@@ -1,0 +1,73 @@
+name: Build and publish Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rebuild source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf src
+          cat \
+            build-src/srcchunk_00.b64 \
+            build-src/srcchunk_01.b64 \
+            build-src/srcchunk_02.b64 \
+            build-src/srcbig_0.b64 \
+            build-src/srcbig_1.b64 \
+            | tr -d '\r\n ' | base64 --decode > /tmp/topdown-src.tar.xz
+          xz -t /tmp/topdown-src.tar.xz
+          tar -xJf /tmp/topdown-src.tar.xz
+          test -f src/main.js
+          test -f src/game/scenes/RaceScene.js
+          test -f src/game/scenes/UpgradeShopScene.js
+          test -f src/game/garage/garageStore.js
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build for GitHub Pages
+        env:
+          BASE: /TopdownCraftrace/
+        run: npm run build
+
+      - name: Publish dist into main root
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp dist/index.html ./index.html
+          rm -rf assets
+          cp -R dist/assets ./assets
+          if [ -f dist/manifest.webmanifest ]; then cp dist/manifest.webmanifest ./manifest.webmanifest; fi
+          if [ -f dist/sw.js ]; then cp dist/sw.js ./sw.js; fi
+          if [ -d dist/icons ]; then rm -rf icons && cp -R dist/icons ./icons; fi
+          touch .nojekyll
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html assets manifest.webmanifest sw.js icons .nojekyll 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "No publication changes"
+          else
+            git commit -m "Publish playable build [skip ci]"
+            git push origin main
+          fi
