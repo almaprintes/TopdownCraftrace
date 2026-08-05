@@ -1,76 +1,14 @@
-name: Build and publish Pages
+name: Build and publish Pages (manual)
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build:
-    if: github.actor != 'github-actions[bot]'
+  info:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Restore verified Garage Fusion source
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf src
-          cat \
-            build-src/clean/pfx-00.b64 \
-            build-src/clean/pfx-01.b64 \
-            build-src/clean/pfx-02.b64 \
-            build-src/clean/pfx-03.b64 \
-            build-src/clean/pfx-04.b64 \
-            build-src/clean/pfx-05.b64 \
-            build-src/clean/pfx-06.b64 \
-            build-src/clean/part-00.b64 \
-            build-src/clean/part-01.b64 \
-            build-src/clean/part-02.b64 \
-            build-src/clean/part-03.b64 \
-            build-src/clean/part-04.b64 \
-            | tr -d '\r\n ' | base64 --ignore-garbage --decode > /tmp/src-clean.zip
-          echo "f1e877b1b34ffeb5fb0a64e435dbac15ee15389d4c1f9282034c131213e46735  /tmp/src-clean.zip" | sha256sum -c -
-          unzip -t /tmp/src-clean.zip
-          unzip -q /tmp/src-clean.zip -d .
-          test -f src/main.js
-          test -f src/game/scenes/RaceScene.js
-          test -f src/game/scenes/UpgradeShopScene.js
-          test -f src/game/garage/garageStore.js
-          test -f src/game/monetization/RewardedAdsProvider.js
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
-      - name: Build for GitHub Pages
-        env:
-          BASE: /TopdownCraftrace/
-        run: npm run build
-
-      - name: Publish playable build and real source
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp -R dist/. ./
-          touch .nojekyll
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          if git diff --cached --quiet; then
-            echo "No publication changes"
-          else
-            git commit -m "Publish playable Garage Fusion build [skip ci]"
-            git push origin main
-          fi
+      - name: Standalone preview active
+        run: echo "GitHub Pages is currently served directly from main/index.html. The Vite rebuild workflow is intentionally disabled while the full source migration is repaired."
