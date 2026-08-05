@@ -24,9 +24,6 @@ jobs:
           set -euo pipefail
           rm -rf src
           cat \
-            build-src/srcchunk_00.b64 \
-            build-src/srcchunk_01.b64 \
-            build-src/srcchunk_02.b64 \
             build-src/srcbig_0.b64 \
             build-src/srcbig_1.b64 \
             | tr -d '\r\n ' | base64 --decode > /tmp/topdown-src.tar.xz
@@ -36,6 +33,7 @@ jobs:
           test -f src/game/scenes/RaceScene.js
           test -f src/game/scenes/UpgradeShopScene.js
           test -f src/game/garage/garageStore.js
+          test -f src/game/monetization/RewardedAdsProvider.js
 
       - name: Setup Node
         uses: actions/setup-node@v4
