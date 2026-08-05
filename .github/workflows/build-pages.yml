@@ -18,22 +18,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Rebuild source tree
+      - name: Restore clean Garage Fusion source
         shell: bash
         run: |
           set -euo pipefail
           rm -rf src
           cat \
-            build-src/srcbig_0.b64 \
-            build-src/srcbig_1.b64 \
-            | tr -d '\r\n ' | base64 --decode > /tmp/topdown-src.tar.xz
-          xz -t /tmp/topdown-src.tar.xz
-          tar -xJf /tmp/topdown-src.tar.xz
+            build-src/clean/part-00.b64 \
+            build-src/clean/part-01.b64 \
+            build-src/clean/part-02.b64 \
+            build-src/clean/part-03.b64 \
+            build-src/clean/part-04.b64 \
+            | tr -d '\r\n ' | base64 --decode > /tmp/src-clean.zip
+          echo "f1e877b1b34ffeb5fb0a64e435dbac15ee15389d4c1f9282034c131213e46735  /tmp/src-clean.zip" | sha256sum -c -
+          unzip -q /tmp/src-clean.zip -d .
           test -f src/main.js
           test -f src/game/scenes/RaceScene.js
           test -f src/game/scenes/UpgradeShopScene.js
           test -f src/game/garage/garageStore.js
           test -f src/game/monetization/RewardedAdsProvider.js
+          echo "Clean Garage Fusion source restored successfully"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -48,16 +52,11 @@ jobs:
           BASE: /TopdownCraftrace/
         run: npm run build
 
-      - name: Publish dist into main root
+      - name: Publish playable build and real source
         shell: bash
         run: |
           set -euo pipefail
-          cp dist/index.html ./index.html
-          rm -rf assets
-          cp -R dist/assets ./assets
-          if [ -f dist/manifest.webmanifest ]; then cp dist/manifest.webmanifest ./manifest.webmanifest; fi
-          if [ -f dist/sw.js ]; then cp dist/sw.js ./sw.js; fi
-          if [ -d dist/icons ]; then rm -rf icons && cp -R dist/icons ./icons; fi
+          cp -R dist/. ./
           touch .nojekyll
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -65,6 +64,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No publication changes"
           else
-            git commit -m "Publish playable build [skip ci]"
+            git commit -m "Publish playable Garage Fusion build [skip ci]"
             git push origin main
           fi
