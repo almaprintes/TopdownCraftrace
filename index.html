@@ -1,109 +1,49 @@
 <!doctype html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-    <meta name="theme-color" content="#0b1020" />
-
-    <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="icon" href="./icons/icon-192.png" />
-<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-
-    <title>Top-Down Race 2</title>
-  </head>
-  <body>
-        <div id="rotateOverlay" aria-hidden="true">
-  <img
-    class="rot-image"
-    src="./assets/ui/orientation_portrait.png"
-    alt="Ponlo en horizontal. Top-Down Race 2 se juega en landscape."
-  />
-</div>
-    <div id="app"></div>
-    <script type="module" src="/src/main.js"></script>
-<!-- ========================= -->
-<!-- CAR FACTORY HTML MODAL  -->
-<!-- ========================= -->
-<div id="carFactoryModal" class="cf-modal hidden">
-  <div class="cf-card">
-    <h3 id="cf-title">Editar</h3>
-
-    <input id="cf-input" type="text" />
-
-    <div class="cf-actions">
-      <button id="cf-cancel">Cancelar</button>
-      <button id="cf-save">Guardar</button>
-    </div>
-  </div>
-</div>
-
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#070b14">
+<title>Topdown Craftrace · Garage Fusion</title>
 <style>
-.cf-modal {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  backdrop-filter: blur(4px);
-}
-
-.cf-card {
-  width: 320px;
-  background: #0b1020;
-  border: 1px solid rgba(44,246,255,0.4);
-  border-radius: 14px;
-  padding: 20px;
-  box-shadow: 0 0 30px rgba(44,246,255,0.3);
-  color: white;
-  font-family: system-ui;
-}
-
-.cf-card h3 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  color: #2cf6ff;
-}
-
-.cf-card input {
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: none;
-  background: #111a33;
-  color: white;
-  margin-bottom: 14px;
-  font-size: 14px;
-}
-
-.cf-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.cf-actions button {
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-#cf-save {
-  background: #2cf6ff;
-  color: black;
-}
-
-#cf-cancel {
-  background: #333;
-  color: white;
-}
-
-.hidden {
-  display: none;
-}
+:root{--bg:#070b14;--panel:#0d1424;--panel2:#111c31;--cyan:#39e8ff;--green:#5cff9d;--gold:#ffd45a;--red:#ff5d73;--text:#f5f7ff;--muted:#8d9ab4}*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:radial-gradient(circle at 50% 0,#14213d 0,#070b14 45%,#03050a 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button{font:inherit}.app{height:100%;display:flex;flex-direction:column}.top{height:58px;padding:calc(8px + env(safe-area-inset-top)) 14px 8px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #22304b;background:rgba(6,10,19,.9);backdrop-filter:blur(15px);z-index:5}.brand{font-weight:900;letter-spacing:.08em;font-size:14px}.brand b{color:var(--cyan)}.spacer{flex:1}.pill{padding:7px 10px;border-radius:999px;background:#111b2f;border:1px solid #273653;font-size:12px;font-weight:800}.pill.coin{color:var(--gold)}.main{flex:1;min-height:0;position:relative}.screen{position:absolute;inset:0;display:none}.screen.active{display:flex}.menu{padding:18px;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:16px}.hero{font-size:clamp(38px,8vw,74px);font-weight:1000;line-height:.9;letter-spacing:-.06em;text-shadow:0 8px 40px #000}.hero span{display:block;color:var(--cyan);font-size:.48em;letter-spacing:.16em;margin-top:12px}.sub{max-width:620px;color:#aab6ce;font-size:14px;line-height:1.5}.ctaRow{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}.btn{border:0;border-radius:14px;padding:14px 18px;font-weight:900;color:#051017;background:linear-gradient(180deg,#55efff,#20bed7);box-shadow:0 8px 25px #19cce744;cursor:pointer}.btn.secondary{background:#121d31;color:#eaf1ff;border:1px solid #2d405f;box-shadow:none}.btn.gold{background:linear-gradient(180deg,#ffe78d,#ffc936);color:#2b1c00}.status{font-size:12px;color:var(--muted)}.race{flex-direction:column;background:#05070d}.hud{height:54px;display:flex;align-items:center;padding:8px 12px;gap:10px;background:#0a101dbf;border-bottom:1px solid #1f2b42}.hud strong{font-size:14px}.hud .metric{font-size:11px;color:var(--muted)}.hud .metric b{display:block;color:white;font-size:16px}.roadWrap{flex:1;min-height:0;position:relative;overflow:hidden;background:#193622}.road{position:absolute;inset:0 15%;background:#30343b;border-left:6px solid #e6e6e6;border-right:6px solid #e6e6e6;overflow:hidden}.road:before{content:"";position:absolute;left:50%;top:-200%;width:6px;height:400%;transform:translateX(-50%);background:repeating-linear-gradient(to bottom,#fff 0 36px,transparent 36px 72px);opacity:.75;animation:road 1s linear infinite}@keyframes road{to{transform:translate(-50%,72px)}}.car{position:absolute;width:42px;height:72px;bottom:20%;left:50%;transform:translateX(-50%);border-radius:13px 13px 9px 9px;background:linear-gradient(90deg,#15233e 0 12%,#35e6ff 12% 88%,#15233e 88%);box-shadow:0 0 30px #39e8ff88,0 14px 16px #0008;transition:left .1s linear;z-index:2}.car:before{content:"";position:absolute;left:8px;right:8px;top:13px;height:21px;border-radius:7px;background:#06101e;border:2px solid #7df4ff}.car:after{content:"";position:absolute;left:11px;right:11px;bottom:7px;height:7px;border-radius:5px;background:#ff4058;box-shadow:0 0 10px #ff4058}.object{position:absolute;width:28px;height:28px;top:-40px;z-index:1}.cone{background:linear-gradient(135deg,#ff8a33,#cf3f00);clip-path:polygon(50% 0,100% 100%,0 100%);filter:drop-shadow(0 5px 4px #0009)}.part{border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#51e9ff 22%,#13728d 60%,#06202b);box-shadow:0 0 18px #39e8ff}.controls{height:92px;padding:8px 14px calc(8px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr;gap:12px;background:#080d17;border-top:1px solid #202c42}.steer{border:1px solid #30435f;border-radius:18px;background:#111a2b;color:white;font-size:30px;font-weight:900}.garage{flex-direction:column;overflow:auto;padding:14px 14px calc(90px + env(safe-area-inset-bottom));gap:12px}.garageHead{display:flex;align-items:end;gap:12px}.garageHead h2{margin:0;font-size:28px}.garageHead p{margin:0;color:var(--muted);font-size:12px}.card{background:linear-gradient(180deg,#101a2d,#0a111f);border:1px solid #263653;border-radius:18px;padding:14px;box-shadow:0 14px 40px #0005}.equip{display:flex;gap:12px;align-items:center}.disc{width:68px;height:68px;border:10px solid #8692a7;border-radius:50%;position:relative;box-shadow:inset 0 0 0 8px #263244,0 0 25px #39e8ff22}.disc:after{content:"";position:absolute;width:18px;height:34px;right:-14px;top:7px;border-radius:8px;background:#ff4e66}.equipInfo{flex:1}.equipInfo .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em}.equipInfo h3{margin:3px 0;font-size:20px}.bar{height:8px;border-radius:20px;background:#202a3d;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#34cde4,#65ffa8);width:48%}.items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.item{padding:13px;border-radius:15px;background:#0b1425;border:1px solid #253653;position:relative}.item.sport{border-color:#a47a1e;background:linear-gradient(145deg,#221b0e,#101827)}.rarity{font-size:10px;font-weight:900;letter-spacing:.13em;color:#72eaff}.sport .rarity{color:var(--gold)}.item h4{margin:5px 0 3px;font-size:15px}.count{font-weight:1000;font-size:24px}.mini{font-size:11px;color:var(--muted)}.item button{width:100%;margin-top:10px;padding:9px;border-radius:10px;border:0;background:#1e304c;color:#eaf2ff;font-weight:900}.item button.ready{background:linear-gradient(180deg,#ffe27b,#ffc329);color:#2a1b00}.rewardPanel{display:none;position:absolute;inset:0;z-index:20;background:#050811eF;align-items:center;justify-content:center;padding:20px}.rewardPanel.show{display:flex}.rewardBox{width:min(440px,100%);text-align:center;background:#0e1728;border:1px solid #31476b;border-radius:24px;padding:22px;box-shadow:0 30px 80px #000}.rewardBox h2{font-size:30px;margin:5px}.loot{display:flex;justify-content:center;gap:10px;margin:18px 0}.loot span{padding:12px;border-radius:13px;background:#14223a;font-weight:900}.adOverlay{display:none;position:absolute;inset:0;z-index:30;background:#000;align-items:center;justify-content:center;text-align:center}.adOverlay.show{display:flex}.adVideo{width:min(500px,88vw);height:min(270px,55vh);border-radius:22px;background:radial-gradient(circle at center,#193956,#07101d 65%);display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid #3c6685}.adVideo b{font-size:34px;color:var(--cyan)}.bottomnav{height:64px;padding:6px 10px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:1fr 1fr;background:#080d17;border-top:1px solid #202c42}.nav{border:0;background:transparent;color:#6f7f9a;font-weight:800}.nav.active{color:var(--cyan)}.toast{position:absolute;left:50%;bottom:78px;transform:translateX(-50%) translateY(20px);background:#101b2e;border:1px solid #344969;border-radius:13px;padding:10px 14px;opacity:0;transition:.2s;z-index:40;font-size:12px;font-weight:800;white-space:nowrap}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}@media(min-width:760px){.items{grid-template-columns:repeat(3,1fr)}.garage{max-width:820px;margin:auto;width:100%}}@media(orientation:portrait){.road{inset:0 9%}}
 </style>
-  </body>
+</head>
+<body>
+<div class="app">
+<header class="top"><div class="brand">TOPDOWN <b>CRAFTRACE</b></div><div class="spacer"></div><div class="pill coin">🪙 <span id="coins">0</span></div><div class="pill">⚙️ Fusion v0.1</div></header>
+<main class="main">
+<section class="screen menu active" id="menu"><div class="hero">GARAGE<span>FUSION</span></div><div class="sub">Corre, gana piezas, fusiona duplicados y equipa mejoras que cambian el coche. Esta preview elimina el build roto y prueba directamente el bucle que queremos monetizar.</div><div class="ctaRow"><button class="btn" id="raceBtn">🏁 CORRER</button><button class="btn secondary" id="garageBtn">🔧 ABRIR GARAJE</button></div><div class="status">Objetivo de esta versión: 10 × Frenos de calle → Frenos Sport</div></section>
+<section class="screen race" id="race"><div class="hud"><div><strong>SPRINT INDUSTRIAL</strong><div class="metric">Toca ◀ ▶ para esquivar conos y recoger piezas.</div></div><div class="spacer"></div><div class="metric">TIEMPO<b id="time">25.0</b></div><div class="metric">PIEZAS<b id="picked">0</b></div></div><div class="roadWrap" id="roadWrap"><div class="road" id="road"></div><div class="car" id="car"></div></div><div class="controls"><button class="steer" id="left">◀</button><button class="steer" id="right">▶</button></div></section>
+<section class="screen garage" id="garage"><div class="garageHead"><div><h2>Garage Fusion</h2><p>Las mejoras equipadas afectan a la siguiente carrera.</p></div></div><div class="card equip"><div class="disc"></div><div class="equipInfo"><div class="label">Frenos equipados</div><h3 id="equippedName">Frenos de calle</h3><div class="mini" id="equippedBonus">Frenada base · Manejo base</div><div class="bar"><i id="brakeBar"></i></div></div></div><div class="card"><div style="display:flex;align-items:center;gap:10px"><div><b>Inventario</b><div class="mini">Los duplicados son materia prima.</div></div><div class="spacer"></div><button class="btn secondary" style="padding:9px 11px" id="freePart">+ PIEZA TEST</button></div><div class="items" style="margin-top:12px"><div class="item"><div class="rarity">COMÚN</div><h4>Frenos de calle</h4><div class="count"><span id="streetCount">0</span> / 10</div><div class="mini">Duplica y fusiona diez copias.</div><button id="fuseBtn">Faltan piezas</button></div><div class="item sport"><div class="rarity">SPORT</div><h4>Frenos Sport</h4><div class="count" id="sportCount">0</div><div class="mini">+8% frenada · + agarre</div><button id="equipSport">Sin fabricar</button></div><div class="item"><div class="rarity">MATERIAL</div><h4>Discos ventilados</h4><div class="count" id="discCount">0</div><div class="mini">Recurso para futuras recetas.</div><button disabled>Próximamente</button></div></div></div><div class="card"><b>Economía de prueba</b><div class="mini" style="margin-top:5px">Cada carrera: monedas + 1–3 piezas. Un vídeo recompensado puede duplicar el botín. En la app final este botón se conecta a AdMob.</div></div></section>
+<div class="rewardPanel" id="reward"><div class="rewardBox"><div class="rarity">CARRERA COMPLETADA</div><h2>BOTÍN CONSEGUIDO</h2><div class="loot"><span>🪙 <b id="rewardCoins">0</b></span><span>🛞 <b id="rewardParts">0</b> piezas</span></div><div class="ctaRow"><button class="btn gold" id="doubleBtn">▶ DUPLICAR CON VÍDEO</button><button class="btn secondary" id="claimBtn">COBRAR</button></div></div></div>
+<div class="adOverlay" id="ad"><div class="adVideo"><div class="rarity">REWARDED AD · SIMULACIÓN</div><b>CRAF TERRA</b><p>El espacio queda preparado para AdMob.</p><div id="adTimer">4</div></div></div><div class="toast" id="toast"></div>
+</main>
+<nav class="bottomnav"><button class="nav active" data-screen="menu">🏁 Carrera</button><button class="nav" data-screen="garage">🔧 Garage</button></nav>
+</div>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const defaults={coins:250,street:3,sport:0,discs:1,equipped:'street',runs:0};
+let state={...defaults,...JSON.parse(localStorage.getItem('tdrGarageFusion')||'{}')};
+let race=null,reward={coins:0,parts:0,doubled:false};
+function save(){localStorage.setItem('tdrGarageFusion',JSON.stringify(state));render()}
+function render(){coins.textContent=state.coins;streetCount.textContent=state.street;sportCount.textContent=state.sport;discCount.textContent=state.discs;const ready=state.street>=10;fuseBtn.textContent=ready?'FUSIONAR 10 → SPORT':`Faltan ${Math.max(0,10-state.street)} piezas`;fuseBtn.className=ready?'ready':'';equipSport.textContent=state.sport?state.equipped==='sport'?'EQUIPADO':'EQUIPAR':'Sin fabricar';equipSport.className=state.sport?'ready':'';equippedName.textContent=state.equipped==='sport'?'Frenos Sport':'Frenos de calle';equippedBonus.textContent=state.equipped==='sport'?'+8% frenada · + agarre en maniobra':'Frenada base · Manejo base';brakeBar.style.width=state.equipped==='sport'?'72%':'48%'}
+function show(id){$$('.screen').forEach(x=>x.classList.remove('active'));$('#'+id).classList.add('active');$$('.nav').forEach(n=>n.classList.toggle('active',n.dataset.screen===id))}
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
+$$('.nav').forEach(n=>n.onclick=()=>show(n.dataset.screen));raceBtn.onclick=()=>startRace();garageBtn.onclick=()=>show('garage');
+freePart.onclick=()=>{state.street++;save();toast('+1 Frenos de calle')};
+fuseBtn.onclick=()=>{if(state.street<10)return toast('Necesitas 10 copias');state.street-=10;state.sport++;save();toast('✨ Frenos Sport fabricados')};
+equipSport.onclick=()=>{if(!state.sport)return;state.equipped='sport';save();toast('Frenos Sport equipados')};
+function startRace(){show('race');document.querySelectorAll('.object').forEach(x=>x.remove());race={x:50,time:25,picked:0,objects:[],last:0,running:true,boost:state.equipped==='sport'?1.18:1};car.style.left='50%';picked.textContent='0';requestAnimationFrame(loop)}
+function steer(dir){if(!race||!race.running)return;race.x=Math.max(23,Math.min(77,race.x+dir*(state.equipped==='sport'?9:7)));car.style.left=race.x+'%'}
+left.onpointerdown=()=>steer(-1);right.onpointerdown=()=>steer(1);
+window.addEventListener('keydown',e=>{if(e.key==='ArrowLeft')steer(-1);if(e.key==='ArrowRight')steer(1)});
+function spawn(){const el=document.createElement('div');const isPart=Math.random()<.38;el.className='object '+(isPart?'part':'cone');const x=24+Math.random()*52;el.style.left=x+'%';roadWrap.appendChild(el);race.objects.push({el,x,y:-8,isPart,speed:(isPart?34:40)*race.boost})}
+function loop(ts){if(!race?.running)return;if(!race.prev)race.prev=ts;const dt=Math.min(.035,(ts-race.prev)/1000);race.prev=ts;race.time-=dt;time.textContent=Math.max(0,race.time).toFixed(1);if(ts-race.last>650){spawn();race.last=ts}for(const o of race.objects){o.y+=o.speed*dt;o.el.style.top=o.y+'%';if(!o.hit&&o.y>62&&o.y<84&&Math.abs(o.x-race.x)<10){o.hit=true;if(o.isPart){race.picked++;picked.textContent=race.picked;o.el.remove()}else{o.el.style.opacity=.25;race.time=Math.max(0,race.time-.8);roadWrap.animate([{transform:'translateX(-3px)'},{transform:'translateX(3px)'},{transform:'none'}],{duration:160})}}}race.objects=race.objects.filter(o=>o.y<110&&!o.isPart||(!o.hit&&o.y<110));if(race.time<=0)return finishRace();requestAnimationFrame(loop)}
+function finishRace(){race.running=false;state.runs++;reward={coins:120+Math.min(80,race.picked*10),parts:Math.max(1,Math.min(3,1+Math.floor(race.picked/3))),doubled:false};rewardCoins.textContent=reward.coins;rewardParts.textContent=reward.parts;rewardPanel.classList.add('show')}
+function claim(mult=1){state.coins+=reward.coins*mult;state.street+=reward.parts*mult;if(Math.random()<.35*mult)state.discs++;save();rewardPanel.classList.remove('show');show('garage');toast(mult===2?'🎁 Botín duplicado':'Botín añadido al garaje')}
+claimBtn.onclick=()=>claim(1);doubleBtn.onclick=()=>{if(reward.doubled)return;reward.doubled=true;ad.classList.add('show');let n=4;adTimer.textContent=n;const t=setInterval(()=>{n--;adTimer.textContent=n;if(n<=0){clearInterval(t);ad.classList.remove('show');claim(2)}},700)};
+render();
+</script>
+</body>
 </html>
