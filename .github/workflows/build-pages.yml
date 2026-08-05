@@ -18,12 +18,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore clean Garage Fusion source
+      - name: Restore verified Garage Fusion source
         shell: bash
         run: |
           set -euo pipefail
           rm -rf src
           cat \
+            build-src/clean/pfx-00.b64 \
+            build-src/clean/pfx-01.b64 \
+            build-src/clean/pfx-02.b64 \
+            build-src/clean/pfx-03.b64 \
+            build-src/clean/pfx-04.b64 \
+            build-src/clean/pfx-05.b64 \
+            build-src/clean/pfx-06.b64 \
             build-src/clean/part-00.b64 \
             build-src/clean/part-01.b64 \
             build-src/clean/part-02.b64 \
@@ -31,13 +38,13 @@ jobs:
             build-src/clean/part-04.b64 \
             | tr -d '\r\n ' | base64 --decode > /tmp/src-clean.zip
           echo "f1e877b1b34ffeb5fb0a64e435dbac15ee15389d4c1f9282034c131213e46735  /tmp/src-clean.zip" | sha256sum -c -
+          unzip -t /tmp/src-clean.zip
           unzip -q /tmp/src-clean.zip -d .
           test -f src/main.js
           test -f src/game/scenes/RaceScene.js
           test -f src/game/scenes/UpgradeShopScene.js
           test -f src/game/garage/garageStore.js
           test -f src/game/monetization/RewardedAdsProvider.js
-          echo "Clean Garage Fusion source restored successfully"
 
       - name: Setup Node
         uses: actions/setup-node@v4
