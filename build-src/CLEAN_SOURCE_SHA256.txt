@@ -1,0 +1,6 @@
+Garage Fusion clean source package
+Generated from: top-down-race-garage-fusion-v0.1.zip
+Archive: src-clean.zip
+SHA-256: f1e877b1b34ffeb5fb0a64e435dbac15ee15389d4c1f9282034c131213e46735
+Files in src/: 32
+Purpose: replace the broken srcchunk/srcbig reconstruction path.
