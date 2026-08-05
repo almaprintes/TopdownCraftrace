@@ -41,10 +41,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Build for GitHub Pages
         env:
@@ -64,7 +63,7 @@ jobs:
           touch .nojekyll
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html assets manifest.webmanifest sw.js icons .nojekyll 2>/dev/null || true
+          git add -A
           if git diff --cached --quiet; then
             echo "No publication changes"
           else
