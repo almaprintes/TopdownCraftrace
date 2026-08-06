@@ -1,23 +1,10 @@
 import { RaceScene as OriginalRaceScene } from './RaceScene.js';
 
-// Corrección estable de carrera para iOS/Safari:
-// - uiCam queda desactivada porque provoca el framebuffer negro
-// - main dibuja el mundo
-// - solo recuperamos HUD/controles seguros, nunca overlays fullscreen
-// - el seguimiento manual conserva el zoom dinámico original
+// Corrección iOS/Safari:
+// - una sola cámara visible evita el framebuffer negro de uiCam
+// - mundo/coche conservan el zoom dinámico original
+// - HUD/controles/minimapa se compensan contra ese zoom para quedar fijos en pantalla
 export class RaceScene extends OriginalRaceScene {
-  constructor() {
-    super();
-
-    // Zoom dinámico más contenido para móvil landscape:
-    // lento = cerca, rápido = lejos, sin acercamientos extremos.
-    this._zoomGameplayMin = 0.72;
-    this._zoomGameplayMax = 1.08;
-    this._zoomKmhRef = 160;
-    this._zoomLerp = 0.045;
-    this._zoomCurrent = Math.min(this.zoom ?? 0.86, this._zoomGameplayMax);
-  }
-
   create() {
     super.create();
 
@@ -28,6 +15,8 @@ export class RaceScene extends OriginalRaceScene {
       main.setVisible(true);
       main.setAlpha(1);
       if (this.uiCam) this.uiCam.setVisible(false);
+
+      this._fixedUiState = new WeakMap();
 
       const allowMain = (obj) => {
         if (!obj) return;
@@ -51,11 +40,11 @@ export class RaceScene extends OriginalRaceScene {
         const w = Number(obj.displayWidth ?? obj.width ?? 0);
         const h = Number(obj.displayHeight ?? obj.height ?? 0);
 
-        const fullscreenLike = w >= sw * 0.82 && h >= sh * 0.82;
-        return !fullscreenLike;
+        // No recuperamos fondos/overlays de pantalla completa.
+        return !(w >= sw * 0.82 && h >= sh * 0.82);
       };
 
-      const restoreHud = () => {
+      this._restoreHudToMain = () => {
         for (const ref of [
           this.hud,
           this.touchUI,
@@ -76,12 +65,53 @@ export class RaceScene extends OriginalRaceScene {
         }
       };
 
-      restoreHud();
-      this.time.delayedCall(0, restoreHud);
-      this.time.delayedCall(250, restoreHud);
-      this.time.delayedCall(1000, restoreHud);
+      // Compensa la transformación de la cámara sobre UI con scrollFactor 0.
+      // Guardamos la primera posición/escala real de cada elemento y su zoom de referencia.
+      this._freezeHudAgainstZoom = () => {
+        const cam = this.cameras?.main;
+        if (!cam) return;
+
+        const zoom = Number(cam.zoom || 1);
+        const cx = Number(cam.width || this.scale?.width || 0) * 0.5;
+        const cy = Number(cam.height || this.scale?.height || 0) * 0.5;
+
+        for (const obj of this.children?.list || []) {
+          if (!isSafeFixedUi(obj)) continue;
+          if (!Number.isFinite(obj.x) || !Number.isFinite(obj.y)) continue;
+
+          let state = this._fixedUiState.get(obj);
+          if (!state) {
+            state = {
+              x: obj.x,
+              y: obj.y,
+              scaleX: Number.isFinite(obj.scaleX) ? obj.scaleX : 1,
+              scaleY: Number.isFinite(obj.scaleY) ? obj.scaleY : 1,
+              zoom: zoom || 1
+            };
+            this._fixedUiState.set(obj, state);
+          }
+
+          const k = state.zoom / Math.max(0.001, zoom);
+
+          // Mantener el mismo punto de pantalla aunque la cámara haga zoom alrededor del centro.
+          obj.x = cx + (state.x - cx) * k;
+          obj.y = cy + (state.y - cy) * k;
+
+          if (typeof obj.setScale === 'function') {
+            obj.setScale(state.scaleX * k, state.scaleY * k);
+          } else {
+            if (Number.isFinite(obj.scaleX)) obj.scaleX = state.scaleX * k;
+            if (Number.isFinite(obj.scaleY)) obj.scaleY = state.scaleY * k;
+          }
+        }
+      };
+
+      this._restoreHudToMain();
+      this.time.delayedCall(0, this._restoreHudToMain);
+      this.time.delayedCall(250, this._restoreHudToMain);
+      this.time.delayedCall(1000, this._restoreHudToMain);
     } catch (err) {
-      console.warn('[TDR2] Safe single-camera HUD setup failed', err);
+      console.warn('[TDR2] Single-camera HUD setup failed', err);
     }
   }
 
@@ -93,11 +123,15 @@ export class RaceScene extends OriginalRaceScene {
       const main = this.cameras?.main;
       if (!body?.scene || !main) return;
 
+      // Solo el mundo sigue al coche. El zoom dinámico original permanece intacto.
       if (!this._mapZoomOn) {
         main.centerOn(body.x, body.y);
       }
+
+      this._restoreHudToMain?.();
+      this._freezeHudAgainstZoom?.();
     } catch (err) {
-      console.warn('[TDR2] Manual race camera follow failed', err);
+      console.warn('[TDR2] Race camera/HUD compensation failed', err);
     }
   }
 }
