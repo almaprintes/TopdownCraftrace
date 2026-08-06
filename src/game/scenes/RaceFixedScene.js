@@ -16,10 +16,13 @@ export class RaceScene extends OriginalRaceScene {
       main.setAlpha(1);
       if (this.uiCam) this.uiCam.setVisible(false);
 
+      // La pieza inferior actual es todavía un asset de interfaz en construcción.
+      // Se mantiene fuera de la carrera hasta recuperar el HUD inferior completo.
+      if (this.bottomBanner?.scene) this.bottomBanner.setVisible(false);
+
       this._fixedUiState = new WeakMap();
       this._fixedUiRoots = new Set();
       this._miniScreenPos = null;
-      this._bottomHudState = null;
 
       const allowMain = (obj) => {
         if (!obj) return;
@@ -46,11 +49,9 @@ export class RaceScene extends OriginalRaceScene {
         obj && (obj === this.minimap?.car || obj === this.minimap?.shadow)
       );
 
-      const isBottomHud = (obj) => obj && obj === this.bottomBanner;
-
       const rememberFixedRoot = (obj, force = false) => {
         if (!obj || obj.visible === false) return;
-        if (isMiniMarker(obj) || isBottomHud(obj)) return;
+        if (isMiniMarker(obj)) return;
         if (!Number.isFinite(obj.x) || !Number.isFinite(obj.y)) return;
 
         const fixed = force || (obj.scrollFactorX === 0 && obj.scrollFactorY === 0);
@@ -88,39 +89,6 @@ export class RaceScene extends OriginalRaceScene {
         }
       };
 
-      this._prepareBottomHud = () => {
-        const banner = this.bottomBanner;
-        if (!banner?.scene) return;
-
-        allowMain(banner);
-
-        if (!this._bottomHudState) {
-          const vw = Math.max(1, Number(this.scale?.width || 1));
-          const vh = Math.max(1, Number(this.scale?.height || 1));
-          const bw = Math.max(1, Number(banner.width || 1));
-          const bh = Math.max(1, Number(banner.height || 1));
-
-          // El asset tiene bastante margen interno, así que partimos del ajuste
-          // seguro anterior y lo ampliamos un 70%, manteniendo límites duros.
-          const safeFit = Math.min((vw * 0.92) / bw, (vh * 0.24) / bh);
-          const hardCap = Math.min((vw * 0.72) / bw, (vh * 0.40) / bh);
-          const fit = Math.min(safeFit * 1.70, hardCap);
-
-          this._bottomHudState = {
-            screenX: vw * 0.5,
-            screenY: vh,
-            scale: fit
-          };
-
-          banner.setOrigin(0.5, 1);
-          if (typeof banner.setScrollFactor === 'function') banner.setScrollFactor(1, 1);
-          else {
-            banner.scrollFactorX = 1;
-            banner.scrollFactorY = 1;
-          }
-        }
-      };
-
       this._discoverFixedHud = () => {
         for (const ref of [
           this.hud,
@@ -142,7 +110,6 @@ export class RaceScene extends OriginalRaceScene {
         }
 
         this._prepareMinimapMarker?.();
-        this._prepareBottomHud?.();
       };
 
       this._pinHudToScreen = () => {
@@ -217,40 +184,24 @@ export class RaceScene extends OriginalRaceScene {
         }
       };
 
-      this._pinBottomHud = () => {
-        const cam = this.cameras?.main;
-        const banner = this.bottomBanner;
-        const state = this._bottomHudState;
-        if (!cam || !banner?.scene || !state) return;
-
-        const zoom = Math.max(0.001, Number(cam.zoom || 1));
-        const world = cam.getWorldPoint(state.screenX, state.screenY);
-        banner.setPosition(world.x, world.y);
-        banner.setScale(state.scale / zoom);
-      };
-
       this._discoverFixedHud();
       this._pinHudToScreen();
       this._pinMinimapMarker();
-      this._pinBottomHud();
 
       this.time.delayedCall(0, () => {
         this._discoverFixedHud?.();
         this._pinHudToScreen?.();
         this._pinMinimapMarker?.();
-        this._pinBottomHud?.();
       });
       this.time.delayedCall(250, () => {
         this._discoverFixedHud?.();
         this._pinHudToScreen?.();
         this._pinMinimapMarker?.();
-        this._pinBottomHud?.();
       });
       this.time.delayedCall(1000, () => {
         this._discoverFixedHud?.();
         this._pinHudToScreen?.();
         this._pinMinimapMarker?.();
-        this._pinBottomHud?.();
       });
     } catch (err) {
       console.warn('[TDR2] Single-camera HUD setup failed', err);
@@ -272,7 +223,6 @@ export class RaceScene extends OriginalRaceScene {
       this._discoverFixedHud?.();
       this._pinHudToScreen?.();
       this._pinMinimapMarker?.();
-      this._pinBottomHud?.();
     } catch (err) {
       console.warn('[TDR2] Race camera/HUD pinning failed', err);
     }
