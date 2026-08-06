@@ -10,7 +10,6 @@ export class RaceScene extends StyledRaceScene {
       const main = this.cameras?.main;
       if (!main) return;
 
-      // Ocultar SOLO diagnósticos de desarrollo.
       this._hideRaceDebugOnly = () => {
         for (const obj of [
           this._diagText,
@@ -29,7 +28,6 @@ export class RaceScene extends StyledRaceScene {
       this.time.delayedCall(250, () => this._hideRaceDebugOnly?.());
       this.time.delayedCall(1000, () => this._hideRaceDebugOnly?.());
 
-      // Ocultar presentación antigua de la esquina superior izquierda.
       for (const obj of [
         this.ttHud?.lapText,
         this.ttHud?.bestLapText,
@@ -46,8 +44,7 @@ export class RaceScene extends StyledRaceScene {
       const c = this.add.container(0, 0).setDepth(2210);
       this.competitionHud = c;
 
-      const accent = this.add.rectangle(0, 0, 3, 58, 0x61c9ff, 0.82)
-        .setOrigin(0, 0);
+      const accent = this.add.rectangle(0, 0, 3, 58, 0x61c9ff, 0.82).setOrigin(0, 0);
 
       const lapLabel = this.add.text(10, -1, 'VUELTA', {
         fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
@@ -71,16 +68,13 @@ export class RaceScene extends StyledRaceScene {
 
       const sectorStyle = {
         fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
-        fontSize: '10px',
-        fontStyle: '800',
-        color: '#8999A6'
+        fontSize: '10px', fontStyle: '800', color: '#8999A6'
       };
       const s1 = this.add.text(10, 42, 'S1 —', sectorStyle).setOrigin(0, 0);
       const s2 = this.add.text(48, 42, 'S2 —', sectorStyle).setOrigin(0, 0);
       const s3 = this.add.text(86, 42, 'S3 —', sectorStyle).setOrigin(0, 0);
 
-      const timingSep = this.add.rectangle(127, 4, 1, 48, 0xffffff, 0.12)
-        .setOrigin(0, 0);
+      const timingSep = this.add.rectangle(127, 4, 1, 48, 0xffffff, 0.12).setOrigin(0, 0);
 
       const lastLabel = this.add.text(139, 1, 'LAST', {
         fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
@@ -97,7 +91,6 @@ export class RaceScene extends StyledRaceScene {
         fontSize: '8px', fontStyle: '800', color: '#7E8D9A'
       }).setOrigin(0, 0);
 
-      // BEST debe destacar por color, no por un halo que emborrona los dígitos.
       const bestText = this.add.text(139, 43, '--:--.--', {
         fontFamily: 'Orbitron, system-ui, sans-serif',
         fontSize: '12px', fontStyle: '900', color: '#63FFD1'
@@ -161,9 +154,7 @@ export class RaceScene extends StyledRaceScene {
         }
         const sign = ms > 0 ? '+' : '−';
         const sec = Math.abs(ms) / 1000;
-        hud._delta
-          .setText(`Δ ${sign}${sec.toFixed(2)}`)
-          .setColor(ms <= 0 ? '#68F0A4' : '#FF7272');
+        hud._delta.setText(`Δ ${sign}${sec.toFixed(2)}`).setColor(ms <= 0 ? '#68F0A4' : '#FF7272');
       };
 
       const setSectorState = (obj, done, active) => {
@@ -212,9 +203,7 @@ export class RaceScene extends StyledRaceScene {
 
         const hist = Array.isArray(this.ttHistory) ? this.ttHistory : [];
         const histLast = hist.length ? Number(hist[hist.length - 1]?.lapMs) : NaN;
-        const lastMs = Number.isFinite(Number(this.timing?.lastLap))
-          ? Number(this.timing.lastLap)
-          : histLast;
+        const lastMs = Number.isFinite(Number(this.timing?.lastLap)) ? Number(this.timing.lastLap) : histLast;
         const bestMs = Number(this.ttBest?.lapMs);
 
         hud._last?.setText(fmtLap(lastMs));
@@ -222,34 +211,75 @@ export class RaceScene extends StyledRaceScene {
       };
 
       // =========================================================
-      // MINIMAPA SPORT — marco integrado, compacto y sin invadir pedales
+      // MINIMAPA PREMIUM — misma familia visual que pedales/HUD
       // =========================================================
       const mapFrame = this.add.container(0, 0).setDepth(1998);
       this.minimapSportFrame = mapFrame;
 
-      // Más ajustado que v1: acompaña al mapa sin bajar hacia GAS.
-      const mapW = 142;
-      const mapH = 96;
-      const mapBg = this.add.rectangle(0, 0, mapW, mapH, 0x07111a, 0.30)
-        .setOrigin(0, 0)
-        .setStrokeStyle(1, 0x7FD8FF, 0.20);
-      const mapTop = this.add.rectangle(7, 5, mapW - 14, 1, 0x68D7FF, 0.46)
-        .setOrigin(0, 0);
-      const mapGlow = this.add.rectangle(mapW * 0.5 - 24, 5, 48, 1, 0x9BE9FF, 0.14)
-        .setOrigin(0, 0);
+      const mapW = 154;
+      const mapH = 104;
+      const cut = 10;
+      const shell = this.add.graphics();
 
-      const corners = this.add.graphics();
-      corners.lineStyle(2, 0x7FD8FF, 0.28);
-      const k = 10;
-      corners.beginPath();
-      corners.moveTo(0, k); corners.lineTo(0, 0); corners.lineTo(k, 0);
-      corners.moveTo(mapW - k, 0); corners.lineTo(mapW, 0); corners.lineTo(mapW, k);
-      // Las esquinas inferiores son más cortas para no competir visualmente con GAS.
-      corners.moveTo(0, mapH - 6); corners.lineTo(0, mapH); corners.lineTo(6, mapH);
-      corners.moveTo(mapW - 6, mapH); corners.lineTo(mapW, mapH); corners.lineTo(mapW, mapH - 6);
-      corners.strokePath();
+      // Sombra exterior tenue.
+      shell.fillStyle(0x000000, 0.24);
+      shell.beginPath();
+      shell.moveTo(cut + 2, 4);
+      shell.lineTo(mapW - cut + 2, 4);
+      shell.lineTo(mapW + 2, cut + 4);
+      shell.lineTo(mapW + 2, mapH - cut + 4);
+      shell.lineTo(mapW - cut + 2, mapH + 4);
+      shell.lineTo(cut + 2, mapH + 4);
+      shell.lineTo(2, mapH - cut + 4);
+      shell.lineTo(2, cut + 4);
+      shell.closePath();
+      shell.fillPath();
 
-      mapFrame.add([mapBg, mapTop, mapGlow, corners]);
+      // Cuerpo oscuro translúcido.
+      shell.fillStyle(0x061019, 0.72);
+      shell.lineStyle(2, 0x5bdcff, 0.72);
+      shell.beginPath();
+      shell.moveTo(cut, 0);
+      shell.lineTo(mapW - cut, 0);
+      shell.lineTo(mapW, cut);
+      shell.lineTo(mapW, mapH - cut);
+      shell.lineTo(mapW - cut, mapH);
+      shell.lineTo(cut, mapH);
+      shell.lineTo(0, mapH - cut);
+      shell.lineTo(0, cut);
+      shell.closePath();
+      shell.fillPath();
+      shell.strokePath();
+
+      // Segundo borde interior para dar profundidad tipo pedal.
+      shell.lineStyle(1, 0x9beaff, 0.24);
+      shell.beginPath();
+      shell.moveTo(cut + 5, 6);
+      shell.lineTo(mapW - cut - 5, 6);
+      shell.lineTo(mapW - 6, cut + 5);
+      shell.lineTo(mapW - 6, mapH - cut - 5);
+      shell.lineTo(mapW - cut - 5, mapH - 6);
+      shell.lineTo(cut + 5, mapH - 6);
+      shell.lineTo(6, mapH - cut - 5);
+      shell.lineTo(6, cut + 5);
+      shell.closePath();
+      shell.strokePath();
+
+      const topRail = this.add.rectangle(19, 8, mapW - 38, 1, 0x6ee6ff, 0.72).setOrigin(0, 0);
+      const topGlow = this.add.rectangle(52, 7, 50, 2, 0xa7f1ff, 0.22).setOrigin(0, 0);
+      const leftAccent = this.add.rectangle(7, 31, 2, 22, 0x39ff9a, 0.46).setOrigin(0, 0);
+
+      // Pequeños detalles técnicos como en el mockup, sin texto decorativo.
+      const detail = this.add.graphics();
+      detail.lineStyle(1, 0x70dfff, 0.32);
+      detail.beginPath();
+      detail.moveTo(16, 17); detail.lineTo(31, 17);
+      detail.moveTo(16, 20); detail.lineTo(25, 20);
+      detail.moveTo(mapW - 30, mapH - 14); detail.lineTo(mapW - 15, mapH - 14);
+      detail.moveTo(mapW - 24, mapH - 11); detail.lineTo(mapW - 15, mapH - 11);
+      detail.strokePath();
+
+      mapFrame.add([shell, topRail, topGlow, leftAccent, detail]);
       if (typeof mapFrame.cameraFilter === 'number') mapFrame.cameraFilter &= ~main.id;
       for (const child of mapFrame.list || []) {
         if (typeof child.cameraFilter === 'number') child.cameraFilter &= ~main.id;
@@ -259,11 +289,53 @@ export class RaceScene extends StyledRaceScene {
       this._layoutMinimapSportFrame = () => {
         const vw = Math.max(1, Number(this.scale?.width || 1));
         this._minimapSportFrameState = {
-          // Ajustado alrededor del minimapa original 132x92 y elevado 10 px.
-          screenX: vw - 12 - 132 - 5,
-          screenY: 38,
+          screenX: vw - mapW - 12,
+          screenY: 28,
           scale: 1
         };
+      };
+
+      // Recentrar TODO el contenido existente del minimapa dentro del panel.
+      // Se hace una sola vez: puntos, trazado, bandera y marcador comparten el mismo offset.
+      this._centerMinimapInsideSportFrame = () => {
+        const mini = this.minimap;
+        const state = this._minimapSportFrameState;
+        if (!mini || !state || this._minimapSportContentCentered) return;
+
+        const pts = Array.isArray(mini.points) ? mini.points : [];
+        if (pts.length < 2) return;
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const p of pts) {
+          if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+          minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+          maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+        }
+        if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) return;
+
+        const contentCX = (minX + maxX) * 0.5;
+        const contentCY = (minY + maxY) * 0.5;
+        const targetCX = state.screenX + mapW * 0.5;
+        const targetCY = state.screenY + mapH * 0.54;
+        const dx = targetCX - contentCX;
+        const dy = targetCY - contentCY;
+
+        for (const p of pts) {
+          if (!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+          p.x += dx;
+          p.y += dy;
+        }
+
+        // El trazado y la bandera originales son objetos de pantalla; desplazarlos igual.
+        for (const obj of [mini.gfx, mini.flag]) {
+          if (!obj?.scene) continue;
+          obj.x = Number(obj.x || 0) + dx;
+          obj.y = Number(obj.y || 0) + dy;
+        }
+
+        // El marcador se vuelve a pinnear desde mini.points en RaceFixedScene.
+        this._miniScreenPos = null;
+        this._minimapSportContentCentered = true;
       };
 
       this._pinMinimapSportFrame = () => {
@@ -317,6 +389,7 @@ export class RaceScene extends StyledRaceScene {
       };
 
       this._layoutMinimapSportFrame();
+      this._centerMinimapInsideSportFrame();
       this._pinCompetitionHud();
       this._pinMinimapSportFrame();
       this._syncCompetitionHud();
