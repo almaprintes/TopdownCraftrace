@@ -16,13 +16,13 @@ export class RaceScene extends OriginalRaceScene {
       main.setAlpha(1);
       if (this.uiCam) this.uiCam.setVisible(false);
 
-      // La pieza inferior actual es todavía un asset de interfaz en construcción.
-      // Se mantiene fuera de la carrera hasta recuperar el HUD inferior completo.
+      // La pieza inferior antigua era solo una maqueta visual con fondo negro.
       if (this.bottomBanner?.scene) this.bottomBanner.setVisible(false);
 
       this._fixedUiState = new WeakMap();
       this._fixedUiRoots = new Set();
       this._miniScreenPos = null;
+      this._raceInfoHudState = null;
 
       const allowMain = (obj) => {
         if (!obj) return;
@@ -49,9 +49,11 @@ export class RaceScene extends OriginalRaceScene {
         obj && (obj === this.minimap?.car || obj === this.minimap?.shadow)
       );
 
+      const isRaceInfoHud = (obj) => obj && obj === this.raceInfoHud;
+
       const rememberFixedRoot = (obj, force = false) => {
         if (!obj || obj.visible === false) return;
-        if (isMiniMarker(obj)) return;
+        if (isMiniMarker(obj) || isRaceInfoHud(obj)) return;
         if (!Number.isFinite(obj.x) || !Number.isFinite(obj.y)) return;
 
         const fixed = force || (obj.scrollFactorX === 0 && obj.scrollFactorY === 0);
@@ -86,6 +88,156 @@ export class RaceScene extends OriginalRaceScene {
             obj.scrollFactorX = 1;
             obj.scrollFactorY = 1;
           }
+        }
+      };
+
+      // =========================================================
+      // HUD INFERIOR v1 — telemetría real, sin imágenes de fondo
+      // =========================================================
+      this._buildRaceInfoHud = () => {
+        if (this.raceInfoHud?.scene) return;
+
+        const panelW = 282;
+        const panelH = 82;
+
+        const c = this.add.container(0, 0).setDepth(2150);
+        this.raceInfoHud = c;
+
+        const bg = this.add.rectangle(0, 0, panelW, panelH, 0x07101b, 0.78)
+          .setOrigin(0.5, 1)
+          .setStrokeStyle(1, 0x63bfff, 0.50);
+
+        const accent = this.add.rectangle(0, -panelH + 4, panelW - 10, 2, 0x38a9ff, 0.90)
+          .setOrigin(0.5, 0);
+
+        const speed = this.add.text(-25, -52, '000', {
+          fontFamily: 'Orbitron, system-ui, sans-serif',
+          fontSize: '36px',
+          fontStyle: '900',
+          color: '#F5FAFF'
+        }).setOrigin(0.5, 0.5).setShadow(0, 2, '#000000', 3, false, true);
+
+        const unit = this.add.text(38, -38, 'km/h', {
+          fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
+          fontSize: '11px',
+          fontStyle: '700',
+          color: '#7EC8FF'
+        }).setOrigin(0, 0.5);
+
+        const gearLabel = this.add.text(-120, -66, 'MARCHA', {
+          fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
+          fontSize: '9px',
+          fontStyle: '700',
+          color: '#7E8C99'
+        }).setOrigin(0, 0.5);
+
+        const gear = this.add.text(-92, -43, 'N', {
+          fontFamily: 'Orbitron, system-ui, sans-serif',
+          fontSize: '24px',
+          fontStyle: '900',
+          color: '#FFFFFF'
+        }).setOrigin(0.5, 0.5);
+
+        const surfaceLabel = this.add.text(66, -66, 'SUPERFICIE', {
+          fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
+          fontSize: '9px',
+          fontStyle: '700',
+          color: '#7E8C99'
+        }).setOrigin(0, 0.5);
+
+        const surface = this.add.text(66, -43, 'PISTA', {
+          fontFamily: 'Orbitron, system-ui, sans-serif',
+          fontSize: '14px',
+          fontStyle: '800',
+          color: '#70FFB0'
+        }).setOrigin(0, 0.5);
+
+        const dividerL = this.add.rectangle(-61, -42, 1, 46, 0xffffff, 0.12);
+        const dividerR = this.add.rectangle(59, -42, 1, 46, 0xffffff, 0.12);
+
+        c.add([
+          bg,
+          accent,
+          dividerL,
+          dividerR,
+          gearLabel,
+          gear,
+          speed,
+          unit,
+          surfaceLabel,
+          surface
+        ]);
+
+        c._speedText = speed;
+        c._gearText = gear;
+        c._surfaceText = surface;
+        c._panelW = panelW;
+        c._panelH = panelH;
+
+        allowMain(c);
+        if (typeof c.setScrollFactor === 'function') c.setScrollFactor(1, 1);
+
+        this._layoutRaceInfoHud?.();
+      };
+
+      this._layoutRaceInfoHud = () => {
+        const c = this.raceInfoHud;
+        if (!c?.scene) return;
+
+        const vw = Math.max(1, Number(this.scale?.width || 1));
+        const vh = Math.max(1, Number(this.scale?.height || 1));
+
+        // Centro inferior con margen suficiente para el home indicator.
+        this._raceInfoHudState = {
+          screenX: vw * 0.5,
+          screenY: vh - 14,
+          scale: Math.min(1, Math.max(0.82, vw / 900))
+        };
+      };
+
+      this._pinRaceInfoHud = () => {
+        const cam = this.cameras?.main;
+        const c = this.raceInfoHud;
+        const state = this._raceInfoHudState;
+        if (!cam || !c?.scene || !state) return;
+
+        const zoom = Math.max(0.001, Number(cam.zoom || 1));
+        const world = cam.getWorldPoint(state.screenX, state.screenY);
+        c.setPosition(world.x, world.y);
+        c.setScale(state.scale / zoom);
+      };
+
+      this._updateRaceInfoHud = () => {
+        const c = this.raceInfoHud;
+        const body = this.carBody;
+        if (!c?.scene || !body?.body?.velocity) return;
+
+        const vx = Number(body.body.velocity.x || 0);
+        const vy = Number(body.body.velocity.y || 0);
+        const pxPerSec = Math.hypot(vx, vy);
+        const kmh = Math.max(0, pxPerSec * 0.185);
+
+        c._speedText?.setText(String(Math.round(kmh)).padStart(3, '0'));
+
+        const rot = Number(body.rotation || 0);
+        const forwardSpeed = vx * Math.cos(rot) + vy * Math.sin(rot);
+
+        let gear = 'N';
+        if (forwardSpeed < -3) gear = 'R';
+        else if (kmh >= 3 && kmh < 35) gear = '1';
+        else if (kmh < 65) gear = kmh >= 3 ? '2' : 'N';
+        else if (kmh < 95) gear = '3';
+        else if (kmh < 125) gear = '4';
+        else gear = '5';
+        c._gearText?.setText(gear);
+
+        const surf = this._surface || 'TRACK';
+        if (surf === 'GRASS') {
+          c._surfaceText?.setText('CÉSPED').setColor('#FFD56A');
+        } else if (surf === 'OFF') {
+          c._surfaceText?.setText('FUERA').setColor('#FF7373');
+        } else {
+          c._surfaceText?.setText('PISTA').setColor('#70FFB0');
         }
       };
 
@@ -184,24 +336,40 @@ export class RaceScene extends OriginalRaceScene {
         }
       };
 
+      this._buildRaceInfoHud();
       this._discoverFixedHud();
       this._pinHudToScreen();
       this._pinMinimapMarker();
+      this._pinRaceInfoHud();
+      this._updateRaceInfoHud();
+
+      this.scale.off('resize', this._onResizeRaceInfoHud);
+      this._onResizeRaceInfoHud = () => {
+        this._layoutRaceInfoHud?.();
+        this._pinRaceInfoHud?.();
+      };
+      this.scale.on('resize', this._onResizeRaceInfoHud);
 
       this.time.delayedCall(0, () => {
         this._discoverFixedHud?.();
         this._pinHudToScreen?.();
         this._pinMinimapMarker?.();
+        this._layoutRaceInfoHud?.();
+        this._pinRaceInfoHud?.();
       });
       this.time.delayedCall(250, () => {
         this._discoverFixedHud?.();
         this._pinHudToScreen?.();
         this._pinMinimapMarker?.();
+        this._layoutRaceInfoHud?.();
+        this._pinRaceInfoHud?.();
       });
       this.time.delayedCall(1000, () => {
         this._discoverFixedHud?.();
         this._pinHudToScreen?.();
         this._pinMinimapMarker?.();
+        this._layoutRaceInfoHud?.();
+        this._pinRaceInfoHud?.();
       });
     } catch (err) {
       console.warn('[TDR2] Single-camera HUD setup failed', err);
@@ -223,6 +391,8 @@ export class RaceScene extends OriginalRaceScene {
       this._discoverFixedHud?.();
       this._pinHudToScreen?.();
       this._pinMinimapMarker?.();
+      this._pinRaceInfoHud?.();
+      this._updateRaceInfoHud?.();
     } catch (err) {
       console.warn('[TDR2] Race camera/HUD pinning failed', err);
     }
