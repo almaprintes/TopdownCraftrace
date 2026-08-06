@@ -28,6 +28,27 @@ function normalizeCenterline(centerline, fallbackWidth = 80) {
   }).filter(Boolean);
 }
 
+function makeFinishLineFromStart(start, trackWidth) {
+  const x = Number(start?.x);
+  const y = Number(start?.y);
+  const r = Number(start?.r);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r)) return null;
+
+  // La meta cruza perpendicularmente la dirección de marcha en el punto START.
+  // Se genera en runtime para no depender de metadatos antiguos del editor.
+  const half = Math.max(36, Number(trackWidth) * 0.56);
+  const px = -Math.sin(r);
+  const py = Math.cos(r);
+  const nx = Math.cos(r);
+  const ny = Math.sin(r);
+
+  return {
+    a: { x: x - px * half, y: y - py * half },
+    b: { x: x + px * half, y: y + py * half },
+    normal: { x: nx, y: ny }
+  };
+}
+
 function buildRegistry() {
   const out = {};
 
@@ -40,6 +61,7 @@ function buildRegistry() {
 
     const slug = m[1];
     const fallbackWidth = Number(json.trackWidth) || 80;
+    const start = json.start || { x: 400, y: 400, r: 0 };
 
     out[slug] = {
       id: slug,
@@ -56,17 +78,17 @@ function buildRegistry() {
       sampleStepPx: Number(json.sampleStepPx) || 12,
       cellSize: Number(json.cellSize) || 400,
       shoulderPx: Number(json.shoulderPx) || 10,
-      start: json.start || { x: 400, y: 400, r: 0 },
+      start,
       centerline: normalizeCenterline(json.centerline, fallbackWidth),
       closed: json.closed !== false,
 
-      // Metadatos de carrera exportados por Track Studio.
-      // Antes se descartaban aquí, así que la carrera perdía meta/checkpoints
-      // aunque existieran correctamente en el track.json.
-      finishLine: json.finishLine ? clone(json.finishLine) : null,
-      finish: json.finish ? clone(json.finish) : null,
-      checkpoints: Array.isArray(json.checkpoints) ? clone(json.checkpoints) : [],
-      grid: json.grid ? clone(json.grid) : null
+      // La meta debe corresponder al punto de salida usado por la carrera.
+      // Los finish/checkpoints/grid guardados en este JSON pertenecen a una
+      // versión anterior del editor y no deben sustituir la geometría runtime.
+      finishLine: makeFinishLineFromStart(start, fallbackWidth),
+      finish: null,
+      checkpoints: [],
+      grid: null
     };
   }
 
