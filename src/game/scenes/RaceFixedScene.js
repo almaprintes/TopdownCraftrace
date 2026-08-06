@@ -1,7 +1,7 @@
 import { RaceScene as OriginalRaceScene } from './RaceScene.js';
 
-// Diagnóstico final antes de corregir: cámara y texturas existen.
-// Medimos selección de coche, tamaño real y filtros de los objetos de mundo.
+// Diagnóstico/corrección aislada de RaceScene.
+// Mantiene la lógica original de físicas y zoom dinámico, y protege el follow al coche.
 export class RaceScene extends OriginalRaceScene {
   create() {
     super.create();
@@ -11,7 +11,25 @@ export class RaceScene extends OriginalRaceScene {
       if (main) {
         main.setVisible(true);
         main.setAlpha(1);
+
+        if (this.carBody) {
+          main.startFollow(this.carBody, true, 0.12, 0.12);
+          main.centerOn(this.carBody.x, this.carBody.y);
+
+          // iOS/reentrada: reforzar el enganche cuando ya ha pasado al menos un tick.
+          this.time.delayedCall(0, () => {
+            if (!this.carBody?.scene) return;
+            main.startFollow(this.carBody, true, 0.12, 0.12);
+            main.centerOn(this.carBody.x, this.carBody.y);
+          });
+          this.time.delayedCall(250, () => {
+            if (!this.carBody?.scene) return;
+            main.startFollow(this.carBody, true, 0.12, 0.12);
+          });
+        }
       }
+
+      // Seguimos con la UI camera apagada mientras aislamos el fallo de render de texturas.
       if (this.uiCam) this.uiCam.setVisible(false);
 
       const cx = Number(this.carBody?.x ?? this.car?.x ?? 400);
@@ -62,7 +80,19 @@ export class RaceScene extends OriginalRaceScene {
         }
       }
     } catch (err) {
-      console.warn('[TDR2] Final world diagnostic failed', err);
+      console.warn('[TDR2] Race diagnostic/follow patch failed', err);
     }
+  }
+
+  update(time, delta) {
+    super.update(time, delta);
+
+    // Protección: si cualquier rutina corta el follow, reenganchar sin tocar el zoom dinámico.
+    try {
+      const main = this.cameras?.main;
+      if (main && this.carBody?.scene && main._follow !== this.carBody) {
+        main.startFollow(this.carBody, true, 0.12, 0.12);
+      }
+    } catch {}
   }
 }
