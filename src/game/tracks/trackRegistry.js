@@ -58,7 +58,15 @@ function buildRegistry() {
       shoulderPx: Number(json.shoulderPx) || 10,
       start: json.start || { x: 400, y: 400, r: 0 },
       centerline: normalizeCenterline(json.centerline, fallbackWidth),
-      closed: json.closed !== false
+      closed: json.closed !== false,
+
+      // Metadatos de carrera exportados por Track Studio.
+      // Antes se descartaban aquí, así que la carrera perdía meta/checkpoints
+      // aunque existieran correctamente en el track.json.
+      finishLine: json.finishLine ? clone(json.finishLine) : null,
+      finish: json.finish ? clone(json.finish) : null,
+      checkpoints: Array.isArray(json.checkpoints) ? clone(json.checkpoints) : [],
+      grid: json.grid ? clone(json.grid) : null
     };
   }
 
