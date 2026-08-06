@@ -104,34 +104,17 @@ function __wakeGame() {
 }
 
 function __hideLegacyPedalVisuals(race) {
-  if (!race?.children?.list) return;
+  const list = race?.touchUI?.list;
+  if (!Array.isArray(list) || list.length < 6) return;
 
-  const texts = race.children.list.filter((obj) => {
-    const value = String(obj?.text ?? '').trim().toUpperCase();
-    return value === 'GAS' || value === 'FRENO';
-  });
-
-  for (const text of texts) {
-    try { text.setAlpha?.(0); } catch {}
-
-    const tx = Number(text?.x);
-    const ty = Number(text?.y);
-    if (!Number.isFinite(tx) || !Number.isFinite(ty)) continue;
-
-    for (const obj of race.children.list) {
-      if (!obj || obj === text) continue;
-      const ox = Number(obj?.x);
-      const oy = Number(obj?.y);
-      const w = Number(obj?.displayWidth ?? obj?.width ?? 0);
-      const h = Number(obj?.displayHeight ?? obj?.height ?? 0);
-      if (!Number.isFinite(ox) || !Number.isFinite(oy)) continue;
-
-      const close = Math.abs(ox - tx) < 90 && Math.abs(oy - ty) < 70;
-      const looksLikeLegacyButton = close && w > 120 && h > 45 && w < 420 && h < 180;
-      if (looksLikeLegacyButton) {
-        try { obj.setAlpha?.(0); } catch {}
-      }
-    }
+  // createTouchControls() añade siempre en este orden:
+  // [joystickBase, joystickKnob, gasBg, gasText, brakeBg, brakeText]
+  // El input real NO usa estos objetos: usa hit-tests por coordenadas.
+  for (let i = 2; i <= 5; i++) {
+    const obj = list[i];
+    if (!obj) continue;
+    try { obj.setVisible?.(false); } catch {}
+    try { obj.setAlpha?.(0); } catch {}
   }
 }
 
