@@ -56,7 +56,6 @@ function registerServiceWorker() {
     try {
       const reg = await navigator.serviceWorker.register('./sw.js');
 
-      // Si hay un SW nuevo esperando, lo activamos y recargamos una vez
       if (reg.waiting) {
         reg.waiting.postMessage({ type: 'SKIP_WAITING' });
       }
@@ -72,7 +71,6 @@ function registerServiceWorker() {
       });
 
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        // Recarga dura tras activar el nuevo SW
         window.location.reload();
       });
     } catch (e) {
@@ -105,26 +103,184 @@ function __wakeGame() {
   try { __game?.loop?.wake?.(); } catch {}
 }
 
+// =========================================================
+// RACE PEDALS v2 — capa visual, el input Phaser queda intacto
+// =========================================================
+function __installRacePedalVisuals() {
+  if (document.getElementById('tdr-race-pedals')) return;
+
+  const style = document.createElement('style');
+  style.textContent = `
+    #tdr-race-pedals {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      pointer-events: none;
+      display: none;
+      font-family: Orbitron, system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+
+    .tdr-pedal {
+      --accent: #55ff9d;
+      --level: 0;
+      position: absolute;
+      right: max(18px, 1.8vw);
+      width: clamp(168px, 19vw, 340px);
+      height: clamp(78px, 16.5vh, 124px);
+      box-sizing: border-box;
+      overflow: hidden;
+      clip-path: polygon(8% 0, 100% 0, 94% 100%, 0 100%);
+      border: 1px solid color-mix(in srgb, var(--accent) 52%, white 8%);
+      background:
+        linear-gradient(115deg, rgba(255,255,255,.07), transparent 30%),
+        linear-gradient(180deg, rgba(16,27,34,.91), rgba(4,10,15,.88));
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.12),
+        inset 0 -18px 34px rgba(0,0,0,.25),
+        0 0 0 1px rgba(0,0,0,.28),
+        0 8px 22px rgba(0,0,0,.18);
+      transition: filter 80ms linear, transform 80ms linear;
+      transform: translateZ(0);
+    }
+
+    .tdr-pedal::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      transform-origin: 50% 100%;
+      transform: scaleY(calc(.10 + var(--level) * .90));
+      background: linear-gradient(0deg,
+        color-mix(in srgb, var(--accent) 34%, transparent),
+        color-mix(in srgb, var(--accent) 5%, transparent) 62%,
+        transparent 100%);
+      opacity: calc(.30 + var(--level) * .70);
+    }
+
+    .tdr-pedal::after {
+      content: '';
+      position: absolute;
+      left: 10%;
+      right: 6%;
+      top: 10px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: calc(.42 + var(--level) * .58);
+      box-shadow: 0 0 calc(5px + var(--level) * 11px) var(--accent);
+    }
+
+    .tdr-pedal-gas { bottom: calc(max(18px, 2.8vh) + clamp(90px, 18vh, 135px)); }
+    .tdr-pedal-brake { --accent: #ff5e73; bottom: max(18px, 2.8vh); }
+
+    .tdr-pedal-inner {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transform: skewX(-2deg);
+    }
+
+    .tdr-pedal-icon {
+      width: 24px;
+      height: 44%;
+      border-left: 3px solid var(--accent);
+      border-right: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      opacity: .85;
+      transform: skewX(-7deg);
+      box-shadow: -4px 0 10px color-mix(in srgb, var(--accent) 28%, transparent);
+    }
+
+    .tdr-pedal-copy { display: flex; flex-direction: column; line-height: 1; }
+    .tdr-pedal-label {
+      color: white;
+      font-size: clamp(24px, 2.5vw, 42px);
+      font-weight: 900;
+      letter-spacing: .02em;
+      text-shadow: 0 2px 3px #000, 0 0 12px color-mix(in srgb, var(--accent) 34%, transparent);
+    }
+    .tdr-pedal-sub {
+      margin-top: 7px;
+      color: color-mix(in srgb, var(--accent) 72%, white 10%);
+      font-size: clamp(7px, .7vw, 11px);
+      font-weight: 800;
+      letter-spacing: .18em;
+      opacity: .78;
+    }
+
+    .tdr-pedal.is-active {
+      filter: brightness(1.25) saturate(1.16);
+      transform: translateY(2px) scale(.985);
+    }
+  `;
+  document.head.appendChild(style);
+
+  const root = document.createElement('div');
+  root.id = 'tdr-race-pedals';
+  root.innerHTML = `
+    <div class="tdr-pedal tdr-pedal-gas" data-pedal="gas">
+      <div class="tdr-pedal-inner">
+        <div class="tdr-pedal-icon"></div>
+        <div class="tdr-pedal-copy">
+          <div class="tdr-pedal-label">GAS</div>
+          <div class="tdr-pedal-sub">ACELERADOR</div>
+        </div>
+      </div>
+    </div>
+    <div class="tdr-pedal tdr-pedal-brake" data-pedal="brake">
+      <div class="tdr-pedal-inner">
+        <div class="tdr-pedal-icon"></div>
+        <div class="tdr-pedal-copy">
+          <div class="tdr-pedal-label">FRENO</div>
+          <div class="tdr-pedal-sub">BRAKE</div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(root);
+
+  const gas = root.querySelector('[data-pedal="gas"]');
+  const brake = root.querySelector('[data-pedal="brake"]');
+
+  const tick = () => {
+    try {
+      const race = __game?.scene?.getScene?.('race');
+      const active = !!race?.sys?.isActive?.();
+      root.style.display = active && __isLandscape() ? 'block' : 'none';
+
+      if (active) {
+        const throttle = Math.max(0, Math.min(1, Number(race?.touch?.throttle || 0)));
+        const braking = Math.max(0, Math.min(1, Number(race?.touch?.brake || 0)));
+
+        gas?.style.setProperty('--level', String(throttle));
+        brake?.style.setProperty('--level', String(braking));
+        gas?.classList.toggle('is-active', throttle > .12);
+        brake?.classList.toggle('is-active', braking > .12);
+      }
+    } catch {}
+    requestAnimationFrame(tick);
+  };
+
+  requestAnimationFrame(tick);
+}
+
 function __tickOrientation() {
   const landscape = __isLandscape();
 
-  // Overlay
   __setOverlayVisible(!landscape);
 
-  // Arranque diferido
   if (landscape && !__game) {
     __game = createGame('app');
+    __installRacePedalVisuals();
     return;
   }
 
-  // Si ya existe, dormimos/despertamos el loop
   if (__game) {
     if (landscape) __wakeGame();
     else __sleepGame();
   }
 }
 
-// Primer chequeo + eventos
 __tickOrientation();
 window.addEventListener('resize', __tickOrientation);
 window.addEventListener('orientationchange', __tickOrientation);
