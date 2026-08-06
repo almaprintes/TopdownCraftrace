@@ -2,7 +2,7 @@ import { RaceScene as StableRaceScene } from './RaceFixedScene.js';
 
 // Capa visual v2 del HUD inferior.
 // Mantiene intacta toda la lógica estable de RaceFixedScene y solo sustituye
-// la presentación de velocidad / marcha / superficie.
+// presentación de HUD y marcadores visuales de pista.
 export class RaceScene extends StableRaceScene {
   create() {
     super.create();
@@ -15,6 +15,184 @@ export class RaceScene extends StableRaceScene {
       const main = this.cameras?.main;
       if (!main) return;
 
+      // =========================================================
+      // MARCAS DE PISTA v2 — solo visual, lógica intacta
+      // =========================================================
+      // Apagamos los gráficos provisionales originales. Las puertas lógicas
+      // this.finishLine / this.checkpoints siguen siendo exactamente las mismas.
+      for (const obj of [this.finishLineDebug, this.finishGfx, this.cpGfx]) {
+        if (obj?.scene) obj.setVisible(false);
+      }
+
+      const centerline = (
+        this.track?.geom?.center ||
+        this.track?.meta?.centerline ||
+        []
+      );
+
+      const ptXY = (p) => {
+        if (!p) return null;
+        if (Array.isArray(p) && p.length >= 2) {
+          return { x: Number(p[0]), y: Number(p[1]), width: Number(p[2]) };
+        }
+        if (Number.isFinite(Number(p.x)) && Number.isFinite(Number(p.y))) {
+          return { x: Number(p.x), y: Number(p.y), width: Number(p.width) };
+        }
+        return null;
+      };
+
+      const localTrackWidth = (x, y) => {
+        let bestD2 = Infinity;
+        let bestW = Number(this.track?.meta?.trackWidth || 160);
+        for (const raw of centerline || []) {
+          const p = ptXY(raw);
+          if (!p) continue;
+          const dx = p.x - x;
+          const dy = p.y - y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < bestD2) {
+            bestD2 = d2;
+            if (Number.isFinite(p.width) && p.width > 20) bestW = p.width;
+          }
+        }
+        return Math.max(50, bestW);
+      };
+
+      const gateFrame = (gate, insetRatio = 0.055) => {
+        if (!gate?.a || !gate?.b) return null;
+        const mx = (Number(gate.a.x) + Number(gate.b.x)) * 0.5;
+        const my = (Number(gate.a.y) + Number(gate.b.y)) * 0.5;
+        const gx = Number(gate.b.x) - Number(gate.a.x);
+        const gy = Number(gate.b.y) - Number(gate.a.y);
+        const gl = Math.hypot(gx, gy) || 1;
+        const ux = gx / gl;
+        const uy = gy / gl;
+        const width = localTrackWidth(mx, my);
+        const half = Math.max(22, width * (0.5 - insetRatio));
+        return { mx, my, ux, uy, nx: -uy, ny: ux, width, half };
+      };
+
+      // Meta: damero de dos filas, fino y contenido dentro del asfalto.
+      const drawFinish = () => {
+        const f = gateFrame(this.finishLine, 0.055);
+        if (!f) return null;
+
+        const g = this.add.graphics().setDepth(17.6).setScrollFactor(1);
+        const cols = Math.max(10, Math.round(f.width / 13));
+        const rows = 2;
+        const full = f.half * 2;
+        const cellW = full / cols;
+        const bandHalf = Math.max(5.5, Math.min(8.5, f.width * 0.045));
+        const rowH = (bandHalf * 2) / rows;
+
+        // Sombra/desgaste mínimo: parece pintura asentada sobre asfalto.
+        g.lineStyle(1, 0x000000, 0.18);
+        g.beginPath();
+        g.moveTo(f.mx - f.ux * f.half, f.my - f.uy * f.half);
+        g.lineTo(f.mx + f.ux * f.half, f.my + f.uy * f.half);
+        g.strokePath();
+
+        for (let c = 0; c < cols; c++) {
+          const s0 = -f.half + c * cellW;
+          const s1 = s0 + cellW;
+          for (let r = 0; r < rows; r++) {
+            const n0 = -bandHalf + r * rowH;
+            const n1 = n0 + rowH;
+            const col = ((c + r) % 2 === 0) ? 0xf1f1ed : 0x17191b;
+            const alpha = ((c + r) % 2 === 0) ? 0.90 : 0.82;
+
+            const p1 = { x: f.mx + f.ux * s0 + f.nx * n0, y: f.my + f.uy * s0 + f.ny * n0 };
+            const p2 = { x: f.mx + f.ux * s1 + f.nx * n0, y: f.my + f.uy * s1 + f.ny * n0 };
+            const p3 = { x: f.mx + f.ux * s1 + f.nx * n1, y: f.my + f.uy * s1 + f.ny * n1 };
+            const p4 = { x: f.mx + f.ux * s0 + f.nx * n1, y: f.my + f.uy * s0 + f.ny * n1 };
+
+            g.fillStyle(col, alpha);
+            g.beginPath();
+            g.moveTo(p1.x, p1.y);
+            g.lineTo(p2.x, p2.y);
+            g.lineTo(p3.x, p3.y);
+            g.lineTo(p4.x, p4.y);
+            g.closePath();
+            g.fillPath();
+          }
+        }
+
+        if (typeof g.cameraFilter === 'number') g.cameraFilter &= ~main.id;
+        this.uiCam?.ignore?.(g);
+        return g;
+      };
+
+      // CP: puerta lógica invisible; visualmente solo dos marcas laterales
+      // y una referencia transversal casi imperceptible.
+      const drawSector = (gate, color) => {
+        const f = gateFrame(gate, 0.07);
+        if (!f) return null;
+
+        const g = this.add.graphics().setDepth(17.4).setScrollFactor(1);
+        const edgeLen = Math.max(13, Math.min(24, f.width * 0.13));
+        const innerHalf = Math.max(12, f.half - edgeLen);
+
+        // guía central muy tenue
+        g.lineStyle(1, color, 0.10);
+        g.beginPath();
+        g.moveTo(f.mx - f.ux * innerHalf, f.my - f.uy * innerHalf);
+        g.lineTo(f.mx + f.ux * innerHalf, f.my + f.uy * innerHalf);
+        g.strokePath();
+
+        // marcas laterales con doble trazo corto tipo pintura de sector
+        for (const side of [-1, 1]) {
+          const outer = side * f.half;
+          const inner = side * (f.half - edgeLen);
+          const ox = f.mx + f.ux * outer;
+          const oy = f.my + f.uy * outer;
+          const ix = f.mx + f.ux * inner;
+          const iy = f.my + f.uy * inner;
+
+          g.lineStyle(4, color, 0.54);
+          g.beginPath();
+          g.moveTo(ox, oy);
+          g.lineTo(ix, iy);
+          g.strokePath();
+
+          const offset = 5;
+          g.lineStyle(1.5, 0xffffff, 0.30);
+          g.beginPath();
+          g.moveTo(ox + f.nx * offset, oy + f.ny * offset);
+          g.lineTo(ix + f.nx * offset, iy + f.ny * offset);
+          g.strokePath();
+        }
+
+        g.setAlpha(0.72);
+        if (typeof g.cameraFilter === 'number') g.cameraFilter &= ~main.id;
+        this.uiCam?.ignore?.(g);
+        return g;
+      };
+
+      this.finishIntegratedGfx?.destroy?.();
+      this.cp1IntegratedGfx?.destroy?.();
+      this.cp2IntegratedGfx?.destroy?.();
+
+      this.finishIntegratedGfx = drawFinish();
+      this.cp1IntegratedGfx = drawSector(this.checkpoints?.cp1, 0xffd86a);
+      this.cp2IntegratedGfx = drawSector(this.checkpoints?.cp2, 0x67e6ff);
+      this._styledPrevCpState = Number(this._cpState || 0);
+
+      this._flashSectorMarker = (idx) => {
+        const target = idx === 1 ? this.cp1IntegratedGfx : this.cp2IntegratedGfx;
+        if (!target?.scene) return;
+        this.tweens.killTweensOf(target);
+        target.setAlpha(1);
+        this.tweens.add({
+          targets: target,
+          alpha: 0.72,
+          duration: 420,
+          ease: 'Sine.easeOut'
+        });
+      };
+
+      // =========================================================
+      // HUD INFERIOR v2
+      // =========================================================
       const W = 356;
       const H = 62;
       const c = this.add.container(0, 0).setDepth(2190);
@@ -153,11 +331,19 @@ export class RaceScene extends StableRaceScene {
   }
 
   update(time, delta) {
+    const cpBefore = Number(this._cpState || 0);
     super.update(time, delta);
 
     try {
       this._pinRaceInfoHudV2?.();
       this._syncRaceInfoHudV2?.();
+
+      const cpAfter = Number(this._cpState || 0);
+      if (cpAfter !== cpBefore) {
+        if (cpAfter === 1) this._flashSectorMarker?.(1);
+        if (cpAfter === 2) this._flashSectorMarker?.(2);
+      }
+      this._styledPrevCpState = cpAfter;
     } catch (err) {
       console.warn('[TDR2] Styled race HUD update failed', err);
     }
