@@ -167,8 +167,8 @@ export class RaceScene extends OriginalRaceScene {
         car.setPosition(world.x, world.y);
         car.rotation = body.rotation + (this._carVisualRotOffset || 0);
 
-        const targetW = 20;
-        const targetH = 8;
+        const targetW = 27;
+        const targetH = 10.8;
         const sw = car.width || 1;
         const sh = car.height || 1;
         const baseScale = Math.min(targetW / sw, targetH / sh);
