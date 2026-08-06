@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: topdown-pages-build
+  cancel-in-progress: false
+
 jobs:
   build:
     if: github.actor != 'github-actions[bot]'
@@ -34,6 +38,11 @@ jobs:
         env:
           BASE: /TopdownCraftrace/
         run: npm run build
+
+      - name: Wait for branch Pages deployment
+        run: |
+          echo "Waiting for the automatic Pages deployment triggered by the source commit to finish..."
+          sleep 75
 
       - name: Publish build to main root
         shell: bash
