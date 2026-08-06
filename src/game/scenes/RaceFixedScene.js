@@ -1,53 +1,49 @@
 import { RaceScene as OriginalRaceScene } from './RaceScene.js';
 
-// Parche aislado de diagnóstico/corrección.
-// La lógica de físicas y el zoom dinámico siguen viviendo en RaceScene original.
+// Corrección estable de carrera para iOS/Pages:
+// - una única cámara visible evita que la cámara UI tape el mundo en negro
+// - la cámara principal dibuja también el HUD (los elementos UI ya usan scrollFactor 0)
+// - seguimiento manual conserva el zoom dinámico original
 export class RaceScene extends OriginalRaceScene {
   create() {
     super.create();
 
     try {
       const main = this.cameras?.main;
-      if (main) {
-        main.setVisible(true);
-        main.setAlpha(1);
-      }
+      if (!main) return;
 
-      // Mientras aislamos el mundo dejamos la UI camera fuera de la ecuación.
+      main.setVisible(true);
+      main.setAlpha(1);
+
+      // La segunda cámara provocaba el framebuffer negro en iOS/Safari.
+      // La dejamos fuera y usamos la principal para mundo + HUD.
       if (this.uiCam) this.uiCam.setVisible(false);
 
-      const cx = Number(this.carBody?.x ?? this.car?.x ?? 400);
-      const cy = Number(this.carBody?.y ?? this.car?.y ?? 400);
-
-      // Proxy visual del coche: seguirá SIEMPRE la posición física real.
-      this._worldProbe = this.add.rectangle(cx, cy, 42, 42, 0xff00ff, 1)
-        .setDepth(999999)
-        .setScrollFactor(1);
-
-      const carSprite = this.carRig?.list?.[0] || null;
-      const fmt = (n) => Number.isFinite(Number(n)) ? Number(n).toFixed(2) : '-';
-      const keyOf = (o) => o?.texture?.key || o?.frame?.texture?.key || '-';
-
-      this._worldInfo = this.add.text(cx + 34, cy - 70,
-        `carId:${this.carId ?? '-'}\n` +
-        `sprite:${keyOf(carSprite)} vis:${carSprite?.visible === false ? 'N' : 'Y'} a:${fmt(carSprite?.alpha)}\n` +
-        `CAM MANUAL FOLLOW TEST`, {
-          fontFamily: 'monospace',
-          fontSize: '13px',
-          color: '#ff00ff',
-          backgroundColor: '#ffffff',
-          padding: { x: 6, y: 4 }
-        })
-        .setDepth(999999)
-        .setScrollFactor(1);
-
-      if (main?.id) {
-        for (const obj of [this._worldProbe, this._worldInfo]) {
-          if (obj && typeof obj.cameraFilter === 'number') obj.cameraFilter &= ~main.id;
+      // RaceScene original separaba mundo/UI mediante cameraFilter.
+      // Al usar una sola cámara debemos permitir que main dibuje todo.
+      const allowMain = (obj) => {
+        if (!obj) return;
+        if (typeof obj.cameraFilter === 'number') {
+          obj.cameraFilter &= ~main.id;
         }
-      }
+
+        const children = obj.list || obj.getAll?.();
+        if (Array.isArray(children)) {
+          for (const child of children) allowMain(child);
+        }
+      };
+
+      for (const obj of this.children?.list || []) allowMain(obj);
+
+      // Reaplicar una vez después de que callbacks diferidos creen HUD/semáforo.
+      this.time.delayedCall(0, () => {
+        for (const obj of this.children?.list || []) allowMain(obj);
+      });
+      this.time.delayedCall(300, () => {
+        for (const obj of this.children?.list || []) allowMain(obj);
+      });
     } catch (err) {
-      console.warn('[TDR2] Manual camera diagnostic create failed', err);
+      console.warn('[TDR2] Single-camera race setup failed', err);
     }
   }
 
@@ -59,21 +55,31 @@ export class RaceScene extends OriginalRaceScene {
       const main = this.cameras?.main;
       if (!body?.scene || !main) return;
 
-      // El proxy se mueve con el coche físico real.
-      if (this._worldProbe?.scene) {
-        this._worldProbe.setPosition(body.x, body.y);
-      }
-      if (this._worldInfo?.scene) {
-        this._worldInfo.setPosition(body.x + 34, body.y - 70);
-      }
-
-      // Seguimiento determinista: no depende de Phaser startFollow().
-      // El zoom dinámico ya ha sido calculado por super.update().
+      // Seguimiento determinista. El zoom dinámico se calcula en super.update().
       if (!this._mapZoomOn) {
         main.centerOn(body.x, body.y);
       }
+
+      // Si algún bloque original vuelve a marcar UI para ignorar main,
+      // lo corregimos solo para objetos fijos (HUD/controles/modal).
+      const restoreFixedUi = (obj, parentFixed = false) => {
+        if (!obj) return;
+        const fixed = parentFixed ||
+          (obj.scrollFactorX === 0 && obj.scrollFactorY === 0);
+
+        if (fixed && typeof obj.cameraFilter === 'number') {
+          obj.cameraFilter &= ~main.id;
+        }
+
+        const children = obj.list || obj.getAll?.();
+        if (Array.isArray(children)) {
+          for (const child of children) restoreFixedUi(child, fixed);
+        }
+      };
+
+      for (const obj of this.children?.list || []) restoreFixedUi(obj, false);
     } catch (err) {
-      console.warn('[TDR2] Manual camera follow failed', err);
+      console.warn('[TDR2] Single-camera race follow failed', err);
     }
   }
 }
