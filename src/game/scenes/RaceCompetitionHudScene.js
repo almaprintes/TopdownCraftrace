@@ -79,7 +79,6 @@ export class RaceScene extends StyledRaceScene {
       const s2 = this.add.text(48, 42, 'S2 —', sectorStyle).setOrigin(0, 0);
       const s3 = this.add.text(86, 42, 'S3 —', sectorStyle).setOrigin(0, 0);
 
-      // LAST/BEST se colocan a la derecha para no aumentar altura ni invadir MENU.
       const timingSep = this.add.rectangle(127, 4, 1, 48, 0xffffff, 0.12)
         .setOrigin(0, 0);
 
@@ -98,10 +97,11 @@ export class RaceScene extends StyledRaceScene {
         fontSize: '8px', fontStyle: '800', color: '#7E8D9A'
       }).setOrigin(0, 0);
 
+      // BEST debe destacar por color, no por un halo que emborrona los dígitos.
       const bestText = this.add.text(139, 43, '--:--.--', {
         fontFamily: 'Orbitron, system-ui, sans-serif',
         fontSize: '12px', fontStyle: '900', color: '#63FFD1'
-      }).setOrigin(0, 0).setShadow(0, 0, '#39FF9A', 4, true, true);
+      }).setOrigin(0, 0).setShadow(0, 1, '#001610', 1.5, false, true);
 
       c.add([
         accent,
@@ -210,7 +210,6 @@ export class RaceScene extends StyledRaceScene {
         this._competitionLastDeltaMs = deltaMs;
         this._setCompetitionDelta(deltaMs);
 
-        // Datos reales persistentes del Time Trial.
         const hist = Array.isArray(this.ttHistory) ? this.ttHistory : [];
         const histLast = hist.length ? Number(hist[hist.length - 1]?.lapMs) : NaN;
         const lastMs = Number.isFinite(Number(this.timing?.lastLap))
@@ -223,31 +222,31 @@ export class RaceScene extends StyledRaceScene {
       };
 
       // =========================================================
-      // MINIMAPA SPORT — marco integrado detrás del minimapa existente
+      // MINIMAPA SPORT — marco integrado, compacto y sin invadir pedales
       // =========================================================
       const mapFrame = this.add.container(0, 0).setDepth(1998);
       this.minimapSportFrame = mapFrame;
 
-      const mapW = 150;
-      const mapH = 108;
-      const mapBg = this.add.rectangle(0, 0, mapW, mapH, 0x07111a, 0.36)
+      // Más ajustado que v1: acompaña al mapa sin bajar hacia GAS.
+      const mapW = 142;
+      const mapH = 96;
+      const mapBg = this.add.rectangle(0, 0, mapW, mapH, 0x07111a, 0.30)
         .setOrigin(0, 0)
-        .setStrokeStyle(1, 0x7FD8FF, 0.24);
-      const mapTop = this.add.rectangle(8, 5, mapW - 16, 1, 0x68D7FF, 0.52)
+        .setStrokeStyle(1, 0x7FD8FF, 0.20);
+      const mapTop = this.add.rectangle(7, 5, mapW - 14, 1, 0x68D7FF, 0.46)
         .setOrigin(0, 0);
-      const mapGlow = this.add.rectangle(mapW * 0.5 - 28, 5, 56, 2, 0x9BE9FF, 0.18)
+      const mapGlow = this.add.rectangle(mapW * 0.5 - 24, 5, 48, 1, 0x9BE9FF, 0.14)
         .setOrigin(0, 0);
 
-      // Esquinas técnicas muy discretas: hacen que el mapa parezca integrado,
-      // sin añadir texto ni tapar el trazado.
       const corners = this.add.graphics();
-      corners.lineStyle(2, 0x7FD8FF, 0.34);
-      const k = 12;
+      corners.lineStyle(2, 0x7FD8FF, 0.28);
+      const k = 10;
       corners.beginPath();
       corners.moveTo(0, k); corners.lineTo(0, 0); corners.lineTo(k, 0);
       corners.moveTo(mapW - k, 0); corners.lineTo(mapW, 0); corners.lineTo(mapW, k);
-      corners.moveTo(0, mapH - k); corners.lineTo(0, mapH); corners.lineTo(k, mapH);
-      corners.moveTo(mapW - k, mapH); corners.lineTo(mapW, mapH); corners.lineTo(mapW, mapH - k);
+      // Las esquinas inferiores son más cortas para no competir visualmente con GAS.
+      corners.moveTo(0, mapH - 6); corners.lineTo(0, mapH); corners.lineTo(6, mapH);
+      corners.moveTo(mapW - 6, mapH); corners.lineTo(mapW, mapH); corners.lineTo(mapW, mapH - 6);
       corners.strokePath();
 
       mapFrame.add([mapBg, mapTop, mapGlow, corners]);
@@ -259,11 +258,10 @@ export class RaceScene extends StyledRaceScene {
 
       this._layoutMinimapSportFrame = () => {
         const vw = Math.max(1, Number(this.scale?.width || 1));
-        // El minimapa original mide 132x92 y nace en y=54.
-        // El marco deja 9px de respiración alrededor.
         this._minimapSportFrameState = {
-          screenX: vw - 12 - 132 - 9,
-          screenY: 45,
+          // Ajustado alrededor del minimapa original 132x92 y elevado 10 px.
+          screenX: vw - 12 - 132 - 5,
+          screenY: 38,
           scale: 1
         };
       };
@@ -279,7 +277,6 @@ export class RaceScene extends StyledRaceScene {
         frame.setScale(s.scale / zoom);
       };
 
-      // Flash de checkpoint inequívoco.
       this._flashCheckpointGate = (idx) => {
         const gate = idx === 1 ? this.checkpoints?.cp1 : this.checkpoints?.cp2;
         if (!gate?.a || !gate?.b) return;
