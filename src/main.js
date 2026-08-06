@@ -81,7 +81,6 @@ function registerServiceWorker() {
 
 registerServiceWorker();
 
-// --- LANDSCAPE-ONLY gate (no rompe escenas) ---
 let __game = null;
 
 function __isLandscape() {
@@ -103,14 +102,14 @@ function __wakeGame() {
   try { __game?.loop?.wake?.(); } catch {}
 }
 
-function __hideLegacyPedalVisuals(race) {
+function __hideLegacyTouchVisuals(race) {
   const list = race?.touchUI?.list;
   if (!Array.isArray(list) || list.length < 6) return;
 
-  // createTouchControls() añade siempre en este orden:
+  // createTouchControls():
   // [joystickBase, joystickKnob, gasBg, gasText, brakeBg, brakeText]
-  // El input real NO usa estos objetos: usa hit-tests por coordenadas.
-  for (let i = 2; i <= 5; i++) {
+  // El input usa hit-tests y estado, no estos objetos visuales.
+  for (let i = 0; i <= 5; i++) {
     const obj = list[i];
     if (!obj) continue;
     try { obj.setVisible?.(false); } catch {}
@@ -118,15 +117,12 @@ function __hideLegacyPedalVisuals(race) {
   }
 }
 
-// =========================================================
-// RACE PEDALS v2 — capa visual, el input Phaser queda intacto
-// =========================================================
-function __installRacePedalVisuals() {
-  if (document.getElementById('tdr-race-pedals')) return;
+function __installRaceControlVisuals() {
+  if (document.getElementById('tdr-race-controls')) return;
 
   const style = document.createElement('style');
   style.textContent = `
-    #tdr-race-pedals {
+    #tdr-race-controls {
       position: fixed;
       inset: 0;
       z-index: 50;
@@ -227,12 +223,127 @@ function __installRacePedalVisuals() {
       filter: brightness(1.25) saturate(1.16);
       transform: translateY(2px) scale(.985);
     }
+
+    .tdr-stick {
+      --x: 0;
+      --y: 0;
+      --mag: 0;
+      position: absolute;
+      left: max(22px, 2vw);
+      bottom: max(22px, 3vh);
+      width: clamp(142px, 17vw, 190px);
+      aspect-ratio: 1;
+      opacity: .78;
+      transition: opacity 90ms linear;
+      filter: drop-shadow(0 7px 18px rgba(0,0,0,.20));
+    }
+
+    .tdr-stick.is-active { opacity: .98; }
+
+    .tdr-stick-ring,
+    .tdr-stick-core,
+    .tdr-stick-energy {
+      position: absolute;
+      border-radius: 50%;
+      inset: 0;
+      margin: auto;
+    }
+
+    .tdr-stick-ring {
+      width: 84%;
+      height: 84%;
+      border: 3px solid rgba(220,235,255,.30);
+      background:
+        radial-gradient(circle, rgba(20,40,55,.08) 0 54%, transparent 55%),
+        conic-gradient(from -90deg,
+          rgba(110,215,255,calc(.05 + var(--mag) * .15)),
+          transparent 22%, transparent 78%,
+          rgba(110,215,255,calc(.05 + var(--mag) * .15)));
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.055),
+        0 0 14px rgba(100,200,255,.11);
+    }
+
+    .tdr-stick-ring::before,
+    .tdr-stick-ring::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      background: rgba(185,225,255,.12);
+      transform: translate(-50%,-50%);
+    }
+    .tdr-stick-ring::before { width: 62%; height: 1px; }
+    .tdr-stick-ring::after { width: 1px; height: 62%; }
+
+    .tdr-stick-energy {
+      width: 63%;
+      height: 63%;
+      border: 1px solid rgba(115,210,255,calc(.10 + var(--mag) * .28));
+      box-shadow: 0 0 calc(5px + var(--mag) * 10px) rgba(80,190,255,.14);
+      transform: translate(
+        calc(var(--x) * 8px),
+        calc(var(--y) * 8px)
+      );
+      transition: border-color 80ms linear;
+    }
+
+    .tdr-stick-vector {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: calc(var(--mag) * 32%);
+      height: 3px;
+      transform-origin: 0 50%;
+      transform: rotate(calc(atan2(var(--y), var(--x))));
+      background: linear-gradient(90deg, rgba(120,220,255,.08), rgba(120,220,255,.52));
+      box-shadow: 0 0 9px rgba(80,200,255,.24);
+      opacity: calc(var(--mag) * .9);
+      border-radius: 2px;
+    }
+
+    .tdr-stick-knob {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: clamp(42px, 5vw, 54px);
+      height: clamp(42px, 5vw, 54px);
+      border-radius: 50%;
+      transform:
+        translate(-50%, -50%)
+        translate(calc(var(--x) * 42px), calc(var(--y) * 42px))
+        scale(calc(1 + var(--mag) * .10));
+      background:
+        radial-gradient(circle at 38% 32%, rgba(255,255,255,.98), rgba(189,232,255,.92) 28%, rgba(67,145,205,.92) 72%, rgba(17,51,78,.98));
+      border: 2px solid rgba(255,255,255,.38);
+      box-shadow:
+        0 4px 14px rgba(0,0,0,.28),
+        0 0 calc(10px + var(--mag) * 10px) rgba(80,190,255,.22),
+        inset 0 1px 2px rgba(255,255,255,.55);
+      transition: box-shadow 80ms linear, transform 90ms ease-out;
+    }
+
+    .tdr-stick-knob::after {
+      content: '';
+      position: absolute;
+      inset: 27%;
+      border-radius: 50%;
+      border: 1px solid rgba(10,55,90,.38);
+      background: rgba(255,255,255,.08);
+    }
   `;
   document.head.appendChild(style);
 
   const root = document.createElement('div');
-  root.id = 'tdr-race-pedals';
+  root.id = 'tdr-race-controls';
   root.innerHTML = `
+    <div class="tdr-stick" data-stick>
+      <div class="tdr-stick-ring"></div>
+      <div class="tdr-stick-core"></div>
+      <div class="tdr-stick-energy"></div>
+      <div class="tdr-stick-vector"></div>
+      <div class="tdr-stick-knob"></div>
+    </div>
     <div class="tdr-pedal tdr-pedal-gas" data-pedal="gas">
       <div class="tdr-pedal-inner">
         <div class="tdr-pedal-icon"></div>
@@ -254,6 +365,7 @@ function __installRacePedalVisuals() {
   `;
   document.body.appendChild(root);
 
+  const stick = root.querySelector('[data-stick]');
   const gas = root.querySelector('[data-pedal="gas"]');
   const brake = root.querySelector('[data-pedal="brake"]');
 
@@ -264,15 +376,22 @@ function __installRacePedalVisuals() {
       root.style.display = active && __isLandscape() ? 'block' : 'none';
 
       if (active) {
-        __hideLegacyPedalVisuals(race);
+        __hideLegacyTouchVisuals(race);
 
         const throttle = Math.max(0, Math.min(1, Number(race?.touch?.throttle || 0)));
         const braking = Math.max(0, Math.min(1, Number(race?.touch?.brake || 0)));
-
         gas?.style.setProperty('--level', String(throttle));
         brake?.style.setProperty('--level', String(braking));
         gas?.classList.toggle('is-active', throttle > .12);
         brake?.classList.toggle('is-active', braking > .12);
+
+        const sx = Math.max(-1, Math.min(1, Number(race?.touch?.stickX || 0)));
+        const sy = Math.max(-1, Math.min(1, Number(race?.touch?.stickY || 0)));
+        const mag = Math.max(0, Math.min(1, Math.hypot(sx, sy)));
+        stick?.style.setProperty('--x', String(sx));
+        stick?.style.setProperty('--y', String(sy));
+        stick?.style.setProperty('--mag', String(mag));
+        stick?.classList.toggle('is-active', !!race?.touch?.leftActive || mag > .04);
       }
     } catch {}
     requestAnimationFrame(tick);
@@ -283,12 +402,11 @@ function __installRacePedalVisuals() {
 
 function __tickOrientation() {
   const landscape = __isLandscape();
-
   __setOverlayVisible(!landscape);
 
   if (landscape && !__game) {
     __game = createGame('app');
-    __installRacePedalVisuals();
+    __installRaceControlVisuals();
     return;
   }
 
