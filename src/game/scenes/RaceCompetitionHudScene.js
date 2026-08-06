@@ -1,7 +1,7 @@
 import { RaceScene as StyledRaceScene } from './RaceStyledHudScene.js';
 
-// HUD de competición: sustituye la antigua barra superior izquierda
-// sin tocar lógica de vueltas, checkpoints, cronómetro ni cámara estable.
+// HUD de competición: capa visual sobre la carrera estable.
+// No altera cronometraje, checkpoints, cámara, minimapa ni física.
 export class RaceScene extends StyledRaceScene {
   create() {
     super.create();
@@ -40,6 +40,9 @@ export class RaceScene extends StyledRaceScene {
         if (obj?.scene) obj.setVisible(false);
       }
 
+      // =========================================================
+      // HUD SPORT — vuelta, delta, sectores, LAST y BEST
+      // =========================================================
       const c = this.add.container(0, 0).setDepth(2210);
       this.competitionHud = c;
 
@@ -76,12 +79,47 @@ export class RaceScene extends StyledRaceScene {
       const s2 = this.add.text(48, 42, 'S2 —', sectorStyle).setOrigin(0, 0);
       const s3 = this.add.text(86, 42, 'S3 —', sectorStyle).setOrigin(0, 0);
 
-      c.add([accent, lapLabel, lap, deltaLabel, deltaText, s1, s2, s3]);
+      // LAST/BEST se colocan a la derecha para no aumentar altura ni invadir MENU.
+      const timingSep = this.add.rectangle(127, 4, 1, 48, 0xffffff, 0.12)
+        .setOrigin(0, 0);
+
+      const lastLabel = this.add.text(139, 1, 'LAST', {
+        fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
+        fontSize: '8px', fontStyle: '800', color: '#7E8D9A'
+      }).setOrigin(0, 0);
+
+      const lastText = this.add.text(139, 12, '--:--.--', {
+        fontFamily: 'Orbitron, system-ui, sans-serif',
+        fontSize: '12px', fontStyle: '800', color: '#EAF4FA'
+      }).setOrigin(0, 0).setShadow(0, 1, '#000000', 2, false, true);
+
+      const bestLabel = this.add.text(139, 32, 'BEST', {
+        fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
+        fontSize: '8px', fontStyle: '800', color: '#7E8D9A'
+      }).setOrigin(0, 0);
+
+      const bestText = this.add.text(139, 43, '--:--.--', {
+        fontFamily: 'Orbitron, system-ui, sans-serif',
+        fontSize: '12px', fontStyle: '900', color: '#63FFD1'
+      }).setOrigin(0, 0).setShadow(0, 0, '#39FF9A', 4, true, true);
+
+      c.add([
+        accent,
+        lapLabel, lap,
+        deltaLabel, deltaText,
+        s1, s2, s3,
+        timingSep,
+        lastLabel, lastText,
+        bestLabel, bestText
+      ]);
+
       c._lap = lap;
       c._delta = deltaText;
       c._s1 = s1;
       c._s2 = s2;
       c._s3 = s3;
+      c._last = lastText;
+      c._best = bestText;
 
       if (typeof c.cameraFilter === 'number') c.cameraFilter &= ~main.id;
       for (const child of c.list || []) {
@@ -104,6 +142,16 @@ export class RaceScene extends StyledRaceScene {
         hud.setScale(s.scale / zoom);
       };
 
+      const fmtLap = (ms) => {
+        if (!Number.isFinite(ms)) return '--:--.--';
+        if (typeof this._fmtTT2 === 'function') return this._fmtTT2(ms);
+        const t = Math.max(0, ms);
+        const m = Math.floor(t / 60000);
+        const s = Math.floor((t % 60000) / 1000);
+        const cs = Math.floor((t % 1000) / 10);
+        return `${m}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+      };
+
       this._setCompetitionDelta = (ms) => {
         const hud = this.competitionHud;
         if (!hud?._delta?.scene) return;
@@ -120,18 +168,19 @@ export class RaceScene extends StyledRaceScene {
 
       const setSectorState = (obj, done, active) => {
         if (!obj?.scene) return;
+        const key = obj.text.slice(0, 2);
         if (done) {
-          obj.setText(`${obj.text.slice(0, 2)} ✓`);
+          obj.setText(`${key} ✓`);
           obj.setColor('#39FF6A');
           obj.setShadow(0, 0, '#39FF6A', 7, true, true);
           obj.setAlpha(1);
         } else if (active) {
-          obj.setText(`${obj.text.slice(0, 2)} —`);
+          obj.setText(`${key} —`);
           obj.setColor('#EAF6FF');
           obj.setShadow(0, 0, '#68D7FF', 4, true, true);
           obj.setAlpha(0.95);
         } else {
-          obj.setText(`${obj.text.slice(0, 2)} —`);
+          obj.setText(`${key} —`);
           obj.setColor('#73818C');
           obj.setShadow(0, 0, '#000000', 0, false, false);
           obj.setAlpha(0.72);
@@ -160,10 +209,77 @@ export class RaceScene extends StyledRaceScene {
         }
         this._competitionLastDeltaMs = deltaMs;
         this._setCompetitionDelta(deltaMs);
+
+        // Datos reales persistentes del Time Trial.
+        const hist = Array.isArray(this.ttHistory) ? this.ttHistory : [];
+        const histLast = hist.length ? Number(hist[hist.length - 1]?.lapMs) : NaN;
+        const lastMs = Number.isFinite(Number(this.timing?.lastLap))
+          ? Number(this.timing.lastLap)
+          : histLast;
+        const bestMs = Number(this.ttBest?.lapMs);
+
+        hud._last?.setText(fmtLap(lastMs));
+        hud._best?.setText(fmtLap(bestMs));
       };
 
-      // Flash de checkpoint inequívoco: refuerza las marcas existentes y
-      // dibuja durante unas décimas la puerta luminosa completa.
+      // =========================================================
+      // MINIMAPA SPORT — marco integrado detrás del minimapa existente
+      // =========================================================
+      const mapFrame = this.add.container(0, 0).setDepth(1998);
+      this.minimapSportFrame = mapFrame;
+
+      const mapW = 150;
+      const mapH = 108;
+      const mapBg = this.add.rectangle(0, 0, mapW, mapH, 0x07111a, 0.36)
+        .setOrigin(0, 0)
+        .setStrokeStyle(1, 0x7FD8FF, 0.24);
+      const mapTop = this.add.rectangle(8, 5, mapW - 16, 1, 0x68D7FF, 0.52)
+        .setOrigin(0, 0);
+      const mapGlow = this.add.rectangle(mapW * 0.5 - 28, 5, 56, 2, 0x9BE9FF, 0.18)
+        .setOrigin(0, 0);
+
+      // Esquinas técnicas muy discretas: hacen que el mapa parezca integrado,
+      // sin añadir texto ni tapar el trazado.
+      const corners = this.add.graphics();
+      corners.lineStyle(2, 0x7FD8FF, 0.34);
+      const k = 12;
+      corners.beginPath();
+      corners.moveTo(0, k); corners.lineTo(0, 0); corners.lineTo(k, 0);
+      corners.moveTo(mapW - k, 0); corners.lineTo(mapW, 0); corners.lineTo(mapW, k);
+      corners.moveTo(0, mapH - k); corners.lineTo(0, mapH); corners.lineTo(k, mapH);
+      corners.moveTo(mapW - k, mapH); corners.lineTo(mapW, mapH); corners.lineTo(mapW, mapH - k);
+      corners.strokePath();
+
+      mapFrame.add([mapBg, mapTop, mapGlow, corners]);
+      if (typeof mapFrame.cameraFilter === 'number') mapFrame.cameraFilter &= ~main.id;
+      for (const child of mapFrame.list || []) {
+        if (typeof child.cameraFilter === 'number') child.cameraFilter &= ~main.id;
+      }
+      mapFrame.setScrollFactor(1, 1);
+
+      this._layoutMinimapSportFrame = () => {
+        const vw = Math.max(1, Number(this.scale?.width || 1));
+        // El minimapa original mide 132x92 y nace en y=54.
+        // El marco deja 9px de respiración alrededor.
+        this._minimapSportFrameState = {
+          screenX: vw - 12 - 132 - 9,
+          screenY: 45,
+          scale: 1
+        };
+      };
+
+      this._pinMinimapSportFrame = () => {
+        const cam = this.cameras?.main;
+        const frame = this.minimapSportFrame;
+        const s = this._minimapSportFrameState;
+        if (!cam || !frame?.scene || !s) return;
+        const zoom = Math.max(0.001, Number(cam.zoom || 1));
+        const world = cam.getWorldPoint(s.screenX, s.screenY);
+        frame.setPosition(world.x, world.y);
+        frame.setScale(s.scale / zoom);
+      };
+
+      // Flash de checkpoint inequívoco.
       this._flashCheckpointGate = (idx) => {
         const gate = idx === 1 ? this.checkpoints?.cp1 : this.checkpoints?.cp2;
         if (!gate?.a || !gate?.b) return;
@@ -203,8 +319,18 @@ export class RaceScene extends StyledRaceScene {
         });
       };
 
+      this._layoutMinimapSportFrame();
       this._pinCompetitionHud();
+      this._pinMinimapSportFrame();
       this._syncCompetitionHud();
+
+      this.scale.off('resize', this._onResizeCompetitionSport);
+      this._onResizeCompetitionSport = () => {
+        this._layoutMinimapSportFrame?.();
+        this._pinCompetitionHud?.();
+        this._pinMinimapSportFrame?.();
+      };
+      this.scale.on('resize', this._onResizeCompetitionSport);
     } catch (err) {
       console.warn('[TDR2] Competition HUD setup failed', err);
     }
@@ -233,6 +359,7 @@ export class RaceScene extends StyledRaceScene {
 
       this._hideRaceDebugOnly?.();
       this._pinCompetitionHud?.();
+      this._pinMinimapSportFrame?.();
       this._syncCompetitionHud?.();
     } catch (err) {
       console.warn('[TDR2] Competition HUD update failed', err);
