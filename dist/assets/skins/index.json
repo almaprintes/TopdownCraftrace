@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "items": [
-    { "file": "stock.png", "label": "Stock" },
-    { "file": "helix_comet.png", "label": "Helix Comet" },
-    { "file": "avenir_gripline.png", "label": "Avenir Gripline" }
-  ]
-}
