@@ -19,7 +19,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore clean Vite source index
+      - name: Restore clean source index
         run: cp .github/source-index.html index.html
 
       - name: Setup Node
@@ -39,11 +39,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          # Nunca versionar dependencias ni la carpeta de trabajo de Vite.
+          git rm -r --cached --ignore-unmatch node_modules dist || true
+
+          # Copiar SOLO el resultado publicable a la raíz de Pages.
           cp -R dist/. ./
           touch .nojekyll
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Añadir cambios, respetando .gitignore.
           git add -A
+
           if git diff --cached --quiet; then
             echo "No publication changes"
           else
