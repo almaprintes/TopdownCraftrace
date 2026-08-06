@@ -6,6 +6,18 @@ import { RaceScene as OriginalRaceScene } from './RaceScene.js';
 // - solo recuperamos HUD/controles seguros, nunca overlays fullscreen
 // - el seguimiento manual conserva el zoom dinámico original
 export class RaceScene extends OriginalRaceScene {
+  constructor() {
+    super();
+
+    // Zoom dinámico más contenido para móvil landscape:
+    // lento = cerca, rápido = lejos, sin acercamientos extremos.
+    this._zoomGameplayMin = 0.72;
+    this._zoomGameplayMax = 1.08;
+    this._zoomKmhRef = 160;
+    this._zoomLerp = 0.045;
+    this._zoomCurrent = Math.min(this.zoom ?? 0.86, this._zoomGameplayMax);
+  }
+
   create() {
     super.create();
 
@@ -39,14 +51,11 @@ export class RaceScene extends OriginalRaceScene {
         const w = Number(obj.displayWidth ?? obj.width ?? 0);
         const h = Number(obj.displayHeight ?? obj.height ?? 0);
 
-        // Nunca devolver a main un overlay/panel que cubra prácticamente toda la pantalla.
-        // Éste era el origen del negro al desbloquear toda la UI indiscriminadamente.
         const fullscreenLike = w >= sw * 0.82 && h >= sh * 0.82;
         return !fullscreenLike;
       };
 
       const restoreHud = () => {
-        // Grupos explícitos conocidos de la carrera.
         for (const ref of [
           this.hud,
           this.touchUI,
@@ -62,7 +71,6 @@ export class RaceScene extends OriginalRaceScene {
           allowMain(ref);
         }
 
-        // Textos, botones y bandas fijas pequeñas que no formen parte de esos contenedores.
         for (const obj of this.children?.list || []) {
           if (isSafeFixedUi(obj)) allowMain(obj);
         }
@@ -85,7 +93,6 @@ export class RaceScene extends OriginalRaceScene {
       const main = this.cameras?.main;
       if (!body?.scene || !main) return;
 
-      // Seguimiento determinista. El zoom dinámico sigue calculándose en RaceScene original.
       if (!this._mapZoomOn) {
         main.centerOn(body.x, body.y);
       }
