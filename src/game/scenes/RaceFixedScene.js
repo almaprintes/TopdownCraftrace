@@ -3,7 +3,7 @@ import { RaceScene as OriginalRaceScene } from './RaceScene.js';
 // Corrección iOS/Safari:
 // - una sola cámara visible evita el framebuffer negro de uiCam
 // - mundo/coche conservan el zoom dinámico original
-// - HUD/controles/minimapa se compensan contra ese zoom para quedar fijos en pantalla
+// - HUD/controles/minimapa quedan anclados a píxeles de pantalla
 export class RaceScene extends OriginalRaceScene {
   create() {
     super.create();
@@ -17,6 +17,7 @@ export class RaceScene extends OriginalRaceScene {
       if (this.uiCam) this.uiCam.setVisible(false);
 
       this._fixedUiState = new WeakMap();
+      this._fixedUiRoots = new Set();
 
       const allowMain = (obj) => {
         if (!obj) return;
@@ -31,20 +32,45 @@ export class RaceScene extends OriginalRaceScene {
         }
       };
 
-      const isSafeFixedUi = (obj) => {
-        if (!obj || obj.visible === false) return false;
-        if (!(obj.scrollFactorX === 0 && obj.scrollFactorY === 0)) return false;
-
+      const isFullscreenLike = (obj) => {
         const sw = Number(this.scale?.width || 1);
         const sh = Number(this.scale?.height || 1);
-        const w = Number(obj.displayWidth ?? obj.width ?? 0);
-        const h = Number(obj.displayHeight ?? obj.height ?? 0);
-
-        // No recuperamos fondos/overlays de pantalla completa.
-        return !(w >= sw * 0.82 && h >= sh * 0.82);
+        const w = Number(obj?.displayWidth ?? obj?.width ?? 0);
+        const h = Number(obj?.displayHeight ?? obj?.height ?? 0);
+        return w >= sw * 0.82 && h >= sh * 0.82;
       };
 
-      this._restoreHudToMain = () => {
+      const rememberFixedRoot = (obj, force = false) => {
+        if (!obj || obj.visible === false) return;
+        if (!Number.isFinite(obj.x) || !Number.isFinite(obj.y)) return;
+
+        const fixed = force || (obj.scrollFactorX === 0 && obj.scrollFactorY === 0);
+        if (!fixed) return;
+        if (!force && isFullscreenLike(obj)) return;
+
+        allowMain(obj);
+        this._fixedUiRoots.add(obj);
+
+        if (!this._fixedUiState.has(obj)) {
+          this._fixedUiState.set(obj, {
+            screenX: Number(obj.x),
+            screenY: Number(obj.y),
+            scaleX: Number.isFinite(obj.scaleX) ? Number(obj.scaleX) : 1,
+            scaleY: Number.isFinite(obj.scaleY) ? Number(obj.scaleY) : 1
+          });
+
+          // A partir de aquí lo tratamos como objeto de mundo colocado a partir
+          // de una coordenada de pantalla. Así getWorldPoint() lo deja inmóvil.
+          if (typeof obj.setScrollFactor === 'function') obj.setScrollFactor(1, 1);
+          else {
+            obj.scrollFactorX = 1;
+            obj.scrollFactorY = 1;
+          }
+        }
+      };
+
+      this._discoverFixedHud = () => {
+        // Raíces conocidas. Se fuerzan aunque sean containers sin scrollFactor explícito.
         for (const ref of [
           this.hud,
           this.touchUI,
@@ -57,59 +83,58 @@ export class RaceScene extends OriginalRaceScene {
           this._startModalText,
           this._startModalTitle
         ]) {
-          allowMain(ref);
+          rememberFixedRoot(ref, true);
         }
 
+        // Elementos independientes de interfaz creados directamente en la Scene.
         for (const obj of this.children?.list || []) {
-          if (isSafeFixedUi(obj)) allowMain(obj);
+          rememberFixedRoot(obj, false);
         }
       };
 
-      // Compensa la transformación de la cámara sobre UI con scrollFactor 0.
-      // Guardamos la primera posición/escala real de cada elemento y su zoom de referencia.
-      this._freezeHudAgainstZoom = () => {
+      this._pinHudToScreen = () => {
         const cam = this.cameras?.main;
         if (!cam) return;
 
-        const zoom = Number(cam.zoom || 1);
-        const cx = Number(cam.width || this.scale?.width || 0) * 0.5;
-        const cy = Number(cam.height || this.scale?.height || 0) * 0.5;
+        const zoom = Math.max(0.001, Number(cam.zoom || 1));
 
-        for (const obj of this.children?.list || []) {
-          if (!isSafeFixedUi(obj)) continue;
-          if (!Number.isFinite(obj.x) || !Number.isFinite(obj.y)) continue;
+        for (const obj of this._fixedUiRoots || []) {
+          if (!obj?.scene) continue;
+          const state = this._fixedUiState.get(obj);
+          if (!state) continue;
 
-          let state = this._fixedUiState.get(obj);
-          if (!state) {
-            state = {
-              x: obj.x,
-              y: obj.y,
-              scaleX: Number.isFinite(obj.scaleX) ? obj.scaleX : 1,
-              scaleY: Number.isFinite(obj.scaleY) ? obj.scaleY : 1,
-              zoom: zoom || 1
-            };
-            this._fixedUiState.set(obj, state);
-          }
+          // Phaser calcula la coordenada de mundo que corresponde exactamente
+          // al píxel de pantalla original del HUD para el scroll/zoom actuales.
+          const world = cam.getWorldPoint(state.screenX, state.screenY);
+          obj.x = world.x;
+          obj.y = world.y;
 
-          const k = state.zoom / Math.max(0.001, zoom);
-
-          // Mantener el mismo punto de pantalla aunque la cámara haga zoom alrededor del centro.
-          obj.x = cx + (state.x - cx) * k;
-          obj.y = cy + (state.y - cy) * k;
-
+          // Neutralizar solo el escalado de la cámara.
           if (typeof obj.setScale === 'function') {
-            obj.setScale(state.scaleX * k, state.scaleY * k);
+            obj.setScale(state.scaleX / zoom, state.scaleY / zoom);
           } else {
-            if (Number.isFinite(obj.scaleX)) obj.scaleX = state.scaleX * k;
-            if (Number.isFinite(obj.scaleY)) obj.scaleY = state.scaleY * k;
+            obj.scaleX = state.scaleX / zoom;
+            obj.scaleY = state.scaleY / zoom;
           }
         }
       };
 
-      this._restoreHudToMain();
-      this.time.delayedCall(0, this._restoreHudToMain);
-      this.time.delayedCall(250, this._restoreHudToMain);
-      this.time.delayedCall(1000, this._restoreHudToMain);
+      this._discoverFixedHud();
+      this._pinHudToScreen();
+
+      // Algunos bloques (semáforo/controles) nacen de callbacks diferidos.
+      this.time.delayedCall(0, () => {
+        this._discoverFixedHud?.();
+        this._pinHudToScreen?.();
+      });
+      this.time.delayedCall(250, () => {
+        this._discoverFixedHud?.();
+        this._pinHudToScreen?.();
+      });
+      this.time.delayedCall(1000, () => {
+        this._discoverFixedHud?.();
+        this._pinHudToScreen?.();
+      });
     } catch (err) {
       console.warn('[TDR2] Single-camera HUD setup failed', err);
     }
@@ -123,15 +148,16 @@ export class RaceScene extends OriginalRaceScene {
       const main = this.cameras?.main;
       if (!body?.scene || !main) return;
 
-      // Solo el mundo sigue al coche. El zoom dinámico original permanece intacto.
+      // Mundo/coche: seguimiento + zoom dinámico original intactos.
       if (!this._mapZoomOn) {
         main.centerOn(body.x, body.y);
       }
 
-      this._restoreHudToMain?.();
-      this._freezeHudAgainstZoom?.();
+      // UI: detectar elementos tardíos y recolocarlos en sus píxeles fijos.
+      this._discoverFixedHud?.();
+      this._pinHudToScreen?.();
     } catch (err) {
-      console.warn('[TDR2] Race camera/HUD compensation failed', err);
+      console.warn('[TDR2] Race camera/HUD pinning failed', err);
     }
   }
 }
