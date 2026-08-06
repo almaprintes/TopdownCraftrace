@@ -100,9 +100,11 @@ export class RaceScene extends OriginalRaceScene {
           const bw = Math.max(1, Number(banner.width || 1));
           const bh = Math.max(1, Number(banner.height || 1));
 
-          // Ajuste seguro: nunca dejamos que el asset inferior pueda cubrir la escena.
-          // Conserva proporción y ocupa como máximo el 92% del ancho / 24% del alto.
-          const fit = Math.min((vw * 0.92) / bw, (vh * 0.24) / bh);
+          // El asset tiene bastante margen interno, así que partimos del ajuste
+          // seguro anterior y lo ampliamos un 70%, manteniendo límites duros.
+          const safeFit = Math.min((vw * 0.92) / bw, (vh * 0.24) / bh);
+          const hardCap = Math.min((vw * 0.72) / bw, (vh * 0.40) / bh);
+          const fit = Math.min(safeFit * 1.70, hardCap);
 
           this._bottomHudState = {
             screenX: vw * 0.5,
