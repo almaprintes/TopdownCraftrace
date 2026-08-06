@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: topdown-pages-build
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -41,25 +41,21 @@ jobs:
 
       - name: Wait for branch Pages deployment
         run: |
-          echo "Waiting for the automatic Pages deployment triggered by the source commit to finish..."
-          sleep 75
+          echo "Waiting briefly for the automatic Pages deployment triggered by the source commit..."
+          sleep 40
 
       - name: Publish build to main root
         shell: bash
         run: |
           set -euo pipefail
 
-          # Nunca versionar dependencias ni la carpeta de trabajo de Vite.
           git rm -r --cached --ignore-unmatch node_modules dist || true
-
-          # Copiar SOLO el resultado publicable a la raíz de Pages.
           cp -R dist/. ./
           touch .nojekyll
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # Añadir cambios, respetando .gitignore.
           git add -A
 
           if git diff --cached --quiet; then
