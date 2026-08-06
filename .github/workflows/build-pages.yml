@@ -1,4 +1,4 @@
-name: Build Top Down RACE for Pages
+name: Build and Deploy Top Down RACE
 
 on:
   push:
@@ -6,22 +6,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: topdown-pages-build
+  group: pages
   cancel-in-progress: true
 
 jobs:
   build:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout real project
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Restore clean source index
         run: cp .github/source-index.html index.html
@@ -30,37 +29,32 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build real game
         env:
           BASE: /TopdownCraftrace/
         run: npm run build
 
-      - name: Wait for branch Pages deployment
-        run: |
-          echo "Waiting briefly for the automatic Pages deployment triggered by the source commit..."
-          sleep 40
+      - name: Prepare Pages artifact
+        run: touch dist/.nojekyll
 
-      - name: Publish build to main root
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
 
-          git rm -r --cached --ignore-unmatch node_modules dist || true
-          cp -R dist/. ./
-          touch .nojekyll
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add -A
-
-          if git diff --cached --quiet; then
-            echo "No publication changes"
-          else
-            git commit -m "Publish Top Down RACE Garage Fusion build [skip ci]"
-            git push origin main
-          fi
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
