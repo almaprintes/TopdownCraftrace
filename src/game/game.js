@@ -9,7 +9,7 @@ import { GarageDetailScene } from './scenes/GarageDetailScene.js';
 import { AdminHubScene } from './scenes/AdminHubScene.js';
 import { CarEditorScene } from './scenes/CarEditorScene.js';
 import { TrackEditorScene } from './scenes/TrackEditorScene.js';
-import { TrackGarageScene } from './scenes/TrackGarageScene.js';
+import { TrackGarageScene } from './scenes/TrackGarageFixedScene.js';
 import { TrackStudioScene } from './scenes/TrackStudioScene.js';
 export function createGame(parentId = 'app') {
   return new Phaser.Game({
