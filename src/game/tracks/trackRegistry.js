@@ -34,8 +34,7 @@ function makeFinishLineFromStart(start, trackWidth) {
   const r = Number(start?.r);
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r)) return null;
 
-  // La meta cruza perpendicularmente la dirección de marcha en el punto START.
-  // Se genera en runtime para no depender de metadatos antiguos del editor.
+  // La meta cruza perpendicularmente la dirección de marcha en el punto START original.
   const half = Math.max(36, Number(trackWidth) * 0.56);
   const px = -Math.sin(r);
   const py = Math.cos(r);
@@ -46,6 +45,21 @@ function makeFinishLineFromStart(start, trackWidth) {
     a: { x: x - px * half, y: y - py * half },
     b: { x: x + px * half, y: y + py * half },
     normal: { x: nx, y: ny }
+  };
+}
+
+function makeSpawnBehindFinish(start, distance = 80) {
+  const x = Number(start?.x);
+  const y = Number(start?.y);
+  const r = Number(start?.r);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r)) {
+    return start || { x: 400, y: 400, r: 0 };
+  }
+
+  return {
+    x: x - Math.cos(r) * distance,
+    y: y - Math.sin(r) * distance,
+    r
   };
 }
 
@@ -61,7 +75,8 @@ function buildRegistry() {
 
     const slug = m[1];
     const fallbackWidth = Number(json.trackWidth) || 80;
-    const start = json.start || { x: 400, y: 400, r: 0 };
+    const finishAnchor = json.start || { x: 400, y: 400, r: 0 };
+    const raceStart = makeSpawnBehindFinish(finishAnchor, 80);
 
     out[slug] = {
       id: slug,
@@ -78,14 +93,12 @@ function buildRegistry() {
       sampleStepPx: Number(json.sampleStepPx) || 12,
       cellSize: Number(json.cellSize) || 400,
       shoulderPx: Number(json.shoulderPx) || 10,
-      start,
+      start: raceStart,
       centerline: normalizeCenterline(json.centerline, fallbackWidth),
       closed: json.closed !== false,
 
-      // La meta debe corresponder al punto de salida usado por la carrera.
-      // Los finish/checkpoints/grid guardados en este JSON pertenecen a una
-      // versión anterior del editor y no deben sustituir la geometría runtime.
-      finishLine: makeFinishLineFromStart(start, fallbackWidth),
+      // Meta anclada al START original; el coche aparece 80 px detrás.
+      finishLine: makeFinishLineFromStart(finishAnchor, fallbackWidth),
       finish: null,
       checkpoints: [],
       grid: null
