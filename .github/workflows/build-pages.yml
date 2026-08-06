@@ -58,3 +58,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+# Pages source switched to GitHub Actions on 2026-08-06; neutral trigger commit.
