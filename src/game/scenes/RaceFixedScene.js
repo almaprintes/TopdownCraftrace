@@ -1,7 +1,7 @@
 import { RaceScene as OriginalRaceScene } from './RaceScene.js';
 
-// Parche aislado de diagnóstico/corrección de cámaras.
-// No modifica RaceScene original ni la geometría del circuito.
+// Diagnóstico definitivo: desactivar por completo la cámara UI para comprobar
+// si está limpiando/tapando el framebuffer después de renderizar la cámara mundo.
 export class RaceScene extends OriginalRaceScene {
   create() {
     super.create();
@@ -13,48 +13,36 @@ export class RaceScene extends OriginalRaceScene {
         main.setAlpha(1);
       }
 
+      // PRUEBA DEFINITIVA: ocultar la cámara HUD entera.
+      // Si reaparecen pista/coche, el negro procede de uiCam.
       if (this.uiCam) {
-        this.uiCam.setBackgroundColor('rgba(0,0,0,0)');
-        this.uiCam.transparent = true;
+        this.uiCam.setVisible(false);
       }
 
-      // Phaser implementa Camera.ignore() mediante cameraFilter en cada objeto.
-      // Restauramos la cámara principal SOLO en objetos del mundo (scrollFactor != 0).
+      // Marcador de mundo inequívoco junto al coche.
+      const cx = Number(this.carBody?.x ?? this.car?.x ?? 400);
+      const cy = Number(this.carBody?.y ?? this.car?.y ?? 400);
+      this.add.rectangle(cx, cy, 42, 42, 0xff00ff, 1)
+        .setDepth(999999)
+        .setScrollFactor(1);
+
+      // Como uiCam queda oculta, el diagnóstico debe verlo main.
+      const info = this.add.text(cx + 28, cy - 28, 'WORLD CAM TEST', {
+        fontFamily: 'monospace',
+        fontSize: '18px',
+        color: '#ff00ff',
+        backgroundColor: '#ffffff'
+      }).setDepth(999999).setScrollFactor(1);
+
       if (main?.id) {
-        for (const obj of (this.children?.list || [])) {
-          if (!obj) continue;
-
-          const sfx = Number(obj.scrollFactorX ?? 1);
-          const sfy = Number(obj.scrollFactorY ?? 1);
-          const isWorldObject = sfx !== 0 || sfy !== 0;
-          if (!isWorldObject) continue;
-
-          if (typeof obj.cameraFilter === 'number') {
+        for (const obj of [info, ...(this.children?.list || [])]) {
+          if (obj && typeof obj.cameraFilter === 'number') {
             obj.cameraFilter &= ~main.id;
           }
         }
       }
-
-      // Marcador inequívoco en coordenadas de mundo para separar cámara de máscaras.
-      const cx = Number(this.carBody?.x ?? this.car?.x ?? 400);
-      const cy = Number(this.carBody?.y ?? this.car?.y ?? 400);
-      const probe = this.add.rectangle(cx, cy, 36, 36, 0xff00ff, 1)
-        .setDepth(999)
-        .setScrollFactor(1);
-
-      if (this.uiCam) this.uiCam.ignore(probe);
-      if (main && typeof probe.cameraFilter === 'number') {
-        probe.cameraFilter &= ~main.id;
-      }
-
-      this.time.delayedCall(600, () => {
-        try {
-          const msg = `cam main vis:${main?.visible !== false ? 'Y' : 'N'} a:${Number(main?.alpha ?? 0).toFixed(1)} z:${Number(main?.zoom ?? 0).toFixed(2)} x:${Math.round(main?.scrollX ?? 0)} y:${Math.round(main?.scrollY ?? 0)}`;
-          this._diag?.(msg);
-        } catch {}
-      });
     } catch (err) {
-      console.warn('[TDR2] Camera diagnostic patch failed', err);
+      console.warn('[TDR2] Full uiCam diagnostic failed', err);
     }
   }
 }
