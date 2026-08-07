@@ -134,6 +134,16 @@ function cellKey(cx, cy) {
   return `${cx},${cy}`;
 }
 
+// Circumradius of three points. Infinity means essentially straight.
+function circumRadius(a, b, c) {
+  const ab = Math.hypot(b.x - a.x, b.y - a.y);
+  const bc = Math.hypot(c.x - b.x, c.y - b.y);
+  const ca = Math.hypot(a.x - c.x, a.y - c.y);
+  const twiceArea = Math.abs((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+  if (twiceArea < 1e-5) return Infinity;
+  return (ab * bc * ca) / (2 * twiceArea);
+}
+
 export function buildTrackRibbon({
   centerline,
   trackWidth,
@@ -164,11 +174,7 @@ export function buildTrackRibbon({
   dense.push(makePt(dense[0].x, dense[0].y, dense[0].width));
 
   const cl = resample(dense, sampleStepPx, fallbackWidth);
-
-  // Un circuito cerrado NO debe contener dos muestras casi iguales en el cierre.
-  // Esa duplicación crea una tangente casi nula y puede girar la normal 180° en la costura.
   if (cl.length > 8 && dist(cl[0], cl[cl.length - 1]) < Math.max(2, sampleStepPx * 0.55)) cl.pop();
-
   if (cl.length < 8) return { center: cl, left: [], right: [], cells: new Map(), cellSize };
 
   const baseGrassMargin = Math.max(0, grassMargin);
@@ -178,10 +184,10 @@ export function buildTrackRibbon({
   const grassRight = [];
   const count = cl.length;
 
-  // IMPORTANTE: sin miter. El miter anterior podía apuntar hacia el lado equivocado en cambios
-  // de curvatura fuertes y generaba exactamente los vértices "retorcidos" visibles en horquillas.
-  // La normal se obtiene de una tangente centrada y ancha: siempre perpendicular a la centerline
-  // y siempre a distancia constante. No hay handles que puedan darse la vuelta.
+  // A fixed-width parallel curve develops a mathematical cusp whenever the inside radius
+  // is smaller than half the road width. That is exactly what the sharp hairpins were showing.
+  // We therefore keep the normal clean, and only reduce the INNER offset when local curvature
+  // makes a full-width offset impossible. Outside edge stays untouched. No miter, no flipped nodes.
   for (let i = 0; i < count; i++) {
     const p = cl[i];
     const pBack = cl[(i - 2 + count) % count];
@@ -190,8 +196,6 @@ export function buildTrackRibbon({
     let tx = pAhead.x - pBack.x;
     let ty = pAhead.y - pBack.y;
     let td = Math.hypot(tx, ty);
-
-    // Fallback local si la ventana amplia cae en una geometría excepcionalmente cerrada.
     if (td < 1e-5) {
       const pPrev = cl[(i - 1 + count) % count];
       const pNext = cl[(i + 1) % count];
@@ -199,19 +203,38 @@ export function buildTrackRibbon({
       ty = pNext.y - pPrev.y;
       td = Math.hypot(tx, ty) || 1;
     }
-
     tx /= td;
     ty /= td;
     const nx = -ty;
     const ny = tx;
 
     const half = (Number.isFinite(Number(p.width)) ? Number(p.width) : fallbackWidth) * 0.5;
-    const halfGrass = half + baseGrassMargin;
+    const radius = circumRadius(pBack, p, pAhead);
 
-    left.push([p.x + nx * half, p.y + ny * half]);
-    right.push([p.x - nx * half, p.y - ny * half]);
-    grassLeft.push([p.x + nx * halfGrass, p.y + ny * halfGrass]);
-    grassRight.push([p.x - nx * halfGrass, p.y - ny * halfGrass]);
+    // Signed turn from incoming to outgoing chord: + left turn, - right turn.
+    const inX = p.x - pBack.x;
+    const inY = p.y - pBack.y;
+    const outX = pAhead.x - p.x;
+    const outY = pAhead.y - p.y;
+    const cross = inX * outY - inY * outX;
+
+    let leftOffset = half;
+    let rightOffset = half;
+
+    if (Number.isFinite(radius) && radius < half * 2.25 && Math.abs(cross) > 1e-4) {
+      // Keep a healthy positive inside radius. 0.58R is conservative enough to eliminate
+      // the visible inward fold while preserving most of the road width.
+      const safeInner = Math.max(half * 0.32, Math.min(half, radius * 0.58));
+      if (cross > 0) leftOffset = safeInner; // left turn => left edge is inside
+      else rightOffset = safeInner;          // right turn => right edge is inside
+    }
+
+    left.push([p.x + nx * leftOffset, p.y + ny * leftOffset]);
+    right.push([p.x - nx * rightOffset, p.y - ny * rightOffset]);
+
+    // Grass follows the same corrected inner edge, then adds its margin outward.
+    grassLeft.push([p.x + nx * (leftOffset + baseGrassMargin), p.y + ny * (leftOffset + baseGrassMargin)]);
+    grassRight.push([p.x - nx * (rightOffset + baseGrassMargin), p.y - ny * (rightOffset + baseGrassMargin)]);
   }
 
   const cells = new Map();
