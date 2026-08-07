@@ -1,8 +1,7 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 
 // Mobile-safe premium surface pass.
-// Keep the road dressing deliberately simple: matte materials + subtle driven-line wear
-// + one translucent dirt ribbon outside each exact track edge.
+// Matte materials + sparse longitudinal wear + simple translucent dirt underlay strokes.
 export class RaceScene extends MaterialRaceScene {
   ensureBgTexture() {
     const key = 'grass';
@@ -105,20 +104,20 @@ export class RaceScene extends MaterialRaceScene {
 
       const rand = this._rng?.(0x2d934b71) || Math.random;
       const roadWear = this.add.graphics().setDepth(11.08).setScrollFactor(1);
-      const shoulder = this.add.graphics().setDepth(10.02).setScrollFactor(1);
+      // Deliberately BELOW asphalt: a wide line centered on the edge leaves only its outer half visible.
+      const shoulder = this.add.graphics().setDepth(9.80).setScrollFactor(1);
       this.uiCam?.ignore?.([roadWear, shoulder]);
       this._longitudinalAsphaltWear = roadWear;
       this._premiumShoulder = shoulder;
 
       const count = center.length;
       const tangentAt = (i) => {
-        const p0 = center[(i - 3 + count) % count];
-        const p1 = center[(i + 3) % count];
+        const p0 = center[(i - 2 + count) % count];
+        const p1 = center[(i + 2) % count];
         const dx = p1.x - p0.x, dy = p1.y - p0.y, d = Math.hypot(dx, dy) || 1;
         return { tx: dx / d, ty: dy / d };
       };
 
-      // Very sparse world-space wear, always following the centerline tangent.
       for (let i = 5; i < count - 5; i += 10) {
         const p = center[i];
         const { tx, ty } = tangentAt(i);
@@ -136,39 +135,20 @@ export class RaceScene extends MaterialRaceScene {
         }
       }
 
-      // Exactly what is needed visually: one translucent dirt strip per side. No dots, ovals,
-      // random blocks or decorative fragments. It follows the corrected exact ribbon edge.
-      if (left.length === count && right.length === count) {
-        const drawBand = (edgePts) => {
-          const bandW = 10;
-          const inner = [];
-          const outer = [];
+      // One translucent strip per side, literally. No filled closed ribbons that can self-cross.
+      // Because this sits below asphalt, the inner half of the stroke is naturally hidden.
+      const drawUnderlayEdge = (edgePts) => {
+        if (edgePts.length !== count || count < 3) return;
+        shoulder.lineStyle(18, 0x67513a, 0.14);
+        shoulder.beginPath();
+        shoulder.moveTo(edgePts[0].x, edgePts[0].y);
+        for (let i = 1; i < count; i++) shoulder.lineTo(edgePts[i].x, edgePts[i].y);
+        shoulder.lineTo(edgePts[0].x, edgePts[0].y);
+        shoulder.strokePath();
+      };
 
-          // Sample every second point; enough fidelity for curves and cheap on mobile.
-          for (let i = 0; i < count; i += 2) {
-            const c = center[i];
-            const e = edgePts[i];
-            if (!c || !e) continue;
-            let ox = e.x - c.x, oy = e.y - c.y;
-            const d = Math.hypot(ox, oy) || 1;
-            ox /= d; oy /= d;
-            inner.push({ x: e.x, y: e.y });
-            outer.push({ x: e.x + ox * bandW, y: e.y + oy * bandW });
-          }
-
-          if (inner.length < 4) return;
-          shoulder.fillStyle(0x67513a, 0.16);
-          shoulder.beginPath();
-          shoulder.moveTo(inner[0].x, inner[0].y);
-          for (let i = 1; i < inner.length; i++) shoulder.lineTo(inner[i].x, inner[i].y);
-          for (let i = outer.length - 1; i >= 0; i--) shoulder.lineTo(outer[i].x, outer[i].y);
-          shoulder.closePath();
-          shoulder.fillPath();
-        };
-
-        drawBand(left);
-        drawBand(right);
-      }
+      drawUnderlayEdge(left);
+      drawUnderlayEdge(right);
     } catch (err) {
       console.warn('[TDR2] Mobile-safe premium surface pass failed', err);
     }
