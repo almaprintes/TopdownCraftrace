@@ -1,45 +1,41 @@
-import { RaceScene as MaterialBlendRaceScene } from './RaceSurfaceMaterialBlendScene.js';
+import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 
 // Paso 1 de reconstrucción visual:
-// - asfalto base neutro/isotrópico
-// - desgaste/vetas longitudinales orientadas por la tangente real de la pista
+// - conserva los materiales de referencia aprobados
+// - neutraliza la dirección falsa del asfalto con una base más oscura
+// - añade vetas longitudinales orientadas por la tangente real de la pista
 // Mantiene intactos física, trazado, cámaras, HUD y gameplay.
-export class RaceScene extends MaterialBlendRaceScene {
+export class RaceScene extends MaterialRaceScene {
   ensureAsphaltTexture() {
     const key = 'asphalt';
-    const size = 768;
     if (this.textures.exists(key)) return;
 
-    const rand = this._rng(0x6f41a2d9);
+    const source = this.textures.get('asphaltMaterialRef')?.getSourceImage?.();
+    if (!source) return super.ensureAsphaltTexture();
+
+    const size = 512;
     const tex = this.textures.createCanvas(key, size, size);
     const ctx = tex.getContext();
+    ctx.imageSmoothingEnabled = true;
 
-    // Base más oscura/fría y sin dirección dominante.
-    this._paintRasterBase(ctx, size, [35, 38, 40], 17, rand);
+    // Partimos de la textura real de referencia, pero la convertimos en una base
+    // más neutra para que ninguna dirección transversal domine visualmente.
+    ctx.drawImage(source, 0, 0, size, size);
+    ctx.fillStyle = 'rgba(13,16,18,0.24)';
+    ctx.fillRect(0, 0, size, size);
 
-    // Árido fino isotrópico: detalle sin sugerir una dirección falsa.
-    for (let i = 0; i < 52000; i++) {
+    const rand = this._rng?.(0x6f41a2d9) || Math.random;
+
+    // Árido fino isotrópico: conserva detalle sin sugerir una dirección falsa.
+    for (let i = 0; i < 18000; i++) {
       const x = rand() * size;
       const y = rand() * size;
       const p = rand();
-      if (p > 0.78) ctx.fillStyle = `rgba(118,121,123,${0.055 + rand() * 0.07})`;
-      else if (p > 0.42) ctx.fillStyle = `rgba(65,68,70,${0.06 + rand() * 0.075})`;
-      else ctx.fillStyle = `rgba(12,14,15,${0.055 + rand() * 0.075})`;
-      const s = 0.45 + rand() * 1.35;
+      ctx.fillStyle = p > 0.72
+        ? `rgba(185,186,184,${0.018 + rand() * 0.028})`
+        : `rgba(0,0,0,${0.018 + rand() * 0.030})`;
+      const s = 0.45 + rand() * 1.25;
       ctx.fillRect(x, y, s, s);
-    }
-
-    // Pequeños poros/puntos, igualmente sin orientación.
-    for (let i = 0; i < 6500; i++) {
-      const x = rand() * size;
-      const y = rand() * size;
-      const r = 0.35 + rand() * 1.0;
-      ctx.fillStyle = rand() > 0.5
-        ? `rgba(125,126,126,${0.035 + rand() * 0.045})`
-        : `rgba(5,6,7,${0.04 + rand() * 0.05})`;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
     }
 
     tex.refresh();
@@ -62,10 +58,10 @@ export class RaceScene extends MaterialBlendRaceScene {
       const g = this.add.graphics().setDepth(11.08).setScrollFactor(1);
       this.uiCam?.ignore?.(g);
       this._longitudinalAsphaltWear = g;
-      const rand = this._rng(0x2d934b71);
+      const rand = this._rng?.(0x2d934b71) || Math.random;
 
-      // Cada marca es un segmento independiente y corto, orientado por la tangente local.
-      // No hay polilínea continua => no puede atravesar horquillas ni generar pinchos.
+      // Cada marca es un segmento independiente, orientado por la tangente local.
+      // No se unen segmentos: evita cruces/pinchos en horquillas.
       for (let i = 3; i < center.length - 3; i += 2) {
         const p = center[i];
         const p0 = center[i - 2];
@@ -82,22 +78,22 @@ export class RaceScene extends MaterialBlendRaceScene {
         const trackW = Math.max(90, Math.min(250, Number(p.width || defaultTrackW)));
         const half = trackW * 0.5;
 
-        // Mayor densidad en la zona central de rodadura, algo de variación lateral.
-        const strokes = 6 + Math.floor(rand() * 5);
+        // Vetas finas longitudinales repartidas por todo el ancho útil.
+        const strokes = 8 + Math.floor(rand() * 6);
         for (let k = 0; k < strokes; k++) {
-          const laneBias = (rand() - 0.5) * Math.min(half * 1.35, 88);
-          const along = (rand() - 0.5) * 18;
+          const laneBias = (rand() - 0.5) * Math.min(half * 1.55, 96);
+          const along = (rand() - 0.5) * 20;
           const x = p.x + nx * laneBias + tx * along;
           const y = p.y + ny * laneBias + ty * along;
-          const streakLen = 9 + rand() * 28;
-          const wobble = (rand() - 0.5) * 0.14;
+          const streakLen = 12 + rand() * 34;
+          const wobble = (rand() - 0.5) * 0.10;
           const ca = Math.cos(wobble);
           const sa = Math.sin(wobble);
           const ux = tx * ca - ty * sa;
           const uy = tx * sa + ty * ca;
-          const alpha = 0.025 + rand() * 0.055;
-          const width = 0.7 + rand() * 1.5;
-          const color = rand() > 0.64 ? 0x77797a : 0x0d0f10;
+          const alpha = 0.035 + rand() * 0.075;
+          const width = 0.75 + rand() * 1.35;
+          const color = rand() > 0.68 ? 0x8a8b89 : 0x090b0c;
 
           g.lineStyle(width, color, alpha);
           g.beginPath();
@@ -106,14 +102,14 @@ export class RaceScene extends MaterialBlendRaceScene {
           g.strokePath();
         }
 
-        // Dos carriles ligeramente más oscuros, también en segmentos cortos.
-        if (i % 4 === 0) {
-          const lane = Math.min(24, trackW * 0.16);
+        // Dos zonas de rodadura oscuras, también longitudinales y discontinuas.
+        if (i % 3 === 0) {
+          const lane = Math.min(25, trackW * 0.16);
           for (const side of [-1, 1]) {
             const x = p.x + nx * lane * side;
             const y = p.y + ny * lane * side;
-            const l = 16 + rand() * 24;
-            g.lineStyle(3.2 + rand() * 1.8, 0x080909, 0.018 + rand() * 0.028);
+            const l = 22 + rand() * 34;
+            g.lineStyle(4.0 + rand() * 2.0, 0x050607, 0.026 + rand() * 0.040);
             g.beginPath();
             g.moveTo(x - tx * l * 0.5, y - ty * l * 0.5);
             g.lineTo(x + tx * l * 0.5, y + ty * l * 0.5);
