@@ -1,8 +1,7 @@
 import { RaceScene as TextureRaceScene } from './RaceSurfaceTextureScene.js';
 
-// Cuarta pasada visual: enriquece el entorno sin tocar geometría ni física.
-// Añade césped seco/roto por microfragmentos y una transición sucia junto al asfalto
-// construida con sellos independientes para evitar cruces en horquillas.
+// Quinta pasada visual: desgaste del entorno claramente legible en móvil.
+// Mantiene física/geometría intactas y evita trazos continuos en los bordes.
 export class RaceScene extends TextureRaceScene {
   ensureBgTexture() {
     const key = 'grass';
@@ -14,29 +13,29 @@ export class RaceScene extends TextureRaceScene {
     const ctx = tex.getContext();
 
     // Base densa de césped de circuito.
-    this._paintRasterBase(ctx, size, [42, 68, 43], 20, rand);
+    this._paintRasterBase(ctx, size, [41, 67, 42], 20, rand);
 
     // Microvegetación continua.
-    for (let i = 0; i < 18500; i++) {
+    for (let i = 0; i < 19000; i++) {
       const x = rand() * size;
       const y = rand() * size;
       const r = rand();
-      if (r > 0.74) ctx.fillStyle = `rgba(132,148,104,${0.08 + rand() * 0.12})`;
-      else if (r > 0.42) ctx.fillStyle = `rgba(18,45,24,${0.08 + rand() * 0.12})`;
-      else ctx.fillStyle = `rgba(76,103,65,${0.06 + rand() * 0.10})`;
-      const s = 0.8 + rand() * 2.4;
+      if (r > 0.74) ctx.fillStyle = `rgba(132,148,104,${0.09 + rand() * 0.13})`;
+      else if (r > 0.42) ctx.fillStyle = `rgba(18,45,24,${0.09 + rand() * 0.13})`;
+      else ctx.fillStyle = `rgba(76,103,65,${0.07 + rand() * 0.11})`;
+      const s = 0.8 + rand() * 2.5;
       ctx.fillRect(x, y, s, s);
     }
 
     ctx.lineCap = 'round';
-    for (let i = 0; i < 13800; i++) {
+    for (let i = 0; i < 14200; i++) {
       const x = rand() * size;
       const y = rand() * size;
       const a = rand() * Math.PI;
-      const len = 1.2 + rand() * 3.8;
+      const len = 1.2 + rand() * 3.9;
       ctx.strokeStyle = rand() > 0.54
-        ? `rgba(139,153,108,${0.09 + rand() * 0.14})`
-        : `rgba(15,40,21,${0.10 + rand() * 0.15})`;
+        ? `rgba(139,153,108,${0.10 + rand() * 0.15})`
+        : `rgba(15,40,21,${0.11 + rand() * 0.16})`;
       ctx.lineWidth = rand() > 0.90 ? 1.3 : 0.75;
       ctx.beginPath();
       ctx.moveTo(x, y);
@@ -44,47 +43,55 @@ export class RaceScene extends TextureRaceScene {
       ctx.stroke();
     }
 
-    // ZONAS SECAS: cada zona se forma con muchos fragmentos diminutos.
-    // Nunca se dibuja una elipse completa, así que no aparecen parches geométricos.
-    for (let z = 0; z < 34; z++) {
+    // ZONAS SECAS claramente visibles: miles de fragmentos diminutos agrupados.
+    for (let z = 0; z < 30; z++) {
       const cx = rand() * size;
       const cy = rand() * size;
-      const radius = 22 + rand() * 58;
-      const pieces = 95 + Math.floor(rand() * 150);
+      const radius = 28 + rand() * 72;
+      const pieces = 210 + Math.floor(rand() * 220);
       for (let j = 0; j < pieces; j++) {
         const a = rand() * Math.PI * 2;
-        const rr = Math.sqrt(rand()) * radius;
+        const rr = Math.pow(rand(), 0.62) * radius;
         const x = cx + Math.cos(a) * rr;
         const y = cy + Math.sin(a) * rr;
         const p = rand();
-        ctx.fillStyle = p > 0.58
-          ? `rgba(151,132,76,${0.07 + rand() * 0.12})`
-          : `rgba(112,101,59,${0.06 + rand() * 0.10})`;
-        const w = 0.8 + rand() * 3.2;
-        const h = 0.8 + rand() * 2.5;
+        ctx.fillStyle = p > 0.62
+          ? `rgba(174,149,82,${0.12 + rand() * 0.17})`
+          : (p > 0.30
+            ? `rgba(131,111,61,${0.11 + rand() * 0.15})`
+            : `rgba(92,93,51,${0.08 + rand() * 0.12})`);
+        const w = 1 + rand() * 4.2;
+        const h = 0.8 + rand() * 3.0;
         ctx.fillRect(x, y, w, h);
       }
     }
 
-    // ROTOS / CALVAS: pequeños núcleos de tierra marrón mezclados con hierba dañada.
-    for (let z = 0; z < 16; z++) {
+    // ROTOS / CALVAS con tierra marrón visible y bordes mezclados con hierba seca.
+    for (let z = 0; z < 22; z++) {
       const cx = rand() * size;
       const cy = rand() * size;
-      const radius = 12 + rand() * 30;
-      const pieces = 70 + Math.floor(rand() * 90);
+      const radius = 17 + rand() * 42;
+      const pieces = 150 + Math.floor(rand() * 160);
       for (let j = 0; j < pieces; j++) {
         const a = rand() * Math.PI * 2;
-        const rr = Math.sqrt(rand()) * radius;
+        const rr = Math.pow(rand(), 0.72) * radius;
         const x = cx + Math.cos(a) * rr;
         const y = cy + Math.sin(a) * rr;
+        const edge = rr / radius;
         const p = rand();
-        ctx.fillStyle = p > 0.68
-          ? `rgba(126,99,60,${0.12 + rand() * 0.14})`
-          : (p > 0.34
-            ? `rgba(86,68,44,${0.11 + rand() * 0.15})`
-            : `rgba(55,70,39,${0.08 + rand() * 0.12})`);
-        const s = 1 + rand() * 3.5;
-        ctx.fillRect(x, y, s, 0.8 + rand() * 2.6);
+
+        if (edge < 0.48 && p > 0.18) {
+          ctx.fillStyle = p > 0.62
+            ? `rgba(137,98,57,${0.22 + rand() * 0.20})`
+            : `rgba(91,65,41,${0.20 + rand() * 0.19})`;
+        } else {
+          ctx.fillStyle = p > 0.50
+            ? `rgba(145,124,69,${0.12 + rand() * 0.16})`
+            : `rgba(66,76,43,${0.09 + rand() * 0.13})`;
+        }
+
+        const s = 1.1 + rand() * 4.6;
+        ctx.fillRect(x, y, s, 0.9 + rand() * 3.4);
       }
     }
 
@@ -105,15 +112,14 @@ export class RaceScene extends TextureRaceScene {
 
       if (center.length < 12) return;
 
-      const g = this.add.graphics().setDepth(10.92).setScrollFactor(1);
+      const g = this.add.graphics().setDepth(10.93).setScrollFactor(1);
       this.uiCam?.ignore?.(g);
       this._environmentEdgeWear = g;
 
       const rand = this._rng(0xc2b2ae35);
       const n = center.length;
 
-      // Cada muestra coloca fragmentos independientes junto a ambos bordes.
-      // No unimos puntos, por lo que una horquilla nunca puede generar pinchos/cruces.
+      // Sellos independientes: transición ancha y sucia sin líneas que puedan cruzarse.
       for (let i = 3; i < n - 3; i += 2) {
         const p = center[i];
         const p0 = center[i - 2];
@@ -129,30 +135,42 @@ export class RaceScene extends TextureRaceScene {
         const half = trackW * 0.5;
 
         for (const side of [-1, 1]) {
-          // 1) Suciedad oscura pegada al asfalto.
-          const edgeJitter = (rand() - 0.5) * 6;
-          const near = half + 2 + rand() * 7 + edgeJitter;
-          const x0 = p.x + nx * near * side;
-          const y0 = p.y + ny * near * side;
-          g.fillStyle(0x4a4030, 0.055 + rand() * 0.06);
-          g.fillCircle(x0, y0, 2.2 + rand() * 4.5);
-
-          // 2) Tierra más clara algo más afuera: transición asfalto -> suciedad -> hierba.
-          if (rand() > 0.28) {
-            const out = half + 8 + rand() * 15;
-            const x1 = p.x + nx * out * side + (rand() - 0.5) * 5;
-            const y1 = p.y + ny * out * side + (rand() - 0.5) * 5;
-            g.fillStyle(rand() > 0.5 ? 0x756247 : 0x65533b, 0.045 + rand() * 0.055);
-            g.fillCircle(x1, y1, 1.5 + rand() * 4.2);
+          // 1) Franja oscura de tierra y goma pegada al asfalto.
+          for (let s = 0; s < 2; s++) {
+            const near = half + 1 + rand() * 8;
+            const x0 = p.x + nx * near * side + (rand() - 0.5) * 5;
+            const y0 = p.y + ny * near * side + (rand() - 0.5) * 5;
+            g.fillStyle(rand() > 0.5 ? 0x493b2c : 0x5a4934, 0.13 + rand() * 0.11);
+            g.fillCircle(x0, y0, 3.5 + rand() * 5.8);
           }
 
-          // 3) Césped estresado/seco justo después de la tierra.
-          if (rand() > 0.40) {
-            const out = half + 15 + rand() * 22;
-            const x2 = p.x + nx * out * side + (rand() - 0.5) * 7;
-            const y2 = p.y + ny * out * side + (rand() - 0.5) * 7;
-            g.fillStyle(rand() > 0.48 ? 0x756c3d : 0x5f6338, 0.025 + rand() * 0.04);
-            g.fillCircle(x2, y2, 1.2 + rand() * 3.8);
+          // 2) Tierra marrón intermedia visible.
+          if (rand() > 0.10) {
+            for (let s = 0; s < 2; s++) {
+              const out = half + 8 + rand() * 18;
+              const x1 = p.x + nx * out * side + (rand() - 0.5) * 7;
+              const y1 = p.y + ny * out * side + (rand() - 0.5) * 7;
+              g.fillStyle(rand() > 0.5 ? 0x7e6748 : 0x69533a, 0.10 + rand() * 0.10);
+              g.fillCircle(x1, y1, 2.8 + rand() * 5.0);
+            }
+          }
+
+          // 3) Césped estresado/seco tras la tierra.
+          if (rand() > 0.16) {
+            const out = half + 19 + rand() * 27;
+            const x2 = p.x + nx * out * side + (rand() - 0.5) * 10;
+            const y2 = p.y + ny * out * side + (rand() - 0.5) * 10;
+            g.fillStyle(rand() > 0.50 ? 0x8a7a43 : 0x6f6a39, 0.07 + rand() * 0.08);
+            g.fillCircle(x2, y2, 2.5 + rand() * 5.2);
+          }
+
+          // 4) Alguna calva rota más profunda junto al borde, no en todos los puntos.
+          if (rand() > 0.86) {
+            const out = half + 11 + rand() * 20;
+            const x3 = p.x + nx * out * side + (rand() - 0.5) * 12;
+            const y3 = p.y + ny * out * side + (rand() - 0.5) * 12;
+            g.fillStyle(rand() > 0.5 ? 0x6d4b31 : 0x845d38, 0.18 + rand() * 0.12);
+            g.fillCircle(x3, y3, 4.0 + rand() * 7.0);
           }
         }
       }
