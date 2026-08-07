@@ -104,11 +104,13 @@ export class RaceScene extends MaterialRaceScene {
 
       const rand = this._rng?.(0x2d934b71) || Math.random;
       const roadWear = this.add.graphics().setDepth(11.08).setScrollFactor(1);
-      // Deliberately BELOW asphalt: a wide line centered on the edge leaves only its outer half visible.
       const shoulder = this.add.graphics().setDepth(9.80).setScrollFactor(1);
-      this.uiCam?.ignore?.([roadWear, shoulder]);
+      // TEMP diagnostic: very visible road-edge probe. It has no physics/collision role.
+      const edgeProbe = this.add.graphics().setDepth(11.35).setScrollFactor(1);
+      this.uiCam?.ignore?.([roadWear, shoulder, edgeProbe]);
       this._longitudinalAsphaltWear = roadWear;
       this._premiumShoulder = shoulder;
+      this._edgeProbe = edgeProbe;
 
       const count = center.length;
       const tangentAt = (i) => {
@@ -135,8 +137,6 @@ export class RaceScene extends MaterialRaceScene {
         }
       }
 
-      // One translucent strip per side, literally. No filled closed ribbons that can self-cross.
-      // Because this sits below asphalt, the inner half of the stroke is naturally hidden.
       const drawUnderlayEdge = (edgePts) => {
         if (edgePts.length !== count || count < 3) return;
         shoulder.lineStyle(18, 0x67513a, 0.14);
@@ -149,6 +149,22 @@ export class RaceScene extends MaterialRaceScene {
 
       drawUnderlayEdge(left);
       drawUnderlayEdge(right);
+
+      // Diagnostic only: intentionally crisp and bright so even a tiny fold, cusp or reversal
+      // becomes obvious in screenshots. If this survives a full lap cleanly, we can reuse the
+      // same path later as the final aged shoulder line with subtler styling.
+      const drawDiagnosticEdge = (edgePts) => {
+        if (edgePts.length !== count || count < 3) return;
+        edgeProbe.lineStyle(3, 0xf7f4ea, 1);
+        edgeProbe.beginPath();
+        edgeProbe.moveTo(edgePts[0].x, edgePts[0].y);
+        for (let i = 1; i < count; i++) edgeProbe.lineTo(edgePts[i].x, edgePts[i].y);
+        edgeProbe.lineTo(edgePts[0].x, edgePts[0].y);
+        edgeProbe.strokePath();
+      };
+
+      drawDiagnosticEdge(left);
+      drawDiagnosticEdge(right);
     } catch (err) {
       console.warn('[TDR2] Mobile-safe premium surface pass failed', err);
     }
