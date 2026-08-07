@@ -117,15 +117,37 @@ export class RaceScene extends MaterialRaceScene {
       };
       drawCenterStroke(shoulder, defaultTrackW + 18, 0x67513a, 0.14);
 
+      const curbThreshold = 0.105;
+      const maxCurbWidth = 11.5;
+      const minCurbWidth = 1.25;
+      const curbStrength = new Array(count);
+      for (let i = 0; i < count; i++) {
+        const raw = (Math.abs(turnAt(i)) - curbThreshold) / 0.12;
+        const t = Math.max(0, Math.min(1, raw));
+        const smooth = t * t * (3 - 2 * t);
+        curbStrength[i] = smooth;
+      }
+      // Gentle local smoothing keeps the width breathing with the bend instead of changing at a node.
+      const smoothedStrength = new Array(count);
+      for (let i = 0; i < count; i++) {
+        let sum = 0, weight = 0;
+        for (let k = -3; k <= 3; k++) {
+          const w = 4 - Math.abs(k);
+          sum += curbStrength[(i + k + count) % count] * w;
+          weight += w;
+        }
+        smoothedStrength[i] = sum / weight;
+      }
+
       const left = new Array(count), right = new Array(count), leftOuter = new Array(count), rightOuter = new Array(count);
-      const curbWidth = 10;
       for (let i = 0; i < count; i++) {
         const p = center[i], { tx, ty } = tangentAt(i), nx = -ty, ny = tx;
         const half = Number(p.width || defaultTrackW) * 0.5;
+        const localCurbWidth = minCurbWidth + (maxCurbWidth - minCurbWidth) * smoothedStrength[i];
         left[i] = { x: p.x + nx * half, y: p.y + ny * half };
         right[i] = { x: p.x - nx * half, y: p.y - ny * half };
-        leftOuter[i] = { x: p.x + nx * (half + curbWidth), y: p.y + ny * (half + curbWidth) };
-        rightOuter[i] = { x: p.x - nx * (half + curbWidth), y: p.y - ny * (half + curbWidth) };
+        leftOuter[i] = { x: p.x + nx * (half + localCurbWidth), y: p.y + ny * (half + localCurbWidth) };
+        rightOuter[i] = { x: p.x - nx * (half + localCurbWidth), y: p.y - ny * (half + localCurbWidth) };
       }
 
       const circularIndexDistance = (a, b) => Math.min(Math.abs(a - b), count - Math.abs(a - b));
@@ -182,13 +204,11 @@ export class RaceScene extends MaterialRaceScene {
       drawTrimmedEdge(left);
       drawTrimmedEdge(right);
 
-      // CURBS v2:
-      // - only the INSIDE of sustained corners for now;
-      // - real strips OUTSIDE the white line, never a thick coloured stroke centered on it;
-      // - red/white phase comes from travelled arc length, not node count, so block size is stable;
-      // - every quad is rejected if its edge is buried by another road section.
+      // CURBS v3:
+      // Width is not constant. It follows local curvature: slim on turn-in, widest near the apex,
+      // then tapers again on exit. This produces the wedge/bell profile seen on many real kerbs.
+      // The red/white block phase still comes from travelled distance, so visual rhythm stays stable.
       const blockLen = 18;
-      const curbThreshold = 0.105;
       const cumulative = new Array(count + 1).fill(0);
       for (let i = 0; i < count; i++) {
         const j = (i + 1) % count;
@@ -205,7 +225,7 @@ export class RaceScene extends MaterialRaceScene {
       for (let i = 0; i < count; i++) {
         const j = (i + 1) % count;
         const turn = turnAt(i);
-        if (Math.abs(turn) < curbThreshold) continue;
+        if (Math.abs(turn) < curbThreshold || smoothedStrength[i] < 0.035) continue;
 
         const edge = turn > 0 ? left : right;
         const outer = turn > 0 ? leftOuter : rightOuter;
