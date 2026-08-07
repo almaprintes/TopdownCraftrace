@@ -1,5 +1,5 @@
 // src/game/tracks/TrackBuilder.js
-// TrackBuilder: centerline -> ribbon (polígono) con suavizado + muestreo y culling por celdas
+// TrackBuilder: centerline -> ribbon (polígono) con suavizado + muestreo adaptativo y culling por celdas
 
 function ptX(p) {
   if (Array.isArray(p)) return Number(p[0]) || 0;
@@ -31,6 +31,12 @@ function normalize(x, y) {
   const d = Math.sqrt(x * x + y * y);
   if (d < 1e-6) return [0, 0];
   return [x / d, y / d];
+}
+
+function wrapPi(a) {
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
 }
 
 // Catmull-Rom centrípeta: evita el overshoot fuerte de la variante uniforme.
@@ -119,6 +125,42 @@ function resample(points, stepPx, fallbackWidth = 80) {
   return out;
 }
 
+// Muestreo adaptativo: primero crea una centerline fina y después conserva muchos más
+// puntos donde cambia rápido la dirección. En rectas vuelve aproximadamente al paso original.
+// Así las horquillas dejan de depender de unos pocos vértices con cambios enormes de normal.
+function adaptiveResample(points, baseStep, fallbackWidth = 80) {
+  const fineStep = Math.max(4, Math.min(6, baseStep * 0.45));
+  const fine = resample(points, fineStep, fallbackWidth);
+  const n = fine.length;
+  if (n < 12) return fine;
+
+  const out = [];
+  const straightStride = Math.max(2, Math.round(baseStep / fineStep));
+
+  for (let i = 0; i < n; i++) {
+    const p0 = fine[(i - 2 + n) % n];
+    const p = fine[i];
+    const p1 = fine[(i + 2) % n];
+
+    const a0 = Math.atan2(p.y - p0.y, p.x - p0.x);
+    const a1 = Math.atan2(p1.y - p.y, p1.x - p.x);
+    const turn = Math.abs(wrapPi(a1 - a0));
+
+    // Curva fuerte: 4–6 px entre nodos.
+    // Curva media: ~8–12 px.
+    // Recta: recuperamos aproximadamente sampleStepPx.
+    let stride = straightStride;
+    if (turn > 0.13) stride = 1;
+    else if (turn > 0.045) stride = Math.min(2, straightStride);
+
+    if (i === 0 || i === n - 1 || (i % stride) === 0) {
+      out.push(makePt(p.x, p.y, p.width));
+    }
+  }
+
+  return out;
+}
+
 function boundsOfPoly(poly) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of poly) {
@@ -156,19 +198,16 @@ export function buildTrackRibbon({
   if (n < 2) return { center: [], left: [], right: [], cells: new Map(), cellSize };
 
   const get = (idx) => src[(idx + n) % n];
-  const SUB = 10;
+  const SUB = 14; // más fidelidad en la curva original antes del remuestreo adaptativo
   for (let i = 0; i < n; i++) {
     const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
     for (let s = 0; s < SUB; s++) dense.push(catmullRom(p0, p1, p2, p3, s / SUB, fallbackWidth));
   }
   dense.push(makePt(dense[0].x, dense[0].y, dense[0].width));
 
-  const cl = resample(dense, sampleStepPx, fallbackWidth);
+  const cl = adaptiveResample(dense, sampleStepPx, fallbackWidth);
 
-  // Un circuito cerrado NO debe contener dos muestras casi iguales en el cierre.
-  // Esa duplicación crea una tangente casi nula y puede girar la normal 180° en la costura.
   if (cl.length > 8 && dist(cl[0], cl[cl.length - 1]) < Math.max(2, sampleStepPx * 0.55)) cl.pop();
-
   if (cl.length < 8) return { center: cl, left: [], right: [], cells: new Map(), cellSize };
 
   const baseGrassMargin = Math.max(0, grassMargin);
@@ -178,25 +217,24 @@ export function buildTrackRibbon({
   const grassRight = [];
   const count = cl.length;
 
-  // IMPORTANTE: sin miter. El miter anterior podía apuntar hacia el lado equivocado en cambios
-  // de curvatura fuertes y generaba exactamente los vértices "retorcidos" visibles en horquillas.
-  // La normal se obtiene de una tangente centrada y ancha: siempre perpendicular a la centerline
-  // y siempre a distancia constante. No hay handles que puedan darse la vuelta.
+  // Bordes de ancho constante. La diferencia ahora es que una curva cerrada dispone de muchos
+  // más nodos y por tanto cada cambio de normal es pequeño y progresivo.
   for (let i = 0; i < count; i++) {
     const p = cl[i];
-    const pBack = cl[(i - 2 + count) % count];
-    const pAhead = cl[(i + 2) % count];
+
+    // Tangente local centrada. Con densidad adaptativa no necesitamos una ventana grande que
+    // atraviese el vértice de una horquilla y apunte hacia una dirección poco representativa.
+    const pBack = cl[(i - 1 + count) % count];
+    const pAhead = cl[(i + 1) % count];
 
     let tx = pAhead.x - pBack.x;
     let ty = pAhead.y - pBack.y;
     let td = Math.hypot(tx, ty);
-
-    // Fallback local si la ventana amplia cae en una geometría excepcionalmente cerrada.
     if (td < 1e-5) {
-      const pPrev = cl[(i - 1 + count) % count];
-      const pNext = cl[(i + 1) % count];
-      tx = pNext.x - pPrev.x;
-      ty = pNext.y - pPrev.y;
+      const pBack2 = cl[(i - 2 + count) % count];
+      const pAhead2 = cl[(i + 2) % count];
+      tx = pAhead2.x - pBack2.x;
+      ty = pAhead2.y - pBack2.y;
       td = Math.hypot(tx, ty) || 1;
     }
 
