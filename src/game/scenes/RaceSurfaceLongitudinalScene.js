@@ -98,15 +98,20 @@ export class RaceScene extends MaterialRaceScene {
         : { x: Number(p?.x), y: Number(p?.y), width: Number(p?.width || fallbackW) };
 
       const center = (this.track?.geom?.center || []).map((p) => toPoint(p)).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
-      const left = (this.track?.geom?.left || []).map((p) => toPoint(p)).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
-      const right = (this.track?.geom?.right || []).map((p) => toPoint(p)).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
       if (center.length < 12) return;
 
       const rand = this._rng?.(0x2d934b71) || Math.random;
       const roadWear = this.add.graphics().setDepth(11.08).setScrollFactor(1);
       const shoulder = this.add.graphics().setDepth(9.80).setScrollFactor(1);
-      // TEMP diagnostic: very visible road-edge probe. It has no physics/collision role.
-      const edgeProbe = this.add.graphics().setDepth(11.35).setScrollFactor(1);
+
+      // IMPORTANT: diagnostic outline now comes from the SAME swept centerline idea that makes
+      // the asphalt look correct. It does not use geom.left/right at all. Those parallel offsets
+      // are mathematically allowed to cusp/self-cross when a hairpin radius is tighter than half
+      // the road width, so connecting them globally can never be a reliable road boundary.
+      // This probe is a single wide stroke UNDER the asphalt. The asphalt hides the middle and
+      // leaves only ~3 px visible outside the true swept road silhouette.
+      const edgeProbe = this.add.graphics().setDepth(9.92).setScrollFactor(1);
+
       this.uiCam?.ignore?.([roadWear, shoulder, edgeProbe]);
       this._longitudinalAsphaltWear = roadWear;
       this._premiumShoulder = shoulder;
@@ -137,34 +142,22 @@ export class RaceScene extends MaterialRaceScene {
         }
       }
 
-      const drawUnderlayEdge = (edgePts) => {
-        if (edgePts.length !== count || count < 3) return;
-        shoulder.lineStyle(18, 0x67513a, 0.14);
-        shoulder.beginPath();
-        shoulder.moveTo(edgePts[0].x, edgePts[0].y);
-        for (let i = 1; i < count; i++) shoulder.lineTo(edgePts[i].x, edgePts[i].y);
-        shoulder.lineTo(edgePts[0].x, edgePts[0].y);
-        shoulder.strokePath();
+      // Shoulder follows the robust swept centerline too. It is below asphalt, so only the
+      // exterior fringe survives visually and no offset-line loop can appear in a hairpin.
+      const drawCenterStroke = (g, width, color, alpha) => {
+        g.lineStyle(width, color, alpha);
+        g.beginPath();
+        g.moveTo(center[0].x, center[0].y);
+        for (let i = 1; i < count; i++) g.lineTo(center[i].x, center[i].y);
+        g.lineTo(center[0].x, center[0].y);
+        g.strokePath();
       };
 
-      drawUnderlayEdge(left);
-      drawUnderlayEdge(right);
+      drawCenterStroke(shoulder, defaultTrackW + 18, 0x67513a, 0.14);
 
-      // Diagnostic only: intentionally crisp and bright so even a tiny fold, cusp or reversal
-      // becomes obvious in screenshots. If this survives a full lap cleanly, we can reuse the
-      // same path later as the final aged shoulder line with subtler styling.
-      const drawDiagnosticEdge = (edgePts) => {
-        if (edgePts.length !== count || count < 3) return;
-        edgeProbe.lineStyle(3, 0xf7f4ea, 1);
-        edgeProbe.beginPath();
-        edgeProbe.moveTo(edgePts[0].x, edgePts[0].y);
-        for (let i = 1; i < count; i++) edgeProbe.lineTo(edgePts[i].x, edgePts[i].y);
-        edgeProbe.lineTo(edgePts[0].x, edgePts[0].y);
-        edgeProbe.strokePath();
-      };
-
-      drawDiagnosticEdge(left);
-      drawDiagnosticEdge(right);
+      // Bright truth-test: if this stays smooth through the old problem corners, then the visible
+      // road boundary is genuinely robust. Later this same underlay becomes the final aged edge line.
+      drawCenterStroke(edgeProbe, defaultTrackW + 6, 0xf7f4ea, 1);
     } catch (err) {
       console.warn('[TDR2] Mobile-safe premium surface pass failed', err);
     }
