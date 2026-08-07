@@ -1,7 +1,7 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 
 // Mobile-safe premium surface pass.
-// Matte materials + sparse longitudinal wear + simple translucent dirt underlay strokes.
+// Matte materials + sparse longitudinal wear + robust shoulder underlay + trimmed true edge line.
 export class RaceScene extends MaterialRaceScene {
   ensureBgTexture() {
     const key = 'grass';
@@ -103,19 +103,12 @@ export class RaceScene extends MaterialRaceScene {
       const rand = this._rng?.(0x2d934b71) || Math.random;
       const roadWear = this.add.graphics().setDepth(11.08).setScrollFactor(1);
       const shoulder = this.add.graphics().setDepth(9.80).setScrollFactor(1);
+      const edgeLine = this.add.graphics().setDepth(11.34).setScrollFactor(1);
 
-      // IMPORTANT: diagnostic outline now comes from the SAME swept centerline idea that makes
-      // the asphalt look correct. It does not use geom.left/right at all. Those parallel offsets
-      // are mathematically allowed to cusp/self-cross when a hairpin radius is tighter than half
-      // the road width, so connecting them globally can never be a reliable road boundary.
-      // This probe is a single wide stroke UNDER the asphalt. The asphalt hides the middle and
-      // leaves only ~3 px visible outside the true swept road silhouette.
-      const edgeProbe = this.add.graphics().setDepth(9.92).setScrollFactor(1);
-
-      this.uiCam?.ignore?.([roadWear, shoulder, edgeProbe]);
+      this.uiCam?.ignore?.([roadWear, shoulder, edgeLine]);
       this._longitudinalAsphaltWear = roadWear;
       this._premiumShoulder = shoulder;
-      this._edgeProbe = edgeProbe;
+      this._edgeProbe = edgeLine;
 
       const count = center.length;
       const tangentAt = (i) => {
@@ -142,8 +135,7 @@ export class RaceScene extends MaterialRaceScene {
         }
       }
 
-      // Shoulder follows the robust swept centerline too. It is below asphalt, so only the
-      // exterior fringe survives visually and no offset-line loop can appear in a hairpin.
+      // Robust dirt shoulder remains the cheap underlay trick: no self-crossing edge polygon.
       const drawCenterStroke = (g, width, color, alpha) => {
         g.lineStyle(width, color, alpha);
         g.beginPath();
@@ -152,12 +144,80 @@ export class RaceScene extends MaterialRaceScene {
         g.lineTo(center[0].x, center[0].y);
         g.strokePath();
       };
-
       drawCenterStroke(shoulder, defaultTrackW + 18, 0x67513a, 0.14);
 
-      // Bright truth-test: if this stays smooth through the old problem corners, then the visible
-      // road boundary is genuinely robust. Later this same underlay becomes the final aged edge line.
-      drawCenterStroke(edgeProbe, defaultTrackW + 6, 0xf7f4ea, 1);
+      // TRUE shoulder line:
+      // 1) build actual left/right offset candidates from the dense centerline;
+      // 2) test each candidate against the swept road union;
+      // 3) if that edge point lies inside another non-neighbouring road segment, suppress it.
+      // This is effectively "erasing where needed", but automatically and geometrically.
+      const left = new Array(count);
+      const right = new Array(count);
+      for (let i = 0; i < count; i++) {
+        const p = center[i];
+        const { tx, ty } = tangentAt(i);
+        const nx = -ty, ny = tx;
+        const half = Number(p.width || defaultTrackW) * 0.5;
+        left[i] = { x: p.x + nx * half, y: p.y + ny * half };
+        right[i] = { x: p.x - nx * half, y: p.y - ny * half };
+      }
+
+      const circularIndexDistance = (a, b) => {
+        const d = Math.abs(a - b);
+        return Math.min(d, count - d);
+      };
+
+      const pointToSegmentDistance = (q, a, b) => {
+        const vx = b.x - a.x, vy = b.y - a.y;
+        const wx = q.x - a.x, wy = q.y - a.y;
+        const vv = vx * vx + vy * vy;
+        let t = vv > 1e-8 ? (wx * vx + wy * vy) / vv : 0;
+        t = Math.max(0, Math.min(1, t));
+        const px = a.x + vx * t, py = a.y + vy * t;
+        return { d: Math.hypot(q.x - px, q.y - py), t };
+      };
+
+      const isBuriedByOtherRoad = (q, ownIndex) => {
+        // Skip nearby segments: touching its own local road is expected.
+        // Only non-local road overlap means this candidate is not part of the exterior silhouette.
+        for (let j = 0; j < count; j++) {
+          if (circularIndexDistance(j, ownIndex) <= 5 || circularIndexDistance((j + 1) % count, ownIndex) <= 5) continue;
+          const a = center[j], b = center[(j + 1) % count];
+          const hit = pointToSegmentDistance(q, a, b);
+          const halfA = Number(a.width || defaultTrackW) * 0.5;
+          const halfB = Number(b.width || defaultTrackW) * 0.5;
+          const radius = halfA + (halfB - halfA) * hit.t;
+          // Small inset avoids deleting legitimate tangent contacts due to floating-point noise.
+          if (hit.d < radius - 1.25) return true;
+        }
+        return false;
+      };
+
+      const drawTrimmedEdge = (pts) => {
+        edgeLine.lineStyle(2.6, 0xf3efe5, 0.98);
+        let drawing = false;
+        for (let i = 0; i < count; i++) {
+          const j = (i + 1) % count;
+          const aVisible = !isBuriedByOtherRoad(pts[i], i);
+          const bVisible = !isBuriedByOtherRoad(pts[j], j);
+
+          if (aVisible && bVisible) {
+            if (!drawing) {
+              edgeLine.beginPath();
+              edgeLine.moveTo(pts[i].x, pts[i].y);
+              drawing = true;
+            }
+            edgeLine.lineTo(pts[j].x, pts[j].y);
+          } else if (drawing) {
+            edgeLine.strokePath();
+            drawing = false;
+          }
+        }
+        if (drawing) edgeLine.strokePath();
+      };
+
+      drawTrimmedEdge(left);
+      drawTrimmedEdge(right);
     } catch (err) {
       console.warn('[TDR2] Mobile-safe premium surface pass failed', err);
     }
