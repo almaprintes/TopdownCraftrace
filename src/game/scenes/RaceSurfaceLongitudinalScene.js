@@ -1,7 +1,7 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 
 // Mobile-safe premium surface pass.
-// Matte materials + robust shoulder/edge geometry + clipped curbs derived from the same dense centerline.
+// Matte materials + robust shoulder/edge geometry + curbs built from clipped edge strips.
 export class RaceScene extends MaterialRaceScene {
   ensureBgTexture() {
     const key = 'grass';
@@ -80,7 +80,7 @@ export class RaceScene extends MaterialRaceScene {
       const roadWear = this.add.graphics().setDepth(11.08).setScrollFactor(1);
       const shoulder = this.add.graphics().setDepth(9.80).setScrollFactor(1);
       const edgeLine = this.add.graphics().setDepth(11.34).setScrollFactor(1);
-      const curbs = this.add.graphics().setDepth(11.38).setScrollFactor(1);
+      const curbs = this.add.graphics().setDepth(11.30).setScrollFactor(1);
       this.uiCam?.ignore?.([roadWear, shoulder, edgeLine, curbs]);
       this._longitudinalAsphaltWear = roadWear;
       this._premiumShoulder = shoulder;
@@ -95,7 +95,7 @@ export class RaceScene extends MaterialRaceScene {
       };
       const normAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
       const turnAt = (i) => {
-        const a = center[(i - 4 + count) % count], b = center[i], c = center[(i + 4) % count];
+        const a = center[(i - 5 + count) % count], b = center[i], c = center[(i + 5) % count];
         return normAngle(Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(b.y - a.y, b.x - a.x));
       };
 
@@ -117,12 +117,15 @@ export class RaceScene extends MaterialRaceScene {
       };
       drawCenterStroke(shoulder, defaultTrackW + 18, 0x67513a, 0.14);
 
-      const left = new Array(count), right = new Array(count);
+      const left = new Array(count), right = new Array(count), leftOuter = new Array(count), rightOuter = new Array(count);
+      const curbWidth = 10;
       for (let i = 0; i < count; i++) {
         const p = center[i], { tx, ty } = tangentAt(i), nx = -ty, ny = tx;
         const half = Number(p.width || defaultTrackW) * 0.5;
         left[i] = { x: p.x + nx * half, y: p.y + ny * half };
         right[i] = { x: p.x - nx * half, y: p.y - ny * half };
+        leftOuter[i] = { x: p.x + nx * (half + curbWidth), y: p.y + ny * (half + curbWidth) };
+        rightOuter[i] = { x: p.x - nx * (half + curbWidth), y: p.y - ny * (half + curbWidth) };
       }
 
       const circularIndexDistance = (a, b) => Math.min(Math.abs(a - b), count - Math.abs(a - b));
@@ -176,43 +179,52 @@ export class RaceScene extends MaterialRaceScene {
         }
         if (drawing) edgeLine.strokePath();
       };
-
       drawTrimmedEdge(left);
       drawTrimmedEdge(right);
 
-      // PIANOS: only on genuine curves, derived from the same clipped edge system.
-      // Inner edge gets the main curb. The outside edge is added only on the latter half of a
-      // strong bend (exit), which keeps the circuit readable and avoids decorating every metre.
-      let curbPhase = 0;
-      const drawCurbSegment = (a, b, color) => {
-        curbs.lineStyle(9, color, 0.98);
-        curbs.beginPath(); curbs.moveTo(a.x, a.y); curbs.lineTo(b.x, b.y); curbs.strokePath();
-      };
+      // CURBS v2:
+      // - only the INSIDE of sustained corners for now;
+      // - real strips OUTSIDE the white line, never a thick coloured stroke centered on it;
+      // - red/white phase comes from travelled arc length, not node count, so block size is stable;
+      // - every quad is rejected if its edge is buried by another road section.
+      const blockLen = 18;
+      const curbThreshold = 0.105;
+      const cumulative = new Array(count + 1).fill(0);
       for (let i = 0; i < count; i++) {
         const j = (i + 1) % count;
-        const turn = turnAt(i), absTurn = Math.abs(turn);
-        if (absTurn < 0.085) continue;
+        cumulative[i + 1] = cumulative[i] + Math.hypot(center[j].x - center[i].x, center[j].y - center[i].y);
+      }
 
-        // Turn sign: positive = left bend => left edge is inside; negative => right edge inside.
-        const inside = turn > 0 ? left : right;
-        const outside = turn > 0 ? right : left;
-        const ia = inside[i], ib = inside[j];
-        const insideVisible = !isBuriedByOtherRoad(ia, i) && !isBuriedByOtherRoad(ib, j);
-        if (insideVisible) {
-          const color = (curbPhase++ % 2 === 0) ? 0xc93b32 : 0xeee9df;
-          drawCurbSegment(ia, ib, color);
-        }
+      const lerpPt = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+      const fillQuad = (a, b, c, d, color) => {
+        curbs.fillStyle(color, 0.98);
+        curbs.beginPath();
+        curbs.moveTo(a.x, a.y); curbs.lineTo(b.x, b.y); curbs.lineTo(c.x, c.y); curbs.lineTo(d.x, d.y); curbs.closePath(); curbs.fillPath();
+      };
 
-        // Exit curb: same turn sign still present, but local curvature is already easing.
-        const prevAbs = Math.abs(turnAt((i - 3 + count) % count));
-        const nextAbs = Math.abs(turnAt((i + 3) % count));
-        const easing = nextAbs < absTurn && absTurn <= prevAbs + 0.04;
-        if (absTurn > 0.11 && easing) {
-          const oa = outside[i], ob = outside[j];
-          if (!isBuriedByOtherRoad(oa, i) && !isBuriedByOtherRoad(ob, j)) {
-            const color = (curbPhase++ % 2 === 0) ? 0xc93b32 : 0xeee9df;
-            drawCurbSegment(oa, ob, color);
-          }
+      for (let i = 0; i < count; i++) {
+        const j = (i + 1) % count;
+        const turn = turnAt(i);
+        if (Math.abs(turn) < curbThreshold) continue;
+
+        const edge = turn > 0 ? left : right;
+        const outer = turn > 0 ? leftOuter : rightOuter;
+        if (isBuriedByOtherRoad(edge[i], i) || isBuriedByOtherRoad(edge[j], j)) continue;
+
+        const segLen = Math.hypot(edge[j].x - edge[i].x, edge[j].y - edge[i].y);
+        if (segLen < 0.5) continue;
+        let used = 0;
+        while (used < segLen - 0.01) {
+          const absStart = cumulative[i] + used;
+          const nextBoundary = (Math.floor(absStart / blockLen) + 1) * blockLen;
+          const piece = Math.min(segLen - used, nextBoundary - absStart);
+          const t0 = used / segLen;
+          const t1 = (used + piece) / segLen;
+          const e0 = lerpPt(edge[i], edge[j], t0), e1 = lerpPt(edge[i], edge[j], t1);
+          const o0 = lerpPt(outer[i], outer[j], t0), o1 = lerpPt(outer[i], outer[j], t1);
+          const blockIndex = Math.floor((absStart + 0.001) / blockLen);
+          fillQuad(e0, e1, o1, o0, blockIndex % 2 === 0 ? 0xc43b33 : 0xeee9df);
+          used += piece;
         }
       }
     } catch (err) {
