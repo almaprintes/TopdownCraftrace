@@ -1,8 +1,8 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 
 // Mobile-safe premium surface pass.
-// World-space detail follows the track tangent; shoulder uses broad, low-alpha overlapping quads
-// so it reads as one dirty edge rather than visible geometric blocks.
+// Keep the road dressing deliberately simple: matte materials + subtle driven-line wear
+// + one translucent dirt ribbon outside each exact track edge.
 export class RaceScene extends MaterialRaceScene {
   ensureBgTexture() {
     const key = 'grass';
@@ -35,7 +35,10 @@ export class RaceScene extends MaterialRaceScene {
         : (rand() > 0.5 ? `rgba(100,132,73,${0.026 + rand() * 0.045})` : `rgba(13,43,18,${0.028 + rand() * 0.048})`);
       ctx.lineWidth = 0.38 + rand() * 0.34;
       const a = rand() * Math.PI, l = 0.65 + rand() * 1.45;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
+      ctx.stroke();
     }
 
     for (let i = 0; i < 1900; i++) {
@@ -63,7 +66,8 @@ export class RaceScene extends MaterialRaceScene {
       const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
       grad.addColorStop(0, `rgba(${c},${0.009 + rand() * 0.014})`);
       grad.addColorStop(1, `rgba(${c},0)`);
-      ctx.fillStyle = grad; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
     }
 
     for (let i = 0; i < 5200; i++) {
@@ -106,23 +110,25 @@ export class RaceScene extends MaterialRaceScene {
       this._longitudinalAsphaltWear = roadWear;
       this._premiumShoulder = shoulder;
 
+      const count = center.length;
       const tangentAt = (i) => {
-        const p0 = center[Math.max(0, i - 3)], p1 = center[Math.min(center.length - 1, i + 3)];
+        const p0 = center[(i - 3 + count) % count];
+        const p1 = center[(i + 3) % count];
         const dx = p1.x - p0.x, dy = p1.y - p0.y, d = Math.hypot(dx, dy) || 1;
         return { tx: dx / d, ty: dy / d };
       };
 
-      // Sparse driven-line wear; tiny command count.
-      for (let i = 5; i < center.length - 5; i += 8) {
+      // Very sparse world-space wear, always following the centerline tangent.
+      for (let i = 5; i < count - 5; i += 10) {
         const p = center[i];
         const { tx, ty } = tangentAt(i);
         const nx = -ty, ny = tx;
         const half = Math.max(90, Math.min(250, Number(p.width || defaultTrackW))) * 0.5;
         for (let k = 0; k < 2; k++) {
-          const laneBias = (k ? 1 : -1) * Math.min(half * 0.18, 15) + (rand() - 0.5) * 8;
+          const laneBias = (k ? 1 : -1) * Math.min(half * 0.18, 15) + (rand() - 0.5) * 6;
           const x = p.x + nx * laneBias, y = p.y + ny * laneBias;
-          const l = 18 + rand() * 30;
-          roadWear.lineStyle(1.2 + rand() * 1.5, 0x151311, 0.010 + rand() * 0.010);
+          const l = 18 + rand() * 26;
+          roadWear.lineStyle(1.1 + rand() * 1.2, 0x151311, 0.009 + rand() * 0.008);
           roadWear.beginPath();
           roadWear.moveTo(x - tx * l * 0.5, y - ty * l * 0.5);
           roadWear.lineTo(x + tx * l * 0.5, y + ty * l * 0.5);
@@ -130,65 +136,38 @@ export class RaceScene extends MaterialRaceScene {
         }
       }
 
-      if (left.length === center.length && right.length === center.length) {
-        const paintEdgeSoil = (edgePts) => {
-          const step = 5;
-          for (let i = step; i < center.length - step; i += step) {
-            const c = center[i], e = edgePts[i];
+      // Exactly what is needed visually: one translucent dirt strip per side. No dots, ovals,
+      // random blocks or decorative fragments. It follows the corrected exact ribbon edge.
+      if (left.length === count && right.length === count) {
+        const drawBand = (edgePts) => {
+          const bandW = 10;
+          const inner = [];
+          const outer = [];
+
+          // Sample every second point; enough fidelity for curves and cheap on mobile.
+          for (let i = 0; i < count; i += 2) {
+            const c = center[i];
+            const e = edgePts[i];
             if (!c || !e) continue;
-
-            const { tx, ty } = tangentAt(i);
             let ox = e.x - c.x, oy = e.y - c.y;
-            const od = Math.hypot(ox, oy) || 1;
-            ox /= od; oy /= od;
-
-            // Length adapts to local spacing so neighbouring samples overlap naturally.
-            const prev = center[Math.max(0, i - step)];
-            const next = center[Math.min(center.length - 1, i + step)];
-            const localSpan = Math.max(18, Math.min(48, Math.hypot(next.x - prev.x, next.y - prev.y) * 0.62));
-            const halfLen = localSpan * 0.5;
-
-            // Slightly different widths at both ends remove the repeated-rectangle look.
-            const inner0 = 0.8 + rand() * 1.2;
-            const inner1 = 0.8 + rand() * 1.2;
-            const outer0 = 6.0 + rand() * 3.0;
-            const outer1 = 6.0 + rand() * 3.0;
-
-            const a0x = e.x - tx * halfLen + ox * inner0;
-            const a0y = e.y - ty * halfLen + oy * inner0;
-            const a1x = e.x + tx * halfLen + ox * inner1;
-            const a1y = e.y + ty * halfLen + oy * inner1;
-            const b1x = e.x + tx * halfLen + ox * outer1;
-            const b1y = e.y + ty * halfLen + oy * outer1;
-            const b0x = e.x - tx * halfLen + ox * outer0;
-            const b0y = e.y - ty * halfLen + oy * outer0;
-
-            const color = rand() > 0.5 ? 0x604b38 : 0x705940;
-            shoulder.fillStyle(color, 0.055 + rand() * 0.035);
-            shoulder.beginPath();
-            shoulder.moveTo(a0x, a0y);
-            shoulder.lineTo(a1x, a1y);
-            shoulder.lineTo(b1x, b1y);
-            shoulder.lineTo(b0x, b0y);
-            shoulder.closePath();
-            shoulder.fillPath();
-
-            // Very faint dusty outer feather, still one cheap quad.
-            const dust0 = outer0 + 5 + rand() * 3;
-            const dust1 = outer1 + 5 + rand() * 3;
-            shoulder.fillStyle(0x8b714c, 0.025 + rand() * 0.020);
-            shoulder.beginPath();
-            shoulder.moveTo(e.x - tx * halfLen + ox * outer0, e.y - ty * halfLen + oy * outer0);
-            shoulder.lineTo(e.x + tx * halfLen + ox * outer1, e.y + ty * halfLen + oy * outer1);
-            shoulder.lineTo(e.x + tx * halfLen + ox * dust1, e.y + ty * halfLen + oy * dust1);
-            shoulder.lineTo(e.x - tx * halfLen + ox * dust0, e.y - ty * halfLen + oy * dust0);
-            shoulder.closePath();
-            shoulder.fillPath();
+            const d = Math.hypot(ox, oy) || 1;
+            ox /= d; oy /= d;
+            inner.push({ x: e.x, y: e.y });
+            outer.push({ x: e.x + ox * bandW, y: e.y + oy * bandW });
           }
+
+          if (inner.length < 4) return;
+          shoulder.fillStyle(0x67513a, 0.16);
+          shoulder.beginPath();
+          shoulder.moveTo(inner[0].x, inner[0].y);
+          for (let i = 1; i < inner.length; i++) shoulder.lineTo(inner[i].x, inner[i].y);
+          for (let i = outer.length - 1; i >= 0; i--) shoulder.lineTo(outer[i].x, outer[i].y);
+          shoulder.closePath();
+          shoulder.fillPath();
         };
 
-        paintEdgeSoil(left);
-        paintEdgeSoil(right);
+        drawBand(left);
+        drawBand(right);
       }
     } catch (err) {
       console.warn('[TDR2] Mobile-safe premium surface pass failed', err);
