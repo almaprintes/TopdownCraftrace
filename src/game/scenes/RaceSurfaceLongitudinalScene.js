@@ -65,8 +65,7 @@ export class RaceScene extends MaterialRaceScene {
       const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
       grad.addColorStop(0, `rgba(${c},${0.009 + rand() * 0.014})`);
       grad.addColorStop(1, `rgba(${c},0)`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      ctx.fillStyle = grad; ctx.fillRect(x - r, y - r, r * 2, r * 2);
     }
 
     for (let i = 0; i < 5200; i++) {
@@ -128,14 +127,10 @@ export class RaceScene extends MaterialRaceScene {
           const x = p.x + nx * laneBias, y = p.y + ny * laneBias;
           const l = 18 + rand() * 26;
           roadWear.lineStyle(1.1 + rand() * 1.2, 0x151311, 0.009 + rand() * 0.008);
-          roadWear.beginPath();
-          roadWear.moveTo(x - tx * l * 0.5, y - ty * l * 0.5);
-          roadWear.lineTo(x + tx * l * 0.5, y + ty * l * 0.5);
-          roadWear.strokePath();
+          roadWear.beginPath(); roadWear.moveTo(x - tx * l * 0.5, y - ty * l * 0.5); roadWear.lineTo(x + tx * l * 0.5, y + ty * l * 0.5); roadWear.strokePath();
         }
       }
 
-      // Robust dirt shoulder remains the cheap underlay trick: no self-crossing edge polygon.
       const drawCenterStroke = (g, width, color, alpha) => {
         g.lineStyle(width, color, alpha);
         g.beginPath();
@@ -146,13 +141,7 @@ export class RaceScene extends MaterialRaceScene {
       };
       drawCenterStroke(shoulder, defaultTrackW + 18, 0x67513a, 0.14);
 
-      // TRUE shoulder line:
-      // 1) build actual left/right offset candidates from the dense centerline;
-      // 2) test each candidate against the swept road union;
-      // 3) if that edge point lies inside another non-neighbouring road segment, suppress it.
-      // This is effectively "erasing where needed", but automatically and geometrically.
-      const left = new Array(count);
-      const right = new Array(count);
+      const left = new Array(count), right = new Array(count);
       for (let i = 0; i < count; i++) {
         const p = center[i];
         const { tx, ty } = tangentAt(i);
@@ -178,8 +167,6 @@ export class RaceScene extends MaterialRaceScene {
       };
 
       const isBuriedByOtherRoad = (q, ownIndex) => {
-        // Skip nearby segments: touching its own local road is expected.
-        // Only non-local road overlap means this candidate is not part of the exterior silhouette.
         for (let j = 0; j < count; j++) {
           if (circularIndexDistance(j, ownIndex) <= 5 || circularIndexDistance((j + 1) % count, ownIndex) <= 5) continue;
           const a = center[j], b = center[(j + 1) % count];
@@ -187,32 +174,72 @@ export class RaceScene extends MaterialRaceScene {
           const halfA = Number(a.width || defaultTrackW) * 0.5;
           const halfB = Number(b.width || defaultTrackW) * 0.5;
           const radius = halfA + (halfB - halfA) * hit.t;
-          // Small inset avoids deleting legitimate tangent contacts due to floating-point noise.
           if (hit.d < radius - 1.25) return true;
         }
         return false;
       };
 
+      // Find the exact visible/buried transition INSIDE an edge segment instead of dropping the
+      // whole segment when one endpoint is hidden. This closes the small 4-10 px diagnostic gaps
+      // seen in tight bends while keeping the self-overlap trimmed away.
+      const boundaryPoint = (a, b, ownIndexA, ownIndexB, aVisible) => {
+        let lo = 0, hi = 1;
+        for (let it = 0; it < 8; it++) {
+          const t = (lo + hi) * 0.5;
+          const q = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+          const idx = t < 0.5 ? ownIndexA : ownIndexB;
+          const visible = !isBuriedByOtherRoad(q, idx);
+          if (visible === aVisible) lo = t;
+          else hi = t;
+        }
+        const t = (lo + hi) * 0.5;
+        return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+      };
+
       const drawTrimmedEdge = (pts) => {
         edgeLine.lineStyle(2.6, 0xf3efe5, 0.98);
         let drawing = false;
+
         for (let i = 0; i < count; i++) {
           const j = (i + 1) % count;
-          const aVisible = !isBuriedByOtherRoad(pts[i], i);
-          const bVisible = !isBuriedByOtherRoad(pts[j], j);
+          const a = pts[i], b = pts[j];
+          const aVisible = !isBuriedByOtherRoad(a, i);
+          const bVisible = !isBuriedByOtherRoad(b, j);
 
           if (aVisible && bVisible) {
             if (!drawing) {
               edgeLine.beginPath();
-              edgeLine.moveTo(pts[i].x, pts[i].y);
+              edgeLine.moveTo(a.x, a.y);
               drawing = true;
             }
-            edgeLine.lineTo(pts[j].x, pts[j].y);
+            edgeLine.lineTo(b.x, b.y);
+          } else if (aVisible !== bVisible) {
+            const cut = boundaryPoint(a, b, i, j, aVisible);
+            if (aVisible) {
+              if (!drawing) {
+                edgeLine.beginPath();
+                edgeLine.moveTo(a.x, a.y);
+                drawing = true;
+              }
+              edgeLine.lineTo(cut.x, cut.y);
+              edgeLine.strokePath();
+              drawing = false;
+            } else {
+              if (drawing) {
+                edgeLine.strokePath();
+                drawing = false;
+              }
+              edgeLine.beginPath();
+              edgeLine.moveTo(cut.x, cut.y);
+              edgeLine.lineTo(b.x, b.y);
+              drawing = true;
+            }
           } else if (drawing) {
             edgeLine.strokePath();
             drawing = false;
           }
         }
+
         if (drawing) edgeLine.strokePath();
       };
 
