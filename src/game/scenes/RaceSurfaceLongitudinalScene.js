@@ -1,8 +1,8 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 
 // Premium semi-realistic surface pass.
-// Replaces visibly tiled reference materials with procedural, non-directional terrain.
-// Physics, track, cameras, HUD and gameplay stay untouched.
+// Keeps surfaces procedural while removing the two main visual failures found in testing:
+// coarse pebble-like asphalt and shoulder dirt leaking into the racing surface.
 export class RaceScene extends MaterialRaceScene {
   ensureBgTexture() {
     const key = 'grass';
@@ -16,7 +16,6 @@ export class RaceScene extends MaterialRaceScene {
     ctx.fillStyle = '#30452d';
     ctx.fillRect(0, 0, size, size);
 
-    // Large, extremely soft tone drift. No squares or mowing stripes.
     for (let i = 0; i < 70; i++) {
       const x = rand() * size;
       const y = rand() * size;
@@ -30,7 +29,6 @@ export class RaceScene extends MaterialRaceScene {
       ctx.fillRect(x-r, y-r, r*2, r*2);
     }
 
-    // Dense micro vegetation. Tiny enough to survive race zoom without looking like rope.
     for (let i = 0; i < 52000; i++) {
       const x = rand() * size;
       const y = rand() * size;
@@ -49,7 +47,6 @@ export class RaceScene extends MaterialRaceScene {
       ctx.stroke();
     }
 
-    // Small bare/dry speckles, intentionally irregular and sparse.
     for (let i = 0; i < 4200; i++) {
       const x = rand() * size;
       const y = rand() * size;
@@ -72,45 +69,45 @@ export class RaceScene extends MaterialRaceScene {
     const ctx = tex.getContext();
     const rand = this._rng?.(0x6f41a2d9) || Math.random;
 
-    // Warm charcoal base: deliberately matte and neutral.
-    ctx.fillStyle = '#343230';
+    // Smooth matte warm charcoal. The road should read as asphalt from value variation,
+    // not from visible stones.
+    ctx.fillStyle = '#35322f';
     ctx.fillRect(0, 0, size, size);
 
-    // Very broad grime/value drift. Removes the synthetic flat fill without obvious motifs.
-    for (let i = 0; i < 90; i++) {
+    // Large soft tonal drift: grime, repairs and age without decorative blobs.
+    for (let i = 0; i < 110; i++) {
       const x = rand() * size;
       const y = rand() * size;
-      const r = 35 + rand() * 145;
-      const warm = rand() > 0.55;
+      const r = 45 + rand() * 170;
+      const pick = rand();
+      const c = pick > 0.66 ? '86,73,60' : pick > 0.32 ? '20,20,20' : '72,70,66';
       const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, warm
-        ? `rgba(88,74,60,${0.018 + rand() * 0.035})`
-        : `rgba(0,0,0,${0.020 + rand() * 0.045})`);
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      grad.addColorStop(0, `rgba(${c},${0.014 + rand() * 0.028})`);
+      grad.addColorStop(1, `rgba(${c},0)`);
       ctx.fillStyle = grad;
       ctx.fillRect(x-r, y-r, r*2, r*2);
     }
 
-    // Fine aggregate. No repeated pebbles, no shiny highlights.
-    for (let i = 0; i < 43000; i++) {
+    // Very fine micrograin only. Deliberately sparse to avoid the current pebble look.
+    for (let i = 0; i < 9000; i++) {
       const x = rand() * size;
       const y = rand() * size;
-      const light = rand() > 0.80;
+      const light = rand() > 0.84;
       ctx.fillStyle = light
-        ? `rgba(145,139,130,${0.016 + rand() * 0.035})`
-        : `rgba(4,4,4,${0.018 + rand() * 0.040})`;
-      const s = 0.35 + rand() * 0.8;
+        ? `rgba(154,148,139,${0.008 + rand() * 0.018})`
+        : `rgba(0,0,0,${0.010 + rand() * 0.022})`;
+      const s = 0.3 + rand() * 0.55;
       ctx.fillRect(x, y, s, s);
     }
 
-    // Tiny repair/fatigue freckles, never long decorative lines.
-    for (let i = 0; i < 1300; i++) {
+    // Sparse fatigue marks, low enough that they only appear subconsciously at race zoom.
+    for (let i = 0; i < 480; i++) {
       const x = rand() * size;
       const y = rand() * size;
       ctx.fillStyle = rand() > 0.6
-        ? `rgba(102,94,83,${0.020 + rand() * 0.04})`
-        : `rgba(0,0,0,${0.020 + rand() * 0.05})`;
-      ctx.fillRect(x, y, 1 + rand() * 2.2, 0.5 + rand() * 1.2);
+        ? `rgba(102,94,83,${0.012 + rand() * 0.026})`
+        : `rgba(0,0,0,${0.014 + rand() * 0.030})`;
+      ctx.fillRect(x, y, 0.8 + rand() * 1.6, 0.4 + rand() * 0.8);
     }
 
     tex.refresh();
@@ -118,6 +115,11 @@ export class RaceScene extends MaterialRaceScene {
 
   create() {
     super.create();
+
+    // The inherited material scene painted shoulder dirt using an approximate width.
+    // On this track that approximation can place dirt inside the asphalt. Remove it.
+    this._materialEdgeWear?.destroy?.();
+    this._materialEdgeWear = null;
 
     try {
       const centerRaw = this.track?.geom?.center || [];
@@ -151,70 +153,40 @@ export class RaceScene extends MaterialRaceScene {
         const trackW = Math.max(90, Math.min(250, Number(p.width || defaultTrackW)));
         const half = trackW * 0.5;
 
-        // Subtle longitudinal usage, aligned to the actual tangent of the road.
-        const strokes = 4 + Math.floor(rand() * 5);
+        // Longitudinal road-use variation. Soft, sparse and tangent-aligned.
+        const strokes = 3 + Math.floor(rand() * 4);
         for (let k = 0; k < strokes; k++) {
-          const laneBias = (rand() - 0.5) * Math.min(half * 1.45, 92);
+          const laneBias = (rand() - 0.5) * Math.min(half * 1.35, 86);
           const along = (rand() - 0.5) * 24;
           const x = p.x + nx * laneBias + tx * along;
           const y = p.y + ny * laneBias + ty * along;
-          const streakLen = 20 + rand() * 52;
-          const wobble = (rand() - 0.5) * 0.06;
+          const streakLen = 26 + rand() * 62;
+          const wobble = (rand() - 0.5) * 0.055;
           const ca = Math.cos(wobble);
           const sa = Math.sin(wobble);
           const ux = tx * ca - ty * sa;
           const uy = tx * sa + ty * ca;
-          const dark = rand() > 0.20;
-          g.lineStyle(1.2 + rand() * 2.8, dark ? 0x11100f : 0x756b5e,
-            dark ? 0.028 + rand() * 0.045 : 0.015 + rand() * 0.025);
+          const dark = rand() > 0.18;
+          g.lineStyle(1.4 + rand() * 3.0, dark ? 0x11100f : 0x746a5e,
+            dark ? 0.020 + rand() * 0.034 : 0.010 + rand() * 0.018);
           g.beginPath();
           g.moveTo(x - ux * streakLen * 0.5, y - uy * streakLen * 0.5);
           g.lineTo(x + ux * streakLen * 0.5, y + uy * streakLen * 0.5);
           g.strokePath();
         }
 
-        // Diffuse tyre-use zones.
-        if (i % 3 === 0 && rand() > 0.15) {
+        // Two broad, barely-visible usage bands instead of explicit tyre rails.
+        if (i % 4 === 0 && rand() > 0.24) {
           const lane = Math.min(27, trackW * 0.17);
           for (const side of [-1, 1]) {
-            const jitter = (rand() - 0.5) * 8;
+            const jitter = (rand() - 0.5) * 9;
             const x = p.x + nx * (lane * side + jitter);
             const y = p.y + ny * (lane * side + jitter);
-            const l = 30 + rand() * 54;
-            g.lineStyle(6 + rand() * 4, 0x080707, 0.020 + rand() * 0.034);
+            const l = 36 + rand() * 64;
+            g.lineStyle(7 + rand() * 5, 0x080707, 0.012 + rand() * 0.020);
             g.beginPath();
             g.moveTo(x - tx * l * 0.5, y - ty * l * 0.5);
             g.lineTo(x + tx * l * 0.5, y + ty * l * 0.5);
-            g.strokePath();
-          }
-        }
-
-        // Much clearer soil shoulder. It remains irregular so the track edge stops looking cut out.
-        for (const side of [-1, 1]) {
-          const edgeBase = half - 1;
-          const patches = 15 + Math.floor(rand() * 10);
-          for (let k = 0; k < patches; k++) {
-            const out = edgeBase + rand() * 22;
-            const along = (rand() - 0.5) * 36;
-            const x = p.x + nx * out * side + tx * along;
-            const y = p.y + ny * out * side + ty * along;
-            const soil = rand();
-            const color = soil > 0.68 ? 0x80694d : soil > 0.32 ? 0x5c4835 : 0x44382c;
-            g.fillStyle(color, 0.11 + rand() * 0.13);
-            g.fillEllipse(x, y, 2.5 + rand() * 7.5, 1.4 + rand() * 4.6);
-          }
-
-          for (let k = 0; k < 8; k++) {
-            const out = edgeBase + 15 + rand() * 28;
-            const along = (rand() - 0.5) * 40;
-            const x = p.x + nx * out * side + tx * along;
-            const y = p.y + ny * out * side + ty * along;
-            const a = Math.atan2(ty, tx) + (rand() - 0.5) * 2.7;
-            const l = 1.5 + rand() * 4.5;
-            g.lineStyle(0.8 + rand() * 0.9, rand() > 0.5 ? 0x9b8050 : 0x6f5d3f, 0.08 + rand() * 0.10);
-            g.beginPath();
-            g.moveTo(x, y);
-            g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
             g.strokePath();
           }
         }
