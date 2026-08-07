@@ -1,14 +1,15 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 
-// Premium semi-realistic surface pass.
-// Dirt is anchored to the real ribbon edge point-by-point (never joined as a polyline),
-// so it follows the asphalt accurately without creating hairpin spikes.
+// Mobile-safe premium surface pass.
+// Keep the semi-realistic look, but cap persistent Phaser Graphics commands aggressively.
+// The previous edge treatment created thousands of circles/lines that WebGL had to redraw
+// every frame on iPhone, causing the sudden frame-time spikes reported during driving.
 export class RaceScene extends MaterialRaceScene {
   ensureBgTexture() {
     const key = 'grass';
     if (this.textures.exists(key)) this.textures.remove(key);
 
-    const size = 1024;
+    const size = 768;
     const tex = this.textures.createCanvas(key, size, size);
     const ctx = tex.getContext();
     const rand = this._rng?.(0x5a91e3c7) || Math.random;
@@ -16,35 +17,36 @@ export class RaceScene extends MaterialRaceScene {
     ctx.fillStyle = '#30452c';
     ctx.fillRect(0, 0, size, size);
 
-    // Low-frequency colour drift. Smaller and softer than the previous blotchy pass.
-    for (let i = 0; i < 105; i++) {
-      const x = rand() * size, y = rand() * size, r = 42 + rand() * 125;
+    // Canvas work happens once at scene creation; still keep it reasonably light for mobile.
+    for (let i = 0; i < 58; i++) {
+      const x = rand() * size, y = rand() * size, r = 34 + rand() * 105;
       const pick = rand();
       const c = pick > 0.82 ? '116,98,57' : pick > 0.50 ? '31,66,31' : pick > 0.22 ? '72,99,52' : '24,50,25';
       const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(${c},${0.028 + rand() * 0.045})`);
+      grad.addColorStop(0, `rgba(${c},${0.026 + rand() * 0.040})`);
       grad.addColorStop(1, `rgba(${c},0)`);
       ctx.fillStyle = grad;
       ctx.fillRect(x - r, y - r, r * 2, r * 2);
     }
 
-    // Fine short turf.
-    for (let i = 0; i < 76000; i++) {
+    for (let i = 0; i < 22000; i++) {
       const x = rand() * size, y = rand() * size;
       const dry = rand() > 0.91;
       ctx.strokeStyle = dry
-        ? `rgba(157,132,75,${0.030 + rand() * 0.055})`
-        : (rand() > 0.50 ? `rgba(105,137,77,${0.030 + rand() * 0.055})` : `rgba(15,47,19,${0.032 + rand() * 0.060})`);
-      ctx.lineWidth = 0.38 + rand() * 0.42;
-      const a = rand() * Math.PI, l = 0.7 + rand() * 1.8;
-      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); ctx.stroke();
+        ? `rgba(157,132,75,${0.030 + rand() * 0.050})`
+        : (rand() > 0.50 ? `rgba(105,137,77,${0.030 + rand() * 0.050})` : `rgba(15,47,19,${0.032 + rand() * 0.055})`);
+      ctx.lineWidth = 0.40 + rand() * 0.40;
+      const a = rand() * Math.PI, l = 0.7 + rand() * 1.7;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
+      ctx.stroke();
     }
 
-    // Very small dry/bare flecks. No large visible blobs.
-    for (let i = 0; i < 7600; i++) {
+    for (let i = 0; i < 2600; i++) {
       const dry = rand() > 0.50;
-      ctx.fillStyle = dry ? `rgba(126,99,57,${0.020 + rand() * 0.045})` : `rgba(7,29,12,${0.020 + rand() * 0.040})`;
-      ctx.fillRect(rand() * size, rand() * size, 0.5 + rand() * 1.2, 0.4 + rand() * 1.0);
+      ctx.fillStyle = dry ? `rgba(126,99,57,${0.020 + rand() * 0.042})` : `rgba(7,29,12,${0.020 + rand() * 0.038})`;
+      ctx.fillRect(rand() * size, rand() * size, 0.5 + rand(), 0.4 + rand() * 0.9);
     }
     tex.refresh();
   }
@@ -52,21 +54,27 @@ export class RaceScene extends MaterialRaceScene {
   ensureAsphaltTexture() {
     const key = 'asphalt';
     if (this.textures.exists(key)) this.textures.remove(key);
-    const size = 1024;
+
+    const size = 768;
     const tex = this.textures.createCanvas(key, size, size);
     const ctx = tex.getContext();
     const rand = this._rng?.(0x6f41a2d9) || Math.random;
-    ctx.fillStyle = '#383431'; ctx.fillRect(0, 0, size, size);
 
-    for (let i = 0; i < 62; i++) {
-      const x = rand() * size, y = rand() * size, r = 90 + rand() * 225;
+    ctx.fillStyle = '#383431';
+    ctx.fillRect(0, 0, size, size);
+
+    for (let i = 0; i < 38; i++) {
+      const x = rand() * size, y = rand() * size, r = 70 + rand() * 175;
       const c = rand() > 0.58 ? '77,65,55' : '20,19,18';
       const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(${c},${0.011 + rand() * 0.017})`); grad.addColorStop(1, `rgba(${c},0)`);
-      ctx.fillStyle = grad; ctx.fillRect(x - r, y - r, r * 2, r * 2);
+      grad.addColorStop(0, `rgba(${c},${0.010 + rand() * 0.015})`);
+      grad.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
     }
-    for (let i = 0; i < 7800; i++) {
-      ctx.fillStyle = rand() > 0.82 ? `rgba(155,148,138,${0.004 + rand() * 0.009})` : `rgba(0,0,0,${0.005 + rand() * 0.010})`;
+
+    for (let i = 0; i < 2600; i++) {
+      ctx.fillStyle = rand() > 0.82 ? `rgba(155,148,138,${0.004 + rand() * 0.008})` : `rgba(0,0,0,${0.005 + rand() * 0.009})`;
       ctx.fillRect(rand() * size, rand() * size, 0.35, 0.35);
     }
     tex.refresh();
@@ -76,7 +84,8 @@ export class RaceScene extends MaterialRaceScene {
     const key = 'asphaltOverlay';
     if (this.textures.exists(key)) this.textures.remove(key);
     const tex = this.textures.createCanvas(key, 8, 8);
-    tex.getContext().clearRect(0, 0, 8, 8); tex.refresh();
+    tex.getContext().clearRect(0, 0, 8, 8);
+    tex.refresh();
   }
 
   create() {
@@ -103,64 +112,70 @@ export class RaceScene extends MaterialRaceScene {
       this._premiumShoulder = shoulder;
 
       const tangentAt = (i) => {
-        const p0 = center[Math.max(0, i - 2)], p1 = center[Math.min(center.length - 1, i + 2)];
+        const p0 = center[Math.max(0, i - 3)], p1 = center[Math.min(center.length - 1, i + 3)];
         const dx = p1.x - p0.x, dy = p1.y - p0.y, d = Math.hypot(dx, dy) || 1;
         return { tx: dx / d, ty: dy / d };
       };
 
-      // Soft longitudinal road wear.
-      for (let i = 3; i < center.length - 3; i += 2) {
+      // Much lower persistent command count: sample every 6 points and draw only 2 strokes.
+      for (let i = 4; i < center.length - 4; i += 6) {
         const p = center[i];
         const { tx, ty } = tangentAt(i);
         const nx = -ty, ny = tx;
         const half = Math.max(90, Math.min(250, Number(p.width || defaultTrackW))) * 0.5;
-        const strokes = 3 + Math.floor(rand() * 4);
-        for (let k = 0; k < strokes; k++) {
-          const laneBias = (rand() - 0.5) * Math.min(half * 1.22, 76);
-          const along = (rand() - 0.5) * 22;
-          const x = p.x + nx * laneBias + tx * along, y = p.y + ny * laneBias + ty * along;
-          const l = 20 + rand() * 48, dark = rand() > 0.22;
-          roadWear.lineStyle(1.4 + rand() * 2.8, dark ? 0x181513 : 0x74695d, dark ? 0.010 + rand() * 0.017 : 0.005 + rand() * 0.009);
-          roadWear.beginPath(); roadWear.moveTo(x - tx * l * 0.5, y - ty * l * 0.5); roadWear.lineTo(x + tx * l * 0.5, y + ty * l * 0.5); roadWear.strokePath();
+        for (let k = 0; k < 2; k++) {
+          const laneBias = (rand() - 0.5) * Math.min(half * 1.10, 68);
+          const x = p.x + nx * laneBias, y = p.y + ny * laneBias;
+          const l = 22 + rand() * 40;
+          roadWear.lineStyle(1.5 + rand() * 2.0, 0x171513, 0.010 + rand() * 0.012);
+          roadWear.beginPath();
+          roadWear.moveTo(x - tx * l * 0.5, y - ty * l * 0.5);
+          roadWear.lineTo(x + tx * l * 0.5, y + ty * l * 0.5);
+          roadWear.strokePath();
         }
       }
 
-      // EXACT edge anchoring. We never connect edge points, so tight hairpins cannot spike.
+      // Exact edge anchoring, but only every 6th point and with a handful of larger soft marks.
+      // This reduces persistent edge draw commands by roughly an order of magnitude.
       if (left.length === center.length && right.length === center.length) {
         const paintEdgeSoil = (edgePts) => {
-          for (let i = 2; i < center.length - 2; i += 2) {
+          for (let i = 3; i < center.length - 3; i += 6) {
             const c = center[i], e = edgePts[i];
             if (!c || !e) continue;
             const { tx, ty } = tangentAt(i);
             let ox = e.x - c.x, oy = e.y - c.y;
-            const od = Math.hypot(ox, oy) || 1; ox /= od; oy /= od;
+            const od = Math.hypot(ox, oy) || 1;
+            ox /= od; oy /= od;
 
-            // Dark compacted soil hugs the exact asphalt edge.
-            for (let s = 0; s < 18; s++) {
-              const along = (rand() - 0.5) * 22;
-              const out = 0.8 + rand() * 10;
-              const x = e.x + tx * along + ox * out, y = e.y + ty * along + oy * out;
+            // 4 overlapping compact-soil ellipses instead of 18 circles.
+            for (let s = 0; s < 4; s++) {
+              const along = (rand() - 0.5) * 28;
+              const out = 2 + rand() * 10;
+              const x = e.x + tx * along + ox * out;
+              const y = e.y + ty * along + oy * out;
               const pick = rand();
-              const color = pick > 0.72 ? 0x765f45 : pick > 0.34 ? 0x5a4735 : 0x43372c;
-              shoulder.fillStyle(color, 0.18 + rand() * 0.24);
-              shoulder.fillCircle(x, y, 1.3 + rand() * 3.0);
+              const color = pick > 0.70 ? 0x765f45 : pick > 0.32 ? 0x5a4735 : 0x43372c;
+              shoulder.fillStyle(color, 0.15 + rand() * 0.18);
+              shoulder.fillEllipse(x, y, 5 + rand() * 9, 2.5 + rand() * 5);
             }
 
-            // Lighter dusty fade into the grass.
-            for (let s = 0; s < 8; s++) {
-              const along = (rand() - 0.5) * 25;
-              const out = 9 + rand() * 19;
-              const x = e.x + tx * along + ox * out, y = e.y + ty * along + oy * out;
-              shoulder.fillStyle(rand() > 0.5 ? 0x947b50 : 0x68543c, 0.09 + rand() * 0.15);
-              shoulder.fillCircle(x, y, 0.7 + rand() * 1.8);
+            // 2 sparse dusty flecks for the grass transition.
+            for (let s = 0; s < 2; s++) {
+              const along = (rand() - 0.5) * 30;
+              const out = 12 + rand() * 18;
+              const x = e.x + tx * along + ox * out;
+              const y = e.y + ty * along + oy * out;
+              shoulder.fillStyle(rand() > 0.5 ? 0x947b50 : 0x68543c, 0.08 + rand() * 0.11);
+              shoulder.fillEllipse(x, y, 2 + rand() * 4, 1 + rand() * 3);
             }
           }
         };
+
         paintEdgeSoil(left);
         paintEdgeSoil(right);
       }
     } catch (err) {
-      console.warn('[TDR2] Premium surface pass failed', err);
+      console.warn('[TDR2] Mobile-safe premium surface pass failed', err);
     }
   }
 }
