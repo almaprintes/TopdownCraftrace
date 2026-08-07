@@ -1,8 +1,7 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 
 // Premium semi-realistic surface pass.
-// Current priority: a clean believable road/soil/grass transition. No decorative road-edge
-// dashes or procedural kerb blocks until we have a continuous geometry-safe kerb solution.
+// Priority: believable asphalt -> dirty shoulder -> grass transition without road-like edge dashes.
 export class RaceScene extends MaterialRaceScene {
   ensureBgTexture() {
     const key = 'grass';
@@ -13,34 +12,38 @@ export class RaceScene extends MaterialRaceScene {
     const ctx = tex.getContext();
     const rand = this._rng?.(0x5a91e3c7) || Math.random;
 
-    ctx.fillStyle = '#31472d';
+    ctx.fillStyle = '#30452c';
     ctx.fillRect(0, 0, size, size);
 
-    for (let i = 0; i < 90; i++) {
-      const x = rand() * size, y = rand() * size, r = 42 + rand() * 150;
+    // Larger organic colour drift so the field does not read as flat green carpet.
+    for (let i = 0; i < 135; i++) {
+      const x = rand() * size, y = rand() * size, r = 34 + rand() * 135;
       const pick = rand();
-      const c = pick > 0.75 ? '116,96,54' : pick > 0.40 ? '27,62,29' : '70,98,50';
+      const c = pick > 0.80 ? '129,105,58' : pick > 0.48 ? '32,67,31' : pick > 0.20 ? '74,101,52' : '24,49,25';
       const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(${c},${0.030 + rand() * 0.055})`);
+      grad.addColorStop(0, `rgba(${c},${0.045 + rand() * 0.075})`);
       grad.addColorStop(1, `rgba(${c},0)`);
       ctx.fillStyle = grad;
       ctx.fillRect(x - r, y - r, r * 2, r * 2);
     }
 
-    for (let i = 0; i < 62000; i++) {
+    // Fine short blades.
+    for (let i = 0; i < 70000; i++) {
       const x = rand() * size, y = rand() * size;
-      const dry = rand() > 0.91;
+      const dry = rand() > 0.88;
       ctx.strokeStyle = dry
-        ? `rgba(159,134,75,${0.040 + rand() * 0.070})`
-        : (rand() > 0.50 ? `rgba(106,139,77,${0.035 + rand() * 0.065})` : `rgba(16,48,20,${0.040 + rand() * 0.070})`);
-      ctx.lineWidth = 0.42 + rand() * 0.46;
-      const a = rand() * Math.PI, l = 0.8 + rand() * 2.0;
+        ? `rgba(163,137,77,${0.050 + rand() * 0.085})`
+        : (rand() > 0.50 ? `rgba(108,143,79,${0.045 + rand() * 0.080})` : `rgba(15,47,19,${0.045 + rand() * 0.085})`);
+      ctx.lineWidth = 0.42 + rand() * 0.52;
+      const a = rand() * Math.PI, l = 0.8 + rand() * 2.2;
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); ctx.stroke();
     }
 
-    for (let i = 0; i < 7000; i++) {
-      ctx.fillStyle = rand() > 0.55 ? `rgba(122,94,52,${0.025 + rand() * 0.055})` : `rgba(8,31,13,${0.024 + rand() * 0.050})`;
-      ctx.fillRect(rand() * size, rand() * size, 0.5 + rand() * 1.5, 0.5 + rand() * 1.2);
+    // Small bare/dry spots, irregular and sparse.
+    for (let i = 0; i < 11000; i++) {
+      const dry = rand() > 0.45;
+      ctx.fillStyle = dry ? `rgba(130,103,59,${0.035 + rand() * 0.070})` : `rgba(7,29,12,${0.030 + rand() * 0.060})`;
+      ctx.fillEllipse(rand() * size, rand() * size, 0.5 + rand() * 2.2, 0.4 + rand() * 1.7);
     }
     tex.refresh();
   }
@@ -54,15 +57,15 @@ export class RaceScene extends MaterialRaceScene {
     const rand = this._rng?.(0x6f41a2d9) || Math.random;
     ctx.fillStyle = '#383431'; ctx.fillRect(0, 0, size, size);
 
-    for (let i = 0; i < 58; i++) {
-      const x = rand() * size, y = rand() * size, r = 85 + rand() * 230;
-      const c = rand() > 0.58 ? '79,66,55' : '19,18,17';
+    for (let i = 0; i < 62; i++) {
+      const x = rand() * size, y = rand() * size, r = 90 + rand() * 225;
+      const c = rand() > 0.58 ? '77,65,55' : '20,19,18';
       const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      grad.addColorStop(0, `rgba(${c},${0.010 + rand() * 0.018})`); grad.addColorStop(1, `rgba(${c},0)`);
+      grad.addColorStop(0, `rgba(${c},${0.011 + rand() * 0.017})`); grad.addColorStop(1, `rgba(${c},0)`);
       ctx.fillStyle = grad; ctx.fillRect(x - r, y - r, r * 2, r * 2);
     }
-    for (let i = 0; i < 7600; i++) {
-      ctx.fillStyle = rand() > 0.82 ? `rgba(155,148,138,${0.004 + rand() * 0.010})` : `rgba(0,0,0,${0.005 + rand() * 0.012})`;
+    for (let i = 0; i < 7800; i++) {
+      ctx.fillStyle = rand() > 0.82 ? `rgba(155,148,138,${0.004 + rand() * 0.009})` : `rgba(0,0,0,${0.005 + rand() * 0.010})`;
       ctx.fillRect(rand() * size, rand() * size, 0.35, 0.35);
     }
     tex.refresh();
@@ -101,24 +104,23 @@ export class RaceScene extends MaterialRaceScene {
         return { tx: dx / d, ty: dy / d, nx: -dy / d, ny: dx / d };
       };
 
-      // Longitudinal road use only: no transverse decorative marks.
+      // Subtle longitudinal wear: shorter, softer and less rail-like.
       for (let i = 3; i < center.length - 3; i += 2) {
         const p = center[i];
         const { tx, ty, nx, ny } = tangentAt(i);
         const half = Math.max(90, Math.min(250, Number(p.width || defaultTrackW))) * 0.5;
-        const strokes = 4 + Math.floor(rand() * 5);
+        const strokes = 3 + Math.floor(rand() * 4);
         for (let k = 0; k < strokes; k++) {
-          const laneBias = (rand() - 0.5) * Math.min(half * 1.30, 82);
-          const along = (rand() - 0.5) * 28;
+          const laneBias = (rand() - 0.5) * Math.min(half * 1.28, 80);
+          const along = (rand() - 0.5) * 24;
           const x = p.x + nx * laneBias + tx * along, y = p.y + ny * laneBias + ty * along;
-          const l = 34 + rand() * 78, dark = rand() > 0.18;
-          roadWear.lineStyle(2 + rand() * 4.2, dark ? 0x151311 : 0x766b60, dark ? 0.018 + rand() * 0.028 : 0.008 + rand() * 0.014);
+          const l = 24 + rand() * 56, dark = rand() > 0.20;
+          roadWear.lineStyle(1.5 + rand() * 3.2, dark ? 0x181513 : 0x74695d, dark ? 0.012 + rand() * 0.020 : 0.006 + rand() * 0.010);
           roadWear.beginPath(); roadWear.moveTo(x - tx * l * 0.5, y - ty * l * 0.5); roadWear.lineTo(x + tx * l * 0.5, y + ty * l * 0.5); roadWear.strokePath();
         }
       }
 
-      // Soft organic shoulder. Nothing is drawn on the asphalt edge itself: this deliberately
-      // avoids the dashed-line look and leaves a natural, imperfect road-to-earth boundary.
+      // Stronger organic shoulder: a visible but irregular strip of compacted dirt fading into grass.
       for (let i = 2; i < center.length - 2; i += 2) {
         const p = center[i];
         const { tx, ty, nx, ny } = tangentAt(i);
@@ -127,24 +129,25 @@ export class RaceScene extends MaterialRaceScene {
           const ex = p.x + nx * half * side, ey = p.y + ny * half * side;
           const ox = nx * side, oy = ny * side;
 
-          // Dense near-edge soil creates continuity through overlap, but stays irregular.
-          for (let s = 0; s < 11; s++) {
-            const along = (rand() - 0.5) * 24;
-            const out = 1.5 + rand() * 13;
+          // Core dirt hugs the asphalt and overlaps enough to read continuously.
+          for (let s = 0; s < 20; s++) {
+            const along = (rand() - 0.5) * 28;
+            const out = 0.5 + rand() * 12;
             const x = ex + tx * along + ox * out, y = ey + ty * along + oy * out;
             const pick = rand();
-            const color = pick > 0.70 ? 0x735d43 : pick > 0.32 ? 0x584634 : 0x44382d;
-            shoulder.fillStyle(color, 0.10 + rand() * 0.17);
-            shoulder.fillEllipse(x, y, 3 + rand() * 8, 1.5 + rand() * 4);
+            const color = pick > 0.72 ? 0x7a6348 : pick > 0.34 ? 0x5d4936 : 0x45382d;
+            shoulder.fillStyle(color, 0.12 + rand() * 0.20);
+            shoulder.fillEllipse(x, y, 4 + rand() * 9, 1.6 + rand() * 4.4);
           }
 
-          // Sparse dry material farther into the turf gives a soft fade instead of a cutout.
-          for (let s = 0; s < 5; s++) {
-            const along = (rand() - 0.5) * 28;
-            const out = 12 + rand() * 24;
+          // Dry, dusty transition beyond the compacted band.
+          for (let s = 0; s < 9; s++) {
+            const along = (rand() - 0.5) * 32;
+            const out = 10 + rand() * 28;
             const x = ex + tx * along + ox * out, y = ey + ty * along + oy * out;
-            shoulder.fillStyle(rand() > 0.5 ? 0x927b50 : 0x63523a, 0.08 + rand() * 0.13);
-            shoulder.fillCircle(x, y, 0.6 + rand() * 1.6);
+            const color = rand() > 0.50 ? 0x9a8053 : 0x69553c;
+            shoulder.fillStyle(color, 0.08 + rand() * 0.15);
+            shoulder.fillEllipse(x, y, 1 + rand() * 3.2, 0.6 + rand() * 2.2);
           }
         }
       }
