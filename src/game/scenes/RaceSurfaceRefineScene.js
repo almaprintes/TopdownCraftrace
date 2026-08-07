@@ -11,53 +11,57 @@ export class RaceScene extends SemiSimRaceScene {
 
     const g = this.make.graphics({ x: 0, y: 0, add: false });
 
-    // Base natural, sin franjas de siega artificiales.
-    g.fillStyle(0x38533a, 1);
+    // Base oscura y contenida, más cercana a césped de circuito real.
+    g.fillStyle(0x2f4931, 1);
     g.fillRect(0, 0, size, size);
 
-    // Masas orgánicas grandes: rompen cualquier lectura de patrón repetido.
-    for (let i = 0; i < 72; i++) {
-      const rx = 55 + Math.random() * 180;
-      const ry = 40 + Math.random() * 150;
+    // Variación de tono a escala pequeña. No hay manchas grandes ni elipses legibles.
+    // La idea es que el ojo perciba una superficie continua, no formas superpuestas.
+    for (let i = 0; i < 9800; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
       const r = Math.random();
-      const col = r > 0.72 ? 0x536449 : (r > 0.42 ? 0x2a462f : 0x45543a);
-      g.fillStyle(col, 0.035 + Math.random() * 0.065);
-      g.fillEllipse(x, y, rx * 2, ry * 2);
-    }
-
-    // Calvas y césped estresado, discretos pero visibles al zoom de carrera.
-    for (let i = 0; i < 34; i++) {
-      const rx = 18 + Math.random() * 68;
-      const ry = 12 + Math.random() * 48;
-      const col = Math.random() > 0.5 ? 0x716747 : 0x263c2a;
-      g.fillStyle(col, 0.05 + Math.random() * 0.055);
-      g.fillEllipse(Math.random() * size, Math.random() * size, rx * 2, ry * 2);
-    }
-
-    // Grano vegetal visible: pequeños grupos, no ruido uniforme.
-    for (let i = 0; i < 11500; i++) {
-      const x = Math.random() * size;
-      const y = Math.random() * size;
-      const light = Math.random() > 0.58;
-      g.fillStyle(light ? 0x6c7b5f : 0x1b3422, 0.08 + Math.random() * 0.10);
-      const w = Math.random() > 0.90 ? 2 : 1;
-      const h = Math.random() > 0.55 ? 2 : 1;
+      const col = r > 0.74 ? 0x496344 : (r > 0.48 ? 0x38553a : (r > 0.22 ? 0x243e29 : 0x5a6242));
+      g.fillStyle(col, 0.045 + Math.random() * 0.085);
+      const w = 2 + Math.random() * 10;
+      const h = 2 + Math.random() * 8;
       g.fillRect(x, y, w, h);
     }
 
-    // Hebras cortas orientadas de forma aleatoria para una superficie orgánica.
-    for (let i = 0; i < 2200; i++) {
+    // Micrograno vegetal denso. Esta es la capa que debe sobrevivir al zoom de carrera.
+    for (let i = 0; i < 36000; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const r = Math.random();
+      const col = r > 0.72 ? 0x75826a : (r > 0.42 ? 0x1b3320 : 0x516248);
+      g.fillStyle(col, 0.08 + Math.random() * 0.12);
+      const s = r > 0.93 ? 2 : 1;
+      g.fillRect(x, y, s, s);
+    }
+
+    // Briznas cortas y aleatorias. Longitud muy contenida para evitar aspecto de rayas.
+    for (let i = 0; i < 7600; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
       const ang = Math.random() * Math.PI;
-      const len = 2 + Math.random() * 4;
-      g.lineStyle(1, Math.random() > 0.5 ? 0x78906d : 0x203d28, 0.10 + Math.random() * 0.08);
+      const len = 1.5 + Math.random() * 3.5;
+      const col = Math.random() > 0.55 ? 0x7a896e : 0x203b25;
+      g.lineStyle(1, col, 0.12 + Math.random() * 0.13);
       g.beginPath();
       g.moveTo(x, y);
       g.lineTo(x + Math.cos(ang) * len, y + Math.sin(ang) * len);
       g.strokePath();
+    }
+
+    // Restos secos y pequeñas irregularidades del terreno, siempre a escala pequeña.
+    for (let i = 0; i < 1800; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const col = Math.random() > 0.5 ? 0x817651 : 0x60704e;
+      g.fillStyle(col, 0.08 + Math.random() * 0.10);
+      const w = 1 + Math.random() * 3;
+      const h = 1 + Math.random() * 3;
+      g.fillRect(x, y, w, h);
     }
 
     g.generateTexture(key, size, size);
@@ -75,43 +79,35 @@ export class RaceScene extends SemiSimRaceScene {
     g.fillStyle(0x625b49, 1);
     g.fillRect(0, 0, size, size);
 
-    // Placas grandes de tierra con variación suficiente para leerse en móvil.
-    for (let i = 0; i < 78; i++) {
-      const rx = 35 + Math.random() * 145;
-      const ry = 22 + Math.random() * 105;
+    // Variación contenida: textura visible sin placas geométricas enormes.
+    for (let i = 0; i < 9000; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
       const r = Math.random();
       const col = r > 0.68 ? 0x81755b : (r > 0.34 ? 0x4b473b : 0x706852);
-      g.fillStyle(col, 0.045 + Math.random() * 0.07);
-      g.fillEllipse(Math.random() * size, Math.random() * size, rx * 2, ry * 2);
+      g.fillStyle(col, 0.05 + Math.random() * 0.08);
+      const w = 2 + Math.random() * 12;
+      const h = 2 + Math.random() * 9;
+      g.fillRect(x, y, w, h);
     }
 
-    // Grava visible: puntos de 1-3 px, bastante más legibles que antes.
-    for (let i = 0; i < 15000; i++) {
+    // Grava visible: puntos de 1-3 px.
+    for (let i = 0; i < 22000; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
       const r = Math.random();
       const col = r > 0.72 ? 0xb1a386 : (r > 0.38 ? 0x393830 : 0x756d58);
       g.fillStyle(col, 0.10 + Math.random() * 0.14);
-      const s = r > 0.92 ? 3 : (r > 0.72 ? 2 : 1);
+      const s = r > 0.94 ? 3 : (r > 0.78 ? 2 : 1);
       g.fillRect(x, y, s, s);
     }
 
     // Piedras aisladas algo mayores.
-    for (let i = 0; i < 520; i++) {
+    for (let i = 0; i < 760; i++) {
       const r = 1 + Math.random() * 2.4;
       const col = Math.random() > 0.55 ? 0xc0b292 : 0x35352f;
       g.fillStyle(col, 0.18 + Math.random() * 0.18);
       g.fillCircle(Math.random() * size, Math.random() * size, r);
-    }
-
-    // Huellas/compactaciones difusas de vehículos de servicio.
-    for (let i = 0; i < 20; i++) {
-      const w = 110 + Math.random() * 260;
-      const h = 18 + Math.random() * 42;
-      const x = Math.random() * (size - w);
-      const y = Math.random() * (size - h);
-      g.fillStyle(0x292923, 0.035 + Math.random() * 0.045);
-      g.fillRoundedRect(x, y, w, h, 12);
     }
 
     g.generateTexture(key, size, size);
@@ -162,7 +158,6 @@ export class RaceScene extends SemiSimRaceScene {
         const trackW = Number(center[i]?.width || defaultTrackW);
 
         // Vía visual del coche: aprox. 30-42 px entre centros de neumático.
-        // Se escala suavemente con el ancho de pista pero con límites para no exagerar.
         const tireHalfGap = Math.max(15, Math.min(22, trackW * 0.105));
 
         // Trazada de frenada ligeramente hacia el exterior de la curva.
@@ -186,7 +181,6 @@ export class RaceScene extends SemiSimRaceScene {
 
             const nx = -dy / len;
             const ny = dx / len;
-            // Irregularidad mínima para evitar dos líneas vectoriales perfectas.
             const wobble = Math.sin((sampleIndex + wobblePhase) * 1.65) * 0.8;
             const offset = racingOffset + tireOffset + wobble;
             const q = { x: p.x + nx * offset, y: p.y + ny * offset };
@@ -205,7 +199,6 @@ export class RaceScene extends SemiSimRaceScene {
 
         const drawBrokenTrack = (pts, width, alpha, phase) => {
           g.lineStyle(width, 0x050606, alpha);
-          // Segmentos cortos con huecos aleatorios: desgaste real, no pincelada perfecta.
           for (let k = phase; k < pts.length - 1; k += 2) {
             const a = pts[k];
             const b = pts[k + 1];
