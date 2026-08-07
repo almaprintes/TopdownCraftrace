@@ -117,37 +117,12 @@ export class RaceScene extends MaterialRaceScene {
       };
       drawCenterStroke(shoulder, defaultTrackW + 18, 0x67513a, 0.14);
 
-      const curbThreshold = 0.105;
-      const maxCurbWidth = 11.5;
-      const minCurbWidth = 1.25;
-      const curbStrength = new Array(count);
-      for (let i = 0; i < count; i++) {
-        const raw = (Math.abs(turnAt(i)) - curbThreshold) / 0.12;
-        const t = Math.max(0, Math.min(1, raw));
-        const smooth = t * t * (3 - 2 * t);
-        curbStrength[i] = smooth;
-      }
-      // Gentle local smoothing keeps the width breathing with the bend instead of changing at a node.
-      const smoothedStrength = new Array(count);
-      for (let i = 0; i < count; i++) {
-        let sum = 0, weight = 0;
-        for (let k = -3; k <= 3; k++) {
-          const w = 4 - Math.abs(k);
-          sum += curbStrength[(i + k + count) % count] * w;
-          weight += w;
-        }
-        smoothedStrength[i] = sum / weight;
-      }
-
-      const left = new Array(count), right = new Array(count), leftOuter = new Array(count), rightOuter = new Array(count);
+      const left = new Array(count), right = new Array(count);
       for (let i = 0; i < count; i++) {
         const p = center[i], { tx, ty } = tangentAt(i), nx = -ty, ny = tx;
         const half = Number(p.width || defaultTrackW) * 0.5;
-        const localCurbWidth = minCurbWidth + (maxCurbWidth - minCurbWidth) * smoothedStrength[i];
         left[i] = { x: p.x + nx * half, y: p.y + ny * half };
         right[i] = { x: p.x - nx * half, y: p.y - ny * half };
-        leftOuter[i] = { x: p.x + nx * (half + localCurbWidth), y: p.y + ny * (half + localCurbWidth) };
-        rightOuter[i] = { x: p.x - nx * (half + localCurbWidth), y: p.y - ny * (half + localCurbWidth) };
       }
 
       const circularIndexDistance = (a, b) => Math.min(Math.abs(a - b), count - Math.abs(a - b));
@@ -204,17 +179,47 @@ export class RaceScene extends MaterialRaceScene {
       drawTrimmedEdge(left);
       drawTrimmedEdge(right);
 
-      // CURBS v3:
-      // Width is not constant. It follows local curvature: slim on turn-in, widest near the apex,
-      // then tapers again on exit. This produces the wedge/bell profile seen on many real kerbs.
-      // The red/white block phase still comes from travelled distance, so visual rhythm stays stable.
+      // CURBS v4: treat every kerb as ONE corner object, not as unrelated local samples.
+      // This fixes the mixed results of curvature-driven width: each sustained bend now has a clean
+      // turn-in -> apex -> exit profile, while folded/reversing offset segments are rejected entirely.
       const blockLen = 18;
-      const cumulative = new Array(count + 1).fill(0);
+      const maxCurbWidth = 11.5;
+      const enterThreshold = 0.055;
+      const peakThreshold = 0.105;
+      const turns = new Array(count);
+      for (let i = 0; i < count; i++) turns[i] = turnAt(i);
+
+      const sameSign = (a, b) => Math.sign(a) !== 0 && Math.sign(a) === Math.sign(b);
+      const groups = [];
+      let start = -1;
       for (let i = 0; i < count; i++) {
-        const j = (i + 1) % count;
-        cumulative[i + 1] = cumulative[i] + Math.hypot(center[j].x - center[i].x, center[j].y - center[i].y);
+        const active = Math.abs(turns[i]) >= enterThreshold;
+        if (active && start < 0) start = i;
+        const nextActive = i + 1 < count && Math.abs(turns[i + 1]) >= enterThreshold && sameSign(turns[i], turns[i + 1]);
+        if (start >= 0 && (!active || !nextActive || i === count - 1)) {
+          const end = active ? i : i - 1;
+          if (end >= start) groups.push({ start, end, sign: Math.sign(turns[Math.floor((start + end) * 0.5)]) || Math.sign(turns[start]) });
+          start = -1;
+        }
       }
 
+      // Merge the first/last group if the same physical bend crosses the lap seam.
+      if (groups.length > 1) {
+        const first = groups[0], last = groups[groups.length - 1];
+        if (first.start === 0 && last.end === count - 1 && first.sign === last.sign) {
+          groups[0] = { start: last.start, end: first.end + count, sign: first.sign };
+          groups.pop();
+        }
+      }
+
+      const idx = (i) => (i + count) % count;
+      const edgeAlignmentOK = (edge, i) => {
+        const j = idx(i + 1);
+        const ex = edge[j].x - edge[idx(i)].x, ey = edge[j].y - edge[idx(i)].y;
+        const cx = center[j].x - center[idx(i)].x, cy = center[j].y - center[idx(i)].y;
+        const ed = Math.hypot(ex, ey) || 1, cd = Math.hypot(cx, cy) || 1;
+        return (ex * cx + ey * cy) / (ed * cd) > 0.35;
+      };
       const lerpPt = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
       const fillQuad = (a, b, c, d, color) => {
         curbs.fillStyle(color, 0.98);
@@ -222,29 +227,57 @@ export class RaceScene extends MaterialRaceScene {
         curbs.moveTo(a.x, a.y); curbs.lineTo(b.x, b.y); curbs.lineTo(c.x, c.y); curbs.lineTo(d.x, d.y); curbs.closePath(); curbs.fillPath();
       };
 
-      for (let i = 0; i < count; i++) {
-        const j = (i + 1) % count;
-        const turn = turnAt(i);
-        if (Math.abs(turn) < curbThreshold || smoothedStrength[i] < 0.035) continue;
+      for (const group of groups) {
+        let peak = 0, arc = 0;
+        for (let ii = group.start; ii <= group.end; ii++) {
+          peak = Math.max(peak, Math.abs(turns[idx(ii)]));
+          const a = center[idx(ii)], b = center[idx(ii + 1)];
+          arc += Math.hypot(b.x - a.x, b.y - a.y);
+        }
+        if (peak < peakThreshold || arc < 42) continue;
 
-        const edge = turn > 0 ? left : right;
-        const outer = turn > 0 ? leftOuter : rightOuter;
-        if (isBuriedByOtherRoad(edge[i], i) || isBuriedByOtherRoad(edge[j], j)) continue;
+        const edge = group.sign > 0 ? left : right;
+        let travelled = 0;
+        let phaseDistance = 0;
+        for (let ii = group.start; ii <= group.end; ii++) {
+          const i = idx(ii), j = idx(ii + 1);
+          const c0 = center[i], c1 = center[j];
+          const centerSegLen = Math.hypot(c1.x - c0.x, c1.y - c0.y);
+          const u0 = arc > 0 ? travelled / arc : 0;
+          const u1 = arc > 0 ? (travelled + centerSegLen) / arc : 1;
+          travelled += centerSegLen;
 
-        const segLen = Math.hypot(edge[j].x - edge[i].x, edge[j].y - edge[i].y);
-        if (segLen < 0.5) continue;
-        let used = 0;
-        while (used < segLen - 0.01) {
-          const absStart = cumulative[i] + used;
-          const nextBoundary = (Math.floor(absStart / blockLen) + 1) * blockLen;
-          const piece = Math.min(segLen - used, nextBoundary - absStart);
-          const t0 = used / segLen;
-          const t1 = (used + piece) / segLen;
-          const e0 = lerpPt(edge[i], edge[j], t0), e1 = lerpPt(edge[i], edge[j], t1);
-          const o0 = lerpPt(outer[i], outer[j], t0), o1 = lerpPt(outer[i], outer[j], t1);
-          const blockIndex = Math.floor((absStart + 0.001) / blockLen);
-          fillQuad(e0, e1, o1, o0, blockIndex % 2 === 0 ? 0xc43b33 : 0xeee9df);
-          used += piece;
+          // Bell-shaped profile determined by position in the whole corner, not noisy local curvature.
+          const bell = (u) => Math.pow(Math.max(0, Math.sin(Math.PI * Math.max(0, Math.min(1, u)))), 0.78);
+          const w0 = maxCurbWidth * bell(u0);
+          const w1 = maxCurbWidth * bell(u1);
+          if (Math.max(w0, w1) < 0.8) continue;
+
+          const e0 = edge[i], e1 = edge[j];
+          if (!edgeAlignmentOK(edge, i)) continue;
+          if (isBuriedByOtherRoad(e0, i) || isBuriedByOtherRoad(e1, j)) continue;
+
+          const p0 = center[i], p1 = center[j];
+          const d0 = Math.hypot(e0.x - p0.x, e0.y - p0.y) || 1;
+          const d1 = Math.hypot(e1.x - p1.x, e1.y - p1.y) || 1;
+          const o0 = { x: e0.x + (e0.x - p0.x) / d0 * w0, y: e0.y + (e0.y - p0.y) / d0 * w0 };
+          const o1 = { x: e1.x + (e1.x - p1.x) / d1 * w1, y: e1.y + (e1.y - p1.y) / d1 * w1 };
+          if (isBuriedByOtherRoad(o0, i) || isBuriedByOtherRoad(o1, j)) continue;
+
+          const segLen = Math.hypot(e1.x - e0.x, e1.y - e0.y);
+          if (segLen < 0.5) continue;
+          let used = 0;
+          while (used < segLen - 0.01) {
+            const nextBoundary = (Math.floor((phaseDistance + used) / blockLen) + 1) * blockLen;
+            const piece = Math.min(segLen - used, nextBoundary - (phaseDistance + used));
+            const t0 = used / segLen, t1 = (used + piece) / segLen;
+            const a = lerpPt(e0, e1, t0), b = lerpPt(e0, e1, t1);
+            const d = lerpPt(o0, o1, t0), c = lerpPt(o0, o1, t1);
+            const blockIndex = Math.floor((phaseDistance + used + 0.001) / blockLen);
+            fillQuad(a, b, c, d, blockIndex % 2 === 0 ? 0xc43b33 : 0xeee9df);
+            used += piece;
+          }
+          phaseDistance += segLen;
         }
       }
     } catch (err) {
