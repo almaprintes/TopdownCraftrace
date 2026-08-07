@@ -1,7 +1,8 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 
 // Mobile-safe premium surface pass.
-// Keep detail simple and geometrically correct: every world-space mark follows the track tangent.
+// World-space detail follows the track tangent; shoulder uses broad, low-alpha overlapping quads
+// so it reads as one dirty edge rather than visible geometric blocks.
 export class RaceScene extends MaterialRaceScene {
   ensureBgTexture() {
     const key = 'grass';
@@ -71,8 +72,6 @@ export class RaceScene extends MaterialRaceScene {
       const s = 0.22 + rand() * 0.34;
       ctx.fillRect(rand() * size, rand() * size, s, s);
     }
-
-    // No baked directional streaks here: texture-space direction cannot follow a curved track.
     tex.refresh();
   }
 
@@ -113,6 +112,7 @@ export class RaceScene extends MaterialRaceScene {
         return { tx: dx / d, ty: dy / d };
       };
 
+      // Sparse driven-line wear; tiny command count.
       for (let i = 5; i < center.length - 5; i += 8) {
         const p = center[i];
         const { tx, ty } = tangentAt(i);
@@ -130,10 +130,10 @@ export class RaceScene extends MaterialRaceScene {
         }
       }
 
-      // One cheap oriented dirt quad per sample. Unlike fillEllipse(), this actually follows the road.
       if (left.length === center.length && right.length === center.length) {
         const paintEdgeSoil = (edgePts) => {
-          for (let i = 4; i < center.length - 4; i += 7) {
+          const step = 5;
+          for (let i = step; i < center.length - step; i += step) {
             const c = center[i], e = edgePts[i];
             if (!c || !e) continue;
 
@@ -142,26 +142,46 @@ export class RaceScene extends MaterialRaceScene {
             const od = Math.hypot(ox, oy) || 1;
             ox /= od; oy /= od;
 
-            const len = 24 + rand() * 10;
-            const inner = 2 + rand() * 2;
-            const outer = 9 + rand() * 4;
-            const halfLen = len * 0.5;
+            // Length adapts to local spacing so neighbouring samples overlap naturally.
+            const prev = center[Math.max(0, i - step)];
+            const next = center[Math.min(center.length - 1, i + step)];
+            const localSpan = Math.max(18, Math.min(48, Math.hypot(next.x - prev.x, next.y - prev.y) * 0.62));
+            const halfLen = localSpan * 0.5;
 
-            const ax = e.x - tx * halfLen + ox * inner;
-            const ay = e.y - ty * halfLen + oy * inner;
-            const bx = e.x + tx * halfLen + ox * inner;
-            const by = e.y + ty * halfLen + oy * inner;
-            const cx = e.x + tx * halfLen + ox * outer;
-            const cy = e.y + ty * halfLen + oy * outer;
-            const dx = e.x - tx * halfLen + ox * outer;
-            const dy = e.y - ty * halfLen + oy * outer;
+            // Slightly different widths at both ends remove the repeated-rectangle look.
+            const inner0 = 0.8 + rand() * 1.2;
+            const inner1 = 0.8 + rand() * 1.2;
+            const outer0 = 6.0 + rand() * 3.0;
+            const outer1 = 6.0 + rand() * 3.0;
 
-            shoulder.fillStyle(rand() > 0.5 ? 0x65503a : 0x544232, 0.16 + rand() * 0.08);
+            const a0x = e.x - tx * halfLen + ox * inner0;
+            const a0y = e.y - ty * halfLen + oy * inner0;
+            const a1x = e.x + tx * halfLen + ox * inner1;
+            const a1y = e.y + ty * halfLen + oy * inner1;
+            const b1x = e.x + tx * halfLen + ox * outer1;
+            const b1y = e.y + ty * halfLen + oy * outer1;
+            const b0x = e.x - tx * halfLen + ox * outer0;
+            const b0y = e.y - ty * halfLen + oy * outer0;
+
+            const color = rand() > 0.5 ? 0x604b38 : 0x705940;
+            shoulder.fillStyle(color, 0.055 + rand() * 0.035);
             shoulder.beginPath();
-            shoulder.moveTo(ax, ay);
-            shoulder.lineTo(bx, by);
-            shoulder.lineTo(cx, cy);
-            shoulder.lineTo(dx, dy);
+            shoulder.moveTo(a0x, a0y);
+            shoulder.lineTo(a1x, a1y);
+            shoulder.lineTo(b1x, b1y);
+            shoulder.lineTo(b0x, b0y);
+            shoulder.closePath();
+            shoulder.fillPath();
+
+            // Very faint dusty outer feather, still one cheap quad.
+            const dust0 = outer0 + 5 + rand() * 3;
+            const dust1 = outer1 + 5 + rand() * 3;
+            shoulder.fillStyle(0x8b714c, 0.025 + rand() * 0.020);
+            shoulder.beginPath();
+            shoulder.moveTo(e.x - tx * halfLen + ox * outer0, e.y - ty * halfLen + oy * outer0);
+            shoulder.lineTo(e.x + tx * halfLen + ox * outer1, e.y + ty * halfLen + oy * outer1);
+            shoulder.lineTo(e.x + tx * halfLen + ox * dust1, e.y + ty * halfLen + oy * dust1);
+            shoulder.lineTo(e.x - tx * halfLen + ox * dust0, e.y - ty * halfLen + oy * dust0);
             shoulder.closePath();
             shoulder.fillPath();
           }
