@@ -33,8 +33,7 @@ function normalize(x, y) {
   return [x / d, y / d];
 }
 
-// Catmull-Rom CENTRÍPETA (reduce overshoot / auto-cruces) para t en [0,1]
-// Devuelve {x,y,width}
+// Catmull-Rom centrípeta: evita el overshoot fuerte de la variante uniforme.
 function catmullRom(p0, p1, p2, p3, t, fallbackWidth = 80) {
   const alpha = 0.5;
   const eps = 1e-6;
@@ -52,7 +51,6 @@ function catmullRom(p0, p1, p2, p3, t, fallbackWidth = 80) {
   const t1 = t0 + Math.pow(Math.max(d01, eps), alpha);
   const t2 = t1 + Math.pow(Math.max(d12, eps), alpha);
   const t3 = t2 + Math.pow(Math.max(d23, eps), alpha);
-
   const tt = t1 + (t2 - t1) * t;
 
   const lerp = (ax, ay, bx, by, ta, tb) => {
@@ -68,45 +66,31 @@ function catmullRom(p0, p1, p2, p3, t, fallbackWidth = 80) {
   const B1 = (() => {
     const denom = (t2 - t0) || eps;
     const w = (tt - t0) / denom;
-    return [
-      A1[0] + (A2[0] - A1[0]) * w,
-      A1[1] + (A2[1] - A1[1]) * w
-    ];
+    return [A1[0] + (A2[0] - A1[0]) * w, A1[1] + (A2[1] - A1[1]) * w];
   })();
 
   const B2 = (() => {
     const denom = (t3 - t1) || eps;
     const w = (tt - t1) / denom;
-    return [
-      A2[0] + (A3[0] - A2[0]) * w,
-      A2[1] + (A3[1] - A2[1]) * w
-    ];
+    return [A2[0] + (A3[0] - A2[0]) * w, A2[1] + (A3[1] - A2[1]) * w];
   })();
 
   const C = (() => {
     const denom = (t2 - t1) || eps;
     const w = (tt - t1) / denom;
-    return [
-      B1[0] + (B2[0] - B1[0]) * w,
-      B1[1] + (B2[1] - B1[1]) * w
-    ];
+    return [B1[0] + (B2[0] - B1[0]) * w, B1[1] + (B2[1] - B1[1]) * w];
   })();
 
   const w1 = ptWidth(p1, fallbackWidth);
   const w2 = ptWidth(p2, fallbackWidth);
-  const width = w1 + (w2 - w1) * t;
-
-  return makePt(C[0], C[1], width);
+  return makePt(C[0], C[1], w1 + (w2 - w1) * t);
 }
 
-// Remuestreo a paso fijo (10–20 px típico)
-// Conserva width interpolado
 function resample(points, stepPx, fallbackWidth = 80) {
   const out = [];
   if (points.length < 2) return out;
 
   out.push(makePt(ptX(points[0]), ptY(points[0]), ptWidth(points[0], fallbackWidth)));
-
   let acc = 0;
   let prev = makePt(ptX(points[0]), ptY(points[0]), ptWidth(points[0], fallbackWidth));
 
@@ -117,14 +101,12 @@ function resample(points, stepPx, fallbackWidth = 80) {
 
     while (acc + segLen >= stepPx) {
       const t = (stepPx - acc) / segLen;
-
-      const x = prev.x + (cur.x - prev.x) * t;
-      const y = prev.y + (cur.y - prev.y) * t;
-      const width = prev.width + (cur.width - prev.width) * t;
-
-      const inserted = makePt(x, y, width);
+      const inserted = makePt(
+        prev.x + (cur.x - prev.x) * t,
+        prev.y + (cur.y - prev.y) * t,
+        prev.width + (cur.width - prev.width) * t
+      );
       out.push(inserted);
-
       prev = inserted;
       segLen = dist(prev, cur);
       acc = 0;
@@ -136,6 +118,7 @@ function resample(points, stepPx, fallbackWidth = 80) {
 
   return out;
 }
+
 function boundsOfPoly(poly) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const p of poly) {
@@ -154,219 +137,122 @@ function cellKey(cx, cy) {
 export function buildTrackRibbon({
   centerline,
   trackWidth,
-  grassMargin = 0,     // <-- NUEVO: extra a cada lado (px). Banda GRASS = trackWidth + 2*grassMargin
+  grassMargin = 0,
   sampleStepPx = 12,
   cellSize = 400
 }) {
-  // Normaliza input: acepta [[x,y]] o [{x,y,width}]
   const fallbackWidth = Number(trackWidth) || 80;
 
   const src = (centerline || []).map((p) => {
-    if (Array.isArray(p) && p.length >= 2) {
-      return makePt(Number(p[0]), Number(p[1]), fallbackWidth);
-    }
+    if (Array.isArray(p) && p.length >= 2) return makePt(Number(p[0]), Number(p[1]), fallbackWidth);
     if (p && typeof p.x === 'number' && typeof p.y === 'number') {
-      return makePt(
-        Number(p.x),
-        Number(p.y),
-        Number.isFinite(Number(p.width)) ? Number(p.width) : fallbackWidth
-      );
+      return makePt(Number(p.x), Number(p.y), Number.isFinite(Number(p.width)) ? Number(p.width) : fallbackWidth);
     }
     return makePt(NaN, NaN, fallbackWidth);
   });
 
-  // 1) Suavizado Catmull-Rom -> nube densa
   const dense = [];
   const n = src.length;
-  const closed = true;
+  if (n < 2) return { center: [], left: [], right: [], cells: new Map(), cellSize };
 
-  if (n < 2) {
-    return { center: [], left: [], right: [], cells: new Map(), cellSize };
-  }
-
-  const get = (idx) => {
-    const i = (idx + n) % n;
-    return src[i];
-  };
-
-  // Generamos puntos densos entre cada par p1->p2
-  const SUB = 10; // densidad inicial (luego remuestreamos)
+  const get = (idx) => src[(idx + n) % n];
+  const SUB = 10;
   for (let i = 0; i < n; i++) {
-    const p0 = get(i - 1);
-    const p1 = get(i);
-    const p2 = get(i + 1);
-    const p3 = get(i + 2);
-
-    for (let s = 0; s < SUB; s++) {
-      const t = s / SUB;
-      dense.push(catmullRom(p0, p1, p2, p3, t, fallbackWidth));
-    }
+    const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
+    for (let s = 0; s < SUB; s++) dense.push(catmullRom(p0, p1, p2, p3, s / SUB, fallbackWidth));
   }
-  if (closed) dense.push(makePt(dense[0].x, dense[0].y, dense[0].width));
+  dense.push(makePt(dense[0].x, dense[0].y, dense[0].width));
 
-  // 2) Remuestreo a paso fijo (10–20px)
   const cl = resample(dense, sampleStepPx, fallbackWidth);
-  if (cl.length < 8) {
-    return { center: cl, left: [], right: [], cells: new Map(), cellSize };
-  }
-// 2.5) Sin corner relaxation extra
-// Dejamos la centerline tal como sale de Catmull-Rom + resample,
-// porque el postproceso estaba introduciendo puntas y cruces raros.
 
-// 3) Bordes por normal (con miter-limit para curvas cerradas)
-const baseGrassMargin = Math.max(0, grassMargin);
+  // Un circuito cerrado NO debe contener dos muestras casi iguales en el cierre.
+  // Esa duplicación crea una tangente casi nula y puede girar la normal 180° en la costura.
+  if (cl.length > 8 && dist(cl[0], cl[cl.length - 1]) < Math.max(2, sampleStepPx * 0.55)) cl.pop();
 
-const left = [];
-const right = [];
+  if (cl.length < 8) return { center: cl, left: [], right: [], cells: new Map(), cellSize };
 
-// Banda GRASS (más ancha) siguiendo la misma forma
-const grassLeft = [];
-const grassRight = [];
+  const baseGrassMargin = Math.max(0, grassMargin);
+  const left = [];
+  const right = [];
+  const grassLeft = [];
+  const grassRight = [];
+  const count = cl.length;
 
-const eps = 1e-6;
-const MITER_LIMIT = 2.0; // 2.0–2.5 típico. Más alto = más puntas, más bajo = más “bevel”.
+  // IMPORTANTE: sin miter. El miter anterior podía apuntar hacia el lado equivocado en cambios
+  // de curvatura fuertes y generaba exactamente los vértices "retorcidos" visibles en horquillas.
+  // La normal se obtiene de una tangente centrada y ancha: siempre perpendicular a la centerline
+  // y siempre a distancia constante. No hay handles que puedan darse la vuelta.
+  for (let i = 0; i < count; i++) {
+    const p = cl[i];
+    const pBack = cl[(i - 2 + count) % count];
+    const pAhead = cl[(i + 2) % count];
 
-for (let i = 0; i < cl.length; i++) {
-  const pPrev = cl[(i - 1 + cl.length) % cl.length];
-  const p = cl[i];
-  const pNext = cl[(i + 1) % cl.length];
+    let tx = pAhead.x - pBack.x;
+    let ty = pAhead.y - pBack.y;
+    let td = Math.hypot(tx, ty);
 
-  const px = p.x;
-  const py = p.y;
+    // Fallback local si la ventana amplia cae en una geometría excepcionalmente cerrada.
+    if (td < 1e-5) {
+      const pPrev = cl[(i - 1 + count) % count];
+      const pNext = cl[(i + 1) % count];
+      tx = pNext.x - pPrev.x;
+      ty = pNext.y - pPrev.y;
+      td = Math.hypot(tx, ty) || 1;
+    }
 
-  // Segmentos
-  const v0x = p.x - pPrev.x;
-  const v0y = p.y - pPrev.y;
-  const v1x = pNext.x - p.x;
-  const v1y = pNext.y - p.y;
+    tx /= td;
+    ty /= td;
+    const nx = -ty;
+    const ny = tx;
 
-  const half = (Number.isFinite(Number(p.width)) ? Number(p.width) : fallbackWidth) * 0.5;
-  const halfGrass = half + baseGrassMargin;
+    const half = (Number.isFinite(Number(p.width)) ? Number(p.width) : fallbackWidth) * 0.5;
+    const halfGrass = half + baseGrassMargin;
 
-  // Normales de cada segmento (izquierda)
-  let [n0x, n0y] = normalize(-v0y, v0x);
-  let [n1x, n1y] = normalize(-v1y, v1x);
-
-  // Si una normal viene invertida respecto a la otra, alinearla
-  if ((n0x * n1x + n0y * n1y) < 0) {
-    n1x = -n1x;
-    n1y = -n1y;
-  }
-
-  // Miter = normalizada (n0 + n1)
-  let mx = n0x + n1x;
-  let my = n0y + n1y;
-
-  // Si se anulan casi por completo, usar una normal segura
-  if (Math.hypot(mx, my) < eps) {
-    mx = n1x;
-    my = n1y;
+    left.push([p.x + nx * half, p.y + ny * half]);
+    right.push([p.x - nx * half, p.y - ny * half]);
+    grassLeft.push([p.x + nx * halfGrass, p.y + ny * halfGrass]);
+    grassRight.push([p.x - nx * halfGrass, p.y - ny * halfGrass]);
   }
 
-  const [miterX, miterY] = normalize(mx, my);
-
-  // Escala del miter: half / dot(miter, n0)
-  const denom = (miterX * n0x + miterY * n0y);
-  const safeDenom = Math.max(Math.abs(denom), eps);
-  const miterLen = half / safeDenom;
-
-  // Fallback bevel si el ángulo es muy agudo o el miter se dispara
-  const tooSharp =
-    (safeDenom < 0.35) ||
-    (miterLen > MITER_LIMIT * half);
-
-    // Dirección del offset + escala real
-  let dirX, dirY;
-  let scaleT, scaleG;
-
-  if (tooSharp) {
-    // Bevel estable: usar una normal segura con ancho normal
-    dirX = n1x;
-    dirY = n1y;
-    scaleT = half;
-    scaleG = halfGrass;
-  } else {
-    // Miter real: hay que usar miterLen, no half
-    dirX = miterX;
-    dirY = miterY;
-    scaleT = miterLen;
-    scaleG = miterLen * (halfGrass / half);
-  }
-
-  // TRACK offsets
-  const oxT = dirX * scaleT;
-  const oyT = dirY * scaleT;
-
-    left.push([px + oxT, py + oyT]);
-  right.push([px - oxT, py - oyT]);
-
-  // GRASS offsets
-  const oxG = dirX * scaleG;
-  const oyG = dirY * scaleG;
-
-  grassLeft.push([px + oxG, py + oyG]);
-  grassRight.push([px - oxG, py - oyG]);
-}
-  // 4) Ribbon en segmentos (quad -> 2 tri) y asignación a celdas
-  // Guardamos polys como arrays de {x,y}
-    const cells = new Map();
-  const grassCells = new Map(); // <-- NUEVO
+  const cells = new Map();
+  const grassCells = new Map();
 
   const addPolyToCells = (cellsMap, poly) => {
     const b = boundsOfPoly(poly);
-    const cx0 = Math.floor(b.minX / cellSize);
-    const cy0 = Math.floor(b.minY / cellSize);
-    const cx1 = Math.floor(b.maxX / cellSize);
-    const cy1 = Math.floor(b.maxY / cellSize);
-
+    const cx0 = Math.floor(b.minX / cellSize), cy0 = Math.floor(b.minY / cellSize);
+    const cx1 = Math.floor(b.maxX / cellSize), cy1 = Math.floor(b.maxY / cellSize);
     for (let cy = cy0; cy <= cy1; cy++) {
       for (let cx = cx0; cx <= cx1; cx++) {
         const key = cellKey(cx, cy);
-                if (!cellsMap.has(key)) cellsMap.set(key, { polys: [] });
+        if (!cellsMap.has(key)) cellsMap.set(key, { polys: [] });
         cellsMap.get(key).polys.push(poly);
       }
     }
   };
 
-// Creamos quads (li, ri, r(next), l(next)) como polígono de 4 puntos
-// IMPORTANTE: cerramos el último segmento (último -> primero)
-const count = left.length;
-for (let i = 0; i < count; i++) {
-  const j = (i + 1) % count;
+  for (let i = 0; i < count; i++) {
+    const j = (i + 1) % count;
+    const l0 = left[i], r0 = right[i], l1 = left[j], r1 = right[j];
+    addPolyToCells(cells, [
+      { x: l0[0], y: l0[1] }, { x: r0[0], y: r0[1] },
+      { x: r1[0], y: r1[1] }, { x: l1[0], y: l1[1] }
+    ]);
 
-  const l0 = left[i], r0 = right[i];
-  const l1 = left[j], r1 = right[j];
+    const gl0 = grassLeft[i], gr0 = grassRight[i], gl1 = grassLeft[j], gr1 = grassRight[j];
+    addPolyToCells(grassCells, [
+      { x: gl0[0], y: gl0[1] }, { x: gr0[0], y: gr0[1] },
+      { x: gr1[0], y: gr1[1] }, { x: gl1[0], y: gl1[1] }
+    ]);
+  }
 
-    // TRACK quad -> celdas TRACK
-  addPolyToCells(cells, [
-    { x: l0[0], y: l0[1] },
-    { x: r0[0], y: r0[1] },
-    { x: r1[0], y: r1[1] },
-    { x: l1[0], y: l1[1] }
-  ]);
-
-  // GRASS quad -> celdas GRASS (misma topología, mayor ancho)
-  const gl0 = grassLeft[i], gr0 = grassRight[i];
-  const gl1 = grassLeft[j], gr1 = grassRight[j];
-
-  addPolyToCells(grassCells, [
-    { x: gl0[0], y: gl0[1] },
-    { x: gr0[0], y: gr0[1] },
-    { x: gr1[0], y: gr1[1] },
-    { x: gl1[0], y: gl1[1] }
-  ]);
-}
-
-    return {
+  return {
     center: cl,
     left,
     right,
     cells,
     cellSize,
-
-    // Banda GRASS adicional (misma forma, más ancha)
     grass: {
-      margin: Math.max(0, grassMargin),
+      margin: baseGrassMargin,
       left: grassLeft,
       right: grassRight,
       cells: grassCells
