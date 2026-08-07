@@ -1,8 +1,7 @@
 import { RaceScene as CurrentRaceScene } from './RaceMinimapCenteredScene.js';
 
-// Capa visual semi-sim: sustituye únicamente superficies y desgaste.
-// Toda la lógica de carrera, física, cámaras, HUD, CP, meta y minimapa
-// permanece heredada de la escena estable actual.
+// Capa visual semi-sim. Solo sustituye superficies y decoración visual.
+// Física, cámaras, HUD, CP, meta y minimapa permanecen heredados.
 export class RaceScene extends CurrentRaceScene {
   ensureOffTexture() {
     const key = 'off';
@@ -10,8 +9,6 @@ export class RaceScene extends CurrentRaceScene {
     if (this.textures.exists(key)) return;
 
     const g = this.make.graphics({ x: 0, y: 0, add: false });
-
-    // Tierra compactada de circuito: apagada y poco saturada.
     g.fillStyle(0x655c45, 1);
     g.fillRect(0, 0, size, size);
 
@@ -24,7 +21,6 @@ export class RaceScene extends CurrentRaceScene {
       g.fillCircle(x, y, r);
     }
 
-    // Pequeño agregado de tierra/piedra.
     for (let i = 0; i < 26000; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
@@ -34,7 +30,6 @@ export class RaceScene extends CurrentRaceScene {
       g.fillRect(x, y, s, s);
     }
 
-    // Rodadas/zonas compactadas irregulares.
     for (let i = 0; i < 18; i++) {
       const w = 100 + Math.random() * 260;
       const h = 18 + Math.random() * 52;
@@ -54,12 +49,9 @@ export class RaceScene extends CurrentRaceScene {
     if (this.textures.exists(key)) return;
 
     const g = this.make.graphics({ x: 0, y: 0, add: false });
-
-    // Verde natural de circuito, bastante menos saturado que el anterior.
     g.fillStyle(0x355536, 1);
     g.fillRect(0, 0, size, size);
 
-    // Franjas muy sutiles de corte de césped.
     const stripeW = 86;
     for (let x = -stripeW; x < size + stripeW; x += stripeW) {
       const alt = Math.floor(x / stripeW) % 2 === 0;
@@ -67,7 +59,6 @@ export class RaceScene extends CurrentRaceScene {
       g.fillRect(x, 0, stripeW, size);
     }
 
-    // Grandes variaciones orgánicas.
     for (let i = 0; i < 30; i++) {
       const r = 120 + Math.random() * 260;
       const x = Math.random() * size;
@@ -78,7 +69,6 @@ export class RaceScene extends CurrentRaceScene {
       g.fillCircle(x, y, r);
     }
 
-    // Hojas / hebras vistas desde arriba, sin convertirlo en ruido.
     for (let i = 0; i < 32000; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
@@ -88,7 +78,6 @@ export class RaceScene extends CurrentRaceScene {
       g.fillRect(x, y, 1, h);
     }
 
-    // Calvas / zonas secas discretas.
     for (let i = 0; i < 15; i++) {
       const r = 35 + Math.random() * 95;
       g.fillStyle(0x7a7045, 0.025 + Math.random() * 0.025);
@@ -105,12 +94,9 @@ export class RaceScene extends CurrentRaceScene {
     if (this.textures.exists(key)) return;
 
     const g = this.make.graphics({ x: 0, y: 0, add: false });
-
-    // Base carbón fría, de pista real y menos gris-plástico.
     g.fillStyle(0x292b2d, 1);
     g.fillRect(0, 0, size, size);
 
-    // Variación tonal amplia y suave.
     for (let i = 0; i < 42; i++) {
       const r = 70 + Math.random() * 210;
       const x = Math.random() * size;
@@ -120,7 +106,6 @@ export class RaceScene extends CurrentRaceScene {
       g.fillCircle(x, y, r);
     }
 
-    // Agregado del asfalto: piedra clara/oscura muy fina.
     for (let i = 0; i < 36000; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
@@ -131,7 +116,6 @@ export class RaceScene extends CurrentRaceScene {
       g.fillRect(x, y, s, s);
     }
 
-    // Reparaciones/parches casi imperceptibles.
     for (let i = 0; i < 12; i++) {
       const w = 90 + Math.random() * 250;
       const h = 24 + Math.random() * 78;
@@ -142,17 +126,17 @@ export class RaceScene extends CurrentRaceScene {
       g.fillRoundedRect(x, y, w, h, 8);
     }
 
-    // Fisuras finísimas y cortas.
-    g.lineStyle(1, 0x0a0b0c, 0.12);
-    for (let i = 0; i < 26; i++) {
+    // Fisuras muy sutiles. No son marcas de frenado.
+    g.lineStyle(1, 0x0a0b0c, 0.07);
+    for (let i = 0; i < 18; i++) {
       let x = Math.random() * size;
       let y = Math.random() * size;
       g.beginPath();
       g.moveTo(x, y);
-      const steps = 2 + Math.floor(Math.random() * 4);
+      const steps = 2 + Math.floor(Math.random() * 3);
       for (let s = 0; s < steps; s++) {
-        x += (Math.random() - 0.5) * 35;
-        y += 10 + Math.random() * 32;
+        x += (Math.random() - 0.5) * 30;
+        y += 10 + Math.random() * 26;
         g.lineTo(x, y);
       }
       g.strokePath();
@@ -170,30 +154,20 @@ export class RaceScene extends CurrentRaceScene {
     const g = this.make.graphics({ x: 0, y: 0, add: false });
     g.clear();
 
-    // Nubes de desgaste/pulido.
-    for (let i = 0; i < 24; i++) {
-      const r = 100 + Math.random() * 230;
-      const col = Math.random() > 0.5 ? 0xffffff : 0x000000;
-      g.fillStyle(col, 0.018 + Math.random() * 0.028);
+    // Solo desgaste isotrópico. Las huellas direccionales se dibujan en mundo,
+    // orientadas según la geometría real del circuito.
+    for (let i = 0; i < 34; i++) {
+      const r = 75 + Math.random() * 220;
+      const col = Math.random() > 0.52 ? 0xffffff : 0x000000;
+      g.fillStyle(col, 0.012 + Math.random() * 0.024);
       g.fillCircle(Math.random() * size, Math.random() * size, r);
     }
 
-    // Huellas de goma longitudinales, muy suaves para que no parezcan rayas.
-    for (let i = 0; i < 22; i++) {
-      const w = 180 + Math.random() * 360;
-      const h = 6 + Math.random() * 18;
-      const x = Math.random() * (size - w);
-      const y = Math.random() * (size - h);
-      g.fillStyle(0x050606, 0.045 + Math.random() * 0.045);
-      g.fillRoundedRect(x, y, w, h, h * 0.5);
-    }
-
-    // Marcas de frenada cortas y rotas.
-    for (let i = 0; i < 26; i++) {
-      const w = 50 + Math.random() * 150;
-      const h = 2 + Math.random() * 5;
-      g.fillStyle(0x000000, 0.05 + Math.random() * 0.05);
-      g.fillRoundedRect(Math.random() * (size - w), Math.random() * size, w, h, 2);
+    for (let i = 0; i < 12000; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      g.fillStyle(Math.random() > 0.5 ? 0xffffff : 0x000000, 0.01 + Math.random() * 0.018);
+      g.fillRect(x, y, 1, 1);
     }
 
     g.generateTexture(key, size, size);
@@ -205,48 +179,119 @@ export class RaceScene extends CurrentRaceScene {
 
     try {
       // =========================================================
-      // DESGASTE DE COMPETICIÓN — sobre el asfalto, bajo meta/CP/coche
+      // MARCAS DE FRENADA SEMI-SIM
+      // - NO hay línea continua por el centro.
+      // - Solo aparecen antes de curvas relevantes.
+      // - Son pares de neumático separados y tramos independientes.
+      // - No usamos left/right para líneas continuas: evita pinchos y cruces.
       // =========================================================
-      const center = this.track?.geom?.center || [];
-      const left = this.track?.geom?.left || [];
-      const right = this.track?.geom?.right || [];
+      const centerRaw = this.track?.geom?.center || [];
+      const center = centerRaw
+        .map((p) => Array.isArray(p)
+          ? { x: Number(p[0]), y: Number(p[1]), width: Number(this.track?.meta?.trackWidth || 160) }
+          : { x: Number(p?.x), y: Number(p?.y), width: Number(p?.width || this.track?.meta?.trackWidth || 160) })
+        .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
 
-      const getXY = (p) => {
-        if (Array.isArray(p)) return { x: Number(p[0]), y: Number(p[1]) };
-        return { x: Number(p?.x), y: Number(p?.y) };
-      };
+      const n = center.length;
+      if (n >= 24) {
+        const normAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+        const angleAt = (i0, i1) => {
+          const a = center[(i0 + n) % n];
+          const b = center[(i1 + n) % n];
+          return Math.atan2(b.y - a.y, b.x - a.x);
+        };
 
-      const drawOpenLine = (points, width, color, alpha, depth) => {
-        if (!Array.isArray(points) || points.length < 2) return null;
-        const g = this.add.graphics().setDepth(depth).setScrollFactor(1);
-        g.lineStyle(width, color, alpha);
-        const p0 = getXY(points[0]);
-        if (!Number.isFinite(p0.x) || !Number.isFinite(p0.y)) return g;
-        g.beginPath();
-        g.moveTo(p0.x, p0.y);
-        for (let i = 1; i < points.length; i++) {
-          const p = getXY(points[i]);
-          if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
-          g.lineTo(p.x, p.y);
-        }
-        g.strokePath();
+        const turnAt = (i) => {
+          // Ventana suficientemente amplia para ignorar microquiebros del resample.
+          const a0 = angleAt(i - 5, i);
+          const a1 = angleAt(i, i + 5);
+          return normAngle(a1 - a0);
+        };
+
+        const g = this.add.graphics().setDepth(11.24).setScrollFactor(1);
         this.uiCam?.ignore?.(g);
-        return g;
-      };
+        this._semiSimBrakeMarks = g;
 
-      // Franja de goma principal: ancha + núcleo suave. No afecta a la física.
-      this._semiSimRubberWide = drawOpenLine(center, 24, 0x08090a, 0.10, 11.18);
-      this._semiSimRubberCore = drawOpenLine(center, 9, 0x030404, 0.13, 11.19);
+        const used = [];
+        const circularDistance = (a, b) => {
+          const d = Math.abs(a - b);
+          return Math.min(d, n - d);
+        };
 
-      // Borde de pista castigado: tierra/goma justo donde termina el asfalto.
-      this._semiSimEdgeLeft = drawOpenLine(left, 9, 0x29251d, 0.20, 11.26);
-      this._semiSimEdgeRight = drawOpenLine(right, 9, 0x29251d, 0.20, 11.26);
-      this._semiSimEdgeDustLeft = drawOpenLine(left, 3, 0x95866a, 0.12, 11.27);
-      this._semiSimEdgeDustRight = drawOpenLine(right, 3, 0x95866a, 0.12, 11.27);
+        for (let i = 10; i < n - 10; i += 3) {
+          const upcoming = turnAt(i + 7);
+          const absTurn = Math.abs(upcoming);
 
-      // Línea blanca fina tipo circuito, ligeramente envejecida.
-      this._semiSimWhiteLeft = drawOpenLine(left, 2, 0xe6e4dc, 0.52, 11.36);
-      this._semiSimWhiteRight = drawOpenLine(right, 2, 0xe6e4dc, 0.52, 11.36);
+          // Solo curvas suficientemente claras. Evita llenar toda la pista.
+          if (absTurn < 0.20) continue;
+          if (used.some((u) => circularDistance(u, i) < 24)) continue;
+
+          // Las huellas empiezan antes del giro y terminan al llegar a él.
+          const startI = Math.max(2, i - 10);
+          const endI = Math.min(n - 3, i + 3);
+          const turnSign = Math.sign(upcoming) || 1;
+
+          // Entrada de curva: trazada hacia el exterior.
+          // normal izquierda => curva izquierda usa exterior derecho y viceversa.
+          const baseWidth = Number(center[i]?.width || this.track?.meta?.trackWidth || 160);
+          const racingOffset = -turnSign * Math.min(28, baseWidth * 0.16);
+          const tireHalfGap = Math.min(5.5, Math.max(3.2, baseWidth * 0.025));
+
+          const makeTrack = (tireOffset) => {
+            const pts = [];
+            let prev = null;
+
+            for (let k = startI; k <= endI; k += 2) {
+              const p = center[k];
+              const p0 = center[Math.max(0, k - 2)];
+              const p1 = center[Math.min(n - 1, k + 2)];
+              const dx = p1.x - p0.x;
+              const dy = p1.y - p0.y;
+              const len = Math.hypot(dx, dy);
+              if (len < 8) continue;
+
+              const nx = -dy / len;
+              const ny = dx / len;
+              const offset = racingOffset + tireOffset;
+              const q = { x: p.x + nx * offset, y: p.y + ny * offset };
+
+              // Protección contra saltos geométricos: corta el trazo en vez de unirlo.
+              if (prev && Math.hypot(q.x - prev.x, q.y - prev.y) > 80) break;
+              pts.push(q);
+              prev = q;
+            }
+            return pts;
+          };
+
+          const leftTire = makeTrack(-tireHalfGap);
+          const rightTire = makeTrack(tireHalfGap);
+          if (leftTire.length < 3 || rightTire.length < 3) continue;
+
+          const drawTrack = (pts, width, alpha) => {
+            g.lineStyle(width, 0x080909, alpha);
+            g.beginPath();
+            g.moveTo(pts[0].x, pts[0].y);
+            for (let k = 1; k < pts.length; k++) g.lineTo(pts[k].x, pts[k].y);
+            g.strokePath();
+          };
+
+          // Dos pasadas dan cuerpo irregular sin convertirse en una franja negra.
+          drawTrack(leftTire, 4.2, 0.14);
+          drawTrack(rightTire, 4.2, 0.14);
+          drawTrack(leftTire, 1.6, 0.12);
+          drawTrack(rightTire, 1.6, 0.12);
+
+          used.push(i);
+        }
+      }
+
+      // Deliberadamente NO dibujamos líneas globales siguiendo geom.left/right.
+      // En horquillas estrechas los offsets pueden auto-cruzarse. El borde de pista
+      // queda definido por la propia máscara del asfalto y por los curbs exportados.
+      this._semiSimEdgeLeft = null;
+      this._semiSimEdgeRight = null;
+      this._semiSimWhiteLeft = null;
+      this._semiSimWhiteRight = null;
     } catch (err) {
       console.warn('[TDR2] Semi-sim surface overlay failed', err);
     }
