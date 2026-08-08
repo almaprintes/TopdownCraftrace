@@ -9,20 +9,17 @@ function readPackageName() {
 }
 
 export default defineConfig(({ command }) => {
-  // En dev: base "/"
+  // Local dev always serves from root.
   if (command === 'serve') return { base: '/' };
 
-  // En build: base "/<repo>/" para GitHub Pages
-  // Se puede sobreescribir con BASE=/mi-repo/ npm run build
-    const repo = readPackageName();
+  const repo = readPackageName();
 
-  // PRIORIDAD:
-  // 1) BASE explícita (override manual)
-  // 2) Netlify (sirve en "/")
-  // 3) GitHub Pages (sirve en "/<repo>/")
-  const base =
-    process.env.BASE ??
-    (process.env.NETLIFY ? '/' : `/${repo}/`);
+  // Build base priority:
+  // 1) Explicit BASE override.
+  // 2) Vercel / Netlify: app is served from domain root.
+  // 3) GitHub Pages: app is served from /<repo>/.
+  const isRootHost = Boolean(process.env.VERCEL || process.env.NETLIFY);
+  const base = process.env.BASE ?? (isRootHost ? '/' : `/${repo}/`);
 
   return {
     base,
