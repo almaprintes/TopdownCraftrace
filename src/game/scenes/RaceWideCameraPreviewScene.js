@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceSurfaceLongitudinalScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceKerbSurfaceScene.js';
 import { hasTrack } from '../tracks/trackRegistry.js';
 
 // Temporary camera experiment: deliberately wider than the previous pass so
