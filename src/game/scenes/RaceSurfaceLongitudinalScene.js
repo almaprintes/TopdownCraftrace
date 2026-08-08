@@ -1,4 +1,5 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
+import { addCircuitEnvironment } from './RaceEnvironmentLayer.js';
 
 // Mobile-safe premium surface pass.
 // Matte materials + robust shoulder/edge geometry + curbs built from clipped edge strips.
@@ -179,9 +180,6 @@ export class RaceScene extends MaterialRaceScene {
       drawTrimmedEdge(left);
       drawTrimmedEdge(right);
 
-      // CURBS v4: treat every kerb as ONE corner object, not as unrelated local samples.
-      // This fixes the mixed results of curvature-driven width: each sustained bend now has a clean
-      // turn-in -> apex -> exit profile, while folded/reversing offset segments are rejected entirely.
       const blockLen = 18;
       const maxCurbWidth = 11.5;
       const enterThreshold = 0.055;
@@ -203,7 +201,6 @@ export class RaceScene extends MaterialRaceScene {
         }
       }
 
-      // Merge the first/last group if the same physical bend crosses the lap seam.
       if (groups.length > 1) {
         const first = groups[0], last = groups[groups.length - 1];
         if (first.start === 0 && last.end === count - 1 && first.sign === last.sign) {
@@ -247,7 +244,6 @@ export class RaceScene extends MaterialRaceScene {
           const u1 = arc > 0 ? (travelled + centerSegLen) / arc : 1;
           travelled += centerSegLen;
 
-          // Bell-shaped profile determined by position in the whole corner, not noisy local curvature.
           const bell = (u) => Math.pow(Math.max(0, Math.sin(Math.PI * Math.max(0, Math.min(1, u)))), 0.78);
           const w0 = maxCurbWidth * bell(u0);
           const w1 = maxCurbWidth * bell(u1);
@@ -280,6 +276,10 @@ export class RaceScene extends MaterialRaceScene {
           phaseDistance += segLen;
         }
       }
+
+      // Environment is deliberately mounted last and is fully decorative. The module owns only
+      // static sprites/textures and can be removed without touching track geometry or physics.
+      addCircuitEnvironment(this, center, defaultTrackW);
     } catch (err) {
       console.warn('[TDR2] Mobile-safe premium surface pass failed', err);
     }
