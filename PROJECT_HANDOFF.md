@@ -40,14 +40,21 @@ La línea de arcén fue una prueba deliberada para revelar visualmente cualquier
 
 ### 3.2 Rendimiento
 
-Hubo una versión que comenzaba fluida pero aproximadamente a mitad de vuelta acumulaba tirones hasta volverse impracticable. Después se corrigió y se probaron varias vueltas consecutivas con rendimiento excelente (4 vueltas marcando fast lap y posteriormente 8 vueltas seguidas sin ralentizaciones).
+Hubo una versión que comenzaba fluida pero aproximadamente a mitad de vuelta acumulaba tirones hasta volverse impracticable. Después se corrigió y se probaron varias vueltas consecutivas con rendimiento excelente.
+
+Hitos confirmados:
+
+- pista/pianos: 8 vueltas seguidas sin ralentizaciones;
+- vegetación: prueba posterior con hasta ~28 sprites estáticos reutilizando solo 4 WebP y 5 composiciones alrededor del circuito;
+- resultado de esa prueba: **8 vueltas completas con rendimiento absoluto**, sin degradación progresiva ni tirones.
 
 Reglas:
 
 - nada de crear geometría/objetos de entorno cada frame;
 - entorno estático debe construirse una vez;
 - evitar cantidades enormes de segmentos/Graphics que se acumulen;
-- cualquier mejora visual debe probarse durante varias vueltas completas, no solo durante los primeros segundos.
+- reutilizar texturas siempre que sea posible;
+- subir densidad por escalones y validar 6–8 vueltas completas antes de seguir.
 
 ## 4. Pianos / kerbs
 
@@ -92,36 +99,36 @@ La colocación NO debe ser aleatoria. Debe existir dirección artística por zon
 
 Pensar en **composiciones reconocibles**, no en dispersar objetos para rellenar huecos.
 
-### 6.1 Assets actuales de prueba
+### 6.1 Assets actuales
 
-Se generó una lámina transparente de vegetación y se extrajeron assets WebP. Para la primera prueba controlada se subieron a:
+Ruta:
 
 `public/assets/environment/`
 
-Archivos:
+Archivos base validados:
 
 - `tree_deciduous_01.webp`
 - `tree_conifer_01.webp`
 - `shrub_round_01.webp`
 - `shrub_flowers_01.webp`
 
-La intención de la prueba es SOLO 2 árboles + 2 arbustos, colocados deliberadamente y lejos de pista. Antes de ampliar la biblioteca hay que validar escala, limpieza del alfa, sombra residual y coherencia con el césped real.
+Visualmente fueron aprobados: encajan con el estilo del juego y tienen suficiente calidad. La sombra de suelo es visible pero funciona sobre el césped actual.
 
 Nota: una extracción anterior de ~70 elementos desde una infografía JPEG fue descartada porque los recortes tenían halos, fondo crema, sombras y contaminación entre objetos. No reutilizar esos recortes.
 
-### 6.2 Limpieza del 08/08
+### 6.2 Integración actual
 
-Se detectó que `RaceEnvironmentLayer.js` había quedado en una versión problemática que embebía WebP gigantes como `data:image/webp;base64,...` dentro del propio JavaScript. Aunque esa versión pretendía mostrar solo cuatro piezas, era innecesariamente pesada y dificultaba saber qué versión estaba viendo Vercel/PWA.
+`RaceEnvironmentLayer.js` carga los cuatro WebP reales desde `public/assets/environment/` usando `import.meta.env.BASE_URL`.
 
-Se sustituyó por una implementación limpia que carga los cuatro WebP reales desde `public/assets/environment/` usando `import.meta.env.BASE_URL`, de modo que funcione tanto con Vercel (`/`) como con GitHub Pages (`/<repo>/`).
+Después de la prueba inicial con 4 piezas se escaló a una prueba forestal con unas 28 colocaciones máximas en 5 zonas diseñadas alrededor del circuito. Los árboles se solapan hacia el fondo y los arbustos suavizan el borde. No hay colisiones, aleatoriedad ni trabajo por frame.
 
-La implementación actual coloca exactamente dos composiciones: árbol caducifolio + arbusto redondo alrededor del 18% de vuelta, y conífera + arbusto de flores alrededor del 64%. No contiene guardarraíles, casetas, carteles ni decoración legacy.
+Commits relevantes:
 
-Commit relevante:
+- `90750a2` — usar WebP subidos y retirar entorno legacy de esta capa.
+- `129ea6c` — prueba de 12 elementos.
+- `cd20adf` — prueba de bosque más denso (~28 sprites / 5 zonas).
 
-- `90750a2` — usar WebP subidos y retirar definitivamente el entorno legacy de esta capa.
-
-Si después de este commit siguen viéndose elementos antiguos, la explicación ya no está en `RaceEnvironmentLayer.js`: hay que comprobar deploy/caché o buscar otra capa que los esté creando.
+Resultado confirmado por el usuario tras 8 vueltas: rendimiento absoluto. Esto habilita seguir aumentando densidad y empezar a añadir nuevas familias de assets de forma gradual.
 
 ## 7. RaceEnvironmentLayer
 
@@ -129,68 +136,71 @@ Si después de este commit siguen viéndose elementos antiguos, la explicación 
 
 Principio arquitectónico: pista/geometría/pianos/física/HUD deben permanecer aislados de los experimentos de entorno.
 
-## 8. Vercel + GitHub Pages
+## 8. Cámara / zoom
 
-`vite.config.js` originalmente estaba orientado a GitHub Pages y usaba `/<repo>/` como `base` durante build. Esto hacía que Vercel, que sirve desde `/`, pudiera resolver mal los recursos.
+Se creó una escena temporal `RaceWideCameraPreviewScene.js` para probar más contexto visual sin tocar física ni HUD.
 
-Se modificó para detectar Vercel y usar `base: '/'`, conservando la lógica de GitHub Pages. Commit relevante:
+Valores de prueba actuales aproximados:
 
-- `781ce28` — soporte de base `/` en Vercel sin abandonar GitHub Pages.
+- zoom min: `0.62`
+- zoom max: `1.06`
+- referencia de velocidad: `110 km/h`
+- zoom inicial: `0.96`
+
+El objetivo es ver más entorno y leer mejor las curvas. La primera prueba suave casi no se notaba, así que se abrió más. No tocar de golpe junto con cambios de física.
+
+## 9. Vercel + GitHub Pages
+
+`vite.config.js` detecta Vercel/Netlify y usa `base: '/'`; GitHub Pages mantiene `/<repo>/`.
 
 Vercel es solo preview temporal. GitHub Pages debe volver a ser el destino oficial cuando el flujo de deploy esté estable.
 
-## 9. PWA en iPhone
+Commit relevante:
 
-El manifest usa:
+- `781ce28` — soporte de base `/` en Vercel sin abandonar GitHub Pages.
 
-- `display: "standalone"`
-- `orientation: "landscape"`
-- `start_url: "."`
-- `scope: "."`
+## 10. PWA en iPhone
 
-En `index.html` se añadieron metadatos Apple:
+Metadatos Apple presentes en `index.html`:
 
 - `apple-mobile-web-app-capable=yes`
 - `apple-mobile-web-app-status-bar-style=black-translucent`
 - `apple-mobile-web-app-title=TDR2`
 
-Commit relevante:
+### 10.1 Service worker
 
-- `22c9621` — soporte iPhone standalone.
-
-### 9.1 Service worker: hallazgo importante
-
-Sí existe service worker. `src/main.js` registra `./sw.js` y el archivo es `public/sw.js`.
-
-La versión anterior (`tdr2-v13`) usaba cache-first para assets. Durante desarrollo esto podía mantener recursos antiguos en una PWA instalada y explicar diferencias entre Safari/Vercel y la app de pantalla de inicio.
-
-El 08/08 se cambió a `tdr2-v14` y a estrategia **network-first para todo recurso del mismo origen**, con caché únicamente como fallback offline. Además, el install usa `Promise.allSettled` para que un recurso opcional que falle no haga fracasar toda la instalación del service worker.
+Existe `public/sw.js` y `src/main.js` lo registra. Se cambió a estrategia network-first durante desarrollo para evitar quedarse atrapado en versiones antiguas.
 
 Commit relevante:
 
-- `dc4efb0` — PWA development-safe: red primero, caché como fallback y limpieza de caches v13/anteriores.
+- `dc4efb0` — service worker v14 network-first.
 
-Objetivo durante desarrollo: una PWA instalada desde Vercel debe ver el mismo build actual que Safari y no quedarse atrapada en una versión anterior del circuito/entorno.
+### 10.2 Bug específico `/assets/` al instalar desde Vercel
 
-### 9.2 Flujo de prueba PWA temporal con Vercel
+Síntoma observado en iPhone:
 
-1. Esperar al deploy de Vercel correspondiente a `dc4efb0` o posterior.
-2. Borrar del iPhone el icono PWA anterior de Vercel.
-3. Abrir la URL de Vercel directamente en Safari.
-4. Recargar una vez para asegurarse de que Safari recibe el build nuevo y el SW v14.
-5. Compartir → Añadir a pantalla de inicio.
-6. Abrir desde el nuevo icono.
+1. En Safari, al abrir Compartir, la ficha superior muestra correctamente el dominio raíz `https://topdown-craftrace-two.vercel.app`.
+2. Al pulsar **Añadir a pantalla de inicio**, la pantalla final cambia misteriosamente la URL a `https://topdown-craftrace-two.vercel.app/assets/`.
+3. La PWA resultante abre en blanco.
 
-La instalación antigua desde GitHub Pages llegó a mostrar una versión vieja con el coche/rectángulo magenta. Cuando se vuelva a GitHub Pages como publicación principal, revisar deploy y caches antes de reinstalar la PWA oficial.
+Hallazgo en código: el manifest todavía usaba URLs relativas (`./`) en `id`, `start_url`, `scope` e iconos, y `index.html` enlazaba el manifest de forma relativa. Esto permite que iOS resuelva el contexto de instalación de forma no deseada.
 
-## 10. Commits / hitos que conviene recordar
+Corrección aplicada el 08/08:
 
-- `4f76115` — eliminación del entorno placeholder/procedural anterior, dejando limpio el punto de integración.
-- `1c6cc34` — primera integración modular de assets cenitales (dirección visual/colocación rechazada; referencia histórica).
-- `781ce28` — Vercel usa base `/`.
-- `22c9621` — metadatos iPhone PWA standalone.
-- `90750a2` — entorno limpio usando los cuatro WebP reales externos.
-- `dc4efb0` — service worker v14 network-first para pruebas frescas en PWA.
+- manifest con `id: "/"`;
+- `start_url: "/?source=pwa"`;
+- `scope: "/"`;
+- iconos con rutas absolutas `/icons/...`;
+- `index.html` enlaza `/manifest.webmanifest?v=20260808-3`;
+- iconos Apple/favicon también absolutos;
+- imagen de orientación también absoluta para evitar herencia accidental de rutas.
+
+Commits relevantes:
+
+- `4cd5b72` — manifest absoluto para forzar instalación desde raíz.
+- `d3ecc4e` — URLs absolutas del manifest/iconos en `index.html`.
+
+Después de desplegar esos commits en Vercel, probar de nuevo desde una pestaña nueva de Safari. Si la pantalla final sigue inyectando `/assets/`, el siguiente paso será limpiar datos del sitio/PWA en iOS y revisar exactamente qué manifest está sirviendo Vercel en producción antes de tocar más código.
 
 ## 11. Reglas de trabajo para el siguiente chat
 
@@ -206,6 +216,6 @@ La instalación antigua desde GitHub Pages llegó a mostrar una versión vieja c
 
 ## 12. Próximo paso inmediato
 
-Esperar al deploy de Vercel de `dc4efb0` o posterior. Primero comprobar en Safari que desapareció la decoración legacy y solo aparecen los cuatro WebP de prueba. Después borrar/reinstalar la PWA de Vercel y comprobar que ya no queda en blanco.
-
-Si Safari está correcto pero la PWA sigue en blanco, capturar el error que muestra el overlay de diagnóstico ya presente en `src/main.js`; ese overlay escucha `window.error` y `unhandledrejection` y debe aportar el error exacto de iOS.
+1. Esperar a Vercel con `d3ecc4e` o posterior y repetir instalación PWA desde la raíz.
+2. Si la URL final deja de añadir `/assets/`, comprobar que la PWA abre correctamente.
+3. En paralelo, continuar escalando entorno desde la prueba estable de ~28 sprites hacia un bosque más frondoso, introduciendo nuevas especies/objetos poco a poco y validando rendimiento tras cada escalón.
