@@ -6,22 +6,10 @@
 const BASE = import.meta.env.BASE_URL || '/';
 
 const ASSETS = {
-  treeA: {
-    key: 'env-tree-deciduous-01',
-    url: `${BASE}assets/environment/tree_deciduous_01.webp`
-  },
-  treeB: {
-    key: 'env-tree-conifer-01',
-    url: `${BASE}assets/environment/tree_conifer_01.webp`
-  },
-  shrubA: {
-    key: 'env-shrub-round-01',
-    url: `${BASE}assets/environment/shrub_round_01.webp`
-  },
-  shrubB: {
-    key: 'env-shrub-flowers-01',
-    url: `${BASE}assets/environment/shrub_flowers_01.webp`
-  }
+  treeA: { key: 'env-tree-deciduous-01', url: `${BASE}assets/environment/tree_deciduous_01.webp` },
+  treeB: { key: 'env-tree-conifer-01', url: `${BASE}assets/environment/tree_conifer_01.webp` },
+  shrubA: { key: 'env-shrub-round-01', url: `${BASE}assets/environment/shrub_round_01.webp` },
+  shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` }
 };
 
 function tangentAt(center, i) {
@@ -52,15 +40,7 @@ function pointBesideTrack(center, fraction, side, extraOffset, defaultTrackW) {
   const { tx, ty, nx, ny } = tangentAt(center, i);
   const half = Number(p.width || defaultTrackW) * 0.5;
   const offset = half + extraOffset;
-  return {
-    i,
-    x: p.x + nx * side * offset,
-    y: p.y + ny * side * offset,
-    tx,
-    ty,
-    nx,
-    ny
-  };
+  return { i, x: p.x + nx * side * offset, y: p.y + ny * side * offset, tx, ty, nx, ny };
 }
 
 function addImage(scene, placed, key, x, y, scale, rotation = 0, depth = 7.15) {
@@ -76,31 +56,28 @@ function addImage(scene, placed, key, x, y, scale, rotation = 0, depth = 7.15) {
 }
 
 function placeCuratedVegetation(scene, center, defaultTrackW) {
-  // Destroy a previous environment instance if this function is re-entered.
   if (Array.isArray(scene._circuitEnvironment)) {
     for (const obj of scene._circuitEnvironment) obj?.destroy?.();
   }
 
   const placed = [];
 
-  // Cluster A: broadleaf tree + round shrub. Deliberately outside the racing area.
-  const a = pointBesideTrack(center, 0.18, 1, 235, defaultTrackW);
-  if (isClearOfTrack(center, a.x, a.y, defaultTrackW, 115)) {
+  const a = pointBesideTrack(center, 0.18, 1, 105, defaultTrackW);
+  if (isClearOfTrack(center, a.x, a.y, defaultTrackW, 72)) {
     addImage(scene, placed, ASSETS.treeA.key, a.x, a.y, 0.32, -0.20, 7.13);
-    const sx = a.x + a.tx * 92 + a.nx * 24;
-    const sy = a.y + a.ty * 92 + a.ny * 24;
-    if (isClearOfTrack(center, sx, sy, defaultTrackW, 95)) {
+    const sx = a.x + a.tx * 82 + a.nx * 10;
+    const sy = a.y + a.ty * 82 + a.ny * 10;
+    if (isClearOfTrack(center, sx, sy, defaultTrackW, 62)) {
       addImage(scene, placed, ASSETS.shrubA.key, sx, sy, 0.27, 0.32, 7.12);
     }
   }
 
-  // Cluster B: conifer + flowering shrub on a different part/side of the lap.
-  const b = pointBesideTrack(center, 0.64, -1, 245, defaultTrackW);
-  if (isClearOfTrack(center, b.x, b.y, defaultTrackW, 120)) {
+  const b = pointBesideTrack(center, 0.64, -1, 112, defaultTrackW);
+  if (isClearOfTrack(center, b.x, b.y, defaultTrackW, 74)) {
     addImage(scene, placed, ASSETS.treeB.key, b.x, b.y, 0.31, 0.14, 7.13);
-    const sx = b.x - b.tx * 88 - b.nx * 22;
-    const sy = b.y - b.ty * 88 - b.ny * 22;
-    if (isClearOfTrack(center, sx, sy, defaultTrackW, 95)) {
+    const sx = b.x - b.tx * 78 - b.nx * 10;
+    const sy = b.y - b.ty * 78 - b.ny * 10;
+    if (isClearOfTrack(center, sx, sy, defaultTrackW, 62)) {
       addImage(scene, placed, ASSETS.shrubB.key, sx, sy, 0.27, -0.26, 7.12);
     }
   }
@@ -120,16 +97,11 @@ export function addCircuitEnvironment(scene, center, defaultTrackW = 160) {
     }
   }
 
-  if (missing.length === 0) {
-    return placeCuratedVegetation(scene, center, defaultTrackW);
-  }
+  if (missing.length === 0) return placeCuratedVegetation(scene, center, defaultTrackW);
 
-  // Phaser can safely load these four small static textures after the scene starts.
-  // Placement happens once, only after all requested WebPs are available.
   scene.load.once('complete', () => {
     placeCuratedVegetation(scene, center, defaultTrackW);
   });
   if (!scene.load.isLoading()) scene.load.start();
-
   return [];
 }
