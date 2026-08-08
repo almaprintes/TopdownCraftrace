@@ -109,6 +109,20 @@ La intención de la prueba es SOLO 2 árboles + 2 arbustos, colocados deliberada
 
 Nota: una extracción anterior de ~70 elementos desde una infografía JPEG fue descartada porque los recortes tenían halos, fondo crema, sombras y contaminación entre objetos. No reutilizar esos recortes.
 
+### 6.2 Limpieza del 08/08
+
+Se detectó que `RaceEnvironmentLayer.js` había quedado en una versión problemática que embebía WebP gigantes como `data:image/webp;base64,...` dentro del propio JavaScript. Aunque esa versión pretendía mostrar solo cuatro piezas, era innecesariamente pesada y dificultaba saber qué versión estaba viendo Vercel/PWA.
+
+Se sustituyó por una implementación limpia que carga los cuatro WebP reales desde `public/assets/environment/` usando `import.meta.env.BASE_URL`, de modo que funcione tanto con Vercel (`/`) como con GitHub Pages (`/<repo>/`).
+
+La implementación actual coloca exactamente dos composiciones: árbol caducifolio + arbusto redondo alrededor del 18% de vuelta, y conífera + arbusto de flores alrededor del 64%. No contiene guardarraíles, casetas, carteles ni decoración legacy.
+
+Commit relevante:
+
+- `90750a2` — usar WebP subidos y retirar definitivamente el entorno legacy de esta capa.
+
+Si después de este commit siguen viéndose elementos antiguos, la explicación ya no está en `RaceEnvironmentLayer.js`: hay que comprobar deploy/caché o buscar otra capa que los esté creando.
+
 ## 7. RaceEnvironmentLayer
 
 `src/game/scenes/RaceEnvironmentLayer.js` es el punto de integración del entorno. Se dejó aislado para poder trabajar el decorado sin tocar el corazón probado del circuito.
@@ -127,14 +141,14 @@ Vercel es solo preview temporal. GitHub Pages debe volver a ser el destino ofici
 
 ## 9. PWA en iPhone
 
-El manifest ya usa:
+El manifest usa:
 
 - `display: "standalone"`
 - `orientation: "landscape"`
 - `start_url: "."`
 - `scope: "."`
 
-En `index.html` se añadieron metadatos Apple para mejorar la instalación desde Safari:
+En `index.html` se añadieron metadatos Apple:
 
 - `apple-mobile-web-app-capable=yes`
 - `apple-mobile-web-app-status-bar-style=black-translucent`
@@ -144,22 +158,39 @@ Commit relevante:
 
 - `22c9621` — soporte iPhone standalone.
 
-### Flujo de prueba PWA temporal con Vercel
+### 9.1 Service worker: hallazgo importante
 
-1. Esperar al deploy de Vercel correspondiente al último commit.
-2. Abrir la URL de Vercel directamente en Safari del iPhone.
-3. Compartir → Añadir a pantalla de inicio.
-4. Si ya existía una instalación anterior de esa URL, borrar primero el icono y volver a instalar para evitar que iOS conserve metadata/caché antigua.
-5. Esta PWA de Vercel es temporal y puede eliminarse cuando GitHub Pages vuelva a ser el destino de pruebas/final.
+Sí existe service worker. `src/main.js` registra `./sw.js` y el archivo es `public/sw.js`.
 
-La instalación antigua desde GitHub Pages llegó a mostrar una versión vieja con el coche/rectángulo magenta. Sospecha principal: deploy/caché/service worker antiguo, no el manifest actual. Cuando se vuelva a GitHub Pages como publicación principal, revisar despliegue y cachés antes de reinstalar la PWA oficial.
+La versión anterior (`tdr2-v13`) usaba cache-first para assets. Durante desarrollo esto podía mantener recursos antiguos en una PWA instalada y explicar diferencias entre Safari/Vercel y la app de pantalla de inicio.
+
+El 08/08 se cambió a `tdr2-v14` y a estrategia **network-first para todo recurso del mismo origen**, con caché únicamente como fallback offline. Además, el install usa `Promise.allSettled` para que un recurso opcional que falle no haga fracasar toda la instalación del service worker.
+
+Commit relevante:
+
+- `dc4efb0` — PWA development-safe: red primero, caché como fallback y limpieza de caches v13/anteriores.
+
+Objetivo durante desarrollo: una PWA instalada desde Vercel debe ver el mismo build actual que Safari y no quedarse atrapada en una versión anterior del circuito/entorno.
+
+### 9.2 Flujo de prueba PWA temporal con Vercel
+
+1. Esperar al deploy de Vercel correspondiente a `dc4efb0` o posterior.
+2. Borrar del iPhone el icono PWA anterior de Vercel.
+3. Abrir la URL de Vercel directamente en Safari.
+4. Recargar una vez para asegurarse de que Safari recibe el build nuevo y el SW v14.
+5. Compartir → Añadir a pantalla de inicio.
+6. Abrir desde el nuevo icono.
+
+La instalación antigua desde GitHub Pages llegó a mostrar una versión vieja con el coche/rectángulo magenta. Cuando se vuelva a GitHub Pages como publicación principal, revisar deploy y caches antes de reinstalar la PWA oficial.
 
 ## 10. Commits / hitos que conviene recordar
 
 - `4f76115` — eliminación del entorno placeholder/procedural anterior, dejando limpio el punto de integración.
-- `1c6cc34` — primera integración modular de assets cenitales (la dirección visual/colocación de esa tanda fue posteriormente rechazada; conservar solo como referencia histórica).
+- `1c6cc34` — primera integración modular de assets cenitales (dirección visual/colocación rechazada; referencia histórica).
 - `781ce28` — Vercel usa base `/`.
 - `22c9621` — metadatos iPhone PWA standalone.
+- `90750a2` — entorno limpio usando los cuatro WebP reales externos.
+- `dc4efb0` — service worker v14 network-first para pruebas frescas en PWA.
 
 ## 11. Reglas de trabajo para el siguiente chat
 
@@ -175,13 +206,6 @@ La instalación antigua desde GitHub Pages llegó a mostrar una versión vieja c
 
 ## 12. Próximo paso inmediato
 
-Validar en Vercel/PWA la prueba de vegetación con los cuatro WebP ya subidos. Revisar:
+Esperar al deploy de Vercel de `dc4efb0` o posterior. Primero comprobar en Safari que desapareció la decoración legacy y solo aparecen los cuatro WebP de prueba. Después borrar/reinstalar la PWA de Vercel y comprobar que ya no queda en blanco.
 
-- si realmente cargan;
-- escala respecto al coche/pista;
-- sombra bajo árboles;
-- halo de transparencia;
-- contraste con césped;
-- colocación lógica.
-
-Solo si la prueba convence, ampliar la biblioteca de assets y empezar a construir escenas ambientales coherentes alrededor del circuito.
+Si Safari está correcto pero la PWA sigue en blanco, capturar el error que muestra el overlay de diagnóstico ya presente en `src/main.js`; ese overlay escucha `window.error` y `unhandledrejection` y debe aportar el error exacto de iOS.
