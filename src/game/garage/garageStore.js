@@ -43,6 +43,28 @@ export function garageTuning(s){
   }
   return out;
 }
+
+const COMMON_LOOT=['scrap','alloy','rubber','compound','disc','spring','gear'];
+
+// Small-scale race -> materials loop. A valid completed time-trial lap counts as a race reward.
+// Two common drops are granted, with a small ECU chance. The reward is intentionally modest
+// so short circuits cannot flood the crafting economy.
+export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
+  const s=loadGarage();
+  const reward={};
+  const picks=2;
+  for(let i=0;i<picks;i++){
+    const id=COMMON_LOOT[Math.floor(Math.random()*COMMON_LOOT.length)];
+    reward[id]=(reward[id]||0)+1;
+  }
+  if(Math.random()<0.10) reward.ecu=(reward.ecu||0)+1;
+  for(const [id,n] of Object.entries(reward)) addItem(s,id,n);
+  s.lastReward={...reward,t:Date.now(),trackKey,lapMs,doubled:false};
+  saveGarage(s);
+  return reward;
+}
+
+// Legacy helper kept for compatibility with older code paths.
 export function grantRaceReward(mult=1){
   const s=loadGarage();
   const reward={ scrap:2*mult, alloy:1*mult, rubber:1*mult };
@@ -52,6 +74,9 @@ export function grantRaceReward(mult=1){
 export function duplicateLastReward(){
   const s=loadGarage(); const r=s.lastReward;
   if(!r || r.doubled) return null;
-  for(const id of ['scrap','alloy','rubber']) if(r[id]) addItem(s,id,r[id]);
+  for(const [id,n] of Object.entries(r)){
+    if(!GARAGE_ITEMS[id] || !Number.isFinite(Number(n)) || Number(n)<=0) continue;
+    addItem(s,id,Number(n));
+  }
   s.lastReward={...r,doubled:true}; saveGarage(s); return r;
 }
