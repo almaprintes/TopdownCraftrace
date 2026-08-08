@@ -1,20 +1,21 @@
 import { RaceScene as CurrentRaceScene } from './RaceSurfaceLongitudinalScene.js';
 
-// Temporary camera experiment: keep more circuit environment visible while driving.
-// No physics, HUD, minimap or track geometry changes.
+// Temporary camera experiment: deliberately wider than the previous pass so
+// environment density can be judged while driving. Physics/HUD/minimap/track
+// geometry remain untouched.
 export class RaceScene extends CurrentRaceScene {
   constructor() {
     super();
 
-    // Original values were 0.75 / 1.50 / 140 / 0.06.
-    // This preview stays wider at low and medium speed and reaches the wide view sooner.
-    this._zoomGameplayMin = 0.70;
-    this._zoomGameplayMax = 1.24;
-    this._zoomKmhRef = 120;
-    this._zoomLerp = 0.045;
+    // Original stable values: 0.75 / 1.50 / 140 / 0.06.
+    // Previous preview (0.70 / 1.24) was barely perceptible on iPhone.
+    // This pass is intentionally obvious, but still keeps the car readable.
+    this._zoomGameplayMin = 0.62;
+    this._zoomGameplayMax = 1.06;
+    this._zoomKmhRef = 105;
+    this._zoomLerp = 0.042;
 
-    // Start from a less aggressive close-up so the first seconds already expose scenery.
-    this.zoom = 1.12;
+    this.zoom = 0.96;
     this._zoomCurrent = this.zoom;
   }
 }
