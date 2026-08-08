@@ -7,7 +7,8 @@ export class TrackGarageScene extends OriginalTrackGarageScene {
 
     try {
       const realTrack = createTrack('track01');
-      this._tracks = [realTrack];
+      const enduranceTrack = createTrack('forest-endurance');
+      this._tracks = [realTrack, enduranceTrack];
 
       const savedTrack = (() => {
         try { return localStorage.getItem('tdr2:trackKey'); } catch { return null; }
@@ -16,14 +17,13 @@ export class TrackGarageScene extends OriginalTrackGarageScene {
       const idx = this._tracks.findIndex((t) => t.key === savedTrack);
       this._selectedIndex = idx >= 0 ? idx : 0;
 
-      const previewKey = 'track_preview_track01';
-      if (this.textures.exists(previewKey)) {
-        this.textures.remove(previewKey);
+      for (const key of ['track_preview_track01', 'track_preview_forest-endurance']) {
+        if (this.textures.exists(key)) this.textures.remove(key);
       }
 
       this._rebuild();
     } catch (err) {
-      console.error('[TDR2] No se pudo cargar track01 real en TrackGarageScene', err);
+      console.error('[TDR2] No se pudieron cargar los circuitos reales en TrackGarageScene', err);
     }
   }
 }
