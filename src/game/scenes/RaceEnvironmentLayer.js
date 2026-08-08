@@ -1,7 +1,6 @@
 // src/game/scenes/RaceEnvironmentLayer.js
-// Controlled environment stress test: curated vegetation only.
-// Reuses 4 loaded WebP textures, creates 12 static sprites once, no collision,
-// no random scatter and no per-frame updates.
+// Controlled forest stress test: 28 curated static vegetation sprites max.
+// Reuses only 4 WebP textures, no collision, no random scatter, no per-frame work.
 
 const BASE = import.meta.env.BASE_URL || '/';
 
@@ -66,14 +65,13 @@ function addImage(scene, placed, key, x, y, scale, rotation = 0, depth = 7.15) {
 }
 
 function addCluster(scene, placed, center, defaultTrackW, spec) {
-  const a = findUsableAnchor(center, spec.fraction, spec.side, spec.extra, defaultTrackW, spec.clearance || 70);
+  const a = findUsableAnchor(center, spec.fraction, spec.side, spec.extra, defaultTrackW, spec.clearance || 68);
   if (!a) return;
-
-  for (const m of spec.members || []) {
-    const x = a.x + a.tx * (m.along || 0) + a.nx * (m.out || 0) * spec.side;
-    const y = a.y + a.ty * (m.along || 0) + a.ny * (m.out || 0) * spec.side;
-    if (!isClearOfTrack(center, x, y, defaultTrackW, m.clearance || 52)) continue;
-    addImage(scene, placed, ASSETS[m.asset].key, x, y, m.scale, m.rotation || 0, m.depth || 7.13);
+  for (const m of spec.members) {
+    const x = a.x + a.tx * m.along + a.nx * m.out * spec.side;
+    const y = a.y + a.ty * m.along + a.ny * m.out * spec.side;
+    if (!isClearOfTrack(center, x, y, defaultTrackW, m.clearance || 48)) continue;
+    addImage(scene, placed, ASSETS[m.asset].key, x, y, m.scale, m.rotation, m.depth || 7.13);
   }
 }
 
@@ -83,50 +81,43 @@ function placeCuratedVegetation(scene, center, defaultTrackW) {
   }
 
   const placed = [];
+  // Five deliberately composed zones. The denser bands sit farther from the asphalt;
+  // shrubs soften the edge while trees overlap behind them to read as woodland.
   const clusters = [
-    {
-      fraction: 0.10, side: 1, extra: 92,
-      members: [
-        { asset: 'treeA', along: -34, out: 3, scale: 0.31, rotation: -0.16, clearance: 64 },
-        { asset: 'shrubB', along: 52, out: -2, scale: 0.25, rotation: 0.28, clearance: 50 },
-        { asset: 'shrubA', along: 92, out: 16, scale: 0.22, rotation: -0.34, clearance: 48 }
-      ]
-    },
-    {
-      fraction: 0.31, side: -1, extra: 98,
-      members: [
-        { asset: 'treeB', along: 0, out: 0, scale: 0.30, rotation: 0.10, clearance: 66 },
-        { asset: 'shrubA', along: -66, out: 10, scale: 0.24, rotation: 0.18, clearance: 50 },
-        { asset: 'shrubB', along: 70, out: 4, scale: 0.24, rotation: -0.22, clearance: 50 }
-      ]
-    },
-    {
-      fraction: 0.57, side: 1, extra: 96,
-      members: [
-        { asset: 'treeA', along: 24, out: 4, scale: 0.29, rotation: 0.12, clearance: 64 },
-        { asset: 'treeB', along: -72, out: 18, scale: 0.27, rotation: -0.14, clearance: 62 },
-        { asset: 'shrubB', along: 92, out: -2, scale: 0.23, rotation: 0.30, clearance: 48 }
-      ]
-    },
-    {
-      fraction: 0.79, side: -1, extra: 94,
-      members: [
-        { asset: 'treeB', along: -16, out: 0, scale: 0.30, rotation: 0.18, clearance: 66 },
-        { asset: 'shrubA', along: 62, out: 10, scale: 0.24, rotation: -0.30, clearance: 50 },
-        { asset: 'shrubB', along: 104, out: 18, scale: 0.22, rotation: 0.12, clearance: 48 }
-      ]
-    }
+    { fraction: 0.08, side: 1, extra: 88, members: [
+      {asset:'shrubA',along:-92,out:0,scale:.23,rotation:-.28},{asset:'treeA',along:-48,out:28,scale:.31,rotation:-.12,clearance:58},
+      {asset:'treeB',along:6,out:52,scale:.29,rotation:.14,clearance:58},{asset:'treeA',along:62,out:30,scale:.28,rotation:.22,clearance:56},
+      {asset:'shrubB',along:106,out:5,scale:.22,rotation:.31},{asset:'shrubA',along:28,out:84,scale:.20,rotation:.08}
+    ]},
+    { fraction: 0.27, side: -1, extra: 94, members: [
+      {asset:'treeB',along:-105,out:36,scale:.28,rotation:-.18,clearance:58},{asset:'shrubB',along:-64,out:2,scale:.22,rotation:.24},
+      {asset:'treeA',along:-18,out:58,scale:.32,rotation:.09,clearance:60},{asset:'treeB',along:42,out:32,scale:.30,rotation:.19,clearance:58},
+      {asset:'shrubA',along:88,out:4,scale:.23,rotation:-.27},{asset:'treeA',along:105,out:78,scale:.25,rotation:-.11,clearance:54}
+    ]},
+    { fraction: 0.47, side: 1, extra: 100, members: [
+      {asset:'shrubB',along:-90,out:0,scale:.22,rotation:-.22},{asset:'treeA',along:-52,out:38,scale:.29,rotation:.17,clearance:58},
+      {asset:'treeB',along:4,out:68,scale:.31,rotation:-.09,clearance:60},{asset:'treeA',along:60,out:40,scale:.27,rotation:.28,clearance:56},
+      {asset:'shrubA',along:104,out:4,scale:.22,rotation:.14}
+    ]},
+    { fraction: 0.66, side: -1, extra: 92, members: [
+      {asset:'treeA',along:-102,out:62,scale:.26,rotation:-.16,clearance:56},{asset:'shrubA',along:-72,out:4,scale:.22,rotation:.30},
+      {asset:'treeB',along:-28,out:36,scale:.31,rotation:.11,clearance:60},{asset:'treeA',along:30,out:66,scale:.30,rotation:-.24,clearance:58},
+      {asset:'treeB',along:82,out:34,scale:.27,rotation:.21,clearance:56},{asset:'shrubB',along:112,out:0,scale:.23,rotation:-.12}
+    ]},
+    { fraction: 0.84, side: 1, extra: 96, members: [
+      {asset:'shrubB',along:-88,out:2,scale:.22,rotation:.16},{asset:'treeB',along:-48,out:42,scale:.29,rotation:-.20,clearance:58},
+      {asset:'treeA',along:8,out:72,scale:.32,rotation:.10,clearance:60},{asset:'treeB',along:62,out:38,scale:.28,rotation:.26,clearance:56},
+      {asset:'shrubA',along:104,out:5,scale:.22,rotation:-.31}
+    ]}
   ];
 
   for (const cluster of clusters) addCluster(scene, placed, center, defaultTrackW, cluster);
-
   scene._circuitEnvironment = placed;
   return placed;
 }
 
 export function addCircuitEnvironment(scene, center, defaultTrackW = 160) {
   if (!scene || !Array.isArray(center) || center.length < 24) return [];
-
   const missing = [];
   for (const spec of Object.values(ASSETS)) {
     if (!scene.textures.exists(spec.key)) {
@@ -134,12 +125,8 @@ export function addCircuitEnvironment(scene, center, defaultTrackW = 160) {
       missing.push(spec.key);
     }
   }
-
   if (missing.length === 0) return placeCuratedVegetation(scene, center, defaultTrackW);
-
-  scene.load.once('complete', () => {
-    placeCuratedVegetation(scene, center, defaultTrackW);
-  });
+  scene.load.once('complete', () => placeCuratedVegetation(scene, center, defaultTrackW));
   if (!scene.load.isLoading()) scene.load.start();
   return [];
 }
