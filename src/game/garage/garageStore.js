@@ -2,13 +2,23 @@ import { GARAGE_ITEMS, EVOLUTION_CHAIN, EVOLUTION_COST, findRecipe, tuningForPar
 const KEY='tdr2:garageFusion:v1';
 
 const STARTER={ scrap:8, alloy:5, rubber:4, compound:4, disc:4, spring:3, gear:3, ecu:2 };
-const DEFAULT={ inventory:{...STARTER}, equipped:{}, discoveries:[], coins:250, lastReward:null, rewardedToday:0, rewardedDay:'' };
+const DEFAULT={ inventory:{...STARTER}, equipped:{}, equippedByCar:{}, discoveries:[], coins:250, lastReward:null, rewardedToday:0, rewardedDay:'' };
+
+function selectedCarId(){
+  try { return localStorage.getItem('tdr2:carId') || 'stock'; } catch { return 'stock'; }
+}
 
 export function loadGarage(){
   try{
     const raw=localStorage.getItem(KEY); if(!raw) return structuredClone(DEFAULT);
     const x=JSON.parse(raw)||{};
-    return { ...structuredClone(DEFAULT), ...x, inventory:{...STARTER,...(x.inventory||{})}, equipped:{...(x.equipped||{})} };
+    return {
+      ...structuredClone(DEFAULT),
+      ...x,
+      inventory:{...STARTER,...(x.inventory||{})},
+      equipped:{...(x.equipped||{})},
+      equippedByCar:{...(x.equippedByCar||{})}
+    };
   }catch{ return structuredClone(DEFAULT); }
 }
 export function saveGarage(s){ localStorage.setItem(KEY,JSON.stringify(s)); return s; }
@@ -28,13 +38,25 @@ export function evolve(s,id){
   consume(s,id,EVOLUTION_COST); addItem(s,next,1); if(!s.discoveries.includes(next)) s.discoveries.push(next); saveGarage(s);
   return {ok:true,item:GARAGE_ITEMS[next]};
 }
-export function equip(s,id){
-  const item=GARAGE_ITEMS[id]; if(!item?.family || qty(s,id)<1) return false;
-  s.equipped[item.family]=id; saveGarage(s); return true;
+
+export function getEquippedForCar(s,carId=selectedCarId()){
+  const own=s?.equippedByCar?.[carId];
+  if(own && typeof own==='object') return own;
+  // Migration bridge: old global loadout is used until that car gets its own loadout.
+  return s?.equipped || {};
 }
-export function garageTuning(s){
+
+export function equip(s,id,carId=selectedCarId()){
+  const item=GARAGE_ITEMS[id]; if(!item?.family || qty(s,id)<1) return false;
+  if(!s.equippedByCar || typeof s.equippedByCar!=='object') s.equippedByCar={};
+  if(!s.equippedByCar[carId]) s.equippedByCar[carId]={...getEquippedForCar(s,carId)};
+  s.equippedByCar[carId][item.family]=id;
+  saveGarage(s); return true;
+}
+
+export function garageTuning(s,carId=selectedCarId()){
   const out={ accelMult:1, brakeMult:1, dragMult:1, turnRateMult:1, maxFwdAdd:0, maxRevAdd:0, turnMinAdd:0, gripCoastAdd:0, gripDriveAdd:0, gripBrakeAdd:0 };
-  for(const id of Object.values(s.equipped||{})){
+  for(const id of Object.values(getEquippedForCar(s,carId)||{})){
     const t=tuningForPart(GARAGE_ITEMS[id]);
     for(const [k,v] of Object.entries(t)){
       if(k.endsWith('Mult')) out[k] *= v;
@@ -46,14 +68,10 @@ export function garageTuning(s){
 
 const COMMON_LOOT=['scrap','alloy','rubber','compound','disc','spring','gear'];
 
-// Small-scale race -> materials loop. A valid completed time-trial lap counts as a race reward.
-// Two common drops are granted, with a small ECU chance. The reward is intentionally modest
-// so short circuits cannot flood the crafting economy.
 export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
   const s=loadGarage();
   const reward={};
-  const picks=2;
-  for(let i=0;i<picks;i++){
+  for(let i=0;i<2;i++){
     const id=COMMON_LOOT[Math.floor(Math.random()*COMMON_LOOT.length)];
     reward[id]=(reward[id]||0)+1;
   }
@@ -64,7 +82,6 @@ export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
   return reward;
 }
 
-// Legacy helper kept for compatibility with older code paths.
 export function grantRaceReward(mult=1){
   const s=loadGarage();
   const reward={ scrap:2*mult, alloy:1*mult, rubber:1*mult };
