@@ -43,6 +43,16 @@ function pointBesideTrack(center, fraction, side, extraOffset, defaultTrackW) {
   return { i, x: p.x + nx * side * offset, y: p.y + ny * side * offset, tx, ty, nx, ny };
 }
 
+function findVisibleSpot(center, preferredFraction, side, extraOffset, defaultTrackW, clearance) {
+  const offsets = [0, 0.035, -0.035, 0.07, -0.07, 0.11, -0.11];
+  for (const df of offsets) {
+    const fraction = (preferredFraction + df + 1) % 1;
+    const p = pointBesideTrack(center, fraction, side, extraOffset, defaultTrackW);
+    if (isClearOfTrack(center, p.x, p.y, defaultTrackW, clearance)) return p;
+  }
+  return null;
+}
+
 function addImage(scene, placed, key, x, y, scale, rotation = 0, depth = 7.15) {
   if (!scene.textures.exists(key)) return null;
   const img = scene.add.image(x, y, key)
@@ -62,8 +72,8 @@ function placeCuratedVegetation(scene, center, defaultTrackW) {
 
   const placed = [];
 
-  const a = pointBesideTrack(center, 0.18, 1, 105, defaultTrackW);
-  if (isClearOfTrack(center, a.x, a.y, defaultTrackW, 72)) {
+  const a = findVisibleSpot(center, 0.18, 1, 108, defaultTrackW, 72);
+  if (a) {
     addImage(scene, placed, ASSETS.treeA.key, a.x, a.y, 0.32, -0.20, 7.13);
     const sx = a.x + a.tx * 82 + a.nx * 10;
     const sy = a.y + a.ty * 82 + a.ny * 10;
@@ -72,8 +82,8 @@ function placeCuratedVegetation(scene, center, defaultTrackW) {
     }
   }
 
-  const b = pointBesideTrack(center, 0.64, -1, 112, defaultTrackW);
-  if (isClearOfTrack(center, b.x, b.y, defaultTrackW, 74)) {
+  const b = findVisibleSpot(center, 0.64, -1, 112, defaultTrackW, 74);
+  if (b) {
     addImage(scene, placed, ASSETS.treeB.key, b.x, b.y, 0.31, 0.14, 7.13);
     const sx = b.x - b.tx * 78 - b.nx * 10;
     const sy = b.y - b.ty * 78 - b.ny * 10;
