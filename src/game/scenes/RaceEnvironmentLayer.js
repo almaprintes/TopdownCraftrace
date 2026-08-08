@@ -1,5 +1,6 @@
 // src/game/scenes/RaceEnvironmentLayer.js
 // Static, decoration-only circuit environment. No collision, no per-frame updates.
+// Premium rule: low visual noise, real trackside rhythm, no cartoon blobs.
 
 function makeCanvasTexture(scene, key, w, h, painter) {
   if (scene.textures.exists(key)) return key;
@@ -12,46 +13,52 @@ function makeCanvasTexture(scene, key, w, h, painter) {
 }
 
 function createTextures(scene) {
-  makeCanvasTexture(scene, 'envTreeCluster', 96, 96, (ctx) => {
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.beginPath(); ctx.ellipse(49, 70, 31, 12, 0, 0, Math.PI * 2); ctx.fill();
-    const crowns = [
-      [32, 50, 23, '#244526'], [55, 45, 26, '#315a31'], [47, 61, 27, '#274d29'],
-      [68, 60, 18, '#3b6336'], [27, 66, 16, '#365d32']
-    ];
-    for (const [x, y, r, c] of crowns) {
-      ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.fillStyle = 'rgba(131,161,95,0.15)';
-    ctx.beginPath(); ctx.arc(48, 42, 22, 0, Math.PI * 2); ctx.fill();
+  makeCanvasTexture(scene, 'envTreePremium', 72, 72, (ctx) => {
+    const g = ctx.createRadialGradient(34, 31, 6, 36, 36, 29);
+    g.addColorStop(0, '#58714a');
+    g.addColorStop(0.34, '#3d5938');
+    g.addColorStop(0.72, '#29412c');
+    g.addColorStop(1, 'rgba(20,34,22,0)');
+    ctx.fillStyle = 'rgba(0,0,0,0.16)';
+    ctx.beginPath(); ctx.ellipse(39, 49, 21, 9, -0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(35, 34, 30, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(135,158,106,0.12)';
+    ctx.beginPath(); ctx.arc(28, 26, 10, 0, Math.PI * 2); ctx.fill();
   });
 
-  makeCanvasTexture(scene, 'envTyreBarrier', 128, 30, (ctx) => {
-    ctx.fillStyle = 'rgba(0,0,0,0.20)'; ctx.fillRect(3, 20, 122, 6);
-    for (let row = 0; row < 2; row++) {
-      for (let i = 0; i < 10; i++) {
-        const x = 9 + i * 12 + (row ? 5 : 0), y = 8 + row * 9;
-        ctx.fillStyle = '#181817'; ctx.beginPath(); ctx.arc(x, y, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = '#343330'; ctx.beginPath(); ctx.arc(x, y, 2.3, 0, Math.PI * 2); ctx.fill();
-      }
+  makeCanvasTexture(scene, 'envTyreWallPremium', 144, 24, (ctx) => {
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(5, 18, 134, 4);
+    for (let i = 0; i < 17; i++) {
+      const x = 7 + i * 8;
+      ctx.fillStyle = '#171817'; ctx.beginPath(); ctx.arc(x, 10, 4.5, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(92,92,86,0.42)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(x, 10, 2.1, 0, Math.PI * 2); ctx.stroke();
     }
   });
 
-  makeCanvasTexture(scene, 'envMarshalHut', 72, 60, (ctx) => {
-    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(13, 48, 48, 7);
-    ctx.fillStyle = '#d2c7a5'; ctx.fillRect(14, 21, 44, 30);
-    ctx.fillStyle = '#353b39'; ctx.fillRect(20, 28, 14, 11); ctx.fillRect(39, 28, 13, 11);
-    ctx.fillStyle = '#6d3d2a'; ctx.fillRect(7, 16, 58, 8);
-    ctx.fillStyle = '#ece8d8'; ctx.fillRect(16, 43, 40, 4);
+  makeCanvasTexture(scene, 'envGuardrail', 160, 18, (ctx) => {
+    ctx.strokeStyle = 'rgba(21,24,22,0.22)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(4, 13); ctx.lineTo(156, 13); ctx.stroke();
+    ctx.strokeStyle = '#9b9b92'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(4, 8); ctx.lineTo(156, 8); ctx.stroke();
+    ctx.strokeStyle = 'rgba(222,221,207,0.66)'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(4, 7); ctx.lineTo(156, 7); ctx.stroke();
+    ctx.fillStyle = '#666760';
+    for (let x = 10; x < 156; x += 24) ctx.fillRect(x, 8, 2, 8);
   });
 
-  makeCanvasTexture(scene, 'envSponsorBoard', 88, 34, (ctx) => {
-    ctx.fillStyle = 'rgba(0,0,0,0.16)'; ctx.fillRect(8, 28, 72, 4);
-    ctx.fillStyle = '#ece9df'; ctx.fillRect(3, 3, 82, 22);
-    ctx.fillStyle = '#202421'; ctx.fillRect(7, 7, 74, 14);
-    ctx.fillStyle = '#e8e1cf'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('TOPDOWN RACE', 44, 14);
-    ctx.fillStyle = '#454944'; ctx.fillRect(13, 25, 3, 7); ctx.fillRect(72, 25, 3, 7);
+  makeCanvasTexture(scene, 'envMarshalHutPremium', 66, 52, (ctx) => {
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(13, 42, 42, 6);
+    ctx.fillStyle = '#b9b29f'; ctx.fillRect(14, 19, 38, 25);
+    ctx.fillStyle = '#2e3432'; ctx.fillRect(19, 24, 11, 8); ctx.fillRect(35, 24, 11, 8);
+    ctx.fillStyle = '#7e4330'; ctx.fillRect(9, 15, 49, 6);
+    ctx.fillStyle = 'rgba(235,230,213,0.7)'; ctx.fillRect(17, 36, 32, 3);
+  });
+
+  makeCanvasTexture(scene, 'envSponsorBoardPremium', 110, 30, (ctx) => {
+    ctx.fillStyle = 'rgba(0,0,0,0.14)'; ctx.fillRect(9, 24, 92, 4);
+    ctx.fillStyle = '#d8d6cd'; ctx.fillRect(4, 3, 102, 20);
+    ctx.fillStyle = '#222625'; ctx.fillRect(7, 6, 96, 14);
+    ctx.fillStyle = '#d8d6cd'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('TOPDOWN RACE', 55, 13);
+    ctx.fillStyle = '#585a55'; ctx.fillRect(15, 23, 2, 6); ctx.fillRect(93, 23, 2, 6);
   });
 }
 
@@ -75,9 +82,8 @@ export function addCircuitEnvironment(scene, center, defaultTrackW = 160) {
     return Math.atan2(Math.sin(ang), Math.cos(ang));
   };
 
-  // Conservative one-time clearance check against sampled centerline points.
   const isClear = (x, y, clearance) => {
-    const stride = Math.max(1, Math.floor(count / 160));
+    const stride = Math.max(1, Math.floor(count / 180));
     for (let i = 0; i < count; i += stride) {
       const p = center[i];
       const half = Number(p.width || defaultTrackW) * 0.5;
@@ -86,54 +92,59 @@ export function addCircuitEnvironment(scene, center, defaultTrackW = 160) {
     return true;
   };
 
-  const addSprite = (key, x, y, depth, scale = 1, rotation = 0) => {
-    const img = scene.add.image(x, y, key).setDepth(depth).setScrollFactor(1).setScale(scale).setRotation(rotation);
+  const addSprite = (key, x, y, depth, scale = 1, rotation = 0, alpha = 1) => {
+    const img = scene.add.image(x, y, key).setDepth(depth).setScrollFactor(1).setScale(scale).setRotation(rotation).setAlpha(alpha);
     scene.uiCam?.ignore?.(img);
     placed.push(img);
     return img;
   };
 
-  // Tree clusters: sparse rhythm, well away from the road. These act as visual speed/reference markers.
-  const treeStep = Math.max(18, Math.floor(count / 34));
+  // Vegetation: fewer, individual crowns, farther away from the tarmac. Avoid visible repeating clusters.
+  const treeStep = Math.max(24, Math.floor(count / 22));
   for (let i = 0; i < count; i += treeStep) {
-    const p = center[i], { nx, ny } = tangentAt(i);
+    const p = center[i], { tx, ty, nx, ny } = tangentAt(i);
     const side = rand() > 0.5 ? 1 : -1;
-    const offset = Number(p.width || defaultTrackW) * 0.5 + 105 + rand() * 95;
-    const alongJitter = (rand() - 0.5) * 55;
-    const { tx, ty } = tangentAt(i);
-    const x = p.x + nx * offset * side + tx * alongJitter;
-    const y = p.y + ny * offset * side + ty * alongJitter;
-    if (!isClear(x, y, 58)) continue;
-    addSprite('envTreeCluster', x, y, 7.6, 0.72 + rand() * 0.34, (rand() - 0.5) * 0.4);
+    const baseOffset = Number(p.width || defaultTrackW) * 0.5 + 145 + rand() * 120;
+    const x = p.x + nx * baseOffset * side + tx * ((rand() - 0.5) * 70);
+    const y = p.y + ny * baseOffset * side + ty * ((rand() - 0.5) * 70);
+    if (!isClear(x, y, 86)) continue;
+    const s = 0.50 + rand() * 0.28;
+    addSprite('envTreePremium', x, y, 7.25, s, rand() * Math.PI * 2, 0.92);
+    if (rand() > 0.48) {
+      const x2 = x + tx * (24 + rand() * 28) + nx * side * (8 + rand() * 18);
+      const y2 = y + ty * (24 + rand() * 28) + ny * side * (8 + rand() * 18);
+      if (isClear(x2, y2, 76)) addSprite('envTreePremium', x2, y2, 7.24, s * (0.78 + rand() * 0.16), rand() * Math.PI * 2, 0.84);
+    }
   }
 
-  // Tyre barriers: only outside the strongest bends, and always decorative/non-colliding.
-  let barriers = 0;
-  for (let i = 0; i < count && barriers < 10; i += Math.max(8, Math.floor(count / 60))) {
+  // Safety furniture: short premium sections only on the outside of notable bends.
+  let safety = 0;
+  for (let i = 0; i < count && safety < 8; i += Math.max(10, Math.floor(count / 46))) {
     const turn = turnAt(i);
-    if (Math.abs(turn) < 0.115) continue;
+    if (Math.abs(turn) < 0.12) continue;
     const p = center[i], { tx, ty, nx, ny } = tangentAt(i);
     const outsideSide = turn > 0 ? -1 : 1;
-    const offset = Number(p.width || defaultTrackW) * 0.5 + 48;
+    const offset = Number(p.width || defaultTrackW) * 0.5 + 62;
     const x = p.x + nx * offset * outsideSide;
     const y = p.y + ny * offset * outsideSide;
-    if (!isClear(x, y, 28)) continue;
-    addSprite('envTyreBarrier', x, y, 8.1, 0.78, Math.atan2(ty, tx));
-    barriers++;
+    if (!isClear(x, y, 34)) continue;
+    const key = safety % 3 === 0 ? 'envTyreWallPremium' : 'envGuardrail';
+    addSprite(key, x, y, 7.95, key === 'envGuardrail' ? 0.82 : 0.72, Math.atan2(ty, tx), 0.92);
+    safety++;
   }
 
-  // Three memorable landmarks spaced around the lap: two marshal huts and one sponsor board.
-  const landmarkFractions = [0.16, 0.47, 0.76];
+  // Landmarks: deliberately sparse and understated. They should aid orientation, not dominate the scene.
+  const landmarkFractions = [0.21, 0.58, 0.82];
   landmarkFractions.forEach((f, n) => {
     const i = Math.floor(count * f) % count;
     const p = center[i], { tx, ty, nx, ny } = tangentAt(i);
     const side = n === 1 ? -1 : 1;
-    const offset = Number(p.width || defaultTrackW) * 0.5 + 82;
+    const offset = Number(p.width || defaultTrackW) * 0.5 + 108;
     const x = p.x + nx * offset * side;
     const y = p.y + ny * offset * side;
-    if (!isClear(x, y, 46)) return;
-    if (n < 2) addSprite('envMarshalHut', x, y, 8.0, 0.90, Math.atan2(ty, tx));
-    else addSprite('envSponsorBoard', x, y, 8.0, 0.95, Math.atan2(ty, tx));
+    if (!isClear(x, y, 58)) return;
+    if (n === 1) addSprite('envSponsorBoardPremium', x, y, 7.85, 0.80, Math.atan2(ty, tx), 0.90);
+    else addSprite('envMarshalHutPremium', x, y, 7.82, 0.72, Math.atan2(ty, tx), 0.90);
   });
 
   scene._circuitEnvironment = placed;
