@@ -57,6 +57,13 @@ export class TrackGarageScene extends BaseScene {
 
   _move(dir){ if(!this._tracks.length)return;this._index=(this._index+dir+this._tracks.length)%this._tracks.length;this._render(); }
 
+  _visibleIndexes(count){
+    const n=this._tracks.length;if(!n)return[];
+    const size=Math.min(count,n),half=Math.floor(size/2),out=[];
+    for(let k=0;k<size;k++)out.push((this._index-half+k+n)%n);
+    return out;
+  }
+
   _render(){
     const {width,height}=this.scale;if(this._ui)this._ui.destroy(true);this._ui=this.add.container(0,0);const add=o=>{this._ui.add(o);return o;};
     const bg=add(this.add.graphics());bg.fillGradientStyle(0x071017,0x102119,0x0b1218,0x18301f,1);bg.fillRect(0,0,width,height);bg.fillStyle(0x65ff9a,.035);bg.fillEllipse(width*.72,height*.30,width*.70,height*.62);bg.lineStyle(1,0xffffff,.025);for(let x=0;x<width;x+=72)bg.lineBetween(x,0,x,height);for(let y=0;y<height;y+=72)bg.lineBetween(0,y,width,y);
@@ -66,7 +73,7 @@ export class TrackGarageScene extends BaseScene {
     add(this.add.text(width-pad,top+8,`${this._index+1} / ${this._tracks.length}`,{fontFamily:'Orbitron,system-ui',fontSize:'14px',color:'#8da6af'}).setOrigin(1,0));
     const back=add(this.add.text(width-pad,top+38,'← VOLVER',{fontFamily:'system-ui',fontSize:'12px',fontStyle:'800',color:'#dce8eb'}).setOrigin(1,0).setInteractive({useHandCursor:true}));back.on('pointerdown',()=>this.scene.start(this._mode==='admin'?'admin-hub':'menu'));
     const track=this._tracks[this._index];if(!track)return;
-    const contentTop=86,bottomStrip=84,contentH=height-contentTop-bottomStrip-14,previewW=width*.59-pad*1.3,infoX=width*.61,infoW=width-infoX-pad;
+    const contentTop=86,bottomStrip=104,contentH=height-contentTop-bottomStrip-14,previewW=width*.59-pad*1.3,infoX=width*.61,infoW=width-infoX-pad;
     add(this.add.rectangle(pad,contentTop,previewW,contentH,0x091118,.86).setOrigin(0).setStrokeStyle(1,0x5fffa0,.22));
     const img=add(this.add.image(pad+previewW/2,contentTop+contentH/2,this._preview(track)));img.setScale(Math.min((previewW-24)/img.width,(contentH-24)/img.height));
     const left=add(this.add.text(pad+16,contentTop+contentH/2,'‹',{fontFamily:'system-ui',fontSize:'46px',color:'#fff',backgroundColor:'#0b1218aa',padding:{x:7,y:0}}).setOrigin(0,.5).setInteractive({useHandCursor:true}));
@@ -79,7 +86,12 @@ export class TrackGarageScene extends BaseScene {
     const selectY=contentTop+contentH-54,btn=add(this.add.rectangle(infoX,selectY,infoW,48,0x43f58b,1).setOrigin(0).setInteractive({useHandCursor:true}));
     add(this.add.text(infoX+infoW/2,selectY+24,this._mode==='admin'?'EDITAR CIRCUITO':'ELEGIR CIRCUITO',{fontFamily:'Orbitron,system-ui',fontSize:'13px',fontStyle:'900',color:'#062012'}).setOrigin(.5));
     btn.on('pointerdown',()=>{try{localStorage.setItem('tdr2:trackKey',track.key);}catch{} if(this._mode==='admin')this.scene.start('track-editor',{trackKey:track.key});else this.scene.start('menu');});
-    const stripY=height-bottomStrip+10,gap=8,cardW=Math.min(150,(width-pad*2-gap*(this._tracks.length-1))/this._tracks.length),cardH=56,total=this._tracks.length*cardW+(this._tracks.length-1)*gap,startX=(width-total)/2;
-    this._tracks.forEach((t,i)=>{const x=startX+i*(cardW+gap),sel=i===this._index;const r=add(this.add.rectangle(x,stripY,cardW,cardH,sel?0x163c2b:0x0b1419,.96).setOrigin(0).setStrokeStyle(sel?2:1,sel?0x52ff99:0x35505c,sel ? .95 : .55).setInteractive({useHandCursor:true}));add(this.add.text(x+10,stripY+9,t.name,{fontFamily:'system-ui',fontSize:'10px',fontStyle:'800',color:sel?'#fff':'#a8b8be',wordWrap:{width:cardW-20}}));add(this.add.text(x+10,stripY+34,t.difficulty||'',{fontFamily:'system-ui',fontSize:'9px',color:sel?'#62eaa1':'#66808b'}));r.on('pointerdown',()=>{this._index=i;this._render();});});
+
+    const stripY=height-bottomStrip+8,visibleCount=width>=1100?5:4,indexes=this._visibleIndexes(visibleCount),gap=10,sideArrowW=34,usableW=width-pad*2-sideArrowW*2-18,cardW=Math.min(190,(usableW-gap*(indexes.length-1))/indexes.length),cardH=62,total=indexes.length*cardW+(indexes.length-1)*gap,startX=(width-total)/2;
+    const prev=add(this.add.text(pad,stripY+cardH/2,'‹',{fontFamily:'system-ui',fontSize:'34px',fontStyle:'900',color:'#dce8eb',backgroundColor:'#0b1419cc',padding:{x:8,y:0}}).setOrigin(0,.5).setInteractive({useHandCursor:true}));
+    const next=add(this.add.text(width-pad,stripY+cardH/2,'›',{fontFamily:'system-ui',fontSize:'34px',fontStyle:'900',color:'#dce8eb',backgroundColor:'#0b1419cc',padding:{x:8,y:0}}).setOrigin(1,.5).setInteractive({useHandCursor:true}));
+    prev.on('pointerdown',()=>this._move(-1));next.on('pointerdown',()=>this._move(1));
+    indexes.forEach((i,j)=>{const t=this._tracks[i],x=startX+j*(cardW+gap),sel=i===this._index;const r=add(this.add.rectangle(x,stripY,cardW,cardH,sel?0x163c2b:0x0b1419,.98).setOrigin(0).setStrokeStyle(sel?2:1,sel?0x52ff99:0x35505c,sel?.95:.55).setInteractive({useHandCursor:true}));add(this.add.text(x+10,stripY+9,t.name,{fontFamily:'system-ui',fontSize:'10px',fontStyle:'800',color:sel?'#fff':'#a8b8be',wordWrap:{width:cardW-20}}));add(this.add.text(x+10,stripY+38,`${t.difficulty||''} · ${t.lengthLabel||''}`,{fontFamily:'system-ui',fontSize:'9px',color:sel?'#62eaa1':'#66808b'}));r.on('pointerdown',()=>{this._index=i;this._render();});});
+    add(this.add.text(width/2,stripY+cardH+5,'DESLIZA O USA ‹ › PARA RECORRER LA COLECCIÓN',{fontFamily:'system-ui',fontSize:'8px',fontStyle:'700',color:'#58717a',letterSpacing:1}).setOrigin(.5,0));
   }
 }
