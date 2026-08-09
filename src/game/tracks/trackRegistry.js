@@ -9,78 +9,77 @@ function normalizeCenterline(centerline, fallbackWidth = 80) {
 
   return centerline.map((p) => {
     if (Array.isArray(p) && p.length >= 2) {
-      return {
-        x: Number(p[0]),
-        y: Number(p[1]),
-        width: fallbackWidth
-      };
+      return { x: Number(p[0]), y: Number(p[1]), width: fallbackWidth };
     }
-
     if (p && typeof p.x === 'number' && typeof p.y === 'number') {
       return {
-        x: Number(p.x),
-        y: Number(p.y),
+        x: Number(p.x), y: Number(p.y),
         width: Number.isFinite(Number(p.width)) ? Number(p.width) : fallbackWidth
       };
     }
-
     return null;
   }).filter(Boolean);
 }
 
-function makeFinishLineFromStart(start, trackWidth) {
-  const x = Number(start?.x);
-  const y = Number(start?.y);
-  const r = Number(start?.r);
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r)) return null;
-
-  // La meta cruza perpendicularmente la dirección de marcha en el punto START original.
-  const half = Math.max(36, Number(trackWidth) * 0.56);
-  const px = -Math.sin(r);
-  const py = Math.cos(r);
-  const nx = Math.cos(r);
-  const ny = Math.sin(r);
-
-  return {
-    a: { x: x - px * half, y: y - py * half },
-    b: { x: x + px * half, y: y + py * half },
-    normal: { x: nx, y: ny }
-  };
-}
-
-function makeSpawnBehindFinish(start, distance = 80) {
-  const x = Number(start?.x);
-  const y = Number(start?.y);
-  const r = Number(start?.r);
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r)) {
+function deriveFinishAnchor(start, centerline) {
+  const sx = Number(start?.x), sy = Number(start?.y);
+  if (!Number.isFinite(sx) || !Number.isFinite(sy) || !Array.isArray(centerline) || centerline.length < 2) {
     return start || { x: 400, y: 400, r: 0 };
   }
 
+  let best = null;
+  for (let i = 0; i < centerline.length; i++) {
+    const a = centerline[i], b = centerline[(i + 1) % centerline.length];
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const len2 = vx * vx + vy * vy;
+    if (len2 < 1) continue;
+    const t = Math.max(0, Math.min(1, ((sx - a.x) * vx + (sy - a.y) * vy) / len2));
+    const x = a.x + vx * t, y = a.y + vy * t;
+    const d2 = (sx - x) ** 2 + (sy - y) ** 2;
+    if (!best || d2 < best.d2) best = { x, y, r: Math.atan2(vy, vx), d2 };
+  }
+  return best ? { x: best.x, y: best.y, r: best.r } : start;
+}
+
+function makeFinishLineFromAnchor(anchor, trackWidth) {
+  const x = Number(anchor?.x), y = Number(anchor?.y), r = Number(anchor?.r);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r)) return null;
+  const half = Math.max(36, Number(trackWidth) * 0.48);
+  const px = -Math.sin(r), py = Math.cos(r);
   return {
-    x: x - Math.cos(r) * distance,
-    y: y - Math.sin(r) * distance,
-    r
+    a: { x: x - px * half, y: y - py * half },
+    b: { x: x + px * half, y: y + py * half },
+    normal: { x: Math.cos(r), y: Math.sin(r) }
   };
+}
+
+function makeSpawnBehindFinish(anchor, distance = 110) {
+  const x = Number(anchor?.x), y = Number(anchor?.y), r = Number(anchor?.r);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r)) return anchor || { x: 400, y: 400, r: 0 };
+  return { x: x - Math.cos(r) * distance, y: y - Math.sin(r) * distance, r };
 }
 
 function buildRegistry() {
   const out = {};
-
   for (const [path, mod] of Object.entries(trackModules)) {
     const json = mod?.default ?? mod;
     if (!json || typeof json !== 'object') continue;
-
     const m = path.match(/\/library\/([^/]+)\/track\.json$/);
     if (!m) continue;
 
     const slug = m[1];
     const fallbackWidth = Number(json.trackWidth) || 80;
-    const finishAnchor = json.start || { x: 400, y: 400, r: 0 };
-    const raceStart = makeSpawnBehindFinish(finishAnchor, 80);
+    const centerline = normalizeCenterline(json.centerline, fallbackWidth);
+
+    // START in track.json is only a preferred location. Project it onto the
+    // actual centreline and derive heading from that road segment. This keeps
+    // the chequered line perpendicular and fully on the asphalt even when a
+    // newly imported circuit used an approximate/manual rotation.
+    const finishAnchor = deriveFinishAnchor(json.start || centerline[0], centerline);
+    const raceStart = makeSpawnBehindFinish(finishAnchor, 110);
 
     out[slug] = {
-      id: slug,
-      key: slug,
+      id: slug, key: slug,
       name: json.name || slug.toUpperCase(),
       brand: json.brand || 'CUSTOM',
       category: json.category || 'Nuevo',
@@ -94,17 +93,14 @@ function buildRegistry() {
       cellSize: Number(json.cellSize) || 400,
       shoulderPx: Number(json.shoulderPx) || 10,
       start: raceStart,
-      centerline: normalizeCenterline(json.centerline, fallbackWidth),
+      centerline,
       closed: json.closed !== false,
-
-      // Meta anclada al START original; el coche aparece 80 px detrás.
-      finishLine: makeFinishLineFromStart(finishAnchor, fallbackWidth),
+      finishLine: makeFinishLineFromAnchor(finishAnchor, fallbackWidth),
       finish: null,
       checkpoints: [],
       grid: null
     };
   }
-
   return out;
 }
 
@@ -112,16 +108,9 @@ export const TRACK_REGISTRY = buildRegistry();
 
 export function createTrack(trackId) {
   const track = TRACK_REGISTRY[trackId];
-  if (!track) {
-    throw new Error(`Track no encontrado: ${trackId}`);
-  }
+  if (!track) throw new Error(`Track no encontrado: ${trackId}`);
   return clone(track);
 }
 
-export function getTrackKeys() {
-  return Object.keys(TRACK_REGISTRY);
-}
-
-export function hasTrack(trackId) {
-  return !!TRACK_REGISTRY[trackId];
-}
+export function getTrackKeys() { return Object.keys(TRACK_REGISTRY); }
+export function hasTrack(trackId) { return !!TRACK_REGISTRY[trackId]; }
