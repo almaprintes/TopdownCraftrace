@@ -6,7 +6,6 @@ function clone(obj) {
 
 function normalizeCenterline(centerline, fallbackWidth = 80) {
   if (!Array.isArray(centerline)) return [];
-
   return centerline.map((p) => {
     if (Array.isArray(p) && p.length >= 2) {
       return { x: Number(p[0]), y: Number(p[1]), width: fallbackWidth };
@@ -21,15 +20,24 @@ function normalizeCenterline(centerline, fallbackWidth = 80) {
   }).filter(Boolean);
 }
 
+function ensureClosedCenterline(centerline, closed, fallbackWidth) {
+  const out = centerline.map(p => ({ ...p }));
+  if (!closed || out.length < 2) return out;
+  const a = out[0], b = out[out.length - 1];
+  if (Math.hypot(a.x - b.x, a.y - b.y) > 1) {
+    out.push({ x: a.x, y: a.y, width: Number(a.width) || fallbackWidth });
+  }
+  return out;
+}
+
 function deriveFinishAnchor(start, centerline) {
   const sx = Number(start?.x), sy = Number(start?.y);
   if (!Number.isFinite(sx) || !Number.isFinite(sy) || !Array.isArray(centerline) || centerline.length < 2) {
     return start || { x: 400, y: 400, r: 0 };
   }
-
   let best = null;
-  for (let i = 0; i < centerline.length; i++) {
-    const a = centerline[i], b = centerline[(i + 1) % centerline.length];
+  for (let i = 0; i < centerline.length - 1; i++) {
+    const a = centerline[i], b = centerline[i + 1];
     const vx = b.x - a.x, vy = b.y - a.y;
     const len2 = vx * vx + vy * vy;
     if (len2 < 1) continue;
@@ -41,10 +49,30 @@ function deriveFinishAnchor(start, centerline) {
   return best ? { x: best.x, y: best.y, r: best.r } : start;
 }
 
+function deriveLongestStraightAnchor(centerline) {
+  if (!Array.isArray(centerline) || centerline.length < 2) return null;
+  let best = null;
+  for (let i = 0; i < centerline.length - 1; i++) {
+    const a = centerline[i], b = centerline[i + 1];
+    const vx = b.x - a.x, vy = b.y - a.y;
+    const len = Math.hypot(vx, vy);
+    if (len < 1) continue;
+    if (!best || len > best.len) {
+      best = {
+        len,
+        x: (a.x + b.x) * 0.5,
+        y: (a.y + b.y) * 0.5,
+        r: Math.atan2(vy, vx)
+      };
+    }
+  }
+  return best ? { x: best.x, y: best.y, r: best.r } : null;
+}
+
 function makeFinishLineFromAnchor(anchor, trackWidth) {
   const x = Number(anchor?.x), y = Number(anchor?.y), r = Number(anchor?.r);
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r)) return null;
-  const half = Math.max(36, Number(trackWidth) * 0.48);
+  const half = Math.max(34, Number(trackWidth) * 0.43);
   const px = -Math.sin(r), py = Math.cos(r);
   return {
     a: { x: x - px * half, y: y - py * half },
@@ -53,7 +81,7 @@ function makeFinishLineFromAnchor(anchor, trackWidth) {
   };
 }
 
-function makeSpawnBehindFinish(anchor, distance = 110) {
+function makeSpawnBehindFinish(anchor, distance = 120) {
   const x = Number(anchor?.x), y = Number(anchor?.y), r = Number(anchor?.r);
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(r)) return anchor || { x: 400, y: 400, r: 0 };
   return { x: x - Math.cos(r) * distance, y: y - Math.sin(r) * distance, r };
@@ -69,14 +97,17 @@ function buildRegistry() {
 
     const slug = m[1];
     const fallbackWidth = Number(json.trackWidth) || 80;
-    const centerline = normalizeCenterline(json.centerline, fallbackWidth);
+    const isClosed = json.closed !== false;
+    const normalized = normalizeCenterline(json.centerline, fallbackWidth);
+    const centerline = ensureClosedCenterline(normalized, isClosed, fallbackWidth);
+    const isF1Imported = String(json.brand || '').includes('F1 Inspired') || String(json?.meta?.source || '').includes('F1 circuit silhouette');
 
-    // START in track.json is only a preferred location. Project it onto the
-    // actual centreline and derive heading from that road segment. This keeps
-    // the chequered line perpendicular and fully on the asphalt even when a
-    // newly imported circuit used an approximate/manual rotation.
-    const finishAnchor = deriveFinishAnchor(json.start || centerline[0], centerline);
-    const raceStart = makeSpawnBehindFinish(finishAnchor, 110);
+    // Imported F1 silhouettes used approximate START coordinates. Put the
+    // finish on the longest available straight instead. Other tracks retain
+    // their authored preferred location, projected onto the real centreline.
+    const finishAnchor = (isF1Imported ? deriveLongestStraightAnchor(centerline) : null)
+      || deriveFinishAnchor(json.start || centerline[0], centerline);
+    const raceStart = makeSpawnBehindFinish(finishAnchor, 120);
 
     out[slug] = {
       id: slug, key: slug,
@@ -94,7 +125,7 @@ function buildRegistry() {
       shoulderPx: Number(json.shoulderPx) || 10,
       start: raceStart,
       centerline,
-      closed: json.closed !== false,
+      closed: isClosed,
       finishLine: makeFinishLineFromAnchor(finishAnchor, fallbackWidth),
       finish: null,
       checkpoints: [],
