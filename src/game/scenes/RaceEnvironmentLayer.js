@@ -9,7 +9,7 @@ const ASSETS = {
   treeB: { key: 'env-tree-conifer-01', url: `${BASE}assets/environment/tree_conifer_01.webp` },
   shrubA: { key: 'env-shrub-round-01', url: `${BASE}assets/environment/shrub_round_01.webp` },
   shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` },
-  fenceModule: { key: 'env-fence-module-short-v4', url: `${BASE}assets/environment/fence_module_short.webp` }
+  fenceModule: { key: 'env-fence-module-short-v5', url: `${BASE}assets/environment/fence_module_short.webp?v=5` }
 };
 
 function tangentAt(center, i) {
@@ -130,21 +130,22 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
   if (metrics.total < 300 || !scene.textures.exists(ASSETS.fenceModule.key)) return;
 
   const runs = [
-    { fraction: 0.10, side: 1 },
-    { fraction: 0.25, side: -1 },
-    { fraction: 0.42, side: 1 },
-    { fraction: 0.58, side: -1 },
-    { fraction: 0.74, side: 1 },
-    { fraction: 0.88, side: -1 }
+    { fraction: 0.08, side: 1 },
+    { fraction: 0.20, side: -1 },
+    { fraction: 0.33, side: 1 },
+    { fraction: 0.46, side: -1 },
+    { fraction: 0.59, side: 1 },
+    { fraction: 0.71, side: -1 },
+    { fraction: 0.83, side: 1 },
+    { fraction: 0.93, side: -1 }
   ];
 
-  // Render the complete WebP. Previous versions cropped the sprite, which could
-  // make the fence effectively disappear on some Phaser/WebGL combinations.
-  // Short modules are rotated to the local tangent so the chain follows the track.
-  const moduleWorldLength = 82;
-  const runLength = Math.min(620, Math.max(360, metrics.total * 0.07));
-  const pieces = Math.max(5, Math.floor(runLength / moduleWorldLength));
-  const offsetFromEdge = 58;
+  // Intentionally visible pass: keep fences above road/kerb graphics so they cannot be hidden.
+  // Once placement is approved visually we can lower their depth if desired.
+  const moduleWorldLength = 118;
+  const runLength = Math.min(720, Math.max(420, metrics.total * 0.075));
+  const pieces = Math.max(4, Math.floor(runLength / moduleWorldLength));
+  const offsetFromEdge = 42;
 
   for (const run of runs) {
     const centerDistance = metrics.total * run.fraction;
@@ -158,9 +159,9 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
 
       const img = scene.add.image(x, y, ASSETS.fenceModule.key)
         .setScrollFactor(1)
-        .setDepth(8.2)
+        .setDepth(12.85)
         .setRotation(Math.atan2(s.ty, s.tx))
-        .setDisplaySize(112, 26)
+        .setDisplaySize(158, 36)
         .setOrigin(0.5, 0.5);
       scene.uiCam?.ignore?.(img);
       placed.push(img);
