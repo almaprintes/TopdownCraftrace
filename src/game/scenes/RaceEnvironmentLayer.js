@@ -9,7 +9,7 @@ const ASSETS = {
   treeB: { key: 'env-tree-conifer-01', url: `${BASE}assets/environment/tree_conifer_01.webp` },
   shrubA: { key: 'env-shrub-round-01', url: `${BASE}assets/environment/shrub_round_01.webp` },
   shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` },
-  fenceModule: { key: 'env-fence-module-short', url: `${BASE}assets/environment/fence_module_short.webp` }
+  fenceModule: { key: 'env-fence-module-short-v2', url: `${BASE}assets/environment/fence_module_short.webp?v=2` }
 };
 
 function tangentAt(center, i) {
@@ -90,7 +90,7 @@ function buildCenterMetrics(center) {
 
 function sampleCenterAtDistance(center, metrics, distance, defaultTrackW) {
   const total = metrics.total || 1;
-  let d = ((distance % total) + total) % total;
+  const d = ((distance % total) + total) % total;
   const cumulative = metrics.cumulative;
 
   let lo = 0;
@@ -129,9 +129,6 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
   const metrics = buildCenterMetrics(center);
   if (metrics.total < 300) return;
 
-  // Four short fence runs distributed around every circuit. Each run is built
-  // from tiny overlapping modules sampled by arc length, so the fence inherits
-  // the real circuit curvature instead of using a fixed-radius sprite.
   const runs = [
     { fraction: 0.12, side: 1 },
     { fraction: 0.37, side: -1 },
@@ -139,10 +136,17 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
     { fraction: 0.84, side: -1 }
   ];
 
+  // The source WebP contains two shallow curved halves joined by a centre post.
+  // We deliberately use ONLY the left half, which is almost straight, then apply
+  // a small angular correction. Repeating that half makes a true articulated
+  // fence that follows the circuit instead of stamping the original fixed curve.
   const moduleScale = 0.40;
-  const moduleWorldLength = 58;
+  const moduleWorldLength = 50;
+  const sourceHalfWidth = 132;
+  const sourceHeight = 59;
+  const sourceStraightening = -5 * Math.PI / 180;
   const runLength = Math.min(430, Math.max(280, metrics.total * 0.055));
-  const pieces = Math.max(5, Math.floor(runLength / moduleWorldLength));
+  const pieces = Math.max(6, Math.floor(runLength / moduleWorldLength));
   const offsetFromEdge = 34;
 
   for (const run of runs) {
@@ -150,19 +154,11 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
     const startDistance = centerDistance - ((pieces - 1) * moduleWorldLength) * 0.5;
 
     for (let j = 0; j < pieces; j++) {
-      const s = sampleCenterAtDistance(
-        center,
-        metrics,
-        startDistance + j * moduleWorldLength,
-        defaultTrackW
-      );
-
+      const s = sampleCenterAtDistance(center, metrics, startDistance + j * moduleWorldLength, defaultTrackW);
       const offset = s.width * 0.5 + offsetFromEdge;
       const x = s.x + s.nx * run.side * offset;
       const y = s.y + s.ny * run.side * offset;
 
-      // Avoid placing a fence in the escape road of another nearby loop on
-      // very compact circuits.
       if (!isClearOfTrack(center, x, y, defaultTrackW, 12)) continue;
 
       const img = addImage(
@@ -172,10 +168,15 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
         x,
         y,
         moduleScale,
-        Math.atan2(s.ty, s.tx),
+        Math.atan2(s.ty, s.tx) + sourceStraightening,
         7.10
       );
-      if (img && run.side < 0) img.setFlipY(true);
+
+      if (img) {
+        img.setCrop(0, 0, sourceHalfWidth, sourceHeight);
+        img.setOrigin(1, 0.5);
+        if (run.side < 0) img.setFlipY(true);
+      }
     }
   }
 }
