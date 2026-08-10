@@ -9,7 +9,7 @@ const ASSETS = {
   treeB: { key: 'env-tree-conifer-01', url: `${BASE}assets/environment/tree_conifer_01.webp` },
   shrubA: { key: 'env-shrub-round-01', url: `${BASE}assets/environment/shrub_round_01.webp` },
   shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` },
-  fenceModule: { key: 'env-fence-module-short-v2', url: `${BASE}assets/environment/fence_module_short.webp?v=2` }
+  fenceModule: { key: 'env-fence-module-short-v3', url: `${BASE}assets/environment/fence_module_short.webp?v=3` }
 };
 
 function tangentAt(center, i) {
@@ -136,18 +136,17 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
     { fraction: 0.84, side: -1 }
   ];
 
-  // The source WebP contains two shallow curved halves joined by a centre post.
-  // We deliberately use ONLY the left half, which is almost straight, then apply
-  // a small angular correction. Repeating that half makes a true articulated
-  // fence that follows the circuit instead of stamping the original fixed curve.
-  const moduleScale = 0.40;
-  const moduleWorldLength = 50;
-  const sourceHalfWidth = 132;
+  // Use the left half of the source WebP as a short articulated module.
+  // Crucially, do not move the crop origin: each piece stays centred on the
+  // sampled track point and therefore remains visible while following curvature.
+  const moduleScale = 0.55;
+  const moduleWorldLength = 44;
+  const sourceHalfWidth = 128;
   const sourceHeight = 59;
-  const sourceStraightening = -5 * Math.PI / 180;
-  const runLength = Math.min(430, Math.max(280, metrics.total * 0.055));
-  const pieces = Math.max(6, Math.floor(runLength / moduleWorldLength));
-  const offsetFromEdge = 34;
+  const sourceStraightening = -4 * Math.PI / 180;
+  const runLength = Math.min(460, Math.max(320, metrics.total * 0.06));
+  const pieces = Math.max(7, Math.floor(runLength / moduleWorldLength));
+  const offsetFromEdge = 48;
 
   for (const run of runs) {
     const centerDistance = metrics.total * run.fraction;
@@ -158,8 +157,6 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
       const offset = s.width * 0.5 + offsetFromEdge;
       const x = s.x + s.nx * run.side * offset;
       const y = s.y + s.ny * run.side * offset;
-
-      if (!isClearOfTrack(center, x, y, defaultTrackW, 12)) continue;
 
       const img = addImage(
         scene,
@@ -174,7 +171,7 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
 
       if (img) {
         img.setCrop(0, 0, sourceHalfWidth, sourceHeight);
-        img.setOrigin(1, 0.5);
+        img.setOrigin(0.5, 0.5);
         if (run.side < 0) img.setFlipY(true);
       }
     }
