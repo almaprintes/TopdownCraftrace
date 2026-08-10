@@ -1,6 +1,6 @@
 // src/game/scenes/RaceEnvironmentLayer.js
-// Controlled forest stress test: 28 curated static vegetation sprites max.
-// Reuses only 4 WebP textures, no collision, no random scatter, no per-frame work.
+// Curated static environment: vegetation + top-down curved fence WebP.
+// No collision, no random scatter, no per-frame work.
 
 const BASE = import.meta.env.BASE_URL || '/';
 
@@ -8,7 +8,8 @@ const ASSETS = {
   treeA: { key: 'env-tree-deciduous-01', url: `${BASE}assets/environment/tree_deciduous_01.webp` },
   treeB: { key: 'env-tree-conifer-01', url: `${BASE}assets/environment/tree_conifer_01.webp` },
   shrubA: { key: 'env-shrub-round-01', url: `${BASE}assets/environment/shrub_round_01.webp` },
-  shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` }
+  shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` },
+  fenceCurve: { key: 'env-fence-curve-topdown', url: `${BASE}assets/environment/fence_curve_topdown.webp` }
 };
 
 function tangentAt(center, i) {
@@ -75,14 +76,41 @@ function addCluster(scene, placed, center, defaultTrackW, spec) {
   }
 }
 
-function placeCuratedVegetation(scene, center, defaultTrackW) {
+function placeCurvedFences(scene, placed, center, defaultTrackW) {
+  // Four lightweight fence segments on every track. They sit close to the asphalt
+  // but outside the road clearance, and rotate with the local track tangent.
+  const specs = [
+    { fraction: 0.14, side: 1,  extra: 40, scale: 0.34 },
+    { fraction: 0.36, side: -1, extra: 42, scale: 0.32 },
+    { fraction: 0.61, side: 1,  extra: 40, scale: 0.34 },
+    { fraction: 0.83, side: -1, extra: 42, scale: 0.32 }
+  ];
+
+  for (const s of specs) {
+    const a = findUsableAnchor(center, s.fraction, s.side, s.extra, defaultTrackW, 24);
+    if (!a) continue;
+    const img = addImage(
+      scene,
+      placed,
+      ASSETS.fenceCurve.key,
+      a.x,
+      a.y,
+      s.scale,
+      Math.atan2(a.ty, a.tx),
+      7.10
+    );
+    if (img && s.side < 0) img.setFlipY(true);
+  }
+}
+
+function placeCuratedEnvironment(scene, center, defaultTrackW) {
   if (Array.isArray(scene._circuitEnvironment)) {
     for (const obj of scene._circuitEnvironment) obj?.destroy?.();
   }
 
   const placed = [];
-  // Five deliberately composed zones. The denser bands sit farther from the asphalt;
-  // shrubs soften the edge while trees overlap behind them to read as woodland.
+  placeCurvedFences(scene, placed, center, defaultTrackW);
+
   const clusters = [
     { fraction: 0.08, side: 1, extra: 88, members: [
       {asset:'shrubA',along:-92,out:0,scale:.23,rotation:-.28},{asset:'treeA',along:-48,out:28,scale:.31,rotation:-.12,clearance:58},
@@ -125,8 +153,8 @@ export function addCircuitEnvironment(scene, center, defaultTrackW = 160) {
       missing.push(spec.key);
     }
   }
-  if (missing.length === 0) return placeCuratedVegetation(scene, center, defaultTrackW);
-  scene.load.once('complete', () => placeCuratedVegetation(scene, center, defaultTrackW));
+  if (missing.length === 0) return placeCuratedEnvironment(scene, center, defaultTrackW);
+  scene.load.once('complete', () => placeCuratedEnvironment(scene, center, defaultTrackW));
   if (!scene.load.isLoading()) scene.load.start();
   return [];
 }
