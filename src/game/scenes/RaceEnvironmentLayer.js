@@ -9,7 +9,7 @@ const ASSETS = {
   treeB: { key: 'env-tree-conifer-01', url: `${BASE}assets/environment/tree_conifer_01.webp` },
   shrubA: { key: 'env-shrub-round-01', url: `${BASE}assets/environment/shrub_round_01.webp` },
   shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` },
-  fenceModule: { key: 'env-fence-module-short-v3', url: `${BASE}assets/environment/fence_module_short.webp?v=3` }
+  fenceModule: { key: 'env-fence-module-short-v4', url: `${BASE}assets/environment/fence_module_short.webp` }
 };
 
 function tangentAt(center, i) {
@@ -127,26 +127,24 @@ function sampleCenterAtDistance(center, metrics, distance, defaultTrackW) {
 
 function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
   const metrics = buildCenterMetrics(center);
-  if (metrics.total < 300) return;
+  if (metrics.total < 300 || !scene.textures.exists(ASSETS.fenceModule.key)) return;
 
   const runs = [
-    { fraction: 0.12, side: 1 },
-    { fraction: 0.37, side: -1 },
-    { fraction: 0.62, side: 1 },
-    { fraction: 0.84, side: -1 }
+    { fraction: 0.10, side: 1 },
+    { fraction: 0.25, side: -1 },
+    { fraction: 0.42, side: 1 },
+    { fraction: 0.58, side: -1 },
+    { fraction: 0.74, side: 1 },
+    { fraction: 0.88, side: -1 }
   ];
 
-  // Use the left half of the source WebP as a short articulated module.
-  // Crucially, do not move the crop origin: each piece stays centred on the
-  // sampled track point and therefore remains visible while following curvature.
-  const moduleScale = 0.55;
-  const moduleWorldLength = 44;
-  const sourceHalfWidth = 128;
-  const sourceHeight = 59;
-  const sourceStraightening = -4 * Math.PI / 180;
-  const runLength = Math.min(460, Math.max(320, metrics.total * 0.06));
-  const pieces = Math.max(7, Math.floor(runLength / moduleWorldLength));
-  const offsetFromEdge = 48;
+  // Render the complete WebP. Previous versions cropped the sprite, which could
+  // make the fence effectively disappear on some Phaser/WebGL combinations.
+  // Short modules are rotated to the local tangent so the chain follows the track.
+  const moduleWorldLength = 82;
+  const runLength = Math.min(620, Math.max(360, metrics.total * 0.07));
+  const pieces = Math.max(5, Math.floor(runLength / moduleWorldLength));
+  const offsetFromEdge = 58;
 
   for (const run of runs) {
     const centerDistance = metrics.total * run.fraction;
@@ -158,22 +156,14 @@ function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
       const x = s.x + s.nx * run.side * offset;
       const y = s.y + s.ny * run.side * offset;
 
-      const img = addImage(
-        scene,
-        placed,
-        ASSETS.fenceModule.key,
-        x,
-        y,
-        moduleScale,
-        Math.atan2(s.ty, s.tx) + sourceStraightening,
-        7.10
-      );
-
-      if (img) {
-        img.setCrop(0, 0, sourceHalfWidth, sourceHeight);
-        img.setOrigin(0.5, 0.5);
-        if (run.side < 0) img.setFlipY(true);
-      }
+      const img = scene.add.image(x, y, ASSETS.fenceModule.key)
+        .setScrollFactor(1)
+        .setDepth(8.2)
+        .setRotation(Math.atan2(s.ty, s.tx))
+        .setDisplaySize(112, 26)
+        .setOrigin(0.5, 0.5);
+      scene.uiCam?.ignore?.(img);
+      placed.push(img);
     }
   }
 }
