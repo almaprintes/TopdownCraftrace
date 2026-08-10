@@ -1,5 +1,5 @@
 // src/game/scenes/RaceEnvironmentLayer.js
-// Curated static environment: vegetation + modular fence runs that follow track geometry.
+// Curated static environment + pilot sponsor-board system.
 // No collision, no random scatter, no per-frame work.
 
 const BASE = import.meta.env.BASE_URL || '/';
@@ -8,9 +8,18 @@ const ASSETS = {
   treeA: { key: 'env-tree-deciduous-01', url: `${BASE}assets/environment/tree_deciduous_01.webp` },
   treeB: { key: 'env-tree-conifer-01', url: `${BASE}assets/environment/tree_conifer_01.webp` },
   shrubA: { key: 'env-shrub-round-01', url: `${BASE}assets/environment/shrub_round_01.webp` },
-  shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` },
-  fenceModule: { key: 'env-fence-module-short-v5', url: `${BASE}assets/environment/fence_module_short.webp?v=5` }
+  shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` }
 };
+
+const SPONSORS = [
+  { id:'forge', name:'FORGE', bg:'#151515', edge:'#ff9d19', fg:'#f5f2e9', accent:'#ff7a00' },
+  { id:'avenir', name:'AVENIR', bg:'#101622', edge:'#d8dde5', fg:'#f4f5f7', accent:'#d7aa45' },
+  { id:'veloce', name:'VELOCE', bg:'#121b2d', edge:'#f1d321', fg:'#f7f8fb', accent:'#18a84b' },
+  { id:'crown', name:'CROWN', bg:'#101827', edge:'#e4b43a', fg:'#f6f1df', accent:'#ffce52' },
+  { id:'helix', name:'HÉLIX', bg:'#b80d13', edge:'#ffd52a', fg:'#fff4d7', accent:'#ffb400' },
+  { id:'tdr', name:'TDR', bg:'#07111c', edge:'#39bfff', fg:'#ffffff', accent:'#1e8dff' },
+  { id:'almaprint', name:'AlmaPrint', bg:'#151018', edge:'#d8a845', fg:'#f4d88c', accent:'#8d38cf' }
+];
 
 function tangentAt(center, i) {
   const n = center.length;
@@ -125,43 +134,138 @@ function sampleCenterAtDistance(center, metrics, distance, defaultTrackW) {
   return { x, y, tx, ty, nx, ny, width };
 }
 
-function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
-  const metrics = buildCenterMetrics(center);
-  if (metrics.total < 300 || !scene.textures.exists(ASSETS.fenceModule.key)) return;
+function angleDiff(a, b) {
+  return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+}
 
+function makeSponsorTextures(scene) {
+  for (const s of SPONSORS) {
+    const key = `env-sponsor-${s.id}-v1`;
+    if (scene.textures.exists(key)) continue;
+
+    const tex = scene.textures.createCanvas(key, 320, 82);
+    const ctx = tex.getContext();
+    ctx.clearRect(0, 0, 320, 82);
+
+    // soft ground shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.24)';
+    ctx.fillRect(13, 57, 294, 12);
+
+    // panel body
+    const g = ctx.createLinearGradient(0, 10, 0, 62);
+    g.addColorStop(0, s.bg);
+    g.addColorStop(1, '#080a0d');
+    ctx.fillStyle = g;
+    ctx.strokeStyle = s.edge;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.roundRect(7, 8, 306, 54, 7);
+    ctx.fill();
+    ctx.stroke();
+
+    // small racing accent
+    ctx.fillStyle = s.accent;
+    ctx.fillRect(18, 19, 5, 32);
+    ctx.fillRect(28, 19, 2, 32);
+
+    // wordmark
+    ctx.fillStyle = s.fg;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = s.id === 'almaprint' ? '700 34px system-ui, sans-serif' : '900 36px system-ui, sans-serif';
+    ctx.fillText(s.name, 171, 35);
+
+    // support feet seen from above
+    ctx.fillStyle = '#4f5458';
+    ctx.fillRect(55, 62, 12, 9);
+    ctx.fillRect(253, 62, 12, 9);
+
+    tex.refresh();
+  }
+}
+
+function isPilotCircuit(scene) {
+  const key = String(scene?.trackKey || '').toLowerCase();
+  const name = String(scene?.track?.meta?.name || '').toLowerCase();
+  return key.includes('karting-canarias') || key.includes('karting_canarias') || name.includes('karting canarias');
+}
+
+function findStraightCenters(center, metrics, defaultTrackW) {
+  const total = metrics.total;
+  const candidates = [];
+  const probe = Math.max(70, Math.min(120, total * 0.035));
+  const step = Math.max(45, Math.min(75, total / 80));
+
+  for (let d = 0; d < total; d += step) {
+    const a = sampleCenterAtDistance(center, metrics, d - probe, defaultTrackW);
+    const b = sampleCenterAtDistance(center, metrics, d, defaultTrackW);
+    const c = sampleCenterAtDistance(center, metrics, d + probe, defaultTrackW);
+    const aa = Math.atan2(a.ty, a.tx);
+    const bb = Math.atan2(b.ty, b.tx);
+    const cc = Math.atan2(c.ty, c.tx);
+    const bend = angleDiff(aa, bb) + angleDiff(bb, cc);
+    candidates.push({ d, bend });
+  }
+
+  candidates.sort((a, b) => a.bend - b.bend);
+  const picked = [];
+  for (const c of candidates) {
+    if (picked.every((p) => {
+      const raw = Math.abs(p.d - c.d);
+      const circular = Math.min(raw, total - raw);
+      return circular > total * 0.22;
+    })) {
+      picked.push(c);
+      if (picked.length >= 2) break;
+    }
+  }
+  return picked;
+}
+
+function placeSponsorBoards(scene, placed, center, defaultTrackW) {
+  if (!isPilotCircuit(scene)) return;
+
+  makeSponsorTextures(scene);
+  const metrics = buildCenterMetrics(center);
+  if (metrics.total < 300) return;
+
+  const straightCenters = findStraightCenters(center, metrics, defaultTrackW);
   const runs = [
-    { fraction: 0.08, side: 1 },
-    { fraction: 0.20, side: -1 },
-    { fraction: 0.33, side: 1 },
-    { fraction: 0.46, side: -1 },
-    { fraction: 0.59, side: 1 },
-    { fraction: 0.71, side: -1 },
-    { fraction: 0.83, side: 1 },
-    { fraction: 0.93, side: -1 }
+    { brands: SPONSORS.slice(0, 4), anchor: straightCenters[0], side: 1 },
+    { brands: SPONSORS.slice(4), anchor: straightCenters[1] || straightCenters[0], side: -1 }
   ];
 
-  // Intentionally visible pass: keep fences above road/kerb graphics so they cannot be hidden.
-  // Once placement is approved visually we can lower their depth if desired.
-  const moduleWorldLength = 118;
-  const runLength = Math.min(720, Math.max(420, metrics.total * 0.075));
-  const pieces = Math.max(4, Math.floor(runLength / moduleWorldLength));
-  const offsetFromEdge = 42;
+  const spacing = 142;
+  const panelW = 132;
+  const panelH = 34;
+  const edgeGap = 34;
 
   for (const run of runs) {
-    const centerDistance = metrics.total * run.fraction;
-    const startDistance = centerDistance - ((pieces - 1) * moduleWorldLength) * 0.5;
+    if (!run.anchor) continue;
+    const count = run.brands.length;
+    const start = run.anchor.d - ((count - 1) * spacing) * 0.5;
 
-    for (let j = 0; j < pieces; j++) {
-      const s = sampleCenterAtDistance(center, metrics, startDistance + j * moduleWorldLength, defaultTrackW);
-      const offset = s.width * 0.5 + offsetFromEdge;
-      const x = s.x + s.nx * run.side * offset;
-      const y = s.y + s.ny * run.side * offset;
+    for (let i = 0; i < count; i++) {
+      const s = sampleCenterAtDistance(center, metrics, start + i * spacing, defaultTrackW);
+      const offset = s.width * 0.5 + edgeGap;
+      let side = run.side;
+      let x = s.x + s.nx * side * offset;
+      let y = s.y + s.ny * side * offset;
 
-      const img = scene.add.image(x, y, ASSETS.fenceModule.key)
+      // If another road section is too close, flip the panel to the other side.
+      if (!isClearOfTrack(center, x, y, defaultTrackW, 14)) {
+        side *= -1;
+        x = s.x + s.nx * side * offset;
+        y = s.y + s.ny * side * offset;
+      }
+
+      const brand = run.brands[i];
+      const key = `env-sponsor-${brand.id}-v1`;
+      const img = scene.add.image(x, y, key)
         .setScrollFactor(1)
-        .setDepth(12.85)
+        .setDepth(15.5)
         .setRotation(Math.atan2(s.ty, s.tx))
-        .setDisplaySize(158, 36)
+        .setDisplaySize(panelW, panelH)
         .setOrigin(0.5, 0.5);
       scene.uiCam?.ignore?.(img);
       placed.push(img);
@@ -175,7 +279,9 @@ function placeCuratedEnvironment(scene, center, defaultTrackW) {
   }
 
   const placed = [];
-  placeModularFenceRuns(scene, placed, center, defaultTrackW);
+
+  // Pilot monetisation test: only Karting Canarias for now.
+  placeSponsorBoards(scene, placed, center, defaultTrackW);
 
   const clusters = [
     { fraction: 0.08, side: 1, extra: 88, members: [
