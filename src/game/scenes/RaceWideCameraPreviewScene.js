@@ -59,6 +59,83 @@ export class RaceScene extends CurrentRaceScene {
     this._garageRewardHistCount = Array.isArray(this.ttHistory) ? this.ttHistory.length : 0;
   }
 
+  create() {
+    super.create();
+
+    // Sponsor-board safety pass. The first pilot showed that checking only each board's
+    // centre was insufficient on compact parallel sections: the long rectangle could still
+    // clip the asphalt. Re-seat every sponsor after the environment is mounted so the entire
+    // panel remains beyond the white edge line. Repeated delayed passes cover async texture load.
+    const makeSafe = () => {
+      try {
+        const center = (this.track?.geom?.center || []).map((p) => Array.isArray(p)
+          ? { x:Number(p[0]), y:Number(p[1]), width:Number(this.track?.meta?.trackWidth || 150) }
+          : { x:Number(p?.x), y:Number(p?.y), width:Number(p?.width || this.track?.meta?.trackWidth || 150) }
+        ).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+        if (center.length < 4) return;
+
+        const sponsors = (this.children?.list || []).filter((o) => {
+          const key = o?.texture?.key || o?.frame?.texture?.key || '';
+          return typeof key === 'string' && key.startsWith('env-sponsor-');
+        });
+
+        const n = center.length;
+        const idx = (i) => (i + n) % n;
+        const nearestIndex = (x, y) => {
+          let bestI = 0, bestD2 = Infinity;
+          for (let i = 0; i < n; i++) {
+            const dx = x - center[i].x, dy = y - center[i].y;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < bestD2) { bestD2 = d2; bestI = i; }
+          }
+          return bestI;
+        };
+
+        const pointSafe = (x, y, clearance = 34) => {
+          for (let i = 0; i < n; i++) {
+            const p = center[i];
+            const half = Number(p.width || this.track?.meta?.trackWidth || 150) * 0.5;
+            if (Math.hypot(x - p.x, y - p.y) < half + clearance) return false;
+          }
+          return true;
+        };
+
+        for (const board of sponsors) {
+          if (!board?.scene || board._tdrSponsorSafe) continue;
+          const i = nearestIndex(board.x, board.y);
+          const a = center[idx(i - 2)], b = center[idx(i + 2)], p = center[i];
+          const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+          const nx = -dy / len, ny = dx / len;
+          const side = ((board.x - p.x) * nx + (board.y - p.y) * ny) >= 0 ? 1 : -1;
+          const half = Number(p.width || this.track?.meta?.trackWidth || 150) * 0.5;
+
+          let chosen = null;
+          for (const extra of [72, 88, 104, 124, 146, 170]) {
+            const x = p.x + nx * side * (half + extra);
+            const y = p.y + ny * side * (half + extra);
+            if (pointSafe(x, y, 30)) { chosen = { x, y }; break; }
+          }
+          if (!chosen) {
+            // Last resort: opposite side, only if the compact layout blocks the original side.
+            for (const extra of [88, 108, 132, 158, 184]) {
+              const x = p.x - nx * side * (half + extra);
+              const y = p.y - ny * side * (half + extra);
+              if (pointSafe(x, y, 30)) { chosen = { x, y }; break; }
+            }
+          }
+          if (chosen) board.setPosition(chosen.x, chosen.y);
+          board._tdrSponsorSafe = true;
+        }
+      } catch (e) {
+        console.warn('[TDR2] sponsor safety pass failed', e);
+      }
+    };
+
+    this.time.delayedCall(0, makeSafe);
+    this.time.delayedCall(260, makeSafe);
+    this.time.delayedCall(850, makeSafe);
+  }
+
   update(time, delta) {
     super.update(time, delta);
 
