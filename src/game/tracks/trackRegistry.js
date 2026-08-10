@@ -61,7 +61,8 @@ function deriveLongestStraightAnchor(centerline) {
 function makeFinishLineFromAnchor(anchor, trackWidth) {
   const x=Number(anchor?.x),y=Number(anchor?.y),r=Number(anchor?.r);
   if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(r))return null;
-  const half=Math.max(30,Number(trackWidth)*0.36),px=-Math.sin(r),py=Math.cos(r);
+  // Full road width: the chequered stripe must visually reach both white edge lines.
+  const half=Math.max(30,Number(trackWidth)*0.50),px=-Math.sin(r),py=Math.cos(r);
   return {a:{x:x-px*half,y:y-py*half},b:{x:x+px*half,y:y+py*half},normal:{x:Math.cos(r),y:Math.sin(r)}};
 }
 
