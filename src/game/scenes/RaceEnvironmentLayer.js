@@ -1,5 +1,5 @@
 // src/game/scenes/RaceEnvironmentLayer.js
-// Curated static environment: vegetation + top-down curved fence WebP.
+// Curated static environment: vegetation + modular fence runs that follow track geometry.
 // No collision, no random scatter, no per-frame work.
 
 const BASE = import.meta.env.BASE_URL || '/';
@@ -9,7 +9,7 @@ const ASSETS = {
   treeB: { key: 'env-tree-conifer-01', url: `${BASE}assets/environment/tree_conifer_01.webp` },
   shrubA: { key: 'env-shrub-round-01', url: `${BASE}assets/environment/shrub_round_01.webp` },
   shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` },
-  fenceCurve: { key: 'env-fence-curve-topdown', url: `${BASE}assets/environment/fence_curve_topdown.webp` }
+  fenceModule: { key: 'env-fence-module-short', url: `${BASE}assets/environment/fence_module_short.webp` }
 };
 
 function tangentAt(center, i) {
@@ -76,30 +76,107 @@ function addCluster(scene, placed, center, defaultTrackW, spec) {
   }
 }
 
-function placeCurvedFences(scene, placed, center, defaultTrackW) {
-  // Four lightweight fence segments on every track. They sit close to the asphalt
-  // but outside the road clearance, and rotate with the local track tangent.
-  const specs = [
-    { fraction: 0.14, side: 1,  extra: 40, scale: 0.34 },
-    { fraction: 0.36, side: -1, extra: 42, scale: 0.32 },
-    { fraction: 0.61, side: 1,  extra: 40, scale: 0.34 },
-    { fraction: 0.83, side: -1, extra: 42, scale: 0.32 }
+function buildCenterMetrics(center) {
+  const cumulative = [0];
+  let total = 0;
+  for (let i = 0; i < center.length; i++) {
+    const a = center[i];
+    const b = center[(i + 1) % center.length];
+    total += Math.hypot(b.x - a.x, b.y - a.y);
+    cumulative.push(total);
+  }
+  return { cumulative, total };
+}
+
+function sampleCenterAtDistance(center, metrics, distance, defaultTrackW) {
+  const total = metrics.total || 1;
+  let d = ((distance % total) + total) % total;
+  const cumulative = metrics.cumulative;
+
+  let lo = 0;
+  let hi = center.length - 1;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi + 1) / 2);
+    if (cumulative[mid] <= d) lo = mid;
+    else hi = mid - 1;
+  }
+
+  const i = Math.min(lo, center.length - 1);
+  const a = center[i];
+  const b = center[(i + 1) % center.length];
+  const segStart = cumulative[i];
+  const segEnd = cumulative[i + 1];
+  const segLen = Math.max(0.0001, segEnd - segStart);
+  const t = Math.max(0, Math.min(1, (d - segStart) / segLen));
+
+  const x = a.x + (b.x - a.x) * t;
+  const y = a.y + (b.y - a.y) * t;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const mag = Math.hypot(dx, dy) || 1;
+  const tx = dx / mag;
+  const ty = dy / mag;
+  const nx = -ty;
+  const ny = tx;
+  const widthA = Number(a.width || defaultTrackW);
+  const widthB = Number(b.width || defaultTrackW);
+  const width = widthA + (widthB - widthA) * t;
+
+  return { x, y, tx, ty, nx, ny, width };
+}
+
+function placeModularFenceRuns(scene, placed, center, defaultTrackW) {
+  const metrics = buildCenterMetrics(center);
+  if (metrics.total < 300) return;
+
+  // Four short fence runs distributed around every circuit. Each run is built
+  // from tiny overlapping modules sampled by arc length, so the fence inherits
+  // the real circuit curvature instead of using a fixed-radius sprite.
+  const runs = [
+    { fraction: 0.12, side: 1 },
+    { fraction: 0.37, side: -1 },
+    { fraction: 0.62, side: 1 },
+    { fraction: 0.84, side: -1 }
   ];
 
-  for (const s of specs) {
-    const a = findUsableAnchor(center, s.fraction, s.side, s.extra, defaultTrackW, 24);
-    if (!a) continue;
-    const img = addImage(
-      scene,
-      placed,
-      ASSETS.fenceCurve.key,
-      a.x,
-      a.y,
-      s.scale,
-      Math.atan2(a.ty, a.tx),
-      7.10
-    );
-    if (img && s.side < 0) img.setFlipY(true);
+  const moduleScale = 0.40;
+  const moduleWorldLength = 58;
+  const runLength = Math.min(430, Math.max(280, metrics.total * 0.055));
+  const pieces = Math.max(5, Math.floor(runLength / moduleWorldLength));
+  const offsetFromEdge = 34;
+
+  for (const run of runs) {
+    const centerDistance = metrics.total * run.fraction;
+    const startDistance = centerDistance - ((pieces - 1) * moduleWorldLength) * 0.5;
+
+    for (let j = 0; j < pieces; j++) {
+      const s = sampleCenterAtDistance(
+        center,
+        metrics,
+        startDistance + j * moduleWorldLength,
+        defaultTrackW
+      );
+
+      const offset = s.width * 0.5 + offsetFromEdge;
+      const x = s.x + s.nx * run.side * offset;
+      const y = s.y + s.ny * run.side * offset;
+
+      // Avoid placing a fence in the escape road of another nearby loop on
+      // very compact circuits.
+      if (!isClearOfTrack(center, x, y, defaultTrackW, 12)) continue;
+
+      const img = addImage(
+        scene,
+        placed,
+        ASSETS.fenceModule.key,
+        x,
+        y,
+        moduleScale,
+        Math.atan2(s.ty, s.tx),
+        7.10
+      );
+      if (img && run.side < 0) img.setFlipY(true);
+    }
   }
 }
 
@@ -109,7 +186,7 @@ function placeCuratedEnvironment(scene, center, defaultTrackW) {
   }
 
   const placed = [];
-  placeCurvedFences(scene, placed, center, defaultTrackW);
+  placeModularFenceRuns(scene, placed, center, defaultTrackW);
 
   const clusters = [
     { fraction: 0.08, side: 1, extra: 88, members: [
