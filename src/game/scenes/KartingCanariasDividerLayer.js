@@ -26,7 +26,6 @@ function isKartingCanarias(scene) {
 export function installKartingCanariasDividers(scene) {
   if (!scene || !isKartingCanarias(scene) || !scene.carBody?.scene) return [];
 
-  // Clean previous installation if scene was rebuilt in-place.
   try { scene._kcDividerCollider?.destroy?.(); } catch (_) {}
   for (const o of scene._kcDividers || []) {
     try { o?.destroy?.(); } catch (_) {}
@@ -44,7 +43,7 @@ export function installKartingCanariasDividers(scene) {
     const a = pts[i], b = pts[i + 1];
     const dx = b.x - a.x, dy = b.y - a.y;
     const len = Math.hypot(dx, dy);
-    if (len < 80) continue;
+    if (len < 65) continue;
     segments.push({
       i, a, b, len,
       mx:(a.x+b.x)*0.5, my:(a.y+b.y)*0.5,
@@ -53,42 +52,41 @@ export function installKartingCanariasDividers(scene) {
     });
   }
 
-  // Candidate median pairs: close enough to tempt a shortcut, but not neighboring
-  // pieces of the same ribbon. Restrict to near-parallel lanes so barriers never cut turns.
+  // Wider search than v1: we want most of the compact multi-lane section protected,
+  // not only the five closest pairs.
   const pairs = [];
   for (let ai = 0; ai < segments.length; ai++) {
     const A = segments[ai];
     for (let bi = ai + 1; bi < segments.length; bi++) {
       const B = segments[bi];
-      if (circularSegDistance(A.i, B.i, n - 1) < 5) continue;
+      if (circularSegDistance(A.i, B.i, n - 1) < 4) continue;
 
       const d = Math.hypot(B.mx - A.mx, B.my - A.my);
       const medianGap = d - (A.width + B.width) * 0.5;
       const parallel = Math.min(angleDiff(A.angle, B.angle), Math.abs(Math.PI - angleDiff(A.angle, B.angle)));
 
-      if (medianGap < 12 || medianGap > 125) continue;
-      if (parallel > 0.42) continue; // ~24 degrees
+      if (medianGap < 8 || medianGap > 155) continue;
+      if (parallel > 0.50) continue; // ~29 degrees
 
-      pairs.push({ A, B, d, medianGap, score: medianGap + parallel * 100 });
+      pairs.push({ A, B, d, medianGap, score: medianGap + parallel * 85 });
     }
   }
   pairs.sort((a,b) => a.score - b.score);
 
-  // Keep only separated median zones, preventing several rows in the same place.
+  // More protected medians, but still suppress near-duplicates.
   const chosen = [];
   for (const p of pairs) {
     const mx = (p.A.mx + p.B.mx) * 0.5;
     const my = (p.A.my + p.B.my) * 0.5;
-    if (chosen.some(c => Math.hypot(mx-c.mx, my-c.my) < 210)) continue;
+    if (chosen.some(c => Math.hypot(mx-c.mx, my-c.my) < 125)) continue;
     chosen.push({ ...p, mx, my });
-    if (chosen.length >= 5) break;
+    if (chosen.length >= 12) break;
   }
 
   const staticBodies = scene.physics.add.staticGroup();
   const placed = [];
 
   for (const p of chosen) {
-    // Average tangent; flip B if required so both directions agree before averaging.
     let ax = Math.cos(p.A.angle), ay = Math.sin(p.A.angle);
     let bx = Math.cos(p.B.angle), by = Math.sin(p.B.angle);
     if (ax*bx + ay*by < 0) { bx = -bx; by = -by; }
@@ -97,9 +95,15 @@ export function installKartingCanariasDividers(scene) {
     tx /= mag; ty /= mag;
     const ang = Math.atan2(ty,tx);
 
-    const usable = Math.min(250, Math.max(90, Math.min(p.A.len, p.B.len) * 0.58));
-    const moduleLen = 48;
-    const count = Math.max(2, Math.floor(usable / moduleLen));
+    const usable = Math.min(330, Math.max(120, Math.min(p.A.len, p.B.len) * 0.78));
+
+    // Modules overlap slightly. This removes the little corners/gaps that were catching
+    // the circular car body while still behaving as a continuous wall.
+    const moduleLen = 42;
+    const visualLen = 46;
+    const bodyLen = 44;
+    const bodyThick = 8;
+    const count = Math.max(3, Math.ceil(usable / moduleLen));
     const start = -((count - 1) * moduleLen) * 0.5;
 
     for (let k = 0; k < count; k++) {
@@ -107,17 +111,19 @@ export function installKartingCanariasDividers(scene) {
       const x = p.mx + tx * along;
       const y = p.my + ty * along;
 
-      // Arcade static rectangle = real collision. Visual deliberately reads as
-      // low steel/energy barrier from the top-down camera.
-      const r = scene.add.rectangle(x, y, 46, 12, 0x30363b, 1)
-        .setStrokeStyle(2, 0xb9c1c7, 0.95)
+      const r = scene.add.rectangle(x, y, visualLen, 10, 0x30363b, 1)
+        .setStrokeStyle(1.5, 0xb9c1c7, 0.95)
         .setDepth(16.2)
         .setRotation(ang);
       scene.physics.add.existing(r, true);
+      // Make the physical wall a little slimmer than the art so glancing hits slide cleanly.
+      try {
+        r.body.setSize(bodyLen, bodyThick, true);
+        r.body.updateFromGameObject();
+      } catch (_) {}
       scene.uiCam?.ignore?.(r);
 
-      // Reflective strip gives the divider a readable arcade/semi-realistic finish.
-      const mark = scene.add.rectangle(x, y, 20, 3, 0xf3b51b, 0.95)
+      const mark = scene.add.rectangle(x, y, 22, 2.5, 0xf3b51b, 0.95)
         .setDepth(16.3)
         .setRotation(ang);
       scene.uiCam?.ignore?.(mark);
@@ -127,18 +133,29 @@ export function installKartingCanariasDividers(scene) {
     }
   }
 
-  // Player collision: stop and slightly dissipate speed instead of bouncing like pinball.
-  const onHit = (car) => {
+  // Glancing collisions should scrape/slide, not glue the car to the barrier.
+  // Preserve most velocity and only trim enough speed to punish wall riding.
+  const onHit = (car, barrier) => {
     try {
       const v = car?.body?.velocity;
-      if (v) {
-        car.setVelocity(v.x * 0.28, v.y * 0.28);
-      }
+      if (!v) return;
+
+      const a = Number(barrier?.rotation || 0);
+      const tx = Math.cos(a), ty = Math.sin(a);
+      const nx = -ty, ny = tx;
+      const tangentSpeed = v.x * tx + v.y * ty;
+      const normalSpeed = v.x * nx + v.y * ny;
+
+      // Keep 78% of tangential motion and kill most inward motion.
+      // A tiny outward component helps Arcade Physics separate the bodies immediately.
+      const outNormal = -normalSpeed * 0.08;
+      const vx = tx * tangentSpeed * 0.78 + nx * outNormal;
+      const vy = ty * tangentSpeed * 0.78 + ny * outNormal;
+      car.setVelocity(vx, vy);
     } catch (_) {}
   };
   scene._kcDividerCollider = scene.physics.add.collider(scene.carBody, staticBodies, onHit, undefined, scene);
 
-  // AI cars should respect the same physical divider if they are present.
   for (const ai of scene.gridCars || []) {
     if (ai?.body?.scene) {
       try { scene.physics.add.collider(ai.body, staticBodies); } catch (_) {}
