@@ -1,13 +1,7 @@
 import { UpgradeShopScene as PremiumWorkshopV2 } from './UpgradeWorkshopPremiumV2Scene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 
-function workshopBase(){
-  if(typeof window==='undefined') return 'assets/cars/workshop/';
-  const parts=window.location.pathname.split('/').filter(Boolean);
-  const isGithubPages=window.location.hostname.endsWith('github.io');
-  const appBase=isGithubPages&&parts.length?`/${parts[0]}/`:'./';
-  return `${appBase}assets/cars/workshop/`;
-}
+const WORKSHOP_BASE=`${import.meta.env.BASE_URL || './'}assets/cars/workshop/`;
 
 export class UpgradeShopScene extends PremiumWorkshopV2 {
   create(){
@@ -23,7 +17,6 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     A(this.add.text(r.x+15,y+(compact?17:20),spec.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'20px':'27px',fontStyle:'900 italic',color:'#fff'}));
     A(this.add.text(r.x+r.w-15,y+2,String(spec.rarity||'COMÚN').toUpperCase(),{fontFamily:'system-ui',fontSize:compact?'10px':'12px',fontStyle:'900',color:'#ffd05a'}).setOrigin(1,0));
 
-    // Damos más altura real a las estadísticas en pantallas apaisadas bajas (iPhone/Safari).
     const imageH=Math.round(r.h*(compact?0.47:0.55));
     const carR={x:r.x+10,y:r.y+(compact?53:66),w:r.w-20,h:imageH};
     this._platform(A,carR);
@@ -32,8 +25,7 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
   }
 
   _carImage(A,spec,r){
-    // Clave exclusiva y versionada para que nunca reutilice la textura de una carta.
-    const cleanKey=`workshop_render_v3_${this.car}`;
+    const cleanKey=`workshop_render_v4_${this.car}`;
     const cx=r.x+r.w*.49,cy=r.y+r.h*.47,w=r.w*.92,h=r.h*.94;
 
     const showClean=()=>{
@@ -66,8 +58,7 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
 
     this.load.once(`filecomplete-image-${cleanKey}`,ok);
     this.load.on('loaderror',err);
-    const url=`${workshopBase()}${this.car}.webp?v=20260811-3`;
-    this.load.image(cleanKey,url);
+    this.load.image(cleanKey,`${WORKSHOP_BASE}${this.car}.webp?v=20260811-4`);
     if(!this.load.isLoading())this.load.start();
   }
 }
