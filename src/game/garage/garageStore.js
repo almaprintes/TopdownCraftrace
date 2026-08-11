@@ -1,4 +1,4 @@
-import { GARAGE_ITEMS, EVOLUTION_CHAIN, EVOLUTION_COST, findRecipe, tuningForPart } from './partsCatalog.js';
+import { GARAGE_ITEMS, EVOLUTION_CHAIN, EVOLUTION_COST, findRecipe, findStripRecipe, statDeltaForPart, tuningForPart } from './partsCatalog.js';
 const KEY='tdr2:garageFusion:v1';
 
 const STARTER={ scrap:8, alloy:5, rubber:4, compound:4, disc:4, spring:3, gear:3, ecu:2 };
@@ -25,6 +25,7 @@ export function saveGarage(s){ localStorage.setItem(KEY,JSON.stringify(s)); retu
 export function qty(s,id){ return Number(s.inventory?.[id]||0); }
 export function addItem(s,id,n=1){ s.inventory[id]=(s.inventory[id]||0)+n; return s; }
 export function consume(s,id,n=1){ if(qty(s,id)<n) return false; s.inventory[id]-=n; return true; }
+
 export function craft(s,a,b){
   const r=findRecipe(a,b); if(!r) return {ok:false,reason:'Sin receta'};
   if(a===b){ if(qty(s,a)<2) return {ok:false,reason:'Faltan piezas'}; consume(s,a,2); }
@@ -32,6 +33,20 @@ export function craft(s,a,b){
   addItem(s,r.out,1); if(!s.discoveries.includes(r.out)) s.discoveries.push(r.out); saveGarage(s);
   return {ok:true,item:GARAGE_ITEMS[r.out]};
 }
+
+export function craftStrip(s,ids){
+  const r=findStripRecipe(ids);
+  if(!r) return {ok:false,reason:'Combinación no válida'};
+  const need={};
+  for(const id of ids) need[id]=(need[id]||0)+1;
+  for(const [id,n] of Object.entries(need)) if(qty(s,id)<n) return {ok:false,reason:`Falta ${GARAGE_ITEMS[id]?.name||id}`};
+  for(const [id,n] of Object.entries(need)) consume(s,id,n);
+  addItem(s,r.out,1);
+  if(!s.discoveries.includes(r.out)) s.discoveries.push(r.out);
+  saveGarage(s);
+  return {ok:true,item:GARAGE_ITEMS[r.out]};
+}
+
 export function evolve(s,id){
   const next=EVOLUTION_CHAIN[id]; if(!next) return {ok:false,reason:'Nivel máximo'};
   if(qty(s,id)<EVOLUTION_COST) return {ok:false,reason:`Necesitas ${EVOLUTION_COST}`};
@@ -42,7 +57,6 @@ export function evolve(s,id){
 export function getEquippedForCar(s,carId=selectedCarId()){
   const own=s?.equippedByCar?.[carId];
   if(own && typeof own==='object') return own;
-  // Migration bridge: old global loadout is used until that car gets its own loadout.
   return s?.equipped || {};
 }
 
@@ -64,6 +78,37 @@ export function garageTuning(s,carId=selectedCarId()){
     }
   }
   return out;
+}
+
+const clamp99=n=>Math.max(1,Math.min(99,Math.round(n)));
+function baseDisplayStats(spec){
+  if(spec?.designStats){
+    const d=spec.designStats;
+    return {
+      speed:clamp99(d.VEL??55),
+      accel:clamp99(d.ACC??55),
+      grip:clamp99(((d.EST??55)+(d.GIR??55))/2),
+      control:clamp99(((d.GIR??55)+(d.FRN??55))/2)
+    };
+  }
+  return {
+    speed:clamp99(((Number(spec?.maxFwd)||520)-400)/3.2+45),
+    accel:clamp99(((Number(spec?.accel)||650)-500)/5+45),
+    grip:clamp99(((Number(spec?.gripCoast)||.23)-.16)*260+50),
+    control:clamp99(((Number(spec?.turnRate)||3.4)-2.7)*28+50)
+  };
+}
+
+export function garageDisplayStats(spec,s,carId=selectedCarId(),replacementPartId=null){
+  const out=baseDisplayStats(spec);
+  const eq={...(getEquippedForCar(s,carId)||{})};
+  const replacement=GARAGE_ITEMS[replacementPartId];
+  if(replacement?.kind==='part'&&replacement.family) eq[replacement.family]=replacement.id;
+  for(const id of Object.values(eq)){
+    const d=statDeltaForPart(GARAGE_ITEMS[id]);
+    out.speed+=d.speed; out.accel+=d.accel; out.grip+=d.grip; out.control+=d.control;
+  }
+  return {speed:clamp99(out.speed),accel:clamp99(out.accel),grip:clamp99(out.grip),control:clamp99(out.control)};
 }
 
 const COMMON_LOOT=['scrap','alloy','rubber','compound','disc','spring','gear'];
