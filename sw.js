@@ -1,5 +1,5 @@
 /* Static-cache SW (sin Workbox) — reproducible y fácil de depurar */
-const CACHE_VERSION = 'tdr2-v16';
+const CACHE_VERSION = 'tdr2-v17';
 const CORE_ASSETS = [
   './',
   './index.html',
