@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceKerbSurfaceScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceForgeSurfaceScene.js';
 import { hasTrack } from '../tracks/trackRegistry.js';
 import { grantRaceLoot } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
