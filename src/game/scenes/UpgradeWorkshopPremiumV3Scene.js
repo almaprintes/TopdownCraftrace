@@ -1,20 +1,40 @@
 import { UpgradeShopScene as PremiumWorkshopV2 } from './UpgradeWorkshopPremiumV2Scene.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
 
-const WORKSHOP_BASE='assets/cars/workshop/';
+function workshopBase(){
+  if(typeof window==='undefined') return 'assets/cars/workshop/';
+  const parts=window.location.pathname.split('/').filter(Boolean);
+  const isGithubPages=window.location.hostname.endsWith('github.io');
+  const appBase=isGithubPages&&parts.length?`/${parts[0]}/`:'./';
+  return `${appBase}assets/cars/workshop/`;
+}
 
 export class UpgradeShopScene extends PremiumWorkshopV2 {
   create(){
-    // Reintentar los renders limpios cada vez que se entra al taller.
-    // Esto permite añadir nuevos WebP al repositorio sin que una búsqueda 404 anterior
-    // deje al coche condenado a mostrar la carta durante toda la sesión.
     this._workshopMissing=new Set();
     super.create();
   }
 
+  _carPanel(A,r,compact){
+    this._panel(A,r,0x2bcfff);
+    const spec=CAR_SPECS[this.car]||CAR_SPECS.stock;
+    const y=r.y+(compact?10:14);
+    A(this.add.text(r.x+15,y,'COCHE ACTUAL',{fontFamily:'system-ui',fontSize:compact?'10px':'12px',fontStyle:'800',color:'#8da3ae'}));
+    A(this.add.text(r.x+15,y+(compact?17:20),spec.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'20px':'27px',fontStyle:'900 italic',color:'#fff'}));
+    A(this.add.text(r.x+r.w-15,y+2,String(spec.rarity||'COMÚN').toUpperCase(),{fontFamily:'system-ui',fontSize:compact?'10px':'12px',fontStyle:'900',color:'#ffd05a'}).setOrigin(1,0));
+
+    // Damos más altura real a las estadísticas en pantallas apaisadas bajas (iPhone/Safari).
+    const imageH=Math.round(r.h*(compact?0.47:0.55));
+    const carR={x:r.x+10,y:r.y+(compact?53:66),w:r.w-20,h:imageH};
+    this._platform(A,carR);
+    this._carImage(A,spec,carR);
+    this._stats(A,spec,{x:r.x+14,y:carR.y+carR.h+8,w:r.w-28,h:r.y+r.h-carR.y-carR.h-16},compact);
+  }
+
   _carImage(A,spec,r){
-    // Clave separada y versionada: jamás reutiliza la textura de las cartas runtime.
-    const cleanKey=`workshop_render_v2_${this.car}`;
-    const cx=r.x+r.w*.49,cy=r.y+r.h*.46,w=r.w*.90,h=r.h*.88;
+    // Clave exclusiva y versionada para que nunca reutilice la textura de una carta.
+    const cleanKey=`workshop_render_v3_${this.car}`;
+    const cx=r.x+r.w*.49,cy=r.y+r.h*.47,w=r.w*.92,h=r.h*.94;
 
     const showClean=()=>{
       if(!this.textures.exists(cleanKey))return false;
@@ -24,15 +44,10 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     };
 
     if(showClean())return;
-
-    // Solo hacemos un intento por entrada a la escena; si no existe, usamos la carta.
-    if(this._workshopMissing?.has(cleanKey)){
-      return super._carImage(A,spec,r);
-    }
-
+    if(this._workshopMissing?.has(cleanKey))return super._carImage(A,spec,r);
     if(this.loadingAssets.has(cleanKey))return;
-    this.loadingAssets.add(cleanKey);
 
+    this.loadingAssets.add(cleanKey);
     const cleanup=()=>{
       this.loadingAssets.delete(cleanKey);
       this.load.off(`filecomplete-image-${cleanKey}`,ok);
@@ -40,7 +55,6 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     };
     const ok=()=>{
       cleanup();
-      // Reconstruimos el panel para mostrar el render limpio recién cargado.
       if(this.root?.scene)this.render();
     };
     const err=f=>{
@@ -52,7 +66,8 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
 
     this.load.once(`filecomplete-image-${cleanKey}`,ok);
     this.load.on('loaderror',err);
-    this.load.image(cleanKey,`${WORKSHOP_BASE}${this.car}.webp?v=2`);
+    const url=`${workshopBase()}${this.car}.webp?v=20260811-3`;
+    this.load.image(cleanKey,url);
     if(!this.load.isLoading())this.load.start();
   }
 }
