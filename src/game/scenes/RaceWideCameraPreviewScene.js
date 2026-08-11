@@ -2,6 +2,7 @@ import { RaceScene as CurrentRaceScene } from './RaceKerbSurfaceScene.js';
 import { hasTrack } from '../tracks/trackRegistry.js';
 import { grantRaceLoot } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
+import { installKartingCanariasDividers } from './KartingCanariasDividerLayer.js';
 
 // Wider gameplay camera + current selected-library-track bridge.
 export class RaceScene extends CurrentRaceScene {
@@ -134,6 +135,15 @@ export class RaceScene extends CurrentRaceScene {
     this.time.delayedCall(0, makeSafe);
     this.time.delayedCall(260, makeSafe);
     this.time.delayedCall(850, makeSafe);
+
+    // Karting Canarias has several very close parallel lanes. Install physical median
+    // dividers after the car and track geometry exist. They are real Arcade Physics
+    // static bodies, not decorative sprites, so shortcuts between nearby lanes are blocked.
+    try {
+      installKartingCanariasDividers(this);
+    } catch (e) {
+      console.warn('[TDR2] Karting Canarias divider install failed', e);
+    }
   }
 
   update(time, delta) {
