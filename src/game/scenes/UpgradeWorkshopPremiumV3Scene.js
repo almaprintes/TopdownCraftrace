@@ -3,6 +3,13 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 
 const WORKSHOP_BASE=`${import.meta.env.BASE_URL || './'}assets/cars/workshop/`;
 
+// Ajustes visuales por coche para que cada render apoye correctamente sobre la plataforma.
+// x/y son proporciones del rectángulo del coche; scale multiplica el tamaño calculado automáticamente.
+const WORKSHOP_CAR_LAYOUT={
+  avenir_gripline:{x:0.49,y:0.55,scale:1.18},
+  avenir_apex:{x:0.47,y:0.55,scale:1.13},
+};
+
 export class UpgradeShopScene extends PremiumWorkshopV2 {
   create(){
     this._workshopMissing=new Set();
@@ -25,13 +32,15 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
   }
 
   _carImage(A,spec,r){
-    const cleanKey=`workshop_render_v4_${this.car}`;
-    const cx=r.x+r.w*.49,cy=r.y+r.h*.47,w=r.w*.92,h=r.h*.94;
+    const cleanKey=`workshop_render_v5_${this.car}`;
+    const layout=WORKSHOP_CAR_LAYOUT[this.car]||{x:0.49,y:0.53,scale:1.08};
+    const cx=r.x+r.w*layout.x,cy=r.y+r.h*layout.y,w=r.w*.92,h=r.h*.94;
 
     const showClean=()=>{
       if(!this.textures.exists(cleanKey))return false;
       const img=A(this.add.image(cx,cy,cleanKey));
-      img.setScale(Math.min(w/(img.width||1),h/(img.height||1)));
+      const baseScale=Math.min(w/(img.width||1),h/(img.height||1));
+      img.setScale(baseScale*layout.scale);
       return true;
     };
 
@@ -58,7 +67,7 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
 
     this.load.once(`filecomplete-image-${cleanKey}`,ok);
     this.load.on('loaderror',err);
-    this.load.image(cleanKey,`${WORKSHOP_BASE}${this.car}.webp?v=20260811-4`);
+    this.load.image(cleanKey,`${WORKSHOP_BASE}${this.car}.webp?v=20260811-5`);
     if(!this.load.isLoading())this.load.start();
   }
 }
