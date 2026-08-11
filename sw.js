@@ -1,5 +1,5 @@
 /* Static-cache SW (sin Workbox) — reproducible y fácil de depurar */
-const CACHE_VERSION = 'tdr2-v15';
+const CACHE_VERSION = 'tdr2-v16';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -18,76 +18,61 @@ self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_VERSION).then((cache) => cache.addAll(CORE_ASSETS)));
   self.skipWaiting();
 });
-
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => (k === CACHE_VERSION ? Promise.resolve() : caches.delete(k))));
-      await self.clients.claim();
-    })()
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((k) => (k === CACHE_VERSION ? Promise.resolve() : caches.delete(k))));
+    await self.clients.claim();
+  })());
 });
-
 function isNavigationRequest(req) {
-  return (
-    req.mode === 'navigate' ||
-    (req.method === 'GET' && req.headers.get('accept') && req.headers.get('accept').includes('text/html'))
-  );
+  return req.mode === 'navigate' || (req.method === 'GET' && req.headers.get('accept') && req.headers.get('accept').includes('text/html'));
 }
-
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
-
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.endsWith('/community/car-overrides.json')) {
-    event.respondWith(
-      (async () => {
-        const cache = await caches.open(CACHE_VERSION);
-        try {
-          const fresh = await fetch(req, { cache: 'no-store' });
-          if (fresh && fresh.ok) cache.put(req, fresh.clone());
-          return fresh;
-        } catch {
-          const cached = await cache.match(req);
-          return cached || new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
-      })()
-    );
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_VERSION);
+      try {
+        const fresh = await fetch(req, { cache: 'no-store' });
+        if (fresh && fresh.ok) cache.put(req, fresh.clone());
+        return fresh;
+      } catch {
+        const cached = await cache.match(req);
+        return cached || new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+    })());
     return;
   }
   if (isNavigationRequest(req)) {
-    event.respondWith(
-      (async () => {
-        const cache = await caches.open(CACHE_VERSION);
-        const indexUrl = new URL('./index.html', self.location.href).toString();
-        try {
-          const fresh = await fetch(req);
-          cache.put(indexUrl, fresh.clone());
-          return fresh;
-        } catch {
-          const cached = await cache.match(indexUrl);
-          return cached || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
-        }
-      })()
-    );
-    return;
-  }
-  event.respondWith(
-    (async () => {
-      const cached = await caches.match(req);
-      if (cached) return cached;
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_VERSION);
+      const indexUrl = new URL('./index.html', self.location.href).toString();
       try {
         const fresh = await fetch(req);
-        if (!fresh || !fresh.ok) return fresh;
-        const cache = await caches.open(CACHE_VERSION);
-        cache.put(req, fresh.clone());
+        cache.put(indexUrl, fresh.clone());
         return fresh;
       } catch {
-        return new Response('', { status: 504 });
+        const cached = await cache.match(indexUrl);
+        return cached || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
       }
-    })()
-  );
+    })());
+    return;
+  }
+  event.respondWith((async () => {
+    const cached = await caches.match(req);
+    if (cached) return cached;
+    try {
+      const fresh = await fetch(req);
+      if (!fresh || !fresh.ok) return fresh;
+      const cache = await caches.open(CACHE_VERSION);
+      cache.put(req, fresh.clone());
+      return fresh;
+    } catch {
+      return new Response('', { status: 504 });
+    }
+  })());
 });
