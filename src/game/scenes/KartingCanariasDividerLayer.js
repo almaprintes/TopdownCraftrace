@@ -23,6 +23,15 @@ function isKartingCanarias(scene) {
   return key.includes('karting-canarias') || key.includes('karting_canarias') || name.includes('karting canarias');
 }
 
+function normalizedTangent(A, B) {
+  let ax = Math.cos(A.angle), ay = Math.sin(A.angle);
+  let bx = Math.cos(B.angle), by = Math.sin(B.angle);
+  if (ax * bx + ay * by < 0) { bx = -bx; by = -by; }
+  let tx = ax + bx, ty = ay + by;
+  const mag = Math.hypot(tx, ty) || 1;
+  return { tx: tx / mag, ty: ty / mag };
+}
+
 export function installKartingCanariasDividers(scene) {
   if (!scene || !isKartingCanarias(scene) || !scene.carBody?.scene) return [];
 
@@ -52,8 +61,6 @@ export function installKartingCanariasDividers(scene) {
     });
   }
 
-  // Wider search than v1: we want most of the compact multi-lane section protected,
-  // not only the five closest pairs.
   const pairs = [];
   for (let ai = 0; ai < segments.length; ai++) {
     const A = segments[ai];
@@ -66,57 +73,109 @@ export function installKartingCanariasDividers(scene) {
       const parallel = Math.min(angleDiff(A.angle, B.angle), Math.abs(Math.PI - angleDiff(A.angle, B.angle)));
 
       if (medianGap < 8 || medianGap > 155) continue;
-      if (parallel > 0.50) continue; // ~29 degrees
+      if (parallel > 0.50) continue;
 
-      pairs.push({ A, B, d, medianGap, score: medianGap + parallel * 85 });
+      const tangent = normalizedTangent(A, B);
+      pairs.push({ A, B, d, medianGap, score: medianGap + parallel * 85, ...tangent });
     }
   }
   pairs.sort((a,b) => a.score - b.score);
 
-  // More protected medians, but still suppress near-duplicates.
-  const chosen = [];
+  // Build MEDIAN RUNS instead of independent spots. Candidates that point in the
+  // same direction and lie on the same median are merged into one continuous run.
+  // This prevents the previous double-wall effect where two nearby candidates laid
+  // a second row on top of the first.
+  const runs = [];
   for (const p of pairs) {
     const mx = (p.A.mx + p.B.mx) * 0.5;
     const my = (p.A.my + p.B.my) * 0.5;
-    if (chosen.some(c => Math.hypot(mx-c.mx, my-c.my) < 125)) continue;
-    chosen.push({ ...p, mx, my });
-    if (chosen.length >= 12) break;
+    const ang = Math.atan2(p.ty, p.tx);
+
+    let merged = false;
+    for (const run of runs) {
+      const ad = Math.min(angleDiff(run.ang, ang), Math.abs(Math.PI - angleDiff(run.ang, ang)));
+      if (ad > 0.20) continue;
+
+      // Test perpendicular separation between median centre lines. If they are almost
+      // the same line, absorb this candidate and extend the existing run instead of
+      // creating a second row.
+      const nx = -Math.sin(run.ang), ny = Math.cos(run.ang);
+      const perp = Math.abs((mx - run.cx) * nx + (my - run.cy) * ny);
+      if (perp > 34) continue;
+
+      const tx = Math.cos(run.ang), ty = Math.sin(run.ang);
+      const along = (mx - run.cx) * tx + (my - run.cy) * ty;
+      if (Math.abs(along) > run.halfLen + 210) continue;
+
+      const usable = Math.min(330, Math.max(120, Math.min(p.A.len, p.B.len) * 0.78));
+      const minA = Math.min(run.minAlong, along - usable * 0.5);
+      const maxA = Math.max(run.maxAlong, along + usable * 0.5);
+      run.minAlong = minA;
+      run.maxAlong = maxA;
+      run.halfLen = (maxA - minA) * 0.5;
+      merged = true;
+      break;
+    }
+
+    if (!merged) {
+      const usable = Math.min(330, Math.max(120, Math.min(p.A.len, p.B.len) * 0.78));
+      runs.push({
+        cx: mx, cy: my, ang,
+        minAlong: -usable * 0.5,
+        maxAlong: usable * 0.5,
+        halfLen: usable * 0.5,
+        score: p.score
+      });
+    }
+  }
+
+  // Keep strongest separated runs. A second dedupe pass rejects any run whose actual
+  // occupied corridor overlaps an already accepted one.
+  runs.sort((a,b) => a.score - b.score);
+  const chosen = [];
+  for (const run of runs) {
+    const tx = Math.cos(run.ang), ty = Math.sin(run.ang);
+    const nx = -ty, ny = tx;
+    const overlaps = chosen.some(c => {
+      const ad = Math.min(angleDiff(c.ang, run.ang), Math.abs(Math.PI - angleDiff(c.ang, run.ang)));
+      if (ad > 0.22) return false;
+      const perp = Math.abs((run.cx - c.cx) * (-Math.sin(c.ang)) + (run.cy - c.cy) * Math.cos(c.ang));
+      if (perp > 42) return false;
+      const along = Math.abs((run.cx - c.cx) * Math.cos(c.ang) + (run.cy - c.cy) * Math.sin(c.ang));
+      return along < (run.halfLen + c.halfLen + 50);
+    });
+    if (overlaps) continue;
+    chosen.push(run);
+    if (chosen.length >= 14) break;
   }
 
   const staticBodies = scene.physics.add.staticGroup();
   const placed = [];
 
-  for (const p of chosen) {
-    let ax = Math.cos(p.A.angle), ay = Math.sin(p.A.angle);
-    let bx = Math.cos(p.B.angle), by = Math.sin(p.B.angle);
-    if (ax*bx + ay*by < 0) { bx = -bx; by = -by; }
-    let tx = ax + bx, ty = ay + by;
-    const mag = Math.hypot(tx,ty) || 1;
-    tx /= mag; ty /= mag;
-    const ang = Math.atan2(ty,tx);
+  for (const run of chosen) {
+    const tx = Math.cos(run.ang), ty = Math.sin(run.ang);
+    const runLen = Math.max(110, run.maxAlong - run.minAlong);
 
-    const usable = Math.min(330, Math.max(120, Math.min(p.A.len, p.B.len) * 0.78));
-
-    // Modules overlap slightly. This removes the little corners/gaps that were catching
-    // the circular car body while still behaving as a continuous wall.
-    const moduleLen = 42;
-    const visualLen = 46;
-    const bodyLen = 44;
-    const bodyThick = 8;
-    const count = Math.max(3, Math.ceil(usable / moduleLen));
-    const start = -((count - 1) * moduleLen) * 0.5;
+    // One continuous chain. Centres are exactly one module pitch apart so pieces
+    // continue each other instead of being independently centred on candidate spots.
+    const modulePitch = 42;
+    const visualLen = 44;
+    const bodyLen = 40;
+    const bodyThick = 7;
+    const count = Math.max(3, Math.ceil(runLen / modulePitch));
+    const actualLen = (count - 1) * modulePitch;
+    const start = -actualLen * 0.5;
 
     for (let k = 0; k < count; k++) {
-      const along = start + k * moduleLen;
-      const x = p.mx + tx * along;
-      const y = p.my + ty * along;
+      const along = start + k * modulePitch;
+      const x = run.cx + tx * along;
+      const y = run.cy + ty * along;
 
       const r = scene.add.rectangle(x, y, visualLen, 10, 0x30363b, 1)
         .setStrokeStyle(1.5, 0xb9c1c7, 0.95)
         .setDepth(16.2)
-        .setRotation(ang);
+        .setRotation(run.ang);
       scene.physics.add.existing(r, true);
-      // Make the physical wall a little slimmer than the art so glancing hits slide cleanly.
       try {
         r.body.setSize(bodyLen, bodyThick, true);
         r.body.updateFromGameObject();
@@ -125,7 +184,7 @@ export function installKartingCanariasDividers(scene) {
 
       const mark = scene.add.rectangle(x, y, 22, 2.5, 0xf3b51b, 0.95)
         .setDepth(16.3)
-        .setRotation(ang);
+        .setRotation(run.ang);
       scene.uiCam?.ignore?.(mark);
 
       staticBodies.add(r);
@@ -133,8 +192,6 @@ export function installKartingCanariasDividers(scene) {
     }
   }
 
-  // Glancing collisions should scrape/slide, not glue the car to the barrier.
-  // Preserve most velocity and only trim enough speed to punish wall riding.
   const onHit = (car, barrier) => {
     try {
       const v = car?.body?.velocity;
@@ -146,11 +203,9 @@ export function installKartingCanariasDividers(scene) {
       const tangentSpeed = v.x * tx + v.y * ty;
       const normalSpeed = v.x * nx + v.y * ny;
 
-      // Keep 78% of tangential motion and kill most inward motion.
-      // A tiny outward component helps Arcade Physics separate the bodies immediately.
-      const outNormal = -normalSpeed * 0.08;
-      const vx = tx * tangentSpeed * 0.78 + nx * outNormal;
-      const vy = ty * tangentSpeed * 0.78 + ny * outNormal;
+      const outNormal = -normalSpeed * 0.06;
+      const vx = tx * tangentSpeed * 0.84 + nx * outNormal;
+      const vy = ty * tangentSpeed * 0.84 + ny * outNormal;
       car.setVelocity(vx, vy);
     } catch (_) {}
   };
