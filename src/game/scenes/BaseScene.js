@@ -12,8 +12,6 @@ const waitFrames = (scene, count = 2) => new Promise(resolve => {
 
 export class BaseScene extends Phaser.Scene {
   create() {
-    // FIX TDR2: cualquier cámara adicional (HUD/UI) debe ser transparente.
-    // Si no, puede quedar encima de la cámara del mundo y tapar pista/coche con negro.
     if (!this._cameraAddPatched && this.cameras?.add) {
       const originalAdd = this.cameras.add.bind(this.cameras);
       this.cameras.add = (...args) => {
@@ -27,14 +25,7 @@ export class BaseScene extends Phaser.Scene {
       this._cameraAddPatched = true;
     }
 
-    // Overlay global (portrait -> bloquea)
-    this._orientationOverlay = new OrientationOverlay(this, {
-      imageKey: 'ui_rotate_landscape'
-    });
-
-    // Herramienta de trabajo: en escenas de carrera con mundo grande aparecen dos
-    // botones para exportar una instantánea COMPLETA del circuito. Se instalan con
-    // retraso para dar tiempo a la escena hija a crear pista, decoración y cámaras HUD.
+    this._orientationOverlay = new OrientationOverlay(this, { imageKey: 'ui_rotate_landscape' });
     this.time.delayedCall(900, () => this._installMapExportButtons());
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -68,11 +59,8 @@ export class BaseScene extends Phaser.Scene {
     mk(36, 'MAPA TÉCNICO', true);
     this._mapExportUi = ui;
 
-    // Si existe una cámara dedicada al HUD, mantenemos estos controles en ella.
     try {
-      if (this.uiCam && this.uiCam !== this.cameras.main) {
-        this.cameras.main.ignore(ui);
-      }
+      if (this.uiCam && this.uiCam !== this.cameras.main) this.cameras.main.ignore(ui);
     } catch {}
   }
 
@@ -81,13 +69,13 @@ export class BaseScene extends Phaser.Scene {
     this._mapExportBusy = true;
 
     const main = this.cameras.main;
-    const worldW = Math.round(Number(this.track?.meta?.worldW || this.track?.worldW || this.physics?.world?.bounds?.width || main.getBounds?.().width || 0));
-    const worldH = Math.round(Number(this.track?.meta?.worldH || this.track?.worldH || this.physics?.world?.bounds?.height || main.getBounds?.().height || 0));
+    const worldW = Math.round(Number(this.track?.meta?.worldW || this.track?.worldW || this.physics?.world?.bounds?.width || 0));
+    const worldH = Math.round(Number(this.track?.meta?.worldH || this.track?.worldH || this.physics?.world?.bounds?.height || 0));
     if (!worldW || !worldH) { this._mapExportBusy = false; return; }
 
-    // iOS/Safari tiene límites bastante estrictos de área de canvas. 0.75 conserva
-    // mucho detalle (Karting Canarias: 2250x4200) sin superar esos límites habituales.
-    const exportScale = 0.75;
+    // Keep the final PNG comfortably below Safari's large-canvas limits.
+    const maxSide = 4200;
+    const exportScale = Math.min(1, maxSide / Math.max(worldW, worldH));
     const outW = Math.max(1, Math.round(worldW * exportScale));
     const outH = Math.max(1, Math.round(worldH * exportScale));
     const out = document.createElement('canvas');
@@ -97,8 +85,6 @@ export class BaseScene extends Phaser.Scene {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    // Abrimos la pestaña AHORA, dentro del gesto del usuario. Así Safari no bloquea
-    // la salida cuando el PNG termine de componerse varios segundos después.
     let previewWindow = null;
     try { previewWindow = window.open('', '_blank'); } catch {}
     if (previewWindow) {
@@ -107,40 +93,68 @@ export class BaseScene extends Phaser.Scene {
       } catch {}
     }
 
-    const old = {
-      x:main.scrollX, y:main.scrollY, zoom:main.zoom,
-      follow:main._follow,
-      roundPixels:main.roundPixels
-    };
-    const otherCameras = this.cameras.cameras.filter(c => c !== main).map(c => ({ c, visible:c.visible }));
-    const exportUiVisible = this._mapExportUi?.visible;
+    // IMPORTANT: the race scene continuously repositions cameras while driving. Using
+    // cameras.main for tiled captures therefore produced the same viewport over and over.
+    // A dedicated temporary camera is never touched by race/update logic.
+    const previousCameras = this.cameras.cameras.slice();
+    const cameraVisibility = previousCameras.map(c => ({ c, visible:c.visible }));
+    const hiddenUi = [];
+    let exportCam = null;
 
     try {
-      // Capturamos SOLO la cámara del mundo. HUD/minimapa/botones no forman parte
-      // de la instantánea, pero sí todos los objetos de mundo y decoraciones actuales.
-      otherCameras.forEach(({c}) => c.setVisible(false));
-      this._mapExportUi?.setVisible(false);
-      try { main.stopFollow(); } catch {}
-      main.setZoom(1);
-      main.roundPixels = false;
+      // Hide screen-space HUD objects (timer, minimap, controls, export buttons, etc.).
+      // World decoration normally has scrollFactor=1 and remains visible.
+      for (const obj of this.children.list) {
+        if (!obj || obj === this._mapExportUi || obj === this._orientationOverlay) continue;
+        const sx = Number(obj.scrollFactorX ?? 1);
+        const sy = Number(obj.scrollFactorY ?? 1);
+        if (sx === 0 && sy === 0 && obj.visible !== false) {
+          hiddenUi.push(obj);
+          obj.setVisible?.(false);
+        }
+      }
+      if (this._mapExportUi?.visible !== false) {
+        hiddenUi.push(this._mapExportUi);
+        this._mapExportUi.setVisible(false);
+      }
 
-      const viewW = Math.round(main.width);
-      const viewH = Math.round(main.height);
+      // Disable all live cameras and render the world through one isolated camera.
+      cameraVisibility.forEach(({c}) => c.setVisible(false));
+      const viewW = Math.max(1, Math.round(this.scale.width));
+      const viewH = Math.max(1, Math.round(this.scale.height));
+      exportCam = this.cameras.add(0, 0, viewW, viewH, false, '__map_export__');
+      exportCam.setVisible(true);
+      exportCam.setBackgroundColor(main.backgroundColor || '#25452a');
+      exportCam.setBounds(0, 0, worldW, worldH);
+      exportCam.setZoom(1);
+      exportCam.roundPixels = false;
+
+      // Do not render the two screen-space helper objects even if they are nested.
+      try { exportCam.ignore(this._mapExportUi); } catch {}
+
       const sourceCanvas = this.game.canvas;
+      const maxScrollX = Math.max(0, worldW - viewW);
+      const maxScrollY = Math.max(0, worldH - viewH);
 
-      for (let y = 0; y < worldH; y += viewH) {
-        for (let x = 0; x < worldW; x += viewW) {
-          const tileW = Math.min(viewW, worldW - x);
-          const tileH = Math.min(viewH, worldH - y);
-          main.setScroll(x, y);
+      for (let destY = 0; destY < worldH; destY += viewH) {
+        for (let destX = 0; destX < worldW; destX += viewW) {
+          const tileW = Math.min(viewW, worldW - destX);
+          const tileH = Math.min(viewH, worldH - destY);
+
+          // At the far right/bottom a bounded camera cannot scroll all the way to destX/Y.
+          // Capture from the correct offset inside the final viewport instead of duplicating tiles.
+          const actualX = Math.min(destX, maxScrollX);
+          const actualY = Math.min(destY, maxScrollY);
+          const srcOffsetX = destX - actualX;
+          const srcOffsetY = destY - actualY;
+
+          exportCam.setScroll(actualX, actualY);
           await waitFrames(this, 2);
 
-          // La cámara principal ocupa normalmente todo el canvas. Recortamos en los
-          // bordes del mundo para que las últimas teselas no dupliquen contenido.
           ctx.drawImage(
             sourceCanvas,
-            main.x, main.y, tileW, tileH,
-            Math.round(x * exportScale), Math.round(y * exportScale),
+            exportCam.x + srcOffsetX, exportCam.y + srcOffsetY, tileW, tileH,
+            Math.round(destX * exportScale), Math.round(destY * exportScale),
             Math.round(tileW * exportScale), Math.round(tileH * exportScale)
           );
         }
@@ -168,7 +182,8 @@ export class BaseScene extends Phaser.Scene {
         } catch { previewWindow.location.href = url; }
       } else {
         const a = document.createElement('a');
-        a.href = url; a.download = filename;
+        a.href = url;
+        a.download = filename;
         document.body.appendChild(a); a.click(); a.remove();
       }
       setTimeout(() => URL.revokeObjectURL(url), 120000);
@@ -178,12 +193,9 @@ export class BaseScene extends Phaser.Scene {
         if (previewWindow && !previewWindow.closed) previewWindow.document.body.innerHTML = '<div style="color:white;background:#111;padding:24px;font-family:system-ui">No se pudo generar el mapa. Vuelve al juego e inténtalo otra vez.</div>';
       } catch {}
     } finally {
-      main.setZoom(old.zoom || 1);
-      main.setScroll(old.x, old.y);
-      main.roundPixels = old.roundPixels;
-      try { if (old.follow) main.startFollow(old.follow); } catch {}
-      otherCameras.forEach(({c,visible}) => c.setVisible(visible));
-      if (this._mapExportUi) this._mapExportUi.setVisible(exportUiVisible !== false);
+      try { if (exportCam) this.cameras.remove(exportCam); } catch {}
+      cameraVisibility.forEach(({c,visible}) => { try { c.setVisible(visible); } catch {} });
+      hiddenUi.forEach(obj => { try { obj.setVisible?.(true); } catch {} });
       this._mapExportBusy = false;
     }
   }
@@ -192,7 +204,6 @@ export class BaseScene extends Phaser.Scene {
     ctx.save();
     ctx.scale(scale, scale);
 
-    // Cuadrícula cada 250 px; línea más fuerte y etiqueta cada 500 px.
     for (let x = 0; x <= worldW; x += 250) {
       const major = x % 500 === 0;
       ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,worldH);
@@ -214,8 +225,6 @@ export class BaseScene extends Phaser.Scene {
       }
     }
 
-    // Centerline y nodos originales numerados. Esto permite marcar una zona y decir
-    // "entre nodo 12 y 13" además de usar coordenadas X/Y.
     const raw = Array.isArray(this.track?.meta?.centerline)
       ? this.track.meta.centerline
       : Array.isArray(this.track?.centerline) ? this.track.centerline : [];
