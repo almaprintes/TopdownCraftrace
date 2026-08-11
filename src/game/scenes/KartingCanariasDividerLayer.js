@@ -1,7 +1,8 @@
 // Physical curved guardrails for Karting Canarias.
-// Guardrails are derived from the REAL centerline and offset a short distance from
-// the asphalt edge, so they inherit exactly the same bends instead of approximating
-// the circuit with long straight rectangles.
+// The source centerline is intentionally densified with a closed Catmull-Rom spline
+// before offsetting it. This gives every bend many intermediate nodes, so the rail
+// follows the road as a smooth curve instead of joining sparse control points with
+// visible straight chords.
 
 function xy(p, fallbackW = 150) {
   if (Array.isArray(p)) return { x:Number(p[0]), y:Number(p[1]), width:Number(p[2] || fallbackW) };
@@ -23,20 +24,85 @@ function isKartingCanarias(scene) {
   return key.includes('karting-canarias') || key.includes('karting_canarias') || name.includes('karting canarias');
 }
 
+function catmull(a, b, c, d, t) {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return 0.5 * (
+    (2 * b) +
+    (-a + c) * t +
+    (2*a - 5*b + 4*c - d) * t2 +
+    (-a + 3*b - 3*c + d) * t3
+  );
+}
+
+function buildDenseClosedSpline(src, fallbackW) {
+  if (!Array.isArray(src) || src.length < 4) return src || [];
+
+  // Remove duplicated closing point if the JSON already repeats point 0 at the end.
+  const base = src.slice();
+  if (base.length > 2) {
+    const a = base[0], b = base[base.length - 1];
+    if (Math.hypot(a.x - b.x, a.y - b.y) < 1) base.pop();
+  }
+
+  const n = base.length;
+  const dense = [];
+  const at = (i) => base[(i + n) % n];
+
+  for (let i = 0; i < n; i++) {
+    const p0 = at(i - 1), p1 = at(i), p2 = at(i + 1), p3 = at(i + 2);
+    const chord = Math.max(1, Math.hypot(p2.x - p1.x, p2.y - p1.y));
+
+    // Around one node every 10-14 world px. Long original segments therefore gain
+    // many intermediate nodes and even tight corners become visually smooth.
+    const steps = Math.max(5, Math.min(18, Math.ceil(chord / 12)));
+    for (let s = 0; s < steps; s++) {
+      const t = s / steps;
+      dense.push({
+        x: catmull(p0.x, p1.x, p2.x, p3.x, t),
+        y: catmull(p0.y, p1.y, p2.y, p3.y, t),
+        width: Math.max(50, catmull(
+          Number(p0.width || fallbackW),
+          Number(p1.width || fallbackW),
+          Number(p2.width || fallbackW),
+          Number(p3.width || fallbackW),
+          t
+        ))
+      });
+    }
+  }
+
+  return dense;
+}
+
 function tangentAt(pts, i) {
   const n = pts.length;
-  const a = pts[(i - 1 + n) % n];
-  const b = pts[(i + 1) % n];
+  const a = pts[(i - 2 + n) % n];
+  const b = pts[(i + 2) % n];
   const dx = b.x - a.x, dy = b.y - a.y;
   const len = Math.hypot(dx, dy) || 1;
   return { tx:dx/len, ty:dy/len, angle:Math.atan2(dy,dx) };
 }
 
-function drawPolyline(g, pts) {
+function drawSmoothPolyline(g, pts) {
   if (!pts?.length) return;
+  if (pts.length === 1) {
+    g.fillCircle(pts[0].x, pts[0].y, 2);
+    return;
+  }
+
+  // Quadratic midpoint smoothing on top of the already-dense spline removes the last
+  // visible joins produced by Phaser Graphics' straight lineTo segments.
   g.beginPath();
   g.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p = pts[i], q = pts[i + 1];
+    const mx = (p.x + q.x) * 0.5;
+    const my = (p.y + q.y) * 0.5;
+    g.quadraticBezierTo(p.x, p.y, mx, my);
+  }
+  const last = pts[pts.length - 1];
+  g.lineTo(last.x, last.y);
   g.strokePath();
 }
 
@@ -52,22 +118,21 @@ export function installKartingCanariasDividers(scene) {
 
   const raw = Array.isArray(scene.track?.meta?.centerline) ? scene.track.meta.centerline : [];
   const fallbackW = Number(scene.track?.meta?.trackWidth || 150);
-  const pts = raw.map(p => xy(p, fallbackW)).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+  const sparse = raw.map(p => xy(p, fallbackW)).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+  const pts = buildDenseClosedSpline(sparse, fallbackW);
   const n = pts.length;
-  if (n < 12) return [];
+  if (n < 24) return [];
 
-  // For each centerline sample, find the closest NON-adjacent, roughly parallel lane.
-  // Only the lower index of the pair is allowed to own the divider. That prevents the
-  // same median from being drawn twice from both neighboring lanes.
+  // Find nearby non-adjacent lanes on the DENSE spline. With ~12px samples we skip
+  // enough indices to avoid mistaking the same local bend for another lane.
   const candidate = new Array(n).fill(null);
   for (let i = 0; i < n; i++) {
     const p = pts[i];
     const ti = tangentAt(pts, i);
     let best = null;
 
-    for (let j = 0; j < n; j++) {
-      if (circularIndexDistance(i, j, n) < 6) continue;
-      if (i >= j) continue; // one owner per median
+    for (let j = i + 1; j < n; j++) {
+      if (circularIndexDistance(i, j, n) < 18) continue;
 
       const q = pts[j];
       const tj = tangentAt(pts, j);
@@ -79,22 +144,19 @@ export function installKartingCanariasDividers(scene) {
       const halfA = Number(p.width || fallbackW) * 0.5;
       const halfB = Number(q.width || fallbackW) * 0.5;
       const edgeGap = d - halfA - halfB;
+      if (edgeGap < 15 || edgeGap > 190) continue;
 
-      // Close enough to invite an illegal lane jump, but with an actual median where
-      // a guardrail can live. Very tiny/negative gaps are deliberately skipped.
-      if (edgeGap < 16 || edgeGap > 190) continue;
-
+      // Prefer the nearest legal median. Ownership by i<j naturally prevents mirrored copies.
       if (!best || edgeGap < best.edgeGap) {
         const cross = ti.tx * dy - ti.ty * dx;
         best = { j, edgeGap, side: cross >= 0 ? 1 : -1, d };
       }
     }
-
     candidate[i] = best;
   }
 
-  // Convert point detections into contiguous centerline ranges. We keep the guardrail
-  // attached to one lane and one side, so its curvature is inherited from that lane.
+  // Dense contiguous ranges produce long rails. Allow up to two tiny detection holes so
+  // spline curvature does not get split into multiple short rails at a corner.
   const runs = [];
   let i = 0;
   while (i < n) {
@@ -103,29 +165,29 @@ export function installKartingCanariasDividers(scene) {
 
     const start = i;
     const side = c.side;
-    const indices = [i];
-    let last = i;
+    let lastGood = i;
+    let goodCount = 1;
     let misses = 0;
     i++;
 
     while (i < n) {
       const next = candidate[i];
       if (next && next.side === side) {
-        indices.push(i);
-        last = i;
+        lastGood = i;
+        goodCount++;
         misses = 0;
         i++;
         continue;
       }
-      // Bridge one missing sample so a tiny detection wobble does not split a long rail.
-      if (!next && misses < 1) { misses++; i++; continue; }
+      if (!next && misses < 2) { misses++; i++; continue; }
       break;
     }
 
-    if (indices.length >= 3 && last - start >= 3) runs.push({ start, end:last, side });
+    // At ~12px/sample this asks for roughly 70+px of useful barrier.
+    if (goodCount >= 6 && lastGood - start >= 5) runs.push({ start, end:lastGood, side });
   }
 
-  // Spatial dedupe: if two runs still describe essentially the same corridor, keep the longer one.
+  // Prefer long rails and suppress genuinely duplicate corridors.
   runs.sort((a,b) => (b.end-b.start) - (a.end-a.start));
   const chosen = [];
   for (const run of runs) {
@@ -134,7 +196,7 @@ export function installKartingCanariasDividers(scene) {
     const t = tangentAt(pts, mid);
     const half = Number(p.width || fallbackW) * 0.5;
     const probe = { x:p.x + (-t.ty) * run.side * (half + 18), y:p.y + t.tx * run.side * (half + 18) };
-    if (chosen.some(c => Math.hypot(probe.x-c.probe.x, probe.y-c.probe.y) < 45)) continue;
+    if (chosen.some(c => Math.hypot(probe.x-c.probe.x, probe.y-c.probe.y) < 38)) continue;
     chosen.push({ ...run, probe });
     if (chosen.length >= 12) break;
   }
@@ -153,9 +215,8 @@ export function installKartingCanariasDividers(scene) {
       const half = Number(p.width || fallbackW) * 0.5;
       const near = candidate[k];
 
-      // Base clearance = just outside the white line. If the median is wider, move a
-      // little farther outward, but NEVER as far as the center of the neighboring lane.
-      const extra = Math.max(14, Math.min(24, Number(near?.edgeGap || 30) * 0.32));
+      // Guardrail sits just outside the white line and remains parallel to the spline.
+      const extra = Math.max(13, Math.min(22, Number(near?.edgeGap || 30) * 0.30));
       const offset = half + extra;
       curve.push({
         x: p.x + nx * run.side * offset,
@@ -164,50 +225,47 @@ export function installKartingCanariasDividers(scene) {
       });
     }
 
-    if (curve.length < 3) continue;
+    if (curve.length < 5) continue;
 
-    // One graphics object draws the entire guardrail as a CURVED polyline.
-    // Three passes create shadow/lower rail/highlight, like road Armco from above.
     const rail = scene.add.graphics().setDepth(16.2);
-    rail.lineStyle(11, 0x000000, 0.24); drawPolyline(rail, curve);
-    rail.lineStyle(7, 0x626b72, 1); drawPolyline(rail, curve);
-    rail.lineStyle(3, 0xd4dade, 0.95); drawPolyline(rail, curve);
+    rail.lineStyle(11, 0x000000, 0.22); drawSmoothPolyline(rail, curve);
+    rail.lineStyle(7, 0x626b72, 1); drawSmoothPolyline(rail, curve);
+    rail.lineStyle(3, 0xd4dade, 0.96); drawSmoothPolyline(rail, curve);
     scene.uiCam?.ignore?.(rail);
     placed.push(rail);
 
-    // Posts every ~55px along the curved guardrail.
-    let postCarry = 0;
+    // Place posts by accumulated distance along the dense curved path.
+    let carry = 0;
+    const postSpacing = 52;
     for (let k = 1; k < curve.length; k++) {
       const a = curve[k-1], b = curve[k];
       const dx = b.x-a.x, dy = b.y-a.y;
       const len = Math.hypot(dx,dy);
-      if (len < 1) continue;
+      if (len < 0.5) continue;
       const ang = Math.atan2(dy,dx);
-      let d = 55 - postCarry;
-      while (d < len) {
+      let d = postSpacing - carry;
+      while (d <= len) {
         const u = d/len;
         const x = a.x + dx*u, y = a.y + dy*u;
-        const post = scene.add.rectangle(x, y, 4, 13, 0x40464b, 1)
-          .setStrokeStyle(1, 0xaab1b6, 0.7)
+        const post = scene.add.rectangle(x, y, 4, 12, 0x40464b, 1)
+          .setStrokeStyle(1, 0xaab1b6, 0.72)
           .setRotation(ang + Math.PI/2)
           .setDepth(16.25);
         scene.uiCam?.ignore?.(post);
         placed.push(post);
-        d += 55;
+        d += postSpacing;
       }
-      postCarry = Math.max(0, len - (d - 55));
-      if (postCarry >= 55) postCarry %= 55;
+      carry = (carry + len) % postSpacing;
     }
 
-    // Collision follows the SAME curved polyline. Invisible circles overlap every 12px,
-    // so curves cannot be cut through and there are no rotated-box holes.
+    // Collision samples the same curved offset path densely. No rotated box, no chord shortcut.
     const physRadius = 9;
-    const physStep = 12;
+    const physStep = 11;
     for (let k = 1; k < curve.length; k++) {
       const a = curve[k-1], b = curve[k];
       const dx = b.x-a.x, dy = b.y-a.y;
       const len = Math.hypot(dx,dy);
-      if (len < 1) continue;
+      if (len < 0.5) continue;
       const ang = Math.atan2(dy,dx);
       const count = Math.max(1, Math.ceil(len/physStep));
       for (let s = 0; s <= count; s++) {
@@ -224,7 +282,6 @@ export function installKartingCanariasDividers(scene) {
     }
   }
 
-  // Glancing hit: preserve most along-rail velocity and reject the inward component.
   const onHit = (car, barrier) => {
     try {
       const v = car?.body?.velocity;
