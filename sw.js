@@ -1,5 +1,5 @@
 /* Static-cache SW (sin Workbox) — reproducible y fácil de depurar */
-const CACHE_VERSION = 'tdr2-v13';
+const CACHE_VERSION = 'tdr2-v14';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -11,7 +11,7 @@ const CORE_ASSETS = [
   './icons/icon-512.png',
   './assets/ui/orientation_portrait.png'
 ];
-  self.addEventListener('message', (event) => {
+self.addEventListener('message', (event) => {
   if (event?.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 self.addEventListener('install', (event) => {
@@ -42,7 +42,6 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  // ✅ Community overrides: NETWORK-FIRST (para que se actualice sin reinstalar PWA)
   if (url.pathname.endsWith('/community/car-overrides.json')) {
     event.respondWith(
       (async () => {
@@ -59,16 +58,13 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-  // Navegación: network-first con fallback a index cacheado (clave por URL real)
   if (isNavigationRequest(req)) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE_VERSION);
         const indexUrl = new URL('./index.html', self.location.href).toString();
-
         try {
           const fresh = await fetch(req);
-          // Guardamos SIEMPRE el index bajo una clave absoluta estable
           cache.put(indexUrl, fresh.clone());
           return fresh;
         } catch {
@@ -79,25 +75,19 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-
-// Assets: cache-first, pero NO cacheamos errores (404/500/etc.)
-event.respondWith(
-  (async () => {
-    const cached = await caches.match(req);
-    if (cached) return cached;
-
-    try {
-      const fresh = await fetch(req);
-
-      // 👇 CLAVE: si no es OK (p.ej. 404), lo devolvemos pero NO lo cacheamos
-      if (!fresh || !fresh.ok) return fresh;
-
-      const cache = await caches.open(CACHE_VERSION);
-      cache.put(req, fresh.clone());
-      return fresh;
-    } catch {
-      return new Response('', { status: 504 });
-    }
-  })()
-);
+  event.respondWith(
+    (async () => {
+      const cached = await caches.match(req);
+      if (cached) return cached;
+      try {
+        const fresh = await fetch(req);
+        if (!fresh || !fresh.ok) return fresh;
+        const cache = await caches.open(CACHE_VERSION);
+        cache.put(req, fresh.clone());
+        return fresh;
+      } catch {
+        return new Response('', { status: 504 });
+      }
+    })()
+  );
 });
