@@ -1,6 +1,6 @@
 // Physical lane dividers for Karting Canarias.
 // Detects close, roughly parallel NON-adjacent centerline segments and places
-// short static barriers in the median so the player cannot jump between lanes.
+// long road-style guardrails in the median so the player cannot jump between lanes.
 // The circuit geometry itself is not changed.
 
 function xy(p, fallbackW = 150) {
@@ -85,8 +85,8 @@ export function installKartingCanariasDividers(scene) {
   }
   pairs.sort((a,b) => a.score - b.score);
 
-  // Build MEDIAN RUNS instead of independent spots. Candidates that point in the
-  // same direction and lie on the same median are merged into one continuous run.
+  // Build long MEDIAN RUNS. Nearby candidates are aggressively merged so one
+  // corridor produces one guardrail, not several short rails at different angles.
   const runs = [];
   for (const p of pairs) {
     const mx = (p.A.mx + p.B.mx) * 0.5;
@@ -96,26 +96,34 @@ export function installKartingCanariasDividers(scene) {
     let merged = false;
     for (const run of runs) {
       const ad = Math.min(angleDiff(run.ang, ang), Math.abs(Math.PI - angleDiff(run.ang, ang)));
-      if (ad > 0.20) continue;
+      if (ad > 0.28) continue;
 
       const nx = -Math.sin(run.ang), ny = Math.cos(run.ang);
       const perp = Math.abs((mx - run.cx) * nx + (my - run.cy) * ny);
-      if (perp > 34) continue;
+      if (perp > 52) continue;
 
       const tx = Math.cos(run.ang), ty = Math.sin(run.ang);
       const along = (mx - run.cx) * tx + (my - run.cy) * ty;
-      if (Math.abs(along) > run.halfLen + 210) continue;
+      if (Math.abs(along) > run.halfLen + 260) continue;
 
-      const usable = Math.min(330, Math.max(120, Math.min(p.A.len, p.B.len) * 0.78));
+      const usable = Math.min(420, Math.max(150, Math.min(p.A.len, p.B.len) * 0.95));
       run.minAlong = Math.min(run.minAlong, along - usable * 0.5);
       run.maxAlong = Math.max(run.maxAlong, along + usable * 0.5);
       run.halfLen = (run.maxAlong - run.minAlong) * 0.5;
+
+      // Stabilise the visual angle: blend toward the new tangent instead of creating a new rail.
+      let ax = Math.cos(run.ang), ay = Math.sin(run.ang);
+      let bx = Math.cos(ang), by = Math.sin(ang);
+      if (ax * bx + ay * by < 0) { bx = -bx; by = -by; }
+      const vx = ax * 0.82 + bx * 0.18;
+      const vy = ay * 0.82 + by * 0.18;
+      run.ang = Math.atan2(vy, vx);
       merged = true;
       break;
     }
 
     if (!merged) {
-      const usable = Math.min(330, Math.max(120, Math.min(p.A.len, p.B.len) * 0.78));
+      const usable = Math.min(420, Math.max(150, Math.min(p.A.len, p.B.len) * 0.95));
       runs.push({
         cx: mx, cy: my, ang,
         minAlong: -usable * 0.5,
@@ -126,20 +134,22 @@ export function installKartingCanariasDividers(scene) {
     }
   }
 
+  // Final corridor-level dedupe. If two rails occupy nearly the same median, keep
+  // only the stronger/longer one. This is intentionally stricter than previous passes.
   runs.sort((a,b) => a.score - b.score);
   const chosen = [];
   for (const run of runs) {
     const overlaps = chosen.some(c => {
       const ad = Math.min(angleDiff(c.ang, run.ang), Math.abs(Math.PI - angleDiff(c.ang, run.ang)));
-      if (ad > 0.22) return false;
-      const perp = Math.abs((run.cx - c.cx) * (-Math.sin(c.ang)) + (run.cy - c.cy) * Math.cos(c.ang));
-      if (perp > 42) return false;
-      const along = Math.abs((run.cx - c.cx) * Math.cos(c.ang) + (run.cy - c.cy) * Math.sin(c.ang));
-      return along < (run.halfLen + c.halfLen + 50);
+      const dx = run.cx - c.cx;
+      const dy = run.cy - c.cy;
+      const perp = Math.abs(dx * (-Math.sin(c.ang)) + dy * Math.cos(c.ang));
+      const along = Math.abs(dx * Math.cos(c.ang) + dy * Math.sin(c.ang));
+      return ad < 0.34 && perp < 70 && along < (run.halfLen + c.halfLen + 110);
     });
     if (overlaps) continue;
     chosen.push(run);
-    if (chosen.length >= 14) break;
+    if (chosen.length >= 10) break;
   }
 
   const staticBodies = scene.physics.add.staticGroup();
@@ -148,40 +158,47 @@ export function installKartingCanariasDividers(scene) {
 
   for (const run of chosen) {
     const tx = Math.cos(run.ang), ty = Math.sin(run.ang);
-    const runLen = Math.max(110, run.maxAlong - run.minAlong);
+    const runLen = Math.max(150, run.maxAlong - run.minAlong);
 
-    // VISUAL chain: decorative modules continue one after another.
-    const modulePitch = 42;
-    const visualLen = 44;
-    const count = Math.max(3, Math.ceil(runLen / modulePitch));
-    const actualLen = (count - 1) * modulePitch;
-    const visualStart = -actualLen * 0.5;
+    // VISUAL: road-style long guardrail sections, not lots of little slabs.
+    // Long sections overlap slightly and use regularly spaced posts so they read
+    // like continuous roadside Armco from the top-down camera.
+    const sectionLen = 150;
+    const overlap = 10;
+    const pitch = sectionLen - overlap;
+    const count = Math.max(1, Math.ceil(runLen / pitch));
+    const actualLen = (count - 1) * pitch;
+    const start = -actualLen * 0.5;
 
     for (let k = 0; k < count; k++) {
-      const along = visualStart + k * modulePitch;
+      const along = start + k * pitch;
       const x = run.cx + tx * along;
       const y = run.cy + ty * along;
 
-      const r = scene.add.rectangle(x, y, visualLen, 10, 0x30363b, 1)
-        .setStrokeStyle(1.5, 0xb9c1c7, 0.95)
-        .setDepth(16.2)
-        .setRotation(run.ang);
-      scene.uiCam?.ignore?.(r);
+      const rail = scene.add.container(x, y).setDepth(16.2).setRotation(run.ang);
+      const shadow = scene.add.rectangle(2, 3, sectionLen, 10, 0x000000, 0.24);
+      const lower = scene.add.rectangle(0, 2, sectionLen, 5, 0x687078, 1)
+        .setStrokeStyle(1, 0x2e3438, 0.9);
+      const upper = scene.add.rectangle(0, -2, sectionLen, 4, 0xbfc7cd, 1)
+        .setStrokeStyle(1, 0xe3e7ea, 0.65);
+      rail.add([shadow, lower, upper]);
 
-      const mark = scene.add.rectangle(x, y, 22, 2.5, 0xf3b51b, 0.95)
-        .setDepth(16.3)
-        .setRotation(run.ang);
-      scene.uiCam?.ignore?.(mark);
-      placed.push(r, mark);
+      const postCount = 5;
+      for (let p = 0; p < postCount; p++) {
+        const px = -sectionLen * 0.42 + p * (sectionLen * 0.84 / (postCount - 1));
+        const post = scene.add.rectangle(px, 4, 4, 12, 0x40464b, 1)
+          .setStrokeStyle(1, 0x9aa1a6, 0.7);
+        rail.add(post);
+      }
+
+      scene.uiCam?.ignore?.(rail);
+      placed.push(rail);
     }
 
-    // PHYSICS chain: Arcade Physics static rectangles do NOT rotate with the visual
-    // rectangle, which left diagonal barriers traversable. Use overlapping invisible
-    // circular static bodies instead. Circles are rotation-independent and form a true
-    // continuous wall along the exact barrier tangent.
+    // PHYSICS: overlapping invisible circles make the collision independent of rotation.
     const physRadius = 10;
-    const physStep = 13; // strong overlap: no gaps for a ~14px car body
-    const physHalf = actualLen * 0.5 + 18;
+    const physStep = 13;
+    const physHalf = actualLen * 0.5 + sectionLen * 0.5 + 8;
     const physCount = Math.max(2, Math.ceil((physHalf * 2) / physStep) + 1);
     const physStart = -((physCount - 1) * physStep) * 0.5;
 
@@ -203,7 +220,6 @@ export function installKartingCanariasDividers(scene) {
     }
   }
 
-  // Glancing collisions should scrape/slide, not glue the car to the barrier.
   const onHit = (car, barrier) => {
     try {
       const v = car?.body?.velocity;
@@ -215,8 +231,6 @@ export function installKartingCanariasDividers(scene) {
       const tangentSpeed = v.x * tx + v.y * ty;
       const normalSpeed = v.x * nx + v.y * ny;
 
-      // Keep most of the along-wall motion. Reverse only a small part of the
-      // inward component so Arcade separates the car immediately without sticking.
       const outNormal = -normalSpeed * 0.12;
       const vx = tx * tangentSpeed * 0.88 + nx * outNormal;
       const vy = ty * tangentSpeed * 0.88 + ny * outNormal;
