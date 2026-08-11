@@ -1,7 +1,7 @@
-// Physical lane dividers for Karting Canarias.
-// Detects close, roughly parallel NON-adjacent centerline segments and places
-// long road-style guardrails in the median so the player cannot jump between lanes.
-// The circuit geometry itself is not changed.
+// Physical curved guardrails for Karting Canarias.
+// Guardrails are derived from the REAL centerline and offset a short distance from
+// the asphalt edge, so they inherit exactly the same bends instead of approximating
+// the circuit with long straight rectangles.
 
 function xy(p, fallbackW = 150) {
   if (Array.isArray(p)) return { x:Number(p[0]), y:Number(p[1]), width:Number(p[2] || fallbackW) };
@@ -12,7 +12,7 @@ function angleDiff(a, b) {
   return Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 }
 
-function circularSegDistance(a, b, n) {
+function circularIndexDistance(a, b, n) {
   const d = Math.abs(a - b);
   return Math.min(d, n - d);
 }
@@ -23,25 +23,30 @@ function isKartingCanarias(scene) {
   return key.includes('karting-canarias') || key.includes('karting_canarias') || name.includes('karting canarias');
 }
 
-function normalizedTangent(A, B) {
-  let ax = Math.cos(A.angle), ay = Math.sin(A.angle);
-  let bx = Math.cos(B.angle), by = Math.sin(B.angle);
-  if (ax * bx + ay * by < 0) { bx = -bx; by = -by; }
-  let tx = ax + bx, ty = ay + by;
-  const mag = Math.hypot(tx, ty) || 1;
-  return { tx: tx / mag, ty: ty / mag };
+function tangentAt(pts, i) {
+  const n = pts.length;
+  const a = pts[(i - 1 + n) % n];
+  const b = pts[(i + 1) % n];
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  return { tx:dx/len, ty:dy/len, angle:Math.atan2(dy,dx) };
+}
+
+function drawPolyline(g, pts) {
+  if (!pts?.length) return;
+  g.beginPath();
+  g.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+  g.strokePath();
 }
 
 export function installKartingCanariasDividers(scene) {
   if (!scene || !isKartingCanarias(scene) || !scene.carBody?.scene) return [];
 
   try { scene._kcDividerCollider?.destroy?.(); } catch (_) {}
-  for (const o of scene._kcDividers || []) {
-    try { o?.destroy?.(); } catch (_) {}
-  }
-  for (const o of scene._kcDividerPhysics || []) {
-    try { o?.destroy?.(); } catch (_) {}
-  }
+  for (const o of scene._kcDividers || []) { try { o?.destroy?.(); } catch (_) {} }
+  for (const o of scene._kcDividerPhysics || []) { try { o?.destroy?.(); } catch (_) {} }
+  try { scene._kcDividerGroup?.clear?.(true, true); } catch (_) {}
   scene._kcDividers = [];
   scene._kcDividerPhysics = [];
 
@@ -51,105 +56,87 @@ export function installKartingCanariasDividers(scene) {
   const n = pts.length;
   if (n < 12) return [];
 
-  const segments = [];
-  for (let i = 0; i < n - 1; i++) {
-    const a = pts[i], b = pts[i + 1];
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const len = Math.hypot(dx, dy);
-    if (len < 65) continue;
-    segments.push({
-      i, a, b, len,
-      mx:(a.x+b.x)*0.5, my:(a.y+b.y)*0.5,
-      angle:Math.atan2(dy,dx),
-      width:(Number(a.width||fallbackW)+Number(b.width||fallbackW))*0.5
-    });
-  }
+  // For each centerline sample, find the closest NON-adjacent, roughly parallel lane.
+  // Only the lower index of the pair is allowed to own the divider. That prevents the
+  // same median from being drawn twice from both neighboring lanes.
+  const candidate = new Array(n).fill(null);
+  for (let i = 0; i < n; i++) {
+    const p = pts[i];
+    const ti = tangentAt(pts, i);
+    let best = null;
 
-  const pairs = [];
-  for (let ai = 0; ai < segments.length; ai++) {
-    const A = segments[ai];
-    for (let bi = ai + 1; bi < segments.length; bi++) {
-      const B = segments[bi];
-      if (circularSegDistance(A.i, B.i, n - 1) < 4) continue;
+    for (let j = 0; j < n; j++) {
+      if (circularIndexDistance(i, j, n) < 6) continue;
+      if (i >= j) continue; // one owner per median
 
-      const d = Math.hypot(B.mx - A.mx, B.my - A.my);
-      const medianGap = d - (A.width + B.width) * 0.5;
-      const parallel = Math.min(angleDiff(A.angle, B.angle), Math.abs(Math.PI - angleDiff(A.angle, B.angle)));
+      const q = pts[j];
+      const tj = tangentAt(pts, j);
+      const parallel = Math.min(angleDiff(ti.angle, tj.angle), Math.abs(Math.PI - angleDiff(ti.angle, tj.angle)));
+      if (parallel > 0.62) continue;
 
-      if (medianGap < 8 || medianGap > 155) continue;
-      if (parallel > 0.50) continue;
+      const dx = q.x - p.x, dy = q.y - p.y;
+      const d = Math.hypot(dx, dy);
+      const halfA = Number(p.width || fallbackW) * 0.5;
+      const halfB = Number(q.width || fallbackW) * 0.5;
+      const edgeGap = d - halfA - halfB;
 
-      const tangent = normalizedTangent(A, B);
-      pairs.push({ A, B, d, medianGap, score: medianGap + parallel * 85, ...tangent });
+      // Close enough to invite an illegal lane jump, but with an actual median where
+      // a guardrail can live. Very tiny/negative gaps are deliberately skipped.
+      if (edgeGap < 16 || edgeGap > 190) continue;
+
+      if (!best || edgeGap < best.edgeGap) {
+        const cross = ti.tx * dy - ti.ty * dx;
+        best = { j, edgeGap, side: cross >= 0 ? 1 : -1, d };
+      }
     }
+
+    candidate[i] = best;
   }
-  pairs.sort((a,b) => a.score - b.score);
 
-  // Build long MEDIAN RUNS. Nearby candidates are aggressively merged so one
-  // corridor produces one guardrail, not several short rails at different angles.
+  // Convert point detections into contiguous centerline ranges. We keep the guardrail
+  // attached to one lane and one side, so its curvature is inherited from that lane.
   const runs = [];
-  for (const p of pairs) {
-    const mx = (p.A.mx + p.B.mx) * 0.5;
-    const my = (p.A.my + p.B.my) * 0.5;
-    const ang = Math.atan2(p.ty, p.tx);
+  let i = 0;
+  while (i < n) {
+    const c = candidate[i];
+    if (!c) { i++; continue; }
 
-    let merged = false;
-    for (const run of runs) {
-      const ad = Math.min(angleDiff(run.ang, ang), Math.abs(Math.PI - angleDiff(run.ang, ang)));
-      if (ad > 0.28) continue;
+    const start = i;
+    const side = c.side;
+    const indices = [i];
+    let last = i;
+    let misses = 0;
+    i++;
 
-      const nx = -Math.sin(run.ang), ny = Math.cos(run.ang);
-      const perp = Math.abs((mx - run.cx) * nx + (my - run.cy) * ny);
-      if (perp > 52) continue;
-
-      const tx = Math.cos(run.ang), ty = Math.sin(run.ang);
-      const along = (mx - run.cx) * tx + (my - run.cy) * ty;
-      if (Math.abs(along) > run.halfLen + 260) continue;
-
-      const usable = Math.min(420, Math.max(150, Math.min(p.A.len, p.B.len) * 0.95));
-      run.minAlong = Math.min(run.minAlong, along - usable * 0.5);
-      run.maxAlong = Math.max(run.maxAlong, along + usable * 0.5);
-      run.halfLen = (run.maxAlong - run.minAlong) * 0.5;
-
-      // Stabilise the visual angle: blend toward the new tangent instead of creating a new rail.
-      let ax = Math.cos(run.ang), ay = Math.sin(run.ang);
-      let bx = Math.cos(ang), by = Math.sin(ang);
-      if (ax * bx + ay * by < 0) { bx = -bx; by = -by; }
-      const vx = ax * 0.82 + bx * 0.18;
-      const vy = ay * 0.82 + by * 0.18;
-      run.ang = Math.atan2(vy, vx);
-      merged = true;
+    while (i < n) {
+      const next = candidate[i];
+      if (next && next.side === side) {
+        indices.push(i);
+        last = i;
+        misses = 0;
+        i++;
+        continue;
+      }
+      // Bridge one missing sample so a tiny detection wobble does not split a long rail.
+      if (!next && misses < 1) { misses++; i++; continue; }
       break;
     }
 
-    if (!merged) {
-      const usable = Math.min(420, Math.max(150, Math.min(p.A.len, p.B.len) * 0.95));
-      runs.push({
-        cx: mx, cy: my, ang,
-        minAlong: -usable * 0.5,
-        maxAlong: usable * 0.5,
-        halfLen: usable * 0.5,
-        score: p.score
-      });
-    }
+    if (indices.length >= 3 && last - start >= 3) runs.push({ start, end:last, side });
   }
 
-  // Final corridor-level dedupe. If two rails occupy nearly the same median, keep
-  // only the stronger/longer one. This is intentionally stricter than previous passes.
-  runs.sort((a,b) => a.score - b.score);
+  // Spatial dedupe: if two runs still describe essentially the same corridor, keep the longer one.
+  runs.sort((a,b) => (b.end-b.start) - (a.end-a.start));
   const chosen = [];
   for (const run of runs) {
-    const overlaps = chosen.some(c => {
-      const ad = Math.min(angleDiff(c.ang, run.ang), Math.abs(Math.PI - angleDiff(c.ang, run.ang)));
-      const dx = run.cx - c.cx;
-      const dy = run.cy - c.cy;
-      const perp = Math.abs(dx * (-Math.sin(c.ang)) + dy * Math.cos(c.ang));
-      const along = Math.abs(dx * Math.cos(c.ang) + dy * Math.sin(c.ang));
-      return ad < 0.34 && perp < 70 && along < (run.halfLen + c.halfLen + 110);
-    });
-    if (overlaps) continue;
-    chosen.push(run);
-    if (chosen.length >= 10) break;
+    const mid = Math.floor((run.start + run.end) * 0.5);
+    const p = pts[mid];
+    const t = tangentAt(pts, mid);
+    const half = Number(p.width || fallbackW) * 0.5;
+    const probe = { x:p.x + (-t.ty) * run.side * (half + 18), y:p.y + t.tx * run.side * (half + 18) };
+    if (chosen.some(c => Math.hypot(probe.x-c.probe.x, probe.y-c.probe.y) < 45)) continue;
+    chosen.push({ ...run, probe });
+    if (chosen.length >= 12) break;
   }
 
   const staticBodies = scene.physics.add.staticGroup();
@@ -157,92 +144,107 @@ export function installKartingCanariasDividers(scene) {
   const physicsBodies = [];
 
   for (const run of chosen) {
-    const tx = Math.cos(run.ang), ty = Math.sin(run.ang);
-    const runLen = Math.max(150, run.maxAlong - run.minAlong);
+    const curve = [];
 
-    // VISUAL: road-style long guardrail sections, not lots of little slabs.
-    // Long sections overlap slightly and use regularly spaced posts so they read
-    // like continuous roadside Armco from the top-down camera.
-    const sectionLen = 150;
-    const overlap = 10;
-    const pitch = sectionLen - overlap;
-    const count = Math.max(1, Math.ceil(runLen / pitch));
-    const actualLen = (count - 1) * pitch;
-    const start = -actualLen * 0.5;
+    for (let k = run.start; k <= run.end; k++) {
+      const p = pts[k];
+      const t = tangentAt(pts, k);
+      const nx = -t.ty, ny = t.tx;
+      const half = Number(p.width || fallbackW) * 0.5;
+      const near = candidate[k];
 
-    for (let k = 0; k < count; k++) {
-      const along = start + k * pitch;
-      const x = run.cx + tx * along;
-      const y = run.cy + ty * along;
-
-      const rail = scene.add.container(x, y).setDepth(16.2).setRotation(run.ang);
-      const shadow = scene.add.rectangle(2, 3, sectionLen, 10, 0x000000, 0.24);
-      const lower = scene.add.rectangle(0, 2, sectionLen, 5, 0x687078, 1)
-        .setStrokeStyle(1, 0x2e3438, 0.9);
-      const upper = scene.add.rectangle(0, -2, sectionLen, 4, 0xbfc7cd, 1)
-        .setStrokeStyle(1, 0xe3e7ea, 0.65);
-      rail.add([shadow, lower, upper]);
-
-      const postCount = 5;
-      for (let p = 0; p < postCount; p++) {
-        const px = -sectionLen * 0.42 + p * (sectionLen * 0.84 / (postCount - 1));
-        const post = scene.add.rectangle(px, 4, 4, 12, 0x40464b, 1)
-          .setStrokeStyle(1, 0x9aa1a6, 0.7);
-        rail.add(post);
-      }
-
-      scene.uiCam?.ignore?.(rail);
-      placed.push(rail);
+      // Base clearance = just outside the white line. If the median is wider, move a
+      // little farther outward, but NEVER as far as the center of the neighboring lane.
+      const extra = Math.max(14, Math.min(24, Number(near?.edgeGap || 30) * 0.32));
+      const offset = half + extra;
+      curve.push({
+        x: p.x + nx * run.side * offset,
+        y: p.y + ny * run.side * offset,
+        angle: t.angle
+      });
     }
 
-    // PHYSICS: overlapping invisible circles make the collision independent of rotation.
-    const physRadius = 10;
-    const physStep = 13;
-    const physHalf = actualLen * 0.5 + sectionLen * 0.5 + 8;
-    const physCount = Math.max(2, Math.ceil((physHalf * 2) / physStep) + 1);
-    const physStart = -((physCount - 1) * physStep) * 0.5;
+    if (curve.length < 3) continue;
 
-    for (let k = 0; k < physCount; k++) {
-      const along = physStart + k * physStep;
-      const x = run.cx + tx * along;
-      const y = run.cy + ty * along;
+    // One graphics object draws the entire guardrail as a CURVED polyline.
+    // Three passes create shadow/lower rail/highlight, like road Armco from above.
+    const rail = scene.add.graphics().setDepth(16.2);
+    rail.lineStyle(11, 0x000000, 0.24); drawPolyline(rail, curve);
+    rail.lineStyle(7, 0x626b72, 1); drawPolyline(rail, curve);
+    rail.lineStyle(3, 0xd4dade, 0.95); drawPolyline(rail, curve);
+    scene.uiCam?.ignore?.(rail);
+    placed.push(rail);
 
-      const c = scene.add.circle(x, y, physRadius, 0x000000, 0);
-      scene.physics.add.existing(c, true);
-      try {
-        c.body.setCircle(physRadius);
-        c.body.updateFromGameObject();
-      } catch (_) {}
-      c.setVisible(false);
-      c._kcBarrierAngle = run.ang;
-      staticBodies.add(c);
-      physicsBodies.push(c);
+    // Posts every ~55px along the curved guardrail.
+    let postCarry = 0;
+    for (let k = 1; k < curve.length; k++) {
+      const a = curve[k-1], b = curve[k];
+      const dx = b.x-a.x, dy = b.y-a.y;
+      const len = Math.hypot(dx,dy);
+      if (len < 1) continue;
+      const ang = Math.atan2(dy,dx);
+      let d = 55 - postCarry;
+      while (d < len) {
+        const u = d/len;
+        const x = a.x + dx*u, y = a.y + dy*u;
+        const post = scene.add.rectangle(x, y, 4, 13, 0x40464b, 1)
+          .setStrokeStyle(1, 0xaab1b6, 0.7)
+          .setRotation(ang + Math.PI/2)
+          .setDepth(16.25);
+        scene.uiCam?.ignore?.(post);
+        placed.push(post);
+        d += 55;
+      }
+      postCarry = Math.max(0, len - (d - 55));
+      if (postCarry >= 55) postCarry %= 55;
+    }
+
+    // Collision follows the SAME curved polyline. Invisible circles overlap every 12px,
+    // so curves cannot be cut through and there are no rotated-box holes.
+    const physRadius = 9;
+    const physStep = 12;
+    for (let k = 1; k < curve.length; k++) {
+      const a = curve[k-1], b = curve[k];
+      const dx = b.x-a.x, dy = b.y-a.y;
+      const len = Math.hypot(dx,dy);
+      if (len < 1) continue;
+      const ang = Math.atan2(dy,dx);
+      const count = Math.max(1, Math.ceil(len/physStep));
+      for (let s = 0; s <= count; s++) {
+        const u = s/count;
+        const x = a.x + dx*u, y = a.y + dy*u;
+        const c = scene.add.circle(x, y, physRadius, 0x000000, 0);
+        scene.physics.add.existing(c, true);
+        try { c.body.setCircle(physRadius); c.body.updateFromGameObject(); } catch (_) {}
+        c.setVisible(false);
+        c._kcBarrierAngle = ang;
+        staticBodies.add(c);
+        physicsBodies.push(c);
+      }
     }
   }
 
+  // Glancing hit: preserve most along-rail velocity and reject the inward component.
   const onHit = (car, barrier) => {
     try {
       const v = car?.body?.velocity;
       if (!v) return;
-
       const a = Number(barrier?._kcBarrierAngle || 0);
       const tx = Math.cos(a), ty = Math.sin(a);
       const nx = -ty, ny = tx;
-      const tangentSpeed = v.x * tx + v.y * ty;
-      const normalSpeed = v.x * nx + v.y * ny;
-
-      const outNormal = -normalSpeed * 0.12;
-      const vx = tx * tangentSpeed * 0.88 + nx * outNormal;
-      const vy = ty * tangentSpeed * 0.88 + ny * outNormal;
-      car.setVelocity(vx, vy);
+      const tangentSpeed = v.x*tx + v.y*ty;
+      const normalSpeed = v.x*nx + v.y*ny;
+      const outNormal = -normalSpeed * 0.11;
+      car.setVelocity(
+        tx*tangentSpeed*0.90 + nx*outNormal,
+        ty*tangentSpeed*0.90 + ny*outNormal
+      );
     } catch (_) {}
   };
-  scene._kcDividerCollider = scene.physics.add.collider(scene.carBody, staticBodies, onHit, undefined, scene);
 
+  scene._kcDividerCollider = scene.physics.add.collider(scene.carBody, staticBodies, onHit, undefined, scene);
   for (const ai of scene.gridCars || []) {
-    if (ai?.body?.scene) {
-      try { scene.physics.add.collider(ai.body, staticBodies); } catch (_) {}
-    }
+    if (ai?.body?.scene) { try { scene.physics.add.collider(ai.body, staticBodies); } catch (_) {} }
   }
 
   scene._kcDividers = placed;
