@@ -43,6 +43,7 @@ const CRAFT_ASSETS={
 };
 
 const FAMILY_LABEL={engine:'MOTOR',brakes:'FRENOS',tires:'NEUMÁTICOS',suspension:'SUSPENSIÓN',transmission:'TRANSMISIÓN'};
+const FAMILIES=['engine','brakes','tires','suspension','transmission'];
 const STATS=[['speed','VELOCIDAD'],['accel','ACELERACIÓN'],['grip','AGARRE'],['control','CONTROL']];
 
 const WORKSHOP_CAR_LAYOUT={
@@ -53,10 +54,10 @@ const WORKSHOP_CAR_LAYOUT={
 export class UpgradeShopScene extends PremiumWorkshopV2 {
   create(){
     this._workshopMissing=new Set();
+    this.selectedFamily=this.selectedFamily||'engine';
     super.create();
   }
 
-  // Rediseño: el Craft Strip pasa a ser protagonista visual.
   render(){
     const {width:w,height:h}=this.scale;
     if(this.root)this.root.destroy(true);
@@ -67,34 +68,57 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     this._bg(A,w,h);
     this._header(A,w,compact);
 
-    const top=compact?51:64;
+    const top=compact?50:63;
     const pad=compact?8:12;
-    const gap=compact?9:12;
-    const bottom=compact?66:84;
+    const gap=compact?8:12;
+    const bottom=compact?58:76;
     const bodyH=h-top-bottom-pad;
 
-    const leftW=Math.round(w*.48);
+    const leftW=Math.round(w*.34);
     const left={x:pad,y:top,w:leftW-pad,h:bodyH};
     const right={x:left.x+left.w+gap,y:top,w:w-(left.x+left.w+gap)-pad,h:bodyH};
 
-    this._carPanel(A,left,compact);
-    this._craftPanel(A,right,compact);
-    this._equippedStrip(A,{x:pad,y:h-bottom,w:w-pad*2,h:bottom-pad},compact);
+    this._compactCarPanel(A,left,compact);
+    this._forgePanel(A,right,compact);
+    this._familyDock(A,{x:pad,y:h-bottom,w:w-pad*2,h:bottom-pad},compact);
   }
 
-  _carPanel(A,r,compact){
+  _compactCarPanel(A,r,compact){
     this._panel(A,r,0x2bcfff);
     const spec=CAR_SPECS[this.car]||CAR_SPECS.stock;
-    const y=r.y+(compact?10:14);
-    A(this.add.text(r.x+15,y,'COCHE ACTUAL',{fontFamily:'system-ui',fontSize:compact?'10px':'12px',fontStyle:'800',color:'#8da3ae'}));
-    A(this.add.text(r.x+15,y+(compact?17:20),spec.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'20px':'27px',fontStyle:'900 italic',color:'#fff'}));
-    A(this.add.text(r.x+r.w-15,y+2,String(spec.rarity||'COMÚN').toUpperCase(),{fontFamily:'system-ui',fontSize:compact?'10px':'12px',fontStyle:'900',color:'#ffd05a'}).setOrigin(1,0));
+    const y=r.y+(compact?9:13);
 
-    const imageH=Math.round(r.h*(compact?0.45:0.52));
-    const carR={x:r.x+10,y:r.y+(compact?53:66),w:r.w-20,h:imageH};
+    A(this.add.text(r.x+13,y,'COCHE ACTUAL',{fontFamily:'system-ui',fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8da3ae'}));
+    A(this.add.text(r.x+13,y+(compact?14:18),spec.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'17px':'23px',fontStyle:'900 italic',color:'#fff'}));
+    A(this.add.text(r.x+r.w-12,y+1,String(spec.rarity||'COMÚN').toUpperCase(),{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'900',color:'#ffd05a'}).setOrigin(1,0));
+
+    const imageH=Math.round(r.h*(compact?.43:.50));
+    const carR={x:r.x+9,y:r.y+(compact?45:57),w:r.w-18,h:imageH};
     this._platform(A,carR);
     this._carImage(A,spec,carR);
-    this._stats(A,spec,{x:r.x+14,y:carR.y+carR.h+8,w:r.w-28,h:r.y+r.h-carR.y-carR.h-16},compact);
+
+    const statsR={x:r.x+13,y:carR.y+carR.h+7,w:r.w-26,h:r.y+r.h-carR.y-carR.h-14};
+    this._miniStats(A,spec,statsR,compact);
+  }
+
+  _miniStats(A,spec,r,compact){
+    const recipe=findStripRecipe(this.slots);
+    const result=recipe?GARAGE_ITEMS[recipe.out]:null;
+    const cur=garageDisplayStats(spec,this.state,this.car,null);
+    const next=result?.kind==='part'?garageDisplayStats(spec,this.state,this.car,result.id):cur;
+    A(this.add.text(r.x,r.y,'RENDIMIENTO',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'12px',fontStyle:'900',color:'#fff'}));
+    const start=r.y+(compact?17:22);
+    const row=Math.max(compact?24:31,(r.h-(compact?18:24))/4);
+    STATS.forEach(([k,label],i)=>{
+      const y=start+i*row,v=cur[k],nv=next[k],d=nv-v;
+      A(this.add.text(r.x,y,label,{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'800',color:'#d8e4e9'}));
+      A(this.add.text(r.x+r.w,y,d?`${v}  +${d}`:`${v}`,{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'11px',fontStyle:'900',color:d?'#64ef73':'#fff'}).setOrigin(1,0));
+      const by=y+(compact?11:14),bh=compact?5:7;
+      const g=A(this.add.graphics());
+      g.fillStyle(0x14232a);g.fillRoundedRect(r.x,by,r.w,bh,bh/2);
+      g.fillStyle(0x25c6ff);g.fillRoundedRect(r.x,by,r.w*v/99,bh,bh/2);
+      if(nv>v){g.fillStyle(0x63ef70);g.fillRoundedRect(r.x+r.w*v/99,by,r.w*(nv-v)/99,bh,bh/2);}
+    });
   }
 
   _carImage(A,spec,r){
@@ -115,130 +139,146 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     if(this.loadingAssets.has(cleanKey))return;
 
     this.loadingAssets.add(cleanKey);
-    const cleanup=()=>{
-      this.loadingAssets.delete(cleanKey);
-      this.load.off(`filecomplete-image-${cleanKey}`,ok);
-      this.load.off('loaderror',err);
-    };
+    const cleanup=()=>{this.loadingAssets.delete(cleanKey);this.load.off(`filecomplete-image-${cleanKey}`,ok);this.load.off('loaderror',err);};
     const ok=()=>{cleanup();if(this.root?.scene)this.render();};
     const err=f=>{if(f?.key!==cleanKey)return;cleanup();this._workshopMissing?.add(cleanKey);if(this.root?.scene)this.render();};
-
     this.load.once(`filecomplete-image-${cleanKey}`,ok);
     this.load.on('loaderror',err);
     this.load.image(cleanKey,`${WORKSHOP_BASE}${this.car}.webp?v=20260811-5`);
     if(!this.load.isLoading())this.load.start();
   }
 
-  _craftPanel(A,r,compact){
-    this._panel(A,r,0x2dcfff);
-    A(this.add.text(r.x+16,r.y+11,'ELIGE 3 COMPONENTES',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'14px':'19px',fontStyle:'900',color:'#fff'}));
-    A(this.add.text(r.x+r.w-16,r.y+13,'CRAFT STRIP',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'12px',fontStyle:'900 italic',color:'#5edcff'}).setOrigin(1,0));
+  _forgePanel(A,r,compact){
+    this._panel(A,r,0xffb72b);
+    A(this.add.text(r.x+15,r.y+10,'FORJA CENTRAL',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'15px':'21px',fontStyle:'900 italic',color:'#fff'}));
+    A(this.add.text(r.x+r.w-15,r.y+12,'3 COMPONENTES  →  1 PIEZA',{fontFamily:'system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#ffd46b'}).setOrigin(1,0));
 
-    const sy=r.y+(compact?36:45);
-    const gap=compact?7:10;
-    const sw=(r.w-32-gap*2)/3;
-    const sh=compact?68:112;
-    for(let i=0;i<3;i++)this._slot(A,i,r.x+16+i*(sw+gap),sy,sw,sh,compact);
+    const inner={x:r.x+12,y:r.y+(compact?34:43),w:r.w-24,h:r.h-(compact?42:53)};
+    const inventoryH=compact?67:100;
+    const forgeH=inner.h-inventoryH-(compact?7:10);
+    const forge={x:inner.x,y:inner.y,w:inner.w,h:forgeH};
+    const inv={x:inner.x,y:inner.y+forgeH+(compact?7:10),w:inner.w,h:inventoryH};
 
-    const ry=sy+sh+(compact?7:10);
-    const rh=compact?70:144;
-    this._result(A,{x:r.x+16,y:ry,w:r.w-32,h:rh},compact);
-
-    const ty=ry+rh+(compact?6:9);
-    const th=compact?26:34;
-    this._tab(A,r.x+16,ty,(r.w-38)/2,th,'MATERIALES','materials',compact);
-    this._tab(A,r.x+22+(r.w-38)/2,ty,(r.w-38)/2,th,'PIEZAS','parts',compact);
-
-    const gridY=ty+th+(compact?5:8);
-    this._inventory(A,{x:r.x+14,y:gridY,w:r.w-28,h:r.y+r.h-gridY-10},compact);
+    this._forgeCore(A,forge,compact);
+    this._inventoryShelf(A,inv,compact);
   }
 
-  _slot(A,i,x,y,w,h,compact){
+  _forgeCore(A,r,compact){
+    const g=A(this.add.graphics());
+    g.fillGradientStyle(0x071116,0x0b1117,0x0c1015,0x05080b,1);g.fillRoundedRect(r.x,r.y,r.w,r.h,12);
+    g.lineStyle(1,0x2e4c57,.8);g.strokeRoundedRect(r.x,r.y,r.w,r.h,12);
+
+    const cx=r.x+r.w*.54,cy=r.y+r.h*.46;
+    const resultW=r.w*(compact?.38:.42),resultH=r.h*(compact?.58:.64);
+    const result={x:cx-resultW/2,y:cy-resultH/2,w:resultW,h:resultH};
+
+    const slotW=r.w*(compact?.20:.21),slotH=r.h*(compact?.28:.30);
+    const s0={x:r.x+r.w*.035,y:r.y+r.h*.08,w:slotW,h:slotH};
+    const s1={x:r.x+r.w*.035,y:r.y+r.h*.61,w:slotW,h:slotH};
+    const s2={x:r.x+r.w*.765,y:r.y+r.h*.34,w:slotW,h:slotH};
+
+    const line=A(this.add.graphics());
+    line.lineStyle(compact?2:3,0x3bcfff,.35);
+    [[s0,result],[s1,result],[s2,result]].forEach(([s,t])=>{
+      line.lineBetween(s.x+s.w,s.y+s.h/2,t.x,t.y+t.h/2);
+    });
+    line.fillStyle(0x3bcfff,.12);line.fillCircle(cx,cy,Math.min(resultW,resultH)*.55);
+    line.lineStyle(compact?2:3,0xc74cff,.28);line.strokeCircle(cx,cy,Math.min(resultW,resultH)*.54);
+
+    this._forgeSlot(A,0,s0,compact);
+    this._forgeSlot(A,1,s1,compact);
+    this._forgeSlot(A,2,s2,compact);
+    this._forgeResult(A,result,compact);
+  }
+
+  _forgeSlot(A,i,r,compact){
     const id=this.slots[i],item=id?GARAGE_ITEMS[id]:null;
     const g=A(this.add.graphics());
-    g.fillStyle(item?0x07151c:0x081015);g.fillRoundedRect(x,y,w,h,10);
-    g.lineStyle(item?2:1,item?(item.tone||0x2dcfff):0x2e4854,item?1:.8);g.strokeRoundedRect(x,y,w,h,10);
+    g.fillStyle(item?0x0a1920:0x091116,.98);g.fillRoundedRect(r.x,r.y,r.w,r.h,10);
+    g.lineStyle(item?2:1,item?(item.tone||0x2dcfff):0x334b55,item?1:.75);g.strokeRoundedRect(r.x,r.y,r.w,r.h,10);
 
     if(!item){
-      A(this.add.text(x+w/2,y+h/2,`+ ${i+1}`,{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'20px':'30px',fontStyle:'900',color:'#4c6874'}).setOrigin(.5));
+      A(this.add.text(r.x+r.w/2,r.y+r.h/2,`+ ${i+1}`,{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'18px':'27px',fontStyle:'900',color:'#4b6570'}).setOrigin(.5));
       return;
     }
 
-    const artSize=Math.min(w*.78,h*.62);
-    this._itemArt(A,item,x+w/2,y+h*.40,artSize);
-    A(this.add.text(x+w/2,y+h-compact?13:17,'',{fontSize:'1px'}));
-    A(this.add.text(x+w/2,y+h-(compact?10:14),item.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'12px',fontStyle:'900',color:'#fff',align:'center',wordWrap:{width:w-10}}).setOrigin(.5,1));
-    A(this.add.text(x+w-7,y+6,`×${qty(this.state,id)}`,{fontFamily:'system-ui',fontSize:compact?'9px':'11px',fontStyle:'900',color:'#fff'}).setOrigin(1,0));
-
-    const hit=A(this.add.rectangle(x,y,w,h,0x000000,.001).setOrigin(0).setInteractive({useHandCursor:true}));
-    hit.on('pointerdown',()=>{if(!this.busy){this.slots.splice(i,1);this.render();}});
+    const size=Math.min(r.w*.80,r.h*.66);
+    this._itemArt(A,item,r.x+r.w/2,r.y+r.h*.43,size);
+    A(this.add.text(r.x+r.w/2,r.y+r.h-(compact?7:10),item.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#fff',align:'center',wordWrap:{width:r.w-8}}).setOrigin(.5,1));
+    A(this.add.text(r.x+r.w-5,r.y+4,`×${qty(this.state,id)}`,{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'900',color:'#fff'}).setOrigin(1,0));
+    A(this.add.rectangle(r.x,r.y,r.w,r.h,0x000000,.001).setOrigin(0).setInteractive({useHandCursor:true})).on('pointerdown',()=>{if(!this.busy){this.slots.splice(i,1);this.render();}});
   }
 
-  _result(A,r,compact){
-    const recipe=findStripRecipe(this.slots);
-    const item=recipe?GARAGE_ITEMS[recipe.out]:null;
+  _forgeResult(A,r,compact){
+    const recipe=findStripRecipe(this.slots),item=recipe?GARAGE_ITEMS[recipe.out]:null;
     const g=A(this.add.graphics());
-    g.fillGradientStyle(item?0x160821:0x071017,0x071017,item?0x240b31:0x071017,0x05090d,1);
-    g.fillRoundedRect(r.x,r.y,r.w,r.h,11);
-    g.lineStyle(item?2:1,item?0xc74cff:0x31515f,.85);g.strokeRoundedRect(r.x,r.y,r.w,r.h,11);
+    g.fillGradientStyle(item?0x1b0926:0x0a1015,0x091016,item?0x280b34:0x081015,0x05090d,1);g.fillRoundedRect(r.x,r.y,r.w,r.h,13);
+    g.lineStyle(item?2:1,item?0xd45aff:0x38505a,.9);g.strokeRoundedRect(r.x,r.y,r.w,r.h,13);
 
     if(!item){
-      A(this.add.text(r.x+r.w/2,r.y+r.h/2,this.slots.length?'COMPLETA UNA RECETA':'SELECCIONA TRES COMPONENTES',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'12px':'17px',fontStyle:'900',color:'#718993'}).setOrigin(.5));
+      A(this.add.text(r.x+r.w/2,r.y+r.h*.42,this.slots.length?'COMPLETA\nLA RECETA':'PIEZA\nRESULTANTE',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'13px':'20px',fontStyle:'900',color:'#6e828c',align:'center'}).setOrigin(.5));
+      A(this.add.text(r.x+r.w/2,r.y+r.h*.70,`${this.slots.length}/3 COMPONENTES`,{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'900',color:'#41545c'}).setOrigin(.5));
       return;
     }
 
-    const artSize=Math.min(r.h*.78,r.w*.24);
-    this._itemArt(A,item,r.x+r.w*.15,r.y+r.h*.49,artSize);
-
-    const tx=r.x+r.w*.28;
-    A(this.add.text(tx,r.y+(compact?8:15),item.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'16px':'25px',fontStyle:'900 italic',color:'#dc59ff'}));
-    A(this.add.text(tx,r.y+(compact?29:48),`${FAMILY_LABEL[item.family]||'PIEZA'} · T${item.tier||1}`,{fontFamily:'system-ui',fontSize:compact?'9px':'12px',fontStyle:'800',color:'#dac2df'}));
+    const artSize=Math.min(r.w*.82,r.h*.50);
+    this._itemArt(A,item,r.x+r.w/2,r.y+r.h*.31,artSize);
+    A(this.add.text(r.x+r.w/2,r.y+r.h*.57,item.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'14px':'21px',fontStyle:'900 italic',color:'#e260ff',align:'center',wordWrap:{width:r.w-12}}).setOrigin(.5));
+    A(this.add.text(r.x+r.w/2,r.y+r.h*.68,`${FAMILY_LABEL[item.family]||'PIEZA'} · T${item.tier||1}`,{fontFamily:'system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#dbc4e1'}).setOrigin(.5));
 
     const spec=CAR_SPECS[this.car]||CAR_SPECS.stock;
-    const cur=garageDisplayStats(spec,this.state,this.car,null);
-    const next=garageDisplayStats(spec,this.state,this.car,item.id);
-    const changes=STATS.filter(([k])=>next[k]!==cur[k]).map(([k,l])=>`${l} +${next[k]-cur[k]}`);
-    A(this.add.text(tx,r.y+(compact?45:72),changes.slice(0,2).join('  ·  ')||'LISTA PARA EQUIPAR',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'10px':'14px',fontStyle:'900',color:'#65ef70'}));
+    const cur=garageDisplayStats(spec,this.state,this.car,null),next=garageDisplayStats(spec,this.state,this.car,item.id);
+    const changes=STATS.filter(([k])=>next[k]!==cur[k]).map(([k,l])=>`${l} +${next[k]-cur[k]}`).slice(0,2).join(' · ');
+    A(this.add.text(r.x+r.w/2,r.y+r.h*.77,changes||'LISTA PARA EQUIPAR',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#65ef70',align:'center'}).setOrigin(.5));
 
-    const bw=compact?116:170,bh=compact?29:42;
-    const bx=r.x+r.w-bw-10,by=r.y+r.h-bh-9;
-    const btn=A(this.add.rectangle(bx,by,bw,bh,0xf5bb11).setOrigin(0).setStrokeStyle(1,0xffdf58).setInteractive({useHandCursor:true}));
-    A(this.add.text(bx+bw/2,by+bh/2,'FABRICAR',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'13px':'18px',fontStyle:'900',color:'#111'}).setOrigin(.5));
+    const bw=r.w*.78,bh=compact?25:36,bx=r.x+(r.w-bw)/2,by=r.y+r.h-bh-(compact?6:9);
+    const btn=A(this.add.rectangle(bx,by,bw,bh,0xf6bb13).setOrigin(0).setStrokeStyle(1,0xffdf59).setInteractive({useHandCursor:true}));
+    A(this.add.text(bx+bw/2,by+bh/2,'FABRICAR',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'11px':'16px',fontStyle:'900',color:'#111'}).setOrigin(.5));
     btn.on('pointerdown',()=>this._craft());
   }
 
-  _inventory(A,r,compact){
-    const used={};
-    for(const id of this.slots)used[id]=(used[id]||0)+1;
-    const ids=Object.keys(GARAGE_ITEMS).filter(id=>{
+  _inventoryShelf(A,r,compact){
+    const g=A(this.add.graphics());
+    g.fillStyle(0x060d11,.98);g.fillRoundedRect(r.x,r.y,r.w,r.h,10);g.lineStyle(1,0x28404a,.85);g.strokeRoundedRect(r.x,r.y,r.w,r.h,10);
+
+    const tabW=compact?70:94,tabH=compact?20:25;
+    this._miniTab(A,r.x+7,r.y+6,tabW,tabH,'MATERIALES','materials',compact);
+    this._miniTab(A,r.x+12+tabW,r.y+6,tabW,tabH,'PIEZAS','parts',compact);
+
+    const used={};for(const id of this.slots)used[id]=(used[id]||0)+1;
+    let ids=Object.keys(GARAGE_ITEMS).filter(id=>{
       const item=GARAGE_ITEMS[id],part=item.kind==='part';
       if(this.filter==='parts'?!part:part)return false;
+      if(this.filter==='parts'&&this.selectedFamily&&item.family!==this.selectedFamily)return false;
       if(qty(this.state,id)-(used[id]||0)<=0)return false;
       return this.slots.length<3&&stripRecipeCanAccept(this.slots,id);
     });
 
-    const cols=4,gap=7;
-    const cw=(r.w-gap*3)/4;
-    const rows=Math.max(1,Math.min(2,Math.ceil(ids.length/cols)));
-    const ch=Math.max(compact?54:84,(r.h-gap*(rows-1))/rows);
+    const areaX=r.x+compact?150:205;
+    const startX=r.x+(compact?151:205);
+    const areaW=r.x+r.w-startX-7;
+    const gap=compact?5:7,cols=4,cw=(areaW-gap*(cols-1))/cols,ch=r.h-12;
 
-    ids.slice(0,8).forEach((id,i)=>{
-      const x=r.x+(i%4)*(cw+gap),y=r.y+Math.floor(i/4)*(ch+gap);
-      if(y+ch>r.y+r.h+2)return;
-      const item=GARAGE_ITEMS[id];
-      const g=A(this.add.graphics());
-      g.fillStyle(0x071218);g.fillRoundedRect(x,y,cw,ch,9);
-      g.lineStyle(1,item.tone||0x2dcfff,.66);g.strokeRoundedRect(x,y,cw,ch,9);
-      g.fillStyle(item.tone||0x2dcfff,.055);g.fillEllipse(x+cw/2,y+ch*.42,cw*.76,ch*.66);
-
-      const artSize=Math.min(cw*.67,ch*.61);
-      this._itemArt(A,item,x+cw/2,y+ch*.40,artSize);
-      A(this.add.text(x+cw/2,y+ch-(compact?9:12),item.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'8px':'11px',fontStyle:'900',color:'#fff',align:'center',wordWrap:{width:cw-8}}).setOrigin(.5,1));
-      A(this.add.text(x+cw-6,y+5,`×${qty(this.state,id)-(used[id]||0)}`,{fontFamily:'system-ui',fontSize:compact?'8px':'10px',fontStyle:'900',color:'#66e7ff'}).setOrigin(1,0));
+    ids.slice(0,4).forEach((id,i)=>{
+      const item=GARAGE_ITEMS[id],x=startX+i*(cw+gap),y=r.y+6;
+      const q=A(this.add.graphics());q.fillStyle(0x0a151a);q.fillRoundedRect(x,y,cw,ch,8);q.lineStyle(1,item.tone||0x2dcfff,.65);q.strokeRoundedRect(x,y,cw,ch,8);
+      const size=Math.min(cw*.62,ch*.60);
+      this._itemArt(A,item,x+cw*.38,y+ch*.48,size);
+      A(this.add.text(x+cw-5,y+4,`×${qty(this.state,id)-(used[id]||0)}`,{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'900',color:'#69e8ff'}).setOrigin(1,0));
+      A(this.add.text(x+cw*.72,y+ch*.52,item.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'6px':'8px',fontStyle:'900',color:'#fff',align:'center',wordWrap:{width:cw*.48}}).setOrigin(.5));
       A(this.add.rectangle(x,y,cw,ch,0x000000,.001).setOrigin(0).setInteractive({useHandCursor:true})).on('pointerdown',()=>this._select(id));
     });
 
-    if(!ids.length)A(this.add.text(r.x+r.w/2,r.y+r.h/2,this.slots.length===3?'RECETA COMPLETA':'SIN COMPONENTES COMPATIBLES',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'10px':'13px',fontStyle:'900',color:'#627985'}).setOrigin(.5));
+    if(!ids.length){
+      A(this.add.text(startX+areaW/2,r.y+r.h/2,this.slots.length===3?'RECETA COMPLETA':'SIN COMPONENTES COMPATIBLES',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'8px':'10px',fontStyle:'900',color:'#5d737c'}).setOrigin(.5));
+    }
+  }
+
+  _miniTab(A,x,y,w,h,label,key,compact){
+    const on=this.filter===key;
+    const q=A(this.add.rectangle(x,y,w,h,on?0x103444:0x0b151a).setOrigin(0).setStrokeStyle(1,on?0x36d7ff:0x31454d).setInteractive({useHandCursor:true}));
+    A(this.add.text(x+w/2,y+h/2,label,{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'6px':'8px',fontStyle:'900',color:on?'#fff':'#7d929b'}).setOrigin(.5));
+    q.on('pointerdown',()=>{if(!this.busy){this.filter=key;this.render();}});
   }
 
   _itemArt(A,item,cx,cy,size){
@@ -259,7 +299,7 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
       const err=f=>{if(f?.key!==key)return;cleanup();this.failedAssets.add(key);if(this.root?.scene)this.render();};
       this.load.once(`filecomplete-image-${key}`,ok);
       this.load.on('loaderror',err);
-      this.load.image(key,`${CRAFT_BASE}${rel}?v=20260812-3`);
+      this.load.image(key,`${CRAFT_BASE}${rel}?v=20260812-forge1`);
       if(!this.load.isLoading())this.load.start();
     }
 
@@ -269,31 +309,17 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     A(this.add.text(cx,cy,item.icon||'◆',{fontFamily:'system-ui',fontSize:`${Math.max(18,Math.round(size*.55))}px`,fontStyle:'900',color:'#fff'}).setOrigin(.5));
   }
 
-  _equippedStrip(A,r,compact){
-    const families=['engine','brakes','tires','suspension','transmission'];
+  _familyDock(A,r,compact){
     const eq=getEquippedForCar(this.state,this.car)||{};
-    const g=A(this.add.graphics());
-    g.fillStyle(0x03080b,.98);g.fillRoundedRect(r.x,r.y,r.w,r.h,9);
-    g.lineStyle(1,0x223c47,.9);g.strokeRoundedRect(r.x,r.y,r.w,r.h,9);
-    const gap=6,cw=(r.w-gap*4)/5;
+    const g=A(this.add.graphics());g.fillStyle(0x03080b,.99);g.fillRoundedRect(r.x,r.y,r.w,r.h,9);g.lineStyle(1,0x243c46,.9);g.strokeRoundedRect(r.x,r.y,r.w,r.h,9);
+    const gap=5,cw=(r.w-gap*4)/5;
 
-    families.forEach((f,i)=>{
-      const x=r.x+i*(cw+gap),item=eq[f]?GARAGE_ITEMS[eq[f]]:null;
-      const q=A(this.add.graphics());
-      q.fillStyle(item?0x0a1b21:0x081116);q.fillRoundedRect(x+2,r.y+2,cw-4,r.h-4,7);
-      q.lineStyle(1,item?(item.tone||0x2dcfff):0x2b424c,.72);q.strokeRoundedRect(x+2,r.y+2,cw-4,r.h-4,7);
-
-      if(item){
-        const artSize=Math.min(compact?42:58,r.h*.72,cw*.34);
-        this._itemArt(A,item,x+9+artSize/2,r.y+r.h/2,artSize);
-        const textX=x+artSize+18;
-        const textW=cw-artSize-25;
-        A(this.add.text(textX,r.y+(compact?10:13),FAMILY_LABEL[f],{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'11px',fontStyle:'900',color:'#fff'}));
-        A(this.add.text(textX,r.y+r.h-(compact?9:12),`${item.name} · T${item.tier}`,{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'700',color:'#66dfff',wordWrap:{width:textW}}).setOrigin(0,1));
-      }else{
-        A(this.add.text(x+cw/2,r.y+(compact?14:18),FAMILY_LABEL[f],{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'11px',fontStyle:'900',color:'#fff'}).setOrigin(.5));
-        A(this.add.text(x+cw/2,r.y+r.h-(compact?13:16),'SIN EQUIPAR',{fontFamily:'system-ui',fontSize:compact?'8px':'9px',fontStyle:'700',color:'#667a83'}).setOrigin(.5));
-      }
+    FAMILIES.forEach((f,i)=>{
+      const x=r.x+i*(cw+gap),item=eq[f]?GARAGE_ITEMS[eq[f]]:null,on=this.filter==='parts'&&this.selectedFamily===f;
+      const q=A(this.add.rectangle(x+2,r.y+2,cw-4,r.h-4,on?0x123142:0x081116).setOrigin(0).setStrokeStyle(on?2:1,on?0x36d7ff:(item?.tone||0x2b424c),on?1:.7).setInteractive({useHandCursor:true}));
+      A(this.add.text(x+cw/2,r.y+(compact?12:16),FAMILY_LABEL[f],{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'8px':'10px',fontStyle:'900',color:on?'#8eeaff':'#fff'}).setOrigin(.5));
+      A(this.add.text(x+cw/2,r.y+r.h-(compact?10:13),item?`EQUIPADA · T${item.tier}`:'SIN EQUIPAR',{fontFamily:'system-ui',fontSize:compact?'7px':'8px',fontStyle:'800',color:item?'#65dfff':'#637780'}).setOrigin(.5));
+      q.on('pointerdown',()=>{if(this.busy)return;this.selectedFamily=f;this.filter='parts';this.render();});
     });
   }
 }
