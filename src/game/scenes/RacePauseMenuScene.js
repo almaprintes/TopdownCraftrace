@@ -16,6 +16,7 @@ export class RaceScene extends CurrentRaceScene {
     this._legacyHudRoots = new Set();
     this._captureInProgress = false;
     this._captureFrozenState = null;
+    this._captureTechnicalOverlay = null;
   }
 
   _installSessionReportButton() {
@@ -27,7 +28,6 @@ export class RaceScene extends CurrentRaceScene {
     this._findAndHideLegacyHudActions();
     this._installPauseButton();
 
-    // Several HUD wrappers finish mounting slightly later on iOS.
     for (const ms of [0, 80, 200, 500, 1000]) {
       this.time?.delayedCall?.(ms, () => this._findAndHideLegacyHudActions());
     }
@@ -41,8 +41,6 @@ export class RaceScene extends CurrentRaceScene {
 
     super.update(time, delta);
 
-    // Capture generation needs the scene update/render pipeline alive, but the
-    // driver's car must remain visually and physically frozen while that happens.
     if (this._captureInProgress && this._captureFrozenState) {
       const s = this._captureFrozenState;
       const body = this.carBody || this.car;
@@ -78,7 +76,6 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _buttonRootAndTrigger(labelObj, parent) {
-    // Most legacy buttons are a Container holding a Text + an interactive Rectangle/Image.
     const root = parent || labelObj;
     const candidates = [];
     const collect = (o) => {
@@ -88,7 +85,6 @@ export class RaceScene extends CurrentRaceScene {
     };
     collect(root);
 
-    // Prefer the actual clickable surface over the text label.
     const trigger = candidates.find((o) => o !== labelObj && o.input?.enabled)
       || candidates.find((o) => o !== labelObj)
       || (labelObj.input?.enabled ? labelObj : null)
@@ -114,7 +110,6 @@ export class RaceScene extends CurrentRaceScene {
       if (kind === 'world' && !this._legacyWorldCapture) this._legacyWorldCapture = trigger;
       if (kind === 'technical' && !this._legacyTechnicalCapture) this._legacyTechnicalCapture = trigger;
 
-      // Hide the WHOLE legacy button/container, not only its text label.
       root?.setVisible?.(false);
       o?.setVisible?.(false);
     }
@@ -142,8 +137,10 @@ export class RaceScene extends CurrentRaceScene {
   _destroyPauseUi() {
     try { this._pauseButton?.remove(); } catch (_) {}
     try { this._pauseModal?.remove(); } catch (_) {}
+    try { this._captureTechnicalOverlay?.destroy?.(); } catch (_) {}
     this._pauseButton = null;
     this._pauseModal = null;
+    this._captureTechnicalOverlay = null;
   }
 
   _openPauseMenu() {
@@ -220,21 +217,95 @@ export class RaceScene extends CurrentRaceScene {
     this._findAndHideLegacyHudActions();
   }
 
-  _emitLegacyCapture(trigger) {
-    if (!trigger) return false;
-    try {
-      if (typeof trigger.emit === 'function') {
-        trigger.emit('pointerdown', null, 0, 0, { stopPropagation() {} });
-        return true;
-      }
-    } catch (_) {}
-    return false;
+  _makeTechnicalCaptureOverlay() {
+    try { this._captureTechnicalOverlay?.destroy?.(); } catch (_) {}
+    const g = this.add.graphics().setDepth(900).setScrollFactor(1);
+    this._captureTechnicalOverlay = g;
+    this.uiCam?.ignore?.(g);
+
+    const raw = this.track?.geom?.center || this.track?.meta?.centerline || [];
+    const pts = raw.map((p) => Array.isArray(p)
+      ? { x:Number(p[0]), y:Number(p[1]), width:Number(p[2] || this.track?.meta?.trackWidth || 160) }
+      : { x:Number(p?.x), y:Number(p?.y), width:Number(p?.width || this.track?.meta?.trackWidth || 160) }
+    ).filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
+
+    if (pts.length > 1) {
+      g.lineStyle(3, 0x37e6ff, 0.95);
+      g.beginPath();
+      g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+      g.lineTo(pts[0].x, pts[0].y);
+      g.strokePath();
+
+      const stride = Math.max(1, Math.floor(pts.length / 180));
+      g.fillStyle(0xffffff, 0.60);
+      for (let i = 0; i < pts.length; i += stride) g.fillCircle(pts[i].x, pts[i].y, 2.2);
+    }
+
+    const drawGate = (gate, color, width = 5) => {
+      if (!gate?.a || !gate?.b) return;
+      g.lineStyle(width, color, 0.95);
+      g.beginPath();
+      g.moveTo(Number(gate.a.x), Number(gate.a.y));
+      g.lineTo(Number(gate.b.x), Number(gate.b.y));
+      g.strokePath();
+    };
+    drawGate(this.finishLine || this.track?.meta?.finishLine || this.track?.meta?.finish, 0xffffff, 7);
+    drawGate(this.checkpoints?.cp1, 0xffd84f, 6);
+    drawGate(this.checkpoints?.cp2, 0x45ff98, 6);
+
+    const b = this.physics?.world?.bounds;
+    if (b?.width && b?.height) {
+      g.lineStyle(4, 0xff5470, 0.55);
+      g.strokeRect(Number(b.x || 0), Number(b.y || 0), Number(b.width), Number(b.height));
+    }
+    return g;
+  }
+
+  _exportSnapshotImage(image, kind) {
+    if (!image || typeof document === 'undefined') return;
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width || this.scale?.width || 1280;
+    canvas.height = image.height || this.scale?.height || 720;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const trackName = String(this.track?.meta?.name || this.trackKey || 'circuito')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'circuito';
+    const suffix = kind === 'technical' ? 'tecnico' : 'mundo';
+    const filename = `${trackName}-${suffix}.png`;
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      try {
+        if (navigator?.share && typeof File !== 'undefined') {
+          const file = new File([blob], filename, { type:'image/png' });
+          if (!navigator.canShare || navigator.canShare({ files:[file] })) {
+            await navigator.share({ files:[file], title: filename });
+            return;
+          }
+        }
+      } catch (_) {}
+
+      try {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+      } catch (_) {}
+    }, 'image/png');
   }
 
   _captureFromPause(kind) {
-    // Re-scan immediately in case a late HUD wrapper created/replaced the buttons.
-    this._findAndHideLegacyHudActions();
-    const trigger = kind === 'technical' ? this._legacyTechnicalCapture : this._legacyWorldCapture;
+    if (this._captureInProgress) return;
 
     const capturePauseStartedAt = this._pauseStartedAt || performance.now();
     const body = this.carBody || this.car;
@@ -244,19 +315,55 @@ export class RaceScene extends CurrentRaceScene {
       rotation: Number(body.rotation || 0)
     } : null;
 
+    const cam = this.cameras?.main;
+    const worldBounds = this.physics?.world?.bounds;
+    if (!cam || !worldBounds?.width || !worldBounds?.height) return;
+
+    const saved = {
+      zoom: Number(cam.zoom || 1),
+      scrollX: Number(cam.scrollX || 0),
+      scrollY: Number(cam.scrollY || 0),
+      cullEnabled: this._cullEnabled,
+      mapZoomOn: this._mapZoomOn
+    };
+
     this._closePauseMenu(false);
     const hidden = this._hideHudForCapture();
     this._captureInProgress = true;
 
-    // Critical: the legacy whole-world generator needs the scene/render pipeline alive.
-    // We resume Arcade Physics, while update() above freezes the driver's car every frame.
     try { this.physics?.world?.resume?.(); } catch (_) {}
+    try { cam.stopFollow?.(); } catch (_) {}
 
-    const finishCapture = () => {
-      const excludedMs = Math.max(0, performance.now() - capturePauseStartedAt);
-      if (excludedMs > 0 && Number.isFinite(this.timing?.lapStart)) {
-        this.timing.lapStart += excludedMs;
+    // Force every generated road cell visible before the snapshot.
+    this._cullEnabled = false;
+    this._mapZoomOn = true;
+
+    const margin = 26;
+    const vw = Math.max(1, Number(this.scale?.width || 1) - margin * 2);
+    const vh = Math.max(1, Number(this.scale?.height || 1) - margin * 2);
+    const z = Math.max(0.02, Math.min(vw / worldBounds.width, vh / worldBounds.height) * 0.98);
+    cam.setZoom(z);
+    cam.centerOn(
+      Number(worldBounds.x || 0) + Number(worldBounds.width) * 0.5,
+      Number(worldBounds.y || 0) + Number(worldBounds.height) * 0.5
+    );
+
+    if (kind === 'technical') this._makeTechnicalCaptureOverlay();
+
+    const finish = () => {
+      try { this._captureTechnicalOverlay?.destroy?.(); } catch (_) {}
+      this._captureTechnicalOverlay = null;
+
+      this._cullEnabled = saved.cullEnabled;
+      this._mapZoomOn = saved.mapZoomOn;
+      cam.setZoom(saved.zoom);
+      cam.setScroll(saved.scrollX, saved.scrollY);
+      if (body?.scene) {
+        try { cam.startFollow(body, true, 0.12, 0.12); } catch (_) {}
       }
+
+      const excludedMs = Math.max(0, performance.now() - capturePauseStartedAt);
+      if (excludedMs > 0 && Number.isFinite(this.timing?.lapStart)) this.timing.lapStart += excludedMs;
 
       this._captureInProgress = false;
       this._captureFrozenState = null;
@@ -265,19 +372,25 @@ export class RaceScene extends CurrentRaceScene {
       this._openPauseMenu();
     };
 
-    const fire = () => {
-      const fired = this._emitLegacyCapture(trigger);
-      if (!fired) {
-        console.warn('[RacePauseMenu] capture trigger not found:', kind);
-        finishCapture();
-        return;
+    const takeSnapshot = () => {
+      try {
+        const renderer = this.game?.renderer;
+        if (!renderer || typeof renderer.snapshot !== 'function') {
+          console.warn('[RacePauseMenu] renderer.snapshot unavailable');
+          finish();
+          return;
+        }
+        renderer.snapshot((image) => {
+          try { this._exportSnapshotImage(image, kind); }
+          finally { finish(); }
+        }, 'image/png', 1);
+      } catch (err) {
+        console.warn('[RacePauseMenu] native capture failed', err);
+        finish();
       }
-
-      // Give iOS enough time for the legacy whole-world camera/culling pass to complete.
-      window.setTimeout(finishCapture, 2400);
     };
 
-    // Two clean frames: pause modal gone + HUD hidden before the capture starts.
-    requestAnimationFrame(() => requestAnimationFrame(fire));
+    // Give the no-culling full-world camera several actual render frames on iOS.
+    requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(takeSnapshot)));
   }
 }
