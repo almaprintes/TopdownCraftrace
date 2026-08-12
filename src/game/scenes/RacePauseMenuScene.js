@@ -14,6 +14,8 @@ export class RaceScene extends CurrentRaceScene {
     this._legacyWorldCapture = null;
     this._legacyTechnicalCapture = null;
     this._legacyHudRoots = new Set();
+    this._captureInProgress = false;
+    this._captureFrozenState = null;
   }
 
   _installSessionReportButton() {
@@ -35,8 +37,30 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   update(time, delta) {
-    if (this._pauseMenuOpen) return;
+    if (this._pauseMenuOpen && !this._captureInProgress) return;
+
     super.update(time, delta);
+
+    // Capture generation needs the scene update/render pipeline alive, but the
+    // driver's car must remain visually and physically frozen while that happens.
+    if (this._captureInProgress && this._captureFrozenState) {
+      const s = this._captureFrozenState;
+      const body = this.carBody || this.car;
+      if (body?.scene) {
+        body.setPosition?.(s.x, s.y);
+        body.rotation = s.rotation;
+        if (body.body?.velocity) {
+          body.body.velocity.x = 0;
+          body.body.velocity.y = 0;
+        }
+        body.body?.setAngularVelocity?.(0);
+      }
+      if (this.carRig?.scene) {
+        this.carRig.x = s.x;
+        this.carRig.y = s.y;
+        this.carRig.rotation = s.rotation + (this._carVisualRotOffset || 0) + (this._visualChassisLag || 0);
+      }
+    }
   }
 
   _walkUiTree() {
@@ -199,7 +223,6 @@ export class RaceScene extends CurrentRaceScene {
   _emitLegacyCapture(trigger) {
     if (!trigger) return false;
     try {
-      // Phaser EventEmitter path used by legacy buttons.
       if (typeof trigger.emit === 'function') {
         trigger.emit('pointerdown', null, 0, 0, { stopPropagation() {} });
         return true;
@@ -213,20 +236,48 @@ export class RaceScene extends CurrentRaceScene {
     this._findAndHideLegacyHudActions();
     const trigger = kind === 'technical' ? this._legacyTechnicalCapture : this._legacyWorldCapture;
 
+    const capturePauseStartedAt = this._pauseStartedAt || performance.now();
+    const body = this.carBody || this.car;
+    this._captureFrozenState = body?.scene ? {
+      x: Number(body.x || 0),
+      y: Number(body.y || 0),
+      rotation: Number(body.rotation || 0)
+    } : null;
+
     this._closePauseMenu(false);
     const hidden = this._hideHudForCapture();
+    this._captureInProgress = true;
+
+    // Critical: the legacy whole-world generator needs the scene/render pipeline alive.
+    // We resume Arcade Physics, while update() above freezes the driver's car every frame.
+    try { this.physics?.world?.resume?.(); } catch (_) {}
+
+    const finishCapture = () => {
+      const excludedMs = Math.max(0, performance.now() - capturePauseStartedAt);
+      if (excludedMs > 0 && Number.isFinite(this.timing?.lapStart)) {
+        this.timing.lapStart += excludedMs;
+      }
+
+      this._captureInProgress = false;
+      this._captureFrozenState = null;
+      this._restoreHudAfterCapture(hidden);
+      try { this.physics?.world?.pause?.(); } catch (_) {}
+      this._openPauseMenu();
+    };
 
     const fire = () => {
       const fired = this._emitLegacyCapture(trigger);
-      if (!fired) console.warn('[RacePauseMenu] capture trigger not found:', kind);
+      if (!fired) {
+        console.warn('[RacePauseMenu] capture trigger not found:', kind);
+        finishCapture();
+        return;
+      }
 
-      window.setTimeout(() => {
-        this._restoreHudAfterCapture(hidden);
-        try { this.physics?.world?.pause?.(); } catch (_) {}
-        this._openPauseMenu();
-      }, 1300);
+      // Give iOS enough time for the legacy whole-world camera/culling pass to complete.
+      window.setTimeout(finishCapture, 2400);
     };
 
+    // Two clean frames: pause modal gone + HUD hidden before the capture starts.
     requestAnimationFrame(() => requestAnimationFrame(fire));
   }
 }
