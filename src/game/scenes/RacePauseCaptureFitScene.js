@@ -4,20 +4,11 @@ export class RaceScene extends PauseRaceScene {
   constructor() {
     super();
     this._captureCameraLock = null;
+    this._capturePhotoCamera = null;
   }
 
   update(time, delta) {
     super.update(time, delta);
-
-    const lock = this._captureCameraLock;
-    const cam = this.cameras?.main;
-    if (lock && cam) {
-      // Ancestor camera wrappers may update zoom/centering every frame.
-      // Re-assert the exact capture view after the full inherited update chain.
-      cam.stopFollow?.();
-      cam.setZoom(lock.zoom);
-      cam.setScroll(lock.scrollX, lock.scrollY);
-    }
   }
 
   _captureBoundsFromTrack() {
@@ -44,8 +35,7 @@ export class RaceScene extends PauseRaceScene {
       maxHalf = Math.max(maxHalf, Number(p.width || fallbackW) * 0.5);
     }
 
-    // Include shoulder, kerbs and nearby environment/sponsor boards.
-    const pad = Math.max(130, maxHalf + 90);
+    const pad = Math.max(150, maxHalf + 110);
     return {
       x: minX - pad,
       y: minY - pad,
@@ -65,14 +55,13 @@ export class RaceScene extends PauseRaceScene {
       rotation: Number(body.rotation || 0)
     } : null;
 
-    const cam = this.cameras?.main;
+    const main = this.cameras?.main;
     const bounds = this._captureBoundsFromTrack();
-    if (!cam || !bounds?.width || !bounds?.height) return;
+    if (!main || !bounds?.width || !bounds?.height) return;
 
     const saved = {
-      zoom: Number(cam.zoom || 1),
-      scrollX: Number(cam.scrollX || 0),
-      scrollY: Number(cam.scrollY || 0),
+      mainVisible: main.visible !== false,
+      uiVisible: this.uiCam?.visible !== false,
       cullEnabled: this._cullEnabled,
       mapZoomOn: this._mapZoomOn
     };
@@ -82,43 +71,49 @@ export class RaceScene extends PauseRaceScene {
     this._captureInProgress = true;
 
     try { this.physics?.world?.resume?.(); } catch (_) {}
-    try { cam.stopFollow?.(); } catch (_) {}
-
     this._cullEnabled = false;
     this._mapZoomOn = true;
 
-    const screenW = Math.max(1, Number(cam.width || this.scale?.width || 1));
-    const screenH = Math.max(1, Number(cam.height || this.scale?.height || 1));
+    if (kind === 'technical') this._makeTechnicalCaptureOverlay?.();
+
+    const screenW = Math.max(1, Number(this.scale?.width || main.width || 1));
+    const screenH = Math.max(1, Number(this.scale?.height || main.height || 1));
     const marginPx = 24;
     const usableW = Math.max(1, screenW - marginPx * 2);
     const usableH = Math.max(1, screenH - marginPx * 2);
-    const zoom = Math.max(0.015, Math.min(usableW / bounds.width, usableH / bounds.height));
-
+    const zoom = Math.max(0.01, Math.min(usableW / bounds.width, usableH / bounds.height));
     const cx = bounds.x + bounds.width * 0.5;
     const cy = bounds.y + bounds.height * 0.5;
-    const viewWorldW = screenW / zoom;
-    const viewWorldH = screenH / zoom;
-    const scrollX = cx - viewWorldW * 0.5;
-    const scrollY = cy - viewWorldH * 0.5;
 
-    this._captureCameraLock = { zoom, scrollX, scrollY };
-    cam.setZoom(zoom);
-    cam.setScroll(scrollX, scrollY);
+    let photoCam = null;
+    try {
+      photoCam = this.cameras.add(0, 0, screenW, screenH, false, 'pause-photo');
+      this._capturePhotoCamera = photoCam;
+      photoCam.setZoom(zoom);
+      photoCam.centerOn(cx, cy);
+      photoCam.roundPixels = false;
+      photoCam.setVisible(true);
 
-    if (kind === 'technical') this._makeTechnicalCaptureOverlay?.();
+      // The gameplay camera and the disabled iOS UI camera must not contribute to the snapshot.
+      main.setVisible(false);
+      this.uiCam?.setVisible?.(false);
+    } catch (err) {
+      console.warn('[RacePauseCaptureFit] photo camera setup failed', err);
+    }
 
     const finish = () => {
       try { this._captureTechnicalOverlay?.destroy?.(); } catch (_) {}
       this._captureTechnicalOverlay = null;
-      this._captureCameraLock = null;
 
+      try {
+        if (photoCam) this.cameras.remove(photoCam);
+      } catch (_) {}
+      this._capturePhotoCamera = null;
+
+      main.setVisible(saved.mainVisible);
+      this.uiCam?.setVisible?.(saved.uiVisible);
       this._cullEnabled = saved.cullEnabled;
       this._mapZoomOn = saved.mapZoomOn;
-      cam.setZoom(saved.zoom);
-      cam.setScroll(saved.scrollX, saved.scrollY);
-      if (body?.scene) {
-        try { cam.startFollow(body, true, 0.12, 0.12); } catch (_) {}
-      }
 
       const excludedMs = Math.max(0, performance.now() - capturePauseStartedAt);
       if (excludedMs > 0 && Number.isFinite(this.timing?.lapStart)) this.timing.lapStart += excludedMs;
@@ -133,8 +128,8 @@ export class RaceScene extends PauseRaceScene {
     const takeSnapshot = () => {
       try {
         const renderer = this.game?.renderer;
-        if (!renderer || typeof renderer.snapshot !== 'function') {
-          console.warn('[RacePauseCaptureFit] renderer.snapshot unavailable');
+        if (!renderer || typeof renderer.snapshot !== 'function' || !photoCam) {
+          console.warn('[RacePauseCaptureFit] renderer.snapshot/photoCam unavailable');
           finish();
           return;
         }
@@ -148,11 +143,14 @@ export class RaceScene extends PauseRaceScene {
       }
     };
 
-    // Let culling rebuild all cells and camera lock win over all inherited updates.
+    // First frame rebuilds all road cells with culling disabled; the next frames
+    // render only the dedicated photo camera. Nothing in the race update chain controls it.
     requestAnimationFrame(() =>
       requestAnimationFrame(() =>
         requestAnimationFrame(() =>
-          requestAnimationFrame(takeSnapshot)
+          requestAnimationFrame(() =>
+            requestAnimationFrame(takeSnapshot)
+          )
         )
       )
     );
