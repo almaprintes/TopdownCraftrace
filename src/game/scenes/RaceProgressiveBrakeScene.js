@@ -8,9 +8,8 @@ function smoothstep01(t) {
 
 // Progressive brake layer.
 // Keeps steering, coasting and off-track physics untouched.
-// The base scene still performs its normal brake calculation; this layer restores
-// part of that longitudinal impulse so braking builds progressively instead of
-// behaving like an on/off switch.
+// During forward braking we control TOTAL longitudinal deceleration, compensating
+// the base brake + passive drag so they cannot stack into an unrealistically hard stop.
 //
 // Reverse gate:
 // - if a brake press starts while the car is moving forward, that whole press is
@@ -68,31 +67,31 @@ export class RaceScene extends CurrentRaceScene {
     const fy = Math.sin(rot);
 
     // ---------------------------------------------------------
-    // 1) Progressive forward braking
+    // 1) Progressive forward braking, TOTAL decel controlled
     // ---------------------------------------------------------
-    if (brakePressed && fwdBefore > 12) {
+    if (brakePressed && fwdBefore > 2) {
       const brakeForce = Math.max(0, Number(this.brakeForce || 0));
       if (brakeForce > 0) {
-        // Pedal-pressure build-up:
-        // quick taps = gentle speed trim;
-        // sustained braking = progressively stronger, but still much less abrupt
-        // than the old full-force brake.
-        const build = smoothstep01(this._brakeHoldSec / 1.8);
-        const desiredStrength = 0.12 + (0.30 * build); // 12% -> 42%
+        // Much softer pedal curve than before.
+        // A tap trims speed; sustained pressure grows over ~2.2 s.
+        const build = smoothstep01(this._brakeHoldSec / 2.2);
+        const desiredStrength = 0.08 + (0.14 * build); // 8% -> 22%
 
-        // The base physics already applied 100% brakeForce. Restore the excess impulse
-        // along the car's forward axis, leaving lateral grip/steering calculations intact.
-        const restoreImpulse = brakeForce * (1 - desiredStrength) * dt;
+        // Target longitudinal speed for THIS frame. This is the crucial change:
+        // instead of merely undoing part of brakeForce, we undo any EXTRA loss caused
+        // by base brake + linear drag, so their effects cannot stack.
+        const desiredLoss = brakeForce * desiredStrength * dt;
+        const targetFwd = Math.max(0, fwdBefore - desiredLoss);
 
-        // Never restore enough to accelerate past the pre-brake longitudinal speed.
         const vx = Number(body.body.velocity.x || 0);
         const vy = Number(body.body.velocity.y || 0);
         const fwdAfter = vx * fx + vy * fy;
-        const maxRestore = Math.max(0, fwdBefore - fwdAfter);
-        const restore = Math.min(restoreImpulse, maxRestore);
 
-        body.body.velocity.x += fx * restore;
-        body.body.velocity.y += fy * restore;
+        if (fwdAfter < targetFwd) {
+          const restore = targetFwd - fwdAfter;
+          body.body.velocity.x += fx * restore;
+          body.body.velocity.y += fy * restore;
+        }
       }
     }
 
