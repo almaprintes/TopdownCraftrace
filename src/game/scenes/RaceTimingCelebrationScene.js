@@ -2,8 +2,8 @@ import { RaceScene as TimingRaceScene } from './RaceWideCameraPreviewScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 
 // Capa de celebración premium para récords.
-// El banner se dibuja como HUD fijo en la cámara principal y tapa temporalmente
-// solo el cronómetro, manteniendo libre la zona de conducción.
+// El banner se mantiene anclado a la pantalla en cada frame mientras exista,
+// tapa temporalmente solo el cronómetro y deja libre la zona de conducción.
 export class RaceScene extends TimingRaceScene {
   _destroyTimingBanner() {
     if (this._timingBannerTimer) {
@@ -14,6 +14,8 @@ export class RaceScene extends TimingRaceScene {
       try { this._timingBanner.destroy(true); } catch (_) {}
     }
     this._timingBanner = null;
+    this._timingBannerScreenY = null;
+    this._pinTimingBanner = null;
     this._restoreTimingHudAfterBanner();
   }
 
@@ -28,6 +30,14 @@ export class RaceScene extends TimingRaceScene {
     const hud = this.competitionHud;
     if (hud?.scene && this._timingHudWasVisible !== false) hud.setVisible(true);
     this._timingHudWasVisible = null;
+  }
+
+  update(time, delta) {
+    super.update(time, delta);
+    // Mientras el banner existe, su posición se recalcula cada frame a partir
+    // de coordenadas de pantalla. Así nunca queda pegado al mundo aunque la
+    // cámara siga al coche o cambie de zoom durante la celebración.
+    this._pinTimingBanner?.();
   }
 
   _showTimingAchievement({ carBest, circuitRecord }, lapMs) {
@@ -49,16 +59,13 @@ export class RaceScene extends TimingRaceScene {
     const softTone = isRecord ? '#C8A84B' : '#4DBFA9';
     const carName = String(CAR_SPECS[this._recordCarId]?.name || this._recordCarId || 'COCHE').toUpperCase();
 
-    // El HUD de esta carrera vive en coordenadas de mundo ancladas a la cámara principal.
-    // Convertimos la posición de pantalla a mundo y compensamos el zoom para que el banner
-    // permanezca exactamente arriba aunque la cámara haga zoom o siga al coche.
     const zoom = Math.max(0.001, Number(cam?.zoom || 1));
     const startWorld = cam?.getWorldPoint ? cam.getWorldPoint(screenX, screenStartY) : { x:screenX, y:screenStartY };
-    const targetWorld = cam?.getWorldPoint ? cam.getWorldPoint(screenX, screenTargetY) : { x:screenX, y:screenTargetY };
 
     const c = this.add.container(startWorld.x, startWorld.y).setDepth(100500);
     c.setScale(1 / zoom);
     this._timingBanner = c;
+    this._timingBannerScreenY = screenStartY;
 
     const shell = this.add.graphics();
     shell.fillStyle(0x02070b, 0.96);
@@ -119,20 +126,20 @@ export class RaceScene extends TimingRaceScene {
     c.add(flash);
     this.tweens.add({targets:flash,alpha:{from:0,to:.72},duration:220,yoyo:true,hold:80});
 
-    // El banner debe verse en la cámara principal, pero no duplicarse en uiCam.
+    // Visible en la cámara principal; uiCam lo ignora para evitar duplicado.
     try { this.uiCam?.ignore?.(c); } catch (_) {}
 
-    // Reanclado continuo durante la celebración para que el movimiento/zoom de cámara
-    // no desplace el banner respecto a la pantalla.
-    const pin = (screenY) => {
-      if (!c?.scene || !cam) return;
+    this._pinTimingBanner = () => {
+      if (!c?.scene || !cam || !Number.isFinite(this._timingBannerScreenY)) return;
       const z = Math.max(0.001, Number(cam.zoom || 1));
-      const wp = cam.getWorldPoint(screenX, screenY);
+      const wp = cam.getWorldPoint(screenX, this._timingBannerScreenY);
       c.setPosition(wp.x, wp.y);
       c.setScale(1 / z);
     };
 
+    this._pinTimingBanner();
     c.setAlpha(0.98);
+
     this.tweens.addCounter({
       from:0,
       to:1,
@@ -140,10 +147,12 @@ export class RaceScene extends TimingRaceScene {
       ease:'Back.Out',
       onUpdate:(tw)=>{
         const t=tw.getValue();
-        pin(screenStartY + (screenTargetY-screenStartY)*t);
+        this._timingBannerScreenY = screenStartY + (screenTargetY-screenStartY)*t;
+        this._pinTimingBanner?.();
       },
       onComplete:()=>{
-        pin(screenTargetY);
+        this._timingBannerScreenY = screenTargetY;
+        this._pinTimingBanner?.();
         this._timingBannerTimer = this.time.delayedCall(isRecord ? 2550 : 2100, () => {
           if (!c?.scene) return this._restoreTimingHudAfterBanner();
           this.tweens.addCounter({
@@ -153,13 +162,16 @@ export class RaceScene extends TimingRaceScene {
             ease:'Quad.In',
             onUpdate:(tw)=>{
               const t=tw.getValue();
-              pin(screenTargetY + (-bannerH-16-screenTargetY)*t);
+              this._timingBannerScreenY = screenTargetY + (-bannerH-16-screenTargetY)*t;
               c.setAlpha(0.98*(1-t));
+              this._pinTimingBanner?.();
             },
             onComplete:()=>{
               if (c?.scene) c.destroy(true);
               if (this._timingBanner === c) this._timingBanner = null;
               this._timingBannerTimer = null;
+              this._timingBannerScreenY = null;
+              this._pinTimingBanner = null;
               this._restoreTimingHudAfterBanner();
             }
           });
