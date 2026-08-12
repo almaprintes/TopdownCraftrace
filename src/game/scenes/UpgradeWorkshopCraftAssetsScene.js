@@ -54,11 +54,11 @@ function assetPath(item){
   if(!item) return null;
   if(item.kind === 'material'){
     const file = MATERIAL_FILES[item.id];
-    return file ? `${CRAFT_BASE}materials/${file}?v=20260812-1` : null;
+    return file ? `${CRAFT_BASE}materials/${file}?v=20260812-2` : null;
   }
   if(item.kind === 'part'){
     const file = PART_FILES[item.id];
-    return file ? `${CRAFT_BASE}parts/${item.family}/${file}?v=20260812-1` : null;
+    return file ? `${CRAFT_BASE}parts/${item.family}/${file}?v=20260812-2` : null;
   }
   return null;
 }
@@ -78,8 +78,9 @@ export class UpgradeShopScene extends PremiumWorkshopV3 {
     };
 
     if(apply()) return;
+    if(this.failedAssets.has(key)) return super._itemArt(A,item,cx,cy,size);
 
-    if(!this.failedAssets.has(key) && !this.loadingAssets.has(key)){
+    if(!this.loadingAssets.has(key)){
       this.loadingAssets.add(key);
       const cleanup = () => {
         this.loadingAssets.delete(key);
@@ -102,7 +103,6 @@ export class UpgradeShopScene extends PremiumWorkshopV3 {
       if(!this.load.isLoading()) this.load.start();
     }
 
-    // Placeholder limpio mientras carga el WebP.
     const g = A(this.add.graphics());
     g.fillStyle(item.tone||0x2dcfff,.10);
     g.fillCircle(cx,cy,size*.48);
