@@ -11,7 +11,8 @@ function wrapPi(a) {
 // IMPORTANT: does not modify carBody position, rotation, velocity or steering input.
 // The physical controller remains exactly the existing one. Only carRig receives:
 // 1) a small forward offset during yaw so the apparent pivot moves rearward,
-// 2) a tiny angular lag so the chassis has visible weight without changing control.
+// 2) a tiny speed/load-dependent angular lag so the chassis has visible weight
+//    without changing how the car responds to the steering stick.
 export class RaceScene extends CurrentRaceScene {
   constructor() {
     super();
@@ -44,11 +45,16 @@ export class RaceScene extends CurrentRaceScene {
     const speed = Math.hypot(vx, vy);
 
     // ---------------------------------------------------------
-    // 1) Pivote visual trasero (versión que ya mejoró el tacto)
+    // 1) Pivote visual trasero
     // ---------------------------------------------------------
     const turnStrength = clamp((yawRate - 0.08) / 2.5, 0, 1);
     const speedBlend = clamp(speed / 120, 0, 1);
-    const maxOffset = clamp(this._visualCarLength() * 0.085, 7, 12);
+
+    // Un poco más de barrido solo a alta velocidad/carga. En curva lenta
+    // conserva prácticamente el ajuste anterior para no perjudicar precisión.
+    const highSpeedLoad = clamp((speed - 155) / 260, 0, 1) * clamp((yawRate - 0.45) / 2.4, 0, 1);
+    const baseMaxOffset = clamp(this._visualCarLength() * 0.085, 7, 12);
+    const maxOffset = baseMaxOffset * (1 + 0.16 * highSpeedLoad);
     const targetOffset = maxOffset * turnStrength * speedBlend;
 
     const pivotFollow = 1 - Math.exp(-13 * dt);
@@ -56,19 +62,22 @@ export class RaceScene extends CurrentRaceScene {
     if (Math.abs(this._visualPivotOffset) < 0.02) this._visualPivotOffset = 0;
 
     // ---------------------------------------------------------
-    // 2) Micro-inercia visual del chasis
+    // 2) Micro-inercia visual del chasis, dependiente de velocidad
     // ---------------------------------------------------------
-    // El sprite se queda una fracción de grado "por detrás" del giro físico.
-    // Máximo aprox. 2 grados: suficiente para sugerir masa, demasiado pequeño
-    // para que parezca que el coche deja de obedecer a la palanca.
-    const lagSpeedBlend = clamp((speed - 45) / 180, 0, 1);
-    const lagTurnBlend = clamp((yawRate - 0.18) / 2.8, 0, 1);
-    const maxLag = 2.0 * Math.PI / 180;
+    // En baja velocidad el tope se mantiene cerca de 1.5–2º. Solo cuando la
+    // velocidad y el yaw real son altos sube progresivamente hasta ~3º.
+    const lagSpeedBlend = clamp((speed - 55) / 235, 0, 1);
+    const lagTurnBlend = clamp((yawRate - 0.16) / 2.75, 0, 1);
+    const fastCornerBlend = clamp((speed - 180) / 260, 0, 1) * clamp((yawRate - 0.55) / 2.1, 0, 1);
+
+    const baseLagDeg = 1.85;
+    const extraLagDeg = 1.15 * fastCornerBlend;
+    const maxLag = (baseLagDeg + extraLagDeg) * Math.PI / 180;
     const targetLag = -Math.sign(signedYawRate || 0) * maxLag * lagSpeedBlend * lagTurnBlend;
 
-    // Entra con suavidad, pero vuelve a cero más rápido al enderezar para que
-    // nunca quede una sensación gomosa o de retraso en el control.
-    const lagFollowRate = Math.abs(targetLag) > Math.abs(this._visualChassisLag) ? 11 : 18;
+    // Algo más asentado en curva rápida, pero recupera muy deprisa al enderezar.
+    const enteringFastCorner = fastCornerBlend > 0.15 && Math.abs(targetLag) > Math.abs(this._visualChassisLag);
+    const lagFollowRate = enteringFastCorner ? 9.5 : (Math.abs(targetLag) > Math.abs(this._visualChassisLag) ? 11.5 : 20);
     const lagFollow = 1 - Math.exp(-lagFollowRate * dt);
     this._visualChassisLag += (targetLag - this._visualChassisLag) * lagFollow;
     if (Math.abs(this._visualChassisLag) < 0.00025) this._visualChassisLag = 0;
