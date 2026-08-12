@@ -2,8 +2,8 @@ import { RaceScene as TimingRaceScene } from './RaceWideCameraPreviewScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 
 // Capa de celebración premium para récords.
-// Sustituye el aviso textual heredado por un banner superior temporal,
-// manteniendo completamente libre la zona de conducción.
+// El banner se dibuja como HUD fijo en la cámara principal y tapa temporalmente
+// solo el cronómetro, manteniendo libre la zona de conducción.
 export class RaceScene extends TimingRaceScene {
   _destroyTimingBanner() {
     if (this._timingBannerTimer) {
@@ -36,28 +36,35 @@ export class RaceScene extends TimingRaceScene {
     this._destroyTimingBanner();
     this._hideTimingHudForBanner();
 
+    const cam = this.cameras?.main;
     const w = Math.max(320, Number(this.scale?.width || 0));
     const isRecord = !!circuitRecord;
     const bannerW = Math.min(w - 20, Math.max(430, w * 0.72));
     const bannerH = isRecord ? 86 : 76;
-    const x = w / 2;
-    const startY = -bannerH - 12;
-    const targetY = 8;
+    const screenX = w / 2;
+    const screenStartY = -bannerH - 12;
+    const screenTargetY = 8;
     const tone = isRecord ? 0xffd85c : 0x57f0cf;
     const toneText = isRecord ? '#FFE48A' : '#72F7DA';
     const softTone = isRecord ? '#C8A84B' : '#4DBFA9';
     const carName = String(CAR_SPECS[this._recordCarId]?.name || this._recordCarId || 'COCHE').toUpperCase();
 
-    const c = this.add.container(x, startY).setDepth(100500).setScrollFactor(0);
+    // El HUD de esta carrera vive en coordenadas de mundo ancladas a la cámara principal.
+    // Convertimos la posición de pantalla a mundo y compensamos el zoom para que el banner
+    // permanezca exactamente arriba aunque la cámara haga zoom o siga al coche.
+    const zoom = Math.max(0.001, Number(cam?.zoom || 1));
+    const startWorld = cam?.getWorldPoint ? cam.getWorldPoint(screenX, screenStartY) : { x:screenX, y:screenStartY };
+    const targetWorld = cam?.getWorldPoint ? cam.getWorldPoint(screenX, screenTargetY) : { x:screenX, y:screenTargetY };
+
+    const c = this.add.container(startWorld.x, startWorld.y).setDepth(100500);
+    c.setScale(1 / zoom);
     this._timingBanner = c;
 
     const shell = this.add.graphics();
-    shell.fillStyle(0x02070b, 0.94);
+    shell.fillStyle(0x02070b, 0.96);
     shell.fillRoundedRect(-bannerW / 2, 0, bannerW, bannerH, 13);
     shell.lineStyle(1.5, tone, 0.95);
     shell.strokeRoundedRect(-bannerW / 2, 0, bannerW, bannerH, 13);
-
-    // Borde interior y reflejo técnico muy sutil.
     shell.lineStyle(1, tone, 0.18);
     shell.strokeRoundedRect(-bannerW / 2 + 6, 6, bannerW - 12, bannerH - 12, 9);
     shell.fillStyle(tone, isRecord ? 0.10 : 0.07);
@@ -89,7 +96,6 @@ export class RaceScene extends TimingRaceScene {
 
     c.add([shell, accentL, accentR, eyebrow, title, detail]);
 
-    // Partículas elegantes contenidas dentro del banner, más abundantes en récord absoluto.
     const particleCount = isRecord ? 22 : 10;
     for (let i = 0; i < particleCount; i++) {
       const px = -bannerW * 0.42 + Math.random() * bannerW * 0.84;
@@ -109,27 +115,47 @@ export class RaceScene extends TimingRaceScene {
       });
     }
 
-    // Destello horizontal corto al entrar.
     const flash = this.add.rectangle(-bannerW * 0.34, bannerH - 7, bannerW * 0.68, 1, tone, 0).setOrigin(0,.5);
     c.add(flash);
     this.tweens.add({targets:flash,alpha:{from:0,to:.72},duration:220,yoyo:true,hold:80});
 
-    // Entrada/salida suave. El banner queda arriba y no invade la pista.
+    // El banner debe verse en la cámara principal, pero no duplicarse en uiCam.
+    try { this.uiCam?.ignore?.(c); } catch (_) {}
+
+    // Reanclado continuo durante la celebración para que el movimiento/zoom de cámara
+    // no desplace el banner respecto a la pantalla.
+    const pin = (screenY) => {
+      if (!c?.scene || !cam) return;
+      const z = Math.max(0.001, Number(cam.zoom || 1));
+      const wp = cam.getWorldPoint(screenX, screenY);
+      c.setPosition(wp.x, wp.y);
+      c.setScale(1 / z);
+    };
+
     c.setAlpha(0.98);
-    this.tweens.add({
-      targets:c,
-      y:targetY,
+    this.tweens.addCounter({
+      from:0,
+      to:1,
       duration:330,
       ease:'Back.Out',
+      onUpdate:(tw)=>{
+        const t=tw.getValue();
+        pin(screenStartY + (screenTargetY-screenStartY)*t);
+      },
       onComplete:()=>{
+        pin(screenTargetY);
         this._timingBannerTimer = this.time.delayedCall(isRecord ? 2550 : 2100, () => {
           if (!c?.scene) return this._restoreTimingHudAfterBanner();
-          this.tweens.add({
-            targets:c,
-            y:-bannerH-16,
-            alpha:0,
+          this.tweens.addCounter({
+            from:0,
+            to:1,
             duration:300,
             ease:'Quad.In',
+            onUpdate:(tw)=>{
+              const t=tw.getValue();
+              pin(screenTargetY + (-bannerH-16-screenTargetY)*t);
+              c.setAlpha(0.98*(1-t));
+            },
             onComplete:()=>{
               if (c?.scene) c.destroy(true);
               if (this._timingBanner === c) this._timingBanner = null;
@@ -140,9 +166,5 @@ export class RaceScene extends TimingRaceScene {
         });
       }
     });
-
-    // Misma estrategia de cámara que los avisos de carrera existentes.
-    try { this.cameras.main.ignore(c); } catch (_) {}
-    try { this.uiCam?.removeFromRenderList?.(c); } catch (_) {}
   }
 }
