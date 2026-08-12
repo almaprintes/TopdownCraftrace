@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceCoastInertiaScene.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
 
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 function smoothstep01(t) {
@@ -11,6 +12,12 @@ function smoothstep01(t) {
 // During forward braking we control TOTAL longitudinal deceleration, compensating
 // the base brake + passive drag so they cannot stack into an unrealistically hard stop.
 //
+// Vehicle mass:
+// - FORGE Colossus (4200 kg) is the braking reference and keeps the current feel exactly;
+// - lighter cars get progressively more deceleration from the same pedal pressure;
+// - the relationship is intentionally softened (fourth-root) so mass matters without
+//   making lightweight cars stop unrealistically short.
+//
 // Reverse gate:
 // - if a brake press starts while the car is moving forward, that whole press is
 //   BRAKE ONLY and cannot engage reverse, even after speed reaches zero;
@@ -21,6 +28,13 @@ export class RaceScene extends CurrentRaceScene {
     this._brakeHoldSec = 0;
     this._brakeWasPressed = false;
     this._brakeCycleForwardLock = false;
+  }
+
+  _massBrakeFactor() {
+    const spec = CAR_SPECS[this.carId] || CAR_SPECS.stock || {};
+    const massKg = Math.max(500, Number(spec.massKg || 4200));
+    const colossusMassKg = 4200;
+    return clamp(Math.pow(colossusMassKg / massKg, 0.25), 1.0, 1.50);
   }
 
   update(time, delta) {
@@ -72,10 +86,10 @@ export class RaceScene extends CurrentRaceScene {
     if (brakePressed && fwdBefore > 2) {
       const brakeForce = Math.max(0, Number(this.brakeForce || 0));
       if (brakeForce > 0) {
-        // Much softer pedal curve than before.
-        // A tap trims speed; sustained pressure grows over ~2.2 s.
+        // Same pedal build-up that felt right on Colossus.
         const build = smoothstep01(this._brakeHoldSec / 2.2);
-        const desiredStrength = 0.08 + (0.14 * build); // 8% -> 22%
+        const baseStrength = 0.08 + (0.14 * build); // Colossus: 8% -> 22%
+        const desiredStrength = baseStrength * this._massBrakeFactor();
 
         // Target longitudinal speed for THIS frame. This is the crucial change:
         // instead of merely undoing part of brakeForce, we undo any EXTRA loss caused
