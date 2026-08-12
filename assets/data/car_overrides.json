@@ -1,5 +1,24 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-02-22T00:00:00Z",
-  "cars": {}
+  "updated_at": "2026-08-12T21:40:00Z",
+  "cars": {
+    "stock": { "massKg": 980 },
+    "touring": { "massKg": 1280 },
+    "power": { "massKg": 1180 },
+    "helix_spark": { "massKg": 920 },
+    "helix_comet": { "massKg": 1040 },
+    "helix_pulse": { "massKg": 980 },
+    "crown_axis": { "massKg": 1120 },
+    "crown_vector": { "massKg": 900 },
+    "crown_equinox": { "massKg": 1180 },
+    "avenir_gripline": { "massKg": 1020 },
+    "avenir_apex": { "massKg": 960 },
+    "avenir_torque": { "massKg": 1080 },
+    "veloce_flash": { "massKg": 940 },
+    "veloce_surge": { "massKg": 900 },
+    "veloce_photon": { "massKg": 860 },
+    "forge_hammer": { "massKg": 2100 },
+    "forge_anvil": { "massKg": 2600 },
+    "forge_colossus": { "massKg": 4200 }
+  }
 }
