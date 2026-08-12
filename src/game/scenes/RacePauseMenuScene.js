@@ -13,10 +13,9 @@ export class RaceScene extends CurrentRaceScene {
     this._pauseStartedAt = 0;
     this._legacyWorldCapture = null;
     this._legacyTechnicalCapture = null;
+    this._legacyHudRoots = new Set();
   }
 
-  // RaceSessionReportScene calls this from create(). We keep the report itself,
-  // but remove its permanent FIN SESIÓN pill from the driving HUD.
   _installSessionReportButton() {
     this._sessionReportButton = null;
   }
@@ -26,9 +25,10 @@ export class RaceScene extends CurrentRaceScene {
     this._findAndHideLegacyHudActions();
     this._installPauseButton();
 
-    // Some inherited wrappers create UI at the end of the same tick.
-    this.time?.delayedCall?.(0, () => this._findAndHideLegacyHudActions());
-    this.time?.delayedCall?.(120, () => this._findAndHideLegacyHudActions());
+    // Several HUD wrappers finish mounting slightly later on iOS.
+    for (const ms of [0, 80, 200, 500, 1000]) {
+      this.time?.delayedCall?.(ms, () => this._findAndHideLegacyHudActions());
+    }
 
     this.events.once('shutdown', () => this._destroyPauseUi());
     this.events.once('destroy', () => this._destroyPauseUi());
@@ -39,20 +39,60 @@ export class RaceScene extends CurrentRaceScene {
     super.update(time, delta);
   }
 
+  _walkUiTree() {
+    const out = [];
+    const seen = new Set();
+    const walk = (o, parent = null) => {
+      if (!o || seen.has(o)) return;
+      seen.add(o);
+      out.push({ o, parent });
+      const list = Array.isArray(o.list) ? o.list : null;
+      if (list) for (const child of list) walk(child, o);
+    };
+    for (const root of (this.children?.list || [])) walk(root, null);
+    return out;
+  }
+
+  _buttonRootAndTrigger(labelObj, parent) {
+    // Most legacy buttons are a Container holding a Text + an interactive Rectangle/Image.
+    const root = parent || labelObj;
+    const candidates = [];
+    const collect = (o) => {
+      if (!o) return;
+      if (o.input?.enabled || o.input?.hitArea || o.listenerCount?.('pointerdown') > 0) candidates.push(o);
+      if (Array.isArray(o.list)) for (const child of o.list) collect(child);
+    };
+    collect(root);
+
+    // Prefer the actual clickable surface over the text label.
+    const trigger = candidates.find((o) => o !== labelObj && o.input?.enabled)
+      || candidates.find((o) => o !== labelObj)
+      || (labelObj.input?.enabled ? labelObj : null)
+      || labelObj;
+
+    return { root, trigger };
+  }
+
   _findAndHideLegacyHudActions() {
-    const list = this.children?.list || [];
-    for (const o of list) {
+    for (const { o, parent } of this._walkUiTree()) {
       if (!o || typeof o.text !== 'string') continue;
       const label = norm(o.text);
-      if (label === 'MAPA PNG') {
-        this._legacyWorldCapture = o;
-        o.setVisible?.(false);
-      } else if (label.includes('MAPA TECNICO')) {
-        this._legacyTechnicalCapture = o;
-        o.setVisible?.(false);
-      } else if (label === 'MENU') {
-        o.setVisible?.(false);
-      }
+
+      let kind = null;
+      if (label.includes('MAPA PNG') || label.includes('CAPTURA MUNDO')) kind = 'world';
+      else if (label.includes('MAPA TECNICO') || label.includes('CAPTURA TECNICA')) kind = 'technical';
+      else if (label === 'MENU') kind = 'menu';
+      if (!kind) continue;
+
+      const { root, trigger } = this._buttonRootAndTrigger(o, parent);
+      this._legacyHudRoots.add(root);
+
+      if (kind === 'world' && !this._legacyWorldCapture) this._legacyWorldCapture = trigger;
+      if (kind === 'technical' && !this._legacyTechnicalCapture) this._legacyTechnicalCapture = trigger;
+
+      // Hide the WHOLE legacy button/container, not only its text label.
+      root?.setVisible?.(false);
+      o?.setVisible?.(false);
     }
   }
 
@@ -64,16 +104,11 @@ export class RaceScene extends CurrentRaceScene {
     b.dataset.tdrRaceUi = '1';
     b.innerHTML = '<span aria-hidden="true">Ⅱ</span>';
     Object.assign(b.style, {
-      position: 'fixed',
-      right: '160px',
-      top: 'calc(env(safe-area-inset-top, 0px) + 10px)',
-      width: '42px', height: '42px', borderRadius: '50%',
-      zIndex: '7600', border: '1px solid rgba(255,255,255,.22)',
-      background: 'rgba(7,12,22,.80)', color: '#fff',
-      font: '900 18px/1 system-ui,-apple-system,sans-serif',
-      boxShadow: '0 6px 20px rgba(0,0,0,.30)',
-      backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-      display: 'grid', placeItems: 'center', padding: '0'
+      position: 'fixed', right: '160px', top: 'calc(env(safe-area-inset-top, 0px) + 10px)',
+      width: '42px', height: '42px', borderRadius: '50%', zIndex: '7600',
+      border: '1px solid rgba(255,255,255,.22)', background: 'rgba(7,12,22,.80)', color: '#fff',
+      font: '900 18px/1 system-ui,-apple-system,sans-serif', boxShadow: '0 6px 20px rgba(0,0,0,.30)',
+      backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'grid', placeItems: 'center', padding: '0'
     });
     b.addEventListener('click', () => this._openPauseMenu());
     document.body.appendChild(b);
@@ -112,16 +147,13 @@ export class RaceScene extends CurrentRaceScene {
           <button class="tdrp-btn full" data-a="report">FIN DE SESIÓN · INFORME</button>
           <button class="tdrp-btn danger full" data-a="menu">SALIR AL MENÚ</button>
         </div>
-        <div class="tdrp-note">Las capturas cierran esta pausa y ocultan automáticamente el HUD antes de generar la imagen.</div>
+        <div class="tdrp-note">La captura se realiza con la pausa cerrada y el HUD oculto.</div>
       </div></div>`;
 
     root.querySelector('[data-a="continue"]')?.addEventListener('click', () => this._closePauseMenu(true));
     root.querySelector('[data-a="world"]')?.addEventListener('click', () => this._captureFromPause('world'));
     root.querySelector('[data-a="technical"]')?.addEventListener('click', () => this._captureFromPause('technical'));
-    root.querySelector('[data-a="report"]')?.addEventListener('click', () => {
-      this._closePauseMenu(false);
-      this._openSessionReport?.();
-    });
+    root.querySelector('[data-a="report"]')?.addEventListener('click', () => { this._closePauseMenu(false); this._openSessionReport?.(); });
     root.querySelector('[data-a="menu"]')?.addEventListener('click', () => {
       this._closePauseMenu(false);
       if (this._testMode && this._returnSceneKey) this.scene.start(this._returnSceneKey, this._returnSceneData || {});
@@ -140,13 +172,8 @@ export class RaceScene extends CurrentRaceScene {
     this._pauseModal = null;
     if (this._pauseButton) this._pauseButton.style.display = '';
 
-    // Do not charge pause time to the current lap when simply resuming driving.
-    if (resume && pausedMs > 0 && Number.isFinite(this.timing?.lapStart)) {
-      this.timing.lapStart += pausedMs;
-    }
-    if (resume) {
-      try { this.physics?.world?.resume?.(); } catch (_) {}
-    }
+    if (resume && pausedMs > 0 && Number.isFinite(this.timing?.lapStart)) this.timing.lapStart += pausedMs;
+    if (resume) { try { this.physics?.world?.resume?.(); } catch (_) {} }
   }
 
   _hideHudForCapture() {
@@ -155,7 +182,6 @@ export class RaceScene extends CurrentRaceScene {
       if (!o?.visible) continue;
       const depth = Number(o.depth || 0);
       const fixed = Number(o.scrollFactorX) === 0 && Number(o.scrollFactorY) === 0;
-      // World geometry/cars live at low depth. HUD/control layers are fixed and/or >=1000.
       if (depth >= 1000 || fixed) {
         hidden.push(o);
         o.setVisible?.(false);
@@ -166,35 +192,41 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _restoreHudAfterCapture(hidden) {
-    for (const o of hidden || []) {
-      if (o?.scene) o.setVisible?.(true);
-    }
-    // Permanent legacy controls stay retired.
+    for (const o of hidden || []) if (o?.scene) o.setVisible?.(true);
     this._findAndHideLegacyHudActions();
   }
 
+  _emitLegacyCapture(trigger) {
+    if (!trigger) return false;
+    try {
+      // Phaser EventEmitter path used by legacy buttons.
+      if (typeof trigger.emit === 'function') {
+        trigger.emit('pointerdown', null, 0, 0, { stopPropagation() {} });
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   _captureFromPause(kind) {
+    // Re-scan immediately in case a late HUD wrapper created/replaced the buttons.
+    this._findAndHideLegacyHudActions();
     const trigger = kind === 'technical' ? this._legacyTechnicalCapture : this._legacyWorldCapture;
+
     this._closePauseMenu(false);
     const hidden = this._hideHudForCapture();
 
     const fire = () => {
-      try {
-        if (trigger?.emit) trigger.emit('pointerdown');
-        else console.warn('[RacePauseMenu] legacy capture trigger not found:', kind);
-      } catch (e) {
-        console.warn('[RacePauseMenu] capture failed:', e);
-      }
+      const fired = this._emitLegacyCapture(trigger);
+      if (!fired) console.warn('[RacePauseMenu] capture trigger not found:', kind);
 
-      // Give the inherited capture pipeline time to snapshot/restore its camera.
       window.setTimeout(() => {
         this._restoreHudAfterCapture(hidden);
         try { this.physics?.world?.pause?.(); } catch (_) {}
         this._openPauseMenu();
-      }, 1100);
+      }, 1300);
     };
 
-    // Two clean frames: modal gone + HUD hidden before the capture code runs.
     requestAnimationFrame(() => requestAnimationFrame(fire));
   }
 }
