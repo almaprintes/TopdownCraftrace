@@ -33,15 +33,23 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
   }
 
   _drawHero(root,g,x,y,w,h){
-    const t=this._tracks[this._index];g.fillStyle(C.panel,.98).fillRoundedRect(x,y,w,h,10);g.lineStyle(1,C.line,1).strokeRoundedRect(x,y,w,h,10);
-    const infoW=Math.max(220,Math.min(285,w*.255)),imageX=x+infoW,imageW=w-infoW,pad=Math.max(20,infoW*.08);
+    const t=this._tracks[this._index];
+    g.fillStyle(C.panel,.98).fillRoundedRect(x,y,w,h,10);g.lineStyle(1,C.line,1).strokeRoundedRect(x,y,w,h,10);
+    const infoW=Math.max(190,Math.min(235,w*.205)),imageX=x+infoW,imageW=w-infoW,pad=Math.max(18,infoW*.085);
     g.fillStyle(0x09131a,1).fillRect(x,y,infoW,h);g.fillStyle(0x050d12,1).fillRect(imageX,y,imageW,h);g.lineStyle(1,0x31434d,.95).lineBetween(imageX,y+1,imageX,y+h-1);
-    root.add(this.add.text(x+pad,y+22,String(this._index+1).padStart(2,'0'),{fontFamily:'Arial Black',fontSize:`${Math.max(42,Math.min(62,infoW*.21))}px`,fontStyle:'italic',color:'#ffca19'}));
-    root.add(this.add.text(x+pad,y+84,(t.name||t.key).toUpperCase(),{fontFamily:'Arial Black',fontSize:`${Math.max(25,Math.min(38,infoW*.13))}px`,fontStyle:'italic',color:C.white,wordWrap:{width:infoW-pad*2}}));
-    const lineY=y+Math.max(182,h*.29);g.lineStyle(2,C.yellow,1).lineBetween(x+pad,lineY,x+infoW-pad,lineY);
-    const stats=[['LONGITUD',`${lengthOf(t)} m`],['SECTORES',String(sectorCount(t))],['SUPERFICIE',surface(t)],['ANCHO PISTA',`${Math.round(Number(t.trackWidth||t.width||160))} m`]];const statsTop=lineY+14,cellH=(h-(statsTop-y)-12)/4;
-    stats.forEach((s,i)=>{const cy=statsTop+i*cellH;if(i)g.lineStyle(1,0x273842,.8).lineBetween(x+pad,cy,x+infoW-pad,cy);root.add(this.add.text(x+pad,cy+cellH*.28,s[0],{fontFamily:'Arial',fontSize:`${Math.max(11,cellH*.17)}px`,fontStyle:'bold',color:C.muted}).setOrigin(0,.5));root.add(this.add.text(x+pad,cy+cellH*.64,s[1],{fontFamily:'Arial Black',fontSize:`${Math.max(16,cellH*.25)}px`,color:C.white}).setOrigin(0,.5));});
-    const inset=Math.max(10,imageW*.012);g.fillStyle(0x061015,1).fillRoundedRect(imageX+inset,y+inset,imageW-inset*2,h-inset*2,6);const key=this._preview(t,1200,760);if(key&&this.textures.exists(key)){const im=this.add.image(imageX+imageW/2,y+h/2,key).setOrigin(.5);im.setScale(Math.min((imageW-inset*3)/im.width,(h-inset*3)/im.height)).setAlpha(1);root.add(im);}
+
+    const numberSize=Math.max(36,Math.min(50,infoW*.19));
+    root.add(this.add.text(x+pad,y+18,String(this._index+1).padStart(2,'0'),{fontFamily:'Arial Black',fontSize:`${numberSize}px`,fontStyle:'italic',color:'#ffca19'}));
+    const nameY=y+68,nameH=Math.max(72,h*.17);
+    root.add(this.add.text(x+pad,nameY,(t.name||t.key).toUpperCase(),{fontFamily:'Arial Black',fontSize:`${Math.max(21,Math.min(31,infoW*.125))}px`,fontStyle:'italic',color:C.white,wordWrap:{width:infoW-pad*2},lineSpacing:2}).setOrigin(0,0));
+
+    const lineY=Math.min(y+h*.36,nameY+nameH+8);g.lineStyle(2,C.yellow,1).lineBetween(x+pad,lineY,x+infoW-pad,lineY);
+    const stats=[['LONGITUD',`${lengthOf(t)} m`],['SECTORES',String(sectorCount(t))],['SUPERFICIE',surface(t)],['ANCHO PISTA',`${Math.round(Number(t.trackWidth||t.width||160))} m`]];
+    const statsTop=lineY+10,statsBottom=y+h-14,cellH=(statsBottom-statsTop)/4;
+    stats.forEach((s,i)=>{const cy=statsTop+i*cellH;if(i)g.lineStyle(1,0x273842,.82).lineBetween(x+pad,cy,x+infoW-pad,cy);const labelY=cy+cellH*.28,valueY=cy+cellH*.66;root.add(this.add.text(x+pad,labelY,s[0],{fontFamily:'Arial',fontSize:`${Math.max(10,Math.min(13,cellH*.18))}px`,fontStyle:'bold',color:C.muted}).setOrigin(0,.5));root.add(this.add.text(x+pad,valueY,s[1],{fontFamily:'Arial Black',fontSize:`${Math.max(15,Math.min(21,cellH*.28))}px`,color:C.white}).setOrigin(0,.5));});
+
+    const inset=Math.max(8,imageW*.009);g.fillStyle(0x061015,1).fillRoundedRect(imageX+inset,y+inset,imageW-inset*2,h-inset*2,6);
+    const key=this._preview(t,1400,850);if(key&&this.textures.exists(key)){const im=this.add.image(imageX+imageW/2,y+h/2,key).setOrigin(.5);im.setScale(Math.min((imageW-inset*2.2)/im.width,(h-inset*2.2)/im.height)).setAlpha(1);root.add(im);}
   }
 
   _button(root,g,x,y,w,h,label,hot,fn){g.fillStyle(hot?C.yellow:0x101b22,1).fillRoundedRect(x,y-h/2,w,h,5);g.lineStyle(1,hot?0xffd84a:0x40505a,1).strokeRoundedRect(x,y-h/2,w,h,5);root.add(this.add.text(x+w/2,y,label,{fontFamily:'Arial Black',fontSize:`${Math.max(14,h*.34)}px`,fontStyle:'italic',color:hot?'#111820':C.white}).setOrigin(.5));const hit=this.add.rectangle(x+w/2,y,w,h,0,0).setInteractive({useHandCursor:true});root.add(hit);hit.on('pointerup',fn);}
