@@ -1,6 +1,9 @@
+import { buildTrackRibbon } from './TrackBuilder.js';
+
 const trackModules = import.meta.glob('./library/*/track.json', { eager: true });
 
 function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+function wrapPi(a){ while(a>Math.PI)a-=Math.PI*2; while(a<-Math.PI)a+=Math.PI*2; return a; }
 
 function normalizeCenterline(centerline, fallbackWidth = 80) {
   if (!Array.isArray(centerline)) return [];
@@ -19,54 +22,54 @@ function ensureClosedCenterline(centerline, closed, fallbackWidth) {
   return out;
 }
 
-function deriveFinishAnchor(start, centerline) {
-  const sx=Number(start?.x), sy=Number(start?.y);
-  if (!Number.isFinite(sx)||!Number.isFinite(sy)||!Array.isArray(centerline)||centerline.length<2) return start||{x:400,y:400,r:0};
-  let best=null;
-  for(let i=0;i<centerline.length-1;i++){
-    const a=centerline[i],b=centerline[i+1],vx=b.x-a.x,vy=b.y-a.y,len2=vx*vx+vy*vy;
-    if(len2<1)continue;
-    const t=Math.max(0,Math.min(1,((sx-a.x)*vx+(sy-a.y)*vy)/len2));
-    const x=a.x+vx*t,y=a.y+vy*t,d2=(sx-x)**2+(sy-y)**2;
-    if(!best||d2<best.d2)best={x,y,r:Math.atan2(vy,vx),d2};
-  }
-  return best?{x:best.x,y:best.y,r:best.r}:start;
-}
+function normalizeDirection(v){ return String(v||'forward').toLowerCase()==='reverse' ? 'reverse' : 'forward'; }
 
 function normalizeExplicitFinishAnchor(anchor){
   const x=Number(anchor?.x),y=Number(anchor?.y),r=Number(anchor?.r);
   return [x,y,r].every(Number.isFinite)?{x,y,r}:null;
 }
 
-function deriveSegmentAnchor(centerline,index,t=.5){
+function deriveSegmentHint(centerline,index,t=.5){
   if(!Array.isArray(centerline)||centerline.length<2)return null;
   const max=centerline.length-2;
   const i=Math.max(0,Math.min(max,Number(index)|0));
   const a=centerline[i],b=centerline[i+1],vx=b.x-a.x,vy=b.y-a.y;
   if(Math.hypot(vx,vy)<1)return null;
-  const k=Math.max(.15,Math.min(.85,Number.isFinite(Number(t))?Number(t):.5));
-  return {x:a.x+vx*k,y:a.y+vy*k,r:Math.atan2(vy,vx)};
+  const k=Math.max(.05,Math.min(.95,Number.isFinite(Number(t))?Number(t):.5));
+  return {x:a.x+vx*k,y:a.y+vy*k};
 }
 
-function deriveLongestStraightAnchor(centerline) {
-  if (!Array.isArray(centerline) || centerline.length < 4) return null;
+function projectToSmoothCenter(hint, center){
+  const hx=Number(hint?.x),hy=Number(hint?.y);
+  if(!Number.isFinite(hx)||!Number.isFinite(hy)||!Array.isArray(center)||center.length<2)return null;
   let best=null;
-  const ang=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x);
-  const ad=(a,b)=>Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));
-  for(let i=1;i<centerline.length-2;i++){
-    const p=centerline[i-1],a=centerline[i],b=centerline[i+1],n=centerline[i+2];
-    const vx=b.x-a.x,vy=b.y-a.y,len=Math.hypot(vx,vy); if(len<1)continue;
-    const bend=ad(ang(p,a),ang(a,b))+ad(ang(a,b),ang(b,n));
-    const score=len*Math.pow(Math.max(.05,1-bend/Math.PI),4);
-    if(!best||score>best.score)best={score,x:(a.x+b.x)*.5,y:(a.y+b.y)*.5,r:Math.atan2(vy,vx)};
+  for(let i=0;i<center.length;i++){
+    const a=center[i],b=center[(i+1)%center.length],vx=b.x-a.x,vy=b.y-a.y,len2=vx*vx+vy*vy;
+    if(len2<1e-6)continue;
+    const t=Math.max(0,Math.min(1,((hx-a.x)*vx+(hy-a.y)*vy)/len2));
+    const x=a.x+vx*t,y=a.y+vy*t,d2=(hx-x)**2+(hy-y)**2;
+    if(!best||d2<best.d2)best={x,y,r:Math.atan2(vy,vx),segIndex:i,segT:t,d2};
   }
-  return best?{x:best.x,y:best.y,r:best.r}:null;
+  return best;
+}
+
+function deriveLongestStraightAnchor(center) {
+  if (!Array.isArray(center) || center.length < 8) return null;
+  let best=null;
+  for(let i=0;i<center.length;i++){
+    const p=center[(i-3+center.length)%center.length],a=center[i],b=center[(i+1)%center.length],n=center[(i+4)%center.length];
+    const r0=Math.atan2(a.y-p.y,a.x-p.x), r1=Math.atan2(b.y-a.y,b.x-a.x), r2=Math.atan2(n.y-b.y,n.x-b.x);
+    const len=Math.hypot(b.x-a.x); if(len<1)continue;
+    const bend=Math.abs(wrapPi(r1-r0))+Math.abs(wrapPi(r2-r1));
+    const score=len*Math.pow(Math.max(.02,1-bend/Math.PI),5);
+    if(!best||score>best.score)best={score,x:(a.x+b.x)*.5,y:(a.y+b.y)*.5,r:r1,segIndex:i,segT:.5};
+  }
+  return best?{x:best.x,y:best.y,r:best.r,segIndex:best.segIndex,segT:best.segT}:null;
 }
 
 function makeFinishLineFromAnchor(anchor, trackWidth) {
   const x=Number(anchor?.x),y=Number(anchor?.y),r=Number(anchor?.r);
   if(!Number.isFinite(x)||!Number.isFinite(y)||!Number.isFinite(r))return null;
-  // Full road width: the chequered stripe must visually reach both white edge lines.
   const half=Math.max(30,Number(trackWidth)*0.50),px=-Math.sin(r),py=Math.cos(r);
   return {a:{x:x-px*half,y:y-py*half},b:{x:x+px*half,y:y+py*half},normal:{x:Math.cos(r),y:Math.sin(r)}};
 }
@@ -77,20 +80,113 @@ function makeSpawnBehindFinish(anchor,distance=120){
   return {x:x-Math.cos(r)*distance,y:y-Math.sin(r)*distance,r};
 }
 
+function loopMetrics(center){
+  const n=center?.length||0,cum=new Array(n+1).fill(0);
+  for(let i=0;i<n;i++)cum[i+1]=cum[i]+Math.hypot(center[(i+1)%n].x-center[i].x,center[(i+1)%n].y-center[i].y);
+  return {cum,total:cum[n]||1};
+}
+
+function distanceAtProjection(proj,metrics,center){
+  const i=Math.max(0,Math.min(center.length-1,proj?.segIndex|0));
+  const a=center[i],b=center[(i+1)%center.length];
+  return metrics.cum[i]+Math.hypot(b.x-a.x,b.y-a.y)*Math.max(0,Math.min(1,Number(proj?.segT)||0));
+}
+
+function pointAtLoopDistance(center,metrics,distance){
+  const total=metrics.total; let d=((distance%total)+total)%total;
+  for(let i=0;i<center.length;i++){
+    const a=center[i],b=center[(i+1)%center.length],seg=Math.hypot(b.x-a.x,b.y-a.y);
+    if(d<=seg||i===center.length-1){
+      const t=seg>1e-6?d/seg:0;
+      return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,r:Math.atan2(b.y-a.y,b.x-a.x),width:(Number(a.width)||Number(b.width)||80)};
+    }
+    d-=seg;
+  }
+  return null;
+}
+
+function makeGateAt(point,width,directionSign=1,safety=.10){
+  if(!point)return null;
+  const r=wrapPi(point.r+(directionSign<0?Math.PI:0));
+  const half=Math.max(30,(Number(width)||80)*(.5+safety)),px=-Math.sin(r),py=Math.cos(r);
+  return {a:{x:point.x-px*half,y:point.y-py*half},b:{x:point.x+px*half,y:point.y+py*half},normal:{x:Math.cos(r),y:Math.sin(r)}};
+}
+
+function reverseGate(g){
+  if(!g?.a||!g?.b)return g;
+  return {...g,a:{...g.a},b:{...g.b},normal:g.normal?{x:-Number(g.normal.x||0),y:-Number(g.normal.y||0)}:g.normal};
+}
+
+function normalizeAuthoredCheckpoints(list,direction){
+  if(!Array.isArray(list)||!list.length)return null;
+  const out=list.map(g=>clone(g));
+  if(direction==='reverse')return out.reverse().map(reverseGate);
+  return out;
+}
+
 function buildRegistry(){
   const out={};
   for(const [path,mod] of Object.entries(trackModules)){
     const json=mod?.default??mod;if(!json||typeof json!=='object')continue;
     const m=path.match(/\/library\/([^/]+)\/track\.json$/);if(!m)continue;
+
     const slug=m[1],fallbackWidth=Number(json.trackWidth)||80,isClosed=json.closed!==false;
+    const direction=normalizeDirection(json.raceDirection);
+    const directionSign=direction==='reverse'?-1:1;
     const normalized=normalizeCenterline(json.centerline,fallbackWidth);
     const centerline=ensureClosedCenterline(normalized,isClosed,fallbackWidth);
-    const isF1Imported=String(json.brand||'').includes('F1 Inspired')||String(json?.meta?.source||'').includes('F1 circuit silhouette');
+
+    const geom=buildTrackRibbon({
+      centerline,
+      trackWidth:fallbackWidth,
+      grassMargin:Number(json.grassMargin)||120,
+      sampleStepPx:Number(json.sampleStepPx)||12,
+      cellSize:Number(json.cellSize)||400
+    });
+    const smooth=(geom?.center||[]).map(p=>({x:Number(p.x),y:Number(p.y),width:Number(p.width)||fallbackWidth}));
+
     const explicit=normalizeExplicitFinishAnchor(json.finishAnchor);
-    const authored=explicit || (Number.isFinite(Number(json.finishSegment)) ? deriveSegmentAnchor(centerline,Number(json.finishSegment),json.finishT) : null);
-    const finishAnchor=authored || (isF1Imported?deriveLongestStraightAnchor(centerline):null) || deriveFinishAnchor(json.start||centerline[0],centerline);
-    const raceStart=makeSpawnBehindFinish(finishAnchor,120);
-    out[slug]={id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:json.lengthLabel||'Media',worldW:Number(json.worldW)||8000,worldH:Number(json.worldH)||5000,trackWidth:fallbackWidth,grassMargin:Number(json.grassMargin)||120,sampleStepPx:Number(json.sampleStepPx)||12,cellSize:Number(json.cellSize)||400,shoulderPx:Number(json.shoulderPx)||10,start:raceStart,centerline,closed:isClosed,finishLine:makeFinishLineFromAnchor(finishAnchor,fallbackWidth),finish:null,checkpoints:[],grid:null};
+    let finishAnchor=null,finishProjection=null;
+
+    if(explicit){
+      finishAnchor={...explicit,r:wrapPi(explicit.r+(directionSign<0?Math.PI:0))};
+      finishProjection=projectToSmoothCenter(explicit,smooth);
+    } else {
+      const hint=Number.isFinite(Number(json.finishSegment)) ? deriveSegmentHint(centerline,Number(json.finishSegment),json.finishT) : null;
+      finishProjection=hint ? projectToSmoothCenter(hint,smooth) : deriveLongestStraightAnchor(smooth);
+      if(!finishProjection){
+        const startHint=json.start||centerline[0];
+        finishProjection=projectToSmoothCenter(startHint,smooth);
+      }
+      if(finishProjection)finishAnchor={x:finishProjection.x,y:finishProjection.y,r:wrapPi(finishProjection.r+(directionSign<0?Math.PI:0))};
+    }
+
+    if(!finishAnchor)finishAnchor={x:400,y:400,r:directionSign<0?Math.PI:0};
+
+    const raceStart=makeSpawnBehindFinish(finishAnchor,Number(json.startOffset)||120);
+    const metrics=loopMetrics(smooth);
+    const anchorProjection=finishProjection||projectToSmoothCenter(finishAnchor,smooth);
+    const finishDist=anchorProjection?distanceAtProjection(anchorProjection,metrics,smooth):0;
+
+    let checkpoints=normalizeAuthoredCheckpoints(json.checkpoints,direction);
+    if(!checkpoints&&smooth.length>3){
+      checkpoints=[1/3,2/3].map(frac=>{
+        const p=pointAtLoopDistance(smooth,metrics,finishDist+directionSign*metrics.total*frac);
+        return makeGateAt(p,Number(p?.width)||fallbackWidth,directionSign,.10);
+      }).filter(Boolean);
+    }
+
+    const raceCenterline=direction==='reverse' ? smooth.slice().reverse() : smooth.slice();
+
+    out[slug]={
+      id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:json.lengthLabel||'Media',
+      worldW:Number(json.worldW)||8000,worldH:Number(json.worldH)||5000,trackWidth:fallbackWidth,grassMargin:Number(json.grassMargin)||120,sampleStepPx:Number(json.sampleStepPx)||12,cellSize:Number(json.cellSize)||400,shoulderPx:Number(json.shoulderPx)||10,
+      start:raceStart,centerline,closed:isClosed,
+      raceDirection:direction,raceCenterline,
+      finishAnchor,finishLine:makeFinishLineFromAnchor(finishAnchor,fallbackWidth),finish:null,
+      checkpoints,grid:null,
+      meta:json.meta||{}
+    };
   }
   return out;
 }
