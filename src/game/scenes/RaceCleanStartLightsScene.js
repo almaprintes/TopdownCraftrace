@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceHDMapExportScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceFullWidthFinishGateScene.js';
 
 // Keeps the start-light sequence intact while removing the legacy text labels
 // that sit on top of the semaphore modal.
