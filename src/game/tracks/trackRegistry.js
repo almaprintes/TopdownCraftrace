@@ -59,7 +59,7 @@ function deriveLongestStraightAnchor(center) {
   for(let i=0;i<center.length;i++){
     const p=center[(i-3+center.length)%center.length],a=center[i],b=center[(i+1)%center.length],n=center[(i+4)%center.length];
     const r0=Math.atan2(a.y-p.y,a.x-p.x), r1=Math.atan2(b.y-a.y,b.x-a.x), r2=Math.atan2(n.y-b.y,n.x-b.x);
-    const len=Math.hypot(b.x-a.x); if(len<1)continue;
+    const len=Math.hypot(b.x-a.x,b.y-a.y); if(len<1)continue;
     const bend=Math.abs(wrapPi(r1-r0))+Math.abs(wrapPi(r2-r1));
     const score=len*Math.pow(Math.max(.02,1-bend/Math.PI),5);
     if(!best||score>best.score)best={score,x:(a.x+b.x)*.5,y:(a.y+b.y)*.5,r:r1,segIndex:i,segT:.5};
@@ -124,6 +124,12 @@ function normalizeAuthoredCheckpoints(list,direction){
   return out;
 }
 
+function normalizeCheckpointFractions(value){
+  const src=Array.isArray(value)&&value.length ? value : [1/3,2/3];
+  const out=src.map(Number).filter(v=>Number.isFinite(v)&&v>0&&v<1).sort((a,b)=>a-b);
+  return out.length ? out : [1/3,2/3];
+}
+
 function buildRegistry(){
   const out={};
   for(const [path,mod] of Object.entries(trackModules)){
@@ -167,10 +173,17 @@ function buildRegistry(){
     const metrics=loopMetrics(smooth);
     const anchorProjection=finishProjection||projectToSmoothCenter(finishAnchor,smooth);
     const finishDist=anchorProjection?distanceAtProjection(anchorProjection,metrics,smooth):0;
+    const checkpointFractions=normalizeCheckpointFractions(json.checkpointFractions);
 
-    let checkpoints=normalizeAuthoredCheckpoints(json.checkpoints,direction);
+    // Canonical rule: checkpoints are measured from the FINAL finish line along race direction.
+    // Moving finishAnchor / finishSegment therefore rotates every CP around the lap automatically.
+    // Legacy/manual gates are only used when a track explicitly opts into checkpointMode="authored".
+    let checkpoints=null;
+    if(String(json.checkpointMode||'').toLowerCase()==='authored'){
+      checkpoints=normalizeAuthoredCheckpoints(json.checkpoints,direction);
+    }
     if(!checkpoints&&smooth.length>3){
-      checkpoints=[1/3,2/3].map(frac=>{
+      checkpoints=checkpointFractions.map(frac=>{
         const p=pointAtLoopDistance(smooth,metrics,finishDist+directionSign*metrics.total*frac);
         return makeGateAt(p,Number(p?.width)||fallbackWidth,directionSign,.10);
       }).filter(Boolean);
@@ -184,7 +197,7 @@ function buildRegistry(){
       start:raceStart,centerline,closed:isClosed,
       raceDirection:direction,raceCenterline,
       finishAnchor,finishLine:makeFinishLineFromAnchor(finishAnchor,fallbackWidth),finish:null,
-      checkpoints,grid:null,
+      checkpoints,checkpointFractions,checkpointMode:'proportional',grid:null,
       meta:json.meta||{}
     };
   }
