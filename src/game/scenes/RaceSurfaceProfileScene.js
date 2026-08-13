@@ -1,7 +1,9 @@
 import { RaceScene as CurrentRaceScene } from './RaceDirectionScene.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
+import { resolveVehicleSurface } from '../cars/surfaceInteraction.js';
 
-// Per-track surface presentation/feel without changing the physical track geometry.
-// Profiles are authored in track.json -> meta.surfaceProfile.
+// Per-track surface presentation plus vehicle × surface dynamics.
+// A track declares its material. The car's hardware determines how well it can use it.
 export class RaceScene extends CurrentRaceScene {
   create(data) {
     const result = super.create(data);
@@ -12,24 +14,44 @@ export class RaceScene extends CurrentRaceScene {
       ''
     ).toLowerCase();
 
-    this._tdrSurfaceHandlingApplied = false;
+    this._tdrSurfaceDynamicsApplied = false;
     this._applySurfaceProfileVisuals();
-    this._applySurfaceProfileHandling();
+    this._applyVehicleSurfaceDynamics();
 
     return result;
   }
 
-  _applySurfaceProfileHandling() {
-    if (this._tdrSurfaceHandlingApplied) return;
+  _applyVehicleSurfaceDynamics() {
+    if (this._tdrSurfaceDynamicsApplied) return;
     if (this._tdrSurfaceProfile !== 'dirt-asphalt-grass') return;
 
-    // Mild rally-style character: less lateral bite and a touch less steering authority,
-    // while preserving the responsive controller and all braking/inertia work already tuned.
-    if (Number.isFinite(Number(this.turnRate))) this.turnRate *= 0.94;
-    if (Number.isFinite(Number(this.lateralGrip))) this.lateralGrip *= 0.78;
-    if (Number.isFinite(Number(this.accel))) this.accel *= 0.93;
+    const spec = CAR_SPECS?.[this.carId] || {};
+    const interaction = resolveVehicleSurface(spec, 'DIRT');
+    this._tdrSurfaceInteraction = interaction;
 
-    this._tdrSurfaceHandlingApplied = true;
+    // These are effective capacities produced by the SAME dirt surface with the
+    // current car hardware. No per-track steering/grip nerf exists here.
+    if (Number.isFinite(Number(this.accel))) {
+      this.accel *= interaction.longCapacity;
+    }
+    if (Number.isFinite(Number(this.brakeForce))) {
+      this.brakeForce *= interaction.brakingCapacity;
+    }
+    if (Number.isFinite(Number(this.maxFwd))) {
+      this.maxFwd *= interaction.speedCapacity;
+    }
+    if (Number.isFinite(Number(this.linearDrag))) {
+      this.linearDrag *= interaction.dragFactor;
+    }
+    if (Number.isFinite(Number(this.lateralGrip))) {
+      this.lateralGrip *= interaction.latCapacity;
+    }
+
+    // Steering ratio itself is not arbitrarily reduced. The car keeps its native
+    // steering response; only the tire/surface lateral capacity limits how much
+    // of that commanded rotation can be converted into actual cornering grip.
+
+    this._tdrSurfaceDynamicsApplied = true;
   }
 
   _applySurfaceProfileVisuals() {
@@ -51,7 +73,6 @@ export class RaceScene extends CurrentRaceScene {
       for (const cell of cells.values()) {
         try {
           if (cell?.tile?.texture?.key !== 'off') cell?.tile?.setTexture?.('off');
-          // The normal asphalt grain overlay looks wrong over dirt.
           cell?.overlay?.setVisible?.(false);
         } catch (_) {}
       }
@@ -61,8 +82,14 @@ export class RaceScene extends CurrentRaceScene {
   update(time, delta) {
     super.update(time, delta);
 
-    // Cells are created lazily by culling, so newly-created visible cells also
-    // need the authored surface profile applied.
+    // The base surface detector still calls the drivable ribbon TRACK. For this
+    // authored profile the TRACK material is dirt, so expose the semantic surface
+    // for HUD / telemetry without altering the controller.
+    if (this._tdrSurfaceProfile === 'dirt-asphalt-grass' && this._onTrack) {
+      this._surface = 'DIRT';
+    }
+
+    // Cells are created lazily by culling.
     this._applySurfaceProfileVisuals();
   }
 }
