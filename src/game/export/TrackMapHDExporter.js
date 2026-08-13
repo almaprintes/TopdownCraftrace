@@ -37,7 +37,6 @@ export function computeTrackExportBounds(scene) {
   collect(scene.track?.geom?.left);
   collect(scene.track?.geom?.right);
 
-  // Include actual placed scenery so the exported crop never clips a real prop.
   for (const obj of (scene._circuitEnvironment || [])) {
     if (!obj?.scene || !Number.isFinite(obj.x) || !Number.isFinite(obj.y)) continue;
     const hw = Math.abs(Number(obj.displayWidth || 0)) * 0.6;
@@ -65,7 +64,6 @@ export function computeTrackExportBounds(scene) {
     maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
   }
 
-  // Crop margin only. It does not alter any track geometry or world coordinate.
   const padWorld = Math.max(90, fallbackW * 0.45);
   return {
     x:minX - padWorld,
@@ -110,7 +108,7 @@ export function buildTrackMapping(scene, kind, bounds, geometry) {
     .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
 
   return {
-    version:3,
+    version:4,
     type:'topdown-race-world-map',
     trackId,
     trackName,
@@ -132,7 +130,7 @@ export function buildTrackMapping(scene, kind, bounds, geometry) {
         pixelToWorld:'worldX=worldOriginX+px*worldUnitsPerPixel; worldY=worldOriginY+py*worldUnitsPerPixel'
       }
     },
-    renderer:{ mode:'deterministic-single-canvas-2d', geometrySource:'runtime-track-geom' },
+    renderer:{ mode:'deterministic-segment-ribbon-canvas-2d', geometrySource:'runtime-track-geom' },
     track:{
       nominalWidth:Number(scene.track?.meta?.trackWidth || 0) || null,
       centerline,
@@ -162,32 +160,64 @@ function fillWithTexture(ctx, scene, key, fallback) {
   ctx.fillStyle = fallback;
 }
 
-function ribbonPath(ctx, left, right) {
-  if (!Array.isArray(left) || !Array.isArray(right) || left.length < 2 || right.length < 2) return false;
-  const l0 = xy(left[0]);
-  if (!Number.isFinite(l0.x) || !Number.isFinite(l0.y)) return false;
-  ctx.beginPath();
-  ctx.moveTo(l0.x, l0.y);
-  for (let i = 1; i < left.length; i++) {
-    const p = xy(left[i]);
-    if (Number.isFinite(p.x) && Number.isFinite(p.y)) ctx.lineTo(p.x, p.y);
+function validQuad(a, b, c, d) {
+  return [a.x,a.y,b.x,b.y,c.x,c.y,d.x,d.y].every(Number.isFinite);
+}
+
+function fillRibbonSegments(ctx, left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right)) return false;
+  const n = Math.min(left.length, right.length);
+  if (n < 2) return false;
+
+  for (let i = 0; i < n; i++) {
+    const ni = (i + 1) % n;
+    const l0 = xy(left[i]);
+    const l1 = xy(left[ni]);
+    const r1 = xy(right[ni]);
+    const r0 = xy(right[i]);
+    if (!validQuad(l0,l1,r1,r0)) continue;
+
+    ctx.beginPath();
+    ctx.moveTo(l0.x,l0.y);
+    ctx.lineTo(l1.x,l1.y);
+    ctx.lineTo(r1.x,r1.y);
+    ctx.lineTo(r0.x,r0.y);
+    ctx.closePath();
+    ctx.fill();
   }
-  for (let i = right.length - 1; i >= 0; i--) {
-    const p = xy(right[i]);
-    if (Number.isFinite(p.x) && Number.isFinite(p.y)) ctx.lineTo(p.x, p.y);
-  }
-  ctx.closePath();
   return true;
 }
 
+function strokeClosedSegments(ctx, pts, color, lineWidth=2, alpha=1) {
+  if (!Array.isArray(pts) || pts.length < 2) return;
+  ctx.save();
+  ctx.strokeStyle=color;
+  ctx.lineWidth=lineWidth;
+  ctx.globalAlpha=alpha;
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  for (let i=0;i<pts.length;i++) {
+    const a=xy(pts[i]);
+    const b=xy(pts[(i+1)%pts.length]);
+    if (![a.x,a.y,b.x,b.y].every(Number.isFinite)) continue;
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.lineTo(b.x,b.y);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawStripedBand(ctx, innerPts, outerPts, colorA, colorB, segmentLen = 14) {
-  if (!Array.isArray(innerPts) || !Array.isArray(outerPts) || innerPts.length < 2 || innerPts.length !== outerPts.length) return;
+  if (!Array.isArray(innerPts) || !Array.isArray(outerPts)) return;
+  const n = Math.min(innerPts.length, outerPts.length);
+  if (n < 2) return;
   let accumLen = 0;
-  for (let i = 0; i < innerPts.length; i++) {
-    const ni = (i + 1) % innerPts.length;
+  for (let i = 0; i < n; i++) {
+    const ni = (i + 1) % n;
     const a0 = xy(innerPts[i]), a1 = xy(innerPts[ni]);
     const b1 = xy(outerPts[ni]), b0 = xy(outerPts[i]);
-    if (![a0.x,a0.y,a1.x,a1.y,b0.x,b0.y,b1.x,b1.y].every(Number.isFinite)) continue;
+    if (!validQuad(a0,a1,b1,b0)) continue;
     const len = Math.hypot(a1.x - a0.x, a1.y - a0.y);
     ctx.fillStyle = (Math.floor(accumLen / segmentLen) % 2 === 0) ? colorA : colorB;
     ctx.beginPath();
@@ -226,11 +256,7 @@ function drawGate(ctx, gate, color, lineWidth=5) {
 
 function drawCenterline(ctx, center) {
   if (!Array.isArray(center) || center.length < 2) return;
-  const p0=xy(center[0]);
-  ctx.save(); ctx.strokeStyle='#22d7ff'; ctx.globalAlpha=0.85; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.moveTo(p0.x,p0.y);
-  for (let i=1;i<center.length;i++) { const p=xy(center[i]); ctx.lineTo(p.x,p.y); }
-  ctx.closePath(); ctx.stroke(); ctx.restore();
+  strokeClosedSegments(ctx, center, '#22d7ff', 2, 0.85);
 }
 
 function drawSceneImage(ctx, obj) {
@@ -263,28 +289,28 @@ function drawDeterministicMap(scene, kind, geometry, mapping) {
   ctx.imageSmoothingEnabled=true;
   ctx.imageSmoothingQuality='high';
 
-  // Entire exported rectangle: actual OFF texture anchored in world coordinates.
   fillWithTexture(ctx,scene,'off','#716f61');
   ctx.fillRect(origin.x,origin.y,geometry.width/scale,geometry.height/scale);
 
   const geom=scene.track?.geom;
   const grassLeft=geom?.grass?.left, grassRight=geom?.grass?.right;
-  if (ribbonPath(ctx,grassLeft,grassRight)) {
-    fillWithTexture(ctx,scene,'grass','#294f2d');
-    ctx.fill();
-  }
+  fillWithTexture(ctx,scene,'grass','#294f2d');
+  fillRibbonSegments(ctx,grassLeft,grassRight);
 
-  // Exact runtime asphalt ribbon. No interpolation is performed here.
-  if (ribbonPath(ctx,geom?.left,geom?.right)) {
-    fillWithTexture(ctx,scene,'asphalt','#343131');
-    ctx.fill();
-  }
+  fillWithTexture(ctx,scene,'asphalt','#343131');
+  fillRibbonSegments(ctx,geom?.left,geom?.right);
 
-  // Optional asphalt overlay texture, clipped to the exact same ribbon.
   const overlay=textureSource(scene,'asphaltOverlay') || textureSource(scene,'asphalt-overlay');
-  if (overlay && ribbonPath(ctx,geom?.left,geom?.right)) {
-    ctx.save(); ctx.clip(); ctx.globalAlpha=0.16;
-    try { const p=ctx.createPattern(overlay,'repeat'); if (p) { ctx.fillStyle=p; ctx.fillRect(origin.x,origin.y,geometry.width/scale,geometry.height/scale); } } catch (_) {}
+  if (overlay) {
+    ctx.save();
+    ctx.globalAlpha=0.16;
+    try {
+      const p=ctx.createPattern(overlay,'repeat');
+      if (p) {
+        ctx.fillStyle=p;
+        fillRibbonSegments(ctx,geom?.left,geom?.right);
+      }
+    } catch (_) {}
     ctx.restore();
   }
 
@@ -297,7 +323,11 @@ function drawDeterministicMap(scene, kind, geometry, mapping) {
     if (curbSides.inner !== false) drawStripedBand(ctx,exportedGeom.trackInner,exportedGeom.curbInner,'#d92f2f','#f2f2f2',14);
   }
 
-  // Actual static props, at their exact scene transforms.
+  // Fine edge strokes make the exported road read like the in-game road while remaining
+  // derived from the exact same left/right runtime geometry.
+  strokeClosedSegments(ctx,geom?.left,'#e6e2d9',2.2,0.9);
+  strokeClosedSegments(ctx,geom?.right,'#e6e2d9',2.2,0.9);
+
   const props=(scene._circuitEnvironment || []).filter((o)=>o?.scene).slice().sort((a,b)=>(a.depth||0)-(b.depth||0));
   for (const obj of props) drawSceneImage(ctx,obj);
 
