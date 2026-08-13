@@ -1,5 +1,5 @@
 /* Static-cache SW (sin Workbox) — reproducible y fácil de depurar */
-const CACHE_VERSION = 'tdr2-v17';
+const CACHE_VERSION = 'tdr2-v18';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -52,7 +52,7 @@ self.addEventListener('fetch', (event) => {
       const cache = await caches.open(CACHE_VERSION);
       const indexUrl = new URL('./index.html', self.location.href).toString();
       try {
-        const fresh = await fetch(req);
+        const fresh = await fetch(req, { cache: 'no-store' });
         cache.put(indexUrl, fresh.clone());
         return fresh;
       } catch {
