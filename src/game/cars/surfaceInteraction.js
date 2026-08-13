@@ -17,7 +17,7 @@ export const SURFACE_MATERIALS = {
     id: 'DIRT',
     muLong: 0.72,
     muLat: 0.60,
-    rollingResistance: 1.34,
+    rollingResistance: 1.16,
     roughness: 0.42,
     loose: 0.58
   },
@@ -93,21 +93,27 @@ export function resolveVehicleSurface(spec, surfaceId = 'ASPHALT') {
   const latCapacity = clamp(surface.muLat * tire * looseStability * (1 - roughPenalty * 0.38), 0.20, 1.08);
   const brakingCapacity = clamp(surface.muLong * tire * (0.78 + car.tractionSystem * 0.22) * (1 - roughPenalty * 0.20), 0.30, 1.08);
 
-  // Loose ground should primarily punish traction, not impose an artificial low speed limiter.
-  // Once the car is moving, gearing / power still allows a substantial top speed.
+  // Dirt should hurt launch and control far more than outright gearing/top speed.
   let speedCapacity;
   if (surface.id === 'DIRT') {
-    speedCapacity = clamp(0.96 - roughPenalty * 0.18 - (1 - car.groundClearance) * 0.035, 0.84, 0.98);
+    speedCapacity = clamp(0.995 - roughPenalty * 0.045 - (1 - car.groundClearance) * 0.010, 0.95, 1.00);
   } else if (surface.id === 'GRASS') {
     speedCapacity = clamp(0.86 - roughPenalty * 0.22 - (1 - car.groundClearance) * 0.08, 0.68, 0.92);
   } else {
     speedCapacity = clamp(1 - roughPenalty * 0.12, 0.96, 1.03);
   }
 
-  const dragFactor = clamp(surface.rollingResistance * (1 + roughPenalty * 0.38), 0.95, 1.75);
+  // Dirt coast-down is handled explicitly via rollingDecel below. Do not also multiply
+  // the car's native linear drag heavily or it creates an artificial low terminal speed.
+  let dragFactor;
+  if (surface.id === 'DIRT') {
+    dragFactor = clamp(1.02 + roughPenalty * 0.10, 1.02, 1.10);
+  } else {
+    dragFactor = clamp(surface.rollingResistance * (1 + roughPenalty * 0.38), 0.95, 1.75);
+  }
 
   // Launch traction is intentionally distinct from moving traction. A road/F1 car can spin
-  // badly from rest on dirt yet build useful speed once the tyres stop digging themselves in.
+  // badly from rest on dirt yet build substantial speed once momentum is established.
   let launchCapacity = longCapacity;
   let movingDriveCapacity = longCapacity;
   let rollingDecel = 0;
@@ -116,16 +122,20 @@ export function resolveVehicleSurface(spec, surfaceId = 'ASPHALT') {
 
   if (surface.id === 'DIRT') {
     launchCapacity = clamp(
-      0.10 + tire * 0.34 + car.tractionSystem * 0.28 + chassisAbility * 0.18,
-      0.24,
-      0.96
+      0.06 + tire * 0.20 + car.tractionSystem * 0.18 + chassisAbility * 0.10,
+      0.18,
+      0.82
     );
+
     movingDriveCapacity = clamp(
-      0.52 + tire * 0.23 + car.tractionSystem * 0.15 + chassisAbility * 0.08,
-      0.58,
-      0.98
+      0.78 + tire * 0.10 + car.tractionSystem * 0.07 + chassisAbility * 0.04,
+      0.82,
+      1.00
     );
-    rollingDecel = 18 + roughPenalty * 24 + (1 - car.groundClearance) * 9;
+
+    // More coast-down than asphalt, but mild enough that engine power can still build speed.
+    rollingDecel = 9 + roughPenalty * 12 + (1 - car.groundClearance) * 4;
+
     brakeSlide = clamp(surface.loose * (1.08 - tire * 0.36 - car.tractionSystem * 0.22), 0.16, 0.72);
     cornerSlide = clamp(surface.loose * (1.10 - tire * 0.30 - car.looseSurfaceStability * 0.28), 0.14, 0.78);
   } else if (surface.id === 'GRASS') {
