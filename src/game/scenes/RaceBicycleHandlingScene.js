@@ -49,20 +49,22 @@ export class RaceScene extends CurrentRaceScene {
 
     steer=clamp(steer,-1,1);
 
-    // Small centre dead-zone so tiny thumb tremors do not wag the nose.
-    const dead=0.085;
+    // Wider neutral zone: small thumb movements are now trajectory corrections,
+    // not immediate nose rotation.
+    const dead=0.11;
     const sign=Math.sign(steer);
     let mag=Math.abs(steer);
     mag=mag<=dead?0:(mag-dead)/(1-dead);
 
-    // Progressive response: gentle around centre, full authority near the edge.
-    mag=Math.pow(mag,1.45);
+    // Stronger progressive curve. The first half of stick travel is deliberately
+    // soft, while the outer edge still reaches full lock for tight corners.
+    mag=Math.pow(mag,1.75);
     const shaped=sign*mag;
 
-    // Framerate-independent low-pass filtering removes touch quantisation/jitter.
-    const alpha=1-Math.exp(-dt*8.5);
+    // Slower, framerate-independent steering filter for a more analogue feel.
+    const alpha=1-Math.exp(-dt*6.2);
     this._bikeSteerFiltered += (shaped-this._bikeSteerFiltered)*alpha;
-    if(Math.abs(shaped)<0.001 && Math.abs(this._bikeSteerFiltered)<0.002) this._bikeSteerFiltered=0;
+    if(Math.abs(shaped)<0.001 && Math.abs(this._bikeSteerFiltered)<0.0015) this._bikeSteerFiltered=0;
 
     return clamp(this._bikeSteerFiltered,-1,1);
   }
@@ -101,8 +103,9 @@ export class RaceScene extends CurrentRaceScene {
     const carLength=this._bikeVisualLength();
     const wheelbase=carLength*0.60;
 
-    // Less lock around normal driving speeds, but enough authority for hairpins.
-    const maxSteerDeg=29-(16*speed01);
+    // Reduced lock overall, especially at speed. Full stick still gives enough
+    // angle for hairpins but normal corrections are much calmer.
+    const maxSteerDeg=26-(14*speed01);
     const maxSteer=maxSteerDeg*Math.PI/180;
     const steerAngle=maxSteer*steer;
 
@@ -110,27 +113,27 @@ export class RaceScene extends CurrentRaceScene {
     let bikeYaw=(signedForward/wheelbase)*Math.tan(steerAngle)*dt;
 
     // No stationary pirouettes.
-    const lowSpeedBlend=clamp((Math.abs(signedForward)-5)/38,0,1);
+    const lowSpeedBlend=clamp((Math.abs(signedForward)-5)/42,0,1);
     bikeYaw*=lowSpeedBlend;
 
-    // Keep only a small amount of the old instantaneous rotation.
-    const bicycleWeight=0.90;
+    // Almost all steering now comes from the filtered bicycle model.
+    const bicycleWeight=0.94;
     let targetYaw=rawYaw*(1-bicycleWeight)+bikeYaw*bicycleWeight;
 
-    const maxYaw=Math.max(0.018,Number(this.carParams?.turnRate || spec?.turnRate || 4)*dt*0.92);
+    const maxYaw=Math.max(0.015,Number(this.carParams?.turnRate || spec?.turnRate || 4)*dt*0.82);
     targetYaw=clamp(targetYaw,-maxYaw,maxYaw);
 
-    // Smooth angular velocity itself. This removes the frame-to-frame snap that
-    // makes the chassis look like it is rotating in little steps.
-    const yawAlpha=1-Math.exp(-dt*11.0);
+    // Heavier angular-velocity smoothing removes the last visible stepping.
+    const yawAlpha=1-Math.exp(-dt*7.5);
     this._bikeYawFiltered += (targetYaw-this._bikeYawFiltered)*yawAlpha;
+    if(Math.abs(targetYaw)<0.0002 && Math.abs(this._bikeYawFiltered)<0.0002) this._bikeYawFiltered=0;
     const correctedYaw=clamp(this._bikeYawFiltered,-maxYaw,maxYaw);
 
     const newRot=wrapPi(prevRot+correctedYaw);
 
-    // Rear-axle pivot, softened slightly to avoid lateral micro-jumps.
-    const rearOffset=wheelbase*0.42;
-    const pivotStrength=clamp(Math.abs(signedForward)/70,0,1);
+    // Softer rear-axle pivot to avoid tiny lateral nudges while steering.
+    const rearOffset=wheelbase*0.38;
+    const pivotStrength=clamp(Math.abs(signedForward)/82,0,1);
     const newFx=Math.cos(newRot), newFy=Math.sin(newRot);
     body.x += (newFx-prevFx)*rearOffset*pivotStrength;
     body.y += (newFy-prevFy)*rearOffset*pivotStrength;
