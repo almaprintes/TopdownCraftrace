@@ -1,23 +1,36 @@
 /* Static-cache SW (sin Workbox) — reproducible y fácil de depurar */
-const CACHE_VERSION = 'tdr2-v18';
+const CACHE_VERSION = 'tdr2-v19';
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './assets/data/car_overrides.json',
   './icons/icon-192.png',
   './icons/icon-256.png',
   './icons/icon-384.png',
   './icons/icon-512.png',
   './assets/ui/orientation_portrait.png'
 ];
+
 self.addEventListener('message', (event) => {
   if (event?.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_VERSION).then((cache) => cache.addAll(CORE_ASSETS)));
-  self.skipWaiting();
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    await Promise.all(CORE_ASSETS.map(async (asset) => {
+      try {
+        const req = new Request(asset, { cache: 'reload' });
+        const res = await fetch(req);
+        if (res && res.ok) await cache.put(req, res.clone());
+      } catch (_) {
+        // A single optional asset must never abort SW installation.
+      }
+    }));
+    await self.skipWaiting();
+  })());
 });
+
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
@@ -25,54 +38,44 @@ self.addEventListener('activate', (event) => {
     await self.clients.claim();
   })());
 });
+
 function isNavigationRequest(req) {
-  return req.mode === 'navigate' || (req.method === 'GET' && req.headers.get('accept') && req.headers.get('accept').includes('text/html'));
+  return req.mode === 'navigate' || (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'));
 }
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.endsWith('/community/car-overrides.json')) {
-    event.respondWith((async () => {
-      const cache = await caches.open(CACHE_VERSION);
-      try {
-        const fresh = await fetch(req, { cache: 'no-store' });
-        if (fresh && fresh.ok) cache.put(req, fresh.clone());
-        return fresh;
-      } catch {
-        const cached = await cache.match(req);
-        return cached || new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
-      }
-    })());
-    return;
-  }
+
   if (isNavigationRequest(req)) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_VERSION);
       const indexUrl = new URL('./index.html', self.location.href).toString();
       try {
         const fresh = await fetch(req, { cache: 'no-store' });
-        cache.put(indexUrl, fresh.clone());
+        if (fresh && fresh.ok) await cache.put(indexUrl, fresh.clone());
         return fresh;
-      } catch {
+      } catch (_) {
         const cached = await cache.match(indexUrl);
-        return cached || new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+        return cached || new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><body style="background:#071017;color:white;font-family:system-ui;padding:24px">Top-Down Race no puede arrancar sin una copia válida en caché.</body>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
       }
     })());
     return;
   }
+
   event.respondWith((async () => {
-    const cached = await caches.match(req);
-    if (cached) return cached;
     try {
-      const fresh = await fetch(req);
-      if (!fresh || !fresh.ok) return fresh;
-      const cache = await caches.open(CACHE_VERSION);
-      cache.put(req, fresh.clone());
+      const fresh = await fetch(req, { cache: 'no-store' });
+      if (fresh && fresh.ok) {
+        const cache = await caches.open(CACHE_VERSION);
+        await cache.put(req, fresh.clone());
+      }
       return fresh;
-    } catch {
-      return new Response('', { status: 504 });
+    } catch (_) {
+      const cached = await caches.match(req);
+      return cached || new Response('', { status: 504 });
     }
   })());
 });
