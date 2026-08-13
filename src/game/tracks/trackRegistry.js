@@ -33,6 +33,11 @@ function deriveFinishAnchor(start, centerline) {
   return best?{x:best.x,y:best.y,r:best.r}:start;
 }
 
+function normalizeExplicitFinishAnchor(anchor){
+  const x=Number(anchor?.x),y=Number(anchor?.y),r=Number(anchor?.r);
+  return [x,y,r].every(Number.isFinite)?{x,y,r}:null;
+}
+
 function deriveSegmentAnchor(centerline,index,t=.5){
   if(!Array.isArray(centerline)||centerline.length<2)return null;
   const max=centerline.length-2;
@@ -81,7 +86,8 @@ function buildRegistry(){
     const normalized=normalizeCenterline(json.centerline,fallbackWidth);
     const centerline=ensureClosedCenterline(normalized,isClosed,fallbackWidth);
     const isF1Imported=String(json.brand||'').includes('F1 Inspired')||String(json?.meta?.source||'').includes('F1 circuit silhouette');
-    const authored=Number.isFinite(Number(json.finishSegment)) ? deriveSegmentAnchor(centerline,Number(json.finishSegment),json.finishT) : null;
+    const explicit=normalizeExplicitFinishAnchor(json.finishAnchor);
+    const authored=explicit || (Number.isFinite(Number(json.finishSegment)) ? deriveSegmentAnchor(centerline,Number(json.finishSegment),json.finishT) : null);
     const finishAnchor=authored || (isF1Imported?deriveLongestStraightAnchor(centerline):null) || deriveFinishAnchor(json.start||centerline[0],centerline);
     const raceStart=makeSpawnBehindFinish(finishAnchor,120);
     out[slug]={id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:json.lengthLabel||'Media',worldW:Number(json.worldW)||8000,worldH:Number(json.worldH)||5000,trackWidth:fallbackWidth,grassMargin:Number(json.grassMargin)||120,sampleStepPx:Number(json.sampleStepPx)||12,cellSize:Number(json.cellSize)||400,shoulderPx:Number(json.shoulderPx)||10,start:raceStart,centerline,closed:isClosed,finishLine:makeFinishLineFromAnchor(finishAnchor,fallbackWidth),finish:null,checkpoints:[],grid:null};
