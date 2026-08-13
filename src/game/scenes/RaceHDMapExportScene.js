@@ -57,7 +57,7 @@ export class RaceScene extends PauseRaceScene {
       try {
         const result = await exportTrackMapHD(this, kind, {
           longSide:4096,
-          paddingPx:96
+          paddingPx:128
         });
         console.info('[TDR2] HD map export complete', kind, result?.width, result?.height);
       } catch (err) {
@@ -67,12 +67,13 @@ export class RaceScene extends PauseRaceScene {
       }
     };
 
-    // Give the inherited scene a few live frames with culling disabled. This does not
-    // affect lap timing and the player's car is held at the exact paused transform.
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() =>
-        requestAnimationFrame(run)
-      )
-    );
+    // Some environment/road chunks are rebuilt lazily after culling is disabled,
+    // especially on iOS. Give the full world six rendered frames to settle before
+    // reading the Display List so late chunks cannot leave small holes in the export.
+    const afterFrames = (remaining, fn) => {
+      if (remaining <= 0) return fn();
+      requestAnimationFrame(() => afterFrames(remaining - 1, fn));
+    };
+    afterFrames(6, run);
   }
 }
