@@ -41,9 +41,11 @@ export function computeTrackExportBounds(scene) {
     maxHalf = Math.max(maxHalf, Number(p.width || fallbackW) * 0.5);
   }
 
-  // Same world, no geometry reconstruction: this is only the crop rectangle.
-  // Leave enough space for kerbs, shoulders and the nearby environment used by the race scene.
-  const padWorld = Math.max(150, maxHalf + 110);
+  // Safety overscan: the HD map is an exact render of the existing scene, but the crop
+  // must extend beyond the centerline envelope far enough to include kerbs, shoulders,
+  // scenery and any geometry whose visual bounds protrude past its anchor point.
+  // This does NOT alter world coordinates or distances; it only enlarges the captured area.
+  const padWorld = Math.max(260, maxHalf + 190);
   return {
     x:minX - padWorld,
     y:minY - padWorld,
@@ -65,7 +67,7 @@ function makeExportGeometry(scene, bounds, options = {}) {
   const maxTexture = Math.max(2048, getMaxTextureSize(scene));
   const requestedLongSide = Number(options.longSide || 4096);
   const longSide = Math.floor(clamp(requestedLongSide, 2048, Math.min(4096, maxTexture)));
-  const paddingPx = Math.max(48, Math.round(Number(options.paddingPx || 96)));
+  const paddingPx = Math.max(64, Math.round(Number(options.paddingPx || 128)));
 
   // Choose one uniform pixels/world-unit scale. This keeps every distance exact in both axes.
   const scaleByLongSide = longSide / Math.max(bounds.width, bounds.height);
@@ -119,7 +121,8 @@ export function buildTrackMapping(scene, kind, bounds, geometry) {
       width:bounds.width, height:bounds.height,
       minX:bounds.x, minY:bounds.y,
       maxX:bounds.x + bounds.width,
-      maxY:bounds.y + bounds.height
+      maxY:bounds.y + bounds.height,
+      safetyOverscanWorld:bounds.padWorld
     },
     transform:{
       pixelsPerWorldUnit:scale,
