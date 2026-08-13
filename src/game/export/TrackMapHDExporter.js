@@ -41,10 +41,7 @@ export function computeTrackExportBounds(scene) {
     maxHalf = Math.max(maxHalf, Number(p.width || fallbackW) * 0.5);
   }
 
-  // Safety overscan: the HD map is an exact render of the existing scene, but the crop
-  // must extend beyond the centerline envelope far enough to include kerbs, shoulders,
-  // scenery and any geometry whose visual bounds protrude past its anchor point.
-  // This does NOT alter world coordinates or distances; it only enlarges the captured area.
+  // Crop overscan only. Geometry and world coordinates remain untouched.
   const padWorld = Math.max(260, maxHalf + 190);
   return {
     x:minX - padWorld,
@@ -69,19 +66,16 @@ function makeExportGeometry(scene, bounds, options = {}) {
   const longSide = Math.floor(clamp(requestedLongSide, 2048, Math.min(4096, maxTexture)));
   const paddingPx = Math.max(64, Math.round(Number(options.paddingPx || 128)));
 
-  // Choose one uniform pixels/world-unit scale. This keeps every distance exact in both axes.
   const scaleByLongSide = longSide / Math.max(bounds.width, bounds.height);
   const scale = Math.max(0.01, scaleByLongSide);
   let width = Math.ceil(bounds.width * scale + paddingPx * 2);
   let height = Math.ceil(bounds.height * scale + paddingPx * 2);
 
-  // Keep dimensions inside the GPU limit while preserving the same uniform scale.
-  const fit = Math.min(1, maxTexture / width, maxTexture / height, 4096 / width, 4096 / height);
+  const fit = Math.min(1, 4096 / width, 4096 / height);
   const finalScale = scale * fit;
   width = Math.max(2, Math.ceil(bounds.width * finalScale + paddingPx * 2));
   height = Math.max(2, Math.ceil(bounds.height * finalScale + paddingPx * 2));
 
-  // Even framebuffer sizes render more reliably in Phaser/WebGL.
   if (width % 2) width += 1;
   if (height % 2) height += 1;
 
@@ -109,7 +103,7 @@ export function buildTrackMapping(scene, kind, bounds, geometry) {
     .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
 
   return {
-    version:1,
+    version:2,
     type:'topdown-race-world-map',
     trackId,
     trackName,
@@ -133,6 +127,7 @@ export function buildTrackMapping(scene, kind, bounds, geometry) {
         pixelToWorld:'worldX=worldOriginX+px*worldUnitsPerPixel; worldY=worldOriginY+py*worldUnitsPerPixel'
       }
     },
+    renderer:{ mode:'overlapping-tiles', tileCorePx:960, tileOverlapPx:64 },
     track:{
       nominalWidth:Number(scene.track?.meta?.trackWidth || 0) || null,
       centerline,
@@ -143,15 +138,15 @@ export function buildTrackMapping(scene, kind, bounds, geometry) {
   };
 }
 
-function imageToBlob(image) {
+function sourceToBlob(source) {
   return new Promise((resolve, reject) => {
     try {
       const canvas = document.createElement('canvas');
-      canvas.width = image.width;
-      canvas.height = image.height;
+      canvas.width = source.width;
+      canvas.height = source.height;
       const ctx = canvas.getContext('2d');
       if (!ctx) return reject(new Error('2D context unavailable'));
-      ctx.drawImage(image, 0, 0);
+      ctx.drawImage(source, 0, 0);
       canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('PNG encode failed')), 'image/png');
     } catch (err) { reject(err); }
   });
@@ -162,7 +157,7 @@ async function deliverFiles(scene, image, mapping, kind) {
   const suffix = kind === 'technical' ? 'technical-hd' : 'world-hd';
   const pngName = `${base}-${suffix}.png`;
   const jsonName = `${base}-mapping.json`;
-  const pngBlob = await imageToBlob(image);
+  const pngBlob = await sourceToBlob(image);
   const jsonBlob = new Blob([JSON.stringify(mapping, null, 2)], { type:'application/json' });
 
   try {
@@ -193,46 +188,84 @@ async function deliverFiles(scene, image, mapping, kind) {
   window.setTimeout(() => download(jsonBlob, jsonName), 220);
 }
 
-export function exportTrackMapHD(scene, kind = 'world', options = {}) {
+function snapshotRenderTexture(rt) {
   return new Promise((resolve, reject) => {
-    const bounds = computeTrackExportBounds(scene);
-    if (!bounds) return reject(new Error('Track export bounds unavailable'));
-    const geometry = makeExportGeometry(scene, bounds, options);
-    const mapping = buildTrackMapping(scene, kind, bounds, geometry);
-
-    let rt = null;
     try {
-      scene.children?.depthSort?.();
-      rt = scene.add.renderTexture(0, 0, geometry.width, geometry.height)
-        .setOrigin(0, 0)
-        .setVisible(false);
-
-      // The internal RenderTexture camera renders the *actual scene display list*.
-      // No road, kerb, prop or obstacle geometry is reconstructed here.
-      rt.camera.setZoom(geometry.scale);
-      rt.camera.setScroll(
-        bounds.x - geometry.paddingPx / geometry.scale,
-        bounds.y - geometry.paddingPx / geometry.scale
-      );
-      rt.camera.roundPixels = false;
-
-      // DisplayList drawing respects visibility, so the pause layer can hide HUD roots
-      // while all world GameObjects retain their exact positions, rotations and scales.
-      rt.draw(scene.children);
-
-      rt.snapshot(async (image) => {
-        try {
-          await deliverFiles(scene, image, mapping, kind);
-          resolve({ mapping, width:geometry.width, height:geometry.height });
-        } catch (err) {
-          reject(err);
-        } finally {
-          try { rt?.destroy?.(); } catch (_) {}
-        }
+      rt.snapshot((image) => {
+        if (!image) return reject(new Error('Tile snapshot failed'));
+        resolve(image);
       }, 'image/png', 1);
-    } catch (err) {
-      try { rt?.destroy?.(); } catch (_) {}
-      reject(err);
-    }
+    } catch (err) { reject(err); }
   });
+}
+
+async function renderSceneInTiles(scene, geometry, mapping, options = {}) {
+  const out = document.createElement('canvas');
+  out.width = geometry.width;
+  out.height = geometry.height;
+  const ctx = out.getContext('2d');
+  if (!ctx) throw new Error('Output canvas unavailable');
+
+  const core = Math.max(512, Math.round(Number(options.tileCorePx || 960)));
+  const overlap = Math.max(24, Math.round(Number(options.tileOverlapPx || 64)));
+  const worldOrigin = mapping.transform.worldOriginAtImagePixel00;
+
+  scene.children?.depthSort?.();
+
+  for (let y = 0; y < geometry.height; y += core) {
+    for (let x = 0; x < geometry.width; x += core) {
+      const coreW = Math.min(core, geometry.width - x);
+      const coreH = Math.min(core, geometry.height - y);
+      const sx0 = Math.max(0, x - overlap);
+      const sy0 = Math.max(0, y - overlap);
+      const sx1 = Math.min(geometry.width, x + coreW + overlap);
+      const sy1 = Math.min(geometry.height, y + coreH + overlap);
+      const renderW = sx1 - sx0;
+      const renderH = sy1 - sy0;
+
+      let rt = null;
+      try {
+        rt = scene.add.renderTexture(0, 0, renderW, renderH)
+          .setOrigin(0, 0)
+          .setVisible(false);
+        rt.camera.setZoom(geometry.scale);
+        rt.camera.setScroll(
+          worldOrigin.x + sx0 / geometry.scale,
+          worldOrigin.y + sy0 / geometry.scale
+        );
+        rt.camera.roundPixels = false;
+        rt.draw(scene.children);
+
+        const image = await snapshotRenderTexture(rt);
+        const cropX = x - sx0;
+        const cropY = y - sy0;
+        ctx.drawImage(
+          image,
+          cropX, cropY, coreW, coreH,
+          x, y, coreW, coreH
+        );
+      } finally {
+        try { rt?.destroy?.(); } catch (_) {}
+      }
+
+      // Yield between tiles so iOS Safari can release temporary GPU resources.
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+  }
+
+  return out;
+}
+
+export async function exportTrackMapHD(scene, kind = 'world', options = {}) {
+  const bounds = computeTrackExportBounds(scene);
+  if (!bounds) throw new Error('Track export bounds unavailable');
+  const geometry = makeExportGeometry(scene, bounds, options);
+  const mapping = buildTrackMapping(scene, kind, bounds, geometry);
+
+  // Render the exact existing Display List in small overlapping camera windows, then stitch
+  // only the safe interior of each tile. This avoids the tiny WebGL/Graphics clipping gaps
+  // seen when the complete 4096px map is rendered into one giant framebuffer on iPhone.
+  const canvas = await renderSceneInTiles(scene, geometry, mapping, options);
+  await deliverFiles(scene, canvas, mapping, kind);
+  return { mapping, width:geometry.width, height:geometry.height };
 }
