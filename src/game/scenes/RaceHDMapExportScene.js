@@ -26,8 +26,6 @@ export class RaceScene extends PauseRaceScene {
     this._captureInProgress = true;
     this._hdMapExportBusy = true;
 
-    // Let any world-cell / decoration culling wrappers expose the complete scene before
-    // the offscreen RenderTexture reads the Display List. update() keeps the car frozen.
     this._cullEnabled = false;
     this._mapZoomOn = false;
     try { this.physics?.world?.resume?.(); } catch (_) {}
@@ -56,7 +54,7 @@ export class RaceScene extends PauseRaceScene {
     const run = async () => {
       try {
         const result = await exportTrackMapHD(this, kind, {
-          longSide:4096,
+          longSide:3200,
           paddingPx:128
         });
         console.info('[TDR2] HD map export complete', kind, result?.width, result?.height);
@@ -67,9 +65,6 @@ export class RaceScene extends PauseRaceScene {
       }
     };
 
-    // Some environment/road chunks are rebuilt lazily after culling is disabled,
-    // especially on iOS. Give the full world six rendered frames to settle before
-    // reading the Display List so late chunks cannot leave small holes in the export.
     const afterFrames = (remaining, fn) => {
       if (remaining <= 0) return fn();
       requestAnimationFrame(() => afterFrames(remaining - 1, fn));
