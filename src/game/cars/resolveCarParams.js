@@ -5,6 +5,10 @@ import { loadGarage, garageTuning } from '../garage/garageStore.js';
 
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
+// Global factory top-speed uplift.
+// Applied to every car before garage / external tuning is added.
+const FACTORY_MAX_FWD_MULT = 1.40;
+
 function mergedTuning(external = {}) {
   let g = {};
   try { g = garageTuning(loadGarage()) || {}; } catch (_) {}
@@ -34,7 +38,7 @@ export function resolveCarParams(baseSpec, tuning = {}, overrides = {}) {
     brakeForce: Math.max(0, (baseSpec.brakeForce || 0) * t.brakeMult),
     engineBrake: Math.max(0, (baseSpec.engineBrake || 0)),
     linearDrag: Math.max(0, (baseSpec.linearDrag || 0) * t.dragMult),
-    maxFwd: Math.max(0, (baseSpec.maxFwd || 0) + t.maxFwdAdd),
+    maxFwd: Math.max(0, (baseSpec.maxFwd || 0) * FACTORY_MAX_FWD_MULT + t.maxFwdAdd),
     maxRev: Math.max(0, (baseSpec.maxRev || 0) + t.maxRevAdd),
     turnRate: Math.max(0, (baseSpec.turnRate || 0) * t.turnRateMult),
     turnMin: clamp((baseSpec.turnMin || 0) + t.turnMinAdd, 0.05, 0.95),
