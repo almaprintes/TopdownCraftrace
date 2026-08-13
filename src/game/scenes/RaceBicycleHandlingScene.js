@@ -15,6 +15,8 @@ export class RaceScene extends CurrentRaceScene {
   constructor(){
     super();
     this._bikeHandlingEnabled=true;
+    this._bikeSteerFiltered=0;
+    this._bikeYawFiltered=0;
   }
 
   _bikeVisualLength(){
@@ -44,7 +46,25 @@ export class RaceScene extends CurrentRaceScene {
       const maxBase=Math.max(0.001,Number(this.carParams?.turnRate || spec?.turnRate || 4)*dt);
       steer=clamp(rawYaw/maxBase,-1,1);
     }
-    return clamp(steer,-1,1);
+
+    steer=clamp(steer,-1,1);
+
+    // Small centre dead-zone so tiny thumb tremors do not wag the nose.
+    const dead=0.085;
+    const sign=Math.sign(steer);
+    let mag=Math.abs(steer);
+    mag=mag<=dead?0:(mag-dead)/(1-dead);
+
+    // Progressive response: gentle around centre, full authority near the edge.
+    mag=Math.pow(mag,1.45);
+    const shaped=sign*mag;
+
+    // Framerate-independent low-pass filtering removes touch quantisation/jitter.
+    const alpha=1-Math.exp(-dt*8.5);
+    this._bikeSteerFiltered += (shaped-this._bikeSteerFiltered)*alpha;
+    if(Math.abs(shaped)<0.001 && Math.abs(this._bikeSteerFiltered)<0.002) this._bikeSteerFiltered=0;
+
+    return clamp(this._bikeSteerFiltered,-1,1);
   }
 
   update(time,delta){
@@ -62,7 +82,10 @@ export class RaceScene extends CurrentRaceScene {
     const rawYaw=wrapPi(baseRot-prevRot);
 
     // Ignore resets/teleports/grid placement rather than turning them into steering.
-    if(Math.abs(rawYaw)>0.65) return;
+    if(Math.abs(rawYaw)>0.65){
+      this._bikeYawFiltered=0;
+      return;
+    }
 
     const vx=Number(body.body.velocity.x||0);
     const vy=Number(body.body.velocity.y||0);
@@ -78,45 +101,41 @@ export class RaceScene extends CurrentRaceScene {
     const carLength=this._bikeVisualLength();
     const wheelbase=carLength*0.60;
 
-    // Real-car-ish steering envelope: generous lock at low speed, progressively
-    // smaller effective road-wheel angle as speed rises for stability.
-    const maxSteerDeg=32-(17*speed01);
+    // Less lock around normal driving speeds, but enough authority for hairpins.
+    const maxSteerDeg=29-(16*speed01);
     const maxSteer=maxSteerDeg*Math.PI/180;
     const steerAngle=maxSteer*steer;
 
     // Kinematic bicycle model: yawRate = v/L * tan(delta).
-    // signedForward naturally reverses yaw direction when reversing.
     let bikeYaw=(signedForward/wheelbase)*Math.tan(steerAngle)*dt;
 
-    // No stationary pirouettes. Below walking pace the tyres can turn but the
-    // chassis barely yaws, exactly what was missing in the centre-pivot feel.
-    const lowSpeedBlend=clamp((Math.abs(signedForward)-4)/34,0,1);
+    // No stationary pirouettes.
+    const lowSpeedBlend=clamp((Math.abs(signedForward)-5)/38,0,1);
     bikeYaw*=lowSpeedBlend;
 
-    // Keep a little of the established controller feel so the first test is
-    // recognisable, while the majority of the rotation comes from the bicycle model.
-    const bicycleWeight=0.82;
-    let correctedYaw=rawYaw*(1-bicycleWeight)+bikeYaw*bicycleWeight;
+    // Keep only a small amount of the old instantaneous rotation.
+    const bicycleWeight=0.90;
+    let targetYaw=rawYaw*(1-bicycleWeight)+bikeYaw*bicycleWeight;
 
-    // Safety cap based on each car's existing turn rate. Prevents one-frame spikes
-    // from touch input while still allowing agile cars to remain agile.
-    const maxYaw=Math.max(0.02,Number(this.carParams?.turnRate || spec?.turnRate || 4)*dt*1.08);
-    correctedYaw=clamp(correctedYaw,-maxYaw,maxYaw);
+    const maxYaw=Math.max(0.018,Number(this.carParams?.turnRate || spec?.turnRate || 4)*dt*0.92);
+    targetYaw=clamp(targetYaw,-maxYaw,maxYaw);
+
+    // Smooth angular velocity itself. This removes the frame-to-frame snap that
+    // makes the chassis look like it is rotating in little steps.
+    const yawAlpha=1-Math.exp(-dt*11.0);
+    this._bikeYawFiltered += (targetYaw-this._bikeYawFiltered)*yawAlpha;
+    const correctedYaw=clamp(this._bikeYawFiltered,-maxYaw,maxYaw);
 
     const newRot=wrapPi(prevRot+correctedYaw);
 
-    // Move the chassis around a virtual rear axle rather than spinning its centre.
-    // Center = rearAxle + rearOffset * forwardVector. Holding rearAxle approximately
-    // fixed during yaw makes the nose sweep naturally into the corner.
-    const rearOffset=wheelbase*0.46;
-    const pivotStrength=clamp(Math.abs(signedForward)/55,0,1);
+    // Rear-axle pivot, softened slightly to avoid lateral micro-jumps.
+    const rearOffset=wheelbase*0.42;
+    const pivotStrength=clamp(Math.abs(signedForward)/70,0,1);
     const newFx=Math.cos(newRot), newFy=Math.sin(newRot);
     body.x += (newFx-prevFx)*rearOffset*pivotStrength;
     body.y += (newFy-prevFy)*rearOffset*pivotStrength;
     body.rotation=newRot;
 
-    // Base update already synchronized the visual rig before this layer runs,
-    // so resync once with the corrected physical transform.
     if(this.carRig?.scene){
       this.carRig.x=body.x;
       this.carRig.y=body.y;
