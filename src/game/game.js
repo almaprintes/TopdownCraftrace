@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene.js';
-import { MenuScene } from './scenes/MenuScene.js';
+import { MenuScene } from './scenes/MenuSpeedConsistencyScene.js';
 import { RaceScene } from './scenes/RaceSurfaceProfileScene.js';
 import { UpgradeShopScene } from './scenes/UpgradeWorkshopCraftAssetsScene.js';
 import { GarageScene } from './scenes/GarageSpeedConsistencyScene.js';
