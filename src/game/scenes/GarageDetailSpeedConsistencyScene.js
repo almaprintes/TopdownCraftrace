@@ -1,7 +1,7 @@
 import { GarageDetailScene as CurrentGarageDetailScene } from './GarageDetailScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
-import { pxpsToKmh } from '../cars/speedUnits.js';
+import { attainableTopSpeedKmh } from '../cars/speedUnits.js';
 
 function savedSpec(carId) {
   try {
@@ -23,7 +23,7 @@ export class GarageDetailScene extends CurrentGarageDetailScene {
 
     const currentSpec = { ...factory, ...savedSpec(id) };
     const resolved = resolveCarParams(currentSpec);
-    const kmh = Math.round(pxpsToKmh(resolved.maxFwd));
+    const kmh = Math.round(attainableTopSpeedKmh(resolved));
 
     for (const child of this.children?.list || []) {
       if (!child?.setText || typeof child.text !== 'string') continue;
@@ -31,7 +31,7 @@ export class GarageDetailScene extends CurrentGarageDetailScene {
       if (/^\s*\d+\s*km\/h\s*$/i.test(txt)) {
         child.setText(`${kmh} km/h`);
       } else if (txt.includes('maxFwd:') && txt.includes('km/h')) {
-        child.setText(txt.replace(/maxFwd:[^\n]*/i, `maxFwd: ${resolved.maxFwd.toFixed(1)} px/s · ${kmh} km/h`));
+        child.setText(txt.replace(/maxFwd:[^\n]*/i, `vel. real: ${kmh} km/h`));
       }
     }
   }
