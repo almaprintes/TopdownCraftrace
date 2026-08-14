@@ -98,30 +98,39 @@ export class RaceScene extends TouchRaceScene {
 
     if (touch) {
       if (pad) {
-        // Mirror the on-screen joystick one-for-one: left stick X/Y become the
-        // same stickX/stickY vector consumed by the race controller.
-        let v = stickVector(pad.axes?.[0] || 0, pad.axes?.[1] || 0);
+        // Analogue stick: mirror the on-screen joystick one-for-one. It keeps
+        // the full X/Y vector and therefore the same absolute-stick behaviour.
+        const v = stickVector(pad.axes?.[0] || 0, pad.axes?.[1] || 0);
 
-        // D-pad fallback if the analogue stick is centred.
-        if (v.mag < 0.02) {
-          const left = !!pad.buttons?.[14]?.pressed;
-          const right = !!pad.buttons?.[15]?.pressed;
-          const up = !!pad.buttons?.[12]?.pressed;
-          const down = !!pad.buttons?.[13]?.pressed;
-          v = stickVector((right ? 1 : 0) - (left ? 1 : 0), (down ? 1 : 0) - (up ? 1 : 0), 0);
-        }
+        const dLeft = !!pad.buttons?.[14]?.pressed;
+        const dRight = !!pad.buttons?.[15]?.pressed;
+        const dpadSteer = dLeft && !dRight ? -1 : dRight && !dLeft ? 1 : 0;
 
-        touch.stickX = v.x;
-        touch.stickY = v.y;
-        touch.steer = v.x;
-        touch.leftActive = v.mag > 0.02;
-        touch.buttonSteer = 0;
-
-        if (v.mag > 0.001) {
-          // Keep the exact target-angle convention of createTouchControls().
+        if (v.mag >= 0.02) {
+          touch.stickX = v.x;
+          touch.stickY = v.y;
+          touch.steer = v.x;
+          touch.leftActive = true;
+          touch.buttonSteer = 0;
           touch.targetAngle = Math.atan2(v.y, v.x) - (Math.PI / 2);
-        } else {
+        } else if (dpadSteer !== 0) {
+          // D-pad is NOT a virtual analogue stick. Left/right means "keep
+          // steering left/right" relative to the car, so it must never create
+          // a world-space targetAngle. This lets the car turn continuously
+          // through 360 degrees while the direction is held.
+          touch.stickX = 0;
+          touch.stickY = 0;
           touch.targetAngle = null;
+          touch.steer = dpadSteer;
+          touch.leftActive = true;
+          touch.buttonSteer = 0;
+        } else {
+          touch.stickX = 0;
+          touch.stickY = 0;
+          touch.targetAngle = null;
+          touch.steer = 0;
+          touch.leftActive = false;
+          touch.buttonSteer = 0;
         }
 
         // Standard browser mapping for DualShock 4 / DualSense:
