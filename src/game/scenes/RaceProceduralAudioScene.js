@@ -6,14 +6,31 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function audioPrefs(){
   try{
     const s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');
-    return {master:clamp(Number(s?.audio?.master ?? 1),0,1),mute:!!s?.audio?.mute};
-  }catch{return {master:1,mute:false};}
+    const a=s?.audio||{};
+    return {
+      master:clamp(Number(a.master ?? 1),0,1),
+      engine:clamp(Number(a.engine ?? 1),0,1),
+      effects:clamp(Number(a.effects ?? .45),0,1),
+      impacts:clamp(Number(a.impacts ?? .8),0,1),
+      profile:String(a.profile||'per_car'),
+      mute:!!a.mute
+    };
+  }catch{return {master:1,engine:1,effects:.45,impacts:.8,profile:'per_car',mute:false};}
 }
 
 function hash01(text='car'){
   let h=2166136261>>>0;
   for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619);}
   return (h>>>0)/4294967295;
+}
+
+const APPROVED_PROFILES=['forge_hammer','avenir_apex','crown_axis'];
+function profileSeed(carId,profile){
+  const forced={forge:'forge_hammer',avenir:'avenir_apex',crown:'crown_axis'}[profile];
+  if(forced)return hash01(forced);
+  if(APPROVED_PROFILES.includes(carId))return hash01(carId);
+  const idx=Math.min(2,Math.floor(hash01(carId)*3));
+  return hash01(APPROVED_PROFILES[idx]);
 }
 
 function makeNoiseBuffer(ctx,seconds=2){
@@ -23,7 +40,7 @@ function makeNoiseBuffer(ctx,seconds=2){
   let last=0;
   for(let i=0;i<length;i++){
     const white=Math.random()*2-1;
-    last=last*0.72+white*0.28;
+    last=last*.72+white*.28;
     d[i]=last;
   }
   return b;
@@ -57,27 +74,24 @@ export class RaceScene extends CurrentRaceScene{
       const ctx=new AC();
       const master=ctx.createGain();
       const limiter=ctx.createDynamicsCompressor();
-      limiter.threshold.value=-9; limiter.knee.value=12; limiter.ratio.value=5; limiter.attack.value=.006; limiter.release.value=.18;
+      limiter.threshold.value=-9;limiter.knee.value=12;limiter.ratio.value=5;limiter.attack.value=.006;limiter.release.value=.18;
       master.connect(limiter).connect(ctx.destination);
 
-      const engineBus=ctx.createGain(); engineBus.gain.value=0;
-      const engineFilter=ctx.createBiquadFilter(); engineFilter.type='lowpass'; engineFilter.frequency.value=1200; engineFilter.Q.value=.55;
+      const engineBus=ctx.createGain();engineBus.gain.value=0;
+      const engineFilter=ctx.createBiquadFilter();engineFilter.type='lowpass';engineFilter.frequency.value=1200;engineFilter.Q.value=.55;
       engineBus.connect(engineFilter).connect(master);
 
       const id=String(this.carId||'car');
-      const seed=hash01(id);
-      const osc1=ctx.createOscillator();
-      const osc2=ctx.createOscillator();
-      const osc3=ctx.createOscillator();
+      const prefs=audioPrefs();
+      const seed=profileSeed(id,prefs.profile);
+      const osc1=ctx.createOscillator(),osc2=ctx.createOscillator(),osc3=ctx.createOscillator();
       osc1.type=seed>.66?'sawtooth':seed>.33?'square':'triangle';
-      osc2.type='triangle'; osc3.type='sine';
+      osc2.type='triangle';osc3.type='sine';
       const g1=ctx.createGain(),g2=ctx.createGain(),g3=ctx.createGain();
       g1.gain.value=.52;g2.gain.value=.22;g3.gain.value=.12;
       osc1.connect(g1).connect(engineBus);osc2.connect(g2).connect(engineBus);osc3.connect(g3).connect(engineBus);
       osc1.start();osc2.start();osc3.start();
 
-      // Keep only a subtle aerodynamic layer. Tyre/slip synthesis was removed
-      // deliberately: the engine is the core sonic identity and must stay clean.
       const noiseBuffer=makeNoiseBuffer(ctx);
       const wind=ctx.createBufferSource();wind.buffer=noiseBuffer;wind.loop=true;
       const windFilter=ctx.createBiquadFilter();windFilter.type='highpass';windFilter.frequency.value=900;
@@ -90,14 +104,14 @@ export class RaceScene extends CurrentRaceScene{
     }catch(e){console.warn('[TDR2 audio] init failed',e);}
   }
 
-  _impactSound(strength){
+  _impactSound(strength,impactVolume=1){
     const ctx=this._audioCtx,a=this._audio;
-    if(!ctx||!a||ctx.state!=='running')return;
+    if(!ctx||!a||ctx.state!=='running'||impactVolume<=.001)return;
     const now=ctx.currentTime;
     const osc=ctx.createOscillator(),gain=ctx.createGain(),filter=ctx.createBiquadFilter();
     osc.type='triangle';osc.frequency.setValueAtTime(90+strength*80,now);osc.frequency.exponentialRampToValueAtTime(42,now+.12);
     filter.type='lowpass';filter.frequency.value=520;
-    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.10*strength+.015,now+.008);gain.gain.exponentialRampToValueAtTime(.0001,now+.18);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime((.10*strength+.015)*impactVolume,now+.008);gain.gain.exponentialRampToValueAtTime(.0001,now+.18);
     osc.connect(filter).connect(gain).connect(a.master);osc.start(now);osc.stop(now+.2);
   }
 
@@ -113,45 +127,34 @@ export class RaceScene extends CurrentRaceScene{
     const speed01=clamp(speed/maxFwd,0,1.15);
     const throttle=clamp(Number(this.touch?.throttle||0),0,1);
 
-    // Two acoustic gears only.
     const shiftPoint=.52;
     const gear=speed01<shiftPoint?1:2;
-    if(gear!==this._audioGear && speed>35){
-      this._audioGear=gear;
-      this._audioShiftUntil=performance.now()+155;
-    }
-    const inGear=gear===1
-      ? clamp(speed01/shiftPoint,0,1)
-      : clamp((speed01-shiftPoint)/(1-shiftPoint),0,1);
+    if(gear!==this._audioGear&&speed>35){this._audioGear=gear;this._audioShiftUntil=performance.now()+155;}
+    const inGear=gear===1?clamp(speed01/shiftPoint,0,1):clamp((speed01-shiftPoint)/(1-shiftPoint),0,1);
     let rpm01=.22+inGear*.70+throttle*.10;
     if(performance.now()<this._audioShiftUntil)rpm01*=.66;
 
     const seed=a.seed;
     const baseHz=42+seed*18;
     const hz=baseHz+rpm01*(105+seed*42);
-    const tc=.035;
-    a.osc1.frequency.setTargetAtTime(hz,now,tc);
-    a.osc2.frequency.setTargetAtTime(hz*2.01,now,tc);
-    a.osc3.frequency.setTargetAtTime(hz*(3.0+seed*.08),now,tc);
+    a.osc1.frequency.setTargetAtTime(hz,now,.035);
+    a.osc2.frequency.setTargetAtTime(hz*2.01,now,.035);
+    a.osc3.frequency.setTargetAtTime(hz*(3+seed*.08),now,.035);
     a.engineFilter.frequency.setTargetAtTime(520+rpm01*1850+throttle*900,now,.06);
-    const engineLevel=(.025+rpm01*.055+throttle*.045)*(this._raceStarted?1:.45);
+    const engineLevel=(.025+rpm01*.055+throttle*.045)*(this._raceStarted?1:.45)*prefs.engine;
     a.engineBus.gain.setTargetAtTime(engineLevel,now,.045);
 
-    // No lateral-slip or braking tyre sound. Deliberately silent until we have
-    // an effect that improves immersion instead of calling attention to itself.
-
-    const windLevel=Math.pow(clamp(speed01,0,1),1.7)*.018;
+    const windLevel=Math.pow(clamp(speed01,0,1),1.7)*.018*prefs.effects;
     a.windFilter.frequency.setTargetAtTime(850+speed01*1700,now,.12);
     a.windGain.gain.setTargetAtTime(windLevel,now,.09);
 
-    const master=prefs.mute?0:prefs.master*.78;
-    a.master.gain.setTargetAtTime(master,now,.04);
+    a.master.gain.setTargetAtTime(prefs.mute?0:prefs.master*.78,now,.04);
 
     const dt=Math.max(.001,Number(delta||16.7)/1000);
     const decel=(this._audioPrevSpeed-speed)/dt;
-    if(speed>80 && decel>520 && performance.now()-this._audioLastImpactAt>180){
+    if(speed>80&&decel>520&&performance.now()-this._audioLastImpactAt>180){
       this._audioLastImpactAt=performance.now();
-      this._impactSound(clamp((decel-520)/1200,.18,1));
+      this._impactSound(clamp((decel-520)/1200,.18,1),prefs.impacts);
     }
     this._audioPrevSpeed=speed;
   }
