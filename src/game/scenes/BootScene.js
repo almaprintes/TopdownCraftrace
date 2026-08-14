@@ -17,7 +17,9 @@ this.load.image(
   'assets/ui/orientation_portrait.png'
 );
 // Precarga mínima (logo/splash y UI esenciales)
-this.load.image('logo', 'assets/logo.webp');
+// Usamos el logo TDR2 dedicado que también sirve como acceso oculto a ADMIN.
+// El antiguo assets/logo.webp podía quedar como textura missing en algunos reloads/PWA.
+this.load.image('logo', 'assets/logos/logo_tdr2_sobres.webp');
 //Imagenes de MenuScene
 this.load.json('car_overrides', 'community/car-overrides.json');
 this.load.json('trackjson:track01', 'tracks/library/track01/track.json');
@@ -163,7 +165,7 @@ const fadeRect = this.add.rectangle(
       p.catch(() => {
         // Fallback: tap para iniciar
         const hint = this.add.text(width / 2, height * 0.8, 'Toca para empezar', {
-          fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
+          fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto,Arial',
           fontSize: '18px',
           color: '#ffffff'
         }).setOrigin(0.5);
