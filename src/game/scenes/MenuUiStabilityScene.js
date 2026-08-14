@@ -5,6 +5,25 @@ import { MenuScene as CurrentMenuScene } from './MenuSpeedConsistencyScene.js';
 // left an anonymous resize listener behind after leaving the scene. Both behaviours
 // can produce flicker / ghost UI after several scene changes.
 export class MenuScene extends CurrentMenuScene {
+  renderUI() {
+    super.renderUI();
+
+    // The menu logo is also the long-press ADMIN portal. Keep the exact existing
+    // asset and simply present it at 2× the previous visual size.
+    const scaleLogoIn = (node) => {
+      if (!node) return;
+      if (node?.texture?.key === 'logo' && !node.__tdrAdminLogoDoubled) {
+        node.setScale(Number(node.scaleX || 1) * 2, Number(node.scaleY || 1) * 2);
+        node.__tdrAdminLogoDoubled = true;
+      }
+      const children = node?.list;
+      if (Array.isArray(children)) {
+        for (const child of children) scaleLogoIn(child);
+      }
+    };
+    scaleLogoIn(this._ui);
+  }
+
   create() {
     const scale = this.scale;
     const originalOn = scale.on;
