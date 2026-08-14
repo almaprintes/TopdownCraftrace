@@ -27,52 +27,16 @@ export class RaceScene extends CurrentRaceScene {
   _hideAllJoystickVisuals() {
     if (this._tdrSteeringMode !== 'buttons') return;
 
-    const w = Number(this.scale?.width || 0);
-    const h = Number(this.scale?.height || 0);
-    const maxX = w * 0.31;
-    const minY = h * 0.48;
+    // The analogue stick is created inside the legacy touchUI container together
+    // with the obsolete GAS/FRENO rectangles. The commercial pedal controls are
+    // rendered elsewhere, and the actual throttle/brake hit testing is handled by
+    // global pointer listeners, so hiding this whole legacy container is safe and
+    // guarantees the joystick cannot be recreated visibly after a resize/reflow.
+    try { this.touchUI?.setVisible?.(false); } catch (_) {}
 
-    // 1) Explicit references used by the legacy touch system, when present.
-    const refs = [
-      this.joystickBase, this.joystickKnob,
-      this.joyBase, this.joyKnob,
-      this.stickBase, this.stickKnob,
-      this.touch?.joystickBase, this.touch?.joystickKnob,
-      this.touch?.joyBase, this.touch?.joyKnob,
-      this.touch?.base, this.touch?.knob
-    ];
-    for (const obj of refs) {
-      try { obj?.setVisible?.(false); } catch (_) {}
-      try { obj?.disableInteractive?.(); } catch (_) {}
-    }
-
-    // 2) touchUI children.
     const list = this.touchUI?.list || [];
-    for (let i = 0; i <= 1; i++) {
-      try { list[i]?.setVisible?.(false); } catch (_) {}
-      try { list[i]?.disableInteractive?.(); } catch (_) {}
-    }
-
-    // 3) The visible joystick in the current commercial HUD is not always inside
-    // touchUI. Remove circular HUD objects in the joystick zone at bottom-left.
-    for (const obj of this.children?.list || []) {
-      if (!obj || obj === this._tdrSteerButtons) continue;
-      const x = Number(obj.x ?? -9999);
-      const y = Number(obj.y ?? -9999);
-      if (!(x <= maxX && y >= minY)) continue;
-
-      const type = String(obj.type || obj.constructor?.name || '').toLowerCase();
-      const circular = type.includes('arc') || type.includes('circle');
-      const size = Math.max(
-        Number(obj.displayWidth || 0), Number(obj.displayHeight || 0),
-        Number(obj.radius || 0) * 2
-      );
-
-      // Avoid touching tiny decorative dots; the joystick base/knob are sizeable circles.
-      if (circular && size >= 38) {
-        try { obj.setVisible?.(false); } catch (_) {}
-        try { obj.disableInteractive?.(); } catch (_) {}
-      }
+    for (const obj of list) {
+      try { obj?.setVisible?.(false); } catch (_) {}
     }
   }
 
@@ -83,6 +47,9 @@ export class RaceScene extends CurrentRaceScene {
     this._applySteeringModeVisuals = () => {
       const mode = this._tdrSteeringMode || 'stick';
       if (mode === 'buttons') this._hideAllJoystickVisuals();
+      else {
+        try { this.touchUI?.setVisible?.(true); } catch (_) {}
+      }
 
       if (mode !== 'buttons' || this._tdrSteerButtons?.scene) return;
 
@@ -155,7 +122,7 @@ export class RaceScene extends CurrentRaceScene {
     let prevLeft = false, prevRight = false;
 
     if (buttonMode && this.keys) {
-      // Keep enforcing this because legacy resize/reflow code can recreate joystick objects.
+      // A resize can rebuild touchUI, so keep the whole legacy container hidden.
       this._hideAllJoystickVisuals();
 
       leftKey = this.keys.left;
@@ -175,6 +142,7 @@ export class RaceScene extends CurrentRaceScene {
       super.update(time, delta);
     } finally {
       if (buttonMode) {
+        this._hideAllJoystickVisuals();
         if (leftKey) leftKey.isDown = prevLeft;
         if (rightKey) rightKey.isDown = prevRight;
       }
