@@ -15,6 +15,16 @@ function selectedCarId(scene) {
   return CAR_SPECS?.[id] ? id : firstPlayableCarId();
 }
 
+function savedSpec(carId) {
+  try {
+    const raw = localStorage.getItem(`tdr2:carSpecs:${carId}`);
+    const obj = raw ? JSON.parse(raw) : null;
+    return obj && typeof obj === 'object' ? obj : {};
+  } catch (_) {
+    return {};
+  }
+}
+
 function walk(obj, fn) {
   if (!obj) return;
   fn(obj);
@@ -27,10 +37,10 @@ export class MenuScene extends CurrentMenuScene {
     super.renderUI();
 
     const id = selectedCarId(this);
-    const spec = CAR_SPECS?.[id];
-    if (!spec || !this._ui) return;
+    const factory = CAR_SPECS?.[id];
+    if (!factory || !this._ui) return;
 
-    const resolved = resolveCarParams(spec);
+    const resolved = resolveCarParams({ ...factory, ...savedSpec(id) });
     const kmh = Math.round(attainableTopSpeedKmh(resolved));
 
     walk(this._ui, (obj) => {
