@@ -7,6 +7,10 @@ function wrapPi(a){
   while(a<-Math.PI)a+=Math.PI*2;
   return a;
 }
+function smoothstep01(t){
+  t=clamp(t,0,1);
+  return t*t*(3-2*t);
+}
 
 // Handling preview: kinematic bicycle steering + rear-axle pivot.
 // Isolated as a top layer so it can be tuned or removed without touching
@@ -49,14 +53,14 @@ export class RaceScene extends CurrentRaceScene {
 
     steer=clamp(steer,-1,1);
 
-    // Wider neutral zone: small thumb movements are now trajectory corrections,
+    // Wider neutral zone: small thumb movements are trajectory corrections,
     // not immediate nose rotation.
     const dead=0.11;
     const sign=Math.sign(steer);
     let mag=Math.abs(steer);
     mag=mag<=dead?0:(mag-dead)/(1-dead);
 
-    // Stronger progressive curve. The first half of stick travel is deliberately
+    // Strong progressive curve. The first half of stick travel is deliberately
     // soft, while the outer edge still reaches full lock for tight corners.
     mag=Math.pow(mag,1.75);
     const shaped=sign*mag;
@@ -94,6 +98,7 @@ export class RaceScene extends CurrentRaceScene {
     const prevFx=Math.cos(prevRot), prevFy=Math.sin(prevRot);
     const signedForward=vx*prevFx+vy*prevFy;
     const speed=Math.hypot(vx,vy);
+    const absForward=Math.abs(signedForward);
 
     const spec=CAR_SPECS[this.carId] || CAR_SPECS.stock;
     const maxFwd=Math.max(120,Number(this.carParams?.maxFwd || spec?.maxFwd || 520));
@@ -103,6 +108,12 @@ export class RaceScene extends CurrentRaceScene {
     const carLength=this._bikeVisualLength();
     const wheelbase=carLength*0.60;
 
+    // Very low speed must not behave like a tank pivot. Steering authority is
+    // almost zero near standstill, then returns progressively as the car rolls.
+    const steerStart=10;
+    const steerFull=62;
+    const lowSpeedAuthority=smoothstep01((absForward-steerStart)/(steerFull-steerStart));
+
     // Reduced lock overall, especially at speed. Full stick still gives enough
     // angle for hairpins but normal corrections are much calmer.
     const maxSteerDeg=26-(14*speed01);
@@ -111,29 +122,38 @@ export class RaceScene extends CurrentRaceScene {
 
     // Kinematic bicycle model: yawRate = v/L * tan(delta).
     let bikeYaw=(signedForward/wheelbase)*Math.tan(steerAngle)*dt;
+    bikeYaw*=lowSpeedAuthority;
 
-    // No stationary pirouettes.
-    const lowSpeedBlend=clamp((Math.abs(signedForward)-5)/42,0,1);
-    bikeYaw*=lowSpeedBlend;
+    // The legacy controller is also gated by road speed. This is the important
+    // part: it prevents the old controller from rotating the chassis while the
+    // bicycle model is correctly trying to keep it almost still.
+    const bicycleWeight=0.96;
+    const legacyYaw=rawYaw*(1-bicycleWeight)*lowSpeedAuthority;
+    let targetYaw=legacyYaw+bikeYaw*bicycleWeight;
 
-    // Almost all steering now comes from the filtered bicycle model.
-    const bicycleWeight=0.94;
-    let targetYaw=rawYaw*(1-bicycleWeight)+bikeYaw*bicycleWeight;
+    // At walking pace, aggressively bleed any residual angular velocity instead
+    // of letting the previous frame keep turning the car after it has slowed down.
+    if(absForward<steerStart){
+      targetYaw=0;
+      const settle=1-Math.exp(-dt*18);
+      this._bikeYawFiltered += (0-this._bikeYawFiltered)*settle;
+    }
 
-    const maxYaw=Math.max(0.015,Number(this.carParams?.turnRate || spec?.turnRate || 4)*dt*0.82);
+    const baseTurnRate=Math.max(0,Number(this.carParams?.turnRate || spec?.turnRate || 4));
+    const maxYaw=baseTurnRate*dt*0.82*lowSpeedAuthority;
     targetYaw=clamp(targetYaw,-maxYaw,maxYaw);
 
-    // Heavier angular-velocity smoothing removes the last visible stepping.
+    // Heavy angular-velocity smoothing removes visible stepping.
     const yawAlpha=1-Math.exp(-dt*7.5);
     this._bikeYawFiltered += (targetYaw-this._bikeYawFiltered)*yawAlpha;
-    if(Math.abs(targetYaw)<0.0002 && Math.abs(this._bikeYawFiltered)<0.0002) this._bikeYawFiltered=0;
+    if(absForward<4 || (Math.abs(targetYaw)<0.00015 && Math.abs(this._bikeYawFiltered)<0.00015)) this._bikeYawFiltered=0;
     const correctedYaw=clamp(this._bikeYawFiltered,-maxYaw,maxYaw);
 
     const newRot=wrapPi(prevRot+correctedYaw);
 
     // Softer rear-axle pivot to avoid tiny lateral nudges while steering.
     const rearOffset=wheelbase*0.38;
-    const pivotStrength=clamp(Math.abs(signedForward)/82,0,1);
+    const pivotStrength=smoothstep01(clamp((absForward-8)/82,0,1));
     const newFx=Math.cos(newRot), newFy=Math.sin(newRot);
     body.x += (newFx-prevFx)*rearOffset*pivotStrength;
     body.y += (newFy-prevFy)*rearOffset*pivotStrength;
