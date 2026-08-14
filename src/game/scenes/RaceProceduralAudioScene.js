@@ -76,35 +76,15 @@ export class RaceScene extends CurrentRaceScene{
       osc1.connect(g1).connect(engineBus);osc2.connect(g2).connect(engineBus);osc3.connect(g3).connect(engineBus);
       osc1.start();osc2.start();osc3.start();
 
-      // Tyres: a small amount of filtered scrub noise plus two narrow tonal
-      // resonances. The resonances are what make lateral slip read as rubber
-      // squeal instead of wind/air noise.
-      const noise=ctx.createBufferSource();noise.buffer=makeNoiseBuffer(ctx);noise.loop=true;
-      const tireScrubFilter=ctx.createBiquadFilter();tireScrubFilter.type='bandpass';tireScrubFilter.frequency.value=1650;tireScrubFilter.Q.value=3.2;
-      const tireScrubGain=ctx.createGain();tireScrubGain.gain.value=0;
-      noise.connect(tireScrubFilter).connect(tireScrubGain).connect(master);noise.start();
-
-      const tireSqueal1=ctx.createOscillator();
-      const tireSqueal2=ctx.createOscillator();
-      tireSqueal1.type='sine';
-      tireSqueal2.type='triangle';
-      const tireToneFilter=ctx.createBiquadFilter();tireToneFilter.type='bandpass';tireToneFilter.frequency.value=2100;tireToneFilter.Q.value=8.5;
-      const tireToneGain=ctx.createGain();tireToneGain.gain.value=0;
-      const tireTone1Gain=ctx.createGain();tireTone1Gain.gain.value=.72;
-      const tireTone2Gain=ctx.createGain();tireTone2Gain.gain.value=.28;
-      tireSqueal1.connect(tireTone1Gain).connect(tireToneFilter);
-      tireSqueal2.connect(tireTone2Gain).connect(tireToneFilter);
-      tireToneFilter.connect(tireToneGain).connect(master);
-      tireSqueal1.start();tireSqueal2.start();
-
-      const wind=ctx.createBufferSource();wind.buffer=noise.buffer;wind.loop=true;
+      // Keep only a subtle aerodynamic layer. Tyre/slip synthesis was removed
+      // deliberately: the engine is the core sonic identity and must stay clean.
+      const noiseBuffer=makeNoiseBuffer(ctx);
+      const wind=ctx.createBufferSource();wind.buffer=noiseBuffer;wind.loop=true;
       const windFilter=ctx.createBiquadFilter();windFilter.type='highpass';windFilter.frequency.value=900;
       const windGain=ctx.createGain();windGain.gain.value=0;
       wind.connect(windFilter).connect(windGain).connect(master);wind.start();
 
-      this._audio={master,engineBus,engineFilter,osc1,osc2,osc3,
-        tireScrubFilter,tireScrubGain,tireSqueal1,tireSqueal2,tireToneFilter,tireToneGain,
-        windFilter,windGain,noise,wind,seed};
+      this._audio={master,engineBus,engineFilter,osc1,osc2,osc3,windFilter,windGain,wind,seed};
       this._audioCtx=ctx;this._audioReady=true;
       try{ctx.resume();}catch{}
     }catch(e){console.warn('[TDR2 audio] init failed',e);}
@@ -132,10 +112,8 @@ export class RaceScene extends CurrentRaceScene{
     const maxFwd=Math.max(120,Number(this.carParams?.maxFwd||520));
     const speed01=clamp(speed/maxFwd,0,1.15);
     const throttle=clamp(Number(this.touch?.throttle||0),0,1);
-    const brake=clamp(Number(this.touch?.brake||0),0,1);
 
-    // Two acoustic gears only. First gear runs through the lower half of the
-    // useful speed range; second gear carries the car to maximum speed.
+    // Two acoustic gears only.
     const shiftPoint=.52;
     const gear=speed01<shiftPoint?1:2;
     if(gear!==this._audioGear && speed>35){
@@ -159,28 +137,10 @@ export class RaceScene extends CurrentRaceScene{
     const engineLevel=(.025+rpm01*.055+throttle*.045)*(this._raceStarted?1:.45);
     a.engineBus.gain.setTargetAtTime(engineLevel,now,.045);
 
-    // Slip = velocity not aligned with the nose.
-    const rot=Number(this.carBody?.rotation||0),fx=Math.cos(rot),fy=Math.sin(rot);
-    const forward=vx*fx+vy*fy;
-    const lateral=Math.abs(-vx*fy+vy*fx);
-    const slip=clamp(lateral/Math.max(28,Math.abs(forward)),0,1);
-    const speedForTyres=clamp(speed/170,0,1);
-    const cornerSqueal=clamp((slip-.075)*1.9,0,1)*speedForTyres;
-    const brakeSqueal=brake*clamp((speed-55)/210,0,1)*.72;
-    const squeal=clamp(Math.max(cornerSqueal,brakeSqueal),0,1);
+    // No lateral-slip or braking tyre sound. Deliberately silent until we have
+    // an effect that improves immersion instead of calling attention to itself.
 
-    // Narrow, slightly moving harmonics imitate rubber resonance. Noise is kept
-    // low and only adds texture, so the dominant perception is a chirp/squeal.
-    const squealHz=1450+squeal*1250+Math.sin(performance.now()*.018)*55;
-    a.tireSqueal1.frequency.setTargetAtTime(squealHz,now,.025);
-    a.tireSqueal2.frequency.setTargetAtTime(squealHz*1.47,now,.03);
-    a.tireToneFilter.frequency.setTargetAtTime(squealHz*1.08,now,.035);
-    a.tireToneGain.gain.setTargetAtTime(Math.pow(squeal,1.15)*.075,now,.022);
-
-    a.tireScrubFilter.frequency.setTargetAtTime(1250+squeal*1150,now,.045);
-    a.tireScrubGain.gain.setTargetAtTime(Math.pow(squeal,1.4)*.018,now,.028);
-
-    const windLevel=Math.pow(clamp(speed01,0,1),1.7)*.028;
+    const windLevel=Math.pow(clamp(speed01,0,1),1.7)*.018;
     a.windFilter.frequency.setTargetAtTime(850+speed01*1700,now,.12);
     a.windGain.gain.setTargetAtTime(windLevel,now,.09);
 
@@ -200,13 +160,10 @@ export class RaceScene extends CurrentRaceScene{
     window.removeEventListener('pointerdown',this._audioUnlock);
     window.removeEventListener('touchstart',this._audioUnlock);
     window.removeEventListener('keydown',this._audioUnlock);
-    try{this._audio?.noise?.stop?.();}catch{}
     try{this._audio?.wind?.stop?.();}catch{}
     try{this._audio?.osc1?.stop?.();}catch{}
     try{this._audio?.osc2?.stop?.();}catch{}
     try{this._audio?.osc3?.stop?.();}catch{}
-    try{this._audio?.tireSqueal1?.stop?.();}catch{}
-    try{this._audio?.tireSqueal2?.stop?.();}catch{}
     try{this._audioCtx?.close?.();}catch{}
     this._audio=null;this._audioCtx=null;this._audioReady=false;
   }
