@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceSurfaceProfileScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceRuntimeSafetyScene.js';
 
 export class RaceScene extends CurrentRaceScene {
   create(data) {
