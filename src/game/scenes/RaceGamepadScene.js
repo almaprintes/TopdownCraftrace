@@ -16,12 +16,19 @@ function firstPad() {
   catch (_) { return null; }
 }
 
-function deadzone(v, dz = 0.12) {
-  const n = Math.max(-1, Math.min(1, Number(v) || 0));
-  const a = Math.abs(n);
-  if (a <= dz) return 0;
-  const normalized = (a - dz) / (1 - dz);
-  return Math.sign(n) * Math.pow(normalized, 1.35);
+// Same idea as the on-screen joystick: circular deadzone, preserve direction,
+// then remap the usable radius back to 0..1. This avoids diagonal distortion.
+function stickVector(rawX, rawY, dz = 0.12) {
+  let x = Math.max(-1, Math.min(1, Number(rawX) || 0));
+  let y = Math.max(-1, Math.min(1, Number(rawY) || 0));
+  const mag = Math.hypot(x, y);
+  if (mag <= dz) return { x: 0, y: 0, mag: 0 };
+
+  const clampedMag = Math.min(1, mag);
+  const usable = (clampedMag - dz) / (1 - dz);
+  const nx = x / mag;
+  const ny = y / mag;
+  return { x: nx * usable, y: ny * usable, mag: usable };
 }
 
 function triggerValue(button) {
@@ -91,29 +98,33 @@ export class RaceScene extends TouchRaceScene {
 
     if (touch) {
       if (pad) {
-        let steer = deadzone(pad.axes?.[0] || 0);
+        // Mirror the on-screen joystick one-for-one: left stick X/Y become the
+        // same stickX/stickY vector consumed by the race controller.
+        let v = stickVector(pad.axes?.[0] || 0, pad.axes?.[1] || 0);
 
-        // Standard mapping: D-pad left/right are buttons 14/15.
-        if (Math.abs(steer) < 0.02) {
-          const dLeft = !!pad.buttons?.[14]?.pressed;
-          const dRight = !!pad.buttons?.[15]?.pressed;
-          steer = dLeft && !dRight ? -1 : dRight && !dLeft ? 1 : 0;
+        // D-pad fallback if the analogue stick is centred.
+        if (v.mag < 0.02) {
+          const left = !!pad.buttons?.[14]?.pressed;
+          const right = !!pad.buttons?.[15]?.pressed;
+          const up = !!pad.buttons?.[12]?.pressed;
+          const down = !!pad.buttons?.[13]?.pressed;
+          v = stickVector((right ? 1 : 0) - (left ? 1 : 0), (down ? 1 : 0) - (up ? 1 : 0), 0);
         }
 
-        // IMPORTANT: the legacy touch controller interprets stickX/stickY as an
-        // ABSOLUTE world-space direction. Feeding the gamepad axis into stickX
-        // made the car rotate toward a fixed world angle and then stop turning.
-        // Gamepad steering is relative car steering, so only feed touch.steer;
-        // keep the absolute-stick vector neutral. RaceBicycleHandlingScene reads
-        // touch.steer continuously and therefore keeps turning while the player
-        // holds the stick left/right, exactly like a real steering control.
-        touch.stickX = 0;
-        touch.stickY = 0;
-        touch.targetAngle = null;
-        touch.steer = steer;
+        touch.stickX = v.x;
+        touch.stickY = v.y;
+        touch.steer = v.x;
+        touch.leftActive = v.mag > 0.02;
         touch.buttonSteer = 0;
 
-        // Standard mapping used by DualShock 4 / DualSense in browsers:
+        if (v.mag > 0.001) {
+          // Keep the exact target-angle convention of createTouchControls().
+          touch.targetAngle = Math.atan2(v.y, v.x) - (Math.PI / 2);
+        } else {
+          touch.targetAngle = null;
+        }
+
+        // Standard browser mapping for DualShock 4 / DualSense:
         // L2 = 6, R2 = 7.
         touch.throttle = triggerValue(pad.buttons?.[7]);
         touch.brake = triggerValue(pad.buttons?.[6]);
@@ -125,6 +136,7 @@ export class RaceScene extends TouchRaceScene {
         touch.stickY = 0;
         touch.targetAngle = null;
         touch.steer = 0;
+        touch.leftActive = false;
         touch.buttonSteer = 0;
         touch.throttle = 0;
         touch.brake = 0;
