@@ -21,7 +21,6 @@ function deadzone(v, dz = 0.12) {
   const a = Math.abs(n);
   if (a <= dz) return 0;
   const normalized = (a - dz) / (1 - dz);
-  // Progressive response: precise around centre, full authority at the edge.
   return Math.sign(n) * Math.pow(normalized, 1.35);
 }
 
@@ -37,8 +36,7 @@ export class RaceScene extends TouchRaceScene {
     const wanted = selectedMode();
     this._tdrGamepadMode = wanted === 'gamepad';
 
-    // Reuse the button-mode touch state because it deliberately creates no
-    // analogue joystick. Restore the real setting immediately after creation.
+    // Reuse the button-mode touch state because it creates no analogue joystick.
     let originalRaw = null;
     if (this._tdrGamepadMode) {
       try {
@@ -69,8 +67,6 @@ export class RaceScene extends TouchRaceScene {
     this._tdrLeftButton = null;
     this._tdrRightButton = null;
 
-    // The polished stick/pedals are a DOM overlay outside Phaser. In gamepad
-    // mode hide the entire overlay so the track remains clean.
     this._tdrGamepadStyle = document.createElement('style');
     this._tdrGamepadStyle.textContent = '#tdr-race-controls{display:none!important}';
     document.head.appendChild(this._tdrGamepadStyle);
@@ -104,12 +100,21 @@ export class RaceScene extends TouchRaceScene {
           steer = dLeft && !dRight ? -1 : dRight && !dLeft ? 1 : 0;
         }
 
-        // Standard mapping used by DualShock 4 / DualSense in browsers:
-        // L2 = 6, R2 = 7.
-        touch.stickX = steer;
+        // IMPORTANT: the legacy touch controller interprets stickX/stickY as an
+        // ABSOLUTE world-space direction. Feeding the gamepad axis into stickX
+        // made the car rotate toward a fixed world angle and then stop turning.
+        // Gamepad steering is relative car steering, so only feed touch.steer;
+        // keep the absolute-stick vector neutral. RaceBicycleHandlingScene reads
+        // touch.steer continuously and therefore keeps turning while the player
+        // holds the stick left/right, exactly like a real steering control.
+        touch.stickX = 0;
         touch.stickY = 0;
+        touch.targetAngle = null;
         touch.steer = steer;
         touch.buttonSteer = 0;
+
+        // Standard mapping used by DualShock 4 / DualSense in browsers:
+        // L2 = 6, R2 = 7.
         touch.throttle = triggerValue(pad.buttons?.[7]);
         touch.brake = triggerValue(pad.buttons?.[6]);
         touch.rightThrottle = touch.throttle > 0.05;
@@ -118,6 +123,7 @@ export class RaceScene extends TouchRaceScene {
       } else {
         touch.stickX = 0;
         touch.stickY = 0;
+        touch.targetAngle = null;
         touch.steer = 0;
         touch.buttonSteer = 0;
         touch.throttle = 0;
