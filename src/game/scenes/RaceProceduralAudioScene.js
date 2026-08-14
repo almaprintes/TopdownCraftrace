@@ -2,7 +2,6 @@ import { RaceScene as CurrentRaceScene } from './RaceGamepadScene.js';
 
 const SETTINGS_KEY='tdr2:settings';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-const lerp=(a,b,t)=>a+(b-a)*t;
 
 function audioPrefs(){
   try{
@@ -48,7 +47,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _ensureProceduralAudio(){
-    if(this._audioReady) {
+    if(this._audioReady){
       try{if(this._audioCtx?.state==='suspended')this._audioCtx.resume();}catch{}
       return;
     }
@@ -77,17 +76,35 @@ export class RaceScene extends CurrentRaceScene{
       osc1.connect(g1).connect(engineBus);osc2.connect(g2).connect(engineBus);osc3.connect(g3).connect(engineBus);
       osc1.start();osc2.start();osc3.start();
 
+      // Tyres: a small amount of filtered scrub noise plus two narrow tonal
+      // resonances. The resonances are what make lateral slip read as rubber
+      // squeal instead of wind/air noise.
       const noise=ctx.createBufferSource();noise.buffer=makeNoiseBuffer(ctx);noise.loop=true;
-      const tireFilter=ctx.createBiquadFilter();tireFilter.type='bandpass';tireFilter.frequency.value=1350;tireFilter.Q.value=.7;
-      const tireGain=ctx.createGain();tireGain.gain.value=0;
-      noise.connect(tireFilter).connect(tireGain).connect(master);noise.start();
+      const tireScrubFilter=ctx.createBiquadFilter();tireScrubFilter.type='bandpass';tireScrubFilter.frequency.value=1650;tireScrubFilter.Q.value=3.2;
+      const tireScrubGain=ctx.createGain();tireScrubGain.gain.value=0;
+      noise.connect(tireScrubFilter).connect(tireScrubGain).connect(master);noise.start();
+
+      const tireSqueal1=ctx.createOscillator();
+      const tireSqueal2=ctx.createOscillator();
+      tireSqueal1.type='sine';
+      tireSqueal2.type='triangle';
+      const tireToneFilter=ctx.createBiquadFilter();tireToneFilter.type='bandpass';tireToneFilter.frequency.value=2100;tireToneFilter.Q.value=8.5;
+      const tireToneGain=ctx.createGain();tireToneGain.gain.value=0;
+      const tireTone1Gain=ctx.createGain();tireTone1Gain.gain.value=.72;
+      const tireTone2Gain=ctx.createGain();tireTone2Gain.gain.value=.28;
+      tireSqueal1.connect(tireTone1Gain).connect(tireToneFilter);
+      tireSqueal2.connect(tireTone2Gain).connect(tireToneFilter);
+      tireToneFilter.connect(tireToneGain).connect(master);
+      tireSqueal1.start();tireSqueal2.start();
 
       const wind=ctx.createBufferSource();wind.buffer=noise.buffer;wind.loop=true;
       const windFilter=ctx.createBiquadFilter();windFilter.type='highpass';windFilter.frequency.value=900;
       const windGain=ctx.createGain();windGain.gain.value=0;
       wind.connect(windFilter).connect(windGain).connect(master);wind.start();
 
-      this._audio={master,engineBus,engineFilter,osc1,osc2,osc3,tireFilter,tireGain,windFilter,windGain,noise,wind,seed};
+      this._audio={master,engineBus,engineFilter,osc1,osc2,osc3,
+        tireScrubFilter,tireScrubGain,tireSqueal1,tireSqueal2,tireToneFilter,tireToneGain,
+        windFilter,windGain,noise,wind,seed};
       this._audioCtx=ctx;this._audioReady=true;
       try{ctx.resume();}catch{}
     }catch(e){console.warn('[TDR2 audio] init failed',e);}
@@ -117,13 +134,19 @@ export class RaceScene extends CurrentRaceScene{
     const throttle=clamp(Number(this.touch?.throttle||0),0,1);
     const brake=clamp(Number(this.touch?.brake||0),0,1);
 
-    // Five virtual gears. They are acoustic only: physics remains untouched.
-    const gear=Math.min(5,Math.max(1,Math.floor(speed01*5.25)+1));
-    if(gear!==this._audioGear && speed>35){this._audioGear=gear;this._audioShiftUntil=performance.now()+125;}
-    const gearFloor=(gear-1)/5.25,gearSpan=1/5.25;
-    const inGear=clamp((speed01-gearFloor)/gearSpan,0,1);
-    let rpm01=.24+inGear*.68+throttle*.10;
-    if(performance.now()<this._audioShiftUntil)rpm01*=.72;
+    // Two acoustic gears only. First gear runs through the lower half of the
+    // useful speed range; second gear carries the car to maximum speed.
+    const shiftPoint=.52;
+    const gear=speed01<shiftPoint?1:2;
+    if(gear!==this._audioGear && speed>35){
+      this._audioGear=gear;
+      this._audioShiftUntil=performance.now()+155;
+    }
+    const inGear=gear===1
+      ? clamp(speed01/shiftPoint,0,1)
+      : clamp((speed01-shiftPoint)/(1-shiftPoint),0,1);
+    let rpm01=.22+inGear*.70+throttle*.10;
+    if(performance.now()<this._audioShiftUntil)rpm01*=.66;
 
     const seed=a.seed;
     const baseHz=42+seed*18;
@@ -136,14 +159,26 @@ export class RaceScene extends CurrentRaceScene{
     const engineLevel=(.025+rpm01*.055+throttle*.045)*(this._raceStarted?1:.45);
     a.engineBus.gain.setTargetAtTime(engineLevel,now,.045);
 
-    // Slip = velocity not aligned with the nose. This naturally creates tyre sound in hard cornering.
+    // Slip = velocity not aligned with the nose.
     const rot=Number(this.carBody?.rotation||0),fx=Math.cos(rot),fy=Math.sin(rot);
     const forward=vx*fx+vy*fy;
     const lateral=Math.abs(-vx*fy+vy*fx);
     const slip=clamp(lateral/Math.max(28,Math.abs(forward)),0,1);
-    const tire=clamp((slip-.08)*1.55,0,1)*clamp(speed/180,0,1)+brake*clamp(speed/260,0,1)*.55;
-    a.tireFilter.frequency.setTargetAtTime(900+tire*2200,now,.05);
-    a.tireGain.gain.setTargetAtTime(tire*.095,now,.035);
+    const speedForTyres=clamp(speed/170,0,1);
+    const cornerSqueal=clamp((slip-.075)*1.9,0,1)*speedForTyres;
+    const brakeSqueal=brake*clamp((speed-55)/210,0,1)*.72;
+    const squeal=clamp(Math.max(cornerSqueal,brakeSqueal),0,1);
+
+    // Narrow, slightly moving harmonics imitate rubber resonance. Noise is kept
+    // low and only adds texture, so the dominant perception is a chirp/squeal.
+    const squealHz=1450+squeal*1250+Math.sin(performance.now()*.018)*55;
+    a.tireSqueal1.frequency.setTargetAtTime(squealHz,now,.025);
+    a.tireSqueal2.frequency.setTargetAtTime(squealHz*1.47,now,.03);
+    a.tireToneFilter.frequency.setTargetAtTime(squealHz*1.08,now,.035);
+    a.tireToneGain.gain.setTargetAtTime(Math.pow(squeal,1.15)*.075,now,.022);
+
+    a.tireScrubFilter.frequency.setTargetAtTime(1250+squeal*1150,now,.045);
+    a.tireScrubGain.gain.setTargetAtTime(Math.pow(squeal,1.4)*.018,now,.028);
 
     const windLevel=Math.pow(clamp(speed01,0,1),1.7)*.028;
     a.windFilter.frequency.setTargetAtTime(850+speed01*1700,now,.12);
@@ -152,7 +187,6 @@ export class RaceScene extends CurrentRaceScene{
     const master=prefs.mute?0:prefs.master*.78;
     a.master.gain.setTargetAtTime(master,now,.04);
 
-    // Sudden loss of speed while moving = barrier/contact accent.
     const dt=Math.max(.001,Number(delta||16.7)/1000);
     const decel=(this._audioPrevSpeed-speed)/dt;
     if(speed>80 && decel>520 && performance.now()-this._audioLastImpactAt>180){
@@ -171,6 +205,8 @@ export class RaceScene extends CurrentRaceScene{
     try{this._audio?.osc1?.stop?.();}catch{}
     try{this._audio?.osc2?.stop?.();}catch{}
     try{this._audio?.osc3?.stop?.();}catch{}
+    try{this._audio?.tireSqueal1?.stop?.();}catch{}
+    try{this._audio?.tireSqueal2?.stop?.();}catch{}
     try{this._audioCtx?.close?.();}catch{}
     this._audio=null;this._audioCtx=null;this._audioReady=false;
   }
