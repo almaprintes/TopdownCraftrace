@@ -378,6 +378,17 @@ function __installRaceControlVisuals() {
       if (active) {
         __hideLegacyTouchVisuals(race);
 
+        // This is a separate DOM joystick, independent from Phaser's touchUI.
+        // In button mode it must be hidden while GAS/FRENO remain visible.
+        let buttonMode = race?._tdrSteeringMode === 'buttons';
+        if (!buttonMode) {
+          try {
+            const settings = JSON.parse(localStorage.getItem('tdr2:settings') || '{}');
+            buttonMode = settings?.controls?.steeringMode === 'buttons';
+          } catch {}
+        }
+        if (stick) stick.style.display = buttonMode ? 'none' : 'block';
+
         const throttle = Math.max(0, Math.min(1, Number(race?.touch?.throttle || 0)));
         const braking = Math.max(0, Math.min(1, Number(race?.touch?.brake || 0)));
         gas?.style.setProperty('--level', String(throttle));
@@ -385,13 +396,17 @@ function __installRaceControlVisuals() {
         gas?.classList.toggle('is-active', throttle > .12);
         brake?.classList.toggle('is-active', braking > .12);
 
-        const sx = Math.max(-1, Math.min(1, Number(race?.touch?.stickX || 0)));
-        const sy = Math.max(-1, Math.min(1, Number(race?.touch?.stickY || 0)));
-        const mag = Math.max(0, Math.min(1, Math.hypot(sx, sy)));
-        stick?.style.setProperty('--x', String(sx));
-        stick?.style.setProperty('--y', String(sy));
-        stick?.style.setProperty('--mag', String(mag));
-        stick?.classList.toggle('is-active', !!race?.touch?.leftActive || mag > .04);
+        if (!buttonMode) {
+          const sx = Math.max(-1, Math.min(1, Number(race?.touch?.stickX || 0)));
+          const sy = Math.max(-1, Math.min(1, Number(race?.touch?.stickY || 0)));
+          const mag = Math.max(0, Math.min(1, Math.hypot(sx, sy)));
+          stick?.style.setProperty('--x', String(sx));
+          stick?.style.setProperty('--y', String(sy));
+          stick?.style.setProperty('--mag', String(mag));
+          stick?.classList.toggle('is-active', !!race?.touch?.leftActive || mag > .04);
+        } else {
+          stick?.classList.remove('is-active');
+        }
       }
     } catch {}
     requestAnimationFrame(tick);
