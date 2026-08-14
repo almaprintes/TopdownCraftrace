@@ -21,6 +21,47 @@ export class RaceScene extends CurrentRaceScene {
     this._bikeHandlingEnabled=true;
     this._bikeSteerFiltered=0;
     this._bikeYawFiltered=0;
+    this._racePhysicsWakeDone=false;
+  }
+
+  create(data){
+    const result=super.create(data);
+
+    // Defensive reset for scene re-entry. If Arcade Physics was left paused by a
+    // previous race/orientation transition, game logic can still increase the
+    // velocity vector while the body never integrates its position. That exact
+    // state looks like "speedometer rises, car turns, but it does not advance".
+    try { this.physics?.world?.resume?.(); } catch (_) {}
+    const b=this.carBody?.body;
+    if(b){
+      b.enable=true;
+      b.moves=true;
+      b.immovable=false;
+      if('pushable' in b) b.pushable=true;
+    }
+    this._racePhysicsWakeDone=false;
+
+    return result;
+  }
+
+  _ensureRacePhysicsLive(){
+    if(this._racePhysicsWakeDone || !this._raceStarted) return;
+
+    // Do this once, exactly when the countdown has actually released the car.
+    // We deliberately do not touch velocity or position, so normal starts and
+    // collisions remain physically identical.
+    try { this.physics?.world?.resume?.(); } catch (_) {}
+
+    const b=this.carBody?.body;
+    if(b){
+      b.enable=true;
+      b.moves=true;
+      b.immovable=false;
+      if('pushable' in b) b.pushable=true;
+    }
+
+    try { this.carBody?.setActive?.(true); } catch (_) {}
+    this._racePhysicsWakeDone=true;
   }
 
   _bikeVisualLength(){
@@ -78,6 +119,7 @@ export class RaceScene extends CurrentRaceScene {
     const prevRot=Number(bodyBefore?.rotation);
 
     super.update(time,delta);
+    this._ensureRacePhysicsLive();
 
     if(!this._bikeHandlingEnabled) return;
     const body=this.carBody;
