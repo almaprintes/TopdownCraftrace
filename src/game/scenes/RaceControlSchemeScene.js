@@ -30,11 +30,28 @@ export class RaceScene extends CurrentRaceScene {
       const mode = this._tdrSteeringMode || 'stick';
       const list = this.touchUI?.list || [];
 
-      // Legacy touch order starts with joystick base + knob.
-      // In button mode these two are hidden; GAS/FRENO remain handled elsewhere.
+      // In button mode the complete analogue joystick must disappear, not merely
+      // become inactive. Hide every legacy object that belongs to the joystick.
       if (mode === 'buttons') {
-        try { list[0]?.setVisible?.(false); } catch (_) {}
-        try { list[1]?.setVisible?.(false); } catch (_) {}
+        const joyX = Number(state.joyX ?? state.joystickX ?? list[0]?.x ?? 0);
+        const joyY = Number(state.joyY ?? state.joystickY ?? list[0]?.y ?? 0);
+        const radius = Math.max(70, Number(state.joyRadius || 110));
+
+        for (const obj of list) {
+          if (!obj) continue;
+          const ox = Number(obj.x ?? 0);
+          const oy = Number(obj.y ?? 0);
+          const nearJoystick = Math.hypot(ox - joyX, oy - joyY) <= radius * 1.7;
+          if (nearJoystick) {
+            try { obj.setVisible?.(false); } catch (_) {}
+            try { obj.disableInteractive?.(); } catch (_) {}
+          }
+        }
+        // Known legacy order: base + knob. Keep this explicit as a fallback.
+        for (let i = 0; i <= 1; i++) {
+          try { list[i]?.setVisible?.(false); } catch (_) {}
+          try { list[i]?.disableInteractive?.(); } catch (_) {}
+        }
       }
 
       if (mode !== 'buttons' || this._tdrSteerButtons?.scene) return;
@@ -45,7 +62,6 @@ export class RaceScene extends CurrentRaceScene {
       const btnH = Math.max(76, Math.min(118, Math.floor(h * 0.22)));
       const btnW = Math.max(92, Math.min(150, Math.floor(w * 0.14)));
       const gap = 14;
-      const totalW = btnW * 2 + gap;
       const startX = pad;
       const y = h - pad - btnH;
 
@@ -77,10 +93,7 @@ export class RaceScene extends CurrentRaceScene {
           else if (state.buttonSteer === dir) state.buttonSteer = 0;
         };
 
-        bg.on('pointerdown', (p) => {
-          activePointer = p.id;
-          setPressed(true);
-        });
+        bg.on('pointerdown', (p) => { activePointer = p.id; setPressed(true); });
         bg.on('pointerup', (p) => {
           if (activePointer === p.id) setPressed(false);
           activePointer = null;
@@ -115,12 +128,8 @@ export class RaceScene extends CurrentRaceScene {
       rightKey = this.keys.right;
       prevLeft = !!leftKey?.isDown;
       prevRight = !!rightKey?.isDown;
-
       if (leftKey) leftKey.isDown = steer < -0.25;
       if (rightKey) rightKey.isDown = steer > 0.25;
-
-      // Neutralise the analogue stick so the absolute-heading touch branch never fights
-      // the relative left/right steering branch.
       if (this.touch) {
         this.touch.stickX = 0;
         this.touch.stickY = 0;
