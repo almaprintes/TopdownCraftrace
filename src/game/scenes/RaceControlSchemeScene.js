@@ -17,34 +17,81 @@ function loadSteeringMode() {
 export class RaceScene extends CurrentRaceScene {
   create(data) {
     this._tdrSteeringMode = loadSteeringMode();
+
+    // Definitive guard: in button mode, stop the legacy joystick circles at the
+    // moment they are created. This also catches later resize/reflow rebuilds,
+    // which is why hiding/destroying touchUI after the fact was not sufficient.
+    if (this._tdrSteeringMode === 'buttons' && this.add?.circle && !this._tdrOriginalAddCircle) {
+      this._tdrOriginalAddCircle = this.add.circle.bind(this.add);
+      const originalCircle = this._tdrOriginalAddCircle;
+
+      this.add.circle = (x, y, radius, fillColor, fillAlpha) => {
+        const obj = originalCircle(x, y, radius, fillColor, fillAlpha);
+        const w = Number(this.scale?.width || 0);
+        const h = Number(this.scale?.height || 0);
+        const isLegacyJoystickCircle =
+          Number(x) <= w * 0.34 &&
+          Number(y) >= h * 0.45 &&
+          Number(radius) >= 18;
+
+        if (isLegacyJoystickCircle) {
+          try { obj.setVisible(false); } catch (_) {}
+          try { obj.setAlpha(0); } catch (_) {}
+          try { obj.disableInteractive?.(); } catch (_) {}
+          obj.__tdrSuppressedLegacyJoystick = true;
+        }
+        return obj;
+      };
+    }
+
     const result = super.create(data);
     this._applySteeringModeVisuals?.();
     this.time?.delayedCall?.(0, () => this._applySteeringModeVisuals?.());
     this.time?.delayedCall?.(120, () => this._applySteeringModeVisuals?.());
+
+    this.events.once('shutdown', () => {
+      if (this._tdrOriginalAddCircle && this.add) {
+        try { this.add.circle = this._tdrOriginalAddCircle; } catch (_) {}
+      }
+      this._tdrOriginalAddCircle = null;
+    });
+
     return result;
   }
 
   _purgeLegacyTouchVisuals() {
     if (this._tdrSteeringMode !== 'buttons') return;
 
-    // In button mode we do not merely hide the old joystick. We remove every
-    // display object created by the legacy touch renderer (joystick + obsolete
-    // GAS/FRENO artwork). The commercial pedal artwork lives elsewhere and the
-    // legacy pointer listeners still update throttle/brake state without needing
-    // these display objects.
     const ui = this.touchUI;
     if (ui) {
       const list = Array.isArray(ui.list) ? [...ui.list] : [];
       for (const obj of list) {
         try { obj?.disableInteractive?.(); } catch (_) {}
-        try { obj?.destroy?.(); } catch (_) {}
+        try { obj?.setVisible?.(false); } catch (_) {}
+        try { obj?.setAlpha?.(0); } catch (_) {}
       }
-      try { ui.removeAll?.(false); } catch (_) {}
       try { ui.setVisible?.(false); } catch (_) {}
+      try { ui.setAlpha?.(0); } catch (_) {}
     }
 
-    // The original draw callback closes over the destroyed circles. Replacing it
-    // prevents pointer events from trying to redraw a joystick that no longer exists.
+    // Catch any legacy joystick circle that was created outside touchUI.
+    const w = Number(this.scale?.width || 0);
+    const h = Number(this.scale?.height || 0);
+    for (const obj of this.children?.list || []) {
+      if (!obj || obj === this._tdrSteerButtons) continue;
+      const x = Number(obj.x ?? -9999);
+      const y = Number(obj.y ?? -9999);
+      const radius = Number(obj.radius ?? 0);
+      const type = String(obj.type || obj.constructor?.name || '').toLowerCase();
+      const isCircle = type.includes('arc') || type.includes('circle') || radius > 0;
+      const isLegacyJoystickCircle = isCircle && x <= w * 0.34 && y >= h * 0.45 && radius >= 18;
+      if (isLegacyJoystickCircle || obj.__tdrSuppressedLegacyJoystick) {
+        try { obj.setVisible?.(false); } catch (_) {}
+        try { obj.setAlpha?.(0); } catch (_) {}
+        try { obj.disableInteractive?.(); } catch (_) {}
+      }
+    }
+
     if (this.touch) this.touch._draw = () => {};
   }
 
@@ -57,6 +104,7 @@ export class RaceScene extends CurrentRaceScene {
       if (mode === 'buttons') this._purgeLegacyTouchVisuals();
       else {
         try { this.touchUI?.setVisible?.(true); } catch (_) {}
+        try { this.touchUI?.setAlpha?.(1); } catch (_) {}
       }
 
       if (mode !== 'buttons' || this._tdrSteerButtons?.scene) return;
@@ -130,8 +178,6 @@ export class RaceScene extends CurrentRaceScene {
     let prevLeft = false, prevRight = false;
 
     if (buttonMode && this.keys) {
-      // Legacy resize code can rebuild touch visuals. Purge them again before the
-      // frame is rendered, so there is no one-frame joystick flash.
       this._purgeLegacyTouchVisuals();
 
       leftKey = this.keys.left;
