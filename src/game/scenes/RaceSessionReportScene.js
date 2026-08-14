@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceProgressiveBrakeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import { pxpsToKmh } from '../cars/speedUnits.js';
 
 function clamp(n,a,b){ return Math.max(a,Math.min(b,n)); }
 function fmtTime(ms){
@@ -34,7 +35,7 @@ export class RaceScene extends CurrentRaceScene {
     super.create(data);
     this._sessionLapBaseline=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
     this._sessionStats={
-      startedAt:Date.now(), elapsed:0, movingTime:0,
+      startedAt:null, elapsed:0, movingTime:0,
       maxKmh:0, speedIntegral:0, distanceKm:0,
       throttleTime:0, brakeTime:0, coastTime:0,
       steeringIntegral:0, steeringTime:0, maxSteer:0,
@@ -79,10 +80,16 @@ export class RaceScene extends CurrentRaceScene {
   _sampleSession(delta){
     const s=this._sessionStats, body=this.carBody;
     if(!s||!body?.body?.velocity) return;
+
+    // A session starts at the actual green-light/racing state. Countdown and
+    // grid waiting must never dilute average speed, duration or control usage.
+    if(!this._raceStarted) return;
+    if(!s.startedAt) s.startedAt=Date.now();
+
     const dt=clamp(Number(delta||16.67)/1000,0.001,0.10);
     const vx=Number(body.body.velocity.x||0), vy=Number(body.body.velocity.y||0);
     const pxs=Math.hypot(vx,vy);
-    const kmh=pxs*0.10;
+    const kmh=pxpsToKmh(pxs);
     s.elapsed+=dt;
     s.maxKmh=Math.max(s.maxKmh,kmh);
     s.speedIntegral+=kmh*dt;
