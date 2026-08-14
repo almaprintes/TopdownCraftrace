@@ -1,10 +1,13 @@
 import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGarageFixedScene.js';
 import { loadTrackPreview } from '../tracks/trackPreviewStore.js';
 import { OFFICIAL_TRACK_WEBP } from '../tracks/officialTrackPreviewData.js';
+import { pxToMeters } from '../cars/speedUnits.js';
 
 const C = { bg:0x071017, panel:0x0b171f, panel2:0x101f28, line:0x263640, yellow:0xffc400, white:'#f4f7f8', muted:'#8fa0aa' };
 function points(track){return (track?.centerline||[]).map(p=>Array.isArray(p)?{x:Number(p[0]),y:Number(p[1])}:{x:Number(p?.x),y:Number(p?.y)}).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));}
-function lengthOf(track){const direct=Number(track?.length??track?.trackLength??track?.meta?.length??track?.meta?.trackLength);if(Number.isFinite(direct)&&direct>0)return Math.round(direct);const p=points(track);let d=0;if(p.length<2)return d;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];d+=Math.hypot(b.x-a.x,b.y-a.y);}return Math.round(d);}
+function lengthWorldUnits(track){const direct=Number(track?.length??track?.trackLength??track?.meta?.length??track?.meta?.trackLength);if(Number.isFinite(direct)&&direct>0)return direct;const p=points(track);let d=0;if(p.length<2)return d;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];d+=Math.hypot(b.x-a.x,b.y-a.y);}return d;}
+function lengthOf(track){return Math.round(pxToMeters(lengthWorldUnits(track)));}
+function widthOf(track){const raw=Number(track?.trackWidth??track?.width??track?.meta?.trackWidth??160);return pxToMeters(Number.isFinite(raw)?raw:160);}
 function sectorCount(track){const n=Number(track?.sectors);if(Number.isFinite(n)&&n>0)return Math.round(n);const c=track?.checkpointFractions;return Array.isArray(c)?Math.max(1,c.length+1):3;}
 function surface(track){return String(track?.surface||track?.meta?.trackSurface||track?.meta?.surface||'Asfalto');}
 
@@ -54,7 +57,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     root.add(this.add.text(x+pad,nameY,(t.name||t.key).toUpperCase(),{fontFamily:'Arial Black',fontSize:`${Math.max(21,Math.min(31,infoW*.125))}px`,fontStyle:'italic',color:C.white,wordWrap:{width:infoW-pad*2},lineSpacing:2}).setOrigin(0,0));
 
     const lineY=Math.min(y+h*.36,nameY+nameH+8);g.lineStyle(2,C.yellow,1).lineBetween(x+pad,lineY,x+infoW-pad,lineY);
-    const stats=[['LONGITUD',`${lengthOf(t)} m`],['SECTORES',String(sectorCount(t))],['SUPERFICIE',surface(t)],['ANCHO PISTA',`${Math.round(Number(t.trackWidth||t.width||160))} m`]];
+    const stats=[['LONGITUD',`${lengthOf(t)} m`],['SECTORES',String(sectorCount(t))],['SUPERFICIE',surface(t)],['ANCHO PISTA',`${widthOf(t).toFixed(1)} m`]];
     const statsTop=lineY+10,statsBottom=y+h-14,cellH=(statsBottom-statsTop)/4;
     stats.forEach((s,i)=>{const cy=statsTop+i*cellH;if(i)g.lineStyle(1,0x273842,.82).lineBetween(x+pad,cy,x+infoW-pad,cy);const labelY=cy+cellH*.28,valueY=cy+cellH*.66;root.add(this.add.text(x+pad,labelY,s[0],{fontFamily:'Arial',fontSize:`${Math.max(10,Math.min(13,cellH*.18))}px`,fontStyle:'bold',color:C.muted}).setOrigin(0,.5));root.add(this.add.text(x+pad,valueY,s[1],{fontFamily:'Arial Black',fontSize:`${Math.max(15,Math.min(21,cellH*.28))}px`,color:C.white}).setOrigin(0,.5));});
 
