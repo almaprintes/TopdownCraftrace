@@ -25,8 +25,6 @@ export class RaceScene extends ReplayTelemetryScene {
     if(this._ghostSectorCrossings.length===1 && prev<2/3 && p>=2/3){
       this._ghostSectorCrossings.push(elapsed);
     }
-    // If progress wraps at the finish, the parent lap-completion logic will
-    // close S3 using the authoritative lap time.
     this._ghostSectorLastProgress=p;
   }
 
@@ -85,10 +83,17 @@ export class RaceScene extends ReplayTelemetryScene {
 
   _updateReplayIdentity(t){
     super._updateReplayIdentity(t);
+
+    // Keep the small replay stopwatch tied to the exact replay timeline.
+    // It used to remain at the initial 0:00.00 because only its DOM adapter
+    // was created, but nothing updated it after playback started.
+    const lap=Math.max(1,Number(this._ghostData?.lapMs)||1);
+    const shown=Math.min(Math.max(0,Number(t)||0),lap);
+    if(this._replayTimeText?.scene)this._replayTimeText.setText(this._fmtReplayMs(shown));
+
     const rows=this._replaySectors;
     if(!rows?.length)return;
 
-    const lap=Math.max(1,Number(this._ghostData?.lapMs)||1);
     const sectors=Array.isArray(this._ghostData?.sectorTimes)&&this._ghostData.sectorTimes.length===3
       ? this._ghostData.sectorTimes.map(v=>Math.max(0,Number(v)||0))
       : null;
