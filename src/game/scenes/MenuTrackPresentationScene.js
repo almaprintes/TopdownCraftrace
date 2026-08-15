@@ -1,6 +1,7 @@
 import { MenuScene as CurrentMenuScene } from './MenuCleanTypographyScene.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { METERS_PER_PX } from '../cars/speedUnits.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
@@ -21,10 +22,53 @@ function surfaceLabel(track){
   return 'ASFALTO';
 }
 
+function walkGameObjects(node,out=[]){
+  if(!node)return out;
+  const list=Array.isArray(node.list)?node.list:[];
+  for(const child of list){
+    out.push(child);
+    if(Array.isArray(child?.list))walkGameObjects(child,out);
+  }
+  return out;
+}
+
 export class MenuScene extends CurrentMenuScene{
   renderUI(){
     super.renderUI();
+    this._recomposeHeroInfo();
     this._renderSelectedTrackCard();
+  }
+
+  _recomposeHeroInfo(){
+    if(!this._ui)return;
+    const {width}=this.scale;
+    const key=this.selectedTrackKey||localStorage.getItem('tdr2:trackKey')||'track01';
+    const track=TRACK_REGISTRY?.[key];
+    const oldTrackTitle=String(track?.name||this._trackTitle(key)||'').trim().toLowerCase();
+    const carName=String(CAR_SPECS?.[this.selectedCarId]?.name||this.selectedCarId||'').trim().toLowerCase();
+
+    const objects=walkGameObjects(this._ui,[]);
+
+    // Remove only the legacy circuit-name text from the old car information row.
+    // The new circuit card below is the sole place where the circuit name lives.
+    for(const obj of objects){
+      const txt=String(obj?.text??'').trim().toLowerCase();
+      if(!txt)continue;
+      if(oldTrackTitle&&txt===oldTrackTitle){
+        try{obj.destroy();}catch{}
+      }
+    }
+
+    // Move the whole selected-car information panel clearly to the left.
+    // Its title text is a reliable anchor to the parent HUD container created by MenuScene.
+    const carTitleObj=objects.find(obj=>{
+      const txt=String(obj?.text??'').trim().toLowerCase();
+      return !!carName && txt===carName;
+    });
+    const panel=carTitleObj?.parentContainer;
+    if(panel&&Number.isFinite(panel.x)){
+      panel.x-=clamp(Math.floor(width*.13),170,250);
+    }
   }
 
   _renderSelectedTrackCard(){
@@ -38,13 +82,12 @@ export class MenuScene extends CurrentMenuScene{
     const center=Array.isArray(track.raceCenterline)&&track.raceCenterline.length?track.raceCenterline:track.centerline;
     if(!Array.isArray(center)||center.length<2)return;
 
-    // Right-side information block: intentionally compact and high enough to
-    // stay clear of ARRANCAR MOTOR and the bottom TRACKS button.
+    // High right-side placement: deliberately above the mode selector and play button.
     const cardW=clamp(Math.floor(width*.28),350,480);
     const cardH=clamp(Math.floor(height*.17),126,148);
     const rightMargin=clamp(Math.floor(width*.045),46,72);
     const cardX=width-rightMargin-cardW/2;
-    const cardY=clamp(Math.floor(height*.37),270,325);
+    const cardY=clamp(Math.floor(height*.235),170,225);
 
     const card=this.add.container(cardX,cardY).setDepth(34);
     this._ui?.add(card);
