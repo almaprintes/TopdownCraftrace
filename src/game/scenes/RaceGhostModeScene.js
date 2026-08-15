@@ -59,12 +59,10 @@ export class RaceScene extends CurrentRaceScene{
       }
     });
 
-    // Runtime skins can arrive asynchronously. Retry briefly so the ghost always
-    // clones the real visible car rather than the invisible physics body.
     if(this._tdrGameMode==='ghost'&&this._ghostData){
-      this.time.delayedCall(180,()=>this._createGhostSprite());
-      this.time.delayedCall(500,()=>this._createGhostSprite());
-      this.time.delayedCall(1000,()=>this._createGhostSprite());
+      this.time.delayedCall(180,()=>this._syncGhostVisual());
+      this.time.delayedCall(500,()=>this._syncGhostVisual());
+      this.time.delayedCall(1000,()=>this._syncGhostVisual());
     }
 
     this.events.once('shutdown',()=>{
@@ -75,13 +73,20 @@ export class RaceScene extends CurrentRaceScene{
     return result;
   }
 
+  _runtimeGhostTextureKey(){
+    const runtimeKey=`car_${this._ghostCarId}`;
+    if(this.textures?.exists?.(runtimeKey))return runtimeKey;
+    const visual=visualCarSprite(this);
+    const current=visual?.texture?.key;
+    return current&&current!=='__BODY__'&&this.textures?.exists?.(current)?current:null;
+  }
+
   _createGhostSprite(){
     if(this._tdrGameMode!=='ghost'||!this._ghostData||this._ghostSprite?.scene)return;
     const body=this.carBody;
     const visual=visualCarSprite(this);
-    if(!body||!visual)return;
-    const tex=visual.texture?.key;
-    if(!tex||!this.textures?.exists?.(tex))return;
+    const tex=this._runtimeGhostTextureKey();
+    if(!body||!visual||!tex)return;
 
     const g=this.add.image(Number(body.x||0),Number(body.y||0),tex)
       .setOrigin(visual.originX??.5,visual.originY??.5)
@@ -92,9 +97,31 @@ export class RaceScene extends CurrentRaceScene{
     g.setScale(Number(visual.scaleX||1),Number(visual.scaleY||1));
     g.setDepth(Math.max(31,Number(this.carRig?.depth||30)+1));
     this._ghostSprite=g;
+    this._ghostTextureKey=tex;
 
-    // The UI camera must not render world objects. Mirror the player's car rule.
     try{this.uiCam?.ignore?.(g);}catch{}
+  }
+
+  _syncGhostVisual(){
+    if(this._tdrGameMode!=='ghost'||!this._ghostData)return;
+    if(!this._ghostSprite?.scene){
+      this._createGhostSprite();
+      return;
+    }
+
+    // The selected car's real runtime skin always has this deterministic key.
+    // Prefer it over whatever temporary/procedural texture the visual rig had
+    // during the first frame while the asynchronous skin loader was still busy.
+    const desired=this._runtimeGhostTextureKey();
+    if(desired&&this._ghostSprite.texture?.key!==desired){
+      try{this._ghostSprite.setTexture(desired);this._ghostTextureKey=desired;}catch{}
+    }
+
+    const visual=visualCarSprite(this);
+    if(visual){
+      try{this._ghostSprite.setOrigin(visual.originX??.5,visual.originY??.5);}catch{}
+      try{this._ghostSprite.setScale(Number(visual.scaleX||1),Number(visual.scaleY||1));}catch{}
+    }
   }
 
   _createGhostHud(){
@@ -127,13 +154,14 @@ export class RaceScene extends CurrentRaceScene{
     if(valid&&this._ghostSamples.length>4){
       const previous=this._ghostData;
       if(!previous||lapMs<Number(previous.lapMs)){
-        const saved={version:2,trackKey:this._ghostTrackKey,carId:this._ghostCarId,lapMs:Math.round(lapMs),samples:this._ghostSamples.slice()};
+        const saved={version:3,trackKey:this._ghostTrackKey,carId:this._ghostCarId,lapMs:Math.round(lapMs),samples:this._ghostSamples.slice()};
         if(writeGhost(this._ghostStorageKey,saved)){
           this._ghostData=saved;
           if(this._tdrGameMode==='ghost'){
             try{this._ghostSprite?.destroy?.();}catch{}
             this._ghostSprite=null;
             this._createGhostSprite();
+            this._syncGhostVisual();
             if(this._ghostHud?.scene)this._ghostHud.setText(previous?'👻 NUEVO FANTASMA · RÉCORD MEJORADO':'👻 FANTASMA CREADO · SIGUIENTE VUELTA');
           }
         }
@@ -167,6 +195,7 @@ export class RaceScene extends CurrentRaceScene{
     super.update(time,delta);
     const now=performance.now();
     if(this._raceStarted&&this._ghostLapStartPerf==null)this._ghostLapStartPerf=now;
+    this._syncGhostVisual();
     this._recordGhostSample(now);
     this._completedLapCheck(now);
     this._playGhost(now);
