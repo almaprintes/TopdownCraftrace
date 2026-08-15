@@ -38,10 +38,13 @@ export class MenuScene extends CurrentMenuScene{
     const center=Array.isArray(track.raceCenterline)&&track.raceCenterline.length?track.raceCenterline:track.centerline;
     if(!Array.isArray(center)||center.length<2)return;
 
-    const cardW=clamp(Math.floor(width*.30),360,520);
-    const cardH=clamp(Math.floor(height*.19),132,164);
-    const cardX=width-clamp(Math.floor(width*.055),54,84)-cardW/2;
-    const cardY=clamp(Math.floor(height*.48),310,410);
+    // Right-side information block: intentionally compact and high enough to
+    // stay clear of ARRANCAR MOTOR and the bottom TRACKS button.
+    const cardW=clamp(Math.floor(width*.28),350,480);
+    const cardH=clamp(Math.floor(height*.17),126,148);
+    const rightMargin=clamp(Math.floor(width*.045),46,72);
+    const cardX=width-rightMargin-cardW/2;
+    const cardY=clamp(Math.floor(height*.37),270,325);
 
     const card=this.add.container(cardX,cardY).setDepth(34);
     this._ui?.add(card);
@@ -51,19 +54,19 @@ export class MenuScene extends CurrentMenuScene{
     card.add(this.add.rectangle(0,-cardH/2+3,cardW-6,3,0x25d7ff,.65).setOrigin(.5,0));
 
     const left=-cardW/2+16;
-    const top=-cardH/2+12;
+    const top=-cardH/2+10;
     card.add(this.add.text(left,top,'CIRCUITO SELECCIONADO',{
       fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#6deaff',letterSpacing:1
     }).setOrigin(0));
 
-    card.add(this.add.text(left,top+19,String(track.name||this._trackTitle(key)).toUpperCase(),{
-      fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'20px',fontStyle:'bold',color:'#ffffff'
+    card.add(this.add.text(left,top+18,String(track.name||this._trackTitle(key)).toUpperCase(),{
+      fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'19px',fontStyle:'bold',color:'#ffffff'
     }).setOrigin(0));
 
-    const previewX=left+78;
-    const previewY=top+83;
-    const previewW=Math.min(150,cardW*.30);
-    const previewH=70;
+    const previewX=left+68;
+    const previewY=top+75;
+    const previewW=Math.min(132,cardW*.28);
+    const previewH=62;
 
     card.add(this.add.rectangle(previewX,previewY,previewW,previewH,0x071018,.72)
       .setOrigin(.5).setStrokeStyle(1,0xffffff,.10));
@@ -76,7 +79,7 @@ export class MenuScene extends CurrentMenuScene{
     }
     if(Number.isFinite(minX)&&maxX>minX&&maxY>minY){
       const g=this.add.graphics();
-      const s=Math.min((previewW-18)/(maxX-minX),(previewH-16)/(maxY-minY));
+      const s=Math.min((previewW-16)/(maxX-minX),(previewH-14)/(maxY-minY));
       const ox=previewX-(maxX-minX)*s/2;
       const oy=previewY-(maxY-minY)*s/2;
       g.lineStyle(5,0x000000,.45);
@@ -102,9 +105,10 @@ export class MenuScene extends CurrentMenuScene{
     const difficulty=String(track.difficulty||'Media').toUpperCase();
     const direction=String(track.raceDirection||'forward').toLowerCase()==='reverse'?'ANTIHORARIO':'HORARIO';
 
-    const statsX=left+168;
-    const labelStyle={fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#7d8da7'};
-    const valueStyle={fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'13px',fontStyle:'bold',color:'#ffffff'};
+    const statsX=left+150;
+    const colGap=Math.max(96,Math.floor((cardW-180)/2));
+    const labelStyle={fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#7d8da7'};
+    const valueStyle={fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#ffffff'};
     const rows=[
       ['LONGITUD',`${lengthM} m`],
       ['SECTORES',String(sectors)],
@@ -113,13 +117,13 @@ export class MenuScene extends CurrentMenuScene{
     ];
     rows.forEach((r,i)=>{
       const col=i%2,row=Math.floor(i/2);
-      const rx=statsX+col*112,ry=top+58+row*40;
+      const rx=statsX+col*colGap,ry=top+52+row*35;
       card.add(this.add.text(rx,ry,r[0],labelStyle).setOrigin(0));
-      card.add(this.add.text(rx,ry+13,r[1],valueStyle).setOrigin(0));
+      card.add(this.add.text(rx,ry+12,r[1],valueStyle).setOrigin(0));
     });
 
-    card.add(this.add.text(cardW/2-14,cardH/2-13,direction,{
-      fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#57ffb0'
+    card.add(this.add.text(cardW/2-12,cardH/2-9,direction,{
+      fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#57ffb0'
     }).setOrigin(1,1));
   }
 }
