@@ -130,7 +130,7 @@ export class UpgradeShopScene extends CraftAssetsScene {
       const enabled=this.slots.length<3 && available>0 && stripRecipeCanAccept(this.slots,id);
       const q=A(this.add.graphics());
       q.fillStyle(enabled?0x10223c:0x0b1729,.98);q.fillRoundedRect(x,y,cw,ch,10);
-      q.lineStyle(enabled?2:1,enabled?0x2bff88:0x49617f,enabled?.72:.42);q.strokeRoundedRect(x,y,cw,ch,10);
+      q.lineStyle(enabled?2:1,enabled?0x2bff88:0x49617f,enabled ? .72 : .42);q.strokeRoundedRect(x,y,cw,ch,10);
       const size=Math.min(cw*.55,ch*.54);this._itemArt(A,item,x+cw*.39,y+ch*.45,size);
       A(this.add.text(x+cw-7,y+6,`×${total}`,{fontFamily:UI_FONT,fontSize:compact?'8px':'10px',fontStyle:'700',color:'#8be9ff'}).setOrigin(1,0));
       if(onTable>0)A(this.add.text(x+7,y+6,`EN MESA ×${onTable}`,{fontFamily:UI_FONT,fontSize:compact?'6px':'8px',fontStyle:'700',color:'#72f1b8'}));
