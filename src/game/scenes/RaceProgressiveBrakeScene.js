@@ -12,8 +12,13 @@ function smoothstep01(t) {
 // During forward braking we control TOTAL longitudinal deceleration, compensating
 // the base brake + passive drag so they cannot stack into an unrealistically hard stop.
 //
+// Global brake baseline:
+// - forward braking is now 2x stronger for every car than the previous baseline;
+// - the existing progressive build-up and mass relationship are preserved;
+// - this gives us a firmer base before testing any future analog/progressive pedal input.
+//
 // Vehicle mass:
-// - FORGE Colossus (4200 kg) is the braking reference and keeps the current feel exactly;
+// - FORGE Colossus (4200 kg) is the braking reference;
 // - lighter cars get progressively more deceleration from the same pedal pressure;
 // - the relationship is intentionally softened (fourth-root) so mass matters without
 //   making lightweight cars stop unrealistically short.
@@ -86,15 +91,15 @@ export class RaceScene extends CurrentRaceScene {
     if (brakePressed && fwdBefore > 2) {
       const brakeForce = Math.max(0, Number(this.brakeForce || 0));
       if (brakeForce > 0) {
-        // Same pedal build-up that felt right on Colossus.
+        // Preserve the same pedal build-up, but with a 2x global brake baseline.
         const build = smoothstep01(this._brakeHoldSec / 2.2);
-        const baseStrength = 0.08 + (0.14 * build); // Colossus: 8% -> 22%
+        const baseStrength = 0.08 + (0.14 * build);
         const desiredStrength = baseStrength * this._massBrakeFactor();
 
-        // Target longitudinal speed for THIS frame. This is the crucial change:
-        // instead of merely undoing part of brakeForce, we undo any EXTRA loss caused
-        // by base brake + linear drag, so their effects cannot stack.
-        const desiredLoss = brakeForce * desiredStrength * dt;
+        // Target longitudinal speed for THIS frame. We control total deceleration
+        // and explicitly double the previous braking baseline without touching
+        // steering, grip, coasting, track logic or reverse behaviour.
+        const desiredLoss = brakeForce * desiredStrength * dt * 2;
         const targetFwd = Math.max(0, fwdBefore - desiredLoss);
 
         const vx = Number(body.body.velocity.x || 0);
