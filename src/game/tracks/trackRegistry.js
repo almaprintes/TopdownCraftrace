@@ -1,4 +1,5 @@
 import { buildTrackRibbon } from './TrackBuilder.js';
+import { METERS_PER_PX } from '../cars/speedUnits.js';
 
 const trackModules = import.meta.glob('./library/*/track.json', { eager: true });
 
@@ -130,6 +131,57 @@ function normalizeCheckpointFractions(value){
   return out.length ? out : [1/3,2/3];
 }
 
+// Per-track physical normalization. Karting Tenerife was authored at an accidental
+// giant world scale (~27k px around the lap). Keep the exact shape but rescale all
+// world dimensions so the player-facing lap is a realistic 750 m kart circuit.
+const TARGET_TRACK_METERS={
+  'karting-tenerife':750
+};
+
+function rawLoopLength(center){
+  if(!Array.isArray(center)||center.length<2)return 0;
+  let total=0;
+  for(let i=0;i<center.length;i++){
+    const a=center[i],b=center[(i+1)%center.length];
+    total+=Math.hypot(Number(b.x)-Number(a.x),Number(b.y)-Number(a.y));
+  }
+  return total;
+}
+
+function scaleTrackAuthoring(slug,json,centerline,fallbackWidth){
+  const targetM=Number(TARGET_TRACK_METERS[slug]);
+  if(!Number.isFinite(targetM)||targetM<=0)return {
+    centerline,
+    trackWidth:fallbackWidth,
+    worldW:Number(json.worldW)||8000,
+    worldH:Number(json.worldH)||5000,
+    grassMargin:Number(json.grassMargin)||120,
+    sampleStepPx:Number(json.sampleStepPx)||12,
+    cellSize:Number(json.cellSize)||400,
+    shoulderPx:Number(json.shoulderPx)||10,
+    startOffset:Number(json.startOffset)||120,
+    authorScale:1
+  };
+
+  const rawPx=rawLoopLength(centerline);
+  const targetPx=targetM/Math.max(1e-9,METERS_PER_PX);
+  const s=rawPx>1 ? targetPx/rawPx : 1;
+  const scalePoint=p=>({...p,x:Number(p.x)*s,y:Number(p.y)*s,width:Math.max(48,Number(p.width||fallbackWidth)*s)});
+
+  return {
+    centerline:centerline.map(scalePoint),
+    trackWidth:Math.max(48,fallbackWidth*s),
+    worldW:Math.max(1800,(Number(json.worldW)||8000)*s),
+    worldH:Math.max(1400,(Number(json.worldH)||5000)*s),
+    grassMargin:Math.max(120,(Number(json.grassMargin)||120)*s),
+    sampleStepPx:Math.max(6,(Number(json.sampleStepPx)||12)*s),
+    cellSize:Math.max(180,(Number(json.cellSize)||400)*s),
+    shoulderPx:Math.max(8,(Number(json.shoulderPx)||10)*s),
+    startOffset:Math.max(70,(Number(json.startOffset)||120)*s),
+    authorScale:s
+  };
+}
+
 function buildRegistry(){
   const out={};
   for(const [path,mod] of Object.entries(trackModules)){
@@ -140,18 +192,21 @@ function buildRegistry(){
     const direction=normalizeDirection(json.raceDirection);
     const directionSign=direction==='reverse'?-1:1;
     const normalized=normalizeCenterline(json.centerline,fallbackWidth);
-    const centerline=ensureClosedCenterline(normalized,isClosed,fallbackWidth);
+    const authored=scaleTrackAuthoring(slug,json,normalized,fallbackWidth);
+    const scaledFallbackWidth=authored.trackWidth;
+    const centerline=ensureClosedCenterline(authored.centerline,isClosed,scaledFallbackWidth);
 
     const geom=buildTrackRibbon({
       centerline,
-      trackWidth:fallbackWidth,
-      grassMargin:Number(json.grassMargin)||120,
-      sampleStepPx:Number(json.sampleStepPx)||12,
-      cellSize:Number(json.cellSize)||400
+      trackWidth:scaledFallbackWidth,
+      grassMargin:authored.grassMargin,
+      sampleStepPx:authored.sampleStepPx,
+      cellSize:authored.cellSize
     });
-    const smooth=(geom?.center||[]).map(p=>({x:Number(p.x),y:Number(p.y),width:Number(p.width)||fallbackWidth}));
+    const smooth=(geom?.center||[]).map(p=>({x:Number(p.x),y:Number(p.y),width:Number(p.width)||scaledFallbackWidth}));
 
-    const explicit=normalizeExplicitFinishAnchor(json.finishAnchor);
+    let explicit=normalizeExplicitFinishAnchor(json.finishAnchor);
+    if(explicit&&authored.authorScale!==1)explicit={x:explicit.x*authored.authorScale,y:explicit.y*authored.authorScale,r:explicit.r};
     let finishAnchor=null,finishProjection=null;
 
     if(explicit){
@@ -161,7 +216,7 @@ function buildRegistry(){
       const hint=Number.isFinite(Number(json.finishSegment)) ? deriveSegmentHint(centerline,Number(json.finishSegment),json.finishT) : null;
       finishProjection=hint ? projectToSmoothCenter(hint,smooth) : deriveLongestStraightAnchor(smooth);
       if(!finishProjection){
-        const startHint=json.start||centerline[0];
+        const startHint=json.start ? {x:Number(json.start.x)*authored.authorScale,y:Number(json.start.y)*authored.authorScale} : centerline[0];
         finishProjection=projectToSmoothCenter(startHint,smooth);
       }
       if(finishProjection)finishAnchor={x:finishProjection.x,y:finishProjection.y,r:wrapPi(finishProjection.r+(directionSign<0?Math.PI:0))};
@@ -169,39 +224,47 @@ function buildRegistry(){
 
     if(!finishAnchor)finishAnchor={x:400,y:400,r:directionSign<0?Math.PI:0};
 
-    const raceStart=makeSpawnBehindFinish(finishAnchor,Number(json.startOffset)||120);
+    const raceStart=makeSpawnBehindFinish(finishAnchor,authored.startOffset);
     const metrics=loopMetrics(smooth);
     const anchorProjection=finishProjection||projectToSmoothCenter(finishAnchor,smooth);
     const finishDist=anchorProjection?distanceAtProjection(anchorProjection,metrics,smooth):0;
     const checkpointFractions=normalizeCheckpointFractions(json.checkpointFractions);
 
-    // Canonical rule: checkpoints are measured from the FINAL finish line along race direction.
-    // Moving finishAnchor / finishSegment therefore rotates every CP around the lap automatically.
-    // Legacy/manual gates are only used when a track explicitly opts into checkpointMode="authored".
     let checkpoints=null;
     if(String(json.checkpointMode||'').toLowerCase()==='authored'){
       checkpoints=normalizeAuthoredCheckpoints(json.checkpoints,direction);
+      if(checkpoints&&authored.authorScale!==1){
+        checkpoints=checkpoints.map(g=>({
+          ...g,
+          a:{x:Number(g.a.x)*authored.authorScale,y:Number(g.a.y)*authored.authorScale},
+          b:{x:Number(g.b.x)*authored.authorScale,y:Number(g.b.y)*authored.authorScale}
+        }));
+      }
     }
     if(!checkpoints&&smooth.length>3){
       checkpoints=checkpointFractions.map(frac=>{
         const p=pointAtLoopDistance(smooth,metrics,finishDist+directionSign*metrics.total*frac);
-        return makeGateAt(p,Number(p?.width)||fallbackWidth,directionSign,.10);
+        return makeGateAt(p,Number(p?.width)||scaledFallbackWidth,directionSign,.10);
       }).filter(Boolean);
     }
 
     const raceCenterline=direction==='reverse' ? smooth.slice().reverse() : smooth.slice();
 
     out[slug]={
-      id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:json.lengthLabel||'Media',
-      worldW:Number(json.worldW)||8000,worldH:Number(json.worldH)||5000,trackWidth:fallbackWidth,grassMargin:Number(json.grassMargin)||120,sampleStepPx:Number(json.sampleStepPx)||12,cellSize:Number(json.cellSize)||400,shoulderPx:Number(json.shoulderPx)||10,
+      id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:targetTrackLabel(slug,json.lengthLabel),
+      worldW:authored.worldW,worldH:authored.worldH,trackWidth:scaledFallbackWidth,grassMargin:authored.grassMargin,sampleStepPx:authored.sampleStepPx,cellSize:authored.cellSize,shoulderPx:authored.shoulderPx,
       start:raceStart,centerline,closed:isClosed,
       raceDirection:direction,raceCenterline,
-      finishAnchor,finishLine:makeFinishLineFromAnchor(finishAnchor,fallbackWidth),finish:null,
+      finishAnchor,finishLine:makeFinishLineFromAnchor(finishAnchor,scaledFallbackWidth),finish:null,
       checkpoints,checkpointFractions,checkpointMode:'proportional',grid:null,
-      meta:json.meta||{}
+      meta:{...(json.meta||{}),authorScale:authored.authorScale,targetLengthMeters:TARGET_TRACK_METERS[slug]||null}
     };
   }
   return out;
+}
+
+function targetTrackLabel(slug,fallback){
+  return TARGET_TRACK_METERS[slug] ? 'Corta' : (fallback||'Media');
 }
 
 export const TRACK_REGISTRY=buildRegistry();
