@@ -131,11 +131,11 @@ function normalizeCheckpointFractions(value){
   return out.length ? out : [1/3,2/3];
 }
 
-// Per-track physical normalization. Karting Tenerife was authored at an accidental
-// giant world scale (~27k px around the lap). Keep the exact shape but rescale all
-// world dimensions so the player-facing lap is a realistic 750 m kart circuit.
-const TARGET_TRACK_METERS={
-  'karting-tenerife':750
+// Physical targets for tracks whose source geometry was authored at the wrong scale.
+// Length and width are independent on purpose: reducing a 27k-px source must never
+// turn a real kart track into a ribbon narrower than the cars.
+const TARGET_TRACK_GEOMETRY={
+  'karting-tenerife': { lengthMeters:753, widthMeters:7.0 }
 };
 
 function rawLoopLength(center){
@@ -149,8 +149,8 @@ function rawLoopLength(center){
 }
 
 function scaleTrackAuthoring(slug,json,centerline,fallbackWidth){
-  const targetM=Number(TARGET_TRACK_METERS[slug]);
-  if(!Number.isFinite(targetM)||targetM<=0)return {
+  const target=TARGET_TRACK_GEOMETRY[slug];
+  if(!target)return {
     centerline,
     trackWidth:fallbackWidth,
     worldW:Number(json.worldW)||8000,
@@ -160,25 +160,30 @@ function scaleTrackAuthoring(slug,json,centerline,fallbackWidth){
     cellSize:Number(json.cellSize)||400,
     shoulderPx:Number(json.shoulderPx)||10,
     startOffset:Number(json.startOffset)||120,
-    authorScale:1
+    authorScale:1,
+    targetLengthMeters:null,
+    targetWidthMeters:null
   };
 
   const rawPx=rawLoopLength(centerline);
-  const targetPx=targetM/Math.max(1e-9,METERS_PER_PX);
+  const targetPx=Number(target.lengthMeters)/Math.max(1e-9,METERS_PER_PX);
+  const targetWidthPx=Number(target.widthMeters)/Math.max(1e-9,METERS_PER_PX);
   const s=rawPx>1 ? targetPx/rawPx : 1;
-  const scalePoint=p=>({...p,x:Number(p.x)*s,y:Number(p.y)*s,width:Math.max(48,Number(p.width||fallbackWidth)*s)});
+  const scalePoint=p=>({...p,x:Number(p.x)*s,y:Number(p.y)*s,width:targetWidthPx});
 
   return {
     centerline:centerline.map(scalePoint),
-    trackWidth:Math.max(48,fallbackWidth*s),
+    trackWidth:targetWidthPx,
     worldW:Math.max(1800,(Number(json.worldW)||8000)*s),
     worldH:Math.max(1400,(Number(json.worldH)||5000)*s),
-    grassMargin:Math.max(120,(Number(json.grassMargin)||120)*s),
-    sampleStepPx:Math.max(6,(Number(json.sampleStepPx)||12)*s),
-    cellSize:Math.max(180,(Number(json.cellSize)||400)*s),
-    shoulderPx:Math.max(8,(Number(json.shoulderPx)||10)*s),
-    startOffset:Math.max(70,(Number(json.startOffset)||120)*s),
-    authorScale:s
+    grassMargin:Math.max(targetWidthPx*2.5,(Number(json.grassMargin)||120)*s),
+    sampleStepPx:Math.max(7,(Number(json.sampleStepPx)||12)*s),
+    cellSize:Math.max(targetWidthPx*2.5,(Number(json.cellSize)||400)*s),
+    shoulderPx:Math.max(18,targetWidthPx*.20),
+    startOffset:Math.max(targetWidthPx*.85,(Number(json.startOffset)||120)*s),
+    authorScale:s,
+    targetLengthMeters:Number(target.lengthMeters),
+    targetWidthMeters:Number(target.widthMeters)
   };
 }
 
@@ -251,20 +256,16 @@ function buildRegistry(){
     const raceCenterline=direction==='reverse' ? smooth.slice().reverse() : smooth.slice();
 
     out[slug]={
-      id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:targetTrackLabel(slug,json.lengthLabel),
+      id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:authored.targetLengthMeters?'Corta':(json.lengthLabel||'Media'),
       worldW:authored.worldW,worldH:authored.worldH,trackWidth:scaledFallbackWidth,grassMargin:authored.grassMargin,sampleStepPx:authored.sampleStepPx,cellSize:authored.cellSize,shoulderPx:authored.shoulderPx,
       start:raceStart,centerline,closed:isClosed,
       raceDirection:direction,raceCenterline,
       finishAnchor,finishLine:makeFinishLineFromAnchor(finishAnchor,scaledFallbackWidth),finish:null,
       checkpoints,checkpointFractions,checkpointMode:'proportional',grid:null,
-      meta:{...(json.meta||{}),authorScale:authored.authorScale,targetLengthMeters:TARGET_TRACK_METERS[slug]||null}
+      meta:{...(json.meta||{}),authorScale:authored.authorScale,targetLengthMeters:authored.targetLengthMeters,targetWidthMeters:authored.targetWidthMeters}
     };
   }
   return out;
-}
-
-function targetTrackLabel(slug,fallback){
-  return TARGET_TRACK_METERS[slug] ? 'Corta' : (fallback||'Media');
 }
 
 export const TRACK_REGISTRY=buildRegistry();
