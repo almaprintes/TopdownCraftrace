@@ -33,23 +33,17 @@ class MenuMusic {
     this.fadeTimer=null;
     this.pauseTimer=null;
 
-    // iOS needs audio.play() to happen DIRECTLY inside a trusted user gesture.
-    // Calling it later from a timer/sync loop is not enough in a standalone PWA.
-    this.unlock=(ev)=>{
+    this.unlock=()=>{
       if(this.unlocked && !this.audio.paused){ this._sync(true); return; }
       this.unlocked=true;
       clearTimeout(this.pauseTimer);this.pauseTimer=null;
       const p=prefs();
       if(!this._isMenu()||p.mute){ this._sync(true); return; }
       try{
-        // A tiny audible value is required on some iOS versions; immediately fade to the configured level.
         this.audio.volume=Math.max(.01,Math.min(.03,p.master*.03));
         const playPromise=this.audio.play();
-        if(playPromise?.then){
-          playPromise.then(()=>this._sync(true)).catch(()=>{});
-        }else{
-          this._sync(true);
-        }
+        if(playPromise?.then) playPromise.then(()=>this._sync(true)).catch(()=>{});
+        else this._sync(true);
       }catch{}
     };
 
@@ -60,7 +54,7 @@ class MenuMusic {
     window.addEventListener('keydown',this.unlock,opts);
 
     try{this.audio.load();}catch{}
-    this.watch=setInterval(()=>this._sync(false),160);
+    this.watch=setInterval(()=>this._sync(false),80);
     this._sync(false);
   }
 
@@ -75,13 +69,10 @@ class MenuMusic {
   _play(){
     if(!this.unlocked||!this.audio.paused)return;
     clearTimeout(this.pauseTimer);this.pauseTimer=null;
-    try{
-      const p=this.audio.play();
-      if(p?.catch)p.catch(()=>{});
-    }catch{}
+    try{const p=this.audio.play();if(p?.catch)p.catch(()=>{});}catch{}
   }
 
-  _fadeTo(target,duration=420,onDone=null){
+  _fadeTo(target,duration=160,onDone=null){
     target=clamp(target,0,1);
     this.targetVolume=target;
     clearInterval(this.fadeTimer);
@@ -93,8 +84,7 @@ class MenuMusic {
       this.audio.volume=clamp(start+(target-start)*eased,0,1);
       if(k>=1){clearInterval(this.fadeTimer);this.fadeTimer=null;onDone?.();}
     };
-    tick();
-    this.fadeTimer=setInterval(tick,30);
+    tick();this.fadeTimer=setInterval(tick,24);
   }
 
   _sync(force=false){
@@ -105,23 +95,21 @@ class MenuMusic {
     if(menu&&!p.mute){
       clearTimeout(this.pauseTimer);this.pauseTimer=null;
       this._play();
-      if(force||Math.abs(this.targetVolume-desired)>.015)this._fadeTo(desired,520);
+      // Master volume must be authoritative. Track the persisted slider continuously,
+      // including while it is being dragged in the settings scene.
+      if(force||Math.abs(this.targetVolume-desired)>.001)this._fadeTo(desired,120);
       return;
     }
 
     if(force||this.targetVolume!==0){
-      this._fadeTo(0,360,()=>{
-        if(!this._isMenu()||prefs().mute){
-          try{this.audio.pause();}catch{}
-        }
+      this._fadeTo(0,160,()=>{
+        if(!this._isMenu()||prefs().mute){try{this.audio.pause();}catch{}}
       });
     }
   }
 
   destroy(){
-    clearInterval(this.watch);
-    clearInterval(this.fadeTimer);
-    clearTimeout(this.pauseTimer);
+    clearInterval(this.watch);clearInterval(this.fadeTimer);clearTimeout(this.pauseTimer);
     const opts={capture:true};
     window.removeEventListener('pointerup',this.unlock,opts);
     window.removeEventListener('touchend',this.unlock,opts);
