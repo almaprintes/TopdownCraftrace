@@ -47,20 +47,21 @@ export class MenuScene extends CurrentMenuScene{
     const trackKey=this.selectedTrackKey||localStorage.getItem('tdr2:trackKey')||'track01';
     const track=TRACK_REGISTRY?.[trackKey],spec=CAR_SPECS?.[this.selectedCarId];if(!track||!spec)return;
 
-    // Compact top rail. Nothing is allowed to descend into the hero car or game-mode controls.
-    const cardH=clamp(Math.floor(height*.112),78,88);
-    const topY=clamp(Math.floor(height*.135),82,96);
-    const gap=clamp(Math.floor(width*.012),14,20);
-    const rightMargin=clamp(Math.floor(width*.055),58,86);
-    const trackW=clamp(Math.floor(width*.285),390,455);
-    const carW=clamp(Math.floor(width*.205),280,325);
-    const trackRight=width-rightMargin;
-    const trackX=trackRight-trackW/2;
-    const carRight=trackRight-trackW-gap;
-    const carX=carRight-carW/2;
+    // Three deliberate zones from the approved screenshot markup:
+    // car = upper centre, mission = middle left, track = middle right.
+    // The middle corridor stays completely free for car + race-mode controls.
+    const carW=clamp(Math.floor(width*.215),300,350);
+    const carH=clamp(Math.floor(height*.112),80,92);
+    const carX=clamp(Math.floor(width*.425),carW/2+24,width-carW/2-24);
+    const carY=clamp(Math.floor(height*.155),92,118);
 
-    this._renderCarCard(carX,topY,carW,cardH,spec);
-    this._renderTrackCard(trackX,topY,trackW,cardH,track,trackKey);
+    const trackW=clamp(Math.floor(width*.245),360,430);
+    const trackH=clamp(Math.floor(height*.142),98,116);
+    const trackX=clamp(Math.floor(width*.80),width*.72,width-trackW/2-28);
+    const trackY=clamp(Math.floor(height*.43),285,365);
+
+    this._renderCarCard(carX,carY,carW,carH,spec);
+    this._renderTrackCard(trackX,trackY,trackW,trackH,track,trackKey);
   }
 
   _renderCarCard(x,y,w,h,spec){
@@ -84,22 +85,20 @@ export class MenuScene extends CurrentMenuScene{
   _renderTrackCard(x,y,w,h,track,key){
     const center=Array.isArray(track.raceCenterline)&&track.raceCenterline.length?track.raceCenterline:track.centerline;if(!Array.isArray(center)||center.length<2)return;
     const c=this.add.container(x,y).setDepth(36);this._ui?.add(c);addChamferFrame(this,c,w,h,0xd8a73a);
-    const left=-w/2+12,top=-h/2+7;
+    const left=-w/2+12,top=-h/2+8;
     c.add(this.add.text(left,top,'CIRCUITO SELECCIONADO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#f0c65a',letterSpacing:1}).setOrigin(0));
-    c.add(this.add.text(left,top+16,String(track.name||this._trackTitle(key)).toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:'#ffffff'}).setOrigin(0));
+    c.add(this.add.text(left,top+17,String(track.name||this._trackTitle(key)).toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:'#ffffff'}).setOrigin(0));
 
-    const previewW=92,previewH=38,previewX=left+46,previewY=top+52;
+    const previewW=94,previewH=42,previewX=left+47,previewY=top+65;
     c.add(this.add.rectangle(previewX,previewY,previewW,previewH,0x050b10,.56).setOrigin(.5).setStrokeStyle(1,0xd8a73a,.20));
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
     for(const p of center){const px=Number(p?.x),py=Number(p?.y);if(!Number.isFinite(px)||!Number.isFinite(py))continue;minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py);}
     if(Number.isFinite(minX)&&maxX>minX&&maxY>minY){const g=this.add.graphics(),s=Math.min((previewW-12)/(maxX-minX),(previewH-8)/(maxY-minY)),ox=previewX-(maxX-minX)*s/2,oy=previewY-(maxY-minY)*s/2;g.lineStyle(4,0x000000,.5);g.beginPath();center.forEach((p,i)=>{const px=ox+(Number(p.x)-minX)*s,py=oy+(Number(p.y)-minY)*s;i?g.lineTo(px,py):g.moveTo(px,py);});g.closePath();g.strokePath();g.lineStyle(2,0xffffff,.96);g.beginPath();center.forEach((p,i)=>{const px=ox+(Number(p.x)-minX)*s,py=oy+(Number(p.y)-minY)*s;i?g.lineTo(px,py):g.moveTo(px,py);});g.closePath();g.strokePath();c.add(g);}
 
     const lengthM=Math.round(loopLength(center)*METERS_PER_PX),sectors=Math.max(1,(track.checkpoints?.length||2)+1),surface=surfaceLabel(track),direction=String(track.raceDirection||'forward').toLowerCase()==='reverse'?'ANTIHORARIO':'HORARIO';
-
-    // Dedicated stats zone, centered vertically and horizontally inside the right half.
-    const zoneLeft=left+104,zoneRight=w/2-12,zoneW=zoneRight-zoneLeft;
+    const zoneLeft=left+112,zoneRight=w/2-12,zoneW=zoneRight-zoneLeft;
     const colCenters=[zoneLeft+zoneW*.25,zoneLeft+zoneW*.75];
-    const rowCenters=[top+36,top+59];
+    const rowCenters=[top+48,top+76];
     const ls={fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'6px',fontStyle:'bold',color:'#8b97a8',align:'center'};
     const vs={fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#ffffff',align:'center'};
     [['LONGITUD',`${lengthM} m`],['SECTORES',String(sectors)],['SUPERFICIE',surface],['SENTIDO',direction]].forEach((r,i)=>{const cx=colCenters[i%2],cy=rowCenters[Math.floor(i/2)];c.add(this.add.text(cx,cy,r[0],ls).setOrigin(.5,.5));c.add(this.add.text(cx,cy+9,r[1],vs).setOrigin(.5,.5));});
@@ -109,25 +108,26 @@ export class MenuScene extends CurrentMenuScene{
     const {width,height}=this.scale;if(width<760)return;
     const key=this.selectedTrackKey||localStorage.getItem('tdr2:trackKey')||'track01';
     let laps=0,best=null;
-    try{const h=JSON.parse(localStorage.getItem(`tdr2:ttHist:${key}`)||'null')?.history;if(Array.isArray(h)){laps=h.filter(r=>r&&Number.isFinite(r.lapMs)).length;for(const r of h){if(Number.isFinite(r?.lapMs)&&(best==null||r.lapMs<best))best=r.lapMs;}}}catch{}
+    try{const hist=JSON.parse(localStorage.getItem(`tdr2:ttHist:${key}`)||'null')?.history;if(Array.isArray(hist)){laps=hist.filter(r=>r&&Number.isFinite(r.lapMs)).length;for(const r of hist){if(Number.isFinite(r?.lapMs)&&(best==null||r.lapMs<best))best=r.lapMs;}}}catch{}
     const target=3,done=Math.min(target,laps),complete=done>=target;
 
-    // Purposefully compact and confined to the left column; never crosses into the hero controls.
-    const w=clamp(Math.floor(width*.235),300,360);
-    const h=clamp(Math.floor(height*.145),96,112);
-    const x=clamp(Math.floor(width*.155),w/2+24,width*.205);
-    const y=clamp(Math.floor(height*.46),270,330);
+    // Mirror the track card across the hero corridor: aligned vertical centre,
+    // contained entirely in the left marked zone.
+    const w=clamp(Math.floor(width*.215),300,350);
+    const h=clamp(Math.floor(height*.142),98,116);
+    const x=clamp(Math.floor(width*.18),w/2+28,width*.25);
+    const y=clamp(Math.floor(height*.43),285,365);
     const c=this.add.container(x,y).setDepth(24);this._ui?.add(c);addChamferFrame(this,c,w,h,complete?0x39ff9a:0x35cfff);
     const left=-w/2+14,top=-h/2+10,accent=complete?'#62ffb2':'#6deaff';
 
     c.add(this.add.text(left,top,complete?'RETO COMPLETADO':'RETO DE PILOTO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:accent,letterSpacing:1}).setOrigin(0));
-    c.add(this.add.text(left,top+20,complete?'3 VUELTAS REGISTRADAS':'COMPLETA 3 VUELTAS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'15px',fontStyle:'bold',color:'#ffffff'}).setOrigin(0));
-    c.add(this.add.text(left,top+42,best==null?'Tu primera vuelta fijará el tiempo de referencia.':`Mejor vuelta: ${this._formatMissionTime(best)}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',color:'#aebdca'}).setOrigin(0));
+    c.add(this.add.text(left,top+21,complete?'3 VUELTAS REGISTRADAS':'COMPLETA 3 VUELTAS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'15px',fontStyle:'bold',color:'#ffffff'}).setOrigin(0));
+    c.add(this.add.text(left,top+44,best==null?'Tu primera vuelta fijará el tiempo de referencia.':`Mejor vuelta: ${this._formatMissionTime(best)}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',color:'#aebdca'}).setOrigin(0));
 
-    const barX=left,barY=top+64,barW=w-28,barH=8;
+    const barX=left,barY=top+69,barW=w-28,barH=8;
     c.add(this.add.rectangle(barX,barY,barW,barH,0x10202b,.9).setOrigin(0).setStrokeStyle(1,0xffffff,.12));
     if(done>0)c.add(this.add.rectangle(barX+2,barY+2,(barW-4)*(done/target),barH-4,complete?0x39ff9a:0x35cfff,.9).setOrigin(0));
-    c.add(this.add.text(left,top+78,`${done} / ${target} VUELTAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:accent}).setOrigin(0));
+    c.add(this.add.text(left,top+84,`${done} / ${target} VUELTAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:accent}).setOrigin(0));
   }
 
   _formatMissionTime(ms){const t=Math.max(0,Number(ms)||0),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000),cs=Math.floor((t%1000)/10);return `${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;}
