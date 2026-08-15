@@ -1,15 +1,15 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene.js';
-import { MenuScene } from './scenes/MenuGameModesScene.js';
+import { MenuScene } from './scenes/MenuCleanTypographyScene.js';
 import { RaceScene } from './scenes/RaceReplayDroneExportScene.js';
 import { UpgradeShopScene } from './scenes/UpgradeWorkshopCraftAssetsScene.js';
-import { GarageScene } from './scenes/GarageUiStabilityScene.js';
+import { GarageScene } from './scenes/GarageCleanTypographyScene.js';
 import { SettingsScene } from './scenes/SettingsAVOptionsScene.js';
 import { GarageDetailScene } from './scenes/GarageDetailSpeedConsistencyScene.js';
 import { AdminHubScene } from './scenes/AdminHubScene.js';
 import { CarEditorScene } from './scenes/CarEditorSpeedConsistencyScene.js';
 import { TrackEditorScene } from './scenes/TrackEditorScene.js';
-import { TrackGarageScene } from './scenes/TrackGarageUnifiedStyleScene.js';
+import { TrackGarageScene } from './scenes/TrackGarageCleanTypographyScene.js';
 import { TrackStudioScene } from './scenes/TrackStudioScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
 
@@ -31,13 +31,10 @@ function installCleanTextFactory(){
   const original=proto.text;
   proto.text=function(x,y,text,style={}){
     const clean={...(style||{})};
-    // iOS renders its native UI family extremely cleanly. Orbitron was often
-    // falling back differently between screens and produced chunky headings.
     if(/Orbitron/i.test(String(clean.fontFamily||''))){
       clean.fontFamily='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
       if(clean.fontStyle==='900') clean.fontStyle='bold';
     }
-    // Heavy canvas outlines are the other source of the blocky/pixel look.
     if(Number(clean.strokeThickness)>2) clean.strokeThickness=2;
     return original.call(this,x,y,text,clean);
   };
@@ -52,9 +49,6 @@ export function createGame(parentId = 'app') {
   const requestedScale=vp.renderScale==='eco'?1:vp.renderScale==='sharp'?2:1.5;
   const requestedQuality=vp.quality==='low'?1:vp.quality==='medium'?1.5:2;
   const requested=Math.min(requestedScale,requestedQuality);
-  // Keep the game surface Retina-sharp, but never call setResolution() on each
-  // Phaser Text object: that changes text metrics/crops in Phaser 3.90 and was
-  // the reason track names suddenly became enormous and truncated.
   const resolution=Math.min(dpr,Math.max(2,requested));
 
   const game=new Phaser.Game({
