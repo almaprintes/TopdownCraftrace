@@ -28,6 +28,15 @@ function lerpAngle(a,b,t){
   return a+d*t;
 }
 
+function visualCarSprite(scene){
+  const list=scene?.carRig?.list;
+  if(!Array.isArray(list))return null;
+  return list.find(o=>{
+    const key=o?.texture?.key;
+    return o?.visible!==false && key && key!=='__BODY__' && scene.textures?.exists?.(key);
+  })||null;
+}
+
 export class RaceScene extends CurrentRaceScene{
   create(data){
     this._tdrGameMode=readMode(data);
@@ -50,6 +59,14 @@ export class RaceScene extends CurrentRaceScene{
       }
     });
 
+    // Runtime skins can arrive asynchronously. Retry briefly so the ghost always
+    // clones the real visible car rather than the invisible physics body.
+    if(this._tdrGameMode==='ghost'&&this._ghostData){
+      this.time.delayedCall(180,()=>this._createGhostSprite());
+      this.time.delayedCall(500,()=>this._createGhostSprite());
+      this.time.delayedCall(1000,()=>this._createGhostSprite());
+    }
+
     this.events.once('shutdown',()=>{
       try{this._ghostSprite?.destroy?.();}catch{}
       try{this._ghostHud?.destroy?.();}catch{}
@@ -60,18 +77,24 @@ export class RaceScene extends CurrentRaceScene{
 
   _createGhostSprite(){
     if(this._tdrGameMode!=='ghost'||!this._ghostData||this._ghostSprite?.scene)return;
-    const car=this.carBody;
-    const tex=car?.texture?.key;
+    const body=this.carBody;
+    const visual=visualCarSprite(this);
+    if(!body||!visual)return;
+    const tex=visual.texture?.key;
     if(!tex||!this.textures?.exists?.(tex))return;
-    const g=this.add.image(Number(car.x||0),Number(car.y||0),tex)
-      .setOrigin(car.originX??.5,car.originY??.5)
-      .setAlpha(.34)
-      .setTint(0x71e9ff)
+
+    const g=this.add.image(Number(body.x||0),Number(body.y||0),tex)
+      .setOrigin(visual.originX??.5,visual.originY??.5)
+      .setAlpha(.48)
+      .setTint(0x79eaff)
       .setBlendMode('ADD');
-    const sx=Number(car.scaleX||1),sy=Number(car.scaleY||1);
-    g.setScale(sx,sy);
-    g.setDepth(Math.max(1,Number(car.depth||10)-1));
+
+    g.setScale(Number(visual.scaleX||1),Number(visual.scaleY||1));
+    g.setDepth(Math.max(31,Number(this.carRig?.depth||30)+1));
     this._ghostSprite=g;
+
+    // The UI camera must not render world objects. Mirror the player's car rule.
+    try{this.uiCam?.ignore?.(g);}catch{}
   }
 
   _createGhostHud(){
@@ -104,7 +127,7 @@ export class RaceScene extends CurrentRaceScene{
     if(valid&&this._ghostSamples.length>4){
       const previous=this._ghostData;
       if(!previous||lapMs<Number(previous.lapMs)){
-        const saved={version:1,trackKey:this._ghostTrackKey,carId:this._ghostCarId,lapMs:Math.round(lapMs),samples:this._ghostSamples.slice()};
+        const saved={version:2,trackKey:this._ghostTrackKey,carId:this._ghostCarId,lapMs:Math.round(lapMs),samples:this._ghostSamples.slice()};
         if(writeGhost(this._ghostStorageKey,saved)){
           this._ghostData=saved;
           if(this._tdrGameMode==='ghost'){
@@ -136,7 +159,8 @@ export class RaceScene extends CurrentRaceScene{
     const den=Math.max(1,Number(b.t)-Number(a.t));
     const k=clamp((t-Number(a.t))/den,0,1);
     g.setPosition(Number(a.x)+(Number(b.x)-Number(a.x))*k,Number(a.y)+(Number(b.y)-Number(a.y))*k);
-    g.rotation=lerpAngle(Number(a.r||0),Number(b.r||0),k);
+    const bodyRot=lerpAngle(Number(a.r||0),Number(b.r||0),k);
+    g.rotation=bodyRot+Number(this._carVisualRotOffset||0);
   }
 
   update(time,delta){
