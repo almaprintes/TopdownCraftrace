@@ -18,6 +18,19 @@ export class RaceScene extends ReplayTelemetryScene {
     super._recordGhostSample(now);
     if(this._replayActive||!this._raceStarted||!this.carBody||this._ghostLapStartPerf==null)return;
 
+    // Attach the ACTUAL brake state to the sample just recorded by RaceGhostModeScene.
+    // This does not touch physics or track geometry; it only enriches replay telemetry.
+    const samples=this._ghostSamples||[];
+    const last=samples[samples.length-1];
+    if(last){
+      const elapsed=Math.max(0,Math.round(now-this._ghostLapStartPerf));
+      if(Math.abs(Number(last.t||0)-elapsed)<90){
+        const touch=this.touch||{},keys=this.keys||{};
+        const brakePressed=Number(touch.brake||0)>0.5||!!keys.down?.isDown||!!keys.down2?.isDown;
+        last.brake=brakePressed?1:0;
+      }
+    }
+
     const p=clamp(Number(this._computeLapProgress01?.(Number(this.carBody.x||0),Number(this.carBody.y||0))||0),0,1);
     const prev=clamp(Number(this._ghostSectorLastProgress||0),0,1);
     const elapsed=Math.max(0,Math.round(now-this._ghostLapStartPerf));
@@ -39,7 +52,7 @@ export class RaceScene extends ReplayTelemetryScene {
       const c1=clamp(Number(crossings[0]),0,lap);
       const c2=clamp(Number(crossings[1]),c1,lap);
       const sectors=[c1,c2-c1,lap-c2].map(v=>Math.max(0,Math.round(v)));
-      this._ghostData={...this._ghostData,version:5,sectorTimes:sectors,sectorCrossings:[c1,c2]};
+      this._ghostData={...this._ghostData,version:7,sectorTimes:sectors,sectorCrossings:[c1,c2]};
       try{localStorage.setItem(this._ghostStorageKey,JSON.stringify(this._ghostData));}catch{}
     }
 
@@ -91,8 +104,34 @@ export class RaceScene extends ReplayTelemetryScene {
     if(this._validSectorTimes(this._ghostData.sectorTimes))return;
     const sectors=this._deriveSectorTimesFromSamples();
     if(!this._validSectorTimes(sectors))return;
-    this._ghostData={...this._ghostData,version:6,sectorTimes:sectors};
+    this._ghostData={...this._ghostData,version:7,sectorTimes:sectors};
     try{localStorage.setItem(this._ghostStorageKey,JSON.stringify(this._ghostData));}catch{}
+  }
+
+  _replayBrake01(t){
+    const samples=this._ghostData?.samples||[];
+    if(samples.length<2)return 0;
+    let lo=0,hi=samples.length-1;
+    while(lo<hi){const mid=(lo+hi)>>1;if(Number(samples[mid].t)<t)lo=mid+1;else hi=mid;}
+    const i=clamp(lo,1,samples.length-1),a=samples[i-1],b=samples[i];
+    const ta=Number(a.t)||0,tb=Number(b.t)||ta,span=Math.max(1,tb-ta),k=clamp((t-ta)/span,0,1);
+    const hasRecorded=Number.isFinite(Number(a.brake))||Number.isFinite(Number(b.brake));
+    if(hasRecorded){
+      const ba=Number.isFinite(Number(a.brake))?Number(a.brake):0;
+      const bb=Number.isFinite(Number(b.brake))?Number(b.brake):ba;
+      return clamp(ba+(bb-ba)*k,0,1);
+    }
+
+    // Compatibility for ghosts recorded before brake telemetry existed:
+    // infer only strong deceleration, so old replays show braking without false positives.
+    const speedAt=(u,v)=>{
+      const dt=Math.max(1,Number(v.t)-Number(u.t));
+      return Math.hypot(Number(v.x)-Number(u.x),Number(v.y)-Number(u.y))/(dt/1000);
+    };
+    const prev=samples[Math.max(0,i-2)],next=samples[Math.min(samples.length-1,i+1)];
+    const s0=speedAt(prev,a),s1=speedAt(b,next);
+    if(!Number.isFinite(s0)||!Number.isFinite(s1)||s0<25)return 0;
+    return clamp((s0-s1)/Math.max(35,s0*.28),0,1);
   }
 
   _updateReplayIdentity(t){
@@ -100,6 +139,12 @@ export class RaceScene extends ReplayTelemetryScene {
     const lap=Math.max(1,Number(this._ghostData?.lapMs)||1);
     const shown=Math.min(Math.max(0,Number(t)||0),lap);
     if(this._replayTimeText?.scene)this._replayTimeText.setText(this._fmtReplayMs(shown));
+
+    // ReplayTelemetryFixScene intentionally zeroed the brake bar. Restore it from
+    // the recorded pedal state (or a conservative fallback for legacy ghosts).
+    const brake=this._replayBrake01(shown);
+    const brakeEl=this._replayTelemetry?.querySelector?.('[data-brake]');
+    if(brakeEl)brakeEl.style.width=`${Math.round(brake*100)}%`;
 
     const rows=this._replaySectors;
     if(!rows?.length)return;
