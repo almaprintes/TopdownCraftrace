@@ -11,6 +11,7 @@ import { CarEditorScene } from './scenes/CarEditorSpeedConsistencyScene.js';
 import { TrackEditorScene } from './scenes/TrackEditorScene.js';
 import { TrackGarageScene } from './scenes/TrackGarageGeneratedPreviewScene.js';
 import { TrackStudioScene } from './scenes/TrackStudioScene.js';
+import { installMenuMusic } from './audio/MenuMusic.js';
 
 class MenuAliasScene extends Phaser.Scene {
   constructor() { super('MenuScene'); }
@@ -32,7 +33,7 @@ export function createGame(parentId = 'app') {
   const resolution=Math.min(dpr,scaleCap,qualityCap);
   const antialias=vp.quality!=='low';
 
-  return new Phaser.Game({
+  const game=new Phaser.Game({
     type: Phaser.AUTO,
     parent: parentId,
     backgroundColor: '#0b1020',
@@ -44,4 +45,6 @@ export function createGame(parentId = 'app') {
     physics: { default: 'arcade', arcade: { debug: false } },
     render: { pixelArt: false, antialias, antialiasGL: antialias, roundPixels: false }
   });
+  installMenuMusic(game);
+  return game;
 }
