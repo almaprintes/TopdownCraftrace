@@ -25,42 +25,37 @@ function videoPrefs(){
   }catch{return {quality:'high',targetFps:60,renderScale:'normal'};}
 }
 
-function installCrispTextFactory(){
+function installCleanTextFactory(){
   const proto=Phaser.GameObjects?.GameObjectFactory?.prototype;
-  if(!proto||proto.__tdrCrispTextInstalled||typeof proto.text!=='function')return;
+  if(!proto||proto.__tdrCleanTextInstalled||typeof proto.text!=='function')return;
   const original=proto.text;
   proto.text=function(x,y,text,style={}){
     const clean={...(style||{})};
-    // Thick canvas strokes become visibly blocky on Retina when the game is scaled.
-    // Keep outlines subtle and let the high-resolution glyph texture do the work.
-    if(Number(clean.strokeThickness)>3) clean.strokeThickness=3;
-    const obj=original.call(this,x,y,text,clean);
-    try{
-      const dpr=Math.max(2,Math.min(3,window.devicePixelRatio||1));
-      obj.setResolution?.(dpr);
-      obj.updateText?.();
-      if(obj.canvas?.style) obj.canvas.style.imageRendering='auto';
-    }catch(_){}
-    return obj;
+    // iOS renders its native UI family extremely cleanly. Orbitron was often
+    // falling back differently between screens and produced chunky headings.
+    if(/Orbitron/i.test(String(clean.fontFamily||''))){
+      clean.fontFamily='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      if(clean.fontStyle==='900') clean.fontStyle='bold';
+    }
+    // Heavy canvas outlines are the other source of the blocky/pixel look.
+    if(Number(clean.strokeThickness)>2) clean.strokeThickness=2;
+    return original.call(this,x,y,text,clean);
   };
-  proto.__tdrCrispTextInstalled=true;
+  proto.__tdrCleanTextInstalled=true;
 }
 
 export function createGame(parentId = 'app') {
-  installCrispTextFactory();
+  installCleanTextFactory();
 
   const vp=videoPrefs();
   const dpr=window.devicePixelRatio||1;
   const requestedScale=vp.renderScale==='eco'?1:vp.renderScale==='sharp'?2:1.5;
   const requestedQuality=vp.quality==='low'?1:vp.quality==='medium'?1.5:2;
-
-  // UI must never fall back to a 1x canvas on Retina displays. That was the
-  // source of the chunky/pixelated typography seen in menus and track cards.
-  // Performance presets can still reduce particles/effects, but the final UI
-  // surface remains high density and clean.
   const requested=Math.min(requestedScale,requestedQuality);
+  // Keep the game surface Retina-sharp, but never call setResolution() on each
+  // Phaser Text object: that changes text metrics/crops in Phaser 3.90 and was
+  // the reason track names suddenly became enormous and truncated.
   const resolution=Math.min(dpr,Math.max(2,requested));
-  const antialias=true;
 
   const game=new Phaser.Game({
     type: Phaser.AUTO,
@@ -72,15 +67,15 @@ export function createGame(parentId = 'app') {
     dom: { createContainer: true },
     scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
     physics: { default: 'arcade', arcade: { debug: false } },
-    render: { pixelArt: false, antialias, antialiasGL: antialias, roundPixels: false }
+    render: { pixelArt: false, antialias:true, antialiasGL:true, roundPixels:false }
   });
 
-  // Avoid browser-side nearest-neighbour scaling of the Phaser canvas.
   try{
     const canvas=game.canvas;
     if(canvas?.style){
       canvas.style.imageRendering='auto';
       canvas.style.webkitFontSmoothing='antialiased';
+      canvas.style.textRendering='optimizeLegibility';
     }
   }catch(_){}
 
