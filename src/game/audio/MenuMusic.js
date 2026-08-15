@@ -8,20 +8,40 @@ function prefs(){
   }catch{return {master:1,mute:false};}
 }
 
+function assetUrl(path){
+  try{
+    const base=String(import.meta.env?.BASE_URL||'/');
+    return `${base.replace(/\/$/,'')}/${String(path).replace(/^\//,'')}`;
+  }catch{
+    return `/TopdownCraftrace/${String(path).replace(/^\//,'')}`;
+  }
+}
+
 class MenuMusic {
   constructor(game){
-    this.game=game;this.ctx=null;this.master=null;this.timer=null;this.step=0;this.started=false;
-    this.unlock=()=>this._ensure();
+    this.game=game;
+    this.audio=new Audio(assetUrl('assets/audio/turbo-carousel.mp3'));
+    this.audio.loop=true;
+    this.audio.preload='auto';
+    this.audio.volume=0;
+    this.audio.playsInline=true;
+    this.targetVolume=0;
+    this.unlocked=false;
+    this.fadeTimer=null;
+    this.pauseTimer=null;
+
+    this.unlock=()=>{
+      this.unlocked=true;
+      this._sync(true);
+    };
     window.addEventListener('pointerdown',this.unlock,{passive:true});
     window.addEventListener('touchstart',this.unlock,{passive:true});
     window.addEventListener('keydown',this.unlock,{passive:true});
-    this.watch=setInterval(()=>this._sync(),180);
+
+    this.watch=setInterval(()=>this._sync(false),160);
+    this._sync(false);
   }
-  _ensure(){
-    if(this.ctx){try{if(this.ctx.state==='suspended')this.ctx.resume();}catch{};return;}
-    const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
-    try{this.ctx=new AC();this.master=this.ctx.createGain();this.master.gain.value=0;this.master.connect(this.ctx.destination);this.ctx.resume();}catch{}
-  }
+
   _isMenu(){
     try{
       const active=this.game.scene.getScenes(true)||[];
@@ -29,41 +49,66 @@ class MenuMusic {
       return active.length>0;
     }catch{return false;}
   }
-  _sync(){
-    this._ensure();if(!this.ctx||!this.master)return;
-    const p=prefs(),menu=this._isMenu();
-    const target=menu&&!p.mute?p.master*.115:0;
-    this.master.gain.setTargetAtTime(target,this.ctx.currentTime,.32);
-    if(menu&&!this.started)this._start();
+
+  _play(){
+    if(!this.unlocked||!this.audio.paused)return;
+    clearTimeout(this.pauseTimer);this.pauseTimer=null;
+    try{
+      const p=this.audio.play();
+      if(p?.catch)p.catch(()=>{});
+    }catch{}
   }
-  _start(){
-    this.started=true;this.step=0;
+
+  _fadeTo(target,duration=420,onDone=null){
+    target=clamp(target,0,1);
+    this.targetVolume=target;
+    clearInterval(this.fadeTimer);
+    const start=Number(this.audio.volume||0);
+    const started=performance.now();
     const tick=()=>{
-      if(!this.ctx)return;
-      const now=this.ctx.currentTime;
-      // Warm, restrained synth bed: D minor pentatonic, deliberately non-melodic.
-      const roots=[146.83,146.83,174.61,130.81,146.83,196.00,174.61,130.81];
-      const root=roots[this.step%roots.length];
-      this._pad(root,now,3.6);
-      if(this.step%2===0)this._pluck(root*2,now+.22);
-      if(this.step%4===2)this._pluck(root*2.4,now+1.05);
-      this.step++;
+      const k=clamp((performance.now()-started)/Math.max(1,duration),0,1);
+      const eased=1-Math.pow(1-k,3);
+      this.audio.volume=clamp(start+(target-start)*eased,0,1);
+      if(k>=1){clearInterval(this.fadeTimer);this.fadeTimer=null;onDone?.();}
     };
-    tick();this.timer=setInterval(tick,3200);
+    tick();
+    this.fadeTimer=setInterval(tick,30);
   }
-  _pad(freq,when,dur){
-    const ctx=this.ctx;if(!ctx)return;
-    const bus=ctx.createGain(),filter=ctx.createBiquadFilter();filter.type='lowpass';filter.frequency.value=760;filter.Q.value=.5;
-    bus.gain.setValueAtTime(.0001,when);bus.gain.exponentialRampToValueAtTime(.17,when+.55);bus.gain.exponentialRampToValueAtTime(.0001,when+dur);
-    bus.connect(filter).connect(this.master);
-    [1,.5,1.5].forEach((m,i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.type=i===0?'triangle':'sine';o.frequency.value=freq*m;o.detune.value=i===1?-7:i===2?5:0;g.gain.value=i===0?.52:.19;o.connect(g).connect(bus);o.start(when);o.stop(when+dur+.05);});
+
+  _sync(force=false){
+    const p=prefs();
+    const menu=this._isMenu();
+    const desired=menu&&!p.mute?p.master*.32:0;
+
+    if(menu&&!p.mute){
+      clearTimeout(this.pauseTimer);this.pauseTimer=null;
+      this._play();
+      if(force||Math.abs(this.targetVolume-desired)>.015)this._fadeTo(desired,520);
+      return;
+    }
+
+    if(force||this.targetVolume!==0){
+      this._fadeTo(0,360,()=>{
+        if(!this._isMenu()||prefs().mute){
+          try{this.audio.pause();}catch{}
+        }
+      });
+    }
   }
-  _pluck(freq,when){
-    const ctx=this.ctx;if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain(),f=ctx.createBiquadFilter();o.type='triangle';o.frequency.value=freq;f.type='lowpass';f.frequency.value=1350;g.gain.setValueAtTime(.0001,when);g.gain.exponentialRampToValueAtTime(.085,when+.015);g.gain.exponentialRampToValueAtTime(.0001,when+.7);o.connect(f).connect(g).connect(this.master);o.start(when);o.stop(when+.72);
+
+  destroy(){
+    clearInterval(this.watch);
+    clearInterval(this.fadeTimer);
+    clearTimeout(this.pauseTimer);
+    window.removeEventListener('pointerdown',this.unlock);
+    window.removeEventListener('touchstart',this.unlock);
+    window.removeEventListener('keydown',this.unlock);
+    try{this.audio.pause();this.audio.src='';this.audio.load();}catch{}
   }
-  destroy(){clearInterval(this.watch);clearInterval(this.timer);window.removeEventListener('pointerdown',this.unlock);window.removeEventListener('touchstart',this.unlock);window.removeEventListener('keydown',this.unlock);try{this.ctx?.close?.();}catch{}}
 }
 
 export function installMenuMusic(game){
-  const mm=new MenuMusic(game);game.events.once('destroy',()=>mm.destroy());return mm;
+  const mm=new MenuMusic(game);
+  game.events.once('destroy',()=>mm.destroy());
+  return mm;
 }
