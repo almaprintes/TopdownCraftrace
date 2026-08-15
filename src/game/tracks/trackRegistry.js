@@ -193,8 +193,15 @@ function buildRegistry(){
     const slug=m[1],fallbackWidth=Number(json.trackWidth)||80,isClosed=json.closed!==false;
     const direction=normalizeDirection(json.raceDirection);
     const directionSign=direction==='reverse'?-1:1;
-    const normalized=normalizeCenterline(json.centerline,fallbackWidth);
-    const authored=scaleTrackAuthoring(slug,json,normalized,fallbackWidth);
+
+    // Width-only override: preserve every traced x/y coordinate exactly.
+    // Karting Tenerife needs twice the road width for the current car scale.
+    const widthMultiplier=slug==='karting-tenerife'?2:1;
+    const normalized=normalizeCenterline(json.centerline,fallbackWidth).map(p=>({
+      ...p,
+      width:(Number(p.width)||fallbackWidth)*widthMultiplier
+    }));
+    const authored=scaleTrackAuthoring(slug,json,normalized,fallbackWidth*widthMultiplier);
     const scaledFallbackWidth=authored.trackWidth;
     const centerline=ensureClosedCenterline(authored.centerline,isClosed,scaledFallbackWidth);
 
