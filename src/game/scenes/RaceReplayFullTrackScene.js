@@ -1,7 +1,7 @@
-import { RaceScene as GhostRaceScene } from './RaceGhostModeScene.js';
+import { RaceScene as ReplayControlsScene } from './RaceReplayControlsScene.js';
 import { RaceScene as VideoRaceScene } from './RaceVideoPreferencesScene.js';
 
-export class RaceScene extends GhostRaceScene {
+export class RaceScene extends ReplayControlsScene {
   _primeFullTrackForReplay() {
     if (!this.track?.geom?.cells) return;
 
@@ -57,8 +57,6 @@ export class RaceScene extends GhostRaceScene {
   }
 
   _startReplayExport() {
-    // Re-prime immediately before capture as an extra guarantee that the clean
-    // export never inherits a partially culled asphalt set from normal play.
     this._primeFullTrackForReplay();
     return super._startReplayExport();
   }
