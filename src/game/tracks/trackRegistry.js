@@ -131,12 +131,9 @@ function normalizeCheckpointFractions(value){
   return out.length ? out : [1/3,2/3];
 }
 
-// Physical targets for tracks whose source geometry was authored at the wrong scale.
-// Length and width are independent on purpose: reducing a 27k-px source must never
-// turn a real kart track into a ribbon narrower than the cars.
-const TARGET_TRACK_GEOMETRY={
-  'karting-tenerife': { lengthMeters:753, widthMeters:7.0 }
-};
+// Legacy authoring-scale corrections. Karting Tenerife is now authored natively
+// from the approved traced centerline, so it must not be rescaled a second time.
+const TARGET_TRACK_GEOMETRY={};
 
 function rawLoopLength(center){
   if(!Array.isArray(center)||center.length<2)return 0;
