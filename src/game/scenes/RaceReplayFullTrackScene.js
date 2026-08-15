@@ -50,19 +50,58 @@ export class RaceScene extends ReplayControlsScene {
     }
   }
 
+  _hideResidualHudForReplay() {
+    if (this._replayResidualHudHidden) return;
+    this._replayResidualHudHidden = [];
+
+    // Some legacy HUD pieces are standalone scene objects rather than children
+    // of this.hud / this.minimapSportFrame. During a moving replay camera they
+    // therefore appear only when the camera passes over their world coordinates.
+    // Hide any fixed-screen or very-high-depth object, while preserving the
+    // world, track and replay car.
+    const objects = Array.isArray(this.children?.list) ? this.children.list : [];
+    for (const obj of objects) {
+      if (!obj || obj === this._ghostSprite || obj === this.carBody) continue;
+      if (obj === this._replayUi || obj === this.carRig) continue;
+
+      const depth = Number(obj.depth ?? 0);
+      const sx = Number(obj.scrollFactorX ?? 1);
+      const sy = Number(obj.scrollFactorY ?? 1);
+      const fixedScreen = sx === 0 || sy === 0;
+      const uiDepth = depth >= 1000;
+
+      if (!fixedScreen && !uiDepth) continue;
+      this._replayResidualHudHidden.push([obj, obj.visible !== false]);
+      try { obj.setVisible(false); } catch (_) {}
+    }
+  }
+
+  _restoreResidualHudAfterReplay() {
+    const list = this._replayResidualHudHidden || [];
+    this._replayResidualHudHidden = null;
+    for (const [obj, wasVisible] of list) {
+      try { if (obj?.scene) obj.setVisible(wasVisible); } catch (_) {}
+    }
+  }
+
   _enterReplay() {
     const result = super._enterReplay();
-    if (this._replayActive) this._primeFullTrackForReplay();
+    if (this._replayActive) {
+      this._primeFullTrackForReplay();
+      this._hideResidualHudForReplay();
+    }
     return result;
   }
 
   _startReplayExport() {
     this._primeFullTrackForReplay();
+    this._hideResidualHudForReplay();
     return super._startReplayExport();
   }
 
   _exitReplay() {
     const previous = this._replayCullPrevious;
+    this._restoreResidualHudAfterReplay();
     const result = super._exitReplay();
     if (previous !== undefined) {
       this._cullEnabled = previous;
