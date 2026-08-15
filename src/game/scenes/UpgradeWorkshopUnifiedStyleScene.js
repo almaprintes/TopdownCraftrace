@@ -3,6 +3,30 @@ import { GARAGE_ITEMS, stripRecipeCanAccept } from '../garage/partsCatalog.js';
 import { qty } from '../garage/garageStore.js';
 
 const UI_FONT='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+const CRAFT_BASE=`${import.meta.env.BASE_URL || './'}assets/crafting/`;
+const MATERIAL_FILES={
+  scrap:'materials/chatarra.webp',
+  alloy:'materials/aleacion.webp',
+  rubber:'materials/goma.webp',
+  compound:'materials/compuesto.webp',
+  disc:'materials/disco_metalico.webp',
+  spring:'materials/muelle.webp',
+  gear:'materials/engranaje.webp',
+  ecu:'materials/electronica.webp'
+};
+const PART_FILES={
+  engine_street:'parts/engine/engine_street.webp',engine_sport:'parts/engine/engine_sport.webp',engine_racing:'parts/engine/engine_racing.webp',engine_prototype:'parts/engine/engine_prototype.webp',
+  brakes_street:'parts/brakes/brakes_street.webp',brakes_sport:'parts/brakes/brakes_sport.webp',brakes_racing:'parts/brakes/brakes_racing.webp',brakes_prototype:'parts/brakes/brakes_prototype.webp',
+  tires_street:'parts/tires/tires_street.webp',tires_sport:'parts/tires/tires_sport.webp',tires_racing:'parts/tires/tires_racing_t3.webp',tires_prototype:'parts/tires/tires_prototype_t4.webp',
+  suspension_street:'parts/suspension/suspension_street_t1.webp',suspension_sport:'parts/suspension/suspension_sport_t2.webp',suspension_racing:'parts/suspension/suspension_racing_t3.webp',suspension_prototype:'parts/suspension/suspension_prototype_t4.webp',
+  transmission_street:'parts/transmission/transmission_street_t1.webp',transmission_sport:'parts/transmission/transmission_sport_t2.webp',transmission_racing:'parts/transmission/transmission_racing_t3.webp',transmission_prototype:'parts/transmission/transmission_prototype_t4.webp'
+};
+
+function craftPath(item){
+  if(!item)return null;
+  const rel=item.kind==='material'?MATERIAL_FILES[item.id]:PART_FILES[item.id];
+  return rel?`${CRAFT_BASE}${rel}?v=20260815-fullbleed1`:null;
+}
 
 export class UpgradeShopScene extends CraftAssetsScene {
   create(){
@@ -79,13 +103,57 @@ export class UpgradeShopScene extends CraftAssetsScene {
     this._forgeSlot(A,0,s0,compact);this._forgeSlot(A,1,s1,compact);this._forgeSlot(A,2,s2,compact);this._forgeResult(A,result,compact);
   }
 
+  _loadFullBleed(A,item,r,onReady){
+    const path=craftPath(item);
+    if(!path)return false;
+    const key=`craft_fullbleed_${item.id}`;
+    const draw=()=>{
+      if(!this.textures.exists(key))return false;
+      const img=A(this.add.image(r.x+r.w/2,r.y+r.h/2,key));
+      // The asset IS the tile: no inner plate, no circle, no secondary background.
+      // Fill the whole usable card while keeping its aspect ratio; crop overflow naturally.
+      const scale=Math.max(r.w/(img.width||1),r.h/(img.height||1));
+      img.setScale(scale);
+      const maskG=this.make.graphics({add:false});
+      maskG.fillStyle(0xffffff,1);maskG.fillRoundedRect(r.x,r.y,r.w,r.h,Math.min(12,r.h*.12));
+      img.setMask(maskG.createGeometryMask());
+      return true;
+    };
+    if(draw())return true;
+    if(this.failedAssets?.has(key))return false;
+    if(!this.loadingAssets?.has(key)){
+      this.loadingAssets.add(key);
+      const cleanup=()=>{this.loadingAssets.delete(key);this.load.off(`filecomplete-image-${key}`,ok);this.load.off('loaderror',err);};
+      const ok=()=>{cleanup();if(this.root?.scene){onReady?.();this.render();}};
+      const err=f=>{if(f?.key!==key)return;cleanup();this.failedAssets.add(key);if(this.root?.scene)this.render();};
+      this.load.once(`filecomplete-image-${key}`,ok);this.load.on('loaderror',err);this.load.image(key,path);if(!this.load.isLoading())this.load.start();
+    }
+    return false;
+  }
+
+  _overlayText(A,x,y,text,size,originX=.5,originY=.5,color='#ffffff'){
+    return A(this.add.text(x,y,text,{fontFamily:UI_FONT,fontSize:`${size}px`,fontStyle:'800',color,shadow:{offsetX:2,offsetY:2,color:'#000000',blur:4,fill:true,stroke:true}}).setOrigin(originX,originY));
+  }
+
+  _forgeSlot(A,i,r,compact){
+    const id=this.slots[i],item=id?GARAGE_ITEMS[id]:null;
+    if(!item){
+      const g=A(this.add.graphics());g.fillStyle(0x091116,.96);g.fillRoundedRect(r.x,r.y,r.w,r.h,10);g.lineStyle(1,0x334b55,.75);g.strokeRoundedRect(r.x,r.y,r.w,r.h,10);
+      this._overlayText(A,r.x+r.w/2,r.y+r.h/2,`+ ${i+1}`,compact?18:27,.5,.5,'#4b6570');
+      return;
+    }
+
+    this._loadFullBleed(A,item,r);
+    const border=A(this.add.graphics());border.lineStyle(2,item.tone||0x2bff88,1);border.strokeRoundedRect(r.x,r.y,r.w,r.h,10);
+    this._overlayText(A,r.x+r.w-6,r.y+5,`×${qty(this.state,id)}`,compact?8:10,1,0);
+    this._overlayText(A,r.x+r.w/2,r.y+r.h-7,item.name.toUpperCase(),compact?8:11,.5,1);
+    A(this.add.rectangle(r.x,r.y,r.w,r.h,0x000000,.001).setOrigin(0).setInteractive({useHandCursor:true})).on('pointerdown',()=>{if(!this.busy){this.slots.splice(i,1);this.render();}});
+  }
+
   _itemArt(A,item,cx,cy,size){
-    const g=A(this.add.graphics());
-    const w=size*1.08,h=size*.82;
-    g.fillStyle(0x09131e,.96);g.fillRoundedRect(cx-w/2,cy-h/2,w,h,Math.max(6,size*.10));
-    g.lineStyle(1,0x5f7895,.52);g.strokeRoundedRect(cx-w/2,cy-h/2,w,h,Math.max(6,size*.10));
-    g.fillStyle(0xffffff,.035);g.fillEllipse(cx,cy+h*.18,w*.72,h*.30);
-    super._itemArt(A,item,cx,cy,size*.70);
+    // Used outside the inventory cards (result/equipment). Keep the original asset clean,
+    // but never add a dark inner plate around it.
+    super._itemArt(A,item,cx,cy,size*1.12);
   }
 
   _inventoryShelf(A,r,compact){
@@ -103,8 +171,8 @@ export class UpgradeShopScene extends CraftAssetsScene {
       if(this.filter==='parts'?!part:part)return false;
       if(this.filter==='parts'&&this.selectedFamily&&item.family!==this.selectedFamily)return false;
       if(qty(this.state,id)<=0)return false;
-      if(this.slots.length<3 && stripRecipeCanAccept(this.slots,id))return true;
-      return (used[id]||0)>0;
+      if(this.slots.length<3&&stripRecipeCanAccept(this.slots,id))return true;
+      return(used[id]||0)>0;
     });
 
     const controlsW=compact?135:185;
@@ -120,26 +188,27 @@ export class UpgradeShopScene extends CraftAssetsScene {
       A(this.add.text(x,r.y+r.h/2,char,{fontFamily:UI_FONT,fontSize:compact?'15px':'18px',fontStyle:'700',color:'#ffffff'}).setOrigin(.5));
       b.on('pointerdown',()=>{if(this.busy||pages<=1)return;this._invPage=(this._invPage+delta+pages)%pages;this.render();});
     };
-    mkArrow(r.x+(compact?88:118),'‹',-1);
-    mkArrow(r.x+(compact?120:158),'›',1);
+    mkArrow(r.x+(compact?88:118),'‹',-1);mkArrow(r.x+(compact?120:158),'›',1);
 
     const pageIds=ids.slice(this._invPage*perPage,this._invPage*perPage+perPage);
     pageIds.forEach((id,i)=>{
-      const item=GARAGE_ITEMS[id],x=startX+i*(cw+gap),y=r.y+7;
+      const item=GARAGE_ITEMS[id],x=startX+i*(cw+gap),y=r.y+7,card={x,y,w:cw,h:ch};
       const total=qty(this.state,id),onTable=used[id]||0,available=total-onTable;
-      const enabled=this.slots.length<3 && available>0 && stripRecipeCanAccept(this.slots,id);
-      const q=A(this.add.graphics());
-      q.fillStyle(enabled?0x10223c:0x0b1729,.98);q.fillRoundedRect(x,y,cw,ch,10);
-      q.lineStyle(enabled?2:1,enabled?0x2bff88:0x49617f,enabled ? .72 : .42);q.strokeRoundedRect(x,y,cw,ch,10);
-      const size=Math.min(cw*.55,ch*.54);this._itemArt(A,item,x+cw*.39,y+ch*.45,size);
-      A(this.add.text(x+cw-7,y+6,`×${total}`,{fontFamily:UI_FONT,fontSize:compact?'8px':'10px',fontStyle:'700',color:'#8be9ff'}).setOrigin(1,0));
-      if(onTable>0)A(this.add.text(x+7,y+6,`EN MESA ×${onTable}`,{fontFamily:UI_FONT,fontSize:compact?'6px':'8px',fontStyle:'700',color:'#72f1b8'}));
-      A(this.add.text(x+cw*.72,y+ch*.55,item.name.toUpperCase(),{fontFamily:UI_FONT,fontSize:compact?'6px':'8px',fontStyle:'700',color:enabled?'#ffffff':'#8190a8',align:'center',wordWrap:{width:cw*.48}}).setOrigin(.5));
+      const enabled=this.slots.length<3&&available>0&&stripRecipeCanAccept(this.slots,id);
+
+      // NO card background: the complete asset image is the button surface.
+      this._loadFullBleed(A,item,card);
+      const frame=A(this.add.graphics());frame.lineStyle(enabled?2:1,enabled?0x2bff88:0x58708f,enabled?1:.65);frame.strokeRoundedRect(x,y,cw,ch,10);
+
+      this._overlayText(A,x+cw-7,y+6,`×${total}`,compact?9:11,1,0);
+      if(onTable>0)this._overlayText(A,x+7,y+6,`EN MESA ×${onTable}`,compact?6:8,0,0,'#8effc5');
+      this._overlayText(A,x+cw/2,y+ch-7,item.name.toUpperCase(),compact?8:10,.5,1,enabled?'#ffffff':'#c6cfdd');
+
       const hit=A(this.add.rectangle(x,y,cw,ch,0x000000,.001).setOrigin(0));
       if(enabled){hit.setInteractive({useHandCursor:true});hit.on('pointerdown',()=>this._select(id));}
     });
 
-    if(!ids.length)A(this.add.text(startX+areaW/2,r.y+r.h/2,'SIN COMPONENTES EN INVENTARIO',{fontFamily:UI_FONT,fontSize:compact?'8px':'10px',fontStyle:'700',color:'#72849f'}).setOrigin(.5));
+    if(!ids.length)this._overlayText(A,startX+areaW/2,r.y+r.h/2,'SIN COMPONENTES EN INVENTARIO',compact?8:10,.5,.5,'#72849f');
   }
 
   _miniTab(A,x,y,w,h,label,key,compact){
@@ -150,8 +219,6 @@ export class UpgradeShopScene extends CraftAssetsScene {
   }
 
   _familyDock(A,r,compact){
-    const oldPage=this._invPage;
-    super._familyDock(A,r,compact);
-    this._invPage=oldPage;
+    const oldPage=this._invPage;super._familyDock(A,r,compact);this._invPage=oldPage;
   }
 }
