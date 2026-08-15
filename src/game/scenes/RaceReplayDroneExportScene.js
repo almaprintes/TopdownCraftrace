@@ -1,4 +1,4 @@
-import { RaceScene as ReplayRealSectorsScene } from './RaceReplayRealSectorsScene.js';
+import { RaceScene as ReplayRealSectorsScene } from './RaceReplayBrakeExactScene.js';
 
 export class RaceScene extends ReplayRealSectorsScene {
   _startReplayExport(){
