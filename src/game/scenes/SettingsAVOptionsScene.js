@@ -1,6 +1,7 @@
 import { SettingsScene as CurrentSettingsScene } from './SettingsControlOptionsScene.js';
 
 const STORAGE_KEY='tdr2:settings';
+const AUDIO_EVENT='tdr2:audio-settings';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 function connectedPad(){
@@ -18,7 +19,10 @@ export class SettingsScene extends CurrentSettingsScene {
     if(!['general','effects','engine'].includes(s.ui.settingsSubtab.audio)) s.ui.settingsSubtab.audio='general';
   }
 
-  _saveAll(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(this.settings));}catch{}}
+  _saveAll(){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(this.settings));}catch{}
+    try{window.dispatchEvent(new CustomEvent(AUDIO_EVENT,{detail:{...(this.settings?.audio||{})}}));}catch{}
+  }
 
   _label(x,y,text,size=12,color='#ffffff'){
     return this.add.text(x,y,text,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:`${size}px`,fontStyle:'bold',color});
