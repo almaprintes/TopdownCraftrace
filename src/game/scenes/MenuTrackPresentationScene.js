@@ -47,18 +47,22 @@ export class MenuScene extends CurrentMenuScene{
     const trackKey=this.selectedTrackKey||localStorage.getItem('tdr2:trackKey')||'track01';
     const track=TRACK_REGISTRY?.[trackKey],spec=CAR_SPECS?.[this.selectedCarId];if(!track||!spec)return;
 
-    // Three deliberate zones from the approved screenshot markup:
-    // car = upper centre, mission = middle left, track = middle right.
-    // The middle corridor stays completely free for car + race-mode controls.
-    const carW=clamp(Math.floor(width*.215),300,350);
-    const carH=clamp(Math.floor(height*.112),80,92);
-    const carX=clamp(Math.floor(width*.425),carW/2+24,width-carW/2-24);
+    // Anchors taken directly from the user's yellow cross markup:
+    // vertical guide = exact screen centre; horizontal guide = 40.5% of height.
+    // Car is centred on the vertical guide. Mission/track are mirrored at 25%/75%
+    // and share the exact same horizontal centre line.
+    const guideX=Math.floor(width*.5);
+    const guideY=Math.floor(height*.405);
+
+    const carW=clamp(Math.floor(width*.285),390,520);
+    const carH=clamp(Math.floor(height*.115),82,94);
+    const carX=guideX;
     const carY=clamp(Math.floor(height*.155),92,118);
 
-    const trackW=clamp(Math.floor(width*.245),360,430);
+    const trackW=clamp(Math.floor(width*.285),390,500);
     const trackH=clamp(Math.floor(height*.142),98,116);
-    const trackX=clamp(Math.floor(width*.80),width*.72,width-trackW/2-28);
-    const trackY=clamp(Math.floor(height*.43),285,365);
+    const trackX=Math.floor(width*.75);
+    const trackY=guideY;
 
     this._renderCarCard(carX,carY,carW,carH,spec);
     this._renderTrackCard(trackX,trackY,trackW,trackH,track,trackKey);
@@ -111,12 +115,11 @@ export class MenuScene extends CurrentMenuScene{
     try{const hist=JSON.parse(localStorage.getItem(`tdr2:ttHist:${key}`)||'null')?.history;if(Array.isArray(hist)){laps=hist.filter(r=>r&&Number.isFinite(r.lapMs)).length;for(const r of hist){if(Number.isFinite(r?.lapMs)&&(best==null||r.lapMs<best))best=r.lapMs;}}}catch{}
     const target=3,done=Math.min(target,laps),complete=done>=target;
 
-    // Mirror the track card across the hero corridor: aligned vertical centre,
-    // contained entirely in the left marked zone.
-    const w=clamp(Math.floor(width*.215),300,350);
+    // Same horizontal centre as circuit card; mirrored to the left quarter.
+    const w=clamp(Math.floor(width*.235),320,390);
     const h=clamp(Math.floor(height*.142),98,116);
-    const x=clamp(Math.floor(width*.18),w/2+28,width*.25);
-    const y=clamp(Math.floor(height*.43),285,365);
+    const x=Math.floor(width*.25);
+    const y=Math.floor(height*.405);
     const c=this.add.container(x,y).setDepth(24);this._ui?.add(c);addChamferFrame(this,c,w,h,complete?0x39ff9a:0x35cfff);
     const left=-w/2+14,top=-h/2+10,accent=complete?'#62ffb2':'#6deaff';
 
