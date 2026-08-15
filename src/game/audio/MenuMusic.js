@@ -1,4 +1,5 @@
 const SETTINGS_KEY='tdr2:settings';
+const AUDIO_EVENT='tdr2:audio-settings';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 function prefs(){
@@ -47,14 +48,27 @@ class MenuMusic {
       }catch{}
     };
 
+    this.onAudioSettings=(ev)=>{
+      const d=ev?.detail||{};
+      const master=clamp(Number.isFinite(Number(d.master))?Number(d.master):prefs().master,0,1);
+      const mute=typeof d.mute==='boolean'?d.mute:prefs().mute;
+      const desired=this._isMenu()&&!mute?master*.32:0;
+      clearInterval(this.fadeTimer);this.fadeTimer=null;
+      this.targetVolume=desired;
+      this.audio.volume=desired;
+      if(desired>0)this._play();
+      else if(mute){try{this.audio.pause();}catch{}}
+    };
+
     const opts={capture:true,passive:true};
     window.addEventListener('pointerup',this.unlock,opts);
     window.addEventListener('touchend',this.unlock,opts);
     window.addEventListener('click',this.unlock,opts);
     window.addEventListener('keydown',this.unlock,opts);
+    window.addEventListener(AUDIO_EVENT,this.onAudioSettings);
 
     try{this.audio.load();}catch{}
-    this.watch=setInterval(()=>this._sync(false),80);
+    this.watch=setInterval(()=>this._sync(false),160);
     this._sync(false);
   }
 
@@ -72,7 +86,7 @@ class MenuMusic {
     try{const p=this.audio.play();if(p?.catch)p.catch(()=>{});}catch{}
   }
 
-  _fadeTo(target,duration=160,onDone=null){
+  _fadeTo(target,duration=220,onDone=null){
     target=clamp(target,0,1);
     this.targetVolume=target;
     clearInterval(this.fadeTimer);
@@ -84,25 +98,21 @@ class MenuMusic {
       this.audio.volume=clamp(start+(target-start)*eased,0,1);
       if(k>=1){clearInterval(this.fadeTimer);this.fadeTimer=null;onDone?.();}
     };
-    tick();this.fadeTimer=setInterval(tick,24);
+    tick();this.fadeTimer=setInterval(tick,30);
   }
 
   _sync(force=false){
     const p=prefs();
     const menu=this._isMenu();
     const desired=menu&&!p.mute?p.master*.32:0;
-
     if(menu&&!p.mute){
       clearTimeout(this.pauseTimer);this.pauseTimer=null;
       this._play();
-      // Master volume must be authoritative. Track the persisted slider continuously,
-      // including while it is being dragged in the settings scene.
-      if(force||Math.abs(this.targetVolume-desired)>.001)this._fadeTo(desired,120);
+      if(force||Math.abs(this.audio.volume-desired)>.01)this._fadeTo(desired,220);
       return;
     }
-
     if(force||this.targetVolume!==0){
-      this._fadeTo(0,160,()=>{
+      this._fadeTo(0,180,()=>{
         if(!this._isMenu()||prefs().mute){try{this.audio.pause();}catch{}}
       });
     }
@@ -115,6 +125,7 @@ class MenuMusic {
     window.removeEventListener('touchend',this.unlock,opts);
     window.removeEventListener('click',this.unlock,opts);
     window.removeEventListener('keydown',this.unlock,opts);
+    window.removeEventListener(AUDIO_EVENT,this.onAudioSettings);
     try{this.audio.pause();this.audio.src='';this.audio.load();}catch{}
   }
 }
