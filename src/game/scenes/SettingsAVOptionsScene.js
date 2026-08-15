@@ -3,20 +3,27 @@ import { SettingsScene as CurrentSettingsScene } from './SettingsControlOptionsS
 const STORAGE_KEY='tdr2:settings';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
+function connectedPad(){
+  try{return Array.from(navigator.getGamepads?.()||[]).find(Boolean)||null;}catch{return null;}
+}
+
 export class SettingsScene extends CurrentSettingsScene {
-  _ensureAVDefaults(){
+  _ensureDefaults(){
     const s=this.settings||(this.settings={});
+    s.controls={scheme:'touch',steeringMode:'stick',sensitivity:1,deadZone:.1,invertSteer:false,...(s.controls||{})};
     s.audio={master:1,engine:1,effects:.45,impacts:.8,profile:'per_car',mute:false,...(s.audio||{})};
     s.video={quality:'high',targetFps:60,showFPS:false,particles:true,renderScale:'normal',...(s.video||{})};
   }
 
-  _saveAV(){
-    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(this.settings));}catch{}
+  _saveAll(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(this.settings));}catch{}}
+
+  _label(x,y,text,size=12,color='#ffffff'){
+    return this.add.text(x,y,text,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:`${size}px`,fontStyle:'bold',color});
   }
 
   _pill(x,y,w,h,label,selected,onTap){
-    const box=this.add.rectangle(x,y,w,h,selected?0x123b34:0x141b33,selected?.92:.62)
-      .setOrigin(0).setStrokeStyle(2,selected?0x2bff88:0xb7c0ff,selected?.8:.18).setInteractive({useHandCursor:true});
+    const box=this.add.rectangle(x,y,w,h,selected?0x123b34:0x141b33,selected?.94:.62)
+      .setOrigin(0).setStrokeStyle(2,selected?0x2bff88:0xb7c0ff,selected?.88:.18).setInteractive({useHandCursor:true});
     this.add.text(x+w/2,y+h/2,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:selected?'#7dffc1':'#ffffff'}).setOrigin(.5);
     box.on('pointerdown',()=>box.setScale(.985));
     box.on('pointerout',()=>box.setScale(1));
@@ -24,66 +31,102 @@ export class SettingsScene extends CurrentSettingsScene {
     return box;
   }
 
-  _slider(label,key,x,y,w,onChange){
-    const value=clamp(Number(key()),0,1);
-    this.add.text(x,y,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#ffffff'});
-    const valueTxt=this.add.text(x+w,y,`${Math.round(value*100)}%`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#2bff88'}).setOrigin(1,0);
-    const ty=y+24,th=12;
-    this.add.rectangle(x,ty,w,th,0x111a2c,.95).setOrigin(0).setStrokeStyle(1,0xb7c0ff,.16);
+  _switch(x,y,value,onTap){
+    const w=78,h=30;
+    const bg=this.add.rectangle(x,y,w,h,value?0x2bff88:0x141b33,value?.9:.9).setOrigin(0).setStrokeStyle(1,value?0x2bff88:0xb7c0ff,.35).setInteractive();
+    this.add.circle(x+(value?w-15:15),y+h/2,12,0xffffff,1);
+    this.add.text(x+w+10,y+h/2,value?'ON':'OFF',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:value?'#2bff88':'#b7c0ff'}).setOrigin(0,.5);
+    bg.on('pointerup',()=>onTap?.());
+  }
+
+  _slider(label,getValue,x,y,w,onChange){
+    const value=clamp(Number(getValue()),0,1);
+    if(label)this._label(x,y,label,11);
+    const valueTxt=this.add.text(x+w,y,`${Math.round(value*100)}%`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#2bff88'}).setOrigin(1,0);
+    const ty=y+22,th=9;
+    this.add.rectangle(x,ty,w,th,0x111a2c,.95).setOrigin(0).setStrokeStyle(1,0xb7c0ff,.13);
     const fill=this.add.rectangle(x,ty,w*value,th,0x2bff88,.82).setOrigin(0);
-    const knob=this.add.circle(x+w*value,ty+th/2,9,0xffffff,1).setStrokeStyle(2,0x2bff88,.8);
-    const hit=this.add.rectangle(x,ty-10,w,th+20,0x000000,.001).setOrigin(0).setInteractive();
+    const knob=this.add.circle(x+w*value,ty+th/2,7,0xffffff,1).setStrokeStyle(2,0x2bff88,.75);
+    const hit=this.add.rectangle(x,ty-9,w,th+18,0x000000,.001).setOrigin(0).setInteractive();
     let dragging=false;
-    const setFrom=(px)=>{
+    const setFrom=px=>{
       const v=clamp((px-x)/w,0,1);
-      fill.width=w*v;knob.x=x+w*v;valueTxt.setText(`${Math.round(v*100)}%`);
-      onChange(v);this._saveAV();
+      fill.width=w*v; knob.x=x+w*v; valueTxt.setText(`${Math.round(v*100)}%`);
+      onChange(v); this._saveAll();
     };
     hit.on('pointerdown',p=>{dragging=true;setFrom(p.x);});
     this.input.on('pointermove',p=>{if(dragging)setFrom(p.x);});
     this.input.on('pointerup',()=>{dragging=false;});
   }
 
+  _footer(panelX,panelY,panelW,panelH){
+    const footerH=54,fy=panelY+panelH-footerH;
+    this.add.rectangle(panelX+10,fy,panelW-20,1,0xffffff,.08).setOrigin(0);
+    const reset=this.add.rectangle(panelX+16,fy+10,140,34,0x141b33,.62).setOrigin(0).setStrokeStyle(1,0xb7c0ff,.18).setInteractive();
+    this.add.text(panelX+86,fy+27,'RESTABLECER',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5);
+    reset.on('pointerup',()=>{
+      this.settings={controls:{scheme:'touch',steeringMode:'stick',sensitivity:1,deadZone:.1,invertSteer:false},video:{quality:'high',targetFps:60,showFPS:false,particles:true,renderScale:'normal'},audio:{master:1,engine:1,effects:.45,impacts:.8,profile:'per_car',mute:false}};
+      this._saveAll();this.scene.restart();
+    });
+    this.add.text(panelX+panelW-16,fy+27,'Guardado ✓',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#2bff88'}).setOrigin(1,.5);
+  }
+
   _renderTabContent(panelX,panelY,panelW,panelH){
-    this._ensureAVDefaults();
-    super._renderTabContent(panelX,panelY,panelW,panelH);
-    if(this.activeTab==='controls')return;
+    this._ensureDefaults();
+    const headH=this._panel?.headH||56;
+    const x=panelX+22,top=panelY+headH+22,usableW=panelW-44;
+    this._footer(panelX,panelY,panelW,panelH);
 
-    const x=panelX+16;
-    const top=panelY+(this._panel?.headH||56)+98;
-    const maxW=Math.min(720,panelW-32);
-
-    if(this.activeTab==='audio'){
-      const a=this.settings.audio;
-      this._slider('VOLUMEN GENERAL',()=>a.master,x,top,maxW*.58,v=>a.master=v);
-      this._slider('MOTOR',()=>a.engine,x,top+58,maxW*.58,v=>a.engine=v);
-      this._slider('EFECTOS',()=>a.effects,x,top+116,maxW*.58,v=>a.effects=v);
-      this._slider('IMPACTOS',()=>a.impacts,x,top+174,maxW*.58,v=>a.impacts=v);
-
-      const px=x+maxW*.62;
-      this.add.text(px,top,'PERFIL DE MOTOR',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#ffffff'});
-      const choices=[['per_car','POR COCHE'],['forge','FORGE'],['avenir','AVENIR'],['crown','CROWN']];
-      choices.forEach((c,i)=>this._pill(px,top+24+i*43,maxW*.34,34,c[1],a.profile===c[0],()=>{a.profile=c[0];this._saveAV();this.scene.restart();}));
-      this.add.text(px,top+202,'Los tres perfiles base proceden de\nHammer, Apex y Axis.',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#9eaad0',lineSpacing:4});
+    if(this.activeTab==='controls'){
+      const c=this.settings.controls;
+      this._label(x,top,'MODO DE DIRECCIÓN',13);
+      this.add.text(x,top+22,'Elige cómo quieres controlar el coche durante la carrera.',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',color:'#aeb9d8'});
+      const gap=12,cardW=Math.floor((usableW-gap*2)/3),cardY=top+48,cardH=88,pad=connectedPad();
+      const choices=[['stick','◉  PALANCA','Dirección analógica táctil'],['buttons','◀ ▶  BOTONES','Dirección digital izquierda / derecha'],['gamepad','🎮  MANDO',pad?`Conectado: ${String(pad.id||'Gamepad').slice(0,21)}`:'DualSense / DualShock']];
+      choices.forEach((ch,i)=>{
+        const selected=c.steeringMode===ch[0],bx=x+i*(cardW+gap);
+        const box=this.add.rectangle(bx,cardY,cardW,cardH,selected?0x123b34:0x141b33,selected?.94:.62).setOrigin(0).setStrokeStyle(2,selected?0x2bff88:0xb7c0ff,selected?.88:.18).setInteractive();
+        this._label(bx+14,cardY+14,ch[1],12,selected?'#7dffc1':'#ffffff');
+        this.add.text(bx+14,cardY+45,ch[2],{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:selected?'#79ffc0':'#aeb9d8',wordWrap:{width:cardW-28}});
+        box.on('pointerup',()=>{c.steeringMode=ch[0];c.scheme=ch[0]==='gamepad'?'gamepad':'touch';this._saveAll();this.scene.restart();});
+      });
+      const sy=cardY+cardH+30;
+      this._label(x,sy,'INVERTIR DIRECCIÓN',11);
+      this._switch(x,sy+22,!!c.invertSteer,()=>{c.invertSteer=!c.invertSteer;this._saveAll();this.scene.restart();});
+      this._label(x+240,sy,'SENSIBILIDAD',11);
+      this._slider('',()=>c.sensitivity,x+240,sy+18,Math.min(360,usableW-260),v=>c.sensitivity=v);
     }
 
     if(this.activeTab==='video'){
-      const v=this.settings.video;
-      this.add.text(x,top,'CALIDAD GRÁFICA',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#ffffff'});
-      const gap=8,cw=120;
-      ['low','medium','high'].forEach((q,i)=>this._pill(x+i*(cw+gap),top+24,cw,34,{low:'BAJA',medium:'MEDIA',high:'ALTA'}[q],v.quality===q,()=>{v.quality=q;this._saveAV();this.scene.restart();}));
+      const v=this.settings.video,leftW=Math.min(470,usableW*.52),rightX=x+leftW+46;
+      this._label(x,top,'CALIDAD GRÁFICA',12);
+      const bw=Math.floor((leftW-16)/3);
+      [['low','BAJA'],['medium','MEDIA'],['high','ALTA']].forEach((q,i)=>this._pill(x+i*(bw+8),top+24,bw,38,q[1],v.quality===q[0],()=>{v.quality=q[0];this._saveAll();this.scene.restart();}));
+      this._label(x,top+86,'FPS OBJETIVO',12);
+      this._pill(x,top+110,120,38,'30 FPS',Number(v.targetFps)===30,()=>{v.targetFps=30;this._saveAll();this.scene.restart();});
+      this._pill(x+128,top+110,120,38,'60 FPS',Number(v.targetFps)===60,()=>{v.targetFps=60;this._saveAll();this.scene.restart();});
+      this._label(x,top+174,'MOSTRAR FPS',11);
+      this._switch(x,top+196,!!v.showFPS,()=>{v.showFPS=!v.showFPS;this._saveAll();this.scene.restart();});
+      this._label(x+210,top+174,'PARTÍCULAS',11);
+      this._switch(x+210,top+196,!!v.particles,()=>{v.particles=!v.particles;this._saveAll();this.scene.restart();});
+      this._label(rightX,top,'ESCALA DE RENDER',12);
+      [['eco','AHORRO'],['normal','NORMAL'],['sharp','NÍTIDA']].forEach((r,i)=>this._pill(rightX,top+24+i*50,Math.min(240,usableW-leftW-46),38,r[1],v.renderScale===r[0],()=>{v.renderScale=r[0];this._saveAll();this.scene.restart();}));
+      this.add.text(rightX,top+184,'Calidad y escala de render se aplican\nal recargar el juego.',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#9eaad0',lineSpacing:4});
+    }
 
-      this.add.text(x,top+76,'FPS OBJETIVO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#ffffff'});
-      [30,60].forEach((fps,i)=>this._pill(x+i*(cw+gap),top+100,cw,34,`${fps} FPS`,Number(v.targetFps)===fps,()=>{v.targetFps=fps;this._saveAV();try{this.game.loop.targetFps=fps;}catch{}this.scene.restart();}));
-
-      this.add.text(x,top+158,'PARTÍCULAS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#ffffff'});
-      this._pill(x+190,top+150,92,30,v.particles?'ON':'OFF',!!v.particles,()=>{v.particles=!v.particles;this._saveAV();this.scene.restart();});
-
-      const rx=x+360;
-      this.add.text(rx,top+76,'ESCALA DE RENDER',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#ffffff'});
-      const rs=[['eco','AHORRO'],['normal','NORMAL'],['sharp','NÍTIDA']];
-      rs.forEach((r,i)=>this._pill(rx,top+100+i*43,150,34,r[1],v.renderScale===r[0],()=>{v.renderScale=r[0];this._saveAV();this.scene.restart();}));
-      this.add.text(rx,top+236,'La escala de render y la calidad\nse aplican al volver a cargar.',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#9eaad0',lineSpacing:4});
+    if(this.activeTab==='audio'){
+      const a=this.settings.audio,leftW=Math.min(520,usableW*.55),rightX=x+leftW+46;
+      this._label(x,top,'MODO SILENCIO',11);
+      this._switch(x,top+20,!!a.mute,()=>{a.mute=!a.mute;this._saveAll();this.scene.restart();});
+      const sy=top+70;
+      this._slider('VOLUMEN GENERAL',()=>a.master,x,sy,leftW,v=>a.master=v);
+      this._slider('MOTOR',()=>a.engine,x,sy+54,leftW,v=>a.engine=v);
+      this._slider('EFECTOS',()=>a.effects,x,sy+108,leftW,v=>a.effects=v);
+      this._slider('IMPACTOS',()=>a.impacts,x,sy+162,leftW,v=>a.impacts=v);
+      this._label(rightX,top,'PERFIL DE MOTOR',12);
+      const ww=Math.min(260,usableW-leftW-46);
+      [['per_car','POR COCHE'],['forge','FORGE'],['avenir','AVENIR'],['crown','CROWN']].forEach((p,i)=>this._pill(rightX,top+24+i*47,ww,36,p[1],a.profile===p[0],()=>{a.profile=p[0];this._saveAll();this.scene.restart();}));
+      this.add.text(rightX,top+222,'FORGE · AVENIR · CROWN son los tres\nperfiles sonoros de referencia.',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#9eaad0',lineSpacing:4});
     }
   }
 }
