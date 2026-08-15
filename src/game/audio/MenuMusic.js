@@ -20,24 +20,46 @@ function assetUrl(path){
 class MenuMusic {
   constructor(game){
     this.game=game;
-    this.audio=new Audio(assetUrl('assets/audio/turbo-carousel.mp3'));
+    this.audio=new Audio();
+    this.audio.src=assetUrl('assets/audio/turbo-carousel.mp3');
     this.audio.loop=true;
     this.audio.preload='auto';
     this.audio.volume=0;
     this.audio.playsInline=true;
+    this.audio.setAttribute('playsinline','');
+    this.audio.setAttribute('webkit-playsinline','');
     this.targetVolume=0;
     this.unlocked=false;
     this.fadeTimer=null;
     this.pauseTimer=null;
 
-    this.unlock=()=>{
+    // iOS needs audio.play() to happen DIRECTLY inside a trusted user gesture.
+    // Calling it later from a timer/sync loop is not enough in a standalone PWA.
+    this.unlock=(ev)=>{
+      if(this.unlocked && !this.audio.paused){ this._sync(true); return; }
       this.unlocked=true;
-      this._sync(true);
+      clearTimeout(this.pauseTimer);this.pauseTimer=null;
+      const p=prefs();
+      if(!this._isMenu()||p.mute){ this._sync(true); return; }
+      try{
+        // A tiny audible value is required on some iOS versions; immediately fade to the configured level.
+        this.audio.volume=Math.max(.01,Math.min(.03,p.master*.03));
+        const playPromise=this.audio.play();
+        if(playPromise?.then){
+          playPromise.then(()=>this._sync(true)).catch(()=>{});
+        }else{
+          this._sync(true);
+        }
+      }catch{}
     };
-    window.addEventListener('pointerdown',this.unlock,{passive:true});
-    window.addEventListener('touchstart',this.unlock,{passive:true});
-    window.addEventListener('keydown',this.unlock,{passive:true});
 
+    const opts={capture:true,passive:true};
+    window.addEventListener('pointerup',this.unlock,opts);
+    window.addEventListener('touchend',this.unlock,opts);
+    window.addEventListener('click',this.unlock,opts);
+    window.addEventListener('keydown',this.unlock,opts);
+
+    try{this.audio.load();}catch{}
     this.watch=setInterval(()=>this._sync(false),160);
     this._sync(false);
   }
@@ -100,9 +122,11 @@ class MenuMusic {
     clearInterval(this.watch);
     clearInterval(this.fadeTimer);
     clearTimeout(this.pauseTimer);
-    window.removeEventListener('pointerdown',this.unlock);
-    window.removeEventListener('touchstart',this.unlock);
-    window.removeEventListener('keydown',this.unlock);
+    const opts={capture:true};
+    window.removeEventListener('pointerup',this.unlock,opts);
+    window.removeEventListener('touchend',this.unlock,opts);
+    window.removeEventListener('click',this.unlock,opts);
+    window.removeEventListener('keydown',this.unlock,opts);
     try{this.audio.pause();this.audio.src='';this.audio.load();}catch{}
   }
 }
