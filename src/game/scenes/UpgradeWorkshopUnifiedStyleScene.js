@@ -80,8 +80,6 @@ export class UpgradeShopScene extends CraftAssetsScene {
   }
 
   _itemArt(A,item,cx,cy,size){
-    // Neutral presentation plinth: existing art stays intact but no longer floats
-    // as an uncontrolled blob of saturated colours.
     const g=A(this.add.graphics());
     const w=size*1.08,h=size*.82;
     g.fillStyle(0x09131e,.96);g.fillRoundedRect(cx-w/2,cy-h/2,w,h,Math.max(6,size*.10));
@@ -104,8 +102,6 @@ export class UpgradeShopScene extends CraftAssetsScene {
       const item=GARAGE_ITEMS[id],part=item.kind==='part';
       if(this.filter==='parts'?!part:part)return false;
       if(this.filter==='parts'&&this.selectedFamily&&item.family!==this.selectedFamily)return false;
-      // IMPORTANT: do not remove cards just because all copies are currently on the table.
-      // Keep the inventory stable; availability only controls whether another copy can be selected.
       if(qty(this.state,id)<=0)return false;
       if(this.slots.length<3 && stripRecipeCanAccept(this.slots,id))return true;
       return (used[id]||0)>0;
@@ -118,14 +114,14 @@ export class UpgradeShopScene extends CraftAssetsScene {
     const pages=Math.max(1,Math.ceil(ids.length/perPage));
     this._invPage=Math.max(0,Math.min(this._invPage||0,pages-1));
 
-    const label=A(this.add.text(r.x+12,r.y+r.h-(compact?14:18),`${this._invPage+1}/${pages}`,{fontFamily:UI_FONT,fontSize:compact?'8px':'10px',fontStyle:'700',color:'#91a7c8'}));
+    A(this.add.text(r.x+12,r.y+r.h-(compact?14:18),`${this._invPage+1}/${pages}`,{fontFamily:UI_FONT,fontSize:compact?'8px':'10px',fontStyle:'700',color:'#91a7c8'}));
     const mkArrow=(x,char,delta)=>{
       const b=A(this.add.rectangle(x,r.y+r.h/2,compact?28:34,compact?28:34,0x112341,.92).setStrokeStyle(1,0x5e7da9,.6).setInteractive({useHandCursor:true}));
       A(this.add.text(x,r.y+r.h/2,char,{fontFamily:UI_FONT,fontSize:compact?'15px':'18px',fontStyle:'700',color:'#ffffff'}).setOrigin(.5));
       b.on('pointerdown',()=>{if(this.busy||pages<=1)return;this._invPage=(this._invPage+delta+pages)%pages;this.render();});
     };
-    mkArrow(r.x+compact?88:118,'‹',-1);
-    mkArrow(r.x+compact?120:158,'›',1);
+    mkArrow(r.x+(compact?88:118),'‹',-1);
+    mkArrow(r.x+(compact?120:158),'›',1);
 
     const pageIds=ids.slice(this._invPage*perPage,this._invPage*perPage+perPage);
     pageIds.forEach((id,i)=>{
@@ -143,7 +139,7 @@ export class UpgradeShopScene extends CraftAssetsScene {
       if(enabled){hit.setInteractive({useHandCursor:true});hit.on('pointerdown',()=>this._select(id));}
     });
 
-    if(!ids.length){A(this.add.text(startX+areaW/2,r.y+r.h/2,'SIN COMPONENTES EN INVENTARIO',{fontFamily:UI_FONT,fontSize:compact?'8px':'10px',fontStyle:'700',color:'#72849f'}).setOrigin(.5));}
+    if(!ids.length)A(this.add.text(startX+areaW/2,r.y+r.h/2,'SIN COMPONENTES EN INVENTARIO',{fontFamily:UI_FONT,fontSize:compact?'8px':'10px',fontStyle:'700',color:'#72849f'}).setOrigin(.5));
   }
 
   _miniTab(A,x,y,w,h,label,key,compact){
@@ -154,7 +150,6 @@ export class UpgradeShopScene extends CraftAssetsScene {
   }
 
   _familyDock(A,r,compact){
-    // Keep all family controls fully inside the safe area; same card language as garage/tracks.
     const oldPage=this._invPage;
     super._familyDock(A,r,compact);
     this._invPage=oldPage;
