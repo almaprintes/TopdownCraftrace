@@ -38,6 +38,11 @@ jobs:
           BASE: ./
         run: npm run build
 
+      - name: Copy dropping tutorial assets
+        run: |
+          mkdir -p dist/assets/tutorials/dropping
+          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
+
       - name: Publish dist to preview branch
         shell: bash
         run: |
