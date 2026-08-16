@@ -12,40 +12,14 @@ function walk(node,fn){
 export class MenuScene extends CurrentMenuScene{
   renderUI(){
     super.renderUI();
-    const {width}=this.scale;
-    const selected=(()=>{try{return localStorage.getItem(MODE_KEY)||'timeattack';}catch{return 'timeattack';}})();
 
+    // The main welcome screen stays clean. Game modes only appear after
+    // ARRANCAR MOTOR is pressed.
     let play=null;
     walk(this._ui,o=>{if(o?.texture?.key==='btn_play')play=o;});
     if(!play)return;
 
     try{play.removeAllListeners();}catch{}
-
-    const modes=this.add.container(0,0).setDepth(75);
-    this._ui.add(modes);
-
-    // Three compact cards in one clean row, clearly above ARRANCAR MOTOR.
-    const gap=8;
-    const w=Math.min(150,Math.max(128,Math.floor(width*.145)));
-    const h=42;
-    const y=Math.max(88,play.y-96);
-    const total=w*3+gap*2;
-    const start=Math.floor(width/2-total/2);
-
-    const makeMode=(x,key,title,sub,icon)=>{
-      const active=selected===key;
-      const bg=this.add.rectangle(x,y,w,h,active?0x123b34:0x08121c,active?.96:.80)
-        .setOrigin(0).setStrokeStyle(2,active?0x2bff88:0x6d88a4,active?.92:.34).setInteractive({useHandCursor:true});
-      const t=this.add.text(x+10,y+6,`${icon} ${title}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:active?'#7dffc1':'#ffffff'});
-      const s=this.add.text(x+10,y+23,sub,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',color:'#aeb9d8'});
-      bg.on('pointerup',()=>{try{localStorage.setItem(MODE_KEY,key);}catch{}this.renderUI();});
-      modes.add([bg,t,s]);
-    };
-
-    makeMode(start,'timeattack','CONTRARRELOJ','Tu mejor vuelta','🏁');
-    makeMode(start+w+gap,'ghost','FANTASMA','Contra tu récord','👻');
-    makeMode(start+(w+gap)*2,'survival','SUPERVIVENCIA','Último fuera','⚡');
-
     let armed=false;
     const baseScale=play.scaleX;
     play.setInteractive({useHandCursor:true});
@@ -56,15 +30,101 @@ export class MenuScene extends CurrentMenuScene{
       play.setScale(baseScale);
       if(!armed)return;
       armed=false;
-      let trackKey=this.selectedTrackKey||'track01';
-      try{
-        const live=localStorage.getItem('tdr2:trackKey');
-        if(live?.trim())trackKey=live.trim();
-        localStorage.setItem('tdr2:carId',this.selectedCarId);
-        localStorage.setItem('tdr2:trackKey',trackKey);
-        localStorage.setItem(MODE_KEY,selected);
-      }catch{}
-      this.scene.start('race',{carId:this.selectedCarId,trackKey,gameMode:selected});
+      this._openGameModeModal();
     });
+  }
+
+  _startSelectedMode(mode){
+    let trackKey=this.selectedTrackKey||'track01';
+    try{
+      const live=localStorage.getItem('tdr2:trackKey');
+      if(live?.trim())trackKey=live.trim();
+      localStorage.setItem('tdr2:carId',this.selectedCarId);
+      localStorage.setItem('tdr2:trackKey',trackKey);
+      localStorage.setItem(MODE_KEY,mode);
+    }catch{}
+    this._closeGameModeModal();
+    this.scene.start('race',{carId:this.selectedCarId,trackKey,gameMode:mode});
+  }
+
+  _closeGameModeModal(){
+    if(this._gameModeModal){
+      try{this._gameModeModal.destroy(true);}catch{}
+      this._gameModeModal=null;
+    }
+    try{this._gameModeMarqueeTween?.stop?.();}catch{}
+    this._gameModeMarqueeTween=null;
+  }
+
+  _openGameModeModal(){
+    if(this._gameModeModal?.scene)return;
+    const {width,height}=this.scale;
+    const selected=(()=>{try{return localStorage.getItem(MODE_KEY)||'timeattack';}catch{return'timeattack';}})();
+
+    const root=this.add.container(0,0).setDepth(9000);
+    this._ui?.add(root);
+    this._gameModeModal=root;
+
+    const veil=this.add.rectangle(0,0,width,height,0x02070d,.74).setOrigin(0).setInteractive();
+    root.add(veil);
+
+    const panelW=Math.min(760,Math.max(610,Math.floor(width*.63)));
+    const panelH=Math.min(330,Math.max(270,Math.floor(height*.48)));
+    const cx=width/2,cy=height/2;
+
+    const panel=this.add.graphics();
+    const x=cx-panelW/2,y=cy-panelH/2,c=16;
+    panel.fillStyle(0x07131b,.98);
+    panel.lineStyle(2,0x45dfff,.72);
+    panel.beginPath();
+    panel.moveTo(x+c,y);panel.lineTo(x+panelW-c,y);panel.lineTo(x+panelW,y+c);
+    panel.lineTo(x+panelW,y+panelH-c);panel.lineTo(x+panelW-c,y+panelH);
+    panel.lineTo(x+c,y+panelH);panel.lineTo(x,y+panelH-c);panel.lineTo(x,y+c);
+    panel.closePath();panel.fillPath();panel.strokePath();
+    panel.lineStyle(1,0xffffff,.07);panel.strokeRect(x+7,y+7,panelW-14,panelH-14);
+    root.add(panel);
+
+    // Marquee header: a moving strip inside the top of the modal.
+    const marqueeY=y+17;
+    const marqueeBg=this.add.rectangle(cx,marqueeY,panelW-34,28,0x0b2230,.92).setOrigin(.5,0).setStrokeStyle(1,0x45dfff,.35);
+    root.add(marqueeBg);
+    const marquee=this.add.text(cx,marqueeY+7,'◆  ELIGE MODO DE JUEGO   •   LISTO PARA CORRER   •   ELIGE MODO DE JUEGO  ◆',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#77ecff',letterSpacing:1}).setOrigin(.5,0);
+    root.add(marquee);
+    this._gameModeMarqueeTween=this.tweens.add({targets:marquee,x:{from:cx-34,to:cx+34},duration:2200,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
+
+    root.add(this.add.text(cx,y+58,'¿CÓMO QUIERES CORRER?',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'21px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,y+86,'Selecciona un modo y la carrera comenzará inmediatamente',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',color:'#9fb1c2'}).setOrigin(.5,0));
+
+    const gap=14;
+    const cardW=Math.floor((panelW-64-gap*2)/3);
+    const cardH=Math.min(142,panelH-138);
+    const cardY=y+118;
+    const startX=cx-(cardW*3+gap*2)/2;
+
+    const modes=[
+      {key:'timeattack',icon:'🏁',title:'CONTRARRELOJ',sub:'Persigue tu mejor vuelta',detail:'Pista libre · cronómetro puro',accent:0x55bfff},
+      {key:'ghost',icon:'👻',title:'FANTASMA',sub:'Compite contra tu récord',detail:'Tu mejor vuelta como rival',accent:0x8f7dff},
+      {key:'survival',icon:'⚡',title:'SUPERVIVENCIA',sub:'6 coches · último fuera',detail:'Una eliminación por vuelta',accent:0x42ff9d}
+    ];
+
+    modes.forEach((m,i)=>{
+      const bx=startX+i*(cardW+gap),active=selected===m.key;
+      const bg=this.add.rectangle(bx,cardY,cardW,cardH,active?0x102c2b:0x0a1620,.98).setOrigin(0)
+        .setStrokeStyle(2,active?m.accent:0x52677b,active?.95:.42).setInteractive({useHandCursor:true});
+      root.add(bg);
+      root.add(this.add.text(bx+cardW/2,cardY+13,m.icon,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'22px'}).setOrigin(.5,0));
+      root.add(this.add.text(bx+cardW/2,cardY+45,m.title,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#ffffff',align:'center'}).setOrigin(.5,0));
+      root.add(this.add.text(bx+cardW/2,cardY+69,m.sub,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:active?'#baffdf':'#b8c4d0',align:'center',wordWrap:{width:cardW-18}}).setOrigin(.5,0));
+      root.add(this.add.text(bx+cardW/2,cardY+94,m.detail,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',color:'#708398',align:'center',wordWrap:{width:cardW-18}}).setOrigin(.5,0));
+      if(active)root.add(this.add.text(bx+cardW/2,cardY+cardH-18,'ÚLTIMO USADO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'6px',fontStyle:'bold',color:'#72ffc1',letterSpacing:1}).setOrigin(.5,0));
+      bg.on('pointerover',()=>{bg.setFillStyle(0x153244,.98);bg.setStrokeStyle(2,m.accent,.95);});
+      bg.on('pointerout',()=>{bg.setFillStyle(active?0x102c2b:0x0a1620,.98);bg.setStrokeStyle(2,active?m.accent:0x52677b,active?.95:.42);});
+      bg.on('pointerup',()=>this._startSelectedMode(m.key));
+    });
+
+    const close=this.add.text(x+panelW-22,y+8,'×',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'24px',fontStyle:'bold',color:'#8ea2b4'}).setOrigin(.5,0).setInteractive({useHandCursor:true});
+    close.on('pointerup',()=>this._closeGameModeModal());
+    root.add(close);
+    veil.on('pointerup',()=>this._closeGameModeModal());
   }
 }
