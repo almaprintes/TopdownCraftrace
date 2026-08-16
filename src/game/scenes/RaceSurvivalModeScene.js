@@ -226,8 +226,8 @@ export class RaceScene extends CurrentRaceScene{
     root.innerHTML=`
       <style>
         .tdrsurv-veil{position:fixed;inset:0;z-index:14000;background:rgba(2,6,12,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
-        .tdrsurv-card{width:min(88vw,460px);background:linear-gradient(180deg,rgba(13,27,38,.98),rgba(6,14,22,.98));border:2px solid ${won?'#4fffb0':'#ff6479'};clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px);padding:22px 24px;color:#fff;box-shadow:0 24px 90px rgba(0,0,0,.55)}
-        .tdrsurv-kicker{font-size:10px;font-weight:900;letter-spacing:.18em;color:${won?'#63ffc0':'#ff8293'};margin-bottom:5px}.tdrsurv-title{font-size:28px;font-weight:950;letter-spacing:.02em;margin-bottom:16px}.tdrsurv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 18px}.tdrsurv-stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10);padding:11px 9px;text-align:center}.tdrsurv-stat small{display:block;font-size:8px;letter-spacing:.11em;color:#8495a9;font-weight:900;margin-bottom:5px}.tdrsurv-stat b{font-size:16px}.tdrsurv-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tdrsurv-btn{height:48px;border:1px solid rgba(255,255,255,.18);background:#122335;color:#fff;font:900 12px system-ui,-apple-system,sans-serif;letter-spacing:.07em}.tdrsurv-btn.primary{background:${won?'#145a45':'#56212b'};border-color:${won?'#4fffb0':'#ff6479'}}
+        .tdrsurv-card{width:min(88vw,500px);background:linear-gradient(180deg,rgba(13,27,38,.98),rgba(6,14,22,.98));border:2px solid ${won?'#4fffb0':'#ff6479'};clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px);padding:22px 24px;color:#fff;box-shadow:0 24px 90px rgba(0,0,0,.55)}
+        .tdrsurv-kicker{font-size:10px;font-weight:900;letter-spacing:.18em;color:${won?'#63ffc0':'#ff8293'};margin-bottom:5px}.tdrsurv-title{font-size:28px;font-weight:950;letter-spacing:.02em;margin-bottom:16px}.tdrsurv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 18px}.tdrsurv-stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10);padding:11px 9px;text-align:center}.tdrsurv-stat small{display:block;font-size:8px;letter-spacing:.11em;color:#8495a9;font-weight:900;margin-bottom:5px}.tdrsurv-stat b{font-size:16px}.tdrsurv-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.tdrsurv-btn{height:48px;border:1px solid rgba(255,255,255,.18);background:#122335;color:#fff;font:900 11px system-ui,-apple-system,sans-serif;letter-spacing:.055em}.tdrsurv-btn.primary{background:${won?'#145a45':'#56212b'};border-color:${won?'#4fffb0':'#ff6479'}}.tdrsurv-btn.info{background:#123452;border-color:#3f8bc7}
       </style>
       <div class="tdrsurv-veil"><div class="tdrsurv-card">
         <div class="tdrsurv-kicker">SUPERVIVENCIA</div>
@@ -237,8 +237,9 @@ export class RaceScene extends CurrentRaceScene{
           <div class="tdrsurv-stat"><small>MEJOR VUELTA</small><b>${best}</b></div>
           <div class="tdrsurv-stat"><small>POSICIÓN</small><b>${won?'1º':'—'}</b></div>
         </div>
-        <div class="tdrsurv-actions"><button class="tdrsurv-btn primary" data-a="again">REPETIR</button><button class="tdrsurv-btn" data-a="menu">MENÚ</button></div>
+        <div class="tdrsurv-actions"><button class="tdrsurv-btn info" data-a="info">INFO SESIÓN</button><button class="tdrsurv-btn primary" data-a="again">REPETIR</button><button class="tdrsurv-btn" data-a="menu">MENÚ</button></div>
       </div></div>`;
+    root.querySelector('[data-a="info"]')?.addEventListener('click',()=>this._showSurvivalSessionInfo(root));
     root.querySelector('[data-a="again"]')?.addEventListener('click',()=>{
       try{root.remove();}catch{}this._survivalResultDom=null;
       try{this.physics?.world?.resume?.();}catch{}
@@ -250,6 +251,24 @@ export class RaceScene extends CurrentRaceScene{
       this.scene.start('menu');
     });
     document.body.appendChild(root);this._survivalResultDom=root;
+  }
+
+  _showSurvivalSessionInfo(resultRoot){
+    if(typeof document==='undefined')return;
+    const laps=(Array.isArray(this.ttHistory)?this.ttHistory:[]).map((r,i)=>({n:i+1,ms:Number(r?.lapMs)})).filter(r=>Number.isFinite(r.ms)&&r.ms>1000);
+    const times=laps.map(r=>r.ms),best=times.length?Math.min(...times):null,worst=times.length?Math.max(...times):null,avg=times.length?times.reduce((a,b)=>a+b,0)/times.length:null;
+    const trackName=String(this.track?.meta?.name||this.track?.name||this.trackId||this.trackKey||'Circuito');
+    const car=CAR_SPECS?.[this.carId]||CAR_SPECS?.[this.selectedCarId]||{};
+    const rows=laps.length?laps.map(r=>`<div class="tdrsi-lap"><b>V${r.n}</b><span>${fmtLap(r.ms)}</span><i>${r.ms===best?'MEJOR':''}</i></div>`).join(''):'<div class="tdrsi-empty">No hay vueltas cronometradas en esta sesión.</div>';
+    const overlay=document.createElement('div');overlay.dataset.tdrRaceUi='1';
+    overlay.innerHTML=`<style>
+      .tdrsi-veil{position:fixed;inset:0;z-index:14500;background:rgba(2,6,12,.90);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:18px;font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#fff}
+      .tdrsi-card{width:min(92vw,540px);max-height:88vh;overflow:auto;background:linear-gradient(180deg,#0d1b28,#071019);border:1px solid #3678ad;clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);padding:20px;box-shadow:0 25px 90px rgba(0,0,0,.62)}
+      .tdrsi-kicker{font-size:9px;font-weight:900;letter-spacing:.16em;color:#69c8ff}.tdrsi-card h2{margin:4px 0 2px;font-size:23px}.tdrsi-sub{color:#9aabc0;font-size:11px;margin-bottom:15px}.tdrsi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.tdrsi-stat{background:#101c29;border:1px solid #23364b;padding:10px;text-align:center}.tdrsi-stat small{display:block;color:#8193a8;font-size:7px;font-weight:900;letter-spacing:.1em;margin-bottom:4px}.tdrsi-stat b{font-size:14px}.tdrsi-card h3{font-size:10px;letter-spacing:.13em;color:#8fa1b6;margin:17px 0 6px}.tdrsi-lap{display:grid;grid-template-columns:42px 1fr 48px;gap:8px;padding:8px 2px;border-bottom:1px solid #182738;font-size:12px}.tdrsi-lap span{text-align:right}.tdrsi-lap i{text-align:right;color:#62ffb2;font-size:8px;font-style:normal;font-weight:900}.tdrsi-empty{color:#8495a9;font-size:11px;padding:10px 0}.tdrsi-back{width:100%;height:46px;margin-top:16px;border:1px solid #3f8bc7;background:#123452;color:#fff;font:900 11px system-ui,-apple-system,sans-serif;letter-spacing:.08em}
+    </style><div class="tdrsi-veil"><div class="tdrsi-card"><div class="tdrsi-kicker">INFO DE SESIÓN · SUPERVIVENCIA</div><h2>${trackName}</h2><div class="tdrsi-sub">${String(car?.name||this.carId||'Coche')} · resultado ${this._survivalWon?'1º / CAMPEÓN':'ELIMINADO'}</div><div class="tdrsi-grid"><div class="tdrsi-stat"><small>RONDAS</small><b>${this._survivalRound}/5</b></div><div class="tdrsi-stat"><small>MEJOR</small><b>${fmtLap(best)}</b></div><div class="tdrsi-stat"><small>MEDIA</small><b>${fmtLap(avg)}</b></div><div class="tdrsi-stat"><small>VUELTAS</small><b>${laps.length}</b></div><div class="tdrsi-stat"><small>PEOR</small><b>${fmtLap(worst)}</b></div><div class="tdrsi-stat"><small>COCHES INICIALES</small><b>6</b></div></div><h3>VUELTAS DE LA SESIÓN</h3><div>${rows}</div><button class="tdrsi-back" data-a="back">VOLVER AL RESULTADO</button></div></div>`;
+    if(resultRoot)resultRoot.style.display='none';
+    overlay.querySelector('[data-a="back"]')?.addEventListener('click',()=>{try{overlay.remove();}catch{}if(resultRoot)resultRoot.style.display='';});
+    document.body.appendChild(overlay);
   }
 
   _updateSurvivalBots(deltaMs){
