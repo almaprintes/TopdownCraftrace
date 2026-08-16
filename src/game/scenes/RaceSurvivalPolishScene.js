@@ -4,6 +4,12 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapPi=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
 
 export class RaceScene extends TrafficRaceScene {
+  create(data){
+    this._survivalPlayerLapTimes=[];
+    this._survivalPlayerLapStartPerf=null;
+    return super.create(data);
+  }
+
   _initSurvival(){
     super._initSurvival();
     for(const b of this._survivalBots||[]){
@@ -16,6 +22,46 @@ export class RaceScene extends TrafficRaceScene {
     }
   }
 
+  _registerFinishCross(racer){
+    const isPlayer=racer===this._survivalPlayer;
+    const wasArmed=Boolean(racer?.armed);
+    const completed=super._registerFinishCross(racer);
+    if(isPlayer){
+      const now=performance.now();
+      if(!wasArmed&&racer?.armed){
+        // First crossing only arms the survival lap counter. Timing starts here.
+        this._survivalPlayerLapStartPerf=now;
+      }else if(completed){
+        const start=Number(this._survivalPlayerLapStartPerf);
+        const lapMs=now-start;
+        if(Number.isFinite(start)&&Number.isFinite(lapMs)&&lapMs>1000){
+          this._survivalPlayerLapTimes.push(lapMs);
+          // Survival has five elimination rounds, therefore at most five player laps
+          // belong to its session report.
+          if(this._survivalPlayerLapTimes.length>5)this._survivalPlayerLapTimes=this._survivalPlayerLapTimes.slice(-5);
+        }
+        this._survivalPlayerLapStartPerf=now;
+      }
+    }
+    return completed;
+  }
+
+  _survivalSessionBestLapMs(){
+    const laps=Array.isArray(this._survivalPlayerLapTimes)?this._survivalPlayerLapTimes:[];
+    return laps.length?Math.min(...laps):null;
+  }
+
+  _showSurvivalSessionInfo(resultRoot){
+    // The inherited report expects ttHistory. Feed it only the player's real
+    // survival laps, never Time Attack history or CPU/internal crossings.
+    const original=this.ttHistory;
+    this.ttHistory=(Array.isArray(this._survivalPlayerLapTimes)?this._survivalPlayerLapTimes:[])
+      .slice(0,5)
+      .map(lapMs=>({lapMs}));
+    try{return super._showSurvivalSessionInfo(resultRoot);}
+    finally{this.ttHistory=original;}
+  }
+
   _ensureSurvivalMiniMarkers(){
     if(!this._survivalMode)return;
     for(const b of this._survivalBots||[]){
@@ -24,7 +70,6 @@ export class RaceScene extends TrafficRaceScene {
         .setStrokeStyle(1,0x271400,.95)
         .setDepth(2305)
         .setScrollFactor(1);
-      // RaceFixed uses the main camera for HUD on iOS; keep these markers there too.
       try{if(typeof m.cameraFilter==='number'&&this.cameras?.main)m.cameraFilter&=~this.cameras.main.id;}catch{}
       try{this.uiCam?.ignore?.(m);}catch{}
       b._miniMarker=m;
@@ -34,7 +79,6 @@ export class RaceScene extends TrafficRaceScene {
   _smoothSurvivalSprites(deltaMs){
     if(!this._survivalMode)return;
     const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
-    // Time-based damping: removes one-frame lane/mistake jumps without creating visible lag.
     const posK=1-Math.exp(-14*dt);
     const rotK=1-Math.exp(-16*dt);
     for(const b of this._survivalBots||[]){
@@ -45,7 +89,6 @@ export class RaceScene extends TrafficRaceScene {
         b._renderX=tx;b._renderY=ty;b._renderRot=tr;
       }else{
         const jump=Math.hypot(tx-b._renderX,ty-b._renderY);
-        // For ordinary motion interpolate. A true scene reset / impossible jump snaps once.
         if(jump<260){
           b._renderX+=(tx-b._renderX)*posK;
           b._renderY+=(ty-b._renderY)*posK;
