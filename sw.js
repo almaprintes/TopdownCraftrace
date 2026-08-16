@@ -3,7 +3,7 @@
    as an offline fallback. This prevents an installed iPhone PWA from getting
    stuck on an old circuit/environment build. */
 
-const CACHE_VERSION = 'tdr2-v14';
+const CACHE_VERSION = 'tdr2-v21';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -13,7 +13,12 @@ const CORE_ASSETS = [
   './icons/icon-256.png',
   './icons/icon-384.png',
   './icons/icon-512.png',
-  './assets/ui/orientation_portrait.png'
+  './assets/ui/orientation_portrait.png',
+  './assets/tutorials/dropping/dropping_01_717x330.png',
+  './assets/tutorials/dropping/dropping_02_717x330.png',
+  './assets/tutorials/dropping/dropping_03_717x330.png',
+  './assets/tutorials/dropping/dropping_04_717x330.png',
+  './assets/tutorials/dropping/dropping_05_717x330.png'
 ];
 
 self.addEventListener('message', (event) => {
@@ -23,7 +28,6 @@ self.addEventListener('message', (event) => {
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION).then(async (cache) => {
-      // Do not let one optional/missing file abort SW installation.
       await Promise.allSettled(CORE_ASSETS.map((url) => cache.add(url)));
     })
   );
@@ -62,8 +66,5 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // While the game is being iterated on, EVERYTHING on our own origin is
-  // network-first. That includes JS/CSS/WebP, so an installed PWA sees the same
-  // build as Safari/Vercel instead of a stale cached environment.
   event.respondWith(networkFirst(req));
 });
