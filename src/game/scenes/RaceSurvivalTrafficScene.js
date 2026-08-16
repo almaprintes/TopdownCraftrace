@@ -56,9 +56,12 @@ export class RaceScene extends CurrentRaceScene {
       const meP=Number(b.absProgress||0),meLane=Number(b._trafficLane||0);
       const trackW=Math.max(80,Number(b.trackW||this.track?.meta?.trackWidth||140));
       const safeLane=Math.max(16,Math.min(trackW*.20,34));
-      const maxLane=Math.max(safeLane,trackW*.34);
-      const warnGap=.030;
-      const panicGap=.014;
+      const maxLane=Math.max(safeLane,trackW*.36);
+
+      // La IA debe apartarse antes que frenar. Solo reducimos ritmo cuando ya está
+      // realmente encima del coche delantero.
+      const warnGap=.020;
+      const panicGap=.0065;
 
       let nearest=null;
       for(const e of entries){
@@ -68,7 +71,7 @@ export class RaceScene extends CurrentRaceScene {
         if(gap>0.5)gap-=1;
         if(gap<=0||gap>warnGap)continue;
         const latGap=Math.abs(Number(e.lane||0)-meLane);
-        if(latGap>safeLane*1.7)continue;
+        if(latGap>safeLane*1.65)continue;
         if(!nearest||gap<nearest.gap)nearest={...e,gap,latGap};
       }
 
@@ -79,26 +82,36 @@ export class RaceScene extends CurrentRaceScene {
         let side=Math.sign(meLane-otherLane);
         if(!side)side=Number(b._trafficSide||1);
         b._trafficSide=side;
-        target=clamp(otherLane+side*safeLane*1.35,-maxLane,maxLane);
+
+        // Cambio de carril bastante decidido, aprovechando el ancho disponible.
+        target=clamp(otherLane+side*safeLane*1.55,-maxLane,maxLane);
+
         const urgency=clamp((warnGap-nearest.gap)/(warnGap-panicGap),0,1);
-        speedScale=1-(0.12+0.46*urgency);
-        if(nearest.gap<panicGap)speedScale=Math.min(speedScale,.42);
+        // Antes se podía caer a ~42% del ritmo, formando trenes lentísimos. Ahora
+        // conserva casi toda la velocidad y solo levanta de verdad a distancia crítica.
+        speedScale=1-(0.02+0.14*urgency);
+        if(nearest.gap<panicGap){
+          const critical=clamp((panicGap-nearest.gap)/panicGap,0,1);
+          speedScale=Math.min(speedScale,1-0.18-0.20*critical);
+          speedScale=Math.max(.62,speedScale);
+        }
       }else{
-        // Side-by-side cars still repel gently so they do not merge into one sprite.
+        // En paralelo no deben frenar: únicamente se separan lateralmente.
         for(const e of entries){
           if(e.bot===b)continue;
           let gap=Math.abs(Number(e.progress)-meP);gap=Math.min(gap,Math.abs(gap-1));
           const lat=Number(e.lane||0)-meLane;
-          if(gap<.010&&Math.abs(lat)<safeLane){
+          if(gap<.009&&Math.abs(lat)<safeLane){
             const side=Math.sign(-lat)||Number(b._trafficSide||1);
-            target=clamp(meLane+side*safeLane*.75,-maxLane,maxLane);
-            speedScale=Math.min(speedScale,.86);
+            target=clamp(meLane+side*safeLane*.90,-maxLane,maxLane);
+            speedScale=Math.min(speedScale,.98);
             break;
           }
         }
       }
 
-      const laneLerp=nearest?clamp(dt*5.5,0,1):clamp(dt*1.8,0,1);
+      // Más respuesta lateral al detectar tráfico; retorno más suave al carril nominal.
+      const laneLerp=nearest?clamp(dt*7.2,0,1):clamp(dt*1.7,0,1);
       b._trafficLane+=(target-b._trafficLane)*laneLerp;
       saved.push({b,targetRate:b.targetRate,baseLane:b.baseLane});
       b.baseLane=b._trafficLane;
