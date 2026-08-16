@@ -189,7 +189,14 @@ export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
   else s.lootPityEcu=pity+1;
 
   const chest=sessionLap%5===0;
-  if(chest)addCommon(2);
+  const chestLoot={};
+  if(chest){
+    for(let i=0;i<2;i++){
+      const id=weightedCommon(affinity);
+      add(id,1);
+      chestLoot[id]=(chestLoot[id]||0)+1;
+    }
+  }
 
   for(const [id,n] of Object.entries(reward)){
     addItem(s,id,n);
@@ -200,7 +207,7 @@ export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
   if(bonusCommon)LOOT_SESSION.bonusLaps+=1;
 
   const meta={
-    trackKey,lapMs:lap,affinity,sessionLap,chest,bonusCommon,
+    trackKey,lapMs:lap,affinity,sessionLap,chest,chestLoot,bonusCommon,
     within110,carBest,circuitRecord,ecuDrop,ecuChance,pityBefore:pity,
     label:circuitRecord?'RÉCORD DEL CIRCUITO':carBest?'MEJOR VUELTA':within110?'VUELTA RÁPIDA':'VUELTA VÁLIDA'
   };
