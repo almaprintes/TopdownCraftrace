@@ -4,7 +4,7 @@ import { MenuScene } from './scenes/MenuCarPreviewFixScene.js';
 import { RaceScene } from './scenes/RaceLootEconomyScene.js';
 import { UpgradeShopScene } from './scenes/UpgradeWorkshopUnifiedStyleScene.js';
 import { GarageScene } from './scenes/GarageCleanTypographyScene.js';
-import { SettingsScene } from './scenes/SettingsAVOptionsScene.js';
+import { SettingsScene } from './scenes/SettingsHelpTutorialScene.js';
 import { GarageDetailScene } from './scenes/GarageDetailSpeedConsistencyScene.js';
 import { AdminHubScene } from './scenes/AdminHubScene.js';
 import { CarEditorScene } from './scenes/CarEditorSpeedConsistencyScene.js';
