@@ -50,15 +50,15 @@ export class RaceScene extends CurrentRaceScene{
 
     const carWidth=Math.max(14,Number(visual.displayWidth||visual.width||28));
     const carLength=Math.max(24,Number(visual.displayHeight||visual.height||48));
-    const trackW=Math.max(carWidth*4.8,Number(this.track?.meta?.trackWidth||this.track?.trackWidth||this.trackWidth||carWidth*7));
-    const safeHalf=Math.max(carWidth*.92,trackW*.5-carWidth*.82);
-    const laneEdge=clamp(trackW*.32,carWidth*.9,safeHalf);
-    const frontGap=clamp(carLength*1.08,30,72);
-    const rowGap=clamp(carLength*1.42,38,86);
-    const stagger=clamp(carLength*.52,14,34);
+    const trackW=Math.max(carWidth*5.2,Number(this.track?.meta?.trackWidth||this.track?.trackWidth||this.trackWidth||carWidth*7));
+    const safeHalf=Math.max(carWidth*1.05,trackW*.5-carWidth*.88);
+    const laneEdge=clamp(trackW*.36,carWidth*1.05,safeHalf);
+    const frontGap=clamp(carLength*1.18,34,78);
+    const rowGap=clamp(carLength*1.62,46,96);
+    const stagger=clamp(carLength*.62,18,40);
     const lapMultipliers=[1.22,1.18,1.14,1.10,1.07];
 
-    // F1-style staggered grid: two columns near the usable edges, not a pile on the centre line.
+    // Parrilla tipo F1: dos columnas abiertas, alternadas y con separación longitudinal clara.
     const slots=[
       {lane:-laneEdge,back:frontGap},
       {lane:+laneEdge,back:frontGap+stagger},
@@ -93,12 +93,13 @@ export class RaceScene extends CurrentRaceScene{
 
       const body=this.physics.add.sprite(p.x,p.y,'__BODY__');
       body.setVisible(false);
-      body.setCircle(Math.max(8,Math.round(Math.min(carWidth,carLength)*.27)));
+      body.setCircle(Math.max(8,Math.round(Math.min(carWidth,carLength)*.24)));
       body.setCollideWorldBounds(true);
-      body.setBounce(.12);
+      body.setBounce(.04);
       body.setDrag(0,0);
       body.rotation=p.r;
       body.setVelocity(0,0);
+      body.setPushable?.(true);
       this._survivalPhysicsGroup.add(body);
 
       const sprite=this.add.image(p.x,p.y,tex)
@@ -113,16 +114,16 @@ export class RaceScene extends CurrentRaceScene{
       const targetRate=1/(baseLapSec*lapMultipliers[i]);
       this._survivalBots.push({
         id:`CPU ${i+1}`,body,sprite,absProgress:startProgress,lapRate:0,targetRate,
-        lane:slot.lane,baseLane:slot.lane,active:true,launchDelay:i*.08,
+        lane:slot.lane,baseLane:slot.lane,active:true,launchDelay:i*.10,
         armed:false,completedLaps:0,distanceSinceFinish:0,prevX:p.x,prevY:p.y,_lastFrac:this._survivalNearestPathProgress(p.x,p.y),
         paceFactor:rand(.965,1.035),paceTarget:rand(.955,1.045),nextPaceChange:rand(1.8,4.5),
-        lapFactor:rand(.95,1.05),linePhase:rand(0,Math.PI*2),lineFreq:rand(.65,1.35),lineAmp:rand(carWidth*.16,carWidth*.42),
+        lapFactor:rand(.95,1.05),linePhase:rand(0,Math.PI*2),lineFreq:rand(.65,1.35),lineAmp:rand(carWidth*.12,carWidth*.32),
         trackW,mistakeUntil:0,mistakeLane:0,mistakeSlow:1,nextMistakeCheck:rand(.8,2.2),lastLapSeen:0,
-        lenPx,carWidth,carLength
+        lenPx,carWidth,carLength,avoidLane:0,avoidSpeed:1,avoidSide:(i%2===0?-1:1)
       });
     }
 
-    // Real Arcade collisions: player ↔ CPU and CPU ↔ CPU.
+    // Colisión física como red de seguridad. La IA intenta evitar el contacto ANTES de llegar aquí.
     try{
       this._survivalPlayerCollider=this.physics.add.collider(this.carBody,this._survivalPhysicsGroup);
       this._survivalBotCollider=this.physics.add.collider(this._survivalPhysicsGroup,this._survivalPhysicsGroup);
@@ -142,6 +143,52 @@ export class RaceScene extends CurrentRaceScene{
     const arr=[{id:'TÚ',player:true,active:!this._survivalPlayerOut,raceDistance:this._survivalPlayerRaceDistance()}];
     for(const b of this._survivalBots)if(b.active)arr.push({...b,raceDistance:this._survivalBotRaceDistance(b)});
     return arr.filter(e=>e.active).sort((a,b)=>b.raceDistance-a.raceDistance);
+  }
+
+  _survivalTrafficFor(bot,targetR){
+    const bx=Number(bot?.body?.x),by=Number(bot?.body?.y);
+    if(!Number.isFinite(bx)||!Number.isFinite(by))return{lane:0,speed:1};
+    const tx=Math.cos(targetR),ty=Math.sin(targetR),nx=-ty,ny=tx;
+    const lookAhead=Math.max(bot.carLength*4.2,90);
+    const sideZone=Math.max(bot.carWidth*1.25,24);
+    let lanePush=0,speedFactor=1,nearestAhead=Infinity;
+
+    const inspect=(x,y,weight=1)=>{
+      if(!Number.isFinite(x)||!Number.isFinite(y))return;
+      const rx=x-bx,ry=y-by;
+      const ahead=rx*tx+ry*ty;
+      const side=rx*nx+ry*ny;
+      const absSide=Math.abs(side);
+      const dist=Math.hypot(rx,ry);
+
+      // Coche por delante: abrirse con decisión y levantar antes de tocarlo.
+      if(ahead>0&&ahead<lookAhead&&absSide<sideZone*1.35){
+        nearestAhead=Math.min(nearestAhead,ahead);
+        const danger=1-clamp(ahead/lookAhead,0,1);
+        const away=absSide<2?bot.avoidSide:(side<=0?1:-1);
+        lanePush+=away*danger*bot.trackW*.34*weight;
+        speedFactor=Math.min(speedFactor,clamp(.28+ahead/lookAhead*.82,.30,1));
+      }
+
+      // Contacto lateral o trayectoria convergente: apartarse, no empujar.
+      const bubble=Math.max(bot.carWidth*1.7,30);
+      if(dist<bubble&&Math.abs(ahead)<bot.carLength*1.5){
+        const danger=1-clamp(dist/bubble,0,1);
+        const away=side<=0?1:-1;
+        lanePush+=away*danger*bot.trackW*.42*weight;
+        speedFactor=Math.min(speedFactor,.72);
+      }
+    };
+
+    inspect(Number(this.carBody?.x),Number(this.carBody?.y),1.25);
+    for(const other of this._survivalBots){
+      if(other===bot||!other.active||!other.body?.active)continue;
+      inspect(Number(other.body.x),Number(other.body.y),1);
+    }
+
+    // Si hay atasco frontal, priorizar totalmente esquivar antes que acelerar.
+    if(nearestAhead<bot.carLength*1.4)speedFactor=Math.min(speedFactor,.42);
+    return{lane:clamp(lanePush,-bot.trackW*.38,bot.trackW*.38),speed:clamp(speedFactor,.28,1)};
   }
 
   _eliminateSpecific(racer){
@@ -196,41 +243,53 @@ export class RaceScene extends CurrentRaceScene{
       const lapNow=Math.max(0,Math.floor(Number(b.absProgress)||0));
       if(lapNow!==b.lastLapSeen){
         b.lastLapSeen=lapNow;b.lapFactor=rand(.94,1.06);b.linePhase+=rand(-.8,.8);
-        b.lineAmp=clamp(b.lineAmp*rand(.78,1.22),2,Math.max(3,b.trackW*.16));
+        b.lineAmp=clamp(b.lineAmp*rand(.78,1.22),2,Math.max(3,b.trackW*.13));
       }
       if(elapsed>=b.nextMistakeCheck&&elapsed>=b.mistakeUntil){
         const dirt=this._survivalSurfaceId()==='DIRT',chance=dirt?.18:.11;
         if(Math.random()<chance){
           b.mistakeUntil=elapsed+rand(.65,1.75);
           b.mistakeSlow=rand(.48,.78);
-          const sign=Math.random()<.5?-1:1,severity=Math.random()<.28?rand(.42,.62):rand(.18,.36);
+          const sign=Math.random()<.5?-1:1,severity=Math.random()<.28?rand(.36,.52):rand(.16,.30);
           b.mistakeLane=sign*b.trackW*severity;
         }
         b.nextMistakeCheck=elapsed+rand(2.2,5.5);
       }
       const makingMistake=elapsed<b.mistakeUntil;
       if(!makingMistake&&Math.abs(b.mistakeLane)>.05)b.mistakeLane*=Math.pow(.12,dt);
-      const local=Math.max(0,elapsed-b.launchDelay),launch01=clamp(local/3,0,1);
+      const local=Math.max(0,elapsed-b.launchDelay),launch01=clamp(local/2.2,0,1);
       const pace=b.paceFactor*b.lapFactor*(makingMistake?b.mistakeSlow:1);
-      const desiredRate=b.targetRate*pace*(.18+.82*(1-Math.pow(1-launch01,2)));
-      b.lapRate+=(desiredRate-b.lapRate)*clamp(dt*(makingMistake?3.4:2),0,1);
+      const desiredRate=b.targetRate*pace*(.24+.76*(1-Math.pow(1-launch01,2)));
+      b.lapRate+=(desiredRate-b.lapRate)*clamp(dt*(makingMistake?3.4:2.6),0,1);
 
-      // The route target advances, but the actual car reaches it through physics, so contact can slow or deflect it.
       b.absProgress+=b.lapRate*dt;
+      const guide=this._survivalPathPoint(b.absProgress,b.baseLane);
+      if(!guide)continue;
+      const traffic=this._survivalTrafficFor(b,guide.r);
+      b.avoidLane+=(traffic.lane-b.avoidLane)*clamp(dt*7.5,0,1);
+      b.avoidSpeed+=(traffic.speed-b.avoidSpeed)*clamp(dt*9,0,1);
+
       const naturalLane=b.baseLane+Math.sin((b.absProgress*18+b.linePhase)*b.lineFreq)*b.lineAmp;
-      const lane=naturalLane+b.mistakeLane;
+      const maxLane=Math.max(b.carWidth, b.trackW*.5-b.carWidth*.72);
+      const lane=clamp(naturalLane+b.mistakeLane+b.avoidLane,-maxLane,maxLane);
       const target=this._survivalPathPoint(b.absProgress,lane);
       if(!target)continue;
 
       const bx=Number(b.body.x),by=Number(b.body.y);
       const dx=target.x-bx,dy=target.y-by,dist=Math.max(.001,Math.hypot(dx,dy));
-      const cruise=Math.max(24,b.lapRate*b.lenPx);
+      const cruise=Math.max(28,b.lapRate*b.lenPx)*b.avoidSpeed;
       const tx=Math.cos(target.r),ty=Math.sin(target.r);
-      const correction=clamp(dist*2.2,0,cruise*.58);
-      const vx=tx*cruise+(dx/dist)*correction;
-      const vy=ty*cruise+(dy/dist)*correction;
+      const correction=clamp(dist*2.7,0,Math.max(20,cruise*.72));
+      let vx=tx*cruise+(dx/dist)*correction;
+      let vy=ty*cruise+(dy/dist)*correction;
+
+      // Garantizar que un contacto no los deje muertos: conservar siempre intención de avance.
+      const minForward=Math.max(18,cruise*.46);
+      const forward=vx*tx+vy*ty;
+      if(forward<minForward){vx+=tx*(minForward-forward);vy+=ty*(minForward-forward);}
+
       b.body.setVelocity(vx,vy);
-      b.body.rotation=target.r;
+      b.body.rotation=Math.atan2(vy,vx);
 
       const actualFrac=this._survivalNearestPathProgress(bx,by),prevActual=Number(b._lastFrac);
       if(Number.isFinite(prevActual)){
