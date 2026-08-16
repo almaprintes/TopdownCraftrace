@@ -28,7 +28,15 @@ this.load.image('panel_event', 'assets/ui/panel_event.webp');
 this.load.image('btn_play', 'assets/ui/btn_play.webp');
 this.load.image('btn_garage', 'assets/ui/btn_garage.webp');
 this.load.image('btn_factory', 'assets/ui/btn_factory.webp');
-this.load.image('btn_tracks', 'assets/ui/btn_tracks.webp');    
+this.load.image('btn_tracks', 'assets/ui/btn_tracks.webp');
+
+// Tutorial de dropping: se precarga aquí una sola vez para evitar problemas de rutas
+// o de Loader cuando se abre Configuración desde distintas escenas/PWA.
+this.load.image('dropTutorial1', 'assets/tutorials/dropping/dropping_01_717x330.png');
+this.load.image('dropTutorial2', 'assets/tutorials/dropping/dropping_02_717x330.png');
+this.load.image('dropTutorial3', 'assets/tutorials/dropping/dropping_03_717x330.png');
+this.load.image('dropTutorial4', 'assets/tutorials/dropping/dropping_04_717x330.png');
+this.load.image('dropTutorial5', 'assets/tutorials/dropping/dropping_05_717x330.png');
     
     // Materiales (overlay sutil de asfalto)
     this.load.image('asphaltOverlay', 'assets/textures/texture-asphalt-overlay.webp');
