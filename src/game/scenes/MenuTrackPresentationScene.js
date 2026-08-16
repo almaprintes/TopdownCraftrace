@@ -41,20 +41,20 @@ export class MenuScene extends CurrentMenuScene{
     const center=Array.isArray(track.raceCenterline)&&track.raceCenterline.length?track.raceCenterline:track.centerline;if(!Array.isArray(center)||center.length<2)return;
     const c=this.add.container(x,y).setDepth(36);this._ui?.add(c);addChamferFrame(this,c,w,h,0xd8a73a);
     const top=-h/2,bottom=h/2;
-    c.add(this.add.text(0,top+12,'CIRCUITO SELECCIONADO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',fontStyle:'bold',color:'#f0c65a',letterSpacing:1,align:'center'}).setOrigin(.5,0));
-    c.add(this.add.text(0,top+31,String(track.name||this._trackTitle(key)).toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'13px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-28}}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+12,'CIRCUITO SELECCIONADO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#f0c65a',letterSpacing:1,align:'center'}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+34,String(track.name||this._trackTitle(key)).toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-24}}).setOrigin(.5,0));
 
-    const previewW=Math.min(116,w-34),previewH=46,previewY=top+78;
+    const previewW=Math.min(122,w-28),previewH=48,previewY=top+82;
     c.add(this.add.rectangle(0,previewY,previewW,previewH,0x050b10,.58).setStrokeStyle(1,0xd8a73a,.22));
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;for(const p of center){const px=Number(p?.x),py=Number(p?.y);if(!Number.isFinite(px)||!Number.isFinite(py))continue;minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py);}if(Number.isFinite(minX)&&maxX>minX&&maxY>minY){const g=this.add.graphics(),s=Math.min((previewW-12)/(maxX-minX),(previewH-10)/(maxY-minY)),ox=-(maxX-minX)*s/2,oy=previewY-(maxY-minY)*s/2;g.lineStyle(3,0x000000,.45);g.beginPath();center.forEach((p,i)=>{const px=ox+(Number(p.x)-minX)*s,py=oy+(Number(p.y)-minY)*s;i?g.lineTo(px,py):g.moveTo(px,py);});g.closePath();g.strokePath();g.lineStyle(2,0xffffff,.98);g.beginPath();center.forEach((p,i)=>{const px=ox+(Number(p.x)-minX)*s,py=oy+(Number(p.y)-minY)*s;i?g.lineTo(px,py):g.moveTo(px,py);});g.closePath();g.strokePath();c.add(g);}
 
     const lengthM=Math.round(loopLength(center)*METERS_PER_PX),sectors=Math.max(1,(track.checkpoints?.length||2)+1),surface=surfaceLabel(track),direction=String(track.raceDirection||'forward').toLowerCase()==='reverse'?'ANTIHORARIO':'HORARIO';
     const stats=[['LONGITUD',`${lengthM} m`],['SECTORES',String(sectors)],['SUPERFICIE',surface],['SENTIDO',direction]];
-    const colX=[-w*.24,w*.24],rowY=[bottom-52,bottom-27];
+    const colX=[-w*.24,w*.24],rowY=[bottom-56,bottom-27];
     for(let i=0;i<stats.length;i++){
       const [label,value]=stats[i],cx=colX[i%2],cy=rowY[Math.floor(i/2)];
-      c.add(this.add.text(cx,cy,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'6px',fontStyle:'bold',color:'#8899aa',align:'center'}).setOrigin(.5,.5));
-      c.add(this.add.text(cx,cy+10,value,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#fff',align:'center'}).setOrigin(.5,.5));
+      c.add(this.add.text(cx,cy,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#8899aa',align:'center'}).setOrigin(.5,.5));
+      c.add(this.add.text(cx,cy+12,value,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#fff',align:'center'}).setOrigin(.5,.5));
     }
   }
 
@@ -76,13 +76,13 @@ export class MenuScene extends CurrentMenuScene{
     const target=20,done=Math.min(target,laps),complete=done>=target,w=clamp(Math.floor(width*.13),220,242),h=clamp(Math.floor(height*.22),162,178),x=Math.floor(width*.11),y=Math.floor(height*.40);
     const c=this.add.container(x,y).setDepth(24);this._ui?.add(c);addChamferFrame(this,c,w,h,complete?0x39ff9a:0x35cfff);
     const top=-h/2,bottom=h/2,accent=complete?'#62ffb2':'#6deaff';
-    c.add(this.add.text(0,top+12,complete?'EVENTO COMPLETADO':'EVENTO GLOBAL',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',fontStyle:'bold',color:accent,letterSpacing:1,align:'center'}).setOrigin(.5,0));
-    c.add(this.add.text(0,top+35,complete?'20 VUELTAS\nCONSEGUIDAS':'DESAFÍO DE\n20 VUELTAS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'15px',fontStyle:'bold',color:'#fff',align:'center',lineSpacing:0}).setOrigin(.5,0));
-    c.add(this.add.text(0,top+82,'SUMA VUELTAS EN CUALQUIER COCHE\nY EN CUALQUIER CIRCUITO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'6px',fontStyle:'bold',color:'#aebdca',align:'center',lineSpacing:1,wordWrap:{width:w-34}}).setOrigin(.5,0));
-    if(best!=null)c.add(this.add.text(0,top+111,`MEJOR GLOBAL · ${this._formatMissionTime(best)}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'6px',fontStyle:'bold',color:'#8395a8',align:'center'}).setOrigin(.5,0));
-    const barW=w-36,barY=bottom-38;c.add(this.add.rectangle(-barW/2,barY,barW,9,0x10202b,.95).setOrigin(0).setStrokeStyle(1,0xffffff,.12));
-    if(done>0)c.add(this.add.rectangle(-barW/2+2,barY+2,(barW-4)*(done/target),5,complete?0x39ff9a:0x35cfff,.95).setOrigin(0));
-    c.add(this.add.text(0,bottom-21,`${done}/${target} VUELTAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:accent,align:'center'}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+12,complete?'EVENTO COMPLETADO':'EVENTO GLOBAL',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:accent,letterSpacing:1,align:'center'}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+38,complete?'20 VUELTAS\nCONSEGUIDAS':'DESAFÍO DE\n20 VUELTAS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'17px',fontStyle:'bold',color:'#fff',align:'center',lineSpacing:1}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+88,'SUMA VUELTAS EN CUALQUIER COCHE\nY EN CUALQUIER CIRCUITO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#aebdca',align:'center',lineSpacing:1,wordWrap:{width:w-26}}).setOrigin(.5,0));
+    if(best!=null)c.add(this.add.text(0,top+118,`MEJOR GLOBAL · ${this._formatMissionTime(best)}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#93a5b8',align:'center'}).setOrigin(.5,0));
+    const barW=w-30,barY=bottom-39;c.add(this.add.rectangle(-barW/2,barY,barW,10,0x10202b,.95).setOrigin(0).setStrokeStyle(1,0xffffff,.12));
+    if(done>0)c.add(this.add.rectangle(-barW/2+2,barY+2,(barW-4)*(done/target),6,complete?0x39ff9a:0x35cfff,.95).setOrigin(0));
+    c.add(this.add.text(0,bottom-22,`${done}/${target} VUELTAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:accent,align:'center'}).setOrigin(.5,0));
   }
 
   _formatMissionTime(ms){const t=Math.max(0,Number(ms)||0),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000),cs=Math.floor((t%1000)/10);return`${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;}
