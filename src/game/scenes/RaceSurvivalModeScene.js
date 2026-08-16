@@ -24,6 +24,15 @@ function pathLength(cl){
   }
   return total;
 }
+function segIntersect(ax,ay,bx,by,cx,cy,dx,dy){
+  const rX=bx-ax,rY=by-ay,sX=dx-cx,sY=dy-cy;
+  const den=rX*sY-rY*sX;
+  if(Math.abs(den)<1e-8)return false;
+  const qpx=cx-ax,qpy=cy-ay;
+  const t=(qpx*sY-qpy*sX)/den;
+  const u=(qpx*rY-qpy*rX)/den;
+  return t>=0&&t<=1&&u>=0&&u<=1;
+}
 
 export class RaceScene extends CurrentRaceScene{
   create(data){
@@ -52,16 +61,22 @@ export class RaceScene extends CurrentRaceScene{
     return Array.isArray(cl)?cl:[];
   }
 
-  _survivalFindStartOffset(){
-    const cl=this._survivalCenterline();
-    if(cl.length<2||!this.carBody)return 0;
-    const px=Number(this.carBody.x),py=Number(this.carBody.y);
-    if(!Number.isFinite(px)||!Number.isFinite(py))return 0;
+  _survivalFinishGate(){
+    const gate=this.finishLine||this.track?.meta?.finishLine||this.track?.meta?.finish;
+    if(!gate?.a||!gate?.b)return null;
+    const ax=Number(gate.a.x),ay=Number(gate.a.y),bx=Number(gate.b.x),by=Number(gate.b.y);
+    if(![ax,ay,bx,by].every(Number.isFinite))return null;
+    return{ax,ay,bx,by,mx:(ax+bx)*.5,my:(ay+by)*.5};
+  }
+
+  _survivalFindFinishOffset(){
+    const cl=this._survivalCenterline(),gate=this._survivalFinishGate();
+    if(cl.length<2||!gate)return 0;
     let bestI=0,bestD=Infinity;
     for(let i=0;i<cl.length;i++){
       const p=cl[i],x=Number(p?.x??p?.[0]),y=Number(p?.y??p?.[1]);
       if(!Number.isFinite(x)||!Number.isFinite(y))continue;
-      const d=(x-px)*(x-px)+(y-py)*(y-py);
+      const d=(x-gate.mx)*(x-gate.mx)+(y-gate.my)*(y-gate.my);
       if(d<bestD){bestD=d;bestI=i;}
     }
     return bestI/cl.length;
@@ -100,7 +115,7 @@ export class RaceScene extends CurrentRaceScene{
     if(!this._survivalMode||this._survivalBots.length)return;
     const visual=visualCarSprite(this),cl=this._survivalCenterline();if(!visual||cl.length<2)return;
     const tex=visual.texture.key;
-    this._survivalPathOffset=this._survivalFindStartOffset();
+    this._survivalPathOffset=this._survivalFindFinishOffset();
 
     const surfaceId=this._survivalSurfaceId(),playerSpec=CAR_SPECS?.[this.carId]||CAR_SPECS?.[this.selectedCarId]||{};
     const surface=resolveVehicleSurface(playerSpec,surfaceId),lenPx=Math.max(100,pathLength(cl));
@@ -131,9 +146,12 @@ export class RaceScene extends CurrentRaceScene{
       const lane=(i%2===0?-1:1)*laneGap;
       const startProgress=-(row*rowGap)/lenPx;
       const targetRate=1/(baseLapSec*lapMultipliers[i]);
-      const bot={id:`CPU ${i+1}`,sprite,absProgress:startProgress,lapRate:0,targetRate,lane,active:true,launchDelay:i*.08};
+      const p=this._survivalPathPoint(startProgress,lane);
+      const bot={
+        id:`CPU ${i+1}`,sprite,absProgress:startProgress,lapRate:0,targetRate,lane,active:true,launchDelay:i*.08,
+        finishPasses:0,completedLaps:0,distanceSinceFinish:0,prevX:p?.x??0,prevY:p?.y??0
+      };
       this._survivalBots.push(bot);
-      const p=this._survivalPathPoint(bot.absProgress,bot.lane);
       if(p){sprite.setPosition(p.x,p.y);sprite.rotation=p.r+Number(this._carVisualRotOffset||0);}
     }
     this._createSurvivalHud();
@@ -148,27 +166,19 @@ export class RaceScene extends CurrentRaceScene{
     c.add([bg,title,state]);c._state=state;this._survivalHud=c;
   }
 
-  _survivalCurrentHistoryLen(){
-    return Array.isArray(this.ttHistory)?this.ttHistory.length:0;
-  }
+  _survivalCurrentHistoryLen(){return Array.isArray(this.ttHistory)?this.ttHistory.length:0;}
 
   _survivalPlayerRelativeProgress(){
     const raw=clamp(Number(this._computeLapProgress01?.(Number(this.carBody?.x),Number(this.carBody?.y))||0),0,1);
-    let rel=raw-Number(this._survivalPlayerProgressBase||0);
-    if(rel<0)rel+=1;
-    // IMPORTANT: this is only fractional position for ranking. Completed laps come solely
-    // from newly-recorded valid laps in ttHistory, never from lapCount (which starts at 1
-    // on some circuits and was the source of the false first-lap eliminations).
+    let rel=raw-Number(this._survivalPlayerProgressBase||0);if(rel<0)rel+=1;
     return clamp(rel,0,.999999);
   }
 
-  _survivalPlayerAbsProgress(){
-    return Math.max(0,Number(this._survivalPlayerCompletedLaps||0))+this._survivalPlayerRelativeProgress();
-  }
+  _survivalPlayerAbsProgress(){return Math.max(0,Number(this._survivalPlayerCompletedLaps||0))+this._survivalPlayerRelativeProgress();}
 
   _survivalEntries(){
     const arr=[{id:'TÚ',player:true,active:!this._survivalPlayerOut,absProgress:this._survivalPlayerAbsProgress()}];
-    for(const b of this._survivalBots)if(b.active)arr.push(b);
+    for(const b of this._survivalBots)if(b.active)arr.push({...b,absProgress:Number(b.completedLaps||0)+(((Number(b.absProgress)||0)%1+1)%1)});
     return arr.filter(e=>e.active).sort((a,b)=>b.absProgress-a.absProgress);
   }
 
@@ -200,45 +210,50 @@ export class RaceScene extends CurrentRaceScene{
       this._survivalPlayerProgressBase=clamp(Number(this._computeLapProgress01?.(Number(this.carBody?.x),Number(this.carBody?.y))||0),0,1);
     }
 
+    const gate=this._survivalFinishGate();
     const dt=Math.max(0,Number(deltaMs)||0)/1000;
     const elapsed=Math.max(0,(performance.now()-this._survivalStartPerf)/1000);
     for(const b of this._survivalBots){
       if(!b.active)continue;
-      const local=Math.max(0,elapsed-b.launchDelay);
-      const launch01=clamp(local/3.0,0,1);
+      const local=Math.max(0,elapsed-b.launchDelay),launch01=clamp(local/3.0,0,1);
       const desired=b.targetRate*(.18+.82*(1-Math.pow(1-launch01,2)));
       b.lapRate+=(desired-b.lapRate)*clamp(dt*2.4,0,1);
+      const before=Number(b.absProgress)||0;
       b.absProgress+=b.lapRate*dt;
+      b.distanceSinceFinish+=Math.max(0,b.absProgress-before);
       const p=this._survivalPathPoint(b.absProgress,b.lane);if(!p)continue;
+
+      if(gate&&Number.isFinite(b.prevX)&&Number.isFinite(b.prevY)&&segIntersect(b.prevX,b.prevY,p.x,p.y,gate.ax,gate.ay,gate.bx,gate.by)){
+        if(b.finishPasses===0){
+          // First crossing after lights-out only establishes the start line passage.
+          b.finishPasses=1;b.distanceSinceFinish=0;
+        }else if(b.distanceSinceFinish>.55){
+          // A lap exists only after physically crossing the real finish gate again
+          // having travelled most of a lap since the previous finish crossing.
+          b.finishPasses+=1;b.completedLaps+=1;b.distanceSinceFinish=0;
+        }
+      }
+
+      b.prevX=p.x;b.prevY=p.y;
       b.sprite.setPosition(p.x,p.y);b.sprite.rotation=p.r+Number(this._carVisualRotOffset||0);
     }
 
-    // A player's completed lap is accepted ONLY when the normal race timing system actually
-    // appends a new lap to ttHistory. This completely decouples Survival from lapCount quirks.
+    // Player laps come from the normal race timer, which is itself triggered by the real finish gate.
     this._survivalPlayerCompletedLaps=Math.max(0,this._survivalCurrentHistoryLen()-this._survivalHistoryBaseLen);
 
-    // For CPU cars absProgress is measured from their actual grid positions behind the line,
-    // so floor(absProgress) becomes 1 only after that CPU has physically traversed a full lap.
     let maxCompletedLap=this._survivalPlayerCompletedLaps;
-    for(const b of this._survivalBots){
-      if(!b.active)continue;
-      maxCompletedLap=Math.max(maxCompletedLap,Math.max(0,Math.floor(Number(b.absProgress)||0)));
-    }
+    for(const b of this._survivalBots)if(b.active)maxCompletedLap=Math.max(maxCompletedLap,Number(b.completedLaps||0));
 
     if(maxCompletedLap>this._survivalEliminationLap){
-      // Exactly one elimination per completed race lap. If a frame arrives late, catch up
-      // one round at a time, but never before a genuine completed lap exists.
-      for(let lap=this._survivalEliminationLap+1;lap<=maxCompletedLap;lap++){
-        if(this._survivalEntries().length>1)this._eliminateSurvivalLast();
-      }
+      for(let lap=this._survivalEliminationLap+1;lap<=maxCompletedLap;lap++)if(this._survivalEntries().length>1)this._eliminateSurvivalLast();
       this._survivalEliminationLap=maxCompletedLap;
     }
 
     const ranked=this._survivalEntries();
     if(this._survivalHud?._state?.scene){
       const idx=ranked.findIndex(e=>e.player),pos=idx<0?ranked.length+1:idx+1;
-      const lapTxt=Math.max(this._survivalPlayerCompletedLaps,...this._survivalBots.filter(b=>b.active).map(b=>Math.max(0,Math.floor(Number(b.absProgress)||0))));
-      this._survivalHud._state.setText(this._survivalPlayerOut?`ELIMINADO · ${ranked.length} coches siguen`:`POSICIÓN ${pos}/${ranked.length} · ronda ${lapTxt+1} · último fuera solo tras vuelta válida`);
+      const lapTxt=Math.max(this._survivalPlayerCompletedLaps,...this._survivalBots.filter(b=>b.active).map(b=>Number(b.completedLaps||0)));
+      this._survivalHud._state.setText(this._survivalPlayerOut?`ELIMINADO · ${ranked.length} coches siguen`:`POSICIÓN ${pos}/${ranked.length} · ronda ${lapTxt+1} · meta real activa`);
     }
   }
 
