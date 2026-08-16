@@ -74,24 +74,36 @@ export class SettingsScene extends CurrentSettingsScene {
     this._dropTutorialOverlay=overlay;
 
     const shade=this.add.rectangle(0,0,w,h,0x000000,.95).setOrigin(0).setInteractive();
-    const frame=this.add.rectangle(w/2,h/2,100,100,0x050a0f,.98).setStrokeStyle(2,0x2bff88,.55);
     const img=this.add.image(w/2,h/2,TUTORIAL_KEYS[index]).setOrigin(.5);
     const status=this.add.text(w/2,h/2,'',{fontFamily:'system-ui',fontSize:'13px',fontStyle:'bold',color:'#fff'}).setOrigin(.5).setVisible(false);
+
+    // Las propias diapositivas ya incluyen botones y puntos de progreso.
+    // Estas dos zonas son invisibles y se colocan exactamente encima de ellos.
+    const prevHit=this.add.rectangle(0,0,1,1,0x000000,0.001).setOrigin(0).setInteractive({useHandCursor:true});
+    const nextHit=this.add.rectangle(0,0,1,1,0x000000,0.001).setOrigin(0).setInteractive({useHandCursor:true});
+
     const close=this.add.circle(w-28,26,18,0x111827,.95).setStrokeStyle(1,0xffffff,.25).setInteractive({useHandCursor:true});
     const closeTxt=this.add.text(w-28,26,'×',{fontFamily:'system-ui',fontSize:'22px',fontStyle:'bold',color:'#fff'}).setOrigin(.5).setInteractive({useHandCursor:true});
-    const prev=this.add.text(24,h-18,'‹  ANTERIOR',{fontFamily:'system-ui',fontSize:'11px',fontStyle:'bold',color:'#fff',backgroundColor:'#111827cc',padding:{x:10,y:7}}).setOrigin(0,1).setInteractive({useHandCursor:true});
-    const next=this.add.text(w-24,h-18,'SIGUIENTE  ›',{fontFamily:'system-ui',fontSize:'11px',fontStyle:'bold',color:'#06120d',backgroundColor:'#2bff88',padding:{x:12,y:7}}).setOrigin(1,1).setInteractive({useHandCursor:true});
-    const dots=[];
-    for(let i=0;i<5;i++) dots.push(this.add.circle(w/2+(i-2)*17,h-16,4,i===index?0x2bff88:0x596273,1));
-    overlay.add([shade,frame,img,status,close,closeTxt,prev,next,...dots]);
 
-    const fit=()=>{
+    overlay.add([shade,img,status,prevHit,nextHit,close,closeTxt]);
+
+    const fitAndPlaceHits=()=>{
       const src=img.texture?.getSourceImage?.();
       const iw=Number(src?.width)||717, ih=Number(src?.height)||330;
-      const maxW=Math.max(120,w-34), maxH=Math.max(80,h-58);
+      const maxW=Math.max(120,w-36), maxH=Math.max(80,h-18);
       const s=Math.min(maxW/iw,maxH/ih);
       img.setScale(s);
-      frame.setSize(iw*s+8,ih*s+8);
+
+      const left=img.x-(iw*s)/2;
+      const top=img.y-(ih*s)/2;
+
+      // Coordenadas relativas sobre el diseño 717x330.
+      // Cubren los botones dibujados sin invadir el contenido central.
+      const prevBox={x:20,y:278,w:142,h:48};
+      const nextBox={x:565,y:278,w:146,h:48};
+
+      prevHit.setPosition(left+prevBox.x*s,top+prevBox.y*s).setSize(prevBox.w*s,prevBox.h*s);
+      nextHit.setPosition(left+nextBox.x*s,top+nextBox.y*s).setSize(nextBox.w*s,nextBox.h*s);
     };
 
     const refresh=()=>{
@@ -99,22 +111,27 @@ export class SettingsScene extends CurrentSettingsScene {
       if(this.textures.exists(key)){
         img.setTexture(key).setVisible(true);
         status.setVisible(false);
-        fit();
+        fitAndPlaceHits();
       }else{
         img.setVisible(false);
         status.setText('TUTORIAL NO PRECARGADO · RECARGA LA APP').setVisible(true);
-        frame.setSize(Math.min(520,w-80),110);
       }
-      dots.forEach((d,i)=>d.setFillStyle(i===index?0x2bff88:0x596273,1));
-      prev.setAlpha(index===0?.35:1);
-      next.setText(index===4?'ENTENDIDO ✓':'SIGUIENTE  ›');
+      // En la primera pantalla la zona ANTERIOR queda desactivada.
+      prevHit.input.enabled=index>0;
     };
 
     const destroy=()=>{overlay.destroy(true);this._dropTutorialOverlay=null;};
     close.on('pointerup',destroy); closeTxt.on('pointerup',destroy);
-    prev.on('pointerup',()=>{if(index>0){index--;refresh();}});
-    next.on('pointerup',()=>{if(index<4){index++;refresh();}else destroy();});
 
+    prevHit.on('pointerup',()=>{
+      if(index>0){index--;refresh();}
+    });
+    nextHit.on('pointerup',()=>{
+      if(index<4){index++;refresh();}
+      else destroy();
+    });
+
+    // Conservamos también el gesto lateral como atajo natural en móvil.
     let downX=null;
     shade.on('pointerdown',p=>{downX=p.x;});
     shade.on('pointerup',p=>{
@@ -124,6 +141,7 @@ export class SettingsScene extends CurrentSettingsScene {
       if(dx<0&&index<4){index++;refresh();}
       if(dx>0&&index>0){index--;refresh();}
     });
+
     refresh();
   }
 }
