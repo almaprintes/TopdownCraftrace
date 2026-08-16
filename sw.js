@@ -1,5 +1,5 @@
 /* Static-cache SW (sin Workbox) — reproducible y fácil de depurar */
-const CACHE_VERSION = 'tdr2-v19';
+const CACHE_VERSION = 'tdr2-v20';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -8,7 +8,12 @@ const CORE_ASSETS = [
   './icons/icon-256.png',
   './icons/icon-384.png',
   './icons/icon-512.png',
-  './assets/ui/orientation_portrait.png'
+  './assets/ui/orientation_portrait.png',
+  './assets/tutorials/dropping/dropping_01_717x330.png',
+  './assets/tutorials/dropping/dropping_02_717x330.png',
+  './assets/tutorials/dropping/dropping_03_717x330.png',
+  './assets/tutorials/dropping/dropping_04_717x330.png',
+  './assets/tutorials/dropping/dropping_05_717x330.png'
 ];
 
 self.addEventListener('message', (event) => {
