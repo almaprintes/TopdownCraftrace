@@ -103,10 +103,21 @@ export function garageDisplayStats(spec,s,carId=selectedCarId(),replacementPartI
 }
 
 const COMMON_LOOT=['scrap','alloy','rubber','compound','disc','spring','gear'];
-let LOOT_SESSION={trackKey:null,laps:0};
+let LOOT_SESSION={trackKey:null,laps:0,totals:{},ecuDrops:0,chests:0,bonusLaps:0};
 
 export function resetRaceLootSession(trackKey=null){
-  LOOT_SESSION={trackKey:trackKey||null,laps:0};
+  LOOT_SESSION={trackKey:trackKey||null,laps:0,totals:{},ecuDrops:0,chests:0,bonusLaps:0};
+}
+
+export function getRaceLootSessionSummary(){
+  return {
+    trackKey:LOOT_SESSION.trackKey,
+    laps:Number(LOOT_SESSION.laps||0),
+    totals:{...(LOOT_SESSION.totals||{})},
+    ecuDrops:Number(LOOT_SESSION.ecuDrops||0),
+    chests:Number(LOOT_SESSION.chests||0),
+    bonusLaps:Number(LOOT_SESSION.bonusLaps||0)
+  };
 }
 
 function hashText(s){
@@ -164,16 +175,12 @@ export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
   const circuitRecord=Number.isFinite(lap)&&Number.isFinite(circuitBestMs)&&Math.abs(lap-circuitBestMs)<1;
   const within110=Number.isFinite(lap)&&Number.isFinite(carBestMs)&&lap<=carBestMs*1.10;
 
-  // Base: two guaranteed common-material rolls. Each circuit favours three materials
-  // at double weight, while every common material remains obtainable.
   addCommon(2);
 
   let bonusCommon=false;
   if(circuitRecord||carBest){ addCommon(1); bonusCommon=true; }
   else if(within110&&Math.random()<0.25){ addCommon(1); bonusCommon=true; }
 
-  // ECU pity: 8% base, +2 percentage points per valid lap without ECU, capped at 24%.
-  // Personal best raises the floor to 20%; an absolute circuit record guarantees one.
   const pity=Math.max(0,Number(s.lootPityEcu||0));
   const pityChance=Math.min(.24,.08+.02*pity);
   const ecuChance=circuitRecord?1:(carBest?Math.max(.20,pityChance):pityChance);
@@ -181,11 +188,17 @@ export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
   if(ecuDrop){ add('ecu',1); s.lootPityEcu=0; }
   else s.lootPityEcu=pity+1;
 
-  // Small session chest every five rewarded laps: two extra affinity-weighted materials.
   const chest=sessionLap%5===0;
   if(chest)addCommon(2);
 
-  for(const [id,n] of Object.entries(reward)) addItem(s,id,n);
+  for(const [id,n] of Object.entries(reward)){
+    addItem(s,id,n);
+    LOOT_SESSION.totals[id]=(LOOT_SESSION.totals[id]||0)+Number(n||0);
+  }
+  if(ecuDrop)LOOT_SESSION.ecuDrops+=1;
+  if(chest)LOOT_SESSION.chests+=1;
+  if(bonusCommon)LOOT_SESSION.bonusLaps+=1;
+
   const meta={
     trackKey,lapMs:lap,affinity,sessionLap,chest,bonusCommon,
     within110,carBest,circuitRecord,ecuDrop,ecuChance,pityBefore:pity,
