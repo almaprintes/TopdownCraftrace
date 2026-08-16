@@ -4,6 +4,7 @@ import { resolveVehicleSurface } from '../cars/surfaceInteraction.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const MODE_KEY='tdr2:gameMode';
+const rand=(a,b)=>a+Math.random()*(b-a);
 
 function readMode(data){
   if(['timeattack','ghost','survival'].includes(data?.gameMode))return data.gameMode;
@@ -108,11 +109,18 @@ export class RaceScene extends CurrentRaceScene{
     if(Number.isFinite(bestMs))baseLapSec=clamp(bestMs/1000,12,180);
     else{const surfacePace=clamp((surface.speedCapacity||1)*(surface.movingDriveCapacity||1),.42,1.02);baseLapSec=clamp(lenPx/Math.max(55,playerMax*surfacePace*.36),28,120);}
     const lapMultipliers=[1.22,1.18,1.14,1.10,1.07],carWidth=Math.max(12,Number(visual.displayWidth||visual.width||28)),carLength=Math.max(20,Number(visual.displayHeight||visual.height||48)),laneGap=clamp(carWidth*.72,8,18),rowGap=clamp(carLength*1.45,26,60);
+    const trackW=Math.max(carWidth*4,Number(this.track?.meta?.trackWidth||this.track?.trackWidth||this.trackWidth||carWidth*7));
     for(let i=0;i<5;i++){
       const sprite=this.add.image(0,0,tex).setOrigin(visual.originX??.5,visual.originY??.5).setDepth(Math.max(29,Number(this.carRig?.depth||30)-1));
       sprite.setScale(Number(visual.scaleX||1),Number(visual.scaleY||1));sprite.clearTint?.();sprite.setAlpha(1).setBlendMode('NORMAL');try{this.uiCam?.ignore?.(sprite);}catch{}
       const row=Math.floor(i/2)+1,lane=(i%2===0?-1:1)*laneGap,startProgress=-(row*rowGap)/lenPx,targetRate=1/(baseLapSec*lapMultipliers[i]),p=this._survivalPathPoint(startProgress,lane);
-      const bot={id:`CPU ${i+1}`,sprite,absProgress:startProgress,lapRate:0,targetRate,lane,active:true,launchDelay:i*.08,armed:false,completedLaps:0,distanceSinceFinish:0,prevX:p?.x??0,prevY:p?.y??0};
+      const bot={
+        id:`CPU ${i+1}`,sprite,absProgress:startProgress,lapRate:0,targetRate,lane,baseLane:lane,active:true,launchDelay:i*.08,
+        armed:false,completedLaps:0,distanceSinceFinish:0,prevX:p?.x??0,prevY:p?.y??0,
+        paceFactor:rand(.965,1.035),paceTarget:rand(.955,1.045),nextPaceChange:rand(1.8,4.5),
+        lapFactor:rand(.95,1.05),linePhase:rand(0,Math.PI*2),lineFreq:rand(.65,1.35),lineAmp:rand(carWidth*.18,carWidth*.52),
+        trackW,mistakeUntil:0,mistakeLane:0,mistakeSlow:1,nextMistakeCheck:rand(.8,2.2),lastLapSeen:0
+      };
       this._survivalBots.push(bot);if(p){sprite.setPosition(p.x,p.y);sprite.rotation=p.r+Number(this._carVisualRotOffset||0);}
     }
     this._createSurvivalHud();
@@ -160,9 +168,6 @@ export class RaceScene extends CurrentRaceScene{
     const racers=this._survivalRacers();if(racers.length<=1)return;
     const targetLap=this._survivalRound+1;
     const crossed=racers.filter(r=>Number(r.state.completedLaps||0)>=targetLap);
-    // Rule requested: the elimination becomes effective exactly when the PENULTIMATE
-    // active car crosses the finish line. At that instant only one racer has not reached
-    // the target lap; that remaining racer is eliminated immediately.
     if(crossed.length<racers.length-1)return;
     const pending=racers.filter(r=>Number(r.state.completedLaps||0)<targetLap);
     if(pending.length!==1)return;
@@ -188,10 +193,52 @@ export class RaceScene extends CurrentRaceScene{
 
     for(const b of this._survivalBots){
       if(!b.active)continue;
-      const local=Math.max(0,elapsed-b.launchDelay),launch01=clamp(local/3,0,1),desired=b.targetRate*(.18+.82*(1-Math.pow(1-launch01,2)));
-      b.lapRate+=(desired-b.lapRate)*clamp(dt*2.4,0,1);
+
+      // Small pace changes throughout a lap: no CPU repeats the exact same rhythm forever.
+      if(elapsed>=b.nextPaceChange){
+        b.paceTarget=rand(.94,1.06);
+        b.nextPaceChange=elapsed+rand(1.8,5.0);
+      }
+      b.paceFactor+=(b.paceTarget-b.paceFactor)*clamp(dt*.75,0,1);
+
+      // Each completed lap gets its own pace bias. A good lap can be followed by a mediocre one.
+      const lapNow=Math.max(0,Math.floor(Number(b.absProgress)||0));
+      if(lapNow!==b.lastLapSeen){
+        b.lastLapSeen=lapNow;
+        b.lapFactor=rand(.94,1.06);
+        b.linePhase+=rand(-.8,.8);
+        b.lineAmp=clamp(b.lineAmp*rand(.78,1.22),2,Math.max(3,b.trackW*.18));
+      }
+
+      // Human-like mistakes. Dirt is deliberately less predictable than asphalt.
+      if(elapsed>=b.nextMistakeCheck&&elapsed>=b.mistakeUntil){
+        const dirt=this._survivalSurfaceId()==='DIRT';
+        const chance=dirt?.18:.11;
+        if(Math.random()<chance){
+          const duration=rand(.65,1.75);
+          b.mistakeUntil=elapsed+duration;
+          b.mistakeSlow=rand(.48,.78);
+          const sign=Math.random()<.5?-1:1;
+          // Some errors merely run wide; a minority visibly put a wheel/car outside the road.
+          const severity=Math.random()<.28?rand(.48,.72):rand(.20,.42);
+          b.mistakeLane=sign*b.trackW*severity;
+        }
+        b.nextMistakeCheck=elapsed+rand(2.2,5.5);
+      }
+
+      const makingMistake=elapsed<b.mistakeUntil;
+      if(!makingMistake&&Math.abs(b.mistakeLane)>.05)b.mistakeLane*=Math.pow(.12,dt);
+
+      const local=Math.max(0,elapsed-b.launchDelay),launch01=clamp(local/3,0,1);
+      const pace=b.paceFactor*b.lapFactor*(makingMistake?b.mistakeSlow:1);
+      const desired=b.targetRate*pace*(.18+.82*(1-Math.pow(1-launch01,2)));
+      b.lapRate+=(desired-b.lapRate)*clamp(dt*(makingMistake?3.4:2.0),0,1);
       const before=Number(b.absProgress)||0;b.absProgress+=b.lapRate*dt;b.distanceSinceFinish+=Math.max(0,b.absProgress-before);
-      const p=this._survivalPathPoint(b.absProgress,b.lane);if(!p)continue;
+
+      // Different racing lines per driver, changing slightly lap to lap.
+      const naturalLane=b.baseLane+Math.sin((b.absProgress*18+b.linePhase)*b.lineFreq)*b.lineAmp;
+      const lane=naturalLane+b.mistakeLane;
+      const p=this._survivalPathPoint(b.absProgress,lane);if(!p)continue;
       if(gate&&Number.isFinite(b.prevX)&&Number.isFinite(b.prevY)&&segIntersect(b.prevX,b.prevY,p.x,p.y,gate.ax,gate.ay,gate.bx,gate.by))validCross=this._registerFinishCross(b)||validCross;
       b.prevX=p.x;b.prevY=p.y;b.sprite.setPosition(p.x,p.y);b.sprite.rotation=p.r+Number(this._carVisualRotOffset||0);
     }
@@ -201,7 +248,7 @@ export class RaceScene extends CurrentRaceScene{
     const ranked=this._survivalEntries();
     if(this._survivalHud?._state?.scene){
       const idx=ranked.findIndex(e=>e.player),pos=idx<0?ranked.length+1:idx+1,targetLap=this._survivalRound+1,racers=this._survivalRacers(),crossed=racers.filter(r=>Number(r.state.completedLaps||0)>=targetLap).length,need=Math.max(1,racers.length-1);
-      this._survivalHud._state.setText(this._survivalPlayerOut?`ELIMINADO · ${ranked.length} coches siguen`:`POSICIÓN ${pos}/${ranked.length} · meta ${crossed}/${need} · elimina el penúltimo paso`);
+      this._survivalHud._state.setText(this._survivalPlayerOut?`ELIMINADO · ${ranked.length} coches siguen`:`POSICIÓN ${pos}/${ranked.length} · meta ${crossed}/${need} · último fuera al penúltimo paso`);
     }
   }
 
