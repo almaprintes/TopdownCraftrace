@@ -33,6 +33,11 @@ jobs:
       - name: Build for GitHub Pages
         run: npm run build -- --base=/TopdownCraftrace/
 
+      - name: Copy dropping tutorial assets
+        run: |
+          mkdir -p dist/assets/tutorials/dropping
+          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
