@@ -2,7 +2,7 @@ import { GARAGE_ITEMS, EVOLUTION_CHAIN, EVOLUTION_COST, findRecipe, findStripRec
 const KEY='tdr2:garageFusion:v1';
 
 const STARTER={ scrap:8, alloy:5, rubber:4, compound:4, disc:4, spring:3, gear:3, ecu:2 };
-const DEFAULT={ inventory:{...STARTER}, equipped:{}, equippedByCar:{}, discoveries:[], coins:250, lastReward:null, rewardedToday:0, rewardedDay:'' };
+const DEFAULT={ inventory:{...STARTER}, equipped:{}, equippedByCar:{}, discoveries:[], coins:250, lastReward:null, rewardedToday:0, rewardedDay:'', lootPityEcu:0 };
 
 function selectedCarId(){
   try { return localStorage.getItem('tdr2:carId') || 'stock'; } catch { return 'stock'; }
@@ -35,15 +35,11 @@ export function craft(s,a,b){
 }
 
 export function craftStrip(s,ids){
-  const r=findStripRecipe(ids);
-  if(!r) return {ok:false,reason:'Combinación no válida'};
-  const need={};
-  for(const id of ids) need[id]=(need[id]||0)+1;
+  const r=findStripRecipe(ids); if(!r) return {ok:false,reason:'Combinación no válida'};
+  const need={}; for(const id of ids) need[id]=(need[id]||0)+1;
   for(const [id,n] of Object.entries(need)) if(qty(s,id)<n) return {ok:false,reason:`Falta ${GARAGE_ITEMS[id]?.name||id}`};
   for(const [id,n] of Object.entries(need)) consume(s,id,n);
-  addItem(s,r.out,1);
-  if(!s.discoveries.includes(r.out)) s.discoveries.push(r.out);
-  saveGarage(s);
+  addItem(s,r.out,1); if(!s.discoveries.includes(r.out)) s.discoveries.push(r.out); saveGarage(s);
   return {ok:true,item:GARAGE_ITEMS[r.out]};
 }
 
@@ -84,12 +80,7 @@ const clamp99=n=>Math.max(1,Math.min(99,Math.round(n)));
 function baseDisplayStats(spec){
   if(spec?.designStats){
     const d=spec.designStats;
-    return {
-      speed:clamp99(d.VEL??55),
-      accel:clamp99(d.ACC??55),
-      grip:clamp99(((d.EST??55)+(d.GIR??55))/2),
-      control:clamp99(((d.GIR??55)+(d.FRN??55))/2)
-    };
+    return { speed:clamp99(d.VEL??55), accel:clamp99(d.ACC??55), grip:clamp99(((d.EST??55)+(d.GIR??55))/2), control:clamp99(((d.GIR??55)+(d.FRN??55))/2) };
   }
   return {
     speed:clamp99(((Number(spec?.maxFwd)||520)-400)/3.2+45),
@@ -112,18 +103,97 @@ export function garageDisplayStats(spec,s,carId=selectedCarId(),replacementPartI
 }
 
 const COMMON_LOOT=['scrap','alloy','rubber','compound','disc','spring','gear'];
+let LOOT_SESSION={trackKey:null,laps:0};
+
+export function resetRaceLootSession(trackKey=null){
+  LOOT_SESSION={trackKey:trackKey||null,laps:0};
+}
+
+function hashText(s){
+  let h=2166136261>>>0;
+  for(const ch of String(s||'track')){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619)>>>0; }
+  return h>>>0;
+}
+
+function trackAffinity(trackKey){
+  const h=hashText(trackKey);
+  const start=h%COMMON_LOOT.length;
+  const step=(h%3)+2;
+  const out=[];
+  for(let i=0;out.length<3&&i<20;i++){
+    const id=COMMON_LOOT[(start+i*step)%COMMON_LOOT.length];
+    if(!out.includes(id))out.push(id);
+  }
+  for(const id of COMMON_LOOT) if(out.length<3&&!out.includes(id))out.push(id);
+  return out.slice(0,3);
+}
+
+function weightedCommon(affinity){
+  const bag=[];
+  for(const id of COMMON_LOOT){
+    const w=affinity.includes(id)?2:1;
+    for(let i=0;i<w;i++)bag.push(id);
+  }
+  return bag[Math.floor(Math.random()*bag.length)]||'scrap';
+}
+
+function readBestMs(key){
+  try{
+    const raw=localStorage.getItem(key); if(!raw)return null;
+    const x=JSON.parse(raw); const ms=Number(x?.lapMs);
+    return Number.isFinite(ms)&&ms>0?ms:null;
+  }catch{return null;}
+}
 
 export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
   const s=loadGarage();
   const reward={};
-  for(let i=0;i<2;i++){
-    const id=COMMON_LOOT[Math.floor(Math.random()*COMMON_LOOT.length)];
-    reward[id]=(reward[id]||0)+1;
-  }
-  if(Math.random()<0.10) reward.ecu=(reward.ecu||0)+1;
+  const affinity=trackAffinity(trackKey);
+  const add=(id,n=1)=>{reward[id]=(reward[id]||0)+n;};
+  const addCommon=(n=1)=>{for(let i=0;i<n;i++)add(weightedCommon(affinity),1);};
+
+  if(LOOT_SESSION.trackKey!==trackKey) resetRaceLootSession(trackKey);
+  LOOT_SESSION.laps+=1;
+  const sessionLap=LOOT_SESSION.laps;
+
+  const carId=selectedCarId();
+  const lap=Number(lapMs);
+  const carBestMs=readBestMs(`tdr2:ttBestCar:${trackKey}:${carId}`);
+  const circuitBestMs=readBestMs(`tdr2:ttBest:${trackKey}`);
+  const carBest=Number.isFinite(lap)&&Number.isFinite(carBestMs)&&Math.abs(lap-carBestMs)<1;
+  const circuitRecord=Number.isFinite(lap)&&Number.isFinite(circuitBestMs)&&Math.abs(lap-circuitBestMs)<1;
+  const within110=Number.isFinite(lap)&&Number.isFinite(carBestMs)&&lap<=carBestMs*1.10;
+
+  // Base: two guaranteed common-material rolls. Each circuit favours three materials
+  // at double weight, while every common material remains obtainable.
+  addCommon(2);
+
+  let bonusCommon=false;
+  if(circuitRecord||carBest){ addCommon(1); bonusCommon=true; }
+  else if(within110&&Math.random()<0.25){ addCommon(1); bonusCommon=true; }
+
+  // ECU pity: 8% base, +2 percentage points per valid lap without ECU, capped at 24%.
+  // Personal best raises the floor to 20%; an absolute circuit record guarantees one.
+  const pity=Math.max(0,Number(s.lootPityEcu||0));
+  const pityChance=Math.min(.24,.08+.02*pity);
+  const ecuChance=circuitRecord?1:(carBest?Math.max(.20,pityChance):pityChance);
+  const ecuDrop=Math.random()<ecuChance;
+  if(ecuDrop){ add('ecu',1); s.lootPityEcu=0; }
+  else s.lootPityEcu=pity+1;
+
+  // Small session chest every five rewarded laps: two extra affinity-weighted materials.
+  const chest=sessionLap%5===0;
+  if(chest)addCommon(2);
+
   for(const [id,n] of Object.entries(reward)) addItem(s,id,n);
-  s.lastReward={...reward,t:Date.now(),trackKey,lapMs,doubled:false};
+  const meta={
+    trackKey,lapMs:lap,affinity,sessionLap,chest,bonusCommon,
+    within110,carBest,circuitRecord,ecuDrop,ecuChance,pityBefore:pity,
+    label:circuitRecord?'RÉCORD DEL CIRCUITO':carBest?'MEJOR VUELTA':within110?'VUELTA RÁPIDA':'VUELTA VÁLIDA'
+  };
+  s.lastReward={...reward,t:Date.now(),trackKey,lapMs:lap,doubled:false,meta};
   saveGarage(s);
+  Object.defineProperty(reward,'meta',{value:meta,enumerable:false,configurable:true});
   return reward;
 }
 
