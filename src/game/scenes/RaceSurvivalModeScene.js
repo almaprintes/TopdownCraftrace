@@ -31,6 +31,11 @@ function segIntersect(ax,ay,bx,by,cx,cy,dx,dy){
   const qpx=cx-ax,qpy=cy-ay,t=(qpx*sY-qpy*sX)/den,u=(qpx*rY-qpy*rX)/den;
   return t>=0&&t<=1&&u>=0&&u<=1;
 }
+function fmtLap(ms){
+  ms=Number(ms);if(!Number.isFinite(ms)||ms<=0)return'--:--.--';
+  const m=Math.floor(ms/60000),s=(ms-m*60000)/1000;
+  return`${m}:${s.toFixed(2).padStart(5,'0')}`;
+}
 
 export class RaceScene extends CurrentRaceScene{
   create(data){
@@ -43,6 +48,10 @@ export class RaceScene extends CurrentRaceScene{
     this._survivalStartPerf=0;
     this._survivalPathOffset=0;
     this._survivalPlayer={armed:false,completedLaps:0,distanceSinceFinish:0,prevX:null,prevY:null};
+    this._survivalFinishAt=0;
+    this._survivalResultShown=false;
+    this._survivalResultDom=null;
+    this._survivalWon=false;
     const result=super.create(data);
     if(this._survivalMode){
       this.time.delayedCall(350,()=>this._initSurvival());
@@ -99,6 +108,13 @@ export class RaceScene extends CurrentRaceScene{
       let best=null;for(const r of h){const ms=Number(r?.lapMs);if(Number.isFinite(ms)&&ms>5000&&(best==null||ms<best))best=ms;}return best;
     }catch{return null;}
   }
+  _survivalSessionBestLapMs(){
+    let best=null;
+    for(const r of(Array.isArray(this.ttHistory)?this.ttHistory:[])){
+      const ms=Number(r?.lapMs);if(Number.isFinite(ms)&&ms>1000&&(best==null||ms<best))best=ms;
+    }
+    return best;
+  }
 
   _initSurvival(){
     if(!this._survivalMode||this._survivalBots.length)return;
@@ -129,7 +145,7 @@ export class RaceScene extends CurrentRaceScene{
   _createSurvivalHud(){
     if(this._survivalHud?.scene)return;
     const c=this.add.container(this.scale.width/2,14).setDepth(5200).setScrollFactor(0),bg=this.add.rectangle(0,0,330,42,0x06131b,.84).setOrigin(.5,0).setStrokeStyle(1,0xffc94a,.65),title=this.add.text(0,7,'⚡ SUPERVIVENCIA · 6 COCHES',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffd76e'}).setOrigin(.5,0),state=this.add.text(0,24,'PARRILLA · esperando semáforo',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',color:'#d8e4ec'}).setOrigin(.5,0);
-    c.add([bg,title,state]);c._state=state;this._survivalHud=c;
+    c.add([bg,title,state]);c._state=state;c._title=title;c._bg=bg;this._survivalHud=c;
   }
   _survivalPlayerRaceDistance(){
     const s=this._survivalPlayer,x=Number(this.carBody?.x),y=Number(this.carBody?.y),frac=this._survivalNearestPathProgress(x,y);
@@ -147,11 +163,17 @@ export class RaceScene extends CurrentRaceScene{
     return all.filter(r=>r.active);
   }
   _eliminateSpecific(racer){
-    if(!racer)return;
-    if(racer.player){this._survivalPlayerOut=true;this._showSurvivalNotice('ELIMINADO','Has sido el último en llegar a meta','#ff667a');}
-    else{const bot=this._survivalBots.find(b=>b.id===racer.id);if(bot){bot.active=false;bot.sprite?.setVisible(false);}this._showSurvivalNotice(`${racer.id} ELIMINADO`,'Último coche pendiente de cruzar meta','#ffd76e');}
+    if(!racer||this._survivalFinished)return;
+    if(racer.player){
+      this._survivalPlayerOut=true;
+      this._showSurvivalNotice('ELIMINADO','Has sido el último en llegar a meta','#ff667a',true);
+      this._finishSurvival(false);
+      return;
+    }
+    const bot=this._survivalBots.find(b=>b.id===racer.id);if(bot){bot.active=false;bot.sprite?.setVisible(false);}
+    this._showSurvivalNotice(`${racer.id} ELIMINADO`,'Último coche pendiente de cruzar meta','#ffd76e');
     const remaining=this._survivalEntries();
-    if(remaining.length===1){this._survivalFinished=true;const win=remaining[0].player;this._showSurvivalNotice(win?'¡SUPERVIVENCIA GANADA!':`${remaining[0].id} GANA`,win?'Eres el último coche en pista':'Carrera terminada',win?'#62ffb2':'#ff8b78',true);}
+    if(remaining.length===1)this._finishSurvival(Boolean(remaining[0].player));
   }
   _showSurvivalNotice(title,sub,color='#ffd76e',persistent=false){
     try{this._survivalNotice?.destroy?.(true);}catch{}
@@ -165,7 +187,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _tryCloseSurvivalRound(){
-    const racers=this._survivalRacers();if(racers.length<=1)return;
+    const racers=this._survivalRacers();if(racers.length<=1||this._survivalFinished)return;
     const targetLap=this._survivalRound+1;
     const crossed=racers.filter(r=>Number(r.state.completedLaps||0)>=targetLap);
     if(crossed.length<racers.length-1)return;
@@ -175,8 +197,63 @@ export class RaceScene extends CurrentRaceScene{
     this._eliminateSpecific(pending[0]);
   }
 
+  _finishSurvival(win){
+    if(this._survivalFinished)return;
+    this._survivalFinished=true;
+    this._survivalWon=Boolean(win);
+    this._survivalFinishAt=performance.now();
+    if(this._survivalHud?._title?.scene){
+      this._survivalHud._title.setText(win?'🏆 SUPERVIVENCIA · CAMPEÓN':'⚡ SUPERVIVENCIA · ELIMINADO');
+      this._survivalHud._title.setColor(win?'#62ffb2':'#ff7788');
+    }
+    if(this._survivalHud?._state?.scene){
+      this._survivalHud._state.setText(win?`${this._survivalRound}/5 RONDAS SUPERADAS · ÚLTIMO COCHE EN PISTA`:`RONDA ${Math.max(1,this._survivalRound+1)} · FIN DE CARRERA`);
+    }
+    if(win)this._showSurvivalNotice('¡SUPERVIVENCIA GANADA!','Has sobrevivido a las 5 eliminaciones','#62ffb2',true);
+    this.time.delayedCall(1500,()=>this._showSurvivalResults());
+  }
+
+  _showSurvivalResults(){
+    if(this._survivalResultShown||typeof document==='undefined')return;
+    this._survivalResultShown=true;
+    try{this.physics?.world?.pause?.();}catch{}
+    try{if(this._pauseButton)this._pauseButton.style.display='none';}catch{}
+    try{this._survivalNotice?.destroy?.(true);}catch{}
+    const best=fmtLap(this._survivalSessionBestLapMs());
+    const root=document.createElement('div');
+    root.dataset.tdrRaceUi='1';
+    const won=this._survivalWon;
+    root.innerHTML=`
+      <style>
+        .tdrsurv-veil{position:fixed;inset:0;z-index:14000;background:rgba(2,6,12,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+        .tdrsurv-card{width:min(88vw,460px);background:linear-gradient(180deg,rgba(13,27,38,.98),rgba(6,14,22,.98));border:2px solid ${won?'#4fffb0':'#ff6479'};clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px);padding:22px 24px;color:#fff;box-shadow:0 24px 90px rgba(0,0,0,.55)}
+        .tdrsurv-kicker{font-size:10px;font-weight:900;letter-spacing:.18em;color:${won?'#63ffc0':'#ff8293'};margin-bottom:5px}.tdrsurv-title{font-size:28px;font-weight:950;letter-spacing:.02em;margin-bottom:16px}.tdrsurv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 18px}.tdrsurv-stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10);padding:11px 9px;text-align:center}.tdrsurv-stat small{display:block;font-size:8px;letter-spacing:.11em;color:#8495a9;font-weight:900;margin-bottom:5px}.tdrsurv-stat b{font-size:16px}.tdrsurv-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tdrsurv-btn{height:48px;border:1px solid rgba(255,255,255,.18);background:#122335;color:#fff;font:900 12px system-ui,-apple-system,sans-serif;letter-spacing:.07em}.tdrsurv-btn.primary{background:${won?'#145a45':'#56212b'};border-color:${won?'#4fffb0':'#ff6479'}}
+      </style>
+      <div class="tdrsurv-veil"><div class="tdrsurv-card">
+        <div class="tdrsurv-kicker">SUPERVIVENCIA</div>
+        <div class="tdrsurv-title">${won?'🏆 CAMPEÓN':'ELIMINADO'}</div>
+        <div class="tdrsurv-stats">
+          <div class="tdrsurv-stat"><small>RONDAS</small><b>${this._survivalRound}/5</b></div>
+          <div class="tdrsurv-stat"><small>MEJOR VUELTA</small><b>${best}</b></div>
+          <div class="tdrsurv-stat"><small>POSICIÓN</small><b>${won?'1º':'—'}</b></div>
+        </div>
+        <div class="tdrsurv-actions"><button class="tdrsurv-btn primary" data-a="again">REPETIR</button><button class="tdrsurv-btn" data-a="menu">MENÚ</button></div>
+      </div></div>`;
+    root.querySelector('[data-a="again"]')?.addEventListener('click',()=>{
+      try{root.remove();}catch{}this._survivalResultDom=null;
+      try{this.physics?.world?.resume?.();}catch{}
+      this.scene.restart({gameMode:'survival'});
+    });
+    root.querySelector('[data-a="menu"]')?.addEventListener('click',()=>{
+      try{root.remove();}catch{}this._survivalResultDom=null;
+      try{this.physics?.world?.resume?.();}catch{}
+      this.scene.start('menu');
+    });
+    document.body.appendChild(root);this._survivalResultDom=root;
+  }
+
   _updateSurvivalBots(deltaMs){
-    if(!this._survivalMode||!this._survivalBots.length)return;
+    if(!this._survivalMode||!this._survivalBots.length||this._survivalFinished)return;
     if(!this._raceStarted){if(this._survivalHud?._state?.scene)this._survivalHud._state.setText('PARRILLA · esperando semáforo');return;}
     if(!this._survivalRaceWasStarted){
       this._survivalRaceWasStarted=true;this._survivalRound=0;this._survivalStartPerf=performance.now();
@@ -193,65 +270,57 @@ export class RaceScene extends CurrentRaceScene{
 
     for(const b of this._survivalBots){
       if(!b.active)continue;
-
-      // Small pace changes throughout a lap: no CPU repeats the exact same rhythm forever.
-      if(elapsed>=b.nextPaceChange){
-        b.paceTarget=rand(.94,1.06);
-        b.nextPaceChange=elapsed+rand(1.8,5.0);
-      }
+      if(elapsed>=b.nextPaceChange){b.paceTarget=rand(.94,1.06);b.nextPaceChange=elapsed+rand(1.8,5);}
       b.paceFactor+=(b.paceTarget-b.paceFactor)*clamp(dt*.75,0,1);
-
-      // Each completed lap gets its own pace bias. A good lap can be followed by a mediocre one.
       const lapNow=Math.max(0,Math.floor(Number(b.absProgress)||0));
-      if(lapNow!==b.lastLapSeen){
-        b.lastLapSeen=lapNow;
-        b.lapFactor=rand(.94,1.06);
-        b.linePhase+=rand(-.8,.8);
-        b.lineAmp=clamp(b.lineAmp*rand(.78,1.22),2,Math.max(3,b.trackW*.18));
-      }
-
-      // Human-like mistakes. Dirt is deliberately less predictable than asphalt.
+      if(lapNow!==b.lastLapSeen){b.lastLapSeen=lapNow;b.lapFactor=rand(.94,1.06);b.linePhase+=rand(-.8,.8);b.lineAmp=clamp(b.lineAmp*rand(.78,1.22),2,Math.max(3,b.trackW*.18));}
       if(elapsed>=b.nextMistakeCheck&&elapsed>=b.mistakeUntil){
-        const dirt=this._survivalSurfaceId()==='DIRT';
-        const chance=dirt?.18:.11;
+        const dirt=this._survivalSurfaceId()==='DIRT',chance=dirt?.18:.11;
         if(Math.random()<chance){
-          const duration=rand(.65,1.75);
-          b.mistakeUntil=elapsed+duration;
-          b.mistakeSlow=rand(.48,.78);
-          const sign=Math.random()<.5?-1:1;
-          // Some errors merely run wide; a minority visibly put a wheel/car outside the road.
-          const severity=Math.random()<.28?rand(.48,.72):rand(.20,.42);
-          b.mistakeLane=sign*b.trackW*severity;
+          const duration=rand(.65,1.75);b.mistakeUntil=elapsed+duration;b.mistakeSlow=rand(.48,.78);
+          const sign=Math.random()<.5?-1:1,severity=Math.random()<.28?rand(.48,.72):rand(.20,.42);b.mistakeLane=sign*b.trackW*severity;
         }
         b.nextMistakeCheck=elapsed+rand(2.2,5.5);
       }
-
-      const makingMistake=elapsed<b.mistakeUntil;
-      if(!makingMistake&&Math.abs(b.mistakeLane)>.05)b.mistakeLane*=Math.pow(.12,dt);
-
-      const local=Math.max(0,elapsed-b.launchDelay),launch01=clamp(local/3,0,1);
-      const pace=b.paceFactor*b.lapFactor*(makingMistake?b.mistakeSlow:1);
-      const desired=b.targetRate*pace*(.18+.82*(1-Math.pow(1-launch01,2)));
-      b.lapRate+=(desired-b.lapRate)*clamp(dt*(makingMistake?3.4:2.0),0,1);
+      const makingMistake=elapsed<b.mistakeUntil;if(!makingMistake&&Math.abs(b.mistakeLane)>.05)b.mistakeLane*=Math.pow(.12,dt);
+      const local=Math.max(0,elapsed-b.launchDelay),launch01=clamp(local/3,0,1),pace=b.paceFactor*b.lapFactor*(makingMistake?b.mistakeSlow:1),desired=b.targetRate*pace*(.18+.82*(1-Math.pow(1-launch01,2)));
+      b.lapRate+=(desired-b.lapRate)*clamp(dt*(makingMistake?3.4:2),0,1);
       const before=Number(b.absProgress)||0;b.absProgress+=b.lapRate*dt;b.distanceSinceFinish+=Math.max(0,b.absProgress-before);
-
-      // Different racing lines per driver, changing slightly lap to lap.
-      const naturalLane=b.baseLane+Math.sin((b.absProgress*18+b.linePhase)*b.lineFreq)*b.lineAmp;
-      const lane=naturalLane+b.mistakeLane;
-      const p=this._survivalPathPoint(b.absProgress,lane);if(!p)continue;
+      const naturalLane=b.baseLane+Math.sin((b.absProgress*18+b.linePhase)*b.lineFreq)*b.lineAmp,lane=naturalLane+b.mistakeLane,p=this._survivalPathPoint(b.absProgress,lane);if(!p)continue;
       if(gate&&Number.isFinite(b.prevX)&&Number.isFinite(b.prevY)&&segIntersect(b.prevX,b.prevY,p.x,p.y,gate.ax,gate.ay,gate.bx,gate.by))validCross=this._registerFinishCross(b)||validCross;
       b.prevX=p.x;b.prevY=p.y;b.sprite.setPosition(p.x,p.y);b.sprite.rotation=p.r+Number(this._carVisualRotOffset||0);
     }
 
     if(validCross)this._tryCloseSurvivalRound();
+    if(this._survivalFinished)return;
 
     const ranked=this._survivalEntries();
     if(this._survivalHud?._state?.scene){
       const idx=ranked.findIndex(e=>e.player),pos=idx<0?ranked.length+1:idx+1,targetLap=this._survivalRound+1,racers=this._survivalRacers(),crossed=racers.filter(r=>Number(r.state.completedLaps||0)>=targetLap).length,need=Math.max(1,racers.length-1);
-      this._survivalHud._state.setText(this._survivalPlayerOut?`ELIMINADO · ${ranked.length} coches siguen`:`POSICIÓN ${pos}/${ranked.length} · meta ${crossed}/${need} · último fuera al penúltimo paso`);
+      this._survivalHud._title?.setText?.(`⚡ SUPERVIVENCIA · ${ranked.length} COCHES`);
+      this._survivalHud._state.setText(`POSICIÓN ${pos}/${ranked.length} · meta ${crossed}/${need} · último fuera al penúltimo paso`);
     }
   }
 
-  _destroySurvival(){for(const b of this._survivalBots){try{b.sprite?.destroy?.();}catch{}}this._survivalBots=[];try{this._survivalHud?.destroy?.(true);}catch{}try{this._survivalNotice?.destroy?.(true);}catch{}this._survivalHud=null;this._survivalNotice=null;}
-  update(time,delta){const result=super.update(time,delta);if(this._survivalMode){this._updateSurvivalBots(delta);if(this._survivalPlayerOut||this._survivalFinished){try{this.carBody?.setVelocity?.(0,0);this.carBody?.setAngularVelocity?.(0);}catch{}}}return result;}
+  _updateSurvivalFinishCoast(delta){
+    if(!this._survivalFinished||this._survivalResultShown)return;
+    const dt=Math.max(0,Number(delta)||0)/1000;
+    const body=this.carBody?.body||this.carBody;
+    if(body?.velocity){const f=Math.exp(-1.35*dt);body.velocity.x*=f;body.velocity.y*=f;}
+    try{if(Number.isFinite(body?.angularVelocity))body.angularVelocity*=Math.exp(-2.1*dt);}catch{}
+  }
+
+  _destroySurvival(){
+    for(const b of this._survivalBots){try{b.sprite?.destroy?.();}catch{}}
+    this._survivalBots=[];
+    try{this._survivalHud?.destroy?.(true);}catch{}
+    try{this._survivalNotice?.destroy?.(true);}catch{}
+    try{this._survivalResultDom?.remove?.();}catch{}
+    this._survivalHud=null;this._survivalNotice=null;this._survivalResultDom=null;
+  }
+  update(time,delta){
+    const result=super.update(time,delta);
+    if(this._survivalMode){this._updateSurvivalBots(delta);this._updateSurvivalFinishCoast(delta);}
+    return result;
+  }
 }
