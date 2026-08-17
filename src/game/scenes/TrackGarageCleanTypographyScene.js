@@ -56,7 +56,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
       const xs=p.map(q=>q.x),ys=p.map(q=>q.y);
       const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
       const bw=Math.max(1,maxX-minX),bh=Math.max(1,maxY-minY);
-      const pad=Math.min(renderW,renderH)*(hero?.105:.115);
+      const pad=Math.min(renderW,renderH)*(hero ? .105 : .115);
       const scale=Math.min((renderW-pad*2)/bw,(renderH-pad*2)/bh);
       const ox=(renderW-bw*scale)/2-minX*scale,oy=(renderH-bh*scale)/2-minY*scale;
 
@@ -88,10 +88,9 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
         path();ctx.strokeStyle='rgba(90,100,104,.30)';ctx.lineWidth=road*.72;ctx.stroke();
       }
 
-      // Start/finish checker line: gives every generated preview a clear racing cue.
       const a=p[0],b=p[1];
       const ax=a.x*scale+ox,ay=a.y*scale+oy,dx=(b.x-a.x)*scale,dy=(b.y-a.y)*scale;
-      const len=Math.hypot(dx,dy)||1,ang=Math.atan2(dy,dx),cells=8;
+      const ang=Math.atan2(dy,dx),cells=8;
       ctx.save();ctx.translate(ax,ay);ctx.rotate(ang);
       const across=road*.88,cellH=across/cells,cellW=Math.max(3,road*.075);
       for(let col=0;col<2;col++)for(let row=0;row<cells;row++){
