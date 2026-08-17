@@ -70,6 +70,8 @@ export class RaceScene extends CurrentRaceScene{
     this._ghostSprite=null;
     this._ghostHud=null;
     this._ghostSubHud=null;
+    this._ghostTopBg=null;
+    this._ghostSubBg=null;
     this._replayUi=null;
 
     this.time.delayedCall(0,()=>{
@@ -93,11 +95,13 @@ export class RaceScene extends CurrentRaceScene{
       try{this._ghostSprite?.destroy?.();}catch{}
       try{this._ghostHud?.destroy?.();}catch{}
       try{this._ghostSubHud?.destroy?.();}catch{}
+      try{this._ghostTopBg?.destroy?.();}catch{}
+      try{this._ghostSubBg?.destroy?.();}catch{}
       try{this._replayUi?.destroy?.(true);}catch{}
       try{this._replayStyle?.remove?.();}catch{}
       try{this.scale.off('resize',this._onGhostResize);}catch{}
       this._onGhostResize=null;
-      this._ghostSprite=null;this._ghostHud=null;this._ghostSubHud=null;this._replayUi=null;this._replayStyle=null;
+      this._ghostSprite=null;this._ghostHud=null;this._ghostSubHud=null;this._ghostTopBg=null;this._ghostSubBg=null;this._replayUi=null;this._replayStyle=null;
     });
     return result;
   }
@@ -150,8 +154,8 @@ export class RaceScene extends CurrentRaceScene{
 
   _makeReplayButton(x,y,w,h,label,onTap){
     const c=this.add.container(x,y).setDepth(6100).setScrollFactor(0);
-    const bg=this.add.rectangle(0,0,w,h,0x07131d,.88).setOrigin(.5).setStrokeStyle(1,0x64e8ff,.55).setInteractive({useHandCursor:true});
-    const tx=this.add.text(0,0,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#e9fbff'}).setOrigin(.5);
+    const bg=this.add.rectangle(0,0,w,h,0x07131d,.92).setOrigin(.5).setStrokeStyle(1,0x64e8ff,.55).setInteractive({useHandCursor:true});
+    const tx=this.add.text(0,0,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#e9fbff'}).setOrigin(.5);
     bg.on('pointerdown',()=>c.setScale(.97));
     bg.on('pointerout',()=>c.setScale(1));
     bg.on('pointerup',()=>{c.setScale(1);onTap?.();});
@@ -160,13 +164,13 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _ghostControlsLayout(){
-    const w=Number(this.scale?.width||1280),h=Number(this.scale?.height||720);
-    // Three stacked strips that behave like an extension of the minimap panel.
-    const controlWidth=230;
-    const right=w-20;
+    const w=Number(this.scale?.width||896),h=Number(this.scale?.height||414);
+    // Match the minimap footprint on the right: same width, same right edge and no vertical gap.
+    const controlWidth=clamp(Math.round(w*.196),166,184);
+    const right=w-10;
     const x=right-controlWidth/2;
-    const topY=clamp(Math.round(h*.285),190,214);
-    const row1H=22,row2H=20,buttonH=28;
+    const topY=clamp(Math.round(h*.315),118,150);
+    const row1H=18,row2H=17,buttonH=24;
     return {
       x,controlWidth,row1H,row2H,buttonH,
       topY,
@@ -177,6 +181,8 @@ export class RaceScene extends CurrentRaceScene{
 
   _positionGhostControls(){
     const p=this._ghostControlsLayout();
+    if(this._ghostTopBg?.scene)this._ghostTopBg.setPosition(p.x,p.topY+p.row1H/2).setDisplaySize(p.controlWidth,p.row1H);
+    if(this._ghostSubBg?.scene)this._ghostSubBg.setPosition(p.x,p.secondY+p.row2H/2).setDisplaySize(p.controlWidth,p.row2H);
     if(this._ghostHud?.scene)this._ghostHud.setPosition(p.x,p.topY).setFixedSize(p.controlWidth,p.row1H);
     if(this._ghostSubHud?.scene)this._ghostSubHud.setPosition(p.x,p.secondY).setFixedSize(p.controlWidth,p.row2H);
     if(this._replayEntryBtn?.scene){
@@ -197,10 +203,13 @@ export class RaceScene extends CurrentRaceScene{
     const p=this._ghostControlsLayout();
     const top='👻 FANTASMA';
     const bottom=this._ghostData?'RÉCORD CARGADO':'CREA TU PRIMERA VUELTA';
-    const base={fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontStyle:'bold',backgroundColor:'rgba(3,13,22,.82)',align:'center',valign:'middle',fixedWidth:p.controlWidth,padding:{x:6,y:2}};
-    this._ghostHud=this.add.text(p.x,p.topY,top,{...base,fontSize:'10px',color:'#9beeff',fixedHeight:p.row1H})
+    const border=0x64e8ff,fill=0x07131d;
+    this._ghostTopBg=this.add.rectangle(p.x,p.topY+p.row1H/2,p.controlWidth,p.row1H,fill,.92).setStrokeStyle(1,border,.55).setDepth(5004).setScrollFactor(0);
+    this._ghostSubBg=this.add.rectangle(p.x,p.secondY+p.row2H/2,p.controlWidth,p.row2H,fill,.92).setStrokeStyle(1,border,.55).setDepth(5004).setScrollFactor(0);
+    const base={fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontStyle:'bold',align:'center',valign:'middle',fixedWidth:p.controlWidth,padding:{x:4,y:1}};
+    this._ghostHud=this.add.text(p.x,p.topY,top,{...base,fontSize:'9px',color:'#9beeff',fixedHeight:p.row1H})
       .setOrigin(.5,0).setScrollFactor(0).setDepth(5005);
-    this._ghostSubHud=this.add.text(p.x,p.secondY,bottom,{...base,fontSize:'9px',color:'#d8f8ff',fixedHeight:p.row2H})
+    this._ghostSubHud=this.add.text(p.x,p.secondY,bottom,{...base,fontSize:'8px',color:'#d8f8ff',fixedHeight:p.row2H})
       .setOrigin(.5,0).setScrollFactor(0).setDepth(5005);
     if(this._ghostData)this._ensureReplayEntryButton();
   }
@@ -283,7 +292,7 @@ export class RaceScene extends CurrentRaceScene{
     this._syncGhostVisual();
     if(this._ghostSprite?.scene)this._ghostSprite.setVisible(true).setAlpha(1).clearTint?.().setBlendMode('NORMAL');
 
-    for(const obj of [this.carRig,this.touchUI,this.hud,this.competitionHud,this.minimapSportFrame,this._ghostHud,this._ghostSubHud,this._replayEntryBtn,this._tdrFpsText])this._hideForReplay(obj);
+    for(const obj of [this.carRig,this.touchUI,this.hud,this.competitionHud,this.minimapSportFrame,this._ghostTopBg,this._ghostSubBg,this._ghostHud,this._ghostSubHud,this._replayEntryBtn,this._tdrFpsText])this._hideForReplay(obj);
     try{this._audio?.master?.gain?.setTargetAtTime?.(0,this._audioCtx?.currentTime||0,.02);}catch{}
     try{this.carBody?.setVelocity?.(0,0);this.carBody?.setAngularVelocity?.(0);}catch{}
 
