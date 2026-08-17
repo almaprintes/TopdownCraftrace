@@ -1,6 +1,17 @@
 import { GarageScene as CurrentGarageScene } from './GarageUiStabilityScene.js';
 
 export class GarageScene extends CurrentGarageScene {
+  _refreshSelection(){
+    super._refreshSelection();
+
+    const selected=this._thumbItems?.[this._selectedIndex];
+    if(!selected?.item||!selected?.bg||!this._thumbViewport)return;
+
+    const centered=this._thumbViewport.height/2-(selected.item.y+selected.bg.height/2);
+    this._scrollVelocity=0;
+    this._setThumbScroll(centered);
+  }
+
   _buildHeroPanel(x,y,w,h){
     this._hero.removeAll(true);
     this._hero.setPosition(0,0);
