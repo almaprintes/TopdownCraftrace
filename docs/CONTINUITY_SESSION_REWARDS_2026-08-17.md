@@ -36,3 +36,12 @@ La ventana final está compactada para paisaje móvil: cofre más pequeño, reji
 ## Nombre de circuito
 
 El circuito importado principal tiene clave interna `track01` y nombre público `CIRCUITO ATLÁNTICO`. El `track.json` histórico aún contiene el nombre de importación, pero `trackPublicNames.js` centraliza el nombre público al arrancar el juego para que selector de circuitos, tarjeta del menú, carrera e informe compartan el mismo nombre sin tocar geometría ni cambiar la clave persistente. `karting-tenerife` conserva su nombre `KARTING TENERIFE`.
+
+## Selector de circuitos y previews premium
+
+- La lista centra automáticamente el circuito preseleccionado para facilitar avanzar y retroceder de uno en uno.
+- `TrackGarageCleanTypographyScene.js` genera ahora previews premium directamente desde la geometría real de cada circuito.
+- Existen dos niveles de render independientes: miniatura (`thumb`) y panel grande (`hero`). No deben volver a compartir una única textura cacheada, porque el sistema anterior podía reutilizar una miniatura de baja resolución en el panel grande y estirarla.
+- El render premium tiene prioridad sobre las previews oficiales/legacy dentro del selector; estas quedan como fallback si no puede generarse la preview geométrica.
+- Asfalto: fondo de césped con gradiente, sombra/arcén, borde claro, asfalto interior y línea de salida a cuadros. Tierra/grava mantiene tratamiento propio.
+- Resoluciones internas actuales: 640×560 para miniaturas y 1280×760 para hero. La UI las reduce al tamaño visible para ganar nitidez en iPhone horizontal sin alterar la geometría del circuito.
