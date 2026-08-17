@@ -159,13 +159,12 @@ export class RaceScene extends CurrentRaceScene{
 
   _ghostControlsLayout(){
     const w=Number(this.scale?.width||1280),h=Number(this.scale?.height||720);
-    // Keep this HUD block in the clear strip directly below the minimap and above the pedals.
-    // Do not derive its position from minimapSportFrame.getBounds(): that container can include
-    // other HUD children and produced a false lower bound on iPhone landscape.
-    const x=clamp(Math.round(w*.84),220,w-180);
-    const hudY=clamp(Math.round(h*.43),220,270);
+    // One compact block under the minimap: shared right edge, shared width and minimal vertical gap.
     const controlWidth=230;
-    return {x,hudY,buttonY:hudY+42,controlWidth};
+    const right=clamp(w-20,controlWidth+20,w-20);
+    const x=right-controlWidth/2;
+    const hudY=clamp(Math.round(h*.325),210,240);
+    return {x,hudY,buttonY:hudY+36,controlWidth};
   }
 
   _positionGhostControls(){
