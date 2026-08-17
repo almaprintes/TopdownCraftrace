@@ -134,11 +134,10 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     const t=this._tracks[this._index];
     const title=String(t.name||t.key).toUpperCase();
     const titleSize=title.length>20?23:title.length>15?25:27;
-    root.add(this.add.text(x+w/2,y+16,title,{fontFamily:FONT,fontSize:`${titleSize}px`,fontStyle:'bold',color:'#fff'}).setOrigin(.5,0));
-    root.add(this.add.text(x+w/2,y+54,`${surface(t).toUpperCase()} · ${sectors(t)} SECTORES`,{fontFamily:FONT,fontSize:'12px',fontStyle:'bold',color:'#2bff88'}).setOrigin(.5,0));
+    root.add(this.add.text(x+w/2,y+12,title,{fontFamily:FONT,fontSize:`${titleSize}px`,fontStyle:'bold',color:'#fff'}).setOrigin(.5,0));
 
-    const previewX=x+24,previewTop=y+82,footerH=66,previewW=w-48;
-    const previewH=Math.max(135,h-82-footerH-12);
+    const previewX=x+24,previewTop=y+50,footerH=66,previewW=w-48;
+    const previewH=Math.max(135,h-50-footerH-12);
     g.fillStyle(0x071016,.82).fillRoundedRect(previewX,previewTop,previewW,previewH,15);
     g.lineStyle(1,0xb7c0ff,.15).strokeRoundedRect(previewX,previewTop,previewW,previewH,15);
     const key=this._displayPreview(t,1400,850);if(key&&this.textures.exists(key)){const im=this.add.image(previewX+previewW/2,previewTop+previewH/2,key);im.setScale(Math.min((previewW-14)/im.width,(previewH-12)/im.height));root.add(im);}
