@@ -10,6 +10,22 @@ function surface(track){return String(track?.surface||track?.meta?.trackSurface|
 const FONT='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 export class TrackGarageScene extends CurrentTrackGarageScene {
+  constructor(){
+    super();
+    this._centerSelectedTrackOnNextLayout=true;
+  }
+
+  _setTrackScroll(y){
+    if(this._centerSelectedTrackOnNextLayout&&this._trackViewport&&this._trackItems?.length){
+      const selected=this._trackItems[this._index];
+      if(selected?.item&&selected?.bg){
+        y=this._trackViewport.height/2-(selected.item.y+selected.bg.height/2);
+      }
+      this._centerSelectedTrackOnNextLayout=false;
+    }
+    super._setTrackScroll(y);
+  }
+
   _trackItem(x,y,w,h,t,i){
     const item=this.add.container(x,y),selected=i===this._index;this._trackList.add(item);
     const bg=this.add.rectangle(0,0,w,h,0x111a33,selected?.82:.50).setOrigin(0).setStrokeStyle(2,selected?0x2bff88:0xb7c0ff,selected?.65:.18);
@@ -24,7 +40,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     item.add(this.add.text(tx,42,`${String(i+1).padStart(2,'0')} · ${surface(t)}\n${lengthM(t)} m · ${sectors(t)} sectores`,{fontFamily:FONT,fontSize:'10.5px',color:selected?'#cad3f4':'#94a3c7',lineSpacing:2,fixedWidth:available}));
 
     const hit=this.add.rectangle(0,0,w,h,0,0.001).setOrigin(0).setInteractive({useHandCursor:true});item.add(hit);
-    let sy=0,drag=false;hit.on('pointerdown',p=>{sy=p.y;drag=false;});hit.on('pointermove',p=>{if(Math.abs(p.y-sy)>8)drag=true;});hit.on('pointerup',()=>{if(drag||this._dragTrackList)return;this._index=i;this._commercial?.destroy(true);this._commercial=null;this._buildCommercial();});
+    let sy=0,drag=false;hit.on('pointerdown',p=>{sy=p.y;drag=false;});hit.on('pointermove',p=>{if(Math.abs(p.y-sy)>8)drag=true;});hit.on('pointerup',()=>{if(drag||this._dragTrackList)return;this._index=i;this._centerSelectedTrackOnNextLayout=true;this._commercial?.destroy(true);this._commercial=null;this._buildCommercial();});
     return {item,bg,hit};
   }
 
