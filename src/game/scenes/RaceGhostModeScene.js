@@ -69,6 +69,7 @@ export class RaceScene extends CurrentRaceScene{
     this._ghostHistoryLen=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
     this._ghostSprite=null;
     this._ghostHud=null;
+    this._ghostSubHud=null;
     this._replayUi=null;
 
     this.time.delayedCall(0,()=>{
@@ -91,11 +92,12 @@ export class RaceScene extends CurrentRaceScene{
       try{this._replayRecorder?.state!=='inactive'&&this._replayRecorder?.stop?.();}catch{}
       try{this._ghostSprite?.destroy?.();}catch{}
       try{this._ghostHud?.destroy?.();}catch{}
+      try{this._ghostSubHud?.destroy?.();}catch{}
       try{this._replayUi?.destroy?.(true);}catch{}
       try{this._replayStyle?.remove?.();}catch{}
       try{this.scale.off('resize',this._onGhostResize);}catch{}
       this._onGhostResize=null;
-      this._ghostSprite=null;this._ghostHud=null;this._replayUi=null;this._replayStyle=null;
+      this._ghostSprite=null;this._ghostHud=null;this._ghostSubHud=null;this._replayUi=null;this._replayStyle=null;
     });
     return result;
   }
@@ -159,33 +161,46 @@ export class RaceScene extends CurrentRaceScene{
 
   _ghostControlsLayout(){
     const w=Number(this.scale?.width||1280),h=Number(this.scale?.height||720);
-    // One compact block under the minimap: shared right edge, shared width and minimal vertical gap.
+    // Three stacked strips that behave like an extension of the minimap panel.
     const controlWidth=230;
-    const right=clamp(w-20,controlWidth+20,w-20);
+    const right=w-20;
     const x=right-controlWidth/2;
-    const hudY=clamp(Math.round(h*.325),210,240);
-    return {x,hudY,buttonY:hudY+36,controlWidth};
+    const topY=clamp(Math.round(h*.285),190,214);
+    const row1H=22,row2H=20,buttonH=28;
+    return {
+      x,controlWidth,row1H,row2H,buttonH,
+      topY,
+      secondY:topY+row1H,
+      buttonY:topY+row1H+row2H+buttonH/2
+    };
   }
 
   _positionGhostControls(){
     const p=this._ghostControlsLayout();
-    if(this._ghostHud?.scene){
-      this._ghostHud.setPosition(p.x,p.hudY);
-      this._ghostHud.setFixedSize(p.controlWidth,0);
-    }
+    if(this._ghostHud?.scene)this._ghostHud.setPosition(p.x,p.topY).setFixedSize(p.controlWidth,p.row1H);
+    if(this._ghostSubHud?.scene)this._ghostSubHud.setPosition(p.x,p.secondY).setFixedSize(p.controlWidth,p.row2H);
     if(this._replayEntryBtn?.scene){
       this._replayEntryBtn.setPosition(p.x,p.buttonY);
       const bg=this._replayEntryBtn.list?.[0];
-      if(bg?.setSize)bg.setSize(p.controlWidth,28);
-      if(bg?.setDisplaySize)bg.setDisplaySize(p.controlWidth,28);
+      if(bg?.setSize)bg.setSize(p.controlWidth,p.buttonH);
+      if(bg?.setDisplaySize)bg.setDisplaySize(p.controlWidth,p.buttonH);
     }
+  }
+
+  _setGhostHudLabels(top,bottom){
+    if(this._ghostHud?.scene)this._ghostHud.setText(top);
+    if(this._ghostSubHud?.scene)this._ghostSubHud.setText(bottom);
   }
 
   _createGhostHud(){
     if(this._ghostHud?.scene)return;
-    const label=this._ghostData?'👻 FANTASMA · RÉCORD CARGADO':'👻 FANTASMA · CREA TU PRIMERA VUELTA';
     const p=this._ghostControlsLayout();
-    this._ghostHud=this.add.text(p.x,p.hudY,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#9beeff',backgroundColor:'rgba(3,13,22,.76)',padding:{x:8,y:4},align:'center',fixedWidth:p.controlWidth})
+    const top='👻 FANTASMA';
+    const bottom=this._ghostData?'RÉCORD CARGADO':'CREA TU PRIMERA VUELTA';
+    const base={fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontStyle:'bold',backgroundColor:'rgba(3,13,22,.82)',align:'center',valign:'middle',fixedWidth:p.controlWidth,padding:{x:6,y:2}};
+    this._ghostHud=this.add.text(p.x,p.topY,top,{...base,fontSize:'10px',color:'#9beeff',fixedHeight:p.row1H})
+      .setOrigin(.5,0).setScrollFactor(0).setDepth(5005);
+    this._ghostSubHud=this.add.text(p.x,p.secondY,bottom,{...base,fontSize:'9px',color:'#d8f8ff',fixedHeight:p.row2H})
       .setOrigin(.5,0).setScrollFactor(0).setDepth(5005);
     if(this._ghostData)this._ensureReplayEntryButton();
   }
@@ -193,7 +208,7 @@ export class RaceScene extends CurrentRaceScene{
   _ensureReplayEntryButton(){
     if(!this._ghostData||this._replayEntryBtn?.scene)return;
     const p=this._ghostControlsLayout();
-    this._replayEntryBtn=this._makeReplayButton(p.x,p.buttonY,p.controlWidth,28,'▶  VER REPETICIÓN',()=>this._enterReplay());
+    this._replayEntryBtn=this._makeReplayButton(p.x,p.buttonY,p.controlWidth,p.buttonH,'▶  VER REPETICIÓN',()=>this._enterReplay());
   }
 
   _recordGhostSample(now){
@@ -223,7 +238,7 @@ export class RaceScene extends CurrentRaceScene{
             this._ghostSprite=null;
             this._createGhostSprite();
             this._syncGhostVisual();
-            if(this._ghostHud?.scene)this._ghostHud.setText(previous?'👻 NUEVO FANTASMA · RÉCORD MEJORADO':'👻 FANTASMA CREADO · SIGUIENTE VUELTA');
+            this._setGhostHudLabels(previous?'👻 NUEVO FANTASMA':'👻 FANTASMA CREADO',previous?'RÉCORD MEJORADO':'SIGUIENTE VUELTA');
             this._ensureReplayEntryButton();
           }
         }
@@ -268,7 +283,7 @@ export class RaceScene extends CurrentRaceScene{
     this._syncGhostVisual();
     if(this._ghostSprite?.scene)this._ghostSprite.setVisible(true).setAlpha(1).clearTint?.().setBlendMode('NORMAL');
 
-    for(const obj of [this.carRig,this.touchUI,this.hud,this.competitionHud,this.minimapSportFrame,this._ghostHud,this._replayEntryBtn,this._tdrFpsText])this._hideForReplay(obj);
+    for(const obj of [this.carRig,this.touchUI,this.hud,this.competitionHud,this.minimapSportFrame,this._ghostHud,this._ghostSubHud,this._replayEntryBtn,this._tdrFpsText])this._hideForReplay(obj);
     try{this._audio?.master?.gain?.setTargetAtTime?.(0,this._audioCtx?.currentTime||0,.02);}catch{}
     try{this.carBody?.setVelocity?.(0,0);this.carBody?.setAngularVelocity?.(0);}catch{}
 
