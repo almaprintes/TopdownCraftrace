@@ -159,24 +159,41 @@ export class RaceScene extends CurrentRaceScene{
 
   _ghostControlsLayout(){
     const w=Number(this.scale?.width||1280),h=Number(this.scale?.height||720);
-    // Keep ghost controls directly BELOW the minimap, never in the central timing area.
-    // The HUD remains right-aligned and adapts to different landscape phone widths.
-    const x=Math.max(120,w-154);
-    const hudY=clamp(Math.round(h*.305),188,224);
-    return {x,hudY,buttonY:hudY+39};
+    // Anchor the ghost block to the real minimap bounds so it reads as part of that HUD cluster.
+    // Keep the old responsive coordinates as a safe fallback if the minimap frame is unavailable.
+    let x=Math.max(120,w-154);
+    let hudY=clamp(Math.round(h*.305),188,224);
+    let controlWidth=220;
+    try{
+      const b=this.minimapSportFrame?.getBounds?.();
+      if(b&&Number.isFinite(b.centerX)&&Number.isFinite(b.bottom)&&Number.isFinite(b.width)&&b.width>0){
+        x=clamp(Math.round(b.centerX),120,w-120);
+        hudY=clamp(Math.round(b.bottom+4),70,h-86);
+        controlWidth=clamp(Math.round(b.width-8),220,280);
+      }
+    }catch{}
+    return {x,hudY,buttonY:hudY+32,controlWidth};
   }
 
   _positionGhostControls(){
     const p=this._ghostControlsLayout();
-    if(this._ghostHud?.scene)this._ghostHud.setPosition(p.x,p.hudY);
-    if(this._replayEntryBtn?.scene)this._replayEntryBtn.setPosition(p.x,p.buttonY);
+    if(this._ghostHud?.scene){
+      this._ghostHud.setPosition(p.x,p.hudY);
+      this._ghostHud.setFixedSize(p.controlWidth,0);
+    }
+    if(this._replayEntryBtn?.scene){
+      this._replayEntryBtn.setPosition(p.x,p.buttonY);
+      const bg=this._replayEntryBtn.list?.[0];
+      if(bg?.setSize)bg.setSize(p.controlWidth,28);
+      if(bg?.setDisplaySize)bg.setDisplaySize(p.controlWidth,28);
+    }
   }
 
   _createGhostHud(){
     if(this._ghostHud?.scene)return;
     const label=this._ghostData?'👻 FANTASMA · RÉCORD CARGADO':'👻 FANTASMA · CREA TU PRIMERA VUELTA';
     const p=this._ghostControlsLayout();
-    this._ghostHud=this.add.text(p.x,p.hudY,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#9beeff',backgroundColor:'rgba(3,13,22,.76)',padding:{x:8,y:4}})
+    this._ghostHud=this.add.text(p.x,p.hudY,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#9beeff',backgroundColor:'rgba(3,13,22,.76)',padding:{x:8,y:4},align:'center',fixedWidth:p.controlWidth})
       .setOrigin(.5,0).setScrollFactor(0).setDepth(5005);
     if(this._ghostData)this._ensureReplayEntryButton();
   }
@@ -184,7 +201,7 @@ export class RaceScene extends CurrentRaceScene{
   _ensureReplayEntryButton(){
     if(!this._ghostData||this._replayEntryBtn?.scene)return;
     const p=this._ghostControlsLayout();
-    this._replayEntryBtn=this._makeReplayButton(p.x,p.buttonY,146,30,'▶  VER REPETICIÓN',()=>this._enterReplay());
+    this._replayEntryBtn=this._makeReplayButton(p.x,p.buttonY,p.controlWidth,28,'▶  VER REPETICIÓN',()=>this._enterReplay());
   }
 
   _recordGhostSample(now){
