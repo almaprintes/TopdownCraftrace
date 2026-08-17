@@ -12,6 +12,7 @@ import { TrackEditorScene } from './scenes/TrackEditorScene.js';
 import { TrackGarageScene } from './scenes/TrackGarageCleanTypographyScene.js';
 import { TrackStudioScene } from './scenes/TrackStudioScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
+import './tracks/trackPublicNames.js';
 
 class MenuAliasScene extends Phaser.Scene {
   constructor() { super('MenuScene'); }
