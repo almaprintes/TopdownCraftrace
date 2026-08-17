@@ -4,11 +4,12 @@ const TARGET_TRACK_NAME = 'Imported Track 1773617484759';
 const FLAG_KEY = 'tdr2:track01AntiCutPenalty';
 const PENALTY_MS = 2000;
 
-// Zona marcada por el usuario en la captura del circuito.
-// Coordenadas de mundo del interior de la horquilla central, justo antes de CP2.
-// Se usa una elipse algo más generosa que el trazo amarillo para que el contacto
-// sea fiable en móvil sin invadir el asfalto normal.
-const FIXED_ZONE = Object.freeze({ x:1160, y:882, rx:78, ry:92 });
+// Zona exacta marcada por el usuario en la captura del circuito.
+// La captura muestra el mundo completo (2430x2000) encajado dentro del viewport;
+// al convertir el centro del círculo amarillo a coordenadas de mundo, el área
+// correcta queda en el interior de la horquilla central, justo antes de CP2.
+// La elipse permanece completamente dentro del césped para no penalizar la trazada legal.
+const FIXED_ZONE = Object.freeze({ x:1145, y:810, rx:92, ry:105 });
 
 function enabled(){
   try{
@@ -67,25 +68,24 @@ export class RaceScene extends CurrentRaceScene {
 
   update(time,delta){
     const result=super.update(time,delta);
-    if(!enabled()||!this._antiCutTargetTrack()||this._replayActive||!this._raceStarted||!this.carBody||!this._isOnTrack)return result;
+    if(!enabled()||!this._antiCutTargetTrack()||this._replayActive||!this._raceStarted||!this.carBody)return result;
 
     const x=Number(this.carBody.x),y=Number(this.carBody.y);
     if(!Number.isFinite(x)||!Number.isFinite(y))return result;
 
     const inZone=this._insideMarkedAntiCutZone(x,y);
-    const offTrack=!this._isOnTrack(x,y);
 
-    // Solo penaliza al entrar en el césped/interior marcado. Rodar por el asfalto
-    // que bordea la horquilla no dispara nada.
-    if(inZone&&offTrack&&this._antiCutArmed){
+    // La propia zona está dibujada íntegramente sobre el interior ilegal de la
+    // horquilla. No dependemos de _isOnTrack(), porque esa máscara fue precisamente
+    // la que podía impedir detectar el corte aun atravesando el césped marcado.
+    if(inZone&&this._antiCutArmed){
       this._antiCutArmed=false;
       this._applyAntiCutPenalty();
     }
 
-    // Rearmamos al abandonar físicamente la zona. La penalización sigue limitada
-    // a una sola vez por vuelta.
     if(!inZone)this._antiCutArmed=true;
 
+    // Una sola penalización por vuelta. Se rearma al comenzar la siguiente.
     const p=Number(this._computeLapProgress01?.(x,y));
     if(Number.isFinite(p)&&p<0.08)this._antiCutPenaltyApplied=false;
 
