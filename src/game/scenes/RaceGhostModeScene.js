@@ -84,12 +84,17 @@ export class RaceScene extends CurrentRaceScene{
       this.time.delayedCall(1000,()=>this._syncGhostVisual());
     }
 
+    this._onGhostResize=()=>this._positionGhostControls();
+    this.scale.on('resize',this._onGhostResize);
+
     this.events.once('shutdown',()=>{
       try{this._replayRecorder?.state!=='inactive'&&this._replayRecorder?.stop?.();}catch{}
       try{this._ghostSprite?.destroy?.();}catch{}
       try{this._ghostHud?.destroy?.();}catch{}
       try{this._replayUi?.destroy?.(true);}catch{}
       try{this._replayStyle?.remove?.();}catch{}
+      try{this.scale.off('resize',this._onGhostResize);}catch{}
+      this._onGhostResize=null;
       this._ghostSprite=null;this._ghostHud=null;this._replayUi=null;this._replayStyle=null;
     });
     return result;
@@ -152,17 +157,34 @@ export class RaceScene extends CurrentRaceScene{
     return c;
   }
 
+  _ghostControlsLayout(){
+    const w=Number(this.scale?.width||1280),h=Number(this.scale?.height||720);
+    // Keep ghost controls directly BELOW the minimap, never in the central timing area.
+    // The HUD remains right-aligned and adapts to different landscape phone widths.
+    const x=Math.max(120,w-154);
+    const hudY=clamp(Math.round(h*.305),188,224);
+    return {x,hudY,buttonY:hudY+39};
+  }
+
+  _positionGhostControls(){
+    const p=this._ghostControlsLayout();
+    if(this._ghostHud?.scene)this._ghostHud.setPosition(p.x,p.hudY);
+    if(this._replayEntryBtn?.scene)this._replayEntryBtn.setPosition(p.x,p.buttonY);
+  }
+
   _createGhostHud(){
     if(this._ghostHud?.scene)return;
     const label=this._ghostData?'👻 FANTASMA · RÉCORD CARGADO':'👻 FANTASMA · CREA TU PRIMERA VUELTA';
-    this._ghostHud=this.add.text(this.scale.width/2,12,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#9beeff',backgroundColor:'rgba(3,13,22,.72)',padding:{x:9,y:5}})
+    const p=this._ghostControlsLayout();
+    this._ghostHud=this.add.text(p.x,p.hudY,label,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#9beeff',backgroundColor:'rgba(3,13,22,.76)',padding:{x:8,y:4}})
       .setOrigin(.5,0).setScrollFactor(0).setDepth(5005);
     if(this._ghostData)this._ensureReplayEntryButton();
   }
 
   _ensureReplayEntryButton(){
     if(!this._ghostData||this._replayEntryBtn?.scene)return;
-    this._replayEntryBtn=this._makeReplayButton(this.scale.width/2,52,152,32,'▶  VER REPETICIÓN',()=>this._enterReplay());
+    const p=this._ghostControlsLayout();
+    this._replayEntryBtn=this._makeReplayButton(p.x,p.buttonY,146,30,'▶  VER REPETICIÓN',()=>this._enterReplay());
   }
 
   _recordGhostSample(now){
