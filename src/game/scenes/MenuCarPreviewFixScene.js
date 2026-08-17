@@ -1,6 +1,7 @@
 import { MenuScene as CurrentMenuScene } from './MenuTrackPresentationScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
+import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
@@ -22,10 +23,6 @@ export class MenuScene extends CurrentMenuScene {
 
     const key = `skin:${spec.id}`;
     if (this.textures?.exists?.(key)) return;
-
-    // Cargamos la miniatura antes de renderizar el lobby. Antes se solicitaba
-    // durante renderUI y durante unos frames se usaba el fallback; en iPhone
-    // podía quedarse así si el loader ya estaba ocupado.
     this.load.image(key, `assets/skins/${spec.skin}`);
   }
 
@@ -76,11 +73,60 @@ export class MenuScene extends CurrentMenuScene {
       btn.on('pointerout',()=>btn.setFillStyle(0x174b37,.98));
       btn.on('pointerup',()=>{
         const result=claimCurrentRaceEvent();
-        if(result?.ok)this.scene.restart();
+        if(result?.ok)this._showEventRewardModal(result.event);
       });
     }else{
       c.add(this.add.text(0,bottom-26,`${progress.value}/${progress.target} ${progress.label}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#6deaff',align:'center'}).setOrigin(.5,0));
     }
+  }
+
+  _showEventRewardModal(event){
+    if(!event||this._eventRewardModal?.scene)return;
+    const {width,height}=this.scale;
+    const items=Object.entries(event.reward?.items||{}).filter(([,n])=>Number(n)>0);
+    const cols=Math.min(4,Math.max(1,items.length));
+    const rows=Math.ceil(items.length/cols);
+    const panelW=Math.min(width-36,Math.max(520,Math.min(760,180*cols+40)));
+    const panelH=Math.min(height-26,Math.max(270,176+rows*82));
+    const cx=width/2,cy=height/2;
+    const root=this.add.container(0,0).setDepth(12000);
+    this._ui?.add(root);
+    this._eventRewardModal=root;
+
+    const veil=this.add.rectangle(0,0,width,height,0x02070d,.82).setOrigin(0).setInteractive();
+    root.add(veil);
+    root.add(this.add.rectangle(cx,cy,panelW,panelH,0x08131d,.995).setStrokeStyle(2,0x62ffb2,.78));
+    root.add(this.add.text(cx,cy-panelH/2+17,'EVENTO COMPLETADO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#62ffb2',letterSpacing:2}).setOrigin(.5,0));
+    root.add(this.add.text(cx,cy-panelH/2+42,event.title,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'24px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,cy-panelH/2+76,'PREMIO CONSEGUIDO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#aebdca',letterSpacing:1}).setOrigin(.5,0));
+
+    const coins=Math.max(0,Number(event.reward?.coins)||0);
+    if(coins)root.add(this.add.text(cx,cy-panelH/2+98,`◈ +${coins} MONEDAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(.5,0));
+
+    if(items.length){
+      const gap=8,gridW=panelW-34,cardW=(gridW-gap*(cols-1))/cols,cardH=68,startX=cx-gridW/2,startY=cy-panelH/2+128;
+      items.forEach(([id,n],i)=>{
+        const item=GARAGE_ITEMS[id]||{};
+        const col=i%cols,row=Math.floor(i/cols),x=startX+col*(cardW+gap),y=startY+row*(cardH+gap);
+        root.add(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.98).setOrigin(0).setStrokeStyle(1,0x355064,.9));
+        root.add(this.add.text(x+cardW/2,y+7,item.icon||'◆',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'20px'}).setOrigin(.5,0));
+        root.add(this.add.text(x+cardW/2,y+31,String(item.name||id),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#aebdca',align:'center',wordWrap:{width:cardW-10}}).setOrigin(.5,0));
+        root.add(this.add.text(x+cardW/2,y+47,`+${Number(n)}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'13px',fontStyle:'bold',color:'#62ffb2'}).setOrigin(.5,0));
+      });
+    }
+
+    const btnY=cy+panelH/2-28;
+    const btn=this.add.rectangle(cx,btnY,210,36,0x174b37,.98).setStrokeStyle(1,0x62ffb2,.85).setInteractive({useHandCursor:true});
+    const label=this.add.text(cx,btnY,'CONTINUAR',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff',letterSpacing:1}).setOrigin(.5);
+    root.add([btn,label]);
+    root.add(this.add.text(cx,btnY-25,'El premio ya está guardado en tu inventario',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',color:'#8295a8'}).setOrigin(.5,1));
+
+    const close=()=>{
+      try{root.destroy(true);}catch{}
+      if(this._eventRewardModal===root)this._eventRewardModal=null;
+      this.scene.restart();
+    };
+    btn.on('pointerup',close);
   }
 
   _insetLobbySidePanels() {
