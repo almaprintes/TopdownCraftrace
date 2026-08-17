@@ -39,11 +39,13 @@ export class RaceScene extends CurrentRaceScene {
     for(const [index,penaltyMs] of this._penaltyByHistoryIndex){
       if(this._penaltyPersistedIndices.has(index)||!h[index])continue;
       const rec=h[index];
-      const raw=num(rec.rawLapMs)??num(rec.lapMs)??num(rec.ms)??num(rec.time);
-      if(raw==null)continue;
-      rec.rawLapMs=raw;
+      const finalLapMs=num(rec.lapMs)??num(rec.ms)??num(rec.time);
+      if(finalLapMs==null)continue;
       rec.penaltyMs=Math.max(0,Number(penaltyMs)||0);
       rec.penalized=rec.penaltyMs>0;
+      // lapMs is authoritative and already includes the live in-race penalty.
+      // rawLapMs is informational only: the lap before the penalty was applied.
+      rec.rawLapMs=Math.max(0,finalLapMs-rec.penaltyMs);
       this._penaltyPersistedIndices.add(index);
       changed=true;
     }
@@ -56,7 +58,11 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _effectiveRecordLapMs(rec){
-    const raw=num(rec?.rawLapMs)??num(rec?.lapMs)??num(rec?.ms)??num(rec?.time);
+    // New records store the official final time directly in lapMs.
+    const finalLapMs=num(rec?.lapMs)??num(rec?.ms)??num(rec?.time);
+    if(finalLapMs!=null)return finalLapMs;
+    // Compatibility fallback for any older record that only has raw + penalty.
+    const raw=num(rec?.rawLapMs);
     if(raw==null)return null;
     return raw+Math.max(0,Number(rec?.penaltyMs)||0);
   }
@@ -90,12 +96,14 @@ export class RaceScene extends CurrentRaceScene {
     const base=Math.max(0,Number(this._sessionLapBaseline)||0);
     return h.slice(base).map((e,i)=>{
       const absoluteIndex=base+i;
-      const raw=num(e?.rawLapMs)??num(e?.lapMs)??num(e?.ms)??num(e?.time);
       const penaltyMs=Math.max(0,Number(e?.penaltyMs)||Number(this._penaltyByHistoryIndex?.get(absoluteIndex))||0);
+      const finalLapMs=num(e?.lapMs)??num(e?.ms)??num(e?.time);
+      const fallbackRaw=num(e?.rawLapMs);
+      const officialLapMs=finalLapMs??(fallbackRaw==null?null:fallbackRaw+penaltyMs);
       return {
         n:i+1,
-        lapMs:raw==null?null:raw+penaltyMs,
-        rawLapMs:raw,
+        lapMs:officialLapMs,
+        rawLapMs:fallbackRaw??(officialLapMs==null?null:Math.max(0,officialLapMs-penaltyMs)),
         penaltyMs,
         carId:e?.carId||this.carId
       };
