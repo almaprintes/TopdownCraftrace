@@ -4,9 +4,15 @@ const TARGET_TRACK_NAME = 'Imported Track 1773617484759';
 const FLAG_KEY = 'tdr2:track01AntiCutPenalty';
 const PENALTY_MS = 2000;
 
-// Zona marcada por el usuario: interior de la horquilla central antes de CP2.
-// Es deliberadamente más compacta que la versión anterior para no invadir el asfalto.
-const FIXED_ZONE = Object.freeze({ x:1145, y:810, rx:68, ry:78 });
+// Zona exacta tomada del MAPA TÉCNICO aportado por el usuario.
+// El triángulo amarillo fue convertido desde píxeles del mapa técnico al mundo
+// real del circuito (2430x2000). No es una aproximación circular/elíptica.
+// Vértices del área ilegal de césped entre los dos brazos de la horquilla.
+const FIXED_ZONE_POLY = Object.freeze([
+  Object.freeze({ x:1133, y:721 }),
+  Object.freeze({ x:1157, y:721 }),
+  Object.freeze({ x:1145, y:839 })
+]);
 
 function enabled(){
   try{
@@ -15,9 +21,15 @@ function enabled(){
   }catch{return true;}
 }
 
-function xy(p){
-  if(Array.isArray(p))return {x:Number(p[0]),y:Number(p[1]),width:Number(p[2])};
-  return {x:Number(p?.x),y:Number(p?.y),width:Number(p?.width)};
+function pointInPoly(x,y,poly){
+  let inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    const a=poly[i],b=poly[j];
+    const crosses=((a.y>y)!==(b.y>y)) &&
+      (x < (b.x-a.x)*(y-a.y)/((b.y-a.y)||1e-9)+a.x);
+    if(crosses)inside=!inside;
+  }
+  return inside;
 }
 
 export class RaceScene extends CurrentRaceScene {
@@ -63,38 +75,8 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _insideMarkedAntiCutZone(x,y){
-    const dx=(Number(x)-FIXED_ZONE.x)/FIXED_ZONE.rx;
-    const dy=(Number(y)-FIXED_ZONE.y)/FIXED_ZONE.ry;
-    return Number.isFinite(dx)&&Number.isFinite(dy)&&(dx*dx+dy*dy)<=1;
-  }
-
-  _nearestRoadDistance(x,y){
-    const cl=this.track?.meta?.centerline||this.track?.centerline||[];
-    if(!Array.isArray(cl)||cl.length<2)return null;
-    let best=null;
-    for(let i=0;i<cl.length;i++){
-      const a=xy(cl[i]),b=xy(cl[(i+1)%cl.length]);
-      if(![a.x,a.y,b.x,b.y].every(Number.isFinite))continue;
-      const vx=b.x-a.x,vy=b.y-a.y,l2=vx*vx+vy*vy;
-      if(l2<1e-6)continue;
-      const t=Math.max(0,Math.min(1,((x-a.x)*vx+(y-a.y)*vy)/l2));
-      const qx=a.x+vx*t,qy=a.y+vy*t;
-      const dist=Math.hypot(x-qx,y-qy);
-      if(!best||dist<best.dist){
-        const width=Number.isFinite(a.width)?a.width:(Number.isFinite(b.width)?b.width:Number(this.track?.meta?.trackWidth)||162);
-        best={dist,width};
-      }
-    }
-    return best;
-  }
-
-  _isGenuineGrassCut(x,y){
-    const road=this._nearestRoadDistance(x,y);
-    if(!road)return false;
-    const half=Math.max(1,Number(road.width||162)*0.5);
-    // Pedimos que el centro del coche esté claramente más allá del borde de pista.
-    // El margen evita falsos positivos al rozar el límite desde el asfalto.
-    return road.dist > half + 8;
+    x=Number(x); y=Number(y);
+    return Number.isFinite(x)&&Number.isFinite(y)&&pointInPoly(x,y,FIXED_ZONE_POLY);
   }
 
   update(time,delta){
@@ -105,9 +87,11 @@ export class RaceScene extends CurrentRaceScene {
     if(!Number.isFinite(x)||!Number.isFinite(y))return result;
 
     const inZone=this._insideMarkedAntiCutZone(x,y);
-    const genuineCut=inZone&&this._isGenuineGrassCut(x,y);
 
-    if(genuineCut&&this._antiCutArmed){
+    // La geometría de la zona ya coincide exclusivamente con el césped ilegal.
+    // Por eso no aplicamos una segunda máscara de pista que pueda desplazar o falsear
+    // la detección: entrar en este triángulo exacto es el corte que se penaliza.
+    if(inZone&&this._antiCutArmed){
       this._antiCutArmed=false;
       this._applyAntiCutPenalty();
     }
