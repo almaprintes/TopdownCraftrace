@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceProceduralAudioScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceDeferredChestScene.js';
 
 const SETTINGS_KEY='tdr2:settings';
 function prefs(){
