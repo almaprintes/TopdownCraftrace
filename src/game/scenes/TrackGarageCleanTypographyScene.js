@@ -56,14 +56,14 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
       const xs=p.map(q=>q.x),ys=p.map(q=>q.y);
       const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
       const bw=Math.max(1,maxX-minX),bh=Math.max(1,maxY-minY);
-      const pad=Math.min(renderW,renderH)*(hero?.105:.125);
+      const pad=Math.min(renderW,renderH)*(hero ? .105 : .125);
       const scale=Math.min((renderW-pad*2)/bw,(renderH-pad*2)/bh);
       const ox=(renderW-bw*scale)/2-minX*scale,oy=(renderH-bh*scale)/2-minY*scale;
 
       const grass=ctx.createLinearGradient(0,0,renderW,renderH);
       grass.addColorStop(0,'#294d34');grass.addColorStop(.55,'#23452e');grass.addColorStop(1,'#183521');
       ctx.fillStyle=grass;ctx.fillRect(0,0,renderW,renderH);
-      ctx.globalAlpha=hero?.075:.04;ctx.fillStyle='#79a56f';
+      ctx.globalAlpha=hero ? .075 : .04;ctx.fillStyle='#79a56f';
       for(let y=0;y<renderH;y+=(hero?42:58)){ctx.fillRect(0,y,renderW,1);}
       ctx.globalAlpha=1;
 
@@ -86,7 +86,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
         path();ctx.strokeStyle='rgba(3,9,11,.50)';ctx.lineWidth=road*1.29;ctx.stroke();
         path();ctx.strokeStyle='#171d20';ctx.lineWidth=road*1.15;ctx.stroke();
         path();ctx.strokeStyle=hero?'rgba(214,220,218,.74)':'rgba(198,205,203,.58)';ctx.lineWidth=road*(hero?1.045:1.035);ctx.stroke();
-        path();ctx.strokeStyle='#3d4448';ctx.lineWidth=road*(hero?.945:.955);ctx.stroke();
+        path();ctx.strokeStyle='#3d4448';ctx.lineWidth=road*(hero ? .945 : .955);ctx.stroke();
         if(hero){
           path();ctx.strokeStyle='rgba(118,126,129,.18)';ctx.lineWidth=road*.68;ctx.stroke();
         }
@@ -96,7 +96,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
       const ax=a.x*scale+ox,ay=a.y*scale+oy,dx=(b.x-a.x)*scale,dy=(b.y-a.y)*scale;
       const ang=Math.atan2(dy,dx),cells=hero?8:6;
       ctx.save();ctx.translate(ax,ay);ctx.rotate(ang);
-      const across=road*.82,cellH=across/cells,cellW=Math.max(hero?4:5,road*(hero?.07:.10));
+      const across=road*.82,cellH=across/cells,cellW=Math.max(hero?4:5,road*(hero ? .07 : .10));
       for(let col=0;col<2;col++)for(let row=0;row<cells;row++){
         ctx.fillStyle=((col+row)&1)?'#202628':'#e8ebe7';
         ctx.fillRect((col-1)*cellW,-across/2+row*cellH,cellW+.6,cellH+.6);
