@@ -1,15 +1,18 @@
 import { GarageScene as CurrentGarageScene } from './GarageUiStabilityScene.js';
 
 export class GarageScene extends CurrentGarageScene {
-  _refreshSelection(){
-    super._refreshSelection();
-
-    const selected=this._thumbItems?.[this._selectedIndex];
-    if(!selected?.item||!selected?.bg||!this._thumbViewport)return;
-
-    const centered=this._thumbViewport.height/2-(selected.item.y+selected.bg.height/2);
-    this._scrollVelocity=0;
-    this._setThumbScroll(centered);
+  _createThumbItem(x,y,w,h,carId,spec,index){
+    const entry=super._createThumbItem(x,y,w,h,carId,spec,index);
+    entry?.hit?.on('pointerup',()=>{
+      if(this._selectedIndex!==index||this._isDraggingThumbs)return;
+      const selected=this._thumbItems?.[index]||entry;
+      if(!selected?.item||!selected?.bg||!this._thumbViewport)return;
+      const centered=this._thumbViewport.height/2-(selected.item.y+selected.bg.height/2);
+      this._scrollVelocity=0;
+      this.tweens?.killTweensOf?.(this);
+      this._setThumbScroll(centered);
+    });
+    return entry;
   }
 
   _buildHeroPanel(x,y,w,h){
