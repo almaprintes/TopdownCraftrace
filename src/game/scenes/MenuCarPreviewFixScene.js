@@ -96,7 +96,6 @@ export class MenuScene extends CurrentMenuScene {
     right=makeHeaderButton(right,154,'CONFIGURACIÓN','⚙',0x45dfff,()=>this.scene.start('SettingsScene'));
     makeHeaderButton(right,148,'INVENTARIO','▦',0xd8a73a,()=>this._openLobbyInventoryModal());
 
-    // El panel del coche no debe quedar por debajo de la nueva cabecera.
     const shiftCarCard=(node)=>{
       if(!node)return false;
       if(typeof node.text==='string'&&node.text.trim().toUpperCase()==='COCHE SELECCIONADO'){
@@ -131,7 +130,7 @@ export class MenuScene extends CurrentMenuScene {
     INVENTORY_IDS.forEach((id,i)=>{
       const item=GARAGE_ITEMS[id]||{},qty=Math.max(0,Number(garage.inventory?.[id])||0);
       const col=i%cols,row=Math.floor(i/cols),x=startX+col*(cardW+gap),y=startY+row*(cardH+gap);
-      root.add(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.98).setOrigin(0).setStrokeStyle(1,qty>0?0x355064:0x24323e,qty>0?.9:.55));
+      root.add(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.98).setOrigin(0).setStrokeStyle(1,qty>0?0x355064:0x24323e,qty>0 ? .9 : .55));
       root.add(this.add.text(x+cardW/2,y+9,item.icon||'◆',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'23px',color:qty>0?'#ffffff':'#65717c'}).setOrigin(.5,0));
       root.add(this.add.text(x+cardW/2,y+38,String(item.name||id).toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:qty>0?'#aebdca':'#667583',align:'center',wordWrap:{width:cardW-12}}).setOrigin(.5,0));
       root.add(this.add.text(x+cardW/2,y+cardH-27,`×${qty}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:qty>0?'#62ffb2':'#71808d'}).setOrigin(.5,0));
