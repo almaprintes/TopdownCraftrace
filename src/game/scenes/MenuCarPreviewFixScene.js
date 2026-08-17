@@ -1,5 +1,15 @@
 import { MenuScene as CurrentMenuScene } from './MenuTrackPresentationScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
+
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+
+function addEventFrame(scene,container,w,h,accent){
+  const g=scene.add.graphics(),x=-w/2,y=-h/2,c=10;
+  g.fillStyle(0x07131b,.94);g.lineStyle(2,accent,.82);
+  g.beginPath();g.moveTo(x+c,y);g.lineTo(x+w-c,y);g.lineTo(x+w,y+c);g.lineTo(x+w,y+h-c);g.lineTo(x+w-c,y+h);g.lineTo(x+c,y+h);g.lineTo(x,y+h-c);g.lineTo(x,y+c);g.closePath();g.fillPath();g.strokePath();
+  g.lineStyle(1,0xffffff,.05);g.strokeRect(x+5,y+5,w-10,h-10);g.fillStyle(accent,.78);g.fillRect(x+c,y+2,Math.max(48,w*.22),3);container.add(g);
+}
 
 export class MenuScene extends CurrentMenuScene {
   preload() {
@@ -24,6 +34,55 @@ export class MenuScene extends CurrentMenuScene {
     this._insetLobbySidePanels();
   }
 
+  _renderGlobalEventCard() {
+    const {width,height}=this.scale;
+    if(width<760)return;
+
+    const data=getCurrentRaceEvent();
+    const w=clamp(Math.floor(width*.13),220,242),h=clamp(Math.floor(height*.22),162,178),x=Math.floor(width*.11),y=Math.floor(height*.40);
+    const finished=!!data.finished;
+    const complete=!finished&&!!data.progress?.complete;
+    const accent=finished?0xd8a73a:(complete?0x39ff9a:0x35cfff);
+    const c=this.add.container(x,y).setDepth(24);this._ui?.add(c);addEventFrame(this,c,w,h,accent);
+    const top=-h/2,bottom=h/2;
+
+    if(finished){
+      c.add(this.add.text(0,top+13,'TEMPORADA COMPLETADA',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#f0c65a',letterSpacing:1,align:'center'}).setOrigin(.5,0));
+      c.add(this.add.text(0,top+43,'PILOTO\nDE ÉLITE',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'19px',fontStyle:'bold',color:'#fff',align:'center',lineSpacing:0}).setOrigin(.5,0));
+      c.add(this.add.text(0,top+94,'HAS COMPLETADO LOS 7 EVENTOS\nDE PROGRESIÓN',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#b7c4d0',align:'center',lineSpacing:1}).setOrigin(.5,0));
+      c.add(this.add.text(0,bottom-25,'7/7 EVENTOS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(.5,0));
+      return;
+    }
+
+    const event=data.event,progress=data.progress;
+    const reward=raceEventRewardLabel(event.reward);
+    const stage=`EVENTO ${data.index+1}/${data.total}`;
+    c.add(this.add.text(0,top+11,complete?'EVENTO COMPLETADO':stage,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:complete?'#62ffb2':'#6deaff',letterSpacing:1,align:'center'}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+34,event.title,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-24}}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+59,event.description.toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',fontStyle:'bold',color:'#aebdca',align:'center',lineSpacing:1,wordWrap:{width:w-24}}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+91,`PREMIO · ${reward}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'6px',fontStyle:'bold',color:'#f0c65a',align:'center',wordWrap:{width:w-22}}).setOrigin(.5,0));
+
+    const barW=w-30,barY=bottom-44;
+    c.add(this.add.rectangle(-barW/2,barY,barW,9,0x10202b,.95).setOrigin(0).setStrokeStyle(1,0xffffff,.12));
+    const ratio=Math.max(0,Math.min(1,progress.value/progress.target));
+    if(ratio>0)c.add(this.add.rectangle(-barW/2+2,barY+2,(barW-4)*ratio,5,complete?0x39ff9a:0x35cfff,.97).setOrigin(0));
+
+    if(complete){
+      const btn=this.add.rectangle(0,bottom-24,w-30,27,0x174b37,.98).setStrokeStyle(1,0x62ffb2,.8).setInteractive({useHandCursor:true});
+      c.add(btn);
+      const label=this.add.text(0,bottom-24,'RECLAMAR PREMIO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#ffffff',letterSpacing:1}).setOrigin(.5);
+      c.add(label);
+      btn.on('pointerover',()=>btn.setFillStyle(0x206448,.98));
+      btn.on('pointerout',()=>btn.setFillStyle(0x174b37,.98));
+      btn.on('pointerup',()=>{
+        const result=claimCurrentRaceEvent();
+        if(result?.ok)this.scene.restart();
+      });
+    }else{
+      c.add(this.add.text(0,bottom-26,`${progress.value}/${progress.target} ${progress.label}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#6deaff',align:'center'}).setOrigin(.5,0));
+    }
+  }
+
   _insetLobbySidePanels() {
     const ui = this._ui;
     const width = Number(this.scale?.width) || 0;
@@ -37,8 +96,8 @@ export class MenuScene extends CurrentMenuScene {
         const label = node.text.trim().toUpperCase();
         if (
           label === 'CIRCUITO SELECCIONADO' ||
-          label === 'EVENTO GLOBAL' ||
-          label === 'EVENTO COMPLETADO'
+          label.startsWith('EVENTO ') ||
+          label === 'TEMPORADA COMPLETADA'
         ) {
           const panel = node.parentContainer;
           if (panel && panel !== ui) {
