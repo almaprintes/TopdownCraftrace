@@ -4,7 +4,7 @@ Este documento complementa `PROJECT_HANDOFF.md` y el README. El código actual d
 
 ## Flujo de final de sesión
 
-- La escena activa de carrera se carga desde `RaceSessionFinalPolishScene.js`.
+- La escena activa de carrera se carga desde `RacePenaltyReportFixScene.js`, que hereda del flujo de recompensas y presentación final.
 - Los cofres no interrumpen la conducción: se acumulan durante la tanda y se presentan al finalizar sesión.
 - El jugador finaliza de forma controlada desde Pausa → `FINALIZAR SESIÓN`.
 - El cierre muestra primero recompensas/cofre y después el informe de sesión.
@@ -27,12 +27,12 @@ El catálogo tiene ocho materiales: Chatarra, Aleación, Goma, Compuesto, Disco 
 
 ## Penalización antiatajo
 
-La penalización antiatajo de +2.000 s ya modifica el tiempo real de vuelta mediante `lapStart`. `RaceSessionFinalPolishScene.js` añade además una marca por número de vuelta para que el informe indique explícitamente `+2.000 s` en la vuelta penalizada, sin volver a sumar la penalización.
+La penalización antiatajo es de +2.000 s. `RacePenaltyReportFixScene.js` la asocia a la vuelta concreta del histórico y persiste `rawLapMs`, `penaltyMs` y `penalized`. Para el informe y para reconciliar la mejor vuelta se usa el tiempo efectivo `rawLapMs + penaltyMs`. Por tanto una vuelta sancionada no puede figurar como récord usando su tiempo bruto. El informe muestra además `+2.000 s` junto a la vuelta penalizada.
 
 ## UI final de recompensas
 
-La ventana final se compactó para paisaje móvil: cofre más pequeño, rejilla 4×2 de materiales, metadatos compactos y botón `VER INFORME` dentro del alto visible. Mientras está abierta se mantiene el bloqueo de input de carrera implantado por `RaceSessionRewardsScene.js`.
+La ventana final está compactada para paisaje móvil: cofre más pequeño, rejilla 4×2 de materiales, metadatos compactos y botón `VER INFORME` dentro del alto visible. Mientras está abierta se mantiene el bloqueo de input de carrera implantado por `RaceSessionRewardsScene.js`.
 
 ## Nombre de circuito
 
-El circuito de karting principal se presenta en la UI y en el informe como `CIRCUITO ATLÁNTICO`. La clave/slug interna no cambia para preservar persistencia, récords y compatibilidad.
+El circuito importado principal tiene clave interna `track01` y nombre público `CIRCUITO ATLÁNTICO`. El `track.json` histórico aún contiene el nombre de importación, pero `trackPublicNames.js` centraliza el nombre público al arrancar el juego para que selector de circuitos, tarjeta del menú, carrera e informe compartan el mismo nombre sin tocar geometría ni cambiar la clave persistente. `karting-tenerife` conserva su nombre `KARTING TENERIFE`.
