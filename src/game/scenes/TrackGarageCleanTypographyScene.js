@@ -40,9 +40,9 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     const p=pts(track);if(p.length<3)return null;
     const hero=Number(w)>=800;
     const tier=hero?'hero':'thumb';
-    const renderW=hero?1280:640;
-    const renderH=hero?760:560;
-    const sig=`${track?.key}_${isDirt(track)?'dirt':'asphalt'}_${p.length}_${tier}_v2`;
+    const renderW=hero?1440:720;
+    const renderH=hero?860:620;
+    const sig=`${track?.key}_${isDirt(track)?'dirt':'asphalt'}_${p.length}_${tier}_v3`;
     const existing=this._premiumPreviewKeys.get(sig);
     if(existing&&this.textures.exists(existing))return existing;
     const key=`premium_track_${sig}`;
@@ -56,15 +56,15 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
       const xs=p.map(q=>q.x),ys=p.map(q=>q.y);
       const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
       const bw=Math.max(1,maxX-minX),bh=Math.max(1,maxY-minY);
-      const pad=Math.min(renderW,renderH)*(hero ? .105 : .115);
+      const pad=Math.min(renderW,renderH)*(hero?.105:.125);
       const scale=Math.min((renderW-pad*2)/bw,(renderH-pad*2)/bh);
       const ox=(renderW-bw*scale)/2-minX*scale,oy=(renderH-bh*scale)/2-minY*scale;
 
       const grass=ctx.createLinearGradient(0,0,renderW,renderH);
       grass.addColorStop(0,'#294d34');grass.addColorStop(.55,'#23452e');grass.addColorStop(1,'#183521');
       ctx.fillStyle=grass;ctx.fillRect(0,0,renderW,renderH);
-      ctx.globalAlpha=.10;ctx.fillStyle='#79a56f';
-      for(let y=0;y<renderH;y+=34){ctx.fillRect(0,y,renderW,1);}
+      ctx.globalAlpha=hero?.075:.04;ctx.fillStyle='#79a56f';
+      for(let y=0;y<renderH;y+=(hero?42:58)){ctx.fillRect(0,y,renderW,1);}
       ctx.globalAlpha=1;
 
       const path=()=>{
@@ -73,34 +73,38 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
         ctx.closePath();ctx.lineCap='round';ctx.lineJoin='round';
       };
       const rawWidth=Number(track?.trackWidth??track?.width??track?.meta?.trackWidth??160);
-      const road=Math.max(hero?16:11,rawWidth*scale);
+      const road=Math.max(hero?18:13,rawWidth*scale);
 
       if(isDirt(track)){
-        path();ctx.strokeStyle='rgba(3,10,8,.42)';ctx.lineWidth=road*1.34;ctx.stroke();
-        path();ctx.strokeStyle='#3f3528';ctx.lineWidth=road*1.16;ctx.stroke();
+        path();ctx.strokeStyle='rgba(3,10,8,.42)';ctx.lineWidth=road*1.32;ctx.stroke();
+        path();ctx.strokeStyle='#40382e';ctx.lineWidth=road*1.14;ctx.stroke();
         path();ctx.strokeStyle='#8b714f';ctx.lineWidth=road;ctx.stroke();
-        path();ctx.strokeStyle='rgba(223,191,140,.34)';ctx.lineWidth=Math.max(1.5,road*.045);ctx.setLineDash([Math.max(5,road*.22),Math.max(5,road*.18)]);ctx.stroke();ctx.setLineDash([]);
+        if(hero){
+          path();ctx.strokeStyle='rgba(223,191,140,.24)';ctx.lineWidth=Math.max(1.6,road*.035);ctx.setLineDash([Math.max(10,road*.34),Math.max(10,road*.30)]);ctx.stroke();ctx.setLineDash([]);
+        }
       }else{
-        path();ctx.strokeStyle='rgba(3,9,11,.48)';ctx.lineWidth=road*1.30;ctx.stroke();
-        path();ctx.strokeStyle='#141a1d';ctx.lineWidth=road*1.16;ctx.stroke();
-        path();ctx.strokeStyle='#f0f2ee';ctx.lineWidth=road*1.055;ctx.stroke();
-        path();ctx.strokeStyle='#343a3e';ctx.lineWidth=road*.93;ctx.stroke();
-        path();ctx.strokeStyle='rgba(90,100,104,.30)';ctx.lineWidth=road*.72;ctx.stroke();
+        path();ctx.strokeStyle='rgba(3,9,11,.50)';ctx.lineWidth=road*1.29;ctx.stroke();
+        path();ctx.strokeStyle='#171d20';ctx.lineWidth=road*1.15;ctx.stroke();
+        path();ctx.strokeStyle=hero?'rgba(214,220,218,.74)':'rgba(198,205,203,.58)';ctx.lineWidth=road*(hero?1.045:1.035);ctx.stroke();
+        path();ctx.strokeStyle='#3d4448';ctx.lineWidth=road*(hero?.945:.955);ctx.stroke();
+        if(hero){
+          path();ctx.strokeStyle='rgba(118,126,129,.18)';ctx.lineWidth=road*.68;ctx.stroke();
+        }
       }
 
       const a=p[0],b=p[1];
       const ax=a.x*scale+ox,ay=a.y*scale+oy,dx=(b.x-a.x)*scale,dy=(b.y-a.y)*scale;
-      const ang=Math.atan2(dy,dx),cells=8;
+      const ang=Math.atan2(dy,dx),cells=hero?8:6;
       ctx.save();ctx.translate(ax,ay);ctx.rotate(ang);
-      const across=road*.88,cellH=across/cells,cellW=Math.max(3,road*.075);
+      const across=road*.82,cellH=across/cells,cellW=Math.max(hero?4:5,road*(hero?.07:.10));
       for(let col=0;col<2;col++)for(let row=0;row<cells;row++){
-        ctx.fillStyle=((col+row)&1)?'#161b1d':'#f5f5f2';
-        ctx.fillRect((col-1)*cellW,-across/2+row*cellH,cellW+1,cellH+1);
+        ctx.fillStyle=((col+row)&1)?'#202628':'#e8ebe7';
+        ctx.fillRect((col-1)*cellW,-across/2+row*cellH,cellW+.6,cellH+.6);
       }
       ctx.restore();
 
       const vignette=ctx.createRadialGradient(renderW/2,renderH/2,Math.min(renderW,renderH)*.18,renderW/2,renderH/2,Math.max(renderW,renderH)*.68);
-      vignette.addColorStop(.55,'rgba(0,0,0,0)');vignette.addColorStop(1,'rgba(0,0,0,.18)');ctx.fillStyle=vignette;ctx.fillRect(0,0,renderW,renderH);
+      vignette.addColorStop(.55,'rgba(0,0,0,0)');vignette.addColorStop(1,hero?'rgba(0,0,0,.16)':'rgba(0,0,0,.12)');ctx.fillStyle=vignette;ctx.fillRect(0,0,renderW,renderH);
 
       this.textures.addCanvas(key,canvas);
       this._premiumPreviewKeys.set(sig,key);
@@ -114,7 +118,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     const accent=this.add.rectangle(0,0,7,h,selected?0x2bff88:0x2b7bff,selected?.95:.70).setOrigin(0);
     const thumbW=84,thumbH=h-14;const thumbBg=this.add.rectangle(14,7,thumbW,thumbH,0x071016,1).setOrigin(0);
     item.add([bg,accent,thumbBg]);
-    const key=this._displayPreview(t,420,360);if(key&&this.textures.exists(key)){const im=this.add.image(14+thumbW/2,h/2,key);im.setScale(Math.min((thumbW-4)/im.width,(thumbH-4)/im.height)).setAlpha(selected?1:.88);item.add(im);}
+    const key=this._displayPreview(t,420,360);if(key&&this.textures.exists(key)){const im=this.add.image(14+thumbW/2,h/2,key);im.setScale(Math.min((thumbW-4)/im.width,(thumbH-4)/im.height)).setAlpha(selected?1:.90);item.add(im);}
 
     const tx=110,available=Math.max(110,w-tx-12),label=String(t.name||t.key).toUpperCase();
     const nameSize=label.length>18?11:label.length>14?12:13;
