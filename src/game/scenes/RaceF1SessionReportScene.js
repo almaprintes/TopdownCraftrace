@@ -66,10 +66,12 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _reportInnerHtml(r){
-    let html=super._reportInnerHtml?.(r)||'';
+    const html=super._reportInnerHtml?.(r)||'';
     const replacement=`<h3>Vueltas · Sectores</h3>${this._f1LapTable(r)}`;
-    html=html.replace(/<h3>Vueltas<\/h3><div class="laps">[\s\S]*?<\/div>(?=<div class="insight">)/,replacement);
-    return html;
+    const start=html.indexOf('<h3>Vueltas</h3>');
+    const end=start>=0?html.indexOf('<div class="insight">',start):-1;
+    if(start>=0&&end>start)return `${html.slice(0,start)}${replacement}${html.slice(end)}`;
+    return html.replace(/<h3>Vueltas<\/h3>\s*<div class="laps">[\s\S]*?<\/div>\s*(?=<div class="insight">)/,replacement);
   }
 
   _reportCss(){
