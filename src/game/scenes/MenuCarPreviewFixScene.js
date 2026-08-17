@@ -29,8 +29,8 @@ export class MenuScene extends CurrentMenuScene {
     const width = Number(this.scale?.width) || 0;
     if (!ui || !width) return;
 
-    const inset = 16;
-    const panels = new Set();
+    const baseInset = 16;
+    const panels = new Map();
     const visit = (node) => {
       if (!node) return;
       if (typeof node.text === 'string') {
@@ -41,7 +41,9 @@ export class MenuScene extends CurrentMenuScene {
           label === 'EVENTO COMPLETADO'
         ) {
           const panel = node.parentContainer;
-          if (panel && panel !== ui) panels.add(panel);
+          if (panel && panel !== ui) {
+            panels.set(panel, label === 'CIRCUITO SELECCIONADO' ? baseInset + 1 : baseInset);
+          }
         }
       }
       if (Array.isArray(node.list)) {
@@ -50,7 +52,7 @@ export class MenuScene extends CurrentMenuScene {
     };
     visit(ui);
 
-    for (const panel of panels) {
+    for (const [panel, inset] of panels) {
       const bounds = panel.getBounds?.();
       if (!bounds) continue;
       if (bounds.left < inset) panel.x += inset - bounds.left;
