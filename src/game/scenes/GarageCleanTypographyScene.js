@@ -58,7 +58,7 @@ export class GarageScene extends CurrentGarageScene {
       const col=i%cols,row=Math.floor(i/cols);
       const x=startX+col*(cardW+gap),y=startY+row*(cardH+gap);
       const qty=Math.max(0,Number(garage.inventory?.[id])||0);
-      root.add(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.98).setOrigin(0).setStrokeStyle(1,qty>0?0x355064:0x24323e,qty>0?.9:.55));
+      root.add(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.98).setOrigin(0).setStrokeStyle(1,qty>0?0x355064:0x24323e,qty>0 ? .9 : .55));
       root.add(this.add.text(x+cardW/2,y+10,item.icon||'◆',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'24px',color:qty>0?'#ffffff':'#65717c'}).setOrigin(.5,0));
       root.add(this.add.text(x+cardW/2,y+39,String(item.name||id).toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:qty>0?'#aebdca':'#667583',align:'center',wordWrap:{width:cardW-12}}).setOrigin(.5,0));
       root.add(this.add.text(x+cardW/2,y+cardH-28,`×${qty}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'17px',fontStyle:'bold',color:qty>0?'#62ffb2':'#71808d'}).setOrigin(.5,0));
