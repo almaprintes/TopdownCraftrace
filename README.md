@@ -4,6 +4,306 @@ Estado real del proyecto a **17 de agosto de 2026**.
 
 Este README se mantiene como documento de seguridad y continuidad: debe reflejar el estado funcional real del juego, las decisiones ya tomadas, los sistemas implantados, los problemas conocidos y los siguientes pasos. No debe describir funciones como terminadas si todavía están pendientes de probar o pulir.
 
+# 🚢 SHIPATON 2026 — OBJETIVO OFICIAL DE LANZAMIENTO
+
+> **Prioridad del proyecto desde el 17 de agosto de 2026:** convertir Top Down RACE en una versión 1.0 comercial, publicarla en una tienda móvil válida y presentar el juego a **RevenueCat Shipaton 2026**.
+>
+> Toda instancia, agente o colaborador que trabaje sobre este repositorio debe conocer este objetivo y evitar cambios que pongan en riesgo el lanzamiento.
+
+## Fuente de verdad y enlaces oficiales
+
+- Sitio oficial: https://www.shipaton.com/
+- Reglas / concurso: https://revenuecat-shipaton-2026.devpost.com/
+- Recursos RevenueCat: https://www.shipaton.com/resources
+
+Si existe cualquier contradicción entre este README y unas reglas oficiales posteriores, **mandan las reglas oficiales vigentes** y este documento deberá actualizarse.
+
+## Ventana oficial del concurso
+
+- Inicio de publicaciones elegibles: **1 de agosto de 2026**.
+- Cierre oficial: **30 de septiembre de 2026 a las 23:45, hora del Pacífico**.
+- La primera versión pública en una tienda elegible debe publicarse dentro de esa ventana.
+- Haber desarrollado el juego antes del 1 de agosto **no lo invalida**; lo importante es que no se hubiera lanzado públicamente antes en una tienda elegible.
+- Tiendas/plataformas válidas indicadas por Shipaton: **App Store, Google Play y Samsung Galaxy Store** para apps iOS/iPadOS/macOS/Android según corresponda.
+- La aplicación debe poder ser evaluada públicamente; nuestra build comercial debe estar disponible también para los jueces/mercado requerido por el concurso.
+
+### Deadline interno de Top Down RACE
+
+**NO usar el 30 de septiembre como fecha objetivo de publicación.**
+
+Nuestro objetivo es:
+
+- **10 de septiembre:** build de tienda lista.
+- **15 de septiembre como máximo:** Top Down RACE 1.0 publicado o enviado con margen suficiente para revisión.
+- **29 de septiembre:** candidatura Shipaton completamente enviada.
+- **30 de septiembre:** solo colchón de emergencia.
+
+## Vía de cumplimiento RevenueCat elegida
+
+Para evitar cualquier ambigüedad de elegibilidad, Top Down RACE debe integrar:
+
+**RevenueCat SDK + al menos una compra real dentro de la app (IAP) gestionada mediante RevenueCat.**
+
+No considerar el requisito de Shipaton cumplido hasta que:
+
+1. RevenueCat esté integrado en la build nativa.
+2. Exista al menos un producto real configurado en la tienda.
+3. La compra pueda realizarse/restaurarse correctamente en pruebas.
+4. RevenueCat registre correctamente el entitlement/compra.
+5. El flujo esté probado en dispositivo real.
+
+AdMob puede seguir formando parte de la monetización del juego, pero **AdMob por sí solo no satisface nuestro camino de cumplimiento Shipaton**.
+
+## Monetización objetivo
+
+El diseño debe ser compatible con un juego gratuito y evitar pay-to-win agresivo.
+
+Arquitectura prevista:
+
+- juego base gratuito;
+- anuncios recompensados para obtener recursos/monedas o acelerar progresión de forma opcional;
+- compra mediante RevenueCat;
+- posibilidad de producto tipo `Eliminar anuncios` / versión PRO;
+- posibles packs de moneda o contenido, solo si quedan bien integrados y no comprometen el calendario;
+- restauración de compras obligatoria donde corresponda;
+- consentimiento, privacidad y reglamentos europeos terminados antes del lanzamiento.
+
+### Catvertising Award
+
+**No asumir que Top Down RACE compite en Catvertising únicamente por usar AdMob.**
+
+Esta categoría está específicamente orientada al uso creativo de **RevenueCat Ads**. Solo se añadirá como categoría objetivo si RevenueCat Ads se integra de verdad y tiene sentido para el producto. No cambiar la arquitectura estable únicamente por perseguir esta categoría sin una decisión explícita.
+
+## Categorías Shipaton objetivo
+
+### 1. 🏁 Best Game Award — PRIORIDAD PRINCIPAL
+
+Top Down RACE debe presentarse principalmente como juego móvil de carreras.
+
+Áreas a maximizar:
+
+- diversión inmediata al conducir;
+- controles sólidos en móvil;
+- personalidad/diferenciación;
+- progresión y rejugabilidad;
+- circuitos variados;
+- dirección artística coherente;
+- sonido, feedback y sensación de velocidad;
+- monetización apropiada para el género;
+- estabilidad y pulido general.
+
+### 2. 🎨 RevenueCat Design Award — OBJETIVO SECUNDARIO
+
+El acabado visual cuenta. Dar especial importancia a:
+
+- selector de circuitos;
+- previews de pista;
+- HUD;
+- garaje;
+- Factory;
+- estadísticas y resultados;
+- jerarquía visual;
+- animaciones y transiciones;
+- consistencia gráfica en móvil horizontal;
+- legibilidad en dispositivo real.
+
+### 3. 💰 HAMM Award — OBJETIVO SECUNDARIO
+
+Debe existir una estrategia de monetización coherente, no anuncios/compras colocados al azar.
+
+El loop deseado es:
+
+`CORRER → GANAR RECURSOS → MEJORAR/FUSIONAR → PROGRESAR → CORRER MEJOR`
+
+La monetización debe complementar este loop sin romperlo.
+
+### 4. 📣 #BuildInPublic Award — OBJETIVO SECUNDARIO
+
+Documentar públicamente decisiones y evolución reales del proyecto cuando sea conveniente:
+
+- problemas de físicas y cómo se solucionaron;
+- construcción/importación de circuitos;
+- evolución visual;
+- IA de rivales;
+- sistemas de drop/crafting;
+- diseño de monetización;
+- errores encontrados en pruebas reales;
+- feedback recibido y cambios derivados de ese feedback.
+
+No fabricar una historia artificial: usar el desarrollo real como material.
+
+## Entregables obligatorios de la candidatura
+
+Antes de considerar Shipaton terminado, comprobar uno por uno:
+
+- [ ] Descripción textual clara de características y funcionamiento.
+- [ ] Demo pública en **YouTube o Vimeo**.
+- [ ] Vídeo con el juego funcionando en el dispositivo/plataforma para el que se creó.
+- [ ] **Máximo 2 minutos de metraje esencial**; los jueces no están obligados a ver más.
+- [ ] No usar música, marcas o material de terceros sin los derechos necesarios.
+- [ ] URL de la app completamente publicada en una tienda válida.
+- [ ] Icono de aplicación **1024 × 1024 px**.
+- [ ] Al menos una captura **1179 × 2556 px**, sin marco de dispositivo, conforme al requisito de Shipaton.
+- [ ] Acceso para jueces a las funciones premium mediante prueba gratuita o código promocional cuando proceda.
+- [ ] RevenueCat integrado y compra real comprobada.
+- [ ] Bundle/package ID definitivo y consistente entre build, store y RevenueCat.
+- [ ] Información de candidatura y material principal preparados también en inglés para una evaluación internacional clara.
+
+## Estrategia del vídeo de 2 minutos
+
+El vídeo no será una grabación improvisada. Debe vender Top Down RACE como producto terminado.
+
+Orden recomendado:
+
+1. **0–10 s:** identidad del juego y gancho inmediato.
+2. **10–50 s:** conducción real y sensación de juego.
+3. **50–80 s:** circuitos/modos/progresión.
+4. **80–105 s:** garaje, crafting, estadísticas y economía.
+5. **105–120 s:** monetización/RevenueCat + cierre memorable.
+
+El vídeo debe mostrar gameplay real en dispositivo. El jurado debe comprender el juego aunque no lo descargue inmediatamente.
+
+## Hitos internos Shipaton
+
+### 17–23 agosto — GAMEPLAY
+
+Objetivo: congelar y pulir la mecánica fundamental.
+
+- conducción;
+- controles;
+- físicas;
+- colisiones;
+- vueltas/checkpoints;
+- cronometraje;
+- Supervivencia/CPU;
+- estabilidad.
+
+**23 agosto: gameplay base cerrado.**
+
+### 24–30 agosto — PRODUCTO / UI
+
+- selector de circuitos;
+- previews;
+- progresión;
+- resultados;
+- récords;
+- estadísticas;
+- garaje/Factory;
+- economía básica;
+- tutorial/ayuda;
+- sonido y feedback;
+- ajustes;
+- eliminación de debug visual.
+
+**30 agosto: experiencia de producto cerrada.**
+
+### 31 agosto–6 septiembre — MONETIZACIÓN
+
+- RevenueCat;
+- producto IAP real;
+- compra/restauración;
+- AdMob/rewarded;
+- economía final;
+- consentimiento europeo/RGPD;
+- privacidad;
+- QA de monetización.
+
+**6 septiembre: monetización cerrada.**
+
+### 7–10 septiembre — STORE BUILD
+
+- build nativa;
+- icono;
+- splash;
+- orientación;
+- permisos;
+- package/bundle ID;
+- versionado;
+- pruebas en dispositivo real;
+- crash testing;
+- assets de store.
+
+**10 septiembre: build candidata a tienda.**
+
+### 10–15 septiembre — PUBLICACIÓN 1.0
+
+Objetivo máximo: **Top Down RACE 1.0 publicado/en revisión con margen real de aprobación**.
+
+No introducir features grandes durante esta fase.
+
+### 15–25 septiembre — FEEDBACK Y CRECIMIENTO
+
+- corregir bugs reales;
+- sacar updates pequeños y seguros;
+- recopilar feedback;
+- observar retención y comportamiento;
+- documentar #BuildInPublic;
+- mejorar onboarding/pulido si los datos lo justifican.
+
+### 25–28 septiembre — PITCH FINAL
+
+- vídeo de ≤2 min;
+- capturas definitivas;
+- icono definitivo;
+- descripción;
+- texto de categorías;
+- datos reales de lanzamiento;
+- revisión de requisitos.
+
+### 29 septiembre — SUBMIT
+
+**Candidatura enviada y verificada.**
+
+### 30 septiembre — EMERGENCIA
+
+No reservar trabajo normal para este día.
+
+## Regla de alcance hasta Shipaton
+
+Hasta haber enviado la candidatura:
+
+> **PRIMERO TERMINAR Y PULIR. DESPUÉS AMPLIAR.**
+
+Una nueva idea solo entra en la 1.0 si cumple al menos una de estas condiciones:
+
+- arregla un bug;
+- mejora claramente el gameplay principal;
+- es necesaria para publicar;
+- es necesaria para cumplir Shipaton;
+- mejora sustancialmente una categoría objetivo sin poner en peligro el calendario.
+
+Todo lo demás se mueve a **v1.1 / post-Shipaton**.
+
+Evitar especialmente:
+
+- reescrituras completas de sistemas que ya funcionan;
+- cambios simultáneos de física + UI + economía;
+- añadir modos grandes nuevos;
+- experimentar en `main` con cambios destructivos;
+- romper persistencia/localStorage;
+- dejar debug/overlays internos visibles;
+- introducir assets o dependencias con derechos dudosos;
+- esperar al último día para Store Review, RevenueCat o la candidatura.
+
+## Estado Shipaton a 17 de agosto de 2026
+
+- [x] Proyecto seleccionado: **Top Down RACE**.
+- [x] Repositorio identificado: `almaprintes/TopdownCraftrace`.
+- [x] Categoría principal decidida: **Best Game Award**.
+- [x] Categorías secundarias previstas: **RevenueCat Design Award, HAMM y #BuildInPublic**.
+- [x] Hitos internos definidos.
+- [ ] Registro/candidatura final completada en Devpost.
+- [ ] RevenueCat integrado.
+- [ ] IAP real configurado y probado.
+- [ ] AdMob/rewarded validado en build comercial.
+- [ ] Consentimiento europeo/RGPD terminado.
+- [ ] Build nativa iOS/Android lista.
+- [ ] Store listing preparada.
+- [ ] 1.0 publicada.
+- [ ] Vídeo final de ≤2 minutos.
+- [ ] Capturas/icono definitivos.
+- [ ] Candidatura enviada.
+
 ## Stack y ejecución
 
 - **Vite 6**
