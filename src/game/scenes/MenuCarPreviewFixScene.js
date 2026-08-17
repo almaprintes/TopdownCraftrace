@@ -18,4 +18,43 @@ export class MenuScene extends CurrentMenuScene {
     // podía quedarse así si el loader ya estaba ocupado.
     this.load.image(key, `assets/skins/${spec.skin}`);
   }
+
+  renderUI() {
+    super.renderUI();
+    this._insetLobbySidePanels();
+  }
+
+  _insetLobbySidePanels() {
+    const ui = this._ui;
+    const width = Number(this.scale?.width) || 0;
+    if (!ui || !width) return;
+
+    const inset = 16;
+    const panels = new Set();
+    const visit = (node) => {
+      if (!node) return;
+      if (typeof node.text === 'string') {
+        const label = node.text.trim().toUpperCase();
+        if (
+          label === 'CIRCUITO SELECCIONADO' ||
+          label === 'EVENTO GLOBAL' ||
+          label === 'EVENTO COMPLETADO'
+        ) {
+          const panel = node.parentContainer;
+          if (panel && panel !== ui) panels.add(panel);
+        }
+      }
+      if (Array.isArray(node.list)) {
+        for (const child of node.list) visit(child);
+      }
+    };
+    visit(ui);
+
+    for (const panel of panels) {
+      const bounds = panel.getBounds?.();
+      if (!bounds) continue;
+      if (bounds.left < inset) panel.x += inset - bounds.left;
+      if (bounds.right > width - inset) panel.x -= bounds.right - (width - inset);
+    }
+  }
 }
