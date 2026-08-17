@@ -5,6 +5,7 @@ import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage } from '../garage/garageStore.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const INVENTORY_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
 
 function addEventFrame(scene,container,w,h,accent){
   const g=scene.add.graphics(),x=-w/2,y=-h/2,c=10;
@@ -29,17 +30,17 @@ export class MenuScene extends CurrentMenuScene {
 
   renderUI() {
     super.renderUI();
-    this._renderTopEconomyHeader();
+    this._renderTopLobbyHeader();
     this._insetLobbySidePanels();
   }
 
-  _renderTopEconomyHeader(){
+  _renderTopLobbyHeader(){
     const ui=this._ui;
     const {width}=this.scale;
     if(!ui||!width)return;
 
-    try{this._coinHeader?.destroy?.(true);}catch{}
-    this._coinHeader=null;
+    try{this._topLobbyHeader?.destroy?.(true);}catch{}
+    this._topLobbyHeader=null;
 
     let logo=null;
     const visit=(node)=>{
@@ -47,42 +48,102 @@ export class MenuScene extends CurrentMenuScene {
       const key=String(node?.texture?.key||'');
       if(/logo/i.test(key)){
         const b=node.getBounds?.();
-        if(b&&(!logo||b.width*b.height>logo.bounds.width*logo.bounds.height))logo={node,bounds:b};
+        if(b&&(!logo||b.width*b.height>logo.bounds.width*logo.bounds.height))logo={node,bounds:b,key};
       }
       if(Array.isArray(node.list))for(const child of node.list)visit(child);
     };
     visit(ui);
 
+    const barH=58;
+    const root=this.add.container(0,0).setDepth(500);
+    ui.add(root);
+    this._topLobbyHeader=root;
+
+    const bg=this.add.rectangle(0,0,width,barH,0x050c14,.95).setOrigin(0).setInteractive();
+    root.add(bg);
+    const line=this.add.graphics();
+    line.fillStyle(0x45dfff,.46);line.fillRect(0,barH-2,width,1);
+    line.fillStyle(0xd8a73a,.7);line.fillRect(0,0,Math.min(250,width*.18),2);
+    root.add(line);
+
+    if(logo?.key&&this.textures.exists(logo.key)){
+      try{logo.node.setVisible(false);}catch{}
+      const img=this.add.image(52,barH/2,logo.key).setOrigin(.5);
+      const s=Math.min(50/(img.width||1),50/(img.height||1));
+      img.setScale(s);
+      root.add(img);
+    }
+
     const garage=loadGarage();
     const coins=Math.max(0,Math.floor(Number(garage?.coins)||0));
-    const pillW=154,pillH=34;
-    const logoBounds=logo?.bounds;
-    const x=logoBounds
-      ? clamp(Math.round(logoBounds.right+pillW/2+12),pillW/2+16,width-pillW/2-16)
-      : clamp(Math.round(width*.63),pillW/2+16,width-pillW/2-16);
-    const y=logoBounds
-      ? Math.round(logoBounds.centerY)
-      : 38;
+    const coinX=112;
+    root.add(this.add.text(coinX,15,'MONEDAS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#a5b2bf',letterSpacing:1}).setOrigin(0,.5));
+    root.add(this.add.text(coinX,37,'◈',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'18px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(0,.5));
+    root.add(this.add.text(coinX+25,37,String(coins),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'18px',fontStyle:'bold',color:'#ffffff'}).setOrigin(0,.5));
 
-    const c=this.add.container(x,y).setDepth(80);
-    ui.add(c);
-    this._coinHeader=c;
+    const makeHeaderButton=(right,w,label,icon,accent,onClick)=>{
+      const x=right-w;
+      const hit=this.add.rectangle(x,9,w,40,0x0b1822,.92).setOrigin(0).setStrokeStyle(1,accent,.5).setInteractive({useHandCursor:true});
+      const t=this.add.text(x+w/2,29,`${icon}  ${label}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#ffffff',letterSpacing:.5}).setOrigin(.5);
+      root.add([hit,t]);
+      hit.on('pointerover',()=>hit.setFillStyle(0x122839,.98));
+      hit.on('pointerout',()=>hit.setFillStyle(0x0b1822,.92));
+      hit.on('pointerup',onClick);
+      return x-10;
+    };
 
-    const bg=this.add.graphics();
-    const left=-pillW/2,top=-pillH/2,ch=8;
-    bg.fillStyle(0x07131b,.96);
-    bg.lineStyle(1,0xd8a73a,.78);
-    bg.beginPath();
-    bg.moveTo(left+ch,top);bg.lineTo(left+pillW-ch,top);bg.lineTo(left+pillW,top+ch);
-    bg.lineTo(left+pillW,top+pillH-ch);bg.lineTo(left+pillW-ch,top+pillH);
-    bg.lineTo(left+ch,top+pillH);bg.lineTo(left,top+pillH-ch);bg.lineTo(left,top+ch);
-    bg.closePath();bg.fillPath();bg.strokePath();
-    bg.fillStyle(0xd8a73a,.9);bg.fillRect(left+8,top+2,36,2);
-    c.add(bg);
+    let right=width-14;
+    right=makeHeaderButton(right,154,'CONFIGURACIÓN','⚙',0x45dfff,()=>this.scene.start('SettingsScene'));
+    makeHeaderButton(right,148,'INVENTARIO','▦',0xd8a73a,()=>this._openLobbyInventoryModal());
 
-    c.add(this.add.text(left+15,-1,'◈',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'19px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(0,.5));
-    c.add(this.add.text(left+42,-9,'MONEDAS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',fontStyle:'bold',color:'#8f9eab',letterSpacing:1}).setOrigin(0,.5));
-    c.add(this.add.text(left+42,6,String(coins),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'15px',fontStyle:'bold',color:'#ffffff'}).setOrigin(0,.5));
+    // El panel del coche no debe quedar por debajo de la nueva cabecera.
+    const shiftCarCard=(node)=>{
+      if(!node)return false;
+      if(typeof node.text==='string'&&node.text.trim().toUpperCase()==='COCHE SELECCIONADO'){
+        const panel=node.parentContainer;
+        const b=panel?.getBounds?.();
+        if(panel&&b&&b.top<barH+7)panel.y+=barH+7-b.top;
+        return true;
+      }
+      if(Array.isArray(node.list))for(const child of node.list)if(shiftCarCard(child))return true;
+      return false;
+    };
+    shiftCarCard(ui);
+  }
+
+  _openLobbyInventoryModal(){
+    if(this._lobbyInventoryModal?.scene)return;
+    const {width,height}=this.scale;
+    const garage=loadGarage();
+    const panelW=Math.min(width-40,760),panelH=Math.min(height-32,390),cx=width/2,cy=height/2;
+    const root=this.add.container(0,0).setDepth(15000);
+    this._ui?.add(root);
+    this._lobbyInventoryModal=root;
+
+    const veil=this.add.rectangle(0,0,width,height,0x02070d,.84).setOrigin(0).setInteractive();
+    root.add(veil);
+    root.add(this.add.rectangle(cx,cy,panelW,panelH,0x08131d,.995).setStrokeStyle(2,0x45dfff,.75));
+    root.add(this.add.text(cx,cy-panelH/2+18,'INVENTARIO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'24px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,cy-panelH/2+54,`◈ ${Math.max(0,Math.floor(Number(garage.coins)||0))} MONEDAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'14px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(.5,0));
+
+    const cols=4,gap=9,pad=22,gridW=panelW-pad*2,cardW=(gridW-gap*(cols-1))/cols;
+    const cardH=Math.min(88,(panelH-136-gap)/2),startX=cx-gridW/2,startY=cy-panelH/2+91;
+    INVENTORY_IDS.forEach((id,i)=>{
+      const item=GARAGE_ITEMS[id]||{},qty=Math.max(0,Number(garage.inventory?.[id])||0);
+      const col=i%cols,row=Math.floor(i/cols),x=startX+col*(cardW+gap),y=startY+row*(cardH+gap);
+      root.add(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.98).setOrigin(0).setStrokeStyle(1,qty>0?0x355064:0x24323e,qty>0?.9:.55));
+      root.add(this.add.text(x+cardW/2,y+9,item.icon||'◆',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'23px',color:qty>0?'#ffffff':'#65717c'}).setOrigin(.5,0));
+      root.add(this.add.text(x+cardW/2,y+38,String(item.name||id).toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:qty>0?'#aebdca':'#667583',align:'center',wordWrap:{width:cardW-12}}).setOrigin(.5,0));
+      root.add(this.add.text(x+cardW/2,y+cardH-27,`×${qty}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:qty>0?'#62ffb2':'#71808d'}).setOrigin(.5,0));
+    });
+
+    const btnY=cy+panelH/2-27;
+    const closeBg=this.add.rectangle(cx,btnY,180,34,0x153244,.98).setStrokeStyle(1,0x45dfff,.65).setInteractive({useHandCursor:true});
+    const closeText=this.add.text(cx,btnY,'CERRAR',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff',letterSpacing:1}).setOrigin(.5);
+    root.add([closeBg,closeText]);
+    const close=()=>{try{root.destroy(true);}catch{} if(this._lobbyInventoryModal===root)this._lobbyInventoryModal=null;};
+    closeBg.on('pointerup',close);
+    veil.on('pointerup',close);
   }
 
   _renderGlobalEventCard() {
