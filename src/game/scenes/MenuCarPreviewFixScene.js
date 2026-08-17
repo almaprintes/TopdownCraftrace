@@ -2,6 +2,7 @@ import { MenuScene as CurrentMenuScene } from './MenuTrackPresentationScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
+import { loadGarage } from '../garage/garageStore.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
@@ -28,7 +29,60 @@ export class MenuScene extends CurrentMenuScene {
 
   renderUI() {
     super.renderUI();
+    this._renderTopEconomyHeader();
     this._insetLobbySidePanels();
+  }
+
+  _renderTopEconomyHeader(){
+    const ui=this._ui;
+    const {width}=this.scale;
+    if(!ui||!width)return;
+
+    try{this._coinHeader?.destroy?.(true);}catch{}
+    this._coinHeader=null;
+
+    let logo=null;
+    const visit=(node)=>{
+      if(!node)return;
+      const key=String(node?.texture?.key||'');
+      if(/logo/i.test(key)){
+        const b=node.getBounds?.();
+        if(b&&(!logo||b.width*b.height>logo.bounds.width*logo.bounds.height))logo={node,bounds:b};
+      }
+      if(Array.isArray(node.list))for(const child of node.list)visit(child);
+    };
+    visit(ui);
+
+    const garage=loadGarage();
+    const coins=Math.max(0,Math.floor(Number(garage?.coins)||0));
+    const pillW=154,pillH=34;
+    const logoBounds=logo?.bounds;
+    const x=logoBounds
+      ? clamp(Math.round(logoBounds.right+pillW/2+12),pillW/2+16,width-pillW/2-16)
+      : clamp(Math.round(width*.63),pillW/2+16,width-pillW/2-16);
+    const y=logoBounds
+      ? Math.round(logoBounds.centerY)
+      : 38;
+
+    const c=this.add.container(x,y).setDepth(80);
+    ui.add(c);
+    this._coinHeader=c;
+
+    const bg=this.add.graphics();
+    const left=-pillW/2,top=-pillH/2,ch=8;
+    bg.fillStyle(0x07131b,.96);
+    bg.lineStyle(1,0xd8a73a,.78);
+    bg.beginPath();
+    bg.moveTo(left+ch,top);bg.lineTo(left+pillW-ch,top);bg.lineTo(left+pillW,top+ch);
+    bg.lineTo(left+pillW,top+pillH-ch);bg.lineTo(left+pillW-ch,top+pillH);
+    bg.lineTo(left+ch,top+pillH);bg.lineTo(left,top+pillH-ch);bg.lineTo(left,top+ch);
+    bg.closePath();bg.fillPath();bg.strokePath();
+    bg.fillStyle(0xd8a73a,.9);bg.fillRect(left+8,top+2,36,2);
+    c.add(bg);
+
+    c.add(this.add.text(left+15,-1,'◈',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'19px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(0,.5));
+    c.add(this.add.text(left+42,-9,'MONEDAS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',fontStyle:'bold',color:'#8f9eab',letterSpacing:1}).setOrigin(0,.5));
+    c.add(this.add.text(left+42,6,String(coins),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'15px',fontStyle:'bold',color:'#ffffff'}).setOrigin(0,.5));
   }
 
   _renderGlobalEventCard() {
