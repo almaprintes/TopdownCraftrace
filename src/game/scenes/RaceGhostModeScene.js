@@ -159,20 +159,13 @@ export class RaceScene extends CurrentRaceScene{
 
   _ghostControlsLayout(){
     const w=Number(this.scale?.width||1280),h=Number(this.scale?.height||720);
-    // Anchor the ghost block to the real minimap bounds so it reads as part of that HUD cluster.
-    // Keep the old responsive coordinates as a safe fallback if the minimap frame is unavailable.
-    let x=Math.max(120,w-154);
-    let hudY=clamp(Math.round(h*.305),188,224);
-    let controlWidth=220;
-    try{
-      const b=this.minimapSportFrame?.getBounds?.();
-      if(b&&Number.isFinite(b.centerX)&&Number.isFinite(b.bottom)&&Number.isFinite(b.width)&&b.width>0){
-        x=clamp(Math.round(b.centerX),120,w-120);
-        hudY=clamp(Math.round(b.bottom+4),70,h-86);
-        controlWidth=clamp(Math.round(b.width-8),220,280);
-      }
-    }catch{}
-    return {x,hudY,buttonY:hudY+32,controlWidth};
+    // Keep this HUD block in the clear strip directly below the minimap and above the pedals.
+    // Do not derive its position from minimapSportFrame.getBounds(): that container can include
+    // other HUD children and produced a false lower bound on iPhone landscape.
+    const x=clamp(Math.round(w*.84),220,w-180);
+    const hudY=clamp(Math.round(h*.43),220,270);
+    const controlWidth=230;
+    return {x,hudY,buttonY:hudY+42,controlWidth};
   }
 
   _positionGhostControls(){
