@@ -149,8 +149,6 @@ export class RaceScene extends CurrentRaceScene {
       .filter(([id,n])=>GARAGE_ITEMS[id]&&Number(n)>0)
       .sort((a,b)=>Number(b[1])-Number(a[1]));
 
-    // One visual chest represents the whole session tier. Rewards remain exactly
-    // as granted by the existing economy (including every 5-lap bonus).
     const chestTier=rewardedLaps>=5?Math.floor(rewardedLaps/5)*5:0;
     const hasChest=chestTier>=5;
 
@@ -202,7 +200,7 @@ export class RaceScene extends CurrentRaceScene {
 
     const stop=(e)=>{e.stopPropagation?.();};
     for(const type of ['pointerdown','pointerup','mousedown','mouseup','click','touchstart','touchend']){
-      root.addEventListener(type,stop,true);
+      root.addEventListener(type,stop,false);
     }
 
     const reveal=()=>{
