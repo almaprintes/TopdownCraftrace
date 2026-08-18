@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuAdminLogoRestoreScene.js';
-import { RaceScene } from './scenes/RaceKartingTenerifePaddockScene.js';
+import { RaceScene } from './scenes/RaceAuthoredEnvironmentScene.js';
 import { UpgradeShopScene } from './scenes/UpgradeWorkshopUnifiedStyleScene.js';
 import { GarageScene } from './scenes/GarageCleanTypographyScene.js';
 import { SettingsScene } from './scenes/SettingsHelpTutorialScene.js';
@@ -11,7 +11,7 @@ import { CarEditorScene } from './scenes/CarEditorSpeedConsistencyScene.js';
 import { TrackEditorScene } from './scenes/TrackEditorScene.js';
 import { TrackGarageScene } from './scenes/TrackGarageCleanTypographyScene.js';
 import { TrackStudioScene } from './scenes/TrackStudioScene.js';
-import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderContinuousSurfaceScene.js';
+import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderRealTrackScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
 import './tracks/trackPublicNames.js';
 
