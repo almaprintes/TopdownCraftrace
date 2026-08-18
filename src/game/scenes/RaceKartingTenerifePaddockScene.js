@@ -69,6 +69,46 @@ function clearPaddockVegetation(scene,origin,t,side){
   scene._ktDenseVegetation=keep;
 }
 
+function drawVisualPaddockSurface(scene,p,t,side,serviceCenter,fallback,placed){
+  const rot=Math.atan2(t.ty,t.tx);
+  const halfTrack=Number(p.width||fallback)*.5;
+  const laneHalf=66;
+  const laneStart=-555;
+  const laneEnd=500;
+
+  const lane=scene.add.graphics().setDepth(5.72);
+  lane.setPosition(serviceCenter.x,serviceCenter.y).setRotation(rot);
+  lane.fillStyle(0x2b2c2f,.98);
+  lane.lineStyle(3,0x56595e,.95);
+  lane.fillRoundedRect(laneStart,-laneHalf,laneEnd-laneStart,laneHalf*2,14);
+  lane.strokeRoundedRect(laneStart,-laneHalf,laneEnd-laneStart,laneHalf*2,14);
+  lane.lineStyle(2,0xe1b33b,.72);
+  lane.lineBetween(laneStart+22,0,laneEnd-22,0);
+  for(let x=laneStart+55;x<laneEnd-35;x+=128){
+    lane.lineBetween(x,-laneHalf+12,x,-24);
+    lane.lineBetween(x,24,x,laneHalf-12);
+  }
+  scene.uiCam?.ignore?.(lane);
+  placed.push(lane);
+
+  const trackEdgeOffset=170-halfTrack-6;
+  const connectorLength=Math.max(36,trackEdgeOffset-laneHalf+8);
+  const accessAlong=[-475,365];
+
+  for(const along of accessAlong){
+    const c=scene.add.graphics().setDepth(5.73);
+    const cx=serviceCenter.x+t.tx*along-t.nx*side*(laneHalf+connectorLength/2-4);
+    const cy=serviceCenter.y+t.ty*along-t.ny*side*(laneHalf+connectorLength/2-4);
+    c.setPosition(cx,cy).setRotation(rot+Math.PI/2);
+    c.fillStyle(0x2b2c2f,.98);
+    c.lineStyle(2,0x56595e,.92);
+    c.fillRoundedRect(-connectorLength/2,-40,connectorLength,80,8);
+    c.strokeRoundedRect(-connectorLength/2,-40,connectorLength,80,8);
+    scene.uiCam?.ignore?.(c);
+    placed.push(c);
+  }
+}
+
 function rebuild(scene){
   if(!isKT(scene))return;
   const {center,fallback}=centerline(scene); if(center.length<24)return;
@@ -79,26 +119,24 @@ function rebuild(scene){
   const fi=finishIndex(scene,center),p=center[fi],t=tangent(center,fi);
   const side=1;
 
-  // Entire paddock remains grass. This keeps the existing off-track slowdown behavior.
-  // The service axis is pulled much closer to the circuit so all structures stay inside the map.
+  // The dark paddock lane below is visual only: we do not alter any drivable-surface mask,
+  // so gameplay still treats this whole area as off-track grass and keeps the slowdown.
   const serviceCenter={x:p.x+t.nx*side*170,y:p.y+t.ny*side*170};
   clearPaddockVegetation(scene,p,t,side);
+  drawVisualPaddockSurface(scene,p,t,side,serviceCenter,fallback,placed);
 
-  const placeFacingGrassLane=(spec,along,out,width)=>{
+  const placeFacingLane=(spec,along,out,width)=>{
     const pos={x:serviceCenter.x+t.tx*along+t.nx*side*out,y:serviceCenter.y+t.ty*along+t.ny*side*out};
     const target={x:serviceCenter.x+t.tx*along,y:serviceCenter.y+t.ty*along};
     return addImage(scene,placed,spec.key,pos.x,pos.y,width,frontRotationToward(pos,target),12.15);
   };
 
-  // Structures line one side of the grassy paddock corridor and all fronts face inward.
-  placeFacingGrassLane(ASSETS.tower,-500,105,172);
-  placeFacingGrassLane(ASSETS.pit,-245,112,315);
-  placeFacingGrassLane(ASSETS.paddock,75,108,230);
-  placeFacingGrassLane(ASSETS.grandstand,330,118,380);
+  placeFacingLane(ASSETS.tower,-500,105,172);
+  placeFacingLane(ASSETS.pit,-245,112,315);
+  placeFacingLane(ASSETS.paddock,75,108,230);
+  placeFacingLane(ASSETS.grandstand,330,118,380);
 
-  // Keep two clear grass accesses to the circuit: lower access near the current car position
-  // and a second access at the upper end. No asphalt overlay is drawn, so both remain grass.
-  // Marshal posts stay trackside and face the racing surface.
+  // Two trackside marshal posts face the racing surface.
   for(const [frac,sideM] of [[.34,1],[.62,-1]]){
     const i=Math.floor(center.length*frac)%center.length,q=center[i],tt=tangent(center,i),h=Number(q.width||fallback)*.5;
     const pos={x:q.x+tt.nx*sideM*(h+145),y:q.y+tt.ny*sideM*(h+145)};
