@@ -21,7 +21,7 @@ export class MenuScene extends CurrentMenuScene {
     const paint=(hover=false)=>{
       g.clear();
       g.fillStyle(hover?0x103126:0x07131b,.99);
-      g.lineStyle(2,hover?0x62ffb2:0x38ff9b,hover?.95:.82);
+      g.lineStyle(2,hover?0x62ffb2:0x38ff9b,hover ? .95 : .82);
       g.beginPath();g.moveTo(-hw+c,-hh);g.lineTo(hw-c,-hh);g.lineTo(hw,-hh+c);g.lineTo(hw,hh-c);g.lineTo(hw-c,hh);g.lineTo(-hw+c,hh);g.lineTo(-hw,hh-c);g.lineTo(-hw,-hh+c);g.closePath();g.fillPath();g.strokePath();
       g.lineStyle(1,0xffffff,.08);g.strokeRect(-hw+6,-hh+6,w-12,h-12);
       g.fillStyle(0x38ff9b,.28);g.fillRect(-hw+14,-hh+8,w-28,3);
