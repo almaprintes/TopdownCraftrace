@@ -11,18 +11,20 @@ function band(s){const len=Math.hypot(s.x2-s.x1,s.y2-s.y1),steps=Math.max(24,Mat
 function polygon(g,pts,color){if(!pts.length)return;g.fillStyle(color,.98);g.beginPath();g.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)g.lineTo(pts[i].x,pts[i].y);g.closePath();g.fillPath();}
 function destroyList(scene,key){const arr=scene?.[key];if(Array.isArray(arr))for(const o of arr)o?.destroy?.();scene[key]=[];}
 function clearLegacyEnvironment(scene){destroyList(scene,'_circuitEnvironment');destroyList(scene,'_ktPaddock');destroyList(scene,'_ktStructures');destroyList(scene,'_ktDenseVegetation');}
-
-function renderLinear(scene,data,placed){
-  for(const s of data.linearBarriers||[]){
-    const key=`auth-linear:${s.asset}`;if(!scene.textures.exists(key))continue;
-    const c=control(s),approx=Math.hypot(s.x2-s.x1,s.y2-s.y1)+Math.hypot(c.x-(s.x1+s.x2)/2,c.y-(s.y1+s.y2)/2),count=Math.max(1,Math.ceil(approx/(Number(s.spacing)||105)));
-    for(let i=0;i<count;i++){
-      const t=(i+.5)/count,p=qp(s,t),v=qt(s,t),img=scene.add.image(p.x,p.y,key).setDepth(Number(s.z)||11.8).setRotation(Math.atan2(v.y,v.x));
-      const w=Math.max(70,approx/count*1.08);if(img.width>0)img.setDisplaySize(w,img.height*(w/img.width));scene.uiCam?.ignore?.(img);placed.push(img);
-    }
+function ad(a,b){return Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));}
+function linearPieces(s){
+  const N=180,pts=[],cum=[0];let total=0;
+  for(let i=0;i<=N;i++){const t=i/N,p=qp(s,t),v=qt(s,t),ang=Math.atan2(v.y,v.x);pts.push({p,ang});if(i){total+=Math.hypot(p.x-pts[i-1].p.x,p.y-pts[i-1].p.y);cum.push(total);}}
+  const out=[];let next=0;
+  for(let i=1;i<N;i++){
+    const turn=ad(pts[i-1].ang,pts[i+1].ang),target=Math.max(44,Math.min(Number(s.spacing)||105,105/(1+turn*13)));
+    if(cum[i]<next)continue;
+    out.push({x:pts[i].p.x,y:pts[i].p.y,angle:pts[i].ang,width:Math.max(46,target*1.16)});next=cum[i]+target;
   }
+  if(!out.length){const p=qp(s,.5),v=qt(s,.5);out.push({x:p.x,y:p.y,angle:Math.atan2(v.y,v.x),width:Math.max(46,total*1.06)});}
+  return out;
 }
-
+function renderLinear(scene,data,placed){for(const s of data.linearBarriers||[]){const key=`auth-linear:${s.asset}`;if(!scene.textures.exists(key))continue;for(const q of linearPieces(s)){const img=scene.add.image(q.x,q.y,key).setDepth(Number(s.z)||11.8).setRotation(q.angle);if(img.width>0)img.setDisplaySize(q.width,img.height*(q.width/img.width));scene.uiCam?.ignore?.(img);placed.push(img);}}}
 function render(scene,data){
   if(!data)return;clearLegacyEnvironment(scene);
   if(Array.isArray(scene._authoredEnvironmentObjects))for(const o of scene._authoredEnvironmentObjects)o?.destroy?.();
@@ -33,15 +35,5 @@ function render(scene,data){
   for(const d of env){const key=`auth-env:${d.asset}`;if(!scene.textures.exists(key))continue;const img=scene.add.image(Number(d.x)||0,Number(d.y)||0,key).setDepth(Number(d.z)||12).setRotation(Number(d.rotation)||0);const dw=Number(d.displayWidth);if(Number.isFinite(dw)&&dw>0&&img.width>0)img.setDisplaySize(dw,img.height*(dw/img.width));img.setFlipX(!!d.flipX);img.setFlipY(!!d.flipY);scene.uiCam?.ignore?.(img);placed.push(img);}
   scene._authoredEnvironmentObjects=placed;scene._authoredSurfaceZones=(data.surfaces||[]).map(s=>({...s}));
 }
-
-function ensure(scene,data){
-  const missing=[],queued=new Set();
-  const add=(key,path)=>{if(!key||!path||scene.textures.exists(key)||queued.has(key))return;scene.load.image(key,`${BASE}assets/${String(path).replace(/^assets\//,'')}`);queued.add(key);missing.push(key);};
-  for(const d of data.environment||[])if(d?.asset&&d?.path)add(`auth-env:${d.asset}`,d.path);
-  for(const d of data.linearBarriers||[])if(d?.asset&&d?.path)add(`auth-linear:${d.asset}`,d.path);
-  const apply=()=>scene.time?.delayedCall?.(40,()=>render(scene,data));if(!missing.length){apply();return;}scene.load.once('complete',apply);if(!scene.load.isLoading())scene.load.start();
-}
-
-export class RaceScene extends CurrentRaceScene{
-  create(){super.create();const id=trackId(this);if(!id||!hasTrackEnvironment(id))return;const data=createTrackEnvironment(id);clearLegacyEnvironment(this);ensure(this,data);}
-}
+function ensure(scene,data){const missing=[],queued=new Set();const add=(key,path)=>{if(!key||!path||scene.textures.exists(key)||queued.has(key))return;scene.load.image(key,`${BASE}assets/${String(path).replace(/^assets\//,'')}`);queued.add(key);missing.push(key);};for(const d of data.environment||[])if(d?.asset&&d?.path)add(`auth-env:${d.asset}`,d.path);for(const d of data.linearBarriers||[])if(d?.asset&&d?.path)add(`auth-linear:${d.asset}`,d.path);const apply=()=>scene.time?.delayedCall?.(40,()=>render(scene,data));if(!missing.length){apply();return;}scene.load.once('complete',apply);if(!scene.load.isLoading())scene.load.start();}
+export class RaceScene extends CurrentRaceScene{create(){super.create();const id=trackId(this);if(!id||!hasTrackEnvironment(id))return;const data=createTrackEnvironment(id);clearLegacyEnvironment(this);ensure(this,data);}}
