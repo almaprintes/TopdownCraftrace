@@ -36,8 +36,6 @@ function finishIndex(scene,center){
   return best;
 }
 
-function localToWorld(origin,t,n,along,out){return {x:origin.x+t.tx*along+n.nx*out,y:origin.y+t.ty*along+n.ny*out};}
-
 function frontRotationToward(from,to){
   const ang=Math.atan2(to.y-from.y,to.x-from.x);
   return ang-Math.PI/2;
@@ -50,27 +48,25 @@ function addImage(scene,placed,key,x,y,width,rotation,depth=12.1){
   scene.uiCam?.ignore?.(img); placed.push(img); return img;
 }
 
-function drawPaddock(scene,origin,t,n,side,placed){
-  const roadCenter={x:origin.x+n.nx*side*305,y:origin.y+n.ny*side*305};
-  const g=scene.add.graphics().setDepth(5.7);
-  g.setPosition(roadCenter.x,roadCenter.y).setRotation(Math.atan2(t.ty,t.tx));
-  g.fillStyle(0x242527,1); g.lineStyle(3,0x55585d,.95);
-  g.fillRoundedRect(-610,-104,1220,208,18); g.strokeRoundedRect(-610,-104,1220,208,18);
-  g.fillStyle(0x303236,.95); g.fillRoundedRect(-590,-84,1180,168,12);
-  g.lineStyle(3,0xe2b43e,.86); g.lineBetween(-565,0,565,0);
-  g.lineStyle(2,0xe2b43e,.7);
-  for(let x=-520;x<=520;x+=130){g.lineBetween(x,-76,x,-28);g.lineBetween(x,28,x,76);}
-  scene.uiCam?.ignore?.(g); placed.push(g);
+function localCoords(origin,t,world){
+  const dx=world.x-origin.x,dy=world.y-origin.y;
+  return {along:dx*t.tx+dy*t.ty,out:dx*t.nx+dy*t.ny};
+}
 
-  const link=scene.add.graphics().setDepth(5.65);
-  link.fillStyle(0x2b2d30,1); link.lineStyle(2,0x55585d,.9);
-  const inner={x:origin.x+n.nx*side*110,y:origin.y+n.ny*side*110};
-  const outer={x:roadCenter.x,y:roadCenter.y};
-  const ang=Math.atan2(outer.y-inner.y,outer.x-inner.x),len=Math.hypot(outer.x-inner.x,outer.y-inner.y);
-  link.setPosition((inner.x+outer.x)/2,(inner.y+outer.y)/2).setRotation(ang);
-  link.fillRoundedRect(-len/2,-42,len,84,10); link.strokeRoundedRect(-len/2,-42,len,84,10);
-  scene.uiCam?.ignore?.(link); placed.push(link);
-  return roadCenter;
+function clearPaddockVegetation(scene,origin,t,side){
+  const list=Array.isArray(scene._ktDenseVegetation)?scene._ktDenseVegetation:[];
+  const keep=[];
+  for(const obj of list){
+    if(!obj?.scene)continue;
+    const q=localCoords(origin,t,obj);
+    const out=q.out*side;
+    const inMainZone=q.along>-650&&q.along<650&&out>75&&out<390;
+    const inLowerAccess=q.along>300&&q.along<560&&out>20&&out<390;
+    const inUpperAccess=q.along>-590&&q.along<-390&&out>20&&out<390;
+    if(inMainZone||inLowerAccess||inUpperAccess){obj.destroy?.();continue;}
+    keep.push(obj);
+  }
+  scene._ktDenseVegetation=keep;
 }
 
 function rebuild(scene){
@@ -81,22 +77,27 @@ function rebuild(scene){
 
   const placed=[];
   const fi=finishIndex(scene,center),p=center[fi],t=tangent(center,fi);
-  const side=1,half=Number(p.width||fallback)*.5;
-  const trackEdge={x:p.x+t.nx*side*(half+10),y:p.y+t.ny*side*(half+10)};
-  const roadCenter=drawPaddock(scene,p,t,t,side,placed);
-  const outerSign=side;
+  const side=1;
 
-  const placeFacingRoad=(spec,along,out,width)=>{
-    const pos={x:roadCenter.x+t.tx*along+t.nx*outerSign*out,y:roadCenter.y+t.ty*along+t.ny*outerSign*out};
-    const target={x:roadCenter.x+t.tx*along,y:roadCenter.y+t.ty*along};
+  // Entire paddock remains grass. This keeps the existing off-track slowdown behavior.
+  // The service axis is pulled much closer to the circuit so all structures stay inside the map.
+  const serviceCenter={x:p.x+t.nx*side*170,y:p.y+t.ny*side*170};
+  clearPaddockVegetation(scene,p,t,side);
+
+  const placeFacingGrassLane=(spec,along,out,width)=>{
+    const pos={x:serviceCenter.x+t.tx*along+t.nx*side*out,y:serviceCenter.y+t.ty*along+t.ny*side*out};
+    const target={x:serviceCenter.x+t.tx*along,y:serviceCenter.y+t.ty*along};
     return addImage(scene,placed,spec.key,pos.x,pos.y,width,frontRotationToward(pos,target),12.15);
   };
 
-  placeFacingRoad(ASSETS.pit,-250,175,320);
-  placeFacingRoad(ASSETS.paddock,80,168,235);
-  placeFacingRoad(ASSETS.grandstand,330,182,390);
-  placeFacingRoad(ASSETS.tower,-500,160,175);
+  // Structures line one side of the grassy paddock corridor and all fronts face inward.
+  placeFacingGrassLane(ASSETS.tower,-500,105,172);
+  placeFacingGrassLane(ASSETS.pit,-245,112,315);
+  placeFacingGrassLane(ASSETS.paddock,75,108,230);
+  placeFacingGrassLane(ASSETS.grandstand,330,118,380);
 
+  // Keep two clear grass accesses to the circuit: lower access near the current car position
+  // and a second access at the upper end. No asphalt overlay is drawn, so both remain grass.
   // Marshal posts stay trackside and face the racing surface.
   for(const [frac,sideM] of [[.34,1],[.62,-1]]){
     const i=Math.floor(center.length*frac)%center.length,q=center[i],tt=tangent(center,i),h=Number(q.width||fallback)*.5;
