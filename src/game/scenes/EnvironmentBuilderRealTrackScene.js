@@ -109,7 +109,7 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     p.version=Math.max(3,Number(p.version)||1);
     p.trackId=this._trackId;
     p.baseTrack={id:this._trackId,name:this._realTrack?.name||this._trackId,source:`src/game/tracks/library/${this._trackId}/track.json`,locked:true};
-    p.repositoryPath=`src/game/tracks/library/${this._trackId}/environment.json`;
+    p.repositoryPath=`src/game/tracks/library/${this._trackId}/${this._trackId}.environment.json`;
     return p;
   }
 
@@ -117,6 +117,6 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     const data=this._project();
     const txt=JSON.stringify(data,null,2),blob=new Blob([txt],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=`${this._trackId}.environment.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),500);
-    this._flash?.(`EXPORTADO · subir como library/${this._trackId}/environment.json`);
+    this._flash?.(`EXPORTADO · subir a library/${this._trackId}/`);
   }
 }
