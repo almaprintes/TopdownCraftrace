@@ -92,14 +92,46 @@ function addStructure(scene,placed,spec,a,rotation,widthOverride=0){
 
 function placeOne(scene,placed,center,fallback,{asset,fraction,side,extra,rotationOffset=0,width=0,clearance=0}){
   const spec=STRUCTURES[asset];
-  if(!spec)return;
+  if(!spec)return false;
   const a=anchorAt(center,fraction,side,extra,fallback);
-  if(!a)return;
+  if(!a)return false;
   const rotation=Math.atan2(a.ty,a.tx)+rotationOffset;
   const finalWidth=width||spec.width;
   const height=finalWidth*spec.aspect;
-  if(!footprintClear(center,fallback,a,finalWidth+clearance,height+clearance,rotation))return;
+  if(!footprintClear(center,fallback,a,finalWidth+clearance,height+clearance,rotation))return false;
   addStructure(scene,placed,spec,a,rotation,finalWidth);
+  return true;
+}
+
+function placeGrandstand(scene,placed,center,fallback,ff){
+  const spec=STRUCTURES.grandstand;
+  const attempts=[];
+  const fractions=[0,.018,-.018,.036,-.036,.06,-.06,.085,-.085,.12,-.12];
+  const extras=[210,250,290,330,370];
+  const sides=[-1,1];
+  const widths=[390,360,330];
+
+  for(const df of fractions){
+    for(const side of sides){
+      for(const extra of extras){
+        const a=anchorAt(center,(ff+df+1)%1,side,extra,fallback);
+        if(!a)continue;
+        const rotation=Math.atan2(a.ty,a.tx);
+        for(const width of widths){
+          const height=width*spec.aspect;
+          if(!footprintClear(center,fallback,a,width+24,height+24,rotation))continue;
+          attempts.push({a,rotation,width,score:Math.abs(df)*1000+extra+(side===-1?0:35)});
+          break;
+        }
+      }
+    }
+  }
+
+  attempts.sort((a,b)=>a.score-b.score);
+  const best=attempts[0];
+  if(!best)return false;
+  addStructure(scene,placed,spec,best.a,best.rotation,best.width);
+  return true;
 }
 
 function placeStructures(scene){
@@ -111,15 +143,12 @@ function placeStructures(scene){
   const placed=[];
   const ff=fractionNearFinish(scene,center);
 
-  // Main paddock complex beside the start/finish area.
   placeOne(scene,placed,center,fallback,{asset:'pit',fraction:(ff+.028)%1,side:1,extra:255,rotationOffset:0,width:310,clearance:36});
   placeOne(scene,placed,center,fallback,{asset:'paddock',fraction:(ff+.060)%1,side:1,extra:300,rotationOffset:0,width:230,clearance:34});
   placeOne(scene,placed,center,fallback,{asset:'tower',fraction:(ff-.020+1)%1,side:1,extra:235,rotationOffset:Math.PI/2,width:176,clearance:30});
 
-  // Main spectator area facing the start/finish straight.
-  placeOne(scene,placed,center,fallback,{asset:'grandstand',fraction:(ff+.010)%1,side:-1,extra:270,rotationOffset:0,width:370,clearance:46});
+  placeGrandstand(scene,placed,center,fallback,ff);
 
-  // Two marshal posts placed at separated technical sections.
   placeOne(scene,placed,center,fallback,{asset:'marshal',fraction:.34,side:1,extra:150,rotationOffset:Math.PI/2,width:122,clearance:24});
   placeOne(scene,placed,center,fallback,{asset:'marshal',fraction:.62,side:-1,extra:155,rotationOffset:Math.PI/2,width:118,clearance:24});
 
