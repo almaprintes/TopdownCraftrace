@@ -9,6 +9,7 @@ const D=(a,b)=>{const x=a.x-b.x,y=a.y-b.y;return x*x+y*y};
 
 export class EnvironmentBuilderScene extends Current{
   create(){this._rails=[];this._selRail=null;this._railStart=null;this._railDrag=null;super.create();this._railRoot=this.add.container(0,0).setDepth(11.8);this.cameras.main.ignore(this._railRoot);this._drawRails();}
+  _allAssets(){return (super._allAssets?.()||[]).filter(a=>!['guardrail_straight_01','guardrail_curve_01'].includes(a.id));}
   _setupUi(){super._setupUi();const {width}=this.scale,rx=width-this._right,y=this._top+118;
     const b=this.add.rectangle(rx+14,y,this._right-28,32,0x242c35,1).setOrigin(0).setStrokeStyle(1,0xb8c2cc,.95).setInteractive({useHandCursor:true}).setDepth(60506);
     const t=this.add.text(rx+this._right/2,y+16,'〰 GUARDARRAÍL',{fontFamily:'system-ui',fontSize:'10px',fontStyle:'bold',color:'#fff'}).setOrigin(.5).setDepth(60507);this._editCam?.ignore([b,t]);
