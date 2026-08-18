@@ -79,7 +79,7 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     const active=this._mode==='pan'?'pan':this._mode==='surface'?'surface':'select';
     for(const [mode,h] of Object.entries(this._toolStateHighlights)){
       const on=mode===active;
-      h.r.setFillStyle(h.color,on?.22:0);
+      h.r.setFillStyle(h.color,on?0.22:0);
       h.r.setStrokeStyle(on?3:0,h.color,on?1:0);
     }
   }
