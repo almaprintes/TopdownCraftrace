@@ -1,6 +1,5 @@
 // src/game/scenes/RaceEnvironmentLayer.js
-// Curated static environment + pilot sponsor-board system.
-// No collision, no random scatter, no per-frame work.
+// Curated static environment. Visual only: no collision, no random scatter, no per-frame work.
 
 const BASE = import.meta.env.BASE_URL || '/';
 
@@ -8,7 +7,27 @@ const ASSETS = {
   treeA: { key: 'env-tree-deciduous-01', url: `${BASE}assets/environment/tree_deciduous_01.webp` },
   treeB: { key: 'env-tree-conifer-01', url: `${BASE}assets/environment/tree_conifer_01.webp` },
   shrubA: { key: 'env-shrub-round-01', url: `${BASE}assets/environment/shrub_round_01.webp` },
-  shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` }
+  shrubB: { key: 'env-shrub-flowers-01', url: `${BASE}assets/environment/shrub_flowers_01.webp` },
+
+  treeBroad1: { key: 'env-tree-broad-01', url: `${BASE}assets/environment/vegetation/tree_broad_01.webp` },
+  treeBroad2: { key: 'env-tree-broad-02', url: `${BASE}assets/environment/vegetation/tree_broad_02.webp` },
+  palmTall: { key: 'env-palm-tall-01', url: `${BASE}assets/environment/vegetation/palm_tall_01.webp` },
+
+  tireStack: { key: 'env-tire-stack-compact-01', url: `${BASE}assets/environment/barriers/tire_stack_compact_01.webp` },
+  tireStraight: { key: 'env-tire-barrier-straight-01', url: `${BASE}assets/environment/barriers/tire_barrier_straight_short_01.webp` },
+  guardrailStraight: { key: 'env-guardrail-straight-01', url: `${BASE}assets/environment/barriers/guardrail_straight_01.webp` },
+  concreteStraight: { key: 'env-concrete-barrier-straight-01', url: `${BASE}assets/environment/barriers/concrete_barrier_straight_01.webp` },
+  plasticRedWhite: { key: 'env-plastic-barrier-redwhite-01', url: `${BASE}assets/environment/barriers/plastic_barrier_redwhite_01.webp` },
+
+  cone: { key: 'env-cone-orange-01', url: `${BASE}assets/environment/props/cone_orange_01.webp` },
+  bollard: { key: 'env-bollard-metal-short-01', url: `${BASE}assets/environment/props/bollard_metal_short_01.webp` },
+  directionSign: { key: 'env-direction-sign-01', url: `${BASE}assets/environment/props/direction_sign_01.webp` },
+  extinguisher: { key: 'env-extinguisher-post-01', url: `${BASE}assets/environment/props/extinguisher_post_01.webp` },
+  lightPost: { key: 'env-light-post-short-01', url: `${BASE}assets/environment/props/light_post_short_01.webp` },
+  barrel: { key: 'env-metal-barrel-01', url: `${BASE}assets/environment/props/metal_barrel_01.webp` },
+  raceStartLight: { key: 'env-race-start-light-01', url: `${BASE}assets/environment/props/race_start_light_01.webp` },
+  toolbox: { key: 'env-toolbox-01', url: `${BASE}assets/environment/props/toolbox_01.webp` },
+  pallet: { key: 'env-wood-pallet-01', url: `${BASE}assets/environment/props/wood_pallet_01.webp` }
 };
 
 const SPONSORS = [
@@ -62,13 +81,17 @@ function findUsableAnchor(center, fraction, side, extraOffset, defaultTrackW, cl
   return null;
 }
 
-function addImage(scene, placed, key, x, y, scale, rotation = 0, depth = 7.15) {
+function addImage(scene, placed, key, x, y, scale = 1, rotation = 0, depth = 7.15, displayWidth = 0) {
   if (!scene.textures.exists(key)) return null;
   const img = scene.add.image(x, y, key)
     .setScrollFactor(1)
     .setDepth(depth)
-    .setScale(scale)
     .setRotation(rotation);
+  if (displayWidth > 0 && img.width > 0) {
+    img.setDisplaySize(displayWidth, img.height * (displayWidth / img.width));
+  } else {
+    img.setScale(scale);
+  }
   scene.uiCam?.ignore?.(img);
   placed.push(img);
   return img;
@@ -81,7 +104,8 @@ function addCluster(scene, placed, center, defaultTrackW, spec) {
     const x = a.x + a.tx * m.along + a.nx * m.out * spec.side;
     const y = a.y + a.ty * m.along + a.ny * m.out * spec.side;
     if (!isClearOfTrack(center, x, y, defaultTrackW, m.clearance || 48)) continue;
-    addImage(scene, placed, ASSETS[m.asset].key, x, y, m.scale, m.rotation, m.depth || 7.13);
+    const rot = m.followTrack ? Math.atan2(a.ty, a.tx) + (m.rotation || 0) : (m.rotation || 0);
+    addImage(scene, placed, ASSETS[m.asset].key, x, y, m.scale || 1, rot, m.depth || 7.13, m.width || 0);
   }
 }
 
@@ -101,7 +125,6 @@ function sampleCenterAtDistance(center, metrics, distance, defaultTrackW) {
   const total = metrics.total || 1;
   const d = ((distance % total) + total) % total;
   const cumulative = metrics.cumulative;
-
   let lo = 0;
   let hi = center.length - 1;
   while (lo < hi) {
@@ -109,7 +132,6 @@ function sampleCenterAtDistance(center, metrics, distance, defaultTrackW) {
     if (cumulative[mid] <= d) lo = mid;
     else hi = mid - 1;
   }
-
   const i = Math.min(lo, center.length - 1);
   const a = center[i];
   const b = center[(i + 1) % center.length];
@@ -117,7 +139,6 @@ function sampleCenterAtDistance(center, metrics, distance, defaultTrackW) {
   const segEnd = cumulative[i + 1];
   const segLen = Math.max(0.0001, segEnd - segStart);
   const t = Math.max(0, Math.min(1, (d - segStart) / segLen));
-
   const x = a.x + (b.x - a.x) * t;
   const y = a.y + (b.y - a.y) * t;
   const dx = b.x - a.x;
@@ -130,7 +151,6 @@ function sampleCenterAtDistance(center, metrics, distance, defaultTrackW) {
   const widthA = Number(a.width || defaultTrackW);
   const widthB = Number(b.width || defaultTrackW);
   const width = widthA + (widthB - widthA) * t;
-
   return { x, y, tx, ty, nx, ny, width };
 }
 
@@ -142,16 +162,11 @@ function makeSponsorTextures(scene) {
   for (const s of SPONSORS) {
     const key = `env-sponsor-${s.id}-v1`;
     if (scene.textures.exists(key)) continue;
-
     const tex = scene.textures.createCanvas(key, 320, 82);
     const ctx = tex.getContext();
     ctx.clearRect(0, 0, 320, 82);
-
-    // soft ground shadow
     ctx.fillStyle = 'rgba(0,0,0,0.24)';
     ctx.fillRect(13, 57, 294, 12);
-
-    // panel body
     const g = ctx.createLinearGradient(0, 10, 0, 62);
     g.addColorStop(0, s.bg);
     g.addColorStop(1, '#080a0d');
@@ -162,32 +177,31 @@ function makeSponsorTextures(scene) {
     ctx.roundRect(7, 8, 306, 54, 7);
     ctx.fill();
     ctx.stroke();
-
-    // small racing accent
     ctx.fillStyle = s.accent;
     ctx.fillRect(18, 19, 5, 32);
     ctx.fillRect(28, 19, 2, 32);
-
-    // wordmark
     ctx.fillStyle = s.fg;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = s.id === 'almaprint' ? '700 34px system-ui, sans-serif' : '900 36px system-ui, sans-serif';
     ctx.fillText(s.name, 171, 35);
-
-    // support feet seen from above
     ctx.fillStyle = '#4f5458';
     ctx.fillRect(55, 62, 12, 9);
     ctx.fillRect(253, 62, 12, 9);
-
     tex.refresh();
   }
 }
 
-function isPilotCircuit(scene) {
+function isKartingCanarias(scene) {
   const key = String(scene?.trackKey || '').toLowerCase();
   const name = String(scene?.track?.meta?.name || '').toLowerCase();
   return key.includes('karting-canarias') || key.includes('karting_canarias') || name.includes('karting canarias');
+}
+
+function isKartingTenerife(scene) {
+  const key = String(scene?.trackKey || '').toLowerCase();
+  const name = String(scene?.track?.meta?.name || '').toLowerCase();
+  return key.includes('karting-tenerife') || key.includes('karting_tenerife') || name.includes('karting tenerife');
 }
 
 function findStraightCenters(center, metrics, defaultTrackW) {
@@ -195,7 +209,6 @@ function findStraightCenters(center, metrics, defaultTrackW) {
   const candidates = [];
   const probe = Math.max(70, Math.min(120, total * 0.035));
   const step = Math.max(45, Math.min(75, total / 80));
-
   for (let d = 0; d < total; d += step) {
     const a = sampleCenterAtDistance(center, metrics, d - probe, defaultTrackW);
     const b = sampleCenterAtDistance(center, metrics, d, defaultTrackW);
@@ -203,69 +216,54 @@ function findStraightCenters(center, metrics, defaultTrackW) {
     const aa = Math.atan2(a.ty, a.tx);
     const bb = Math.atan2(b.ty, b.tx);
     const cc = Math.atan2(c.ty, c.tx);
-    const bend = angleDiff(aa, bb) + angleDiff(bb, cc);
-    candidates.push({ d, bend });
+    candidates.push({ d, bend: angleDiff(aa, bb) + angleDiff(bb, cc) });
   }
-
   candidates.sort((a, b) => a.bend - b.bend);
   const picked = [];
   for (const c of candidates) {
     if (picked.every((p) => {
       const raw = Math.abs(p.d - c.d);
-      const circular = Math.min(raw, total - raw);
-      return circular > total * 0.22;
+      return Math.min(raw, total - raw) > total * 0.18;
     })) {
       picked.push(c);
-      if (picked.length >= 2) break;
+      if (picked.length >= 3) break;
     }
   }
   return picked;
 }
 
 function placeSponsorBoards(scene, placed, center, defaultTrackW) {
-  if (!isPilotCircuit(scene)) return;
-
+  if (!isKartingCanarias(scene)) return;
   makeSponsorTextures(scene);
   const metrics = buildCenterMetrics(center);
   if (metrics.total < 300) return;
-
   const straightCenters = findStraightCenters(center, metrics, defaultTrackW);
   const runs = [
     { brands: SPONSORS.slice(0, 4), anchor: straightCenters[0], side: 1 },
     { brands: SPONSORS.slice(4), anchor: straightCenters[1] || straightCenters[0], side: -1 }
   ];
-
   const spacing = 142;
-  const panelW = 132;
-  const panelH = 34;
-  const edgeGap = 34;
-
   for (const run of runs) {
     if (!run.anchor) continue;
-    const count = run.brands.length;
-    const start = run.anchor.d - ((count - 1) * spacing) * 0.5;
-
-    for (let i = 0; i < count; i++) {
+    const start = run.anchor.d - ((run.brands.length - 1) * spacing) * 0.5;
+    for (let i = 0; i < run.brands.length; i++) {
       const s = sampleCenterAtDistance(center, metrics, start + i * spacing, defaultTrackW);
-      const offset = s.width * 0.5 + edgeGap;
+      const offset = s.width * 0.5 + 34;
       let side = run.side;
       let x = s.x + s.nx * side * offset;
       let y = s.y + s.ny * side * offset;
-
-      // If another road section is too close, flip the panel to the other side.
       if (!isClearOfTrack(center, x, y, defaultTrackW, 14)) {
         side *= -1;
         x = s.x + s.nx * side * offset;
         y = s.y + s.ny * side * offset;
       }
-
-      const brand = run.brands[i];
-      const key = `env-sponsor-${brand.id}-v1`;
+      if (!isClearOfTrack(center, x, y, defaultTrackW, 10)) continue;
+      const key = `env-sponsor-${run.brands[i].id}-v1`;
       const img = scene.add.image(x, y, key)
         .setScrollFactor(1)
         .setDepth(15.5)
         .setRotation(Math.atan2(s.ty, s.tx))
-        .setDisplaySize(panelW, panelH)
+        .setDisplaySize(132, 34)
         .setOrigin(0.5, 0.5);
       scene.uiCam?.ignore?.(img);
       placed.push(img);
@@ -273,16 +271,117 @@ function placeSponsorBoards(scene, placed, center, defaultTrackW) {
   }
 }
 
-function placeCuratedEnvironment(scene, center, defaultTrackW) {
-  if (Array.isArray(scene._circuitEnvironment)) {
-    for (const obj of scene._circuitEnvironment) obj?.destroy?.();
+function finishFraction(scene, center) {
+  const finish = scene?.track?.meta?.finishAnchor || scene?.track?.finishAnchor;
+  const fx = Number(finish?.x), fy = Number(finish?.y);
+  if (!Number.isFinite(fx) || !Number.isFinite(fy)) return 0;
+  let best = 0, bestD = Infinity;
+  for (let i = 0; i < center.length; i++) {
+    const d = Math.hypot(center[i].x - fx, center[i].y - fy);
+    if (d < bestD) { bestD = d; best = i; }
   }
+  return best / center.length;
+}
 
-  const placed = [];
+function placeLinearRun(scene, placed, center, metrics, defaultTrackW, spec) {
+  if (!spec.anchor) return;
+  const start = spec.anchor.d - ((spec.count - 1) * spec.spacing) * 0.5;
+  for (let i = 0; i < spec.count; i++) {
+    const s = sampleCenterAtDistance(center, metrics, start + i * spec.spacing, defaultTrackW);
+    const offset = s.width * 0.5 + spec.edgeGap;
+    const x = s.x + s.nx * spec.side * offset;
+    const y = s.y + s.ny * spec.side * offset;
+    const half = spec.width * 0.42;
+    const ex1 = x - s.tx * half, ey1 = y - s.ty * half;
+    const ex2 = x + s.tx * half, ey2 = y + s.ty * half;
+    if (!isClearOfTrack(center, x, y, defaultTrackW, spec.clearance || 12)) continue;
+    if (!isClearOfTrack(center, ex1, ey1, defaultTrackW, 7) || !isClearOfTrack(center, ex2, ey2, defaultTrackW, 7)) continue;
+    addImage(scene, placed, ASSETS[spec.asset].key, x, y, 1, Math.atan2(s.ty, s.tx), spec.depth || 12.2, spec.width);
+  }
+}
 
-  // Pilot monetisation test: only Karting Canarias for now.
-  placeSponsorBoards(scene, placed, center, defaultTrackW);
+function placeKartingTenerifePilot(scene, placed, center, defaultTrackW) {
+  if (!isKartingTenerife(scene)) return;
 
+  // Large vegetation sits well outside the racing ribbon. Every member is independently
+  // rejected when another piece of road comes too close, important on this compact layout.
+  const vegetation = [
+    { fraction: 0.04, side: -1, extra: 138, clearance: 78, members: [
+      {asset:'treeBroad1',along:-82,out:18,width:150,rotation:-.12,clearance:72},
+      {asset:'treeBroad2',along:12,out:72,width:136,rotation:.09,clearance:70},
+      {asset:'palmTall',along:92,out:18,width:118,rotation:.22,clearance:66},
+      {asset:'shrubA',along:35,out:112,scale:.21,rotation:.11,clearance:50}
+    ]},
+    { fraction: 0.21, side: 1, extra: 150, clearance: 80, members: [
+      {asset:'palmTall',along:-100,out:16,width:116,rotation:-.20,clearance:66},
+      {asset:'treeBroad2',along:-28,out:72,width:144,rotation:.13,clearance:72},
+      {asset:'treeBroad1',along:70,out:30,width:152,rotation:-.08,clearance:74},
+      {asset:'shrubB',along:112,out:92,scale:.20,rotation:.24,clearance:48}
+    ]},
+    { fraction: 0.43, side: -1, extra: 156, clearance: 82, members: [
+      {asset:'treeBroad1',along:-92,out:20,width:148,rotation:.12,clearance:72},
+      {asset:'palmTall',along:-12,out:82,width:112,rotation:-.14,clearance:64},
+      {asset:'treeBroad2',along:82,out:36,width:140,rotation:.19,clearance:70},
+      {asset:'shrubA',along:30,out:122,scale:.20,rotation:-.18,clearance:48}
+    ]},
+    { fraction: 0.67, side: 1, extra: 148, clearance: 80, members: [
+      {asset:'palmTall',along:-96,out:28,width:118,rotation:.18,clearance:66},
+      {asset:'treeBroad1',along:-8,out:78,width:154,rotation:-.06,clearance:74},
+      {asset:'treeBroad2',along:86,out:24,width:138,rotation:.15,clearance:70}
+    ]},
+    { fraction: 0.86, side: -1, extra: 152, clearance: 80, members: [
+      {asset:'treeBroad2',along:-92,out:28,width:140,rotation:-.19,clearance:70},
+      {asset:'treeBroad1',along:-4,out:86,width:150,rotation:.08,clearance:74},
+      {asset:'palmTall',along:94,out:18,width:114,rotation:.26,clearance:64},
+      {asset:'shrubB',along:40,out:120,scale:.21,rotation:-.14,clearance:48}
+    ]}
+  ];
+  for (const cluster of vegetation) addCluster(scene, placed, center, defaultTrackW, cluster);
+
+  // Technical paddock-like pockets: deliberately visual-only and far enough from asphalt.
+  const ff = finishFraction(scene, center);
+  const technical = [
+    { fraction: (ff + 0.018) % 1, side: 1, extra: 112, clearance: 70, members: [
+      {asset:'raceStartLight',along:-42,out:4,width:72,followTrack:true,rotation:Math.PI/2,clearance:54,depth:13.2},
+      {asset:'lightPost',along:58,out:20,width:54,rotation:.10,clearance:48,depth:12.9},
+      {asset:'cone',along:92,out:-8,width:34,rotation:.20,clearance:30,depth:13.0}
+    ]},
+    { fraction: (ff + 0.055) % 1, side: 1, extra: 176, clearance: 86, members: [
+      {asset:'pallet',along:-72,out:0,width:76,followTrack:true,clearance:48,depth:12.4},
+      {asset:'toolbox',along:-12,out:14,width:60,followTrack:true,rotation:.08,clearance:42,depth:12.6},
+      {asset:'barrel',along:48,out:8,width:50,rotation:.14,clearance:40,depth:12.6},
+      {asset:'extinguisher',along:90,out:24,width:48,rotation:-.12,clearance:38,depth:12.8},
+      {asset:'bollard',along:20,out:70,width:34,rotation:.10,clearance:30,depth:12.7}
+    ]},
+    { fraction: 0.56, side: -1, extra: 112, clearance: 68, members: [
+      {asset:'directionSign',along:-34,out:8,width:68,followTrack:true,rotation:Math.PI/2,clearance:44,depth:12.8},
+      {asset:'cone',along:28,out:-4,width:32,rotation:.14,clearance:28,depth:12.8},
+      {asset:'cone',along:62,out:3,width:30,rotation:-.16,clearance:28,depth:12.8}
+    ]},
+    { fraction: 0.76, side: 1, extra: 130, clearance: 72, members: [
+      {asset:'tireStack',along:-44,out:5,width:76,rotation:-.12,clearance:52,depth:12.2},
+      {asset:'tireStack',along:32,out:18,width:68,rotation:.18,clearance:48,depth:12.2},
+      {asset:'bollard',along:84,out:4,width:32,rotation:.07,clearance:28,depth:12.6}
+    ]}
+  ];
+  for (const cluster of technical) addCluster(scene, placed, center, defaultTrackW, cluster);
+
+  // A few coherent safety runs on the straightest sections. They are outside the road,
+  // aligned to its tangent, and skipped if either endpoint approaches another track segment.
+  const metrics = buildCenterMetrics(center);
+  const straights = findStraightCenters(center, metrics, defaultTrackW);
+  if (straights[0]) placeLinearRun(scene, placed, center, metrics, defaultTrackW, {
+    anchor: straights[0], side: -1, asset:'guardrailStraight', count:3, spacing:112, edgeGap:38, width:118, clearance:12, depth:12.0
+  });
+  if (straights[1]) placeLinearRun(scene, placed, center, metrics, defaultTrackW, {
+    anchor: straights[1], side: 1, asset:'plasticRedWhite', count:2, spacing:118, edgeGap:44, width:124, clearance:14, depth:12.0
+  });
+  if (straights[2]) placeLinearRun(scene, placed, center, metrics, defaultTrackW, {
+    anchor: straights[2], side: -1, asset:'tireStraight', count:2, spacing:112, edgeGap:40, width:116, clearance:14, depth:12.0
+  });
+}
+
+function placeLegacyVegetation(scene, placed, center, defaultTrackW) {
   const clusters = [
     { fraction: 0.08, side: 1, extra: 88, members: [
       {asset:'shrubA',along:-92,out:0,scale:.23,rotation:-.28},{asset:'treeA',along:-48,out:28,scale:.31,rotation:-.12,clearance:58},
@@ -310,8 +409,17 @@ function placeCuratedEnvironment(scene, center, defaultTrackW) {
       {asset:'shrubA',along:104,out:5,scale:.22,rotation:-.31}
     ]}
   ];
-
   for (const cluster of clusters) addCluster(scene, placed, center, defaultTrackW, cluster);
+}
+
+function placeCuratedEnvironment(scene, center, defaultTrackW) {
+  if (Array.isArray(scene._circuitEnvironment)) {
+    for (const obj of scene._circuitEnvironment) obj?.destroy?.();
+  }
+  const placed = [];
+  placeSponsorBoards(scene, placed, center, defaultTrackW);
+  placeLegacyVegetation(scene, placed, center, defaultTrackW);
+  placeKartingTenerifePilot(scene, placed, center, defaultTrackW);
   scene._circuitEnvironment = placed;
   return placed;
 }
