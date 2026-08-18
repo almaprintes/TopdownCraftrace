@@ -23,15 +23,26 @@ function band(s){
 }
 function polygon(g,pts,color){if(!pts.length)return;g.fillStyle(color,.98);g.beginPath();g.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)g.lineTo(pts[i].x,pts[i].y);g.closePath();g.fillPath();}
 
-function clearLegacyKT(scene){
-  for(const key of ['_ktPaddock','_ktStructures','_ktDenseVegetation']){
-    const arr=scene[key];if(Array.isArray(arr))for(const o of arr)o?.destroy?.();scene[key]=[];
-  }
+function destroyList(scene,key){
+  const arr=scene?.[key];
+  if(Array.isArray(arr))for(const o of arr)o?.destroy?.();
+  scene[key]=[];
+}
+
+function clearLegacyEnvironment(scene){
+  // Curated automatic decoration shared by all circuits.
+  destroyList(scene,'_circuitEnvironment');
+
+  // Older Karting Tenerife experiments. Harmless on other circuits and ensures
+  // authored Builder data is the single source of truth when present.
+  destroyList(scene,'_ktPaddock');
+  destroyList(scene,'_ktStructures');
+  destroyList(scene,'_ktDenseVegetation');
 }
 
 function render(scene,data){
   if(!data)return;
-  clearLegacyKT(scene);
+  clearLegacyEnvironment(scene);
   if(Array.isArray(scene._authoredEnvironmentObjects))for(const o of scene._authoredEnvironmentObjects)o?.destroy?.();
   const placed=[];
   const sg=scene.add.graphics().setDepth(5.7);scene.uiCam?.ignore?.(sg);placed.push(sg);
@@ -66,6 +77,10 @@ export class RaceScene extends CurrentRaceScene{
   create(){
     super.create();
     const id=trackId(this);if(!id||!hasTrackEnvironment(id))return;
-    const data=createTrackEnvironment(id);ensure(this,data);
+    const data=createTrackEnvironment(id);
+    // Clear legacy immediately so it never flashes underneath while authored
+    // WebP assets are loading asynchronously.
+    clearLegacyEnvironment(this);
+    ensure(this,data);
   }
 }
