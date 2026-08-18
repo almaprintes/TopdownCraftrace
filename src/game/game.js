@@ -11,6 +11,7 @@ import { CarEditorScene } from './scenes/CarEditorSpeedConsistencyScene.js';
 import { TrackEditorScene } from './scenes/TrackEditorScene.js';
 import { TrackGarageScene } from './scenes/TrackGarageCleanTypographyScene.js';
 import { TrackStudioScene } from './scenes/TrackStudioScene.js';
+import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
 import './tracks/trackPublicNames.js';
 
@@ -58,7 +59,7 @@ export function createGame(parentId = 'app') {
     backgroundColor: '#0b1020',
     resolution,
     fps:{target:vp.targetFps,min:20},
-    scene: [BootScene, MenuScene, MenuAliasScene, GarageScene, SettingsScene, GarageDetailScene, RaceScene, AdminHubScene, UpgradeShopScene, CarEditorScene, TrackGarageScene, TrackStudioScene, TrackEditorScene],
+    scene: [BootScene, MenuScene, MenuAliasScene, GarageScene, SettingsScene, GarageDetailScene, RaceScene, AdminHubScene, UpgradeShopScene, CarEditorScene, TrackGarageScene, TrackStudioScene, EnvironmentBuilderScene, TrackEditorScene],
     dom: { createContainer: true },
     scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
     physics: { default: 'arcade', arcade: { debug: false } },
