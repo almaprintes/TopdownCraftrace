@@ -118,16 +118,35 @@ export class RaceScene extends CurrentRaceScene {
     // 2) Brake-to-stop, release, then reverse
     // ---------------------------------------------------------
     // During a press that started while moving forward, prevent the base controller
-    // from crossing through zero into reverse. Preserve any lateral component so this
-    // does not interfere with steering/grip while the car finishes slowing down.
+    // from crossing through zero into reverse. Preserve lateral velocity while the
+    // car is still genuinely moving, but once it has reached near-rest remove the
+    // tiny residual vector too; otherwise the HUD can show 000 km/h while the body
+    // keeps creeping sideways for several seconds.
     if (brakePressed && this._brakeCycleForwardLock) {
-      const vx = Number(body.body.velocity.x || 0);
-      const vy = Number(body.body.velocity.y || 0);
-      const fwdAfter = vx * fx + vy * fy;
+      let vx = Number(body.body.velocity.x || 0);
+      let vy = Number(body.body.velocity.y || 0);
+      let fwdAfter = vx * fx + vy * fy;
 
       if (fwdAfter < 0) {
         body.body.velocity.x -= fx * fwdAfter;
         body.body.velocity.y -= fy * fwdAfter;
+      }
+
+      vx = Number(body.body.velocity.x || 0);
+      vy = Number(body.body.velocity.y || 0);
+      fwdAfter = vx * fx + vy * fy;
+      const totalSpeed = Math.hypot(vx, vy);
+
+      // True resting snap: only at walking-crawl physics speeds and only during
+      // the same brake press that brought the car down from forward motion.
+      // This does not touch normal cornering/drift and cannot block reverse,
+      // because reverse already requires releasing and pressing the brake again.
+      if (Math.abs(fwdAfter) <= 2.5 && totalSpeed <= 4) {
+        body.setVelocity?.(0, 0);
+        if (body.body?.velocity) {
+          body.body.velocity.x = 0;
+          body.body.velocity.y = 0;
+        }
       }
     }
   }
