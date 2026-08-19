@@ -117,16 +117,12 @@ export class RaceScene extends CurrentRaceScene {
     // ---------------------------------------------------------
     // 2) Brake-to-stop, release, then reverse
     // ---------------------------------------------------------
-    // During a press that started while moving forward, prevent the base controller
-    // from crossing through zero into reverse. Preserve lateral velocity while the
-    // car is still genuinely moving, but once it has reached near-rest remove the
-    // tiny residual vector too; otherwise the HUD can show 000 km/h while the body
-    // keeps creeping sideways for several seconds.
     if (brakePressed && this._brakeCycleForwardLock) {
       let vx = Number(body.body.velocity.x || 0);
       let vy = Number(body.body.velocity.y || 0);
       let fwdAfter = vx * fx + vy * fy;
 
+      // Never cross through zero into reverse during the same brake press.
       if (fwdAfter < 0) {
         body.body.velocity.x -= fx * fwdAfter;
         body.body.velocity.y -= fy * fwdAfter;
@@ -135,13 +131,32 @@ export class RaceScene extends CurrentRaceScene {
       vx = Number(body.body.velocity.x || 0);
       vy = Number(body.body.velocity.y || 0);
       fwdAfter = vx * fx + vy * fy;
-      const totalSpeed = Math.hypot(vx, vy);
 
-      // True resting snap: only at walking-crawl physics speeds and only during
-      // the same brake press that brought the car down from forward motion.
-      // This does not touch normal cornering/drift and cannot block reverse,
-      // because reverse already requires releasing and pressing the brake again.
-      if (Math.abs(fwdAfter) <= 2.5 && totalSpeed <= 4) {
+      const rightX = -fy;
+      const rightY = fx;
+      let lateral = vx * rightX + vy * rightY;
+      let totalSpeed = Math.hypot(vx, vy);
+
+      // Below roughly 3 km/h, lateral slip should collapse quickly while the driver
+      // is still holding the brake. This removes the exaggerated sideways creep
+      // without changing useful-speed drift or cornering behaviour.
+      const lowSpeedSettle = 16.2; // ~3.0 km/h at the HUD conversion (0.185).
+      if (totalSpeed <= lowSpeedSettle && Math.abs(lateral) > 0.01) {
+        const lateralKeep = Math.exp(-16 * dt);
+        lateral *= lateralKeep;
+        body.body.velocity.x = fx * Math.max(0, fwdAfter) + rightX * lateral;
+        body.body.velocity.y = fy * Math.max(0, fwdAfter) + rightY * lateral;
+      }
+
+      vx = Number(body.body.velocity.x || 0);
+      vy = Number(body.body.velocity.y || 0);
+      fwdAfter = vx * fx + vy * fy;
+      totalSpeed = Math.hypot(vx, vy);
+
+      // HUD rounds 0.5..1.49 km/h to "001". At these speeds the car should feel
+      // effectively parked once a forward braking cycle has completed, not slide
+      // sideways for metres. 8.1 px/s is about 1.5 km/h, the top of that display band.
+      if (Math.abs(fwdAfter) <= 5.5 && totalSpeed <= 8.1) {
         body.setVelocity?.(0, 0);
         if (body.body?.velocity) {
           body.body.velocity.x = 0;
