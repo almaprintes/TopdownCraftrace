@@ -82,14 +82,41 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     const {width,height}=this.scale;
     const rx=width-this._right+14;
     const py=height-174;
-    const make=(x,label,deg)=>{
+    const make=(x,label,dir)=>{
       const b=this.add.rectangle(x,py+24,62,30,0x172034,1).setOrigin(0)
         .setStrokeStyle(1,0x5b7196,.98).setInteractive({useHandCursor:true}).setDepth(61000);
       const t=this.add.text(x+31,py+39,label,{
         fontFamily:'system-ui',fontSize:'11px',fontStyle:'bold',color:'#fff'
       }).setOrigin(.5).setDepth(61001);
       this._editCam?.ignore([b,t]);
-      b.on('pointerup',p=>{p?.event?.stopPropagation?.();this._rotate(deg);});
+
+      let holdTimer=null,repeatTimer=null,startedAt=0;
+      const stop=()=>{
+        try{holdTimer?.remove?.(false);}catch{}
+        try{repeatTimer?.remove?.(false);}catch{}
+        holdTimer=null;repeatTimer=null;startedAt=0;
+      };
+      const repeat=()=>{
+        if(!startedAt)return;
+        const held=this.time.now-startedAt;
+        const step=held>1700?5:held>950?3:1;
+        this._rotate(dir*step);
+      };
+
+      b.on('pointerdown',p=>{
+        p?.event?.stopPropagation?.();
+        stop();
+        startedAt=this.time.now;
+        this._rotate(dir); // A normal tap always keeps exact 1-degree precision.
+        holdTimer=this.time.delayedCall(360,()=>{
+          if(!startedAt)return;
+          repeatTimer=this.time.addEvent({delay:72,loop:true,callback:repeat});
+        });
+      });
+      b.on('pointerup',p=>{p?.event?.stopPropagation?.();stop();});
+      b.on('pointerout',stop);
+      b.on('pointerupoutside',stop);
+      this.events.once('shutdown',stop);
     };
     make(rx,'↺ 1°',-1);
     make(rx+68,'↻ 1°',1);
