@@ -4,6 +4,10 @@ const ZOOM_MIN=.012;
 const ZOOM_MAX=4;
 const CAMERA_RESPONSE=18;
 const MAX_EVENT_RATIO=1.12;
+const ASSET_SCALE_MIN=.08;
+const ASSET_SCALE_MAX=12;
+
+function normAngle(a){return Math.atan2(Math.sin(a),Math.cos(a));}
 
 export class EnvironmentBuilderScene extends Current {
   _setupInput(){
@@ -12,15 +16,18 @@ export class EnvironmentBuilderScene extends Current {
 
     this._pinchPointers=new Map();
     this._pinching=false;
+    this._pinchMode=null;
     this._pinchPrevDistance=0;
     this._pinchPrevMid=null;
     this._pinchTarget=null;
     this._pinchSettling=false;
+    this._assetPinch=null;
 
     const inside=p=>!!p&&this._inside?.(p);
     const pair=()=>Array.from(this._pinchPointers.values()).filter(p=>p?.isDown&&inside(p)).slice(0,2);
     const dist=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y);
     const mid=(a,b)=>({x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+    const angle=(a,b)=>Math.atan2(b.y-a.y,b.x-a.x);
     const cancel=()=>{
       this._panStart=null;this._freePan=null;
       this._surfaceStart=null;this._surfaceTrace=null;this._surfaceDrag=null;
@@ -52,20 +59,57 @@ export class EnvironmentBuilderScene extends Current {
       this._pinchPointers.set(p.id,p);
       const ps=pair(),cam=this._editCam;
       if(ps.length<2||!cam)return;
+
       cancel();
-      this._pinching=true;this._pinchSettling=false;
+      this._pinching=true;
+      this._pinchSettling=false;
       this._pinchPrevDistance=Math.max(1,dist(ps[0],ps[1]));
       this._pinchPrevMid=mid(ps[0],ps[1]);
-      this._pinchTarget={x:cam.scrollX,y:cam.scrollY,zoom:Number(cam.zoom)||1};
+
+      // Gesture context is decided once, when the second finger lands.
+      // Only a real placed asset (_env) activates asset transform mode.
+      const selected=this._selected;
+      if(selected?._env&&selected?.scene){
+        this._pinchMode='asset';
+        this._pinchTarget=null;
+        this._assetPinch={
+          asset:selected,
+          startDistance:this._pinchPrevDistance,
+          startAngle:angle(ps[0],ps[1]),
+          startScaleX:Number(selected.scaleX)||1,
+          startScaleY:Number(selected.scaleY)||1,
+          startRotation:Number(selected.rotation)||0
+        };
+      }else{
+        this._pinchMode='map';
+        this._assetPinch=null;
+        this._pinchTarget={x:cam.scrollX,y:cam.scrollY,zoom:Number(cam.zoom)||1};
+      }
     });
 
-    // Pointer events update only the exact desired camera transform. They never
-    // move the camera directly; rendering toward this target happens every frame.
     this.input.on('pointermove',p=>{
       if(this._pinchPointers.has(p.id))this._pinchPointers.set(p.id,p);
-      const ps=pair(),cam=this._editCam,t=this._pinchTarget;
-      if(ps.length<2||!cam||!t)return;
-      cancel();this._pinching=true;
+      const ps=pair(),cam=this._editCam;
+      if(ps.length<2||!cam||!this._pinching)return;
+      cancel();
+
+      if(this._pinchMode==='asset'){
+        const ap=this._assetPinch,asset=ap?.asset;
+        if(!ap||!asset?.scene)return;
+        const d=Math.max(1,dist(ps[0],ps[1]));
+        let ratio=d/Math.max(1,ap.startDistance);
+        if(!Number.isFinite(ratio))ratio=1;
+        ratio=Math.max(ASSET_SCALE_MIN,Math.min(ASSET_SCALE_MAX,ratio));
+        asset.scaleX=ap.startScaleX*ratio;
+        asset.scaleY=ap.startScaleY*ratio;
+        const da=normAngle(angle(ps[0],ps[1])-ap.startAngle);
+        asset.rotation=ap.startRotation+da;
+        this._drawSelection?.();
+        return;
+      }
+
+      const t=this._pinchTarget;
+      if(this._pinchMode!=='map'||!t)return;
 
       const d=Math.max(1,dist(ps[0],ps[1])),m=mid(ps[0],ps[1]);
       if(!this._pinchPrevDistance||!this._pinchPrevMid){this._pinchPrevDistance=d;this._pinchPrevMid=m;return;}
@@ -92,11 +136,11 @@ export class EnvironmentBuilderScene extends Current {
       this._pinchPrevMid=m;
     });
 
-    // Exponential interpolation is frame-rate independent. The target follows the
-    // raw touch geometry exactly; only the camera presentation is smoothed.
+    // Only map gestures use the per-frame camera smoothing. Asset transforms
+    // follow the fingers directly so scale and twist feel attached to the object.
     this.events.on('update',(_time,delta=16.67)=>{
       const cam=this._editCam,t=this._pinchTarget;
-      if(!cam||!t||(!this._pinching&&!this._pinchSettling))return;
+      if(!cam||!t||this._pinchMode==='asset'||(!this._pinching&&!this._pinchSettling))return;
       const dt=Math.max(1,Math.min(50,Number(delta)||16.67))/1000;
       const k=1-Math.exp(-CAMERA_RESPONSE*dt);
       const nz=cam.zoom+(t.zoom-cam.zoom)*k;
@@ -108,23 +152,27 @@ export class EnvironmentBuilderScene extends Current {
 
       if(!this._pinching){
         const done=Math.abs(t.zoom-cam.zoom)<.00015&&Math.hypot(t.x-cam.scrollX,t.y-cam.scrollY)<.12;
-        if(done){cam.setZoom(t.zoom);cam.scrollX=t.x;cam.scrollY=t.y;clampCam(cam);this._pinchSettling=false;this._pinchTarget=null;}
+        if(done){
+          cam.setZoom(t.zoom);cam.scrollX=t.x;cam.scrollY=t.y;clampCam(cam);
+          this._pinchSettling=false;this._pinchTarget=null;this._pinchMode=null;
+        }
       }
     });
 
     const end=p=>{
       const wasPinching=this._pinching;
+      const endedMode=this._pinchMode;
       this._pinchPointers.delete(p?.id);
-      // A normal one-finger pointerup belongs to the selection layer. Do not
-      // clear its deferred asset/empty-map tap candidates here. Only an actual
-      // two-finger gesture owns and cancels those candidates.
       if(!wasPinching)return;
       if(pair().length<2){
         this._pinching=false;
-        this._pinchSettling=!!this._pinchTarget;
+        this._pinchSettling=endedMode==='map'&&!!this._pinchTarget;
         this._pinchPrevDistance=0;
         this._pinchPrevMid=null;
+        this._assetPinch=null;
+        if(endedMode!=='map')this._pinchMode=null;
         cancel();
+        this._drawSelection?.();
       }
     };
     this.input.on('pointerup',end);
