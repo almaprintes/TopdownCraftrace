@@ -113,7 +113,12 @@ export class EnvironmentBuilderScene extends Current {
     });
 
     const end=p=>{
+      const wasPinching=this._pinching;
       this._pinchPointers.delete(p?.id);
+      // A normal one-finger pointerup belongs to the selection layer. Do not
+      // clear its deferred asset/empty-map tap candidates here. Only an actual
+      // two-finger gesture owns and cancels those candidates.
+      if(!wasPinching)return;
       if(pair().length<2){
         this._pinching=false;
         this._pinchSettling=!!this._pinchTarget;
