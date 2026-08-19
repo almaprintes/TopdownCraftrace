@@ -2,7 +2,7 @@ import { EnvironmentBuilderScene as Current } from './EnvironmentBuilderGuardrai
 import { pathPoint, pathTangent } from '../environment/EditableSpline.js';
 
 function buildSamples(s){
-  const N=420,out=[];let total=0,prev=null;
+  const N=520,out=[];let total=0,prev=null;
   for(let i=0;i<=N;i++){
     const t=i/N,p=pathPoint(s,t),v=pathTangent(s,t),angle=Math.atan2(v.y,v.x);
     if(prev)total+=Math.hypot(p.x-prev.x,p.y-prev.y);
@@ -21,32 +21,37 @@ function poseAt(samples,d){
 function angleDelta(a,b){return Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));}
 function materialScale(s){
   switch(String(s?.type||'')){
-    case 'guardrail': return .82;
-    case 'tires': return .78;
-    case 'fence': return .86;
-    case 'plastic': return .88;
-    case 'concrete': return .88;
-    default:return .84;
+    case 'guardrail': return .72;
+    case 'tires': return .68;
+    case 'fence': return .76;
+    case 'plastic': return .78;
+    case 'concrete': return .78;
+    default:return .74;
   }
 }
+function chordAngle(samples,d,halfSpan){
+  const a=poseAt(samples,Math.max(0,d-halfSpan)),b=poseAt(samples,Math.min(samples.total,d+halfSpan));
+  const dx=b.x-a.x,dy=b.y-a.y;
+  return Math.hypot(dx,dy)>1e-4?Math.atan2(dy,dx):poseAt(samples,d).angle;
+}
 function pieces(s){
-  const samples=buildSamples(s),total=samples.total,base=Math.max(46,Number(s.spacing)||105);
-  const pieceWidth=Math.max(42,base*materialScale(s));
-  if(total<1){const p=pathPoint(s,.5),v=pathTangent(s,.5);return[{x:p.x,y:p.y,angle:Math.atan2(v.y,v.x),width:pieceWidth}];}
+  const samples=buildSamples(s),total=samples.total,base=Math.max(46,Number(s.spacing)||105),baseWidth=Math.max(38,base*materialScale(s));
+  if(total<1){const p=pathPoint(s,.5),v=pathTangent(s,.5);return[{x:p.x,y:p.y,angle:Math.atan2(v.y,v.x),width:baseWidth}];}
 
-  // Advance by physical distance. Curves use a smaller step, while the sprite itself
-  // remains rigid and constant-sized. This removes stretched pieces and hard elbows.
-  const out=[],probe=Math.max(18,pieceWidth*.42);
-  let d=Math.min(pieceWidth*.42,total*.5),guard=0;
-  while(d<total&&guard++<1000){
-    const q=poseAt(samples,d),qa=poseAt(samples,Math.max(0,d-probe)),qb=poseAt(samples,Math.min(total,d+probe));
-    const turn=angleDelta(qa.angle,qb.angle);
-    const curve=Math.min(1,turn/(Math.PI*.42));
-    const step=pieceWidth*(.90-.26*curve);
-    out.push({...q,width:pieceWidth});
-    d+=Math.max(pieceWidth*.60,step);
+  const out=[];let d=Math.min(baseWidth*.38,total*.5),guard=0;
+  while(d<total&&guard++<1400){
+    const probe=Math.max(20,baseWidth*.58);
+    const qa=poseAt(samples,Math.max(0,d-probe)),qb=poseAt(samples,Math.min(total,d+probe));
+    const turn=angleDelta(qa.angle,qb.angle),curve=Math.min(1,turn/(Math.PI*.34));
+    // Tight curves use genuinely shorter rigid modules instead of forcing a long
+    // straight sprite through a changing tangent.
+    const width=Math.max(34,baseWidth*(1-.30*curve));
+    const q=poseAt(samples,d);
+    const angle=chordAngle(samples,d,width*.34);
+    out.push({x:q.x,y:q.y,angle,width});
+    d+=Math.max(width*.72,width*(.90-.08*curve));
   }
-  if(!out.length){const q=poseAt(samples,total*.5);out.push({...q,width:pieceWidth});}
+  if(!out.length){const q=poseAt(samples,total*.5);out.push({...q,width:baseWidth});}
   return out;
 }
 
