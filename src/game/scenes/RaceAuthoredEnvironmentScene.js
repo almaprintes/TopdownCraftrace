@@ -11,17 +11,28 @@ function band(s){const steps=Math.max(28,Math.min(240,Math.ceil(pathLength(s,120
 function polygon(g,pts,color){if(!pts.length)return;g.fillStyle(color,.98);g.beginPath();g.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)g.lineTo(pts[i].x,pts[i].y);g.closePath();g.fillPath();}
 function destroyList(scene,key){const arr=scene?.[key];if(Array.isArray(arr))for(const o of arr)o?.destroy?.();scene[key]=[];}
 function clearLegacyEnvironment(scene){destroyList(scene,'_circuitEnvironment');destroyList(scene,'_ktPaddock');destroyList(scene,'_ktStructures');destroyList(scene,'_ktDenseVegetation');}
-function ad(a,b){return Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));}
-function linearPieces(s){
-  const N=220,pts=[],cum=[0];let total=0;
-  for(let i=0;i<=N;i++){const t=i/N,p=pathPoint(s,t),v=pathTangent(s,t),ang=Math.atan2(v.y,v.x);pts.push({p,ang});if(i){total+=Math.hypot(p.x-pts[i-1].p.x,p.y-pts[i-1].p.y);cum.push(total);}}
-  const out=[];let next=0;
-  for(let i=1;i<N;i++){
-    const turn=ad(pts[i-1].ang,pts[i+1].ang),target=Math.max(44,Math.min(Number(s.spacing)||105,105/(1+turn*13)));
-    if(cum[i]<next)continue;
-    out.push({x:pts[i].p.x,y:pts[i].p.y,angle:pts[i].ang,width:Math.max(46,target*1.16)});next=cum[i]+target;
+function buildSamples(s){
+  const N=360,out=[];let total=0,prev=null;
+  for(let i=0;i<=N;i++){
+    const t=i/N,p=pathPoint(s,t),v=pathTangent(s,t),angle=Math.atan2(v.y,v.x);
+    if(prev)total+=Math.hypot(p.x-prev.x,p.y-prev.y);
+    out.push({t,p,angle,d:total});prev=p;
   }
-  if(!out.length){const p=pathPoint(s,.5),v=pathTangent(s,.5);out.push({x:p.x,y:p.y,angle:Math.atan2(v.y,v.x),width:Math.max(46,total*1.06)});}
+  return {out,total,source:s};
+}
+function poseAt(samples,d){
+  const a=samples.out,total=samples.total,target=Math.max(0,Math.min(total,d));
+  let lo=1,hi=a.length-1;
+  while(lo<hi){const m=(lo+hi)>>1;if(a[m].d<target)lo=m+1;else hi=m;}
+  const b=a[lo],p=a[Math.max(0,lo-1)],span=b.d-p.d||1,u=(target-p.d)/span,t=p.t+(b.t-p.t)*u;
+  const pos=pathPoint(samples.source,t),v=pathTangent(samples.source,t);
+  return{x:pos.x,y:pos.y,angle:Math.atan2(v.y,v.x)};
+}
+function linearPieces(s){
+  const samples=buildSamples(s),total=samples.total,base=Math.max(46,Number(s.spacing)||105),pieceWidth=Math.max(46,base*1.04);
+  if(total<1){const p=pathPoint(s,.5),v=pathTangent(s,.5);return[{x:p.x,y:p.y,angle:Math.atan2(v.y,v.x),width:pieceWidth}];}
+  const count=Math.max(1,Math.ceil(total/(base*.82))),step=total/count,out=[];
+  for(let i=0;i<count;i++)out.push({...poseAt(samples,(i+.5)*step),width:pieceWidth});
   return out;
 }
 function renderLinear(scene,data,placed){for(const s of data.linearBarriers||[]){const key=`auth-linear:${s.asset}`;if(!scene.textures.exists(key))continue;for(const q of linearPieces(s)){const img=scene.add.image(q.x,q.y,key).setDepth(Number(s.z)||11.8).setRotation(q.angle);if(img.width>0)img.setDisplaySize(q.width,img.height*(q.width/img.width));scene.uiCam?.ignore?.(img);placed.push(img);}}}
