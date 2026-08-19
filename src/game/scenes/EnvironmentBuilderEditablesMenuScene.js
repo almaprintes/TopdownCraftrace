@@ -1,4 +1,5 @@
 import { EnvironmentBuilderScene as Current } from './EnvironmentBuilderTreeFixScene.js';
+import { fivePointsFromTrace } from '../environment/EditableSpline.js';
 
 const EDITABLES={
   guardrail:{label:'GUARDARRAÍL',type:'guardrail',asset:'guardrail_straight_01',path:'environment/barriers/guardrail_straight_01.webp',spacing:105},
@@ -11,16 +12,16 @@ const REMOVE_FROM_LIBRARY=new Set([
   'guardrail_straight_01','guardrail_curve_01','plastic_barrier_redwhite_01','concrete_barrier_straight_01',
   'fence_chainlink_straight_01','fence_chainlink_curve_l_01','tire_barrier_straight_short_01','tire_barrier_curve_l_01'
 ]);
+const d2=(a,b)=>{const x=a.x-b.x,y=a.y-b.y;return x*x+y*y;};
 
 export class EnvironmentBuilderScene extends Current{
-  create(){this._linearDef=EDITABLES.guardrail;this._linearStart=null;super.create();}
+  create(){this._linearDef=EDITABLES.guardrail;this._linearStart=null;this._linearTrace=null;super.create();}
 
   _allAssets(){return (super._allAssets?.()||[]).filter(a=>!REMOVE_FROM_LIBRARY.has(a.id));}
 
   _setupUi(){
     super._setupUi();
     const {width}=this.scale,rx=width-this._right,y=this._top+118;
-    // Covers the former standalone GUARDARRAÍL control and owns its hit area.
     const b=this.add.rectangle(rx+14,y,this._right-28,34,0x182637,1).setOrigin(0)
       .setStrokeStyle(2,0x45dfff,.9).setInteractive({useHandCursor:true}).setDepth(62000);
     this._editablesLabel=this.add.text(rx+this._right/2,y+17,'✎ EDITABLES',{fontFamily:'system-ui',fontSize:'10px',fontStyle:'bold',color:'#fff'}).setOrigin(.5).setDepth(62001);
@@ -35,7 +36,7 @@ export class EnvironmentBuilderScene extends Current{
     const block=this.add.rectangle(0,0,width,height,0x000000,.7).setOrigin(0).setInteractive();
     const panel=this.add.rectangle(px,py,pw,ph,0x0b1422,1).setOrigin(0).setStrokeStyle(2,0x45dfff,.95);
     const title=this.add.text(px+22,py+18,'EDITABLES',{fontFamily:'system-ui',fontSize:'20px',fontStyle:'bold',color:'#fff'});
-    const hint=this.add.text(px+22,py+48,'Elige un tipo y arrastra sobre el circuito para crear un tramo',{fontFamily:'system-ui',fontSize:'10px',color:'#9fb0c5'});
+    const hint=this.add.text(px+22,py+48,'Dibuja el trazo con el dedo · 3 nodos azules para afinar la curva',{fontFamily:'system-ui',fontSize:'10px',color:'#9fb0c5'});
     const close=this.add.text(px+pw-30,py+9,'×',{fontFamily:'system-ui',fontSize:'28px',fontStyle:'bold',color:'#fff'}).setOrigin(.5,0).setInteractive({useHandCursor:true});
     root.add([block,panel,title,hint,close]);
 
@@ -64,26 +65,27 @@ export class EnvironmentBuilderScene extends Current{
   _chooseAsphalt(){
     this._closeEditablesMenu();this._surfaceVisual='asphalt';this._mode='surface';
     this._surfacePaletteRoot?.setVisible?.(true);this._refreshSurfacePalette?.();this._status?.();
-    this._editablesLabel?.setText('✎ ASFALTO');this._flash?.('ARRASTRA PARA CREAR ASFALTO');
+    this._editablesLabel?.setText('✎ ASFALTO');this._flash?.('DIBUJA EL TRAZO DEL ASFALTO');
   }
 
   _chooseLinear(def){
     this._closeEditablesMenu();this._linearDef=def;this._mode='linear-barrier';this._selRail=null;this._selected=this._selectedSurface=null;
-    this._selectionG?.clear?.();this._editablesLabel?.setText(`✎ ${def.label}`);this._flash?.(`ARRASTRA PARA CREAR ${def.label}`);
+    this._selectionG?.clear?.();this._editablesLabel?.setText(`✎ ${def.label}`);this._flash?.(`DIBUJA EL TRAZO DE ${def.label}`);
   }
 
   _setupInput(){
     super._setupInput();const W=p=>this._editCam.getWorldPoint(p.x,p.y);
-    this.input.on('pointerdown',p=>{if(this._mode!=='linear-barrier'||!this._inside?.(p))return;this._linearStart=W(p);this._freePan=null;this._panStart=null;});
+    this.input.on('pointerdown',p=>{if(this._mode!=='linear-barrier'||!this._inside?.(p))return;const w=W(p);this._linearStart=w;this._linearTrace=[{...w}];this._freePan=null;this._panStart=null;});
+    this.input.on('pointermove',p=>{if(this._mode!=='linear-barrier'||!this._linearStart||!p.isDown)return;const w=W(p),last=this._linearTrace?.[this._linearTrace.length-1];if(!last||d2(w,last)>36)this._linearTrace.push({...w});});
     const up=p=>{
       if(this._mode!=='linear-barrier'||!this._linearStart)return;
       if(this._inside?.(p)){
         const e=W(p),a=this._linearStart,dx=e.x-a.x,dy=e.y-a.y;
-        if(dx*dx+dy*dy>1600){const s={...this._linearDef,x1:a.x,y1:a.y,x2:e.x,y2:e.y};this._rails.push(s);this._drawRails?.();this._selectRail?.(s);}
+        if(dx*dx+dy*dy>1600){const s={...this._linearDef,x1:a.x,y1:a.y,x2:e.x,y2:e.y,points:fivePointsFromTrace(this._linearTrace,a,e)};this._rails.push(s);this._drawRails?.();this._selectRail?.(s);}
       }
-      this._linearStart=null;
+      this._linearStart=null;this._linearTrace=null;
     };
-    this.input.on('pointerup',up);this.input.on('pointerupoutside',()=>{this._linearStart=null;});
+    this.input.on('pointerup',up);this.input.on('pointerupoutside',()=>{this._linearStart=null;this._linearTrace=null;});
   }
 
   _selectRail(s){super._selectRail?.(s);const def=Object.values(EDITABLES).find(d=>d.type===s?.type||d.asset===s?.asset);if(def)this._editablesLabel?.setText(`✎ ${def.label}`);}
