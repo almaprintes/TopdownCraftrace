@@ -11,15 +11,14 @@ function smoothstep01(t) {
   return t * t * (3 - 2 * t);
 }
 
-// Progressive longitudinal weight-transfer layer.
-// It deliberately stays small: the established steering/braking/coasting remain the base.
-// Effects only become meaningful while the car is moving and cornering:
-// - throttle + steering at speed => mild understeer (less yaw response),
+// Progressive chassis / tyre dynamics layered over the established base controller.
+// - throttle + steering at speed => mild understeer,
 // - braking + steering => mild front-load / turn-in assistance,
-// - sudden throttle lift while loaded => brief, controlled lift-off rotation,
-// - at high speed steering authority tapers slightly for stability,
-// - when steering is released, lateral slip recentres progressively on asphalt/track,
-// - steering input itself ramps in briefly so re-grabbing the virtual stick does not snap the chassis.
+// - sudden throttle lift while loaded => brief controlled rotation,
+// - high-speed steering authority tapers slightly,
+// - neutral tyres self-align when steering is released,
+// - touch steering re-engages progressively,
+// - tyre lateral grip saturates progressively instead of behaving like an on/off switch.
 export class RaceScene extends CurrentRaceScene {
   constructor() {
     super();
@@ -37,17 +36,17 @@ export class RaceScene extends CurrentRaceScene {
 
     const t = this.touch || {};
     const k = this.keys || {};
-    const throttle = Number(t.throttle || 0) > 0.5 || !!k.up?.isDown || !!k.up2?.isDown;
-    const brake = Number(t.brake || 0) > 0.5 || !!k.down?.isDown || !!k.down2?.isDown;
+    const keyThrottle = !!k.up?.isDown || !!k.up2?.isDown;
+    const keyBrake = !!k.down?.isDown || !!k.down2?.isDown;
+    const throttleAmount = Math.max(clamp(Number(t.throttle || 0), 0, 1), keyThrottle ? 1 : 0);
+    const brakeAmount = Math.max(clamp(Number(t.brake || 0), 0, 1), keyBrake ? 1 : 0);
+    const throttle = throttleAmount > 0.5;
+    const brake = brakeAmount > 0.5;
     const dt = clamp(Number(delta || 16.67) / 1000, 0.001, 0.05);
 
     // ---------------------------------------------------------
     // Steering input response
     // ---------------------------------------------------------
-    // A touch joystick can jump from 0 to a large steering value in a single frame
-    // when the driver re-grabs it. Real steering/chassis response cannot do that.
-    // Filter only the physical steering command; the visual joystick stays under
-    // the finger and return-to-centre remains deliberately faster than turn-in.
     const rawSteer = clamp(Number(t.steer ?? t.stickX ?? 0), -1, 1);
     const steerCfg = this.carParams?.steering || {};
     const steerSpeedKmh = Math.hypot(vxBefore, vyBefore) * 0.185;
@@ -68,9 +67,7 @@ export class RaceScene extends CurrentRaceScene {
     this._steerFiltered = clamp(steerCurrent, -1, 1);
     const steer = this._steerFiltered;
 
-    // Feed the filtered touch command into the existing base controller for this
-    // frame only. Restore the raw input immediately afterwards so UI/input state
-    // remains the single source of truth and no downstream layer sees synthetic input.
+    // Feed filtered steering into the existing controller for this frame only.
     const hasTouchSteer = !!this.touch && (t.steer != null || t.stickX != null);
     const hadSteer = Object.prototype.hasOwnProperty.call(t, 'steer');
     const hadStickX = Object.prototype.hasOwnProperty.call(t, 'stickX');
@@ -92,8 +89,7 @@ export class RaceScene extends CurrentRaceScene {
     }
     this._wtThrottlePrev = throttle;
 
-    // Smooth longitudinal balance target. Positive = more front load.
-    // Braking transfers weight forward; throttle shifts it rearward.
+    // Smooth longitudinal weight transfer.
     let balanceTarget = 0;
     if (brake) balanceTarget = 1;
     else if (throttle) balanceTarget = -0.72;
@@ -101,9 +97,74 @@ export class RaceScene extends CurrentRaceScene {
     const balanceFollow = 1 - Math.exp(-balanceRate * dt);
     this._wtBalance += (balanceTarget - this._wtBalance) * balanceFollow;
 
+    // ---------------------------------------------------------
+    // Progressive tyre saturation BEFORE the base controller consumes lateralGrip
+    // ---------------------------------------------------------
+    // The base controller already removes lateral velocity using steering.lateralGrip.
+    // Instead of adding fake drift afterwards, temporarily reduce that real tyre grip
+    // as speed, steering demand and slip angle approach the tyre's configured limit.
+    // Forward speed is untouched: this only changes how much lateral slip survives.
+    const steeringParams = this.carParams?.steering;
+    const originalLateralGrip = Number(steeringParams?.lateralGrip);
+    let lateralGripAdjusted = false;
+
+    const surfaceBefore = String(this._surface || 'TRACK').toUpperCase();
+    const stableSurfaceBefore = surfaceBefore !== 'DIRT' && surfaceBefore !== 'GRASS' && surfaceBefore !== 'OFF';
+    const specialMultiSurface = String(this._tdrSurfaceProfile || '').toLowerCase() === 'dirt-asphalt-grass';
+
+    if (
+      bodyBefore?.body?.velocity && steeringParams && Number.isFinite(originalLateralGrip) && originalLateralGrip > 0 &&
+      stableSurfaceBefore && !specialMultiSurface && steerSpeedKmh > 18
+    ) {
+      const tires = this.carParams?.tires || {};
+      const fx0 = Math.cos(rotBefore);
+      const fy0 = Math.sin(rotBefore);
+      const rx0 = -fy0;
+      const ry0 = fx0;
+      const vF0 = vxBefore * fx0 + vyBefore * fy0;
+      const vL0 = vxBefore * rx0 + vyBefore * ry0;
+      const slipDeg = Math.abs(Math.atan2(vL0, Math.max(18, Math.abs(vF0)))) * 180 / Math.PI;
+
+      const slipStart = Math.max(0.5, Number(tires.slipStartDeg ?? 5.0));
+      const slipFull = Math.max(slipStart + 1, Number(tires.slipFullDeg ?? 14.0));
+      const gripFloor = clamp(Number(tires.cornerGripFloor ?? 0.58), 0.25, 0.95);
+      const throttleLoss = clamp(Number(tires.throttleGripLoss ?? 0.10), 0, 0.35);
+      const brakeLoss = clamp(Number(tires.brakeGripLoss ?? 0.12), 0, 0.35);
+
+      const speedDemand = smoothstep01((steerSpeedKmh - 28) / 82);
+      const steeringDemand = smoothstep01((Math.abs(steer) - 0.10) / 0.80);
+      const cornerDemand = speedDemand * steeringDemand;
+      const slipDemand = smoothstep01((slipDeg - slipStart) / (slipFull - slipStart));
+
+      // Steering/speed creates the load; existing slip feeds back more gently so grip
+      // breaks progressively without creating a runaway spin once the rear moves.
+      const saturation = clamp(0.72 * cornerDemand + 0.28 * slipDemand, 0, 1);
+      const combinedLongitudinalLoss =
+        throttleLoss * throttleAmount * cornerDemand +
+        brakeLoss * brakeAmount * cornerDemand;
+
+      const gripScale = clamp(
+        1 - (1 - gripFloor) * saturation - combinedLongitudinalLoss,
+        Math.max(0.22, gripFloor * 0.88),
+        1
+      );
+
+      steeringParams.lateralGrip = originalLateralGrip * gripScale;
+      lateralGripAdjusted = true;
+      this._tyreSaturation01 = saturation;
+      this._tyreSlipDeg = slipDeg;
+    } else {
+      this._tyreSaturation01 = 0;
+      this._tyreSlipDeg = 0;
+    }
+
     try {
       super.update(time, delta);
     } finally {
+      // Restore source parameters after this physics step. The resolved car setup remains
+      // authoritative and can later vary these values per vehicle without accumulating drift.
+      if (lateralGripAdjusted && steeringParams) steeringParams.lateralGrip = originalLateralGrip;
+
       if (hasTouchSteer) {
         if (hadSteer) t.steer = originalSteer;
         else delete t.steer;
@@ -119,12 +180,8 @@ export class RaceScene extends CurrentRaceScene {
     const baseYawDelta = wrapPi(rotAfterBase - rotBefore);
 
     // ---------------------------------------------------------
-    // 0) Neutral chassis stability / tyre self-alignment
+    // Neutral chassis stability / tyre self-alignment
     // ---------------------------------------------------------
-    // When the driver releases the steering on asphalt/track, tyres naturally scrub
-    // away slip angle and the car settles back onto its longitudinal direction.
-    // Preserve forward/reverse speed exactly; only the lateral component is damped.
-    // Dirt/grass/off-track are intentionally excluded so loose surfaces can keep sliding.
     const trueKmh = Math.hypot(
       Number(body.body.velocity.x || 0),
       Number(body.body.velocity.y || 0)
@@ -143,8 +200,6 @@ export class RaceScene extends CurrentRaceScene {
       const vF = vx * fx + vy * fy;
       let vL = vx * rx + vy * ry;
 
-      // Mild at low speed, progressively stronger at road speed. This is additional
-      // self-alignment after steering release, not extra rolling resistance.
       const alignLoad = smoothstep01((trueKmh - 5) / 75);
       const alignRate = 1.8 + 2.6 * alignLoad;
       vL *= Math.exp(-alignRate * dt);
@@ -153,7 +208,6 @@ export class RaceScene extends CurrentRaceScene {
       body.body.velocity.y = fy * vF + ry * vL;
     }
 
-    // Ignore straight-line/no-load yaw cases after neutral stability has run.
     if (cornerLoad < 0.01 || Math.abs(baseYawDelta) < 1e-7) {
       this._wtLiftPulse *= Math.exp(-7.5 * dt);
       if (this._wtLiftPulse < 0.002) this._wtLiftPulse = 0;
@@ -161,27 +215,19 @@ export class RaceScene extends CurrentRaceScene {
     }
 
     // ---------------------------------------------------------
-    // 1) Progressive understeer on throttle
+    // Progressive understeer on throttle
     // ---------------------------------------------------------
-    // At high speed + meaningful steering, full throttle can remove up to ~15%
-    // of the base yaw response. Low speed and small steering remain essentially direct.
     const throttleUndersteer = throttle
       ? 0.15 * cornerLoad * smoothstep01((speedKmhBefore - 30) / 80)
       : 0;
 
     // ---------------------------------------------------------
-    // 2) Front-load turn-in while braking
+    // Front-load turn-in while braking
     // ---------------------------------------------------------
-    // Braking can add up to ~9% yaw response, helping the nose rotate into the corner.
-    // Because the progressive brake is already gentle, this reads as weight transfer,
-    // not as an artificial steering boost.
     const brakeTurnIn = brake
       ? 0.09 * cornerLoad * clamp(this._wtBalance, 0, 1)
       : 0;
 
-    // The base controller already reduces steering with speed. This extra taper is
-    // deliberately modest and only starts at genuinely fast road speeds so the car
-    // keeps agility in technical corners but feels calmer near maximum velocity.
     const highSpeedAuthority = 1 - 0.10 * smoothstep01((trueKmh - 70) / 65);
 
     let yawScale = (1 - throttleUndersteer + brakeTurnIn) * highSpeedAuthority;
@@ -189,15 +235,12 @@ export class RaceScene extends CurrentRaceScene {
     let correctedYaw = baseYawDelta * yawScale;
 
     // ---------------------------------------------------------
-    // 3) Controlled lift-off oversteer
+    // Controlled lift-off oversteer
     // ---------------------------------------------------------
-    // A throttle lift during a loaded corner adds a short extra yaw impulse in the
-    // same direction as the current turn. It decays quickly and is capped so the car
-    // hints at rear rotation without snapping into a spin.
     if (!throttle && !brake && this._wtLiftPulse > 0) {
       const pulse = this._wtLiftPulse * cornerLoad;
       const sign = Math.sign(baseYawDelta || steer || 0);
-      const extraYawRate = sign * (0.22 * pulse); // rad/s, intentionally modest
+      const extraYawRate = sign * (0.22 * pulse);
       correctedYaw += extraYawRate * dt;
       this._wtLiftPulse *= Math.exp(-4.8 * dt);
       if (this._wtLiftPulse < 0.002) this._wtLiftPulse = 0;
@@ -208,8 +251,6 @@ export class RaceScene extends CurrentRaceScene {
 
     body.rotation = rotBefore + correctedYaw;
 
-    // Keep the visible rig aligned immediately; lower visual layers may add their
-    // own tiny chassis lag on the next frame, but physics remains the authority.
     if (this.carRig?.scene) {
       this.carRig.rotation = body.rotation + (this._carVisualRotOffset || 0) + (this._visualChassisLag || 0);
     }
