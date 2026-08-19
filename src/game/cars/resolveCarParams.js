@@ -52,7 +52,10 @@ export function resolveCarParams(baseSpec, tuning = {}, overrides = {}) {
       steerSat: profileFinal.steering?.steerSat ?? 0.45,
       lowSpeedSteer: profileFinal.steering?.lowSpeedSteer ?? 0.35,
       highSpeedLimit: profileFinal.steering?.highSpeedLimit ?? 0.75,
-      lateralGrip: profileFinal.steering?.lateralGrip ?? 6
+      lateralGrip: profileFinal.steering?.lateralGrip ?? 6,
+      inputRiseRate: profileFinal.steering?.inputRiseRate ?? 9.5,
+      inputReturnRate: profileFinal.steering?.inputReturnRate ?? 14.0,
+      inputReverseRate: profileFinal.steering?.inputReverseRate ?? 7.5
     },
     engine: {
       throttleGamma: profileFinal.engine?.throttleGamma ?? 1.35,
