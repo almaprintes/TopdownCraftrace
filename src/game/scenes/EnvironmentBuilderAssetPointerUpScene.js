@@ -5,6 +5,7 @@ const TAP_PX=9;
 export class EnvironmentBuilderScene extends Current{
   create(){
     this._assetTapCandidate=null;
+    this._emptyTapCandidate=null;
     super.create();
   }
 
@@ -31,21 +32,44 @@ export class EnvironmentBuilderScene extends Current{
     super._setupInput();
 
     const isAsset=o=>!!o?._env;
+    const worldAt=p=>this._editCam.getWorldPoint(p.x,p.y);
 
-    // This listener is registered after the inherited input handlers. If an
-    // unselected asset is under the finger, re-enable free pan for this gesture
-    // and defer selection until pointerup.
+    // These listeners are registered after the inherited input handlers. An
+    // unselected asset under the finger becomes a tap candidate and the gesture
+    // remains available for free-pan until pointerup.
     this.input.on('pointerdown',(p,currentlyOver=[])=>{
+      this._emptyTapCandidate=null;
       if(this._mode!=='select'||!this._inside?.(p))return;
+
       const asset=(currentlyOver||[]).find(isAsset);
-      if(!asset||asset===this._selected){this._assetTapCandidate=null;return;}
-      this._assetTapCandidate={pointerId:p.id,asset,x:p.x,y:p.y};
-      this._freePan={pointerId:p.id,x:p.x,y:p.y,scrollX:this._editCam.scrollX,scrollY:this._editCam.scrollY};
-      this._panStart=null;
+      if(asset){
+        if(asset===this._selected){this._assetTapCandidate=null;return;}
+        this._assetTapCandidate={pointerId:p.id,asset,x:p.x,y:p.y};
+        this._freePan={pointerId:p.id,x:p.x,y:p.y,scrollX:this._editCam.scrollX,scrollY:this._editCam.scrollY};
+        this._panStart=null;
+        return;
+      }
+
+      this._assetTapCandidate=null;
+      const w=worldAt(p);
+      // A surface, barrier or one of their edit handles is not empty map.
+      const onSurfaceHandle=!!this._surfaceHandleAt?.(w);
+      const onRailHandle=!!this._railHandle?.(w);
+      const onSurface=!!this._surfaceAt?.(w);
+      const onRail=!!this._railAt?.(w);
+      if(onSurfaceHandle||onRailHandle||onSurface||onRail)return;
+
+      this._emptyTapCandidate={pointerId:p.id,x:p.x,y:p.y};
     });
 
-    this.input.on('pointerup',p=>this._finishAssetTap(p,true));
-    this.input.on('pointerupoutside',p=>this._finishAssetTap(p,false));
+    this.input.on('pointerup',p=>{
+      this._finishAssetTap(p,true);
+      this._finishEmptyTap(p,true);
+    });
+    this.input.on('pointerupoutside',p=>{
+      this._finishAssetTap(p,false);
+      this._finishEmptyTap(p,false);
+    });
   }
 
   _finishAssetTap(p,allowSelect){
@@ -56,5 +80,23 @@ export class EnvironmentBuilderScene extends Current{
     if(allowSelect&&dx*dx+dy*dy<=TAP_PX*TAP_PX&&c.asset?.scene){
       this._select?.(c.asset);
     }
+  }
+
+  _finishEmptyTap(p,allowDeselect){
+    const c=this._emptyTapCandidate;
+    if(!c||!p||p.id!==c.pointerId)return;
+    this._emptyTapCandidate=null;
+    const dx=p.x-c.x,dy=p.y-c.y;
+    if(!allowDeselect||dx*dx+dy*dy>TAP_PX*TAP_PX)return;
+
+    this._selected=null;
+    this._selectedSurface=null;
+    this._selRail=null;
+    this._selectionG?.clear?.();
+    this._mode='select';
+    this._refreshSurfaceDepthButton?.();
+    this._updateLayerInfo?.();
+    this._status?.();
+    this._editablesLabel?.setText?.('✎ EDITABLES');
   }
 }
