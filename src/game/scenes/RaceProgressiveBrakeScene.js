@@ -118,50 +118,47 @@ export class RaceScene extends CurrentRaceScene {
     // 2) Brake-to-stop, release, then reverse
     // ---------------------------------------------------------
     if (brakePressed && this._brakeCycleForwardLock) {
-      let vx = Number(body.body.velocity.x || 0);
-      let vy = Number(body.body.velocity.y || 0);
-      let fwdAfter = vx * fx + vy * fy;
+      const vx = Number(body.body.velocity.x || 0);
+      const vy = Number(body.body.velocity.y || 0);
+      const fwdAfter = vx * fx + vy * fy;
 
       // Never cross through zero into reverse during the same brake press.
       if (fwdAfter < 0) {
         body.body.velocity.x -= fx * fwdAfter;
         body.body.velocity.y -= fy * fwdAfter;
       }
+    }
 
-      vx = Number(body.body.velocity.x || 0);
-      vy = Number(body.body.velocity.y || 0);
-      fwdAfter = vx * fx + vy * fy;
-
+    // ---------------------------------------------------------
+    // 3) Low-speed tyre scrub: keep longitudinal motion, kill sideways creep
+    // ---------------------------------------------------------
+    // At walking/parking speed a normal tyre can roll forward or backward, but it
+    // cannot translate sideways like a caster wheel. Decompose velocity in car-local
+    // axes and suppress only the lateral component. This applies whether braking,
+    // coasting, moving forward or reversing; longitudinal speed is preserved.
+    {
+      const vx = Number(body.body.velocity.x || 0);
+      const vy = Number(body.body.velocity.y || 0);
       const rightX = -fy;
       const rightY = fx;
+      const fwd = vx * fx + vy * fy;
       let lateral = vx * rightX + vy * rightY;
-      let totalSpeed = Math.hypot(vx, vy);
+      const totalSpeed = Math.hypot(vx, vy);
 
-      // Below roughly 3 km/h, lateral slip should collapse quickly while the driver
-      // is still holding the brake. This removes the exaggerated sideways creep
-      // without changing useful-speed drift or cornering behaviour.
-      const lowSpeedSettle = 16.2; // ~3.0 km/h at the HUD conversion (0.185).
-      if (totalSpeed <= lowSpeedSettle && Math.abs(lateral) > 0.01) {
-        const lateralKeep = Math.exp(-16 * dt);
-        lateral *= lateralKeep;
-        body.body.velocity.x = fx * Math.max(0, fwdAfter) + rightX * lateral;
-        body.body.velocity.y = fy * Math.max(0, fwdAfter) + rightY * lateral;
-      }
+      const scrubStart = 16.2; // ~3.0 km/h longitudinal.
+      const hardLock = 8.1;    // ~1.5 km/h longitudinal.
+      const maxLowSpeedVector = 24.3; // ~4.5 km/h total; avoid touching real drift.
 
-      vx = Number(body.body.velocity.x || 0);
-      vy = Number(body.body.velocity.y || 0);
-      fwdAfter = vx * fx + vy * fy;
-      totalSpeed = Math.hypot(vx, vy);
-
-      // HUD rounds 0.5..1.49 km/h to "001". At these speeds the car should feel
-      // effectively parked once a forward braking cycle has completed, not slide
-      // sideways for metres. 8.1 px/s is about 1.5 km/h, the top of that display band.
-      if (Math.abs(fwdAfter) <= 5.5 && totalSpeed <= 8.1) {
-        body.setVelocity?.(0, 0);
-        if (body.body?.velocity) {
-          body.body.velocity.x = 0;
-          body.body.velocity.y = 0;
+      if (Math.abs(fwd) <= scrubStart && totalSpeed <= maxLowSpeedVector && Math.abs(lateral) > 0.001) {
+        if (Math.abs(fwd) <= hardLock) {
+          lateral = 0;
+        } else {
+          // Strong, frame-rate independent lateral tyre scrub from ~3 km/h down.
+          lateral *= Math.exp(-24 * dt);
         }
+
+        body.body.velocity.x = fx * fwd + rightX * lateral;
+        body.body.velocity.y = fy * fwd + rightY * lateral;
       }
     }
   }
