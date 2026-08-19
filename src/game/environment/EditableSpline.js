@@ -1,10 +1,16 @@
 const n=v=>Number(v);
 const finite=v=>Number.isFinite(n(v));
+const hasPoints=s=>Array.isArray(s?.points)&&s.points.filter(p=>finite(p?.x)&&finite(p?.y)).length>=2;
 
 export function legacyQuadPoint(s,t){
   const x1=n(s?.x1)||0,y1=n(s?.y1)||0,x2=n(s?.x2)||0,y2=n(s?.y2)||0;
   const cx=finite(s?.cpx)?n(s.cpx):(x1+x2)/2,cy=finite(s?.cpy)?n(s.cpy):(y1+y2)/2,m=1-t;
   return{x:m*m*x1+2*m*t*cx+t*t*x2,y:m*m*y1+2*m*t*cy+t*t*y2};
+}
+function legacyQuadTangent(s,t){
+  const x1=n(s?.x1)||0,y1=n(s?.y1)||0,x2=n(s?.x2)||0,y2=n(s?.y2)||0;
+  const cx=finite(s?.cpx)?n(s.cpx):(x1+x2)/2,cy=finite(s?.cpy)?n(s.cpy):(y1+y2)/2;
+  return{x:2*(1-t)*(cx-x1)+2*t*(x2-cx),y:2*(1-t)*(cy-y1)+2*t*(y2-cy)};
 }
 
 export function pathPoints(s){
@@ -30,6 +36,7 @@ function catmullTangent(p0,p1,p2,p3,t){
 }
 
 export function pathPoint(s,t){
+  if(!hasPoints(s))return legacyQuadPoint(s,t);
   const pts=pathPoints(s),count=pts.length;
   if(count===2)return{x:pts[0].x+(pts[1].x-pts[0].x)*t,y:pts[0].y+(pts[1].y-pts[0].y)*t};
   const u=Math.max(0,Math.min(.999999,Number(t)||0))*(count-1),i=Math.min(count-2,Math.floor(u)),lt=u-i;
@@ -38,6 +45,7 @@ export function pathPoint(s,t){
 }
 
 export function pathTangent(s,t){
+  if(!hasPoints(s))return legacyQuadTangent(s,t);
   const pts=pathPoints(s),count=pts.length;
   if(count===2)return{x:pts[1].x-pts[0].x,y:pts[1].y-pts[0].y};
   const u=Math.max(0,Math.min(.999999,Number(t)||0))*(count-1),i=Math.min(count-2,Math.floor(u)),lt=u-i;
@@ -48,10 +56,10 @@ export function pathTangent(s,t){
 }
 
 export function normalizedPoints(s){
+  if(!hasPoints(s))return [0,.25,.5,.75,1].map(t=>legacyQuadPoint(s,t));
   const pts=pathPoints(s).map(p=>({...p}));
   if(pts.length===5)return pts;
-  const sample=[0,.25,.5,.75,1].map(t=>pathPoint({...s,points:pts},t));
-  return sample;
+  return [0,.25,.5,.75,1].map(t=>pathPoint({...s,points:pts},t));
 }
 
 function pointAtTraceFraction(trace,f){
