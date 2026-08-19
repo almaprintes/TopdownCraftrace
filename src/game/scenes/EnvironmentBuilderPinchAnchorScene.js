@@ -3,7 +3,6 @@ import { EnvironmentBuilderScene as Current } from './EnvironmentBuilderGuardrai
 const ZOOM_MIN=.012;
 const ZOOM_MAX=4;
 const CAMERA_RESPONSE=18;
-const MAX_EVENT_RATIO=1.12;
 const ASSET_SCALE_MIN=.08;
 const ASSET_SCALE_MAX=12;
 
@@ -17,11 +16,8 @@ export class EnvironmentBuilderScene extends Current {
     this._pinchPointers=new Map();
     this._pinching=false;
     this._pinchMode=null;
-    this._pinchPrevDistance=0;
-    this._pinchPrevMid=null;
-    this._pinchTarget=null;
-    this._pinchSettling=false;
     this._assetPinch=null;
+    this._mapPinch=null;
 
     const inside=p=>!!p&&this._inside?.(p);
     const pair=()=>Array.from(this._pinchPointers.values()).filter(p=>p?.isDown&&inside(p)).slice(0,2);
@@ -34,22 +30,21 @@ export class EnvironmentBuilderScene extends Current {
       this._railStart=null;this._linearStart=null;this._railDrag=null;
       this._assetTapCandidate=null;this._emptyTapCandidate=null;
     };
-    const bounds=cam=>{
-      const z=Math.max(.0001,Number(cam.zoom)||1);
-      const worldW=Number(cam._bounds?.width)||8000,worldH=Number(cam._bounds?.height)||5000;
-      const minX=Number(cam._bounds?.x)||0,minY=Number(cam._bounds?.y)||0;
-      return {minX,minY,maxX:Math.max(minX,minX+worldW-cam.width/z),maxY:Math.max(minY,minY+worldH-cam.height/z)};
-    };
-    const clampTarget=t=>{
-      const cam=this._editCam;if(!cam||!t)return;
-      const z=Math.max(.0001,t.zoom);
-      const worldW=Number(cam._bounds?.width)||8000,worldH=Number(cam._bounds?.height)||5000;
-      const minX=Number(cam._bounds?.x)||0,minY=Number(cam._bounds?.y)||0;
-      const maxX=Math.max(minX,minX+worldW-cam.width/z),maxY=Math.max(minY,minY+worldH-cam.height/z);
-      t.x=Math.max(minX,Math.min(maxX,t.x));t.y=Math.max(minY,Math.min(maxY,t.y));
+    const boundsFor=(cam,z=cam?.zoom)=>{
+      const zoom=Math.max(.0001,Number(z)||1);
+      const b=cam?._bounds;
+      const minX=Number(b?.x)||0,minY=Number(b?.y)||0;
+      const worldW=Number(b?.width)||this._editorWorldW||8000;
+      const worldH=Number(b?.height)||this._editorWorldH||5000;
+      return {
+        minX,minY,
+        maxX:Math.max(minX,minX+worldW-cam.width/zoom),
+        maxY:Math.max(minY,minY+worldH-cam.height/zoom)
+      };
     };
     const clampCam=cam=>{
-      const b=bounds(cam);
+      if(!cam)return;
+      const b=boundsFor(cam);
       cam.scrollX=Math.max(b.minX,Math.min(b.maxX,cam.scrollX));
       cam.scrollY=Math.max(b.minY,Math.min(b.maxY,cam.scrollY));
     };
@@ -62,29 +57,40 @@ export class EnvironmentBuilderScene extends Current {
 
       cancel();
       this._pinching=true;
-      this._pinchSettling=false;
-      this._pinchPrevDistance=Math.max(1,dist(ps[0],ps[1]));
-      this._pinchPrevMid=mid(ps[0],ps[1]);
+      const d=Math.max(1,dist(ps[0],ps[1]));
+      const m=mid(ps[0],ps[1]);
 
-      // Gesture context is decided once, when the second finger lands.
-      // Only a real placed asset (_env) activates asset transform mode.
+      // The gesture context is fixed when the second finger lands.
       const selected=this._selected;
       if(selected?._env&&selected?.scene){
         this._pinchMode='asset';
-        this._pinchTarget=null;
+        this._mapPinch=null;
         this._assetPinch={
           asset:selected,
-          startDistance:this._pinchPrevDistance,
+          startDistance:d,
           startAngle:angle(ps[0],ps[1]),
           startScaleX:Number(selected.scaleX)||1,
           startScaleY:Number(selected.scaleY)||1,
           startRotation:Number(selected.rotation)||0
         };
-      }else{
-        this._pinchMode='map';
-        this._assetPinch=null;
-        this._pinchTarget={x:cam.scrollX,y:cam.scrollY,zoom:Number(cam.zoom)||1};
+        return;
       }
+
+      this._pinchMode='map';
+      this._assetPinch=null;
+      const anchor=cam.getWorldPoint(m.x,m.y);
+      this._mapPinch={
+        startDistance:d,
+        startZoom:Number(cam.zoom)||1,
+        targetZoom:Number(cam.zoom)||1,
+        mid:{...m},
+        anchor:{x:anchor.x,y:anchor.y},
+        previousUseBounds:cam.useBounds
+      };
+
+      // Camera bounds must not fight the fingers during an active map gesture.
+      // They are restored as soon as either finger is released.
+      if('useBounds' in cam)cam.useBounds=false;
     });
 
     this.input.on('pointermove',p=>{
@@ -108,72 +114,64 @@ export class EnvironmentBuilderScene extends Current {
         return;
       }
 
-      const t=this._pinchTarget;
-      if(this._pinchMode!=='map'||!t)return;
-
-      const d=Math.max(1,dist(ps[0],ps[1])),m=mid(ps[0],ps[1]);
-      if(!this._pinchPrevDistance||!this._pinchPrevMid){this._pinchPrevDistance=d;this._pinchPrevMid=m;return;}
-
-      const prevX=this._pinchPrevMid.x-cam.x,prevY=this._pinchPrevMid.y-cam.y;
-      const nowX=m.x-cam.x,nowY=m.y-cam.y;
-      if(prevX<0||prevY<0||prevX>cam.width||prevY>cam.height||nowX<0||nowY<0||nowX>cam.width||nowY>cam.height){
-        this._pinchPrevDistance=d;this._pinchPrevMid=m;return;
-      }
-
-      const oldZoom=Math.max(.0001,t.zoom);
-      const anchorX=t.x+prevX/oldZoom,anchorY=t.y+prevY/oldZoom;
-      let ratio=d/this._pinchPrevDistance;
+      const mp=this._mapPinch;
+      if(this._pinchMode!=='map'||!mp)return;
+      const d=Math.max(1,dist(ps[0],ps[1]));
+      const m=mid(ps[0],ps[1]);
+      let ratio=d/Math.max(1,mp.startDistance);
       if(!Number.isFinite(ratio))ratio=1;
-      ratio=Math.max(1/MAX_EVENT_RATIO,Math.min(MAX_EVENT_RATIO,ratio));
-      const nextZoom=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,oldZoom*ratio));
-
-      t.zoom=nextZoom;
-      t.x=anchorX-nowX/nextZoom;
-      t.y=anchorY-nowY/nextZoom;
-      clampTarget(t);
-
-      this._pinchPrevDistance=d;
-      this._pinchPrevMid=m;
+      mp.targetZoom=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,mp.startZoom*ratio));
+      mp.mid={...m};
     });
 
-    // Only map gestures use the per-frame camera smoothing. Asset transforms
-    // follow the fingers directly so scale and twist feel attached to the object.
+    // Zoom is smoothed per frame, but scroll is NOT interpolated separately.
+    // At every frame it is solved from the same world anchor and the live finger
+    // midpoint, so the point between the two fingers cannot drift while zooming.
     this.events.on('update',(_time,delta=16.67)=>{
-      const cam=this._editCam,t=this._pinchTarget;
-      if(!cam||!t||this._pinchMode==='asset'||(!this._pinching&&!this._pinchSettling))return;
+      if(!this._pinching||this._pinchMode!=='map')return;
+      const cam=this._editCam,mp=this._mapPinch;
+      if(!cam||!mp)return;
+
       const dt=Math.max(1,Math.min(50,Number(delta)||16.67))/1000;
       const k=1-Math.exp(-CAMERA_RESPONSE*dt);
-      const nz=cam.zoom+(t.zoom-cam.zoom)*k;
-      cam.setZoom(nz);
-      cam.scrollX+=(t.x-cam.scrollX)*k;
-      cam.scrollY+=(t.y-cam.scrollY)*k;
-      clampCam(cam);
-      if(this._selectedSurface||this._selRail)this._drawSelection?.();
+      const current=Math.max(.0001,Number(cam.zoom)||1);
+      const next=current+(mp.targetZoom-current)*k;
+      cam.setZoom(next);
 
-      if(!this._pinching){
-        const done=Math.abs(t.zoom-cam.zoom)<.00015&&Math.hypot(t.x-cam.scrollX,t.y-cam.scrollY)<.12;
-        if(done){
-          cam.setZoom(t.zoom);cam.scrollX=t.x;cam.scrollY=t.y;clampCam(cam);
-          this._pinchSettling=false;this._pinchTarget=null;this._pinchMode=null;
-        }
-      }
+      const localX=mp.mid.x-cam.x;
+      const localY=mp.mid.y-cam.y;
+      cam.scrollX=mp.anchor.x-localX/next;
+      cam.scrollY=mp.anchor.y-localY/next;
+
+      if(this._selectedSurface||this._selRail)this._drawSelection?.();
     });
 
     const end=p=>{
       const wasPinching=this._pinching;
       const endedMode=this._pinchMode;
+      const cam=this._editCam;
+      const mp=this._mapPinch;
       this._pinchPointers.delete(p?.id);
       if(!wasPinching)return;
-      if(pair().length<2){
-        this._pinching=false;
-        this._pinchSettling=endedMode==='map'&&!!this._pinchTarget;
-        this._pinchPrevDistance=0;
-        this._pinchPrevMid=null;
-        this._assetPinch=null;
-        if(endedMode!=='map')this._pinchMode=null;
-        cancel();
-        this._drawSelection?.();
+      if(pair().length>=2)return;
+
+      this._pinching=false;
+      if(endedMode==='map'&&cam&&mp){
+        // Finish at the exact requested zoom/anchor before restoring bounds.
+        const z=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,mp.targetZoom));
+        cam.setZoom(z);
+        const localX=mp.mid.x-cam.x,localY=mp.mid.y-cam.y;
+        cam.scrollX=mp.anchor.x-localX/z;
+        cam.scrollY=mp.anchor.y-localY/z;
+        if('useBounds' in cam)cam.useBounds=mp.previousUseBounds!==false;
+        clampCam(cam);
       }
+
+      this._assetPinch=null;
+      this._mapPinch=null;
+      this._pinchMode=null;
+      cancel();
+      this._drawSelection?.();
     };
     this.input.on('pointerup',end);
     this.input.on('pointerupoutside',end);
