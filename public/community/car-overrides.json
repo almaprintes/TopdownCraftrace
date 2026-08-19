@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-08-19T18:47:00Z",
+  "updated_at": "2026-08-19T20:52:00Z",
   "cars": {
     "stock": { "massKg": 980 },
     "touring": { "massKg": 1280 },
@@ -51,6 +51,7 @@
 
     "crown_axis": {
       "massKg": 1120,
+      "visualScale": 0.92,
       "handlingProfile": "CROWN_AXIS",
       "maxFwd": 548.0,
       "accel": 748.0,
