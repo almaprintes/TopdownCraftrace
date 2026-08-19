@@ -1,0 +1,239 @@
+{
+  "version": 4,
+  "trackId": "karting-tenerife",
+  "environment": [
+    {
+      "asset": "tree_broad_02",
+      "path": "environment/tree_broad_02.webp",
+      "x": 1181.48,
+      "y": 444.09,
+      "rotation": 0,
+      "displayWidth": 85.03,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tree_broad_02",
+      "path": "environment/tree_broad_02.webp",
+      "x": 1122.2,
+      "y": 473.14,
+      "rotation": -0.40143,
+      "displayWidth": 85.03,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tree_broad_02",
+      "path": "environment/tree_broad_02.webp",
+      "x": 1105.59,
+      "y": 527.53,
+      "rotation": -0.40143,
+      "displayWidth": 85.03,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "shrub_round_01",
+      "path": "environment/shrub_round_01.webp",
+      "x": 1173.11,
+      "y": 483.86,
+      "rotation": 0,
+      "displayWidth": 41.45,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "shrub_flowers_01",
+      "path": "environment/shrub_flowers_01.webp",
+      "x": 1145.39,
+      "y": 506.95,
+      "rotation": 0,
+      "displayWidth": 43.7,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "grandstand_full_01",
+      "path": "environment/structures/grandstand_full_01.webp",
+      "x": 2200.29,
+      "y": 1211.44,
+      "rotation": -1.48353,
+      "displayWidth": 207.26,
+      "flipX": true,
+      "flipY": false,
+      "z": 12
+    }
+  ],
+  "surfaces": [
+    {
+      "x1": 2383.507962953293,
+      "y1": 1678.5058444472725,
+      "x2": 2607.748224892989,
+      "y2": 1340.6635353239133,
+      "width": 60,
+      "visual": "asphalt",
+      "physics": "dirt",
+      "trackLayer": "under",
+      "cpx": 2566.291816230434,
+      "cpy": 1548.6593912995763
+    },
+    {
+      "x1": 1712.2872629153323,
+      "y1": 1047.2239896573578,
+      "x2": 1356.0109728610314,
+      "y2": 688.5018669482217,
+      "width": 60,
+      "visual": "gravel",
+      "physics": "dirt",
+      "trackLayer": "under"
+    },
+    {
+      "x1": 2606.4072925796804,
+      "y1": 1347.792364213098,
+      "x2": 2622.7705526239447,
+      "y2": 785.3385604009,
+      "width": 60,
+      "visual": "asphalt",
+      "physics": "dirt",
+      "trackLayer": "under",
+      "cpx": 2641.5893534761053,
+      "cpy": 1062.4941577484035
+    },
+    {
+      "x1": 2622.93583857485,
+      "y1": 788.6283449030102,
+      "x2": 2459.6832606551993,
+      "y2": 459.9385438604047,
+      "width": 60,
+      "visual": "asphalt",
+      "physics": "dirt",
+      "trackLayer": "under",
+      "cpx": 2610.420139104291,
+      "cpy": 587.2486042092798
+    }
+  ],
+  "baseTrack": {
+    "id": "karting-tenerife",
+    "name": "KARTING TENERIFE",
+    "source": "src/game/tracks/library/karting-tenerife/track.json",
+    "locked": true
+  },
+  "repositoryPath": "src/game/tracks/library/karting-tenerife/karting-tenerife.environment.json",
+  "linearBarriers": [
+    {
+      "type": "guardrail",
+      "asset": "guardrail_straight_01",
+      "path": "environment/barriers/guardrail_straight_01.webp",
+      "spacing": 105,
+      "x1": 1925.9338272637538,
+      "y1": 791.9021380062711,
+      "x2": 2176.0294371563946,
+      "y2": 972.8110244995646,
+      "cpx": 1975.156670235646,
+      "cpy": 1036.9086159541757
+    },
+    {
+      "type": "guardrail",
+      "asset": "guardrail_straight_01",
+      "path": "environment/barriers/guardrail_straight_01.webp",
+      "spacing": 105,
+      "x1": 2208.9785455146116,
+      "y1": 957.512109211082,
+      "x2": 2237.9440959444264,
+      "y2": 512.3542102123371,
+      "cpx": 2355.1998699625906,
+      "cpy": 901.647556821611
+    },
+    {
+      "type": "guardrail",
+      "asset": "guardrail_straight_01",
+      "path": "environment/barriers/guardrail_straight_01.webp",
+      "spacing": 105,
+      "x1": 2219.911831602165,
+      "y1": 458.64942293212306,
+      "x2": 2242.6481649032776,
+      "y2": 414.35277356961075,
+      "cpx": 2203.447590246187,
+      "cpy": 415.5287908093235
+    },
+    {
+      "type": "guardrail",
+      "asset": "guardrail_straight_01",
+      "path": "environment/barriers/guardrail_straight_01.webp",
+      "spacing": 105,
+      "x1": 2246.1762166224157,
+      "y1": 426.1129459667379,
+      "x2": 2295.764943563635,
+      "y2": 634.464000269174,
+      "cpx": 2333.005489487871,
+      "cpy": 456.29738845269765
+    },
+    {
+      "type": "guardrail",
+      "asset": "guardrail_straight_01",
+      "path": "environment/barriers/guardrail_straight_01.webp",
+      "spacing": 105,
+      "x1": 2296.6454863461895,
+      "y1": 776.9213765396838,
+      "x2": 2302.2686801652003,
+      "y2": 671.7676521241824,
+      "cpx": 2301.331481195365,
+      "cpy": 747.1184492989267
+    },
+    {
+      "type": "plastic",
+      "asset": "plastic_barrier_redwhite_01",
+      "path": "environment/barriers/plastic_barrier_redwhite_01.webp",
+      "spacing": 92,
+      "label": "BARRERA PLÁSTICA",
+      "x1": 2472.8059488112044,
+      "y1": 1505.8351463065358,
+      "x2": 2557.3628660300606,
+      "y2": 839.6052962193661,
+      "cpx": 2599.051392658892,
+      "cpy": 1199.857092370398
+    },
+    {
+      "type": "plastic",
+      "asset": "plastic_barrier_redwhite_01",
+      "path": "environment/barriers/plastic_barrier_redwhite_01.webp",
+      "spacing": 92,
+      "label": "BARRERA PLÁSTICA",
+      "x1": 2551.48093995291,
+      "y1": 777.4254258664507,
+      "x2": 2497.4336567360233,
+      "y2": 570.607394524414,
+      "cpx": 2536.5186027156446,
+      "cpy": 649.6471984672397
+    },
+    {
+      "label": "HORMIGÓN",
+      "type": "concrete",
+      "asset": "concrete_barrier_straight_01",
+      "path": "environment/barriers/concrete_barrier_straight_01.webp",
+      "spacing": 108,
+      "x1": 2492.659679715854,
+      "y1": 682.7895377109004,
+      "x2": 2443.1762198875927,
+      "y2": 1510.4076377625277
+    },
+    {
+      "label": "NEUMÁTICOS",
+      "type": "tires",
+      "asset": "tire_barrier_straight_short_01",
+      "path": "environment/barriers/tire_barrier_straight_short_01.webp",
+      "spacing": 82,
+      "x1": 1966.764607947385,
+      "y1": 999.3682573824445,
+      "x2": 1908.1909356723597,
+      "y2": 1491.8017853583203,
+      "cpx": 2113.717139717028,
+      "cpy": 1457.3314384000091
+    }
+  ]
+}
