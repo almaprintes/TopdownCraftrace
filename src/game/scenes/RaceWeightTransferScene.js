@@ -16,7 +16,9 @@ function smoothstep01(t) {
 // Effects only become meaningful while the car is moving and cornering:
 // - throttle + steering at speed => mild understeer (less yaw response),
 // - braking + steering => mild front-load / turn-in assistance,
-// - sudden throttle lift while loaded => brief, controlled lift-off rotation.
+// - sudden throttle lift while loaded => brief, controlled lift-off rotation,
+// - at high speed steering authority tapers slightly for stability,
+// - when steering is released, lateral slip recentres progressively on asphalt/track.
 export class RaceScene extends CurrentRaceScene {
   constructor() {
     super();
@@ -67,7 +69,42 @@ export class RaceScene extends CurrentRaceScene {
     const rotAfterBase = Number(body.rotation || rotBefore);
     const baseYawDelta = wrapPi(rotAfterBase - rotBefore);
 
-    // Ignore straight-line/no-load cases completely.
+    // ---------------------------------------------------------
+    // 0) Neutral chassis stability / tyre self-alignment
+    // ---------------------------------------------------------
+    // When the driver releases the steering on asphalt/track, tyres naturally scrub
+    // away slip angle and the car settles back onto its longitudinal direction.
+    // Preserve forward/reverse speed exactly; only the lateral component is damped.
+    // Dirt/grass/off-track are intentionally excluded so loose surfaces can keep sliding.
+    const trueKmh = Math.hypot(
+      Number(body.body.velocity.x || 0),
+      Number(body.body.velocity.y || 0)
+    ) * 0.185;
+    const surface = String(this._surface || 'TRACK').toUpperCase();
+    const stableSurface = surface !== 'DIRT' && surface !== 'GRASS' && surface !== 'OFF';
+
+    if (stableSurface && Math.abs(steer) < 0.055 && trueKmh > 5) {
+      const rot = Number(body.rotation || rotAfterBase);
+      const fx = Math.cos(rot);
+      const fy = Math.sin(rot);
+      const rx = -fy;
+      const ry = fx;
+      const vx = Number(body.body.velocity.x || 0);
+      const vy = Number(body.body.velocity.y || 0);
+      const vF = vx * fx + vy * fy;
+      let vL = vx * rx + vy * ry;
+
+      // Mild at low speed, progressively stronger at road speed. This is additional
+      // self-alignment after steering release, not extra rolling resistance.
+      const alignLoad = smoothstep01((trueKmh - 5) / 75);
+      const alignRate = 1.8 + 2.6 * alignLoad;
+      vL *= Math.exp(-alignRate * dt);
+
+      body.body.velocity.x = fx * vF + rx * vL;
+      body.body.velocity.y = fy * vF + ry * vL;
+    }
+
+    // Ignore straight-line/no-load yaw cases after neutral stability has run.
     if (cornerLoad < 0.01 || Math.abs(baseYawDelta) < 1e-7) {
       this._wtLiftPulse *= Math.exp(-7.5 * dt);
       if (this._wtLiftPulse < 0.002) this._wtLiftPulse = 0;
@@ -93,8 +130,13 @@ export class RaceScene extends CurrentRaceScene {
       ? 0.09 * cornerLoad * clamp(this._wtBalance, 0, 1)
       : 0;
 
-    let yawScale = 1 - throttleUndersteer + brakeTurnIn;
-    yawScale = clamp(yawScale, 0.84, 1.10);
+    // The base controller already reduces steering with speed. This extra taper is
+    // deliberately modest and only starts at genuinely fast road speeds so the car
+    // keeps agility in technical corners but feels calmer near maximum velocity.
+    const highSpeedAuthority = 1 - 0.10 * smoothstep01((trueKmh - 70) / 65);
+
+    let yawScale = (1 - throttleUndersteer + brakeTurnIn) * highSpeedAuthority;
+    yawScale = clamp(yawScale, 0.80, 1.10);
     let correctedYaw = baseYawDelta * yawScale;
 
     // ---------------------------------------------------------
