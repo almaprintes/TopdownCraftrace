@@ -3,7 +3,7 @@
    as an offline fallback. This prevents an installed iPhone PWA from getting
    stuck on an old circuit/environment build. */
 
-const CACHE_VERSION = 'tdr2-v21';
+const CACHE_VERSION = 'tdr2-v22';
 const CORE_ASSETS = [
   './',
   './index.html',
