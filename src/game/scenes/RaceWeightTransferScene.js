@@ -13,7 +13,7 @@ function smoothstep01(t) {
 
 // Progressive chassis / tyre dynamics layered over the established base controller.
 // - throttle + steering at speed => mild understeer,
-// - braking + steering => mild front-load / turn-in assistance,
+// - braking first loads the nose, then saturates progressively under heavy corner load,
 // - sudden throttle lift while loaded => brief controlled rotation,
 // - high-speed steering authority tapers slightly,
 // - neutral tyres self-align when steering is released,
@@ -25,6 +25,7 @@ export class RaceScene extends CurrentRaceScene {
     this._wtThrottlePrev = false;
     this._wtLiftPulse = 0;
     this._wtBalance = 0; // -1 rearward, +1 forward
+    this._wtBrakePressure = 0;
     this._steerFiltered = 0;
   }
 
@@ -43,6 +44,14 @@ export class RaceScene extends CurrentRaceScene {
     const throttle = throttleAmount > 0.5;
     const brake = brakeAmount > 0.5;
     const dt = clamp(Number(delta || 16.67) / 1000, 0.001, 0.05);
+
+    // Brake command is digital on touch, but chassis load is not. Build a short physical
+    // pressure ramp so turn-in assistance and tyre saturation arrive progressively.
+    const brakePressureRate = brakeAmount > this._wtBrakePressure ? 7.0 : 11.5;
+    const brakePressureFollow = 1 - Math.exp(-brakePressureRate * dt);
+    this._wtBrakePressure += (brakeAmount - this._wtBrakePressure) * brakePressureFollow;
+    if (brakeAmount === 0 && this._wtBrakePressure < 0.002) this._wtBrakePressure = 0;
+    const brakePressure = clamp(this._wtBrakePressure, 0, 1);
 
     // ---------------------------------------------------------
     // Steering input response
@@ -89,9 +98,10 @@ export class RaceScene extends CurrentRaceScene {
     }
     this._wtThrottlePrev = throttle;
 
-    // Smooth longitudinal weight transfer.
+    // Smooth longitudinal weight transfer. Use physical brake pressure instead of the
+    // digital button so load transfer follows the chassis rather than the input switch.
     let balanceTarget = 0;
-    if (brake) balanceTarget = 1;
+    if (brakePressure > 0.01) balanceTarget = brakePressure;
     else if (throttle) balanceTarget = -0.72;
     const balanceRate = balanceTarget === 0 ? 7.5 : 5.5;
     const balanceFollow = 1 - Math.exp(-balanceRate * dt);
@@ -100,10 +110,6 @@ export class RaceScene extends CurrentRaceScene {
     // ---------------------------------------------------------
     // Progressive tyre saturation BEFORE the base controller consumes lateralGrip
     // ---------------------------------------------------------
-    // The base controller already removes lateral velocity using steering.lateralGrip.
-    // Instead of adding fake drift afterwards, temporarily reduce that real tyre grip
-    // as speed, steering demand and slip angle approach the tyre's configured limit.
-    // Forward speed is untouched: this only changes how much lateral slip survives.
     const steeringParams = this.carParams?.steering;
     const originalLateralGrip = Number(steeringParams?.lateralGrip);
     let lateralGripAdjusted = false;
@@ -136,12 +142,10 @@ export class RaceScene extends CurrentRaceScene {
       const cornerDemand = speedDemand * steeringDemand;
       const slipDemand = smoothstep01((slipDeg - slipStart) / (slipFull - slipStart));
 
-      // Steering/speed creates the load; existing slip feeds back more gently so grip
-      // breaks progressively without creating a runaway spin once the rear moves.
       const saturation = clamp(0.72 * cornerDemand + 0.28 * slipDemand, 0, 1);
       const combinedLongitudinalLoss =
         throttleLoss * throttleAmount * cornerDemand +
-        brakeLoss * brakeAmount * cornerDemand;
+        brakeLoss * brakePressure * cornerDemand;
 
       const gripScale = clamp(
         1 - (1 - gripFloor) * saturation - combinedLongitudinalLoss,
@@ -161,8 +165,6 @@ export class RaceScene extends CurrentRaceScene {
     try {
       super.update(time, delta);
     } finally {
-      // Restore source parameters after this physics step. The resolved car setup remains
-      // authoritative and can later vary these values per vehicle without accumulating drift.
       if (lateralGripAdjusted && steeringParams) steeringParams.lateralGrip = originalLateralGrip;
 
       if (hasTouchSteer) {
@@ -222,16 +224,24 @@ export class RaceScene extends CurrentRaceScene {
       : 0;
 
     // ---------------------------------------------------------
-    // Front-load turn-in while braking
+    // Braking in a corner: useful initial turn-in, then front-tyre saturation
     // ---------------------------------------------------------
-    const brakeTurnIn = brake
-      ? 0.09 * cornerLoad * clamp(this._wtBalance, 0, 1)
-      : 0;
+    // Moderate pressure loads the front axle and helps the nose rotate. Heavy pressure
+    // plus substantial steering/speed consumes the same front grip, so extra brake no
+    // longer gives free yaw and eventually trims steering authority.
+    const brakeUsefulLoad = smoothstep01(brakePressure / 0.58);
+    const brakeOverload =
+      smoothstep01((brakePressure - 0.56) / 0.44) *
+      smoothstep01((Math.abs(steer) - 0.28) / 0.62) *
+      smoothstep01((trueKmh - 28) / 62);
+
+    const brakeTurnIn = 0.085 * cornerLoad * clamp(this._wtBalance, 0, 1) * brakeUsefulLoad * (1 - 0.62 * brakeOverload);
+    const brakeSteerLoss = 0.115 * cornerLoad * brakeOverload;
 
     const highSpeedAuthority = 1 - 0.10 * smoothstep01((trueKmh - 70) / 65);
 
-    let yawScale = (1 - throttleUndersteer + brakeTurnIn) * highSpeedAuthority;
-    yawScale = clamp(yawScale, 0.80, 1.10);
+    let yawScale = (1 - throttleUndersteer + brakeTurnIn - brakeSteerLoss) * highSpeedAuthority;
+    yawScale = clamp(yawScale, 0.78, 1.10);
     let correctedYaw = baseYawDelta * yawScale;
 
     // ---------------------------------------------------------
