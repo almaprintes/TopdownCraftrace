@@ -41,14 +41,13 @@ export class RaceScene extends CurrentRaceScene {
     const vy0 = Number(body.body.velocity.y || 0);
     const kmh = Math.hypot(vx0, vy0) * 0.185;
 
-    // Low-speed driveline braking remains deliberately strong: below ~18 km/h
-    // the extra coasting assistance is essentially absent so the car settles naturally.
-    // From 18 to 30 km/h the racing-speed inertia returns progressively. This keeps
-    // lift-off useful for chassis balance without making it replace the brake pedal.
-    const coastBlend = smoothstep01((kmh - 18) / 12);
+    // Full long-coast compensation is useful at racing speed, but must fade away
+    // at parking/crawl speeds. Below 15 km/h we keep NONE of the extra inertia;
+    // from 15 to 35 km/h it blends smoothly back to the established high-speed feel.
+    const coastBlend = smoothstep01((kmh - 15) / 20);
 
     // Base RaceScene applies exp(-linearDrag * dt * 60).
-    // High speed keeps the established effective scale (~3.5); low speed receives
+    // High speed keeps the previous effective scale (~3.5); low speed receives
     // the full base rolling resistance (scale 60), with a smooth transition.
     const baseDragScale = 60;
     const highSpeedCoastScale = 3.5;
@@ -59,9 +58,9 @@ export class RaceScene extends CurrentRaceScene {
       body.body.velocity.y *= compensation;
     }
 
-    // Restore the high-speed part of engine-brake compensation with the same curve.
-    // At <=18 km/h the base driveline resistance remains untouched, preserving the
-    // natural low-speed settling we already validated on device.
+    // Likewise, restore engine braking only in proportion to racing-speed coasting.
+    // At <=15 km/h the base driveline resistance remains untouched so the car
+    // naturally settles instead of gliding indefinitely.
     if (engineBrake > 0 && coastBlend > 0) {
       const rot = Number(body.rotation || 0);
       const fx = Math.cos(rot);
