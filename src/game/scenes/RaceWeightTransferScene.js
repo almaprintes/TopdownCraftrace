@@ -14,6 +14,7 @@ function smoothstep01(t) {
 // Progressive chassis / tyre dynamics layered over the established base controller.
 // - throttle + steering at speed => mild progressive understeer,
 // - braking first loads the nose, then saturates progressively under heavy corner load,
+// - brake/throttle transitions crossfade through chassis load instead of switching states,
 // - sudden throttle lift while loaded => brief controlled rotation,
 // - high-speed steering authority tapers slightly,
 // - neutral tyres self-align when steering is released,
@@ -27,6 +28,7 @@ export class RaceScene extends CurrentRaceScene {
     this._wtBalance = 0; // -1 rearward, +1 forward
     this._wtBrakePressure = 0;
     this._wtThrottleLoad = 0;
+    this._wtYawScale = 1;
     this._steerFiltered = 0;
   }
 
@@ -108,14 +110,18 @@ export class RaceScene extends CurrentRaceScene {
     }
     this._wtThrottlePrev = throttle;
 
-    // Smooth longitudinal weight transfer. Physical brake pressure and throttle load
-    // make the chassis transition continuously between nose-down, neutral and rear-loaded.
-    let balanceTarget = 0;
-    if (brakePressure > 0.01) balanceTarget = brakePressure;
-    else if (throttleLoad > 0.01) balanceTarget = -0.72 * throttleLoad;
-    const balanceRate = balanceTarget === 0 ? 7.5 : 5.5;
+    // ---------------------------------------------------------
+    // Continuous longitudinal load transfer
+    // ---------------------------------------------------------
+    // Brake and throttle loads are allowed to overlap briefly while their physical ramps
+    // decay. Subtracting them creates a continuous path nose-down -> neutral -> rear-loaded
+    // instead of waiting for one state to disappear before activating the other.
+    const balanceTarget = clamp(brakePressure - 0.72 * throttleLoad, -0.72, 1);
+    const crossingBalance = Math.abs(this._wtBalance) > 0.04 && Math.abs(balanceTarget) > 0.04 && Math.sign(this._wtBalance) !== Math.sign(balanceTarget);
+    const balanceRate = crossingBalance ? 4.8 : (Math.abs(balanceTarget) < 0.02 ? 7.5 : 5.8);
     const balanceFollow = 1 - Math.exp(-balanceRate * dt);
     this._wtBalance += (balanceTarget - this._wtBalance) * balanceFollow;
+    if (Math.abs(balanceTarget) < 0.002 && Math.abs(this._wtBalance) < 0.002) this._wtBalance = 0;
 
     // ---------------------------------------------------------
     // Progressive tyre saturation BEFORE the base controller consumes lateralGrip
@@ -223,22 +229,22 @@ export class RaceScene extends CurrentRaceScene {
     if (cornerLoad < 0.01 || Math.abs(baseYawDelta) < 1e-7) {
       this._wtLiftPulse *= Math.exp(-7.5 * dt);
       if (this._wtLiftPulse < 0.002) this._wtLiftPulse = 0;
+      const yawNeutralFollow = 1 - Math.exp(-10.0 * dt);
+      this._wtYawScale += (1 - this._wtYawScale) * yawNeutralFollow;
+      if (Math.abs(this._wtYawScale - 1) < 0.001) this._wtYawScale = 1;
       return;
     }
 
     // ---------------------------------------------------------
     // Progressive understeer on throttle
     // ---------------------------------------------------------
-    // Rearward load now follows the chassis rather than the digital pedal. Re-applying
+    // Rearward load follows the chassis rather than the digital pedal. Re-applying
     // power on corner exit therefore opens the line progressively instead of jolting it.
     const throttleUndersteer = 0.15 * throttleLoad * cornerLoad * smoothstep01((speedKmhBefore - 30) / 80);
 
     // ---------------------------------------------------------
     // Braking in a corner: useful initial turn-in, then front-tyre saturation
     // ---------------------------------------------------------
-    // Moderate pressure loads the front axle and helps the nose rotate. Heavy pressure
-    // plus substantial steering/speed consumes the same front grip, so extra brake no
-    // longer gives free yaw and eventually trims steering authority.
     const brakeUsefulLoad = smoothstep01(brakePressure / 0.58);
     const brakeOverload =
       smoothstep01((brakePressure - 0.56) / 0.44) *
@@ -250,8 +256,13 @@ export class RaceScene extends CurrentRaceScene {
 
     const highSpeedAuthority = 1 - 0.10 * smoothstep01((trueKmh - 70) / 65);
 
-    let yawScale = (1 - throttleUndersteer + brakeTurnIn - brakeSteerLoss) * highSpeedAuthority;
-    yawScale = clamp(yawScale, 0.78, 1.10);
+    // The requested yaw modifier is itself filtered through a short chassis response.
+    // This removes the final instantaneous state change without making steering feel lazy.
+    const yawTarget = clamp((1 - throttleUndersteer + brakeTurnIn - brakeSteerLoss) * highSpeedAuthority, 0.78, 1.10);
+    const yawResponseRate = yawTarget < this._wtYawScale ? 9.2 : 7.4;
+    const yawFollow = 1 - Math.exp(-yawResponseRate * dt);
+    this._wtYawScale += (yawTarget - this._wtYawScale) * yawFollow;
+    const yawScale = clamp(this._wtYawScale, 0.78, 1.10);
     let correctedYaw = baseYawDelta * yawScale;
 
     // ---------------------------------------------------------
