@@ -11,7 +11,7 @@ import { CarEditorScene } from './scenes/CarEditorSpeedConsistencyScene.js';
 import { TrackEditorScene } from './scenes/TrackEditorScene.js';
 import { TrackGarageScene } from './scenes/TrackGarageCleanTypographyScene.js';
 import { TrackStudioScene } from './scenes/TrackStudioScene.js';
-import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderCreationGuardScene.js';
+import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderExportPathFixScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
 import './tracks/trackPublicNames.js';
 
