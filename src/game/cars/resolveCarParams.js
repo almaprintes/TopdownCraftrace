@@ -62,6 +62,13 @@ export function resolveCarParams(baseSpec, tuning = {}, overrides = {}) {
       coastDrag: profileFinal.engine?.coastDrag ?? 0.016,
       brakeDrag: profileFinal.engine?.brakeDrag ?? 0.055
     },
-    tires: { gripSpeedGain: profileFinal.tires?.gripSpeedGain ?? 0.04 }
+    tires: {
+      gripSpeedGain: profileFinal.tires?.gripSpeedGain ?? 0.04,
+      slipStartDeg: profileFinal.tires?.slipStartDeg ?? 5.0,
+      slipFullDeg: profileFinal.tires?.slipFullDeg ?? 14.0,
+      cornerGripFloor: profileFinal.tires?.cornerGripFloor ?? 0.58,
+      throttleGripLoss: profileFinal.tires?.throttleGripLoss ?? 0.10,
+      brakeGripLoss: profileFinal.tires?.brakeGripLoss ?? 0.12
+    }
   };
 }
