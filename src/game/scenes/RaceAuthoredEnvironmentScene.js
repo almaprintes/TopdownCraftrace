@@ -3,6 +3,8 @@ import { createTrackEnvironment, hasTrackEnvironment } from '../tracks/environme
 
 const BASE=import.meta.env.BASE_URL||'/';
 const STYLE={asphalt:{main:0x2b2c2f,edge:0x656a70},grass:{main:0x285936,edge:0x39794a},dirt:{main:0x695743,edge:0x806d55},gravel:{main:0x77766f,edge:0x97968d}};
+const VEGETATION_PATHS={tree_broad_02:'environment/vegetation/tree_broad_02.webp',palm_tall_01:'environment/vegetation/palm_tall_01.webp'};
+function assetPath(asset,path){return VEGETATION_PATHS[asset]||path;}
 function trackId(scene){return String(scene?.trackKey||scene?.track?.id||scene?.track?.key||'');}
 function control(s){return{x:Number.isFinite(Number(s.cpx))?Number(s.cpx):(Number(s.x1)+Number(s.x2))/2,y:Number.isFinite(Number(s.cpy))?Number(s.cpy):(Number(s.y1)+Number(s.y2))/2};}
 function qp(s,t){const m=1-t,c=control(s);return{x:m*m*s.x1+2*m*t*c.x+t*t*s.x2,y:m*m*s.y1+2*m*t*c.y+t*t*s.y2};}
@@ -35,5 +37,5 @@ function render(scene,data){
   for(const d of env){const key=`auth-env:${d.asset}`;if(!scene.textures.exists(key))continue;const img=scene.add.image(Number(d.x)||0,Number(d.y)||0,key).setDepth(Number(d.z)||12).setRotation(Number(d.rotation)||0);const dw=Number(d.displayWidth);if(Number.isFinite(dw)&&dw>0&&img.width>0)img.setDisplaySize(dw,img.height*(dw/img.width));img.setFlipX(!!d.flipX);img.setFlipY(!!d.flipY);scene.uiCam?.ignore?.(img);placed.push(img);}
   scene._authoredEnvironmentObjects=placed;scene._authoredSurfaceZones=(data.surfaces||[]).map(s=>({...s}));
 }
-function ensure(scene,data){const missing=[],queued=new Set();const add=(key,path)=>{if(!key||!path||scene.textures.exists(key)||queued.has(key))return;scene.load.image(key,`${BASE}assets/${String(path).replace(/^assets\//,'')}`);queued.add(key);missing.push(key);};for(const d of data.environment||[])if(d?.asset&&d?.path)add(`auth-env:${d.asset}`,d.path);for(const d of data.linearBarriers||[])if(d?.asset&&d?.path)add(`auth-linear:${d.asset}`,d.path);const apply=()=>scene.time?.delayedCall?.(40,()=>render(scene,data));if(!missing.length){apply();return;}scene.load.once('complete',apply);if(!scene.load.isLoading())scene.load.start();}
+function ensure(scene,data){const missing=[],queued=new Set();const add=(key,path)=>{if(!key||!path||scene.textures.exists(key)||queued.has(key))return;scene.load.image(key,`${BASE}assets/${String(path).replace(/^assets\//,'')}`);queued.add(key);missing.push(key);};for(const d of data.environment||[])if(d?.asset&&d?.path)add(`auth-env:${d.asset}`,assetPath(d.asset,d.path));for(const d of data.linearBarriers||[])if(d?.asset&&d?.path)add(`auth-linear:${d.asset}`,d.path);const apply=()=>scene.time?.delayedCall?.(40,()=>render(scene,data));if(!missing.length){apply();return;}scene.load.once('complete',apply);if(!scene.load.isLoading())scene.load.start();}
 export class RaceScene extends CurrentRaceScene{create(){super.create();const id=trackId(this);if(!id||!hasTrackEnvironment(id))return;const data=createTrackEnvironment(id);clearLegacyEnvironment(this);ensure(this,data);}}
