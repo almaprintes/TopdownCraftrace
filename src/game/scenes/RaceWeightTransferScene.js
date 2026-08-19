@@ -12,7 +12,7 @@ function smoothstep01(t) {
 }
 
 // Progressive chassis / tyre dynamics layered over the established base controller.
-// - throttle + steering at speed => mild understeer,
+// - throttle + steering at speed => mild progressive understeer,
 // - braking first loads the nose, then saturates progressively under heavy corner load,
 // - sudden throttle lift while loaded => brief controlled rotation,
 // - high-speed steering authority tapers slightly,
@@ -26,6 +26,7 @@ export class RaceScene extends CurrentRaceScene {
     this._wtLiftPulse = 0;
     this._wtBalance = 0; // -1 rearward, +1 forward
     this._wtBrakePressure = 0;
+    this._wtThrottleLoad = 0;
     this._steerFiltered = 0;
   }
 
@@ -52,6 +53,15 @@ export class RaceScene extends CurrentRaceScene {
     this._wtBrakePressure += (brakeAmount - this._wtBrakePressure) * brakePressureFollow;
     if (brakeAmount === 0 && this._wtBrakePressure < 0.002) this._wtBrakePressure = 0;
     const brakePressure = clamp(this._wtBrakePressure, 0, 1);
+
+    // Throttle pedal can also be digital, but rearward load transfer must build through
+    // the chassis instead of appearing in one frame. Rise is deliberately quick enough
+    // to feel responsive; release is faster so lift-off rotation remains available.
+    const throttleLoadRate = throttleAmount > this._wtThrottleLoad ? 6.4 : 10.5;
+    const throttleLoadFollow = 1 - Math.exp(-throttleLoadRate * dt);
+    this._wtThrottleLoad += (throttleAmount - this._wtThrottleLoad) * throttleLoadFollow;
+    if (throttleAmount === 0 && this._wtThrottleLoad < 0.002) this._wtThrottleLoad = 0;
+    const throttleLoad = clamp(this._wtThrottleLoad, 0, 1);
 
     // ---------------------------------------------------------
     // Steering input response
@@ -98,11 +108,11 @@ export class RaceScene extends CurrentRaceScene {
     }
     this._wtThrottlePrev = throttle;
 
-    // Smooth longitudinal weight transfer. Use physical brake pressure instead of the
-    // digital button so load transfer follows the chassis rather than the input switch.
+    // Smooth longitudinal weight transfer. Physical brake pressure and throttle load
+    // make the chassis transition continuously between nose-down, neutral and rear-loaded.
     let balanceTarget = 0;
     if (brakePressure > 0.01) balanceTarget = brakePressure;
-    else if (throttle) balanceTarget = -0.72;
+    else if (throttleLoad > 0.01) balanceTarget = -0.72 * throttleLoad;
     const balanceRate = balanceTarget === 0 ? 7.5 : 5.5;
     const balanceFollow = 1 - Math.exp(-balanceRate * dt);
     this._wtBalance += (balanceTarget - this._wtBalance) * balanceFollow;
@@ -144,7 +154,7 @@ export class RaceScene extends CurrentRaceScene {
 
       const saturation = clamp(0.72 * cornerDemand + 0.28 * slipDemand, 0, 1);
       const combinedLongitudinalLoss =
-        throttleLoss * throttleAmount * cornerDemand +
+        throttleLoss * throttleLoad * cornerDemand +
         brakeLoss * brakePressure * cornerDemand;
 
       const gripScale = clamp(
@@ -219,9 +229,9 @@ export class RaceScene extends CurrentRaceScene {
     // ---------------------------------------------------------
     // Progressive understeer on throttle
     // ---------------------------------------------------------
-    const throttleUndersteer = throttle
-      ? 0.15 * cornerLoad * smoothstep01((speedKmhBefore - 30) / 80)
-      : 0;
+    // Rearward load now follows the chassis rather than the digital pedal. Re-applying
+    // power on corner exit therefore opens the line progressively instead of jolting it.
+    const throttleUndersteer = 0.15 * throttleLoad * cornerLoad * smoothstep01((speedKmhBefore - 30) / 80);
 
     // ---------------------------------------------------------
     // Braking in a corner: useful initial turn-in, then front-tyre saturation
