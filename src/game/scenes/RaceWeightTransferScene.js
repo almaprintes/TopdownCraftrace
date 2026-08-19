@@ -18,13 +18,15 @@ function smoothstep01(t) {
 // - braking + steering => mild front-load / turn-in assistance,
 // - sudden throttle lift while loaded => brief, controlled lift-off rotation,
 // - at high speed steering authority tapers slightly for stability,
-// - when steering is released, lateral slip recentres progressively on asphalt/track.
+// - when steering is released, lateral slip recentres progressively on asphalt/track,
+// - steering input itself ramps in briefly so re-grabbing the virtual stick does not snap the chassis.
 export class RaceScene extends CurrentRaceScene {
   constructor() {
     super();
     this._wtThrottlePrev = false;
     this._wtLiftPulse = 0;
     this._wtBalance = 0; // -1 rearward, +1 forward
+    this._steerFiltered = 0;
   }
 
   update(time, delta) {
@@ -37,9 +39,48 @@ export class RaceScene extends CurrentRaceScene {
     const k = this.keys || {};
     const throttle = Number(t.throttle || 0) > 0.5 || !!k.up?.isDown || !!k.up2?.isDown;
     const brake = Number(t.brake || 0) > 0.5 || !!k.down?.isDown || !!k.down2?.isDown;
-    const steer = clamp(Number(t.steer ?? t.stickX ?? 0), -1, 1);
-
     const dt = clamp(Number(delta || 16.67) / 1000, 0.001, 0.05);
+
+    // ---------------------------------------------------------
+    // Steering input response
+    // ---------------------------------------------------------
+    // A touch joystick can jump from 0 to a large steering value in a single frame
+    // when the driver re-grabs it. Real steering/chassis response cannot do that.
+    // Filter only the physical steering command; the visual joystick stays under
+    // the finger and return-to-centre remains deliberately faster than turn-in.
+    const rawSteer = clamp(Number(t.steer ?? t.stickX ?? 0), -1, 1);
+    const steerCfg = this.carParams?.steering || {};
+    const steerSpeedKmh = Math.hypot(vxBefore, vyBefore) * 0.185;
+    const speedCalm = smoothstep01((steerSpeedKmh - 45) / 90);
+    const riseRate = Math.max(0.1, Number(steerCfg.inputRiseRate ?? 9.5)) * (1 - 0.25 * speedCalm);
+    const returnRate = Math.max(0.1, Number(steerCfg.inputReturnRate ?? 14.0));
+    const reverseRate = Math.max(0.1, Number(steerCfg.inputReverseRate ?? 7.5)) * (1 - 0.18 * speedCalm);
+    const steerTarget = Math.abs(rawSteer) < 0.025 ? 0 : rawSteer;
+
+    let steerCurrent = Number.isFinite(this._steerFiltered) ? this._steerFiltered : 0;
+    let responseRate = riseRate;
+    if (steerTarget === 0) responseRate = returnRate;
+    else if (Math.abs(steerCurrent) > 0.01 && Math.sign(steerTarget) !== Math.sign(steerCurrent)) responseRate = reverseRate;
+
+    const steerFollow = 1 - Math.exp(-responseRate * dt);
+    steerCurrent += (steerTarget - steerCurrent) * steerFollow;
+    if (steerTarget === 0 && Math.abs(steerCurrent) < 0.002) steerCurrent = 0;
+    this._steerFiltered = clamp(steerCurrent, -1, 1);
+    const steer = this._steerFiltered;
+
+    // Feed the filtered touch command into the existing base controller for this
+    // frame only. Restore the raw input immediately afterwards so UI/input state
+    // remains the single source of truth and no downstream layer sees synthetic input.
+    const hasTouchSteer = !!this.touch && (t.steer != null || t.stickX != null);
+    const hadSteer = Object.prototype.hasOwnProperty.call(t, 'steer');
+    const hadStickX = Object.prototype.hasOwnProperty.call(t, 'stickX');
+    const originalSteer = t.steer;
+    const originalStickX = t.stickX;
+    if (hasTouchSteer) {
+      t.steer = steer;
+      if (hadStickX) t.stickX = steer;
+    }
+
     const speedKmhBefore = Math.hypot(vxBefore, vyBefore) * 0.10;
     const speedLoad = smoothstep01((speedKmhBefore - 18) / 72);
     const steerLoad = smoothstep01((Math.abs(steer) - 0.08) / 0.72);
@@ -60,7 +101,15 @@ export class RaceScene extends CurrentRaceScene {
     const balanceFollow = 1 - Math.exp(-balanceRate * dt);
     this._wtBalance += (balanceTarget - this._wtBalance) * balanceFollow;
 
-    super.update(time, delta);
+    try {
+      super.update(time, delta);
+    } finally {
+      if (hasTouchSteer) {
+        if (hadSteer) t.steer = originalSteer;
+        else delete t.steer;
+        if (hadStickX) t.stickX = originalStickX;
+      }
+    }
 
     const body = this.carBody;
     if (!body?.scene || !body.body?.velocity) return;
