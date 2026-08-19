@@ -9,7 +9,11 @@ export const HANDLING_PROFILES = {
       inputRiseRate: 10.5, inputReturnRate: 15.0, inputReverseRate: 8.5
     },
     engine: { throttleGamma: 1.25, coastDrag: 0.018, brakeDrag: 0.060 },
-    tires:  { gripSpeedGain: 0.00 } // kart: sin “aero”
+    tires: {
+      gripSpeedGain: 0.00,
+      slipStartDeg: 4.5, slipFullDeg: 13.0, cornerGripFloor: 0.62,
+      throttleGripLoss: 0.08, brakeGripLoss: 0.10
+    }
   },
 
   F1_DOWNFORCE: {
@@ -18,7 +22,11 @@ export const HANDLING_PROFILES = {
       inputRiseRate: 9.5, inputReturnRate: 15.0, inputReverseRate: 8.0
     },
     engine: { throttleGamma: 1.20, coastDrag: 0.020, brakeDrag: 0.070 },
-    tires:  { gripSpeedGain: 0.12 } // grip aumenta con velocidad (simula downforce)
+    tires: {
+      gripSpeedGain: 0.12,
+      slipStartDeg: 4.0, slipFullDeg: 11.5, cornerGripFloor: 0.68,
+      throttleGripLoss: 0.07, brakeGripLoss: 0.09
+    }
   },
 
   ARCADE: {
@@ -27,7 +35,11 @@ export const HANDLING_PROFILES = {
       inputRiseRate: 9.5, inputReturnRate: 14.0, inputReverseRate: 7.5
     },
     engine: { throttleGamma: 1.35, coastDrag: 0.016, brakeDrag: 0.055 },
-    tires:  { gripSpeedGain: 0.04 }
+    tires: {
+      gripSpeedGain: 0.04,
+      slipStartDeg: 5.0, slipFullDeg: 14.0, cornerGripFloor: 0.58,
+      throttleGripLoss: 0.10, brakeGripLoss: 0.12
+    }
   },
 
   RALLY_LOOSE: {
@@ -36,7 +48,11 @@ export const HANDLING_PROFILES = {
       inputRiseRate: 8.5, inputReturnRate: 12.5, inputReverseRate: 7.0
     },
     engine: { throttleGamma: 1.45, coastDrag: 0.014, brakeDrag: 0.050 },
-    tires:  { gripSpeedGain: 0.02 }
+    tires: {
+      gripSpeedGain: 0.02,
+      slipStartDeg: 4.0, slipFullDeg: 10.0, cornerGripFloor: 0.42,
+      throttleGripLoss: 0.13, brakeGripLoss: 0.16
+    }
   },
 
   DRIFT: {
@@ -45,7 +61,11 @@ export const HANDLING_PROFILES = {
       inputRiseRate: 8.0, inputReturnRate: 11.0, inputReverseRate: 6.5
     },
     engine: { throttleGamma: 1.10, coastDrag: 0.012, brakeDrag: 0.045 },
-    tires:  { gripSpeedGain: 0.00 }
+    tires: {
+      gripSpeedGain: 0.00,
+      slipStartDeg: 3.0, slipFullDeg: 8.0, cornerGripFloor: 0.30,
+      throttleGripLoss: 0.18, brakeGripLoss: 0.14
+    }
   },
 
   HEAVY_TRUCK: {
@@ -54,6 +74,10 @@ export const HANDLING_PROFILES = {
       inputRiseRate: 7.0, inputReturnRate: 12.0, inputReverseRate: 6.0
     },
     engine: { throttleGamma: 1.55, coastDrag: 0.022, brakeDrag: 0.070 },
-    tires:  { gripSpeedGain: 0.03 }
+    tires: {
+      gripSpeedGain: 0.03,
+      slipStartDeg: 5.5, slipFullDeg: 15.0, cornerGripFloor: 0.65,
+      throttleGripLoss: 0.08, brakeGripLoss: 0.10
+    }
   }
 };
