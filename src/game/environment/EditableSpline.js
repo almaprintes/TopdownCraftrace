@@ -20,38 +20,40 @@ export function pathPoints(s){
   return [legacyQuadPoint(s,0),legacyQuadPoint(s,.25),legacyQuadPoint(s,.5),legacyQuadPoint(s,.75),legacyQuadPoint(s,1)];
 }
 
-function catmull(p0,p1,p2,p3,t){
-  const t2=t*t,t3=t2*t;
-  return{
-    x:.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
-    y:.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)
-  };
+const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+const knot=(t,a,b)=>t+Math.max(1e-4,Math.pow((b.x-a.x)*(b.x-a.x)+(b.y-a.y)*(b.y-a.y),.25));
+function timedLerp(a,b,ta,tb,t){
+  const d=tb-ta;if(Math.abs(d)<1e-7)return {...a};
+  return lerp(a,b,(t-ta)/d);
 }
-function catmullTangent(p0,p1,p2,p3,t){
-  const t2=t*t;
-  return{
-    x:.5*((-p0.x+p2.x)+2*(2*p0.x-5*p1.x+4*p2.x-p3.x)*t+3*(-p0.x+3*p1.x-3*p2.x+p3.x)*t2),
-    y:.5*((-p0.y+p2.y)+2*(2*p0.y-5*p1.y+4*p2.y-p3.y)*t+3*(-p0.y+3*p1.y-3*p2.y+p3.y)*t2)
-  };
+function centripetalSegment(p0,p1,p2,p3,u){
+  const t0=0,t1=knot(t0,p0,p1),t2=knot(t1,p1,p2),t3=knot(t2,p2,p3),t=t1+(t2-t1)*u;
+  const a1=timedLerp(p0,p1,t0,t1,t),a2=timedLerp(p1,p2,t1,t2,t),a3=timedLerp(p2,p3,t2,t3,t);
+  const b1=timedLerp(a1,a2,t0,t2,t),b2=timedLerp(a2,a3,t1,t3,t);
+  return timedLerp(b1,b2,t1,t2,t);
 }
+function virtualBefore(a,b){return{x:a.x-(b.x-a.x),y:a.y-(b.y-a.y)};}
+function virtualAfter(a,b){return{x:b.x+(b.x-a.x),y:b.y+(b.y-a.y)};}
 
 export function pathPoint(s,t){
   if(!hasPoints(s))return legacyQuadPoint(s,t);
   const pts=pathPoints(s),count=pts.length;
-  if(count===2)return{x:pts[0].x+(pts[1].x-pts[0].x)*t,y:pts[0].y+(pts[1].y-pts[0].y)*t};
-  const u=Math.max(0,Math.min(.999999,Number(t)||0))*(count-1),i=Math.min(count-2,Math.floor(u)),lt=u-i;
-  const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(count-1,i+2)];
-  return catmull(p0,p1,p2,p3,lt);
+  if(count===2)return lerp(pts[0],pts[1],Math.max(0,Math.min(1,Number(t)||0)));
+  const tt=Math.max(0,Math.min(1,Number(t)||0));
+  if(tt>=1)return {...pts[count-1]};
+  const u=tt*(count-1),i=Math.min(count-2,Math.floor(u)),lt=u-i;
+  const p1=pts[i],p2=pts[i+1];
+  const p0=i>0?pts[i-1]:virtualBefore(p1,p2);
+  const p3=i+2<count?pts[i+2]:virtualAfter(p1,p2);
+  return centripetalSegment(p0,p1,p2,p3,lt);
 }
 
 export function pathTangent(s,t){
   if(!hasPoints(s))return legacyQuadTangent(s,t);
-  const pts=pathPoints(s),count=pts.length;
-  if(count===2)return{x:pts[1].x-pts[0].x,y:pts[1].y-pts[0].y};
-  const u=Math.max(0,Math.min(.999999,Number(t)||0))*(count-1),i=Math.min(count-2,Math.floor(u)),lt=u-i;
-  const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(count-1,i+2)];
-  const v=catmullTangent(p0,p1,p2,p3,lt);
-  if(Math.hypot(v.x,v.y)<1e-5)return{x:p2.x-p1.x,y:p2.y-p1.y};
+  const tt=Math.max(0,Math.min(1,Number(t)||0)),eps=.0015;
+  const a=pathPoint(s,Math.max(0,tt-eps)),b=pathPoint(s,Math.min(1,tt+eps));
+  let v={x:b.x-a.x,y:b.y-a.y};
+  if(Math.hypot(v.x,v.y)<1e-5){const pts=pathPoints(s);v={x:pts[pts.length-1].x-pts[0].x,y:pts[pts.length-1].y-pts[0].y};}
   return v;
 }
 
@@ -82,7 +84,7 @@ export function fivePointsFromTrace(trace,start,end){
   return[a,b,c,d,e];
 }
 
-export function pathLength(s,steps=160){
+export function pathLength(s,steps=220){
   let a=pathPoint(s,0),total=0;
   for(let i=1;i<=steps;i++){const b=pathPoint(s,i/steps);total+=Math.hypot(b.x-a.x,b.y-a.y);a=b;}
   return total;
