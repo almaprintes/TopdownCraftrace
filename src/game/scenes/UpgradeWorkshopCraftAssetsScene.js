@@ -1,6 +1,6 @@
 import { UpgradeShopScene as PremiumWorkshopV3 } from './UpgradeWorkshopPremiumV3Scene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
-import { getEquippedForCar } from '../garage/garageStore.js';
+import { getEquippedForCar, saveGarage } from '../garage/garageStore.js';
 
 const CRAFT_BASE = `${import.meta.env.BASE_URL || './'}assets/crafting/`;
 const FAMILIES = ['engine','brakes','tires','suspension','transmission'];
@@ -110,6 +110,19 @@ export class UpgradeShopScene extends PremiumWorkshopV3 {
     g.strokeCircle(cx,cy,size*.46);
   }
 
+  _unequipFamily(family){
+    if(this.busy || !family) return;
+    if(!this.state.equippedByCar || typeof this.state.equippedByCar !== 'object'){
+      this.state.equippedByCar = {};
+    }
+    if(!this.state.equippedByCar[this.car]){
+      this.state.equippedByCar[this.car] = {...(getEquippedForCar(this.state,this.car)||{})};
+    }
+    delete this.state.equippedByCar[this.car][family];
+    saveGarage(this.state);
+    this.render();
+  }
+
   _equippedStrip(A,r,compact){
     const g=A(this.add.graphics());
     g.fillStyle(0x03080b,.98);
@@ -138,8 +151,8 @@ export class UpgradeShopScene extends PremiumWorkshopV3 {
 
       if(item){
         const artSize=Math.min(cw*.22,r.h*(compact?.34:.38));
-        this._itemArt(A,item,x+cw*.20,r.y+r.h*.61,artSize);
-        A(this.add.text(x+cw*.58,r.y+r.h*.60,`${item.name}\nT${item.tier}`,{
+        this._itemArt(A,item,x+cw*.20,r.y+r.h*.56,artSize);
+        A(this.add.text(x+cw*.58,r.y+r.h*.53,`${item.name}\nT${item.tier}`,{
           fontFamily:'system-ui',
           fontSize:compact?'7px':'8px',
           fontStyle:'700',
@@ -147,6 +160,17 @@ export class UpgradeShopScene extends PremiumWorkshopV3 {
           align:'center',
           wordWrap:{width:cw*.70}
         }).setOrigin(.5));
+        A(this.add.text(x+cw/2,r.y+r.h-(compact?8:10),'TOCA PARA QUITAR',{
+          fontFamily:'system-ui',
+          fontSize:compact?'6px':'7px',
+          fontStyle:'800',
+          color:'#ffcf63'
+        }).setOrigin(.5));
+
+        const hit=A(this.add.rectangle(x+2,r.y+2,cw-4,r.h-4,0x000000,.001)
+          .setOrigin(0)
+          .setInteractive({useHandCursor:true}));
+        hit.on('pointerdown',()=>this._unequipFamily(f));
       }else{
         A(this.add.text(x+cw/2,r.y+r.h-(compact?11:14),'SIN EQUIPAR',{
           fontFamily:'system-ui',
