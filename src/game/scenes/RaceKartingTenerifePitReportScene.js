@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceKartingTenerifePaddockFinishScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceReplayCameraFrameScene.js';
 
 function trackId(scene){return String(scene?.trackKey||scene?.track?.id||scene?.track?.key||'');}
 
