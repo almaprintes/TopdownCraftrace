@@ -20,9 +20,9 @@ export class EnvironmentBuilderScene extends Current{
     img.removeAllListeners('pointerdown');
     img.removeAllListeners('drag');
     img.on('drag',(_p,dx,dy)=>{
-      // Moving is deliberately a second interaction: only an asset that was
-      // already selected before this gesture may follow the pointer.
-      if(this._mode!=='select'||this._selected!==img)return;
+      // A two-finger map gesture always owns the interaction, even if this asset
+      // happened to be selected before the pinch began.
+      if(this._pinching||this._mode!=='select'||this._selected!==img)return;
       img.x=dx;img.y=dy;this._drawSelection?.();
     });
     return img;
@@ -39,6 +39,11 @@ export class EnvironmentBuilderScene extends Current{
     // remains available for free-pan until pointerup.
     this.input.on('pointerdown',(p,currentlyOver=[])=>{
       this._emptyTapCandidate=null;
+      if(this._pinching){
+        this._assetTapCandidate=null;
+        this._emptyTapCandidate=null;
+        return;
+      }
       if(this._mode!=='select'||!this._inside?.(p))return;
 
       const asset=(currentlyOver||[]).find(isAsset);
