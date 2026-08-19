@@ -7,25 +7,48 @@ export class EnvironmentBuilderScene extends Current{
     this._assetTapCandidate=null;
     this._emptyTapCandidate=null;
     super.create();
+    this._rewireExistingAssets();
   }
 
-  _spawn(a,data=null){
-    const img=super._spawn(a,data);
+  _wireAsset(img){
     if(!img)return img;
-
-    // Base Builder selected assets immediately on pointerdown and allowed every
-    // asset to move as soon as Phaser promoted the gesture to a drag. On touch
-    // that makes an innocent pan gesture grab whichever decoration is under the
-    // finger. Selection is handled at scene pointerup below instead.
+    try{img.setInteractive?.({useHandCursor:true,draggable:true});}catch{}
+    try{this.input?.setDraggable?.(img,true);}catch{}
     img.removeAllListeners('pointerdown');
     img.removeAllListeners('drag');
     img.on('drag',(_p,dx,dy)=>{
-      // A two-finger map gesture always owns the interaction, even if this asset
-      // happened to be selected before the pinch began.
       if(this._pinching||this._mode!=='select'||this._selected!==img)return;
       img.x=dx;img.y=dy;this._drawSelection?.();
     });
     return img;
+  }
+
+  _rewireExistingAssets(){
+    for(const img of this._objects||[])this._wireAsset(img);
+  }
+
+  _spawn(a,data=null){
+    const img=super._spawn(a,data);
+    return this._wireAsset(img);
+  }
+
+  _applyProject(p){
+    super._applyProject?.(p);
+    this._rewireExistingAssets();
+  }
+
+  _assetAtWorld(w){
+    if(!w)return null;
+    const objects=this._objects||[];
+    for(let i=objects.length-1;i>=0;i--){
+      const o=objects[i];
+      if(!o?.scene||!o.visible)continue;
+      let b=null;
+      try{b=o.getBounds?.();}catch{}
+      if(!b)continue;
+      if(w.x>=b.x&&w.x<=b.x+b.width&&w.y>=b.y&&w.y<=b.y+b.height)return o;
+    }
+    return null;
   }
 
   _setupInput(){
@@ -34,9 +57,6 @@ export class EnvironmentBuilderScene extends Current{
     const isAsset=o=>!!o?._env;
     const worldAt=p=>this._editCam.getWorldPoint(p.x,p.y);
 
-    // These listeners are registered after the inherited input handlers. An
-    // unselected asset under the finger becomes a tap candidate and the gesture
-    // remains available for free-pan until pointerup.
     this.input.on('pointerdown',(p,currentlyOver=[])=>{
       this._emptyTapCandidate=null;
       if(this._pinching){
@@ -46,7 +66,11 @@ export class EnvironmentBuilderScene extends Current{
       }
       if(this._mode!=='select'||!this._inside?.(p))return;
 
-      const asset=(currentlyOver||[]).find(isAsset);
+      const w=worldAt(p);
+      // Prefer Phaser's interactive hit, but fall back to visible world bounds.
+      // That makes assets restored from older projects selectable even if their
+      // inherited hit area/listeners were created differently.
+      const asset=(currentlyOver||[]).find(isAsset)||this._assetAtWorld(w);
       if(asset){
         if(asset===this._selected){this._assetTapCandidate=null;return;}
         this._assetTapCandidate={pointerId:p.id,asset,x:p.x,y:p.y};
@@ -56,8 +80,6 @@ export class EnvironmentBuilderScene extends Current{
       }
 
       this._assetTapCandidate=null;
-      const w=worldAt(p);
-      // A surface, barrier or one of their edit handles is not empty map.
       const onSurfaceHandle=!!this._surfaceHandleAt?.(w);
       const onRailHandle=!!this._railHandle?.(w);
       const onSurface=!!this._surfaceAt?.(w);
