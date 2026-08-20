@@ -31,7 +31,11 @@ const ASSETS=[
   ['grandstand_full_01','environment/structures/grandstand_full_01.webp'],
   ['marshal_post_01','environment/structures/marshal_post_01.webp'],
   ['paddock_box_small_01','environment/structures/paddock_box_small_01.webp'],
-  ['pit_garage_small_01','environment/structures/pit_garage_small_01.webp']
+  ['pit_garage_small_01','environment/structures/pit_garage_small_01.webp'],
+  ['santacruz_auditorio','environment/structures/santacruz_auditorio.webp'],
+  ['santacruz_heliodoro','environment/structures/santacruz_heliodoro.webp'],
+  ['santacruz_monumento','environment/structures/santacruz_monumento.webp'],
+  ['santacruz_plaza_espana','environment/structures/santacruz_plaza_espana.webp']
 ];
 
 const CORRECT_PATHS={
@@ -40,6 +44,13 @@ const CORRECT_PATHS={
   palm_tall_01:'environment/vegetation/palm_tall_01.webp'
 };
 
+const SANTACRUZ_ITEMS=[
+  {cat:'ESTRUCTURAS',id:'santacruz_auditorio',path:'environment/structures/santacruz_auditorio.webp',w:520},
+  {cat:'ESTRUCTURAS',id:'santacruz_heliodoro',path:'environment/structures/santacruz_heliodoro.webp',w:560},
+  {cat:'ESTRUCTURAS',id:'santacruz_monumento',path:'environment/structures/santacruz_monumento.webp',w:480},
+  {cat:'ESTRUCTURAS',id:'santacruz_plaza_espana',path:'environment/structures/santacruz_plaza_espana.webp',w:560}
+];
+
 export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
   preload(){
     for(const [id,path] of ASSETS)this.load.image(`env:${id}`,`${BASE}assets/${path}`);
@@ -47,7 +58,10 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
 
   _catalogItemsForCategory(category){
     const items=super._catalogItemsForCategory?.(category)||[];
-    return items.map(a=>CORRECT_PATHS[a.id]?{...a,path:CORRECT_PATHS[a.id]}:a);
+    const corrected=items.map(a=>CORRECT_PATHS[a.id]?{...a,path:CORRECT_PATHS[a.id]}:a);
+    if(category!=='ESTRUCTURAS')return corrected;
+    const ids=new Set(corrected.map(a=>a.id));
+    return corrected.concat(SANTACRUZ_ITEMS.filter(a=>!ids.has(a.id)));
   }
 
   _setupUi(){
