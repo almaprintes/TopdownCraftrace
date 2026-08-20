@@ -2,12 +2,12 @@
 
 > Documento de referencia para conservar las pruebas reales de conducción, las sensaciones del piloto y el carácter homologado de los 15 coches oficiales.
 >
-> Fuentes consolidadas el 20/08/2026: conversación exportada con HÉLIX/CROWN y PDF de homologaciones desde AVENIR Gripline en adelante. La prioridad de este documento es conservar la sensación real expresada durante las tandas, no reconstruirla a posteriori únicamente desde las estadísticas.
+> Fuentes consolidadas: conversaciones de homologación y los informes HTML originales de telemetría de KARTING TENERIFE (19–20/08/2026). Las sensaciones del piloto y los datos medidos se conservan por separado: las cifras explican la sensación, no la sustituyen.
 
 ## Regla de uso
 - Las frases del piloto tienen prioridad sobre interpretaciones posteriores.
-- Las cifras sirven para explicar la sensación, no para sustituirla.
-- Si una futura modificación de físicas cambia claramente el carácter de un coche, debe anotarse aquí y volver a homologarse.
+- La telemetría archivada corresponde a la tanda de homologación indicada; no debe mezclarse con físicas futuras sin nueva prueba.
+- Si una modificación cambia claramente el carácter de un coche, debe anotarse aquí y volver a homologarse.
 - El garaje debe resumir este documento, no inventar una personalidad independiente.
 
 ---
@@ -19,8 +19,6 @@
 
 **Sensación del piloto:** “Facilísimo y monótono. Enseguida llegas a la velocidad punta y te desmotiva un poco cuando ya conoces el circuito. Cuando estás en un circuito nuevo no creo que tengas esa sensación. La sensación es quiero maxearlo para poder ir más rápido con él. Las salidas fue por intentar arañar décimas.”
 
-**Lectura de la tanda:** mejor vuelta 50.613. Conducción prácticamente a gas, muy poco freno y buena repetibilidad. Las salidas no se interpretaron como falta de control, sino como búsqueda deliberada del límite.
-
 **Conclusión:** cumple muy bien como primer peldaño. Debe ser fácil, noble y algo frustrante por falta de velocidad cuando el jugador ya domina el circuito; esa frustración alimenta el deseo de progresión/mejora.
 
 ## 02 — HÉLIX Comet
@@ -28,16 +26,12 @@
 
 **Sensación del piloto:** “Sensación sumamente divertido de conducir. No tan desesperante como el Spark.”
 
-**Lectura de la tanda:** mejor vuelta 47.737. Mantiene la consistencia del Spark, pero mejora casi tres segundos. Se conduce con más confianza, usando más coasting y menos freno.
-
 **Conclusión:** transición HÉLIX muy conseguida. Debe sentirse como el momento en que la colección deja de ser solo aprendizaje y empieza a ser diversión.
 
 ## 03 — HÉLIX Pulse
 **Carácter homologado:** rápido, muy fácil de manejar y especialmente fuerte en salida de curva.
 
-**Sensación recuperada de la conversación:** “muy fácil de manejar y salida de curva excepcional”.
-
-**Lectura de la tanda:** mejor vuelta 45.905, punta de 59 km/h y consistencia muy alta. El análisis detectó que podía resultar incluso demasiado indulgente para ser el HÉLIX superior.
+**Sensación del piloto:** “Muy fácil de manejar y salida de curva excepcional”.
 
 **Conclusión:** conservar su sensación general y su gran salida de curva. Su personalidad es la de un HÉLIX rápido y delicioso de conducir, no la de un coche nervioso.
 
@@ -48,9 +42,7 @@
 ## 04 — CROWN Axis
 **Carácter homologado:** refinado, muy fácil y accesible; introduce una sensación más “premium” sin exigir más al piloto.
 
-**Sensación registrada en la conversación:** el piloto lo sintió “bastante más fácil” que Pulse.
-
-**Lectura de la tanda:** 46.034, prácticamente empatado con Pulse pero con poquísimo freno y buena consistencia. Se corrigió únicamente la escala visual, no la física.
+**Sensación registrada:** el piloto lo sintió “bastante más fácil” que Pulse.
 
 **Conclusión:** primer CROWN = facilidad y refinamiento. No necesita ser mucho más rápido que HÉLIX para justificar su escalón.
 
@@ -59,16 +51,12 @@
 
 **Sensación consolidada:** la tanda permite “construir la vuelta”; cada vuelta mejora de forma limpia conforme el piloto entiende dónde conservar más velocidad.
 
-**Lectura de la tanda:** 45.921 → 44.544 → 44.073 → 43.877. Cero frenadas en la tanda; rendimiento basado en fluidez, coasting y colocación.
-
 **Conclusión:** coche rápido que no pelea con el piloto. Su personalidad está en la progresión y la fluidez, no en la agresividad.
 
 ## 06 — CROWN Equinox
 **Carácter homologado:** potencia seria, gran recompensa y riesgo real cuando se supera el límite.
 
-**Sensación consolidada:** sensación de “como me pase un poco me voy fuera”, justo el salto de respeto al límite que se buscaba dentro de CROWN.
-
-**Lectura de la tanda:** mejor vuelta 41.458, claramente por encima del Vector. Las salidas se interpretaron como exploración de un límite más alto, no como incontrolabilidad.
+**Sensación consolidada:** “como me pase un poco me voy fuera”, justo el salto de respeto al límite que se buscaba dentro de CROWN.
 
 **Conclusión:** el CROWN que exige respeto. Cuando sale bien, vuela; si el piloto se excede, lo castiga de forma clara.
 
@@ -81,23 +69,23 @@
 
 **Sensación del piloto:** “La sensación del coche es de mucho control y bastante velocidad.”
 
-**Incidencia de la tanda:** una vuelta hubo que repetirla probablemente por perder CP1; no se atribuye al comportamiento del coche.
+**Incidencia:** una vuelta hubo que repetirla probablemente por perder CP1; esto distorsiona especialmente vuelta media, σ y delta de esta sesión y no se atribuye al comportamiento del coche.
 
-**Conclusión:** debe transmitir confianza inmediata y precisión de morro. Su virtud no es la explosividad, sino que el piloto sienta que puede colocarlo donde quiere.
+**Conclusión:** debe transmitir confianza inmediata y precisión de morro.
 
 ## 08 — AVENIR Apex
 **Carácter homologado:** más nervioso de entrada que Gripline, pero rápidamente dominable.
 
 **Sensación del piloto:** “Muy nervioso al principio pero tras alguna vuelta lo controlé rápidamente.”
 
-**Conclusión:** técnico agresivo, pero aprendible. El reto está en el primer contacto; cuando el piloto entiende su respuesta, deja de intimidar.
+**Conclusión:** técnico agresivo, pero aprendible.
 
 ## 09 — AVENIR Torque
 **Carácter homologado:** precisión extrema, agarre muy alto y salida de curva con sensación de potencia.
 
 **Sensación del piloto:** “Sublime. Se come los pianos como un poseso. Como si fuera por raíles. La aceleración tras soltar acelerador y pasar la curva transmite mucha potencia. Se nota la velocidad punta. Tarda un pelín en llegar pero se siente veloz cuando la alcanzas.”
 
-**Conclusión:** referencia técnica de AVENIR. Debe parecer una herramienta de precisión que permite abusar de los pianos y salir de curva con autoridad.
+**Conclusión:** referencia técnica de AVENIR.
 
 ---
 
@@ -108,23 +96,21 @@
 
 **Sensación del piloto:** “La sensación es que es muy difícil de conducir. La parte de atrás se va muchísimo y le obliga a entrar frenando; no me basta con soltar acelerador.”
 
-**Observación:** una vuelta muy buena terminó arruinada por una salida al césped en la última curva.
-
-**Conclusión:** primer VELOCE ya debe marcar un cambio de disciplina: velocidad a cambio de menos indulgencia.
+**Conclusión:** primer VELOCE ya marca un cambio de disciplina: velocidad a cambio de menos indulgencia.
 
 ## 11 — VELOCE Surge
 **Carácter homologado:** más salvaje e incontrolable que Flash; exige orientar el coche antes de abrir gas.
 
 **Sensación del piloto:** “Tremendo. Se va mucho más que el Flash. Más incontrolable. Me obliga a frenar más aún. Intenté la primera vuelta sin frenar y qué va… Si no orientas bien el coche tras la curva antes de abrir el gas te vas fuera.”
 
-**Conclusión:** coche de compromiso: si se abre gas antes de tenerlo apuntado, el error se amplifica de inmediato.
+**Conclusión:** si se abre gas antes de tenerlo apuntado, el error se amplifica de inmediato.
 
 ## 12 — VELOCE Photon
 **Carácter homologado:** aceleración extrema y comportamiento feroz; el más radical de VELOCE.
 
 **Sensación del piloto:** “Potro indomable. Solo lo controlé una vuelta. Me he llegado a parar en una curva porque me iba a Honolulu. [...] La aceleración es de otro planeta. Me salí en sitios donde jamás habría imaginado salirme.”
 
-**Conclusión:** personalidad deliberadamente salvaje. Dominarlo forma parte de la recompensa; no debe suavizarse hasta parecer otro all-rounder.
+**Conclusión:** personalidad deliberadamente salvaje. Dominarlo forma parte de la recompensa.
 
 ---
 
@@ -135,23 +121,56 @@
 
 **Sensación del piloto:** “Tremendamente complicado. Lo bueno que tiene es que no penaliza en la hierba con lo cual no te complicas mucho por las salidas. Con la poca velocidad que lleva se va más incluso que los Veloce y es mucho más difícil reorientarlo una vez te fuiste.”
 
-**Incidencia:** en la última vuelta se perdió CP2 y hubo que volver a buscarlo.
+**Incidencia:** en la última vuelta se perdió CP2 y hubo que volver a buscarlo; esto distorsiona vuelta media, σ y delta.
 
-**Conclusión:** FORGE no debe sentirse simplemente lento y estable. Hammer ya introduce masa, torpeza y dificultad para recuperar la orientación.
+**Conclusión:** Hammer introduce masa, torpeza y dificultad para recuperar la orientación.
 
 ## 14 — FORGE Anvil
 **Carácter homologado:** extremadamente exigente en chicanes; el gas debe dosificarse para evitar que toda su aceleración descoloque el coche.
 
 **Sensación del piloto:** “Las segundas curvas de las chicanes penalizan muchísimo. Es imposible reorientar el coche con garantías sin casi pararlo. Para el resto de curvas compensa recuperar el gas a pequeños empujones que impiden que se te vaya mucho con toda la aceleración que tiene.”
 
-**Conclusión:** coche pesado que se conduce por anticipación y dosificación, no por correcciones rápidas.
+**Conclusión:** coche pesado que se conduce por anticipación y dosificación.
 
 ## 15 — FORGE Colossus
 **Carácter homologado:** enorme, difícil y con una sensación de pivote demasiado centrado en la versión probada; la zaga parecía bailar más de lo esperable para su tamaño.
 
 **Sensación del piloto:** “Fui aprendiendo a controlarlo pero me he tenido que salir mucho del circuito en muchas curvas. Debería sentirse más pesado pero sin embargo el morro tiembla muchísimo. Tiene un pivote de giro demasiado centrado que hace que la parte de atrás parezca que va bailando.”
 
-**Conclusión:** la intención de diseño es un gigante pesado y menos ágil que sus hermanos. La prueba detectó que su giro visual/dinámico no transmitía todavía todo ese peso de forma convincente; esta observación debe preservarse si se vuelve a revisar su física.
+**Conclusión:** la intención es un gigante pesado y menos ágil. La prueba detectó que su giro visual/dinámico no transmitía todavía todo ese peso.
+
+---
+
+# Telemetría original de homologación
+
+Datos extraídos de los informes HTML originales. Se guardan los indicadores comparables y útiles para futuras revisiones; las tablas completas vuelta/sector permanecen en los informes fuente.
+
+| Coche | Mejor | Punta | Media vuelta | σ | Vel. media | Delta | Salidas · tiempo | Gas | Coast | Freno | Frenadas | Freno máx. |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| HÉLIX Spark | 50.613 | 52 km/h | 52.033 | 0.80 s | 49 km/h | 2.48 s | 6 · 2.8 s | 91% | 7% | 1% | 13 | 0.63 s |
+| HÉLIX Comet | 47.737 | 56 km/h | 49.097 | 0.80 s | 51 km/h | 2.50 s | 5 · 3.1 s | 90% | 9% | 1% | 6 | 0.49 s |
+| HÉLIX Pulse | 45.905 | 59 km/h | 46.181 | 0.36 s | 54 km/h | 0.97 s | 9 · 2.8 s | 92% | 8% | 0% | 6 | 0.19 s |
+| CROWN Axis | 46.034 | 58 km/h | 46.643 | 0.44 s | 54 km/h | 1.23 s | 6 · 2.9 s | 93% | 7% | 0% | 1 | 0.28 s |
+| CROWN Vector | 43.877 | 62 km/h | 44.603 | 0.80 s | 57 km/h | 2.04 s | 5 · 1.6 s | 91% | 9% | 0% | 0 | 0.00 s |
+| CROWN Equinox | 41.458 | 65 km/h | 41.818 | 0.57 s | 60 km/h | 1.50 s | 8 · 2.2 s | 91% | 9% | 0% | 1 | 0.12 s |
+| AVENIR Gripline | 44.599 | 59 km/h | 54.346* | 18.25 s* | 55 km/h | 46.22 s* | 7 · 5.3 s | 91% | 9% | 0% | 0 | 0.00 s |
+| AVENIR Apex | 42.366 | 62 km/h | 43.193 | 0.82 s | 57 km/h | 2.30 s | 7 · 4.7 s | 89% | 11% | 0% | 0 | 0.00 s |
+| AVENIR Torque | 41.008 | 65 km/h | 41.540 | 0.44 s | 58 km/h | 1.23 s | 5 · 7.1 s | 89% | 11% | 0% | 0 | 0.00 s |
+| VELOCE Flash | 41.493 | 68 km/h | 42.003 | 0.69 s | 60 km/h | 1.87 s | 8 · 3.9 s | 89% | 8% | 3% | 30 | 0.37 s |
+| VELOCE Surge | 39.865 | 72 km/h | 41.026 | 0.89 s | 63 km/h | 2.37 s | 17 · 7.1 s | 87% | 8% | 5% | 31 | 0.62 s |
+| VELOCE Photon | 38.849 | 80 km/h | 40.788 | 1.24 s | 65 km/h | 3.31 s | 26 · 12.6 s | 83% | 9% | 8% | 29 | 1.08 s |
+| FORGE Hammer | 52.043 | 54 km/h | 56.510* | 7.82 s* | 49 km/h | 20.03 s* | 0 · 0.0 s | 84% | 13% | 2% | 15 | 0.77 s |
+| FORGE Anvil | 52.241 | 54 km/h | 53.398 | 1.18 s | 49 km/h | 3.14 s | 0 · 0.0 s | 82% | 16% | 2% | 8 | 0.90 s |
+| FORGE Colossus | 56.607 | 53 km/h | 1:01.789 | 6.82 s | 46 km/h | 18.47 s | 0 · 0.0 s | 71% | 28% | 1% | 4 | 0.89 s |
+
+\* Métrica afectada por una vuelta anómala/incidencia de checkpoint documentada; conservar el dato original, pero no usarlo aisladamente para comparar rendimiento.
+
+## Señales que confirma la telemetría
+- **HÉLIX:** la progresión de prestaciones es limpia: 50.613 → 47.737 → 45.905; Pulse es además el más consistente (σ 0.36 s).
+- **CROWN:** Vector completa su tanda sin frenar y Equinox baja a 41.458 manteniendo 91% de gas; el aumento de ritmo no exige convertirlos en coches nerviosos.
+- **AVENIR:** Apex y Torque completan sus tandas sin frenar. Torque baja a 41.008 con σ 0.44 s, coherente con la sensación de precisión y raíles.
+- **VELOCE:** la dificultad subjetiva aparece claramente en los controles: Flash 30 frenadas, Surge 31 y Photon 29; el uso de freno sube 3% → 5% → 8%, mientras las salidas suben 8 → 17 → 26. A la vez, la punta escala 68 → 72 → 80 km/h.
+- **FORGE:** el coasting crece hasta 28% en Colossus y las vueltas son mucho más lentas. Hammer y Colossus contienen incidencias/anomalías que inflan σ y delta; no deben leerse como pura inconsistencia del piloto.
 
 ---
 
@@ -176,6 +195,6 @@
 | FORGE Colossus | Gigante difícil; debe transmitir más peso y menos pivote. |
 
 ## Estado
-**Consolidación inicial completada — 20/08/2026.**
+**Homologaciones + telemetría consolidadas — 20/08/2026.**
 
-Este documento pasa a ser la referencia para futuras frases del garaje y revisiones de personalidad de conducción.
+Este documento pasa a ser la referencia persistente para futuras frases del garaje, comparativas y revisiones de físicas.
