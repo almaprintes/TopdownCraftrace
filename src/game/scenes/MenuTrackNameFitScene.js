@@ -82,5 +82,25 @@ export class MenuScene extends CurrentMenuScene {
       title.setFontSize?.(14);
       title.setWordWrapWidth?.(maxTitleW+18,true);
     }
+
+    // La primera fila de datos quedaba pegada a la línea inferior de la
+    // caja de preview. Bajamos las dos filas completas unos píxeles para
+    // crear una separación visual clara sin modificar el tamaño del panel.
+    const card=title.parentContainer;
+    if(!card||!Array.isArray(card.list))return;
+    const stats=card.list.filter(child=>typeof child?.text==='string');
+    const labels=new Set(['LONGITUD','SECTORES','SUPERFICIE','SENTIDO']);
+    const shiftY=7;
+
+    for(const label of stats){
+      if(!labels.has(label.text.trim().toUpperCase()))continue;
+      const oldY=Number(label.y)||0;
+      const lx=Number(label.x)||0;
+      const value=stats
+        .filter(node=>node!==label&&Math.abs((Number(node.x)||0)-lx)<2&&(Number(node.y)||0)>oldY)
+        .sort((a,b)=>(Number(a.y)||0)-(Number(b.y)||0))[0];
+      label.y=oldY+shiftY;
+      if(value)value.y=(Number(value.y)||0)+shiftY;
+    }
   }
 }
