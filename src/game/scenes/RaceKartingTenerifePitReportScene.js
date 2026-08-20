@@ -72,6 +72,45 @@ export class RaceScene extends CurrentRaceScene {
     return result;
   }
 
+  _showSurvivalResults(){
+    const result=super._showSurvivalResults?.();
+    const root=this._survivalResultDom;
+    if(!root)return result;
+
+    const style=document.createElement('style');
+    style.textContent=`
+      .tdrsurv-veil{padding:7px !important;overflow:hidden !important;align-items:center !important;}
+      .tdrsurv-card{width:min(94vw,980px) !important;max-height:calc(100dvh - 14px) !important;overflow-y:auto !important;overscroll-behavior:contain !important;-webkit-overflow-scrolling:touch !important;padding:14px 18px 10px !important;box-sizing:border-box !important;}
+      .tdrsurv-title{margin-bottom:10px !important;font-size:24px !important;}
+      .tdrsurv-stats{margin-bottom:10px !important;gap:7px !important;}
+      .tdrsurv-stat{padding:8px 7px !important;}
+      .tdrsurv-loot{margin:0 0 9px !important;padding:9px !important;}
+      .tdrsurv-loot-head{margin-bottom:7px !important;}
+      .tdrsurv-loot-grid{gap:5px !important;}
+      .tdrsurv-loot-item{min-height:50px !important;padding:4px 3px !important;}
+      .tdrsurv-loot-meta{margin-top:6px !important;}
+      .tdrsurv-actions{position:sticky !important;bottom:0 !important;z-index:5 !important;background:linear-gradient(180deg,rgba(7,16,25,.35),#071019 28%) !important;padding-top:7px !important;margin-top:0 !important;}
+      .tdrsurv-btn{height:42px !important;}
+      @media (orientation:landscape) and (max-height:520px){
+        .tdrsurv-card{padding:8px 14px 7px !important;}
+        .tdrsurv-kicker{font-size:8px !important;margin-bottom:2px !important;}
+        .tdrsurv-title{font-size:20px !important;margin-bottom:6px !important;}
+        .tdrsurv-stats{margin-bottom:7px !important;}
+        .tdrsurv-stat{padding:6px 5px !important;}
+        .tdrsurv-stat small{margin-bottom:2px !important;}
+        .tdrsurv-stat b{font-size:14px !important;}
+        .tdrsurv-loot{padding:7px !important;margin-bottom:6px !important;}
+        .tdrsurv-loot-item{min-height:44px !important;}
+        .tdrsurv-loot-meta{margin-top:4px !important;}
+        .tdrsurv-btn{height:38px !important;}
+      }
+    `;
+    root.appendChild(style);
+    const card=root.querySelector?.('.tdrsurv-card');
+    if(card)card.scrollTop=0;
+    return result;
+  }
+
   _openFinalSessionReport(){
     const result=super._openFinalSessionReport?.();
     const root=this._sessionReportModal;
