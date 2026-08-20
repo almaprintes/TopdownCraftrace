@@ -4,8 +4,42 @@ import { getEquippedForCar, saveGarage } from '../garage/garageStore.js';
 
 const FAMILIES=['engine','brakes','tires','suspension','transmission'];
 const FAMILY_LABEL={engine:'MOTOR',brakes:'FRENOS',tires:'NEUMÁTICOS',suspension:'SUSPENSIÓN',transmission:'TRANSMISIÓN'};
+const REPAIR_KEY='tdr2:repair:unequip-gripline-20260820';
 
 export class UpgradeShopScene extends UnifiedWorkshop {
+  create(){
+    super.create();
+    this._repairLostGriplinePartsOnce();
+  }
+
+  _inventoryQty(id){
+    return Number(this.state?.inventory?.[id]||0);
+  }
+
+  _returnPartToInventory(id){
+    if(!id)return;
+    if(!this.state.inventory||typeof this.state.inventory!=='object')this.state.inventory={};
+    // Some legacy equip paths leave the equipped unit at qty 0, while newer ones
+    // keep it referenced in inventory. Only restore when no physical copy remains.
+    if(this._inventoryQty(id)<1)this.state.inventory[id]=1;
+  }
+
+  _repairLostGriplinePartsOnce(){
+    try{
+      if(localStorage.getItem(REPAIR_KEY)==='1')return;
+      const eq=getEquippedForCar(this.state,'avenir_gripline')||{};
+      const lostTires=!eq.tires&&this._inventoryQty('tires_street')<1;
+      const lostTransmission=!eq.transmission&&this._inventoryQty('transmission_prototype')<1;
+      if(lostTires)this.state.inventory.tires_street=1;
+      if(lostTransmission)this.state.inventory.transmission_prototype=1;
+      if(lostTires||lostTransmission){
+        saveGarage(this.state);
+        this.render();
+      }
+      localStorage.setItem(REPAIR_KEY,'1');
+    }catch(_){}
+  }
+
   _familyDock(A,r,compact){
     const eq=getEquippedForCar(this.state,this.car)||{};
     const g=A(this.add.graphics());
@@ -18,7 +52,8 @@ export class UpgradeShopScene extends UnifiedWorkshop {
 
     FAMILIES.forEach((f,i)=>{
       const x=r.x+i*(cw+gap);
-      const item=eq[f]?GARAGE_ITEMS[eq[f]]:null;
+      const equippedId=eq[f]||null;
+      const item=equippedId?GARAGE_ITEMS[equippedId]:null;
       const on=this.filter==='parts'&&this.selectedFamily===f;
       const q=A(this.add.rectangle(x+2,r.y+2,cw-4,r.h-4,on?0x123142:0x081116)
         .setOrigin(0)
@@ -44,6 +79,7 @@ export class UpgradeShopScene extends UnifiedWorkshop {
         if(item){
           if(!this.state.equippedByCar||typeof this.state.equippedByCar!=='object')this.state.equippedByCar={};
           if(!this.state.equippedByCar[this.car])this.state.equippedByCar[this.car]={...(getEquippedForCar(this.state,this.car)||{})};
+          this._returnPartToInventory(equippedId);
           delete this.state.equippedByCar[this.car][f];
           saveGarage(this.state);
           this.render();
