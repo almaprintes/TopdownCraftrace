@@ -1,195 +1,144 @@
 # Top-Down Race 2 — Estructura de chats y handoff
 
-Convención: [TDR2] <ÁREA> — <Tema> (v1, v2… cuando se renueve por tokens)
-
-## Chats activos recomendados
-1) [TDR2] DEV — Programación v1 (código y debugging)
-2) [TDR2] DESIGN — Game Design (progresión, dificultad, economía)
-3) [TDR2] ART — Identidad & UI (icono, HUD, branding, flyers, promo)
-4) [TDR2] STORY — Campaña (modo historia, estructura, guión)
-5) [TDR2] QA — Testing (checklists, dispositivos, criterios de aceptación)
-
-## Regla de renovación
-Cuando un chat se acerque al límite de tokens:
-- Se crea el siguiente chat y se pega el SUPERPROMPT de continuidad.
-- El nuevo chat debe usar el repositorio conectado `almaprintes/TopdownCraftrace` y comprobar siempre el estado real de `main` antes de editar.
-- El chat anterior queda como histórico.
-
----
-
 # SUPERPROMPT ACTUAL — 2026-08-20
 
-Continuamos el desarrollo de **Top Down RACE / TopdownCraftrace**.
+Repositorio `almaprintes/TopdownCraftrace` · rama `main`.
 
-Repositorio:
-`almaprintes/TopdownCraftrace`
+## Reglas críticas
+- Usar GitHub conectado real.
+- Inspeccionar imports y archivos activos antes de editar.
+- Cambios pequeños y reversibles.
+- Tras modificar, verificar SHA exacto con `fetch_commit` antes de comunicarlo.
+- El usuario prueba en iPhone real; no afirmar funcionamiento en dispositivo hasta confirmación.
 
-Rama de trabajo:
-`main`
-
-## Regla crítica de trabajo
-- Usar GitHub conectado de verdad; no decir que no hay acceso sin comprobarlo.
-- Antes de editar, inspeccionar imports y archivos activos reales.
-- Hacer cambios pequeños y reversibles.
-- Tras cada modificación, verificar el SHA exacto con `fetch_commit` antes de comunicarlo.
-- El usuario prueba en iPhone real; no afirmar que algo funciona en dispositivo hasta que él lo confirme.
-
-## Física BASE 1.0 congelada
-La física común está aprobada y congelada. No tocar globalmente salvo defecto concreto reportado por el usuario.
-
-Coche patrón:
-`VELOCE Flash`
-
-Commit base de chasis aprobado:
-`433651cf043c9f2312fdc8cd264948c9645608a7`
-`Blend chassis load transitions across brake and throttle`
-
-El usuario confirmó una mejora enorme de conducción y un tiempo de 41.751 en Karting Tenerife con Flash. La estrategia es mantener esta BASE 1.0 y crear identidad por coche mediante perfiles/overrides individuales.
+## BASE 1.0
+Física común congelada. No tocar globalmente salvo defecto concreto.
+Patrón: `VELOCE Flash`.
+Commit base aprobado: `433651cf043c9f2312fdc8cd264948c9645608a7` — `Blend chassis load transitions across brake and throttle`.
+La identidad se construye mediante perfiles/overrides individuales.
+Override activo: `public/community/car-overrides.json`.
 
 ## Filosofía de marcas
-Hay 15 coches oficiales: 5 marcas × 3.
+- HÉLIX: escuela, accesible y progresiva.
+- CROWN: equilibrada, refinada y más prestacional.
+- AVENIR: precisión/control; recompensa técnica.
+- VELOCE: velocidad a cambio de exigencia creciente.
+- FORGE: pesado/lento en asfalto y muy tolerante fuera.
 
-- HÉLIX: marca pobre/escuela. Cada hermano mejora al anterior pero también es algo más exigente.
-- CROWN: mismo espíritu equilibrado, más prestación y refinamiento que HÉLIX.
-- AVENIR: precisión y morro incisivo; más técnico, castiga brusquedad y mala transferencia de peso.
-- VELOCE: velocidad. Flash es la referencia BASE 1.0; Surge y Photon suben prestaciones y exigencia.
-- FORGE: categoría aparte; más lentos en asfalto, mucha fuerza y gran tracción en tierra/césped/condiciones adversas.
+Principio: **mejor coche no significa coche más fácil**.
 
-Principio: **mejor coche no significa coche más fácil**. Debe aumentar el techo de rendimiento, pero también la exigencia.
+## Homologación STOCK 1.0 — Karting Tenerife
+Contrarreloj, normalmente 5 vueltas, completamente stock.
 
-## Identidades iniciales ya aplicadas
-Se crearon perfiles específicos por coche/familia y overrides individuales. El override activo es:
-`public/community/car-overrides.json`
+| # | Coche | Mejor | Punta | Sensación | Estado |
+|---|---|---:|---:|---|---|
+|1|HÉLIX Spark|50.613|52 km/h|Facilísimo, monótono, llega enseguida a punta|REPETIR STOCK*|
+|2|HÉLIX Comet|47.737|56 km/h|Sumamente divertido y accesible|CONGELAR|
+|3|HÉLIX Pulse|45.905|59 km/h|Muy rápido/fácil; salida excepcional|VIGILAR|
+|4|CROWN Axis|~46.034|—|Algo lento frente a Pulse pero muy fácil|CONGELAR|
+|5|CROWN Vector|43.877|62 km/h|Fantástico; permite progresar vuelta a vuelta|CONGELAR|
+|6|CROWN Equinox|41.458|65 km/h|Muy potente; rápido con sensación de peligro|CONGELAR|
+|7|AVENIR Gripline|44.599|59 km/h|Mucho control y bastante velocidad|CONGELAR|
+|8|AVENIR Apex|42.366|62 km/h|Nervioso inicialmente, rápidamente dominable|CONGELAR|
+|9|AVENIR Torque|41.008|65 km/h|Sublime; raíles, pianos, salida potentísima|CONGELAR|
+|10|VELOCE Flash|41.493|68 km/h|Patrón; difícil, trasera viva, exige freno|PATRÓN / CONGELAR|
+|11|VELOCE Surge|39.865|72 km/h|Muy salvaje; orientar antes de abrir gas|VIGILAR|
+|12|VELOCE Photon|38.849|80 km/h|Potro indomable; aceleración brutal|REVISAR DIFICULTAD|
+|13|FORGE Hammer|52.043|54 km/h|Excesivamente difícil de reorientar|REVISAR|
+|14|FORGE Anvil|52.241|54 km/h|Chicanes críticas; gas a impulsos ayuda|REVISAR|
+|15|FORGE Colossus|56.607|53 km/h|Aprendible; morro tiembla/pivote muy centrado|REVISAR|
 
-Boot carga `community/car-overrides.json` en producción. Se eliminó un override antiguo absurdo de CROWN Axis (`maxFwd:1500`).
+* Spark llevaba Frenos T4. Como apenas frenó, la lectura de carácter sigue siendo útil, pero el crono no es homologación stock estricta.
 
-VELOCE Flash quedó sin cambios de rendimiento, solo con `massKg` heredado del override, para conservarlo como patrón.
+## Lectura por familias
 
-## Protocolo de homologación
-Circuito elegido: **Karting Tenerife**, porque el usuario lo conoce muy bien y así evitamos el sesgo de aprendizaje de un circuito nuevo.
+### HÉLIX
+Progresión correcta. Comet especialmente divertido. Pulse quizá demasiado fácil para ser el superior; no tocar todavía. Spark debe repetirse completamente stock.
 
-Prueba por coche:
-- Contrarreloj.
-- 5 vueltas consecutivas.
-- Coche completamente stock, sin piezas equipadas.
-- Analizar mejor vuelta, progresión V1→V5, consistencia σ, punta, sectores, salidas y sensación subjetiva.
+### CROWN
+Familia muy sólida: Axis accesible, Vector progresivo, Equinox potente/peligroso.
+Axis recibió únicamente corrección visual `visualScale: 0.92` en commit `efc5b9e917f24d3d93687ce47e2009c9c58c9172`.
 
-Orden de prueba:
-Spark → Comet → Pulse → Axis → Vector → Equinox → Gripline → Apex → Torque → Flash → Surge → Photon → Hammer → Anvil → Colossus.
+### AVENIR
+Familia más redonda de la primera homologación.
+- Gripline 44.599 / 59: control + velocidad.
+- Apex 42.366 / 62: nerviosismo inicial que se aprende rápido.
+- Torque 41.008 / 65: precisión brutal, devora pianos, gran salida de curva.
 
-## Resultados y sensaciones hasta ahora
+Los tres congelados provisionalmente.
 
-### HÉLIX Spark
-Tanda registrada:
-- Mejor 50.613
-- Punta 52 km/h
-- σ 0.80 s
-- Evolución 53.091 → 52.027 → 52.118 → 52.316 → 50.613
-- Usuario: “Facilísimo y monótono. Enseguida llegas a la velocidad punta… sensación de quiero maxearlo para poder ir más rápido.”
-- Las salidas fueron buscando décimas, no por inestabilidad.
-- IMPORTANTE: después descubrimos que llevaba **Frenos T4 equipados**. Como casi no frenó, la lectura de carácter sigue siendo válida y el tiempo probablemente está poco afectado. Repetición stock opcional al final para homologación estricta.
+### VELOCE
+Flash repetido stock: 41.493 / 68 km/h frente al antiguo 41.751; la mejora del piloto fue solo de unas décimas.
 
-### HÉLIX Comet
-- Mejor 47.737
-- Punta 56 km/h
-- σ 0.80 s
-- Evolución 50.238 → 49.114 → 49.074 → 49.321 → 47.737
-- Usuario: “Sumamente divertido de conducir. No tan desesperante como el Spark.”
-- Congelado provisionalmente, sin cambios.
+Surge: 39.865 / 72 km/h; 17 detecciones fuera, 31 frenadas, frenada máxima 0.62 s. Muy salvaje pero ofrece enorme recompensa cuando se domina.
 
-### HÉLIX Pulse
-- Mejor 45.905
-- Punta 59 km/h
-- σ 0.36 s
-- Usuario: “Muy bien y rápido. Muy fácil de manejar con una salida de curva excepcional.”
-- Durante esta prueba hubo algo de lag.
-- Lectura: rendimiento muy bueno, quizá demasiado fácil para ser el HÉLIX superior. Posible ajuste fino futuro: algo más de exigencia al volver al gas con dirección metida, sin quitar velocidad. No tocar todavía.
+Photon: 38.849 / 80 km/h; 26 detecciones fuera, 12.6 s acumulados, 29 frenadas, frenada máxima 1.08 s. Solo una vuelta realmente dominada. Revisar dificultad antes de decidir si suavizar.
 
-### CROWN Axis
-- Mejor 46.034 aprox.
-- Usuario: “Un poco lento comparado con Pulse pero mucho más fácil de conducir.”
-- Visualmente parecía demasiado grande.
-- Se corrigió solo su tamaño visual con `visualScale: 0.92`, sin tocar física.
-- Commit verificado de escala: `efc5b9e917f24d3d93687ce47e2009c9c58c9172`.
+No tocar BASE 1.0.
 
-### CROWN Vector
-Tanda de 4 vueltas por error, aceptada:
-- 45.921 → 44.544 → 44.073 → 43.877
-- Mejor 43.877
-- Punta 62 km/h
-- Velocidad media 57 km/h
-- σ 0.80 s
-- 0 frenadas; 91% gas / 9% coasting
-- Usuario: “Sensación fantástica. El coche me permite progresar y arañar más décimas a cada vuelta.”
-- Congelado provisionalmente.
+### FORGE — diagnóstico
+FORGE necesita revisión, pero **no** debe convertirse en AVENIR pesado.
 
-### CROWN Equinox
-- Mejor 41.458
-- Punta 65 km/h
-- Media 60 km/h
-- σ 0.57 s
-- V1 42.953 / V2 41.496 / V3 41.458 / V4 41.701 / V5 41.483
-- Usuario: “He hecho una gran conducción. Es muy potente pero se siente peligro de que te puedes salir en cualquier momento.”
-- En V5 se salió dos veces y aun así hizo 41.483; sus mejores parciales fueron 13.545 y 27.342.
-- No suavizar de momento: esta sensación de riesgo es justo la identidad deseada.
-- Ha superado el viejo 41.751 del Flash, pero antes de nerfear nada hay que repetir Flash más adelante para medir cuánto ha mejorado el piloto durante la sesión.
+Hammer:
+- Vueltas útiles: 53.974 → 52.051 → 52.043 → 52.409.
+- V5 1:12.077 contaminada porque se perdió CP2 y hubo que volver a buscarlo.
+- Punta 54 km/h.
+- Muy difícil de reorientar pese a poca velocidad.
 
-## Estado AVENIR Gripline
-El usuario empezó a probarlo y notó que iba demasiado rápido. Descubrió que tenía mejoras equipadas:
-- Neumático Street T1
-- Transmisión Prototype T4
+Anvil:
+- Tanda accidental de 4 vueltas: 55.379 → 52.241 → 52.900 → 53.074.
+- Punta 54 km/h.
+- La segunda curva de las chicanes penaliza muchísimo; casi hay que parar para invertir orientación.
+- En curvas normales funciona mejor recuperar gas con pequeños impulsos.
 
-La tanda Gripline con esas mejoras NO cuenta. Debe repetirse totalmente stock.
+Colossus:
+- 1:15.073 → 1:01.061 → 59.054 → 57.152 → 56.607.
+- Punta 53 km/h.
+- Aprendizaje muy claro y más satisfactorio que Hammer/Anvil.
+- Debería sentirse más pesado, pero el morro tiembla demasiado.
+- Sensación de pivote excesivamente centrado: la parte trasera parece bailar.
+- 71% gas / 28% coasting / 1% freno.
 
-También se descubrió que Spark tenía Frenos T4. Los demás coches probados hasta Equinox parecen stock.
+Ventaja FORGE a conservar: enorme tolerancia a césped/terreno y 0 penalización fuera en estas tandas.
 
-## Factory / desequipado — problema reciente
-Inicialmente Factory permitía equipar pero no desequipar.
+Objetivo FORGE 1.1:
+- conservar masa, anticipación y dificultad en cambios rápidos;
+- conservar ventaja fuera de asfalto;
+- reducir pivote central/trasera bailona;
+- hacer que la dificultad venga de masa, batalla e inercia, no de sobreviraje extraño;
+- hacer Hammer/Anvil más satisfactorios y distinguibles;
+- Colossus puede ser el peor en Karting Tenerife, pero debe obedecer previsiblemente cuando se conduce bien.
 
-Se intentó una primera corrección en `_equippedStrip()`, pero era el método equivocado: la barra inferior visible usa realmente `_familyDock()` de `UpgradeWorkshopPremiumV3Scene`.
+Antes de cambiar valores: inspeccionar `public/community/car-overrides.json` y el código activo que consume esos parámetros. Ajustes pequeños/reversibles. BASE 1.0 intocable.
 
-Se creó wrapper activo:
-`src/game/scenes/UpgradeWorkshopUnequipScene.js`
+## Factory / desequipado y UX pendiente
+Gripline tenía accidentalmente `tires_street` T1 y `transmission_prototype` T4.
+Wrapper activo: `src/game/scenes/UpgradeWorkshopUnequipScene.js`.
+Commit: `fe2a036c45487ee5d939f6564113681c5ce3f7ea` — `Return factory parts to inventory when unequipping`.
 
-y `src/game/game.js` ahora importa ese wrapper en lugar de `UpgradeWorkshopUnifiedStyleScene.js`.
+El usuario confirmó Gripline con cinco categorías vacías / `SIN EQUIPAR`.
 
-Commit que activó la interfaz correcta:
-`e6b432653a0019d4e541b2d36e176414e1b50b77`
-`Activate factory unequip wrapper`
+Se descubrió que el inventario visual puede ocultar piezas T4 finales al filtrar según si pueden participar en otra receta. Revisar.
 
-La UI muestra `TOCA PARA QUITAR` en una familia equipada.
+La parte derecha de Fabricación necesita **rediseño UX profundo**:
+- botones montados;
+- materiales incómodos de desplegar;
+- flechas/controles demasiado pequeños;
+- flujo crafting → autoequipado → desequipado poco intuitivo;
+- inventario que oculta piezas válidas.
 
-### Bug descubierto al desequipar
-El usuario quitó Neumáticos T1 y Transmisión T4 del Gripline y las piezas desaparecieron del inventario.
+No parchear superficialmente: diseñar primero mockup horizontal iPhone y después implementar.
 
-Se corrigió para que al desequipar se devuelva la pieza al inventario cuando no queda ninguna copia física registrada, y además se añadió reparación puntual de las dos piezas perdidas del Gripline.
+## SIGUIENTE GRAN FASE — CRAFTING Y POTENCIAL MÁXIMO
+1. Auditar todas las mejoras reales: Motor, Transmisión, Neumáticos, Frenos y Suspensión; T1→T4; recetas, costes y efectos reales.
+2. Determinar cómo debe afectar cada mejora a cada coche/familia.
+3. Definir el **máximo potencial** de cada uno de los 15 coches.
+4. Evitar que todos los coches maxeados converjan en el mismo supercoche.
+5. Permitir potenciar fortalezas, compensar debilidades o habilitar builds sin borrar identidad.
+6. Repetir homologación con coches desarrollados/maxeados y comparar stock → máximo.
+7. Probar posteriormente en circuitos/superficies diferentes; Karting Tenerife no debe decidir por sí solo el potencial global, especialmente para FORGE.
 
-**Último commit verificado antes del cambio de chat:**
-`fe2a036c45487ee5d939f6564113681c5ce3f7ea`
-`Return factory parts to inventory when unequipping`
+Principio de diseño: Gripline maxeado debe seguir siendo Gripline; Photon maxeado debe seguir siendo terroríficamente rápido y exigente; Colossus maxeado debe ser una apisonadora eficaz en su terreno, no un deportivo gigante.
 
-Este commit:
-- añade `_returnPartToInventory(equippedId)` antes de borrar la referencia equipada;
-- añade una reparación de una sola vez con clave `tdr2:repair:unequip-gripline-20260820`;
-- si Gripline ya no tiene esas piezas equipadas y el inventario está a 0, restaura 1× `tires_street` y 1× `transmission_prototype`.
-
-### PRIMERA ACCIÓN DEL NUEVO CHAT
-No asumir que el arreglo ya funciona en iPhone. Pedir/comprobar con el usuario que, tras cargar la versión nueva y entrar a Fabricación con Gripline:
-1. reaparezcan Neumático Street T1 y Transmisión Prototype T4 en inventario;
-2. Gripline tenga las cinco familias en `SIN EQUIPAR`;
-3. no desequipar ninguna otra pieza hasta confirmar lo anterior.
-
-Si las piezas reaparecen correctamente, retomar inmediatamente la homologación con **AVENIR Gripline stock, 5 vueltas en Karting Tenerife**.
-
-## Deploy / caché
-Hay dos workflows en `.github/workflows/`:
-- `build-pages.yml`: construye preview y publica rama `preview`.
-- `pages.yml`: construye `dist` y despliega GitHub Pages.
-
-Se forzó `public/sw.js` de `tdr2-v21` a `tdr2-v22` durante el diagnóstico, pero el problema de la opción de desequipar no era caché: era que se había modificado el método incorrecto.
-
-## Regla para continuar la calibración
-No tocar la física global BASE 1.0.
-No cambiar un coche solo por una tanda aislada si la sensación y los datos no lo justifican.
-Mantener las tandas stock y comparar siempre con Karting Tenerife.
-Cuando terminemos las familias, repetir 5 vueltas de VELOCE Flash stock como control del progreso del piloto antes de hacer balance final entre marcas.
+## Próximo paso inmediato
+Inspeccionar parámetros reales de FORGE en `public/community/car-overrides.json` y su consumo activo antes de proponer FORGE 1.1. Después auditar el árbol completo de crafting/mejoras y definir potencial máximo por coche.
