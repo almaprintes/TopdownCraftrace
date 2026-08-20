@@ -2,6 +2,17 @@ import { RaceScene as CurrentRaceScene } from './RaceReplayCameraFrameScene.js';
 
 function trackId(scene){return String(scene?.trackKey||scene?.track?.id||scene?.track?.key||'');}
 
+const MATERIAL_ASSETS=[
+  'chatarra.webp',
+  'aleacion.webp',
+  'goma.webp',
+  'compuesto.webp',
+  'disco_metalico.webp',
+  'muelle.webp',
+  'engranaje.webp',
+  'electronica.webp'
+];
+
 export class RaceScene extends CurrentRaceScene {
   update(time,delta){
     const gate=this._paddockFinishGate;
@@ -39,5 +50,54 @@ export class RaceScene extends CurrentRaceScene {
       });
     }
     return html;
+  }
+
+  _showSessionRewards(resultRoot=null,onDone=null){
+    const result=super._showSessionRewards?.(resultRoot,onDone);
+    const root=this._sessionRewardsDom;
+    if(!root)return result;
+
+    const base=import.meta.env.BASE_URL||'/';
+    const items=[...root.querySelectorAll?.('.tdrfp-item')||[]];
+    items.forEach((node,i)=>{
+      const icon=node.querySelector?.('.tdrfp-ico');
+      const file=MATERIAL_ASSETS[i];
+      if(!icon||!file)return;
+      icon.innerHTML=`<img src="${base}assets/crafting/materials/${file}" alt="" draggable="false" style="display:block;width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 3px 5px rgba(0,0,0,.35));">`;
+      icon.style.width='38px';
+      icon.style.minWidth='38px';
+      icon.style.display='grid';
+      icon.style.placeItems='center';
+    });
+    return result;
+  }
+
+  _openFinalSessionReport(){
+    const result=super._openFinalSessionReport?.();
+    const root=this._sessionReportModal;
+    if(!root)return result;
+
+    const style=document.createElement('style');
+    style.textContent=`
+      .veil{padding:8px !important;align-items:center !important;overflow:hidden !important;}
+      .modal{width:min(94vw,1100px) !important;max-width:94vw !important;max-height:calc(100dvh - 16px) !important;overflow-y:auto !important;overscroll-behavior:contain !important;-webkit-overflow-scrolling:touch !important;}
+      @media (orientation:landscape) and (max-height:850px){
+        .modal{max-height:calc(100dvh - 12px) !important;padding:14px 18px 12px !important;}
+        .modal .hero h2{font-size:20px !important;}
+        .modal .headline{margin:10px 0 7px !important;}
+        .modal .headline>div,.modal .grid>div{padding:9px 11px !important;}
+        .modal h3{margin:12px 0 6px !important;}
+        .modal .lap{padding:7px 3px !important;}
+        .modal .actions{margin-top:10px !important;}
+      }
+    `;
+    root.appendChild(style);
+
+    const modal=root.querySelector?.('.modal');
+    if(modal){
+      modal.scrollTop=0;
+      modal.style.boxSizing='border-box';
+    }
+    return result;
   }
 }
