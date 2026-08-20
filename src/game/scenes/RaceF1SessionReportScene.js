@@ -12,11 +12,17 @@ function fmtLap(ms){
   return `${m}:${String(s).padStart(2,'0')}.${String(x).padStart(3,'0')}`;
 }
 function sectorsFromRecord(rec){
-  const s1=num(rec?.s1),s2=num(rec?.s2);
+  const split1=num(rec?.s1),split2=num(rec?.s2);
   const raw=num(rec?.rawLapMs)??num(rec?.lapMs)??num(rec?.ms)??num(rec?.time);
-  if(s1==null||s2==null||raw==null||s1<=0||s2<=0)return [null,null,null];
-  const s3=raw-s1-s2;
-  if(!Number.isFinite(s3)||s3<=0)return [s1,s2,null];
+  if(split1==null||split2==null||raw==null||split1<=0||split2<=split1||raw<=split2)return [null,null,null];
+
+  // The timing system stores S1 and S2 as cumulative split timestamps:
+  // S1 = start -> sector 1 gate, S2 = start -> sector 2 gate.
+  // Convert those splits to real sector durations before rendering.
+  const s1=split1;
+  const s2=split2-split1;
+  const s3=raw-split2;
+  if(![s1,s2,s3].every(v=>Number.isFinite(v)&&v>0))return [null,null,null];
   return [s1,s2,s3];
 }
 function bestBySector(records){
