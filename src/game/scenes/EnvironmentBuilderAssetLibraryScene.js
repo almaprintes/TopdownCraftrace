@@ -66,36 +66,28 @@ export class EnvironmentBuilderScene extends Current{
     let drag=null;
     this._libDragged=false;
 
+    const chooseAsset=a=>{
+      if(!a)return;
+      this._placingAsset=a;
+      this._mode='place-asset';
+      this._closeAssetLibrary();
+      this._placeHint?.setText(`COLOCAR: ${a.id.replaceAll('_',' ')} · toca el mapa`).setColor('#6dffad');
+      this._flash?.('TOCA EL MAPA PARA COLOCAR');
+    };
+
     items.forEach((a,i)=>{
       const col=i%cols,row=Math.floor(i/cols),x=vp.x+col*(cw+gap),y=vp.y+row*(ch+gap);
-      const bg=this.add.rectangle(x,y,cw,ch,0x151f31,1).setOrigin(0).setStrokeStyle(1,0x344563,.95).setInteractive({useHandCursor:true});
+      const bg=this.add.rectangle(x,y,cw,ch,0x151f31,1).setOrigin(0).setStrokeStyle(1,0x344563,.95);
       const img=this.add.image(x+cw/2,y+47,`env:${a.id}`);
       img.setScale(Math.min((cw-28)/(img.width||1),68/(img.height||1)));
       const lab=this.add.text(x+cw/2,y+89,a.id.replace(/_01$/,'').replaceAll('_',' '),{fontFamily:'system-ui',fontSize:'9px',color:'#fff',align:'center',wordWrap:{width:cw-12}}).setOrigin(.5,0);
-      bg._asset=a;
-      bg.on('pointerup',p=>{
-        if(this._libDragged)return;
-        p?.event?.stopPropagation?.();
-        this._placingAsset=a;
-        this._mode='place-asset';
-        this._closeAssetLibrary();
-        this._placeHint?.setText(`COLOCAR: ${a.id.replaceAll('_',' ')} · toca el mapa`).setColor('#6dffad');
-        this._flash?.('TOCA EL MAPA PARA COLOCAR');
-      });
       list.add([bg,img,lab]);
     });
 
     const rows=Math.ceil(items.length/cols);
     const min=Math.min(0,vp.h-Math.max(vp.h,rows*(ch+gap)-gap));
     let off=0;
-    const apply=()=>{
-      list.y=off;
-      for(const o of list.list||[]){
-        if(!o?._asset)continue;
-        const top=o.y+off;
-        if(o.input)o.input.enabled=top+ch>vp.y&&top<vp.y+vp.h;
-      }
-    };
+    const apply=()=>{list.y=off;};
 
     const mg=this.make.graphics({x:0,y:0,add:false});
     mg.fillStyle(0xffffff);mg.fillRect(vp.x,vp.y,vp.w,vp.h);
@@ -104,9 +96,23 @@ export class EnvironmentBuilderScene extends Current{
     const insideVp=p=>p&&p.x>=vp.x&&p.x<=vp.x+vp.w&&p.y>=vp.y&&p.y<=vp.y+vp.h;
     const insidePanel=p=>p&&p.x>=px&&p.x<=px+pw&&p.y>=py&&p.y<=py+ph;
 
+    const assetAtPointer=p=>{
+      if(!insideVp(p))return null;
+      const localX=p.x-vp.x;
+      const localY=p.y-vp.y-off;
+      if(localX<0||localY<0)return null;
+      const col=Math.floor(localX/(cw+gap));
+      const row=Math.floor(localY/(ch+gap));
+      if(col<0||col>=cols||row<0)return null;
+      const inCardX=localX-col*(cw+gap);
+      const inCardY=localY-row*(ch+gap);
+      if(inCardX<0||inCardX>cw||inCardY<0||inCardY>ch)return null;
+      return items[row*cols+col]||null;
+    };
+
     const down=p=>{
       if(!insideVp(p))return;
-      drag={y:p.y,start:off};
+      drag={y:p.y,start:off,asset:assetAtPointer(p)};
       this._libDragged=false;
     };
     const move=p=>{
@@ -116,9 +122,19 @@ export class EnvironmentBuilderScene extends Current{
       off=Math.max(min,Math.min(0,drag.start+d));
       apply();
     };
-    const up=()=>{
+    const up=p=>{
+      const d=drag;
+      const dragged=this._libDragged;
       drag=null;
-      if(this._libDragged)this.time.delayedCall(90,()=>{this._libDragged=false;});
+      if(!dragged&&d&&insideVp(p)){
+        const a=assetAtPointer(p);
+        if(a&&a===d.asset){
+          p?.event?.stopPropagation?.();
+          chooseAsset(a);
+          return;
+        }
+      }
+      if(dragged)this.time.delayedCall(90,()=>{this._libDragged=false;});
       else this._libDragged=false;
     };
     const wheel=(p,_g,_x,dy)=>{
