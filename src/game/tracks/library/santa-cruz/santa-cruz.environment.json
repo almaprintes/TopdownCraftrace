@@ -1,0 +1,59 @@
+{
+  "version": 5,
+  "trackId": "santa-cruz",
+  "environment": [
+    {
+      "asset": "santacruz_plaza_espana",
+      "path": "environment/structures/santacruz_plaza_espana.webp",
+      "x": 588.93,
+      "y": 2331.29,
+      "rotation": 0.07631,
+      "displayWidth": 431.57,
+      "flipX": true,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "santacruz_monumento",
+      "path": "environment/structures/santacruz_monumento.webp",
+      "x": 1064.26,
+      "y": 461.25,
+      "rotation": 0.03297,
+      "displayWidth": 340.98,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "santacruz_auditorio",
+      "path": "environment/structures/santacruz_auditorio.webp",
+      "x": 1124.51,
+      "y": 1587.9,
+      "rotation": 0,
+      "displayWidth": 520,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "santacruz_heliodoro",
+      "path": "environment/structures/santacruz_heliodoro.webp",
+      "x": 86.34,
+      "y": 1538.66,
+      "rotation": 0,
+      "displayWidth": 560,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    }
+  ],
+  "surfaces": [],
+  "baseTrack": {
+    "id": "santa-cruz",
+    "name": "SANTA CRUZ",
+    "source": "src/game/tracks/library/santa-cruz/track.json",
+    "locked": true
+  },
+  "repositoryPath": "src/game/tracks/library/santa-cruz/santa-cruz.environment.json",
+  "linearBarriers": []
+}
