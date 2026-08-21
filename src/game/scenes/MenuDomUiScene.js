@@ -39,20 +39,33 @@ export class MenuScene extends PreviousMenuScene {
     const candidates = findCar(this._ui).filter(obj => obj?.visible !== false);
     if (!candidates.length || !this.textures.exists('lobby-platform')) return;
     const car = candidates.sort((a, b) => (b.displayWidth * b.displayHeight) - (a.displayWidth * a.displayHeight))[0];
-    const parent = car.parentContainer;
-    if (!parent?.addAt) return;
+    const ui = this._ui;
+    if (!ui?.addAt) return;
 
     car.setScale(car.scaleX * 1.1, car.scaleY * 1.1);
-    const diameter = Math.max(car.displayHeight * 1.42, car.displayWidth * 2.65, 220);
+    const bounds = car.getBounds?.();
+    if (!bounds) return;
+    const centerX = bounds.centerX;
+    const centerY = bounds.centerY + 5;
+    const diameter = Math.max(bounds.height * 1.5, bounds.width * 2.8, 240);
+
+    // Insert the platform in the lobby root, immediately before the top-level
+    // hero container. This avoids nested-container visibility/order problems.
+    let hero = car;
+    while (hero?.parentContainer && hero.parentContainer !== ui) hero = hero.parentContainer;
+    const heroIndex = Math.max(1, ui.getIndex?.(hero) ?? ui.list.length);
+
     const glow = this.add.graphics();
     glow.fillStyle(0x39dfff, .07);
-    glow.fillCircle(car.x, car.y + 5, diameter * .52);
-    glow.lineStyle(3, 0x39dfff, .38);
-    glow.strokeCircle(car.x, car.y + 5, diameter * .5);
-    const platform = this.add.image(car.x, car.y + 5, 'lobby-platform').setOrigin(.5).setAlpha(1);
+    glow.fillCircle(centerX, centerY, diameter * .52);
+    glow.lineStyle(5, 0x39dfff, .72);
+    glow.strokeCircle(centerX, centerY, diameter * .5);
+    glow.lineStyle(2, 0xf0b84b, .46);
+    glow.strokeCircle(centerX, centerY, diameter * .46);
+
+    const platform = this.add.image(centerX, centerY, 'lobby-platform').setOrigin(.5).setAlpha(1);
     platform.setDisplaySize(diameter, diameter);
-    const index = Math.max(0, parent.getIndex?.(car) ?? 0);
-    parent.addAt(glow, index);
-    parent.addAt(platform, index + 1);
+    ui.addAt(glow, heroIndex);
+    ui.addAt(platform, heroIndex + 1);
   }
 }
