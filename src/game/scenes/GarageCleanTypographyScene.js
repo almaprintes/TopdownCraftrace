@@ -19,6 +19,28 @@ const GARAGE_PERSONALITY={
 };
 
 export class GarageScene extends CurrentGarageScene {
+  _queueSelectedThumbCenter(){
+    try{this._selectedCenterTimer?.remove?.(false);}catch(_){}
+    this._selectedCenterTimer=this.time.delayedCall(0,()=>{
+      if(!this.sys?.isActive?.())return;
+      const selected=this._thumbItems?.[this._selectedIndex];
+      if(!selected?.item||!selected?.bg||!this._thumbViewport)return;
+      const itemCenter=selected.item.y+(selected.bg.height*.5);
+      const viewCenter=this._thumbViewport.height*.5;
+      const target=Math.max(this._thumbMinScroll,Math.min(0,-(itemCenter-viewCenter)));
+      this._scrollVelocity=0;
+      this.tweens?.killTweensOf?.(this);
+      this._setThumbScroll(target);
+    });
+  }
+
+  _rebuild(...args){
+    super._rebuild(...args);
+    // iOS can issue a stabilising resize immediately after scene creation.
+    // Recenter after that rebuild instead of restoring the list to its top.
+    this._queueSelectedThumbCenter();
+  }
+
   _createThumbItem(x,y,w,h,carId,spec,index){
     const entry=super._createThumbItem(x,y,w,h,carId,spec,index);
     entry?.hit?.on('pointerup',()=>{
