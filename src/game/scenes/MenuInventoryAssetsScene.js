@@ -5,7 +5,7 @@ import { loadGarage, getEquippedForCar } from '../garage/garageStore.js';
 const MATERIAL_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
 const PART_IDS=Object.keys(GARAGE_ITEMS).filter(id=>GARAGE_ITEMS[id]?.kind==='part');
 const TIER_COLOR={1:0x66c6ff,2:0x4ee1a0,3:0xbf7cff,4:0xffc64d};
-const TIER_SIGLA={1:'ST',2:'SP',3:'RC',4:'PT'};
+const TIER_SIGLA={1:'I',2:'II',3:'III',4:'IV'};
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 
 export class MenuScene extends PreviousMenuScene {
