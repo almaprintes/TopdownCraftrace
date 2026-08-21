@@ -1,6 +1,6 @@
-import { RaceScene as ReplayRealSectorsScene } from './RaceReplayRealSectorsScene.js';
+import { RaceScene as SessionLapCapScene } from './RaceSessionLapCapScene.js';
 
-export class RaceScene extends ReplayRealSectorsScene {
+export class RaceScene extends SessionLapCapScene {
   _replayBrake01(t){
     const samples=this._ghostData?.samples||[];
     if(!samples.length)return 0;
