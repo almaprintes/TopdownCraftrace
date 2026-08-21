@@ -6394,7 +6394,7 @@ Fabrícalas en FACTORY y aparecerán aquí.`;n(this.add.text(i,L+N/2,B,{fontFami
     `}}function Je({cls:R="",icon:v,label:y,action:g}){const b=document.createElement("button");return b.type="button",b.className=`tdr-lobby-button ${R}`.trim(),b.innerHTML=`<img src="${_0(v)}" alt="" draggable="false"><span>${y}</span>`,b.addEventListener("click",g),b}function np(R){if(typeof R._openGameModeModal=="function"){R._openGameModeModal();return}const v=R.selectedCarId,y=R.selectedTrackKey||"track01";try{localStorage.setItem("tdr2:carId",v),localStorage.setItem("tdr2:trackKey",y)}catch{}R.scene.start("race",{carId:v,trackKey:y})}function rp(R){ep(R);let v=R._lobbyDomRoot;if(!v?.isConnected){const b=R.game?.canvas?.parentElement||document.getElementById("app")||document.body;b.classList.add("tdr-lobby-host"),v=document.createElement("div"),v.className="tdr-lobby-dom",v.innerHTML=`
       <header class="tdr-lobby-header">
         <button type="button" class="tdr-lobby-brand" aria-label="Top Down Race">
-          <img src="${Ni}assets/logos/logo_tdr2_sobres.webp" alt="Top Down Race" draggable="false">
+          <img src="${Ni}assets/logo.webp" alt="Top Down Race" draggable="false">
         </button>
         <div class="tdr-lobby-wallet">
           <img src="${Ni}assets/ui/moneda-tdr.webp" alt="" draggable="false">
