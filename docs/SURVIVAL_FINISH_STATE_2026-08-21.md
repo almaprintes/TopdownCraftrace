@@ -32,9 +32,31 @@ Cuando el jugador completa su quinta vuelta:
 - su posición física queda bloqueada en el punto de finalización y su velocidad se anula;
 - no puede recorrer una sexta vuelta;
 - permanece dentro de la clasificación mientras el resto de participantes resuelve sus vueltas y eliminaciones pendientes;
-- el HUD indica que el jugador ha finalizado y está esperando a la parrilla.
+- el HUD indica que el jugador ha finalizado;
+- aparece la opción **TERMINAR YA · SIMULAR RESTO**.
 
-La pantalla final de Supervivencia no se abre simplemente porque el jugador haya llegado a cinco vueltas. Se abre cuando el sistema de eliminaciones queda resuelto como corresponde.
+La pantalla final de Supervivencia no se abre simplemente porque el jugador haya llegado a cinco vueltas. Se abre cuando el sistema de eliminaciones queda resuelto como corresponde, ya sea en tiempo real o mediante la simulación solicitada por el jugador.
+
+## Opción de simular el resto
+
+No se obliga al jugador que ya ha completado su distancia a quedarse mirando cómo la IA termina varias vueltas pendientes.
+
+Una vez en estado `FINISHED`, el jugador puede:
+
+1. esperar y ver cómo termina la parrilla en tiempo real; o
+2. pulsar **TERMINAR YA · SIMULAR RESTO**.
+
+La simulación:
+
+- no concede vueltas adicionales al jugador;
+- no genera botín adicional;
+- no añade tiempos de vuelta ficticios al historial del jugador;
+- resuelve únicamente las eliminaciones todavía pendientes de los rivales;
+- usa el progreso actual y el ritmo efectivo/objetivo de cada IA para proyectar qué coche sería el último en alcanzar el siguiente umbral de vuelta;
+- conserva la misma regla de eliminación de Supervivencia;
+- desemboca en la misma pantalla final que el cierre natural de la carrera.
+
+Esto convierte el botón en una aceleración de la resolución de la IA, no en una alteración del resultado económico del jugador.
 
 ## Comportamiento de los rivales
 
@@ -55,9 +77,13 @@ Esta arquitectura es deliberadamente compatible con un futuro modo multijugador.
 
 El ganador puede completar primero la distancia establecida y quedar `FINISHED`, mientras los demás jugadores continúan hasta completar sus propias vueltas o quedar eliminados según las reglas del modo. No se fuerza el cierre de la carrera de todos cuando termina el líder.
 
+La opción **simular resto** es una comodidad específica para carreras contra IA. En un futuro multijugador real no deberá cerrar ni simular la carrera de otros jugadores humanos: el jugador que haya terminado podrá abandonar la vista de carrera mientras el servidor conserva y resuelve el estado real de los demás participantes.
+
 ## Protección económica
 
 Supervivencia mantiene su unidad económica de diseño en cinco vueltas por participante. El jugador no puede convertir una gran ventaja de rendimiento en vueltas extra recompensables.
+
+La simulación del final tampoco crea materiales, vueltas o créditos temporales adicionales para el jugador.
 
 Esto protege la calibración de progresión ya documentada:
 
@@ -70,28 +96,39 @@ La normalización temporal de botín y los créditos persistentes entre sesiones
 
 ## Implementación
 
-Archivo nuevo:
+Archivo:
 
 - `src/game/scenes/RaceSurvivalFinishStateScene.js`
 
 Integración en la cadena de escenas:
 
-- `src/game/scenes/RaceReplayBrakeExactScene.js` importa ahora `RaceSurvivalFinishStateScene.js`, que a su vez conserva la capa `RaceSessionLapCapScene.js`.
+- `src/game/scenes/RaceReplayBrakeExactScene.js` importa `RaceSurvivalFinishStateScene.js`, que a su vez conserva la capa `RaceSessionLapCapScene.js`.
 
 Constante:
 
 - `SURVIVAL_MAX_LAPS = 5`
 
+Funciones relevantes añadidas para el cierre rápido:
+
+- `_showSurvivalFastFinishButton()`
+- `_destroySurvivalFastFinishButton()`
+- `_survivalProjectedEtaToLap()`
+- `_simulateSurvivalRemainder()`
+
 ## Casos de prueba recomendados
 
 1. Coche Prototype muy superior: doblar dos o más veces a varios rivales y comprobar que el jugador queda fijado en 5 vueltas.
 2. Confirmar que los rivales continúan resolviendo las rondas pendientes después de que el jugador termine.
-3. Verificar que la quinta eliminación todavía determina correctamente victoria/derrota.
-4. Confirmar que ningún rival supera cinco vueltas visuales o lógicas.
-5. Confirmar que el informe de sesión del jugador no incluye vueltas 6+.
-6. Repetir en un circuito corto y uno largo para comprobar que no reaparece ninguna ventaja económica por longitud de vuelta.
+3. Al llegar a 5 vueltas, comprobar que aparece **TERMINAR YA · SIMULAR RESTO**.
+4. Dejar terminar a la IA de forma natural y registrar el resultado.
+5. Repetir una situación comparable, pulsar simulación y verificar que el sistema resuelve las eliminaciones sin añadir vueltas/botín al jugador.
+6. Confirmar que ningún rival supera cinco vueltas visuales o lógicas.
+7. Confirmar que el informe de sesión del jugador no incluye vueltas 6+.
+8. Repetir en un circuito corto y uno largo para comprobar que no reaparece ninguna ventaja económica por longitud de vuelta.
+9. Comprobar que el botón desaparece al abrir el resultado, reiniciar, salir o destruir la escena.
 
 ## Commits
 
 - `9da504a9` — nueva capa de estado FINISHED por corredor.
 - `05cc91f0` — integración de la nueva capa en la cadena de RaceScene.
+- `044a152b` — opción de simular inmediatamente el resto de la parrilla tras finalizar el jugador.
