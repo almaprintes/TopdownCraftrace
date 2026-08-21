@@ -1,128 +1,162 @@
 # Modelo matemático de equilibrio DROP → CRAFT
 
 Fecha: 2026-08-21
-Estado: propuesta matemática para validar antes de modificar gameplay
+Estado: **primera calibración implementada en `main`**
 
 ## Objetivo innegociable
 
-Dentro de una misma categoría, las cinco familias de piezas deben tener aproximadamente la misma dificultad/tiempo esperado de fabricación. La familia elegida no puede penalizar al jugador por usar un material más raro.
+Dentro de un mismo tier, Motor, Frenos, Neumáticos, Suspensión y Transmisión deben tener prácticamente la misma dificultad de fabricación. La dificultad la determina la categoría, no la familia elegida:
 
-La dificultad la determina el tier:
+**I Street < II Sport < III Racing < IV Prototype**.
 
-I Street < II Sport < III Racing < IV Prototype.
+Desde Sport se consume siempre la pieza inmediatamente anterior de la misma familia.
 
-Desde Sport se consume además 1 pieza del tier inmediatamente anterior.
+## Decisiones ya aplicadas
 
-## Hallazgo sobre el sistema actual
+- Inventario inicial de materiales: **0**.
+- Street no utiliza materiales raros: el jugador debe poder elegir libremente su primera mejora.
+- Las cinco familias tienen la misma estructura matemática de receta.
+- Chatarra es el principal sumidero y el material de mayor frecuencia.
+- Compuesto entra desde Sport.
+- Electrónica entra desde Racing.
+- Se elimina el antiguo sesgo fuerte por afinidades de circuito y el pity independiente de ECU como motor económico.
+- El drop pasa a un modelo adaptativo: azar a corto plazo + convergencia suave hacia cuotas globales a largo plazo.
 
-El loot actual de `garageStore.js` no tiene rarezas globales controladas por material. Los siete materiales no-ECU están en `COMMON_LOOT` y cada circuito elige tres afinidades que reciben peso 2 frente a peso 1. Electrónica/ECU usa un drop separado con pity. Por tanto, la dificultad efectiva de una receta puede variar por circuito y por los materiales que use.
+## Rareza y cuota objetivo de los materiales
 
-El inventario inicial actual también entrega: Chatarra 8, Aleación 5, Goma 4, Compuesto 4, Disco 4, Muelle 3, Engranaje 3 y ECU 2. Esto debe revisarse junto al nuevo modelo porque puede hacer que algunas recetas Street estén prácticamente prepagadas.
+| Material | Rareza | Cuota objetivo por tiradas |
+|---|---|---:|
+| Chatarra | Común | **38 %** |
+| Aleación | Poco común | **10 %** |
+| Goma | Poco común | **10 %** |
+| Disco metálico | Poco común | **10 %** |
+| Muelle | Poco común | **10 %** |
+| Engranaje | Poco común | **10 %** |
+| Compuesto | Raro | **8 %** |
+| Electrónica | Épico | **4 %** |
 
-## Distribución objetivo inicial
+Las cinco materias específicas de familia tienen exactamente la misma cuota del 10 %. Esto es deliberado: evita que fabricar Motor, Frenos, Ruedas, Suspensión o Transmisión sea objetivamente más difícil dentro de un mismo nivel.
 
-Estos porcentajes son cuotas de equilibrio a largo plazo, no probabilidades rígidas por tirada:
+Estas cifras son cuotas de convergencia, **no una secuencia fija**. Cada tirada pondera más los materiales que van por debajo de su cuota acumulada y menos los que van por encima, manteniendo además una pequeña variación aleatoria.
 
-| Material | Cuota objetivo |
-|---|---:|
-| Chatarra | 34% |
-| Goma | 16% |
-| Aleación | 16% |
-| Disco metálico | 9% |
-| Muelle | 7% |
-| Engranaje | 7% |
-| Compuesto | 7% |
-| Electrónica | 4% |
+## Corrección adaptativa
 
-Total = 100%.
+Para material `m`, tras `N` tiradas:
 
-La implementación final debe permitir una banda alrededor del objetivo y corregir suavemente desviaciones acumuladas, de modo que exista azar local pero convergencia estadística a largo plazo. No usar una secuencia fija tipo «cada N drops».
+`esperado_m = (N + 1) × p_m`
 
-## Fórmula central
+`déficit_m = (esperado_m - obtenido_m) / max(0.5, esperado_m)`
 
-Sea `p_m` la cuota de drop objetivo del material `m` y `T_c` el presupuesto de drops equivalente del tier `c`.
+`peso_m = p_m × exp(2 × déficit_m) × jitter`
 
-Para cada material usado por una receta:
+con `jitter` aleatorio aproximado entre 0.90 y 1.10.
 
-`Q(c,m) ≈ round(p_m × T_c)`
+La selección sigue siendo aleatoria, pero una mala racha no puede alejar indefinidamente al jugador del equilibrio previsto.
 
-La dificultad temporal aproximada de una receta se estima por su cuello de botella:
+## Cantidad entregada por tirada
 
-`D(receta) = max_m ( Q(receta,m) / p_m )`
+Una tirada selecciona un material y después determina el tamaño del lote:
 
-Diseñamos las recetas de una misma categoría para que sus valores `D` sean aproximadamente iguales.
+- Chatarra: **2–4** unidades.
+- Aleación / Goma / Disco / Muelle / Engranaje: **1–3** unidades.
+- Compuesto: **1–2** unidades.
+- Electrónica: **1** unidad.
 
-Esto hace que un material raro exija pocas unidades y uno frecuente muchas, compensando automáticamente su frecuencia de aparición.
+Por tanto, la cuota de tiradas y la cantidad de unidades por tirada trabajan juntas. Una Chatarra frecuente también llega en lotes mayores, lo que justifica requisitos numéricos mucho más altos en tiers superiores.
 
-## Presupuestos iniciales para simulación
+## Recetas implementadas
 
-- Street: T = 25
-- Sport: T = 55 + pieza Street ×1
-- Racing: T = 100 + pieza Sport ×1
-- Prototype: T = 170 + pieza Racing ×1
+Cada familia usa una materia secundaria propia:
 
-No son todavía valores definitivos. Deben validarse mediante Monte Carlo contra la duración real de las sesiones.
+- Motor → Aleación.
+- Frenos → Disco metálico.
+- Neumáticos → Goma.
+- Suspensión → Muelle.
+- Transmisión → Engranaje.
 
-## Matriz resultante inicial
+### I · Street
 
-### I Street
+Todas: **Chatarra ×8 + material de familia ×2**.
 
-- Motor: Chatarra 8 · Aleación 4 · Electrónica 1
-- Frenos: Chatarra 8 · Aleación 4 · Disco 2 · Compuesto 2
-- Neumáticos: Chatarra 8 · Goma 4 · Aleación 4 · Compuesto 2
-- Suspensión: Chatarra 8 · Aleación 4 · Muelle 2
-- Transmisión: Chatarra 8 · Aleación 4 · Engranaje 2
+Ejemplos:
+- Motor Street: Chatarra ×8 + Aleación ×2.
+- Frenos Street: Chatarra ×8 + Disco ×2.
+- Neumáticos Street: Chatarra ×8 + Goma ×2.
+- Suspensión Street: Chatarra ×8 + Muelle ×2.
+- Transmisión Street: Chatarra ×8 + Engranaje ×2.
 
-### II Sport
+### II · Sport
 
-Todas consumen además la pieza Street correspondiente ×1.
+Todas: **pieza Street ×1 + Chatarra ×28 + material de familia ×5 + Compuesto ×3**.
 
-- Motor: Chatarra 19 · Aleación 9 · Electrónica 2
-- Frenos: Chatarra 19 · Aleación 9 · Disco 5 · Compuesto 4
-- Neumáticos: Chatarra 19 · Goma 9 · Aleación 9 · Compuesto 4
-- Suspensión: Chatarra 19 · Aleación 9 · Muelle 4
-- Transmisión: Chatarra 19 · Aleación 9 · Engranaje 4
+### III · Racing
 
-### III Racing
+Todas: **pieza Sport ×1 + Chatarra ×50 + material de familia ×9 + Compuesto ×5 + Electrónica ×2**.
 
-Todas consumen además la pieza Sport correspondiente ×1.
+### IV · Prototype
 
-- Motor: Chatarra 34 · Aleación 16 · Electrónica 4
-- Frenos: Chatarra 34 · Aleación 16 · Disco 9 · Compuesto 7
-- Neumáticos: Chatarra 34 · Goma 16 · Aleación 16 · Compuesto 7
-- Suspensión: Chatarra 34 · Aleación 16 · Muelle 7
-- Transmisión: Chatarra 34 · Aleación 16 · Engranaje 7
+Todas: **pieza Racing ×1 + Chatarra ×90 + material de familia ×16 + Compuesto ×10 + Electrónica ×3**.
 
-### IV Prototype
+Así, dentro de cada tier solo cambia el material específico de la familia; el esfuerzo esperado es simétrico.
 
-Todas consumen además la pieza Racing correspondiente ×1.
+## Calibración de primera sesión — Monte Carlo
 
-- Motor: Chatarra 58 · Aleación 27 · Electrónica 7
-- Frenos: Chatarra 58 · Aleación 27 · Disco 15 · Compuesto 12
-- Neumáticos: Chatarra 58 · Goma 27 · Aleación 27 · Compuesto 12
-- Suspensión: Chatarra 58 · Aleación 27 · Muelle 12
-- Transmisión: Chatarra 58 · Aleación 27 · Engranaje 12
+Se simuló la receta Street desde inventario cero con el modelo adaptativo y decenas de miles de jugadores virtuales.
 
-## Restricciones de diseño
+Probabilidad aproximada de poder fabricar cada Street según tiradas acumuladas:
 
-1. Chatarra siempre es el principal sumidero en unidades.
-2. Las cantidades disminuyen al aumentar el valor/rareza del material.
-3. Ninguna familia puede tener un cuello de botella sistemáticamente mayor que otra del mismo tier.
-4. Street debe ser alcanzable durante la primera sesión normal, no necesariamente antes de correr.
-5. No basta con igualar medias: validar P50, P75 y P90 para detectar mala suerte/frustración.
-6. El sistema de drop debe converger hacia las cuotas objetivo a largo plazo mediante corrección suave de pesos.
-7. Afinidades de circuito, si se conservan, no pueden romper la igualdad de dificultad entre familias; deben ser variación local compensada a largo plazo.
-8. Tienda y packs de materiales deberán valorarse con la misma economía, no con precios arbitrarios.
+| Tiradas | Probabilidad por familia | Diferencia máx. entre familias |
+|---:|---:|---:|
+| 12 | ~70,3–70,7 % | ~0,4 pp |
+| 13 | ~75,1–75,6 % | ~0,5 pp |
+| 14 | ~79,4–80,1 % | ~0,7 pp |
+| **15** | **~82,5–82,9 %** | **~0,4 pp** |
+| 16 | ~85,6–86,1 % | ~0,6 pp |
+| 17 | ~87,9–88,6 % | ~0,7 pp |
 
-## Siguiente simulación necesaria
+Objetivo aprobado: alrededor de **80–85 %** de probabilidad para cualquiera de las cinco Street tras una primera sesión completa. La calibración elegida es aproximadamente **15 tiradas**.
 
-Antes de llevar estas cifras a `partsCatalog.js` hay que fijar qué significa exactamente una «primera sesión normal» en número medio de vueltas/drops. Después ejecutar simulación Monte Carlo de muchos jugadores y medir para cada familia/tier:
+## Traducción a Supervivencia
 
-- probabilidad de poder fabricar;
-- sesiones P50/P75/P90;
-- diferencia máxima entre familias;
-- materiales sobrantes acumulados;
-- cuellos de botella;
-- tiempo acumulado hasta completar cada colección de cinco piezas.
+Supervivencia tiene 6 coches y elimina uno por ronda, por lo que una partida completa alcanza aproximadamente 5 vueltas/rondas.
 
-Objetivo recomendado de igualdad entre familias del mismo tier: diferencia máxima de probabilidad <= 5 puntos porcentuales y tiempos P50/P90 muy próximos.
+El nuevo `grantRaceLoot()` entrega:
+
+- 2 tiradas garantizadas por vuelta = 10 en cinco vueltas.
+- 60 % de probabilidad de una tercera tirada en cada vuelta = ~3 adicionales de media.
+- Cofre de la vuelta 5 = 2 tiradas adicionales.
+
+Total esperado de una partida completa de cinco vueltas: **~15 tiradas**.
+
+Esto alinea directamente la duración real del modo con el objetivo de fabricar la primera Street.
+
+## Coste de colecciones completas
+
+El escalado está pensado también para que completar las cinco piezas de cada categoría sea progresivamente más exigente:
+
+- Street: primera colección relativamente rápida; cada pieza individual es viable desde las primeras sesiones.
+- Sport: primer salto serio y entrada del Compuesto.
+- Racing: introduce Electrónica y requiere acumulación de varias sesiones.
+- Prototype: fuerte sumidero final de materiales y objetivo de largo recorrido.
+
+La igualdad entre familias es estructural: cambiar de Motor a Neumáticos no cambia la dificultad matemática, solo el material secundario requerido.
+
+## Archivos de producción
+
+- Recetas y rarezas: `src/game/garage/partsCatalog.js`.
+- Drop adaptativo y persistencia: `src/game/garage/garageStore.js`.
+
+Commits del hito:
+
+- `a7a12487` — retirada del kit inicial de materiales.
+- `9cc50b19` — recetas simétricas y rarezas por material.
+- `a1d25c36` — sistema de drop adaptativo y calibración de ~15 tiradas por Supervivencia completa.
+
+## Validaciones reales pendientes
+
+1. Jugar varias partidas nuevas desde inventario cero y contrastar el comportamiento con la simulación.
+2. Verificar que los cinco tipos de Street resultan igual de alcanzables en experiencia real.
+3. Medir materiales sobrantes después de 5, 10 y 20 sesiones.
+4. Medir tiempo real para completar colecciones I, II, III y IV.
+5. Rebalancear packs de tienda usando esta misma valoración; no vender materiales con precios arbitrarios.
+6. Mantener telemetría de drops para poder ajustar cuotas sin rehacer las recetas.
