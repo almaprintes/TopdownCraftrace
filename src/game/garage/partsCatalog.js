@@ -15,16 +15,17 @@ for(const [family,[name,icon]] of Object.entries(families)) tierNames.forEach((t
 GARAGE_ITEMS.tires_racing.name='Semi-Slick Racing'; GARAGE_ITEMS.tires_prototype.name='Slick Prototype'; GARAGE_ITEMS.suspension_racing.name='Coilover Racing'; GARAGE_ITEMS.suspension_prototype.name='Suspensión Active Prototype'; GARAGE_ITEMS.transmission_prototype.name='Sequential Prototype';
 
 // Economy 2.0. Every family in a tier has the same mathematical effort.
-// Street uses only common/uncommon resources so the player's first choice is never punished by rarity.
-// Higher tiers progressively introduce Compound and Electronics. Previous-tier piece is always first.
+// Street remains deliberately accessible. Higher tiers are calibrated around a long-term progression target:
+// an advanced player who doubles every race reward with a rewarded ad should still need about 50 active hours
+// to complete all five Prototype parts of one car (simulation target ~510 full five-lap reward sessions).
 const R=(...pairs)=>pairs.map(([id,qty])=>({id,qty}));
 const SECONDARY={engine:'alloy',brakes:'disc',tires:'rubber',suspension:'spring',transmission:'gear'};
 const PREV={sport:'street',racing:'sport',prototype:'racing'};
 const TIER_COST={
   street:{scrap:8,secondary:2},
-  sport:{scrap:28,secondary:5,compound:3},
-  racing:{scrap:50,secondary:9,compound:5,ecu:2},
-  prototype:{scrap:90,secondary:16,compound:10,ecu:3}
+  sport:{scrap:185,secondary:160,compound:20},
+  racing:{scrap:820,secondary:720,compound:86,ecu:29},
+  prototype:{scrap:2400,secondary:2100,compound:250,ecu:84}
 };
 export const DIRECT_CRAFT_RECIPES={};
 for(const family of Object.keys(SECONDARY)){
