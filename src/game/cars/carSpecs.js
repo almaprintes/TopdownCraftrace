@@ -230,6 +230,7 @@ steeringProfile: 'DIRECT',
     collectionNo: 16,
     rarity: 'Raro',
     cardEffect: 'holographic',
+    cardAssetVersion: 2,
     skin: 'skin_helix_vortex.webp',
     visualScale: 1.10,
 

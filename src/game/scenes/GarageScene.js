@@ -751,7 +751,8 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
       `card_${carId}_${raritySlug}_${String(spec.collectionNo || 0).padStart(3, '0')}.webp`;
 
     const texKey = `card_${carId}`;
-    const url = `${CARD_BASE}${fileName}`;
+    const assetVersion = encodeURIComponent(spec.cardAssetVersion || 1);
+    const url = `${CARD_BASE}${fileName}?v=${assetVersion}`;
 
     if (this.textures.exists(texKey)) {
       onReady?.(texKey);
