@@ -1,221 +1,183 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
 > Documento vivo para continuar el proyecto en un chat nuevo sin perder decisiones, soluciones técnicas ni el estado de trabajo.
-> Actualizar este archivo cuando haya un cambio importante de arquitectura, render, pista, rendimiento, assets, deploy o PWA.
+> Actualizar este archivo cuando haya un cambio importante de arquitectura, render, pista, rendimiento, assets, deploy, progresión, economía o PWA.
 
 ## 1. Repositorio y flujo actual
 
 - Repositorio: `almaprintes/TopdownCraftrace`
 - Rama de trabajo actual: `main`
 - Existe una rama/checkpoint de seguridad de la pista estable: `checkpoint-track-stable-2026-08-08`. No usarla para trabajo normal; conservarla como salvavidas.
-- GitHub es la fuente oficial del código y el destino final previsto.
-- Vercel se está usando TEMPORALMENTE como banco de pruebas porque GitHub Pages estaba tardando mucho o dando problemas con los deploys.
-- Regla: no convertir decisiones temporales de Vercel en arquitectura permanente si no hace falta.
+- GitHub es la fuente oficial del código y del estado documentado del proyecto.
+- Vercel se usa como banco de pruebas cuando es necesario; GitHub Pages sigue siendo destino previsto.
 
-## 2. Objetivo visual
+## 2. Dirección del juego
 
-Objetivo actual: **arcade premium con base semi-realista**, vista cenital/top-down.
+Objetivo visual: **arcade premium con base semi-realista**, vista cenital/top-down.
 
-La pista debe sentirse como un circuito real estilizado, no como una PWA dibujada con primitivas CSS/Canvas. Dirección visual aceptada:
+La pista debe sentirse como un circuito real estilizado. Dirección aceptada:
 
-- asfalto mate, gris oscuro cálido, sin look metalizado;
-- desgaste/suciedad longitudinal siguiendo el sentido de marcha;
-- borde asfalto → pequeña franja de tierra/suciedad → césped;
-- césped orgánico, brizna pequeña, mezcla de verdes y zonas secas/desgastadas;
-- pianos rojo/blanco integrados en curvas;
-- entorno con assets cenitales semirrealistas con estética de animación;
-- HUD, pedales, minimapa, cronos y paneles actuales se consideran una base válida y no deben romperse durante los pases de entorno.
+- asfalto mate gris oscuro cálido;
+- desgaste longitudinal;
+- transición asfalto → suciedad → césped;
+- pianos rojo/blanco integrados;
+- entorno con assets cenitales semirrealistas;
+- HUD, pedales, minimapa, cronos y paneles como base válida.
+
+La progresión del jugador se apoya además en carreras, botín de materiales, garaje, fabricación y evolución de piezas.
 
 ## 3. Pista — lecciones críticas
 
 ### 3.1 Retorcimiento de curvas
 
-Se sufrió un problema grave en curvas pronunciadas: los bordes/líneas parecían retorcerse o invertir su orientación en algunos vértices. Añadir más decoración no lo solucionaba y llegó a producir islas y geometrías absurdas.
+Se sufrió un problema grave en curvas pronunciadas: los bordes/líneas parecían retorcerse o invertir orientación. La pista estable actual se consiguió después de varias iteraciones de muestreo/geometría.
 
-La pista estable actual se consiguió después de varias iteraciones de muestreo/geometría. NO volver a enfoques que dependan de handles Bezier mal orientados o de offsets ingenuos por nodo.
-
-La línea de arcén fue una prueba deliberada para revelar visualmente cualquier retorcimiento residual. Finalmente se consiguió una línea de arcén continua que seguía correctamente la pista, con pequeñas aberturas corregidas posteriormente.
-
-**Regla para circuitos futuros:** reutilizar el mismo método de construcción de borde/arcén de la pista estable actual; no reinventarlo circuito por circuito.
+**Regla:** reutilizar el método estable de construcción de borde/arcén; no volver a offsets ingenuos por nodo ni depender de handles Bezier mal orientados.
 
 ### 3.2 Rendimiento
-
-Hubo una versión que comenzaba fluida pero aproximadamente a mitad de vuelta acumulaba tirones hasta volverse impracticable. Después se corrigió y se probaron varias vueltas consecutivas con rendimiento excelente.
 
 Hitos confirmados:
 
 - pista/pianos: 8 vueltas seguidas sin ralentizaciones;
-- vegetación: prueba posterior con hasta ~28 sprites estáticos reutilizando solo 4 WebP y 5 composiciones alrededor del circuito;
-- resultado de esa prueba: **8 vueltas completas con rendimiento absoluto**, sin degradación progresiva ni tirones.
+- vegetación: hasta ~28 sprites estáticos reutilizando 4 WebP y 5 composiciones;
+- 8 vueltas completas con rendimiento absoluto, sin degradación progresiva.
 
-Reglas:
-
-- nada de crear geometría/objetos de entorno cada frame;
-- entorno estático debe construirse una vez;
-- evitar cantidades enormes de segmentos/Graphics que se acumulen;
-- reutilizar texturas siempre que sea posible;
-- subir densidad por escalones y validar 6–8 vueltas completas antes de seguir.
+Reglas: entorno construido una vez, evitar trabajo/objetos por frame, reutilizar texturas y validar 6–8 vueltas completas tras incrementos importantes.
 
 ## 4. Pianos / kerbs
 
-Los primeros intentos eran incoherentes. La solución visual mejoró al tratar el piano como un elemento ligado a la curva y no como piezas aisladas.
+Implementación actual aceptada. Deben seguir exactamente la trayectoria local, crecer hacia el ápice y volver a estrecharse, evitando discontinuidades, dientes o inversiones. Tratar la implementación estable como base protegida.
 
-Decisión de diseño:
+## 5. Entorno
 
-- pianos automáticos en el exterior/interior apropiado de curvas según geometría;
-- posibilidad futura de override manual por tramo para forzar/quitar;
-- el ancho puede variar a lo largo del piano: empieza fino, crece hacia la zona central/ápice y vuelve a estrecharse al terminar;
-- deben seguir exactamente la trayectoria local de la pista;
-- evitar discontinuidades, dientes, inversiones o piezas atravesadas.
+Descartados los decorados de primitivas/procedural Canvas y la colocación aleatoria por su aspecto barato y poca coherencia espacial.
 
-Los pianos actuales fueron aceptados después de una prueba de 8 vueltas sin ralentizaciones. Tratar esa implementación como parte de la base estable.
+Enfoque vigente: **assets cenitales reales, preferentemente WebP transparentes**, colocados con dirección artística por zonas.
 
-## 5. Entorno — enfoque descartado
+Ruta base: `public/assets/environment/`.
 
-Se intentó crear vegetación, guardarraíles, casetas y otros elementos mediante primitivas/procedural Canvas. Resultado rechazado: aspecto barato/casposo.
+Assets inicialmente validados: `tree_deciduous_01.webp`, `tree_conifer_01.webp`, `shrub_round_01.webp`, `shrub_flowers_01.webp`.
 
-También se probó una primera tanda de SVG sencillos colocados proceduralmente. Resultado rechazado porque:
+`RaceEnvironmentLayer.js` es el punto de integración del entorno y debe mantenerse aislado de geometría, física, HUD y cronometraje.
 
-- los assets no tenían suficiente calidad visual;
-- los guardarraíles parecían barras tiradas por el césped;
-- los elementos aparecían sin lógica espacial;
-- la colocación aleatoria/procedural rompía la credibilidad del circuito.
+Commits históricos relevantes: `90750a2`, `129ea6c`, `cd20adf`.
 
-**No volver a ese enfoque.**
+## 6. Cámara / zoom
 
-## 6. Entorno — enfoque actual
+Prueba de cámara abierta con valores aproximados: zoom min `0.62`, max `1.06`, referencia `110 km/h`, inicial `0.96`. Objetivo: mostrar más entorno y anticipar curvas sin alterar la física.
 
-El entorno debe construirse con **assets cenitales reales**, preferiblemente WebP transparentes, con volumen, detalle y sombras controladas.
+## 7. PWA / deploy
 
-La colocación NO debe ser aleatoria. Debe existir dirección artística por zonas/escenas:
+`vite.config.js` contempla base `/` en Vercel/Netlify y `/<repo>/` en GitHub Pages. Service worker en desarrollo usa estrategia network-first para evitar versiones atrapadas en caché.
 
-- guardarraíles siguiendo el borde de pista, paralelos y continuos;
-- barreras/protecciones en zonas de riesgo;
-- puesto de comisarios + protección + acceso como conjunto;
-- grupos naturales de vegetación;
-- carteles orientados hacia la pista;
-- escapatorias y elementos técnicos colocados con intención;
-- zonas de exclusión respecto a asfalto y entre objetos.
+Correcciones históricas de instalación iOS: manifest e iconos con rutas absolutas, `id: "/"`, `start_url: "/?source=pwa"`, `scope: "/"`.
 
-Pensar en **composiciones reconocibles**, no en dispersar objetos para rellenar huecos.
+Commits relevantes: `781ce28`, `dc4efb0`, `4cd5b72`, `d3ecc4e`.
 
-### 6.1 Assets actuales
+## 8. Garaje, piezas y homologaciones
 
-Ruta:
+El garaje dispone de familias de piezas con cuatro categorías de progresión:
 
-`public/assets/environment/`
+- Street
+- Sport
+- Racing
+- Prototype
 
-Archivos base validados:
+Familias actuales: motor, frenos, neumáticos, suspensión y transmisión.
 
-- `tree_deciduous_01.webp`
-- `tree_conifer_01.webp`
-- `shrub_round_01.webp`
-- `shrub_flowers_01.webp`
+Las piezas modifican estadísticas y tuning real del coche; la progresión no debe ser meramente cosmética. Se han realizado homologaciones y pruebas de comportamiento de coches, y las sensaciones/telemetría consolidadas deben conservarse como referencia para personalidad y equilibrio de cada vehículo.
 
-Visualmente fueron aprobados: encajan con el estilo del juego y tienen suficiente calidad. La sombra de suelo es visible pero funciona sobre el césped actual.
+## 9. Fabricación — REDISEÑO 21/08/2026
 
-Nota: una extracción anterior de ~70 elementos desde una infografía JPEG fue descartada porque los recortes tenían halos, fondo crema, sombras y contaminación entre objetos. No reutilizar esos recortes.
+### 9.1 Problema detectado
 
-### 6.2 Integración actual
+La mesa de fusión anterior exigía introducir tres elementos y descubrir/recordar combinaciones. Aunque funcionaba técnicamente, visualmente no comunicaba de inmediato qué debía hacer el jugador y el coste de fabricar piezas era demasiado bajo.
 
-`RaceEnvironmentLayer.js` carga los cuatro WebP reales desde `public/assets/environment/` usando `import.meta.env.BASE_URL`.
+Decisión de diseño: **suma sencillez**. La fabricación debe entenderse de un vistazo en móvil.
 
-Después de la prueba inicial con 4 piezas se escaló a una prueba forestal con unas 28 colocaciones máximas en 5 zonas diseñadas alrededor del circuito. Los árboles se solapan hacia el fondo y los arbustos suavizan el borde. No hay colisiones, aleatoriedad ni trabajo por frame.
+### 9.2 Nuevo flujo
 
-Commits relevantes:
+Se elimina como interfaz principal el concepto de probar combinaciones en una mesa de tres slots. El taller activo pasa a fabricación directa:
 
-- `90750a2` — usar WebP subidos y retirar entorno legacy de esta capa.
-- `129ea6c` — prueba de 12 elementos.
-- `cd20adf` — prueba de bosque más denso (~28 sprites / 5 zonas).
+**FAMILIA → CATEGORÍA → REQUISITOS → FABRICAR**
 
-Resultado confirmado por el usuario tras 8 vueltas: rendimiento absoluto. Esto habilita seguir aumentando densidad y empezar a añadir nuevas familias de assets de forma gradual.
+El jugador:
 
-## 7. RaceEnvironmentLayer
+1. elige familia (Motor, Frenos, Neumáticos, Suspensión o Transmisión);
+2. elige Street / Sport / Racing / Prototype;
+3. ve inmediatamente la pieza objetivo y todos sus requisitos;
+4. cada material muestra `disponible / necesario` y una barra visual;
+5. requisitos satisfechos se muestran como válidos y los insuficientes como faltantes;
+6. el botón FABRICAR solo queda disponible cuando se cumplen todos los requisitos.
 
-`src/game/scenes/RaceEnvironmentLayer.js` es el punto de integración del entorno. Se dejó aislado para poder trabajar el decorado sin tocar el corazón probado del circuito.
+Los assets de las piezas siguen siendo protagonistas visuales; no sustituirlos por iconografía procedural cuando existe arte definitivo.
 
-Principio arquitectónico: pista/geometría/pianos/física/HUD deben permanecer aislados de los experimentos de entorno.
+Archivo de la nueva interfaz:
 
-## 8. Cámara / zoom
+`src/game/scenes/UpgradeWorkshopSimpleCraftScene.js`
 
-Se creó una escena temporal `RaceWideCameraPreviewScene.js` para probar más contexto visual sin tocar física ni HUD.
+Activada desde:
 
-Valores de prueba actuales aproximados:
+`src/game/game.js`
 
-- zoom min: `0.62`
-- zoom max: `1.06`
-- referencia de velocidad: `110 km/h`
-- zoom inicial: `0.96`
+### 9.3 Nueva economía de fabricación
 
-El objetivo es ver más entorno y leer mejor las curvas. La primera prueba suave casi no se notaba, así que se abrió más. No tocar de golpe junto con cambios de física.
+El requisito inicial de una sola unidad por material se consideró excesivamente fácil. Se decidió multiplicar aproximadamente por dos la primera propuesta de equilibrio.
 
-## 9. Vercel + GitHub Pages
+Principio económico:
 
-`vite.config.js` detecta Vercel/Netlify y usa `base: '/'`; GitHub Pages mantiene `/<repo>/`.
+- **Street:** coste significativo pero alcanzable pronto;
+- **Sport:** exige acumular claramente más botín;
+- **Racing:** inversión importante;
+- **Prototype:** objetivo de largo recorrido y fuerte sumidero de materiales.
 
-Vercel es solo preview temporal. GitHub Pages debe volver a ser el destino oficial cuando el flujo de deploy esté estable.
+Además, Sport consume la pieza Street anterior, Racing consume Sport y Prototype consume Racing. Esto crea una cadena de evolución y evita saltarse categorías.
 
-Commit relevante:
+Ejemplos del balance activo:
 
-- `781ce28` — soporte de base `/` en Vercel sin abandonar GitHub Pages.
+- Motor Street: 10 Chatarra + 8 Aleación + 4 Electrónica.
+- Motor Sport: Motor Street + 18 Chatarra + 14 Aleación + 8 Electrónica.
+- Motor Racing: Motor Sport + 32 Chatarra + 26 Aleación + 14 Electrónica.
+- Motor Prototype: Motor Racing + 56 Chatarra + 46 Aleación + 28 Compuesto + 24 Electrónica.
 
-## 10. PWA en iPhone
+Los costes completos de las cinco familias están centralizados en `DIRECT_CRAFT_RECIPES` dentro de:
 
-Metadatos Apple presentes en `index.html`:
+`src/game/garage/partsCatalog.js`
 
-- `apple-mobile-web-app-capable=yes`
-- `apple-mobile-web-app-status-bar-style=black-translucent`
-- `apple-mobile-web-app-title=TDR2`
+### 9.4 Compatibilidad
 
-### 10.1 Service worker
+Las recetas antiguas se mantienen temporalmente en `GARAGE_RECIPES` / `CRAFT_STRIP_RECIPES` por compatibilidad con código o partidas anteriores, pero **la interfaz activa del taller utiliza `DIRECT_CRAFT_RECIPES`**.
 
-Existe `public/sw.js` y `src/main.js` lo registra. Se cambió a estrategia network-first durante desarrollo para evitar quedarse atrapado en versiones antiguas.
+No volver a presentar la mesa de tres componentes como flujo principal salvo decisión explícita posterior.
 
-Commit relevante:
+### 9.5 Commits del hito
 
-- `dc4efb0` — service worker v14 network-first.
+- `06c7c0f` — nueva escena de fabricación directa y simplificada.
+- `c84afd3` — recetas directas y nuevo balance de materiales.
+- `12c6524` — activación del nuevo taller en `game.js`.
 
-### 10.2 Bug específico `/assets/` al instalar desde Vercel
+### 9.6 Validación pendiente
 
-Síntoma observado en iPhone:
+El cambio está implementado pero requiere prueba real en iPhone. Criterio de aceptación UX: al entrar en FABRICACIÓN, un jugador debe comprender inmediatamente qué pieza puede fabricar, qué le falta y qué botón debe pulsar, sin necesidad de aprender previamente el sistema.
 
-1. En Safari, al abrir Compartir, la ficha superior muestra correctamente el dominio raíz `https://topdown-craftrace-two.vercel.app`.
-2. Al pulsar **Añadir a pantalla de inicio**, la pantalla final cambia misteriosamente la URL a `https://topdown-craftrace-two.vercel.app/assets/`.
-3. La PWA resultante abre en blanco.
+También habrá que observar el ritmo real de obtención de materiales durante varias sesiones. Los números actuales son un punto de balance deliberadamente más exigente, no deben considerarse definitivos hasta contrastarlos con la economía de botín.
 
-Hallazgo en código: el manifest todavía usaba URLs relativas (`./`) en `id`, `start_url`, `scope` e iconos, y `index.html` enlazaba el manifest de forma relativa. Esto permite que iOS resuelva el contexto de instalación de forma no deseada.
-
-Corrección aplicada el 08/08:
-
-- manifest con `id: "/"`;
-- `start_url: "/?source=pwa"`;
-- `scope: "/"`;
-- iconos con rutas absolutas `/icons/...`;
-- `index.html` enlaza `/manifest.webmanifest?v=20260808-3`;
-- iconos Apple/favicon también absolutos;
-- imagen de orientación también absoluta para evitar herencia accidental de rutas.
-
-Commits relevantes:
-
-- `4cd5b72` — manifest absoluto para forzar instalación desde raíz.
-- `d3ecc4e` — URLs absolutas del manifest/iconos en `index.html`.
-
-Después de desplegar esos commits en Vercel, probar de nuevo desde una pestaña nueva de Safari. Si la pantalla final sigue inyectando `/assets/`, el siguiente paso será limpiar datos del sitio/PWA en iOS y revisar exactamente qué manifest está sirviendo Vercel en producción antes de tocar más código.
-
-## 11. Reglas de trabajo para el siguiente chat
+## 10. Reglas de trabajo
 
 1. Leer este archivo antes de tocar el proyecto.
-2. No romper pista, pianos, física, HUD, minimapa ni cronometraje mientras se trabaja el entorno.
+2. No romper pista, pianos, física, HUD, minimapa ni cronometraje al trabajar otras capas.
 3. Hacer cambios pequeños y comprobables.
 4. Probar rendimiento durante varias vueltas completas.
-5. No llenar el circuito de assets hasta validar primero una muestra pequeña.
-6. No usar decoración procedural barata para sustituir assets finales.
-7. No colocar elementos de entorno aleatoriamente: diseñar escenas y zonas coherentes.
-8. Mantener GitHub como fuente oficial; Vercel es preview temporal.
-9. Actualizar este `PROJECT_HANDOFF.md` después de cada solución técnica importante o cambio de flujo.
+5. No usar decoración procedural barata donde existan assets finales.
+6. No colocar entorno aleatoriamente: diseñar zonas coherentes.
+7. Mantener GitHub como fuente oficial.
+8. Conservar homologaciones, telemetría y sensaciones de coches como datos de diseño, no como conversación desechable.
+9. Actualizar este `PROJECT_HANDOFF.md` tras cada solución técnica importante o cambio de flujo/economía.
 
-## 12. Próximo paso inmediato
+## 11. Próximo paso inmediato
 
-1. Esperar a Vercel con `d3ecc4e` o posterior y repetir instalación PWA desde la raíz.
-2. Si la URL final deja de añadir `/assets/`, comprobar que la PWA abre correctamente.
-3. En paralelo, continuar escalando entorno desde la prueba estable de ~28 sprites hacia un bosque más frondoso, introduciendo nuevas especies/objetos poco a poco y validando rendimiento tras cada escalón.
+1. Probar en iPhone el nuevo taller de fabricación directa.
+2. Verificar legibilidad, tamaño táctil y ausencia de desbordamientos en apaisado.
+3. Fabricar al menos una pieza Street y comprobar descuento correcto de materiales e incorporación al inventario.
+4. Verificar que Sport/Racing/Prototype exigen correctamente la pieza del nivel inmediatamente anterior.
+5. Tras varias carreras de Supervivencia/eventos, contrastar botín obtenido frente a los nuevos costes y ajustar economía si la progresión queda demasiado rápida o excesivamente lenta.
