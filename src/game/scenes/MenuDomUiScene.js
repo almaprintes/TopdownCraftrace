@@ -36,36 +36,38 @@ export class MenuScene extends PreviousMenuScene {
   }
 
   _installCarPlatform() {
-    const candidates = findCar(this._ui).filter(obj => obj?.visible !== false);
-    if (!candidates.length || !this.textures.exists('lobby-platform')) return;
-    const car = candidates.sort((a, b) => (b.displayWidth * b.displayHeight) - (a.displayWidth * a.displayHeight))[0];
     const ui = this._ui;
     if (!ui?.addAt) return;
 
-    car.setScale(car.scaleX * 1.1, car.scaleY * 1.1);
-    const bounds = car.getBounds?.();
-    if (!bounds) return;
-    const centerX = bounds.centerX;
-    const centerY = bounds.centerY + 5;
-    const diameter = Math.max(bounds.height * 1.5, bounds.width * 2.8, 240);
+    // The car is always centred by the lobby layout. Use that canonical layout
+    // position rather than depending on a skin texture key or nested container.
+    const { width, height } = this.scale;
+    const centerX = width * .5;
+    const centerY = height * .505;
+    const diameter = Math.max(260, Math.min(380, width * .26, height * .48));
 
-    // Insert the platform in the lobby root, immediately before the top-level
-    // hero container. This avoids nested-container visibility/order problems.
-    let hero = car;
-    while (hero?.parentContainer && hero.parentContainer !== ui) hero = hero.parentContainer;
-    const heroIndex = Math.max(1, ui.getIndex?.(hero) ?? ui.list.length);
+    const candidates = findCar(ui).filter(obj => obj?.visible !== false);
+    const car = candidates.sort((a, b) => (b.displayWidth * b.displayHeight) - (a.displayWidth * a.displayHeight))[0];
+    if (car && !car.__tdrLobbyScaleApplied) {
+      car.setScale(car.scaleX * 1.1, car.scaleY * 1.1);
+      car.__tdrLobbyScaleApplied = true;
+    }
 
     const glow = this.add.graphics();
-    glow.fillStyle(0x39dfff, .07);
+    glow.fillStyle(0x07131b, .58);
     glow.fillCircle(centerX, centerY, diameter * .52);
-    glow.lineStyle(5, 0x39dfff, .72);
+    glow.lineStyle(6, 0x39dfff, .92);
     glow.strokeCircle(centerX, centerY, diameter * .5);
-    glow.lineStyle(2, 0xf0b84b, .46);
+    glow.lineStyle(3, 0xf0b84b, .72);
     glow.strokeCircle(centerX, centerY, diameter * .46);
 
-    const platform = this.add.image(centerX, centerY, 'lobby-platform').setOrigin(.5).setAlpha(1);
-    platform.setDisplaySize(diameter, diameter);
-    ui.addAt(glow, heroIndex);
-    ui.addAt(platform, heroIndex + 1);
+    // Index 0 is the photographic background. Everything inserted immediately
+    // after it is guaranteed to remain below the hero car and all HUD layers.
+    ui.addAt(glow, Math.min(1, ui.list.length));
+    if (this.textures.exists('lobby-platform')) {
+      const platform = this.add.image(centerX, centerY, 'lobby-platform').setOrigin(.5).setAlpha(1);
+      platform.setDisplaySize(diameter, diameter);
+      ui.addAt(platform, Math.min(2, ui.list.length));
+    }
   }
 }

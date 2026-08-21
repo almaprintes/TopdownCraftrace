@@ -24,6 +24,7 @@ this.load.image('logo', 'assets/logos/logo_tdr2_sobres.webp');
 this.load.json('car_overrides', 'community/car-overrides.json');
 this.load.json('trackjson:track01', 'tracks/library/track01/track.json');
 this.load.image('menu_bg', 'assets/ui/menu_bg.webp');
+this.load.image('lobby-platform', 'assets/ui/lobby/car_platform.webp');
 this.load.image('panel_event', 'assets/ui/panel_event.webp');
 this.load.image('btn_play', 'assets/ui/btn_play.webp');
 this.load.image('btn_garage', 'assets/ui/btn_garage.webp');
