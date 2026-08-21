@@ -50,6 +50,7 @@ export class MenuScene extends PreviousMenuScene{
   const closeBox=this.add.graphics();closeBox.fillStyle(0x0a1526,.96);closeBox.fillRoundedRect(w-57,9,42,40,10);closeBox.lineStyle(1,0x36506c,.8);closeBox.strokeRoundedRect(w-57,9,42,40,10);root.add(closeBox);
   const close=this.add.text(w-36,29,'✕',{fontFamily:FONT,fontSize:'23px',fontStyle:'bold',color:'#fff'}).setOrigin(.5).setInteractive({useHandCursor:true});root.add(close);close.on('pointerup',()=>{root.destroy(true);this._storeModal=null;});
 
+  let jump=()=>{};
   const tabs=[['materials','⬡  MATERIALES'],['coins','●  MONEDAS'],['rewards','◆  RECOMPENSAS']];
   const tabY=68,tabW=170,tabH=38;
   tabs.forEach(([id,label],i)=>{
@@ -58,30 +59,36 @@ export class MenuScene extends PreviousMenuScene{
    const t=this.add.text(x+tabW/2,tabY+tabH/2,label,{fontFamily:FONT,fontSize:'11px',fontStyle:'bold',color:active?'#ffffff':'#9ca9bb'}).setOrigin(.5).setInteractive({useHandCursor:true});root.add(t);t.on('pointerup',()=>jump(id));
   });
 
-  const viewportX=24,viewportY=116,viewportW=w-48,viewportH=h-132;
+  const viewportX=24,viewportY=112,viewportW=w-48,viewportH=h-120;
   const clip=this.add.graphics().fillStyle(0xffffff).fillRect(viewportX,viewportY,viewportW,viewportH);clip.setVisible(false);root.add(clip);
   const content=this.add.container(viewportX,viewportY).setMask(clip.createGeometryMask());root.add(content);
-  const cardW=Math.min(294,w*.285),cardH=Math.max(285,viewportH-54),gap=18,sectionGap=70;let cursor=0;const starts={};
+
+  // Critical mobile rule: cards must ALWAYS fit vertically inside the viewport.
+  const sectionHeadH=42;
+  const bottomSafe=10;
+  const cardW=Math.min(294,w*.285);
+  const cardH=Math.max(196,viewportH-sectionHeadH-bottomSafe);
+  const gap=18,sectionGap=70;let cursor=0;const starts={};
 
   const sectionTitle=(id,label,copy)=>{
    starts[id]=cursor;
-   content.add(this.add.text(cursor,2,label,{fontFamily:FONT,fontSize:'17px',fontStyle:'bold',color:'#31aaff'}));
-   content.add(this.add.text(cursor,26,copy,{fontFamily:FONT,fontSize:'11px',color:'#a7b4c6'}));
+   content.add(this.add.text(cursor,0,label,{fontFamily:FONT,fontSize:'16px',fontStyle:'bold',color:'#31aaff'}));
+   content.add(this.add.text(cursor,21,copy,{fontFamily:FONT,fontSize:'10px',color:'#a7b4c6'}));
   };
 
   sectionTitle('materials','MATERIALES','Componentes para fabricar y mejorar piezas en la fábrica.');
-  MATERIAL_PACKS.forEach((p,i)=>{this._storeCard(content,{type:'mat',...p,accent:ACCENTS[i%4]},cursor,48,cardW,cardH);cursor+=cardW+gap;});
+  MATERIAL_PACKS.forEach((p,i)=>{this._storeCard(content,{type:'mat',...p,accent:ACCENTS[i%4]},cursor,sectionHeadH,cardW,cardH);cursor+=cardW+gap;});
   cursor+=sectionGap;
 
   sectionTitle('coins','MONEDAS','Acelera tu progreso con packs de monedas.');
-  COIN_PACKS.slice(0,3).forEach((p,i)=>{this._storeCard(content,{type:'coin',...p,priceLabel:PRICES[i],coinVisual:i,accent:[0x37b8ff,0x6bd35e,0xe4a83b][i]},cursor,48,cardW,cardH);cursor+=cardW+gap;});
+  COIN_PACKS.slice(0,3).forEach((p,i)=>{this._storeCard(content,{type:'coin',...p,priceLabel:PRICES[i],coinVisual:i,accent:[0x37b8ff,0x6bd35e,0xe4a83b][i]},cursor,sectionHeadH,cardW,cardH);cursor+=cardW+gap;});
   cursor+=sectionGap;
 
   sectionTitle('rewards','RECOMPENSAS','Premios gratuitos y recompensas opcionales.');
-  for(const p of [{type:'reward',id:'video',name:'VÍDEO RECOMPENSADO',accent:0xe4a83b},{type:'daily',id:'daily',name:'REGALO DIARIO',accent:0x48cf8b}]){this._storeCard(content,p,cursor,48,cardW,cardH);cursor+=cardW+gap;}
+  for(const p of [{type:'reward',id:'video',name:'VÍDEO RECOMPENSADO',accent:0xe4a83b},{type:'daily',id:'daily',name:'REGALO DIARIO',accent:0x48cf8b}]){this._storeCard(content,p,cursor,sectionHeadH,cardW,cardH);cursor+=cardW+gap;}
 
   const total=Math.max(viewportW,cursor-gap),clamp=x=>Math.max(viewportX-(total-viewportW),Math.min(viewportX,x));
-  const jump=id=>{content.x=clamp(viewportX-starts[id]);};
+  jump=id=>{content.x=clamp(viewportX-starts[id]);};
   let dragStart=null,startX=0;
   const hit=this.add.rectangle(viewportX,viewportY,viewportW,viewportH,0xffffff,.001).setOrigin(0).setInteractive({draggable:true});root.add(hit);
   hit.on('dragstart',ptr=>{dragStart=ptr.x;startX=content.x;});
@@ -91,84 +98,101 @@ export class MenuScene extends PreviousMenuScene{
  }
 
  _cardFrame(card,w,h,accent){
-  const radius=18;
-  const shadow=this.add.graphics();shadow.fillStyle(0x000000,.42);shadow.fillRoundedRect(8,11,w,h,radius);card.add(shadow);
-  const panel=this.add.graphics();panel.fillStyle(0x0a1726,1);panel.fillRoundedRect(0,0,w,h,radius);panel.lineStyle(1.3,accent,.9);panel.strokeRoundedRect(0,0,w,h,radius);panel.fillStyle(accent,.08);panel.fillRoundedRect(1,1,w-2,88,{tl:radius-1,tr:radius-1,bl:3,br:3});card.add(panel);
-  const glow=this.add.graphics();glow.lineStyle(8,accent,.06);glow.strokeRoundedRect(4,4,w-8,h-8,radius-4);card.add(glow);
+  const radius=Math.min(18,h*.07);
+  const shadow=this.add.graphics();shadow.fillStyle(0x000000,.42);shadow.fillRoundedRect(7,7,w,h,radius);card.add(shadow);
+  const panel=this.add.graphics();panel.fillStyle(0x0a1726,1);panel.fillRoundedRect(0,0,w,h,radius);panel.lineStyle(1.3,accent,.9);panel.strokeRoundedRect(0,0,w,h,radius);
+  const headerH=Math.min(82,Math.max(62,h*.26));panel.fillStyle(accent,.08);panel.fillRoundedRect(1,1,w-2,headerH,{tl:radius-1,tr:radius-1,bl:3,br:3});card.add(panel);
+  const glow=this.add.graphics();glow.lineStyle(7,accent,.05);glow.strokeRoundedRect(4,4,w-8,h-8,Math.max(8,radius-4));card.add(glow);
  }
 
- _heroAsset(card,p,w){
+ _heroAsset(card,p,w,h){
   const first=Object.keys(p.items||{})[0],key=`store:${first}`;
   if(!first||!this.textures.exists(key))return;
-  const im=this.add.image(w-62,62,key).setAlpha(.16);
-  const max=122;im.setScale(Math.min(max/(im.width||1),max/(im.height||1)));card.add(im);
+  const im=this.add.image(w-54,Math.min(54,h*.18),key).setAlpha(.12);
+  const max=Math.min(102,h*.30);im.setScale(Math.min(max/(im.width||1),max/(im.height||1)));card.add(im);
  }
 
  _materialGrid(card,p,w,h){
   const entries=Object.entries(p.items||{});if(!entries.length)return;
+  const compact=h<250;
   const cols=entries.length<=3?Math.min(entries.length,3):Math.min(4,entries.length<=4?2:4);
   const rows=Math.ceil(entries.length/cols);
-  const gridTop=120,gridBottom=h-72,gap=8,gridH=gridBottom-gridTop,cellW=(w-28-gap*(cols-1))/cols,cellH=(gridH-gap*(rows-1))/rows;
+  const gridTop=compact?82:Math.min(112,h*.34);
+  const gridBottom=h-(compact?48:58);
+  const gap=compact?5:7;
+  const gridH=Math.max(52,gridBottom-gridTop);
+  const cellW=(w-28-gap*(cols-1))/cols,cellH=(gridH-gap*(rows-1))/rows;
+
   entries.forEach(([id,count],i)=>{
    const col=i%cols,row=Math.floor(i/cols),x=14+col*(cellW+gap),y=gridTop+row*(cellH+gap);
-   const box=this.add.graphics();box.fillStyle(0x07111d,.83);box.fillRoundedRect(x,y,cellW,cellH,10);box.lineStyle(1,0x34506a,.7);box.strokeRoundedRect(x,y,cellW,cellH,10);card.add(box);
+   const box=this.add.graphics();box.fillStyle(0x07111d,.84);box.fillRoundedRect(x,y,cellW,cellH,Math.min(10,cellH*.18));box.lineStyle(1,0x34506a,.7);box.strokeRoundedRect(x,y,cellW,cellH,Math.min(10,cellH*.18));card.add(box);
    const key=`store:${id}`;
    if(this.textures.exists(key)){
-    const im=this.add.image(x+cellW/2,y+cellH*.39,key);
-    const target=Math.max(32,Math.min(cellW*.68,cellH*.48));im.setScale(Math.min(target/(im.width||1),target/(im.height||1)));card.add(im);
+    const im=this.add.image(x+cellW/2,y+cellH*(compact?.34:.38),key);
+    const target=Math.max(20,Math.min(cellW*.66,cellH*(compact?.34:.42)));
+    im.setScale(Math.min(target/(im.width||1),target/(im.height||1)));card.add(im);
    }
    const name=String(GARAGE_ITEMS[id]?.name||id).toUpperCase();
-   card.add(this.add.text(x+cellW/2,y+cellH*.72,name,{fontFamily:FONT,fontSize:cols>=4?'7px':'8px',fontStyle:'bold',color:'#e8edf4',align:'center',wordWrap:{width:cellW-8}}).setOrigin(.5));
-   card.add(this.add.text(x+cellW/2,y+cellH*.89,`×${count}`,{fontFamily:FONT,fontSize:cols>=4?'12px':'15px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5));
+   card.add(this.add.text(x+cellW/2,y+cellH*(compact?.66:.70),name,{fontFamily:FONT,fontSize:cols>=4?(compact?'6px':'7px'):(compact?'7px':'8px'),fontStyle:'bold',color:'#e8edf4',align:'center',wordWrap:{width:cellW-6}}).setOrigin(.5));
+   card.add(this.add.text(x+cellW/2,y+cellH*(compact?.86:.88),`×${count}`,{fontFamily:FONT,fontSize:cols>=4?(compact?'10px':'12px'):(compact?'12px':'15px'),fontStyle:'bold',color:'#ffffff'}).setOrigin(.5));
   });
  }
 
  _storeCard(parent,p,x,y,w,h){
+  const compact=h<250;
   const card=this.add.container(x,y);parent.add(card);this._cardFrame(card,w,h,p.accent);
-  card.add(this.add.text(16,14,p.name,{fontFamily:FONT,fontSize:'18px',fontStyle:'bold',color:'#ffffff',wordWrap:{width:w-32}}).setOrigin(0));
-  const accentLine=this.add.graphics();accentLine.fillStyle(p.accent,1);accentLine.fillRoundedRect(16,54,38,3,2);card.add(accentLine);
+  card.add(this.add.text(16,compact?9:13,p.name,{fontFamily:FONT,fontSize:compact?'15px':'18px',fontStyle:'bold',color:'#ffffff',wordWrap:{width:w-32}}).setOrigin(0));
+  const accentLine=this.add.graphics();accentLine.fillStyle(p.accent,1);accentLine.fillRoundedRect(16,compact?38:52,compact?30:38,3,2);card.add(accentLine);
 
   if(p.type==='mat'){
-   this._heroAsset(card,p,w);
-   card.add(this.add.text(16,67,PACK_COPY[p.id]||'Pack de materiales para tu garaje.',{fontFamily:FONT,fontSize:'10px',color:'#c8d2df',wordWrap:{width:w-86},lineSpacing:2}));
+   this._heroAsset(card,p,w,h);
+   card.add(this.add.text(16,compact?45:64,PACK_COPY[p.id]||'Pack de materiales para tu garaje.',{fontFamily:FONT,fontSize:compact?'8px':'10px',color:'#c8d2df',wordWrap:{width:w-82},lineSpacing:1}));
    this._materialGrid(card,p,w,h);
    this._buyButton(card,w,h,`${fmt(p.price)} MONEDAS`,()=>{const r=buyMaterialPack(p.id);this._toastStore(r.ok?'PACK AÑADIDO':r.reason,r.ok);if(r.ok)this._openStoreModal('materials');},true,p.accent,true);
   }
   if(p.type==='coin'){
    this._coinPile(card,w,h,p.coinVisual);
-   card.add(this.add.text(w/2,h*.66,`${fmt(p.coins)} MONEDAS`,{fontFamily:FONT,fontSize:'23px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));
+   card.add(this.add.text(w/2,h*(compact?.66:.67),`${fmt(p.coins)} MONEDAS`,{fontFamily:FONT,fontSize:compact?'18px':'23px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));
    this._buyButton(card,w,h,p.priceLabel,()=>{simulateCoinPurchase(p.id);this._toastStore('COMPRA DE DESARROLLO',true);this._openStoreModal('coins');},true,p.accent,false);
   }
   if(p.type==='reward'){
    const st=rewardedStatus();
-   card.add(this.add.text(w/2,h*.38,'▶',{fontFamily:FONT,fontSize:'80px',fontStyle:'bold',color:'#ffd34f'}).setOrigin(.5));
-   card.add(this.add.text(w/2,h*.62,'+250 MONEDAS',{fontFamily:FONT,fontSize:'22px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));
+   card.add(this.add.text(w/2,h*.38,'▶',{fontFamily:FONT,fontSize:compact?'58px':'80px',fontStyle:'bold',color:'#ffd34f'}).setOrigin(.5));
+   card.add(this.add.text(w/2,h*.62,'+250 MONEDAS',{fontFamily:FONT,fontSize:compact?'17px':'22px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));
    this._buyButton(card,w,h,st.available?'VER VÍDEO':`DISPONIBLE EN ${timeLabel(st.remaining)}`,()=>{if(!st.available)return;claimRewardedCoins(250);this._toastStore('+250 MONEDAS',true);this._openStoreModal('rewards');},st.available,p.accent,false);
   }
   if(p.type==='daily'){
    const st=dailyStatus();
-   card.add(this.add.text(w/2,h*.4,'★',{fontFamily:FONT,fontSize:'88px',fontStyle:'bold',color:'#72ffad'}).setOrigin(.5));
-   card.add(this.add.text(w/2,h*.62,'+100 MONEDAS',{fontFamily:FONT,fontSize:'22px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));
+   card.add(this.add.text(w/2,h*.40,'★',{fontFamily:FONT,fontSize:compact?'62px':'88px',fontStyle:'bold',color:'#72ffad'}).setOrigin(.5));
+   card.add(this.add.text(w/2,h*.62,'+100 MONEDAS',{fontFamily:FONT,fontSize:compact?'17px':'22px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));
    this._buyButton(card,w,h,st.available?'RECLAMAR GRATIS':'VUELVE MAÑANA',()=>{if(!st.available)return;claimDailyCoins(100);this._toastStore('+100 MONEDAS',true);this._openStoreModal('rewards');},st.available,p.accent,false);
   }
  }
 
  _coinPile(card,w,h,kind){
   if(!this.textures.exists(TDR_COIN_KEY))return;
-  const add=(x,y,s,r=0)=>card.add(this.add.image(x,y,TDR_COIN_KEY).setScale(s).setRotation(r));
-  if(kind===0)add(w/2,h*.43,.56);
-  else if(kind===1){for(let i=0;i<8;i++)add(w/2+(i%3-1)*38,h*.49-Math.floor(i/3)*28,.34,(i%2?-.08:.08));}
-  else{for(let row=0;row<4;row++)for(let i=0;i<5-row;i++)add(w/2+(i-(4-row)/2)*38,h*.54-row*27,.31,(i%2?-.06:.06));}
+  const compact=h<250,scale=compact?.78:1;
+  const add=(x,y,s,r=0)=>card.add(this.add.image(x,y,TDR_COIN_KEY).setScale(s*scale).setRotation(r));
+  if(kind===0)add(w/2,h*.42,.56);
+  else if(kind===1){for(let i=0;i<8;i++)add(w/2+(i%3-1)*(compact?30:38),h*.48-Math.floor(i/3)*(compact?21:28),.34,(i%2?-.08:.08));}
+  else{for(let row=0;row<4;row++)for(let i=0;i<5-row;i++)add(w/2+(i-(4-row)/2)*(compact?30:38),h*.52-row*(compact?20:27),.31,(i%2?-.06:.06));}
  }
 
  _buyButton(card,w,h,label,fn,enabled=true,accent=0x48cf8b,showCoin=false){
-  const x=12,y=h-56,bw=w-24,bh=44;
-  const shadow=this.add.graphics();shadow.fillStyle(0x000000,.28);shadow.fillRoundedRect(x+3,y+4,bw,bh,10);card.add(shadow);
-  const visual=this.add.graphics();visual.fillStyle(enabled?0x11652f:0x202b38,1);visual.fillRoundedRect(x,y,bw,bh,10);visual.lineStyle(1.2,enabled?0x5ddd7a:0x526172,.95);visual.strokeRoundedRect(x,y,bw,bh,10);card.add(visual);
-  if(showCoin&&this.textures.exists(TDR_COIN_KEY))card.add(this.add.image(w/2-66,y+bh/2,TDR_COIN_KEY).setDisplaySize(26,26));
+  const compact=h<250;
+  const bh=compact?34:44,x=12,y=h-bh-10,bw=w-24;
+  const shadow=this.add.graphics();shadow.fillStyle(0x000000,.28);shadow.fillRoundedRect(x+3,y+3,bw,bh,9);card.add(shadow);
+  const visual=this.add.graphics();visual.fillStyle(enabled?0x11652f:0x202b38,1);visual.fillRoundedRect(x,y,bw,bh,9);visual.lineStyle(1.2,enabled?0x5ddd7a:0x526172,.95);visual.strokeRoundedRect(x,y,bw,bh,9);card.add(visual);
   const hit=this.add.rectangle(x,y,bw,bh,0xffffff,.001).setOrigin(0);if(enabled)hit.setInteractive({useHandCursor:true}).on('pointerup',fn);card.add(hit);
-  card.add(this.add.text(w/2+(showCoin?10:0),y+bh/2,label,{fontFamily:FONT,fontSize:'12px',fontStyle:'bold',color:enabled?'#ffffff':'#91a0af'}).setOrigin(.5));
+  let center=w/2;
+  if(showCoin&&this.textures.exists(TDR_COIN_KEY)){
+   const size=compact?22:27;card.add(this.add.image(center-54,y+bh/2,TDR_COIN_KEY).setDisplaySize(size,size));center+=10;
+  }
+  card.add(this.add.text(center,y+bh/2,label,{fontFamily:FONT,fontSize:compact?'10px':'12px',fontStyle:'bold',color:enabled?'#f5fff8':'#91a0af'}).setOrigin(.5));
  }
 
- _toastStore(msg,ok){const t=this.add.text(this.scale.width/2,105,msg,{fontFamily:FONT,fontSize:'14px',fontStyle:'bold',color:ok?'#72ffad':'#ff7373',backgroundColor:'#07101ddd',padding:{x:14,y:8}}).setOrigin(.5).setDepth(30000);this.time.delayedCall(1200,()=>t.destroy());}
+ _toastStore(msg,ok){
+  const t=this.add.text(this.scale.width/2,105,msg,{fontFamily:FONT,fontSize:'14px',fontStyle:'bold',color:ok?'#72ffad':'#ff7373',backgroundColor:'#07101ddd',padding:{x:14,y:8}}).setOrigin(.5).setDepth(30000);
+  this.time.delayedCall(1200,()=>t.destroy());
+ }
 }
