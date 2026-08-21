@@ -1,6 +1,6 @@
 import { MenuScene as PreviousMenuScene } from './MenuAdminLogoRestoreScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
-import { loadGarage, getEquippedForCar } from '../garage/garageStore.js';
+import { loadGarage, saveGarage, getEquippedForCar } from '../garage/garageStore.js';
 
 const MATERIAL_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
 const PART_IDS=Object.keys(GARAGE_ITEMS).filter(id=>GARAGE_ITEMS[id]?.kind==='part');
@@ -9,6 +9,22 @@ const TIER_SIGLA={1:'I',2:'II',3:'III',4:'IV'};
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 
 export class MenuScene extends PreviousMenuScene {
+  _installInventoryPart(garage,carId,id){
+    const item=GARAGE_ITEMS[id];
+    if(!item?.family||Number(garage.inventory?.[id]||0)<1)return false;
+    if(!garage.inventory||typeof garage.inventory!=='object')garage.inventory={};
+    if(!garage.equippedByCar||typeof garage.equippedByCar!=='object')garage.equippedByCar={};
+    const current={...(getEquippedForCar(garage,carId)||{})};
+    const oldId=current[item.family]||null;
+    if(oldId===id)return true;
+    garage.inventory[id]=Math.max(0,Number(garage.inventory[id]||0)-1);
+    if(oldId)garage.inventory[oldId]=Number(garage.inventory[oldId]||0)+1;
+    current[item.family]=id;
+    garage.equippedByCar[carId]=current;
+    saveGarage(garage);
+    return true;
+  }
+
   _openLobbyInventoryModal(tab='materials',page=0,tierFilter=0){
     try{this._lobbyInventoryModal?.destroy?.(true);}catch{}
     this._lobbyInventoryModal=null;
@@ -43,7 +59,6 @@ export class MenuScene extends PreviousMenuScene {
     tabButton(cx-tabW/2-gap/2,'MATERIALES','materials');
     tabButton(cx+tabW/2+gap/2,'PIEZAS','parts');
 
-    // Four compact category filters on the right. No active filter = show all.
     if(tab==='parts'){
       const fw=compact?34:40,fh=compact?28:32,fg=6;
       const total=fw*4+fg*3;
@@ -51,9 +66,7 @@ export class MenuScene extends PreviousMenuScene {
       [1,2,3,4].forEach((tier,i)=>{
         const active=Number(tierFilter)===tier;
         const x=startX+i*(fw+fg)+fw/2;
-        const b=A(this.add.rectangle(x,tabY,fw,fh,active?TIER_COLOR[tier]:0x0d1a24,.99)
-          .setStrokeStyle(active?3:2,TIER_COLOR[tier],active?1:.85)
-          .setInteractive({useHandCursor:true}));
+        const b=A(this.add.rectangle(x,tabY,fw,fh,active?TIER_COLOR[tier]:0x0d1a24,.99).setStrokeStyle(active?3:2,TIER_COLOR[tier],active?1:.85).setInteractive({useHandCursor:true}));
         A(this.add.text(x,tabY,TIER_SIGLA[tier],{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:active?'#07111f':'#ffffff',resolution:2}).setOrigin(.5));
         b.on('pointerup',()=>this._openLobbyInventoryModal('parts',0,active?0:tier));
       });
@@ -68,8 +81,8 @@ export class MenuScene extends PreviousMenuScene {
             const A=GARAGE_ITEMS[a]||{},B=GARAGE_ITEMS[b]||{};
             const tierDiff=Number(A.tier||0)-Number(B.tier||0);
             if(tierDiff)return tierDiff;
-            const slotDiff=String(A.slot||A.type||'').localeCompare(String(B.slot||B.type||''),'es');
-            if(slotDiff)return slotDiff;
+            const familyDiff=String(A.family||'').localeCompare(String(B.family||''),'es');
+            if(familyDiff)return familyDiff;
             return String(A.name||a).localeCompare(String(B.name||b),'es');
           });
 
@@ -82,9 +95,7 @@ export class MenuScene extends PreviousMenuScene {
     const pageIds=ids.slice(page*perPage,page*perPage+perPage);
 
     if(tab==='parts'&&ids.length===0){
-      const msg=tierFilter
-        ? `NO TIENES PIEZAS ${TIER_SIGLA[tierFilter]} EN EL INVENTARIO`
-        : 'AÚN NO TIENES PIEZAS\n\nFabrícalas en FACTORY y aparecerán aquí.';
+      const msg=tierFilter?`NO TIENES PIEZAS ${TIER_SIGLA[tierFilter]} EN EL INVENTARIO`:'AÚN NO TIENES PIEZAS\n\nFabrícalas en FACTORY y aparecerán aquí.';
       A(this.add.text(cx,gridY+availableH/2,msg,{fontFamily:UI,fontSize:compact?'15px':'18px',fontStyle:'bold',color:'#71879b',align:'center',lineSpacing:8,resolution:2}).setOrigin(.5));
     }
 
@@ -104,9 +115,9 @@ export class MenuScene extends PreviousMenuScene {
 
       const key=tab==='materials'?`event-material:${id}`:`inventory-part:${id}`;
       if(this.textures?.exists?.(key)){
-        const imgY=tab==='parts'?y+cardH*.42:y+cardH*.40;
+        const imgY=tab==='parts'?y+cardH*.40:y+cardH*.40;
         const img=A(this.add.image(x+cardW/2,imgY,key).setOrigin(.5));
-        const maxW=cardW*(tab==='materials'?.90:.94),maxH=cardH*(tab==='materials'?.58:.66);
+        const maxW=cardW*(tab==='materials'?.90:.94),maxH=cardH*(tab==='materials'?.58:.61);
         const scale=Math.min(maxW/Math.max(1,img.width),maxH/Math.max(1,img.height));
         img.setScale(scale);
       }
@@ -117,10 +128,17 @@ export class MenuScene extends PreviousMenuScene {
         const qtyY=y+cardH*.87;
         A(this.add.text(x+cardW/2,qtyY,`×${q}`,{fontFamily:UI,fontSize:compact?'16px':'19px',fontStyle:'bold',color:'#7ddcff',resolution:2}).setOrigin(.5,.5));
       }else{
-        const nameY=y+cardH*.72;
+        const nameY=y+cardH*.69;
         A(this.add.text(x+cardW/2,nameY,String(item.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:'#d4e0eb',align:'center',wordWrap:{width:cardW-16},resolution:2}).setOrigin(.5,0));
-        const status=installed?'INSTALADA':`EN INVENTARIO ×${q}`;
-        A(this.add.text(x+cardW/2,y+cardH-(compact?9:12),status,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#62ffb2':'#c9e6ff',resolution:2}).setOrigin(.5,1));
+        const actionY=y+cardH-(compact?10:13);
+        const actionText=installed?'INSTALADA':`INSTALAR · ×${q}`;
+        A(this.add.text(x+cardW/2,actionY,actionText,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#62ffb2':'#7ddcff',resolution:2}).setOrigin(.5,1));
+        if(!installed&&q>0){
+          card.setInteractive({useHandCursor:true});
+          card.on('pointerup',()=>{
+            if(this._installInventoryPart(garage,carId,id))this._openLobbyInventoryModal('parts',page,tierFilter);
+          });
+        }
       }
     });
 
