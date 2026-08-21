@@ -16,6 +16,11 @@
   user-select: none;
 }
 
+.tdr-lobby-dom--modal-open {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .tdr-lobby-dom button { font: inherit; -webkit-tap-highlight-color: transparent; }
 
 .tdr-lobby-header {
@@ -157,4 +162,3 @@
   .tdr-lobby-bottom-actions { height: 72px; }
   .tdr-lobby-play-slot { bottom: 76px; }
 }
-

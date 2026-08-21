@@ -24,6 +24,17 @@ export class MenuScene extends PreviousMenuScene {
     installLobbyDom(this);
   }
 
+  update(time, delta) {
+    super.update?.(time, delta);
+    const modalOpen = Boolean(
+      this._storeModal?.scene ||
+      this._lobbyInventoryModal?.scene ||
+      this._gameModeModal?.scene ||
+      this._eventRewardModal?.scene
+    );
+    this._lobbyDomRoot?.classList.toggle('tdr-lobby-dom--modal-open', modalOpen);
+  }
+
   _installCarPlatform() {
     const candidates = findCar(this._ui).filter(obj => obj?.visible !== false);
     if (!candidates.length || !this.textures.exists('lobby-platform')) return;
@@ -38,4 +49,3 @@ export class MenuScene extends PreviousMenuScene {
     parent.addAt(platform, index);
   }
 }
-
