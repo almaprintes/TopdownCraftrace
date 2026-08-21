@@ -44,6 +44,7 @@ this._isDraggingThumbs = false;
 // FX premium: la carta base permanece inmóvil para conservar nitidez.
 this._heroHoloTween = null;
 this._heroHoloState = null;
+this._garageDomCard = null;
   }
 
   init(data) {
@@ -75,10 +76,12 @@ this._rebuild();
   this.events.off('update', this._updateGarage, this);
 
   this._stopHeroCardFx();
+  this._removeDomHeroCard();
 }
 
   _rebuild() {
     this._stopHeroCardFx();
+    this._hideDomHeroCard();
     try { this.children.removeAll(true); } catch (e) {}
 
     this._thumbItems = [];
@@ -625,7 +628,7 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
   const heroMaxH = isLandscape ? height * 0.58 : height * 0.34;
 
   const applyHeroTexture = () => {
-    heroCard.setTexture(loadedKey).setVisible(true);
+    heroCard.setTexture(loadedKey).setVisible(false);
 
     const s = Math.min(
       heroMaxW / (heroCard.width || 1),
@@ -636,17 +639,9 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
     heroCard.setAngle(0);
     heroCard.setAlpha(0);
 
-    // Entrada solo por opacidad: nunca cambiamos la escala de la carta.
-    this.tweens.add({
-      targets: heroCard,
-      alpha: 1,
-      duration: 180,
-      ease: 'Cubic.easeOut'
-    });
-
-    const holographic = spec.cardEffect === 'holographic' ||
-      ['épico', 'epico', 'legendario'].includes(String(spec.rarity || '').toLowerCase());
-    this._startHeroHolographicFx(heroCard, heroHolo, holographic);
+    // La carta grande se presenta como imagen DOM a resolución nativa.
+    // Phaser conserva solo el objeto de referencia para calcular su geometría.
+    this._showDomHeroCard(selected.id, spec, heroCard);
   };
 
   if (!heroCard.visible) {
@@ -684,6 +679,122 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
 
     this._uiRefs.btnMainLabel.setText(this._mode === 'admin' ? 'EDITAR COCHE' : 'SELECCIONAR');
     this._uiRefs.btnSecondaryLabel.setText(this._mode === 'admin' ? 'VER FICHA' : 'VOLVER');
+  }
+
+  _ensureDomHeroCard() {
+    if (this._garageDomCard?.root?.isConnected) return this._garageDomCard;
+
+    const canvas = this.game?.canvas;
+    const host = canvas?.parentElement || document.getElementById('app') || document.body;
+    if (!canvas || !host) return null;
+
+    const computed = window.getComputedStyle(host);
+    if (computed.position === 'static') host.style.position = 'relative';
+
+    if (!document.getElementById('tdr-garage-card-style')) {
+      const style = document.createElement('style');
+      style.id = 'tdr-garage-card-style';
+      style.textContent = `
+        .tdr-garage-card-dom {
+          position: absolute;
+          z-index: 12;
+          pointer-events: none;
+          transform: translate(-50%, -50%);
+          overflow: hidden;
+          line-height: 0;
+          contain: layout paint;
+          filter: drop-shadow(0 8px 16px rgba(0,0,0,.28));
+        }
+        .tdr-garage-card-dom > img {
+          width: 100%;
+          height: 100%;
+          display: block;
+          object-fit: contain;
+          image-rendering: auto;
+          user-select: none;
+          -webkit-user-select: none;
+          -webkit-user-drag: none;
+        }
+        .tdr-garage-card-sheen {
+          position: absolute;
+          inset: -18%;
+          display: none;
+          background: linear-gradient(112deg,
+            transparent 28%,
+            rgba(70,220,255,.06) 40%,
+            rgba(255,255,255,.34) 49%,
+            rgba(255,90,225,.18) 56%,
+            transparent 70%);
+          mix-blend-mode: screen;
+          transform: translateX(-115%) skewX(-10deg);
+        }
+        .tdr-garage-card-dom.is-holographic .tdr-garage-card-sheen {
+          display: block;
+          animation: tdrGarageHolo 2.45s ease-in-out infinite;
+        }
+        @keyframes tdrGarageHolo {
+          0%, 18% { transform: translateX(-115%) skewX(-10deg); opacity: 0; }
+          28% { opacity: .72; }
+          72% { opacity: .72; }
+          82%, 100% { transform: translateX(115%) skewX(-10deg); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .tdr-garage-card-dom.is-holographic .tdr-garage-card-sheen { animation: none; opacity: .20; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const root = document.createElement('div');
+    root.className = 'tdr-garage-card-dom';
+    root.innerHTML = '<img alt="" draggable="false"><span class="tdr-garage-card-sheen"></span>';
+    host.appendChild(root);
+
+    this._garageDomCard = { root, img: root.querySelector('img') };
+    return this._garageDomCard;
+  }
+
+  _showDomHeroCard(carId, spec, heroCard) {
+    const dom = this._ensureDomHeroCard();
+    const canvas = this.game?.canvas;
+    const host = canvas?.parentElement;
+    if (!dom || !canvas || !host || !heroCard) return;
+
+    const raritySlug = (spec.rarity || 'comun')
+      .toLowerCase()
+      .replace(' ', '_')
+      .normalize('NFD')
+      .replace(/[\\u0300-\\u036f]/g, '');
+    const fileName = `card_${carId}_${raritySlug}_${String(spec.collectionNo || 0).padStart(3, '0')}.webp`;
+    const assetVersion = encodeURIComponent(spec.cardAssetVersion || 1);
+    const src = `${CARD_BASE}${fileName}?v=${assetVersion}`;
+
+    if (dom.img.src !== new URL(src, document.baseURI).href) dom.img.src = src;
+    dom.img.alt = spec.name || carId;
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    const sx = canvasRect.width / Math.max(1, this.scale.width);
+    const sy = canvasRect.height / Math.max(1, this.scale.height);
+
+    dom.root.style.left = `${canvasRect.left - hostRect.left + heroCard.x * sx}px`;
+    dom.root.style.top = `${canvasRect.top - hostRect.top + heroCard.y * sy}px`;
+    dom.root.style.width = `${heroCard.displayWidth * sx}px`;
+    dom.root.style.height = `${heroCard.displayHeight * sy}px`;
+    dom.root.style.display = 'block';
+
+    const holographic = spec.cardEffect === 'holographic' ||
+      ['épico', 'epico', 'legendario'].includes(String(spec.rarity || '').toLowerCase());
+    dom.root.classList.toggle('is-holographic', holographic);
+  }
+
+  _hideDomHeroCard() {
+    if (this._garageDomCard?.root) this._garageDomCard.root.style.display = 'none';
+  }
+
+  _removeDomHeroCard() {
+    try { this._garageDomCard?.root?.remove(); } catch (_) {}
+    this._garageDomCard = null;
   }
 
   _stopHeroCardFx() {
