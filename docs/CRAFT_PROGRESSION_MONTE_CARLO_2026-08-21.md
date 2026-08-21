@@ -1,7 +1,7 @@
 # Monte Carlo de progresión completa de piezas
 
 Fecha: 2026-08-21
-Estado: **recalibrado para objetivo de 50 h con duplicación recompensada**
+Estado: **recalibrado y verificado tras normalización temporal del botín y límite de 10 vueltas**
 
 ## Objetivo de diseño
 
@@ -20,10 +20,55 @@ Se conserva el sistema implementado:
 - Compuesto: 8 %, lote 1–2.
 - Electrónica: 4 %, lote 1.
 - corrección adaptativa para converger suavemente a estas cuotas;
-- Supervivencia completa de 5 vueltas: ~15 tiradas de media;
 - inventario inicial de materiales: 0.
 
-Para esta calibración se modeló al jugador más eficiente económicamente: **duplica mediante rewarded ad el botín de cada carrera completa**.
+### Cambio 2026-08-21: normalización temporal
+
+El botín deja de depender del número bruto de vueltas y pasa a depender del **tiempo competitivo validado**. Esto evita que circuitos extremadamente cortos, como Circuito Atlántico, se conviertan en la opción óptima para farmear materiales.
+
+El sistema conserva crédito fraccional entre sesiones, por lo que una carrera corta no pierde valor por redondeos. A largo plazo, dos circuitos de distinta longitud deben converger al mismo rendimiento por hora de conducción válida.
+
+Protecciones activas:
+
+- una vuelta lenta no puede aumentar artificialmente el crédito de loot;
+- si existe referencia válida, solo se acredita como máximo el 125 % de la referencia más rápida conocida;
+- primera vuelta sin referencia: tope duro de 90 s acreditables;
+- el crédito sobrante se conserva en `lootTimeCredit` entre sesiones.
+
+### Cadencia definitiva de tiradas
+
+Durante la primera implementación temporal se configuró accidentalmente una cadencia de ~15 tiradas cada 225 s, equivalente a **240 tiradas/hora**. Eso habría reducido la progresión Prototype prevista de ~51 h a aproximadamente ~32 h activas.
+
+Se ha corregido para preservar exactamente la referencia económica usada en el Monte Carlo original:
+
+- 10 tiradas base cada 360 s → 100 tiradas/h.
+- 3 tiradas bonus cada 360 s → 30 tiradas/h.
+- 1 cofre cada 360 s con 2 tiradas → 20 tiradas/h.
+- **Total base: 150 tiradas/hora.**
+- Con rewarded ×2 tras cada sesión: **300 tiradas-equivalentes/hora** para el optimizador.
+
+Esta corrección mantiene la progresión objetivo sin volver a premiar los circuitos cortos.
+
+## Límite de sesión en Fantasma y Contrarreloj
+
+Los modos `ghost` y `timeattack` tienen ahora un **máximo de 10 vueltas por sesión**.
+
+Al finalizar la vuelta 10:
+
+1. se cierra la tanda;
+2. no puede registrarse una vuelta 11;
+3. se abre el informe normal de fin de sesión;
+4. se presenta el botín obtenido en esa tanda;
+5. se mantiene el flujo de rewarded para duplicación ×2 del botín cuando esté integrado.
+
+El límite de 10 vueltas **no cambia el rendimiento por hora**, porque el crédito de loot depende del tiempo validado y el crédito fraccional persiste entre sesiones. Su función es:
+
+- evitar tandas ilimitadas con grandes acumulaciones;
+- crear puntos naturales de cierre y monetización;
+- mejorar comparabilidad de sesiones;
+- impedir sesiones largas sin oportunidad de rewarded.
+
+Supervivencia y otros modos conservan sus propias reglas de duración.
 
 ## Recetas recalibradas
 
@@ -55,7 +100,7 @@ Los números grandes son deliberados: el drop de materiales sigue siendo abundan
 
 ## Monte Carlo con duplicación tras cada carrera
 
-Se ejecutó una nueva batería de **2.000 jugadores virtuales** desde inventario cero, aplicando la duplicación del botín en cada sesión completa.
+La batería base ejecutada con **2.000 jugadores virtuales** desde inventario cero produjo:
 
 | Objetivo acumulado | Media de sesiones | P50 | P90 |
 |---|---:|---:|---:|
@@ -66,18 +111,31 @@ Se ejecutó una nueva batería de **2.000 jugadores virtuales** desde inventario
 
 La dispersión sigue siendo pequeña gracias al sistema adaptativo.
 
-## Conversión a horas
+## Conversión a horas — verificación tras los cambios
 
-Tomando 6 minutos de carrera/sesión completa como referencia de trabajo:
+La simulación original utilizaba como referencia 15 tiradas por 6 min, es decir **150 tiradas/hora** antes de rewarded.
 
-- 5 Street: ~0,19 h.
-- 5 Sport: ~3,10 h acumuladas.
-- 5 Racing: ~15,53 h acumuladas.
-- 5 Prototype: **~51,13 h acumuladas**.
+La implementación temporal corregida vuelve a producir exactamente esa misma cadencia de largo plazo. Por tanto, los tiempos objetivo se mantienen:
 
-El P90 de Prototype ronda 520 sesiones, equivalente a **~52 h** de carrera activa con esa referencia.
+- 5 Street: **~0,19 h** acumuladas (~11–12 min).
+- 5 Sport: **~3,10 h** acumuladas.
+- 5 Racing: **~15,53 h** acumuladas.
+- 5 Prototype: **~51,13 h** de carrera activa.
 
-Si además contamos, por ejemplo, ~30 segundos de vídeo por sesión recompensada, 511 sesiones añaden unas 4,3 h de consumo real, elevando el recorrido total por encima de 55 h de tiempo de usuario. La duración real del anuncio dependerá del proveedor y no se fija como parte del balance base.
+P90 Prototype: ~520 sesiones equivalentes → **~52 h** de conducción activa bajo la referencia de trabajo.
+
+Si se añade un rewarded de ~30 s tras cada sesión completa y el jugador optimizador lo acepta siempre, el recorrido total de interacción supera aproximadamente **55 h** por coche.
+
+### Verificación del límite de 10 vueltas
+
+El límite no altera estos tiempos de largo plazo porque:
+
+- las tiradas dependen del tiempo acreditado, no de `lapCount`;
+- el sobrante de tiempo se conserva entre sesiones;
+- la longitud del circuito solo modifica cuántas vueltas caben dentro de un mismo bloque temporal;
+- cerrar a 10 vueltas cambia el ritmo de sesiones, pero no la generación esperada de materiales por hora.
+
+Por ello, Circuito Atlántico deja de tener ventaja económica frente a circuitos más largos.
 
 ## Lectura de progresión
 
@@ -92,19 +150,31 @@ Sin duplicar botín sistemáticamente, el tiempo esperado será sensiblemente ma
 
 ## Regla de monetización
 
-El rewarded ad posterior a carrera debe ser **opcional**. Duplica el botín conseguido en esa carrera; no altera los requisitos de receta ni concede una pieza directamente. Así monetiza aceleración sin convertir la tienda/anuncio en una fuente exclusiva de potencia.
+El rewarded ad posterior a carrera debe ser **opcional**. Duplica el botín conseguido en esa carrera/sesión; no altera los requisitos de receta ni concede una pieza directamente. Así monetiza aceleración sin convertir la tienda/anuncio en una fuente exclusiva de potencia.
+
+La normalización temporal y el límite de 10 vueltas hacen que el rewarded aparezca en puntos de sesión previsibles y que ningún circuito permita eludir económicamente ese ritmo.
 
 ## Archivos de producción
 
 - `src/game/garage/partsCatalog.js` — requisitos de fabricación.
-- `src/game/garage/garageStore.js` — drop adaptativo y entrega de botín.
+- `src/game/garage/garageStore.js` — drop adaptativo, crédito temporal persistente y cadencia de loot.
+- `src/game/scenes/RaceSessionLapCapScene.js` — límite de 10 vueltas para Ghost/Time Attack.
+- cadena de escenas de carrera — integración del cierre automático de sesión.
 
-Commit de la recalibración de recetas: `ed44c90a`.
+## Commits relevantes
+
+- `ed44c90a` — recalibración de recetas para objetivo ~50 h.
+- `8ba7dd5f` — primera normalización de loot por tiempo.
+- `3dee0d8f` — persistencia del crédito temporal entre sesiones.
+- `ef5b5546` — límite de 10 vueltas en Fantasma/Contrarreloj.
+- `b3670070` — corrección de cadencia temporal para preservar ~50 h Prototype.
 
 ## Validaciones pendientes
 
-1. Medir duración real de una Supervivencia completa en jugadores rápidos para sustituir la referencia de 6 min por telemetría real.
-2. Implementar el rewarded ad post-carrera y validar que la duplicación afecta exactamente al botín de la carrera terminada una sola vez.
-3. Repetir Monte Carlo con duraciones reales y con tasas reales de aceptación del anuncio (0 %, 25 %, 50 %, 75 %, 100 %).
-4. Medir cuántos materiales sobrantes se acumulan por tier para detectar un cuello de botella excesivo.
-5. Reequilibrar los packs de tienda contra esta nueva escala para evitar que una compra pequeña destruya semanas de progresión.
+1. Medir con telemetría real el tiempo medio de vuelta/sesión por circuito y por percentiles de habilidad.
+2. Validar en dispositivo que la vuelta 10 cierra correctamente tanto Ghost como Time Attack y nunca entra una vuelta 11.
+3. Implementar/validar el rewarded post-sesión para que duplique exactamente el botín consolidado de esa tanda una sola vez.
+4. Ejecutar telemetría comparativa de materiales/hora entre Atlántico, circuito medio y circuito largo; objetivo: desviación mínima y sin ventaja sistemática por longitud.
+5. Repetir Monte Carlo con tasas reales de aceptación del rewarded (0 %, 25 %, 50 %, 75 %, 100 %).
+6. Medir cuántos materiales sobrantes se acumulan por tier para detectar un cuello de botella excesivo.
+7. Reequilibrar los packs de tienda contra esta escala para evitar que una compra pequeña destruya semanas de progresión.
