@@ -9,6 +9,7 @@ import './lobby-dom.css';
 const BASE = import.meta.env.BASE_URL || '/';
 const asset = (name) => `${BASE}assets/ui/lobby/${name}`;
 const CAR_BRANDS = new Set(['avenir', 'crown', 'forge', 'helix', 'veloce']);
+const COMPACT_CAR_BRANDS = new Set(['avenir', 'helix', 'veloce']);
 
 function disableTree(node) {
   if (!node) return;
@@ -105,13 +106,16 @@ function renderDomCards(scene, root) {
   const params = resolveCarParams(spec, { accelMult:1, brakeMult:1, dragMult:1, turnRateMult:1, maxFwdAdd:0, maxRevAdd:0, turnMinAdd:0 });
   const topKmh = Math.round(attainableTopSpeedKmh(params));
   const brandKey = String(carId || '').split('_')[0].toLowerCase();
+  const brandLogoName = COMPACT_CAR_BRANDS.has(brandKey)
+    ? `logo_${brandKey}_compact.webp`
+    : `logo_${brandKey}.webp`;
   const brandMark = CAR_BRANDS.has(brandKey)
-    ? `<img src="${BASE}assets/logos/logo_${brandKey}.webp" alt="${escapeHtml(spec.brand || brandKey)}" draggable="false">`
+    ? `<img src="${BASE}assets/logos/${brandLogoName}" alt="${escapeHtml(spec.brand || brandKey)}" draggable="false">`
     : escapeHtml(spec.brand || 'TDR');
   if (carSlot) carSlot.innerHTML = `
     <div class="tdr-card-kicker">COCHE SELECCIONADO</div>
     <div class="tdr-car-card-row">
-      <span class="tdr-car-brand">${brandMark}</span>
+      <span class="tdr-car-brand tdr-car-brand--${escapeHtml(brandKey)}">${brandMark}</span>
       <span><h2>${escapeHtml(params?.name || spec.name || carId)}</h2><strong>${topKmh} km/h</strong></span>
       <em>${escapeHtml(spec.category || spec.role || 'RACING')}</em>
     </div>
