@@ -26,10 +26,10 @@
 .tdr-lobby-car-preview {
   position: absolute;
   left: 50%;
-  top: 31%;
+  top: 30%;
   z-index: 1;
-  width: clamp(100px, 13vw, 190px);
-  height: clamp(120px, 30vh, 240px);
+  width: clamp(64px, 7.5vw, 118px);
+  height: clamp(128px, 32vh, 240px);
   object-fit: contain;
   transform: translateX(-50%);
   filter: drop-shadow(0 12px 11px rgba(0, 0, 0, .48));
@@ -266,5 +266,5 @@
   .tdr-event-card, .tdr-track-card { top: 14%; bottom: 30%; height: auto; gap: 8px; padding-top: 16px; }
   .tdr-car-card { top: 14%; min-height: 64px; padding-block: 7px; }
   .tdr-track-map { height: 70px; margin-block: 5px; }
-  .tdr-lobby-car-preview { top: 29%; height: 31vh; }
+  .tdr-lobby-car-preview { top: 28%; width: max(64px, 7.5vw); height: 34vh; }
 }
