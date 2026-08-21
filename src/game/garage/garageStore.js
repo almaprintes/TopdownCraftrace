@@ -27,9 +27,11 @@ const MATERIAL_IDS=Object.keys(MATERIAL_DROP_TARGETS);
 
 // Loot is normalized by validated race time rather than raw lap count.
 // Persistent fractional credits prevent short races from losing value to threshold rounding.
-const BASE_ROLL_MS=22500;   // 10 base rolls per 225 s
-const BONUS_ROLL_MS=75000;  // 3 extra rolls per 225 s
-const CHEST_MS=225000;      // 2 chest rolls per 225 s
+// IMPORTANT: cadence is calibrated to the original progression model: ~15 rolls per 360 s
+// of competitive driving (=150 rolls/hour before rewarded duplication).
+const BASE_ROLL_MS=36000;    // 10 base rolls per 360 s
+const BONUS_ROLL_MS=120000;  // 3 extra rolls per 360 s
+const CHEST_MS=360000;       // 1 chest / 360 s, each chest contributes 2 rolls
 const MAX_CREDIT_LAP_MS=90000;
 let LOOT_SESSION={trackKey:null,laps:0,totals:{},ecuDrops:0,chests:0,bonusLaps:0};
 export function resetRaceLootSession(trackKey=null){LOOT_SESSION={trackKey:trackKey||null,laps:0,totals:{},ecuDrops:0,chests:0,bonusLaps:0};}
@@ -69,7 +71,7 @@ export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
   const chest=chestCount>0,bonusCommon=bonusRolls>0;
 
   for(const[id,n]of Object.entries(reward)){addItem(s,id,n);LOOT_SESSION.totals[id]=(LOOT_SESSION.totals[id]||0)+Number(n||0);}const ecuDrop=Number(reward.ecu||0)>0;if(ecuDrop)LOOT_SESSION.ecuDrops+=Number(reward.ecu||0);if(chest)LOOT_SESSION.chests+=chestCount;if(bonusCommon)LOOT_SESSION.bonusLaps+=bonusRolls;
-  const meta={trackKey,lapMs:lap,creditedMs,sessionLap,chest,chestCount,chestLoot,baseRolls,bonusRolls,bonusCommon,within110,carBest,circuitRecord,ecuDrop,adaptive:true,timeNormalized:true,creditCarry:true,label:circuitRecord?'RÉCORD DEL CIRCUITO':carBest?'MEJOR VUELTA':within110?'VUELTA RÁPIDA':'VUELTA VÁLIDA'};
+  const meta={trackKey,lapMs:lap,creditedMs,sessionLap,chest,chestCount,chestLoot,baseRolls,bonusRolls,bonusCommon,within110,carBest,circuitRecord,ecuDrop,adaptive:true,timeNormalized:true,creditCarry:true,rollRatePerHour:150,label:circuitRecord?'RÉCORD DEL CIRCUITO':carBest?'MEJOR VUELTA':within110?'VUELTA RÁPIDA':'VUELTA VÁLIDA'};
   s.lastReward={...reward,t:Date.now(),trackKey,lapMs:lap,doubled:false,meta};saveGarage(s);Object.defineProperty(reward,'meta',{value:meta,enumerable:false,configurable:true});return reward;
 }
 export function grantRaceReward(mult=1){const s=loadGarage(),reward={scrap:2*mult,alloy:1*mult,rubber:1*mult};for(const[id,n]of Object.entries(reward))addItem(s,id,n);s.lastReward={...reward,t:Date.now(),doubled:mult>1};saveGarage(s);return reward;}
