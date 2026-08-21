@@ -26,10 +26,10 @@
 .tdr-lobby-car-preview {
   position: absolute;
   left: 50%;
-  top: 27.5%;
+  top: 28.5%;
   z-index: 1;
-  width: clamp(78px, 9.5vw, 155px);
-  height: clamp(156px, 40vh, 300px);
+  width: clamp(86px, 10.5vw, 171px);
+  height: clamp(172px, 44vh, 330px);
   object-fit: contain;
   transform: translateX(-50%);
   filter: drop-shadow(0 12px 11px rgba(0, 0, 0, .48));
@@ -165,16 +165,16 @@
   left: 50%;
   top: 16.5%;
   width: clamp(320px, 31%, 460px);
-  min-height: 76px;
-  padding: 10px 14px;
+  min-height: 60px;
+  padding: 6px 12px;
   transform: translateX(-50%);
 }
 
-.tdr-car-card-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-top: 8px; }
-.tdr-car-card-row h2 { font-size: clamp(16px, 1.55vw, 23px); }
-.tdr-car-card-row strong { display: block; margin-top: 4px; color: #c4d2df; font-size: clamp(11px, 1vw, 15px); }
-.tdr-car-brand { display: grid; place-items: center; width: 46px; height: 38px; padding: 0 5px; box-sizing: border-box; color: var(--gold); border: 1px solid rgba(230,184,78,.68); font-size: 9px; font-weight: 950; text-align: center; }
-.tdr-car-card-row em { padding: 5px 9px; color: #8eeaff; background: #10283a; border: 1px solid rgba(70,221,255,.35); font-size: clamp(7px, .68vw, 10px); font-style: normal; font-weight: 900; letter-spacing: .08em; }
+.tdr-car-card-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; margin-top: 3px; }
+.tdr-car-card-row h2 { overflow: hidden; font-size: clamp(14px, 1.4vw, 21px); text-overflow: ellipsis; white-space: nowrap; }
+.tdr-car-card-row strong { display: block; margin-top: 2px; color: #c4d2df; font-size: clamp(10px, .92vw, 14px); }
+.tdr-car-brand { display: grid; place-items: center; width: 40px; height: 30px; padding: 0 4px; box-sizing: border-box; color: var(--gold); border: 1px solid rgba(230,184,78,.68); font-size: 8px; font-weight: 950; text-align: center; }
+.tdr-car-card-row em { padding: 4px 7px; color: #8eeaff; background: #10283a; border: 1px solid rgba(70,221,255,.35); font-size: clamp(7px, .62vw, 9px); font-style: normal; font-weight: 900; letter-spacing: .07em; }
 
 .tdr-track-card {
   right: 0;
@@ -264,7 +264,7 @@
   .tdr-lobby-bottom-actions { height: 72px; }
   .tdr-lobby-play-slot { bottom: 76px; }
   .tdr-event-card, .tdr-track-card { top: 14%; bottom: 30%; height: auto; gap: 8px; padding-top: 16px; }
-  .tdr-car-card { top: 14%; min-height: 64px; padding-block: 7px; }
+  .tdr-car-card { top: 14%; min-height: 54px; padding-block: 4px; }
   .tdr-track-map { height: 70px; margin-block: 5px; }
-  .tdr-lobby-car-preview { top: 26%; width: max(82px, 9.5vw); height: 42vh; }
+  .tdr-lobby-car-preview { top: 27.5%; width: max(90px, 10.5vw); height: 46vh; }
 }
