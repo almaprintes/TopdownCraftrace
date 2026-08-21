@@ -1,12 +1,15 @@
+const CRAFT_BASE = `${import.meta.env.BASE_URL || './'}assets/crafting/materials/`;
+const MATERIAL_ASSET = file => `${CRAFT_BASE}${file}?v=20260812-2`;
+
 export const GARAGE_ITEMS = {
-  scrap:{id:'scrap',name:'Chatarra',kind:'material',rarity:'common',icon:'🔩',tone:0x77818f},
-  alloy:{id:'alloy',name:'Aleación',kind:'material',rarity:'uncommon',icon:'⬡',tone:0x9fb6c8},
-  rubber:{id:'rubber',name:'Goma',kind:'material',rarity:'uncommon',icon:'◉',tone:0x30343a},
-  disc:{id:'disc',name:'Disco metálico',kind:'material',rarity:'uncommon',icon:'◎',tone:0xb8c2cc},
-  spring:{id:'spring',name:'Muelle',kind:'material',rarity:'uncommon',icon:'〰',tone:0x73d3ff},
-  gear:{id:'gear',name:'Engranaje',kind:'material',rarity:'uncommon',icon:'⚙',tone:0xd7bf74},
-  compound:{id:'compound',name:'Compuesto',kind:'material',rarity:'rare',icon:'◆',tone:0xf3a63b},
-  ecu:{id:'ecu',name:'Electrónica',kind:'material',rarity:'epic',icon:'▣',tone:0x59e0aa},
+  scrap:{id:'scrap',name:'Chatarra',kind:'material',rarity:'common',icon:'🔩',tone:0x77818f,asset:MATERIAL_ASSET('chatarra.webp')},
+  alloy:{id:'alloy',name:'Aleación',kind:'material',rarity:'uncommon',icon:'⬡',tone:0x9fb6c8,asset:MATERIAL_ASSET('aleacion.webp')},
+  rubber:{id:'rubber',name:'Goma',kind:'material',rarity:'uncommon',icon:'◉',tone:0x30343a,asset:MATERIAL_ASSET('goma.webp')},
+  disc:{id:'disc',name:'Disco metálico',kind:'material',rarity:'uncommon',icon:'◎',tone:0xb8c2cc,asset:MATERIAL_ASSET('disco_metalico.webp')},
+  spring:{id:'spring',name:'Muelle',kind:'material',rarity:'uncommon',icon:'〰',tone:0x73d3ff,asset:MATERIAL_ASSET('muelle.webp')},
+  gear:{id:'gear',name:'Engranaje',kind:'material',rarity:'uncommon',icon:'⚙',tone:0xd7bf74,asset:MATERIAL_ASSET('engranaje.webp')},
+  compound:{id:'compound',name:'Compuesto',kind:'material',rarity:'rare',icon:'◆',tone:0xf3a63b,asset:MATERIAL_ASSET('compuesto.webp')},
+  ecu:{id:'ecu',name:'Electrónica',kind:'material',rarity:'epic',icon:'▣',tone:0x59e0aa,asset:MATERIAL_ASSET('electronica.webp')},
   brake_pad:{id:'brake_pad',name:'Pastilla deportiva',kind:'component',icon:'▰',tone:0xff8c61}, engine_block:{id:'engine_block',name:'Bloque preparado',kind:'component',icon:'▤',tone:0x8ea6bf},
 };
 const families={brakes:['Frenos','◉'],tires:['Neumático','⬤'],suspension:['Suspensión','↕'],transmission:['Caja','⚙'],engine:['Motor','▦']};
