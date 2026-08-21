@@ -5,7 +5,6 @@ import { loadGarage, getEquippedForCar } from '../garage/garageStore.js';
 const MATERIAL_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
 const PART_IDS=Object.keys(GARAGE_ITEMS).filter(id=>GARAGE_ITEMS[id]?.kind==='part');
 const TIER_COLOR={1:0x66c6ff,2:0x4ee1a0,3:0xbf7cff,4:0xffc64d};
-const TIER_LABEL={1:'STREET',2:'SPORT',3:'RACING',4:'PROTOTYPE'};
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 
 export class MenuScene extends PreviousMenuScene {
@@ -30,7 +29,6 @@ export class MenuScene extends PreviousMenuScene {
     const titleY=cy-panelH/2+(compact?14:20);
     A(this.add.text(cx,titleY,'INVENTARIO',{fontFamily:UI,fontSize:compact?'25px':'31px',fontStyle:'bold',color:'#ffffff',resolution:2}).setOrigin(.5,0));
 
-    // Coins live on their own line: never overlap the tabs.
     const coinsY=titleY+(compact?34:42);
     A(this.add.text(cx,coinsY,`◈ ${Math.max(0,Math.floor(Number(garage.coins)||0)).toLocaleString('es-ES')} MONEDAS`,{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'bold',color:'#f0c65a',resolution:2}).setOrigin(.5,0));
 
@@ -67,31 +65,32 @@ export class MenuScene extends PreviousMenuScene {
       const col=i%cols,row=Math.floor(i/cols),x=cx-gridW/2+col*(cardW+cardGap),y=gridY+row*(cardH+cardGap);
       const tier=Number(item.tier||0),accent=TIER_COLOR[tier]||0x355064;
 
-      // Strong category identity: double frame + colored header strip.
       const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.99).setOrigin(0));
       card.setStrokeStyle(tab==='parts'?(installed?5:4):2,installed?0x62ffb2:accent,1);
       if(tab==='parts'){
+        // Category is communicated by the frame itself. No redundant text badge over the artwork.
         A(this.add.rectangle(x+3,y+3,cardW-6,compact?7:9,accent,.95).setOrigin(0));
-        A(this.add.rectangle(x+7,y+7,cardW-14,cardH-14,0x000000,0).setOrigin(0).setStrokeStyle(1,accent,.45));
-        A(this.add.text(x+10,y+(compact?13:16),TIER_LABEL[tier]||'',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'bold',color:'#ffffff',backgroundColor:'#07111f',padding:{x:5,y:2},resolution:2}).setOrigin(0,0));
+        A(this.add.rectangle(x+7,y+7,cardW-14,cardH-14,0x000000,0).setOrigin(0).setStrokeStyle(2,accent,.55));
       }
 
       const key=tab==='materials'?`event-material:${id}`:`inventory-part:${id}`;
       if(this.textures?.exists?.(key)){
-        const imgY=tab==='parts'?y+cardH*.42:y+cardH*.43;
+        const imgY=tab==='parts'?y+cardH*.42:y+cardH*.40;
         const img=A(this.add.image(x+cardW/2,imgY,key).setOrigin(.5));
-        // Use the space aggressively while keeping the asset whole.
-        const maxW=cardW*(tab==='materials'?.90:.94),maxH=cardH*(tab==='materials'?.61:.66);
+        const maxW=cardW*(tab==='materials'?.90:.94),maxH=cardH*(tab==='materials'?.58:.66);
         const scale=Math.min(maxW/Math.max(1,img.width),maxH/Math.max(1,img.height));
         img.setScale(scale);
       }
 
-      const nameY=y+cardH*(tab==='materials'?.73:.72);
-      A(this.add.text(x+cardW/2,nameY,String(item.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:'#d4e0eb',align:'center',wordWrap:{width:cardW-16},resolution:2}).setOrigin(.5,0));
-
       if(tab==='materials'){
-        A(this.add.text(x+cardW/2,y+cardH-(compact?10:13),`×${q}`,{fontFamily:UI,fontSize:compact?'20px':'24px',fontStyle:'bold',color:'#62ffb2',resolution:2}).setOrigin(.5,1));
+        // Keep name and quantity as two clearly separated lines. Neutral/cyan quantity fits the inventory palette.
+        const nameY=y+cardH*.72;
+        A(this.add.text(x+cardW/2,nameY,String(item.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:'#d7e3ee',align:'center',wordWrap:{width:cardW-18},resolution:2}).setOrigin(.5,0));
+        const qtyY=y+cardH*.87;
+        A(this.add.text(x+cardW/2,qtyY,`×${q}`,{fontFamily:UI,fontSize:compact?'16px':'19px',fontStyle:'bold',color:'#7ddcff',resolution:2}).setOrigin(.5,.5));
       }else{
+        const nameY=y+cardH*.72;
+        A(this.add.text(x+cardW/2,nameY,String(item.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:'#d4e0eb',align:'center',wordWrap:{width:cardW-16},resolution:2}).setOrigin(.5,0));
         const status=installed?'INSTALADA':`EN INVENTARIO ×${q}`;
         A(this.add.text(x+cardW/2,y+cardH-(compact?9:12),status,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#62ffb2':'#c9e6ff',resolution:2}).setOrigin(.5,1));
       }
