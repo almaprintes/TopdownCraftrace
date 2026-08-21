@@ -41,8 +41,9 @@ this._dragStartScroll = 0;
 this._scrollVelocity = 0;
 this._isDraggingThumbs = false;
 
-// FX premium
-this._heroPulseTween = null;
+// FX premium: la carta base permanece inmóvil para conservar nitidez.
+this._heroHoloTween = null;
+this._heroHoloState = null;
   }
 
   init(data) {
@@ -73,11 +74,11 @@ this._rebuild();
   this.scale.off('resize', this._rebuild, this);
   this.events.off('update', this._updateGarage, this);
 
-  try { this._heroPulseTween?.remove(); } catch (e) {}
-  this._heroPulseTween = null;
+  this._stopHeroCardFx();
 }
 
   _rebuild() {
+    this._stopHeroCardFx();
     try { this.children.removeAll(true); } catch (e) {}
 
     this._thumbItems = [];
@@ -441,6 +442,11 @@ return { item, bg, accent, name, meta, cardImg, hit, carId, spec, index };
     const heroCard = this.add.image(x + Math.floor(cardZoneW / 2), y + Math.floor(h * 0.46), '__MISSING')
       .setVisible(false);
 
+    // Capa independiente: el brillo se anima sin transformar la carta base.
+    const heroHolo = this.add.image(heroCard.x, heroCard.y, '__MISSING')
+      .setVisible(false)
+      .setBlendMode(Phaser.BlendModes.ADD);
+
     const title = this.add.text(infoX, y + 24, '', {
       fontFamily: 'Orbitron, system-ui, sans-serif',
       fontSize: '30px',
@@ -496,6 +502,7 @@ return { item, bg, accent, name, meta, cardImg, hit, carId, spec, index };
       panel,
       glow,
       heroCard,
+      heroHolo,
       title,
       brand,
       meta,
@@ -509,6 +516,7 @@ return { item, bg, accent, name, meta, cardImg, hit, carId, spec, index };
     btnSecondary.hit.on('pointerdown', () => this._activateSecondary());
 
     this._uiRefs.heroCard = heroCard;
+    this._uiRefs.heroHolo = heroHolo;
     this._uiRefs.title = title;
     this._uiRefs.brand = brand;
     this._uiRefs.meta = meta;
@@ -604,6 +612,7 @@ if (selectedThumb?.item && selectedThumb?.bg && this._thumbViewport) {
 }
     const spec = selected.spec;
     const heroCard = this._uiRefs.heroCard;
+    const heroHolo = this._uiRefs.heroHolo;
     const texKey = `card_${selected.id}`;
 
 this._ensureCardTexture(selected.id, spec, (loadedKey) => {
@@ -623,27 +632,21 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
       heroMaxH / (heroCard.height || 1)
     );
 
-    heroCard.setScale(s * 0.92);
+    heroCard.setScale(s);
+    heroCard.setAngle(0);
     heroCard.setAlpha(0);
 
+    // Entrada solo por opacidad: nunca cambiamos la escala de la carta.
     this.tweens.add({
       targets: heroCard,
-      scale: s,
       alpha: 1,
       duration: 180,
       ease: 'Cubic.easeOut'
     });
 
-    try { this._heroPulseTween?.remove(); } catch (e) {}
-    this._heroPulseTween = this.tweens.add({
-      targets: heroCard,
-      scaleX: heroCard.scaleX * 1.018,
-      scaleY: heroCard.scaleY * 1.018,
-      duration: 900,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
+    const holographic = spec.cardEffect === 'holographic' ||
+      ['épico', 'epico', 'legendario'].includes(String(spec.rarity || '').toLowerCase());
+    this._startHeroHolographicFx(heroCard, heroHolo, holographic);
   };
 
   if (!heroCard.visible) {
@@ -651,11 +654,10 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
     return;
   }
 
+  this._stopHeroCardFx();
   this.tweens.add({
     targets: heroCard,
     alpha: 0,
-    scaleX: heroCard.scaleX * 0.96,
-    scaleY: heroCard.scaleY * 0.96,
     duration: 110,
     ease: 'Quad.easeIn',
     onComplete: applyHeroTexture
@@ -682,6 +684,60 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
 
     this._uiRefs.btnMainLabel.setText(this._mode === 'admin' ? 'EDITAR COCHE' : 'SELECCIONAR');
     this._uiRefs.btnSecondaryLabel.setText(this._mode === 'admin' ? 'VER FICHA' : 'VOLVER');
+  }
+
+  _stopHeroCardFx() {
+    try { this._heroHoloTween?.remove(); } catch (e) {}
+    this._heroHoloTween = null;
+    this._heroHoloState = null;
+
+    const holo = this._uiRefs?.heroHolo;
+    if (holo?.scene) {
+      holo.resetCrop();
+      holo.clearTint();
+      holo.setVisible(false);
+      holo.setAlpha(0);
+    }
+  }
+
+  _startHeroHolographicFx(heroCard, heroHolo, enabled) {
+    this._stopHeroCardFx();
+    if (!enabled || !heroCard?.scene || !heroHolo?.scene) return;
+
+    heroHolo
+      .setTexture(heroCard.texture.key)
+      .setPosition(heroCard.x, heroCard.y)
+      .setScale(heroCard.scaleX, heroCard.scaleY)
+      .setAngle(0)
+      .setTint(0x76e9ff)
+      .setAlpha(0.24)
+      .setVisible(true);
+
+    const textureW = heroHolo.width || 1;
+    const textureH = heroHolo.height || 1;
+    const bandW = Math.max(28, Math.round(textureW * 0.22));
+    this._heroHoloState = { x: 0 };
+
+    const applyCrop = () => {
+      if (!heroHolo?.scene || !this._heroHoloState) return;
+      const x = Phaser.Math.Clamp(Math.round(this._heroHoloState.x), 0, textureW - bandW);
+      heroHolo.setCrop(x, 0, bandW, textureH);
+
+      const phase = textureW > bandW ? x / (textureW - bandW) : 0;
+      heroHolo.setTint(phase < 0.5 ? 0x65e7ff : 0xff72e8);
+    };
+
+    applyCrop();
+    this._heroHoloTween = this.tweens.add({
+      targets: this._heroHoloState,
+      x: textureW - bandW,
+      duration: 1450,
+      delay: 300,
+      repeat: -1,
+      repeatDelay: 850,
+      ease: 'Sine.easeInOut',
+      onUpdate: applyCrop
+    });
   }
 
   _ensureCardTexture(carId, spec, onReady) {
