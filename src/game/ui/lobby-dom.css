@@ -101,6 +101,89 @@
 .tdr-lobby-button:hover { filter: brightness(1.18); }
 .tdr-lobby-button:active { transform: scale(.97); filter: brightness(1.3); }
 
+.tdr-lobby-card {
+  position: absolute;
+  box-sizing: border-box;
+  color: #fff;
+  background: linear-gradient(145deg, rgba(8, 24, 35, .96), rgba(4, 13, 21, .94));
+  border: 2px solid var(--cyan);
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  box-shadow: inset 0 0 24px rgba(70, 221, 255, .055), 0 12px 28px rgba(0, 0, 0, .34);
+  text-transform: uppercase;
+}
+
+.tdr-lobby-card::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 5px;
+  width: 26%;
+  height: 3px;
+  background: currentColor;
+  opacity: .72;
+}
+
+.tdr-card-kicker { color: #6eeaff; font-size: clamp(9px, .95vw, 14px); font-weight: 900; letter-spacing: .13em; }
+.tdr-lobby-card h2 { margin: 0; color: #fff; font-size: clamp(17px, 1.8vw, 27px); line-height: 1.08; font-weight: 900; letter-spacing: .025em; }
+
+.tdr-event-card {
+  left: 0;
+  top: clamp(78px, 12vh, 96px);
+  width: clamp(250px, 24.5vw, 380px);
+  height: clamp(260px, 49vh, 354px);
+  padding: clamp(23px, 3vh, 34px) clamp(18px, 2vw, 30px) 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(12px, 2vh, 20px);
+  text-align: center;
+}
+
+.tdr-event-card p { max-width: 94%; margin: 0; color: #c4d0dc; font-size: clamp(9px, .92vw, 13px); line-height: 1.35; font-weight: 750; letter-spacing: .055em; }
+.tdr-event-reward { margin-top: auto; color: var(--gold); font-size: clamp(8px, .8vw, 12px); line-height: 1.35; font-weight: 850; }
+.tdr-event-progress { width: 100%; height: 12px; padding: 2px; box-sizing: border-box; background: #0a1b26; border: 1px solid rgba(255,255,255,.15); }
+.tdr-event-progress i { display: block; height: 100%; background: linear-gradient(90deg, #20bde9, #68edff); box-shadow: 0 0 8px rgba(70,221,255,.55); }
+.tdr-event-card > strong, .tdr-event-finished { color: #68eaff; font-size: clamp(12px, 1.15vw, 17px); font-weight: 900; letter-spacing: .04em; }
+.tdr-event-claim { width: 100%; min-height: 34px; color: #fff; background: #174b37; border: 1px solid #62ffb2; font-weight: 900; letter-spacing: .08em; cursor: pointer; pointer-events: auto; }
+
+.tdr-car-card {
+  left: 50%;
+  top: clamp(78px, 11vh, 90px);
+  width: clamp(340px, 32vw, 500px);
+  min-height: clamp(74px, 11vh, 90px);
+  padding: 12px 16px;
+  transform: translateX(-50%);
+}
+
+.tdr-car-card-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-top: 8px; }
+.tdr-car-card-row h2 { font-size: clamp(16px, 1.55vw, 23px); }
+.tdr-car-card-row strong { display: block; margin-top: 4px; color: #c4d2df; font-size: clamp(11px, 1vw, 15px); }
+.tdr-car-brand { display: grid; place-items: center; width: 46px; height: 38px; padding: 0 5px; box-sizing: border-box; color: var(--gold); border: 1px solid rgba(230,184,78,.68); font-size: 9px; font-weight: 950; text-align: center; }
+.tdr-car-card-row em { padding: 5px 9px; color: #8eeaff; background: #10283a; border: 1px solid rgba(70,221,255,.35); font-size: clamp(7px, .68vw, 10px); font-style: normal; font-weight: 900; letter-spacing: .08em; }
+
+.tdr-track-card {
+  right: 0;
+  top: clamp(78px, 12vh, 96px);
+  width: clamp(250px, 24.5vw, 380px);
+  height: clamp(260px, 49vh, 354px);
+  padding: clamp(23px, 3vh, 34px) clamp(18px, 2vw, 30px) 15px;
+  color: var(--gold);
+  border-color: var(--gold);
+  text-align: center;
+}
+
+.tdr-track-card .tdr-card-kicker { color: #f1c966; }
+.tdr-track-card h2 { margin-top: clamp(15px, 2.2vh, 23px); }
+.tdr-track-map { width: 72%; height: clamp(82px, 16vh, 116px); margin: 10px auto 4px; background: rgba(2,8,13,.62); border: 1px solid rgba(230,184,78,.25); }
+.tdr-track-map svg { width: 100%; height: 100%; overflow: visible; }
+.tdr-track-shadow, .tdr-track-line { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.tdr-track-shadow { stroke: #000; stroke-width: 8; opacity: .65; }
+.tdr-track-line { stroke: #f5f8fb; stroke-width: 4; }
+.tdr-track-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+.tdr-track-stats span { display: grid; gap: 2px; }
+.tdr-track-stats small { color: #91a1af; font-size: clamp(7px, .7vw, 10px); font-weight: 850; letter-spacing: .08em; }
+.tdr-track-stats strong { color: #fff; font-size: clamp(11px, 1.12vw, 17px); font-weight: 900; }
+
 .tdr-lobby-play-slot {
   position: absolute;
   left: 50%;
@@ -134,7 +217,7 @@
 .tdr-lobby-bottom-actions {
   position: absolute;
   inset: auto 0 0;
-  height: clamp(74px, 13vh, 104px);
+  height: clamp(68px, 11.5vh, 88px);
   box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(150px, 1fr) minmax(210px, 1.4fr) minmax(150px, 1fr);
@@ -145,7 +228,7 @@
   background: linear-gradient(0deg, rgba(2, 8, 14, .94), rgba(2, 8, 14, .40) 72%, transparent);
 }
 
-.tdr-lobby-bottom-actions .tdr-lobby-button { width: 100%; max-width: 330px; justify-self: center; height: clamp(48px, 8.5vh, 68px); }
+.tdr-lobby-bottom-actions .tdr-lobby-button { width: 100%; max-width: 330px; justify-self: center; height: clamp(46px, 7.4vh, 60px); }
 .tdr-lobby-bottom-actions .tdr-lobby-button img { width: clamp(30px, 3.8vw, 48px); height: clamp(30px, 3.8vw, 48px); }
 .tdr-lobby-bottom-actions .tdr-lobby-button span { font-size: clamp(13px, 1.55vw, 22px); }
 
@@ -154,6 +237,8 @@
   .tdr-lobby-top-actions .tdr-lobby-button span { display: none; }
   .tdr-lobby-top-actions .tdr-lobby-button { width: 48px; }
   .tdr-lobby-bottom-actions { gap: 18px; padding-inline: 18px; }
+  .tdr-event-card, .tdr-track-card { width: 25.5vw; padding-inline: 12px; }
+  .tdr-car-card { width: 38vw; }
 }
 
 @media (max-height: 430px) {
@@ -161,4 +246,7 @@
   .tdr-lobby-brand { width: 42px; }
   .tdr-lobby-bottom-actions { height: 72px; }
   .tdr-lobby-play-slot { bottom: 76px; }
+  .tdr-event-card, .tdr-track-card { top: 55px; height: 230px; gap: 8px; padding-top: 18px; }
+  .tdr-car-card { top: 55px; min-height: 66px; padding-block: 8px; }
+  .tdr-track-map { height: 70px; margin-block: 5px; }
 }

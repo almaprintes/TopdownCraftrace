@@ -1,4 +1,9 @@
 import { loadGarage } from '../garage/garageStore.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
+import { resolveCarParams } from '../cars/resolveCarParams.js';
+import { attainableTopSpeedKmh, METERS_PER_PX } from '../cars/speedUnits.js';
+import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
+import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
 import './lobby-dom.css';
 
 const BASE = import.meta.env.BASE_URL || '/';
@@ -16,15 +21,119 @@ function hideLegacyLobbyControls(scene) {
     scene._topLobbyHeader.setVisible(false);
   }
   const hiddenKeys = new Set(['btn_play', 'btn_garage', 'btn_factory', 'btn_tracks']);
+  const legacyCardLabels = ['COCHE SELECCIONADO', 'CIRCUITO SELECCIONADO'];
+  const legacyCards = new Set();
   const walk = (node) => {
     if (!node) return;
     if (hiddenKeys.has(String(node?.texture?.key || ''))) {
       try { node.setVisible(false); } catch {}
       try { node.disableInteractive?.(); } catch {}
     }
+    if (typeof node?.text === 'string') {
+      const text = node.text.trim().toUpperCase();
+      if (legacyCardLabels.includes(text) || /^EVENTO(?:\s|$)/.test(text) || text === 'TEMPORADA COMPLETADA') {
+        if (node.parentContainer && node.parentContainer !== scene._ui) legacyCards.add(node.parentContainer);
+      }
+    }
     if (Array.isArray(node.list)) node.list.forEach(walk);
   };
   walk(scene._ui);
+  legacyCards.forEach(card => {
+    disableTree(card);
+    try { card.setVisible(false); } catch {}
+  });
+}
+
+const escapeHtml = value => String(value ?? '').replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[ch]));
+
+function loopLength(center) {
+  if (!Array.isArray(center) || center.length < 2) return 0;
+  let total = 0;
+  for (let i = 0; i < center.length; i++) {
+    const a = center[i], b = center[(i + 1) % center.length];
+    total += Math.hypot(Number(b?.x || 0) - Number(a?.x || 0), Number(b?.y || 0) - Number(a?.y || 0));
+  }
+  return total;
+}
+
+function trackSvg(center) {
+  if (!Array.isArray(center) || center.length < 2) return '';
+  const xs = center.map(p => Number(p?.x)).filter(Number.isFinite);
+  const ys = center.map(p => Number(p?.y)).filter(Number.isFinite);
+  if (!xs.length || !ys.length) return '';
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const spanX = Math.max(1, maxX - minX), spanY = Math.max(1, maxY - minY);
+  const scale = Math.min(150 / spanX, 82 / spanY);
+  const ox = 90 - spanX * scale / 2, oy = 48 - spanY * scale / 2;
+  const points = center.map(p => `${(ox + (Number(p.x) - minX) * scale).toFixed(1)},${(oy + (Number(p.y) - minY) * scale).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 180 96" role="img" aria-label="Trazado del circuito"><polyline class="tdr-track-shadow" points="${points}"/><polyline class="tdr-track-line" points="${points}"/></svg>`;
+}
+
+function renderDomCards(scene, root) {
+  const eventSlot = root.querySelector('[data-event-card]');
+  const carSlot = root.querySelector('[data-car-card]');
+  const trackSlot = root.querySelector('[data-track-card]');
+
+  const eventData = getCurrentRaceEvent();
+  if (eventSlot) {
+    if (eventData.finished) {
+      eventSlot.innerHTML = `<div class="tdr-card-kicker">TEMPORADA COMPLETADA</div><h2>PILOTO DE ÉLITE</h2><p>HAS COMPLETADO LOS 7 EVENTOS DE PROGRESIÓN</p><div class="tdr-event-finished">7/7 EVENTOS</div>`;
+    } else {
+      const { event, progress } = eventData;
+      const ratio = Math.max(0, Math.min(100, (Number(progress.value) / Math.max(1, Number(progress.target))) * 100));
+      eventSlot.innerHTML = `
+        <div class="tdr-card-kicker">${progress.complete ? 'EVENTO COMPLETADO' : `EVENTO ${eventData.index + 1}/${eventData.total}`}</div>
+        <h2>${escapeHtml(event.title)}</h2>
+        <p>${escapeHtml(event.description).toUpperCase()}</p>
+        <div class="tdr-event-reward">PREMIO · ${escapeHtml(raceEventRewardLabel(event.reward))}</div>
+        <div class="tdr-event-progress"><i style="width:${ratio.toFixed(2)}%"></i></div>
+        ${progress.complete ? '<button type="button" class="tdr-event-claim">RECLAMAR PREMIO</button>' : `<strong>${progress.value}/${progress.target} ${escapeHtml(progress.label)}</strong>`}
+      `;
+      eventSlot.querySelector('.tdr-event-claim')?.addEventListener('click', () => {
+        const result = claimCurrentRaceEvent();
+        if (result?.ok) {
+          scene._showEventRewardModal?.(result.event);
+          renderDomCards(scene, root);
+        }
+      });
+    }
+  }
+
+  const carId = scene.selectedCarId;
+  const spec = CAR_SPECS?.[carId] || {};
+  const params = resolveCarParams(spec, { accelMult:1, brakeMult:1, dragMult:1, turnRateMult:1, maxFwdAdd:0, maxRevAdd:0, turnMinAdd:0 });
+  const topKmh = Math.round(attainableTopSpeedKmh(params));
+  if (carSlot) carSlot.innerHTML = `
+    <div class="tdr-card-kicker">COCHE SELECCIONADO</div>
+    <div class="tdr-car-card-row">
+      <span class="tdr-car-brand">${escapeHtml(spec.brand || 'TDR')}</span>
+      <span><h2>${escapeHtml(params?.name || spec.name || carId)}</h2><strong>${topKmh} km/h</strong></span>
+      <em>${escapeHtml(spec.category || spec.role || 'RACING')}</em>
+    </div>
+  `;
+
+  const trackKey = scene.selectedTrackKey || 'track01';
+  const track = TRACK_REGISTRY?.[trackKey];
+  const center = Array.isArray(track?.raceCenterline) && track.raceCenterline.length ? track.raceCenterline : track?.centerline;
+  if (trackSlot && track) {
+    const id = String(track.id || track.key || '').toLowerCase();
+    const category = String(track.category || '').toLowerCase();
+    const surface = id.includes('offroad') || category.includes('dirt') || category.includes('tierra') ? 'TIERRA' : 'ASFALTO';
+    const direction = String(track.raceDirection || 'forward').toLowerCase() === 'reverse' ? 'ANTIHORARIO' : 'HORARIO';
+    const length = Math.round(loopLength(center) * METERS_PER_PX);
+    const sectors = Math.max(1, (track.checkpoints?.length || 2) + 1);
+    trackSlot.innerHTML = `
+      <div class="tdr-card-kicker">CIRCUITO SELECCIONADO</div>
+      <h2>${escapeHtml(track.name || trackKey)}</h2>
+      <div class="tdr-track-map">${trackSvg(center)}</div>
+      <div class="tdr-track-stats">
+        <span><small>LONGITUD</small><strong>${length} m</strong></span>
+        <span><small>SECTORES</small><strong>${sectors}</strong></span>
+        <span><small>SUPERFICIE</small><strong>${surface}</strong></span>
+        <span><small>SENTIDO</small><strong>${direction}</strong></span>
+      </div>
+    `;
+  }
 }
 
 function makeButton({ cls = '', icon, label, action }) {
@@ -71,6 +180,11 @@ export function installLobbyDom(scene) {
         </div>
         <nav class="tdr-lobby-top-actions" aria-label="Acciones principales"></nav>
       </header>
+      <main class="tdr-lobby-cards">
+        <section class="tdr-lobby-card tdr-event-card" data-event-card></section>
+        <section class="tdr-lobby-card tdr-car-card" data-car-card></section>
+        <section class="tdr-lobby-card tdr-track-card" data-track-card></section>
+      </main>
       <div class="tdr-lobby-play-slot"></div>
       <nav class="tdr-lobby-bottom-actions" aria-label="Navegación principal"></nav>
     `;
@@ -120,6 +234,6 @@ export function installLobbyDom(scene) {
   const coins = Math.max(0, Math.floor(Number(loadGarage()?.coins) || 0));
   const coinNode = root.querySelector('[data-coins]');
   if (coinNode) coinNode.textContent = coins.toLocaleString('es-ES');
+  renderDomCards(scene, root);
   return root;
 }
-

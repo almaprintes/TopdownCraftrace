@@ -42,10 +42,17 @@ export class MenuScene extends PreviousMenuScene {
     const parent = car.parentContainer;
     if (!parent?.addAt) return;
 
-    const platform = this.add.image(car.x, car.y + 5, 'lobby-platform').setOrigin(.5).setAlpha(.92);
-    const diameter = Math.max(car.displayHeight * 1.28, car.displayWidth * 2.45, 190);
+    car.setScale(car.scaleX * 1.1, car.scaleY * 1.1);
+    const diameter = Math.max(car.displayHeight * 1.42, car.displayWidth * 2.65, 220);
+    const glow = this.add.graphics();
+    glow.fillStyle(0x39dfff, .07);
+    glow.fillCircle(car.x, car.y + 5, diameter * .52);
+    glow.lineStyle(3, 0x39dfff, .38);
+    glow.strokeCircle(car.x, car.y + 5, diameter * .5);
+    const platform = this.add.image(car.x, car.y + 5, 'lobby-platform').setOrigin(.5).setAlpha(1);
     platform.setDisplaySize(diameter, diameter);
     const index = Math.max(0, parent.getIndex?.(car) ?? 0);
-    parent.addAt(platform, index);
+    parent.addAt(glow, index);
+    parent.addAt(platform, index + 1);
   }
 }
