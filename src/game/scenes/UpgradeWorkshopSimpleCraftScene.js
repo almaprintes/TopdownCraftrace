@@ -1,4 +1,4 @@
-import { UpgradeShopScene as PreviousWorkshop } from './UpgradeWorkshopUnifiedStyleScene.js';
+import { UpgradeShopScene as PreviousWorkshop } from './UpgradeWorkshopUnequipScene.js';
 import { GARAGE_ITEMS, DIRECT_CRAFT_RECIPES } from '../garage/partsCatalog.js';
 import { qty, saveGarage, getEquippedForCar } from '../garage/garageStore.js';
 
@@ -70,7 +70,11 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const button=A(this.add.rectangle(reqX,by,reqW,bh,can?0x17683f:0x273247,.98).setOrigin(0).setStrokeStyle(2,can?0x55f29b:0x526077,.9));
     const text=can?'FABRICAR':`FALTAN ${missing[0]||'MATERIALES'}`;
     A(this.add.text(reqX+reqW/2,by+bh/2,text.toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'800',color:can?'#fff':'#aab5c5'}).setOrigin(.5));
-    if(can){button.setInteractive({useHandCursor:true});button.on('pointerdown',()=>this._craftDirect(out,recipe));}
+    if(can){
+      button.setInteractive({useHandCursor:true});
+      // Fabricar on pointerup so the same touch cannot fall through into the modal.
+      button.on('pointerup',()=>this._craftDirect(out,recipe));
+    }
   }
 
   _craftDirect(out,recipe){
@@ -83,7 +87,8 @@ export class UpgradeShopScene extends PreviousWorkshop {
     if(!this.state.discoveries.includes(out))this.state.discoveries.push(out);
     saveGarage(this.state);
     this.render();
-    this.time.delayedCall(40,()=>this._openCraftedPartModal(out));
+    // Open after the FABRICAR pointerup has completed. The piece is only in inventory here.
+    this.time.delayedCall(0,()=>this._openCraftedPartModal(out));
   }
 
   _openCraftedPartModal(id){
@@ -117,9 +122,11 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const installX=tx+btnW+gap;
     const install=A(this.add.rectangle(installX,btnY,btnW,btnH,0x17683f,.98).setOrigin(0).setStrokeStyle(2,0x55f29b,.95).setInteractive({useHandCursor:true}));
     A(this.add.text(installX+btnW/2,btnY+btnH/2,'INSTALAR AHORA',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'800',color:'#fff'}).setOrigin(.5));
-    keep.on('pointerup',close);
-    install.on('pointerup',()=>{this._installCraftedPart(id);close();});
-    veil.on('pointerup',()=>{});
+
+    // Modal actions require a NEW press. Never react to the release that created the modal.
+    keep.on('pointerdown',close);
+    install.on('pointerdown',()=>{this._installCraftedPart(id);close();});
+    veil.on('pointerdown',()=>{});
   }
 
   _installCraftedPart(id){
@@ -127,8 +134,9 @@ export class UpgradeShopScene extends PreviousWorkshop {
     if(!this.state.equippedByCar||typeof this.state.equippedByCar!=='object')this.state.equippedByCar={};
     const current={...(getEquippedForCar(this.state,this.car)||{})};
     const oldId=current[item.family]||null;
+    if(oldId===id)return true;
     this.state.inventory[id]=Math.max(0,qty(this.state,id)-1);
-    if(oldId&&oldId!==id)this.state.inventory[oldId]=qty(this.state,oldId)+1;
+    if(oldId)this.state.inventory[oldId]=qty(this.state,oldId)+1;
     current[item.family]=id;
     this.state.equippedByCar[this.car]=current;
     saveGarage(this.state);
