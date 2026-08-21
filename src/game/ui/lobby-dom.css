@@ -265,7 +265,7 @@
 
 @media (max-height: 430px) {
   .tdr-lobby-header { height: 48px; }
-  .tdr-lobby-brand { width: 42px; }
+  .tdr-lobby-brand { width: 88px; }
   .tdr-lobby-bottom-actions { height: 72px; }
   .tdr-lobby-play-slot { bottom: 76px; }
   .tdr-event-card, .tdr-track-card { top: 14%; bottom: 30%; height: auto; gap: 8px; padding-top: 16px; }
