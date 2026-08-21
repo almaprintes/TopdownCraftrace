@@ -1,126 +1,110 @@
 # Monte Carlo de progresión completa de piezas
 
 Fecha: 2026-08-21
-Estado: simulación sobre la economía implementada en `main`
+Estado: **recalibrado para objetivo de 50 h con duplicación recompensada**
 
-## Objetivo
+## Objetivo de diseño
 
-Medir cuántas partidas/sesiones necesita un jugador, partiendo de inventario cero y sin compras ni packs de tienda, para poder equipar simultáneamente las cinco familias del coche en cada categoría:
+El jugador avanzado que optimiza la progresión y acepta el anuncio recompensado tras cada carrera para **duplicar todo el botín** debe tardar **al menos unas 50 horas activas** en completar un coche con las cinco piezas Prototype.
 
-- 5 × Street
-- 5 × Sport
-- 5 × Racing
-- 5 × Prototype
+Esto convierte un coche Prototype completo en un hito de largo recorrido. Maxear 15 coches supone, de forma aproximada, un objetivo del orden de **750 h** para un jugador que mantuviera ese ritmo y duplicara sistemáticamente recompensas.
 
-## Base simulada
+Street se mantiene intencionadamente accesible: la primera pieza Street debe poder aparecer durante la primera sesión. El endurecimiento se concentra sobre todo en Sport, Racing y Prototype.
 
-La simulación reproduce el modelo actual:
+## Modelo de drop usado
 
-- cuotas de tirada: Chatarra 38 %, Aleación/Goma/Disco/Muelle/Engranaje 10 % cada una, Compuesto 8 %, Electrónica 4 %;
-- corrección adaptativa acumulada con `exp(2 × déficit)` y jitter 0,90–1,10;
-- lotes: Chatarra 2–4, secundarios 1–3, Compuesto 1–2, Electrónica 1;
-- Supervivencia completa de 5 vueltas: 10 tiradas garantizadas + Binomial(5, 0,60) + 2 del cofre de vuelta 5, es decir unas 15 tiradas de media;
-- inventario inicial de materiales = 0;
-- no se cuentan compras, packs, duplicación de recompensas ni otras fuentes externas de materiales.
+Se conserva el sistema implementado:
 
-Se ejecutaron 10.000 jugadores virtuales independientes con semillas distintas.
+- Chatarra: 38 % de las tiradas, lote 2–4.
+- Aleación/Goma/Disco/Muelle/Engranaje: 10 % cada una, lote 1–3.
+- Compuesto: 8 %, lote 1–2.
+- Electrónica: 4 %, lote 1.
+- corrección adaptativa para converger suavemente a estas cuotas;
+- Supervivencia completa de 5 vueltas: ~15 tiradas de media;
+- inventario inicial de materiales: 0.
 
-## Coste acumulado de una colección completa
+Para esta calibración se modeló al jugador más eficiente económicamente: **duplica mediante rewarded ad el botín de cada carrera completa**.
 
-Para poder terminar las cinco familias de cada tier desde cero, los materiales acumulados mínimos equivalen a:
+## Recetas recalibradas
 
-### Street completo
+Cada familia conserva exactamente la misma estructura matemática. Solo cambia su material secundario:
 
-- Chatarra ×40
-- Aleación ×2
-- Goma ×2
-- Disco ×2
-- Muelle ×2
-- Engranaje ×2
+- Motor → Aleación.
+- Frenos → Disco metálico.
+- Neumáticos → Goma.
+- Suspensión → Muelle.
+- Transmisión → Engranaje.
 
-### Sport completo (incluye haber fabricado Street)
+### I · Street
 
-- Chatarra ×180 acumulada
-- Aleación ×7
-- Goma ×7
-- Disco ×7
-- Muelle ×7
-- Engranaje ×7
-- Compuesto ×15
+`Chatarra ×8 + secundario ×2`
 
-### Racing completo (incluye Street + Sport)
+### II · Sport
 
-- Chatarra ×430 acumulada
-- cada material secundario ×16
-- Compuesto ×40
-- Electrónica ×10
+`pieza Street ×1 + Chatarra ×185 + secundario ×160 + Compuesto ×20`
 
-### Prototype completo (incluye toda la cadena anterior)
+### III · Racing
 
-- Chatarra ×880 acumulada
-- cada material secundario ×32
-- Compuesto ×90
-- Electrónica ×25
+`pieza Sport ×1 + Chatarra ×820 + secundario ×720 + Compuesto ×86 + Electrónica ×29`
 
-## Resultado en sesiones completas de Supervivencia
+### IV · Prototype
 
-| Objetivo | Media | P50 | P75 | P90 | P95 |
-|---|---:|---:|---:|---:|---:|
-| 5 Street | **2,95** | 3 | 3 | 3 | 3 |
-| 5 Sport | **11,16** | 11 | 12 | 12 | 12 |
-| 5 Racing | **25,89** | 26 | 27 | 27 | 28 |
-| 5 Prototype | **52,91** | 53 | 54 | 55 | 56 |
+`pieza Racing ×1 + Chatarra ×2400 + secundario ×2100 + Compuesto ×250 + Electrónica ×84`
 
-Rangos observados en las 10.000 simulaciones:
+Los números grandes son deliberados: el drop de materiales sigue siendo abundante y además el jugador óptimo puede duplicarlo tras cada carrera. La dificultad debe sobrevivir a esa aceleración sin romper la igualdad entre familias.
 
-- Street: 2–4 sesiones.
-- Sport: 9–15 sesiones.
-- Racing: 23–32 sesiones.
-- Prototype: 47–64 sesiones.
+## Monte Carlo con duplicación tras cada carrera
 
-El sistema adaptativo reduce mucho la dispersión: P50 y P90 quedan relativamente próximos incluso en Prototype.
+Se ejecutó una nueva batería de **2.000 jugadores virtuales** desde inventario cero, aplicando la duplicación del botín en cada sesión completa.
 
-## Conversión a tiempo real
-
-El código no fija una duración universal en minutos porque el tiempo por vuelta depende de circuito y jugador. Para traducir sesiones a horas se usan tres escenarios prácticos de ciclo completo (carrera + pequeña transición):
-
-| Objetivo | 5 min/sesión | 6 min/sesión | 7 min/sesión |
+| Objetivo acumulado | Media de sesiones | P50 | P90 |
 |---|---:|---:|---:|
-| 5 Street | 0,25 h | **0,30 h** | 0,34 h |
-| 5 Sport | 0,93 h | **1,12 h** | 1,30 h |
-| 5 Racing | 2,16 h | **2,59 h** | 3,02 h |
-| 5 Prototype | 4,41 h | **5,29 h** | 6,17 h |
+| 5 Street | **1,86** | 2 | 2 |
+| 5 Sport | **31,02** | 31 | 33 |
+| 5 Racing | **155,29** | 155 | 160 |
+| 5 Prototype | **511,34** | 510 | 520 |
 
-Tomando **6 minutos por Supervivencia completa** como referencia operativa, el jugador medio alcanzaría aproximadamente:
+La dispersión sigue siendo pequeña gracias al sistema adaptativo.
 
-- coche completo Street: **18 minutos**;
-- coche completo Sport: **1 h 07 min acumulados**;
-- coche completo Racing: **2 h 35 min acumulados**;
-- coche completo Prototype: **5 h 17 min acumulados**.
+## Conversión a horas
 
-Incremento medio desde el tier anterior con esa referencia:
+Tomando 6 minutos de carrera/sesión completa como referencia de trabajo:
 
-- inicio → Street: ~0,30 h;
-- Street → Sport: ~0,82 h adicionales;
-- Sport → Racing: ~1,47 h adicionales;
-- Racing → Prototype: ~2,70 h adicionales.
+- 5 Street: ~0,19 h.
+- 5 Sport: ~3,10 h acumuladas.
+- 5 Racing: ~15,53 h acumuladas.
+- 5 Prototype: **~51,13 h acumuladas**.
 
-## Percentiles prácticos a 6 min/sesión
+El P90 de Prototype ronda 520 sesiones, equivalente a **~52 h** de carrera activa con esa referencia.
 
-- Street P50/P90: ~0,30 h / ~0,30 h.
-- Sport P50/P90: ~1,10 h / ~1,20 h.
-- Racing P50/P90: ~2,60 h / ~2,70 h.
-- Prototype P50/P90: ~5,30 h / ~5,50 h.
+Si además contamos, por ejemplo, ~30 segundos de vídeo por sesión recompensada, 511 sesiones añaden unas 4,3 h de consumo real, elevando el recorrido total por encima de 55 h de tiempo de usuario. La duración real del anuncio dependerá del proveedor y no se fija como parte del balance base.
 
-## Lectura de diseño
+## Lectura de progresión
 
-La igualdad entre familias funciona bien, pero el recorrido completo hasta Prototype es actualmente relativamente corto para un sistema que pretende sostener progresión y tienda a medio plazo: alrededor de 4,4–6,2 horas de juego activo según duración real de sesión, sin usar compras ni aceleradores.
+La curva queda aproximadamente así para el jugador más eficiente:
 
-Esto no implica cambiarlo automáticamente. Antes de endurecer recetas conviene decidir qué duración objetivo queremos para el metajuego completo. Si Prototype debe ser un hito de varios días/semanas, la economía actual necesita mayor escalado desde Racing/Prototype o límites/objetivos adicionales. Si se busca una campaña rápida y rejugable, el ritmo actual puede ser adecuado.
+- Street: recompensa inicial y tutorial práctico.
+- Sport: primer objetivo de varias horas.
+- Racing: progreso serio de medio plazo.
+- Prototype: meta principal de unas 50 h activas aun explotando al máximo la duplicación recompensada.
 
-## Limitaciones
+Sin duplicar botín sistemáticamente, el tiempo esperado será sensiblemente mayor y puede acercarse aproximadamente al doble, aunque no exactamente por el carácter discreto/adaptativo del drop.
 
-- Se asume que el jugador completa las cinco vueltas de cada sesión; ser eliminado antes reduce tiradas por intento y aumenta el tiempo real.
-- No se modelan tiempos exactos de cada circuito: se presentan sesiones como unidad estable y una tabla 5/6/7 min para convertir a horas.
-- No se incluyen packs de materiales, compras de monedas, vídeos recompensados ni otras futuras fuentes de materiales.
-- Se asume que el jugador dedica los materiales a progresar estas cinco familias y no los gasta en otros sistemas.
+## Regla de monetización
+
+El rewarded ad posterior a carrera debe ser **opcional**. Duplica el botín conseguido en esa carrera; no altera los requisitos de receta ni concede una pieza directamente. Así monetiza aceleración sin convertir la tienda/anuncio en una fuente exclusiva de potencia.
+
+## Archivos de producción
+
+- `src/game/garage/partsCatalog.js` — requisitos de fabricación.
+- `src/game/garage/garageStore.js` — drop adaptativo y entrega de botín.
+
+Commit de la recalibración de recetas: `ed44c90a`.
+
+## Validaciones pendientes
+
+1. Medir duración real de una Supervivencia completa en jugadores rápidos para sustituir la referencia de 6 min por telemetría real.
+2. Implementar el rewarded ad post-carrera y validar que la duplicación afecta exactamente al botín de la carrera terminada una sola vez.
+3. Repetir Monte Carlo con duraciones reales y con tasas reales de aceptación del anuncio (0 %, 25 %, 50 %, 75 %, 100 %).
+4. Medir cuántos materiales sobrantes se acumulan por tier para detectar un cuello de botella excesivo.
+5. Reequilibrar los packs de tienda contra esta nueva escala para evitar que una compra pequeña destruya semanas de progresión.
