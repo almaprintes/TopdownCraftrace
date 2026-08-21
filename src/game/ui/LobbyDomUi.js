@@ -111,6 +111,11 @@ function renderDomCards(scene, root) {
       <em>${escapeHtml(spec.category || spec.role || 'RACING')}</em>
     </div>
   `;
+  const carPreview = root.querySelector('[data-lobby-car]');
+  if (carPreview) {
+    carPreview.src = `${BASE}assets/cars/lobby/${encodeURIComponent(carId)}.webp`;
+    carPreview.alt = params?.name || spec.name || carId;
+  }
 
   const trackKey = scene.selectedTrackKey || 'track01';
   const track = TRACK_REGISTRY?.[trackKey];
@@ -180,6 +185,7 @@ export function installLobbyDom(scene) {
         </div>
         <nav class="tdr-lobby-top-actions" aria-label="Acciones principales"></nav>
       </header>
+      <img class="tdr-lobby-car-preview" data-lobby-car alt="" draggable="false">
       <main class="tdr-lobby-cards">
         <section class="tdr-lobby-card tdr-event-card" data-event-card></section>
         <section class="tdr-lobby-card tdr-car-card" data-car-card></section>

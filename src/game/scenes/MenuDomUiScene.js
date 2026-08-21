@@ -48,10 +48,9 @@ export class MenuScene extends PreviousMenuScene {
 
     const candidates = findCar(ui).filter(obj => obj?.visible !== false);
     const car = candidates.sort((a, b) => (b.displayWidth * b.displayHeight) - (a.displayWidth * a.displayHeight))[0];
-    if (car && !car.__tdrLobbyScaleApplied) {
-      car.setScale(car.scaleX * 1.1, car.scaleY * 1.1);
-      car.__tdrLobbyScaleApplied = true;
-    }
+    // Racing sprites are deliberately tiny for performance. The lobby uses a
+    // separate high-resolution DOM render, so keep the gameplay sprite hidden.
+    if (car) car.setVisible(false);
 
     const glow = this.add.graphics();
     glow.fillStyle(0x07131b, .58);
