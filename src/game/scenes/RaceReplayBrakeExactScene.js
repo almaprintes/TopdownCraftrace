@@ -1,6 +1,6 @@
-import { RaceScene as SessionLapCapScene } from './RaceSessionLapCapScene.js';
+import { RaceScene as SurvivalFinishStateScene } from './RaceSurvivalFinishStateScene.js';
 
-export class RaceScene extends SessionLapCapScene {
+export class RaceScene extends SurvivalFinishStateScene {
   _replayBrake01(t){
     const samples=this._ghostData?.samples||[];
     if(!samples.length)return 0;
