@@ -1,8 +1,10 @@
 import { GARAGE_ITEMS, EVOLUTION_CHAIN, EVOLUTION_COST, findRecipe, findStripRecipe, statDeltaForPart, tuningForPart } from './partsCatalog.js';
 const KEY='tdr2:garageFusion:v1';
 
-const STARTER={ scrap:8, alloy:5, rubber:4, compound:4, disc:4, spring:3, gear:3, ecu:2 };
-const DEFAULT={ inventory:{...STARTER}, equipped:{}, equippedByCar:{}, discoveries:[], coins:250, lastReward:null, rewardedToday:0, rewardedDay:'', lootPityEcu:0 };
+// Economy 2.0: new players start with no crafting materials.
+// The first Street part must be earned through the first race/session, not granted at boot.
+const STARTER={};
+const DEFAULT={ inventory:{}, equipped:{}, equippedByCar:{}, discoveries:[], coins:250, lastReward:null, rewardedToday:0, rewardedDay:'', lootPityEcu:0 };
 
 function selectedCarId(){
   try { return localStorage.getItem('tdr2:carId') || 'stock'; } catch { return 'stock'; }
