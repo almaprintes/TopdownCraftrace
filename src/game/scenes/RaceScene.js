@@ -150,7 +150,8 @@ this.minimap = null;
   if (this.textures.exists(texKey)) return Promise.resolve(texKey);
 
   return new Promise((resolve) => {
-    const url = `${CAR_SKIN_BASE}${file}`;
+    const assetVersion = encodeURIComponent(spec?.collectionNo || 1);
+    const url = `${CAR_SKIN_BASE}${file}?v=${assetVersion}`;
 
     const onFileOk = (key) => {
       if (key !== texKey) return;

@@ -122,7 +122,8 @@ function renderDomCards(scene, root) {
   `;
   const carPreview = root.querySelector('[data-lobby-car]');
   if (carPreview) {
-    carPreview.src = `${BASE}assets/cars/lobby/${encodeURIComponent(carId)}.webp`;
+    const assetVersion = encodeURIComponent(spec.collectionNo || 1);
+    carPreview.src = `${BASE}assets/cars/lobby/${encodeURIComponent(carId)}.webp?v=${assetVersion}`;
     carPreview.alt = params?.name || spec.name || carId;
   }
 
