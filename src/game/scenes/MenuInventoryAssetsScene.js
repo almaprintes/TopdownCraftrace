@@ -42,9 +42,20 @@ export class MenuScene extends PreviousMenuScene {
     tabButton(cx-tabW/2-gap/2,'MATERIALES','materials');
     tabButton(cx+tabW/2+gap/2,'PIEZAS','parts');
 
+    // Parts always progress visually from the lowest category to the highest.
+    // Within the same tier keep a deterministic order by slot/type and then name.
     const ids=tab==='materials'
       ? MATERIAL_IDS
-      : PART_IDS.filter(id=>Number(garage.inventory?.[id]||0)>0||Object.values(equipped).includes(id));
+      : PART_IDS
+          .filter(id=>Number(garage.inventory?.[id]||0)>0||Object.values(equipped).includes(id))
+          .sort((a,b)=>{
+            const A=GARAGE_ITEMS[a]||{},B=GARAGE_ITEMS[b]||{};
+            const tierDiff=Number(A.tier||0)-Number(B.tier||0);
+            if(tierDiff)return tierDiff;
+            const slotDiff=String(A.slot||A.type||'').localeCompare(String(B.slot||B.type||''),'es');
+            if(slotDiff)return slotDiff;
+            return String(A.name||a).localeCompare(String(B.name||b),'es');
+          });
 
     const cols=4,rows=2,perPage=cols*rows,cardGap=compact?9:12,pad=24;
     const gridW=panelW-pad*2,cardW=(gridW-cardGap*(cols-1))/cols;
@@ -68,7 +79,6 @@ export class MenuScene extends PreviousMenuScene {
       const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.99).setOrigin(0));
       card.setStrokeStyle(tab==='parts'?(installed?5:4):2,installed?0x62ffb2:accent,1);
       if(tab==='parts'){
-        // Category is communicated by the frame itself. No redundant text badge over the artwork.
         A(this.add.rectangle(x+3,y+3,cardW-6,compact?7:9,accent,.95).setOrigin(0));
         A(this.add.rectangle(x+7,y+7,cardW-14,cardH-14,0x000000,0).setOrigin(0).setStrokeStyle(2,accent,.55));
       }
@@ -83,7 +93,6 @@ export class MenuScene extends PreviousMenuScene {
       }
 
       if(tab==='materials'){
-        // Keep name and quantity as two clearly separated lines. Neutral/cyan quantity fits the inventory palette.
         const nameY=y+cardH*.72;
         A(this.add.text(x+cardW/2,nameY,String(item.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:'#d7e3ee',align:'center',wordWrap:{width:cardW-18},resolution:2}).setOrigin(.5,0));
         const qtyY=y+cardH*.87;
