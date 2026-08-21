@@ -89,6 +89,7 @@ this.load.image('card_forge_hammer', 'card_forge_hammer_raro_013.webp');
 this.load.image('card_helix_comet', 'card_helix_comet_poco_comun_002.webp');
 this.load.image('card_helix_pulse', 'card_helix_pulse_poco_comun_003.webp');
 this.load.image('card_helix_spark', 'card_helix_spark_comun_001.webp');
+this.load.image('card_helix_vortex', 'card_helix_vortex_raro_016.webp');
 
 this.load.image('card_veloce_flash', 'card_veloce_flash_poco_comun_010.webp');
 this.load.image('card_veloce_photon', 'card_veloce_photon_elite_012.webp');

@@ -103,7 +103,7 @@ power: {
 },
 
   // =========================================================
-  // VEHÍCULOS OFICIALES (15) — listos para skins + UI
+  // VEHÍCULOS OFICIALES (16) — listos para skins + UI
   // =========================================================
 
   helix_spark: {
@@ -215,6 +215,41 @@ steeringProfile: 'DIRECT',
     gripCoast: 0.25,
     gripDrive: 0.08,
     gripBrake: 0.18
+  },
+
+  helix_vortex: {
+    id: 'helix_vortex',
+    name: 'HÉLIX Vortex',
+    brand: 'HÉLIX',
+    country: 'España',
+    category: 'All-Rounder',
+    role: 'Crossover ágil',
+    steeringProfile: 'DIRECT',
+
+    // UI / Colección
+    collectionNo: 16,
+    rarity: 'Raro',
+    skin: 'skin_helix_vortex.webp',
+    visualScale: 1.10,
+
+    // Stats diseño (01–99): VEL/ACC/GIR/EST/FRN
+    designStats: { VEL: 61, ACC: 76, GIR: 68, EST: 78, FRN: 70 },
+
+    // Configuración inicial provisional: pendiente de homologación en pista
+    maxFwd: 555.6,
+    maxRev: 260,
+
+    accel: 806.9,
+    brakeForce: 1111.2,
+    engineBrake: 260,
+    linearDrag: 0.033,
+
+    turnRate: 3.87,
+    turnMin: 0.28,
+
+    gripCoast: 0.29,
+    gripDrive: 0.10,
+    gripBrake: 0.20
   },
 
   crown_axis: {
