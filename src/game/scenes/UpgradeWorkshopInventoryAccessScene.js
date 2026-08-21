@@ -34,6 +34,20 @@ export class UpgradeShopScene extends GuardedWorkshop {
     return true;
   }
 
+  _unequipFromInventory(id){
+    const item=GARAGE_ITEMS[id];
+    if(!item?.family)return false;
+    if(!this.state.inventory||typeof this.state.inventory!=='object')this.state.inventory={};
+    if(!this.state.equippedByCar||typeof this.state.equippedByCar!=='object')this.state.equippedByCar={};
+    const current={...(getEquippedForCar(this.state,this.car)||{})};
+    if(current[item.family]!==id)return false;
+    this.state.inventory[id]=qty(this.state,id)+1;
+    delete current[item.family];
+    this.state.equippedByCar[this.car]=current;
+    saveGarage(this.state);
+    return true;
+  }
+
   _openFactoryInventoryModal(tab='parts',page=0,tierFilter=0){
     try{this._factoryInventoryModal?.destroy?.(true);}catch{}
     const {width,height}=this.scale,compact=height<520,cx=width/2,cy=height/2;
@@ -79,22 +93,27 @@ export class UpgradeShopScene extends GuardedWorkshop {
     pageIds.forEach((id,i)=>{
       const item=GARAGE_ITEMS[id],q=qty(this.state,id),installed=Object.values(equipped).includes(id),tier=Number(item?.tier||0),accent=TIER_COLOR[tier]||0x355064;
       const col=i%4,row=Math.floor(i/4),x=cx-gridW/2+col*(cardW+cg),y=gridY+row*(cardH+cg);
-      const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.99).setOrigin(0).setStrokeStyle(tab==='parts'?(installed?5:4):2,installed?0x62ffb2:accent,1));
+      const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.99).setOrigin(0).setStrokeStyle(tab==='parts'?4:2,accent,1));
       if(tab==='parts'){
-        A(this.add.rectangle(x+3,y+3,cardW-6,compact?7:9,accent,.95).setOrigin(0));
-        A(this.add.rectangle(x+7,y+7,cardW-14,cardH-14,0x000000,0).setOrigin(0).setStrokeStyle(2,accent,.55));
+        A(this.add.rectangle(x+3,y+3,cardW-6,compact?7:9,accent,installed?.45:.95).setOrigin(0));
+        A(this.add.rectangle(x+7,y+7,cardW-14,cardH-14,0x000000,0).setOrigin(0).setStrokeStyle(2,accent,installed?.28:.55));
       }
       const art={x:x+8,y:y+8,w:cardW-16,h:cardH*(tab==='parts'?.62:.60)};
+      const before=root.length;
       const loaded=this._loadFullBleed(A,item,art,()=>this._openFactoryInventoryModal(tab,page,tierFilter));
-      if(!loaded)A(this.add.text(x+cardW/2,y+cardH*.38,item?.icon||'◆',{fontFamily:UI,fontSize:compact?'34px':'46px',color:'#fff'}).setOrigin(.5));
+      const added=root.list?.slice?.(before)||[];
+      if(installed)for(const obj of added){if(obj?.setAlpha)obj.setAlpha(.42);if(obj?.setTint)obj.setTint(0x9ba6ad);}
+      if(!loaded){const fallback=A(this.add.text(x+cardW/2,y+cardH*.38,item?.icon||'◆',{fontFamily:UI,fontSize:compact?'34px':'46px',color:'#fff'}).setOrigin(.5));if(installed)fallback.setAlpha(.42);}
       const nameY=y+cardH*.69;
-      A(this.add.text(x+cardW/2,nameY,String(item?.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#d7e3ee',align:'center',wordWrap:{width:cardW-16}}).setOrigin(.5,0));
+      A(this.add.text(x+cardW/2,nameY,String(item?.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#87939d':'#d7e3ee',align:'center',wordWrap:{width:cardW-16}}).setOrigin(.5,0));
       if(tab==='materials'){
         A(this.add.text(x+cardW/2,y+cardH*.88,`×${q}`,{fontFamily:UI,fontSize:compact?'15px':'18px',fontStyle:'800',color:'#7ddcff'}).setOrigin(.5));
       }else{
-        const action=installed?'INSTALADA':`INSTALAR · ×${q}`;
-        A(this.add.text(x+cardW/2,y+cardH-(compact?8:11),action,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#62ffb2':'#7ddcff'}).setOrigin(.5,1));
-        if(!installed&&q>0){card.setInteractive({useHandCursor:true});card.on('pointerup',()=>{if(this._installFromInventory(id)){this.render();this._openFactoryInventoryModal('parts',page,tierFilter);}});}
+        const action=installed?'DESINSTALAR':`INSTALAR · ×${q}`;
+        A(this.add.text(x+cardW/2,y+cardH-(compact?8:11),action,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#87939d':'#7ddcff'}).setOrigin(.5,1));
+        card.setInteractive({useHandCursor:true});
+        if(installed){card.on('pointerup',()=>{if(this._unequipFromInventory(id)){this.render();this._openFactoryInventoryModal('parts',page,tierFilter);}});}
+        else if(q>0){card.on('pointerup',()=>{if(this._installFromInventory(id)){this.render();this._openFactoryInventoryModal('parts',page,tierFilter);}});}
       }
     });
 
