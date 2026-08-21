@@ -186,7 +186,7 @@ export function installLobbyDom(scene) {
     root.innerHTML = `
       <header class="tdr-lobby-header">
         <button type="button" class="tdr-lobby-brand" aria-label="Top Down Race">
-          <img src="${BASE}assets/logos/logo_tdr2_sobres.webp" alt="Top Down Race" draggable="false">
+          <img src="${BASE}assets/logo.webp" alt="Top Down Race" draggable="false">
         </button>
         <div class="tdr-lobby-wallet">
           <img src="${BASE}assets/ui/moneda-tdr.webp" alt="" draggable="false">

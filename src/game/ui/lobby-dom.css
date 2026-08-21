@@ -61,7 +61,8 @@
 }
 
 .tdr-lobby-brand {
-  width: clamp(48px, 5.2vw, 72px);
+  flex: 0 0 auto;
+  width: clamp(96px, 10vw, 150px);
   height: 100%;
   padding: 3px;
   border: 0;
