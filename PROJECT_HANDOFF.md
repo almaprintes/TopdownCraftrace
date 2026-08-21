@@ -87,6 +87,10 @@ Familias actuales: motor, frenos, neumáticos, suspensión y transmisión.
 
 Las piezas modifican estadísticas y tuning real del coche; la progresión no debe ser meramente cosmética. Se han realizado homologaciones y pruebas de comportamiento de coches, y las sensaciones/telemetría consolidadas deben conservarse como referencia para personalidad y equilibrio de cada vehículo.
 
+### 8.1 Personalidad de coches
+
+Las fichas del garaje deben incorporar una frase corta que describa actuación y personalidad de cada coche combinando sus skills reales con las sensaciones obtenidas durante homologación. No inventar esas sensaciones: usar los documentos consolidados de homologación/telemetría como fuente.
+
 ## 9. Fabricación — REDISEÑO 21/08/2026
 
 ### 9.1 Problema detectado
@@ -112,13 +116,9 @@ El jugador:
 
 Los assets de las piezas siguen siendo protagonistas visuales; no sustituirlos por iconografía procedural cuando existe arte definitivo.
 
-Archivo de la nueva interfaz:
+Archivo de la nueva interfaz: `src/game/scenes/UpgradeWorkshopSimpleCraftScene.js`
 
-`src/game/scenes/UpgradeWorkshopSimpleCraftScene.js`
-
-Activada desde:
-
-`src/game/game.js`
+Activada desde: `src/game/game.js`
 
 ### 9.3 Nueva economía de fabricación
 
@@ -140,44 +140,136 @@ Ejemplos del balance activo:
 - Motor Racing: Motor Sport + 32 Chatarra + 26 Aleación + 14 Electrónica.
 - Motor Prototype: Motor Racing + 56 Chatarra + 46 Aleación + 28 Compuesto + 24 Electrónica.
 
-Los costes completos de las cinco familias están centralizados en `DIRECT_CRAFT_RECIPES` dentro de:
+Los costes completos están centralizados en `DIRECT_CRAFT_RECIPES` dentro de `src/game/garage/partsCatalog.js`.
 
-`src/game/garage/partsCatalog.js`
+### 9.4 Fabricar NO significa instalar
 
-### 9.4 Compatibilidad
+Decisión importante de UX/progresión: una pieza recién fabricada **no debe equiparse automáticamente**.
+
+Flujo correcto:
+
+**FABRICAR → INVENTARIO → decidir INSTALAR**
+
+Tras fabricar, la pieza entra en inventario. Desde la propia fabricación puede abrirse la vista/modal de inventario mostrando la pieza recién creada y permitiendo instalarla. Si el coche ya tiene una pieza en ese slot, instalar la nueva debe desequipar la anterior y devolverla al inventario.
+
+Debe existir siempre una sola pieza equipada por slot. El jugador debe poder distinguir con claridad `INSTALADA` de `EN INVENTARIO`.
+
+### 9.5 Límite Prototype
+
+Prototype es el nivel máximo. Nunca debe existir una evolución circular `Prototype → Street` ni cualquier degradación accidental al intentar evolucionar una Prototype. Si se intenta evolucionar una pieza máxima, la acción debe bloquearse/comunicar que ya está en el nivel máximo.
+
+### 9.6 Compatibilidad
 
 Las recetas antiguas se mantienen temporalmente en `GARAGE_RECIPES` / `CRAFT_STRIP_RECIPES` por compatibilidad con código o partidas anteriores, pero **la interfaz activa del taller utiliza `DIRECT_CRAFT_RECIPES`**.
 
 No volver a presentar la mesa de tres componentes como flujo principal salvo decisión explícita posterior.
 
-### 9.5 Commits del hito
+### 9.7 Assets de piezas
+
+Todas las familias, incluida transmisión, deben mostrar su asset real cuando exista. Evitar placeholders/procedurales. Los assets deben aprovechar bien el área disponible y conservar nitidez.
+
+### 9.8 Commits base del hito
 
 - `06c7c0f` — nueva escena de fabricación directa y simplificada.
 - `c84afd3` — recetas directas y nuevo balance de materiales.
 - `12c6524` — activación del nuevo taller en `game.js`.
 
-### 9.6 Validación pendiente
+## 10. Inventario — REDISEÑO 21/08/2026
 
-El cambio está implementado pero requiere prueba real en iPhone. Criterio de aceptación UX: al entrar en FABRICACIÓN, un jugador debe comprender inmediatamente qué pieza puede fabricar, qué le falta y qué botón debe pulsar, sin necesidad de aprender previamente el sistema.
+La ventana principal de INVENTARIO ya no debe ser únicamente un contador de materiales. Se divide en dos pestañas:
 
-También habrá que observar el ritmo real de obtención de materiales durante varias sesiones. Los números actuales son un punto de balance deliberadamente más exigente, no deben considerarse definitivos hasta contrastarlos con la economía de botín.
+**MATERIALES | PIEZAS**
 
-## 10. Reglas de trabajo
+### 10.1 Materiales
+
+- Usar los assets reales de Chatarra, Aleación, Goma, Compuesto, Disco metálico, Muelle, Engranaje y Electrónica.
+- No usar símbolos procedurales si existe asset.
+- La imagen debe aprovechar el espacio de la tarjeta sin quedar diminuta.
+- Nombre y cantidad deben ser legibles y no solaparse.
+- Se descartó el verde intenso de las cantidades por desentonar y competir con el nombre; mantener una jerarquía visual limpia.
+
+### 10.2 Piezas
+
+- Mostrar piezas fabricadas y pieza equipada.
+- Marcos de categoría muy evidentes, usando el color correspondiente al tier.
+- La pieza instalada se distingue claramente de las almacenadas.
+- Se eliminó la etiqueta redundante de categoría en la esquina superior izquierda porque tapaba arte y la categoría ya figura en el nombre.
+- Orden por defecto: **nivel más bajo primero, nivel más alto después**; dentro del mismo nivel, orden coherente por familia/nombre.
+
+### 10.3 Filtros de categoría
+
+En la pestaña PIEZAS hay cuatro botones compactos de filtro, manteniendo el código cromático de las categorías.
+
+La nomenclatura definitiva del filtro es:
+
+- `I` = Street
+- `II` = Sport
+- `III` = Racing
+- `IV` = Prototype
+
+Pulsar un nivel filtra solo ese tier; volver a pulsarlo quita el filtro y recupera la vista completa. Esta solución se prefiere a abreviaturas `ST/SP/RC/PT` por ser más limpia y universal.
+
+Archivo principal de esta interfaz: `src/game/scenes/MenuInventoryAssetsScene.js`.
+
+Commit del cambio de numeración romana: `910667f116960bd4daf728ecaa0b30ace81a6e5d`.
+
+## 11. Supervivencia, resultados y recompensas — avance 20–21/08/2026
+
+### 11.1 Cofre y botín
+
+Las pantallas de botín/recompensas deben usar los assets reales de materiales, nunca iconografía procedural cuando el asset existe. En las tarjetas de apertura de cofre el asset debe ocupar visualmente buena parte del área y estar centrado, no arrinconado ni diminuto.
+
+### 11.2 Info de sesión
+
+La modal de información post-sesión debe caber dentro del viewport en móvil apaisado y permitir acceso a sus controles inferiores; usar scroll interno cuando sea necesario, no dejar botones fuera de pantalla.
+
+La tabla de vueltas de Supervivencia debe seguir el mismo lenguaje de cronometraje por sectores que los otros modos:
+
+`VUELTA | S1 | S2 | S3 | TOTAL`
+
+No fabricar un S3 residual a partir de diferencias minúsculas. Si no existe un split válido de S3, mostrar `—`. Un valor como `0.034` no constituye por sí mismo un sector real y fue identificado como dato ilógico.
+
+### 11.3 Premios de eventos
+
+La modal de evento completado también debe representar Engranaje, Compuesto, Electrónica y demás materiales con sus assets reales, eliminando los procedurales restantes.
+
+## 12. Circuito Santa Cruz y editor — avance 20/08/2026
+
+Se trabajó un nuevo circuito Santa Cruz a partir de una silueta cerrada. La pista tuvo que ensancharse de forma importante manteniendo su forma y separando los dos tramos que colisionaban en la zona central estrecha. Regla aprendida: no deformar globalmente la geometría para ganar anchura; modificar anchura de pista y separación local conservando la identidad del trazado.
+
+En el editor se incorporaron assets específicos de Santa Cruz, incluido el Auditorio y otros elementos preparados como WebP transparentes. La biblioteca de assets debe permitir seleccionarlos y hacer scroll sin cerrar accidentalmente la modal.
+
+En el selector de circuito, mantener separación clara entre la miniatura del trazado y los datos inferiores (longitud, sectores, superficie, sentido), evitando que el texto toque la línea inferior del recuadro del mapa.
+
+## 13. UI del menú — correcciones recientes
+
+- Panel de EVENTO: evitar solapes entre título, descripción, premio y progreso.
+- Panel CIRCUITO: separar métricas de la caja de la silueta del trazado.
+- Priorizar nitidez tipográfica; evitar texto reescalado/blando cuando puede renderizarse directamente a resolución adecuada.
+- En tarjetas con arte disponible, ampliar el asset para aprovechar el espacio útil en vez de dejar grandes zonas vacías.
+
+## 14. Reglas de trabajo
 
 1. Leer este archivo antes de tocar el proyecto.
 2. No romper pista, pianos, física, HUD, minimapa ni cronometraje al trabajar otras capas.
 3. Hacer cambios pequeños y comprobables.
 4. Probar rendimiento durante varias vueltas completas.
-5. No usar decoración procedural barata donde existan assets finales.
+5. No usar decoración ni iconografía procedural barata donde existan assets finales.
 6. No colocar entorno aleatoriamente: diseñar zonas coherentes.
 7. Mantener GitHub como fuente oficial.
 8. Conservar homologaciones, telemetría y sensaciones de coches como datos de diseño, no como conversación desechable.
 9. Actualizar este `PROJECT_HANDOFF.md` tras cada solución técnica importante o cambio de flujo/economía.
+10. Nunca afirmar que un cambio está hecho sin haber realizado y confirmado el commit correspondiente.
 
-## 11. Próximo paso inmediato
+## 15. Próximas validaciones
 
-1. Probar en iPhone el nuevo taller de fabricación directa.
-2. Verificar legibilidad, tamaño táctil y ausencia de desbordamientos en apaisado.
-3. Fabricar al menos una pieza Street y comprobar descuento correcto de materiales e incorporación al inventario.
-4. Verificar que Sport/Racing/Prototype exigen correctamente la pieza del nivel inmediatamente anterior.
-5. Tras varias carreras de Supervivencia/eventos, contrastar botín obtenido frente a los nuevos costes y ajustar economía si la progresión queda demasiado rápida o excesivamente lenta.
+1. Probar en iPhone el taller completo: fabricar una pieza y confirmar que entra en inventario sin autoequiparse.
+2. Instalarla manualmente y confirmar que la pieza sustituida vuelve al inventario.
+3. Verificar que nunca existen dos piezas simultáneamente equipadas en un mismo slot.
+4. Confirmar bloqueo absoluto de evolución por encima de Prototype.
+5. Validar assets de transmisión en todas las pantallas.
+6. Probar filtros `I / II / III / IV`, orden ascendente de tiers y paginación del inventario.
+7. Revisar nitidez y tamaño de assets/textos en iPhone real.
+8. Validar tablas S1/S2/S3/TOTAL de Supervivencia con varias sesiones y circuitos.
+9. Tras varias carreras, contrastar botín obtenido frente a los nuevos costes de fabricación y ajustar economía si la progresión queda demasiado rápida o excesivamente lenta.
+10. Continuar enriqueciendo Santa Cruz con assets del editor sin comprometer legibilidad ni rendimiento.
