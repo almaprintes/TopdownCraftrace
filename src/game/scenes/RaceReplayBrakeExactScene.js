@@ -1,6 +1,6 @@
-import { RaceScene as SurvivalFinishStateScene } from './RaceSurvivalFinishStateScene.js';
+import { RaceScene as SurvivalPauseGuardScene } from './RaceSurvivalPauseGuardScene.js';
 
-export class RaceScene extends SurvivalFinishStateScene {
+export class RaceScene extends SurvivalPauseGuardScene {
   _replayBrake01(t){
     const samples=this._ghostData?.samples||[];
     if(!samples.length)return 0;
