@@ -230,7 +230,10 @@ export function installLobbyDom(scene) {
     const brand = root.querySelector('.tdr-lobby-brand');
     let adminTimer = 0;
     const cancelAdmin = () => { if (adminTimer) window.clearTimeout(adminTimer); adminTimer = 0; };
-    brand.addEventListener('pointerdown', () => {
+    brand.addEventListener('contextmenu', event => event.preventDefault());
+    brand.addEventListener('dragstart', event => event.preventDefault());
+    brand.addEventListener('pointerdown', event => {
+      event.preventDefault();
       cancelAdmin();
       adminTimer = window.setTimeout(() => {
         const enabled = localStorage.getItem('tdr2:admin') === '1' ? '0' : '1';
