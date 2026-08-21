@@ -5,10 +5,11 @@ import { loadGarage, getEquippedForCar } from '../garage/garageStore.js';
 const MATERIAL_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
 const PART_IDS=Object.keys(GARAGE_ITEMS).filter(id=>GARAGE_ITEMS[id]?.kind==='part');
 const TIER_COLOR={1:0x66c6ff,2:0x4ee1a0,3:0xbf7cff,4:0xffc64d};
+const TIER_SIGLA={1:'ST',2:'SP',3:'RC',4:'PT'};
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 
 export class MenuScene extends PreviousMenuScene {
-  _openLobbyInventoryModal(tab='materials',page=0){
+  _openLobbyInventoryModal(tab='materials',page=0,tierFilter=0){
     try{this._lobbyInventoryModal?.destroy?.(true);}catch{}
     this._lobbyInventoryModal=null;
 
@@ -37,17 +38,32 @@ export class MenuScene extends PreviousMenuScene {
       const active=tab===key;
       const b=A(this.add.rectangle(x,tabY,tabW,tabH,active?0x17405a:0x0d1a24,.99).setStrokeStyle(active?3:1,active?0x45dfff:0x355064,active?1:.78).setInteractive({useHandCursor:true}));
       A(this.add.text(x,tabY,label,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'bold',color:active?'#fff':'#a6b7c8',resolution:2}).setOrigin(.5));
-      b.on('pointerup',()=>this._openLobbyInventoryModal(key,0));
+      b.on('pointerup',()=>this._openLobbyInventoryModal(key,0,0));
     };
     tabButton(cx-tabW/2-gap/2,'MATERIALES','materials');
     tabButton(cx+tabW/2+gap/2,'PIEZAS','parts');
 
-    // Parts always progress visually from the lowest category to the highest.
-    // Within the same tier keep a deterministic order by slot/type and then name.
+    // Four compact category filters on the right. No active filter = show all.
+    if(tab==='parts'){
+      const fw=compact?34:40,fh=compact?28:32,fg=6;
+      const total=fw*4+fg*3;
+      const startX=cx+panelW/2-total-(compact?42:52);
+      [1,2,3,4].forEach((tier,i)=>{
+        const active=Number(tierFilter)===tier;
+        const x=startX+i*(fw+fg)+fw/2;
+        const b=A(this.add.rectangle(x,tabY,fw,fh,active?TIER_COLOR[tier]:0x0d1a24,.99)
+          .setStrokeStyle(active?3:2,TIER_COLOR[tier],active?1:.85)
+          .setInteractive({useHandCursor:true}));
+        A(this.add.text(x,tabY,TIER_SIGLA[tier],{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:active?'#07111f':'#ffffff',resolution:2}).setOrigin(.5));
+        b.on('pointerup',()=>this._openLobbyInventoryModal('parts',0,active?0:tier));
+      });
+    }
+
     const ids=tab==='materials'
       ? MATERIAL_IDS
       : PART_IDS
           .filter(id=>Number(garage.inventory?.[id]||0)>0||Object.values(equipped).includes(id))
+          .filter(id=>!tierFilter||Number(GARAGE_ITEMS[id]?.tier||0)===Number(tierFilter))
           .sort((a,b)=>{
             const A=GARAGE_ITEMS[a]||{},B=GARAGE_ITEMS[b]||{};
             const tierDiff=Number(A.tier||0)-Number(B.tier||0);
@@ -66,7 +82,10 @@ export class MenuScene extends PreviousMenuScene {
     const pageIds=ids.slice(page*perPage,page*perPage+perPage);
 
     if(tab==='parts'&&ids.length===0){
-      A(this.add.text(cx,gridY+availableH/2,'AÚN NO TIENES PIEZAS\n\nFabrícalas en FACTORY y aparecerán aquí.',{fontFamily:UI,fontSize:compact?'15px':'18px',fontStyle:'bold',color:'#71879b',align:'center',lineSpacing:8,resolution:2}).setOrigin(.5));
+      const msg=tierFilter
+        ? `NO TIENES PIEZAS ${TIER_SIGLA[tierFilter]} EN EL INVENTARIO`
+        : 'AÚN NO TIENES PIEZAS\n\nFabrícalas en FACTORY y aparecerán aquí.';
+      A(this.add.text(cx,gridY+availableH/2,msg,{fontFamily:UI,fontSize:compact?'15px':'18px',fontStyle:'bold',color:'#71879b',align:'center',lineSpacing:8,resolution:2}).setOrigin(.5));
     }
 
     pageIds.forEach((id,i)=>{
@@ -112,8 +131,8 @@ export class MenuScene extends PreviousMenuScene {
       const next=A(this.add.rectangle(cx+110,footerY,54,30,0x132a3b,.99).setStrokeStyle(2,0x45dfff,.65).setInteractive({useHandCursor:true}));
       A(this.add.text(cx-110,footerY,'‹',{fontFamily:UI,fontSize:'22px',fontStyle:'bold',color:'#fff',resolution:2}).setOrigin(.5));
       A(this.add.text(cx+110,footerY,'›',{fontFamily:UI,fontSize:'22px',fontStyle:'bold',color:'#fff',resolution:2}).setOrigin(.5));
-      prev.on('pointerup',()=>this._openLobbyInventoryModal(tab,(page-1+pages)%pages));
-      next.on('pointerup',()=>this._openLobbyInventoryModal(tab,(page+1)%pages));
+      prev.on('pointerup',()=>this._openLobbyInventoryModal(tab,(page-1+pages)%pages,tierFilter));
+      next.on('pointerup',()=>this._openLobbyInventoryModal(tab,(page+1)%pages,tierFilter));
     }
 
     const closeX=cx+panelW/2-(compact?24:30),closeY=cy-panelH/2+(compact?22:28);
