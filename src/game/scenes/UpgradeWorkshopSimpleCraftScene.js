@@ -10,136 +10,20 @@ const TIER_LABEL={street:'STREET',sport:'SPORT',racing:'RACING',prototype:'PROTO
 const TIER_COLOR={street:0x66c6ff,sport:0x4ee1a0,racing:0xbf7cff,prototype:0xffc64d};
 
 export class UpgradeShopScene extends PreviousWorkshop {
-  create(){
-    this.craftFamily=this.craftFamily||'engine';
-    this.craftTier=this.craftTier||'street';
-    super.create();
-  }
-
-  _forgePanel(A,r,compact){
-    this._panel(A,r,TIER_COLOR[this.craftTier]);
-    A(this.add.text(r.x+18,r.y+12,'FABRICACIÓN DIRECTA',{fontFamily:UI,fontSize:compact?'14px':'19px',fontStyle:'700',color:'#fff'}));
-    A(this.add.text(r.x+r.w-18,r.y+14,'ELIGE PIEZA · REVISA · FABRICA',{fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'700',color:'#9fb4ce'}).setOrigin(1,0));
-    const inner={x:r.x+14,y:r.y+(compact?38:49),w:r.w-28,h:r.h-(compact?49:62)};
-    const familyH=compact?42:55,tierH=compact?45:60,gap=compact?7:10;
-    this._familySelector(A,{x:inner.x,y:inner.y,w:inner.w,h:familyH},compact);
-    this._tierSelector(A,{x:inner.x,y:inner.y+familyH+gap,w:inner.w,h:tierH},compact);
-    this._recipeCard(A,{x:inner.x,y:inner.y+familyH+tierH+gap*2,w:inner.w,h:inner.h-familyH-tierH-gap*2},compact);
-  }
-
-  _familySelector(A,r,compact){
-    const gap=compact?5:7,cw=(r.w-gap*4)/5;
-    FAMILIES.forEach((f,i)=>{
-      const on=this.craftFamily===f,x=r.x+i*(cw+gap);
-      const b=A(this.add.rectangle(x,r.y,cw,r.h,on?0x153a55:0x0b1830,on?.98:.9).setOrigin(0).setStrokeStyle(on?2:1,on?0x5ce5ff:0x486384,on?1:.6).setInteractive({useHandCursor:true}));
-      A(this.add.text(x+cw/2,r.y+r.h/2,LABEL[f],{fontFamily:UI,fontSize:compact?'8px':'11px',fontStyle:'800',color:on?'#fff':'#9aacc4'}).setOrigin(.5));
-      b.on('pointerdown',()=>{if(this.busy)return;this.craftFamily=f;this.craftTier='street';this.render();});
-    });
-  }
-
-  _tierSelector(A,r,compact){
-    const gap=compact?6:9,cw=(r.w-gap*3)/4;
-    TIERS.forEach((t,i)=>{
-      const on=this.craftTier===t,x=r.x+i*(cw+gap),id=`${this.craftFamily}_${t}`,owned=qty(this.state,id);
-      const b=A(this.add.rectangle(x,r.y,cw,r.h,on?0x17223c:0x09152a,.96).setOrigin(0).setStrokeStyle(on?2:1,TIER_COLOR[t],on?1:.45).setInteractive({useHandCursor:true}));
-      A(this.add.text(x+cw/2,r.y+r.h*.39,TIER_LABEL[t],{fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'800',color:'#fff'}).setOrigin(.5));
-      A(this.add.text(x+cw/2,r.y+r.h*.73,owned?`EN INVENTARIO ×${owned}`:'SIN FABRICAR',{fontFamily:UI,fontSize:compact?'6px':'8px',fontStyle:'700',color:owned?'#73f2a7':'#74849b'}).setOrigin(.5));
-      b.on('pointerdown',()=>{if(this.busy)return;this.craftTier=t;this.render();});
-    });
-  }
-
+  create(){this.craftFamily=this.craftFamily||'engine';this.craftTier=this.craftTier||'street';super.create();}
+  _forgePanel(A,r,compact){this._panel(A,r,TIER_COLOR[this.craftTier]);A(this.add.text(r.x+18,r.y+12,'FABRICACIÓN DIRECTA',{fontFamily:UI,fontSize:compact?'14px':'19px',fontStyle:'700',color:'#fff'}));A(this.add.text(r.x+r.w-18,r.y+14,'ELIGE PIEZA · REVISA · FABRICA',{fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'700',color:'#9fb4ce'}).setOrigin(1,0));const inner={x:r.x+14,y:r.y+(compact?38:49),w:r.w-28,h:r.h-(compact?49:62)};const familyH=compact?42:55,tierH=compact?45:60,gap=compact?7:10;this._familySelector(A,{x:inner.x,y:inner.y,w:inner.w,h:familyH},compact);this._tierSelector(A,{x:inner.x,y:inner.y+familyH+gap,w:inner.w,h:tierH},compact);this._recipeCard(A,{x:inner.x,y:inner.y+familyH+tierH+gap*2,w:inner.w,h:inner.h-familyH-tierH-gap*2},compact);}
+  _familySelector(A,r,compact){const gap=compact?5:7,cw=(r.w-gap*4)/5;FAMILIES.forEach((f,i)=>{const on=this.craftFamily===f,x=r.x+i*(cw+gap);const b=A(this.add.rectangle(x,r.y,cw,r.h,on?0x153a55:0x0b1830,on?.98:.9).setOrigin(0).setStrokeStyle(on?2:1,on?0x5ce5ff:0x486384,on?1:.6).setInteractive({useHandCursor:true}));A(this.add.text(x+cw/2,r.y+r.h/2,LABEL[f],{fontFamily:UI,fontSize:compact?'8px':'11px',fontStyle:'800',color:on?'#fff':'#9aacc4'}).setOrigin(.5));b.on('pointerdown',()=>{if(this.busy)return;this.craftFamily=f;this.craftTier='street';this.render();});});}
+  _tierSelector(A,r,compact){const gap=compact?6:9,cw=(r.w-gap*3)/4;TIERS.forEach((t,i)=>{const on=this.craftTier===t,x=r.x+i*(cw+gap),id=`${this.craftFamily}_${t}`,owned=qty(this.state,id);const b=A(this.add.rectangle(x,r.y,cw,r.h,on?0x17223c:0x09152a,.96).setOrigin(0).setStrokeStyle(on?2:1,TIER_COLOR[t],on?1:.45).setInteractive({useHandCursor:true}));A(this.add.text(x+cw/2,r.y+r.h*.39,TIER_LABEL[t],{fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'800',color:'#fff'}).setOrigin(.5));A(this.add.text(x+cw/2,r.y+r.h*.73,owned?`EN INVENTARIO ×${owned}`:'SIN FABRICAR',{fontFamily:UI,fontSize:compact?'6px':'8px',fontStyle:'700',color:owned?'#73f2a7':'#74849b'}).setOrigin(.5));b.on('pointerdown',()=>{if(this.busy)return;this.craftTier=t;this.render();});});}
   _recipeCard(A,r,compact){
-    const out=`${this.craftFamily}_${this.craftTier}`,item=GARAGE_ITEMS[out],recipe=DIRECT_CRAFT_RECIPES[out];
-    const g=A(this.add.graphics());g.fillStyle(0x071225,.96);g.fillRoundedRect(r.x,r.y,r.w,r.h,15);g.lineStyle(1,TIER_COLOR[this.craftTier],.55);g.strokeRoundedRect(r.x,r.y,r.w,r.h,15);
-    if(!item||!recipe)return;
-    const art={x:r.x+10,y:r.y+10,w:r.w*(compact?.28:.31),h:r.h-20};
-    this._loadFullBleed(A,item,art);
-    A(this.add.text(art.x+art.w+14,r.y+10,item.name.toUpperCase(),{fontFamily:UI,fontSize:compact?'14px':'20px',fontStyle:'800',color:'#fff'}));
-    A(this.add.text(art.x+art.w+14,r.y+(compact?29:38),'NECESITAS',{fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'800',color:'#8ea5c3'}));
-    const reqX=art.x+art.w+14,reqW=r.x+r.w-reqX-12;
-    const rows=recipe.requires.length,rowH=Math.min(compact?31:43,(r.h-(compact?67:88))/Math.max(1,rows));
-    let can=true,missing=[];
-    recipe.requires.forEach((req,i)=>{
-      const have=qty(this.state,req.id),ok=have>=req.qty;can=can&&ok;if(!ok)missing.push(`${req.qty-have} ${GARAGE_ITEMS[req.id]?.name||req.id}`);
-      const y=r.y+(compact?42:55)+i*rowH;
-      A(this.add.text(reqX,y,(GARAGE_ITEMS[req.id]?.name||req.id).toUpperCase(),{fontFamily:UI,fontSize:compact?'7px':'10px',fontStyle:'700',color:'#dbe7f5'}));
-      A(this.add.text(reqX+reqW,y,`${have} / ${req.qty}`,{fontFamily:UI,fontSize:compact?'8px':'11px',fontStyle:'800',color:ok?'#62ef9c':'#ff6d76'}).setOrigin(1,0));
-      const barY=y+(compact?12:16),barW=reqW,bh=compact?4:6;const q=A(this.add.graphics());q.fillStyle(0x16243a,1);q.fillRoundedRect(reqX,barY,barW,bh,bh/2);q.fillStyle(ok?0x4ee1a0:0xff5964,1);q.fillRoundedRect(reqX,barY,barW*Math.min(1,have/req.qty),bh,bh/2);
-    });
-    const bh=compact?31:40,by=r.y+r.h-bh-8;
-    const button=A(this.add.rectangle(reqX,by,reqW,bh,can?0x17683f:0x273247,.98).setOrigin(0).setStrokeStyle(2,can?0x55f29b:0x526077,.9));
-    const text=can?'FABRICAR':`FALTAN ${missing[0]||'MATERIALES'}`;
-    A(this.add.text(reqX+reqW/2,by+bh/2,text.toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'800',color:can?'#fff':'#aab5c5'}).setOrigin(.5));
-    if(can){
-      button.setInteractive({useHandCursor:true});
-      // Fabricar on pointerup so the same touch cannot fall through into the modal.
-      button.on('pointerup',()=>this._craftDirect(out,recipe));
-    }
+    const out=`${this.craftFamily}_${this.craftTier}`,item=GARAGE_ITEMS[out],recipe=DIRECT_CRAFT_RECIPES[out];const g=A(this.add.graphics());g.fillStyle(0x071225,.96);g.fillRoundedRect(r.x,r.y,r.w,r.h,15);g.lineStyle(1,TIER_COLOR[this.craftTier],.55);g.strokeRoundedRect(r.x,r.y,r.w,r.h,15);if(!item||!recipe)return;
+    // Reserve a real bottom gutter so tall/full-bleed part art can never touch or overflow the recipe card.
+    const bottomGutter=compact?16:20;const art={x:r.x+10,y:r.y+10,w:r.w*(compact?.28:.31),h:Math.max(40,r.h-20-bottomGutter)};this._loadFullBleed(A,item,art);
+    A(this.add.text(art.x+art.w+14,r.y+10,item.name.toUpperCase(),{fontFamily:UI,fontSize:compact?'14px':'20px',fontStyle:'800',color:'#fff'}));A(this.add.text(art.x+art.w+14,r.y+(compact?29:38),'NECESITAS',{fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'800',color:'#8ea5c3'}));
+    const reqX=art.x+art.w+14,reqW=r.x+r.w-reqX-12;const rows=recipe.requires.length,rowH=Math.min(compact?31:43,(r.h-(compact?67:88))/Math.max(1,rows));let can=true,missing=[];
+    recipe.requires.forEach((req,i)=>{const have=qty(this.state,req.id),ok=have>=req.qty;can=can&&ok;if(!ok)missing.push(`${req.qty-have} ${GARAGE_ITEMS[req.id]?.name||req.id}`);const y=r.y+(compact?42:55)+i*rowH;A(this.add.text(reqX,y,(GARAGE_ITEMS[req.id]?.name||req.id).toUpperCase(),{fontFamily:UI,fontSize:compact?'7px':'10px',fontStyle:'700',color:'#dbe7f5'}));A(this.add.text(reqX+reqW,y,`${have} / ${req.qty}`,{fontFamily:UI,fontSize:compact?'8px':'11px',fontStyle:'800',color:ok?'#62ef9c':'#ff6d76'}).setOrigin(1,0));const barY=y+(compact?12:16),barW=reqW,bh=compact?4:6;const q=A(this.add.graphics());q.fillStyle(0x16243a,1);q.fillRoundedRect(reqX,barY,barW,bh,bh/2);q.fillStyle(ok?0x4ee1a0:0xff5964,1);q.fillRoundedRect(reqX,barY,barW*Math.min(1,have/req.qty),bh,bh/2);});
+    const bh=compact?31:40,by=r.y+r.h-bh-8;const button=A(this.add.rectangle(reqX,by,reqW,bh,can?0x17683f:0x273247,.98).setOrigin(0).setStrokeStyle(2,can?0x55f29b:0x526077,.9));const text=can?'FABRICAR':`FALTAN ${missing[0]||'MATERIALES'}`;A(this.add.text(reqX+reqW/2,by+bh/2,text.toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'800',color:can?'#fff':'#aab5c5'}).setOrigin(.5));if(can){button.setInteractive({useHandCursor:true});button.on('pointerup',()=>this._craftDirect(out,recipe));}
   }
-
-  _craftDirect(out,recipe){
-    if(this.busy||!recipe)return;
-    if(!this.state.inventory||typeof this.state.inventory!=='object')this.state.inventory={};
-    if(recipe.requires.some(r=>qty(this.state,r.id)<r.qty)){this.render();return;}
-    recipe.requires.forEach(r=>{this.state.inventory[r.id]=Math.max(0,qty(this.state,r.id)-r.qty);});
-    this.state.inventory[out]=qty(this.state,out)+1;
-    if(!Array.isArray(this.state.discoveries))this.state.discoveries=[];
-    if(!this.state.discoveries.includes(out))this.state.discoveries.push(out);
-    saveGarage(this.state);
-    this.render();
-    // Open after the FABRICAR pointerup has completed. The piece is only in inventory here.
-    this.time.delayedCall(0,()=>this._openCraftedPartModal(out));
-  }
-
-  _openCraftedPartModal(id){
-    if(this._craftedPartModal?.scene)return;
-    const item=GARAGE_ITEMS[id];if(!item?.family)return;
-    const {width:w,height:h}=this.scale,compact=h<520;
-    const root=this.add.container(0,0).setDepth(30000);this._craftedPartModal=root;
-    const A=o=>{root.add(o);return o;};
-    const veil=A(this.add.rectangle(0,0,w,h,0x020711,.86).setOrigin(0).setInteractive());
-    const pw=Math.min(w-32,compact?720:780),ph=Math.min(h-24,compact?300:390),x=(w-pw)/2,y=(h-ph)/2;
-    A(this.add.rectangle(x,y,pw,ph,0x081526,.995).setOrigin(0).setStrokeStyle(2,item.tone||0x45dfff,.95));
-    A(this.add.text(x+pw/2,y+(compact?15:22),'PIEZA FABRICADA',{fontFamily:UI,fontSize:compact?'10px':'13px',fontStyle:'800',color:'#66efaa',letterSpacing:2}).setOrigin(.5,0));
-    A(this.add.text(x+pw/2,y+(compact?34:48),item.name.toUpperCase(),{fontFamily:UI,fontSize:compact?'21px':'28px',fontStyle:'800',color:'#fff'}).setOrigin(.5,0));
-
-    const artKey=`craft_fullbleed_${id}`,artSize=compact?105:145,artCx=x+pw*.25,artCy=y+ph*.51;
-    if(this.textures.exists(artKey)){
-      const img=A(this.add.image(artCx,artCy,artKey));
-      const s=Math.min(artSize/(img.width||1),artSize/(img.height||1));img.setScale(s);
-    }else A(this.add.text(artCx,artCy,item.icon||'◆',{fontFamily:UI,fontSize:compact?'54px':'76px',color:'#fff'}).setOrigin(.5));
-
-    const eq=getEquippedForCar(this.state,this.car)||{},oldId=eq[item.family]||null,old=oldId?GARAGE_ITEMS[oldId]:null;
-    const tx=x+pw*.46,tw=pw*.48;
-    A(this.add.text(tx,y+ph*.34,'GUARDADA EN TU INVENTARIO',{fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'800',color:'#9fb3ca'}));
-    A(this.add.text(tx,y+ph*.44,old?`INSTALADA AHORA: ${old.name.toUpperCase()}`:'NO HAY NINGUNA PIEZA INSTALADA EN ESTA POSICIÓN',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'700',color:old?'#ffd36b':'#71869c',wordWrap:{width:tw}}));
-    if(old)A(this.add.text(tx,y+ph*.54,'SI INSTALAS LA NUEVA, LA ACTUAL VOLVERÁ AL INVENTARIO.',{fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'700',color:'#c2cede',wordWrap:{width:tw}}));
-
-    const close=()=>{try{root.destroy(true);}catch{}if(this._craftedPartModal===root)this._craftedPartModal=null;this.render();};
-    const btnH=compact?38:46,btnY=y+ph-btnH-(compact?13:18),gap=10,btnW=(tw-gap)/2;
-    const keep=A(this.add.rectangle(tx,btnY,btnW,btnH,0x16263a,.98).setOrigin(0).setStrokeStyle(1,0x6f87a4,.8).setInteractive({useHandCursor:true}));
-    A(this.add.text(tx+btnW/2,btnY+btnH/2,'GUARDAR',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'800',color:'#fff'}).setOrigin(.5));
-    const installX=tx+btnW+gap;
-    const install=A(this.add.rectangle(installX,btnY,btnW,btnH,0x17683f,.98).setOrigin(0).setStrokeStyle(2,0x55f29b,.95).setInteractive({useHandCursor:true}));
-    A(this.add.text(installX+btnW/2,btnY+btnH/2,'INSTALAR AHORA',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'800',color:'#fff'}).setOrigin(.5));
-
-    // Modal actions require a NEW press. Never react to the release that created the modal.
-    keep.on('pointerdown',close);
-    install.on('pointerdown',()=>{this._installCraftedPart(id);close();});
-    veil.on('pointerdown',()=>{});
-  }
-
-  _installCraftedPart(id){
-    const item=GARAGE_ITEMS[id];if(!item?.family||qty(this.state,id)<1)return false;
-    if(!this.state.equippedByCar||typeof this.state.equippedByCar!=='object')this.state.equippedByCar={};
-    const current={...(getEquippedForCar(this.state,this.car)||{})};
-    const oldId=current[item.family]||null;
-    if(oldId===id)return true;
-    this.state.inventory[id]=Math.max(0,qty(this.state,id)-1);
-    if(oldId)this.state.inventory[oldId]=qty(this.state,oldId)+1;
-    current[item.family]=id;
-    this.state.equippedByCar[this.car]=current;
-    saveGarage(this.state);
-    return true;
-  }
+  _craftDirect(out,recipe){if(this.busy||!recipe)return;if(!this.state.inventory||typeof this.state.inventory!=='object')this.state.inventory={};if(recipe.requires.some(r=>qty(this.state,r.id)<r.qty)){this.render();return;}recipe.requires.forEach(r=>{this.state.inventory[r.id]=Math.max(0,qty(this.state,r.id)-r.qty);});this.state.inventory[out]=qty(this.state,out)+1;if(!Array.isArray(this.state.discoveries))this.state.discoveries=[];if(!this.state.discoveries.includes(out))this.state.discoveries.push(out);saveGarage(this.state);this.render();this.time.delayedCall(0,()=>this._openCraftedPartModal(out));}
+  _openCraftedPartModal(id){if(this._craftedPartModal?.scene)return;const item=GARAGE_ITEMS[id];if(!item?.family)return;const {width:w,height:h}=this.scale,compact=h<520;const root=this.add.container(0,0).setDepth(30000);this._craftedPartModal=root;const A=o=>{root.add(o);return o;};const veil=A(this.add.rectangle(0,0,w,h,0x020711,.86).setOrigin(0).setInteractive());const pw=Math.min(w-32,compact?720:780),ph=Math.min(h-24,compact?300:390),x=(w-pw)/2,y=(h-ph)/2;A(this.add.rectangle(x,y,pw,ph,0x081526,.995).setOrigin(0).setStrokeStyle(2,item.tone||0x45dfff,.95));A(this.add.text(x+pw/2,y+(compact?15:22),'PIEZA FABRICADA',{fontFamily:UI,fontSize:compact?'10px':'13px',fontStyle:'800',color:'#66efaa',letterSpacing:2}).setOrigin(.5,0));A(this.add.text(x+pw/2,y+(compact?34:48),item.name.toUpperCase(),{fontFamily:UI,fontSize:compact?'21px':'28px',fontStyle:'800',color:'#fff'}).setOrigin(.5,0));const artKey=`craft_fullbleed_${id}`,artSize=compact?105:145,artCx=x+pw*.25,artCy=y+ph*.51;if(this.textures.exists(artKey)){const img=A(this.add.image(artCx,artCy,artKey));const s=Math.min(artSize/(img.width||1),artSize/(img.height||1));img.setScale(s);}else A(this.add.text(artCx,artCy,item.icon||'◆',{fontFamily:UI,fontSize:compact?'54px':'76px',color:'#fff'}).setOrigin(.5));const eq=getEquippedForCar(this.state,this.car)||{},oldId=eq[item.family]||null,old=oldId?GARAGE_ITEMS[oldId]:null;const tx=x+pw*.46,tw=pw*.48;A(this.add.text(tx,y+ph*.34,'GUARDADA EN TU INVENTARIO',{fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'800',color:'#9fb3ca'}));A(this.add.text(tx,y+ph*.44,old?`INSTALADA AHORA: ${old.name.toUpperCase()}`:'NO HAY NINGUNA PIEZA INSTALADA EN ESTA POSICIÓN',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'700',color:old?'#ffd36b':'#71869c',wordWrap:{width:tw}}));if(old)A(this.add.text(tx,y+ph*.54,'SI INSTALAS LA NUEVA, LA ACTUAL VOLVERÁ AL INVENTARIO.',{fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'700',color:'#c2cede',wordWrap:{width:tw}}));const close=()=>{try{root.destroy(true);}catch{}if(this._craftedPartModal===root)this._craftedPartModal=null;this.render();};const btnH=compact?38:46,btnY=y+ph-btnH-(compact?13:18),gap=10,btnW=(tw-gap)/2;const keep=A(this.add.rectangle(tx,btnY,btnW,btnH,0x16263a,.98).setOrigin(0).setStrokeStyle(1,0x6f87a4,.8).setInteractive({useHandCursor:true}));A(this.add.text(tx+btnW/2,btnY+btnH/2,'GUARDAR',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'800',color:'#fff'}).setOrigin(.5));const installX=tx+btnW+gap;const install=A(this.add.rectangle(installX,btnY,btnW,btnH,0x17683f,.98).setOrigin(0).setStrokeStyle(2,0x55f29b,.95).setInteractive({useHandCursor:true}));A(this.add.text(installX+btnW/2,btnY+btnH/2,'INSTALAR AHORA',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'800',color:'#fff'}).setOrigin(.5));keep.on('pointerdown',close);install.on('pointerdown',()=>{this._installCraftedPart(id);close();});veil.on('pointerdown',()=>{});}
+  _installCraftedPart(id){const item=GARAGE_ITEMS[id];if(!item?.family||qty(this.state,id)<1)return false;if(!this.state.equippedByCar||typeof this.state.equippedByCar!=='object')this.state.equippedByCar={};const current={...(getEquippedForCar(this.state,this.car)||{})};const oldId=current[item.family]||null;if(oldId===id)return true;this.state.inventory[id]=Math.max(0,qty(this.state,id)-1);if(oldId)this.state.inventory[oldId]=qty(this.state,oldId)+1;current[item.family]=id;this.state.equippedByCar[this.car]=current;saveGarage(this.state);return true;}
 }
