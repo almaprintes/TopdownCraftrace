@@ -23,9 +23,17 @@ export function garageDisplayStats(spec,s,carId=selectedCarId(),replacementPartI
 // Equal 10% shares for the five family-specific Street materials guarantee equal family feasibility.
 export const MATERIAL_DROP_TARGETS={scrap:.38,alloy:.10,rubber:.10,disc:.10,spring:.10,gear:.10,compound:.08,ecu:.04};
 const MATERIAL_IDS=Object.keys(MATERIAL_DROP_TARGETS);
-let LOOT_SESSION={trackKey:null,laps:0,totals:{},ecuDrops:0,chests:0,bonusLaps:0};
-export function resetRaceLootSession(trackKey=null){LOOT_SESSION={trackKey:trackKey||null,laps:0,totals:{},ecuDrops:0,chests:0,bonusLaps:0};}
-export function getRaceLootSessionSummary(){return{trackKey:LOOT_SESSION.trackKey,laps:Number(LOOT_SESSION.laps||0),totals:{...(LOOT_SESSION.totals||{})},ecuDrops:Number(LOOT_SESSION.ecuDrops||0),chests:Number(LOOT_SESSION.chests||0),bonusLaps:Number(LOOT_SESSION.bonusLaps||0)};}
+
+// Loot is normalized by validated race time rather than raw lap count.
+// This prevents very short circuits from becoming optimal farming tracks while preserving
+// approximately the previous 15-roll yield for ~225 s of competitive driving.
+const BASE_ROLL_MS=22500;   // 10 base rolls per 225 s
+const BONUS_ROLL_MS=75000;  // 3 extra rolls per 225 s
+const CHEST_MS=225000;      // 2 chest rolls per 225 s
+const MAX_CREDIT_LAP_MS=90000;
+let LOOT_SESSION={trackKey:null,laps:0,totals:{},ecuDrops:0,chests:0,bonusLaps:0,baseCreditMs:0,bonusCreditMs:0,chestCreditMs:0};
+export function resetRaceLootSession(trackKey=null){LOOT_SESSION={trackKey:trackKey||null,laps:0,totals:{},ecuDrops:0,chests:0,bonusLaps:0,baseCreditMs:0,bonusCreditMs:0,chestCreditMs:0};}
+export function getRaceLootSessionSummary(){return{trackKey:LOOT_SESSION.trackKey,laps:Number(LOOT_SESSION.laps||0),totals:{...(LOOT_SESSION.totals||{})},ecuDrops:Number(LOOT_SESSION.ecuDrops||0),chests:Number(LOOT_SESSION.chests||0),bonusLaps:Number(LOOT_SESSION.bonusLaps||0),baseCreditMs:Number(LOOT_SESSION.baseCreditMs||0),bonusCreditMs:Number(LOOT_SESSION.bonusCreditMs||0),chestCreditMs:Number(LOOT_SESSION.chestCreditMs||0)};}
 function stackSize(id){if(id==='scrap')return 2+Math.floor(Math.random()*3);if(id==='compound')return 1+Math.floor(Math.random()*2);if(id==='ecu')return 1;return 1+Math.floor(Math.random()*3);}
 function adaptiveMaterialRoll(s){
   if(!s.lootBalance||typeof s.lootBalance!=='object')s.lootBalance={draws:0,counts:{...EMPTY_LOOT_COUNTS}};
@@ -36,15 +44,38 @@ function adaptiveMaterialRoll(s){
   s.lootBalance.draws=draws+1;s.lootBalance.counts[id]=Math.max(0,Number(s.lootBalance.counts[id]||0))+1;return{id,qty:stackSize(id)};
 }
 function readBestMs(key){try{const raw=localStorage.getItem(key);if(!raw)return null;const x=JSON.parse(raw),ms=Number(x?.lapMs);return Number.isFinite(ms)&&ms>0?ms:null;}catch{return null;}}
+function validatedLootTimeMs(lapMs,carBestMs,circuitBestMs){
+  const lap=Number(lapMs);if(!Number.isFinite(lap)||lap<=0)return 0;
+  const refs=[Number(carBestMs),Number(circuitBestMs)].filter(v=>Number.isFinite(v)&&v>0);
+  // Slow-driving/idling cannot increase farming yield: once a reference exists we credit
+  // at most 125% of the quickest known valid reference. First laps have a hard safety cap.
+  const ref=refs.length?Math.min(...refs):lap;
+  return Math.max(0,Math.min(lap,ref*1.25,MAX_CREDIT_LAP_MS));
+}
+function consumeCredit(field,threshold,onRoll){
+  let count=0;
+  while(LOOT_SESSION[field]>=threshold){LOOT_SESSION[field]-=threshold;onRoll();count++;}
+  return count;
+}
 export function grantRaceLoot({trackKey='track01',lapMs=null}={}){
   const s=loadGarage(),reward={},add=(id,n=1)=>{reward[id]=(reward[id]||0)+n;},roll=(bucket=null)=>{const d=adaptiveMaterialRoll(s);add(d.id,d.qty);if(bucket)bucket[d.id]=(bucket[d.id]||0)+d.qty;return d;};
   if(LOOT_SESSION.trackKey!==trackKey)resetRaceLootSession(trackKey);LOOT_SESSION.laps+=1;const sessionLap=LOOT_SESSION.laps;
   const carId=selectedCarId(),lap=Number(lapMs),carBestMs=readBestMs(`tdr2:ttBestCar:${trackKey}:${carId}`),circuitBestMs=readBestMs(`tdr2:ttBest:${trackKey}`),carBest=Number.isFinite(lap)&&Number.isFinite(carBestMs)&&Math.abs(lap-carBestMs)<1,circuitRecord=Number.isFinite(lap)&&Number.isFinite(circuitBestMs)&&Math.abs(lap-circuitBestMs)<1,within110=Number.isFinite(lap)&&Number.isFinite(carBestMs)&&lap<=carBestMs*1.10;
-  // Five-lap Survival calibration: 10 guaranteed + ~3 stochastic + 2 chest = ~15 rolls.
-  roll();roll();let bonusCommon=false;if(Math.random()<.60){roll();bonusCommon=true;}
-  const chest=sessionLap%5===0,chestLoot={};if(chest){roll(chestLoot);roll(chestLoot);}
-  for(const[id,n]of Object.entries(reward)){addItem(s,id,n);LOOT_SESSION.totals[id]=(LOOT_SESSION.totals[id]||0)+Number(n||0);}const ecuDrop=Number(reward.ecu||0)>0;if(ecuDrop)LOOT_SESSION.ecuDrops+=Number(reward.ecu||0);if(chest)LOOT_SESSION.chests+=1;if(bonusCommon)LOOT_SESSION.bonusLaps+=1;
-  const meta={trackKey,lapMs:lap,sessionLap,chest,chestLoot,bonusCommon,within110,carBest,circuitRecord,ecuDrop,adaptive:true,label:circuitRecord?'RÉCORD DEL CIRCUITO':carBest?'MEJOR VUELTA':within110?'VUELTA RÁPIDA':'VUELTA VÁLIDA'};
+
+  const creditedMs=validatedLootTimeMs(lap,carBestMs,circuitBestMs);
+  LOOT_SESSION.baseCreditMs+=creditedMs;
+  LOOT_SESSION.bonusCreditMs+=creditedMs;
+  LOOT_SESSION.chestCreditMs+=creditedMs;
+
+  const baseRolls=consumeCredit('baseCreditMs',BASE_ROLL_MS,()=>roll());
+  const bonusRolls=consumeCredit('bonusCreditMs',BONUS_ROLL_MS,()=>roll());
+  const chestLoot={};
+  let chestCount=0;
+  while(LOOT_SESSION.chestCreditMs>=CHEST_MS){LOOT_SESSION.chestCreditMs-=CHEST_MS;roll(chestLoot);roll(chestLoot);chestCount++;}
+  const chest=chestCount>0,bonusCommon=bonusRolls>0;
+
+  for(const[id,n]of Object.entries(reward)){addItem(s,id,n);LOOT_SESSION.totals[id]=(LOOT_SESSION.totals[id]||0)+Number(n||0);}const ecuDrop=Number(reward.ecu||0)>0;if(ecuDrop)LOOT_SESSION.ecuDrops+=Number(reward.ecu||0);if(chest)LOOT_SESSION.chests+=chestCount;if(bonusCommon)LOOT_SESSION.bonusLaps+=bonusRolls;
+  const meta={trackKey,lapMs:lap,creditedMs,sessionLap,chest,chestCount,chestLoot,baseRolls,bonusRolls,bonusCommon,within110,carBest,circuitRecord,ecuDrop,adaptive:true,timeNormalized:true,label:circuitRecord?'RÉCORD DEL CIRCUITO':carBest?'MEJOR VUELTA':within110?'VUELTA RÁPIDA':'VUELTA VÁLIDA'};
   s.lastReward={...reward,t:Date.now(),trackKey,lapMs:lap,doubled:false,meta};saveGarage(s);Object.defineProperty(reward,'meta',{value:meta,enumerable:false,configurable:true});return reward;
 }
 export function grantRaceReward(mult=1){const s=loadGarage(),reward={scrap:2*mult,alloy:1*mult,rubber:1*mult};for(const[id,n]of Object.entries(reward))addItem(s,id,n);s.lastReward={...reward,t:Date.now(),doubled:mult>1};saveGarage(s);return reward;}
