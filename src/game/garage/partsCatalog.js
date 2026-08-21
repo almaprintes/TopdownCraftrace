@@ -1,5 +1,12 @@
 export const GARAGE_ITEMS = {
-  scrap:{id:'scrap',name:'Chatarra',kind:'material',icon:'🔩',tone:0x77818f}, alloy:{id:'alloy',name:'Aleación',kind:'material',icon:'⬡',tone:0x9fb6c8}, rubber:{id:'rubber',name:'Goma',kind:'material',icon:'◉',tone:0x30343a}, compound:{id:'compound',name:'Compuesto',kind:'material',icon:'◆',tone:0xf3a63b}, disc:{id:'disc',name:'Disco metálico',kind:'material',icon:'◎',tone:0xb8c2cc}, spring:{id:'spring',name:'Muelle',kind:'material',icon:'〰',tone:0x73d3ff}, gear:{id:'gear',name:'Engranaje',kind:'material',icon:'⚙',tone:0xd7bf74}, ecu:{id:'ecu',name:'Electrónica',kind:'material',icon:'▣',tone:0x59e0aa},
+  scrap:{id:'scrap',name:'Chatarra',kind:'material',rarity:'common',icon:'🔩',tone:0x77818f},
+  alloy:{id:'alloy',name:'Aleación',kind:'material',rarity:'uncommon',icon:'⬡',tone:0x9fb6c8},
+  rubber:{id:'rubber',name:'Goma',kind:'material',rarity:'uncommon',icon:'◉',tone:0x30343a},
+  disc:{id:'disc',name:'Disco metálico',kind:'material',rarity:'uncommon',icon:'◎',tone:0xb8c2cc},
+  spring:{id:'spring',name:'Muelle',kind:'material',rarity:'uncommon',icon:'〰',tone:0x73d3ff},
+  gear:{id:'gear',name:'Engranaje',kind:'material',rarity:'uncommon',icon:'⚙',tone:0xd7bf74},
+  compound:{id:'compound',name:'Compuesto',kind:'material',rarity:'rare',icon:'◆',tone:0xf3a63b},
+  ecu:{id:'ecu',name:'Electrónica',kind:'material',rarity:'epic',icon:'▣',tone:0x59e0aa},
   brake_pad:{id:'brake_pad',name:'Pastilla deportiva',kind:'component',icon:'▰',tone:0xff8c61}, engine_block:{id:'engine_block',name:'Bloque preparado',kind:'component',icon:'▤',tone:0x8ea6bf},
 };
 const families={brakes:['Frenos','◉'],tires:['Neumático','⬤'],suspension:['Suspensión','↕'],transmission:['Caja','⚙'],engine:['Motor','▦']};
@@ -7,16 +14,30 @@ const tierNames=['street','sport','racing','prototype'],tones=[0x66c6ff,0x4ee1a0
 for(const [family,[name,icon]] of Object.entries(families)) tierNames.forEach((tier,i)=>{GARAGE_ITEMS[`${family}_${tier}`]={id:`${family}_${tier}`,name:`${name} ${tier[0].toUpperCase()+tier.slice(1)}`,kind:'part',family,tier:i+1,icon,tone:tones[i]};});
 GARAGE_ITEMS.tires_racing.name='Semi-Slick Racing'; GARAGE_ITEMS.tires_prototype.name='Slick Prototype'; GARAGE_ITEMS.suspension_racing.name='Coilover Racing'; GARAGE_ITEMS.suspension_prototype.name='Suspensión Active Prototype'; GARAGE_ITEMS.transmission_prototype.name='Sequential Prototype';
 
-// Direct crafting economy: previous-tier part first, then materials from lowest to highest value.
-// Quantities are inversely proportional to material value/drop rarity: common resources are the main sink; premium resources require fewer units.
+// Economy 2.0. Every family in a tier has the same mathematical effort.
+// Street uses only common/uncommon resources so the player's first choice is never punished by rarity.
+// Higher tiers progressively introduce Compound and Electronics. Previous-tier piece is always first.
 const R=(...pairs)=>pairs.map(([id,qty])=>({id,qty}));
-export const DIRECT_CRAFT_RECIPES={
- brakes_street:{requires:R(['scrap',12],['alloy',8],['disc',6],['compound',4])}, brakes_sport:{requires:R(['brakes_street',1],['scrap',24],['alloy',16],['disc',12],['compound',8])}, brakes_racing:{requires:R(['brakes_sport',1],['scrap',42],['alloy',28],['disc',20],['compound',14])}, brakes_prototype:{requires:R(['brakes_racing',1],['scrap',68],['alloy',46],['disc',34],['compound',24],['ecu',12])},
- tires_street:{requires:R(['scrap',12],['rubber',10],['alloy',6],['compound',4])}, tires_sport:{requires:R(['tires_street',1],['scrap',24],['rubber',18],['alloy',12],['compound',8])}, tires_racing:{requires:R(['tires_sport',1],['scrap',42],['rubber',32],['alloy',22],['compound',14])}, tires_prototype:{requires:R(['tires_racing',1],['scrap',68],['rubber',54],['alloy',38],['compound',24],['ecu',10])},
- suspension_street:{requires:R(['scrap',12],['alloy',8],['spring',6])}, suspension_sport:{requires:R(['suspension_street',1],['scrap',24],['alloy',16],['spring',12])}, suspension_racing:{requires:R(['suspension_sport',1],['scrap',42],['alloy',28],['spring',20])}, suspension_prototype:{requires:R(['suspension_racing',1],['scrap',68],['alloy',46],['spring',32],['ecu',12])},
- transmission_street:{requires:R(['scrap',12],['alloy',8],['gear',6])}, transmission_sport:{requires:R(['transmission_street',1],['scrap',24],['alloy',16],['gear',12])}, transmission_racing:{requires:R(['transmission_sport',1],['scrap',42],['alloy',28],['gear',20])}, transmission_prototype:{requires:R(['transmission_racing',1],['scrap',68],['alloy',46],['gear',32],['ecu',12])},
- engine_street:{requires:R(['scrap',12],['alloy',8],['ecu',4])}, engine_sport:{requires:R(['engine_street',1],['scrap',24],['alloy',16],['ecu',8])}, engine_racing:{requires:R(['engine_sport',1],['scrap',42],['alloy',28],['ecu',14])}, engine_prototype:{requires:R(['engine_racing',1],['scrap',68],['alloy',46],['compound',28],['ecu',18])}
+const SECONDARY={engine:'alloy',brakes:'disc',tires:'rubber',suspension:'spring',transmission:'gear'};
+const PREV={sport:'street',racing:'sport',prototype:'racing'};
+const TIER_COST={
+  street:{scrap:8,secondary:2},
+  sport:{scrap:28,secondary:5,compound:3},
+  racing:{scrap:50,secondary:9,compound:5,ecu:2},
+  prototype:{scrap:90,secondary:16,compound:10,ecu:3}
 };
+export const DIRECT_CRAFT_RECIPES={};
+for(const family of Object.keys(SECONDARY)){
+  for(const tier of tierNames){
+    const req=[];
+    if(PREV[tier])req.push([`${family}_${PREV[tier]}`,1]);
+    const c=TIER_COST[tier];
+    req.push(['scrap',c.scrap],[SECONDARY[family],c.secondary]);
+    if(c.compound)req.push(['compound',c.compound]);
+    if(c.ecu)req.push(['ecu',c.ecu]);
+    DIRECT_CRAFT_RECIPES[`${family}_${tier}`]={requires:R(...req)};
+  }
+}
 
 export const GARAGE_RECIPES=[{a:'disc',b:'compound',out:'brake_pad'},{a:'brake_pad',b:'disc',out:'brakes_street'},{a:'rubber',b:'compound',out:'tires_street'},{a:'spring',b:'alloy',out:'suspension_street'},{a:'gear',b:'alloy',out:'transmission_street'},{a:'scrap',b:'alloy',out:'engine_block'},{a:'engine_block',b:'ecu',out:'engine_street'}];
 export const CRAFT_STRIP_RECIPES=[{in:['rubber','compound','alloy'],out:'tires_street'},{in:['disc','compound','alloy'],out:'brakes_street'},{in:['spring','alloy','scrap'],out:'suspension_street'},{in:['gear','alloy','scrap'],out:'transmission_street'},{in:['scrap','alloy','ecu'],out:'engine_street'}];
