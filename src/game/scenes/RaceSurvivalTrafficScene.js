@@ -498,6 +498,7 @@ export class RaceScene extends CurrentRaceScene {
         throttle:Number(b._plannerControl?.throttle||0),
         brake:Number(b._plannerControl?.brake||0),
         targetSpeed:Number(b._plannerControl?.targetSpeed||0),
+        chicaneAhead:Boolean(b._plannerControl?.chicaneAhead),
         distanceToLine:Number(b._plannerControl?.distanceToLine||0),
         offTrackSeconds:Number(b._plannerOffTrackSec||0),
         recoveryCount:Number(b._plannerRecoveryCount||0),
