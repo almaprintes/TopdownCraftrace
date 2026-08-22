@@ -443,3 +443,7 @@ Resultado real: V1 20,12 s (0 %), V2 19,79 s (18 %), V3 19,73 s (30 %). La ense�
 
 La sesión 20,07 → 19,67 → 19,77 s mostró que 53 % podía ser peor que 34 %. Se sustituyó la escalada ciega por búsqueda conservadora: conservar mejor tiempo/mezcla, explorar +8 puntos tras una mejora y retroceder si una dosis superior pierde más de 50 ms. Prueba sintética: V1 fija 34 %, una V2 mejor habilita 42 %, y una V3 regresiva restaura 34 % con contador de rollback. Sintaxis validada en las capas Traffic y Polish.
 
+### Reconciliación con ttHistory y recompensas
+
+Caso real: 5 completedLaps, 3 registros generales, una vuelta fusionada de 35,670 s y solo 3 vueltas premiadas. Se sincroniza ahora el segmento de sesión de `ttHistory` en cada vuelta competitiva aceptada. Prueba sintética con historial [17,435, ausencia, 35,670] y tiempos autoritativos [17,435, 17,800, 17,901]: resultado exacto de tres entradas; la primera conserva splits alineados y las dos recuperadas descartan sectores falsos. Sintaxis validada. Pendiente confirmar en dispositivo 5/5 filas y 5 vueltas premiadas.
+
