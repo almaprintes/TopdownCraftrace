@@ -105,7 +105,16 @@ export class RaceScene extends CurrentRaceScene{
     const key=this.trackKey||(()=>{try{return localStorage.getItem('tdr2:trackKey')||'track01';}catch{return'track01';}})();
     try{
       const h=JSON.parse(localStorage.getItem(`tdr2:ttHist:${key}`)||'null')?.history;if(!Array.isArray(h))return null;
-      let best=null;for(const r of h){const ms=Number(r?.lapMs);if(Number.isFinite(ms)&&ms>5000&&(best==null||ms<best))best=ms;}return best;
+      const currentCar=String(this.carId||this.selectedCarId||'');
+      let best=null;
+      for(const r of h){
+        // Los registros antiguos no incluyen coche: no sirven para equilibrar
+        // una parrilla actual sin inventar su procedencia.
+        if(!currentCar||String(r?.carId||'')!==currentCar)continue;
+        const ms=Number(r?.lapMs);
+        if(Number.isFinite(ms)&&ms>5000&&(best==null||ms<best))best=ms;
+      }
+      return best;
     }catch{return null;}
   }
   _survivalSessionBestLapMs(){
