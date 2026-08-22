@@ -770,8 +770,21 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
     const assetVersion = encodeURIComponent(spec.cardAssetVersion || 1);
     const src = `${CARD_BASE}${fileName}?v=${assetVersion}`;
 
-    if (dom.img.src !== new URL(src, document.baseURI).href) dom.img.src = src;
-    dom.img.alt = spec.name || carId;
+    // Reuse the exact URL already resolved and decoded by Phaser. This avoids
+    // differences between Phaser's loader base URL and document.baseURI.
+    const sourceImage = heroCard.texture?.getSourceImage?.();
+    const resolvedSrc = sourceImage?.currentSrc || sourceImage?.src || new URL(src, document.baseURI).href;
+
+    dom.img.alt = '';
+    dom.img.onerror = () => {
+      dom.root.style.display = 'none';
+      if (heroCard?.scene) heroCard.setVisible(true).setAlpha(1);
+    };
+    dom.img.onload = () => {
+      if (heroCard?.scene) heroCard.setVisible(false).setAlpha(0);
+      dom.root.style.display = 'block';
+    };
+    if (dom.img.src !== resolvedSrc) dom.img.src = resolvedSrc;
 
     const canvasRect = canvas.getBoundingClientRect();
     const hostRect = host.getBoundingClientRect();
