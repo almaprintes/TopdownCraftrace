@@ -489,3 +489,15 @@ Tras una segunda grabación real:
 - 17/17 circuitos conservan validez estructural;
 - un techo del 95 % se probó y descartó por salida en Shanghai;
 - pendiente validación visual y de ritmo en iPhone.
+
+
+## Criterio de piano y compromiso de chicane
+
+Decisión de conducción:
+
+- tocar brevemente un piano para arañar tiempo es válido y humaniza;
+- tolerancia experimental: hasta 3 px durante 0.40 s;
+- una chicane corta mantiene un objetivo de salida fijo durante doce muestras;
+- CPU1 usa factor 1.45 y techo 95 %;
+- 17/17 circuitos pasan el criterio revisado;
+- no existe fatiga programada por vuelta.
