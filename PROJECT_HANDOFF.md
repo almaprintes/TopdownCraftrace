@@ -154,5 +154,7 @@ Decisión vigente:
 - cada circuito nuevo debe pasar el checklist de ese informe antes de habilitar `planner_v1`;
 - el planificador acondiciona discontinuidades únicamente en su geometría derivada y conserva el margen lateral;
 - los 17 circuitos pasan validación estructural; Sakhir, Shanghai y Santa Cruz requieren revisión visual prioritaria antes de entregar control a la nueva trayectoria;
-- el controlador provisional `legacy` ya no añade oscilación sinusoidal ni cambios de offset aleatorios;
-- chicanes y horquillas usan riesgo anticipado para bloquear maniobras laterales; Santa Cruz debe volver a probarse visualmente.
+- el intento de estabilizar provisionalmente el controlador `legacy` empeoró Santa Cruz y se revirtió completo en `883258c`; no tratarlo como activo;
+- la Fase 2 genera perfiles anticipativos de velocidad en observación mediante `src/game/ai/trackSpeedProfilePlanner.js`;
+- 17/17 circuitos pasan la validación estructural del perfil; informe en `docs/SURVIVAL_AI_SPEED_PROFILE_VALIDATION_2026-08-22.md`;
+- el perfil de velocidad todavía no controla coches: falta calibración y el controlador físico de Fase 3.
