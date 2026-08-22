@@ -42,8 +42,13 @@ export class RaceScene extends TrafficRaceScene {
       this._survivalAiTelemetry?.pushEvent?.({
         timeMs:Math.round(Number(this.time?.now||0)),
         type:'cpu1_lap',lap:this._survivalCpu1LapTimes.length,
-        lapMs:Math.round(Number(lapMs)||0)
+        lapMs:Math.round(Number(lapMs)||0),
+        teachingBlend:Number(racer._plannerTeachingBlend||0),
+        teacherLap:Number(racer._plannerTeacherLap||0)
       });
+      // La enseñanza cerrada durante la vuelta humana solo entra en vigor al
+      // comenzar una vuelta nueva de CPU1. Así V1 queda como línea base limpia.
+      this._activateSurvivalTeachingForCpuLap?.();
     }
     return true;
   }
