@@ -13,6 +13,13 @@ function crossed(prev,x,y,g){
   if(![ax,ay,bx,by,cx,cy,dx,dy].every(Number.isFinite))return false;
   return segIntersect(ax,ay,bx,by,cx,cy,dx,dy);
 }
+function duelCheckpointGates(scene){
+  const authored=scene?.track?.meta?.checkpoints;
+  if(Array.isArray(authored)&&authored.length>=2)return{cp1:authored[0],cp2:authored[1]};
+  const legacy=scene?.checkpoints;
+  if(Array.isArray(legacy)&&legacy.length>=2)return{cp1:legacy[0],cp2:legacy[1]};
+  return{cp1:legacy?.cp1||null,cp2:legacy?.cp2||null};
+}
 
 export class RaceScene extends CurrentRaceScene {
   create(data={}){
@@ -60,7 +67,7 @@ export class RaceScene extends CurrentRaceScene {
     const prev=this._duelCpuSectorPrev;
     if(prev){
       const timing=this._duelCpuSectorTiming;
-      const cp1=this.checkpoints?.cp1,cp2=this.checkpoints?.cp2;
+      const {cp1,cp2}=duelCheckpointGates(this);
       if(timing?.lapStart!=null&&timing.cp1At==null&&crossed(prev,x,y,cp1))timing.cp1At=performance.now();
       if(timing?.lapStart!=null&&timing.cp1At!=null&&timing.cp2At==null&&crossed(prev,x,y,cp2))timing.cp2At=performance.now();
     }
