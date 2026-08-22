@@ -201,3 +201,10 @@ Decisión vigente:
 - Shanghai alcanza el caso límite medido: 1.5 px durante 0.30 s;
 - no hay fatiga programada: Santa Cruz simula vueltas consecutivas de 29.23 y 29.10 s;
 - pendiente validación visual en iPhone.
+
+- cuarta grabación: CPU1 termina la sesión, pero el jugador gana a medio gas; asegura cada curva y circula habitualmente a 40–50 km/h en ellas;
+- se añade riesgo calculado: conserva más velocidad solo cuando llega con poco error angular y transversal;
+- riesgo máximo 0.35, sin aumentar punta ni introducir errores aleatorios;
+- la variante sin confianza se descartó porque Shanghai salía 13 px casi un segundo;
+- versión vigente: 17/17 válidos; Santa Cruz simula 27.45 y 27.38 s consecutivos;
+- telemetría nueva: cornerRisk, riskConfidence y riskScale.
