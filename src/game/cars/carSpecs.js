@@ -382,7 +382,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 7,
     rarity: 'Poco común',
-    cardAssetVersion: 3,
+    cardAssetVersion: 4,
     skin: 'skin_avenir_gripline.webp',
     visualScale: 1.02,
 
@@ -420,7 +420,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 8,
     rarity: 'Raro',
-    cardAssetVersion: 3,
+    cardAssetVersion: 4,
     skin: 'skin_avenir_apex.webp',
     visualScale: 1.03,
 
@@ -458,7 +458,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 9,
     rarity: 'Élite',
-    cardAssetVersion: 3,
+    cardAssetVersion: 4,
     skin: 'skin_avenir_torque.webp',
     visualScale: 1.04,
 
