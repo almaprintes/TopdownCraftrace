@@ -133,7 +133,7 @@ export class RaceScene extends CurrentRaceScene{
     const bestMs=this._survivalPlayerBestLapMs();let baseLapSec;
     if(Number.isFinite(bestMs))baseLapSec=clamp(bestMs/1000,12,180);
     else{const surfacePace=clamp((surface.speedCapacity||1)*(surface.movingDriveCapacity||1),.42,1.02);baseLapSec=clamp(lenPx/Math.max(55,playerMax*surfacePace*.42),28,120);}
-    const lapMultipliers=[1.24,1.19,1.15,1.11,1.08],carWidth=Math.max(12,Number(visual.displayWidth||visual.width||28)),carLength=Math.max(20,Number(visual.displayHeight||visual.height||48)),laneGap=clamp(carWidth*.72,8,18),rowGap=clamp(carLength*1.45,26,60);
+    const lapMultipliers=[1.08,1.11,1.15,1.19,1.24],carWidth=Math.max(12,Number(visual.displayWidth||visual.width||28)),carLength=Math.max(20,Number(visual.displayHeight||visual.height||48)),laneGap=clamp(carWidth*.72,8,18),rowGap=clamp(carLength*1.45,26,60);
     const trackW=Math.max(carWidth*4,Number(this.track?.meta?.trackWidth||this.track?.trackWidth||this.trackWidth||carWidth*7));
     for(let i=0;i<5;i++){
       const sprite=this.add.image(0,0,tex).setOrigin(visual.originX??.5,visual.originY??.5).setDepth(Math.max(29,Number(this.carRig?.depth||30)-1));
