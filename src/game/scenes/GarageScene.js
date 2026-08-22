@@ -361,7 +361,8 @@ if (this._thumbScrollY >= 0 || this._thumbScrollY <= this._thumbMinScroll) {
       }
     );
 
-    const texKey = `card_${carId}`;
+    const assetVersion = encodeURIComponent(spec.cardAssetVersion || 1);
+    const texKey = `card_${carId}_v${assetVersion}`;
     const cardImg = this.add.image(60, h / 2, '__MISSING').setVisible(false);
 
     item.add([bg, accent, name, meta, cardImg]);
@@ -861,8 +862,8 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
     const fileName =
       `card_${carId}_${raritySlug}_${String(spec.collectionNo || 0).padStart(3, '0')}.webp`;
 
-    const texKey = `card_${carId}`;
     const assetVersion = encodeURIComponent(spec.cardAssetVersion || 1);
+    const texKey = `card_${carId}_v${assetVersion}`;
     const url = `${CARD_BASE}${fileName}?v=${assetVersion}`;
 
     if (this.textures.exists(texKey)) {
