@@ -11,6 +11,8 @@ export class RaceScene extends TrafficRaceScene {
     // mezcla con ttHistory, récords, recompensas ni estadísticas del jugador.
     this._survivalCpu1LapTimes=[];
     this._survivalCpu1LapStartPerf=null;
+    this._survivalLapClockPrev={player:null,cpu1:null};
+    this._survivalLapClockLastCross={player:0,cpu1:0};
     return super.create(data);
   }
 
@@ -26,48 +28,60 @@ export class RaceScene extends TrafficRaceScene {
     }
   }
 
+  _captureSurvivalLapClock(kind,now=performance.now()){
+    const isCpu=kind==='cpu1';
+    const last=Number(this._survivalLapClockLastCross?.[kind]||0);
+    // El cruce geométrico y el wrap de progreso pueden ocurrir en el mismo
+    // fotograma. Dos segundos de bloqueo impiden contar ambos.
+    if(now-last<2000)return;
+    this._survivalLapClockLastCross[kind]=now;
+    const startKey=isCpu?'_survivalCpu1LapStartPerf':'_survivalPlayerLapStartPerf';
+    const lapsKey=isCpu?'_survivalCpu1LapTimes':'_survivalPlayerLapTimes';
+    const lapStart=Number(this[startKey]);
+    if(Number.isFinite(lapStart)&&lapStart>0){
+      const lapMs=now-lapStart;
+      if(Number.isFinite(lapMs)&&lapMs>1000){
+        this[lapsKey].push(lapMs);
+        if(this[lapsKey].length>5)this[lapsKey]=this[lapsKey].slice(-5);
+        if(isCpu)this._survivalAiTelemetry?.pushEvent?.({
+          timeMs:Math.round(Number(this.time?.now||0)),
+          type:'cpu1_lap',lap:this[lapsKey].length,lapMs:Math.round(lapMs)
+        });
+      }
+    }
+    this[startKey]=now;
+  }
+
   _registerFinishCross(racer){
     const isPlayer=racer===this._survivalPlayer;
-    const isCpu1=this._survivalAiRuntime?.effective==='planner_v1'&&
-      racer===this._survivalPlannerBot;
+    const isCpu1=racer===this._survivalPlannerBot;
     const wasArmed=Boolean(racer?.armed);
     const completed=super._registerFinishCross(racer);
-    const now=performance.now();
-    if(isPlayer){
-      if(!wasArmed&&racer?.armed){
-        // First crossing only arms the survival lap counter. Timing starts here.
-        this._survivalPlayerLapStartPerf=now;
-      }else if(completed){
-        const start=Number(this._survivalPlayerLapStartPerf);
-        const lapMs=now-start;
-        if(Number.isFinite(start)&&Number.isFinite(lapMs)&&lapMs>1000){
-          this._survivalPlayerLapTimes.push(lapMs);
-          // Survival has five elimination rounds, therefore at most five player laps
-          // belong to its session report.
-          if(this._survivalPlayerLapTimes.length>5)this._survivalPlayerLapTimes=this._survivalPlayerLapTimes.slice(-5);
-        }
-        this._survivalPlayerLapStartPerf=now;
-      }
-    }
-    if(isCpu1){
-      if(!wasArmed&&racer?.armed){
-        this._survivalCpu1LapStartPerf=now;
-      }else if(completed){
-        const start=Number(this._survivalCpu1LapStartPerf);
-        const lapMs=now-start;
-        if(Number.isFinite(start)&&Number.isFinite(lapMs)&&lapMs>1000){
-          this._survivalCpu1LapTimes.push(lapMs);
-          if(this._survivalCpu1LapTimes.length>5)this._survivalCpu1LapTimes=this._survivalCpu1LapTimes.slice(-5);
-          this._survivalAiTelemetry?.pushEvent?.({
-            timeMs:Math.round(Number(this.time?.now||0)),
-            type:'cpu1_lap',lap:this._survivalCpu1LapTimes.length,
-            lapMs:Math.round(lapMs)
-          });
-        }
-        this._survivalCpu1LapStartPerf=now;
-      }
+    if((!wasArmed&&racer?.armed)||completed){
+      if(isPlayer)this._captureSurvivalLapClock('player');
+      if(isCpu1)this._captureSurvivalLapClock('cpu1');
     }
     return completed;
+  }
+
+  _updateSurvivalLapClockFallback(){
+    if(!this._survivalMode||!this._raceStarted||this._survivalFinished)return;
+    const playerFrac=this._survivalNearestPathProgress?.(
+      Number(this.carBody?.x),Number(this.carBody?.y)
+    );
+    const cpuFrac=Number(this._survivalPlannerBot?._plannerFrac);
+    const check=(kind,frac)=>{
+      if(!Number.isFinite(frac))return;
+      const prev=Number(this._survivalLapClockPrev?.[kind]);
+      this._survivalLapClockPrev[kind]=frac;
+      // Respaldo independiente del segmento de meta: una vuelta hacia delante
+      // cruza de la zona final a la inicial. No modifica completedLaps.
+      if(Number.isFinite(prev)&&prev>.78&&frac<.22){
+        this._captureSurvivalLapClock(kind);
+      }
+    };
+    check('player',playerFrac);
+    if(this._survivalPlannerBot?.active)check('cpu1',cpuFrac);
   }
 
   _survivalSessionBestLapMs(){
@@ -85,12 +99,12 @@ export class RaceScene extends TrafficRaceScene {
     try{super._showSurvivalSessionInfo(resultRoot);}
     finally{this.ttHistory=original;}
 
-    if(this._survivalAiRuntime?.effective!=='planner_v1'||typeof document==='undefined')return;
+    if(typeof document==='undefined'||!this._survivalPlannerBot)return;
     const laps=(Array.isArray(this._survivalCpu1LapTimes)?this._survivalCpu1LapTimes:[])
       .filter(ms=>Number.isFinite(ms)&&ms>1000);
     const cards=[...document.querySelectorAll('.tdrsi-card')];
     const card=cards[cards.length-1],back=card?.querySelector?.('.tdrsi-back');
-    if(!card||!back)return;
+    if(!card||!back||card.querySelector('.tdrsi-cpu'))return;
     const fmt=(ms)=>{
       if(!Number.isFinite(ms)||ms<=0)return '—';
       const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),x=Math.floor(ms%1000);
@@ -237,6 +251,7 @@ export class RaceScene extends TrafficRaceScene {
 
   update(time,delta){
     const result=super.update(time,delta);
+    this._updateSurvivalLapClockFallback();
     this._smoothSurvivalSprites(delta);
     this._pinSurvivalMiniMarkers();
     return result;
