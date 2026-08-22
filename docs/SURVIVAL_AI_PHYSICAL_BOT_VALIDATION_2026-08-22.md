@@ -112,3 +112,35 @@ Solo para el bot experimental:
 - no afecta al jugador ni a los bots `legacy`.
 
 La recuperación es una red de seguridad para QA, no una mecánica de conducción ni un criterio de homologación.
+
+
+## Selector de observación y balance — 22/08/2026
+
+Con `survivalAiDebug=1` aparece un selector táctil:
+
+- `TÚ`;
+- `CPU1`;
+- `CPU2`;
+- `CPU3`;
+- `CPU4`;
+- `CPU5`.
+
+El selector cambia el objetivo de la cámara y dibuja aro y etiqueta sobre el participante observado. `CPU1` muestra `BOT FÍSICO` cuando `planner_v1` está activo. Al eliminarse el participante observado, la cámara vuelve al jugador.
+
+Discrepancia de balance detectada:
+
+- el histórico se guardaba solo por circuito;
+- las vueltas no incluían `carId`;
+- Supervivencia podía usar como referencia un tiempo realizado por otro coche;
+- las variaciones positivas de ritmo y vuelta podían acumularse hasta borrar el margen del rival más rápido.
+
+Corrección:
+
+- las vueltas nuevas guardan `carId`;
+- Supervivencia solo usa históricos demostrablemente realizados con el coche seleccionado;
+- los registros antiguos se conservan, pero no equilibran rivales si no identifican el coche;
+- multiplicadores de parrilla: 1.30, 1.24, 1.19, 1.14 y 1.10;
+- variaciones positivas limitadas a 1.025 por componente;
+- el rival más fuerte conserva aproximadamente un 4 % mínimo respecto a la referencia incluso combinando sus picos favorables.
+
+La sensación de dificultad debe volver a validarse con Pulse equipado y después con un coche stock.
