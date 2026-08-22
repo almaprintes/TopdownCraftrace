@@ -249,3 +249,22 @@ Tras confirmar que el contador humano ya presenta 5/5 tiempos coherentes, CPU1 s
 
 Antes de iniciar aprendizaje por imitación se exige medir la línea base real. Como las inserciones en INFO SESIÓN seguían sin sobrevivir a la composición final de sectores, `RaceSurvivalModeScene._showSurvivalResults` muestra ahora un panel CPU1 directamente en la tarjeta principal: mejor, media y V1–V5 completadas desde `_survivalPlannerBot._survivalLapTimesMs`. No requiere abrir el informe y permanece disponible aunque CPU1 haya sido eliminado. No implementar aprendizaje del jugador hasta confirmar estos tiempos en dispositivo.
 
+### Enseñanza en carrera de CPU1 (2026-08-22)
+
+Línea base real confirmada en Santa Cruz antes de aprender: CPU1 V1 20,15 s, V2 20,09 s, V3 20,09 s; mejor 20,09 s, media 20,11 s. Jugador: mejor 17,169 s, media 17,670 s.
+
+Se implementó aprendizaje online provisional en `RaceSurvivalTrafficScene`:
+
+- registra la posición lateral y velocidad humana por muestra del plan global;
+- solo acepta muestras en pista, hacia delante y con velocidad útil;
+- cierra una lección exclusivamente cuando la misma vuelta autoritativa incrementa `completedLaps`;
+- exige al menos 58 % de cobertura y una vuelta entre 10 y 180 s;
+- interpola huecos cortos y suaviza tres pasadas para no copiar cabeceos;
+- conserva la vuelta humana válida más rápida;
+- limita la referencia lateral al 96 % del corredor geométrico;
+- no aumenta `maxFwd`: la física y el límite de CPU1 permanecen intactos;
+- V1 de CPU1 queda sin aprendizaje; cada plan se activa solo después de que CPU1 cruce meta;
+- mezcla progresiva: 18 %, 30 %, 42 % y máximo 55 % según vueltas humanas completadas.
+
+Resultados muestra por vuelta el porcentaje aprendido. Telemetría: `teacher_lap_ready`, `teacher_plan_activated`, `teachingBlend`, `teacherLap`, `teacherBestLapMs` y `teacherCoverage`.
+
