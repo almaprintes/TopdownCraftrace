@@ -452,3 +452,14 @@ Intento provisional del 22/08/2026:
 - el cambio de comportamiento se revirtió completo en el commit `883258c`;
 - no continuar ajustando este controlador por parches antes de terminar las capas nuevas;
 - el diagnóstico de serpenteo y desplazamientos queda registrado para diseñar y evaluar la Fase 3.
+
+
+## Última calibración visual de Fase 3
+
+Tras observar que CPU1 se abría demasiado en casi todas las curvas:
+
+- la trazada optimizada se conserva, pero su excursión lateral se escala al 72 %;
+- el refuerzo físico sube de 1.16 a 1.21 para ganar aproximadamente un 4 % de ritmo;
+- 17/17 circuitos siguen dentro del corredor en simulación;
+- Santa Cruz reduce su offset planificado máximo de 16.8 a 12.1 px;
+- la aceptación definitiva continúa pendiente de prueba visual en dispositivo.
