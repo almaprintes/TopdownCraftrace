@@ -124,3 +124,12 @@ Se mantienen packs temáticos comprables con moneda del juego (mecánica/chasis/
 6. Validar cooldown real del vídeo recompensado y persistencia al cerrar/reabrir el juego.
 7. Contrastar después de varias carreras cuánto tarda un jugador en fabricar Street/Sport/Racing/Prototype y reajustar botín, precios de packs y recompensas si es necesario.
 8. Continuar validando instalación/desinstalación de piezas, límite Prototype, assets de transmisión y tablas de sectores de Supervivencia.
+
+
+## Actualización visual y de garaje — 22/08/2026
+
+La homologación de UI, skins, pantalla principal y colección de cartas está documentada en:
+
+- `docs/continuity/2026-08-22-ui-assets-garage-cards.md`
+
+Ese documento es lectura obligatoria antes de modificar `GarageScene.js`, `carSpecs.js`, skins, logos, cartas o la pantalla principal. Incluye las correspondencias correctas de AVENIR, el sistema de caché versionada y la integración DOM/Phaser de las cartas.
