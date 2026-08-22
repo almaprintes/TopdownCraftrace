@@ -1,6 +1,7 @@
 import { RaceScene as CurrentRaceScene } from './RaceKartingCanariasSurfaceFixScene.js';
 import { readSurvivalAiRuntime, createSurvivalAiTelemetry } from '../ai/survivalAiRuntime.js';
 import { buildTrackRacingLineModel } from '../ai/trackRacingLinePlanner.js';
+import { buildTrackSpeedProfile } from '../ai/trackSpeedProfilePlanner.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
@@ -200,12 +201,16 @@ export class RaceScene extends CurrentRaceScene {
     // Fase 1: calcular el modelo nuevo para observación y validación. Todavía
     // no se entrega el control de los coches a esta trayectoria.
     this._survivalPlannerTrackModel=buildTrackRacingLineModel(this.track?.meta||this.track||{});
+    this._survivalPlannerSpeedProfile=buildTrackSpeedProfile(this._survivalPlannerTrackModel);
     this._survivalAiTelemetry?.pushEvent?.({
       timeMs:Math.round(Number(this.time?.now||0)),
       type:'track_model',
       valid:Boolean(this._survivalPlannerTrackModel?.valid),
       reason:this._survivalPlannerTrackModel?.reason||null,
-      metrics:this._survivalPlannerTrackModel?.metrics||{}
+      metrics:this._survivalPlannerTrackModel?.metrics||{},
+      speedProfileValid:Boolean(this._survivalPlannerSpeedProfile?.valid),
+      speedProfileReason:this._survivalPlannerSpeedProfile?.reason||null,
+      speedMetrics:this._survivalPlannerSpeedProfile?.metrics||{}
     });
 
     this._buildSurvivalAiLine();
