@@ -396,10 +396,10 @@ export class RaceScene extends CurrentRaceScene {
     // CPU1 ya tenía un ritmo correcto en la prueba real. El factor conserva
     // la nueva estabilidad lateral, pero devuelve velocidad al bot físico sin
     // volver a la envolvente fija anterior.
-    const physicalPaceBoost=1.27;
+    const physicalPaceBoost=1.38;
     const physicalMaxFwd=clamp(
       targetAverage/Math.max(.25,profileMeanRatio*.82)*physicalPaceBoost,
-      playerMaxFwd*.42,playerMaxFwd*.86
+      playerMaxFwd*.42,playerMaxFwd*.92
     );
     const control=updateSurvivalPhysicalBot(b,this._survivalPlannerSpeedProfile,{
       dt,
