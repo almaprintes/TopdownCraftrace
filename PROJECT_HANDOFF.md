@@ -241,3 +241,7 @@ El respaldo por progreso no resolvió el informe: una nueva sesión terminó 5/5
 
 El selector experimental arrancaba enfocado en CPU1. Como el jugador seguía recibiendo control, su coche salía de pantalla y era necesario frenar para pulsar `TÚ`, contaminando el primer tiempo y sectores (observado: vuelta de 23,185 s con S2 de 10,616 s). La cámara inicia ahora siempre en `TÚ`; CPU1 continúa seleccionable manualmente para observarlo.
 
+### CPU1 renderizado desde el informe base (2026-08-22)
+
+Tras confirmar que el contador humano ya presenta 5/5 tiempos coherentes, CPU1 seguía sin aparecer. La inserción posterior de `RaceSurvivalPolishScene` era descartada al reconstruirse la zona de vueltas/sectores. `RaceSurvivalModeScene._showSurvivalSessionInfo` genera ahora el panel CPU1 directamente desde `_survivalPlannerBot._survivalLapTimesMs`, antes de cualquier transformación visual. El panel permanece aunque CPU1 esté inactivo o eliminado y muestra mejor, media, diferencia y vueltas completadas.
+
