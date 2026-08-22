@@ -4,6 +4,7 @@
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
+const forwardSteps=(from,to,n)=>((to-from)%n+n)%n;
 
 function nearestSample(samples,x,y,lastIndex){
   const n=samples.length;
@@ -47,28 +48,51 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   bot._plannerSampleIndex=nearest.index;
 
   const spacing=Math.max(1,Number(params.spacing||10));
-  // En una secuencia izquierda-derecha no perseguir cada vértice como un
-  // eslalon. Apuntar después de la segunda curva aproxima la diagonal lógica
-  // de una chicane sin alterar curvas aisladas ni rectas.
-  let turnSign=0,turnChanges=0,turnEnergy=0;
-  for(let step=2;step<=16;step++){
+  // Analizar la secuencia como una maniobra completa. Una chicane no debe
+  // recalcular su salida cada frame: se fija un objetivo posterior a la segunda
+  // curva y se conserva hasta atravesarlo.
+  let turnSign=0,turnChanges=0,turnEnergy=0,peakTurn=0,lastTurnStep=0;
+  for(let step=2;step<=20;step++){
     const turn=Number(samples[(nearest.index+step)%samples.length].curvature||0);
+    peakTurn=Math.max(peakTurn,Math.abs(turn));
     if(Math.abs(turn)<.012)continue;
     const sign=Math.sign(turn);
     turnEnergy+=Math.abs(turn);
+    lastTurnStep=step;
     if(turnSign&&sign!==turnSign)turnChanges++;
     turnSign=sign;
   }
-  const chicaneAhead=turnChanges>0&&turnEnergy>.10;
-  const lookaheadPx=chicaneAhead
-    ?clamp(52+speed*.24,70,135)
-    :clamp(22+speed*.18,25,82);
-  const lookaheadSteps=Math.max(2,Math.round(lookaheadPx/spacing));
-  const targetIndex=(nearest.index+lookaheadSteps)%samples.length;
+  const detectedChicane=turnChanges>0&&turnEnergy>.10;
+  let committed=bot._plannerManeuver;
+  if(committed){
+    const remaining=forwardSteps(nearest.index,committed.targetIndex,samples.length);
+    if(remaining<=2||remaining>Math.min(samples.length*.45,36))committed=null;
+  }
+  if(!committed&&detectedChicane){
+    const exitSteps=clamp(lastTurnStep+4,10,24);
+    committed={
+      kind:'chicane',
+      targetIndex:(nearest.index+exitSteps)%samples.length
+    };
+  }
+  bot._plannerManeuver=committed;
+  const chicaneAhead=committed?.kind==='chicane';
+  const cornerFactor=clamp((peakTurn-.012)/.12,0,1);
+  const normalLookaheadPx=clamp(24+speed*.15-cornerFactor*18,22,62);
+  const lookaheadSteps=Math.max(2,Math.round(normalLookaheadPx/spacing));
+  const targetIndex=chicaneAhead
+    ?committed.targetIndex
+    :(nearest.index+lookaheadSteps)%samples.length;
   const target=samples[targetIndex];
   const desiredHeading=Math.atan2(Number(target.y)-Number(body.y),Number(target.x)-Number(body.x));
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
-  const steer=clamp(headingError/.48,-1,1);
+  const rawSteer=clamp(headingError/.48,-1,1);
+  // Amortiguar la orden, no la posición. Limita los contravolantes visibles sin
+  // introducir un carril ni desplazar artificialmente el coche.
+  const previousSteer=Number(bot._plannerSteerCommand||0);
+  const steerStep=clamp(rawSteer-previousSteer,-2.8*dt,2.8*dt);
+  const steer=clamp(previousSteer+steerStep,-1,1);
+  bot._plannerSteerCommand=steer;
 
   const maxFwd=Math.max(40,Number(params.maxFwd||420));
   const profileMax=Math.max(1,Number(profile.parameters?.maxSpeed||520));
@@ -99,7 +123,8 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   let turnFactor=(lowSpeedSteer+(1-lowSpeedSteer)*steerT)*(1-(1-highSpeedLimit)*speed01);
   if(speed<yawSpeedMin)turnFactor*=speed/yawSpeedMin;
   const yawLimit=turnRate*turnFactor;
-  body.rotation+=clamp(headingError*2.25,-yawLimit,yawLimit)*dt;
+  const yawCommand=steer*yawLimit;
+  body.rotation+=yawCommand*dt;
 
   const fx=Math.cos(body.rotation),fy=Math.sin(body.rotation);
   const rx=-fy,ry=fx;
@@ -140,6 +165,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     targetSpeed:controlledTargetSpeed,
     profileTargetSpeed:targetSpeed,
     chicaneAhead,
+    maneuverKind:committed?.kind||null,
     headingError,
     steer,
     throttle,
