@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceKartingCanariasSurfaceFixScene.js';
+import { readSurvivalAiRuntime, createSurvivalAiTelemetry } from '../ai/survivalAiRuntime.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
@@ -181,6 +182,20 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _initSurvival(){
+    if(!this._survivalAiRuntime){
+      this._survivalAiRuntime=readSurvivalAiRuntime();
+      this._survivalAiTelemetry=createSurvivalAiTelemetry({
+        mode:this._survivalAiRuntime.effective,
+        requestedMode:this._survivalAiRuntime.requested,
+        trackKey:this.trackKey||this.track?.meta?.key||null
+      });
+      if(this._survivalAiRuntime.requested!==this._survivalAiRuntime.effective){
+        this._survivalAiTelemetry.pushEvent({
+          time:0,type:'planner_fallback',requested:this._survivalAiRuntime.requested,
+          effective:this._survivalAiRuntime.effective
+        });
+      }
+    }
     this._buildSurvivalAiLine();
     super._initSurvival();
 
@@ -221,6 +236,73 @@ export class RaceScene extends CurrentRaceScene {
       b.mistakeUntil=0;
       b.mistakeLane=0;
       b.mistakeLaneTarget=0;
+    }
+  }
+
+  _recordSurvivalAiTelemetry(){
+    const telemetry=this._survivalAiTelemetry;
+    if(!telemetry||!this._survivalMode)return;
+    const now=Number(this.time?.now||0);
+    if(now<Number(this._survivalAiNextSample||0))return;
+    this._survivalAiNextSample=now+120;
+
+    for(const b of this._survivalBots||[]){
+      if(!b?.active||!b.sprite?.scene)continue;
+      telemetry.pushSample({
+        timeMs:Math.round(now),
+        botId:b.id,
+        x:Number(b.sprite.x.toFixed?.(2)??b.sprite.x),
+        y:Number(b.sprite.y.toFixed?.(2)??b.sprite.y),
+        heading:Number((b.sprite.rotation||0).toFixed?.(4)??b.sprite.rotation),
+        progress:Number((b.absProgress||0).toFixed?.(6)??b.absProgress),
+        lapRate:Number((b.lapRate||0).toFixed?.(6)??b.lapRate),
+        targetRate:Number((b.targetRate||0).toFixed?.(6)??b.targetRate),
+        lane:Number((b._trafficLane||0).toFixed?.(3)??b._trafficLane),
+        lateralSpeed:Number((b._trafficLaneVelocity||0).toFixed?.(3)??b._trafficLaneVelocity),
+        speedScale:Number((b._trafficSpeedScale||1).toFixed?.(4)??b._trafficSpeedScale),
+        cornerSeverity:Number(this._trafficCornerSeverity(b.absProgress).toFixed(4)),
+        passCommitted:Number(this.time?.now||0)/1000<Number(b._trafficPassUntil||0)
+      });
+    }
+  }
+
+  _updateSurvivalAiDebugOverlay(){
+    const enabled=Boolean(this._survivalAiRuntime?.debug&&this._survivalMode);
+    if(!enabled){
+      try{this._survivalAiDebugGfx?.destroy?.();}catch{}
+      this._survivalAiDebugGfx=null;
+      return;
+    }
+
+    let g=this._survivalAiDebugGfx;
+    if(!g?.scene){
+      g=this.add.graphics().setDepth(58);
+      try{this.uiCam?.ignore?.(g);}catch{}
+      this._survivalAiDebugGfx=g;
+    }
+    g.clear();
+
+    const line=this._survivalAiLine;
+    if(Array.isArray(line)&&line.length>2){
+      g.lineStyle(2,0x62ffd1,.38);
+      g.beginPath();
+      line.forEach((p,i)=>{if(i===0)g.moveTo(p.x,p.y);else g.lineTo(p.x,p.y);});
+      g.lineTo(line[0].x,line[0].y);
+      g.strokePath();
+    }
+
+    const colors=[0xffb347,0x66d9ff,0xff78c8,0xb6ff6a,0xc69cff];
+    for(let bi=0;bi<(this._survivalBots||[]).length;bi++){
+      const b=this._survivalBots[bi];if(!b?.active)continue;
+      const horizon=clamp(Math.max(.035,Number(b.lapRate||0)*2.2),.035,.12);
+      g.lineStyle(2,colors[bi%colors.length],.82);
+      g.beginPath();
+      for(let i=0;i<=18;i++){
+        const p=this._survivalPathPoint(Number(b.absProgress||0)+horizon*i/18,Number(b._trafficLane||0));
+        if(!p)continue;
+        if(i===0)g.moveTo(p.x,p.y);else g.lineTo(p.x,p.y);
+      }
+      g.strokePath();
     }
   }
 
@@ -337,6 +419,11 @@ export class RaceScene extends CurrentRaceScene {
           b._trafficPassTarget=leftScore<=rightScore?left:right;
           b._trafficSide=Math.sign(b._trafficPassTarget-Number(nearest.lane||0))||b._trafficSide||1;
           b._trafficPassUntil=now+1.8+Math.random()*1.4;
+          this._survivalAiTelemetry?.pushEvent?.({
+            timeMs:Math.round(Number(this.time?.now||0)),
+            type:'pass_commit',botId:b.id,targetLane:Number(b._trafficPassTarget.toFixed(2)),
+            gapPx:Number(nearest.gapPx.toFixed(1))
+          });
         }
 
         laneTarget=clamp(Number(b._trafficPassTarget||laneTarget),-envelope,envelope);
@@ -385,6 +472,22 @@ export class RaceScene extends CurrentRaceScene {
 
   _updateSurvivalBots(deltaMs){
     const saved=this._applySurvivalTrafficAvoidance(deltaMs);
-    try{return super._updateSurvivalBots(deltaMs);}finally{this._restoreSurvivalTraffic(saved);}
+    let result;
+    try{result=super._updateSurvivalBots(deltaMs);}
+    finally{this._restoreSurvivalTraffic(saved);}
+    this._recordSurvivalAiTelemetry();
+    this._updateSurvivalAiDebugOverlay();
+    return result;
+  }
+
+  _destroySurvival(){
+    try{this._survivalAiDebugGfx?.destroy?.();}catch{}
+    this._survivalAiDebugGfx=null;
+    try{
+      if(window.__TDR_SURVIVAL_AI__===this._survivalAiTelemetry?.state){
+        window.__TDR_SURVIVAL_AI__.closedAt=new Date().toISOString();
+      }
+    }catch{}
+    return super._destroySurvival();
   }
 }
