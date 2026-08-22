@@ -77,6 +77,14 @@ Antes de migrar más bots:
 
 ## Activación DEV
 
+Enlace de sesión, sin modificar la preferencia guardada:
+
+```text
+https://topdown-craftrace.vercel.app/?survivalAi=planner_v1&survivalAiDebug=1
+```
+
+Activación persistente desde consola:
+
 ```js
 localStorage.setItem('tdr2:survivalAiMode', 'planner_v1');
 localStorage.setItem('tdr2:survivalAiDebug', '1');
@@ -90,4 +98,17 @@ localStorage.setItem('tdr2:survivalAiMode', 'legacy');
 location.reload();
 ```
 
-La telemetría permanece disponible en `window.__TDR_SURVIVAL_AI__`, incluyendo `steer`, `throttle`, `brake`, `targetSpeed` y `distanceToLine`.
+La telemetría permanece disponible en `window.__TDR_SURVIVAL_AI__`, incluyendo `steer`, `throttle`, `brake`, `targetSpeed`, `distanceToLine`, `offTrackSeconds` y `recoveryCount`.
+
+## Watchdog de prueba
+
+Solo para el bot experimental:
+
+- acumula tiempo fuera de pista mediante la consulta runtime `_isOnTrack`;
+- detecta bloqueo prolongado por debajo de 6 px/s;
+- tras 1.25 s fuera de pista o 3 s bloqueado registra `physical_bot_recovery`;
+- recupera el cuerpo sobre la muestra válida más cercana;
+- no oculta el fallo: motivo, muestra y contador quedan en telemetría;
+- no afecta al jugador ni a los bots `legacy`.
+
+La recuperación es una red de seguridad para QA, no una mecánica de conducción ni un criterio de homologación.
