@@ -158,6 +158,11 @@ export function buildTrackRacingLineModel(track,options={}){
     }
   }
 
+  // Permite homologar una envolvente menos agresiva para un controlador
+  // físico sin alterar el optimizador ni crear una trazada manual por circuito.
+  const offsetScale=clamp(Number(options.offsetScale??1),.35,1);
+  if(offsetScale!==1)offsets=offsets.map(v=>v*offsetScale);
+
   const racingLine=materialize(base,frame,offsets);
   const curve=curvature(racingLine);
   const clearances=limits.map((limit,i)=>limit-Math.abs(offsets[i])+safetyMargin);
@@ -183,7 +188,8 @@ export function buildTrackRacingLineModel(track,options={}){
       safetyMargin,
       discontinuityCount:conditioning.discontinuityCount,
       sourceMaxTurn:conditioning.sourceMaxTurn,
-      referenceConditioningMaxShift:conditioning.maxShift
+      referenceConditioningMaxShift:conditioning.maxShift,
+      offsetScale
     }
   };
 }
