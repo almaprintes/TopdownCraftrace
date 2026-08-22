@@ -194,3 +194,10 @@ Decisión vigente:
 - 17/17 circuitos válidos; Santa Cruz simula 2.00 vueltas/60 s y 20.0 cambios de signo por vuelta;
 - el 95 % se descartó porque Shanghai abandonaba el corredor; con 92 % conserva 0.9 px de margen estructural;
 - pendiente tercera prueba visual en iPhone.
+
+- decisión aprobada: CPU1 puede comer brevemente un piano; tolerancia estructural de hasta 3 px durante 0.40 s, nunca excursiones prolongadas;
+- las chicanes cortas fijan ahora una única salida durante doce muestras para evitar reconstruir la S en el segundo vértice;
+- factor físico 1.45 y techo 95 %; 17/17 válidos con el nuevo criterio;
+- Shanghai alcanza el caso límite medido: 1.5 px durante 0.30 s;
+- no hay fatiga programada: Santa Cruz simula vueltas consecutivas de 29.23 y 29.10 s;
+- pendiente validación visual en iPhone.
