@@ -421,3 +421,7 @@ Se añadió un compromiso interior moderado (0,20), se elevó el perfil de veloc
 
 El modo experimental `planner_v1` muestra provisionalmente los tiempos de CPU1 en el informe final: mejor, media, diferencia con el jugador y vueltas individuales. El cronómetro se arma en el primer cruce válido de meta y solo acepta vueltas completas posteriores. No persiste datos ni participa en récords o economía. Este dato real de dispositivo pasa a ser la referencia principal para alcanzar el objetivo de menos de 22,000 s en Santa Cruz; la simulación se conserva para comparar regresiones.
 
+### Incidencia de cronometraje real
+
+En dispositivo, una pasada por meta no intersectó el segmento geométrico: dos vueltas humanas quedaron combinadas en 37,037 s y el informe mostró cuatro registros. Se añadió detección redundante por wrap de progreso para jugador y CPU1, con deduplicación temporal de 2 s. También se corrigió la visibilidad del panel para conservarlo cuando CPU1 haya sido eliminado antes de abrir resultados. Pendiente: confirmar una sesión 5/5 con cinco tiempos humanos coherentes y los tiempos CPU1 visibles hasta su eliminación.
+
