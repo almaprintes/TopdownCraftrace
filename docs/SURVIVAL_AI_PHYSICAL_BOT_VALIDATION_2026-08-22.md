@@ -144,3 +144,27 @@ Corrección:
 - el rival más fuerte conserva aproximadamente un 4 % mínimo respecto a la referencia incluso combinando sus picos favorables.
 
 La sensación de dificultad debe volver a validarse con Pulse equipado y después con un coche stock.
+
+
+## Prueba real: ritmo, amplitud y duelo final
+
+Observación comunicada tras la primera prueba en iPhone:
+
+- CPU1 era claramente más rápido que los cinco rivales legacy;
+- su cabeceo era más amplio y lento, percibido como exploración excesiva de los límites;
+- los legacy habían quedado demasiado lentos;
+- al quedar jugador y CPU1 solos, la sesión continuó tres vueltas sin eliminación.
+
+Causas y correcciones:
+
+- CPU1 ya no usa una envolvente fija independiente: su velocidad física se deriva de `targetRate × longitud de pista`;
+- la eficiencia medida del controlador frente al perfil ideal se calibra a 0.82;
+- CPU1 se mantiene como rival principal, pero su mejor ritmo teórico conserva margen respecto a la referencia del jugador;
+- el fallback sin histórico sube de 36 % a 42 % de la velocidad máxima para evitar legacy excesivamente lentos;
+- parrilla ordenada de fuerte a lenta: 1.08, 1.11, 1.15, 1.19 y 1.24;
+- CPU1 queda excluido del tráfico legacy para no recibir una segunda corrección lateral;
+- en Santa Cruz, el límite dinámico reduce la desviación simulada a 12 px de media y 28 px máxima;
+- cada participante expone en la etiqueta `VUELTAS`, cruces de `META` y estado `ARMADO`;
+- `_tryCloseSurvivalRound` se evalúa cada frame a partir del estado válido para evitar que una notificación perdida deje bloqueado el duelo.
+
+La siguiente prueba debe anotar qué muestran `V`, `META` y `ARMADO` para TÚ y CPU1 si el duelo vuelve a no finalizar.
