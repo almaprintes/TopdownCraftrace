@@ -177,3 +177,7 @@ Decisión vigente:
 - observación posterior: CPU1 seguía una ese amplia en curvas enlazadas aunque estaba estable en recta;
 - el perfil expone curvatura y el controlador amplía lookahead hasta 135 px al detectar chicane para buscar una diagonal;
 - validación tras el cambio: 17/17 dentro del corredor; Santa Cruz queda en 35 px máximos sobre 78 px.
+
+- última calibración de CPU1: la excursión de la trazada rápida se limita al 72 % y el factor físico sube de 1.16 a 1.21;
+- validación estructural: 17/17 circuitos dentro del corredor; Santa Cruz reduce el offset planificado máximo de 16.8 a 12.1 px y alcanza 1.98 vueltas/60 s;
+- pendiente validar en iPhone que se abre menos en las curvas sin convertir la trazada en un carril central.
