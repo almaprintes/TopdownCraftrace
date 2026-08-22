@@ -910,14 +910,21 @@ export class RaceScene extends CurrentRaceScene {
 
   _activateSurvivalTeachingForCpuLap(){
     const s=this._survivalTeachingState;
-    if(!s?.pendingPlan)return;
-    s.activePlan=s.pendingPlan;s.pendingPlan=null;
-    s.targetBlend=Math.min(s.activePlan.blendTarget,s.adaptiveCap);
+    if(!s)return;
+    const replacedPlan=Boolean(s.pendingPlan);
+    if(s.pendingPlan){s.activePlan=s.pendingPlan;s.pendingPlan=null;}
+    if(!s.activePlan)return;
+    // El porcentaje pertenece al aprendizaje del alumno, no a la existencia
+    // de una nueva vuelta maestra. Si el plan actual mejora el tiempo, CPU1
+    // puede explorarlo ocho puntos más aunque la siguiente vuelta humana sea
+    // más lenta y no sustituya la referencia.
+    s.targetBlend=Math.min(.72,s.adaptiveCap);
     this._survivalAiTelemetry?.pushEvent?.({
       timeMs:Math.round(Number(this.time?.now||0)),type:'teacher_plan_activated',
       teacherLap:s.activePlan.lapNo,teacherLapMs:Math.round(s.activePlan.lapMs),
       requestedBlend:s.activePlan.blendTarget,blendTarget:s.targetBlend,
-      adaptiveCap:s.adaptiveCap,bestCpuBlend:s.bestCpuBlend
+      adaptiveCap:s.adaptiveCap,bestCpuBlend:s.bestCpuBlend,
+      replacedPlan
     });
   }
 
