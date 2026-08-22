@@ -303,7 +303,10 @@ Validación estructural:
 - Karting Tenerife reduce de 70.6 a 43.1 px;
 - Santa Cruz reduce de 61.3 a 42.3 px;
 - la calibración usa una regla general de anticipación y reducción de velocidad por error, sin excepciones de circuito;
-- sigue pendiente la prueba real en Phaser antes de homologar.
+- sigue pendiente la prueba real en Phaser antes de homologar;
+- el modo puede activarse para una sesión mediante `?survivalAi=planner_v1&survivalAiDebug=1`;
+- un watchdog registra y recupera salidas o bloqueos del bot experimental sin afectar a `legacy`;
+- cualquier recuperación invalida esa vuelta como prueba de homologación.
 
 Criterio de salida:
 
