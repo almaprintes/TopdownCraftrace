@@ -117,6 +117,7 @@ power: {
     // UI / Colección
     collectionNo: 1,
     rarity: 'Común',
+    cardAssetVersion: 3,
     skin: 'skin_helix_spark.webp',
     visualScale: 1.00,
 
@@ -154,6 +155,7 @@ steeringProfile: 'DIRECT',
     // UI / Colección
     collectionNo: 2,
     rarity: 'Poco común',
+    cardAssetVersion: 3,
     skin: 'skin_helix_comet.webp',
     visualScale: 1.03,
 
@@ -191,6 +193,7 @@ steeringProfile: 'DIRECT',
     // UI / Colección
     collectionNo: 3,
     rarity: 'Poco común',
+    cardAssetVersion: 3,
     skin: 'skin_helix_pulse.webp',
     visualScale: 1.02,
 
@@ -265,6 +268,7 @@ steeringProfile: 'DIRECT',
     // UI / Colección
     collectionNo: 4,
     rarity: 'Poco común',
+    cardAssetVersion: 3,
     skin: 'skin_crown_axis.webp',
     visualScale: 1.03,
 
@@ -302,6 +306,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 5,
     rarity: 'Raro',
+    cardAssetVersion: 3,
     skin: 'skin_crown_vector.webp',
     visualScale: 1.04,
 
@@ -339,6 +344,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 6,
     rarity: 'Raro',
+    cardAssetVersion: 3,
     skin: 'skin_crown_equinox.webp',
     visualScale: 1.06,
 
@@ -376,6 +382,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 7,
     rarity: 'Poco común',
+    cardAssetVersion: 3,
     skin: 'skin_avenir_gripline.webp',
     visualScale: 1.02,
 
@@ -413,6 +420,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 8,
     rarity: 'Raro',
+    cardAssetVersion: 3,
     skin: 'skin_avenir_apex.webp',
     visualScale: 1.03,
 
@@ -450,6 +458,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 9,
     rarity: 'Élite',
+    cardAssetVersion: 3,
     skin: 'skin_avenir_torque.webp',
     visualScale: 1.04,
 
@@ -487,6 +496,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 10,
     rarity: 'Poco común',
+    cardAssetVersion: 3,
     skin: 'skin_veloce_flash.webp',
     visualScale: 0.99,
 
@@ -524,6 +534,7 @@ handlingProfile: 'F1_DOWNFORCE',
     // UI / Colección
     collectionNo: 11,
     rarity: 'Raro',
+    cardAssetVersion: 3,
     skin: 'skin_veloce_surge.webp',
     visualScale: 0.98,
 
@@ -561,6 +572,7 @@ steeringProfile: 'DIRECT',
     // UI / Colección
     collectionNo: 12,
     rarity: 'Élite',
+    cardAssetVersion: 3,
     skin: 'skin_veloce_photon.webp',
     visualScale: 0.97,
 
@@ -598,6 +610,7 @@ steeringProfile: 'DIRECT',
     // UI / Colección
     collectionNo: 13,
     rarity: 'Raro',
+    cardAssetVersion: 3,
     skin: 'skin_forge_hammer.webp',
     visualScale: 1.25,
 
@@ -635,6 +648,7 @@ steeringProfile: 'DIRECT',
     // UI / Colección
     collectionNo: 14,
     rarity: 'Élite',
+    cardAssetVersion: 3,
     skin: 'skin_forge_anvil.webp',
     visualScale: 1.35,
 
@@ -672,6 +686,7 @@ steeringProfile: 'DIRECT',
     // UI / Colección
     collectionNo: 15,
     rarity: 'Legendario',
+    cardAssetVersion: 3,
     skin: 'skin_forge_colossus.webp',
     visualScale: 1.45,
 
