@@ -164,4 +164,8 @@ Decisión vigente:
 - informe: `docs/SURVIVAL_AI_PHYSICAL_BOT_VALIDATION_2026-08-22.md`;
 - no migrar el pelotón ni activar `planner_v1` por defecto hasta superar prueba real en Phaser;
 - prueba de sesión: `https://almaprintes.github.io/TopdownCraftrace/?survivalAi=planner_v1&survivalAiDebug=1`;
-- el watchdog experimental registra `physical_bot_recovery` al salir o bloquearse; cualquier recuperación invalida la vuelta de homologación.
+- el watchdog experimental registra `physical_bot_recovery` al salir o bloquearse; cualquier recuperación invalida la vuelta de homologación;
+- con debug activo hay selector táctil `TÚ / CPU1…CPU5`, seguimiento de cámara y etiqueta; CPU1 identifica `BOT FÍSICO`;
+- discrepancia corregida: los históricos antiguos no identificaban coche y podían equilibrar Pulse contra otro modelo;
+- las vueltas nuevas guardan `carId` y Supervivencia solo usa referencia del coche seleccionado;
+- parrilla `legacy` rebajada y variaciones positivas limitadas para no superar la referencia de balance.
