@@ -15,15 +15,19 @@ const MAX_SAMPLES=1200;
 function safeStorageGet(key){
   try{return localStorage.getItem(key);}catch{return null;}
 }
+function safeQueryGet(key){
+  try{return new URLSearchParams(window.location.search).get(key);}catch{return null;}
+}
 
 export function readSurvivalAiRuntime(){
-  const requested=safeStorageGet(MODE_KEY)===SURVIVAL_AI_MODES.PLANNER_V1
+  const requestedMode=safeQueryGet('survivalAi')||safeStorageGet(MODE_KEY);
+  const requested=requestedMode===SURVIVAL_AI_MODES.PLANNER_V1
     ?SURVIVAL_AI_MODES.PLANNER_V1
     :SURVIVAL_AI_MODES.LEGACY;
   const effective=requested===SURVIVAL_AI_MODES.PLANNER_V1&&SURVIVAL_AI_PLANNER_READY
     ?SURVIVAL_AI_MODES.PLANNER_V1
     :SURVIVAL_AI_MODES.LEGACY;
-  const debug=safeStorageGet(DEBUG_KEY)==='1';
+  const debug=safeQueryGet('survivalAiDebug')==='1'||safeStorageGet(DEBUG_KEY)==='1';
 
   return{requested,effective,debug,plannerReady:SURVIVAL_AI_PLANNER_READY};
 }
