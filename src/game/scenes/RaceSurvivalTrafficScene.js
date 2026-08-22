@@ -231,13 +231,9 @@ export class RaceScene extends CurrentRaceScene {
       // personalidad solo añade variaciones pequeñas; no crea carriles paralelos.
       b._trafficPreferred=(Math.random()-.5)*envelope*.12;
       b._trafficWanderTarget=b._trafficPreferred;
-      // No añadir un seno permanente a la trayectoria: hacía que el morro
-      // corrigiera a izquierda y derecha incluso sin tráfico.
-      b.lineAmp=0;
-      b.lineFreq=0;
-      // La personalidad es una preferencia estable. Solo el tráfico puede
-      // justificar una maniobra lateral; no se cambia de línea por azar.
-      b._trafficNextChoice=Infinity;
+      b.lineAmp=1.5+Math.random()*3.5;
+      b.lineFreq=.45+Math.random()*.35;
+      b._trafficNextChoice=2+Math.random()*4;
       b._trafficLane=initial;
       b._trafficLaneVelocity=0;
       b._trafficSpeedScale=1;
@@ -367,17 +363,6 @@ export class RaceScene extends CurrentRaceScene {
     return Math.abs(wrapAngle(Number(after.r||0)-Number(before.r||0)));
   }
 
-  _trafficCornerRisk(progress){
-    // Mirar por delante evita iniciar un cambio lateral justo antes de una
-    // chicane u horquilla. El máximo conserva también la primera curva de una
-    // enlazada, aunque el coche esté todavía en la aproximación.
-    let risk=0;
-    for(const ahead of [0,.004,.008,.014,.022,.030]){
-      risk=Math.max(risk,this._trafficCornerSeverity(Number(progress)+ahead));
-    }
-    return risk;
-  }
-
   _trafficCandidateScore(candidate,me,entries,envelope){
     let score=Math.abs(candidate-Number(me._trafficPreferred||0))*.08;
     if(Math.abs(candidate)>envelope*.88)score+=12;
@@ -412,8 +397,13 @@ export class RaceScene extends CurrentRaceScene {
       const envelope=Number(b._trafficEnvelope||42);
       const meLane=Number(b._trafficLane||0);
 
-      // Sin tráfico se conserva una línea personal estable. El movimiento
-      // lateral aparece por una decisión de adelantamiento, no por ruido aleatorio.
+      // Sin tráfico, cada piloto revisa lentamente su línea preferida. No existen
+      // tres carriles discretos: cualquier offset dentro del ancho útil es válido.
+      if(now>=Number(b._trafficNextChoice||0)){
+        const change=envelope*(.035+Math.random()*.085)*(Math.random()<.5?-1:1);
+        b._trafficWanderTarget=clamp(Number(b._trafficPreferred||0)+change,-envelope,envelope);
+        b._trafficNextChoice=now+4+Math.random()*6;
+      }
 
       let nearest=null;
       for(const e of entries){
@@ -430,15 +420,13 @@ export class RaceScene extends CurrentRaceScene {
       let laneTarget=Number(b._trafficWanderTarget||b._trafficPreferred||0);
       let desiredSpeed=1;
       const cornerSeverity=this._trafficCornerSeverity(b.absProgress);
-      const cornerRisk=this._trafficCornerRisk(b.absProgress);
-      const sharpCorner=cornerRisk>.18;
+      const sharpCorner=cornerSeverity>.34;
 
-      // En chicanes y horquillas se mantiene el offset ya alcanzado. Volver de
-      // golpe a la línea preferida también era un desplazamiento horizontal.
+      // En horquillas se termina la maniobra antes del vértice. Intentar abrir
+      // además un adelantamiento lateral generaba el desplazamiento exagerado.
       if(sharpCorner){
         b._trafficPassUntil=0;
-        b._trafficPassTarget=meLane;
-        laneTarget=meLane;
+        b._trafficPassTarget=Number(b._trafficPreferred||0);
       }
 
       if(nearest){
@@ -479,8 +467,8 @@ export class RaceScene extends CurrentRaceScene {
       // Dirección lateral con velocidad y aceleración limitadas. El coche describe
       // una transición curva en vez de interpolar rígidamente hacia otro carril.
       const laneError=laneTarget-meLane;
-      const lateralAccel=clamp(laneError*2.6-Number(b._trafficLaneVelocity||0)*5.8,-34,34);
-      b._trafficLaneVelocity=clamp(Number(b._trafficLaneVelocity||0)+lateralAccel*dt,-13,13);
+      const lateralAccel=clamp(laneError*4.6-Number(b._trafficLaneVelocity||0)*4.8,-58,58);
+      b._trafficLaneVelocity=clamp(Number(b._trafficLaneVelocity||0)+lateralAccel*dt,-22,22);
       b._trafficLane=clamp(meLane+b._trafficLaneVelocity*dt,-envelope,envelope);
 
       // Aceleración y deceleración limitadas: nada de freno/acelerador binario.
