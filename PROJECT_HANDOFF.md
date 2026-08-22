@@ -133,3 +133,19 @@ La homologación de UI, skins, pantalla principal y colección de cartas está d
 - `docs/continuity/2026-08-22-ui-assets-garage-cards.md`
 
 Ese documento es lectura obligatoria antes de modificar `GarageScene.js`, `carSpecs.js`, skins, logos, cartas o la pantalla principal. Incluye las correspondencias correctas de AVENIR, el sistema de caché versionada y la integración DOM/Phaser de las cartas.
+
+
+## Arquitectura progresiva de IA de Supervivencia — 22/08/2026
+
+La sustitución del comportamiento de rivales basado en progreso/offset por una conducción con planificación y control físicos está definida en:
+
+- `docs/SURVIVAL_AI_ROADMAP_2026-08-22.md`
+
+Ese documento es lectura obligatoria antes de modificar la conducción, trazadas, tráfico, adelantamientos o humanización de los bots de Supervivencia.
+
+Decisión vigente:
+
+- los parches actuales de suavizado son provisionales;
+- la migración se hará por fases y con interruptor `legacy` / `planner_v1`;
+- no se tocará la física común BASE 1.0 para compensar fallos de IA;
+- el primer paso será instrumentación y comparación, seguido del modelo de pista y la trazada global de mínima curvatura.
