@@ -391,8 +391,12 @@ export class RaceScene extends CurrentRaceScene {
     const targetAverage=Math.max(35,Number(b.targetRate||0)*Number(b._trafficTrackLength||1000));
     // Calibrar el cuerpo físico contra el mismo ritmo de parrilla que los legacy.
     // 0.82 representa la eficiencia medida del controlador frente al perfil ideal.
+    // CPU1 ya tenía un ritmo correcto en la prueba real. El factor conserva
+    // la nueva estabilidad lateral, pero devuelve velocidad al bot físico sin
+    // volver a la envolvente fija anterior.
+    const physicalPaceBoost=1.16;
     const physicalMaxFwd=clamp(
-      targetAverage/Math.max(.25,profileMeanRatio*.82),
+      targetAverage/Math.max(.25,profileMeanRatio*.82)*physicalPaceBoost,
       playerMaxFwd*.42,playerMaxFwd*.82
     );
     const control=updateSurvivalPhysicalBot(b,this._survivalPlannerSpeedProfile,{
