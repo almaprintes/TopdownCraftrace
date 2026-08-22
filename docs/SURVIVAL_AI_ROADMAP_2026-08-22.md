@@ -254,10 +254,25 @@ Criterio de salida:
 
 ### Fase 2 — Perfil de velocidad anticipativo
 
-- Generar velocidad máxima local.
-- Calcular puntos de frenada hacia atrás.
-- Calcular aceleración posible hacia delante.
-- Comparar tiempo teórico con telemetría.
+Estado: implementada estructuralmente en modo observación; pendiente de calibración física y validación visual.
+
+Implementación:
+
+- `src/game/ai/trackSpeedProfilePlanner.js`;
+- límite local derivado de curvatura y aceleración lateral;
+- pase de frenada hacia atrás;
+- pase de aceleración hacia delante;
+- continuidad cerrada entre final e inicio de vuelta;
+- métricas añadidas al evento `track_model` de telemetría;
+- 17/17 circuitos generan perfiles finitos sin violar los límites longitudinales configurados;
+- informe: `docs/SURVIVAL_AI_SPEED_PROFILE_VALIDATION_2026-08-22.md`.
+
+Tareas pendientes:
+
+- calibrar parámetros con el coche patrón;
+- visualizar frenadas y vértices;
+- comparar tiempo teórico con telemetría real;
+- mantener el perfil desconectado de los coches hasta Fase 3.
 
 Criterio de salida:
 
@@ -395,12 +410,10 @@ Métricas:
 
 Los ajustes realizados en `RaceSurvivalTrafficScene.js` mejoran la presentación provisional, pero no constituyen la arquitectura definitiva. Deben conservarse únicamente mientras `planner_v1` no alcance los criterios de validación de las fases 1–4.
 
-Ajuste de control provisional del 22/08/2026:
+Intento provisional del 22/08/2026:
 
-- eliminada la oscilación sinusoidal permanente de cada rival;
-- eliminados los cambios laterales aleatorios sin causa de tráfico;
-- la personalidad conserva un offset pequeño y estable;
-- el riesgo de curva se evalúa también por delante del coche;
-- chicanes y horquillas bloquean nuevas maniobras laterales y mantienen el offset ya alcanzado;
-- velocidad y aceleración laterales reducidas para evitar correcciones bruscas;
-- pendiente de validación visual específica en Santa Cruz y después en otros circuitos.
+- se probaron una línea personal estable, anticipación de chicanes y límites laterales menores;
+- la prueba visual en Santa Cruz fue claramente peor;
+- el cambio de comportamiento se revirtió completo en el commit `883258c`;
+- no continuar ajustando este controlador por parches antes de terminar las capas nuevas;
+- el diagnóstico de serpenteo y desplazamientos queda registrado para diseñar y evaluar la Fase 3.
