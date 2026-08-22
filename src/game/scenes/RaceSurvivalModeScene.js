@@ -251,6 +251,19 @@ export class RaceScene extends CurrentRaceScene{
     try{if(this._pauseButton)this._pauseButton.style.display='none';}catch{}
     try{this._survivalNotice?.destroy?.(true);}catch{}
     const best=fmtLap(this._survivalSessionBestLapMs());
+    const cpuSource=this._survivalPlannerBot?._survivalLapTimesMs;
+    const cpuTimes=(Array.isArray(cpuSource)?cpuSource:[])
+      .map(Number).filter(ms=>Number.isFinite(ms)&&ms>1000);
+    const cpuBest=cpuTimes.length?Math.min(...cpuTimes):null;
+    const cpuAvg=cpuTimes.length?cpuTimes.reduce((sum,ms)=>sum+ms,0)/cpuTimes.length:null;
+    const cpuLapList=cpuTimes.length
+      ?cpuTimes.map((ms,i)=>`<span><small>V${i+1}</small><b>${fmtLap(ms)}</b></span>`).join('')
+      :'<i>CPU1 no completó ninguna vuelta cronometrada.</i>';
+    const cpuResultPanel=this._survivalPlannerBot?`
+      <section class="tdrsurv-cpu">
+        <div class="tdrsurv-cpu-head"><strong>CPU1 · TIEMPOS REALES</strong><span>MEJOR ${fmtLap(cpuBest)} · MEDIA ${fmtLap(cpuAvg)}</span></div>
+        <div class="tdrsurv-cpu-laps">${cpuLapList}</div>
+      </section>`:'';
     const root=document.createElement('div');
     root.dataset.tdrRaceUi='1';
     const won=this._survivalWon;
@@ -258,7 +271,7 @@ export class RaceScene extends CurrentRaceScene{
       <style>
         .tdrsurv-veil{position:fixed;inset:0;z-index:14000;background:rgba(2,6,12,.72);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
         .tdrsurv-card{width:min(88vw,500px);background:linear-gradient(180deg,rgba(13,27,38,.98),rgba(6,14,22,.98));border:2px solid ${won?'#4fffb0':'#ff6479'};clip-path:polygon(18px 0,100% 0,100% calc(100% - 18px),calc(100% - 18px) 100%,0 100%,0 18px);padding:22px 24px;color:#fff;box-shadow:0 24px 90px rgba(0,0,0,.55)}
-        .tdrsurv-kicker{font-size:10px;font-weight:900;letter-spacing:.18em;color:${won?'#63ffc0':'#ff8293'};margin-bottom:5px}.tdrsurv-title{font-size:28px;font-weight:950;letter-spacing:.02em;margin-bottom:16px}.tdrsurv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 18px}.tdrsurv-stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10);padding:11px 9px;text-align:center}.tdrsurv-stat small{display:block;font-size:8px;letter-spacing:.11em;color:#8495a9;font-weight:900;margin-bottom:5px}.tdrsurv-stat b{font-size:16px}.tdrsurv-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.tdrsurv-btn{height:48px;border:1px solid rgba(255,255,255,.18);background:#122335;color:#fff;font:900 11px system-ui,-apple-system,sans-serif;letter-spacing:.055em}.tdrsurv-btn.primary{background:${won?'#145a45':'#56212b'};border-color:${won?'#4fffb0':'#ff6479'}}.tdrsurv-btn.info{background:#123452;border-color:#3f8bc7}
+        .tdrsurv-kicker{font-size:10px;font-weight:900;letter-spacing:.18em;color:${won?'#63ffc0':'#ff8293'};margin-bottom:5px}.tdrsurv-title{font-size:28px;font-weight:950;letter-spacing:.02em;margin-bottom:16px}.tdrsurv-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 18px}.tdrsurv-stat{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10);padding:11px 9px;text-align:center}.tdrsurv-stat small{display:block;font-size:8px;letter-spacing:.11em;color:#8495a9;font-weight:900;margin-bottom:5px}.tdrsurv-stat b{font-size:16px}.tdrsurv-cpu{margin:0 0 14px;padding:11px;border:1px solid #d89b31;background:rgba(216,155,49,.07)}.tdrsurv-cpu-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}.tdrsurv-cpu-head strong{font-size:9px;letter-spacing:.12em;color:#ffc45f}.tdrsurv-cpu-head span{font-size:9px;color:#dce4ec;font-variant-numeric:tabular-nums}.tdrsurv-cpu-laps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.tdrsurv-cpu-laps>span{background:#111b26;border:1px solid #303c49;padding:6px 4px;text-align:center}.tdrsurv-cpu-laps small{display:block;color:#8997a8;font-size:7px;font-weight:900;margin-bottom:3px}.tdrsurv-cpu-laps b{font-size:10px;font-variant-numeric:tabular-nums}.tdrsurv-cpu-laps i{grid-column:1/-1;color:#8997a8;font-size:9px;font-style:normal}.tdrsurv-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.tdrsurv-btn{height:48px;border:1px solid rgba(255,255,255,.18);background:#122335;color:#fff;font:900 11px system-ui,-apple-system,sans-serif;letter-spacing:.055em}.tdrsurv-btn.primary{background:${won?'#145a45':'#56212b'};border-color:${won?'#4fffb0':'#ff6479'}}.tdrsurv-btn.info{background:#123452;border-color:#3f8bc7}
       </style>
       <div class="tdrsurv-veil"><div class="tdrsurv-card">
         <div class="tdrsurv-kicker">SUPERVIVENCIA</div>
@@ -268,6 +281,7 @@ export class RaceScene extends CurrentRaceScene{
           <div class="tdrsurv-stat"><small>MEJOR VUELTA</small><b>${best}</b></div>
           <div class="tdrsurv-stat"><small>POSICIÓN</small><b>${won?'1º':'—'}</b></div>
         </div>
+        ${cpuResultPanel}
         <div class="tdrsurv-actions"><button class="tdrsurv-btn info" data-a="info">INFO SESIÓN</button><button class="tdrsurv-btn primary" data-a="again">REPETIR</button><button class="tdrsurv-btn" data-a="menu">MENÚ</button></div>
       </div></div>`;
     root.querySelector('[data-a="info"]')?.addEventListener('click',()=>this._showSurvivalSessionInfo(root));
