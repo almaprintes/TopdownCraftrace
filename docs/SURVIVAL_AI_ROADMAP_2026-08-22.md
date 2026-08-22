@@ -513,3 +513,17 @@ Para evitar una conducción artificialmente conservadora:
 - riesgo máximo experimental: 0.35;
 - 17/17 circuitos válidos;
 - Santa Cruz mejora a 27.45/27.38 s en simulación.
+
+
+## Fase 3B — Planificación por maniobras
+
+Implementada experimentalmente tras analizar una vuelta humana de Santa Cruz en 17.301 s.
+
+- nuevo `trackManeuverPlanner.js`;
+- curvatura suavizada antes de segmentar;
+- curvas enlazadas agrupadas por proximidad, oposición y equilibrio;
+- una entrada, una salida y una velocidad común por secuencia;
+- sin recentralización entre vértices;
+- riesgo y tolerancia de piano condicionados;
+- 17/17 circuitos dentro del criterio revisado;
+- Santa Cruz: nueve secuencias, 27.83/27.70 s y 2.9 px durante 0.28 s.
