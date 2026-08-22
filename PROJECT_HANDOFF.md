@@ -173,4 +173,7 @@ Decisión vigente:
 - CPU1 deriva su velocidad de `targetRate × longitud`, con eficiencia 0.82, y no participa en tráfico legacy;
 - observación pendiente: un duelo TÚ/CPU1 duró tres vueltas sin eliminación; ahora las etiquetas muestran V, META y ARMADO y el cierre se evalúa cada frame;
 - corrección posterior: CPU1 no era imbatible; su velocidad original era correcta y los lentos eran los legacy;
-- se mantiene la conducción lateral nueva de CPU1, se restaura su ritmo con factor 1.16 y se conserva el aumento aplicado a los otros cuatro.
+- se mantiene la conducción lateral nueva de CPU1, se restaura su ritmo con factor 1.16 y se conserva el aumento aplicado a los otros cuatro;
+- observación posterior: CPU1 seguía una ese amplia en curvas enlazadas aunque estaba estable en recta;
+- el perfil expone curvatura y el controlador amplía lookahead hasta 135 px al detectar chicane para buscar una diagonal;
+- validación tras el cambio: 17/17 dentro del corredor; Santa Cruz queda en 35 px máximos sobre 78 px.
