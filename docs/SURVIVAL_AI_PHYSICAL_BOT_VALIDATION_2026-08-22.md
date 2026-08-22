@@ -168,3 +168,23 @@ Causas y correcciones:
 - `_tryCloseSurvivalRound` se evalúa cada frame a partir del estado válido para evitar que una notificación perdida deje bloqueado el duelo.
 
 La siguiente prueba debe anotar qué muestran `V`, `META` y `ARMADO` para TÚ y CPU1 si el duelo vuelve a no finalizar.
+
+
+## Corrección de interpretación del ritmo de CPU1
+
+Segunda observación del usuario:
+
+- CPU1 ya era fácil de vencer y su velocidad anterior era correcta;
+- el problema eran los cuatro rivales legacy, que parecían arrastrarse;
+- tras igualar demasiado el ritmo, CPU1 fue eliminado en la segunda vuelta;
+- la conducción lateral nueva sí se percibió bastante más natural.
+
+Decisión:
+
+- conservar anticipación, control por error y menor excursión lateral;
+- conservar el aumento de ritmo de los legacy;
+- aplicar a CPU1 un refuerzo físico de 1.16 sobre el ritmo derivado;
+- mantener el límite superior de 82 % del máximo del coche patrón;
+- no modificar en esta iteración eliminación, espectador ni reglas de ronda.
+
+El refuerzo aproxima el tiempo teórico de CPU1 al comportamiento anterior sin restaurar la envolvente fija que provocaba mayor exploración de bordes. Pendiente confirmar en dispositivo.
