@@ -20,25 +20,27 @@ La línea del planificador se muestra en amarillo con el overlay DEV. Todavía n
 
 Los 17 circuitos producen un modelo finito y una trayectoria limitada por la anchura disponible.
 
-| Circuito | Puntos runtime | Puntos plan | Offset máx. px | Margen mín. px | Pico curvatura | Estado |
-|---|---:|---:|---:|---:|---:|---|
-| chicane-vale | 1628 | 1519 | 16.6 | 59.1 | 0.208 | BASE VÁLIDA |
-| f1-baku | 1250 | 949 | 9.9 | 69.1 | 2.006 | REVISAR PICO |
-| f1-imola | 1098 | 833 | 8.5 | 70.5 | 2.286 | REVISAR PICO |
-| f1-jeddah | 1198 | 888 | 18.8 | 61.2 | 2.429 | REVISAR PICO |
-| f1-melbourne | 1136 | 850 | 8.5 | 71.5 | 0.7 | BASE VÁLIDA |
-| f1-miami | 1023 | 763 | 15.8 | 64.2 | 0.535 | BASE VÁLIDA |
-| f1-monte-carlo | 1170 | 919 | 11.5 | 64.5 | 2.089 | REVISAR PICO |
-| f1-sakhir | 1449 | 1070 | 18.2 | 61.8 | 1.353 | REVISAR PICO |
-| f1-shanghai | 1488 | 1099 | 17.2 | 62.8 | 2.061 | REVISAR PICO |
-| forest-endurance | 1657 | 1473 | 10.3 | 72.1 | 0.1 | BASE VÁLIDA |
-| karting-canarias | 1640 | 1157 | 12.4 | 72.6 | 0.181 | BASE VÁLIDA |
-| karting-tenerife | 1850 | 1465 | 16 | 46.9 | 0.247 | BASE VÁLIDA |
-| offroad-raven-hollow | 1205 | 860 | 15.2 | 54.3 | 0.213 | BASE VÁLIDA |
-| santa-cruz | 785 | 510 | 16.8 | 61.2 | 0.808 | REVISAR PICO |
-| switchback-park | 2102 | 2037 | 16.2 | 55.8 | 0.24 | BASE VÁLIDA |
-| technical-ridge | 1204 | 1131 | 15.5 | 60.9 | 0.184 | BASE VÁLIDA |
-| track01 | 414 | 347 | 21.3 | 58.9 | 0.246 | BASE VÁLIDA |
+La repetición A/B con el mismo `TrackBuilder` y la misma entrada descubrió una discrepancia en la primera tabla: el arnés anterior introducía falsos picos en el cierre de varias geometrías F1. La tabla siguiente sustituye esa medición y compara el planificador anterior con el acondicionamiento nuevo sobre exactamente la misma cinta runtime. No se ha modificado ningún `track.json`.
+
+| Circuito | Puntos runtime | Puntos plan | Pico antes | Pico después | Corrección ref. px | Margen mín. px | Estado |
+|---|---:|---:|---:|---:|---:|---:|---|
+| chicane-vale | 1628 | 1519 | 0.208 | 0.208 | 0 | 59.1 | BASE VÁLIDA |
+| f1-baku | 1255 | 951 | 0.242 | 0.242 | 0 | 67.9 | BASE VÁLIDA |
+| f1-imola | 1103 | 835 | 0.284 | 0.284 | 0 | 65.7 | BASE VÁLIDA |
+| f1-jeddah | 1205 | 890 | 0.323 | 0.323 | 0 | 61.3 | BASE VÁLIDA |
+| f1-melbourne | 1136 | 851 | 0.110 | 0.110 | 0 | 72.0 | BASE VÁLIDA |
+| f1-miami | 1025 | 764 | 0.224 | 0.224 | 0 | 65.1 | BASE VÁLIDA |
+| f1-monte-carlo | 1177 | 921 | 0.255 | 0.255 | 0 | 63.9 | BASE VÁLIDA |
+| f1-sakhir | 1450 | 1072 | 0.731 | 0.424 | 1.47 | 60.0 | ACONDICIONADA |
+| f1-shanghai | 1487 | 1101 | 0.755 | 0.476 | 2.88 | 59.9 | ACONDICIONADA |
+| forest-endurance | 1657 | 1473 | 0.083 | 0.083 | 0 | 72.1 | BASE VÁLIDA |
+| karting-canarias | 1640 | 1157 | 0.087 | 0.087 | 0 | 72.6 | BASE VÁLIDA |
+| karting-tenerife | 1850 | 1465 | 0.247 | 0.247 | 0 | 46.9 | BASE VÁLIDA |
+| offroad-raven-hollow | 1205 | 860 | 0.208 | 0.208 | 0 | 54.3 | BASE VÁLIDA |
+| santa-cruz | 784 | 510 | 0.802 | 0.406 | 2.68 | 61.2 | ACONDICIONADA |
+| switchback-park | 2102 | 2037 | 0.240 | 0.240 | 0 | 55.8 | BASE VÁLIDA |
+| technical-ridge | 1204 | 1131 | 0.184 | 0.184 | 0 | 60.9 | BASE VÁLIDA |
+| track01 | 414 | 347 | 0.246 | 0.246 | 0 | 58.9 | BASE VÁLIDA |
 
 ## Interpretación
 
@@ -52,19 +54,15 @@ Los 17 circuitos producen un modelo finito y una trayectoria limitada por la anc
 
 No significa todavía homologación visual final.
 
-`REVISAR PICO` identifica una discontinuidad angular o una curva extremadamente concentrada que exige inspección con overlay antes de usar la trayectoria para controlar coches.
+`ACONDICIONADA` indica que la referencia derivada contenía una concentración angular y se suavizó dentro de un límite proporcional a la anchura. Ese desplazamiento se descuenta del corredor lateral disponible, de modo que no consume el margen de seguridad sin contabilizarlo.
 
 Revisión visual prioritaria:
 
-- Baku;
-- Imola;
-- Jeddah;
-- Monte Carlo;
 - Sakhir;
 - Shanghai;
 - Santa Cruz.
 
-Los circuitos con centerline fuente poco denso pueden producir picos aunque la cinta renderizada sea visualmente aceptable. Antes de corregir el JSON debe comprobarse la geometría runtime generada por `TrackBuilder`.
+Baku, Imola, Jeddah y Monte Carlo dejan de estar marcados: sus picos anteriores procedían del cierre inconsistente del arnés, no de la geometría runtime reproducida en la comparación A/B. Esta conclusión es estructural; aún falta homologación visual en juego.
 
 ## Procedimiento obligatorio para cada circuito nuevo
 
@@ -110,8 +108,8 @@ Si un circuito necesita una excepción, debe documentarse:
 
 ## Próximas acciones de Fase 1
 
-1. Revisar visualmente los siete circuitos marcados.
-2. Añadir detección explícita de discontinuidades/cúspides.
-3. Confirmar que el offset optimizado reduce curvatura frente al centerline.
+1. Revisar visualmente Sakhir, Shanghai y Santa Cruz con el overlay DEV.
+2. Confirmar visualmente que el acondicionamiento no recorta bordes ni deforma horquillas reales.
+3. Confirmar que el offset optimizado reduce curvatura frente al centerline en secciones representativas.
 4. Congelar la primera versión del modelo geométrico.
 5. Pasar a Fase 2: perfil anticipativo de velocidad.
