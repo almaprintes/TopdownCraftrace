@@ -417,3 +417,7 @@ Referencia humana aportada: vueltas a medio gas entre 19,718 y 20,948 s; vuelta 
 
 Se añadió un compromiso interior moderado (0,20), se elevó el perfil de velocidad en curva y se impidió cruzar a contravolante durante la liberación cuando el error angular es inferior a 0,34 rad. Resultado sintético definitivo en Santa Cruz: 24,250 s, mejora de 2,100 s. Sigue pendiente bajar de 22,000 s. La métrica `releaseOppositeSuppressed` permite comprobar cuántos fotogramas evitaron una corrección opuesta menor.
 
+## Cronómetro real en dispositivo
+
+El modo experimental `planner_v1` muestra provisionalmente los tiempos de CPU1 en el informe final: mejor, media, diferencia con el jugador y vueltas individuales. El cronómetro se arma en el primer cruce válido de meta y solo acepta vueltas completas posteriores. No persiste datos ni participa en récords o economía. Este dato real de dispositivo pasa a ser la referencia principal para alcanzar el objetivo de menos de 22,000 s en Santa Cruz; la simulación se conserva para comparar regresiones.
+
