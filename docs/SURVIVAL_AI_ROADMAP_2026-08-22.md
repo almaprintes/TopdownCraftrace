@@ -527,3 +527,8 @@ Implementada experimentalmente tras analizar una vuelta humana de Santa Cruz en 
 - riesgo y tolerancia de piano condicionados;
 - 17/17 circuitos dentro del criterio revisado;
 - Santa Cruz: nueve secuencias, 27.83/27.70 s y 2.9 px durante 0.28 s.
+
+### Histéresis al terminar una chicane
+
+La ejecución de una secuencia no puede rearmarse mientras el coche siga dentro de la anotación de esa misma maniobra. Al completarla se aplica una liberación breve y limitada de volante. Esta histéresis forma parte del controlador genérico y debe conservarse al añadir circuitos: el circuito nuevo aporta geometría, no coordenadas ni parches propios.
+
