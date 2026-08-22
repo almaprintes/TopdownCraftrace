@@ -229,3 +229,7 @@ Tras la prueba visual del usuario, CPU1 seguía pasando por el centro de las cur
 
 Con `survivalAi=planner_v1`, la capa `RaceSurvivalPolishScene` cronometra ahora las vueltas reales del bot físico CPU1 entre cruces válidos de meta. El informe de sesión añade un bloque aislado con mejor vuelta, media, diferencia respecto a la mejor vuelta humana y lista de vueltas CPU1. Los datos viven solo durante la sesión, no entran en `ttHistory`, récords, recompensas ni estadísticas. Cada vuelta genera además el evento de telemetría `cpu1_lap`. Para retirar la ayuda basta eliminar el bloque provisional y los dos campos de sesión de esa capa.
 
+### Corrección del cronómetro provisional (2026-08-22)
+
+La primera prueba real mostró dos defectos: el panel CPU1 no aparecía por depender de `effective==='planner_v1'` en la fase final del informe, y un cruce humano perdido fusionó dos vueltas en una de 37,037 s (S1 25,570 s), dejando cuatro registros pese a cinco vueltas físicas. El cronómetro usa ahora doble detección: cruce geométrico válido y wrap de progreso `>.78 → <.22`, con bloqueo de 2 s para no duplicar el mismo paso. El respaldo solo cronometra; no altera `completedLaps` ni las eliminaciones. El panel se habilita por existencia real de `_survivalPlannerBot`, incluso si ya fue eliminado.
+
