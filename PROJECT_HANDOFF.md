@@ -163,5 +163,5 @@ Decisión vigente:
 - Jeddah mejora de 95.6 a 40.1 px, Karting Tenerife de 70.6 a 43.1 px y Santa Cruz de 61.3 a 42.3 px de desviación máxima;
 - informe: `docs/SURVIVAL_AI_PHYSICAL_BOT_VALIDATION_2026-08-22.md`;
 - no migrar el pelotón ni activar `planner_v1` por defecto hasta superar prueba real en Phaser;
-- prueba de sesión: `https://topdown-craftrace.vercel.app/?survivalAi=planner_v1&survivalAiDebug=1`;
+- prueba de sesión: `https://almaprintes.github.io/TopdownCraftrace/?survivalAi=planner_v1&survivalAiDebug=1`;
 - el watchdog experimental registra `physical_bot_recovery` al salir o bloquearse; cualquier recuperación invalida la vuelta de homologación.
