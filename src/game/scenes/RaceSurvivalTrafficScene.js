@@ -272,6 +272,7 @@ export class RaceScene extends CurrentRaceScene {
       b.mistakeLaneTarget=0;
     }
     this._initSurvivalPlannerBot();
+    this._initSurvivalPlayerTeaching();
     this._createSurvivalSpectatorControls();
   }
 
@@ -395,6 +396,7 @@ export class RaceScene extends CurrentRaceScene {
     const body=b?.plannerBody;
     if(!body?.body)return false;
     const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
+    const controlProfile=this._survivalTeachingControlProfile||this._survivalPlannerSpeedProfile;
     const beforeX=Number(b.prevX),beforeY=Number(b.prevY);
     const playerMaxFwd=Math.max(80,Number(this.maxFwd||this.carParams?.maxFwd||420));
     const profileMeanRatio=clamp(
@@ -413,7 +415,7 @@ export class RaceScene extends CurrentRaceScene {
       targetAverage/Math.max(.25,profileMeanRatio*.82)*physicalPaceBoost,
       playerMaxFwd*.42,playerMaxFwd*.95
     );
-    const control=updateSurvivalPhysicalBot(b,this._survivalPlannerSpeedProfile,{
+    const control=updateSurvivalPhysicalBot(b,controlProfile,{
       dt,
       spacing:Number(this._survivalPlannerTrackModel?.spacing||10),
       maxFwd:physicalMaxFwd,
@@ -435,7 +437,7 @@ export class RaceScene extends CurrentRaceScene {
     // Watchdog exclusivo del experimento: registra el fallo antes de recuperar
     // el cuerpo. Así una salida no bloquea la carrera ni queda invisible en QA.
     if(b._plannerOffTrackSec>1.25||b._plannerStallSec>3){
-      const samples=this._survivalPlannerSpeedProfile.samples;
+      const samples=controlProfile.samples;
       const i=control.nearestIndex%samples.length,p=samples[i],next=samples[(i+1)%samples.length];
       body.setPosition(Number(p.x),Number(p.y));
       body.rotation=Math.atan2(Number(next.y)-Number(p.y),Number(next.x)-Number(p.x));
@@ -454,7 +456,7 @@ export class RaceScene extends CurrentRaceScene {
       return false;
     }
 
-    const n=this._survivalPlannerSpeedProfile.samples.length;
+    const n=controlProfile.samples.length;
     const frac=((control.nearestIndex/n-Number(this._survivalPathOffset||0))%1+1)%1;
     const previous=Number(b._plannerFrac);
     let advance=Number.isFinite(previous)?frac-previous:0;
@@ -466,6 +468,8 @@ export class RaceScene extends CurrentRaceScene {
     b.distanceSinceFinish+=Math.max(0,advance);
     b.lapRate=Math.max(0,advance/dt);
     b._plannerControl=control;
+    b._plannerTeachingBlend=Number(this._survivalTeachingState?.blend||0);
+    b._plannerTeacherLap=Number(this._survivalTeachingState?.activePlan?.lapNo||0);
 
     const x=Number(body.x),y=Number(body.y);
     b.sprite.setPosition(x,y);
@@ -748,11 +752,170 @@ export class RaceScene extends CurrentRaceScene {
     }
   }
 
+  _initSurvivalPlayerTeaching(){
+    const base=this._survivalPlannerSpeedProfile;
+    const model=this._survivalPlannerTrackModel;
+    if(this._survivalAiRuntime?.effective!=='planner_v1'||!base?.valid||
+      !Array.isArray(base.samples)||!model?.valid)return;
+    const n=base.samples.length,center=model.centerline||[];
+    const frames=base.samples.map((_,i)=>{
+      const a=center[(i-2+n)%n]||base.samples[(i-2+n)%n];
+      const b=center[(i+2)%n]||base.samples[(i+2)%n];
+      const dx=Number(b.x)-Number(a.x),dy=Number(b.y)-Number(a.y);
+      const len=Math.max(.001,Math.hypot(dx,dy));
+      return{nx:-dy/len,ny:dx/len};
+    });
+    this._survivalTeachingState={
+      enabled:true,n,frames,lapNo:0,bestLapMs:null,pendingPlan:null,
+      activePlan:null,blend:0,targetBlend:0,nearestIndex:0,
+      sums:new Array(n).fill(0),speedSums:new Array(n).fill(0),
+      counts:new Array(n).fill(0),unique:0
+    };
+    this._survivalTeachingControlProfile={
+      ...base,samples:base.samples.map(sample=>({...sample}))
+    };
+  }
+
+  _resetSurvivalTeacherBuffer(){
+    const s=this._survivalTeachingState;if(!s)return;
+    s.sums.fill(0);s.speedSums.fill(0);s.counts.fill(0);s.unique=0;
+  }
+
+  _recordSurvivalTeacherSample(){
+    const s=this._survivalTeachingState,body=this.carBody;
+    const base=this._survivalPlannerSpeedProfile?.samples;
+    if(!s?.enabled||!body||!Array.isArray(base)||!this._survivalPlayer?.armed)return;
+    const x=Number(body.x),y=Number(body.y);
+    if(![x,y].every(Number.isFinite))return;
+    if(this._isOnTrack&&!this._isOnTrack(x,y))return;
+    const n=s.n,origin=Number.isInteger(s.nearestIndex)?s.nearestIndex:0;
+    let best=origin,bestD=Infinity;
+    for(let d=-28;d<=42;d++){
+      const i=((origin+d)%n+n)%n,p=base[i];
+      const q=(Number(p.x)-x)**2+(Number(p.y)-y)**2;
+      if(q<bestD){bestD=q;best=i;}
+    }
+    if(bestD>180*180){
+      bestD=Infinity;
+      for(let i=0;i<n;i++){
+        const p=base[i],q=(Number(p.x)-x)**2+(Number(p.y)-y)**2;
+        if(q<bestD){bestD=q;best=i;}
+      }
+    }
+    s.nearestIndex=best;
+    const center=this._survivalPlannerTrackModel.centerline[best];
+    const frame=s.frames[best],limit=Math.max(4,Number(this._survivalPlannerTrackModel.limits?.[best]||45));
+    const offset=clamp((x-Number(center.x))*frame.nx+(y-Number(center.y))*frame.ny,-limit*.96,limit*.96);
+    const velocity=body.body?.velocity||body.velocity||{};
+    const speed=Math.hypot(Number(velocity.x)||0,Number(velocity.y)||0);
+    if(speed<12)return;
+    if(!s.counts[best])s.unique++;
+    s.sums[best]+=offset;s.speedSums[best]+=speed;s.counts[best]++;
+  }
+
+  _finalizeSurvivalTeacherLap(lapMs){
+    const s=this._survivalTeachingState,base=this._survivalPlannerSpeedProfile?.samples;
+    if(!s?.enabled||!Array.isArray(base))return;
+    const coverage=s.unique/Math.max(1,s.n);
+    const valid=Number.isFinite(lapMs)&&lapMs>10000&&lapMs<180000&&coverage>=.58;
+    s.lapNo++;
+    if(valid&&(s.bestLapMs==null||lapMs<s.bestLapMs-25)){
+      const raw=s.counts.map((count,i)=>count?s.sums[i]/count:null);
+      const speedRaw=s.counts.map((count,i)=>count?s.speedSums[i]/count:null);
+      const fill=(arr,fallback)=>arr.map((value,i)=>{
+        if(Number.isFinite(value))return value;
+        for(let d=1;d<=18;d++){
+          const before=arr[(i-d+s.n)%s.n],after=arr[(i+d)%s.n];
+          if(Number.isFinite(before)&&Number.isFinite(after))return(before+after)*.5;
+          if(Number.isFinite(before))return before;
+          if(Number.isFinite(after))return after;
+        }
+        return fallback(i);
+      });
+      let offsets=fill(raw,i=>{
+        const p=base[i],center=this._survivalPlannerTrackModel.centerline[i],f=s.frames[i];
+        return(Number(p.x)-Number(center.x))*f.nx+(Number(p.y)-Number(center.y))*f.ny;
+      });
+      let speeds=fill(speedRaw,i=>Number(base[i].targetSpeed||0));
+      for(let pass=0;pass<3;pass++){
+        const oc=offsets.slice(),vc=speeds.slice();
+        for(let i=0;i<s.n;i++){
+          offsets[i]=(oc[(i-2+s.n)%s.n]+2*oc[(i-1+s.n)%s.n]+4*oc[i]+2*oc[(i+1)%s.n]+oc[(i+2)%s.n])/10;
+          speeds[i]=(vc[(i-2+s.n)%s.n]+2*vc[(i-1+s.n)%s.n]+4*vc[i]+2*vc[(i+1)%s.n]+vc[(i+2)%s.n])/10;
+        }
+      }
+      const playerMax=Math.max(80,Number(this.maxFwd||this.carParams?.maxFwd||420));
+      const profileMax=Math.max(1,Number(this._survivalPlannerSpeedProfile.parameters?.maxSpeed||520));
+      const learnedSpeeds=speeds.map((speed,i)=>Math.max(
+        Number(base[i].targetSpeed||0),
+        clamp(speed/playerMax,0,1.05)*profileMax*.98
+      ));
+      s.bestLapMs=lapMs;
+      s.pendingPlan={
+        offsets,speeds:learnedSpeeds,lapMs,coverage,lapNo:s.lapNo,
+        blendTarget:Math.min(.55,.18+Math.max(0,s.lapNo-1)*.12)
+      };
+      this._survivalAiTelemetry?.pushEvent?.({
+        timeMs:Math.round(Number(this.time?.now||0)),type:'teacher_lap_ready',
+        lap:s.lapNo,lapMs:Math.round(lapMs),coverage:Number(coverage.toFixed(3)),
+        blendTarget:s.pendingPlan.blendTarget
+      });
+    }
+    this._resetSurvivalTeacherBuffer();
+  }
+
+  _activateSurvivalTeachingForCpuLap(){
+    const s=this._survivalTeachingState;
+    if(!s?.pendingPlan)return;
+    s.activePlan=s.pendingPlan;s.pendingPlan=null;
+    s.targetBlend=s.activePlan.blendTarget;
+    this._survivalAiTelemetry?.pushEvent?.({
+      timeMs:Math.round(Number(this.time?.now||0)),type:'teacher_plan_activated',
+      teacherLap:s.activePlan.lapNo,teacherLapMs:Math.round(s.activePlan.lapMs),
+      blendTarget:s.targetBlend
+    });
+  }
+
+  _advanceSurvivalTeaching(deltaMs){
+    const s=this._survivalTeachingState,working=this._survivalTeachingControlProfile;
+    const base=this._survivalPlannerSpeedProfile;
+    if(!s?.activePlan||!working?.samples||!base?.samples)return;
+    const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
+    s.blend+=clamp(s.targetBlend-s.blend,-.22*dt,.22*dt);
+    for(let i=0;i<s.n;i++){
+      const center=this._survivalPlannerTrackModel.centerline[i],f=s.frames[i];
+      const taughtX=Number(center.x)+f.nx*s.activePlan.offsets[i];
+      const taughtY=Number(center.y)+f.ny*s.activePlan.offsets[i];
+      const out=working.samples[i],source=base.samples[i];
+      out.x=Number(source.x)+(taughtX-Number(source.x))*s.blend;
+      out.y=Number(source.y)+(taughtY-Number(source.y))*s.blend;
+      out.targetSpeed=Number(source.targetSpeed)+
+        (Number(s.activePlan.speeds[i])-Number(source.targetSpeed))*s.blend;
+      if(Number.isFinite(source.maneuverTargetSpeed)){
+        out.maneuverTargetSpeed=Math.max(
+          Number(source.maneuverTargetSpeed),
+          out.targetSpeed
+        );
+      }
+    }
+  }
+
   _updateSurvivalBots(deltaMs){
+    this._advanceSurvivalTeaching(deltaMs);
+    const beforeArmed=Boolean(this._survivalPlayer?.armed);
+    const beforeLaps=Number(this._survivalPlayer?.completedLaps||0);
     const saved=this._applySurvivalTrafficAvoidance(deltaMs);
     let result;
     try{result=super._updateSurvivalBots(deltaMs);}
     finally{this._restoreSurvivalTraffic(saved);}
+    const afterArmed=Boolean(this._survivalPlayer?.armed);
+    const afterLaps=Number(this._survivalPlayer?.completedLaps||0);
+    if(!beforeArmed&&afterArmed)this._resetSurvivalTeacherBuffer();
+    if(afterLaps>beforeLaps){
+      const times=this._survivalPlayer?._survivalLapTimesMs||[];
+      this._finalizeSurvivalTeacherLap(Number(times[times.length-1]));
+    }
+    this._recordSurvivalTeacherSample();
     this._recordSurvivalAiTelemetry();
     this._updateSurvivalAiDebugOverlay();
     this._updateSurvivalSpectatorMarker();
