@@ -298,10 +298,12 @@ Implementación:
 
 Validación estructural:
 
-- 17/17 circuitos avanzan;
-- 15/17 se mantienen dentro del semiancho nominal en simulación;
-- Jeddah y Karting Tenerife salen del corredor y bloquean la homologación;
-- Santa Cruz completa vueltas estructuralmente, pendiente de prueba real en Phaser.
+- 17/17 circuitos avanzan y permanecen dentro del semiancho nominal tras la primera calibración;
+- Jeddah reduce su desviación máxima simulada de 95.6 a 40.1 px;
+- Karting Tenerife reduce de 70.6 a 43.1 px;
+- Santa Cruz reduce de 61.3 a 42.3 px;
+- la calibración usa una regla general de anticipación y reducción de velocidad por error, sin excepciones de circuito;
+- sigue pendiente la prueba real en Phaser antes de homologar.
 
 Criterio de salida:
 
