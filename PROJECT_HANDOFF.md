@@ -216,3 +216,8 @@ Decisión vigente:
 - validación 17/17; Santa Cruz detecta nueve secuencias, simula 27.83/27.70 s y usa 2.9 px de piano durante 0.28 s;
 - no hay coordenadas ni copia literal de Santa Cruz; la solución es genérica;
 - pendiente homologación visual en iPhone antes de migrar más bots.
+
+### Último ajuste de CPU1 experimental (2026-08-22)
+
+Se corrigió el contravolante posterior al recorte de una chicane. La causa era el rearme de la misma maniobra cuando su objetivo ya había quedado detrás. El controlador guarda el ID completado hasta salir de la zona, aplica 0,48 s de liberación y limita a 2,2 unidades/s el cambio de signo opuesto. La telemetría publica `maneuverRelease` y `maneuverReleaseSeconds`. Validación sintética: 17/17 circuitos dentro del margen acordado; falta validación visual del usuario en dispositivo.
+
