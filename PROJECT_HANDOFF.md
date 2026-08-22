@@ -168,4 +168,7 @@ Decisión vigente:
 - con debug activo hay selector táctil `TÚ / CPU1…CPU5`, seguimiento de cámara y etiqueta; CPU1 identifica `BOT FÍSICO`;
 - discrepancia corregida: los históricos antiguos no identificaban coche y podían equilibrar Pulse contra otro modelo;
 - las vueltas nuevas guardan `carId` y Supervivencia solo usa referencia del coche seleccionado;
-- parrilla `legacy` rebajada y variaciones positivas limitadas para no superar la referencia de balance.
+- parrilla `legacy` equilibrada por coche y variaciones positivas limitadas para no superar la referencia;
+- tras prueba real, el fallback sin histórico se ajustó a 42 % y los multiplicadores quedaron 1.08–1.24 para evitar rivales demasiado lentos;
+- CPU1 deriva su velocidad de `targetRate × longitud`, con eficiencia 0.82, y no participa en tráfico legacy;
+- observación pendiente: un duelo TÚ/CPU1 duró tres vueltas sin eliminación; ahora las etiquetas muestran V, META y ARMADO y el cierre se evalúa cada frame.
