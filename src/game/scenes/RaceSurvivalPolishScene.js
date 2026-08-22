@@ -64,13 +64,25 @@ export class RaceScene extends TrafficRaceScene {
 
   _ensureSurvivalMiniMarkers(){
     if(!this._survivalMode)return;
+    const unified=this.minimapUnifiedPanel;
     for(const b of this._survivalBots||[]){
-      if(b._miniMarker?.scene)continue;
+      if(b._miniMarker?.scene){
+        if(unified?.scene&&!b._miniInUnified){
+          unified.add(b._miniMarker);
+          b._miniInUnified=true;
+        }
+        continue;
+      }
       const m=this.add.circle(0,0,3.2,0xffb347,1)
         .setStrokeStyle(1,0x271400,.95)
-        .setDepth(2305)
-        .setScrollFactor(1);
-      try{if(typeof m.cameraFilter==='number'&&this.cameras?.main)m.cameraFilter&=~this.cameras.main.id;}catch{}
+        .setDepth(2305);
+      if(unified?.scene){
+        unified.add(m);
+        b._miniInUnified=true;
+      }else{
+        m.setScrollFactor(1);
+        try{if(typeof m.cameraFilter==='number'&&this.cameras?.main)m.cameraFilter&=~this.cameras.main.id;}catch{}
+      }
       try{this.uiCam?.ignore?.(m);}catch{}
       b._miniMarker=m;
     }
@@ -106,9 +118,14 @@ export class RaceScene extends TrafficRaceScene {
   _pinSurvivalMiniMarkers(){
     if(!this._survivalMode)return;
     this._ensureSurvivalMiniMarkers();
-    const cam=this.cameras?.main,pts=this.minimap?.points;
-    if(!cam||!Array.isArray(pts)||pts.length<2)return;
-    const zoom=Math.max(.001,Number(cam.zoom||1));
+
+    const panel=this.minimapUnifiedPanel;
+    const tr=this._minimapUnifiedTransform;
+    const useUnified=Boolean(panel?.scene&&tr);
+    const cam=this.cameras?.main;
+    const pts=this.minimap?.points;
+    if(!useUnified&&(!cam||!Array.isArray(pts)||pts.length<2))return;
+    const zoom=Math.max(.001,Number(cam?.zoom||1));
 
     for(const b of this._survivalBots||[]){
       const m=b?._miniMarker;
@@ -118,6 +135,19 @@ export class RaceScene extends TrafficRaceScene {
 
       const proj=this._computeCenterlineProjection?.(Number(b.sprite.x),Number(b.sprite.y));
       if(!proj)continue;
+
+      if(useUnified){
+        if(!b._miniInUnified){
+          panel.add(m);
+          b._miniInUnified=true;
+        }
+        const px=Number.isFinite(proj.x)?Number(proj.x):Number(b.sprite.x);
+        const py=Number.isFinite(proj.y)?Number(proj.y):Number(b.sprite.y);
+        m.setPosition(tr.ox+px*tr.fitScale,tr.oy+py*tr.fitScale);
+        m.setScale(1);
+        continue;
+      }
+
       const i=Math.max(0,Math.min(pts.length-2,Number(proj.segIndex||0)));
       const t=clamp(Number(proj.segT||0),0,1);
       const a=pts[i],c=pts[i+1]||a;if(!a||!c)continue;
