@@ -297,11 +297,16 @@ export class RaceScene extends CurrentRaceScene{
         const dirt=this._survivalSurfaceId()==='DIRT',chance=dirt?.18:.11;
         if(Math.random()<chance){
           const duration=rand(.65,1.75);b.mistakeUntil=elapsed+duration;b.mistakeSlow=rand(.48,.78);
-          const sign=Math.random()<.5?-1:1,severity=Math.random()<.28?rand(.48,.72):rand(.20,.42);b.mistakeLane=sign*b.trackW*severity;
+          const sign=Math.random()<.5?-1:1,severity=Math.random()<.28?rand(.48,.72):rand(.20,.42);
+          b.mistakeLaneTarget=sign*b.trackW*severity;
         }
         b.nextMistakeCheck=elapsed+rand(2.2,5.5);
       }
-      const makingMistake=elapsed<b.mistakeUntil;if(!makingMistake&&Math.abs(b.mistakeLane)>.05)b.mistakeLane*=Math.pow(.12,dt);
+      const makingMistake=elapsed<b.mistakeUntil;
+      const laneTarget=makingMistake?Number(b.mistakeLaneTarget||0):0;
+      // Evitar saltos laterales instantáneos: el error entra y sale de forma progresiva.
+      b.mistakeLane+=(laneTarget-b.mistakeLane)*clamp(dt*(makingMistake?1.8:2.6),0,1);
+      if(!makingMistake&&Math.abs(b.mistakeLane)<.05){b.mistakeLane=0;b.mistakeLaneTarget=0;}
       const local=Math.max(0,elapsed-b.launchDelay),launch01=clamp(local/3,0,1),pace=b.paceFactor*b.lapFactor*(makingMistake?b.mistakeSlow:1),desired=b.targetRate*pace*(.18+.82*(1-Math.pow(1-launch01,2)));
       b.lapRate+=(desired-b.lapRate)*clamp(dt*(makingMistake?3.4:2),0,1);
       const before=Number(b.absProgress)||0;b.absProgress+=b.lapRate*dt;b.distanceSinceFinish+=Math.max(0,b.absProgress-before);
