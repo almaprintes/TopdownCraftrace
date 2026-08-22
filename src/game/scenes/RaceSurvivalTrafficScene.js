@@ -261,6 +261,78 @@ export class RaceScene extends CurrentRaceScene {
       b.mistakeLaneTarget=0;
     }
     this._initSurvivalPlannerBot();
+    this._createSurvivalSpectatorControls();
+  }
+
+  _createSurvivalSpectatorControls(){
+    if(!this._survivalAiRuntime?.debug||this._survivalSpectatorUi?.scene)return;
+    const racers=[{label:'TÚ',player:true},...(this._survivalBots||[]).map((bot,i)=>({
+      label:'CPU'+(i+1),bot,physical:bot===this._survivalPlannerBot
+    }))];
+    const width=44,gap=3,total=racers.length*width+(racers.length-1)*gap;
+    const ui=this.add.container(this.scale.width/2-total/2,62).setDepth(9200).setScrollFactor(0);
+    ui._items=[];
+    racers.forEach((entry,i)=>{
+      const x=i*(width+gap);
+      const bg=this.add.rectangle(x,0,width,22,entry.physical?0x6b4210:0x0a1822,.92)
+        .setOrigin(0,0).setStrokeStyle(1,entry.physical?0xffbd4a:0x3f718c,.8)
+        .setInteractive({useHandCursor:true});
+      const label=this.add.text(x+width/2,6,entry.label,{
+        fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',
+        fontStyle:'bold',color:entry.physical?'#ffd27a':'#d9ecf5'
+      }).setOrigin(.5,0);
+      bg.on('pointerdown',()=>this._selectSurvivalSpectator(i));
+      ui.add([bg,label]);ui._items.push({bg,label,entry});
+    });
+    this._survivalSpectatorUi=ui;
+    this._survivalSpectatorRing=this.add.ellipse(0,0,44,58)
+      .setStrokeStyle(3,0xffbd4a,.95).setDepth(72);
+    this._survivalSpectatorLabel=this.add.text(0,0,'',{
+      fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',
+      fontStyle:'bold',color:'#ffd27a',backgroundColor:'#09131dcc',
+      padding:{x:5,y:2}
+    }).setOrigin(.5,1).setDepth(73);
+    try{
+      this.uiCam?.ignore?.(this._survivalSpectatorRing);
+      this.uiCam?.ignore?.(this._survivalSpectatorLabel);
+    }catch{}
+    this._selectSurvivalSpectator(this._survivalPlannerBot?1:0);
+  }
+
+  _selectSurvivalSpectator(index){
+    const items=this._survivalSpectatorUi?._items||[];
+    const selected=items[clamp(Math.round(Number(index)||0),0,Math.max(0,items.length-1))];
+    if(!selected)return;
+    this._survivalSpectatorIndex=items.indexOf(selected);
+    for(let i=0;i<items.length;i++){
+      const active=i===this._survivalSpectatorIndex,physical=items[i].entry.physical;
+      items[i].bg.setFillStyle(active?0x174d66:(physical?0x6b4210:0x0a1822),active?1:.92);
+      items[i].bg.setStrokeStyle(active?2:1,active?0x66d9ff:(physical?0xffbd4a:0x3f718c),.95);
+    }
+    const target=selected.entry.player?this.carBody:selected.entry.bot?.sprite;
+    if(target?.scene)this.cameras?.main?.startFollow?.(target,true,.16,.16);
+    this._survivalAiTelemetry?.pushEvent?.({
+      timeMs:Math.round(Number(this.time?.now||0)),
+      type:'spectator_select',target:selected.entry.player?'player':selected.entry.bot?.id
+    });
+    this._updateSurvivalSpectatorMarker();
+  }
+
+  _updateSurvivalSpectatorMarker(){
+    const item=this._survivalSpectatorUi?._items?.[Number(this._survivalSpectatorIndex||0)];
+    const target=item?.entry?.player?this.carBody:item?.entry?.bot?.sprite;
+    const available=Boolean(target?.scene&&(item.entry.player||item.entry.bot?.active));
+    this._survivalSpectatorRing?.setVisible?.(available);
+    this._survivalSpectatorLabel?.setVisible?.(available);
+    if(!available){
+      if(item&&!item.entry.player)this._selectSurvivalSpectator(0);
+      return;
+    }
+    const x=Number(target.x),y=Number(target.y);
+    this._survivalSpectatorRing?.setPosition?.(x,y);
+    this._survivalSpectatorLabel?.setPosition?.(x,y-34);
+    const suffix=item.entry.physical?' · BOT FÍSICO':'';
+    this._survivalSpectatorLabel?.setText?.(item.entry.label+suffix);
   }
 
   _initSurvivalPlannerBot(){
@@ -630,10 +702,17 @@ export class RaceScene extends CurrentRaceScene {
     finally{this._restoreSurvivalTraffic(saved);}
     this._recordSurvivalAiTelemetry();
     this._updateSurvivalAiDebugOverlay();
+    this._updateSurvivalSpectatorMarker();
     return result;
   }
 
   _destroySurvival(){
+    try{this._survivalSpectatorUi?.destroy?.(true);}catch{}
+    try{this._survivalSpectatorRing?.destroy?.();}catch{}
+    try{this._survivalSpectatorLabel?.destroy?.();}catch{}
+    this._survivalSpectatorUi=null;
+    this._survivalSpectatorRing=null;
+    this._survivalSpectatorLabel=null;
     try{this._survivalPlannerBot?.plannerBody?.destroy?.();}catch{}
     if(this._survivalPlannerBot)this._survivalPlannerBot.plannerBody=null;
     this._survivalPlannerBot=null;
