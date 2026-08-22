@@ -2,6 +2,7 @@ import { RaceScene as CurrentRaceScene } from './RaceKartingCanariasSurfaceFixSc
 import { readSurvivalAiRuntime, createSurvivalAiTelemetry } from '../ai/survivalAiRuntime.js';
 import { buildTrackRacingLineModel } from '../ai/trackRacingLinePlanner.js';
 import { buildTrackSpeedProfile } from '../ai/trackSpeedProfilePlanner.js';
+import { buildTrackManeuverPlan } from '../ai/trackManeuverPlanner.js';
 import { updateSurvivalPhysicalBot } from '../ai/survivalPhysicalBotController.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -209,7 +210,9 @@ export class RaceScene extends CurrentRaceScene {
       // Conserva exterior-vértice-exterior sin consumir visualmente todo el ancho.
       offsetScale:.72
     });
-    this._survivalPlannerSpeedProfile=buildTrackSpeedProfile(this._survivalPlannerTrackModel);
+    this._survivalPlannerSpeedProfile=buildTrackManeuverPlan(
+      buildTrackSpeedProfile(this._survivalPlannerTrackModel)
+    );
     this._survivalAiTelemetry?.pushEvent?.({
       timeMs:Math.round(Number(this.time?.now||0)),
       type:'track_model',
@@ -218,7 +221,8 @@ export class RaceScene extends CurrentRaceScene {
       metrics:this._survivalPlannerTrackModel?.metrics||{},
       speedProfileValid:Boolean(this._survivalPlannerSpeedProfile?.valid),
       speedProfileReason:this._survivalPlannerSpeedProfile?.reason||null,
-      speedMetrics:this._survivalPlannerSpeedProfile?.metrics||{}
+      speedMetrics:this._survivalPlannerSpeedProfile?.metrics||{},
+      maneuverMetrics:this._survivalPlannerSpeedProfile?.maneuverMetrics||{}
     });
 
     this._buildSurvivalAiLine();
@@ -506,6 +510,9 @@ export class RaceScene extends CurrentRaceScene {
         riskScale:Number(b._plannerControl?.riskScale||1),
         chicaneAhead:Boolean(b._plannerControl?.chicaneAhead),
         shortChicane:Boolean(b._plannerControl?.shortChicane),
+        maneuverActive:Boolean(b._plannerControl?.maneuverActive),
+        maneuverId:Number(b._plannerControl?.maneuverId||0),
+        maneuverPhase:Number(b._plannerControl?.maneuverPhase||0),
         maneuverKind:b._plannerControl?.maneuverKind||null,
         distanceToLine:Number(b._plannerControl?.distanceToLine||0),
         offTrackSeconds:Number(b._plannerOffTrackSec||0),
