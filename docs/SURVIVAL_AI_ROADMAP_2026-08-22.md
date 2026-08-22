@@ -394,3 +394,13 @@ Métricas:
 ## Estado de los parches actuales
 
 Los ajustes realizados en `RaceSurvivalTrafficScene.js` mejoran la presentación provisional, pero no constituyen la arquitectura definitiva. Deben conservarse únicamente mientras `planner_v1` no alcance los criterios de validación de las fases 1–4.
+
+Ajuste de control provisional del 22/08/2026:
+
+- eliminada la oscilación sinusoidal permanente de cada rival;
+- eliminados los cambios laterales aleatorios sin causa de tráfico;
+- la personalidad conserva un offset pequeño y estable;
+- el riesgo de curva se evalúa también por delante del coche;
+- chicanes y horquillas bloquean nuevas maniobras laterales y mantienen el offset ya alcanzado;
+- velocidad y aceleración laterales reducidas para evitar correcciones bruscas;
+- pendiente de validación visual específica en Santa Cruz y después en otros circuitos.
