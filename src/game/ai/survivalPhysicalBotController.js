@@ -80,8 +80,26 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   }
   const chicaneAhead=(turnChanges===1&&turnEnergy>.12&&
     Math.min(positiveEnergy,negativeEnergy)>.045)||shortChicane;
-  // Una chicane corta conserva una sola salida durante el corte. Así el segundo
-  // vértice no vuelve a convertir la maniobra en una S a mitad del recorrido.
+  // El plan global tiene prioridad: mantiene una salida común para toda la
+  // secuencia y evita recentrar el coche entre sus vértices.
+  const plannedSample=samples[nearest.index];
+  let maneuver=bot._plannerManeuver;
+  if(maneuver){
+    const remaining=forwardSteps(nearest.index,maneuver.targetIndex,samples.length);
+    if(remaining<=2||remaining>36)maneuver=null;
+  }
+  if(!maneuver&&Number(plannedSample?.maneuverId)>0&&
+    Number.isInteger(plannedSample?.maneuverTargetIndex)){
+    maneuver={
+      id:Number(plannedSample.maneuverId),
+      type:String(plannedSample.maneuverType||'linked'),
+      targetIndex:Number(plannedSample.maneuverTargetIndex)
+    };
+  }
+  bot._plannerManeuver=maneuver;
+  const maneuverActive=Boolean(maneuver);
+
+  // Fallback local para pistas sin secuencia global homologada.
   let shortcut=bot._plannerShortChicane;
   if(shortcut){
     const remaining=forwardSteps(nearest.index,shortcut.targetIndex,samples.length);
@@ -97,9 +115,10 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     ?clamp(48+speed*.18,58,100)
     :clamp(30+speed*.17-cornerFactor*8,28,76);
   const lookaheadSteps=Math.max(2,Math.round(lookaheadPx/spacing));
-  const targetIndex=committedShortChicane
-    ?shortcut.targetIndex
-    :(nearest.index+lookaheadSteps)%samples.length;
+  const targetIndex=maneuverActive
+    ?maneuver.targetIndex
+    :(committedShortChicane?shortcut.targetIndex
+      :(nearest.index+lookaheadSteps)%samples.length);
   const target=samples[targetIndex];
   const desiredHeading=Math.atan2(Number(target.y)-Number(body.y),Number(target.x)-Number(body.x));
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
@@ -115,7 +134,10 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // Riesgo condicionado: si el coche llega bien colocado conserva más velocidad
   // cuanto más cerrada es la curva. Si acumula error angular o transversal,
   // renuncia progresivamente al extra en vez de insistir hasta salirse.
-  const cornerRisk=clamp(Number(params.cornerRisk||0),0,.35);
+  const cornerRisk=clamp(Math.max(
+    Number(params.cornerRisk||0),
+    maneuverActive?Number(plannedSample?.maneuverRisk||0):0
+  ),0,.35);
   const riskConfidence=clamp(
     1-Math.abs(headingError)/.42-Math.max(0,nearest.distance-10)/34,
     0,1
@@ -126,7 +148,8 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // antes de exigir más volante. Es una decisión física general, no un parche
   // por circuito: entrar algo más lento conserva agarre y evita cortar bordes.
   const controlScale=clamp(
-    1-Math.abs(headingError)*.25-Math.max(0,nearest.distance-12)*.003,
+    1-Math.abs(headingError)*.25-
+      Math.max(0,nearest.distance-(maneuverActive?28:12))*.003,
     .58,1
   );
   const controlledTargetSpeed=targetSpeed*controlScale;
@@ -193,6 +216,10 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     riskScale,
     chicaneAhead,
     shortChicane:committedShortChicane,
+    maneuverActive,
+    maneuverId:maneuver?.id||0,
+    maneuverType:maneuver?.type||null,
+    maneuverPhase:Number(plannedSample?.maneuverPhase||0),
     headingError,
     steer,
     throttle,
