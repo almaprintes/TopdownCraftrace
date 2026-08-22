@@ -314,7 +314,9 @@ Validación estructural:
 - CPU1 calcula su máximo físico desde el mismo `targetRate` que la parrilla y queda fuera del tráfico legacy;
 - el fallback sin histórico se acelera del 36 % al 42 % para recuperar competitividad;
 - las etiquetas de espectador muestran vueltas, cruces de meta y armado para diagnosticar el duelo final;
-- la evaluación de cierre de ronda se ejecuta continuamente desde el estado de carrera válido.
+- la evaluación de cierre de ronda se ejecuta continuamente desde el estado de carrera válido;
+- corrección tras prueba: CPU1 ya tenía buen ritmo; se conserva su control lateral nuevo y se restaura velocidad con factor físico 1.16;
+- el aumento de ritmo de los cuatro legacy se mantiene porque eran los que resultaban excesivamente lentos.
 
 Criterio de salida:
 
