@@ -435,3 +435,7 @@ Línea base real previa: CPU1 20,15 / 20,09 / 20,09 s (mejor 20,09; media 20,11)
 
 La primera fase de enseñanza captura una vuelta humana por bins del plan, exige 58 % de cobertura, filtra muestras fuera de pista y limita el desplazamiento al 96 % del corredor. Tres pasadas de suavizado evitan copiar microcorrecciones. La mezcla se activa al terminar una vuelta de CPU1: V1=0 %, luego 18/30/42/55 % como máximo. Una prueba sintética de ciclo completo confirmó plan válido, mezcla convergente y todas las coordenadas/velocidades finitas. Falta la validación decisiva en dispositivo comparando V1 contra V2/V3.
 
+### Primera medición de aprendizaje y ajuste
+
+Resultado real: V1 20,12 s (0 %), V2 19,79 s (18 %), V3 19,73 s (30 %). La enseñanza produjo una mejora demostrable de 0,39 s, pero CPU1 volvió a ser eliminado en penúltima ronda. Se aumenta la curva de aprendizaje a 34/53/72 % y la convergencia a 0,46 por segundo. Se mantiene V1 como control y no cambia el límite físico. Pendiente medir la nueva diferencia V1→V2→V3 y posición de eliminación.
+
