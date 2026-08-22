@@ -120,15 +120,15 @@ Causa comprobada en el controlador `legacy`:
 - selección aleatoria periódica de un nuevo offset;
 - protección de adelantamiento basada solo en la severidad de la curva actual.
 
-Corrección provisional:
+Intento provisional y resultado:
 
-- línea personal estable sin oscilación periódica;
-- cambios laterales únicamente por tráfico;
-- lectura anticipada de riesgo de curva;
-- mantenimiento del offset actual en chicanes y horquillas;
-- límites laterales reducidos.
+- se probaron una línea personal estable, lectura anticipada de curva y límites laterales menores;
+- el usuario confirmó que la conducción resultó peor;
+- el cambio se revirtió completo en `883258c`;
+- Santa Cruz continúa sin homologación visual;
+- no se realizarán más retoques aislados del controlador `legacy` antes de completar el planificador y el controlador físico nuevos.
 
-Esto no homologa todavía Santa Cruz. Requiere una nueva prueba visual y, si es posible, comparación de telemetría de cambios de signo del volante y velocidad lateral.
+La próxima comparación deberá medir cambios de signo de dirección, velocidad lateral y posición real frente a rotación renderizada.
 
 ## Próximas acciones de Fase 1
 
