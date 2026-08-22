@@ -447,3 +447,23 @@ La sesión 20,07 → 19,67 → 19,77 s mostró que 53 % podía ser peor que 34 %
 
 Caso real: 5 completedLaps, 3 registros generales, una vuelta fusionada de 35,670 s y solo 3 vueltas premiadas. Se sincroniza ahora el segmento de sesión de `ttHistory` en cada vuelta competitiva aceptada. Prueba sintética con historial [17,435, ausencia, 35,670] y tiempos autoritativos [17,435, 17,800, 17,901]: resultado exacto de tres entradas; la primera conserva splits alineados y las dos recuperadas descartan sectores falsos. Sintaxis validada. Pendiente confirmar en dispositivo 5/5 filas y 5 vueltas premiadas.
 
+
+
+## Confirmación móvil: cronometraje autoritativo y exploración continua (2026-08-22)
+
+Evidencia real recibida:
+
+- Resultado competitivo: 5/5.
+- Informe de sesión: 5 vueltas, sin fusiones ni huecos.
+- Botín: 5 vueltas premiadas.
+- Tiempos del jugador: 17.552, 17.622, 17.348, 17.457 y 19.746.
+- CPU1: 20.07 (0%), 19.88 (34%), 19.94 (34%).
+
+Diagnóstico del porcentaje repetido: la CPU mejoró a 34%, pero `_activateSurvivalTeachingForCpuLap()` exigía un `pendingPlan` nuevo. Como la vuelta humana siguiente no mejoró la maestra, el alumno no podía explorar el 42% aunque su propia vuelta sí hubiera mejorado.
+
+Corrección en `b0eb1a359d2147c40a6d79cf46d3c38d4b09aed3`: conservar y profundizar `activePlan` aun sin una nueva vuelta maestra. Prueba aislada del estado adaptativo:
+
+- 20.070 @ 0% seguido de 19.880 @ 34% => siguiente objetivo 42%.
+- Si 42% pierde más de 50 ms frente al mejor demostrado => siguiente objetivo 34% y aumenta `regressionCount`.
+
+Pendiente de validación móvil: comprobar que las tarjetas muestran 0% → 34% → 42% cuando 34% mejora, y 34% en la vuelta posterior si 42% regresa. No confundir la validación lógica con una mejora cronométrica ya demostrada.
