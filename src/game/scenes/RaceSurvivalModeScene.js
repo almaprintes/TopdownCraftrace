@@ -208,9 +208,15 @@ export class RaceScene extends CurrentRaceScene{
     if(Number.isFinite(started)&&Number.isFinite(lapMs)&&lapMs>1000){
       if(!Array.isArray(racer._survivalLapTimesMs))racer._survivalLapTimesMs=[];
       racer._survivalLapTimesMs.push(lapMs);
+      if(!Array.isArray(racer._survivalLapLearning))racer._survivalLapLearning=[];
+      racer._survivalLapLearning.push({
+        blend:Number(racer._plannerTeachingBlend||0),
+        teacherLap:Number(racer._plannerTeacherLap||0)
+      });
       // Una sola fuente de verdad: un tiempo por cada completedLaps aceptada.
       if(racer._survivalLapTimesMs.length>Number(racer.completedLaps)){
         racer._survivalLapTimesMs=racer._survivalLapTimesMs.slice(-Number(racer.completedLaps));
+        racer._survivalLapLearning=racer._survivalLapLearning.slice(-Number(racer.completedLaps));
       }
     }
     racer._survivalLapStartedAt=now;
@@ -256,8 +262,13 @@ export class RaceScene extends CurrentRaceScene{
       .map(Number).filter(ms=>Number.isFinite(ms)&&ms>1000);
     const cpuBest=cpuTimes.length?Math.min(...cpuTimes):null;
     const cpuAvg=cpuTimes.length?cpuTimes.reduce((sum,ms)=>sum+ms,0)/cpuTimes.length:null;
+    const cpuLearning=Array.isArray(this._survivalPlannerBot?._survivalLapLearning)
+      ?this._survivalPlannerBot._survivalLapLearning:[];
     const cpuLapList=cpuTimes.length
-      ?cpuTimes.map((ms,i)=>`<span><small>V${i+1}</small><b>${fmtLap(ms)}</b></span>`).join('')
+      ?cpuTimes.map((ms,i)=>{
+        const learned=Math.round(clamp(Number(cpuLearning[i]?.blend||0),0,1)*100);
+        return `<span><small>V${i+1} · APREND. ${learned}%</small><b>${fmtLap(ms)}</b></span>`;
+      }).join('')
       :'<i>CPU1 no completó ninguna vuelta cronometrada.</i>';
     const cpuResultPanel=this._survivalPlannerBot?`
       <section class="tdrsurv-cpu">
