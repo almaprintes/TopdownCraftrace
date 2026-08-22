@@ -132,8 +132,8 @@ export class RaceScene extends CurrentRaceScene{
     const surfaceId=this._survivalSurfaceId(),playerSpec=CAR_SPECS?.[this.carId]||CAR_SPECS?.[this.selectedCarId]||{},surface=resolveVehicleSurface(playerSpec,surfaceId),lenPx=Math.max(100,pathLength(cl)),playerMax=Math.max(120,Number(this.maxFwd||this.carParams?.maxFwd||420));
     const bestMs=this._survivalPlayerBestLapMs();let baseLapSec;
     if(Number.isFinite(bestMs))baseLapSec=clamp(bestMs/1000,12,180);
-    else{const surfacePace=clamp((surface.speedCapacity||1)*(surface.movingDriveCapacity||1),.42,1.02);baseLapSec=clamp(lenPx/Math.max(55,playerMax*surfacePace*.36),28,120);}
-    const lapMultipliers=[1.30,1.24,1.19,1.14,1.10],carWidth=Math.max(12,Number(visual.displayWidth||visual.width||28)),carLength=Math.max(20,Number(visual.displayHeight||visual.height||48)),laneGap=clamp(carWidth*.72,8,18),rowGap=clamp(carLength*1.45,26,60);
+    else{const surfacePace=clamp((surface.speedCapacity||1)*(surface.movingDriveCapacity||1),.42,1.02);baseLapSec=clamp(lenPx/Math.max(55,playerMax*surfacePace*.42),28,120);}
+    const lapMultipliers=[1.24,1.19,1.15,1.11,1.08],carWidth=Math.max(12,Number(visual.displayWidth||visual.width||28)),carLength=Math.max(20,Number(visual.displayHeight||visual.height||48)),laneGap=clamp(carWidth*.72,8,18),rowGap=clamp(carLength*1.45,26,60);
     const trackW=Math.max(carWidth*4,Number(this.track?.meta?.trackWidth||this.track?.trackWidth||this.trackWidth||carWidth*7));
     for(let i=0;i<5;i++){
       const sprite=this.add.image(0,0,tex).setOrigin(visual.originX??.5,visual.originY??.5).setDepth(Math.max(29,Number(this.carRig?.depth||30)-1));
@@ -190,6 +190,8 @@ export class RaceScene extends CurrentRaceScene{
     c.add([bg,a,b]);this._survivalNotice=c;if(!persistent)this.time.delayedCall(1700,()=>{if(c?.scene)c.destroy(true);if(this._survivalNotice===c)this._survivalNotice=null;});
   }
   _registerFinishCross(racer){
+    racer.gateCrossCount=Number(racer.gateCrossCount||0)+1;
+    racer.lastGateCrossAt=performance.now();
     if(!racer.armed){racer.armed=true;racer.distanceSinceFinish=0;return false;}
     if(racer.distanceSinceFinish<.72)return false;
     racer.completedLaps=(Number(racer.completedLaps)||0)+1;racer.distanceSinceFinish=0;return true;
@@ -329,7 +331,9 @@ export class RaceScene extends CurrentRaceScene{
       b.sprite.rotation=travelRotation+Number(this._carVisualRotOffset||0);
     }
 
-    if(validCross)this._tryCloseSurvivalRound();
+    // Evaluar siempre: si un cruce válido actualizó el estado en otra capa o
+    // en el fotograma anterior, la ronda no puede quedar esperando otra vuelta.
+    this._tryCloseSurvivalRound();
     if(this._survivalFinished)return;
 
     const ranked=this._survivalEntries();
