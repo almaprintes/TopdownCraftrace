@@ -289,6 +289,12 @@ export class RaceScene extends CurrentRaceScene{
 
     for(const b of this._survivalBots){
       if(!b.active)continue;
+      // Punto de extensión de Fase 3: un controlador físico puede actualizar
+      // su bot y devolver si cruzó meta. El resto conserva exactamente legacy.
+      if(this._shouldUseSurvivalPlannerBot?.(b)){
+        validCross=Boolean(this._updateSurvivalPlannerBot?.(b,deltaMs,gate))||validCross;
+        continue;
+      }
       if(elapsed>=b.nextPaceChange){b.paceTarget=rand(.94,1.06);b.nextPaceChange=elapsed+rand(1.8,5);}
       b.paceFactor+=(b.paceTarget-b.paceFactor)*clamp(dt*.75,0,1);
       const lapNow=Math.max(0,Math.floor(Number(b.absProgress)||0));
