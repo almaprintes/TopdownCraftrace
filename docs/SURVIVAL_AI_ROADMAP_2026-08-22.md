@@ -316,7 +316,10 @@ Validación estructural:
 - las etiquetas de espectador muestran vueltas, cruces de meta y armado para diagnosticar el duelo final;
 - la evaluación de cierre de ronda se ejecuta continuamente desde el estado de carrera válido;
 - corrección tras prueba: CPU1 ya tenía buen ritmo; se conserva su control lateral nuevo y se restaura velocidad con factor físico 1.16;
-- el aumento de ritmo de los cuatro legacy se mantiene porque eran los que resultaban excesivamente lentos.
+- el aumento de ritmo de los cuatro legacy se mantiene porque eran los que resultaban excesivamente lentos;
+- CPU1 detecta sucesiones de curvatura alterna y amplía el objetivo hasta después de la segunda curva;
+- la anticipación de chicane reduce correcciones sin cambiar rectas ni ritmo;
+- validación estructural posterior: 17/17 circuitos dentro del corredor.
 
 Criterio de salida:
 
