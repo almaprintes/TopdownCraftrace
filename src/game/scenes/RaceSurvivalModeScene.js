@@ -190,11 +190,31 @@ export class RaceScene extends CurrentRaceScene{
     c.add([bg,a,b]);this._survivalNotice=c;if(!persistent)this.time.delayedCall(1700,()=>{if(c?.scene)c.destroy(true);if(this._survivalNotice===c)this._survivalNotice=null;});
   }
   _registerFinishCross(racer){
+    const now=performance.now();
     racer.gateCrossCount=Number(racer.gateCrossCount||0)+1;
-    racer.lastGateCrossAt=performance.now();
-    if(!racer.armed){racer.armed=true;racer.distanceSinceFinish=0;return false;}
+    racer.lastGateCrossAt=now;
+    if(!racer.armed){
+      racer.armed=true;
+      racer.distanceSinceFinish=0;
+      racer._survivalLapStartedAt=now;
+      racer._survivalLapTimesMs=[];
+      return false;
+    }
     if(racer.distanceSinceFinish<.72)return false;
-    racer.completedLaps=(Number(racer.completedLaps)||0)+1;racer.distanceSinceFinish=0;return true;
+    const started=Number(racer._survivalLapStartedAt);
+    const lapMs=now-started;
+    racer.completedLaps=(Number(racer.completedLaps)||0)+1;
+    racer.distanceSinceFinish=0;
+    if(Number.isFinite(started)&&Number.isFinite(lapMs)&&lapMs>1000){
+      if(!Array.isArray(racer._survivalLapTimesMs))racer._survivalLapTimesMs=[];
+      racer._survivalLapTimesMs.push(lapMs);
+      // Una sola fuente de verdad: un tiempo por cada completedLaps aceptada.
+      if(racer._survivalLapTimesMs.length>Number(racer.completedLaps)){
+        racer._survivalLapTimesMs=racer._survivalLapTimesMs.slice(-Number(racer.completedLaps));
+      }
+    }
+    racer._survivalLapStartedAt=now;
+    return true;
   }
 
   _tryCloseSurvivalRound(){
