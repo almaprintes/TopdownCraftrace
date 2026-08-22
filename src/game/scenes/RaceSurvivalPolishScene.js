@@ -13,7 +13,20 @@ export class RaceScene extends TrafficRaceScene {
     this._survivalCpu1LapStartPerf=null;
     this._survivalLapClockPrev={player:null,cpu1:null};
     this._survivalLapClockLastCross={player:0,cpu1:0};
-    return super.create(data);
+    this._survivalCpuReplaySamples=[];
+    this._survivalCpuReplayLapStartPerf=null;
+    this._survivalCpuReplayLastSamplePerf=0;
+    this._survivalCpuReplay=null;
+    this._survivalCpuSpeedText=null;
+    this._survivalReplayResultRoot=null;
+    const result=super.create(data);
+    const trackKey=this.trackKey||this.track?.meta?.key||'track01';
+    this._survivalCpuReplayStorageKey=`tdr2:survivalCpuReplay:${trackKey}`;
+    try{
+      const saved=JSON.parse(localStorage.getItem(this._survivalCpuReplayStorageKey)||'null');
+      if(saved?.samples?.length>4&&Number(saved.lapMs)>1000)this._survivalCpuReplay=saved;
+    }catch{}
+    return result;
   }
 
   _initSurvival(){
@@ -26,10 +39,22 @@ export class RaceScene extends TrafficRaceScene {
       b._renderRot=Number(s.rotation||0);
       b._miniMarker=null;
     }
+    if(this._survivalAiRuntime?.debug&&this._survivalPlannerBot?.sprite?.scene){
+      this._survivalCpuSpeedText=this.add.text(0,0,'CPU1 · 000 km/h',{
+        fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',
+        fontSize:'9px',fontStyle:'bold',color:'#fff2c9',
+        backgroundColor:'rgba(8,14,20,.82)',padding:{x:4,y:2}
+      }).setOrigin(.5,1).setDepth(76);
+      try{this.uiCam?.ignore?.(this._survivalCpuSpeedText);}catch{}
+    }
   }
 
   _registerFinishCross(racer){
+    const wasArmed=Boolean(racer?.armed);
     const completed=super._registerFinishCross(racer);
+    if(racer===this._survivalPlannerBot&&!wasArmed&&racer?.armed){
+      this._resetSurvivalCpuReplayLap();
+    }
     if(!completed)return false;
     if(racer===this._survivalPlayer){
       this._survivalPlayerLapTimes=Array.isArray(racer._survivalLapTimesMs)
@@ -39,6 +64,7 @@ export class RaceScene extends TrafficRaceScene {
       this._survivalCpu1LapTimes=Array.isArray(racer._survivalLapTimesMs)
         ?racer._survivalLapTimesMs.slice(0,5):[];
       const lapMs=this._survivalCpu1LapTimes[this._survivalCpu1LapTimes.length-1];
+      this._finalizeSurvivalCpuReplayLap(Number(lapMs));
       this._survivalAiTelemetry?.pushEvent?.({
         timeMs:Math.round(Number(this.time?.now||0)),
         type:'cpu1_lap',lap:this._survivalCpu1LapTimes.length,
@@ -56,6 +82,107 @@ export class RaceScene extends TrafficRaceScene {
       this._activateSurvivalTeachingForCpuLap?.();
     }
     return true;
+  }
+
+  _resetSurvivalCpuReplayLap(){
+    this._survivalCpuReplaySamples=[];
+    this._survivalCpuReplayLapStartPerf=performance.now();
+    this._survivalCpuReplayLastSamplePerf=0;
+  }
+
+  _recordSurvivalCpuReplaySample(){
+    if(this._replayActive||!this._raceStarted)return;
+    const bot=this._survivalPlannerBot,body=bot?.plannerBody;
+    if(!bot?.active||!body?.body)return;
+    const now=performance.now();
+    if(this._survivalCpuReplayLapStartPerf==null)this._survivalCpuReplayLapStartPerf=now;
+    if(now-this._survivalCpuReplayLastSamplePerf<40)return;
+    this._survivalCpuReplayLastSamplePerf=now;
+    const v=body.body.velocity||{};
+    const speed=Math.hypot(Number(v.x)||0,Number(v.y)||0);
+    this._survivalCpuReplaySamples.push({
+      t:Math.max(0,Math.round(now-this._survivalCpuReplayLapStartPerf)),
+      x:Number(body.x||0),y:Number(body.y||0),r:Number(body.rotation||0),
+      speed:Number(speed.toFixed(2)),
+      kmh:Math.max(0,Math.round(speed*.1)),
+      steer:Number(bot._plannerControl?.steer||0),
+      throttle:Number(bot._plannerControl?.throttle||0),
+      brake:Number(bot._plannerControl?.brake||0),
+      straight:Boolean(bot._plannerControl?.straightLock)
+    });
+    if(this._survivalCpuReplaySamples.length>1200)this._survivalCpuReplaySamples.shift();
+  }
+
+  _finalizeSurvivalCpuReplayLap(lapMs){
+    const raw=this._survivalCpuReplaySamples;
+    if(!Number.isFinite(lapMs)||lapMs<=1000||!Array.isArray(raw)||raw.length<8){
+      this._resetSurvivalCpuReplayLap();return;
+    }
+    const elapsed=Math.max(1,Number(raw[raw.length-1]?.t||lapMs));
+    const samples=raw.map(p=>({...p,t:Math.round(Number(p.t||0)*lapMs/elapsed)}));
+    const candidate={
+      version:5,kind:'survival_cpu1',trackKey:this.trackKey||this.track?.meta?.key||'track01',
+      carId:this.carId||'cpu1',carName:'CPU1',lapMs:Math.round(lapMs),
+      teachingBlend:Number(this._survivalPlannerBot?._plannerTeachingBlend||0),
+      samples
+    };
+    if(!this._survivalCpuReplay||lapMs<Number(this._survivalCpuReplay.lapMs||Infinity)){
+      this._survivalCpuReplay=candidate;
+      try{localStorage.setItem(this._survivalCpuReplayStorageKey,JSON.stringify(candidate));}catch{}
+      this._survivalAiTelemetry?.pushEvent?.({
+        timeMs:Math.round(Number(this.time?.now||0)),type:'cpu1_replay_saved',
+        lapMs:Math.round(lapMs),samples:samples.length,
+        teachingBlend:candidate.teachingBlend
+      });
+    }
+    this._resetSurvivalCpuReplayLap();
+  }
+
+  _updateSurvivalCpuSpeedReadout(){
+    const label=this._survivalCpuSpeedText,bot=this._survivalPlannerBot;
+    if(!label?.scene)return;
+    const available=Boolean(!this._replayActive&&bot?.active&&bot?.sprite?.scene);
+    label.setVisible(available);
+    if(!available)return;
+    const body=bot.plannerBody,v=body?.body?.velocity||{};
+    const kmh=Math.max(0,Math.round(Math.hypot(Number(v.x)||0,Number(v.y)||0)*.1));
+    label.setText(`CPU1 · ${String(kmh).padStart(3,'0')} km/h`);
+    label.setPosition(Number(bot.sprite.x),Number(bot.sprite.y)-31);
+  }
+
+  _startSurvivalCpuReplay(resultRoot=null){
+    const replay=this._survivalCpuReplay;
+    if(!replay?.samples?.length||this._replayActive)return;
+    this._ghostData=replay;
+    this._ghostTrackKey=replay.trackKey;
+    try{this._ghostSprite?.destroy?.();}catch{}
+    this._ghostSprite=null;
+    const previousMode=this._tdrGameMode;
+    this._tdrGameMode='ghost';
+    this._createGhostSprite?.();
+    this._tdrGameMode=previousMode;
+    if(!this._ghostSprite?.scene)return;
+    this._survivalReplayResultRoot=resultRoot||this._survivalResultDom||null;
+    if(this._survivalReplayResultRoot)this._survivalReplayResultRoot.style.display='none';
+    this._survivalCpuReplayActive=true;
+    try{this.physics?.world?.resume?.();}catch{}
+    this._enterReplay?.();
+  }
+
+  _replayCarName(){
+    if(this._survivalCpuReplayActive)return 'CPU1 · BOT FÍSICO';
+    return super._replayCarName?.()||'COCHE';
+  }
+
+  _exitReplay(){
+    const result=super._exitReplay?.();
+    if(this._survivalCpuReplayActive){
+      this._survivalCpuReplayActive=false;
+      try{this.physics?.world?.pause?.();}catch{}
+      if(this._survivalReplayResultRoot)this._survivalReplayResultRoot.style.display='';
+      this._survivalReplayResultRoot=null;
+    }
+    return result;
   }
 
   _survivalSessionBestLapMs(){
@@ -228,13 +355,17 @@ export class RaceScene extends TrafficRaceScene {
 
   _destroySurvival(){
     for(const b of this._survivalBots||[]){try{b._miniMarker?.destroy?.();}catch{}}
+    try{this._survivalCpuSpeedText?.destroy?.();}catch{}
+    this._survivalCpuSpeedText=null;
     return super._destroySurvival();
   }
 
   update(time,delta){
     const result=super.update(time,delta);
+    this._recordSurvivalCpuReplaySample();
     this._smoothSurvivalSprites(delta);
     this._pinSurvivalMiniMarkers();
+    this._updateSurvivalCpuSpeedReadout();
     return result;
   }
 }
