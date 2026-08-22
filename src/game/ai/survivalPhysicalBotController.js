@@ -137,11 +137,17 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const target=samples[targetIndex];
   const desiredHeading=Math.atan2(Number(target.y)-Number(body.y),Number(target.x)-Number(body.x));
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
-  const rawSteer=clamp(headingError/.48,-1,1);
+  let rawSteer=clamp(headingError/.48,-1,1);
   const previousSteer=Number(bot._plannerSteerCommand||0);
   const oppositeDuringRelease=maneuverRelease&&
     Math.sign(rawSteer)!==Math.sign(previousSteer)&&
     Math.abs(previousSteer)>.04;
+  // Al descargar el recorte se permite volver a volante neutro, pero no cruzar
+  // inmediatamente al contravolante por una desviación pequeña. Solo un error
+  // angular claro puede cancelar esta histéresis de salida.
+  const releaseOppositeSuppressed=oppositeDuringRelease&&
+    Math.abs(headingError)<.34;
+  if(releaseOppositeSuppressed)rawSteer=0;
   const steerRate=oppositeDuringRelease?2.2:9;
   const steer=clamp(previousSteer+
     clamp(rawSteer-previousSteer,-steerRate*dt,steerRate*dt),-1,1);
@@ -244,6 +250,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     maneuverActive,
     maneuverRelease,
     maneuverReleaseSeconds:releaseSeconds,
+    releaseOppositeSuppressed,
     maneuverId:maneuver?.id||0,
     maneuverType:maneuver?.type||null,
     maneuverPhase:Number(plannedSample?.maneuverPhase||0),
