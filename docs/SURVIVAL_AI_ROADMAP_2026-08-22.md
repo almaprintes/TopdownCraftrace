@@ -478,3 +478,14 @@ Estado vigente:
 - 17/17 circuitos dentro del corredor en simulación;
 - Santa Cruz: 33.0 px máximos respecto a la línea y 22.9 cambios de signo de volante por vuelta;
 - pendiente nueva validación visual en iPhone.
+
+
+## Chicanes cortas y segundo aumento de ritmo
+
+Tras una segunda grabación real:
+
+- se añade detección de dos lóbulos breves, opuestos y equilibrados;
+- el factor físico sube a 1.38 y el techo experimental al 92 %;
+- 17/17 circuitos conservan validez estructural;
+- un techo del 95 % se probó y descartó por salida en Shanghai;
+- pendiente validación visual y de ritmo en iPhone.
