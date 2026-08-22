@@ -46,6 +46,11 @@ export class RaceScene extends TrafficRaceScene {
         teachingBlend:Number(racer._plannerTeachingBlend||0),
         teacherLap:Number(racer._plannerTeacherLap||0)
       });
+      // Evaluar primero el resultado de la mezcla que acaba de usar. Después
+      // activar la siguiente lección dentro del límite que haya demostrado.
+      this._observeSurvivalTeachingCpuLap?.(
+        Number(lapMs),Number(racer._plannerTeachingBlend||0)
+      );
       // La enseñanza cerrada durante la vuelta humana solo entra en vigor al
       // comenzar una vuelta nueva de CPU1. Así V1 queda como línea base limpia.
       this._activateSurvivalTeachingForCpuLap?.();
