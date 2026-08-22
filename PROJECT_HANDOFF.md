@@ -159,6 +159,7 @@ Decisión vigente:
 - 17/17 circuitos pasan la validación estructural del perfil; informe en `docs/SURVIVAL_AI_SPEED_PROFILE_VALIDATION_2026-08-22.md`;
 - la Fase 3 dispone de un único bot físico experimental activable con `planner_v1`; el modo predeterminado sigue siendo `legacy`;
 - usa cuerpo Arcade, dirección, gas y freno, sin teletransporte, tráfico ni adelantamientos;
-- validación estructural: 15/17 dentro del corredor; Jeddah y Karting Tenerife bloquean la homologación;
+- tras calibrar anticipación y velocidad por error, 17/17 permanecen dentro del semiancho nominal en simulación;
+- Jeddah mejora de 95.6 a 40.1 px, Karting Tenerife de 70.6 a 43.1 px y Santa Cruz de 61.3 a 42.3 px de desviación máxima;
 - informe: `docs/SURVIVAL_AI_PHYSICAL_BOT_VALIDATION_2026-08-22.md`;
-- no migrar el pelotón ni activar `planner_v1` por defecto hasta superar prueba real en Phaser y corregir esos dos circuitos.
+- no migrar el pelotón ni activar `planner_v1` por defecto hasta superar prueba real en Phaser.
