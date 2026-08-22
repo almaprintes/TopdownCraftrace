@@ -188,3 +188,9 @@ Decisión vigente:
 - CPU1 usa factor físico 1.27 y techo experimental 86 %, sin modificar la física ni velocidad máxima del jugador;
 - validación final: 17/17 dentro del corredor; Santa Cruz queda en 33.0 px máximos respecto a la línea y 22.9 cambios de signo por vuelta;
 - pendiente confirmar movimiento y ritmo con una segunda grabación en iPhone.
+
+- segunda grabación: menor apertura exterior, pero las chicanes cortas no se diagonalizaban y CPU1 seguía lento, normalmente a 50–59 km/h visibles;
+- se añade detector de dos lóbulos cortos opuestos y equilibrados; factor físico 1.38 y techo 92 %;
+- 17/17 circuitos válidos; Santa Cruz simula 2.00 vueltas/60 s y 20.0 cambios de signo por vuelta;
+- el 95 % se descartó porque Shanghai abandonaba el corredor; con 92 % conserva 0.9 px de margen estructural;
+- pendiente tercera prueba visual en iPhone.
