@@ -158,6 +158,38 @@ export function buildTrackRacingLineModel(track,options={}){
     }
   }
 
+  // Compromiso de vértice opcional. El signo de la curvatura marca el lado
+  // interior y una demanda suavizada desplaza la línea solo en curva sostenida.
+  // La transición amplia conserva entrada/salida continuas: no crea un carril
+  // paralelo ni obliga al controlador a perseguir cada microcurva.
+  const apexCommitment=clamp(Number(options.apexCommitment||0),0,.85);
+  if(apexCommitment>0){
+    const baseTurns=curvature(base);
+    const signedDemand=baseTurns.map((_,i)=>{
+      let weighted=0,total=0;
+      for(let d=-4;d<=4;d++){
+        const w=5-Math.abs(d);
+        weighted+=Number(baseTurns[(i+d+base.length)%base.length]||0)*w;
+        total+=w;
+      }
+      return weighted/total;
+    });
+    const desired=signedDemand.map((turn,i)=>{
+      const strength=clamp((Math.abs(turn)-.0015)/.025,0,1);
+      return Math.sign(turn)*limits[i]*strength*.82;
+    });
+    for(let pass=0;pass<4;pass++){
+      const copy=desired.slice();
+      for(let i=0;i<base.length;i++)desired[i]=(
+        copy[(i-2+base.length)%base.length]+2*copy[(i-1+base.length)%base.length]+
+        4*copy[i]+2*copy[(i+1)%base.length]+copy[(i+2)%base.length]
+      )/10;
+    }
+    offsets=offsets.map((value,i)=>clamp(
+      value+(desired[i]-value)*apexCommitment,-limits[i],limits[i]
+    ));
+  }
+
   // Permite homologar una envolvente menos agresiva para un controlador
   // físico sin alterar el optimizador ni crear una trazada manual por circuito.
   const offsetScale=clamp(Number(options.offsetScale??1),.35,1);
