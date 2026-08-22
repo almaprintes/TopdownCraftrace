@@ -307,7 +307,7 @@ export class RaceScene extends CurrentRaceScene {
     const control=updateSurvivalPhysicalBot(b,this._survivalPlannerSpeedProfile,{
       dt,
       spacing:Number(this._survivalPlannerTrackModel?.spacing||10),
-      maxFwd:Number(this.maxFwd||this.carParams?.maxFwd||420)*.88,
+      maxFwd:Number(this.maxFwd||this.carParams?.maxFwd||420)*.82,
       accel:Number(this.accel||this.carParams?.accel||520),
       brakeForce:Number(this.brakeForce||this.carParams?.brakeForce||720),
       linearDrag:Number(this.linearDrag||this.carParams?.linearDrag||.004),
