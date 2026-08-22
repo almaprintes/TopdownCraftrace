@@ -166,7 +166,8 @@ export class RaceScene extends TrafficRaceScene {
 
   update(time,delta){
     const result=super.update(time,delta);
-    this._smoothSurvivalSprites(delta);
+    // La trayectoria lógica ya avanza con delta real. Una segunda interpolación
+    // visual introducía efecto acordeón cuando variaba el frame time.
     this._pinSurvivalMiniMarkers();
     return result;
   }
