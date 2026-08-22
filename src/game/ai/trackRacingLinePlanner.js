@@ -46,6 +46,50 @@ function resampleClosed(source,fallbackWidth,spacing){
   return{points,total};
 }
 
+function pointTurn(points,i){
+  const n=points.length,p=points[(i-1+n)%n],c=points[i],q=points[(i+1)%n];
+  return Math.abs(wrapAngle(Math.atan2(q.y-c.y,q.x-c.x)-Math.atan2(c.y-p.y,c.x-p.x)));
+}
+
+// Acondiciona solo la referencia derivada. Las cúspides de una polilínea escasa
+// no son curvas conducibles: se reparten entre varias muestras con un movimiento
+// acotado por la anchura local, sin modificar el JSON homologado del circuito.
+function conditionReference(points,options={}){
+  const original=points.map(p=>({...p}));
+  let conditioned=points.map(p=>({...p}));
+  const threshold=clamp(Number(options.discontinuityTurn||.62),.4,1.0);
+  const sourceTurns=original.map((_,i)=>pointTurn(original,i));
+  const discontinuityCount=sourceTurns.filter(v=>v>threshold).length;
+  const passes=clamp(Math.round(Number(options.conditioningPasses||18)),4,32);
+
+  for(let pass=0;pass<passes;pass++){
+    const previous=conditioned.map(p=>({...p}));
+    for(let i=0;i<conditioned.length;i++){
+      const turn=pointTurn(previous,i);
+      if(turn<=threshold*.72)continue;
+      const prev=previous[(i-1+previous.length)%previous.length];
+      const next=previous[(i+1)%previous.length];
+      const targetX=(prev.x+next.x)*.5,targetY=(prev.y+next.y)*.5;
+      const strength=clamp((turn-threshold*.55)/Math.max(.001,Math.PI-threshold*.55),.08,.32);
+      let x=previous[i].x+(targetX-previous[i].x)*strength;
+      let y=previous[i].y+(targetY-previous[i].y)*strength;
+      const maxShift=Math.min(18,Math.max(3,Number(original[i].width||140)*.12));
+      const dx=x-original[i].x,dy=y-original[i].y,d=Math.hypot(dx,dy);
+      if(d>maxShift){x=original[i].x+dx*maxShift/d;y=original[i].y+dy*maxShift/d;}
+      conditioned[i]={...previous[i],x,y};
+    }
+  }
+
+  const shifts=conditioned.map((p,i)=>Math.hypot(p.x-original[i].x,p.y-original[i].y));
+  return{
+    points:conditioned,
+    shifts,
+    discontinuityCount,
+    sourceMaxTurn:Math.max(...sourceTurns),
+    maxShift:Math.max(...shifts)
+  };
+}
+
 function frames(points){
   const n=points.length;
   return points.map((p,i)=>{
@@ -75,12 +119,16 @@ export function buildTrackRacingLineModel(track,options={}){
 
   const spacing=clamp(Number(options.spacing||source.fallbackWidth*.075),7,13);
   const sampled=resampleClosed(source.points,source.fallbackWidth,spacing);
-  const base=sampled.points;
-  if(base.length<4)return{valid:false,reason:'resample_failed',centerline:[],racingLine:[],offsets:[],curvature:[],metrics:{}};
+  const rawBase=sampled.points;
+  if(rawBase.length<4)return{valid:false,reason:'resample_failed',centerline:[],racingLine:[],offsets:[],curvature:[],metrics:{}};
 
+  const conditioning=conditionReference(rawBase,options);
+  const base=conditioning.points;
   const frame=frames(base);
   const safetyMargin=Math.max(5,Number(options.safetyMargin||source.fallbackWidth*.075));
-  const limits=base.map(p=>Math.max(3,Number(p.width||source.fallbackWidth)*.5-safetyMargin));
+  // El desplazamiento de acondicionamiento se descuenta del corredor disponible:
+  // la trazada optimizada conserva el margen respecto a la referencia homologada.
+  const limits=base.map((p,i)=>Math.max(3,Number(p.width||source.fallbackWidth)*.5-safetyMargin-conditioning.shifts[i]));
   let offsets=new Array(base.length).fill(0);
 
   // Elastic-band constrained optimizer. Pulling each point toward the chord of
@@ -132,7 +180,10 @@ export function buildTrackRacingLineModel(track,options={}){
       maxAbsCurvature:Math.max(...curve.map(Math.abs)),
       maxAbsOffset:Math.max(...offsets.map(Math.abs)),
       minBoundaryClearance:Math.min(...clearances),
-      safetyMargin
+      safetyMargin,
+      discontinuityCount:conditioning.discontinuityCount,
+      sourceMaxTurn:conditioning.sourceMaxTurn,
+      referenceConditioningMaxShift:conditioning.maxShift
     }
   };
 }
