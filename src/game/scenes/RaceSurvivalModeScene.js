@@ -133,7 +133,7 @@ export class RaceScene extends CurrentRaceScene{
     const bestMs=this._survivalPlayerBestLapMs();let baseLapSec;
     if(Number.isFinite(bestMs))baseLapSec=clamp(bestMs/1000,12,180);
     else{const surfacePace=clamp((surface.speedCapacity||1)*(surface.movingDriveCapacity||1),.42,1.02);baseLapSec=clamp(lenPx/Math.max(55,playerMax*surfacePace*.36),28,120);}
-    const lapMultipliers=[1.22,1.18,1.14,1.10,1.07],carWidth=Math.max(12,Number(visual.displayWidth||visual.width||28)),carLength=Math.max(20,Number(visual.displayHeight||visual.height||48)),laneGap=clamp(carWidth*.72,8,18),rowGap=clamp(carLength*1.45,26,60);
+    const lapMultipliers=[1.30,1.24,1.19,1.14,1.10],carWidth=Math.max(12,Number(visual.displayWidth||visual.width||28)),carLength=Math.max(20,Number(visual.displayHeight||visual.height||48)),laneGap=clamp(carWidth*.72,8,18),rowGap=clamp(carLength*1.45,26,60);
     const trackW=Math.max(carWidth*4,Number(this.track?.meta?.trackWidth||this.track?.trackWidth||this.trackWidth||carWidth*7));
     for(let i=0;i<5;i++){
       const sprite=this.add.image(0,0,tex).setOrigin(visual.originX??.5,visual.originY??.5).setDepth(Math.max(29,Number(this.carRig?.depth||30)-1));
@@ -142,8 +142,8 @@ export class RaceScene extends CurrentRaceScene{
       const bot={
         id:`CPU ${i+1}`,sprite,absProgress:startProgress,lapRate:0,targetRate,lane,baseLane:lane,active:true,launchDelay:i*.08,
         armed:false,completedLaps:0,distanceSinceFinish:0,prevX:p?.x??0,prevY:p?.y??0,
-        paceFactor:rand(.965,1.035),paceTarget:rand(.955,1.045),nextPaceChange:rand(1.8,4.5),
-        lapFactor:rand(.95,1.05),linePhase:rand(0,Math.PI*2),lineFreq:rand(.65,1.35),lineAmp:rand(carWidth*.18,carWidth*.52),
+        paceFactor:rand(.97,1.02),paceTarget:rand(.97,1.025),nextPaceChange:rand(2.5,5.5),
+        lapFactor:rand(.97,1.025),linePhase:rand(0,Math.PI*2),lineFreq:rand(.65,1.35),lineAmp:rand(carWidth*.18,carWidth*.52),
         trackW,mistakeUntil:0,mistakeLane:0,mistakeSlow:1,nextMistakeCheck:rand(.8,2.2),lastLapSeen:0
       };
       this._survivalBots.push(bot);if(p){sprite.setPosition(p.x,p.y);sprite.rotation=p.r+Number(this._carVisualRotOffset||0);}
@@ -304,10 +304,10 @@ export class RaceScene extends CurrentRaceScene{
         validCross=Boolean(this._updateSurvivalPlannerBot?.(b,deltaMs,gate))||validCross;
         continue;
       }
-      if(elapsed>=b.nextPaceChange){b.paceTarget=rand(.94,1.06);b.nextPaceChange=elapsed+rand(1.8,5);}
+      if(elapsed>=b.nextPaceChange){b.paceTarget=rand(.97,1.025);b.nextPaceChange=elapsed+rand(2.5,5.5);}
       b.paceFactor+=(b.paceTarget-b.paceFactor)*clamp(dt*.75,0,1);
       const lapNow=Math.max(0,Math.floor(Number(b.absProgress)||0));
-      if(lapNow!==b.lastLapSeen){b.lastLapSeen=lapNow;b.lapFactor=rand(.94,1.06);b.linePhase+=rand(-.8,.8);b.lineAmp=clamp(b.lineAmp*rand(.78,1.22),2,Math.max(3,b.trackW*.18));}
+      if(lapNow!==b.lastLapSeen){b.lastLapSeen=lapNow;b.lapFactor=rand(.97,1.025);b.linePhase+=rand(-.8,.8);b.lineAmp=clamp(b.lineAmp*rand(.78,1.22),2,Math.max(3,b.trackW*.18));}
       if(elapsed>=b.nextMistakeCheck&&elapsed>=b.mistakeUntil){
         const dirt=this._survivalSurfaceId()==='DIRT',chance=dirt?.18:.11;
         if(Math.random()<chance){
