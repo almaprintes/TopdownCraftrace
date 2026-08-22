@@ -425,3 +425,7 @@ El modo experimental `planner_v1` muestra provisionalmente los tiempos de CPU1 e
 
 En dispositivo, una pasada por meta no intersectó el segmento geométrico: dos vueltas humanas quedaron combinadas en 37,037 s y el informe mostró cuatro registros. Se añadió detección redundante por wrap de progreso para jugador y CPU1, con deduplicación temporal de 2 s. También se corrigió la visibilidad del panel para conservarlo cuando CPU1 haya sido eliminado antes de abrir resultados. Pendiente: confirmar una sesión 5/5 con cinco tiempos humanos coherentes y los tiempos CPU1 visibles hasta su eliminación.
 
+### Fuente autoritativa de cronometraje
+
+Después de comprobar que el detector redundante seguía dejando 5 vueltas competitivas como 4 filas, el cronómetro se trasladó al mismo punto que incrementa `completedLaps`. Cada corredor conserva `_survivalLapTimesMs`; tanto el informe humano como el panel CPU1 leen esa matriz. Se retiró el respaldo de wrap del flujo de cronometraje para evitar dos relojes independientes. Pendiente confirmar en dispositivo el invariante 5 completedLaps = 5 tiempos y la aparición del panel CPU1.
+
