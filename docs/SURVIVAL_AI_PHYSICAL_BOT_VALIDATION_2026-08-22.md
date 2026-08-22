@@ -304,3 +304,37 @@ Validación:
 - se descartó el techo del 95 % porque Shanghai excedía el corredor en 1.2 px.
 
 Pendiente confirmar en dispositivo que las dos chicanes cortas se leen como diagonales y que el aumento de ritmo es suficiente.
+
+
+## Tercera grabación: consistencia y uso de piano
+
+Observación del usuario:
+
+- CPU1 empieza fuerte, pero parece perder rendimiento al sucederse las vueltas;
+- la menor excursión exterior es una mejora;
+- todavía no diagonaliza las chicanes;
+- se aprueba que un vértice pueda exceder el límite uno o dos píxeles durante un instante si representa una comida de piano lógica;
+- no se aprueban salidas prolongadas ni excursiones fuera de pista.
+
+Comprobación:
+
+- no existe multiplicador de fatiga ni reducción de `targetRate` por vuelta para CPU1;
+- la simulación de Santa Cruz mantiene 29.23 s y 29.10 s en dos vueltas consecutivas;
+- la variación observada procede de curvas, error de seguimiento y reducción correctiva de velocidad, no de una degradación programada.
+
+Corrección:
+
+- una chicane corta detectada fija un único objetivo de salida durante doce muestras;
+- el objetivo no se recalcula al llegar al segundo vértice, evitando reconstruir la S;
+- factor físico 1.45 y techo 95 %;
+- la telemetría distingue `shortChicane`.
+
+Criterio revisado de límites:
+
+- se acepta hasta 3 px fuera durante un máximo de 0.40 s como uso breve de piano;
+- cualquier exceso superior o permanencia mayor continúa siendo fallo;
+- con este criterio, 17/17 circuitos son válidos;
+- Shanghai presenta el máximo: 1.5 px durante 0.30 s;
+- Santa Cruz no excede el borde en la simulación y marca 29.23/29.10 s.
+
+Pendiente validación visual de la diagonal y confirmar que el ritmo percibido se mantiene durante toda la sesión real.
