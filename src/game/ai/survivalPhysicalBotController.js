@@ -47,7 +47,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   bot._plannerSampleIndex=nearest.index;
 
   const spacing=Math.max(1,Number(params.spacing||10));
-  const lookaheadPx=clamp(24+speed*.24,28,105);
+  const lookaheadPx=clamp(22+speed*.18,25,82);
   const lookaheadSteps=Math.max(2,Math.round(lookaheadPx/spacing));
   const targetIndex=(nearest.index+lookaheadSteps)%samples.length;
   const target=samples[targetIndex];
@@ -58,7 +58,15 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const maxFwd=Math.max(40,Number(params.maxFwd||420));
   const profileMax=Math.max(1,Number(profile.parameters?.maxSpeed||520));
   const targetSpeed=clamp(Number(samples[nearest.index].targetSpeed||0)/profileMax,0,1)*maxFwd;
-  const speedError=targetSpeed-speed;
+  // Si aumenta el error angular o la distancia a la línea, reducir velocidad
+  // antes de exigir más volante. Es una decisión física general, no un parche
+  // por circuito: entrar algo más lento conserva agarre y evita cortar bordes.
+  const controlScale=clamp(
+    1-Math.abs(headingError)*.25-Math.max(0,nearest.distance-12)*.003,
+    .58,1
+  );
+  const controlledTargetSpeed=targetSpeed*controlScale;
+  const speedError=controlledTargetSpeed-speed;
   const throttle=clamp((speedError-2)/34,0,1);
   const brake=clamp((-speedError-3)/30,0,1);
 
@@ -114,7 +122,8 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     targetIndex,
     distanceToLine:nearest.distance,
     speed,
-    targetSpeed,
+    targetSpeed:controlledTargetSpeed,
+    profileTargetSpeed:targetSpeed,
     headingError,
     steer,
     throttle,
