@@ -280,3 +280,9 @@ Segunda prueba: humano ~17,29 s; CPU1 V1 20,07 s (0 %), V2 19,67 s (34 %), V3 19
 
 CPU1 evalúa ahora su propio tiempo al finalizar cada vuelta. V1 establece referencia y habilita 34 %. Una mezcla que mejora se convierte en la nueva mejor y solo permite explorar +8 puntos la vuelta siguiente. Si una mezcla superior pierde más de 50 ms, se rechaza y el objetivo vuelve al mejor porcentaje demostrado. Telemetría nueva: `teaching_improved`, `teaching_rollback`, `teachingBestCpuLapMs`, `teachingBestBlend`, `teachingAdaptiveCap`, `teachingRegressionCount`.
 
+### Reconciliación de cronómetro general con Supervivencia (2026-08-22)
+
+Nueva evidencia: Supervivencia 5/5 y campeón, pero INFO SESIÓN/ttHistory mostró solo 3 vueltas; una era 35,670 s con S1 24,152 s, y el botín indicó 3 vueltas premiadas. El estado competitivo seguía correcto; fallaban cronómetro general, sectores y economía porque consumían `ttHistory`.
+
+Cada incremento autoritativo de `completedLaps` del jugador reconstruye ahora el tramo de sesión de `ttHistory` desde `_survivalLapTimesMs`. Conserva sectores únicamente cuando el total previo coincide dentro de 1,2 s; registros dobles o desalineados pierden splits falsos y adoptan el total autoritativo. La matriz reconciliada se persiste en `ttHistKey`. Como la capa de botín observa el crecimiento de `ttHistory`, una vuelta recuperada vuelve a generar su premio y el total debe coincidir con 5/5.
+
