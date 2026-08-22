@@ -338,3 +338,27 @@ Criterio revisado de límites:
 - Santa Cruz no excede el borde en la simulación y marca 29.23/29.10 s.
 
 Pendiente validación visual de la diagonal y confirmar que el ritmo percibido se mantiene durante toda la sesión real.
+
+
+## Cuarta grabación: riesgo humano en curva
+
+La grabación de 129.7 s confirma que CPU1 puede completar la sesión, pero el jugador lo vence a medio gas. La causa visible ya no es la recta: CPU1 asegura cada curva, reduce normalmente a 40–50 km/h y no intenta conservar velocidad para arañar tiempo.
+
+Se añade un presupuesto de riesgo condicionado:
+
+- el extra aumenta cuanto menor es la velocidad base de la curva;
+- solo se concede si el coche llega con poco error angular y cerca de su trayectoria;
+- la confianza disminuye continuamente al descolocarse;
+- si llega mal, renuncia al extra antes de convertir el riesgo en una salida;
+- no añade errores aleatorios ni aumenta la velocidad punta;
+- telemetría: `cornerRisk`, `riskConfidence` y `riskScale`.
+
+Calibración:
+
+- riesgo máximo de CPU1: 0.35;
+- una variante sin control de confianza se descartó: Shanghai alcanzaba 13 px fuera durante casi un segundo;
+- con confianza, 17/17 circuitos cumplen el criterio de 3 px/0.40 s;
+- Santa Cruz mejora de aproximadamente 29.2 a 27.45/27.38 s en vueltas consecutivas;
+- Shanghai permanece dentro en la simulación final.
+
+Pendiente confirmar en iPhone que la mayor velocidad de paso se percibe como decisión y que CPU1 sigue recuperándose de una entrada mala sin excursiones.
