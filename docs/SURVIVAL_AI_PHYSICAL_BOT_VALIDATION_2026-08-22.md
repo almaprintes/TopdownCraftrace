@@ -217,3 +217,29 @@ Validación de 60 s sobre la lista completa:
 - Santa Cruz: 19.5 cambios de signo de volante por vuelta, 15.3 px de desviación media y 35 px máxima sobre 78 px;
 - el cambio mantiene el ritmo de CPU1;
 - pendiente confirmar visualmente que la diagonal se percibe natural en las chicanes concretas observadas.
+
+
+## Ajuste de apertura y ritmo tras prueba visual
+
+Observación real posterior:
+
+- CPU1 necesitaba un aumento pequeño de ritmo;
+- se abría demasiado en prácticamente todas las curvas;
+- la corrección debía conservar una trazada lógica exterior–vértice–salida, sin devolverlo a un carril central imaginario.
+
+Corrección general, sin excepciones por circuito:
+
+- el optimizador admite `offsetScale` para graduar la excursión de su trazada ya calculada;
+- Supervivencia usa `offsetScale = 0.72`, por lo que conserva la forma de la línea rápida con un 28 % menos de desplazamiento lateral;
+- el refuerzo físico de CPU1 sube de 1.16 a 1.21;
+- se mantienen la anticipación de chicanes, el control continuo y el límite físico existente.
+
+Validación determinista de 60 s:
+
+- 17/17 circuitos permanecen dentro de su semiancho nominal;
+- Santa Cruz pasa de 1.90 a 1.98 vueltas/60 s, aproximadamente un 4.2 % más rápido;
+- la excursión máxima intencionada de la trazada de Santa Cruz baja de 16.8 a 12.1 px;
+- seguimiento físico en Santa Cruz: 16.0 px de desviación media y 38.0 px máxima sobre 78 px de semiancho;
+- la mayor excursión planificada entre los 17 circuitos es 15.3 px.
+
+Pendiente comprobar en dispositivo que CPU1 deja de abrirse en exceso sin perder naturalidad ni recortar bordes de forma irreal.
