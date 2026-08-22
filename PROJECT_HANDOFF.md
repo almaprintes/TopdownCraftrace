@@ -152,4 +152,5 @@ Decisión vigente:
 - la Fase 1 calcula una trazada global en modo observación para los 17 circuitos;
 - informe de homologación: `docs/SURVIVAL_AI_TRACK_HOMOLOGATION_2026-08-22.md`;
 - cada circuito nuevo debe pasar el checklist de ese informe antes de habilitar `planner_v1`;
-- siete circuitos requieren revisión visual prioritaria de picos de curvatura antes de entregar control a la nueva trayectoria.
+- el planificador acondiciona discontinuidades únicamente en su geometría derivada y conserva el margen lateral;
+- los 17 circuitos pasan validación estructural; Sakhir, Shanghai y Santa Cruz requieren revisión visual prioritaria antes de entregar control a la nueva trayectoria.
