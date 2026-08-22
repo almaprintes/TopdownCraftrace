@@ -181,3 +181,10 @@ Decisión vigente:
 - última calibración de CPU1: la excursión de la trazada rápida se limita al 72 % y el factor físico sube de 1.16 a 1.21;
 - validación estructural: 17/17 circuitos dentro del corredor; Santa Cruz reduce el offset planificado máximo de 16.8 a 12.1 px y alcanza 1.98 vueltas/60 s;
 - pendiente validar en iPhone que se abre menos en las curvas sin convertir la trazada en un carril central.
+
+- una grabación real de 94.7 s confirmó que CPU1 era estable en recta, pero abría demasiado, dibujaba chicanes en S y corregía lentamente en enlazadas;
+- se descartó una detección permisiva de maniobras que solo validaba 15/17 circuitos;
+- estado vigente: chicane estricta, horizonte adaptado a la curva y volante con variación limitada;
+- CPU1 usa factor físico 1.27 y techo experimental 86 %, sin modificar la física ni velocidad máxima del jugador;
+- validación final: 17/17 dentro del corredor; Santa Cruz queda en 33.0 px máximos respecto a la línea y 22.9 cambios de signo por vuelta;
+- pendiente confirmar movimiento y ritmo con una segunda grabación en iPhone.
