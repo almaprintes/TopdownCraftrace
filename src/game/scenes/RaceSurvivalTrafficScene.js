@@ -7,13 +7,109 @@ function pt(raw){
   return {x:Number(raw?.x),y:Number(raw?.y)};
 }
 
+function wrappedGap(ahead,behind){
+  let gap=Number(ahead)-Number(behind);
+  while(gap<-.5)gap+=1;
+  while(gap>.5)gap-=1;
+  return gap;
+}
+
 export class RaceScene extends CurrentRaceScene {
+  _buildSurvivalAiLine(){
+    const raw=super._survivalCenterline?.()||[];
+    const source=raw.map(pt).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
+    if(source.length<4){this._survivalAiLine=null;return;}
+
+    const cumulative=[0];
+    let total=0;
+    for(let i=0;i<source.length;i++){
+      const a=source[i],b=source[(i+1)%source.length];
+      total+=Math.hypot(b.x-a.x,b.y-a.y);
+      cumulative.push(total);
+    }
+    if(total<100){this._survivalAiLine=null;return;}
+
+    const trackW=Math.max(80,Number(this.track?.meta?.trackWidth||this.track?.trackWidth||140));
+    const spacing=clamp(trackW*.085,8,13);
+    const count=Math.max(48,Math.round(total/spacing));
+    const uniform=[];
+    let seg=0;
+    for(let k=0;k<count;k++){
+      const d=k*total/count;
+      while(seg<source.length-1&&cumulative[seg+1]<d)seg++;
+      const a=source[seg],b=source[(seg+1)%source.length];
+      const span=Math.max(.001,cumulative[seg+1]-cumulative[seg]);
+      const t=clamp((d-cumulative[seg])/span,0,1);
+      uniform.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+    }
+
+    // Filtro corto y conservador: elimina dientes de pocos píxeles, pero mezcla
+    // con la muestra original para no recortar horquillas ni abandonar la pista.
+    const smooth=uniform.map((p,i)=>{
+      const p2=uniform[(i-2+count)%count],p1=uniform[(i-1+count)%count];
+      const n1=uniform[(i+1)%count],n2=uniform[(i+2)%count];
+      const ax=(p2.x+2*p1.x+4*p.x+2*n1.x+n2.x)/10;
+      const ay=(p2.y+2*p1.y+4*p.y+2*n1.y+n2.y)/10;
+      return{x:p.x*.38+ax*.62,y:p.y*.38+ay*.62};
+    });
+    this._survivalAiLine=smooth;
+  }
+
+  _survivalPathPoint(progress,lane=0){
+    const line=this._survivalAiLine;
+    if(!Array.isArray(line)||line.length<4)return super._survivalPathPoint(progress,lane);
+
+    const n=line.length;
+    const logical=Number(progress)+Number(this._survivalPathOffset||0);
+    const f=(((logical%1)+1)%1)*n;
+    const i=Math.floor(f)%n,t=f-Math.floor(f);
+    const p0=line[(i-1+n)%n],p1=line[i],p2=line[(i+1)%n],p3=line[(i+2)%n];
+    const t2=t*t,t3=t2*t;
+    const x=.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3);
+    const y=.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3);
+    const dx=.5*((-p0.x+p2.x)+2*(2*p0.x-5*p1.x+4*p2.x-p3.x)*t+3*(-p0.x+3*p1.x-3*p2.x+p3.x)*t2);
+    const dy=.5*((-p0.y+p2.y)+2*(2*p0.y-5*p1.y+4*p2.y-p3.y)*t+3*(-p0.y+3*p1.y-3*p2.y+p3.y)*t2);
+    const len=Math.max(.001,Math.hypot(dx,dy));
+    return{x:x-dy/len*lane,y:y+dx/len*lane,r:Math.atan2(dy,dx)};
+  }
+
   _initSurvival(){
+    this._buildSurvivalAiLine();
     super._initSurvival();
+
+    const centerline=this._survivalCenterline?.()||[];
+    let trackLength=0;
+    for(let i=0;i<centerline.length;i++){
+      const a=pt(centerline[i]),b=pt(centerline[(i+1)%centerline.length]);
+      if([a.x,a.y,b.x,b.y].every(Number.isFinite))trackLength+=Math.hypot(b.x-a.x,b.y-a.y);
+    }
+    trackLength=Math.max(500,trackLength);
+
     for(const b of this._survivalBots||[]){
-      if(!Number.isFinite(b._trafficNominalLane))b._trafficNominalLane=Number(b.baseLane||0);
-      b._trafficLane=Number(b.baseLane||0);
-      b._trafficSide=(Math.sign(Number(b.baseLane||0))||((Math.random()<.5)?-1:1));
+      const trackW=Math.max(80,Number(b.trackW||this.track?.meta?.trackWidth||140));
+      const envelope=Math.max(18,trackW*.32);
+      const initial=Number(b.baseLane||0);
+
+      // Cada rival conserva una personalidad y una línea preferida propias.
+      b._trafficTrackLength=trackLength;
+      b._trafficEnvelope=envelope;
+      b._trafficPreferred=clamp(initial+(Math.random()-.5)*envelope*.34,-envelope,envelope);
+      b._trafficWanderTarget=b._trafficPreferred;
+      b._trafficNextChoice=2+Math.random()*4;
+      b._trafficLane=initial;
+      b._trafficLaneVelocity=0;
+      b._trafficSpeedScale=1;
+      b._trafficPassUntil=0;
+      b._trafficPassTarget=initial;
+      b._trafficSide=(Math.sign(initial)||((Math.random()<.5)?-1:1));
+      b._trafficTemper=.82+Math.random()*.28;
+
+      // Los saltos aleatorios antiguos movían el coche lateralmente de golpe.
+      // La variedad pasa a depender de decisiones continuas de línea y tráfico.
+      b.nextMistakeCheck=Infinity;
+      b.mistakeUntil=0;
+      b.mistakeLane=0;
+      b.mistakeLaneTarget=0;
     }
   }
 
@@ -37,85 +133,118 @@ export class RaceScene extends CurrentRaceScene {
         bestLane=dx*nx+dy*ny;
       }
     }
-    return {id:'TÚ',progress:Number(this._survivalPlayerRaceDistance?.()||0),lane:bestLane,player:true};
+    return {
+      id:'TÚ',
+      progress:Number(this._survivalPlayerRaceDistance?.()||0),
+      lane:bestLane,
+      speedScale:1,
+      player:true
+    };
+  }
+
+  _trafficCandidateScore(candidate,me,entries,envelope){
+    let score=Math.abs(candidate-Number(me._trafficPreferred||0))*.08;
+    if(Math.abs(candidate)>envelope*.88)score+=12;
+    for(const e of entries){
+      if(e.bot===me)continue;
+      const longitudinal=Math.abs(wrappedGap(e.progress,me.absProgress))*Number(me._trafficTrackLength||1000);
+      const lateral=Math.abs(Number(e.lane||0)-candidate);
+      if(longitudinal<105&&lateral<24)score+=(105-longitudinal)*.22+(24-lateral)*.75;
+    }
+    return score;
   }
 
   _applySurvivalTrafficAvoidance(deltaMs){
     const bots=(this._survivalBots||[]).filter(b=>b?.active);
     if(!this._survivalMode||!this._raceStarted||!bots.length)return [];
 
-    const dt=clamp(Number(deltaMs||16.67)/1000,0.001,0.05);
+    const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
+    const now=Number(this.time?.now||performance.now())/1000;
     const player=this._trafficPlayerState();
-    const entries=bots.map(b=>({id:b.id,progress:Number(b.absProgress||0),lane:Number(b._trafficLane??b.baseLane??0),bot:b}));
+    const entries=bots.map(b=>({
+      id:b.id,
+      progress:Number(b.absProgress||0),
+      lane:Number(b._trafficLane??b.baseLane??0),
+      speedScale:Number(b._trafficSpeedScale||1),
+      bot:b
+    }));
     if(player)entries.push(player);
 
     const saved=[];
     for(const b of bots){
-      if(!Number.isFinite(b._trafficNominalLane))b._trafficNominalLane=Number(b.baseLane||0);
-      if(!Number.isFinite(b._trafficLane))b._trafficLane=Number(b.baseLane||0);
-      const meP=Number(b.absProgress||0),meLane=Number(b._trafficLane||0);
-      const trackW=Math.max(80,Number(b.trackW||this.track?.meta?.trackWidth||140));
-      const safeLane=Math.max(16,Math.min(trackW*.20,34));
-      const maxLane=Math.max(safeLane,trackW*.36);
+      const trackLength=Number(b._trafficTrackLength||1000);
+      const envelope=Number(b._trafficEnvelope||42);
+      const meLane=Number(b._trafficLane||0);
 
-      // La IA debe apartarse antes que frenar. Solo reducimos ritmo cuando ya está
-      // realmente encima del coche delantero.
-      const warnGap=.020;
-      const panicGap=.0065;
+      // Sin tráfico, cada piloto revisa lentamente su línea preferida. No existen
+      // tres carriles discretos: cualquier offset dentro del ancho útil es válido.
+      if(now>=Number(b._trafficNextChoice||0)){
+        const change=envelope*(.10+Math.random()*.22)*(Math.random()<.5?-1:1);
+        b._trafficWanderTarget=clamp(Number(b._trafficPreferred||0)+change,-envelope,envelope);
+        b._trafficNextChoice=now+4+Math.random()*6;
+      }
 
       let nearest=null;
       for(const e of entries){
         if(e.bot===b)continue;
-        let gap=Number(e.progress)-meP;
-        if(gap<-0.5)gap+=1;
-        if(gap>0.5)gap-=1;
-        if(gap<=0||gap>warnGap)continue;
-        const latGap=Math.abs(Number(e.lane||0)-meLane);
-        if(latGap>safeLane*1.65)continue;
-        if(!nearest||gap<nearest.gap)nearest={...e,gap,latGap};
+        const gap01=wrappedGap(e.progress,b.absProgress);
+        if(gap01<=0)continue;
+        const gapPx=gap01*trackLength;
+        if(gapPx>190)continue;
+        const lateral=Math.abs(Number(e.lane||0)-meLane);
+        if(lateral>34)continue;
+        if(!nearest||gapPx<nearest.gapPx)nearest={...e,gapPx,lateral};
       }
 
-      let target=Number(b._trafficNominalLane||0);
-      let speedScale=1;
+      let laneTarget=Number(b._trafficWanderTarget||b._trafficPreferred||0);
+      let desiredSpeed=1;
+
       if(nearest){
-        const otherLane=Number(nearest.lane||0);
-        let side=Math.sign(meLane-otherLane);
-        if(!side)side=Number(b._trafficSide||1);
-        b._trafficSide=side;
-
-        // Cambio de carril bastante decidido, aprovechando el ancho disponible.
-        target=clamp(otherLane+side*safeLane*1.55,-maxLane,maxLane);
-
-        const urgency=clamp((warnGap-nearest.gap)/(warnGap-panicGap),0,1);
-        // Antes se podía caer a ~42% del ritmo, formando trenes lentísimos. Ahora
-        // conserva casi toda la velocidad y solo levanta de verdad a distancia crítica.
-        speedScale=1-(0.02+0.14*urgency);
-        if(nearest.gap<panicGap){
-          const critical=clamp((panicGap-nearest.gap)/panicGap,0,1);
-          speedScale=Math.min(speedScale,1-0.18-0.20*critical);
-          speedScale=Math.max(.62,speedScale);
+        const committed=now<Number(b._trafficPassUntil||0);
+        if(!committed&&nearest.gapPx<150){
+          const separation=clamp(24+Number(b._trafficTemper||1)*8,24,34);
+          const left=clamp(Number(nearest.lane||0)-separation,-envelope,envelope);
+          const right=clamp(Number(nearest.lane||0)+separation,-envelope,envelope);
+          const leftScore=this._trafficCandidateScore(left,b,entries,envelope);
+          const rightScore=this._trafficCandidateScore(right,b,entries,envelope);
+          b._trafficPassTarget=leftScore<=rightScore?left:right;
+          b._trafficSide=Math.sign(b._trafficPassTarget-Number(nearest.lane||0))||b._trafficSide||1;
+          b._trafficPassUntil=now+1.8+Math.random()*1.4;
         }
+
+        laneTarget=clamp(Number(b._trafficPassTarget||laneTarget),-envelope,envelope);
+
+        // Modelo de seguimiento anticipativo: se levanta el acelerador en función
+        // del espacio disponible, sin aplicar porcentajes instantáneos.
+        const comfort=54+Number(b._trafficTemper||1)*18;
+        const room=clamp((nearest.gapPx-20)/Math.max(1,comfort),0,1);
+        const leaderScale=Number(nearest.speedScale||1);
+        desiredSpeed=clamp(leaderScale*(.58+.42*room),.56,1);
+        if(Math.abs(laneTarget-Number(nearest.lane||0))>24&&nearest.gapPx>38){
+          desiredSpeed=Math.max(desiredSpeed,.93);
+        }
+      }else if(now>=Number(b._trafficPassUntil||0)){
+        b._trafficPassTarget=laneTarget;
       }else{
-        // En paralelo no deben frenar: únicamente se separan lateralmente.
-        for(const e of entries){
-          if(e.bot===b)continue;
-          let gap=Math.abs(Number(e.progress)-meP);gap=Math.min(gap,Math.abs(gap-1));
-          const lat=Number(e.lane||0)-meLane;
-          if(gap<.009&&Math.abs(lat)<safeLane){
-            const side=Math.sign(-lat)||Number(b._trafficSide||1);
-            target=clamp(meLane+side*safeLane*.90,-maxLane,maxLane);
-            speedScale=Math.min(speedScale,.98);
-            break;
-          }
-        }
+        laneTarget=Number(b._trafficPassTarget||laneTarget);
       }
 
-      // Más respuesta lateral al detectar tráfico; retorno más suave al carril nominal.
-      const laneLerp=nearest?clamp(dt*7.2,0,1):clamp(dt*1.7,0,1);
-      b._trafficLane+=(target-b._trafficLane)*laneLerp;
+      // Dirección lateral con velocidad y aceleración limitadas. El coche describe
+      // una transición curva en vez de interpolar rígidamente hacia otro carril.
+      const laneError=laneTarget-meLane;
+      const lateralAccel=clamp(laneError*5.2-Number(b._trafficLaneVelocity||0)*4.4,-90,90);
+      b._trafficLaneVelocity=clamp(Number(b._trafficLaneVelocity||0)+lateralAccel*dt,-34,34);
+      b._trafficLane=clamp(meLane+b._trafficLaneVelocity*dt,-envelope,envelope);
+
+      // Aceleración y deceleración limitadas: nada de freno/acelerador binario.
+      const speedResponse=desiredSpeed<Number(b._trafficSpeedScale||1)?.72:.38;
+      const maxStep=speedResponse*dt;
+      const speedDelta=clamp(desiredSpeed-Number(b._trafficSpeedScale||1),-maxStep,maxStep);
+      b._trafficSpeedScale=clamp(Number(b._trafficSpeedScale||1)+speedDelta,.56,1.03);
+
       saved.push({b,targetRate:b.targetRate,baseLane:b.baseLane});
       b.baseLane=b._trafficLane;
-      b.targetRate=Number(b.targetRate||0)*speedScale;
+      b.targetRate=Number(b.targetRate||0)*b._trafficSpeedScale;
     }
     return saved;
   }
@@ -123,8 +252,6 @@ export class RaceScene extends CurrentRaceScene {
   _restoreSurvivalTraffic(saved){
     for(const s of saved||[]){
       s.b.targetRate=s.targetRate;
-      // Keep the smoothed traffic lane as the base for the next frame; the nominal
-      // lane is stored separately and is where the car gradually returns when clear.
       s.b.baseLane=Number(s.b._trafficLane||s.baseLane||0);
     }
   }
