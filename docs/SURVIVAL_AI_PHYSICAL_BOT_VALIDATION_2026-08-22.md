@@ -429,3 +429,9 @@ En dispositivo, una pasada por meta no intersectó el segmento geométrico: dos 
 
 Después de comprobar que el detector redundante seguía dejando 5 vueltas competitivas como 4 filas, el cronómetro se trasladó al mismo punto que incrementa `completedLaps`. Cada corredor conserva `_survivalLapTimesMs`; tanto el informe humano como el panel CPU1 leen esa matriz. Se retiró el respaldo de wrap del flujo de cronometraje para evitar dos relojes independientes. Pendiente confirmar en dispositivo el invariante 5 completedLaps = 5 tiempos y la aparición del panel CPU1.
 
+## Línea base y enseñanza online
+
+Línea base real previa: CPU1 20,15 / 20,09 / 20,09 s (mejor 20,09; media 20,11). Humano 17,169 s de mejor vuelta.
+
+La primera fase de enseñanza captura una vuelta humana por bins del plan, exige 58 % de cobertura, filtra muestras fuera de pista y limita el desplazamiento al 96 % del corredor. Tres pasadas de suavizado evitan copiar microcorrecciones. La mezcla se activa al terminar una vuelta de CPU1: V1=0 %, luego 18/30/42/55 % como máximo. Una prueba sintética de ciclo completo confirmó plan válido, mezcla convergente y todas las coordenadas/velocidades finitas. Falta la validación decisiva en dispositivo comparando V1 contra V2/V3.
+
