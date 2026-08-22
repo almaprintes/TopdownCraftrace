@@ -397,3 +397,17 @@ Validación:
 - el sistema es geométrico y reutilizable; no copia la vuelta ni contiene coordenadas específicas de Santa Cruz.
 
 La referencia humana de 17.301 s es un objetivo de comportamiento y competitividad, no una garantía de igualdad inmediata: falta homologación visual y calibración posterior por coche.
+
+## Validación del bloqueo posterior a maniobra (2026-08-22)
+
+La prueba visual detectó que, tras recortar un vértice y rebasar brevemente la referencia, CPU1 podía volver a armar la misma maniobra con el objetivo ya situado detrás. El resultado era un contravolante hacia el lado opuesto y una pérdida desproporcionada de uno o dos segundos.
+
+Corrección aplicada:
+
+- el identificador de una maniobra terminada queda bloqueado hasta abandonar su zona anotada;
+- la salida de la maniobra mantiene una fase de liberación de 0,48 s;
+- durante esa liberación, un cambio de signo contrario al volante existente queda limitado a 2,2 unidades/s;
+- se conserva la tolerancia transversal de 28 px durante la liberación para no castigar una comida breve de piano.
+
+Validación sintética de 60 s en los 17 circuitos homologados: 17/17 sin superar el criterio de inseguridad (más de 3 px fuera durante más de 0,40 s). Las liberaciones solo aparecieron donde el clasificador encontró maniobras enlazadas: Karting Canarias, Karting Tenerife y Santa Cruz. Santa Cruz completó dos vueltas en la ventana, con 15 liberaciones y sin salida medida por encima del margen.
+
