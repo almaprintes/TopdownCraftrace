@@ -316,6 +316,34 @@ export class RaceScene extends CurrentRaceScene {
     });
     if(!control.valid)return false;
 
+    const onTrack=this._isOnTrack?Boolean(this._isOnTrack(Number(body.x),Number(body.y))):true;
+    b._plannerOffTrackSec=onTrack?0:Number(b._plannerOffTrackSec||0)+dt;
+    b._plannerStallSec=control.speed<6
+      ?Number(b._plannerStallSec||0)+dt
+      :0;
+
+    // Watchdog exclusivo del experimento: registra el fallo antes de recuperar
+    // el cuerpo. Así una salida no bloquea la carrera ni queda invisible en QA.
+    if(b._plannerOffTrackSec>1.25||b._plannerStallSec>3){
+      const samples=this._survivalPlannerSpeedProfile.samples;
+      const i=control.nearestIndex%samples.length,p=samples[i],next=samples[(i+1)%samples.length];
+      body.setPosition(Number(p.x),Number(p.y));
+      body.rotation=Math.atan2(Number(next.y)-Number(p.y),Number(next.x)-Number(p.x));
+      body.setVelocity(0,0);
+      b._plannerOffTrackSec=0;b._plannerStallSec=0;
+      b._plannerRecoveryCount=Number(b._plannerRecoveryCount||0)+1;
+      b.prevX=Number(body.x);b.prevY=Number(body.y);
+      b.sprite.setPosition(body.x,body.y);
+      b.sprite.rotation=body.rotation+Number(this._carVisualRotOffset||0);
+      this._survivalAiTelemetry?.pushEvent?.({
+        timeMs:Math.round(Number(this.time?.now||0)),
+        type:'physical_bot_recovery',botId:b.id,
+        reason:onTrack?'stalled':'off_track',
+        sampleIndex:i,recoveryCount:b._plannerRecoveryCount
+      });
+      return false;
+    }
+
     const n=this._survivalPlannerSpeedProfile.samples.length;
     const frac=((control.nearestIndex/n-Number(this._survivalPathOffset||0))%1+1)%1;
     const previous=Number(b._plannerFrac);
@@ -375,7 +403,9 @@ export class RaceScene extends CurrentRaceScene {
         throttle:Number(b._plannerControl?.throttle||0),
         brake:Number(b._plannerControl?.brake||0),
         targetSpeed:Number(b._plannerControl?.targetSpeed||0),
-        distanceToLine:Number(b._plannerControl?.distanceToLine||0)
+        distanceToLine:Number(b._plannerControl?.distanceToLine||0),
+        offTrackSeconds:Number(b._plannerOffTrackSec||0),
+        recoveryCount:Number(b._plannerRecoveryCount||0)
       });
     }
   }
