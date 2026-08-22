@@ -307,7 +307,11 @@ export class RaceScene extends CurrentRaceScene{
       const before=Number(b.absProgress)||0;b.absProgress+=b.lapRate*dt;b.distanceSinceFinish+=Math.max(0,b.absProgress-before);
       const naturalLane=b.baseLane+Math.sin((b.absProgress*18+b.linePhase)*b.lineFreq)*b.lineAmp,lane=naturalLane+b.mistakeLane,p=this._survivalPathPoint(b.absProgress,lane);if(!p)continue;
       if(gate&&Number.isFinite(b.prevX)&&Number.isFinite(b.prevY)&&segIntersect(b.prevX,b.prevY,p.x,p.y,gate.ax,gate.ay,gate.bx,gate.by))validCross=this._registerFinishCross(b)||validCross;
-      b.prevX=p.x;b.prevY=p.y;b.sprite.setPosition(p.x,p.y);b.sprite.rotation=p.r+Number(this._carVisualRotOffset||0);
+      const moveX=p.x-Number(b.prevX),moveY=p.y-Number(b.prevY);
+      const moveDistance=Math.hypot(moveX,moveY);
+      const travelRotation=moveDistance>.01?Math.atan2(moveY,moveX):p.r;
+      b.prevX=p.x;b.prevY=p.y;b.sprite.setPosition(p.x,p.y);
+      b.sprite.rotation=travelRotation+Number(this._carVisualRotOffset||0);
     }
 
     if(validCross)this._tryCloseSurvivalRound();
