@@ -2,7 +2,7 @@
 
 > Documento de referencia para conservar las pruebas reales de conducción, las sensaciones del piloto y el carácter homologado de los 15 coches oficiales.
 >
-> Fuentes consolidadas: conversaciones de homologación y los informes HTML originales de telemetría de KARTING TENERIFE (19–20/08/2026). Las sensaciones del piloto y los datos medidos se conservan por separado: las cifras explican la sensación, no la sustituyen.
+> Fuentes consolidadas: conversaciones de homologación y los informes HTML originales de telemetría de KARTING TENERIFE (19–21/08/2026). Las sensaciones del piloto y los datos medidos se conservan por separado: las cifras explican la sensación, no la sustituyen.
 
 ## Regla de uso
 - Las frases del piloto tienen prioridad sobre interpretaciones posteriores.
@@ -34,6 +34,17 @@
 **Sensación del piloto:** “Muy fácil de manejar y salida de curva excepcional”.
 
 **Conclusión:** conservar su sensación general y su gran salida de curva. Su personalidad es la de un HÉLIX rápido y delicioso de conducir, no la de un coche nervioso.
+
+## HÉLIX Vortex — nueva tanda de homologación · 21/08/2026
+**Estado:** prueba real registrada para el nuevo Vortex. No sustituir ni mezclar con telemetría anterior de otra configuración.
+
+**Sensación del piloto:** “La sensación es de bajo control el 99% del tiempo. Casi no es necesario frenar.”
+
+**Lectura apoyada por telemetría:** la tanda confirma una dependencia prácticamente nula del freno: 88% de gas, 11% de coasting y 0% de freno redondeado; solo se registran 2 frenadas y la más larga dura 0.17 s. La consistencia es alta (σ 0.73 s), aunque la sesión incluye 12 salidas de pista y 21.1 s acumulados fuera.
+
+**Vueltas registradas:** V1 46.384 · V2 44.374 · V3 44.891 · V4 45.990 · V5 45.641.
+
+**Conclusión de esta tanda:** queda documentado que el nuevo Vortex se conduce casi siempre bajo control y apenas exige frenar. Antes de alterar físicas, las 12 salidas y sus 21.1 s deben conservarse como señal separada para valorar si el ajuste necesario está en agarre/control o en la penalización dinámica al exceder la trazada.
 
 ---
 
@@ -150,6 +161,7 @@ Datos extraídos de los informes HTML originales. Se guardan los indicadores com
 | HÉLIX Spark | 50.613 | 52 km/h | 52.033 | 0.80 s | 49 km/h | 2.48 s | 6 · 2.8 s | 91% | 7% | 1% | 13 | 0.63 s |
 | HÉLIX Comet | 47.737 | 56 km/h | 49.097 | 0.80 s | 51 km/h | 2.50 s | 5 · 3.1 s | 90% | 9% | 1% | 6 | 0.49 s |
 | HÉLIX Pulse | 45.905 | 59 km/h | 46.181 | 0.36 s | 54 km/h | 0.97 s | 9 · 2.8 s | 92% | 8% | 0% | 6 | 0.19 s |
+| HÉLIX Vortex · 21/08 | 44.374 | 59 km/h | 45.456 | 0.73 s | 52 km/h | 2.01 s | 12 · 21.1 s | 88% | 11% | 0% | 2 | 0.17 s |
 | CROWN Axis | 46.034 | 58 km/h | 46.643 | 0.44 s | 54 km/h | 1.23 s | 6 · 2.9 s | 93% | 7% | 0% | 1 | 0.28 s |
 | CROWN Vector | 43.877 | 62 km/h | 44.603 | 0.80 s | 57 km/h | 2.04 s | 5 · 1.6 s | 91% | 9% | 0% | 0 | 0.00 s |
 | CROWN Equinox | 41.458 | 65 km/h | 41.818 | 0.57 s | 60 km/h | 1.50 s | 8 · 2.2 s | 91% | 9% | 0% | 1 | 0.12 s |
@@ -166,7 +178,7 @@ Datos extraídos de los informes HTML originales. Se guardan los indicadores com
 \* Métrica afectada por una vuelta anómala/incidencia de checkpoint documentada; conservar el dato original, pero no usarlo aisladamente para comparar rendimiento.
 
 ## Señales que confirma la telemetría
-- **HÉLIX:** la progresión de prestaciones es limpia: 50.613 → 47.737 → 45.905; Pulse es además el más consistente (σ 0.36 s).
+- **HÉLIX:** la progresión de prestaciones original es limpia: 50.613 → 47.737 → 45.905. La nueva tanda del Vortex registra 44.374 de mejor vuelta y confirma un uso de freno prácticamente nulo: 0% redondeado, 2 frenadas y 0.17 s como frenada más larga.
 - **CROWN:** Vector completa su tanda sin frenar y Equinox baja a 41.458 manteniendo 91% de gas; el aumento de ritmo no exige convertirlos en coches nerviosos.
 - **AVENIR:** Apex y Torque completan sus tandas sin frenar. Torque baja a 41.008 con σ 0.44 s, coherente con la sensación de precisión y raíles.
 - **VELOCE:** la dificultad subjetiva aparece claramente en los controles: Flash 30 frenadas, Surge 31 y Photon 29; el uso de freno sube 3% → 5% → 8%, mientras las salidas suben 8 → 17 → 26. A la vez, la punta escala 68 → 72 → 80 km/h.
@@ -181,6 +193,7 @@ Datos extraídos de los informes HTML originales. Se guardan los indicadores com
 | HÉLIX Spark | Facilísimo, noble y pronto limitado de velocidad. |
 | HÉLIX Comet | Divertido, permisivo y claramente más vivo que Spark. |
 | HÉLIX Pulse | Rápido, fácil y excelente en salida de curva. |
+| HÉLIX Vortex · nueva tanda | Casi siempre bajo control; apenas exige frenar. |
 | CROWN Axis | Refinado y muy accesible. |
 | CROWN Vector | Fluido; deja construir la vuelta. |
 | CROWN Equinox | Muy rápido, gratificante y con riesgo real. |
@@ -195,6 +208,6 @@ Datos extraídos de los informes HTML originales. Se guardan los indicadores com
 | FORGE Colossus | Gigante difícil; debe transmitir más peso y menos pivote. |
 
 ## Estado
-**Homologaciones + telemetría consolidadas — 20/08/2026.**
+**Homologaciones + telemetría consolidadas — actualizado con tanda HÉLIX Vortex del 21/08/2026.**
 
 Este documento pasa a ser la referencia persistente para futuras frases del garaje, comparativas y revisiones de físicas.
