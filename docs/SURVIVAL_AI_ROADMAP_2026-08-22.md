@@ -532,3 +532,7 @@ Implementada experimentalmente tras analizar una vuelta humana de Santa Cruz en 
 
 La ejecución de una secuencia no puede rearmarse mientras el coche siga dentro de la anotación de esa misma maniobra. Al completarla se aplica una liberación breve y limitada de volante. Esta histéresis forma parte del controlador genérico y debe conservarse al añadir circuitos: el circuito nuevo aporta geometría, no coordenadas ni parches propios.
 
+### Compromiso interior progresivo
+
+El optimizador global incorpora un `apexCommitment` opcional. La curvatura firmada y suavizada determina el interior de curvas sostenidas; el desplazamiento se mezcla con la línea elástica existente para conservar una entrada y salida continuas. CPU1 parte de 0,20: valores altos resultaron más lentos al generar error de seguimiento. La siguiente mejora debe buscar menos de 22 s en Santa Cruz sin aumentar ese compromiso hasta provocar correcciones.
+
