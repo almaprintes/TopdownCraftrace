@@ -331,8 +331,14 @@ export class RaceScene extends CurrentRaceScene {
     const x=Number(target.x),y=Number(target.y);
     this._survivalSpectatorRing?.setPosition?.(x,y);
     this._survivalSpectatorLabel?.setPosition?.(x,y-34);
+    const racer=item.entry.player?this._survivalPlayer:item.entry.bot;
     const suffix=item.entry.physical?' · BOT FÍSICO':'';
-    this._survivalSpectatorLabel?.setText?.(item.entry.label+suffix);
+    const laps=Number(racer?.completedLaps||0);
+    const crosses=Number(racer?.gateCrossCount||0);
+    const armed=racer?.armed?'ARMADO':'SIN ARMAR';
+    this._survivalSpectatorLabel?.setText?.(
+      item.entry.label+suffix+' · V'+laps+' · META '+crosses+' · '+armed
+    );
   }
 
   _initSurvivalPlannerBot(){
@@ -376,10 +382,23 @@ export class RaceScene extends CurrentRaceScene {
     if(!body?.body)return false;
     const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
     const beforeX=Number(b.prevX),beforeY=Number(b.prevY);
+    const playerMaxFwd=Math.max(80,Number(this.maxFwd||this.carParams?.maxFwd||420));
+    const profileMeanRatio=clamp(
+      Number(this._survivalPlannerSpeedProfile?.metrics?.meanTargetSpeed||0)/
+      Math.max(1,Number(this._survivalPlannerSpeedProfile?.parameters?.maxSpeed||520)),
+      .35,1
+    );
+    const targetAverage=Math.max(35,Number(b.targetRate||0)*Number(b._trafficTrackLength||1000));
+    // Calibrar el cuerpo físico contra el mismo ritmo de parrilla que los legacy.
+    // 0.75 representa la eficiencia medida del controlador frente al perfil ideal.
+    const physicalMaxFwd=clamp(
+      targetAverage/Math.max(.25,profileMeanRatio*.75),
+      playerMaxFwd*.42,playerMaxFwd*.82
+    );
     const control=updateSurvivalPhysicalBot(b,this._survivalPlannerSpeedProfile,{
       dt,
       spacing:Number(this._survivalPlannerTrackModel?.spacing||10),
-      maxFwd:Number(this.maxFwd||this.carParams?.maxFwd||420)*.82,
+      maxFwd:physicalMaxFwd,
       accel:Number(this.accel||this.carParams?.accel||520),
       brakeForce:Number(this.brakeForce||this.carParams?.brakeForce||720),
       linearDrag:Number(this.linearDrag||this.carParams?.linearDrag||.004),
@@ -477,7 +496,10 @@ export class RaceScene extends CurrentRaceScene {
         targetSpeed:Number(b._plannerControl?.targetSpeed||0),
         distanceToLine:Number(b._plannerControl?.distanceToLine||0),
         offTrackSeconds:Number(b._plannerOffTrackSec||0),
-        recoveryCount:Number(b._plannerRecoveryCount||0)
+        recoveryCount:Number(b._plannerRecoveryCount||0),
+        completedLaps:Number(b.completedLaps||0),
+        gateCrossCount:Number(b.gateCrossCount||0),
+        armed:Boolean(b.armed)
       });
     }
   }
@@ -580,7 +602,7 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _applySurvivalTrafficAvoidance(deltaMs){
-    const bots=(this._survivalBots||[]).filter(b=>b?.active);
+    const bots=(this._survivalBots||[]).filter(b=>b?.active&&!this._shouldUseSurvivalPlannerBot(b));
     if(!this._survivalMode||!this._raceStarted||!bots.length)return [];
 
     const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
