@@ -188,3 +188,32 @@ Decisión:
 - no modificar en esta iteración eliminación, espectador ni reglas de ronda.
 
 El refuerzo aproxima el tiempo teórico de CPU1 al comportamiento anterior sin restaurar la envolvente fija que provocaba mayor exploración de bordes. Pendiente confirmar en dispositivo.
+
+
+## Anticipación geométrica de chicanes
+
+Observación real:
+
+- legacy parecía cabecear menos que CPU1;
+- CPU1 no oscilaba en recta;
+- en sucesiones de curvas dibujaba una línea ondulada y lenta de percibir;
+- en vez de cruzar la chicane por la diagonal lógica, perseguía vértices consecutivos;
+- fue eliminado en la tercera vuelta, sin indicios de velocidad imbatible.
+
+Corrección:
+
+- cada muestra del perfil expone ahora la curvatura local;
+- el controlador analiza las próximas 16 muestras;
+- solo si detecta cambio significativo de signo y energía angular suficiente marca `chicaneAhead`;
+- el lookahead normal permanece en 25–82 px;
+- durante la secuencia alterna aumenta progresivamente hasta 70–135 px;
+- el coche apunta después de la segunda curva en lugar de tratar la chicane como un eslalon;
+- el estado queda registrado en telemetría.
+
+Validación de 60 s sobre la lista completa:
+
+- 17/17 dentro del semiancho nominal;
+- cero circuitos estructuralmente fallidos;
+- Santa Cruz: 19.5 cambios de signo de volante por vuelta, 15.3 px de desviación media y 35 px máxima sobre 78 px;
+- el cambio mantiene el ritmo de CPU1;
+- pendiente confirmar visualmente que la diagonal se percibe natural en las chicanes concretas observadas.
