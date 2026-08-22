@@ -80,7 +80,7 @@ Antes de migrar más bots:
 Enlace de sesión, sin modificar la preferencia guardada:
 
 ```text
-https://topdown-craftrace.vercel.app/?survivalAi=planner_v1&survivalAiDebug=1
+https://almaprintes.github.io/TopdownCraftrace/?survivalAi=planner_v1&survivalAiDebug=1
 ```
 
 Activación persistente desde consola:
