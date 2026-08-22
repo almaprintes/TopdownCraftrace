@@ -144,6 +144,17 @@ export class RaceScene extends CurrentRaceScene {
       }
     }
 
+    // Una horquilla no puede ordenar decenas de píxeles de desplazamiento en
+    // pocas muestras. Limitar la pendiente lateral evita el latigazo de salida.
+    const maxOffsetStep=Math.max(1.25,spacing*.18);
+    for(let pass=0;pass<4;pass++){
+      for(let i=1;i<count;i++)offsets[i]=clamp(offsets[i],offsets[i-1]-maxOffsetStep,offsets[i-1]+maxOffsetStep);
+      for(let i=count-2;i>=0;i--)offsets[i]=clamp(offsets[i],offsets[i+1]-maxOffsetStep,offsets[i+1]+maxOffsetStep);
+      const seam=(offsets[0]+offsets[count-1])*.5;
+      offsets[0]=clamp(offsets[0],seam-maxOffsetStep*.5,seam+maxOffsetStep*.5);
+      offsets[count-1]=clamp(offsets[count-1],seam-maxOffsetStep*.5,seam+maxOffsetStep*.5);
+    }
+
     this._survivalAiLine=smooth.map((p,i)=>{
       const prev=smooth[(i-1+count)%count],next=smooth[(i+1)%count];
       const dx=next.x-prev.x,dy=next.y-prev.y,len=Math.max(.001,Math.hypot(dx,dy));
@@ -242,6 +253,13 @@ export class RaceScene extends CurrentRaceScene {
     };
   }
 
+  _trafficCornerSeverity(progress){
+    const before=this._survivalPathPoint(Number(progress)-.010,0);
+    const after=this._survivalPathPoint(Number(progress)+.010,0);
+    if(!before||!after)return 0;
+    return Math.abs(wrapAngle(Number(after.r||0)-Number(before.r||0)));
+  }
+
   _trafficCandidateScore(candidate,me,entries,envelope){
     let score=Math.abs(candidate-Number(me._trafficPreferred||0))*.08;
     if(Math.abs(candidate)>envelope*.88)score+=12;
@@ -298,10 +316,19 @@ export class RaceScene extends CurrentRaceScene {
 
       let laneTarget=Number(b._trafficWanderTarget||b._trafficPreferred||0);
       let desiredSpeed=1;
+      const cornerSeverity=this._trafficCornerSeverity(b.absProgress);
+      const sharpCorner=cornerSeverity>.34;
+
+      // En horquillas se termina la maniobra antes del vértice. Intentar abrir
+      // además un adelantamiento lateral generaba el desplazamiento exagerado.
+      if(sharpCorner){
+        b._trafficPassUntil=0;
+        b._trafficPassTarget=Number(b._trafficPreferred||0);
+      }
 
       if(nearest){
         const committed=now<Number(b._trafficPassUntil||0);
-        if(!committed&&nearest.gapPx<150){
+        if(!sharpCorner&&!committed&&nearest.gapPx<150){
           const separation=clamp(24+Number(b._trafficTemper||1)*8,24,34);
           const left=clamp(Number(nearest.lane||0)-separation,-envelope,envelope);
           const right=clamp(Number(nearest.lane||0)+separation,-envelope,envelope);
@@ -332,8 +359,8 @@ export class RaceScene extends CurrentRaceScene {
       // Dirección lateral con velocidad y aceleración limitadas. El coche describe
       // una transición curva en vez de interpolar rígidamente hacia otro carril.
       const laneError=laneTarget-meLane;
-      const lateralAccel=clamp(laneError*5.2-Number(b._trafficLaneVelocity||0)*4.4,-90,90);
-      b._trafficLaneVelocity=clamp(Number(b._trafficLaneVelocity||0)+lateralAccel*dt,-34,34);
+      const lateralAccel=clamp(laneError*4.6-Number(b._trafficLaneVelocity||0)*4.8,-58,58);
+      b._trafficLaneVelocity=clamp(Number(b._trafficLaneVelocity||0)+lateralAccel*dt,-22,22);
       b._trafficLane=clamp(meLane+b._trafficLaneVelocity*dt,-envelope,envelope);
 
       // Aceleración y deceleración limitadas: nada de freno/acelerador binario.
