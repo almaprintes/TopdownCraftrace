@@ -185,7 +185,19 @@ La personalidad cambia costes y márgenes, no introduce teletransportes.
 
 ### Fase 0 — Instrumentación y comparación
 
-Estado: siguiente tarea.
+Estado: implementada el 22/08/2026.
+
+Implementación:
+
+- runtime: `src/game/ai/survivalAiRuntime.js`;
+- modo persistente solicitado: `localStorage['tdr2:survivalAiMode']`;
+- valores admitidos: `legacy` y `planner_v1`;
+- mientras `SURVIVAL_AI_PLANNER_READY` sea `false`, pedir `planner_v1` produce fallback seguro a `legacy`;
+- overlay DEV: `localStorage['tdr2:survivalAiDebug'] = '1'`;
+- telemetría circular de la sesión: `window.__TDR_SURVIVAL_AI__`;
+- el overlay y la telemetría no envían información fuera del dispositivo.
+
+La conducción visible continúa en `legacy`. El overlay muestra la referencia derivada y el horizonte actual de cada rival, pero no interviene en el control.
 
 - Añadir bandera de IA: `legacy` / `planner_v1`.
 - Registrar por bot:
