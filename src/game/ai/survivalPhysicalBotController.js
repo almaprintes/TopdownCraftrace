@@ -69,7 +69,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const cornerFactor=clamp((peakTurn-.014)/.12,0,1);
   const lookaheadPx=chicaneAhead
     ?clamp(48+speed*.18,58,100)
-    :clamp(24+speed*.15-cornerFactor*16,22,62);
+    :clamp(30+speed*.17-cornerFactor*8,28,76);
   const lookaheadSteps=Math.max(2,Math.round(lookaheadPx/spacing));
   const targetIndex=(nearest.index+lookaheadSteps)%samples.length;
   const target=samples[targetIndex];
@@ -78,7 +78,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const rawSteer=clamp(headingError/.48,-1,1);
   const previousSteer=Number(bot._plannerSteerCommand||0);
   const steer=clamp(previousSteer+
-    clamp(rawSteer-previousSteer,-5.5*dt,5.5*dt),-1,1);
+    clamp(rawSteer-previousSteer,-9*dt,9*dt),-1,1);
   bot._plannerSteerCommand=steer;
 
   const maxFwd=Math.max(40,Number(params.maxFwd||420));
@@ -110,7 +110,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   let turnFactor=(lowSpeedSteer+(1-lowSpeedSteer)*steerT)*(1-(1-highSpeedLimit)*speed01);
   if(speed<yawSpeedMin)turnFactor*=speed/yawSpeedMin;
   const yawLimit=turnRate*turnFactor;
-  body.rotation+=clamp(steer*1.18,-1,1)*yawLimit*dt;
+  body.rotation+=clamp(steer*1.35,-1,1)*yawLimit*dt;
 
   const fx=Math.cos(body.rotation),fy=Math.sin(body.rotation);
   const rx=-fy,ry=fx;
