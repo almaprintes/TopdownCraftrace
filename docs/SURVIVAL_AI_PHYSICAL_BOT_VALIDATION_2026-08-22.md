@@ -281,3 +281,26 @@ Validación final de 60 s:
 - Shanghai conserva el margen estructural menor: 9.5 px, por lo que sigue requiriendo revisión visual.
 
 La simulación valida estructura y estabilidad numérica; la naturalidad y el ritmo definitivo deben confirmarse en dispositivo con otra grabación.
+
+
+## Segunda grabación: chicane corta y ritmo
+
+La grabación de 88.9 s confirma menor excursión exterior, pero muestra que las chicanes cortas aún no se diagonalizaban y CPU1 continuaba lento, normalmente en el entorno visible de 50–59 km/h.
+
+Corrección:
+
+- detector adicional de dos lóbulos contiguos, opuestos y equilibrados para chicanes cortas;
+- no se relaja el detector general de secuencias largas;
+- factor físico de 1.27 a 1.38;
+- techo experimental de 86 % a 92 % del máximo del coche patrón.
+
+Validación:
+
+- 17/17 circuitos dentro del corredor;
+- Santa Cruz: 2.00 vueltas/60 s, 39.1 px máximos respecto a la referencia central sobre 78 px;
+- 20.0 cambios de signo de volante por vuelta;
+- detección de chicane activa el 24.2 % de la simulación de Santa Cruz;
+- Shanghai queda con solo 0.9 px de margen estructural;
+- se descartó el techo del 95 % porque Shanghai excedía el corredor en 1.2 px.
+
+Pendiente confirmar en dispositivo que las dos chicanes cortas se leen como diagonales y que el aumento de ritmo es suficiente.
