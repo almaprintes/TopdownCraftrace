@@ -62,8 +62,23 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     if(turnSign&&sign!==turnSign)turnChanges++;
     turnSign=sign;
   }
-  const chicaneAhead=turnChanges===1&&turnEnergy>.12&&
-    Math.min(positiveEnergy,negativeEnergy)>.045;
+  // Las chicanes cortas pueden quedar suavizadas por debajo del umbral de
+  // cada muestra. Comparar dos lóbulos contiguos permite reconocerlas sin
+  // relajar la detección de secuencias largas.
+  let shortChicane=false;
+  for(let split=3;split<=8&&!shortChicane;split++){
+    let first=0,second=0;
+    for(let step=1;step<=12;step++){
+      const turn=Number(samples[(nearest.index+step)%samples.length].curvature||0);
+      if(step<=split)first+=turn;else second+=turn;
+    }
+    const larger=Math.max(Math.abs(first),Math.abs(second));
+    const smaller=Math.min(Math.abs(first),Math.abs(second));
+    shortChicane=first*second<0&&smaller>.030&&
+      smaller/Math.max(.001,larger)>.40&&Math.abs(first-second)>.085;
+  }
+  const chicaneAhead=(turnChanges===1&&turnEnergy>.12&&
+    Math.min(positiveEnergy,negativeEnergy)>.045)||shortChicane;
   // En curva cerrada se mira menos lejos para atacar el vértice. Solo una
   // chicane confirmada amplía el horizonte para dibujar su diagonal.
   const cornerFactor=clamp((peakTurn-.014)/.12,0,1);
