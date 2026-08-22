@@ -207,11 +207,16 @@ export class RaceScene extends CurrentRaceScene {
     this._survivalPlannerTrackModel=buildTrackRacingLineModel({
       raceCenterline:plannerCenterline,
       trackWidth:plannerTrackWidth,
-      // Conserva exterior-vértice-exterior sin consumir visualmente todo el ancho.
-      offsetScale:.72
+      // Una entrada amplia converge hacia un vértice interior y libera la
+      // salida; el compromiso moderado evita perseguir cada microcurva.
+      offsetScale:1,
+      apexCommitment:.20
     });
     this._survivalPlannerSpeedProfile=buildTrackManeuverPlan(
-      buildTrackSpeedProfile(this._survivalPlannerTrackModel)
+      buildTrackSpeedProfile(this._survivalPlannerTrackModel,{
+        lateralAccel:1500,
+        minCornerSpeed:125
+      })
     );
     this._survivalAiTelemetry?.pushEvent?.({
       timeMs:Math.round(Number(this.time?.now||0)),
@@ -513,6 +518,7 @@ export class RaceScene extends CurrentRaceScene {
         maneuverActive:Boolean(b._plannerControl?.maneuverActive),
         maneuverRelease:Boolean(b._plannerControl?.maneuverRelease),
         maneuverReleaseSeconds:Number(b._plannerControl?.maneuverReleaseSeconds||0),
+        releaseOppositeSuppressed:Boolean(b._plannerControl?.releaseOppositeSuppressed),
         maneuverId:Number(b._plannerControl?.maneuverId||0),
         maneuverPhase:Number(b._plannerControl?.maneuverPhase||0),
         maneuverKind:b._plannerControl?.maneuverType||b._plannerControl?.maneuverKind||null,
