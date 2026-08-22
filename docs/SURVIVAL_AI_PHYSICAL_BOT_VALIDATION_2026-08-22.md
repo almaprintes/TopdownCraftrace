@@ -467,3 +467,24 @@ Corrección en `b0eb1a359d2147c40a6d79cf46d3c38d4b09aed3`: conservar y profundiz
 - Si 42% pierde más de 50 ms frente al mejor demostrado => siguiente objetivo 34% y aumenta `regressionCount`.
 
 Pendiente de validación móvil: comprobar que las tarjetas muestran 0% → 34% → 42% cuando 34% mejora, y 34% en la vuelta posterior si 42% regresa. No confundir la validación lógica con una mejora cronométrica ya demostrada.
+
+
+## Bloqueo de volante en rectas (2026-08-22)
+
+Motivación observada en dispositivo: Santa Cruz exige aprovechar la velocidad punta y las oscilaciones laterales de CPU1 impiden completar la aceleración longitudinal.
+
+Cambio general en `survivalPhysicalBotController.js`:
+
+- reconoce una recta por baja curvatura local y ausencia de chicane, maniobra o fase de liberación;
+- exige 0,12 s de geometría estable antes de bloquearla para evitar entradas y salidas intermitentes;
+- amplía el lookahead en recta;
+- aplica una zona muerta angular de 0,035 rad;
+- impide invertir el volante por un error menor de 0,12 rad;
+- reduce la velocidad de variación del volante y lo hace converger activamente a cero;
+- abandona el bloqueo cuando aparece curvatura de aproximación, conservando la preparación de la curva.
+
+Telemetría añadida: `straightLock`, `straightDeadband`, `straightLocalCurvature` y `straightApproachCurvature`.
+
+Commits: `d64e483099e1d2290169f07dbd74d690e291b9a7` y `b4df869c8d2e465aa806facb6462c84004a33301`.
+
+Pendiente de validación real: comprobar que CPU1 mantiene el morro estable en las rectas, alcanza mayor punta y no retrasa la entrada en curva. No atribuir una mejora de tiempo hasta medirla en dispositivo.
