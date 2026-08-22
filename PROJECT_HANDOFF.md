@@ -157,4 +157,8 @@ Decisión vigente:
 - el intento de estabilizar provisionalmente el controlador `legacy` empeoró Santa Cruz y se revirtió completo en `883258c`; no tratarlo como activo;
 - la Fase 2 genera perfiles anticipativos de velocidad en observación mediante `src/game/ai/trackSpeedProfilePlanner.js`;
 - 17/17 circuitos pasan la validación estructural del perfil; informe en `docs/SURVIVAL_AI_SPEED_PROFILE_VALIDATION_2026-08-22.md`;
-- el perfil de velocidad todavía no controla coches: falta calibración y el controlador físico de Fase 3.
+- la Fase 3 dispone de un único bot físico experimental activable con `planner_v1`; el modo predeterminado sigue siendo `legacy`;
+- usa cuerpo Arcade, dirección, gas y freno, sin teletransporte, tráfico ni adelantamientos;
+- validación estructural: 15/17 dentro del corredor; Jeddah y Karting Tenerife bloquean la homologación;
+- informe: `docs/SURVIVAL_AI_PHYSICAL_BOT_VALIDATION_2026-08-22.md`;
+- no migrar el pelotón ni activar `planner_v1` por defecto hasta superar prueba real en Phaser y corregir esos dos circuitos.
