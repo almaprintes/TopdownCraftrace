@@ -306,7 +306,11 @@ Validación estructural:
 - sigue pendiente la prueba real en Phaser antes de homologar;
 - el modo puede activarse para una sesión mediante `?survivalAi=planner_v1&survivalAiDebug=1`;
 - un watchdog registra y recupera salidas o bloqueos del bot experimental sin afectar a `legacy`;
-- cualquier recuperación invalida esa vuelta como prueba de homologación.
+- cualquier recuperación invalida esa vuelta como prueba de homologación;
+- el overlay DEV permite seleccionar y seguir con la cámara a cualquiera de los seis participantes;
+- CPU1 queda identificado explícitamente como `BOT FÍSICO`;
+- el balance `legacy` usa solo referencias históricas del coche seleccionado;
+- el ritmo máximo aleatorio ya no puede superar la referencia usada para equilibrar la carrera.
 
 Criterio de salida:
 
