@@ -218,9 +218,46 @@ export class RaceScene extends CurrentRaceScene{
         racer._survivalLapTimesMs=racer._survivalLapTimesMs.slice(-Number(racer.completedLaps));
         racer._survivalLapLearning=racer._survivalLapLearning.slice(-Number(racer.completedLaps));
       }
+      if(racer===this._survivalPlayer)this._syncSurvivalAuthoritativeHistory(racer);
     }
     racer._survivalLapStartedAt=now;
     return true;
+  }
+
+  _syncSurvivalAuthoritativeHistory(racer){
+    const times=Array.isArray(racer?._survivalLapTimesMs)
+      ?racer._survivalLapTimesMs:[];
+    if(!Array.isArray(this.ttHistory)||!times.length)return;
+    const baseline=Math.max(0,Math.min(
+      this.ttHistory.length,
+      Number.isInteger(this._sessionLapBaseline)?this._sessionLapBaseline:0
+    ));
+    const existing=this.ttHistory.slice(baseline);
+    const carId=this.carId||this.selectedCarId||this._carId||'stock';
+    const records=times.map((lapMs,i)=>{
+      const prior=existing[i];
+      const priorMs=Number(prior?.lapMs);
+      // Conservar sectores solo si pertenecen inequívocamente a esta misma
+      // vuelta. Un total doble (35 s) no puede contaminar una vuelta de 17 s.
+      const aligned=Number.isFinite(priorMs)&&Math.abs(priorMs-lapMs)<=1200;
+      return{
+        ...(aligned&&prior&&typeof prior==='object'?prior:{}),
+        t:Number(prior?.t||Date.now()),
+        carId:String(prior?.carId||carId),
+        lapMs,
+        rawLapMs:lapMs,
+        s1:aligned&&Number.isFinite(prior?.s1)?Number(prior.s1):null,
+        s2:aligned&&Number.isFinite(prior?.s2)?Number(prior.s2):null,
+        survivalAuthoritative:true,
+        survivalLap:i+1
+      };
+    });
+    this.ttHistory.splice(baseline,this.ttHistory.length-baseline,...records);
+    try{
+      if(this.ttHistKey)localStorage.setItem(
+        this.ttHistKey,JSON.stringify({v:1,history:this.ttHistory.slice(-500)})
+      );
+    }catch{}
   }
 
   _tryCloseSurvivalRound(){
