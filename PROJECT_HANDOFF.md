@@ -274,3 +274,9 @@ Primera sesión con enseñanza confirmó funcionamiento pero influencia insufici
 
 Se acelera la progresión sin alterar V1 ni `maxFwd`: objetivos 34 % tras la primera lección, 53 % tras la segunda y máximo 72 %; velocidad de convergencia de mezcla 0,46/s en lugar de 0,22/s. Objetivo de prueba: que V2/V3 se acerquen a 19 s y CPU1 sobreviva hasta quedar segundo.
 
+### Enseñanza adaptativa con rollback (2026-08-22)
+
+Segunda prueba: humano ~17,29 s; CPU1 V1 20,07 s (0 %), V2 19,67 s (34 %), V3 19,77 s (53 %). El 34 % mejoró 0,40 s, pero subir al 53 % devolvió 0,10 s: copiar más no era mejor para el controlador físico.
+
+CPU1 evalúa ahora su propio tiempo al finalizar cada vuelta. V1 establece referencia y habilita 34 %. Una mezcla que mejora se convierte en la nueva mejor y solo permite explorar +8 puntos la vuelta siguiente. Si una mezcla superior pierde más de 50 ms, se rechaza y el objetivo vuelve al mejor porcentaje demostrado. Telemetría nueva: `teaching_improved`, `teaching_rollback`, `teachingBestCpuLapMs`, `teachingBestBlend`, `teachingAdaptiveCap`, `teachingRegressionCount`.
+
