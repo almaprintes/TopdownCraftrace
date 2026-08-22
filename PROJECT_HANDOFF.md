@@ -245,3 +245,7 @@ El selector experimental arrancaba enfocado en CPU1. Como el jugador seguía rec
 
 Tras confirmar que el contador humano ya presenta 5/5 tiempos coherentes, CPU1 seguía sin aparecer. La inserción posterior de `RaceSurvivalPolishScene` era descartada al reconstruirse la zona de vueltas/sectores. `RaceSurvivalModeScene._showSurvivalSessionInfo` genera ahora el panel CPU1 directamente desde `_survivalPlannerBot._survivalLapTimesMs`, antes de cualquier transformación visual. El panel permanece aunque CPU1 esté inactivo o eliminado y muestra mejor, media, diferencia y vueltas completadas.
 
+### Línea base CPU1 visible en resultado principal (2026-08-22)
+
+Antes de iniciar aprendizaje por imitación se exige medir la línea base real. Como las inserciones en INFO SESIÓN seguían sin sobrevivir a la composición final de sectores, `RaceSurvivalModeScene._showSurvivalResults` muestra ahora un panel CPU1 directamente en la tarjeta principal: mejor, media y V1–V5 completadas desde `_survivalPlannerBot._survivalLapTimesMs`. No requiere abrir el informe y permanece disponible aunque CPU1 haya sido eliminado. No implementar aprendizaje del jugador hasta confirmar estos tiempos en dispositivo.
+
