@@ -208,3 +208,11 @@ Decisión vigente:
 - la variante sin confianza se descartó porque Shanghai salía 13 px casi un segundo;
 - versión vigente: 17/17 válidos; Santa Cruz simula 27.45 y 27.38 s consecutivos;
 - telemetría nueva: cornerRisk, riskConfidence y riskScale.
+
+- referencia humana analizada: AVENIR Gripline, Santa Cruz, 17.301 s; mantiene 58–61 km/h, mínima aproximada 53–55, enlaza curvas como una maniobra y no se recentra tras cada vértice;
+- nueva capa experimental `trackManeuverPlanner.js`: suaviza curvatura y agrupa pares próximos, opuestos y equilibrados;
+- cada secuencia tiene entrada, identidad, fase, riesgo, salida fija y velocidad común;
+- el controlador mantiene el compromiso y no penaliza una separación moderada de la línea dentro del sector;
+- validación 17/17; Santa Cruz detecta nueve secuencias, simula 27.83/27.70 s y usa 2.9 px de piano durante 0.28 s;
+- no hay coordenadas ni copia literal de Santa Cruz; la solución es genérica;
+- pendiente homologación visual en iPhone antes de migrar más bots.
