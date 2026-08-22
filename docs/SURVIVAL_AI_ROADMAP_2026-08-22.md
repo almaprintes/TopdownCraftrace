@@ -501,3 +501,15 @@ Decisión de conducción:
 - CPU1 usa factor 1.45 y techo 95 %;
 - 17/17 circuitos pasan el criterio revisado;
 - no existe fatiga programada por vuelta.
+
+
+## Presupuesto de riesgo de CPU1
+
+Para evitar una conducción artificialmente conservadora:
+
+- CPU1 conserva más velocidad en curva cuando llega bien colocado;
+- el extra crece en curvas lentas y desaparece con error angular o transversal;
+- no altera velocidad punta ni introduce fallos aleatorios;
+- riesgo máximo experimental: 0.35;
+- 17/17 circuitos válidos;
+- Santa Cruz mejora a 27.45/27.38 s en simulación.
