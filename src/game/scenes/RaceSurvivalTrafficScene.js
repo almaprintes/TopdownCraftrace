@@ -307,7 +307,10 @@ export class RaceScene extends CurrentRaceScene {
       this.uiCam?.ignore?.(this._survivalSpectatorRing);
       this.uiCam?.ignore?.(this._survivalSpectatorLabel);
     }catch{}
-    this._selectSurvivalSpectator(this._survivalPlannerBot?1:0);
+    // El jugador conserva siempre el foco al arrancar. CPU1 se puede
+    // seleccionar después para observarlo, pero nunca a costa de conducir
+    // varios segundos con el coche propio fuera de pantalla.
+    this._selectSurvivalSpectator(0);
   }
 
   _selectSurvivalSpectator(index){
