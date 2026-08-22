@@ -286,3 +286,13 @@ Nueva evidencia: Supervivencia 5/5 y campeón, pero INFO SESIÓN/ttHistory mostr
 
 Cada incremento autoritativo de `completedLaps` del jugador reconstruye ahora el tramo de sesión de `ttHistory` desde `_survivalLapTimesMs`. Conserva sectores únicamente cuando el total previo coincide dentro de 1,2 s; registros dobles o desalineados pierden splits falsos y adoptan el total autoritativo. La matriz reconciliada se persiste en `ttHistKey`. Como la capa de botín observa el crecimiento de `ttHistory`, una vuelta recuperada vuelve a generar su premio y el total debe coincidir con 5/5.
 
+
+
+## Confirmación móvil: cronometraje autoritativo y exploración continua (2026-08-22)
+
+- Las capturas reales confirman que Supervivencia, el informe de sesión y el botín ya comparten las 5 vueltas autoritativas: desaparecieron las sesiones de 5/5 mostradas como 3 o 4 vueltas y las vueltas fusionadas de 35 s.
+- Última referencia humana observada en Santa Cruz: 17.348 como mejor vuelta; cinco vueltas registradas correctamente (17.552, 17.622, 17.348, 17.457 y 19.746).
+- Última secuencia CPU1 observada: 20.07 al 0%, 19.88 al 34% y 19.94 al 34%.
+- Se detectó que el aprendizaje no exploraba 42% después de mejorar a 34% cuando la siguiente vuelta humana no sustituía la vuelta maestra. La activación ahora puede seguir profundizando el plan humano activo sin exigir un nuevo récord del jugador.
+- Regla adaptativa verificada: una mejora a 34% habilita 42% en la siguiente vuelta de CPU1; una regresión clara a 42% restaura 34%. No se aumenta el máximo físico del coche.
+- Cambio de código confirmado en main: `b0eb1a359d2147c40a6d79cf46d3c38d4b09aed3` (`Keep exploring a proven teacher lap`). Falta validar el resultado dinámico en dispositivo; no debe darse por demostrada una bajada de tiempo hasta esa prueba.
