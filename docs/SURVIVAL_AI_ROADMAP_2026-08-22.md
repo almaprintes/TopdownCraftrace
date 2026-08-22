@@ -282,9 +282,26 @@ Criterio de salida:
 
 ### Fase 3 — Controlador físico de un bot
 
-- Un rival de prueba sigue la trayectoria usando dirección, gas y freno.
-- Sin tráfico ni adelantamientos.
-- El resto permanece en legacy.
+Estado: implementación experimental disponible mediante `planner_v1`; no homologada.
+
+Implementación:
+
+- `src/game/ai/survivalPhysicalBotController.js`;
+- un cuerpo Arcade real sigue la trazada usando dirección, gas y freno continuos;
+- no se teletransporta su posición durante la marcha;
+- objetivo anticipado dependiente de velocidad;
+- el perfil de Fase 2 define la velocidad objetivo;
+- sin tráfico, adelantamientos ni colisión con el pelotón;
+- los otros cuatro rivales permanecen en `legacy`;
+- telemetría de volante, gas, freno, velocidad objetivo y distancia a línea;
+- informe: `docs/SURVIVAL_AI_PHYSICAL_BOT_VALIDATION_2026-08-22.md`.
+
+Validación estructural:
+
+- 17/17 circuitos avanzan;
+- 15/17 se mantienen dentro del semiancho nominal en simulación;
+- Jeddah y Karting Tenerife salen del corredor y bloquean la homologación;
+- Santa Cruz completa vueltas estructuralmente, pendiente de prueba real en Phaser.
 
 Criterio de salida:
 
