@@ -205,7 +205,9 @@ export class RaceScene extends CurrentRaceScene {
     const plannerTrackWidth=Number(this.track?.meta?.trackWidth||this.track?.trackWidth||140);
     this._survivalPlannerTrackModel=buildTrackRacingLineModel({
       raceCenterline:plannerCenterline,
-      trackWidth:plannerTrackWidth
+      trackWidth:plannerTrackWidth,
+      // Conserva exterior-vértice-exterior sin consumir visualmente todo el ancho.
+      offsetScale:.72
     });
     this._survivalPlannerSpeedProfile=buildTrackSpeedProfile(this._survivalPlannerTrackModel);
     this._survivalAiTelemetry?.pushEvent?.({
@@ -394,7 +396,7 @@ export class RaceScene extends CurrentRaceScene {
     // CPU1 ya tenía un ritmo correcto en la prueba real. El factor conserva
     // la nueva estabilidad lateral, pero devuelve velocidad al bot físico sin
     // volver a la envolvente fija anterior.
-    const physicalPaceBoost=1.16;
+    const physicalPaceBoost=1.21;
     const physicalMaxFwd=clamp(
       targetAverage/Math.max(.25,profileMeanRatio*.82)*physicalPaceBoost,
       playerMaxFwd*.42,playerMaxFwd*.82
