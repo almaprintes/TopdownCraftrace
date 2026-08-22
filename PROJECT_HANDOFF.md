@@ -171,4 +171,6 @@ Decisión vigente:
 - parrilla `legacy` equilibrada por coche y variaciones positivas limitadas para no superar la referencia;
 - tras prueba real, el fallback sin histórico se ajustó a 42 % y los multiplicadores quedaron 1.08–1.24 para evitar rivales demasiado lentos;
 - CPU1 deriva su velocidad de `targetRate × longitud`, con eficiencia 0.82, y no participa en tráfico legacy;
-- observación pendiente: un duelo TÚ/CPU1 duró tres vueltas sin eliminación; ahora las etiquetas muestran V, META y ARMADO y el cierre se evalúa cada frame.
+- observación pendiente: un duelo TÚ/CPU1 duró tres vueltas sin eliminación; ahora las etiquetas muestran V, META y ARMADO y el cierre se evalúa cada frame;
+- corrección posterior: CPU1 no era imbatible; su velocidad original era correcta y los lentos eran los legacy;
+- se mantiene la conducción lateral nueva de CPU1, se restaura su ritmo con factor 1.16 y se conserva el aumento aplicado a los otros cuatro.
