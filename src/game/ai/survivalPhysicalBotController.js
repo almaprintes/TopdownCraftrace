@@ -130,7 +130,13 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
 
   const maxFwd=Math.max(40,Number(params.maxFwd||420));
   const profileMax=Math.max(1,Number(profile.parameters?.maxSpeed||520));
-  const profileRatio=clamp(Number(samples[nearest.index].targetSpeed||0)/profileMax,0,1);
+  const baseProfileSpeed=Number(samples[nearest.index].targetSpeed||0);
+  const maneuverProfileSpeed=maneuverActive
+    ?Number(plannedSample?.maneuverTargetSpeed||0)
+    :0;
+  const profileRatio=clamp(
+    Math.max(baseProfileSpeed,maneuverProfileSpeed)/profileMax,0,1
+  );
   // Riesgo condicionado: si el coche llega bien colocado conserva más velocidad
   // cuanto más cerrada es la curva. Si acumula error angular o transversal,
   // renuncia progresivamente al extra en vez de insistir hasta salirse.
