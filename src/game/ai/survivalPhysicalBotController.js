@@ -47,7 +47,22 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   bot._plannerSampleIndex=nearest.index;
 
   const spacing=Math.max(1,Number(params.spacing||10));
-  const lookaheadPx=clamp(22+speed*.18,25,82);
+  // En una secuencia izquierda-derecha no perseguir cada vértice como un
+  // eslalon. Apuntar después de la segunda curva aproxima la diagonal lógica
+  // de una chicane sin alterar curvas aisladas ni rectas.
+  let turnSign=0,turnChanges=0,turnEnergy=0;
+  for(let step=2;step<=16;step++){
+    const turn=Number(samples[(nearest.index+step)%samples.length].curvature||0);
+    if(Math.abs(turn)<.012)continue;
+    const sign=Math.sign(turn);
+    turnEnergy+=Math.abs(turn);
+    if(turnSign&&sign!==turnSign)turnChanges++;
+    turnSign=sign;
+  }
+  const chicaneAhead=turnChanges>0&&turnEnergy>.10;
+  const lookaheadPx=chicaneAhead
+    ?clamp(52+speed*.24,70,135)
+    :clamp(22+speed*.18,25,82);
   const lookaheadSteps=Math.max(2,Math.round(lookaheadPx/spacing));
   const targetIndex=(nearest.index+lookaheadSteps)%samples.length;
   const target=samples[targetIndex];
@@ -124,6 +139,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     speed,
     targetSpeed:controlledTargetSpeed,
     profileTargetSpeed:targetSpeed,
+    chicaneAhead,
     headingError,
     steer,
     throttle,
