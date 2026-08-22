@@ -106,6 +106,30 @@ Si un circuito necesita una excepción, debe documentarse:
 - captura/telemetría de validación;
 - commit.
 
+## Observación de conducción provisional — Santa Cruz
+
+Prueba visual comunicada el 22/08/2026:
+
+- mejora previa en frecuencia de correcciones;
+- persistía cabeceo tipo serpiente;
+- algunos rivales ordenaban desplazamientos laterales grandes dentro de chicanes.
+
+Causa comprobada en el controlador `legacy`:
+
+- oscilación sinusoidal permanente añadida a `baseLane`;
+- selección aleatoria periódica de un nuevo offset;
+- protección de adelantamiento basada solo en la severidad de la curva actual.
+
+Corrección provisional:
+
+- línea personal estable sin oscilación periódica;
+- cambios laterales únicamente por tráfico;
+- lectura anticipada de riesgo de curva;
+- mantenimiento del offset actual en chicanes y horquillas;
+- límites laterales reducidos.
+
+Esto no homologa todavía Santa Cruz. Requiere una nueva prueba visual y, si es posible, comparación de telemetría de cambios de signo del volante y velocidad lateral.
+
 ## Próximas acciones de Fase 1
 
 1. Revisar visualmente Sakhir, Shanghai y Santa Cruz con el overlay DEV.
