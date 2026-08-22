@@ -237,3 +237,7 @@ La primera prueba real mostró dos defectos: el panel CPU1 no aparecía por depe
 
 El respaldo por progreso no resolvió el informe: una nueva sesión terminó 5/5 pero mostró cuatro vueltas, con S2 de V3 inflado a 10,616 s. Se eliminó la duplicidad conceptual. `RaceSurvivalModeScene._registerFinishCross` guarda ahora `_survivalLapTimesMs` en el propio estado del corredor exactamente cuando incrementa `completedLaps`. Jugador y CPU1 consumen esa misma matriz autoritativa en `RaceSurvivalPolishScene`. El informe ya no depende de `ttHistory` para contar vueltas de Supervivencia. Invariante: cada vuelta competitiva aceptada produce exactamente un tiempo.
 
+### Foco inicial del espectador (2026-08-22)
+
+El selector experimental arrancaba enfocado en CPU1. Como el jugador seguía recibiendo control, su coche salía de pantalla y era necesario frenar para pulsar `TÚ`, contaminando el primer tiempo y sectores (observado: vuelta de 23,185 s con S2 de 10,616 s). La cámara inicia ahora siempre en `TÚ`; CPU1 continúa seleccionable manualmente para observarlo.
+
