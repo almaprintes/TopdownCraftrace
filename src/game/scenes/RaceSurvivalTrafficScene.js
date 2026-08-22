@@ -520,6 +520,10 @@ export class RaceScene extends CurrentRaceScene {
           this._survivalTeachingState?.activePlan?.coverage||
           this._survivalTeachingState?.pendingPlan?.coverage||0
         ),
+        teachingBestCpuLapMs:Number(this._survivalTeachingState?.bestCpuLapMs||0),
+        teachingBestBlend:Number(this._survivalTeachingState?.bestCpuBlend||0),
+        teachingAdaptiveCap:Number(this._survivalTeachingState?.adaptiveCap||0),
+        teachingRegressionCount:Number(this._survivalTeachingState?.regressionCount||0),
         steer:Number(b._plannerControl?.steer||0),
         throttle:Number(b._plannerControl?.throttle||0),
         brake:Number(b._plannerControl?.brake||0),
@@ -775,6 +779,7 @@ export class RaceScene extends CurrentRaceScene {
     this._survivalTeachingState={
       enabled:true,n,frames,lapNo:0,bestLapMs:null,pendingPlan:null,
       activePlan:null,blend:0,targetBlend:0,nearestIndex:0,
+      bestCpuLapMs:null,bestCpuBlend:0,adaptiveCap:.72,regressionCount:0,
       sums:new Array(n).fill(0),speedSums:new Array(n).fill(0),
       counts:new Array(n).fill(0),unique:0
     };
@@ -874,15 +879,45 @@ export class RaceScene extends CurrentRaceScene {
     this._resetSurvivalTeacherBuffer();
   }
 
+  _observeSurvivalTeachingCpuLap(lapMs,usedBlend){
+    const s=this._survivalTeachingState;
+    if(!s||!Number.isFinite(lapMs)||lapMs<=1000)return;
+    const blend=clamp(Number(usedBlend||0),0,1);
+    const previousBest=s.bestCpuLapMs;
+    if(previousBest==null||lapMs<previousBest-20){
+      s.bestCpuLapMs=lapMs;
+      s.bestCpuBlend=blend;
+      // Solo explorar ocho puntos por encima de una mezcla demostrada.
+      s.adaptiveCap=Math.min(.72,Math.max(.34,blend+.08));
+      this._survivalAiTelemetry?.pushEvent?.({
+        timeMs:Math.round(Number(this.time?.now||0)),type:'teaching_improved',
+        lapMs:Math.round(lapMs),blend,bestBlend:s.bestCpuBlend,
+        nextCap:s.adaptiveCap
+      });
+    }else if(blend>s.bestCpuBlend+.04&&lapMs>previousBest+50){
+      s.regressionCount++;
+      // Una mezcla mayor empeoró: volver al mejor porcentaje comprobado.
+      s.adaptiveCap=Math.max(.28,s.bestCpuBlend);
+      s.targetBlend=Math.min(s.targetBlend,s.adaptiveCap);
+      this._survivalAiTelemetry?.pushEvent?.({
+        timeMs:Math.round(Number(this.time?.now||0)),type:'teaching_rollback',
+        lapMs:Math.round(lapMs),bestLapMs:Math.round(previousBest),
+        rejectedBlend:blend,restoredBlend:s.bestCpuBlend,
+        regressionCount:s.regressionCount
+      });
+    }
+  }
+
   _activateSurvivalTeachingForCpuLap(){
     const s=this._survivalTeachingState;
     if(!s?.pendingPlan)return;
     s.activePlan=s.pendingPlan;s.pendingPlan=null;
-    s.targetBlend=s.activePlan.blendTarget;
+    s.targetBlend=Math.min(s.activePlan.blendTarget,s.adaptiveCap);
     this._survivalAiTelemetry?.pushEvent?.({
       timeMs:Math.round(Number(this.time?.now||0)),type:'teacher_plan_activated',
       teacherLap:s.activePlan.lapNo,teacherLapMs:Math.round(s.activePlan.lapMs),
-      blendTarget:s.targetBlend
+      requestedBlend:s.activePlan.blendTarget,blendTarget:s.targetBlend,
+      adaptiveCap:s.adaptiveCap,bestCpuBlend:s.bestCpuBlend
     });
   }
 
