@@ -201,7 +201,12 @@ export class RaceScene extends CurrentRaceScene {
     }
     // Fase 1: calcular el modelo nuevo para observación y validación. Todavía
     // no se entrega el control de los coches a esta trayectoria.
-    this._survivalPlannerTrackModel=buildTrackRacingLineModel(this.track?.meta||this.track||{});
+    const plannerCenterline=this._survivalCenterline?.()||[];
+    const plannerTrackWidth=Number(this.track?.meta?.trackWidth||this.track?.trackWidth||140);
+    this._survivalPlannerTrackModel=buildTrackRacingLineModel({
+      raceCenterline:plannerCenterline,
+      trackWidth:plannerTrackWidth
+    });
     this._survivalPlannerSpeedProfile=buildTrackSpeedProfile(this._survivalPlannerTrackModel);
     this._survivalAiTelemetry?.pushEvent?.({
       timeMs:Math.round(Number(this.time?.now||0)),
