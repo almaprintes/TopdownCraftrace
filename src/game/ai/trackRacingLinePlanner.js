@@ -221,7 +221,8 @@ export function buildTrackRacingLineModel(track,options={}){
       discontinuityCount:conditioning.discontinuityCount,
       sourceMaxTurn:conditioning.sourceMaxTurn,
       referenceConditioningMaxShift:conditioning.maxShift,
-      offsetScale
+      offsetScale,
+      apexCommitment
     }
   };
 }
