@@ -2,6 +2,7 @@ import { RaceScene as CurrentRaceScene } from './RaceKartingCanariasSurfaceFixSc
 import { readSurvivalAiRuntime, createSurvivalAiTelemetry } from '../ai/survivalAiRuntime.js';
 import { buildTrackRacingLineModel } from '../ai/trackRacingLinePlanner.js';
 import { buildTrackSpeedProfile } from '../ai/trackSpeedProfilePlanner.js';
+import { updateSurvivalPhysicalBot } from '../ai/survivalPhysicalBotController.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
@@ -254,6 +255,91 @@ export class RaceScene extends CurrentRaceScene {
       b.mistakeLane=0;
       b.mistakeLaneTarget=0;
     }
+    this._initSurvivalPlannerBot();
+  }
+
+  _initSurvivalPlannerBot(){
+    if(this._survivalAiRuntime?.effective!=='planner_v1'||!this._survivalPlannerSpeedProfile?.valid)return;
+    const b=(this._survivalBots||[]).find(bot=>bot?.active);
+    const samples=this._survivalPlannerSpeedProfile.samples;
+    if(!b||!Array.isArray(samples)||samples.length<4||!this.physics?.add?.sprite)return;
+
+    const logical=Number(b.absProgress||0)+Number(this._survivalPathOffset||0);
+    const index=Math.floor((((logical%1)+1)%1)*samples.length)%samples.length;
+    const p=samples[index],next=samples[(index+1)%samples.length];
+    const body=this.physics.add.sprite(Number(p.x),Number(p.y),'__BODY__');
+    body.setVisible(false);
+    body.setCircle(Math.max(7,Math.round(Math.min(Number(b.sprite?.displayWidth||28),Number(b.sprite?.displayHeight||48))*.22)));
+    body.setCollideWorldBounds(true);
+    body.setBounce(0);
+    body.setDrag(0,0);
+    body.rotation=Math.atan2(Number(next.y)-Number(p.y),Number(next.x)-Number(p.x));
+    body.setVelocity(0,0);
+
+    b.plannerBody=body;
+    b._plannerSampleIndex=index;
+    b._plannerFrac=((Number(b.absProgress||0)%1)+1)%1;
+    b._plannerControl=null;
+    b.prevX=Number(body.x);b.prevY=Number(body.y);
+    b.sprite.setPosition(body.x,body.y);
+    b.sprite.rotation=body.rotation+Number(this._carVisualRotOffset||0);
+    this._survivalPlannerBot=b;
+    this._survivalAiTelemetry?.pushEvent?.({
+      timeMs:Math.round(Number(this.time?.now||0)),
+      type:'physical_bot_enabled',botId:b.id,sampleIndex:index
+    });
+  }
+
+  _shouldUseSurvivalPlannerBot(b){
+    return this._survivalAiRuntime?.effective==='planner_v1'&&b===this._survivalPlannerBot&&Boolean(b?.plannerBody?.body);
+  }
+
+  _updateSurvivalPlannerBot(b,deltaMs,gate){
+    const body=b?.plannerBody;
+    if(!body?.body)return false;
+    const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
+    const beforeX=Number(b.prevX),beforeY=Number(b.prevY);
+    const control=updateSurvivalPhysicalBot(b,this._survivalPlannerSpeedProfile,{
+      dt,
+      spacing:Number(this._survivalPlannerTrackModel?.spacing||10),
+      maxFwd:Number(this.maxFwd||this.carParams?.maxFwd||420)*.88,
+      accel:Number(this.accel||this.carParams?.accel||520),
+      brakeForce:Number(this.brakeForce||this.carParams?.brakeForce||720),
+      linearDrag:Number(this.linearDrag||this.carParams?.linearDrag||.004),
+      turnRate:Number(this.turnRate||this.carParams?.turnRate||2.4),
+      steering:this.carParams?.steering||{}
+    });
+    if(!control.valid)return false;
+
+    const n=this._survivalPlannerSpeedProfile.samples.length;
+    const frac=((control.nearestIndex/n-Number(this._survivalPathOffset||0))%1+1)%1;
+    const previous=Number(b._plannerFrac);
+    let advance=Number.isFinite(previous)?frac-previous:0;
+    if(advance<-.5)advance+=1;
+    if(advance>.5)advance-=1;
+    advance=clamp(advance,-.01,.035);
+    b._plannerFrac=frac;
+    b.absProgress=Number(b.absProgress||0)+advance;
+    b.distanceSinceFinish+=Math.max(0,advance);
+    b.lapRate=Math.max(0,advance/dt);
+    b._plannerControl=control;
+
+    const x=Number(body.x),y=Number(body.y);
+    b.sprite.setPosition(x,y);
+    b.sprite.rotation=Number(body.rotation||0)+Number(this._carVisualRotOffset||0);
+    b.prevX=x;b.prevY=y;
+
+    let crossed=false;
+    if(gate&&Number.isFinite(beforeX)&&Number.isFinite(beforeY)){
+      const ax=gate.ax,ay=gate.ay,bx=gate.bx,by=gate.by;
+      const rx=x-beforeX,ry=y-beforeY,sx=bx-ax,sy=by-ay,den=rx*sy-ry*sx;
+      if(Math.abs(den)>1e-8){
+        const qx=ax-beforeX,qy=ay-beforeY;
+        const t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den;
+        if(t>=0&&t<=1&&u>=0&&u<=1)crossed=this._registerFinishCross(b);
+      }
+    }
+    return crossed;
   }
 
   _recordSurvivalAiTelemetry(){
@@ -278,7 +364,13 @@ export class RaceScene extends CurrentRaceScene {
         lateralSpeed:Number((b._trafficLaneVelocity||0).toFixed?.(3)??b._trafficLaneVelocity),
         speedScale:Number((b._trafficSpeedScale||1).toFixed?.(4)??b._trafficSpeedScale),
         cornerSeverity:Number(this._trafficCornerSeverity(b.absProgress).toFixed(4)),
-        passCommitted:Number(this.time?.now||0)/1000<Number(b._trafficPassUntil||0)
+        passCommitted:Number(this.time?.now||0)/1000<Number(b._trafficPassUntil||0),
+        physicalController:Boolean(this._shouldUseSurvivalPlannerBot(b)),
+        steer:Number(b._plannerControl?.steer||0),
+        throttle:Number(b._plannerControl?.throttle||0),
+        brake:Number(b._plannerControl?.brake||0),
+        targetSpeed:Number(b._plannerControl?.targetSpeed||0),
+        distanceToLine:Number(b._plannerControl?.distanceToLine||0)
       });
     }
   }
@@ -507,6 +599,9 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _destroySurvival(){
+    try{this._survivalPlannerBot?.plannerBody?.destroy?.();}catch{}
+    if(this._survivalPlannerBot)this._survivalPlannerBot.plannerBody=null;
+    this._survivalPlannerBot=null;
     try{this._survivalAiDebugGfx?.destroy?.();}catch{}
     this._survivalAiDebugGfx=null;
     try{
