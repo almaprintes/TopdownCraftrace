@@ -362,3 +362,38 @@ Calibración:
 - Shanghai permanece dentro en la simulación final.
 
 Pendiente confirmar en iPhone que la mayor velocidad de paso se percibe como decisión y que CPU1 sigue recuperándose de una entrada mala sin excursiones.
+
+
+## Referencia humana de Santa Cruz — 17.301 s
+
+Se analizó una vuelta completa de AVENIR Gripline conducida por el usuario.
+
+Patrones observados:
+
+- velocidad habitualmente entre 58 y 61 km/h;
+- mínima aproximada de 53–55 km/h incluso en la horquilla;
+- las enlazadas se resuelven como una sola intención;
+- no hay recentralización automática después de cada vértice;
+- se sacrifica una curva cuando mejora la salida de la siguiente;
+- uso breve de piano y pocas correcciones largas y decididas.
+
+Nueva capa experimental:
+
+- `src/game/ai/trackManeuverPlanner.js`;
+- suaviza la curvatura antes de clasificarla;
+- agrupa únicamente pares próximos, opuestos y equilibrados;
+- genera identidad, entrada, fase, riesgo y salida común;
+- el controlador mantiene el objetivo hasta completar el sector;
+- durante la maniobra no penaliza como error una separación moderada de la línea;
+- toda la secuencia comparte una velocidad al 65 % entre el mínimo y el máximo local, evitando frenar de nuevo por cada vértice.
+
+Validación:
+
+- 17/17 circuitos cumplen hasta 3 px/0.40 s;
+- Santa Cruz detecta nueve secuencias;
+- Santa Cruz: 27.83 y 27.70 s consecutivos;
+- 20.5 cambios de signo de volante por vuelta;
+- uso máximo medido de piano: 2.9 px durante 0.28 s;
+- el sistema es geométrico y reutilizable; no copia la vuelta ni contiene coordenadas específicas de Santa Cruz.
+
+La referencia humana de 17.301 s es un objetivo de comportamiento y competitividad, no una garantía de igualdad inmediata: falta homologación visual y calibración posterior por coche.
