@@ -268,3 +268,9 @@ Se implementó aprendizaje online provisional en `RaceSurvivalTrafficScene`:
 
 Resultados muestra por vuelta el porcentaje aprendido. Telemetría: `teacher_lap_ready`, `teacher_plan_activated`, `teachingBlend`, `teacherLap`, `teacherBestLapMs` y `teacherCoverage`.
 
+### Enseñanza acelerada tras primera prueba real (2026-08-22)
+
+Primera sesión con enseñanza confirmó funcionamiento pero influencia insuficiente: CPU1 V1 20,12 s al 0 %, V2 19,79 s al 18 % y V3 19,73 s al 30 %. Mejora máxima 0,39 s; eliminado en penúltima ronda. Humano: mejor 17,350 s, media 17,528 s.
+
+Se acelera la progresión sin alterar V1 ni `maxFwd`: objetivos 34 % tras la primera lección, 53 % tras la segunda y máximo 72 %; velocidad de convergencia de mezcla 0,46/s en lugar de 0,22/s. Objetivo de prueba: que V2/V3 se acerquen a 19 s y CPU1 sobreviva hasta quedar segundo.
+
