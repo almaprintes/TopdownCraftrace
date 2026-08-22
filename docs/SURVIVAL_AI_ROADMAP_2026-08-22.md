@@ -310,7 +310,11 @@ Validación estructural:
 - el overlay DEV permite seleccionar y seguir con la cámara a cualquiera de los seis participantes;
 - CPU1 queda identificado explícitamente como `BOT FÍSICO`;
 - el balance `legacy` usa solo referencias históricas del coche seleccionado;
-- el ritmo máximo aleatorio ya no puede superar la referencia usada para equilibrar la carrera.
+- el ritmo máximo aleatorio ya no puede superar la referencia usada para equilibrar la carrera;
+- CPU1 calcula su máximo físico desde el mismo `targetRate` que la parrilla y queda fuera del tráfico legacy;
+- el fallback sin histórico se acelera del 36 % al 42 % para recuperar competitividad;
+- las etiquetas de espectador muestran vueltas, cruces de meta y armado para diagnosticar el duelo final;
+- la evaluación de cierre de ronda se ejecuta continuamente desde el estado de carrera válido.
 
 Criterio de salida:
 
