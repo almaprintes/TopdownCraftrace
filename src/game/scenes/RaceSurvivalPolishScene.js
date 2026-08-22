@@ -7,6 +7,10 @@ export class RaceScene extends TrafficRaceScene {
   create(data){
     this._survivalPlayerLapTimes=[];
     this._survivalPlayerLapStartPerf=null;
+    // Cronómetro provisional de QA. Vive solo durante esta sesión y nunca se
+    // mezcla con ttHistory, récords, recompensas ni estadísticas del jugador.
+    this._survivalCpu1LapTimes=[];
+    this._survivalCpu1LapStartPerf=null;
     return super.create(data);
   }
 
@@ -24,10 +28,12 @@ export class RaceScene extends TrafficRaceScene {
 
   _registerFinishCross(racer){
     const isPlayer=racer===this._survivalPlayer;
+    const isCpu1=this._survivalAiRuntime?.effective==='planner_v1'&&
+      racer===this._survivalPlannerBot;
     const wasArmed=Boolean(racer?.armed);
     const completed=super._registerFinishCross(racer);
+    const now=performance.now();
     if(isPlayer){
-      const now=performance.now();
       if(!wasArmed&&racer?.armed){
         // First crossing only arms the survival lap counter. Timing starts here.
         this._survivalPlayerLapStartPerf=now;
@@ -41,6 +47,24 @@ export class RaceScene extends TrafficRaceScene {
           if(this._survivalPlayerLapTimes.length>5)this._survivalPlayerLapTimes=this._survivalPlayerLapTimes.slice(-5);
         }
         this._survivalPlayerLapStartPerf=now;
+      }
+    }
+    if(isCpu1){
+      if(!wasArmed&&racer?.armed){
+        this._survivalCpu1LapStartPerf=now;
+      }else if(completed){
+        const start=Number(this._survivalCpu1LapStartPerf);
+        const lapMs=now-start;
+        if(Number.isFinite(start)&&Number.isFinite(lapMs)&&lapMs>1000){
+          this._survivalCpu1LapTimes.push(lapMs);
+          if(this._survivalCpu1LapTimes.length>5)this._survivalCpu1LapTimes=this._survivalCpu1LapTimes.slice(-5);
+          this._survivalAiTelemetry?.pushEvent?.({
+            timeMs:Math.round(Number(this.time?.now||0)),
+            type:'cpu1_lap',lap:this._survivalCpu1LapTimes.length,
+            lapMs:Math.round(lapMs)
+          });
+        }
+        this._survivalCpu1LapStartPerf=now;
       }
     }
     return completed;
@@ -58,8 +82,51 @@ export class RaceScene extends TrafficRaceScene {
     this.ttHistory=(Array.isArray(this._survivalPlayerLapTimes)?this._survivalPlayerLapTimes:[])
       .slice(0,5)
       .map(lapMs=>({lapMs}));
-    try{return super._showSurvivalSessionInfo(resultRoot);}
+    try{super._showSurvivalSessionInfo(resultRoot);}
     finally{this.ttHistory=original;}
+
+    if(this._survivalAiRuntime?.effective!=='planner_v1'||typeof document==='undefined')return;
+    const laps=(Array.isArray(this._survivalCpu1LapTimes)?this._survivalCpu1LapTimes:[])
+      .filter(ms=>Number.isFinite(ms)&&ms>1000);
+    const cards=[...document.querySelectorAll('.tdrsi-card')];
+    const card=cards[cards.length-1],back=card?.querySelector?.('.tdrsi-back');
+    if(!card||!back)return;
+    const fmt=(ms)=>{
+      if(!Number.isFinite(ms)||ms<=0)return '—';
+      const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),x=Math.floor(ms%1000);
+      return `${m}:${String(s).padStart(2,'0')}.${String(x).padStart(3,'0')}`;
+    };
+    const playerLaps=Array.isArray(this._survivalPlayerLapTimes)?this._survivalPlayerLapTimes:[];
+    const playerBest=playerLaps.length?Math.min(...playerLaps):null;
+    const best=laps.length?Math.min(...laps):null;
+    const avg=laps.length?laps.reduce((sum,ms)=>sum+ms,0)/laps.length:null;
+    const delta=Number.isFinite(best)&&Number.isFinite(playerBest)?best-playerBest:null;
+    const signedDelta=Number.isFinite(delta)?`${delta>=0?'+':'−'}${(Math.abs(delta)/1000).toFixed(3)} s`:'—';
+    const rows=laps.length?laps.map((ms,i)=>
+      `<div class="tdrsi-cpu-lap"><b>V${i+1}</b><span>${fmt(ms)}</span><i>${ms===best?'MEJOR':''}</i></div>`
+    ).join(''):'<div class="tdrsi-empty">CPU1 no completó ninguna vuelta cronometrada.</div>';
+    const panel=document.createElement('section');
+    panel.className='tdrsi-cpu';
+    panel.innerHTML=`
+      <style>
+        .tdrsi-cpu{margin-top:17px;padding:12px;border:1px solid #d89b31;background:rgba(216,155,49,.055)}
+        .tdrsi-cpu-title{font-size:9px;font-weight:950;letter-spacing:.14em;color:#ffc45f;margin-bottom:9px}
+        .tdrsi-cpu-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:7px}
+        .tdrsi-cpu-grid div{background:#151d27;border:1px solid #39424e;padding:8px;text-align:center}
+        .tdrsi-cpu-grid small{display:block;color:#8e9bac;font-size:7px;font-weight:900;letter-spacing:.08em;margin-bottom:4px}
+        .tdrsi-cpu-grid b{font-size:13px}.tdrsi-cpu-lap{display:grid;grid-template-columns:42px 1fr 48px;gap:8px;padding:7px 2px;border-bottom:1px solid #26303b;font-size:11px}
+        .tdrsi-cpu-lap span{text-align:right}.tdrsi-cpu-lap i{text-align:right;color:#ffc45f;font-size:8px;font-style:normal;font-weight:900}
+        .tdrsi-cpu-note{margin-top:8px;color:#79889a;font-size:7px;line-height:1.35}
+      </style>
+      <div class="tdrsi-cpu-title">CPU1 · CRONOMETRAJE PROVISIONAL</div>
+      <div class="tdrsi-cpu-grid">
+        <div><small>MEJOR</small><b>${fmt(best)}</b></div>
+        <div><small>MEDIA</small><b>${fmt(avg)}</b></div>
+        <div><small>DIF. CONTIGO</small><b>${signedDelta}</b></div>
+      </div>
+      <div>${rows}</div>
+      <div class="tdrsi-cpu-note">Solo diagnóstico planner_v1 · no guarda récords ni altera resultados.</div>`;
+    card.insertBefore(panel,back);
   }
 
   _ensureSurvivalMiniMarkers(){
