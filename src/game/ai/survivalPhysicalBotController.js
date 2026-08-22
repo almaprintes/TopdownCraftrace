@@ -83,21 +83,36 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // El plan global tiene prioridad: mantiene una salida común para toda la
   // secuencia y evita recentrar el coche entre sus vértices.
   const plannedSample=samples[nearest.index];
+  const plannedId=Number(plannedSample?.maneuverId||0);
   let maneuver=bot._plannerManeuver;
+  let releaseSeconds=Math.max(0,Number(bot._plannerManeuverRelease||0)-dt);
   if(maneuver){
     const remaining=forwardSteps(nearest.index,maneuver.targetIndex,samples.length);
-    if(remaining<=2||remaining>36)maneuver=null;
+    if(remaining<=2||remaining>36){
+      bot._plannerCompletedManeuverId=maneuver.id;
+      releaseSeconds=.48;
+      maneuver=null;
+    }
   }
-  if(!maneuver&&Number(plannedSample?.maneuverId)>0&&
+  // No rearmar una maniobra cuyo objetivo acaba de quedar detrás. El bloqueo
+  // desaparece únicamente al abandonar por completo su zona planificada.
+  if(Number(bot._plannerCompletedManeuverId||0)&&
+    plannedId!==Number(bot._plannerCompletedManeuverId)){
+    bot._plannerCompletedManeuverId=0;
+  }
+  if(!maneuver&&plannedId>0&&
+    plannedId!==Number(bot._plannerCompletedManeuverId||0)&&
     Number.isInteger(plannedSample?.maneuverTargetIndex)){
     maneuver={
-      id:Number(plannedSample.maneuverId),
+      id:plannedId,
       type:String(plannedSample.maneuverType||'linked'),
       targetIndex:Number(plannedSample.maneuverTargetIndex)
     };
   }
   bot._plannerManeuver=maneuver;
+  bot._plannerManeuverRelease=releaseSeconds;
   const maneuverActive=Boolean(maneuver);
+  const maneuverRelease=releaseSeconds>0;
 
   // Fallback local para pistas sin secuencia global homologada.
   let shortcut=bot._plannerShortChicane;
@@ -124,8 +139,12 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
   const rawSteer=clamp(headingError/.48,-1,1);
   const previousSteer=Number(bot._plannerSteerCommand||0);
+  const oppositeDuringRelease=maneuverRelease&&
+    Math.sign(rawSteer)!==Math.sign(previousSteer)&&
+    Math.abs(previousSteer)>.04;
+  const steerRate=oppositeDuringRelease?2.2:9;
   const steer=clamp(previousSteer+
-    clamp(rawSteer-previousSteer,-9*dt,9*dt),-1,1);
+    clamp(rawSteer-previousSteer,-steerRate*dt,steerRate*dt),-1,1);
   bot._plannerSteerCommand=steer;
 
   const maxFwd=Math.max(40,Number(params.maxFwd||420));
@@ -155,7 +174,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // por circuito: entrar algo más lento conserva agarre y evita cortar bordes.
   const controlScale=clamp(
     1-Math.abs(headingError)*.25-
-      Math.max(0,nearest.distance-(maneuverActive?28:12))*.003,
+      Math.max(0,nearest.distance-((maneuverActive||maneuverRelease)?28:12))*.003,
     .58,1
   );
   const controlledTargetSpeed=targetSpeed*controlScale;
@@ -223,6 +242,8 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     chicaneAhead,
     shortChicane:committedShortChicane,
     maneuverActive,
+    maneuverRelease,
+    maneuverReleaseSeconds:releaseSeconds,
     maneuverId:maneuver?.id||0,
     maneuverType:maneuver?.type||null,
     maneuverPhase:Number(plannedSample?.maneuverPhase||0),
