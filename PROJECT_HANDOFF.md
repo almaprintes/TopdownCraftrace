@@ -221,3 +221,7 @@ Decisión vigente:
 
 Se corrigió el contravolante posterior al recorte de una chicane. La causa era el rearme de la misma maniobra cuando su objetivo ya había quedado detrás. El controlador guarda el ID completado hasta salir de la zona, aplica 0,48 s de liberación y limita a 2,2 unidades/s el cambio de signo opuesto. La telemetría publica `maneuverRelease` y `maneuverReleaseSeconds`. Validación sintética: 17/17 circuitos dentro del margen acordado; falta validación visual del usuario en dispositivo.
 
+### CPU1: compromiso interior y descarga sin contravolante (2026-08-22)
+
+Tras la prueba visual del usuario, CPU1 seguía pasando por el centro de las curvas y todavía cruzaba a contravolante después de una comida breve de piano. El modelo admite ahora `apexCommitment`; CPU1 usa 0,20 con `offsetScale: 1`, una demanda interior suavizada y un perfil de curva de `lateralAccel: 1500` / `minCornerSpeed: 125`. Durante la liberación de una maniobra, una orden opuesta con error angular inferior a 0,34 rad se descarga a cero en vez de cruzar de lado. Santa Cruz pasó de 26,350 s a 24,250 s en la simulación del controlador definitivo. Objetivo pendiente: menos de 22,000 s y validación visual en dispositivo.
+
