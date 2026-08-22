@@ -243,3 +243,41 @@ Validación determinista de 60 s:
 - la mayor excursión planificada entre los 17 circuitos es 15.3 px.
 
 Pendiente comprobar en dispositivo que CPU1 deja de abrirse en exceso sin perder naturalidad ni recortar bordes de forma irreal.
+
+
+## Refinamiento guiado por grabación real
+
+Se revisó una grabación completa de 94.7 s siguiendo a CPU1 en Santa Cruz. La prueba confirmó:
+
+- estabilidad razonable en recta;
+- correcciones laterales lentas y amplias en curvas enlazadas;
+- apertura excesiva durante buena parte de algunas curvas;
+- horquilla recorrida con radio demasiado exterior;
+- chicanes dibujadas como una S completa;
+- velocidad visible habitualmente entre 40 y 55 km/h, insuficiente respecto a la referencia mostrada de 17.37 s.
+
+Primer intento descartado:
+
+- se probó fijar un objetivo posterior a la segunda curva durante toda la maniobra;
+- la detección resultó demasiado permisiva y Santa Cruz quedó marcada como chicane casi toda la vuelta;
+- solo 15/17 circuitos permanecieron dentro del corredor;
+- esa calibración se sustituyó y no representa el estado final.
+
+Corrección conservada:
+
+- una chicane exige exactamente un cambio de signo y energía suficiente en ambos sentidos;
+- en curva cerrada el horizonte disminuye para atacar mejor el vértice;
+- en chicane confirmada aumenta de forma acotada para buscar la diagonal;
+- el volante recibe un límite de variación, manteniendo respuesta suficiente;
+- el factor físico sube de 1.21 a 1.27 y el techo del bot de 82 % a 86 % del máximo del coche patrón;
+- no se modifica la física común ni la velocidad máxima del jugador.
+
+Validación final de 60 s:
+
+- 17/17 circuitos dentro del corredor;
+- Santa Cruz: 1.84 vueltas, 33.0 px de desviación máxima respecto a la línea y 35.5 px respecto a la referencia central sobre 78 px de semiancho;
+- Santa Cruz: 22.9 cambios de signo de volante por vuelta;
+- detección de chicane activa durante el 9.2 % de la simulación de Santa Cruz;
+- Shanghai conserva el margen estructural menor: 9.5 px, por lo que sigue requiriendo revisión visual.
+
+La simulación valida estructura y estabilidad numérica; la naturalidad y el ritmo definitivo deben confirmarse en dispositivo con otra grabación.
