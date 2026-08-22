@@ -463,3 +463,18 @@ Tras observar que CPU1 se abría demasiado en casi todas las curvas:
 - 17/17 circuitos siguen dentro del corredor en simulación;
 - Santa Cruz reduce su offset planificado máximo de 16.8 a 12.1 px;
 - la aceptación definitiva continúa pendiente de prueba visual en dispositivo.
+
+
+## Controlador refinado a partir de vídeo real
+
+La grabación de CPU1 en Santa Cruz confirmó que reducir el ancho de la trazada no bastaba: el controlador seguía realizando correcciones amplias y trataba algunas enlazadas como una S completa.
+
+Estado vigente:
+
+- detección de chicane estricta, con energía suficiente en ambos sentidos;
+- horizonte menor en curvas cerradas y ampliación acotada en chicanes confirmadas;
+- variación de volante limitada sin desplazar artificialmente el coche;
+- factor físico 1.27 y techo experimental 86 %;
+- 17/17 circuitos dentro del corredor en simulación;
+- Santa Cruz: 33.0 px máximos respecto a la línea y 22.9 cambios de signo de volante por vuelta;
+- pendiente nueva validación visual en iPhone.
