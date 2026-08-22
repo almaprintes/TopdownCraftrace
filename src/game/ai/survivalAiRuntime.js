@@ -1,12 +1,12 @@
 // src/game/ai/survivalAiRuntime.js
-// Infraestructura de migración. No cambia la conducción mientras PLANNER_READY sea false.
+// Infraestructura de migración. El modo por defecto sigue siendo legacy; planner_v1 activa un único bot físico experimental.
 
 export const SURVIVAL_AI_MODES=Object.freeze({
   LEGACY:'legacy',
   PLANNER_V1:'planner_v1'
 });
 
-export const SURVIVAL_AI_PLANNER_READY=false;
+export const SURVIVAL_AI_PLANNER_READY=true;
 
 const MODE_KEY='tdr2:survivalAiMode';
 const DEBUG_KEY='tdr2:survivalAiDebug';
