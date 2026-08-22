@@ -51,6 +51,7 @@ export function buildTrackSpeedProfile(lineModel,options={}){
     const state=deltaNext<-1?'brake':deltaNext>1?'accelerate':'hold';
     return{
       x:Number(line[i].x),y:Number(line[i].y),
+      curvature:Number(turns[i]||0),
       targetSpeed,
       localLimit:localLimit[i],
       state,
