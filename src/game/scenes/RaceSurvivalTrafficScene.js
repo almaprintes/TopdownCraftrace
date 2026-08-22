@@ -1,6 +1,7 @@
 import { RaceScene as CurrentRaceScene } from './RaceKartingCanariasSurfaceFixScene.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
 
 function pt(raw){
   if(Array.isArray(raw))return {x:Number(raw[0]),y:Number(raw[1])};
@@ -52,7 +53,102 @@ export class RaceScene extends CurrentRaceScene {
       const ay=(p2.y+2*p1.y+4*p.y+2*n1.y+n2.y)/10;
       return{x:p.x*.38+ax*.62,y:p.y*.38+ay*.62};
     });
-    this._survivalAiLine=smooth;
+    // Detectar vértices reales sobre la geometría ya depurada.
+    const curvature=smooth.map((p,i)=>{
+      const prev=smooth[(i-1+count)%count],next=smooth[(i+1)%count];
+      const incoming=Math.atan2(p.y-prev.y,p.x-prev.x);
+      const outgoing=Math.atan2(next.y-p.y,next.x-p.x);
+      return wrapAngle(outgoing-incoming);
+    });
+
+    const candidates=[];
+    for(let i=0;i<count;i++){
+      const mag=Math.abs(curvature[i]);
+      if(mag<.025)continue;
+      let peak=true;
+      for(let d=1;d<=3;d++){
+        if(Math.abs(curvature[(i-d+count)%count])>mag||Math.abs(curvature[(i+d)%count])>mag){peak=false;break;}
+      }
+      if(peak)candidates.push({i,mag,sign:Math.sign(curvature[i])||1});
+    }
+
+    // Un vértice por curva: las pequeñas ondulaciones cercanas no crean curvas nuevas.
+    const minPeakDistance=Math.max(6,Math.round(55/spacing));
+    const selected=[];
+    for(const candidate of candidates.sort((a,b)=>b.mag-a.mag)){
+      const isolated=selected.every(other=>{
+        const d=Math.abs(candidate.i-other.i);
+        return Math.min(d,count-d)>=minPeakDistance;
+      });
+      if(isolated)selected.push(candidate);
+    }
+
+    const envelope=Math.max(18,trackW*.27);
+    const anchors=[];
+    const addAnchor=(index,value,weight)=>{
+      anchors.push({index:(index%count+count)%count,value:clamp(value,-envelope,envelope),weight});
+    };
+
+    for(const corner of selected){
+      const sign=corner.sign;
+      let start=corner.i,end=corner.i;
+      let quiet=0;
+      for(let d=1;d<Math.min(count*.18,30);d++){
+        const idx=(corner.i-d+count)%count,k=curvature[idx];
+        if(Math.sign(k)===sign&&Math.abs(k)>.009){start=idx;quiet=0;}
+        else if(++quiet>=2)break;
+      }
+      quiet=0;
+      for(let d=1;d<Math.min(count*.18,30);d++){
+        const idx=(corner.i+d)%count,k=curvature[idx];
+        if(Math.sign(k)===sign&&Math.abs(k)>.009){end=idx;quiet=0;}
+        else if(++quiet>=2)break;
+      }
+
+      const approach=Math.max(4,Math.round(65/spacing));
+      const release=Math.max(4,Math.round(72/spacing));
+      // Exterior de entrada -> interior en el vértice -> exterior de salida.
+      addAnchor(start-approach,-sign*envelope*.60,1.2);
+      addAnchor(corner.i,sign*envelope*.72,2.2);
+      addAnchor(end+release,-sign*envelope*.58,1.15);
+    }
+
+    if(!anchors.length){this._survivalAiLine=smooth;return;}
+
+    // Fusionar intenciones coincidentes, algo habitual en chicanes y enlazadas.
+    const merged=new Map();
+    for(const a of anchors){
+      const m=merged.get(a.index)||{index:a.index,sum:0,weight:0};
+      m.sum+=a.value*a.weight;m.weight+=a.weight;merged.set(a.index,m);
+    }
+    const ordered=[...merged.values()]
+      .map(a=>({index:a.index,value:a.sum/Math.max(.001,a.weight)}))
+      .sort((a,b)=>a.index-b.index);
+
+    const offsets=new Array(count).fill(0);
+    for(let k=0;k<ordered.length;k++){
+      const a=ordered[k],b=ordered[(k+1)%ordered.length];
+      let span=(b.index-a.index+count)%count;if(span===0)span=count;
+      for(let d=0;d<=span;d++){
+        const t=d/span;
+        const eased=t*t*(3-2*t);
+        offsets[(a.index+d)%count]=a.value+(b.value-a.value)*eased;
+      }
+    }
+
+    // Continuidad de volante: filtrar el offset, no la pista.
+    for(let pass=0;pass<2;pass++){
+      const copy=offsets.slice();
+      for(let i=0;i<count;i++){
+        offsets[i]=(copy[(i-2+count)%count]+2*copy[(i-1+count)%count]+4*copy[i]+2*copy[(i+1)%count]+copy[(i+2)%count])/10;
+      }
+    }
+
+    this._survivalAiLine=smooth.map((p,i)=>{
+      const prev=smooth[(i-1+count)%count],next=smooth[(i+1)%count];
+      const dx=next.x-prev.x,dy=next.y-prev.y,len=Math.max(.001,Math.hypot(dx,dy));
+      return{x:p.x-dy/len*offsets[i],y:p.y+dx/len*offsets[i]};
+    });
   }
 
   _survivalPathPoint(progress,lane=0){
@@ -93,8 +189,12 @@ export class RaceScene extends CurrentRaceScene {
       // Cada rival conserva una personalidad y una línea preferida propias.
       b._trafficTrackLength=trackLength;
       b._trafficEnvelope=envelope;
-      b._trafficPreferred=clamp(initial+(Math.random()-.5)*envelope*.34,-envelope,envelope);
+      // La referencia cero ya es una trazada de competición calculada. La
+      // personalidad solo añade variaciones pequeñas; no crea carriles paralelos.
+      b._trafficPreferred=(Math.random()-.5)*envelope*.12;
       b._trafficWanderTarget=b._trafficPreferred;
+      b.lineAmp=1.5+Math.random()*3.5;
+      b.lineFreq=.45+Math.random()*.35;
       b._trafficNextChoice=2+Math.random()*4;
       b._trafficLane=initial;
       b._trafficLaneVelocity=0;
@@ -179,7 +279,7 @@ export class RaceScene extends CurrentRaceScene {
       // Sin tráfico, cada piloto revisa lentamente su línea preferida. No existen
       // tres carriles discretos: cualquier offset dentro del ancho útil es válido.
       if(now>=Number(b._trafficNextChoice||0)){
-        const change=envelope*(.10+Math.random()*.22)*(Math.random()<.5?-1:1);
+        const change=envelope*(.035+Math.random()*.085)*(Math.random()<.5?-1:1);
         b._trafficWanderTarget=clamp(Number(b._trafficPreferred||0)+change,-envelope,envelope);
         b._trafficNextChoice=now+4+Math.random()*6;
       }
