@@ -233,3 +233,7 @@ Con `survivalAi=planner_v1`, la capa `RaceSurvivalPolishScene` cronometra ahora 
 
 La primera prueba real mostró dos defectos: el panel CPU1 no aparecía por depender de `effective==='planner_v1'` en la fase final del informe, y un cruce humano perdido fusionó dos vueltas en una de 37,037 s (S1 25,570 s), dejando cuatro registros pese a cinco vueltas físicas. El cronómetro usa ahora doble detección: cruce geométrico válido y wrap de progreso `>.78 → <.22`, con bloqueo de 2 s para no duplicar el mismo paso. El respaldo solo cronometra; no altera `completedLaps` ni las eliminaciones. El panel se habilita por existencia real de `_survivalPlannerBot`, incluso si ya fue eliminado.
 
+### Fuente única para vueltas de Supervivencia (2026-08-22)
+
+El respaldo por progreso no resolvió el informe: una nueva sesión terminó 5/5 pero mostró cuatro vueltas, con S2 de V3 inflado a 10,616 s. Se eliminó la duplicidad conceptual. `RaceSurvivalModeScene._registerFinishCross` guarda ahora `_survivalLapTimesMs` en el propio estado del corredor exactamente cuando incrementa `completedLaps`. Jugador y CPU1 consumen esa misma matriz autoritativa en `RaceSurvivalPolishScene`. El informe ya no depende de `ttHistory` para contar vueltas de Supervivencia. Invariante: cada vuelta competitiva aceptada produce exactamente un tiempo.
+
