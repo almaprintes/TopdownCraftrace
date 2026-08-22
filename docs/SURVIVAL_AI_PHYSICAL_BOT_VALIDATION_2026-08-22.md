@@ -411,3 +411,9 @@ Corrección aplicada:
 
 Validación sintética de 60 s en los 17 circuitos homologados: 17/17 sin superar el criterio de inseguridad (más de 3 px fuera durante más de 0,40 s). Las liberaciones solo aparecieron donde el clasificador encontró maniobras enlazadas: Karting Canarias, Karting Tenerife y Santa Cruz. Santa Cruz completó dos vueltas en la ventana, con 15 liberaciones y sin salida medida por encima del margen.
 
+## Iteración de vértice interior (2026-08-22)
+
+Referencia humana aportada: vueltas a medio gas entre 19,718 y 20,948 s; vuelta rápida de 17,884 s. La versión anterior de CPU1 simulaba 26,350 s y visualmente recorría el centro de las curvas.
+
+Se añadió un compromiso interior moderado (0,20), se elevó el perfil de velocidad en curva y se impidió cruzar a contravolante durante la liberación cuando el error angular es inferior a 0,34 rad. Resultado sintético definitivo en Santa Cruz: 24,250 s, mejora de 2,100 s. Sigue pendiente bajar de 22,000 s. La métrica `releaseOppositeSuppressed` permite comprobar cuántos fotogramas evitaron una corrección opuesta menor.
+
