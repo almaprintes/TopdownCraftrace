@@ -38,6 +38,7 @@ export function createRaceAiLapLearner({baseProfile,trackModel,saved=null}={}){
     bestCpuBlend:bestBlend,
     adaptiveCap:clamp(Number(saved?.adaptiveCap||Math.max(.34,bestBlend+.08)),.28,.72),
     regressionCount:Number(saved?.regressionCount||0),
+    explorationStep:Math.max(0,Number(saved?.explorationStep||0)|0),
     nearestIndex:0,
     sums:new Array(n).fill(0),
     counts:new Array(n).fill(0),
@@ -105,6 +106,7 @@ export function finalizeRaceAiTeacherLap(state,{baseProfile,trackModel,lapMs}={}
     state.teacherBestLapMs=lapMs;
     plan={offsets,lapMs,coverage,lapNo:state.teacherLapNo};
     state.pendingPlan=plan;
+    state.explorationStep=0;
     accepted=true;
   }
   resetRaceAiTeacherBuffer(state);
@@ -120,10 +122,11 @@ export function observeRaceAiCpuLap(state,lapMs){
     state.bestCpuBlend=blend;
     if(state.activePlan)state.bestCpuPlan=clonePlan(state.activePlan);
     state.adaptiveCap=Math.min(.72,Math.max(.34,blend+.08));
+    state.explorationStep=0;
     state.lastDecision=previousBest==null?'BASELINE':'ACCEPT';
     return{decision:state.lastDecision,bestLapMs:state.bestCpuLapMs,bestBlend:state.bestCpuBlend};
   }
-  if(blend>state.bestCpuBlend+.04&&lapMs>previousBest+50){
+  if(Math.abs(blend-state.bestCpuBlend)>.035&&lapMs>previousBest+50){
     state.regressionCount++;
     if(state.bestCpuPlan)state.activePlan=clonePlan(state.bestCpuPlan);
     state.currentBlend=state.bestCpuBlend;
@@ -135,12 +138,44 @@ export function observeRaceAiCpuLap(state,lapMs){
   return{decision:'HOLD',bestLapMs:previousBest,bestBlend:state.bestCpuBlend};
 }
 
+function nextExplorationBlend(state){
+  const best=clamp(Number(state.bestCpuBlend||0),0,.72);
+  // Explora alrededor del mejor valor conocido. Una sola variante por vuelta,
+  // siempre fija durante toda la vuelta para evitar oscilaciones de dirección.
+  const deltas=[-.06,.04,-.12,-.03,.08,-.09,.02];
+  for(let tries=0;tries<deltas.length;tries++){
+    const index=(state.explorationStep+tries)%deltas.length;
+    const candidate=clamp(best+deltas[index],.20,.72);
+    if(Math.abs(candidate-best)>=.015){
+      state.explorationStep=(index+1)%deltas.length;
+      return candidate;
+    }
+  }
+  return best;
+}
+
 export function activateRaceAiPlanForNextLap(state){
   if(!state)return{active:false};
   const replaced=!!state.pendingPlan;
-  if(state.pendingPlan){state.activePlan=state.pendingPlan;state.pendingPlan=null;}
+  if(state.pendingPlan){
+    state.activePlan=state.pendingPlan;
+    state.pendingPlan=null;
+    // Una nueva mejor vuelta humana merece una prueba propia, pero no saltamos
+    // a una intensidad arbitraria distinta en mitad del aprendizaje.
+    state.currentBlend=clamp(Math.max(.34,state.bestCpuBlend||.34),.20,.72);
+    state.explorationStep=0;
+  }
   if(!state.activePlan){state.currentBlend=0;return{active:false,replaced:false,blend:0};}
-  if(state.lastDecision!=='ROLLBACK')state.currentBlend=Math.min(.72,state.adaptiveCap);
+
+  if(!replaced){
+    if(state.lastDecision==='ROLLBACK'){
+      state.currentBlend=state.bestCpuBlend;
+    }else if(state.lastDecision==='HOLD'){
+      state.currentBlend=nextExplorationBlend(state);
+    }else{
+      state.currentBlend=Math.min(.72,state.adaptiveCap);
+    }
+  }
   return{active:true,replaced,blend:state.currentBlend,teacherLap:state.activePlan.lapNo||0};
 }
 
@@ -173,6 +208,7 @@ export function raceAiLearnerPersistence(state){
     bestCpuBlend:state.bestCpuBlend,
     adaptiveCap:state.adaptiveCap,
     regressionCount:state.regressionCount,
+    explorationStep:state.explorationStep,
     teacherBestLapMs:state.teacherBestLapMs,
     teacherPlan:clonePlan(state.pendingPlan||state.activePlan),
     bestPlan:clonePlan(state.bestCpuPlan)
