@@ -4,6 +4,7 @@
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
+const forwardSteps=(from,to,n)=>((to-from)%n+n)%n;
 
 function nearestSample(samples,x,y,lastIndex){
   const n=samples.length;
@@ -79,14 +80,26 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   }
   const chicaneAhead=(turnChanges===1&&turnEnergy>.12&&
     Math.min(positiveEnergy,negativeEnergy)>.045)||shortChicane;
-  // En curva cerrada se mira menos lejos para atacar el vértice. Solo una
-  // chicane confirmada amplía el horizonte para dibujar su diagonal.
+  // Una chicane corta conserva una sola salida durante el corte. Así el segundo
+  // vértice no vuelve a convertir la maniobra en una S a mitad del recorrido.
+  let shortcut=bot._plannerShortChicane;
+  if(shortcut){
+    const remaining=forwardSteps(nearest.index,shortcut.targetIndex,samples.length);
+    if(remaining<=3||remaining>18)shortcut=null;
+  }
+  if(!shortcut&&shortChicane)shortcut={
+    targetIndex:(nearest.index+12)%samples.length
+  };
+  bot._plannerShortChicane=shortcut;
+  const committedShortChicane=Boolean(shortcut);
   const cornerFactor=clamp((peakTurn-.014)/.12,0,1);
   const lookaheadPx=chicaneAhead
     ?clamp(48+speed*.18,58,100)
     :clamp(30+speed*.17-cornerFactor*8,28,76);
   const lookaheadSteps=Math.max(2,Math.round(lookaheadPx/spacing));
-  const targetIndex=(nearest.index+lookaheadSteps)%samples.length;
+  const targetIndex=committedShortChicane
+    ?shortcut.targetIndex
+    :(nearest.index+lookaheadSteps)%samples.length;
   const target=samples[targetIndex];
   const desiredHeading=Math.atan2(Number(target.y)-Number(body.y),Number(target.x)-Number(body.x));
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
@@ -166,6 +179,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     targetSpeed:controlledTargetSpeed,
     profileTargetSpeed:targetSpeed,
     chicaneAhead,
+    shortChicane:committedShortChicane,
     headingError,
     steer,
     throttle,
