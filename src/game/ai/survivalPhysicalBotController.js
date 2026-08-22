@@ -111,7 +111,17 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
 
   const maxFwd=Math.max(40,Number(params.maxFwd||420));
   const profileMax=Math.max(1,Number(profile.parameters?.maxSpeed||520));
-  const targetSpeed=clamp(Number(samples[nearest.index].targetSpeed||0)/profileMax,0,1)*maxFwd;
+  const profileRatio=clamp(Number(samples[nearest.index].targetSpeed||0)/profileMax,0,1);
+  // Riesgo condicionado: si el coche llega bien colocado conserva más velocidad
+  // cuanto más cerrada es la curva. Si acumula error angular o transversal,
+  // renuncia progresivamente al extra en vez de insistir hasta salirse.
+  const cornerRisk=clamp(Number(params.cornerRisk||0),0,.35);
+  const riskConfidence=clamp(
+    1-Math.abs(headingError)/.42-Math.max(0,nearest.distance-10)/34,
+    0,1
+  );
+  const riskScale=1+(1-profileRatio)*cornerRisk*riskConfidence;
+  const targetSpeed=clamp(profileRatio*riskScale,0,1)*maxFwd;
   // Si aumenta el error angular o la distancia a la línea, reducir velocidad
   // antes de exigir más volante. Es una decisión física general, no un parche
   // por circuito: entrar algo más lento conserva agarre y evita cortar bordes.
@@ -178,6 +188,9 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     speed,
     targetSpeed:controlledTargetSpeed,
     profileTargetSpeed:targetSpeed,
+    cornerRisk,
+    riskConfidence,
+    riskScale,
     chicaneAhead,
     shortChicane:committedShortChicane,
     headingError,
