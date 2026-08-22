@@ -488,3 +488,20 @@ Telemetría añadida: `straightLock`, `straightDeadband`, `straightLocalCurvatur
 Commits: `d64e483099e1d2290169f07dbd74d690e291b9a7` y `b4df869c8d2e465aa806facb6462c84004a33301`.
 
 Pendiente de validación real: comprobar que CPU1 mantiene el morro estable en las rectas, alcanza mayor punta y no retrasa la entrada en curva. No atribuir una mejora de tiempo hasta medirla en dispositivo.
+
+
+## Lectura de velocidad y repetición física de CPU1 (2026-08-22)
+
+Se añaden herramientas exclusivas de `planner_v1 + survivalAiDebug=1` para revisar CPU1 sin obligar al jugador a mantenerlo en pantalla mientras conduce:
+
+- etiqueta mundial sobre CPU1 con velocidad instantánea en km/h usando la misma conversión visual del reproductor existente;
+- muestreo cada 40 ms de posición física, rotación, velocidad, volante, gas, freno y `straightLock`;
+- separación exacta de la vuelta al armarse y en cada paso autoritativo por meta;
+- conservación de la mejor vuelta física de CPU1 en `localStorage`, por circuito;
+- botón `VER MEJOR VUELTA DE CPU1` en el resultado de Supervivencia;
+- reutilización del reproductor homologado de fantasmas: pausa, reinicio, cámara de seguimiento/abierta y exportación de vídeo;
+- la repetición es diagnóstica: no modifica récords, recompensas, aprendizaje ni resultados.
+
+Última evidencia previa a esta herramienta: CPU1 20.08 @ 0%, 19.54 @ 34% y 19.62 @ 42%. Comparado con la prueba anterior de 20.02 @ 42%, el bloqueo de recta coincide con una mejora observada de 0.40 s al mismo porcentaje, aunque todavía se requiere repetición para atribuir dónde se obtiene.
+
+Commits: `70819cedbed6ba655ac5b98ad0d5620e5c5f419b` y `85a9f52d41aba0a3d3fe168f4247906006fa5fc9`.
