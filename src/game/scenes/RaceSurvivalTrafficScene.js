@@ -513,6 +513,13 @@ export class RaceScene extends CurrentRaceScene {
         cornerSeverity:Number(this._trafficCornerSeverity(b.absProgress).toFixed(4)),
         passCommitted:Number(this.time?.now||0)/1000<Number(b._trafficPassUntil||0),
         physicalController:Boolean(this._shouldUseSurvivalPlannerBot(b)),
+        teachingBlend:Number(b._plannerTeachingBlend||0),
+        teacherLap:Number(b._plannerTeacherLap||0),
+        teacherBestLapMs:Number(this._survivalTeachingState?.bestLapMs||0),
+        teacherCoverage:Number(
+          this._survivalTeachingState?.activePlan?.coverage||
+          this._survivalTeachingState?.pendingPlan?.coverage||0
+        ),
         steer:Number(b._plannerControl?.steer||0),
         throttle:Number(b._plannerControl?.throttle||0),
         brake:Number(b._plannerControl?.brake||0),
