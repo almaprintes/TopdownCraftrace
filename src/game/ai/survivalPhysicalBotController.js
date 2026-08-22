@@ -4,7 +4,6 @@
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
-const forwardSteps=(from,to,n)=>((to-from)%n+n)%n;
 
 function nearestSample(samples,x,y,lastIndex){
   const n=samples.length;
@@ -48,50 +47,38 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   bot._plannerSampleIndex=nearest.index;
 
   const spacing=Math.max(1,Number(params.spacing||10));
-  // Analizar la secuencia como una maniobra completa. Una chicane no debe
-  // recalcular su salida cada frame: se fija un objetivo posterior a la segunda
-  // curva y se conserva hasta atravesarlo.
-  let turnSign=0,turnChanges=0,turnEnergy=0,peakTurn=0,lastTurnStep=0;
-  for(let step=2;step<=20;step++){
+  // Una chicane real necesita dos lóbulos opuestos de entidad parecida. Exigir
+  // energía a ambos lados evita interpretar una sucesión larga de curvas como
+  // una chicane permanente.
+  let turnSign=0,turnChanges=0,turnEnergy=0,positiveEnergy=0,negativeEnergy=0,peakTurn=0;
+  for(let step=2;step<=16;step++){
     const turn=Number(samples[(nearest.index+step)%samples.length].curvature||0);
     peakTurn=Math.max(peakTurn,Math.abs(turn));
-    if(Math.abs(turn)<.012)continue;
+    if(Math.abs(turn)<.014)continue;
     const sign=Math.sign(turn);
-    turnEnergy+=Math.abs(turn);
-    lastTurnStep=step;
+    const energy=Math.abs(turn);
+    turnEnergy+=energy;
+    if(sign>0)positiveEnergy+=energy;else negativeEnergy+=energy;
     if(turnSign&&sign!==turnSign)turnChanges++;
     turnSign=sign;
   }
-  const detectedChicane=turnChanges>0&&turnEnergy>.10;
-  let committed=bot._plannerManeuver;
-  if(committed){
-    const remaining=forwardSteps(nearest.index,committed.targetIndex,samples.length);
-    if(remaining<=2||remaining>Math.min(samples.length*.45,36))committed=null;
-  }
-  if(!committed&&detectedChicane){
-    const exitSteps=clamp(lastTurnStep+4,10,24);
-    committed={
-      kind:'chicane',
-      targetIndex:(nearest.index+exitSteps)%samples.length
-    };
-  }
-  bot._plannerManeuver=committed;
-  const chicaneAhead=committed?.kind==='chicane';
-  const cornerFactor=clamp((peakTurn-.012)/.12,0,1);
-  const normalLookaheadPx=clamp(24+speed*.15-cornerFactor*18,22,62);
-  const lookaheadSteps=Math.max(2,Math.round(normalLookaheadPx/spacing));
-  const targetIndex=chicaneAhead
-    ?committed.targetIndex
-    :(nearest.index+lookaheadSteps)%samples.length;
+  const chicaneAhead=turnChanges===1&&turnEnergy>.12&&
+    Math.min(positiveEnergy,negativeEnergy)>.045;
+  // En curva cerrada se mira menos lejos para atacar el vértice. Solo una
+  // chicane confirmada amplía el horizonte para dibujar su diagonal.
+  const cornerFactor=clamp((peakTurn-.014)/.12,0,1);
+  const lookaheadPx=chicaneAhead
+    ?clamp(48+speed*.18,58,100)
+    :clamp(24+speed*.15-cornerFactor*16,22,62);
+  const lookaheadSteps=Math.max(2,Math.round(lookaheadPx/spacing));
+  const targetIndex=(nearest.index+lookaheadSteps)%samples.length;
   const target=samples[targetIndex];
   const desiredHeading=Math.atan2(Number(target.y)-Number(body.y),Number(target.x)-Number(body.x));
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
   const rawSteer=clamp(headingError/.48,-1,1);
-  // Amortiguar la orden, no la posición. Limita los contravolantes visibles sin
-  // introducir un carril ni desplazar artificialmente el coche.
   const previousSteer=Number(bot._plannerSteerCommand||0);
-  const steerStep=clamp(rawSteer-previousSteer,-2.8*dt,2.8*dt);
-  const steer=clamp(previousSteer+steerStep,-1,1);
+  const steer=clamp(previousSteer+
+    clamp(rawSteer-previousSteer,-5.5*dt,5.5*dt),-1,1);
   bot._plannerSteerCommand=steer;
 
   const maxFwd=Math.max(40,Number(params.maxFwd||420));
@@ -123,8 +110,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   let turnFactor=(lowSpeedSteer+(1-lowSpeedSteer)*steerT)*(1-(1-highSpeedLimit)*speed01);
   if(speed<yawSpeedMin)turnFactor*=speed/yawSpeedMin;
   const yawLimit=turnRate*turnFactor;
-  const yawCommand=steer*yawLimit;
-  body.rotation+=yawCommand*dt;
+  body.rotation+=clamp(steer*1.18,-1,1)*yawLimit*dt;
 
   const fx=Math.cos(body.rotation),fy=Math.sin(body.rotation);
   const rx=-fy,ry=fx;
@@ -165,7 +151,6 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     targetSpeed:controlledTargetSpeed,
     profileTargetSpeed:targetSpeed,
     chicaneAhead,
-    maneuverKind:committed?.kind||null,
     headingError,
     steer,
     throttle,
