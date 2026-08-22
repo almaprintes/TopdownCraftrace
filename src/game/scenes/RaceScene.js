@@ -4136,6 +4136,7 @@ const prevBestMs = (this.ttBest && Number.isFinite(this.ttBest.lapMs)) ? this.tt
 if (this.ttHistory && this.ttHistKey) {
   const rec = {
     t: Date.now(),
+    carId: this.carId || this._carId || localStorage.getItem('tdr2:carId') || 'stock',
     lapMs: lapTime,
       lapTick: lapTicks,
     s1: Number.isFinite(this.timing.s1) ? this.timing.s1 : null,
