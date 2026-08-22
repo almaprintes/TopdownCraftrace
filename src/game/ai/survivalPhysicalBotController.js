@@ -126,9 +126,32 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   bot._plannerShortChicane=shortcut;
   const committedShortChicane=Boolean(shortcut);
   const cornerFactor=clamp((peakTurn-.014)/.12,0,1);
+
+  // En recta, perseguir cada muestra de una línea aprendida roba velocidad punta:
+  // el coche convierte aceleración longitudinal en pequeños cambios de rumbo.
+  // La recta se reconoce por la geometría local, con histéresis temporal, y se
+  // abandona antes de la frenada para que la preparación de curva siga intacta.
+  let localStraightPeak=0,approachPeak=0;
+  for(let step=-3;step<=7;step++){
+    localStraightPeak=Math.max(localStraightPeak,
+      Math.abs(Number(samples[(nearest.index+step+samples.length)%samples.length].curvature||0)));
+  }
+  for(let step=8;step<=14;step++){
+    approachPeak=Math.max(approachPeak,
+      Math.abs(Number(samples[(nearest.index+step)%samples.length].curvature||0)));
+  }
+  const straightGeometry=localStraightPeak<.010&&approachPeak<.018&&
+    !chicaneAhead&&!maneuverActive&&!maneuverRelease&&!committedShortChicane;
+  bot._plannerStraightStable=straightGeometry
+    ?Math.min(.5,Number(bot._plannerStraightStable||0)+dt)
+    :0;
+  const straightLock=bot._plannerStraightStable>=.12;
+
   const lookaheadPx=chicaneAhead
     ?clamp(48+speed*.18,58,100)
-    :clamp(30+speed*.17-cornerFactor*8,28,76);
+    :(straightLock
+      ?clamp(74+speed*.16,84,124)
+      :clamp(30+speed*.17-cornerFactor*8,28,76));
   const lookaheadSteps=Math.max(2,Math.round(lookaheadPx/spacing));
   const targetIndex=maneuverActive
     ?maneuver.targetIndex
@@ -137,20 +160,29 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const target=samples[targetIndex];
   const desiredHeading=Math.atan2(Number(target.y)-Number(body.y),Number(target.x)-Number(body.x));
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
-  let rawSteer=clamp(headingError/.48,-1,1);
+  let rawSteer=clamp(headingError/(straightLock?.62:.48),-1,1);
   const previousSteer=Number(bot._plannerSteerCommand||0);
   const oppositeDuringRelease=maneuverRelease&&
     Math.sign(rawSteer)!==Math.sign(previousSteer)&&
     Math.abs(previousSteer)>.04;
+  // En una recta estable hay zona muerta y no se acepta un cambio de signo por
+  // errores minúsculos. El volante converge a cero en lugar de serpentear.
+  const straightDeadband=straightLock&&Math.abs(headingError)<.035;
+  const straightOppositeSuppressed=straightLock&&
+    Math.sign(rawSteer)!==Math.sign(previousSteer)&&
+    Math.abs(headingError)<.12;
   // Al descargar el recorte se permite volver a volante neutro, pero no cruzar
   // inmediatamente al contravolante por una desviación pequeña. Solo un error
   // angular claro puede cancelar esta histéresis de salida.
   const releaseOppositeSuppressed=oppositeDuringRelease&&
     Math.abs(headingError)<.34;
-  if(releaseOppositeSuppressed)rawSteer=0;
-  const steerRate=oppositeDuringRelease?2.2:9;
-  const steer=clamp(previousSteer+
+  if(releaseOppositeSuppressed||straightDeadband||straightOppositeSuppressed)rawSteer=0;
+  const steerRate=straightLock?2.4:(oppositeDuringRelease?2.2:9);
+  let steer=clamp(previousSteer+
     clamp(rawSteer-previousSteer,-steerRate*dt,steerRate*dt),-1,1);
+  if(straightLock&&rawSteer===0){
+    steer=Math.sign(steer)*Math.max(0,Math.abs(steer)-3.8*dt);
+  }
   bot._plannerSteerCommand=steer;
 
   const maxFwd=Math.max(40,Number(params.maxFwd||420));
@@ -251,6 +283,10 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     maneuverRelease,
     maneuverReleaseSeconds:releaseSeconds,
     releaseOppositeSuppressed,
+    straightLock,
+    straightDeadband,
+    straightLocalCurvature:localStraightPeak,
+    straightApproachCurvature:approachPeak,
     maneuverId:maneuver?.id||0,
     maneuverType:maneuver?.type||null,
     maneuverPhase:Number(plannedSample?.maneuverPhase||0),
