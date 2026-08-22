@@ -141,6 +141,33 @@ export class RaceScene extends TrafficRaceScene {
   _updateSurvivalCpuSpeedReadout(){
     const label=this._survivalCpuSpeedText,bot=this._survivalPlannerBot;
     if(!label?.scene)return;
+
+    if(this._replayActive&&this._survivalCpuReplayActive&&this._ghostSprite?.scene){
+      const samples=this._ghostData?.samples||[];
+      const t=Math.max(0,Number(this._replayElapsed||0));
+      let sample=null;
+      if(samples.length){
+        let lo=0,hi=samples.length-1;
+        while(lo<hi){
+          const mid=(lo+hi)>>1;
+          if(Number(samples[mid]?.t||0)<t)lo=mid+1;
+          else hi=mid;
+        }
+        const b=samples[lo]||samples[samples.length-1];
+        const a=samples[Math.max(0,lo-1)]||b;
+        const at=Number(a?.t||0),bt=Number(b?.t||at);
+        const k=bt>at?clamp((t-at)/(bt-at),0,1):0;
+        const ak=Number.isFinite(Number(a?.kmh))?Number(a.kmh):Math.max(0,Number(a?.speed||0)*.1);
+        const bk=Number.isFinite(Number(b?.kmh))?Number(b.kmh):Math.max(0,Number(b?.speed||0)*.1);
+        sample={kmh:Math.round(ak+(bk-ak)*k)};
+      }
+      const kmh=Math.max(0,Math.round(Number(sample?.kmh)||0));
+      label.setText(`CPU1 · ${String(kmh).padStart(3,'0')} km/h`);
+      label.setPosition(Number(this._ghostSprite.x),Number(this._ghostSprite.y)-31);
+      label.setVisible(true);
+      return;
+    }
+
     const available=Boolean(!this._replayActive&&bot?.active&&bot?.sprite?.scene);
     label.setVisible(available);
     if(!available)return;
