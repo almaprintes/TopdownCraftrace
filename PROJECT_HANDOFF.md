@@ -225,3 +225,7 @@ Se corrigió el contravolante posterior al recorte de una chicane. La causa era 
 
 Tras la prueba visual del usuario, CPU1 seguía pasando por el centro de las curvas y todavía cruzaba a contravolante después de una comida breve de piano. El modelo admite ahora `apexCommitment`; CPU1 usa 0,20 con `offsetScale: 1`, una demanda interior suavizada y un perfil de curva de `lateralAccel: 1500` / `minCornerSpeed: 125`. Durante la liberación de una maniobra, una orden opuesta con error angular inferior a 0,34 rad se descarga a cero en vez de cruzar de lado. Santa Cruz pasó de 26,350 s a 24,250 s en la simulación del controlador definitivo. Objetivo pendiente: menos de 22,000 s y validación visual en dispositivo.
 
+### Cronometraje provisional de CPU1 en resultados (2026-08-22)
+
+Con `survivalAi=planner_v1`, la capa `RaceSurvivalPolishScene` cronometra ahora las vueltas reales del bot físico CPU1 entre cruces válidos de meta. El informe de sesión añade un bloque aislado con mejor vuelta, media, diferencia respecto a la mejor vuelta humana y lista de vueltas CPU1. Los datos viven solo durante la sesión, no entran en `ttHistory`, récords, recompensas ni estadísticas. Cada vuelta genera además el evento de telemetría `cpu1_lap`. Para retirar la ayuda basta eliminar el bloque provisional y los dos campos de sesión de esa capa.
+
