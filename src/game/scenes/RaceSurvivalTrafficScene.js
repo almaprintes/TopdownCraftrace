@@ -860,7 +860,10 @@ export class RaceScene extends CurrentRaceScene {
       s.bestLapMs=lapMs;
       s.pendingPlan={
         offsets,speeds:learnedSpeeds,lapMs,coverage,lapNo:s.lapNo,
-        blendTarget:Math.min(.55,.18+Math.max(0,s.lapNo-1)*.12)
+        // Aprendizaje rápido dentro de una carrera corta: V2 arranca con
+        // suficiente influencia para ser medible y V3 puede acercarse de verdad
+        // a la vuelta maestra, sin llegar a copiarla al 100 %.
+        blendTarget:Math.min(.72,.34+Math.max(0,s.lapNo-1)*.19)
       };
       this._survivalAiTelemetry?.pushEvent?.({
         timeMs:Math.round(Number(this.time?.now||0)),type:'teacher_lap_ready',
@@ -888,7 +891,7 @@ export class RaceScene extends CurrentRaceScene {
     const base=this._survivalPlannerSpeedProfile;
     if(!s?.activePlan||!working?.samples||!base?.samples)return;
     const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
-    s.blend+=clamp(s.targetBlend-s.blend,-.22*dt,.22*dt);
+    s.blend+=clamp(s.targetBlend-s.blend,-.46*dt,.46*dt);
     for(let i=0;i<s.n;i++){
       const center=this._survivalPlannerTrackModel.centerline[i],f=s.frames[i];
       const taughtX=Number(center.x)+f.nx*s.activePlan.offsets[i];
