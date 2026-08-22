@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceKartingCanariasSurfaceFixScene.js';
 import { readSurvivalAiRuntime, createSurvivalAiTelemetry } from '../ai/survivalAiRuntime.js';
+import { buildTrackRacingLineModel } from '../ai/trackRacingLinePlanner.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
@@ -196,6 +197,17 @@ export class RaceScene extends CurrentRaceScene {
         });
       }
     }
+    // Fase 1: calcular el modelo nuevo para observación y validación. Todavía
+    // no se entrega el control de los coches a esta trayectoria.
+    this._survivalPlannerTrackModel=buildTrackRacingLineModel(this.track?.meta||this.track||{});
+    this._survivalAiTelemetry?.pushEvent?.({
+      timeMs:Math.round(Number(this.time?.now||0)),
+      type:'track_model',
+      valid:Boolean(this._survivalPlannerTrackModel?.valid),
+      reason:this._survivalPlannerTrackModel?.reason||null,
+      metrics:this._survivalPlannerTrackModel?.metrics||{}
+    });
+
     this._buildSurvivalAiLine();
     super._initSurvival();
 
@@ -282,9 +294,18 @@ export class RaceScene extends CurrentRaceScene {
     }
     g.clear();
 
+    const modelLine=this._survivalPlannerTrackModel?.racingLine;
+    if(Array.isArray(modelLine)&&modelLine.length>2){
+      g.lineStyle(3,0xffd45f,.72);
+      g.beginPath();
+      modelLine.forEach((p,i)=>{if(i===0)g.moveTo(p.x,p.y);else g.lineTo(p.x,p.y);});
+      g.lineTo(modelLine[0].x,modelLine[0].y);
+      g.strokePath();
+    }
+
     const line=this._survivalAiLine;
     if(Array.isArray(line)&&line.length>2){
-      g.lineStyle(2,0x62ffd1,.38);
+      g.lineStyle(2,0x62ffd1,.30);
       g.beginPath();
       line.forEach((p,i)=>{if(i===0)g.moveTo(p.x,p.y);else g.lineTo(p.x,p.y);});
       g.lineTo(line[0].x,line[0].y);
