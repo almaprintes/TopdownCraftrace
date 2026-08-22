@@ -70,6 +70,14 @@ export function buildTrackManeuverPlan(profile,options={}){
   }));
   for(const maneuver of maneuvers){
     const length=Math.max(1,maneuver.end-maneuver.start);
+    // Una secuencia comparte velocidad objetivo: no se frena de nuevo por cada
+    // vértice interno. El 65 % conserva margen frente al máximo del sector.
+    const speeds=[];
+    for(let step=maneuver.start;step<=maneuver.end;step++){
+      speeds.push(Number(samples[mod(origin+step,n)].targetSpeed||0));
+    }
+    const lowSpeed=Math.min(...speeds),highSpeed=Math.max(...speeds);
+    const maneuverTargetSpeed=lowSpeed+(highSpeed-lowSpeed)*.65;
     for(let step=maneuver.start;step<=maneuver.end;step++){
       const index=mod(origin+step,n);
       planned[index]={...planned[index],
@@ -77,7 +85,8 @@ export function buildTrackManeuverPlan(profile,options={}){
         maneuverType:maneuver.type,
         maneuverTargetIndex:mod(origin+maneuver.target,n),
         maneuverPhase:clamp((step-maneuver.start)/length,0,1),
-        maneuverRisk:clamp(.22+maneuver.balance*.13,0,.35)
+        maneuverRisk:clamp(.22+maneuver.balance*.13,0,.35),
+        maneuverTargetSpeed
       };
     }
     maneuver.startIndex=mod(origin+maneuver.start,n);
