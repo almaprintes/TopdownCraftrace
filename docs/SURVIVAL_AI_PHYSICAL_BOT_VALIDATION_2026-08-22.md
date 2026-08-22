@@ -439,3 +439,7 @@ La primera fase de enseñanza captura una vuelta humana por bins del plan, exige
 
 Resultado real: V1 20,12 s (0 %), V2 19,79 s (18 %), V3 19,73 s (30 %). La enseñanza produjo una mejora demostrable de 0,39 s, pero CPU1 volvió a ser eliminado en penúltima ronda. Se aumenta la curva de aprendizaje a 34/53/72 % y la convergencia a 0,46 por segundo. Se mantiene V1 como control y no cambia el límite físico. Pendiente medir la nueva diferencia V1→V2→V3 y posición de eliminación.
 
+### Selección adaptativa de mezcla
+
+La sesión 20,07 → 19,67 → 19,77 s mostró que 53 % podía ser peor que 34 %. Se sustituyó la escalada ciega por búsqueda conservadora: conservar mejor tiempo/mezcla, explorar +8 puntos tras una mejora y retroceder si una dosis superior pierde más de 50 ms. Prueba sintética: V1 fija 34 %, una V2 mejor habilita 42 %, y una V3 regresiva restaura 34 % con contador de rollback. Sintaxis validada en las capas Traffic y Polish.
+
