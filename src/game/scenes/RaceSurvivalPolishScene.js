@@ -92,7 +92,10 @@ export class RaceScene extends TrafficRaceScene {
     if(!this._survivalMode)return;
     const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
     const posK=1-Math.exp(-14*dt);
-    const rotK=1-Math.exp(-16*dt);
+    // La carrocería tiene inercia direccional: filtra microcorrecciones de la
+    // tangente sin retrasar la posición lógica del rival.
+    const rotK=1-Math.exp(-6.2*dt);
+    const maxAngularStep=2.35*dt;
     for(const b of this._survivalBots||[]){
       const s=b?.sprite;if(!s?.scene)continue;
       if(!b.active){s.setVisible(false);continue;}
@@ -105,7 +108,8 @@ export class RaceScene extends TrafficRaceScene {
           b._renderX+=(tx-b._renderX)*posK;
           b._renderY+=(ty-b._renderY)*posK;
           const dr=wrapPi(tr-Number(b._renderRot||0));
-          b._renderRot=Number(b._renderRot||0)+dr*rotK;
+          const angularStep=clamp(dr*rotK,-maxAngularStep,maxAngularStep);
+          b._renderRot=Number(b._renderRot||0)+angularStep;
         }else{
           b._renderX=tx;b._renderY=ty;b._renderRot=tr;
         }
