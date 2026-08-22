@@ -220,7 +220,7 @@ Criterio de salida:
 
 ### Fase 1 — Modelo de pista y trazada global
 
-Estado: implementada en modo observación; pendiente de homologación visual prioritaria en siete circuitos.
+Estado: implementada en modo observación; acondicionamiento de discontinuidades validado estructuralmente y pendiente de homologación visual prioritaria en tres circuitos.
 
 Implementación:
 
@@ -231,7 +231,10 @@ Implementación:
 - métricas incorporadas a `window.__TDR_SURVIVAL_AI__`;
 - informe completo: `docs/SURVIVAL_AI_TRACK_HOMOLOGATION_2026-08-22.md`;
 - 17/17 circuitos generan un modelo estructural válido;
-- Baku, Imola, Jeddah, Monte Carlo, Sakhir, Shanghai y Santa Cruz requieren revisión visual de picos antes de controlar coches.
+- la referencia derivada detecta y suaviza concentraciones angulares con desplazamiento limitado por anchura;
+- ese desplazamiento se descuenta del corredor lateral para conservar el margen de seguridad;
+- la comparación A/B corrigió falsos picos de cierre del primer arnés de validación;
+- Sakhir, Shanghai y Santa Cruz quedan como revisión visual prioritaria antes de controlar coches.
 
 Tareas de la fase:
 
