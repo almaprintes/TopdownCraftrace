@@ -536,3 +536,15 @@ La ejecución de una secuencia no puede rearmarse mientras el coche siga dentro 
 
 El optimizador global incorpora un `apexCommitment` opcional. La curvatura firmada y suavizada determina el interior de curvas sostenidas; el desplazamiento se mezcla con la línea elástica existente para conservar una entrada y salida continuas. CPU1 parte de 0,20: valores altos resultaron más lentos al generar error de seguimiento. La siguiente mejora debe buscar menos de 22 s en Santa Cruz sin aumentar ese compromiso hasta provocar correcciones.
 
+## Fase 4A · Imitación progresiva en la misma carrera
+
+Implementada una primera enseñanza geométrica, optativa porque solo existe bajo `planner_v1`. El alumno no copia entradas de volante: aprende desplazamiento lateral y velocidad por progreso, filtrados sobre el modelo homologado. La enseñanza se activa entre vueltas de CPU1 para conservar V1 como control experimental.
+
+Criterios de aceptación en dispositivo:
+
+- V1 CPU1 debe seguir próxima a la línea base 20,09–20,15 s;
+- V2/V3 deben indicar un porcentaje de aprendizaje mayor que cero;
+- la mejora debe medirse contra V1 de la misma sesión;
+- no se acepta una ganancia acompañada de excursiones, contravolantes o recuperación watchdog;
+- objetivo inicial: aproximarse a 19 s sin aumentar el límite físico.
+
