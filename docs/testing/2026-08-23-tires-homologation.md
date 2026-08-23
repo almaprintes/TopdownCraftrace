@@ -131,6 +131,46 @@ Lectura:
 - Esta observación cualitativa es crítica: una mejora no se considera bien balanceada si baja el crono a costa de volver el coche artificialmente nervioso o de obligar a corregir por exceso de giro.
 - T4 debe probarse como diagnóstico, pero no se congelará la curva de Neumáticos solo por tiempo; habrá que evaluar especialmente si aumenta aún más esta tendencia a cerrar demasiado la trazada.
 
+## Tanda D — NEUMÁTICOS T4 / PROTOTYPE
+Fecha: 2026-08-23
+Coche: AVENIR Torque
+Circuito: Karting Tenerife
+Piezas: Neumáticos T4 / Prototype; resto sin equipar
+Vueltas: 3
+
+Resultados:
+- V1: 41.981 s
+- V2: 40.779 s
+- V3: 40.406 s
+- Mejor: 40.406 s
+- Media de sesión: 41.055 s
+- Media útil V2–V3: 40.593 s
+- Punta: 65 km/h
+- Velocidad media: 60 km/h
+- Consistencia σ: 0.67 s
+- Salidas de pista: 4, total 3.1 s
+- Gas: 96%
+- Coasting: 4%
+- Freno: 0%
+- Frenadas: 0
+
+Comparación frente a T3:
+- Mejor vuelta: 40.535 → 40.406 = mejora de 0.129 s (0.32%).
+- Punta: 65 → 65 km/h = sin cambio.
+- La ganancia de T4 sobre T3 es pequeña y muestra rendimiento decreciente en este coche/circuito.
+
+Comparación frente a STOCK histórica:
+- Mejor vuelta: 41.008 → 40.406 = mejora acumulada de 0.602 s (1.47%).
+- Punta: 65 → 65 km/h = sin cambio.
+
+Lectura:
+- T4 mejora el mejor crono respecto a T3, pero solo por 0.129 s; el salto físico final es pequeño frente al incremento visible esperado de una Prototype.
+- La velocidad punta permanece idéntica en todos los tiers, coherente con una pieza de agarre.
+- El Torque parece acercarse a saturación de grip útil en Karting Tenerife: a partir de T3 el beneficio de crono cae mucho.
+- La sensación cualitativa de T3 — exceso de capacidad de giro y tendencia a cerrar demasiado por el interior — impide congelar todavía esta familia aunque T4 sea el mejor crono.
+- Con solo 3 vueltas, la tanda sirve para diagnóstico pero no para declarar el balance definitivo de T4.
+- Antes de tocar física conviene contrastar Neumáticos en un coche menos estable o en un circuito que exija más transición y control de trayectoria.
+
 ## Tabla viva — Neumáticos
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
@@ -138,12 +178,10 @@ Lectura:
 | Neumáticos T1 · Street | 40.764 s | 41.611 s | 65 km/h | -0.244 s |
 | Neumáticos T2 · Sport | 41.061 s | 41.339 s | 65 km/h | +0.053 s |
 | Neumáticos T3 · Racing | 40.535 s | 40.893 s | 65 km/h | -0.473 s |
-| Neumáticos T4 · Prototype | — | — | — | — |
+| Neumáticos T4 · Prototype | 40.406 s | 40.593 s | 65 km/h | -0.602 s |
 
-### Próxima tanda
-- Coche: AVENIR Torque
-- Circuito: Karting Tenerife
-- Pieza: Neumáticos T4 / Prototype
-- Resto de familias: sin equipar
-- Serie: 4 vueltas
-- Observación prioritaria: comprobar si el exceso de capacidad de giro empeora respecto a T3, especialmente tendencia a cerrar demasiado la curva y salirse por el interior.
+### Estado de la familia
+- No congelada todavía.
+- Función física correcta en concepto: mejora de agarre sin aumento de punta.
+- Dudas pendientes: progresión T1/T2 irregular, salto T3→T4 pequeño y posible exceso de capacidad de giro en coches de alto agarre como Torque.
+- Próximo paso recomendado: contraste en un coche menos estable antes de modificar valores globales.
