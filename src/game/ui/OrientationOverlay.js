@@ -42,8 +42,9 @@ export class OrientationOverlay {
     this._blocked = shouldBlock;
     this._root.setVisible(shouldBlock);
 
-    // The full-screen dimmer must only participate in input while the overlay is visible.
-    // A hidden interactive rectangle can otherwise sit above the scene and swallow every tap.
+    // Block touches only with the overlay hitbox itself. Never disable the scene input
+    // plugin: doing so can leave a newly-started scene visually alive but completely
+    // unresponsive after admin/DOM scene transitions on iOS.
     if (shouldBlock) {
       if (!this._dim.input) this._dim.setInteractive();
       else this._dim.input.enabled = true;
@@ -51,7 +52,6 @@ export class OrientationOverlay {
       this._dim.input.enabled = false;
     }
 
-    if (scene.input) scene.input.enabled = !shouldBlock;
     if (scene.physics?.world) scene.physics.world.isPaused = shouldBlock;
   }
 
@@ -60,7 +60,6 @@ export class OrientationOverlay {
     if (!scene) return;
     scene.scale.off('resize', this._onResize);
     if (this._dim?.input) this._dim.input.enabled = false;
-    if (scene.input) scene.input.enabled = true;
     if (scene.physics?.world) scene.physics.world.isPaused = false;
     this._root?.destroy(true);
     this._root = null;
