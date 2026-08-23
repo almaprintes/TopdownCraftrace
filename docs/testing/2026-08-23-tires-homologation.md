@@ -171,17 +171,66 @@ Lectura:
 - Con solo 3 vueltas, la tanda sirve para diagnóstico pero no para declarar el balance definitivo de T4.
 - Antes de tocar física conviene contrastar Neumáticos en un coche menos estable o en un circuito que exija más transición y control de trayectoria.
 
+## Contraste — VELOCE Surge con NEUMÁTICOS T4 / PROTOTYPE
+Fecha: 2026-08-23
+Coche: VELOCE Surge
+Circuito: Karting Tenerife
+Piezas: Neumáticos T4 / Prototype; resto sin equipar
+Vueltas: 4
+
+Resultados:
+- V1: 41.654 s
+- V2: 40.397 s
+- V3: 38.770 s
+- V4: 40.398 s
+- Mejor: 38.770 s
+- Media de sesión: 40.304 s
+- Media útil V2–V4: 39.855 s
+- Punta: 73 km/h
+- Velocidad media: 64 km/h
+- Consistencia σ: 1.02 s
+- Salidas de pista: 8, total 3.8 s
+- Gas: 90%
+- Coasting: 10%
+- Freno: 0%
+- Frenadas: 0
+
+Referencia stock previa del Surge en Karting Tenerife:
+- Mejor histórica: 39.865 s
+- Punta histórica: 72 km/h
+
+Comparación frente a STOCK histórica:
+- Mejor vuelta: 39.865 → 38.770 = mejora de 1.095 s (2.75%).
+- Punta: 72 → 73 km/h = +1 km/h observado en la sesión, aunque Neumáticos no añade maxFwd; tratar como variación de trazada/medición hasta repetir.
+- V2 y V4 quedan prácticamente idénticas (40.397 / 40.398), mientras V3 destaca con 38.770; por tanto el mejor tiempo muestra potencial, pero la tanda no es suficientemente uniforme para fijar una ganancia típica de 1.1 s.
+
+Lectura del contraste:
+- En un coche menos estable y más rápido como Surge, T4 sí libera un potencial de vuelta sensiblemente mayor que el visto en Torque.
+- Esto sugiere que la saturación T3→T4 observada en Torque no debe interpretarse como prueba de que T4 sea globalmente débil; parte del efecto depende del coche base.
+- La dispersión de Surge sigue siendo alta (σ 1.02 s), por lo que todavía falta la sensación del piloto para decidir si el extra de grip estabiliza el coche, lo vuelve demasiado reactivo o simplemente amplía su techo.
+- No modificar todavía los valores globales de Neumáticos.
+
 ## Tabla viva — Neumáticos
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
-| Stock (homologación previa) | 41.008 s | — | 65 km/h | — |
-| Neumáticos T1 · Street | 40.764 s | 41.611 s | 65 km/h | -0.244 s |
-| Neumáticos T2 · Sport | 41.061 s | 41.339 s | 65 km/h | +0.053 s |
-| Neumáticos T3 · Racing | 40.535 s | 40.893 s | 65 km/h | -0.473 s |
-| Neumáticos T4 · Prototype | 40.406 s | 40.593 s | 65 km/h | -0.602 s |
+| Torque Stock (homologación previa) | 41.008 s | — | 65 km/h | — |
+| Torque · T1 Street | 40.764 s | 41.611 s | 65 km/h | -0.244 s |
+| Torque · T2 Sport | 41.061 s | 41.339 s | 65 km/h | +0.053 s |
+| Torque · T3 Racing | 40.535 s | 40.893 s | 65 km/h | -0.473 s |
+| Torque · T4 Prototype | 40.406 s | 40.593 s | 65 km/h | -0.602 s |
+| Surge Stock (homologación previa) | 39.865 s | — | 72 km/h | — |
+| Surge · T4 Prototype | 38.770 s | 39.855 s | 73 km/h | -1.095 s |
 
 ### Estado de la familia
 - No congelada todavía.
-- Función física correcta en concepto: mejora de agarre sin aumento de punta.
-- Dudas pendientes: progresión T1/T2 irregular, salto T3→T4 pequeño y posible exceso de capacidad de giro en coches de alto agarre como Torque.
-- Próximo paso recomendado: contraste en un coche menos estable antes de modificar valores globales.
+- Función física correcta en concepto: mejora de agarre sin aumento intencionado de punta.
+- Dudas pendientes: progresión T1/T2 irregular en Torque, salto T3→T4 pequeño en coches ya muy estables y posible exceso de capacidad de giro en coches de alto agarre.
+- Contraste Surge indica que T4 sí puede ser potente en coches menos estables; falta valoración cualitativa del piloto antes de decidir si hay que limitar el efecto por coche o mantener la curva global.
+
+### Próxima tanda recomendada
+- Coche: VELOCE Surge
+- Circuito: Karting Tenerife
+- Pieza: Neumáticos T3 / Racing
+- Resto de familias: sin equipar
+- Serie: 4 vueltas
+- Objetivo: comprobar si el salto T3→T4 en Surge es razonable y si el carácter de giro cambia de forma progresiva o brusca.
