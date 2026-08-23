@@ -250,6 +250,13 @@ Lectura del contraste T3→T4 en Surge:
 - Esto refuerza la idea de que T4 amplía potencial más que facilidad, coherente con el criterio de que una mejora no debe convertir automáticamente el coche en más sencillo.
 - No hay evidencia en los cronos de un latigazo artificial T3→T4; la decisión final depende de la sensación de dirección del piloto.
 
+### Sensación del piloto — Surge T3 vs T4
+- Con Neumáticos T4 se nota mucho agarre, pero no llega al exceso experimentado con el Torque.
+- El Surge sigue deslizándose y exige desacelerar en curva; el extra de grip no elimina su carácter ni permite mantener gas a fondo de forma general.
+- Con el Torque, en cambio, el agarre permitía mantener gas sin soltar y la capacidad de giro llegaba a hacer que el coche se metiera demasiado por el interior.
+- En Surge, T3 se siente un poco más fácil y progresivo que T4.
+- Conclusión cualitativa: la curva global de Neumáticos parece compatible con coches más nerviosos como Surge, donde T4 aumenta el techo sin neutralizar la necesidad de gestionar velocidad. El problema de exceso de giro parece concentrarse en coches que ya parten con agarre/control muy altos.
+
 ## Tabla viva — Neumáticos
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
@@ -266,10 +273,15 @@ Lectura del contraste T3→T4 en Surge:
 - No congelada todavía.
 - Función física correcta en concepto: mejora de agarre sin aumento intencionado de punta.
 - En Surge, T3→T4 añade 0.566 s de techo de mejor vuelta sin cambio de punta; el salto parece razonable en cronómetro.
-- T3 fue más consistente que T4 en esta muestra, por lo que T4 está actuando más como ampliación de potencial que como simplificación del coche.
-- Dudas pendientes: progresión T1/T2 irregular en Torque y posible exceso de capacidad de giro en coches de alto agarre.
-- Falta la valoración cualitativa del piloto sobre Surge T3 frente a T4 para decidir si mantener la curva global o introducir alguna limitación según el carácter base del coche.
+- T3 fue más consistente y se siente un poco más fácil que T4; T4 amplía más el potencial pero exige más gestión.
+- El contraste cualitativo indica que T4 no homogeneiza al Surge: sigue deslizándose y obliga a desacelerar.
+- El exceso de capacidad de giro parece específico de coches con agarre/control base muy altos, como Torque, más que un defecto global de T4.
+- No modificar todavía la curva global de Neumáticos; antes de introducir limitaciones por coche conviene contrastar un tercer perfil representativo.
 
 ### Próxima tanda recomendada
-- No repetir cronometraje todavía.
-- Recoger primero sensación del piloto sobre la diferencia de giro Surge T3 vs T4; esa observación decide el siguiente paso.
+- Coche: HÉLIX Pulse
+- Circuito: Karting Tenerife
+- Pieza: Neumáticos T4 / Prototype
+- Resto de familias: sin equipar
+- Serie: 4 vueltas
+- Objetivo: tercer contraste con un coche equilibrado/intermedio para decidir si el exceso de giro es realmente exclusivo de los coches de grip alto.
