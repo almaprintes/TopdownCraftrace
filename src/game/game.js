@@ -25,5 +25,19 @@ function isIOSDevice(){
     return /iPhone|iPad|iPod/i.test(ua)||(platform==='MacIntel'&&Number(navigator?.maxTouchPoints||0)>1);
   }catch{return false;}
 }
+function renderResolution(vp,ios,dpr){
+  // La resolución interna debe reflejar de verdad el preset. Antes iOS quedaba
+  // siempre en 1x y el resto de dispositivos tenía un mínimo accidental de 2x,
+  // haciendo que BAJA apenas redujera fill-rate.
+  const qualityScale=vp.quality==='low'?0.80:vp.quality==='medium'?0.92:1.00;
+  const userScale=vp.renderScale==='eco'?0.90:vp.renderScale==='sharp'?1.15:1.00;
+  const wanted=qualityScale*userScale;
+
+  // En iOS conservamos el techo 1x que ya nos protegía de presión GPU/memoria.
+  // En otras plataformas permitimos algo más en ALTA/SHARP, pero nunca forzamos
+  // una resolución superior a la solicitada por el preset.
+  const platformCap=ios?1.0:Math.min(Number(dpr||1),1.5);
+  return Math.max(0.70,Math.min(platformCap,wanted));
+}
 function installCleanTextFactory(){const proto=Phaser.GameObjects?.GameObjectFactory?.prototype;if(!proto||proto.__tdrCleanTextInstalled||typeof proto.text!=='function')return;const original=proto.text;proto.text=function(x,y,text,style={}){const clean={...(style||{})};if(/Orbitron/i.test(String(clean.fontFamily||''))){clean.fontFamily='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';if(clean.fontStyle==='900')clean.fontStyle='bold';}if(Number(clean.strokeThickness)>2)clean.strokeThickness=2;return original.call(this,x,y,text,clean);};proto.__tdrCleanTextInstalled=true;}
-export function createGame(parentId='app'){installCleanTextFactory();const vp=videoPrefs();const dpr=window.devicePixelRatio||1;const requestedScale=vp.renderScale==='eco'?1:vp.renderScale==='sharp'?2:1.5;const requestedQuality=vp.quality==='low'?1:vp.quality==='medium'?1.5:2;const requested=Math.min(requestedScale,requestedQuality);const ios=isIOSDevice();const resolution=ios?1:Math.min(dpr,Math.max(2,requested));const antialias=vp.quality!=='low';const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',resolution,fps:{target:vp.targetFps,min:20},scene:[BootScene,MenuScene,MenuAliasScene,GarageScene,SettingsScene,GarageDetailScene,RaceScene,AdminHubScene,UpgradeShopScene,CarEditorScene,TrackGarageScene,TrackStudioScene,EnvironmentBuilderScene,TrackEditorScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:false}});try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}installRuntimeCrashDiagnostics(game);installMenuMusic(game);return game;}
+export function createGame(parentId='app'){installCleanTextFactory();const vp=videoPrefs();const dpr=window.devicePixelRatio||1;const ios=isIOSDevice();const resolution=renderResolution(vp,ios,dpr);const antialias=vp.quality!=='low';const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',resolution,fps:{target:vp.targetFps,min:20},scene:[BootScene,MenuScene,MenuAliasScene,GarageScene,SettingsScene,GarageDetailScene,RaceScene,AdminHubScene,UpgradeShopScene,CarEditorScene,TrackGarageScene,TrackStudioScene,EnvironmentBuilderScene,TrackEditorScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:false}});try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}installRuntimeCrashDiagnostics(game);installMenuMusic(game);return game;}
