@@ -16,14 +16,8 @@ export class RaceScene extends CurrentRaceScene {
     try {
       const quality=videoQuality();
 
-      // BaseScene programaba herramientas de exportación de mapas incluso en una
-      // carrera normal. Son utilidades de desarrollo, no gameplay.
       this._installMapExportButtons = () => {};
 
-      // RaceFixedScene conserva un descubridor histórico de HUD que recorre toda
-      // la Display List. Como los chunks de pista quedan cacheados, hacerlo cada
-      // frame se vuelve progresivamente más caro. Lo mantenemos para UI dinámica,
-      // pero como máximo 4 veces por segundo.
       if (typeof this._discoverFixedHud === 'function') {
         const discover = this._discoverFixedHud.bind(this);
         let lastDiscover = -Infinity;
@@ -37,21 +31,15 @@ export class RaceScene extends CurrentRaceScene {
       }
 
       if (this.minimapUnifiedPanel?.scene) {
-        // El minimapa heredado y el marco SPORT anterior están ocultos por el
-        // minimapa unificado. No deben seguir haciendo trabajo de cámara/proyección.
         this._pinMinimapMarker = () => {};
         this._pinMinimapSportFrame = () => {};
       }
 
-      // Los objetos de debug ya se ocultaron durante create; no recorrerlos en
-      // cada frame de una carrera normal.
       if(typeof this._hideRaceDebugOnly==='function'){
         this._hideRaceDebugOnly();
         this._hideRaceDebugOnly=()=>{};
       }
 
-      // Mantener la posición del HUD a frecuencia de frame, pero refrescar los
-      // Text de velocidad/marcha/superficie a 20 Hz.
       if (typeof this._updateRaceInfoHud === 'function') {
         const updateInfo = this._updateRaceInfoHud.bind(this);
         let lastInfo = -Infinity;
@@ -64,9 +52,6 @@ export class RaceScene extends CurrentRaceScene {
         };
       }
 
-      // El HUD de competición actualiza textos, colores y sombras cuyos valores
-      // cambian por sectores/vueltas. 10 Hz es sobrado y evita regenerar Texts
-      // innecesariamente a frecuencia de render.
       if(typeof this._syncCompetitionHud==='function'){
         const syncCompetition=this._syncCompetitionHud.bind(this);
         let lastCompetition=-Infinity;
@@ -79,20 +64,29 @@ export class RaceScene extends CurrentRaceScene {
         };
       }
 
-      // BAJA debe ser un perfil GPU real. El asfalto base y su máscara se
-      // conservan; eliminamos únicamente la segunda capa semitransparente de
-      // desgaste, que duplica draw/blending por cada chunk visible.
-      if(quality==='low' && this.track?.gfxByCell instanceof Map){
-        const map=this.track.gfxByCell;
-        const stripOverlay=(cell)=>{
-          if(!cell?.overlay)return cell;
-          try{cell.overlay.destroy?.();}catch{}
-          cell.overlay=null;
-          return cell;
-        };
-        for(const cell of map.values())stripOverlay(cell);
-        const nativeSet=map.set.bind(map);
-        map.set=(key,cell)=>nativeSet(key,stripOverlay(cell));
+      if(quality==='low'){
+        // Microdecoración estática de alto coste visual: en BAJA conservamos las
+        // texturas base, pianos y entorno, pero retiramos estos Graphics densos.
+        for(const key of ['_environmentEdgeWear','_semiSimBrakeMarks']){
+          const obj=this[key];
+          if(obj?.scene){try{obj.destroy?.();}catch{}}
+          this[key]=null;
+        }
+
+        // Segunda capa semitransparente del asfalto: elimina blending/draw extra
+        // por chunk manteniendo intacta la superficie principal y su máscara.
+        if(this.track?.gfxByCell instanceof Map){
+          const map=this.track.gfxByCell;
+          const stripOverlay=(cell)=>{
+            if(!cell?.overlay)return cell;
+            try{cell.overlay.destroy?.();}catch{}
+            cell.overlay=null;
+            return cell;
+          };
+          for(const cell of map.values())stripOverlay(cell);
+          const nativeSet=map.set.bind(map);
+          map.set=(key,cell)=>nativeSet(key,stripOverlay(cell));
+        }
       }
     } catch (err) {
       console.warn('[TDR2] sustained performance setup failed', err);
