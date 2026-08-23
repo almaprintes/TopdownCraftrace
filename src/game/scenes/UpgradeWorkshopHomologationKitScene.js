@@ -5,9 +5,14 @@ import { qty, saveGarage } from '../garage/garageStore.js';
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 const PART_IDS=Object.keys(GARAGE_ITEMS).filter(id=>GARAGE_ITEMS[id]?.kind==='part');
 
+function isAdminMode(){
+  try{return localStorage.getItem('tdr2:admin')==='1';}catch{return false;}
+}
+
 export class UpgradeShopScene extends PreviousWorkshop {
   _header(A,w,compact){
     super._header(A,w,compact);
+    if(!isAdminMode())return;
 
     const bw=compact?128:176;
     const bh=compact?28:34;
@@ -29,6 +34,7 @@ export class UpgradeShopScene extends PreviousWorkshop {
   }
 
   _grantHomologationKit(){
+    if(!isAdminMode())return false;
     if(!this.state.inventory||typeof this.state.inventory!=='object')this.state.inventory={};
     let added=0;
     for(const id of PART_IDS){
@@ -42,5 +48,6 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const total=PART_IDS.length;
     if(added>0)this._toast?.(`KIT HOMOLOGACIÓN · ${added} PIEZAS AÑADIDAS · ${total}/${total} DISPONIBLES`);
     else this._toast?.(`KIT HOMOLOGACIÓN · ${total}/${total} PIEZAS YA DISPONIBLES`);
+    return true;
   }
 }
