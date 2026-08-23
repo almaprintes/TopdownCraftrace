@@ -58,12 +58,23 @@ export class RaceScene extends CurrentRaceScene {
 
       if(typeof this._syncCompetitionHud==='function'){
         const syncCompetition=this._syncCompetitionHud.bind(this);
-        let lastCompetition=-Infinity;
+        let lastCompetitionCheck=-Infinity;
+        let lastCompetitionSig='';
+        const sigNum=(v)=>Number.isFinite(Number(v))?Math.round(Number(v)/10):'x';
         syncCompetition();
         this._syncCompetitionHud=()=>{
           const now=performance.now();
-          if(now-lastCompetition<100)return;
-          lastCompetition=now;
+          if(now-lastCompetitionCheck<250)return;
+          lastCompetitionCheck=now;
+
+          const cp=Number(this._cpState||0);
+          const lap=Number(this.lapCount||0)+1;
+          const s1=(Number.isFinite(this.timing?.s1)&&Number.isFinite(this.ttBest?.s1))?this.timing.s1-this.ttBest.s1:NaN;
+          const s2=(Number.isFinite(this.timing?.s2)&&Number.isFinite(this.ttBest?.s2))?this.timing.s2-this.ttBest.s2:NaN;
+          const finalActive=now<=Number(this._competitionFinalDeltaUntil||0)?1:0;
+          const sig=[lap,cp,sigNum(s1),sigNum(s2),sigNum(this.timing?.lastLap),sigNum(this.ttBest?.lapMs),finalActive].join('|');
+          if(sig===lastCompetitionSig)return;
+          lastCompetitionSig=sig;
           syncCompetition();
         };
       }
