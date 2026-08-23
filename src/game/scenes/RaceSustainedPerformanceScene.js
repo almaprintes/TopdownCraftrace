@@ -44,9 +44,60 @@ export class RaceScene extends CurrentRaceScene {
         this._hideRaceDebugOnly=()=>{};
       }
 
+      // =========================================================
+      // HUD inferior simplificado: VELOCIDAD + TIEMPO.
+      // Marcha y superficie salen del HUD. El cronómetro superior se elimina
+      // también de la ruta de actualización para evitar regenerar texto oculto.
+      // =========================================================
+      const info=this.raceInfoHud;
+      if(info?.scene){
+        const children=Array.isArray(info.list)?info.list:[];
+
+        for(const obj of children){
+          const txt=String(obj?.text||'');
+          if(txt==='MARCHA' || txt==='SUPERFICIE') obj.setVisible?.(false);
+
+          // Ocultamos los dos separadores verticales del diseño antiguo.
+          const w=Number(obj?.displayWidth??obj?.width??0);
+          const h=Number(obj?.displayHeight??obj?.height??0);
+          if(w<=2 && h>=35 && h<=60) obj.setVisible?.(false);
+        }
+
+        info._gearText?.setVisible?.(false);
+        info._surfaceText?.setVisible?.(false);
+        info._speedText?.setPosition?.(-58,-52);
+
+        const unit=children.find(o=>String(o?.text||'')==='km/h');
+        unit?.setPosition?.(-8,-38);
+
+        const timerLabel=this.add.text(44,-66,'TIEMPO',{
+          fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+          fontSize:'9px',fontStyle:'700',color:'#7E8C99'
+        }).setOrigin(0,0.5);
+
+        const timerText=this.add.text(44,-52,'0:00.00',{
+          fontFamily:'Orbitron,system-ui,sans-serif',
+          fontSize:'25px',fontStyle:'900',color:'#F5FAFF'
+        }).setOrigin(0,0.5);
+
+        info.add([timerLabel,timerText]);
+        info._timerText=timerText;
+      }
+
+      // El reloj superior antiguo queda fuera tanto de render como de redibujado.
+      if(this.ttHud?.timeText?.scene){
+        this.ttHud.timeText.setVisible(false);
+        this.ttHud.timeText.setText=()=>this.ttHud.timeText;
+      }
+      // VUELTA antigua también está sustituida por competitionHud.
+      if(this.ttHud?.lapText?.scene){
+        this.ttHud.lapText.setVisible(false);
+        this.ttHud.lapText.setText=()=>this.ttHud.lapText;
+      }
+
       if (typeof this._updateRaceInfoHud === 'function') {
         let lastInfo = -Infinity;
-        const cache={speed:null,gear:null,surface:null};
+        const cache={speed:null,time:null};
         this._updateRaceInfoHud = () => {
           const now = performance.now();
           if (now - lastInfo < 50) return;
@@ -65,26 +116,15 @@ export class RaceScene extends CurrentRaceScene {
             c._speedText?.setText(speedTxt);
           }
 
-          const rot=Number(body.rotation||0);
-          const forwardSpeed=vx*Math.cos(rot)+vy*Math.sin(rot);
-          let gear='N';
-          if(forwardSpeed < -3) gear='R';
-          else if(kmh>=3 && kmh<35) gear='1';
-          else if(kmh<65) gear=kmh>=3?'2':'N';
-          else if(kmh<95) gear='3';
-          else if(kmh<125) gear='4';
-          else gear='5';
-          if(gear!==cache.gear){
-            cache.gear=gear;
-            c._gearText?.setText(gear);
-          }
-
-          const surf=this._surface||'TRACK';
-          if(surf!==cache.surface){
-            cache.surface=surf;
-            if(surf==='GRASS') c._surfaceText?.setText('CÉSPED').setColor('#FFD56A');
-            else if(surf==='OFF') c._surfaceText?.setText('FUERA').setColor('#FF7373');
-            else c._surfaceText?.setText('PISTA').setColor('#70FFB0');
+          const started=!!this.timing?.started && this.timing?.lapStart!=null;
+          const elapsed=started?Math.max(0,now-Number(this.timing.lapStart)):0;
+          const m=Math.floor(elapsed/60000);
+          const s=Math.floor((elapsed%60000)/1000);
+          const cs=Math.floor((elapsed%1000)/10);
+          const timeTxt=`${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+          if(timeTxt!==cache.time){
+            cache.time=timeTxt;
+            c._timerText?.setText(timeTxt);
           }
         };
         this._updateRaceInfoHud();
