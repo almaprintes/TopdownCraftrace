@@ -194,33 +194,38 @@ Resultados:
 - Mejor: 41.088 s
 - Media de sesión: 41.895 s
 - Media útil V2–V4: 42.079 s
-- Media representativa V1/V2/V4 (excluyendo V3 anómala): 41.390 s
+- Media representativa V1/V2/V4 (excluyendo V3 contaminada): 41.390 s
 - Punta: 67 km/h
 - Velocidad media: 61 km/h
-- Consistencia σ: 0.91 s
+- Consistencia σ: 0.91 s (estadística bruta, contaminada por V3)
 - Salidas de pista: 6, total 1.6 s
 - Gas: 92%
 - Coasting: 8%
 - Freno: 0%
 - Frenadas: 0
 
+Incidencia V3:
+- El piloto informa de un trompo en S1 durante V3.
+- Por tanto, V3 (43.413 s) debe tratarse como vuelta contaminada por incidente de conducción y no como evidencia de inestabilidad intrínseca de T4.
+- La σ bruta de 0.91 s y la media útil estándar V2–V4 quedan distorsionadas por ese trompo.
+
 Comparación frente a T3:
 - Mejor vuelta: 41.407 → 41.088 = mejora de 0.319 s (0.77%).
-- Media útil estándar: 41.444 → 42.079 = empeora 0.635 s, pero queda fuertemente contaminada por V3 (43.413).
-- Media representativa sin V3 anómala: 41.390 s, 0.054 s mejor que la media útil T3; diferencia pequeña.
+- Media útil estándar: 41.444 → 42.079 = empeora 0.635 s, pero queda invalidada como comparador fino por el trompo de V3.
+- Media representativa sin V3 contaminada: 41.390 s, 0.054 s mejor que la media útil T3; diferencia pequeña.
 - Punta: 68 → 67 km/h = -1 km/h observado, sin atribuirlo a Suspensión.
-- Consistencia: σ 0.34 → 0.91 s = T4 fue bastante más dispersa en esta muestra.
+- La dispersión bruta de T4 no debe compararse directamente con T3 por el trompo de V3.
 
 Comparación frente a STOCK:
 - Mejor vuelta: 41.427 → 41.088 = mejora de 0.339 s (0.82%).
-- Media representativa sin V3 anómala: 41.390 s frente a 41.655 s stock = mejora de 0.265 s.
+- Media representativa sin V3: 41.390 s frente a 41.655 s stock = mejora de 0.265 s.
 
-Lectura:
+Lectura corregida:
 - T4 sí eleva el techo de rendimiento respecto a T3: mejora el mejor crono en 0.319 s.
-- No aparece una mejora equivalente en consistencia; al contrario, la tanda es más dispersa y contiene una V3 claramente anómala.
-- V1 y V2 son dos vueltas sólidas consecutivas (41.346 / 41.088), por lo que el mejor crono no parece un único accidente aislado.
-- El resultado encaja con el criterio de que T4 amplíe potencial sin convertir automáticamente el coche en más fácil.
-- Aun así, la progresión T1→T3 sigue muy comprimida en Flash/Karting, por lo que no conviene declarar cerrada la curva global de Suspensión únicamente por esta tanda.
+- V1 y V2 son dos vueltas sólidas consecutivas (41.346 / 41.088), por lo que el mejor crono no parece un accidente aislado.
+- El trompo de V3 explica la mayor parte de la dispersión de la sesión; no hay base para afirmar que T4 sea estadísticamente más inestable que T3 a partir de esta tanda.
+- Excluyendo la vuelta contaminada, el ritmo representativo de T4 queda en 41.390 s, ligeramente mejor que T3.
+- Aun así, la progresión T1→T3 sigue muy comprimida en Flash/Karting, por lo que no conviene declarar cerrada la curva global de Suspensión únicamente por cronómetro.
 - Falta la sensación del piloto sobre si los latigazos aumentaron, se mantuvieron o disminuyeron con T4.
 
 ## Tabla viva — Suspensión
@@ -233,7 +238,7 @@ Lectura:
 | Suspensión T3 · Racing | 41.407 s | 41.444 s | 68 km/h | -0.020 s |
 | Suspensión T4 · Prototype | 41.088 s | 41.390 s* | 67 km/h | -0.339 s |
 
-\* T4 usa media representativa V1/V2/V4 porque V3 (43.413) es anómala; la media útil estándar V2–V4 es 42.079 s.
+\* T4 usa media representativa V1/V2/V4 porque V3 (43.413) contiene un trompo en S1; la media útil estándar V2–V4 y la σ bruta no son comparadores finos válidos para esta tanda.
 
 ### Próxima decisión
 - No modificar física todavía.
