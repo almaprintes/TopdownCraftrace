@@ -133,6 +133,51 @@ Lectura:
 - La pieza sigue comportándose como mejora de recuperación/aceleración: gana bastante ritmo medio sin disparar la punta.
 - La curva T1→T2→T3 empieza a verse razonable; T4 debe confirmar un último escalón visible sin acercarse demasiado al efecto de Motor T4.
 
+## Tanda D — TRANSMISIÓN T4 / PROTOTYPE
+Fecha: 2026-08-23
+Coche: VELOCE Flash
+Circuito: Karting Tenerife
+Piezas: Transmisión T4 / Prototype; resto sin equipar
+Vueltas: 4
+
+Resultados:
+- V1: 41.678 s
+- V2: 39.325 s
+- V3: 40.923 s
+- V4: 39.149 s
+- Mejor: 39.149 s
+- Media de sesión: 40.268 s
+- Media útil V2–V4: 39.799 s
+- Media representativa V2/V4: 39.237 s
+- Punta: 72 km/h
+- Velocidad media: 63 km/h
+- Consistencia σ: 1.07 s
+- Salidas de pista: 11, total 4.2 s
+- Gas: 90%
+- Coasting: 10%
+- Freno: 0%
+- Frenadas: 0
+
+Comparación frente a T3:
+- Mejor vuelta: 40.035 → 39.149 = mejora de 0.886 s (2.21%).
+- Media útil: 40.327 → 39.799 = mejora de 0.528 s.
+- Punta: 70 → 72 km/h = +2 km/h.
+- Velocidad media: 63 → 63 km/h = sin cambio.
+- La dispersión aumenta por V1 y V3, pero V2 y V4 (39.325 / 39.149) confirman el potencial real de T4.
+
+Comparación frente a STOCK:
+- Mejor vuelta: 41.427 → 39.149 = mejora acumulada de 2.278 s (5.50%).
+- Media útil: 41.655 → 39.799 = mejora acumulada de 1.856 s.
+- Punta: 68 → 72 km/h = +4 km/h.
+- Velocidad media: 59 → 63 km/h = +4 km/h.
+
+Lectura final de Transmisión:
+- La familia produce una progresión clara a partir de T2; T1 es prácticamente neutra en crono y punta.
+- T4 ofrece un salto visible y suficiente sin igualar el efecto del Motor T4.
+- Frente a Motor T4, la Transmisión T4 mejora menos el tiempo y menos la punta, lo cual preserva funciones diferenciadas: Motor domina potencia/velocidad; Transmisión mejora recuperación/aceleración y ritmo.
+- El escalón T3 → T4 es fuerte pero todavía razonable. El punto más débil de la familia es T1, que podría necesitar refuerzo físico si al contrastar en otro coche vuelve a resultar indistinguible del stock.
+- Curva candidata a congelar provisionalmente salvo revisión de T1 tras contraste adicional.
+
 ## Tabla viva — Transmisión
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
@@ -140,11 +185,8 @@ Lectura:
 | Transmisión T1 · Street | 41.427 s | 41.775 s | 68 km/h | 0.000 s |
 | Transmisión T2 · Sport | 40.585 s | 41.012 s | 69 km/h | -0.842 s |
 | Transmisión T3 · Racing | 40.035 s | 40.327 s | 70 km/h | -1.392 s |
-| Transmisión T4 · Prototype | — | — | — | — |
+| Transmisión T4 · Prototype | 39.149 s | 39.799 s | 72 km/h | -2.278 s |
 
-### Próxima tanda
-- Coche: VELOCE Flash
-- Circuito: Karting Tenerife
-- Pieza: Transmisión T4 / Prototype
-- Resto de familias: sin equipar
-- Serie: 4 vueltas
+### Próxima secuencia
+- Pasar a una familia de comportamiento en curva.
+- Coche/circuito representativos por decidir según qué pieza se pruebe primero.
