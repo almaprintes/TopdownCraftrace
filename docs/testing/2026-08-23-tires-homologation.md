@@ -210,6 +210,46 @@ Lectura del contraste:
 - La dispersión de Surge sigue siendo alta (σ 1.02 s), por lo que todavía falta la sensación del piloto para decidir si el extra de grip estabiliza el coche, lo vuelve demasiado reactivo o simplemente amplía su techo.
 - No modificar todavía los valores globales de Neumáticos.
 
+## Contraste — VELOCE Surge con NEUMÁTICOS T3 / RACING
+Fecha: 2026-08-23
+Coche: VELOCE Surge
+Circuito: Karting Tenerife
+Piezas: Neumáticos T3 / Racing; resto sin equipar
+Vueltas: 4
+
+Resultados:
+- V1: 41.495 s
+- V2: 39.936 s
+- V3: 39.591 s
+- V4: 39.336 s
+- Mejor: 39.336 s
+- Media de sesión: 40.089 s
+- Media útil V2–V4: 39.621 s
+- Punta: 73 km/h
+- Velocidad media: 64 km/h
+- Consistencia σ: 0.84 s
+- Salidas de pista: 13, total 3.8 s
+- Gas: 91%
+- Coasting: 9%
+- Freno: 0%
+- Frenadas: 0
+
+Comparación frente a Surge T4:
+- Mejor vuelta: 39.336 → 38.770 = T4 mejora 0.566 s (1.44%).
+- Media útil: 39.621 → 39.855 = T3 es 0.234 s mejor en media útil en estas tandas, debido a que T4 tuvo una vuelta excepcional y dos vueltas casi idénticas en 40.397 / 40.398.
+- Punta: 73 → 73 km/h = sin cambio.
+- Consistencia: σ 0.84 → 1.02 s = T3 fue más estable.
+
+Comparación frente a STOCK histórica del Surge:
+- Mejor vuelta: 39.865 → 39.336 = mejora de 0.529 s (1.33%).
+- Punta: 72 → 73 km/h = +1 km/h observado, sin atribuirlo a Neumáticos porque la familia no añade maxFwd.
+
+Lectura del contraste T3→T4 en Surge:
+- El salto de mejor vuelta T3→T4 existe y es significativo, pero no explosivo: 0.566 s.
+- T3 presenta un ritmo de tanda más uniforme que T4; T4 muestra mayor techo potencial, pero también más dispersión en esta muestra.
+- Esto refuerza la idea de que T4 amplía potencial más que facilidad, coherente con el criterio de que una mejora no debe convertir automáticamente el coche en más sencillo.
+- No hay evidencia en los cronos de un latigazo artificial T3→T4; la decisión final depende de la sensación de dirección del piloto.
+
 ## Tabla viva — Neumáticos
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
@@ -219,18 +259,17 @@ Lectura del contraste:
 | Torque · T3 Racing | 40.535 s | 40.893 s | 65 km/h | -0.473 s |
 | Torque · T4 Prototype | 40.406 s | 40.593 s | 65 km/h | -0.602 s |
 | Surge Stock (homologación previa) | 39.865 s | — | 72 km/h | — |
+| Surge · T3 Racing | 39.336 s | 39.621 s | 73 km/h | -0.529 s |
 | Surge · T4 Prototype | 38.770 s | 39.855 s | 73 km/h | -1.095 s |
 
 ### Estado de la familia
 - No congelada todavía.
 - Función física correcta en concepto: mejora de agarre sin aumento intencionado de punta.
-- Dudas pendientes: progresión T1/T2 irregular en Torque, salto T3→T4 pequeño en coches ya muy estables y posible exceso de capacidad de giro en coches de alto agarre.
-- Contraste Surge indica que T4 sí puede ser potente en coches menos estables; falta valoración cualitativa del piloto antes de decidir si hay que limitar el efecto por coche o mantener la curva global.
+- En Surge, T3→T4 añade 0.566 s de techo de mejor vuelta sin cambio de punta; el salto parece razonable en cronómetro.
+- T3 fue más consistente que T4 en esta muestra, por lo que T4 está actuando más como ampliación de potencial que como simplificación del coche.
+- Dudas pendientes: progresión T1/T2 irregular en Torque y posible exceso de capacidad de giro en coches de alto agarre.
+- Falta la valoración cualitativa del piloto sobre Surge T3 frente a T4 para decidir si mantener la curva global o introducir alguna limitación según el carácter base del coche.
 
 ### Próxima tanda recomendada
-- Coche: VELOCE Surge
-- Circuito: Karting Tenerife
-- Pieza: Neumáticos T3 / Racing
-- Resto de familias: sin equipar
-- Serie: 4 vueltas
-- Objetivo: comprobar si el salto T3→T4 en Surge es razonable y si el carácter de giro cambia de forma progresiva o brusca.
+- No repetir cronometraje todavía.
+- Recoger primero sensación del piloto sobre la diferencia de giro Surge T3 vs T4; esa observación decide el siguiente paso.
