@@ -2,8 +2,7 @@ import { RaceScene as RealSurfaceRaceScene } from './RaceRealSurfaceAssetsScene.
 
 // Karting Tenerife: el asfalto se crea como UNA sola superficie continua de mundo
 // y se recorta con UNA mascara global construida a partir de la geometria logica.
-// Los chunks siguen existiendo solo hasta el momento del bake por compatibilidad
-// con la cadena heredada, pero ya no participan en el render final del asfalto.
+// Los chunks legacy no participan en el render final.
 export class RaceScene extends RealSurfaceRaceScene {
   _worldPoint(pt) {
     if (Array.isArray(pt)) return { x: Number(pt[0]), y: Number(pt[1]) };
@@ -22,7 +21,6 @@ export class RaceScene extends RealSurfaceRaceScene {
     for (const [key, cd] of cells.entries()) {
       const polys = cd?.polys;
       if (!Array.isArray(polys) || !polys.length) continue;
-
       const [sx, sy] = String(key).split(',');
       const cx = Number(sx);
       const cy = Number(sy);
@@ -33,13 +31,9 @@ export class RaceScene extends RealSurfaceRaceScene {
         if (!Array.isArray(poly) || poly.length < 3) continue;
         const p0 = this._worldPoint(poly[0]);
         if (!Number.isFinite(p0.x) || !Number.isFinite(p0.y)) continue;
-
-        // Misma heuristica usada por la logica de superficie del RaceScene base:
-        // algunos ribbons almacenan puntos mundo y otros locales a la celda.
         const looksWorld =
           (p0.x > cellSize * 1.5) || (p0.y > cellSize * 1.5) ||
           (p0.x < -cellSize * 0.5) || (p0.y < -cellSize * 0.5);
-
         const ox = looksWorld ? 0 : oxCell;
         const oy = looksWorld ? 0 : oyCell;
         const pts = [];
@@ -76,9 +70,6 @@ export class RaceScene extends RealSurfaceRaceScene {
     const maskBundle = this._buildWholeTrackMask();
     if (!maskBundle) throw new Error('no se pudo crear mascara global de pista');
 
-    // UNA unica superficie de asfalto para todo el mundo. La textura ya es un WebP
-    // real cargado por Phaser. Al no existir TileSprite por celda, no puede haber
-    // reinicios de fase ni costuras de chunk.
     const asphalt = this.add.tileSprite(0, 0, worldW, worldH, 'asphalt')
       .setOrigin(0, 0)
       .setDepth(10)
@@ -99,8 +90,6 @@ export class RaceScene extends RealSurfaceRaceScene {
       sources.push(asphaltOverlay);
     }
 
-    // Detalles estaticos existentes se absorben tambien en el bake y despues
-    // desaparecen completamente como GameObjects vivos.
     const staticSurfaceDetails = [];
     for (const obj of [this._materialEdgeWear, this._environmentEdgeWear, this._semiSimBrakeMarks]) {
       if (!obj?.scene) continue;
@@ -111,9 +100,11 @@ export class RaceScene extends RealSurfaceRaceScene {
     }
 
     const tileMax = 2048;
+    const overlap = 2;
+    const stride = tileMax - overlap;
     const baked = [];
-    for (let y = 0; y < worldH; y += tileMax) {
-      for (let x = 0; x < worldW; x += tileMax) {
+    for (let y = 0; y < worldH; y += stride) {
+      for (let x = 0; x < worldW; x += stride) {
         const w = Math.min(tileMax, worldW - x);
         const h = Math.min(tileMax, worldH - y);
         const rt = this.add.renderTexture(x, y, w, h)
@@ -129,7 +120,6 @@ export class RaceScene extends RealSurfaceRaceScene {
       }
     }
 
-    // Destruccion REAL de la superficie temporal global y de su mascara.
     try { asphalt.clearMask?.(true); } catch {}
     try { asphalt.destroy?.(); } catch {}
     try { asphaltOverlay?.clearMask?.(true); } catch {}
@@ -137,7 +127,6 @@ export class RaceScene extends RealSurfaceRaceScene {
     try { maskBundle.mask?.destroy?.(); } catch {}
     try { maskBundle.gfx?.destroy?.(); } catch {}
 
-    // Los chunks legacy ya no tienen ninguna funcion visual: se destruyen enteros.
     for (const cell of map.values()) {
       try { cell?.tile?.destroy?.(); } catch {}
       try { cell?.overlay?.destroy?.(); } catch {}
@@ -153,8 +142,6 @@ export class RaceScene extends RealSurfaceRaceScene {
     this._environmentEdgeWear = null;
     this._semiSimBrakeMarks = null;
 
-    // Sentinel JS puro por celda logica: evita que el bloque legado vuelva a crear
-    // renderables. No es un GameObject y no recibe updates.
     map.clear();
     for (const [key, cd] of logicalCells.entries()) {
       if (!cd?.polys?.length) continue;
@@ -173,13 +160,9 @@ export class RaceScene extends RealSurfaceRaceScene {
     this._centerlineLookaheadCells = () => new Set();
 
     console.info('[TDR2] whole-surface asphalt baked', {
-      track:'karting-tenerife',
-      worldW,
-      worldH,
-      bakedTiles:baked.length,
-      logicalCells:map.size,
-      maskPolys:maskBundle.polyCount,
-      staticSurfaceDetails:staticSurfaceDetails.length
+      track:'karting-tenerife', worldW, worldH, bakedTiles:baked.length,
+      logicalCells:map.size, maskPolys:maskBundle.polyCount,
+      staticSurfaceDetails:staticSurfaceDetails.length, overlap
     });
   }
 }
