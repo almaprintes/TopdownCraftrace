@@ -16,6 +16,12 @@ export class RaceScene extends CurrentRaceScene {
     try {
       const quality=videoQuality();
 
+      // BAJA prioriza estabilidad térmica. Es preferible 45 FPS sostenidos a
+      // intentar 60, calentar el dispositivo y terminar oscilando 40-50 FPS.
+      if(quality==='low'){
+        try{this.game.loop.targetFps=Math.min(Number(this.game.loop.targetFps||60),45);}catch{}
+      }
+
       this._installMapExportButtons = () => {};
 
       if (typeof this._discoverFixedHud === 'function') {
@@ -24,7 +30,7 @@ export class RaceScene extends CurrentRaceScene {
         discover();
         this._discoverFixedHud = () => {
           const now = performance.now();
-          if (now - lastDiscover < 250) return;
+          if (now - lastDiscover < 1000) return;
           lastDiscover = now;
           discover();
         };
