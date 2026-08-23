@@ -127,7 +127,52 @@ Lectura corregida:
 - Esta sesión NO corresponde a T3. Es una repetición de T2.
 - La repetición mejora claramente la media útil respecto a la primera tanda T2 y respalda que los latigazos/correcciones penalizaron la primera medición.
 - T1 sigue conservando el mejor crono aislado, pero T1 y T2 repetida están prácticamente empatadas en media útil.
-- Todavía no existe ningún dato de Suspensión T3; por tanto no se puede evaluar la progresión T2→T3 hasta realizar esa tanda.
+
+## Tanda C — SUSPENSIÓN T3 / RACING
+Fecha: 2026-08-23
+Coche: VELOCE Flash
+Circuito: Karting Tenerife
+Piezas: Suspensión T3 / Racing; resto sin equipar
+Vueltas: 4
+
+Resultados:
+- V1: 42.216 s
+- V2: 41.489 s
+- V3: 41.407 s
+- V4: 41.436 s
+- Mejor: 41.407 s
+- Media de sesión: 41.637 s
+- Media útil V2–V4: 41.444 s
+- Punta: 68 km/h
+- Velocidad media: 61 km/h
+- Consistencia σ: 0.34 s
+- Salidas de pista: 4, total 0.4 s
+- Gas: 92%
+- Coasting: 8%
+- Freno: 0%
+- Frenadas: 0
+
+Comparación frente a T2 repetida:
+- Mejor vuelta: 41.374 → 41.407 = T3 es 0.033 s más lento; diferencia prácticamente nula.
+- Media útil: 41.460 → 41.444 = T3 mejora 0.016 s; diferencia prácticamente nula.
+- Punta: 68 → 68 km/h = sin cambio.
+- Consistencia: σ 0.76 → 0.34 s = T3 es claramente más uniforme.
+- Salidas de pista: 5 / 1.9 s → 4 / 0.4 s = tanda mucho más limpia.
+
+Comparación frente a T1:
+- Mejor vuelta: 40.877 → 41.407 = T3 es 0.530 s más lento.
+- Media útil: 41.410 → 41.444 = diferencia de 0.034 s; prácticamente empatados en ritmo útil.
+
+Comparación frente a STOCK:
+- Mejor vuelta: 41.427 → 41.407 = mejora mínima de 0.020 s; prácticamente neutra.
+- Media útil: 41.655 → 41.444 = mejora de 0.211 s.
+- Punta: 68 → 68 km/h = sin cambio.
+
+Lectura:
+- Esta es la referencia T3 más limpia de la secuencia: apenas 0.4 s fuera de pista y σ 0.34 s.
+- T3 no muestra una ganancia de crono clara sobre T2 repetida; ambas quedan esencialmente empatadas en mejor vuelta y media útil.
+- T1, T2 repetida y T3 también quedan muy cerca en media útil (41.410 / 41.460 / 41.444), lo que sugiere que en Flash + Karting Tenerife la progresión física de Suspensión está muy comprimida o el circuito no la expone bien.
+- No conviene ajustar todavía solo por cronómetro: falta la sensación del piloto sobre los latigazos y la respuesta de dirección en T3.
 
 ## Tabla viva — Suspensión
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
@@ -136,13 +181,9 @@ Lectura corregida:
 | Suspensión T1 · Street | 40.877 s | 41.410 s | 67 km/h | -0.550 s |
 | Suspensión T2 · Sport (1ª tanda, latigazos) | 41.405 s | 41.979 s | 67 km/h | -0.022 s |
 | Suspensión T2 · Sport (repetición) | 41.374 s | 41.460 s | 68 km/h | -0.053 s |
-| Suspensión T3 · Racing | — | — | — | — |
+| Suspensión T3 · Racing | 41.407 s | 41.444 s | 68 km/h | -0.020 s |
 | Suspensión T4 · Prototype | — | — | — | — |
 
-### Próxima tanda
-- Coche: VELOCE Flash
-- Circuito: Karting Tenerife
-- Pieza: Suspensión T3 / Racing
-- Resto de familias: sin equipar
-- Serie: 4 vueltas
-- Observación prioritaria: comprobar si los latigazos persisten, aumentan o disminuyen respecto a T2, además del crono.
+### Próxima decisión
+- No pasar automáticamente a T4 hasta recoger la sensación del piloto sobre T3.
+- Observación prioritaria: comparar latigazos y facilidad de control de T3 frente a T2 repetida.
