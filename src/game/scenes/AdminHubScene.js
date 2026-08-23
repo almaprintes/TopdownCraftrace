@@ -16,8 +16,26 @@ export class AdminHubScene extends BaseScene {
     this.events.once('shutdown',()=>this._removeAdminDom());
   }
 
+  _resetPhaserPointers(){
+    // Entering ADMIN uses a long press on a DOM control. On iOS that gesture can
+    // outlive the DOM element that received it and leave Phaser's touch pointer
+    // active. Reset the public Pointer objects only after the Admin button click
+    // has completed, immediately before returning to a Phaser-driven tool scene.
+    try{
+      const manager=this.input?.manager;
+      const pointers=Array.isArray(manager?.pointers)?manager.pointers:[];
+      for(const pointer of pointers) pointer?.reset?.();
+      if(manager){
+        manager.enabled=true;
+        if(manager.touch) manager.touch.enabled=true;
+        if(manager.mouse) manager.mouse.enabled=true;
+      }
+    }catch{}
+  }
+
   _navigate(key,data){
     try{sessionStorage.setItem('tdr2:adminInputProbe','1');}catch{}
+    this._resetPhaserPointers();
     const root=this._adminDomRoot;
     if(root){
       root.style.pointerEvents='none';
