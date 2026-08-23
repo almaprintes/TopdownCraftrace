@@ -16,30 +16,69 @@ export class RaceScene extends BaseRaceScene {
     const source = this.textures.get('grassMaterialRef')?.getSourceImage?.();
     if (!source) return super.ensureBgTexture();
 
-    const size = 512;
+    // Más resolución de material sin aumentar GameObjects ni draw calls.
+    const size = 1024;
     const tex = this.textures.createCanvas(key, size, size);
     const ctx = tex.getContext();
     ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(source, 0, 0, size, size);
 
-    // Break tiling symmetry with very subtle color variation only.
     const rand = this._rng?.(0x6f1d4c3a) || Math.random;
+    const wrapSpot = (x, y, r, color) => {
+      for (const ox of [-size, 0, size]) {
+        for (const oy of [-size, 0, size]) {
+          const g = ctx.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
+          g.addColorStop(0, color);
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(x + ox - r, y + oy - r, r * 2, r * 2);
+        }
+      }
+    };
+
+    // Variación de vegetación a gran escala: manchas húmedas/secas muy suaves.
     ctx.globalCompositeOperation = 'source-over';
-    for (let i = 0; i < 2600; i++) {
+    for (let i = 0; i < 34; i++) {
       const x = rand() * size;
       const y = rand() * size;
-      const dry = rand() > 0.74;
+      const r = 70 + rand() * 180;
+      const dry = rand() > 0.70;
+      wrapSpot(
+        x, y, r,
+        dry
+          ? `rgba(150,121,58,${0.025 + rand() * 0.035})`
+          : `rgba(8,38,14,${0.025 + rand() * 0.04})`
+      );
+    }
+
+    // Hojas/fibras finas y pequeñas zonas de tierra.
+    for (let i = 0; i < 7600; i++) {
+      const x = rand() * size;
+      const y = rand() * size;
+      const dry = rand() > 0.77;
       ctx.strokeStyle = dry
-        ? `rgba(150,128,72,${0.025 + rand() * 0.045})`
-        : `rgba(16,37,18,${0.018 + rand() * 0.035})`;
-      ctx.lineWidth = 0.5 + rand() * 0.7;
+        ? `rgba(179,151,79,${0.025 + rand() * 0.055})`
+        : `rgba(10,48,16,${0.020 + rand() * 0.045})`;
+      ctx.lineWidth = 0.45 + rand() * 0.85;
       const a = rand() * Math.PI * 2;
-      const l = 1.2 + rand() * 3.0;
+      const l = 1.0 + rand() * 4.8;
       ctx.beginPath();
       ctx.moveTo(x, y);
       ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
       ctx.stroke();
     }
+
+    for (let i = 0; i < 850; i++) {
+      const x = rand() * size;
+      const y = rand() * size;
+      ctx.fillStyle = rand() > 0.5
+        ? `rgba(83,66,38,${0.025 + rand() * 0.045})`
+        : `rgba(198,176,104,${0.012 + rand() * 0.028})`;
+      const w = 0.6 + rand() * 2.2;
+      ctx.fillRect(x, y, w, 0.5 + rand() * 1.8);
+    }
+
     tex.refresh();
   }
 
@@ -49,24 +88,81 @@ export class RaceScene extends BaseRaceScene {
     const source = this.textures.get('asphaltMaterialRef')?.getSourceImage?.();
     if (!source) return super.ensureAsphaltTexture();
 
-    const size = 512;
+    const size = 1024;
     const tex = this.textures.createCanvas(key, size, size);
     const ctx = tex.getContext();
     ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(source, 0, 0, size, size);
 
-    // Add only tiny aggregate variation; the material already carries the main detail.
     const rand = this._rng?.(0x91b35d27) || Math.random;
-    for (let i = 0; i < 2500; i++) {
+    const wrapSpot = (x, y, r, color) => {
+      for (const ox of [-size, 0, size]) {
+        for (const oy of [-size, 0, size]) {
+          const g = ctx.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, r);
+          g.addColorStop(0, color);
+          g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(x + ox - r, y + oy - r, r * 2, r * 2);
+        }
+      }
+    };
+
+    // Cambios tonales amplios para romper el aspecto plano del asfalto.
+    for (let i = 0; i < 28; i++) {
       const x = rand() * size;
       const y = rand() * size;
-      const light = rand() > 0.55;
-      ctx.fillStyle = light
-        ? `rgba(210,210,205,${0.012 + rand() * 0.025})`
-        : `rgba(0,0,0,${0.014 + rand() * 0.028})`;
-      const s = 0.5 + rand() * 1.6;
-      ctx.fillRect(x, y, s, s);
+      const r = 80 + rand() * 210;
+      const light = rand() > 0.58;
+      wrapSpot(
+        x, y, r,
+        light
+          ? `rgba(210,205,192,${0.010 + rand() * 0.018})`
+          : `rgba(0,0,0,${0.018 + rand() * 0.028})`
+      );
     }
+
+    // Árido fino, pequeñas picaduras y grano irregular.
+    for (let i = 0; i < 8200; i++) {
+      const x = rand() * size;
+      const y = rand() * size;
+      const light = rand() > 0.53;
+      ctx.fillStyle = light
+        ? `rgba(218,214,202,${0.012 + rand() * 0.030})`
+        : `rgba(0,0,0,${0.016 + rand() * 0.035})`;
+      const s = 0.35 + rand() * 1.65;
+      ctx.fillRect(x, y, s, 0.35 + rand() * 1.35);
+    }
+
+    // Goma/rodadura sutil. Se hornea en la textura y no añade coste por frame.
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 42; i++) {
+      const x = rand() * size;
+      const y = rand() * size;
+      const len = 55 + rand() * 210;
+      const a = (rand() - 0.5) * 0.34;
+      ctx.strokeStyle = `rgba(4,4,4,${0.018 + rand() * 0.030})`;
+      ctx.lineWidth = 1.4 + rand() * 3.4;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
+      ctx.stroke();
+    }
+
+    // Fisuras/minúsculas juntas, muy discretas para evitar aspecto artificial.
+    for (let i = 0; i < 120; i++) {
+      const x = rand() * size;
+      const y = rand() * size;
+      const a = rand() * Math.PI * 2;
+      const l = 5 + rand() * 24;
+      ctx.strokeStyle = `rgba(8,8,8,${0.025 + rand() * 0.035})`;
+      ctx.lineWidth = 0.45 + rand() * 0.65;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
+      ctx.stroke();
+    }
+
     tex.refresh();
   }
 
