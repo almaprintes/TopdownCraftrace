@@ -33,7 +33,7 @@ export class UpgradeShopScene extends PreviousWorkshop {
     if(item&&this.textures.exists(key)){
       const img=A(this.add.image(r.x+r.w/2,r.y+r.h/2,key));
       const fit=Math.min(r.w/(img.width||1),r.h/(img.height||1));
-      img.setScale(fit*.86);
+      img.setScale(fit);
       return true;
     }
     if(item&&typeof super._loadFullBleed==='function'){
@@ -81,11 +81,12 @@ export class UpgradeShopScene extends PreviousWorkshop {
       const card=A(this.add.rectangle(bx,by,cardW,cardH,installed?0x101821:0x0d1a24,.99).setOrigin(0)
         .setStrokeStyle(installed?3:2,accent,installed?.72:1));
       A(this.add.rectangle(bx+3,by+3,cardW-6,compact?7:9,accent,installed?.35:.95).setOrigin(0));
-      const art={x:bx+cardW*.08,y:by+cardH*.08,w:cardW*.84,h:cardH*.46};
+      // Same visual rule used by the lobby inventory: maxW 94%, maxH 61%, centered at 40% card height.
+      const art={x:bx+cardW*.03,y:by+cardH*.095,w:cardW*.94,h:cardH*.61};
       const loaded=this._loadQuickContained(A,item,art,()=>this._openQuickFamilyInstall(family));
-      if(!loaded)A(this.add.text(bx+cardW/2,by+cardH*.31,item?.icon||'◆',{fontFamily:UI,fontSize:compact?'38px':'52px',color:'#fff'}).setOrigin(.5));
-      A(this.add.text(bx+cardW/2,by+cardH*.62,String(item?.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#9aa7b0':'#fff',align:'center',wordWrap:{width:cardW-14}}).setOrigin(.5,0));
-      A(this.add.text(bx+cardW/2,by+cardH*.76,`NIVEL ${tier}`,{fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'800',color:'#a9bbca'}).setOrigin(.5));
+      if(!loaded)A(this.add.text(bx+cardW/2,by+cardH*.40,item?.icon||'◆',{fontFamily:UI,fontSize:compact?'38px':'52px',color:'#fff'}).setOrigin(.5));
+      A(this.add.text(bx+cardW/2,by+cardH*.69,String(item?.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#9aa7b0':'#fff',align:'center',wordWrap:{width:cardW-14}}).setOrigin(.5,0));
+      A(this.add.text(bx+cardW/2,by+cardH*.80,`NIVEL ${tier}`,{fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'800',color:'#a9bbca'}).setOrigin(.5));
       const action=installed?'DESINSTALAR':`INSTALAR · ×${q}`;
       A(this.add.text(bx+cardW/2,by+cardH-(compact?10:13),action,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#ffcf63':'#7ddcff'}).setOrigin(.5,1));
       if(installed){
