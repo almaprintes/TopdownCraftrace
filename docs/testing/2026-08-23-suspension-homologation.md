@@ -174,6 +174,11 @@ Lectura:
 - T1, T2 repetida y T3 también quedan muy cerca en media útil (41.410 / 41.460 / 41.444), lo que sugiere que en Flash + Karting Tenerife la progresión física de Suspensión está muy comprimida o el circuito no la expone bien.
 - No conviene ajustar todavía solo por cronómetro: falta la sensación del piloto sobre los latigazos y la respuesta de dirección en T3.
 
+### Sensación del piloto — T3
+- Los latigazos siguen presentes con Suspensión T3.
+- El piloto indica que ya los está controlando mejor; siguen condicionando la conducción, pero no dominan la tanda como en la primera prueba de T2.
+- Esto permite continuar a T4 como diagnóstico, vigilando si el último tier aumenta de forma brusca la reactividad o si mantiene los latigazos en un nivel gestionable.
+
 ## Tabla viva — Suspensión
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
@@ -184,6 +189,10 @@ Lectura:
 | Suspensión T3 · Racing | 41.407 s | 41.444 s | 68 km/h | -0.020 s |
 | Suspensión T4 · Prototype | — | — | — | — |
 
-### Próxima decisión
-- No pasar automáticamente a T4 hasta recoger la sensación del piloto sobre T3.
-- Observación prioritaria: comparar latigazos y facilidad de control de T3 frente a T2 repetida.
+### Próxima tanda
+- Coche: VELOCE Flash
+- Circuito: Karting Tenerife
+- Pieza: Suspensión T4 / Prototype
+- Resto de familias: sin equipar
+- Serie: 4 vueltas
+- Observación prioritaria: comprobar si T4 intensifica los latigazos o si el mayor control permite aprovechar el extra de respuesta sin volver el coche artificialmente nervioso.
