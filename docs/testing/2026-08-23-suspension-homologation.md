@@ -84,6 +84,13 @@ Lectura:
 - Aun así, cuatro vueltas siguen siendo una muestra pequeña y T1 tuvo una V4 especialmente buena; no conviene retocar la física con solo dos tiers.
 - T3 debe aclarar si aparece una progresión real o si la curva de Suspensión está demasiado plana/irregular en el Flash.
 
+### Advertencia de interpretación — T2
+- El piloto informa de que durante esta tanda estaba luchando activamente contra varios latigazos del coche y tratando de reducirlos.
+- Esas correcciones pueden haber penalizado de forma material los tiempos y la media útil de T2.
+- Por tanto, esta tanda no debe usarse como evidencia suficiente de que T2 sea físicamente peor que T1.
+- Antes de sacar conclusiones sobre la progresión de Suspensión, hay que comprobar si los latigazos persisten, si forman parte del comportamiento de la pieza o si fueron un problema puntual de conducción/estado del coche.
+- La próxima prueba T3 se mantiene, pero su prioridad pasa a ser observar también la estabilidad y la presencia de latigazos, no solo el crono.
+
 ## Tabla viva — Suspensión
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
@@ -99,3 +106,4 @@ Lectura:
 - Pieza: Suspensión T3 / Racing
 - Resto de familias: sin equipar
 - Serie: 4 vueltas
+- Observación prioritaria: comprobar si aparecen latigazos y cuánto condicionan la trazada/las correcciones.
