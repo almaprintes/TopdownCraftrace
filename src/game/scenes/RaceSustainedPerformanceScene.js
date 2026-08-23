@@ -89,16 +89,47 @@ export class RaceScene extends CurrentRaceScene {
         }
       }
 
-      // Diagnóstico ligero: solo aparece cuando MOSTRAR FPS está activado.
-      // Nos permite separar CPU/update de una caída de frame pacing/GPU y ver
-      // si objetos/chunks siguen creciendo con las vueltas.
       this._perfDiagEnabled=!!prefs.showFPS;
       this._perfUpdateAccum=0;
       this._perfUpdateMax=0;
       this._perfSamples=0;
       this._perfFrameMax=0;
       this._perfDiagAt=performance.now();
+      this._perfHotName='--';
+      this._perfHotMs=0;
+
       if(this._perfDiagEnabled){
+        const wrapHot=(method,label)=>{
+          const original=this[method];
+          if(typeof original!=='function' || original.__tdrPerfWrapped)return;
+          const bound=original.bind(this);
+          const wrapped=(...args)=>{
+            const t0=performance.now();
+            const out=bound(...args);
+            const ms=performance.now()-t0;
+            if(ms>this._perfHotMs){
+              this._perfHotMs=ms;
+              this._perfHotName=label;
+            }
+            return out;
+          };
+          wrapped.__tdrPerfWrapped=true;
+          this[method]=wrapped;
+        };
+
+        for(const [method,label] of [
+          ['_computeLapProgress01','lapProg'],
+          ['_computeCenterlineProjection','projection'],
+          ['_getNearestTrackPoint','nearest'],
+          ['_isOnTrack','onTrack'],
+          ['_isInBand','band'],
+          ['_updateProceduralAudio','audio'],
+          ['_discoverFixedHud','hudDiscover'],
+          ['_pinHudToScreen','hudPin'],
+          ['_updateRaceInfoHud','hudInfo'],
+          ['_syncCompetitionHud','hudComp']
+        ]) wrapHot(method,label);
+
         this._perfDiagText=this.add.text(10,42,'PERF --',{
           fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',
           fontSize:'10px',fontStyle:'bold',color:'#d8e8ff',
@@ -106,6 +137,13 @@ export class RaceScene extends CurrentRaceScene {
         }).setScrollFactor(0).setDepth(5001);
         try{this.cameras.main.ignore(this._perfDiagText);}catch{}
       }
+
+      // El debug amarillo legado puede crearse de forma diferida en algunas capas.
+      // Lo ocultamos después del arranque sin mantener ningún trabajo por frame.
+      this.time?.delayedCall?.(1200,()=>{
+        try{if(this._dbgText?.scene)this._dbgText.setVisible(false);}catch{}
+        try{this._dbgSet=()=>{};}catch{}
+      });
     } catch (err) {
       console.warn('[TDR2] sustained performance setup failed', err);
     }
@@ -134,12 +172,15 @@ export class RaceScene extends CurrentRaceScene {
         this._perfDiagText?.setText(
           `L${lap} UP ${avg.toFixed(1)} ms  MAX ${this._perfUpdateMax.toFixed(1)}\n`+
           `FRAME MAX ${this._perfFrameMax.toFixed(1)} ms\n`+
+          `HOT ${this._perfHotName} ${this._perfHotMs.toFixed(1)} ms\n`+
           `OBJ ${objs}  CHUNK ${active}/${made}`
         );
         this._perfUpdateAccum=0;
         this._perfUpdateMax=0;
         this._perfSamples=0;
         this._perfFrameMax=0;
+        this._perfHotName='--';
+        this._perfHotMs=0;
         this._perfDiagAt=now;
       }
     }
