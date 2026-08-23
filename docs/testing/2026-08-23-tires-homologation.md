@@ -127,7 +127,9 @@ Lectura:
 - V2 (40.535) y V4 (40.930) muestran que hay ritmo mejor que T2 pese a una tanda muy contaminada por salidas de pista.
 - El dato de 20.9 s fuera de pista invalida la velocidad media como comparador fino de esta sesión, pero no invalida la mejor vuelta ni la mejora de la media útil V2–V4.
 - La familia sigue expresando el comportamiento esperado de Neumáticos: más paso por curva/agarre sin alterar la potencia.
-- T4 debe cerrar la secuencia; si el salto aparece con claridad, la curva podrá considerarse funcional aunque Karting Tenerife no sea el circuito ideal para medir grip puro.
+- Sensación del piloto tras la tanda: el Torque gira tan rápido que se vuelve difícil de controlar y tiende a salirse por el interior de la curva. Esto indica que la ganancia de grip/capacidad de giro de T3 puede estar superando el punto útil en un coche que ya parte con mucho agarre y control.
+- Esta observación cualitativa es crítica: una mejora no se considera bien balanceada si baja el crono a costa de volver el coche artificialmente nervioso o de obligar a corregir por exceso de giro.
+- T4 debe probarse como diagnóstico, pero no se congelará la curva de Neumáticos solo por tiempo; habrá que evaluar especialmente si aumenta aún más esta tendencia a cerrar demasiado la trazada.
 
 ## Tabla viva — Neumáticos
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
@@ -144,3 +146,4 @@ Lectura:
 - Pieza: Neumáticos T4 / Prototype
 - Resto de familias: sin equipar
 - Serie: 4 vueltas
+- Observación prioritaria: comprobar si el exceso de capacidad de giro empeora respecto a T3, especialmente tendencia a cerrar demasiado la curva y salirse por el interior.
