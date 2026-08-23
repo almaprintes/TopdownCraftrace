@@ -45,15 +45,49 @@ export class RaceScene extends CurrentRaceScene {
       }
 
       if (typeof this._updateRaceInfoHud === 'function') {
-        const updateInfo = this._updateRaceInfoHud.bind(this);
         let lastInfo = -Infinity;
-        updateInfo();
+        const cache={speed:null,gear:null,surface:null};
         this._updateRaceInfoHud = () => {
           const now = performance.now();
           if (now - lastInfo < 50) return;
           lastInfo = now;
-          updateInfo();
+
+          const c=this.raceInfoHud;
+          const body=this.carBody;
+          if(!c?.scene || !body?.body?.velocity)return;
+
+          const vx=Number(body.body.velocity.x||0);
+          const vy=Number(body.body.velocity.y||0);
+          const kmh=Math.max(0,Math.hypot(vx,vy)*0.185);
+          const speedTxt=String(Math.round(kmh)).padStart(3,'0');
+          if(speedTxt!==cache.speed){
+            cache.speed=speedTxt;
+            c._speedText?.setText(speedTxt);
+          }
+
+          const rot=Number(body.rotation||0);
+          const forwardSpeed=vx*Math.cos(rot)+vy*Math.sin(rot);
+          let gear='N';
+          if(forwardSpeed < -3) gear='R';
+          else if(kmh>=3 && kmh<35) gear='1';
+          else if(kmh<65) gear=kmh>=3?'2':'N';
+          else if(kmh<95) gear='3';
+          else if(kmh<125) gear='4';
+          else gear='5';
+          if(gear!==cache.gear){
+            cache.gear=gear;
+            c._gearText?.setText(gear);
+          }
+
+          const surf=this._surface||'TRACK';
+          if(surf!==cache.surface){
+            cache.surface=surf;
+            if(surf==='GRASS') c._surfaceText?.setText('CÉSPED').setColor('#FFD56A');
+            else if(surf==='OFF') c._surfaceText?.setText('FUERA').setColor('#FF7373');
+            else c._surfaceText?.setText('PISTA').setColor('#70FFB0');
+          }
         };
+        this._updateRaceInfoHud();
       }
 
       if(typeof this._syncCompetitionHud==='function'){
