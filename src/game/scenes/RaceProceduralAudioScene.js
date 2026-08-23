@@ -54,6 +54,8 @@ export class RaceScene extends CurrentRaceScene{
     this._audioShiftUntil=0;
     this._audioLastImpactAt=0;
     this._audioReady=false;
+    this._audioPrefs=audioPrefs();
+    this._audioUpdateAccum=0;
     this._audioUnlock=()=>this._ensureProceduralAudio();
     window.addEventListener('pointerdown',this._audioUnlock,{passive:true});
     window.addEventListener('touchstart',this._audioUnlock,{passive:true});
@@ -82,7 +84,7 @@ export class RaceScene extends CurrentRaceScene{
       engineBus.connect(engineFilter).connect(master);
 
       const id=String(this.carId||'car');
-      const prefs=audioPrefs();
+      const prefs=this._audioPrefs||audioPrefs();
       const seed=profileSeed(id,prefs.profile);
       const osc1=ctx.createOscillator(),osc2=ctx.createOscillator(),osc3=ctx.createOscillator();
       osc1.type=seed>.66?'sawtooth':seed>.33?'square':'triangle';
@@ -118,8 +120,9 @@ export class RaceScene extends CurrentRaceScene{
   _updateProceduralAudio(delta){
     if(!this._audioReady){this._ensureProceduralAudio();return;}
     const ctx=this._audioCtx,a=this._audio;if(!ctx||!a)return;
-    const prefs=audioPrefs();
+    const prefs=this._audioPrefs||{master:1,engine:1,effects:.45,impacts:.8,mute:false};
     const now=ctx.currentTime;
+    const perfNow=performance.now();
     const body=this.carBody?.body;
     const vx=Number(body?.velocity?.x||0),vy=Number(body?.velocity?.y||0);
     const speed=Math.hypot(vx,vy);
@@ -129,10 +132,10 @@ export class RaceScene extends CurrentRaceScene{
 
     const shiftPoint=.52;
     const gear=speed01<shiftPoint?1:2;
-    if(gear!==this._audioGear&&speed>35){this._audioGear=gear;this._audioShiftUntil=performance.now()+155;}
+    if(gear!==this._audioGear&&speed>35){this._audioGear=gear;this._audioShiftUntil=perfNow+155;}
     const inGear=gear===1?clamp(speed01/shiftPoint,0,1):clamp((speed01-shiftPoint)/(1-shiftPoint),0,1);
     let rpm01=.22+inGear*.70+throttle*.10;
-    if(performance.now()<this._audioShiftUntil)rpm01*=.66;
+    if(perfNow<this._audioShiftUntil)rpm01*=.66;
 
     const seed=a.seed;
     const baseHz=42+seed*18;
@@ -147,13 +150,12 @@ export class RaceScene extends CurrentRaceScene{
     const windLevel=Math.pow(clamp(speed01,0,1),1.7)*.018*prefs.effects;
     a.windFilter.frequency.setTargetAtTime(850+speed01*1700,now,.12);
     a.windGain.gain.setTargetAtTime(windLevel,now,.09);
-
     a.master.gain.setTargetAtTime(prefs.mute?0:prefs.master*.78,now,.04);
 
-    const dt=Math.max(.001,Number(delta||16.7)/1000);
+    const dt=Math.max(.001,Number(delta||33.3)/1000);
     const decel=(this._audioPrevSpeed-speed)/dt;
-    if(speed>80&&decel>520&&performance.now()-this._audioLastImpactAt>180){
-      this._audioLastImpactAt=performance.now();
+    if(speed>80&&decel>520&&perfNow-this._audioLastImpactAt>180){
+      this._audioLastImpactAt=perfNow;
       this._impactSound(clamp((decel-520)/1200,.18,1),prefs.impacts);
     }
     this._audioPrevSpeed=speed;
@@ -168,11 +170,16 @@ export class RaceScene extends CurrentRaceScene{
     try{this._audio?.osc2?.stop?.();}catch{}
     try{this._audio?.osc3?.stop?.();}catch{}
     try{this._audioCtx?.close?.();}catch{}
-    this._audio=null;this._audioCtx=null;this._audioReady=false;
+    this._audio=null;this._audioCtx=null;this._audioReady=false;this._audioPrefs=null;
   }
 
   update(time,delta){
     super.update(time,delta);
-    this._updateProceduralAudio(delta);
+    this._audioUpdateAccum+=Number(delta||0);
+    if(this._audioUpdateAccum>=33){
+      const dt=this._audioUpdateAccum;
+      this._audioUpdateAccum=0;
+      this._updateProceduralAudio(dt);
+    }
   }
 }
