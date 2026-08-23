@@ -42,9 +42,15 @@ export class OrientationOverlay {
     this._blocked = shouldBlock;
     this._root.setVisible(shouldBlock);
 
-    // Always synchronise input/physics. The previous implementation only did this
-    // when the boolean changed, so a newly-created landscape scene could inherit
-    // disabled input and look normal while every button was dead.
+    // The full-screen dimmer must only participate in input while the overlay is visible.
+    // A hidden interactive rectangle can otherwise sit above the scene and swallow every tap.
+    if (shouldBlock) {
+      if (!this._dim.input) this._dim.setInteractive();
+      else this._dim.input.enabled = true;
+    } else if (this._dim.input) {
+      this._dim.input.enabled = false;
+    }
+
     if (scene.input) scene.input.enabled = !shouldBlock;
     if (scene.physics?.world) scene.physics.world.isPaused = shouldBlock;
   }
@@ -53,7 +59,7 @@ export class OrientationOverlay {
     const scene = this.scene;
     if (!scene) return;
     scene.scale.off('resize', this._onResize);
-    // Never leave the scene/input plugin disabled after this overlay disappears.
+    if (this._dim?.input) this._dim.input.enabled = false;
     if (scene.input) scene.input.enabled = true;
     if (scene.physics?.world) scene.physics.world.isPaused = false;
     this._root?.destroy(true);
