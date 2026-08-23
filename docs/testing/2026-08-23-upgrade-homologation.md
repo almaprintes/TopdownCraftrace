@@ -51,9 +51,47 @@ Lectura:
 - V2–V4 son muy consistentes y sirven como referencia principal para comparar Motor T1.
 - Karting Tenerife resulta adecuado para medir potencia/aceleración porque esta tanda se hizo sin frenar y con 88% de gas.
 
+### Tanda B — MOTOR T1 / STREET
+Fecha: 2026-08-23
+Coche: VELOCE Flash
+Circuito: Karting Tenerife
+Piezas: Motor T1 / Street; resto sin equipar
+Vueltas: 4
+
+Resultados:
+- V1: 41.982 s
+- V2: 45.591 s — vuelta contaminada por S2 de 18.317 s
+- V3: 41.519 s
+- V4: 40.854 s
+- Mejor: 40.854 s
+- Media de sesión: 42.486 s
+- Media útil limpia V1/V3/V4: 41.452 s
+- Punta: 69 km/h
+- Velocidad media: 60 km/h
+- Consistencia σ: 1.84 s
+- Salidas de pista: 11, total 4.6 s
+- Gas: 88%
+- Coasting: 11%
+- Freno: 1%
+- Frenadas: 1
+- Frenada más larga: 1.23 s
+
+Comparación frente a STOCK:
+- Mejor vuelta: 41.427 → 40.854 = mejora de 0.573 s (1.38%).
+- Media útil: 41.655 → 41.452 = mejora de 0.203 s (0.49%).
+- Punta: 68 → 69 km/h = +1 km/h.
+- Velocidad media: 59 → 60 km/h = +1 km/h.
+- La media bruta de sesión empeora por la V2 contaminada, por lo que no representa el potencial real de T1.
+
+Lectura:
+- Motor T1 produce una mejora real y medible en punta y tiempo.
+- El salto es pequeño, apropiado para T1, pero perceptible: la mejor vuelta gana más de medio segundo.
+- La dispersión de esta tanda obliga a seguir usando media de vueltas limpias además de la mejor vuelta.
+- No se detecta aún un salto excesivo; se puede avanzar a T2 sin ajustar física.
+
 ### Próxima tanda
 - Coche: VELOCE Flash
 - Circuito: Karting Tenerife
-- Pieza: Motor T1 / Street
+- Pieza: Motor T2 / Sport
 - Resto de familias: sin equipar
 - Serie: 4 vueltas
