@@ -44,7 +44,7 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const pw=Math.min(width-28,compact?820:900),ph=Math.min(height-22,compact?310:390),x=cx-pw/2,y=cy-ph/2;
     A(this.add.rectangle(x,y,pw,ph,0x08131d,.998).setOrigin(0).setStrokeStyle(2,0x45dfff,.95));
     A(this.add.text(cx,y+(compact?15:21),`PIEZAS · ${FAMILY_LABEL[family]}`,{fontFamily:UI,fontSize:compact?'19px':'25px',fontStyle:'800',color:'#fff'}).setOrigin(.5,0));
-    A(this.add.text(cx,y+(compact?42:55),'TOCA UNA PIEZA PARA INSTALARLA',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8da8bd'}).setOrigin(.5,0));
+    A(this.add.text(cx,y+(compact?42:55),'INSTALA O DESINSTALA CON UN TOQUE',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8da8bd'}).setOrigin(.5,0));
 
     const close=()=>{try{root.destroy(true);}catch{}if(this._quickFamilyModal===root)this._quickFamilyModal=null;this.render();};
     const closeX=x+pw-(compact?20:26),closeY=y+(compact?20:26);
@@ -72,9 +72,12 @@ export class UpgradeShopScene extends PreviousWorkshop {
       if(!loaded)A(this.add.text(bx+cardW/2,by+cardH*.36,item?.icon||'◆',{fontFamily:UI,fontSize:compact?'38px':'52px',color:'#fff'}).setOrigin(.5));
       A(this.add.text(bx+cardW/2,by+cardH*.67,String(item?.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#9aa7b0':'#fff',align:'center',wordWrap:{width:cardW-14}}).setOrigin(.5,0));
       A(this.add.text(bx+cardW/2,by+cardH*.79,`NIVEL ${tier}`,{fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'800',color:'#a9bbca'}).setOrigin(.5));
-      const action=installed?'INSTALADA':`INSTALAR · ×${q}`;
-      A(this.add.text(bx+cardW/2,by+cardH-(compact?10:13),action,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#71e7a2':'#7ddcff'}).setOrigin(.5,1));
-      if(!installed&&q>0){
+      const action=installed?'DESINSTALAR':`INSTALAR · ×${q}`;
+      A(this.add.text(bx+cardW/2,by+cardH-(compact?10:13),action,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#ffcf63':'#7ddcff'}).setOrigin(.5,1));
+      if(installed){
+        card.setInteractive({useHandCursor:true});
+        card.on('pointerup',()=>{if(this._unequipFromInventory?.(id))close();});
+      }else if(q>0){
         card.setInteractive({useHandCursor:true});
         card.on('pointerup',()=>{if(this._installFromInventory?.(id))close();});
       }
