@@ -17,14 +17,12 @@ export class AdminHubScene extends BaseScene {
   }
 
   _navigate(key,data){
+    try{sessionStorage.setItem('tdr2:adminInputProbe','1');}catch{}
     const root=this._adminDomRoot;
     if(root){
       root.style.pointerEvents='none';
       root.style.visibility='hidden';
     }
-    // Let the browser finish the DOM click/touch before destroying the element
-    // that received it. This avoids iOS leaving the following Phaser scene with
-    // a stale gesture/capture state.
     requestAnimationFrame(()=>{
       this._removeAdminDom();
       setTimeout(()=>{
