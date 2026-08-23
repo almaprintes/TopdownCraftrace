@@ -17,7 +17,25 @@ export function getEquippedForCar(s,carId=selectedCarId()){const own=s?.equipped
 export function equip(s,id,carId=selectedCarId()){const item=GARAGE_ITEMS[id];if(!item?.family||qty(s,id)<1)return false;if(!s.equippedByCar||typeof s.equippedByCar!=='object')s.equippedByCar={};if(!s.equippedByCar[carId])s.equippedByCar[carId]={...getEquippedForCar(s,carId)};s.equippedByCar[carId][item.family]=id;saveGarage(s);return true;}
 export function garageTuning(s,carId=selectedCarId()){const out={accelMult:1,brakeMult:1,dragMult:1,turnRateMult:1,maxFwdAdd:0,maxRevAdd:0,turnMinAdd:0,gripCoastAdd:0,gripDriveAdd:0,gripBrakeAdd:0};for(const id of Object.values(getEquippedForCar(s,carId)||{})){const t=tuningForPart(GARAGE_ITEMS[id]);for(const[k,v]of Object.entries(t)){if(k.endsWith('Mult'))out[k]*=v;else out[k]+=v;}}return out;}
 const clamp99=n=>Math.max(1,Math.min(99,Math.round(n)));
-function baseDisplayStats(spec){if(spec?.designStats){const d=spec.designStats;return{speed:clamp99(d.VEL??55),accel:clamp99(d.ACC??55),grip:clamp99(((d.EST??55)+(d.GIR??55))/2),control:clamp99(((d.GIR??55)+(d.FRN??55))/2)};}return{speed:clamp99(((Number(spec?.maxFwd)||520)-400)/3.2+45),accel:clamp99(((Number(spec?.accel)||650)-500)/5+45),grip:clamp99(((Number(spec?.gripCoast)||.23)-.16)*260+50),control:clamp99(((Number(spec?.turnRate)||3.4)-2.7)*28+50)};}
+const STOCK_DISPLAY_SCALE=.75;
+const stockDisplay=n=>clamp99(Number(n||0)*STOCK_DISPLAY_SCALE);
+function baseDisplayStats(spec){
+  if(spec?.designStats){
+    const d=spec.designStats;
+    return{
+      speed:stockDisplay(d.VEL??55),
+      accel:stockDisplay(d.ACC??55),
+      grip:stockDisplay(((d.EST??55)+(d.GIR??55))/2),
+      control:stockDisplay(((d.GIR??55)+(d.FRN??55))/2)
+    };
+  }
+  return{
+    speed:stockDisplay(((Number(spec?.maxFwd)||520)-400)/3.2+45),
+    accel:stockDisplay(((Number(spec?.accel)||650)-500)/5+45),
+    grip:stockDisplay(((Number(spec?.gripCoast)||.23)-.16)*260+50),
+    control:stockDisplay(((Number(spec?.turnRate)||3.4)-2.7)*28+50)
+  };
+}
 export function garageDisplayStats(spec,s,carId=selectedCarId(),replacementPartId=null){const out=baseDisplayStats(spec),eq={...(getEquippedForCar(s,carId)||{})},replacement=GARAGE_ITEMS[replacementPartId];if(replacement?.kind==='part'&&replacement.family)eq[replacement.family]=replacement.id;for(const id of Object.values(eq)){const d=statDeltaForPart(GARAGE_ITEMS[id]);out.speed+=d.speed;out.accel+=d.accel;out.grip+=d.grip;out.control+=d.control;}return{speed:clamp99(out.speed),accel:clamp99(out.accel),grip:clamp99(out.grip),control:clamp99(out.control)};}
 
 // Economy 2.0 material drops. Targets are long-run draw shares, not rigid per-roll percentages.
