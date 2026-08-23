@@ -78,25 +78,18 @@ Comparación frente a STOCK:
 - Media útil: 41.655 → 41.979 = 0.324 s peor.
 - Punta: 68 → 67 km/h = -1 km/h observado, sin atribuirlo a la pieza.
 
-Lectura:
-- T2 no confirma la progresión observada en T1: tanto mejor vuelta como media útil son peores que T1.
-- La tanda es razonablemente limpia (6 salidas, 1.8 s) y la dispersión no es extrema, así que el resultado no puede descartarse solo por una vuelta claramente contaminada.
-- Aun así, cuatro vueltas siguen siendo una muestra pequeña y T1 tuvo una V4 especialmente buena; no conviene retocar la física con solo dos tiers.
-- T3 debe aclarar si aparece una progresión real o si la curva de Suspensión está demasiado plana/irregular en el Flash.
-
-### Advertencia de interpretación — T2
+Advertencia de interpretación:
 - El piloto informa de que durante esta tanda estaba luchando activamente contra varios latigazos del coche y tratando de reducirlos.
-- Esas correcciones pueden haber penalizado de forma material los tiempos y la media útil de T2.
-- Por tanto, esta tanda no debe usarse como evidencia suficiente de que T2 sea físicamente peor que T1.
-- Antes de sacar conclusiones sobre la progresión de Suspensión, hay que comprobar si los latigazos persisten, si forman parte del comportamiento de la pieza o si fueron un problema puntual de conducción/estado del coche.
-- La próxima prueba T3 se mantiene, pero su prioridad pasa a ser observar también la estabilidad y la presencia de latigazos, no solo el crono.
+- Esas correcciones pueden haber penalizado de forma material los tiempos y la media útil.
+- Esta tanda no debe usarse por sí sola como evidencia de que T2 sea peor que T1.
 
-## Tanda C — SUSPENSIÓN T3 / RACING
+## Repetición de control — SUSPENSIÓN T2 / SPORT
 Fecha: 2026-08-23
 Coche: VELOCE Flash
 Circuito: Karting Tenerife
-Piezas: Suspensión T3 / Racing; resto sin equipar
+Piezas: Suspensión T2 / Sport; resto sin equipar
 Vueltas: 4
+Motivo: repetir T2 después de la tanda anterior para reducir el efecto de los latigazos y obtener una referencia más representativa.
 
 Resultados:
 - V1: 43.209 s
@@ -115,37 +108,41 @@ Resultados:
 - Freno: 0%
 - Frenadas: 0
 
-Comparación frente a T2:
-- Mejor vuelta: 41.405 → 41.374 = mejora mínima de 0.031 s.
+Comparación frente a la primera tanda T2:
+- Mejor vuelta: 41.405 → 41.374 = mejora de 0.031 s.
 - Media útil: 41.979 → 41.460 = mejora de 0.519 s.
-- Punta: 67 → 68 km/h = vuelve a la referencia stock; no atribuir a Suspensión.
-- La tanda tiene menos salidas de pista (5) y un tiempo total fuera de pista similar (1.9 s), por lo que el ritmo útil es más representativo que en T2.
+- Punta: 67 → 68 km/h.
+- V2–V4 quedan agrupadas entre 41.374 y 41.585, mostrando un ritmo útil bastante más sólido que en la primera tanda.
 
 Comparación frente a T1:
-- Mejor vuelta: 40.877 → 41.374 = T3 es 0.497 s más lento.
-- Media útil: 41.410 → 41.460 = T3 es solo 0.050 s más lento; prácticamente empatados en ritmo útil.
+- Mejor vuelta: 40.877 → 41.374 = la repetición de T2 es 0.497 s más lenta.
+- Media útil: 41.410 → 41.460 = diferencia de solo 0.050 s; prácticamente empatadas en ritmo útil.
 
 Comparación frente a STOCK:
-- Mejor vuelta: 41.427 → 41.374 = mejora de 0.053 s; prácticamente neutro.
+- Mejor vuelta: 41.427 → 41.374 = mejora de 0.053 s; prácticamente neutra.
 - Media útil: 41.655 → 41.460 = mejora de 0.195 s.
 - Punta: 68 → 68 km/h = sin cambio.
 
-Lectura:
-- T3 recupera claramente la media útil respecto a T2, lo que encaja con la posibilidad de que los latigazos/correcciones penalizaran la tanda anterior.
-- Sin embargo, la secuencia aún no muestra una progresión cronológica limpia por tiers: T1 conserva el mejor crono y T1/T3 están prácticamente empatados en media útil.
-- La V1 de T3 (43.209) eleva la dispersión de la sesión; V2–V4 quedan agrupadas entre 41.374 y 41.585.
-- No hay evidencia suficiente para retocar la curva todavía sin conocer la sensación de estabilidad de T3.
-- La prioridad es confirmar si los latigazos persistieron en T3 y si aumentan con el tier; esa información decidirá si T4 debe probarse como cierre o si hay que investigar antes el comportamiento de Suspensión.
+Lectura corregida:
+- Esta sesión NO corresponde a T3. Es una repetición de T2.
+- La repetición mejora claramente la media útil respecto a la primera tanda T2 y respalda que los latigazos/correcciones penalizaron la primera medición.
+- T1 sigue conservando el mejor crono aislado, pero T1 y T2 repetida están prácticamente empatadas en media útil.
+- Todavía no existe ningún dato de Suspensión T3; por tanto no se puede evaluar la progresión T2→T3 hasta realizar esa tanda.
 
 ## Tabla viva — Suspensión
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
 | Stock | 41.427 s | 41.655 s | 68 km/h | — |
 | Suspensión T1 · Street | 40.877 s | 41.410 s | 67 km/h | -0.550 s |
-| Suspensión T2 · Sport | 41.405 s | 41.979 s | 67 km/h | -0.022 s |
-| Suspensión T3 · Racing | 41.374 s | 41.460 s | 68 km/h | -0.053 s |
+| Suspensión T2 · Sport (1ª tanda, latigazos) | 41.405 s | 41.979 s | 67 km/h | -0.022 s |
+| Suspensión T2 · Sport (repetición) | 41.374 s | 41.460 s | 68 km/h | -0.053 s |
+| Suspensión T3 · Racing | — | — | — | — |
 | Suspensión T4 · Prototype | — | — | — | — |
 
-### Próxima decisión
-- No pasar automáticamente a T4 hasta valorar la sensación del piloto en T3.
-- Observación prioritaria: confirmar presencia, intensidad y momento de los latigazos en T3.
+### Próxima tanda
+- Coche: VELOCE Flash
+- Circuito: Karting Tenerife
+- Pieza: Suspensión T3 / Racing
+- Resto de familias: sin equipar
+- Serie: 4 vueltas
+- Observación prioritaria: comprobar si los latigazos persisten, aumentan o disminuyen respecto a T2, además del crono.
