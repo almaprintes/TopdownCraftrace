@@ -7,6 +7,14 @@ export class RaceScene extends CompetitionRaceScene {
   create() {
     super.create();
 
+    // La caja _dbgText es una herramienta histórica de desarrollo. En carrera
+    // normal no debe aparecer aunque alguna comprobación interna encuentre un
+    // asset __MISSING. Dejamos la consola disponible pero retiramos el HUD.
+    try {
+      if (this._dbgText?.scene) this._dbgText.setVisible(false);
+      this._dbgSet = () => {};
+    } catch {}
+
     try {
       const main = this.cameras?.main;
       if (!main) return;
@@ -197,16 +205,13 @@ export class RaceScene extends CompetitionRaceScene {
         const body = this.carBody || this.car;
         if (!m?.scene || !tr || !body) return;
 
-        let px = Number(body.x);
-        let py = Number(body.y);
-
-        if (typeof this._computeCenterlineProjection === 'function') {
-          const proj = this._computeCenterlineProjection(px, py);
-          if (Number.isFinite(proj?.x) && Number.isFinite(proj?.y)) {
-            px = proj.x;
-            py = proj.y;
-          }
-        }
+        // El marcador comparte el mismo transform mundo -> minimapa, así que la
+        // posición real del coche ya es suficiente. Antes proyectábamos contra
+        // TODOS los segmentos de la centerline en cada frame, creando picos de
+        // CPU/frame-time aunque el FPS medio pareciera razonable.
+        const px = Number(body.x);
+        const py = Number(body.y);
+        if (!Number.isFinite(px) || !Number.isFinite(py)) return;
 
         const x = tr.ox + px * tr.fitScale;
         const y = tr.oy + py * tr.fitScale;
