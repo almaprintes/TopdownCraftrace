@@ -179,20 +179,62 @@ Lectura:
 - El piloto indica que ya los está controlando mejor; siguen condicionando la conducción, pero no dominan la tanda como en la primera prueba de T2.
 - Esto permite continuar a T4 como diagnóstico, vigilando si el último tier aumenta de forma brusca la reactividad o si mantiene los latigazos en un nivel gestionable.
 
+## Tanda D — SUSPENSIÓN T4 / PROTOTYPE
+Fecha: 2026-08-23
+Coche: VELOCE Flash
+Circuito: Karting Tenerife
+Piezas: Suspensión T4 / Prototype; resto sin equipar
+Vueltas: 4
+
+Resultados:
+- V1: 41.346 s
+- V2: 41.088 s
+- V3: 43.413 s
+- V4: 41.736 s
+- Mejor: 41.088 s
+- Media de sesión: 41.895 s
+- Media útil V2–V4: 42.079 s
+- Media representativa V1/V2/V4 (excluyendo V3 anómala): 41.390 s
+- Punta: 67 km/h
+- Velocidad media: 61 km/h
+- Consistencia σ: 0.91 s
+- Salidas de pista: 6, total 1.6 s
+- Gas: 92%
+- Coasting: 8%
+- Freno: 0%
+- Frenadas: 0
+
+Comparación frente a T3:
+- Mejor vuelta: 41.407 → 41.088 = mejora de 0.319 s (0.77%).
+- Media útil estándar: 41.444 → 42.079 = empeora 0.635 s, pero queda fuertemente contaminada por V3 (43.413).
+- Media representativa sin V3 anómala: 41.390 s, 0.054 s mejor que la media útil T3; diferencia pequeña.
+- Punta: 68 → 67 km/h = -1 km/h observado, sin atribuirlo a Suspensión.
+- Consistencia: σ 0.34 → 0.91 s = T4 fue bastante más dispersa en esta muestra.
+
+Comparación frente a STOCK:
+- Mejor vuelta: 41.427 → 41.088 = mejora de 0.339 s (0.82%).
+- Media representativa sin V3 anómala: 41.390 s frente a 41.655 s stock = mejora de 0.265 s.
+
+Lectura:
+- T4 sí eleva el techo de rendimiento respecto a T3: mejora el mejor crono en 0.319 s.
+- No aparece una mejora equivalente en consistencia; al contrario, la tanda es más dispersa y contiene una V3 claramente anómala.
+- V1 y V2 son dos vueltas sólidas consecutivas (41.346 / 41.088), por lo que el mejor crono no parece un único accidente aislado.
+- El resultado encaja con el criterio de que T4 amplíe potencial sin convertir automáticamente el coche en más fácil.
+- Aun así, la progresión T1→T3 sigue muy comprimida en Flash/Karting, por lo que no conviene declarar cerrada la curva global de Suspensión únicamente por esta tanda.
+- Falta la sensación del piloto sobre si los latigazos aumentaron, se mantuvieron o disminuyeron con T4.
+
 ## Tabla viva — Suspensión
-| Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
+| Configuración | Mejor vuelta | Media útil / representativa | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
 | Stock | 41.427 s | 41.655 s | 68 km/h | — |
 | Suspensión T1 · Street | 40.877 s | 41.410 s | 67 km/h | -0.550 s |
 | Suspensión T2 · Sport (1ª tanda, latigazos) | 41.405 s | 41.979 s | 67 km/h | -0.022 s |
 | Suspensión T2 · Sport (repetición) | 41.374 s | 41.460 s | 68 km/h | -0.053 s |
 | Suspensión T3 · Racing | 41.407 s | 41.444 s | 68 km/h | -0.020 s |
-| Suspensión T4 · Prototype | — | — | — | — |
+| Suspensión T4 · Prototype | 41.088 s | 41.390 s* | 67 km/h | -0.339 s |
 
-### Próxima tanda
-- Coche: VELOCE Flash
-- Circuito: Karting Tenerife
-- Pieza: Suspensión T4 / Prototype
-- Resto de familias: sin equipar
-- Serie: 4 vueltas
-- Observación prioritaria: comprobar si T4 intensifica los latigazos o si el mayor control permite aprovechar el extra de respuesta sin volver el coche artificialmente nervioso.
+\* T4 usa media representativa V1/V2/V4 porque V3 (43.413) es anómala; la media útil estándar V2–V4 es 42.079 s.
+
+### Próxima decisión
+- No modificar física todavía.
+- Recoger sensación del piloto sobre los latigazos en T4 antes de decidir si Suspensión queda candidata a freeze o necesita contraste adicional.
