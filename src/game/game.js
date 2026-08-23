@@ -46,9 +46,9 @@ export function createGame(parentId='app'){
     parent:parentId,
     backgroundColor:'#0b1020',
     resolution,
-    // requestAnimationFrame no garantiza un techo real a 30 Hz en Safari/iOS.
-    // Para el modo 30 usamos el temporizador de Phaser, que sí limita el loop.
-    fps:{target:targetFps,min:20,forceSetTimeOut:targetFps===30},
+    // Mantener requestAnimationFrame: el temporizador forzado a 30 Hz introduce
+    // jitter perceptible en iOS y degrada el movimiento del coche.
+    fps:{target:targetFps,min:20,forceSetTimeOut:false},
     scene:[BootScene,MenuScene,MenuAliasScene,GarageScene,SettingsScene,GarageDetailScene,RaceScene,AdminHubScene,UpgradeShopScene,CarEditorScene,TrackGarageScene,TrackStudioScene,EnvironmentBuilderScene,TrackEditorScene],
     dom:{createContainer:true},
     scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},
