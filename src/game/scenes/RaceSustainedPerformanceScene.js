@@ -36,11 +36,18 @@ export class RaceScene extends CurrentRaceScene {
         };
       }
 
-      // El minimapa heredado queda oculto por RaceMinimapCenteredScene, que ya
-      // tiene su propio marcador world->map. Evitamos seguir proyectando el
-      // marcador antiguo contra toda la centerline en cada frame.
       if (this.minimapUnifiedPanel?.scene) {
+        // El minimapa heredado y el marco SPORT anterior están ocultos por el
+        // minimapa unificado. No deben seguir haciendo trabajo de cámara/proyección.
         this._pinMinimapMarker = () => {};
+        this._pinMinimapSportFrame = () => {};
+      }
+
+      // Los objetos de debug ya se ocultaron durante create; no recorrerlos en
+      // cada frame de una carrera normal.
+      if(typeof this._hideRaceDebugOnly==='function'){
+        this._hideRaceDebugOnly();
+        this._hideRaceDebugOnly=()=>{};
       }
 
       // Mantener la posición del HUD a frecuencia de frame, pero refrescar los
@@ -54,6 +61,21 @@ export class RaceScene extends CurrentRaceScene {
           if (now - lastInfo < 50) return;
           lastInfo = now;
           updateInfo();
+        };
+      }
+
+      // El HUD de competición actualiza textos, colores y sombras cuyos valores
+      // cambian por sectores/vueltas. 10 Hz es sobrado y evita regenerar Texts
+      // innecesariamente a frecuencia de render.
+      if(typeof this._syncCompetitionHud==='function'){
+        const syncCompetition=this._syncCompetitionHud.bind(this);
+        let lastCompetition=-Infinity;
+        syncCompetition();
+        this._syncCompetitionHud=()=>{
+          const now=performance.now();
+          if(now-lastCompetition<100)return;
+          lastCompetition=now;
+          syncCompetition();
         };
       }
 
