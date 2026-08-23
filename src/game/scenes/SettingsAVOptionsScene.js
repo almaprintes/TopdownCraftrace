@@ -24,6 +24,13 @@ export class SettingsScene extends CurrentSettingsScene {
     try{window.dispatchEvent(new CustomEvent(AUDIO_EVENT,{detail:{...(this.settings?.audio||{})}}));}catch{}
   }
 
+  _reloadForVideoChange(){
+    this._saveAll();
+    // FPS real, resolución interna y antialiasing pertenecen al Phaser.Game,
+    // no a esta escena. Un scene.restart() no puede reaplicar esos parámetros.
+    try{window.setTimeout(()=>window.location.reload(),50);}catch{this.scene.restart();}
+  }
+
   _label(x,y,text,size=12,color='#ffffff'){
     return this.add.text(x,y,text,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:`${size}px`,fontStyle:'bold',color});
   }
@@ -145,8 +152,8 @@ export class SettingsScene extends CurrentSettingsScene {
 
       if(sub==='performance'){
         this._label(x,bodyY,'FPS OBJETIVO',12);
-        this._pill(x,bodyY+24,140,38,'30 FPS',Number(v.targetFps)===30,()=>{v.targetFps=30;this._saveAll();this.scene.restart();});
-        this._pill(x+150,bodyY+24,140,38,'60 FPS',Number(v.targetFps)===60,()=>{v.targetFps=60;this._saveAll();this.scene.restart();});
+        this._pill(x,bodyY+24,140,38,'30 FPS',Number(v.targetFps)===30,()=>{v.targetFps=30;this._reloadForVideoChange();});
+        this._pill(x+150,bodyY+24,140,38,'60 FPS',Number(v.targetFps)===60,()=>{v.targetFps=60;this._reloadForVideoChange();});
 
         this._label(x,bodyY+88,'MOSTRAR FPS',11);
         this._switch(x,bodyY+108,!!v.showFPS,()=>{v.showFPS=!v.showFPS;this._saveAll();this.scene.restart();});
@@ -155,9 +162,9 @@ export class SettingsScene extends CurrentSettingsScene {
       } else {
         this._label(x,bodyY,'CALIDAD GRÁFICA',12);
         const bw=170;
-        [['low','BAJA'],['medium','MEDIA'],['high','ALTA']].forEach((q,i)=>this._pill(x+i*(bw+10),bodyY+24,bw,38,q[1],v.quality===q[0],()=>{v.quality=q[0];this._saveAll();this.scene.restart();}));
+        [['low','BAJA'],['medium','MEDIA'],['high','ALTA']].forEach((q,i)=>this._pill(x+i*(bw+10),bodyY+24,bw,38,q[1],v.quality===q[0],()=>{v.quality=q[0];this._reloadForVideoChange();}));
         this._label(x,bodyY+88,'ESCALA DE RENDER',12);
-        [['eco','AHORRO'],['normal','NORMAL'],['sharp','NÍTIDA']].forEach((r,i)=>this._pill(x+i*(bw+10),bodyY+112,bw,38,r[1],v.renderScale===r[0],()=>{v.renderScale=r[0];this._saveAll();this.scene.restart();}));
+        [['eco','AHORRO'],['normal','NORMAL'],['sharp','NÍTIDA']].forEach((r,i)=>this._pill(x+i*(bw+10),bodyY+112,bw,38,r[1],v.renderScale===r[0],()=>{v.renderScale=r[0];this._reloadForVideoChange();}));
       }
     }
 
