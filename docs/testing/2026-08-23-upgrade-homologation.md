@@ -175,9 +175,52 @@ Lectura:
 - La tanda es la más consistente de la secuencia hasta ahora, por lo que el rendimiento alrededor de 39 s parece estable y no fruto de una vuelta aislada.
 - La curva global empieza a verse razonable: T1 pequeño, T2 salto fuerte, T3 vuelve a un incremento más contenido. T4 decidirá si conviene redistribuir algo entre tiers.
 
-### Próxima tanda
-- Coche: VELOCE Flash
-- Circuito: Karting Tenerife
-- Pieza: Motor T4 / Prototype
-- Resto de familias: sin equipar
-- Serie: 4 vueltas
+### Tanda E — MOTOR T4 / PROTOTYPE
+Fecha: 2026-08-23
+Coche: VELOCE Flash
+Circuito: Karting Tenerife
+Piezas: Motor T4 / Prototype; resto sin equipar
+Vueltas: 4
+
+Resultados:
+- V1: 39.774 s
+- V2: 39.727 s
+- V3: 38.536 s
+- V4: 38.230 s
+- Mejor: 38.230 s
+- Media de sesión: 39.066 s
+- Media útil V2–V4: 38.831 s
+- Punta: 75 km/h
+- Velocidad media: 65 km/h
+- Consistencia σ: 0.69 s
+- Salidas de pista: 9, total 5.8 s
+- Gas: 88%
+- Coasting: 12%
+- Freno: 0%
+- Frenadas: 0
+
+Comparación frente a MOTOR T3:
+- Mejor vuelta: 39.022 → 38.230 = mejora de 0.792 s (2.03%).
+- Media útil: 39.553 → 38.831 = mejora de 0.722 s (1.83%).
+- Punta: 73 → 75 km/h = +2 km/h.
+- Velocidad media: 64 → 65 km/h = +1 km/h.
+- V3 y V4 (38.536 / 38.230) confirman que el rendimiento en 38 bajos es repetible.
+
+Comparación frente a STOCK:
+- Mejor vuelta: 41.427 → 38.230 = mejora acumulada de 3.197 s (7.72%).
+- Media útil: 41.655 → 38.831 = mejora acumulada de 2.824 s (6.78%).
+- Punta: 68 → 75 km/h = +7 km/h.
+- Velocidad media: 59 → 65 km/h = +6 km/h.
+
+Lectura final de Motor:
+- La familia Motor produce una progresión clara y medible en los cuatro tiers.
+- T4 se siente suficientemente superior: aporta otros 2 km/h de punta y casi 0.8 s de mejor vuelta frente a T3.
+- El salto T1 → T2 sigue siendo el más grande de la serie; T3 y T4 recuperan una progresión más controlada.
+- La mejora acumulada stock → T4 es importante (7.72% en mejor vuelta) sin convertir al Flash en un coche irreconocible.
+- Curva física candidata a congelar provisionalmente para Motor, pendiente de contraste posterior en otro coche representativo antes de declararla definitiva.
+
+### Próxima secuencia
+- Mantener VELOCE Flash y Karting Tenerife.
+- Siguiente familia a homologar: Transmisión.
+- Empezar por Transmisión T1 / Street con resto de familias sin equipar.
+- Serie: 4 vueltas.
