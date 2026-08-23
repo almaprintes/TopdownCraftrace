@@ -89,9 +89,52 @@ Lectura:
 - La dispersión de esta tanda obliga a seguir usando media de vueltas limpias además de la mejor vuelta.
 - No se detecta aún un salto excesivo; se puede avanzar a T2 sin ajustar física.
 
+### Tanda C — MOTOR T2 / SPORT
+Fecha: 2026-08-23
+Coche: VELOCE Flash
+Circuito: Karting Tenerife
+Piezas: Motor T2 / Sport; resto sin equipar
+Vueltas: 4
+
+Resultados:
+- V1: 42.387 s
+- V2: 41.632 s
+- V3: 39.650 s
+- V4: 39.489 s
+- Mejor: 39.489 s
+- Media de sesión: 40.789 s
+- Media útil V2–V4: 40.257 s
+- Media de las dos vueltas más representativas V3–V4: 39.570 s
+- Punta: 71 km/h
+- Velocidad media: 61 km/h
+- Consistencia σ: 1.25 s
+- Salidas de pista: 8, total 6.3 s
+- Gas: 88%
+- Coasting: 12%
+- Freno: 0%
+- Frenadas: 0
+
+Comparación frente a MOTOR T1:
+- Mejor vuelta: 40.854 → 39.489 = mejora de 1.365 s (3.34%).
+- Punta: 69 → 71 km/h = +2 km/h.
+- Velocidad media: 60 → 61 km/h = +1 km/h.
+- Las dos últimas vueltas quedan en 39.650 y 39.489, señal de que el ritmo inferior a 40 s es repetible y no una vuelta aislada.
+
+Comparación frente a STOCK:
+- Mejor vuelta: 41.427 → 39.489 = mejora acumulada de 1.938 s (4.68%).
+- Media útil V2–V4: 41.655 → 40.257 = mejora de 1.398 s (3.36%).
+- Punta: 68 → 71 km/h = +3 km/h.
+- Velocidad media: 59 → 61 km/h = +2 km/h.
+
+Lectura:
+- El Motor T2 produce un salto claramente perceptible respecto a T1 y stock.
+- La mejora se manifiesta tanto en punta como en ritmo de vuelta, sin necesidad de frenar en esta tanda.
+- V3 y V4 confirman una nueva meseta de rendimiento alrededor de 39.5 s.
+- El escalón T1 → T2 es sensiblemente mayor que STOCK → T1; de momento es aceptable, pero debe vigilarse al comparar con T3 y T4 para evitar una curva demasiado explosiva.
+
 ### Próxima tanda
 - Coche: VELOCE Flash
 - Circuito: Karting Tenerife
-- Pieza: Motor T2 / Sport
+- Pieza: Motor T3 / Racing
 - Resto de familias: sin equipar
 - Serie: 4 vueltas
