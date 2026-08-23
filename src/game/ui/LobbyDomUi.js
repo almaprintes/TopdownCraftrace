@@ -46,7 +46,7 @@ function hideLegacyLobbyControls(scene) {
   });
 }
 
-const escapeHtml = value => String(value ?? '').replace(/[&<>"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[ch]));
+const escapeHtml = value => String(value ?? '').replace(/[&<>\"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;' }[ch]));
 
 function loopLength(center) {
   if (!Array.isArray(center) || center.length < 2) return 0;
@@ -123,6 +123,7 @@ function renderDomCards(scene, root) {
   const carPreview = root.querySelector('[data-lobby-car]');
   if (carPreview) {
     const assetVersion = encodeURIComponent(spec.collectionNo || 1);
+    carPreview.decoding = 'async';
     carPreview.src = `${BASE}assets/cars/lobby/${encodeURIComponent(carId)}.webp?v=${assetVersion}`;
     carPreview.alt = params?.name || spec.name || carId;
   }
@@ -245,6 +246,15 @@ export function installLobbyDom(scene) {
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(name => brand.addEventListener(name, cancelAdmin));
 
     scene.events.once('shutdown', () => {
+      // Safari/iOS may retain decoded image memory after a DOM node is removed.
+      // Clear every image source first so lobby renders can be reclaimed before race.
+      try {
+        root.querySelectorAll('img').forEach(img => {
+          img.removeAttribute('src');
+          img.src = '';
+        });
+      } catch {}
+      try { root.replaceChildren(); } catch {}
       try { root.remove(); } catch {}
       if (scene._lobbyDomRoot === root) scene._lobbyDomRoot = null;
     });
