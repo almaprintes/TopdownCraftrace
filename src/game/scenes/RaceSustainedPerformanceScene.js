@@ -1,10 +1,13 @@
 import { RaceScene as CurrentRaceScene } from './RaceCullAheadScene.js';
 
-function videoQuality(){
+function videoPrefs(){
   try{
     const s=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');
-    return String(s?.video?.quality||'high');
-  }catch{return 'high';}
+    return {
+      quality:String(s?.video?.quality||'high'),
+      showFPS:!!s?.video?.showFPS
+    };
+  }catch{return {quality:'high',showFPS:false};}
 }
 
 // Optimización de carga sostenida, especialmente para iOS y dispositivos antiguos.
@@ -14,13 +17,8 @@ export class RaceScene extends CurrentRaceScene {
     const result = super.create(data);
 
     try {
-      const quality=videoQuality();
-
-      // BAJA prioriza estabilidad térmica. Es preferible 45 FPS sostenidos a
-      // intentar 60, calentar el dispositivo y terminar oscilando 40-50 FPS.
-      if(quality==='low'){
-        try{this.game.loop.targetFps=Math.min(Number(this.game.loop.targetFps||60),45);}catch{}
-      }
+      const prefs=videoPrefs();
+      const quality=prefs.quality;
 
       this._installMapExportButtons = () => {};
 
@@ -71,16 +69,12 @@ export class RaceScene extends CurrentRaceScene {
       }
 
       if(quality==='low'){
-        // Microdecoración estática de alto coste visual: en BAJA conservamos las
-        // texturas base, pianos y entorno, pero retiramos estos Graphics densos.
         for(const key of ['_environmentEdgeWear','_semiSimBrakeMarks']){
           const obj=this[key];
           if(obj?.scene){try{obj.destroy?.();}catch{}}
           this[key]=null;
         }
 
-        // Segunda capa semitransparente del asfalto: elimina blending/draw extra
-        // por chunk manteniendo intacta la superficie principal y su máscara.
         if(this.track?.gfxByCell instanceof Map){
           const map=this.track.gfxByCell;
           const stripOverlay=(cell)=>{
@@ -94,8 +88,60 @@ export class RaceScene extends CurrentRaceScene {
           map.set=(key,cell)=>nativeSet(key,stripOverlay(cell));
         }
       }
+
+      // Diagnóstico ligero: solo aparece cuando MOSTRAR FPS está activado.
+      // Nos permite separar CPU/update de una caída de frame pacing/GPU y ver
+      // si objetos/chunks siguen creciendo con las vueltas.
+      this._perfDiagEnabled=!!prefs.showFPS;
+      this._perfUpdateAccum=0;
+      this._perfUpdateMax=0;
+      this._perfSamples=0;
+      this._perfFrameMax=0;
+      this._perfDiagAt=performance.now();
+      if(this._perfDiagEnabled){
+        this._perfDiagText=this.add.text(10,42,'PERF --',{
+          fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',
+          fontSize:'10px',fontStyle:'bold',color:'#d8e8ff',
+          backgroundColor:'rgba(0,0,0,.58)',padding:{x:6,y:4},lineSpacing:2
+        }).setScrollFactor(0).setDepth(5001);
+        try{this.cameras.main.ignore(this._perfDiagText);}catch{}
+      }
     } catch (err) {
       console.warn('[TDR2] sustained performance setup failed', err);
+    }
+
+    return result;
+  }
+
+  update(time,delta){
+    const t0=performance.now();
+    const result=super.update(time,delta);
+    const updateMs=performance.now()-t0;
+
+    if(this._perfDiagEnabled){
+      this._perfUpdateAccum+=updateMs;
+      this._perfUpdateMax=Math.max(this._perfUpdateMax,updateMs);
+      this._perfSamples++;
+      this._perfFrameMax=Math.max(this._perfFrameMax,Number(delta||0));
+
+      const now=performance.now();
+      if(now-this._perfDiagAt>=500){
+        const avg=this._perfSamples?this._perfUpdateAccum/this._perfSamples:0;
+        const objs=Array.isArray(this.children?.list)?this.children.list.length:0;
+        const made=this.track?.gfxByCell instanceof Map?this.track.gfxByCell.size:0;
+        const active=this.track?.activeCells instanceof Set?this.track.activeCells.size:0;
+        const lap=Number(this.lapCount||0)+1;
+        this._perfDiagText?.setText(
+          `L${lap} UP ${avg.toFixed(1)} ms  MAX ${this._perfUpdateMax.toFixed(1)}\n`+
+          `FRAME MAX ${this._perfFrameMax.toFixed(1)} ms\n`+
+          `OBJ ${objs}  CHUNK ${active}/${made}`
+        );
+        this._perfUpdateAccum=0;
+        this._perfUpdateMax=0;
+        this._perfSamples=0;
+        this._perfFrameMax=0;
+        this._perfDiagAt=now;
+      }
     }
 
     return result;
