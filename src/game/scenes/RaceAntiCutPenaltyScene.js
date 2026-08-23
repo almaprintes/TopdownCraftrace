@@ -4,10 +4,6 @@ const TARGET_TRACK_NAME = 'Imported Track 1773617484759';
 const FLAG_KEY = 'tdr2:track01AntiCutPenalty';
 const PENALTY_MS = 2000;
 
-// Zona exacta tomada del MAPA TÉCNICO aportado por el usuario.
-// El triángulo amarillo fue convertido desde píxeles del mapa técnico al mundo
-// real del circuito (2430x2000). No es una aproximación circular/elíptica.
-// Vértices del área ilegal de césped entre los dos brazos de la horquilla.
 const FIXED_ZONE_POLY = Object.freeze([
   Object.freeze({ x:1133, y:721 }),
   Object.freeze({ x:1157, y:721 }),
@@ -37,7 +33,11 @@ export class RaceScene extends CurrentRaceScene {
     this._antiCutArmed=true;
     this._antiCutPenaltyApplied=false;
     this._antiCutNotice=null;
+    this._antiCutProgressAccum=0;
     const result=super.create(data);
+    this._antiCutEnabled=enabled();
+    const name=String(this.track?.meta?.name||'');
+    this._antiCutIsTarget=(name===TARGET_TRACK_NAME || this.trackKey==='track01');
     this.events.once('shutdown',()=>{
       try{this._antiCutNotice?.destroy?.();}catch{}
       this._antiCutNotice=null;
@@ -45,10 +45,7 @@ export class RaceScene extends CurrentRaceScene {
     return result;
   }
 
-  _antiCutTargetTrack(){
-    const name=String(this.track?.meta?.name||'');
-    return name===TARGET_TRACK_NAME || this.trackKey==='track01';
-  }
+  _antiCutTargetTrack(){return !!this._antiCutIsTarget;}
 
   _showAntiCutPenalty(){
     try{this._antiCutNotice?.destroy?.();}catch{}
@@ -60,10 +57,7 @@ export class RaceScene extends CurrentRaceScene {
     }).setOrigin(.5,0).setScrollFactor(0).setDepth(250000);
     this._antiCutNotice=t;
     try{this.cameras?.main?.ignore?.(t);this.uiCam?.removeFromRenderList?.(t);}catch{}
-    this.tweens.add({
-      targets:t,alpha:0,y:76,duration:900,delay:650,ease:'Sine.easeIn',
-      onComplete:()=>{if(t?.scene)t.destroy();if(this._antiCutNotice===t)this._antiCutNotice=null;}
-    });
+    this.tweens.add({targets:t,alpha:0,y:76,duration:900,delay:650,ease:'Sine.easeIn',onComplete:()=>{if(t?.scene)t.destroy();if(this._antiCutNotice===t)this._antiCutNotice=null;}});
   }
 
   _applyAntiCutPenalty(){
@@ -81,31 +75,22 @@ export class RaceScene extends CurrentRaceScene {
 
   update(time,delta){
     const result=super.update(time,delta);
-    if(!enabled()||!this._antiCutTargetTrack()||this._replayActive||!this._raceStarted||!this.carBody)return result;
+    if(!this._antiCutEnabled||!this._antiCutIsTarget||this._replayActive||!this._raceStarted||!this.carBody)return result;
 
     const x=Number(this.carBody.x),y=Number(this.carBody.y);
     if(!Number.isFinite(x)||!Number.isFinite(y))return result;
 
     const inZone=this._insideMarkedAntiCutZone(x,y);
-
-    // La geometría de la zona ya coincide exclusivamente con el césped ilegal.
-    // Por eso no aplicamos una segunda máscara de pista que pueda desplazar o falsear
-    // la detección: entrar en este triángulo exacto es el corte que se penaliza.
-    if(inZone&&this._antiCutArmed){
-      this._antiCutArmed=false;
-      this._applyAntiCutPenalty();
-    }
-
+    if(inZone&&this._antiCutArmed){this._antiCutArmed=false;this._applyAntiCutPenalty();}
     if(!inZone)this._antiCutArmed=true;
 
-    // Una sola penalización por vuelta. Se rearma al comenzar la siguiente.
-    const p=Number(this._computeLapProgress01?.(x,y));
-    if(Number.isFinite(p)&&p<0.08)this._antiCutPenaltyApplied=false;
-
+    // El rearmado no necesita una proyección centerline a frecuencia de frame.
+    this._antiCutProgressAccum+=Number(delta||0);
+    if(this._antiCutProgressAccum>=200){
+      this._antiCutProgressAccum=0;
+      const p=Number(this._computeLapProgress01?.(x,y));
+      if(Number.isFinite(p)&&p<0.08)this._antiCutPenaltyApplied=false;
+    }
     return result;
   }
 }
-
-// Reversible trial switch:
-// localStorage.setItem('tdr2:track01AntiCutPenalty','0')  -> OFF
-// localStorage.setItem('tdr2:track01AntiCutPenalty','1')  -> ON
