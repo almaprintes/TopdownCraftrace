@@ -257,8 +257,47 @@ Lectura del contraste T3→T4 en Surge:
 - En Surge, T3 se siente un poco más fácil y progresivo que T4.
 - Conclusión cualitativa: la curva global de Neumáticos parece compatible con coches más nerviosos como Surge, donde T4 aumenta el techo sin neutralizar la necesidad de gestionar velocidad. El problema de exceso de giro parece concentrarse en coches que ya parten con agarre/control muy altos.
 
+## Contraste — HÉLIX Pulse con NEUMÁTICOS T4 / PROTOTYPE (tanda incompleta)
+Fecha: 2026-08-23
+Coche: HÉLIX Pulse
+Circuito: Karting Tenerife
+Piezas: Neumáticos T4 / Prototype; resto sin equipar
+Vueltas válidas registradas: 2
+
+Incidencia:
+- En la última vuelta se omitió un checkpoint al pasar por el interior y el piloto decidió no repetir la ronda.
+- La sesión se conserva como contraste corto; no debe tratarse como una serie estándar de 4 vueltas.
+
+Resultados válidos:
+- V1: 46.455 s
+- V2: 44.954 s
+- Mejor: 44.954 s
+- Media de las 2 vueltas válidas: 45.704 s
+- Punta: 59 km/h
+- Velocidad media: 54 km/h
+- Consistencia σ: 0.75 s
+- Salidas de pista: 5, total 2.2 s
+- Gas: 92%
+- Coasting: 8%
+- Freno: 0%
+- Frenadas: 0
+
+Referencia stock previa del Pulse en Karting Tenerife:
+- Mejor histórica: 45.905 s
+- Punta histórica: 59 km/h
+
+Comparación frente a STOCK histórica:
+- Mejor vuelta: 45.905 → 44.954 = mejora de 0.951 s (2.07%).
+- Punta: 59 → 59 km/h = sin cambio.
+
+Lectura del contraste:
+- Incluso con una muestra corta, T4 muestra potencial claro frente al Pulse stock sin alterar la velocidad punta.
+- El resultado encaja con lo visto en Surge: en un coche que no parte del extremo de agarre del Torque, T4 puede ofrecer una mejora apreciable sin convertirse en una mejora de potencia.
+- La omisión del checkpoint invalida la vuelta posterior para cronometraje; no se utiliza para evaluar consistencia ni ritmo medio.
+- La muestra de dos vueltas no basta para afinar la magnitud exacta del beneficio, pero sí cumple el objetivo del tercer contraste y no aporta evidencia de que T4 sea globalmente excesivo.
+
 ## Tabla viva — Neumáticos
-| Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
+| Configuración | Mejor vuelta | Media útil / válida | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
 | Torque Stock (homologación previa) | 41.008 s | — | 65 km/h | — |
 | Torque · T1 Street | 40.764 s | 41.611 s | 65 km/h | -0.244 s |
@@ -268,20 +307,15 @@ Lectura del contraste T3→T4 en Surge:
 | Surge Stock (homologación previa) | 39.865 s | — | 72 km/h | — |
 | Surge · T3 Racing | 39.336 s | 39.621 s | 73 km/h | -0.529 s |
 | Surge · T4 Prototype | 38.770 s | 39.855 s | 73 km/h | -1.095 s |
+| Pulse Stock (homologación previa) | 45.905 s | — | 59 km/h | — |
+| Pulse · T4 Prototype (2 vueltas válidas) | 44.954 s | 45.704 s | 59 km/h | -0.951 s |
 
 ### Estado de la familia
-- No congelada todavía.
-- Función física correcta en concepto: mejora de agarre sin aumento intencionado de punta.
-- En Surge, T3→T4 añade 0.566 s de techo de mejor vuelta sin cambio de punta; el salto parece razonable en cronómetro.
-- T3 fue más consistente y se siente un poco más fácil que T4; T4 amplía más el potencial pero exige más gestión.
-- El contraste cualitativo indica que T4 no homogeneiza al Surge: sigue deslizándose y obliga a desacelerar.
-- El exceso de capacidad de giro parece específico de coches con agarre/control base muy altos, como Torque, más que un defecto global de T4.
-- No modificar todavía la curva global de Neumáticos; antes de introducir limitaciones por coche conviene contrastar un tercer perfil representativo.
+- Curva global de Neumáticos: candidata a mantenerse sin cambios por ahora.
+- La función física es correcta en concepto: aumenta agarre/potencial sin añadir velocidad máxima.
+- Surge y Pulse muestran que T4 aporta rendimiento apreciable sin borrar necesariamente el carácter del coche.
+- El exceso de capacidad de giro observado en Torque parece asociado a la combinación con un coche que ya parte con agarre/control muy altos, no a un defecto global demostrado de T4.
+- Mantener la observación sobre coches de grip alto; no introducir todavía limitaciones específicas por coche con la evidencia actual.
 
-### Próxima tanda recomendada
-- Coche: HÉLIX Pulse
-- Circuito: Karting Tenerife
-- Pieza: Neumáticos T4 / Prototype
-- Resto de familias: sin equipar
-- Serie: 4 vueltas
-- Objetivo: tercer contraste con un coche equilibrado/intermedio para decidir si el exceso de giro es realmente exclusivo de los coches de grip alto.
+### Próxima secuencia recomendada
+- Pasar a Suspensión para homologar una familia que actúa más directamente sobre respuesta de giro/control.
