@@ -10,6 +10,19 @@ function videoPrefs(){
   }catch{return {quality:'high',showFPS:false};}
 }
 
+function inertTextRef(){
+  return {
+    scene:null,
+    setText(){return this;},
+    setColor(){return this;},
+    setVisible(){return this;},
+    setShadow(){return this;},
+    setAlpha(){return this;},
+    setPosition(){return this;},
+    destroy(){return this;}
+  };
+}
+
 // Optimización de carga sostenida, especialmente para iOS y dispositivos antiguos.
 // No modifica física, IA, cronometraje ni geometría de pista.
 export class RaceScene extends CurrentRaceScene {
@@ -45,90 +58,115 @@ export class RaceScene extends CurrentRaceScene {
       }
 
       // =========================================================
-      // HUD inferior simplificado: VELOCIDAD + TIEMPO.
-      // Marcha y superficie salen del HUD. El cronómetro superior se elimina
-      // también de la ruta de actualización para evitar regenerar texto oculto.
+      // HUD inferior NUEVO: solo VELOCIDAD + TIEMPO.
+      // El HUD anterior se destruye completo, no se deja invisible.
       // =========================================================
-      const info=this.raceInfoHud;
-      if(info?.scene){
-        const children=Array.isArray(info.list)?info.list:[];
+      const oldInfo=this.raceInfoHud;
+      if(oldInfo){
+        try{this._fixedUiRoots?.delete?.(oldInfo);}catch{}
+        try{this._fixedUiState?.delete?.(oldInfo);}catch{}
+        try{oldInfo.destroy?.(true);}catch{}
+      }
+      this.raceInfoHud=null;
+      this._buildRaceInfoHud=()=>{};
 
-        for(const obj of children){
-          const txt=String(obj?.text||'');
-          if(txt==='MARCHA' || txt==='SUPERFICIE') obj.setVisible?.(false);
+      const info=this.add.container(0,0).setDepth(2150);
+      this.raceInfoHud=info;
 
-          // Ocultamos los dos separadores verticales del diseño antiguo.
-          const w=Number(obj?.displayWidth??obj?.width??0);
-          const h=Number(obj?.displayHeight??obj?.height??0);
-          if(w<=2 && h>=35 && h<=60) obj.setVisible?.(false);
+      const panelW=300;
+      const panelH=70;
+      const bg=this.add.rectangle(0,0,panelW,panelH,0x07101b,0.78)
+        .setOrigin(0.5,1)
+        .setStrokeStyle(1,0x63bfff,0.42);
+      const accent=this.add.rectangle(0,-panelH+4,panelW-10,2,0x38a9ff,0.82)
+        .setOrigin(0.5,0);
+      const divider=this.add.rectangle(0,-35,1,42,0xffffff,0.12);
+
+      const speedLabel=this.add.text(-124,-58,'VELOCIDAD',{
+        fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+        fontSize:'9px',fontStyle:'700',color:'#7E8C99'
+      }).setOrigin(0,0.5);
+      const speedText=this.add.text(-72,-34,'000',{
+        fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+        fontSize:'36px',fontStyle:'bold',color:'#F5FAFF'
+      }).setOrigin(0.5,0.5);
+      const unit=this.add.text(-21,-27,'km/h',{
+        fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+        fontSize:'11px',fontStyle:'700',color:'#7EC8FF'
+      }).setOrigin(0,0.5);
+
+      const timerLabel=this.add.text(24,-58,'TIEMPO',{
+        fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+        fontSize:'9px',fontStyle:'700',color:'#7E8C99'
+      }).setOrigin(0,0.5);
+      const timerText=this.add.text(24,-34,'0:00.00',{
+        fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+        fontSize:'27px',fontStyle:'bold',color:'#F5FAFF'
+      }).setOrigin(0,0.5);
+
+      info.add([bg,accent,divider,speedLabel,speedText,unit,timerLabel,timerText]);
+      info._speedText=speedText;
+      info._timerText=timerText;
+      info._panelW=panelW;
+      info._panelH=panelH;
+      info.setScrollFactor(1,1);
+
+      // Estado de anclaje del HUD nuevo. Reutiliza _pinRaceInfoHud heredado.
+      const vw=Math.max(1,Number(this.scale?.width||1));
+      const vh=Math.max(1,Number(this.scale?.height||1));
+      this._raceInfoHudState={
+        screenX:vw*0.5,
+        screenY:vh-14,
+        scale:Math.min(1,Math.max(0.82,vw/900))
+      };
+      this._pinRaceInfoHud?.();
+
+      // =========================================================
+      // TT HUD antiguo: destrucción real.
+      // El update base aún llama a algunas referencias; se sustituyen por
+      // objetos JS inertes que no son GameObjects ni generan render/texturas.
+      // =========================================================
+      if(this.ttHud){
+        for(const key of ['timeText','lapText','bestLapText','barBase','barSlider','ticksGfx']){
+          const obj=this.ttHud[key];
+          if(obj?.scene){try{obj.destroy?.();}catch{}}
+          this.ttHud[key]=inertTextRef();
+        }
+      }
+
+      // Telemetría ligera: 20 Hz y solo regenera texto cuando cambia.
+      let lastInfo=-Infinity;
+      const infoCache={speed:null,time:null};
+      this._updateRaceInfoHud=()=>{
+        const now=performance.now();
+        if(now-lastInfo<50)return;
+        lastInfo=now;
+
+        const c=this.raceInfoHud;
+        const body=this.carBody;
+        if(!c?.scene || !body?.body?.velocity)return;
+
+        const vx=Number(body.body.velocity.x||0);
+        const vy=Number(body.body.velocity.y||0);
+        const kmh=Math.max(0,Math.hypot(vx,vy)*0.185);
+        const speedTxt=String(Math.round(kmh)).padStart(3,'0');
+        if(speedTxt!==infoCache.speed){
+          infoCache.speed=speedTxt;
+          c._speedText?.setText(speedTxt);
         }
 
-        info._gearText?.setVisible?.(false);
-        info._surfaceText?.setVisible?.(false);
-        info._speedText?.setPosition?.(-58,-52);
-
-        const unit=children.find(o=>String(o?.text||'')==='km/h');
-        unit?.setPosition?.(-8,-38);
-
-        const timerLabel=this.add.text(44,-66,'TIEMPO',{
-          fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
-          fontSize:'9px',fontStyle:'700',color:'#7E8C99'
-        }).setOrigin(0,0.5);
-
-        const timerText=this.add.text(44,-52,'0:00.00',{
-          fontFamily:'Orbitron,system-ui,sans-serif',
-          fontSize:'25px',fontStyle:'900',color:'#F5FAFF'
-        }).setOrigin(0,0.5);
-
-        info.add([timerLabel,timerText]);
-        info._timerText=timerText;
-      }
-
-      // El reloj superior antiguo queda fuera tanto de render como de redibujado.
-      if(this.ttHud?.timeText?.scene){
-        this.ttHud.timeText.setVisible(false);
-        this.ttHud.timeText.setText=()=>this.ttHud.timeText;
-      }
-      // VUELTA antigua también está sustituida por competitionHud.
-      if(this.ttHud?.lapText?.scene){
-        this.ttHud.lapText.setVisible(false);
-        this.ttHud.lapText.setText=()=>this.ttHud.lapText;
-      }
-
-      if (typeof this._updateRaceInfoHud === 'function') {
-        let lastInfo = -Infinity;
-        const cache={speed:null,time:null};
-        this._updateRaceInfoHud = () => {
-          const now = performance.now();
-          if (now - lastInfo < 50) return;
-          lastInfo = now;
-
-          const c=this.raceInfoHud;
-          const body=this.carBody;
-          if(!c?.scene || !body?.body?.velocity)return;
-
-          const vx=Number(body.body.velocity.x||0);
-          const vy=Number(body.body.velocity.y||0);
-          const kmh=Math.max(0,Math.hypot(vx,vy)*0.185);
-          const speedTxt=String(Math.round(kmh)).padStart(3,'0');
-          if(speedTxt!==cache.speed){
-            cache.speed=speedTxt;
-            c._speedText?.setText(speedTxt);
-          }
-
-          const started=!!this.timing?.started && this.timing?.lapStart!=null;
-          const elapsed=started?Math.max(0,now-Number(this.timing.lapStart)):0;
-          const m=Math.floor(elapsed/60000);
-          const s=Math.floor((elapsed%60000)/1000);
-          const cs=Math.floor((elapsed%1000)/10);
-          const timeTxt=`${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
-          if(timeTxt!==cache.time){
-            cache.time=timeTxt;
-            c._timerText?.setText(timeTxt);
-          }
-        };
-        this._updateRaceInfoHud();
-      }
+        const started=!!this.timing?.started && this.timing?.lapStart!=null;
+        const elapsed=started?Math.max(0,now-Number(this.timing.lapStart)):0;
+        const m=Math.floor(elapsed/60000);
+        const s=Math.floor((elapsed%60000)/1000);
+        const cs=Math.floor((elapsed%1000)/10);
+        const timeTxt=`${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
+        if(timeTxt!==infoCache.time){
+          infoCache.time=timeTxt;
+          c._timerText?.setText(timeTxt);
+        }
+      };
+      this._updateRaceInfoHud();
 
       if(typeof this._syncCompetitionHud==='function'){
         const syncCompetition=this._syncCompetitionHud.bind(this);
@@ -224,10 +262,13 @@ export class RaceScene extends CurrentRaceScene {
       }
 
       // El debug amarillo legado puede crearse de forma diferida en algunas capas.
-      // Lo ocultamos después del arranque sin mantener ningún trabajo por frame.
+      // Destrucción real: no queda invisible ni participando en render.
       this.time?.delayedCall?.(1200,()=>{
-        try{if(this._dbgText?.scene)this._dbgText.setVisible(false);}catch{}
-        try{this._dbgSet=()=>{};}catch{}
+        try{
+          if(this._dbgText?.scene)this._dbgText.destroy();
+          this._dbgText=null;
+          this._dbgSet=()=>{};
+        }catch{}
       });
     } catch (err) {
       console.warn('[TDR2] sustained performance setup failed', err);
