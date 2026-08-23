@@ -71,6 +71,18 @@ export class RaceScene extends DirectionalRaceScene {
         sources.push(obj);
       }
     }
+
+    // Todo detalle estático de superficie que sobreviva a la calidad elegida se
+    // mete dentro del bake. Después se destruye: no queda Graphics invisible.
+    const staticSurfaceDetails = [];
+    for (const obj of [this._materialEdgeWear, this._environmentEdgeWear, this._semiSimBrakeMarks]) {
+      if (!obj?.scene) continue;
+      obj.setVisible?.(true);
+      obj.active = true;
+      sources.push(obj);
+      staticSurfaceDetails.push(obj);
+    }
+
     if (!sources.length) throw new Error('sin chunks de asfalto para hornear');
 
     const tileMax = 2048;
@@ -105,6 +117,13 @@ export class RaceScene extends DirectionalRaceScene {
       try { cell?.maskG?.destroy?.(); } catch {}
     }
 
+    for (const obj of staticSurfaceDetails) {
+      try { obj.destroy?.(); } catch {}
+    }
+    this._materialEdgeWear = null;
+    this._environmentEdgeWear = null;
+    this._semiSimBrakeMarks = null;
+
     // Sentinel JS puro por celda lógica: evita que el bloque legado vuelva a
     // crear GameObjects. No renderiza, no tiene textura y no recibe updates.
     map.clear();
@@ -129,7 +148,8 @@ export class RaceScene extends DirectionalRaceScene {
       track:'karting-tenerife',
       worldW, worldH,
       bakedTiles:baked.length,
-      logicalCells:map.size
+      logicalCells:map.size,
+      staticSurfaceDetails:staticSurfaceDetails.length
     });
   }
 }
