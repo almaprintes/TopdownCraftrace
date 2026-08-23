@@ -20,6 +20,11 @@ export class RaceScene extends CurrentRaceScene{
     }
     this._tdrFpsAccum=0;
     this._tdrFpsFrames=0;
+
+    // Aplicar una sola vez. Antes se recorría toda la Display List en cada frame;
+    // como la carrera conserva chunks/objetos para reutilizarlos, ese barrido se
+    // hacía progresivamente más caro con el tiempo y provocaba calor/stutter.
+    this._applyParticlePreference();
     return result;
   }
 
@@ -36,7 +41,6 @@ export class RaceScene extends CurrentRaceScene{
 
   update(time,delta){
     super.update(time,delta);
-    this._applyParticlePreference();
     if(this._tdrFpsText){
       this._tdrFpsAccum+=Number(delta||0);this._tdrFpsFrames++;
       if(this._tdrFpsAccum>=400){
