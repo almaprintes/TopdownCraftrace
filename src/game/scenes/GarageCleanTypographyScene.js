@@ -19,6 +19,40 @@ const GARAGE_PERSONALITY={
 };
 
 export class GarageScene extends CurrentGarageScene {
+  create(){
+    super.create();
+    let probe=false;
+    try{probe=sessionStorage.getItem('tdr2:adminInputProbe')==='1'&&this._mode==='admin';}catch{}
+    if(probe)this._installAdminInputProbe();
+  }
+
+  _installAdminInputProbe(){
+    const canvas=this.game?.canvas;
+    const host=canvas?.parentElement||document.body;
+    if(!canvas||!host)return;
+    let domDown=0,domUp=0,phDown=0,phUp=0;
+    const box=document.createElement('div');
+    box.style.cssText='position:absolute;left:8px;top:8px;z-index:999999;pointer-events:none;background:rgba(0,0,0,.86);border:2px solid #ffcc33;color:#fff;padding:7px 9px;font:700 11px/1.35 system-ui;white-space:pre;';
+    const render=()=>{box.textContent=`INPUT PROBE\nDOM ↓${domDown} ↑${domUp}\nPHASER ↓${phDown} ↑${phUp}\ninput.enabled=${this.input?.enabled!==false}`;};
+    render();
+    host.appendChild(box);
+    const onDomDown=()=>{domDown++;render();};
+    const onDomUp=()=>{domUp++;render();};
+    const onPhDown=()=>{phDown++;render();};
+    const onPhUp=()=>{phUp++;render();};
+    canvas.addEventListener('pointerdown',onDomDown,true);
+    canvas.addEventListener('pointerup',onDomUp,true);
+    this.input.on('pointerdown',onPhDown);
+    this.input.on('pointerup',onPhUp);
+    this.events.once('shutdown',()=>{
+      canvas.removeEventListener('pointerdown',onDomDown,true);
+      canvas.removeEventListener('pointerup',onDomUp,true);
+      try{this.input.off('pointerdown',onPhDown);this.input.off('pointerup',onPhUp);}catch{}
+      try{box.remove();}catch{}
+      try{sessionStorage.removeItem('tdr2:adminInputProbe');}catch{}
+    });
+  }
+
   _queueSelectedThumbCenter(){
     try{this._selectedCenterTimer?.remove?.(false);}catch(_){}
     this._selectedCenterTimer=this.time.delayedCall(0,()=>{
@@ -36,8 +70,6 @@ export class GarageScene extends CurrentGarageScene {
 
   _rebuild(...args){
     super._rebuild(...args);
-    // iOS can issue a stabilising resize immediately after scene creation.
-    // Recenter after that rebuild instead of restoring the list to its top.
     this._queueSelectedThumbCenter();
   }
 
