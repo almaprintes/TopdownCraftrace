@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuDuelModeScene.js';
-import { RaceScene } from './scenes/RaceSustainedPerformanceScene.js';
+import { RaceScene } from './scenes/RaceCleanHudScene.js';
 import { UpgradeShopScene } from './scenes/UpgradeWorkshopInventorySizingScene.js';
 import { GarageScene } from './scenes/GarageCleanTypographyScene.js';
 import { SettingsScene } from './scenes/SettingsHelpTutorialScene.js';
@@ -46,8 +46,6 @@ export function createGame(parentId='app'){
     parent:parentId,
     backgroundColor:'#0b1020',
     resolution,
-    // Mantener requestAnimationFrame: el temporizador forzado a 30 Hz introduce
-    // jitter perceptible en iOS y degrada el movimiento del coche.
     fps:{target:targetFps,min:20,forceSetTimeOut:false},
     scene:[BootScene,MenuScene,MenuAliasScene,GarageScene,SettingsScene,GarageDetailScene,RaceScene,AdminHubScene,UpgradeShopScene,CarEditorScene,TrackGarageScene,TrackStudioScene,EnvironmentBuilderScene,TrackEditorScene],
     dom:{createContainer:true},
