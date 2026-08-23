@@ -8,8 +8,8 @@ function videoQuality(){
 }
 
 // Capa final de rendimiento para la pista.
-// Mantiene asfalto preparado alrededor del coche evitando un radio excesivo
-// en dispositivos que usan el preset BAJA.
+// BAJA usa temporalmente el radio original 2 (25 celdas potenciales) para
+// medir cuánto del calor sostenido viene del coste GPU de los chunks activos.
 // No modifica física, cronometraje, IA ni geometría de pista.
 export class RaceScene extends CurrentRaceScene {
   create() {
@@ -17,9 +17,7 @@ export class RaceScene extends CurrentRaceScene {
 
     try {
       if (this.track) {
-        // Radio 4 = 81 celdas potenciales. En BAJA usamos radio 3 = 49,
-        // todavía con bastante margen frente al radio 2 original (25).
-        this.track.cullRadiusCells = videoQuality()==='low' ? 3 : 4;
+        this.track.cullRadiusCells = videoQuality()==='low' ? 2 : 4;
       }
     } catch (_) {}
   }
