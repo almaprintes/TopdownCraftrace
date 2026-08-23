@@ -90,18 +90,61 @@ Lectura:
 - La transmisión empieza a expresar mejor recuperación/aceleración sin comportarse como un segundo motor.
 - El salto T1 → T2 es significativo; T3 y T4 deben mantener progresión sin disparar la punta en exceso.
 
+## Tanda C — TRANSMISIÓN T3 / RACING
+Fecha: 2026-08-23
+Coche: VELOCE Flash
+Circuito: Karting Tenerife
+Piezas: Transmisión T3 / Racing; resto sin equipar
+Vueltas: 4
+
+Resultados:
+- V1: 41.046 s
+- V2: 40.035 s
+- V3: 40.478 s
+- V4: 40.467 s
+- Mejor: 40.035 s
+- Media de sesión: 40.506 s
+- Media útil V2–V4: 40.327 s
+- Punta: 70 km/h
+- Velocidad media: 63 km/h
+- Consistencia σ: 0.36 s
+- Salidas de pista: 6, total 1.5 s
+- Gas: 92%
+- Coasting: 8%
+- Freno: 0%
+- Frenadas: 0
+
+Comparación frente a T2:
+- Mejor vuelta: 40.585 → 40.035 = mejora de 0.550 s (1.35%).
+- Media útil: 41.012 → 40.327 = mejora de 0.685 s.
+- Punta: 69 → 70 km/h = +1 km/h.
+- Velocidad media: 61 → 63 km/h = +2 km/h.
+- Consistencia: σ 0.57 → 0.36 s.
+
+Comparación frente a STOCK:
+- Mejor vuelta: 41.427 → 40.035 = mejora acumulada de 1.392 s (3.36%).
+- Media útil: 41.655 → 40.327 = mejora acumulada de 1.328 s.
+- Punta: 68 → 70 km/h = +2 km/h.
+- Velocidad media: 59 → 63 km/h = +4 km/h.
+
+Lectura:
+- T3 confirma una progresión clara y limpia de la familia Transmisión.
+- Tres vueltas seguidas quedan entre 40.035 y 40.478, por lo que la mejora es muy repetible.
+- La pieza sigue comportándose como mejora de recuperación/aceleración: gana bastante ritmo medio sin disparar la punta.
+- La curva T1→T2→T3 empieza a verse razonable; T4 debe confirmar un último escalón visible sin acercarse demasiado al efecto de Motor T4.
+
 ## Tabla viva — Transmisión
 | Configuración | Mejor vuelta | Media útil | Punta | Mejora vs stock |
 |---|---:|---:|---:|---:|
 | Stock | 41.427 s | 41.655 s | 68 km/h | — |
 | Transmisión T1 · Street | 41.427 s | 41.775 s | 68 km/h | 0.000 s |
 | Transmisión T2 · Sport | 40.585 s | 41.012 s | 69 km/h | -0.842 s |
-| Transmisión T3 · Racing | — | — | — | — |
+| Transmisión T3 · Racing | 40.035 s | 40.327 s | 70 km/h | -1.392 s |
 | Transmisión T4 · Prototype | — | — | — | — |
 
 ### Próxima tanda
 - Coche: VELOCE Flash
 - Circuito: Karting Tenerife
-- Pieza: Transmisión T3 / Racing
+- Pieza: Transmisión T4 / Prototype
 - Resto de familias: sin equipar
 - Serie: 4 vueltas
