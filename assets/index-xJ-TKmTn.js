@@ -6692,6 +6692,14 @@ OBJ ${t}  CHUNK ${c}/${s}`),this._perfUpdateAccum=0,this._perfUpdateMax=0,this._
       #tdr-steering-wheel .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:.98;transform:rotate(var(--rot,0deg));transform-origin:50% 50%;transition:transform 38ms linear,filter 80ms linear;}
       #tdr-steering-wheel.active .art{filter:brightness(1.05)}
     `,document.head.appendChild(g);const b=document.createElement("div");b.id="tdr-steering-wheel",b.innerHTML='<img class="art" src="assets/ui/tdr_steering_wheel_nissan.webp?v=1" alt="Volante">',document.body.appendChild(b);let M=null;const l=c=>{const n=b.getBoundingClientRect(),i=n.left+n.width*.5,r=Math.max(46,n.width*.5);let e=(c.clientX-i)/r;e=Math.max(-1,Math.min(1,e));const a=fs(),u=Math.max(.4,Math.min(1.4,Number(a.sensitivity||1))),o=a.invertSteer===!0?-1:1,d=.055,f=Math.abs(e)<=d?0:(Math.abs(e)-d)/(1-d),p=Math.sign(e)*Math.pow(f,1.55),v=Math.max(-.66,Math.min(.66,p*.6*u*o));this._applyWheelSteer(v),b.style.setProperty("--rot",`${e*40}deg`)},y=c=>{M===null&&(M=c.pointerId,b.setPointerCapture?.(c.pointerId),b.classList.add("active"),l(c),c.preventDefault())},t=c=>{M===c.pointerId&&(l(c),c.preventDefault())},s=c=>{if(M===c.pointerId){try{b.releasePointerCapture?.(c.pointerId)}catch{}M=null,b.classList.remove("active"),this._applyWheelSteer(0),b.style.setProperty("--rot","0deg"),c.preventDefault()}};b.addEventListener("pointerdown",y,{passive:!1}),b.addEventListener("pointermove",t,{passive:!1}),b.addEventListener("pointerup",s,{passive:!1}),b.addEventListener("pointercancel",s,{passive:!1}),b.addEventListener("lostpointercapture",s,{passive:!1}),this.events.once("shutdown",()=>{this._applyWheelSteer(0),b.removeEventListener("pointerdown",y),b.removeEventListener("pointermove",t),b.removeEventListener("pointerup",s),b.removeEventListener("pointercancel",s),b.removeEventListener("lostpointercapture",s),b.remove(),document.getElementById("tdr-steering-wheel-style")?.remove()})}update(h,m){if(!this._tdrWheelMode)return super.update(h,m);const g=this._tdrWheelSteer||0;this._applyWheelSteer(g);const b=this.keys||{},M=b.left,l=b.right,y=M?.isDown,t=l?.isDown,s=Number(this.turnRate),c=Math.abs(g);try{M&&(M.isDown=g<-.012),l&&(l.isDown=g>.012),Number.isFinite(s)&&(this.turnRate=s*Math.max(.08,c)),super.update(h,m)}finally{M&&(M.isDown=y),l&&(l.isDown=t),Number.isFinite(s)&&(this.turnRate=s),this._applyWheelSteer(g)}}};const Di=(R,h,m)=>Math.max(h,Math.min(m,R));class Sf extends og{create(h){this._tdrHandbrake=!1,this._tdrHandbrakeVisual=null;const m=super.create(h);return this._buildPedalRow(),this._buildHandbrakeControl(),m}_setHandbrakeFromSwipe(h){this._tdrHandbrake=!!h,this._tdrHandbrakeVisual?.classList?.toggle("active",!!h)}_buildPedalRow(){document.getElementById("tdr-pedal-row-style")?.remove?.();let h=!1;try{h=JSON.parse(localStorage.getItem("tdr2:settings")||"{}")?.controls?.leftHanded===!0}catch{}const m=document.createElement("style");m.id="tdr-pedal-row-style";const g=h?"left":"right";m.textContent=`
+      #tdr-race-controls,
+      #tdr-race-controls *,
+      button[data-tdr-race-ui="1"],
+      button[data-tdr-race-ui="1"] *{
+        user-select:none!important;
+        -webkit-user-select:none!important;
+        -webkit-touch-callout:none!important;
+      }
       #tdr-race-controls .tdr-pedal{
         ${g}:auto!important;
         bottom:max(8px,1.5vh)!important;
@@ -6745,7 +6753,7 @@ OBJ ${t}  CHUNK ${c}/${s}`),this._perfUpdateAccum=0,this._perfUpdateMax=0,this._
         position:fixed;z-index:82;bottom:max(8px,1.5vh);
         ${h?"left":"right"}:max(4px,.55vw);
         width:clamp(78px,8vw,102px);aspect-ratio:859/1024;
-        touch-action:none;user-select:none;-webkit-user-select:none;
+        touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
         pointer-events:auto;filter:drop-shadow(0 7px 15px rgba(0,0,0,.42));
       }
       #tdr-handbrake img{
