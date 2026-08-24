@@ -61,8 +61,6 @@ Resultado: el fallo persiste y Configuración vuelve a poder congelarse, por lo 
 - las 16 cartas del garaje;
 - las 5 imágenes PNG del tutorial de dropping.
 
-Esto encaja mejor con el síntoma actual: Configuración también puede congelarse y el diagnóstico puede reaparecer como `unknown`, señal de que la presión de memoria puede existir antes de entrar a una escena concreta.
-
 ### Mitigación aplicada
 
 Commit `a661bbda01daf962dc50b10b762d397a0f0d6c8d`:
@@ -70,25 +68,43 @@ Commit `a661bbda01daf962dc50b10b762d397a0f0d6c8d`:
 - Boot deja de precargar las 5 diapositivas del tutorial.
 
 Commit `93fe694839f75817d0ec18f8138be1ff19305ab2`:
-- nuevo `GarageLazyCardsScene`;
 - las cards se cargan únicamente al entrar en Garaje.
 
 Commit `729200c0b1da9265f6621457b7900a618b2b5412`:
-- nuevo `SettingsLazyTutorialScene`;
-- las imágenes del tutorial se cargan únicamente cuando el usuario pulsa para abrirlo.
+- las imágenes del tutorial se cargan únicamente al abrirlo.
 
 Commit `f7a4992175543ac67952b6f3c80f2355d604b722`:
-- `game.js` enruta Garaje y Configuración por esos loaders bajo demanda.
+- `game.js` usa esos loaders bajo demanda.
+
+Resultado: el iPhone 12 sigue cerrando/reiniciando WebKit.
+
+## Mitigación 5 — modo seguro agresivo para iPhone 12
+
+Ante la persistencia del fallo se introduce un perfil de supervivencia específico para teléfonos iOS de clase iPhone 12 / pantalla lógica de hasta 844 px de lado largo.
+
+Commit `a157ddb88c6582da61f00ac8e6d5a70bb6150faf`:
+- resolución interna forzada a `0.72`;
+- objetivo de `30 FPS`;
+- antialias y antialiasGL desactivados;
+- `roundPixels` activado;
+- `powerPreference: low-power`;
+- batch del renderer reducido para bajar picos de memoria;
+- el resto de iPhone modernos conserva el perfil normal.
+
+Commit `f051d3bee140abe853ee2692d6379ab6b4845816`:
+- Boot deja de cargar globalmente `karting-tenerife-completo.png` (~3,2 MB comprimido), `asphaltOverlay` y las siete imágenes de semáforo que no deben permanecer residentes desde el arranque;
+- en modo seguro iOS se omite por completo la decodificación/reproducción del MP4 de intro y se entra directamente al menú;
+- en el resto de dispositivos el vídeo usa `preload=metadata` y una limpieza más estricta.
+
+El objetivo de esta fase no es calidad máxima sino comprobar si el iPhone 12 deja de ser expulsado por WebKit. Si estabiliza, se recuperarán opciones visuales una a una hasta localizar el margen real.
 
 ## Protocolo de prueba actual
 
-1. Cerrar Safari completamente desde multitarea en el iPhone 12.
-2. Abrir el juego desde cero.
-3. Entrar primero en Configuración y cambiar entre pestañas varias veces.
-4. Volver al menú.
-5. Entrar en Circuitos, navegar por varias pistas y seleccionar una.
-6. Entrar a carrera.
-7. Solo después, abrir Garaje y comprobar que las cards cargan correctamente.
-8. En Configuración > Ayuda, abrir el tutorial y comprobar que aparece tras la carga bajo demanda.
+1. Cerrar Safari completamente desde multitarea.
+2. Abrir el juego desde cero. En iPhone 12 debería saltarse la intro y entrar directamente al menú.
+3. Entrar primero en Configuración y cambiar varias veces entre Controles / Vídeo / Audio.
+4. Volver al menú y entrar en Circuitos.
+5. Seleccionar pista y entrar a carrera.
+6. Si aguanta, repetir el ciclo Configuración → Circuitos → Carrera dos veces para comprobar acumulación.
 
 No se han cambiado físicas, geometría, IA, checkpoints ni clasificación de superficies durante este diagnóstico.
