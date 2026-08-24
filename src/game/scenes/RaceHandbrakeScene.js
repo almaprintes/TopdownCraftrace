@@ -7,8 +7,82 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrHandbrake=false;
     this._tdrHandbrakeVisual=null;
     const result=super.create(data);
+    this._buildPedalRow();
     this._buildHandbrakeControl();
     return result;
+  }
+
+  _buildPedalRow(){
+    document.getElementById('tdr-pedal-row-style')?.remove?.();
+    let leftHanded=false;
+    try{leftHanded=JSON.parse(localStorage.getItem('tdr2:settings')||'{}')?.controls?.leftHanded===true;}catch{}
+
+    const style=document.createElement('style');
+    style.id='tdr-pedal-row-style';
+    const edge=leftHanded?'left':'right';
+    style.textContent=`
+      #tdr-race-controls .tdr-pedal{
+        ${edge}:auto!important;
+        bottom:max(10px,1.8vh)!important;
+        width:clamp(104px,11vw,148px)!important;
+        height:clamp(126px,23vh,166px)!important;
+        pointer-events:auto!important;
+        touch-action:none!important;
+        clip-path:polygon(5% 0,95% 0,100% 100%,0 100%)!important;
+      }
+      #tdr-race-controls .tdr-pedal-brake{
+        ${edge}:calc(max(8px,1vw) + clamp(78px,8vw,102px) + 8px)!important;
+      }
+      #tdr-race-controls .tdr-pedal-gas{
+        ${edge}:calc(max(8px,1vw) + clamp(78px,8vw,102px) + 8px + clamp(104px,11vw,148px) + 10px)!important;
+      }
+      #tdr-race-controls .tdr-pedal-inner{flex-direction:column!important;gap:5px!important;}
+      #tdr-race-controls .tdr-pedal-icon{
+        width:42%!important;height:18px!important;border-left:0!important;
+        border-right:0!important;border-bottom:3px solid var(--accent)!important;
+        transform:none!important;
+      }
+      #tdr-race-controls .tdr-pedal-copy{align-items:center!important;}
+      #tdr-race-controls .tdr-pedal-label{font-size:clamp(18px,2vw,29px)!important;}
+      #tdr-race-controls .tdr-pedal-sub{font-size:clamp(6px,.58vw,9px)!important;margin-top:5px!important;}
+    `;
+    document.head.appendChild(style);
+
+    const root=document.getElementById('tdr-race-controls');
+    const gas=root?.querySelector?.('[data-pedal="gas"]');
+    const brake=root?.querySelector?.('[data-pedal="brake"]');
+    const bindings=[];
+
+    const bind=(el,key)=>{
+      if(!el)return;
+      let pointerId=null;
+      const set=v=>{if(this.touch)this.touch[key]=v?1:0;};
+      const down=e=>{
+        if(pointerId!==null)return;
+        pointerId=e.pointerId;
+        try{el.setPointerCapture?.(e.pointerId);}catch{}
+        set(true);
+        e.preventDefault();e.stopPropagation?.();
+      };
+      const up=e=>{
+        if(pointerId!==e.pointerId)return;
+        try{el.releasePointerCapture?.(e.pointerId);}catch{}
+        pointerId=null;set(false);
+        e.preventDefault();e.stopPropagation?.();
+      };
+      el.addEventListener('pointerdown',down,{passive:false});
+      el.addEventListener('pointerup',up,{passive:false});
+      el.addEventListener('pointercancel',up,{passive:false});
+      el.addEventListener('lostpointercapture',up,{passive:false});
+      bindings.push(()=>{set(false);el.removeEventListener('pointerdown',down);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);el.removeEventListener('lostpointercapture',up);});
+    };
+    bind(gas,'throttle');
+    bind(brake,'brake');
+
+    this.events.once('shutdown',()=>{
+      bindings.forEach(fn=>{try{fn();}catch{}});
+      document.getElementById('tdr-pedal-row-style')?.remove?.();
+    });
   }
 
   _buildHandbrakeControl(){
@@ -23,8 +97,8 @@ export class RaceScene extends CurrentRaceScene {
     style.textContent=`
       #tdr-handbrake{
         position:fixed;z-index:82;bottom:max(10px,1.8vh);
-        ${leftHanded?'left:calc(max(18px,1.8vw) + clamp(150px,22vw,260px) + 12px);':'right:calc(max(18px,1.8vw) + clamp(150px,22vw,260px) + 12px);'}
-        width:clamp(70px,7.2vw,92px);aspect-ratio:859/1024;
+        ${leftHanded?'left':'right'}:max(8px,1vw);
+        width:clamp(78px,8vw,102px);aspect-ratio:859/1024;
         touch-action:none;user-select:none;-webkit-user-select:none;
         pointer-events:auto;filter:drop-shadow(0 7px 15px rgba(0,0,0,.42));
       }
@@ -128,7 +202,6 @@ export class RaceScene extends CurrentRaceScene {
     const brakeDrag=Math.exp(-dt*(.78+.88*speed01));
     vf*=brakeDrag;
 
-    // More rear breakaway: stronger lateral build-up and slower lateral damping.
     const slipBuild=(.85+2.25*speed01)*Math.abs(vf)*steer*dt;
     vl+=slipBuild;
     vl*=Math.exp(-dt*.20);
