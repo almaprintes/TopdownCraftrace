@@ -5,9 +5,6 @@ const TRAIL_SAMPLE_MS = 85;
 const TRAIL_LIFE_MS = 145;
 const MAX_TRAIL_GHOSTS = 5;
 
-// Estas skins muestran el morro en el extremo que visualmente queda hacia atrás
-// en la composición del asset. En ellas no fingimos pilotos traseros: mostramos
-// dos ópticas delanteras blancas en ese extremo visible.
 const FRONT_LIGHT_CARS = new Set([
   'helix_comet',
   'helix_pulse',
@@ -79,9 +76,6 @@ export class RaceScene extends CurrentRaceScene {
     const sprite=this._visualSprite();
     if(!gfx?.scene || !sprite?.scene)return;
 
-    // Las luces son HIJAS del mismo carRig que la carrocería. Por tanto reciben
-    // exactamente la misma posición, pivote visual, rotación, lag y zoom de cámara:
-    // no pueden flotar ni ondular respecto al coche.
     const w=Math.max(14,Number(sprite.displayWidth||sprite.width||28));
     const h=Math.max(28,Number(sprite.displayHeight||sprite.height||56));
     const frontFacing=FRONT_LIGHT_CARS.has(String(this.carId||''));
@@ -95,31 +89,28 @@ export class RaceScene extends CurrentRaceScene {
 
     gfx.clear();
 
-    // Los sprites de carrera están orientados longitudinalmente sobre el eje Y
-    // local del rig. Pegamos las ópticas al borde visible, no a una coordenada
-    // mundial inventada.
-    const edgeY=h*0.405;
-    const halfSpread=Math.max(4.5,w*0.255);
+    if(frontFacing){
+      // En estas skins se ve el frontal: dos ópticas blancas redondas en el MORRO.
+      const frontY=-h*0.405;
+      const halfSpread=Math.max(4.5,w*0.255);
+      const radius=Math.max(2.2,Math.min(3.4,w*0.105));
+      gfx.fillStyle(0xffffff,0.88);
+      gfx.fillCircle(-halfSpread,frontY,radius);
+      gfx.fillCircle( halfSpread,frontY,radius);
+      return;
+    }
+
+    // Pilotos traseros: un pelín más hacia dentro longitudinalmente y algo más abiertos.
+    const edgeY=h*0.385;
+    const halfSpread=Math.max(4.8,w*0.285);
     const triW=Math.max(3.0,Math.min(5.2,w*0.19));
     const triH=Math.max(2.8,Math.min(5.0,h*0.085));
 
-    let color;
-    let alpha;
-    if(frontFacing){
-      color=0xffffff;
-      alpha=0.82;
-    }else if(braking){
-      color=0xff0000;
-      alpha=1.0;
-    }else{
-      color=0x7b0808;
-      alpha=0.52;
-    }
-
+    const color=braking?0xff0000:0x7b0808;
+    const alpha=braking?1.0:0.52;
     gfx.fillStyle(color,alpha);
 
     const drawTri=(cx,mirror)=>{
-      // Triángulos achatados, con la punta hacia el centro del coche.
       const innerX=cx + (mirror?-1:1)*triW*0.52;
       const outerX=cx - (mirror?-1:1)*triW*0.52;
       gfx.fillTriangle(
@@ -132,8 +123,6 @@ export class RaceScene extends CurrentRaceScene {
     drawTri(-halfSpread,false);
     drawTri( halfSpread,true);
 
-    // Un halo mínimo SOLO al frenar. La geometría principal sigue siendo el
-    // triángulo rojo puro; esto evita volver a los círculos flotantes anteriores.
     if(braking){
       gfx.fillStyle(0xff1a12,0.18);
       gfx.fillTriangle(-halfSpread-triW*0.68,edgeY-triH*0.68,-halfSpread+triW*0.68,edgeY-triH*0.68,-halfSpread,edgeY+triH*0.78);
