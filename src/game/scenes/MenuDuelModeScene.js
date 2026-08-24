@@ -10,6 +10,11 @@ export class MenuScene extends CurrentMenuScene {
     const {width,height}=this.scale;
     const selected=(()=>{try{return localStorage.getItem(MODE_KEY)||'timeattack';}catch{return'timeattack';}})();
 
+    // Al volver desde UI DOM (p.ej. calibrador de controles), WebKit puede dejar
+    // el gesto anterior en una transición rara. Reiniciamos el estado de input de
+    // la escena y usamos pointerdown en las acciones críticas del modal.
+    try{this.input?.setEnabled?.(false);this.input?.setEnabled?.(true);}catch{}
+
     const root=this.add.container(0,0).setDepth(9000);
     this._ui?.add(root);
     this._gameModeModal=root;
@@ -57,8 +62,12 @@ export class MenuScene extends CurrentMenuScene {
         const img=this.add.image(bx,cardY,key).setOrigin(0).setDisplaySize(cardW,cardH).setInteractive({useHandCursor:true});
         const border=this.add.rectangle(bx,cardY,cardW,cardH,0x000000,0).setOrigin(0)
           .setStrokeStyle(active?3:1,active?m.accent:0x536577,active?1:.5).setInteractive({useHandCursor:true});
-        const choose=()=>m.key==='duel'?this._openDuelLapSelector():this._startSelectedMode(m.key);
-        img.on('pointerup',choose);border.on('pointerup',choose);
+        let fired=false;
+        const choose=()=>{
+          if(fired)return;fired=true;
+          m.key==='duel'?this._openDuelLapSelector():this._startSelectedMode(m.key);
+        };
+        img.on('pointerdown',choose);border.on('pointerdown',choose);
         const hover=()=>border.setStrokeStyle(3,m.accent,1);
         const out=()=>border.setStrokeStyle(active?3:1,active?m.accent:0x536577,active?1:.5);
         img.on('pointerover',hover);img.on('pointerout',out);border.on('pointerover',hover);border.on('pointerout',out);
@@ -89,16 +98,17 @@ export class MenuScene extends CurrentMenuScene {
     };
     const left=this.add.text(x+24,cardY+cardH/2,'‹',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'42px',fontStyle:'bold',color:'#ffd09a'}).setOrigin(.5).setInteractive({useHandCursor:true});
     const right=this.add.text(x+panelW-24,cardY+cardH/2,'›',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'42px',fontStyle:'bold',color:'#ffd09a'}).setOrigin(.5).setInteractive({useHandCursor:true});
-    left.on('pointerup',()=>applyPage(page-1));right.on('pointerup',()=>applyPage(page+1));root.add([left,right]);
-    for(let i=0;i<=maxPage;i++){const d=this.add.circle(cx+(i-maxPage/2)*20,y+panelH-18,4,0x405364,.65).setInteractive({useHandCursor:true});d.on('pointerup',()=>applyPage(i));dots.push(d);root.add(d);}
+    left.on('pointerdown',()=>applyPage(page-1));right.on('pointerdown',()=>applyPage(page+1));root.add([left,right]);
+    for(let i=0;i<=maxPage;i++){const d=this.add.circle(cx+(i-maxPage/2)*20,y+panelH-18,4,0x405364,.65).setInteractive({useHandCursor:true});d.on('pointerdown',()=>applyPage(i));dots.push(d);root.add(d);}
     applyPage(page,false);
 
     let dragX=null;
     veil.on('pointerdown',p=>{dragX=Number(p.x);});
     veil.on('pointerup',p=>{if(dragX==null)return;const dx=Number(p.x)-dragX;dragX=null;if(Math.abs(dx)>45)applyPage(page+(dx<0?1:-1));});
+    veil.on('pointerupoutside',()=>{dragX=null;});
 
     const close=this.add.text(x+panelW-22,y+3,'×',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'27px',fontStyle:'bold',color:'#9aafc1'}).setOrigin(.5,0).setInteractive({useHandCursor:true});
-    close.on('pointerup',()=>this._closeGameModeModal());root.add(close);
+    close.on('pointerdown',()=>this._closeGameModeModal());root.add(close);
   }
 
   _openDuelLapSelector(){
@@ -115,9 +125,9 @@ export class MenuScene extends CurrentMenuScene {
       const bx=cx+(i-1)*118,active=current===laps;
       const b=this.add.rectangle(bx,cy+14,100,50,active?0x5a3512:0x112331,.98).setStrokeStyle(2,active?0xffb45f:0x587085,active?1:.55).setInteractive({useHandCursor:true});
       const t=this.add.text(bx,cy+14,`${laps} VUELTAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5);c.add([b,t]);
-      b.on('pointerup',()=>{try{localStorage.setItem(DUEL_LAPS_KEY,String(laps));}catch{}this._duelLapModal=null;c.destroy(true);this._startSelectedMode('duel');});
+      b.on('pointerdown',()=>{try{localStorage.setItem(DUEL_LAPS_KEY,String(laps));}catch{}this._duelLapModal=null;c.destroy(true);this._startSelectedMode('duel');});
     });
     const cancel=this.add.text(cx,cy+70,'CANCELAR',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#8fa3b5'}).setOrigin(.5).setInteractive({useHandCursor:true});
-    cancel.on('pointerup',()=>{this._duelLapModal=null;c.destroy(true);});c.add(cancel);
+    cancel.on('pointerdown',()=>{this._duelLapModal=null;c.destroy(true);});c.add(cancel);
   }
 }
