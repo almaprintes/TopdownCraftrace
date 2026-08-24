@@ -1,6 +1,5 @@
 import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGarageFixedScene.js';
 import { loadTrackPreview } from '../tracks/trackPreviewStore.js';
-import { OFFICIAL_TRACK_WEBP } from '../tracks/officialTrackPreviewData.js';
 import { pxToMeters } from '../cars/speedUnits.js';
 
 const C = { bg:0x071017, panel:0x0b171f, panel2:0x101f28, line:0x263640, yellow:0xffc400, white:'#f4f7f8', muted:'#8fa0aa' };
@@ -16,10 +15,10 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
   preload(){
     if(super.preload) super.preload();
-    for(const [trackKey,url] of Object.entries(OFFICIAL_TRACK_WEBP)){
-      const textureKey=`official_track_${trackKey}`;
-      if(!this.textures.exists(textureKey)) this.load.image(textureKey,url);
-    }
+    // iOS stability: the final selector renders its own premium previews, so loading
+    // every legacy official preview here only duplicates memory. In particular, the
+    // old OFFICIAL_TRACK_WEBP module embeds many WEBP images as base64 strings and
+    // then decodes all of them at scene entry. Do not import or preload that package.
   }
 
   create(){ super.create(); this._buildCommercial(); this.scale.on('resize', this._rebuildCommercial, this); this.events.once('shutdown',()=>this.scale.off('resize',this._rebuildCommercial,this)); }
@@ -67,6 +66,6 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
   _button(root,g,x,y,w,h,label,hot,fn){g.fillStyle(hot?C.yellow:0x101b22,1).fillRoundedRect(x,y-h/2,w,h,5);g.lineStyle(1,hot?0xffd84a:0x40505a,1).strokeRoundedRect(x,y-h/2,w,h,5);root.add(this.add.text(x+w/2,y,label,{fontFamily:'Arial Black',fontSize:`${Math.max(14,h*.34)}px`,fontStyle:'italic',color:hot?'#111820':C.white}).setOrigin(.5));const hit=this.add.rectangle(x+w/2,y,w,h,0,0).setInteractive({useHandCursor:true});root.add(hit);hit.on('pointerup',fn);}
   _launchSelected(){const t=this._tracks?.[this._index];if(!t)return;try{localStorage.setItem('tdr2:trackKey',t.key);}catch(_){}this.registry.set('selectedTrackKey',t.key);this.registry.set('selectedTrack',t.key);if(this._mode==='admin')this.scene.start('track-editor',{trackKey:t.key});else this.scene.start('menu');}
-  _preview(track,w=760,h=410){const fixed=`official_track_${track?.key}`;if(this.textures.exists(fixed))return fixed;const generated=this._generatedPreviewKeys?.get(track?.key);if(generated&&this.textures.exists(generated))return generated;const fallback=super._preview(track,w,h);this._queueGeneratedPreview(track);return fallback;}
-  async _queueGeneratedPreview(track){const trackKey=track?.key;if(OFFICIAL_TRACK_WEBP[trackKey])return;if(!trackKey||this._generatedPreviewPending.has(trackKey)||this._generatedPreviewKeys.has(trackKey))return;this._generatedPreviewPending.add(trackKey);try{const row=await loadTrackPreview(trackKey,track);if(!row?.blob||!this.sys?.isActive?.())return;const textureKey=`generated_track_${trackKey}_${row.updatedAt||0}`;if(!this.textures.exists(textureKey)){const url=URL.createObjectURL(row.blob);try{const image=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('preview'));img.src=url;});if(!this.textures.exists(textureKey))this.textures.addImage(textureKey,image);}finally{URL.revokeObjectURL(url);}}if(!this.textures.exists(textureKey))return;this._generatedPreviewKeys.set(trackKey,textureKey);if(this._tracks?.[this._index]?.key===trackKey&&this.sys?.isActive?.()){this._commercial?.destroy(true);this._commercial=null;this._buildCommercial();}}catch(_){}finally{this._generatedPreviewPending.delete(trackKey);}}
+  _preview(track,w=760,h=410){const generated=this._generatedPreviewKeys?.get(track?.key);if(generated&&this.textures.exists(generated))return generated;const fallback=super._preview(track,w,h);this._queueGeneratedPreview(track);return fallback;}
+  async _queueGeneratedPreview(track){const trackKey=track?.key;if(!trackKey||this._generatedPreviewPending.has(trackKey)||this._generatedPreviewKeys.has(trackKey))return;this._generatedPreviewPending.add(trackKey);try{const row=await loadTrackPreview(trackKey,track);if(!row?.blob||!this.sys?.isActive?.())return;const textureKey=`generated_track_${trackKey}_${row.updatedAt||0}`;if(!this.textures.exists(textureKey)){const url=URL.createObjectURL(row.blob);try{const image=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error('preview'));img.src=url;});if(!this.textures.exists(textureKey))this.textures.addImage(textureKey,image);}finally{URL.revokeObjectURL(url);}}if(!this.textures.exists(textureKey))return;this._generatedPreviewKeys.set(trackKey,textureKey);if(this._tracks?.[this._index]?.key===trackKey&&this.sys?.isActive?.()){this._commercial?.destroy(true);this._commercial=null;this._buildCommercial();}}catch(_){}finally{this._generatedPreviewPending.delete(trackKey);}}
 }
