@@ -6695,7 +6695,7 @@ OBJ ${t}  CHUNK ${c}/${s}`),this._perfUpdateAccum=0,this._perfUpdateMax=0,this._
       #tdr-handbrake{
         position:fixed;z-index:82;bottom:max(10px,1.8vh);
         ${h?"left:calc(max(18px,1.8vw) + clamp(150px,22vw,260px) + 12px);":"right:calc(max(18px,1.8vw) + clamp(150px,22vw,260px) + 12px);"}
-        width:clamp(62px,6.4vw,82px);aspect-ratio:859/1024;
+        width:clamp(70px,7.2vw,92px);aspect-ratio:859/1024;
         touch-action:none;user-select:none;-webkit-user-select:none;
         pointer-events:auto;filter:drop-shadow(0 7px 15px rgba(0,0,0,.42));
       }
