@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="475" height="365" viewBox="0 0 475 365">
+  <defs>
+    <clipPath id="wheelClip"><ellipse cx="237.5" cy="182.5" rx="214" ry="170"/></clipPath>
+    <radialGradient id="back" cx="50%" cy="42%" r="62%">
+      <stop offset="0" stop-color="#151b22" stop-opacity="0.82"/>
+      <stop offset="1" stop-color="#06090d" stop-opacity="0.94"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="237.5" cy="182.5" rx="214" ry="170" fill="url(#back)"/>
+  <image href="steering-wheel.svg" x="0" y="0" width="475" height="365" preserveAspectRatio="xMidYMid meet" clip-path="url(#wheelClip)"/>
+</svg>
