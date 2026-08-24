@@ -1,4 +1,4 @@
-name: Bake Karting Tenerife beauty
+name: Bake all track beauty
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
       - '.github/workflows/bake-karting-tenerife.yml'
       - 'scripts/bake-track-visual.mjs'
       - 'src/game/tracks/TrackBuilder.js'
-      - 'src/game/tracks/library/karting-tenerife/track.json'
+      - 'src/game/tracks/library/**/track.json'
+      - 'public/assets/materials/**'
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:
@@ -20,7 +21,7 @@ jobs:
   bake:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,21 +37,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Bake Karting Tenerife
-        run: npm run bake:track -- karting-tenerife
+      - name: Bake every track
+        run: npm run bake:track -- all
 
-      - name: Publish generated beauty assets
+      - name: Publish generated beauty assets and catalog
         run: |
           set -euo pipefail
-          SRC='artifacts/track-beauty/karting-tenerife'
-          DEST='public/assets/tracks/karting-tenerife/beauty'
-          mkdir -p "$DEST"
-          cp "$SRC/karting-tenerife-beauty-preview.webp" "$DEST/"
-          cp "$SRC/karting-tenerife-beauty-0.webp" "$DEST/"
-          cp "$SRC/karting-tenerife-beauty-1.webp" "$DEST/"
-          cp "$SRC/karting-tenerife-beauty-2.webp" "$DEST/"
-          cp "$SRC/karting-tenerife-beauty-3.webp" "$DEST/"
-          cp "$SRC/manifest.json" "$DEST/"
+          for SRC in artifacts/track-beauty/*; do
+            [ -d "$SRC" ] || continue
+            KEY="$(basename "$SRC")"
+            DEST="public/assets/tracks/$KEY/beauty"
+            mkdir -p "$DEST"
+            rm -f "$DEST"/*-beauty-preview.webp "$DEST"/*-beauty-[0-9].webp "$DEST/manifest.json"
+            cp "$SRC/$KEY-beauty-preview.webp" "$DEST/"
+            cp "$SRC/$KEY-beauty-0.webp" "$DEST/"
+            cp "$SRC/$KEY-beauty-1.webp" "$DEST/"
+            cp "$SRC/$KEY-beauty-2.webp" "$DEST/"
+            cp "$SRC/$KEY-beauty-3.webp" "$DEST/"
+            cp "$SRC/manifest.json" "$DEST/"
+          done
+          cp artifacts/track-beauty/trackBeautyLayers.generated.js src/game/tracks/trackBeautyLayers.generated.js
 
       - name: Commit generated assets
         id: commit_assets
@@ -58,13 +64,13 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/assets/tracks/karting-tenerife/beauty
+          git add public/assets/tracks src/game/tracks/trackBeautyLayers.generated.js
           if git diff --cached --quiet; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
             echo 'No generated changes to commit.'
             exit 0
           fi
-          git commit -m 'Bake Karting Tenerife beauty assets'
+          git commit -m 'Bake all track beauty assets'
           git push origin HEAD:main
           echo 'changed=true' >> "$GITHUB_OUTPUT"
 
