@@ -125,15 +125,16 @@ export class RaceScene extends CurrentRaceScene {
     const speed01=clamp(speed/maxFwd,0,1);
     const steer=this._steerForHandbrake();
 
-    const brakeDrag=Math.exp(-dt*(.85+1.0*speed01));
+    const brakeDrag=Math.exp(-dt*(.78+.88*speed01));
     vf*=brakeDrag;
 
-    const slipBuild=(.55+1.45*speed01)*Math.abs(vf)*steer*dt;
+    // More rear breakaway: stronger lateral build-up and slower lateral damping.
+    const slipBuild=(.85+2.25*speed01)*Math.abs(vf)*steer*dt;
     vl+=slipBuild;
-    vl*=Math.exp(-dt*.42);
+    vl*=Math.exp(-dt*.20);
 
-    const yawAuthority=clamp((speed-28)/150,0,1);
-    const yaw=steer*(.55+1.15*speed01)*yawAuthority*dt;
+    const yawAuthority=clamp((speed-24)/140,0,1);
+    const yaw=steer*(.70+1.35*speed01)*yawAuthority*dt;
     body.rotation+=yaw;
 
     const nr=Number(body.rotation||rot);
