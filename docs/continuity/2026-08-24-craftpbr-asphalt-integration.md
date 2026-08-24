@@ -23,94 +23,62 @@ No replacement edge polyline or kerb geometry is drawn by the beauty pass. The p
 
 `RaceRealSurfaceAssetsScene` loads all six CraftPBR maps from `assets/materials/asphalt-pbr/` plus the existing `grass-real.webp` world material.
 
-## Iterations
+## Stable visual baseline
+The accepted runtime baseline is now **v6**:
+- CraftPBR asphalt through the exact `track.geom.left/right` mask;
+- WebGL asphalt shader with zoom-aware anti-moire filtering;
+- broad grass tonal variation;
+- irregular dirt/soil specks and sparse dry-grass marks outside the exact road edge;
+- no custom rubber/groove layer;
+- existing border/kerb renderer untouched.
+
+## Iterations and lessons
 ### v1
 One photographic Albedo layer plus restrained AO. This proved the new material and exact mask worked.
 
-### v2 / v3
-Tried compositing Roughness/Height/AO as 2D grayscale layers at different scales. In live iPhone tests this mostly made the road darker; the intended material response was not convincingly visible. This approach is retired.
+### v2 / v3 — retired
+Compositing Roughness/Height/AO as grayscale 2D layers mainly darkened the road without convincing material response.
 
-### v4 — real WebGL material response
-A dedicated `AsphaltPBRPipeline` handles the visible road surface in WebGL.
-
-The shader consumes:
-- Albedo as base colour;
-- Normal as tangent-space micro-surface direction;
-- Roughness to control broad weak asphalt highlights;
-- Height as restrained micro-relief/tonal variation.
+### v4 — WebGL material response
+Dedicated `AsphaltPBRPipeline` consumes Albedo, Normal, Roughness and Height.
 
 ### v5 — dynamic zoom anti-moire
-Live iPhone testing exposed shimmer in the fine asphalt aggregate because race camera zoom changes continuously with speed (`~0.75` fast/far to `~1.50` slow/near`).
-
-The PBR shader now receives camera zoom every bind and applies a permanent low-pass floor, increasing filtering as the camera moves farther away. Albedo, Normal, Roughness and Height are filtered; normal/specular/height strength are attenuated when detail becomes sub-pixel. The dynamic zoom itself is unchanged.
-
-Live validation: some shimmer remains detectable when deliberately looking for it at low speed, but it is no longer expected to be noticeable to a first-time player. Further filtering would trade away visible surface detail for a marginal gain, so the current balance is accepted.
+The asphalt shader adapts filtering to the dynamic camera zoom. Some shimmer remains detectable only when deliberately looking for it at low speed; further filtering would cost too much visible detail.
 
 ### v6 — grass richness + irregular dirt shoulder
-`raceExactRuntimeBeautyPass.js` adds:
-- a broad second sample of the existing real grass texture at a much larger world scale and low opacity;
-- deterministic dirt/soil specks immediately outside `track.geom.left/right`;
-- sparse dry-grass strokes farther outside the edge;
-- natural clean gaps so the dirt never reads as a continuous painted halo.
+Adds large-scale grass variation and small irregular dirt/dry-grass marks immediately outside the exact road edge. Live validation: "No está mal. Se nota algo." This remains the accepted environmental baseline.
 
-The shoulder system derives the outward direction from each exact left/right edge point relative to the local road centre. It does **not** construct any offset border polyline. Therefore it cannot recreate the old twisted-line failure mode.
-
-### v6 live validation — accepted as modest gain
-User validation on 2026-08-24: "No está mal. Se nota algo."
-
-### v7 — continuous geometry-driven rubber — rejected
-The first rubber implementation drew several broad low-alpha vector passes along a visual guide derived from the midpoint between `track.geom.left/right`.
-
-Live validation: "Se aprecia una franja totalmente centrada".
-
-Diagnosis: even with low opacity and random gaps, long vector strokes read as a designed central lane rather than tyre deposition.
+### v7 — continuous vector rubber — rejected
+Live result read as a centred stripe: "Se aprecia una franja totalmente centrada".
 
 ### v8 — corner-phase vector rubber — rejected
-A second attempt removed straight-line rubber and moved wear through corner phases (outside approach → inside apex → outside exit).
+Moving the vector marks outside/apex/outside still produced obvious blobs: "Ahora mismo son plastas mal colocadas."
 
-Live validation: "Ahora mismo son plastas mal colocadas." This confirmed that the **representation itself** was wrong: solid Phaser `Graphics` strokes/blobs under MULTIPLY still look like dark painted shapes, regardless of improved placement logic.
+### v9 — sparse textured decals — rejected
+Runtime-generated textured decals were technically better than vector blobs but visually too subtle and placement still lacked the coherent repeated-use pattern of the supplied real-track reference.
 
-## Research-backed correction of approach
-External references were checked for both motorsport behaviour and common game-environment implementation practice.
+### v10 — continuous multi-streak groove — rejected and rolled back
+The supplied real-track reference showed the desired visual target clearly: several coherent dark tyre-use streaks wrapping around a hairpin, not isolated marks.
 
-Key conclusions used for implementation:
-- real circuit rubber builds up on repeatedly used paths under braking/cornering load, rather than as one uniform black stripe;
-- a convincing groove uses track width and is strongest through loaded bends;
-- environment-art workflows commonly layer tyre/rubber decals/textures over a tileable road material instead of drawing solid vector strokes;
-- Phaser `RenderTexture` can be used as a bake target so authored decal stamps do not remain as many live GameObjects;
-- MULTIPLY is useful only once the source has useful alpha/texture variation.
+A new continuous multi-streak baked RenderTexture approach was tried. Live iPhone validation showed two problems:
+1. visually it still did not convincingly reproduce the reference;
+2. **performance regressed** — user observed higher `FMAX`, with the screenshot showing frame max around 43.6 ms and live FPS in the low 20s.
 
-### v9 — sparse baked textured rubber decals — rejected as wrong target
-Three runtime transparent rubber decal textures were baked into RenderTextures. This removed the previous vector blobs, but live validation showed the result was almost invisible and, where visible, the isolated placement still did not resemble a real rubbered hairpin.
+User decision: "Este camino no nos lleva a ningún lado y ha hecho subir el fmax".
 
-User feedback on 2026-08-24: "Casi no se aprecia y es lo mejor porque lo poco que se aprecia no tiene sentido." A supplied aerial reference of a kart-track U-turn established the visual target clearly: several **coherent, parallel, curved dark tyre paths** build up together through the braking zone and around the complete hairpin. The desired effect is cumulative track usage, not random isolated marks.
+Therefore all custom racing-rubber/groove code from v7-v10 is removed from the active runtime. `raceExactRuntimeBeautyPass.js` has been restored to the v6 implementation. This is an intentional rollback, not a temporary disable.
 
-### v10 — reference-driven coherent multiline rubber groove
-The v9 sparse random-decal plan is retired.
-
-New approach in `raceExactRuntimeBeautyPass.js`:
-- analyse signed curvature over a wider stencil and smooth it to identify sustained bends instead of reacting to individual geometry nodes;
-- build one continuous visual trajectory around active corners: outside on approach, toward the inside through the main bend, opening back to the outside on exit;
-- smooth lateral interpolation repeatedly so the trajectory forms a natural arc rather than disconnected phase jumps;
-- derive **five nearby parallel vehicle paths** around that trajectory, matching the visual language of the supplied reference where many laps produce multiple adjacent rubber streaks;
-- use narrow elongated transparent streak textures rather than broad blobs;
-- stamp them densely along consecutive track samples so neighbouring stamps join visually into coherent curved tyre paths;
-- retain small deterministic gaps and differing line strengths so the surface does not become a perfect CAD line;
-- keep true low-curvature straights essentially clean;
-- bake all temporary streak stamps into 2048px-or-smaller RenderTextures, then destroy the temporary Images;
-- clip the final result with the exact validated asphalt mask.
-
-This is still strictly a beauty layer. It does not feed racing-line logic back into AI, physics or gameplay.
+## Performance rule from this point
+Visual additions must justify their GPU/CPU/frame-time cost on the target iPhone. Runtime RenderTexture baking, many decal stamps, or additional full-world masked layers should not be reintroduced casually. Prefer cheap baked/static assets or small localized overlays with measurable benefit.
 
 ## Next visual priorities
-Proceed in controlled layers:
-1. Validate v10 multiline groove against the supplied U-turn reference. The test is whether hairpins now show several plausible parallel rubber arcs rather than isolated marks or one centre stripe.
-2. **Kerb weathering** — restrained dirt/desaturation/scuff overlays clipped to existing kerb areas; do not rebuild kerb geometry.
-3. **Terrain breakup** — larger irregular dry/worn/soil zones in grass islands.
-4. **Edge integration** — selective dirt accumulation and grass encroachment with clean gaps.
-5. **Trackside depth** — sparse tyre stacks/barriers/vegetation with soft baked-style shadows.
+Do **not** continue the procedural rubber experiment. Better candidates for visible gain at lower risk:
+1. kerb weathering using lightweight overlays without rebuilding kerb geometry;
+2. larger irregular terrain breakup in grass islands;
+3. selective edge dirt/grass encroachment;
+4. sparse trackside props/shadows using existing or pre-baked assets.
 
-Validate each layer on iPhone before proceeding so visual gains and performance regressions remain attributable.
+Validate one layer at a time on iPhone and watch both appearance and `FMAX`.
 
 ## Explicitly untouched
 - dynamic camera zoom behaviour/range
