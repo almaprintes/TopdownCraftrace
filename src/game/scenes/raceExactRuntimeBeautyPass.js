@@ -51,6 +51,27 @@ function buildExactRoadMask(scene) {
   return { gfx, mask, quads, count };
 }
 
+function addMapLayer(scene, {
+  key, worldW, worldH, mask, depth, alpha, scale, posX, posY,
+  blendMode = 0, tint = 0xffffff
+}) {
+  if (!scene.textures.exists(key)) return null;
+  const layer = scene.add.tileSprite(0, 0, worldW, worldH, key)
+    .setOrigin(0, 0)
+    .setDepth(depth)
+    .setScrollFactor(1)
+    .setAlpha(alpha)
+    .setTint(tint)
+    .setBlendMode(blendMode)
+    .setMask(mask);
+  layer.tileScaleX = scale;
+  layer.tileScaleY = scale;
+  layer.tilePositionX = posX;
+  layer.tilePositionY = posY;
+  scene.uiCam?.ignore?.(layer);
+  return layer;
+}
+
 function installPass(scene, data) {
   if (trackId(scene, data) !== 'karting-tenerife') return;
   if (!scene.textures?.exists?.('asphalt')) return;
@@ -66,45 +87,57 @@ function installPass(scene, data) {
 
   const objects = [];
   const masked = [];
+  const keep = (obj) => {
+    if (!obj) return;
+    objects.push(obj);
+    masked.push(obj);
+  };
 
-  // One clean, photographic CraftPBR albedo layer. Do not stack the old procedural
-  // asphalt/micro/repair/rubber overlays: those were the source of the visible bands.
-  // At 1024 px the tile is intentionally displayed large in world space so the mineral
-  // aggregate reads as real asphalt instead of a repeated game texture.
-  const asphalt = scene.add.tileSprite(0, 0, worldW, worldH, 'asphalt')
-    .setOrigin(0, 0)
-    .setDepth(10.35)
-    .setScrollFactor(1)
-    .setMask(bundle.mask);
-  asphalt.tileScaleX = 0.72;
-  asphalt.tileScaleY = 0.72;
-  asphalt.tilePositionX = 173;
-  asphalt.tilePositionY = 91;
-  scene.uiCam?.ignore?.(asphalt);
-  objects.push(asphalt);
-  masked.push(asphalt);
+  // Base photographic albedo. Slightly smaller texel scale than v1 so individual
+  // stones stop reading as oversized gravel at the gameplay camera distance.
+  const asphalt = addMapLayer(scene, {
+    key: 'asphalt', worldW, worldH, mask: bundle.mask,
+    depth: 10.35, alpha: 1, scale: 0.52, posX: 173, posY: 91
+  });
+  keep(asphalt);
 
-  // AO is used only as a very restrained multiplicative-looking detail pass. Phaser's
-  // 2D renderer is not a PBR renderer, so Normal/Roughness/Height are deliberately NOT
-  // faked with stripes or procedural marks; they stay loaded for a later WebGL shader.
-  if (scene.textures.exists('asphaltAO')) {
-    const ao = scene.add.tileSprite(0, 0, worldW, worldH, 'asphaltAO')
-      .setOrigin(0, 0)
-      .setDepth(10.36)
-      .setScrollFactor(1)
-      .setAlpha(0.10)
-      .setTint(0x3a3a3a)
-      .setMask(bundle.mask);
-    ao.tileScaleX = asphalt.tileScaleX;
-    ao.tileScaleY = asphalt.tileScaleY;
-    ao.tilePositionX = asphalt.tilePositionX;
-    ao.tilePositionY = asphalt.tilePositionY;
-    scene.uiCam?.ignore?.(ao);
-    objects.push(ao);
-    masked.push(ao);
-  }
+  // Fine AO at the same material scale gives crevices a little depth without painting
+  // fake cracks. MULTIPLY is supported by both Phaser Canvas and WebGL renderers.
+  keep(addMapLayer(scene, {
+    key: 'asphaltAO', worldW, worldH, mask: bundle.mask,
+    depth: 10.36, alpha: 0.065, scale: 0.52, posX: 173, posY: 91,
+    blendMode: 2
+  }));
 
-  // Deliberately NO custom white edge, NO dirt stroke, NO rubber stripe and NO
+  // Large-scale variation comes from the real PBR maps themselves, sampled at much
+  // larger world scales and different offsets. This breaks the "uniform carpet" look
+  // without reintroducing procedural stripes, border strokes or repeated repair decals.
+  keep(addMapLayer(scene, {
+    key: 'asphaltRoughness', worldW, worldH, mask: bundle.mask,
+    depth: 10.37, alpha: 0.11, scale: 2.8, posX: 431, posY: 257,
+    blendMode: 2, tint: 0xc8c8c8
+  }));
+
+  keep(addMapLayer(scene, {
+    key: 'asphaltHeight', worldW, worldH, mask: bundle.mask,
+    depth: 10.38, alpha: 0.055, scale: 4.4, posX: 911, posY: 613,
+    blendMode: 3, tint: 0x9a9a9a
+  }));
+
+  // A second broad AO sample adds extremely soft patches of darker pavement at a
+  // different frequency. Because the source itself is photographic, the variation
+  // remains organic instead of looking like manually drawn ellipses.
+  keep(addMapLayer(scene, {
+    key: 'asphaltAO', worldW, worldH, mask: bundle.mask,
+    depth: 10.39, alpha: 0.075, scale: 3.6, posX: 1229, posY: 347,
+    blendMode: 2, tint: 0xd0d0d0
+  }));
+
+  // Normal is intentionally not color-composited: a tangent-space normal map would
+  // tint the road purple in a 2D pass. It remains loaded for a future WebGL lighting
+  // shader. Metalness is correctly black and likewise has no visible 2D contribution.
+
+  // Deliberately NO custom white edge, NO dirt stroke, NO center rubber stripe and NO
   // procedural repair patches. Existing border/kerb rendering stays untouched.
   scene._exactRuntimeBeautyPass = { objects, masked, mask: bundle.mask, gfx: bundle.gfx };
   scene.events.once('shutdown', () => {
@@ -128,9 +161,9 @@ function installPass(scene, data) {
     exactRoadMask: true,
     geometryExpanded: false,
     bordersRedrawn: false,
-    materialRevision: 'craftpbr-v1',
+    materialRevision: 'craftpbr-v2-multiscale',
     pbrMapsLoaded: ['albedo', 'ao', 'normal', 'roughness', 'height', 'metalness'],
-    visiblePasses: ['albedo', 'ao']
+    visiblePasses: ['albedo', 'ao-fine', 'roughness-macro', 'height-macro', 'ao-macro']
   });
 }
 
