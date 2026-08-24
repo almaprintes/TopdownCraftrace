@@ -16,6 +16,9 @@ function wrapPi(a) {
 export class RaceScene extends CurrentRaceScene {
   constructor() {
     super();
+    // Keep the fast end of the dynamic camera unchanged, but let the camera
+    // come noticeably closer when the car is stopped / crawling.
+    this._zoomGameplayMax = 1.38;
     this._visualPivotOffset = 0;
     this._visualChassisLag = 0;
   }
