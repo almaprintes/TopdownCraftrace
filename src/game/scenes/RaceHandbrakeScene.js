@@ -26,6 +26,14 @@ export class RaceScene extends CurrentRaceScene {
     style.id='tdr-pedal-row-style';
     const edge=leftHanded?'left':'right';
     style.textContent=`
+      #tdr-race-controls,
+      #tdr-race-controls *,
+      button[data-tdr-race-ui="1"],
+      button[data-tdr-race-ui="1"] *{
+        user-select:none!important;
+        -webkit-user-select:none!important;
+        -webkit-touch-callout:none!important;
+      }
       #tdr-race-controls .tdr-pedal{
         ${edge}:auto!important;
         bottom:max(8px,1.5vh)!important;
@@ -101,7 +109,6 @@ export class RaceScene extends CurrentRaceScene {
       else if(paddedHit(br,x,7)) mode='brake';
       else if(paddedHit(gr,x,7)) mode='gas';
       else {
-        // Keep the gesture continuous through the tiny visual gaps.
         const centers=[
           {mode:'gas',x:(gr.left+gr.right)/2},
           {mode:'brake',x:(br.left+br.right)/2}
@@ -173,7 +180,7 @@ export class RaceScene extends CurrentRaceScene {
         position:fixed;z-index:82;bottom:max(8px,1.5vh);
         ${leftHanded?'left':'right'}:max(4px,.55vw);
         width:clamp(78px,8vw,102px);aspect-ratio:859/1024;
-        touch-action:none;user-select:none;-webkit-user-select:none;
+        touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
         pointer-events:auto;filter:drop-shadow(0 7px 15px rgba(0,0,0,.42));
       }
       #tdr-handbrake img{
