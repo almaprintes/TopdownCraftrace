@@ -30,79 +30,89 @@ export class RaceScene extends BakedRaceScene {
 
   create(data) {
     const result = super.create(data);
-    this._installGrassOffFeather();
+    this._installGrassOffAlphaFeather();
     return result;
   }
 
-  _installGrassOffFeather() {
-    // Suavizado puramente visual de la frontera YA EXISTENTE grass/off.
-    // GeometryMask es de borde duro: para simular feather real sin shader usamos
-    // tres bandas solapadas, anchas y progresivamente más transparentes.
+  _installGrassOffAlphaFeather() {
+    // Reemplaza el borde duro de la mascara visual de GRASS por una mascara alfa real.
+    // No crea otra superficie ni otro TileSprite: bgGrass sigue siendo el mismo objeto.
     if (this.bgGrass?.texture?.key !== 'grass' || this.bgOff?.texture?.key !== 'off') return;
 
     const grass = this.track?.geom?.grass;
-    const left = Array.isArray(grass?.left) ? grass.left : [];
-    const right = Array.isArray(grass?.right) ? grass.right : [];
-    if (left.length < 4 || right.length < 4) return;
+    const leftRaw = Array.isArray(grass?.left) ? grass.left : [];
+    const rightRaw = Array.isArray(grass?.right) ? grass.right : [];
+    if (leftRaw.length < 4 || rightRaw.length < 4) return;
 
     const worldW = Math.max(1, Math.ceil(Number(this.worldW || this.track?.meta?.worldW || 0)));
     const worldH = Math.max(1, Math.ceil(Number(this.worldH || this.track?.meta?.worldH || 0)));
     if (!worldW || !worldH) return;
 
     const normalize = (raw) => raw
-      .map((p) => Array.isArray(p) ? { x: Number(p[0]), y: Number(p[1]) } : { x: Number(p?.x), y: Number(p?.y) })
+      .map((p) => Array.isArray(p)
+        ? { x: Number(p[0]), y: Number(p[1]) }
+        : { x: Number(p?.x), y: Number(p?.y) })
       .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y));
 
-    const boundaries = [normalize(left), normalize(right)].filter((pts) => pts.length >= 4);
-    if (!boundaries.length) return;
+    const left = normalize(leftRaw);
+    const right = normalize(rightRaw);
+    if (left.length < 4 || right.length < 4) return;
 
-    const drawClosed = (gfx, pts) => {
-      gfx.beginPath();
-      gfx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) gfx.lineTo(pts[i].x, pts[i].y);
-      gfx.closePath();
-      gfx.strokePath();
-    };
+    // Mascara reducida: se genera una sola vez. Phaser la escala al mundo completo.
+    // 1024 px de ancho da suficiente precision en el borde sin reservar un canvas 8000x5000.
+    const maskW = 1024;
+    const maskH = Math.max(256, Math.round(maskW * worldH / worldW));
+    const sx = maskW / worldW;
+    const sy = maskH / worldH;
+    const maskKey = `grassOffSoftMask_${worldW}x${worldH}`;
 
-    // De fuera hacia dentro: la banda más ancha casi imperceptible rompe la línea dura;
-    // las dos interiores recuperan gradualmente la lectura de hierba.
-    const bands = [
-      { width: 42, alpha: 0.055, depth: -89.30 },
-      { width: 26, alpha: 0.075, depth: -89.20 },
-      { width: 12, alpha: 0.095, depth: -89.10 }
-    ];
+    try { if (this.textures.exists(maskKey)) this.textures.remove(maskKey); } catch {}
+    const tex = this.textures.createCanvas(maskKey, maskW, maskH);
+    const ctx = tex.getContext();
+    ctx.clearRect(0, 0, maskW, maskH);
 
-    const layers = [];
-    for (const band of bands) {
-      const maskGfx = this.make.graphics({ x: 0, y: 0, add: false });
-      maskGfx.lineStyle(band.width, 0xffffff, 1);
-      for (const pts of boundaries) drawClosed(maskGfx, pts);
+    // Poligono de la banda grass completa: un borde por cada lado de la pista.
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(left[0].x * sx, left[0].y * sy);
+    for (let i = 1; i < left.length; i++) ctx.lineTo(left[i].x * sx, left[i].y * sy);
+    for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x * sx, right[i].y * sy);
+    ctx.closePath();
 
-      const mask = maskGfx.createGeometryMask();
-      const feather = this.add.tileSprite(0, 0, worldW, worldH, 'grass')
-        .setOrigin(0, 0)
-        .setScrollFactor(1)
-        .setDepth(band.depth)
-        .setAlpha(band.alpha)
-        .setMask(mask);
-      feather.tilePositionX = 0;
-      feather.tilePositionY = 0;
+    // ShadowBlur produce alfa progresiva REAL fuera del poligono. El interior permanece
+    // 100 % opaco; solo los ~28 px exteriores mezclan gradualmente grass sobre off.
+    const featherWorldPx = 28;
+    const blurPx = Math.max(2, featherWorldPx * ((sx + sy) * 0.5));
+    ctx.shadowColor = 'rgba(255,255,255,1)';
+    ctx.shadowBlur = blurPx;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.fillStyle = 'rgba(255,255,255,1)';
+    ctx.fill();
+    ctx.restore();
+    tex.refresh();
 
-      this.uiCam?.ignore?.(feather);
-      this.uiCam?.ignore?.(maskGfx);
-      layers.push({ feather, mask, maskGfx });
-    }
+    // Retirar SOLO la mascara visual dura anterior. No tocamos su geometria fuente.
+    try { this.bgGrass.clearMask?.(false); } catch {}
 
-    this._grassOffFeatherLayers = layers;
+    const maskSource = this.make.image({ x: 0, y: 0, key: maskKey, add: false })
+      .setOrigin(0, 0)
+      .setDisplaySize(worldW, worldH);
+    const softMask = maskSource.createBitmapMask();
+    this.bgGrass.setMask(softMask);
+
+    this._grassOffSoftMaskTextureKey = maskKey;
+    this._grassOffSoftMaskSource = maskSource;
+    this._grassOffSoftMask = softMask;
 
     this.events.once('shutdown', () => {
-      for (const layer of layers) {
-        try { layer.feather?.clearMask?.(false); } catch {}
-        try { layer.feather?.destroy?.(); } catch {}
-        try { layer.mask?.destroy?.(); } catch {}
-        try { layer.maskGfx?.destroy?.(); } catch {}
-      }
-      this._grassOffFeatherLayers = null;
+      try { this.bgGrass?.clearMask?.(false); } catch {}
+      try { softMask.destroy?.(); } catch {}
+      try { maskSource.destroy?.(); } catch {}
+      try { if (this.textures.exists(maskKey)) this.textures.remove(maskKey); } catch {}
+      this._grassOffSoftMaskTextureKey = null;
+      this._grassOffSoftMaskSource = null;
+      this._grassOffSoftMask = null;
     });
   }
 
