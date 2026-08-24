@@ -28,8 +28,6 @@ function buildExactRoadMask(scene) {
   const gfx = scene.add.graphics().setDepth(-10000).setScrollFactor(1);
   gfx.fillStyle(0xffffff, 1);
   let quads = 0;
-
-  // EXACTLY the ribbon validated in solid red: no grow, offset, smoothing or strokes.
   for (let i = 0; i < count; i++) {
     const j = (i + 1) % count;
     const l0 = xy(left[i]);
@@ -40,12 +38,10 @@ function buildExactRoadMask(scene) {
     gfx.fillPoints([l0, r0, r1, l1], true);
     quads++;
   }
-
   if (!quads) {
     gfx.destroy();
     return null;
   }
-
   const mask = gfx.createGeometryMask();
   gfx.setVisible(false);
   return { gfx, mask, quads, count };
@@ -87,68 +83,61 @@ function installPass(scene, data) {
 
   const objects = [];
   const masked = [];
-  const keep = (obj) => {
-    if (!obj) return;
-    objects.push(obj);
-    masked.push(obj);
-  };
+  const keep = (obj) => { if (obj) { objects.push(obj); masked.push(obj); } };
 
-  // Base photographic albedo. Slightly smaller texel scale than v1 so individual
-  // stones stop reading as oversized gravel at the gameplay camera distance.
-  const asphalt = addMapLayer(scene, {
-    key: 'asphalt', worldW, worldH, mask: bundle.mask,
-    depth: 10.35, alpha: 1, scale: 0.52, posX: 173, posY: 91
-  });
-  keep(asphalt);
-
-  // Fine AO at the same material scale gives crevices a little depth without painting
-  // fake cracks. MULTIPLY is supported by both Phaser Canvas and WebGL renderers.
+  // Photographic base. Slightly finer than v1 so the visible aggregate reads as asphalt,
+  // not coarse gravel, at the gameplay camera distance.
   keep(addMapLayer(scene, {
-    key: 'asphaltAO', worldW, worldH, mask: bundle.mask,
-    depth: 10.36, alpha: 0.065, scale: 0.52, posX: 173, posY: 91,
-    blendMode: 2
+    key: 'asphalt', worldW, worldH, mask: bundle.mask,
+    depth: 10.35, alpha: 1, scale: 0.48, posX: 173, posY: 91
   }));
 
-  // Large-scale variation comes from the real PBR maps themselves, sampled at much
-  // larger world scales and different offsets. This breaks the "uniform carpet" look
-  // without reintroducing procedural stripes, border strokes or repeated repair decals.
+  // Fine crevice depth from the real AO map.
+  keep(addMapLayer(scene, {
+    key: 'asphaltAO', worldW, worldH, mask: bundle.mask,
+    depth: 10.36, alpha: 0.16, scale: 0.48, posX: 173, posY: 91,
+    blendMode: 2, tint: 0xe0e0e0
+  }));
+
+  // IMPORTANT: v2 was too subtle on an iPhone screen. These macro passes are now
+  // deliberately strong enough to be visible: broad rough/dark zones and softer worn
+  // zones come from the actual CraftPBR maps, not procedural stripes or fake decals.
   keep(addMapLayer(scene, {
     key: 'asphaltRoughness', worldW, worldH, mask: bundle.mask,
-    depth: 10.37, alpha: 0.11, scale: 2.8, posX: 431, posY: 257,
-    blendMode: 2, tint: 0xc8c8c8
+    depth: 10.37, alpha: 0.34, scale: 3.25, posX: 431, posY: 257,
+    blendMode: 2, tint: 0xb8b8b8
   }));
 
   keep(addMapLayer(scene, {
     key: 'asphaltHeight', worldW, worldH, mask: bundle.mask,
-    depth: 10.38, alpha: 0.055, scale: 4.4, posX: 911, posY: 613,
-    blendMode: 3, tint: 0x9a9a9a
+    depth: 10.38, alpha: 0.14, scale: 4.9, posX: 911, posY: 613,
+    blendMode: 3, tint: 0xb0b0b0
   }));
 
-  // A second broad AO sample adds extremely soft patches of darker pavement at a
-  // different frequency. Because the source itself is photographic, the variation
-  // remains organic instead of looking like manually drawn ellipses.
   keep(addMapLayer(scene, {
     key: 'asphaltAO', worldW, worldH, mask: bundle.mask,
-    depth: 10.39, alpha: 0.075, scale: 3.6, posX: 1229, posY: 347,
+    depth: 10.39, alpha: 0.22, scale: 5.6, posX: 1229, posY: 347,
+    blendMode: 2, tint: 0xc4c4c4
+  }));
+
+  // A second roughness frequency breaks large repeated islands and gives the surface a
+  // more weathered, patched tonal rhythm without drawing any explicit repair shapes.
+  keep(addMapLayer(scene, {
+    key: 'asphaltRoughness', worldW, worldH, mask: bundle.mask,
+    depth: 10.40, alpha: 0.18, scale: 7.8, posX: 2027, posY: 1103,
     blendMode: 2, tint: 0xd0d0d0
   }));
 
-  // Normal is intentionally not color-composited: a tangent-space normal map would
-  // tint the road purple in a 2D pass. It remains loaded for a future WebGL lighting
-  // shader. Metalness is correctly black and likewise has no visible 2D contribution.
+  // Normal stays reserved for a real lighting shader; compositing it as color would tint
+  // the road purple. Metalness is black by design and has no visible 2D contribution.
+  // No custom edge, dirt stroke, rubber stripe or procedural repair marks are added.
 
-  // Deliberately NO custom white edge, NO dirt stroke, NO center rubber stripe and NO
-  // procedural repair patches. Existing border/kerb rendering stays untouched.
   scene._exactRuntimeBeautyPass = { objects, masked, mask: bundle.mask, gfx: bundle.gfx };
   scene.events.once('shutdown', () => {
     const pass = scene._exactRuntimeBeautyPass;
     if (!pass) return;
-    for (const obj of pass.masked || []) {
-      try { obj?.clearMask?.(false); } catch {}
-    }
-    for (const obj of pass.objects || []) {
-      try { obj?.destroy?.(); } catch {}
-    }
+    for (const obj of pass.masked || []) { try { obj?.clearMask?.(false); } catch {} }
+    for (const obj of pass.objects || []) { try { obj?.destroy?.(); } catch {} }
     try { pass.mask?.destroy?.(); } catch {}
     try { pass.gfx?.destroy?.(); } catch {}
     scene._exactRuntimeBeautyPass = null;
@@ -161,9 +150,8 @@ function installPass(scene, data) {
     exactRoadMask: true,
     geometryExpanded: false,
     bordersRedrawn: false,
-    materialRevision: 'craftpbr-v2-multiscale',
-    pbrMapsLoaded: ['albedo', 'ao', 'normal', 'roughness', 'height', 'metalness'],
-    visiblePasses: ['albedo', 'ao-fine', 'roughness-macro', 'height-macro', 'ao-macro']
+    materialRevision: 'craftpbr-v3-visible-wear',
+    visiblePasses: ['albedo', 'ao-fine', 'roughness-macro-1', 'height-macro', 'ao-macro', 'roughness-macro-2']
   });
 }
 
