@@ -101,8 +101,8 @@ export class RaceScene extends CurrentRaceScene {
       markKind = onGrass ? 'grass-dirt' : 'off-dirt';
     } else if (carryingDirt) {
       const carry = clamp01((Number(this._dirtCarryUntil || 0) - nowMs) / DIRT_CARRY_MS);
-      color = 0x5a452f;
-      alpha = 0.18 + carry * 0.34;
+      color = 0xb79a6a;
+      alpha = 0.20 + carry * 0.38;
       width = 4.2;
       life = 1050;
       markKind = 'dirt-carry';
