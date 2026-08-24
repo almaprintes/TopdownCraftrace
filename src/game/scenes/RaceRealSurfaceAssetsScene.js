@@ -16,10 +16,11 @@ export class RaceScene extends BakedRaceScene {
 
     this.load.image('grass', 'assets/materials/grass-real.webp');
 
-    // CraftPBR source material. Albedo is the visible world-space surface; the other
-    // maps are loaded under dedicated keys so they remain available for the WebGL/PBR
-    // upgrade without ever touching track geometry or gameplay surfaces.
-    this.load.image('asphalt', 'assets/materials/asphalt-pbr/albedo.png?v=20260824-craftpbr-v1');
+    // Poly Haven Clean Asphalt diffuse/albedo only. No runtime PBR shader: the iPhone
+    // A/B test showed a materially better FMAX (16-18 ms) without it. The remaining
+    // CraftPBR maps stay loaded only as dormant/reference assets and do not affect the
+    // visible asphalt pass.
+    this.load.image('asphalt', 'assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg?v=20260824-polyhaven-clean-v1');
     this.load.image('asphaltAO', 'assets/materials/asphalt-pbr/ao.png?v=20260824-craftpbr-v1');
     this.load.image('asphaltNormal', 'assets/materials/asphalt-pbr/normal.png?v=20260824-craftpbr-v1');
     this.load.image('asphaltRoughness', 'assets/materials/asphalt-pbr/roughness.png?v=20260824-craftpbr-v1');
