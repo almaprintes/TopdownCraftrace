@@ -47,59 +47,75 @@ The PBR shader now receives camera zoom every bind and applies a permanent low-p
 Live validation: some shimmer remains detectable when deliberately looking for it at low speed, but it is no longer expected to be noticeable to a first-time player. Further filtering would trade away visible surface detail for a marginal gain, so the current balance is accepted.
 
 ### v6 — grass richness + irregular dirt shoulder
-The next beauty gain moves outside the asphalt rather than further filtering the road.
-
-`raceExactRuntimeBeautyPass.js` now adds:
-- a broad second sample of the existing real grass texture at a much larger world scale and low opacity, creating slow vegetation tonal variation without adding fine-frequency shimmer;
+`raceExactRuntimeBeautyPass.js` adds:
+- a broad second sample of the existing real grass texture at a much larger world scale and low opacity;
 - deterministic dirt/soil specks immediately outside `track.geom.left/right`;
 - sparse dry-grass strokes farther outside the edge;
 - natural clean gaps so the dirt never reads as a continuous painted halo.
 
 The shoulder system derives the outward direction from each exact left/right edge point relative to the local road centre. It does **not** construct any offset border polyline. Therefore it cannot recreate the old twisted-line failure mode.
 
-The stable white border and red/white kerb renderer is untouched and remains above these environmental marks.
+### v6 live validation — accepted as modest gain
+User validation on 2026-08-24: "No está mal. Se nota algo."
 
-### v6 live validation — iPhone screenshot
-User validation on 2026-08-24: "No está mal. Se nota algo." The environmental pass is visible and accepted as a modest improvement rather than a finished visual target.
+### v7 — continuous geometry-driven rubber — rejected
+The first rubber implementation drew several broad low-alpha vector passes along a visual guide derived from the midpoint between `track.geom.left/right`.
 
-Screenshot observations:
-- asphalt reads substantially more like a real aggregate surface than the earlier flat procedural road;
-- grass has some texture and large-scale variation, but large interior islands still read too uniformly dark/green and lack convincing terrain structure;
-- the transition from asphalt to vegetation is cleaner than before but remains visually dominated by the pristine continuous white border;
-- red/white kerbs are crisp and geometrically stable, but their perfectly clean colour makes them feel newer than the surrounding surface;
-- the scene still lacks medium-scale environmental cues that give a real kart track depth: tyre rubber on racing/braking lines, kerb wear, edge dust accumulation, irregular worn grass/soil patches, and selective trackside objects/shadows.
+Live validation: "Se aprecia una franja totalmente centrada".
 
-### v7 — geometry-driven racing-line rubber and braking wear
-`raceExactRuntimeBeautyPass.js` added a static rubber/wear decal layer above the PBR asphalt and below the proven border/kerb render.
+Diagnosis: even with low opacity and random gaps, long vector strokes read as a designed central lane rather than tyre deposition.
 
-The first implementation derived a guide from the midpoint between `track.geom.left/right`, biased toward the inside in curves, then drew several broad low-alpha passes across almost the whole lap.
+### v8 — corner-phase vector rubber — rejected
+A second attempt removed straight-line rubber and moved wear through corner phases (outside approach → inside apex → outside exit).
 
-### v7 live validation — rejected
-User screenshot on 2026-08-24: "Se aprecia una franja totalmente centrada".
+Live validation: "Ahora mismo son plastas mal colocadas." This confirmed that the **representation itself** was wrong: solid Phaser `Graphics` strokes/blobs under MULTIPLY still look like dark painted shapes, regardless of improved placement logic.
 
-Diagnosis: despite low opacity and random gaps, the continuous treatment through straights made the eye read the effect as an artificial central lane. The problem was not the asphalt material or exact mask; it was the wear-placement logic.
+## Research-backed correction of approach
+Before v9, external references were checked for both motorsport behaviour and common game-environment implementation practice.
 
-### v8 — corner-phase rubber wear
-The continuous-centre strategy is removed.
+Key conclusions used for implementation:
+- real circuit rubber builds up on the repeatedly used racing groove under braking/cornering load, rather than as a uniform black stripe;
+- a convincing racing groove uses the road width (outside entry → apex → opening exit), not the centreline;
+- environment-art workflows commonly layer tyre/rubber **decals/textures** over a tileable road material instead of drawing solid vector strokes;
+- Phaser `RenderTexture` can be used as a bake target so authored decal stamps do not remain as many live GameObjects;
+- MULTIPLY is useful only once the source has useful alpha/texture variation. Applying it to solid vector shapes merely creates obvious dark blobs.
 
-The new visual-only wear guide uses signed local curvature to model three phases:
-- **approach / braking:** wear moves to the outside half of the road;
-- **apex / sustained corner:** wear moves toward the inside;
-- **exit:** wear unwinds toward the outside before disappearing.
+The v7/v8 vector-rubber code path is therefore retired, not tuned further.
 
-True straights receive no racing-line stripe at all. Rubber segments are only drawn where corner/braking activity crosses a threshold, with stronger deterministic gaps, variable widths and restrained alpha. Braking haze also uses the outside approach path instead of the centreline.
+### v9 — baked textured rubber decals
+`raceExactRuntimeBeautyPass.js` now generates three small transparent tyre-rubber decal textures at runtime. Each decal contains:
+- feathered longitudinal ends;
+- multiple thin, slightly wandering rubber streaks;
+- uneven alpha across the width;
+- sparse broken rubber flecks;
+- no solid filled ellipse or thick vector centre band.
 
-Every mark remains clipped by the already validated exact asphalt mask. No geometry, AI, physics, checkpoints, lap timing or gameplay surfaces are changed.
+Placement logic:
+- decal positions are interpolated directly between the existing exact left and right road edges (`t=0` left, `t=1` right), avoiding a newly constructed offset polyline;
+- approach/braking stamps use the outside portion of the track;
+- apex stamps move toward the inside;
+- exit stamps open outward;
+- genuine straights receive no synthetic racing-groove stripe;
+- deterministic lateral jitter and skipped stamps prevent the decals from becoming a mathematical guide line;
+- every decal is finally clipped by the exact validated asphalt mask.
+
+Performance strategy:
+- temporary Phaser `Image` objects are created only as authoring stamps;
+- they are immediately rasterized into 2048px-or-smaller `RenderTexture` world tiles;
+- the temporary images are destroyed in the same setup pass;
+- only the small number of baked RenderTextures remains alive during racing.
+
+The baked rubber RenderTextures use MULTIPLY, where the textured alpha now has a meaningful purpose instead of darkening large vector blobs.
 
 ## Next visual priorities
-Proceed in controlled layers, preserving exact geometry and performance:
-1. Validate v8 corner-phase rubber on iPhone. Reject or reduce immediately if it still reads as a designed lane rather than irregular use.
+Proceed in controlled layers:
+1. Validate v9 textured/baked rubber on iPhone. If placement still feels wrong, adjust the corner-phase interpolation only; do **not** return to vector blobs.
 2. **Kerb weathering** — restrained dirt/desaturation/scuff overlays clipped to existing kerb areas; do not rebuild kerb geometry.
-3. **Terrain breakup** — a few larger irregular dry/worn/soil zones in grass islands to remove the uniform green-carpet appearance.
-4. **Edge integration** — local dirt accumulation and grass encroachment near selected edges while leaving deliberate clean sections.
-5. **Trackside depth** — later add sparse tyre stacks/barriers/vegetation with soft baked-style shadows, prioritising recognizable circuit areas rather than filling every empty space.
+3. **Terrain breakup** — larger irregular dry/worn/soil zones in grass islands.
+4. **Edge integration** — selective dirt accumulation and grass encroachment with clean gaps.
+5. **Trackside depth** — sparse tyre stacks/barriers/vegetation with soft baked-style shadows.
 
-Do not add all effects at once. Validate each layer on iPhone before proceeding so visual gains and performance regressions remain attributable.
+Validate each layer on iPhone before proceeding so visual gains and performance regressions remain attributable.
 
 ## Explicitly untouched
 - dynamic camera zoom behaviour/range
