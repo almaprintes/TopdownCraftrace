@@ -51,32 +51,46 @@ The v6 environmental layers were then removed, leaving only exact road mask + on
 
 This was a major recovery from ~40 ms but still slower than the earlier ~16–17 ms screenshots.
 
-## Current A/B test — shader disabled
-The user noted that the PBR shader barely changes the visible result, so the next test removes it completely to measure its real cost.
+## Shader A/B result — confirmed expensive, disabled
+The user noted that the PBR shader barely changes the visible result, so it was removed completely for a direct A/B test.
+
+With the same race setup, exact road mask and CraftPBR albedo still active, but without `AsphaltPBRPipeline`, the user measured:
+- **FMAX: 16–18 ms**
+
+Compared with the shader-on baseline of **23.4 ms**, disabling the shader recovered roughly **5–7 ms of worst-frame time** while preserving almost all of the perceived asphalt quality.
+
+Decision: **keep the custom PBR shader disabled in the active runtime**. The visual gain does not justify its cost on the target iPhone.
 
 Active beauty pass now contains only:
 - exact `track.geom.left/right` geometry mask;
 - one CraftPBR asphalt TileSprite using **albedo only**;
 - stable existing border/kerb renderer.
 
-Temporarily inactive:
+Inactive / retired from active runtime:
 - `AsphaltPBRPipeline` application;
 - Normal/Roughness/Height shader sampling;
 - zoom-aware shader filtering;
-- extra grass layer;
-- shoulder Graphics;
+- extra full-world grass layer;
+- procedural shoulder Graphics;
 - all rubber/groove code.
 
-The shader implementation file remains in the repository for reference, but the active beauty pass no longer imports or applies it.
+The shader implementation file may remain in the repository for reference, but it is not part of the production render path.
 
-A/B commit: `f601e1063cd3de7921b570aaec7d78e7b692afae`.
+A/B shader-off commit: `f601e1063cd3de7921b570aaec7d78e7b692afae`.
 
-## Decision rule
-Measure FPS and FMAX on the same iPhone/circuit area:
-- if FMAX improves materially from the 23.4 ms shader-on baseline, keep the shader disabled and favor the clean photographic albedo;
-- if there is little/no difference, the remaining cost is more likely the masked full-world asphalt TileSprite / renderer path rather than the shader itself.
+## Current performance baseline
+Use **FMAX 16–18 ms** as the accepted visual/performance baseline for Karting Tenerife with photographic asphalt active.
 
-Do not add another visual effect until this A/B result is recorded.
+Future visual work must preserve approximately this frame-time envelope. Any effect that adds more than a small measurable cost must produce an obvious visual gain to survive.
+
+## Next visual direction
+Do not reintroduce runtime PBR or procedural rubber. Prefer:
+1. pre-baked/static texture detail;
+2. very small localized overlays rather than full-world layers;
+3. pre-authored kerb wear or terrain patches;
+4. sparse props/shadows with strict object-count control.
+
+Every addition should be tested independently against the **16–18 ms FMAX baseline**.
 
 ## Explicitly untouched
 - dynamic camera zoom behaviour/range
