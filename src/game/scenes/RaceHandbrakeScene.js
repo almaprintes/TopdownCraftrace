@@ -12,6 +12,11 @@ export class RaceScene extends CurrentRaceScene {
     return result;
   }
 
+  _setHandbrakeFromSwipe(v){
+    this._tdrHandbrake=!!v;
+    this._tdrHandbrakeVisual?.classList?.toggle('active',!!v);
+  }
+
   _buildPedalRow(){
     document.getElementById('tdr-pedal-row-style')?.remove?.();
     let leftHanded=false;
@@ -23,64 +28,133 @@ export class RaceScene extends CurrentRaceScene {
     style.textContent=`
       #tdr-race-controls .tdr-pedal{
         ${edge}:auto!important;
-        bottom:max(10px,1.8vh)!important;
-        width:clamp(104px,11vw,148px)!important;
-        height:clamp(126px,23vh,166px)!important;
+        bottom:max(8px,1.5vh)!important;
+        width:clamp(88px,9.2vw,122px)!important;
+        height:clamp(132px,24vh,172px)!important;
         pointer-events:auto!important;
         touch-action:none!important;
         clip-path:polygon(5% 0,95% 0,100% 100%,0 100%)!important;
       }
       #tdr-race-controls .tdr-pedal-brake{
-        ${edge}:calc(max(8px,1vw) + clamp(78px,8vw,102px) + 8px)!important;
+        ${edge}:calc(max(4px,.55vw) + clamp(78px,8vw,102px) + 5px)!important;
       }
       #tdr-race-controls .tdr-pedal-gas{
-        ${edge}:calc(max(8px,1vw) + clamp(78px,8vw,102px) + 8px + clamp(104px,11vw,148px) + 10px)!important;
+        ${edge}:calc(max(4px,.55vw) + clamp(78px,8vw,102px) + 5px + clamp(88px,9.2vw,122px) + 6px)!important;
       }
-      #tdr-race-controls .tdr-pedal-inner{flex-direction:column!important;gap:5px!important;}
+      #tdr-race-controls .tdr-pedal-inner{
+        flex-direction:column!important;
+        gap:4px!important;
+        padding:8px 0!important;
+      }
       #tdr-race-controls .tdr-pedal-icon{
-        width:42%!important;height:18px!important;border-left:0!important;
+        width:38%!important;height:15px!important;border-left:0!important;
         border-right:0!important;border-bottom:3px solid var(--accent)!important;
-        transform:none!important;
+        transform:none!important;flex:0 0 auto!important;
       }
-      #tdr-race-controls .tdr-pedal-copy{align-items:center!important;}
-      #tdr-race-controls .tdr-pedal-label{font-size:clamp(18px,2vw,29px)!important;}
-      #tdr-race-controls .tdr-pedal-sub{font-size:clamp(6px,.58vw,9px)!important;margin-top:5px!important;}
+      #tdr-race-controls .tdr-pedal-copy{
+        align-items:center!important;
+        justify-content:center!important;
+        flex-direction:row!important;
+        gap:5px!important;
+        min-height:0!important;
+      }
+      #tdr-race-controls .tdr-pedal-label,
+      #tdr-race-controls .tdr-pedal-sub{
+        writing-mode:vertical-rl!important;
+        text-orientation:upright!important;
+        white-space:nowrap!important;
+        margin:0!important;
+        line-height:1!important;
+      }
+      #tdr-race-controls .tdr-pedal-label{
+        font-size:clamp(14px,1.55vw,22px)!important;
+        letter-spacing:.04em!important;
+      }
+      #tdr-race-controls .tdr-pedal-sub{
+        font-size:clamp(5px,.48vw,7px)!important;
+        letter-spacing:.08em!important;
+      }
     `;
     document.head.appendChild(style);
 
     const root=document.getElementById('tdr-race-controls');
     const gas=root?.querySelector?.('[data-pedal="gas"]');
     const brake=root?.querySelector?.('[data-pedal="brake"]');
-    const bindings=[];
+    if(!gas||!brake)return;
 
-    const bind=(el,key)=>{
-      if(!el)return;
-      let pointerId=null;
-      const set=v=>{if(this.touch)this.touch[key]=v?1:0;};
-      const down=e=>{
-        if(pointerId!==null)return;
-        pointerId=e.pointerId;
-        try{el.setPointerCapture?.(e.pointerId);}catch{}
-        set(true);
-        e.preventDefault();e.stopPropagation?.();
-      };
-      const up=e=>{
-        if(pointerId!==e.pointerId)return;
-        try{el.releasePointerCapture?.(e.pointerId);}catch{}
-        pointerId=null;set(false);
-        e.preventDefault();e.stopPropagation?.();
-      };
+    let activeId=null;
+    let captureEl=null;
+
+    const clear=()=>{
+      if(this.touch){this.touch.throttle=0;this.touch.brake=0;}
+      this._setHandbrakeFromSwipe(false);
+    };
+
+    const paddedHit=(rect,x,pad=7)=>x>=rect.left-pad&&x<=rect.right+pad;
+    const applyAt=x=>{
+      const gr=gas.getBoundingClientRect();
+      const br=brake.getBoundingClientRect();
+      const hb=this._tdrHandbrakeVisual?.getBoundingClientRect?.();
+
+      let mode='none';
+      if(hb&&paddedHit(hb,x,6)) mode='handbrake';
+      else if(paddedHit(br,x,7)) mode='brake';
+      else if(paddedHit(gr,x,7)) mode='gas';
+      else {
+        // Keep the gesture continuous through the tiny visual gaps.
+        const centers=[
+          {mode:'gas',x:(gr.left+gr.right)/2},
+          {mode:'brake',x:(br.left+br.right)/2}
+        ];
+        if(hb)centers.push({mode:'handbrake',x:(hb.left+hb.right)/2});
+        centers.sort((a,b)=>Math.abs(a.x-x)-Math.abs(b.x-x));
+        if(centers[0]&&Math.abs(centers[0].x-x)<70)mode=centers[0].mode;
+      }
+
+      if(this.touch){
+        this.touch.throttle=mode==='gas'?1:0;
+        this.touch.brake=mode==='brake'?1:0;
+      }
+      this._setHandbrakeFromSwipe(mode==='handbrake');
+    };
+
+    const down=e=>{
+      if(activeId!==null)return;
+      activeId=e.pointerId;
+      captureEl=e.currentTarget;
+      try{captureEl.setPointerCapture?.(e.pointerId);}catch{}
+      applyAt(e.clientX);
+      e.preventDefault();e.stopPropagation?.();
+    };
+    const move=e=>{
+      if(activeId!==e.pointerId)return;
+      applyAt(e.clientX);
+      e.preventDefault();e.stopPropagation?.();
+    };
+    const up=e=>{
+      if(activeId!==e.pointerId)return;
+      try{captureEl?.releasePointerCapture?.(e.pointerId);}catch{}
+      activeId=null;captureEl=null;clear();
+      e.preventDefault();e.stopPropagation?.();
+    };
+
+    [gas,brake].forEach(el=>{
       el.addEventListener('pointerdown',down,{passive:false});
+      el.addEventListener('pointermove',move,{passive:false});
       el.addEventListener('pointerup',up,{passive:false});
       el.addEventListener('pointercancel',up,{passive:false});
       el.addEventListener('lostpointercapture',up,{passive:false});
-      bindings.push(()=>{set(false);el.removeEventListener('pointerdown',down);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);el.removeEventListener('lostpointercapture',up);});
-    };
-    bind(gas,'throttle');
-    bind(brake,'brake');
+    });
 
     this.events.once('shutdown',()=>{
-      bindings.forEach(fn=>{try{fn();}catch{}});
+      clear();
+      [gas,brake].forEach(el=>{
+        el.removeEventListener('pointerdown',down);
+        el.removeEventListener('pointermove',move);
+        el.removeEventListener('pointerup',up);
+        el.removeEventListener('pointercancel',up);
+        el.removeEventListener('lostpointercapture',up);
+      });
       document.getElementById('tdr-pedal-row-style')?.remove?.();
     });
   }
@@ -96,8 +170,8 @@ export class RaceScene extends CurrentRaceScene {
     style.id='tdr-handbrake-style';
     style.textContent=`
       #tdr-handbrake{
-        position:fixed;z-index:82;bottom:max(10px,1.8vh);
-        ${leftHanded?'left':'right'}:max(8px,1vw);
+        position:fixed;z-index:82;bottom:max(8px,1.5vh);
+        ${leftHanded?'left':'right'}:max(4px,.55vw);
         width:clamp(78px,8vw,102px);aspect-ratio:859/1024;
         touch-action:none;user-select:none;-webkit-user-select:none;
         pointer-events:auto;filter:drop-shadow(0 7px 15px rgba(0,0,0,.42));
@@ -124,25 +198,19 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrHandbrakeVisual=root;
 
     let activeId=null;
-    const setActive=(v)=>{
-      this._tdrHandbrake=!!v;
-      root.classList.toggle('active',!!v);
-    };
+    const setActive=v=>this._setHandbrakeFromSwipe(v);
     const down=e=>{
       if(activeId!==null)return;
       activeId=e.pointerId;
       root.setPointerCapture?.(e.pointerId);
       setActive(true);
-      e.preventDefault();
-      e.stopPropagation?.();
+      e.preventDefault();e.stopPropagation?.();
     };
     const release=e=>{
       if(activeId!==e.pointerId)return;
       try{root.releasePointerCapture?.(e.pointerId);}catch{}
-      activeId=null;
-      setActive(false);
-      e.preventDefault();
-      e.stopPropagation?.();
+      activeId=null;setActive(false);
+      e.preventDefault();e.stopPropagation?.();
     };
     root.addEventListener('pointerdown',down,{passive:false});
     root.addEventListener('pointerup',release,{passive:false});
@@ -169,7 +237,7 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _steerForHandbrake(){
-    if(Number.isFinite(this._tdrWheelSteer) && Math.abs(this._tdrWheelSteer)>.01) return clamp(this._tdrWheelSteer,-1,1);
+    if(Number.isFinite(this._tdrWheelSteer)&&Math.abs(this._tdrWheelSteer)>.01)return clamp(this._tdrWheelSteer,-1,1);
     const t=this.touch||{};
     let s=Number(t.steer||t.buttonSteer||0);
     if(Math.abs(s)>.01)return clamp(s,-1,1);
@@ -181,10 +249,10 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _applyHandbrakePhysics(delta){
-    if(!this._tdrHandbrake || !this._raceStarted)return;
+    if(!this._tdrHandbrake||!this._raceStarted)return;
     const body=this.carBody;
     const vel=body?.body?.velocity;
-    if(!body?.scene || !vel)return;
+    if(!body?.scene||!vel)return;
 
     const dt=clamp(Number(delta||16.67)/1000,.001,.05);
     const rot=Number(body.rotation||0);
