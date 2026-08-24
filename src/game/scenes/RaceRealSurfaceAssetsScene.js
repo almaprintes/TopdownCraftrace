@@ -7,6 +7,7 @@ export class RaceScene extends BakedRaceScene {
     super.preload?.();
 
     try { if (this.textures.exists('grass')) this.textures.remove('grass'); } catch {}
+    try { if (this.textures.exists('grassTrack')) this.textures.remove('grassTrack'); } catch {}
     try { if (this.textures.exists('asphalt')) this.textures.remove('asphalt'); } catch {}
     try { if (this.textures.exists('asphaltAO')) this.textures.remove('asphaltAO'); } catch {}
     try { if (this.textures.exists('asphaltNormal')) this.textures.remove('asphaltNormal'); } catch {}
@@ -14,15 +15,14 @@ export class RaceScene extends BakedRaceScene {
     try { if (this.textures.exists('asphaltHeight')) this.textures.remove('asphaltHeight'); } catch {}
     try { if (this.textures.exists('asphaltMetalness')) this.textures.remove('asphaltMetalness'); } catch {}
 
-    // Off-road real 4K: se carga directamente como textura world-space. Mantener la
-    // escala física grande es intencionado: las rocas deben conservar tamaño natural
-    // y el mapa debe repetirse pocas veces, no convertirse en un patrón fino.
-    this.load.image('grass', 'assets/materials/offroad/rocky_terrain_diff_4k.jpg?v=20260824-rocky-offroad-v1');
+    // IMPORTANTE: la escena base usa la clave `grass` como fondo mundial. Para conservar
+    // esa ruta sin tocar física ni renderer base, aquí esa clave representa OFF-ROAD.
+    // La hierba real del margen se carga aparte como `grassTrack` y se enmascara solo en
+    // track.geom.grass desde raceExactRuntimeBeautyPass.js.
+    this.load.image('grass', 'assets/materials/offroad/rocky_terrain_diff_4k.jpg?v=20260824-rocky-offroad-v2');
+    this.load.image('grassTrack', 'assets/materials/grass-real.webp?v=20260824-grass-track-v1');
 
-    // Poly Haven Clean Asphalt diffuse/albedo only. No runtime PBR shader: the iPhone
-    // A/B test showed a materially better FMAX (16-18 ms) without it. The remaining
-    // CraftPBR maps stay loaded only as dormant/reference assets and do not affect the
-    // visible asphalt pass.
+    // Poly Haven Clean Asphalt diffuse/albedo only. No runtime PBR shader.
     this.load.image('asphalt', 'assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg?v=20260824-polyhaven-clean-v1');
     this.load.image('asphaltAO', 'assets/materials/asphalt-pbr/ao.png?v=20260824-craftpbr-v1');
     this.load.image('asphaltNormal', 'assets/materials/asphalt-pbr/normal.png?v=20260824-craftpbr-v1');
