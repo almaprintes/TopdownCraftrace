@@ -8,6 +8,11 @@ const SLIP_STRONG = 72;
 const DIRT_CARRY_MS = 1250;
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+function currentTrackKey(scene){
+  let stored='';
+  try{stored=localStorage.getItem('tdr2:trackKey')||'';}catch{}
+  return String(scene?.trackKey || scene?.track?.meta?.id || stored || '').trim().toLowerCase();
+}
 
 export class RaceScene extends CurrentRaceScene {
   create(data){
@@ -16,9 +21,10 @@ export class RaceScene extends CurrentRaceScene {
     this._nextTireMarkAt = 0;
     this._lastMarkPoint = null;
     this._dirtCarryUntil = 0;
+    this._lastMarkOnTrack = null;
     this.events.once('shutdown', () => {
       for (const mark of this._tireMarks || []) { try { mark?.destroy?.(); } catch {} }
-      this._tireMarks = []; this._lastMarkPoint = null; this._dirtCarryUntil = 0;
+      this._tireMarks = []; this._lastMarkPoint = null; this._dirtCarryUntil = 0; this._lastMarkOnTrack = null;
     });
     return result;
   }
@@ -41,22 +47,57 @@ export class RaceScene extends CurrentRaceScene {
     const grassBand = this.track?.geom?.grass;
     const onGrass = !onTrack && this._isInBand ? !!this._isInBand(grassBand, x, y) : false;
     const offRoad = !onTrack;
-    if (offRoad) this._dirtCarryUntil = nowMs + DIRT_CARRY_MS;
-    const carryingDirt = onTrack && nowMs < Number(this._dirtCarryUntil || 0);
+    const raven = currentTrackKey(this)==='offroad-raven-hollow';
+    const prevOnTrack = this._lastMarkOnTrack;
+
+    let carryingDirt=false;
+    if(raven){
+      // Raven Hollow: la pista ES tierra y el exterior inmediato ES asfalto.
+      // Solo arrastramos tierra al SALIR de pista hacia ese asfalto.
+      if(prevOnTrack===true && offRoad) this._dirtCarryUntil=nowMs+DIRT_CARRY_MS;
+      if(onTrack){
+        // Al volver desde asfalto a la pista de tierra no debe aparecer arrastre.
+        this._dirtCarryUntil=0;
+      }
+      carryingDirt=offRoad && nowMs<Number(this._dirtCarryUntil||0);
+    }else{
+      if(offRoad) this._dirtCarryUntil = nowMs + DIRT_CARRY_MS;
+      carryingDirt = onTrack && nowMs < Number(this._dirtCarryUntil || 0);
+    }
+    this._lastMarkOnTrack=onTrack;
+
     const strongSlide = slip >= SLIP_START && Math.abs(forward) > 70;
     if (!strongSlide && !offRoad && !carryingDirt) { this._lastMarkPoint = null; return; }
     const rearOffset = 27, wheelHalf = 13, rearX = x - fx * rearOffset, rearY = y - fy * rearOffset;
     const leftX = rearX + lx * wheelHalf, leftY = rearY + ly * wheelHalf, rightX = rearX - lx * wheelHalf, rightY = rearY - ly * wheelHalf;
     let color = 0x161616, alpha = 0.24 + clamp01((slip - SLIP_START) / (SLIP_STRONG - SLIP_START)) * 0.28;
     let width = 2.2 + clamp01(slip / 120) * 1.4, life = 1150, markKind = 'rubber';
+
+    if(raven && onTrack){
+      // Sobre la pista de tierra: surco marrón suave, no goma negra de asfalto.
+      color = 0x624631;
+      alpha = 0.14 + clamp01((slip - SLIP_START) / (SLIP_STRONG - SLIP_START)) * 0.16;
+      width = 3.5 + clamp01(slip / 120) * 1.2;
+      life = 900;
+      markKind = 'raven-dirt-track';
+    }
+
     if (offRoad) {
-      // Tierra/hierba: huella mucho más evidente. No tocar el arrastre que entra después en asfalto.
-      color = onGrass ? 0x4a3422 : 0x3d2a1c;
-      alpha = 0.42 + clamp01(speed / 360) * 0.24;
-      width = 5.8 + clamp01(slip / 120) * 1.8;
-      life = 1050;
-      markKind = onGrass ? 'grass-dirt' : 'off-dirt';
-    } else if (carryingDirt) {
+      if(raven && carryingDirt){
+        const carry = clamp01((Number(this._dirtCarryUntil || 0) - nowMs) / DIRT_CARRY_MS);
+        color = 0xb89562;
+        alpha = 0.12 + carry * 0.18;
+        width = 4.0;
+        life = 1000;
+        markKind = 'raven-dirt-to-asphalt';
+      }else{
+        color = onGrass ? 0x4a3422 : 0x3d2a1c;
+        alpha = 0.42 + clamp01(speed / 360) * 0.24;
+        width = 5.8 + clamp01(slip / 120) * 1.8;
+        life = 1050;
+        markKind = onGrass ? 'grass-dirt' : 'off-dirt';
+      }
+    } else if (!raven && carryingDirt) {
       const carry = clamp01((Number(this._dirtCarryUntil || 0) - nowMs) / DIRT_CARRY_MS);
       color = 0xb89562; alpha = 0.11 + carry * 0.18; width = 4.0; life = 1000; markKind = 'dirt-carry';
     }
