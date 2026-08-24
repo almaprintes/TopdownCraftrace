@@ -34,47 +34,49 @@ Photographic CraftPBR albedo through the exact road mask.
 Dedicated `AsphaltPBRPipeline` consumes Albedo, Normal, Roughness and Height.
 
 ### v5 — dynamic zoom anti-moire
-The asphalt shader adapts filtering to dynamic camera zoom. Live screenshots around this stage showed roughly 60 FPS and frame max around 16–17 ms, so the PBR shader itself was not showing the later 40 ms regression in the observed test.
+The asphalt shader adapts filtering to dynamic camera zoom. Some low-speed shimmer remains detectable only when deliberately looking for it.
 
 ### v6 — grass richness + irregular dirt shoulder
-Added a second **full-world grass TileSprite** plus one large Graphics object containing many dirt ellipses and dry-grass strokes along both road edges.
-
-This looked modestly better, but subsequent screenshots showed FPS around the high 20s and frame max in the mid/high 30 ms range. At first the regression was blamed on later rubber experiments.
+Added a second full-world grass TileSprite plus many dirt ellipses/dry-grass strokes. This produced only a modest visual gain and coincided with a large performance regression.
 
 ### v7-v10 — rubber experiments — rejected
-Several vector/decal/RenderTexture approaches were tried and rejected visually. The last version also showed FMAX around 43 ms. All custom rubber code was removed.
+Several vector/decal/RenderTexture approaches were tried and rejected visually. The final versions also worsened FMAX. All custom rubber code is removed from active runtime.
 
-### Performance diagnosis after rubber rollback
-After restoring the nominal v6 implementation, the user confirmed **FMAX still remained around 40 ms**. Therefore the rubber system was not the root cause of the sustained regression.
+## Performance isolation timeline
+After removing rubber, FMAX stayed around ~40 ms, proving rubber was not the sustained root cause.
 
-The timeline points much more strongly at the v6 environmental additions:
-- before v6: shader-only screenshots showed frame max about 16–17 ms;
-- after adding full-world grass variation + dense shoulder Graphics: screenshots moved into roughly 36–40 ms;
-- removing rubber did not recover frame time.
+The v6 environmental layers were then removed, leaving only exact road mask + one asphalt TileSprite + PBR shader. User live measurement on iPhone after this rollback:
+- FPS: **51**
+- FRAME MAX / FMAX: **23.4 ms**
 
-For a clean A/B test, the active runtime has now been rolled back further to the **shader-only CraftPBR baseline**: exact road mask + asphalt PBR shader only. The full-world grass variation and procedural shoulder marks are removed from active rendering.
+This was a major recovery from ~40 ms but still slower than the earlier ~16–17 ms screenshots.
 
-Commit for this performance isolation: `5a59553a6184f4bcbcaa46ef4c029ff08c50235e`.
+## Current A/B test — shader disabled
+The user noted that the PBR shader barely changes the visible result, so the next test removes it completely to measure its real cost.
 
-## Current performance baseline under test
 Active beauty pass now contains only:
 - exact `track.geom.left/right` geometry mask;
-- one CraftPBR asphalt TileSprite;
-- `AsphaltPBRPipeline` with zoom-aware anti-moire filtering;
+- one CraftPBR asphalt TileSprite using **albedo only**;
 - stable existing border/kerb renderer.
 
-Temporarily removed:
-- second full-world grass TileSprite;
-- procedural dirt/soil shoulder ellipses;
-- dry-grass Graphics strokes;
-- every rubber/groove experiment.
+Temporarily inactive:
+- `AsphaltPBRPipeline` application;
+- Normal/Roughness/Height shader sampling;
+- zoom-aware shader filtering;
+- extra grass layer;
+- shoulder Graphics;
+- all rubber/groove code.
 
-## Performance rule from this point
-Do not add another visual layer until the iPhone baseline is measured again. Every future effect must be introduced one at a time and compared against `FMAX`.
+The shader implementation file remains in the repository for reference, but the active beauty pass no longer imports or applies it.
 
-If frame time returns to the previous ~16–20 ms range, reintroduce environmental detail only as lightweight localized or pre-baked assets, never another full-world translucent layer plus thousands of Graphics primitives.
+A/B commit: `f601e1063cd3de7921b570aaec7d78e7b692afae`.
 
-If FMAX remains ~40 ms even with this shader-only baseline, investigate the shader / multi-texture filtering path next instead of making further visual additions.
+## Decision rule
+Measure FPS and FMAX on the same iPhone/circuit area:
+- if FMAX improves materially from the 23.4 ms shader-on baseline, keep the shader disabled and favor the clean photographic albedo;
+- if there is little/no difference, the remaining cost is more likely the masked full-world asphalt TileSprite / renderer path rather than the shader itself.
+
+Do not add another visual effect until this A/B result is recorded.
 
 ## Explicitly untouched
 - dynamic camera zoom behaviour/range
