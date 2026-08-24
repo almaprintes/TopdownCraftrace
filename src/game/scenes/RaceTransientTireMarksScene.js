@@ -50,7 +50,12 @@ export class RaceScene extends CurrentRaceScene {
     let color = 0x161616, alpha = 0.24 + clamp01((slip - SLIP_START) / (SLIP_STRONG - SLIP_START)) * 0.28;
     let width = 2.2 + clamp01(slip / 120) * 1.4, life = 1150, markKind = 'rubber';
     if (offRoad) {
-      color = onGrass ? 0x756a46 : 0x6e5941; alpha = 0.18 + clamp01(speed / 360) * 0.17; width = 3.4; life = 820; markKind = onGrass ? 'grass-dirt' : 'off-dirt';
+      // Tierra/hierba: huella mucho más evidente. No tocar el arrastre que entra después en asfalto.
+      color = onGrass ? 0x4a3422 : 0x3d2a1c;
+      alpha = 0.42 + clamp01(speed / 360) * 0.24;
+      width = 5.8 + clamp01(slip / 120) * 1.8;
+      life = 1050;
+      markKind = onGrass ? 'grass-dirt' : 'off-dirt';
     } else if (carryingDirt) {
       const carry = clamp01((Number(this._dirtCarryUntil || 0) - nowMs) / DIRT_CARRY_MS);
       color = 0xb89562; alpha = 0.11 + carry * 0.18; width = 4.0; life = 1000; markKind = 'dirt-carry';
