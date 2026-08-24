@@ -23,21 +23,27 @@ No custom edge stroke, dirt stroke or replacement kerb geometry is drawn by the 
 
 `RaceRealSurfaceAssetsScene` loads all six CraftPBR maps from `assets/materials/asphalt-pbr/`.
 
+## Iterations
 ### v1
-The first live integration used one Albedo layer plus restrained AO. It proved the material and exact mask worked, but the road still looked too uniform and the mineral aggregate read too large at gameplay zoom.
+One photographic Albedo layer plus restrained AO. This proved the new material and exact mask worked.
 
-### v2 — multiscale material variation
-`raceExactRuntimeBeautyPass.js` now:
-- reduces the base albedo scale so aggregate reads finer at gameplay distance;
-- keeps fine AO aligned to the albedo;
-- reuses the real Roughness map at a much larger world scale with MULTIPLY blending for broad dark/polished variation;
-- reuses the real Height map at another large scale with very low SCREEN blending for soft worn highlights;
-- adds a second large-scale AO sample at a different offset/frequency to break uniformity;
-- does **not** composite the tangent-space Normal map as color, avoiding purple contamination;
-- keeps Normal loaded for a future proper WebGL lighting shader;
-- keeps Metalness unused visually because asphalt is correctly non-metallic.
+### v2 / v3
+Tried compositing Roughness/Height/AO as 2D grayscale layers at different scales. In live iPhone tests this mostly made the road darker; the intended material response was not convincingly visible. This approach is retired.
 
-This replaces the previous procedural repairs, aggregate dots and center rubber stripe. The goal is organic multiscale variation derived from the actual PBR source maps, not painted game effects.
+### v4 — real WebGL material response
+A dedicated `AsphaltPBRPipeline` now handles the visible road surface when Phaser is running in WebGL.
+
+The shader consumes:
+- Albedo as the base colour;
+- Normal as real tangent-space micro-surface direction;
+- Roughness to control the strength of broad, weak asphalt highlights;
+- Height as restrained micro-relief/tonal variation.
+
+The lighting direction is fixed and soft to read as outdoor daylight from the top-down camera. The aim is perceptible surface relief and material response on a phone screen without making the asphalt look wet, metallic or exaggerated.
+
+The previous fake 2D Roughness/Height/AO stacks are removed. If WebGL or the custom pipeline is unavailable, the game falls back to the clean photographic Albedo only.
+
+`AO` and `metalness` remain loaded as source material maps. Metalness is correctly black for asphalt. AO can be incorporated later if the shader needs further refinement after live validation.
 
 ## Explicitly untouched
 - physics
