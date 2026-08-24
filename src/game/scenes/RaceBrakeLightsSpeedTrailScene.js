@@ -90,25 +90,28 @@ export class RaceScene extends CurrentRaceScene {
     gfx.clear();
 
     if(frontFacing){
-      // Óptica frontal: núcleo pequeño + halo concéntrico suave para sensación de deslumbramiento.
-      const frontY=-h*0.405;
-      const halfSpread=Math.max(4.5,w*0.255);
-      const coreR=Math.max(1.25,Math.min(2.05,w*0.064));
-      const haloR1=coreR*1.9;
-      const haloR2=coreR*3.0;
+      // Faros delanteros: núcleo mínimo colocado SOBRE el morro y un único halo exterior
+      // construido en capas para que el brillo se degrade suavemente hacia fuera.
+      const frontY=-h*0.335;
+      const halfSpread=Math.max(4.2,w*0.245);
+      const coreR=Math.max(0.78,Math.min(1.30,w*0.041));
 
-      // Halo exterior muy tenue.
-      gfx.fillStyle(0xddeaff,0.07);
-      gfx.fillCircle(-halfSpread,frontY,haloR2);
-      gfx.fillCircle( halfSpread,frontY,haloR2);
+      // Halo exterior degradado. No hay halo interior independiente.
+      const glowLayers=[
+        [4.4,0.018,0xcfe4ff],
+        [3.6,0.030,0xd9eaff],
+        [2.9,0.050,0xe3f0ff],
+        [2.3,0.075,0xecf5ff],
+        [1.8,0.105,0xf3f9ff]
+      ];
+      for(const [mul,alpha,color] of glowLayers){
+        gfx.fillStyle(color,alpha);
+        gfx.fillCircle(-halfSpread,frontY,coreR*mul);
+        gfx.fillCircle( halfSpread,frontY,coreR*mul);
+      }
 
-      // Halo interior algo más presente.
-      gfx.fillStyle(0xeaf3ff,0.15);
-      gfx.fillCircle(-halfSpread,frontY,haloR1);
-      gfx.fillCircle( halfSpread,frontY,haloR1);
-
-      // Núcleo blanco compacto.
-      gfx.fillStyle(0xffffff,0.96);
+      // Punto luminoso muy pequeño; el volumen aparente debe venir del halo exterior.
+      gfx.fillStyle(0xffffff,0.98);
       gfx.fillCircle(-halfSpread,frontY,coreR);
       gfx.fillCircle( halfSpread,frontY,coreR);
       return;
