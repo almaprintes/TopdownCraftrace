@@ -69,9 +69,23 @@ Screenshot observations:
 - red/white kerbs are crisp and geometrically stable, but their perfectly clean colour makes them feel newer than the surrounding surface;
 - the scene still lacks medium-scale environmental cues that give a real kart track depth: tyre rubber on racing/braking lines, kerb wear, edge dust accumulation, irregular worn grass/soil patches, and selective trackside objects/shadows.
 
+### v7 — geometry-driven racing-line rubber and braking wear
+`raceExactRuntimeBeautyPass.js` now adds a static rubber/wear decal layer above the PBR asphalt and below the proven border/kerb render.
+
+Implementation rules:
+- the visual guide path is derived only from the midpoint between existing `track.geom.left/right` samples;
+- local curvature is calculated from neighbouring centre samples;
+- curves bias the visual rubber path gently toward the inside, while straights relax back toward centre;
+- the path is **visual only** and never feeds AI, physics, checkpoints, lap timing or surface detection;
+- three broad, very low-alpha passes with deterministic gaps/width variation create diffuse rubber accumulation instead of one obvious black ideal-line stripe;
+- approaching sharp curvature increases a separate broader braking-zone haze before the corner;
+- every rubber mark is clipped by the exact already-validated asphalt geometry mask, so it cannot leak outside the road or modify borders.
+
+This is intentionally a first-pass strength chosen to be visible on iPhone without making the circuit look painted. Live validation is required before increasing/decreasing opacity.
+
 ## Next visual priorities
 Proceed in controlled layers, preserving exact geometry and performance:
-1. **Racing-line rubber / braking-zone wear** — broad, extremely subtle darkening driven from the centre ribbon/curvature, not a hard painted line. This should provide the largest immediate realism gain on the asphalt.
+1. **Racing-line rubber / braking-zone wear** — v7 implemented; awaiting iPhone validation.
 2. **Kerb weathering** — restrained dirt/desaturation/scuff overlays clipped to existing kerb areas; do not rebuild kerb geometry.
 3. **Terrain breakup** — a few larger irregular dry/worn/soil zones in grass islands to remove the uniform green-carpet appearance.
 4. **Edge integration** — local dirt accumulation and grass encroachment near selected edges while leaving deliberate clean sections.
