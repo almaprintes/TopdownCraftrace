@@ -6,13 +6,12 @@ function prefs(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')
 export class RaceScene extends CurrentRaceScene {
   create(data){
     this._tdrWheelMode=prefs().steeringMode==='wheel';
+    this._tdrWheelSteer=0;
     const result=super.create(data);
     if(this._tdrWheelMode)this._buildSteeringWheel();
     return result;
   }
 
-  // Wheel mode must NOT inherit the old analogue joystick's absolute-angle logic.
-  // A steering wheel is relative to the car: hold right and the car keeps turning right.
   createTouchControls(){
     if(!this._tdrWheelMode)return super.createTouchControls();
 
@@ -60,6 +59,17 @@ export class RaceScene extends CurrentRaceScene {
     return state;
   }
 
+  _applyWheelSteer(value){
+    this._tdrWheelSteer=Number.isFinite(value)?value:0;
+    if(!this.touch)return;
+    this.touch.targetAngle=null;
+    this.touch.stickX=0;
+    this.touch.stickY=0;
+    this.touch.steer=this._tdrWheelSteer;
+    this.touch.buttonSteer=0;
+    this.touch.leftActive=Math.abs(this._tdrWheelSteer)>.008;
+  }
+
   _buildSteeringWheel(){
     document.getElementById('tdr-steering-wheel')?.remove?.();
     document.getElementById('tdr-steering-wheel-style')?.remove?.();
@@ -69,49 +79,62 @@ export class RaceScene extends CurrentRaceScene {
     style.id='tdr-steering-wheel-style';
     style.textContent=`
       #tdr-race-controls .tdr-stick{display:none!important}
-      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(18px,1.8vw);bottom:max(10px,1.8vh);width:clamp(142px,17vw,194px);aspect-ratio:475/365;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 8px 18px rgba(0,0,0,.42));}
-      #tdr-steering-wheel .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:.98;transform:rotate(var(--rot,0deg));transform-origin:50% 50%;transition:transform 45ms linear,filter 80ms linear}
-      #tdr-steering-wheel.active .art{filter:brightness(1.08)}
+      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(18px,1.8vw);bottom:max(10px,1.8vh);width:clamp(136px,16vw,184px);aspect-ratio:475/365;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 7px 15px rgba(0,0,0,.38));}
+      #tdr-steering-wheel .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:.97;transform:rotate(var(--rot,0deg));transform-origin:50% 50%;transition:transform 38ms linear,filter 80ms linear}
+      #tdr-steering-wheel.active .art{filter:brightness(1.05)}
     `;
     document.head.appendChild(style);
 
     const wheel=document.createElement('div');
     wheel.id='tdr-steering-wheel';
-    wheel.innerHTML='<img class="art" src="assets/ui/steering-wheel.svg?v=2" alt="Volante">';
+    wheel.innerHTML='<img class="art" src="assets/ui/steering-wheel-v2.svg?v=1" alt="Volante">';
     document.body.appendChild(wheel);
 
-    let activeId=null,startX=0,steer=0;
-    const setSteer=value=>{
+    let activeId=null;
+
+    const setFromPointer=e=>{
+      const r=wheel.getBoundingClientRect();
+      const cx=r.left+r.width*.5;
+      const half=Math.max(44,r.width*.5);
+      let raw=(e.clientX-cx)/half;
+      raw=Math.max(-1,Math.min(1,raw));
+
       const current=prefs();
       const sens=Math.max(.4,Math.min(1.4,Number(current.sensitivity||1)));
       const inv=current.invertSteer===true?-1:1;
-      steer=Math.max(-1,Math.min(1,value*sens*inv));
-      if(this.touch){
-        // IMPORTANT: targetAngle MUST stay null. A wheel is relative steering,
-        // not the joystick's old world-space "point the car toward this angle" mode.
-        this.touch.targetAngle=null;
-        this.touch.stickX=0;
-        this.touch.stickY=0;
-        this.touch.steer=steer;
-        this.touch.buttonSteer=0;
-        this.touch.leftActive=Math.abs(steer)>.01;
-      }
-      wheel.style.setProperty('--rot',`${steer*82}deg`);
+
+      // Más progresivo alrededor del centro y sin llegar a un giro salvaje.
+      const shaped=Math.sign(raw)*Math.pow(Math.abs(raw),1.35);
+      const steer=Math.max(-0.78,Math.min(0.78,shaped*0.68*sens*inv));
+      this._applyWheelSteer(steer);
+
+      // El dibujo comunica el ángulo del volante, pero de forma contenida.
+      wheel.style.setProperty('--rot',`${raw*52}deg`);
     };
+
     const down=e=>{
       if(activeId!==null)return;
-      activeId=e.pointerId;startX=e.clientX;wheel.setPointerCapture?.(e.pointerId);wheel.classList.add('active');setSteer(0);e.preventDefault();
+      activeId=e.pointerId;
+      wheel.setPointerCapture?.(e.pointerId);
+      wheel.classList.add('active');
+      setFromPointer(e);
+      e.preventDefault();
     };
     const move=e=>{
       if(activeId!==e.pointerId)return;
-      const travel=Math.max(48,wheel.getBoundingClientRect().width*.46);
-      setSteer((e.clientX-startX)/travel);e.preventDefault();
+      setFromPointer(e);
+      e.preventDefault();
     };
     const release=e=>{
       if(activeId!==e.pointerId)return;
       try{wheel.releasePointerCapture?.(e.pointerId);}catch{}
-      activeId=null;startX=0;wheel.classList.remove('active');setSteer(0);e.preventDefault();
+      activeId=null;
+      wheel.classList.remove('active');
+      this._applyWheelSteer(0);
+      wheel.style.setProperty('--rot','0deg');
+      e.preventDefault();
     };
+
     wheel.addEventListener('pointerdown',down,{passive:false});
     wheel.addEventListener('pointermove',move,{passive:false});
     wheel.addEventListener('pointerup',release,{passive:false});
@@ -119,15 +142,24 @@ export class RaceScene extends CurrentRaceScene {
     wheel.addEventListener('lostpointercapture',release,{passive:false});
 
     this.events.once('shutdown',()=>{
-      if(this.touch){this.touch.targetAngle=null;this.touch.steer=0;this.touch.stickX=0;this.touch.stickY=0;this.touch.leftActive=false;}
-      wheel.remove();document.getElementById('tdr-steering-wheel-style')?.remove();
+      this._applyWheelSteer(0);
+      wheel.removeEventListener('pointerdown',down);
+      wheel.removeEventListener('pointermove',move);
+      wheel.removeEventListener('pointerup',release);
+      wheel.removeEventListener('pointercancel',release);
+      wheel.removeEventListener('lostpointercapture',release);
+      wheel.remove();
+      document.getElementById('tdr-steering-wheel-style')?.remove();
     });
   }
 
   update(time,delta){
-    // Belt-and-braces: never allow inherited joystick code to turn wheel input
-    // back into an absolute world angle between pointer events.
-    if(this._tdrWheelMode&&this.touch)this.touch.targetAngle=null;
+    if(this._tdrWheelMode){
+      // Reinyectar cada frame: ninguna capa heredada puede convertirlo en dirección absoluta
+      // ni neutralizarlo mientras el volante se mantiene girado.
+      this._applyWheelSteer(this._tdrWheelSteer||0);
+    }
     super.update(time,delta);
+    if(this._tdrWheelMode)this._applyWheelSteer(this._tdrWheelSteer||0);
   }
 }
