@@ -7,14 +7,10 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    // UI
-    if (this.textures.exists('ui_rotate_landscape')) {
-      this.textures.remove('ui_rotate_landscape');
-    }
-    this.load.image('track_karting_tenerife', 'assets/tracks/karting-tenerife-completo.png');
+    if (this.textures.exists('ui_rotate_landscape')) this.textures.remove('ui_rotate_landscape');
     this.load.image('ui_rotate_landscape', 'assets/ui/orientation_portrait.png');
 
-    // Precarga mínima: solo recursos necesarios para arrancar y mostrar el menú.
+    // Boot mínimo: solo recursos del menú inicial.
     this.load.image('logo', 'assets/logos/logo_tdr2_sobres.webp');
     this.load.json('car_overrides', 'community/car-overrides.json');
     this.load.json('trackjson:track01', 'tracks/library/track01/track.json');
@@ -26,134 +22,75 @@ export class BootScene extends Phaser.Scene {
     this.load.image('btn_factory', 'assets/ui/btn_factory.webp');
     this.load.image('btn_tracks', 'assets/ui/btn_tracks.webp');
 
-    // Material base utilizado por escenas antiguas.
-    this.load.image('asphaltOverlay', 'assets/textures/texture-asphalt-overlay.webp');
+    // Ya NO se cargan globalmente aquí:
+    // - karting-tenerife-completo.png (~3.2 MB comprimido; mucho más en RAM)
+    // - asphaltOverlay
+    // - start lights x7
+    // - cards de garaje
+    // - tutoriales
+    // Todo eso debe vivir en la escena que realmente lo necesite.
 
-    // Start lights (7 estados: base + 6 rojas)
-    this.load.image('start_base', 'assets/startlights/start_base.png');
-    this.load.image('start_l1', 'assets/startlights/start_l1.png');
-    this.load.image('start_l2', 'assets/startlights/start_l2.png');
-    this.load.image('start_l3', 'assets/startlights/start_l3.png');
-    this.load.image('start_l4', 'assets/startlights/start_l4.png');
-    this.load.image('start_l5', 'assets/startlights/start_l5.png');
-    this.load.image('start_l6', 'assets/startlights/start_l6.png');
-
-    // IMPORTANTE iOS:
-    // - Las 16 cards del garaje ya NO se cargan globalmente aquí.
-    // - Las 5 imágenes del tutorial ya NO se cargan globalmente aquí.
-    // Ambos grupos se cargan bajo demanda en sus escenas para reducir memoria residente
-    // y evitar cierres de WebKit en dispositivos con menor margen (iPhone 12).
-
-    // Barra de carga simple
     const { width, height } = this.scale;
     const barW = Math.min(520, Math.floor(width * 0.7));
     const barH = 10;
     const x = (width - barW) / 2;
     const y = Math.floor(height * 0.72);
-
-    const outline = this.add
-      .rectangle(x + barW / 2, y, barW, barH, 0x0b1020, 0)
-      .setStrokeStyle(1, 0xb7c0ff, 0.35);
-
-    const fill = this.add
-      .rectangle(x, y, 0, barH - 2, 0x2bff88, 0.9)
-      .setOrigin(0, 0.5);
-
-    this.load.on('progress', (p) => {
-      fill.width = Math.max(2, Math.floor((barW - 2) * p));
-    });
-
-    this.load.on('complete', () => {
-      outline.destroy();
-    });
+    const outline = this.add.rectangle(x + barW / 2, y, barW, barH, 0x0b1020, 0).setStrokeStyle(1, 0xb7c0ff, 0.35);
+    const fill = this.add.rectangle(x, y, 0, barH - 2, 0x2bff88, 0.9).setOrigin(0, 0.5);
+    this.load.on('progress', p => { fill.width = Math.max(2, Math.floor((barW - 2) * p)); });
+    this.load.on('complete', () => outline.destroy());
   }
 
   create() {
-    const cam = this.cameras.main;
-    cam.setBackgroundColor('#000000');
-
+    this.cameras.main.setBackgroundColor('#000000');
     const { width, height } = this.scale;
-    try {
-      const payload = this.cache.json.get('car_overrides');
-      applyCarOverrides(payload);
-    } catch {}
+    try { applyCarOverrides(this.cache.json.get('car_overrides')); } catch {}
 
-    // Creamos un <video> HTML para iOS/Android (lo más robusto)
+    // En iPhone 12 / modo seguro evitamos incluso decodificar el MP4 de intro.
+    if (window.__tdrIosSafeMode === true) {
+      this.scene.start('menu');
+      return;
+    }
+
     const video = document.createElement('video');
     video.src = 'assets/intro/intro.mp4';
     video.muted = true;
     video.playsInline = true;
     video.autoplay = true;
-    video.preload = 'auto';
+    video.preload = 'metadata';
     video.controls = false;
     video.loop = false;
-
     video.style.width = '100%';
     video.style.height = '100%';
     video.style.objectFit = 'contain';
     video.style.background = '#000';
 
-    const domEl = this.add.dom(width / 2, height / 2, video);
-    domEl.setOrigin(0.5);
+    const domEl = this.add.dom(width / 2, height / 2, video).setOrigin(0.5);
+    const fadeRect = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0).setDepth(1000);
+    const onResize = gameSize => domEl.setPosition(gameSize.width / 2, gameSize.height / 2);
+    this.scale.on('resize', onResize);
 
-    const fadeRect = this.add.rectangle(
-      width / 2,
-      height / 2,
-      width,
-      height,
-      0x000000,
-      0
-    ).setDepth(1000);
-
-    this.scale.on('resize', (gameSize) => {
-      domEl.setPosition(gameSize.width / 2, gameSize.height / 2);
-    });
-
+    let leaving=false;
     const cleanupAndGo = () => {
-      this.tweens.add({
-        targets: fadeRect,
-        alpha: 1,
-        duration: 500,
-        ease: 'Sine.easeInOut',
-        onComplete: () => {
-          video.onended = null;
-          video.onerror = null;
-
-          try { video.pause(); } catch {}
-          try { video.removeAttribute('src'); video.load(); } catch {}
-          try { domEl.destroy(); } catch {}
-          try { video.remove(); } catch {}
-
-          this.scene.start('menu');
-        }
-      });
+      if(leaving)return; leaving=true;
+      this.tweens.add({targets:fadeRect,alpha:1,duration:300,ease:'Sine.easeInOut',onComplete:()=>{
+        this.scale.off('resize',onResize);
+        video.onended=null;video.onerror=null;
+        try{video.pause();}catch{}
+        try{video.removeAttribute('src');video.load();}catch{}
+        try{domEl.destroy();}catch{}
+        try{video.remove();}catch{}
+        this.scene.start('menu');
+      }});
     };
+    video.onended=cleanupAndGo;
+    video.onerror=cleanupAndGo;
 
-    video.onended = cleanupAndGo;
-    video.onerror = cleanupAndGo;
-
-    const tryPlay = () => {
-      const p = video.play();
-      if (p && typeof p.catch === 'function') {
-        p.catch(() => {
-          const hint = this.add.text(width / 2, height * 0.8, 'Toca para empezar', {
-            fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto,Arial',
-            fontSize: '18px',
-            color: '#ffffff'
-          }).setOrigin(0.5);
-
-          this.input.once('pointerdown', () => {
-            hint.destroy();
-            video.play().catch(() => cleanupAndGo());
-          });
-        });
-      }
-    };
-
-    tryPlay();
-
-    this.time.delayedCall(7000, () => {
-      if (this.scene.isActive()) cleanupAndGo();
+    const p=video.play();
+    if(p&&typeof p.catch==='function')p.catch(()=>{
+      const hint=this.add.text(width/2,height*.8,'Toca para empezar',{fontFamily:'system-ui, -apple-system, Segoe UI, Roboto,Arial',fontSize:'18px',color:'#ffffff'}).setOrigin(.5);
+      this.input.once('pointerdown',()=>{hint.destroy();video.play().catch(cleanupAndGo);});
     });
+    this.time.delayedCall(7000,()=>{if(this.scene.isActive())cleanupAndGo();});
   }
 }
