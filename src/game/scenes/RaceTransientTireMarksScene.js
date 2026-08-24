@@ -5,6 +5,7 @@ const SAMPLE_MS = 58;
 const MIN_SPEED = 115;
 const SLIP_START = 34;
 const SLIP_STRONG = 72;
+const DIRT_CARRY_MS = 900;
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 
@@ -14,6 +15,7 @@ export class RaceScene extends CurrentRaceScene {
     this._tireMarks = [];
     this._nextTireMarkAt = 0;
     this._lastMarkPoint = null;
+    this._dirtCarryUntil = 0;
 
     this.events.once('shutdown', () => {
       for (const mark of this._tireMarks || []) {
@@ -21,6 +23,7 @@ export class RaceScene extends CurrentRaceScene {
       }
       this._tireMarks = [];
       this._lastMarkPoint = null;
+      this._dirtCarryUntil = 0;
     });
 
     return result;
@@ -33,11 +36,11 @@ export class RaceScene extends CurrentRaceScene {
     if (Number(time || 0) < Number(this._nextTireMarkAt || 0)) return result;
     this._nextTireMarkAt = Number(time || 0) + SAMPLE_MS;
 
-    this._emitTransientTireMark();
+    this._emitTransientTireMark(Number(time || 0));
     return result;
   }
 
-  _emitTransientTireMark(){
+  _emitTransientTireMark(nowMs){
     const car = this.car;
     const body = car?.body;
     if (!body) return;
@@ -66,8 +69,11 @@ export class RaceScene extends CurrentRaceScene {
     const onGrass = !onTrack && this._isInBand ? !!this._isInBand(grassBand, x, y) : false;
     const offRoad = !onTrack;
 
+    if (offRoad) this._dirtCarryUntil = nowMs + DIRT_CARRY_MS;
+    const carryingDirt = onTrack && nowMs < Number(this._dirtCarryUntil || 0);
+
     const strongSlide = slip >= SLIP_START && Math.abs(forward) > 70;
-    if (!strongSlide && !offRoad) {
+    if (!strongSlide && !offRoad && !carryingDirt) {
       this._lastMarkPoint = null;
       return;
     }
@@ -85,19 +91,28 @@ export class RaceScene extends CurrentRaceScene {
     let alpha = 0.24 + clamp01((slip - SLIP_START) / (SLIP_STRONG - SLIP_START)) * 0.28;
     let width = 2.2 + clamp01(slip / 120) * 1.4;
     let life = 1150;
+    let markKind = 'rubber';
 
     if (offRoad) {
       color = onGrass ? 0x756a46 : 0x6e5941;
       alpha = 0.18 + clamp01(speed / 360) * 0.17;
       width = 3.4;
       life = 820;
+      markKind = onGrass ? 'grass-dirt' : 'off-dirt';
+    } else if (carryingDirt) {
+      const carry = clamp01((Number(this._dirtCarryUntil || 0) - nowMs) / DIRT_CARRY_MS);
+      color = 0x6e5941;
+      alpha = 0.10 + carry * 0.22;
+      width = 3.1;
+      life = 760;
+      markKind = 'dirt-carry';
     }
 
     const prev = this._lastMarkPoint;
     const gfx = this.add.graphics().setDepth(19).setScrollFactor(1);
     gfx.lineStyle(width, color, alpha);
 
-    if (prev && prev.offRoad === offRoad) {
+    if (prev && prev.markKind === markKind) {
       gfx.beginPath();
       gfx.moveTo(prev.leftX, prev.leftY);
       gfx.lineTo(leftX, leftY);
@@ -134,6 +149,6 @@ export class RaceScene extends CurrentRaceScene {
       }
     });
 
-    this._lastMarkPoint = { leftX, leftY, rightX, rightY, offRoad };
+    this._lastMarkPoint = { leftX, leftY, rightX, rightY, offRoad, markKind };
   }
 }
