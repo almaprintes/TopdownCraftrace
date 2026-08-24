@@ -1,11 +1,36 @@
 const SETTINGS_KEY='tdr2:settings';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
-const DEFAULTS={
-  stick:{steer:{x:.11,y:.77,scale:1},gas:{x:.80,y:.73,scale:1},brake:{x:.88,y:.73,scale:1},handbrake:{x:.955,y:.73,scale:1}},
-  wheel:{steer:{x:.115,y:.76,scale:1},gas:{x:.80,y:.73,scale:1},brake:{x:.88,y:.73,scale:1},handbrake:{x:.955,y:.73,scale:1}},
-  buttons:{left:{x:.085,y:.78,scale:1},right:{x:.19,y:.78,scale:1},gas:{x:.80,y:.73,scale:1},brake:{x:.88,y:.73,scale:1},handbrake:{x:.955,y:.73,scale:1}}
+const STEERING_DEFAULTS={
+  stick:{steer:{x:.11,y:.77,scale:1}},
+  wheel:{steer:{x:.115,y:.76,scale:1}},
+  buttons:{left:{x:.085,y:.78,scale:1},right:{x:.19,y:.78,scale:1}}
 };
+
+function viewportSize(){
+  const w=Math.max(320,Number(globalThis.innerWidth)||844);
+  const h=Math.max(240,Number(globalThis.innerHeight)||390);
+  return {w,h};
+}
+
+function factoryPedalLayout(){
+  const {w,h}=viewportSize();
+  // Match the actual factory CSS in RaceHandbrakeScene exactly instead of
+  // using guessed normalized coordinates. This keeps RESTABLECER identical
+  // to the untouched race layout on every landscape iPhone size.
+  const handW=clamp(w*.08,78,102);
+  const pedalW=clamp(w*.092,88,122);
+  const pedalH=clamp(h*.24,132,172);
+  const edge=Math.max(4,w*.0055);
+  const bottom=Math.max(8,h*.015);
+  const y=1-(bottom+pedalH*.5)/h;
+  const handbrake={x:1-(edge+handW*.5)/w,y,scale:1};
+  const brakeRight=edge+handW+5;
+  const brake={x:1-(brakeRight+pedalW*.5)/w,y,scale:1};
+  const gasRight=brakeRight+pedalW+6;
+  const gas={x:1-(gasRight+pedalW*.5)/w,y,scale:1};
+  return {gas,brake,handbrake};
+}
 
 function mirror(layout){
   const out={};
@@ -20,7 +45,7 @@ export function controlLayoutKey(controls={}){
 
 export function defaultControlLayout(controls={}){
   const mode=['stick','buttons','wheel'].includes(controls.steeringMode)?controls.steeringMode:'stick';
-  const base=structuredClone(DEFAULTS[mode]||DEFAULTS.stick);
+  const base={...structuredClone(STEERING_DEFAULTS[mode]||STEERING_DEFAULTS.stick),...factoryPedalLayout()};
   return controls.leftHanded===true?mirror(base):base;
 }
 
@@ -76,10 +101,35 @@ function placeDom(el,point,sizeScale=true){
   }
 }
 
+function hardenIosRaceControls(root){
+  if(!root)return;
+  const nodes=[
+    root,
+    ...root.querySelectorAll('*'),
+    document.getElementById('tdr-handbrake'),
+    document.getElementById('tdr-steering-wheel')
+  ].filter(Boolean);
+  for(const el of nodes){
+    el.style.setProperty('user-select','none','important');
+    el.style.setProperty('-webkit-user-select','none','important');
+    el.style.setProperty('-webkit-touch-callout','none','important');
+    el.style.setProperty('-webkit-tap-highlight-color','transparent','important');
+    el.style.setProperty('touch-action','none','important');
+    try{el.draggable=false;}catch{}
+  }
+
+  if(root.dataset.tdrIosTouchGuard==='1')return;
+  root.dataset.tdrIosTouchGuard='1';
+  const block=e=>{e.preventDefault();};
+  const guarded=['dblclick','contextmenu','selectstart','dragstart','gesturestart','gesturechange','gestureend'];
+  guarded.forEach(type=>root.addEventListener(type,block,{capture:true,passive:false}));
+}
+
 export function applyDomControlLayout(){
   const {controls,layout}=readControlLayout();
   const root=document.getElementById('tdr-race-controls');
   if(!root)return;
+  hardenIosRaceControls(root);
   placeDom(root.querySelector('[data-stick]'),layout.steer);
   placeDom(root.querySelector('[data-pedal="gas"]'),layout.gas);
   placeDom(root.querySelector('[data-pedal="brake"]'),layout.brake);
