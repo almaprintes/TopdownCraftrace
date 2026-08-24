@@ -2,41 +2,23 @@
 // La fisica y la deteccion de superficie NO consumen estos assets.
 const TRACK_BEAUTY_LAYERS = Object.freeze({
   'karting-tenerife': Object.freeze({
-    useBeautyLayer: true,
-    assetRevision: 'debug-red-20260824-064121',
-    assetsAvailable: true,
+    // El bake rojo de validacion queda retirado del runtime.
+    // Karting Tenerife usa ahora el material world-space aplicado sobre la mascara
+    // exacta de track.geom.left/right en raceExactRuntimeBeautyPass.js.
+    useBeautyLayer: false,
+    assetRevision: 'runtime-exact-materials-20260824',
+    assetsAvailable: false,
     worldW: 2813,
     worldH: 2602,
     depth: 9,
     replaces: Object.freeze({
-      asphalt: true,
-      grass: true,
-      offroad: true,
+      asphalt: false,
+      grass: false,
+      offroad: false,
       kerbs: false,
       props: false
     }),
-    tiles: Object.freeze([
-      Object.freeze({
-        key: 'trackBeauty:karting-tenerife:0:debug-red',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-0.webp?v=debug-red-20260824-064121',
-        x: 0, y: 0, w: 1407, h: 1301
-      }),
-      Object.freeze({
-        key: 'trackBeauty:karting-tenerife:1:debug-red',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-1.webp?v=debug-red-20260824-064121',
-        x: 1407, y: 0, w: 1406, h: 1301
-      }),
-      Object.freeze({
-        key: 'trackBeauty:karting-tenerife:2:debug-red',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-2.webp?v=debug-red-20260824-064121',
-        x: 0, y: 1301, w: 1407, h: 1301
-      }),
-      Object.freeze({
-        key: 'trackBeauty:karting-tenerife:3:debug-red',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-3.webp?v=debug-red-20260824-064121',
-        x: 1407, y: 1301, w: 1406, h: 1301
-      })
-    ])
+    tiles: Object.freeze([])
   })
 });
 
