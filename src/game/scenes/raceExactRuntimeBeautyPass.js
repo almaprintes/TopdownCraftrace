@@ -73,21 +73,23 @@ function addRoadDetails(scene, mask, worldW, worldH) {
   const detail = scene.add.graphics().setDepth(10.48).setScrollFactor(1).setMask(mask);
   const rng = seeded(240824);
 
-  for (let i = 0; i < 150; i++) {
+  // Repair patches: larger and darker than the first pass so they are visible on mobile.
+  for (let i = 0; i < 115; i++) {
     const x = rng() * worldW;
     const y = rng() * worldH;
-    const w = 18 + rng() * 92;
-    const h = 5 + rng() * 24;
-    const light = rng() > 0.55;
-    detail.fillStyle(light ? 0x737477 : 0x17191a, 0.025 + rng() * 0.045);
+    const w = 24 + rng() * 125;
+    const h = 7 + rng() * 32;
+    const light = rng() > 0.7;
+    detail.fillStyle(light ? 0x77736d : 0x111313, 0.045 + rng() * 0.055);
     detail.fillEllipse(x, y, w, h);
   }
 
-  for (let i = 0; i < 520; i++) {
+  // Fine aggregate: enough contrast to survive the game's camera scale.
+  for (let i = 0; i < 720; i++) {
     const x = rng() * worldW;
     const y = rng() * worldH;
-    const r = 0.6 + rng() * 1.7;
-    detail.fillStyle(rng() > 0.5 ? 0xd1d1cd : 0x080909, 0.025 + rng() * 0.035);
+    const r = 0.7 + rng() * 1.8;
+    detail.fillStyle(rng() > 0.52 ? 0xc6c0b4 : 0x090a0a, 0.04 + rng() * 0.05);
     detail.fillCircle(x, y, r);
   }
 
@@ -99,9 +101,9 @@ function addRubber(scene, mask) {
   const center = scene.track?.geom?.center;
   if (!Array.isArray(center) || center.length < 3) return null;
   const rubber = scene.add.graphics().setDepth(10.53).setScrollFactor(1).setMask(mask);
-  rubber.lineStyle(22, 0x0b0c0d, 0.045);
+  rubber.lineStyle(28, 0x070808, 0.075);
   strokePolyline(rubber, center);
-  rubber.lineStyle(10, 0x050606, 0.055);
+  rubber.lineStyle(13, 0x020303, 0.095);
   strokePolyline(rubber, center);
   scene.uiCam?.ignore?.(rubber);
   return rubber;
@@ -135,38 +137,45 @@ function installPass(scene, data) {
     objects.push(grass);
   }
 
+  // Main high-detail asphalt material.
   const asphalt = scene.add.tileSprite(0, 0, worldW, worldH, 'asphalt')
     .setOrigin(0, 0)
     .setDepth(10.35)
     .setScrollFactor(1)
     .setMask(bundle.mask);
+  asphalt.tileScaleX = 0.86;
+  asphalt.tileScaleY = 0.86;
   asphalt.tilePositionX = 0;
   asphalt.tilePositionY = 0;
   scene.uiCam?.ignore?.(asphalt);
   objects.push(asphalt);
   masked.push(asphalt);
 
+  // Second scale breaks repetition and adds micro aggregate.
   const micro = scene.add.tileSprite(0, 0, worldW, worldH, 'asphalt')
     .setOrigin(0, 0)
     .setDepth(10.41)
     .setScrollFactor(1)
-    .setAlpha(0.17)
+    .setAlpha(0.26)
     .setMask(bundle.mask);
-  micro.tileScaleX = 0.46;
-  micro.tileScaleY = 0.46;
+  micro.tileScaleX = 0.38;
+  micro.tileScaleY = 0.38;
   micro.tilePositionX = 191;
   micro.tilePositionY = 317;
   scene.uiCam?.ignore?.(micro);
   objects.push(micro);
   masked.push(micro);
 
+  // Dedicated overlay: weathering, longitudinal grime and small cracking.
   if (scene.textures.exists('asphaltOverlay')) {
     const overlay = scene.add.tileSprite(0, 0, worldW, worldH, 'asphaltOverlay')
       .setOrigin(0, 0)
       .setDepth(10.44)
       .setScrollFactor(1)
-      .setAlpha(0.12)
+      .setAlpha(0.42)
       .setMask(bundle.mask);
+    overlay.tileScaleX = 0.82;
+    overlay.tileScaleY = 0.82;
     overlay.tilePositionX = 73;
     overlay.tilePositionY = 119;
     scene.uiCam?.ignore?.(overlay);
@@ -208,7 +217,8 @@ function installPass(scene, data) {
     quads: bundle.quads,
     exactRoadMask: true,
     geometryExpanded: false,
-    bordersRedrawn: false
+    bordersRedrawn: false,
+    materialRevision: 'realism-v2'
   });
 }
 
