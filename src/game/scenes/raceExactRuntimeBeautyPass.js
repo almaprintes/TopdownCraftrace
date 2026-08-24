@@ -26,6 +26,10 @@ function hash01(n) {
   return x - Math.floor(x);
 }
 
+function clamp01(v) {
+  return Math.max(0, Math.min(1, v));
+}
+
 function buildExactRoadMask(scene) {
   const left = scene.track?.geom?.left;
   const right = scene.track?.geom?.right;
@@ -60,7 +64,6 @@ function buildExactRoadMask(scene) {
 function addGrassVariation(scene, worldW, worldH, objects) {
   if (!scene.textures?.exists?.('grass')) return null;
 
-  // Broad second sample only: enriches vegetation tone without adding fine shimmer.
   const grassMacro = scene.add.tileSprite(0, 0, worldW, worldH, 'grass')
     .setOrigin(0, 0)
     .setDepth(8.7)
@@ -119,7 +122,7 @@ function addIrregularShoulder(scene, left, right, objects) {
       tx /= tlen;
       ty /= tlen;
 
-      if (hash01(side.seed * 17.31) < 0.18) continue; // natural clean gaps.
+      if (hash01(side.seed * 17.31) < 0.18) continue;
 
       const dirtCount = 3 + Math.floor(hash01(side.seed * 9.7) * 5);
       for (let k = 0; k < dirtCount; k++) {
@@ -158,6 +161,120 @@ function addIrregularShoulder(scene, left, right, objects) {
 
   objects.push(g);
   return { gfx: g, marks };
+}
+
+function addRacingLineWear(scene, left, right, roadMask, objects, masked) {
+  const count = Math.min(left.length, right.length);
+  if (count < 12) return null;
+
+  const center = new Array(count);
+  const halfW = new Array(count);
+  for (let i = 0; i < count; i++) {
+    const l = xy(left[i]);
+    const r = xy(right[i]);
+    if (!finitePoint(l) || !finitePoint(r)) continue;
+    center[i] = { x: (l.x + r.x) * 0.5, y: (l.y + r.y) * 0.5 };
+    halfW[i] = Math.hypot(r.x - l.x, r.y - l.y) * 0.5;
+  }
+
+  const racing = new Array(count);
+  const curvature = new Array(count).fill(0);
+
+  // Build a visual racing path from the exact road ribbon. It is only a decal guide:
+  // it does not feed AI, physics or checkpoints. Curves bias gently toward the inside;
+  // straights relax back to centre. No hard lane or ideal-line gameplay logic is created.
+  for (let i = 2; i < count - 2; i++) {
+    const pm = center[i - 2];
+    const p = center[i];
+    const pp = center[i + 2];
+    if (![pm, p, pp].every(finitePoint)) continue;
+
+    let ax = p.x - pm.x;
+    let ay = p.y - pm.y;
+    let bx = pp.x - p.x;
+    let by = pp.y - p.y;
+    const al = Math.hypot(ax, ay);
+    const bl = Math.hypot(bx, by);
+    if (al < 2 || bl < 2) continue;
+    ax /= al; ay /= al; bx /= bl; by /= bl;
+
+    const cross = ax * by - ay * bx;
+    const dot = Math.max(-1, Math.min(1, ax * bx + ay * by));
+    const turn = Math.atan2(cross, dot);
+    const strength = clamp01(Math.abs(turn) / 0.24);
+    curvature[i] = strength;
+
+    let tx = pp.x - pm.x;
+    let ty = pp.y - pm.y;
+    const tl = Math.hypot(tx, ty);
+    if (tl < 2) continue;
+    tx /= tl; ty /= tl;
+    const nx = -ty;
+    const ny = tx;
+
+    const insideSign = cross >= 0 ? 1 : -1;
+    const shift = Number(halfW[i] || 0) * 0.24 * strength * insideSign;
+    racing[i] = { x: p.x + nx * shift, y: p.y + ny * shift };
+  }
+
+  const g = scene.add.graphics()
+    .setDepth(10.37)
+    .setScrollFactor(1)
+    .setBlendMode(2)
+    .setMask(roadMask);
+  scene.uiCam?.ignore?.(g);
+
+  let segments = 0;
+  let brakingMarks = 0;
+
+  // Several extremely low-alpha passes create a broad, diffuse rubbered lane. The
+  // deterministic gaps and width variation prevent it reading as a painted black line.
+  for (let pass = 0; pass < 3; pass++) {
+    for (let i = 3 + pass; i < count - 4; i += 2) {
+      const a = racing[i];
+      const b = racing[i + 2];
+      if (!finitePoint(a) || !finitePoint(b)) continue;
+      if (hash01(i * 31.7 + pass * 91.3) < 0.10) continue;
+
+      const curve = Math.max(curvature[i] || 0, curvature[i + 2] || 0);
+      const baseWidth = Math.max(13, Math.min(34, Number(halfW[i] || 70) * (0.24 + curve * 0.07)));
+      const width = baseWidth * (0.88 + hash01(i * 17.1 + pass) * 0.28) + pass * 3.5;
+      const alpha = 0.018 + curve * 0.018 + pass * 0.004;
+      const tone = pass === 0 ? 0x171817 : (pass === 1 ? 0x20211f : 0x111211);
+
+      g.lineStyle(width, tone, alpha);
+      g.beginPath();
+      g.moveTo(a.x, a.y);
+      g.lineTo(b.x, b.y);
+      g.strokePath();
+      segments++;
+    }
+  }
+
+  // Braking-zone haze: look a few samples ahead for a sharp rise in curvature and add
+  // broader, short-lived rubber accumulation before the corner. Still diffuse and masked.
+  for (let i = 4; i < count - 12; i += 3) {
+    const now = curvature[i] || 0;
+    let ahead = 0;
+    for (let k = 3; k <= 9; k += 2) ahead = Math.max(ahead, curvature[i + k] || 0);
+    if (ahead < 0.48 || ahead <= now + 0.14) continue;
+    if (hash01(i * 44.9) < 0.16) continue;
+
+    const a = racing[i];
+    const b = racing[i + 3];
+    if (!finitePoint(a) || !finitePoint(b)) continue;
+    const width = Math.max(24, Math.min(48, Number(halfW[i] || 70) * (0.38 + ahead * 0.10)));
+    g.lineStyle(width, 0x0f100f, 0.030 + ahead * 0.020);
+    g.beginPath();
+    g.moveTo(a.x, a.y);
+    g.lineTo(b.x, b.y);
+    g.strokePath();
+    brakingMarks++;
+  }
+
+  objects.push(g);
+  masked.push(g);
+  return { gfx: g, segments, brakingMarks };
 }
 
 function installPass(scene, data) {
@@ -204,7 +321,10 @@ function installPass(scene, data) {
   objects.push(asphalt);
   masked.push(asphalt);
 
-  // Stable border/kerb renderer remains untouched. Dirt lives outside the exact edge.
+  const racingWear = addRacingLineWear(scene, left, right, bundle.mask, objects, masked);
+
+  // Stable border/kerb renderer remains untouched. Dirt lives outside the exact edge;
+  // rubber wear is clipped inside the already validated road mask.
   scene._exactRuntimeBeautyPass = { objects, masked, mask: bundle.mask, gfx: bundle.gfx };
   scene.events.once('shutdown', () => {
     const pass = scene._exactRuntimeBeautyPass;
@@ -227,11 +347,13 @@ function installPass(scene, data) {
     exactRoadMask: true,
     geometryExpanded: false,
     bordersRedrawn: false,
-    materialRevision: 'craftpbr-v6-environment-edge',
+    materialRevision: 'craftpbr-v7-racing-wear',
     shaderActive,
     shaderInputs: shaderActive ? ['albedo', 'normal', 'roughness', 'height'] : ['albedo'],
     grassMacro: !!grassMacro,
-    shoulderMarks: Number(shoulder?.marks || 0)
+    shoulderMarks: Number(shoulder?.marks || 0),
+    rubberSegments: Number(racingWear?.segments || 0),
+    brakingMarks: Number(racingWear?.brakingMarks || 0)
   });
 }
 
