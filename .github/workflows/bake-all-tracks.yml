@@ -1,3 +1,4 @@
+# trigger: 2026-08-24 all-track bake diagnostics
 name: Bake all tracks beauty
 
 on:
