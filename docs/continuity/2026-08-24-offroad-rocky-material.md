@@ -1,26 +1,42 @@
 # Rocky off-road material — 2026-08-24
 
-## User intent
-`rocky_terrain_diff_4k.jpg` replaces the visual texture of the **existing OFF surface only**.
-
-The renderer already had three distinct texture slots before this work:
+## Surface model
+The renderer keeps the same three pre-existing visual surface slots:
 - `asphalt`
 - `grass`
 - `off`
 
-The correct implementation is therefore a direct asset swap on `off`. No new grass layer, no extra mask and no new surface geometry are required.
+No fourth semantic surface has been created and no gameplay surface geometry has changed.
 
-## Mistake and correction
-The first integration incorrectly put the rocky material into the `grass` slot. A follow-up then tried to compensate by creating a separate `grassTrack` texture plus an additional runtime grass mask. Both approaches were unnecessary and are retired.
-
-Corrected runtime:
-- `grass` -> `assets/materials/grass-real.webp`
+## Current assets
+- `grass` -> `assets/materials/grass/rocky_terrain_02_diff_2k.jpg`
 - `asphalt` -> `assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg`
-- `off` -> `assets/materials/offroad/rocky_terrain_diff_4k.jpg`
+- `off` -> `assets/materials/offroad/rocky_terrain_diff_2k.jpg`
 
-`RaceRealSurfaceAssetsScene` now loads the rocky JPEG directly under the existing `off` key and preserves that asset through `ensureOffTexture()`.
+Both natural-terrain textures are Poly Haven CC0 assets by Amal Kumar. Full provenance/contact information is recorded in `docs/ASSET_LICENSES.md`.
 
-`raceExactRuntimeBeautyPass.js` is restored to asphalt-only behavior. It creates no grass/off-road GameObjects and no grass mask.
+The original 4K OFF source remains in the repository as a high-resolution source, but runtime now uses the much lighter 2K version.
+
+## Live validation
+The natural terrain combination was approved visually on iPhone. Grass and rocky OFF now have strong photographic detail and retain good frame-time behavior compared with earlier shader/procedural experiments.
+
+The remaining visible issue after the 2K swaps was the mathematically hard seam between `grass` and `off`.
+
+## Grass ↔ OFF transition feather
+Commit `fe38ef6915de72383257ef052abc1ed89e446a8c` adds a deliberately minimal visual feather to that existing boundary.
+
+Implementation:
+- uses the existing `track.geom.grass.left/right` outer boundaries;
+- does not modify either boundary;
+- creates one narrow 22 px visual mask centered on those existing lines;
+- overlays the same `grass` texture at 0.22 alpha only inside that narrow strip;
+- world-space tile alignment remains identical to the main grass texture;
+- the transition object sits below track/asphalt rendering;
+- it is destroyed on scene shutdown.
+
+This is a visual cross-fade aid, **not a new surface**. Surface classification remains exactly asphalt / grass / off as before.
+
+The implementation intentionally uses only one additional masked TileSprite so it can be A/B tested on iPhone. If FMAX materially worsens, remove the feather rather than stacking more runtime layers.
 
 ## Geometry and gameplay invariants
 Untouched:
@@ -34,13 +50,7 @@ Untouched:
 - lap timing
 - white borders
 - kerbs
-- camera zoom
+- dynamic camera zoom
 
-This is strictly a texture replacement in the renderer's pre-existing OFF slot.
-
-## Performance
-The original 4K rocky JPEG in the repo is ~10.75 MB. A live iPhone screenshot while displaying it showed approximately 56 FPS and FMAX 17.9 ms, so the asset itself did not show the major frame-time regression previously caused by runtime shader/layer experiments.
-
-## Final correction commits
-- `7d1946d483f97ba123b226a74607ef6a6568f093` — rocky material assigned directly to existing `off` texture key; grass restored to its existing slot.
-- `0a8752ef6d9a01b6dd1ab5aa28b04ace7e27693b` — removes the unnecessary added grass mask/TileSprite and restores asphalt-only beauty pass.
+## Historical correction
+An earlier integration incorrectly assigned the rocky OFF material to the grass slot and then attempted to compensate with an extra grass surface layer. That approach was removed. The accepted architecture is still the original three surface slots; only the narrow visual feather described above is added for presentation.
