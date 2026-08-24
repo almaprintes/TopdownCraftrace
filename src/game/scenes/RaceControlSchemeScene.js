@@ -23,6 +23,7 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   createTouchControls() {
+    if (this._tdrSteeringMode === 'stick') return this._createCustomStickTouchControls();
     if (this._tdrSteeringMode !== 'buttons') return super.createTouchControls();
 
     const state = {
@@ -76,6 +77,75 @@ export class RaceScene extends CurrentRaceScene {
       this._tdrSteerButtons = null;
     });
     this.time?.delayedCall?.(0, () => this._buildButtonSteeringUi?.());
+    return state;
+  }
+
+  _createCustomStickTouchControls() {
+    const state = {
+      steer: 0, throttle: 0, brake: 0, stickX: 0, stickY: 0, buttonSteer: 0,
+      leftId: null, rightId: null, leftActive: false, rightThrottle: false,
+      rightBrake: false, btnW: 0, btnH: 0, rightX: 0, throttleY: 0, brakeY: 0,
+      _draw: () => {}
+    };
+
+    this.touchUI = this.add.container(0, 0).setScrollFactor(0).setDepth(1000);
+    for (let i = 0; i < 6; i++) this.touchUI.add(this.add.rectangle(0, 0, 1, 1, 0x000000, 0).setVisible(false));
+    try { this.cameras.main.ignore(this.touchUI); } catch (_) {}
+
+    let cx = 0, cy = 0, radius = 64, activationRadius = 86;
+    const layout = () => {
+      const w = Number(this.scale?.width || 0), h = Number(this.scale?.height || 0);
+      const p = sanitizeLayoutPoint(readControlLayout().layout.steer || {});
+      const baseSize = Math.max(142, Math.min(190, w * 0.17));
+      cx = p.x * w;
+      cy = p.y * h;
+      radius = Math.max(42, baseSize * 0.34 * p.scale);
+      activationRadius = Math.max(radius * 1.35, baseSize * 0.56 * p.scale);
+    };
+
+    const setStick = (p) => {
+      const dx = p.x - cx, dy = p.y - cy;
+      const d = Math.hypot(dx, dy);
+      const m = d > radius ? radius / Math.max(1e-6, d) : 1;
+      state.stickX = (dx * m) / radius;
+      state.stickY = (dy * m) / radius;
+      state.steer = state.stickX;
+      state.leftActive = true;
+    };
+
+    const onDown = (p) => {
+      if (state.leftId !== null) return;
+      if (Math.hypot(p.x - cx, p.y - cy) > activationRadius) return;
+      state.leftId = p.id;
+      setStick(p);
+    };
+    const onMove = (p) => {
+      if (!p.isDown || state.leftId !== p.id) return;
+      setStick(p);
+    };
+    const onUp = (p) => {
+      if (state.leftId !== p.id) return;
+      state.leftId = null;
+      state.leftActive = false;
+      state.stickX = 0;
+      state.stickY = 0;
+      state.steer = 0;
+    };
+
+    this.input.on('pointerdown', onDown);
+    this.input.on('pointermove', onMove);
+    this.input.on('pointerup', onUp);
+    this.input.on('pointerupoutside', onUp);
+    this.scale.on('resize', layout);
+    layout();
+
+    this.events.once('shutdown', () => {
+      try { this.input.off('pointerdown', onDown); } catch (_) {}
+      try { this.input.off('pointermove', onMove); } catch (_) {}
+      try { this.input.off('pointerup', onUp); } catch (_) {}
+      try { this.input.off('pointerupoutside', onUp); } catch (_) {}
+      try { this.scale.off('resize', layout); } catch (_) {}
+    });
     return state;
   }
 
