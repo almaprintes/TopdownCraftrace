@@ -40,7 +40,7 @@ The shader consumes:
 - Height as restrained micro-relief/tonal variation.
 
 ### v5 — dynamic zoom anti-moire
-Live iPhone testing exposed shimmer in the fine asphalt aggregate because race camera zoom changes continuously with speed (`~0.75` fast/far to `~1.50` slow/near).
+Live iPhone testing exposed shimmer in the fine asphalt aggregate because race camera zoom changes continuously with speed (`~0.75` fast/far to `~1.50` slow/near`).
 
 The PBR shader now receives camera zoom every bind and applies a permanent low-pass floor, increasing filtering as the camera moves farther away. Albedo, Normal, Roughness and Height are filtered; normal/specular/height strength are attenuated when detail becomes sub-pixel. The dynamic zoom itself is unchanged.
 
@@ -70,22 +70,30 @@ Screenshot observations:
 - the scene still lacks medium-scale environmental cues that give a real kart track depth: tyre rubber on racing/braking lines, kerb wear, edge dust accumulation, irregular worn grass/soil patches, and selective trackside objects/shadows.
 
 ### v7 — geometry-driven racing-line rubber and braking wear
-`raceExactRuntimeBeautyPass.js` now adds a static rubber/wear decal layer above the PBR asphalt and below the proven border/kerb render.
+`raceExactRuntimeBeautyPass.js` added a static rubber/wear decal layer above the PBR asphalt and below the proven border/kerb render.
 
-Implementation rules:
-- the visual guide path is derived only from the midpoint between existing `track.geom.left/right` samples;
-- local curvature is calculated from neighbouring centre samples;
-- curves bias the visual rubber path gently toward the inside, while straights relax back toward centre;
-- the path is **visual only** and never feeds AI, physics, checkpoints, lap timing or surface detection;
-- three broad, very low-alpha passes with deterministic gaps/width variation create diffuse rubber accumulation instead of one obvious black ideal-line stripe;
-- approaching sharp curvature increases a separate broader braking-zone haze before the corner;
-- every rubber mark is clipped by the exact already-validated asphalt geometry mask, so it cannot leak outside the road or modify borders.
+The first implementation derived a guide from the midpoint between `track.geom.left/right`, biased toward the inside in curves, then drew several broad low-alpha passes across almost the whole lap.
 
-This is intentionally a first-pass strength chosen to be visible on iPhone without making the circuit look painted. Live validation is required before increasing/decreasing opacity.
+### v7 live validation — rejected
+User screenshot on 2026-08-24: "Se aprecia una franja totalmente centrada".
+
+Diagnosis: despite low opacity and random gaps, the continuous treatment through straights made the eye read the effect as an artificial central lane. The problem was not the asphalt material or exact mask; it was the wear-placement logic.
+
+### v8 — corner-phase rubber wear
+The continuous-centre strategy is removed.
+
+The new visual-only wear guide uses signed local curvature to model three phases:
+- **approach / braking:** wear moves to the outside half of the road;
+- **apex / sustained corner:** wear moves toward the inside;
+- **exit:** wear unwinds toward the outside before disappearing.
+
+True straights receive no racing-line stripe at all. Rubber segments are only drawn where corner/braking activity crosses a threshold, with stronger deterministic gaps, variable widths and restrained alpha. Braking haze also uses the outside approach path instead of the centreline.
+
+Every mark remains clipped by the already validated exact asphalt mask. No geometry, AI, physics, checkpoints, lap timing or gameplay surfaces are changed.
 
 ## Next visual priorities
 Proceed in controlled layers, preserving exact geometry and performance:
-1. **Racing-line rubber / braking-zone wear** — v7 implemented; awaiting iPhone validation.
+1. Validate v8 corner-phase rubber on iPhone. Reject or reduce immediately if it still reads as a designed lane rather than irregular use.
 2. **Kerb weathering** — restrained dirt/desaturation/scuff overlays clipped to existing kerb areas; do not rebuild kerb geometry.
 3. **Terrain breakup** — a few larger irregular dry/worn/soil zones in grass islands to remove the uniform green-carpet appearance.
 4. **Edge integration** — local dirt accumulation and grass encroachment near selected edges while leaving deliberate clean sections.
