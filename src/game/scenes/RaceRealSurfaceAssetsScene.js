@@ -7,7 +7,7 @@ export class RaceScene extends BakedRaceScene {
     super.preload?.();
 
     try { if (this.textures.exists('grass')) this.textures.remove('grass'); } catch {}
-    try { if (this.textures.exists('grassTrack')) this.textures.remove('grassTrack'); } catch {}
+    try { if (this.textures.exists('off')) this.textures.remove('off'); } catch {}
     try { if (this.textures.exists('asphalt')) this.textures.remove('asphalt'); } catch {}
     try { if (this.textures.exists('asphaltAO')) this.textures.remove('asphaltAO'); } catch {}
     try { if (this.textures.exists('asphaltNormal')) this.textures.remove('asphaltNormal'); } catch {}
@@ -15,15 +15,12 @@ export class RaceScene extends BakedRaceScene {
     try { if (this.textures.exists('asphaltHeight')) this.textures.remove('asphaltHeight'); } catch {}
     try { if (this.textures.exists('asphaltMetalness')) this.textures.remove('asphaltMetalness'); } catch {}
 
-    // IMPORTANTE: la escena base usa la clave `grass` como fondo mundial. Para conservar
-    // esa ruta sin tocar física ni renderer base, aquí esa clave representa OFF-ROAD.
-    // La hierba real del margen se carga aparte como `grassTrack` y se enmascara solo en
-    // track.geom.grass desde raceExactRuntimeBeautyPass.js.
-    this.load.image('grass', 'assets/materials/offroad/rocky_terrain_diff_4k.jpg?v=20260824-rocky-offroad-v2');
-    this.load.image('grassTrack', 'assets/materials/grass-real.webp?v=20260824-grass-track-v1');
-
-    // Poly Haven Clean Asphalt diffuse/albedo only. No runtime PBR shader.
+    // Mantener las tres superficies existentes del renderer: grass / asphalt / off.
+    this.load.image('grass', 'assets/materials/grass-real.webp?v=20260824-grass-real-v1');
+    this.load.image('off', 'assets/materials/offroad/rocky_terrain_diff_4k.jpg?v=20260824-rocky-offroad-v3');
     this.load.image('asphalt', 'assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg?v=20260824-polyhaven-clean-v1');
+
+    // Mapas PBR conservados solo como referencia; no forman parte del render activo.
     this.load.image('asphaltAO', 'assets/materials/asphalt-pbr/ao.png?v=20260824-craftpbr-v1');
     this.load.image('asphaltNormal', 'assets/materials/asphalt-pbr/normal.png?v=20260824-craftpbr-v1');
     this.load.image('asphaltRoughness', 'assets/materials/asphalt-pbr/roughness.png?v=20260824-craftpbr-v1');
@@ -34,6 +31,11 @@ export class RaceScene extends BakedRaceScene {
   ensureBgTexture() {
     if (this.textures.exists('grass')) return;
     super.ensureBgTexture?.();
+  }
+
+  ensureOffTexture() {
+    if (this.textures.exists('off')) return;
+    super.ensureOffTexture?.();
   }
 
   ensureAsphaltTexture() {
