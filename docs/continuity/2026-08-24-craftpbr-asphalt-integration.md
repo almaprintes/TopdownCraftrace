@@ -71,45 +71,40 @@ A second attempt removed straight-line rubber and moved wear through corner phas
 Live validation: "Ahora mismo son plastas mal colocadas." This confirmed that the **representation itself** was wrong: solid Phaser `Graphics` strokes/blobs under MULTIPLY still look like dark painted shapes, regardless of improved placement logic.
 
 ## Research-backed correction of approach
-Before v9, external references were checked for both motorsport behaviour and common game-environment implementation practice.
+External references were checked for both motorsport behaviour and common game-environment implementation practice.
 
 Key conclusions used for implementation:
-- real circuit rubber builds up on the repeatedly used racing groove under braking/cornering load, rather than as a uniform black stripe;
-- a convincing racing groove uses the road width (outside entry → apex → opening exit), not the centreline;
-- environment-art workflows commonly layer tyre/rubber **decals/textures** over a tileable road material instead of drawing solid vector strokes;
+- real circuit rubber builds up on repeatedly used paths under braking/cornering load, rather than as one uniform black stripe;
+- a convincing groove uses track width and is strongest through loaded bends;
+- environment-art workflows commonly layer tyre/rubber decals/textures over a tileable road material instead of drawing solid vector strokes;
 - Phaser `RenderTexture` can be used as a bake target so authored decal stamps do not remain as many live GameObjects;
-- MULTIPLY is useful only once the source has useful alpha/texture variation. Applying it to solid vector shapes merely creates obvious dark blobs.
+- MULTIPLY is useful only once the source has useful alpha/texture variation.
 
-The v7/v8 vector-rubber code path is therefore retired, not tuned further.
+### v9 — sparse baked textured rubber decals — rejected as wrong target
+Three runtime transparent rubber decal textures were baked into RenderTextures. This removed the previous vector blobs, but live validation showed the result was almost invisible and, where visible, the isolated placement still did not resemble a real rubbered hairpin.
 
-### v9 — baked textured rubber decals
-`raceExactRuntimeBeautyPass.js` now generates three small transparent tyre-rubber decal textures at runtime. Each decal contains:
-- feathered longitudinal ends;
-- multiple thin, slightly wandering rubber streaks;
-- uneven alpha across the width;
-- sparse broken rubber flecks;
-- no solid filled ellipse or thick vector centre band.
+User feedback on 2026-08-24: "Casi no se aprecia y es lo mejor porque lo poco que se aprecia no tiene sentido." A supplied aerial reference of a kart-track U-turn established the visual target clearly: several **coherent, parallel, curved dark tyre paths** build up together through the braking zone and around the complete hairpin. The desired effect is cumulative track usage, not random isolated marks.
 
-Placement logic:
-- decal positions are interpolated directly between the existing exact left and right road edges (`t=0` left, `t=1` right), avoiding a newly constructed offset polyline;
-- approach/braking stamps use the outside portion of the track;
-- apex stamps move toward the inside;
-- exit stamps open outward;
-- genuine straights receive no synthetic racing-groove stripe;
-- deterministic lateral jitter and skipped stamps prevent the decals from becoming a mathematical guide line;
-- every decal is finally clipped by the exact validated asphalt mask.
+### v10 — reference-driven coherent multiline rubber groove
+The v9 sparse random-decal plan is retired.
 
-Performance strategy:
-- temporary Phaser `Image` objects are created only as authoring stamps;
-- they are immediately rasterized into 2048px-or-smaller `RenderTexture` world tiles;
-- the temporary images are destroyed in the same setup pass;
-- only the small number of baked RenderTextures remains alive during racing.
+New approach in `raceExactRuntimeBeautyPass.js`:
+- analyse signed curvature over a wider stencil and smooth it to identify sustained bends instead of reacting to individual geometry nodes;
+- build one continuous visual trajectory around active corners: outside on approach, toward the inside through the main bend, opening back to the outside on exit;
+- smooth lateral interpolation repeatedly so the trajectory forms a natural arc rather than disconnected phase jumps;
+- derive **five nearby parallel vehicle paths** around that trajectory, matching the visual language of the supplied reference where many laps produce multiple adjacent rubber streaks;
+- use narrow elongated transparent streak textures rather than broad blobs;
+- stamp them densely along consecutive track samples so neighbouring stamps join visually into coherent curved tyre paths;
+- retain small deterministic gaps and differing line strengths so the surface does not become a perfect CAD line;
+- keep true low-curvature straights essentially clean;
+- bake all temporary streak stamps into 2048px-or-smaller RenderTextures, then destroy the temporary Images;
+- clip the final result with the exact validated asphalt mask.
 
-The baked rubber RenderTextures use MULTIPLY, where the textured alpha now has a meaningful purpose instead of darkening large vector blobs.
+This is still strictly a beauty layer. It does not feed racing-line logic back into AI, physics or gameplay.
 
 ## Next visual priorities
 Proceed in controlled layers:
-1. Validate v9 textured/baked rubber on iPhone. If placement still feels wrong, adjust the corner-phase interpolation only; do **not** return to vector blobs.
+1. Validate v10 multiline groove against the supplied U-turn reference. The test is whether hairpins now show several plausible parallel rubber arcs rather than isolated marks or one centre stripe.
 2. **Kerb weathering** — restrained dirt/desaturation/scuff overlays clipped to existing kerb areas; do not rebuild kerb geometry.
 3. **Terrain breakup** — larger irregular dry/worn/soil zones in grass islands.
 4. **Edge integration** — selective dirt accumulation and grass encroachment with clean gaps.
