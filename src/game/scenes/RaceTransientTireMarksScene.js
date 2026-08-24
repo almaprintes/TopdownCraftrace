@@ -77,11 +77,11 @@ export class RaceScene extends CurrentRaceScene {
     let width = 2.2 + clamp01(slip / 120) * 1.4, life = 1150, markKind = 'rubber';
 
     if(raven && onTrack){
-      // Tierra: huella marrón gruesa y prácticamente continua mientras el coche rueda.
-      color = 0x5a3b27;
-      alpha = 0.34 + clamp01(speed / 330) * 0.12;
-      width = 5.8 + clamp01(slip / 110) * 1.7;
-      life = 1450;
+      // Tierra: huella muy oscura, gruesa y prácticamente continua mientras el coche rueda.
+      color = 0x2f1d12;
+      alpha = 0.52 + clamp01(speed / 330) * 0.16;
+      width = 6.4 + clamp01(slip / 110) * 2.0;
+      life = 1650;
       markKind = 'raven-dirt-track';
     }
 
