@@ -35,6 +35,14 @@ function factoryPedalLayout(){
 function mirror(layout){
   const out={};
   for(const [k,v] of Object.entries(layout||{}))out[k]={...v,x:1-Number(v.x||0)};
+
+  // Direction buttons are a semantic pair. Left-handed mode moves the whole
+  // steering block to the opposite side, but LEFT must remain visually left
+  // of RIGHT; mirroring each button independently reverses their order.
+  if(layout?.left&&layout?.right){
+    out.left={...layout.left,x:1-Number(layout.right.x||0)};
+    out.right={...layout.right,x:1-Number(layout.left.x||0)};
+  }
   return out;
 }
 
