@@ -3,9 +3,7 @@
 const TRACK_BEAUTY_LAYERS = Object.freeze({
   'karting-tenerife': Object.freeze({
     useBeautyLayer: true,
-    // Revision visual: cambiarla cuando cambien los binarios horneados evita que
-    // Safari/PWA reutilice WebP antiguos con la misma URL.
-    assetRevision: 'beauty4-20260824-062342',
+    assetRevision: 'debug-red-20260824-064121',
     assetsAvailable: true,
     worldW: 2813,
     worldH: 2602,
@@ -14,31 +12,28 @@ const TRACK_BEAUTY_LAYERS = Object.freeze({
       asphalt: true,
       grass: true,
       offroad: true,
-      // Los pianos siguen siendo objetos separados mientras el arte beauty no
-      // declare explicitamente que los contiene. Asi conservamos sus detalles
-      // actuales sin duplicar props dinamicos.
       kerbs: false,
       props: false
     }),
     tiles: Object.freeze([
       Object.freeze({
-        key: 'trackBeauty:karting-tenerife:0:beauty4',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-0.webp?v=beauty4-20260824-062342',
+        key: 'trackBeauty:karting-tenerife:0:debug-red',
+        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-0.webp?v=debug-red-20260824-064121',
         x: 0, y: 0, w: 1407, h: 1301
       }),
       Object.freeze({
-        key: 'trackBeauty:karting-tenerife:1:beauty4',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-1.webp?v=beauty4-20260824-062342',
+        key: 'trackBeauty:karting-tenerife:1:debug-red',
+        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-1.webp?v=debug-red-20260824-064121',
         x: 1407, y: 0, w: 1406, h: 1301
       }),
       Object.freeze({
-        key: 'trackBeauty:karting-tenerife:2:beauty4',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-2.webp?v=beauty4-20260824-062342',
+        key: 'trackBeauty:karting-tenerife:2:debug-red',
+        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-2.webp?v=debug-red-20260824-064121',
         x: 0, y: 1301, w: 1407, h: 1301
       }),
       Object.freeze({
-        key: 'trackBeauty:karting-tenerife:3:beauty4',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-3.webp?v=beauty4-20260824-062342',
+        key: 'trackBeauty:karting-tenerife:3:debug-red',
+        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-3.webp?v=debug-red-20260824-064121',
         x: 1407, y: 1301, w: 1406, h: 1301
       })
     ])
