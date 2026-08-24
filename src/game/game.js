@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuDuelModeScene.js';
-import { RaceScene } from './scenes/RaceDebugRedMaskScene.js';
+import { RaceScene } from './scenes/RaceWorldAlignedMaterialsScene.js';
+import { installExactRuntimeBeautyPass } from './scenes/raceExactRuntimeBeautyPass.js';
 import { UpgradeShopScene } from './scenes/UpgradeWorkshopInventorySizingScene.js';
 import { GarageScene } from './scenes/GarageCleanTypographyScene.js';
 import { SettingsScene } from './scenes/SettingsHelpTutorialScene.js';
@@ -15,6 +16,8 @@ import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderAssetPointer
 import { installMenuMusic } from './audio/MenuMusic.js';
 import { installRuntimeCrashDiagnostics } from './dev/runtimeCrashDiagnostics.js';
 import './tracks/trackPublicNames.js';
+
+installExactRuntimeBeautyPass(RaceScene);
 
 class MenuAliasScene extends Phaser.Scene { constructor(){super('MenuScene');} create(){this.scene.start('menu');} }
 function videoPrefs(){try{const s=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');return{quality:String(s?.video?.quality||'high'),targetFps:Number(s?.video?.targetFps||60),renderScale:String(s?.video?.renderScale||'normal')};}catch{return{quality:'high',targetFps:60,renderScale:'normal'};}}
