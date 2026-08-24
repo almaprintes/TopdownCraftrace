@@ -15,9 +15,7 @@ varying vec4 outTint;
 vec4 sampleFilteredBase(vec2 uv, float aa)
 {
     vec4 c = texture2D(uMainSampler, uv);
-    if (aa <= 0.001) return c;
-
-    float r = mix(0.45, 1.85, aa) / 1024.0;
+    float r = mix(0.72, 1.95, aa) / 1024.0;
     vec4 s = c * 0.36;
     s += texture2D(uMainSampler, uv + vec2( r, 0.0)) * 0.16;
     s += texture2D(uMainSampler, uv + vec2(-r, 0.0)) * 0.16;
@@ -29,9 +27,7 @@ vec4 sampleFilteredBase(vec2 uv, float aa)
 vec3 sampleFilteredNormal(vec2 uv, float aa)
 {
     vec3 c = texture2D(uNormalSampler, uv).rgb;
-    if (aa <= 0.001) return c;
-
-    float r = mix(0.45, 1.65, aa) / 1024.0;
+    float r = mix(0.72, 1.80, aa) / 1024.0;
     vec3 s = c * 0.40;
     s += texture2D(uNormalSampler, uv + vec2( r, 0.0)).rgb * 0.15;
     s += texture2D(uNormalSampler, uv + vec2(-r, 0.0)).rgb * 0.15;
@@ -40,13 +36,25 @@ vec3 sampleFilteredNormal(vec2 uv, float aa)
     return mix(c, s, aa);
 }
 
+float sampleFilteredScalar(sampler2D tex, vec2 uv, float aa)
+{
+    float c = texture2D(tex, uv).r;
+    float r = mix(0.65, 1.65, aa) / 1024.0;
+    float s = c * 0.40;
+    s += texture2D(tex, uv + vec2( r, 0.0)).r * 0.15;
+    s += texture2D(tex, uv + vec2(-r, 0.0)).r * 0.15;
+    s += texture2D(tex, uv + vec2(0.0,  r)).r * 0.15;
+    s += texture2D(tex, uv + vec2(0.0, -r)).r * 0.15;
+    return mix(c, s, aa);
+}
+
 void main ()
 {
-    // Dynamic camera zoom ranges roughly from 0.75 (fast/far) to 1.50 (slow/near).
-    // The farther the camera is, the more we low-pass the high-frequency asphalt detail.
-    // This prevents the fine aggregate / normal pattern from crossing the pixel grid and
-    // producing moving moire while preserving full sharpness when the camera comes close.
-    float aa = 1.0 - smoothstep(0.78, 1.08, uCameraZoom);
+    // The live iPhone recording showed the worst shimmer at LOW speed, where the camera
+    // is closest (~1.5 zoom). Therefore filtering must never drop to zero. We keep a
+    // permanent low-pass floor and progressively strengthen it as the camera moves away.
+    float farFactor = 1.0 - smoothstep(0.78, 1.18, uCameraZoom);
+    float aa = mix(0.34, 1.0, farFactor);
 
     vec4 baseSample = sampleFilteredBase(outTexCoord, aa);
     vec3 base = baseSample.rgb * outTint.rgb;
@@ -54,27 +62,26 @@ void main ()
     vec3 nSample = sampleFilteredNormal(outTexCoord, aa);
     vec3 n = nSample * 2.0 - 1.0;
 
-    // Fade micro-normal strength as the camera moves away. High-frequency relief cannot
-    // be represented faithfully once its texels become sub-pixel, so attenuating it is
-    // both more realistic and much more stable than trying to keep every tiny pebble.
-    float normalStrength = mix(1.35, 0.58, aa);
-    n = normalize(vec3(n.xy * normalStrength, max(0.22, n.z)));
+    // Close camera still gets tactile relief, but not the previous over-sharp normal map
+    // that produced crawling highlights on the fine aggregate while zoom was changing.
+    float normalStrength = mix(1.00, 0.52, farFactor);
+    n = normalize(vec3(n.xy * normalStrength, max(0.24, n.z)));
 
-    float rough = texture2D(uRoughnessSampler, outTexCoord).r;
-    float height = texture2D(uHeightSampler, outTexCoord).r;
+    float rough = sampleFilteredScalar(uRoughnessSampler, outTexCoord, aa);
+    float height = sampleFilteredScalar(uHeightSampler, outTexCoord, aa);
 
     vec3 lightDir = normalize(vec3(-0.38, -0.46, 0.80));
     float ndl = max(dot(n, lightDir), 0.0);
 
     float smoothness = 1.0 - rough;
     float spec = pow(max(dot(n, normalize(lightDir + vec3(0.0, 0.0, 1.0))), 0.0), 8.0);
-    spec *= (0.025 + smoothness * 0.16);
-    spec *= mix(1.0, 0.45, aa);
+    spec *= (0.018 + smoothness * 0.10);
+    spec *= mix(0.72, 0.38, farFactor);
 
-    float diffuse = 0.80 + ndl * 0.27;
-    float heightStrength = mix(0.16, 0.045, aa);
+    float diffuse = 0.82 + ndl * 0.23;
+    float heightStrength = mix(0.10, 0.035, farFactor);
     float microRelief = (height - 0.5) * heightStrength;
-    float roughTone = (0.5 - rough) * 0.08;
+    float roughTone = (0.5 - rough) * 0.06;
 
     vec3 color = base * (diffuse + microRelief + roughTone);
     color += vec3(spec);
