@@ -98,13 +98,30 @@ Commit `f051d3bee140abe853ee2692d6379ab6b4845816`:
 
 El objetivo de esta fase no es calidad máxima sino comprobar si el iPhone 12 deja de ser expulsado por WebKit. Si estabiliza, se recuperarán opciones visuales una a una hasta localizar el margen real.
 
+## Corrección de salida — semáforo normal + cuenta atrás ligera
+
+Al retirar los siete PNG del semáforo de `BootScene`, la carrera seguía intentando usar las claves `start_base` / `start_l1..6` sin volver a cargarlas. Resultado observado: cuadro negro / textura missing en la salida.
+
+Commit `52e5e180164ed0d394eb96b43df17bdc4f8487fc`:
+- añade `RaceAdaptiveStartScene`;
+- en dispositivos normales, las siete imágenes del semáforo se cargan únicamente al entrar en carrera;
+- en modo seguro, no se cargan ni decodifican esos PNG;
+- el modo seguro muestra una cuenta atrás Phaser `3 → 2 → 1 → ¡YA!` de coste mínimo;
+- la lógica real de salida, bloqueo del coche, cronómetro e IA sigue siendo la del RaceScene base, por lo que no cambia el gameplay.
+
+Commit `91011fad8e9392450440552cda45f8b924f430bf`:
+- `game.js` enruta la carrera a través de `RaceAdaptiveStartScene`.
+
+Objetivo de diseño: mantener la experiencia completa de semáforo en dispositivos con margen suficiente y usar una salida textual muy ligera en perfiles de bajos recursos, sin alterar tiempos ni reglas.
+
 ## Protocolo de prueba actual
 
 1. Cerrar Safari completamente desde multitarea.
 2. Abrir el juego desde cero. En iPhone 12 debería saltarse la intro y entrar directamente al menú.
-3. Entrar primero en Configuración y cambiar varias veces entre Controles / Vídeo / Audio.
+3. Entrar primero en Configuración y comprobar si ya responde al tacto.
 4. Volver al menú y entrar en Circuitos.
 5. Seleccionar pista y entrar a carrera.
-6. Si aguanta, repetir el ciclo Configuración → Circuitos → Carrera dos veces para comprobar acumulación.
+6. En modo seguro debe verse `3 → 2 → 1 → ¡YA!`; en dispositivos normales debe volver a verse el semáforo completo.
+7. Si aguanta, repetir el ciclo Configuración → Circuitos → Carrera dos veces para comprobar acumulación.
 
 No se han cambiado físicas, geometría, IA, checkpoints ni clasificación de superficies durante este diagnóstico.
