@@ -24,24 +24,27 @@ export class RaceScene extends CurrentRaceScene {
       #tdr-handbrake{
         position:fixed;z-index:82;bottom:max(10px,1.8vh);
         ${leftHanded?'left:calc(max(18px,1.8vw) + clamp(150px,22vw,260px) + 12px);':'right:calc(max(18px,1.8vw) + clamp(150px,22vw,260px) + 12px);'}
-        width:clamp(62px,6.4vw,82px);height:clamp(116px,17vh,164px);
+        width:clamp(62px,6.4vw,82px);aspect-ratio:859/1024;
         touch-action:none;user-select:none;-webkit-user-select:none;
         pointer-events:auto;filter:drop-shadow(0 7px 15px rgba(0,0,0,.42));
       }
-      #tdr-handbrake img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;transition:filter 70ms linear,transform 70ms ease-out;}
+      #tdr-handbrake img{
+        position:absolute;left:0;top:0;width:100%;height:100%;
+        object-fit:fill;object-position:0 0;pointer-events:none;
+        transform:none!important;transition:none!important;
+      }
+      #tdr-handbrake .idle{opacity:1;}
       #tdr-handbrake .pulled{opacity:0;}
       #tdr-handbrake.active .idle{opacity:0;}
-      #tdr-handbrake.active .pulled{opacity:1;filter:brightness(1.08);}
-      #tdr-handbrake .fallback{position:absolute;inset:16% 15% 4%;border-radius:18px;background:linear-gradient(180deg,#242934,#0d1016);border:1px solid rgba(255,255,255,.22);display:flex;align-items:flex-end;justify-content:center;color:#fff;font:800 9px system-ui;padding-bottom:7px;letter-spacing:.7px;opacity:.7;}
+      #tdr-handbrake.active .pulled{opacity:1;}
     `;
     document.head.appendChild(style);
 
     const root=document.createElement('div');
     root.id='tdr-handbrake';
     root.innerHTML=`
-      <div class="fallback">FRENO MANO</div>
-      <img class="idle" src="assets/ui/tdr_handbrake_idle.webp?v=2" alt="Freno de mano">
-      <img class="pulled" src="assets/ui/tdr_handbrake_pulled.webp?v=2" alt="Freno de mano accionado">
+      <img class="idle" src="assets/ui/tdr_handbrake_idle.webp?v=3" width="859" height="1024" alt="Freno de mano">
+      <img class="pulled" src="assets/ui/tdr_handbrake_pulled.webp?v=3" width="859" height="1024" alt="Freno de mano accionado">
     `;
     document.body.appendChild(root);
     this._tdrHandbrakeVisual=root;
