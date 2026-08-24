@@ -82,42 +82,18 @@ export class RaceScene extends CurrentRaceScene {
     const braking=!frontFacing && this._brakePressed() && !!this._raceStarted;
 
     const layoutKey=`${Math.round(w*10)}:${Math.round(h*10)}:${frontFacing?1:0}`;
-    const stateKey=frontFacing?'front':(braking?'brake':'tail');
+    const stateKey=frontFacing?'front-none':(braking?'brake':'tail');
     if(!force && layoutKey===this._vehicleLightsLayoutKey && stateKey===this._vehicleLightsStateKey)return;
     this._vehicleLightsLayoutKey=layoutKey;
     this._vehicleLightsStateKey=stateKey;
 
     gfx.clear();
 
-    if(frontFacing){
-      // Faros delanteros: núcleo mínimo colocado SOBRE el morro y un único halo exterior
-      // construido en capas para que el brillo se degrade suavemente hacia fuera.
-      const frontY=-h*0.335;
-      const halfSpread=Math.max(4.2,w*0.245);
-      const coreR=Math.max(0.78,Math.min(1.30,w*0.041));
+    // En las tres skins que muestran el frontal no dibujamos ninguna luz añadida.
+    // Se conserva únicamente el arte propio del sprite.
+    if(frontFacing) return;
 
-      // Halo exterior degradado. No hay halo interior independiente.
-      const glowLayers=[
-        [4.4,0.018,0xcfe4ff],
-        [3.6,0.030,0xd9eaff],
-        [2.9,0.050,0xe3f0ff],
-        [2.3,0.075,0xecf5ff],
-        [1.8,0.105,0xf3f9ff]
-      ];
-      for(const [mul,alpha,color] of glowLayers){
-        gfx.fillStyle(color,alpha);
-        gfx.fillCircle(-halfSpread,frontY,coreR*mul);
-        gfx.fillCircle( halfSpread,frontY,coreR*mul);
-      }
-
-      // Punto luminoso muy pequeño; el volumen aparente debe venir del halo exterior.
-      gfx.fillStyle(0xffffff,0.98);
-      gfx.fillCircle(-halfSpread,frontY,coreR);
-      gfx.fillCircle( halfSpread,frontY,coreR);
-      return;
-    }
-
-    // Pilotos traseros: un pelín más hacia dentro longitudinalmente y algo más abiertos.
+    // Pilotos traseros: posición y apertura aprobadas.
     const edgeY=h*0.385;
     const halfSpread=Math.max(4.8,w*0.285);
     const triW=Math.max(3.0,Math.min(5.2,w*0.19));
