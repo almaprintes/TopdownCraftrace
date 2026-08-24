@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceWheelModeScene.js';
+import { applyDomControlLayout } from '../controls/controlLayout.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
@@ -8,27 +9,28 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrHandbrakeVisual=null;
     const result=super.create(data);
 
-    // El HUD moderno ya cubre vuelta/delta/mejor. El panel TT heredado seguía
-    // deslizándose desde la derecha al cerrar una vuelta y aparecía detrás del
-    // minimapa nuevo. Se conserva su lógica de datos, pero se anula su visual.
     try{this.ttPanel?.c?.setVisible?.(false);}catch{}
     this._showTTPanel=()=>{};
     this._hideTTPanel=()=>{};
 
     this._buildPedalRow();
     this._buildHandbrakeControl();
+
+    // La disposición personalizada se aplica al final, después de que todas las
+    // capas anteriores hayan creado palanca/volante/pedales/freno de mano.
+    const applyLayout=()=>{try{applyDomControlLayout();}catch{}};
+    this.time?.delayedCall?.(0,applyLayout);
+    window.addEventListener('resize',applyLayout,{passive:true});
+    this.events.once('shutdown',()=>window.removeEventListener('resize',applyLayout));
     return result;
   }
 
-  // El banner grande mantiene texto/partículas nítidos, pero su placa de fondo
-  // deja ver bastante más carretera. Solo atenuamos el Graphics de la carcasa.
   _showTimingAchievement(records,lapMs){
     super._showTimingAchievement(records,lapMs);
     const shell=this._timingBanner?.list?.[0];
     if(shell?.scene) shell.setAlpha(.70);
   }
 
-  // El aviso pequeño de botín queda aún más transparente que el banner grande.
   _showRaceLoot(reward){
     super._showRaceLoot(reward);
     const toast=this._lootToast;
