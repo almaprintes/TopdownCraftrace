@@ -15,9 +15,6 @@ function viewportSize(){
 
 function factoryPedalLayout(){
   const {w,h}=viewportSize();
-  // Match the actual factory CSS in RaceHandbrakeScene exactly instead of
-  // using guessed normalized coordinates. This keeps RESTABLECER identical
-  // to the untouched race layout on every landscape iPhone size.
   const handW=clamp(w*.08,78,102);
   const pedalW=clamp(w*.092,88,122);
   const pedalH=clamp(h*.24,132,172);
@@ -35,10 +32,6 @@ function factoryPedalLayout(){
 function mirror(layout){
   const out={};
   for(const [k,v] of Object.entries(layout||{}))out[k]={...v,x:1-Number(v.x||0)};
-
-  // Direction buttons are a semantic pair. Left-handed mode moves the whole
-  // steering block to the opposite side, but LEFT must remain visually left
-  // of RIGHT; mirroring each button independently reverses their order.
   if(layout?.left&&layout?.right){
     out.left={...layout.left,x:1-Number(layout.right.x||0)};
     out.right={...layout.right,x:1-Number(layout.left.x||0)};
@@ -131,6 +124,15 @@ function hardenIosRaceControls(root){
   const block=e=>{e.preventDefault();};
   const guarded=['dblclick','contextmenu','selectstart','dragstart','gesturestart','gesturechange','gestureend'];
   guarded.forEach(type=>root.addEventListener(type,block,{capture:true,passive:false}));
+
+  // iOS can perform double-tap zoom before a dblclick is dispatched. Block the
+  // second touchend directly on race controls so rapid GAS/BRAKE taps stay input.
+  let lastTouchEnd=0;
+  root.addEventListener('touchend',e=>{
+    const now=Date.now();
+    if(now-lastTouchEnd<420)e.preventDefault();
+    lastTouchEnd=now;
+  },{capture:true,passive:false});
 }
 
 export function applyDomControlLayout(){
