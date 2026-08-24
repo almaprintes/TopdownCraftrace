@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceLeftHandedControlsScene.js';
+import { GENERATED_WHEEL_ASSET } from '../ui/generatedWheelAsset.js';
 
 const SETTINGS_KEY='tdr2:settings';
 function prefs(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')?.controls||{};}catch{return {};}}
@@ -20,20 +21,17 @@ export class RaceScene extends CurrentRaceScene {
     style.id='tdr-steering-wheel-style';
     style.textContent=`
       #tdr-race-controls .tdr-stick{display:none!important}
-      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(22px,2vw);bottom:max(18px,2.7vh);width:clamp(112px,14vw,152px);aspect-ratio:1;border-radius:50%;pointer-events:auto;touch-action:none;opacity:.88;filter:drop-shadow(0 7px 16px rgba(0,0,0,.28));}
-      #tdr-steering-wheel .rim{position:absolute;inset:5%;border-radius:50%;border:10px solid rgba(210,225,240,.44);box-shadow:inset 0 0 0 2px rgba(7,19,30,.9),0 0 0 2px rgba(90,205,255,.12),0 0 18px rgba(80,190,255,.10);background:radial-gradient(circle,rgba(20,36,50,.13) 0 53%,transparent 54%);transform:rotate(var(--rot,0deg));transition:transform 65ms ease-out,filter 80ms linear}
-      #tdr-steering-wheel.active .rim{filter:brightness(1.22)}
-      #tdr-steering-wheel .hub{position:absolute;left:50%;top:50%;width:28%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:radial-gradient(circle at 38% 34%,#dcecff,#7398b5 48%,#22394b 72%);border:2px solid rgba(255,255,255,.28)}
-      #tdr-steering-wheel .spoke{position:absolute;left:50%;top:50%;width:38%;height:8px;background:linear-gradient(90deg,rgba(215,230,242,.7),rgba(89,119,142,.75));transform-origin:0 50%}
-      #tdr-steering-wheel .s1{transform:translateY(-50%) rotate(0deg)}#tdr-steering-wheel .s2{transform:translateY(-50%) rotate(120deg)}#tdr-steering-wheel .s3{transform:translateY(-50%) rotate(240deg)}
+      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(18px,1.8vw);bottom:max(10px,1.8vh);width:clamp(142px,17vw,194px);aspect-ratio:320/277;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 8px 18px rgba(0,0,0,.42));}
+      #tdr-steering-wheel .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:.96;transition:filter 80ms linear}
+      #tdr-steering-wheel.active .art{filter:brightness(1.08)}
+      #tdr-steering-wheel .steer-cue{position:absolute;left:50%;top:3.5%;width:7px;height:18px;border-radius:5px;background:#18a7ff;box-shadow:0 0 8px rgba(24,167,255,.8);transform:translateX(calc(-50% + var(--cue,0px)));transition:transform 55ms ease-out;pointer-events:none}
     `;
     document.head.appendChild(style);
 
     const wheel=document.createElement('div');
     wheel.id='tdr-steering-wheel';
-    wheel.innerHTML='<div class="rim"><i class="spoke s1"></i><i class="spoke s2"></i><i class="spoke s3"></i><i class="hub"></i></div>';
+    wheel.innerHTML=`<img class="art" src="${GENERATED_WHEEL_ASSET}" alt=""><i class="steer-cue"></i>`;
     document.body.appendChild(wheel);
-    const rim=wheel.querySelector('.rim');
 
     let activeId=null;
     let startX=0;
@@ -50,8 +48,8 @@ export class RaceScene extends CurrentRaceScene {
         this.touch.steer=steer;
         this.touch.leftActive=Math.abs(steer)>.01;
       }
-      // Visual angle is deliberately limited: it indicates steering, never spins.
-      rim?.style?.setProperty('--rot',`${steer*72}deg`);
+      const cue=Math.round(steer*Math.max(24,wheel.clientWidth*.27));
+      wheel.style.setProperty('--cue',`${cue}px`);
     };
 
     const down=e=>{
@@ -67,11 +65,8 @@ export class RaceScene extends CurrentRaceScene {
     const move=e=>{
       if(activeId!==e.pointerId)return;
       const r=wheel.getBoundingClientRect();
-      // Joystick behaviour: displacement from where the finger first touched.
-      // About 42% of wheel width reaches full lock.
-      const travel=Math.max(42,r.width*.42);
-      const delta=(e.clientX-startX)/travel;
-      setSteer(delta);
+      const travel=Math.max(46,r.width*.42);
+      setSteer((e.clientX-startX)/travel);
       e.preventDefault();
     };
 
