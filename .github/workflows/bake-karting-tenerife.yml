@@ -19,6 +19,7 @@ jobs:
   bake:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +36,9 @@ jobs:
         run: npm ci
 
       - name: Bake Karting Tenerife
-        run: npm run bake:track -- karting-tenerife
+        run: |
+          echo 'Forcing beauty bake refresh'
+          npm run bake:track -- karting-tenerife
 
       - name: Publish generated beauty assets
         run: |
