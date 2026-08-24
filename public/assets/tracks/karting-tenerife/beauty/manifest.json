@@ -1,6 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "generator": "scripts/bake-track-visual.mjs",
+  "style": "premium-material-pass-v2",
   "trackKey": "karting-tenerife",
   "source": "src/game/tracks/library/karting-tenerife/track.json",
   "worldW": 2813,
