@@ -16,12 +16,12 @@ Stored in `public/assets/materials/asphalt-pbr/`:
 The asphalt mask is still built exclusively from `track.geom.left/right`, using the exact per-sample quads previously validated with the solid-red debug mask. There is no widening, smoothing, offsetting or reinterpretation of the circuit geometry.
 
 ## Border invariant
-No custom edge stroke, dirt stroke or replacement kerb geometry is drawn by the CraftPBR beauty pass. The proven border/kerb renderer in the base race scene remains responsible for those visuals. This specifically avoids reintroducing the previously fixed twisted-line artefacts.
+No replacement edge polyline or kerb geometry is drawn by the beauty pass. The proven border/kerb renderer remains responsible for the white lines and red/white kerbs. This specifically avoids reintroducing the previously fixed twisted-line artefacts.
 
 ## Runtime
 `RaceWorldAlignedMaterialsScene` remains the normal active RaceScene through `src/game/game.js`.
 
-`RaceRealSurfaceAssetsScene` loads all six CraftPBR maps from `assets/materials/asphalt-pbr/`.
+`RaceRealSurfaceAssetsScene` loads all six CraftPBR maps from `assets/materials/asphalt-pbr/` plus the existing `grass-real.webp` world material.
 
 ## Iterations
 ### v1
@@ -31,31 +31,33 @@ One photographic Albedo layer plus restrained AO. This proved the new material a
 Tried compositing Roughness/Height/AO as 2D grayscale layers at different scales. In live iPhone tests this mostly made the road darker; the intended material response was not convincingly visible. This approach is retired.
 
 ### v4 — real WebGL material response
-A dedicated `AsphaltPBRPipeline` now handles the visible road surface when Phaser is running in WebGL.
+A dedicated `AsphaltPBRPipeline` handles the visible road surface in WebGL.
 
 The shader consumes:
-- Albedo as the base colour;
-- Normal as real tangent-space micro-surface direction;
-- Roughness to control the strength of broad, weak asphalt highlights;
+- Albedo as base colour;
+- Normal as tangent-space micro-surface direction;
+- Roughness to control broad weak asphalt highlights;
 - Height as restrained micro-relief/tonal variation.
 
-The lighting direction is fixed and soft to read as outdoor daylight from the top-down camera. The aim is perceptible surface relief and material response on a phone screen without making the asphalt look wet, metallic or exaggerated.
-
-The previous fake 2D Roughness/Height/AO stacks are removed. If WebGL or the custom pipeline is unavailable, the game falls back to the clean photographic Albedo only.
-
 ### v5 — dynamic zoom anti-moire
-Live iPhone testing exposed moire/shimmer in the fine asphalt aggregate because race camera zoom changes continuously with speed (`~0.75` when fast/far to `~1.50` when slow/near).
+Live iPhone testing exposed shimmer in the fine asphalt aggregate because race camera zoom changes continuously with speed (`~0.75` fast/far to `~1.50` slow/near).
 
-The PBR shader now receives the active camera zoom every bind and performs zoom-aware low-pass filtering:
-- at close zoom the photographic Albedo and Normal retain full sharpness;
-- below roughly `1.08` zoom, filtering progressively increases;
-- Albedo uses a five-tap cross filter to suppress sub-pixel aggregate shimmer;
-- Normal uses the same strategy so micro-relief does not create moving interference patterns;
-- normal strength, specular response and Height contribution are reduced as the camera moves farther away because those details cannot be represented reliably below pixel size.
+The PBR shader now receives camera zoom every bind and applies a permanent low-pass floor, increasing filtering as the camera moves farther away. Albedo, Normal, Roughness and Height are filtered; normal/specular/height strength are attenuated when detail becomes sub-pixel. The dynamic zoom itself is unchanged.
 
-The dynamic camera behaviour itself is unchanged. The material adapts to the camera, not vice versa.
+Live validation: some shimmer remains detectable when deliberately looking for it at low speed, but it is no longer expected to be noticeable to a first-time player. Further filtering would trade away visible surface detail for a marginal gain, so the current balance is accepted.
 
-`AO` and `metalness` remain loaded as source material maps. Metalness is correctly black for asphalt. AO can be incorporated later if the shader needs further refinement after live validation.
+### v6 — grass richness + irregular dirt shoulder
+The next beauty gain moves outside the asphalt rather than further filtering the road.
+
+`raceExactRuntimeBeautyPass.js` now adds:
+- a broad second sample of the existing real grass texture at a much larger world scale and low opacity, creating slow vegetation tonal variation without adding fine-frequency shimmer;
+- deterministic dirt/soil specks immediately outside `track.geom.left/right`;
+- sparse dry-grass strokes farther outside the edge;
+- natural clean gaps so the dirt never reads as a continuous painted halo.
+
+The shoulder system derives the outward direction from each exact left/right edge point relative to the local road centre. It does **not** construct any offset border polyline. Therefore it cannot recreate the old twisted-line failure mode.
+
+The stable white border and red/white kerb renderer is untouched and remains above these environmental marks.
 
 ## Explicitly untouched
 - dynamic camera zoom behaviour/range
