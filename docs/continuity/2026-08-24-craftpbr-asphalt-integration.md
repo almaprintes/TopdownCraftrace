@@ -59,6 +59,26 @@ The shoulder system derives the outward direction from each exact left/right edg
 
 The stable white border and red/white kerb renderer is untouched and remains above these environmental marks.
 
+### v6 live validation — iPhone screenshot
+User validation on 2026-08-24: "No está mal. Se nota algo." The environmental pass is visible and accepted as a modest improvement rather than a finished visual target.
+
+Screenshot observations:
+- asphalt reads substantially more like a real aggregate surface than the earlier flat procedural road;
+- grass has some texture and large-scale variation, but large interior islands still read too uniformly dark/green and lack convincing terrain structure;
+- the transition from asphalt to vegetation is cleaner than before but remains visually dominated by the pristine continuous white border;
+- red/white kerbs are crisp and geometrically stable, but their perfectly clean colour makes them feel newer than the surrounding surface;
+- the scene still lacks medium-scale environmental cues that give a real kart track depth: tyre rubber on racing/braking lines, kerb wear, edge dust accumulation, irregular worn grass/soil patches, and selective trackside objects/shadows.
+
+## Next visual priorities
+Proceed in controlled layers, preserving exact geometry and performance:
+1. **Racing-line rubber / braking-zone wear** — broad, extremely subtle darkening driven from the centre ribbon/curvature, not a hard painted line. This should provide the largest immediate realism gain on the asphalt.
+2. **Kerb weathering** — restrained dirt/desaturation/scuff overlays clipped to existing kerb areas; do not rebuild kerb geometry.
+3. **Terrain breakup** — a few larger irregular dry/worn/soil zones in grass islands to remove the uniform green-carpet appearance.
+4. **Edge integration** — local dirt accumulation and grass encroachment near selected edges while leaving deliberate clean sections.
+5. **Trackside depth** — later add sparse tyre stacks/barriers/vegetation with soft baked-style shadows, prioritising recognizable circuit areas rather than filling every empty space.
+
+Do not add all effects at once. Validate each layer on iPhone before proceeding so visual gains and performance regressions remain attributable.
+
 ## Explicitly untouched
 - dynamic camera zoom behaviour/range
 - physics
