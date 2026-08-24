@@ -7,9 +7,32 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrHandbrake=false;
     this._tdrHandbrakeVisual=null;
     const result=super.create(data);
+
+    // El HUD moderno ya cubre vuelta/delta/mejor. El panel TT heredado seguía
+    // deslizándose desde la derecha al cerrar una vuelta y aparecía detrás del
+    // minimapa nuevo. Se conserva su lógica de datos, pero se anula su visual.
+    try{this.ttPanel?.c?.setVisible?.(false);}catch{}
+    this._showTTPanel=()=>{};
+    this._hideTTPanel=()=>{};
+
     this._buildPedalRow();
     this._buildHandbrakeControl();
     return result;
+  }
+
+  // El banner grande mantiene texto/partículas nítidos, pero su placa de fondo
+  // deja ver bastante más carretera. Solo atenuamos el Graphics de la carcasa.
+  _showTimingAchievement(records,lapMs){
+    super._showTimingAchievement(records,lapMs);
+    const shell=this._timingBanner?.list?.[0];
+    if(shell?.scene) shell.setAlpha(.70);
+  }
+
+  // El aviso pequeño de botín queda aún más transparente que el banner grande.
+  _showRaceLoot(reward){
+    super._showRaceLoot(reward);
+    const toast=this._lootToast;
+    if(toast?.scene) toast.setBackgroundColor?.('#07160f8c');
   }
 
   _setHandbrakeFromSwipe(v){
