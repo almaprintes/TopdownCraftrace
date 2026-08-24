@@ -90,13 +90,27 @@ export class RaceScene extends CurrentRaceScene {
     gfx.clear();
 
     if(frontFacing){
-      // En estas skins se ve el frontal: dos ópticas blancas redondas en el MORRO.
+      // Óptica frontal: núcleo pequeño + halo concéntrico suave para sensación de deslumbramiento.
       const frontY=-h*0.405;
       const halfSpread=Math.max(4.5,w*0.255);
-      const radius=Math.max(2.2,Math.min(3.4,w*0.105));
-      gfx.fillStyle(0xffffff,0.88);
-      gfx.fillCircle(-halfSpread,frontY,radius);
-      gfx.fillCircle( halfSpread,frontY,radius);
+      const coreR=Math.max(1.25,Math.min(2.05,w*0.064));
+      const haloR1=coreR*1.9;
+      const haloR2=coreR*3.0;
+
+      // Halo exterior muy tenue.
+      gfx.fillStyle(0xddeaff,0.07);
+      gfx.fillCircle(-halfSpread,frontY,haloR2);
+      gfx.fillCircle( halfSpread,frontY,haloR2);
+
+      // Halo interior algo más presente.
+      gfx.fillStyle(0xeaf3ff,0.15);
+      gfx.fillCircle(-halfSpread,frontY,haloR1);
+      gfx.fillCircle( halfSpread,frontY,haloR1);
+
+      // Núcleo blanco compacto.
+      gfx.fillStyle(0xffffff,0.96);
+      gfx.fillCircle(-halfSpread,frontY,coreR);
+      gfx.fillCircle( halfSpread,frontY,coreR);
       return;
     }
 
