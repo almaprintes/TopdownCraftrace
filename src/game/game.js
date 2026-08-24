@@ -28,7 +28,19 @@ function isIOSDevice(){
     return /iPhone|iPad|iPod/i.test(ua)||(platform==='MacIntel'&&Number(navigator?.maxTouchPoints||0)>1);
   }catch{return false;}
 }
-function renderResolution(vp,ios,dpr){
+function isLegacyIOSPhone(){
+  try{
+    if(!isIOSDevice())return false;
+    const sw=Math.max(Number(screen?.width||0),Number(screen?.height||0));
+    const sh=Math.min(Number(screen?.width||0),Number(screen?.height||0));
+    const phoneLike=Math.max(sw,sh)<=900;
+    const iPhone12Class=phoneLike&&Math.max(sw,sh)<=844;
+    const crashSafe=localStorage.getItem('tdr2:forceIosSafeMode')==='1';
+    return iPhone12Class||crashSafe;
+  }catch{return false;}
+}
+function renderResolution(vp,ios,dpr,safeMode){
+  if(safeMode)return 0.72;
   const qualityScale=vp.quality==='low'?0.80:vp.quality==='medium'?0.92:1.00;
   const userScale=vp.renderScale==='eco'?0.90:vp.renderScale==='sharp'?1.15:1.00;
   const wanted=qualityScale*userScale;
@@ -41,20 +53,22 @@ export function createGame(parentId='app'){
   const vp=videoPrefs();
   const dpr=window.devicePixelRatio||1;
   const ios=isIOSDevice();
-  const resolution=renderResolution(vp,ios,dpr);
-  const antialias=vp.quality!=='low';
-  const targetFps=Number(vp.targetFps)===30?30:60;
+  const safeMode=isLegacyIOSPhone();
+  try{window.__tdrIosSafeMode=safeMode;}catch{}
+  const resolution=renderResolution(vp,ios,dpr,safeMode);
+  const antialias=safeMode?false:vp.quality!=='low';
+  const targetFps=safeMode?30:(Number(vp.targetFps)===30?30:60);
   const game=new Phaser.Game({
     type:Phaser.AUTO,
     parent:parentId,
     backgroundColor:'#0b1020',
     resolution,
-    fps:{target:targetFps,min:20,forceSetTimeOut:false},
+    fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},
     scene:[BootScene,MenuScene,MenuAliasScene,GarageScene,SettingsScene,GarageDetailScene,RaceScene,AdminHubScene,UpgradeShopScene,CarEditorScene,TrackGarageScene,TrackStudioScene,EnvironmentBuilderScene,TrackEditorScene],
     dom:{createContainer:true},
     scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},
     physics:{default:'arcade',arcade:{debug:false}},
-    render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:false}
+    render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:safeMode,powerPreference:'low-power',batchSize:safeMode?1024:4096}
   });
   try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}
   installRuntimeCrashDiagnostics(game);
