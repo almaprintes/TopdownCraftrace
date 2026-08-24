@@ -165,7 +165,7 @@ function addIrregularShoulder(scene, left, right, objects) {
 
 function addRacingLineWear(scene, left, right, roadMask, objects, masked) {
   const count = Math.min(left.length, right.length);
-  if (count < 12) return null;
+  if (count < 16) return null;
 
   const center = new Array(count);
   const halfW = new Array(count);
@@ -177,12 +177,8 @@ function addRacingLineWear(scene, left, right, roadMask, objects, masked) {
     halfW[i] = Math.hypot(r.x - l.x, r.y - l.y) * 0.5;
   }
 
-  const racing = new Array(count);
+  const signedTurn = new Array(count).fill(0);
   const curvature = new Array(count).fill(0);
-
-  // Build a visual racing path from the exact road ribbon. It is only a decal guide:
-  // it does not feed AI, physics or checkpoints. Curves bias gently toward the inside;
-  // straights relax back to centre. No hard lane or ideal-line gameplay logic is created.
   for (let i = 2; i < count - 2; i++) {
     const pm = center[i - 2];
     const p = center[i];
@@ -201,8 +197,20 @@ function addRacingLineWear(scene, left, right, roadMask, objects, masked) {
     const cross = ax * by - ay * bx;
     const dot = Math.max(-1, Math.min(1, ax * bx + ay * by));
     const turn = Math.atan2(cross, dot);
-    const strength = clamp01(Math.abs(turn) / 0.24);
-    curvature[i] = strength;
+    signedTurn[i] = turn;
+    curvature[i] = clamp01(Math.abs(turn) / 0.24);
+  }
+
+  // Visual wear path only. Unlike v7, it is NOT a continuous near-centre lane.
+  // We model a simple corner phase: outside on approach, inside near apex, outside on exit.
+  // On genuine straights no rubber stripe is rendered at all.
+  const racing = new Array(count);
+  const activity = new Array(count).fill(0);
+  for (let i = 6; i < count - 7; i++) {
+    const pm = center[i - 2];
+    const p = center[i];
+    const pp = center[i + 2];
+    if (![pm, p, pp].every(finitePoint)) continue;
 
     let tx = pp.x - pm.x;
     let ty = pp.y - pm.y;
@@ -212,9 +220,49 @@ function addRacingLineWear(scene, left, right, roadMask, objects, masked) {
     const nx = -ty;
     const ny = tx;
 
-    const insideSign = cross >= 0 ? 1 : -1;
-    const shift = Number(halfW[i] || 0) * 0.24 * strength * insideSign;
-    racing[i] = { x: p.x + nx * shift, y: p.y + ny * shift };
+    let aheadStrength = 0;
+    let aheadSign = 0;
+    let behindStrength = 0;
+    let behindSign = 0;
+    for (let k = 2; k <= 7; k++) {
+      const af = curvature[i + k] || 0;
+      if (af > aheadStrength) {
+        aheadStrength = af;
+        aheadSign = Math.sign(signedTurn[i + k] || 0);
+      }
+      const bf = curvature[i - k] || 0;
+      if (bf > behindStrength) {
+        behindStrength = bf;
+        behindSign = Math.sign(signedTurn[i - k] || 0);
+      }
+    }
+
+    const here = curvature[i] || 0;
+    const hereSign = Math.sign(signedTurn[i] || 0);
+    const w = Number(halfW[i] || 0);
+
+    let shiftFrac = 0;
+    let active = 0;
+
+    if (here > 0.18) {
+      // Apex / sustained corner: move decisively toward the inside.
+      const sign = hereSign || aheadSign || behindSign;
+      shiftFrac = sign * (0.22 + here * 0.30);
+      active = Math.max(active, here);
+    } else if (aheadStrength > 0.30) {
+      // Corner approach / braking: use the OUTSIDE half of the track.
+      shiftFrac = -aheadSign * (0.18 + aheadStrength * 0.28);
+      active = Math.max(active, aheadStrength * 0.86);
+    } else if (behindStrength > 0.32) {
+      // Corner exit: unwind back toward the outside rather than snapping to centre.
+      shiftFrac = -behindSign * (0.10 + behindStrength * 0.20);
+      active = Math.max(active, behindStrength * 0.62);
+    }
+
+    // Keep the decal comfortably inside the exact road ribbon.
+    shiftFrac = Math.max(-0.58, Math.min(0.58, shiftFrac));
+    racing[i] = { x: p.x + nx * w * shiftFrac, y: p.y + ny * w * shiftFrac };
+    activity[i] = active;
   }
 
   const g = scene.add.graphics()
@@ -227,20 +275,19 @@ function addRacingLineWear(scene, left, right, roadMask, objects, masked) {
   let segments = 0;
   let brakingMarks = 0;
 
-  // Several extremely low-alpha passes create a broad, diffuse rubbered lane. The
-  // deterministic gaps and width variation prevent it reading as a painted black line.
+  // Corner-only, broken rubber patches. No continuous straight-centre pass.
   for (let pass = 0; pass < 3; pass++) {
-    for (let i = 3 + pass; i < count - 4; i += 2) {
+    for (let i = 7 + pass; i < count - 8; i += 2) {
       const a = racing[i];
       const b = racing[i + 2];
-      if (!finitePoint(a) || !finitePoint(b)) continue;
-      if (hash01(i * 31.7 + pass * 91.3) < 0.10) continue;
+      const active = Math.max(activity[i] || 0, activity[i + 2] || 0);
+      if (!finitePoint(a) || !finitePoint(b) || active < 0.24) continue;
+      if (hash01(i * 31.7 + pass * 91.3) < 0.24) continue;
 
-      const curve = Math.max(curvature[i] || 0, curvature[i + 2] || 0);
-      const baseWidth = Math.max(13, Math.min(34, Number(halfW[i] || 70) * (0.24 + curve * 0.07)));
-      const width = baseWidth * (0.88 + hash01(i * 17.1 + pass) * 0.28) + pass * 3.5;
-      const alpha = 0.018 + curve * 0.018 + pass * 0.004;
-      const tone = pass === 0 ? 0x171817 : (pass === 1 ? 0x20211f : 0x111211);
+      const widthBase = Math.max(11, Math.min(30, Number(halfW[i] || 70) * (0.17 + active * 0.08)));
+      const width = widthBase * (0.80 + hash01(i * 17.1 + pass) * 0.34) + pass * 2.0;
+      const alpha = 0.014 + active * 0.022 + pass * 0.003;
+      const tone = pass === 0 ? 0x151615 : (pass === 1 ? 0x1d1e1c : 0x101110);
 
       g.lineStyle(width, tone, alpha);
       g.beginPath();
@@ -251,20 +298,19 @@ function addRacingLineWear(scene, left, right, roadMask, objects, masked) {
     }
   }
 
-  // Braking-zone haze: look a few samples ahead for a sharp rise in curvature and add
-  // broader, short-lived rubber accumulation before the corner. Still diffuse and masked.
-  for (let i = 4; i < count - 12; i += 3) {
-    const now = curvature[i] || 0;
+  // Braking haze is placed on the outside approach path, not down the road centre.
+  for (let i = 7; i < count - 14; i += 3) {
+    const here = curvature[i] || 0;
     let ahead = 0;
     for (let k = 3; k <= 9; k += 2) ahead = Math.max(ahead, curvature[i + k] || 0);
-    if (ahead < 0.48 || ahead <= now + 0.14) continue;
-    if (hash01(i * 44.9) < 0.16) continue;
+    if (ahead < 0.48 || ahead <= here + 0.14) continue;
+    if (hash01(i * 44.9) < 0.22) continue;
 
     const a = racing[i];
     const b = racing[i + 3];
     if (!finitePoint(a) || !finitePoint(b)) continue;
-    const width = Math.max(24, Math.min(48, Number(halfW[i] || 70) * (0.38 + ahead * 0.10)));
-    g.lineStyle(width, 0x0f100f, 0.030 + ahead * 0.020);
+    const width = Math.max(22, Math.min(44, Number(halfW[i] || 70) * (0.30 + ahead * 0.10)));
+    g.lineStyle(width, 0x0e0f0e, 0.025 + ahead * 0.018);
     g.beginPath();
     g.moveTo(a.x, a.y);
     g.lineTo(b.x, b.y);
@@ -347,7 +393,7 @@ function installPass(scene, data) {
     exactRoadMask: true,
     geometryExpanded: false,
     bordersRedrawn: false,
-    materialRevision: 'craftpbr-v7-racing-wear',
+    materialRevision: 'craftpbr-v8-corner-phase-wear',
     shaderActive,
     shaderInputs: shaderActive ? ['albedo', 'normal', 'roughness', 'height'] : ['albedo'],
     grassMacro: !!grassMacro,
