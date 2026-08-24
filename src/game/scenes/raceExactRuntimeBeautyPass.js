@@ -1,6 +1,7 @@
 // Runtime-only visual beauty pass for Karting Tenerife.
-// IMPORTANT: this module consumes track.geom.left/right only as a render mask.
-// It never changes track geometry, surfaces, physics, AI, checkpoints or timing.
+// IMPORTANT: this module consumes track.geom.left/right ONLY as the exact asphalt mask.
+// It never redraws the circuit borders and never changes geometry, surfaces, physics,
+// AI, checkpoints or timing. Border/kerb rendering remains owned by the proven base scene.
 
 function trackId(scene, data) {
   const direct = data?.trackKey || scene?.trackKey || scene?.track?.meta?.id;
@@ -39,6 +40,8 @@ function buildExactRoadMask(scene) {
   let quads = 0;
 
   // EXACTLY the same ribbon validated in solid red: no grow, offset or smoothing.
+  // Quads are safe here because they define a filled mask; we deliberately do NOT
+  // connect left/right arrays as continuous strokes (that was the source of twists).
   for (let i = 0; i < count; i++) {
     const j = (i + 1) % count;
     const l0 = xy(left[i]);
@@ -66,28 +69,10 @@ function strokePolyline(gfx, points, close = true) {
   gfx.strokePoints(pts, close, false);
 }
 
-function addEdgeDirt(scene, left, right) {
-  // These strokes sit below the asphalt. Their inner half is covered by the exact
-  // road mask, so only the exterior verge remains visible without widening asphalt.
-  const dirt = scene.add.graphics().setDepth(10.18).setScrollFactor(1);
-  dirt.lineStyle(16, 0x6d604f, 0.40);
-  strokePolyline(dirt, left);
-  strokePolyline(dirt, right);
-  dirt.lineStyle(7, 0x8b7a62, 0.34);
-  strokePolyline(dirt, left);
-  strokePolyline(dirt, right);
-  dirt.lineStyle(2, 0x3f3a32, 0.24);
-  strokePolyline(dirt, left);
-  strokePolyline(dirt, right);
-  scene.uiCam?.ignore?.(dirt);
-  return dirt;
-}
-
 function addRoadDetails(scene, mask, worldW, worldH) {
   const detail = scene.add.graphics().setDepth(10.48).setScrollFactor(1).setMask(mask);
   const rng = seeded(240824);
 
-  // Large tonal repairs / weathering, intentionally subtle and world-aligned.
   for (let i = 0; i < 150; i++) {
     const x = rng() * worldW;
     const y = rng() * worldH;
@@ -98,7 +83,6 @@ function addRoadDetails(scene, mask, worldW, worldH) {
     detail.fillEllipse(x, y, w, h);
   }
 
-  // Fine aggregate variation. Low alpha prevents a procedural/confetti look.
   for (let i = 0; i < 520; i++) {
     const x = rng() * worldW;
     const y = rng() * worldH;
@@ -121,20 +105,6 @@ function addRubber(scene, mask) {
   strokePolyline(rubber, center);
   scene.uiCam?.ignore?.(rubber);
   return rubber;
-}
-
-function addIntegratedWhiteEdges(scene, mask, left, right) {
-  // Stroke is centered on the validated boundary but clipped by the exact road mask,
-  // therefore only its inner half is visible: the visual asphalt edge never expands.
-  const line = scene.add.graphics().setDepth(10.72).setScrollFactor(1).setMask(mask);
-  line.lineStyle(3.2, 0xf0eee7, 0.82);
-  strokePolyline(line, left);
-  strokePolyline(line, right);
-  line.lineStyle(1.0, 0xffffff, 0.45);
-  strokePolyline(line, left);
-  strokePolyline(line, right);
-  scene.uiCam?.ignore?.(line);
-  return line;
 }
 
 function installPass(scene, data) {
@@ -165,8 +135,6 @@ function installPass(scene, data) {
     objects.push(grass);
   }
 
-  objects.push(addEdgeDirt(scene, left, right));
-
   const asphalt = scene.add.tileSprite(0, 0, worldW, worldH, 'asphalt')
     .setOrigin(0, 0)
     .setDepth(10.35)
@@ -178,8 +146,6 @@ function installPass(scene, data) {
   objects.push(asphalt);
   masked.push(asphalt);
 
-  // A second differently scaled sample of the same real material breaks tiling
-  // repetition and gives the road a denser, photographic grain without new assets.
   const micro = scene.add.tileSprite(0, 0, worldW, worldH, 'asphalt')
     .setOrigin(0, 0)
     .setDepth(10.41)
@@ -218,9 +184,8 @@ function installPass(scene, data) {
     masked.push(rubber);
   }
 
-  const whiteEdges = addIntegratedWhiteEdges(scene, bundle.mask, left, right);
-  objects.push(whiteEdges);
-  masked.push(whiteEdges);
+  // Deliberately NO custom white edge and NO edge-dirt stroke here.
+  // The existing RaceWorldAlignedMaterialsScene border/kerb renderer is left intact.
 
   scene._exactRuntimeBeautyPass = { objects, masked, mask: bundle.mask, gfx: bundle.gfx };
   scene.events.once('shutdown', () => {
@@ -242,7 +207,8 @@ function installPass(scene, data) {
     samples: bundle.count,
     quads: bundle.quads,
     exactRoadMask: true,
-    geometryExpanded: false
+    geometryExpanded: false,
+    bordersRedrawn: false
   });
 }
 
