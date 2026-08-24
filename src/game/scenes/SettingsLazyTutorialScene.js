@@ -10,9 +10,6 @@ const TUTORIALS = [
 
 export class SettingsScene extends CurrentSettingsScene {
   create(){
-    // Safari/iOS puede dejar restos DOM del lobby sobre el canvas tras cambiar de escena.
-    // Aunque sean invisibles, una capa DOM puede seguir capturando los toques y hacer
-    // que Configuración parezca completamente congelada. Limpiamos antes de construir UI.
     try {
       document.querySelectorAll('.tdr-lobby-dom').forEach(node=>node.remove());
       document.querySelectorAll('[data-tdr-modal],[data-tdr-overlay]').forEach(node=>node.remove());
@@ -25,8 +22,6 @@ export class SettingsScene extends CurrentSettingsScene {
       host?.classList?.remove?.('tdr-lobby-host');
     } catch(_) {}
 
-    // Fuerza el InputPlugin a estado operativo por si la escena anterior dejó el
-    // puntero activo/cancelado durante la transición DOM -> Phaser.
     try {
       this.input.enabled=true;
       if(this.game?.input) this.game.input.enabled=true;
@@ -41,8 +36,6 @@ export class SettingsScene extends CurrentSettingsScene {
 
     super.create();
 
-    // Un segundo rearme al siguiente frame evita el caso iOS en que pointerup del
-    // botón DOM que abrió la escena llega después del create de Configuración.
     this.time.delayedCall(0,()=>{
       try {
         this.input.enabled=true;
@@ -51,6 +44,14 @@ export class SettingsScene extends CurrentSettingsScene {
         if(canvas) canvas.style.pointerEvents='auto';
       } catch(_) {}
     });
+
+    if(window.__tdrIosSafeMode===true){
+      this.events.once('shutdown',()=>{
+        for(const [key] of TUTORIALS){
+          try{if(this.textures?.exists?.(key))this.textures.remove(key);}catch{}
+        }
+      });
+    }
   }
 
   _openDroppingTutorial(startIndex=0){
@@ -75,9 +76,7 @@ export class SettingsScene extends CurrentSettingsScene {
       try{wait.destroy();}catch{}
       if(this.sys?.isActive?.())super._openDroppingTutorial(startIndex);
     });
-    this.load.once('loaderror',()=>{
-      // Complete seguirá ejecutándose; el padre mostrará su fallback para cualquier slide ausente.
-    });
+    this.load.once('loaderror',()=>{});
     this.load.start();
   }
 }
