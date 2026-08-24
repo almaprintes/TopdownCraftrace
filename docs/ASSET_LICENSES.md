@@ -44,7 +44,9 @@ No se ha confirmado un Patreon personal independiente de Amal Kumar. Si Top Down
 ### Implementación actual
 
 - `grass` → `public/assets/materials/grass/rocky_terrain_02_diff_2k.jpg`
-- `off` → `public/assets/materials/offroad/rocky_terrain_diff_4k.jpg` (pendiente sustituir por versión 2K más ligera manteniendo el mismo material visual).
+- `off` → `public/assets/materials/offroad/rocky_terrain_diff_2k.jpg`
+
+La antigua versión 4K del OFF puede conservarse como fuente de alta resolución, pero el runtime usa la versión 2K más ligera.
 
 ## Criterio del proyecto
 
