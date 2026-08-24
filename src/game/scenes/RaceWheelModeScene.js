@@ -62,10 +62,11 @@ export class RaceScene extends CurrentRaceScene {
   _applyWheelSteer(value){
     this._tdrWheelSteer=Number.isFinite(value)?value:0;
     if(!this.touch)return;
+    // Never feed the old absolute-stick branch. Wheel steering is relative.
     this.touch.targetAngle=null;
     this.touch.stickX=0;
     this.touch.stickY=0;
-    this.touch.steer=this._tdrWheelSteer;
+    this.touch.steer=0;
     this.touch.buttonSteer=0;
     this.touch.leftActive=Math.abs(this._tdrWheelSteer)>.008;
   }
@@ -79,15 +80,17 @@ export class RaceScene extends CurrentRaceScene {
     style.id='tdr-steering-wheel-style';
     style.textContent=`
       #tdr-race-controls .tdr-stick{display:none!important}
-      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(18px,1.8vw);bottom:max(10px,1.8vh);width:clamp(136px,16vw,184px);aspect-ratio:475/365;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 7px 15px rgba(0,0,0,.38));}
-      #tdr-steering-wheel .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:.97;transform:rotate(var(--rot,0deg));transform-origin:50% 50%;transition:transform 38ms linear,filter 80ms linear}
+      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(18px,1.8vw);bottom:max(10px,1.8vh);width:clamp(132px,15vw,176px);aspect-ratio:1/1;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 7px 15px rgba(0,0,0,.38));overflow:hidden;border-radius:50%;}
+      #tdr-steering-wheel .art{position:absolute;left:50%;top:50%;width:126%;height:126%;object-fit:cover;pointer-events:none;opacity:.97;transform:translate(-50%,-50%) rotate(var(--rot,0deg));transform-origin:50% 50%;transition:transform 38ms linear,filter 80ms linear}
       #tdr-steering-wheel.active .art{filter:brightness(1.05)}
     `;
     document.head.appendChild(style);
 
     const wheel=document.createElement('div');
     wheel.id='tdr-steering-wheel';
-    wheel.innerHTML='<img class="art" src="assets/ui/steering-wheel-v2.svg?v=1" alt="Volante">';
+    // Revert the broken black-mask asset. This is the last visible wheel art,
+    // clipped cleanly by CSS while we keep gameplay independent from the image.
+    wheel.innerHTML='<img class="art" src="assets/ui/steering-wheel.svg?v=4" alt="Volante">';
     document.body.appendChild(wheel);
 
     let activeId=null;
@@ -103,13 +106,11 @@ export class RaceScene extends CurrentRaceScene {
       const sens=Math.max(.4,Math.min(1.4,Number(current.sensitivity||1)));
       const inv=current.invertSteer===true?-1:1;
 
-      // Más progresivo alrededor del centro y sin llegar a un giro salvaje.
-      const shaped=Math.sign(raw)*Math.pow(Math.abs(raw),1.35);
-      const steer=Math.max(-0.78,Math.min(0.78,shaped*0.68*sens*inv));
+      // Deliberately contained: lots of useful precision around centre.
+      const shaped=Math.sign(raw)*Math.pow(Math.abs(raw),1.55);
+      const steer=Math.max(-0.62,Math.min(0.62,shaped*0.56*sens*inv));
       this._applyWheelSteer(steer);
-
-      // El dibujo comunica el ángulo del volante, pero de forma contenida.
-      wheel.style.setProperty('--rot',`${raw*52}deg`);
+      wheel.style.setProperty('--rot',`${raw*42}deg`);
     };
 
     const down=e=>{
@@ -154,12 +155,39 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   update(time,delta){
-    if(this._tdrWheelMode){
-      // Reinyectar cada frame: ninguna capa heredada puede convertirlo en dirección absoluta
-      // ni neutralizarlo mientras el volante se mantiene girado.
-      this._applyWheelSteer(this._tdrWheelSteer||0);
+    if(!this._tdrWheelMode){
+      super.update(time,delta);
+      return;
     }
-    super.update(time,delta);
-    if(this._tdrWheelMode)this._applyWheelSteer(this._tdrWheelSteer||0);
+
+    const steer=Number(this._tdrWheelSteer||0);
+    const mag=Math.abs(steer);
+    const leftKey=this.keys?.left;
+    const rightKey=this.keys?.right;
+    const prevLeft=!!leftKey?.isDown;
+    const prevRight=!!rightKey?.isDown;
+    const prevTurnRate=this.turnRate;
+
+    // The base race controller already has the correct continuous "classic wheel"
+    // physics on keyboard left/right. Drive that exact path instead of inventing a
+    // second steering model. Scale turnRate by wheel deflection to keep it analogue.
+    if(mag>0.018){
+      if(leftKey)leftKey.isDown=steer<0;
+      if(rightKey)rightKey.isDown=steer>0;
+      if(Number.isFinite(prevTurnRate))this.turnRate=prevTurnRate*Math.max(.12,Math.min(.62,mag));
+    }else{
+      if(leftKey)leftKey.isDown=false;
+      if(rightKey)rightKey.isDown=false;
+    }
+
+    this._applyWheelSteer(steer);
+    try{
+      super.update(time,delta);
+    }finally{
+      if(leftKey)leftKey.isDown=prevLeft;
+      if(rightKey)rightKey.isDown=prevRight;
+      if(Number.isFinite(prevTurnRate))this.turnRate=prevTurnRate;
+      this._applyWheelSteer(steer);
+    }
   }
 }
