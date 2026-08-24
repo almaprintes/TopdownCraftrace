@@ -17,7 +17,7 @@ export class RaceScene extends BakedRaceScene {
 
     // Mantener las tres superficies existentes del renderer: grass / asphalt / off.
     this.load.image('grass', 'assets/materials/grass/rocky_terrain_02_diff_2k.jpg?v=20260824-grass-rocky2k-v1');
-    this.load.image('off', 'assets/materials/offroad/rocky_terrain_diff_4k.jpg?v=20260824-rocky-offroad-v3');
+    this.load.image('off', 'assets/materials/offroad/rocky_terrain_diff_2k.jpg?v=20260824-rocky-offroad-2k-v1');
     this.load.image('asphalt', 'assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg?v=20260824-polyhaven-clean-v1');
 
     // Mapas PBR conservados solo como referencia; no forman parte del render activo.
