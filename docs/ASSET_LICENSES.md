@@ -48,8 +48,25 @@ No se ha confirmado un Patreon personal independiente de Amal Kumar. Si Top Down
 
 La antigua versión 4K del OFF puede conservarse como fuente de alta resolución, pero el runtime usa la versión 2K más ligera.
 
+## Poly Haven — asfalto
+
+### Autor: Dimitrios Savva
+
+La textura **Clean Asphalt** usada actualmente para la superficie `asphalt` procede de Poly Haven y aparece publicada bajo licencia **CC0**.
+
+- Autor: **Dimitrios Savva**
+- Asset: **Clean Asphalt**
+- Categoría mostrada por Poly Haven: **Asphalt & Bitumen → Asphalt → Fresh Asphalt**
+- Resolución usada en runtime: **2K**
+- Ruta actual: `public/assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg`
+- Licencia: **CC0**
+- Licencia oficial de Poly Haven: https://polyhaven.com/license
+- Página de autor/assets en Poly Haven: https://polyhaven.com/all?a=Dimitrios%20Savva
+
+Se conserva esta autoría aunque CC0 no obliga a atribuir, para mantener trazabilidad y poder acreditar o apoyar al creador en el futuro.
+
 ## Criterio del proyecto
 
 Aunque CC0 no exige atribución, conservamos este registro para mantener trazabilidad sobre la procedencia de los assets y facilitar futuras revisiones antes de publicación.
 
-También conservamos los datos públicos del autor para poder acreditarlo voluntariamente, contactar con él o apoyarlo económicamente en el futuro si el proyecto genera ingresos.
+También conservamos los datos públicos de los autores para poder acreditarlos voluntariamente, contactar con ellos o apoyarlos económicamente en el futuro si el proyecto genera ingresos.
