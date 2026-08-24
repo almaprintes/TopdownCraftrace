@@ -12,23 +12,32 @@ Stored in `public/assets/materials/asphalt-pbr/`:
 - `ao.png`
 - `metalness.png`
 
-The visible 2D race pass currently uses Albedo plus a restrained AO layer. Normal/Roughness/Height/Metalness are loaded and reserved for a later WebGL shader/PBR pass; they are not approximated procedurally.
-
 ## Geometry invariant
 The asphalt mask is still built exclusively from `track.geom.left/right`, using the exact per-sample quads previously validated with the solid-red debug mask. There is no widening, smoothing, offsetting or reinterpretation of the circuit geometry.
 
 ## Border invariant
 No custom edge stroke, dirt stroke or replacement kerb geometry is drawn by the CraftPBR beauty pass. The proven border/kerb renderer in the base race scene remains responsible for those visuals. This specifically avoids reintroducing the previously fixed twisted-line artefacts.
 
-## Removed from beauty pass
-The previous stacked asphalt layer, micro layer, generated repair patches, aggregate dots, rubber center stripe and procedural overlay were removed from the runtime beauty pass. They created visible banding/repetition and fought the photographic material.
-
 ## Runtime
 `RaceWorldAlignedMaterialsScene` remains the normal active RaceScene through `src/game/game.js`.
 
-`RaceRealSurfaceAssetsScene` now loads the CraftPBR maps from `assets/materials/asphalt-pbr/`.
+`RaceRealSurfaceAssetsScene` loads all six CraftPBR maps from `assets/materials/asphalt-pbr/`.
 
-`raceExactRuntimeBeautyPass.js` renders the photographic albedo world-space through the exact runtime mask and adds AO at low opacity. No gameplay systems are changed.
+### v1
+The first live integration used one Albedo layer plus restrained AO. It proved the material and exact mask worked, but the road still looked too uniform and the mineral aggregate read too large at gameplay zoom.
+
+### v2 — multiscale material variation
+`raceExactRuntimeBeautyPass.js` now:
+- reduces the base albedo scale so aggregate reads finer at gameplay distance;
+- keeps fine AO aligned to the albedo;
+- reuses the real Roughness map at a much larger world scale with MULTIPLY blending for broad dark/polished variation;
+- reuses the real Height map at another large scale with very low SCREEN blending for soft worn highlights;
+- adds a second large-scale AO sample at a different offset/frequency to break uniformity;
+- does **not** composite the tangent-space Normal map as color, avoiding purple contamination;
+- keeps Normal loaded for a future proper WebGL lighting shader;
+- keeps Metalness unused visually because asphalt is correctly non-metallic.
+
+This replaces the previous procedural repairs, aggregate dots and center rubber stripe. The goal is organic multiscale variation derived from the actual PBR source maps, not painted game effects.
 
 ## Explicitly untouched
 - physics
