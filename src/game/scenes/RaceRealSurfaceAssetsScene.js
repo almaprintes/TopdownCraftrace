@@ -14,7 +14,10 @@ export class RaceScene extends BakedRaceScene {
     try { if (this.textures.exists('asphaltHeight')) this.textures.remove('asphaltHeight'); } catch {}
     try { if (this.textures.exists('asphaltMetalness')) this.textures.remove('asphaltMetalness'); } catch {}
 
-    this.load.image('grass', 'assets/materials/grass-real.webp');
+    // Off-road real 4K: se carga directamente como textura world-space. Mantener la
+    // escala física grande es intencionado: las rocas deben conservar tamaño natural
+    // y el mapa debe repetirse pocas veces, no convertirse en un patrón fino.
+    this.load.image('grass', 'assets/materials/offroad/rocky_terrain_diff_4k.jpg?v=20260824-rocky-offroad-v1');
 
     // Poly Haven Clean Asphalt diffuse/albedo only. No runtime PBR shader: the iPhone
     // A/B test showed a materially better FMAX (16-18 ms) without it. The remaining
