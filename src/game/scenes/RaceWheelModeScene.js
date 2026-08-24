@@ -79,15 +79,15 @@ export class RaceScene extends CurrentRaceScene {
     style.id='tdr-steering-wheel-style';
     style.textContent=`
       #tdr-race-controls .tdr-stick{display:none!important}
-      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(18px,1.8vw);bottom:max(10px,1.8vh);width:clamp(136px,16vw,184px);aspect-ratio:475/365;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 7px 15px rgba(0,0,0,.38));}
-      #tdr-steering-wheel .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:.98;transform:rotate(var(--rot,0deg));transform-origin:50% 52%;transition:transform 38ms linear,filter 80ms linear;-webkit-mask-image:radial-gradient(ellipse 52% 51% at 50% 52%,#000 0%,#000 84%,rgba(0,0,0,.92) 90%,rgba(0,0,0,.45) 96%,transparent 100%);mask-image:radial-gradient(ellipse 52% 51% at 50% 52%,#000 0%,#000 84%,rgba(0,0,0,.92) 90%,rgba(0,0,0,.45) 96%,transparent 100%);}
+      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(18px,1.8vw);bottom:max(10px,1.8vh);width:clamp(136px,16vw,184px);aspect-ratio:1/1;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 7px 15px rgba(0,0,0,.38));}
+      #tdr-steering-wheel .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:.98;transform:rotate(var(--rot,0deg));transform-origin:50% 50%;transition:transform 38ms linear,filter 80ms linear;}
       #tdr-steering-wheel.active .art{filter:brightness(1.05)}
     `;
     document.head.appendChild(style);
 
     const wheel=document.createElement('div');
     wheel.id='tdr-steering-wheel';
-    wheel.innerHTML='<img class="art" src="assets/ui/steering-wheel.svg?v=4" alt="Volante">';
+    wheel.innerHTML='<img class="art" src="assets/ui/tdr_steering_wheel_nissan.webp?v=1" alt="Volante">';
     document.body.appendChild(wheel);
 
     let activeId=null;
@@ -102,8 +102,6 @@ export class RaceScene extends CurrentRaceScene {
       const sens=Math.max(.4,Math.min(1.4,Number(current.sensitivity||1)));
       const inv=current.invertSteer===true?-1:1;
 
-      // Zona central dócil y progresión continua: el volante no pega saltos,
-      // pero mantener una posición conserva ese ángulo de dirección indefinidamente.
       const dead=.055;
       const mag=Math.abs(raw)<=dead?0:(Math.abs(raw)-dead)/(1-dead);
       const shaped=Math.sign(raw)*Math.pow(mag,1.55);
@@ -155,10 +153,6 @@ export class RaceScene extends CurrentRaceScene {
     const steer=this._tdrWheelSteer||0;
     this._applyWheelSteer(steer);
 
-    // El controlador base tiene una ruta de giro continuo probada para teclado,
-    // pero es binaria. La usamos únicamente como portadora y escalamos turnRate
-    // por la posición real del volante; así 25% de volante = 25% aprox. de giro,
-    // y mantenerlo girado nunca se convierte en un ángulo absoluto del mundo.
     const k=this.keys||{};
     const lk=k.left,rk=k.right;
     const oldL=lk?.isDown,oldR=rk?.isDown;
