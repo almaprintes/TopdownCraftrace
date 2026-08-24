@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceBrakeLightsSpeedTrailScene.js';
+import { readControlLayout, sanitizeLayoutPoint } from '../controls/controlLayout.js';
 
 const SETTINGS_KEY='tdr2:settings';
 function leftHanded(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')?.controls?.leftHanded===true;}catch{return false;}}
@@ -34,7 +35,6 @@ export class RaceScene extends CurrentRaceScene {
     const buttonMode=this._tdrSteeringMode==='buttons';
     const state={steer:0,throttle:0,brake:0,stickX:0,stickY:0,buttonSteer:0,leftId:null,rightId:null,leftActive:false,rightThrottle:false,rightBrake:false,btnW:0,btnH:0,rightX:0,throttleY:0,brakeY:0,_draw:()=>{}};
     this.touchUI=this.add.container(0,0).setScrollFactor(0).setDepth(1000);
-    // Preserve the legacy six-object shape expected by HUD cleanup code, but invisible.
     for(let i=0;i<6;i++)this.touchUI.add(this.add.rectangle(0,0,1,1,0x000000,0).setVisible(false));
     try{this.cameras.main.ignore(this.touchUI);}catch{}
 
@@ -44,14 +44,10 @@ export class RaceScene extends CurrentRaceScene {
       const pad=Math.max(14,Math.min(28,Math.floor(Math.min(w,h)*0.04)));
       pedalW=Math.max(150,Math.min(260,Math.floor(w*0.22)));
       pedalH=Math.max(78,Math.min(140,Math.floor(h*0.16)));
-      pedalX=pad;
-      brakeY=h-pad-pedalH;
-      gasY=brakeY-Math.floor(pedalH*1.08);
+      pedalX=pad; brakeY=h-pad-pedalH; gasY=brakeY-Math.floor(pedalH*1.08);
       const stickSize=Math.max(142,Math.min(190,w*0.17));
-      const stickPad=Math.max(22,w*0.02);
-      stickCX=w-stickPad-stickSize/2;
-      stickCY=h-Math.max(22,h*0.03)-stickSize/2;
-      stickRadius=stickSize*0.34;
+      const custom=sanitizeLayoutPoint(readControlLayout().layout.steer||{});
+      stickCX=custom.x*w; stickCY=custom.y*h; stickRadius=stickSize*0.34*custom.scale;
       state.btnW=pedalW;state.btnH=pedalH;state.rightX=pedalX;state.throttleY=gasY;state.brakeY=brakeY;
       this._layoutButtonSteeringUi?.();
     };
@@ -79,15 +75,7 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _layoutButtonSteeringUi(){
-    if(!this._tdrLeftHanded)return super._layoutButtonSteeringUi?.();
-    if(this._tdrSteeringMode!=='buttons'||!this._tdrSteerButtons?.scene)return;
-    const w=Number(this.scale?.width||0),h=Number(this.scale?.height||0);
-    const pad=Math.max(14,Math.min(28,Math.floor(Math.min(w,h)*0.04)));
-    const btnH=Math.max(76,Math.min(118,Math.floor(h*0.22)));
-    const btnW=Math.max(92,Math.min(150,Math.floor(w*0.14)));
-    const gap=14,y=h-pad-btnH;
-    const start=w-pad-(btnW*2+gap);
-    const place=(parts,x)=>{if(!parts)return;parts.bg.setPosition(x,y).setSize(btnW,btnH).setDisplaySize(btnW,btnH);parts.arrow.setPosition(x+btnW/2,y+btnH*.42).setFontSize(Math.floor(btnH*.42));parts.tx.setPosition(x+btnW/2,y+btnH-13);};
-    place(this._tdrLeftButton,start);place(this._tdrRightButton,start+btnW+gap);
+    // La capa base ya conoce la disposición guardada para buttons:left.
+    return super._layoutButtonSteeringUi?.();
   }
 }
