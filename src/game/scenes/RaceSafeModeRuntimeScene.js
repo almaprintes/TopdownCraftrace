@@ -65,14 +65,12 @@ export class RaceScene extends CurrentRaceScene {
       if (tile?.key) keys.add(tile.key);
     }
 
-    // El shutdown del RaceScene destruye primero los GameObjects. Después retiramos
-    // las texturas exclusivas de carrera para que WebKit pueda recuperar RAM/GPU.
-    this.time?.delayedCall?.(0, () => {
-      for (const key of keys) {
-        try {
-          if (this.textures?.exists?.(key)) this.textures.remove(key);
-        } catch {}
-      }
-    });
+    // Este listener se registra después de los cleanup del RaceScene base, por lo que
+    // los GameObjects ya se han destruido cuando retiramos sus texturas del manager.
+    for (const key of keys) {
+      try {
+        if (this.textures?.exists?.(key)) this.textures.remove(key);
+      } catch {}
+    }
   }
 }
