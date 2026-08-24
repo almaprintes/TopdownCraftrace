@@ -1,4 +1,5 @@
 import { UpgradeShopScene as PreviousWorkshop } from './UpgradeWorkshopQuickInstallScene.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
 
 const CRAFT_BASE=`${import.meta.env.BASE_URL || './'}assets/crafting/`;
 const MATERIAL_FILES={
@@ -12,6 +13,8 @@ const PART_FILES={
   suspension_street:'parts/suspension/suspension_street_t1.webp',suspension_sport:'parts/suspension/suspension_sport_t2.webp',suspension_racing:'parts/suspension/suspension_racing_t3.webp',suspension_prototype:'parts/suspension/suspension_prototype_t4.webp',
   transmission_street:'parts/transmission/transmission_street_t1.webp',transmission_sport:'parts/transmission/transmission_sport_t2.webp',transmission_racing:'parts/transmission/transmission_racing_t3.webp',transmission_prototype:'parts/transmission/transmission_prototype_t4.webp'
 };
+const LEGACY_CAR_IDS=new Set(['stock','touring','power']);
+const WORKSHOP_CAR_IDS=Object.keys(CAR_SPECS).filter(id=>!LEGACY_CAR_IDS.has(id)&&CAR_SPECS[id]);
 
 function assetPath(item){
   if(!item)return null;
@@ -20,6 +23,60 @@ function assetPath(item){
 }
 
 export class UpgradeShopScene extends PreviousWorkshop {
+  _compactCarPanel(A,r,compact){
+    super._compactCarPanel(A,r,compact);
+
+    const index=WORKSHOP_CAR_IDS.indexOf(this.car);
+    if(index<0)return;
+
+    const spec=CAR_SPECS[this.car];
+    const rowY=r.y+(compact?23:31);
+    const stripX=r.x+8;
+    const stripW=Math.max(120,r.w-(compact?75:92));
+    const stripH=compact?22:29;
+    const centerX=stripX+stripW/2;
+    const arrowGap=Math.min(compact?92:132,stripW*.38);
+    const leftEnabled=index>0;
+    const rightEnabled=index<WORKSHOP_CAR_IDS.length-1;
+
+    // Redraw only the name row so the arrows sit genuinely on both sides of the car name.
+    A(this.add.rectangle(stripX,rowY-2,stripW,stripH,0x081525,.995).setOrigin(0,.5));
+
+    const name=A(this.add.text(centerX,rowY,String(spec?.name||this.car).toUpperCase(),{
+      fontFamily:'Arial Narrow,system-ui',fontSize:compact?'15px':'20px',fontStyle:'900 italic',color:'#fff'
+    }).setOrigin(.5));
+
+    const arrow=(x,glyph,enabled,delta)=>{
+      const hit=A(this.add.rectangle(x,rowY,compact?28:34,compact?24:28,0x10273a,enabled?.92:.32)
+        .setStrokeStyle(1,enabled?0x45dfff:0x405262,enabled?.90:.30));
+      A(this.add.text(x,rowY,glyph,{
+        fontFamily:'system-ui',fontSize:compact?'18px':'22px',fontStyle:'900',color:enabled?'#ffffff':'#607080'
+      }).setOrigin(.5));
+      if(enabled){
+        hit.setInteractive({useHandCursor:true});
+        hit.on('pointerdown',()=>this._browseWorkshopCar(delta));
+      }
+    };
+
+    const halfName=Math.min(name.width/2,arrowGap-24);
+    const leftX=Math.max(stripX+15,centerX-halfName-(compact?22:27));
+    const rightX=Math.min(stripX+stripW-15,centerX+halfName+(compact?22:27));
+    arrow(leftX,'‹',leftEnabled,-1);
+    arrow(rightX,'›',rightEnabled,1);
+  }
+
+  _browseWorkshopCar(delta){
+    if(this.busy)return;
+    const index=WORKSHOP_CAR_IDS.indexOf(this.car);
+    if(index<0)return;
+    const next=index+Number(delta||0);
+    if(next<0||next>=WORKSHOP_CAR_IDS.length)return;
+    this.car=WORKSHOP_CAR_IDS[next];
+    // Deliberately keep craftFamily/craftTier untouched: browsing cars must not
+    // throw the player out of the part/tier they are currently inspecting.
+    this.render();
+  }
+
   _loadFullBleed(A,item,r,onReady){
     // Outside inventory/equipment modals, preserve the original large artwork behavior.
     if(!this._factoryInventoryModal?.scene)return super._loadFullBleed(A,item,r,onReady);
