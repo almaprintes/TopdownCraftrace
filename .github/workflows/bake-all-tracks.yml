@@ -1,0 +1,108 @@
+name: Bake all tracks beauty
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bake-all-tracks.yml'
+      - 'scripts/bake-track-visual.mjs'
+      - 'src/game/tracks/TrackBuilder.js'
+      - 'src/game/tracks/library/**/track.json'
+      - 'public/assets/materials/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+env:
+  NODE_OPTIONS: --max-old-space-size=6144
+  VIPS_CONCURRENCY: '1'
+
+jobs:
+  bake:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Show bake inputs
+        run: |
+          set -euxo pipefail
+          node --version
+          npm --version
+          find src/game/tracks/library -mindepth 2 -maxdepth 2 -name track.json -print | sort
+          ls -lh public/assets/materials/dirt-road/road_damaged_2_diff_2k.jpg
+          df -h .
+          free -h
+
+      - name: Bake every track
+        run: |
+          set -euxo pipefail
+          npm run bake:track -- all
+
+      - name: Publish generated beauty assets and catalog
+        run: |
+          set -euxo pipefail
+          for SRC in artifacts/track-beauty/*; do
+            [ -d "$SRC" ] || continue
+            KEY="$(basename "$SRC")"
+            DEST="public/assets/tracks/$KEY/beauty"
+            mkdir -p "$DEST"
+            rm -f "$DEST"/*-beauty-preview.webp "$DEST"/*-beauty-[0-9].webp "$DEST/manifest.json"
+            cp "$SRC/$KEY-beauty-preview.webp" "$DEST/"
+            cp "$SRC/$KEY-beauty-0.webp" "$DEST/"
+            cp "$SRC/$KEY-beauty-1.webp" "$DEST/"
+            cp "$SRC/$KEY-beauty-2.webp" "$DEST/"
+            cp "$SRC/$KEY-beauty-3.webp" "$DEST/"
+            cp "$SRC/manifest.json" "$DEST/"
+          done
+          cp artifacts/track-beauty/trackBeautyLayers.generated.js src/game/tracks/trackBeautyLayers.generated.js
+
+      - name: Verify Raven Hollow bake exists
+        run: |
+          set -euxo pipefail
+          test -f public/assets/tracks/offroad-raven-hollow/beauty/offroad-raven-hollow-beauty-0.webp
+          test -f public/assets/tracks/offroad-raven-hollow/beauty/manifest.json
+          grep -q 'offroad-raven-hollow' src/game/tracks/trackBeautyLayers.generated.js
+
+      - name: Commit generated assets
+        id: commit_assets
+        run: |
+          set -euxo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/assets/tracks src/game/tracks/trackBeautyLayers.generated.js
+          if git diff --cached --quiet; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo 'No generated changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Bake all track beauty assets'
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+
+      - name: Trigger fresh preview and Pages builds
+        if: steps.commit_assets.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run build-pages.yml --ref main || true
+          gh workflow run pages.yml --ref main || true
