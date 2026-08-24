@@ -5,7 +5,7 @@ const TRACK_BEAUTY_LAYERS = Object.freeze({
     useBeautyLayer: true,
     // Revision visual: cambiarla cuando cambien los binarios horneados evita que
     // Safari/PWA reutilice WebP antiguos con la misma URL.
-    assetRevision: 'beauty2-20260824-055218',
+    assetRevision: 'beauty3-20260824-061300',
     assetsAvailable: true,
     worldW: 2813,
     worldH: 2602,
@@ -22,23 +22,23 @@ const TRACK_BEAUTY_LAYERS = Object.freeze({
     }),
     tiles: Object.freeze([
       Object.freeze({
-        key: 'trackBeauty:karting-tenerife:0:beauty2',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-0.webp?v=beauty2-20260824-055218',
+        key: 'trackBeauty:karting-tenerife:0:beauty3',
+        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-0.webp?v=beauty3-20260824-061300',
         x: 0, y: 0, w: 1407, h: 1301
       }),
       Object.freeze({
-        key: 'trackBeauty:karting-tenerife:1:beauty2',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-1.webp?v=beauty2-20260824-055218',
+        key: 'trackBeauty:karting-tenerife:1:beauty3',
+        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-1.webp?v=beauty3-20260824-061300',
         x: 1407, y: 0, w: 1406, h: 1301
       }),
       Object.freeze({
-        key: 'trackBeauty:karting-tenerife:2:beauty2',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-2.webp?v=beauty2-20260824-055218',
+        key: 'trackBeauty:karting-tenerife:2:beauty3',
+        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-2.webp?v=beauty3-20260824-061300',
         x: 0, y: 1301, w: 1407, h: 1301
       }),
       Object.freeze({
-        key: 'trackBeauty:karting-tenerife:3:beauty2',
-        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-3.webp?v=beauty2-20260824-055218',
+        key: 'trackBeauty:karting-tenerife:3:beauty3',
+        path: 'assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-3.webp?v=beauty3-20260824-061300',
         x: 1407, y: 1301, w: 1406, h: 1301
       })
     ])
