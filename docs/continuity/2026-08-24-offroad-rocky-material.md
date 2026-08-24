@@ -1,44 +1,46 @@
 # Rocky off-road material — 2026-08-24
 
 ## User intent
-The 4K `rocky_terrain_diff_4k.jpg` material is an **OFF-ROAD** surface, not a replacement for grass.
+`rocky_terrain_diff_4k.jpg` replaces the visual texture of the **existing OFF surface only**.
 
-Live validation of the first integration showed the texture itself looked excellent, but it was incorrectly assigned to the scene's global `grass` visual slot, which made every non-asphalt area rocky. User feedback: "Se ve brutal pero te dije como offroad no como hierva".
+The renderer already had three distinct texture slots before this work:
+- `asphalt`
+- `grass`
+- `off`
 
-## Corrected visual model
-The base race renderer historically uses the texture key `grass` as the world background. To avoid changing physics or the old renderer contract:
+The correct implementation is therefore a direct asset swap on `off`. No new grass layer, no extra mask and no new surface geometry are required.
 
-- `grass` key now carries `assets/materials/offroad/rocky_terrain_diff_4k.jpg` and therefore visually represents the world **off-road** background.
-- `grassTrack` is a separate texture key loading `assets/materials/grass-real.webp`.
-- `raceExactRuntimeBeautyPass.js` builds an exact visual mask for the existing authored grass margin from `track.geom.grass.left/right` together with `track.geom.left/right`.
-- The grass mask is a ring only: road edge -> authored outer grass edge on both sides.
-- Asphalt remains the Poly Haven `clean_asphalt_diff_2k.jpg` through the exact road mask.
+## Mistake and correction
+The first integration incorrectly put the rocky material into the `grass` slot. A follow-up then tried to compensate by creating a separate `grassTrack` texture plus an additional runtime grass mask. Both approaches were unnecessary and are retired.
 
-This produces three visually distinct surface zones:
-1. asphalt inside `track.geom.left/right`;
-2. grass only in the existing authored grass margin;
-3. rocky terrain everywhere outside that grass margin.
+Corrected runtime:
+- `grass` -> `assets/materials/grass-real.webp`
+- `asphalt` -> `assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg`
+- `off` -> `assets/materials/offroad/rocky_terrain_diff_4k.jpg`
+
+`RaceRealSurfaceAssetsScene` now loads the rocky JPEG directly under the existing `off` key and preserves that asset through `ensureOffTexture()`.
+
+`raceExactRuntimeBeautyPass.js` is restored to asphalt-only behavior. It creates no grass/off-road GameObjects and no grass mask.
 
 ## Geometry and gameplay invariants
-No new surface geometry is invented. The visual grass band uses the exact arrays already produced by TrackBuilder.
-
 Untouched:
+- track geometry
+- grass-band geometry
 - physics
 - surface classification
-- FORGE off-road behavior
+- FORGE terrain behavior
 - AI
 - checkpoints
 - lap timing
-- track.geom generation
 - white borders
 - kerbs
-- dynamic camera zoom
+- camera zoom
+
+This is strictly a texture replacement in the renderer's pre-existing OFF slot.
 
 ## Performance
-The rocky 4K JPEG is ~10.75 MB on disk. First live screenshot with it used globally showed ~56 FPS and FMAX 17.9 ms, indicating the large JPEG itself was not causing the previous shader-style regression.
+The original 4K rocky JPEG in the repo is ~10.75 MB. A live iPhone screenshot while displaying it showed approximately 56 FPS and FMAX 17.9 ms, so the asset itself did not show the major frame-time regression previously caused by runtime shader/layer experiments.
 
-The corrected implementation adds one masked grass TileSprite for the authored grass ring. This must now be measured on iPhone against the accepted ~16-18 ms FMAX baseline. If the extra masked layer materially harms frame time, the next approach should be a pre-baked/static combined terrain asset rather than procedural runtime effects.
-
-## Commits
-- `19154b346ac3b02e0174fe8e1dd3f28e8fce07ff` — separates grass/off-road texture keys.
-- `5255014e67a64f9c3646c3a3a6cbccc210c30d0f` — renders grass only in the exact authored grass band.
+## Final correction commits
+- `7d1946d483f97ba123b226a74607ef6a6568f093` — rocky material assigned directly to existing `off` texture key; grass restored to its existing slot.
+- `0a8752ef6d9a01b6dd1ab5aa28b04ace7e27693b` — removes the unnecessary added grass mask/TileSprite and restores asphalt-only beauty pass.
