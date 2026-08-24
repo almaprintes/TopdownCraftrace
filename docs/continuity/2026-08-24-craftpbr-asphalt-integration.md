@@ -43,9 +43,22 @@ The lighting direction is fixed and soft to read as outdoor daylight from the to
 
 The previous fake 2D Roughness/Height/AO stacks are removed. If WebGL or the custom pipeline is unavailable, the game falls back to the clean photographic Albedo only.
 
+### v5 — dynamic zoom anti-moire
+Live iPhone testing exposed moire/shimmer in the fine asphalt aggregate because race camera zoom changes continuously with speed (`~0.75` when fast/far to `~1.50` when slow/near).
+
+The PBR shader now receives the active camera zoom every bind and performs zoom-aware low-pass filtering:
+- at close zoom the photographic Albedo and Normal retain full sharpness;
+- below roughly `1.08` zoom, filtering progressively increases;
+- Albedo uses a five-tap cross filter to suppress sub-pixel aggregate shimmer;
+- Normal uses the same strategy so micro-relief does not create moving interference patterns;
+- normal strength, specular response and Height contribution are reduced as the camera moves farther away because those details cannot be represented reliably below pixel size.
+
+The dynamic camera behaviour itself is unchanged. The material adapts to the camera, not vice versa.
+
 `AO` and `metalness` remain loaded as source material maps. Metalness is correctly black for asphalt. AO can be incorporated later if the shader needs further refinement after live validation.
 
 ## Explicitly untouched
+- dynamic camera zoom behaviour/range
 - physics
 - AI
 - checkpoints
