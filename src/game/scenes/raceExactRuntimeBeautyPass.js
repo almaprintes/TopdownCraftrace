@@ -162,12 +162,12 @@ function addIrregularShoulder(scene, left, right, objects) {
   return { gfx: g, marks };
 }
 
-function ensureRubberDecalTextures(scene) {
-  const keys = ['tdrRubberDecalA', 'tdrRubberDecalB', 'tdrRubberDecalC'];
+function ensureRubberStreakTextures(scene) {
+  const keys = ['tdrRubberStreakA', 'tdrRubberStreakB', 'tdrRubberStreakC'];
   if (keys.every((k) => scene.textures.exists(k))) return keys;
 
   const w = 256;
-  const h = 64;
+  const h = 32;
   for (let variant = 0; variant < keys.length; variant++) {
     const key = keys[variant];
     if (scene.textures.exists(key)) continue;
@@ -175,53 +175,36 @@ function ensureRubberDecalTextures(scene) {
     const ctx = tex.getContext();
     ctx.clearRect(0, 0, w, h);
 
-    // Soft longitudinal rubber: transparent ends + feathered sides. The source itself
-    // is irregular, so repeated stamps do not become rounded vector blobs.
-    const endFade = ctx.createLinearGradient(0, 0, w, 0);
-    endFade.addColorStop(0.00, 'rgba(18,18,17,0)');
-    endFade.addColorStop(0.12, 'rgba(18,18,17,0.22)');
-    endFade.addColorStop(0.50, 'rgba(14,15,14,0.28)');
-    endFade.addColorStop(0.88, 'rgba(18,18,17,0.20)');
-    endFade.addColorStop(1.00, 'rgba(18,18,17,0)');
+    // One elongated soft streak, not a blob and not a painted lane. Several nearby
+    // vehicle paths are built later by stamping this narrow source along coherent arcs.
+    const grad = ctx.createLinearGradient(0, 0, w, 0);
+    grad.addColorStop(0.00, 'rgba(8,9,8,0)');
+    grad.addColorStop(0.10, 'rgba(8,9,8,0.32)');
+    grad.addColorStop(0.50, 'rgba(7,8,7,0.42)');
+    grad.addColorStop(0.90, 'rgba(8,9,8,0.30)');
+    grad.addColorStop(1.00, 'rgba(8,9,8,0)');
 
-    for (let band = 0; band < 13; band++) {
-      const s = variant * 1009 + band * 71;
-      const y = h * (0.28 + hash01(s + 1) * 0.44);
-      const width = 0.7 + hash01(s + 2) * 2.8;
-      const x0 = 8 + hash01(s + 3) * 55;
-      const x1 = w - 8 - hash01(s + 4) * 48;
-      ctx.strokeStyle = endFade;
-      ctx.globalAlpha = 0.28 + hash01(s + 5) * 0.42;
-      ctx.lineWidth = width;
+    const rows = 3 + variant;
+    for (let band = 0; band < rows; band++) {
+      const s = variant * 733 + band * 97;
+      const y = h * (0.42 + (band - (rows - 1) * 0.5) * 0.055) + (hash01(s) - 0.5) * 1.4;
+      ctx.strokeStyle = grad;
+      ctx.globalAlpha = 0.42 + hash01(s + 1) * 0.24;
+      ctx.lineWidth = 0.65 + hash01(s + 2) * 0.75;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      ctx.moveTo(x0, y + (hash01(s + 6) - 0.5) * 3);
-      ctx.bezierCurveTo(
-        w * 0.34, y + (hash01(s + 7) - 0.5) * 5,
-        w * 0.66, y + (hash01(s + 8) - 0.5) * 5,
-        x1, y + (hash01(s + 9) - 0.5) * 3
-      );
+      ctx.moveTo(4, y);
+      ctx.bezierCurveTo(w * 0.33, y + (hash01(s + 3) - 0.5) * 1.5, w * 0.66, y + (hash01(s + 4) - 0.5) * 1.5, w - 4, y);
       ctx.stroke();
     }
 
-    // Tiny broken rubber flecks embedded in the decal.
     ctx.globalAlpha = 1;
-    for (let i = 0; i < 70; i++) {
-      const s = variant * 5003 + i * 29;
-      const x = 18 + hash01(s + 1) * (w - 36);
-      const y = h * (0.22 + hash01(s + 2) * 0.56);
-      const rw = 1 + hash01(s + 3) * 5;
-      const rh = 0.4 + hash01(s + 4) * 1.3;
-      ctx.fillStyle = `rgba(10,11,10,${0.025 + hash01(s + 5) * 0.07})`;
-      ctx.fillRect(x, y, rw, rh);
-    }
-
     tex.refresh();
   }
   return keys;
 }
 
-function buildCornerDecalPlan(left, right) {
+function buildTrackAnalysis(left, right) {
   const count = Math.min(left.length, right.length);
   const center = new Array(count);
   const halfW = new Array(count).fill(0);
@@ -236,10 +219,12 @@ function buildCornerDecalPlan(left, right) {
     halfW[i] = Math.hypot(r.x - l.x, r.y - l.y) * 0.5;
   }
 
-  for (let i = 3; i < count - 3; i++) {
-    const a = center[i - 3];
+  // Wider stencil than the old version: tyre groove should follow the whole bend,
+  // not react to one noisy local node.
+  for (let i = 5; i < count - 5; i++) {
+    const a = center[i - 5];
     const p = center[i];
-    const b = center[i + 3];
+    const b = center[i + 5];
     if (![a, p, b].every(Boolean)) continue;
     let ax = p.x - a.x; let ay = p.y - a.y;
     let bx = b.x - p.x; let by = b.y - p.y;
@@ -249,102 +234,116 @@ function buildCornerDecalPlan(left, right) {
     const cross = ax * by - ay * bx;
     const dot = Math.max(-1, Math.min(1, ax * bx + ay * by));
     turn[i] = Math.atan2(cross, dot);
-    curve[i] = clamp01(Math.abs(turn[i]) / 0.20);
+    curve[i] = clamp01(Math.abs(turn[i]) / 0.34);
   }
 
-  const plan = [];
-  // Sparse by design. We stamp texture fragments only where a corner actually produces
-  // meaningful tyre loading. Straights remain free of a synthetic dark centre stripe.
-  for (let i = 8; i < count - 10; i += 3) {
-    const p = center[i];
-    const pm = center[i - 2];
-    const pp = center[i + 2];
-    if (![p, pm, pp].every(Boolean)) continue;
-
-    let aheadStrength = 0; let aheadSign = 0;
-    let behindStrength = 0; let behindSign = 0;
-    for (let k = 2; k <= 9; k++) {
-      if ((curve[i + k] || 0) > aheadStrength) {
-        aheadStrength = curve[i + k] || 0;
-        aheadSign = Math.sign(turn[i + k] || 0);
-      }
-      if ((curve[i - k] || 0) > behindStrength) {
-        behindStrength = curve[i - k] || 0;
-        behindSign = Math.sign(turn[i - k] || 0);
-      }
+  // Smooth curvature to identify sustained corner zones rather than isolated samples.
+  const smooth = curve.slice();
+  for (let pass = 0; pass < 3; pass++) {
+    const src = smooth.slice();
+    for (let i = 3; i < count - 3; i++) {
+      smooth[i] = (src[i - 2] + src[i - 1] * 2 + src[i] * 3 + src[i + 1] * 2 + src[i + 2]) / 9;
     }
+  }
+  return { count, center, halfW, turn, curve: smooth };
+}
 
+function buildGroovePlan(left, right) {
+  const a = buildTrackAnalysis(left, right);
+  const { count, center, halfW, turn, curve } = a;
+  if (count < 24) return [];
+
+  // t is interpolation across exact left/right: 0 left edge, 1 right edge.
+  // We create a continuous outside->inside->outside trajectory only around sustained bends.
+  const tPath = new Array(count).fill(0.5);
+  const activity = new Array(count).fill(0);
+
+  for (let i = 10; i < count - 10; i++) {
     const here = curve[i] || 0;
-    const hereSign = Math.sign(turn[i] || 0);
-    let t = 0.5;
-    let activity = 0;
-    let phase = 'none';
-
-    // left/right interpolation is safer than inventing an offset polyline: t=0 is the
-    // exact left edge, t=1 the exact right edge. Left turn => inside is left; right => right.
-    if (here > 0.22) {
-      const sign = hereSign || aheadSign || behindSign;
-      t = sign > 0 ? 0.28 : 0.72; // apex-side rubber
-      activity = here;
-      phase = 'apex';
-    } else if (aheadStrength > 0.38) {
-      t = aheadSign > 0 ? 0.76 : 0.24; // outside approach
-      activity = aheadStrength * 0.82;
-      phase = 'brake';
-    } else if (behindStrength > 0.40) {
-      t = behindSign > 0 ? 0.72 : 0.28; // opening exit
-      activity = behindStrength * 0.58;
-      phase = 'exit';
+    let ahead = 0, aheadSign = 0, behind = 0, behindSign = 0;
+    for (let k = 3; k <= 12; k++) {
+      if ((curve[i + k] || 0) > ahead) { ahead = curve[i + k] || 0; aheadSign = Math.sign(turn[i + k] || 0); }
+      if ((curve[i - k] || 0) > behind) { behind = curve[i - k] || 0; behindSign = Math.sign(turn[i - k] || 0); }
     }
+    const sign = Math.sign(turn[i] || 0) || aheadSign || behindSign;
 
-    if (activity < 0.25 || phase === 'none') continue;
-    if (hash01(i * 37.17) < (phase === 'apex' ? 0.10 : 0.24)) continue;
+    if (here > 0.24) {
+      // Main corner body: converge toward inside, as in real rubbered kart hairpins.
+      tPath[i] = sign > 0 ? 0.25 : 0.75;
+      activity[i] = Math.max(here, 0.45);
+    } else if (ahead > 0.32) {
+      // Approach is already on outside line, producing the parallel braking streaks seen in reference.
+      tPath[i] = aheadSign > 0 ? 0.76 : 0.24;
+      activity[i] = ahead * 0.82;
+    } else if (behind > 0.34) {
+      // Exit opens to outside; fade gradually rather than snapping back to centre.
+      tPath[i] = behindSign > 0 ? 0.72 : 0.28;
+      activity[i] = behind * 0.62;
+    }
+  }
 
-    // Small lateral jitter prevents decal centres becoming a mathematical guide line.
-    t += (hash01(i * 19.3) - 0.5) * 0.075;
-    t = Math.max(0.18, Math.min(0.82, t));
-    const pos = lerpPoint(p.l, p.r, t);
-    const tangent = Math.atan2(pp.y - pm.y, pp.x - pm.x);
-    const width = Math.max(11, Math.min(25, halfW[i] * (0.15 + activity * 0.055)));
-    const length = phase === 'brake'
-      ? 72 + activity * 58
-      : 54 + activity * 52;
+  // Smooth lateral movement so the groove becomes a believable arc, not disconnected marks.
+  for (let pass = 0; pass < 5; pass++) {
+    const src = tPath.slice();
+    for (let i = 2; i < count - 2; i++) {
+      if ((activity[i] || 0) < 0.10) continue;
+      tPath[i] = (src[i - 2] + src[i - 1] * 2 + src[i] * 4 + src[i + 1] * 2 + src[i + 2]) / 10;
+    }
+  }
 
-    plan.push({
-      x: pos.x,
-      y: pos.y,
-      angle: tangent + (hash01(i * 12.7) - 0.5) * 0.035,
-      width,
-      length,
-      alpha: phase === 'brake' ? 0.22 + activity * 0.08 : 0.15 + activity * 0.07,
-      phase,
-      variant: Math.floor(hash01(i * 51.1) * 3) % 3
-    });
+  const lanes = [-0.070, -0.035, 0.0, 0.038, 0.075];
+  const plan = [];
+  for (let lane = 0; lane < lanes.length; lane++) {
+    for (let i = 11; i < count - 12; i++) {
+      const act = Math.min(activity[i] || 0, activity[i + 1] || 0);
+      if (act < 0.24) continue;
+      // Natural gaps, but long enough that multiple coherent arcs remain visible.
+      if (hash01(i * 17.73 + lane * 113.1) < 0.075) continue;
+
+      const p = center[i];
+      const q = center[i + 1];
+      if (!p || !q) continue;
+      const t0 = Math.max(0.12, Math.min(0.88, tPath[i] + lanes[lane]));
+      const t1 = Math.max(0.12, Math.min(0.88, tPath[i + 1] + lanes[lane]));
+      const p0 = lerpPoint(p.l, p.r, t0);
+      const p1 = lerpPoint(q.l, q.r, t1);
+      const dx = p1.x - p0.x;
+      const dy = p1.y - p0.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 1.5) continue;
+
+      const width = 3.1 + lane * 0.30 + act * 1.6;
+      plan.push({
+        x: (p0.x + p1.x) * 0.5,
+        y: (p0.y + p1.y) * 0.5,
+        angle: Math.atan2(dy, dx),
+        length: Math.max(22, dist * 1.75),
+        width,
+        alpha: 0.22 + act * 0.18 + (lane === 2 ? 0.05 : 0),
+        variant: lane % 3,
+        activity: act
+      });
+    }
   }
   return plan;
 }
 
-function addBakedRubberDecals(scene, left, right, roadMask, worldW, worldH, objects, masked) {
-  const keys = ensureRubberDecalTextures(scene);
-  const plan = buildCornerDecalPlan(left, right);
-  if (!plan.length) return { tiles: 0, decals: 0, phases: {} };
+function addBakedRubberGroove(scene, left, right, roadMask, worldW, worldH, objects, masked) {
+  const keys = ensureRubberStreakTextures(scene);
+  const plan = buildGroovePlan(left, right);
+  if (!plan.length) return { tiles: 0, decals: 0 };
 
-  // Temporary Images are only authoring stamps. They are immediately baked into a small
-  // set of RenderTextures and destroyed, so the race does not carry dozens of live decals.
   const stamps = [];
-  const phases = {};
-  for (let i = 0; i < plan.length; i++) {
-    const d = plan[i];
+  for (const d of plan) {
     const img = scene.add.image(d.x, d.y, keys[d.variant])
       .setOrigin(0.5, 0.5)
       .setRotation(d.angle)
-      .setScale(d.length / 256, d.width / 64)
+      .setScale(d.length / 256, d.width / 32)
       .setAlpha(d.alpha)
-      .setTint(0xd0d0cd)
+      .setTint(0xc3c3bf)
       .setScrollFactor(1)
       .setDepth(-9999);
     stamps.push(img);
-    phases[d.phase] = (phases[d.phase] || 0) + 1;
   }
 
   const tileMax = 2048;
@@ -353,10 +352,7 @@ function addBakedRubberDecals(scene, left, right, roadMask, worldW, worldH, obje
     for (let x = 0; x < worldW; x += tileMax) {
       const w = Math.min(tileMax, worldW - x);
       const h = Math.min(tileMax, worldH - y);
-      const nearby = stamps.filter((img) =>
-        img.x >= x - 180 && img.x <= x + w + 180 &&
-        img.y >= y - 180 && img.y <= y + h + 180
-      );
+      const nearby = stamps.filter((img) => img.x >= x - 180 && img.x <= x + w + 180 && img.y >= y - 180 && img.y <= y + h + 180);
       if (!nearby.length) continue;
 
       const rt = scene.add.renderTexture(x, y, w, h)
@@ -379,8 +375,7 @@ function addBakedRubberDecals(scene, left, right, roadMask, worldW, worldH, obje
   for (const img of stamps) {
     try { img.destroy(); } catch {}
   }
-
-  return { tiles: tileCount, decals: plan.length, phases };
+  return { tiles: tileCount, decals: plan.length };
 }
 
 function installPass(scene, data) {
@@ -426,7 +421,7 @@ function installPass(scene, data) {
   objects.push(asphalt);
   masked.push(asphalt);
 
-  const rubber = addBakedRubberDecals(scene, left, right, bundle.mask, worldW, worldH, objects, masked);
+  const rubber = addBakedRubberGroove(scene, left, right, bundle.mask, worldW, worldH, objects, masked);
 
   scene._exactRuntimeBeautyPass = { objects, masked, mask: bundle.mask, gfx: bundle.gfx };
   scene.events.once('shutdown', () => {
@@ -450,14 +445,13 @@ function installPass(scene, data) {
     exactRoadMask: true,
     geometryExpanded: false,
     bordersRedrawn: false,
-    materialRevision: 'craftpbr-v9-baked-textured-rubber-decals',
+    materialRevision: 'craftpbr-v10-coherent-multiline-rubber-groove',
     shaderActive,
     shaderInputs: shaderActive ? ['albedo', 'normal', 'roughness', 'height'] : ['albedo'],
     grassMacro: !!grassMacro,
     shoulderMarks: Number(shoulder?.marks || 0),
-    rubberDecals: Number(rubber?.decals || 0),
-    rubberBakeTiles: Number(rubber?.tiles || 0),
-    rubberPhases: rubber?.phases || {}
+    rubberStreakDecals: Number(rubber?.decals || 0),
+    rubberBakeTiles: Number(rubber?.tiles || 0)
   });
 }
 
