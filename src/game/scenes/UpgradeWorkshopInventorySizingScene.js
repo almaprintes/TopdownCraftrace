@@ -72,8 +72,9 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const next=index+Number(delta||0);
     if(next<0||next>=WORKSHOP_CAR_IDS.length)return;
     this.car=WORKSHOP_CAR_IDS[next];
-    // Deliberately keep craftFamily/craftTier untouched: browsing cars must not
-    // throw the player out of the part/tier they are currently inspecting.
+    try{localStorage.setItem('tdr2:carId',this.car);}catch{}
+    // Keep craftFamily/craftTier untouched while making the browsed car the
+    // persistent active car used by the garage and the rest of the game.
     this.render();
   }
 
