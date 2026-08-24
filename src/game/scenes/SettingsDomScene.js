@@ -106,13 +106,13 @@ export class SettingsScene extends Phaser.Scene{
     if(tab==='controls'){
       body.innerHTML=`<div class="s2grid">
         <section class="s2card wide"><div class="s2label">MODO DE DIRECCIÓN</div><div class="s2desc">Elige el control principal para conducir.</div><div class="s2row" data-choice="steer">${this._choiceWrap([['stick','◉ PALANCA'],['buttons','◀ ▶ BOTONES'],['wheel','◉ VOLANTE'],['gamepad','🎮 MANDO']],c.steeringMode)}</div></section>
+        <section class="s2card wide"><div class="s2label">DISPOSICIÓN EN PANTALLA</div><div class="s2desc">Coloca y escala tus controles con precisión. Cada modo y cada mano conservan su propia distribución.</div><div class="s2row"><button class="s2cta" data-customize ${c.steeringMode==='gamepad'?'disabled':''}>✥ PERSONALIZAR CONTROLES</button><span class="s2note">Arrastrar · tamaño · zonas protegidas · prueba de alcance</span></div></section>
         <section class="s2card"><div class="s2label">MODO ZURDO</div><div class="s2desc">Intercambia dirección y pedales de lado.</div><div class="s2row"><span class="s2note">La calibración se guarda por separado</span><button class="s2switch ${c.leftHanded?'on':''}"><i></i></button></div></section>
         <section class="s2card"><div class="s2label">INVERTIR DIRECCIÓN</div><div class="s2desc">Invierte izquierda y derecha.</div><div class="s2row"><button class="s2switch ${c.invertSteer?'on':''}"><i></i></button></div></section>
         <section class="s2card wide"><div class="s2label">SENSIBILIDAD</div><div class="s2desc">Respuesta de la dirección táctil.</div><div class="s2row"><input class="s2range" type="range" min="0.4" max="1.4" step="0.05" value="${c.sensitivity}"><span class="s2val">${Math.round(c.sensitivity*100)}%</span></div></section>
-        <section class="s2card wide"><div class="s2label">DISPOSICIÓN EN PANTALLA</div><div class="s2desc">Coloca y escala tus controles con precisión. Cada modo y cada mano conservan su propia distribución.</div><div class="s2row"><button class="s2cta" data-customize ${c.steeringMode==='gamepad'?'disabled':''}>✥ PERSONALIZAR CONTROLES</button><span class="s2note">Arrastrar · tamaño · zonas protegidas · prueba de alcance</span></div></section>
       </div>`;
       body.querySelector('[data-choice="steer"]').onclick=e=>{const b=e.target.closest('[data-v]');if(!b)return;c.steeringMode=b.dataset.v;c.scheme=c.steeringMode==='gamepad'?'gamepad':'touch';save(this.settings);this._renderTab('controls');};
-      this._switch(body.querySelectorAll('.s2card')[1],['controls','leftHanded']);this._switch(body.querySelectorAll('.s2card')[2],['controls','invertSteer']);
+      this._switch(body.querySelectorAll('.s2card')[2],['controls','leftHanded']);this._switch(body.querySelectorAll('.s2card')[3],['controls','invertSteer']);
       const r=body.querySelector('.s2range'),val=body.querySelector('.s2val');r.oninput=()=>{c.sensitivity=Number(r.value);val.textContent=`${Math.round(c.sensitivity*100)}%`;save(this.settings);};
       body.querySelector('[data-customize]').onclick=()=>this._openCalibration();
     }
