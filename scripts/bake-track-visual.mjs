@@ -6,21 +6,9 @@ import { buildTrackRibbon } from '../src/game/tracks/TrackBuilder.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
-
 const trackKey = String(process.argv[2] || 'karting-tenerife').trim();
 const trackPath = path.join(ROOT, 'src/game/tracks/library', trackKey, 'track.json');
 const outDir = path.join(ROOT, 'artifacts/track-beauty', trackKey);
-
-const xml = (s) => String(s)
-  .replaceAll('&', '&amp;')
-  .replaceAll('<', '&lt;')
-  .replaceAll('>', '&gt;')
-  .replaceAll('"', '&quot;');
-
-const rgba = (hex, alpha = 1) => {
-  const n = Number.parseInt(String(hex).replace('#', ''), 16);
-  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${alpha})`;
-};
 
 function quadPolygons(left, right) {
   const count = Math.min(left.length, right.length);
@@ -44,22 +32,13 @@ function centerPath(center) {
   return `${d} Z`;
 }
 
-function edgePath(points) {
-  if (!points?.length) return '';
-  let d = `M ${points[0][0]} ${points[0][1]}`;
-  for (let i = 1; i < points.length; i++) d += ` L ${points[i][0]} ${points[i][1]}`;
-  return `${d} Z`;
-}
-
-function surfaceSvg({ worldW, worldH, geom, meta }) {
+function surfaceSvg({ worldW, worldH, geom }) {
   const roadQuads = quadPolygons(geom.left, geom.right);
   const grassQuads = quadPolygons(geom.grass.left, geom.grass.right);
   const center = centerPath(geom.center);
-  const left = edgePath(geom.left);
-  const right = edgePath(geom.right);
 
-  // This first baker deliberately favours geometric fidelity over decoration.
-  // Every visible region is derived from the same TrackBuilder geometry used by runtime.
+  // Fidelity first: every visible mask comes from the same TrackBuilder geometry
+  // used by runtime. Decoration is intentionally restrained in this first bake.
   return `
   <svg xmlns="http://www.w3.org/2000/svg" width="${worldW}" height="${worldH}" viewBox="0 0 ${worldW} ${worldH}">
     <defs>
@@ -93,7 +72,7 @@ function surfaceSvg({ worldW, worldH, geom, meta }) {
 
     <g clip-path="url(#grassClip)">
       <rect width="${worldW}" height="${worldH}" fill="url(#grassTone)" filter="url(#grassNoise)"/>
-      <g opacity="0.11">
+      <g opacity="0.10">
         ${Array.from({ length: Math.ceil(worldH / 30) + 1 }, (_, i) => `<rect x="0" y="${i * 30}" width="${worldW}" height="15" fill="#b2bd78"/>`).join('')}
       </g>
     </g>
@@ -103,11 +82,6 @@ function surfaceSvg({ worldW, worldH, geom, meta }) {
       <path d="${center}" fill="none" stroke="#08090a" stroke-width="18" opacity="0.10" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="${center}" fill="none" stroke="#c5c2b8" stroke-width="3" opacity="0.025" stroke-dasharray="70 150"/>
     </g>
-
-    <path d="${left}" fill="none" stroke="#f0ede4" stroke-width="2.4" opacity="0.96" stroke-linejoin="round"/>
-    <path d="${right}" fill="none" stroke="#f0ede4" stroke-width="2.4" opacity="0.96" stroke-linejoin="round"/>
-
-    <text x="24" y="42" fill="white" opacity="0.55" font-size="22" font-family="system-ui, sans-serif">${xml(meta.name || trackKey)} · deterministic beauty bake</text>
   </svg>`;
 }
 
@@ -130,9 +104,11 @@ async function main() {
   }
 
   await fs.mkdir(outDir, { recursive: true });
-  const svg = Buffer.from(surfaceSvg({ worldW, worldH, geom, meta }));
-  const fullPng = path.join(outDir, `${trackKey}-beauty-full.png`);
-  await sharp(svg, { density: 72 }).png().toFile(fullPng);
+  const svg = Buffer.from(surfaceSvg({ worldW, worldH, geom }));
+  const fullPngBuffer = await sharp(svg, { density: 72 }).png().toBuffer();
+
+  const previewFile = `${trackKey}-beauty-preview.webp`;
+  await sharp(fullPngBuffer).webp({ quality: 90, effort: 5 }).toFile(path.join(outDir, previewFile));
 
   const splitX = Math.ceil(worldW / 2);
   const splitY = Math.ceil(worldH / 2);
@@ -143,11 +119,12 @@ async function main() {
     { x: splitX, y: splitY, w: worldW - splitX, h: worldH - splitY }
   ];
 
-  const full = sharp(fullPng);
   for (let i = 0; i < tiles.length; i++) {
     const t = tiles[i];
-    const out = path.join(outDir, `${trackKey}-beauty-${i}.webp`);
-    await full.clone().extract({ left: t.x, top: t.y, width: t.w, height: t.h }).webp({ quality: 88, effort: 5 }).toFile(out);
+    await sharp(fullPngBuffer)
+      .extract({ left: t.x, top: t.y, width: t.w, height: t.h })
+      .webp({ quality: 88, effort: 5 })
+      .toFile(path.join(outDir, `${trackKey}-beauty-${i}.webp`));
   }
 
   const manifest = {
@@ -157,6 +134,7 @@ async function main() {
     source: path.relative(ROOT, trackPath),
     worldW,
     worldH,
+    preview: previewFile,
     geometry: {
       centerSamples: geom.center.length,
       trackWidth: meta.trackWidth,
@@ -164,10 +142,7 @@ async function main() {
       sampleStepPx: meta.sampleStepPx,
       cellSize: meta.cellSize
     },
-    tiles: tiles.map((t, i) => ({
-      file: `${trackKey}-beauty-${i}.webp`,
-      ...t
-    }))
+    tiles: tiles.map((t, i) => ({ file: `${trackKey}-beauty-${i}.webp`, ...t }))
   };
   await fs.writeFile(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
