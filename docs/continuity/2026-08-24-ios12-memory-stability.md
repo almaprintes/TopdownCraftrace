@@ -3,11 +3,12 @@
 ## Síntomas observados
 
 En un iPhone 12:
-- inicialmente Configuración podía congelar el juego;
+- Configuración puede congelar el juego;
 - entrar al selector/carrera puede expulsar Safari / cerrar la pestaña;
-- tras varios intentos Safari muestra: “ha generado problemas repetidamente”.
+- tras varios intentos Safari muestra: “ha generado problemas repetidamente”;
+- el diagnóstico llegó a mostrar `TrackGarageScene` y posteriormente `escena unknown` tras un reinicio inesperado.
 
-Tras la primera mitigación, Configuración funciona correctamente pero el problema al entrar en circuitos continúa. En una de las ocasiones apareció una referencia visible a `TrackGarageScene`, por lo que la investigación se desplazó del render de carrera al selector de circuitos.
+`unknown` no identifica por sí solo una escena culpable: significa que WebKit reinició la página cuando el diagnóstico no pudo recuperar una escena Phaser activa. Esto refuerza la hipótesis de cierre brusco del proceso / presión de memoria en lugar de un error JavaScript normal capturable.
 
 ## Hallazgo 1 — RaceRealSurfaceAssetsScene
 
@@ -27,7 +28,7 @@ Commit `fad3de2357218767b3bcc9a4442c23fd3c51b489`:
 - mantiene solo los tres mapas visuales activos: `grass`, `off`, `asphalt`;
 - desactiva temporalmente el feather grass/off mientras se valida estabilidad en iPhone 12.
 
-Resultado: Configuración deja de dar problemas, pero TrackGarage/carrera sigue expulsando Safari.
+Resultado: el problema global persiste.
 
 ## Hallazgo 2 — previews oficiales embebidas
 
@@ -45,27 +46,49 @@ Antes del ajuste:
 - la lista crea miniaturas para todos los circuitos de una vez;
 - las texturas canvas quedaban registradas en Phaser y no se retiraban explícitamente al salir de la escena.
 
-Esto puede acumular una cantidad muy alta de memoria gráfica en WebKit aunque cada canvas solo se muestre a 84 px en la lista.
-
 ### Mitigación aplicada
 
 Commit `b8e06e38f13726d23eb680ac5832d68b0debf938`:
-- miniaturas reducidas a `240×150` (siguen teniendo casi 3× la resolución de presentación real);
+- miniaturas reducidas a `240×150`;
 - hero reducido a `640×380`;
-- las texturas premium creadas por la escena quedan registradas como propiedad de TrackGarage;
-- todas esas texturas se eliminan explícitamente del TextureManager en `shutdown`;
-- no se altera geometría, físicas, catálogo, selección ni lógica de circuito.
+- limpieza explícita de las texturas canvas premium en `shutdown`.
 
-La reducción aproximada por miniatura pasa de ~1,70 MiB a ~0,14 MiB RGBA, unas 12 veces menos antes de overhead.
+Resultado: el fallo persiste y Configuración vuelve a poder congelarse, por lo que el problema no puede atribuirse únicamente a TrackGarage.
+
+## Hallazgo 4 — assets globales residentes desde Boot
+
+`BootScene` mantenía residentes desde el arranque dos grupos grandes de recursos aunque el usuario no entrara nunca en esas pantallas:
+- las 16 cartas del garaje;
+- las 5 imágenes PNG del tutorial de dropping.
+
+Esto encaja mejor con el síntoma actual: Configuración también puede congelarse y el diagnóstico puede reaparecer como `unknown`, señal de que la presión de memoria puede existir antes de entrar a una escena concreta.
+
+### Mitigación aplicada
+
+Commit `a661bbda01daf962dc50b10b762d397a0f0d6c8d`:
+- Boot deja de precargar las 16 cards;
+- Boot deja de precargar las 5 diapositivas del tutorial.
+
+Commit `93fe694839f75817d0ec18f8138be1ff19305ab2`:
+- nuevo `GarageLazyCardsScene`;
+- las cards se cargan únicamente al entrar en Garaje.
+
+Commit `729200c0b1da9265f6621457b7900a618b2b5412`:
+- nuevo `SettingsLazyTutorialScene`;
+- las imágenes del tutorial se cargan únicamente cuando el usuario pulsa para abrirlo.
+
+Commit `f7a4992175543ac67952b6f3c80f2355d604b722`:
+- `game.js` enruta Garaje y Configuración por esos loaders bajo demanda.
 
 ## Protocolo de prueba actual
 
 1. Cerrar Safari completamente desde multitarea en el iPhone 12.
 2. Abrir el juego desde cero.
-3. Entrar directamente en `Circuitos`.
-4. Moverse por varios circuitos y cambiar selección varias veces.
-5. Pulsar `SELECCIONAR` y entrar a carrera.
-6. Si aguanta, salir al menú y repetir una segunda vez para verificar que el `shutdown` libera las previews.
-7. Si aún cae antes de carrera, el siguiente paso será dejar de construir miniaturas de todos los circuitos y virtualizar la lista: generar solo las visibles + seleccionada.
+3. Entrar primero en Configuración y cambiar entre pestañas varias veces.
+4. Volver al menú.
+5. Entrar en Circuitos, navegar por varias pistas y seleccionar una.
+6. Entrar a carrera.
+7. Solo después, abrir Garaje y comprobar que las cards cargan correctamente.
+8. En Configuración > Ayuda, abrir el tutorial y comprobar que aparece tras la carga bajo demanda.
 
 No se han cambiado físicas, geometría, IA, checkpoints ni clasificación de superficies durante este diagnóstico.
