@@ -1,7 +1,6 @@
 {
   "version": 2,
   "generator": "scripts/bake-track-visual.mjs",
-  "style": "premium-material-pass-v2",
   "trackKey": "karting-tenerife",
   "source": "src/game/tracks/library/karting-tenerife/track.json",
   "worldW": 2813,
@@ -12,7 +11,8 @@
     "trackWidth": 66.6,
     "grassMargin": 220,
     "sampleStepPx": 8,
-    "cellSize": 240
+    "cellSize": 240,
+    "visualRoadExpand": 16
   },
   "tiles": [
     {
