@@ -15,20 +15,24 @@ export class RaceScene extends CurrentRaceScene {
     document.getElementById('tdr-handbrake')?.remove?.();
     document.getElementById('tdr-handbrake-style')?.remove?.();
 
+    let leftHanded=false;
+    try{leftHanded=JSON.parse(localStorage.getItem('tdr2:settings')||'{}')?.controls?.leftHanded===true;}catch{}
+
     const style=document.createElement('style');
     style.id='tdr-handbrake-style';
     style.textContent=`
       #tdr-handbrake{
-        position:fixed;z-index:82;left:50%;bottom:max(8px,1.3vh);
-        width:clamp(72px,8vw,98px);height:clamp(128px,19vh,184px);
-        transform:translateX(-50%);touch-action:none;user-select:none;-webkit-user-select:none;
+        position:fixed;z-index:82;bottom:max(10px,1.8vh);
+        ${leftHanded?'left:calc(max(18px,1.8vw) + clamp(150px,22vw,260px) + 12px);':'right:calc(max(18px,1.8vw) + clamp(150px,22vw,260px) + 12px);'}
+        width:clamp(62px,6.4vw,82px);height:clamp(116px,17vh,164px);
+        touch-action:none;user-select:none;-webkit-user-select:none;
         pointer-events:auto;filter:drop-shadow(0 7px 15px rgba(0,0,0,.42));
       }
       #tdr-handbrake img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;transition:filter 70ms linear,transform 70ms ease-out;}
       #tdr-handbrake .pulled{opacity:0;}
       #tdr-handbrake.active .idle{opacity:0;}
       #tdr-handbrake.active .pulled{opacity:1;filter:brightness(1.08);}
-      #tdr-handbrake .fallback{position:absolute;inset:16% 15% 4%;border-radius:18px;background:linear-gradient(180deg,#242934,#0d1016);border:1px solid rgba(255,255,255,.22);display:flex;align-items:flex-end;justify-content:center;color:#fff;font:800 10px system-ui;padding-bottom:8px;letter-spacing:.7px;opacity:.7;}
+      #tdr-handbrake .fallback{position:absolute;inset:16% 15% 4%;border-radius:18px;background:linear-gradient(180deg,#242934,#0d1016);border:1px solid rgba(255,255,255,.22);display:flex;align-items:flex-end;justify-content:center;color:#fff;font:800 9px system-ui;padding-bottom:7px;letter-spacing:.7px;opacity:.7;}
     `;
     document.head.appendChild(style);
 
@@ -36,8 +40,8 @@ export class RaceScene extends CurrentRaceScene {
     root.id='tdr-handbrake';
     root.innerHTML=`
       <div class="fallback">FRENO MANO</div>
-      <img class="idle" src="assets/ui/tdr_handbrake_idle.webp?v=1" alt="Freno de mano">
-      <img class="pulled" src="assets/ui/tdr_handbrake_pulled.webp?v=1" alt="Freno de mano accionado">
+      <img class="idle" src="assets/ui/tdr_handbrake_idle.webp?v=2" alt="Freno de mano">
+      <img class="pulled" src="assets/ui/tdr_handbrake_pulled.webp?v=2" alt="Freno de mano accionado">
     `;
     document.body.appendChild(root);
     this._tdrHandbrakeVisual=root;
@@ -118,21 +122,17 @@ export class RaceScene extends CurrentRaceScene {
     const speed01=clamp(speed/maxFwd,0,1);
     const steer=this._steerForHandbrake();
 
-    // Rear wheels lock: some longitudinal speed is scrubbed, but momentum remains.
     const brakeDrag=Math.exp(-dt*(.85+1.0*speed01));
     vf*=brakeDrag;
 
-    // Rear grip collapses. Steering starts the slide and existing lateral momentum is preserved.
     const slipBuild=(.55+1.45*speed01)*Math.abs(vf)*steer*dt;
     vl+=slipBuild;
     vl*=Math.exp(-dt*.42);
 
-    // Additional yaw only while moving. It is speed-sensitive so parking-lot spins do not happen.
     const yawAuthority=clamp((speed-28)/150,0,1);
     const yaw=steer*(.55+1.15*speed01)*yawAuthority*dt;
     body.rotation+=yaw;
 
-    // Recompose velocity in the new body frame with deliberately low rear lateral grip.
     const nr=Number(body.rotation||rot);
     const nfx=Math.cos(nr),nfy=Math.sin(nr);
     const nrx=-nfy,nry=nfx;
