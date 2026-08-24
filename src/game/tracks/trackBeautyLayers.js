@@ -1,10 +1,11 @@
+import { GENERATED_TRACK_BEAUTY_LAYERS } from './trackBeautyLayers.generated.js';
+
 // Configuracion declarativa de capas visuales horneadas por circuito.
 // La fisica y la deteccion de superficie NO consumen estos assets.
+// El catalogo generado por el baker es la fuente principal. Este bloque manual
+// solo conserva fallbacks o excepciones mientras no exista un bake publicado.
 const TRACK_BEAUTY_LAYERS = Object.freeze({
   'karting-tenerife': Object.freeze({
-    // El bake rojo de validacion queda retirado del runtime.
-    // Karting Tenerife usa ahora el material world-space aplicado sobre la mascara
-    // exacta de track.geom.left/right en raceExactRuntimeBeautyPass.js.
     useBeautyLayer: false,
     assetRevision: 'runtime-exact-materials-20260824',
     assetsAvailable: false,
@@ -24,7 +25,7 @@ const TRACK_BEAUTY_LAYERS = Object.freeze({
 
 export function getTrackBeautyLayerConfig(trackId) {
   const key = String(trackId || '').trim().toLowerCase();
-  return TRACK_BEAUTY_LAYERS[key] || null;
+  return GENERATED_TRACK_BEAUTY_LAYERS[key] || TRACK_BEAUTY_LAYERS[key] || null;
 }
 
 export function hasReadyTrackBeautyLayer(trackId) {
