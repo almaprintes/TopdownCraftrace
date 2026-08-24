@@ -3,9 +3,9 @@
 const TRACK_BEAUTY_LAYERS = Object.freeze({
   'karting-tenerife': Object.freeze({
     useBeautyLayer: true,
-    // Los cuatro WebP aun no existen en main. Mantener false evita peticiones 404
-    // y conserva el render estable actual hasta que los binarios entren al repo.
-    assetsAvailable: false,
+    // Los cuatro WebP ya existen en main y han sido generados por el baker
+    // determinista desde la geometria real de Karting Tenerife.
+    assetsAvailable: true,
     worldW: 2813,
     worldH: 2602,
     depth: 9,
@@ -14,8 +14,8 @@ const TRACK_BEAUTY_LAYERS = Object.freeze({
       grass: true,
       offroad: true,
       // Los pianos siguen siendo objetos separados mientras el arte beauty no
-      // declare explicitamente que los contiene. Asi no duplicamos ni borramos
-      // geometria visual sin tener los assets finales delante.
+      // declare explicitamente que los contiene. Asi conservamos sus detalles
+      // actuales sin duplicar props dinamicos.
       kerbs: false,
       props: false
     }),
