@@ -3,8 +3,6 @@
 // It never redraws circuit borders and never changes geometry, surfaces, physics,
 // AI, checkpoints or timing. Border/kerb rendering remains owned by the proven base scene.
 
-import { ensureAsphaltPBRPipeline } from '../render/AsphaltPBRPipeline.js';
-
 function trackId(scene, data) {
   const direct = data?.trackKey || scene?.trackKey || scene?.track?.meta?.id;
   if (direct) return String(direct).trim().toLowerCase();
@@ -69,8 +67,8 @@ function installPass(scene, data) {
   const objects = [];
   const masked = [];
 
-  // Clean CraftPBR asphalt only. Grass variation, shoulder marks and rubber experiments
-  // are intentionally disabled until their performance cost is proven safe on iPhone.
+  // Performance A/B baseline: one clean CraftPBR ALBEDO tile only.
+  // No custom PBR pipeline, no second grass layer, no shoulder Graphics, no rubber decals.
   const asphalt = scene.add.tileSprite(0, 0, worldW, worldH, 'asphalt')
     .setOrigin(0, 0)
     .setDepth(10.35)
@@ -80,17 +78,6 @@ function installPass(scene, data) {
   asphalt.tileScaleY = 0.50;
   asphalt.tilePositionX = 173;
   asphalt.tilePositionY = 91;
-
-  let shaderActive = false;
-  try {
-    const pipeline = ensureAsphaltPBRPipeline(scene);
-    if (pipeline) {
-      asphalt.setPipeline('TDRAsphaltPBR');
-      shaderActive = true;
-    }
-  } catch (err) {
-    console.warn('[TDR2] asphalt PBR pipeline unavailable; using clean albedo fallback', err);
-  }
 
   scene.uiCam?.ignore?.(asphalt);
   objects.push(asphalt);
@@ -111,16 +98,16 @@ function installPass(scene, data) {
     scene._exactRuntimeBeautyPass = null;
   });
 
-  console.info('[TDR2] exact runtime CraftPBR asphalt active', {
+  console.info('[TDR2] exact runtime CraftPBR asphalt A/B baseline active', {
     track: 'karting-tenerife',
     samples: bundle.count,
     quads: bundle.quads,
     exactRoadMask: true,
     geometryExpanded: false,
     bordersRedrawn: false,
-    materialRevision: 'craftpbr-perf-baseline',
-    shaderActive,
-    shaderInputs: shaderActive ? ['albedo', 'normal', 'roughness', 'height'] : ['albedo']
+    materialRevision: 'craftpbr-albedo-only-perf-ab',
+    shaderActive: false,
+    visibleInputs: ['albedo']
   });
 }
 
