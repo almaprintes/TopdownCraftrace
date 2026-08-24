@@ -1,5 +1,11 @@
 import { RaceScene as BakedRaceScene } from './RaceBakedAsphaltScene.js';
 
+function currentTrackKey(scene) {
+  let stored = '';
+  try { stored = localStorage.getItem('tdr2:trackKey') || ''; } catch {}
+  return String(scene?.trackKey || stored || '').trim().toLowerCase();
+}
+
 // Materiales world-space cargados como assets reales por Phaser.
 // La geometría, físicas y detección de superficies no consumen estos assets.
 export class RaceScene extends BakedRaceScene {
@@ -15,7 +21,14 @@ export class RaceScene extends BakedRaceScene {
     // roughness/height/metalness no participan en el render y mantenerlos residentes
     // podía consumir decenas de MB extra de memoria gráfica en Safari/WebKit.
     this.load.image('grass', 'assets/materials/grass/rocky_terrain_02_diff_2k.jpg?v=20260824-grass-rocky2k-v1');
-    this.load.image('off', 'assets/materials/offroad/rocky_terrain_diff_2k.jpg?v=20260824-rocky-offroad-2k-v1');
+
+    // Raven Hollow tiene una textura de tierra dedicada. Sustituye la textura off
+    // genérica: no añade ninguna capa ni draw call adicional.
+    const offPath = currentTrackKey(this) === 'offroad-raven-hollow'
+      ? 'assets/materials/dirt-road/road_damaged_2_diff_2k.jpg?v=20260824-raven-dirt-v1'
+      : 'assets/materials/offroad/rocky_terrain_diff_2k.jpg?v=20260824-rocky-offroad-2k-v1';
+    this.load.image('off', offPath);
+
     this.load.image('asphalt', 'assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg?v=20260824-polyhaven-clean-v1');
   }
 
