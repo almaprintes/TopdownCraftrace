@@ -5,7 +5,7 @@ const SAMPLE_MS = 58;
 const MIN_SPEED = 115;
 const SLIP_START = 34;
 const SLIP_STRONG = 72;
-const DIRT_CARRY_MS = 900;
+const DIRT_CARRY_MS = 1400;
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 
@@ -101,10 +101,10 @@ export class RaceScene extends CurrentRaceScene {
       markKind = onGrass ? 'grass-dirt' : 'off-dirt';
     } else if (carryingDirt) {
       const carry = clamp01((Number(this._dirtCarryUntil || 0) - nowMs) / DIRT_CARRY_MS);
-      color = 0x6e5941;
-      alpha = 0.10 + carry * 0.22;
-      width = 3.1;
-      life = 760;
+      color = 0x5a452f;
+      alpha = 0.18 + carry * 0.34;
+      width = 4.2;
+      life = 1050;
       markKind = 'dirt-carry';
     }
 
