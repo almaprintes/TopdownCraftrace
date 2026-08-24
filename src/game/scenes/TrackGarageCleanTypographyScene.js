@@ -15,6 +15,20 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     super();
     this._centerSelectedTrackOnNextLayout=true;
     this._premiumPreviewKeys=new Map();
+    this._ownedPremiumTextureKeys=new Set();
+  }
+
+  create(){
+    super.create();
+    this.events.once('shutdown',()=>this._releasePremiumPreviews());
+  }
+
+  _releasePremiumPreviews(){
+    for(const key of this._ownedPremiumTextureKeys){
+      try{if(this.textures.exists(key))this.textures.remove(key);}catch(_){ }
+    }
+    this._ownedPremiumTextureKeys.clear();
+    this._premiumPreviewKeys.clear();
   }
 
   _setTrackScroll(y){
@@ -40,9 +54,17 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     const p=pts(track);if(p.length<3)return null;
     const hero=Number(w)>=800;
     const tier=hero?'hero':'thumb';
-    const renderW=hero?1440:720;
-    const renderH=hero?860:620;
-    const sig=`${track?.key}_${isDirt(track)?'dirt':'asphalt'}_${p.length}_${tier}_v3`;
+
+    // IMPORTANTE iOS/WebKit:
+    // Estas previews se crean para TODOS los circuitos al construir la lista.
+    // 720x620 por miniatura reservaba ~1.7 MB RGBA por circuito y 1440x860
+    // otros ~4.7 MB para cada hero generado. En iPhone 12 WebKit podía matar
+    // el proceso antes de llegar a carrera. A 240x150 la miniatura sigue teniendo
+    // casi 3x la resolución con la que se muestra (84 px) y el hero a 640x380
+    // conserva detalle suficiente para móvil sin disparar memoria gráfica.
+    const renderW=hero?640:240;
+    const renderH=hero?380:150;
+    const sig=`${track?.key}_${isDirt(track)?'dirt':'asphalt'}_${p.length}_${tier}_v4_memcap`;
     const existing=this._premiumPreviewKeys.get(sig);
     if(existing&&this.textures.exists(existing))return existing;
     const key=`premium_track_${sig}`;
@@ -108,6 +130,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
       this.textures.addCanvas(key,canvas);
       this._premiumPreviewKeys.set(sig,key);
+      this._ownedPremiumTextureKeys.add(key);
       return key;
     }catch{return null;}
   }
