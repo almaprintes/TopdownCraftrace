@@ -31,7 +31,16 @@ export class GarageScene extends CurrentGarageScene {
 
   create(){
     super.create();
-    // Las cards se mantienen mientras la app siga viva porque el garaje puede reabrirse,
-    // pero ya no ocupan memoria en sesiones que nunca entran al garaje.
+
+    // Perfil normal: mantenemos las cards para reabrir el garaje sin recarga.
+    // Modo seguro: al salir las descargamos para evitar que 16 imágenes queden
+    // residentes mientras se navega por circuitos/configuración/carrera.
+    if(window.__tdrIosSafeMode===true){
+      this.events.once('shutdown',()=>{
+        for(const [key] of CARDS){
+          try{if(this.textures?.exists?.(key))this.textures.remove(key);}catch{}
+        }
+      });
+    }
   }
 }
