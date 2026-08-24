@@ -1,0 +1,88 @@
+const SETTINGS_KEY='tdr2:settings';
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+
+const DEFAULTS={
+  stick:{steer:{x:.11,y:.77,scale:1},gas:{x:.80,y:.73,scale:1},brake:{x:.88,y:.73,scale:1},handbrake:{x:.955,y:.73,scale:1}},
+  wheel:{steer:{x:.115,y:.76,scale:1},gas:{x:.80,y:.73,scale:1},brake:{x:.88,y:.73,scale:1},handbrake:{x:.955,y:.73,scale:1}},
+  buttons:{left:{x:.085,y:.78,scale:1},right:{x:.19,y:.78,scale:1},gas:{x:.80,y:.73,scale:1},brake:{x:.88,y:.73,scale:1},handbrake:{x:.955,y:.73,scale:1}}
+};
+
+function mirror(layout){
+  const out={};
+  for(const [k,v] of Object.entries(layout||{}))out[k]={...v,x:1-Number(v.x||0)};
+  return out;
+}
+
+export function controlLayoutKey(controls={}){
+  const mode=['stick','buttons','wheel'].includes(controls.steeringMode)?controls.steeringMode:'stick';
+  return `${mode}:${controls.leftHanded===true?'left':'right'}`;
+}
+
+export function defaultControlLayout(controls={}){
+  const mode=['stick','buttons','wheel'].includes(controls.steeringMode)?controls.steeringMode:'stick';
+  const base=structuredClone(DEFAULTS[mode]||DEFAULTS.stick);
+  return controls.leftHanded===true?mirror(base):base;
+}
+
+export function readControlLayout(controlsOverride=null){
+  let settings={};
+  try{settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')||{};}catch{}
+  const controls={...(settings.controls||{}),...(controlsOverride||{})};
+  const key=controlLayoutKey(controls);
+  return {key,controls,layout:{...defaultControlLayout(controls),...((settings.controls?.layouts||{})[key]||{})}};
+}
+
+export function saveControlLayout(layout,controlsOverride=null){
+  let settings={};
+  try{settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')||{};}catch{}
+  settings.controls={...(settings.controls||{}),...(controlsOverride||{})};
+  const key=controlLayoutKey(settings.controls);
+  settings.controls.layouts={...(settings.controls.layouts||{}),[key]:layout};
+  localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));
+  return key;
+}
+
+export function resetControlLayout(controlsOverride=null){
+  let settings={};
+  try{settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')||{};}catch{}
+  settings.controls={...(settings.controls||{}),...(controlsOverride||{})};
+  const key=controlLayoutKey(settings.controls);
+  if(settings.controls.layouts){delete settings.controls.layouts[key];}
+  localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));
+  return defaultControlLayout(settings.controls);
+}
+
+export function sanitizeLayoutPoint(point={}){
+  return {
+    x:clamp(Number(point.x)||.5,.04,.96),
+    y:clamp(Number(point.y)||.75,.12,.94),
+    scale:clamp(Number(point.scale)||1,.65,1.55)
+  };
+}
+
+function placeDom(el,point,sizeScale=true){
+  if(!el||!point)return;
+  const p=sanitizeLayoutPoint(point);
+  el.style.setProperty('left',`${p.x*100}vw`,'important');
+  el.style.setProperty('top',`${p.y*100}vh`,'important');
+  el.style.setProperty('right','auto','important');
+  el.style.setProperty('bottom','auto','important');
+  el.style.setProperty('transform','translate(-50%,-50%)','important');
+  el.dataset.tdrLayoutScale=String(p.scale);
+  if(sizeScale){
+    const base=Number(el.dataset.tdrLayoutBaseWidth)||el.getBoundingClientRect().width||100;
+    if(!el.dataset.tdrLayoutBaseWidth)el.dataset.tdrLayoutBaseWidth=String(base);
+    el.style.setProperty('width',`${base*p.scale}px`,'important');
+  }
+}
+
+export function applyDomControlLayout(){
+  const {controls,layout}=readControlLayout();
+  const root=document.getElementById('tdr-race-controls');
+  if(!root)return;
+  placeDom(root.querySelector('[data-stick]'),layout.steer);
+  placeDom(root.querySelector('[data-pedal="gas"]'),layout.gas);
+  placeDom(root.querySelector('[data-pedal="brake"]'),layout.brake);
+  placeDom(document.getElementById('tdr-handbrake'),layout.handbrake);
+  if(controls.steeringMode==='wheel')placeDom(document.getElementById('tdr-steering-wheel'),layout.steer);
+}
