@@ -8,11 +8,11 @@ function isPractice(data){
   try{return localStorage.getItem(MODE_KEY)==='practice';}catch{return false;}
 }
 
-function destroyCell(cell){
+function hideCell(cell){
   for(const key of ['tile','overlay','stroke','maskG','maskGraphics','container']){
-    try{cell?.[key]?.destroy?.();}catch{}
+    try{cell?.[key]?.setVisible?.(false);}catch{}
   }
-  try{cell?.mask?.destroy?.();}catch{}
+  try{cell?.mask?.setVisible?.(false);}catch{}
 }
 
 export class RaceScene extends CurrentRaceScene{
@@ -32,9 +32,6 @@ export class RaceScene extends CurrentRaceScene{
     this._practiceAreaMode=practice;
 
     if(practice){
-      // El RaceScene base filtra trackKey antes de create(). Área de Pruebas es
-      // un modo especial, así que imponemos su mundo aquí sin sustituir la
-      // selección normal de circuito persistida por el jugador.
       this.trackKey=PRACTICE_KEY;
       try{
         if(hadSaved)localStorage.setItem('tdr2:trackKey',savedTrack);
@@ -55,18 +52,20 @@ export class RaceScene extends CurrentRaceScene{
 
     const gfx=track.gfxByCell;
     if(gfx?.values){
-      for(const cell of gfx.values())destroyCell(cell);
+      for(const cell of gfx.values())hideCell(cell);
     }
 
-    // El mundo libre ya tiene sus cuatro superficies grandes. No necesita el
-    // ribbon técnico ni el culling por celdas de un circuito de carrera.
+    // Área de Pruebas no usa el renderer por celdas. Ocultamos sus objetos,
+    // pero NO los destruimos: otras capas del RaceScene pueden conservar una
+    // referencia durante este frame y Phaser deja geom=null tras destroy().
     track.gfxByCell=new Map();
     track.activeCells=new Set();
     track.cullRadiusCells=0;
 
+    // Vacío válido en vez de null para consumidores tardíos del motor base.
     if(track.geom){
-      track.geom.cells=null;
-      if(track.geom.grass)track.geom.grass.cells=null;
+      track.geom.cells=new Map();
+      if(track.geom.grass)track.geom.grass.cells=new Map();
     }
 
     this._aheadVisible=new Set();
