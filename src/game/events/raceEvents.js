@@ -95,7 +95,10 @@ export function claimCurrentRaceEvent(){
   for(const [id,n] of Object.entries(event.reward?.items||{})){const amount=Math.max(0,Math.floor(Number(n)||0));if(amount)addItem(garage,id,amount);}
   if(event.reward?.car?.id)unlockCar(event.reward.car.id);
   saveGarage(garage);
-  state.claimed=[...(state.claimed||[]),event.id];state.index+=1;state.baseline=normalizedBaseline(now);saveState(state);return {ok:true,event,nextIndex:state.index};
+  state.claimed=[...(state.claimed||[]),event.id];state.index+=1;state.baseline=normalizedBaseline(now);saveState(state);
+  const result={ok:true,event,nextIndex:state.index};
+  try{window.dispatchEvent(new CustomEvent('tdr:seasonRewardClaimed',{detail:{event,nextIndex:state.index}}));}catch{}
+  return result;
 }
 
 export function raceEventRewardLabel(reward){
