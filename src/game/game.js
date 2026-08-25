@@ -10,7 +10,7 @@ import { GarageDetailScene } from './scenes/GarageDetailSpeedConsistencyScene.js
 import { AdminHubScene } from './scenes/AdminHubScene.js';
 import { CarEditorScene } from './scenes/CarEditorSpeedConsistencyScene.js';
 import { TrackEditorScene } from './scenes/TrackEditorScene.js';
-import { TrackGarageScene } from './scenes/TrackGarageCleanTypographyScene.js';
+import { TrackGarageScene } from './scenes/TrackGarageHideSpecialScene.js';
 import { TrackStudioScene } from './scenes/TrackStudioScene.js';
 import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderAssetPointerUpScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
