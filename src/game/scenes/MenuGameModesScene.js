@@ -1,4 +1,5 @@
 import { MenuScene as CurrentMenuScene } from './MenuUiStabilityScene.js';
+import { recordModeStart } from '../seasons/seasonTelemetry.js';
 
 const MODE_KEY='tdr2:gameMode';
 const PRACTICE_TRACK_KEY='practice-area';
@@ -42,6 +43,7 @@ export class MenuScene extends CurrentMenuScene{
       // Área de Pruebas es un modo, no un circuito seleccionado.
       if(mode!=='practice')localStorage.setItem('tdr2:trackKey',trackKey);
     }catch{}
+    recordModeStart(mode);
     const launchTrack=mode==='practice'?PRACTICE_TRACK_KEY:trackKey;
     this._closeGameModeModal();
     this.scene.start('race',{carId:this.selectedCarId,trackKey:launchTrack,gameMode:mode});
