@@ -18,6 +18,7 @@ import { installRuntimeCrashDiagnostics } from './dev/runtimeCrashDiagnostics.js
 import { initLanguage } from './i18n/index.js';
 import { localizeLegacyText, installLegacyDomLocalization } from './i18n/legacyUiText.js';
 import { installDomUiEnglishBridge } from './i18n/domUiEnglishBridge.js';
+import { localizePlayerPhaserText } from './i18n/phaserUiExtra.js';
 import './tracks/trackPublicNames.js';
 
 installExactRuntimeBeautyPass(RaceScene);
@@ -27,6 +28,7 @@ function videoPrefs(){try{const s=JSON.parse(localStorage.getItem('tdr2:settings
 function isIOSDevice(){try{const ua=String(navigator?.userAgent||'');const platform=String(navigator?.platform||'');return /iPhone|iPad|iPod/i.test(ua)||(platform==='MacIntel'&&Number(navigator?.maxTouchPoints||0)>1);}catch{return false;}}
 function isLegacyIOSPhone(){try{if(!isIOSDevice())return false;const sw=Math.max(Number(screen?.width||0),Number(screen?.height||0));const sh=Math.min(Number(screen?.width||0),Number(screen?.height||0));const phoneLike=Math.max(sw,sh)<=900;const iPhone12Class=phoneLike&&Math.max(sw,sh)<=844;const crashSafe=localStorage.getItem('tdr2:forceIosSafeMode')==='1';return iPhone12Class||crashSafe;}catch{return false;}}
 function renderResolution(vp,ios,dpr,safeMode){if(safeMode)return 0.72;const qualityScale=vp.quality==='low'?0.80:vp.quality==='medium'?0.92:1.00;const userScale=vp.renderScale==='eco'?0.90:vp.renderScale==='sharp'?1.15:1.00;const wanted=qualityScale*userScale;const platformCap=ios?1.0:Math.min(Number(dpr||1),1.5);return Math.max(0.70,Math.min(platformCap,wanted));}
+function localizePhaserValue(value){return localizePlayerPhaserText(localizeLegacyText(value));}
 function installCleanTextFactory(){
   const factory=Phaser.GameObjects?.GameObjectFactory?.prototype;
   if(factory&&!factory.__tdrCleanTextInstalled&&typeof factory.text==='function'){
@@ -35,14 +37,14 @@ function installCleanTextFactory(){
       const clean={...(style||{})};
       if(/Orbitron/i.test(String(clean.fontFamily||''))){clean.fontFamily='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';if(clean.fontStyle==='900')clean.fontStyle='bold';}
       if(Number(clean.strokeThickness)>2)clean.strokeThickness=2;
-      return original.call(this,x,y,localizeLegacyText(text),clean);
+      return original.call(this,x,y,localizePhaserValue(text),clean);
     };
     factory.__tdrCleanTextInstalled=true;
   }
   const textProto=Phaser.GameObjects?.Text?.prototype;
   if(textProto&&!textProto.__tdrLegacyLocalizationInstalled&&typeof textProto.setText==='function'){
     const originalSetText=textProto.setText;
-    textProto.setText=function(value){return originalSetText.call(this,localizeLegacyText(value));};
+    textProto.setText=function(value){return originalSetText.call(this,localizePhaserValue(value));};
     textProto.__tdrLegacyLocalizationInstalled=true;
   }
 }
