@@ -1,12 +1,13 @@
 import { MenuScene as CurrentMenuScene } from './MenuDomUiScene.js';
 import { t, getLanguage } from '../i18n/index.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
-import { buyMaterialPack } from '../store/storeEconomy.js';
+import { buyMaterialPack, rewardedStatus, dailyStatus } from '../store/storeEconomy.js';
 
 const DUEL_LAPS_KEY='tdr2:duelLaps';
 const MODE_KEY='tdr2:gameMode';
 const BASE=import.meta.env.BASE_URL||'/';
 const FONT='system-ui,-apple-system,Segoe UI,Arial';
+const STORE_TIME_LABEL=ms=>{const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;};
 
 const PACK_UI={
   mechanic:{es:'PACK MECÁNICA',en:'MECHANICS PACK',esCopy:'Base mecánica para mantener y mejorar.',enCopy:'Mechanical essentials for upkeep and upgrades.'},
@@ -21,6 +22,8 @@ const MATERIAL_LABELS={
 
 export class MenuScene extends CurrentMenuScene {
   _openStoreModal(section='materials'){
+    this._storeCountdownEvent?.remove?.(false);
+    this._storeCountdownEvent=null;
     super._openStoreModal(section);
     const root=this._storeModal;
     if(!root?.scene)return;
@@ -43,6 +46,45 @@ export class MenuScene extends CurrentMenuScene {
     });
 
     this._installStoreInertia(root);
+    this._installStoreCountdownTicker(root);
+  }
+
+  _installStoreCountdownTicker(root){
+    const prefix=getLanguage()==='en'?'AVAILABLE IN':'DISPONIBLE EN';
+    const collectCards=(node,out=[])=>{
+      for(const child of node?.list||[]){
+        if(child?.type==='Container'){
+          const texts=(child.list||[]).filter(o=>o?.type==='Text');
+          const title=texts.map(o=>String(o.text||'').toUpperCase()).join(' | ');
+          if(title.includes('REWARDED VIDEO')||title.includes('VÍDEO RECOMPENSADO'))out.push({kind:'video',card:child,texts});
+          else if(title.includes('DAILY GIFT')||title.includes('REGALO DIARIO'))out.push({kind:'daily',card:child,texts});
+          collectCards(child,out);
+        }
+      }
+      return out;
+    };
+    const cards=collectCards(root,[]);
+    if(!cards.length)return;
+    const refresh=()=>{
+      if(!root?.scene||this._storeModal!==root){this._storeCountdownEvent?.remove?.(false);this._storeCountdownEvent=null;return;}
+      let becameAvailable=false;
+      for(const entry of cards){
+        const status=entry.kind==='video'?rewardedStatus():dailyStatus();
+        const label=entry.texts.find(o=>/^(AVAILABLE IN|DISPONIBLE EN)\b/i.test(String(o.text||'')));
+        if(status.available){
+          if(label)becameAvailable=true;
+          continue;
+        }
+        if(label)label.setText(`${prefix} ${STORE_TIME_LABEL(status.remaining)}`);
+      }
+      if(becameAvailable){
+        this._storeCountdownEvent?.remove?.(false);
+        this._storeCountdownEvent=null;
+        this._openStoreModal('rewards');
+      }
+    };
+    refresh();
+    this._storeCountdownEvent=this.time.addEvent({delay:1000,loop:true,callback:refresh});
   }
 
   _installStoreInertia(root){
