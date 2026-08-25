@@ -36,8 +36,21 @@ After the direct premium material-card design was confirmed visually by the user
 
 The new premium renderer remains unchanged; this pass only changes carousel density/width. No product contents, prices, rewards or economy behavior were changed.
 
+## Store polish + direct ES/EN copy
+Commit:
+`b65e93a6f6aac817157762966513610a50f492e1` — `Polish store cards and localize store copy`
+
+Following the iPhone review:
+- `PACK TECNOLOGÍA / TECH PACK` is about 12% narrower than the other three-item material packs;
+- coin cards now use a premium hero treatment with the official coin artwork, accent wedge, compact badge, large coin amount and cleaner pricing/action hierarchy;
+- rewarded-video and daily-gift cards now use the same premium visual language, with larger official assets and clearer reward amounts/actions;
+- Store header, tabs, section titles, section descriptions, reward names, action labels, availability messages and coin terminology now resolve directly in ES/EN inside `MenuStoreScene.js` rather than relying on the legacy runtime bridge;
+- numeric formatting follows the active language locale.
+
+No new image assets were generated and no Store economy values or reward quantities were changed.
+
 ## Safety
 No economy values, pack contents, reward amounts, car physics, controls, race logic or persistence were intentionally changed.
 
 ## Validation
-The premium material-card redesign has been visually confirmed by the user on iPhone. The narrower-card pass has not yet been confirmed on iPhone; do not state that the new widths are final until the user confirms them.
+The premium material-card redesign and the narrower-card direction were confirmed positively by the user on iPhone. The latest technology-width adjustment, coin/reward visual polish and direct Store ES/EN copy have not yet been confirmed on iPhone; do not state that those latest changes are final until the user confirms them.
