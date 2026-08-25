@@ -23,8 +23,8 @@ Each theme should draw roughly 14 monthly missions from a larger bank and vary p
 
 ## Reward lanes
 The UI is designed from the start with two parallel horizontal lanes:
-- FREE — active.
-- PREMIUM PASS — visible but disabled and marked COMING SOON / PRÓXIMAMENTE.
+- FREE — active, always the upper lane.
+- PREMIUM PASS — visible but disabled and marked COMING SOON / PRÓXIMAMENTE, always the lower lane.
 
 If Premium is activated in the future, it should use the same season progress and unlock already-earned premium rewards retroactively when purchased. Premium should focus on cosmetic/exclusive/convenience rewards and avoid pay-to-win advantages.
 
@@ -46,24 +46,32 @@ If Premium is activated in the future, it should use the same season progress an
 - `c51f05a21c78d0e10d3743e97aa4ba03bcde17fe` — Replace the compact 7×2 stage grid with a long horizontal scroll of near-full-screen mission slides and two parallel FREE/PREMIUM reward rails.
 - `63bf87a7a5145deba19963fbfb457adfa48496d2` — Replace text-led season reward cards with asset-led reward showcases using official coin, material and Store artwork.
 - `b4fa76418f73c51b0305a92c955f45041b26d161` — Replace page-by-page season slides with one continuous horizontal route: a conventional FREE road above and a wider PREMIUM highway below, with deliberately generous spacing between reward nodes.
-- `7c1438fda494d60a0f4602c8cc93d404fa6379b1` — Replace rectangular reward cards with motorsport-themed traffic-sign nodes: circular roadside signs on FREE and motorway-style direction signs on PREMIUM, while keeping official reward assets.
+- `7c1438fda494d60a0f4602c8cc93d404fa6379b1` — Replace rectangular reward cards with motorsport-themed traffic-sign nodes.
+- `3f2c5356617524b8f8961cd27b9710d75f10f91f` — Shift the continuous route toward a more dynamic season-pass feel: remove horizontal snap, enlarge official reward art, reduce traffic signs to compact stage markers, increase breathing room and add centre-focus scaling while scrolling.
 
 ## Season UI architecture
 The season progression must never be rendered as a large overlay on top of the lobby. The lobby only shows a compact Season 0 summary card with current mission, reward preview and progress. Tapping the card navigates to the dedicated `season` scene.
 
-The dedicated Season scene is intentionally separate from the lobby and now uses:
+The dedicated Season scene uses:
 - a clear top header with back navigation and overall 14-stage progress;
 - one long continuous horizontal route with iPhone momentum scrolling;
+- FREE on the upper road and PREMIUM on the lower highway;
 - no page-sized mission cards and no forced screen-by-screen navigation;
-- a conventional road visual for the FREE progression lane, including edge lines and a dashed centre line;
-- a visibly wider dual-carriageway/highway visual for the PREMIUM lane, with gold accents and separated carriageway markings;
-- generous horizontal spacing between reward nodes so the route breathes and reads as a journey instead of a compact icon strip;
-- aligned FREE and PREMIUM nodes for every stage;
-- official visual reward assets on the nodes, with compact quantity badges;
-- traffic-sign visual language for stage nodes instead of floating rectangular cards: circular roadside signs on FREE and motorway direction signs on PREMIUM, physically connected to the roads with posts/pins;
+- no horizontal snap: movement must feel like travelling along one route rather than paging through slides;
+- a conventional road visual for FREE, including edge lines and a dashed centre line;
+- a visibly wider dual-carriageway/highway visual for PREMIUM, with gold accents and separated carriageway markings;
+- generous horizontal spacing between reward milestones;
+- aligned FREE and PREMIUM milestones for every stage;
+- official visual reward assets as the visual protagonists, with compact quantity badges;
+- small traffic-sign stage markers physically associated with the road; the signs identify the milestone but must not contain or visually dominate the reward art;
+- subtle dynamic focus while scrolling: milestones nearer the viewport centre grow slightly and distant milestones recede, without turning navigation into screen snapping;
+- the next and previous rewards should remain partially discoverable during normal scrolling so the route invites continued movement;
 - a fixed detail dock at the bottom for the currently selected mission, so mission text does not break the continuity of the road itself;
-- tapping any stage selects it and updates the detail dock; the current stage is centered automatically when the scene opens;
+- tapping any stage selects it and updates the detail dock; the current stage is centered when the scene opens;
 - no road/track lines behind the lobby and no semi-transparent season overlay competing with the car/track cards.
+
+### Interaction reference principle
+The Brawl Stars season-pass recording supplied by the user is a reference for interaction principles only, not a visual template to copy. Useful principles adopted are continuous horizontal progression, clear upper FREE/lower PREMIUM hierarchy, strong reward-art prominence, visibility of upcoming rewards and lively movement. Top Down RACE keeps its own road/highway/traffic-sign identity.
 
 ### Text rendering rule
 SeasonScene player-facing text is DOM/HTML/CSS, not Phaser Text. This makes typography, wrapping, spacing, localization and later visual iteration directly editable with normal CSS. Phaser remains responsible only for scene lifecycle/navigation. Do not reintroduce Phaser Text into the Season screen unless there is a specific rendering reason that DOM cannot satisfy.
@@ -104,4 +112,4 @@ The baseline simulation is documented in `docs/economy/2026-08-25-store-economy-
 The 14 induction rewards are one-time onboarding rewards. Recurring monthly season rewards should later become the controlled steady-state seasonal income.
 
 ## Validation
-The continuous-road DOM Season scene with traffic-sign nodes is active in code but has NOT yet been confirmed on iPhone. Do not claim it works correctly on iPhone until the user tests it.
+The dynamic continuous-road DOM Season scene is active in code but has NOT yet been confirmed on iPhone. Do not claim it works correctly on iPhone until the user tests it.
