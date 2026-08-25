@@ -1,0 +1,17 @@
+{
+  "active": "default",
+  "output": "public/assets/ui/orientation_active.webp",
+  "defaults": {
+    "maxWidth": 1290,
+    "quality": 84,
+    "effort": 6
+  },
+  "variants": {
+    "default": {
+      "label": "Estándar",
+      "master": "assets/ui/orientation_portrait.png",
+      "theme": "default",
+      "notes": "Splash base aprobado visualmente en iPhone. 1024x1536; runtime q84 medido en ~115 KB."
+    }
+  }
+}
