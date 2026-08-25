@@ -1,17 +1,7 @@
-# trigger: 2026-08-24 all-track bake diagnostics
+# All-track beauty bake is intentionally manual until the baker is split into bounded per-track jobs.
 name: Bake all tracks beauty
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/bake-all-tracks.yml'
-      - 'scripts/bake-track-visual.mjs'
-      - 'src/game/tracks/TrackBuilder.js'
-      - 'src/game/tracks/library/**/track.json'
-      - 'public/assets/materials/**'
-      - 'package.json'
-      - 'package-lock.json'
   workflow_dispatch:
 
 permissions:
