@@ -1,4 +1,5 @@
 import { GarageScene as CurrentGarageScene } from './GarageCleanTypographyScene.js';
+import { recordGarageVisit } from '../seasons/seasonTelemetry.js';
 
 const CARDS = [
   ['card_avenir_apex','card_avenir_apex_raro_008.webp'],
@@ -31,6 +32,7 @@ export class GarageScene extends CurrentGarageScene {
 
   create(){
     super.create();
+    recordGarageVisit();
 
     // Perfil normal: mantenemos las cards para reabrir el garaje sin recarga.
     // Modo seguro: al salir las descargamos para evitar que 16 imágenes queden
