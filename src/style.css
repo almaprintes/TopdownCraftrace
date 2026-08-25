@@ -1,13 +1,57 @@
 html, body {
   margin: 0;
   padding: 0;
+  width: 100%;
   height: 100%;
+  min-width: 100%;
+  min-height: 100%;
+  overflow: hidden;
   background: #0b1020;
+  overscroll-behavior: none;
+}
+
+:root {
+  --tdr-vv-width: 100vw;
+  --tdr-vv-height: 100vh;
+  --tdr-vv-left: 0px;
+  --tdr-vv-top: 0px;
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --tdr-vv-width: 100dvw;
+    --tdr-vv-height: 100dvh;
+  }
+}
+
+body {
+  position: fixed;
+  left: var(--tdr-vv-left);
+  top: var(--tdr-vv-top);
+  width: var(--tdr-vv-width);
+  height: var(--tdr-vv-height);
+  max-width: var(--tdr-vv-width);
+  max-height: var(--tdr-vv-height);
+  box-sizing: border-box;
+  touch-action: none;
 }
 
 #app {
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
+
+#app > canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
 @font-face {
   font-family: 'Orbitron';
   src: url('/fonts/Orbitron-Regular.ttf') format('truetype');
@@ -34,6 +78,7 @@ html, body {
   position: relative;
   width: min(92vw, 760px);
   height: min(94vh, 900px);
+  max-height: calc(var(--tdr-vv-height) - 12px);
   display: flex;
   align-items: center;
   justify-content: center;
