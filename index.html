@@ -12,7 +12,46 @@
     <link rel="icon" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 
-    <title>Top-Down Race 2</title>
+    <title>Top-Down Race</title>
+    <script>
+      (() => {
+        const root = document.documentElement;
+        let lastW = 0, lastH = 0, lastL = 0, lastT = 0, raf = 0;
+
+        function measure() {
+          raf = 0;
+          const vv = window.visualViewport;
+          const w = Math.max(1, Math.round(vv?.width || window.innerWidth || root.clientWidth || 1));
+          const h = Math.max(1, Math.round(vv?.height || window.innerHeight || root.clientHeight || 1));
+          const l = Math.max(0, Math.round(vv?.offsetLeft || 0));
+          const t = Math.max(0, Math.round(vv?.offsetTop || 0));
+          if (w === lastW && h === lastH && l === lastL && t === lastT) return;
+          lastW = w; lastH = h; lastL = l; lastT = t;
+          root.style.setProperty('--tdr-vv-width', `${w}px`);
+          root.style.setProperty('--tdr-vv-height', `${h}px`);
+          root.style.setProperty('--tdr-vv-left', `${l}px`);
+          root.style.setProperty('--tdr-vv-top', `${t}px`);
+          root.dataset.tdrVisualViewport = '1';
+          try { window.dispatchEvent(new CustomEvent('tdr:viewportchange', { detail: { width:w, height:h, left:l, top:t } })); } catch {}
+          try { window.dispatchEvent(new Event('resize')); } catch {}
+        }
+
+        function schedule() {
+          if (raf) cancelAnimationFrame(raf);
+          raf = requestAnimationFrame(measure);
+        }
+
+        measure();
+        window.addEventListener('resize', schedule, { passive:true });
+        window.addEventListener('orientationchange', schedule, { passive:true });
+        window.addEventListener('pageshow', schedule, { passive:true });
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(); }, { passive:true });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', schedule, { passive:true });
+          window.visualViewport.addEventListener('scroll', schedule, { passive:true });
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="rotateOverlay" aria-hidden="true">
