@@ -21,9 +21,9 @@ export class MenuScene extends PreviousMenuScene{
  _materialCardWidth(pack,w){
   const n=Math.max(1,Object.keys(pack.items||{}).length);
   const cols=n<=3?n:4;
-  const perItem=Math.min(122,Math.max(108,w*.092));
-  const side=30,gap=8;
-  return Math.round(Math.min(560,side*2+cols*perItem+(cols-1)*gap));
+  const perItem=Math.min(100,Math.max(86,w*.075));
+  const side=24,gap=7;
+  return Math.round(Math.min(460,side*2+cols*perItem+(cols-1)*gap));
  }
 
  _openStoreModal(section='materials'){
@@ -37,12 +37,12 @@ export class MenuScene extends PreviousMenuScene{
   tabs.forEach(([id,label],i)=>{const x=24+i*(tabW+10),active=id===section,g=this.add.graphics();g.fillStyle(active?0x123e70:0x101c2d,1);g.fillRoundedRect(x,tabY,tabW,tabH,8);g.lineStyle(1.4,active?0x25a8ff:0x2b4056,.95);g.strokeRoundedRect(x,tabY,tabW,tabH,8);root.add(g);const t=this.add.text(x+tabW/2,tabY+tabH/2,label,{fontFamily:FONT,fontSize:'11px',fontStyle:'bold',color:active?'#fff':'#9ca9bb'}).setOrigin(.5).setInteractive({useHandCursor:true});root.add(t);t.on('pointerup',()=>jump(id));});
 
   const viewportX=24,viewportY=112,viewportW=w-48,viewportH=h-120,clip=this.add.graphics().fillStyle(0xffffff).fillRect(viewportX,viewportY,viewportW,viewportH);clip.setVisible(false);root.add(clip);const content=this.add.container(viewportX,viewportY).setMask(clip.createGeometryMask());root.add(content);
-  const sectionHeadH=42,bottomSafe=10,cardH=Math.max(196,viewportH-sectionHeadH-bottomSafe),gap=18,sectionGap=70;let cursor=0;const starts={};
+  const sectionHeadH=42,bottomSafe=10,cardH=Math.max(196,viewportH-sectionHeadH-bottomSafe),gap=16,sectionGap=56;let cursor=0;const starts={};
   const sectionTitle=(id,label,copy)=>{starts[id]=cursor;content.add(this.add.text(cursor,0,label,{fontFamily:FONT,fontSize:'16px',fontStyle:'bold',color:'#31aaff'}));content.add(this.add.text(cursor,21,copy,{fontFamily:FONT,fontSize:'10px',color:'#a7b4c6'}));};
 
   sectionTitle('materials','MATERIALES','Componentes para fabricar y mejorar piezas en la fábrica.');
   MATERIAL_PACKS.forEach((p,i)=>{const cw=this._materialCardWidth(p,w);this._storeCard(content,{type:'mat',...p,accent:ACCENTS[i%4]},cursor,sectionHeadH,cw,cardH);cursor+=cw+gap;});cursor+=sectionGap;
-  sectionTitle('coins','MONEDAS','Acelera tu progreso con packs de monedas.');const coinW=Math.min(294,w*.285);COIN_PACKS.slice(0,3).forEach((p,i)=>{this._storeCard(content,{type:'coin',...p,priceLabel:PRICES[i],coinVisual:i,accent:[0x37b8ff,0x6bd35e,0xe4a83b][i]},cursor,sectionHeadH,coinW,cardH);cursor+=coinW+gap;});cursor+=sectionGap;
+  sectionTitle('coins','MONEDAS','Acelera tu progreso con packs de monedas.');const coinW=Math.min(250,Math.max(220,w*.24));COIN_PACKS.slice(0,3).forEach((p,i)=>{this._storeCard(content,{type:'coin',...p,priceLabel:PRICES[i],coinVisual:i,accent:[0x37b8ff,0x6bd35e,0xe4a83b][i]},cursor,sectionHeadH,coinW,cardH);cursor+=coinW+gap;});cursor+=sectionGap;
   sectionTitle('rewards','RECOMPENSAS','Premios gratuitos y recompensas opcionales.');for(const p of [{type:'reward',id:'video',name:'VÍDEO RECOMPENSADO',accent:0xe4a83b},{type:'daily',id:'daily',name:'REGALO DIARIO',accent:0x48cf8b}]){this._storeCard(content,p,cursor,sectionHeadH,coinW,cardH);cursor+=coinW+gap;}
 
   const total=Math.max(viewportW,cursor-gap),clamp=x=>Math.max(viewportX-(total-viewportW),Math.min(viewportX,x));jump=id=>{content.x=clamp(viewportX-starts[id]);};let dragStart=null,startX=0;const hit=this.add.rectangle(viewportX,viewportY,viewportW,viewportH,0xffffff,.001).setOrigin(0).setInteractive({draggable:true});root.add(hit);hit.on('dragstart',ptr=>{dragStart=ptr.x;startX=content.x;});hit.on('drag',ptr=>{content.x=clamp(startX+(ptr.x-dragStart));});hit.on('wheel',(_p,_dx,dy)=>{content.x=clamp(content.x-dy*.7);});jump(section);
