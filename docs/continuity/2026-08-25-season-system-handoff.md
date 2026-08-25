@@ -42,6 +42,7 @@ If Premium is activated in the future, it should use the same season progress an
 - `2ae1a3b990eb36aa082733e17190dea59f21d5f4` — Redesign lobby season card and make it navigate to the Season scene instead of opening an overlay.
 - `7c5f32c535454918bc05bfd058e352fd400200ba` — Register SeasonScene in the Phaser scene list.
 - `3dd362cc701030c215c74278b54efc318b2526c2` — Ensure Season scene resize listeners are cleaned up on shutdown.
+- `cc679132facbae9e8f066d54c331b784f74960bd` — Replace all SeasonScene Phaser text/layout objects with a DOM/CSS interface while keeping Phaser only as the scene lifecycle/router.
 
 ## Season UI architecture
 The season progression must never be rendered as a large overlay on top of the lobby. The lobby only shows a compact Season 0 summary card with current mission, reward preview and progress. Tapping the card navigates to the dedicated `season` scene.
@@ -52,6 +53,9 @@ The dedicated Season scene is intentionally separate from the lobby and uses:
 - explicit FREE reward and visible-but-locked PREMIUM reward treatment;
 - a 7×2 grid of the 14 induction stages on the right;
 - no road/track lines behind the lobby and no semi-transparent season overlay competing with the car/track cards.
+
+### Text rendering rule
+SeasonScene player-facing text is DOM/HTML/CSS, not Phaser Text. This makes typography, wrapping, spacing, localization and later visual iteration directly editable with normal CSS. Phaser remains responsible only for scene lifecycle/navigation. Do not reintroduce Phaser Text into the Season screen unless there is a specific rendering reason that DOM cannot satisfy.
 
 ## Active 14-stage induction order
 1. First Miles / Primeros metros — complete 1 valid lap.
@@ -79,4 +83,4 @@ The baseline simulation is documented in `docs/economy/2026-08-25-store-economy-
 The 14 induction rewards are one-time onboarding rewards. Recurring monthly season rewards should later become the controlled steady-state seasonal income.
 
 ## Validation
-The dedicated Season scene and redesigned lobby season card are active in code but have NOT yet been confirmed on iPhone. Do not claim they work correctly on iPhone until the user tests them.
+The DOM Season scene and redesigned lobby season card are active in code but have NOT yet been confirmed on iPhone. Do not claim they work correctly on iPhone until the user tests them.
