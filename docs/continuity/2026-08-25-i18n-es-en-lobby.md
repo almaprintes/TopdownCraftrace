@@ -121,6 +121,19 @@ The active workshop and older inherited factory UI still contain many Phaser lit
 
 No intentional changes were made to car physics, AI, track geometry, control mechanics, calibration persistence, race timing, reward quantities, crafting recipes or monetization behavior. Language remains persisted in `tdr2:settings`.
 
+## iPhone review fixes
+The first full-device review found two store-related regressions after the broad localization pass.
+
+`7bbefa62ec59ec4dcc94075a7575b0ec026206c4` — `Disable global DOM translation observers on iPhone`
+
+The store could freeze on iPhone. The broad DOM MutationObserver translation layer was removed from the runtime path to avoid repeatedly scanning dynamic store UI. Translation should continue through direct i18n and Phaser/runtime mappings instead of global DOM observation.
+
+`9d77cb32b3dd68b016f79629746c91bb91e99ea0` — `Fix store tab touch targets`
+
+The Store top tabs (`Materials`, `Coins`, `Rewards`) originally made only the text itself interactive, producing a small unreliable touch target on iPhone. They also did not refresh their active visual state when jumping horizontally. The active runtime descendant now overlays a full-size invisible hit rectangle across each complete tab and switches section on `pointerdown`; switching reopens the store at the selected section, so the selected tab receives the same highlighted style as the initial Materials tab.
+
+This store-tab fix is not considered validated until the user confirms it on iPhone.
+
 ## Review status
 The compact language pills were previously confirmed on iPhone.
 
