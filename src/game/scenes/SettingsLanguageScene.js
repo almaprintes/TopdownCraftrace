@@ -30,24 +30,27 @@ export class SettingsScene extends CurrentSettingsScene {
     style.id='tdr-language-cards-style';
     style.textContent=`
       #tdr-settings2 .lang-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:10px}
-      #tdr-settings2 .lang-card{position:relative;min-width:0;height:58px;border:1px solid rgba(255,255,255,.14);border-radius:13px;overflow:hidden;padding:0;background:#0d1522;color:#fff;text-align:left;isolation:isolate;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 5px 14px rgba(0,0,0,.15);transition:transform .12s,border-color .12s,box-shadow .12s,opacity .12s}
+      #tdr-settings2 .lang-card{position:relative;min-width:0;height:58px;border:1px solid rgba(255,255,255,.15);border-radius:13px;overflow:hidden;padding:0;background:#111214;color:#fff;text-align:left;isolation:isolate;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 5px 14px rgba(0,0,0,.22);transition:transform .12s,border-color .12s,box-shadow .12s,opacity .12s,filter .12s}
       #tdr-settings2 .lang-card:not(.future):active{transform:scale(.98)}
       #tdr-settings2 .lang-card:before,#tdr-settings2 .lang-card:after{content:'';position:absolute;inset:0;pointer-events:none}
-      #tdr-settings2 .lang-card:after{background:linear-gradient(90deg,rgba(5,10,18,.12),rgba(5,10,18,.58) 58%,rgba(5,10,18,.78));z-index:-1}
-      #tdr-settings2 .lang-card.es:before{background:linear-gradient(180deg,#aa151b 0 27%,#f1bf00 27% 73%,#aa151b 73% 100%);opacity:.72;z-index:-2}
-      #tdr-settings2 .lang-card.en:before{background:linear-gradient(33deg,transparent 42%,rgba(255,255,255,.92) 42% 48%,#c8102e 48% 52%,rgba(255,255,255,.92) 52% 58%,transparent 58%),linear-gradient(-33deg,transparent 42%,rgba(255,255,255,.92) 42% 48%,#c8102e 48% 52%,rgba(255,255,255,.92) 52% 58%,transparent 58%),linear-gradient(90deg,transparent 39%,rgba(255,255,255,.94) 39% 45%,#c8102e 45% 55%,rgba(255,255,255,.94) 55% 61%,transparent 61%),linear-gradient(180deg,transparent 35%,rgba(255,255,255,.94) 35% 43%,#c8102e 43% 57%,rgba(255,255,255,.94) 57% 65%,transparent 65%),#012169;opacity:.72;z-index:-2}
-      #tdr-settings2 .lang-card.future:before{background:linear-gradient(135deg,#263246,#111927);opacity:.72;z-index:-2}
-      #tdr-settings2 .lang-card .lang-content{position:relative;z-index:2;height:58px;padding:8px 10px;display:flex;flex-direction:column;justify-content:flex-end;min-width:0}
-      #tdr-settings2 .lang-card .lang-code{position:absolute;top:7px;right:8px;font-size:8px;font-weight:1000;letter-spacing:.15em;opacity:.75}
-      #tdr-settings2 .lang-card .lang-check{position:absolute;top:6px;left:8px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(9,18,28,.72);border:1px solid rgba(255,255,255,.28);font-size:9px;font-weight:1000;opacity:0;transform:scale(.8);transition:.12s}
-      #tdr-settings2 .lang-card .lang-name{font-size:13px;font-weight:1000;line-height:1;letter-spacing:.01em;text-shadow:0 2px 6px rgba(0,0,0,.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      #tdr-settings2 .lang-card .lang-sub{margin-top:3px;font-size:7px;font-weight:850;line-height:1;letter-spacing:.06em;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      #tdr-settings2 .lang-card.on{border-color:#7cffb8;box-shadow:0 0 0 1px rgba(66,247,149,.18),0 0 18px rgba(66,247,149,.14),inset 0 1px 0 rgba(255,255,255,.08)}
-      #tdr-settings2 .lang-card.on .lang-check{opacity:1;transform:scale(1);background:#1b8c59;border-color:#7cffb8;color:#fff}
-      #tdr-settings2 .lang-card.future{opacity:.28;filter:saturate(.35);cursor:default}
-      #tdr-settings2 .lang-card.future .lang-sub{opacity:.65}
+      #tdr-settings2 .lang-card:before{z-index:-2;background:radial-gradient(circle at 18% 24%,rgba(255,255,255,.055) 0 1px,transparent 1.4px),radial-gradient(circle at 74% 68%,rgba(255,255,255,.035) 0 1px,transparent 1.5px),radial-gradient(circle at 43% 82%,rgba(0,0,0,.28) 0 1.2px,transparent 1.8px),linear-gradient(118deg,#202124,#111214 44%,#1a1b1e 72%,#0d0e10);background-size:9px 9px,13px 13px,11px 11px,100% 100%}
+      #tdr-settings2 .lang-card:after{z-index:-1;opacity:.9;background:linear-gradient(90deg,transparent 0 40%,var(--stripe-a) 40% 46%,var(--stripe-b) 46% 54%,var(--stripe-c) 54% 60%,transparent 60% 100%),linear-gradient(90deg,rgba(0,0,0,.2),transparent 30%,transparent 70%,rgba(0,0,0,.24))}
+      #tdr-settings2 .lang-card.es{--stripe-a:#aa151b;--stripe-b:#f1bf00;--stripe-c:#aa151b}
+      #tdr-settings2 .lang-card.en{--stripe-a:#21468b;--stripe-b:#f4f5f7;--stripe-c:#c8102e}
+      #tdr-settings2 .lang-card.fr{--stripe-a:#0055a4;--stripe-b:#f4f5f7;--stripe-c:#ef4135}
+      #tdr-settings2 .lang-card.de{--stripe-a:#121212;--stripe-b:#dd0000;--stripe-c:#ffce00}
+      #tdr-settings2 .lang-card.it{--stripe-a:#009246;--stripe-b:#f4f5f7;--stripe-c:#ce2b37}
+      #tdr-settings2 .lang-card .lang-content{position:relative;z-index:2;height:58px;padding:8px 10px;display:flex;flex-direction:column;justify-content:flex-end;min-width:0;background:linear-gradient(90deg,rgba(7,8,9,.72),rgba(7,8,9,.18) 37%,rgba(7,8,9,.08) 63%,rgba(7,8,9,.72))}
+      #tdr-settings2 .lang-card .lang-code{position:absolute;top:7px;right:8px;font-size:8px;font-weight:1000;letter-spacing:.16em;opacity:.8;text-shadow:0 1px 4px #000}
+      #tdr-settings2 .lang-card .lang-check{position:absolute;top:6px;left:8px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(9,18,28,.78);border:1px solid rgba(255,255,255,.3);font-size:9px;font-weight:1000;opacity:0;transform:scale(.8);transition:.12s}
+      #tdr-settings2 .lang-card .lang-name{font-size:12px;font-weight:1000;line-height:1;letter-spacing:.035em;text-transform:uppercase;text-shadow:0 1px 0 rgba(255,255,255,.08),0 2px 6px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;filter:drop-shadow(.35px 0 rgba(255,255,255,.2))}
+      #tdr-settings2 .lang-card .lang-sub{margin-top:3px;font-size:7px;font-weight:900;line-height:1;letter-spacing:.075em;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px #000}
+      #tdr-settings2 .lang-card.on{border-color:#7cffb8;box-shadow:0 0 0 1px rgba(66,247,149,.24),0 0 19px rgba(66,247,149,.2),inset 0 0 13px rgba(66,247,149,.045),inset 0 1px 0 rgba(255,255,255,.08)}
+      #tdr-settings2 .lang-card.on .lang-check{opacity:1;transform:scale(1);background:#1b8c59;border-color:#7cffb8;color:#fff;box-shadow:0 0 9px rgba(66,247,149,.34)}
+      #tdr-settings2 .lang-card.future{opacity:.34;filter:saturate(.55) brightness(.8);cursor:default}
+      #tdr-settings2 .lang-card.future .lang-sub{opacity:.62}
       #tdr-settings2 .lang-active-note{margin-top:8px;color:#70ffad;font-size:9px;font-weight:900;letter-spacing:.03em}
-      @media(max-width:760px){#tdr-settings2 .lang-grid{gap:5px}#tdr-settings2 .lang-card{height:50px;border-radius:11px}#tdr-settings2 .lang-card .lang-content{height:50px;padding:7px 8px}#tdr-settings2 .lang-card .lang-name{font-size:11px}#tdr-settings2 .lang-card .lang-sub{font-size:6px}#tdr-settings2 .lang-card .lang-code{top:5px;right:6px;font-size:7px}#tdr-settings2 .lang-card .lang-check{top:5px;left:6px;width:14px;height:14px;font-size:8px}}
+      @media(max-width:760px){#tdr-settings2 .lang-grid{gap:5px}#tdr-settings2 .lang-card{height:50px;border-radius:11px}#tdr-settings2 .lang-card .lang-content{height:50px;padding:7px 8px}#tdr-settings2 .lang-card .lang-name{font-size:10px;letter-spacing:.02em}#tdr-settings2 .lang-card .lang-sub{font-size:6px}#tdr-settings2 .lang-card .lang-code{top:5px;right:6px;font-size:7px}#tdr-settings2 .lang-card .lang-check{top:5px;left:6px;width:14px;height:14px;font-size:8px}}
     `;
     document.head.appendChild(style);
   }
