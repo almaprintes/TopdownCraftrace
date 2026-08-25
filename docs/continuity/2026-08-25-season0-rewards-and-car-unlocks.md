@@ -75,6 +75,29 @@ Fix:
 - `src/game/game.js` now registers this wrapper as `RaceScene`.
 - When the player accepts the fifth Survival lap, completed laps are clamped to 5, authoritative Survival history is truncated/synced to five laps, vehicle velocity is stopped, round is set to 5, and Survival finishes as a win. A sixth player lap can no longer be recorded by the active runtime chain.
 
+Validation: retested in the same clean Opera profile. Result screen showed `RONDAS 5/5`, `VUELTAS 5`, and only V1–V5. The five-lap cap is now confirmed working on-device/browser.
+
+## Reward claim celebration UX
+Problem found during clean-profile testing: claiming a Season reward immediately credited it but provided almost no emotional feedback. The player could easily miss what had just been earned.
+
+Implemented a global claim celebration so every successful call to `claimCurrentRaceEvent()` produces the same result regardless of where the claim originated.
+
+New file:
+`src/game/seasons/seasonRewardCelebration.js`
+
+Behavior:
+- full-screen premium overlay above Phaser/DOM UI;
+- expanding shockwave + rotating light burst;
+- confetti and spark particles;
+- hero-size official reward asset;
+- large quantity for coins/materials;
+- localized ES/EN copy;
+- explicit `PREMIO CONSEGUIDO` / `REWARD CLAIMED` message;
+- manual `CONTINUAR` button so the player has time to register the reward;
+- Stage 14 gets a dedicated gold treatment and `NUEVO COCHE DESBLOQUEADO`, using the official AVENIR Gripline display art at much larger scale.
+
+`claimCurrentRaceEvent()` now broadcasts `tdr:seasonRewardClaimed` only after the economy/unlock state has been successfully saved. `game.js` installs one global listener, so future claim surfaces automatically inherit this celebration instead of implementing separate effects.
+
 ## Implementation commits
 - `cded4d05e199c106563673c92ce5cdb256d90922` — Add car unlock progression store.
 - `9c06bcd80d1d22be1b01f5dbb710ac7515277375` — Simplify Season 0 rewards and add Gripline finale.
@@ -85,10 +108,14 @@ Fix:
 - `c4e518ec02014e476f4778c7ce21940e31713809` — Fix track selector translation shadowing crash.
 - `06300e3e18815112c9dfad78040e7aa40ecb1038` — Enforce active survival five-lap finish.
 - `4772d816d05b79efa2378221f4bea8940c5c5f10` — Use hard survival lap cap scene.
+- `99fb35822762d3e4eee224d744a3f902284b73ab` — Add season reward celebration overlay.
+- `51c607de7385f48c5a97f9c6370d195aca1b4a76` — Broadcast season reward claims.
+- `2156bba1ce5da4458f2ac0f4440f52b874378cf9` — Install season reward celebrations.
 
 ## Validation status
 - Single-reward Season 0 presentation and Gripline finale were visually confirmed by the user as looking great.
 - Player Garage with real progression was confirmed on iPhone showing only HÉLIX Spark.
 - DEV full-car toggle still needs explicit on-device confirmation in ON state.
 - Track selector crash fix is committed and awaits a fresh on-device retry.
-- Survival five-lap hard cap is committed and awaits a fresh clean-profile retry.
+- Survival five-lap hard cap is confirmed working in a clean Opera profile: 5/5 rounds, exactly 5 laps.
+- New reward celebration is committed and awaits visual validation on device/browser.
