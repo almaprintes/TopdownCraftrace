@@ -1,10 +1,25 @@
 import Phaser from 'phaser';
-import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel, RACE_EVENTS } from '../events/raceEvents.js';
+import { getCurrentRaceEvent, claimCurrentRaceEvent, RACE_EVENTS } from '../events/raceEvents.js';
 import { getLanguage } from '../i18n/index.js';
 import { INDUCTION_SEASON, seasonText } from '../seasons/seasonCatalog.js';
 
+const BASE=import.meta.env.BASE_URL||'/';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const MATERIAL_ART={
+  scrap:'chatarra.webp',
+  alloy:'aleacion.webp',
+  rubber:'goma.webp',
+  compound:'compuesto.webp',
+  disc:'disco_metalico.webp',
+  spring:'muelle.webp',
+  gear:'engranaje.webp',
+  ecu:'electronica.webp'
+};
+const MATERIAL_NAMES={
+  scrap:{es:'Chatarra',en:'Scrap'},alloy:{es:'Aleación',en:'Alloy'},rubber:{es:'Goma',en:'Rubber'},compound:{es:'Compuesto',en:'Compound'},
+  disc:{es:'Disco',en:'Disc'},spring:{es:'Muelle',en:'Spring'},gear:{es:'Engranaje',en:'Gear'},ecu:{es:'Electrónica',en:'Electronics'}
+};
 
 export class SeasonScene extends Phaser.Scene {
   constructor(){super('season');}
@@ -67,27 +82,41 @@ export class SeasonScene extends Phaser.Scene {
       #tdr-season-dom .objective .s-bar{margin-top:12px;height:11px}
 
       #tdr-season-dom .lanes{position:relative;z-index:2;min-width:0;display:grid;grid-template-rows:1fr 1fr}
-      #tdr-season-dom .lane{position:relative;min-height:0;padding:24px 34px 22px;display:flex;flex-direction:column;justify-content:center}
-      #tdr-season-dom .lane.free{border-bottom:1px solid rgba(255,255,255,.1)}
-      #tdr-season-dom .lane:before{content:'';position:absolute;left:34px;right:34px;top:50%;height:3px;transform:translateY(-50%);background:#264657;box-shadow:0 0 0 1px rgba(255,255,255,.025)}
-      #tdr-season-dom .lane.premium:before{background:#5a4521}
-      #tdr-season-dom .lane-label{position:absolute;left:34px;top:18px;font-size:9px;font-weight:1000;letter-spacing:.16em;color:#62ffb2}
+      #tdr-season-dom .lane{position:relative;min-height:0;padding:24px 34px 22px;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+      #tdr-season-dom .lane.free{border-bottom:1px solid rgba(255,255,255,.1);background:radial-gradient(circle at 50% 54%,rgba(57,255,154,.055),transparent 48%)}
+      #tdr-season-dom .lane.premium{background:radial-gradient(circle at 50% 54%,rgba(216,167,58,.06),transparent 48%)}
+      #tdr-season-dom .lane:before{content:'';position:absolute;left:34px;right:34px;top:54%;height:3px;transform:translateY(-50%);background:linear-gradient(90deg,transparent,#264657 12%,#264657 88%,transparent);box-shadow:0 0 18px rgba(53,207,255,.06)}
+      #tdr-season-dom .lane.premium:before{background:linear-gradient(90deg,transparent,#5a4521 12%,#5a4521 88%,transparent);box-shadow:0 0 18px rgba(216,167,58,.06)}
+      #tdr-season-dom .lane-label{position:absolute;left:34px;top:15px;font-size:9px;font-weight:1000;letter-spacing:.16em;color:#62ffb2;z-index:4}
       #tdr-season-dom .lane.premium .lane-label{color:#f0c65a}
-      #tdr-season-dom .reward-node{position:relative;z-index:1;width:min(78%,560px);min-height:86px;margin:auto;display:grid;grid-template-columns:64px minmax(0,1fr);align-items:center;gap:18px;padding:15px 18px;background:#10231d;border:1px solid rgba(57,255,154,.5);box-shadow:0 8px 24px rgba(0,0,0,.28)}
-      #tdr-season-dom .lane.premium .reward-node{background:#211b10;border-color:rgba(216,167,58,.52)}
-      #tdr-season-dom .reward-icon{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#0a1712;border:1px solid rgba(98,255,178,.44);font-size:23px}
-      #tdr-season-dom .lane.premium .reward-icon{background:#18130b;border-color:rgba(240,198,90,.42)}
-      #tdr-season-dom .reward-name{font-size:13px;font-weight:1000;color:#e8fff4;line-height:1.25}
-      #tdr-season-dom .lane.premium .reward-name{color:#b3914c}
-      #tdr-season-dom .reward-sub{margin-top:6px;font-size:8px;font-weight:800;letter-spacing:.07em;color:#729486}
-      #tdr-season-dom .lane.premium .reward-sub{color:#806d43}
-      #tdr-season-dom .claim{position:absolute;right:34px;bottom:18px;height:34px;padding:0 18px;border:1px solid #62ffb2;background:#174b37;font-size:9px;font-weight:1000;letter-spacing:.06em;cursor:pointer;z-index:4}
+
+      #tdr-season-dom .reward-showcase{position:relative;z-index:2;width:min(92%,650px);height:132px;margin:17px auto 0;display:flex;align-items:center;justify-content:center;gap:10px;padding:7px 14px;background:linear-gradient(180deg,rgba(10,28,23,.72),rgba(5,15,14,.9));border:1px solid rgba(57,255,154,.25);box-shadow:0 14px 34px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.035);overflow:visible}
+      #tdr-season-dom .stage-slide.active .lane.free .reward-showcase{border-color:rgba(98,255,178,.58);box-shadow:0 0 24px rgba(57,255,154,.08),0 14px 34px rgba(0,0,0,.36)}
+      #tdr-season-dom .loot{position:relative;flex:0 1 82px;width:82px;height:104px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 8px 9px rgba(0,0,0,.5))}
+      #tdr-season-dom .loot.coin{flex-basis:116px;width:116px;height:112px}
+      #tdr-season-dom .loot img{display:block;max-width:100%;max-height:92px;object-fit:contain;transform:scale(1.02);transition:transform .15s}
+      #tdr-season-dom .loot.coin img{max-height:108px;max-width:116px}
+      #tdr-season-dom .stage-slide.active .loot img{transform:scale(1.07)}
+      #tdr-season-dom .loot-qty{position:absolute;right:-2px;bottom:2px;min-width:34px;height:24px;padding:0 7px;display:grid;place-items:center;border-radius:12px;background:linear-gradient(180deg,#14392c,#09231a);border:1px solid rgba(98,255,178,.7);box-shadow:0 4px 10px rgba(0,0,0,.45);font-size:11px;font-weight:1000;color:#fff;white-space:nowrap}
+      #tdr-season-dom .loot.coin .loot-qty{right:2px;background:linear-gradient(180deg,#5a4311,#2c2109);border-color:rgba(240,198,90,.85);color:#ffe78e}
+      #tdr-season-dom .loot-name{position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);font-size:6px;font-weight:1000;letter-spacing:.08em;color:#7f9b8e;text-transform:uppercase;white-space:nowrap;opacity:.78}
+      #tdr-season-dom .reward-state{position:absolute;right:12px;top:10px;padding:4px 7px;background:rgba(4,12,10,.78);font-size:6px;font-weight:1000;letter-spacing:.12em;color:#6d8c7c;z-index:4}
+      #tdr-season-dom .stage-slide.active .reward-state{color:#62ffb2}
+      #tdr-season-dom .stage-slide.done .reward-state{color:#62ffb2}
+
+      #tdr-season-dom .premium-showcase{position:relative;z-index:2;width:min(86%,560px);height:128px;margin:18px auto 0;display:grid;place-items:center;background:linear-gradient(180deg,rgba(37,29,13,.68),rgba(18,14,7,.91));border:1px solid rgba(216,167,58,.34);box-shadow:0 14px 34px rgba(0,0,0,.35);overflow:hidden}
+      #tdr-season-dom .premium-showcase:after{content:'';position:absolute;inset:0;background:linear-gradient(112deg,transparent 30%,rgba(255,220,126,.09) 48%,transparent 66%);pointer-events:none}
+      #tdr-season-dom .premium-art{position:relative;width:155px;height:118px;display:grid;place-items:center;filter:grayscale(.32) saturate(.72) brightness(.7) drop-shadow(0 10px 12px rgba(0,0,0,.56));opacity:.72}
+      #tdr-season-dom .premium-art img{display:block;max-width:100%;max-height:118px;object-fit:contain}
+      #tdr-season-dom .premium-lock{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:rgba(8,8,7,.83);border:1px solid rgba(240,198,90,.7);box-shadow:0 0 22px rgba(216,167,58,.16);font-size:24px;z-index:3}
+      #tdr-season-dom .premium-coming{position:absolute;right:12px;bottom:10px;padding:5px 8px;background:rgba(30,23,9,.88);border:1px solid rgba(216,167,58,.25);font-size:6px;font-weight:1000;letter-spacing:.14em;color:#b3914c;z-index:4}
+      #tdr-season-dom .claim{position:absolute;right:34px;bottom:18px;height:34px;padding:0 18px;border:1px solid #62ffb2;background:#174b37;font-size:9px;font-weight:1000;letter-spacing:.06em;cursor:pointer;z-index:5}
 
       #tdr-season-dom .swipe-hint{position:absolute;right:18px;top:50%;transform:translateY(-50%);width:34px;height:58px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.08);background:rgba(4,12,18,.6);font-size:24px;color:#60788a;pointer-events:none}
       #tdr-season-dom .stage-slide:last-child .swipe-hint{display:none}
 
-      @media(max-width:1050px){#tdr-season-dom .s-head{grid-template-columns:86px minmax(0,1fr) 220px;padding:0 18px;gap:14px}#tdr-season-dom .s-title{font-size:21px}#tdr-season-dom .stage-slide{flex-basis:92vw;min-width:720px;grid-template-columns:minmax(235px,33%) minmax(0,1fr)}#tdr-season-dom .mission-title{font-size:27px}#tdr-season-dom .lane{padding-left:24px;padding-right:24px}#tdr-season-dom .lane:before{left:24px;right:24px}#tdr-season-dom .lane-label{left:24px}#tdr-season-dom .reward-node{width:min(82%,500px)}}
-      @media(max-height:520px){#tdr-season-dom .s-head{height:64px}#tdr-season-dom .season-main{height:calc(100% - 64px)}#tdr-season-dom .track-head{height:42px}#tdr-season-dom .stage-scroll{padding-bottom:12px}#tdr-season-dom .mission-pane{padding:18px}#tdr-season-dom .mission-title{margin-top:16px;font-size:25px}#tdr-season-dom .mission-desc{margin-top:13px;font-size:10px}#tdr-season-dom .lane{padding-top:18px;padding-bottom:15px}#tdr-season-dom .lane-label{top:10px}#tdr-season-dom .reward-node{min-height:68px;grid-template-columns:48px 1fr;padding:10px 14px}#tdr-season-dom .reward-icon{width:42px;height:42px;font-size:18px}#tdr-season-dom .reward-name{font-size:11px}}
+      @media(max-width:1050px){#tdr-season-dom .s-head{grid-template-columns:86px minmax(0,1fr) 220px;padding:0 18px;gap:14px}#tdr-season-dom .s-title{font-size:21px}#tdr-season-dom .stage-slide{flex-basis:92vw;min-width:720px;grid-template-columns:minmax(235px,33%) minmax(0,1fr)}#tdr-season-dom .mission-title{font-size:27px}#tdr-season-dom .lane{padding-left:24px;padding-right:24px}#tdr-season-dom .lane:before{left:24px;right:24px}#tdr-season-dom .lane-label{left:24px}#tdr-season-dom .reward-showcase{width:94%;gap:6px;padding-inline:8px}#tdr-season-dom .loot{flex-basis:70px;width:70px}#tdr-season-dom .loot.coin{flex-basis:100px;width:100px}}
+      @media(max-height:520px){#tdr-season-dom .s-head{height:64px}#tdr-season-dom .season-main{height:calc(100% - 64px)}#tdr-season-dom .track-head{height:42px}#tdr-season-dom .stage-scroll{padding-bottom:12px}#tdr-season-dom .mission-pane{padding:18px}#tdr-season-dom .mission-title{margin-top:16px;font-size:25px}#tdr-season-dom .mission-desc{margin-top:13px;font-size:10px}#tdr-season-dom .lane{padding-top:16px;padding-bottom:10px}#tdr-season-dom .lane-label{top:8px}#tdr-season-dom .reward-showcase{height:104px;margin-top:14px}#tdr-season-dom .loot{height:84px;flex-basis:64px;width:64px}#tdr-season-dom .loot img{max-height:72px}#tdr-season-dom .loot.coin{height:90px;flex-basis:88px;width:88px}#tdr-season-dom .loot.coin img{max-height:86px;max-width:90px}#tdr-season-dom .loot-qty{height:21px;font-size:9px}#tdr-season-dom .loot-name{display:none}#tdr-season-dom .premium-showcase{height:102px;margin-top:13px}#tdr-season-dom .premium-art{height:94px;width:130px}#tdr-season-dom .premium-art img{max-height:94px}#tdr-season-dom .premium-lock{width:46px;height:46px;font-size:20px}}
     `;
     document.head.appendChild(style);
 
@@ -106,6 +135,22 @@ export class SeasonScene extends Phaser.Scene {
       description:def.description?.[lang]||def.description?.es||'',
       objective:{...def.objective,label:def.objective?.label?.[lang]||def.objective?.label?.es||''}
     };
+  }
+
+  _rewardGallery(reward,lang){
+    const items=[];
+    const coins=Math.max(0,Number(reward?.coins)||0);
+    if(coins){
+      items.push(`<div class="loot coin" title="${coins} ${lang==='en'?'coins':'monedas'}"><img src="${BASE}assets/store/coins_2500.webp" alt=""><span class="loot-qty">${coins}</span><span class="loot-name">${lang==='en'?'Coins':'Monedas'}</span></div>`);
+    }
+    for(const [id,nRaw] of Object.entries(reward?.items||{})){
+      const n=Math.max(0,Number(nRaw)||0);
+      const file=MATERIAL_ART[id];
+      if(!n||!file)continue;
+      const name=MATERIAL_NAMES[id]?.[lang]||id;
+      items.push(`<div class="loot" title="${esc(name)} ×${n}"><img src="${BASE}assets/crafting/materials/${file}" alt=""><span class="loot-qty">×${n}</span><span class="loot-name">${esc(name)}</span></div>`);
+    }
+    return items.join('');
   }
 
   _renderDom(){
@@ -130,9 +175,9 @@ export class SeasonScene extends Phaser.Scene {
       const target=Math.max(1,Number(objective.target)||1);
       const value=active?Number(activeProgress?.value||0):(done?target:0);
       const ratio=done?1:(active?activeRatio:0);
-      const rewardLabel=raceEventRewardLabel(def?.reward);
       const progressText=`${Math.min(value,target)}/${target} ${objective.label||''}`;
       const rewardState=done?(lang==='en'?'COLLECTED':'RECOGIDA'):(active?(lang==='en'?'CURRENT REWARD':'PREMIO ACTUAL'):(lang==='en'?'LOCKED REWARD':'PREMIO BLOQUEADO'));
+      const rewardGallery=this._rewardGallery(def?.reward,lang);
       return `<article class="stage-slide ${done?'done':''} ${active?'active':''} ${locked?'locked':''}" data-stage="${i}">
         <section class="mission-pane">
           <div class="stage-kicker"><span>${esc(L.stage)} ${i+1} · ${String(i+1).padStart(2,'0')}</span><span class="stage-state">${esc(status)}</span></div>
@@ -147,17 +192,18 @@ export class SeasonScene extends Phaser.Scene {
         <section class="lanes">
           <div class="lane free">
             <div class="lane-label">${lang==='en'?'FREE REWARD':'RECOMPENSA GRATIS'}</div>
-            <div class="reward-node">
-              <div class="reward-icon">${done?'✓':'◈'}</div>
-              <div><div class="reward-name">${esc(rewardLabel)}</div><div class="reward-sub">${esc(rewardState)}</div></div>
+            <div class="reward-showcase">
+              <div class="reward-state">${esc(rewardState)}</div>
+              ${rewardGallery}
             </div>
             ${active&&activeProgress?.complete?`<button class="claim" type="button">${lang==='en'?'CLAIM REWARD':'RECLAMAR PREMIO'}</button>`:''}
           </div>
           <div class="lane premium">
             <div class="lane-label">${esc(L.premium)} · ${esc(L.comingSoon)}</div>
-            <div class="reward-node">
-              <div class="reward-icon">🔒</div>
-              <div><div class="reward-name">${lang==='en'?'EXCLUSIVE SEASON REWARD':'RECOMPENSA EXCLUSIVA DE TEMPORADA'}</div><div class="reward-sub">${lang==='en'?'PREMIUM TRACK DISABLED FOR LAUNCH':'LÍNEA PREMIUM DESACTIVADA EN EL LANZAMIENTO'}</div></div>
+            <div class="premium-showcase">
+              <div class="premium-art"><img src="${BASE}assets/store/daily_gift.webp" alt=""></div>
+              <div class="premium-lock">🔒</div>
+              <div class="premium-coming">${lang==='en'?'PREMIUM REWARD · COMING SOON':'PREMIO PREMIUM · PRÓXIMAMENTE'}</div>
             </div>
           </div>
         </section>
