@@ -24,8 +24,20 @@ The active runtime descendant now overrides `_storeCard()` and directly owns ren
 ### Store inertia
 The inertia hook was also made more explicit: it identifies the masked horizontal content container and the Store drag hit area, samples recent drag velocity and applies a short clamped `Cubic.easeOut` tween after release. A new drag cancels any active inertia tween.
 
+## Narrower card pass
+Commit:
+`2a7665a1234aae6fc13c0fb373df10dc8698eb24` — `Narrow store cards`
+
+After the direct premium material-card design was confirmed visually by the user, all Store cards were made narrower to fit more naturally in the horizontal carousel:
+- material-pack width calculation reduced substantially while still allowing wider mixed packs;
+- coin and reward cards reduced from the previous ~294 px maximum to a responsive 220–250 px range;
+- card gap reduced from 18 px to 16 px;
+- section separation reduced from 70 px to 56 px.
+
+The new premium renderer remains unchanged; this pass only changes carousel density/width. No product contents, prices, rewards or economy behavior were changed.
+
 ## Safety
 No economy values, pack contents, reward amounts, car physics, controls, race logic or persistence were intentionally changed.
 
 ## Validation
-This direct-renderer version has not yet been confirmed on iPhone. Do not state that the visual redesign or inertia works correctly on iPhone until the user confirms it.
+The premium material-card redesign has been visually confirmed by the user on iPhone. The narrower-card pass has not yet been confirmed on iPhone; do not state that the new widths are final until the user confirms them.
