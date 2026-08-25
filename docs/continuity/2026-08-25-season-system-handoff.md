@@ -48,6 +48,7 @@ If Premium is activated in the future, it should use the same season progress an
 - `b4fa76418f73c51b0305a92c955f45041b26d161` — Replace page-by-page season slides with one continuous horizontal route: a conventional FREE road above and a wider PREMIUM highway below, with deliberately generous spacing between reward nodes.
 - `7c1438fda494d60a0f4602c8cc93d404fa6379b1` — Replace rectangular reward cards with motorsport-themed traffic-sign nodes.
 - `3f2c5356617524b8f8961cd27b9710d75f10f91f` — Shift the continuous route toward a more dynamic season-pass feel: remove horizontal snap, enlarge official reward art, reduce traffic signs to compact stage markers, increase breathing room and add centre-focus scaling while scrolling.
+- `31143b9854ed178a3d484b6885c91d14891c182f` — Add reusable tiered reward-card backgrounds to FREE milestones and layer official reward assets dynamically inside them.
 
 ## Season UI architecture
 The season progression must never be rendered as a large overlay on top of the lobby. The lobby only shows a compact Season 0 summary card with current mission, reward preview and progress. Tapping the card navigates to the dedicated `season` scene.
@@ -63,12 +64,29 @@ The dedicated Season scene uses:
 - generous horizontal spacing between reward milestones;
 - aligned FREE and PREMIUM milestones for every stage;
 - official visual reward assets as the visual protagonists, with compact quantity badges;
-- small traffic-sign stage markers physically associated with the road; the signs identify the milestone but must not contain or visually dominate the reward art;
-- subtle dynamic focus while scrolling: milestones nearer the viewport centre grow slightly and distant milestones recede, without turning navigation into screen snapping;
-- the next and previous rewards should remain partially discoverable during normal scrolling so the route invites continued movement;
-- a fixed detail dock at the bottom for the currently selected mission, so mission text does not break the continuity of the road itself;
+- small traffic-sign stage markers physically associated with the road;
+- subtle dynamic focus while scrolling: milestones nearer the viewport centre grow slightly and distant milestones recede;
+- the next and previous rewards should remain partially discoverable during normal scrolling;
+- a fixed detail dock at the bottom for the currently selected mission;
 - tapping any stage selects it and updates the detail dock; the current stage is centered when the scene opens;
 - no road/track lines behind the lobby and no semi-transparent season overlay competing with the car/track cards.
+
+### Tiered reward-card system
+FREE milestone rewards now use reusable premium-style master card backgrounds stored under `public/assets/season/reward_cards/`:
+- `free_blue.svg`
+- `free_green.svg`
+- `free_purple.svg`
+- `free_gold.svg`
+
+These files contain only the reusable racing-card treatment: metallic frame, glow, dark racing texture and empty reward area. Reward contents are never baked into the master background. `SeasonScene.js` layers the official coin/material assets and quantities on top at runtime.
+
+Current induction visual mapping is progressive rather than random:
+- stages 1–4: blue;
+- stages 5–8: green;
+- stages 9–12: purple;
+- stages 13–14: gold.
+
+The color indicates reward presentation/importance inside the season journey, not a new gameplay-stat tier. The final stages deliberately look more valuable. The card may overlap part of the road: reward desirability has visual priority over keeping the road fully unobstructed.
 
 ### Interaction reference principle
 The Brawl Stars season-pass recording supplied by the user is a reference for interaction principles only, not a visual template to copy. Useful principles adopted are continuous horizontal progression, clear upper FREE/lower PREMIUM hierarchy, strong reward-art prominence, visibility of upcoming rewards and lively movement. Top Down RACE keeps its own road/highway/traffic-sign identity.
@@ -112,4 +130,4 @@ The baseline simulation is documented in `docs/economy/2026-08-25-store-economy-
 The 14 induction rewards are one-time onboarding rewards. Recurring monthly season rewards should later become the controlled steady-state seasonal income.
 
 ## Validation
-The dynamic continuous-road DOM Season scene is active in code but has NOT yet been confirmed on iPhone. Do not claim it works correctly on iPhone until the user tests it.
+The tiered-card continuous-road DOM Season scene is active in code but has NOT yet been confirmed on iPhone. Do not claim it works correctly on iPhone until the user tests it.
