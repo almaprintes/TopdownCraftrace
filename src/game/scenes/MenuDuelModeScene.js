@@ -1,10 +1,12 @@
 import { MenuScene as CurrentMenuScene } from './MenuDomUiScene.js';
 import { t, getLanguage } from '../i18n/index.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
+import { buyMaterialPack } from '../store/storeEconomy.js';
 
 const DUEL_LAPS_KEY='tdr2:duelLaps';
 const MODE_KEY='tdr2:gameMode';
 const BASE=import.meta.env.BASE_URL||'/';
+const FONT='system-ui,-apple-system,Segoe UI,Arial';
 
 const PACK_UI={
   mechanic:{es:'PACK MECÁNICA',en:'MECHANICS PACK',esCopy:'Base mecánica para mantener y mejorar.',enCopy:'Mechanical essentials for upkeep and upgrades.'},
@@ -45,24 +47,28 @@ export class MenuScene extends CurrentMenuScene {
 
   _installStoreInertia(root){
     const {width:w}=this.scale;
-    const content=root.list?.find?.(o=>o?.type==='Container');
-    const hit=root.list?.find?.(o=>o?.type==='Rectangle'&&Math.abs(Number(o.x)-24)<1&&Math.abs(Number(o.y)-112)<1&&Number(o.displayWidth)>w*.75);
+    const content=(root.list||[]).find(o=>o?.type==='Container'&&o.mask);
+    const candidates=(root.list||[]).filter(o=>o?.type==='Rectangle'&&o.input);
+    const hit=candidates.find(o=>Math.abs(Number(o.x)-24)<2&&Math.abs(Number(o.y)-112)<2&&Number(o.displayWidth)>w*.7)
+      ||candidates[candidates.length-1];
     if(!content||!hit)return;
 
     let lastX=0,lastT=0,velocity=0;
     const viewportX=24,viewportW=w-48;
-    const bounds=()=>{
-      let right=0;
+    const measure=()=>{
+      let right=viewportW;
       for(const child of content.list||[]){
         try{
           const b=child.getBounds?.();
-          if(b)right=Math.max(right,(b.right-content.x));
+          if(b)right=Math.max(right,b.right-content.x);
         }catch{}
       }
-      const total=Math.max(viewportW,right);
-      return {max:viewportX,min:viewportX-Math.max(0,total-viewportW)};
+      return Math.max(viewportW,right);
     };
-    const clamp=x=>{const b=bounds();return Math.max(b.min,Math.min(b.max,x));};
+    const clamp=x=>{
+      const min=viewportX-Math.max(0,measure()-viewportW);
+      return Math.max(min,Math.min(viewportX,x));
+    };
 
     hit.on('dragstart',ptr=>{
       this.tweens.killTweensOf(content);
@@ -71,69 +77,105 @@ export class MenuScene extends CurrentMenuScene {
       velocity=0;
     });
     hit.on('drag',ptr=>{
-      const now=performance.now(),x=Number(ptr.x)||0,dt=Math.max(8,now-lastT);
+      const now=performance.now();
+      const x=Number(ptr.x)||0;
+      const dt=Math.max(8,now-lastT);
       const instant=(x-lastX)/dt;
-      velocity=velocity*.62+instant*.38;
-      lastX=x;lastT=now;
+      velocity=velocity*.55+instant*.45;
+      lastX=x;
+      lastT=now;
     });
     hit.on('dragend',()=>{
-      if(Math.abs(velocity)<.03)return;
-      const projected=clamp(content.x+velocity*235);
-      const distance=Math.abs(projected-content.x);
+      const speed=Math.max(-2.2,Math.min(2.2,velocity));
+      if(Math.abs(speed)<.025)return;
+      const target=clamp(content.x+speed*310);
+      const distance=Math.abs(target-content.x);
       if(distance<2)return;
-      this.tweens.add({targets:content,x:projected,duration:Math.min(520,180+distance*.55),ease:'Cubic.easeOut'});
+      this.tweens.add({targets:content,x:target,duration:Math.min(620,220+distance*.62),ease:'Cubic.easeOut'});
     });
   }
 
   _storeCard(parent,p,x,y,w,h){
-    super._storeCard(parent,p,x,y,w,h);
-    if(p?.type!=='mat')return;
-    const card=parent.list?.[parent.list.length-1];
-    if(!card?.add)return;
-    this._decorateMaterialPackCard(card,p,w,h);
+    if(p?.type!=='mat'){
+      super._storeCard(parent,p,x,y,w,h);
+      return;
+    }
+    this._renderMaterialPackCard(parent,p,x,y,w,h);
   }
 
-  _decorateMaterialPackCard(card,p,w,h){
+  _renderMaterialPackCard(parent,p,x,y,w,h){
     const lang=getLanguage()==='en'?'en':'es';
     const ui=PACK_UI[p.id]||{es:p.name,en:p.name,esCopy:'Pack de materiales',enCopy:'Materials pack'};
+    const card=this.add.container(x,y);
+    parent.add(card);
     const compact=h<250;
-    const headerH=compact?72:92;
+    const accent=p.accent||0x31aaff;
 
-    const cover=this.add.graphics();
-    cover.fillGradientStyle(0x07131b,0x0a1b2d,0x07131b,0x0a121d,.97);
-    cover.fillRoundedRect(1,1,w-2,headerH,14);
-    cover.lineStyle(1,p.accent||0x31aaff,.35);
-    cover.lineBetween(16,headerH-2,w-16,headerH-2);
-    card.add(cover);
+    const shadow=this.add.graphics();
+    shadow.fillStyle(0x000000,.44);
+    shadow.fillRoundedRect(7,8,w,h,18);
+    card.add(shadow);
 
-    const slash=this.add.graphics();
-    slash.fillStyle(p.accent||0x31aaff,.13);
-    slash.beginPath();
-    slash.moveTo(w*.58,2);slash.lineTo(w,2);slash.lineTo(w,headerH);slash.lineTo(w*.43,headerH);slash.closePath();slash.fillPath();
-    card.add(slash);
+    const frame=this.add.graphics();
+    frame.fillGradientStyle(0x091521,0x08111c,0x07101a,0x0b1721,1);
+    frame.fillRoundedRect(0,0,w,h,18);
+    frame.lineStyle(2,accent,.95);
+    frame.strokeRoundedRect(0,0,w,h,18);
+    frame.lineStyle(8,accent,.045);
+    frame.strokeRoundedRect(5,5,w-10,h-10,14);
+    card.add(frame);
 
-    const title=this.add.text(16,compact?9:12,ui[lang],{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:compact?'15px':'19px',fontStyle:'bold',color:'#ffffff'});
-    const copy=this.add.text(16,compact?31:39,ui[`${lang}Copy`],{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:compact?'7px':'9px',color:'#aebdca',wordWrap:{width:w*.52}});
+    const heroH=Math.round(h*(compact?.54:.60));
+    const hero=this.add.graphics();
+    hero.fillGradientStyle(0x0b2233,0x0a1722,0x071018,0x0a1723,1);
+    hero.fillRoundedRect(2,2,w-4,heroH,16);
+    hero.fillStyle(accent,.09);
+    hero.beginPath();
+    hero.moveTo(w*.48,2);hero.lineTo(w-2,2);hero.lineTo(w-2,heroH);hero.lineTo(w*.28,heroH);hero.closePath();hero.fillPath();
+    card.add(hero);
+
+    const title=this.add.text(18,compact?12:16,ui[lang],{fontFamily:FONT,fontSize:compact?'17px':'22px',fontStyle:'bold',color:'#ffffff'});
+    title.setShadow(0,3,'#000',5,true,true);
+    const copy=this.add.text(18,compact?36:45,ui[`${lang}Copy`],{fontFamily:FONT,fontSize:compact?'7px':'9px',color:'#b9c7d4',wordWrap:{width:w*.48},lineSpacing:1});
     card.add([title,copy]);
 
     const entries=Object.entries(p.items||{});
     const preview=entries.slice(0,Math.min(4,entries.length));
-    const baseX=w-(compact?56:68),baseY=compact?35:43;
+    const cx=w*.72,cy=heroH*.52;
+    const offsets=[[-52,14],[-8,-12],[38,12],[5,35]];
+    const angles=[-13,8,-6,14];
+    const sizes=compact?[70,82,68,57]:[88,104,84,68];
     preview.forEach(([id],i)=>{
       const key=`store:${id}`;
       if(!this.textures.exists(key))return;
-      const offsets=[[-34,5],[0,-5],[31,7],[8,15]];
       const [ox,oy]=offsets[i]||[i*18,0];
-      const im=this.add.image(baseX+ox,baseY+oy,key).setAngle([-12,8,-4,14][i]||0);
-      const target=compact?42:56;
-      im.setScale(Math.min(target/(im.width||1),target/(im.height||1))*(i===1?1.08:.92));
-      im.setAlpha(i===3?.72:.96);
+      const im=this.add.image(cx+ox,cy+oy,key).setAngle(angles[i]||0);
+      const target=sizes[i]||72;
+      im.setScale(Math.min(target/(im.width||1),target/(im.height||1)));
+      im.setAlpha(i===3?.82:1);
+      im.setShadow?.(0,5,'#000',8);
       card.add(im);
     });
 
-    const exact=entries.map(([id,n])=>`${n}× ${(MATERIAL_LABELS[id]?.[lang]||GARAGE_ITEMS[id]?.name||id)}`).join('  ·  ');
-    const contents=this.add.text(16,headerH-(compact?14:17),exact,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:compact?'6px':'7px',fontStyle:'bold',color:'#d7e2eb',wordWrap:{width:w-32}});
-    card.add(contents);
+    const divider=this.add.graphics();
+    divider.fillStyle(accent,.9);
+    divider.fillRoundedRect(18,heroH-4,compact?48:64,4,2);
+    card.add(divider);
+
+    const exact=entries.map(([id,n])=>`${n}× ${MATERIAL_LABELS[id]?.[lang]||GARAGE_ITEMS[id]?.name||id}`).join('  ·  ');
+    const detailsY=heroH+(compact?10:13);
+    const detailsLabel=lang==='en'?'INCLUDES':'INCLUYE';
+    card.add(this.add.text(18,detailsY,detailsLabel,{fontFamily:FONT,fontSize:compact?'6px':'7px',fontStyle:'bold',color:'#7f95a8'}));
+    card.add(this.add.text(18,detailsY+(compact?10:13),exact,{fontFamily:FONT,fontSize:compact?'7px':'8px',fontStyle:'bold',color:'#e3eaf1',wordWrap:{width:w-36},lineSpacing:2}));
+
+    const price=Number(p.price||0).toLocaleString(lang==='en'?'en-US':'es-ES');
+    const buyLabel=lang==='en'?`${price} COINS`:`${price} MONEDAS`;
+    this._buyButton(card,w,h,buyLabel,()=>{
+      const r=buyMaterialPack(p.id);
+      const okLabel=lang==='en'?'PACK ADDED':'PACK AÑADIDO';
+      this._toastStore(r.ok?okLabel:r.reason,r.ok);
+      if(r.ok)this._openStoreModal('materials');
+    },true,accent,true);
   }
 
   _openGameModeModal(){
