@@ -16,11 +16,32 @@
   </head>
   <body>
     <div id="rotateOverlay" aria-hidden="true">
-      <img
-        class="rot-image"
-        src="./assets/ui/orientation_active.webp"
-        alt="Ponlo en horizontal. Top-Down Race 2 se juega en landscape."
-      />
+      <div class="rot-shell">
+        <img
+          class="rot-image"
+          src="./assets/ui/orientation_active.webp"
+          alt=""
+          aria-hidden="true"
+        />
+        <div class="rot-copy" role="status" aria-live="polite">
+          <div class="rot-lang rot-es">
+            <div class="rot-title">GIRA TU DISPOSITIVO</div>
+            <div class="rot-sub">Top Down RACE se juega en horizontal.</div>
+            <div class="rot-beta">
+              <div class="rot-beta-title">⚠ VERSIÓN BETA</div>
+              <div class="rot-beta-text">TODO EL PROGRESO DE LA BETA SE REINICIARÁ CON EL LANZAMIENTO DEL JUEGO.</div>
+            </div>
+          </div>
+          <div class="rot-lang rot-en">
+            <div class="rot-title">ROTATE YOUR DEVICE</div>
+            <div class="rot-sub">Top Down RACE is played in landscape.</div>
+            <div class="rot-beta">
+              <div class="rot-beta-title">⚠ BETA VERSION</div>
+              <div class="rot-beta-text">ALL BETA PROGRESS WILL BE RESET WHEN THE GAME LAUNCHES.</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="app"></div>
     <script type="module" src="./src/main.js"></script>
