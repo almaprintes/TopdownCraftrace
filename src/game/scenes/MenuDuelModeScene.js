@@ -64,8 +64,6 @@ export class MenuScene extends CurrentMenuScene {
           fired=true;
           m.key==='duel'?this._openDuelLapSelector():this._startSelectedMode(m.key);
         };
-        // iOS/WebKit: accept both phases. Some gesture transitions can swallow
-        // either pointerdown or pointerup after a DOM overlay has just closed.
         img.on('pointerdown',choose);img.on('pointerup',choose);
         border.on('pointerdown',choose);border.on('pointerup',choose);
         const hover=()=>border.setStrokeStyle(3,m.accent,1);
@@ -98,14 +96,12 @@ export class MenuScene extends CurrentMenuScene {
     };
     const left=this.add.text(x+24,cardY+cardH/2,'‹',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'42px',fontStyle:'bold',color:'#ffd09a'}).setOrigin(.5).setInteractive({useHandCursor:true});
     const right=this.add.text(x+panelW-24,cardY+cardH/2,'›',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'42px',fontStyle:'bold',color:'#ffd09a'}).setOrigin(.5).setInteractive({useHandCursor:true});
-    const prev=()=>applyPage(page-1),next=()=>applyPage(page+1);
-    left.on('pointerdown',prev);left.on('pointerup',prev);
-    right.on('pointerdown',next);right.on('pointerup',next);
+    left.on('pointerdown',()=>applyPage(page-1));
+    right.on('pointerdown',()=>applyPage(page+1));
     root.add([left,right]);
     for(let i=0;i<=maxPage;i++){
       const d=this.add.circle(cx+(i-maxPage/2)*20,y+panelH-18,4,0x405364,.65).setInteractive({useHandCursor:true});
-      const go=()=>applyPage(i);
-      d.on('pointerdown',go);d.on('pointerup',go);dots.push(d);root.add(d);
+      d.on('pointerdown',()=>applyPage(i));dots.push(d);root.add(d);
     }
     applyPage(page,false);
 
@@ -115,15 +111,13 @@ export class MenuScene extends CurrentMenuScene {
       if(dragX==null)return;
       const dx=Number(p.x)-dragX;dragX=null;
       if(Math.abs(dx)>45){applyPage(page+(dx<0?1:-1));return;}
-      // Tapping outside the panel is always a reliable escape hatch.
       const px=Number(p.x),py=Number(p.y);
       if(px<x||px>x+panelW||py<y||py>y+panelH)this._closeGameModeModal();
     });
     veil.on('pointerupoutside',()=>{dragX=null;});
 
     const close=this.add.text(x+panelW-22,y+3,'×',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'27px',fontStyle:'bold',color:'#9aafc1'}).setOrigin(.5,0).setInteractive({useHandCursor:true});
-    const closeModal=()=>this._closeGameModeModal();
-    close.on('pointerdown',closeModal);close.on('pointerup',closeModal);root.add(close);
+    close.on('pointerdown',()=>this._closeGameModeModal());root.add(close);
   }
 
   _openDuelLapSelector(){
@@ -145,7 +139,6 @@ export class MenuScene extends CurrentMenuScene {
       b.on('pointerdown',choose);b.on('pointerup',choose);
     });
     const cancel=this.add.text(cx,cy+70,'CANCELAR',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#8fa3b5'}).setOrigin(.5).setInteractive({useHandCursor:true});
-    const cancelFn=()=>{this._duelLapModal=null;c.destroy(true);};
-    cancel.on('pointerdown',cancelFn);cancel.on('pointerup',cancelFn);c.add(cancel);
+    cancel.on('pointerdown',()=>{this._duelLapModal=null;c.destroy(true);});c.add(cancel);
   }
 }
