@@ -34,9 +34,9 @@ If Premium is activated in the future, it should use the same season progress an
 - `7e47ad7da7ecce7997e076a37a7b91d3d1f5da6d` — Activate Season 0 menu scene.
 - `5f1201dda814e6421419bf7e920ae6474013033c` — Add induction season telemetry.
 - `008ab0eec5ad50beb9681f5419dbe5b891aa4ab7` — Track soft-currency Store purchases.
-- `2d85dfd4e4b44a977d1d6f37f9c1374fa302bdfc` — Track garage visits.
+- `2d85dfd4e4b44a977d1f5419dbe5b891aa4ab7` — Track garage visits.
 - `517251afcdd327dbe82049eff1b8228a554baaea` — Track mode starts.
-- `9e37a861da2ae4b44a977d1d6f37f9c1374fa302bdfc` — Replace the placeholder/legacy stage list with the new induction mission order.
+- `9e37a861da2ae4eb4fc8a9b02f78d0d35e7ce76f` — Replace the placeholder/legacy stage list with the new induction mission order.
 - `0d3eed511a9ce46dd19c531159c04b9c05abdcf1` — Replace the old seven-event engine data with the full 14-stage induction mission set.
 - `5fd940e27a6860534642d16e28f2e32b01c190c4` — Add dedicated full-screen Season scene.
 - `2ae1a3b990eb36aa082733e17190dea59f21d5f4` — Redesign lobby season card and make it navigate to the Season scene instead of opening an overlay.
