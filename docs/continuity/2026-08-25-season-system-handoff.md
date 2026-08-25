@@ -44,6 +44,7 @@ If Premium is activated in the future, it should use the same season progress an
 - `3dd362cc701030c215c74278b54efc318b2526c2` — Ensure Season scene resize listeners are cleaned up on shutdown.
 - `cc679132facbae9e8f066d54c331b784f74960bd` — Replace all SeasonScene Phaser text/layout objects with a DOM/CSS interface while keeping Phaser only as the scene lifecycle/router.
 - `c51f05a21c78d0e10d3743e97aa4ba03bcde17fe` — Replace the compact 7×2 stage grid with a long horizontal scroll of near-full-screen mission slides and two parallel FREE/PREMIUM reward rails.
+- `63bf87a7a5145deba19963fbfb457adfa48496d2` — Replace text-led season reward cards with asset-led reward showcases using official coin, material and Store artwork.
 
 ## Season UI architecture
 The season progression must never be rendered as a large overlay on top of the lobby. The lobby only shows a compact Season 0 summary card with current mission, reward preview and progress. Tapping the card navigates to the dedicated `season` scene.
@@ -59,6 +60,16 @@ The dedicated Season scene is intentionally separate from the lobby and now uses
 
 ### Text rendering rule
 SeasonScene player-facing text is DOM/HTML/CSS, not Phaser Text. This makes typography, wrapping, spacing, localization and later visual iteration directly editable with normal CSS. Phaser remains responsible only for scene lifecycle/navigation. Do not reintroduce Phaser Text into the Season screen unless there is a specific rendering reason that DOM cannot satisfy.
+
+### Reward presentation rule
+Season rewards are visual-first rather than prose-first.
+- FREE rewards use official game artwork for coins and crafting materials, with compact quantity badges on the images.
+- All material types contained in a reward are shown visually; do not collapse the final items into a textual `+N MORE` summary.
+- Official crafting material files under `public/assets/crafting/materials/` are the source of truth for material art.
+- The coin presentation reuses official Store coin artwork under `public/assets/store/`.
+- While Premium is disabled and its contents are not defined, the Premium rail uses the official Store gift artwork as a dimmed locked placeholder. It must not imply a specific future premium reward.
+- Small state labels and quantity badges are allowed, but the reward itself should be understood primarily from the art.
+- Do not generate replacement reward art while appropriate official assets already exist in the repository.
 
 ## Active 14-stage induction order
 1. First Miles / Primeros metros — complete 1 valid lap.
@@ -86,4 +97,4 @@ The baseline simulation is documented in `docs/economy/2026-08-25-store-economy-
 The 14 induction rewards are one-time onboarding rewards. Recurring monthly season rewards should later become the controlled steady-state seasonal income.
 
 ## Validation
-The horizontal DOM Season scene is active in code but has NOT yet been confirmed on iPhone. Do not claim it works correctly on iPhone until the user tests it.
+The horizontal DOM Season scene with asset-led reward presentation is active in code but has NOT yet been confirmed on iPhone. Do not claim it works correctly on iPhone until the user tests it.
