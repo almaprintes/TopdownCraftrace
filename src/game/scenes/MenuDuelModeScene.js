@@ -98,6 +98,11 @@ export class MenuScene extends CurrentMenuScene {
   _storeCard(parent,p,x,y,w,h){
     if(p?.type!=='mat'){
       super._storeCard(parent,p,x,y,w,h);
+      const card=parent.list?.[parent.list.length-1];
+      if(card?.bringToTop){
+        const topText=(card.list||[]).filter(child=>child?.type==='Text'&&Number(child.y)<82);
+        topText.forEach(child=>card.bringToTop(child));
+      }
       return;
     }
     this._renderMaterialPackCard(parent,p,x,y,w,h);
