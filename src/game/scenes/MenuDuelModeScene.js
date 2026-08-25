@@ -1,9 +1,21 @@
 import { MenuScene as CurrentMenuScene } from './MenuDomUiScene.js';
-import { t } from '../i18n/index.js';
+import { t, getLanguage } from '../i18n/index.js';
+import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 
 const DUEL_LAPS_KEY='tdr2:duelLaps';
 const MODE_KEY='tdr2:gameMode';
 const BASE=import.meta.env.BASE_URL||'/';
+
+const PACK_UI={
+  mechanic:{es:'PACK MECÁNICA',en:'MECHANICS PACK',esCopy:'Base mecánica para mantener y mejorar.',enCopy:'Mechanical essentials for upkeep and upgrades.'},
+  chassis:{es:'PACK CHASIS',en:'CHASSIS PACK',esCopy:'Refuerzo de estructura y comportamiento.',enCopy:'Chassis essentials for structure and handling.'},
+  technology:{es:'PACK TECNOLOGÍA',en:'TECH PACK',esCopy:'Electrónica y componentes de alto rendimiento.',enCopy:'Electronics and high-performance components.'},
+  mixed:{es:'PACK PADDOCK',en:'PADDOCK PACK',esCopy:'Selección variada para fabricar y evolucionar.',enCopy:'A mixed selection for crafting and progression.'}
+};
+const MATERIAL_LABELS={
+  scrap:{es:'Chatarra',en:'Scrap'},alloy:{es:'Aleación',en:'Alloy'},rubber:{es:'Goma',en:'Rubber'},compound:{es:'Compuesto',en:'Compound'},
+  disc:{es:'Disco metálico',en:'Metal disc'},spring:{es:'Muelle',en:'Spring'},gear:{es:'Engranaje',en:'Gear'},ecu:{es:'Electrónica',en:'Electronics'}
+};
 
 export class MenuScene extends CurrentMenuScene {
   _openStoreModal(section='materials'){
@@ -27,6 +39,101 @@ export class MenuScene extends CurrentMenuScene {
       };
       hit.on('pointerdown',activate);
     });
+
+    this._installStoreInertia(root);
+  }
+
+  _installStoreInertia(root){
+    const {width:w}=this.scale;
+    const content=root.list?.find?.(o=>o?.type==='Container');
+    const hit=root.list?.find?.(o=>o?.type==='Rectangle'&&Math.abs(Number(o.x)-24)<1&&Math.abs(Number(o.y)-112)<1&&Number(o.displayWidth)>w*.75);
+    if(!content||!hit)return;
+
+    let lastX=0,lastT=0,velocity=0;
+    const viewportX=24,viewportW=w-48;
+    const bounds=()=>{
+      let right=0;
+      for(const child of content.list||[]){
+        try{
+          const b=child.getBounds?.();
+          if(b)right=Math.max(right,(b.right-content.x));
+        }catch{}
+      }
+      const total=Math.max(viewportW,right);
+      return {max:viewportX,min:viewportX-Math.max(0,total-viewportW)};
+    };
+    const clamp=x=>{const b=bounds();return Math.max(b.min,Math.min(b.max,x));};
+
+    hit.on('dragstart',ptr=>{
+      this.tweens.killTweensOf(content);
+      lastX=Number(ptr.x)||0;
+      lastT=performance.now();
+      velocity=0;
+    });
+    hit.on('drag',ptr=>{
+      const now=performance.now(),x=Number(ptr.x)||0,dt=Math.max(8,now-lastT);
+      const instant=(x-lastX)/dt;
+      velocity=velocity*.62+instant*.38;
+      lastX=x;lastT=now;
+    });
+    hit.on('dragend',()=>{
+      if(Math.abs(velocity)<.03)return;
+      const projected=clamp(content.x+velocity*235);
+      const distance=Math.abs(projected-content.x);
+      if(distance<2)return;
+      this.tweens.add({targets:content,x:projected,duration:Math.min(520,180+distance*.55),ease:'Cubic.easeOut'});
+    });
+  }
+
+  _storeCard(parent,p,x,y,w,h){
+    super._storeCard(parent,p,x,y,w,h);
+    if(p?.type!=='mat')return;
+    const card=parent.list?.[parent.list.length-1];
+    if(!card?.add)return;
+    this._decorateMaterialPackCard(card,p,w,h);
+  }
+
+  _decorateMaterialPackCard(card,p,w,h){
+    const lang=getLanguage()==='en'?'en':'es';
+    const ui=PACK_UI[p.id]||{es:p.name,en:p.name,esCopy:'Pack de materiales',enCopy:'Materials pack'};
+    const compact=h<250;
+    const headerH=compact?72:92;
+
+    const cover=this.add.graphics();
+    cover.fillGradientStyle(0x07131b,0x0a1b2d,0x07131b,0x0a121d,.97);
+    cover.fillRoundedRect(1,1,w-2,headerH,14);
+    cover.lineStyle(1,p.accent||0x31aaff,.35);
+    cover.lineBetween(16,headerH-2,w-16,headerH-2);
+    card.add(cover);
+
+    const slash=this.add.graphics();
+    slash.fillStyle(p.accent||0x31aaff,.13);
+    slash.beginPath();
+    slash.moveTo(w*.58,2);slash.lineTo(w,2);slash.lineTo(w,headerH);slash.lineTo(w*.43,headerH);slash.closePath();slash.fillPath();
+    card.add(slash);
+
+    const title=this.add.text(16,compact?9:12,ui[lang],{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:compact?'15px':'19px',fontStyle:'bold',color:'#ffffff'});
+    const copy=this.add.text(16,compact?31:39,ui[`${lang}Copy`],{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:compact?'7px':'9px',color:'#aebdca',wordWrap:{width:w*.52}});
+    card.add([title,copy]);
+
+    const entries=Object.entries(p.items||{});
+    const preview=entries.slice(0,Math.min(4,entries.length));
+    const baseX=w-(compact?56:68),baseY=compact?35:43;
+    preview.forEach(([id],i)=>{
+      const key=`store:${id}`;
+      if(!this.textures.exists(key))return;
+      const offsets=[[-34,5],[0,-5],[31,7],[8,15]];
+      const [ox,oy]=offsets[i]||[i*18,0];
+      const im=this.add.image(baseX+ox,baseY+oy,key).setAngle([-12,8,-4,14][i]||0);
+      const target=compact?42:56;
+      im.setScale(Math.min(target/(im.width||1),target/(im.height||1))*(i===1?1.08:.92));
+      im.setAlpha(i===3?.72:.96);
+      card.add(im);
+    });
+
+    const exact=entries.map(([id,n])=>`${n}× ${(MATERIAL_LABELS[id]?.[lang]||GARAGE_ITEMS[id]?.name||id)}`).join('  ·  ');
+    const contents=this.add.text(16,headerH-(compact?14:17),exact,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:compact?'6px':'7px',fontStyle:'bold',color:'#d7e2eb',wordWrap:{width:w-32}});
+    card.add(contents);
   }
 
   _openGameModeModal(){
