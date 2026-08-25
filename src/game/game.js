@@ -16,6 +16,7 @@ import { TrackStudioScene } from './scenes/TrackStudioScene.js';
 import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderAssetPointerUpScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
 import { installRuntimeCrashDiagnostics } from './dev/runtimeCrashDiagnostics.js';
+import { installSeasonRewardCelebrations } from './seasons/seasonRewardCelebration.js';
 import { initLanguage } from './i18n/index.js';
 import { localizeLegacyText } from './i18n/legacyUiText.js';
 import { localizePlayerPhaserText } from './i18n/phaserUiExtra.js';
@@ -49,7 +50,7 @@ function installCleanTextFactory(){
   }
 }
 export function createGame(parentId='app'){
-  initLanguage();installCleanTextFactory();const vp=videoPrefs();const dpr=window.devicePixelRatio||1;const ios=isIOSDevice();const safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const resolution=renderResolution(vp,ios,dpr,safeMode);const antialias=safeMode?false:vp.quality!=='low';const targetFps=safeMode?30:(Number(vp.targetFps)===30?30:60);
+  initLanguage();installSeasonRewardCelebrations();installCleanTextFactory();const vp=videoPrefs();const dpr=window.devicePixelRatio||1;const ios=isIOSDevice();const safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const resolution=renderResolution(vp,ios,dpr,safeMode);const antialias=safeMode?false:vp.quality!=='low';const targetFps=safeMode?30:(Number(vp.targetFps)===30?30:60);
   const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',resolution,fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},scene:[BootScene,MenuScene,MenuAliasScene,SeasonScene,GarageScene,SettingsScene,GarageDetailScene,RaceScene,AdminHubScene,UpgradeShopScene,CarEditorScene,TrackGarageScene,TrackStudioScene,EnvironmentBuilderScene,TrackEditorScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:safeMode,powerPreference:'low-power',batchSize:safeMode?1024:4096}});
   try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}installRuntimeCrashDiagnostics(game);installMenuMusic(game);return game;
 }
