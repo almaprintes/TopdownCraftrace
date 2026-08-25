@@ -68,30 +68,37 @@ async function textureData(surface) {
   };
 }
 
+async function loadSurfaceTextures(surfaces) {
+  const [roadTex, shoulderTex, outerTex] = await Promise.all([
+    textureData(surfaces.trackSurface),
+    textureData(surfaces.shoulderSurface),
+    textureData(surfaces.outerSurface)
+  ]);
+  return { roadTex, shoulderTex, outerTex };
+}
+
 function pattern(id, tex, scale = 0.5) {
   const w = Math.max(64, Math.round(tex.width * scale));
   const h = Math.max(64, Math.round(tex.height * scale));
   return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${w}" height="${h}"><image href="${tex.uri}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none"/></pattern>`;
 }
 
-async function artisticSvg({ trackKey, worldW, worldH, geom, surfaces }) {
-  const [roadTex, shoulderTex, outerTex] = await Promise.all([
-    textureData(surfaces.trackSurface),
-    textureData(surfaces.shoulderSurface),
-    textureData(surfaces.outerSurface)
-  ]);
-
+function artisticSvg({ trackKey, worldW, worldH, geom, textures, viewBox, outputW, outputH }) {
+  const { roadTex, shoulderTex, outerTex } = textures;
   const roadQuads = quadPolygons(geom.left, geom.right);
   const shoulderQuads = quadPolygons(geom.grass?.left, geom.grass?.right);
+  const vb = viewBox || { x: 0, y: 0, w: worldW, h: worldH };
+  const rasterW = Math.max(1, Math.round(outputW || vb.w));
+  const rasterH = Math.max(1, Math.round(outputH || vb.h));
 
   return `
-  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${worldW}" height="${worldH}" viewBox="0 0 ${worldW} ${worldH}">
+  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${rasterW}" height="${rasterH}" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}">
     <defs>
       ${pattern('outer', outerTex, 0.46)}
       ${pattern('shoulder', shoulderTex, 0.46)}
       ${pattern('road', roadTex, trackKey === 'offroad-raven-hollow' ? 0.42 : 0.50)}
     </defs>
-    <rect width="${worldW}" height="${worldH}" fill="url(#outer)"/>
+    <rect x="0" y="0" width="${worldW}" height="${worldH}" fill="url(#outer)"/>
     ${svgPolys(shoulderQuads, 'url(#shoulder)')}
     ${svgPolys(roadQuads, 'url(#road)')}
   </svg>`;
@@ -133,12 +140,24 @@ async function bakeTrack(trackKey) {
   }
 
   const surfaces = surfacePlan(trackKey, meta);
+  const textures = await loadSurfaceTextures(surfaces);
   await fs.mkdir(outDir, { recursive: true });
-  const svg = Buffer.from(await artisticSvg({ trackKey, worldW, worldH, geom, surfaces }));
-  const fullPngBuffer = await sharp(svg, { density: 72 }).png().toBuffer();
 
+  // IMPORTANT: never rasterize the whole world to an intermediate PNG.
+  // Large tracks such as Raven Hollow used to spend the complete CI timeout in
+  // that single allocation. Preview and tiles are rendered directly from SVG.
   const previewFile = `${trackKey}-beauty-preview.webp`;
-  await sharp(fullPngBuffer).webp({ quality: 90, effort: 5 }).toFile(path.join(outDir, previewFile));
+  const previewW = Math.min(worldW, 1400);
+  const previewH = Math.max(1, Math.round(worldH * previewW / worldW));
+  const previewSvg = Buffer.from(artisticSvg({
+    trackKey, worldW, worldH, geom, textures,
+    viewBox: { x: 0, y: 0, w: worldW, h: worldH },
+    outputW: previewW, outputH: previewH
+  }));
+  console.log(`[track-beauty] preview ${previewW}x${previewH}`);
+  await sharp(previewSvg, { density: 72 })
+    .webp({ quality: 88, effort: 4 })
+    .toFile(path.join(outDir, previewFile));
 
   const splitX = Math.ceil(worldW / 2);
   const splitY = Math.ceil(worldH / 2);
@@ -151,16 +170,22 @@ async function bakeTrack(trackKey) {
 
   for (let i = 0; i < tiles.length; i++) {
     const t = tiles[i];
-    await sharp(fullPngBuffer)
-      .extract({ left: t.x, top: t.y, width: t.w, height: t.h })
-      .webp({ quality: 88, effort: 5 })
+    console.log(`[track-beauty] tile ${i + 1}/4 @ ${t.x},${t.y} ${t.w}x${t.h}`);
+    const tileSvg = Buffer.from(artisticSvg({
+      trackKey, worldW, worldH, geom, textures,
+      viewBox: t,
+      outputW: t.w,
+      outputH: t.h
+    }));
+    await sharp(tileSvg, { density: 72 })
+      .webp({ quality: 86, effort: 4 })
       .toFile(path.join(outDir, `${trackKey}-beauty-${i}.webp`));
   }
 
   const manifest = {
-    version: 4,
+    version: 5,
     generator: 'scripts/bake-track-visual.mjs',
-    style: 'world-space-materials-v1',
+    style: 'direct-svg-tiles-v2',
     trackKey,
     source: path.relative(ROOT, trackPath),
     worldW,
