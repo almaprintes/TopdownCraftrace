@@ -1,3 +1,5 @@
+import { extraTranslation } from './playerUiExtra.js';
+
 const SETTINGS_KEY='tdr2:settings';
 
 export const SUPPORTED_LANGUAGES=Object.freeze([
@@ -32,6 +34,6 @@ function normalizeLanguage(value){const code=String(value||'').trim().toLowerCas
 export function detectDeviceLanguage(){try{const candidates=[navigator?.language,...(navigator?.languages||[])];for(const candidate of candidates){const code=normalizeLanguage(candidate);if(code)return code;}}catch{}return 'en';}
 export function getLanguage(){try{const settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');return normalizeLanguage(settings?.language)||detectDeviceLanguage();}catch{return detectDeviceLanguage();}}
 export function setLanguage(language){const code=normalizeLanguage(language)||'en';try{const settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');settings.language=code;localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));}catch{}try{document.documentElement.lang=code;}catch{}try{window.dispatchEvent(new CustomEvent('tdr2:language-change',{detail:{language:code}}));}catch{}return code;}
-export function t(key,params=null,language=getLanguage()){const lang=normalizeLanguage(language)||'en';const source=DICTIONARIES[lang]||DICTIONARIES.en;let value=source[key]??DICTIONARIES.en[key]??key;if(params&&typeof value==='string'){for(const [name,replacement] of Object.entries(params)){value=value.replaceAll(`{${name}}`,String(replacement));}}return value;}
+export function t(key,params=null,language=getLanguage()){const lang=normalizeLanguage(language)||'en';const source=DICTIONARIES[lang]||DICTIONARIES.en;let value=source[key]??extraTranslation(lang,key)??DICTIONARIES.en[key]??extraTranslation('en',key)??key;if(params&&typeof value==='string'){for(const [name,replacement] of Object.entries(params)){value=value.replaceAll(`{${name}}`,String(replacement));}}return value;}
 export function languageName(code){return SUPPORTED_LANGUAGES.find(x=>x.code===normalizeLanguage(code))?.nativeLabel||'English';}
 export function initLanguage(){const language=getLanguage();try{document.documentElement.lang=language;}catch{}return language;}
