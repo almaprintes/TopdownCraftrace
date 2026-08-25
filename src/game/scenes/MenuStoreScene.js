@@ -1,5 +1,5 @@
 import { MenuScene as PreviousMenuScene } from './MenuCoinAssetScene.js';
-import { MATERIAL_PACKS,COIN_PACKS,buyMaterialPack,simulateCoinPurchase,rewardedStatus,claimRewardedCoins,dailyStatus,claimDailyCoins } from '../store/storeEconomy.js';
+import { MATERIAL_PACKS,COIN_PACKS,buyMaterialPack,rewardedStatus,claimRewardedCoins,dailyStatus,claimDailyCoins } from '../store/storeEconomy.js';
 import { loadGarage } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { preloadTdrCoin, TDR_COIN_KEY } from '../ui/CoinAssetUi.js';
@@ -20,8 +20,8 @@ const PACK_COPY={
  mixed:{es:'Todo lo necesario para tu garaje y tu rendimiento.',en:'A complete mix for garage progression.'}
 };
 const UI={
- es:{store:'TIENDA',materials:'MATERIALES',coins:'MONEDAS',rewards:'RECOMPENSAS',materialsCopy:'Componentes para fabricar y mejorar piezas en la fábrica.',coinsCopy:'Acelera tu progreso con packs de monedas.',rewardsCopy:'Premios gratuitos y recompensas opcionales.',coinPack:'PACK DE MONEDAS',rewarded:'VÍDEO RECOMPENSADO',daily:'REGALO DIARIO',free:'GRATIS',watch:'VER VÍDEO',available:'DISPONIBLE EN',claim:'RECLAMAR GRATIS',tomorrow:'VUELVE MAÑANA',devPurchase:'COMPRA DE DESARROLLO',added:'PACK AÑADIDO',coinsWord:'MONEDAS'},
- en:{store:'STORE',materials:'MATERIALS',coins:'COINS',rewards:'REWARDS',materialsCopy:'Components for crafting and upgrading parts in the factory.',coinsCopy:'Speed up progression with coin packs.',rewardsCopy:'Free prizes and optional rewards.',coinPack:'COIN PACK',rewarded:'REWARDED VIDEO',daily:'DAILY GIFT',free:'FREE',watch:'WATCH VIDEO',available:'AVAILABLE IN',claim:'CLAIM FREE',tomorrow:'COME BACK TOMORROW',devPurchase:'DEVELOPMENT PURCHASE',added:'PACK ADDED',coinsWord:'COINS'}
+ es:{store:'TIENDA',materials:'MATERIALES',coins:'MONEDAS',rewards:'RECOMPENSAS',materialsCopy:'Componentes para fabricar y mejorar piezas en la fábrica.',coinsCopy:'Acelera tu progreso con packs de monedas.',rewardsCopy:'Premios gratuitos y recompensas opcionales.',coinPack:'PACK DE MONEDAS',rewarded:'VÍDEO RECOMPENSADO',daily:'REGALO DIARIO',free:'GRATIS',watch:'VER VÍDEO',available:'DISPONIBLE EN',claim:'RECLAMAR GRATIS',tomorrow:'VUELVE MAÑANA',comingSoon:'PRÓXIMAMENTE',added:'PACK AÑADIDO',coinsWord:'MONEDAS'},
+ en:{store:'STORE',materials:'MATERIALS',coins:'COINS',rewards:'REWARDS',materialsCopy:'Components for crafting and upgrading parts in the factory.',coinsCopy:'Speed up progression with coin packs.',rewardsCopy:'Free prizes and optional rewards.',coinPack:'COIN PACK',rewarded:'REWARDED VIDEO',daily:'DAILY GIFT',free:'FREE',watch:'WATCH VIDEO',available:'AVAILABLE IN',claim:'CLAIM FREE',tomorrow:'COME BACK TOMORROW',comingSoon:'COMING SOON',added:'PACK ADDED',coinsWord:'COINS'}
 };
 
 export class MenuScene extends PreviousMenuScene{
@@ -58,7 +58,7 @@ export class MenuScene extends PreviousMenuScene{
   sectionTitle('coins',L.coins,L.coinsCopy);const coinW=Math.min(250,Math.max(220,w*.24));COIN_PACKS.slice(0,3).forEach((p,i)=>{this._storeCard(content,{type:'coin',...p,priceLabel:PRICES[i],coinVisual:i,accent:[0x37b8ff,0x6bd35e,0xe4a83b][i]},cursor,sectionHeadH,coinW,cardH);cursor+=coinW+gap;});cursor+=sectionGap;
   sectionTitle('rewards',L.rewards,L.rewardsCopy);for(const p of [{type:'reward',id:'video',name:L.rewarded,accent:0xe4a83b},{type:'daily',id:'daily',name:L.daily,accent:0x48cf8b}]){this._storeCard(content,p,cursor,sectionHeadH,coinW,cardH);cursor+=coinW+gap;}
 
-  const total=Math.max(viewportW,cursor-gap),clamp=x=>Math.max(viewportX-(total-viewportW),Math.min(viewportX,x));jump=id=>{content.x=clamp(viewportX-starts[id]);};let dragStart=null,startX=0;const hit=this.add.rectangle(viewportX,viewportY,viewportW,viewportH,0xffffff,.001).setOrigin(0).setInteractive({draggable:true});root.add(hit);hit.on('dragstart',ptr=>{dragStart=ptr.x;startX=content.x;});hit.on('drag',ptr=>{content.x=clamp(startX+(ptr.x-dragStart));});hit.on('wheel',(_p,_dx,dy)=>{content.x=clamp(content.x-dy*.7);});jump(section);
+  const total=Math.max(viewportW,cursor-gap),clamp=x=>Math.max(viewportX-(total-viewportW),Math.min(viewportX,x));jump=id=>{content.x=clamp(viewportX-starts[id]);};let dragStart=null,startX=0;const hit=this.add.rectangle(viewportX,viewportY,viewportW,viewportH,0xffffff,.001).setOrigin(0).setInteractive({draggable:true});root.addAt(hit,Math.max(0,root.getIndex(content)));hit.on('dragstart',ptr=>{dragStart=ptr.x;startX=content.x;});hit.on('drag',ptr=>{content.x=clamp(startX+(ptr.x-dragStart));});hit.on('wheel',(_p,_dx,dy)=>{content.x=clamp(content.x-dy*.7);});jump(section);
  }
 
  _cardFrame(card,w,h,accent){const radius=Math.min(18,h*.07),shadow=this.add.graphics();shadow.fillStyle(0x000000,.42);shadow.fillRoundedRect(7,7,w,h,radius);card.add(shadow);const panel=this.add.graphics();panel.fillStyle(0x0a1726,1);panel.fillRoundedRect(0,0,w,h,radius);panel.lineStyle(1.3,accent,.9);panel.strokeRoundedRect(0,0,w,h,radius);const headerH=Math.min(82,Math.max(62,h*.26));panel.fillStyle(accent,.08);panel.fillRoundedRect(1,1,w-2,headerH,{tl:radius-1,tr:radius-1,bl:3,br:3});card.add(panel);const glow=this.add.graphics();glow.lineStyle(7,accent,.05);glow.strokeRoundedRect(4,4,w-8,h-8,Math.max(8,radius-4));card.add(glow);}
@@ -89,20 +89,20 @@ export class MenuScene extends PreviousMenuScene{
   if(p.type==='coin'){
     this._coinPile(card,w,h,p.coinVisual);
     card.add(this.add.text(w/2,heroH-17,p.priceLabel,{fontFamily:FONT,fontSize:compact?'8px':'9px',fontStyle:'bold',color:'#a8b9c8'}).setOrigin(.5));
-    this._buyButton(card,w,h,p.priceLabel,()=>{simulateCoinPurchase(p.id);this._toastStore(L.devPurchase,true);this._openStoreModal('coins');},true,p.accent,false);return;
+    this._buyButton(card,w,h,p.priceLabel,()=>{this._toastStore(L.comingSoon,true);},true,p.accent,false);return;
   }
   if(p.type==='reward'){
     const st=rewardedStatus();this._rewardAsset(card,w,h,REWARD_ASSETS.video);card.add(this.add.text(w/2,heroH-18,`+250 ${L.coinsWord}`,{fontFamily:FONT,fontSize:compact?'17px':'21px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));this._buyButton(card,w,h,st.available?L.watch:`${L.available} ${timeLabel(st.remaining)}`,()=>{if(!st.available)return;claimRewardedCoins(250);this._toastStore(`+250 ${L.coinsWord}`,true);this._openStoreModal('rewards');},st.available,p.accent,false);return;
   }
   if(p.type==='daily'){
-    const st=dailyStatus();this._rewardAsset(card,w,h,REWARD_ASSETS.daily);card.add(this.add.text(w/2,heroH-18,`+100 ${L.coinsWord}`,{fontFamily:FONT,fontSize:compact?'17px':'21px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));this._buyButton(card,w,h,st.available?L.claim:L.tomorrow,()=>{if(!st.available)return;claimDailyCoins(100);this._toastStore(`+100 ${L.coinsWord}`,true);this._openStoreModal('rewards');},st.available,p.accent,false);}
+    const st=dailyStatus();this._rewardAsset(card,w,h,REWARD_ASSETS.daily);card.add(this.add.text(w/2,heroH-18,`+100 ${L.coinsWord}`,{fontFamily:FONT,fontSize:compact?'17px':'21px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));this._buyButton(card,w,h,st.available?L.claim:`${L.available} ${timeLabel(st.remaining)}`,()=>{if(!st.available)return;claimDailyCoins(100);this._toastStore(`+100 ${L.coinsWord}`,true);this._openStoreModal('rewards');},st.available,p.accent,false);}
  }
 
  _coinPile(card,w,h,kind){const key=`store:${COIN_PACK_ASSETS[kind]||COIN_PACK_ASSETS[0]}`;if(!this.textures.exists(key))return;const im=this.add.image(w/2,h*(h<250?.39:.40),key),scale=Math.min((w*.82)/(im.width||1),(h*.50)/(im.height||1));im.setScale(scale);card.add(im);}
 
  _rewardAsset(card,w,h,id){const key=`store:${id}`;if(!this.textures.exists(key))return;const im=this.add.image(w/2,h*(h<250?.39:.40),key),scale=Math.min((w*.78)/(im.width||1),(h*.47)/(im.height||1));im.setScale(scale);card.add(im);}
 
- _buyButton(card,w,h,label,fn,enabled=true,accent=0x48cf8b,showCoin=false){const compact=h<250,bh=compact?34:44,x=12,y=h-bh-10,bw=w-24,shadow=this.add.graphics();shadow.fillStyle(0x000000,.28);shadow.fillRoundedRect(x+3,y+3,bw,bh,9);card.add(shadow);const visual=this.add.graphics();visual.fillStyle(enabled?0x11652f:0x202b38,1);visual.fillRoundedRect(x,y,bw,bh,9);visual.lineStyle(1.2,enabled?0x5ddd7a:0x526172,.95);visual.strokeRoundedRect(x,y,bw,bh,9);card.add(visual);const hit=this.add.rectangle(x,y,bw,bh,0xffffff,.001).setOrigin(0);if(enabled)hit.setInteractive({useHandCursor:true}).on('pointerup',fn);card.add(hit);let center=w/2;if(showCoin&&this.textures.exists(TDR_COIN_KEY)){const size=compact?22:27;card.add(this.add.image(center-54,y+bh/2,TDR_COIN_KEY).setDisplaySize(size,size));center+=10;}card.add(this.add.text(center,y+bh/2,label,{fontFamily:FONT,fontSize:compact?'10px':'12px',fontStyle:'bold',color:enabled?'#f5fff8':'#91a0af'}).setOrigin(.5));}
+ _buyButton(card,w,h,label,fn,enabled=true,accent=0x48cf8b,showCoin=false){const compact=h<250,bh=compact?34:44,x=12,y=h-bh-10,bw=w-24,shadow=this.add.graphics();shadow.fillStyle(0x000000,.28);shadow.fillRoundedRect(x+3,y+3,bw,bh,9);card.add(shadow);const visual=this.add.graphics();visual.fillStyle(enabled?0x11652f:0x202b38,1);visual.fillRoundedRect(x,y,bw,bh,9);visual.lineStyle(1.2,enabled?0x5ddd7a:0x526172,.95);visual.strokeRoundedRect(x,y,bw,bh,9);card.add(visual);const hit=this.add.rectangle(x,y,bw,bh,0xffffff,.001).setOrigin(0);if(enabled)hit.setInteractive({useHandCursor:true}).on('pointerdown',fn);card.add(hit);let center=w/2;if(showCoin&&this.textures.exists(TDR_COIN_KEY)){const size=compact?22:27;card.add(this.add.image(center-54,y+bh/2,TDR_COIN_KEY).setDisplaySize(size,size));center+=10;}card.add(this.add.text(center,y+bh/2,label,{fontFamily:FONT,fontSize:compact?'10px':'12px',fontStyle:'bold',color:enabled?'#f5fff8':'#91a0af'}).setOrigin(.5));}
 
  _toastStore(msg,ok){const t=this.add.text(this.scale.width/2,105,msg,{fontFamily:FONT,fontSize:'14px',fontStyle:'bold',color:ok?'#72ffad':'#ff7373',backgroundColor:'#07101ddd',padding:{x:14,y:8}}).setOrigin(.5).setDepth(30000);this.time.delayedCall(1200,()=>t.destroy());}
 }
