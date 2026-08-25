@@ -122,7 +122,7 @@ The active workshop and older inherited factory UI still contain many Phaser lit
 No intentional changes were made to car physics, AI, track geometry, control mechanics, calibration persistence, race timing, reward quantities, crafting recipes or monetization behavior. Language remains persisted in `tdr2:settings`.
 
 ## iPhone review fixes
-The first full-device review found two store-related regressions after the broad localization pass.
+The first full-device review found store-related regressions after the broad localization pass.
 
 `7bbefa62ec59ec4dcc94075a7575b0ec026206c4` — `Disable global DOM translation observers on iPhone`
 
@@ -130,14 +130,20 @@ The store could freeze on iPhone. The broad DOM MutationObserver translation lay
 
 `9d77cb32b3dd68b016f79629746c91bb91e99ea0` — `Fix store tab touch targets`
 
-The Store top tabs (`Materials`, `Coins`, `Rewards`) originally made only the text itself interactive, producing a small unreliable touch target on iPhone. They also did not refresh their active visual state when jumping horizontally. The active runtime descendant now overlays a full-size invisible hit rectangle across each complete tab and switches section on `pointerdown`; switching reopens the store at the selected section, so the selected tab receives the same highlighted style as the initial Materials tab.
+The Store top tabs (`Materials`, `Coins`, `Rewards`) originally made only the text itself interactive, producing a small unreliable touch target on iPhone. They also did not refresh their active visual state when jumping horizontally. The active runtime descendant overlays a full-size invisible hit rectangle across each complete tab and switches section on `pointerdown`; switching reopens the store at the selected section, so the selected tab receives the same highlighted style as the initial Materials tab. The user confirmed this fix on iPhone.
 
-This store-tab fix is not considered validated until the user confirms it on iPhone.
+`248d70c57a6801a488dad94f1491ea20d7268216` — `Smooth store carousel and refresh pack cards`
+
+The Store horizontal card navigation now adds a light inertial finish after finger drag: recent pointer velocity is sampled during the drag and a short clamped `Cubic.easeOut` tween continues the content after release. Existing drag behavior remains in place and starting a new drag kills any active inertia tween.
+
+Material pack cards also receive a new visual header layer inspired by the game-mode cards without generating new images. The header uses the official material assets already preloaded by the Store and composes up to four of them as a small collage with slight rotation and overlap. Pack title/copy and the exact pack contents are rendered as live ES/EN text, while the existing detailed material grid and purchase button remain below. No pack quantities, prices or economy behavior were changed.
+
+This inertia/card redesign is not considered validated until the user confirms it on iPhone.
 
 ## Review status
 The compact language pills were previously confirmed on iPhone.
 
-The **app-wide ES/EN pass described above has not yet been reviewed on iPhone**. Per the user's instruction, no intermediate review was requested. The next step is one complete English-language walkthrough on iPhone, noting only remaining Spanish strings, bad translations, overflow or layout regressions, then correcting that punch list only.
+The **app-wide ES/EN pass described above has not yet been fully reviewed on iPhone**. Continue noting remaining Spanish strings, bad translations, overflow or layout regressions, then correct that punch list only.
 
 Known review hotspots:
 - historical game-mode card artwork may still visually contain baked Spanish under/around the new translated title overlay;
@@ -146,6 +152,6 @@ Known review hotspots:
 - highly unusual dynamic combinations from old workshop/debug UI may need one final exact mapping after the walkthrough.
 
 ## Validation rule
-Do not state that this full pass works correctly on iPhone until the user confirms it after the planned complete walkthrough.
+Do not state that the full pass works correctly on iPhone until the user confirms it after the complete walkthrough.
 
 For every future write: fetch the current file from `main`, use its real blob SHA, keep commits narrow, verify each resulting commit with `fetch_commit`, and update continuity documentation.
