@@ -34,24 +34,29 @@ export class SettingsScene extends CurrentSettingsScene {
       #tdr-settings2 .lang-card:not(.future):active{transform:scale(.98)}
       #tdr-settings2 .lang-card:before,#tdr-settings2 .lang-card:after{content:'';position:absolute;inset:0;pointer-events:none}
       #tdr-settings2 .lang-card:before{z-index:-2;background:radial-gradient(circle at 18% 24%,rgba(255,255,255,.055) 0 1px,transparent 1.4px),radial-gradient(circle at 74% 68%,rgba(255,255,255,.035) 0 1px,transparent 1.5px),radial-gradient(circle at 43% 82%,rgba(0,0,0,.28) 0 1.2px,transparent 1.8px),linear-gradient(118deg,#202124,#111214 44%,#1a1b1e 72%,#0d0e10);background-size:9px 9px,13px 13px,11px 11px,100% 100%}
-      #tdr-settings2 .lang-card:after{z-index:-1;opacity:.9;background:linear-gradient(90deg,transparent 0 40%,var(--stripe-a) 40% 46%,var(--stripe-b) 46% 54%,var(--stripe-c) 54% 60%,transparent 60% 100%),linear-gradient(90deg,rgba(0,0,0,.2),transparent 30%,transparent 70%,rgba(0,0,0,.24))}
+      #tdr-settings2 .lang-card:after{z-index:-1;opacity:.88;background:linear-gradient(90deg,transparent 0 44%,var(--stripe-a) 44% 48%,var(--stripe-b) 48% 52%,var(--stripe-c) 52% 56%,transparent 56% 100%),linear-gradient(90deg,rgba(0,0,0,.2),transparent 30%,transparent 70%,rgba(0,0,0,.24))}
       #tdr-settings2 .lang-card.es{--stripe-a:#aa151b;--stripe-b:#f1bf00;--stripe-c:#aa151b}
-      #tdr-settings2 .lang-card.en{--stripe-a:#21468b;--stripe-b:#f4f5f7;--stripe-c:#c8102e}
-      #tdr-settings2 .lang-card.en:after{opacity:.94;background:linear-gradient(90deg,transparent 0 39%,#012169 39% 61%,transparent 61% 100%),linear-gradient(90deg,transparent 0 47%,#f4f5f7 47% 53%,transparent 53% 100%),linear-gradient(180deg,transparent 0 43%,#f4f5f7 43% 57%,transparent 57% 100%),linear-gradient(90deg,transparent 0 49%,#c8102e 49% 51%,transparent 51% 100%),linear-gradient(180deg,transparent 0 47%,#c8102e 47% 53%,transparent 53% 100%),linear-gradient(90deg,rgba(0,0,0,.2),transparent 30%,transparent 70%,rgba(0,0,0,.24))}
+      #tdr-settings2 .lang-card.en{--stripe-a:#012169;--stripe-b:#f4f5f7;--stripe-c:#c8102e}
       #tdr-settings2 .lang-card.fr{--stripe-a:#0055a4;--stripe-b:#f4f5f7;--stripe-c:#ef4135}
       #tdr-settings2 .lang-card.de{--stripe-a:#121212;--stripe-b:#dd0000;--stripe-c:#ffce00}
       #tdr-settings2 .lang-card.it{--stripe-a:#009246;--stripe-b:#f4f5f7;--stripe-c:#ce2b37}
-      #tdr-settings2 .lang-card .lang-content{position:relative;z-index:2;height:58px;padding:8px 10px;display:flex;flex-direction:column;justify-content:flex-end;min-width:0;background:linear-gradient(90deg,rgba(7,8,9,.72),rgba(7,8,9,.18) 37%,rgba(7,8,9,.08) 63%,rgba(7,8,9,.72))}
+      #tdr-settings2 .lang-card .lang-content{position:relative;z-index:2;height:58px;padding:8px 8px 8px 46px;display:flex;flex-direction:column;justify-content:center;min-width:0;background:linear-gradient(90deg,rgba(7,8,9,.7),rgba(7,8,9,.08) 34%,rgba(7,8,9,.08) 66%,rgba(7,8,9,.7))}
+      #tdr-settings2 .lang-card .lang-flag{position:absolute;left:9px;top:50%;width:28px;height:28px;transform:translateY(-50%);border-radius:50%;overflow:hidden;border:1px solid rgba(255,255,255,.55);box-shadow:0 2px 7px rgba(0,0,0,.5),inset 0 0 0 1px rgba(0,0,0,.16)}
+      #tdr-settings2 .lang-card.es .lang-flag{background:linear-gradient(180deg,#aa151b 0 26%,#f1bf00 26% 74%,#aa151b 74% 100%)}
+      #tdr-settings2 .lang-card.fr .lang-flag{background:linear-gradient(90deg,#0055a4 0 33.33%,#f4f5f7 33.33% 66.66%,#ef4135 66.66% 100%)}
+      #tdr-settings2 .lang-card.de .lang-flag{background:linear-gradient(180deg,#111 0 33.33%,#dd0000 33.33% 66.66%,#ffce00 66.66% 100%)}
+      #tdr-settings2 .lang-card.it .lang-flag{background:linear-gradient(90deg,#009246 0 33.33%,#f4f5f7 33.33% 66.66%,#ce2b37 66.66% 100%)}
+      #tdr-settings2 .lang-card.en .lang-flag{background:linear-gradient(90deg,transparent 43%,#fff 43% 57%,transparent 57%),linear-gradient(180deg,transparent 43%,#fff 43% 57%,transparent 57%),linear-gradient(90deg,transparent 47%,#c8102e 47% 53%,transparent 53%),linear-gradient(180deg,transparent 47%,#c8102e 47% 53%,transparent 53%),linear-gradient(32deg,transparent 43%,#fff 43% 48%,#c8102e 48% 52%,#fff 52% 57%,transparent 57%),linear-gradient(-32deg,transparent 43%,#fff 43% 48%,#c8102e 48% 52%,#fff 52% 57%,transparent 57%),#012169}
       #tdr-settings2 .lang-card .lang-code{position:absolute;top:7px;right:8px;font-size:8px;font-weight:1000;letter-spacing:.16em;opacity:.8;text-shadow:0 1px 4px #000}
-      #tdr-settings2 .lang-card .lang-check{position:absolute;top:6px;left:8px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:rgba(9,18,28,.78);border:1px solid rgba(255,255,255,.3);font-size:9px;font-weight:1000;opacity:0;transform:scale(.8);transition:.12s}
+      #tdr-settings2 .lang-card .lang-check{position:absolute;top:6px;left:6px;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;background:rgba(9,18,28,.78);border:1px solid rgba(255,255,255,.3);font-size:8px;font-weight:1000;opacity:0;transform:scale(.8);transition:.12s;z-index:3}
       #tdr-settings2 .lang-card .lang-name{font-size:12px;font-weight:1000;line-height:1;letter-spacing:.035em;text-transform:uppercase;text-shadow:0 1px 0 rgba(255,255,255,.08),0 2px 6px #000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;filter:drop-shadow(.35px 0 rgba(255,255,255,.2))}
-      #tdr-settings2 .lang-card .lang-sub{margin-top:3px;font-size:7px;font-weight:900;line-height:1;letter-spacing:.075em;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px #000}
+      #tdr-settings2 .lang-card .lang-sub{margin-top:4px;font-size:8px;font-weight:900;line-height:1;letter-spacing:.08em;opacity:.84;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 4px #000}
       #tdr-settings2 .lang-card.on{border-color:#7cffb8;box-shadow:0 0 0 1px rgba(66,247,149,.24),0 0 19px rgba(66,247,149,.2),inset 0 0 13px rgba(66,247,149,.045),inset 0 1px 0 rgba(255,255,255,.08)}
       #tdr-settings2 .lang-card.on .lang-check{opacity:1;transform:scale(1);background:#1b8c59;border-color:#7cffb8;color:#fff;box-shadow:0 0 9px rgba(66,247,149,.34)}
       #tdr-settings2 .lang-card.future{opacity:.34;filter:saturate(.55) brightness(.8);cursor:default}
       #tdr-settings2 .lang-card.future .lang-sub{opacity:.62}
       #tdr-settings2 .lang-active-note{margin-top:8px;color:#70ffad;font-size:9px;font-weight:900;letter-spacing:.03em}
-      @media(max-width:760px){#tdr-settings2 .lang-grid{gap:5px}#tdr-settings2 .lang-card{height:50px;border-radius:11px}#tdr-settings2 .lang-card .lang-content{height:50px;padding:7px 8px}#tdr-settings2 .lang-card .lang-name{font-size:10px;letter-spacing:.02em}#tdr-settings2 .lang-card .lang-sub{font-size:6px}#tdr-settings2 .lang-card .lang-code{top:5px;right:6px;font-size:7px}#tdr-settings2 .lang-card .lang-check{top:5px;left:6px;width:14px;height:14px;font-size:8px}}
+      @media(max-width:760px){#tdr-settings2 .lang-grid{gap:5px}#tdr-settings2 .lang-card{height:50px;border-radius:11px}#tdr-settings2 .lang-card .lang-content{height:50px;padding:6px 6px 6px 38px}#tdr-settings2 .lang-card .lang-flag{left:7px;width:24px;height:24px}#tdr-settings2 .lang-card .lang-name{font-size:10px;letter-spacing:.02em}#tdr-settings2 .lang-card .lang-sub{font-size:7px}#tdr-settings2 .lang-card .lang-code{top:5px;right:6px;font-size:7px}#tdr-settings2 .lang-card .lang-check{top:4px;left:4px;width:13px;height:13px;font-size:7px}}
     `;
     document.head.appendChild(style);
   }
@@ -86,10 +91,11 @@ export class SettingsScene extends CurrentSettingsScene {
 
     const current=getLanguage();
     this.settings.language=current;
-    const subtitles={es:'España · ES',en:'English · EN'};
+    const subtitles={es:'ES',en:'EN'};
     const activeChoices=SUPPORTED_LANGUAGES.map(({code,nativeLabel})=>
       `<button class="lang-card ${code} ${current===code?'on':''}" data-language="${code}" aria-pressed="${current===code?'true':'false'}">
         <span class="lang-content">
+          <span class="lang-flag" aria-hidden="true"></span>
           <span class="lang-check">✓</span>
           <span class="lang-code">${code.toUpperCase()}</span>
           <span class="lang-name">${nativeLabel}</span>
@@ -100,9 +106,10 @@ export class SettingsScene extends CurrentSettingsScene {
     const futureChoices=[['fr','Français'],['de','Deutsch'],['it','Italiano']].map(([code,name])=>
       `<button class="lang-card future ${code}" type="button" disabled aria-disabled="true">
         <span class="lang-content">
+          <span class="lang-flag" aria-hidden="true"></span>
           <span class="lang-code">${code.toUpperCase()}</span>
           <span class="lang-name">${name}</span>
-          <span class="lang-sub">PRÓX.</span>
+          <span class="lang-sub">${code.toUpperCase()}</span>
         </span>
       </button>`
     ).join('');
