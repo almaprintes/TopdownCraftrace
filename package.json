@@ -4,12 +4,14 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "predev": "npm run gen:orientation",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "gen:icons": "node scripts/generate-icons.mjs",
+    "gen:orientation": "node scripts/generate-orientation-runtime.mjs",
     "bake:track": "node scripts/bake-track-visual.mjs",
-    "prebuild": "npm run gen:icons"
+    "prebuild": "npm run gen:icons && npm run gen:orientation"
   },
   "dependencies": {
     "phaser": "^3.90.0"
