@@ -56,14 +56,55 @@ The language-pill layout has been confirmed by the user on iPhone.
 
 The new lobby localization has NOT yet been confirmed on iPhone. Do not claim it works on iPhone until the user tests it.
 
-## Suggested next localization blocks
-After iPhone validation of the lobby, continue in small reversible blocks:
+## App-wide text localization audit — decision after iPhone lobby review
+The iPhone screenshot after the first lobby pass showed that several Spanish strings remained inside otherwise-English panels, especially the progression event card and some metadata labels.
 
-1. Dynamic race-event content/reward labels.
-2. Garage player UI.
-3. Track selector / race-mode selector.
-4. Pre-race and race HUD/results.
-5. Store/inventory/factory player-facing modals.
+Important finding: those remaining strings are not all Phaser-rendered text. The event title, description, objective label and reward names currently come from `src/game/events/raceEvents.js`, where the progression data itself is hardcoded in Spanish. Therefore converting every Phaser `Text` object to DOM would not by itself solve the localization problem.
+
+A repository-wide search for `this.add.text(` also shows many Phaser text call sites across active gameplay scenes and older inheritance layers, including race HUD, garage, track garage, game-mode UI, settings ancestors, editors and internal/dev scenes.
+
+The runtime scene registration in `src/game/game.js` confirms that the active player-facing classes are layered through current descendants such as `MenuDuelModeScene`, `GarageLazyCardsScene`, `SettingsLanguageScene`, `GarageDetailSpeedConsistencyScene`, `RacePracticeAreaSurfaceTuningScene`, `UpgradeWorkshopInventorySizingScene` and `TrackGarageHideSpecialScene`. An audit must follow those active inheritance chains rather than blindly converting every historical scene file.
+
+### Architecture decision
+Do **not** perform a global Phaser-to-DOM rewrite just for localization.
+
+The renderer and the source of the string are separate concerns:
+- DOM/CSS is preferred for menu/settings/card interfaces where responsive layout, accessibility and easy styling benefit from editable HTML text.
+- Phaser text can remain in realtime race/HUD/gameplay overlays where it is efficient and tightly coupled to the canvas, but every user-facing literal must come from `t()` or from localized data instead of hardcoded Spanish/English.
+- Text baked into image assets should be identified and replaced by text-free assets plus DOM/Phaser overlays when practical.
+- Dynamic content/data (race events, rewards, categories, item labels, mode descriptions, etc.) must use language-neutral IDs and resolve labels/descriptions through i18n.
+
+### Migration objective
+Before expanding ES/EN translation coverage, audit all active player-facing screens and classify every visible string into one of four buckets:
+1. Already localized through `t()`.
+2. DOM text but still hardcoded.
+3. Phaser text still hardcoded.
+4. Data/asset text still hardcoded or baked into images.
+
+Then migrate screen by screen, keeping each commit small and reversible. Do not convert a stable realtime Phaser HUD to DOM merely because it contains text; localize its string source instead.
+
+### First concrete source issue found
+`src/game/events/raceEvents.js` currently stores all seven progression-event titles/descriptions/objective labels in Spanish and also formats item/reward labels in Spanish (`MONEDAS`, `Chatarra`, `Aleación`, `Goma`, etc.). This is why the English lobby screenshot still showed `PILOTO PRO`, `COMPLETA 50 VUELTAS LIMPIAS`, Spanish reward names and `VUELTAS LIMPIAS` even though the card itself is DOM.
+
+### Audit order
+1. Main lobby + progression event data and player-facing lobby metadata.
+2. Garage and garage detail active inheritance chain.
+3. Track garage + game-mode/pre-race flow.
+4. Race HUD, pause/results/replay/spectator overlays.
+5. Factory/store/inventory.
+6. Settings ancestors still producing visible labels.
+7. Editors/Admin/dev tools last.
+
+No further broad translation pass should be considered complete until this source-of-text audit is performed for the active player flow.
+
+## Suggested next localization blocks
+After iPhone validation of each block, continue in small reversible steps:
+
+1. Localize dynamic race-event content/reward labels at the data source.
+2. Audit and localize Garage player UI.
+3. Audit and localize Track selector / race-mode selector.
+4. Audit and localize pre-race and race HUD/results.
+5. Audit and localize Store/inventory/factory player-facing modals.
 6. Admin/internal tools last.
 
 For every write: fetch the current file from `main`, use its real blob SHA, keep commits narrow, verify each resulting commit with `fetch_commit`, and update continuity documentation.
