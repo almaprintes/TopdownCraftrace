@@ -1,4 +1,5 @@
 import { MenuScene as CurrentMenuScene } from './MenuDomUiScene.js';
+import { t } from '../i18n/index.js';
 
 const DUEL_LAPS_KEY='tdr2:duelLaps';
 const MODE_KEY='tdr2:gameMode';
@@ -27,8 +28,8 @@ export class MenuScene extends CurrentMenuScene {
     panel.lineTo(x,y+panelH-c);panel.lineTo(x,y+c);panel.closePath();panel.fillPath();panel.strokePath();
     panel.lineStyle(1,0xffffff,.07);panel.strokeRect(x+7,y+7,panelW-14,panelH-14);root.add(panel);
 
-    root.add(this.add.text(cx,y+18,'ELIGE MODO DE JUEGO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'22px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
-    root.add(this.add.text(cx,y+48,'Desliza el carrusel o usa las flechas',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',color:'#a9bac9'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,y+18,t('modes.title'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'22px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,y+48,t('modes.swipe'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',color:'#a9bac9'}).setOrigin(.5,0));
 
     const modes=[
       {key:'timeattack',asset:'contrarreloj.webp',accent:0xff9f43},
@@ -72,7 +73,7 @@ export class MenuScene extends CurrentMenuScene {
         cards.add([img,border]);
         if(active){
           const tagBg=this.add.rectangle(bx+cardW/2,cardY+cardH-15,cardW-18,18,0x07131b,.9).setOrigin(.5);
-          const tag=this.add.text(bx+cardW/2,cardY+cardH-15,'ÚLTIMO USADO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',fontStyle:'bold',color:'#72ffc1',letterSpacing:1}).setOrigin(.5);
+          const tag=this.add.text(bx+cardW/2,cardY+cardH-15,t('modes.lastUsed'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',fontStyle:'bold',color:'#72ffc1',letterSpacing:1}).setOrigin(.5);
           cards.add([tagBg,tag]);
         }
       };
@@ -127,18 +128,18 @@ export class MenuScene extends CurrentMenuScene {
     const c=this.add.container(0,0).setDepth(9050);parent.add(c);this._duelLapModal=c;
     const veil=this.add.rectangle(0,0,width,height,0x02070d,.88).setOrigin(0).setInteractive();
     const panel=this.add.rectangle(cx,cy,440,190,0x091722,.99).setStrokeStyle(2,0xff9f43,.95);
-    const title=this.add.text(cx,cy-70,'🏎️ DUELO · DISTANCIA',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'18px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5);
-    const sub=this.add.text(cx,cy-43,'Elige la duración del duelo contra CPU1',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#aebdcc'}).setOrigin(.5);c.add([veil,panel,title,sub]);
+    const title=this.add.text(cx,cy-70,t('modes.duelDistance'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'18px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5);
+    const sub=this.add.text(cx,cy-43,t('modes.duelDesc'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#aebdcc'}).setOrigin(.5);c.add([veil,panel,title,sub]);
     const current=(()=>{try{return Number(localStorage.getItem(DUEL_LAPS_KEY)||15);}catch{return 15;}})();
     [5,10,15].forEach((laps,i)=>{
       const bx=cx+(i-1)*118,active=current===laps;
       const b=this.add.rectangle(bx,cy+14,100,50,active?0x5a3512:0x112331,.98).setStrokeStyle(2,active?0xffb45f:0x587085,active?1:.55).setInteractive({useHandCursor:true});
-      const t=this.add.text(bx,cy+14,`${laps} VUELTAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5);c.add([b,t]);
+      const txt=this.add.text(bx,cy+14,t('modes.laps',{laps}),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5);c.add([b,txt]);
       let fired=false;
       const choose=()=>{if(fired)return;fired=true;try{localStorage.setItem(DUEL_LAPS_KEY,String(laps));}catch{}this._duelLapModal=null;c.destroy(true);this._startSelectedMode('duel');};
       b.on('pointerdown',choose);b.on('pointerup',choose);
     });
-    const cancel=this.add.text(cx,cy+70,'CANCELAR',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#8fa3b5'}).setOrigin(.5).setInteractive({useHandCursor:true});
+    const cancel=this.add.text(cx,cy+70,t('modes.cancel'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#8fa3b5'}).setOrigin(.5).setInteractive({useHandCursor:true});
     cancel.on('pointerdown',()=>{this._duelLapModal=null;c.destroy(true);});c.add(cancel);
   }
 }
