@@ -123,11 +123,13 @@ Aparece en la zona de asfalto, encarado hacia la Zona de Velocidad.
 
 La modal activa es `MenuDuelModeScene.js`; esta capa sustituye la presentación simple de `MenuGameModesScene.js`, por lo que cualquier nuevo modo debe integrarse aquí también.
 
-La tarjeta visual oficial de Área de Pruebas usa el asset:
+La tarjeta visual oficial de Área de Pruebas usa:
 
 `public/assets/ui/game-modes/area-pruebas.webp`
 
-Texto de apoyo de la tarjeta: `Velocidad · drift · superficies`.
+El master generado se conserva fuera del runtime y el asset publicado se optimizó específicamente para el tamaño real del carrusel. No regenerar esta tarjeta salvo petición explícita.
+
+Texto de apoyo: `Velocidad · drift · superficies`.
 
 En el mundo aparece un badge discreto: `ÁREA DE PRUEBAS · CONDUCCIÓN LIBRE`.
 
@@ -139,6 +141,7 @@ Tras la primera integración se detectó en iPhone un bloqueo dentro de la modal
 
 - se eliminó el toggle inmediato `input.setEnabled(false/true)` al abrir;
 - las tarjetas aceptan `pointerdown` y `pointerup` con protección anti-doble-disparo;
+- flechas/puntos mantienen navegación de un solo paso;
 - el cierre mantiene una vía de escape fiable;
 - el carrusel se recalcula para cinco modos.
 
