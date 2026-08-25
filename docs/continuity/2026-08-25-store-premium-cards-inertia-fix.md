@@ -55,8 +55,24 @@ Commit:
 
 The iPhone review showed that the large coin/reward artwork overlapped the upper title text on coin packs, rewarded video and daily gift cards. The active Store descendant now moves the top text elements back to the front after the inherited card renderer finishes adding its artwork, preserving the existing composition while keeping titles and badges readable above the images.
 
+## Reward buttons + cooldown behavior
+Commits:
+`3143f92c9e7bde1f30b557f47d2809b06f2d7b1b` — `Use rolling cooldowns for free rewards`
+`2d6f20cff97701ffc2e9e37867339ac3cbe98b52` — `Enable store reward buttons and coming soon purchases`
+
+The Store drag layer was sitting above the card content and intercepting taps on purchase/reward buttons. It is now inserted below the masked card content, while the card buttons themselves respond on `pointerdown` for more reliable iPhone input.
+
+Free rewards:
+- Daily gift now uses a true rolling 24-hour cooldown from the exact claim timestamp instead of resetting at calendar midnight.
+- When unavailable, the daily button shows an `AVAILABLE IN / DISPONIBLE EN HH:MM:SS` countdown.
+- Rewarded-video reward keeps its existing 4-hour cooldown and becomes tappable again in the web/runtime UI. This remains a development reward path until real AdMob rewarded-ad completion is wired into the native build.
+
+Paid coin packs:
+- Real-money purchase simulation is no longer triggered by Store buttons.
+- Tapping a paid coin pack now shows localized `COMING SOON / PRÓXIMAMENTE` and does not modify the player's coin balance.
+
 ## Safety
-No economy values, pack contents, reward amounts, car physics, controls, race logic or persistence were intentionally changed.
+No pack contents, material prices, car physics, controls, race logic or unrelated persistence were intentionally changed. Reward quantities remain +250 for rewarded video and +100 for daily gift.
 
 ## Validation
-The premium material-card redesign and the narrower-card direction were confirmed positively by the user on iPhone. The latest title-layering fix has not yet been confirmed on iPhone; do not state that it is final until the user confirms it.
+The premium material-card redesign and narrower-card direction were confirmed positively by the user on iPhone. The reward-button interaction fix, rolling 24-hour daily countdown and paid-pack `COMING SOON` behavior still require iPhone confirmation; do not state that those latest changes are final until the user confirms them.
