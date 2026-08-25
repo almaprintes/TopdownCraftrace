@@ -1,6 +1,7 @@
 import { BaseScene } from './BaseScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage, saveGarage } from '../garage/garageStore.js';
+import { devFullCarAccessEnabled, toggleDevFullCarAccess } from '../cars/carUnlocks.js';
 
 const PART_IDS=Object.keys(GARAGE_ITEMS).filter(id=>GARAGE_ITEMS[id]?.kind==='part');
 
@@ -17,10 +18,6 @@ export class AdminHubScene extends BaseScene {
   }
 
   _resetPhaserPointers(){
-    // Entering ADMIN uses a long press on a DOM control. On iOS that gesture can
-    // outlive the DOM element that received it and leave Phaser's touch pointer
-    // active. Reset the public Pointer objects only after the Admin button click
-    // has completed, immediately before returning to a Phaser-driven tool scene.
     try{
       const manager=this.input?.manager;
       const pointers=Array.isArray(manager?.pointers)?manager.pointers:[];
@@ -59,12 +56,12 @@ export class AdminHubScene extends BaseScene {
     root.style.cssText='position:absolute;inset:0;z-index:120;display:flex;flex-direction:column;box-sizing:border-box;padding:clamp(12px,2.5vh,22px) clamp(18px,4vw,54px);background:linear-gradient(180deg,#0b1020,#08111d);color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation;';
 
     const header=document.createElement('div');
-    header.style.cssText='flex:0 0 auto;text-align:center;margin-bottom:clamp(10px,2vh,18px);';
+    header.style.cssText='flex:0 0 auto;text-align:center;margin-bottom:clamp(8px,1.5vh,14px);';
     header.innerHTML='<div style="font-size:clamp(21px,4.2vh,34px);font-weight:900;color:#2bff88;letter-spacing:.02em">ADMIN HUB</div><div style="margin-top:3px;font-size:clamp(8px,1.5vh,11px);font-weight:800;color:#71879b;letter-spacing:.16em">HERRAMIENTAS INTERNAS</div>';
     root.appendChild(header);
 
     const grid=document.createElement('div');
-    grid.style.cssText='flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:clamp(8px,1.8vh,15px) clamp(10px,1.4vw,18px);width:min(980px,100%);margin:0 auto;';
+    grid.style.cssText='flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:clamp(6px,1.3vh,11px) clamp(10px,1.4vw,18px);width:min(980px,100%);margin:0 auto;';
     root.appendChild(grid);
 
     const actions=[
@@ -73,15 +70,22 @@ export class AdminHubScene extends BaseScene {
       {label:'TRACK STUDIO',sub:'Diseño avanzado de trazado',accent:'#2bff88',run:()=>this._navigate('TrackStudioScene')},
       {label:'ENVIRONMENT BUILDER',sub:'Decoración y entorno',accent:'#e1b33b',run:()=>this._navigate('EnvironmentBuilderScene')},
       {label:'KIT HOMOLOGACIÓN',sub:'Garantiza 1 de cada pieza',accent:'#ffa63c',run:()=>this._grantHomologationKit()},
+      {label:()=>`COCHES DEV · ${devFullCarAccessEnabled()?'ON':'OFF'}`,sub:()=>devFullCarAccessEnabled()?'Jugador ve toda la flota':'Jugador respeta desbloqueos',accent:'#35cfff',run:()=>this._toggleFullCarAccess()},
+      {label:'GARAGE JUGADOR',sub:'Probar progresión / homologar',accent:'#35cfff',run:()=>this._navigate('GarageScene')},
       {label:'SALIR ADMIN',sub:'Volver al juego',accent:'#5c718e',run:()=>this._navigate('menu',{forcePlayer:true})}
     ];
 
     for(const action of actions){
       const b=document.createElement('button');
       b.type='button';
-      b.style.cssText=`min-width:0;min-height:0;border:2px solid ${action.accent};background:linear-gradient(180deg,rgba(20,27,51,.98),rgba(9,16,31,.98));color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(3px,.8vh,8px);padding:clamp(8px,1.6vh,16px);font:inherit;font-weight:900;letter-spacing:.02em;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;`;
-      b.innerHTML=`<span style="font-size:clamp(13px,2.4vh,19px)">${action.label}</span><small style="font-size:clamp(8px,1.45vh,11px);font-weight:750;color:#93a6b7">${action.sub}</small>`;
-      b.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();action.run();},{passive:false});
+      const render=()=>{
+        const label=typeof action.label==='function'?action.label():action.label;
+        const sub=typeof action.sub==='function'?action.sub():action.sub;
+        b.style.cssText=`min-width:0;min-height:0;border:2px solid ${action.accent};background:linear-gradient(180deg,rgba(20,27,51,.98),rgba(9,16,31,.98));color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(2px,.6vh,6px);padding:clamp(6px,1.2vh,12px);font:inherit;font-weight:900;letter-spacing:.02em;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;`;
+        b.innerHTML=`<span style="font-size:clamp(12px,2.1vh,17px)">${label}</span><small style="font-size:clamp(7px,1.25vh,10px);font-weight:750;color:#93a6b7">${sub}</small>`;
+      };
+      render();
+      b.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();action.run();render();},{passive:false});
       grid.appendChild(b);
     }
 
@@ -118,6 +122,14 @@ export class AdminHubScene extends BaseScene {
     this._showToast(added>0
       ?`KIT HOMOLOGACIÓN · ${added} PIEZAS AÑADIDAS`
       :`KIT HOMOLOGACIÓN · ${PART_IDS.length}/${PART_IDS.length} YA DISPONIBLES`
+    );
+  }
+
+  _toggleFullCarAccess(){
+    const enabled=toggleDevFullCarAccess();
+    this._showToast(enabled
+      ?'COCHES DEV · ACCESO COMPLETO ACTIVADO'
+      :'COCHES DEV · PROGRESIÓN REAL ACTIVADA'
     );
   }
 
