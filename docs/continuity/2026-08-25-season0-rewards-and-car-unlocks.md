@@ -28,24 +28,44 @@ Total Season 0 coin income from coin stages: 4,300 coins.
   `public/assets/season/reward_cards/avenir_gripline_reward_top_down_race.webp`
 - The final car card deliberately breaks the normal material/coin rhythm and is rendered larger as an aspirational graduation reward.
 
-## Car unlock persistence scaffold
-New file:
+## Car unlock persistence and garage filtering
+File:
 `src/game/cars/carUnlocks.js`
 
-Current local beta key:
-`tdr2:carUnlocks:v1`
+Current local beta keys:
+- progression: `tdr2:carUnlocks:v1`
+- explicit development bypass: `tdr2:devFullCarAccess:v1`
 
-The scaffold guarantees `helix_spark` is present as the starter ID and provides helpers to load/save/unlock/check car IDs. Claiming Stage 14 records `avenir_gripline` as unlocked.
+The unlock store guarantees `helix_spark` is present as the starter ID and provides helpers to load/save/unlock/check car IDs. Claiming Stage 14 records `avenir_gripline` as unlocked.
 
-Important: this is the progression data layer. Full garage filtering/locking of the other cars is a separate implementation step and must not be claimed complete until the Garage UI actually consumes this unlock store.
+The player Garage now consumes this unlock state:
+- normal player mode shows only cars recorded as unlocked;
+- a fresh progression therefore exposes HÉLIX Spark as the starter;
+- if the previously selected car is locked, Garage falls back to the first unlocked car and updates `tdr2:carId`;
+- Admin Garage (`mode:'admin'`) always sees the complete fleet regardless of progression.
+
+### DEV homologation bypass
+Admin Hub now includes `COCHES DEV · ON/OFF`.
+
+- OFF: player Garage behaves like the real launch progression and only exposes unlocked cars.
+- ON: player Garage exposes the full fleet so homologation, physics and equipment testing can continue without falsely unlocking those cars.
+- Toggling DEV access does NOT modify the player's unlock list.
+- Admin Hub also includes `GARAGE JUGADOR` to jump directly into the player Garage and compare the two states.
+
+This separation is intentional: homologation access is a development privilege, not progression data.
 
 ## Season presentation
-`SeasonScene.js` now understands car rewards in addition to coins/materials. The final card uses the Gripline display asset without a quantity badge and has a larger hero-art treatment. Standard Season 0 cards continue using the four reusable FREE card backgrounds under `public/assets/season/reward_cards/`.
+`SeasonScene.js` understands car rewards in addition to coins/materials. The final card uses the Gripline display asset without a quantity badge and has a larger hero-art treatment. Standard Season 0 cards continue using the four reusable FREE card backgrounds under `public/assets/season/reward_cards/`.
 
 ## Implementation commits
 - `cded4d05e199c106563673c92ce5cdb256d90922` — Add car unlock progression store.
 - `9c06bcd80d1d22be1b01f5dbb710ac7515277375` — Simplify Season 0 rewards and add Gripline finale.
 - `88367c38ce49800eadb63be62b5fdd9dfb746ad0` — Show single hero rewards and Gripline finale.
+- `206c9cece78157e2e84b0cd7d8d522c00aadafd3` — Add dev full car access toggle.
+- `81e6884762e5ee636fe64e50db999618a7fbc54c` — Respect car unlocks with dev bypass.
+- `917a66cf53532bf3651e684bb368c4a5b07b7e46` — Add homologation full car access control.
 
 ## Validation status
-Code is committed to `main`, but the new single-reward cards and the Gripline Stage 14 card have NOT yet been visually confirmed on iPhone by the user. Do not claim the layout is approved until tested.
+- Single-reward Season 0 presentation and Gripline finale were visually confirmed by the user as looking great before the garage progression wiring.
+- Garage unlock filtering + DEV bypass are committed but have NOT yet been confirmed on iPhone by the user.
+- Do not claim the new garage filtering/toggle interaction is approved until tested on device.
