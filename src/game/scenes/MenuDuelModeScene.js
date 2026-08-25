@@ -32,11 +32,11 @@ export class MenuScene extends CurrentMenuScene {
     root.add(this.add.text(cx,y+48,t('modes.swipe'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',color:'#a9bac9'}).setOrigin(.5,0));
 
     const modes=[
-      {key:'timeattack',asset:'contrarreloj.webp',accent:0xff9f43},
-      {key:'ghost',asset:'fantasma.webp',accent:0x58d6ff},
-      {key:'survival',asset:'supervivencia.webp',accent:0xff6a1a},
-      {key:'duel',asset:'duelo.webp',accent:0xff9f43},
-      {key:'practice',asset:'area-pruebas.webp',accent:0xff9f43}
+      {key:'timeattack',asset:'contrarreloj.webp',accent:0xff9f43,label:'race.timeAttack'},
+      {key:'ghost',asset:'fantasma.webp',accent:0x58d6ff,label:'race.ghost'},
+      {key:'survival',asset:'supervivencia.webp',accent:0xff6a1a,label:'race.survival'},
+      {key:'duel',asset:'duelo.webp',accent:0xff9f43,label:'race.duel'},
+      {key:'practice',asset:'area-pruebas.webp',accent:0xff9f43,label:'race.practiceArea'}
     ];
 
     const viewportW=panelW-96,viewportX=cx-viewportW/2;
@@ -59,6 +59,8 @@ export class MenuScene extends CurrentMenuScene {
         const img=this.add.image(bx,cardY,key).setOrigin(0).setDisplaySize(cardW,cardH).setInteractive({useHandCursor:true});
         const border=this.add.rectangle(bx,cardY,cardW,cardH,0x000000,0).setOrigin(0)
           .setStrokeStyle(active?3:1,active?m.accent:0x536577,active?1:.5).setInteractive({useHandCursor:true});
+        const titleBand=this.add.rectangle(bx+5,cardY+5,cardW-10,34,0x07131b,.92).setOrigin(0);
+        const modeTitle=this.add.text(bx+cardW/2,cardY+22,t(m.label),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff',align:'center',fixedWidth:cardW-20}).setOrigin(.5);
         let fired=false;
         const choose=()=>{
           if(fired)return;
@@ -70,7 +72,7 @@ export class MenuScene extends CurrentMenuScene {
         const hover=()=>border.setStrokeStyle(3,m.accent,1);
         const out=()=>border.setStrokeStyle(active?3:1,active?m.accent:0x536577,active?1:.5);
         img.on('pointerover',hover);img.on('pointerout',out);border.on('pointerover',hover);border.on('pointerout',out);
-        cards.add([img,border]);
+        cards.add([img,titleBand,modeTitle,border]);
         if(active){
           const tagBg=this.add.rectangle(bx+cardW/2,cardY+cardH-15,cardW-18,18,0x07131b,.9).setOrigin(.5);
           const tag=this.add.text(bx+cardW/2,cardY+cardH-15,t('modes.lastUsed'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'7px',fontStyle:'bold',color:'#72ffc1',letterSpacing:1}).setOrigin(.5);
