@@ -1,12 +1,15 @@
 import { MenuScene as PreviousMenuScene } from './MenuAdminLogoRestoreScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage, saveGarage, getEquippedForCar } from '../garage/garageStore.js';
+import { getLanguage, t } from '../i18n/index.js';
 
 const MATERIAL_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
 const PART_IDS=Object.keys(GARAGE_ITEMS).filter(id=>GARAGE_ITEMS[id]?.kind==='part');
 const TIER_COLOR={1:0x66c6ff,2:0x4ee1a0,3:0xbf7cff,4:0xffc64d};
 const TIER_SIGLA={1:'I',2:'II',3:'III',4:'IV'};
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
+const locale=()=>getLanguage()==='es'?'es-ES':'en-US';
+const itemName=item=>t(`items.${item?.id}`)!==`items.${item?.id}`?t(`items.${item?.id}`):String(item?.name||item?.id||'');
 
 export class MenuScene extends PreviousMenuScene {
   _installInventoryPart(garage,carId,id){
@@ -58,10 +61,11 @@ export class MenuScene extends PreviousMenuScene {
     A(this.add.rectangle(cx,cy,panelW,panelH,0x08131d,.998).setStrokeStyle(2,0x45dfff,.92));
 
     const titleY=cy-panelH/2+(compact?14:20);
-    A(this.add.text(cx,titleY,'INVENTARIO',{fontFamily:UI,fontSize:compact?'25px':'31px',fontStyle:'bold',color:'#ffffff',resolution:2}).setOrigin(.5,0));
+    A(this.add.text(cx,titleY,t('inventory.title'),{fontFamily:UI,fontSize:compact?'25px':'31px',fontStyle:'bold',color:'#ffffff',resolution:2}).setOrigin(.5,0));
 
     const coinsY=titleY+(compact?34:42);
-    A(this.add.text(cx,coinsY,`◈ ${Math.max(0,Math.floor(Number(garage.coins)||0)).toLocaleString('es-ES')} MONEDAS`,{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'bold',color:'#f0c65a',resolution:2}).setOrigin(.5,0));
+    const coinText=t('inventory.coins',{coins:Math.max(0,Math.floor(Number(garage.coins)||0)).toLocaleString(locale())});
+    A(this.add.text(cx,coinsY,coinText,{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'bold',color:'#f0c65a',resolution:2}).setOrigin(.5,0));
 
     const tabY=coinsY+(compact?38:46),tabW=compact?170:205,tabH=compact?34:40,gap=12;
     const tabButton=(x,label,key)=>{
@@ -70,8 +74,8 @@ export class MenuScene extends PreviousMenuScene {
       A(this.add.text(x,tabY,label,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'bold',color:active?'#fff':'#a6b7c8',resolution:2}).setOrigin(.5));
       b.on('pointerup',()=>this._openLobbyInventoryModal(key,0,0));
     };
-    tabButton(cx-tabW/2-gap/2,'MATERIALES','materials');
-    tabButton(cx+tabW/2+gap/2,'PIEZAS','parts');
+    tabButton(cx-tabW/2-gap/2,t('inventory.materials'),'materials');
+    tabButton(cx+tabW/2+gap/2,t('inventory.parts'),'parts');
 
     if(tab==='parts'){
       const fw=compact?34:40,fh=compact?28:32,fg=6;
@@ -95,9 +99,9 @@ export class MenuScene extends PreviousMenuScene {
             const A=GARAGE_ITEMS[a]||{},B=GARAGE_ITEMS[b]||{};
             const tierDiff=Number(A.tier||0)-Number(B.tier||0);
             if(tierDiff)return tierDiff;
-            const familyDiff=String(A.family||'').localeCompare(String(B.family||''),'es');
+            const familyDiff=String(A.family||'').localeCompare(String(B.family||''),getLanguage());
             if(familyDiff)return familyDiff;
-            return String(A.name||a).localeCompare(String(B.name||b),'es');
+            return itemName(A).localeCompare(itemName(B),getLanguage());
           });
 
     const cols=4,rows=2,perPage=cols*rows,cardGap=compact?9:12,pad=24;
@@ -109,7 +113,7 @@ export class MenuScene extends PreviousMenuScene {
     const pageIds=ids.slice(page*perPage,page*perPage+perPage);
 
     if(tab==='parts'&&ids.length===0){
-      const msg=tierFilter?`NO TIENES PIEZAS ${TIER_SIGLA[tierFilter]} EN EL INVENTARIO`:'AÚN NO TIENES PIEZAS\n\nFabrícalas en FACTORY y aparecerán aquí.';
+      const msg=tierFilter?t('inventory.noTierParts',{tier:TIER_SIGLA[tierFilter]}):t('inventory.noParts');
       A(this.add.text(cx,gridY+availableH/2,msg,{fontFamily:UI,fontSize:compact?'15px':'18px',fontStyle:'bold',color:'#71879b',align:'center',lineSpacing:8,resolution:2}).setOrigin(.5));
     }
 
@@ -139,14 +143,14 @@ export class MenuScene extends PreviousMenuScene {
 
       if(tab==='materials'){
         const nameY=y+cardH*.72;
-        A(this.add.text(x+cardW/2,nameY,String(item.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:'#d7e3ee',align:'center',wordWrap:{width:cardW-18},resolution:2}).setOrigin(.5,0));
+        A(this.add.text(x+cardW/2,nameY,itemName({...item,id}).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:'#d7e3ee',align:'center',wordWrap:{width:cardW-18},resolution:2}).setOrigin(.5,0));
         const qtyY=y+cardH*.87;
         A(this.add.text(x+cardW/2,qtyY,`×${q}`,{fontFamily:UI,fontSize:compact?'16px':'19px',fontStyle:'bold',color:'#7ddcff',resolution:2}).setOrigin(.5,.5));
       }else{
         const nameY=y+cardH*.69;
-        A(this.add.text(x+cardW/2,nameY,String(item.name||id).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#87939d':'#d4e0eb',align:'center',wordWrap:{width:cardW-16},resolution:2}).setOrigin(.5,0));
+        A(this.add.text(x+cardW/2,nameY,itemName({...item,id}).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#87939d':'#d4e0eb',align:'center',wordWrap:{width:cardW-16},resolution:2}).setOrigin(.5,0));
         const actionY=y+cardH-(compact?10:13);
-        const actionText=installed?'DESINSTALAR':`INSTALAR · ×${q}`;
+        const actionText=installed?t('inventory.uninstall'):t('inventory.install',{qty:q});
         A(this.add.text(x+cardW/2,actionY,actionText,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#87939d':'#7ddcff',resolution:2}).setOrigin(.5,1));
         if(installed){
           card.setInteractive({useHandCursor:true});
