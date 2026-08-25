@@ -1,22 +1,5 @@
 import { GarageScene as CurrentGarageScene } from './GarageUiStabilityScene.js';
-
-const GARAGE_PERSONALITY={
-  helix_spark:'Facilísimo y predecible. Su límite llega pronto: perfecto para aprender, enseguida querrás hacerlo correr más.',
-  helix_comet:'Sumamente divertido y permisivo. Mantiene el ADN HÉLIX, pero ya invita a buscar ritmo en cada curva.',
-  helix_pulse:'Muy fácil de llevar y magnífico al salir de curva. Rápido, limpio y con una respuesta que engancha.',
-  crown_axis:'Refinado y muy accesible. Hace fácil ir deprisa y transmite control desde las primeras curvas.',
-  crown_vector:'Fluido y progresivo. Te deja construir la vuelta y cada décima aparece cuando entiendes mejor la trazada.',
-  crown_equinox:'Potencia seria con riesgo real. Cuando lo clavas vuela; si te pasas, te recuerda enseguida dónde está el límite.',
-  avenir_gripline:'Mucho control y bastante velocidad. Preciso de morro, inspira confianza y coloca el coche donde se lo pides.',
-  avenir_apex:'Nervioso al principio, pero se deja domar rápido. Exige atención y recompensa enseguida cuando entiendes su giro.',
-  avenir_torque:'Sublime: se come los pianos como un poseso y parece ir por raíles. Potente al salir y muy veloz cuando estira.',
-  veloce_flash:'Rápido y exigente. La trasera se mueve mucho y obliga a frenar de verdad antes de atacar la salida.',
-  veloce_surge:'Más salvaje que el Flash. Hay que orientar bien el coche antes de abrir gas o la pista se acaba muy deprisa.',
-  veloce_photon:'Potro indomable. Aceleración de otro planeta y cero paciencia con una mala colocación: dominarlo es parte del premio.',
-  forge_hammer:'Tremendamente complicado y muy peculiar. Se va incluso a poca velocidad, aunque la hierba apenas castiga sus excesos.',
-  forge_anvil:'Brutal en las chicanes: exige casi parar para reorientarlo. El gas a pequeños empujones es la clave para domarlo.',
-  forge_colossus:'Un gigante que pide peso y anticipación. Si lo fuerzas, el morro tiembla y la zaga baila mucho más de lo esperado.'
-};
+import { t } from '../i18n/index.js';
 
 export class GarageScene extends CurrentGarageScene {
   create(){
@@ -113,8 +96,8 @@ export class GarageScene extends CurrentGarageScene {
     const statPanel=this.add.rectangle(infoX+Math.floor(infoW/2),statY+statH/2,infoW,statH,0x111a33,.58).setStrokeStyle(1,0xffffff,.09);
     const statText=this.add.text(infoX+16,statY+10,'',{fontFamily:'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',fontSize:'13px',fontStyle:'600',color:'#fff',lineSpacing:5});
 
-    const btnMain=this._makeHeroButton(infoX,y+h-58,Math.floor(infoW*.60),46,this._mode==='admin'?'EDITAR COCHE':'SELECCIONAR',true);
-    const btnSecondary=this._makeHeroButton(infoX+Math.floor(infoW*.60)+12,y+h-58,Math.floor(infoW*.34),46,this._mode==='admin'?'VER FICHA':'VOLVER',false);
+    const btnMain=this._makeHeroButton(infoX,y+h-58,Math.floor(infoW*.60),46,this._mode==='admin'?t('garage.editCar'):t('garage.select'),true);
+    const btnSecondary=this._makeHeroButton(infoX+Math.floor(infoW*.60)+12,y+h-58,Math.floor(infoW*.34),46,this._mode==='admin'?t('garage.viewSpecs'):t('garage.back'),false);
 
     this._hero.add([panel,glow,heroCard,title,brand,meta,personality,statPanel,statText,btnMain.container,btnSecondary.container]);
     btnMain.hit.on('pointerdown',()=>this._activatePrimary());
@@ -134,7 +117,7 @@ export class GarageScene extends CurrentGarageScene {
     super._refreshSelection();
     const selected=this._cars?.[this._selectedIndex];
     if(this._uiRefs?.personality){
-      this._uiRefs.personality.setText(GARAGE_PERSONALITY[selected?.id]||'');
+      this._uiRefs.personality.setText(selected?.id?t(`garage.personality.${selected.id}`):'');
     }
   }
 }
