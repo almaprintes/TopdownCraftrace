@@ -6,6 +6,29 @@ const MODE_KEY='tdr2:gameMode';
 const BASE=import.meta.env.BASE_URL||'/';
 
 export class MenuScene extends CurrentMenuScene {
+  _openStoreModal(section='materials'){
+    super._openStoreModal(section);
+    const root=this._storeModal;
+    if(!root?.scene)return;
+
+    const tabs=['materials','coins','rewards'];
+    const tabY=68,tabW=170,tabH=38;
+    tabs.forEach((id,i)=>{
+      const x=24+i*(tabW+10);
+      const hit=this.add.rectangle(x,tabY,tabW,tabH,0xffffff,.001)
+        .setOrigin(0)
+        .setInteractive({useHandCursor:true});
+      root.add(hit);
+      let fired=false;
+      const activate=()=>{
+        if(fired)return;
+        fired=true;
+        this._openStoreModal(id);
+      };
+      hit.on('pointerdown',activate);
+    });
+  }
+
   _openGameModeModal(){
     if(this._gameModeModal?.scene)return;
     const {width,height}=this.scale;
