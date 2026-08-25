@@ -4,265 +4,55 @@ import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { attainableTopSpeedKmh, METERS_PER_PX } from '../cars/speedUnits.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
+import { getLanguage, t } from '../i18n/index.js';
 import './lobby-dom.css';
 
 const BASE = import.meta.env.BASE_URL || '/';
 const asset = (name) => `${BASE}assets/ui/lobby/${name}`;
 const CAR_BRANDS = new Set(['avenir', 'crown', 'forge', 'helix', 'veloce']);
 const COMPACT_CAR_BRANDS = new Set(['avenir', 'helix', 'veloce']);
+const tr = (key, params = null) => t(key, params);
 
-function disableTree(node) {
-  if (!node) return;
-  try { node.disableInteractive?.(); } catch {}
-  if (Array.isArray(node.list)) node.list.forEach(disableTree);
-}
-
+function disableTree(node) { if (!node) return; try { node.disableInteractive?.(); } catch {} if (Array.isArray(node.list)) node.list.forEach(disableTree); }
 function hideLegacyLobbyControls(scene) {
-  if (scene._topLobbyHeader) {
-    disableTree(scene._topLobbyHeader);
-    scene._topLobbyHeader.setVisible(false);
-  }
+  if (scene._topLobbyHeader) { disableTree(scene._topLobbyHeader); scene._topLobbyHeader.setVisible(false); }
   const hiddenKeys = new Set(['btn_play', 'btn_garage', 'btn_factory', 'btn_tracks']);
-  const legacyCardLabels = ['COCHE SELECCIONADO', 'CIRCUITO SELECCIONADO'];
+  const legacyCardLabels = ['COCHE SELECCIONADO', 'CIRCUITO SELECCIONADO', 'SELECTED CAR', 'SELECTED TRACK'];
   const legacyCards = new Set();
-  const walk = (node) => {
-    if (!node) return;
-    if (hiddenKeys.has(String(node?.texture?.key || ''))) {
-      try { node.setVisible(false); } catch {}
-      try { node.disableInteractive?.(); } catch {}
-    }
-    if (typeof node?.text === 'string') {
-      const text = node.text.trim().toUpperCase();
-      if (legacyCardLabels.includes(text) || /^EVENTO(?:\s|$)/.test(text) || text === 'TEMPORADA COMPLETADA') {
-        if (node.parentContainer && node.parentContainer !== scene._ui) legacyCards.add(node.parentContainer);
-      }
-    }
-    if (Array.isArray(node.list)) node.list.forEach(walk);
-  };
-  walk(scene._ui);
-  legacyCards.forEach(card => {
-    disableTree(card);
-    try { card.setVisible(false); } catch {}
-  });
+  const walk = (node) => { if (!node) return; if (hiddenKeys.has(String(node?.texture?.key || ''))) { try { node.setVisible(false); } catch {} try { node.disableInteractive?.(); } catch {} } if (typeof node?.text === 'string') { const text = node.text.trim().toUpperCase(); if (legacyCardLabels.includes(text) || /^EVENTO(?:\s|$)/.test(text) || /^EVENT(?:\s|$)/.test(text) || text === 'TEMPORADA COMPLETADA' || text === 'SEASON COMPLETE') { if (node.parentContainer && node.parentContainer !== scene._ui) legacyCards.add(node.parentContainer); } } if (Array.isArray(node.list)) node.list.forEach(walk); };
+  walk(scene._ui); legacyCards.forEach(card => { disableTree(card); try { card.setVisible(false); } catch {} });
 }
-
 const escapeHtml = value => String(value ?? '').replace(/[&<>\"]/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '\"':'&quot;' }[ch]));
-
-function loopLength(center) {
-  if (!Array.isArray(center) || center.length < 2) return 0;
-  let total = 0;
-  for (let i = 0; i < center.length; i++) {
-    const a = center[i], b = center[(i + 1) % center.length];
-    total += Math.hypot(Number(b?.x || 0) - Number(a?.x || 0), Number(b?.y || 0) - Number(a?.y || 0));
-  }
-  return total;
-}
-
-function trackSvg(center) {
-  if (!Array.isArray(center) || center.length < 2) return '';
-  const xs = center.map(p => Number(p?.x)).filter(Number.isFinite);
-  const ys = center.map(p => Number(p?.y)).filter(Number.isFinite);
-  if (!xs.length || !ys.length) return '';
-  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-  const spanX = Math.max(1, maxX - minX), spanY = Math.max(1, maxY - minY);
-  const scale = Math.min(150 / spanX, 82 / spanY);
-  const ox = 90 - spanX * scale / 2, oy = 48 - spanY * scale / 2;
-  const points = center.map(p => `${(ox + (Number(p.x) - minX) * scale).toFixed(1)},${(oy + (Number(p.y) - minY) * scale).toFixed(1)}`).join(' ');
-  return `<svg viewBox="0 0 180 96" role="img" aria-label="Trazado del circuito"><polyline class="tdr-track-shadow" points="${points}"/><polyline class="tdr-track-line" points="${points}"/></svg>`;
-}
+function loopLength(center) { if (!Array.isArray(center) || center.length < 2) return 0; let total = 0; for (let i = 0; i < center.length; i++) { const a = center[i], b = center[(i + 1) % center.length]; total += Math.hypot(Number(b?.x || 0) - Number(a?.x || 0), Number(b?.y || 0) - Number(a?.y || 0)); } return total; }
+function trackSvg(center) { if (!Array.isArray(center) || center.length < 2) return ''; const xs = center.map(p => Number(p?.x)).filter(Number.isFinite); const ys = center.map(p => Number(p?.y)).filter(Number.isFinite); if (!xs.length || !ys.length) return ''; const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys); const spanX = Math.max(1, maxX - minX), spanY = Math.max(1, maxY - minY); const scale = Math.min(150 / spanX, 82 / spanY); const ox = 90 - spanX * scale / 2, oy = 48 - spanY * scale / 2; const points = center.map(p => `${(ox + (Number(p.x) - minX) * scale).toFixed(1)},${(oy + (Number(p.y) - minY) * scale).toFixed(1)}`).join(' '); return `<svg viewBox="0 0 180 96" role="img" aria-label="${escapeHtml(tr('lobby.trackLayout'))}"><polyline class="tdr-track-shadow" points="${points}"/><polyline class="tdr-track-line" points="${points}"/></svg>`; }
 
 function renderDomCards(scene, root) {
-  const eventSlot = root.querySelector('[data-event-card]');
-  const carSlot = root.querySelector('[data-car-card]');
-  const trackSlot = root.querySelector('[data-track-card]');
-
+  const eventSlot = root.querySelector('[data-event-card]'); const carSlot = root.querySelector('[data-car-card]'); const trackSlot = root.querySelector('[data-track-card]');
   const eventData = getCurrentRaceEvent();
   if (eventSlot) {
-    if (eventData.finished) {
-      eventSlot.innerHTML = `<div class="tdr-card-kicker">TEMPORADA COMPLETADA</div><h2>PILOTO DE ÉLITE</h2><p>HAS COMPLETADO LOS 7 EVENTOS DE PROGRESIÓN</p><div class="tdr-event-finished">7/7 EVENTOS</div>`;
-    } else {
-      const { event, progress } = eventData;
-      const ratio = Math.max(0, Math.min(100, (Number(progress.value) / Math.max(1, Number(progress.target))) * 100));
-      eventSlot.innerHTML = `
-        <div class="tdr-card-kicker">${progress.complete ? 'EVENTO COMPLETADO' : `EVENTO ${eventData.index + 1}/${eventData.total}`}</div>
-        <h2>${escapeHtml(event.title)}</h2>
-        <p>${escapeHtml(event.description).toUpperCase()}</p>
-        <div class="tdr-event-reward">PREMIO · ${escapeHtml(raceEventRewardLabel(event.reward))}</div>
-        <div class="tdr-event-progress"><i style="width:${ratio.toFixed(2)}%"></i></div>
-        ${progress.complete ? '<button type="button" class="tdr-event-claim">RECLAMAR PREMIO</button>' : `<strong>${progress.value}/${progress.target} ${escapeHtml(progress.label)}</strong>`}
-      `;
-      eventSlot.querySelector('.tdr-event-claim')?.addEventListener('click', () => {
-        const result = claimCurrentRaceEvent();
-        if (result?.ok) {
-          scene._showEventRewardModal?.(result.event);
-          renderDomCards(scene, root);
-        }
-      });
-    }
+    if (eventData.finished) eventSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.seasonComplete')}</div><h2>${tr('lobby.eliteDriver')}</h2><p>${tr('lobby.completedSeven')}</p><div class="tdr-event-finished">${tr('lobby.eventsCount')}</div>`;
+    else { const { event, progress } = eventData; const ratio = Math.max(0, Math.min(100, (Number(progress.value) / Math.max(1, Number(progress.target))) * 100)); eventSlot.innerHTML = `<div class="tdr-card-kicker">${progress.complete ? tr('lobby.eventComplete') : tr('lobby.event',{current:eventData.index+1,total:eventData.total})}</div><h2>${escapeHtml(event.title)}</h2><p>${escapeHtml(event.description).toUpperCase()}</p><div class="tdr-event-reward">${tr('lobby.reward',{reward:escapeHtml(raceEventRewardLabel(event.reward))})}</div><div class="tdr-event-progress"><i style="width:${ratio.toFixed(2)}%"></i></div>${progress.complete ? `<button type="button" class="tdr-event-claim">${tr('lobby.claimReward')}</button>` : `<strong>${progress.value}/${progress.target} ${escapeHtml(progress.label)}</strong>`}`; eventSlot.querySelector('.tdr-event-claim')?.addEventListener('click', () => { const result = claimCurrentRaceEvent(); if (result?.ok) { scene._showEventRewardModal?.(result.event); renderDomCards(scene, root); } }); }
   }
-
-  const carId = scene.selectedCarId;
-  const spec = CAR_SPECS?.[carId] || {};
-  const params = resolveCarParams(spec, { accelMult:1, brakeMult:1, dragMult:1, turnRateMult:1, maxFwdAdd:0, maxRevAdd:0, turnMinAdd:0 });
-  const topKmh = Math.round(attainableTopSpeedKmh(params));
-  const brandKey = String(carId || '').split('_')[0].toLowerCase();
-  const brandLogoName = COMPACT_CAR_BRANDS.has(brandKey)
-    ? `logo_${brandKey}_compact.webp`
-    : `logo_${brandKey}.webp`;
-  const brandMark = CAR_BRANDS.has(brandKey)
-    ? `<img src="${BASE}assets/logos/${brandLogoName}" alt="${escapeHtml(spec.brand || brandKey)}" draggable="false">`
-    : escapeHtml(spec.brand || 'TDR');
-  if (carSlot) carSlot.innerHTML = `
-    <div class="tdr-card-kicker">COCHE SELECCIONADO</div>
-    <div class="tdr-car-card-row">
-      <span class="tdr-car-brand tdr-car-brand--${escapeHtml(brandKey)}">${brandMark}</span>
-      <span><h2>${escapeHtml(params?.name || spec.name || carId)}</h2><strong>${topKmh} km/h</strong></span>
-      <em>${escapeHtml(spec.category || spec.role || 'RACING')}</em>
-    </div>
-  `;
-  const carPreview = root.querySelector('[data-lobby-car]');
-  if (carPreview) {
-    const assetVersion = encodeURIComponent(spec.collectionNo || 1);
-    carPreview.decoding = 'async';
-    carPreview.src = `${BASE}assets/cars/lobby/${encodeURIComponent(carId)}.webp?v=${assetVersion}`;
-    carPreview.alt = params?.name || spec.name || carId;
-  }
-
-  const trackKey = scene.selectedTrackKey || 'track01';
-  const track = TRACK_REGISTRY?.[trackKey];
-  const center = Array.isArray(track?.raceCenterline) && track.raceCenterline.length ? track.raceCenterline : track?.centerline;
-  if (trackSlot && track) {
-    const id = String(track.id || track.key || '').toLowerCase();
-    const category = String(track.category || '').toLowerCase();
-    const surface = id.includes('offroad') || category.includes('dirt') || category.includes('tierra') ? 'TIERRA' : 'ASFALTO';
-    const direction = String(track.raceDirection || 'forward').toLowerCase() === 'reverse' ? 'ANTIHORARIO' : 'HORARIO';
-    const length = Math.round(loopLength(center) * METERS_PER_PX);
-    const sectors = Math.max(1, (track.checkpoints?.length || 2) + 1);
-    trackSlot.innerHTML = `
-      <div class="tdr-card-kicker">CIRCUITO SELECCIONADO</div>
-      <h2>${escapeHtml(track.name || trackKey)}</h2>
-      <div class="tdr-track-map">${trackSvg(center)}</div>
-      <div class="tdr-track-stats">
-        <span><small>LONGITUD</small><strong>${length} m</strong></span>
-        <span><small>SECTORES</small><strong>${sectors}</strong></span>
-        <span><small>SUPERFICIE</small><strong>${surface}</strong></span>
-        <span><small>SENTIDO</small><strong>${direction}</strong></span>
-      </div>
-    `;
-  }
+  const carId = scene.selectedCarId; const spec = CAR_SPECS?.[carId] || {}; const params = resolveCarParams(spec, { accelMult:1, brakeMult:1, dragMult:1, turnRateMult:1, maxFwdAdd:0, maxRevAdd:0, turnMinAdd:0 }); const topKmh = Math.round(attainableTopSpeedKmh(params)); const brandKey = String(carId || '').split('_')[0].toLowerCase(); const brandLogoName = COMPACT_CAR_BRANDS.has(brandKey) ? `logo_${brandKey}_compact.webp` : `logo_${brandKey}.webp`; const brandMark = CAR_BRANDS.has(brandKey) ? `<img src="${BASE}assets/logos/${brandLogoName}" alt="${escapeHtml(spec.brand || brandKey)}" draggable="false">` : escapeHtml(spec.brand || 'TDR');
+  if (carSlot) carSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.selectedCar')}</div><div class="tdr-car-card-row"><span class="tdr-car-brand tdr-car-brand--${escapeHtml(brandKey)}">${brandMark}</span><span><h2>${escapeHtml(params?.name || spec.name || carId)}</h2><strong>${topKmh} km/h</strong></span><em>${escapeHtml(spec.category || spec.role || 'RACING')}</em></div>`;
+  const carPreview = root.querySelector('[data-lobby-car]'); if (carPreview) { const assetVersion = encodeURIComponent(spec.collectionNo || 1); carPreview.decoding = 'async'; carPreview.src = `${BASE}assets/cars/lobby/${encodeURIComponent(carId)}.webp?v=${assetVersion}`; carPreview.alt = params?.name || spec.name || carId; }
+  const trackKey = scene.selectedTrackKey || 'track01'; const track = TRACK_REGISTRY?.[trackKey]; const center = Array.isArray(track?.raceCenterline) && track.raceCenterline.length ? track.raceCenterline : track?.centerline;
+  if (trackSlot && track) { const id = String(track.id || track.key || '').toLowerCase(); const category = String(track.category || '').toLowerCase(); const surface = id.includes('offroad') || category.includes('dirt') || category.includes('tierra') ? tr('lobby.dirt') : tr('lobby.asphalt'); const direction = String(track.raceDirection || 'forward').toLowerCase() === 'reverse' ? tr('lobby.counterclockwise') : tr('lobby.clockwise'); const length = Math.round(loopLength(center) * METERS_PER_PX); const sectors = Math.max(1, (track.checkpoints?.length || 2) + 1); trackSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.selectedTrack')}</div><h2>${escapeHtml(track.name || trackKey)}</h2><div class="tdr-track-map">${trackSvg(center)}</div><div class="tdr-track-stats"><span><small>${tr('lobby.length')}</small><strong>${length} m</strong></span><span><small>${tr('lobby.sectors')}</small><strong>${sectors}</strong></span><span><small>${tr('lobby.surface')}</small><strong>${surface}</strong></span><span><small>${tr('lobby.direction')}</small><strong>${direction}</strong></span></div>`; }
 }
-
-function makeButton({ cls = '', icon, label, action }) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = `tdr-lobby-button ${cls}`.trim();
-  button.innerHTML = `<img src="${asset(icon)}" alt="" draggable="false"><span>${label}</span>`;
-  button.addEventListener('click', action);
-  return button;
-}
-
-function startRaceFlow(scene) {
-  if (typeof scene._openGameModeModal === 'function') {
-    scene._openGameModeModal();
-    return;
-  }
-  const carId = scene.selectedCarId;
-  const trackKey = scene.selectedTrackKey || 'track01';
-  try {
-    localStorage.setItem('tdr2:carId', carId);
-    localStorage.setItem('tdr2:trackKey', trackKey);
-  } catch {}
-  scene.scene.start('race', { carId, trackKey });
-}
+function makeButton({ cls = '', icon, label, action }) { const button = document.createElement('button'); button.type = 'button'; button.className = `tdr-lobby-button ${cls}`.trim(); button.innerHTML = `<img src="${asset(icon)}" alt="" draggable="false"><span>${label}</span>`; button.addEventListener('click', action); return button; }
+function startRaceFlow(scene) { if (typeof scene._openGameModeModal === 'function') { scene._openGameModeModal(); return; } const carId = scene.selectedCarId; const trackKey = scene.selectedTrackKey || 'track01'; try { localStorage.setItem('tdr2:carId', carId); localStorage.setItem('tdr2:trackKey', trackKey); } catch {} scene.scene.start('race', { carId, trackKey }); }
 
 export function installLobbyDom(scene) {
-  hideLegacyLobbyControls(scene);
-
-  let root = scene._lobbyDomRoot;
+  hideLegacyLobbyControls(scene); let root = scene._lobbyDomRoot;
   if (!root?.isConnected) {
-    const host = scene.game?.canvas?.parentElement || document.getElementById('app') || document.body;
-    host.classList.add('tdr-lobby-host');
-
-    root = document.createElement('div');
-    root.className = 'tdr-lobby-dom';
-    root.innerHTML = `
-      <header class="tdr-lobby-header">
-        <button type="button" class="tdr-lobby-brand" aria-label="Top Down Race">
-          <img src="${BASE}assets/logo.webp" alt="Top Down Race" draggable="false">
-        </button>
-        <div class="tdr-lobby-wallet">
-          <img src="${BASE}assets/ui/moneda-tdr.webp" alt="" draggable="false">
-          <span><small>MONEDAS</small><strong data-coins>0</strong></span>
-        </div>
-        <nav class="tdr-lobby-top-actions" aria-label="Acciones principales"></nav>
-      </header>
-      <img class="tdr-lobby-car-preview" data-lobby-car alt="" draggable="false">
-      <main class="tdr-lobby-cards">
-        <section class="tdr-lobby-card tdr-event-card" data-event-card></section>
-        <section class="tdr-lobby-card tdr-car-card" data-car-card></section>
-        <section class="tdr-lobby-card tdr-track-card" data-track-card></section>
-      </main>
-      <div class="tdr-lobby-play-slot"></div>
-      <nav class="tdr-lobby-bottom-actions" aria-label="Navegación principal"></nav>
-    `;
-    host.appendChild(root);
-    scene._lobbyDomRoot = root;
-
-    const top = root.querySelector('.tdr-lobby-top-actions');
-    top.append(
-      makeButton({ cls: 'tdr-lobby-button--gold', icon: 'icon_inventory.webp', label: 'INVENTARIO', action: () => scene._openLobbyInventoryModal?.('materials') }),
-      makeButton({ cls: 'tdr-lobby-button--purple', icon: 'icon_store.webp', label: 'TIENDA', action: () => scene._openStoreModal?.('materials') }),
-      makeButton({ icon: 'icon_settings.webp', label: 'CONFIGURACIÓN', action: () => scene.scene.start('SettingsScene') })
-    );
-
-    const play = document.createElement('button');
-    play.type = 'button';
-    play.className = 'tdr-lobby-play';
-    play.innerHTML = '<span class="tdr-lobby-play-triangle">▶</span><span>ARRANCAR MOTOR</span>';
-    play.addEventListener('click', () => startRaceFlow(scene));
-    root.querySelector('.tdr-lobby-play-slot').appendChild(play);
-
-    const bottom = root.querySelector('.tdr-lobby-bottom-actions');
-    bottom.append(
-      makeButton({ icon: 'icon_garage.webp', label: 'GARAJE', action: () => scene.scene.start('GarageScene', { mode: 'player' }) }),
-      makeButton({ cls: 'tdr-lobby-button--factory', icon: 'icon_factory.webp', label: 'FÁBRICA', action: () => scene.scene.start('upgrade-shop') }),
-      makeButton({ cls: 'tdr-lobby-button--gold', icon: 'icon_tracks.webp', label: 'CIRCUITOS', action: () => scene.scene.start('TrackGarageScene', { mode: 'player' }) })
-    );
-
-    const brand = root.querySelector('.tdr-lobby-brand');
-    let adminTimer = 0;
-    const cancelAdmin = () => { if (adminTimer) window.clearTimeout(adminTimer); adminTimer = 0; };
-    brand.addEventListener('contextmenu', event => event.preventDefault());
-    brand.addEventListener('dragstart', event => event.preventDefault());
-    brand.addEventListener('pointerdown', event => {
-      event.preventDefault();
-      cancelAdmin();
-      adminTimer = window.setTimeout(() => {
-        const enabled = localStorage.getItem('tdr2:admin') === '1' ? '0' : '1';
-        localStorage.setItem('tdr2:admin', enabled);
-        if (enabled === '1') scene.scene.start('admin-hub');
-      }, 700);
-    });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(name => brand.addEventListener(name, cancelAdmin));
-
-    scene.events.once('shutdown', () => {
-      // Safari/iOS may retain decoded image memory after a DOM node is removed.
-      // Clear every image source first so lobby renders can be reclaimed before race.
-      try {
-        root.querySelectorAll('img').forEach(img => {
-          img.removeAttribute('src');
-          img.src = '';
-        });
-      } catch {}
-      try { root.replaceChildren(); } catch {}
-      try { root.remove(); } catch {}
-      if (scene._lobbyDomRoot === root) scene._lobbyDomRoot = null;
-    });
+    const host = scene.game?.canvas?.parentElement || document.getElementById('app') || document.body; host.classList.add('tdr-lobby-host'); root = document.createElement('div'); root.className = 'tdr-lobby-dom';
+    root.innerHTML = `<header class="tdr-lobby-header"><button type="button" class="tdr-lobby-brand" aria-label="Top Down Race"><img src="${BASE}assets/logo.webp" alt="Top Down Race" draggable="false"></button><div class="tdr-lobby-wallet"><img src="${BASE}assets/ui/moneda-tdr.webp" alt="" draggable="false"><span><small>${tr('lobby.coins')}</small><strong data-coins>0</strong></span></div><nav class="tdr-lobby-top-actions" aria-label="${escapeHtml(tr('lobby.mainActions'))}"></nav></header><img class="tdr-lobby-car-preview" data-lobby-car alt="" draggable="false"><main class="tdr-lobby-cards"><section class="tdr-lobby-card tdr-event-card" data-event-card></section><section class="tdr-lobby-card tdr-car-card" data-car-card></section><section class="tdr-lobby-card tdr-track-card" data-track-card></section></main><div class="tdr-lobby-play-slot"></div><nav class="tdr-lobby-bottom-actions" aria-label="${escapeHtml(tr('lobby.mainNav'))}"></nav>`;
+    host.appendChild(root); scene._lobbyDomRoot = root;
+    const top = root.querySelector('.tdr-lobby-top-actions'); top.append(makeButton({ cls:'tdr-lobby-button--gold', icon:'icon_inventory.webp', label:tr('lobby.inventory'), action:()=>scene._openLobbyInventoryModal?.('materials') }), makeButton({ cls:'tdr-lobby-button--purple', icon:'icon_store.webp', label:tr('lobby.store'), action:()=>scene._openStoreModal?.('materials') }), makeButton({ icon:'icon_settings.webp', label:tr('lobby.settings'), action:()=>scene.scene.start('SettingsScene') }));
+    const play = document.createElement('button'); play.type='button'; play.className='tdr-lobby-play'; play.innerHTML=`<span class="tdr-lobby-play-triangle">▶</span><span>${tr('lobby.play')}</span>`; play.addEventListener('click',()=>startRaceFlow(scene)); root.querySelector('.tdr-lobby-play-slot').appendChild(play);
+    const bottom=root.querySelector('.tdr-lobby-bottom-actions'); bottom.append(makeButton({icon:'icon_garage.webp',label:tr('lobby.garage'),action:()=>scene.scene.start('GarageScene',{mode:'player'})}),makeButton({cls:'tdr-lobby-button--factory',icon:'icon_factory.webp',label:tr('lobby.factory'),action:()=>scene.scene.start('upgrade-shop')}),makeButton({cls:'tdr-lobby-button--gold',icon:'icon_tracks.webp',label:tr('lobby.tracks'),action:()=>scene.scene.start('TrackGarageScene',{mode:'player'})}));
+    const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));
+    scene.events.once('shutdown',()=>{try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
   }
-
-  const coins = Math.max(0, Math.floor(Number(loadGarage()?.coins) || 0));
-  const coinNode = root.querySelector('[data-coins]');
-  if (coinNode) coinNode.textContent = coins.toLocaleString('es-ES');
-  renderDomCards(scene, root);
-  return root;
+  const coins=Math.max(0,Math.floor(Number(loadGarage()?.coins)||0)); const coinNode=root.querySelector('[data-coins]'); if(coinNode)coinNode.textContent=coins.toLocaleString(getLanguage()==='es'?'es-ES':'en-US'); renderDomCards(scene,root); return root;
 }
