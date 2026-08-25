@@ -1,4 +1,5 @@
 const KEY='tdr2:carUnlocks:v1';
+const DEV_FULL_ACCESS_KEY='tdr2:devFullCarAccess:v1';
 const STARTER_CAR='helix_spark';
 
 function normalize(ids){return [...new Set((Array.isArray(ids)?ids:[]).map(x=>String(x||'').trim()).filter(Boolean))];}
@@ -32,5 +33,18 @@ export function unlockCar(carId){
 
 export function isCarUnlocked(carId){return loadCarUnlocks().unlocked.includes(String(carId||''));}
 export function unlockedCarIds(){return [...loadCarUnlocks().unlocked];}
+
+export function devFullCarAccessEnabled(){
+  try{return localStorage.getItem(DEV_FULL_ACCESS_KEY)==='1';}catch{return false;}
+}
+
+export function setDevFullCarAccess(enabled){
+  try{localStorage.setItem(DEV_FULL_ACCESS_KEY,enabled?'1':'0');}catch{}
+  return !!enabled;
+}
+
+export function toggleDevFullCarAccess(){return setDevFullCarAccess(!devFullCarAccessEnabled());}
+
 export const STARTER_CAR_ID=STARTER_CAR;
 export const CAR_UNLOCKS_KEY=KEY;
+export const DEV_FULL_CAR_ACCESS_KEY=DEV_FULL_ACCESS_KEY;
