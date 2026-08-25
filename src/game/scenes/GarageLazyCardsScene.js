@@ -1,5 +1,6 @@
 import { GarageScene as CurrentGarageScene } from './GarageCleanTypographyScene.js';
 import { recordGarageVisit } from '../seasons/seasonTelemetry.js';
+import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
 
 const CARDS = [
   ['card_avenir_apex','card_avenir_apex_raro_008.webp'],
@@ -32,6 +33,25 @@ export class GarageScene extends CurrentGarageScene {
 
   create(){
     super.create();
+
+    // Admin always sees the complete fleet. Player mode follows progression,
+    // unless the explicit DEV homologation bypass is enabled in Admin Hub.
+    const fullAccess=this._mode==='admin'||devFullCarAccessEnabled();
+    if(!fullAccess){
+      const unlockedCars=(this._cars||[]).filter(car=>isCarUnlocked(car?.id));
+      this._cars=unlockedCars.length?unlockedCars:(this._cars||[]).filter(car=>car?.id===STARTER_CAR_ID);
+      if(!this._cars.length&&Array.isArray(this._cars))this._cars=[];
+
+      let savedCarId=null;
+      try{savedCarId=localStorage.getItem('tdr2:carId');}catch{}
+      const selected=this._cars.findIndex(car=>car?.id===savedCarId);
+      this._selectedIndex=selected>=0?selected:0;
+      if(this._cars[0]&&selected<0){
+        try{localStorage.setItem('tdr2:carId',this._cars[0].id);}catch{}
+      }
+      this._rebuild();
+    }
+
     recordGarageVisit();
 
     // Perfil normal: mantenemos las cards para reabrir el garaje sin recarga.
