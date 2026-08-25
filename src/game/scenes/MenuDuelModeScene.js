@@ -103,7 +103,12 @@ export class MenuScene extends CurrentMenuScene {
         const topText=(card.list||[]).filter(child=>child?.type==='Text'&&Number(child.y)<82);
         topText.forEach(child=>card.bringToTop(child));
         const artKeys=new Set(['store:coins_2500','store:coins_7500','store:coins_20000','store:rewarded_video','store:daily_gift']);
-        (card.list||[]).filter(child=>child?.type==='Image'&&artKeys.has(child.texture?.key)).forEach(child=>{child.y+=8;});
+        const arts=(card.list||[]).filter(child=>child?.type==='Image'&&artKeys.has(child.texture?.key));
+        arts.forEach(child=>{child.y+=22;});
+        if(p.type==='coin'){
+          const duplicatePrice=(card.list||[]).find(child=>child?.type==='Text'&&child.text===p.priceLabel&&Number(child.y)<h*.75);
+          duplicatePrice?.destroy();
+        }
       }
       return;
     }
