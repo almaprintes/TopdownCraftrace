@@ -1,0 +1,101 @@
+name: Bake Raven Hollow beauty
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bake-raven-hollow.yml'
+      - 'scripts/bake-track-visual.mjs'
+      - 'src/game/tracks/TrackBuilder.js'
+      - 'src/game/tracks/library/offroad-raven-hollow/track.json'
+      - 'public/assets/materials/dirt-road/**'
+      - 'public/assets/materials/grass/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+env:
+  NODE_OPTIONS: --max-old-space-size=4096
+  VIPS_CONCURRENCY: '1'
+
+jobs:
+  bake-raven:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bake Raven Hollow only
+        run: |
+          set -euxo pipefail
+          npm run bake:track -- offroad-raven-hollow
+
+      - name: Publish Raven Hollow beauty assets and catalog
+        run: |
+          set -euxo pipefail
+          KEY='offroad-raven-hollow'
+          SRC="artifacts/track-beauty/$KEY"
+          DEST="public/assets/tracks/$KEY/beauty"
+          mkdir -p "$DEST"
+          rm -f "$DEST"/*-beauty-preview.webp "$DEST"/*-beauty-[0-9].webp "$DEST/manifest.json"
+          cp "$SRC/$KEY-beauty-preview.webp" "$DEST/"
+          cp "$SRC/$KEY-beauty-0.webp" "$DEST/"
+          cp "$SRC/$KEY-beauty-1.webp" "$DEST/"
+          cp "$SRC/$KEY-beauty-2.webp" "$DEST/"
+          cp "$SRC/$KEY-beauty-3.webp" "$DEST/"
+          cp "$SRC/manifest.json" "$DEST/"
+          cp artifacts/track-beauty/trackBeautyLayers.generated.js src/game/tracks/trackBeautyLayers.generated.js
+
+      - name: Verify Raven Hollow bake
+        run: |
+          set -euxo pipefail
+          test -s public/assets/tracks/offroad-raven-hollow/beauty/offroad-raven-hollow-beauty-0.webp
+          test -s public/assets/tracks/offroad-raven-hollow/beauty/offroad-raven-hollow-beauty-1.webp
+          test -s public/assets/tracks/offroad-raven-hollow/beauty/offroad-raven-hollow-beauty-2.webp
+          test -s public/assets/tracks/offroad-raven-hollow/beauty/offroad-raven-hollow-beauty-3.webp
+          test -s public/assets/tracks/offroad-raven-hollow/beauty/manifest.json
+          grep -q 'offroad-raven-hollow' src/game/tracks/trackBeautyLayers.generated.js
+          ls -lh public/assets/tracks/offroad-raven-hollow/beauty/
+
+      - name: Commit Raven Hollow beauty assets
+        id: commit_assets
+        run: |
+          set -euxo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/assets/tracks/offroad-raven-hollow/beauty src/game/tracks/trackBeautyLayers.generated.js
+          if git diff --cached --quiet; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo 'No Raven Hollow beauty changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Bake Raven Hollow beauty assets'
+          git pull --rebase origin main
+          git push origin HEAD:main
+          echo 'changed=true' >> "$GITHUB_OUTPUT"
+
+      - name: Trigger fresh preview and Pages builds
+        if: steps.commit_assets.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run build-pages.yml --ref main || true
+          gh workflow run pages.yml --ref main || true
