@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuSeasonScene.js';
 import { SeasonScene } from './scenes/SeasonScene.js';
-import { RaceScene } from './scenes/RacePracticeAreaSurfaceTuningScene.js';
+import { RaceScene } from './scenes/RaceSurvivalHardLapCapScene.js';
 import { installExactRuntimeBeautyPass } from './scenes/raceExactRuntimeBeautyPass.js';
 import { UpgradeShopScene } from './scenes/UpgradeWorkshopInventorySizingScene.js';
 import { GarageScene } from './scenes/GarageLazyCardsScene.js';
