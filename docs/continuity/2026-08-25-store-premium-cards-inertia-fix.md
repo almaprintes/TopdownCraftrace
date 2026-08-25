@@ -49,8 +49,14 @@ Following the iPhone review:
 
 No new image assets were generated and no Store economy values or reward quantities were changed.
 
+## Title layering fix
+Commit:
+`2d464acc8a700ca1d7006adb42d251edf6da3c61` — `Keep store card titles above artwork`
+
+The iPhone review showed that the large coin/reward artwork overlapped the upper title text on coin packs, rewarded video and daily gift cards. The active Store descendant now moves the top text elements back to the front after the inherited card renderer finishes adding its artwork, preserving the existing composition while keeping titles and badges readable above the images.
+
 ## Safety
 No economy values, pack contents, reward amounts, car physics, controls, race logic or persistence were intentionally changed.
 
 ## Validation
-The premium material-card redesign and the narrower-card direction were confirmed positively by the user on iPhone. The latest technology-width adjustment, coin/reward visual polish and direct Store ES/EN copy have not yet been confirmed on iPhone; do not state that those latest changes are final until the user confirms them.
+The premium material-card redesign and the narrower-card direction were confirmed positively by the user on iPhone. The latest title-layering fix has not yet been confirmed on iPhone; do not state that it is final until the user confirms it.
