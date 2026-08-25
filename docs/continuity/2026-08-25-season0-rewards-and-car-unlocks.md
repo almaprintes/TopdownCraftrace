@@ -65,6 +65,16 @@ Cause: `_trackItem(x,y,w,h,t,i)` in `TrackGarageCleanTypographyScene.js` used `t
 
 Fix: the track parameter was renamed to `track`, restoring translation calls inside the selector.
 
+## Survival five-lap regression found with a clean player profile
+A clean Opera profile was used to test the game from a new-player perspective. In Survival, the player was able to continue beyond lap 5 and the session info showed nine laps.
+
+The repository already contained `RaceSurvivalFinishStateScene.js` with a five-lap cap, but the active race class registered in `src/game/game.js` came from the newer `RacePracticeAreaSurfaceTuningScene.js` chain, which did not inherit that finish-state wrapper. Therefore the intended cap existed in the repo but was not part of the runtime scene actually being launched.
+
+Fix:
+- Added `src/game/scenes/RaceSurvivalHardLapCapScene.js` on top of the current active race chain.
+- `src/game/game.js` now registers this wrapper as `RaceScene`.
+- When the player accepts the fifth Survival lap, completed laps are clamped to 5, authoritative Survival history is truncated/synced to five laps, vehicle velocity is stopped, round is set to 5, and Survival finishes as a win. A sixth player lap can no longer be recorded by the active runtime chain.
+
 ## Implementation commits
 - `cded4d05e199c106563673c92ce5cdb256d90922` — Add car unlock progression store.
 - `9c06bcd80d1d22be1b01f5dbb710ac7515277375` — Simplify Season 0 rewards and add Gripline finale.
@@ -73,9 +83,12 @@ Fix: the track parameter was renamed to `track`, restoring translation calls ins
 - `81e6884762e5ee636fe64e50db999618a7fbc54c` — Respect car unlocks with dev bypass.
 - `917a66cf53532bf3651e684bb368c4a5b07b7e46` — Add homologation full car access control.
 - `c4e518ec02014e476f4778c7ce21940e31713809` — Fix track selector translation shadowing crash.
+- `06300e3e18815112c9dfad78040e7aa40ecb1038` — Enforce active survival five-lap finish.
+- `4772d816d05b79efa2378221f4bea8940c5c5f10` — Use hard survival lap cap scene.
 
 ## Validation status
 - Single-reward Season 0 presentation and Gripline finale were visually confirmed by the user as looking great.
 - Player Garage with real progression was confirmed on iPhone showing only HÉLIX Spark.
 - DEV full-car toggle still needs explicit on-device confirmation in ON state.
 - Track selector crash fix is committed and awaits a fresh on-device retry.
+- Survival five-lap hard cap is committed and awaits a fresh clean-profile retry.
