@@ -48,7 +48,6 @@ function surfacePlan(trackKey, meta) {
   const shoulderSurface = normalizeSurface(authored.shoulderSurface || 'grass', 'grass');
   const outerSurface = normalizeSurface(authored.outerSurface || 'grass', 'grass');
 
-  // Raven Hollow uses its dedicated damaged dirt-road material for the racing surface.
   if (trackKey === 'offroad-raven-hollow') trackSurface = 'dirt-road';
 
   return { trackSurface, shoulderSurface, outerSurface };
@@ -120,6 +119,8 @@ async function bakeTrack(trackKey) {
   const worldH = Math.ceil(Number(meta.worldH));
   if (!worldW || !worldH) throw new Error(`Invalid world dimensions in ${trackPath}`);
 
+  console.log(`[track-beauty] starting ${trackKey} ${worldW}x${worldH}`);
+
   const geom = buildTrackRibbon({
     centerline: meta.centerline || [],
     trackWidth: meta.trackWidth,
@@ -178,7 +179,7 @@ async function bakeTrack(trackKey) {
   };
 
   await fs.writeFile(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
-  console.log(`[track-beauty] ${trackKey} ${worldW}x${worldH}; samples ${geom.center.length}; ${surfaces.trackSurface}/${surfaces.shoulderSurface}/${surfaces.outerSurface}`);
+  console.log(`[track-beauty] finished ${trackKey} ${worldW}x${worldH}; samples ${geom.center.length}; ${surfaces.trackSurface}/${surfaces.shoulderSurface}/${surfaces.outerSurface}`);
   return manifest;
 }
 
@@ -217,7 +218,7 @@ async function main() {
   const manifests = [];
   for (const key of keys) manifests.push(await bakeTrack(key));
 
-  if (requested === 'all') await writeCatalog(manifests);
+  await writeCatalog(manifests);
 }
 
 main().catch((error) => {
