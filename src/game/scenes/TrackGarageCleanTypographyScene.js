@@ -125,18 +125,18 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     }catch{return null;}
   }
 
-  _trackItem(x,y,w,h,t,i){
+  _trackItem(x,y,w,h,track,i){
     const item=this.add.container(x,y),selected=i===this._index;this._trackList.add(item);
     const bg=this.add.rectangle(0,0,w,h,0x111a33,selected?.82:.50).setOrigin(0).setStrokeStyle(2,selected?0x2bff88:0xb7c0ff,selected?.65:.18);
     const accent=this.add.rectangle(0,0,7,h,selected?0x2bff88:0x2b7bff,selected?.95:.70).setOrigin(0);
     const thumbW=84,thumbH=h-14;const thumbBg=this.add.rectangle(14,7,thumbW,thumbH,0x071016,1).setOrigin(0);
     item.add([bg,accent,thumbBg]);
-    const key=this._displayPreview(t,420,360);if(key&&this.textures.exists(key)){const im=this.add.image(14+thumbW/2,h/2,key);im.setScale(Math.min((thumbW-4)/im.width,(thumbH-4)/im.height)).setAlpha(selected?1:.90);item.add(im);}
+    const key=this._displayPreview(track,420,360);if(key&&this.textures.exists(key)){const im=this.add.image(14+thumbW/2,h/2,key);im.setScale(Math.min((thumbW-4)/im.width,(thumbH-4)/im.height)).setAlpha(selected?1:.90);item.add(im);}
 
-    const tx=110,available=Math.max(110,w-tx-12),label=String(t.name||t.key).toUpperCase();
+    const tx=110,available=Math.max(110,w-tx-12),label=String(track.name||track.key).toUpperCase();
     const nameSize=label.length>18?11:label.length>14?12:13;
     item.add(this.add.text(tx,14,label,{fontFamily:FONT,fontSize:`${nameSize}px`,fontStyle:'bold',color:'#fff',fixedWidth:available}));
-    item.add(this.add.text(tx,42,`${String(i+1).padStart(2,'0')} · ${surfaceLabel(t)}\n${lengthM(t)} m · ${sectors(t)} ${t('tracks.sectors').toLowerCase()}`,{fontFamily:FONT,fontSize:'10.5px',color:selected?'#cad3f4':'#94a3c7',lineSpacing:2,fixedWidth:available}));
+    item.add(this.add.text(tx,42,`${String(i+1).padStart(2,'0')} · ${surfaceLabel(track)}\n${lengthM(track)} m · ${sectors(track)} ${t('tracks.sectors').toLowerCase()}`,{fontFamily:FONT,fontSize:'10.5px',color:selected?'#cad3f4':'#94a3c7',lineSpacing:2,fixedWidth:available}));
 
     const hit=this.add.rectangle(0,0,w,h,0,0.001).setOrigin(0).setInteractive({useHandCursor:true});item.add(hit);
     let sy=0,drag=false;hit.on('pointerdown',p=>{sy=p.y;drag=false;});hit.on('pointermove',p=>{if(Math.abs(p.y-sy)>8)drag=true;});hit.on('pointerup',()=>{if(drag||this._dragTrackList)return;this._index=i;this._centerSelectedTrackOnNextLayout=true;this._commercial?.destroy(true);this._commercial=null;this._buildCommercial();});
