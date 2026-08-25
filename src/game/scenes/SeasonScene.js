@@ -12,7 +12,9 @@ export class SeasonScene extends Phaser.Scene {
   create(){
     this.cameras.main.setBackgroundColor('#061019');
     this._render();
-    this.scale.on('resize',()=>this.scene.restart());
+    const onResize=()=>this.scene.restart();
+    this.scale.on('resize',onResize);
+    this.events.once('shutdown',()=>this.scale.off('resize',onResize));
   }
 
   _render(){
@@ -41,7 +43,7 @@ export class SeasonScene extends Phaser.Scene {
     this.add.text(142,49,L.subtitle,{fontFamily:FONT,fontSize:'9px',fontStyle:'bold',color:'#8fa4b5',letterSpacing:.4});
 
     const pct=data.finished?1:clamp((index+(Number(progress?.value)||0)/Math.max(1,Number(progress?.target)||1))/stages.length,0,1);
-    const progX=w-330,progY=24,progW=270;
+    const progX=w-330,progW=270;
     this.add.text(progX,14,`${Math.min(index+1,stages.length)}/${stages.length}`,{fontFamily:FONT,fontSize:'11px',fontStyle:'bold',color:'#f0c65a'});
     this.add.rectangle(progX,38,progW,10,0x142532,1).setOrigin(0).setStrokeStyle(1,0xffffff,.1);
     this.add.rectangle(progX+2,40,(progW-4)*pct,6,data.finished?0x39ff9a:0x35cfff,1).setOrigin(0);
