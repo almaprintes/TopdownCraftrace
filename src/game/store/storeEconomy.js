@@ -1,4 +1,5 @@
 import { loadGarage, saveGarage, addItem } from '../garage/garageStore.js';
+import { recordStoreBuy } from '../seasons/seasonTelemetry.js';
 
 export const MATERIAL_PACKS=[
   {id:'mechanic',name:'PACK MECÁNICA',price:450,items:{scrap:28,disc:12,gear:10}},
@@ -20,7 +21,7 @@ const DAY=24*60*60*1000;
 export function buyMaterialPack(id){
   const pack=MATERIAL_PACKS.find(p=>p.id===id); if(!pack)return {ok:false,reason:'Pack no válido'};
   const s=loadGarage(); if(Number(s.coins||0)<pack.price)return {ok:false,reason:'MONEDAS INSUFICIENTES'};
-  s.coins-=pack.price; for(const [item,n] of Object.entries(pack.items))addItem(s,item,n); saveGarage(s); return {ok:true,pack,state:s};
+  s.coins-=pack.price; for(const [item,n] of Object.entries(pack.items))addItem(s,item,n); saveGarage(s); recordStoreBuy(); return {ok:true,pack,state:s};
 }
 
 export function rewardedStatus(now=Date.now()){
