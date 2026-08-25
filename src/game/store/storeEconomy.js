@@ -15,7 +15,7 @@ export const COIN_PACKS=[
 ];
 
 const FOUR_HOURS=4*60*60*1000;
-const dayKey=()=>new Date().toISOString().slice(0,10);
+const DAY=24*60*60*1000;
 
 export function buyMaterialPack(id){
   const pack=MATERIAL_PACKS.find(p=>p.id===id); if(!pack)return {ok:false,reason:'Pack no válido'};
@@ -33,10 +33,13 @@ export function claimRewardedCoins(amount=250,now=Date.now()){
   const s=loadGarage(); s.coins=Number(s.coins||0)+amount; s.storeRewardedAt=now; saveGarage(s); return {ok:true,amount,state:s};
 }
 
-export function dailyStatus(){const s=loadGarage();return {available:s.storeDailyDay!==dayKey()};}
-export function claimDailyCoins(amount=100){
-  const s=loadGarage(),today=dayKey(); if(s.storeDailyDay===today)return {ok:false,reason:'YA RECLAMADA'};
-  s.coins=Number(s.coins||0)+amount; s.storeDailyDay=today; saveGarage(s); return {ok:true,amount,state:s};
+export function dailyStatus(now=Date.now()){
+  const s=loadGarage(),last=Number(s.storeDailyAt||0),remaining=Math.max(0,DAY-(now-last));
+  return {available:!last||remaining<=0,remaining};
+}
+export function claimDailyCoins(amount=100,now=Date.now()){
+  const st=dailyStatus(now); if(!st.available)return {ok:false,reason:'YA RECLAMADA',remaining:st.remaining};
+  const s=loadGarage(); s.coins=Number(s.coins||0)+amount; s.storeDailyAt=now; saveGarage(s); return {ok:true,amount,state:s};
 }
 
 // Development purchase provider. Native builds will replace this with IAP.
