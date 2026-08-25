@@ -38,6 +38,20 @@ If Premium is activated in the future, it should use the same season progress an
 - `517251afcdd327dbe82049eff1b8228a554baaea` — Track mode starts.
 - `9e37a861da2ae4eb4fc8a9b02f78d0d35e7ce76f` — Replace the placeholder/legacy stage list with the new induction mission order.
 - `0d3eed511a9ce46dd19c531159c04b9c05abdcf1` — Replace the old seven-event engine data with the full 14-stage induction mission set.
+- `5fd940e27a6860534642d16e28f2e32b01c190c4` — Add dedicated full-screen Season scene.
+- `2ae1a3b990eb36aa082733e17190dea59f21d5f4` — Redesign lobby season card and make it navigate to the Season scene instead of opening an overlay.
+- `7c5f32c535454918bc05bfd058e352fd400200ba` — Register SeasonScene in the Phaser scene list.
+- `3dd362cc701030c215c74278b54efc318b2526c2` — Ensure Season scene resize listeners are cleaned up on shutdown.
+
+## Season UI architecture
+The season progression must never be rendered as a large overlay on top of the lobby. The lobby only shows a compact Season 0 summary card with current mission, reward preview and progress. Tapping the card navigates to the dedicated `season` scene.
+
+The dedicated Season scene is intentionally separate from the lobby and uses:
+- a clear top header with back navigation and overall 14-stage progress;
+- a large current-mission panel on the left;
+- explicit FREE reward and visible-but-locked PREMIUM reward treatment;
+- a 7×2 grid of the 14 induction stages on the right;
+- no road/track lines behind the lobby and no semi-transparent season overlay competing with the car/track cards.
 
 ## Active 14-stage induction order
 1. First Miles / Primeros metros — complete 1 valid lap.
@@ -65,4 +79,4 @@ The baseline simulation is documented in `docs/economy/2026-08-25-store-economy-
 The 14 induction rewards are one-time onboarding rewards. Recurring monthly season rewards should later become the controlled steady-state seasonal income.
 
 ## Validation
-The new 14-stage induction engine and presentation are active in code but have NOT yet been confirmed on iPhone. Do not claim they work correctly on iPhone until the user tests them.
+The dedicated Season scene and redesigned lobby season card are active in code but have NOT yet been confirmed on iPhone. Do not claim they work correctly on iPhone until the user tests them.
