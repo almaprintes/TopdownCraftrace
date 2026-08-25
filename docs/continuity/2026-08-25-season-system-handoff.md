@@ -22,7 +22,7 @@ This gives a repeating quarterly loop. The architecture remains open to adding a
 Each theme should draw roughly 14 monthly missions from a larger bank and vary parameters so a repeated theme does not repeat the exact same checklist.
 
 ## Reward lanes
-The UI is designed from the start with two parallel lanes:
+The UI is designed from the start with two parallel horizontal lanes:
 - FREE — active.
 - PREMIUM PASS — visible but disabled and marked COMING SOON / PRÓXIMAMENTE.
 
@@ -36,22 +36,25 @@ If Premium is activated in the future, it should use the same season progress an
 - `008ab0eec5ad50beb9681f5419dbe5b891aa4ab7` — Track soft-currency Store purchases.
 - `2d85dfd4e4b44a977d1d6f37f9c1374fa302bdfc` — Track garage visits.
 - `517251afcdd327dbe82049eff1b8228a554baaea` — Track mode starts.
-- `9e37a861da2ae4eb4fc8a9b02f78d0d35e7ce76f` — Replace the placeholder/legacy stage list with the new induction mission order.
+- `9e37a861da2ae4b44a977d1d6f37f9c1374fa302bdfc` — Replace the placeholder/legacy stage list with the new induction mission order.
 - `0d3eed511a9ce46dd19c531159c04b9c05abdcf1` — Replace the old seven-event engine data with the full 14-stage induction mission set.
 - `5fd940e27a6860534642d16e28f2e32b01c190c4` — Add dedicated full-screen Season scene.
 - `2ae1a3b990eb36aa082733e17190dea59f21d5f4` — Redesign lobby season card and make it navigate to the Season scene instead of opening an overlay.
 - `7c5f32c535454918bc05bfd058e352fd400200ba` — Register SeasonScene in the Phaser scene list.
 - `3dd362cc701030c215c74278b54efc318b2526c2` — Ensure Season scene resize listeners are cleaned up on shutdown.
 - `cc679132facbae9e8f066d54c331b784f74960bd` — Replace all SeasonScene Phaser text/layout objects with a DOM/CSS interface while keeping Phaser only as the scene lifecycle/router.
+- `c51f05a21c78d0e10d3743e97aa4ba03bcde17fe` — Replace the compact 7×2 stage grid with a long horizontal scroll of near-full-screen mission slides and two parallel FREE/PREMIUM reward rails.
 
 ## Season UI architecture
 The season progression must never be rendered as a large overlay on top of the lobby. The lobby only shows a compact Season 0 summary card with current mission, reward preview and progress. Tapping the card navigates to the dedicated `season` scene.
 
-The dedicated Season scene is intentionally separate from the lobby and uses:
+The dedicated Season scene is intentionally separate from the lobby and now uses:
 - a clear top header with back navigation and overall 14-stage progress;
-- a large current-mission panel on the left;
-- explicit FREE reward and visible-but-locked PREMIUM reward treatment;
-- a 7×2 grid of the 14 induction stages on the right;
+- one long horizontal scroll with scroll-snap and iPhone momentum;
+- one mission per large slide, sized to occupy almost the whole viewport so objectives are readable instead of compressed;
+- two horizontal reward rails inside every mission slide: FREE above and PREMIUM below;
+- the real title, description, objective target and free reward for all 14 induction missions;
+- the current stage centered automatically when the scene opens;
 - no road/track lines behind the lobby and no semi-transparent season overlay competing with the car/track cards.
 
 ### Text rendering rule
@@ -83,4 +86,4 @@ The baseline simulation is documented in `docs/economy/2026-08-25-store-economy-
 The 14 induction rewards are one-time onboarding rewards. Recurring monthly season rewards should later become the controlled steady-state seasonal income.
 
 ## Validation
-The DOM Season scene and redesigned lobby season card are active in code but have NOT yet been confirmed on iPhone. Do not claim they work correctly on iPhone until the user tests them.
+The horizontal DOM Season scene is active in code but has NOT yet been confirmed on iPhone. Do not claim it works correctly on iPhone until the user tests it.
