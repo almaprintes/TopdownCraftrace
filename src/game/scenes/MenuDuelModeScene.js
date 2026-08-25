@@ -10,11 +10,6 @@ export class MenuScene extends CurrentMenuScene {
     const {width,height}=this.scale;
     const selected=(()=>{try{return localStorage.getItem(MODE_KEY)||'timeattack';}catch{return'timeattack';}})();
 
-    // Al volver desde UI DOM (p.ej. calibrador de controles), WebKit puede dejar
-    // el gesto anterior en una transición rara. Reiniciamos el estado de input de
-    // la escena y usamos pointerdown en las acciones críticas del modal.
-    try{this.input?.setEnabled?.(false);this.input?.setEnabled?.(true);}catch{}
-
     const root=this.add.container(0,0).setDepth(9000);
     this._ui?.add(root);
     this._gameModeModal=root;
@@ -39,7 +34,8 @@ export class MenuScene extends CurrentMenuScene {
       {key:'timeattack',asset:'contrarreloj.webp',accent:0xff9f43},
       {key:'ghost',asset:'fantasma.webp',accent:0x58d6ff},
       {key:'survival',asset:'supervivencia.webp',accent:0xff6a1a},
-      {key:'duel',asset:'duelo.webp',accent:0xff9f43}
+      {key:'duel',asset:'duelo.webp',accent:0xff9f43},
+      {key:'practice',asset:'area-pruebas.webp',accent:0xff9f43}
     ];
 
     const viewportW=panelW-96,viewportX=cx-viewportW/2;
@@ -64,10 +60,14 @@ export class MenuScene extends CurrentMenuScene {
           .setStrokeStyle(active?3:1,active?m.accent:0x536577,active?1:.5).setInteractive({useHandCursor:true});
         let fired=false;
         const choose=()=>{
-          if(fired)return;fired=true;
+          if(fired)return;
+          fired=true;
           m.key==='duel'?this._openDuelLapSelector():this._startSelectedMode(m.key);
         };
-        img.on('pointerdown',choose);border.on('pointerdown',choose);
+        // iOS/WebKit: accept both phases. Some gesture transitions can swallow
+        // either pointerdown or pointerup after a DOM overlay has just closed.
+        img.on('pointerdown',choose);img.on('pointerup',choose);
+        border.on('pointerdown',choose);border.on('pointerup',choose);
         const hover=()=>border.setStrokeStyle(3,m.accent,1);
         const out=()=>border.setStrokeStyle(active?3:1,active?m.accent:0x536577,active?1:.5);
         img.on('pointerover',hover);img.on('pointerout',out);border.on('pointerover',hover);border.on('pointerout',out);
@@ -98,17 +98,32 @@ export class MenuScene extends CurrentMenuScene {
     };
     const left=this.add.text(x+24,cardY+cardH/2,'‹',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'42px',fontStyle:'bold',color:'#ffd09a'}).setOrigin(.5).setInteractive({useHandCursor:true});
     const right=this.add.text(x+panelW-24,cardY+cardH/2,'›',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'42px',fontStyle:'bold',color:'#ffd09a'}).setOrigin(.5).setInteractive({useHandCursor:true});
-    left.on('pointerdown',()=>applyPage(page-1));right.on('pointerdown',()=>applyPage(page+1));root.add([left,right]);
-    for(let i=0;i<=maxPage;i++){const d=this.add.circle(cx+(i-maxPage/2)*20,y+panelH-18,4,0x405364,.65).setInteractive({useHandCursor:true});d.on('pointerdown',()=>applyPage(i));dots.push(d);root.add(d);}
+    const prev=()=>applyPage(page-1),next=()=>applyPage(page+1);
+    left.on('pointerdown',prev);left.on('pointerup',prev);
+    right.on('pointerdown',next);right.on('pointerup',next);
+    root.add([left,right]);
+    for(let i=0;i<=maxPage;i++){
+      const d=this.add.circle(cx+(i-maxPage/2)*20,y+panelH-18,4,0x405364,.65).setInteractive({useHandCursor:true});
+      const go=()=>applyPage(i);
+      d.on('pointerdown',go);d.on('pointerup',go);dots.push(d);root.add(d);
+    }
     applyPage(page,false);
 
     let dragX=null;
     veil.on('pointerdown',p=>{dragX=Number(p.x);});
-    veil.on('pointerup',p=>{if(dragX==null)return;const dx=Number(p.x)-dragX;dragX=null;if(Math.abs(dx)>45)applyPage(page+(dx<0?1:-1));});
+    veil.on('pointerup',p=>{
+      if(dragX==null)return;
+      const dx=Number(p.x)-dragX;dragX=null;
+      if(Math.abs(dx)>45){applyPage(page+(dx<0?1:-1));return;}
+      // Tapping outside the panel is always a reliable escape hatch.
+      const px=Number(p.x),py=Number(p.y);
+      if(px<x||px>x+panelW||py<y||py>y+panelH)this._closeGameModeModal();
+    });
     veil.on('pointerupoutside',()=>{dragX=null;});
 
     const close=this.add.text(x+panelW-22,y+3,'×',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'27px',fontStyle:'bold',color:'#9aafc1'}).setOrigin(.5,0).setInteractive({useHandCursor:true});
-    close.on('pointerdown',()=>this._closeGameModeModal());root.add(close);
+    const closeModal=()=>this._closeGameModeModal();
+    close.on('pointerdown',closeModal);close.on('pointerup',closeModal);root.add(close);
   }
 
   _openDuelLapSelector(){
@@ -125,9 +140,12 @@ export class MenuScene extends CurrentMenuScene {
       const bx=cx+(i-1)*118,active=current===laps;
       const b=this.add.rectangle(bx,cy+14,100,50,active?0x5a3512:0x112331,.98).setStrokeStyle(2,active?0xffb45f:0x587085,active?1:.55).setInteractive({useHandCursor:true});
       const t=this.add.text(bx,cy+14,`${laps} VUELTAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5);c.add([b,t]);
-      b.on('pointerdown',()=>{try{localStorage.setItem(DUEL_LAPS_KEY,String(laps));}catch{}this._duelLapModal=null;c.destroy(true);this._startSelectedMode('duel');});
+      let fired=false;
+      const choose=()=>{if(fired)return;fired=true;try{localStorage.setItem(DUEL_LAPS_KEY,String(laps));}catch{}this._duelLapModal=null;c.destroy(true);this._startSelectedMode('duel');};
+      b.on('pointerdown',choose);b.on('pointerup',choose);
     });
     const cancel=this.add.text(cx,cy+70,'CANCELAR',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#8fa3b5'}).setOrigin(.5).setInteractive({useHandCursor:true});
-    cancel.on('pointerdown',()=>{this._duelLapModal=null;c.destroy(true);});c.add(cancel);
+    const cancelFn=()=>{this._duelLapModal=null;c.destroy(true);};
+    cancel.on('pointerdown',cancelFn);cancel.on('pointerup',cancelFn);c.add(cancel);
   }
 }
