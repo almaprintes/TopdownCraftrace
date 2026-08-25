@@ -16,6 +16,15 @@ function inRect(x,y,z){
   return x>=Number(z.x)&&x<=Number(z.x)+Number(z.w)&&y>=Number(z.y)&&y<=Number(z.y)+Number(z.h);
 }
 
+function practiceMeta(track){
+  const direct=track?.meta||{};
+  const nested=direct?.meta||{};
+  return {
+    zones:Array.isArray(direct.practiceZones)?direct.practiceZones:(Array.isArray(nested.practiceZones)?nested.practiceZones:[]),
+    spawn:direct.practiceSpawn||nested.practiceSpawn||{x:700,y:900,r:0}
+  };
+}
+
 export class RaceScene extends CurrentRaceScene{
   create(data){
     this._practiceAreaMode=isPractice(data);
@@ -23,15 +32,34 @@ export class RaceScene extends CurrentRaceScene{
     const result=super.create(launch);
     if(!this._practiceAreaMode)return result;
 
-    this._practiceZones=Array.isArray(this.track?.meta?.practiceZones)?this.track.meta.practiceZones:[];
+    const meta=practiceMeta(this.track);
+    this._practiceZones=meta.zones;
+    this._practiceSpawn=meta.spawn;
     this._capturePracticeSurfaceBaseline();
     this._buildPracticeSurfaceInteractions();
 
+    this._disablePracticeStartSequence();
     this._disablePracticeRaceRules();
     this._buildPracticeWorld();
     this.time?.delayedCall?.(0,()=>this._placePracticeCar());
-    this.time?.delayedCall?.(250,()=>{this._disablePracticeRaceRules();this._placePracticeCar();});
+    this.time?.delayedCall?.(250,()=>{this._disablePracticeStartSequence();this._disablePracticeRaceRules();this._placePracticeCar();});
     return result;
+  }
+
+  _disablePracticeStartSequence(){
+    if(!this._practiceAreaMode)return;
+    this._startAutoFired=true;
+    this._startState='RACING';
+    this._raceStarted=true;
+    try{if(this._reflowStartModal)this.scale?.off?.('resize',this._reflowStartModal);}catch{}
+    try{this._startModal?.destroy?.(true);}catch{}
+    this._startModal=null;
+    this._startModalBg=null;
+    this._startTitle=null;
+    this._startHint=null;
+    this._startStatus=null;
+    this._startAsset=null;
+    this._startLights=[];
   }
 
   _capturePracticeSurfaceBaseline(){
@@ -57,7 +85,7 @@ export class RaceScene extends CurrentRaceScene{
   _materialAt(x,y){
     if(!this._practiceAreaMode)return 'ASPHALT';
     let found='GRASS';
-    for(const z of this._practiceZones){if(inRect(x,y,z))found=String(z.id||'GRASS').toUpperCase();}
+    for(const z of this._practiceZones||[]){if(inRect(x,y,z))found=String(z.id||'GRASS').toUpperCase();}
     return found;
   }
 
@@ -79,10 +107,29 @@ export class RaceScene extends CurrentRaceScene{
     return {speed:Math.hypot(vx,vy),vF,vL,slipAngle:Math.atan2(vL,Math.max(18,Math.abs(vF)))};
   }
 
+  _restorePracticeAsphaltBase(){
+    const base=this._practiceSurfaceBase;
+    if(!base)return;
+    if(Number.isFinite(base.accel))this.accel=base.accel;
+    if(Number.isFinite(base.brakeForce))this.brakeForce=base.brakeForce;
+    if(Number.isFinite(base.maxFwd))this.maxFwd=base.maxFwd;
+    if(Number.isFinite(base.linearDrag))this.linearDrag=base.linearDrag;
+    if(Number.isFinite(base.lateralGrip))this.lateralGrip=base.lateralGrip;
+    if(this.carParams?.steering&&Number.isFinite(base.steeringLateralGrip))this.carParams.steering.lateralGrip=base.steeringLateralGrip;
+  }
+
   _applyPracticeMaterial(material,body){
     const base=this._practiceSurfaceBase;
     const interaction=this._practiceSurfaceInteractions?.[material];
     if(!base||!interaction)return;
+
+    // Asfalto de Área de Pruebas = BASE 1.0 exacta del coche. Aquí no añadimos
+    // ningún multiplicador de superficie para que la Zona de Velocidad sirva
+    // como referencia comparable con los circuitos normales.
+    if(material==='ASPHALT'){
+      this._restorePracticeAsphaltBase();
+      return;
+    }
 
     const controls=this._practiceControls();
     const kin=this._practiceForwardKinematics(body);
@@ -119,6 +166,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _applyPracticeRollingResistance(material,body,delta){
+    if(material==='ASPHALT')return;
     const interaction=this._practiceSurfaceInteractions?.[material];
     const vel=body?.body?.velocity;
     if(!interaction||!vel)return;
@@ -229,7 +277,7 @@ export class RaceScene extends CurrentRaceScene{
 
   _placePracticeCar(){
     if(!this._practiceAreaMode)return;
-    const p=this.track?.meta?.practiceSpawn||{x:700,y:900,r:0};
+    const p=this._practiceSpawn||{x:700,y:900,r:0};
     const body=this.carBody||this.car;
     if(body?.scene){
       try{body.setPosition(Number(p.x)||700,Number(p.y)||900);}catch{}
@@ -249,12 +297,16 @@ export class RaceScene extends CurrentRaceScene{
       return;
     }
 
+    // Los callbacks del semáforo base quedan sin UI, pero este modo siempre está
+    // conduciendo: mantenemos el estado de carrera abierto en cada frame.
+    this._startAutoFired=true;
+    this._startState='RACING';
+    this._raceStarted=true;
+
     const bodyBefore=this.carBody||this.car;
     const materialBefore=this._materialAt(Number(bodyBefore?.x||0),Number(bodyBefore?.y||0));
     this._applyPracticeMaterial(materialBefore,bodyBefore);
 
-    // Área de Pruebas no tiene una pista válida/ inválida: neutraliza SOLO aquí
-    // la penalización genérica de salirse del ribbon técnico invisible.
     const originalOnTrack=this._isOnTrack;
     const originalInBand=this._isInBand;
     this._isOnTrack=()=>true;
