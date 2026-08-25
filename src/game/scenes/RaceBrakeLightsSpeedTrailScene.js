@@ -60,7 +60,7 @@ export class RaceScene extends CurrentRaceScene {
   _brakePressed(){
     const t=this.touch||{};
     const k=this.keys||{};
-    return Number(t.brake||0)>0.5 || !!k.down?.isDown || !!k.down2?.isDown || this._brakeWasPressed===true;
+    return Number(t.brake||0)>0.5 || !!k.down?.isDown || !!k.down2?.isDown || this._brakeWasPressed===true || this._tdrHandbrake===true;
   }
 
   _updateVehicleLights(){
