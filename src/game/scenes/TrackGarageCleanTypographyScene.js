@@ -1,5 +1,6 @@
 import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGarageUnifiedStyleScene.js';
 import { pxToMeters } from '../cars/speedUnits.js';
+import { t } from '../i18n/index.js';
 
 function pts(track){return (track?.centerline||[]).map(p=>Array.isArray(p)?{x:+p[0],y:+p[1]}:{x:+p?.x,y:+p?.y}).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));}
 function lengthWorld(track){const direct=Number(track?.length??track?.trackLength??track?.meta?.length??track?.meta?.trackLength);if(Number.isFinite(direct)&&direct>0)return direct;const p=pts(track);let d=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];d+=Math.hypot(b.x-a.x,b.y-a.y);}return d;}
@@ -8,6 +9,7 @@ function widthM(track){const raw=Number(track?.trackWidth??track?.width??track?.
 function sectors(track){const n=Number(track?.sectors);if(Number.isFinite(n)&&n>0)return Math.round(n);const c=track?.checkpointFractions;return Array.isArray(c)?Math.max(1,c.length+1):3;}
 function surface(track){return String(track?.surface||track?.meta?.trackSurface||track?.meta?.surface||'Asfalto');}
 function isDirt(track){return /dirt|tierra|gravel|grava/i.test(surface(track));}
+function surfaceLabel(track){return isDirt(track)?t('lobby.dirt'):t('lobby.asphalt');}
 const FONT='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 export class TrackGarageScene extends CurrentTrackGarageScene {
@@ -54,14 +56,6 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     const p=pts(track);if(p.length<3)return null;
     const hero=Number(w)>=800;
     const tier=hero?'hero':'thumb';
-
-    // IMPORTANTE iOS/WebKit:
-    // Estas previews se crean para TODOS los circuitos al construir la lista.
-    // 720x620 por miniatura reservaba ~1.7 MB RGBA por circuito y 1440x860
-    // otros ~4.7 MB para cada hero generado. En iPhone 12 WebKit podía matar
-    // el proceso antes de llegar a carrera. A 240x150 la miniatura sigue teniendo
-    // casi 3x la resolución con la que se muestra (84 px) y el hero a 640x380
-    // conserva detalle suficiente para móvil sin disparar memoria gráfica.
     const renderW=hero?640:240;
     const renderH=hero?380:150;
     const sig=`${track?.key}_${isDirt(track)?'dirt':'asphalt'}_${p.length}_${tier}_v4_memcap`;
@@ -101,17 +95,13 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
         path();ctx.strokeStyle='rgba(3,10,8,.42)';ctx.lineWidth=road*1.32;ctx.stroke();
         path();ctx.strokeStyle='#40382e';ctx.lineWidth=road*1.14;ctx.stroke();
         path();ctx.strokeStyle='#8b714f';ctx.lineWidth=road;ctx.stroke();
-        if(hero){
-          path();ctx.strokeStyle='rgba(223,191,140,.24)';ctx.lineWidth=Math.max(1.6,road*.035);ctx.setLineDash([Math.max(10,road*.34),Math.max(10,road*.30)]);ctx.stroke();ctx.setLineDash([]);
-        }
+        if(hero){path();ctx.strokeStyle='rgba(223,191,140,.24)';ctx.lineWidth=Math.max(1.6,road*.035);ctx.setLineDash([Math.max(10,road*.34),Math.max(10,road*.30)]);ctx.stroke();ctx.setLineDash([]);}
       }else{
         path();ctx.strokeStyle='rgba(3,9,11,.50)';ctx.lineWidth=road*1.29;ctx.stroke();
         path();ctx.strokeStyle='#171d20';ctx.lineWidth=road*1.15;ctx.stroke();
         path();ctx.strokeStyle=hero?'rgba(214,220,218,.74)':'rgba(198,205,203,.58)';ctx.lineWidth=road*(hero?1.045:1.035);ctx.stroke();
         path();ctx.strokeStyle='#3d4448';ctx.lineWidth=road*(hero ? .945 : .955);ctx.stroke();
-        if(hero){
-          path();ctx.strokeStyle='rgba(118,126,129,.18)';ctx.lineWidth=road*.68;ctx.stroke();
-        }
+        if(hero){path();ctx.strokeStyle='rgba(118,126,129,.18)';ctx.lineWidth=road*.68;ctx.stroke();}
       }
 
       const a=p[0],b=p[1];
@@ -146,7 +136,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     const tx=110,available=Math.max(110,w-tx-12),label=String(t.name||t.key).toUpperCase();
     const nameSize=label.length>18?11:label.length>14?12:13;
     item.add(this.add.text(tx,14,label,{fontFamily:FONT,fontSize:`${nameSize}px`,fontStyle:'bold',color:'#fff',fixedWidth:available}));
-    item.add(this.add.text(tx,42,`${String(i+1).padStart(2,'0')} · ${surface(t)}\n${lengthM(t)} m · ${sectors(t)} sectores`,{fontFamily:FONT,fontSize:'10.5px',color:selected?'#cad3f4':'#94a3c7',lineSpacing:2,fixedWidth:available}));
+    item.add(this.add.text(tx,42,`${String(i+1).padStart(2,'0')} · ${surfaceLabel(t)}\n${lengthM(t)} m · ${sectors(t)} ${t('tracks.sectors').toLowerCase()}`,{fontFamily:FONT,fontSize:'10.5px',color:selected?'#cad3f4':'#94a3c7',lineSpacing:2,fixedWidth:available}));
 
     const hit=this.add.rectangle(0,0,w,h,0,0.001).setOrigin(0).setInteractive({useHandCursor:true});item.add(hit);
     let sy=0,drag=false;hit.on('pointerdown',p=>{sy=p.y;drag=false;});hit.on('pointermove',p=>{if(Math.abs(p.y-sy)>8)drag=true;});hit.on('pointerup',()=>{if(drag||this._dragTrackList)return;this._index=i;this._centerSelectedTrackOnNextLayout=true;this._commercial?.destroy(true);this._commercial=null;this._buildCommercial();});
@@ -154,8 +144,8 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
   }
 
   _trackHero(root,g,x,y,w,h){
-    const t=this._tracks[this._index];
-    const title=String(t.name||t.key).toUpperCase();
+    const trk=this._tracks[this._index];
+    const title=String(trk.name||trk.key).toUpperCase();
     const titleSize=title.length>20?23:title.length>15?25:27;
     root.add(this.add.text(x+w/2,y+12,title,{fontFamily:FONT,fontSize:`${titleSize}px`,fontStyle:'bold',color:'#fff'}).setOrigin(.5,0));
 
@@ -163,16 +153,16 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     const previewH=Math.max(135,h-50-footerH-12);
     g.fillStyle(0x071016,.82).fillRoundedRect(previewX,previewTop,previewW,previewH,15);
     g.lineStyle(1,0xb7c0ff,.15).strokeRoundedRect(previewX,previewTop,previewW,previewH,15);
-    const key=this._displayPreview(t,1400,850);if(key&&this.textures.exists(key)){const im=this.add.image(previewX+previewW/2,previewTop+previewH/2,key);im.setScale(Math.min((previewW-14)/im.width,(previewH-12)/im.height));root.add(im);}
+    const key=this._displayPreview(trk,1400,850);if(key&&this.textures.exists(key)){const im=this.add.image(previewX+previewW/2,previewTop+previewH/2,key);im.setScale(Math.min((previewW-14)/im.width,(previewH-12)/im.height));root.add(im);}
 
     const footerY=y+h-footerH;
     const selectW=Math.min(250,w*.31),selectH=44,selectX=x+w-selectW-24,statsRight=selectX-18;
     const statsX=x+24,statsW=Math.max(260,statsRight-statsX),cellW=statsW/4;
-    const rows=[['LONGITUD',`${lengthM(t)} m`],['SECTORES',String(sectors(t))],['SUPERFICIE',surface(t)],['ANCHO',`${widthM(t).toFixed(1)} m`]];
+    const rows=[[t('tracks.length'),`${lengthM(trk)} m`],[t('tracks.sectors'),String(sectors(trk))],[t('tracks.surface'),surfaceLabel(trk)],[t('tracks.width'),`${widthM(trk).toFixed(1)} m`]];
     rows.forEach((r,i)=>{const xx=statsX+i*cellW;if(i)g.lineStyle(1,0xb7c0ff,.10).lineBetween(xx,footerY+9,xx,footerY+52);root.add(this.add.text(xx+10,footerY+8,r[0],{fontFamily:FONT,fontSize:'8.5px',fontStyle:'bold',color:'#7f8fae'}));root.add(this.add.text(xx+10,footerY+27,r[1],{fontFamily:FONT,fontSize:'13px',fontStyle:'bold',color:'#fff'}));});
 
     const select=this.add.rectangle(selectX,footerY+8,selectW,selectH,0x2bff88,.95).setOrigin(0).setStrokeStyle(1,0x7dffc1,.75).setInteractive({useHandCursor:true});root.add(select);
-    root.add(this.add.text(selectX+selectW/2,footerY+30,this._mode==='admin'?'EDITAR':'SELECCIONAR',{fontFamily:FONT,fontSize:'14px',fontStyle:'bold',color:'#07131b'}).setOrigin(.5));
+    root.add(this.add.text(selectX+selectW/2,footerY+30,this._mode==='admin'?t('tracks.edit'):t('tracks.select'),{fontFamily:FONT,fontSize:'14px',fontStyle:'bold',color:'#07131b'}).setOrigin(.5));
     select.on('pointerup',()=>this._launchSelected());
   }
 }
