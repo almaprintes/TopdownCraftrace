@@ -92,10 +92,10 @@ export class MenuScene extends PreviousMenuScene{
     this._buyButton(card,w,h,p.priceLabel,()=>{this._toastStore(L.comingSoon,true);},true,p.accent,false);return;
   }
   if(p.type==='reward'){
-    const st=rewardedStatus();this._rewardAsset(card,w,h,REWARD_ASSETS.video);card.add(this.add.text(w/2,heroH-18,`+250 ${L.coinsWord}`,{fontFamily:FONT,fontSize:compact?'17px':'21px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));this._buyButton(card,w,h,st.available?L.watch:`${L.available} ${timeLabel(st.remaining)}`,()=>{if(!st.available)return;claimRewardedCoins(250);this._toastStore(`+250 ${L.coinsWord}`,true);this._openStoreModal('rewards');},st.available,p.accent,false);return;
+    const st=rewardedStatus();this._rewardAsset(card,w,h,REWARD_ASSETS.video);card.add(this.add.text(w/2,heroH-18,`+100 ${L.coinsWord}`,{fontFamily:FONT,fontSize:compact?'17px':'21px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));this._buyButton(card,w,h,st.available?L.watch:`${L.available} ${timeLabel(st.remaining)}`,()=>{if(!st.available)return;claimRewardedCoins(100);this._toastStore(`+100 ${L.coinsWord}`,true);this._openStoreModal('rewards');},st.available,p.accent,false);return;
   }
   if(p.type==='daily'){
-    const st=dailyStatus();this._rewardAsset(card,w,h,REWARD_ASSETS.daily);card.add(this.add.text(w/2,heroH-18,`+100 ${L.coinsWord}`,{fontFamily:FONT,fontSize:compact?'17px':'21px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));this._buyButton(card,w,h,st.available?L.claim:`${L.available} ${timeLabel(st.remaining)}`,()=>{if(!st.available)return;claimDailyCoins(100);this._toastStore(`+100 ${L.coinsWord}`,true);this._openStoreModal('rewards');},st.available,p.accent,false);}
+    const st=dailyStatus();this._rewardAsset(card,w,h,REWARD_ASSETS.daily);card.add(this.add.text(w/2,heroH-18,`+250 ${L.coinsWord}`,{fontFamily:FONT,fontSize:compact?'17px':'21px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));this._buyButton(card,w,h,st.available?L.claim:`${L.available} ${timeLabel(st.remaining)}`,()=>{if(!st.available)return;claimDailyCoins(250);this._toastStore(`+250 ${L.coinsWord}`,true);this._openStoreModal('rewards');},st.available,p.accent,false);}
  }
 
  _coinPile(card,w,h,kind){const key=`store:${COIN_PACK_ASSETS[kind]||COIN_PACK_ASSETS[0]}`;if(!this.textures.exists(key))return;const im=this.add.image(w/2,h*(h<250?.39:.40),key),scale=Math.min((w*.82)/(im.width||1),(h*.50)/(im.height||1));im.setScale(scale);card.add(im);}
