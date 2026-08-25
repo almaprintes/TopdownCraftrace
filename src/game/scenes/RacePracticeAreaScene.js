@@ -51,15 +51,22 @@ export class RaceScene extends CurrentRaceScene{
     this._startAutoFired=true;
     this._startState='RACING';
     this._raceStarted=true;
-    try{if(this._reflowStartModal)this.scale?.off?.('resize',this._reflowStartModal);}catch{}
-    try{this._startModal?.destroy?.(true);}catch{}
-    this._startModal=null;
-    this._startModalBg=null;
-    this._startTitle=null;
-    this._startHint=null;
-    this._startStatus=null;
-    this._startAsset=null;
-    this._startLights=[];
+
+    // RaceScene base deja callbacks delayedCall(0/120) que invocan
+    // this._reflowStartModal(). No destruimos los Shapes de la modal aquí:
+    // Phaser pone geom=null al destruirlos y un callback ya encolado puede
+    // terminar llamando setSize() sobre ese objeto muerto.
+    const oldReflow=this._reflowStartModal;
+    try{if(oldReflow)this.scale?.off?.('resize',oldReflow);}catch{}
+    this._reflowStartModal=()=>{};
+
+    try{this._startModal?.setVisible?.(false);}catch{}
+    try{this._startModalBg?.setVisible?.(false);}catch{}
+    try{this._startTitle?.setVisible?.(false);}catch{}
+    try{this._startHint?.setVisible?.(false);}catch{}
+    try{this._startStatus?.setVisible?.(false);}catch{}
+    try{this._startAsset?.setVisible?.(false);}catch{}
+    for(const light of this._startLights||[]){try{light?.setVisible?.(false);}catch{}}
   }
 
   _capturePracticeSurfaceBaseline(){
@@ -123,9 +130,6 @@ export class RaceScene extends CurrentRaceScene{
     const interaction=this._practiceSurfaceInteractions?.[material];
     if(!base||!interaction)return;
 
-    // Asfalto de Área de Pruebas = BASE 1.0 exacta del coche. Aquí no añadimos
-    // ningún multiplicador de superficie para que la Zona de Velocidad sirva
-    // como referencia comparable con los circuitos normales.
     if(material==='ASPHALT'){
       this._restorePracticeAsphaltBase();
       return;
@@ -297,8 +301,6 @@ export class RaceScene extends CurrentRaceScene{
       return;
     }
 
-    // Los callbacks del semáforo base quedan sin UI, pero este modo siempre está
-    // conduciendo: mantenemos el estado de carrera abierto en cada frame.
     this._startAutoFired=true;
     this._startState='RACING';
     this._raceStarted=true;
