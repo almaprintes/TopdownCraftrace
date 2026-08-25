@@ -83,30 +83,44 @@ export class SeasonScene extends Phaser.Scene {
       #tdr-season-dom .premium-road:before{top:24%}
       #tdr-season-dom .premium-road:after{bottom:24%}
 
-      #tdr-season-dom .stage-node{position:relative;z-index:3;width:150px;height:102px;align-self:center;scroll-snap-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:17px 8px 8px;border:1px solid #405767;background:linear-gradient(180deg,rgba(12,28,38,.98),rgba(6,18,26,.96));box-shadow:0 10px 24px rgba(0,0,0,.38);transition:transform .14s,border-color .14s,box-shadow .14s,opacity .14s}
+      /* Traffic-sign stage language: the reward is mounted on a road sign, not a card. */
+      #tdr-season-dom .stage-node{position:relative;z-index:3;width:150px;height:118px;align-self:center;scroll-snap-align:center;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 7px 8px;border:0;background:transparent;box-shadow:none;transition:transform .14s,opacity .14s;overflow:visible}
       #tdr-season-dom .stage-node:hover{transform:translateY(-2px)}
-      #tdr-season-dom .stage-node.free-node{grid-row:1;margin-top:-23px}
-      #tdr-season-dom .stage-node.premium-node{grid-row:2;margin-top:-28px;border-color:rgba(216,167,58,.45);background:linear-gradient(180deg,rgba(32,26,14,.97),rgba(10,15,18,.98))}
-      #tdr-season-dom .stage-node.done{border-color:rgba(57,255,154,.7)}
-      #tdr-season-dom .stage-node.current{border:2px solid #62ffb2;box-shadow:0 0 22px rgba(57,255,154,.18),0 12px 26px rgba(0,0,0,.42)}
-      #tdr-season-dom .stage-node.selected{outline:2px solid rgba(53,207,255,.72);outline-offset:3px}
-      #tdr-season-dom .stage-node.locked{opacity:.68}
-      #tdr-season-dom .stage-badge{position:absolute;left:50%;top:-15px;transform:translateX(-50%);min-width:34px;height:29px;padding:0 7px;display:grid;place-items:center;background:#0b1821;border:1px solid #597180;border-radius:10px;font-size:9px;font-weight:1000;color:#d9e5ea;box-shadow:0 4px 10px rgba(0,0,0,.34)}
-      #tdr-season-dom .premium-node .stage-badge{border-color:#a77a24;color:#f0c65a;background:#1c160b;transform:translateX(-50%) rotate(45deg);border-radius:5px;min-width:27px;width:27px;height:27px;padding:0}
-      #tdr-season-dom .premium-node .stage-badge span{transform:rotate(-45deg)}
-      #tdr-season-dom .node-art{height:62px;width:100%;display:flex;align-items:center;justify-content:center;gap:3px;overflow:visible;filter:drop-shadow(0 7px 7px rgba(0,0,0,.46))}
-      #tdr-season-dom .node-loot{position:relative;width:37px;height:55px;display:grid;place-items:center}
-      #tdr-season-dom .node-loot.coin{width:54px}
-      #tdr-season-dom .node-loot img{max-width:100%;max-height:50px;object-fit:contain}
-      #tdr-season-dom .node-loot.coin img{max-height:56px}
-      #tdr-season-dom .node-qty{position:absolute;right:-2px;bottom:-2px;min-width:25px;height:18px;padding:0 5px;display:grid;place-items:center;border-radius:10px;background:#0b2d21;border:1px solid rgba(98,255,178,.7);font-size:8px;font-weight:1000;color:#fff}
+      #tdr-season-dom .stage-node.free-node{grid-row:1;margin-top:-27px}
+      #tdr-season-dom .stage-node.premium-node{grid-row:2;margin-top:-34px}
+      #tdr-season-dom .stage-node.locked{opacity:.62}
+
+      #tdr-season-dom .stage-node:before{content:'';position:absolute;left:50%;top:7px;transform:translateX(-50%);z-index:-1;transition:border-color .14s,box-shadow .14s,background .14s}
+      #tdr-season-dom .free-node:before{width:103px;height:103px;border-radius:50%;background:radial-gradient(circle at 38% 30%,#17303d 0 48%,#0b1a23 72%);border:5px solid #dce6e9;box-shadow:0 0 0 3px #394c57,0 10px 22px rgba(0,0,0,.46),inset 0 0 0 2px rgba(255,255,255,.08)}
+      #tdr-season-dom .free-node.done:before{border-color:#76ffb6;box-shadow:0 0 0 3px #165c41,0 0 17px rgba(57,255,154,.22),0 10px 22px rgba(0,0,0,.46)}
+      #tdr-season-dom .free-node.current:before{border-color:#62ffb2;box-shadow:0 0 0 4px #187149,0 0 27px rgba(57,255,154,.42),0 12px 24px rgba(0,0,0,.48)}
+      #tdr-season-dom .free-node.selected:before{outline:2px solid rgba(53,207,255,.82);outline-offset:5px}
+
+      #tdr-season-dom .premium-node:before{width:118px;height:88px;top:15px;border-radius:7px;background:linear-gradient(180deg,#182f3d,#0c202b);border:4px solid #e0ad3d;box-shadow:0 0 0 2px #5c4616,0 12px 24px rgba(0,0,0,.48),inset 0 0 0 2px rgba(255,231,159,.09)}
+      #tdr-season-dom .premium-node:after{content:'';position:absolute;left:50%;top:102px;width:6px;height:32px;transform:translateX(-50%);background:linear-gradient(90deg,#384b53,#9aa9ad 45%,#42545b);border-radius:0 0 2px 2px;box-shadow:36px 0 0 #65777d,-36px 0 0 #65777d;z-index:-2}
+      #tdr-season-dom .premium-node.selected:before{box-shadow:0 0 0 2px #5c4616,0 0 25px rgba(216,167,58,.35),0 12px 24px rgba(0,0,0,.48);outline:2px solid rgba(53,207,255,.72);outline-offset:5px}
+
+      #tdr-season-dom .sign-post{position:absolute;left:50%;top:104px;transform:translateX(-50%);width:6px;height:37px;background:linear-gradient(90deg,#3f5057,#b7c2c5 48%,#405159);border-radius:0 0 2px 2px;z-index:-2;box-shadow:0 4px 5px rgba(0,0,0,.4)}
+      #tdr-season-dom .premium-node .sign-post{display:none}
+      #tdr-season-dom .stage-badge{position:absolute;left:50%;top:-12px;transform:translateX(-50%);min-width:38px;height:38px;padding:0 6px;display:grid;place-items:center;border-radius:50%;font-size:9px;font-weight:1000;color:#16212a;background:#f4f5f2;border:4px solid #d34b42;box-shadow:0 4px 11px rgba(0,0,0,.42);z-index:5}
+      #tdr-season-dom .free-node.current .stage-badge{background:#143d2d;color:#fff;border-color:#62ffb2;box-shadow:0 0 16px rgba(57,255,154,.4),0 4px 11px rgba(0,0,0,.42)}
+      #tdr-season-dom .free-node.done .stage-badge{border-color:#53d998;color:#153027}
+      #tdr-season-dom .premium-node .stage-badge{top:-8px;min-width:52px;width:auto;height:27px;padding:0 10px;border-radius:4px;background:#17435a;border:2px solid #f0c65a;color:#ffe28a;transform:translateX(-50%);box-shadow:0 4px 10px rgba(0,0,0,.42)}
+      #tdr-season-dom .premium-node .stage-badge span{transform:none}
+
+      #tdr-season-dom .node-art{position:relative;z-index:2;height:72px;width:92px;display:flex;align-items:center;justify-content:center;gap:1px;overflow:visible;filter:drop-shadow(0 7px 7px rgba(0,0,0,.46));margin-top:4px}
+      #tdr-season-dom .node-loot{position:relative;width:31px;height:58px;display:grid;place-items:center}
+      #tdr-season-dom .node-loot.coin{width:43px}
+      #tdr-season-dom .node-loot img{max-width:100%;max-height:47px;object-fit:contain}
+      #tdr-season-dom .node-loot.coin img{max-height:52px}
+      #tdr-season-dom .node-qty{position:absolute;right:-3px;bottom:-1px;min-width:25px;height:18px;padding:0 5px;display:grid;place-items:center;border-radius:10px;background:#0b2d21;border:1px solid rgba(98,255,178,.78);font-size:8px;font-weight:1000;color:#fff;box-shadow:0 3px 7px rgba(0,0,0,.4)}
       #tdr-season-dom .node-loot.coin .node-qty{background:#4a370e;border-color:#d9ac3d;color:#ffe788}
-      #tdr-season-dom .premium-gift{position:relative;width:72px;height:67px;display:grid;place-items:center;filter:grayscale(.25) saturate(.75) brightness(.72) drop-shadow(0 8px 8px rgba(0,0,0,.52))}
-      #tdr-season-dom .premium-gift img{max-width:72px;max-height:67px;object-fit:contain}
+      #tdr-season-dom .premium-gift{position:relative;z-index:2;width:78px;height:74px;display:grid;place-items:center;filter:grayscale(.18) saturate(.78) brightness(.75) drop-shadow(0 8px 8px rgba(0,0,0,.52));margin-top:5px}
+      #tdr-season-dom .premium-gift img{max-width:78px;max-height:73px;object-fit:contain}
       #tdr-season-dom .premium-lock{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:rgba(8,8,7,.84);border:1px solid rgba(240,198,90,.66);font-size:14px}
-      #tdr-season-dom .road-pin{position:absolute;left:50%;bottom:-31px;transform:translateX(-50%);width:13px;height:13px;border-radius:50%;background:#183341;border:2px solid #7b929e;box-shadow:0 0 0 4px rgba(6,16,25,.82)}
+      #tdr-season-dom .road-pin{position:absolute;left:50%;bottom:-27px;transform:translateX(-50%);width:13px;height:13px;border-radius:50%;background:#183341;border:2px solid #7b929e;box-shadow:0 0 0 4px rgba(6,16,25,.82);z-index:4}
       #tdr-season-dom .free-node.current .road-pin,#tdr-season-dom .free-node.done .road-pin{background:#39ff9a;border-color:#b2ffd5;box-shadow:0 0 12px rgba(57,255,154,.65),0 0 0 4px rgba(6,16,25,.82)}
-      #tdr-season-dom .premium-node .road-pin{bottom:-39px;background:#6b5119;border-color:#d8a73a}
+      #tdr-season-dom .premium-node .road-pin{bottom:-35px;background:#6b5119;border-color:#d8a73a}
 
       #tdr-season-dom .detail-dock{display:grid;grid-template-columns:1.55fr .85fr 1.1fr .85fr;min-height:0;background:#081722;border-top:1px solid #2f4758;box-shadow:0 -10px 28px rgba(0,0,0,.2)}
       #tdr-season-dom .detail-cell{min-width:0;padding:12px 18px;border-right:1px solid rgba(255,255,255,.085);display:flex;flex-direction:column;justify-content:center}
@@ -134,7 +148,9 @@ export class SeasonScene extends Phaser.Scene {
         #tdr-season-dom .s-head{grid-template-columns:86px minmax(0,1fr) 220px;padding:0 18px;gap:14px}
         #tdr-season-dom .s-title{font-size:20px}
         #tdr-season-dom .route-inner{grid-template-columns:repeat(14,138px);column-gap:105px;padding-left:190px;padding-right:150px}
-        #tdr-season-dom .stage-node{width:138px;height:96px}
+        #tdr-season-dom .stage-node{width:138px;height:112px}
+        #tdr-season-dom .free-node:before{width:96px;height:96px}
+        #tdr-season-dom .premium-node:before{width:112px;height:84px}
         #tdr-season-dom .detail-dock{grid-template-columns:1.35fr .75fr 1.1fr .8fr}
         #tdr-season-dom .detail-cell{padding:10px 12px}
         #tdr-season-dom .detail-title{font-size:16px}
@@ -143,12 +159,17 @@ export class SeasonScene extends Phaser.Scene {
         #tdr-season-dom .s-head{height:62px}
         #tdr-season-dom .season-main{height:calc(100% - 62px);grid-template-rows:28px minmax(205px,1fr) 98px}
         #tdr-season-dom .route-label{height:60px;width:146px;padding-top:10px}
-        #tdr-season-dom .stage-node{height:86px}
-        #tdr-season-dom .node-art{height:52px}
-        #tdr-season-dom .node-loot{height:48px;width:33px}
-        #tdr-season-dom .node-loot.coin{width:48px}
-        #tdr-season-dom .node-loot img{max-height:44px}
-        #tdr-season-dom .node-loot.coin img{max-height:49px}
+        #tdr-season-dom .stage-node{height:104px}
+        #tdr-season-dom .free-node:before{width:86px;height:86px;top:10px}
+        #tdr-season-dom .premium-node:before{width:104px;height:76px}
+        #tdr-season-dom .sign-post{top:95px;height:28px}
+        #tdr-season-dom .node-art{height:58px;width:82px}
+        #tdr-season-dom .node-loot{height:48px;width:27px}
+        #tdr-season-dom .node-loot.coin{width:39px}
+        #tdr-season-dom .node-loot img{max-height:40px}
+        #tdr-season-dom .node-loot.coin img{max-height:45px}
+        #tdr-season-dom .premium-gift{width:66px;height:62px}
+        #tdr-season-dom .premium-gift img{max-width:66px;max-height:61px}
         #tdr-season-dom .detail-cell{padding-top:7px;padding-bottom:7px}
         #tdr-season-dom .detail-desc{margin-top:4px;font-size:8px}
         #tdr-season-dom .detail-reward{min-height:45px}
@@ -224,11 +245,13 @@ export class SeasonScene extends Phaser.Scene {
       return `<button class="stage-node free-node ${classes}" type="button" data-stage="${i}" style="grid-column:${i+1}">
         <span class="stage-badge">${String(i+1).padStart(2,'0')}</span>
         <span class="node-art">${this._rewardGallery(def?.reward,lang,true)}</span>
+        <span class="sign-post"></span>
         <span class="road-pin"></span>
       </button>
       <button class="stage-node premium-node ${selected===i?'selected':''}" type="button" data-stage="${i}" style="grid-column:${i+1}">
         <span class="stage-badge"><span>${String(i+1).padStart(2,'0')}</span></span>
         <span class="premium-gift"><img src="${BASE}assets/store/daily_gift.webp" alt=""><span class="premium-lock">🔒</span></span>
+        <span class="sign-post"></span>
         <span class="road-pin"></span>
       </button>`;
     }).join('');
