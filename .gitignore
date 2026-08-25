@@ -3,3 +3,4 @@ dist/
 .DS_Store
 npm-debug.log*
 public/assets/ui/orientation_portrait_runtime.webp
+public/assets/ui/orientation_active.webp
