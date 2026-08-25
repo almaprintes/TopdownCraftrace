@@ -57,6 +57,14 @@ This separation is intentional: homologation access is a development privilege, 
 ## Season presentation
 `SeasonScene.js` understands car rewards in addition to coins/materials. The final card uses the Gripline display asset without a quantity badge and has a larger hero-art treatment. Standard Season 0 cards continue using the four reusable FREE card backgrounds under `public/assets/season/reward_cards/`.
 
+## Track selector regression found during validation
+While validating the new player progression on iPhone, opening the track selector raised:
+`TypeError: t is not a function` around `t('tracks.sectors')`.
+
+Cause: `_trackItem(x,y,w,h,t,i)` in `TrackGarageCleanTypographyScene.js` used `t` as the track parameter, shadowing the imported i18n translation function `t`.
+
+Fix: the track parameter was renamed to `track`, restoring translation calls inside the selector.
+
 ## Implementation commits
 - `cded4d05e199c106563673c92ce5cdb256d90922` — Add car unlock progression store.
 - `9c06bcd80d1d22be1b01f5dbb710ac7515277375` — Simplify Season 0 rewards and add Gripline finale.
@@ -64,8 +72,10 @@ This separation is intentional: homologation access is a development privilege, 
 - `206c9cece78157e2e84b0cd7d8d522c00aadafd3` — Add dev full car access toggle.
 - `81e6884762e5ee636fe64e50db999618a7fbc54c` — Respect car unlocks with dev bypass.
 - `917a66cf53532bf3651e684bb368c4a5b07b7e46` — Add homologation full car access control.
+- `c4e518ec02014e476f4778c7ce21940e31713809` — Fix track selector translation shadowing crash.
 
 ## Validation status
-- Single-reward Season 0 presentation and Gripline finale were visually confirmed by the user as looking great before the garage progression wiring.
-- Garage unlock filtering + DEV bypass are committed but have NOT yet been confirmed on iPhone by the user.
-- Do not claim the new garage filtering/toggle interaction is approved until tested on device.
+- Single-reward Season 0 presentation and Gripline finale were visually confirmed by the user as looking great.
+- Player Garage with real progression was confirmed on iPhone showing only HÉLIX Spark.
+- DEV full-car toggle still needs explicit on-device confirmation in ON state.
+- Track selector crash fix is committed and awaits a fresh on-device retry.
