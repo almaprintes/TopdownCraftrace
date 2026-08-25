@@ -1,26 +1,27 @@
 import { loadGarage, saveGarage, addItem } from '../garage/garageStore.js';
 import { t, getLanguage } from '../i18n/index.js';
 import { loadSeasonTelemetry } from '../seasons/seasonTelemetry.js';
+import { unlockCar } from '../cars/carUnlocks.js';
 
 const STATE_KEY='tdr2:seasonInduction:v1';
 const HIST_PREFIX='tdr2:ttHist:';
 
 const L=(es,en)=>({es,en});
 const EVENT_DEFS=[
-  {id:'first-drive',title:L('Primeros metros','First Miles'),description:L('Completa tu primera vuelta válida.','Complete your first valid lap.'),objective:{type:'laps',target:1,label:L('VUELTA','LAP')},reward:{coins:150,items:{scrap:4}}},
-  {id:'garage-visit',title:L('Conoce tu máquina','Know Your Machine'),description:L('Entra en el garaje y echa un vistazo a tu coche.','Visit the garage and take a look at your car.'),objective:{type:'garageVisits',target:1,label:L('VISITA','VISIT')},reward:{coins:200,items:{alloy:3}}},
-  {id:'material-start',title:L('Primer botín','First Loot'),description:L('Corre hasta conseguir tus primeros materiales.','Race until you earn your first materials.'),objective:{type:'lootDraws',target:8,label:L('BOTINES','LOOT DROPS')},reward:{coins:250,items:{scrap:6,rubber:4}}},
-  {id:'first-craft',title:L('Manos a la obra','Hands On'),description:L('Fabrica tu primera pieza para el coche.','Craft your first car part.'),objective:{type:'discoveries',target:1,absolute:true,label:L('PIEZA','PART')},reward:{coins:300,items:{alloy:5,compound:2}}},
-  {id:'equip-part',title:L('Ajusta el coche','Tune the Car'),description:L('Equipa una pieza fabricada en uno de tus coches.','Equip a crafted part on one of your cars.'),objective:{type:'equipped',target:1,absolute:true,label:L('EQUIPADA','EQUIPPED')},reward:{coins:350,items:{gear:4}}},
-  {id:'clean-start',title:L('Conduce limpio','Drive Clean'),description:L('Completa 2 vueltas limpias sin penalización.','Complete 2 clean laps without penalties.'),objective:{type:'clean',target:2,label:L('LIMPIAS','CLEAN LAPS')},reward:{coins:350,items:{compound:4}}},
-  {id:'store-buy',title:L('De compras','Shop Visit'),description:L('Compra un pack de materiales usando monedas del juego.','Buy a material pack using in-game coins.'),objective:{type:'storeBuys',target:1,label:L('COMPRA','PURCHASE')},reward:{coins:400,items:{disc:4,spring:4}}},
-  {id:'track-tour',title:L('Cambia de escenario','Change of Scenery'),description:L('Completa al menos una vuelta en 2 circuitos distintos.','Complete at least one lap on 2 different tracks.'),objective:{type:'tracks',target:2,minPerTrack:1,label:L('CIRCUITOS','TRACKS')},reward:{coins:400,items:{rubber:6}}},
-  {id:'mode-tour',title:L('Prueba algo diferente','Try Something New'),description:L('Inicia otro modo de juego desde el selector de modos.','Start another game mode from the mode selector.'),objective:{type:'modeStarts',target:1,label:L('MODO','MODE')},reward:{coins:400,items:{gear:5}}},
-  {id:'material-hunt',title:L('Coleccionista','Collector'),description:L('Consigue 20 nuevas tiradas de materiales compitiendo.','Earn 20 new material drops by racing.'),objective:{type:'lootDraws',target:20,label:L('BOTINES','LOOT DROPS')},reward:{coins:450,items:{scrap:10,alloy:6}}},
-  {id:'clean-rhythm',title:L('Coge el ritmo','Find Your Rhythm'),description:L('Completa 5 vueltas limpias.','Complete 5 clean laps.'),objective:{type:'clean',target:5,label:L('LIMPIAS','CLEAN LAPS')},reward:{coins:450,items:{compound:6,ecu:1}}},
-  {id:'distance-run',title:L('Suma kilómetros','Build Mileage'),description:L('Completa 10 vueltas válidas.','Complete 10 valid laps.'),objective:{type:'laps',target:10,label:L('VUELTAS','LAPS')},reward:{coins:500,items:{scrap:12,rubber:8}}},
-  {id:'explorer',title:L('Explorador','Explorer'),description:L('Completa al menos 2 vueltas en 3 circuitos distintos.','Complete at least 2 laps on 3 different tracks.'),objective:{type:'tracks',target:3,minPerTrack:2,label:L('CIRCUITOS','TRACKS')},reward:{coins:550,items:{disc:6,spring:6,gear:6}}},
-  {id:'induction-final',title:L('Piloto completo','Complete Driver'),description:L('Demuestra lo aprendido: 5 vueltas, 3 limpias y 2 circuitos.','Show what you learned: 5 laps, 3 clean laps and 2 tracks.'),objective:{type:'combined',target:3,label:L('OBJETIVOS','OBJECTIVES'),parts:[{type:'laps',target:5},{type:'clean',target:3},{type:'tracks',target:2,minPerTrack:1}]},reward:{coins:700,items:{scrap:12,alloy:10,rubber:10,compound:8,ecu:2}}}
+  {id:'first-drive',title:L('Primeros metros','First Miles'),description:L('Completa tu primera vuelta válida.','Complete your first valid lap.'),objective:{type:'laps',target:1,label:L('VUELTA','LAP')},reward:{coins:250}},
+  {id:'garage-visit',title:L('Conoce tu máquina','Know Your Machine'),description:L('Entra en el garaje y echa un vistazo a tu coche.','Visit the garage and take a look at your car.'),objective:{type:'garageVisits',target:1,label:L('VISITA','VISIT')},reward:{items:{scrap:8}}},
+  {id:'material-start',title:L('Primer botín','First Loot'),description:L('Corre hasta conseguir tus primeros materiales.','Race until you earn your first materials.'),objective:{type:'lootDraws',target:8,label:L('BOTINES','LOOT DROPS')},reward:{coins:400}},
+  {id:'first-craft',title:L('Manos a la obra','Hands On'),description:L('Fabrica tu primera pieza para el coche.','Craft your first car part.'),objective:{type:'discoveries',target:1,absolute:true,label:L('PIEZA','PART')},reward:{items:{rubber:6}}},
+  {id:'equip-part',title:L('Ajusta el coche','Tune the Car'),description:L('Equipa una pieza fabricada en uno de tus coches.','Equip a crafted part on one of your cars.'),objective:{type:'equipped',target:1,absolute:true,label:L('EQUIPADA','EQUIPPED')},reward:{coins:600}},
+  {id:'clean-start',title:L('Conduce limpio','Drive Clean'),description:L('Completa 2 vueltas limpias sin penalización.','Complete 2 clean laps without penalties.'),objective:{type:'clean',target:2,label:L('LIMPIAS','CLEAN LAPS')},reward:{items:{gear:4}}},
+  {id:'store-buy',title:L('De compras','Shop Visit'),description:L('Compra un pack de materiales usando monedas del juego.','Buy a material pack using in-game coins.'),objective:{type:'storeBuys',target:1,label:L('COMPRA','PURCHASE')},reward:{coins:800}},
+  {id:'track-tour',title:L('Cambia de escenario','Change of Scenery'),description:L('Completa al menos una vuelta en 2 circuitos distintos.','Complete at least one lap on 2 different tracks.'),objective:{type:'tracks',target:2,minPerTrack:1,label:L('CIRCUITOS','TRACKS')},reward:{items:{alloy:4}}},
+  {id:'mode-tour',title:L('Prueba algo diferente','Try Something New'),description:L('Inicia otro modo de juego desde el selector de modos.','Start another game mode from the mode selector.'),objective:{type:'modeStarts',target:1,label:L('MODO','MODE')},reward:{coins:1000}},
+  {id:'material-hunt',title:L('Coleccionista','Collector'),description:L('Consigue 20 nuevas tiradas de materiales compitiendo.','Earn 20 new material drops by racing.'),objective:{type:'lootDraws',target:20,label:L('BOTINES','LOOT DROPS')},reward:{items:{disc:4}}},
+  {id:'clean-rhythm',title:L('Coge el ritmo','Find Your Rhythm'),description:L('Completa 5 vueltas limpias.','Complete 5 clean laps.'),objective:{type:'clean',target:5,label:L('LIMPIAS','CLEAN LAPS')},reward:{coins:1250}},
+  {id:'distance-run',title:L('Suma kilómetros','Build Mileage'),description:L('Completa 10 vueltas válidas.','Complete 10 valid laps.'),objective:{type:'laps',target:10,label:L('VUELTAS','LAPS')},reward:{items:{compound:4}}},
+  {id:'explorer',title:L('Explorador','Explorer'),description:L('Completa al menos 2 vueltas en 3 circuitos distintos.','Complete at least 2 laps on 3 different tracks.'),objective:{type:'tracks',target:3,minPerTrack:2,label:L('CIRCUITOS','TRACKS')},reward:{items:{ecu:1}}},
+  {id:'induction-final',title:L('Piloto completo','Complete Driver'),description:L('Demuestra lo aprendido: 5 vueltas, 3 limpias y 2 circuitos.','Show what you learned: 5 laps, 3 clean laps and 2 tracks.'),objective:{type:'combined',target:3,label:L('OBJETIVOS','OBJECTIVES'),parts:[{type:'laps',target:5},{type:'clean',target:3},{type:'tracks',target:2,minPerTrack:1}]},reward:{car:{id:'avenir_gripline',name:L('AVENIR Gripline','AVENIR Gripline'),image:'assets/season/reward_cards/avenir_gripline_reward_top_down_race.webp'}}}
 ];
 
 function lang(){return getLanguage()==='en'?'en':'es';}
@@ -89,9 +90,15 @@ export function claimCurrentRaceEvent(){
   const state=loadState();if(state.index>=EVENT_DEFS.length)return {ok:false,reason:'finished'};
   const event=localizeEvent(EVENT_DEFS[state.index]),now=snapshotRaceEventStats(),progress=evaluateObjective(event.objective,deltaStats(now,state.baseline));
   if(!progress.complete)return {ok:false,reason:'incomplete'};if((state.claimed||[]).includes(event.id))return {ok:false,reason:'claimed'};
-  const garage=loadGarage();garage.coins=Math.max(0,Number(garage.coins)||0)+Math.max(0,Number(event.reward?.coins)||0);
-  for(const [id,n] of Object.entries(event.reward?.items||{})){const amount=Math.max(0,Math.floor(Number(n)||0));if(amount)addItem(garage,id,amount);}saveGarage(garage);
+  const garage=loadGarage();
+  garage.coins=Math.max(0,Number(garage.coins)||0)+Math.max(0,Number(event.reward?.coins)||0);
+  for(const [id,n] of Object.entries(event.reward?.items||{})){const amount=Math.max(0,Math.floor(Number(n)||0));if(amount)addItem(garage,id,amount);}
+  if(event.reward?.car?.id)unlockCar(event.reward.car.id);
+  saveGarage(garage);
   state.claimed=[...(state.claimed||[]),event.id];state.index+=1;state.baseline=normalizedBaseline(now);saveState(state);return {ok:true,event,nextIndex:state.index};
 }
 
-export function raceEventRewardLabel(reward){const parts=[],coins=Math.max(0,Number(reward?.coins)||0);if(coins)parts.push(`${coins} ${t('events.coins')}`);const items=Object.entries(reward?.items||{}).filter(([,n])=>Number(n)>0);for(const [id,n] of items.slice(0,2))parts.push(`${t(`items.${id}`)} ×${Number(n)}`);if(items.length>2)parts.push(`+${items.length-2} ${t('events.more')}`);return parts.join(' · ');}
+export function raceEventRewardLabel(reward){
+  if(reward?.car?.id)return String(reward.car?.name?.[lang()]||reward.car?.name?.es||reward.car.id);
+  const parts=[],coins=Math.max(0,Number(reward?.coins)||0);if(coins)parts.push(`${coins} ${t('events.coins')}`);const items=Object.entries(reward?.items||{}).filter(([,n])=>Number(n)>0);for(const [id,n] of items)parts.push(`${t(`items.${id}`)} ×${Number(n)}`);return parts.join(' · ');
+}
