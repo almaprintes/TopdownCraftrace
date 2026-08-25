@@ -1,0 +1,32 @@
+{
+  "name": "ÁREA DE PRUEBAS",
+  "brand": "TDR",
+  "category": "Especial",
+  "difficulty": "Libre",
+  "worldW": 7000,
+  "worldH": 5000,
+  "trackWidth": 20,
+  "grassMargin": 20,
+  "sampleStepPx": 220,
+  "cellSize": 1800,
+  "shoulderPx": 4,
+  "startOffset": 60,
+  "closed": true,
+  "centerline": [
+    {"x":120,"y":120,"width":20},
+    {"x":6880,"y":120,"width":20},
+    {"x":6880,"y":4880,"width":20},
+    {"x":120,"y":4880,"width":20}
+  ],
+  "meta": {
+    "surfaceProfile": "practice-area",
+    "hiddenFromTrackSelect": true,
+    "practiceSpawn": {"x":700,"y":900,"r":0},
+    "practiceZones": [
+      {"id":"ASPHALT","x":0,"y":0,"w":7000,"h":2200},
+      {"id":"DIRT","x":0,"y":2200,"w":3500,"h":2800},
+      {"id":"GRASS","x":3500,"y":2200,"w":3500,"h":2800},
+      {"id":"ASPHALT","x":5000,"y":3250,"w":1650,"h":1250}
+    ]
+  }
+}
