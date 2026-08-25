@@ -113,24 +113,43 @@ Aparece en la zona de asfalto, encarado hacia la Zona de Velocidad.
 
 ## UI
 
-`Área de Pruebas` aparece como cuarta tarjeta en el modal de modos de juego:
+`Área de Pruebas` aparece como **quinto modo** en el carrusel de modos de juego:
 
-- CONTRARRELOJ
-- FANTASMA
-- SUPERVIVENCIA
-- ÁREA DE PRUEBAS
+1. CONTRARRELOJ
+2. FANTASMA
+3. SUPERVIVENCIA
+4. DUELO
+5. ÁREA DE PRUEBAS
 
-Texto de apoyo: `Velocidad · drift · superficies`.
+La modal activa es `MenuDuelModeScene.js`; esta capa sustituye la presentación simple de `MenuGameModesScene.js`, por lo que cualquier nuevo modo debe integrarse aquí también.
+
+La tarjeta visual oficial de Área de Pruebas usa el asset:
+
+`public/assets/ui/game-modes/area-pruebas.webp`
+
+Texto de apoyo de la tarjeta: `Velocidad · drift · superficies`.
 
 En el mundo aparece un badge discreto: `ÁREA DE PRUEBAS · CONDUCCIÓN LIBRE`.
 
 La lógica de meta/checkpoints y el panel TT se neutralizan en este modo. Los controles normales y el HUD útil de conducción se conservan.
 
+## Robustez iOS de la modal de modos
+
+Tras la primera integración se detectó en iPhone un bloqueo dentro de la modal activa. Se corrigió la capa real `MenuDuelModeScene.js`:
+
+- se eliminó el toggle inmediato `input.setEnabled(false/true)` al abrir;
+- las tarjetas aceptan `pointerdown` y `pointerup` con protección anti-doble-disparo;
+- el cierre mantiene una vía de escape fiable;
+- el carrusel se recalcula para cinco modos.
+
+No considerar este punto cerrado hasta validarlo otra vez en el iPhone real.
+
 ## Arquitectura
 
 Archivos principales:
 
-- `src/game/scenes/MenuGameModesScene.js` — entrada del modo y preservación del circuito seleccionado.
+- `src/game/scenes/MenuGameModesScene.js` — lógica común de lanzamiento y preservación del circuito seleccionado.
+- `src/game/scenes/MenuDuelModeScene.js` — modal gráfica activa del carrusel de modos, incluido Área de Pruebas.
 - `src/game/tracks/library/practice-area/track.json` — dimensiones, zonas físicas y spawn técnico.
 - `src/game/scenes/RacePracticeAreaScene.js` — mapa visual ligero, reglas libres y selección de superficie por posición.
 - `src/game/scenes/TrackGarageHideSpecialScene.js` — exclusión explícita del selector de circuitos.
@@ -169,13 +188,14 @@ Estas mejoras son opcionales. La prioridad inicial es validar en iPhone que el m
 
 No considerar cerrada la V1 hasta comprobar en iPhone:
 
-1. `Área de Pruebas` aparece en Modos de Juego y NO en Circuitos.
-2. Entrar/salir conserva el circuito normal seleccionado.
-3. No aparecen meta/checkpoints/vueltas funcionales.
-4. El coche aparece en la zona de asfalto.
-5. Las tres superficies producen diferencias físicas reales.
-6. La Zona de Velocidad tiene longitud suficiente para alcanzar velocidad punta.
-7. Las marcas progresivas del final se leen bien a alta velocidad.
-8. Hay escapatoria suficiente tras los avisos.
-9. La gymkhana no molesta al resto del mapa.
-10. Rendimiento real en iPhone estable y claramente mejor que un circuito visualmente complejo.
+1. `Área de Pruebas` aparece como quinto modo y NO en Circuitos.
+2. La modal se puede cerrar y sus tarjetas responden sin bloqueo.
+3. Entrar/salir conserva el circuito normal seleccionado.
+4. No aparecen meta/checkpoints/vueltas funcionales.
+5. El coche aparece en la zona de asfalto.
+6. Las tres superficies producen diferencias físicas reales.
+7. La Zona de Velocidad tiene longitud suficiente para alcanzar velocidad punta.
+8. Las marcas progresivas del final se leen bien a alta velocidad.
+9. Hay escapatoria suficiente tras los avisos.
+10. La gymkhana no molesta al resto del mapa.
+11. Rendimiento real en iPhone estable y claramente mejor que un circuito visualmente complejo.
