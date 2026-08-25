@@ -9,17 +9,21 @@ La pantalla de orientación no se considera una simple advertencia de "gira el m
 ## Master y runtime
 
 - Master preservado: `assets/ui/orientation_portrait.png`.
-- Peso del master actual: **2.288.993 bytes** (~2,29 MB).
+- Master medido: **1024×1536 · 2.288.993 bytes** (~2,29 MB).
 - El master NO debe usarse directamente en runtime ni duplicarse dentro de `public/`.
 - Runtime generado: `public/assets/ui/orientation_portrait_runtime.webp`.
+- Runtime medido en GitHub Actions: **1024×1536 · 115.160 bytes** (~112,5 KiB).
+- Ahorro medido: **95,0 %**, manteniendo la resolución completa del master.
 - El runtime se genera automáticamente mediante `scripts/generate-orientation-runtime.mjs`.
-- Parámetros iniciales: ancho máximo 1290 px, WebP calidad 84, effort 6, sin ampliar imágenes pequeñas.
+- Parámetros congelados provisionalmente: ancho máximo 1290 px, WebP calidad 84, effort 6, sin ampliar imágenes pequeñas.
 - `npm run dev` y `npm run build` generan previamente el asset runtime.
 - El WebP generado está ignorado por Git: es un artefacto reproducible, no una segunda fuente maestra.
 
 ## Regla de empaquetado
 
 No volver a introducir el PNG master en `public/assets/ui/`. El master debe permanecer fuera de los assets enviados al jugador. La distribución utiliza exclusivamente el WebP runtime generado.
+
+El build de validación confirmó además que desaparecen del preview tanto la antigua copia hash `orientation_portrait-*.png` como `assets/ui/orientation_portrait.png`, y se crea únicamente `assets/ui/orientation_portrait_runtime.webp`.
 
 ## Uso estacional futuro
 
@@ -53,7 +57,7 @@ La optimización no debe convertir esta pantalla en una advertencia genérica o 
 4. peso runtime contenido;
 5. tiempo de carga corto.
 
-Objetivo orientativo inicial del runtime: **150–350 KB** si la calidad visual lo permite. Si una variante premium necesita algo más, se decide por inspección visual real en iPhone, no solo por el número de bytes.
+El primer runtime queda por debajo incluso del objetivo orientativo inicial de 150–350 KB. Se mantiene `q84` porque consigue ~115 KB sin reducir resolución. La decisión final de congelarlo depende de inspección visual real en iPhone.
 
 ## Archivos implicados
 
@@ -65,6 +69,16 @@ Objetivo orientativo inicial del runtime: **150–350 KB** si la calidad visual 
 - `package.json` — hooks de generación.
 - `.gitignore` — exclusión del runtime generado.
 
-## Validación pendiente
+## Validación
 
-Tras el primer build exitoso del pipeline nuevo, registrar aquí las dimensiones y peso reales del WebP y comparar ahorro frente a los 2.288.993 bytes del master. Después validar visualmente en iPhone antes de congelar la calidad/escala definitivas.
+Build de preview exitoso: run `32792745475`, job `97637523857`.
+
+Resultado:
+
+- master: 1024×1536 · 2.288.993 bytes;
+- runtime: 1024×1536 · 115.160 bytes;
+- ahorro: 95,0 %;
+- build Vite: éxito;
+- preview: publicada con el WebP y sin las PNG runtime antiguas.
+
+Pendiente únicamente: **validación visual en iPhone** antes de considerar congelados calidad 84 y este encuadre.
