@@ -7,19 +7,19 @@ export const INDUCTION_SEASON={
   permanent:true,
   premiumEnabled:false,
   stages:[
-    {id:'first-stint',es:'Primeros metros',en:'First Miles',kind:'race'},
-    {id:'clean-lines',es:'Trazada limpia',en:'Clean Lines',kind:'clean'},
-    {id:'track-tour',es:'Conoce los circuitos',en:'Meet the Tracks',kind:'tracks'},
-    {id:'race-rhythm',es:'Coge el ritmo',en:'Find Your Rhythm',kind:'clean'},
-    {id:'endurance',es:'Más kilómetros',en:'More Miles',kind:'laps'},
-    {id:'circuit-master',es:'Explorador',en:'Explorer',kind:'tracks'},
-    {id:'pro-driver',es:'Piloto Pro',en:'Pro Driver',kind:'clean'},
+    {id:'first-drive',es:'Primeros metros',en:'First Miles',kind:'race'},
     {id:'garage-visit',es:'Conoce tu máquina',en:'Know Your Machine',kind:'garage'},
+    {id:'material-start',es:'Primer botín',en:'First Loot',kind:'materials'},
     {id:'first-craft',es:'Manos a la obra',en:'Hands On',kind:'craft'},
     {id:'equip-part',es:'Ajusta el coche',en:'Tune the Car',kind:'equip'},
+    {id:'clean-start',es:'Conduce limpio',en:'Drive Clean',kind:'clean'},
     {id:'store-buy',es:'De compras',en:'Shop Visit',kind:'store'},
+    {id:'track-tour',es:'Cambia de escenario',en:'Change of Scenery',kind:'tracks'},
     {id:'mode-tour',es:'Prueba algo diferente',en:'Try Something New',kind:'mode'},
     {id:'material-hunt',es:'Coleccionista',en:'Collector',kind:'materials'},
+    {id:'clean-rhythm',es:'Coge el ritmo',en:'Find Your Rhythm',kind:'clean'},
+    {id:'distance-run',es:'Suma kilómetros',en:'Build Mileage',kind:'laps'},
+    {id:'explorer',es:'Explorador',en:'Explorer',kind:'tracks'},
     {id:'induction-final',es:'Piloto completo',en:'Complete Driver',kind:'final'}
   ]
 };
