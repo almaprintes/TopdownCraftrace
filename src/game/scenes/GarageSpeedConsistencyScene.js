@@ -1,6 +1,7 @@
 import { GarageScene as CurrentGarageScene } from './GarageScene.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { attainableTopSpeedKmh } from '../cars/speedUnits.js';
+import { t } from '../i18n/index.js';
 
 function savedSpec(carId) {
   try {
@@ -25,9 +26,9 @@ export class GarageScene extends CurrentGarageScene {
     const topKmh = Math.round(attainableTopSpeedKmh(resolved));
 
     statText.setText(
-      `VEL PUNTA   ${topKmh} km/h\n` +
-      `ACELERACIÓN ${Math.round(resolved.accel || 0)}\n` +
-      `FRENADA     ${Math.round(resolved.brakeForce || 0)}`
+      `${t('garage.topSpeed')}   ${topKmh} km/h\n` +
+      `${t('garage.acceleration')} ${Math.round(resolved.accel || 0)}\n` +
+      `${t('garage.braking')}     ${Math.round(resolved.brakeForce || 0)}`
     );
   }
 }
