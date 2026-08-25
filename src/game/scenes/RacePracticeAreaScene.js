@@ -1,7 +1,11 @@
 import { RaceScene as CurrentRaceScene } from './RaceHandbrakeScene.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
+import { resolveVehicleSurface } from '../cars/surfaceInteraction.js';
 
 const PRACTICE_KEY='practice-area';
 const MODE_KEY='tdr2:gameMode';
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const lerp=(a,b,t)=>a+(b-a)*t;
 
 function isPractice(data){
   if(data?.gameMode==='practice')return true;
@@ -19,11 +23,9 @@ export class RaceScene extends CurrentRaceScene{
     const result=super.create(launch);
     if(!this._practiceAreaMode)return result;
 
-    // Reuse the proven vehicle × surface dynamics, but feed it the large
-    // authored practice zones instead of a ribbon/grass-band circuit.
     this._practiceZones=Array.isArray(this.track?.meta?.practiceZones)?this.track.meta.practiceZones:[];
-    try{this._captureSurfaceBaseline?.();this._buildSurfaceInteractions?.();}catch{}
-    this._tdrSurfaceProfile='dirt-asphalt-grass';
+    this._capturePracticeSurfaceBaseline();
+    this._buildPracticeSurfaceInteractions();
 
     this._disablePracticeRaceRules();
     this._buildPracticeWorld();
@@ -32,23 +34,101 @@ export class RaceScene extends CurrentRaceScene{
     return result;
   }
 
+  _capturePracticeSurfaceBaseline(){
+    this._practiceSurfaceBase={
+      accel:Number(this.accel),
+      brakeForce:Number(this.brakeForce),
+      maxFwd:Number(this.maxFwd),
+      linearDrag:Number(this.linearDrag),
+      lateralGrip:Number(this.lateralGrip),
+      steeringLateralGrip:Number(this.carParams?.steering?.lateralGrip)
+    };
+  }
+
+  _buildPracticeSurfaceInteractions(){
+    const spec=CAR_SPECS?.[this.carId]||{};
+    this._practiceSurfaceInteractions={
+      ASPHALT:resolveVehicleSurface(spec,'ASPHALT'),
+      DIRT:resolveVehicleSurface(spec,'DIRT'),
+      GRASS:resolveVehicleSurface(spec,'GRASS')
+    };
+  }
+
   _materialAt(x,y){
-    if(!this._practiceAreaMode)return super._materialAt(x,y);
+    if(!this._practiceAreaMode)return 'ASPHALT';
     let found='GRASS';
-    // Later zones override earlier zones; this lets the asphalt gymkhana pad
-    // sit inside the large off-road field.
     for(const z of this._practiceZones){if(inRect(x,y,z))found=String(z.id||'GRASS').toUpperCase();}
     return found;
   }
 
-  _applySurfaceProfileVisuals(){
-    if(this._practiceAreaMode)return;
-    return super._applySurfaceProfileVisuals();
+  _practiceControls(){
+    const t=this.touch||{};
+    return {
+      steer:clamp(Number(t.steer??t.stickX??0),-1,1),
+      throttle:clamp(Number(t.throttle??0),0,1),
+      brake:clamp(Number(t.brake??0),0,1)
+    };
   }
 
-  _pruneEnvironmentFromAsphalt(){
-    if(this._practiceAreaMode)return;
-    return super._pruneEnvironmentFromAsphalt();
+  _practiceForwardKinematics(body){
+    const rot=Number(body?.rotation||0);
+    const vx=Number(body?.body?.velocity?.x||0);
+    const vy=Number(body?.body?.velocity?.y||0);
+    const fx=Math.cos(rot),fy=Math.sin(rot),rx=-fy,ry=fx;
+    const vF=vx*fx+vy*fy,vL=vx*rx+vy*ry;
+    return {speed:Math.hypot(vx,vy),vF,vL,slipAngle:Math.atan2(vL,Math.max(18,Math.abs(vF)))};
+  }
+
+  _applyPracticeMaterial(material,body){
+    const base=this._practiceSurfaceBase;
+    const interaction=this._practiceSurfaceInteractions?.[material];
+    if(!base||!interaction)return;
+
+    const controls=this._practiceControls();
+    const kin=this._practiceForwardKinematics(body);
+    const baseMax=Math.max(1,Number(base.maxFwd||1));
+    const speed01=clamp(kin.speed/baseMax,0,1);
+
+    let driveCapacity=interaction.longCapacity;
+    let latCapacity=interaction.latCapacity;
+    let brakeCapacity=interaction.brakingCapacity;
+
+    if(material==='DIRT'){
+      const launchBlend=clamp(speed01/.35,0,1);
+      const eased=launchBlend*launchBlend*(3-2*launchBlend);
+      driveCapacity=lerp(interaction.launchCapacity,interaction.movingDriveCapacity,eased);
+      const cornerLoad=clamp(Math.abs(controls.steer)*speed01*1.65,0,1);
+      const brakeLoad=clamp(controls.brake*speed01*1.45,0,1);
+      const throttleLoad=clamp(controls.throttle*Math.abs(controls.steer)*speed01,0,1);
+      latCapacity*=1-interaction.cornerSlide*cornerLoad*.72;
+      latCapacity*=1-interaction.brakeSlide*brakeLoad*.86;
+      latCapacity*=1-interaction.cornerSlide*throttleLoad*.28;
+      latCapacity=clamp(latCapacity,.07,1);
+      brakeCapacity*=1-interaction.brakeSlide*brakeLoad*.42;
+      brakeCapacity=clamp(brakeCapacity,.24,1);
+    }
+
+    if(Number.isFinite(base.accel))this.accel=base.accel*driveCapacity;
+    if(Number.isFinite(base.brakeForce))this.brakeForce=base.brakeForce*brakeCapacity;
+    if(Number.isFinite(base.maxFwd))this.maxFwd=base.maxFwd*interaction.speedCapacity;
+    if(Number.isFinite(base.linearDrag))this.linearDrag=base.linearDrag*interaction.dragFactor;
+    if(Number.isFinite(base.lateralGrip))this.lateralGrip=base.lateralGrip*latCapacity;
+    if(this.carParams?.steering&&Number.isFinite(base.steeringLateralGrip)){
+      this.carParams.steering.lateralGrip=Math.max(.18,base.steeringLateralGrip*latCapacity);
+    }
+  }
+
+  _applyPracticeRollingResistance(material,body,delta){
+    const interaction=this._practiceSurfaceInteractions?.[material];
+    const vel=body?.body?.velocity;
+    if(!interaction||!vel)return;
+    const speed=Math.hypot(Number(vel.x||0),Number(vel.y||0));
+    if(speed<.01)return;
+    const dt=clamp(Number(delta||16.67)/1000,.001,.05);
+    const decel=Math.max(0,Number(interaction.rollingDecel||0));
+    if(decel<=0)return;
+    const next=Math.max(0,speed-decel*dt),k=next/speed;
+    vel.x*=k;vel.y*=k;
   }
 
   _disablePracticeRaceRules(){
@@ -98,23 +178,19 @@ export class RaceScene extends CurrentRaceScene{
     this._hideLegacyPracticeTerrain();
     this._practiceWorldObjects=[];
 
-    // Only four huge surfaces + one graphics object: intentionally cheap.
-    this._worldRect(0,0,7000,2200,0x3d4245);          // asphalt / speed + drift
-    this._worldRect(0,2200,3500,2800,0x76563c);       // dirt
-    this._worldRect(3500,2200,3500,2800,0x42583d);    // off-road / grass
-    this._worldRect(5000,3250,1650,1250,0x383d40);    // gymkhana asphalt pad
+    this._worldRect(0,0,7000,2200,0x3d4245);
+    this._worldRect(0,2200,3500,2800,0x76563c);
+    this._worldRect(3500,2200,3500,2800,0x42583d);
+    this._worldRect(5000,3250,1650,1250,0x383d40);
 
     const g=this.add.graphics().setDepth(4);
     this._practiceWorldObjects.push(g);
     try{this.uiCam?.ignore?.(g);}catch{}
 
-    // Zone boundaries.
     g.lineStyle(6,0xffffff,.20);
     g.lineBetween(0,2200,7000,2200);
     g.lineBetween(3500,2200,3500,5000);
 
-    // Speed runway: long asphalt lane with pool-style progressively denser
-    // transverse warning marks before a deliberately huge braking escape area.
     const rx=420,ry=560,rw=6100,rh=520;
     g.fillStyle(0x24282b,.68);g.fillRoundedRect(rx,ry,rw,rh,28);
     g.lineStyle(8,0xe5edf2,.62);g.strokeRoundedRect(rx,ry,rw,rh,28);
@@ -125,15 +201,12 @@ export class RaceScene extends CurrentRaceScene{
       g.lineStyle(10+(i>4?4:0),0xffffff,alpha);
       g.lineBetween(end-d,ry+28,end-d,ry+rh-28);
     });
-    // Last 520 px remain as a large run-off after the densest warning zone.
     g.fillStyle(0xffc857,.12);g.fillRect(end-520,ry+16,500,rh-32);
 
-    // Asphalt drift circles.
     g.lineStyle(8,0xffffff,.17);
     g.strokeCircle(1500,1650,360);g.strokeCircle(1500,1650,180);
     g.strokeCircle(2650,1650,480);
 
-    // Gymkhana: small and cheap, made from primitives rather than sprites.
     g.lineStyle(5,0xffffff,.24);g.strokeRoundedRect(5050,3300,1550,1150,24);
     const coneXs=[5250,5480,5710,5940,6170,6400];
     coneXs.forEach((x,i)=>{g.fillStyle(0xff8a24,.95);g.fillTriangle(x,3520+(i%2)*170,x-24,3580+(i%2)*170,x+24,3580+(i%2)*170);});
@@ -171,7 +244,34 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   update(time,delta){
-    super.update(time,delta);
-    if(this._practiceAreaMode)this._disablePracticeRaceRules();
+    if(!this._practiceAreaMode){
+      super.update(time,delta);
+      return;
+    }
+
+    const bodyBefore=this.carBody||this.car;
+    const materialBefore=this._materialAt(Number(bodyBefore?.x||0),Number(bodyBefore?.y||0));
+    this._applyPracticeMaterial(materialBefore,bodyBefore);
+
+    // Área de Pruebas no tiene una pista válida/ inválida: neutraliza SOLO aquí
+    // la penalización genérica de salirse del ribbon técnico invisible.
+    const originalOnTrack=this._isOnTrack;
+    const originalInBand=this._isInBand;
+    this._isOnTrack=()=>true;
+    this._isInBand=()=>false;
+    try{
+      super.update(time,delta);
+    }finally{
+      this._isOnTrack=originalOnTrack;
+      this._isInBand=originalInBand;
+    }
+
+    const bodyAfter=this.carBody||this.car;
+    const materialAfter=this._materialAt(Number(bodyAfter?.x||0),Number(bodyAfter?.y||0));
+    this._applyPracticeRollingResistance(materialAfter,bodyAfter,delta);
+    this._surface=materialAfter;
+    this._onTrack=true;
+    this._applyPracticeMaterial(materialAfter,bodyAfter);
+    this._disablePracticeRaceRules();
   }
 }
