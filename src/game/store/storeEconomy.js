@@ -28,7 +28,7 @@ export function rewardedStatus(now=Date.now()){
   return {available:!last||remaining<=0,remaining};
 }
 
-export function claimRewardedCoins(amount=250,now=Date.now()){
+export function claimRewardedCoins(amount=100,now=Date.now()){
   const st=rewardedStatus(now); if(!st.available)return {ok:false,reason:'AÚN NO DISPONIBLE',remaining:st.remaining};
   const s=loadGarage(); s.coins=Number(s.coins||0)+amount; s.storeRewardedAt=now; saveGarage(s); return {ok:true,amount,state:s};
 }
@@ -37,7 +37,7 @@ export function dailyStatus(now=Date.now()){
   const s=loadGarage(),last=Number(s.storeDailyAt||0),remaining=Math.max(0,DAY-(now-last));
   return {available:!last||remaining<=0,remaining};
 }
-export function claimDailyCoins(amount=100,now=Date.now()){
+export function claimDailyCoins(amount=250,now=Date.now()){
   const st=dailyStatus(now); if(!st.available)return {ok:false,reason:'YA RECLAMADA',remaining:st.remaining};
   const s=loadGarage(); s.coins=Number(s.coins||0)+amount; s.storeDailyAt=now; saveGarage(s); return {ok:true,amount,state:s};
 }
