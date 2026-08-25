@@ -64,18 +64,17 @@ Narrative/product intent:
 
 This establishes cars as meaningful progression rewards that can later come from seasons, challenges, events and other systems without needing to give cars away constantly.
 
-## 5. Orientation screen must become editable/localized UI
-Current state:
-- `index.html` uses `public/assets/ui/orientation_active.webp` inside `#rotateOverlay`.
-- the visible orientation instruction is baked into the image rather than being editable/localizable DOM text.
+## 5. Orientation screen: editable/localized beta warning
+Implemented on 2026-08-25.
 
-Required redesign:
-- keep/reuse the visual orientation artwork as appropriate;
-- move all player-facing copy to DOM/HTML/CSS;
-- support ES and EN through the active language setting;
-- avoid introducing new baked-in language text inside orientation images.
+Current implementation:
+- `index.html` keeps `public/assets/ui/orientation_active.webp` as decorative artwork inside `#rotateOverlay`;
+- all important player-facing orientation copy now exists as DOM/HTML text rather than only being baked into the image;
+- ES and EN versions are both present and CSS selects the active one from the document language set by the i18n system;
+- the original artwork is dimmed behind a high-contrast editable overlay so the DOM copy is the primary readable content;
+- the beta-reset warning has a dedicated amber warning panel with strong hierarchy.
 
-Required orientation copy:
+Active copy:
 
 Spanish:
 - `GIRA TU DISPOSITIVO`
@@ -89,7 +88,11 @@ English:
 - `⚠ BETA VERSION`
 - `ALL BETA PROGRESS WILL BE RESET WHEN THE GAME LAUNCHES.`
 
-The BETA warning should have strong visual hierarchy and be impossible to miss.
+Implementation commits:
+- `f365782310e091855316f3d893569228388df3fc` — add localized orientation/beta-reset DOM copy.
+- `b732089a53e204e2c9f9b167adce30f9c68a56cb` — style the orientation screen and warning panel.
+
+The visual result still requires user confirmation on iPhone; do not claim the layout is approved until tested.
 
 ## 6. Current persistence vs production persistence
 Current beta/development persistence is primarily device-local (`localStorage` and existing local game stores). That is acceptable during beta but must not be the only source of truth for the published game.
@@ -201,15 +204,15 @@ Public 1.0:
 - beta progress is not imported.
 
 ## Implementation status
-These are documented product/architecture decisions. They are NOT all implemented yet.
+Implemented:
+- translated DOM orientation screen and beta-reset warning (code committed; visual approval on iPhone still pending).
 
 Not yet to claim as complete:
 - one-reward-per-stage Season 0 economy;
 - Stage 14 car reward;
 - one-car public starting ownership model;
-- translated DOM orientation screen and beta-reset warning;
 - Firebase authentication/cloud save;
 - Game Center / Google Play Games production identity integration;
 - production cloud security/receipt validation.
 
-Do not state that any of those systems are live until they have been implemented and verified.
+Do not state that pending systems are live until they have been implemented and verified.
