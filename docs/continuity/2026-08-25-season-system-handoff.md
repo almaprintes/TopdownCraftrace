@@ -31,7 +31,7 @@ If Premium is activated in the future, it should use the same season progress an
 ## Core implementation
 - `87e84a0ada48bb350ca739cc314c22eb465cd097` — Add season framework catalog.
 - `ba4bd16c44ce28ae47635cc221cc4f6405a73a47` — Add Season 0 free/premium screen.
-- `7e47ad7da7ecce7997e076a37a7b91d3d1f5da6d` — Activate Season 0 menu scene.
+- `7e47ad7da7ecce7997e076a37a7b91d3d1f5da6` — Activate Season 0 menu scene.
 - `5f1201dda814e6421419bf7e920ae6474013033c` — Add induction season telemetry.
 - `008ab0eec5ad50beb9681f5419dbe5b891aa4ab7` — Track soft-currency Store purchases.
 - `2d85dfd4e4b44a977d1d6f37f9c1374fa302bdfc` — Track garage visits.
@@ -45,17 +45,22 @@ If Premium is activated in the future, it should use the same season progress an
 - `cc679132facbae9e8f066d54c331b784f74960bd` — Replace all SeasonScene Phaser text/layout objects with a DOM/CSS interface while keeping Phaser only as the scene lifecycle/router.
 - `c51f05a21c78d0e10d3743e97aa4ba03bcde17fe` — Replace the compact 7×2 stage grid with a long horizontal scroll of near-full-screen mission slides and two parallel FREE/PREMIUM reward rails.
 - `63bf87a7a5145deba19963fbfb457adfa48496d2` — Replace text-led season reward cards with asset-led reward showcases using official coin, material and Store artwork.
+- `b4fa76418f73c51b0305a92c955f45041b26d161` — Replace page-by-page season slides with one continuous horizontal route: a conventional FREE road above and a wider PREMIUM highway below, with deliberately generous spacing between reward nodes.
 
 ## Season UI architecture
 The season progression must never be rendered as a large overlay on top of the lobby. The lobby only shows a compact Season 0 summary card with current mission, reward preview and progress. Tapping the card navigates to the dedicated `season` scene.
 
 The dedicated Season scene is intentionally separate from the lobby and now uses:
 - a clear top header with back navigation and overall 14-stage progress;
-- one long horizontal scroll with scroll-snap and iPhone momentum;
-- one mission per large slide, sized to occupy almost the whole viewport so objectives are readable instead of compressed;
-- two horizontal reward rails inside every mission slide: FREE above and PREMIUM below;
-- the real title, description, objective target and free reward for all 14 induction missions;
-- the current stage centered automatically when the scene opens;
+- one long continuous horizontal route with iPhone momentum scrolling;
+- no page-sized mission cards and no forced screen-by-screen navigation;
+- a conventional road visual for the FREE progression lane, including edge lines and a dashed centre line;
+- a visibly wider dual-carriageway/highway visual for the PREMIUM lane, with gold accents and separated carriageway markings;
+- generous horizontal spacing between reward nodes so the route breathes and reads as a journey instead of a compact icon strip;
+- aligned FREE and PREMIUM nodes for every stage;
+- official visual reward assets on the nodes, with compact quantity badges;
+- a fixed detail dock at the bottom for the currently selected mission, so mission text does not break the continuity of the road itself;
+- tapping any stage selects it and updates the detail dock; the current stage is centered automatically when the scene opens;
 - no road/track lines behind the lobby and no semi-transparent season overlay competing with the car/track cards.
 
 ### Text rendering rule
@@ -97,4 +102,4 @@ The baseline simulation is documented in `docs/economy/2026-08-25-store-economy-
 The 14 induction rewards are one-time onboarding rewards. Recurring monthly season rewards should later become the controlled steady-state seasonal income.
 
 ## Validation
-The horizontal DOM Season scene with asset-led reward presentation is active in code but has NOT yet been confirmed on iPhone. Do not claim it works correctly on iPhone until the user tests it.
+The continuous-road DOM Season scene is active in code but has NOT yet been confirmed on iPhone. Do not claim it works correctly on iPhone until the user tests it.
