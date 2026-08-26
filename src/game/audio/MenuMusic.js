@@ -5,8 +5,12 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function prefs(){
   try{
     const s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');
-    return {master:clamp(Number(s?.audio?.master??1),0,1),mute:!!s?.audio?.mute};
-  }catch{return {master:1,mute:false};}
+    return {
+      master:clamp(Number(s?.audio?.master??1),0,1),
+      music:clamp(Number(s?.audio?.music??1),0,1),
+      mute:!!s?.audio?.mute
+    };
+  }catch{return {master:1,music:1,mute:false};}
 }
 
 function assetUrl(path){
@@ -39,9 +43,9 @@ class MenuMusic {
       this.unlocked=true;
       clearTimeout(this.pauseTimer);this.pauseTimer=null;
       const p=prefs();
-      if(!this._isMenu()||p.mute){ this._sync(true); return; }
+      if(!this._isMenu()||p.mute||p.master<=0||p.music<=0){ this._sync(true); return; }
       try{
-        this.audio.volume=Math.max(.01,Math.min(.03,p.master*.03));
+        this.audio.volume=Math.max(.01,Math.min(.03,p.master*p.music*.03));
         const playPromise=this.audio.play();
         if(playPromise?.then) playPromise.then(()=>this._sync(true)).catch(()=>{});
         else this._sync(true);
@@ -50,14 +54,16 @@ class MenuMusic {
 
     this.onAudioSettings=(ev)=>{
       const d=ev?.detail||{};
-      const master=clamp(Number.isFinite(Number(d.master))?Number(d.master):prefs().master,0,1);
-      const mute=typeof d.mute==='boolean'?d.mute:prefs().mute;
-      const desired=this._isMenu()&&!mute?master*.32:0;
+      const stored=prefs();
+      const master=clamp(Number.isFinite(Number(d.master))?Number(d.master):stored.master,0,1);
+      const music=clamp(Number.isFinite(Number(d.music))?Number(d.music):stored.music,0,1);
+      const mute=typeof d.mute==='boolean'?d.mute:stored.mute;
+      const desired=this._isMenu()&&!mute?master*music*.32:0;
       clearInterval(this.fadeTimer);this.fadeTimer=null;
       this.targetVolume=desired;
       this.audio.volume=desired;
       if(desired>0)this._play();
-      else if(mute){try{this.audio.pause();}catch{}}
+      else {try{this.audio.pause();}catch{}}
     };
 
     const opts={capture:true,passive:true};
@@ -104,17 +110,17 @@ class MenuMusic {
   _sync(force=false){
     const p=prefs();
     const menu=this._isMenu();
-    const desired=menu&&!p.mute?p.master*.32:0;
-    if(menu&&!p.mute){
+    const desired=menu&&!p.mute?p.master*p.music*.32:0;
+    if(menu&&!p.mute&&desired>0){
       clearTimeout(this.pauseTimer);this.pauseTimer=null;
       this._play();
       if(force||Math.abs(this.audio.volume-desired)>.01)this._fadeTo(desired,220);
       return;
     }
-    if(force||this.targetVolume!==0){
-      this._fadeTo(0,180,()=>{
-        if(!this._isMenu()||prefs().mute){try{this.audio.pause();}catch{}}
-      });
+    if(force||this.targetVolume!==0||this.audio.volume!==0){
+      this._fadeTo(0,120,()=>{try{this.audio.pause();}catch{}});
+    }else if(this.audio.paused===false){
+      try{this.audio.pause();}catch{}
     }
   }
 
