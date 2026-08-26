@@ -1,29 +1,7 @@
-import { getLanguage } from './index.js';
+import { canonicalRuntimeText } from './canonicalRuntimeText.js';
 
-const EXACT=new Map(Object.entries({
-  'FICHA':'SPECS','Coche no encontrado':'Car not found','VEL. MÁX.':'TOP SPEED','GIRO':'TURNING','ESTABILIDAD':'STABILITY','TUNEAR':'TUNE','PROBAR':'TEST','Tienda de upgrades: próximamente 😈':'Upgrade store: coming soon 😈',
-  'PILOTO':'DRIVER','COCHE':'CAR','CIRCUITO':'TRACK','RIVAL':'RIVAL','CPU':'CPU','JUGADOR':'PLAYER','RÉCORD PERSONAL':'PERSONAL BEST','MEJOR PERSONAL':'PERSONAL BEST','ÚLTIMA VUELTA':'LAST LAP','VUELTA ACTUAL':'CURRENT LAP','SECTOR':'SECTOR','DIFERENCIA':'GAP','DELTA':'DELTA',
-  'MENÚ':'MENU','MENU':'MENU','CAPTURA MUNDO':'WORLD CAPTURE','CAPTURA TÉCNICA':'TECHNICAL CAPTURE','MAPA TÉCNICO':'TECHNICAL MAP','MAPA PNG':'MAP PNG',
-  'RONDA':'ROUND','RONDAS':'ROUNDS','ELIMINADO':'ELIMINATED','CAMPEÓN':'CHAMPION','GANADOR':'WINNER','DERROTA':'DEFEAT','VICTORIA':'VICTORY','FINAL':'FINAL','SIGUIENTE RONDA':'NEXT ROUND',
-  'TIENDA DE MEJORAS':'UPGRADE STORE','MEJORAS':'UPGRADES','COMPRAR':'BUY','VENDER':'SELL','INSTALAR':'INSTALL','DESINSTALAR':'UNINSTALL','EQUIPAR':'EQUIP','QUITAR':'REMOVE','BLOQUEADO':'LOCKED','DESBLOQUEADO':'UNLOCKED','PRÓXIMAMENTE':'COMING SOON',
-  'PRECIO':'PRICE','COSTE':'COST','NIVEL':'LEVEL','POTENCIA':'POWER','PESO':'WEIGHT','DURABILIDAD':'DURABILITY','RAREZA':'RARITY','CATEGORÍA':'CATEGORY','MARCA':'BRAND','MODELO':'MODEL',
-  'ALMACÉN':'STORAGE','BANCO DE FUSIÓN':'CRAFTING BENCH','FABRICAR':'CRAFT','FUSIONAR':'COMBINE','RECETA':'RECIPE','RECETAS':'RECIPES','MATERIAL':'MATERIAL','MATERIALES':'MATERIALS','PIEZA':'PART','PIEZAS':'PARTS',
-  'IZQUIERDA':'LEFT','DERECHA':'RIGHT','BOTONES':'BUTTONS','VOLANTE':'WHEEL','PALANCA':'STICK','MANDO':'GAMEPAD','FRENO':'BRAKE','FRENO DE MANO':'HANDBRAKE','GAS':'THROTTLE',
-  'BAJA':'LOW','MEDIA':'MEDIUM','ALTA':'HIGH','AHORRO':'ECO','NÍTIDA':'SHARP','CALIDAD':'QUALITY','PARTÍCULAS':'PARTICLES','SENSIBILIDAD':'SENSITIVITY','MODO ZURDO':'LEFT-HANDED MODE','INVERTIR DIRECCIÓN':'INVERT STEERING'
-}));
-
-const RULES=[
-  [/\bVEL\. MÁX\.\b/g,'TOP SPEED'],[/\bGIRO\b/g,'TURNING'],[/\bESTABILIDAD\b/g,'STABILITY'],[/\bTUNEAR\b/g,'TUNE'],[/\bPROBAR\b/g,'TEST'],
-  [/\bCOCHE\b/g,'CAR'],[/\bCIRCUITO\b/g,'TRACK'],[/\bPILOTO\b/g,'DRIVER'],[/\bRONDA\b/g,'ROUND'],[/\bRONDAS\b/g,'ROUNDS'],[/\bCAMPEÓN\b/g,'CHAMPION'],[/\bELIMINADO\b/g,'ELIMINATED'],
-  [/\bMEJOR PERSONAL\b/g,'PERSONAL BEST'],[/\bRÉCORD PERSONAL\b/g,'PERSONAL BEST'],[/\bÚLTIMA VUELTA\b/g,'LAST LAP'],[/\bSECTOR\b/g,'SECTOR'],
-  [/\bPRÓXIMAMENTE\b/g,'COMING SOON'],[/\bBLOQUEADO\b/g,'LOCKED'],[/\bDESBLOQUEADO\b/g,'UNLOCKED'],[/\bINSTALAR\b/g,'INSTALL'],[/\bDESINSTALAR\b/g,'UNINSTALL']
-];
-
+// Kept as a compatibility facade for existing imports in game.js.
+// All actual translation choices are centralized in canonicalRuntimeText.js.
 export function localizePlayerPhaserText(value){
-  if(getLanguage()!=='en'||value==null)return value;
-  if(Array.isArray(value))return value.map(localizePlayerPhaserText);
-  let s=String(value);
-  if(EXACT.has(s))return EXACT.get(s);
-  for(const [re,to] of RULES)s=s.replace(re,to);
-  return s;
+  return canonicalRuntimeText(value);
 }
