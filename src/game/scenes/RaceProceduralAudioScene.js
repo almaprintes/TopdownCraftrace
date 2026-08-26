@@ -76,11 +76,11 @@ export class RaceScene extends CurrentRaceScene{
       const ctx=new AC();
       const master=ctx.createGain();
       const limiter=ctx.createDynamicsCompressor();
-      limiter.threshold.value=-9;limiter.knee.value=12;limiter.ratio.value=5;limiter.attack.value=.006;limiter.release.value=.18;
+      limiter.threshold.value=-10;limiter.knee.value=16;limiter.ratio.value=4;limiter.attack.value=.009;limiter.release.value=.24;
       master.connect(limiter).connect(ctx.destination);
 
       const engineBus=ctx.createGain();engineBus.gain.value=0;
-      const engineFilter=ctx.createBiquadFilter();engineFilter.type='lowpass';engineFilter.frequency.value=1200;engineFilter.Q.value=.55;
+      const engineFilter=ctx.createBiquadFilter();engineFilter.type='lowpass';engineFilter.frequency.value=1050;engineFilter.Q.value=.45;
       engineBus.connect(engineFilter).connect(master);
 
       const id=String(this.carId||'car');
@@ -90,7 +90,8 @@ export class RaceScene extends CurrentRaceScene{
       osc1.type=seed>.66?'sawtooth':seed>.33?'square':'triangle';
       osc2.type='triangle';osc3.type='sine';
       const g1=ctx.createGain(),g2=ctx.createGain(),g3=ctx.createGain();
-      g1.gain.value=.52;g2.gain.value=.22;g3.gain.value=.12;
+      // Keep the original engine identity but reduce the tiring upper harmonics.
+      g1.gain.value=.46;g2.gain.value=.15;g3.gain.value=.065;
       osc1.connect(g1).connect(engineBus);osc2.connect(g2).connect(engineBus);osc3.connect(g3).connect(engineBus);
       osc1.start();osc2.start();osc3.start();
 
@@ -132,25 +133,34 @@ export class RaceScene extends CurrentRaceScene{
 
     const shiftPoint=.52;
     const gear=speed01<shiftPoint?1:2;
-    if(gear!==this._audioGear&&speed>35){this._audioGear=gear;this._audioShiftUntil=perfNow+155;}
+    if(gear!==this._audioGear&&speed>35){this._audioGear=gear;this._audioShiftUntil=perfNow+175;}
     const inGear=gear===1?clamp(speed01/shiftPoint,0,1):clamp((speed01-shiftPoint)/(1-shiftPoint),0,1);
-    let rpm01=.22+inGear*.70+throttle*.10;
-    if(perfNow<this._audioShiftUntil)rpm01*=.66;
+    let rpm01=.20+inGear*.66+throttle*.09;
+    if(perfNow<this._audioShiftUntil)rpm01*=.64;
 
     const seed=a.seed;
     const baseHz=42+seed*18;
-    const hz=baseHz+rpm01*(105+seed*42);
-    a.osc1.frequency.setTargetAtTime(hz,now,.035);
-    a.osc2.frequency.setTargetAtTime(hz*2.01,now,.035);
-    a.osc3.frequency.setTargetAtTime(hz*(3+seed*.08),now,.035);
-    a.engineFilter.frequency.setTargetAtTime(520+rpm01*1850+throttle*900,now,.06);
-    const engineLevel=(.025+rpm01*.055+throttle*.045)*(this._raceStarted?1:.45)*prefs.engine;
-    a.engineBus.gain.setTargetAtTime(engineLevel,now,.045);
+    const hz=baseHz+rpm01*(101+seed*38);
+    // Slightly slower pitch tracking removes the nervous digital buzz without
+    // disconnecting the engine from the car's acceleration.
+    a.osc1.frequency.setTargetAtTime(hz,now,.055);
+    a.osc2.frequency.setTargetAtTime(hz*2.005,now,.060);
+    a.osc3.frequency.setTargetAtTime(hz*(3+seed*.06),now,.065);
 
-    const windLevel=Math.pow(clamp(speed01,0,1),1.7)*.018*prefs.effects;
-    a.windFilter.frequency.setTargetAtTime(850+speed01*1700,now,.12);
-    a.windGain.gain.setTargetAtTime(windLevel,now,.09);
-    a.master.gain.setTargetAtTime(prefs.mute?0:prefs.master*.78,now,.04);
+    // At sustained speed the engine becomes warmer/darker; full throttle still
+    // opens it up so acceleration keeps its punch.
+    const cruise=clamp(speed01*(1-throttle),0,1);
+    const cutoff=500+rpm01*1250+throttle*620-cruise*260;
+    a.engineFilter.frequency.setTargetAtTime(clamp(cutoff,480,2050),now,.10);
+    const engineLevel=(.018+rpm01*.039+throttle*.034)*(1-cruise*.18)*(this._raceStarted?1:.42)*prefs.engine;
+    a.engineBus.gain.setTargetAtTime(engineLevel,now,.075);
+
+    // Give road/wind a little more room in the mix so speed is not represented
+    // only by an increasingly loud engine tone.
+    const windLevel=Math.pow(clamp(speed01,0,1),1.65)*.021*prefs.effects;
+    a.windFilter.frequency.setTargetAtTime(820+speed01*1450,now,.14);
+    a.windGain.gain.setTargetAtTime(windLevel,now,.12);
+    a.master.gain.setTargetAtTime(prefs.mute?0:prefs.master*.74,now,.06);
 
     const dt=Math.max(.001,Number(delta||33.3)/1000);
     const decel=(this._audioPrevSpeed-speed)/dt;
