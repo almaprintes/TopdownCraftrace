@@ -1,6 +1,7 @@
 import { MenuScene as PreviousMenuScene } from './MenuStoreScene.js';
 import { installLobbyDom } from '../ui/LobbyDomUi.js';
 import { polishLobbyForPublish } from '../ui/LobbyPublishPolish.js';
+import { destroySupersededLobbyUi } from '../ui/LobbyLegacyCleanup.js';
 
 function findCar(node, out = []) {
   if (!node) return out;
@@ -27,6 +28,12 @@ export class MenuScene extends PreviousMenuScene {
   renderUI() {
     super.renderUI();
     this._installCarPlatform();
+
+    // DOM is now the authoritative lobby UI. Remove superseded Phaser branches
+    // completely (and their tweens/listeners) instead of leaving invisible work
+    // running underneath the publish interface.
+    destroySupersededLobbyUi(this);
+
     const lobbyRoot = installLobbyDom(this);
     polishLobbyForPublish(this, lobbyRoot);
   }
@@ -53,11 +60,9 @@ export class MenuScene extends PreviousMenuScene {
     const centerY = height * .505;
     const diameter = Math.max(260, Math.min(380, width * .26, height * .48));
 
-    const candidates = findCar(ui).filter(obj => obj?.visible !== false);
-    const car = candidates.sort((a, b) => (b.displayWidth * b.displayHeight) - (a.displayWidth * a.displayHeight))[0];
-    // Racing sprites are deliberately tiny for performance. The lobby uses a
-    // separate high-resolution DOM render, so keep the gameplay sprite hidden.
-    if (car) car.setVisible(false);
+    // Find the legacy hero while it still exists. It is removed immediately
+    // after the platform is installed by destroySupersededLobbyUi().
+    findCar(ui);
 
     const glow = this.add.graphics();
     glow.fillStyle(0x07131b, .58);
@@ -68,7 +73,7 @@ export class MenuScene extends PreviousMenuScene {
     glow.strokeCircle(centerX, centerY, diameter * .46);
 
     // Index 0 is the photographic background. Everything inserted immediately
-    // after it is guaranteed to remain below the hero car and all HUD layers.
+    // after it is guaranteed to remain below the DOM hero car and all HUD layers.
     ui.addAt(glow, Math.min(1, ui.list.length));
     if (this.textures.exists('lobby-platform')) {
       const platform = this.add.image(centerX, centerY, 'lobby-platform').setOrigin(.5).setAlpha(1);
