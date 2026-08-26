@@ -54,5 +54,8 @@ export function installLobbyDom(scene) {
     const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));
     scene.events.once('shutdown',()=>{try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
   }
-  const coins=Math.max(0,Math.floor(Number(loadGarage()?.coins)||0)); const coinNode=root.querySelector('[data-coins]'); if(coinNode)coinNode.textContent=coins.toLocaleString(getLanguage()==='es'?'es-ES':'en-US'); renderDomCards(scene,root); return root;
+  const syncCoins=()=>{const coins=Math.max(0,Math.floor(Number(loadGarage()?.coins)||0));const coinNode=root.querySelector('[data-coins]');if(coinNode)coinNode.textContent=coins.toLocaleString(getLanguage()==='es'?'es-ES':'en-US');};
+  syncCoins();
+  if(!scene._lobbyCoinSyncTimer){scene._lobbyCoinSyncTimer=window.setInterval(syncCoins,250);scene.events.once('shutdown',()=>{try{window.clearInterval(scene._lobbyCoinSyncTimer);}catch{}scene._lobbyCoinSyncTimer=null;});}
+  renderDomCards(scene,root); return root;
 }
