@@ -1,6 +1,8 @@
 import { getLanguage } from '../i18n/index.js';
 import './lobby-publish-polish.css';
 
+const BASE=import.meta.env.BASE_URL||'/';
+
 function makeCardButton(node, label, action) {
   if (!node) return;
   node.setAttribute('role', 'button');
@@ -19,6 +21,35 @@ function makeCardButton(node, label, action) {
       action();
     });
   }
+}
+
+function makeLobbyAction({cls='',icon,label,action}){
+  const button=document.createElement('button');
+  button.type='button';
+  button.className=`tdr-lobby-button ${cls}`.trim();
+  button.innerHTML=`<img src="${BASE}assets/ui/lobby/${icon}" alt="" draggable="false"><span>${label}</span>`;
+  button.addEventListener('click',action);
+  return button;
+}
+
+function installBottomActions(scene,root,lang){
+  const bottom=root.querySelector('.tdr-lobby-bottom-actions');
+  if(!bottom||bottom.dataset.tdrPublishBottom==='1')return;
+  bottom.dataset.tdrPublishBottom='1';
+  bottom.replaceChildren(
+    makeLobbyAction({
+      icon:'icon_stats.webp',
+      label:lang==='en'?'STATISTICS':'ESTADÍSTICAS',
+      action:()=>scene.scene.start('StatsScene')
+    }),
+    makeLobbyAction({
+      cls:'tdr-lobby-button--factory',
+      icon:'icon_factory.webp',
+      label:lang==='en'?'FACTORY':'FÁBRICA',
+      action:()=>scene.scene.start('upgrade-shop')
+    })
+  );
+  bottom.classList.add('tdr-lobby-bottom-actions--two');
 }
 
 export function polishLobbyForPublish(scene, root) {
@@ -46,4 +77,16 @@ export function polishLobbyForPublish(scene, root) {
       () => scene.scene.start('TrackGarageScene', { mode: 'player' })
     );
   }
+
+  const car=root.querySelector('[data-lobby-car]');
+  if(car){
+    car.classList.add('tdr-lobby-car-preview--interactive');
+    makeCardButton(
+      car,
+      lang==='en'?'Open garage':'Abrir garaje',
+      ()=>scene.scene.start('GarageScene',{mode:'player'})
+    );
+  }
+
+  installBottomActions(scene,root,lang);
 }
