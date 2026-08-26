@@ -1,4 +1,5 @@
 const KEY='tdr2:playerStats:v1';
+const TT_HISTORY_PREFIX='tdr2:ttHist:';
 
 function cleanTrackStats(value){
   const out={};
@@ -14,91 +15,73 @@ function cleanTrackStats(value){
   }
   return out;
 }
-
 function cleanCarStats(value){
-  const out={};
-  if(!value||typeof value!=='object')return out;
+  const out={};if(!value||typeof value!=='object')return out;
   for(const [id,row] of Object.entries(value)){
     const tracks=cleanTrackStats(row?.tracks);
     const trackMeters=Object.values(tracks).reduce((sum,r)=>sum+(Number(r.meters)||0),0);
     const trackRaces=Object.values(tracks).reduce((sum,r)=>sum+(Number(r.races)||0),0);
     const trackLaps=Object.values(tracks).reduce((sum,r)=>sum+(Number(r.laps)||0),0);
-    const meters=Math.max(0,Number(row?.meters)||0,trackMeters);
-    const races=Math.max(0,Math.floor(Number(row?.races)||0),trackRaces);
-    const laps=Math.max(0,Math.floor(Number(row?.laps)||0),trackLaps);
-    out[String(id)]={meters,races,laps,tracks};
+    out[String(id)]={meters:Math.max(0,Number(row?.meters)||0,trackMeters),races:Math.max(0,Math.floor(Number(row?.races)||0),trackRaces),laps:Math.max(0,Math.floor(Number(row?.laps)||0),trackLaps),tracks};
   }
   return out;
 }
-
 export function loadPlayerStats(){
-  try{
-    const raw=JSON.parse(localStorage.getItem(KEY)||'null')||{};
-    return{
-      totalMeters:Math.max(0,Number(raw.totalMeters)||0),
-      cars:cleanCarStats(raw.cars),
-      version:2
-    };
-  }catch{return{totalMeters:0,cars:{},version:2};}
+  try{const raw=JSON.parse(localStorage.getItem(KEY)||'null')||{};return{totalMeters:Math.max(0,Number(raw.totalMeters)||0),cars:cleanCarStats(raw.cars),version:3};}
+  catch{return{totalMeters:0,cars:{},version:3};}
 }
-
 export function savePlayerStats(state){
-  const cars=cleanCarStats(state?.cars);
-  const summed=Object.values(cars).reduce((sum,row)=>sum+Math.max(0,Number(row?.meters)||0),0);
-  const totalMeters=Math.max(0,Number(state?.totalMeters)||0,summed);
-  const next={version:2,totalMeters,cars};
-  try{localStorage.setItem(KEY,JSON.stringify(next));}catch{}
-  return next;
+  const cars=cleanCarStats(state?.cars);const summed=Object.values(cars).reduce((sum,row)=>sum+Math.max(0,Number(row?.meters)||0),0);const next={version:3,totalMeters:Math.max(0,Number(state?.totalMeters)||0,summed),cars};
+  try{localStorage.setItem(KEY,JSON.stringify(next));}catch{}return next;
 }
+function ensureCar(state,id){return state.cars[id]||(state.cars[id]={meters:0,races:0,laps:0,tracks:{}});}
+function ensureTrack(car,trackId){const key=String(trackId||'').trim();if(!key)return null;if(!car.tracks||typeof car.tracks!=='object')car.tracks={};return car.tracks[key]||(car.tracks[key]={meters:0,races:0,laps:0,bestLapMs:null,lastLapMs:null});}
 
-function ensureCar(state,id){
-  return state.cars[id]||(state.cars[id]={meters:0,races:0,laps:0,tracks:{}});
-}
-function ensureTrack(car,trackId){
-  const key=String(trackId||'').trim();
-  if(!key)return null;
-  if(!car.tracks||typeof car.tracks!=='object')car.tracks={};
-  return car.tracks[key]||(car.tracks[key]={meters:0,races:0,laps:0,bestLapMs:null,lastLapMs:null});
-}
-
-export function addCarDistance(carId,meters,trackId=null){
-  const id=String(carId||'').trim();
-  const delta=Math.max(0,Number(meters)||0);
-  if(!id||delta<=0)return loadPlayerStats();
+// Time Trial already owns an authoritative per-track history. Rebuild/repair the
+// derived car × track timing index from that source instead of trusting that a
+// scene update happened after the finish line. This also repairs sessions raced
+// before the per-car statistics screen was introduced, when carId is present.
+export function reconcileTimeTrialHistory(){
   const state=loadPlayerStats();
-  const car=ensureCar(state,id);
-  car.meters=Math.max(0,Number(car.meters)||0)+delta;
-  const track=ensureTrack(car,trackId);
-  if(track)track.meters=Math.max(0,Number(track.meters)||0)+delta;
-  state.totalMeters=Math.max(0,Number(state.totalMeters)||0)+delta;
-  return savePlayerStats(state);
-}
-
-export function markCarRace(carId,trackId=null){
-  const id=String(carId||'').trim();if(!id)return loadPlayerStats();
-  const state=loadPlayerStats();const car=ensureCar(state,id);
-  car.races=Math.max(0,Math.floor(Number(car.races)||0))+1;
-  const track=ensureTrack(car,trackId);if(track)track.races=Math.max(0,Math.floor(Number(track.races)||0))+1;
-  return savePlayerStats(state);
-}
-
-export function addCarLap(carId,count=1,trackId=null,lapMs=null){
-  const id=String(carId||'').trim();if(!id)return loadPlayerStats();
-  const state=loadPlayerStats();const car=ensureCar(state,id);
-  const inc=Math.max(0,Math.floor(Number(count)||0));
-  car.laps=Math.max(0,Math.floor(Number(car.laps)||0))+inc;
-  const track=ensureTrack(car,trackId);
-  if(track){
-    track.laps=Math.max(0,Math.floor(Number(track.laps)||0))+inc;
-    const ms=Number(lapMs);
-    if(Number.isFinite(ms)&&ms>0){
-      track.lastLapMs=ms;
-      if(!Number.isFinite(Number(track.bestLapMs))||ms<Number(track.bestLapMs))track.bestLapMs=ms;
+  const aggregate={};
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const storageKey=localStorage.key(i)||'';
+      if(!storageKey.startsWith(TT_HISTORY_PREFIX))continue;
+      const trackId=storageKey.slice(TT_HISTORY_PREFIX.length).trim();
+      if(!trackId)continue;
+      const history=JSON.parse(localStorage.getItem(storageKey)||'null')?.history;
+      if(!Array.isArray(history))continue;
+      for(const row of history){
+        const carId=String(row?.carId||'').trim();
+        const ms=Number(row?.lapMs);
+        if(!carId||!Number.isFinite(ms)||ms<=0||row?.valid===false||row?.invalid===true)continue;
+        const key=`${carId}\u0000${trackId}`;
+        const a=aggregate[key]||(aggregate[key]={carId,trackId,laps:0,best:null,last:null,lastT:-Infinity});
+        a.laps++;
+        if(a.best==null||ms<a.best)a.best=ms;
+        const t=Number(row?.t)||0;
+        if(t>=a.lastT){a.lastT=t;a.last=ms;}
+      }
     }
+  }catch{}
+  let changed=false;
+  for(const a of Object.values(aggregate)){
+    const car=ensureCar(state,a.carId),track=ensureTrack(car,a.trackId);if(!track)continue;
+    if(a.laps>Number(track.laps||0)){track.laps=a.laps;changed=true;}
+    if(a.best!=null&&(!Number.isFinite(Number(track.bestLapMs))||a.best<Number(track.bestLapMs))){track.bestLapMs=a.best;changed=true;}
+    if(a.last!=null&&Number(track.lastLapMs)!==a.last){track.lastLapMs=a.last;changed=true;}
   }
-  return savePlayerStats(state);
+  for(const car of Object.values(state.cars)){
+    const trackLaps=Object.values(car.tracks||{}).reduce((sum,r)=>sum+(Number(r.laps)||0),0);
+    if(trackLaps>Number(car.laps||0)){car.laps=trackLaps;changed=true;}
+  }
+  return changed?savePlayerStats(state):state;
 }
 
+export function addCarDistance(carId,meters,trackId=null){const id=String(carId||'').trim(),delta=Math.max(0,Number(meters)||0);if(!id||delta<=0)return loadPlayerStats();const state=loadPlayerStats(),car=ensureCar(state,id);car.meters=Math.max(0,Number(car.meters)||0)+delta;const track=ensureTrack(car,trackId);if(track)track.meters=Math.max(0,Number(track.meters)||0)+delta;state.totalMeters=Math.max(0,Number(state.totalMeters)||0)+delta;return savePlayerStats(state);}
+export function markCarRace(carId,trackId=null){const id=String(carId||'').trim();if(!id)return loadPlayerStats();const state=loadPlayerStats(),car=ensureCar(state,id);car.races=Math.max(0,Math.floor(Number(car.races)||0))+1;const track=ensureTrack(car,trackId);if(track)track.races=Math.max(0,Math.floor(Number(track.races)||0))+1;return savePlayerStats(state);}
+export function addCarLap(carId,count=1,trackId=null,lapMs=null){const id=String(carId||'').trim();if(!id)return loadPlayerStats();const state=loadPlayerStats(),car=ensureCar(state,id),inc=Math.max(0,Math.floor(Number(count)||0));car.laps=Math.max(0,Math.floor(Number(car.laps)||0))+inc;const track=ensureTrack(car,trackId);if(track){track.laps=Math.max(0,Math.floor(Number(track.laps)||0))+inc;const ms=Number(lapMs);if(Number.isFinite(ms)&&ms>0){track.lastLapMs=ms;if(!Number.isFinite(Number(track.bestLapMs))||ms<Number(track.bestLapMs))track.bestLapMs=ms;}}return savePlayerStats(state);}
 export function recordCarTrackLap(carId,trackId,lapMs){return addCarLap(carId,1,trackId,lapMs);}
 export function carMileageKm(carId){return Math.max(0,Number(loadPlayerStats().cars?.[String(carId||'')]?.meters)||0)/1000;}
 export const PLAYER_STATS_KEY=KEY;
