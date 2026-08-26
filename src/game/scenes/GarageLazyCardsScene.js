@@ -34,8 +34,6 @@ export class GarageScene extends CurrentGarageScene {
   create(){
     super.create();
 
-    // Admin always sees the complete fleet. Player mode follows progression,
-    // unless the explicit DEV homologation bypass is enabled in Admin Hub.
     const fullAccess=this._mode==='admin'||devFullCarAccessEnabled();
     if(!fullAccess){
       const unlockedCars=(this._cars||[]).filter(car=>isCarUnlocked(car?.id));
@@ -54,9 +52,6 @@ export class GarageScene extends CurrentGarageScene {
 
     recordGarageVisit();
 
-    // Perfil normal: mantenemos las cards para reabrir el garaje sin recarga.
-    // Modo seguro: al salir las descargamos para evitar que 16 imágenes queden
-    // residentes mientras se navega por circuitos/configuración/carrera.
     if(window.__tdrIosSafeMode===true){
       this.events.once('shutdown',()=>{
         for(const [key] of CARDS){
@@ -64,5 +59,30 @@ export class GarageScene extends CurrentGarageScene {
         }
       });
     }
+  }
+
+  _rebuild(...args){
+    super._rebuild(...args);
+    this._applyFloatingHeader();
+  }
+
+  _applyFloatingHeader(){
+    const W=this.scale.width;
+    const top=8;
+    const h=56;
+    const side=Math.max(10,Math.min(24,W*.015));
+
+    for(const obj of this.children?.list||[]){
+      const type=String(obj?.type||'');
+      if((type==='Text'||type==='Rectangle')&&Number.isFinite(Number(obj?.y))&&obj.y<64){
+        obj.y+=top;
+        try{obj.setDepth?.(1002);}catch{}
+      }
+    }
+
+    const plate=this.add.graphics().setDepth(1000);
+    plate.fillStyle(0x06121d,.95).fillRoundedRect(side,top,W-side*2,h,13);
+    plate.lineStyle(1,0x46ddff,.34).strokeRoundedRect(side,top,W-side*2,h,13);
+    plate.lineStyle(2,0xe6b84e,.82).lineBetween(side+16,top+1,side+Math.min(260,W*.22),top+1);
   }
 }
