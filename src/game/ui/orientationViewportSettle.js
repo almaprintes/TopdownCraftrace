@@ -1,22 +1,37 @@
 // Mobile browsers often report one or more intermediate viewport sizes while
-// rotating. Phaser can receive that transient size, rebuild the active scene,
-// then never receive the final geometry until the next rotation. This helper
-// waits for the visual viewport to settle and reapplies the authoritative size.
+// rotating OR during the very first landscape load. Phaser can receive that
+// transient size, rebuild the active scene, then keep a short canvas until a
+// later orientation change. This helper keeps sampling until the viewport is
+// genuinely settled and prefers the largest trustworthy landscape rectangle.
+
+function rawViewport() {
+  const vv = window.visualViewport;
+  return {
+    vvW: Number(vv?.width || 0),
+    vvH: Number(vv?.height || 0),
+    innerW: Number(window.innerWidth || 0),
+    innerH: Number(window.innerHeight || 0),
+    clientW: Number(document.documentElement?.clientWidth || 0),
+    clientH: Number(document.documentElement?.clientHeight || 0)
+  };
+}
 
 function isLandscape() {
-  const vv = window.visualViewport;
-  const w = Number(vv?.width || window.innerWidth || 0);
-  const h = Number(vv?.height || window.innerHeight || 0);
+  const r = rawViewport();
+  const w = Math.max(r.vvW, r.innerW, r.clientW, 0);
+  const h = Math.max(r.vvH, r.innerH, r.clientH, 0);
   return w >= h;
 }
 
 function viewportRect() {
-  const vv = window.visualViewport;
-  const w = Math.max(1, Math.round(vv?.width || window.innerWidth || document.documentElement.clientWidth || 1));
-  const h = Math.max(1, Math.round(vv?.height || window.innerHeight || document.documentElement.clientHeight || 1));
-  const left = Math.max(0, Math.round(vv?.offsetLeft || 0));
-  const top = Math.max(0, Math.round(vv?.offsetTop || 0));
-  return { w, h, left, top };
+  const r = rawViewport();
+  // On iOS a direct landscape launch can expose a stale visualViewport height
+  // for a few hundred ms while innerHeight/clientHeight already contain the
+  // real usable rectangle. Taking the largest current candidate prevents the
+  // game from being permanently letterboxed until the user rotates again.
+  const w = Math.max(1, Math.round(Math.max(r.vvW, r.innerW, r.clientW)));
+  const h = Math.max(1, Math.round(Math.max(r.vvH, r.innerH, r.clientH)));
+  return { w, h, left: 0, top: 0 };
 }
 
 function applyViewport(game) {
@@ -24,7 +39,9 @@ function applyViewport(game) {
   const { w, h, left, top } = viewportRect();
   const root = document.documentElement;
 
-  // Keep DOM scenes and Phaser reading the exact same final viewport.
+  // Keep DOM scenes and Phaser reading the exact same final viewport. The app
+  // owns the whole page, so do not offset the fixed body by visualViewport's
+  // transient offsetTop/offsetLeft during browser-toolbar settling.
   root.style.setProperty('--tdr-vv-width', `${w}px`);
   root.style.setProperty('--tdr-vv-height', `${h}px`);
   root.style.setProperty('--tdr-vv-left', `${left}px`);
@@ -57,23 +74,26 @@ export function installOrientationViewportSettle(game) {
     clear();
     if (!isLandscape()) return;
 
-    // First frame fixes obvious stale geometry. Later passes catch Safari/Chrome
-    // toolbar + safe-area settling without requiring a second rotation.
     raf = requestAnimationFrame(() => {
       raf = 0;
       applyViewport(game);
     });
-    timers.push(setTimeout(() => applyViewport(game), 80));
-    timers.push(setTimeout(() => applyViewport(game), 180));
-    timers.push(setTimeout(() => applyViewport(game), 360));
+
+    // Rotation normally settles quickly; a cold landscape launch on Safari can
+    // take noticeably longer. These later passes cost virtually nothing and
+    // remove the need for a corrective portrait -> landscape cycle.
+    [80, 180, 360, 650, 1000, 1500].forEach(ms => {
+      timers.push(setTimeout(() => applyViewport(game), ms));
+    });
   };
 
   window.addEventListener('orientationchange', settle, { passive: true });
   window.addEventListener('resize', settle, { passive: true });
+  window.addEventListener('pageshow', settle, { passive: true });
   window.addEventListener('tdr:viewportchange', settle, { passive: true });
   window.visualViewport?.addEventListener?.('resize', settle, { passive: true });
+  window.visualViewport?.addEventListener?.('scroll', settle, { passive: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) settle(); }, { passive: true });
 
-  // The orientation overlay sleeps the game in portrait. When landscape returns,
-  // give the browser one frame and settle the active scene immediately.
   settle();
 }
