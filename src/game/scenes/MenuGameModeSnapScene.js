@@ -21,6 +21,7 @@ export class MenuScene extends CurrentMenuScene {
     const {width,height}=this.scale;
     const selected=(()=>{try{return localStorage.getItem(MODE_KEY)||'timeattack';}catch{return'timeattack';}})();
     this._modeSnapIndex=Math.max(0,MODES.findIndex(m=>m.key===selected));
+    this._modeSnapAnimating=false;
 
     const root=this.add.container(0,0).setDepth(9000);
     this._ui?.add(root);
@@ -40,7 +41,6 @@ export class MenuScene extends CurrentMenuScene {
     panel.lineTo(x,y+panelH-c);panel.lineTo(x,y+c);panel.closePath();panel.fillPath();panel.strokePath();
     panel.lineStyle(1,0xffffff,.07);panel.strokeRect(x+7,y+7,panelW-14,panelH-14);root.add(panel);
 
-    // Dedicated blocker: interactions inside the panel never fall through to the veil or lobby.
     const blocker=this.add.rectangle(x,y,panelW,panelH,0xffffff,.001).setOrigin(0).setInteractive();
     root.add(blocker);
 
@@ -53,17 +53,20 @@ export class MenuScene extends CurrentMenuScene {
 
     const closeHit=this.add.rectangle(x+panelW-28,y+25,46,46,0xffffff,.001).setInteractive({useHandCursor:true});
     const close=this.add.text(x+panelW-28,y+8,'×',{fontFamily:FONT,fontSize:'29px',fontStyle:'bold',color:'#a9bac9'}).setOrigin(.5,0);
-    closeHit.on('pointerup',()=>this._closeGameModeModal());
+    closeHit.on('pointerup',()=>{if(!this._modeSnapAnimating)this._closeGameModeModal();});
     root.add([closeHit,close]);
 
-    // Only tapping outside the panel closes it.
-    veil.on('pointerup',()=>this._closeGameModeModal());
+    veil.on('pointerup',()=>{if(!this._modeSnapAnimating)this._closeGameModeModal();});
   }
 
   _drawModeSnapCards(){
     const ui=this._modeSnapUi,layer=this._modeSnapCards;
     if(!ui||!layer?.scene||this._gameModeModal!==ui.root)return;
     layer.removeAll(true);
+
+    const visual=this.add.container(0,0);
+    layer.add(visual);
+    this._modeSnapVisual=visual;
 
     const {x,y,panelW,panelH,cx}=ui;
     const compact=panelH<370;
@@ -86,7 +89,7 @@ export class MenuScene extends CurrentMenuScene {
         const done=()=>{
           this._modeSnapLoading.delete(key);
           this.load.off(`filecomplete-image-${key}`,done);
-          if(this._gameModeModal?.scene)this._drawModeSnapCards();
+          if(this._gameModeModal?.scene&&!this._modeSnapAnimating)this._drawModeSnapCards();
         };
         this.load.once(`filecomplete-image-${key}`,done);
         this.load.image(key,`${BASE}assets/ui/game-modes/${mode.asset}`);
@@ -95,7 +98,6 @@ export class MenuScene extends CurrentMenuScene {
       return null;
     };
 
-    // Side cards are deliberately non-interactive. Only the centered card can launch a mode.
     [-1,1].forEach(delta=>{
       const i=index+delta;if(i<0||i>=MODES.length)return;
       const m=MODES[i],key=ensureTexture(m);
@@ -103,9 +105,9 @@ export class MenuScene extends CurrentMenuScene {
       const sy=cardTop+(centerH-sideH)/2;
       if(key){
         const img=this.add.image(scx,sy,key).setOrigin(.5,0).setDisplaySize(sideW,sideH).setAlpha(.46);
-        layer.add(img);
+        visual.add(img);
       }else{
-        layer.add(this.add.rectangle(scx,sy,sideW,sideH,0x10202b,.7).setOrigin(.5,0));
+        visual.add(this.add.rectangle(scx,sy,sideW,sideH,0x10202b,.7).setOrigin(.5,0));
       }
     });
 
@@ -115,24 +117,22 @@ export class MenuScene extends CurrentMenuScene {
       const shadow=this.add.rectangle(cx+5,centerY+7,centerW,centerH,0x000000,.42).setOrigin(.5,0);
       const img=this.add.image(cx,centerY,key).setOrigin(.5,0).setDisplaySize(centerW,centerH);
       const border=this.add.rectangle(cx,centerY,centerW+4,centerH+4,0x000000,0).setOrigin(.5,0).setStrokeStyle(3,mode.accent,1);
-      layer.add([shadow,img,border]);
+      visual.add([shadow,img,border]);
     }else{
       const ph=this.add.rectangle(cx,centerY,centerW,centerH,0x10202b,.96).setOrigin(.5,0).setStrokeStyle(3,mode.accent,.9);
-      layer.add(ph);
+      visual.add(ph);
     }
 
-    // One large gesture surface owns all touches over the carousel. This prevents
-    // arrows or swipes from accidentally activating a card underneath.
     const gestureW=Math.max(centerW+70,Math.min(panelW-150,centerW*1.28));
     const gesture=this.add.rectangle(cx,centerY,gestureW,centerH,0xffffff,.001).setOrigin(.5,0).setInteractive({useHandCursor:true});
     layer.add(gesture);
     let down=false,startX=0,lastX=0;
-    gesture.on('pointerdown',p=>{down=true;startX=lastX=Number(p.x)||0;});
-    gesture.on('pointermove',p=>{if(down)lastX=Number(p.x)||lastX;});
-    gesture.on('pointerout',()=>{if(down&&Math.abs(lastX-startX)>52){this._shiftModeSnap(lastX<startX?1:-1);}down=false;});
-    gesture.on('pointerupoutside',p=>{if(!down)return;lastX=Number(p.x)||lastX;const dx=lastX-startX;down=false;if(Math.abs(dx)>42)this._shiftModeSnap(dx<0?1:-1);});
+    gesture.on('pointerdown',p=>{if(this._modeSnapAnimating)return;down=true;startX=lastX=Number(p.x)||0;});
+    gesture.on('pointermove',p=>{if(down&&!this._modeSnapAnimating)lastX=Number(p.x)||lastX;});
+    gesture.on('pointerout',()=>{if(down&&!this._modeSnapAnimating&&Math.abs(lastX-startX)>52){this._shiftModeSnap(lastX<startX?1:-1);}down=false;});
+    gesture.on('pointerupoutside',p=>{if(!down||this._modeSnapAnimating)return;lastX=Number(p.x)||lastX;const dx=lastX-startX;down=false;if(Math.abs(dx)>42)this._shiftModeSnap(dx<0?1:-1);});
     gesture.on('pointerup',p=>{
-      if(!down)return;lastX=Number(p.x)||lastX;const dx=lastX-startX;down=false;
+      if(!down||this._modeSnapAnimating)return;lastX=Number(p.x)||lastX;const dx=lastX-startX;down=false;
       if(Math.abs(dx)>42){this._shiftModeSnap(dx<0?1:-1);return;}
       this._startSelectedMode(mode.key);
     });
@@ -143,7 +143,7 @@ export class MenuScene extends CurrentMenuScene {
         .setStrokeStyle(2,enabled?0xffb04c:0x425261,enabled?.95:.42);
       const txt=this.add.text(ax,arrowY,glyph,{fontFamily:FONT,fontSize:compact?'28px':'34px',fontStyle:'bold',color:enabled?'#fff':'#5c6c79'}).setOrigin(.5);
       layer.add([hit,txt]);
-      if(enabled){hit.setInteractive({useHandCursor:true});hit.on('pointerup',()=>this._shiftModeSnap(delta));}
+      if(enabled){hit.setInteractive({useHandCursor:true});hit.on('pointerup',()=>{if(!this._modeSnapAnimating)this._shiftModeSnap(delta);});}
     };
     arrow(x+34,'‹',index>0,-1);
     arrow(x+panelW-34,'›',index<MODES.length-1,1);
@@ -156,16 +156,59 @@ export class MenuScene extends CurrentMenuScene {
   }
 
   _shiftModeSnap(delta){
-    if(!this._gameModeModal?.scene)return;
-    const next=clamp((Number(this._modeSnapIndex)||0)+Math.sign(Number(delta)||0),0,MODES.length-1);
+    if(!this._gameModeModal?.scene||this._modeSnapAnimating)return;
+    const direction=Math.sign(Number(delta)||0);
+    const next=clamp((Number(this._modeSnapIndex)||0)+direction,0,MODES.length-1);
     if(next===this._modeSnapIndex)return;
-    this._modeSnapIndex=next;
-    this._drawModeSnapCards();
+
+    const oldVisual=this._modeSnapVisual;
+    this._modeSnapAnimating=true;
+    if(!oldVisual?.scene){
+      this._modeSnapIndex=next;
+      this._drawModeSnapCards();
+      this._modeSnapAnimating=false;
+      return;
+    }
+
+    this.tweens.killTweensOf(oldVisual);
+    this.tweens.add({
+      targets:oldVisual,
+      x:-direction*56,
+      alpha:.52,
+      scaleX:.96,
+      scaleY:.96,
+      duration:115,
+      ease:'Quad.easeIn',
+      onComplete:()=>{
+        if(!this._gameModeModal?.scene){this._modeSnapAnimating=false;return;}
+        this._modeSnapIndex=next;
+        this._drawModeSnapCards();
+        const incoming=this._modeSnapVisual;
+        if(!incoming?.scene){this._modeSnapAnimating=false;return;}
+        incoming.x=direction*78;
+        incoming.alpha=.58;
+        incoming.setScale(.965);
+        this.tweens.add({
+          targets:incoming,
+          x:0,
+          alpha:1,
+          scaleX:1,
+          scaleY:1,
+          duration:360,
+          ease:'Back.easeOut',
+          easeParams:[1.45],
+          onComplete:()=>{this._modeSnapAnimating=false;}
+        });
+      }
+    });
   }
 
   _closeGameModeModal(){
+    try{if(this._modeSnapVisual)this.tweens.killTweensOf(this._modeSnapVisual);}catch{}
+    this._modeSnapAnimating=false;
     super._closeGameModeModal();
     this._modeSnapCards=null;
+    this._modeSnapVisual=null;
     this._modeSnapUi=null;
     this._modeSnapLoading?.clear?.();
   }
