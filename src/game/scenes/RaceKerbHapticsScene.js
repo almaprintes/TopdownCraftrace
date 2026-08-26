@@ -1,15 +1,15 @@
 import { RaceScene as CurrentRaceScene } from './RaceMasteryRoofScene.js';
 
-// Sensory-only kerb layer. RaceKerbSurfaceScene already exposes _isOnKerb(x,y)
-// and classifies the visual piano as drivable track. This layer deliberately does
-// NOT alter grip, speed, steering or collision: it only samples four approximate
-// tyre contact patches and emits haptics while one or more tyres are on the piano.
+// Sensory-only kerb layer. RaceKerbSurfaceScene exposes _isOnKerb(x,y) and
+// classifies the visual piano as drivable track. This layer never changes grip,
+// speed, steering or collisions: it only adds feedback when tyres cross a kerb.
 export class RaceScene extends CurrentRaceScene {
   create(data) {
     const result = super.create(data);
     this._kerbHapticLastAt = 0;
     this._kerbHapticWasOn = false;
     this._kerbHapticNativePending = false;
+    this._kerbFeedbackPulse = 0;
     return result;
   }
 
@@ -30,33 +30,27 @@ export class RaceScene extends CurrentRaceScene {
     const vx = Number(body.velocity?.x) || 0;
     const vy = Number(body.velocity?.y) || 0;
     const speed = Math.hypot(vx, vy);
-
-    // No rumble while effectively stopped: the feedback should feel like tyres
-    // travelling over kerb blocks, not like merely parking on one.
-    if (speed < 18) {
+    if (speed < 14) {
       this._kerbHapticWasOn = false;
       return;
     }
 
     const rawW = Number(body.width || body.gameObject?.displayWidth || 22);
     const rawH = Number(body.height || body.gameObject?.displayHeight || 38);
-    const carW = Math.max(12, Math.min(34, rawW));
-    const carH = Math.max(20, Math.min(58, rawH));
-    const halfTrack = carW * 0.40;
-    const axle = carH * 0.31;
+    const carW = Math.max(12, Math.min(38, rawW));
+    const carH = Math.max(20, Math.min(62, rawH));
+    // Slightly wider contact patches than before. The previous 0.40 sampling sat
+    // too far inside some car bodies and could visually cross a piano without any
+    // sampled tyre point actually reaching the kerb strip.
+    const halfTrack = carW * 0.48;
+    const axle = carH * 0.34;
     const angle = Number(body.gameObject?.rotation ?? this.carRig?.rotation ?? 0) || 0;
     const ca = Math.cos(angle), sa = Math.sin(angle);
-
-    const localToWorld = (lx, ly) => ({
-      x: cx + lx * ca - ly * sa,
-      y: cy + lx * sa + ly * ca
-    });
+    const localToWorld = (lx, ly) => ({ x: cx + lx * ca - ly * sa, y: cy + lx * sa + ly * ca });
 
     const tyres = [
-      localToWorld(-halfTrack, -axle),
-      localToWorld( halfTrack, -axle),
-      localToWorld(-halfTrack,  axle),
-      localToWorld( halfTrack,  axle)
+      localToWorld(-halfTrack, -axle), localToWorld(halfTrack, -axle),
+      localToWorld(-halfTrack, axle),  localToWorld(halfTrack, axle)
     ];
 
     let wheelsOnKerb = 0;
@@ -66,23 +60,34 @@ export class RaceScene extends CurrentRaceScene {
       return;
     }
 
-    // Faster travel = tighter rumble cadence. Two or more tyres = slightly
-    // stronger pulse, but intentionally subtle so long kerbs never become annoying.
-    const speed01 = Math.max(0, Math.min(1, (speed - 18) / 330));
-    const interval = Math.round(118 - speed01 * 55); // ~118ms -> ~63ms
+    const speed01 = Math.max(0, Math.min(1, (speed - 14) / 330));
+    // Human-perceptible cadence rather than tiny phone pulses every ~60 ms.
+    const interval = Math.round(155 - speed01 * 45); // ~155ms -> ~110ms
     const entry = !this._kerbHapticWasOn;
     this._kerbHapticWasOn = true;
     if (!entry && now - this._kerbHapticLastAt < interval) return;
     this._kerbHapticLastAt = now;
 
-    const strength = wheelsOnKerb >= 2 ? 'medium' : 'light';
-    const duration = wheelsOnKerb >= 2 ? (speed01 > .65 ? 20 : 16) : (speed01 > .65 ? 14 : 10);
+    const strong = wheelsOnKerb >= 2;
+    const strength = strong ? 'medium' : 'light';
+    const duration = strong ? Math.round(48 + speed01 * 12) : Math.round(32 + speed01 * 10);
     this._emitKerbHaptic(strength, duration);
+    this._emitKerbVisualFeedback(strong, speed01);
   }
 
-  _emitKerbHaptic(strength = 'light', duration = 10) {
-    // Native-ready bridge: when packaged with Capacitor/Haptics this same event
-    // automatically uses the native motor. No hard dependency is added to web builds.
+  _emitKerbVisualFeedback(strong, speed01) {
+    // Tiny camera kick gives us a platform-independent confirmation that the kerb
+    // detector actually fired, and also makes the piano readable on iOS web where
+    // automatic haptics are unavailable.
+    try {
+      const cam = this.cameras?.main;
+      if (!cam?.shake) return;
+      const intensity = (strong ? 0.00125 : 0.00075) + speed01 * 0.00035;
+      cam.shake(strong ? 42 : 30, intensity, true);
+    } catch (_) {}
+  }
+
+  _emitKerbHaptic(strength = 'light', duration = 32) {
     try {
       const haptics = globalThis?.Capacitor?.Plugins?.Haptics;
       if (haptics?.impact && !this._kerbHapticNativePending) {
@@ -95,10 +100,13 @@ export class RaceScene extends CurrentRaceScene {
       }
     } catch (_) {}
 
-    // Android browsers generally support this. Safari/iOS web may ignore it;
-    // the native bridge above is the intended iOS path for the store build.
     try {
-      if (typeof navigator?.vibrate === 'function') navigator.vibrate(Math.max(6, Math.min(24, duration)));
+      if (typeof navigator?.vibrate === 'function') {
+        // Pulses below ~20 ms are easy to miss on many Android motors. Use a
+        // clearly perceptible pulse while keeping it short enough to feel like kerb blocks.
+        const ms = Math.max(28, Math.min(65, Math.round(duration)));
+        navigator.vibrate(ms);
+      }
     } catch (_) {}
   }
 }
