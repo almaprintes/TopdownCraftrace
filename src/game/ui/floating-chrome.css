@@ -1,9 +1,18 @@
 /* Shared player-facing navigation chrome.
    Main navigation bars live inside the safe viewport instead of touching screen edges. */
 
+/* Lobby geometry is driven by one header box. Content must start AFTER it;
+   never position the cards by a raw percentage of viewport height. */
+.tdr-lobby-dom {
+  --tdr-lobby-header-top: max(8px, var(--tdr-safe-top, 8px));
+  --tdr-lobby-header-h: clamp(52px, 9vh, 68px);
+  --tdr-lobby-header-gap: clamp(10px, 1.8vh, 16px);
+  --tdr-lobby-content-top: calc(var(--tdr-lobby-header-top) + var(--tdr-lobby-header-h) + var(--tdr-lobby-header-gap));
+}
+
 .tdr-lobby-header {
-  inset: max(8px, var(--tdr-safe-top, 8px)) clamp(10px, 4.8vw, 76px) auto !important;
-  height: clamp(52px, 9vh, 68px) !important;
+  inset: var(--tdr-lobby-header-top) clamp(10px, 4.8vw, 76px) auto !important;
+  height: var(--tdr-lobby-header-h) !important;
   border: 1px solid rgba(70,221,255,.42) !important;
   border-radius: 0 !important;
   clip-path: polygon(12px 0, calc(100% - 12px) 0, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0 calc(100% - 12px), 0 12px);
@@ -12,6 +21,21 @@
   backdrop-filter: blur(7px);
 }
 .tdr-lobby-header::before { left: 12px !important; top: 0 !important; }
+
+/* These three panels belong to the same content row. Their upper edge is tied
+   to the floating header's lower edge, so Android browser chrome / short
+   landscape viewports cannot make them collide. */
+.tdr-lobby-dom .tdr-event-card,
+.tdr-lobby-dom .tdr-car-card,
+.tdr-lobby-dom .tdr-track-card {
+  top: var(--tdr-lobby-content-top) !important;
+}
+
+/* Keep the car underneath its selected-car plaque rather than using a viewport
+   percentage that can jump when the visual viewport changes. */
+.tdr-lobby-dom .tdr-lobby-car-preview {
+  top: calc(var(--tdr-lobby-content-top) + clamp(52px, 10vh, 78px)) !important;
+}
 
 .tdr-lobby-bottom-actions {
   inset: auto clamp(12px, 7vw, 108px) max(8px, var(--tdr-safe-bottom, 8px)) !important;
@@ -80,8 +104,10 @@
 }
 
 @media (max-height:430px) {
-  .tdr-lobby-header {
-    top: max(5px,var(--tdr-safe-top,5px)) !important;
+  .tdr-lobby-dom {
+    --tdr-lobby-header-top: max(5px,var(--tdr-safe-top,5px));
+    --tdr-lobby-header-h: 46px;
+    --tdr-lobby-header-gap: 8px;
   }
   .tdr-lobby-bottom-actions { height: 58px !important; }
   #tdr-settings2 .s2top { height: 46px !important; }
