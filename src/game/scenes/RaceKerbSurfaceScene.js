@@ -1,11 +1,8 @@
 import { RaceScene as PremiumSurfaceRaceScene } from './RaceSurfaceLongitudinalScene.js';
 
 // Physics bridge for the premium kerbs/pianos.
-// The visual kerbs are deliberately drawn just OUTSIDE the asphalt ribbon.
-// Without this layer, the legacy surface detector classifies their outer half as grass
-// and applies the grass speed penalty. Here we extend TRACK only over the same local
-// inside-of-corner strip used by the visual kerbs. No geometry, rendering or car physics
-// are otherwise changed.
+// Prefer the exact exported kerb geometry when the track provides it. The older
+// turn-based approximation remains only as a fallback for legacy tracks.
 export class RaceScene extends PremiumSurfaceRaceScene {
   create() {
     super.create();
@@ -23,7 +20,7 @@ export class RaceScene extends PremiumSurfaceRaceScene {
 
       const originalIsOnTrack = this._isOnTrack.bind(this);
       const maxCurbWidth = 11.5;
-      const curbTolerance = 1.75; // avoids a 1px classification seam at the white line
+      const curbTolerance = 1.75;
       const enterThreshold = 0.055;
 
       const idx = (i) => (i + n) % n;
@@ -38,8 +35,6 @@ export class RaceScene extends PremiumSurfaceRaceScene {
         );
       };
 
-      // Cache the nearest segment. Normal driving moves only a few samples per frame,
-      // so this stays cheap even on the long endurance circuit.
       let nearestSeg = 0;
       let nearestReady = false;
 
@@ -71,8 +66,7 @@ export class RaceScene extends PremiumSurfaceRaceScene {
           for (let i = 0; i < n; i++) test(i);
           nearestReady = true;
         } else {
-          for (let o = -24; o <= 24; o++) test(nearestSeg + o);
-          // Safety fallback if something teleports far from the cached neighborhood.
+          for (let o = -18; o <= 18; o++) test(nearestSeg + o);
           if (!best || best.d2 > 220 * 220) {
             best = null;
             for (let i = 0; i < n; i++) test(i);
@@ -83,10 +77,57 @@ export class RaceScene extends PremiumSurfaceRaceScene {
         return best;
       };
 
+      const xy = (p) => Array.isArray(p)
+        ? { x:Number(p[0]), y:Number(p[1]) }
+        : { x:Number(p?.x), y:Number(p?.y) };
+      const pointInQuad = (x,y,a0,a1,b1,b0) => {
+        const pts=[xy(a0),xy(a1),xy(b1),xy(b0)];
+        if(pts.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y))) return false;
+        let inside=false;
+        for(let i=0,j=3;i<4;j=i++){
+          const pi=pts[i],pj=pts[j];
+          const hit=((pi.y>y)!==(pj.y>y)) && (x < (pj.x-pi.x)*(y-pi.y)/((pj.y-pi.y)||1e-9)+pi.x);
+          if(hit) inside=!inside;
+        }
+        return inside;
+      };
+
+      // These are the exact arrays used by RaceScene to draw exported red/white
+      // pianos. Detecting these means the haptic surface and the pixels now agree.
+      const eg=this.track?.meta?.geometry || {};
+      const exportedBands=[];
+      const addBand=(inner,outer)=>{
+        if(Array.isArray(inner)&&Array.isArray(outer)&&inner.length>2&&inner.length===outer.length){
+          exportedBands.push({inner,outer,len:inner.length});
+        }
+      };
+      addBand(eg.trackOuter,eg.curbOuter);
+      addBand(eg.trackInner,eg.curbInner);
+      const hasExportedKerbs=exportedBands.length>0;
+
+      const isOnExportedKerb=(x,y,nearI)=>{
+        if(!hasExportedKerbs) return false;
+        for(const band of exportedBands){
+          // Most exported arrays share the centerline sample count. Map the cached
+          // center index proportionally too, so this stays correct if counts differ.
+          const base=Math.round((nearI/Math.max(1,n-1))*Math.max(1,band.len-1));
+          for(let o=-8;o<=8;o++){
+            const i=(base+o+band.len)%band.len;
+            const j=(i+1)%band.len;
+            if(pointInQuad(x,y,band.inner[i],band.inner[j],band.outer[j],band.outer[i])) return true;
+          }
+        }
+        return false;
+      };
+
       const isOnVisualKerb = (x, y) => {
         const hit = findNearest(x, y);
         if (!hit) return false;
 
+        // Exact geometry first. This is the normal path for current tracks.
+        if(isOnExportedKerb(x,y,hit.i)) return true;
+
+        // Legacy fallback for tracks that only have the generated premium strip.
         const i = hit.i;
         const j = hit.j;
         const turn = turnAt(i);
@@ -101,8 +142,6 @@ export class RaceScene extends PremiumSurfaceRaceScene {
         const w1 = Number(center[j]?.width || fallbackW);
         const half = (w0 + (w1 - w0) * hit.t) * 0.5;
 
-        // Visual algorithm: positive turn -> LEFT edge, negative turn -> RIGHT edge.
-        // Only the actual piano side receives the extra drivable strip.
         if (turn > 0) {
           return lateral >= half - curbTolerance &&
                  lateral <= half + maxCurbWidth + curbTolerance;
