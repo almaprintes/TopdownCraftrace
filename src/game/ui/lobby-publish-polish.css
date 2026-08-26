@@ -1,0 +1,128 @@
+/* Publish polish: lobby cards must fit the real available viewport on every device. */
+
+.tdr-event-card,
+.tdr-track-card {
+  pointer-events: auto;
+  cursor: pointer;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.tdr-event-card:active,
+.tdr-track-card:active {
+  filter: brightness(1.08);
+}
+
+/* The season card is navigation. Claiming happens inside the season road. */
+.tdr-event-card .tdr-event-claim {
+  pointer-events: none;
+}
+
+/* Track card: content is distributed by the ACTUAL card height, not fixed pixels. */
+.tdr-track-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: clamp(3px, 1vh, 8px);
+  padding: clamp(12px, 2.4vh, 24px) clamp(12px, 1.6vw, 22px) clamp(9px, 1.6vh, 14px);
+}
+
+.tdr-track-card .tdr-card-kicker {
+  flex: 0 0 auto;
+  line-height: 1.08;
+  font-size: clamp(8px, min(.95vw, 2.2vh), 14px);
+}
+
+.tdr-track-card h2 {
+  flex: 0 0 auto;
+  margin: clamp(2px, .5vh, 7px) 0 0;
+  padding: 0;
+  line-height: 1.02;
+  font-size: clamp(16px, min(1.8vw, 4.3vh), 27px);
+  overflow-wrap: anywhere;
+}
+
+.tdr-track-map {
+  flex: 1 1 auto;
+  width: min(82%, 230px);
+  min-height: 42px;
+  max-height: 112px;
+  height: auto;
+  margin: clamp(2px, .6vh, 6px) auto 0;
+  box-sizing: border-box;
+}
+
+.tdr-track-map svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tdr-track-stats {
+  flex: 0 0 auto;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(3px, .8vh, 8px) clamp(8px, 1.2vw, 14px);
+  align-items: start;
+}
+
+.tdr-track-stats span {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.tdr-track-stats small {
+  line-height: 1.05;
+  font-size: clamp(6px, min(.7vw, 1.8vh), 10px);
+  overflow-wrap: anywhere;
+}
+
+.tdr-track-stats strong {
+  min-width: 0;
+  line-height: 1.03;
+  font-size: clamp(10px, min(1.12vw, 3vh), 17px);
+  overflow-wrap: anywhere;
+}
+
+/* Short landscape viewports (browser chrome, older Androids, small iPhones). */
+@media (max-height: 520px) {
+  .tdr-track-card {
+    gap: 3px;
+    padding-top: 12px;
+    padding-bottom: 8px;
+  }
+
+  .tdr-track-card h2 {
+    margin-top: 1px;
+    font-size: clamp(15px, 3.8vh, 22px);
+  }
+
+  .tdr-track-map {
+    width: min(72%, 205px);
+    min-height: 34px;
+    max-height: 82px;
+    margin-top: 2px;
+  }
+
+  .tdr-track-stats {
+    gap: 3px 9px;
+  }
+
+  .tdr-track-stats small { font-size: clamp(6px, 1.7vh, 8px); }
+  .tdr-track-stats strong { font-size: clamp(10px, 2.7vh, 14px); }
+}
+
+@media (max-height: 420px) {
+  .tdr-track-card {
+    padding-top: 10px;
+    padding-bottom: 7px;
+  }
+
+  .tdr-track-card .tdr-card-kicker { font-size: 7px; }
+  .tdr-track-card h2 { font-size: clamp(14px, 3.6vh, 18px); }
+  .tdr-track-map { min-height: 28px; max-height: 62px; }
+  .tdr-track-stats small { font-size: 6px; }
+  .tdr-track-stats strong { font-size: clamp(9px, 2.5vh, 12px); }
+}
