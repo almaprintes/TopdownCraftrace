@@ -2,6 +2,7 @@ import { getLanguage } from './index.js';
 
 const EN_EXACT = new Map(Object.entries({
   'GARAJE':'GARAGE','COLECCIÓN':'COLLECTION','JUGADOR':'PLAYER','PLAYER':'PLAYER','COMÚN':'COMMON','POCO COMÚN':'UNCOMMON','RARO':'RARE','ÉPICO':'EPIC','LEGENDARIO':'LEGENDARY',
+  'CIRCUITO ATLÁNTICO':'ATLANTIC CIRCUIT',
   'VEL PUNTA':'TOP SPEED','VELOCIDAD':'SPEED','ACELERACIÓN':'ACCELERATION','FRENADA':'BRAKING','AGARRE':'GRIP','CONTROL':'CONTROL',
   'EDITAR COCHE':'EDIT CAR','SELECCIONAR':'SELECT','SELECCIONADO':'SELECTED','SELECCIONADA':'SELECTED','VOLVER':'BACK','VER FICHA':'VIEW SPECS','EDITAR':'EDIT',
   'LONGITUD':'LENGTH','SECTORES':'SECTORS','SUPERFICIE':'SURFACE','ANCHO':'WIDTH','ASFALTO':'ASPHALT','TIERRA':'DIRT','HORARIO':'CLOCKWISE','ANTIHORARIO':'COUNTERCLOCKWISE',
@@ -45,7 +46,6 @@ function translateString(input){
   if(getLanguage()!=='en')return input;
   let s=String(input??'');
   if(EN_EXACT.has(s))return EN_EXACT.get(s);
-
   if(/^\d+ VUELTAS$/.test(s))return s.replace('VUELTAS','LAPS');
   if(/^\d+ sectores$/i.test(s))return s.replace(/sectores/i,'sectors');
   if(/^Coche:\s*/i.test(s))return s.replace(/^Coche:/i,'Car:');
@@ -58,64 +58,11 @@ function translateString(input){
   if(/^FABRICADO · /i.test(s))s=s.replace(/^FABRICADO/i,'CRAFTED').replace(/ · guardado en PIEZAS$/i,' · stored in PARTS').replace(/ · guardado en MATERIALES$/i,' · stored in MATERIALS');
   if(/^EVOLUCIÓN · /i.test(s))s=s.replace(/^EVOLUCIÓN/i,'UPGRADE');
   if(/ equipada en /i.test(s))s=s.replace(/ equipada en /i,' equipped in ');
-
-  const lineReplacements=[
-    [/\bVEL PUNTA\b/g,'TOP SPEED'],[/\bACELERACIÓN\b/g,'ACCELERATION'],[/\bFRENADA\b/g,'BRAKING'],
-    [/\bVUELTAS LIMPIAS\b/g,'CLEAN LAPS'],[/\bVUELTAS\b/g,'LAPS'],[/\bVUELTA\b/g,'LAP'],[/\bSECTORES\b/g,'SECTORS'],[/\bsectores\b/g,'sectors'],
-    [/\bLONGITUD\b/g,'LENGTH'],[/\bSUPERFICIE\b/g,'SURFACE'],[/\bANCHO\b/g,'WIDTH'],[/\bTIERRA\b/g,'DIRT'],[/\bASFALTO\b/g,'ASPHALT'],
-    [/\bSELECCIONAR\b/g,'SELECT'],[/\bSELECCIONADO\b/g,'SELECTED'],[/\bSELECCIONADA\b/g,'SELECTED'],[/\bVOLVER\b/g,'BACK'],[/\bCANCELAR\b/g,'CANCEL'],
-    [/\bMATERIALES\b/g,'MATERIALS'],[/\bPIEZAS\b/g,'PARTS'],[/\bEQUIPAR\b/g,'EQUIP'],[/\bEQUIPADA\b/g,'EQUIPPED'],[/\bRESULTADO\b/g,'RESULT'],
-    [/\bMONEDAS\b/g,'COINS'],[/\bPREMIO\b/g,'REWARD'],[/\bPROGRESO\b/g,'PROGRESS'],[/\bCIRCUITOS\b/g,'TRACKS'],
-    [/\bFRENOS\b/g,'BRAKES'],[/\bRUEDAS\b/g,'TIRES'],[/\bSUSPENSIÓN\b/g,'SUSPENSION'],[/\bCAJA\b/g,'GEARBOX'],[/\bMOTOR\b/g,'ENGINE'],
-    [/\bCONTINUAR\b/g,'CONTINUE'],[/\bSALIR\b/g,'EXIT'],[/\bINFORME\b/g,'REPORT'],[/\bRECOMPENSAS\b/g,'REWARDS'],[/\bRECOMPENSA\b/g,'REWARD']
-  ];
-  for(const [from,to] of EN_PHRASES)s=s.split(from).join(to);
-  for(const [re,to] of lineReplacements)s=s.replace(re,to);
-
-  s=s.replace(/\b(Frenos|Neumático|Suspensión|Caja|Motor) Street\b/g,m=>m.replace('Frenos','Brakes').replace('Neumático','Tire').replace('Suspensión','Suspension').replace('Caja','Gearbox').replace('Motor','Engine'));
-  s=s.replace(/\b(Frenos|Neumático|Suspensión|Caja|Motor) Sport\b/g,m=>m.replace('Frenos','Brakes').replace('Neumático','Tire').replace('Suspensión','Suspension').replace('Caja','Gearbox').replace('Motor','Engine'));
-  s=s.replace(/\b(Frenos|Neumático|Suspensión|Caja|Motor) Racing\b/g,m=>m.replace('Frenos','Brakes').replace('Neumático','Tire').replace('Suspensión','Suspension').replace('Caja','Gearbox').replace('Motor','Engine'));
-  s=s.replace(/\b(Frenos|Neumático|Suspensión|Caja|Motor) Prototype\b/g,m=>m.replace('Frenos','Brakes').replace('Neumático','Tire').replace('Suspensión','Suspension').replace('Caja','Gearbox').replace('Motor','Engine'));
-  return s;
+  const lineReplacements=[[/\bVEL PUNTA\b/g,'TOP SPEED'],[/\bACELERACIÓN\b/g,'ACCELERATION'],[/\bFRENADA\b/g,'BRAKING'],[/\bVUELTAS LIMPIAS\b/g,'CLEAN LAPS'],[/\bVUELTAS\b/g,'LAPS'],[/\bVUELTA\b/g,'LAP'],[/\bSECTORES\b/g,'SECTORS'],[/\bsectores\b/g,'sectors'],[/\bLONGITUD\b/g,'LENGTH'],[/\bSUPERFICIE\b/g,'SURFACE'],[/\bANCHO\b/g,'WIDTH'],[/\bTIERRA\b/g,'DIRT'],[/\bASFALTO\b/g,'ASPHALT'],[/\bSELECCIONAR\b/g,'SELECT'],[/\bSELECCIONADO\b/g,'SELECTED'],[/\bSELECCIONADA\b/g,'SELECTED'],[/\bVOLVER\b/g,'BACK'],[/\bCANCELAR\b/g,'CANCEL'],[/\bMATERIALES\b/g,'MATERIALS'],[/\bPIEZAS\b/g,'PARTS'],[/\bEQUIPAR\b/g,'EQUIP'],[/\bEQUIPADA\b/g,'EQUIPPED'],[/\bRESULTADO\b/g,'RESULT'],[/\bMONEDAS\b/g,'COINS'],[/\bPREMIO\b/g,'REWARD'],[/\bPROGRESO\b/g,'PROGRESS'],[/\bCIRCUITOS\b/g,'TRACKS'],[/\bFRENOS\b/g,'BRAKES'],[/\bRUEDAS\b/g,'TIRES'],[/\bSUSPENSIÓN\b/g,'SUSPENSION'],[/\bCAJA\b/g,'GEARBOX'],[/\bMOTOR\b/g,'ENGINE'],[/\bCONTINUAR\b/g,'CONTINUE'],[/\bSALIR\b/g,'EXIT'],[/\bINFORME\b/g,'REPORT'],[/\bRECOMPENSAS\b/g,'REWARDS'],[/\bRECOMPENSA\b/g,'REWARD']];
+  for(const [from,to] of EN_PHRASES)s=s.split(from).join(to);for(const [re,to] of lineReplacements)s=s.replace(re,to);
+  s=s.replace(/\b(Frenos|Neumático|Suspensión|Caja|Motor) Street\b/g,m=>m.replace('Frenos','Brakes').replace('Neumático','Tire').replace('Suspensión','Suspension').replace('Caja','Gearbox').replace('Motor','Engine'));s=s.replace(/\b(Frenos|Neumático|Suspensión|Caja|Motor) Sport\b/g,m=>m.replace('Frenos','Brakes').replace('Neumático','Tire').replace('Suspensión','Suspension').replace('Caja','Gearbox').replace('Motor','Engine'));s=s.replace(/\b(Frenos|Neumático|Suspensión|Caja|Motor) Racing\b/g,m=>m.replace('Frenos','Brakes').replace('Neumático','Tire').replace('Suspensión','Suspension').replace('Caja','Gearbox').replace('Motor','Engine'));s=s.replace(/\b(Frenos|Neumático|Suspensión|Caja|Motor) Prototype\b/g,m=>m.replace('Frenos','Brakes').replace('Neumático','Tire').replace('Suspensión','Suspension').replace('Caja','Gearbox').replace('Motor','Engine'));return s;
 }
 
-export function localizeLegacyText(value){
-  if(Array.isArray(value))return value.map(localizeLegacyText);
-  if(value==null)return value;
-  return translateString(value);
-}
-
-function localizeDomNode(node){
-  if(getLanguage()!=='en'||!node)return;
-  if(node.nodeType===Node.TEXT_NODE){
-    const original=node.nodeValue;
-    if(!original||!original.trim())return;
-    const translated=translateString(original);
-    if(translated!==original)node.nodeValue=translated;
-    return;
-  }
-  if(node.nodeType!==Node.ELEMENT_NODE)return;
-  const el=node;
-  for(const attr of ['aria-label','title','placeholder']){
-    const value=el.getAttribute?.(attr);
-    if(!value)continue;
-    const translated=translateString(value);
-    if(translated!==value)el.setAttribute(attr,translated);
-  }
-  for(const child of [...el.childNodes])localizeDomNode(child);
-}
-
-export function installLegacyDomLocalization(){
-  if(typeof document==='undefined'||typeof MutationObserver==='undefined'||document.__tdrLegacyDomLocalization)return;
-  document.__tdrLegacyDomLocalization=true;
-  localizeDomNode(document.body);
-  const observer=new MutationObserver(records=>{
-    if(getLanguage()!=='en')return;
-    for(const record of records){
-      if(record.type==='characterData')localizeDomNode(record.target);
-      for(const node of record.addedNodes||[])localizeDomNode(node);
-    }
-  });
-  observer.observe(document.body,{subtree:true,childList:true,characterData:true});
-  window.addEventListener('tdr2:language-change',()=>{if(getLanguage()==='en')localizeDomNode(document.body);});
-}
+export function localizeLegacyText(value){if(Array.isArray(value))return value.map(localizeLegacyText);if(value==null)return value;return translateString(value);}
+function localizeDomNode(node){if(getLanguage()!=='en'||!node)return;if(node.nodeType===Node.TEXT_NODE){const original=node.nodeValue;if(!original||!original.trim())return;const translated=translateString(original);if(translated!==original)node.nodeValue=translated;return;}if(node.nodeType!==Node.ELEMENT_NODE)return;const el=node;for(const attr of ['aria-label','title','placeholder']){const value=el.getAttribute?.(attr);if(!value)continue;const translated=translateString(value);if(translated!==value)el.setAttribute(attr,translated);}for(const child of [...el.childNodes])localizeDomNode(child);}
+export function installLegacyDomLocalization(){if(typeof document==='undefined'||typeof MutationObserver==='undefined'||document.__tdrLegacyDomLocalization)return;document.__tdrLegacyDomLocalization=true;localizeDomNode(document.body);const observer=new MutationObserver(records=>{if(getLanguage()!=='en')return;for(const record of records){if(record.type==='characterData')localizeDomNode(record.target);for(const node of record.addedNodes||[])localizeDomNode(node);}});observer.observe(document.body,{subtree:true,childList:true,characterData:true});window.addEventListener('tdr2:language-change',()=>{if(getLanguage()==='en')localizeDomNode(document.body);});}
