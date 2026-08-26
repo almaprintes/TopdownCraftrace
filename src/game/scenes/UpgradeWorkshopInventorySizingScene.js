@@ -24,46 +24,53 @@ function assetPath(item){
 
 export class UpgradeShopScene extends PreviousWorkshop {
   _compactCarPanel(A,r,compact){
-    super._compactCarPanel(A,r,compact);
-
+    // Draw this panel once, with the navigation integrated into the real title.
+    // This replaces the old two-layer approach that duplicated/covered the name.
+    this._panel(A,r,0x2bcfff);
+    const spec=CAR_SPECS[this.car]||CAR_SPECS.stock;
     const index=WORKSHOP_CAR_IDS.indexOf(this.car);
-    if(index<0)return;
+    const titleY=r.y+(compact?25:34);
+    const navCenterX=r.x+r.w*.40;
 
-    const spec=CAR_SPECS[this.car];
-    // The base panel already prints the car name at the left. Keep that as the
-    // single visible title and turn this upper strip into navigation only.
-    const rowY=r.y+(compact?23:31);
-    const stripX=r.x+8;
-    const stripW=Math.max(120,r.w-(compact?75:92));
-    const stripH=compact?22:29;
-    const centerX=stripX+stripW/2;
-    const arrowGap=Math.min(compact?92:132,stripW*.38);
-    const leftEnabled=index>0;
-    const rightEnabled=index<WORKSHOP_CAR_IDS.length-1;
+    const title=A(this.add.text(navCenterX,titleY,String(spec?.name||this.car).toUpperCase(),{
+      fontFamily:'Arial Narrow,system-ui',fontSize:compact?'17px':'23px',fontStyle:'900 italic',color:'#fff'
+    }).setOrigin(.5));
 
-    // Cover the duplicate title produced by this navigation layer without
-    // touching the original car name drawn by the base factory panel.
-    A(this.add.rectangle(stripX,rowY-2,stripW,stripH,0x081525,.995).setOrigin(0,.5));
+    A(this.add.text(r.x+r.w-12,r.y+(compact?10:14),String(spec?.rarity||'COMÚN').toUpperCase(),{
+      fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'900',color:'#ffd05a'
+    }).setOrigin(1,0));
 
-    const nameWidth=Math.min(String(spec?.name||this.car).length*(compact?8:10),arrowGap*2-48);
-    const halfName=Math.min(nameWidth/2,arrowGap-24);
-    const leftX=Math.max(stripX+15,centerX-halfName-(compact?22:27));
-    const rightX=Math.min(stripX+stripW-15,centerX+halfName+(compact?22:27));
+    if(index>=0){
+      const leftEnabled=index>0;
+      const rightEnabled=index<WORKSHOP_CAR_IDS.length-1;
+      const gap=compact?18:24;
+      const buttonW=compact?28:34;
+      const leftX=Math.max(r.x+buttonW/2+8,navCenterX-title.width/2-gap-buttonW/2);
+      const rightX=Math.min(r.x+r.w-buttonW/2-8,navCenterX+title.width/2+gap+buttonW/2);
+      this._workshopNavGeometry={rowY:titleY,leftX,rightX,buttonW,buttonH:compact?24:28};
 
-    const arrow=(x,glyph,enabled,delta)=>{
-      const hit=A(this.add.rectangle(x,rowY,compact?28:34,compact?24:28,0x10273a,enabled?.92:.32)
-        .setStrokeStyle(1,enabled?0x45dfff:0x405262,enabled?.90:.30));
-      A(this.add.text(x,rowY,glyph,{
-        fontFamily:'system-ui',fontSize:compact?'18px':'22px',fontStyle:'900',color:enabled?'#ffffff':'#607080'
-      }).setOrigin(.5));
-      if(enabled){
-        hit.setInteractive({useHandCursor:true});
-        hit.on('pointerdown',()=>this._browseWorkshopCar(delta));
-      }
-    };
+      const arrow=(x,glyph,enabled,delta)=>{
+        const hit=A(this.add.rectangle(x,titleY,buttonW,compact?24:28,0x10273a,enabled?.92:.32)
+          .setStrokeStyle(1,enabled?0x45dfff:0x405262,enabled?.90:.30));
+        A(this.add.text(x,titleY,glyph,{
+          fontFamily:'system-ui',fontSize:compact?'18px':'22px',fontStyle:'900',color:enabled?'#ffffff':'#607080'
+        }).setOrigin(.5));
+        if(enabled){
+          hit.setInteractive({useHandCursor:true});
+          hit.on('pointerdown',()=>this._browseWorkshopCar(delta));
+        }
+      };
+      arrow(leftX,'‹',leftEnabled,-1);
+      arrow(rightX,'›',rightEnabled,1);
+    }
 
-    arrow(leftX,'‹',leftEnabled,-1);
-    arrow(rightX,'›',rightEnabled,1);
+    const imageH=Math.round(r.h*(compact?.43:.50));
+    const carR={x:r.x+9,y:r.y+(compact?45:57),w:r.w-18,h:imageH};
+    this._platform(A,carR);
+    this._carImage(A,spec,carR);
+
+    const statsR={x:r.x+13,y:carR.y+carR.h+7,w:r.w-26,h:r.y+r.h-carR.y-carR.h-14};
+    this._miniStats(A,spec,statsR,compact);
   }
 
   _browseWorkshopCar(delta){
