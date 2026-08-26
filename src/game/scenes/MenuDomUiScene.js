@@ -1,5 +1,6 @@
 import { MenuScene as PreviousMenuScene } from './MenuStoreScene.js';
 import { installLobbyDom } from '../ui/LobbyDomUi.js';
+import { polishLobbyForPublish } from '../ui/LobbyPublishPolish.js';
 
 function findCar(node, out = []) {
   if (!node) return out;
@@ -21,7 +22,8 @@ export class MenuScene extends PreviousMenuScene {
   renderUI() {
     super.renderUI();
     this._installCarPlatform();
-    installLobbyDom(this);
+    const lobbyRoot = installLobbyDom(this);
+    polishLobbyForPublish(this, lobbyRoot);
   }
 
   update(time, delta) {
