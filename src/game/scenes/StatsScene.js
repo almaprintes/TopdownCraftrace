@@ -6,42 +6,79 @@ import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { loadPlayerStats } from '../stats/playerStats.js';
 import { masteryInfoForMeters, masteryWheelDataUri } from '../stats/carMastery.js';
 
+const BASE=import.meta.env.BASE_URL||'/';
 const fmtLap=(ms)=>{ms=Number(ms);if(!Number.isFinite(ms)||ms<=0)return'—';const m=Math.floor(ms/60000),s=(ms-m*60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;};
 const fmtKm=(meters,lang)=>{const km=Math.max(0,Number(meters)||0)/1000;return km.toLocaleString(lang==='en'?'en-US':'es-ES',{minimumFractionDigits:km<10?2:1,maximumFractionDigits:km<10?2:1});};
 const esc=value=>String(value??'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
+const trackName=id=>TRACK_REGISTRY?.[id]?.name||String(id||'').replace(/^track/i,'Circuito ');
 
-function trackKeyFromHistory(storageKey,row){
-  const direct=String(row?.trackKey||row?.track||row?.trackId||'');
-  if(direct&&TRACK_REGISTRY?.[direct])return direct;
-  const raw=String(storageKey||'').slice('tdr2:ttHist:'.length);
-  return Object.keys(TRACK_REGISTRY||{}).find(key=>raw===key||raw.startsWith(`${key}:`)||raw.endsWith(`:${key}`)||raw.includes(`:${key}:`))||null;
+function bestForCar(car){
+  let best=null,bestTrack=null;
+  for(const [trackId,row] of Object.entries(car?.tracks||{})){
+    const ms=Number(row?.bestLapMs);
+    if(Number.isFinite(ms)&&ms>0&&(best==null||ms<best)){best=ms;bestTrack=trackId;}
+  }
+  return{best,bestTrack};
 }
-function collectLocalStats(){let laps=0,best=null,bestTrackKey=null,tracks=0;try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(!key.startsWith('tdr2:ttHist:'))continue;const history=JSON.parse(localStorage.getItem(key)||'null')?.history;if(!Array.isArray(history)||!history.length)continue;tracks++;laps+=history.length;for(const row of history){const ms=Number(row?.lapMs);if(Number.isFinite(ms)&&ms>0&&(best==null||ms<best)){best=ms;bestTrackKey=trackKeyFromHistory(key,row);}}}}catch{}const persistent=loadPlayerStats();return{laps,best,bestTrackKey,bestTrackName:bestTrackKey?(TRACK_REGISTRY?.[bestTrackKey]?.name||bestTrackKey):null,tracks,cars:unlockedCarIds().length,persistent};}
 
 export class StatsScene extends Phaser.Scene{
-  constructor(){super('StatsScene');}
+  constructor(){super('StatsScene');this._root=null;this._selectedCar=null;}
+
   create(){
     const host=this.game?.canvas?.parentElement||document.getElementById('app')||document.body;
+    const root=document.createElement('div');root.className='tdr-stats-hub';host.appendChild(root);this._root=root;
+    this._renderCars();
+    this.events.once('shutdown',()=>{try{root.remove();}catch{}this._root=null;});
+  }
+
+  _data(){
+    const stats=loadPlayerStats();
+    const ids=unlockedCarIds().filter(id=>CAR_SPECS?.[id]);
+    return ids.map(id=>{
+      const spec=CAR_SPECS[id]||{};
+      const car=stats.cars?.[id]||{meters:0,races:0,laps:0,tracks:{}};
+      const mastery=masteryInfoForMeters(car.meters||0);
+      return{id,spec,car,mastery,...bestForCar(car)};
+    });
+  }
+
+  _shell(title,backLabel){
     const lang=getLanguage()==='en'?'en':'es';
-    const s=collectLocalStats();
-    const unlocked=unlockedCarIds();
-    const known=new Set([...unlocked,...Object.keys(s.persistent.cars||{})]);
-    const mileageRows=[...known].map(id=>{const meters=Number(s.persistent.cars?.[id]?.meters)||0;return{id,spec:CAR_SPECS?.[id]||{},meters,races:Number(s.persistent.cars?.[id]?.races)||0,mastery:masteryInfoForMeters(meters)};}).sort((a,b)=>b.meters-a.meters);
-    const totalMeters=Number(s.persistent.totalMeters)||mileageRows.reduce((sum,row)=>sum+row.meters,0);
-    const root=document.createElement('div');root.className='tdr-stats';
-    root.innerHTML=`<style>
-      .tdr-stats{position:absolute;inset:0;z-index:12000;box-sizing:border-box;overflow:hidden;color:#fff;background:radial-gradient(circle at 50% 0%,rgba(30,70,95,.28),transparent 38%),linear-gradient(180deg,#07131f,#04101a 58%,#020a11);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:clamp(8px,1.8vh,18px) clamp(10px,2vw,26px);display:grid;grid-template-rows:auto minmax(0,1fr)}
-      .tdr-stats *{box-sizing:border-box}.tdr-stats__head{display:flex;align-items:center;gap:clamp(12px,2vw,24px);min-height:clamp(48px,9vh,72px);border-bottom:1px solid rgba(70,221,255,.28)}.tdr-stats__back{min-width:clamp(88px,11vw,145px);height:clamp(36px,6.5vh,50px);border:1px solid #4e6d82;background:#0b1d2b;color:#fff;font-weight:900;letter-spacing:.08em;cursor:pointer}.tdr-stats__title{margin:0;font-size:clamp(22px,3.6vw,42px);line-height:1;font-weight:950;letter-spacing:.02em}
-      .tdr-stats__body{min-height:0;overflow:auto;padding-top:clamp(10px,2vh,20px);padding-bottom:8px}.tdr-stats__hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,2fr);gap:clamp(10px,1.6vw,20px)}.tdr-stats__panel{min-width:0;border:1px solid rgba(70,221,255,.28);background:linear-gradient(145deg,rgba(9,29,42,.94),rgba(4,14,22,.96));padding:clamp(12px,1.7vw,22px);clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}
-      .tdr-stats__kicker{font-size:clamp(8px,.9vw,12px);font-weight:900;letter-spacing:.16em;color:#66e8ff;margin-bottom:7px}.tdr-stats__big{font-size:clamp(25px,4.3vw,54px);font-weight:950;line-height:.95;color:#fff;margin:0}.tdr-stats__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(8px,1.2vw,14px)}.tdr-stat{min-width:0;border:1px solid rgba(255,255,255,.08);background:#081722;padding:clamp(11px,1.6vw,18px);display:flex;flex-direction:column;justify-content:center;min-height:clamp(82px,15vh,126px)}.tdr-stat small{font-size:clamp(7px,.85vw,11px);font-weight:900;letter-spacing:.14em;color:#8297a8}.tdr-stat strong{margin-top:5px;font-size:clamp(21px,3.5vw,42px);line-height:1;font-weight:950;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tdr-stat__detail{margin-top:6px;color:#9bb0bf;font-size:clamp(8px,.82vw,11px);font-weight:800;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tdr-stat--gold strong{color:#f4c554}.tdr-stat--green strong{color:#63f3a5}.tdr-stat--cyan strong{color:#6feaff}
-      .tdr-mileage{margin-top:clamp(10px,1.8vh,18px)}.tdr-mileage__head{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:8px}.tdr-mileage__head h2{margin:0;font-size:clamp(16px,2vw,25px);letter-spacing:.04em}.tdr-mileage__head span{color:#f4c554;font-size:clamp(13px,1.5vw,20px);font-weight:950;white-space:nowrap}.tdr-mileage__list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(310px,100%),1fr));gap:8px}
-      .tdr-car-km{display:grid;grid-template-columns:clamp(48px,5vw,70px) minmax(0,1fr) auto;align-items:center;gap:10px;padding:9px 11px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(135deg,#081722,#0b1e2b)}.tdr-car-km__badge{width:100%;aspect-ratio:1;display:grid;place-items:center}.tdr-car-km__badge img{width:100%;height:100%;object-fit:contain;display:block}.tdr-car-km__name{min-width:0}.tdr-car-km__name strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(12px,1.25vw,17px)}.tdr-car-km__name small{display:block;margin-top:2px;color:#7f94a5;font-size:clamp(7px,.75vw,10px);letter-spacing:.08em}.tdr-car-km__mastery{margin-top:4px;font-size:clamp(7px,.7vw,9px);font-weight:900;letter-spacing:.08em;color:#d7b16b}.tdr-car-km__value{text-align:right}.tdr-car-km__value strong{display:block;color:#6feaff;font-size:clamp(17px,1.9vw,25px);line-height:1}.tdr-car-km__value small{display:block;margin-top:2px;color:#91a7b8;font-size:8px}
-      @media(max-height:430px){.tdr-stats{padding-top:6px;padding-bottom:6px}.tdr-stats__head{min-height:44px}.tdr-stats__hero{grid-template-columns:minmax(180px,.8fr) minmax(0,2.2fr);gap:8px}.tdr-stats__panel{padding:10px}.tdr-stats__grid{gap:6px}.tdr-stat{min-height:70px;padding:8px}.tdr-stats__big{font-size:clamp(22px,3.7vw,36px)}.tdr-mileage{margin-top:8px}.tdr-car-km{padding:6px 9px;grid-template-columns:44px minmax(0,1fr) auto}}
-      @media(max-width:760px){.tdr-stats__hero{grid-template-columns:1fr}.tdr-stats__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    </style>
-    <header class="tdr-stats__head"><button class="tdr-stats__back" type="button">← ${lang==='en'?'BACK':'VOLVER'}</button><h1 class="tdr-stats__title">${lang==='en'?'STATISTICS':'ESTADÍSTICAS'}</h1></header>
-    <main class="tdr-stats__body"><section class="tdr-stats__hero"><article class="tdr-stats__panel"><div class="tdr-stats__kicker">${lang==='en'?'DRIVER PROFILE':'PERFIL DEL PILOTO'}</div><h2 class="tdr-stats__big">${fmtKm(totalMeters,lang)} KM</h2></article><section class="tdr-stats__grid"><article class="tdr-stat tdr-stat--cyan"><small>${lang==='en'?'TIMED LAPS':'VUELTAS CRONOMETRADAS'}</small><strong>${s.laps}</strong></article><article class="tdr-stat tdr-stat--gold"><small>${lang==='en'?'BEST LAP':'MEJOR VUELTA'}</small><strong>${fmtLap(s.best)}</strong>${s.bestTrackName?`<div class="tdr-stat__detail">${esc(s.bestTrackName)}</div>`:''}</article><article class="tdr-stat tdr-stat--green"><small>${lang==='en'?'TRACKS RACED':'CIRCUITOS CORRIDOS'}</small><strong>${s.tracks}</strong></article><article class="tdr-stat"><small>${lang==='en'?'CARS UNLOCKED':'COCHES DESBLOQUEADOS'}</small><strong>${s.cars}</strong></article></section></section>
-    <section class="tdr-stats__panel tdr-mileage"><div class="tdr-mileage__head"><h2>${lang==='en'?'CAR MASTERY':'MAESTRÍA POR COCHE'}</h2><span>${fmtKm(totalMeters,lang)} KM</span></div><div class="tdr-mileage__list">${mileageRows.map(row=>`<article class="tdr-car-km"><div class="tdr-car-km__badge"><img src="${masteryWheelDataUri(row.mastery.level,{size:128,blackBackground:true})}" alt=""></div><div class="tdr-car-km__name"><strong>${esc(row.spec?.name||row.id)}</strong><small>${esc(row.spec?.brand||String(row.id).split('_')[0].toUpperCase())}${row.races?` · ${row.races} ${lang==='en'?'RACES':'CARRERAS'}`:''}</small><div class="tdr-car-km__mastery">${row.mastery.level?`${lang==='en'?'MASTERY':'MAESTRÍA'} ${row.mastery.level}/9 · ${row.mastery.material.toUpperCase()} · ${row.mastery.spokes} ${lang==='en'?'SPOKES':'RADIOS'}`:(lang==='en'?'MASTERY NOT STARTED':'MAESTRÍA SIN INICIAR')}${row.mastery.nextKm?` · ${lang==='en'?'NEXT':'SIG.'} ${row.mastery.nextKm} KM`:''}</div></div><div class="tdr-car-km__value"><strong>${fmtKm(row.meters,lang)}</strong><small>KM</small></div></article>`).join('')}</div></section></main>`;
-    host.appendChild(root);this._root=root;root.querySelector('.tdr-stats__back')?.addEventListener('click',()=>this.scene.start('menu'));this.events.once('shutdown',()=>{try{root.remove();}catch{}this._root=null;});
+    return `<style>
+      .tdr-stats-hub{position:absolute;inset:0;z-index:12000;background:radial-gradient(circle at 50% 0%,rgba(36,86,115,.25),transparent 40%),linear-gradient(180deg,#07131f,#020a11);color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-sizing:border-box;padding:max(8px,var(--tdr-safe-top,8px)) max(10px,var(--tdr-safe-right,10px)) max(8px,var(--tdr-safe-bottom,8px)) max(10px,var(--tdr-safe-left,10px));display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}.tdr-stats-hub *{box-sizing:border-box}
+      .sh-head{display:flex;align-items:center;gap:clamp(12px,2vw,24px);min-height:clamp(48px,9vh,72px);border-bottom:1px solid rgba(70,221,255,.28);padding:0 clamp(6px,1vw,14px)}.sh-back{min-width:clamp(92px,12vw,155px);height:clamp(36px,6.5vh,50px);border:1px solid #4e6d82;background:#0b1d2b;color:#fff;font-weight:900;letter-spacing:.08em;cursor:pointer}.sh-title{margin:0;font-size:clamp(22px,3.5vw,42px);line-height:1;font-weight:950;letter-spacing:.02em}.sh-body{min-height:0;overflow:auto;padding:clamp(10px,1.8vh,18px) clamp(6px,1vw,14px) 10px}
+      .sh-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.sh-sum{border:1px solid rgba(255,255,255,.09);background:#081722;padding:10px 13px;min-height:68px}.sh-sum small{display:block;color:#8297a8;font-size:clamp(7px,.75vw,10px);font-weight:900;letter-spacing:.13em}.sh-sum strong{display:block;margin-top:4px;font-size:clamp(18px,2.3vw,30px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sh-sum.gold strong{color:#f4c554}.sh-sum.cyan strong{color:#6feaff}.sh-sum.green strong{color:#63f3a5}
+      .sh-cars{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(290px,100%),1fr));gap:10px}.sh-car{position:relative;overflow:hidden;border:1px solid rgba(70,221,255,.28);background:linear-gradient(145deg,#0a1f2d,#06131d);min-height:clamp(150px,26vh,220px);padding:12px;cursor:pointer;clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px)}.sh-car:hover{border-color:#6feaff}.sh-car__top{display:flex;justify-content:space-between;gap:8px}.sh-car__name strong{display:block;font-size:clamp(15px,1.5vw,21px)}.sh-car__name small{display:block;margin-top:2px;color:#8297a8;font-size:9px;letter-spacing:.1em}.sh-car__badge{width:54px;height:54px;flex:0 0 auto}.sh-car__badge img{width:100%;height:100%;object-fit:contain}.sh-car__art{height:clamp(70px,12vh,108px);display:grid;place-items:center;margin:2px 0}.sh-car__art img{max-width:86%;max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(0,0,0,.45))}.sh-car__stats{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;border-top:1px solid rgba(255,255,255,.08);padding-top:7px}.sh-car__stats small{display:block;color:#7f94a5;font-size:7px;font-weight:900;letter-spacing:.08em}.sh-car__stats strong{display:block;margin-top:2px;font-size:clamp(12px,1.2vw,16px)}
+      .sh-detail-hero{display:grid;grid-template-columns:minmax(240px,.75fr) minmax(0,1.6fr);gap:10px;margin-bottom:10px}.sh-detail-card{border:1px solid rgba(70,221,255,.28);background:linear-gradient(145deg,#0a1f2d,#06131d);padding:12px}.sh-detail-title{display:flex;align-items:center;gap:12px}.sh-detail-title img.car{width:clamp(110px,16vw,190px);height:clamp(74px,15vh,125px);object-fit:contain}.sh-detail-title h2{margin:0;font-size:clamp(22px,3vw,38px)}.sh-detail-title p{margin:4px 0 0;color:#8fa5b5;font-size:11px}.sh-detail-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:100%}.sh-metric{border:1px solid rgba(255,255,255,.08);background:#081722;padding:10px;display:flex;flex-direction:column;justify-content:center}.sh-metric small{color:#8297a8;font-size:8px;font-weight:900;letter-spacing:.11em}.sh-metric strong{margin-top:4px;font-size:clamp(18px,2vw,28px)}
+      .sh-table-wrap{border:1px solid rgba(70,221,255,.25);background:#06131d;padding:10px;overflow:auto}.sh-table{width:100%;border-collapse:collapse;min-width:680px}.sh-table th{text-align:left;color:#7f95a7;font-size:8px;letter-spacing:.12em;padding:9px;border-bottom:1px solid rgba(255,255,255,.12)}.sh-table td{padding:10px 9px;border-bottom:1px solid rgba(255,255,255,.07);font-size:clamp(10px,1vw,14px)}.sh-table td.time{color:#f4c554;font-weight:900}.sh-table td.km{color:#6feaff;font-weight:900}.sh-table td.num{color:#dbe6ed;font-weight:800}.sh-table tr:last-child td{border-bottom:0}.sh-empty{color:#71899b;text-align:center;padding:24px!important}
+      @media(max-height:430px){.sh-head{min-height:44px}.sh-body{padding-top:7px}.sh-summary{margin-bottom:8px}.sh-sum{min-height:54px;padding:7px 10px}.sh-car{min-height:145px}.sh-car__art{height:64px}.sh-detail-hero{grid-template-columns:minmax(220px,.7fr) minmax(0,1.7fr)}.sh-detail-title img.car{width:105px;height:70px}.sh-detail-metrics{gap:5px}.sh-metric{padding:7px}}
+      @media(max-width:850px){.sh-summary{grid-template-columns:repeat(2,1fr)}.sh-detail-hero{grid-template-columns:1fr}.sh-detail-metrics{grid-template-columns:repeat(2,1fr)}}
+    </style><header class="sh-head"><button class="sh-back" type="button">← ${backLabel}</button><h1 class="sh-title">${title}</h1></header><main class="sh-body"></main>`;
+  }
+
+  _renderCars(){
+    const lang=getLanguage()==='en'?'en':'es';
+    const rows=this._data();
+    const totalMeters=rows.reduce((s,r)=>s+(Number(r.car.meters)||0),0);
+    const totalLaps=rows.reduce((s,r)=>s+(Number(r.car.laps)||0),0);
+    const totalRaces=rows.reduce((s,r)=>s+(Number(r.car.races)||0),0);
+    let fastest=null;for(const r of rows)if(r.best&&(!fastest||r.best<fastest.best))fastest=r;
+    this._root.innerHTML=this._shell(lang==='en'?'STATISTICS':'ESTADÍSTICAS',lang==='en'?'BACK':'VOLVER');
+    const body=this._root.querySelector('.sh-body');
+    body.innerHTML=`<section class="sh-summary"><article class="sh-sum cyan"><small>${lang==='en'?'TOTAL DISTANCE':'DISTANCIA TOTAL'}</small><strong>${fmtKm(totalMeters,lang)} KM</strong></article><article class="sh-sum"><small>${lang==='en'?'TIMED LAPS':'VUELTAS'}</small><strong>${totalLaps}</strong></article><article class="sh-sum green"><small>${lang==='en'?'RACES':'CARRERAS'}</small><strong>${totalRaces}</strong></article><article class="sh-sum gold"><small>${lang==='en'?'BEST LAP':'MEJOR VUELTA'}</small><strong>${fastest?fmtLap(fastest.best):'—'}</strong></article></section><section class="sh-cars">${rows.map(r=>`<article class="sh-car" data-car="${esc(r.id)}"><div class="sh-car__top"><div class="sh-car__name"><strong>${esc(r.spec.name||r.id)}</strong><small>${esc(r.spec.brand||'')} · ${esc(r.spec.category||'')}</small></div><div class="sh-car__badge"><img src="${masteryWheelDataUri(r.mastery.level,{size:128,blackBackground:true})}" alt=""></div></div><div class="sh-car__art"><img src="${BASE}assets/skins/${encodeURIComponent(r.spec.skin||'')}" alt=""></div><div class="sh-car__stats"><div><small>${lang==='en'?'DISTANCE':'DISTANCIA'}</small><strong>${fmtKm(r.car.meters,lang)} KM</strong></div><div><small>${lang==='en'?'BEST LAP':'MEJOR VUELTA'}</small><strong>${fmtLap(r.best)}</strong></div><div><small>${lang==='en'?'MASTERY':'MAESTRÍA'}</small><strong>${r.mastery.level}/9</strong></div></div></article>`).join('')}</section>`;
+    this._root.querySelector('.sh-back')?.addEventListener('click',()=>this.scene.start('menu'));
+    this._root.querySelectorAll('[data-car]').forEach(el=>el.addEventListener('click',()=>this._renderCarDetail(el.dataset.car)));
+  }
+
+  _renderCarDetail(carId){
+    const lang=getLanguage()==='en'?'en':'es';
+    const row=this._data().find(r=>r.id===carId);if(!row){this._renderCars();return;}
+    this._selectedCar=carId;
+    const tracks=Object.entries(TRACK_REGISTRY||{}).map(([id,track])=>({id,track,stats:row.car.tracks?.[id]||{meters:0,races:0,laps:0,bestLapMs:null,lastLapMs:null}}));
+    const drivenTracks=tracks.filter(r=>(Number(r.stats.meters)||0)>0||(Number(r.stats.laps)||0)>0||(Number(r.stats.races)||0)>0);
+    this._root.innerHTML=this._shell(esc(row.spec.name||carId),lang==='en'?'CARS':'COCHES');
+    const body=this._root.querySelector('.sh-body');
+    body.innerHTML=`<section class="sh-detail-hero"><article class="sh-detail-card"><div class="sh-detail-title"><img class="car" src="${BASE}assets/skins/${encodeURIComponent(row.spec.skin||'')}" alt=""><div><h2>${esc(row.spec.name||carId)}</h2><p>${esc(row.spec.brand||'')} · ${esc(row.spec.category||'')}</p></div></div></article><section class="sh-detail-metrics"><article class="sh-metric"><small>${lang==='en'?'DISTANCE':'DISTANCIA'}</small><strong>${fmtKm(row.car.meters,lang)} KM</strong></article><article class="sh-metric"><small>${lang==='en'?'BEST LAP':'MEJOR VUELTA'}</small><strong>${fmtLap(row.best)}</strong></article><article class="sh-metric"><small>${lang==='en'?'LAPS':'VUELTAS'}</small><strong>${Number(row.car.laps)||0}</strong></article><article class="sh-metric"><small>${lang==='en'?'MASTERY':'MAESTRÍA'}</small><strong>${row.mastery.level}/9</strong></article></section></section><section class="sh-table-wrap"><table class="sh-table"><thead><tr><th>${lang==='en'?'TRACK':'CIRCUITO'}</th><th>${lang==='en'?'BEST LAP':'MEJOR VUELTA'}</th><th>${lang==='en'?'DISTANCE':'DISTANCIA'}</th><th>${lang==='en'?'LAPS':'VUELTAS'}</th><th>${lang==='en'?'RACES':'CARRERAS'}</th></tr></thead><tbody>${drivenTracks.length?drivenTracks.map(r=>`<tr><td>${esc(r.track?.name||trackName(r.id))}</td><td class="time">${fmtLap(r.stats.bestLapMs)}</td><td class="km">${fmtKm(r.stats.meters,lang)} KM</td><td class="num">${Number(r.stats.laps)||0}</td><td class="num">${Number(r.stats.races)||0}</td></tr>`).join(''):`<tr><td class="sh-empty" colspan="5">${lang==='en'?'No circuit statistics yet':'Todavía no hay estadísticas por circuito'}</td></tr>`}</tbody></table></section>`;
+    this._root.querySelector('.sh-back')?.addEventListener('click',()=>this._renderCars());
   }
 }
