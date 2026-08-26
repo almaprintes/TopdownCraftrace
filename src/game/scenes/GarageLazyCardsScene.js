@@ -1,4 +1,4 @@
-import { GarageScene as CurrentGarageScene } from './GarageCleanTypographyScene.js';
+import { GarageScene as CurrentGarageScene } from './GarageResponsiveHeroScene.js';
 import { recordGarageVisit } from '../seasons/seasonTelemetry.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
 
