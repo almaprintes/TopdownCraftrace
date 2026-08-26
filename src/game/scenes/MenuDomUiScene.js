@@ -1,6 +1,7 @@
 import { MenuScene as PreviousMenuScene } from './MenuStoreScene.js';
 import { installLobbyDom } from '../ui/LobbyDomUi.js';
 import { polishLobbyForPublish } from '../ui/LobbyPublishPolish.js';
+import '../ui/floating-chrome.css';
 
 export class MenuScene extends PreviousMenuScene {
   preload() {
@@ -11,8 +12,6 @@ export class MenuScene extends PreviousMenuScene {
     }
   }
 
-  // Publish lobby: one layout only. The old Phaser lobby is no longer rendered
-  // at all, so language changes can only replace strings inside the same DOM UI.
   _renderGlobalEventCard() {}
 
   renderUI() {
@@ -25,8 +24,6 @@ export class MenuScene extends PreviousMenuScene {
     const { width, height } = this.scale;
     this._ui = this.add.container(0, 0);
 
-    // Keep only the photographic background in Phaser. All player-facing lobby
-    // panels, labels and hit areas belong exclusively to the DOM layer below.
     const bg = this.add.image(width / 2, height / 2, 'menu_bg').setOrigin(.5).setDepth(0);
     const sx = width / (bg.width || 1);
     const sy = height / (bg.height || 1);
