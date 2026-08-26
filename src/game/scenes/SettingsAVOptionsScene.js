@@ -134,12 +134,16 @@ export class SettingsScene extends CurrentSettingsScene {
     if(this.activeTab==='audio'){
       const a=this.settings.audio;const sub=this.settings.ui.settingsSubtab.audio;this._subTabs(x,subY,[['general','GENERAL'],['effects','EFECTOS'],['engine','MOTOR']],sub,val=>this._setSubtab('audio',val));
       if(sub==='general'){
-        const colW=Math.min(600,usableW*.62);
+        // Two-column layout deliberately keeps every control above the fixed footer
+        // on short landscape phones (iPhone SE-class heights included).
+        const gap=Math.max(28,Math.min(48,usableW*.045));
+        const colW=Math.floor((usableW-gap)/2);
+        const rightX=x+colW+gap;
         this._label(x,bodyY,'MODO SILENCIO',11);
         this._switch(x,bodyY+20,!!a.mute,()=>{a.mute=!a.mute;this._saveAll();this.scene.restart();});
-        this._slider('VOLUMEN GENERAL',()=>a.master,x,bodyY+62,colW,v=>a.master=v);
-        this._slider('MÚSICA',()=>a.music,x,bodyY+108,colW,v=>a.music=v);
-        this._slider('MOTOR',()=>a.engine,x,bodyY+154,colW,v=>a.engine=v);
+        this._slider('VOLUMEN GENERAL',()=>a.master,x,bodyY+66,colW,v=>a.master=v);
+        this._slider('MÚSICA',()=>a.music,rightX,bodyY,colW,v=>a.music=v);
+        this._slider('MOTOR',()=>a.engine,rightX,bodyY+66,colW,v=>a.engine=v);
       }
       if(sub==='effects'){
         const colW=Math.min(650,usableW*.68);this._label(x,bodyY,'EFECTOS DE SONIDO',12);this.add.text(x,bodyY+20,'Ajusta los sonidos secundarios sin tocar el motor.',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#aeb9d8'});this._slider('EFECTOS',()=>a.effects,x,bodyY+54,colW,v=>a.effects=v);this._slider('IMPACTOS',()=>a.impacts,x,bodyY+108,colW,v=>a.impacts=v);
