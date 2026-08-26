@@ -16,7 +16,7 @@ import { TrackStudioScene } from './scenes/TrackStudioScene.js';
 import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderAssetPointerUpScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
 import { installRuntimeCrashDiagnostics } from './dev/runtimeCrashDiagnostics.js';
-import { installSeasonRewardCelebrations } from './seasons/seasonRewardCelebration.js';
+import { installSeasonRewardCelebrations } from './seasons/seasonRewardCelebrationTouchSafe.js';
 import { initLanguage } from './i18n/index.js';
 import { localizeLegacyText } from './i18n/legacyUiText.js';
 import { localizePlayerPhaserText } from './i18n/phaserUiExtra.js';
