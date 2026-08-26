@@ -1,15 +1,6 @@
 import { MenuScene as PreviousMenuScene } from './MenuStoreScene.js';
 import { installLobbyDom } from '../ui/LobbyDomUi.js';
 import { polishLobbyForPublish } from '../ui/LobbyPublishPolish.js';
-import { destroySupersededLobbyUi } from '../ui/LobbyLegacyCleanup.js';
-
-function findCar(node, out = []) {
-  if (!node) return out;
-  const key = String(node?.texture?.key || '');
-  if (key === 'car' || key.startsWith('skin:')) out.push(node);
-  if (Array.isArray(node.list)) node.list.forEach(child => findCar(child, out));
-  return out;
-}
 
 export class MenuScene extends PreviousMenuScene {
   preload() {
@@ -20,19 +11,30 @@ export class MenuScene extends PreviousMenuScene {
     }
   }
 
-  // The publish lobby uses the DOM Season Pass card. The older Phaser event
-  // card must not be rendered underneath it; safe-area offsets would expose
-  // both layers on notched / Dynamic Island devices.
+  // Publish lobby: one layout only. The old Phaser lobby is no longer rendered
+  // at all, so language changes can only replace strings inside the same DOM UI.
   _renderGlobalEventCard() {}
 
   renderUI() {
-    super.renderUI();
-    this._installCarPlatform();
+    if (this._ui) {
+      try { this.tweens?.killTweensOf?.(this._ui); } catch {}
+      try { this._ui.destroy(true); } catch {}
+      this._ui = null;
+    }
 
-    // DOM is now the authoritative lobby UI. Remove superseded Phaser branches
-    // completely (and their tweens/listeners) instead of leaving invisible work
-    // running underneath the publish interface.
-    destroySupersededLobbyUi(this);
+    const { width, height } = this.scale;
+    this._ui = this.add.container(0, 0);
+
+    // Keep only the photographic background in Phaser. All player-facing lobby
+    // panels, labels and hit areas belong exclusively to the DOM layer below.
+    const bg = this.add.image(width / 2, height / 2, 'menu_bg').setOrigin(.5).setDepth(0);
+    const sx = width / (bg.width || 1);
+    const sy = height / (bg.height || 1);
+    bg.setScale(Math.max(sx, sy));
+    bg.setPosition(width / 2, height / 2);
+    this._ui.add(bg);
+
+    this._installCarPlatform();
 
     const lobbyRoot = installLobbyDom(this);
     polishLobbyForPublish(this, lobbyRoot);
@@ -53,16 +55,10 @@ export class MenuScene extends PreviousMenuScene {
     const ui = this._ui;
     if (!ui?.addAt) return;
 
-    // The car is always centred by the lobby layout. Use that canonical layout
-    // position rather than depending on a skin texture key or nested container.
     const { width, height } = this.scale;
     const centerX = width * .5;
     const centerY = height * .505;
     const diameter = Math.max(260, Math.min(380, width * .26, height * .48));
-
-    // Find the legacy hero while it still exists. It is removed immediately
-    // after the platform is installed by destroySupersededLobbyUi().
-    findCar(ui);
 
     const glow = this.add.graphics();
     glow.fillStyle(0x07131b, .58);
@@ -71,10 +67,8 @@ export class MenuScene extends PreviousMenuScene {
     glow.strokeCircle(centerX, centerY, diameter * .5);
     glow.lineStyle(3, 0xf0b84b, .72);
     glow.strokeCircle(centerX, centerY, diameter * .46);
-
-    // Index 0 is the photographic background. Everything inserted immediately
-    // after it is guaranteed to remain below the DOM hero car and all HUD layers.
     ui.addAt(glow, Math.min(1, ui.list.length));
+
     if (this.textures.exists('lobby-platform')) {
       const platform = this.add.image(centerX, centerY, 'lobby-platform').setOrigin(.5).setAlpha(1);
       platform.setDisplaySize(diameter, diameter);
