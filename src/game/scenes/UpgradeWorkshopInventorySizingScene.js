@@ -30,6 +30,8 @@ export class UpgradeShopScene extends PreviousWorkshop {
     if(index<0)return;
 
     const spec=CAR_SPECS[this.car];
+    // The base panel already prints the car name at the left. Keep that as the
+    // single visible title and turn this upper strip into navigation only.
     const rowY=r.y+(compact?23:31);
     const stripX=r.x+8;
     const stripW=Math.max(120,r.w-(compact?75:92));
@@ -39,12 +41,14 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const leftEnabled=index>0;
     const rightEnabled=index<WORKSHOP_CAR_IDS.length-1;
 
-    // Redraw only the name row so the arrows sit genuinely on both sides of the car name.
+    // Cover the duplicate title produced by this navigation layer without
+    // touching the original car name drawn by the base factory panel.
     A(this.add.rectangle(stripX,rowY-2,stripW,stripH,0x081525,.995).setOrigin(0,.5));
 
-    const name=A(this.add.text(centerX,rowY,String(spec?.name||this.car).toUpperCase(),{
-      fontFamily:'Arial Narrow,system-ui',fontSize:compact?'15px':'20px',fontStyle:'900 italic',color:'#fff'
-    }).setOrigin(.5));
+    const nameWidth=Math.min(String(spec?.name||this.car).length*(compact?8:10),arrowGap*2-48);
+    const halfName=Math.min(nameWidth/2,arrowGap-24);
+    const leftX=Math.max(stripX+15,centerX-halfName-(compact?22:27));
+    const rightX=Math.min(stripX+stripW-15,centerX+halfName+(compact?22:27));
 
     const arrow=(x,glyph,enabled,delta)=>{
       const hit=A(this.add.rectangle(x,rowY,compact?28:34,compact?24:28,0x10273a,enabled?.92:.32)
@@ -58,9 +62,6 @@ export class UpgradeShopScene extends PreviousWorkshop {
       }
     };
 
-    const halfName=Math.min(name.width/2,arrowGap-24);
-    const leftX=Math.max(stripX+15,centerX-halfName-(compact?22:27));
-    const rightX=Math.min(stripX+stripW-15,centerX+halfName+(compact?22:27));
     arrow(leftX,'‹',leftEnabled,-1);
     arrow(rightX,'›',rightEnabled,1);
   }
