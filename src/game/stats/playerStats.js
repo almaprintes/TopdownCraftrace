@@ -20,9 +20,8 @@ export function loadPlayerStats(){try{const raw=JSON.parse(localStorage.getItem(
 export function savePlayerStats(state){const cars=cleanCarStats(state?.cars),summed=Object.values(cars).reduce((s,r)=>s+Math.max(0,Number(r?.meters)||0),0),next={version:4,totalMeters:Math.max(0,Number(state?.totalMeters)||0,summed),cars};try{localStorage.setItem(KEY,JSON.stringify(next));}catch{}return next;}
 function ensureCar(state,id){return state.cars[id]||(state.cars[id]={meters:0,races:0,laps:0,tracks:{}});}
 function ensureTrack(car,trackId){const key=String(trackId||'').trim();if(!key)return null;if(!car.tracks||typeof car.tracks!=='object')car.tracks={};return car.tracks[key]||(car.tracks[key]={meters:0,races:0,laps:0,bestLapMs:null,lastLapMs:null});}
+function hasPositiveTime(value){const n=Number(value);return Number.isFinite(n)&&n>0;}
 
-// TT stores {v,history:[...]}. Older builds of the stats importer incorrectly
-// expected the parsed object itself to be an array, so no lap was ever imported.
 export function reconcileTimeTrialHistory(){
   const state=loadPlayerStats(),aggregate={};
   try{
@@ -38,14 +37,33 @@ export function reconcileTimeTrialHistory(){
     }
   }catch{}
   let changed=false;
-  for(const a of Object.values(aggregate)){const car=ensureCar(state,a.carId),track=ensureTrack(car,a.trackId);if(!track)continue;if(a.laps>Number(track.laps||0)){track.laps=a.laps;changed=true;}if(a.best!=null&&(!Number.isFinite(Number(track.bestLapMs))||a.best<Number(track.bestLapMs))){track.bestLapMs=a.best;changed=true;}if(a.last!=null&&Number(track.lastLapMs)!==a.last){track.lastLapMs=a.last;changed=true;}}
+  for(const a of Object.values(aggregate)){
+    const car=ensureCar(state,a.carId),track=ensureTrack(car,a.trackId);if(!track)continue;
+    if(a.laps>Number(track.laps||0)){track.laps=a.laps;changed=true;}
+    if(a.best!=null&&(!hasPositiveTime(track.bestLapMs)||a.best<Number(track.bestLapMs))){track.bestLapMs=a.best;changed=true;}
+    if(a.last!=null&&Number(track.lastLapMs)!==a.last){track.lastLapMs=a.last;changed=true;}
+  }
   for(const car of Object.values(state.cars)){const n=Object.values(car.tracks||{}).reduce((s,r)=>s+(Number(r.laps)||0),0);if(n>Number(car.laps||0)){car.laps=n;changed=true;}}
   return changed?savePlayerStats(state):state;
 }
 
 export function addCarDistance(carId,meters,trackId=null){const id=String(carId||'').trim(),delta=Math.max(0,Number(meters)||0);if(!id||delta<=0)return loadPlayerStats();const state=loadPlayerStats(),car=ensureCar(state,id);car.meters=Math.max(0,Number(car.meters)||0)+delta;const track=ensureTrack(car,trackId);if(track)track.meters=Math.max(0,Number(track.meters)||0)+delta;state.totalMeters=Math.max(0,Number(state.totalMeters)||0)+delta;return savePlayerStats(state);}
 export function markCarRace(carId,trackId=null){const id=String(carId||'').trim();if(!id)return loadPlayerStats();const state=loadPlayerStats(),car=ensureCar(state,id);car.races=Math.max(0,Math.floor(Number(car.races)||0))+1;const track=ensureTrack(car,trackId);if(track)track.races=Math.max(0,Math.floor(Number(track.races)||0))+1;return savePlayerStats(state);}
-export function addCarLap(carId,count=1,trackId=null,lapMs=null){const id=String(carId||'').trim();if(!id)return loadPlayerStats();const state=loadPlayerStats(),car=ensureCar(state,id),inc=Math.max(0,Math.floor(Number(count)||0));car.laps=Math.max(0,Math.floor(Number(car.laps)||0))+inc;const track=ensureTrack(car,trackId);if(track){track.laps=Math.max(0,Math.floor(Number(track.laps)||0))+inc;const ms=Number(lapMs);if(Number.isFinite(ms)&&ms>0){track.lastLapMs=ms;if(!Number.isFinite(Number(track.bestLapMs))||ms<Number(track.bestLapMs))track.bestLapMs=ms;}}return savePlayerStats(state);}
+export function addCarLap(carId,count=1,trackId=null,lapMs=null){
+  const id=String(carId||'').trim();if(!id)return loadPlayerStats();
+  const state=loadPlayerStats(),car=ensureCar(state,id),inc=Math.max(0,Math.floor(Number(count)||0));
+  car.laps=Math.max(0,Math.floor(Number(car.laps)||0))+inc;
+  const track=ensureTrack(car,trackId);
+  if(track){
+    track.laps=Math.max(0,Math.floor(Number(track.laps)||0))+inc;
+    const ms=Number(lapMs);
+    if(Number.isFinite(ms)&&ms>0){
+      track.lastLapMs=ms;
+      if(!hasPositiveTime(track.bestLapMs)||ms<Number(track.bestLapMs))track.bestLapMs=ms;
+    }
+  }
+  return savePlayerStats(state);
+}
 export function recordCarTrackLap(carId,trackId,lapMs){return addCarLap(carId,1,trackId,lapMs);}
 export function carMileageKm(carId){return Math.max(0,Number(loadPlayerStats().cars?.[String(carId||'')]?.meters)||0)/1000;}
 export const PLAYER_STATS_KEY=KEY;
