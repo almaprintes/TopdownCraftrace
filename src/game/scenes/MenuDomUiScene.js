@@ -2,6 +2,7 @@ import { MenuScene as PreviousMenuScene } from './MenuStoreScene.js';
 import { installLobbyDom } from '../ui/LobbyDomUi.js';
 import { polishLobbyForPublish } from '../ui/LobbyPublishPolish.js';
 import '../ui/floating-chrome.css';
+import '../ui/seasonPassBehavior.js';
 
 export class MenuScene extends PreviousMenuScene {
   preload() {
