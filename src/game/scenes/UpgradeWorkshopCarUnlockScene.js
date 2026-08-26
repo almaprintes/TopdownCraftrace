@@ -38,30 +38,21 @@ export class UpgradeShopScene extends CurrentWorkshop {
   _compactCarPanel(A,r,compact){
     super._compactCarPanel(A,r,compact);
 
-    // The previous layer draws arrows for the whole homologation fleet. Cover
-    // unavailable directions so player mode visually matches the unlock rules.
     if(this._mode==='admin'||devFullCarAccessEnabled())return;
     const allowed=this._allowedWorkshopCars();
     const index=allowed.indexOf(this.car);
     if(index<0)return;
 
-    const spec=CAR_SPECS[this.car];
-    const rowY=r.y+(compact?23:31);
-    const stripX=r.x+8;
-    const stripW=Math.max(120,r.w-(compact?75:92));
-    const centerX=stripX+stripW/2;
-    const arrowGap=Math.min(compact?92:132,stripW*.38);
-    const approxNameWidth=Math.min(String(spec?.name||this.car).length*(compact?8:10),arrowGap*2-48);
-    const halfName=Math.min(approxNameWidth/2,arrowGap-24);
-    const leftX=Math.max(stripX+15,centerX-halfName-(compact?22:27));
-    const rightX=Math.min(stripX+stripW-15,centerX+halfName+(compact?22:27));
-
+    const geo=this._workshopNavGeometry;
+    if(!geo)return;
     const cover=(x,glyph)=>{
-      A(this.add.rectangle(x,rowY,compact?30:36,compact?26:30,0x081525,1)
+      A(this.add.rectangle(x,geo.rowY,geo.buttonW,geo.buttonH,0x081525,1)
         .setStrokeStyle(1,0x405262,.35));
-      A(this.add.text(x,rowY,glyph,{fontFamily:'system-ui',fontSize:compact?'18px':'22px',fontStyle:'900',color:'#536777'}).setOrigin(.5));
+      A(this.add.text(x,geo.rowY,glyph,{
+        fontFamily:'system-ui',fontSize:compact?'18px':'22px',fontStyle:'900',color:'#536777'
+      }).setOrigin(.5));
     };
-    if(index<=0)cover(leftX,'‹');
-    if(index>=allowed.length-1)cover(rightX,'›');
+    if(index<=0)cover(geo.leftX,'‹');
+    if(index>=allowed.length-1)cover(geo.rightX,'›');
   }
 }
