@@ -19,6 +19,11 @@ export class MenuScene extends PreviousMenuScene {
     }
   }
 
+  // The publish lobby uses the DOM Season Pass card. The older Phaser event
+  // card must not be rendered underneath it; safe-area offsets would expose
+  // both layers on notched / Dynamic Island devices.
+  _renderGlobalEventCard() {}
+
   renderUI() {
     super.renderUI();
     this._installCarPlatform();
