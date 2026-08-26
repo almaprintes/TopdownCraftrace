@@ -23,11 +23,14 @@ function makeCardButton(node, label, action) {
   }
 }
 
-function makeLobbyAction({cls='',icon,label,action}){
+function makeLobbyAction({cls='',icon=null,glyph='',label,action}){
   const button=document.createElement('button');
   button.type='button';
   button.className=`tdr-lobby-button ${cls}`.trim();
-  button.innerHTML=`<img src="${BASE}assets/ui/lobby/${icon}" alt="" draggable="false"><span>${label}</span>`;
+  const mark=icon
+    ?`<img src="${BASE}assets/ui/lobby/${icon}" alt="" draggable="false">`
+    :`<span class="tdr-lobby-button-glyph" aria-hidden="true">${glyph}</span>`;
+  button.innerHTML=`${mark}<span>${label}</span>`;
   button.addEventListener('click',action);
   return button;
 }
@@ -38,7 +41,7 @@ function installBottomActions(scene,root,lang){
   bottom.dataset.tdrPublishBottom='1';
   bottom.replaceChildren(
     makeLobbyAction({
-      icon:'icon_stats.webp',
+      glyph:'▥',
       label:lang==='en'?'STATISTICS':'ESTADÍSTICAS',
       action:()=>scene.scene.start('StatsScene')
     }),
