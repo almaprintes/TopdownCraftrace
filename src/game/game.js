@@ -4,7 +4,7 @@ import { MenuScene } from './scenes/MenuSeasonScene.js';
 import { SeasonScene } from './scenes/SeasonScene.js';
 import { RaceScene } from './scenes/RaceSurvivalHardLapCapScene.js';
 import { installExactRuntimeBeautyPass } from './scenes/raceExactRuntimeBeautyPass.js';
-import { UpgradeShopScene } from './scenes/UpgradeWorkshopInventorySizingScene.js';
+import { UpgradeShopScene } from './scenes/UpgradeWorkshopCarUnlockScene.js';
 import { GarageScene } from './scenes/GarageLazyCardsScene.js';
 import { SettingsScene } from './scenes/SettingsLanguageScene.js';
 import { GarageDetailScene } from './scenes/GarageDetailSpeedConsistencyScene.js';
