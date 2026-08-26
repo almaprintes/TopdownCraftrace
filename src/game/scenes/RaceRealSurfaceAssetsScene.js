@@ -16,6 +16,17 @@ export class RaceScene extends BakedRaceScene {
     try { if (this.textures.exists('off')) this.textures.remove('off'); } catch {}
     try { if (this.textures.exists('asphalt')) this.textures.remove('asphalt'); } catch {}
 
+    // DIAGNÓSTICO A/B iOS: en modo seguro no cargamos los tres mapas 2K (~10 MB
+    // comprimidos / decenas de MB en GPU). Las capas anteriores conservan sus
+    // fallbacks ligeros mediante ensure*Texture(), por lo que geometría, físicas,
+    // colisiones y detección de superficies permanecen intactas.
+    //
+    // Dispositivos fuera de safe mode siguen exactamente con el renderer aprobado.
+    if (window.__tdrIosSafeMode === true) {
+      try { console.info('[TDR2][SAFE] Heavy 2K race surface textures skipped'); } catch {}
+      return;
+    }
+
     // Mantener las tres superficies existentes del renderer: grass / asphalt / off.
     // IMPORTANTE iOS: cargar SOLO los tres mapas visibles. Los antiguos AO/normal/
     // roughness/height/metalness no participan en el render y mantenerlos residentes
