@@ -42,11 +42,26 @@ function installMasteryRoofBadge(scene,root){
   badge.hidden=false;badge.src=masteryWheelDataUri(mastery.level,{size:128,blackBackground:true});badge.dataset.level=String(mastery.level);
 }
 
+function polishSeasonCard(scene,season,lang){
+  const kicker=season.querySelector('.tdr-card-kicker');
+  if(kicker)kicker.textContent=lang==='en'?'SEASON PASS':'PASE DE TEMPORADA';
+  const claim=season.querySelector('.tdr-event-claim');
+  if(claim){
+    claim.type='button';
+    claim.classList.add('tdr-event-claim--notice');
+    claim.innerHTML=`<span class="tdr-event-claim-dot" aria-hidden="true"></span><span>${lang==='en'?'REWARD AVAILABLE':'PREMIO DISPONIBLE'}</span><span class="tdr-event-claim-chevron" aria-hidden="true">›</span>`;
+    claim.setAttribute('aria-label',lang==='en'?'Reward available. Open Season Pass':'Premio disponible. Abrir Pase de Temporada');
+    claim.tabIndex=-1;
+    claim.style.pointerEvents='none';
+  }
+  makeCardButton(season,lang==='en'?'Open Season Pass':'Abrir Pase de Temporada',()=>scene.scene.start('season'));
+}
+
 export function polishLobbyForPublish(scene, root) {
   if (!root?.isConnected) return;
   const lang = getLanguage() === 'en' ? 'en' : 'es';
   const season = root.querySelector('[data-event-card]');
-  if (season) {const kicker = season.querySelector('.tdr-card-kicker');if (kicker) kicker.textContent = lang === 'en' ? 'SEASON PASS' : 'PASE DE TEMPORADA';const claim = season.querySelector('.tdr-event-claim');if (claim) claim.textContent = lang === 'en' ? 'OPEN SEASON' : 'ABRIR TEMPORADA';makeCardButton(season,lang === 'en' ? 'Open Season Pass' : 'Abrir Pase de Temporada',() => scene.scene.start('season'));}
+  if (season) polishSeasonCard(scene,season,lang);
   const track = root.querySelector('[data-track-card]');if (track) makeCardButton(track,lang === 'en' ? 'Open track selector' : 'Abrir selector de circuitos',() => scene.scene.start('TrackGarageScene', { mode: 'player' }));
   const car=root.querySelector('[data-lobby-car]');if(car){car.classList.add('tdr-lobby-car-preview--interactive');makeCardButton(car,lang==='en'?'Open garage':'Abrir garaje',()=>scene.scene.start('GarageScene',{mode:'player'}));}
   installMasteryRoofBadge(scene,root);
