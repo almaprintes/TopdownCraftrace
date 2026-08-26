@@ -7,7 +7,7 @@ import { RaceScene } from './scenes/RaceKerbHapticsScene.js';
 import { installExactRuntimeBeautyPass } from './scenes/raceExactRuntimeBeautyPass.js';
 import { UpgradeShopScene } from './scenes/UpgradeWorkshopCarUnlockScene.js';
 import { GarageScene } from './scenes/GarageLazyCardsScene.js';
-import { SettingsScene } from './scenes/SettingsLanguageScene.js';
+import { SettingsScene } from './scenes/SettingsAudioMusicScene.js';
 import { StatsScene } from './scenes/StatsScene.js';
 import { GarageDetailScene } from './scenes/GarageDetailSpeedConsistencyScene.js';
 import { AdminHubScene } from './scenes/AdminHubScene.js';
