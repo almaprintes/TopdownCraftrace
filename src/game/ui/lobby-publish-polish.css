@@ -18,6 +18,39 @@
   pointer-events: none;
 }
 
+/* The hero car itself is now the Garage entry point. */
+.tdr-lobby-car-preview--interactive {
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 130ms ease, filter 130ms ease;
+}
+.tdr-lobby-car-preview--interactive:active {
+  transform: translateX(-50%) scale(.965) translateY(2px);
+  filter: brightness(1.13) drop-shadow(0 12px 11px rgba(0,0,0,.48));
+}
+
+/* Bottom nav now reserves its space for actions with no natural on-screen asset. */
+.tdr-lobby-bottom-actions--two {
+  grid-template-columns: minmax(170px, 300px) minmax(210px, 360px);
+  justify-content: center;
+  gap: clamp(18px, 6vw, 90px);
+}
+.tdr-lobby-bottom-actions--two .tdr-lobby-button {
+  justify-self: center;
+  max-width: 360px;
+}
+.tdr-lobby-button-glyph {
+  width: clamp(22px,2.3vw,31px);
+  height: clamp(22px,2.3vw,31px);
+  display:grid;
+  place-items:center;
+  color:#66e8ff;
+  font-size:clamp(20px,2.2vw,30px);
+  line-height:1;
+  font-weight:900;
+}
+
 /* Track card: content is distributed by the ACTUAL card height, not fixed pixels. */
 .tdr-track-card {
   display: flex;
@@ -112,6 +145,7 @@
 
   .tdr-track-stats small { font-size: clamp(6px, 1.7vh, 8px); }
   .tdr-track-stats strong { font-size: clamp(10px, 2.7vh, 14px); }
+  .tdr-lobby-bottom-actions--two {gap:clamp(12px,4vw,42px);padding-left:18px;padding-right:18px;}
 }
 
 @media (max-height: 420px) {
