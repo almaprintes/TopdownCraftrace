@@ -91,6 +91,132 @@
   height: calc(100% - 58px - max(8px,var(--tdr-safe-top,8px))) !important;
 }
 
+/* Season Pass responsive geometry.
+   The original reward art is 258 px tall, which can exceed either lane on
+   phones with short landscape viewports. Scale the complete stage node as a
+   unit so art, badge and hit target remain aligned and never escape vertically. */
+#tdr-season-dom {
+  --tdr-season-stage-scale: 1;
+}
+#tdr-season-dom .route-inner {
+  padding-bottom: clamp(76px,14vh,92px) !important;
+}
+#tdr-season-dom .stage-node {
+  transform: scale(calc(var(--focus,.92) * var(--tdr-season-stage-scale))) !important;
+}
+#tdr-season-dom .stage-node.current,
+#tdr-season-dom .stage-node.selected {
+  z-index: 12;
+}
+
+/* Completed stages must read as completed at a glance, not as another locked
+   or untouched reward. Keep the reward recognizable but visually retired. */
+#tdr-season-dom .stage-node.done .reward-card,
+#tdr-season-dom .stage-node.done .premium-gift {
+  opacity: .48;
+  filter: grayscale(.52) saturate(.55) brightness(.74) drop-shadow(0 8px 8px rgba(0,0,0,.45)) !important;
+}
+#tdr-season-dom .stage-node.done::after {
+  content: '✓';
+  position:absolute;
+  left:50%;
+  top:50%;
+  z-index:20;
+  transform:translate(-50%,-50%);
+  width:46px;
+  height:46px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  color:#062116;
+  background:#62ffb2;
+  border:3px solid #d8ffe9;
+  box-shadow:0 0 0 6px rgba(98,255,178,.15),0 8px 18px rgba(0,0,0,.38);
+  font-size:27px;
+  font-weight:1000;
+  pointer-events:none;
+}
+#tdr-season-dom .stage-node.done::before {
+  position:absolute;
+  left:50%;
+  top:calc(50% + 38px);
+  z-index:21;
+  transform:translateX(-50%);
+  padding:3px 8px;
+  border:1px solid rgba(98,255,178,.55);
+  background:rgba(5,31,23,.94);
+  color:#8dffd0;
+  font-size:7px;
+  font-weight:1000;
+  letter-spacing:.11em;
+  white-space:nowrap;
+  pointer-events:none;
+}
+html[lang^='es'] #tdr-season-dom .stage-node.done::before { content:'CONSEGUIDO'; }
+html[lang^='en'] #tdr-season-dom .stage-node.done::before { content:'CLAIMED'; }
+
+/* The actual progression stage gets a unique bright treatment. Selection is
+   deliberately weaker so browsing another reward never hides where you are. */
+#tdr-season-dom .stage-node.current .reward-card,
+#tdr-season-dom .stage-node.current .premium-gift {
+  filter:brightness(1.16) saturate(1.12) drop-shadow(0 0 18px rgba(53,207,255,.48)) !important;
+}
+#tdr-season-dom .stage-node.current::before {
+  position:absolute;
+  left:50%;
+  top:0;
+  z-index:24;
+  transform:translate(-50%,-48%);
+  padding:5px 11px;
+  border:1px solid #68eaff;
+  background:linear-gradient(180deg,#17627a,#0b3344);
+  color:#eaffff;
+  box-shadow:0 0 16px rgba(53,207,255,.38);
+  font-size:8px;
+  font-weight:1000;
+  letter-spacing:.12em;
+  white-space:nowrap;
+  pointer-events:none;
+}
+html[lang^='es'] #tdr-season-dom .stage-node.current::before { content:'ETAPA ACTUAL'; }
+html[lang^='en'] #tdr-season-dom .stage-node.current::before { content:'CURRENT STAGE'; }
+#tdr-season-dom .stage-node.selected:not(.current) .reward-card,
+#tdr-season-dom .stage-node.selected:not(.current) .premium-gift {
+  filter:brightness(1.03) !important;
+}
+
+/* Future stages clearly recede instead of competing with the current reward. */
+#tdr-season-dom .stage-node.locked:not(.current) {
+  opacity:.38 !important;
+  filter:grayscale(.24) saturate(.55) brightness(.72) !important;
+}
+
+@media (max-height:620px) {
+  #tdr-season-dom { --tdr-season-stage-scale: .88; }
+  #tdr-season-dom .route-inner { grid-template-rows:54% 46% !important; }
+  #tdr-season-dom .stage-node.free-node { margin-top:4px !important; }
+  #tdr-season-dom .stage-node.premium-node { margin-top:-38px !important; }
+}
+@media (max-height:520px) {
+  #tdr-season-dom { --tdr-season-stage-scale: .76; }
+  #tdr-season-dom .route-inner {
+    grid-template-rows:53% 47% !important;
+    padding-bottom:70px !important;
+  }
+  #tdr-season-dom .route-label { transform:translateY(-50%) scale(.86) !important; transform-origin:left center; }
+  #tdr-season-dom .detail-dock { height:64px !important; bottom:6px !important; }
+}
+@media (max-height:440px) {
+  #tdr-season-dom { --tdr-season-stage-scale: .66; }
+  #tdr-season-dom .route-inner {
+    grid-template-rows:51% 49% !important;
+    padding-bottom:62px !important;
+  }
+  #tdr-season-dom .stage-node.free-node { margin-top:-4px !important; }
+  #tdr-season-dom .stage-node.premium-node { margin-top:-48px !important; }
+  #tdr-season-dom .detail-dock { height:58px !important; }
+}
+
 /* Control editor also floats its command bar so it never competes with notches/islands. */
 #tdr-control-cal .cctop {
   left: max(8px,var(--tdr-safe-left,8px)) !important;
