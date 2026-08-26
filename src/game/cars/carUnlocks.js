@@ -1,6 +1,8 @@
 const KEY='tdr2:carUnlocks:v1';
 const DEV_FULL_ACCESS_KEY='tdr2:devFullCarAccess:v1';
 const STARTER_CAR='helix_spark';
+const PLAYER_STATS_KEY='tdr2:playerStats:v1';
+const TT_HISTORY_PREFIX='tdr2:ttHist:';
 
 function normalize(ids){return [...new Set((Array.isArray(ids)?ids:[]).map(x=>String(x||'').trim()).filter(Boolean))];}
 
@@ -32,7 +34,38 @@ export function unlockCar(carId){
 }
 
 export function isCarUnlocked(carId){return loadCarUnlocks().unlocked.includes(String(carId||''));}
-export function unlockedCarIds(){return [...loadCarUnlocks().unlocked];}
+
+function devUsedCarIds(){
+  const ids=[];
+  try{
+    const selected=String(localStorage.getItem('tdr2:carId')||'').trim();
+    if(selected)ids.push(selected);
+
+    const stats=JSON.parse(localStorage.getItem(PLAYER_STATS_KEY)||'null');
+    if(stats?.cars&&typeof stats.cars==='object')ids.push(...Object.keys(stats.cars));
+
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i)||'';
+      if(!key.startsWith(TT_HISTORY_PREFIX))continue;
+      let parsed=null;
+      try{parsed=JSON.parse(localStorage.getItem(key)||'null');}catch{continue;}
+      const history=Array.isArray(parsed)?parsed:(Array.isArray(parsed?.history)?parsed.history:[]);
+      for(const row of history){
+        const carId=String(row?.carId||'').trim();
+        if(carId)ids.push(carId);
+      }
+    }
+  }catch{}
+  return normalize(ids);
+}
+
+export function unlockedCarIds(){
+  const owned=loadCarUnlocks().unlocked;
+  if(!devFullCarAccessEnabled())return [...owned];
+  // DEV homologation access must never mutate real progression. Statistics can,
+  // however, expose cars that the developer has selected or actually driven.
+  return normalize([...owned,...devUsedCarIds()]);
+}
 
 export function devFullCarAccessEnabled(){
   try{return localStorage.getItem(DEV_FULL_ACCESS_KEY)==='1';}catch{return false;}
