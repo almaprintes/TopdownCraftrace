@@ -218,8 +218,7 @@ export class RaceScene extends CurrentRaceScene {
       this._perfSamples=0;
       this._perfFrameMax=0;
       this._perfDiagAt=performance.now();
-      this._perfHotName='--';
-      this._perfHotMs=0;
+      this._perfStats=new Map();
 
       if(this._perfDiagEnabled){
         const wrapHot=(method,label)=>{
@@ -230,10 +229,11 @@ export class RaceScene extends CurrentRaceScene {
             const t0=performance.now();
             const out=bound(...args);
             const ms=performance.now()-t0;
-            if(ms>this._perfHotMs){
-              this._perfHotMs=ms;
-              this._perfHotName=label;
-            }
+            const stat=this._perfStats.get(label)||{sum:0,max:0,calls:0};
+            stat.sum+=ms;
+            stat.max=Math.max(stat.max,ms);
+            stat.calls++;
+            this._perfStats.set(label,stat);
             return out;
           };
           wrapped.__tdrPerfWrapped=true;
@@ -245,18 +245,27 @@ export class RaceScene extends CurrentRaceScene {
           ['_computeCenterlineProjection','projection'],
           ['_getNearestTrackPoint','nearest'],
           ['_isOnTrack','onTrack'],
+          ['_isOnKerb','kerb'],
           ['_isInBand','band'],
           ['_updateProceduralAudio','audio'],
+          ['_updateKerbHaptics','kerbHaptics'],
           ['_discoverFixedHud','hudDiscover'],
           ['_pinHudToScreen','hudPin'],
+          ['_pinRaceInfoHud','raceHudPin'],
           ['_updateRaceInfoHud','hudInfo'],
-          ['_syncCompetitionHud','hudComp']
+          ['_syncCompetitionHud','hudComp'],
+          ['_updateMinimap','minimap'],
+          ['_updateStandings','standings'],
+          ['_updateCpuAi','cpuAI'],
+          ['_updateAI','ai'],
+          ['_updateParticles','particles'],
+          ['_updateCamera','camera']
         ]) wrapHot(method,label);
 
         this._perfDiagText=this.add.text(10,42,'PERF --',{
           fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',
           fontSize:'10px',fontStyle:'bold',color:'#d8e8ff',
-          backgroundColor:'rgba(0,0,0,.58)',padding:{x:6,y:4},lineSpacing:2
+          backgroundColor:'rgba(0,0,0,.62)',padding:{x:6,y:4},lineSpacing:2
         }).setScrollFactor(0).setDepth(5001);
         try{this.cameras.main.ignore(this._perfDiagText);}catch{}
       }
@@ -289,24 +298,31 @@ export class RaceScene extends CurrentRaceScene {
       this._perfFrameMax=Math.max(this._perfFrameMax,Number(delta||0));
 
       const now=performance.now();
-      if(now-this._perfDiagAt>=500){
+      if(now-this._perfDiagAt>=650){
         const avg=this._perfSamples?this._perfUpdateAccum/this._perfSamples:0;
         const objs=Array.isArray(this.children?.list)?this.children.list.length:0;
         const made=this.track?.gfxByCell instanceof Map?this.track.gfxByCell.size:0;
         const active=this.track?.activeCells instanceof Set?this.track.activeCells.size:0;
         const lap=Number(this.lapCount||0)+1;
+        const rows=[...this._perfStats.entries()]
+          .map(([name,s])=>({name,avg:s.calls?s.sum/s.calls:0,max:s.max,calls:s.calls,total:s.sum}))
+          .sort((a,b)=>b.total-a.total)
+          .slice(0,6);
+        const topLines=rows.length
+          ? rows.map((r,i)=>`${i+1} ${r.name.padEnd(11).slice(0,11)} ${r.avg.toFixed(2)}/${r.max.toFixed(1)}ms x${r.calls}`).join('\n')
+          : '— sin muestras —';
+
         this._perfDiagText?.setText(
-          `L${lap} UP ${avg.toFixed(1)} ms  MAX ${this._perfUpdateMax.toFixed(1)}\n`+
-          `FRAME MAX ${this._perfFrameMax.toFixed(1)} ms\n`+
-          `HOT ${this._perfHotName} ${this._perfHotMs.toFixed(1)} ms\n`+
-          `OBJ ${objs}  CHUNK ${active}/${made}`
+          `L${lap} FPS ${Math.round(this.game?.loop?.actualFps||0)}  UP ${avg.toFixed(1)} ms MAX ${this._perfUpdateMax.toFixed(1)}\n`+
+          `FRAME MAX ${this._perfFrameMax.toFixed(1)} ms  OBJ ${objs} CHUNK ${active}/${made}\n`+
+          `TOP avg/max · llamadas\n${topLines}`
         );
+
         this._perfUpdateAccum=0;
         this._perfUpdateMax=0;
         this._perfSamples=0;
         this._perfFrameMax=0;
-        this._perfHotName='--';
-        this._perfHotMs=0;
+        this._perfStats.clear();
         this._perfDiagAt=now;
       }
     }
