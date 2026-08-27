@@ -72,7 +72,20 @@ export class BootScene extends Phaser.Scene {
     try { applyCarOverrides(this.cache.json.get('car_overrides')); } catch {}
 
     const goMenu = () => {
-      finishStartupOverlay();
+      bootMark('menu-start');
+
+      // Do not remove the HTML startup screen before the lobby exists.
+      // Phaser emits Scene CREATE only after the menu's own create() has completed.
+      // Wait two browser frames as well so the finished lobby has actually painted
+      // underneath the startup overlay before fading that overlay away.
+      try {
+        const menu=this.scene.get('menu');
+        menu?.events?.once?.(Phaser.Scenes.Events.CREATE, () => {
+          bootMark('menu-created');
+          requestAnimationFrame(() => requestAnimationFrame(finishStartupOverlay));
+        });
+      } catch {}
+
       this.scene.start('menu');
     };
 
