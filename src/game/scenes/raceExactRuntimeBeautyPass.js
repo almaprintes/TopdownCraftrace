@@ -2,6 +2,11 @@
 // IMPORTANT: this module consumes track.geom.left/right ONLY as the exact asphalt mask.
 // It never redraws circuit borders and never changes geometry, surfaces, physics,
 // AI, checkpoints or timing. Border/kerb rendering remains owned by the proven base scene.
+//
+// This pass is now strictly a FALLBACK for the pre-baked Beauty Layer. Once the
+// four baked world tiles are active, drawing this masked TileSprite as well would
+// duplicate the road render and add a large geometry-mask workload (especially
+// costly on iOS). In that case we return immediately.
 
 function trackId(scene, data) {
   const direct = data?.trackKey || scene?.trackKey || scene?.track?.meta?.id;
@@ -52,6 +57,14 @@ function buildExactRoadMask(scene) {
 
 function installPass(scene, data) {
   if (trackId(scene, data) !== 'karting-tenerife') return;
+
+  // The baked Beauty Layer already contains asphalt + grass + outer terrain.
+  // Never stack the old full-world masked asphalt on top of those four tiles.
+  if (scene?._beautyLayerActive === true) {
+    console.info('[TDR2] exact runtime asphalt skipped; baked Tenerife beauty active');
+    return;
+  }
+
   if (!scene.textures?.exists?.('asphalt')) return;
 
   const left = scene.track?.geom?.left;
@@ -66,8 +79,6 @@ function installPass(scene, data) {
   const objects = [];
   const masked = [];
 
-  // Solo sustituimos visualmente el asfalto. Grass y OFF siguen usando los slots
-  // existentes del renderer base; sus texturas se cambian en RaceRealSurfaceAssetsScene.
   const asphalt = scene.add.tileSprite(0, 0, worldW, worldH, 'asphalt')
     .setOrigin(0, 0)
     .setDepth(10.35)
@@ -97,13 +108,11 @@ function installPass(scene, data) {
     scene._exactRuntimeBeautyPass = null;
   });
 
-  console.info('[TDR2] exact runtime asphalt active', {
+  console.info('[TDR2] exact runtime asphalt fallback active', {
     track: 'karting-tenerife',
     samples: bundle.count,
     quads: bundle.quads,
     exactRoadMask: true,
-    grassSlotUnchanged: true,
-    offSlotUnchanged: true,
     shaderActive: false
   });
 }
