@@ -120,8 +120,6 @@ function hardenIosRaceControls(root){
     try{el.draggable=false;}catch{}
   }
 
-  // The pedal itself is the only touch target. Its decorative/text children must
-  // never become Safari selection/callout targets during a sustained press.
   for(const pedal of root.querySelectorAll('.tdr-pedal')){
     pedal.style.setProperty('pointer-events','auto','important');
     for(const child of pedal.querySelectorAll('*')){
@@ -137,8 +135,12 @@ function hardenIosRaceControls(root){
   const guarded=['dblclick','contextmenu','selectstart','dragstart','gesturestart','gesturechange','gestureend'];
   guarded.forEach(type=>root.addEventListener(type,block,{capture:true,passive:false}));
 
-  // iOS can perform double-tap zoom before a dblclick is dispatched. Block the
-  // second touchend directly on race controls so rapid GAS/BRAKE taps stay input.
+  // Safari can still start its long-press magnifier from Touch Events even when
+  // Pointer Events and user-select are disabled. Cancel the native touch default
+  // only inside the race control surface; our pointer handlers remain the input.
+  root.addEventListener('touchstart',block,{capture:true,passive:false});
+  root.addEventListener('touchmove',block,{capture:true,passive:false});
+
   let lastTouchEnd=0;
   root.addEventListener('touchend',e=>{
     const now=Date.now();
