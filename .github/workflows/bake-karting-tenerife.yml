@@ -1,17 +1,8 @@
 name: Bake Karting Tenerife beauty
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/bake-karting-tenerife.yml'
-      - 'scripts/bake-track-visual.mjs'
-      - 'scripts/track-beauty-config.mjs'
-      - 'scripts/build-track-beauty-catalog.mjs'
-      - 'src/game/tracks/TrackBuilder.js'
-      - 'src/game/tracks/library/karting-tenerife/track.json'
-      - 'package.json'
-      - 'package-lock.json'
+  # Temporarily manual-only: the supplied Grass Medium 01 diffuse is a model UV
+  # atlas, not a seamless ground texture. Do not publish a bad bake automatically.
   workflow_dispatch:
 
 permissions:
