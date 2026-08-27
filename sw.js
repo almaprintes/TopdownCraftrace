@@ -1,4 +1,4 @@
-/* Static-cache SW (sin Workbox) — reproducible y fácil de depurar */
+/* Static-cache SW (sin Workbox) — arranque estable y actualización en segundo plano */
 const CACHE_VERSION = 'tdr2-v20';
 const CORE_ASSETS = [
   './',
@@ -16,9 +16,9 @@ const CORE_ASSETS = [
   './assets/tutorials/dropping/dropping_05_717x330.png'
 ];
 
-self.addEventListener('message', (event) => {
-  if (event?.data?.type === 'SKIP_WAITING') self.skipWaiting();
-});
+// Do not let an update replace the active controller in the middle of bootstrap.
+// Older clients may still send SKIP_WAITING; intentionally ignore it here.
+self.addEventListener('message', () => {});
 
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
@@ -32,7 +32,7 @@ self.addEventListener('install', (event) => {
         // A single optional asset must never abort SW installation.
       }
     }));
-    await self.skipWaiting();
+    // No skipWaiting: activate naturally after existing clients close.
   })());
 });
 
@@ -40,12 +40,19 @@ self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(keys.map((k) => (k === CACHE_VERSION ? Promise.resolve() : caches.delete(k))));
-    await self.clients.claim();
+    // No clients.claim(): never seize an already-running game session.
   })());
 });
 
 function isNavigationRequest(req) {
   return req.mode === 'navigate' || (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'));
+}
+
+async function refreshInBackground(req, cache, cacheKey = req) {
+  try {
+    const fresh = await fetch(req, { cache: 'no-store' });
+    if (fresh && fresh.ok) await cache.put(cacheKey, fresh.clone());
+  } catch (_) {}
 }
 
 self.addEventListener('fetch', (event) => {
@@ -58,29 +65,41 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_VERSION);
       const indexUrl = new URL('./index.html', self.location.href).toString();
+      const cached = await cache.match(indexUrl);
+
+      if (cached) {
+        // Known-good shell starts immediately. Network only refreshes the next launch.
+        event.waitUntil(refreshInBackground(req, cache, indexUrl));
+        return cached;
+      }
+
       try {
         const fresh = await fetch(req, { cache: 'no-store' });
         if (fresh && fresh.ok) await cache.put(indexUrl, fresh.clone());
         return fresh;
       } catch (_) {
-        const cached = await cache.match(indexUrl);
-        return cached || new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><body style="background:#071017;color:white;font-family:system-ui;padding:24px">Top-Down Race no puede arrancar sin una copia válida en caché.</body>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+        return new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><body style="background:#071017;color:white;font-family:system-ui;padding:24px">Top-Down Race no puede arrancar sin una copia válida en caché.</body>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
       }
     })());
     return;
   }
 
   event.respondWith((async () => {
+    const cache = await caches.open(CACHE_VERSION);
+    const cached = await cache.match(req);
+
+    if (cached) {
+      // Critical startup rule: cached game files never wait for the network.
+      event.waitUntil(refreshInBackground(req, cache));
+      return cached;
+    }
+
     try {
       const fresh = await fetch(req, { cache: 'no-store' });
-      if (fresh && fresh.ok) {
-        const cache = await caches.open(CACHE_VERSION);
-        await cache.put(req, fresh.clone());
-      }
+      if (fresh && fresh.ok) await cache.put(req, fresh.clone());
       return fresh;
     } catch (_) {
-      const cached = await caches.match(req);
-      return cached || new Response('', { status: 504 });
+      return new Response('', { status: 504 });
     }
   })());
 });
