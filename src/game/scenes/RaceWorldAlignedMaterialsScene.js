@@ -1,12 +1,32 @@
 import { RaceScene as RealSurfaceRaceScene } from './RaceRealSurfaceAssetsScene.js';
 import { getTrackBeautyLayerConfig } from '../tracks/trackBeautyLayers.js';
 
+const ATLANTICO_PBR_TRACK = 'track01';
+const ATLANTICO_PBR_KEY = 'tdr_atlantico_asphalt_lit';
+
 function trackIdFrom(data, scene) {
   const fromData = data?.trackKey;
   const fromScene = scene?.trackKey || scene?.track?.meta?.id;
   let fromStorage = null;
   try { fromStorage = localStorage.getItem('tdr2:trackKey'); } catch {}
   return String(fromData || fromScene || fromStorage || '').trim().toLowerCase();
+}
+
+function currentVideoQuality() {
+  try {
+    const settings = JSON.parse(localStorage.getItem('tdr2:settings') || '{}');
+    const quality = String(settings?.video?.quality || 'high').toLowerCase();
+    return ['low', 'medium', 'high'].includes(quality) ? quality : 'high';
+  } catch {
+    return 'high';
+  }
+}
+
+function canUseAtlanticoPbr(scene, trackId) {
+  if (trackId !== ATLANTICO_PBR_TRACK) return false;
+  if (window.__tdrIosSafeMode === true) return false;
+  if (currentVideoQuality() === 'low') return false;
+  return !!scene?.game?.renderer?.gl;
 }
 
 // Karting Tenerife: el asfalto estable actual se mantiene como fallback.
@@ -18,16 +38,34 @@ export class RaceScene extends RealSurfaceRaceScene {
     this._beautyLayerActive = false;
     this._beautyLayerFailed = false;
     this._trackBeautyTiles = [];
+    this._atlanticoPbrActive = false;
+    this._atlanticoPbrSurface = null;
+    this._atlanticoPbrMask = null;
+    this._atlanticoPbrMaskGfx = null;
+    this._atlanticoSunLight = null;
     super.init?.(data);
   }
 
   preload() {
     super.preload?.();
-    const cfg = getTrackBeautyLayerConfig(trackIdFrom(this._beautyInitData, this));
+    const trackId = trackIdFrom(this._beautyInitData, this);
+    const cfg = getTrackBeautyLayerConfig(trackId);
     this._beautyPreloadConfig = cfg;
-    if (!cfg?.useBeautyLayer || !cfg?.assetsAvailable) return;
-    for (const tile of cfg.tiles || []) {
-      if (!this.textures.exists(tile.key)) this.load.image(tile.key, tile.path);
+    if (cfg?.useBeautyLayer && cfg?.assetsAvailable) {
+      for (const tile of cfg.tiles || []) {
+        if (!this.textures.exists(tile.key)) this.load.image(tile.key, tile.path);
+      }
+    }
+
+    // Piloto PBR aislado: CIRCUITO ATLANTICO (track01) únicamente.
+    // Phaser asocia albedo + normal map bajo una sola textura y la Light2D pipeline
+    // solo se activa en esta pista. Roughness queda en disco para una fase posterior:
+    // Light2D no lo consume y no queremos gastar memoria GPU sin efecto visible.
+    if (canUseAtlanticoPbr(this, trackId) && !this.textures.exists(ATLANTICO_PBR_KEY)) {
+      this.load.image(ATLANTICO_PBR_KEY, [
+        'assets/materials/asphalt-pbr/albedo.png?v=20260827-atlantico-pbr-v1',
+        'assets/materials/asphalt-pbr/normal.png?v=20260827-atlantico-pbr-v1'
+      ]);
     }
   }
 
@@ -37,26 +75,101 @@ export class RaceScene extends RealSurfaceRaceScene {
     const cfg = getTrackBeautyLayerConfig(trackId);
     this._beautyConfig = cfg;
 
-    if (!cfg?.useBeautyLayer || !cfg?.assetsAvailable) {
-      if (cfg?.useBeautyLayer && !cfg?.assetsAvailable) {
-        console.info('[TDR2] beauty layer configured but assets are not in main yet', { track: trackId });
+    if (cfg?.useBeautyLayer && cfg?.assetsAvailable) {
+      try {
+        this._activateTrackBeautyLayer(cfg, trackId);
+      } catch (err) {
+        this._beautyLayerFailed = true;
+        this._beautyLayerActive = false;
+        console.warn('[TDR2] beauty layer activation failed; keeping baked fallback', err);
       }
-      return result;
+    } else if (cfg?.useBeautyLayer && !cfg?.assetsAvailable) {
+      console.info('[TDR2] beauty layer configured but assets are not in main yet', { track: trackId });
     }
 
-    try {
-      this._activateTrackBeautyLayer(cfg, trackId);
-    } catch (err) {
-      this._beautyLayerFailed = true;
-      this._beautyLayerActive = false;
-      console.warn('[TDR2] beauty layer activation failed; keeping baked fallback', err);
+    // El piloto PBR no compite con una Beauty Layer horneada. Si Atlántico aún usa
+    // el renderer normal, superponemos exclusivamente el asfalto iluminado y enmascarado.
+    if (!this._beautyLayerActive && canUseAtlanticoPbr(this, trackId)) {
+      try {
+        this._activateAtlanticoPbrPilot(trackId);
+      } catch (err) {
+        this._atlanticoPbrActive = false;
+        console.warn('[TDR2] Atlantico PBR pilot failed; keeping standard asphalt', err);
+      }
     }
+
     return result;
   }
 
   _tryBakeAsphaltPilot() {
     if (this._beautyLayerActive && !this._beautyLayerFailed) return;
     return super._tryBakeAsphaltPilot?.();
+  }
+
+  _activateAtlanticoPbrPilot(trackId) {
+    if (trackId !== ATLANTICO_PBR_TRACK) return;
+    if (!this.textures.exists(ATLANTICO_PBR_KEY)) throw new Error('normal-mapped asphalt texture missing');
+
+    const worldW = Math.max(1, Math.ceil(Number(this.track?.meta?.worldW || this.physics?.world?.bounds?.width || 0)));
+    const worldH = Math.max(1, Math.ceil(Number(this.track?.meta?.worldH || this.physics?.world?.bounds?.height || 0)));
+    if (!worldW || !worldH) throw new Error('world bounds unavailable');
+
+    const maskBundle = this._buildWholeTrackMask();
+    if (!maskBundle) throw new Error('whole-track mask unavailable');
+
+    const surface = this.add.tileSprite(0, 0, worldW, worldH, ATLANTICO_PBR_KEY)
+      .setOrigin(0, 0)
+      .setDepth(10.55)
+      .setScrollFactor(1)
+      .setMask(maskBundle.mask)
+      .setPipeline('Light2D');
+    surface.tilePositionX = 0;
+    surface.tilePositionY = 0;
+    this.uiCam?.ignore?.(surface);
+
+    this.lights.enable();
+    this.lights.setAmbientColor(0x747474);
+
+    // Una fuente muy grande y exterior al mapa se comporta visualmente como un sol:
+    // dirección consistente, relieve legible y gradiente suave, sin efecto "linterna".
+    const diagonal = Math.hypot(worldW, worldH);
+    const sun = this.lights.addLight(
+      -worldW * 0.18,
+      -worldH * 0.22,
+      diagonal * 1.85,
+      0xfff0d6,
+      1.18
+    );
+
+    this._atlanticoPbrSurface = surface;
+    this._atlanticoPbrMask = maskBundle.mask;
+    this._atlanticoPbrMaskGfx = maskBundle.gfx;
+    this._atlanticoSunLight = sun;
+    this._atlanticoPbrActive = true;
+
+    this.events.once('shutdown', this._destroyAtlanticoPbrPilot, this);
+    console.info('[TDR2] Atlantico normal-map lighting active', {
+      track: trackId,
+      worldW,
+      worldH,
+      maskPolys: maskBundle.polyCount,
+      quality: currentVideoQuality()
+    });
+  }
+
+  _destroyAtlanticoPbrPilot() {
+    try { this._atlanticoPbrSurface?.clearMask?.(false); } catch {}
+    try { this._atlanticoPbrSurface?.destroy?.(); } catch {}
+    try { this._atlanticoPbrMask?.destroy?.(); } catch {}
+    try { this._atlanticoPbrMaskGfx?.destroy?.(); } catch {}
+    try {
+      if (this._atlanticoSunLight) this.lights?.removeLight?.(this._atlanticoSunLight);
+    } catch {}
+    this._atlanticoPbrSurface = null;
+    this._atlanticoPbrMask = null;
+    this._atlanticoPbrMaskGfx = null;
+    this._atlanticoSunLight = null;
+    this._atlanticoPbrActive = false;
   }
 
   _validateBeautyAssets(cfg, trackId) {
