@@ -1,101 +1,129 @@
 # Continuidad — 2026-08-27 — Atlántico, Poly Haven y bake de terreno
 
+## Estado
+ATLÁNTICO / `track01` queda APROBADO como patrón visual y técnico del nuevo terreno.
+
+La validación más fuerte se obtuvo en Android Redmi 11 con preset Alta: 60 FPS y sensación de juego superfluida. En iPhone el terreno horneado también mostró tiempos de render muy bajos; los tirones de iOS se consideran un problema distinto de frame pacing/WebKit y no una razón para degradar este sistema de terreno.
+
 ## Objetivo
-Mejorar la calidad visual de las superficies de los circuitos (asfalto, hierba y tierra) usando materiales Poly Haven, manteniendo rendimiento móvil alto y presets gráficos simples para el usuario.
+Mejorar la calidad visual de las superficies de los circuitos usando materiales Poly Haven, manteniendo rendimiento móvil alto y presets gráficos simples para el usuario.
 
 ## Decisión arquitectónica DEFINITIVA
 No usar TileSprites/chunks visuales como arquitectura final del terreno. Los chunks pueden seguir existiendo para geometría, lógica, física, detección y herramientas, pero NO deben ser la representación visual final de carrera.
 
-El terreno estático debe hornearse offline y mostrarse en runtime como un máximo de 4 superficies grandes por circuito. Para Atlántico (track01), mundo 2430x2000, son 4 cuadrantes de aproximadamente 1215x1000.
+El terreno estático se hornea offline y se muestra en runtime como un máximo de 4 superficies grandes por circuito. Para Atlántico, mundo 2430x2000, son 4 cuadrantes de 1215x1000.
 
-Ventajas verificadas en iPhone real:
-- pantalla de carga de Atlántico ~1 segundo;
-- render del terreno alrededor de 0.6–0.8 ms en las capturas de prueba;
-- Ultra observado alrededor de 52–58 FPS según zona/momento;
-- se evita mantener decenas de GameObjects, máscaras y chunks visuales;
-- se evita descargar materiales Poly Haven vivos cuando existe Beauty Layer;
-- la apariencia final queda incluida en los WebP horneados y será la misma al empaquetar la app.
+Principio: Poly Haven es fuente de trabajo/bake, no dependencia de runtime del jugador. El jugador final recibe WebP ya horneados.
 
-Principio: Poly Haven es fuente de trabajo/bake, no dependencia de runtime del jugador.
+## Atlántico aprobado
+Tres superficies:
+- asfalto: Poly Haven `asphalt_02`, procesado para eliminar grietas largas reconocibles y conservar micrograno;
+- hierba: Poly Haven `sparse_grass`;
+- tierra/offroad: Poly Haven `rocky_trail_02`, brightness 0.78.
 
-## Loader/runtime
-Cuando track01 dispone de Beauty Layer, la cadena de carga evita descargar las texturas vivas grass/off/asphalt y el piloto PBR correspondiente. El runtime usa las cuatro beauty tiles y destruye/reemplaza el terreno visual legado. La lógica del circuito permanece separada.
-
-## Materiales elegidos para el piloto Atlántico
-- Asfalto: Poly Haven `asphalt_02`, fuente 2K `asphalt_02_diff_2k.jpg`.
-- Hierba: Poly Haven `sparse_grass`, fuente 2K `sparse_grass_diff_2k.jpg`.
-- Tierra/offroad: Poly Haven `rocky_trail_02`, fuente 2K `rocky_trail_02_diff_2k.jpg`.
-
-La hierba fue aprobada visualmente y no debe tocarse sin motivo. La tierra gustó, aunque anteriormente se pidió oscurecerla para integrarla mejor con la hierba; el bake actual usa brightness 0.78 para outer/offroad.
-
-## Escala y error descubierto
-Durante las pruebas se intentó cambiar `tileScaleX/tileScaleY` del asfalto por chunk. No funcionaba porque el asfalto visible se creaba como `Image` con `setDisplaySize`, no como TileSprite. Además, la textura 2K completa ya se comprimía implícitamente dentro de cada chunk. El experimento de convertir chunks a TileSprite sirvió para diagnosticar el problema, pero NO debe recuperarse como arquitectura final.
-
-La escala visual se fija ahora durante el bake. En el baker de Atlántico:
+Escalas físicas aprobadas:
 - roadCell: 205 px de mundo;
 - roadMacroGrid: 4;
 - macro del asfalto: 820x820 px de mundo;
 - hierba: 1126 px de mundo;
 - tierra: 983 px de mundo.
 
-Cambiar de 1K/2K/4K no debe cambiar la escala física aparente; la resolución de fuente y la escala física son conceptos separados.
+Cambiar 1K/2K/4K no debe cambiar la escala física aparente. Resolución fuente y escala del material son conceptos separados.
 
 ## Evolución del asfalto
-### v8 anti-repeat
-Se creó una macrotextura 4x4 del mismo `asphalt_02`, alternando base/flip/flop/flipflop/180 grados. Esto aumentó el periodo de repetición, pero NO resolvió el problema perceptivo: las grietas individuales largas seguían siendo demasiado reconocibles.
-
-### v9 softcracks
-Se intentó atenuar aproximadamente un 78% la presencia de las grietas grandes mediante blur + parte del original. En iPhone real las grietas continuaban dominando visualmente y aparecían líneas largas casi paralelas en la pista. Conclusión: bajar opacidad/contraste no basta.
-
-### v10 clean asphalt — EN CURSO
-Decisión actual: eliminar las grietas largas de la textura base y reconstruir solo microdetalle/grano del asfalto. No añadir todavía grietas decorativas independientes. Primero evaluar un asfalto limpio.
-
-Implementación en `scripts/bake-atlantico-beauty.mjs`:
-- conserva `asphalt_02` como fuente;
-- genera componente de baja frecuencia con blur fuerte para tono/iluminación;
-- extrae microdetalle mediante diferencia respecto a un blur pequeño;
-- recompone microdetalle sobre la base limpia;
-- mantiene macro 4x4 anti-repetición;
-- no cambia hierba, tierra, geometría ni runtime;
-- revisión de assets: `atlantico-polyhaven-v10-clean-asphalt`;
-- cache bust: `?v=atlantico-v10`.
-
-Commit del baker v10: `cfaaf38bed57b776300e63bd1e55e3c9bd23616f`.
-
-El usuario pidió que se le avise cuando bake + publicación en Pages estén realmente listos antes de probar.
+La textura original tenía grietas largas que se repetían de forma demasiado evidente. Se probaron anti-repeat y reducción de contraste, pero no bastó. La versión aprobada reconstruye el material a partir de componente de baja frecuencia + microdetalle, eliminando las grietas largas de la base. Esto conserva lectura de asfalto sin crear patrones periódicos dominantes.
 
 ## Rendimiento observado
-Capturas de iPhone en Ultra tras adoptar las cuatro superficies grandes:
-- ejemplo v8: 58 FPS instantáneo, L2 53 FPS, RENDER ~0.8/3.0 ms;
-- ejemplo v9: 52 FPS instantáneo, L2 52 FPS, RENDER ~0.6/1.0 ms;
-- los tests ALL / NO UI / NO OVERLAY / NO TRACK CHUNKS rondaban ~0.6–0.8 ms en esas capturas.
+Con cuatro superficies grandes:
+- ejemplos en iPhone Ultra: render del terreno alrededor de 0.6–0.8 ms en varias capturas;
+- Android Redmi 11, preset Alta: 60 FPS estables y sensación superfluida;
+- el terreno horneado deja de ser el principal cuello de botella.
 
-Conclusión: el terreno horneado ya no parece ser el cuello de botella principal. Después de cerrar visualmente Atlántico, investigar picos de CPU/OTHER/UPDATE y fluidez, sin volver a chunks visuales.
+Conclusión: no volver a chunks visuales para intentar solucionar problemas de iOS. Los tirones de iOS deben tratarse como frame pacing / WebKit / bucle de actualización.
 
-## Presets gráficos acordados
-La dirección UX es sustituir ajustes gráficos técnicos individuales por cuatro presets automáticos:
+## Generalización al resto de circuitos
+Todos los circuitos usarán tres superficies conceptuales:
+1. `road` — superficie de pista;
+2. `shoulder` — franja/terreno cercano a la pista;
+3. `outer` — terreno exterior.
+
+Pero NO todos usarán los mismos materiales. Algunos circuitos compartirán configuraciones y otros tendrán combinaciones propias.
+
+Regla de diseño:
+- la arquitectura y el baker son comunes;
+- la selección de los tres materiales, su escala y tratamiento pertenecen a cada circuito;
+- no existe fallback visual automático que convierta todos los circuitos en copias de Atlántico.
+
+## Nueva arquitectura de bake
+### Biblioteca/configuración
+`scripts/track-beauty-config.mjs`
+
+Contiene:
+- biblioteca reutilizable de materiales;
+- configuración por circuito;
+- escala física por superficie;
+- brillo/tratamiento;
+- revisión de assets.
+
+Solo se añade un circuito cuando sus tres superficies han sido elegidas deliberadamente.
+
+### Baker genérico
+`scripts/bake-track-beauty.mjs`
+
+Uso:
+`node scripts/bake-track-beauty.mjs <trackKey>`
+
+Lee el `track.json`, la configuración de materiales y genera:
+- 4 WebP de terreno;
+- preview;
+- manifest completo con materiales, escalas, revisión y geometría.
+
+### Compatibilidad Atlántico
+`scripts/bake-atlantico-beauty.mjs` queda como wrapper de compatibilidad y llama internamente al baker genérico para `track01`.
+
+### Catálogo runtime seguro
+`scripts/build-track-beauty-catalog.mjs`
+
+Reconstruye `src/game/tracks/trackBeautyLayers.generated.js` leyendo TODOS los manifests publicados en `public/assets/tracks/*/beauty/manifest.json`.
+
+Esto es crítico: al hornear un circuito nuevo no se sobrescriben ni desaparecen los Beauty Layers anteriores.
+
+### Workflow
+`.github/workflows/bake-atlantico.yml` ya usa el baker genérico para `track01` y reconstruye el catálogo global después de publicar los cuatro WebP.
+
+## Presets gráficos
+La dirección UX sigue siendo cuatro presets automáticos:
 - Rendimiento
 - Medio
 - Alta calidad
 - Ultra
 
-El usuario no debe tener que actuar como ingeniero gráfico. La resolución/materiales y efectos internos se deciden por preset. La arquitectura de bake debe poder generar las variantes necesarias sin cambiar la escala física de las superficies.
+El usuario no ajusta parámetros técnicos uno por uno. La resolución/efectos internos pueden variar por preset, pero la escala física de las superficies no.
 
-## Pipeline para producción
-Objetivo final:
-1. editar circuito/materiales fuente;
-2. ejecutar baker offline;
-3. generar máximo 4 superficies finales por circuito (y, si procede más adelante, mapas auxiliares optimizados);
-4. validar que el bake está actualizado;
-5. empaquetar Android/iOS con esos assets;
-6. el dispositivo del jugador solo carga/renderiza resultados ya horneados.
+## Método para arreglar el resto
+Para cada circuito:
+1. abrirlo y observar su carácter visual;
+2. escoger `road`, `shoulder` y `outer` de la biblioteca o añadir materiales nuevos;
+3. decidir escala física y, si hace falta, brillo/tratamiento;
+4. añadir su entrada a `TRACK_BEAUTY_CONFIGS`;
+5. ejecutar bake;
+6. probar en dispositivo real;
+7. ajustar solo ese circuito;
+8. congelar la combinación cuando quede aprobada.
 
-Ideal futuro: hacer que el build falle si un circuito requiere Beauty Layer y su bake está ausente/desactualizado.
+Esto permite reutilizar combinaciones completas o solo una de las superficies sin duplicar código.
+
+## Principio visual
+No buscamos que todos los circuitos tengan exactamente la misma textura. Buscamos que todos tengan la misma calidad técnica y que cada uno pueda tener personalidad propia.
+
+Atlántico es el patrón de calidad y rendimiento, no la plantilla estética obligatoria.
+
+## Commits de generalización
+- configuración por circuito/materiales: `d30addee34082484fa345ad698b7fec6521230ce`
+- baker genérico: `5e42acec2615d10f48fea7ba3dfd7a032d978b60`
+- catálogo global desde manifests: `357bbd29d91e2bf7a4e4efe21b10a2cb1cf097f8`
+- wrapper Atlántico sobre baker genérico: `de5f6e963fb322ab69393d4dbe8e10f2f67501ae`
+- workflow Atlántico adaptado al pipeline genérico: `d748fbd4d37fc664cd2bb0c87197d98eec32667c`
 
 ## Próximo paso
-Esperar a que el workflow del v10 termine, publique los cuatro WebP en main y GitHub Pages despliegue esa revisión. Probar Atlántico en Ultra en iPhone real. Evaluar exclusivamente:
-1. si desaparecieron las grietas repetitivas;
-2. si el micrograno sigue pareciendo asfalto y no una mancha gris;
-3. FPS/fluidez y ausencia de regresiones.
-
-Si el asfalto limpio funciona, congelar visualmente las tres superficies de Atlántico y pasar a optimizar los picos de CPU/OTHER/UPDATE antes de extender el pipeline al resto de circuitos.
+Elegir el siguiente circuito y trabajar únicamente sus tres superficies. No modificar Atlántico salvo regresión objetiva.
