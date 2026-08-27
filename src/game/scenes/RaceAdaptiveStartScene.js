@@ -24,7 +24,7 @@ function applyAtlanticoMaterialScale(scene){
     let scale=null;
     if(key==='grass')scale=0.55;
     else if(key==='off')scale=0.48;
-    else if(key==='asphalt'||key==='tdr_atlantico_asphalt_lit')scale=1.0;
+    else if(key==='asphalt'||key==='tdr_atlantico_asphalt_lit')scale=0.25;
     if(scale==null)return;
     try{obj.tileScaleX=scale;obj.tileScaleY=scale;}catch{}
   };
@@ -36,6 +36,16 @@ function applyAtlanticoMaterialScale(scene){
 }
 
 export class RaceScene extends CurrentRaceScene {
+  // A/B de rendimiento en Atlántico: anulamos solo la capa PBR/Light2D del asfalto.
+  // El diffuse y las escalas de los materiales permanecen iguales para comparar FPS y tirones.
+  _activateAtlanticoPbrPilot(trackId){
+    if(String(trackId||'').trim().toLowerCase()==='track01'){
+      this._atlanticoPbrActive=false;
+      return;
+    }
+    return super._activateAtlanticoPbrPilot?.(trackId);
+  }
+
   preload(){
     super.preload?.();
 
