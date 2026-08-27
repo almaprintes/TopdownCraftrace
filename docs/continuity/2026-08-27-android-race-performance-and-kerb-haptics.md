@@ -2,7 +2,7 @@
 
 ## Reported on device
 - Xiaomi Redmi 11 / Android: race feels much slower than iPhone while the stopwatch advances normally, producing worse lap times.
-- Kerb/piano haptics still not felt on Android or iPhone web.
+- Kerb/piano haptics were still not clearly felt on Android or iPhone web.
 
 ## Root cause found in timing/physics path
 `RaceScene.update()` computes driving dt as `Math.min(0.05, deltaMs / 1000)` while the visible stopwatch uses `performance.now()` wall time.
@@ -42,17 +42,36 @@ To test whether those large resident textures are a major part of the Redmi GPU 
 
 Commit: `38e9a6f2369d386768e7ba4884e8c5757937d3a0`.
 
-Validation target: repeat Karting Canarias on Redmi with LOW + performance HUD and compare `RENDER` directly against the previous ~51–52 ms low-preset baseline. A large drop implicates texture bandwidth/fill-rate; a small/no drop means the next isolation target must be other world render families.
+Validation target: repeat Karting Canarias on Redmi with LOW + performance HUD and compare `RENDER` directly against the previous ~51–52 ms LOW baseline. A large drop implicates texture bandwidth/fill-rate; a small/no drop means the next isolation target must be other world render families.
 
 ## Kerb detector correction
 The prior haptic detector used a generated turn-based approximation of where kerbs should be. Current tracks can draw exported kerb geometry (`geometry.trackOuter/curbOuter` and `trackInner/curbInner`), so visible pixels and detected surface could disagree.
 `RaceKerbSurfaceScene.js` now detects the exact exported red/white kerb bands first and keeps the old generated detector only as a fallback for legacy tracks.
 Commit: `32d348dfcac097ba58752fcee09db43e6864751d`.
 
-## Next validation
-1. Hard reload Android build.
-2. Select LOW, AA OFF, particles OFF, 60 FPS target, apply once.
-3. Re-run Karting Canarias with the performance HUD enabled and compare render time against the previous ~51–52 ms LOW baseline; LOW should now report visibly cheaper fallback terrain if the 2K maps were material to the bottleneck.
-4. If LOW still cannot hold a playable frame rate, extend render isolation to terrain/background, environment decoration, cars/shadows and effects families before degrading more visuals globally.
-5. Independently, replace the 50 ms capped driving dt with a proper fixed timestep/substep architecture so competitive lap time never depends on device frame rate.
-6. Deliberately drive with two wheels over a clearly visible red/white piano and continue validating Android vibration/camera micro-rumble once rendering is stable.
+## Kerb immersion — PRIORIDAD
+The detector was correct enough, but the feedback was too subtle to survive normal race motion. Previous camera shake was only about 0.00075–0.0016 and the pulse cadence could stretch to ~155 ms, so visually crossing a piano could still feel like plain asphalt.
+
+`RaceKerbHapticsScene.js` now deliberately makes pianos readable through three synchronized channels:
+- **Visual:** entry kick + short sustained camera rumble. Intensity is now roughly 0.0021–0.0045 depending on entry, wheel count and speed.
+- **Haptic:** Android/web vibration pulses are now 36–62 ms and repeat at ~72–98 ms while the tyres remain on the piano. Native Capacitor Haptics still uses LIGHT/MEDIUM impact when available.
+- **Physical:** a very small rolling-resistance loss is applied at controlled intervals. One-wheel contact keeps ~99.4–99.5% velocity per pulse; two-wheel contact keeps ~98.9–99.1%. This is intentionally far weaker than grass/off-road and exists only to make the kerb mechanically perceptible, not to punish a good racing line.
+
+Tyre sample points were also moved slightly farther toward the real wheel corners (`halfTrack 0.50`, axle `0.36`) so a visually obvious two-wheel kerb cut is less likely to miss the detector.
+
+Commit: `46966d4a411b0d748b66836ef335b663b7e66731`.
+
+## Validation inmediata
+Use Atlántico as the reference circuit because its terrain/render pipeline is already approved and Android runs it smoothly.
+
+Test deliberately:
+1. Brush a piano with one side of the car at medium speed.
+2. Put two wheels clearly over the red/white strip at high speed.
+3. Stay on a long kerb for several blocks.
+4. Confirm the sensation is obvious without feeling like grass, collision or a speed breaker.
+5. Compare Android and iPhone. On iPhone web, where vibration may be unavailable, camera + tiny physical resistance must still communicate the piano.
+
+If it feels too strong, reduce camera intensity first, then physical loss. Do not weaken the geometry detector unless a visible/physical mismatch is proven.
+
+## Remaining performance/fairness work
+Independently, replace the 50 ms capped driving dt with a proper fixed timestep/substep architecture so competitive lap time never depends on device frame rate.
