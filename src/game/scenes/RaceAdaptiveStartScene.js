@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceWorldAlignedMaterialsScene.js';
+import { getTrackBeautyLayerConfig } from '../tracks/trackBeautyLayers.js';
 
 const START_ASSETS = [
   ['start_base','assets/startlights/start_base.png'],
@@ -10,6 +11,12 @@ const START_ASSETS = [
   ['start_l6','assets/startlights/start_l6.png']
 ];
 
+function selectedTrackKey(scene){
+  let stored='';
+  try{stored=localStorage.getItem('tdr2:trackKey')||'';}catch{}
+  return String(scene?.trackKey||scene?.track?.meta?.id||stored||'').trim().toLowerCase();
+}
+
 export class RaceScene extends CurrentRaceScene {
   _activateAtlanticoPbrPilot(trackId){
     if(String(trackId||'').trim().toLowerCase()==='track01'){
@@ -20,7 +27,29 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   preload(){
-    super.preload?.();
+    const trackKey=selectedTrackKey(this);
+    const beauty=getTrackBeautyLayerConfig(trackKey);
+    const beautyReady=!!(beauty?.useBeautyLayer&&beauty?.assetsAvailable&&beauty?.tiles?.length);
+
+    // When four pre-baked beauty images are available, parent scenes must not
+    // also download the live Poly Haven grass/dirt/asphalt/PBR sources. Beauty
+    // tile keys are untouched, so RaceWorldAlignedMaterialsScene still loads them.
+    const loader=this.load;
+    const originalImage=loader?.image;
+    if(beautyReady&&typeof originalImage==='function'){
+      loader.image=function(key,...args){
+        const k=String(key||'');
+        if(k==='grass'||k==='off'||k==='asphalt'||k==='tdr_atlantico_asphalt_lit') return this;
+        return originalImage.call(this,key,...args);
+      };
+    }
+
+    try{
+      super.preload?.();
+    }finally{
+      if(beautyReady&&loader&&originalImage) loader.image=originalImage;
+    }
+
     if(window.__tdrIosSafeMode!==true){
       for(const [key,url] of START_ASSETS){
         if(!this.textures.exists(key)) this.load.image(key,url);
