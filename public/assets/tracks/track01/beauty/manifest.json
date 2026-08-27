@@ -1,0 +1,49 @@
+{
+  "version": 7,
+  "generator": "scripts/bake-atlantico-beauty.mjs",
+  "style": "polyhaven-calibrated-four-tiles-fast-v1",
+  "trackKey": "track01",
+  "worldW": 2430,
+  "worldH": 2000,
+  "sources": {
+    "road": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg",
+    "shoulder": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg",
+    "outer": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg"
+  },
+  "repeatWorldPx": {
+    "road": 205,
+    "shoulder": 1126,
+    "outer": 983
+  },
+  "outerBrightness": 0.78,
+  "tiles": [
+    {
+      "file": "track01-beauty-0.webp",
+      "x": 0,
+      "y": 0,
+      "w": 1215,
+      "h": 1000
+    },
+    {
+      "file": "track01-beauty-1.webp",
+      "x": 1215,
+      "y": 0,
+      "w": 1215,
+      "h": 1000
+    },
+    {
+      "file": "track01-beauty-2.webp",
+      "x": 0,
+      "y": 1000,
+      "w": 1215,
+      "h": 1000
+    },
+    {
+      "file": "track01-beauty-3.webp",
+      "x": 1215,
+      "y": 1000,
+      "w": 1215,
+      "h": 1000
+    }
+  ]
+}
