@@ -1,7 +1,7 @@
 {
-  "version": 7,
+  "version": 8,
   "generator": "scripts/bake-atlantico-beauty.mjs",
-  "style": "polyhaven-calibrated-four-tiles-fast-v1",
+  "style": "polyhaven-four-tiles-asphalt-antirepeat-v1",
   "trackKey": "track01",
   "worldW": 2430,
   "worldH": 2000,
@@ -11,9 +11,20 @@
     "outer": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg"
   },
   "repeatWorldPx": {
-    "road": 205,
+    "roadCell": 205,
+    "roadMacro": 820,
     "shoulder": 1126,
     "outer": 983
+  },
+  "asphaltAntiRepeat": {
+    "grid": 4,
+    "transforms": [
+      "base",
+      "flip",
+      "flop",
+      "flipflop",
+      "rotate180"
+    ]
   },
   "outerBrightness": 0.78,
   "tiles": [
