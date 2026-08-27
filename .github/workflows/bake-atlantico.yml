@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/bake-track-visual.mjs'
+      - 'scripts/bake-atlantico-beauty.mjs'
       - '.github/workflows/bake-atlantico.yml'
   workflow_dispatch:
 
@@ -20,7 +20,7 @@ jobs:
   bake:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -40,7 +40,7 @@ jobs:
       - name: Bake Circuito Atlantico
         run: |
           set -euxo pipefail
-          npm run bake:track -- track01
+          node scripts/bake-atlantico-beauty.mjs
 
       - name: Publish four beauty tiles
         run: |
