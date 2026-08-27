@@ -106,13 +106,25 @@ El manifest debe registrar como mínimo:
 - geometría base;
 - coordenadas de los cuatro tiles.
 
-### 8. Publicar mediante el catálogo generado
+### 8. Publicar de forma AISLADA por circuito
 
-El bake actualiza `trackBeautyLayers.generated.js` y los assets de `public/assets/tracks/<track>/beauty/`.
+**Nunca se ejecuta `bake -- all` para implantar o ajustar un circuito individual.**
 
-El runtime solo consume los WebP publicados. No debe depender de Poly Haven, ZIPs del usuario ni fuentes externas durante la carrera.
+Cada workflow de implantación debe hornear solo la pista que se está trabajando. Ejemplo:
 
-### 9. Validar en dispositivo real
+`npm run bake:track -- karting-tenerife`
+
+El workflow solo puede reemplazar los assets de `public/assets/tracks/<track>/beauty/` correspondientes a ese circuito.
+
+Después de publicar esos assets se ejecuta `scripts/build-track-beauty-catalog.mjs`. Ese script reconstruye `trackBeautyLayers.generated.js` leyendo **todos los manifests ya publicados**, de modo que actualizar Tenerife no borra ni regenera Atlántico.
+
+Como salvaguarda, el workflow debe verificar que los circuitos previamente congelados siguen presentes en el catálogo antes de hacer commit.
+
+### 9. Runtime
+
+El runtime solo consume los cuatro WebP publicados y el catálogo generado. No debe depender de Poly Haven, ZIPs del usuario ni fuentes externas durante la carrera.
+
+### 10. Validar en dispositivo real
 
 No se considera aprobado por ver correctamente el preview.
 
@@ -127,7 +139,7 @@ Validación mínima:
 - moaré;
 - FPS y tirones.
 
-### 10. Congelar el circuito
+### 11. Congelar el circuito
 
 Cuando el usuario lo aprueba:
 
@@ -151,13 +163,14 @@ Cuando el usuario lo aprueba:
 - geometría tomada del `track.json`;
 - separación entre beauty layer, pianos y props;
 - runtime sin dependencia de las fuentes originales;
-- validación en móvil antes de congelar.
+- validación en móvil antes de congelar;
+- aislamiento del bake por circuito.
 
 ## Circuito Atlántico
 
 Circuito patrón ya aprobado. **No debe modificarse al implantar otros circuitos.**
 
-Sus materiales y escalas permanecen congelados hasta que el usuario pida explícitamente revisarlo.
+Sus materiales, WebP publicados, manifest y escalas permanecen congelados hasta que el usuario pida explícitamente revisarlo.
 
 ## Karting Tenerife
 
@@ -165,11 +178,19 @@ Primer circuito que replica formalmente este pipeline tras Atlántico.
 
 Materiales seleccionados por el usuario:
 
-- `road`: Clean Asphalt;
-- `shoulder`: Grass Medium 01;
-- `outer`: la misma tierra aprobada de Atlántico (`rocky_trail_02`, con su tratamiento aprobado).
+- `road`: Clean Asphalt (`clean_asphalt_diff_2k.jpg` para el bake offline);
+- `shoulder`: Grass Medium 01 (`grass_medium_01_diff_2k.jpg`, variante normal, no `dry`);
+- `outer`: la misma tierra aprobada de Atlántico (`rocky_trail_02`, con brillo y escala aprobados).
 
-Las escalas de Clean Asphalt y Grass Medium 01 deben calibrarse visualmente en Karting Tenerife antes de congelar la revisión. Compartir la tierra de Atlántico no obliga a reutilizar automáticamente ninguna otra superficie.
+Primera calibración de prueba:
+
+- Clean Asphalt: ~225 px de repetición física;
+- Grass Medium 01: ~574 px;
+- tierra: ~983 px, idéntica escala física a Atlántico.
+
+Estas dos primeras escalas se validan visualmente en Karting Tenerife antes de congelar la revisión. Compartir la tierra de Atlántico no obliga a reutilizar automáticamente ninguna otra superficie.
+
+Workflow dedicado: `.github/workflows/bake-karting-tenerife.yml`. Debe hornear **solo** `karting-tenerife`, publicar solo esa carpeta, reconstruir el catálogo desde los manifests existentes y comprobar que `track01` sigue presente.
 
 ## Regla para futuros circuitos
 
@@ -178,8 +199,10 @@ Para añadir otro circuito:
 1. elegir tres superficies;
 2. declarar su configuración explícita;
 3. calibrar escalas;
-4. ejecutar el mismo baker;
-5. validar en móvil;
-6. congelar.
+4. crear/usar un bake aislado para esa pista;
+5. publicar solo sus cuatro tiles + preview + manifest;
+6. reconstruir el catálogo desde todos los manifests publicados;
+7. validar en móvil;
+8. congelar.
 
 Si para un nuevo circuito parece necesario crear otro pipeline, primero hay que demostrar por qué este no sirve. La excepción debe ser técnica, no por comodidad.
