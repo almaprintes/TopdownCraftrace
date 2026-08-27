@@ -1,4 +1,5 @@
 import { getLanguage } from '../i18n/index.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
 import { loadPlayerStats } from '../stats/playerStats.js';
 import { acknowledgedMasteryLevel, masteryInfoForMeters, masteryRoofVisible, masteryWheelDataUri } from '../stats/carMastery.js';
 import { showMasteryUnlockModal } from './MasteryUnlockModal.js';
@@ -45,7 +46,8 @@ function installMasteryRoofBadge(scene,root){
 
   if(mastery.level>acknowledgedMasteryLevel(carId)&&!root.dataset.masteryCelebrationShown){
     root.dataset.masteryCelebrationShown='1';
-    window.setTimeout(()=>{if(root.isConnected)showMasteryUnlockModal({scene,carId,carName:String(scene.selectedCarId||''),meters,level:mastery.level});},220);
+    const carName=String(CAR_SPECS?.[carId]?.name||carId);
+    window.setTimeout(()=>{if(root.isConnected)showMasteryUnlockModal({scene,carId,carName,meters,level:mastery.level});},220);
   }
 }
 function polishSeasonCard(scene,season,lang){
