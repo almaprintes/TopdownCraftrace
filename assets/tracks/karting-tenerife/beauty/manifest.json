@@ -1,18 +1,44 @@
 {
-  "version": 2,
-  "generator": "scripts/bake-track-visual.mjs",
+  "version": 11,
+  "generator": "scripts/bake-track-beauty.mjs",
   "trackKey": "karting-tenerife",
-  "source": "src/game/tracks/library/karting-tenerife/track.json",
+  "title": "Karting Tenerife",
+  "approved": false,
+  "revision": "karting-tenerife-clean-asphalt-sparse-grass-v1",
   "worldW": 2813,
   "worldH": 2602,
-  "preview": "karting-tenerife-beauty-preview.webp",
-  "geometry": {
-    "centerSamples": 1850,
-    "trackWidth": 66.6,
-    "grassMargin": 220,
-    "sampleStepPx": 8,
-    "cellSize": 240,
-    "visualRoadExpand": 16
+  "depth": 9,
+  "replaces": {
+    "asphalt": true,
+    "grass": true,
+    "offroad": true,
+    "kerbs": false,
+    "props": false
+  },
+  "materials": {
+    "road": {
+      "material": "cleanAsphalt",
+      "cell": 225,
+      "macroGrid": 4,
+      "brightness": 1,
+      "id": "cleanAsphalt",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_diff_2k.jpg",
+      "processing": "none"
+    },
+    "shoulder": {
+      "material": "sparseGrass",
+      "repeat": 574,
+      "brightness": 1,
+      "id": "sparseGrass",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg"
+    },
+    "outer": {
+      "material": "rockyTrail02",
+      "repeat": 983,
+      "brightness": 0.78,
+      "id": "rockyTrail02",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg"
+    }
   },
   "tiles": [
     {
