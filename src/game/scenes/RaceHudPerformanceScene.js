@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceKerbHapticsScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceMobilePerformanceScene.js';
 
 // The race timer itself remains based on performance.now() and keeps full precision.
 // This layer only reduces how often Phaser regenerates dynamic text textures for the
