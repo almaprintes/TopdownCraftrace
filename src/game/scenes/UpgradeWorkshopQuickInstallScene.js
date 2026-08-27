@@ -17,13 +17,32 @@ export class UpgradeShopScene extends PreviousWorkshop {
 
     FAMILIES.forEach((family,i)=>{
       const x=r.x+i*(cw+gap),equippedId=eq[family]||null,item=equippedId?GARAGE_ITEMS[equippedId]:null;
+      const tier=Number(item?.tier||0),accent=TIER_COLOR[tier]||item?.tone||0x2b424c;
       const q=A(this.add.rectangle(x+2,r.y+2,cw-4,r.h-4,0x081116).setOrigin(0)
-        .setStrokeStyle(1,item?.tone||0x2b424c,.78).setInteractive({useHandCursor:true}));
-      A(this.add.text(x+cw/2,r.y+(compact?11:15),FAMILY_LABEL[family],{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'8px':'10px',fontStyle:'900',color:'#fff'}).setOrigin(.5));
+        .setStrokeStyle(item?2:1,accent,item?.85:.62).setInteractive({useHandCursor:true}));
+
+      A(this.add.text(x+cw/2,r.y+(compact?9:12),FAMILY_LABEL[family],{
+        fontFamily:'Arial Narrow,system-ui',fontSize:compact?'8px':'9px',fontStyle:'900',color:'#d7e6ef'
+      }).setOrigin(.5));
+
       if(item){
-        A(this.add.text(x+cw/2,r.y+r.h*.56,`${item.name} · T${item.tier}`,{fontFamily:UI,fontSize:compact?'6px':'7px',fontStyle:'800',color:'#65dfff'}).setOrigin(.5));
+        const name=String(item.name||equippedId).toUpperCase();
+        A(this.add.text(x+cw/2,r.y+r.h*.53,name,{
+          fontFamily:UI,fontSize:compact?'10px':'13px',fontStyle:'900',color:'#ffffff',
+          align:'center',wordWrap:{width:cw-20,useAdvancedWrap:true}
+        }).setOrigin(.5));
+        A(this.add.text(x+cw/2,r.y+r.h*.70,`EQUIPADO · T${tier}`,{
+          fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'900',color:`#${accent.toString(16).padStart(6,'0')}`
+        }).setOrigin(.5));
+      }else{
+        A(this.add.text(x+cw/2,r.y+r.h*.57,'SIN EQUIPAR',{
+          fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:'#7f95a5'
+        }).setOrigin(.5));
       }
-      A(this.add.text(x+cw/2,r.y+r.h-(compact?9:12),item?'TOCA PARA CAMBIAR':'TOCA PARA INSTALAR',{fontFamily:UI,fontSize:compact?'6px':'8px',fontStyle:'800',color:item?'#ffcf63':'#78dfff'}).setOrigin(.5));
+
+      A(this.add.text(x+cw/2,r.y+r.h-(compact?7:9),item?'CAMBIAR':'INSTALAR',{
+        fontFamily:UI,fontSize:compact?'6px':'7px',fontStyle:'800',color:item?'#d6ad55':'#78dfff'
+      }).setOrigin(.5));
       q.on('pointerup',()=>{if(!this.busy)this._openQuickFamilyInstall(family);});
     });
   }
@@ -81,7 +100,6 @@ export class UpgradeShopScene extends PreviousWorkshop {
       const card=A(this.add.rectangle(bx,by,cardW,cardH,installed?0x101821:0x0d1a24,.99).setOrigin(0)
         .setStrokeStyle(installed?3:2,accent,installed?.72:1));
       A(this.add.rectangle(bx+3,by+3,cardW-6,compact?7:9,accent,installed?.35:.95).setOrigin(0));
-      // Same visual rule used by the lobby inventory: maxW 94%, maxH 61%, centered at 40% card height.
       const art={x:bx+cardW*.03,y:by+cardH*.095,w:cardW*.94,h:cardH*.61};
       const loaded=this._loadQuickContained(A,item,art,()=>this._openQuickFamilyInstall(family));
       if(!loaded)A(this.add.text(bx+cardW/2,by+cardH*.40,item?.icon||'◆',{fontFamily:UI,fontSize:compact?'38px':'52px',color:'#fff'}).setOrigin(.5));
