@@ -16,12 +16,19 @@ function readVideo(){
   }catch{return {preset:'high',quality:'high',particles:true,showFPS:false};}
 }
 
+function beautyLayerOwnsGround(scene){
+  return scene?._beautyLayerActive===true && scene?._beautyLayerFailed!==true;
+}
+
 // Presets automáticos visibles al usuario:
 // PERFORMANCE: mínimo trabajo de render, 3x3 chunks, sin lookahead/overlay/partículas.
 // MEDIUM: rango normal, sin overlay ni partículas; mantiene iluminación/materiales ligeros.
 // HIGH: escena completa y efectos normales.
 // ULTRA: mismo rango seguro de HIGH, dejando activadas todas las capas y usando
 //        las variantes de material de mayor resolución donde estén disponibles.
+// IMPORTANTE: cuando una Beauty Layer horneada posee el terreno, NO se puede
+// reactivar el renderer legacy de chunks. Los cuatro tiles ya sustituyen
+// asfalto/hierba/offroad y volver a crear chunks los dibuja encima y duplica coste.
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
@@ -30,7 +37,7 @@ export class RaceScene extends CurrentRaceScene {
     this._gfxQuality=this._gfxPrefs.quality;
 
     if(this.track){
-      this.track.cullRadiusCells=this._gfxPreset==='performance'?1:2;
+      this.track.cullRadiusCells=beautyLayerOwnsGround(this)?0:(this._gfxPreset==='performance'?1:2);
     }
 
     if(this._gfxPreset==='performance'){
@@ -49,6 +56,10 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _applyDirectionalLookahead(){
+    if(beautyLayerOwnsGround(this)){
+      this._aheadVisible=new Set();
+      return;
+    }
     if(this._disableDirectionalLookaheadForLow){
       try{
         const map=this.track?.gfxByCell;
@@ -70,9 +81,10 @@ export class RaceScene extends CurrentRaceScene {
 
   _enforceGraphicsPreset(){
     try{
-      if(this.track)this.track.cullRadiusCells=this._gfxPreset==='performance'?1:2;
+      const beautyActive=beautyLayerOwnsGround(this);
+      if(this.track)this.track.cullRadiusCells=beautyActive?0:(this._gfxPreset==='performance'?1:2);
       const map=this.track?.gfxByCell;
-      if(map instanceof Map && this._forceNoOverlay){
+      if(!beautyActive && map instanceof Map && this._forceNoOverlay){
         for(const cell of map.values()){
           cell?.overlay?.setVisible?.(false);
           if(cell?.overlay)cell.overlay.active=false;
