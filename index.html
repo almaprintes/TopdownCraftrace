@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TDR2" />
 
-    <link rel="manifest" href="./manifest.webmanifest?v=20260827-startup1" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260827-startup2" />
     <link rel="icon" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 
@@ -17,7 +17,7 @@
       #tdrStartup {
         position: fixed;
         inset: 0;
-        z-index: 35;
+        z-index: 35000;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -31,7 +31,7 @@
         pointer-events: none;
       }
       #tdrStartup.tdr-startup-hide { opacity: 0; }
-      .tdr-startup-shell { width: min(52vw,440px); text-align:center; }
+      .tdr-startup-shell { width: min(58vw,480px); text-align:center; }
       .tdr-startup-logo {
         display:block;
         width:min(32vw,280px);
@@ -41,14 +41,18 @@
         filter:drop-shadow(0 12px 28px rgba(0,0,0,.45));
       }
       .tdr-startup-title { font-size:clamp(18px,3.2vw,34px); font-weight:950; letter-spacing:.11em; }
-      .tdr-startup-sub { margin-top:7px; color:#9cc7dc; font-size:clamp(9px,1.25vw,13px); font-weight:800; letter-spacing:.16em; }
-      .tdr-startup-track { height:4px; margin:24px auto 0; width:min(70%,300px); border-radius:99px; overflow:hidden; background:rgba(255,255,255,.11); }
-      .tdr-startup-bar { height:100%; width:38%; border-radius:99px; background:#58e8ff; box-shadow:0 0 14px rgba(88,232,255,.58); animation:tdrBoot 1.1s ease-in-out infinite alternate; }
+      .tdr-startup-sub { margin-top:7px; color:#9cc7dc; font-size:clamp(11px,1.45vw,15px); font-weight:850; letter-spacing:.10em; min-height:1.3em; }
+      .tdr-startup-time { margin-top:6px; color:#6f98ad; font-size:clamp(10px,1.15vw,12px); font-weight:750; font-variant-numeric:tabular-nums; }
+      .tdr-startup-track { height:5px; margin:22px auto 0; width:min(74%,320px); border-radius:99px; overflow:hidden; background:rgba(255,255,255,.11); }
+      .tdr-startup-bar { height:100%; width:8%; border-radius:99px; background:#58e8ff; box-shadow:0 0 14px rgba(88,232,255,.58); transition:width .16s ease; }
+      #tdrStartup[data-indeterminate="1"] .tdr-startup-bar { width:38%; animation:tdrBoot 1.1s ease-in-out infinite alternate; }
       @keyframes tdrBoot { from{transform:translateX(-35%)} to{transform:translateX(195%)} }
     </style>
     <script>
-      // Register/update the SW before the module graph starts loading. Previously
-      // this happened only after window.load, which may never fire if a module stalls.
+      window.__tdrBootStartedAt = performance.now();
+      window.__tdrBootPhase = 'html';
+
+      // Register/update the SW before the module graph starts loading.
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').catch(() => {});
       }
@@ -93,12 +97,13 @@
     </script>
   </head>
   <body>
-    <div id="tdrStartup" aria-live="polite">
+    <div id="tdrStartup" aria-live="polite" data-indeterminate="1">
       <div class="tdr-startup-shell">
         <img class="tdr-startup-logo" src="./assets/logo.webp" alt="Top Down RACE" />
         <div class="tdr-startup-title">TOP DOWN RACE</div>
-        <div class="tdr-startup-sub">PREPARANDO LA PARRILLA</div>
-        <div class="tdr-startup-track"><div class="tdr-startup-bar"></div></div>
+        <div class="tdr-startup-sub" id="tdrStartupSub">CARGANDO MOTOR</div>
+        <div class="tdr-startup-time" id="tdrStartupTime">0.0 s</div>
+        <div class="tdr-startup-track"><div class="tdr-startup-bar" id="tdrStartupBar"></div></div>
       </div>
     </div>
 
@@ -134,21 +139,51 @@
     <script>
       (() => {
         const startup = document.getElementById('tdrStartup');
-        const app = document.getElementById('app');
-        if (!startup || !app) return;
+        const sub = document.getElementById('tdrStartupSub');
+        const time = document.getElementById('tdrStartupTime');
+        const bar = document.getElementById('tdrStartupBar');
+        if (!startup || !sub || !time || !bar) return;
+        const started = Number(window.__tdrBootStartedAt) || performance.now();
         let done = false;
-        const finish = () => {
+        let phase = 'CARGANDO MOTOR';
+        let progress = null;
+        const tick = () => {
+          if (done) return;
+          const elapsed = Math.max(0, performance.now() - started);
+          time.textContent = `${(elapsed/1000).toFixed(1)} s`;
+          sub.textContent = progress == null ? phase : `${phase} · ${progress}%`;
+          requestAnimationFrame(tick);
+        };
+        window.addEventListener('tdr:bootphase', (e) => {
+          const d=e?.detail||{};
+          if(d.phase==='boot-preload') {
+            phase='CARGANDO RECURSOS';
+            progress=Number.isFinite(Number(d.progress))?Math.round(Number(d.progress)):0;
+            startup.dataset.indeterminate='0';
+            bar.style.width=`${Math.max(4,Math.min(100,progress))}%`;
+          } else if(d.phase==='boot-assets-ready') {
+            phase='RECURSOS LISTOS'; progress=100; bar.style.width='100%';
+          } else if(d.phase==='boot-create') {
+            phase='INICIANDO JUEGO'; progress=100; bar.style.width='100%';
+          } else if(d.phase==='intro-request') {
+            phase='ENTRANDO'; progress=100; bar.style.width='100%';
+          } else if(d.phase==='intro-playing') {
+            phase='PRESENTACIÓN'; progress=100; bar.style.width='100%';
+          }
+        });
+        window.addEventListener('tdr:bootready', () => {
           if (done) return;
           done = true;
+          phase='LISTO'; progress=100; bar.style.width='100%';
+          const elapsed = Math.max(0, performance.now() - started);
+          sub.textContent='LISTO';
+          time.textContent=`${(elapsed/1000).toFixed(1)} s`;
           requestAnimationFrame(() => requestAnimationFrame(() => {
             startup.classList.add('tdr-startup-hide');
             setTimeout(() => startup.remove(), 260);
           }));
-        };
-        const check = () => { if (app.querySelector('canvas')) finish(); };
-        const observer = new MutationObserver(check);
-        observer.observe(app, { childList:true, subtree:true });
-        check();
+        });
+        tick();
       })();
     </script>
     <script type="module" src="./src/main.js"></script>
