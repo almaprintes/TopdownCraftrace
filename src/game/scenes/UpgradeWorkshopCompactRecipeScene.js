@@ -14,14 +14,18 @@ function progressColor(p){const v=Math.max(0,Math.min(1,Number(p)||0));return v<
 function hexColor(n){return `#${Number(n||0).toString(16).padStart(6,'0')}`;}
 
 export class UpgradeShopScene extends PreviousWorkshop {
-  _closeWorkshopRecycler(){
+  _closeWorkshopRecycler(refresh=true){
     try{this._workshopRecycler?.destroy?.(true);}catch{}
     this._workshopRecycler=null;
+    if(refresh){
+      this.state=loadGarage();
+      this.render?.();
+    }
   }
 
   _openRecyclerForMaterial(toId,fromId=this._workshopExchangeFrom||'scrap',amount=this._workshopExchangeAmount||100,openPicker=null){
     if(!EXCHANGEABLE.has(toId))return;
-    this._closeWorkshopRecycler();
+    this._closeWorkshopRecycler(false);
     const {width:w,height:h}=this.scale,compact=h<520,garage=loadGarage();
     if(!EXCHANGEABLE.has(fromId)||fromId===toId)fromId=EXCHANGE_MATERIALS.find(id=>id!==toId&&qty(garage,id)>0)||EXCHANGE_MATERIALS.find(id=>id!==toId);
     const currentHave=qty(garage,fromId);
@@ -38,20 +42,20 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const status=materialExchangeStatus();
     A(this.add.text(x+pw-54,y+(compact?17:22),`${status.remaining}/3 HOY`,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'900',color:status.available?'#71f0b2':'#ff707a'}).setOrigin(1,0));
     const close=A(this.add.text(x+pw-18,y+8,'×',{fontFamily:UI,fontSize:compact?'25px':'30px',fontStyle:'900',color:'#fff'}).setOrigin(1,0).setInteractive({useHandCursor:true}));
-    close.on('pointerdown',()=>{this._closeWorkshopRecycler();this.state=loadGarage();this._render?.();});
+    close.on('pointerdown',()=>this._closeWorkshopRecycler(true));
 
     const materialName=id=>String(GARAGE_ITEMS[id]?.name||id).toUpperCase();
     const sy=y+(compact?73:88),sh=compact?58:66,sw=(pw-(compact?108:128))/2,left=x+22,right=x+pw-22-sw;
-    const selector=(sx,label,id,tone,picker,locked=false)=>{
+    const selector=(sx,label,id,tone,picker)=>{
       A(this.add.text(sx,sy-(compact?18:20),label,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:tone}));
-      const hit=A(this.add.rectangle(sx,sy,sw,sh,0x102434,.99).setOrigin(0).setStrokeStyle(2,tone==='#ffbe68'?0xd89548:0x50dca2,.9));
+      const hit=A(this.add.rectangle(sx,sy,sw,sh,0x102434,.99).setOrigin(0).setStrokeStyle(2,tone==='#ffbe68'?0xd89548:0x50dca2,.9).setInteractive({useHandCursor:true}));
       A(this.add.text(sx+13,sy+sh*.36,materialName(id),{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'900',color:'#fff'}).setOrigin(0,.5));
       A(this.add.text(sx+13,sy+sh*.72,`TIENES ${qty(garage,id)} · VALOR ${MATERIAL_EXCHANGE_VALUE[id]}`,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#9fc0d4'}).setOrigin(0,.5));
-      A(this.add.text(sx+sw-14,sy+sh/2,locked?'FIJO':'▼',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:locked?'#72efb4':'#d9f5ff'}).setOrigin(.5));
-      if(!locked){hit.setInteractive({useHandCursor:true});hit.on('pointerdown',()=>this._openRecyclerForMaterial(toId,fromId,amount,picker));}
+      A(this.add.text(sx+sw-14,sy+sh/2,'▼',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:'#d9f5ff'}).setOrigin(.5));
+      hit.on('pointerdown',()=>this._openRecyclerForMaterial(toId,fromId,amount,picker));
     };
-    selector(left,'ENTREGAS',fromId,'#ffbe68','from',false);
-    selector(right,'RECIBES',toId,'#72efb4',null,true);
+    selector(left,'ENTREGAS',fromId,'#ffbe68','from');
+    selector(right,'RECIBES',toId,'#72efb4','to');
     A(this.add.text(x+pw/2,sy+sh/2,'→',{fontFamily:UI,fontSize:compact?'24px':'29px',fontStyle:'900',color:'#fff'}).setOrigin(.5));
 
     const controlsY=sy+sh+(compact?28:34);
@@ -76,10 +80,17 @@ export class UpgradeShopScene extends PreviousWorkshop {
     A(this.add.text(x+22,btnY+btnH/2,'3 intercambios/día · sin monedas',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8fa6b7'}).setOrigin(0,.5));
     if(enabled){btn.setInteractive({useHandCursor:true});btn.on('pointerdown',async()=>{const ok=await showRewardedAd(this,{title:'RECICLAJE DE MATERIALES'});if(!ok)return;const result=executeMaterialExchange(fromId,toId,amount);this.state=loadGarage();this._toast?.(result.ok?`${result.spend} ${materialName(fromId)} → ${result.receive} ${materialName(toId)}`:result.reason);if(result.ok)this._workshopExchangeAmount=Math.min(amount,Math.max(1,qty(this.state,fromId)));this._openRecyclerForMaterial(toId,fromId,this._workshopExchangeAmount);});}
 
-    if(openPicker==='from'){
-      const py=sy+sh+4,options=EXCHANGE_MATERIALS.filter(id=>id!==toId),oh=compact?27:30,boxH=options.length*oh;
-      A(this.add.rectangle(left,py,sw,boxH,0x07131f,1).setOrigin(0).setStrokeStyle(2,0x65d9c1,.95));
-      options.forEach((id,i)=>{const yy=py+i*oh,hit=A(this.add.rectangle(left,yy,sw,oh,i%2?0x0c1d2b:0x102434,.99).setOrigin(0).setInteractive({useHandCursor:true}));A(this.add.text(left+10,yy+oh/2,`${materialName(id)}  ×${qty(garage,id)}`,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'900',color:'#fff'}).setOrigin(0,.5));hit.on('pointerdown',()=>this._openRecyclerForMaterial(toId,id,Math.min(amount,Math.max(1,qty(loadGarage(),id)))));});
+    if(openPicker==='from'||openPicker==='to'){
+      const pickFrom=openPicker==='from',anchor=pickFrom?left:right,py=sy+sh+4,options=EXCHANGE_MATERIALS.filter(id=>id!==(pickFrom?toId:fromId)),oh=compact?27:30,boxH=options.length*oh;
+      A(this.add.rectangle(anchor,py,sw,boxH,0x07131f,1).setOrigin(0).setStrokeStyle(2,0x65d9c1,.95));
+      options.forEach((id,i)=>{
+        const yy=py+i*oh,hit=A(this.add.rectangle(anchor,yy,sw,oh,i%2?0x0c1d2b:0x102434,.99).setOrigin(0).setInteractive({useHandCursor:true}));
+        A(this.add.text(anchor+10,yy+oh/2,`${materialName(id)}  ×${qty(garage,id)}`,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'900',color:'#fff'}).setOrigin(0,.5));
+        hit.on('pointerdown',()=>{
+          if(pickFrom){this._openRecyclerForMaterial(toId,id,Math.min(amount,Math.max(1,qty(loadGarage(),id))));}
+          else{this._openRecyclerForMaterial(id,fromId,amount);}
+        });
+      });
     }
   }
 
