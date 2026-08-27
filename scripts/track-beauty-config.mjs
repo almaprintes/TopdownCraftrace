@@ -18,7 +18,7 @@ export const MATERIAL_LIBRARY = Object.freeze({
   grassMedium01: Object.freeze({
     id: 'grassMedium01',
     source: 'https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/grass_medium_01/grass_medium_01_diff_2k.jpg',
-    type: 'surface'
+    type: 'model-atlas'
   }),
   rockyTrail02: Object.freeze({
     id: 'rockyTrail02',
@@ -48,12 +48,15 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
   }),
   'karting-tenerife': Object.freeze({
     title: 'Karting Tenerife',
-    approved: true,
+    approved: false,
     trackPath: 'src/game/tracks/library/karting-tenerife/track.json',
-    revision: 'karting-tenerife-clean-asphalt-grass-medium01-v1',
+    revision: 'karting-tenerife-clean-asphalt-sparse-grass-v1',
     materials: Object.freeze({
-      road: Object.freeze({ material: 'cleanAsphalt', cell: 225, brightness: 1.0 }),
-      shoulder: Object.freeze({ material: 'grassMedium01', repeat: 574, brightness: 1.0 }),
+      road: Object.freeze({ material: 'cleanAsphalt', cell: 225, macroGrid: 4, brightness: 1.0 }),
+      // Validated from the supplied 1K/2K/4K packs: this is a true seamless
+      // ground diffuse. First Tenerife-specific scale; validate on device.
+      shoulder: Object.freeze({ material: 'sparseGrass', repeat: 574, brightness: 1.0 }),
+      // Exact approved Atlántico dirt treatment.
       outer: Object.freeze({ material: 'rockyTrail02', repeat: 983, brightness: 0.78 })
     }),
     webp: Object.freeze({ quality: 86, effort: 3 }),
