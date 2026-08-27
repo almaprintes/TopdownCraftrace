@@ -13,7 +13,6 @@ function mixColor(a,b,t){
 }
 function progressColor(p){
   const v=Math.max(0,Math.min(1,Number(p)||0));
-  // Traffic-light progression: red -> amber -> green.
   return v<.5?mixColor(0xff4f5e,0xffbf3f,v/.5):mixColor(0xffbf3f,0x42e58b,(v-.5)/.5);
 }
 function hexColor(n){return `#${Number(n||0).toString(16).padStart(6,'0')}`;}
@@ -30,10 +29,13 @@ export class UpgradeShopScene extends PreviousWorkshop {
     if(!item||!recipe)return;
 
     const artW=r.w*(compact?.27:.30);
-    const buttonH=compact?31:40;
+    const buttonH=compact?28:36;
     const pad=compact?9:12;
+    const artButtonGap=compact?5:7;
     const buttonY=r.y+r.h-buttonH-pad;
-    const art={x:r.x+pad,y:r.y+pad,w:artW,h:Math.max(44,buttonY-r.y-pad*2)};
+    // The craft button now belongs to the artwork column. This uses the formerly
+    // dead space below the part and gives the material vessels the full card height.
+    const art={x:r.x+pad,y:r.y+pad,w:artW,h:Math.max(44,buttonY-r.y-pad-artButtonGap)};
     this._loadFullBleed(A,item,art);
 
     const infoX=art.x+art.w+(compact?10:14);
@@ -54,8 +56,8 @@ export class UpgradeShopScene extends PreviousWorkshop {
     });
 
     const rowTop=r.y+(compact?35:47);
-    const rowBottom=buttonY-(compact?7:9);
-    const rowH=Math.max(compact?42:52,rowBottom-rowTop);
+    const rowBottom=r.y+r.h-pad;
+    const rowH=Math.max(compact?50:62,rowBottom-rowTop);
     const gap=compact?4:6;
     const count=Math.max(1,state.length);
     const cellW=(infoW-gap*(count-1))/count;
@@ -66,12 +68,8 @@ export class UpgradeShopScene extends PreviousWorkshop {
       const tone=progressColor(s.progress);
       const toneHex=hexColor(tone);
       const cell=A(this.add.graphics());
-
-      // Empty vessel.
       cell.fillStyle(0x101722,.96);cell.fillRoundedRect(x,rowTop,cellW,rowH,radius);
 
-      // Liquid fills from bottom according to the real material percentage.
-      // At 0% the tank is visibly empty with a red outline; at 100% it is full green.
       const innerPad=compact?3:4;
       const innerX=x+innerPad,innerY=rowTop+innerPad;
       const innerW=Math.max(1,cellW-innerPad*2),innerH=Math.max(1,rowH-innerPad*2);
@@ -90,29 +88,27 @@ export class UpgradeShopScene extends PreviousWorkshop {
         align:'center',wordWrap:{width:cellW-8,useAdvancedWrap:true},
         shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
       }).setOrigin(.5));
-
       A(this.add.text(x+cellW/2,rowTop+rowH*.43,`${Math.min(999,s.percent)}%`,{
         fontFamily:UI,fontSize:compact?'11px':'15px',fontStyle:'900',color:toneHex,
         shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
       }).setOrigin(.5));
-
       A(this.add.text(x+cellW/2,rowTop+rowH*.65,`${s.have} / ${s.need}`,{
         fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'900',color:'#ffffff',
         shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
       }).setOrigin(.5));
-
       A(this.add.text(x+cellW/2,rowTop+rowH*.84,s.ok?'LISTO':`FALTAN ${Math.max(0,s.need-s.have)}`,{
         fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'900',color:s.ok?'#7dffb6':'#ffd4d7',
         shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
       }).setOrigin(.5));
     });
 
-    const button=A(this.add.rectangle(infoX,buttonY,infoW,buttonH,can?0x17683f:0x273247,.98)
+    const button=A(this.add.rectangle(art.x,buttonY,art.w,buttonH,can?0x17683f:0x273247,.98)
       .setOrigin(0).setStrokeStyle(2,can?0x55f29b:0x526077,.9));
     const missingCount=state.filter(s=>!s.ok).length;
     const text=can?'FABRICAR':missingCount===1?'FALTA 1 MATERIAL':`FALTAN ${missingCount} MATERIALES`;
-    A(this.add.text(infoX+infoW/2,buttonY+buttonH/2,text,{
-      fontFamily:UI,fontSize:compact?'10px':'13px',fontStyle:'900',color:can?'#fff':'#d8e0e8'
+    A(this.add.text(art.x+art.w/2,buttonY+buttonH/2,text,{
+      fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:can?'#fff':'#d8e0e8',
+      align:'center',wordWrap:{width:art.w-8,useAdvancedWrap:true}
     }).setOrigin(.5));
     if(can){
       button.setInteractive({useHandCursor:true});
