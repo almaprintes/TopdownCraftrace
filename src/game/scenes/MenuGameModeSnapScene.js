@@ -16,6 +16,21 @@ const MODES=[
 function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
 
 export class MenuScene extends CurrentMenuScene {
+  create(data){
+    if(typeof super.create==='function') super.create(data);
+    // Startup overlay must disappear only after the real lobby has been created
+    // and the browser has had a couple of frames to paint it.
+    try{
+      const started=Number(window.__tdrBootStartedAt)||performance.now();
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        const elapsedMs=Math.max(0,Math.round(performance.now()-started));
+        window.__tdrBootLast={phase:'menu-ready',elapsedMs};
+        window.dispatchEvent(new CustomEvent('tdr:bootphase',{detail:{phase:'menu-ready',elapsedMs}}));
+        window.dispatchEvent(new CustomEvent('tdr:bootready'));
+      }));
+    }catch{}
+  }
+
   _openGameModeModal(){
     if(this._gameModeModal?.scene)return;
     const {width,height}=this.scale;
