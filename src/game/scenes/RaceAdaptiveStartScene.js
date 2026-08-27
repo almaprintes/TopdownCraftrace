@@ -10,6 +10,31 @@ const START_ASSETS = [
   ['start_l6','assets/startlights/start_l6.png']
 ];
 
+function isAtlantico(scene){
+  let stored='';
+  try{stored=localStorage.getItem('tdr2:trackKey')||'';}catch{}
+  return String(scene?.trackKey||scene?.track?.meta?.id||stored||'').trim().toLowerCase()==='track01';
+}
+
+function applyAtlanticoMaterialScale(scene){
+  if(!isAtlantico(scene))return;
+  const apply=obj=>{
+    if(!obj)return;
+    const key=String(obj?.texture?.key||'');
+    let scale=null;
+    if(key==='grass')scale=0.55;
+    else if(key==='off')scale=0.48;
+    else if(key==='asphalt'||key==='tdr_atlantico_asphalt_lit')scale=1.0;
+    if(scale==null)return;
+    try{obj.tileScaleX=scale;obj.tileScaleY=scale;}catch{}
+  };
+  apply(scene.bgGrass);
+  apply(scene.bgOff);
+  apply(scene._atlanticoPbrSurface);
+  const cells=scene.track?.gfxByCell;
+  if(cells?.values){for(const cell of cells.values())apply(cell?.tile);}
+}
+
 export class RaceScene extends CurrentRaceScene {
   preload(){
     super.preload?.();
@@ -25,6 +50,7 @@ export class RaceScene extends CurrentRaceScene {
 
   create(){
     super.create();
+    applyAtlanticoMaterialScale(this);
 
     if(window.__tdrIosSafeMode!==true) return;
 
@@ -86,5 +112,10 @@ export class RaceScene extends CurrentRaceScene {
 
     // La cámara del mundo no debe duplicar la cuenta atrás.
     try{this.cameras.main.ignore(countdown);}catch{}
+  }
+
+  update(time,delta){
+    super.update?.(time,delta);
+    applyAtlanticoMaterialScale(this);
   }
 }
