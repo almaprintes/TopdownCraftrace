@@ -1,12 +1,30 @@
 import Phaser from 'phaser';
 import { applyCarOverrides } from '../cars/carSpecs.js';
 
+function bootMark(phase, extra={}) {
+  try {
+    const now=performance.now();
+    const start=Number(window.__tdrBootStartedAt)||now;
+    const detail={phase,elapsedMs:Math.max(0,Math.round(now-start)),...extra};
+    window.__tdrBootLast=detail;
+    window.dispatchEvent(new CustomEvent('tdr:bootphase',{detail}));
+  } catch {}
+}
+
+function finishStartupOverlay() {
+  try {
+    bootMark('menu-ready');
+    window.dispatchEvent(new CustomEvent('tdr:bootready'));
+  } catch {}
+}
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('boot');
   }
 
   preload() {
+    bootMark('boot-preload', { progress:0 });
     if (this.textures.exists('ui_rotate_landscape')) this.textures.remove('ui_rotate_landscape');
     this.load.image('ui_rotate_landscape', 'assets/ui/orientation_portrait.png');
 
@@ -37,18 +55,30 @@ export class BootScene extends Phaser.Scene {
     const y = Math.floor(height * 0.72);
     const outline = this.add.rectangle(x + barW / 2, y, barW, barH, 0x0b1020, 0).setStrokeStyle(1, 0xb7c0ff, 0.35);
     const fill = this.add.rectangle(x, y, 0, barH - 2, 0x2bff88, 0.9).setOrigin(0, 0.5);
-    this.load.on('progress', p => { fill.width = Math.max(2, Math.floor((barW - 2) * p)); });
-    this.load.on('complete', () => outline.destroy());
+    this.load.on('progress', p => {
+      fill.width = Math.max(2, Math.floor((barW - 2) * p));
+      bootMark('boot-preload', { progress:Math.round(Math.max(0,Math.min(1,p))*100) });
+    });
+    this.load.on('complete', () => {
+      outline.destroy();
+      bootMark('boot-assets-ready', { progress:100 });
+    });
   }
 
   create() {
+    bootMark('boot-create');
     this.cameras.main.setBackgroundColor('#000000');
     const { width, height } = this.scale;
     try { applyCarOverrides(this.cache.json.get('car_overrides')); } catch {}
 
+    const goMenu = () => {
+      finishStartupOverlay();
+      this.scene.start('menu');
+    };
+
     // En iPhone 12 / modo seguro evitamos incluso decodificar el MP4 de intro.
     if (window.__tdrIosSafeMode === true) {
-      this.scene.start('menu');
+      goMenu();
       return;
     }
 
@@ -71,26 +101,37 @@ export class BootScene extends Phaser.Scene {
     this.scale.on('resize', onResize);
 
     let leaving=false;
-    const cleanupAndGo = () => {
+    let introStarted=false;
+    const cleanupAndGo = (animate=true) => {
       if(leaving)return; leaving=true;
-      this.tweens.add({targets:fadeRect,alpha:1,duration:300,ease:'Sine.easeInOut',onComplete:()=>{
+      const finish=()=>{
         this.scale.off('resize',onResize);
-        video.onended=null;video.onerror=null;
+        video.onended=null;video.onerror=null;video.onplaying=null;
         try{video.pause();}catch{}
         try{video.removeAttribute('src');video.load();}catch{}
         try{domEl.destroy();}catch{}
         try{video.remove();}catch{}
-        this.scene.start('menu');
-      }});
+        goMenu();
+      };
+      if(!animate){finish();return;}
+      this.tweens.add({targets:fadeRect,alpha:1,duration:220,ease:'Sine.easeInOut',onComplete:finish});
     };
-    video.onended=cleanupAndGo;
-    video.onerror=cleanupAndGo;
+    video.onended=()=>cleanupAndGo(true);
+    video.onerror=()=>cleanupAndGo(false);
+    video.onplaying=()=>{introStarted=true;bootMark('intro-playing');};
 
+    bootMark('intro-request');
     const p=video.play();
-    if(p&&typeof p.catch==='function')p.catch(()=>{
-      const hint=this.add.text(width/2,height*.8,'Toca para empezar',{fontFamily:'system-ui, -apple-system, Segoe UI, Roboto,Arial',fontSize:'18px',color:'#ffffff'}).setOrigin(.5);
-      this.input.once('pointerdown',()=>{hint.destroy();video.play().catch(cleanupAndGo);});
+    if(p&&typeof p.catch==='function')p.catch(()=>cleanupAndGo(false));
+
+    // Critical startup rule: the intro is decoration, never a boot dependency.
+    // If playback has not actually started quickly, abandon it and enter the menu.
+    this.time.delayedCall(1200,()=>{
+      if(this.scene.isActive()&&!introStarted) cleanupAndGo(false);
     });
-    this.time.delayedCall(7000,()=>{if(this.scene.isActive())cleanupAndGo();});
+    // Safety only for a genuinely playing intro.
+    this.time.delayedCall(7000,()=>{
+      if(this.scene.isActive()) cleanupAndGo(true);
+    });
   }
 }
