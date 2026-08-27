@@ -5,13 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/bake-raven-hollow.yml'
-      - 'scripts/bake-track-visual.mjs'
-      - 'src/game/tracks/TrackBuilder.js'
       - 'src/game/tracks/library/offroad-raven-hollow/track.json'
       - 'public/assets/materials/dirt-road/**'
       - 'public/assets/materials/grass/**'
-      - 'package.json'
-      - 'package-lock.json'
   workflow_dispatch:
 
 permissions:
@@ -48,7 +44,7 @@ jobs:
           set -euxo pipefail
           npm run bake:track -- offroad-raven-hollow
 
-      - name: Publish Raven Hollow beauty assets and catalog
+      - name: Publish Raven Hollow beauty assets
         run: |
           set -euxo pipefail
           KEY='offroad-raven-hollow'
@@ -62,7 +58,7 @@ jobs:
           cp "$SRC/$KEY-beauty-2.webp" "$DEST/"
           cp "$SRC/$KEY-beauty-3.webp" "$DEST/"
           cp "$SRC/manifest.json" "$DEST/"
-          cp artifacts/track-beauty/trackBeautyLayers.generated.js src/game/tracks/trackBeautyLayers.generated.js
+          node scripts/build-track-beauty-catalog.mjs
 
       - name: Verify Raven Hollow bake
         run: |
