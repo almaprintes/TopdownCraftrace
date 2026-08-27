@@ -1,10 +1,10 @@
 {
-  "version": 11,
+  "version": 12,
   "generator": "scripts/bake-track-beauty.mjs",
   "trackKey": "karting-tenerife",
   "title": "Karting Tenerife",
   "approved": false,
-  "revision": "karting-tenerife-clean-asphalt-sparse-grass-v1",
+  "revision": "karting-tenerife-clean-asphalt-sparse-grass-v2-continuous-ribbon",
   "worldW": 2813,
   "worldH": 2602,
   "depth": 9,
