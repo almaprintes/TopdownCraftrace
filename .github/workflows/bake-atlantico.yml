@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'scripts/bake-atlantico-beauty.mjs'
+      - 'scripts/bake-track-beauty.mjs'
+      - 'scripts/track-beauty-config.mjs'
+      - 'scripts/build-track-beauty-catalog.mjs'
       - '.github/workflows/bake-atlantico.yml'
   workflow_dispatch:
 
@@ -40,7 +43,7 @@ jobs:
       - name: Bake Circuito Atlantico
         run: |
           set -euxo pipefail
-          node scripts/bake-atlantico-beauty.mjs
+          node scripts/bake-track-beauty.mjs track01
 
       - name: Publish four beauty tiles
         run: |
@@ -55,7 +58,7 @@ jobs:
           cp "$SRC/track01-beauty-2.webp" "$DEST/"
           cp "$SRC/track01-beauty-3.webp" "$DEST/"
           cp "$SRC/manifest.json" "$DEST/"
-          cp artifacts/track-beauty/trackBeautyLayers.generated.js src/game/tracks/trackBeautyLayers.generated.js
+          node scripts/build-track-beauty-catalog.mjs
 
       - name: Verify output
         run: |
