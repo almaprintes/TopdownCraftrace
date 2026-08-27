@@ -7,17 +7,15 @@ function save(settings){
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify(settings));}catch{}
 }
 
-function persistVideoValue(settings,key,value){
+function persistVideo(settings,video){
   try{
     const current=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
-    const next={...current,video:{...(current.video||{}),...(settings?.video||{}),[key]:value}};
+    const next={...current,video:{...(current.video||{}),...(video||{})}};
     localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
-    if(settings){settings.video={...(settings.video||{}),[key]:value};}
-    return true;
+    if(settings)settings.video={...(settings.video||{}),...(video||{})};
   }catch{
-    if(settings?.video)settings.video[key]=value;
+    if(settings)settings.video={...(settings.video||{}),...(video||{})};
     save(settings);
-    return false;
   }
 }
 
@@ -46,54 +44,58 @@ export class SettingsScene extends CurrentSettingsScene {
     const en=getLanguage()==='en';
     const scales=[[0.50,'50%'],[0.65,'65%'],[0.80,'80%'],[1.00,'100%']];
     const fps=[30,45,60];
-    body.innerHTML=`<div class="s2grid">
-      <section class="s2card wide">
-        <div class="s2label">${en?'RENDER RESOLUTION':'RESOLUCIÓN DE RENDER'}</div>
-        <div class="s2desc">${en?'This is the setting that most directly reduces GPU load. 50% renders one quarter of the pixels of 100%.':'Este es el ajuste que más directamente reduce la carga de GPU. 50% renderiza una cuarta parte de los píxeles de 100%.'}</div>
-        <div class="s2row" data-render-scale>${scales.map(([val,label])=>`<button type="button" class="s2choice ${Math.abs(Number(v.resolutionScale)-val)<.01?'on':''}" data-scale="${val}">${label}</button>`).join('')}</div>
-      </section>
-      <section class="s2card">
-        <div class="s2label">${en?'TARGET FPS':'FPS OBJETIVO'}</div>
-        <div class="s2desc">${en?'Caps the game loop. It does not lower visual quality.':'Limita el bucle del juego. No reduce la calidad visual.'}</div>
-        <div class="s2row" data-target-fps>${fps.map(val=>`<button type="button" class="s2choice ${Number(v.targetFps)===val?'on':''}" data-fps="${val}">${val}</button>`).join('')}</div>
-      </section>
-      <section class="s2card">
-        <div class="s2label">${en?'GRAPHICS PRESET':'CALIDAD GRÁFICA'}</div>
-        <div class="s2desc">${en?'Controls secondary decoration and effects.':'Controla decoración y efectos secundarios.'}</div>
-        <div class="s2row" data-quality>${[['low',en?'LOW':'BAJA'],['medium',en?'MEDIUM':'MEDIA'],['high',en?'HIGH':'ALTA']].map(([key,label])=>`<button type="button" class="s2choice ${v.quality===key?'on':''}" data-quality="${key}">${label}</button>`).join('')}</div>
-      </section>
-      ${boolCard(en?'ANTIALIASING':'ANTIALIASING',en?'Smooths edges, but costs GPU time. Turn it off on slower devices.':'Suaviza bordes, pero consume GPU. Desactívalo en dispositivos lentos.','antialias',v.antialias)}
-      ${boolCard(en?'PARTICLES':'PARTÍCULAS',en?'Smoke, dust and other non-essential effects.':'Humo, polvo y otros efectos no esenciales.','particles',v.particles)}
-      ${boolCard(en?'PERFORMANCE HUD':'HUD DE RENDIMIENTO',en?'Shows FPS and diagnostic timings.':'Muestra FPS y tiempos de diagnóstico.','showFPS',v.showFPS)}
-      <section class="s2card wide">
-        <div class="s2label">${en?'ACTIVE RENDER MODE':'MODO DE RENDER ACTIVO'}</div>
-        <div class="s2desc">${en?'Changes to resolution, antialiasing or target FPS reload the game so they really affect the renderer.':'Los cambios de resolución, antialiasing o FPS reinician el juego para que afecten realmente al renderer.'}</div>
-        <div class="s2row"><span class="s2val">${String(v.quality).toUpperCase()} · ${Math.round(Number(v.resolutionScale)*100)}% · ${v.antialias?'AA ON':'AA OFF'} · ${Number(v.targetFps)} FPS</span></div>
-      </section>
-    </div>`;
+    const pending={...v};
 
-    const reloadKey=(key,value)=>{
-      persistVideoValue(this.settings,key,value);
-      window.setTimeout(()=>window.location.reload(),120);
+    const render=()=>{
+      body.innerHTML=`<div class="s2grid">
+        <section class="s2card wide">
+          <div class="s2label">${en?'RENDER RESOLUTION':'RESOLUCIÓN DE RENDER'}</div>
+          <div class="s2desc">${en?'This most directly reduces GPU load. 50% renders one quarter of the pixels of 100%.':'Este es el ajuste que más directamente reduce la carga de GPU. 50% renderiza una cuarta parte de los píxeles de 100%.'}</div>
+          <div class="s2row" data-render-scale>${scales.map(([val,label])=>`<button type="button" class="s2choice ${Math.abs(Number(pending.resolutionScale)-val)<.01?'on':''}" data-scale="${val}">${label}</button>`).join('')}</div>
+        </section>
+        <section class="s2card">
+          <div class="s2label">${en?'TARGET FPS':'FPS OBJETIVO'}</div>
+          <div class="s2desc">${en?'Caps the game loop. It does not lower visual quality.':'Limita el bucle del juego. No reduce la calidad visual.'}</div>
+          <div class="s2row" data-target-fps>${fps.map(val=>`<button type="button" class="s2choice ${Number(pending.targetFps)===val?'on':''}" data-fps="${val}">${val}</button>`).join('')}</div>
+        </section>
+        <section class="s2card">
+          <div class="s2label">${en?'GRAPHICS PRESET':'CALIDAD GRÁFICA'}</div>
+          <div class="s2desc">${en?'Controls secondary decoration and effects.':'Controla decoración y efectos secundarios.'}</div>
+          <div class="s2row" data-quality>${[['low',en?'LOW':'BAJA'],['medium',en?'MEDIUM':'MEDIA'],['high',en?'HIGH':'ALTA']].map(([key,label])=>`<button type="button" class="s2choice ${pending.quality===key?'on':''}" data-quality="${key}">${label}</button>`).join('')}</div>
+        </section>
+        ${boolCard(en?'ANTIALIASING':'ANTIALIASING',en?'Smooths edges, but costs GPU time. Turn it off on slower devices.':'Suaviza bordes, pero consume GPU. Desactívalo en dispositivos lentos.','antialias',pending.antialias)}
+        ${boolCard(en?'PARTICLES':'PARTÍCULAS',en?'Smoke, dust and other non-essential effects.':'Humo, polvo y otros efectos no esenciales.','particles',pending.particles)}
+        ${boolCard(en?'PERFORMANCE HUD':'HUD DE RENDIMIENTO',en?'Shows FPS and diagnostic timings.':'Muestra FPS y tiempos de diagnóstico.','showFPS',pending.showFPS)}
+        <section class="s2card wide">
+          <div class="s2label">${en?'PENDING RENDER MODE':'MODO DE RENDER SELECCIONADO'}</div>
+          <div class="s2row" style="justify-content:space-between;gap:14px">
+            <span class="s2val">${String(pending.quality).toUpperCase()} · ${Math.round(Number(pending.resolutionScale)*100)}% · ${pending.antialias?'AA ON':'AA OFF'} · ${Number(pending.targetFps)} FPS</span>
+            <button type="button" class="s2apply" data-apply-video>${en?'APPLY CHANGES':'APLICAR CAMBIOS'}</button>
+          </div>
+          <div class="s2desc">${en?'Select everything first. The game reloads only when you press Apply.':'Selecciona primero todos los ajustes. El juego solo se reinicia al pulsar Aplicar.'}</div>
+        </section>
+      </div>`;
+
+      body.querySelectorAll('[data-scale]').forEach(btn=>btn.onclick=()=>{pending.resolutionScale=Number(btn.dataset.scale);render();});
+      body.querySelectorAll('[data-fps]').forEach(btn=>btn.onclick=()=>{pending.targetFps=Number(btn.dataset.fps);render();});
+      body.querySelectorAll('[data-quality]').forEach(btn=>btn.onclick=()=>{
+        pending.quality=String(btn.dataset.quality);
+        if(pending.quality==='low')pending.antialias=false;
+        render();
+      });
+      body.querySelectorAll('[data-video-bool]').forEach(btn=>btn.onclick=()=>{
+        const key=btn.dataset.videoBool;
+        pending[key]=!pending[key];
+        render();
+      });
+      body.querySelector('[data-apply-video]')?.addEventListener('click',()=>{
+        persistVideo(this.settings,pending);
+        const apply=body.querySelector('[data-apply-video]');
+        if(apply){apply.disabled=true;apply.textContent=en?'APPLYING…':'APLICANDO…';}
+        window.setTimeout(()=>window.location.reload(),220);
+      });
     };
-    body.querySelectorAll('[data-scale]').forEach(btn=>btn.onclick=()=>reloadKey('resolutionScale',Number(btn.dataset.scale)));
-    body.querySelectorAll('[data-fps]').forEach(btn=>btn.onclick=()=>reloadKey('targetFps',Number(btn.dataset.fps)));
-    body.querySelectorAll('[data-quality]').forEach(btn=>btn.onclick=()=>{
-      const quality=String(btn.dataset.quality);
-      persistVideoValue(this.settings,'quality',quality);
-      if(quality==='low')persistVideoValue(this.settings,'antialias',false);
-      window.setTimeout(()=>window.location.reload(),120);
-    });
-    body.querySelectorAll('[data-video-bool]').forEach(btn=>btn.onclick=()=>{
-      const key=btn.dataset.videoBool;
-      const value=!v[key];
-      if(key==='showFPS'){
-        persistVideoValue(this.settings,key,value);
-        this.scene.restart();
-        return;
-      }
-      reloadKey(key,value);
-    });
-    save(this.settings);
+
+    render();
   }
 }
