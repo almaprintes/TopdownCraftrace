@@ -15,7 +15,23 @@ const MATERIALS = Object.freeze({
   grass: 'public/assets/materials/grass/rocky_terrain_02_diff_2k.jpg',
   offroad: 'public/assets/materials/offroad/rocky_terrain_diff_2k.jpg',
   dirt: 'public/assets/materials/offroad/rocky_terrain_diff_2k.jpg',
-  'dirt-road': 'public/assets/materials/dirt-road/road_damaged_2_diff_2k.jpg'
+  'dirt-road': 'public/assets/materials/dirt-road/road_damaged_2_diff_2k.jpg',
+
+  // Atlántico pilot: exact Poly Haven surfaces selected by the user.
+  // They are fetched only by the offline baker; the iPhone never depends on
+  // Poly Haven at race time once the four beauty tiles have been published.
+  'atlantico-asphalt': Object.freeze({
+    source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg',
+    brightness: 0.96
+  }),
+  'atlantico-grass': Object.freeze({
+    source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg',
+    brightness: 1.0
+  }),
+  'atlantico-dirt': Object.freeze({
+    source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg',
+    brightness: 0.78
+  })
 });
 
 function quadPolygons(left, right) {
@@ -43,25 +59,51 @@ function normalizeSurface(value, fallback) {
 }
 
 function surfacePlan(trackKey, meta) {
+  if (trackKey === 'track01') {
+    return {
+      trackSurface: 'atlantico-asphalt',
+      shoulderSurface: 'atlantico-grass',
+      outerSurface: 'atlantico-dirt'
+    };
+  }
+
   const authored = meta?.meta || {};
   let trackSurface = normalizeSurface(authored.trackSurface || meta.surface || 'asphalt', 'asphalt');
   const shoulderSurface = normalizeSurface(authored.shoulderSurface || 'grass', 'grass');
   const outerSurface = normalizeSurface(authored.outerSurface || 'grass', 'grass');
-
   if (trackKey === 'offroad-raven-hollow') trackSurface = 'dirt-road';
-
   return { trackSurface, shoulderSurface, outerSurface };
 }
 
+async function readMaterialInput(spec) {
+  const cfg = typeof spec === 'string' ? { source: spec, brightness: 1 } : spec;
+  const source = String(cfg?.source || '');
+  if (!source) throw new Error('Material source is empty');
+
+  let input;
+  if (/^https?:\/\//i.test(source)) {
+    const response = await fetch(source);
+    if (!response.ok) throw new Error(`Could not fetch ${source}: HTTP ${response.status}`);
+    input = Buffer.from(await response.arrayBuffer());
+  } else {
+    input = await fs.readFile(path.join(ROOT, source));
+  }
+
+  const brightness = Number(cfg?.brightness ?? 1);
+  if (Number.isFinite(brightness) && Math.abs(brightness - 1) > 0.001) {
+    input = await sharp(input).modulate({ brightness }).jpeg({ quality: 95 }).toBuffer();
+  }
+  return { input, source };
+}
+
 async function textureData(surface) {
-  const rel = MATERIALS[surface] || MATERIALS.grass;
-  const abs = path.join(ROOT, rel);
-  const input = await fs.readFile(abs);
+  const spec = MATERIALS[surface] || MATERIALS.grass;
+  const { input, source } = await readMaterialInput(spec);
   const meta = await sharp(input).metadata();
   const mime = meta.format === 'png' ? 'image/png' : meta.format === 'webp' ? 'image/webp' : 'image/jpeg';
   return {
     surface,
-    rel,
+    rel: source,
     width: Math.max(1, Number(meta.width) || 1024),
     height: Math.max(1, Number(meta.height) || 1024),
     uri: `data:${mime};base64,${input.toString('base64')}`
@@ -77,9 +119,22 @@ async function loadSurfaceTextures(surfaces) {
   return { roadTex, shoulderTex, outerTex };
 }
 
+function physicalPatternScales(trackKey) {
+  if (trackKey === 'track01') {
+    // Calibrated visually against the car in Atlántico. With 2K sources this
+    // gives ~205 world px per asphalt repeat, ~1126 for grass and ~983 for dirt.
+    return { road: 0.10, shoulder: 0.55, outer: 0.48 };
+  }
+  return {
+    road: trackKey === 'offroad-raven-hollow' ? 0.42 : 0.50,
+    shoulder: 0.46,
+    outer: 0.46
+  };
+}
+
 function pattern(id, tex, scale = 0.5) {
-  const w = Math.max(64, Math.round(tex.width * scale));
-  const h = Math.max(64, Math.round(tex.height * scale));
+  const w = Math.max(32, Math.round(tex.width * scale));
+  const h = Math.max(32, Math.round(tex.height * scale));
   return `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${w}" height="${h}"><image href="${tex.uri}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="none"/></pattern>`;
 }
 
@@ -90,13 +145,14 @@ function artisticSvg({ trackKey, worldW, worldH, geom, textures, viewBox, output
   const vb = viewBox || { x: 0, y: 0, w: worldW, h: worldH };
   const rasterW = Math.max(1, Math.round(outputW || vb.w));
   const rasterH = Math.max(1, Math.round(outputH || vb.h));
+  const scales = physicalPatternScales(trackKey);
 
   return `
   <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${rasterW}" height="${rasterH}" viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}">
     <defs>
-      ${pattern('outer', outerTex, 0.46)}
-      ${pattern('shoulder', shoulderTex, 0.46)}
-      ${pattern('road', roadTex, trackKey === 'offroad-raven-hollow' ? 0.42 : 0.50)}
+      ${pattern('outer', outerTex, scales.outer)}
+      ${pattern('shoulder', shoulderTex, scales.shoulder)}
+      ${pattern('road', roadTex, scales.road)}
     </defs>
     <rect x="0" y="0" width="${worldW}" height="${worldH}" fill="url(#outer)"/>
     ${svgPolys(shoulderQuads, 'url(#shoulder)')}
@@ -127,7 +183,6 @@ async function bakeTrack(trackKey) {
   if (!worldW || !worldH) throw new Error(`Invalid world dimensions in ${trackPath}`);
 
   console.log(`[track-beauty] starting ${trackKey} ${worldW}x${worldH}`);
-
   const geom = buildTrackRibbon({
     centerline: meta.centerline || [],
     trackWidth: meta.trackWidth,
@@ -143,9 +198,6 @@ async function bakeTrack(trackKey) {
   const textures = await loadSurfaceTextures(surfaces);
   await fs.mkdir(outDir, { recursive: true });
 
-  // IMPORTANT: never rasterize the whole world to an intermediate PNG.
-  // Large tracks such as Raven Hollow used to spend the complete CI timeout in
-  // that single allocation. Preview and tiles are rendered directly from SVG.
   const previewFile = `${trackKey}-beauty-preview.webp`;
   const previewW = Math.min(worldW, 1400);
   const previewH = Math.max(1, Math.round(worldH * previewW / worldW));
@@ -154,10 +206,7 @@ async function bakeTrack(trackKey) {
     viewBox: { x: 0, y: 0, w: worldW, h: worldH },
     outputW: previewW, outputH: previewH
   }));
-  console.log(`[track-beauty] preview ${previewW}x${previewH}`);
-  await sharp(previewSvg, { density: 72 })
-    .webp({ quality: 88, effort: 4 })
-    .toFile(path.join(outDir, previewFile));
+  await sharp(previewSvg, { density: 72 }).webp({ quality: 88, effort: 4 }).toFile(path.join(outDir, previewFile));
 
   const splitX = Math.ceil(worldW / 2);
   const splitY = Math.ceil(worldH / 2);
@@ -174,24 +223,22 @@ async function bakeTrack(trackKey) {
     const tileSvg = Buffer.from(artisticSvg({
       trackKey, worldW, worldH, geom, textures,
       viewBox: t,
-      outputW: t.w,
-      outputH: t.h
+      outputW: t.w, outputH: t.h
     }));
-    await sharp(tileSvg, { density: 72 })
-      .webp({ quality: 86, effort: 4 })
-      .toFile(path.join(outDir, `${trackKey}-beauty-${i}.webp`));
+    await sharp(tileSvg, { density: 72 }).webp({ quality: 86, effort: 4 }).toFile(path.join(outDir, `${trackKey}-beauty-${i}.webp`));
   }
 
   const manifest = {
-    version: 5,
+    version: 6,
     generator: 'scripts/bake-track-visual.mjs',
-    style: 'direct-svg-tiles-v2',
+    style: trackKey === 'track01' ? 'polyhaven-calibrated-four-tiles-v1' : 'direct-svg-tiles-v2',
     trackKey,
     source: path.relative(ROOT, trackPath),
     worldW,
     worldH,
     preview: previewFile,
     surfaces,
+    physicalPatternScales: physicalPatternScales(trackKey),
     geometry: {
       centerSamples: geom.center.length,
       trackWidth: meta.trackWidth,
@@ -202,9 +249,8 @@ async function bakeTrack(trackKey) {
     },
     tiles: tiles.map((t, i) => ({ file: `${trackKey}-beauty-${i}.webp`, ...t }))
   };
-
   await fs.writeFile(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
-  console.log(`[track-beauty] finished ${trackKey} ${worldW}x${worldH}; samples ${geom.center.length}; ${surfaces.trackSurface}/${surfaces.shoulderSurface}/${surfaces.outerSurface}`);
+  console.log(`[track-beauty] finished ${trackKey} ${worldW}x${worldH}; ${surfaces.trackSurface}/${surfaces.shoulderSurface}/${surfaces.outerSurface}`);
   return manifest;
 }
 
@@ -236,13 +282,9 @@ async function writeCatalog(manifests) {
 async function main() {
   const allKeys = await listTrackKeys();
   const keys = requested === 'all' ? allKeys : [requested];
-  for (const key of keys) {
-    if (!allKeys.includes(key)) throw new Error(`Unknown track key: ${key}`);
-  }
-
+  for (const key of keys) if (!allKeys.includes(key)) throw new Error(`Unknown track key: ${key}`);
   const manifests = [];
   for (const key of keys) manifests.push(await bakeTrack(key));
-
   await writeCatalog(manifests);
 }
 
