@@ -40,7 +40,7 @@ const MATERIALS = Object.freeze({
     brightness: 1.0
   }),
   'tenerife-grass': Object.freeze({
-    source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/grass_medium_01/grass_medium_01_diff_2k.jpg',
+    source: 'https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/grass_medium_01/grass_medium_01_diff_2k.jpg',
     brightness: 1.0
   }),
   'tenerife-dirt': Object.freeze({
