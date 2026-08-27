@@ -17,8 +17,12 @@ const SOURCES = Object.freeze({
   outer: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg'
 });
 
-// Final world-space repeat sizes established from the in-game visual tests.
-const REPEAT = Object.freeze({ road: 205, shoulder: 1126, outer: 983 });
+// World-space material scale established from the in-game visual tests.
+// Asphalt keeps the approved 205 px physical cell, but the visible repeat is now
+// a 4x4 macro tile. Mirroring/flipping/180° preserve seamless opposite edges while
+// moving the recognisable cracks around, so the full motif repeats only every 820 px.
+const REPEAT = Object.freeze({ roadCell: 205, roadMacroGrid: 4, shoulder: 1126, outer: 983 });
+const ROAD_MACRO_SIZE = REPEAT.roadCell * REPEAT.roadMacroGrid;
 
 async function fetchBuffer(url) {
   const controller = new AbortController();
@@ -32,12 +36,39 @@ async function fetchBuffer(url) {
   }
 }
 
-async function makePatternSource(url, size, brightness = 1) {
-  const input = await fetchBuffer(url);
+async function makePatternSource(input, size, brightness = 1) {
   let image = sharp(input).resize(size, size, { fit: 'fill', kernel: sharp.kernel.lanczos3 });
   if (Math.abs(brightness - 1) > 0.001) image = image.modulate({ brightness });
   const buffer = await image.jpeg({ quality: 90, chromaSubsampling: '4:4:4' }).toBuffer();
   return `data:image/jpeg;base64,${buffer.toString('base64')}`;
+}
+
+async function roadVariant(input, transform) {
+  let image = sharp(input).resize(REPEAT.roadCell, REPEAT.roadCell, { fit: 'fill', kernel: sharp.kernel.lanczos3 });
+  if (transform === 'flip') image = image.flip();
+  else if (transform === 'flop') image = image.flop();
+  else if (transform === 'flipflop') image = image.flip().flop();
+  else if (transform === 'rotate180') image = image.rotate(180);
+  image = image.modulate({ brightness: 0.96 });
+  return image.jpeg({ quality: 91, chromaSubsampling: '4:4:4' }).toBuffer();
+}
+
+async function makeRoadMacroSource(input) {
+  const transforms = ['base', 'flop', 'rotate180', 'flip', 'flip', 'base', 'flipflop', 'rotate180', 'rotate180', 'flipflop', 'base', 'flop', 'flop', 'rotate180', 'flip', 'base'];
+  const unique = Object.fromEntries(await Promise.all(
+    ['base', 'flip', 'flop', 'flipflop', 'rotate180'].map(async name => [name, await roadVariant(input, name)])
+  ));
+  const composites = [];
+  for (let y = 0; y < REPEAT.roadMacroGrid; y++) {
+    for (let x = 0; x < REPEAT.roadMacroGrid; x++) {
+      const name = transforms[y * REPEAT.roadMacroGrid + x];
+      composites.push({ input: unique[name], left: x * REPEAT.roadCell, top: y * REPEAT.roadCell });
+    }
+  }
+  const macro = await sharp({
+    create: { width: ROAD_MACRO_SIZE, height: ROAD_MACRO_SIZE, channels: 3, background: { r: 90, g: 90, b: 90 } }
+  }).composite(composites).jpeg({ quality: 91, chromaSubsampling: '4:4:4' }).toBuffer();
+  return `data:image/jpeg;base64,${macro.toString('base64')}`;
 }
 
 function quads(left, right) {
@@ -68,7 +99,7 @@ function svgForTile({ worldW, worldH, geom, textures, tile }) {
   <defs>
     ${pattern('outer', textures.outer, REPEAT.outer)}
     ${pattern('shoulder', textures.shoulder, REPEAT.shoulder)}
-    ${pattern('road', textures.road, REPEAT.road)}
+    ${pattern('road', textures.road, ROAD_MACRO_SIZE)}
   </defs>
   <rect x="0" y="0" width="${worldW}" height="${worldH}" fill="url(#outer)"/>
   ${polys(shoulder, 'url(#shoulder)')}
@@ -90,11 +121,15 @@ async function main() {
   if (!worldW || !worldH || !geom.center?.length) throw new Error('Invalid Atlantico geometry');
 
   console.log(`[atlantico-bake] world ${worldW}x${worldH}; samples ${geom.center.length}`);
-  console.log('[atlantico-bake] fetching and pre-scaling Poly Haven materials');
+  console.log('[atlantico-bake] fetching Poly Haven materials');
+  const [roadInput, shoulderInput, outerInput] = await Promise.all([
+    fetchBuffer(SOURCES.road), fetchBuffer(SOURCES.shoulder), fetchBuffer(SOURCES.outer)
+  ]);
+  console.log(`[atlantico-bake] building ${REPEAT.roadMacroGrid}x${REPEAT.roadMacroGrid} asphalt anti-repeat macro (${ROAD_MACRO_SIZE}px world repeat)`);
   const [road, shoulder, outer] = await Promise.all([
-    makePatternSource(SOURCES.road, REPEAT.road, 0.96),
-    makePatternSource(SOURCES.shoulder, REPEAT.shoulder, 1.0),
-    makePatternSource(SOURCES.outer, REPEAT.outer, 0.78)
+    makeRoadMacroSource(roadInput),
+    makePatternSource(shoulderInput, REPEAT.shoulder, 1.0),
+    makePatternSource(outerInput, REPEAT.outer, 0.78)
   ]);
   const textures = { road, shoulder, outer };
   await fs.mkdir(OUT_DIR, { recursive: true });
@@ -123,19 +158,25 @@ async function main() {
     .toFile(path.join(OUT_DIR, `${TRACK_KEY}-beauty-preview.webp`));
 
   const manifest = {
-    version: 7,
+    version: 8,
     generator: 'scripts/bake-atlantico-beauty.mjs',
-    style: 'polyhaven-calibrated-four-tiles-fast-v1',
+    style: 'polyhaven-four-tiles-asphalt-antirepeat-v1',
     trackKey: TRACK_KEY,
     worldW, worldH,
     sources: SOURCES,
-    repeatWorldPx: REPEAT,
+    repeatWorldPx: {
+      roadCell: REPEAT.roadCell,
+      roadMacro: ROAD_MACRO_SIZE,
+      shoulder: REPEAT.shoulder,
+      outer: REPEAT.outer
+    },
+    asphaltAntiRepeat: { grid: REPEAT.roadMacroGrid, transforms: ['base','flip','flop','flipflop','rotate180'] },
     outerBrightness: 0.78,
     tiles: tiles.map((tile, i) => ({ file:`${TRACK_KEY}-beauty-${i}.webp`, ...tile }))
   };
   await fs.writeFile(path.join(OUT_DIR, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
-  const catalog = `// AUTO-GENERATED by scripts/bake-atlantico-beauty.mjs.\nexport const GENERATED_TRACK_BEAUTY_LAYERS = Object.freeze({\n  \"track01\": Object.freeze({\n    useBeautyLayer: true,\n    assetRevision: \"atlantico-polyhaven-v7\",\n    assetsAvailable: true,\n    worldW: ${worldW}, worldH: ${worldH}, depth: 9,\n    replaces: Object.freeze({ asphalt:true, grass:true, offroad:true, kerbs:false, props:false }),\n    tiles: Object.freeze([\n${tiles.map((t,i)=>`      Object.freeze({ key:\"beauty-track01-${i}\", path:\"assets/tracks/track01/beauty/track01-beauty-${i}.webp\", x:${t.x}, y:${t.y}, w:${t.w}, h:${t.h} }),`).join('\n')}\n    ])\n  })\n});\n`;
+  const catalog = `// AUTO-GENERATED by scripts/bake-atlantico-beauty.mjs.\nexport const GENERATED_TRACK_BEAUTY_LAYERS = Object.freeze({\n  \"track01\": Object.freeze({\n    useBeautyLayer: true,\n    assetRevision: \"atlantico-polyhaven-v8-antirepeat\",\n    assetsAvailable: true,\n    worldW: ${worldW}, worldH: ${worldH}, depth: 9,\n    replaces: Object.freeze({ asphalt:true, grass:true, offroad:true, kerbs:false, props:false }),\n    tiles: Object.freeze([\n${tiles.map((t,i)=>`      Object.freeze({ key:\"beauty-track01-${i}\", path:\"assets/tracks/track01/beauty/track01-beauty-${i}.webp?v=atlantico-v8\", x:${t.x}, y:${t.y}, w:${t.w}, h:${t.h} }),`).join('\n')}\n    ])\n  })\n});\n`;
   await fs.mkdir(OUT_ROOT, { recursive:true });
   await fs.writeFile(path.join(OUT_ROOT, 'trackBeautyLayers.generated.js'), catalog);
   console.log('[atlantico-bake] done');
