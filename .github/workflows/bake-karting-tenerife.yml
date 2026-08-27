@@ -1,4 +1,4 @@
-name: Bake all track beauty
+name: Bake Karting Tenerife beauty
 
 on:
   push:
@@ -6,9 +6,10 @@ on:
     paths:
       - '.github/workflows/bake-karting-tenerife.yml'
       - 'scripts/bake-track-visual.mjs'
+      - 'scripts/track-beauty-config.mjs'
+      - 'scripts/build-track-beauty-catalog.mjs'
       - 'src/game/tracks/TrackBuilder.js'
-      - 'src/game/tracks/library/**/track.json'
-      - 'public/assets/materials/**'
+      - 'src/game/tracks/library/karting-tenerife/track.json'
       - 'package.json'
       - 'package-lock.json'
   workflow_dispatch:
@@ -16,6 +17,10 @@ on:
 permissions:
   contents: write
   actions: write
+
+concurrency:
+  group: bake-karting-tenerife
+  cancel-in-progress: true
 
 jobs:
   bake:
@@ -37,40 +42,53 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Bake every track
-        run: npm run bake:track -- all
+      - name: Bake Karting Tenerife only
+        run: npm run bake:track -- karting-tenerife
 
-      - name: Publish generated beauty assets and catalog
+      - name: Publish Karting Tenerife beauty assets
         run: |
           set -euo pipefail
-          for SRC in artifacts/track-beauty/*; do
-            [ -d "$SRC" ] || continue
-            KEY="$(basename "$SRC")"
-            DEST="public/assets/tracks/$KEY/beauty"
-            mkdir -p "$DEST"
-            rm -f "$DEST"/*-beauty-preview.webp "$DEST"/*-beauty-[0-9].webp "$DEST/manifest.json"
-            cp "$SRC/$KEY-beauty-preview.webp" "$DEST/"
-            cp "$SRC/$KEY-beauty-0.webp" "$DEST/"
-            cp "$SRC/$KEY-beauty-1.webp" "$DEST/"
-            cp "$SRC/$KEY-beauty-2.webp" "$DEST/"
-            cp "$SRC/$KEY-beauty-3.webp" "$DEST/"
-            cp "$SRC/manifest.json" "$DEST/"
-          done
-          cp artifacts/track-beauty/trackBeautyLayers.generated.js src/game/tracks/trackBeautyLayers.generated.js
+          KEY='karting-tenerife'
+          SRC="artifacts/track-beauty/$KEY"
+          DEST="public/assets/tracks/$KEY/beauty"
+          test -f "$SRC/$KEY-beauty-preview.webp"
+          test -f "$SRC/$KEY-beauty-0.webp"
+          test -f "$SRC/$KEY-beauty-1.webp"
+          test -f "$SRC/$KEY-beauty-2.webp"
+          test -f "$SRC/$KEY-beauty-3.webp"
+          test -f "$SRC/manifest.json"
+          mkdir -p "$DEST"
+          rm -f "$DEST"/*-beauty-preview.webp "$DEST"/*-beauty-[0-9].webp "$DEST/manifest.json"
+          cp "$SRC/$KEY-beauty-preview.webp" "$DEST/"
+          cp "$SRC/$KEY-beauty-0.webp" "$DEST/"
+          cp "$SRC/$KEY-beauty-1.webp" "$DEST/"
+          cp "$SRC/$KEY-beauty-2.webp" "$DEST/"
+          cp "$SRC/$KEY-beauty-3.webp" "$DEST/"
+          cp "$SRC/manifest.json" "$DEST/"
 
-      - name: Commit generated assets
+      - name: Rebuild runtime beauty catalog from all published manifests
+        run: node scripts/build-track-beauty-catalog.mjs
+
+      - name: Verify Atlántico remains present
+        run: |
+          set -euo pipefail
+          test -f public/assets/tracks/track01/beauty/manifest.json
+          grep -q '"track01"' src/game/tracks/trackBeautyLayers.generated.js
+          grep -q '"karting-tenerife"' src/game/tracks/trackBeautyLayers.generated.js
+
+      - name: Commit generated Karting Tenerife assets
         id: commit_assets
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/assets/tracks src/game/tracks/trackBeautyLayers.generated.js
+          git add public/assets/tracks/karting-tenerife/beauty src/game/tracks/trackBeautyLayers.generated.js
           if git diff --cached --quiet; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
             echo 'No generated changes to commit.'
             exit 0
           fi
-          git commit -m 'Bake all track beauty assets'
+          git commit -m 'Bake Karting Tenerife beauty assets'
           git push origin HEAD:main
           echo 'changed=true' >> "$GITHUB_OUTPUT"
 
