@@ -2,20 +2,6 @@ import Phaser from 'phaser';
 import '../safe-area.css';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuGameModeSnapScene.js';
-import { SeasonScene } from './scenes/SeasonScene.js';
-import { RaceScene } from './scenes/RaceGraphicsPresetScene.js';
-import { installExactRuntimeBeautyPass } from './scenes/raceExactRuntimeBeautyPass.js';
-import { UpgradeShopScene } from './scenes/UpgradeWorkshopCarUnlockScene.js';
-import { GarageScene } from './scenes/GarageLazyCardsScene.js';
-import { SettingsScene } from './scenes/SettingsGraphicsQualityScene.js';
-import { StatsScene } from './scenes/StatsScene.js';
-import { GarageDetailScene } from './scenes/GarageDetailSpeedConsistencyScene.js';
-import { AdminHubScene } from './scenes/AdminHubScene.js';
-import { CarEditorScene } from './scenes/CarEditorSpeedConsistencyScene.js';
-import { TrackEditorScene } from './scenes/TrackEditorScene.js';
-import { TrackGarageScene } from './scenes/TrackGarageHideSpecialScene.js';
-import { TrackStudioScene } from './scenes/TrackStudioScene.js';
-import { EnvironmentBuilderScene } from './scenes/EnvironmentBuilderAssetPointerUpScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
 import { installRuntimeCrashDiagnostics } from './dev/runtimeCrashDiagnostics.js';
 import { installSeasonRewardCelebrations } from './seasons/seasonRewardCelebrationTouchSafe.js';
@@ -26,9 +12,107 @@ import { installSafeAreaRuntime } from './ui/safeArea.js';
 import { installOrientationViewportSettle } from './ui/orientationViewportSettle.js';
 import './tracks/trackPublicNames.js';
 
-installExactRuntimeBeautyPass(RaceScene);
-
 class MenuAliasScene extends Phaser.Scene { constructor(){super('MenuScene');} create(){this.scene.start('menu');} }
+
+// Heavy scenes are intentionally NOT imported at module evaluation time. The lobby
+// can become visible with only Boot + Menu. Once visible, likely destinations are
+// warmed progressively. Any destination tapped before warm-up completes loads on demand.
+const LAZY_SCENES={
+  GarageScene:{load:()=>import('./scenes/GarageLazyCardsScene.js'),exportName:'GarageScene',warm:10},
+  'upgrade-shop':{load:()=>import('./scenes/UpgradeWorkshopCarUnlockScene.js'),exportName:'UpgradeShopScene',warm:20},
+  SettingsScene:{load:()=>import('./scenes/SettingsGraphicsQualityScene.js'),exportName:'SettingsScene',warm:30},
+  StatsScene:{load:()=>import('./scenes/StatsScene.js'),exportName:'StatsScene',warm:40},
+  season:{load:()=>import('./scenes/SeasonScene.js'),exportName:'SeasonScene',warm:50},
+  TrackGarageScene:{load:()=>import('./scenes/TrackGarageHideSpecialScene.js'),exportName:'TrackGarageScene',warm:60},
+  race:{
+    load:async()=>{
+      const [{RaceScene},{installExactRuntimeBeautyPass}]=await Promise.all([
+        import('./scenes/RaceGraphicsPresetScene.js'),
+        import('./scenes/raceExactRuntimeBeautyPass.js')
+      ]);
+      installExactRuntimeBeautyPass(RaceScene);
+      return {RaceScene};
+    },
+    exportName:'RaceScene',warm:70
+  },
+  GarageDetailScene:{load:()=>import('./scenes/GarageDetailSpeedConsistencyScene.js'),exportName:'GarageDetailScene',warm:80},
+
+  // Developer/editor destinations: never warmed during a normal player session.
+  AdminHubScene:{load:()=>import('./scenes/AdminHubScene.js'),exportName:'AdminHubScene',admin:true},
+  CarEditorScene:{load:()=>import('./scenes/CarEditorSpeedConsistencyScene.js'),exportName:'CarEditorScene',admin:true},
+  TrackEditorScene:{load:()=>import('./scenes/TrackEditorScene.js'),exportName:'TrackEditorScene',admin:true},
+  TrackStudioScene:{load:()=>import('./scenes/TrackStudioScene.js'),exportName:'TrackStudioScene',admin:true},
+  EnvironmentBuilderScene:{load:()=>import('./scenes/EnvironmentBuilderAssetPointerUpScene.js'),exportName:'EnvironmentBuilderScene',admin:true}
+};
+
+const lazyPromises=new Map();
+let lazyGame=null;
+
+function sceneExists(game,key){
+  try{return !!game?.scene?.keys?.[key];}catch{return false;}
+}
+
+async function ensureLazyScene(key){
+  const game=lazyGame;
+  const def=LAZY_SCENES[key];
+  if(!game||!def)return false;
+  if(sceneExists(game,key))return true;
+  if(lazyPromises.has(key))return lazyPromises.get(key);
+
+  const p=(async()=>{
+    try{
+      const mod=await def.load();
+      const SceneClass=mod?.[def.exportName];
+      if(typeof SceneClass!=='function')throw new Error(`Missing scene export ${def.exportName}`);
+      if(!sceneExists(game,key))game.scene.add(key,SceneClass,false);
+      return true;
+    }catch(err){
+      console.error(`[lazy-scene] ${key} failed`,err);
+      return false;
+    }finally{
+      lazyPromises.delete(key);
+    }
+  })();
+  lazyPromises.set(key,p);
+  return p;
+}
+
+function installLazySceneNavigation(game){
+  lazyGame=game;
+  const proto=Phaser.Scenes.ScenePlugin?.prototype;
+  if(!proto||proto.__tdrLazyStartInstalled)return;
+  const originalStart=proto.start;
+  proto.start=function(key,data){
+    const target=String(key||'');
+    if(LAZY_SCENES[target]&&!sceneExists(game,target)){
+      ensureLazyScene(target).then(ok=>{
+        if(ok){try{originalStart.call(this,target,data);}catch(err){console.error(`[lazy-scene] start ${target} failed`,err);}}
+      });
+      return this;
+    }
+    return originalStart.call(this,key,data);
+  };
+  proto.__tdrLazyStartInstalled=true;
+}
+
+function scheduleSceneWarmup(){
+  const warm=Object.entries(LAZY_SCENES)
+    .filter(([,def])=>Number.isFinite(def.warm)&&!def.admin)
+    .sort((a,b)=>a[1].warm-b[1].warm);
+
+  const run=async()=>{
+    // Give the freshly rendered lobby a little quiet time first.
+    await new Promise(r=>setTimeout(r,250));
+    for(const [key] of warm){
+      await ensureLazyScene(key);
+      // Yield between chunks so parsing one destination never monopolizes the UI.
+      await new Promise(r=>setTimeout(r,70));
+    }
+  };
+
+  window.addEventListener('tdr:bootready',()=>{run().catch(()=>{});},{once:true});
+}
+
 function videoPrefs(){
   try{
     const s=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');
@@ -68,8 +152,14 @@ export function createGame(parentId='app'){
   installDomUiEnglishBridge();
   installSeasonRewardCelebrations();
   installCleanTextFactory();
-  const vp=videoPrefs();const ios=isIOSDevice();const safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=safeMode?false:!!vp.antialias;const targetFps=safeMode?30:vp.targetFps;
-  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},scene:[BootScene,MenuScene,MenuAliasScene,SeasonScene,GarageScene,SettingsScene,StatsScene,GarageDetailScene,RaceScene,AdminHubScene,UpgradeShopScene,CarEditorScene,TrackGarageScene,TrackStudioScene,EnvironmentBuilderScene,TrackEditorScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:safeMode,powerPreference:'high-performance',batchSize:safeMode?1024:4096}});
+  const vp=videoPrefs();const safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=safeMode?false:!!vp.antialias;const targetFps=safeMode?30:vp.targetFps;
+
+  // Startup invariant: only these three tiny scene entries are required before lobby.
+  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:safeMode,powerPreference:'high-performance',batchSize:safeMode?1024:4096}});
+
+  installLazySceneNavigation(game);
+  scheduleSceneWarmup();
+  try{window.__tdrEnsureScene=ensureLazyScene;}catch{}
   try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}
   installOrientationViewportSettle(game);
   installRuntimeCrashDiagnostics(game);
