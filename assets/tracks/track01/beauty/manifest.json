@@ -1,33 +1,45 @@
 {
-  "version": 10,
-  "generator": "scripts/bake-atlantico-beauty.mjs",
-  "style": "polyhaven-four-tiles-asphalt-clean-microdetail-v1",
+  "version": 11,
+  "generator": "scripts/bake-track-beauty.mjs",
   "trackKey": "track01",
+  "title": "Atlantico",
+  "approved": true,
+  "revision": "atlantico-polyhaven-v10-clean-asphalt",
   "worldW": 2430,
   "worldH": 2000,
-  "sources": {
-    "road": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg",
-    "shoulder": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg",
-    "outer": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg"
+  "depth": 9,
+  "replaces": {
+    "asphalt": true,
+    "grass": true,
+    "offroad": true,
+    "kerbs": false,
+    "props": false
   },
-  "repeatWorldPx": {
-    "roadCell": 205,
-    "roadMacro": 820,
-    "shoulder": 1126,
-    "outer": 983
+  "materials": {
+    "road": {
+      "material": "asphalt02Clean",
+      "cell": 205,
+      "macroGrid": 4,
+      "brightness": 0.96,
+      "id": "asphalt02Clean",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg",
+      "processing": "cleanMicrodetail"
+    },
+    "shoulder": {
+      "material": "sparseGrass",
+      "repeat": 1126,
+      "brightness": 1,
+      "id": "sparseGrass",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg"
+    },
+    "outer": {
+      "material": "rockyTrail02",
+      "repeat": 983,
+      "brightness": 0.78,
+      "id": "rockyTrail02",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg"
+    }
   },
-  "asphaltAntiRepeat": {
-    "grid": 4,
-    "transforms": [
-      "base",
-      "flip",
-      "flop",
-      "flipflop",
-      "rotate180"
-    ]
-  },
-  "asphaltCracks": "removed-from-base",
-  "outerBrightness": 0.78,
   "tiles": [
     {
       "file": "track01-beauty-0.webp",
