@@ -4,20 +4,19 @@ import { qty } from '../garage/garageStore.js';
 
 const UI='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 const TIER_COLOR={street:0x66c6ff,sport:0x4ee1a0,racing:0xbf7cff,prototype:0xffc64d};
+const EXCHANGEABLE=new Set(['scrap','alloy','rubber','disc','spring','gear','compound','ecu']);
 
 function lerp(a,b,t){return Math.round(a+(b-a)*Math.max(0,Math.min(1,t)));}
-function mixColor(a,b,t){
-  const ar=(a>>16)&255,ag=(a>>8)&255,ab=a&255;
-  const br=(b>>16)&255,bg=(b>>8)&255,bb=b&255;
-  return (lerp(ar,br,t)<<16)|(lerp(ag,bg,t)<<8)|lerp(ab,bb,t);
-}
-function progressColor(p){
-  const v=Math.max(0,Math.min(1,Number(p)||0));
-  return v<.5?mixColor(0xff4f5e,0xffbf3f,v/.5):mixColor(0xffbf3f,0x42e58b,(v-.5)/.5);
-}
+function mixColor(a,b,t){const ar=(a>>16)&255,ag=(a>>8)&255,ab=a&255;const br=(b>>16)&255,bg=(b>>8)&255,bb=b&255;return (lerp(ar,br,t)<<16)|(lerp(ag,bg,t)<<8)|lerp(ab,bb,t);}
+function progressColor(p){const v=Math.max(0,Math.min(1,Number(p)||0));return v<.5?mixColor(0xff4f5e,0xffbf3f,v/.5):mixColor(0xffbf3f,0x42e58b,(v-.5)/.5);}
 function hexColor(n){return `#${Number(n||0).toString(16).padStart(6,'0')}`;}
 
 export class UpgradeShopScene extends PreviousWorkshop {
+  _openRecyclerForMaterial(materialId){
+    if(!EXCHANGEABLE.has(materialId))return;
+    this.scene.start('menu',{openMaterialRecycler:true,materialExchangeTo:materialId});
+  }
+
   _recipeCard(A,r,compact){
     const out=`${this.craftFamily}_${this.craftTier}`;
     const item=GARAGE_ITEMS[out];
@@ -33,8 +32,6 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const pad=compact?9:12;
     const artButtonGap=compact?5:7;
     const buttonY=r.y+r.h-buttonH-pad;
-    // The craft button now belongs to the artwork column. This uses the formerly
-    // dead space below the part and gives the material vessels the full card height.
     const art={x:r.x+pad,y:r.y+pad,w:artW,h:Math.max(44,buttonY-r.y-pad-artButtonGap)};
     this._loadFullBleed(A,item,art);
 
@@ -84,22 +81,22 @@ export class UpgradeShopScene extends PreviousWorkshop {
 
       const name=String(s.item?.name||s.req.id).toUpperCase();
       A(this.add.text(x+cellW/2,rowTop+rowH*.20,name,{
-        fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'900',color:'#ffffff',
-        align:'center',wordWrap:{width:cellW-8,useAdvancedWrap:true},
-        shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
+        fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'900',color:'#ffffff',align:'center',wordWrap:{width:cellW-8,useAdvancedWrap:true},shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
       }).setOrigin(.5));
       A(this.add.text(x+cellW/2,rowTop+rowH*.43,`${Math.min(999,s.percent)}%`,{
-        fontFamily:UI,fontSize:compact?'11px':'15px',fontStyle:'900',color:toneHex,
-        shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
+        fontFamily:UI,fontSize:compact?'11px':'15px',fontStyle:'900',color:toneHex,shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
       }).setOrigin(.5));
       A(this.add.text(x+cellW/2,rowTop+rowH*.65,`${s.have} / ${s.need}`,{
-        fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'900',color:'#ffffff',
-        shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
+        fontFamily:UI,fontSize:compact?'9px':'12px',fontStyle:'900',color:'#ffffff',shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
       }).setOrigin(.5));
       A(this.add.text(x+cellW/2,rowTop+rowH*.84,s.ok?'LISTO':`FALTAN ${Math.max(0,s.need-s.have)}`,{
-        fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'900',color:s.ok?'#7dffb6':'#ffd4d7',
-        shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
+        fontFamily:UI,fontSize:compact?'7px':'9px',fontStyle:'900',color:s.ok?'#7dffb6':'#ffd4d7',shadow:{offsetX:1,offsetY:1,color:'#000000',blur:2,fill:true}
       }).setOrigin(.5));
+
+      if(!s.ok&&EXCHANGEABLE.has(s.req.id)){
+        const hit=A(this.add.rectangle(x,rowTop,cellW,rowH,0xffffff,0.001).setOrigin(0).setInteractive({useHandCursor:true}));
+        hit.on('pointerup',()=>this._openRecyclerForMaterial(s.req.id));
+      }
     });
 
     const button=A(this.add.rectangle(art.x,buttonY,art.w,buttonH,can?0x17683f:0x273247,.98)
@@ -107,8 +104,7 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const missingCount=state.filter(s=>!s.ok).length;
     const text=can?'FABRICAR':missingCount===1?'FALTA 1 MATERIAL':`FALTAN ${missingCount} MATERIALES`;
     A(this.add.text(art.x+art.w/2,buttonY+buttonH/2,text,{
-      fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:can?'#fff':'#d8e0e8',
-      align:'center',wordWrap:{width:art.w-8,useAdvancedWrap:true}
+      fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:can?'#fff':'#d8e0e8',align:'center',wordWrap:{width:art.w-8,useAdvancedWrap:true}
     }).setOrigin(.5));
     if(can){
       button.setInteractive({useHandCursor:true});
