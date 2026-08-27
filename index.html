@@ -8,12 +8,51 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="TDR2" />
 
-    <link rel="manifest" href="./manifest.webmanifest?v=20260810-ghp1" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260827-startup1" />
     <link rel="icon" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 
     <title>Top-Down Race</title>
+    <style>
+      #tdrStartup {
+        position: fixed;
+        inset: 0;
+        z-index: 35;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background:
+          radial-gradient(circle at 50% 42%, rgba(28,73,112,.34), transparent 38%),
+          linear-gradient(145deg,#050b14 0%,#0b1020 55%,#081827 100%);
+        color: #fff;
+        font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        opacity: 1;
+        transition: opacity .22s ease;
+        pointer-events: none;
+      }
+      #tdrStartup.tdr-startup-hide { opacity: 0; }
+      .tdr-startup-shell { width: min(52vw,440px); text-align:center; }
+      .tdr-startup-logo {
+        display:block;
+        width:min(32vw,280px);
+        max-height:34vh;
+        object-fit:contain;
+        margin:0 auto 20px;
+        filter:drop-shadow(0 12px 28px rgba(0,0,0,.45));
+      }
+      .tdr-startup-title { font-size:clamp(18px,3.2vw,34px); font-weight:950; letter-spacing:.11em; }
+      .tdr-startup-sub { margin-top:7px; color:#9cc7dc; font-size:clamp(9px,1.25vw,13px); font-weight:800; letter-spacing:.16em; }
+      .tdr-startup-track { height:4px; margin:24px auto 0; width:min(70%,300px); border-radius:99px; overflow:hidden; background:rgba(255,255,255,.11); }
+      .tdr-startup-bar { height:100%; width:38%; border-radius:99px; background:#58e8ff; box-shadow:0 0 14px rgba(88,232,255,.58); animation:tdrBoot 1.1s ease-in-out infinite alternate; }
+      @keyframes tdrBoot { from{transform:translateX(-35%)} to{transform:translateX(195%)} }
+    </style>
     <script>
+      // Register/update the SW before the module graph starts loading. Previously
+      // this happened only after window.load, which may never fire if a module stalls.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+
       (() => {
         const root = document.documentElement;
         let lastW = 0, lastH = 0, lastL = 0, lastT = 0, raf = 0;
@@ -54,6 +93,15 @@
     </script>
   </head>
   <body>
+    <div id="tdrStartup" aria-live="polite">
+      <div class="tdr-startup-shell">
+        <img class="tdr-startup-logo" src="./assets/logo.webp" alt="Top Down RACE" />
+        <div class="tdr-startup-title">TOP DOWN RACE</div>
+        <div class="tdr-startup-sub">PREPARANDO LA PARRILLA</div>
+        <div class="tdr-startup-track"><div class="tdr-startup-bar"></div></div>
+      </div>
+    </div>
+
     <div id="rotateOverlay" aria-hidden="true">
       <div class="rot-shell">
         <img
@@ -83,6 +131,26 @@
       </div>
     </div>
     <div id="app"></div>
+    <script>
+      (() => {
+        const startup = document.getElementById('tdrStartup');
+        const app = document.getElementById('app');
+        if (!startup || !app) return;
+        let done = false;
+        const finish = () => {
+          if (done) return;
+          done = true;
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            startup.classList.add('tdr-startup-hide');
+            setTimeout(() => startup.remove(), 260);
+          }));
+        };
+        const check = () => { if (app.querySelector('canvas')) finish(); };
+        const observer = new MutationObserver(check);
+        observer.observe(app, { childList:true, subtree:true });
+        check();
+      })();
+    </script>
     <script type="module" src="./src/main.js"></script>
 <!-- ========================= -->
 <!-- CAR FACTORY HTML MODAL  -->
