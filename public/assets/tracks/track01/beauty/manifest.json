@@ -1,7 +1,7 @@
 {
-  "version": 8,
+  "version": 9,
   "generator": "scripts/bake-atlantico-beauty.mjs",
-  "style": "polyhaven-four-tiles-asphalt-antirepeat-v1",
+  "style": "polyhaven-four-tiles-asphalt-softcracks-v1",
   "trackKey": "track01",
   "worldW": 2430,
   "worldH": 2000,
@@ -26,6 +26,7 @@
       "rotate180"
     ]
   },
+  "asphaltCrackDetail": 0.22,
   "outerBrightness": 0.78,
   "tiles": [
     {

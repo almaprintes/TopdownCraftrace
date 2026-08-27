@@ -2,15 +2,15 @@
 export const GENERATED_TRACK_BEAUTY_LAYERS = Object.freeze({
   "track01": Object.freeze({
     useBeautyLayer: true,
-    assetRevision: "atlantico-polyhaven-v8-antirepeat",
+    assetRevision: "atlantico-polyhaven-v9-softcracks",
     assetsAvailable: true,
     worldW: 2430, worldH: 2000, depth: 9,
     replaces: Object.freeze({ asphalt:true, grass:true, offroad:true, kerbs:false, props:false }),
     tiles: Object.freeze([
-      Object.freeze({ key:"beauty-track01-0", path:"assets/tracks/track01/beauty/track01-beauty-0.webp?v=atlantico-v8", x:0, y:0, w:1215, h:1000 }),
-      Object.freeze({ key:"beauty-track01-1", path:"assets/tracks/track01/beauty/track01-beauty-1.webp?v=atlantico-v8", x:1215, y:0, w:1215, h:1000 }),
-      Object.freeze({ key:"beauty-track01-2", path:"assets/tracks/track01/beauty/track01-beauty-2.webp?v=atlantico-v8", x:0, y:1000, w:1215, h:1000 }),
-      Object.freeze({ key:"beauty-track01-3", path:"assets/tracks/track01/beauty/track01-beauty-3.webp?v=atlantico-v8", x:1215, y:1000, w:1215, h:1000 }),
+      Object.freeze({ key:"beauty-track01-0", path:"assets/tracks/track01/beauty/track01-beauty-0.webp?v=atlantico-v9", x:0, y:0, w:1215, h:1000 }),
+      Object.freeze({ key:"beauty-track01-1", path:"assets/tracks/track01/beauty/track01-beauty-1.webp?v=atlantico-v9", x:1215, y:0, w:1215, h:1000 }),
+      Object.freeze({ key:"beauty-track01-2", path:"assets/tracks/track01/beauty/track01-beauty-2.webp?v=atlantico-v9", x:0, y:1000, w:1215, h:1000 }),
+      Object.freeze({ key:"beauty-track01-3", path:"assets/tracks/track01/beauty/track01-beauty-3.webp?v=atlantico-v9", x:1215, y:1000, w:1215, h:1000 }),
     ])
   })
 });
