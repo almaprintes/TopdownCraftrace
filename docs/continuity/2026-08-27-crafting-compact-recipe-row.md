@@ -27,9 +27,10 @@ La información textual va por encima del relleno y se ha reforzado:
 - estado inferior con alto contraste;
 - sombra oscura para evitar que el relleno reduzca legibilidad.
 
-El botón inferior permanece fijo y resume si se puede fabricar o cuántos materiales distintos faltan.
+## Redistribución vertical
+El botón `FABRICAR` / `FALTAN X MATERIALES` ya no ocupa una franja horizontal debajo de los vasos. Se ha estrechado al ancho de la columna de la pieza y colocado justo debajo de la imagen de la pieza a fabricar.
 
-Objetivo: que incluso recetas de 4–5 materiales permanezcan completamente visibles en iPhone pequeño y Android, y que el jugador entienda de un vistazo qué recurso está cerca o lejos de completarse.
+Esto aprovecha el espacio que quedaba infrautilizado bajo la pieza y permite que la fila de depósitos utilice toda la altura disponible hasta el borde inferior de la tarjeta. Resultado buscado: vasos sensiblemente más altos y legibles sin aumentar la altura total del panel.
 
 ## Implementación
 Override aislado:
@@ -50,7 +51,8 @@ Solo cambia la representación visual de `_recipeCard()`.
 Commits:
 - creación del layout compacto: `8e88584287457182d92a32cace8452ce3b5ec077`;
 - conexión al flujo activo: `43f38c39042dc1ab055243cd751e13e974ef93e2`;
-- depósitos porcentuales rojo→ámbar→verde + mejora de legibilidad: `f752ecdb8d247f388eddb2ee1992a46d08cb4aa2`.
+- depósitos porcentuales rojo→ámbar→verde + mejora de legibilidad: `f752ecdb8d247f388eddb2ee1992a46d08cb4aa2`;
+- botón de fabricación trasladado bajo la pieza y vasos extendidos verticalmente: `a4b7ae6db32e819bd991736ad426ca76c9cd41c7`.
 
 ## Validación pendiente
 Probar al menos:
@@ -64,4 +66,5 @@ Comprobar especialmente:
 - que las celdas estrechas sigan siendo legibles;
 - que los porcentajes cercanos a 50% se perciban ámbar;
 - que 100% quede lleno y verde;
-- que la imagen de la pieza conserve tamaño suficiente.
+- que la imagen de la pieza conserve tamaño suficiente;
+- que el botón bajo la pieza sea cómodo de pulsar y su texto no se comprima demasiado.
