@@ -18,8 +18,6 @@ const MATERIALS = Object.freeze({
   'dirt-road': 'public/assets/materials/dirt-road/road_damaged_2_diff_2k.jpg',
 
   // Atlántico pilot: exact Poly Haven surfaces selected by the user.
-  // They are fetched only by the offline baker; the iPhone never depends on
-  // Poly Haven at race time once the four beauty tiles have been published.
   'atlantico-asphalt': Object.freeze({
     source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg',
     brightness: 0.96
@@ -29,6 +27,22 @@ const MATERIALS = Object.freeze({
     brightness: 1.0
   }),
   'atlantico-dirt': Object.freeze({
+    source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg',
+    brightness: 0.78
+  }),
+
+  // Karting Tenerife: user-approved surface set. The original 1K/2K/4K packs
+  // were supplied for validation; the offline baker uses the 2K diffuse maps
+  // and publishes compact WebP beauty tiles for runtime.
+  'tenerife-asphalt': Object.freeze({
+    source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_diff_2k.jpg',
+    brightness: 1.0
+  }),
+  'tenerife-grass': Object.freeze({
+    source: 'https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/grass_medium_01/grass_medium_01_diff_2k.jpg',
+    brightness: 1.0
+  }),
+  'tenerife-dirt': Object.freeze({
     source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg',
     brightness: 0.78
   })
@@ -64,6 +78,13 @@ function surfacePlan(trackKey, meta) {
       trackSurface: 'atlantico-asphalt',
       shoulderSurface: 'atlantico-grass',
       outerSurface: 'atlantico-dirt'
+    };
+  }
+  if (trackKey === 'karting-tenerife') {
+    return {
+      trackSurface: 'tenerife-asphalt',
+      shoulderSurface: 'tenerife-grass',
+      outerSurface: 'tenerife-dirt'
     };
   }
 
@@ -121,9 +142,14 @@ async function loadSurfaceTextures(surfaces) {
 
 function physicalPatternScales(trackKey) {
   if (trackKey === 'track01') {
-    // Calibrated visually against the car in Atlántico. With 2K sources this
-    // gives ~205 world px per asphalt repeat, ~1126 for grass and ~983 for dirt.
+    // Calibrated visually against the car in Atlántico.
     return { road: 0.10, shoulder: 0.55, outer: 0.48 };
+  }
+  if (trackKey === 'karting-tenerife') {
+    // First calibrated pass for Karting Tenerife. Clean Asphalt is intentionally
+    // compact; Grass Medium 01 repeats more densely so its tufts do not read as
+    // giant objects from the top-down camera. Dirt keeps Atlántico's approved scale.
+    return { road: 0.11, shoulder: 0.28, outer: 0.48 };
   }
   return {
     road: trackKey === 'offroad-raven-hollow' ? 0.42 : 0.50,
@@ -229,9 +255,13 @@ async function bakeTrack(trackKey) {
   }
 
   const manifest = {
-    version: 6,
+    version: 7,
     generator: 'scripts/bake-track-visual.mjs',
-    style: trackKey === 'track01' ? 'polyhaven-calibrated-four-tiles-v1' : 'direct-svg-tiles-v2',
+    style: trackKey === 'track01'
+      ? 'polyhaven-calibrated-four-tiles-v1'
+      : trackKey === 'karting-tenerife'
+        ? 'karting-tenerife-approved-three-surfaces-v1'
+        : 'direct-svg-tiles-v2',
     trackKey,
     source: path.relative(ROOT, trackPath),
     worldW,
