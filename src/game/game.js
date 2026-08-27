@@ -3,7 +3,7 @@ import '../safe-area.css';
 import { BootScene } from './scenes/BootScene.js';
 import { MenuScene } from './scenes/MenuGameModeSnapScene.js';
 import { SeasonScene } from './scenes/SeasonScene.js';
-import { RaceScene } from './scenes/RaceRenderIsolationProfilerScene.js';
+import { RaceScene } from './scenes/RaceGraphicsPresetScene.js';
 import { installExactRuntimeBeautyPass } from './scenes/raceExactRuntimeBeautyPass.js';
 import { UpgradeShopScene } from './scenes/UpgradeWorkshopCarUnlockScene.js';
 import { GarageScene } from './scenes/GarageLazyCardsScene.js';
@@ -33,24 +33,15 @@ function videoPrefs(){
   try{
     const s=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');
     const v=s?.video||{};
-    const legacyScale=String(v.renderScale||'normal');
-    const migratedScale=legacyScale==='eco' ? .65 : legacyScale==='sharp' ? 1 : .85;
     return {
       quality:String(v.quality||'high'),
       targetFps:[30,45,60].includes(Number(v.targetFps))?Number(v.targetFps):60,
-      resolutionScale:Number.isFinite(Number(v.resolutionScale))?Number(v.resolutionScale):migratedScale,
       antialias:typeof v.antialias==='boolean'?v.antialias:String(v.quality||'high')!=='low'
     };
-  }catch{return{quality:'high',targetFps:60,resolutionScale:.85,antialias:true};}
+  }catch{return{quality:'high',targetFps:60,antialias:true};}
 }
 function isIOSDevice(){try{const ua=String(navigator?.userAgent||'');const platform=String(navigator?.platform||'');return /iPhone|iPad|iPod/i.test(ua)||(platform==='MacIntel'&&Number(navigator?.maxTouchPoints||0)>1);}catch{return false;}}
 function isLegacyIOSPhone(){try{if(!isIOSDevice())return false;const sw=Math.max(Number(screen?.width||0),Number(screen?.height||0));const sh=Math.min(Number(screen?.width||0),Number(screen?.height||0));const phoneLike=Math.max(sw,sh)<=900;const iPhone12Class=phoneLike&&Math.max(sw,sh)<=844;const crashSafe=localStorage.getItem('tdr2:forceIosSafeMode')==='1';return iPhone12Class||crashSafe;}catch{return false;}}
-function renderResolution(vp,ios,dpr,safeMode){
-  if(safeMode)return Math.min(.60,Number(vp.resolutionScale)||.60);
-  const requested=Math.max(.45,Math.min(1,Number(vp.resolutionScale)||.85));
-  const platformCap=ios?1:Math.min(Number(dpr||1),1.5);
-  return Math.min(platformCap,requested);
-}
 function localizePhaserValue(value){return localizeLegacyText(value);}
 function installCleanTextFactory(){
   const factory=Phaser.GameObjects?.GameObjectFactory?.prototype;
@@ -77,8 +68,8 @@ export function createGame(parentId='app'){
   installDomUiEnglishBridge();
   installSeasonRewardCelebrations();
   installCleanTextFactory();
-  const vp=videoPrefs();const dpr=window.devicePixelRatio||1;const ios=isIOSDevice();const safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const resolution=renderResolution(vp,ios,dpr,safeMode);const antialias=safeMode?false:!!vp.antialias;const targetFps=safeMode?30:vp.targetFps;
-  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',resolution,fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},scene:[BootScene,MenuScene,MenuAliasScene,SeasonScene,GarageScene,SettingsScene,StatsScene,GarageDetailScene,RaceScene,AdminHubScene,UpgradeShopScene,CarEditorScene,TrackGarageScene,TrackStudioScene,EnvironmentBuilderScene,TrackEditorScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:safeMode,powerPreference:'high-performance',batchSize:safeMode?1024:4096}});
+  const vp=videoPrefs();const ios=isIOSDevice();const safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=safeMode?false:!!vp.antialias;const targetFps=safeMode?30:vp.targetFps;
+  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},scene:[BootScene,MenuScene,MenuAliasScene,SeasonScene,GarageScene,SettingsScene,StatsScene,GarageDetailScene,RaceScene,AdminHubScene,UpgradeShopScene,CarEditorScene,TrackGarageScene,TrackStudioScene,EnvironmentBuilderScene,TrackEditorScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:safeMode,powerPreference:'high-performance',batchSize:safeMode?1024:4096}});
   try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}
   installOrientationViewportSettle(game);
   installRuntimeCrashDiagnostics(game);
