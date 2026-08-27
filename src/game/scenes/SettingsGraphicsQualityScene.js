@@ -61,7 +61,7 @@ export class SettingsScene extends CurrentSettingsScene {
         <section class="s2card">
           <div class="s2label">${en?'GRAPHICS PRESET':'CALIDAD GRÁFICA'}</div>
           <div class="s2desc">${en?'Controls secondary decoration and effects.':'Controla decoración y efectos secundarios.'}</div>
-          <div class="s2row" data-quality>${[['low',en?'LOW':'BAJA'],['medium',en?'MEDIUM':'MEDIA'],['high',en?'HIGH':'ALTA']].map(([key,label])=>`<button type="button" class="s2choice ${pending.quality===key?'on':''}" data-quality="${key}">${label}</button>`).join('')}</div>
+          <div class="s2row" data-quality-row>${[['low',en?'LOW':'BAJA'],['medium',en?'MEDIUM':'MEDIA'],['high',en?'HIGH':'ALTA']].map(([key,label])=>`<button type="button" class="s2choice ${pending.quality===key?'on':''}" data-quality="${key}">${label}</button>`).join('')}</div>
         </section>
         ${boolCard(en?'ANTIALIASING':'ANTIALIASING',en?'Smooths edges, but costs GPU time. Turn it off on slower devices.':'Suaviza bordes, pero consume GPU. Desactívalo en dispositivos lentos.','antialias',pending.antialias)}
         ${boolCard(en?'PARTICLES':'PARTÍCULAS',en?'Smoke, dust and other non-essential effects.':'Humo, polvo y otros efectos no esenciales.','particles',pending.particles)}
@@ -76,19 +76,22 @@ export class SettingsScene extends CurrentSettingsScene {
         </section>
       </div>`;
 
-      body.querySelectorAll('[data-scale]').forEach(btn=>btn.onclick=()=>{pending.resolutionScale=Number(btn.dataset.scale);render();});
-      body.querySelectorAll('[data-fps]').forEach(btn=>btn.onclick=()=>{pending.targetFps=Number(btn.dataset.fps);render();});
-      body.querySelectorAll('[data-quality]').forEach(btn=>btn.onclick=()=>{
+      body.querySelectorAll('button[data-scale]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();pending.resolutionScale=Number(btn.dataset.scale);render();});
+      body.querySelectorAll('button[data-fps]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();pending.targetFps=Number(btn.dataset.fps);render();});
+      body.querySelectorAll('button[data-quality]').forEach(btn=>btn.onclick=e=>{
+        e.stopPropagation();
         pending.quality=String(btn.dataset.quality);
         if(pending.quality==='low')pending.antialias=false;
         render();
       });
-      body.querySelectorAll('[data-video-bool]').forEach(btn=>btn.onclick=()=>{
+      body.querySelectorAll('button[data-video-bool]').forEach(btn=>btn.onclick=e=>{
+        e.stopPropagation();
         const key=btn.dataset.videoBool;
         pending[key]=!pending[key];
         render();
       });
-      body.querySelector('[data-apply-video]')?.addEventListener('click',()=>{
+      body.querySelector('[data-apply-video]')?.addEventListener('click',e=>{
+        e.stopPropagation();
         persistVideo(this.settings,pending);
         const apply=body.querySelector('[data-apply-video]');
         if(apply){apply.disabled=true;apply.textContent=en?'APPLYING…':'APLICANDO…';}
