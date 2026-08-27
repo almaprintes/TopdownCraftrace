@@ -4,39 +4,42 @@ function readVideo(){
   try{
     const s=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');
     const v=s?.video||{};
+    const preset=['performance','medium','high','ultra'].includes(String(v.preset))?String(v.preset):(
+      String(v.quality)==='low'?'performance':String(v.quality)==='medium'?'medium':'high'
+    );
     return {
+      preset,
       quality:['low','medium','high'].includes(String(v.quality))?String(v.quality):'high',
-      particles:typeof v.particles==='boolean'?v.particles:true,
+      particles:typeof v.particles==='boolean'?v.particles:preset!=='performance'&&preset!=='medium',
       showFPS:!!v.showFPS
     };
-  }catch{return {quality:'high',particles:true,showFPS:false};}
+  }catch{return {preset:'high',quality:'high',particles:true,showFPS:false};}
 }
 
-// Runtime graphics presets that change real render work rather than cosmetic labels.
-// LOW is intentionally aggressive for older / fill-rate-limited Android devices:
-// - 3x3 track chunk neighborhood instead of 5x5
-// - no directional lookahead chunks
-// - no asphalt overlay layer
-// - non-essential particles disabled
-// MEDIUM keeps normal chunks but removes the overlay; HIGH keeps the full scene.
+// Presets automáticos visibles al usuario:
+// PERFORMANCE: mínimo trabajo de render, 3x3 chunks, sin lookahead/overlay/partículas.
+// MEDIUM: rango normal, sin overlay ni partículas; mantiene iluminación/materiales ligeros.
+// HIGH: escena completa y efectos normales.
+// ULTRA: mismo rango seguro de HIGH, dejando activadas todas las capas y usando
+//        las variantes de material de mayor resolución donde estén disponibles.
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
     this._gfxPrefs=readVideo();
+    this._gfxPreset=this._gfxPrefs.preset;
     this._gfxQuality=this._gfxPrefs.quality;
 
     if(this.track){
-      if(this._gfxQuality==='low')this.track.cullRadiusCells=1;
-      else this.track.cullRadiusCells=2;
+      this.track.cullRadiusCells=this._gfxPreset==='performance'?1:2;
     }
 
-    if(this._gfxQuality==='low'){
+    if(this._gfxPreset==='performance'){
       this._disableDirectionalLookaheadForLow=true;
       this._forceNoOverlay=true;
       this._forceNoParticles=true;
-    }else if(this._gfxQuality==='medium'){
+    }else if(this._gfxPreset==='medium'){
       this._forceNoOverlay=true;
-      this._forceNoParticles=!this._gfxPrefs.particles;
+      this._forceNoParticles=true;
     }else{
       this._forceNoOverlay=false;
       this._forceNoParticles=!this._gfxPrefs.particles;
@@ -47,8 +50,6 @@ export class RaceScene extends CurrentRaceScene {
 
   _applyDirectionalLookahead(){
     if(this._disableDirectionalLookaheadForLow){
-      // Clean any lookahead chunks that may have been exposed before the preset
-      // was applied, then leave the base culler in sole control.
       try{
         const map=this.track?.gfxByCell;
         const base=this.track?.activeCells instanceof Set?this.track.activeCells:new Set();
@@ -69,7 +70,7 @@ export class RaceScene extends CurrentRaceScene {
 
   _enforceGraphicsPreset(){
     try{
-      if(this.track)this.track.cullRadiusCells=this._gfxQuality==='low'?1:2;
+      if(this.track)this.track.cullRadiusCells=this._gfxPreset==='performance'?1:2;
       const map=this.track?.gfxByCell;
       if(map instanceof Map && this._forceNoOverlay){
         for(const cell of map.values()){
@@ -80,8 +81,6 @@ export class RaceScene extends CurrentRaceScene {
     }catch{}
 
     if(this._forceNoParticles){
-      // We deliberately avoid destroying emitters at runtime; pausing them is
-      // cheap and reversible, and avoids GC spikes on weak phones.
       try{
         for(const child of this.children?.list||[]){
           const type=String(child?.type||'').toLowerCase();
