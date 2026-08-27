@@ -8,9 +8,9 @@
 .tdr-lobby-car-preview--interactive{pointer-events:auto;cursor:pointer;touch-action:manipulation;transition:transform 130ms ease,filter 130ms ease;}
 .tdr-lobby-car-preview--interactive:active{transform:translateX(-50%) scale(.965) translateY(2px);filter:brightness(1.13) drop-shadow(0 12px 11px rgba(0,0,0,.48));}
 
-/* Mastery is physically visible on the roof in the lobby. The badge itself has
-   a black backing so it works on white, dark or coloured liveries. */
-.tdr-lobby-mastery-badge{position:absolute;left:50%;top:45.5%;z-index:2;width:clamp(24px,3.25vw,48px);height:clamp(24px,3.25vw,48px);object-fit:contain;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55));}
+/* Mastery is anchored from the real DOM bounds of the car preview, never from
+   fixed viewport percentages. That keeps the badge on the roof on every device. */
+.tdr-lobby-mastery-badge{position:absolute;z-index:4;width:var(--mastery-size,36px);height:var(--mastery-size,36px);object-fit:contain;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.62));}
 .tdr-lobby-mastery-badge[hidden]{display:none!important}
 
 .tdr-lobby-bottom-actions--two{grid-template-columns:minmax(170px,300px) minmax(210px,360px);justify-content:center;gap:clamp(18px,6vw,90px);}
@@ -22,5 +22,5 @@
 .tdr-track-map{flex:1 1 auto;width:min(82%,230px);min-height:42px;max-height:112px;height:auto;margin:clamp(2px,.6vh,6px) auto 0;box-sizing:border-box}.tdr-track-map svg{display:block;width:100%;height:100%}
 .tdr-track-stats{flex:0 0 auto;width:100%;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(3px,.8vh,8px) clamp(8px,1.2vw,14px);align-items:start}.tdr-track-stats span{min-width:0;display:grid;gap:1px}.tdr-track-stats small{line-height:1.05;font-size:clamp(6px,min(.7vw,1.8vh),10px);overflow-wrap:anywhere}.tdr-track-stats strong{min-width:0;line-height:1.03;font-size:clamp(10px,min(1.12vw,3vh),17px);overflow-wrap:anywhere}
 
-@media(max-height:520px){.tdr-track-card{gap:3px;padding-top:12px;padding-bottom:8px}.tdr-track-card h2{margin-top:1px;font-size:clamp(15px,3.8vh,22px)}.tdr-track-map{width:min(72%,205px);min-height:34px;max-height:82px;margin-top:2px}.tdr-track-stats{gap:3px 9px}.tdr-track-stats small{font-size:clamp(6px,1.7vh,8px)}.tdr-track-stats strong{font-size:clamp(10px,2.7vh,14px)}.tdr-lobby-bottom-actions--two{gap:clamp(12px,4vw,42px);padding-left:18px;padding-right:18px}.tdr-lobby-mastery-badge{top:46%;width:clamp(22px,3vw,40px);height:clamp(22px,3vw,40px)}}
+@media(max-height:520px){.tdr-track-card{gap:3px;padding-top:12px;padding-bottom:8px}.tdr-track-card h2{margin-top:1px;font-size:clamp(15px,3.8vh,22px)}.tdr-track-map{width:min(72%,205px);min-height:34px;max-height:82px;margin-top:2px}.tdr-track-stats{gap:3px 9px}.tdr-track-stats small{font-size:clamp(6px,1.7vh,8px)}.tdr-track-stats strong{font-size:clamp(10px,2.7vh,14px)}.tdr-lobby-bottom-actions--two{gap:clamp(12px,4vw,42px);padding-left:18px;padding-right:18px}}
 @media(max-height:420px){.tdr-track-card{padding-top:10px;padding-bottom:7px}.tdr-track-card .tdr-card-kicker{font-size:7px}.tdr-track-card h2{font-size:clamp(14px,3.6vh,18px)}.tdr-track-map{min-height:28px;max-height:62px}.tdr-track-stats small{font-size:6px}.tdr-track-stats strong{font-size:clamp(9px,2.5vh,12px)}}
