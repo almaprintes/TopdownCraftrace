@@ -115,8 +115,20 @@ function hardenIosRaceControls(root){
     el.style.setProperty('-webkit-user-select','none','important');
     el.style.setProperty('-webkit-touch-callout','none','important');
     el.style.setProperty('-webkit-tap-highlight-color','transparent','important');
+    el.style.setProperty('-webkit-user-drag','none','important');
     el.style.setProperty('touch-action','none','important');
     try{el.draggable=false;}catch{}
+  }
+
+  // The pedal itself is the only touch target. Its decorative/text children must
+  // never become Safari selection/callout targets during a sustained press.
+  for(const pedal of root.querySelectorAll('.tdr-pedal')){
+    pedal.style.setProperty('pointer-events','auto','important');
+    for(const child of pedal.querySelectorAll('*')){
+      child.style.setProperty('pointer-events','none','important');
+      child.style.setProperty('-webkit-user-drag','none','important');
+      try{child.draggable=false;}catch{}
+    }
   }
 
   if(root.dataset.tdrIosTouchGuard==='1')return;
