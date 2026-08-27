@@ -5,9 +5,19 @@ export const MATERIAL_LIBRARY = Object.freeze({
     type: 'road',
     processing: 'cleanMicrodetail'
   }),
+  cleanAsphalt: Object.freeze({
+    id: 'cleanAsphalt',
+    source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_diff_2k.jpg',
+    type: 'road'
+  }),
   sparseGrass: Object.freeze({
     id: 'sparseGrass',
     source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg',
+    type: 'surface'
+  }),
+  grassMedium01: Object.freeze({
+    id: 'grassMedium01',
+    source: 'https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/grass_medium_01/grass_medium_01_diff_2k.jpg',
     type: 'surface'
   }),
   rockyTrail02: Object.freeze({
@@ -33,6 +43,21 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
     }),
     webp: Object.freeze({ quality: 86, effort: 3 }),
     previewWidth: 1215,
+    depth: 9,
+    replaces: Object.freeze({ asphalt:true, grass:true, offroad:true, kerbs:false, props:false })
+  }),
+  'karting-tenerife': Object.freeze({
+    title: 'Karting Tenerife',
+    approved: true,
+    trackPath: 'src/game/tracks/library/karting-tenerife/track.json',
+    revision: 'karting-tenerife-clean-asphalt-grass-medium01-v1',
+    materials: Object.freeze({
+      road: Object.freeze({ material: 'cleanAsphalt', cell: 225, brightness: 1.0 }),
+      shoulder: Object.freeze({ material: 'grassMedium01', repeat: 574, brightness: 1.0 }),
+      outer: Object.freeze({ material: 'rockyTrail02', repeat: 983, brightness: 0.78 })
+    }),
+    webp: Object.freeze({ quality: 86, effort: 3 }),
+    previewWidth: 1400,
     depth: 9,
     replaces: Object.freeze({ asphalt:true, grass:true, offroad:true, kerbs:false, props:false })
   })
