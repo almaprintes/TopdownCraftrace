@@ -38,7 +38,9 @@ const LAZY_SCENES={
   GarageDetailScene:{load:()=>import('./scenes/GarageDetailSpeedConsistencyScene.js'),exportName:'GarageDetailScene',warm:80},
 
   // Developer/editor destinations: never warmed during a normal player session.
-  AdminHubScene:{load:()=>import('./scenes/AdminHubScene.js'),exportName:'AdminHubScene',admin:true},
+  // Important: the lazy-map key must match the actual navigation key used by the
+  // hidden lobby shortcut and by AdminHubScene itself.
+  'admin-hub':{load:()=>import('./scenes/AdminHubScene.js'),exportName:'AdminHubScene',admin:true},
   CarEditorScene:{load:()=>import('./scenes/CarEditorSpeedConsistencyScene.js'),exportName:'CarEditorScene',admin:true},
   TrackEditorScene:{load:()=>import('./scenes/TrackEditorScene.js'),exportName:'TrackEditorScene',admin:true},
   TrackStudioScene:{load:()=>import('./scenes/TrackStudioScene.js'),exportName:'TrackStudioScene',admin:true},
