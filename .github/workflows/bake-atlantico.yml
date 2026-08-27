@@ -1,14 +1,14 @@
 name: Bake Atlantico beauty
 
 on:
+  # Atlántico is a frozen approved circuit. Rebuild only when this dedicated
+  # workflow is edited intentionally or when launched manually.
   push:
     branches: [main]
     paths:
-      - 'scripts/bake-atlantico-beauty.mjs'
-      - 'scripts/bake-track-beauty.mjs'
-      - 'scripts/track-beauty-config.mjs'
-      - 'scripts/build-track-beauty-catalog.mjs'
       - '.github/workflows/bake-atlantico.yml'
+      - 'scripts/bake-atlantico-beauty.mjs'
+      - 'src/game/tracks/library/track01/track.json'
   workflow_dispatch:
 
 permissions:
