@@ -1,5 +1,8 @@
 import { RaceScene as BakedRaceScene } from './RaceBakedAsphaltScene.js';
 
+const ATLANTICO_TRACK_KEY = 'track01';
+const POLYHAVEN_BASE = 'https://dl.polyhaven.org/file/ph-assets/Textures';
+
 function currentTrackKey(scene) {
   let stored = '';
   try { stored = localStorage.getItem('tdr2:trackKey') || ''; } catch {}
@@ -16,6 +19,17 @@ function currentVideoQuality() {
   }
 }
 
+function polyhaven1k(asset, map, ext) {
+  return `${POLYHAVEN_BASE}/${ext}/1k/${asset}/${asset}_${map}_1k.${ext}`;
+}
+
+function canUseAtlanticoLitSurfaces(scene) {
+  return currentTrackKey(scene) === ATLANTICO_TRACK_KEY
+    && currentVideoQuality() !== 'low'
+    && window.__tdrIosSafeMode !== true
+    && !!scene?.game?.renderer?.gl;
+}
+
 // Materiales world-space cargados como assets reales por Phaser.
 // La geometría, físicas y detección de superficies no consumen estos assets.
 export class RaceScene extends BakedRaceScene {
@@ -28,6 +42,7 @@ export class RaceScene extends BakedRaceScene {
 
     const quality = currentVideoQuality();
     const lowSurfaceMode = quality === 'low';
+    const trackKey = currentTrackKey(this);
 
     // En BAJA no cargamos los tres mapas 2K de superficie. Las capas base ya
     // disponen de fallbacks procedurales ligeros mediante ensure*Texture().
@@ -37,26 +52,65 @@ export class RaceScene extends BakedRaceScene {
     if (window.__tdrIosSafeMode === true || lowSurfaceMode) {
       try {
         window.__tdrLowSurfaceMode = true;
-        console.info('[TDR2][SURFACE LOW] Heavy 2K race surface textures skipped', { quality });
+        console.info('[TDR2][SURFACE LOW] Heavy race surface textures skipped', { quality });
       } catch {}
       return;
     }
 
     try { window.__tdrLowSurfaceMode = false; } catch {}
 
-    // Mantener las tres superficies 2K aprobadas en MEDIA/ALTA.
-    // IMPORTANTE: cargar SOLO los tres mapas visibles. AO/normal/roughness/etc.
-    // no participan en este renderer y no deben residir en GPU.
+    // CIRCUITO ATLÁNTICO: el piloto Light2D de asfalto vive en la escena superior.
+    // Aquí hacemos que hierba y tierra usen también el material Poly Haven elegido
+    // por el usuario con diffuse + normal OpenGL 1K. Ambas superficies compartirán
+    // la misma luz solar del piloto de Atlántico sin añadir luces extra.
+    if (trackKey === ATLANTICO_TRACK_KEY) {
+      this.load.image('grass', [
+        polyhaven1k('sparse_grass', 'diff', 'jpg'),
+        polyhaven1k('sparse_grass', 'nor_gl', 'png')
+      ]);
+      this.load.image('off', [
+        polyhaven1k('rocky_trail_02', 'diff', 'jpg'),
+        polyhaven1k('rocky_trail_02', 'nor_gl', 'png')
+      ]);
+      // Mantener el diffuse de asfalto base como fallback; RaceWorldAlignedMaterialsScene
+      // superpone el asfalto normal-mapped enmascarado de Atlántico.
+      this.load.image('asphalt', polyhaven1k('asphalt_02', 'diff', 'jpg'));
+      return;
+    }
+
+    // Resto de circuitos: superficies aprobadas anteriores.
     this.load.image('grass', 'assets/materials/grass/rocky_terrain_02_diff_2k.jpg?v=20260824-grass-rocky2k-v1');
 
     // Raven Hollow tiene una textura de tierra dedicada. Sustituye la textura off
     // genérica: no añade ninguna capa ni draw call adicional.
-    const offPath = currentTrackKey(this) === 'offroad-raven-hollow'
+    const offPath = trackKey === 'offroad-raven-hollow'
       ? 'assets/materials/dirt-road/road_damaged_2_diff_2k.jpg?v=20260824-raven-dirt-v1'
       : 'assets/materials/offroad/rocky_terrain_diff_2k.jpg?v=20260824-rocky-offroad-2k-v1';
     this.load.image('off', offPath);
 
     this.load.image('asphalt', 'assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg?v=20260824-polyhaven-clean-v1');
+  }
+
+  create(data) {
+    const result = super.create?.(data);
+
+    // El sol se habilita justo después, en RaceWorldAlignedMaterialsScene.create().
+    // Dejar ya estas dos capas en Light2D hace que empiecen a responder a él en el
+    // mismo frame. Si alguna implementación concreta de pista no expone bgGrass o
+    // bgOff, el piloto degrada limpiamente sin afectar lógica ni físicas.
+    if (canUseAtlanticoLitSurfaces(this)) {
+      try { this.bgGrass?.setPipeline?.('Light2D'); } catch {}
+      try { this.bgOff?.setPipeline?.('Light2D'); } catch {}
+      try {
+        console.info('[TDR2][ATLANTICO PBR] grass + dirt Light2D armed', {
+          grass: 'sparse_grass',
+          dirt: 'rocky_trail_02',
+          quality: currentVideoQuality()
+        });
+      } catch {}
+    }
+
+    return result;
   }
 
   // El feather grass/off queda temporalmente desactivado mientras validamos
