@@ -1,6 +1,8 @@
 import { RaceScene as CurrentRaceScene } from './RaceSurvivalHardLapCapScene.js';
 import { METERS_PER_PX } from '../cars/speedUnits.js';
-import { addCarDistance, markCarRace, recordCarTrackLap } from '../stats/playerStats.js';
+import { addCarDistance, loadPlayerStats, markCarRace, recordCarTrackLap } from '../stats/playerStats.js';
+import { masteryLevelForMeters } from '../stats/carMastery.js';
+import { showMasteryUnlockModal } from '../ui/MasteryUnlockModal.js';
 
 const FLUSH_EVERY_MS=3500;
 
@@ -14,19 +16,17 @@ export class RaceScene extends CurrentRaceScene{
     this._mileageLastFlush=performance.now();
     this._mileageRaceMarked=false;
     this._statsSeenHistoryLength=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
+    this._masteryCelebrating=false;
     this.events.once('shutdown',()=>this._flushMileage(true));
     return result;
   }
 
   update(time,delta){
     super.update?.(time,delta);
-    this._sampleMileage(delta);
+    if(!this._masteryCelebrating)this._sampleMileage(delta);
     this._captureNewLapStats();
   }
 
-  // Capture immediately at the same authoritative hook that creates a completed
-  // time-trial lap. This avoids depending on the next update frame (the scene may
-  // pause/open a report/exit immediately after the finish crossing).
   _completedLapCheck(now){
     const before=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
     const result=super._completedLapCheck(now);
@@ -67,9 +67,28 @@ export class RaceScene extends CurrentRaceScene{
     if(performance.now()-this._mileageLastFlush>=FLUSH_EVERY_MS)this._flushMileage(false);
   }
 
+  _showMasteryCelebration(level,totalMeters){
+    if(this._masteryCelebrating||!level)return;
+    this._masteryCelebrating=true;
+    try{this.physics?.world?.pause?.();}catch{}
+    this.time?.delayedCall?.(50,()=>this._installMasteryRoofWheel?.());
+    showMasteryUnlockModal({scene:this,carId:this._mileageCarId,meters:totalMeters,level,onClose:()=>{
+      this._masteryCelebrating=false;
+      try{this.physics?.world?.resume?.();}catch{}
+      this._mileagePrev=null;
+    }});
+  }
+
   _flushMileage(final=false){
     const meters=Math.max(0,Number(this._mileagePendingMeters)||0);
-    if(meters>0&&this._mileageCarId)addCarDistance(this._mileageCarId,meters,this._mileageTrackId);
+    if(meters>0&&this._mileageCarId){
+      const beforeMeters=Number(loadPlayerStats()?.cars?.[this._mileageCarId]?.meters)||0;
+      const beforeLevel=masteryLevelForMeters(beforeMeters);
+      const state=addCarDistance(this._mileageCarId,meters,this._mileageTrackId);
+      const afterMeters=Number(state?.cars?.[this._mileageCarId]?.meters)||beforeMeters+meters;
+      const afterLevel=masteryLevelForMeters(afterMeters);
+      if(!final&&afterLevel>beforeLevel)this._showMasteryCelebration(afterLevel,afterMeters);
+    }
     this._mileagePendingMeters=0;
     this._mileageLastFlush=performance.now();
     if(final){this._mileagePrev=null;this._captureNewLapStats();}
