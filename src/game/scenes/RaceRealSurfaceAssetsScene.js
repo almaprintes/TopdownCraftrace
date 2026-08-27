@@ -9,23 +9,32 @@ function currentTrackKey(scene) {
   return String(scene?.trackKey || stored || '').trim().toLowerCase();
 }
 
-function currentVideoQuality() {
+function currentVideoPrefs() {
   try {
     const settings = JSON.parse(localStorage.getItem('tdr2:settings') || '{}');
-    const quality = String(settings?.video?.quality || 'high').toLowerCase();
-    return ['low', 'medium', 'high'].includes(quality) ? quality : 'high';
+    const video=settings?.video||{};
+    const quality=String(video.quality||'high').toLowerCase();
+    const preset=['performance','medium','high','ultra'].includes(String(video.preset))
+      ? String(video.preset)
+      : quality==='low'?'performance':quality==='medium'?'medium':'high';
+    const surfaceResolution=['1k','2k','4k'].includes(String(video.surfaceResolution))
+      ? String(video.surfaceResolution)
+      : preset==='ultra'?'4k':preset==='high'?'2k':'1k';
+    return {quality:['low','medium','high'].includes(quality)?quality:'high',preset,surfaceResolution,lighting:video.lighting!==false};
   } catch {
-    return 'high';
+    return {quality:'high',preset:'high',surfaceResolution:'2k',lighting:true};
   }
 }
 
-function polyhaven1k(asset, map, ext) {
-  return `${POLYHAVEN_BASE}/${ext}/1k/${asset}/${asset}_${map}_1k.${ext}`;
+function polyhaven(asset, map, ext, resolution) {
+  return `${POLYHAVEN_BASE}/${ext}/${resolution}/${asset}/${asset}_${map}_${resolution}.${ext}`;
 }
 
 function canUseAtlanticoLitSurfaces(scene) {
+  const prefs=currentVideoPrefs();
   return currentTrackKey(scene) === ATLANTICO_TRACK_KEY
-    && currentVideoQuality() !== 'low'
+    && prefs.preset !== 'performance'
+    && prefs.lighting
     && window.__tdrIosSafeMode !== true
     && !!scene?.game?.renderer?.gl;
 }
@@ -40,49 +49,41 @@ export class RaceScene extends BakedRaceScene {
     try { if (this.textures.exists('off')) this.textures.remove('off'); } catch {}
     try { if (this.textures.exists('asphalt')) this.textures.remove('asphalt'); } catch {}
 
-    const quality = currentVideoQuality();
-    const lowSurfaceMode = quality === 'low';
+    const prefs = currentVideoPrefs();
+    const lowSurfaceMode = prefs.preset === 'performance';
     const trackKey = currentTrackKey(this);
 
-    // En BAJA no cargamos los tres mapas 2K de superficie. Las capas base ya
-    // disponen de fallbacks procedurales ligeros mediante ensure*Texture().
-    // Esto reduce de forma real memoria de textura, ancho de banda y muestreo GPU,
-    // sin tocar geometría, físicas, colisiones ni cronometraje.
-    // También conserva el safe mode histórico de iOS.
+    // RENDIMIENTO conserva los fallbacks procedurales ligeros. No se decodifican
+    // mapas pesados ni normales; es la ruta destinada a móviles antiguos/calientes.
     if (window.__tdrIosSafeMode === true || lowSurfaceMode) {
       try {
         window.__tdrLowSurfaceMode = true;
-        console.info('[TDR2][SURFACE LOW] Heavy race surface textures skipped', { quality });
+        console.info('[TDR2][SURFACE PERFORMANCE] Heavy race surface textures skipped', { preset:prefs.preset });
       } catch {}
       return;
     }
 
     try { window.__tdrLowSurfaceMode = false; } catch {}
 
-    // CIRCUITO ATLÁNTICO: el piloto Light2D de asfalto vive en la escena superior.
-    // Aquí hacemos que hierba y tierra usen también el material Poly Haven elegido
-    // por el usuario con diffuse + normal OpenGL 1K. Ambas superficies compartirán
-    // la misma luz solar del piloto de Atlántico sin añadir luces extra.
+    // CIRCUITO ATLÁNTICO usa las tres superficies Poly Haven elegidas por el usuario.
+    // MEDIO=1K, ALTA=2K, ULTRA=4K. Diffuse + normal OpenGL viajan como una textura
+    // Phaser cuando la iluminación está activa; si se desactiva, solo cargamos diffuse.
     if (trackKey === ATLANTICO_TRACK_KEY) {
-      this.load.image('grass', [
-        polyhaven1k('sparse_grass', 'diff', 'jpg'),
-        polyhaven1k('sparse_grass', 'nor_gl', 'png')
-      ]);
-      this.load.image('off', [
-        polyhaven1k('rocky_trail_02', 'diff', 'jpg'),
-        polyhaven1k('rocky_trail_02', 'nor_gl', 'png')
-      ]);
-      // Mantener el diffuse de asfalto base como fallback; RaceWorldAlignedMaterialsScene
-      // superpone el asfalto normal-mapped enmascarado de Atlántico.
-      this.load.image('asphalt', polyhaven1k('asphalt_02', 'diff', 'jpg'));
+      const r=prefs.surfaceResolution;
+      const grassDiff=polyhaven('sparse_grass','diff','jpg',r);
+      const dirtDiff=polyhaven('rocky_trail_02','diff','jpg',r);
+      const grassNormal=polyhaven('sparse_grass','nor_gl','png',r);
+      const dirtNormal=polyhaven('rocky_trail_02','nor_gl','png',r);
+      this.load.image('grass', prefs.lighting ? [grassDiff,grassNormal] : grassDiff);
+      this.load.image('off', prefs.lighting ? [dirtDiff,dirtNormal] : dirtDiff);
+      this.load.image('asphalt', polyhaven('asphalt_02','diff','jpg',r));
       return;
     }
 
-    // Resto de circuitos: superficies aprobadas anteriores.
+    // Resto de circuitos: superficies aprobadas anteriores. El preset sigue afectando
+    // a chunks, overlay, partículas, AA y FPS aunque todavía no haya variantes 1/2/4K.
     this.load.image('grass', 'assets/materials/grass/rocky_terrain_02_diff_2k.jpg?v=20260824-grass-rocky2k-v1');
 
-    // Raven Hollow tiene una textura de tierra dedicada. Sustituye la textura off
-    // genérica: no añade ninguna capa ni draw call adicional.
     const offPath = trackKey === 'offroad-raven-hollow'
       ? 'assets/materials/dirt-road/road_damaged_2_diff_2k.jpg?v=20260824-raven-dirt-v1'
       : 'assets/materials/offroad/rocky_terrain_diff_2k.jpg?v=20260824-rocky-offroad-2k-v1';
@@ -94,28 +95,22 @@ export class RaceScene extends BakedRaceScene {
   create(data) {
     const result = super.create?.(data);
 
-    // El sol se habilita justo después, en RaceWorldAlignedMaterialsScene.create().
-    // Dejar ya estas dos capas en Light2D hace que empiecen a responder a él en el
-    // mismo frame. Si alguna implementación concreta de pista no expone bgGrass o
-    // bgOff, el piloto degrada limpiamente sin afectar lógica ni físicas.
     if (canUseAtlanticoLitSurfaces(this)) {
       try { this.bgGrass?.setPipeline?.('Light2D'); } catch {}
       try { this.bgOff?.setPipeline?.('Light2D'); } catch {}
       try {
+        const prefs=currentVideoPrefs();
         console.info('[TDR2][ATLANTICO PBR] grass + dirt Light2D armed', {
           grass: 'sparse_grass',
           dirt: 'rocky_trail_02',
-          quality: currentVideoQuality()
+          preset:prefs.preset,
+          resolution:prefs.surfaceResolution
         });
       } catch {}
     }
 
     return result;
   }
-
-  // El feather grass/off queda temporalmente desactivado mientras validamos
-  // estabilidad y coste de render. Primero aseguramos que la carrera sea estable;
-  // después recuperaremos transiciones con una técnica barata si procede.
 
   ensureBgTexture() {
     if (this.textures.exists('grass')) return;
