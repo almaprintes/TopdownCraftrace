@@ -50,7 +50,7 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
     title: 'Karting Tenerife',
     approved: false,
     trackPath: 'src/game/tracks/library/karting-tenerife/track.json',
-    revision: 'karting-tenerife-clean-asphalt-sparse-grass-v1',
+    revision: 'karting-tenerife-clean-asphalt-sparse-grass-v2-continuous-ribbon',
     materials: Object.freeze({
       road: Object.freeze({ material: 'cleanAsphalt', cell: 225, macroGrid: 4, brightness: 1.0 }),
       // Validated from the supplied 1K/2K/4K packs: this is a true seamless
