@@ -3,6 +3,29 @@ import { getLanguage } from '../i18n/index.js';
 
 const STORAGE_KEY='tdr2:settings';
 
+const PRESETS=Object.freeze({
+  performance:Object.freeze({
+    quality:'low',targetFps:30,antialias:false,particles:false,surfaceResolution:'1k',lighting:false,
+    es:'Prioriza estabilidad y batería. 30 FPS, superficies ligeras, sin iluminación avanzada ni partículas.',
+    en:'Prioritizes stability and battery life. 30 FPS, light surfaces, no advanced lighting or particles.'
+  }),
+  medium:Object.freeze({
+    quality:'medium',targetFps:45,antialias:true,particles:false,surfaceResolution:'1k',lighting:true,
+    es:'Equilibrado. 45 FPS, antialiasing e iluminación de materiales con coste contenido.',
+    en:'Balanced. 45 FPS, antialiasing and material lighting at a controlled cost.'
+  }),
+  high:Object.freeze({
+    quality:'high',targetFps:60,antialias:true,particles:true,surfaceResolution:'2k',lighting:true,
+    es:'Alta calidad. 60 FPS, superficies 2K, iluminación de materiales y efectos completos.',
+    en:'High quality. 60 FPS, 2K surfaces, material lighting and full effects.'
+  }),
+  ultra:Object.freeze({
+    quality:'high',targetFps:60,antialias:true,particles:true,surfaceResolution:'4k',lighting:true,ultra:true,
+    es:'Máxima calidad. 60 FPS, superficies hasta 4K y todos los efectos disponibles. Recomendado para móviles potentes.',
+    en:'Maximum quality. 60 FPS, surfaces up to 4K and every available effect. Recommended for powerful phones.'
+  })
+});
+
 function save(settings){
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify(settings));}catch{}
 }
@@ -19,8 +42,18 @@ function persistVideo(settings,video){
   }
 }
 
-function boolCard(label,desc,key,value){
-  return `<section class="s2card"><div class="s2label">${label}</div><div class="s2desc">${desc}</div><div class="s2row"><button type="button" class="s2choice ${value?'on':''}" data-video-bool="${key}">${value?'ON':'OFF'}</button></div></section>`;
+function inferPreset(video){
+  const explicit=String(video?.preset||'').toLowerCase();
+  if(PRESETS[explicit])return explicit;
+  const q=String(video?.quality||'high').toLowerCase();
+  if(q==='low')return 'performance';
+  if(q==='medium')return 'medium';
+  return 'high';
+}
+
+function appliedVideoFor(preset,showFPS){
+  const cfg=PRESETS[preset]||PRESETS.high;
+  return {...cfg,preset,showFPS:!!showFPS};
 }
 
 export class SettingsScene extends CurrentSettingsScene {
@@ -31,72 +64,63 @@ export class SettingsScene extends CurrentSettingsScene {
     const body=this.root.querySelector('.s2body');
     if(!body)return;
     const v=this.settings.video||(this.settings.video={});
-    if(typeof v.antialias!=='boolean')v.antialias=v.quality!=='low';
-    if(![30,45,60].includes(Number(v.targetFps)))v.targetFps=60;
-    if(typeof v.particles!=='boolean')v.particles=true;
-    if(typeof v.showFPS!=='boolean')v.showFPS=false;
-    if(!['low','medium','high'].includes(String(v.quality)))v.quality='high';
-
     const en=getLanguage()==='en';
-    const fps=[30,45,60];
-    const pending={...v};
+    let selected=inferPreset(v);
+    let showFPS=!!v.showFPS;
 
-    const qualityDesc=()=>{
-      if(pending.quality==='low')return en
-        ?'LOW: 3×3 track chunks, no forward lookahead, no asphalt overlay, particles off.'
-        :'BAJA: 3×3 chunks de pista, sin precarga hacia delante, sin overlay de asfalto y partículas desactivadas.';
-      if(pending.quality==='medium')return en
-        ?'MEDIUM: normal track range, no asphalt overlay. Balanced option.'
-        :'MEDIA: alcance normal de pista, sin overlay de asfalto. Opción equilibrada.';
-      return en
-        ?'HIGH: full track range, lookahead and all visual layers.'
-        :'ALTA: alcance completo de pista, precarga hacia delante y todas las capas visuales.';
+    const labels={
+      performance:en?'PERFORMANCE':'RENDIMIENTO',
+      medium:en?'MEDIUM':'MEDIO',
+      high:en?'HIGH QUALITY':'ALTA CALIDAD',
+      ultra:'ULTRA'
     };
 
     const render=()=>{
+      const cfg=PRESETS[selected];
       body.innerHTML=`<div class="s2grid">
         <section class="s2card wide">
-          <div class="s2label">${en?'GRAPHICS PRESET':'CALIDAD GRÁFICA'}</div>
-          <div class="s2desc">${qualityDesc()}</div>
-          <div class="s2row" data-quality-row>${[['low',en?'LOW':'BAJA'],['medium',en?'MEDIUM':'MEDIA'],['high',en?'HIGH':'ALTA']].map(([key,label])=>`<button type="button" class="s2choice ${pending.quality===key?'on':''}" data-quality="${key}">${label}</button>`).join('')}</div>
+          <div class="s2label">${en?'GRAPHICS QUALITY':'CALIDAD GRÁFICA'}</div>
+          <div class="s2desc">${en?'Choose one mode. The game configures the technical options automatically.':'Elige un modo. El juego configura automáticamente todas las opciones técnicas.'}</div>
+          <div class="s2row" data-preset-row>${Object.keys(PRESETS).map(key=>`<button type="button" class="s2choice ${selected===key?'on':''}" data-preset="${key}">${labels[key]}</button>`).join('')}</div>
         </section>
-        <section class="s2card">
-          <div class="s2label">${en?'TARGET FPS':'FPS OBJETIVO'}</div>
-          <div class="s2desc">${en?'Caps the game loop. It does not reduce render cost by itself.':'Limita el bucle del juego. Por sí solo no reduce el coste de renderizado.'}</div>
-          <div class="s2row" data-target-fps>${fps.map(val=>`<button type="button" class="s2choice ${Number(pending.targetFps)===val?'on':''}" data-fps="${val}">${val}</button>`).join('')}</div>
-        </section>
-        ${boolCard(en?'ANTIALIASING':'ANTIALIASING',en?'Smooths edges but costs GPU time. LOW turns it off automatically.':'Suaviza bordes pero consume GPU. BAJA lo desactiva automáticamente.','antialias',pending.antialias)}
-        ${boolCard(en?'PARTICLES':'PARTÍCULAS',en?'Smoke, dust and other non-essential effects. LOW turns them off automatically.':'Humo, polvo y otros efectos no esenciales. BAJA los desactiva automáticamente.','particles',pending.particles)}
-        ${boolCard(en?'PERFORMANCE HUD':'HUD DE RENDIMIENTO',en?'Shows FPS and diagnostic timings. Keep it off for normal play.':'Muestra FPS y tiempos de diagnóstico. Déjalo apagado para jugar normalmente.','showFPS',pending.showFPS)}
+
         <section class="s2card wide">
-          <div class="s2label">${en?'SELECTED MODE':'MODO SELECCIONADO'}</div>
-          <div class="s2row" style="justify-content:space-between;gap:14px">
-            <span class="s2val">${String(pending.quality).toUpperCase()} · ${pending.antialias?'AA ON':'AA OFF'} · ${pending.particles?'PARTICLES ON':'PARTICLES OFF'} · ${Number(pending.targetFps)} FPS</span>
-            <button type="button" class="s2apply" data-apply-video>${en?'APPLY CHANGES':'APLICAR CAMBIOS'}</button>
+          <div class="s2label">${labels[selected]}</div>
+          <div class="s2desc">${en?cfg.en:cfg.es}</div>
+          <div class="s2row" style="gap:18px;flex-wrap:wrap">
+            <span class="s2val">${cfg.targetFps} FPS</span>
+            <span class="s2val">${String(cfg.surfaceResolution).toUpperCase()}</span>
+            <span class="s2val">AA ${cfg.antialias?'ON':'OFF'}</span>
+            <span class="s2val">${en?'LIGHTING':'LUCES'} ${cfg.lighting?'ON':'OFF'}</span>
+            <span class="s2val">${en?'EFFECTS':'EFECTOS'} ${cfg.particles?'ON':'OFF'}</span>
           </div>
-          <div class="s2desc">${en?'Only settings that really change the renderer are shown here. The game reloads once when you apply them.':'Aquí solo mostramos ajustes que cambian realmente el renderizado. El juego se reinicia una sola vez al aplicarlos.'}</div>
+        </section>
+
+        <section class="s2card">
+          <div class="s2label">${en?'PERFORMANCE HUD':'HUD DE RENDIMIENTO'}</div>
+          <div class="s2desc">${en?'Diagnostic FPS and timings. It does not change graphics quality.':'FPS y tiempos de diagnóstico. No cambia la calidad gráfica.'}</div>
+          <div class="s2row"><button type="button" class="s2choice ${showFPS?'on':''}" data-fps-hud>${showFPS?'ON':'OFF'}</button></div>
+        </section>
+
+        <section class="s2card wide">
+          <div class="s2row" style="justify-content:flex-end">
+            <button type="button" class="s2apply" data-apply-video>${en?'APPLY':'APLICAR'}</button>
+          </div>
+          <div class="s2desc">${en?'The game reloads once so the selected preset is applied everywhere.':'El juego se reinicia una sola vez para aplicar el preset en todo el renderizado.'}</div>
         </section>
       </div>`;
 
-      body.querySelectorAll('button[data-fps]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();pending.targetFps=Number(btn.dataset.fps);render();});
-      body.querySelectorAll('button[data-quality]').forEach(btn=>btn.onclick=e=>{
+      body.querySelectorAll('button[data-preset]').forEach(btn=>btn.onclick=e=>{
         e.stopPropagation();
-        pending.quality=String(btn.dataset.quality);
-        if(pending.quality==='low'){
-          pending.antialias=false;
-          pending.particles=false;
-        }
+        selected=String(btn.dataset.preset);
         render();
       });
-      body.querySelectorAll('button[data-video-bool]').forEach(btn=>btn.onclick=e=>{
-        e.stopPropagation();
-        const key=btn.dataset.videoBool;
-        pending[key]=!pending[key];
-        render();
+      body.querySelector('[data-fps-hud]')?.addEventListener('click',e=>{
+        e.stopPropagation();showFPS=!showFPS;render();
       });
       body.querySelector('[data-apply-video]')?.addEventListener('click',e=>{
         e.stopPropagation();
-        persistVideo(this.settings,pending);
+        persistVideo(this.settings,appliedVideoFor(selected,showFPS));
         const apply=body.querySelector('[data-apply-video]');
         if(apply){apply.disabled=true;apply.textContent=en?'APPLYING…':'APLICANDO…';}
         window.setTimeout(()=>window.location.reload(),220);
