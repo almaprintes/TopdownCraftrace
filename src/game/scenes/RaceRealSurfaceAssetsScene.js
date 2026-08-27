@@ -6,6 +6,16 @@ function currentTrackKey(scene) {
   return String(scene?.trackKey || stored || '').trim().toLowerCase();
 }
 
+function currentVideoQuality() {
+  try {
+    const settings = JSON.parse(localStorage.getItem('tdr2:settings') || '{}');
+    const quality = String(settings?.video?.quality || 'high').toLowerCase();
+    return ['low', 'medium', 'high'].includes(quality) ? quality : 'high';
+  } catch {
+    return 'high';
+  }
+}
+
 // Materiales world-space cargados como assets reales por Phaser.
 // La geometría, físicas y detección de superficies no consumen estos assets.
 export class RaceScene extends BakedRaceScene {
@@ -16,21 +26,27 @@ export class RaceScene extends BakedRaceScene {
     try { if (this.textures.exists('off')) this.textures.remove('off'); } catch {}
     try { if (this.textures.exists('asphalt')) this.textures.remove('asphalt'); } catch {}
 
-    // DIAGNÓSTICO A/B iOS: en modo seguro no cargamos los tres mapas 2K (~10 MB
-    // comprimidos / decenas de MB en GPU). Las capas anteriores conservan sus
-    // fallbacks ligeros mediante ensure*Texture(), por lo que geometría, físicas,
-    // colisiones y detección de superficies permanecen intactas.
-    //
-    // Dispositivos fuera de safe mode siguen exactamente con el renderer aprobado.
-    if (window.__tdrIosSafeMode === true) {
-      try { console.info('[TDR2][SAFE] Heavy 2K race surface textures skipped'); } catch {}
+    const quality = currentVideoQuality();
+    const lowSurfaceMode = quality === 'low';
+
+    // En BAJA no cargamos los tres mapas 2K de superficie. Las capas base ya
+    // disponen de fallbacks procedurales ligeros mediante ensure*Texture().
+    // Esto reduce de forma real memoria de textura, ancho de banda y muestreo GPU,
+    // sin tocar geometría, físicas, colisiones ni cronometraje.
+    // También conserva el safe mode histórico de iOS.
+    if (window.__tdrIosSafeMode === true || lowSurfaceMode) {
+      try {
+        window.__tdrLowSurfaceMode = true;
+        console.info('[TDR2][SURFACE LOW] Heavy 2K race surface textures skipped', { quality });
+      } catch {}
       return;
     }
 
-    // Mantener las tres superficies existentes del renderer: grass / asphalt / off.
-    // IMPORTANTE iOS: cargar SOLO los tres mapas visibles. Los antiguos AO/normal/
-    // roughness/height/metalness no participan en el render y mantenerlos residentes
-    // podía consumir decenas de MB extra de memoria gráfica en Safari/WebKit.
+    try { window.__tdrLowSurfaceMode = false; } catch {}
+
+    // Mantener las tres superficies 2K aprobadas en MEDIA/ALTA.
+    // IMPORTANTE: cargar SOLO los tres mapas visibles. AO/normal/roughness/etc.
+    // no participan en este renderer y no deben residir en GPU.
     this.load.image('grass', 'assets/materials/grass/rocky_terrain_02_diff_2k.jpg?v=20260824-grass-rocky2k-v1');
 
     // Raven Hollow tiene una textura de tierra dedicada. Sustituye la textura off
@@ -44,8 +60,8 @@ export class RaceScene extends BakedRaceScene {
   }
 
   // El feather grass/off queda temporalmente desactivado mientras validamos
-  // estabilidad en iPhone 12. Primero aseguramos que la carrera no dispara
-  // el proceso WebKit; después recuperaremos la transición con una técnica barata.
+  // estabilidad y coste de render. Primero aseguramos que la carrera sea estable;
+  // después recuperaremos transiciones con una técnica barata si procede.
 
   ensureBgTexture() {
     if (this.textures.exists('grass')) return;
