@@ -7,6 +7,20 @@ function save(settings){
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify(settings));}catch{}
 }
 
+function persistVideoValue(settings,key,value){
+  try{
+    const current=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+    const next={...current,video:{...(current.video||{}),...(settings?.video||{}),[key]:value}};
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(next));
+    if(settings){settings.video={...(settings.video||{}),[key]:value};}
+    return true;
+  }catch{
+    if(settings?.video)settings.video[key]=value;
+    save(settings);
+    return false;
+  }
+}
+
 function boolCard(label,desc,key,value){
   return `<section class="s2card"><div class="s2label">${label}</div><div class="s2desc">${desc}</div><div class="s2row"><button type="button" class="s2choice ${value?'on':''}" data-video-bool="${key}">${value?'ON':'OFF'}</button></div></section>`;
 }
@@ -54,18 +68,31 @@ export class SettingsScene extends CurrentSettingsScene {
       <section class="s2card wide">
         <div class="s2label">${en?'ACTIVE RENDER MODE':'MODO DE RENDER ACTIVO'}</div>
         <div class="s2desc">${en?'Changes to resolution, antialiasing or target FPS reload the game so they really affect the renderer.':'Los cambios de resolución, antialiasing o FPS reinician el juego para que afecten realmente al renderer.'}</div>
-        <div class="s2row"><span class="s2val">${Math.round(Number(v.resolutionScale)*100)}% · ${v.antialias?'AA ON':'AA OFF'} · ${Number(v.targetFps)} FPS</span></div>
+        <div class="s2row"><span class="s2val">${String(v.quality).toUpperCase()} · ${Math.round(Number(v.resolutionScale)*100)}% · ${v.antialias?'AA ON':'AA OFF'} · ${Number(v.targetFps)} FPS</span></div>
       </section>
     </div>`;
 
-    const reload=()=>{save(this.settings);window.setTimeout(()=>window.location.reload(),60);};
-    body.querySelectorAll('[data-scale]').forEach(btn=>btn.onclick=()=>{v.resolutionScale=Number(btn.dataset.scale);reload();});
-    body.querySelectorAll('[data-fps]').forEach(btn=>btn.onclick=()=>{v.targetFps=Number(btn.dataset.fps);reload();});
-    body.querySelectorAll('[data-quality]').forEach(btn=>btn.onclick=()=>{v.quality=btn.dataset.quality;reload();});
+    const reloadKey=(key,value)=>{
+      persistVideoValue(this.settings,key,value);
+      window.setTimeout(()=>window.location.reload(),120);
+    };
+    body.querySelectorAll('[data-scale]').forEach(btn=>btn.onclick=()=>reloadKey('resolutionScale',Number(btn.dataset.scale)));
+    body.querySelectorAll('[data-fps]').forEach(btn=>btn.onclick=()=>reloadKey('targetFps',Number(btn.dataset.fps)));
+    body.querySelectorAll('[data-quality]').forEach(btn=>btn.onclick=()=>{
+      const quality=String(btn.dataset.quality);
+      persistVideoValue(this.settings,'quality',quality);
+      if(quality==='low')persistVideoValue(this.settings,'antialias',false);
+      window.setTimeout(()=>window.location.reload(),120);
+    });
     body.querySelectorAll('[data-video-bool]').forEach(btn=>btn.onclick=()=>{
-      const key=btn.dataset.videoBool;v[key]=!v[key];
-      if(key==='showFPS'){save(this.settings);this.scene.restart();return;}
-      reload();
+      const key=btn.dataset.videoBool;
+      const value=!v[key];
+      if(key==='showFPS'){
+        persistVideoValue(this.settings,key,value);
+        this.scene.restart();
+        return;
+      }
+      reloadKey(key,value);
     });
     save(this.settings);
   }
