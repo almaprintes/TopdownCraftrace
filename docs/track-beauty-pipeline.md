@@ -30,7 +30,21 @@ Antes de tocar el circuito se decide expresamente:
 
 No se hace bake definitivo con materiales provisionales.
 
-### 2. Conservar la fuente original
+### 2. Preflight obligatorio del diffuse/albedo
+
+**No basta con el nombre o la miniatura del asset.** Antes de registrarlo como superficie hay que abrir el archivo `diffuse/albedo` real que utilizará el baker y comprobar visualmente que sea una **textura 2D de suelo repetible**.
+
+Debe rechazarse como superficie plana cualquier archivo que sea:
+
+- atlas UV de un modelo 3D;
+- sprite sheet;
+- fotografía con objeto aislado o grandes zonas transparentes/negras;
+- mapa no tileable cuya costura sea evidente;
+- mapa de normal, roughness, displacement, alpha u otro canal confundido con albedo.
+
+Caso real detectado: `Grass Medium 01` de Poly Haven es un **modelo 3D de matas de hierba**. Su `grass_medium_01_diff_2k.jpg` es un atlas UV de hojas/mechones sobre fondo negro, no una textura de terreno. Por tanto **no es válido para el beauty layer plano** aunque el nombre diga “grass”. El bake de Karting Tenerife se pausó antes de publicarlo.
+
+### 3. Conservar la fuente original
 
 Si el material se recibe en 1K / 2K / 4K, esas versiones son **fuentes de trabajo**, no recursos de runtime.
 
@@ -38,7 +52,7 @@ Para el bake normal se utiliza el mapa `diffuse/albedo` de **2K** salvo que exis
 
 El objetivo es que la apariencia sea la misma en todos los dispositivos; los presets gráficos no deben sustituir una textura por otra con aspecto diferente.
 
-### 3. Calibrar escala física
+### 4. Calibrar escala física
 
 Nunca se usa la escala por defecto del archivo descargado.
 
@@ -52,7 +66,7 @@ Cada superficie se calibra visualmente contra:
 
 La configuración resultante queda fijada por circuito. Atlántico es la referencia de tamaño visual, no una plantilla numérica que se copie automáticamente.
 
-### 4. Construir la geometría desde el trazado real
+### 5. Construir la geometría desde el trazado real
 
 El baker usa `TrackBuilder` y el `track.json` del circuito para obtener:
 
@@ -63,7 +77,7 @@ El baker usa `TrackBuilder` y el `track.json` del circuito para obtener:
 
 No se redibuja el circuito manualmente para el bake.
 
-### 5. Componer offline
+### 6. Componer offline
 
 Las superficies se aplican en coordenadas de mundo y se rasterizan offline.
 
@@ -75,7 +89,7 @@ Orden visual:
 
 Pianos y props permanecen fuera del beauty layer salvo decisión explícita posterior.
 
-### 6. Dividir en cuatro grandes superficies
+### 7. Dividir en cuatro grandes superficies
 
 El mundo completo se divide en cuatro cuadrantes:
 
@@ -86,7 +100,7 @@ El mundo completo se divide en cuatro cuadrantes:
 
 Cada cuadrante genera un WebP independiente. No aumentar el número de tiles salvo evidencia de que un circuito concreto supera límites de textura del dispositivo.
 
-### 7. Generar preview y manifest
+### 8. Generar preview y manifest
 
 Cada bake debe producir:
 
@@ -106,7 +120,7 @@ El manifest debe registrar como mínimo:
 - geometría base;
 - coordenadas de los cuatro tiles.
 
-### 8. Publicar de forma AISLADA por circuito
+### 9. Publicar de forma AISLADA por circuito
 
 **Nunca se ejecuta `bake -- all` para implantar o ajustar un circuito individual.**
 
@@ -120,11 +134,11 @@ Después de publicar esos assets se ejecuta `scripts/build-track-beauty-catalog.
 
 Como salvaguarda, el workflow debe verificar que los circuitos previamente congelados siguen presentes en el catálogo antes de hacer commit.
 
-### 9. Runtime
+### 10. Runtime
 
 El runtime solo consume los cuatro WebP publicados y el catálogo generado. No debe depender de Poly Haven, ZIPs del usuario ni fuentes externas durante la carrera.
 
-### 10. Validar en dispositivo real
+### 11. Validar en dispositivo real
 
 No se considera aprobado por ver correctamente el preview.
 
@@ -139,7 +153,7 @@ Validación mínima:
 - moaré;
 - FPS y tirones.
 
-### 11. Congelar el circuito
+### 12. Congelar el circuito
 
 Cuando el usuario lo aprueba:
 
@@ -164,7 +178,8 @@ Cuando el usuario lo aprueba:
 - separación entre beauty layer, pianos y props;
 - runtime sin dependencia de las fuentes originales;
 - validación en móvil antes de congelar;
-- aislamiento del bake por circuito.
+- aislamiento del bake por circuito;
+- preflight visual del diffuse/albedo real.
 
 ## Circuito Atlántico
 
@@ -176,33 +191,33 @@ Sus materiales, WebP publicados, manifest y escalas permanecen congelados hasta 
 
 Primer circuito que replica formalmente este pipeline tras Atlántico.
 
-Materiales seleccionados por el usuario:
+Materiales confirmados:
 
 - `road`: Clean Asphalt (`clean_asphalt_diff_2k.jpg` para el bake offline);
-- `shoulder`: Grass Medium 01 (`grass_medium_01_diff_2k.jpg`, variante normal, no `dry`);
 - `outer`: la misma tierra aprobada de Atlántico (`rocky_trail_02`, con brillo y escala aprobados).
 
-Primera calibración de prueba:
+`shoulder` está **pendiente de un material de hierba 2D tileable**. El inicialmente elegido `Grass Medium 01` fue descartado tras abrir su diffuse real: pertenece a un modelo 3D y es un atlas UV, por lo que produciría manchas y fragmentos negros al repetirse como terreno.
+
+Primera calibración conservada para cuando se cierre la hierba válida:
 
 - Clean Asphalt: ~225 px de repetición física;
-- Grass Medium 01: ~574 px;
-- tierra: ~983 px, idéntica escala física a Atlántico.
+- tierra: ~983 px, idéntica escala física a Atlántico;
+- hierba: se calibra después de aprobar la nueva textura.
 
-Estas dos primeras escalas se validan visualmente en Karting Tenerife antes de congelar la revisión. Compartir la tierra de Atlántico no obliga a reutilizar automáticamente ninguna otra superficie.
-
-Workflow dedicado: `.github/workflows/bake-karting-tenerife.yml`. Debe hornear **solo** `karting-tenerife`, publicar solo esa carpeta, reconstruir el catálogo desde los manifests existentes y comprobar que `track01` sigue presente.
+Workflow dedicado: `.github/workflows/bake-karting-tenerife.yml`. Mientras la hierba siga pendiente queda en modo manual para impedir que se publique un bake incorrecto.
 
 ## Regla para futuros circuitos
 
 Para añadir otro circuito:
 
 1. elegir tres superficies;
-2. declarar su configuración explícita;
-3. calibrar escalas;
-4. crear/usar un bake aislado para esa pista;
-5. publicar solo sus cuatro tiles + preview + manifest;
-6. reconstruir el catálogo desde todos los manifests publicados;
-7. validar en móvil;
-8. congelar.
+2. abrir y validar el diffuse/albedo real de cada una;
+3. declarar su configuración explícita;
+4. calibrar escalas;
+5. crear/usar un bake aislado para esa pista;
+6. publicar solo sus cuatro tiles + preview + manifest;
+7. reconstruir el catálogo desde todos los manifests publicados;
+8. validar en móvil;
+9. congelar.
 
 Si para un nuevo circuito parece necesario crear otro pipeline, primero hay que demostrar por qué este no sirve. La excepción debe ser técnica, no por comodidad.
