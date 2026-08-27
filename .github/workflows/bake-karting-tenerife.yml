@@ -1,8 +1,15 @@
 name: Bake Karting Tenerife beauty
 
 on:
-  # Temporarily manual-only: the supplied Grass Medium 01 diffuse is a model UV
-  # atlas, not a seamless ground texture. Do not publish a bad bake automatically.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/bake-karting-tenerife.yml'
+      - 'scripts/bake-track-beauty.mjs'
+      - 'scripts/track-beauty-config.mjs'
+      - 'scripts/build-track-beauty-catalog.mjs'
+      - 'src/game/tracks/TrackBuilder.js'
+      - 'src/game/tracks/library/karting-tenerife/track.json'
   workflow_dispatch:
 
 permissions:
@@ -34,7 +41,7 @@ jobs:
         run: npm ci
 
       - name: Bake Karting Tenerife only
-        run: npm run bake:track -- karting-tenerife
+        run: node scripts/bake-track-beauty.mjs karting-tenerife
 
       - name: Publish Karting Tenerife beauty assets
         run: |
@@ -60,10 +67,11 @@ jobs:
       - name: Rebuild runtime beauty catalog from all published manifests
         run: node scripts/build-track-beauty-catalog.mjs
 
-      - name: Verify Atlántico remains present
+      - name: Verify frozen Atlantico remains present
         run: |
           set -euo pipefail
           test -f public/assets/tracks/track01/beauty/manifest.json
+          grep -q 'atlantico-polyhaven-v10-clean-asphalt' public/assets/tracks/track01/beauty/manifest.json
           grep -q '"track01"' src/game/tracks/trackBeautyLayers.generated.js
           grep -q '"karting-tenerife"' src/game/tracks/trackBeautyLayers.generated.js
 
@@ -80,6 +88,7 @@ jobs:
             exit 0
           fi
           git commit -m 'Bake Karting Tenerife beauty assets'
+          git pull --rebase origin main
           git push origin HEAD:main
           echo 'changed=true' >> "$GITHUB_OUTPUT"
 
@@ -88,5 +97,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh workflow run build-pages.yml --ref main
-          gh workflow run pages.yml --ref main
+          gh workflow run build-pages.yml --ref main || true
+          gh workflow run pages.yml --ref main || true
