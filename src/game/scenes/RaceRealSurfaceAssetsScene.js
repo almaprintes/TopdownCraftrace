@@ -2,7 +2,10 @@ import { RaceScene as BakedRaceScene } from './RaceBakedAsphaltScene.js';
 
 const ATLANTICO_TRACK_KEY = 'track01';
 const POLYHAVEN_BASE = 'https://dl.polyhaven.org/file/ph-assets/Textures';
-const ATLANTICO_TERRAIN_TILE_SCALE = 0.42;
+const ATLANTICO_GRASS_TILE_SCALE = 0.55;
+const ATLANTICO_DIRT_TILE_SCALE = 0.48;
+const ATLANTICO_ASPHALT_TILE_SCALE = 0.50;
+const ATLANTICO_DIRT_TINT = 0xc8c0b8;
 
 function currentTrackKey(scene) { let stored=''; try{stored=localStorage.getItem('tdr2:trackKey')||'';}catch{} return String(scene?.trackKey||stored||'').trim().toLowerCase(); }
 function currentVideoPrefs(){try{const settings=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');const video=settings?.video||{};const quality=String(video.quality||'high').toLowerCase();const preset=['performance','medium','high','ultra'].includes(String(video.preset))?String(video.preset):quality==='low'?'performance':quality==='medium'?'medium':'high';const surfaceResolution=['1k','2k','4k'].includes(String(video.surfaceResolution))?String(video.surfaceResolution):preset==='ultra'?'4k':preset==='high'?'2k':'1k';return{quality:['low','medium','high'].includes(quality)?quality:'high',preset,surfaceResolution,lighting:video.lighting!==false};}catch{return{quality:'high',preset:'high',surfaceResolution:'2k',lighting:true};}}
@@ -12,7 +15,19 @@ function surfacePlan(prefs){const mobile=isMobileDevice();if(prefs.preset==='med
 function canUseAtlanticoLitSurfaces(scene){const prefs=currentVideoPrefs();return currentTrackKey(scene)===ATLANTICO_TRACK_KEY&&prefs.preset!=='performance'&&prefs.lighting&&window.__tdrIosSafeMode!==true&&!!scene?.game?.renderer?.gl;}
 function trackLabel(key){if(key===ATLANTICO_TRACK_KEY)return'CIRCUITO ATLÁNTICO';return String(key||'CIRCUITO').replace(/^import:/,'').replace(/[-_]+/g,' ').toUpperCase();}
 function normalizePoint(p){if(Array.isArray(p))return{x:Number(p[0]),y:Number(p[1])};return{x:Number(p?.x),y:Number(p?.y)};}
-function setTerrainScale(obj,scale=ATLANTICO_TERRAIN_TILE_SCALE){try{if(!obj)return;obj.tileScaleX=scale;obj.tileScaleY=scale;}catch{}}
+function applyAtlanticoMaterialPresentation(obj){
+  try{
+    if(!obj)return;
+    const key=String(obj?.texture?.key||'');
+    if(key==='grass'){
+      obj.tileScaleX=ATLANTICO_GRASS_TILE_SCALE;obj.tileScaleY=ATLANTICO_GRASS_TILE_SCALE;obj.clearTint?.();
+    }else if(key==='off'){
+      obj.tileScaleX=ATLANTICO_DIRT_TILE_SCALE;obj.tileScaleY=ATLANTICO_DIRT_TILE_SCALE;obj.setTint?.(ATLANTICO_DIRT_TINT);
+    }else if(key==='asphalt'||key==='tdr_atlantico_asphalt_lit'){
+      obj.tileScaleX=ATLANTICO_ASPHALT_TILE_SCALE;obj.tileScaleY=ATLANTICO_ASPHALT_TILE_SCALE;obj.clearTint?.();
+    }
+  }catch{}
+}
 
 export class RaceScene extends BakedRaceScene {
   _buildRaceLoadingUi(trackKey){
@@ -54,8 +69,16 @@ export class RaceScene extends BakedRaceScene {
   }
   _destroyRaceLoadingUi(){const ui=this._raceLoadingUi;if(!ui)return;try{this.load.off('progress',ui.onProgress);}catch{}try{this.load.off('loaderror',ui.onError);}catch{}for(const obj of ui.root||[]){try{obj?.destroy?.();}catch{}}this._raceLoadingUi=null;}
   preload(){super.preload?.();try{if(this.textures.exists('grass'))this.textures.remove('grass');}catch{}try{if(this.textures.exists('off'))this.textures.remove('off');}catch{}try{if(this.textures.exists('asphalt'))this.textures.remove('asphalt');}catch{}const prefs=currentVideoPrefs(),lowSurfaceMode=prefs.preset==='performance',trackKey=currentTrackKey(this);this._buildRaceLoadingUi(trackKey);if(window.__tdrIosSafeMode===true||lowSurfaceMode){try{window.__tdrLowSurfaceMode=true;}catch{}return;}try{window.__tdrLowSurfaceMode=false;}catch{}if(trackKey===ATLANTICO_TRACK_KEY){const plan=surfacePlan(prefs),grassDiff=polyhaven('sparse_grass','diff','jpg',plan.diff),dirtDiff=polyhaven('rocky_trail_02','diff','jpg',plan.diff),grassNormal=polyhaven('sparse_grass','nor_gl','png',plan.normal),dirtNormal=polyhaven('rocky_trail_02','nor_gl','png',plan.normal);this.load.image('grass',prefs.lighting?[grassDiff,grassNormal]:grassDiff);this.load.image('off',prefs.lighting?[dirtDiff,dirtNormal]:dirtDiff);this.load.image('asphalt',polyhaven('asphalt_02','diff','jpg',plan.asphalt));return;}this.load.image('grass','assets/materials/grass/rocky_terrain_02_diff_2k.jpg?v=20260824-grass-rocky2k-v1');const offPath=trackKey==='offroad-raven-hollow'?'assets/materials/dirt-road/road_damaged_2_diff_2k.jpg?v=20260824-raven-dirt-v1':'assets/materials/offroad/rocky_terrain_diff_2k.jpg?v=20260824-rocky-offroad-2k-v1';this.load.image('off',offPath);this.load.image('asphalt','assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg?v=20260824-polyhaven-clean-v1');}
-  create(data){const result=super.create?.(data);if(currentTrackKey(this)===ATLANTICO_TRACK_KEY){setTerrainScale(this.bgGrass);setTerrainScale(this.bgOff);const cells=this.track?.gfxByCell;if(cells?.values){for(const cell of cells.values())setTerrainScale(cell?.tile);}}if(canUseAtlanticoLitSurfaces(this)){try{this.bgGrass?.setPipeline?.('Light2D');}catch{}try{this.bgOff?.setPipeline?.('Light2D');}catch{}}this._destroyRaceLoadingUi();return result;}
-  update(time,delta){super.update?.(time,delta);if(currentTrackKey(this)!==ATLANTICO_TRACK_KEY)return;setTerrainScale(this.bgGrass);setTerrainScale(this.bgOff);const cells=this.track?.gfxByCell;if(cells?.values){for(const cell of cells.values())setTerrainScale(cell?.tile);}}
+  _applyAtlanticoSurfacePresentation(){
+    if(currentTrackKey(this)!==ATLANTICO_TRACK_KEY)return;
+    applyAtlanticoMaterialPresentation(this.bgGrass);
+    applyAtlanticoMaterialPresentation(this.bgOff);
+    applyAtlanticoMaterialPresentation(this._atlanticoPbrSurface);
+    const cells=this.track?.gfxByCell;
+    if(cells?.values){for(const cell of cells.values())applyAtlanticoMaterialPresentation(cell?.tile);}
+  }
+  create(data){const result=super.create?.(data);this._applyAtlanticoSurfacePresentation();if(canUseAtlanticoLitSurfaces(this)){try{this.bgGrass?.setPipeline?.('Light2D');}catch{}try{this.bgOff?.setPipeline?.('Light2D');}catch{}}this._destroyRaceLoadingUi();return result;}
+  update(time,delta){super.update?.(time,delta);this._applyAtlanticoSurfacePresentation();}
   ensureBgTexture(){if(this.textures.exists('grass'))return;super.ensureBgTexture?.();}
   ensureOffTexture(){if(this.textures.exists('off'))return;super.ensureOffTexture?.();}
   ensureAsphaltTexture(){if(this.textures.exists('asphalt'))return;super.ensureAsphaltTexture?.();}
