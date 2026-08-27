@@ -34,7 +34,7 @@ function videoPrefs(){
     const s=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');
     const v=s?.video||{};
     const legacyScale=String(v.renderScale||'normal');
-    const migratedScale=legacyScale==='eco'?.65:legacyScale==='sharp'?1:.85;
+    const migratedScale=legacyScale==='eco' ? .65 : legacyScale==='sharp' ? 1 : .85;
     return {
       quality:String(v.quality||'high'),
       targetFps:[30,45,60].includes(Number(v.targetFps))?Number(v.targetFps):60,
@@ -47,9 +47,6 @@ function isIOSDevice(){try{const ua=String(navigator?.userAgent||'');const platf
 function isLegacyIOSPhone(){try{if(!isIOSDevice())return false;const sw=Math.max(Number(screen?.width||0),Number(screen?.height||0));const sh=Math.min(Number(screen?.width||0),Number(screen?.height||0));const phoneLike=Math.max(sw,sh)<=900;const iPhone12Class=phoneLike&&Math.max(sw,sh)<=844;const crashSafe=localStorage.getItem('tdr2:forceIosSafeMode')==='1';return iPhone12Class||crashSafe;}catch{return false;}}
 function renderResolution(vp,ios,dpr,safeMode){
   if(safeMode)return Math.min(.60,Number(vp.resolutionScale)||.60);
-  // Explicit render scale: this setting controls actual framebuffer size directly.
-  // 50% resolution = roughly 25% of the pixels of 100%, which is the strongest
-  // lever for fill-rate-bound mobile GPUs.
   const requested=Math.max(.45,Math.min(1,Number(vp.resolutionScale)||.85));
   const platformCap=ios?1:Math.min(Number(dpr||1),1.5);
   return Math.min(platformCap,requested);
