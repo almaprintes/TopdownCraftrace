@@ -2,7 +2,7 @@ import { RaceScene as BakedRaceScene } from './RaceBakedAsphaltScene.js';
 
 const ATLANTICO_TRACK_KEY = 'track01';
 const POLYHAVEN_BASE = 'https://dl.polyhaven.org/file/ph-assets/Textures';
-const ATLANTICO_TERRAIN_TILE_SCALE = 0.48;
+const ATLANTICO_TERRAIN_TILE_SCALE = 0.42;
 
 function currentTrackKey(scene) { let stored=''; try{stored=localStorage.getItem('tdr2:trackKey')||'';}catch{} return String(scene?.trackKey||stored||'').trim().toLowerCase(); }
 function currentVideoPrefs(){try{const settings=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');const video=settings?.video||{};const quality=String(video.quality||'high').toLowerCase();const preset=['performance','medium','high','ultra'].includes(String(video.preset))?String(video.preset):quality==='low'?'performance':quality==='medium'?'medium':'high';const surfaceResolution=['1k','2k','4k'].includes(String(video.surfaceResolution))?String(video.surfaceResolution):preset==='ultra'?'4k':preset==='high'?'2k':'1k';return{quality:['low','medium','high'].includes(quality)?quality:'high',preset,surfaceResolution,lighting:video.lighting!==false};}catch{return{quality:'high',preset:'high',surfaceResolution:'2k',lighting:true};}}
