@@ -2,6 +2,7 @@ import { RaceScene as CurrentRaceScene } from './RaceGamepadScene.js';
 
 const SETTINGS_KEY='tdr2:settings';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+function isIOSDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
 
 function audioPrefs(){
   try{
@@ -56,6 +57,8 @@ export class RaceScene extends CurrentRaceScene{
     this._audioReady=false;
     this._audioPrefs=audioPrefs();
     this._audioUpdateAccum=0;
+    this._iosAudioDisabled=isIOSDevice();
+    if(this._iosAudioDisabled)return result;
     this._audioUnlock=()=>this._ensureProceduralAudio();
     window.addEventListener('pointerdown',this._audioUnlock,{passive:true});
     window.addEventListener('touchstart',this._audioUnlock,{passive:true});
@@ -66,6 +69,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _ensureProceduralAudio(){
+    if(this._iosAudioDisabled)return;
     if(this._audioReady){
       try{if(this._audioCtx?.state==='suspended')this._audioCtx.resume();}catch{}
       return;
@@ -90,7 +94,6 @@ export class RaceScene extends CurrentRaceScene{
       osc1.type=seed>.66?'sawtooth':seed>.33?'square':'triangle';
       osc2.type='triangle';osc3.type='sine';
       const g1=ctx.createGain(),g2=ctx.createGain(),g3=ctx.createGain();
-      // Keep the original engine identity but reduce the tiring upper harmonics.
       g1.gain.value=.46;g2.gain.value=.15;g3.gain.value=.065;
       osc1.connect(g1).connect(engineBus);osc2.connect(g2).connect(engineBus);osc3.connect(g3).connect(engineBus);
       osc1.start();osc2.start();osc3.start();
@@ -108,6 +111,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _impactSound(strength,impactVolume=1){
+    if(this._iosAudioDisabled)return;
     const ctx=this._audioCtx,a=this._audio;
     if(!ctx||!a||ctx.state!=='running'||impactVolume<=.001)return;
     const now=ctx.currentTime;
@@ -119,6 +123,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _updateProceduralAudio(delta){
+    if(this._iosAudioDisabled)return;
     if(!this._audioReady){this._ensureProceduralAudio();return;}
     const ctx=this._audioCtx,a=this._audio;if(!ctx||!a)return;
     const prefs=this._audioPrefs||{master:1,engine:1,effects:.45,impacts:.8,mute:false};
@@ -141,22 +146,16 @@ export class RaceScene extends CurrentRaceScene{
     const seed=a.seed;
     const baseHz=42+seed*18;
     const hz=baseHz+rpm01*(101+seed*38);
-    // Slightly slower pitch tracking removes the nervous digital buzz without
-    // disconnecting the engine from the car's acceleration.
     a.osc1.frequency.setTargetAtTime(hz,now,.055);
     a.osc2.frequency.setTargetAtTime(hz*2.005,now,.060);
     a.osc3.frequency.setTargetAtTime(hz*(3+seed*.06),now,.065);
 
-    // At sustained speed the engine becomes warmer/darker; full throttle still
-    // opens it up so acceleration keeps its punch.
     const cruise=clamp(speed01*(1-throttle),0,1);
     const cutoff=500+rpm01*1250+throttle*620-cruise*260;
     a.engineFilter.frequency.setTargetAtTime(clamp(cutoff,480,2050),now,.10);
     const engineLevel=(.018+rpm01*.039+throttle*.034)*(1-cruise*.18)*(this._raceStarted?1:.42)*prefs.engine;
     a.engineBus.gain.setTargetAtTime(engineLevel,now,.075);
 
-    // Give road/wind a little more room in the mix so speed is not represented
-    // only by an increasingly loud engine tone.
     const windLevel=Math.pow(clamp(speed01,0,1),1.65)*.021*prefs.effects;
     a.windFilter.frequency.setTargetAtTime(820+speed01*1450,now,.14);
     a.windGain.gain.setTargetAtTime(windLevel,now,.12);
@@ -172,9 +171,11 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _destroyProceduralAudio(){
-    window.removeEventListener('pointerdown',this._audioUnlock);
-    window.removeEventListener('touchstart',this._audioUnlock);
-    window.removeEventListener('keydown',this._audioUnlock);
+    if(this._audioUnlock){
+      window.removeEventListener('pointerdown',this._audioUnlock);
+      window.removeEventListener('touchstart',this._audioUnlock);
+      window.removeEventListener('keydown',this._audioUnlock);
+    }
     try{this._audio?.wind?.stop?.();}catch{}
     try{this._audio?.osc1?.stop?.();}catch{}
     try{this._audio?.osc2?.stop?.();}catch{}
@@ -185,6 +186,7 @@ export class RaceScene extends CurrentRaceScene{
 
   update(time,delta){
     super.update(time,delta);
+    if(this._iosAudioDisabled)return;
     this._audioUpdateAccum+=Number(delta||0);
     if(this._audioUpdateAccum>=33){
       const dt=this._audioUpdateAccum;
