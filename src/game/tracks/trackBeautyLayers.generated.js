@@ -3,15 +3,15 @@
 export const GENERATED_TRACK_BEAUTY_LAYERS = Object.freeze({
   "karting-tenerife": Object.freeze({
     useBeautyLayer: true,
-    assetRevision: "karting-tenerife-clean-asphalt-sparse-grass-v2-continuous-ribbon",
+    assetRevision: "karting-tenerife-clean-asphalt-sparse-grass-v3-baked-pbr-detail",
     assetsAvailable: true,
     worldW: 2813, worldH: 2602, depth: 9,
     replaces: Object.freeze({ asphalt:true, grass:true, offroad:true, kerbs:false, props:false }),
     tiles: Object.freeze([
-      Object.freeze({ key:"beauty-karting-tenerife-0", path:"assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-0.webp?v=karting-tenerife-clean-asphalt-sparse-grass-v2-continuous-ribbon", x:0, y:0, w:1407, h:1301 }),
-      Object.freeze({ key:"beauty-karting-tenerife-1", path:"assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-1.webp?v=karting-tenerife-clean-asphalt-sparse-grass-v2-continuous-ribbon", x:1407, y:0, w:1406, h:1301 }),
-      Object.freeze({ key:"beauty-karting-tenerife-2", path:"assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-2.webp?v=karting-tenerife-clean-asphalt-sparse-grass-v2-continuous-ribbon", x:0, y:1301, w:1407, h:1301 }),
-      Object.freeze({ key:"beauty-karting-tenerife-3", path:"assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-3.webp?v=karting-tenerife-clean-asphalt-sparse-grass-v2-continuous-ribbon", x:1407, y:1301, w:1406, h:1301 }),
+      Object.freeze({ key:"beauty-karting-tenerife-0", path:"assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-0.webp?v=karting-tenerife-clean-asphalt-sparse-grass-v3-baked-pbr-detail", x:0, y:0, w:1407, h:1301 }),
+      Object.freeze({ key:"beauty-karting-tenerife-1", path:"assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-1.webp?v=karting-tenerife-clean-asphalt-sparse-grass-v3-baked-pbr-detail", x:1407, y:0, w:1406, h:1301 }),
+      Object.freeze({ key:"beauty-karting-tenerife-2", path:"assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-2.webp?v=karting-tenerife-clean-asphalt-sparse-grass-v3-baked-pbr-detail", x:0, y:1301, w:1407, h:1301 }),
+      Object.freeze({ key:"beauty-karting-tenerife-3", path:"assets/tracks/karting-tenerife/beauty/karting-tenerife-beauty-3.webp?v=karting-tenerife-clean-asphalt-sparse-grass-v3-baked-pbr-detail", x:1407, y:1301, w:1406, h:1301 }),
     ])
   }),
   "track01": Object.freeze({
