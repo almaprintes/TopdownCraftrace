@@ -77,13 +77,8 @@ function installCleanTextFactory(){
 }
 export function createGame(parentId='app'){
   installSafeAreaRuntime();initLanguage();installDomUiEnglishBridge();installSeasonRewardCelebrations();installCleanTextFactory();
-  const vp=videoPrefs(),iosDevice=isIOSDevice(),safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=safeMode?false:!!vp.antialias,targetFps=safeMode?30:vp.targetFps;
-  // iOS/WebKit can deliver long real frames while Phaser's default delta smoothing
-  // feeds the scene a much smaller delta. That makes simulation time advance slower
-  // than wall time (visible as slow-motion despite reasonable FPS). Keep smoothing on
-  // platforms where it behaves well, but use raw frame delta on iOS so physics/timing
-  // remain tied to real elapsed time.
-  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false,smoothStep:!iosDevice},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:safeMode,powerPreference:'high-performance',batchSize:safeMode?1024:4096}});
+  const vp=videoPrefs(),safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=safeMode?false:!!vp.antialias,targetFps=safeMode?30:vp.targetFps;
+  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,roundPixels:safeMode,powerPreference:'high-performance',batchSize:safeMode?1024:4096}});
   installLazySceneNavigation(game);scheduleSceneWarmup();try{window.__tdrEnsureScene=ensureLazyScene;}catch{}
   try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}
   installOrientationViewportSettle(game);installRuntimeCrashDiagnostics(game);installMenuMusic(game);return game;
