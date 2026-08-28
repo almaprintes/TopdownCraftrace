@@ -69,11 +69,7 @@ export class RaceScene extends CurrentRaceScene {
     try{this.cameras.main.ignore([this._simpleRaceTop,this._simpleRaceBottom]);}catch{}
     this._simpleRaceTopLast='';
     this._simpleRaceBottomLast='';
-    // Controlled HUD A/B: Phaser.Text redraws its backing canvas/texture on setText.
-    // Keep Android at the current 10 Hz. On iOS refresh dynamic HUD only at 2 Hz
-    // to test whether Canvas->GPU text churn is contributing to WebKit stalls.
-    this._simpleRaceHudIntervalMs=isIOSDevice()?500:100;
-    this._simpleRaceHudAccum=this._simpleRaceHudIntervalMs;
+    this._simpleRaceHudAccum=100;
 
     this._readRacePosition=()=>{
       const systems=[this.standingsSystem,this.standings,this._standings].filter(Boolean);
@@ -95,10 +91,11 @@ export class RaceScene extends CurrentRaceScene {
 
     this._updateSimpleRaceHud=(delta=0)=>{
       this._simpleRaceHudAccum+=Math.max(0,Number(delta)||0);
-      if(this._simpleRaceHudAccum<this._simpleRaceHudIntervalMs)return;
+      if(this._simpleRaceHudAccum<100)return;
       this._simpleRaceHudAccum=0;
 
-      // performance.now() is sampled only at the HUD refresh cadence.
+      // performance.now() is intentionally sampled only at HUD refresh rate (10 Hz),
+      // never once per rendered frame.
       const now=performance.now();
       const body=this.carBody?.body;
       const vx=Number(body?.velocity?.x||0),vy=Number(body?.velocity?.y||0);
@@ -127,7 +124,7 @@ export class RaceScene extends CurrentRaceScene {
       if(top!==this._simpleRaceTopLast){this._simpleRaceTopLast=top;this._simpleRaceTop?.setText(top);}
     };
 
-    this._updateSimpleRaceHud(this._simpleRaceHudIntervalMs);
+    this._updateSimpleRaceHud(100);
     return result;
   }
 
