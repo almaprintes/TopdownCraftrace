@@ -16,6 +16,14 @@ function readVideo(){
   }catch{return {preset:'high',quality:'high',particles:true,showFPS:false};}
 }
 
+function isIOSDevice(){
+  try{
+    const ua=String(navigator?.userAgent||'');
+    const platform=String(navigator?.platform||'');
+    return /iPhone|iPad|iPod/i.test(ua)||(platform==='MacIntel'&&Number(navigator?.maxTouchPoints||0)>1);
+  }catch{return false;}
+}
+
 function beautyLayerOwnsGround(scene){
   return scene?._beautyLayerActive===true && scene?._beautyLayerFailed!==true;
 }
@@ -46,6 +54,15 @@ export class RaceScene extends CurrentRaceScene {
     this._gfxPrefs=readVideo();
     this._gfxPreset=this._gfxPrefs.preset;
     this._gfxQuality=this._gfxPrefs.quality;
+
+    // Controlled iOS A/B: disable only ghost/replay capture churn. Playback and
+    // the rest of the race remain untouched. This prevents the ~45 ms sample
+    // allocations plus per-lap array copy/localStorage serialization on iOS.
+    if(isIOSDevice()){
+      this._recordGhostSample=()=>{};
+      this._completedLapCheck=()=>{};
+      this._ghostSamples=[];
+    }
 
     if(this.track){
       this.track.cullRadiusCells=beautyLayerOwnsGround(this)?0:(this._gfxPreset==='performance'?1:2);
