@@ -1,5 +1,3 @@
-import { installRafCadenceDiagnostic } from '../dev/rafCadenceDiagnostic.js';
-
 // Mobile browsers often report one or more intermediate viewport sizes while
 // rotating OR during the very first landscape load. Phaser can receive that
 // transient size, rebuild the active scene, then keep a short canvas until a
@@ -62,7 +60,9 @@ export function installOrientationViewportSettle(game) {
   if (!game || game.__tdrOrientationViewportSettleInstalled) return;
   game.__tdrOrientationViewportSettleInstalled = true;
 
-  installRafCadenceDiagnostic();
+  // RAF/MAIN diagnostics were useful to isolate the original WebKit cadence
+  // problem, but they must not keep their own rAF loop alive while the shipping
+  // iOS experiment deliberately drives Phaser with setTimeout instead.
 
   let timers = [];
   let raf = 0;
