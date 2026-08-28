@@ -23,14 +23,6 @@ function isLandscape() {
   return w >= h;
 }
 
-function isIOSDevice() {
-  try {
-    const ua=String(navigator?.userAgent||'');
-    const platform=String(navigator?.platform||'');
-    return /iPhone|iPad|iPod/i.test(ua)||(platform==='MacIntel'&&Number(navigator?.maxTouchPoints||0)>1);
-  } catch { return false; }
-}
-
 function viewportRect() {
   const r = rawViewport();
   // On iOS a direct landscape launch can expose a stale visualViewport height
@@ -100,13 +92,7 @@ export function installOrientationViewportSettle(game) {
   window.addEventListener('pageshow', settle, { passive: true });
   window.addEventListener('tdr:viewportchange', settle, { passive: true });
   window.visualViewport?.addEventListener?.('resize', settle, { passive: true });
-  // Controlled iOS A/B: Safari may emit visualViewport scroll events while the
-  // player is touching/driving. Each event restarts the full settle cascade and
-  // can call Phaser scale.refresh() repeatedly outside the scene update loop.
-  // Keep the scroll listener everywhere else, but suppress only this source on iOS.
-  if(!isIOSDevice()){
-    window.visualViewport?.addEventListener?.('scroll', settle, { passive: true });
-  }
+  window.visualViewport?.addEventListener?.('scroll', settle, { passive: true });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) settle(); }, { passive: true });
 
   settle();
