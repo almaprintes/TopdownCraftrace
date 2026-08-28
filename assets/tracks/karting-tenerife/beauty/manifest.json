@@ -1,10 +1,10 @@
 {
-  "version": 12,
+  "version": 13,
   "generator": "scripts/bake-track-beauty.mjs",
   "trackKey": "karting-tenerife",
   "title": "Karting Tenerife",
   "approved": false,
-  "revision": "karting-tenerife-clean-asphalt-sparse-grass-v3-baked-pbr-detail",
+  "revision": "karting-tenerife-clean-asphalt-sparse-grass-v4-pbr-rebake",
   "worldW": 2813,
   "worldH": 2602,
   "depth": 9,
@@ -23,6 +23,8 @@
       "brightness": 0.95,
       "id": "cleanAsphalt",
       "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_diff_2k.jpg",
+      "normalSource": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_nor_gl_2k.jpg",
+      "roughnessSource": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_rough_2k.jpg",
       "processing": "bakedPbrDetail"
     },
     "shoulder": {
