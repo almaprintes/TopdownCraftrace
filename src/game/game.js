@@ -14,9 +14,6 @@ import './tracks/trackPublicNames.js';
 
 class MenuAliasScene extends Phaser.Scene { constructor(){super('MenuScene');} create(){this.scene.start('menu');} }
 
-// Heavy scenes are intentionally NOT imported at module evaluation time. The lobby
-// can become visible with only Boot + Menu. Once visible, likely destinations are
-// warmed progressively. Any destination tapped before warm-up completes loads on demand.
 const LAZY_SCENES={
   GarageScene:{load:()=>import('./scenes/GarageLazyCardsScene.js'),exportName:'GarageScene',warm:10},
   'upgrade-shop':{load:()=>import('./scenes/UpgradeWorkshopCarUnlockScene.js'),exportName:'UpgradeShopScene',warm:20},
@@ -36,10 +33,6 @@ const LAZY_SCENES={
     exportName:'RaceScene',warm:70
   },
   GarageDetailScene:{load:()=>import('./scenes/GarageDetailSpeedConsistencyScene.js'),exportName:'GarageDetailScene',warm:80},
-
-  // Developer/editor destinations: never warmed during a normal player session.
-  // Important: the lazy-map key must match the actual navigation key used by the
-  // hidden lobby shortcut and by AdminHubScene itself.
   'admin-hub':{load:()=>import('./scenes/AdminHubScene.js'),exportName:'AdminHubScene',admin:true},
   CarEditorScene:{load:()=>import('./scenes/CarEditorSpeedConsistencyScene.js'),exportName:'CarEditorScene',admin:true},
   TrackEditorScene:{load:()=>import('./scenes/TrackEditorScene.js'),exportName:'TrackEditorScene',admin:true},
@@ -78,12 +71,11 @@ function installCleanTextFactory(){
 export function createGame(parentId='app'){
   installSafeAreaRuntime();initLanguage();installDomUiEnglishBridge();installSeasonRewardCelebrations();installCleanTextFactory();
   const vp=videoPrefs(),iosDevice=isIOSDevice(),safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=iosDevice?false:!!vp.antialias,targetFps=safeMode?30:vp.targetFps;
-  // Controlled iOS render A/B: preserve the desynchronized context experiment that
-  // reduced the worst rAF spikes, and change only the WebGL batch capacity on iOS.
-  // Smaller batches trade some extra flushes for less data per GPU upload / batch,
-  // which is worth testing on WebKit given Phaser's documented mobile buffer stalls.
   const batchSize=iosDevice?1024:4096;
-  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,desynchronized:iosDevice,roundPixels:safeMode,powerPreference:'high-performance',batchSize}});
+  // FINAL iOS scheduling A/B. Phaser Arcade Physics already runs fixed-step by default;
+  // only iOS changes loop driver so we can test whether WebKit rAF starvation is the culprit.
+  const forceSetTimeOut=iosDevice;
+  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,desynchronized:iosDevice,roundPixels:safeMode,powerPreference:'high-performance',batchSize}});
   installLazySceneNavigation(game);scheduleSceneWarmup();try{window.__tdrEnsureScene=ensureLazyScene;}catch{}
   try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}
   installOrientationViewportSettle(game);installRuntimeCrashDiagnostics(game);installMenuMusic(game);return game;
