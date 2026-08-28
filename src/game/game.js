@@ -19,7 +19,7 @@ const LAZY_SCENES={
   'upgrade-shop':{load:()=>import('./scenes/UpgradeWorkshopCarUnlockScene.js'),exportName:'UpgradeShopScene',warm:20},
   SettingsScene:{load:()=>import('./scenes/SettingsGraphicsQualityScene.js'),exportName:'SettingsScene',warm:30},
   StatsScene:{load:()=>import('./scenes/StatsMasteryScene.js'),exportName:'StatsScene',warm:40},
-  season:{load:()=>import('./scenes/SeasonScene.js'),exportName:'SeasonScene',warm:50},
+  season:{load:()=>import('./scenes/SeasonSafeDockScene.js'),exportName:'SeasonScene',warm:50},
   TrackGarageScene:{load:()=>import('./scenes/TrackGarageHideSpecialScene.js'),exportName:'TrackGarageScene',warm:60},
   race:{
     load:async()=>{
