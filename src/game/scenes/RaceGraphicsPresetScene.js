@@ -20,6 +20,17 @@ function beautyLayerOwnsGround(scene){
   return scene?._beautyLayerActive===true && scene?._beautyLayerFailed!==true;
 }
 
+function throttleValue(scene){
+  const t=scene?.touch||{};
+  const candidates=[t.throttle,t.gas,t.accel,t.accelerate];
+  for(const v of candidates){
+    const n=Number(v);
+    if(Number.isFinite(n))return Math.max(0,Math.min(1,n));
+  }
+  const k=scene?.keys||{};
+  return (k.up?.isDown||k.up2?.isDown)?1:0;
+}
+
 // Presets automáticos visibles al usuario:
 // PERFORMANCE: mínimo trabajo de render, 3x3 chunks, sin lookahead/overlay/partículas.
 // MEDIUM: rango normal, sin overlay ni partículas; mantiene iluminación/materiales ligeros.
@@ -50,6 +61,18 @@ export class RaceScene extends CurrentRaceScene {
     }else{
       this._forceNoOverlay=false;
       this._forceNoParticles=!this._gfxPrefs.particles;
+    }
+
+    // Diagnóstico temporal: diferencia entre tiempo real y delta de Phaser + input GAS.
+    // Solo existe con Mostrar FPS activado y se actualiza a 2 Hz para no alterar la prueba.
+    if(this._gfxPrefs.showFPS){
+      const now=performance.now();
+      this._clockDiag={lastWall:now,wallSum:0,simSum:0,frames:0,lastPaint:now};
+      this._clockDiagText=this.add.text(10,18,'CLOCK --',{
+        fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',
+        fontSize:'10px',fontStyle:'bold',color:'#8fffd0',
+        backgroundColor:'rgba(0,0,0,.62)',padding:{x:6,y:3}
+      }).setScrollFactor(0).setDepth(5003);
     }
 
     return result;
@@ -107,8 +130,34 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   update(time,delta){
+    const wallNow=performance.now();
+    const d=this._clockDiag;
+    if(d){
+      const wall=Math.max(0,wallNow-d.lastWall);
+      d.lastWall=wallNow;
+      if(wall<250){
+        d.wallSum+=wall;
+        d.simSum+=Math.max(0,Number(delta)||0);
+        d.frames++;
+      }
+    }
+
     const result=super.update(time,delta);
     this._enforceGraphicsPreset();
+
+    if(d && wallNow-d.lastPaint>=500){
+      const wallAvg=d.frames?d.wallSum/d.frames:0;
+      const simAvg=d.frames?d.simSum/d.frames:0;
+      const ratio=d.wallSum>0?d.simSum/d.wallSum:0;
+      const thr=throttleValue(this);
+      const brake=Math.max(0,Math.min(1,Number(this.touch?.brake||0)||0));
+      const worldScale=Number(this.physics?.world?.timeScale);
+      const ts=Number.isFinite(worldScale)?worldScale.toFixed(2):'--';
+      this._clockDiagText?.setText(
+        `THR ${thr.toFixed(2)} BRK ${brake.toFixed(2)} · Δ ${simAvg.toFixed(1)}ms · WALL ${wallAvg.toFixed(1)}ms · SIM/WALL ${ratio.toFixed(2)} · PTS ${ts}`
+      );
+      d.wallSum=0; d.simSum=0; d.frames=0; d.lastPaint=wallNow;
+    }
     return result;
   }
 }
