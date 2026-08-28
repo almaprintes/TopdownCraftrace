@@ -17,6 +17,10 @@ function selectedTrackKey(scene){
   return String(scene?.trackKey||scene?.track?.meta?.id||stored||'').trim().toLowerCase();
 }
 
+function isIOSDevice(){
+  try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}
+}
+
 export class RaceScene extends CurrentRaceScene {
   _activateAtlanticoPbrPilot(trackId){
     if(String(trackId||'').trim().toLowerCase()==='track01'){
@@ -59,6 +63,14 @@ export class RaceScene extends CurrentRaceScene {
 
   create(){
     super.create();
+
+    // Isolated iOS/Atlantico render A/B: keep the Beauty Layer loaded and active,
+    // but hide only its four world tiles. Physics, checkpoints, authored decoration,
+    // cameras, HUD and every other render family remain untouched.
+    if(isIOSDevice()&&selectedTrackKey(this)==='track01'){
+      for(const tile of this._trackBeautyTiles||[]) tile?.setVisible?.(false);
+    }
+
     if(window.__tdrIosSafeMode!==true) return;
 
     try{this._startAsset?.setVisible(false);}catch{}
