@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 
+sharp.cache(false);
 const ROOT = process.cwd();
 
 // Targets are derived from the maximum displayWidth currently used by track01.environment.json.
@@ -23,24 +24,28 @@ for (const target of TARGETS) {
   const abs=path.join(ROOT,target.file);
   let before;
   try { before=await fs.stat(abs); } catch { rows.push({...target,status:'missing'}); continue; }
-  const meta=await sharp(abs).metadata();
+  const src=await fs.readFile(abs);
+  const meta=await sharp(src,{animated:false}).metadata();
   const width=Number(meta.width||0), height=Number(meta.height||0);
   if (!width || !height) { rows.push({...target,status:'unknown-dimensions'}); continue; }
+
   if (width <= target.maxWidth) {
     rows.push({...target,status:'kept',beforeBytes:before.size,afterBytes:before.size,beforeWidth:width,beforeHeight:height,afterWidth:width,afterHeight:height});
     continue;
   }
 
-  const tmp=`${abs}.optimized.tmp.webp`;
-  await sharp(abs)
+  const out=await sharp(src,{animated:false})
     .resize({width:target.maxWidth,withoutEnlargement:true,kernel:sharp.kernel.lanczos3})
     .webp({quality:88,alphaQuality:92,smartSubsample:true,effort:6})
-    .toFile(tmp);
-  await fs.rename(tmp,abs);
+    .toBuffer();
 
+  const outMeta=await sharp(out,{animated:false}).metadata();
+  if (Number(outMeta.width)!==target.maxWidth) {
+    throw new Error(`Resize verification failed for ${target.file}: expected width ${target.maxWidth}, got ${outMeta.width}`);
+  }
+  await fs.writeFile(abs,out);
   const after=await fs.stat(abs);
-  const outMeta=await sharp(abs).metadata();
-  rows.push({...target,status:'optimized',beforeBytes:before.size,afterBytes:after.size,beforeWidth:width,beforeHeight:height,afterWidth:outMeta.width,afterHeight:outMeta.height});
+  rows.push({...target,status:'optimized',beforeBytes:before.size,afterBytes:after.size,beforeWidth:width,beforeHeight:height,afterWidth:Number(outMeta.width),afterHeight:Number(outMeta.height)});
 }
 
 const reportDir=path.join(ROOT,'docs/performance');
@@ -58,7 +63,7 @@ for (const r of rows) {
   const dims=r.beforeWidth?`${r.beforeWidth}×${r.beforeHeight} → ${r.afterWidth}×${r.afterHeight}`:'—';
   lines.push(`| \`${r.file}\` | ${r.status} | ${fmt(r.beforeBytes)} | ${fmt(r.afterBytes)} | ${dims} |`);
 }
-lines.push('', 'Original assets remain recoverable from Git history. Runtime paths do not change, so Environment Studio JSON coordinates, rotations and display widths remain untouched.');
+lines.push('', 'The report verifies the dimensions from the encoded output buffer before replacing each runtime asset. Original files remain recoverable from Git history. Runtime paths, Environment Studio coordinates, rotations and display widths are unchanged.');
 await fs.writeFile(path.join(reportDir,'atlantico-environment-assets.md'),lines.join('\n')+'\n');
 
 console.log(lines.join('\n'));
