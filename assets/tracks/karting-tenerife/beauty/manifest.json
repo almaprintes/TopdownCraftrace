@@ -4,7 +4,7 @@
   "trackKey": "karting-tenerife",
   "title": "Karting Tenerife",
   "approved": false,
-  "revision": "karting-tenerife-clean-asphalt-sparse-grass-v2-continuous-ribbon",
+  "revision": "karting-tenerife-clean-asphalt-sparse-grass-v3-baked-pbr-detail",
   "worldW": 2813,
   "worldH": 2602,
   "depth": 9,
@@ -18,12 +18,12 @@
   "materials": {
     "road": {
       "material": "cleanAsphalt",
-      "cell": 225,
+      "cell": 270,
       "macroGrid": 4,
-      "brightness": 1,
+      "brightness": 0.95,
       "id": "cleanAsphalt",
       "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_diff_2k.jpg",
-      "processing": "none"
+      "processing": "bakedPbrDetail"
     },
     "shoulder": {
       "material": "sparseGrass",
