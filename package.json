@@ -11,12 +11,17 @@
     "gen:icons": "node scripts/generate-icons.mjs",
     "gen:orientation": "node scripts/generate-orientation-runtime.mjs",
     "bake:track": "node scripts/bake-track-visual.mjs",
-    "prebuild": "npm run gen:icons && npm run gen:orientation"
+    "prebuild": "npm run gen:icons && npm run gen:orientation",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npm run build && npx cap sync ios && npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
     "sharp": "^0.34.3",
     "vite": "^6.0.0"
   }
