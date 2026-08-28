@@ -135,18 +135,10 @@ function hardenIosRaceControls(root){
   const guarded=['dblclick','contextmenu','selectstart','dragstart','gesturestart','gesturechange','gestureend'];
   guarded.forEach(type=>root.addEventListener(type,block,{capture:true,passive:false}));
 
-  // Safari can still start its long-press magnifier from Touch Events even when
-  // Pointer Events and user-select are disabled. Cancel the native touch default
-  // only inside the race control surface; our pointer handlers remain the input.
-  root.addEventListener('touchstart',block,{capture:true,passive:false});
-  root.addEventListener('touchmove',block,{capture:true,passive:false});
-
-  let lastTouchEnd=0;
-  root.addEventListener('touchend',e=>{
-    const now=Date.now();
-    if(now-lastTouchEnd<420)e.preventDefault();
-    lastTouchEnd=now;
-  },{capture:true,passive:false});
+  // Do not cancel touchstart/touchmove here. On iOS that can suppress the
+  // Pointer Events used by the pedals, making throttle/brake intermittent.
+  // CSS touch-action/callout/user-select plus non-interactive pedal children
+  // are enough to stop native selection without stealing the racing input.
 }
 
 export function applyDomControlLayout(){
