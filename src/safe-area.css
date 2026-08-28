@@ -53,6 +53,30 @@
   bottom: calc(max(18px, var(--tdr-safe-bottom)) + clamp(90px,18vh,135px)) !important;
 }
 
+/* Real pedal artwork extracted from the approved source image. The DOM pedal
+ * remains the touch target; only the old synthetic box visual is replaced. */
+#tdr-race-controls .tdr-pedal {
+  border: 0 !important;
+  background-color: transparent !important;
+  background-repeat: no-repeat !important;
+  background-position: center bottom !important;
+  background-size: contain !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  overflow: visible !important;
+}
+#tdr-race-controls .tdr-pedal-gas {
+  background-image: url('/assets/ui/tdr_pedal_gas.webp?v=1') !important;
+}
+#tdr-race-controls .tdr-pedal-brake {
+  background-image: url('/assets/ui/tdr_pedal_brake.webp?v=1') !important;
+}
+#tdr-race-controls .tdr-pedal::before,
+#tdr-race-controls .tdr-pedal::after,
+#tdr-race-controls .tdr-pedal-inner {
+  display: none !important;
+}
+
 /* Orientation and legacy edit modals must also respect physical screen cutouts. */
 #rotateOverlay .rot-shell {
   max-width: calc(var(--tdr-vv-width) - var(--tdr-safe-left) - var(--tdr-safe-right)) !important;
