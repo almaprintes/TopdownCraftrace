@@ -1,0 +1,46 @@
+name: Optimize Atlantico environment assets
+
+on:
+  push:
+    paths:
+      - 'scripts/optimize-atlantico-environment.mjs'
+      - '.github/workflows/optimize-atlantico-environment.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Optimize only Atlántico environment assets
+        run: node scripts/optimize-atlantico-environment.mjs
+      - name: Commit optimized runtime assets and report
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            public/assets/environment/vegetation/palm_tall_01.webp \
+            public/assets/environment/tree_deciduous_01.webp \
+            public/assets/environment/vegetation/tree_broad_02.webp \
+            public/assets/environment/barriers/tire_stack_compact_01.webp \
+            public/assets/environment/structures/grandstand_half_01.webp \
+            public/assets/environment/props/direction_sign_01.webp \
+            public/assets/environment/props/light_post_short_01.webp \
+            public/assets/environment/barriers/guardrail_straight_01.webp \
+            docs/performance/atlantico-environment-assets.md
+          if git diff --cached --quiet; then
+            echo "No optimization changes needed"
+            exit 0
+          fi
+          git commit -m "Optimize Atlantico environment runtime assets"
+          git push
