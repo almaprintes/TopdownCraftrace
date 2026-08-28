@@ -1,13 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceHudPerformanceScene.js';
 
-function videoPrefs(){
-  try{
-    const s=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');
-    return {showFPS:!!s?.video?.showFPS};
-  }catch{return {showFPS:false};}
-}
-function makeStat(){return {sum:0,max:0,calls:0};}
-function addStat(map,label,ms){const s=map.get(label)||makeStat();s.sum+=ms;s.max=Math.max(s.max,ms);s.calls++;map.set(label,s);}
 function safeDestroy(obj){if(!obj)return;try{obj.destroy?.(true);}catch{}}
 function fmtLap(ms){
   if(!Number.isFinite(Number(ms)))return '--:--.--';
@@ -16,20 +8,20 @@ function fmtLap(ms){
   return `${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;
 }
 
-// Lightweight race HUD + per-lap diagnostic.
+// Shipping-light race HUD.
 // IMPORTANT: checkpoint state, lap validation and timing are read-only here.
+// The former per-lap profiler was intentionally removed: on iOS its many
+// performance.now() probes materially distorted the workload it was measuring.
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
 
-    // Remove obsolete visual/debug layers completely. Keep gameplay systems.
     for(const key of [
       'raceInfoHud','competitionHud','minimapSportFrame',
-      '_perfDiagText','_renderPerfText','_isoText','_diagText','_touchDbg','_dbgText',
+      '_perfDiagText','_renderPerfText','_isoText','_diagText','_touchDbg','_dbgText','_lapBreakdownText',
       'devBox','devTitle','devInfo','devBtnMap','devTuneBtn'
     ]){safeDestroy(this[key]);this[key]=null;}
 
-    // Neutralise ONLY callbacks belonging to removed visuals.
     this._updateRaceInfoHud=()=>{};
     this._pinRaceInfoHud=()=>{};
     this._buildRaceInfoHud=()=>{};
@@ -43,18 +35,17 @@ export class RaceScene extends CurrentRaceScene {
     this._perfDiagEnabled=false;
     this._renderPerfEnabled=false;
     this._isoModes=null;
+    this._lapBreakdown=null;
     try{this._perfStats?.clear?.();}catch{}
 
     const vw=Math.max(1,Number(this.scale?.width||1));
     const vh=Math.max(1,Number(this.scale?.height||1));
 
-    // TOP: useful race information. One text object, no panel/container/graphics.
     this._simpleRaceTop=this.add.text(vw*0.5,8,'',{
       fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'700',
       color:'#F4F8FB',backgroundColor:'rgba(5,12,20,.58)',padding:{x:10,y:5}
     }).setOrigin(0.5,0).setScrollFactor(0).setDepth(4990);
 
-    // BOTTOM: replacement for the useful speed + clock HUD that was removed by mistake.
     this._simpleRaceBottom=this.add.text(vw*0.5,vh-14,'',{
       fontFamily:'Orbitron,system-ui,sans-serif',fontSize:'20px',fontStyle:'800',
       color:'#F7FBFF',backgroundColor:'rgba(5,12,20,.70)',padding:{x:14,y:7}
@@ -63,7 +54,7 @@ export class RaceScene extends CurrentRaceScene {
     try{this.cameras.main.ignore([this._simpleRaceTop,this._simpleRaceBottom]);}catch{}
     this._simpleRaceTopLast='';
     this._simpleRaceBottomLast='';
-    this._simpleRaceHudAt=-Infinity;
+    this._simpleRaceHudAccum=100;
 
     this._readRacePosition=()=>{
       const systems=[this.standingsSystem,this.standings,this._standings].filter(Boolean);
@@ -83,11 +74,14 @@ export class RaceScene extends CurrentRaceScene {
       return null;
     };
 
-    this._updateSimpleRaceHud=()=>{
-      const now=performance.now();
-      if(now-this._simpleRaceHudAt<100)return; // 10 Hz maximum
-      this._simpleRaceHudAt=now;
+    this._updateSimpleRaceHud=(delta=0)=>{
+      this._simpleRaceHudAccum+=Math.max(0,Number(delta)||0);
+      if(this._simpleRaceHudAccum<100)return;
+      this._simpleRaceHudAccum=0;
 
+      // performance.now() is intentionally sampled only at HUD refresh rate (10 Hz),
+      // never once per rendered frame.
+      const now=performance.now();
       const body=this.carBody?.body;
       const vx=Number(body?.velocity?.x||0),vy=Number(body?.velocity?.y||0);
       const kmh=Math.max(0,Math.hypot(vx,vy)*0.185);
@@ -107,67 +101,21 @@ export class RaceScene extends CurrentRaceScene {
       let deltaMs=NaN;
       if(cp>=2&&Number.isFinite(Number(this.timing?.s2))&&Number.isFinite(Number(this.ttBest?.s2)))deltaMs=Number(this.timing.s2)-Number(this.ttBest.s2);
       else if(cp>=1&&Number.isFinite(Number(this.timing?.s1))&&Number.isFinite(Number(this.ttBest?.s1)))deltaMs=Number(this.timing.s1)-Number(this.ttBest.s1);
-      const delta=Number.isFinite(deltaMs)?`${deltaMs>=0?'+':'−'}${(Math.abs(deltaMs)/1000).toFixed(2)}`:'--';
+      const deltaTxt=Number.isFinite(deltaMs)?`${deltaMs>=0?'+':'−'}${(Math.abs(deltaMs)/1000).toFixed(2)}`:'--';
       const parts=[`VUELTA ${lap}`,`S${sector}/3`];
       if(pos&&pos.total>1)parts.push(`POS ${pos.pos}/${pos.total}`);
-      parts.push(`LAST ${fmtLap(lastMs)}`,`BEST ${fmtLap(bestMs)}`,`Δ ${delta}`);
+      parts.push(`LAST ${fmtLap(lastMs)}`,`BEST ${fmtLap(bestMs)}`,`Δ ${deltaTxt}`);
       const top=parts.join('  ·  ');
       if(top!==this._simpleRaceTopLast){this._simpleRaceTopLast=top;this._simpleRaceTop?.setText(top);}
     };
-    this._updateSimpleRaceHud();
 
-    const showFPS=videoPrefs().showFPS;
-    if(!showFPS)return result;
-
-    this._lapBreakdown={lap:Number(this.lapCount||0)+1,startedAt:performance.now(),stats:new Map(),updateSum:0,updateMax:0,frames:0,history:[],lastUiAt:0};
-    const wrap=(method,label)=>{
-      const original=this[method];
-      if(typeof original!=='function'||original.__tdrLapBreakdown)return;
-      const bound=original.bind(this);
-      const wrapped=(...args)=>{const t0=performance.now();const out=bound(...args);const p=this._lapBreakdown;if(p)addStat(p.stats,label,Math.max(0,performance.now()-t0));return out;};
-      wrapped.__tdrLapBreakdown=true;this[method]=wrapped;
-    };
-    for(const [method,label] of [
-      ['_computeLapProgress01','lapProg'],['_computeCenterlineProjection','projection'],['_getNearestTrackPoint','nearest'],
-      ['_isOnTrack','onTrack'],['_isOnKerb','kerb'],['_isInBand','band'],['_completedLapCheck','lapCheck'],
-      ['_recordGhostSample','ghostRec'],['_playGhost','ghostPlay'],['_updateProceduralAudio','audio'],['_updateKerbHaptics','haptics'],
-      ['_updateMinimap','minimap'],['_updateStandings','standings'],['_updateCpuAi','cpuAI'],['_updateAI','ai'],
-      ['_updateParticles','particles'],['_updateCamera','camera'],['_pinHudToScreen','hudPin'],['_discoverFixedHud','hudDiscover'],
-      ['_applyDirectionalLookahead','lookahead'],['_enforceGraphicsPreset','gfxPreset'],['_updateAuthoredEnvironmentCull','envCull'],
-      ['_updateSimpleRaceHud','simpleHud']
-    ])wrap(method,label);
-
-    this._lapBreakdownText=this.add.text(350,48,'LAP CPU --',{
-      fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',fontSize:'10px',fontStyle:'bold',
-      color:'#fff0a8',backgroundColor:'rgba(0,0,0,.66)',padding:{x:6,y:4},lineSpacing:2
-    }).setScrollFactor(0).setDepth(5004);
-    try{this.cameras.main.ignore(this._lapBreakdownText);}catch{}
+    this._updateSimpleRaceHud(100);
     return result;
   }
 
-  _lapBreakdownSnapshot(lap){
-    const p=this._lapBreakdown;if(!p)return;
-    const rows=[...p.stats.entries()].map(([name,s])=>({name,total:s.sum,avg:s.calls?s.sum/s.calls:0,max:s.max,calls:s.calls})).sort((a,b)=>b.total-a.total);
-    p.history.push({lap,updateAvg:p.frames?p.updateSum/p.frames:0,updateMax:p.updateMax,frames:p.frames,rows:rows.slice(0,8)});
-    if(p.history.length>8)p.history.shift();
-  }
-  _lapBreakdownReset(lap){const p=this._lapBreakdown;if(!p)return;p.lap=lap;p.startedAt=performance.now();p.stats=new Map();p.updateSum=0;p.updateMax=0;p.frames=0;}
-  _lapBreakdownRender(){
-    const p=this._lapBreakdown;if(!p||!this._lapBreakdownText?.scene)return;
-    const current=[...p.stats.entries()].map(([name,s])=>({name,total:s.sum,avg:s.calls?s.sum/s.calls:0,max:s.max,calls:s.calls})).sort((a,b)=>b.total-a.total).slice(0,5);
-    const lines=[`LAP CPU · L${p.lap}  UP ${(p.frames?p.updateSum/p.frames:0).toFixed(1)}/${p.updateMax.toFixed(1)}ms`];
-    for(const r of current)lines.push(`${r.name.padEnd(10).slice(0,10)} ${r.total.toFixed(0)}ms ${r.avg.toFixed(2)}/${r.max.toFixed(1)} x${r.calls}`);
-    if(p.history.length){lines.push('--- VUELTAS CERRADAS ---');for(const h of p.history.slice(-6)){const a=h.rows[0],b=h.rows[1];lines.push(`L${h.lap} UP ${h.updateAvg.toFixed(1)}/${h.updateMax.toFixed(1)} ${a?`${a.name}:${a.total.toFixed(0)}`:'-'} ${b?`${b.name}:${b.total.toFixed(0)}`:''}`);}}
-    this._lapBreakdownText.setText(lines.join('\n'));
-  }
   update(time,delta){
-    const t0=performance.now();
     const result=super.update(time,delta);
-    this._updateSimpleRaceHud?.();
-    const p=this._lapBreakdown;if(!p)return result;
-    const ms=Math.max(0,performance.now()-t0);p.updateSum+=ms;p.updateMax=Math.max(p.updateMax,ms);p.frames++;
-    const lap=Number(this.lapCount||0)+1;if(lap!==p.lap){this._lapBreakdownSnapshot(p.lap);this._lapBreakdownReset(lap);}
-    const now=performance.now();if(now-p.lastUiAt>500){p.lastUiAt=now;this._lapBreakdownRender();}
+    this._updateSimpleRaceHud?.(delta);
     return result;
   }
 }
