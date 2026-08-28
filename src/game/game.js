@@ -23,13 +23,11 @@ const LAZY_SCENES={
   TrackGarageScene:{load:()=>import('./scenes/TrackGarageHideSpecialScene.js'),exportName:'TrackGarageScene',warm:60},
   race:{
     load:async()=>{
-      const [{RaceScene},{installExactRuntimeBeautyPass},{installIosAtlanticoProceduralOnlyAB}]=await Promise.all([
+      const [{RaceScene},{installExactRuntimeBeautyPass}]=await Promise.all([
         import('./scenes/RaceGraphicsPresetScene.js'),
-        import('./scenes/raceExactRuntimeBeautyPass.js'),
-        import('./scenes/raceIosProceduralOnlyAB.js')
+        import('./scenes/raceExactRuntimeBeautyPass.js')
       ]);
       installExactRuntimeBeautyPass(RaceScene);
-      installIosAtlanticoProceduralOnlyAB(RaceScene);
       return {RaceScene};
     },
     exportName:'RaceScene',warm:70
@@ -74,6 +72,7 @@ export function createGame(parentId='app'){
   installSafeAreaRuntime();initLanguage();installDomUiEnglishBridge();installSeasonRewardCelebrations();installCleanTextFactory();
   const vp=videoPrefs(),iosDevice=isIOSDevice(),safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=iosDevice?false:!!vp.antialias,targetFps=safeMode?30:vp.targetFps;
   const batchSize=iosDevice?1024:4096;
+  // Keep the two iOS options that produced the only material improvement during diagnosis.
   const forceSetTimeOut=iosDevice;
   const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,desynchronized:iosDevice,roundPixels:safeMode,powerPreference:'high-performance',batchSize}});
   installLazySceneNavigation(game);scheduleSceneWarmup();try{window.__tdrEnsureScene=ensureLazyScene;}catch{}
