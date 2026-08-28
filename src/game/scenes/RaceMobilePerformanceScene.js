@@ -25,48 +25,66 @@ export class RaceScene extends CurrentRaceScene {
       return {progress01:0,segIndex:0,segT:0,x:px,y:py};
     }
 
-    const getXY=(p)=>Array.isArray(p)?[Number(p[0]),Number(p[1])]:[Number(p?.x),Number(p?.y)];
     const cum=this._ttCl?.cum;
     const total=this._ttCl?.total||1;
     const startDist=this._ttCl?.startDist||0;
+    const segCount=n-1;
 
-    let best=null;
-    const test=(i)=>{
-      i=((i%(n-1))+(n-1))%(n-1);
-      const [x1,y1]=getXY(cl[i]);
-      const [x2,y2]=getXY(cl[i+1]);
-      if(![x1,y1,x2,y2].every(Number.isFinite))return;
+    // Hot-path A/B for Safari/WebKit: keep the exact same local projection search,
+    // but avoid creating arrays/objects for every tested centerline segment.
+    let hasBest=false;
+    let bestD2=Infinity;
+    let bestIndex=0;
+    let bestT=0;
+    let bestX=px;
+    let bestY=py;
+    let bestDistAlong=0;
+
+    const test=(rawIndex)=>{
+      const i=((rawIndex%segCount)+segCount)%segCount;
+      const p1=cl[i],p2=cl[i+1];
+      const x1=Number(Array.isArray(p1)?p1[0]:p1?.x);
+      const y1=Number(Array.isArray(p1)?p1[1]:p1?.y);
+      const x2=Number(Array.isArray(p2)?p2[0]:p2?.x);
+      const y2=Number(Array.isArray(p2)?p2[1]:p2?.y);
+      if(!Number.isFinite(x1)||!Number.isFinite(y1)||!Number.isFinite(x2)||!Number.isFinite(y2))return;
+
       const vx=x2-x1,vy=y2-y1,len2=vx*vx+vy*vy;
       if(len2<1e-9)return;
       const t=clamp(((px-x1)*vx+(py-y1)*vy)/len2,0,1);
       const qx=x1+vx*t,qy=y1+vy*t;
       const dx=px-qx,dy=py-qy,d2=dx*dx+dy*dy;
-      if(!best||d2<best.d2){
-        const segLen=Math.sqrt(len2);
-        const base=Number(cum?.[i]||0);
-        best={d2,segIndex:i,segT:t,x:qx,y:qy,distAlong:base+segLen*t};
+      if(!hasBest||d2<bestD2){
+        hasBest=true;
+        bestD2=d2;
+        bestIndex=i;
+        bestT=t;
+        bestX=qx;
+        bestY=qy;
+        bestDistAlong=Number(cum?.[i]||0)+Math.sqrt(len2)*t;
       }
     };
 
     if(!this._projPerfReady){
-      for(let i=0;i<n-1;i++)test(i);
+      for(let i=0;i<segCount;i++)test(i);
       this._projPerfReady=true;
     }else{
       const base=this._projPerfIndex||0;
       const radius=Math.min(64,Math.max(24,Math.ceil(n*.035)));
       for(let o=-radius;o<=radius;o++)test(base+o);
       // Teleports, restarts and exceptional crossings get one exact global recovery.
-      if(!best||best.d2>260*260){
-        best=null;
-        for(let i=0;i<n-1;i++)test(i);
+      if(!hasBest||bestD2>260*260){
+        hasBest=false;
+        bestD2=Infinity;
+        for(let i=0;i<segCount;i++)test(i);
       }
     }
 
-    if(!best)return {progress01:0,segIndex:0,segT:0,x:px,y:py};
-    this._projPerfIndex=best.segIndex;
-    let d=best.distAlong-startDist;
+    if(!hasBest)return {progress01:0,segIndex:0,segT:0,x:px,y:py};
+    this._projPerfIndex=bestIndex;
+    let d=bestDistAlong-startDist;
     d%=total;if(d<0)d+=total;
-    return {progress01:d/total,segIndex:best.segIndex,segT:best.segT,x:best.x,y:best.y};
+    return {progress01:d/total,segIndex:bestIndex,segT:bestT,x:bestX,y:bestY};
   }
 
   update(time,delta){
