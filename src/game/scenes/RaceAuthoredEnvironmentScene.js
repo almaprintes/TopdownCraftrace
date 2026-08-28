@@ -60,7 +60,8 @@ function linearPieces(s){
   if(!out.length){const q=poseAt(samples,total*.5);out.push({...q,width:baseWidth});}
   return out;
 }
-function renderLinear(scene,data,placed){for(const s of data.linearBarriers||[]){const key=`auth-linear:${s.asset}`;if(!scene.textures.exists(key))continue;for(const q of linearPieces(s)){const img=scene.add.image(q.x,q.y,key).setDepth(Number(s.z)||11.8).setRotation(q.angle);if(img.width>0)img.setDisplaySize(q.width,img.height*(q.width/img.width));scene.uiCam?.ignore?.(img);placed.push(img);}}}
+function markCullable(img){if(img)img._tdrAuthoredCull=true;return img;}
+function renderLinear(scene,data,placed){for(const s of data.linearBarriers||[]){const key=`auth-linear:${s.asset}`;if(!scene.textures.exists(key))continue;for(const q of linearPieces(s)){const img=markCullable(scene.add.image(q.x,q.y,key).setDepth(Number(s.z)||11.8).setRotation(q.angle));if(img.width>0)img.setDisplaySize(q.width,img.height*(q.width/img.width));scene.uiCam?.ignore?.(img);placed.push(img);}}}
 function render(scene,data){
   if(!data)return;clearLegacyEnvironment(scene);
   if(Array.isArray(scene._authoredEnvironmentObjects))for(const o of scene._authoredEnvironmentObjects)o?.destroy?.();
@@ -68,8 +69,27 @@ function render(scene,data){
   for(const s of data.surfaces||[]){const st=STYLE[s.visual]||STYLE.asphalt,b=band(s),pts=[...b.left,...b.right.slice().reverse()];polygon(sg,pts,st.main);sg.lineStyle(Math.max(2,Math.min(5,(Number(s.width)||120)*.025)),st.edge,.9);const edge=arr=>{sg.beginPath();sg.moveTo(arr[0].x,arr[0].y);for(let i=1;i<arr.length;i++)sg.lineTo(arr[i].x,arr[i].y);sg.strokePath();};edge(b.left);edge(b.right);}
   renderLinear(scene,data,placed);
   const env=(data.environment||[]).slice().sort((a,b)=>(Number(a.z)||12)-(Number(b.z)||12));
-  for(const d of env){const key=`auth-env:${d.asset}`;if(!scene.textures.exists(key))continue;const img=scene.add.image(Number(d.x)||0,Number(d.y)||0,key).setDepth(Number(d.z)||12).setRotation(Number(d.rotation)||0);const dw=Number(d.displayWidth);if(Number.isFinite(dw)&&dw>0&&img.width>0)img.setDisplaySize(dw,img.height*(dw/img.width));img.setFlipX(!!d.flipX);img.setFlipY(!!d.flipY);scene.uiCam?.ignore?.(img);placed.push(img);}
+  for(const d of env){const key=`auth-env:${d.asset}`;if(!scene.textures.exists(key))continue;const img=markCullable(scene.add.image(Number(d.x)||0,Number(d.y)||0,key).setDepth(Number(d.z)||12).setRotation(Number(d.rotation)||0));const dw=Number(d.displayWidth);if(Number.isFinite(dw)&&dw>0&&img.width>0)img.setDisplaySize(dw,img.height*(dw/img.width));img.setFlipX(!!d.flipX);img.setFlipY(!!d.flipY);scene.uiCam?.ignore?.(img);placed.push(img);}
   scene._authoredEnvironmentObjects=placed;scene._authoredSurfaceZones=(data.surfaces||[]).map(s=>({...s}));
+  scene._authoredCullNext=0;
+}
+function cullAuthored(scene,now){
+  if(Number(now||0)<Number(scene._authoredCullNext||0))return;
+  scene._authoredCullNext=Number(now||0)+250;
+  const cam=scene?.cameras?.main,view=cam?.worldView,arr=scene?._authoredEnvironmentObjects;
+  if(!view||!Array.isArray(arr))return;
+  const zoom=Math.max(.35,Number(cam.zoom)||1),pad=Math.max(180,260/zoom);
+  const left=view.x-pad,right=view.right+pad,top=view.y-pad,bottom=view.bottom+pad;
+  for(const o of arr){
+    if(!o?._tdrAuthoredCull||!o.scene)continue;
+    const hw=Math.max(18,Math.abs(Number(o.displayWidth||o.width||0))*.62);
+    const hh=Math.max(18,Math.abs(Number(o.displayHeight||o.height||0))*.62);
+    const visible=Number(o.x)+hw>=left&&Number(o.x)-hw<=right&&Number(o.y)+hh>=top&&Number(o.y)-hh<=bottom;
+    if(o.visible!==visible)o.setVisible(visible);
+  }
 }
 function ensure(scene,data){const missing=[],queued=new Set();const add=(key,path)=>{if(!key||!path||scene.textures.exists(key)||queued.has(key))return;scene.load.image(key,`${BASE}assets/${String(path).replace(/^assets\//,'')}`);queued.add(key);missing.push(key);};for(const d of data.environment||[])if(d?.asset&&d?.path)add(`auth-env:${d.asset}`,assetPath(d.asset,d.path));for(const d of data.linearBarriers||[])if(d?.asset&&d?.path)add(`auth-linear:${d.asset}`,d.path);const apply=()=>scene.time?.delayedCall?.(40,()=>render(scene,data));if(!missing.length){apply();return;}scene.load.once('complete',apply);if(!scene.load.isLoading())scene.load.start();}
-export class RaceScene extends CurrentRaceScene{create(){super.create();const id=trackId(this);if(!id||!hasTrackEnvironment(id))return;const data=createTrackEnvironment(id);clearLegacyEnvironment(this);ensure(this,data);}}
+export class RaceScene extends CurrentRaceScene{
+  create(){super.create();const id=trackId(this);if(!id||!hasTrackEnvironment(id))return;const data=createTrackEnvironment(id);clearLegacyEnvironment(this);ensure(this,data);}
+  update(time,delta){super.update(time,delta);cullAuthored(this,time);}
+}
