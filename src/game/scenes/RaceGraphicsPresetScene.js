@@ -110,6 +110,30 @@ export class RaceScene extends CurrentRaceScene {
       ).setScrollFactor(0).setDepth(5005);
     }catch{}
 
+    // Diagnóstico estático del renderer WebGL. Solo consulta el contexto una vez al
+    // crear la carrera para comparar iOS vs Android sin introducir coste sostenido.
+    try{
+      const renderer=this.game?.renderer;
+      const gl=renderer?.gl;
+      const rendererName=renderer?.type===1?'CANVAS':renderer?.type===2?'WEBGL':String(renderer?.type??'--');
+      let api='NO-GL',db='--×--',maxTex='--',gpu='--';
+      if(gl){
+        const isGL2=typeof WebGL2RenderingContext!=='undefined'&&gl instanceof WebGL2RenderingContext;
+        api=isGL2?'WebGL2':'WebGL1';
+        db=`${Number(gl.drawingBufferWidth||0)}×${Number(gl.drawingBufferHeight||0)}`;
+        try{maxTex=String(gl.getParameter(gl.MAX_TEXTURE_SIZE)||'--');}catch{}
+        try{
+          const ext=gl.getExtension('WEBGL_debug_renderer_info');
+          gpu=String(ext?gl.getParameter(ext.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER)||'--');
+        }catch{}
+      }
+      if(gpu.length>42)gpu=gpu.slice(0,42);
+      this._rendererDiagText=this.add.text(10,isIOSDevice()?90:66,
+        `${rendererName}/${api} · DB ${db} · MAXT ${maxTex} · GPU ${gpu}`,
+        {fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',fontSize:'10px',fontStyle:'bold',color:'#c4b5ff',backgroundColor:'rgba(0,0,0,.62)',padding:{x:6,y:3}}
+      ).setScrollFactor(0).setDepth(5006);
+    }catch{}
+
     // Diagnóstico iOS ultraligero de crecimiento. No envuelve funciones y no usa
     // performance.now(): solo cuenta objetos/tweens/timers una vez por segundo.
     if(isIOSDevice()){
