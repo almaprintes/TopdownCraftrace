@@ -92,6 +92,24 @@ export class RaceScene extends CurrentRaceScene {
       }).setScrollFactor(0).setDepth(5003);
     }
 
+    // Diagnóstico ultraligero y estático de backing-store. Se calcula una sola vez
+    // al crear la carrera: nada de lecturas por frame ni wrappers de profiling.
+    try{
+      const canvas=this.game?.canvas;
+      const rect=canvas?.getBoundingClientRect?.();
+      const bw=Math.round(Number(canvas?.width||0));
+      const bh=Math.round(Number(canvas?.height||0));
+      const cw=Math.round(Number(rect?.width||0));
+      const ch=Math.round(Number(rect?.height||0));
+      const dpr=Number(window?.devicePixelRatio||1);
+      const rx=cw>0?bw/cw:0;
+      const ry=ch>0?bh/ch:0;
+      this._bufferDiagText=this.add.text(10,isIOSDevice()?66:42,
+        `BUF ${bw}×${bh} · CSS ${cw}×${ch} · DPR ${dpr.toFixed(2)} · R ${rx.toFixed(2)}×${ry.toFixed(2)}`,
+        {fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',fontSize:'10px',fontStyle:'bold',color:'#9ee7ff',backgroundColor:'rgba(0,0,0,.62)',padding:{x:6,y:3}}
+      ).setScrollFactor(0).setDepth(5005);
+    }catch{}
+
     // Diagnóstico iOS ultraligero de crecimiento. No envuelve funciones y no usa
     // performance.now(): solo cuenta objetos/tweens/timers una vez por segundo.
     if(isIOSDevice()){
