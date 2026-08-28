@@ -1,8 +1,9 @@
 import { RaceScene as CompetitionRaceScene } from './RaceCompetitionHudScene.js';
 
-// Minimap premium reconstruido desde cero dentro de su propio panel.
+// Minimap centrado reconstruido dentro de su propio contenedor.
 // El trazado, meta y marcador comparten el mismo sistema local, evitando
-// los desfases del minimapa heredado.
+// los desfases del minimapa heredado. El marco decorativo se ha eliminado
+// en origen: aquí solo se crean los elementos funcionales del minimapa.
 export class RaceScene extends CompetitionRaceScene {
   create() {
     super.create();
@@ -33,67 +34,11 @@ export class RaceScene extends CompetitionRaceScene {
 
       const frameW = 184;
       const frameH = 112;
-      const cut = 11;
-      const inner = { x: 17, y: 19, w: frameW - 34, h: frameH - 34 };
+      const inner = { x: 8, y: 8, w: frameW - 16, h: frameH - 16 };
 
+      // Contenedor funcional SIN shell, fondo, railes, brillos ni detalles.
       const panel = this.add.container(0, 0).setDepth(2050);
       this.minimapUnifiedPanel = panel;
-
-      const shell = this.add.graphics();
-
-      // Sombra exterior.
-      shell.fillStyle(0x000000, 0.28);
-      shell.beginPath();
-      shell.moveTo(cut + 3, 4);
-      shell.lineTo(frameW - cut + 3, 4);
-      shell.lineTo(frameW + 3, cut + 4);
-      shell.lineTo(frameW + 3, frameH - cut + 4);
-      shell.lineTo(frameW - cut + 3, frameH + 4);
-      shell.lineTo(cut + 3, frameH + 4);
-      shell.lineTo(3, frameH - cut + 4);
-      shell.lineTo(3, cut + 4);
-      shell.closePath();
-      shell.fillPath();
-
-      // Cuerpo: misma familia visual que GAS/FRENO y HUD inferior.
-      shell.fillStyle(0x061019, 0.80);
-      shell.lineStyle(2, 0x5bdcff, 0.78);
-      shell.beginPath();
-      shell.moveTo(cut, 0);
-      shell.lineTo(frameW - cut, 0);
-      shell.lineTo(frameW, cut);
-      shell.lineTo(frameW, frameH - cut);
-      shell.lineTo(frameW - cut, frameH);
-      shell.lineTo(cut, frameH);
-      shell.lineTo(0, frameH - cut);
-      shell.lineTo(0, cut);
-      shell.closePath();
-      shell.fillPath();
-      shell.strokePath();
-
-      // Borde interior y rail superior.
-      shell.lineStyle(1, 0xa4edff, 0.24);
-      shell.strokeRoundedRect(7, 7, frameW - 14, frameH - 14, 4);
-
-      const topRail = this.add.rectangle(22, 8, frameW - 44, 1, 0x6ee6ff, 0.78)
-        .setOrigin(0, 0);
-      const topGlow = this.add.rectangle(frameW * 0.5 - 31, 7, 62, 2, 0xa7f1ff, 0.20)
-        .setOrigin(0, 0);
-      const leftAccent = this.add.rectangle(7, 34, 2, 24, 0x39ff9a, 0.48)
-        .setOrigin(0, 0);
-
-      const detail = this.add.graphics();
-      detail.lineStyle(1, 0x70dfff, 0.32);
-      detail.beginPath();
-      detail.moveTo(17, 18); detail.lineTo(35, 18);
-      detail.moveTo(17, 21); detail.lineTo(28, 21);
-      detail.moveTo(frameW - 35, frameH - 15); detail.lineTo(frameW - 16, frameH - 15);
-      detail.moveTo(frameW - 27, frameH - 12); detail.lineTo(frameW - 16, frameH - 12);
-      detail.strokePath();
-
-      // Fondo interior ligeramente diferenciado.
-      const innerBg = this.add.rectangle(inner.x, inner.y, inner.w, inner.h, 0x02080d, 0.20)
-        .setOrigin(0, 0);
 
       // Construimos transform world -> panel a partir del centerline REAL.
       const raw = Array.isArray(this.track?.meta?.centerline)
@@ -125,7 +70,7 @@ export class RaceScene extends CompetitionRaceScene {
 
       const mapGfx = this.add.graphics();
       if (worldPts.length >= 2) {
-        // Halo muy tenue y línea principal blanca, como en el mockup.
+        // Halo muy tenue y línea principal blanca.
         mapGfx.lineStyle(4, 0x74dfff, 0.10);
         mapGfx.beginPath();
         worldPts.forEach((p, i) => {
@@ -171,7 +116,7 @@ export class RaceScene extends CompetitionRaceScene {
       marker.fillTriangle(0, -5, -2.4, 1.8, 2.4, 1.8);
       this.minimapUnifiedMarker = marker;
 
-      panel.add([shell, innerBg, topRail, topGlow, leftAccent, detail, mapGfx, flag, marker]);
+      panel.add([mapGfx, flag, marker]);
 
       if (typeof panel.cameraFilter === 'number') panel.cameraFilter &= ~main.id;
       for (const child of panel.list || []) {
@@ -205,10 +150,6 @@ export class RaceScene extends CompetitionRaceScene {
         const body = this.carBody || this.car;
         if (!m?.scene || !tr || !body) return;
 
-        // El marcador comparte el mismo transform mundo -> minimapa, así que la
-        // posición real del coche ya es suficiente. Antes proyectábamos contra
-        // TODOS los segmentos de la centerline en cada frame, creando picos de
-        // CPU/frame-time aunque el FPS medio pareciera razonable.
         const px = Number(body.x);
         const py = Number(body.y);
         if (!Number.isFinite(px) || !Number.isFinite(py)) return;
