@@ -78,11 +78,12 @@ function installCleanTextFactory(){
 export function createGame(parentId='app'){
   installSafeAreaRuntime();initLanguage();installDomUiEnglishBridge();installSeasonRewardCelebrations();installCleanTextFactory();
   const vp=videoPrefs(),iosDevice=isIOSDevice(),safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=iosDevice?false:!!vp.antialias,targetFps=safeMode?30:vp.targetFps;
-  // Controlled iOS render A/B: keep the existing iOS antialias setting and change
-  // only the WebGL context synchronization hint. Phaser 3.90 supports
-  // render.desynchronized and defaults it to false; enabling it on iOS asks WebKit
-  // for a lower-latency presentation path without changing physics or scene logic.
-  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,desynchronized:iosDevice,roundPixels:safeMode,powerPreference:'high-performance',batchSize:safeMode?1024:4096}});
+  // Controlled iOS render A/B: preserve the desynchronized context experiment that
+  // reduced the worst rAF spikes, and change only the WebGL batch capacity on iOS.
+  // Smaller batches trade some extra flushes for less data per GPU upload / batch,
+  // which is worth testing on WebKit given Phaser's documented mobile buffer stalls.
+  const batchSize=iosDevice?1024:4096;
+  const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut:false},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,desynchronized:iosDevice,roundPixels:safeMode,powerPreference:'high-performance',batchSize}});
   installLazySceneNavigation(game);scheduleSceneWarmup();try{window.__tdrEnsureScene=ensureLazyScene;}catch{}
   try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}
   installOrientationViewportSettle(game);installRuntimeCrashDiagnostics(game);installMenuMusic(game);return game;
