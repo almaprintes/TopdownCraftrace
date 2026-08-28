@@ -72,3 +72,32 @@ This avoids Safari treating `GAS`, `ACELERADOR`, `FRENO` or their decorative ele
 ## Other open issue
 
 Android had separately been reported to return to the lobby after selecting a race mode while iOS entered the race. Do not conflate that Android navigation/load issue with the iOS pedal-selection bug or the Tenerife Beauty Layer renderer regression. Diagnose it independently after the current iOS/Tenerife validation.
+
+## Atlántico authored decoration — sustained performance degradation
+
+After importing `track01.environment.json` from Environment Studio, Atlántico could start smoothly but lose FPS progressively over a longer stint (reported around lap 7). The authored environment loader itself does not rebuild the decoration on every lap: it renders the environment once when the race is created or when its assets finish loading. Ghost samples are also reset at each completed lap, so neither path is an obvious per-lap object leak.
+
+The authored layer nevertheless kept every environment sprite and every generated linear-barrier segment visible for the whole race, even when far outside the main camera. This creates unnecessary sustained texture/alpha work. The issue is especially relevant on iOS because large transparent assets can raise GPU/bandwidth/thermal load even when their final display size is small. `palm_tall_01.webp`, for example, is over 1 MB compressed and Atlántico places five instances of that family.
+
+### Fix
+
+Commit `8423755eff4413261a8ff772070527ab85695c7a` adds conservative camera culling to `RaceAuthoredEnvironmentScene.js`:
+
+- authored props and generated linear-barrier sprites are marked as cullable;
+- visibility is reevaluated only every 250 ms, not every frame;
+- a generous world-space margin keeps objects visible before they enter the viewport;
+- authored surfaces/graphics are not affected;
+- no positions, rotations, dimensions, track geometry, physics or Environment Studio JSON data are changed.
+
+### Validation
+
+For Atlántico, compare a fresh long stint after this commit with the previous behavior:
+
+1. start from a cold launch;
+2. record FPS on lap 1;
+3. continue for at least 7–10 laps without leaving the race;
+4. compare FPS and `FRAME/OTHER` timing late in the stint;
+5. verify no authored prop visibly pops into view;
+6. if progressive degradation remains, investigate source texture dimensions/runtime variants and device thermal behavior before removing the authored decoration.
+
+For future Environment Studio imports, camera culling is part of the expected runtime path; authored decoration must not remain globally visible simply because it was loaded once.
