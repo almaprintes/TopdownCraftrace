@@ -17,13 +17,14 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
 
-    // Controlled iOS camera A/B: remove follow interpolation only.
+    // Controlled iOS camera A/B: keep instant follow and remove camera pixel rounding.
     if(isIOSDevice()&&this.carBody){
       try{
         const cam=this.cameras?.main;
         cam?.stopFollow?.();
         cam?.centerOn?.(this.carBody.x,this.carBody.y);
         cam?.startFollow?.(this.carBody,true,1,1);
+        if(cam)cam.roundPixels=false;
       }catch{}
     }
 
