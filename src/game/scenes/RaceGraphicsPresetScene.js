@@ -80,9 +80,9 @@ export class RaceScene extends CurrentRaceScene {
       this._forceNoParticles=!this._gfxPrefs.particles;
     }
 
-    // Diagnóstico temporal: diferencia entre tiempo real y delta de Phaser + input GAS.
-    // Solo existe con Mostrar FPS activado y se actualiza a 2 Hz para no alterar la prueba.
-    if(this._gfxPrefs.showFPS){
+    // CLOCK queda desactivado completamente en iOS durante este A/B. En otros
+    // dispositivos conserva el comportamiento previo si Mostrar FPS está activo.
+    if(this._gfxPrefs.showFPS&&!isIOSDevice()){
       const now=performance.now();
       this._clockDiag={lastWall:now,wallSum:0,simSum:0,frames:0,lastPaint:now};
       this._clockDiagText=this.add.text(10,18,'CLOCK --',{
@@ -179,8 +179,8 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   update(time,delta){
-    const wallNow=performance.now();
     const d=this._clockDiag;
+    const wallNow=d?performance.now():0;
     if(d){
       const wall=Math.max(0,wallNow-d.lastWall);
       d.lastWall=wallNow;
