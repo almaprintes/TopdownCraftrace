@@ -7,6 +7,8 @@ const STYLE={asphalt:{main:0x2b2c2f,edge:0x656a70},grass:{main:0x285936,edge:0x3
 const VEGETATION_PATHS={tree_broad_02:'environment/vegetation/tree_broad_02.webp',palm_tall_01:'environment/vegetation/palm_tall_01.webp'};
 function assetPath(asset,path){return VEGETATION_PATHS[asset]||path;}
 function trackId(scene){return String(scene?.trackKey||scene?.track?.id||scene?.track?.key||'');}
+function isIOSDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
+function isolateAuthoredDecoration(scene){return isIOSDevice()&&trackId(scene)==='track01';}
 function band(s){const steps=Math.max(28,Math.min(240,Math.ceil(pathLength(s,120)/26))),half=(Number(s.width)||120)/2,left=[],right=[];for(let i=0;i<=steps;i++){const t=i/steps,p=pathPoint(s,t),v=pathTangent(s,t),d=Math.hypot(v.x,v.y)||1,nx=-v.y/d,ny=v.x/d;left.push({x:p.x+nx*half,y:p.y+ny*half});right.push({x:p.x-nx*half,y:p.y-ny*half});}return{left,right};}
 function polygon(g,pts,color){if(!pts.length)return;g.fillStyle(color,.98);g.beginPath();g.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)g.lineTo(pts[i].x,pts[i].y);g.closePath();g.fillPath();}
 function destroyList(scene,key){const arr=scene?.[key];if(Array.isArray(arr))for(const o of arr)o?.destroy?.();scene[key]=[];}
@@ -67,9 +69,10 @@ function render(scene,data){
   if(Array.isArray(scene._authoredEnvironmentObjects))for(const o of scene._authoredEnvironmentObjects)o?.destroy?.();
   const placed=[],sg=scene.add.graphics().setDepth(5.7);scene.uiCam?.ignore?.(sg);placed.push(sg);
   for(const s of data.surfaces||[]){const st=STYLE[s.visual]||STYLE.asphalt,b=band(s),pts=[...b.left,...b.right.slice().reverse()];polygon(sg,pts,st.main);sg.lineStyle(Math.max(2,Math.min(5,(Number(s.width)||120)*.025)),st.edge,.9);const edge=arr=>{sg.beginPath();sg.moveTo(arr[0].x,arr[0].y);for(let i=1;i<arr.length;i++)sg.lineTo(arr[i].x,arr[i].y);sg.strokePath();};edge(b.left);edge(b.right);}
-  renderLinear(scene,data,placed);
+  const isolate=isolateAuthoredDecoration(scene);
+  if(!isolate)renderLinear(scene,data,placed);
   const env=(data.environment||[]).slice().sort((a,b)=>(Number(a.z)||12)-(Number(b.z)||12));
-  for(const d of env){const key=`auth-env:${d.asset}`;if(!scene.textures.exists(key))continue;const img=markCullable(scene.add.image(Number(d.x)||0,Number(d.y)||0,key).setDepth(Number(d.z)||12).setRotation(Number(d.rotation)||0));const dw=Number(d.displayWidth);if(Number.isFinite(dw)&&dw>0&&img.width>0)img.setDisplaySize(dw,img.height*(dw/img.width));img.setFlipX(!!d.flipX);img.setFlipY(!!d.flipY);scene.uiCam?.ignore?.(img);placed.push(img);}
+  if(!isolate)for(const d of env){const key=`auth-env:${d.asset}`;if(!scene.textures.exists(key))continue;const img=markCullable(scene.add.image(Number(d.x)||0,Number(d.y)||0,key).setDepth(Number(d.z)||12).setRotation(Number(d.rotation)||0));const dw=Number(d.displayWidth);if(Number.isFinite(dw)&&dw>0&&img.width>0)img.setDisplaySize(dw,img.height*(dw/img.width));img.setFlipX(!!d.flipX);img.setFlipY(!!d.flipY);scene.uiCam?.ignore?.(img);placed.push(img);}
   scene._authoredEnvironmentObjects=placed;scene._authoredSurfaceZones=(data.surfaces||[]).map(s=>({...s}));
   scene._authoredCullNext=0;
 }
