@@ -17,14 +17,17 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
 
-    // Controlled iOS camera A/B: keep instant follow and remove camera pixel rounding.
+    // Controlled iOS camera A/B: keep instant follow, no pixel rounding,
+    // and freeze gameplay zoom at 1.0 so dynamic zoom cannot affect cadence.
     if(isIOSDevice()&&this.carBody){
       try{
         const cam=this.cameras?.main;
         cam?.stopFollow?.();
         cam?.centerOn?.(this.carBody.x,this.carBody.y);
         cam?.startFollow?.(this.carBody,true,1,1);
-        if(cam)cam.roundPixels=false;
+        if(cam){cam.roundPixels=false;cam.setZoom?.(1);}
+        this._zoomCurrent=1;
+        this._iosFixedZoom=1;
       }catch{}
     }
 
@@ -127,6 +130,12 @@ export class RaceScene extends CurrentRaceScene {
 
   update(time,delta){
     const result=super.update(time,delta);
+    if(this._iosFixedZoom){
+      try{
+        this._zoomCurrent=this._iosFixedZoom;
+        this.cameras?.main?.setZoom?.(this._iosFixedZoom);
+      }catch{}
+    }
     this._updateSimpleRaceHud?.(delta);
     return result;
   }
