@@ -26,11 +26,13 @@ const LAZY_SCENES={
   TrackGarageScene:{load:()=>import('./scenes/TrackGarageHideSpecialScene.js'),exportName:'TrackGarageScene',warm:60},
   race:{
     load:async()=>{
-      const [{RaceScene},{installExactRuntimeBeautyPass}]=await Promise.all([
+      const [{RaceScene},{installExactRuntimeBeautyPass},{installIosAtlanticoGrassPenaltyAB}]=await Promise.all([
         import('./scenes/RaceGraphicsPresetScene.js'),
-        import('./scenes/raceExactRuntimeBeautyPass.js')
+        import('./scenes/raceExactRuntimeBeautyPass.js'),
+        import('./scenes/raceIosGrassPenaltyAB.js')
       ]);
       installExactRuntimeBeautyPass(RaceScene);
+      installIosAtlanticoGrassPenaltyAB(RaceScene);
       return {RaceScene};
     },
     exportName:'RaceScene',warm:70
