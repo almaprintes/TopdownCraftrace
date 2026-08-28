@@ -1,3 +1,5 @@
+import { installRafCadenceDiagnostic } from '../dev/rafCadenceDiagnostic.js';
+
 // Mobile browsers often report one or more intermediate viewport sizes while
 // rotating OR during the very first landscape load. Phaser can receive that
 // transient size, rebuild the active scene, then keep a short canvas until a
@@ -59,6 +61,8 @@ function applyViewport(game) {
 export function installOrientationViewportSettle(game) {
   if (!game || game.__tdrOrientationViewportSettleInstalled) return;
   game.__tdrOrientationViewportSettleInstalled = true;
+
+  installRafCadenceDiagnostic();
 
   let timers = [];
   let raf = 0;
