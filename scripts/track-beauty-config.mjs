@@ -8,7 +8,10 @@ export const MATERIAL_LIBRARY = Object.freeze({
   cleanAsphalt: Object.freeze({
     id: 'cleanAsphalt',
     source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_diff_2k.jpg',
-    type: 'road'
+    normalSource: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_nor_gl_2k.jpg',
+    roughnessSource: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_rough_2k.jpg',
+    type: 'road',
+    processing: 'bakedPbrDetail'
   }),
   sparseGrass: Object.freeze({
     id: 'sparseGrass',
@@ -50,16 +53,16 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
     title: 'Karting Tenerife',
     approved: false,
     trackPath: 'src/game/tracks/library/karting-tenerife/track.json',
-    revision: 'karting-tenerife-clean-asphalt-sparse-grass-v2-continuous-ribbon',
+    revision: 'karting-tenerife-clean-asphalt-sparse-grass-v3-baked-pbr-detail',
     materials: Object.freeze({
-      road: Object.freeze({ material: 'cleanAsphalt', cell: 225, macroGrid: 4, brightness: 1.0 }),
-      // Validated from the supplied 1K/2K/4K packs: this is a true seamless
-      // ground diffuse. First Tenerife-specific scale; validate on device.
+      // Clean Asphalt is visually flat in diffuse alone. Normal + roughness are
+      // baked offline into these four colour tiles so runtime cost stays unchanged.
+      road: Object.freeze({ material: 'cleanAsphalt', cell: 270, macroGrid: 4, brightness: 0.95 }),
       shoulder: Object.freeze({ material: 'sparseGrass', repeat: 574, brightness: 1.0 }),
       // Exact approved Atlántico dirt treatment.
       outer: Object.freeze({ material: 'rockyTrail02', repeat: 983, brightness: 0.78 })
     }),
-    webp: Object.freeze({ quality: 86, effort: 3 }),
+    webp: Object.freeze({ quality: 88, effort: 3 }),
     previewWidth: 1400,
     depth: 9,
     replaces: Object.freeze({ asphalt:true, grass:true, offroad:true, kerbs:false, props:false })
