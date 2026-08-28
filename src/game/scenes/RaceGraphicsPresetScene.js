@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceRenderIsolationProfilerScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceLapBreakdownProfilerScene.js';
 
 function readVideo(){
   try{
