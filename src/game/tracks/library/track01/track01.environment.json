@@ -1,0 +1,31 @@
+{
+  "version": 5,
+  "trackId": "track01",
+  "environment": [
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":821.72,"y":937.69,"rotation":0,"displayWidth":130,"flipX":false,"flipY":false,"z":12},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":809.54,"y":1007.9,"rotation":-0.52059,"displayWidth":160.49,"flipX":false,"flipY":false,"z":12},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":774.83,"y":931.64,"rotation":-1.11305,"displayWidth":109.06,"flipX":false,"flipY":false,"z":12},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":800.47,"y":852.06,"rotation":-0.79128,"displayWidth":134.44,"flipX":false,"flipY":false,"z":12},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":730.01,"y":865.13,"rotation":-0.84552,"displayWidth":94.92,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_01","path":"environment/tree_deciduous_01.webp","x":715.35,"y":923.24,"rotation":0.08315,"displayWidth":38.69,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_01","path":"environment/tree_deciduous_01.webp","x":877.77,"y":973.12,"rotation":0.08315,"displayWidth":38.69,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1500.91,"y":883.02,"rotation":0.12803,"displayWidth":141.17,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1595.89,"y":849.12,"rotation":-0.87241,"displayWidth":118.7,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1535.24,"y":809.96,"rotation":-1.28688,"displayWidth":114.98,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1621.71,"y":914.26,"rotation":-1.83136,"displayWidth":180.92,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1514.06,"y":951.28,"rotation":-1.34398,"displayWidth":119.7,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":1776.42,"y":883.27,"rotation":1.37171,"displayWidth":117.52,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":1737.26,"y":825.18,"rotation":0.68761,"displayWidth":106.94,"flipX":false,"flipY":true,"z":12},
+    {"asset":"grandstand_half_01","path":"environment/structures/grandstand_half_01.webp","x":1688.88,"y":1304.1,"rotation":2.73787,"displayWidth":368.97,"flipX":false,"flipY":false,"z":12},
+    {"asset":"direction_sign_01","path":"environment/props/direction_sign_01.webp","x":1413,"y":1051.28,"rotation":-0.36432,"displayWidth":177.43,"flipX":true,"flipY":false,"z":12},
+    {"asset":"light_post_short_01","path":"environment/props/light_post_short_01.webp","x":1112.16,"y":1192.25,"rotation":-0.04278,"displayWidth":125.17,"flipX":false,"flipY":false,"z":12},
+    {"asset":"light_post_short_01","path":"environment/props/light_post_short_01.webp","x":915.1,"y":1146.5,"rotation":0.04689,"displayWidth":127.79,"flipX":false,"flipY":false,"z":12}
+  ],
+  "surfaces": [],
+  "baseTrack": {"id":"track01","name":"CIRCUITO ATLÁNTICO","source":"src/game/tracks/library/track01/track.json","locked":true},
+  "repositoryPath":"src/game/tracks/library/track01/track01.environment.json",
+  "linearBarriers":[
+    {"label":"GUARDARRAÍL","type":"guardrail","asset":"guardrail_straight_01","path":"environment/barriers/guardrail_straight_01.webp","spacing":105,"x1":1020.5390338992898,"y1":461.6686323081491,"x2":1146.1922888129573,"y2":775.4146734259175,"points":[{"x":1020.5390338992898,"y":461.6686323081491},{"x":1108.8451263946336,"y":523.233890989069},{"x":1140.962624892623,"y":568.0293494204751},{"x":1149.2185707874232,"y":649.6558447092116},{"x":1146.1922888129573,"y":775.4146734259175}]},
+    {"label":"GUARDARRAÍL","type":"guardrail","asset":"guardrail_straight_01","path":"environment/barriers/guardrail_straight_01.webp","spacing":105,"x1":1147.2029594293917,"y1":790.5680844365428,"x2":1270.8205876191469,"y2":427.32647633755926,"points":[{"x":1147.2029594293917,"y":790.5680844365428},{"x":1142.7411766709504,"y":642.8043377893408},{"x":1160.3039639804617,"y":551.0678218195294},{"x":1192.0832448231245,"y":476.93100229905343},{"x":1270.8205876191469,"y":427.32647633755926}]}
+  ]
+}
