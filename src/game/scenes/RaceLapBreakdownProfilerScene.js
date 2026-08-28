@@ -1,6 +1,7 @@
 import { RaceScene as CurrentRaceScene } from './RaceHudPerformanceScene.js';
 
 function safeDestroy(obj){if(!obj)return;try{obj.destroy?.(true);}catch{}}
+function isIOSDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
 function fmtLap(ms){
   if(!Number.isFinite(Number(ms)))return '--:--.--';
   const t=Math.max(0,Number(ms));
@@ -15,6 +16,16 @@ function fmtLap(ms){
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
+
+    // Controlled iOS camera A/B: remove follow interpolation only.
+    if(isIOSDevice()&&this.carBody){
+      try{
+        const cam=this.cameras?.main;
+        cam?.stopFollow?.();
+        cam?.centerOn?.(this.carBody.x,this.carBody.y);
+        cam?.startFollow?.(this.carBody,true,1,1);
+      }catch{}
+    }
 
     for(const key of [
       'raceInfoHud','competitionHud','minimapSportFrame',
