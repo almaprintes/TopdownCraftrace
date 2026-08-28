@@ -92,6 +92,17 @@ export class RaceScene extends CurrentRaceScene {
       }).setScrollFactor(0).setDepth(5003);
     }
 
+    // Diagnóstico iOS ultraligero de crecimiento. No envuelve funciones y no usa
+    // performance.now(): solo cuenta objetos/tweens/timers una vez por segundo.
+    if(isIOSDevice()){
+      this._growthDiagAccum=1000;
+      this._growthDiagText=this.add.text(10,42,'OBJ -- · TWN -- · TMR --',{
+        fontFamily:'ui-monospace,SFMono-Regular,Menlo,monospace',
+        fontSize:'10px',fontStyle:'bold',color:'#ffe89a',
+        backgroundColor:'rgba(0,0,0,.62)',padding:{x:6,y:3}
+      }).setScrollFactor(0).setDepth(5004);
+    }
+
     return result;
   }
 
@@ -146,6 +157,27 @@ export class RaceScene extends CurrentRaceScene {
     }
   }
 
+  _updateGrowthDiag(delta){
+    if(!this._growthDiagText)return;
+    this._growthDiagAccum+=Math.max(0,Number(delta)||0);
+    if(this._growthDiagAccum<1000)return;
+    this._growthDiagAccum=0;
+
+    let obj=0,twn=0,tmr=0;
+    try{obj=Array.isArray(this.children?.list)?this.children.list.length:0;}catch{}
+    try{
+      const all=typeof this.tweens?.getTweens==='function'?this.tweens.getTweens():null;
+      if(Array.isArray(all))twn=all.length;
+      else if(Array.isArray(this.tweens?._active))twn=this.tweens._active.length;
+      else if(Array.isArray(this.tweens?.list))twn=this.tweens.list.length;
+    }catch{}
+    try{
+      const events=typeof this.time?.getAllEvents==='function'?this.time.getAllEvents():null;
+      if(Array.isArray(events))tmr=events.length;
+    }catch{}
+    this._growthDiagText.setText(`OBJ ${obj} · TWN ${twn} · TMR ${tmr}`);
+  }
+
   update(time,delta){
     const wallNow=performance.now();
     const d=this._clockDiag;
@@ -161,6 +193,7 @@ export class RaceScene extends CurrentRaceScene {
 
     const result=super.update(time,delta);
     this._enforceGraphicsPreset();
+    this._updateGrowthDiag(delta);
 
     if(d && wallNow-d.lastPaint>=500){
       const wallAvg=d.frames?d.wallSum/d.frames:0;
