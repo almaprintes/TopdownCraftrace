@@ -26,6 +26,10 @@ export class RaceScene extends CurrentRaceScene {
         cam?.centerOn?.(this.carBody.x,this.carBody.y);
         cam?.startFollow?.(this.carBody,true,1,1);
         if(cam){cam.roundPixels=false;cam.setZoom?.(1);}
+        // RaceFixedScene otherwise calls main.centerOn() every update while Phaser
+        // also owns the same camera through startFollow(). Reuse its existing guard
+        // so iOS has exactly one camera owner during this A/B.
+        this._mapZoomOn=true;
         this._zoomCurrent=1;
         this._iosFixedZoom=1;
       }catch{}
