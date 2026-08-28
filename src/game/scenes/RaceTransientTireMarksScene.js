@@ -9,6 +9,7 @@ const SLIP_STRONG = 72;
 const DIRT_CARRY_MS = 1250;
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+function isIOSDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
 function currentTrackKey(scene){
   let stored='';
   try{stored=localStorage.getItem('tdr2:trackKey')||'';}catch{}
@@ -31,6 +32,8 @@ export class RaceScene extends CurrentRaceScene {
   }
   update(time, delta){
     const result = super.update?.(time, delta);
+    // Controlled iOS performance A/B: skip transient Graphics + Tween churn only.
+    if (isIOSDevice()) return result;
     if (window.__tdrIosSafeMode === true) return result;
     if (!this._raceStarted || !this.car?.body) return result;
     if (Number(time || 0) < Number(this._nextTireMarkAt || 0)) return result;
