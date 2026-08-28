@@ -53,7 +53,7 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
     title: 'Karting Tenerife',
     approved: false,
     trackPath: 'src/game/tracks/library/karting-tenerife/track.json',
-    revision: 'karting-tenerife-clean-asphalt-sparse-grass-v3-baked-pbr-detail',
+    revision: 'karting-tenerife-clean-asphalt-sparse-grass-v4-pbr-rebake',
     materials: Object.freeze({
       // Clean Asphalt is visually flat in diffuse alone. Normal + roughness are
       // baked offline into these four colour tiles so runtime cost stays unchanged.
