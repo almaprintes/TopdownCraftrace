@@ -3,8 +3,8 @@
   "generator": "scripts/bake-track-beauty.mjs",
   "trackKey": "karting-tenerife",
   "title": "Karting Tenerife",
-  "approved": false,
-  "revision": "karting-tenerife-clean-asphalt-sparse-grass-v4-pbr-rebake",
+  "approved": true,
+  "revision": "atlantico-polyhaven-baseline-v1",
   "worldW": 2813,
   "worldH": 2602,
   "depth": 9,
@@ -17,19 +17,19 @@
   },
   "materials": {
     "road": {
-      "material": "cleanAsphalt",
-      "cell": 270,
+      "material": "asphalt02Clean",
+      "cell": 205,
       "macroGrid": 4,
-      "brightness": 0.95,
-      "id": "cleanAsphalt",
-      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_diff_2k.jpg",
-      "normalSource": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_nor_gl_2k.jpg",
-      "roughnessSource": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/clean_asphalt/clean_asphalt_rough_2k.jpg",
-      "processing": "bakedPbrDetail"
+      "brightness": 0.96,
+      "id": "asphalt02Clean",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg",
+      "normalSource": null,
+      "roughnessSource": null,
+      "processing": "cleanMicrodetail"
     },
     "shoulder": {
       "material": "sparseGrass",
-      "repeat": 574,
+      "repeat": 1126,
       "brightness": 1,
       "id": "sparseGrass",
       "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg"
