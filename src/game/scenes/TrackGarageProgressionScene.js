@@ -9,12 +9,30 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
   create(){
     super.create();
-    if(!this._fullTrackAccess()){
-      const selected=this._tracks?.[this._index];
-      if(selected&&this._lockedTrack(selected)){
-        const starter=this._tracks.findIndex(t=>(t?.key||t?.id)==='track01');
-        if(starter>=0){this._index=starter;try{this._commercial?.destroy?.(true);}catch{}this._commercial=null;this._buildCommercial?.();}
+
+    if(!this._fullTrackAccess()&&Array.isArray(this._tracks)&&this._tracks.length){
+      const selectedKey=this._tracks?.[this._index]?.key||this._tracks?.[this._index]?.id;
+      const originalOrder=new Map(this._tracks.map((track,i)=>[track?.key||track?.id,i]));
+
+      // Player UX: discovered/unlocked circuits always come first, while preserving
+      // the original catalog order inside both groups. Locked content therefore
+      // stays stable and predictable as more circuits are released over time.
+      this._tracks=[...this._tracks].sort((a,b)=>{
+        const aLocked=this._lockedTrack(a)?1:0;
+        const bLocked=this._lockedTrack(b)?1:0;
+        if(aLocked!==bLocked)return aLocked-bLocked;
+        return (originalOrder.get(a?.key||a?.id)??0)-(originalOrder.get(b?.key||b?.id)??0);
+      });
+
+      let next=this._tracks.findIndex(t=>(t?.key||t?.id)===selectedKey);
+      if(next<0||this._lockedTrack(this._tracks[next])){
+        next=this._tracks.findIndex(t=>!this._lockedTrack(t));
       }
+      this._index=next>=0?next:0;
+
+      try{this._commercial?.destroy?.(true);}catch{}
+      this._commercial=null;
+      try{this._buildCommercial?.();}catch{}
     }
   }
 
