@@ -34,9 +34,11 @@ function baseline(trackKey,title){
   });
 }
 
-// First homogeneous pass requested 2026-08-29. Atlántico is the frozen visual
-// reference. Raven Hollow is intentionally absent because its mixed surfaces
-// require a separate treatment. Individual tracks can be tuned after review.
+// First homogeneous visual pass requested 2026-08-29.
+// Atlántico is the frozen visual reference. Every other official circuit,
+// including Raven Hollow, receives the exact same baked surface recipe.
+// This file controls visuals only: track geometry, names and surface penalties
+// remain owned by their existing gameplay/track data and are not modified here.
 export const TRACK_BEAUTY_CONFIGS = Object.freeze({
   track01: Object.freeze({
     title:'Atlantico', approved:true,
@@ -57,6 +59,7 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
   'forest-endurance': baseline('forest-endurance','Forest Endurance'),
   'karting-canarias': baseline('karting-canarias','Karting Canarias'),
   'karting-tenerife': baseline('karting-tenerife','Karting Tenerife'),
+  'offroad-raven-hollow': baseline('offroad-raven-hollow','Raven Hollow'),
   'practice-area': baseline('practice-area','Practice Area'),
   'santa-cruz': baseline('santa-cruz','Santa Cruz')
 });
