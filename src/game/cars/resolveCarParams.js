@@ -27,9 +27,17 @@ export function resolveCarParams(baseSpec, tuning = {}, overrides = {}) {
 
   const profileId = baseSpec.handlingProfile || baseSpec.steeringProfile || 'ARCADE';
   const baseProfile = HANDLING_PROFILES[profileId] || HANDLING_PROFILES.ARCADE;
+  const specProfile = {
+    ...(baseSpec.steering ? { steering: baseSpec.steering } : {}),
+    ...(baseSpec.engine ? { engine: baseSpec.engine } : {}),
+    ...(baseSpec.tires ? { tires: baseSpec.tires } : {})
+  };
   const profOv = overrides?.profiles?.[profileId] || {};
   const carOv  = overrides?.cars?.[baseSpec.id] || {};
-  const profileFinal = deepMerge(deepMerge(baseProfile, profOv), carOv);
+  // Priority: handling profile -> per-car spec/boot override -> runtime profile override -> runtime car override.
+  // Boot's car-overrides.json patches CAR_SPECS, so nested steering/tires values must be folded back into
+  // the resolved profile here; otherwise those values exist on the spec but never reach race physics.
+  const profileFinal = deepMerge(deepMerge(deepMerge(baseProfile, specProfile), profOv), carOv);
 
   return {
     ...baseSpec,
