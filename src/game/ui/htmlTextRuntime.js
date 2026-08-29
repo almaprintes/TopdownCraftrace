@@ -11,6 +11,12 @@ const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
 const PHASER_SCROLL_SCENES=new Set(['GarageScene','TrackGarageScene']);
 function sceneKey(text){try{return String(text?.scene?.sys?.settings?.key||text?.scene?.scene?.key||'');}catch{return '';}}
 function shouldUseHtml(text){return !PHASER_SCROLL_SCENES.has(sceneKey(text));}
+function isRacePreloadOverlay(text){
+  // RaceRealSurfaceAssetsScene creates its briefing/loading labels in preload().
+  // Phaser reports that scene as not active until create(), but these high-depth
+  // screen-space labels are intentionally visible while assets are loading.
+  return sceneKey(text)==='race' && finite(text?.depth)>=100000;
+}
 
 function ensureRoot(game){
   if(!document.getElementById(STYLE_ID)){
@@ -73,6 +79,7 @@ function hierarchyState(text){
 function sceneVisible(text){
   try{
     const s=text?.scene;if(!s?.sys)return false;
+    if(isRacePreloadOverlay(text))return true;
     if(typeof s.sys.isActive==='function'&&!s.sys.isActive())return false;
     if(typeof s.sys.isVisible==='function'&&!s.sys.isVisible())return false;
   }catch{return false;}
