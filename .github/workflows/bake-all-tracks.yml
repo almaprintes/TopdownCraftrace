@@ -33,20 +33,40 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build protected target list
+      - name: Build protected official target list
         id: targets
         run: |
           set -euxo pipefail
-          find src/game/tracks/library -mindepth 2 -maxdepth 2 -name track.json -printf '%h\n' \
-            | xargs -n1 basename \
-            | grep -v -E '^(track01|offroad-raven-hollow)$' \
-            | sort > /tmp/beauty-targets.txt
+          cat > /tmp/beauty-targets.txt <<'EOF'
+          chicane-vale
+          f1-baku
+          f1-imola
+          f1-jeddah
+          f1-melbourne
+          f1-miami
+          f1-monte-carlo
+          f1-sakhir
+          f1-shanghai
+          forest-endurance
+          karting-canarias
+          karting-tenerife
+          practice-area
+          santa-cruz
+          EOF
+          sed -i 's/^          //' /tmp/beauty-targets.txt
           cat /tmp/beauty-targets.txt
           test "$(wc -l < /tmp/beauty-targets.txt)" -eq 14
+          ! grep -q '^track01$' /tmp/beauty-targets.txt
+          ! grep -q '^offroad-raven-hollow$' /tmp/beauty-targets.txt
+          ! grep -q '^switchback-park$' /tmp/beauty-targets.txt
+          ! grep -q '^technical-ridge$' /tmp/beauty-targets.txt
+          while IFS= read -r KEY; do
+            test -f "src/game/tracks/library/$KEY/track.json"
+          done < /tmp/beauty-targets.txt
           test -f public/assets/tracks/track01/beauty/manifest.json
           test -f public/assets/tracks/offroad-raven-hollow/beauty/manifest.json
 
-      - name: Bake 14 tracks with approved generic baker
+      - name: Bake 14 official tracks with approved generic baker
         run: |
           set -euxo pipefail
           while IFS= read -r KEY; do
@@ -71,7 +91,7 @@ jobs:
           done < /tmp/beauty-targets.txt
           node scripts/build-track-beauty-catalog.mjs
 
-      - name: Verify protected tracks and complete 16-track catalog
+      - name: Verify protected tracks and complete 16-track official catalog
         run: |
           set -euxo pipefail
           test -f public/assets/tracks/track01/beauty/manifest.json
@@ -79,6 +99,8 @@ jobs:
           grep -q 'track01' src/game/tracks/trackBeautyLayers.generated.js
           grep -q 'offroad-raven-hollow' src/game/tracks/trackBeautyLayers.generated.js
           test "$(grep -c 'useBeautyLayer: true' src/game/tracks/trackBeautyLayers.generated.js)" -eq 16
+          ! grep -q 'switchback-park' src/game/tracks/trackBeautyLayers.generated.js
+          ! grep -q 'technical-ridge' src/game/tracks/trackBeautyLayers.generated.js
           git diff --exit-code -- public/assets/tracks/track01/beauty
           git diff --exit-code -- public/assets/tracks/offroad-raven-hollow/beauty
 
@@ -93,7 +115,7 @@ jobs:
             echo 'changed=false' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m 'Bake PolyHaven beauty for remaining 14 tracks'
+          git commit -m 'Bake PolyHaven beauty for remaining 14 official tracks'
           git pull --rebase origin main
           git push origin HEAD:main
           echo 'changed=true' >> "$GITHUB_OUTPUT"
