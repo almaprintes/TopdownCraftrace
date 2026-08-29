@@ -16,8 +16,6 @@ export class RaceScene extends CurrentRaceScene {
     this._buildPedalRow();
     this._buildHandbrakeControl();
 
-    // La disposición personalizada se aplica al final, después de que todas las
-    // capas anteriores hayan creado palanca/volante/pedales/freno de mano.
     const applyLayout=()=>{try{applyDomControlLayout();}catch{}};
     this.time?.delayedCall?.(0,applyLayout);
     window.addEventListener('resize',applyLayout,{passive:true});
@@ -269,10 +267,18 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _steerForHandbrake(){
-    if(Number.isFinite(this._tdrWheelSteer)&&Math.abs(this._tdrWheelSteer)>.01)return clamp(this._tdrWheelSteer,-1,1);
+    // The handbrake must not magnify tiny steering residue into a lateral kick.
+    // Use one deliberate neutral dead-zone for every steering source.
+    const neutral=.06;
+    const wheel=Number(this._tdrWheelSteer||0);
+    if(Number.isFinite(wheel)&&Math.abs(wheel)>neutral)return clamp(wheel,-1,1);
+
     const t=this.touch||{};
-    let s=Number(t.steer||t.buttonSteer||0);
-    if(Math.abs(s)>.01)return clamp(s,-1,1);
+    const touchSteer=Number(t.steer||0);
+    const buttonSteer=Number(t.buttonSteer||0);
+    let s=Math.abs(touchSteer)>=Math.abs(buttonSteer)?touchSteer:buttonSteer;
+    if(Number.isFinite(s)&&Math.abs(s)>neutral)return clamp(s,-1,1);
+
     const k=this.keys||{};
     const left=!!(k.left?.isDown||k.left2?.isDown);
     const right=!!(k.right?.isDown||k.right2?.isDown);
@@ -302,13 +308,15 @@ export class RaceScene extends CurrentRaceScene {
     const brakeDrag=Math.exp(-dt*(.78+.88*speed01));
     vf*=brakeDrag;
 
-    const slipBuild=(.85+2.25*speed01)*Math.abs(vf)*steer*dt;
-    vl+=slipBuild;
+    // With genuinely neutral steering, do not manufacture lateral velocity or yaw.
+    // Preserve any lateral component that already existed before the handbrake pull.
+    if(steer!==0){
+      const slipBuild=(.85+2.25*speed01)*Math.abs(vf)*steer*dt;
+      vl+=slipBuild;
+      const yawAuthority=clamp((speed-24)/140,0,1);
+      body.rotation+=steer*(.70+1.35*speed01)*yawAuthority*dt;
+    }
     vl*=Math.exp(-dt*.20);
-
-    const yawAuthority=clamp((speed-24)/140,0,1);
-    const yaw=steer*(.70+1.35*speed01)*yawAuthority*dt;
-    body.rotation+=yaw;
 
     const nr=Number(body.rotation||rot);
     const nfx=Math.cos(nr),nfy=Math.sin(nr);
