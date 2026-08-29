@@ -1,7 +1,7 @@
 import { SeasonScene as BaseSeasonScene } from './SeasonScene.js';
 
 // UX layer over the season pass DOM. Keep the detail dock inside the visible
-// viewport and, crucially, let claimable content define the dock's real height.
+// viewport and size claimable stages from the real rendered content height.
 export class SeasonScene extends BaseSeasonScene {
   _visibleViewport(){
     const vv=window.visualViewport;
@@ -15,6 +15,7 @@ export class SeasonScene extends BaseSeasonScene {
     const dock=root?.querySelector?.('.detail-dock');
     if(!root||!dock)return;
     const vv=this._visibleViewport();
+
     root.style.top=`${Math.round(vv.top)}px`;
     root.style.bottom='auto';
     root.style.height=`${Math.round(vv.height)}px`;
@@ -23,10 +24,30 @@ export class SeasonScene extends BaseSeasonScene {
     dock.style.left='50%';
     dock.style.transform='translateX(-50%)';
     dock.style.bottom='auto';
+
+    // Do not trust the declared CSS height. The claim cell can need more space
+    // than that. Measure every cell's actual scrollHeight and make the dock at
+    // least that tall before positioning it inside the viewport.
+    const cells=[...dock.querySelectorAll('.detail-cell')];
+    const contentHeight=Math.max(
+      dock.scrollHeight||0,
+      ...cells.map(cell=>cell.scrollHeight||0),
+      dock.getBoundingClientRect().height||0,
+      72
+    );
+    const neededHeight=Math.ceil(contentHeight+2);
+    dock.style.height=`${neededHeight}px`;
+
     const margin=14;
-    const h=Math.max(1,dock.getBoundingClientRect().height||dock.offsetHeight||72);
-    const top=Math.max(vv.top+8,vv.bottom-margin-h);
+    const top=Math.max(vv.top+8,vv.bottom-margin-neededHeight);
     dock.style.top=`${Math.round(top)}px`;
+
+    // One final measured clamp after layout settles.
+    const rect=dock.getBoundingClientRect();
+    const maxBottom=vv.bottom-margin;
+    if(rect.bottom>maxBottom){
+      dock.style.top=`${Math.round(top-(rect.bottom-maxBottom))}px`;
+    }
   }
 
   _scheduleDockPlacement(){
@@ -41,29 +62,18 @@ export class SeasonScene extends BaseSeasonScene {
     const style=document.getElementById('tdr-season-dom-style');
     if(!style)return;
     style.textContent+=`
-/* Normal stages keep the compact dock. */
 #tdr-season-dom .detail-dock{height:72px}
-
-/* Claimable stages need more INTERNAL room. Previous attempts moved the dock,
-   but the button was actually being clipped by the dock/cell overflow itself. */
-#tdr-season-dom .detail-dock:has(.claim){height:108px;overflow:visible}
+#tdr-season-dom .detail-dock:has(.claim){height:auto;min-height:108px;overflow:visible}
 #tdr-season-dom .detail-dock:has(.claim) .detail-cell{padding-top:7px;padding-bottom:7px;overflow:visible}
-#tdr-season-dom .detail-dock:has(.claim) .detail-cell:nth-child(3){
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  gap:3px;
-  overflow:visible;
-}
+#tdr-season-dom .detail-dock:has(.claim) .detail-cell:nth-child(3){display:flex;flex-direction:column;justify-content:flex-start;gap:3px;overflow:visible}
 #tdr-season-dom .detail-dock:has(.claim) .detail-cell:nth-child(3) .detail-kicker{flex:0 0 auto}
 #tdr-season-dom .detail-dock:has(.claim) .detail-reward{flex:0 0 42px;height:42px;min-height:42px;margin:0;overflow:visible}
-#tdr-season-dom .detail-dock:has(.claim) .claim{display:block;flex:0 0 28px;width:100%;height:28px;min-height:28px;margin:0;padding:0 10px;position:relative;z-index:2}
-
+#tdr-season-dom .detail-dock:has(.claim) .claim{display:block;flex:0 0 30px;width:100%;height:30px;min-height:30px;margin:2px 0 0;padding:0 10px;position:relative;z-index:2}
 @media(max-height:520px){
-  #tdr-season-dom .detail-dock:has(.claim){height:100px}
+  #tdr-season-dom .detail-dock:has(.claim){min-height:100px}
   #tdr-season-dom .detail-dock:has(.claim) .detail-cell{padding-top:5px;padding-bottom:5px}
   #tdr-season-dom .detail-dock:has(.claim) .detail-reward{flex-basis:38px;height:38px;min-height:38px}
-  #tdr-season-dom .detail-dock:has(.claim) .claim{flex-basis:27px;height:27px;min-height:27px}
+  #tdr-season-dom .detail-dock:has(.claim) .claim{flex-basis:28px;height:28px;min-height:28px}
 }
 `;
 
