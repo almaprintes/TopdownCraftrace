@@ -69,8 +69,21 @@ function installCleanTextFactory(){
   const factory=Phaser.GameObjects?.GameObjectFactory?.prototype;if(factory&&!factory.__tdrCleanTextInstalled&&typeof factory.text==='function'){const original=factory.text;factory.text=function(x,y,text,style={}){const clean={...(style||{})};if(/Orbitron/i.test(String(clean.fontFamily||''))){clean.fontFamily='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';if(clean.fontStyle==='900')clean.fontStyle='bold';}if(Number(clean.strokeThickness)>2)clean.strokeThickness=2;return original.call(this,x,y,localizePhaserValue(text),clean);};factory.__tdrCleanTextInstalled=true;}
   const textProto=Phaser.GameObjects?.Text?.prototype;if(textProto&&!textProto.__tdrLegacyLocalizationInstalled&&typeof textProto.setText==='function'){const originalSetText=textProto.setText;textProto.setText=function(value){return originalSetText.call(this,localizePhaserValue(value));};textProto.__tdrLegacyLocalizationInstalled=true;}
 }
+function installSafeTextureGuard(){
+  const classes=[Phaser.GameObjects?.Image,Phaser.GameObjects?.Sprite,Phaser.GameObjects?.TileSprite].filter(Boolean);
+  for(const Klass of classes){
+    const proto=Klass?.prototype;
+    if(!proto||proto.__tdrSafeTextureGuard||typeof proto.setTexture!=='function')continue;
+    const original=proto.setTexture;
+    proto.setTexture=function(...args){
+      if(!this?.scene?.sys?.textures)return this;
+      return original.apply(this,args);
+    };
+    proto.__tdrSafeTextureGuard=true;
+  }
+}
 export function createGame(parentId='app'){
-  installSafeAreaRuntime();initLanguage();installDomUiEnglishBridge();installSeasonRewardCelebrations();installCleanTextFactory();
+  installSafeAreaRuntime();initLanguage();installDomUiEnglishBridge();installSeasonRewardCelebrations();installCleanTextFactory();installSafeTextureGuard();
   const vp=videoPrefs(),iosDevice=isIOSDevice(),safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=iosDevice?false:!!vp.antialias,targetFps=safeMode?30:vp.targetFps;
   const batchSize=iosDevice?1024:4096;
   const forceSetTimeOut=iosDevice;
