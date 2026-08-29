@@ -13,6 +13,14 @@ export const MATERIAL_LIBRARY = Object.freeze({
     type: 'road',
     processing: 'bakedPbrDetail'
   }),
+  asphaltPitLane: Object.freeze({
+    id: 'asphaltPitLane',
+    source: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_diff_2k.jpg',
+    normalSource: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_nor_gl_2k.jpg',
+    roughnessSource: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_rough_2k.jpg',
+    type: 'road',
+    processing: 'bakedPbrDetail'
+  }),
   sparseGrass: Object.freeze({ id:'sparseGrass', source:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg', type:'surface' }),
   grassMedium01: Object.freeze({ id:'grassMedium01', source:'https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/grass_medium_01/grass_medium_01_diff_2k.jpg', type:'model-atlas' }),
   rockyTrail02: Object.freeze({ id:'rockyTrail02', source:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg', type:'surface' })
@@ -36,9 +44,9 @@ function baseline(trackKey,title){
 
 // First homogeneous visual pass requested 2026-08-29.
 // Atlántico is the frozen visual reference. Every other official circuit,
-// including Raven Hollow, receives the exact same baked surface recipe.
-// This file controls visuals only: track geometry, names and surface penalties
-// remain owned by their existing gameplay/track data and are not modified here.
+// including Raven Hollow, receives the exact same baked surface recipe unless
+// it has an explicit per-track visual override below. Track geometry, names and
+// surface penalties remain owned by gameplay/track data and are not changed here.
 export const TRACK_BEAUTY_CONFIGS = Object.freeze({
   track01: Object.freeze({
     title:'Atlantico', approved:true,
@@ -58,7 +66,19 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
   'f1-shanghai': baseline('f1-shanghai','Shanghai'),
   'forest-endurance': baseline('forest-endurance','Forest Endurance'),
   'karting-canarias': baseline('karting-canarias','Karting Canarias'),
-  'karting-tenerife': baseline('karting-tenerife','Karting Tenerife'),
+  'karting-tenerife': Object.freeze({
+    title:'Karting Tenerife', approved:true,
+    trackPath:'src/game/tracks/library/karting-tenerife/track.json',
+    revision:'karting-tenerife-asphalt-pit-lane-full-width-v1',
+    materials:Object.freeze({
+      // Visual-only expansion reaches the authored road/kerb edges without
+      // touching collision, surface penalties, AI, checkpoints or track width.
+      road:Object.freeze({ material:'asphaltPitLane', cell:286, macroGrid:4, brightness:0.94, visualExpandPx:18 }),
+      shoulder:ATLANTICO_MATERIALS.shoulder,
+      outer:ATLANTICO_MATERIALS.outer
+    }),
+    webp:Object.freeze({quality:86,effort:3}), previewWidth:1215, depth:9, replaces:REPLACES
+  }),
   'offroad-raven-hollow': baseline('offroad-raven-hollow','Raven Hollow'),
   'practice-area': baseline('practice-area','Practice Area'),
   'santa-cruz': baseline('santa-cruz','Santa Cruz')
