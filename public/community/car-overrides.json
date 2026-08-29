@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-08-29T23:12:00Z",
+  "updated_at": "2026-08-30T00:34:00+01:00",
   "cars": {
     "stock": { "massKg": 980 },
     "touring": { "massKg": 1280 },
@@ -22,19 +22,19 @@
       "massKg": 940,
       "steering": {
         "yawSpeedMin": 12,
-        "steerSat": 0.48,
+        "steerSat": 0.50,
         "lowSpeedSteer": 0.35,
-        "highSpeedLimit": 0.68,
-        "lateralGrip": 4.6,
-        "inputRiseRate": 8.0,
-        "inputReturnRate": 10.5,
-        "inputReverseRate": 6.3
+        "highSpeedLimit": 0.62,
+        "lateralGrip": 3.8,
+        "inputRiseRate": 6.8,
+        "inputReturnRate": 8.8,
+        "inputReverseRate": 5.6
       },
       "tires": {
-        "gripSpeedGain": 0.035,
+        "gripSpeedGain": 0.03,
         "slipStartDeg": 5.0,
-        "slipFullDeg": 15.0,
-        "cornerGripFloor": 0.55,
+        "slipFullDeg": 16.0,
+        "cornerGripFloor": 0.52,
         "throttleGripLoss": 0.10,
         "brakeGripLoss": 0.12
       }
