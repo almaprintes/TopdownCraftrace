@@ -1,5 +1,5 @@
 import { MenuScene as CurrentMenuScene } from './MenuMaterialExchangeScene.js';
-import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeDom.js';
+import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeFlexibleDom.js';
 
 // The publish lobby owns the Season Pass UI in DOM. The former Phaser season
 // card is intentionally retired at its source instead of being rendered and
