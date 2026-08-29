@@ -64,12 +64,13 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
   'karting-tenerife': Object.freeze({
     title:'Karting Tenerife', approved:true,
     trackPath:'src/game/tracks/library/karting-tenerife/track.json',
-    revision:'karting-tenerife-asphalt-pit-lane-full-width-v2',
+    revision:'karting-tenerife-atlantico-quad-pitlane-v3',
     materials:Object.freeze({
-      // Purely visual overscan. The baker expands the authored asphalt ribbon
-      // with a rounded SVG stroke instead of pushing sampled vertices outward.
-      // This reaches the white road edges without creating spikes in tight bends.
-      road:Object.freeze({ material:'asphaltPitLane', cell:252, macroGrid:4, brightness:0.95, visualExpandPx:34 }),
+      // Karting Tenerife stores ~66.6 in trackWidth while its circuit sheet and
+      // authored visual width are ~133 u. Atlántico stores its full width directly
+      // (~162 u). Correct ONLY the offline road rendering interpretation here;
+      // gameplay geometry, collisions, surface queries and track.json stay frozen.
+      road:Object.freeze({ material:'asphaltPitLane', cell:225, macroGrid:4, brightness:0.95, visualWidthScale:2.0 }),
       shoulder:ATLANTICO_MATERIALS.shoulder,
       outer:ATLANTICO_MATERIALS.outer
     }),
