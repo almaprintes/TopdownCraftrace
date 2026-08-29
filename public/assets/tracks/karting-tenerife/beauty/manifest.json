@@ -1,10 +1,10 @@
 {
-  "version": 16,
+  "version": 17,
   "generator": "scripts/bake-track-beauty.mjs",
   "trackKey": "karting-tenerife",
   "title": "Karting Tenerife",
   "approved": true,
-  "revision": "karting-tenerife-asphalt-pit-lane-full-width-v2",
+  "revision": "karting-tenerife-atlantico-quad-pitlane-v3",
   "worldW": 2813,
   "worldH": 2602,
   "depth": 9,
@@ -15,13 +15,17 @@
     "kerbs": false,
     "props": false
   },
+  "geometry": {
+    "renderTopology": "atlantico-quad-ribbon",
+    "visualRoadWidthScale": 2
+  },
   "materials": {
     "road": {
       "material": "asphaltPitLane",
-      "cell": 252,
+      "cell": 225,
       "macroGrid": 4,
       "brightness": 0.95,
-      "visualExpandPx": 34,
+      "visualWidthScale": 2,
       "id": "asphaltPitLane",
       "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_diff_2k.jpg",
       "normalSource": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_nor_gl_2k.jpg",
