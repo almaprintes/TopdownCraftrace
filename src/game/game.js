@@ -10,6 +10,7 @@ import { localizeLegacyText } from './i18n/legacyUiText.js';
 import { installDomUiEnglishBridge } from './i18n/domUiEnglishBridge.js';
 import { installSafeAreaRuntime } from './ui/safeArea.js';
 import { installOrientationViewportSettle } from './ui/orientationViewportSettle.js';
+import { installHtmlTextRuntime } from './ui/htmlTextRuntime.js';
 import './tracks/trackPublicNames.js';
 
 class MenuAliasScene extends Phaser.Scene { constructor(){super('MenuScene');} create(){this.scene.start('menu');} }
@@ -74,6 +75,7 @@ export function createGame(parentId='app'){
   const batchSize=iosDevice?1024:4096;
   const forceSetTimeOut=iosDevice;
   const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,desynchronized:iosDevice,roundPixels:safeMode,powerPreference:'high-performance',batchSize}});
+  installHtmlTextRuntime(game);
   installLazySceneNavigation(game);scheduleSceneWarmup();try{window.__tdrEnsureScene=ensureLazyScene;}catch{}
   try{const canvas=game.canvas;if(canvas?.style){canvas.style.imageRendering='auto';canvas.style.webkitFontSmoothing='antialiased';canvas.style.textRendering='optimizeLegibility';}}catch(_){}
   installOrientationViewportSettle(game);installRuntimeCrashDiagnostics(game);installMenuMusic(game);return game;
