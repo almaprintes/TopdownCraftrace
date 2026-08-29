@@ -7,11 +7,28 @@ export class RaceScene extends CurrentRaceScene {
     this._cleanLapTrackId=String(this.trackKey||data?.trackKey||this.track?.id||this.track?.key||'').trim();
     this._cleanLapSeenHistory=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
     this._currentLapClean=true;
+    this._liveHudClosedForSessionEnd=false;
     return result;
+  }
+
+  _closeLiveHudForSessionEnd(){
+    if(this._liveHudClosedForSessionEnd)return;
+    const reportOpen=!!this._sessionReportModal?.isConnected;
+    const survivalResultsOpen=!!this._survivalResultDom?.isConnected;
+    const rewardsOpen=!!this._sessionRewardsDom?.isConnected;
+    const sessionEnding=this._sessionFinalizing===true||reportOpen||survivalResultsOpen||rewardsOpen;
+    if(!sessionEnding)return;
+    this._liveHudClosedForSessionEnd=true;
+    try{this._raceHudDom?.remove?.();}catch{}
+    this._raceHudDom=null;
+    // The race scene deliberately remains alive underneath rewards/results, so
+    // disable only the live HUD updater. Session/report data stays untouched.
+    this._updateSimpleRaceHud=()=>{};
   }
 
   update(time,delta){
     super.update?.(time,delta);
+    this._closeLiveHudForSessionEnd();
     try{
       const body=this.carBody;
       const x=Number(body?.x),y=Number(body?.y);
