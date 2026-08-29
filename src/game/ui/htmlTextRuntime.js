@@ -112,14 +112,21 @@ function sync(game,text,entry){
   const gx=Math.max(1,finite(game.scale?.width,canvas.width||1)),gy=Math.max(1,finite(game.scale?.height,canvas.height||1));
   const cx=cr.width/gx,cy=cr.height/gy,zoom=Math.max(.001,finite(cam.zoom,1));
   const p=pose(text),fx=Number.isFinite(Number(text.scrollFactorX))?Number(text.scrollFactorX):1,fy=Number.isFinite(Number(text.scrollFactorY))?Number(text.scrollFactorY):1;
-  const x=finite(cam.x)+(p.x-finite(cam.scrollX)*fx)*zoom,y=finite(cam.y)+(p.y-finite(cam.scrollY)*fy)*zoom;
+
+  // HUD text created with setScrollFactor(0) is screen-space UI. The DOM mirror
+  // must not inherit gameplay camera zoom or camera scroll, otherwise lap times,
+  // speed and other fixed labels visibly drift as the race camera breathes.
+  const fixedToScreen=Math.abs(fx)<0.0001&&Math.abs(fy)<0.0001;
+  const renderZoom=fixedToScreen?1:zoom;
+  const x=finite(cam.x)+(p.x-finite(cam.scrollX)*fx)*renderZoom;
+  const y=finite(cam.y)+(p.y-finite(cam.scrollY)*fy)*renderZoom;
   const ox=Math.max(0,Math.min(1,finite(text.originX))),oy=Math.max(0,Math.min(1,finite(text.originY)));
 
   const camLeft=finite(cam.x),camTop=finite(cam.y),camRight=camLeft+finite(cam.width,gx),camBottom=camTop+finite(cam.height,gy);
   if(x<camLeft-120||x>camRight+120||y<camTop-120||y>camBottom+120){clip.style.display='none';return true;}
 
   let clipX=cr.left-hr.left+camLeft*cx,clipY=cr.top-hr.top+camTop*cy,clipW=(camRight-camLeft)*cx,clipH=(camBottom-camTop)*cy;
-  const mb=maskBounds(inheritedMask(text));
+  const mb=fixedToScreen?null:maskBounds(inheritedMask(text));
   if(mb){
     const mx=(finite(cam.x)+(mb.x-finite(cam.scrollX))*zoom)*cx+cr.left-hr.left;
     const my=(finite(cam.y)+(mb.y-finite(cam.scrollY))*zoom)*cy+cr.top-hr.top;
@@ -135,7 +142,7 @@ function sync(game,text,entry){
 
   node.style.left=`${cr.left-hr.left+x*cx-clipX}px`;
   node.style.top=`${cr.top-hr.top+y*cy-clipY}px`;
-  node.style.transform=`translate(${-ox*100}%,${-oy*100}%) rotate(${p.r}rad) scale(${p.sx*zoom*cx},${p.sy*zoom*cy})`;
+  node.style.transform=`translate(${-ox*100}%,${-oy*100}%) rotate(${p.r}rad) scale(${p.sx*renderZoom*cx},${p.sy*renderZoom*cy})`;
   const value=Array.isArray(text.text)?text.text.join('\n'):String(text.text??'');
   if(node.textContent!==value)node.textContent=value;
   applyStyle(text,node);
