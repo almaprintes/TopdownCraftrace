@@ -1,4 +1,4 @@
-# Manual bounded PolyHaven bake. Atlántico and Raven Hollow are protected.
+# Manual/one-shot bounded PolyHaven bake. Atlántico is the frozen visual reference.
 name: Bake all tracks beauty
 
 on:
@@ -37,7 +37,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build protected official target list
+      - name: Build official target list
         id: targets
         run: |
           set -euxo pipefail
@@ -54,30 +54,42 @@ jobs:
           forest-endurance
           karting-canarias
           karting-tenerife
+          offroad-raven-hollow
           practice-area
           santa-cruz
           EOF
           sed -i 's/^          //' /tmp/beauty-targets.txt
           cat /tmp/beauty-targets.txt
-          test "$(wc -l < /tmp/beauty-targets.txt)" -eq 14
+          test "$(wc -l < /tmp/beauty-targets.txt)" -eq 15
           ! grep -q '^track01$' /tmp/beauty-targets.txt
-          ! grep -q '^offroad-raven-hollow$' /tmp/beauty-targets.txt
           ! grep -q '^switchback-park$' /tmp/beauty-targets.txt
           ! grep -q '^technical-ridge$' /tmp/beauty-targets.txt
           while IFS= read -r KEY; do
             test -f "src/game/tracks/library/$KEY/track.json"
           done < /tmp/beauty-targets.txt
           test -f public/assets/tracks/track01/beauty/manifest.json
-          test -f public/assets/tracks/offroad-raven-hollow/beauty/manifest.json
 
-      - name: Bake 14 official tracks with approved generic baker
+      - name: Snapshot gameplay track data
+        run: |
+          set -euxo pipefail
+          git diff --exit-code -- src/game/tracks/library
+          find src/game/tracks/library -name track.json -print0 | sort -z | xargs -0 sha256sum > /tmp/track-json-before.sha256
+
+      - name: Bake 15 official tracks with approved generic baker
         run: |
           set -euxo pipefail
           while IFS= read -r KEY; do
             node scripts/bake-track-beauty.mjs "$KEY"
           done < /tmp/beauty-targets.txt
 
-      - name: Publish only the 14 generated tracks
+      - name: Verify gameplay data untouched after bake
+        run: |
+          set -euxo pipefail
+          find src/game/tracks/library -name track.json -print0 | sort -z | xargs -0 sha256sum > /tmp/track-json-after.sha256
+          diff -u /tmp/track-json-before.sha256 /tmp/track-json-after.sha256
+          git diff --exit-code -- src/game/tracks/library
+
+      - name: Publish only the 15 generated tracks
         run: |
           set -euxo pipefail
           while IFS= read -r KEY; do
@@ -95,18 +107,17 @@ jobs:
           done < /tmp/beauty-targets.txt
           node scripts/build-track-beauty-catalog.mjs
 
-      - name: Verify protected tracks and complete 16-track official catalog
+      - name: Verify frozen Atlantico and complete 16-track official catalog
         run: |
           set -euxo pipefail
           test -f public/assets/tracks/track01/beauty/manifest.json
-          test -f public/assets/tracks/offroad-raven-hollow/beauty/manifest.json
           grep -q 'track01' src/game/tracks/trackBeautyLayers.generated.js
           grep -q 'offroad-raven-hollow' src/game/tracks/trackBeautyLayers.generated.js
           test "$(grep -c 'useBeautyLayer: true' src/game/tracks/trackBeautyLayers.generated.js)" -eq 16
           ! grep -q 'switchback-park' src/game/tracks/trackBeautyLayers.generated.js
           ! grep -q 'technical-ridge' src/game/tracks/trackBeautyLayers.generated.js
           git diff --exit-code -- public/assets/tracks/track01/beauty
-          git diff --exit-code -- public/assets/tracks/offroad-raven-hollow/beauty
+          git diff --exit-code -- src/game/tracks/library
 
       - name: Commit generated assets
         id: commit_assets
@@ -119,7 +130,7 @@ jobs:
             echo 'changed=false' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git commit -m 'Bake PolyHaven beauty for remaining 14 official tracks'
+          git commit -m 'Bake Atlantico visual baseline for 15 official tracks'
           git pull --rebase origin main
           git push origin HEAD:main
           echo 'changed=true' >> "$GITHUB_OUTPUT"
