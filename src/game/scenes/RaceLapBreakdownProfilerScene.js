@@ -47,7 +47,7 @@ function createHud(scene){
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
-    if(isIOSDevice()&&this.carBody){try{const cam=this.cameras?.main;cam?.stopFollow?.();cam?.centerOn?.(this.carBody.x,this.carBody.y);cam?.startFollow?.(this.carBody,true,1,1);if(cam){cam.roundPixels=false;cam.setZoom?.(1);}this._zoomCurrent=1;this._iosFixedZoom=1;}catch{}}
+    if(isIOSDevice()&&this.carBody){try{const cam=this.cameras?.main;cam?.stopFollow?.();cam?.centerOn?.(this.carBody.x,this.carBody.y);cam?.startFollow?.(this.carBody,true,1,1);if(cam)cam.roundPixels=false;}catch{}}
 
     // Legacy graphics diagnostics create three Phaser Text objects and keep
     // updating them from an inherited update() loop. Destroying the glyphs
@@ -65,5 +65,5 @@ export class RaceScene extends CurrentRaceScene {
     this._updateSimpleRaceHud(100);return result;
   }
 
-  update(time,delta){const result=super.update(time,delta);if(this._iosFixedZoom){try{this._zoomCurrent=this._iosFixedZoom;this.cameras?.main?.setZoom?.(this._iosFixedZoom);}catch{}}this._updateSimpleRaceHud?.(delta);return result;}
+  update(time,delta){const result=super.update(time,delta);this._updateSimpleRaceHud?.(delta);return result;}
 }
