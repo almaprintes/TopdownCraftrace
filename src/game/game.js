@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import '../safe-area.css';
 import { BootScene } from './scenes/BootScene.js';
-import { MenuScene } from './scenes/MenuGameModeSnapScene.js';
+import { MenuScene } from './scenes/MenuStoreCloseFixScene.js';
 import { installMenuMusic } from './audio/MenuMusic.js';
 import { installRuntimeCrashDiagnostics } from './dev/runtimeCrashDiagnostics.js';
 import { installSeasonRewardCelebrations } from './seasons/seasonRewardCelebrationTouchSafe.js';
