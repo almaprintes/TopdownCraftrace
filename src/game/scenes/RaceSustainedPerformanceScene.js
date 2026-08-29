@@ -101,6 +101,7 @@ export class RaceScene extends CurrentRaceScene {
 
       info.add([bg,accent,divider,speedLabel,speedText,unit,timerLabel,timerText]);
       info._speedText=speedText;
+      info._timerLabel=timerLabel;
       info._timerText=timerText;
       info._panelW=panelW;
       info._panelH=panelH;
@@ -126,18 +127,25 @@ export class RaceScene extends CurrentRaceScene {
 
       // Telemetría ligera controlada por delta, sin reloj de alta resolución.
       let infoAccum=50;
-      const infoCache={speed:null,time:null};
+      const infoCache={speed:null,time:null,paused:null};
       let elapsedMs=0;
       this._updateRaceInfoHud=(delta=0)=>{
         const d=Math.max(0,Number(delta)||0);
+        const paused=!!this.physics?.world?.isPaused;
         infoAccum+=d;
-        if(this.timing?.started)elapsedMs+=d;
+        if(this.timing?.started&&!paused)elapsedMs+=d;
         if(infoAccum<50)return;
         infoAccum=0;
 
         const c=this.raceInfoHud;
         const body=this.carBody;
         if(!c?.scene || !body?.body?.velocity)return;
+
+        if(paused!==infoCache.paused){
+          infoCache.paused=paused;
+          c._timerLabel?.setVisible(!paused);
+          c._timerText?.setVisible(!paused);
+        }
 
         const vx=Number(body.body.velocity.x||0);
         const vy=Number(body.body.velocity.y||0);
@@ -148,7 +156,7 @@ export class RaceScene extends CurrentRaceScene {
           c._speedText?.setText(speedTxt);
         }
 
-        if(!this.timing?.started)elapsedMs=0;
+        if(!this.timing?.started&&elapsedMs<=0)elapsedMs=0;
         const m=Math.floor(elapsedMs/60000);
         const s=Math.floor((elapsedMs%60000)/1000);
         const cs=Math.floor((elapsedMs%1000)/10);
