@@ -19,7 +19,7 @@ export const MATERIAL_LIBRARY = Object.freeze({
     normalSource: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_nor_gl_2k.jpg',
     roughnessSource: 'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_rough_2k.jpg',
     type: 'road',
-    processing: 'bakedPbrDetail'
+    processing: 'cleanBakedPbrDetail'
   }),
   sparseGrass: Object.freeze({ id:'sparseGrass', source:'https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg', type:'surface' }),
   grassMedium01: Object.freeze({ id:'grassMedium01', source:'https://dl.polyhaven.org/file/ph-assets/Models/jpg/2k/grass_medium_01/grass_medium_01_diff_2k.jpg', type:'model-atlas' }),
@@ -42,11 +42,6 @@ function baseline(trackKey,title){
   });
 }
 
-// First homogeneous visual pass requested 2026-08-29.
-// Atlántico is the frozen visual reference. Every other official circuit,
-// including Raven Hollow, receives the exact same baked surface recipe unless
-// it has an explicit per-track visual override below. Track geometry, names and
-// surface penalties remain owned by gameplay/track data and are not changed here.
 export const TRACK_BEAUTY_CONFIGS = Object.freeze({
   track01: Object.freeze({
     title:'Atlantico', approved:true,
@@ -69,11 +64,12 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
   'karting-tenerife': Object.freeze({
     title:'Karting Tenerife', approved:true,
     trackPath:'src/game/tracks/library/karting-tenerife/track.json',
-    revision:'karting-tenerife-asphalt-pit-lane-full-width-v1',
+    revision:'karting-tenerife-asphalt-pit-lane-full-width-v2',
     materials:Object.freeze({
-      // Visual-only expansion reaches the authored road/kerb edges without
-      // touching collision, surface penalties, AI, checkpoints or track width.
-      road:Object.freeze({ material:'asphaltPitLane', cell:286, macroGrid:4, brightness:0.94, visualExpandPx:18 }),
+      // Purely visual overscan. The baker expands the authored asphalt ribbon
+      // with a rounded SVG stroke instead of pushing sampled vertices outward.
+      // This reaches the white road edges without creating spikes in tight bends.
+      road:Object.freeze({ material:'asphaltPitLane', cell:252, macroGrid:4, brightness:0.95, visualExpandPx:34 }),
       shoulder:ATLANTICO_MATERIALS.shoulder,
       outer:ATLANTICO_MATERIALS.outer
     }),
