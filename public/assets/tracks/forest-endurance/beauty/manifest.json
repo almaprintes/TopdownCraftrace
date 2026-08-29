@@ -1,0 +1,75 @@
+{
+  "version": 13,
+  "generator": "scripts/bake-track-beauty.mjs",
+  "trackKey": "forest-endurance",
+  "title": "Forest Endurance",
+  "approved": true,
+  "revision": "atlantico-polyhaven-baseline-v1",
+  "worldW": 7400,
+  "worldH": 4700,
+  "depth": 9,
+  "replaces": {
+    "asphalt": true,
+    "grass": true,
+    "offroad": true,
+    "kerbs": false,
+    "props": false
+  },
+  "materials": {
+    "road": {
+      "material": "asphalt02Clean",
+      "cell": 205,
+      "macroGrid": 4,
+      "brightness": 0.96,
+      "id": "asphalt02Clean",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg",
+      "normalSource": null,
+      "roughnessSource": null,
+      "processing": "cleanMicrodetail"
+    },
+    "shoulder": {
+      "material": "sparseGrass",
+      "repeat": 1126,
+      "brightness": 1,
+      "id": "sparseGrass",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/sparse_grass/sparse_grass_diff_2k.jpg"
+    },
+    "outer": {
+      "material": "rockyTrail02",
+      "repeat": 983,
+      "brightness": 0.78,
+      "id": "rockyTrail02",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/rocky_trail_02/rocky_trail_02_diff_2k.jpg"
+    }
+  },
+  "tiles": [
+    {
+      "file": "forest-endurance-beauty-0.webp",
+      "x": 0,
+      "y": 0,
+      "w": 3700,
+      "h": 2350
+    },
+    {
+      "file": "forest-endurance-beauty-1.webp",
+      "x": 3700,
+      "y": 0,
+      "w": 3700,
+      "h": 2350
+    },
+    {
+      "file": "forest-endurance-beauty-2.webp",
+      "x": 0,
+      "y": 2350,
+      "w": 3700,
+      "h": 2350
+    },
+    {
+      "file": "forest-endurance-beauty-3.webp",
+      "x": 3700,
+      "y": 2350,
+      "w": 3700,
+      "h": 2350
+    }
+  ]
+}
