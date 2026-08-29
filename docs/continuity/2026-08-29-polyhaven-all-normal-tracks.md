@@ -19,6 +19,16 @@ The approved Atlántico system does not use runtime texture tiling/chunks as the
 
 For Atlántico (2430x2000 world) the output is four 1215x1000 quadrants. Other circuits keep their own geometry/world dimensions; the same baker adapts the output to each circuit rather than changing its trace.
 
+### Geometry topology — frozen rule
+The original approved Atlántico baker (`scripts/bake-track-visual.mjs`, historical commit `2a711f8049b0d0f0bd3472a9c8877e43c734bb16`) renders the asphalt and shoulder as a **quad ribbon**: one four-point polygon for every consecutive pair of left/right samples returned by `buildTrackRibbon()`.
+
+This topology is now the required beauty-bake rule. Do **not** replace it with:
+- one giant closed road polygon (can self-intersect at tight hairpins);
+- a thick rounded SVG stroke (creates circular lobes/discs and radial artefacts at bends);
+- per-vertex radial expansion of the final polygon.
+
+`scripts/bake-track-beauty.mjs` was restored to the Atlántico quad-ribbon topology on 2026-08-29 after the rounded-stroke experiment produced obvious geometry artefacts in Karting Tenerife.
+
 ## Baseline materials and treatment
 Exact approved Atlántico recipe:
 - road: Poly Haven `asphalt_02`, processed with `cleanMicrodetail` to remove recognizable long crack repetition while preserving asphalt micrograin;
@@ -30,6 +40,19 @@ Exact approved Atlántico recipe:
 - depth 9.
 
 Source texture resolution and apparent world scale remain separate concepts: changing 1K/2K/4K input resolution must not change the physical scale seen in-game.
+
+## Karting Tenerife exception — visual width only
+Karting Tenerife's authored data uses a different width convention from Atlántico:
+- `trackWidth` is `66.6` and centerline widths are roughly in that range;
+- the circuit sheet reports an asphalt width of about `133 u`;
+- Atlántico stores its full road width directly (`trackWidth` about `162`, centerline widths about `160+`).
+
+Therefore Karting Tenerife's offline beauty road is rendered with `visualWidthScale: 2.0` before passing its road-only centerline to the same `buildTrackRibbon()` + quad-ribbon path used for Atlántico. This is a **render interpretation only**. `track.json`, collision geometry, checkpoints, AI, surface classification, grip and penalties remain untouched.
+
+Karting Tenerife currently uses the user-selected Poly Haven `asphalt_pit_lane` family, processed as cleaned baked-PBR microdetail, at approximately the original Tenerife physical calibration (`cell: 225`). Shoulder and outer terrain remain on the Atlántico baseline unless explicitly reviewed later.
+
+Current Karting Tenerife beauty revision:
+`karting-tenerife-atlantico-quad-pitlane-v3`
 
 ## Safety / rollback
 Rollback branch created before the rollout:
@@ -77,8 +100,9 @@ They physically exist under the generic track library and the registry can disco
 
 ## Files
 - `scripts/track-beauty-config.mjs`: material library and per-track visual configurations.
-- `scripts/bake-track-beauty.mjs`: approved generic offline baker.
+- `scripts/bake-track-beauty.mjs`: approved generic offline baker, now locked to Atlántico-style quad-ribbon geometry.
 - `.github/workflows/bake-all-tracks.yml`: bounded batch with gameplay-data integrity checks.
+- `.github/workflows/bake-karting-tenerife.yml`: single-track bake/publish path for Karting Tenerife.
 - `scripts/build-track-beauty-catalog.mjs`: rebuilds runtime beauty catalog from published manifests.
 
 ## Review after bake
