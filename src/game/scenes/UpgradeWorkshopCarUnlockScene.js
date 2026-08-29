@@ -1,4 +1,4 @@
-import { UpgradeShopScene as CurrentWorkshop } from './UpgradeWorkshopCompactRecipeScene.js';
+import { UpgradeShopScene as CurrentWorkshop } from './UpgradeWorkshopLowHeightRecipeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
 
