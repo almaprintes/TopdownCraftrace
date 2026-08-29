@@ -1,10 +1,10 @@
 {
-  "version": 13,
+  "version": 14,
   "generator": "scripts/bake-track-beauty.mjs",
   "trackKey": "karting-tenerife",
   "title": "Karting Tenerife",
   "approved": true,
-  "revision": "atlantico-polyhaven-baseline-v1",
+  "revision": "karting-tenerife-asphalt-pit-lane-full-width-v1",
   "worldW": 2813,
   "worldH": 2602,
   "depth": 9,
@@ -17,15 +17,16 @@
   },
   "materials": {
     "road": {
-      "material": "asphalt02Clean",
-      "cell": 205,
+      "material": "asphaltPitLane",
+      "cell": 286,
       "macroGrid": 4,
-      "brightness": 0.96,
-      "id": "asphalt02Clean",
-      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg",
-      "normalSource": null,
-      "roughnessSource": null,
-      "processing": "cleanMicrodetail"
+      "brightness": 0.94,
+      "visualExpandPx": 18,
+      "id": "asphaltPitLane",
+      "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_diff_2k.jpg",
+      "normalSource": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_nor_gl_2k.jpg",
+      "roughnessSource": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_pit_lane/asphalt_pit_lane_rough_2k.jpg",
+      "processing": "bakedPbrDetail"
     },
     "shoulder": {
       "material": "sparseGrass",
