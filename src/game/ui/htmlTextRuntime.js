@@ -4,6 +4,14 @@ const ROOT_ID='tdr-native-text-layer';
 const STYLE_ID='tdr-native-text-style';
 const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
 
+// These scenes use Phaser cameras/masks as real scrolling viewports. Mirroring
+// their Text objects into one global DOM layer breaks the relationship between
+// the list, its mask and pointer-driven scrolling. Keep their text in Phaser
+// until those screens are migrated as proper DOM lists rather than mirrored text.
+const PHASER_SCROLL_SCENES=new Set(['GarageScene','TrackGarageScene']);
+function sceneKey(text){try{return String(text?.scene?.sys?.settings?.key||text?.scene?.scene?.key||'');}catch{return '';}}
+function shouldUseHtml(text){return !PHASER_SCROLL_SCENES.has(sceneKey(text));}
+
 function ensureRoot(game){
   if(!document.getElementById(STYLE_ID)){
     const style=document.createElement('style');
@@ -94,6 +102,7 @@ function maskBounds(mask){
 function sync(game,text,entry){
   const {clip,node}=entry;
   if(!text?.scene){clip.remove();return false;}
+  if(!shouldUseHtml(text)){clip.remove();return false;}
   const canvas=game?.canvas,host=canvas?.parentElement;if(!canvas||!host)return true;
   const state=hierarchyState(text);
   if(!state.visible||!sceneVisible(text)){clip.style.display='none';return true;}
@@ -138,9 +147,14 @@ export function installHtmlTextRuntime(game){
   globalThis.__tdrHtmlTextRuntimeInstalled=true;
   const root=ensureRoot(game);if(!root){globalThis.__tdrHtmlTextRuntimeInstalled=false;return;}
   const entries=new Map(),proto=Phaser.GameObjects.Text.prototype,originalDestroy=proto.destroy,originalWebGL=proto.renderWebGL,originalCanvas=proto.renderCanvas;
-  proto.renderWebGL=function(){};proto.renderCanvas=function(){};
+
+  // Render normally in camera-scrolling scenes. Everywhere else the DOM mirror
+  // replaces the Phaser glyphs as before.
+  proto.renderWebGL=function(...args){if(!shouldUseHtml(this))return originalWebGL?.apply(this,args);};
+  proto.renderCanvas=function(...args){if(!shouldUseHtml(this))return originalCanvas?.apply(this,args);};
+
   const register=text=>{
-    if(!text||entries.has(text))return;
+    if(!text||entries.has(text)||!shouldUseHtml(text))return;
     const clip=document.createElement('div');clip.className='tdr-native-clip';
     const node=document.createElement('div');node.className='tdr-native-text';clip.appendChild(node);root.appendChild(clip);
     entries.set(text,{clip,node});
