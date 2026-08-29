@@ -1,7 +1,7 @@
 import { UpgradeShopScene as CurrentWorkshop } from './UpgradeWorkshopLowHeightRecipeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
-import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeDom.js';
+import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeFlexibleDom.js';
 
 const LEGACY_CAR_IDS=new Set(['stock','touring','power']);
 const ALL_CAR_IDS=Object.keys(CAR_SPECS).filter(id=>!LEGACY_CAR_IDS.has(id)&&CAR_SPECS[id]);
