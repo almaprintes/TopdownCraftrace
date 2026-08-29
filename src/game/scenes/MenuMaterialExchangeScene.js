@@ -22,13 +22,17 @@ export class MenuScene extends CurrentMenuScene {
   _closeMaterialExchange(){
     try{this._materialExchangeModal?.destroy?.(true);}catch{}
     this._materialExchangeModal=null;
+    try{if(this._storeModal?.scene)this._storeModal.setVisible(true);}catch{}
   }
 
   _openMaterialExchange(fromId=this._exchangeFrom||'scrap',toId=this._exchangeTo||'compound',amount=this._exchangeAmount||100,openPicker=null){
     this._closeMaterialExchange();
+    // The recycler is a full modal, not a translucent layer over the store.
+    // Hide the store while it is open so legacy/store labels can never bleed through.
+    try{if(this._storeModal?.scene)this._storeModal.setVisible(false);}catch{}
     const {width:w,height:h}=this.scale;
     const compact=h<520;
-    const root=this.add.container(0,0).setDepth(22000);this._materialExchangeModal=root;
+    const root=this.add.container(0,0).setDepth(50000);this._materialExchangeModal=root;
     const A=o=>{root.add(o);return o;};
     const garage=loadGarage();
     if(!EXCHANGE_MATERIALS.includes(fromId))fromId='scrap';
@@ -36,9 +40,9 @@ export class MenuScene extends CurrentMenuScene {
     amount=Math.max(1,Math.min(qty(garage,fromId),Math.floor(Number(amount)||1)));
     this._exchangeFrom=fromId;this._exchangeTo=toId;this._exchangeAmount=amount;
 
-    A(this.add.rectangle(0,0,w,h,0x02070d,.90).setOrigin(0).setInteractive());
+    A(this.add.rectangle(0,0,w,h,0x02070d,1).setOrigin(0).setInteractive());
     const pw=Math.min(w-30,compact?720:780),ph=Math.min(h-24,compact?320:370),x=(w-pw)/2,y=(h-ph)/2;
-    A(this.add.rectangle(x,y,pw,ph,0x081522,.998).setOrigin(0).setStrokeStyle(2,0x5df0b0,.9));
+    A(this.add.rectangle(x,y,pw,ph,0x081522,1).setOrigin(0).setStrokeStyle(2,0x5df0b0,.9));
     A(this.add.text(x+24,y+(compact?14:18),'RECICLADORA DE MATERIALES',{fontFamily:UI,fontSize:compact?'18px':'23px',fontStyle:'900',color:'#ffffff'}));
     A(this.add.text(x+24,y+(compact?39:49),'Convierte excedentes para completar tus piezas',{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'700',color:'#a9bfd0'}));
     const status=materialExchangeStatus();
