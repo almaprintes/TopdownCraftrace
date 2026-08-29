@@ -1,4 +1,4 @@
-# All-track beauty bake is intentionally manual until the baker is split into bounded per-track jobs.
+# Manual bounded PolyHaven bake. Atlántico and Raven Hollow are protected.
 name: Bake all tracks beauty
 
 on:
@@ -16,7 +16,7 @@ jobs:
   bake:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -33,28 +33,33 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Show bake inputs
+      - name: Build protected target list
+        id: targets
         run: |
           set -euxo pipefail
-          node --version
-          npm --version
-          find src/game/tracks/library -mindepth 2 -maxdepth 2 -name track.json -print | sort
-          ls -lh public/assets/materials/dirt-road/road_damaged_2_diff_2k.jpg
-          df -h .
-          free -h
+          find src/game/tracks/library -mindepth 2 -maxdepth 2 -name track.json -printf '%h\n' \
+            | xargs -n1 basename \
+            | grep -v -E '^(track01|offroad-raven-hollow)$' \
+            | sort > /tmp/beauty-targets.txt
+          cat /tmp/beauty-targets.txt
+          test "$(wc -l < /tmp/beauty-targets.txt)" -eq 14
+          test -f public/assets/tracks/track01/beauty/manifest.json
+          test -f public/assets/tracks/offroad-raven-hollow/beauty/manifest.json
 
-      - name: Bake every track
+      - name: Bake 14 tracks with approved generic baker
         run: |
           set -euxo pipefail
-          npm run bake:track -- all
+          while IFS= read -r KEY; do
+            node scripts/bake-track-beauty.mjs "$KEY"
+          done < /tmp/beauty-targets.txt
 
-      - name: Publish generated beauty assets and catalog
+      - name: Publish only the 14 generated tracks
         run: |
           set -euxo pipefail
-          for SRC in artifacts/track-beauty/*; do
-            [ -d "$SRC" ] || continue
-            KEY="$(basename "$SRC")"
+          while IFS= read -r KEY; do
+            SRC="artifacts/track-beauty/$KEY"
             DEST="public/assets/tracks/$KEY/beauty"
+            test -f "$SRC/manifest.json"
             mkdir -p "$DEST"
             rm -f "$DEST"/*-beauty-preview.webp "$DEST"/*-beauty-[0-9].webp "$DEST/manifest.json"
             cp "$SRC/$KEY-beauty-preview.webp" "$DEST/"
@@ -63,15 +68,19 @@ jobs:
             cp "$SRC/$KEY-beauty-2.webp" "$DEST/"
             cp "$SRC/$KEY-beauty-3.webp" "$DEST/"
             cp "$SRC/manifest.json" "$DEST/"
-          done
-          cp artifacts/track-beauty/trackBeautyLayers.generated.js src/game/tracks/trackBeautyLayers.generated.js
+          done < /tmp/beauty-targets.txt
+          node scripts/build-track-beauty-catalog.mjs
 
-      - name: Verify Raven Hollow bake exists
+      - name: Verify protected tracks and complete 16-track catalog
         run: |
           set -euxo pipefail
-          test -f public/assets/tracks/offroad-raven-hollow/beauty/offroad-raven-hollow-beauty-0.webp
+          test -f public/assets/tracks/track01/beauty/manifest.json
           test -f public/assets/tracks/offroad-raven-hollow/beauty/manifest.json
+          grep -q 'track01' src/game/tracks/trackBeautyLayers.generated.js
           grep -q 'offroad-raven-hollow' src/game/tracks/trackBeautyLayers.generated.js
+          test "$(grep -c 'useBeautyLayer: true' src/game/tracks/trackBeautyLayers.generated.js)" -eq 16
+          git diff --exit-code -- public/assets/tracks/track01/beauty
+          git diff --exit-code -- public/assets/tracks/offroad-raven-hollow/beauty
 
       - name: Commit generated assets
         id: commit_assets
@@ -82,10 +91,9 @@ jobs:
           git add public/assets/tracks src/game/tracks/trackBeautyLayers.generated.js
           if git diff --cached --quiet; then
             echo 'changed=false' >> "$GITHUB_OUTPUT"
-            echo 'No generated changes to commit.'
             exit 0
           fi
-          git commit -m 'Bake all track beauty assets'
+          git commit -m 'Bake PolyHaven beauty for remaining 14 tracks'
           git pull --rebase origin main
           git push origin HEAD:main
           echo 'changed=true' >> "$GITHUB_OUTPUT"
