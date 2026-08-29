@@ -34,9 +34,20 @@ export class UpgradeShopScene extends PreviousWorkshop {
     const active={...equipped};
     if(preview?.kind==='part'&&preview.family)active[preview.family]=preview.id;
 
-    A(this.add.text(r.x,r.y,'RENDIMIENTO',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'12px',fontStyle:'900',color:'#fff'}));
-    const start=r.y+(compact?17:22);
-    const row=Math.max(compact?24:31,(r.h-(compact?18:24))/4);
+    const ultraShort=compact&&Number(this.scale?.height||0)<=390;
+    const titleSize=ultraShort?'8px':compact?'9px':'12px';
+    const labelSize=ultraShort?'6px':compact?'7px':'9px';
+    const valueSize=ultraShort?'8px':compact?'9px':'11px';
+    const startOffset=ultraShort?14:compact?17:22;
+    const barOffset=ultraShort?9:compact?11:14;
+    const barH=ultraShort?4:compact?5:7;
+
+    A(this.add.text(r.x,r.y,'RENDIMIENTO',{fontFamily:'Arial Narrow,system-ui',fontSize:titleSize,fontStyle:'900',color:'#fff'}));
+    const start=r.y+startOffset;
+    // On very short landscape screens, fit the four rows to the real panel
+    // height instead of enforcing the old 24 px minimum that pushed CONTROL out.
+    const fittedRow=(r.h-startOffset-barOffset-barH)/Math.max(1,STATS.length-1);
+    const row=ultraShort?Math.max(8,fittedRow):Math.max(compact?24:31,(r.h-(compact?18:24))/4);
 
     STATS.forEach(([key,label],i)=>{
       const y=start+i*row;
@@ -55,10 +66,10 @@ export class UpgradeShopScene extends PreviousWorkshop {
         }
       }
 
-      A(this.add.text(r.x,y,label,{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'800',color:'#d8e4e9'}));
-      A(this.add.text(r.x+r.w,y,String(clamp99(total)),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'11px',fontStyle:'900',color:'#fff'}).setOrigin(1,0));
+      A(this.add.text(r.x,y,label,{fontFamily:'system-ui',fontSize:labelSize,fontStyle:'800',color:'#d8e4e9'}));
+      A(this.add.text(r.x+r.w,y,String(clamp99(total)),{fontFamily:'Arial Narrow,system-ui',fontSize:valueSize,fontStyle:'900',color:'#fff'}).setOrigin(1,0));
 
-      const by=y+(compact?11:14),bh=compact?5:7;
+      const by=y+barOffset,bh=barH;
       const g=A(this.add.graphics());
       g.fillStyle(0x14232a,1);g.fillRoundedRect(r.x,by,r.w,bh,bh/2);
 
