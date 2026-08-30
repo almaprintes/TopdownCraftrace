@@ -27,9 +27,8 @@ function beautyLayerOwnsGround(scene){
   return scene?._beautyLayerActive===true && scene?._beautyLayerFailed!==true;
 }
 
-// Shipping graphics-preset layer. All temporary OBJ/BUF/WEBGL/CLOCK/GPU
-// diagnostics have been removed completely. They were useful for the iOS A/B
-// investigation but must never create or update Phaser.Text during normal play.
+// Shipping graphics-preset layer. Expensive global object/cell scans are applied
+// only during scene setup (plus two short settling passes), never every frame.
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
@@ -59,7 +58,6 @@ export class RaceScene extends CurrentRaceScene {
       this._forceNoParticles=!this._gfxPrefs.particles;
     }
 
-    // Explicitly neutralize any stale diagnostic references left by lower layers.
     for(const key of ['_clockDiagText','_bufferDiagText','_rendererDiagText','_growthDiagText']){
       try{this[key]?.destroy?.(true);}catch{}
       this[key]=null;
@@ -68,6 +66,9 @@ export class RaceScene extends CurrentRaceScene {
     this._growthDiagAccum=0;
     this._updateGrowthDiag=()=>{};
 
+    this._enforceGraphicsPreset();
+    this.time?.delayedCall?.(250,()=>this._enforceGraphicsPreset());
+    this.time?.delayedCall?.(1000,()=>this._enforceGraphicsPreset());
     return result;
   }
 
@@ -121,8 +122,6 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   update(time,delta){
-    const result=super.update(time,delta);
-    this._enforceGraphicsPreset();
-    return result;
+    return super.update(time,delta);
   }
 }
