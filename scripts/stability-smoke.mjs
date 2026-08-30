@@ -58,14 +58,17 @@ requireText(raceFinal,'grantRaceLoot','reward guard must be able to fill only mi
 requireText(raceFinal,"assets/season/reward_cards/free_${tone}.svg",'session chest presenter must use Season Pass reward-card art');
 
 // Mastery unlocks may be earned mid-race but must never interrupt live driving.
-// The lobby owns the informational modal after the session returns there.
 forbid(mileage,'showMasteryUnlockModal','race mileage layer must not display mastery modal during live play');
 forbid(mileage,'physics?.world?.pause?.()','mastery progression must not pause an active race');
 requireText(mileage,'_queueMasteryUnlock','race mileage layer must defer mastery unlock presentation');
 requireText(lobby,'showMasteryUnlockModal','lobby must remain the post-race mastery presentation owner');
 
-requireText(modes,'preload(){','game-mode card preload is missing');
-forbid(modes,'this.load.start()','game-mode carousel must not start Loader during interaction');
+// Game-mode selector must stay DOM-native on mobile; no Phaser card preload/tween lock.
+requireText(modes,"className='tdr-mode-dom-root'",'game-mode selector must use the DOM renderer');
+requireText(modes,'scroll-snap-type:x mandatory','game-mode selector must use native horizontal snap');
+forbid(modes,'this.tweens.add(','game-mode selector must not depend on Phaser tween completion');
+forbid(modes,'_modeSnapAnimating','game-mode selector must not use a global animation input lock');
+forbid(modes,'this.load.image(','game-mode cards must not be duplicated into Phaser textures');
 
 // Player garage must never fall back to the legacy Phaser renderer because of a
 // development unlock flag. It also must not duplicate all card images in Phaser textures.
@@ -87,7 +90,6 @@ forbid(index,"dispatchEvent(new Event('resize'))",'viewport normalizer must not 
 forbid(index,'carFactoryModal','dead Car Factory modal must not return to the shipping shell');
 
 requireText(sw,"fetch(req, { cache: 'no-store' })",'service worker network freshness path is missing');
-
 requireText(stats,'export function loadPlayerStatsPersisted()','lightweight persistent stats read is missing');
 forbid(stats,'return overlayTiming(next);','stat writes must not rescan TT histories');
 requireText(lobby,'loadPlayerStatsPersisted','lobby mastery must not scan all TT histories');
