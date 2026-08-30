@@ -16,7 +16,7 @@ import './tracks/trackPublicNames.js';
 class MenuAliasScene extends Phaser.Scene { constructor(){super('MenuScene');} create(){this.scene.start('menu');} }
 
 const LAZY_SCENES={
-  GarageScene:{load:()=>import('./scenes/GarageLazyCardsScene.js'),exportName:'GarageScene',warm:10},
+  GarageScene:{load:()=>import('./scenes/GarageSelectionCenterScene.js'),exportName:'GarageScene',warm:10},
   'upgrade-shop':{load:()=>import('./scenes/UpgradeWorkshopCarUnlockScene.js'),exportName:'UpgradeShopScene',warm:20},
   SettingsScene:{load:()=>import('./scenes/SettingsGraphicsQualityScene.js'),exportName:'SettingsScene',warm:30},
   StatsScene:{load:()=>import('./scenes/StatsMasteryScene.js'),exportName:'StatsScene',warm:40},
