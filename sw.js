@@ -1,5 +1,5 @@
-/* Static-cache SW (sin Workbox) — arranque estable y actualización en segundo plano */
-const CACHE_VERSION = 'tdr2-v20';
+/* Static-cache SW (sin Workbox) — shell fresco online, fallback estable offline */
+const CACHE_VERSION = 'tdr2-v21';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -16,8 +16,8 @@ const CORE_ASSETS = [
   './assets/tutorials/dropping/dropping_05_717x330.png'
 ];
 
-// Do not let an update replace the active controller in the middle of bootstrap.
-// Older clients may still send SKIP_WAITING; intentionally ignore it here.
+// Never seize a running game session. A newly installed worker activates naturally
+// after old clients close; the next launch gets the new shell.
 self.addEventListener('message', () => {});
 
 self.addEventListener('install', (event) => {
@@ -28,11 +28,8 @@ self.addEventListener('install', (event) => {
         const req = new Request(asset, { cache: 'reload' });
         const res = await fetch(req);
         if (res && res.ok) await cache.put(req, res.clone());
-      } catch (_) {
-        // A single optional asset must never abort SW installation.
-      }
+      } catch (_) {}
     }));
-    // No skipWaiting: activate naturally after existing clients close.
   })());
 });
 
@@ -40,7 +37,6 @@ self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
     await Promise.all(keys.map((k) => (k === CACHE_VERSION ? Promise.resolve() : caches.delete(k))));
-    // No clients.claim(): never seize an already-running game session.
   })());
 });
 
@@ -48,10 +44,10 @@ function isNavigationRequest(req) {
   return req.mode === 'navigate' || (req.method === 'GET' && req.headers.get('accept')?.includes('text/html'));
 }
 
-async function refreshInBackground(req, cache, cacheKey = req) {
+async function refreshInBackground(req, cache) {
   try {
     const fresh = await fetch(req, { cache: 'no-store' });
-    if (fresh && fresh.ok) await cache.put(cacheKey, fresh.clone());
+    if (fresh && fresh.ok) await cache.put(req, fresh.clone());
   } catch (_) {}
 }
 
@@ -62,38 +58,33 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (isNavigationRequest(req)) {
+    // HTML is version authority. Prefer network so a normal online launch never
+    // boots yesterday's bundle; fall back to the known-good cached shell offline.
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_VERSION);
       const indexUrl = new URL('./index.html', self.location.href).toString();
-      const cached = await cache.match(indexUrl);
-
-      if (cached) {
-        // Known-good shell starts immediately. Network only refreshes the next launch.
-        event.waitUntil(refreshInBackground(req, cache, indexUrl));
-        return cached;
-      }
-
       try {
         const fresh = await fetch(req, { cache: 'no-store' });
-        if (fresh && fresh.ok) await cache.put(indexUrl, fresh.clone());
-        return fresh;
-      } catch (_) {
-        return new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><body style="background:#071017;color:white;font-family:system-ui;padding:24px">Top-Down Race no puede arrancar sin una copia válida en caché.</body>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-      }
+        if (fresh && fresh.ok) {
+          await cache.put(indexUrl, fresh.clone());
+          return fresh;
+        }
+      } catch (_) {}
+      const cached = await cache.match(indexUrl);
+      if (cached) return cached;
+      return new Response('<!doctype html><meta charset="utf-8"><title>Offline</title><body style="background:#071017;color:white;font-family:system-ui;padding:24px">Top-Down Race no puede arrancar sin una copia válida en caché.</body>', { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     })());
     return;
   }
 
+  // Hashed Vite chunks and immutable-ish game assets benefit from cache-first.
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_VERSION);
     const cached = await cache.match(req);
-
     if (cached) {
-      // Critical startup rule: cached game files never wait for the network.
       event.waitUntil(refreshInBackground(req, cache));
       return cached;
     }
-
     try {
       const fresh = await fetch(req, { cache: 'no-store' });
       if (fresh && fresh.ok) await cache.put(req, fresh.clone());
