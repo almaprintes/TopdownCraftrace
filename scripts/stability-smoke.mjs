@@ -13,6 +13,7 @@ const gfx=read('src/game/scenes/RaceGraphicsPresetScene.js');
 const safe=read('src/game/scenes/RaceSafeModeRuntimeScene.js');
 const adaptive=read('src/game/scenes/RaceAdaptiveStartScene.js');
 const modes=read('src/game/scenes/MenuGameModeSnapScene.js');
+const garage=read('src/game/scenes/GarageLazyCardsScene.js');
 const main=read('src/main.js');
 const index=read('index.html');
 const sw=read('sw.js');
@@ -24,7 +25,6 @@ const preview=read('.github/workflows/build-pages.yml');
 forbid(gfx,'this._completedLapCheck=()=>{}','iOS graphics layer must not disable completed-lap timing');
 forbid(gfx,'this._recordGhostSample=()=>{}','iOS graphics layer must not disable ghost recording');
 
-// Preserve the measured Aug-28 iOS scheduling baseline, but keep an explicit rAF A/B escape hatch.
 requireText(game,'const forceSetTimeOut=iosDevice&&!forceRafLoop();','iOS timeout scheduling baseline is missing');
 requireText(game,"tdr2:forceRafLoop",'iOS rAF diagnostic override is missing');
 
@@ -37,6 +37,13 @@ requireText(adaptive,'if(window.__tdrIosSafeMode===true)','iOS safe mode Beauty 
 
 requireText(modes,'preload(){','game-mode card preload is missing');
 forbid(modes,'this.load.start()','game-mode carousel must not start Loader during interaction');
+
+// Player garage must never fall back to the legacy Phaser renderer because of a
+// development unlock flag. It also must not duplicate all card images in Phaser textures.
+requireText(garage,"if(this._mode!=='admin')return;",'player garage must skip Phaser card texture preload');
+requireText(garage,'BaseScene.prototype.create.call(this);','player garage must bypass legacy Phaser scene construction');
+forbid(garage,'if(!this._fullAccess())','player DOM garage must not depend on development unlock state');
+forbid(garage,"'PLAYER'",'player-facing garage must not expose the legacy PLAYER label');
 
 if(count(main,'serviceWorker.register')!==0)fail('src/main.js must not register the service worker');
 if(count(index,"serviceWorker.register('./sw.js')")!==1)fail('index.html must own exactly one service-worker registration');
