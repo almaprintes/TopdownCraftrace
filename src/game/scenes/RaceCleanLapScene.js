@@ -1,12 +1,15 @@
 import { RaceScene as CurrentRaceScene } from './RaceGraphicsPresetScene.js';
 import { recordCompletedLapClean } from '../seasons/cleanLapTelemetry.js';
 
+const CLEAN_SAMPLE_MS=100;
+
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
     this._cleanLapTrackId=String(this.trackKey||data?.trackKey||this.track?.id||this.track?.key||'').trim();
     this._cleanLapSeenHistory=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
     this._currentLapClean=true;
+    this._cleanLapAccum=CLEAN_SAMPLE_MS;
     this._liveHudClosedForSessionEnd=false;
     return result;
   }
@@ -21,14 +24,15 @@ export class RaceScene extends CurrentRaceScene {
     this._liveHudClosedForSessionEnd=true;
     try{this._raceHudDom?.remove?.();}catch{}
     this._raceHudDom=null;
-    // The race scene deliberately remains alive underneath rewards/results, so
-    // disable only the live HUD updater. Session/report data stays untouched.
     this._updateSimpleRaceHud=()=>{};
   }
 
   update(time,delta){
     super.update?.(time,delta);
     this._closeLiveHudForSessionEnd();
+    this._cleanLapAccum+=Math.max(0,Number(delta)||0);
+    if(this._cleanLapAccum<CLEAN_SAMPLE_MS)return;
+    this._cleanLapAccum=0;
     try{
       const body=this.carBody;
       const x=Number(body?.x),y=Number(body?.y);
