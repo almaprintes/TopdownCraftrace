@@ -1,10 +1,12 @@
 import { RaceScene as CurrentRaceScene } from './RaceSurvivalHardLapCapScene.js';
 import { METERS_PER_PX } from '../cars/speedUnits.js';
-import { addCarDistance, loadPlayerStats, markCarRace, recordCarTrackLap } from '../stats/playerStats.js';
+import { addCarDistance, loadPlayerStatsPersisted, markCarRace } from '../stats/playerStats.js';
 import { masteryLevelForMeters } from '../stats/carMastery.js';
 import { showMasteryUnlockModal } from '../ui/MasteryUnlockModal.js';
 
-const FLUSH_EVERY_MS=3500;
+// Distance persistence is not frame-critical. A longer flush interval dramatically
+// reduces synchronous localStorage writes while retaining a shutdown flush.
+const FLUSH_EVERY_MS=12000;
 
 export class RaceScene extends CurrentRaceScene{
   create(data){
@@ -15,7 +17,6 @@ export class RaceScene extends CurrentRaceScene{
     this._mileagePendingMeters=0;
     this._mileageLastFlush=performance.now();
     this._mileageRaceMarked=false;
-    this._statsSeenHistoryLength=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
     this._masteryCelebrating=false;
     this.events.once('shutdown',()=>this._flushMileage(true));
     return result;
@@ -24,30 +25,6 @@ export class RaceScene extends CurrentRaceScene{
   update(time,delta){
     super.update?.(time,delta);
     if(!this._masteryCelebrating)this._sampleMileage(delta);
-    this._captureNewLapStats();
-  }
-
-  _completedLapCheck(now){
-    const before=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
-    const result=super._completedLapCheck(now);
-    const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
-    if(hist.length>before)this._captureNewLapStats();
-    return result;
-  }
-
-  _captureNewLapStats(){
-    const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
-    const seen=Math.max(0,Number(this._statsSeenHistoryLength)||0);
-    if(hist.length<=seen)return;
-    for(let i=seen;i<hist.length;i++){
-      const row=hist[i]||{};
-      const ms=Number(row.lapMs ?? row.timeMs ?? row.ms ?? row.time ?? row.lapTime ?? row.durationMs);
-      const valid=row.valid!==false&&row.invalid!==true;
-      if(valid&&Number.isFinite(ms)&&ms>1000&&this._mileageCarId&&this._mileageTrackId){
-        recordCarTrackLap(this._mileageCarId,this._mileageTrackId,ms);
-      }
-    }
-    this._statsSeenHistoryLength=hist.length;
   }
 
   _sampleMileage(delta){
@@ -82,7 +59,7 @@ export class RaceScene extends CurrentRaceScene{
   _flushMileage(final=false){
     const meters=Math.max(0,Number(this._mileagePendingMeters)||0);
     if(meters>0&&this._mileageCarId){
-      const beforeMeters=Number(loadPlayerStats()?.cars?.[this._mileageCarId]?.meters)||0;
+      const beforeMeters=Number(loadPlayerStatsPersisted()?.cars?.[this._mileageCarId]?.meters)||0;
       const beforeLevel=masteryLevelForMeters(beforeMeters);
       const state=addCarDistance(this._mileageCarId,meters,this._mileageTrackId);
       const afterMeters=Number(state?.cars?.[this._mileageCarId]?.meters)||beforeMeters+meters;
@@ -91,6 +68,6 @@ export class RaceScene extends CurrentRaceScene{
     }
     this._mileagePendingMeters=0;
     this._mileageLastFlush=performance.now();
-    if(final){this._mileagePrev=null;this._captureNewLapStats();}
+    if(final)this._mileagePrev=null;
   }
 }
