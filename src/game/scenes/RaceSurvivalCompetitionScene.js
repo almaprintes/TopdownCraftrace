@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceSurvivalModeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { resolveVehicleSurface } from '../cars/surfaceInteraction.js';
 import { buildSurvivalRoster } from '../modes/survival/survivalRoster.js';
 import { buildClosedCenterline, buildSurvivalGrid } from '../modes/survival/survivalGrid.js';
@@ -23,6 +24,11 @@ function visualCarSprite(scene){
  * Clean Survival competition builder.
  * RaceSurvivalModeScene keeps the proven lap/elimination contract while this
  * scene is the sole authority for roster, starting grid and race release.
+ *
+ * Upgrade fairness rule: resolveCarParams() always reads the currently selected
+ * player's equipped Workshop parts. Every CPU base car is resolved through the
+ * same function, so engine/brakes/transmission/tires/etc. are identical in tier
+ * to the player's loadout. Only the base car and CPU driving pace differ.
  */
 export class RaceScene extends CurrentRaceScene {
   preload(){
@@ -56,8 +62,9 @@ export class RaceScene extends CurrentRaceScene {
     if(!visual||!line)return;
 
     const playerId=String(this.carId||this.selectedCarId||readSelectedCarId());
-    const playerSpec=CAR_SPECS[playerId]||CAR_SPECS.helix_spark;
-    const roster=buildSurvivalRoster(playerSpec.id,5);
+    const playerBaseSpec=CAR_SPECS[playerId]||CAR_SPECS.helix_spark;
+    const playerSpec=resolveCarParams(playerBaseSpec);
+    const roster=buildSurvivalRoster(playerBaseSpec.id,5);
     if(roster.length!==6)return;
 
     this._survivalRoster=roster;
@@ -104,7 +111,7 @@ export class RaceScene extends CurrentRaceScene {
       baseLapSec=clamp(line.totalLength/Math.max(55,playerMax*surfacePace*.42),28,120);
     }
 
-    const playerScale=Math.max(.5,Number(playerSpec.visualScale||1));
+    const playerScale=Math.max(.5,Number(playerBaseSpec.visualScale||1));
     const visualScaleX=Number(visual.scaleX||1),visualScaleY=Number(visual.scaleY||1);
     const trackW=Math.max(80,Number(this.track?.meta?.trackWidth||this.track?.trackWidth||this.trackWidth||140));
 
@@ -128,8 +135,13 @@ export class RaceScene extends CurrentRaceScene {
       const startProgress=-backDistance/line.totalLength;
       const targetRate=(1/baseLapSec)*Number(slot.targetPace||1);
       const carWidth=Math.max(12,Number(sprite.displayWidth||sprite.width||28));
+      // Critical fairness invariant: resolve the CPU's own base car using the
+      // player's currently equipped upgrades. resolveCarParams() reads the
+      // selected car's Workshop tuning, so every rival receives the exact same
+      // upgrade package without mutating ownership/equipment in the garage.
+      const cpuSpec=resolveCarParams(slot.spec);
       this._survivalBots.push({
-        id:slot.label||`CPU ${slot.gridIndex}`,carId:slot.carId,carSpec:slot.spec,
+        id:slot.label||`CPU ${slot.gridIndex}`,carId:slot.carId,carSpec:cpuSpec,
         gridIndex:slot.gridIndex,carScore:slot.carScore,targetPace:slot.targetPace,
         sprite,absProgress:startProgress,lapRate:0,targetRate,lane:0,baseLane:0,
         active:true,launchDelay:0,armed:false,completedLaps:0,distanceSinceFinish:0,
