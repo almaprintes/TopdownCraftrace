@@ -70,7 +70,7 @@ requireText(racePauseUi,'CAPTURA TÉCNICA','pause menu must preserve technical c
 requireText(racePauseUi,'FINALIZAR SESIÓN','pause menu must preserve session finish action');
 requireText(raceVisibility,"document.querySelector('.tdr-race-hud')",'UI visibility utility must explicitly own DOM instrument HUD');
 requireText(raceVisibility,"document.querySelectorAll('[data-tdr-race-ui=\"1\"]')",'UI visibility utility must own other race DOM controls');
-requireText(raceVisibility,'scene.uiCam.setVisible?.(false);','UI visibility utility must own Phaser UI camera hiding');
+requireText(raceVisibility,'cam.setVisible?.(false);','UI visibility utility must own Phaser UI camera hiding');
 
 requireText(raceSessionUi,'assets/season/reward_cards/free_${tone}.svg','session reward UI must use canonical Season Pass card art');
 forbid(raceSessionUi,'daily_gift.webp','shipping session reward UI must not use legacy gift chest');
