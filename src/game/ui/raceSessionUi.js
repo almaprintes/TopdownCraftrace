@@ -24,7 +24,12 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
   root.style.setProperty('--reward-transform',hasChest?'translateY(8px)':'none');
   root.style.setProperty('--next-visible',hasChest?'0':'1');
   root.style.setProperty('--next-events',hasChest?'none':'auto');
-  const rewardRows=entries.map((row,i)=>`<div class="tdr-session-item" data-r="${i}"><div class="tdr-session-icon">${esc(row.icon||'◆')}</div><div class="tdr-session-name">${esc(row.name||row.id||'')}</div><div class="tdr-session-qty">×${Math.max(0,Number(row.qty)||0)}</div></div>`).join('');
+  const rewardRows=entries.map((row,i)=>{
+    const visual=row.asset
+      ? `<img class="tdr-session-item-asset" src="${esc(row.asset)}" alt="${esc(row.name||row.id||'Recompensa')}">`
+      : `<span class="tdr-session-item-glyph">${esc(row.icon||'◆')}</span>`;
+    return `<div class="tdr-session-item" data-r="${i}"><div class="tdr-session-icon">${visual}</div><div class="tdr-session-name">${esc(row.name||row.id||'')}</div><div class="tdr-session-qty">×${Math.max(0,Number(row.qty)||0)}</div></div>`;
+  }).join('');
   root.innerHTML=`<section class="tdr-session-card"><button class="tdr-session-close" data-a="close" aria-label="Cerrar">×</button><div class="tdr-session-kicker">SESIÓN FINALIZADA</div><h2>${hasChest?`COFRE DE ${tier} VUELTAS`:'BOTÍN DE LA SESIÓN'}</h2><div class="tdr-session-sub">Todo lo conseguido durante la tanda se entrega junto.</div>${hasChest?`<div class="tdr-session-pass" data-a="open"><img src="${baseUrl}assets/season/reward_cards/free_${tone}.svg" alt="Cofre ${tier}"><span class="free">FREE</span><span class="mark">◆</span><span class="tier">COFRE ${tier}</span></div><div class="tdr-session-tap">TOCA PARA ABRIR</div>`:''}<div class="tdr-session-head"><small>RECOMPENSAS TOTALES</small><strong>${total} PIEZAS</strong></div><div class="tdr-session-grid">${rewardRows}</div><div class="tdr-session-meta"><span class="tdr-session-chip">🏁 ${Math.max(0,Number(laps)||0)} VUELTAS PREMIADAS</span>${Number(bonusLaps)>0?`<span class="tdr-session-chip">⚡ ${Math.max(0,Number(bonusLaps)||0)} BONUS</span>`:''}${hasChest?`<span class="tdr-session-chip">▣ COFRE ${tier}</span>`:''}</div><button class="tdr-session-next" data-a="next">${esc(resultLabel)}</button></section>`;
   const open=root.querySelector('[data-a="open"]'),tap=root.querySelector('.tdr-session-tap'),next=root.querySelector('[data-a="next"]'),close=root.querySelector('[data-a="close"]');
   let opened=!hasChest,finished=false;
