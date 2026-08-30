@@ -1,14 +1,4 @@
 import './raceInstrumentHud.css';
-import { CAR_SPECS } from '../cars/carSpecs.js';
-
-const BASE=import.meta.env.BASE_URL||'/';
-const BRAND_LOGO_SLUG={
-  'HÉLIX':'helix',
-  CROWN:'crown',
-  AVENIR:'avenir',
-  FORGE:'forge',
-  VELOCE:'veloce'
-};
 
 function fmtLap(ms){
   if(!Number.isFinite(Number(ms)))return '--:--.--';
@@ -35,36 +25,6 @@ function readRacePosition(scene){
   return null;
 }
 
-function readCarId(scene){
-  const direct=String(scene?.carId||scene?.selectedCarId||'').trim();
-  if(direct)return direct;
-  try{return String(localStorage.getItem('tdr2:carId')||'').trim();}catch{return'';}
-}
-
-function resolveCarIdentity(scene){
-  const id=readCarId(scene);
-  const spec=CAR_SPECS?.[id]||null;
-  const brand=String(spec?.brand||'').trim().toUpperCase();
-  const fullName=String(spec?.name||id||'').trim();
-  const slug=BRAND_LOGO_SLUG[brand]||null;
-  let model=fullName;
-  if(brand&&fullName.toUpperCase().startsWith(brand))model=fullName.slice(brand.length).trim();
-  return{
-    id,
-    brand,
-    model:model||fullName||id,
-    fullName:fullName||id,
-    logo:slug?`${BASE}assets/logos/logo_${slug}_negativo.webp`:null
-  };
-}
-
-function carIdentityMarkup(scene){
-  const car=resolveCarIdentity(scene);
-  if(!car.fullName)return'';
-  const logo=car.logo?`<img class="tdr-race-car-logo" data-car-logo src="${car.logo}" alt="${car.brand}">`:'';
-  return `<div class="tdr-race-car-id" data-car-id>${logo}<span class="tdr-race-car-model" data-car-model>${car.model||car.fullName}</span></div>`;
-}
-
 export function destroyRaceInstrumentHud(scene){
   try{scene?._raceHudDom?.remove?.();}catch{}
   if(scene){scene._raceHudDom=null;scene._raceHudRefs=null;}
@@ -89,20 +49,16 @@ export function mountRaceInstrumentHud(scene){
     </div>
     <div class="tdr-race-hud-bottom">
       <div class="tdr-race-speedbar">${Array.from({length:18},(_,i)=>`<i class="${i>=15?'red':i>=12?'hot':''}"></i>`).join('')}</div>
-      ${carIdentityMarkup(scene)}
       <div class="tdr-race-speed-wrap"><b class="tdr-race-speed" data-speed>000</b><span class="tdr-race-unit">KM/H</span></div>
       <div class="tdr-race-clock"><small>TIEMPO</small><b data-clock>0:00.00</b></div><div class="tdr-race-pos" data-pos></div>
     </div>`;
   host.appendChild(root);
-  root.querySelector('[data-car-logo]')?.addEventListener('error',event=>event.currentTarget?.remove?.(),{once:true});
   scene._raceHudDom=root;
   scene._raceHudRefs={
     lap:root.querySelector('[data-lap]'),sector:root.querySelector('[data-sector]'),last:root.querySelector('[data-last]'),best:root.querySelector('[data-best]'),
     delta:root.querySelector('[data-delta]'),speed:root.querySelector('[data-speed]'),clock:root.querySelector('[data-clock]'),pos:root.querySelector('[data-pos]'),
-    carId:root.querySelector('[data-car-id]'),carLogo:root.querySelector('[data-car-logo]'),carModel:root.querySelector('[data-car-model]'),
     sectorBars:Array.from(root.querySelectorAll('.tdr-race-sector-bars i')),speedBars:Array.from(root.querySelectorAll('.tdr-race-speedbar i'))
   };
-  scene._raceHudCarId=readCarId(scene);
   scene._raceHudAccum=100;
   return root;
 }
@@ -113,17 +69,6 @@ export function updateRaceInstrumentHud(scene,delta=0){
   scene._raceHudAccum=(Number(scene._raceHudAccum)||0)+Math.max(0,Number(delta)||0);
   if(scene._raceHudAccum<80)return;
   scene._raceHudAccum=0;
-
-  const currentCarId=readCarId(scene);
-  if(currentCarId&&currentCarId!==scene._raceHudCarId){
-    scene._raceHudCarId=currentCarId;
-    const car=resolveCarIdentity(scene);
-    if(refs.carModel)refs.carModel.textContent=car.model||car.fullName;
-    if(refs.carLogo){
-      if(car.logo){refs.carLogo.src=car.logo;refs.carLogo.alt=car.brand;refs.carLogo.hidden=false;}
-      else refs.carLogo.hidden=true;
-    }
-  }
 
   const now=performance.now();
   const body=scene.carBody?.body;
