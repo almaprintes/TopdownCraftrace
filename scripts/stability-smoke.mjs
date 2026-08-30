@@ -16,6 +16,8 @@ const main=read('src/main.js');
 const index=read('index.html');
 const sw=read('sw.js');
 const stats=read('src/game/stats/playerStats.js');
+const htmlText=read('src/game/ui/htmlTextRuntime.js');
+const lobby=read('src/game/ui/LobbyPublishPolish.js');
 const preview=read('.github/workflows/build-pages.yml');
 
 // Core gameplay must never be sacrificed by a graphics/performance layer.
@@ -50,6 +52,14 @@ requireText(sw,"fetch(req, { cache: 'no-store' })",'service worker network fresh
 // Stats writes during racing must not rebuild every TT history index.
 requireText(stats,'export function loadPlayerStatsPersisted()','lightweight persistent stats read is missing');
 forbid(stats,'return overlayTiming(next);','stat writes must not rescan TT histories');
+requireText(lobby,'loadPlayerStatsPersisted','lobby mastery must not scan all TT histories');
+
+// HTML text mirroring is global, so mobile must stay throttled and its Phaser
+// prototype/factory patches must be restored when the game is destroyed.
+requireText(htmlText,'isMobileDevice()?33:16','mobile HTML text synchronization throttle is missing');
+forbid(htmlText,'[...entries]','HTML text sync must not clone the full entry map every frame');
+requireText(htmlText,'proto.destroy=originalDestroy','HTML text destroy monkey-patch must be restored');
+requireText(htmlText,'factory.text=originalFactoryText','HTML text factory monkey-patch must be restored');
 
 // Preview and production must compile the same application shell.
 forbid(preview,'source-index.html','preview must not replace the real index.html');
