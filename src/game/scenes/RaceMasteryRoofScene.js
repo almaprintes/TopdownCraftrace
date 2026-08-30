@@ -1,5 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceMileageStatsScene.js';
-import { loadPlayerStats } from '../stats/playerStats.js';
+import { loadPlayerStatsPersisted } from '../stats/playerStats.js';
 import { masteryInfoForMeters, masteryRoofVisible, masteryVisualSpec } from '../stats/carMastery.js';
 
 function visibleCarSprite(scene){
@@ -15,7 +15,7 @@ export class RaceScene extends CurrentRaceScene{
     if(!masteryRoofVisible())return;
     const rig=this.carRig;if(!rig?.add)return;
     const carId=String(this.carId||this.selectedCarId||(()=>{try{return localStorage.getItem('tdr2:carId')||'';}catch{return'';}})());
-    const meters=Number(loadPlayerStats()?.cars?.[carId]?.meters)||0;
+    const meters=Number(loadPlayerStatsPersisted()?.cars?.[carId]?.meters)||0;
     const mastery=masteryInfoForMeters(meters);if(!mastery.level)return;
     const visual=masteryVisualSpec(mastery.level);
     const sprite=visibleCarSprite(this),carW=Math.max(18,Number(sprite?.displayWidth||sprite?.width||28));
