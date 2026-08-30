@@ -1,7 +1,8 @@
 import { RaceScene as CurrentRaceScene } from './RaceSurvivalModeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
-import { resolveCarParams } from '../cars/resolveCarParams.js';
+import { resolveCarParams, resolveCarParamsWithTuning } from '../cars/resolveCarParams.js';
 import { resolveVehicleSurface } from '../cars/surfaceInteraction.js';
+import { loadGarage, garageTuning } from '../garage/garageStore.js';
 import { buildSurvivalRoster } from '../modes/survival/survivalRoster.js';
 import { buildClosedCenterline, buildSurvivalGrid } from '../modes/survival/survivalGrid.js';
 
@@ -9,6 +10,7 @@ const BASE=import.meta.env.BASE_URL||'/';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const rand=(a,b)=>a+Math.random()*(b-a);
 const textureKey=id=>`survival-car-${id}`;
+const skinUrl=spec=>spec?.skin?`${BASE}assets/skins/${spec.skin}`:null;
 
 function readSelectedCarId(){
   try{return String(localStorage.getItem('tdr2:carId')||'helix_spark');}catch{return'helix_spark';}
@@ -24,11 +26,9 @@ function visualCarSprite(scene){
  * Clean Survival competition builder.
  * RaceSurvivalModeScene keeps the proven lap/elimination contract while this
  * scene is the sole authority for roster, starting grid and race release.
- *
- * Upgrade fairness rule: resolveCarParams() always reads the currently selected
- * player's equipped Workshop parts. Every CPU base car is resolved through the
- * same function, so engine/brakes/transmission/tires/etc. are identical in tier
- * to the player's loadout. Only the base car and CPU driving pace differ.
+ * CPU visuals use the same /assets/skins source as the normal race loader.
+ * CPU physics use each rival's own base car with the player's Workshop tuning
+ * applied exactly once.
  */
 export class RaceScene extends CurrentRaceScene {
   preload(){
@@ -37,8 +37,8 @@ export class RaceScene extends CurrentRaceScene {
     const roster=buildSurvivalRoster(readSelectedCarId());
     for(const entry of roster){
       if(entry.type!=='cpu'||!entry.spec?.skin)continue;
-      const key=textureKey(entry.carId);
-      if(!this.textures?.exists?.(key))this.load.image(key,`${BASE}assets/cars/runtime/${entry.spec.skin}`);
+      const key=textureKey(entry.carId),url=skinUrl(entry.spec);
+      if(url&&!this.textures?.exists?.(key))this.load.image(key,url);
     }
   }
 
@@ -64,6 +64,8 @@ export class RaceScene extends CurrentRaceScene {
     const playerId=String(this.carId||this.selectedCarId||readSelectedCarId());
     const playerBaseSpec=CAR_SPECS[playerId]||CAR_SPECS.helix_spark;
     const playerSpec=resolveCarParams(playerBaseSpec);
+    let playerUpgradeTuning={};
+    try{playerUpgradeTuning=garageTuning(loadGarage(),playerBaseSpec.id)||{};}catch{}
     const roster=buildSurvivalRoster(playerBaseSpec.id,5);
     if(roster.length!==6)return;
 
@@ -119,7 +121,7 @@ export class RaceScene extends CurrentRaceScene {
       if(slot.type!=='cpu')continue;
       const key=textureKey(slot.carId);
       if(!this.textures?.exists?.(key)){
-        console.warn(`[survival-grid] missing CPU texture ${key}; skipping ${slot.carId}`);
+        console.error(`[survival-grid] CPU skin was not loaded: ${slot.carId} -> ${skinUrl(slot.spec)}`);
         continue;
       }
       const sprite=this.add.image(slot.x,slot.y,key)
@@ -135,11 +137,7 @@ export class RaceScene extends CurrentRaceScene {
       const startProgress=-backDistance/line.totalLength;
       const targetRate=(1/baseLapSec)*Number(slot.targetPace||1);
       const carWidth=Math.max(12,Number(sprite.displayWidth||sprite.width||28));
-      // Critical fairness invariant: resolve the CPU's own base car using the
-      // player's currently equipped upgrades. resolveCarParams() reads the
-      // selected car's Workshop tuning, so every rival receives the exact same
-      // upgrade package without mutating ownership/equipment in the garage.
-      const cpuSpec=resolveCarParams(slot.spec);
+      const cpuSpec=resolveCarParamsWithTuning(slot.spec,playerUpgradeTuning);
       this._survivalBots.push({
         id:slot.label||`CPU ${slot.gridIndex}`,carId:slot.carId,carSpec:cpuSpec,
         gridIndex:slot.gridIndex,carScore:slot.carScore,targetPace:slot.targetPace,
@@ -157,8 +155,6 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   update(time,delta){
-    // The common countdown remains authoritative. CPU release is inferred from
-    // the same state/movement as the player, with no independent start timer.
     if(this._survivalMode&&!this._raceStarted){
       const body=this.car?.body||this.carBody?.body||this.carBody;
       const vx=Number(body?.velocity?.x||0),vy=Number(body?.velocity?.y||0);
