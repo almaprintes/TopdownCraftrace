@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceHudPerformanceScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceMobilePerformanceScene.js';
 import { mountRaceInstrumentHud, updateRaceInstrumentHud, destroyRaceInstrumentHud } from '../ui/raceInstrumentHud.js';
 
 function safeDestroy(obj){if(!obj)return;try{obj.destroy?.(true);}catch{}}
