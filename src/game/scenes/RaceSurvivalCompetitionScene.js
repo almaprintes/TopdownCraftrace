@@ -52,7 +52,11 @@ export class RaceScene extends CurrentRaceScene {
 
   _survivalGridSpacing(visual){
     const carLength=Math.max(24,Number(visual?.displayHeight||visual?.height||48));
-    return clamp(carLength*1.55,52,82);
+    // Leave two complete car lengths of empty road between consecutive cars.
+    // Since each car occupies roughly one car length, center-to-center spacing
+    // is therefore ~3 car lengths. This keeps the single-file grid stretched
+    // cleanly along the centerline and avoids launch contact.
+    return clamp(carLength*3,84,156);
   }
 
   _initSurvival(){
