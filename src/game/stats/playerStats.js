@@ -45,8 +45,8 @@ function ensureTrack(car,trackId){
 }
 
 // Timed laps already have an authoritative store: tdr2:ttHist:<trackId>.
-// Statistics must read timing from there directly instead of copying/synchronising
-// best laps into a second database. Distance/race counts remain in PLAYER_STATS_KEY.
+// Statistics screens can merge that timing index on demand, but race-time writes
+// must never scan and parse every TT history synchronously.
 function readTimeTrialIndex(){
   const cars={};
   try{
@@ -78,7 +78,6 @@ function overlayTiming(state){
   const timing=readTimeTrialIndex();
   for(const [carId,tCar] of Object.entries(timing)){
     const car=ensureCar(state,carId);
-    // "Timed laps" is deliberately the history count, not a duplicated counter.
     car.laps=Math.max(0,Number(tCar.laps)||0);
     for(const [trackId,tTrack] of Object.entries(tCar.tracks||{})){
       const track=ensureTrack(car,trackId);if(!track)continue;
@@ -90,21 +89,23 @@ function overlayTiming(state){
   return state;
 }
 
+// UI/read path: includes the authoritative timing history.
 export function loadPlayerStats(){return overlayTiming(loadPersisted());}
+// Hot path: distance/mastery/race code can read persistent counters without a TT scan.
+export function loadPlayerStatsPersisted(){return loadPersisted();}
+
 export function savePlayerStats(state){
   const cars=cleanCarStats(state?.cars);
   const summed=Object.values(cars).reduce((s,r)=>s+Math.max(0,Number(r?.meters)||0),0);
   const next={version:5,totalMeters:Math.max(0,Number(state?.totalMeters)||0,summed),cars};
   try{localStorage.setItem(KEY,JSON.stringify(next));}catch{}
-  return overlayTiming(next);
+  return next;
 }
 
-// Kept for callers created during the stats migration. It is now a read/merge,
-// not a fragile copy operation.
 export function reconcileTimeTrialHistory(){return loadPlayerStats();}
 
 export function addCarDistance(carId,meters,trackId=null){
-  const id=String(carId||'').trim(),delta=Math.max(0,Number(meters)||0);if(!id||delta<=0)return loadPlayerStats();
+  const id=String(carId||'').trim(),delta=Math.max(0,Number(meters)||0);if(!id||delta<=0)return loadPersisted();
   const state=loadPersisted(),car=ensureCar(state,id);
   car.meters=Math.max(0,Number(car.meters)||0)+delta;
   const track=ensureTrack(car,trackId);if(track)track.meters=Math.max(0,Number(track.meters)||0)+delta;
@@ -112,22 +113,22 @@ export function addCarDistance(carId,meters,trackId=null){
   return savePlayerStats(state);
 }
 export function markCarRace(carId,trackId=null){
-  const id=String(carId||'').trim();if(!id)return loadPlayerStats();
+  const id=String(carId||'').trim();if(!id)return loadPersisted();
   const state=loadPersisted(),car=ensureCar(state,id);
   car.races=Math.max(0,Math.floor(Number(car.races)||0))+1;
   const track=ensureTrack(car,trackId);if(track)track.races=Math.max(0,Math.floor(Number(track.races)||0))+1;
   return savePlayerStats(state);
 }
 
-// Race code may call this, but timing is never trusted from this secondary store.
-// The canonical completed-lap record is RaceScene's ttHist entry.
+// Kept for compatibility with historical callers. The authoritative lap timing
+// remains the TT history; callers should not use this during active racing.
 export function addCarLap(carId,count=1,trackId=null,lapMs=null){
-  const id=String(carId||'').trim();if(!id)return loadPlayerStats();
+  const id=String(carId||'').trim();if(!id)return loadPersisted();
   const state=loadPersisted(),car=ensureCar(state,id),inc=Math.max(0,Math.floor(Number(count)||0));
   car.laps=Math.max(0,Math.floor(Number(car.laps)||0))+inc;
   const track=ensureTrack(car,trackId);if(track)track.laps=Math.max(0,Math.floor(Number(track.laps)||0))+inc;
   return savePlayerStats(state);
 }
 export function recordCarTrackLap(carId,trackId,lapMs){return addCarLap(carId,1,trackId,lapMs);}
-export function carMileageKm(carId){return Math.max(0,Number(loadPlayerStats().cars?.[String(carId||'')]?.meters)||0)/1000;}
+export function carMileageKm(carId){return Math.max(0,Number(loadPersisted().cars?.[String(carId||'')]?.meters)||0)/1000;}
 export const PLAYER_STATS_KEY=KEY;
