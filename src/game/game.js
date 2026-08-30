@@ -57,8 +57,6 @@ function installLazySceneNavigation(game){
 function isIOSDevice(){try{const ua=String(navigator?.userAgent||''),platform=String(navigator?.platform||'');return /iPhone|iPad|iPod/i.test(ua)||(platform==='MacIntel'&&Number(navigator?.maxTouchPoints||0)>1);}catch{return false;}}
 function isMobileDevice(){try{return /Android|iPhone|iPad|iPod/i.test(String(navigator?.userAgent||''))||(Number(navigator?.maxTouchPoints||0)>1&&Math.min(Number(screen?.width||0),Number(screen?.height||0))<1100);}catch{return false;}}
 function scheduleSceneWarmup(){
-  // Phones/tablets keep imports truly lazy. Parsing scenes that the player may
-  // never open is wasted main-thread and memory pressure during menu interaction.
   if(isMobileDevice())return;
   const warm=Object.entries(LAZY_SCENES).filter(([,def])=>Number.isFinite(def.warm)&&!def.admin&&def.exportName!=='RaceScene').sort((a,b)=>a[1].warm-b[1].warm);
   let cancelled=false;
@@ -97,7 +95,7 @@ function isLegacyIOSPhone(){
     return olderPhoneClass||manualSafe||autoSafe;
   }catch{return false;}
 }
-function forceTimeoutLoop(){try{return localStorage.getItem('tdr2:forceTimeoutLoop')==='1';}catch{return false;}}
+function forceRafLoop(){try{return localStorage.getItem('tdr2:forceRafLoop')==='1';}catch{return false;}}
 function localizePhaserValue(value){return localizeLegacyText(value);}
 function installCleanTextFactory(){
   const factory=Phaser.GameObjects?.GameObjectFactory?.prototype;if(factory&&!factory.__tdrCleanTextInstalled&&typeof factory.text==='function'){const original=factory.text;factory.text=function(x,y,text,style={}){const clean={...(style||{})};if(/Orbitron/i.test(String(clean.fontFamily||''))){clean.fontFamily='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';if(clean.fontStyle==='900')clean.fontStyle='bold';}if(Number(clean.strokeThickness)>2)clean.strokeThickness=2;return original.call(this,x,y,localizePhaserValue(text),clean);};factory.__tdrCleanTextInstalled=true;}
@@ -120,7 +118,10 @@ export function createGame(parentId='app'){
   installSafeAreaRuntime();initLanguage();installDomUiEnglishBridge();installSeasonRewardCelebrations();installCleanTextFactory();installSafeTextureGuard();
   const vp=videoPrefs(),iosDevice=isIOSDevice(),safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=iosDevice?false:!!vp.antialias,targetFps=safeMode?30:vp.targetFps;
   const batchSize=iosDevice?1024:4096;
-  const forceSetTimeOut=iosDevice&&forceTimeoutLoop();
+  // Retain the measured 2026-08-28 iOS scheduling baseline: WebKit rAF had
+  // captured long gaps, so Phaser uses its supported timeout driver on iOS.
+  // A manual diagnostic flag can still force rAF without changing source.
+  const forceSetTimeOut=iosDevice&&!forceRafLoop();
   const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,desynchronized:iosDevice,roundPixels:safeMode,powerPreference:'high-performance',batchSize}});
   installHtmlTextRuntime(game);
   installLazySceneNavigation(game);scheduleSceneWarmup();try{window.__tdrEnsureScene=ensureLazyScene;}catch{}
