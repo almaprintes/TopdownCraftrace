@@ -131,33 +131,44 @@ export class MenuScene extends PreviousMenuScene {
         A(this.add.rectangle(x+7,y+7,cardW-14,cardH-14,0x000000,0).setOrigin(0).setStrokeStyle(2,accent,installed?.28:.55));
       }
 
+      // Horizontal card layout: large official asset on the left, readable data on the right.
+      const visualW=cardW*.43;
+      const contentX=x+visualW+cardW*.035;
+      const contentW=cardW-visualW-cardW*.07;
       const key=tab==='materials'?`event-material:${id}`:`inventory-part:${id}`;
       if(this.textures?.exists?.(key)){
-        const imgY=y+cardH*.40;
-        const img=A(this.add.image(x+cardW/2,imgY,key).setOrigin(.5));
-        const maxW=cardW*(tab==='materials'?.90:.94),maxH=cardH*(tab==='materials'?.58:.61);
+        const img=A(this.add.image(x+visualW*.52,y+cardH*.53,key).setOrigin(.5));
+        const maxW=visualW*.86,maxH=cardH*(tab==='materials'?.76:.72);
         const scale=Math.min(maxW/Math.max(1,img.width),maxH/Math.max(1,img.height));
         img.setScale(scale);
         if(installed)img.setAlpha(.42).setTint(0x9ba6ad);
       }
 
+      const name=itemName({...item,id}).toUpperCase();
       if(tab==='materials'){
-        const nameY=y+cardH*.72;
-        A(this.add.text(x+cardW/2,nameY,itemName({...item,id}).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:'#d7e3ee',align:'center',wordWrap:{width:cardW-18},resolution:2}).setOrigin(.5,0));
-        const qtyY=y+cardH*.87;
-        A(this.add.text(x+cardW/2,qtyY,`×${q}`,{fontFamily:UI,fontSize:compact?'16px':'19px',fontStyle:'bold',color:'#7ddcff',resolution:2}).setOrigin(.5,.5));
+        A(this.add.text(contentX,y+cardH*.27,name,{fontFamily:UI,fontSize:compact?'12px':'15px',fontStyle:'bold',color:'#e5eef5',align:'left',wordWrap:{width:contentW},resolution:2}).setOrigin(0,.5));
+        A(this.add.text(contentX,y+cardH*.67,`×${q}`,{fontFamily:UI,fontSize:compact?'23px':'29px',fontStyle:'bold',color:'#7ddcff',resolution:2}).setOrigin(0,.5));
       }else{
-        const nameY=y+cardH*.69;
-        A(this.add.text(x+cardW/2,nameY,itemName({...item,id}).toUpperCase(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#87939d':'#d4e0eb',align:'center',wordWrap:{width:cardW-16},resolution:2}).setOrigin(.5,0));
-        const actionY=y+cardH-(compact?10:13);
-        const actionText=installed?t('inventory.uninstall'):t('inventory.install',{qty:q});
-        A(this.add.text(x+cardW/2,actionY,actionText,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#87939d':'#7ddcff',resolution:2}).setOrigin(.5,1));
-        if(installed){
+        A(this.add.text(contentX,y+cardH*.23,name,{fontFamily:UI,fontSize:compact?'11px':'14px',fontStyle:'bold',color:installed?'#87939d':'#e0e9f1',align:'left',wordWrap:{width:contentW},resolution:2}).setOrigin(0,.5));
+
+        const actionY=y+cardH*.56;
+        const buttonW=Math.max(68,contentW*.86),buttonH=compact?27:32;
+        const actionBg=A(this.add.rectangle(contentX,actionY,buttonW,buttonH,installed?0x18242d:0x123743,.99).setOrigin(0,.5).setStrokeStyle(2,installed?0x60717d:0x45dfff,installed?.65:.95));
+        A(this.add.text(contentX+buttonW/2,actionY,installed?t('inventory.uninstall'):t('inventory.install',{qty:''}).replace(/[×x]\s*$/i,'').trim(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#a6b1b9':'#9aeeff',resolution:2}).setOrigin(.5));
+        A(this.add.text(contentX,y+cardH*.82,`×${q}`,{fontFamily:UI,fontSize:compact?'20px':'25px',fontStyle:'bold',color:installed?'#788994':'#ffffff',resolution:2}).setOrigin(0,.5));
+
+        const trigger=()=>{
+          if(installed){
+            if(this._unequipInventoryPart(garage,carId,id))this._openLobbyInventoryModal('parts',page,tierFilter);
+          }else if(q>0){
+            if(this._installInventoryPart(garage,carId,id))this._openLobbyInventoryModal('parts',page,tierFilter);
+          }
+        };
+        if(installed||q>0){
           card.setInteractive({useHandCursor:true});
-          card.on('pointerup',()=>{if(this._unequipInventoryPart(garage,carId,id))this._openLobbyInventoryModal('parts',page,tierFilter);});
-        }else if(q>0){
-          card.setInteractive({useHandCursor:true});
-          card.on('pointerup',()=>{if(this._installInventoryPart(garage,carId,id))this._openLobbyInventoryModal('parts',page,tierFilter);});
+          actionBg.setInteractive({useHandCursor:true});
+          card.on('pointerup',trigger);
+          actionBg.on('pointerup',pointer=>{pointer?.event?.stopPropagation?.();trigger();});
         }
       }
     });
