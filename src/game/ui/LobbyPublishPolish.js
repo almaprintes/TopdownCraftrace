@@ -1,6 +1,6 @@
 import { getLanguage } from '../i18n/index.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
-import { loadPlayerStats } from '../stats/playerStats.js';
+import { loadPlayerStatsPersisted } from '../stats/playerStats.js';
 import { acknowledgedMasteryLevel, masteryInfoForMeters, masteryRoofVisible, masteryWheelDataUri } from '../stats/carMastery.js';
 import { showMasteryUnlockModal } from './MasteryUnlockModal.js';
 import './lobby-publish-polish.css';
@@ -30,7 +30,7 @@ function installBottomActions(scene,root,lang){
 }
 
 function installMasteryRoofBadge(scene,root){
-  const carId=String(scene.selectedCarId||''),stats=loadPlayerStats(),meters=Number(stats?.cars?.[carId]?.meters)||0,mastery=masteryInfoForMeters(meters);
+  const carId=String(scene.selectedCarId||''),stats=loadPlayerStatsPersisted(),meters=Number(stats?.cars?.[carId]?.meters)||0,mastery=masteryInfoForMeters(meters);
   let badge=root.querySelector('[data-lobby-mastery]');
   if(!badge){badge=document.createElement('img');badge.dataset.lobbyMastery='1';badge.className='tdr-lobby-mastery-badge';badge.alt='';badge.draggable=false;root.appendChild(badge);}
   const car=root.querySelector('[data-lobby-car]');
