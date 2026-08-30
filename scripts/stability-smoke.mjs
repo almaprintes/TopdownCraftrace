@@ -14,6 +14,9 @@ const safe=read('src/game/scenes/RaceSafeModeRuntimeScene.js');
 const adaptive=read('src/game/scenes/RaceAdaptiveStartScene.js');
 const racePhysics=read('src/game/scenes/RaceHandbrakePhysicsScene.js');
 const raceExperience=read('src/game/scenes/RaceExperienceScene.js');
+const raceTelemetry=read('src/game/scenes/RaceTelemetryHudScene.js');
+const raceInstrumentHud=read('src/game/ui/raceInstrumentHud.js');
+const raceInstrumentCss=read('src/game/ui/raceInstrumentHud.css');
 const racePauseUi=read('src/game/ui/racePauseUi.js');
 const raceVisibility=read('src/game/ui/raceUiVisibility.js');
 const raceSessionUi=read('src/game/ui/raceSessionUi.js');
@@ -32,6 +35,8 @@ const pages=read('.github/workflows/pages.yml');
 
 forbid(gfx,'this._completedLapCheck=()=>{}','iOS graphics layer must not disable completed-lap timing');
 forbid(gfx,'this._recordGhostSample=()=>{}','iOS graphics layer must not disable ghost recording');
+requireText(gfx,"from './RaceTelemetryHudScene.js'",'graphics presets must route through the semantic telemetry HUD scene');
+forbid(gfx,'RaceLapBreakdownProfilerScene','obsolete profiler scene must not return to shipping chain');
 
 requireText(game,'const forceSetTimeOut=iosDevice&&!forceRafLoop();','iOS timeout scheduling baseline is missing');
 requireText(game,"tdr2:forceRafLoop",'iOS rAF diagnostic override is missing');
@@ -63,6 +68,17 @@ requireText(raceExperience,'getRaceLootSessionSummary','reward guard must compar
 requireText(raceExperience,'grantRaceLoot','reward guard must fill only missing grants');
 requireText(raceExperience,'if(this._tdrPauseMenuOpen){','race update chain must stop while paused');
 requireText(raceExperience,'this.physics?.world?.pause?.();','race experience must freeze physics while paused');
+
+// Telemetry scene coordinates; DOM module owns markup/style/update presentation.
+requireText(raceTelemetry,"from '../ui/raceInstrumentHud.js'",'telemetry scene must delegate instrument HUD to DOM component');
+requireText(raceTelemetry,'mountRaceInstrumentHud(this)','telemetry scene must mount the instrument HUD');
+requireText(raceTelemetry,'updateRaceInstrumentHud(this,delta)','telemetry scene must update the instrument HUD');
+forbid(raceTelemetry,'root.innerHTML','telemetry scene must not embed HUD markup');
+forbid(raceTelemetry,'.tdr-race-hud{','telemetry scene must not embed HUD CSS');
+requireText(raceInstrumentHud,"import './raceInstrumentHud.css'",'instrument HUD component must own its stylesheet');
+requireText(raceInstrumentHud,"root.dataset.tdrRaceUi='1'",'instrument HUD must participate in shared race UI visibility');
+requireText(raceInstrumentHud,'export function updateRaceInstrumentHud','instrument HUD update service is missing');
+requireText(raceInstrumentCss,'.tdr-race-hud{','instrument HUD stylesheet is missing');
 
 requireText(racePauseUi,"className='tdr-race-pause'",'pause menu must be a DOM component');
 requireText(racePauseUi,'CAPTURA MUNDO','pause menu must preserve world capture action');
