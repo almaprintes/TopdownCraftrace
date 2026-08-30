@@ -1,4 +1,4 @@
-import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGarageProgressionScene.js';
+import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGaragePlayerLightScene.js';
 
 const ROOT_ID='tdr-track-selector-dom';
 const TAP_MOVE_PX=14;
