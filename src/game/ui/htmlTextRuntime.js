@@ -6,16 +6,15 @@ const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
 
 // These scenes use Phaser cameras/masks as real scrolling viewports. Mirroring
 // their Text objects into one global DOM layer breaks the relationship between
-// the list, its mask and pointer-driven scrolling. Keep their text in Phaser
-// until those screens are migrated as proper DOM lists rather than mirrored text.
+// the list, its mask and pointer-driven scrolling. Keep their text in Phaser.
 const PHASER_SCROLL_SCENES=new Set(['GarageScene','TrackGarageScene']);
 function sceneKey(text){try{return String(text?.scene?.sys?.settings?.key||text?.scene?.scene?.key||'');}catch{return '';}}
 function shouldUseHtml(text){return !PHASER_SCROLL_SCENES.has(sceneKey(text));}
 function isRacePreloadOverlay(text){
-  // RaceRealSurfaceAssetsScene creates its briefing/loading labels in preload().
-  // Phaser reports that scene as not active until create(), but these high-depth
-  // screen-space labels are intentionally visible while assets are loading.
   return sceneKey(text)==='race' && finite(text?.depth)>=100000;
+}
+function isMobileDevice(){
+  try{return /Android|iPhone|iPad|iPod/i.test(String(navigator?.userAgent||''))||(Number(navigator?.maxTouchPoints||0)>1&&Math.min(Number(screen?.width||0),Number(screen?.height||0))<1100);}catch{return false;}
 }
 
 function ensureRoot(game){
@@ -44,7 +43,12 @@ function pose(text){
 }
 function color(v,f='#fff'){return typeof v==='string'?v:(Number.isFinite(Number(v))?`#${(Number(v)>>>0).toString(16).padStart(6,'0').slice(-6)}`:f);}
 
-function applyStyle(text,node){
+function styleSignature(text){
+  const s=text?.style||{},p=s.padding||{};
+  return [s.fontFamily,s.fontSize,s.fontStyle,s.color,s.fill,s.align,s.lineSpacing,s.backgroundColor,s.fixedWidth,s.wordWrapWidth,s.wordWrap?.width,p.x,p.y,p.left,p.top,s.strokeThickness,s.stroke].join('|');
+}
+function applyStyle(text,node,entry){
+  const sig=styleSignature(text);if(entry.styleSig===sig)return;entry.styleSig=sig;
   const s=text?.style||{},fs=parseFloat(String(s.fontSize||16))||16,fw=finite(s.fixedWidth),ww=finite(s.wordWrapWidth||s.wordWrap?.width),pad=s.padding||{},fontStyle=String(s.fontStyle||'').toLowerCase();
   node.style.fontFamily=String(s.fontFamily||'system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif');
   node.style.fontSize=`${fs}px`;
@@ -106,23 +110,25 @@ function maskBounds(mask){
   return null;
 }
 
-function sync(game,text,entry){
+function frameMetrics(game){
+  const canvas=game?.canvas,host=canvas?.parentElement;if(!canvas||!host)return null;
+  const cr=canvas.getBoundingClientRect(),hr=host.getBoundingClientRect();
+  const gx=Math.max(1,finite(game.scale?.width,canvas.width||1)),gy=Math.max(1,finite(game.scale?.height,canvas.height||1));
+  return{canvas,host,cr,hr,gx,gy,cx:cr.width/gx,cy:cr.height/gy};
+}
+
+function sync(game,text,entry,metrics){
   const {clip,node}=entry;
   if(!text?.scene){clip.remove();return false;}
   if(!shouldUseHtml(text)){clip.remove();return false;}
-  const canvas=game?.canvas,host=canvas?.parentElement;if(!canvas||!host)return true;
+  if(!metrics)return true;
+  const {cr,hr,gx,gy,cx,cy}=metrics;
   const state=hierarchyState(text);
   if(!state.visible||!sceneVisible(text)){clip.style.display='none';return true;}
   const cam=cameraFor(text);if(!cam){clip.style.display='none';return true;}
 
-  const cr=canvas.getBoundingClientRect(),hr=host.getBoundingClientRect();
-  const gx=Math.max(1,finite(game.scale?.width,canvas.width||1)),gy=Math.max(1,finite(game.scale?.height,canvas.height||1));
-  const cx=cr.width/gx,cy=cr.height/gy,zoom=Math.max(.001,finite(cam.zoom,1));
+  const zoom=Math.max(.001,finite(cam.zoom,1));
   const p=pose(text),fx=Number.isFinite(Number(text.scrollFactorX))?Number(text.scrollFactorX):1,fy=Number.isFinite(Number(text.scrollFactorY))?Number(text.scrollFactorY):1;
-
-  // HUD text created with setScrollFactor(0) is screen-space UI. The DOM mirror
-  // must not inherit gameplay camera zoom or camera scroll, otherwise lap times,
-  // speed and other fixed labels visibly drift as the race camera breathes.
   const fixedToScreen=Math.abs(fx)<0.0001&&Math.abs(fy)<0.0001;
   const renderZoom=fixedToScreen?1:zoom;
   const x=finite(cam.x)+(p.x-finite(cam.scrollX)*fx)*renderZoom;
@@ -146,13 +152,12 @@ function sync(game,text,entry){
   clip.style.display='block';
   clip.style.left=`${clipX}px`;clip.style.top=`${clipY}px`;clip.style.width=`${clipW}px`;clip.style.height=`${clipH}px`;
   clip.style.opacity=String(state.alpha*Math.max(0,Math.min(1,finite(cam.alpha,1))));
-
   node.style.left=`${cr.left-hr.left+x*cx-clipX}px`;
   node.style.top=`${cr.top-hr.top+y*cy-clipY}px`;
   node.style.transform=`translate(${-ox*100}%,${-oy*100}%) rotate(${p.r}rad) scale(${p.sx*renderZoom*cx},${p.sy*renderZoom*cy})`;
   const value=Array.isArray(text.text)?text.text.join('\n'):String(text.text??'');
   if(node.textContent!==value)node.textContent=value;
-  applyStyle(text,node);
+  applyStyle(text,node,entry);
   return true;
 }
 
@@ -162,8 +167,6 @@ export function installHtmlTextRuntime(game){
   const root=ensureRoot(game);if(!root){globalThis.__tdrHtmlTextRuntimeInstalled=false;return;}
   const entries=new Map(),proto=Phaser.GameObjects.Text.prototype,originalDestroy=proto.destroy,originalWebGL=proto.renderWebGL,originalCanvas=proto.renderCanvas;
 
-  // Render normally in camera-scrolling scenes. Everywhere else the DOM mirror
-  // replaces the Phaser glyphs as before.
   proto.renderWebGL=function(...args){if(!shouldUseHtml(this))return originalWebGL?.apply(this,args);};
   proto.renderCanvas=function(...args){if(!shouldUseHtml(this))return originalCanvas?.apply(this,args);};
 
@@ -171,21 +174,33 @@ export function installHtmlTextRuntime(game){
     if(!text||entries.has(text)||!shouldUseHtml(text))return;
     const clip=document.createElement('div');clip.className='tdr-native-clip';
     const node=document.createElement('div');node.className='tdr-native-text';clip.appendChild(node);root.appendChild(clip);
-    entries.set(text,{clip,node});
+    entries.set(text,{clip,node,styleSig:null});
   };
   const factory=Phaser.GameObjects.GameObjectFactory.prototype;
+  const originalFactoryText=factory.text;
   if(!factory.__tdrNativeHtmlTextFactory){
-    const original=factory.text;
-    factory.text=function(...args){const text=original.apply(this,args);register(text);return text;};
+    factory.text=function(...args){const text=originalFactoryText.apply(this,args);register(text);return text;};
     factory.__tdrNativeHtmlTextFactory=true;
   }
   for(const scene of Object.values(game.scene?.keys||{}))for(const child of scene?.children?.list||[])if(child instanceof Phaser.GameObjects.Text)register(child);
   proto.destroy=function(...args){const entry=entries.get(this);if(entry){entry.clip.remove();entries.delete(this);}return originalDestroy?.apply(this,args);};
-  let raf=0;
-  const frame=()=>{if(game?.pendingDestroy)return;for(const [text,entry] of [...entries])if(!sync(game,text,entry))entries.delete(text);raf=requestAnimationFrame(frame);};
+
+  const intervalMs=isMobileDevice()?33:16;
+  let raf=0,lastSync=-Infinity;
+  const frame=(ts=0)=>{
+    if(game?.pendingDestroy)return;
+    if(!document.hidden&&ts-lastSync>=intervalMs){
+      lastSync=ts;
+      const metrics=frameMetrics(game);
+      for(const [text,entry] of entries)if(!sync(game,text,entry,metrics))entries.delete(text);
+    }
+    raf=requestAnimationFrame(frame);
+  };
   raf=requestAnimationFrame(frame);
   game.events?.once?.('destroy',()=>{
     cancelAnimationFrame(raf);for(const entry of entries.values())entry.clip.remove();entries.clear();root.remove();
-    proto.renderWebGL=originalWebGL;proto.renderCanvas=originalCanvas;globalThis.__tdrHtmlTextRuntimeInstalled=false;
+    proto.destroy=originalDestroy;proto.renderWebGL=originalWebGL;proto.renderCanvas=originalCanvas;
+    if(factory.__tdrNativeHtmlTextFactory){factory.text=originalFactoryText;delete factory.__tdrNativeHtmlTextFactory;}
+    globalThis.__tdrHtmlTextRuntimeInstalled=false;
   });
 }
