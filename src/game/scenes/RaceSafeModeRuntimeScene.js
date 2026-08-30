@@ -1,13 +1,19 @@
 import { RaceScene as CurrentRaceScene } from './RaceAdaptiveStartScene.js';
 
-// Safe mode now focuses on asset pressure and reduced visual systems. HUD layers
-// already throttle their own DOM/Text work, so rewriting Phaser methods every
-// frame created more allocation/churn than it saved.
+function isMobileDevice(){
+  try{
+    return /Android|iPhone|iPad|iPod/i.test(String(navigator?.userAgent||'')) ||
+      (Number(navigator?.maxTouchPoints||0)>1 && Math.min(Number(screen?.width||0),Number(screen?.height||0))<1100);
+  }catch{return false;}
+}
+
+// Safe mode focuses on asset pressure and reduced visual systems. HUD layers
+// already throttle their own DOM/Text work, so no method rewriting happens here.
 export class RaceScene extends CurrentRaceScene {
   create(data) {
     const result = super.create(data);
-    if (window.__tdrIosSafeMode === true) {
-      this.events.once('shutdown', () => this._releaseSafeModeRaceAssets());
+    if (isMobileDevice()) {
+      this.events.once('shutdown', () => this._releaseMobileRaceAssets());
     }
     return result;
   }
@@ -16,20 +22,21 @@ export class RaceScene extends CurrentRaceScene {
     return super.update?.(time, delta);
   }
 
-  _releaseSafeModeRaceAssets() {
-    if (window.__tdrIosSafeMode !== true) return;
+  _releaseMobileRaceAssets() {
+    const keys = new Set();
 
-    const keys = new Set([
-      'grass', 'off', 'asphalt', 'asphaltOverlay', 'banner-inferior',
-      'start_base', 'start_l1', 'start_l2', 'start_l3', 'start_l4', 'start_l5', 'start_l6'
-    ]);
+    // Beauty tiles are large once decoded into GPU memory. They are track-local,
+    // so keeping them after leaving a race only increases memory pressure.
+    for (const tile of this._beautyConfig?.tiles || []) if (tile?.key) keys.add(tile.key);
+    for (const tile of this._beautyPreloadConfig?.tiles || []) if (tile?.key) keys.add(tile.key);
 
-    if (this.carId) keys.add(`car_${this.carId}`);
-    for (const tile of this._beautyConfig?.tiles || []) {
-      if (tile?.key) keys.add(tile.key);
-    }
-    for (const tile of this._beautyPreloadConfig?.tiles || []) {
-      if (tile?.key) keys.add(tile.key);
+    // The stronger safe-mode cleanup retains the previous behaviour.
+    if (window.__tdrIosSafeMode === true) {
+      for (const key of [
+        'grass', 'off', 'asphalt', 'asphaltOverlay', 'banner-inferior',
+        'start_base', 'start_l1', 'start_l2', 'start_l3', 'start_l4', 'start_l5', 'start_l6'
+      ]) keys.add(key);
+      if (this.carId) keys.add(`car_${this.carId}`);
     }
 
     for (const key of keys) {
