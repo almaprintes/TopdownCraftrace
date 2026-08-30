@@ -295,9 +295,6 @@ export class RaceScene extends CurrentRaceScene {
     const dt=clamp(Number(delta||16.67)/1000,.001,.05);
     const rot=Number(body.rotation||0);
     const fx=Math.cos(rot),fy=Math.sin(rot);
-    const rx=-fy,ry=fx;
-    let vf=vel.x*fx+vel.y*fy;
-    let vl=vel.x*rx+vel.y*ry;
     const speed=Math.hypot(vel.x,vel.y);
     if(speed<24)return;
 
@@ -305,24 +302,31 @@ export class RaceScene extends CurrentRaceScene {
     const speed01=clamp(speed/maxFwd,0,1);
     const steer=this._steerForHandbrake();
 
-    const brakeDrag=Math.exp(-dt*(.78+.88*speed01));
-    vf*=brakeDrag;
+    // Rear wheels lock first: retain most world-space momentum instead of
+    // rotating the whole velocity vector with the body. This lets the body yaw
+    // while the car keeps travelling roughly along its previous trajectory.
+    const brakeDrag=Math.exp(-dt*(.32+.48*speed01));
+    vel.x*=brakeDrag;
+    vel.y*=brakeDrag;
 
-    // With genuinely neutral steering, do not manufacture lateral velocity or yaw.
-    // Preserve any lateral component that already existed before the handbrake pull.
     if(steer!==0){
-      const slipBuild=(.85+2.25*speed01)*Math.abs(vf)*steer*dt;
-      vl+=slipBuild;
-      const yawAuthority=clamp((speed-24)/140,0,1);
-      body.rotation+=steer*(.70+1.35*speed01)*yawAuthority*dt;
-    }
-    vl*=Math.exp(-dt*.20);
+      const yawAuthority=clamp((speed-24)/150,0,1);
+      const yawDelta=steer*(.82+1.72*speed01)*yawAuthority*dt;
 
-    const nr=Number(body.rotation||rot);
-    const nfx=Math.cos(nr),nfy=Math.sin(nr);
-    const nrx=-nfy,nry=nfx;
-    vel.x=nfx*vf+nrx*vl;
-    vel.y=nfy*vf+nry*vl;
+      // Virtual front-axle pivot. Keep the front axle almost where it is while
+      // rotation is applied, so the rear axle sweeps a wider arc than the nose.
+      // This removes the old whole-car diagonal translation.
+      const longSide=Math.max(Number(body.displayWidth||0),Number(body.displayHeight||0),54);
+      const frontOffset=clamp(longSide*.24,12,30);
+      const frontX=Number(body.x||0)+fx*frontOffset;
+      const frontY=Number(body.y||0)+fy*frontOffset;
+      const nr=rot+yawDelta;
+      const nfx=Math.cos(nr),nfy=Math.sin(nr);
+
+      body.rotation=nr;
+      body.x=frontX-nfx*frontOffset;
+      body.y=frontY-nfy*frontOffset;
+    }
 
     if(this.carRig?.scene){
       this.carRig.x=body.x;
