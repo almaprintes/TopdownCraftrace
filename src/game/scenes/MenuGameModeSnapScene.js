@@ -16,6 +16,14 @@ const MODES=[
 function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
 
 export class MenuScene extends CurrentMenuScene {
+  preload(){
+    if(typeof super.preload==='function')super.preload();
+    for(const mode of MODES){
+      const key=`game_mode_card_${mode.key}`;
+      if(!this.textures.exists(key))this.load.image(key,`${BASE}assets/ui/game-modes/${mode.asset}`);
+    }
+  }
+
   create(data){
     if(typeof super.create==='function') super.create(data);
     // Startup overlay must disappear only after the real lobby has been created
@@ -97,20 +105,7 @@ export class MenuScene extends CurrentMenuScene {
 
     const ensureTexture=(mode)=>{
       const key=`game_mode_card_${mode.key}`;
-      if(this.textures.exists(key))return key;
-      if(!this._modeSnapLoading)this._modeSnapLoading=new Set();
-      if(!this._modeSnapLoading.has(key)){
-        this._modeSnapLoading.add(key);
-        const done=()=>{
-          this._modeSnapLoading.delete(key);
-          this.load.off(`filecomplete-image-${key}`,done);
-          if(this._gameModeModal?.scene&&!this._modeSnapAnimating)this._drawModeSnapCards();
-        };
-        this.load.once(`filecomplete-image-${key}`,done);
-        this.load.image(key,`${BASE}assets/ui/game-modes/${mode.asset}`);
-        if(!this.load.isLoading())this.load.start();
-      }
-      return null;
+      return this.textures.exists(key)?key:null;
     };
 
     [-1,1].forEach(delta=>{
@@ -225,6 +220,5 @@ export class MenuScene extends CurrentMenuScene {
     this._modeSnapCards=null;
     this._modeSnapVisual=null;
     this._modeSnapUi=null;
-    this._modeSnapLoading?.clear?.();
   }
 }
