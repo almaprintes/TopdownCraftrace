@@ -2,7 +2,6 @@ import { RaceScene as CurrentRaceScene } from './RaceSurvivalHardLapCapScene.js'
 import { METERS_PER_PX } from '../cars/speedUnits.js';
 import { addCarDistance, loadPlayerStatsPersisted, markCarRace } from '../stats/playerStats.js';
 import { masteryLevelForMeters } from '../stats/carMastery.js';
-import { showMasteryUnlockModal } from '../ui/MasteryUnlockModal.js';
 
 // Distance persistence is not frame-critical. A longer flush interval dramatically
 // reduces synchronous localStorage writes while retaining a shutdown flush.
@@ -17,14 +16,14 @@ export class RaceScene extends CurrentRaceScene{
     this._mileagePendingMeters=0;
     this._mileageLastFlush=performance.now();
     this._mileageRaceMarked=false;
-    this._masteryCelebrating=false;
+    this._pendingMasteryUnlock=null;
     this.events.once('shutdown',()=>this._flushMileage(true));
     return result;
   }
 
   update(time,delta){
     super.update?.(time,delta);
-    if(!this._masteryCelebrating)this._sampleMileage(delta);
+    this._sampleMileage(delta);
   }
 
   _sampleMileage(delta){
@@ -44,16 +43,16 @@ export class RaceScene extends CurrentRaceScene{
     if(performance.now()-this._mileageLastFlush>=FLUSH_EVERY_MS)this._flushMileage(false);
   }
 
-  _showMasteryCelebration(level,totalMeters){
-    if(this._masteryCelebrating||!level)return;
-    this._masteryCelebrating=true;
-    try{this.physics?.world?.pause?.();}catch{}
+  _queueMasteryUnlock(level,totalMeters){
+    if(!level)return;
+    const current=this._pendingMasteryUnlock;
+    if(!current||level>=Number(current.level||0)){
+      this._pendingMasteryUnlock={level,totalMeters:Number(totalMeters)||0};
+    }
+    // Deliberately do not pause play or show UI here. The lobby already detects
+    // unacknowledged mastery levels and presents the informational modal after the
+    // race/session has returned there.
     this.time?.delayedCall?.(50,()=>this._installMasteryRoofWheel?.());
-    showMasteryUnlockModal({scene:this,carId:this._mileageCarId,meters:totalMeters,level,onClose:()=>{
-      this._masteryCelebrating=false;
-      try{this.physics?.world?.resume?.();}catch{}
-      this._mileagePrev=null;
-    }});
   }
 
   _flushMileage(final=false){
@@ -64,7 +63,7 @@ export class RaceScene extends CurrentRaceScene{
       const state=addCarDistance(this._mileageCarId,meters,this._mileageTrackId);
       const afterMeters=Number(state?.cars?.[this._mileageCarId]?.meters)||beforeMeters+meters;
       const afterLevel=masteryLevelForMeters(afterMeters);
-      if(!final&&afterLevel>beforeLevel)this._showMasteryCelebration(afterLevel,afterMeters);
+      if(afterLevel>beforeLevel)this._queueMasteryUnlock(afterLevel,afterMeters);
     }
     this._mileagePendingMeters=0;
     this._mileageLastFlush=performance.now();
