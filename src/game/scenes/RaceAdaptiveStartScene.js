@@ -26,20 +26,36 @@ export class RaceScene extends CurrentRaceScene {
     return super._activateAtlanticoPbrPilot?.(trackId);
   }
 
+  _activateTrackBeautyLayer(cfg,trackId){
+    // Rescue mode must actually lower GPU-memory pressure. Re-use the proven
+    // legacy tiled terrain instead of uploading every full-world Beauty tile.
+    if(window.__tdrIosSafeMode===true){
+      this._beautyLayerActive=false;
+      this._beautyLayerFailed=false;
+      return;
+    }
+    return super._activateTrackBeautyLayer?.(cfg,trackId);
+  }
+
   preload(){
     const trackKey=selectedTrackKey(this);
     const beauty=getTrackBeautyLayerConfig(trackKey);
-    const beautyReady=!!(beauty?.useBeautyLayer&&beauty?.assetsAvailable&&beauty?.tiles?.length);
+    const safeMode=window.__tdrIosSafeMode===true;
+    const beautyConfigured=!!(beauty?.useBeautyLayer&&beauty?.assetsAvailable&&beauty?.tiles?.length);
+    const beautyReady=beautyConfigured&&!safeMode;
+    const beautyKeys=new Set((beauty?.tiles||[]).map(tile=>String(tile?.key||'')).filter(Boolean));
 
-    // When four pre-baked beauty images are available, parent scenes must not
-    // also download the live Poly Haven grass/dirt/asphalt/PBR sources. Beauty
-    // tile keys are untouched, so RaceWorldAlignedMaterialsScene still loads them.
+    // Normal mode: Beauty tiles replace the live terrain sources.
+    // Safe mode: do the inverse — allow the small repeatable terrain textures
+    // and suppress the large full-world Beauty images entirely.
     const loader=this.load;
     const originalImage=loader?.image;
-    if(beautyReady&&typeof originalImage==='function'){
+    const needsFilter=(beautyReady||(safeMode&&beautyConfigured))&&typeof originalImage==='function';
+    if(needsFilter){
       loader.image=function(key,...args){
         const k=String(key||'');
-        if(k==='grass'||k==='off'||k==='asphalt'||k==='tdr_atlantico_asphalt_lit') return this;
+        if(beautyReady&&(k==='grass'||k==='off'||k==='asphalt'||k==='tdr_atlantico_asphalt_lit')) return this;
+        if(safeMode&&beautyKeys.has(k)) return this;
         return originalImage.call(this,key,...args);
       };
     }
@@ -47,10 +63,10 @@ export class RaceScene extends CurrentRaceScene {
     try{
       super.preload?.();
     }finally{
-      if(beautyReady&&loader&&originalImage) loader.image=originalImage;
+      if(needsFilter&&loader&&originalImage) loader.image=originalImage;
     }
 
-    if(window.__tdrIosSafeMode!==true){
+    if(!safeMode){
       for(const [key,url] of START_ASSETS){
         if(!this.textures.exists(key)) this.load.image(key,url);
       }
