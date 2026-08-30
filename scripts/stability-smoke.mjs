@@ -13,6 +13,7 @@ const gfx=read('src/game/scenes/RaceGraphicsPresetScene.js');
 const safe=read('src/game/scenes/RaceSafeModeRuntimeScene.js');
 const adaptive=read('src/game/scenes/RaceAdaptiveStartScene.js');
 const raceFinal=read('src/game/scenes/RaceHandbrakeFrontAxleFixScene.js');
+const mileage=read('src/game/scenes/RaceMileageStatsScene.js');
 const modes=read('src/game/scenes/MenuGameModeSnapScene.js');
 const garage=read('src/game/scenes/GarageLazyCardsScene.js');
 const trackSelector=read('src/game/scenes/TrackGaragePlayerLightScene.js');
@@ -44,6 +45,13 @@ requireText(raceFinal,'this._tdrPauseMenuOpen=true;','pause modal must set the f
 requireText(raceFinal,'this._setPauseClockVisible(false);','pause modal must hide the session clock');
 requireText(raceFinal,'if(this._tdrPauseMenuOpen){','session clock update must be blocked while paused');
 requireText(raceFinal,'this.physics?.world?.pause?.();','opening pause menu must pause the physics world');
+
+// Mastery unlocks may be earned mid-race but must never interrupt live driving.
+// The lobby owns the informational modal after the session returns there.
+forbid(mileage,'showMasteryUnlockModal','race mileage layer must not display mastery modal during live play');
+forbid(mileage,'physics?.world?.pause?.()','mastery progression must not pause an active race');
+requireText(mileage,'_queueMasteryUnlock','race mileage layer must defer mastery unlock presentation');
+requireText(lobby,'showMasteryUnlockModal','lobby must remain the post-race mastery presentation owner');
 
 requireText(modes,'preload(){','game-mode card preload is missing');
 forbid(modes,'this.load.start()','game-mode carousel must not start Loader during interaction');
