@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceKerbHapticsScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceKerbFeedbackScene.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
@@ -30,8 +30,6 @@ export class RaceScene extends CurrentRaceScene {
     const startDist=this._ttCl?.startDist||0;
     const segCount=n-1;
 
-    // Hot-path A/B for Safari/WebKit: keep the exact same local projection search,
-    // but avoid creating arrays/objects for every tested centerline segment.
     let hasBest=false;
     let bestD2=Infinity;
     let bestIndex=0;
@@ -72,7 +70,6 @@ export class RaceScene extends CurrentRaceScene {
       const base=this._projPerfIndex||0;
       const radius=Math.min(64,Math.max(24,Math.ceil(n*.035)));
       for(let o=-radius;o<=radius;o++)test(base+o);
-      // Teleports, restarts and exceptional crossings get one exact global recovery.
       if(!hasBest||bestD2>260*260){
         hasBest=false;
         bestD2=Infinity;
@@ -90,10 +87,6 @@ export class RaceScene extends CurrentRaceScene {
   update(time,delta){
     super.update(time,delta);
 
-    // If a device spends several seconds beyond the 50 ms/frame danger zone,
-    // remove non-essential particle emitters. The core race, physics, geometry and
-    // timing remain untouched. This is deliberately conservative and reversible on
-    // the next race load.
     const d=Math.max(0,Number(delta)||0);
     this._perfFrameAccum+=d;
     this._perfFrameCount++;
