@@ -10,6 +10,21 @@ html, body {
   overscroll-behavior: none;
 }
 
+/* App-like DOM interaction: labels, HUD copy, cards and modal text must never
+   become selectable or trigger the iOS copy/callout UI during taps/holds. */
+html, body, #app, #app *, body > :not(input):not(textarea):not(select) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Preserve normal editing/selection only for real editable controls. */
+input, textarea, select, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 :root {
   --tdr-vv-width: 100vw;
   --tdr-vv-height: 100vh;
