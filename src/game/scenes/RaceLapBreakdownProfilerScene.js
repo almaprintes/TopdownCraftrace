@@ -25,7 +25,7 @@ function ensureHudStyle(){
   @media(max-width:760px){.tdr-race-hud-top{width:58vw;min-width:360px;padding-left:10px;padding-right:10px;gap:8px}.tdr-race-lap{font-size:17px}.tdr-race-times{gap:7px}.tdr-race-time{font-size:9px}.tdr-race-hud-bottom{width:41vw;min-width:290px;height:72px}.tdr-race-speed{font-size:31px}.tdr-race-clock{font-size:15px}}
   `;document.head.appendChild(style);
 }
-function removeHud(scene){try{scene?._raceHudDom?.remove();}catch{}if(scene)scene._raceHudDom=null;}
+function removeHud(scene){try{scene?._raceHudDom?.remove();}catch{}if(scene){scene._raceHudDom=null;scene._raceHudRefs=null;}}
 function createHud(scene){
   ensureHudStyle();removeHud(scene);
   const canvas=scene.game?.canvas,host=canvas?.parentElement||document.getElementById('app')||document.body;if(!host)return null;
@@ -41,7 +41,14 @@ function createHud(scene){
       <div class="tdr-race-speed-wrap"><b class="tdr-race-speed" data-speed>000</b><span class="tdr-race-unit">KM/H</span></div>
       <div class="tdr-race-clock"><small>TIEMPO</small><b data-clock>0:00.00</b></div><div class="tdr-race-pos" data-pos></div>
     </div>`;
-  host.appendChild(root);scene._raceHudDom=root;scene.events?.once?.('shutdown',()=>removeHud(scene));return root;
+  host.appendChild(root);
+  scene._raceHudDom=root;
+  scene._raceHudRefs={
+    lap:root.querySelector('[data-lap]'),sector:root.querySelector('[data-sector]'),last:root.querySelector('[data-last]'),best:root.querySelector('[data-best]'),
+    delta:root.querySelector('[data-delta]'),speed:root.querySelector('[data-speed]'),clock:root.querySelector('[data-clock]'),pos:root.querySelector('[data-pos]'),
+    sectorBars:Array.from(root.querySelectorAll('.tdr-race-sector-bars i')),speedBars:Array.from(root.querySelectorAll('.tdr-race-speedbar i'))
+  };
+  scene.events?.once?.('shutdown',()=>removeHud(scene));return root;
 }
 
 export class RaceScene extends CurrentRaceScene {
@@ -49,19 +56,25 @@ export class RaceScene extends CurrentRaceScene {
     const result=super.create(data);
     if(isIOSDevice()&&this.carBody){try{const cam=this.cameras?.main;cam?.stopFollow?.();cam?.centerOn?.(this.carBody.x,this.carBody.y);cam?.startFollow?.(this.carBody,true,1,1);if(cam)cam.roundPixels=false;}catch{}}
 
-    // Legacy graphics diagnostics create three Phaser Text objects and keep
-    // updating them from an inherited update() loop. Destroying the glyphs
-    // alone is unsafe because Phaser Text.setText() later touches disposed
-    // canvas data. Disable the updater first, then remove the objects once.
     this._updateGrowthDiag=()=>{};
     this._growthDiagAccum=0;
     this._growthDiagLast='';
     for(const key of ['raceInfoHud','competitionHud','minimapSportFrame','_perfDiagText','_renderPerfText','_isoText','_diagText','_touchDbg','_dbgText','_lapBreakdownText','_growthDiagText','_bufferDiagText','_rendererDiagText','devBox','devTitle','devInfo','devBtnMap','devTuneBtn','_simpleRaceTop','_simpleRaceBottom']){safeDestroy(this[key]);this[key]=null;}
     this._updateRaceInfoHud=()=>{};this._pinRaceInfoHud=()=>{};this._buildRaceInfoHud=()=>{};this._syncCompetitionHud=()=>{};this._pinCompetitionHud=()=>{};this._pinMinimapSportFrame=()=>{};this._layoutMinimapSportFrame=()=>{};this._centerMinimapInsideSportFrame=()=>{};this._hideRaceDebugOnly=()=>{};this._dbgSet=()=>{};this._perfDiagEnabled=false;this._renderPerfEnabled=false;this._isoModes=null;this._lapBreakdown=null;try{this._perfStats?.clear?.();}catch{}
 
-    const hud=createHud(this);this._simpleRaceHudAccum=100;
+    const hud=createHud(this);const refs=this._raceHudRefs;this._simpleRaceHudAccum=100;
     this._readRacePosition=()=>{const systems=[this.standingsSystem,this.standings,this._standings].filter(Boolean),ids=[this.playerStandingsId,'player','you','user',this.carId].filter(Boolean).map(String);for(const sys of systems){if(typeof sys?.getPosition!=='function')continue;for(const id of ids){try{const pos=Number(sys.getPosition(id));if(Number.isFinite(pos)&&pos>0){const total=typeof sys.getCarCount==='function'?Number(sys.getCarCount()||0):0;return{pos,total};}}catch{}}}return null;};
-    this._updateSimpleRaceHud=(delta=0)=>{this._simpleRaceHudAccum+=Math.max(0,Number(delta)||0);if(this._simpleRaceHudAccum<80||!hud?.isConnected)return;this._simpleRaceHudAccum=0;const now=performance.now(),body=this.carBody?.body,vx=Number(body?.velocity?.x||0),vy=Number(body?.velocity?.y||0),kmh=Math.max(0,Math.hypot(vx,vy)*0.185),started=!!this.timing?.started&&this.timing?.lapStart!=null,elapsed=started?Math.max(0,now-Number(this.timing.lapStart)):0,lap=Math.max(1,Number(this.lapCount||0)+1),cp=Math.max(0,Math.min(2,Number(this._cpState||0))),sector=cp+1,pos=this._readRacePosition?.(),hist=Array.isArray(this.ttHistory)?this.ttHistory:[],histLast=hist.length?Number(hist[hist.length-1]?.lapMs):NaN,lastMs=Number.isFinite(Number(this.timing?.lastLap))?Number(this.timing.lastLap):histLast,bestMs=Number(this.ttBest?.lapMs);let deltaMs=NaN;if(cp>=2&&Number.isFinite(Number(this.timing?.s2))&&Number.isFinite(Number(this.ttBest?.s2)))deltaMs=Number(this.timing.s2)-Number(this.ttBest.s2);else if(cp>=1&&Number.isFinite(Number(this.timing?.s1))&&Number.isFinite(Number(this.ttBest?.s1)))deltaMs=Number(this.timing.s1)-Number(this.ttBest.s1);const deltaTxt=Number.isFinite(deltaMs)?`${deltaMs>=0?'+':'−'}${(Math.abs(deltaMs)/1000).toFixed(2)}`:'--';hud.querySelector('[data-lap]').textContent=String(lap);hud.querySelector('[data-sector]').textContent=`${sector}/3`;hud.querySelector('[data-last]').textContent=fmtLap(lastMs);hud.querySelector('[data-best]').textContent=fmtLap(bestMs);const d=hud.querySelector('[data-delta]');d.textContent=deltaTxt;d.parentElement.classList.toggle('good',Number.isFinite(deltaMs)&&deltaMs<0);d.parentElement.classList.toggle('bad',Number.isFinite(deltaMs)&&deltaMs>0);hud.querySelector('[data-speed]').textContent=String(Math.round(kmh)).padStart(3,'0');hud.querySelector('[data-clock]').textContent=fmtLap(elapsed);hud.querySelector('[data-pos]').innerHTML=pos&&pos.total>1?`POS <b>${pos.pos}/${pos.total}</b>`:'';hud.querySelectorAll('.tdr-race-sector-bars i').forEach((n,i)=>n.classList.toggle('on',i<sector));const maxKmh=200,fill=Math.max(0,Math.min(18,Math.round(kmh/maxKmh*18)));hud.querySelectorAll('.tdr-race-speedbar i').forEach((n,i)=>n.classList.toggle('on',i<fill));};
+    this._updateSimpleRaceHud=(delta=0)=>{
+      this._simpleRaceHudAccum+=Math.max(0,Number(delta)||0);if(this._simpleRaceHudAccum<80||!hud?.isConnected||!refs)return;this._simpleRaceHudAccum=0;
+      const now=performance.now(),body=this.carBody?.body,vx=Number(body?.velocity?.x||0),vy=Number(body?.velocity?.y||0),kmh=Math.max(0,Math.hypot(vx,vy)*0.185),started=!!this.timing?.started&&this.timing?.lapStart!=null,elapsed=started?Math.max(0,now-Number(this.timing.lapStart)):0,lap=Math.max(1,Number(this.lapCount||0)+1),cp=Math.max(0,Math.min(2,Number(this._cpState||0))),sector=cp+1,pos=this._readRacePosition?.(),hist=Array.isArray(this.ttHistory)?this.ttHistory:[],histLast=hist.length?Number(hist[hist.length-1]?.lapMs):NaN,lastMs=Number.isFinite(Number(this.timing?.lastLap))?Number(this.timing.lastLap):histLast,bestMs=Number(this.ttBest?.lapMs);
+      let deltaMs=NaN;if(cp>=2&&Number.isFinite(Number(this.timing?.s2))&&Number.isFinite(Number(this.ttBest?.s2)))deltaMs=Number(this.timing.s2)-Number(this.ttBest.s2);else if(cp>=1&&Number.isFinite(Number(this.timing?.s1))&&Number.isFinite(Number(this.ttBest?.s1)))deltaMs=Number(this.timing.s1)-Number(this.ttBest.s1);
+      const deltaTxt=Number.isFinite(deltaMs)?`${deltaMs>=0?'+':'−'}${(Math.abs(deltaMs)/1000).toFixed(2)}`:'--';
+      refs.lap.textContent=String(lap);refs.sector.textContent=`${sector}/3`;refs.last.textContent=fmtLap(lastMs);refs.best.textContent=fmtLap(bestMs);refs.delta.textContent=deltaTxt;
+      refs.delta.parentElement?.classList.toggle('good',Number.isFinite(deltaMs)&&deltaMs<0);refs.delta.parentElement?.classList.toggle('bad',Number.isFinite(deltaMs)&&deltaMs>0);
+      refs.speed.textContent=String(Math.round(kmh)).padStart(3,'0');refs.clock.textContent=fmtLap(elapsed);refs.pos.innerHTML=pos&&pos.total>1?`POS <b>${pos.pos}/${pos.total}</b>`:'';
+      for(let i=0;i<refs.sectorBars.length;i++)refs.sectorBars[i].classList.toggle('on',i<sector);
+      const fill=Math.max(0,Math.min(18,Math.round(kmh/200*18)));for(let i=0;i<refs.speedBars.length;i++)refs.speedBars[i].classList.toggle('on',i<fill);
+    };
     this._updateSimpleRaceHud(100);return result;
   }
 
