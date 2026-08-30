@@ -55,15 +55,38 @@ function installLazySceneNavigation(game){
   proto.__tdrLazyStartInstalled=true;
 }
 function scheduleSceneWarmup(){
-  const warm=Object.entries(LAZY_SCENES).filter(([,def])=>Number.isFinite(def.warm)&&!def.admin).sort((a,b)=>a[1].warm-b[1].warm);
-  const run=async()=>{await new Promise(r=>setTimeout(r,250));for(const [key] of warm){await ensureLazyScene(key);await new Promise(r=>setTimeout(r,70));}};
-  window.addEventListener('tdr:bootready',()=>{run().catch(()=>{});},{once:true});
+  // Mobile Safari/WebView: do not defeat lazy-loading by parsing every scene just
+  // after the lobby appears. This was a major source of main-thread work exactly
+  // while users were opening/swiping menu modals.
+  if(isIOSDevice())return;
+  const warm=Object.entries(LAZY_SCENES).filter(([,def])=>Number.isFinite(def.warm)&&!def.admin&&def.exportName!=='RaceScene').sort((a,b)=>a[1].warm-b[1].warm);
+  let cancelled=false;
+  const cancel=()=>{cancelled=true;window.removeEventListener('pointerdown',cancel,true);window.removeEventListener('keydown',cancel,true);};
+  const run=async()=>{
+    await new Promise(resolve=>{
+      if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(()=>resolve(),{timeout:2500});
+      else setTimeout(resolve,1800);
+    });
+    for(const [key] of warm){
+      if(cancelled||document.hidden)break;
+      await ensureLazyScene(key);
+      await new Promise(resolve=>{
+        if(typeof window.requestIdleCallback==='function')window.requestIdleCallback(()=>resolve(),{timeout:700});
+        else setTimeout(resolve,180);
+      });
+    }
+    cancel();
+  };
+  window.addEventListener('pointerdown',cancel,true);
+  window.addEventListener('keydown',cancel,true);
+  window.addEventListener('tdr:bootready',()=>{run().catch(()=>cancel());},{once:true});
 }
 function videoPrefs(){
   try{const s=JSON.parse(localStorage.getItem('tdr2:settings')||'{}'),v=s?.video||{};return{quality:String(v.quality||'high'),targetFps:[30,45,60].includes(Number(v.targetFps))?Number(v.targetFps):60,antialias:typeof v.antialias==='boolean'?v.antialias:String(v.quality||'high')!=='low'};}catch{return{quality:'high',targetFps:60,antialias:true};}
 }
 function isIOSDevice(){try{const ua=String(navigator?.userAgent||''),platform=String(navigator?.platform||'');return /iPhone|iPad|iPod/i.test(ua)||(platform==='MacIntel'&&Number(navigator?.maxTouchPoints||0)>1);}catch{return false;}}
 function isLegacyIOSPhone(){try{if(!isIOSDevice())return false;const sw=Math.max(Number(screen?.width||0),Number(screen?.height||0)),sh=Math.min(Number(screen?.width||0),Number(screen?.height||0)),phoneLike=Math.max(sw,sh)<=900,iPhone12Class=phoneLike&&Math.max(sw,sh)<=844,crashSafe=localStorage.getItem('tdr2:forceIosSafeMode')==='1';return iPhone12Class||crashSafe;}catch{return false;}}
+function forceTimeoutLoop(){try{return localStorage.getItem('tdr2:forceTimeoutLoop')==='1';}catch{return false;}}
 function localizePhaserValue(value){return localizeLegacyText(value);}
 function installCleanTextFactory(){
   const factory=Phaser.GameObjects?.GameObjectFactory?.prototype;if(factory&&!factory.__tdrCleanTextInstalled&&typeof factory.text==='function'){const original=factory.text;factory.text=function(x,y,text,style={}){const clean={...(style||{})};if(/Orbitron/i.test(String(clean.fontFamily||''))){clean.fontFamily='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';if(clean.fontStyle==='900')clean.fontStyle='bold';}if(Number(clean.strokeThickness)>2)clean.strokeThickness=2;return original.call(this,x,y,localizePhaserValue(text),clean);};factory.__tdrCleanTextInstalled=true;}
@@ -86,7 +109,9 @@ export function createGame(parentId='app'){
   installSafeAreaRuntime();initLanguage();installDomUiEnglishBridge();installSeasonRewardCelebrations();installCleanTextFactory();installSafeTextureGuard();
   const vp=videoPrefs(),iosDevice=isIOSDevice(),safeMode=isLegacyIOSPhone();try{window.__tdrIosSafeMode=safeMode;}catch{}const antialias=iosDevice?false:!!vp.antialias,targetFps=safeMode?30:vp.targetFps;
   const batchSize=iosDevice?1024:4096;
-  const forceSetTimeOut=iosDevice;
+  // requestAnimationFrame is the default shipping clock. Keep the old timeout
+  // experiment available only behind an explicit diagnostic flag.
+  const forceSetTimeOut=iosDevice&&forceTimeoutLoop();
   const game=new Phaser.Game({type:Phaser.AUTO,parent:parentId,backgroundColor:'#0b1020',fps:{target:targetFps,min:safeMode?15:20,forceSetTimeOut},scene:[BootScene,MenuScene,MenuAliasScene],dom:{createContainer:true},scale:{mode:Phaser.Scale.RESIZE,autoCenter:Phaser.Scale.CENTER_BOTH},physics:{default:'arcade',arcade:{debug:false}},render:{pixelArt:false,antialias,antialiasGL:antialias,desynchronized:iosDevice,roundPixels:safeMode,powerPreference:'high-performance',batchSize}});
   installHtmlTextRuntime(game);
   installLazySceneNavigation(game);scheduleSceneWarmup();try{window.__tdrEnsureScene=ensureLazyScene;}catch{}
