@@ -12,8 +12,10 @@ const game=read('src/game/game.js');
 const gfx=read('src/game/scenes/RaceGraphicsPresetScene.js');
 const safe=read('src/game/scenes/RaceSafeModeRuntimeScene.js');
 const adaptive=read('src/game/scenes/RaceAdaptiveStartScene.js');
-const raceCore=read('src/game/scenes/RaceHandbrakeFrontAxleFixScene.js');
+const racePhysics=read('src/game/scenes/RaceHandbrakePhysicsScene.js');
 const raceExperience=read('src/game/scenes/RaceExperienceScene.js');
+const racePauseUi=read('src/game/ui/racePauseUi.js');
+const raceVisibility=read('src/game/ui/raceUiVisibility.js');
 const raceSessionUi=read('src/game/ui/raceSessionUi.js');
 const mileage=read('src/game/scenes/RaceMileageStatsScene.js');
 const modes=read('src/game/scenes/MenuGameModeSnapScene.js');
@@ -41,33 +43,41 @@ requireText(game,"def.exportName!=='RaceScene'",'desktop warmup must exclude the
 requireText(game,"import('./scenes/RaceExperienceScene.js')",'shipping race must load RaceExperienceScene directly');
 forbid(game,'RacePauseButtonRestoreFixScene','shipping race must not route through pause hotfix facade');
 forbid(game,'RaceLapHistoryBridgeScene','shipping race must not route through synthetic lap-history bridge');
-requireText(raceExperience,"from './RaceHandbrakeFrontAxleFixScene.js'",'race experience must sit directly above the current physics/core boundary');
+forbid(game,'RaceHandbrakeFrontAxleFixScene','shipping race must not route through obsolete handbrake fix wrapper');
+
+// Physics is focused: handbrake behaviour only, no session/HUD/reward ownership.
+requireText(racePhysics,"from './RaceCleanLapScene.js'",'handbrake physics must sit directly above the current lower race chain');
+requireText(racePhysics,'_applyHandbrakePhysics(delta)','handbrake physics method is missing');
+forbid(racePhysics,'document.','physics scene must not manipulate DOM');
+forbid(racePhysics,'getRaceLootSessionSummary','physics scene must not own reward integrity');
+forbid(racePhysics,'_openPauseMenu','physics scene must not own pause UI');
+
+// Experience owns pause, reward integrity and final-session orchestration.
+requireText(raceExperience,"from './RaceHandbrakePhysicsScene.js'",'race experience must sit directly above focused physics boundary');
 forbid(raceExperience,'RaceLapHistoryBridgeScene','race experience must never synthesize timing history');
+requireText(raceExperience,'mountRacePauseUi','race experience must delegate pause presentation to DOM composition');
+requireText(raceExperience,'hideRaceUi','race experience must delegate HUD visibility to UI utility');
 requireText(raceExperience,'mountRaceSessionRewards','race experience must delegate reward presentation to DOM composition');
-requireText(raceSessionUi,'assets/season/reward_cards/free_${tone}.svg','session reward UI must use the canonical Season Pass card art');
-forbid(raceSessionUi,'daily_gift.webp','shipping session reward UI must not use the legacy gift chest');
+requireText(raceExperience,'_guardCompletedLapRewards()','race experience must own reward-integrity guard');
+requireText(raceExperience,'getRaceLootSessionSummary','reward guard must compare against delivered economy laps');
+requireText(raceExperience,'grantRaceLoot','reward guard must fill only missing grants');
+requireText(raceExperience,'if(this._tdrPauseMenuOpen){','race update chain must stop while paused');
+requireText(raceExperience,'this.physics?.world?.pause?.();','race experience must freeze physics while paused');
+
+requireText(racePauseUi,"className='tdr-race-pause'",'pause menu must be a DOM component');
+requireText(racePauseUi,'CAPTURA MUNDO','pause menu must preserve world capture action');
+requireText(racePauseUi,'CAPTURA TÉCNICA','pause menu must preserve technical capture action');
+requireText(racePauseUi,'FINALIZAR SESIÓN','pause menu must preserve session finish action');
+requireText(raceVisibility,"document.querySelector('.tdr-race-hud')",'UI visibility utility must explicitly own DOM instrument HUD');
+requireText(raceVisibility,"document.querySelectorAll('[data-tdr-race-ui=\"1\"]')",'UI visibility utility must own other race DOM controls');
+requireText(raceVisibility,'scene.uiCam.setVisible?.(false);','UI visibility utility must own Phaser UI camera hiding');
+
+requireText(raceSessionUi,'assets/season/reward_cards/free_${tone}.svg','session reward UI must use canonical Season Pass card art');
+forbid(raceSessionUi,'daily_gift.webp','shipping session reward UI must not use legacy gift chest');
 
 forbid(safe,'patchMethod(','safe mode must not monkey-patch Phaser methods per frame');
 requireText(adaptive,'if(safeMode&&beautyKeys.has(k)) return this;','iOS safe mode must suppress full-resolution Beauty tiles');
 requireText(adaptive,'if(window.__tdrIosSafeMode===true)','iOS safe mode Beauty activation guard is missing');
-
-// Pause remains a complete simulation/UI freeze at the current core boundary.
-requireText(raceCore,'this._tdrPauseMenuOpen=true;','pause modal must set the race pause guard');
-requireText(raceCore,'this._hidePauseHud();','pause modal must hide the full race HUD');
-requireText(raceCore,"document.querySelector('.tdr-race-hud')",'pause must explicitly hide the DOM instrument HUD');
-requireText(raceCore,"hud.style.setProperty('display','none','important')",'DOM instrument HUD must be force-hidden while paused');
-requireText(raceCore,"document.querySelectorAll('[data-tdr-race-ui=\"1\"]')",'pause must hide other DOM race UI');
-requireText(raceCore,'if(Number(obj?.depth||0)>=1000)hideObj(obj);','pause must hide high-depth Phaser HUD objects');
-requireText(raceCore,'this.uiCam.setVisible?.(false);','pause must disable the dedicated Phaser UI camera');
-requireText(raceCore,'if(this._tdrPauseMenuOpen){','race update chain must be blocked while paused');
-requireText(raceCore,'this.physics?.world?.pause?.();','opening pause menu must pause the physics world');
-requireText(raceCore,'this._restorePauseHud();','continue must restore the pre-pause HUD');
-
-// Reward fallback remains idempotent until timing/economy are consolidated in the
-// next refactor phase. It must compare delivered laps before granting anything.
-requireText(raceCore,'_guardCompletedLapRewards()','race core must guard device-specific missed valid-lap rewards');
-requireText(raceCore,'getRaceLootSessionSummary','reward guard must compare against delivered economy laps');
-requireText(raceCore,'grantRaceLoot','reward guard must fill only missing grants');
 
 // Mastery unlocks may be earned mid-race but must never interrupt live driving.
 forbid(mileage,'showMasteryUnlockModal','race mileage layer must not display mastery modal during live play');
@@ -107,6 +117,6 @@ forbid(htmlText,'[...entries]','HTML text sync must not clone the full entry map
 requireText(htmlText,'proto.destroy=originalDestroy','HTML text destroy monkey-patch must be restored');
 requireText(htmlText,'factory.text=originalFactoryText','HTML text factory monkey-patch must be restored');
 forbid(pages,'source-index.html','GitHub Pages must not replace the real index.html');
-requireText(pages,'npm run build -- --base=/TopdownCraftrace/','GitHub Pages must build with the repository base path');
+requireText(pages,'npm run build -- --base=/TopdownCraftrace/','GitHub Pages must build with repository base path');
 
 console.log('[stability-smoke] OK — clean mobile architecture invariants preserved');
