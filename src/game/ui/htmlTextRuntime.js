@@ -4,18 +4,11 @@ const ROOT_ID='tdr-native-text-layer';
 const STYLE_ID='tdr-native-text-style';
 const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
 
-// These scenes use Phaser cameras/masks as real scrolling viewports. Mirroring
-// their Text objects into one global DOM layer breaks the relationship between
-// the list, its mask and pointer-driven scrolling. Keep their text in Phaser.
 const PHASER_SCROLL_SCENES=new Set(['GarageScene','TrackGarageScene']);
 function sceneKey(text){try{return String(text?.scene?.sys?.settings?.key||text?.scene?.scene?.key||'');}catch{return '';}}
 function shouldUseHtml(text){return !PHASER_SCROLL_SCENES.has(sceneKey(text));}
-function isRacePreloadOverlay(text){
-  return sceneKey(text)==='race' && finite(text?.depth)>=100000;
-}
-function isMobileDevice(){
-  try{return /Android|iPhone|iPad|iPod/i.test(String(navigator?.userAgent||''))||(Number(navigator?.maxTouchPoints||0)>1&&Math.min(Number(screen?.width||0),Number(screen?.height||0))<1100);}catch{return false;}
-}
+function isRacePreloadOverlay(text){return sceneKey(text)==='race' && finite(text?.depth)>=100000;}
+function isMobileDevice(){try{return /Android|iPhone|iPad|iPod/i.test(String(navigator?.userAgent||''))||(Number(navigator?.maxTouchPoints||0)>1&&Math.min(Number(screen?.width||0),Number(screen?.height||0))<1100);}catch{return false;}}
 
 function ensureRoot(game){
   if(!document.getElementById(STYLE_ID)){
@@ -32,175 +25,84 @@ function ensureRoot(game){
   return root;
 }
 
-function cameraFor(text){
-  const cams=text?.scene?.cameras?.cameras||[];
-  return cams.find(c=>c?.visible!==false&&(!c.id||((Number(text.cameraFilter)||0)&c.id)===0))||null;
-}
-
+function cameraFor(text){const cams=text?.scene?.cameras?.cameras||[];return cams.find(c=>c?.visible!==false&&(!c.id||((Number(text.cameraFilter)||0)&c.id)===0))||null;}
 function pose(text){
   try{const m=text.getWorldTransformMatrix?.();if(m)return{x:finite(m.tx),y:finite(m.ty),r:Math.atan2(finite(m.b),finite(m.a)),sx:Math.hypot(finite(m.a),finite(m.b))||1,sy:Math.hypot(finite(m.c),finite(m.d))||1};}catch{}
   return{x:finite(text?.x),y:finite(text?.y),r:finite(text?.rotation),sx:finite(text?.scaleX,1),sy:finite(text?.scaleY,1)};
 }
 function color(v,f='#fff'){return typeof v==='string'?v:(Number.isFinite(Number(v))?`#${(Number(v)>>>0).toString(16).padStart(6,'0').slice(-6)}`:f);}
-
-function styleSignature(text){
-  const s=text?.style||{},p=s.padding||{};
-  return [s.fontFamily,s.fontSize,s.fontStyle,s.color,s.fill,s.align,s.lineSpacing,s.backgroundColor,s.fixedWidth,s.wordWrapWidth,s.wordWrap?.width,p.x,p.y,p.left,p.top,s.strokeThickness,s.stroke].join('|');
-}
+function styleSignature(text){const s=text?.style||{},p=s.padding||{};return [s.fontFamily,s.fontSize,s.fontStyle,s.color,s.fill,s.align,s.lineSpacing,s.backgroundColor,s.fixedWidth,s.wordWrapWidth,s.wordWrap?.width,p.x,p.y,p.left,p.top,s.strokeThickness,s.stroke].join('|');}
 function applyStyle(text,node,entry){
   const sig=styleSignature(text);if(entry.styleSig===sig)return;entry.styleSig=sig;
   const s=text?.style||{},fs=parseFloat(String(s.fontSize||16))||16,fw=finite(s.fixedWidth),ww=finite(s.wordWrapWidth||s.wordWrap?.width),pad=s.padding||{},fontStyle=String(s.fontStyle||'').toLowerCase();
   node.style.fontFamily=String(s.fontFamily||'system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif');
-  node.style.fontSize=`${fs}px`;
-  node.style.fontWeight=fontStyle.includes('bold')||fontStyle.includes('900')?'700':'400';
-  node.style.fontStyle=fontStyle.includes('italic')?'italic':'normal';
-  node.style.color=color(s.color||s.fill);
-  node.style.textAlign=String(s.align||'left');
-  node.style.lineHeight=s.lineSpacing?`${Math.max(1,fs+finite(s.lineSpacing))}px`:'normal';
-  node.style.background=s.backgroundColor?color(s.backgroundColor,'transparent'):'transparent';
-  node.style.padding=`${finite(pad.y??pad.top)}px ${finite(pad.x??pad.left)}px`;
-  node.style.width=fw>0?`${fw}px`:(ww>0?`${ww}px`:'max-content');
-  node.style.maxWidth=ww>0?`${ww}px`:'none';
-  node.style.whiteSpace=ww>0?'pre-wrap':'pre';
-  node.style.overflowWrap=ww>0?'break-word':'normal';
-  const st=Math.max(0,finite(s.strokeThickness));
-  node.style.webkitTextStroke=st?`${Math.min(2,st)}px ${color(s.stroke,'transparent')}`:'0 transparent';
+  node.style.fontSize=`${fs}px`;node.style.fontWeight=fontStyle.includes('bold')||fontStyle.includes('900')?'700':'400';node.style.fontStyle=fontStyle.includes('italic')?'italic':'normal';
+  node.style.color=color(s.color||s.fill);node.style.textAlign=String(s.align||'left');node.style.lineHeight=s.lineSpacing?`${Math.max(1,fs+finite(s.lineSpacing))}px`:'normal';
+  node.style.background=s.backgroundColor?color(s.backgroundColor,'transparent'):'transparent';node.style.padding=`${finite(pad.y??pad.top)}px ${finite(pad.x??pad.left)}px`;
+  node.style.width=fw>0?`${fw}px`:(ww>0?`${ww}px`:'max-content');node.style.maxWidth=ww>0?`${ww}px`:'none';node.style.whiteSpace=ww>0?'pre-wrap':'pre';node.style.overflowWrap=ww>0?'break-word':'normal';
+  const st=Math.max(0,finite(s.strokeThickness));node.style.webkitTextStroke=st?`${Math.min(2,st)}px ${color(s.stroke,'transparent')}`:'0 transparent';
 }
 
 function hierarchyState(text){
   let alpha=Math.max(0,Math.min(1,finite(text?.alpha,1)));
   if(text?.visible===false||text?.active===false)return{visible:false,alpha:0};
-  let p=text?.parentContainer||null;const seen=new Set();
-  while(p&&!seen.has(p)){
-    seen.add(p);
+  let p=text?.parentContainer||null,guard=0;
+  while(p&&guard++<32){
     if(p.visible===false||p.active===false)return{visible:false,alpha:0};
-    alpha*=Math.max(0,Math.min(1,finite(p.alpha,1)));
-    p=p.parentContainer||null;
+    alpha*=Math.max(0,Math.min(1,finite(p.alpha,1)));p=p.parentContainer||null;
   }
   return{visible:alpha>0.001,alpha};
 }
-
 function sceneVisible(text){
-  try{
-    const s=text?.scene;if(!s?.sys)return false;
-    if(isRacePreloadOverlay(text))return true;
-    if(typeof s.sys.isActive==='function'&&!s.sys.isActive())return false;
-    if(typeof s.sys.isVisible==='function'&&!s.sys.isVisible())return false;
-  }catch{return false;}
+  try{const s=text?.scene;if(!s?.sys)return false;if(isRacePreloadOverlay(text))return true;if(typeof s.sys.isActive==='function'&&!s.sys.isActive())return false;if(typeof s.sys.isVisible==='function'&&!s.sys.isVisible())return false;}catch{return false;}
   return true;
 }
-
-function inheritedMask(text){
-  let o=text;const seen=new Set();
-  while(o&&!seen.has(o)){
-    seen.add(o);
-    if(o.mask)return o.mask;
-    o=o.parentContainer||null;
-  }
-  return null;
-}
-
+function inheritedMask(text){let o=text,guard=0;while(o&&guard++<32){if(o.mask)return o.mask;o=o.parentContainer||null;}return null;}
 function maskBounds(mask){
   if(!mask)return null;
-  try{
-    const source=mask.geometryMask||mask.bitmapMask||mask;
-    const b=source?.getBounds?.();
-    if(b&&[b.x,b.y,b.width,b.height].every(Number.isFinite)&&b.width>0&&b.height>0)return{x:b.x,y:b.y,width:b.width,height:b.height};
-  }catch{}
+  try{const source=mask.geometryMask||mask.bitmapMask||mask;const b=source?.getBounds?.();if(b&&[b.x,b.y,b.width,b.height].every(Number.isFinite)&&b.width>0&&b.height>0)return{x:b.x,y:b.y,width:b.width,height:b.height};}catch{}
   return null;
 }
-
 function frameMetrics(game){
   const canvas=game?.canvas,host=canvas?.parentElement;if(!canvas||!host)return null;
-  const cr=canvas.getBoundingClientRect(),hr=host.getBoundingClientRect();
-  const gx=Math.max(1,finite(game.scale?.width,canvas.width||1)),gy=Math.max(1,finite(game.scale?.height,canvas.height||1));
-  return{canvas,host,cr,hr,gx,gy,cx:cr.width/gx,cy:cr.height/gy};
+  const cr=canvas.getBoundingClientRect(),hr=host.getBoundingClientRect();const gx=Math.max(1,finite(game.scale?.width,canvas.width||1)),gy=Math.max(1,finite(game.scale?.height,canvas.height||1));
+  return{cr,hr,gx,gy,cx:cr.width/gx,cy:cr.height/gy};
 }
 
 function sync(game,text,entry,metrics){
-  const {clip,node}=entry;
-  if(!text?.scene){clip.remove();return false;}
-  if(!shouldUseHtml(text)){clip.remove();return false;}
-  if(!metrics)return true;
-  const {cr,hr,gx,gy,cx,cy}=metrics;
-  const state=hierarchyState(text);
-  if(!state.visible||!sceneVisible(text)){clip.style.display='none';return true;}
+  const {clip,node}=entry;if(!text?.scene){clip.remove();return false;}if(!shouldUseHtml(text)){clip.remove();return false;}if(!metrics)return true;
+  const {cr,hr,gx,gy,cx,cy}=metrics,state=hierarchyState(text);if(!state.visible||!sceneVisible(text)){clip.style.display='none';return true;}
   const cam=cameraFor(text);if(!cam){clip.style.display='none';return true;}
-
-  const zoom=Math.max(.001,finite(cam.zoom,1));
-  const p=pose(text),fx=Number.isFinite(Number(text.scrollFactorX))?Number(text.scrollFactorX):1,fy=Number.isFinite(Number(text.scrollFactorY))?Number(text.scrollFactorY):1;
-  const fixedToScreen=Math.abs(fx)<0.0001&&Math.abs(fy)<0.0001;
-  const renderZoom=fixedToScreen?1:zoom;
-  const x=finite(cam.x)+(p.x-finite(cam.scrollX)*fx)*renderZoom;
-  const y=finite(cam.y)+(p.y-finite(cam.scrollY)*fy)*renderZoom;
-  const ox=Math.max(0,Math.min(1,finite(text.originX))),oy=Math.max(0,Math.min(1,finite(text.originY)));
-
-  const camLeft=finite(cam.x),camTop=finite(cam.y),camRight=camLeft+finite(cam.width,gx),camBottom=camTop+finite(cam.height,gy);
+  const zoom=Math.max(.001,finite(cam.zoom,1)),p=pose(text),fx=Number.isFinite(Number(text.scrollFactorX))?Number(text.scrollFactorX):1,fy=Number.isFinite(Number(text.scrollFactorY))?Number(text.scrollFactorY):1;
+  const fixedToScreen=Math.abs(fx)<0.0001&&Math.abs(fy)<0.0001,renderZoom=fixedToScreen?1:zoom,x=finite(cam.x)+(p.x-finite(cam.scrollX)*fx)*renderZoom,y=finite(cam.y)+(p.y-finite(cam.scrollY)*fy)*renderZoom;
+  const ox=Math.max(0,Math.min(1,finite(text.originX))),oy=Math.max(0,Math.min(1,finite(text.originY))),camLeft=finite(cam.x),camTop=finite(cam.y),camRight=camLeft+finite(cam.width,gx),camBottom=camTop+finite(cam.height,gy);
   if(x<camLeft-120||x>camRight+120||y<camTop-120||y>camBottom+120){clip.style.display='none';return true;}
-
   let clipX=cr.left-hr.left+camLeft*cx,clipY=cr.top-hr.top+camTop*cy,clipW=(camRight-camLeft)*cx,clipH=(camBottom-camTop)*cy;
   const mb=fixedToScreen?null:maskBounds(inheritedMask(text));
   if(mb){
-    const mx=(finite(cam.x)+(mb.x-finite(cam.scrollX))*zoom)*cx+cr.left-hr.left;
-    const my=(finite(cam.y)+(mb.y-finite(cam.scrollY))*zoom)*cy+cr.top-hr.top;
-    const mw=mb.width*zoom*cx,mh=mb.height*zoom*cy;
-    const r=Math.min(clipX+clipW,mx+mw),b=Math.min(clipY+clipH,my+mh);
-    clipX=Math.max(clipX,mx);clipY=Math.max(clipY,my);clipW=Math.max(0,r-clipX);clipH=Math.max(0,b-clipY);
-    if(clipW<1||clipH<1){clip.style.display='none';return true;}
+    const mx=(finite(cam.x)+(mb.x-finite(cam.scrollX))*zoom)*cx+cr.left-hr.left,my=(finite(cam.y)+(mb.y-finite(cam.scrollY))*zoom)*cy+cr.top-hr.top,mw=mb.width*zoom*cx,mh=mb.height*zoom*cy,r=Math.min(clipX+clipW,mx+mw),b=Math.min(clipY+clipH,my+mh);
+    clipX=Math.max(clipX,mx);clipY=Math.max(clipY,my);clipW=Math.max(0,r-clipX);clipH=Math.max(0,b-clipY);if(clipW<1||clipH<1){clip.style.display='none';return true;}
   }
-
-  clip.style.display='block';
-  clip.style.left=`${clipX}px`;clip.style.top=`${clipY}px`;clip.style.width=`${clipW}px`;clip.style.height=`${clipH}px`;
-  clip.style.opacity=String(state.alpha*Math.max(0,Math.min(1,finite(cam.alpha,1))));
-  node.style.left=`${cr.left-hr.left+x*cx-clipX}px`;
-  node.style.top=`${cr.top-hr.top+y*cy-clipY}px`;
-  node.style.transform=`translate(${-ox*100}%,${-oy*100}%) rotate(${p.r}rad) scale(${p.sx*renderZoom*cx},${p.sy*renderZoom*cy})`;
-  const value=Array.isArray(text.text)?text.text.join('\n'):String(text.text??'');
-  if(node.textContent!==value)node.textContent=value;
-  applyStyle(text,node,entry);
-  return true;
+  clip.style.display='block';clip.style.left=`${clipX}px`;clip.style.top=`${clipY}px`;clip.style.width=`${clipW}px`;clip.style.height=`${clipH}px`;clip.style.opacity=String(state.alpha*Math.max(0,Math.min(1,finite(cam.alpha,1))));
+  node.style.left=`${cr.left-hr.left+x*cx-clipX}px`;node.style.top=`${cr.top-hr.top+y*cy-clipY}px`;node.style.transform=`translate(${-ox*100}%,${-oy*100}%) rotate(${p.r}rad) scale(${p.sx*renderZoom*cx},${p.sy*renderZoom*cy})`;
+  const value=Array.isArray(text.text)?text.text.join('\n'):String(text.text??'');if(node.textContent!==value)node.textContent=value;applyStyle(text,node,entry);return true;
 }
 
 export function installHtmlTextRuntime(game){
-  if(!game||globalThis.__tdrHtmlTextRuntimeInstalled)return;
-  globalThis.__tdrHtmlTextRuntimeInstalled=true;
+  if(!game||globalThis.__tdrHtmlTextRuntimeInstalled)return;globalThis.__tdrHtmlTextRuntimeInstalled=true;
   const root=ensureRoot(game);if(!root){globalThis.__tdrHtmlTextRuntimeInstalled=false;return;}
   const entries=new Map(),proto=Phaser.GameObjects.Text.prototype,originalDestroy=proto.destroy,originalWebGL=proto.renderWebGL,originalCanvas=proto.renderCanvas;
-
-  proto.renderWebGL=function(...args){if(!shouldUseHtml(this))return originalWebGL?.apply(this,args);};
-  proto.renderCanvas=function(...args){if(!shouldUseHtml(this))return originalCanvas?.apply(this,args);};
-
-  const register=text=>{
-    if(!text||entries.has(text)||!shouldUseHtml(text))return;
-    const clip=document.createElement('div');clip.className='tdr-native-clip';
-    const node=document.createElement('div');node.className='tdr-native-text';clip.appendChild(node);root.appendChild(clip);
-    entries.set(text,{clip,node,styleSig:null});
-  };
-  const factory=Phaser.GameObjects.GameObjectFactory.prototype;
-  const originalFactoryText=factory.text;
-  if(!factory.__tdrNativeHtmlTextFactory){
-    factory.text=function(...args){const text=originalFactoryText.apply(this,args);register(text);return text;};
-    factory.__tdrNativeHtmlTextFactory=true;
-  }
+  proto.renderWebGL=function(...args){if(!shouldUseHtml(this))return originalWebGL?.apply(this,args);};proto.renderCanvas=function(...args){if(!shouldUseHtml(this))return originalCanvas?.apply(this,args);};
+  const register=text=>{if(!text||entries.has(text)||!shouldUseHtml(text))return;const clip=document.createElement('div');clip.className='tdr-native-clip';const node=document.createElement('div');node.className='tdr-native-text';clip.appendChild(node);root.appendChild(clip);entries.set(text,{clip,node,styleSig:null});};
+  const factory=Phaser.GameObjects.GameObjectFactory.prototype,originalFactoryText=factory.text;
+  if(!factory.__tdrNativeHtmlTextFactory){factory.text=function(...args){const text=originalFactoryText.apply(this,args);register(text);return text;};factory.__tdrNativeHtmlTextFactory=true;}
   for(const scene of Object.values(game.scene?.keys||{}))for(const child of scene?.children?.list||[])if(child instanceof Phaser.GameObjects.Text)register(child);
   proto.destroy=function(...args){const entry=entries.get(this);if(entry){entry.clip.remove();entries.delete(this);}return originalDestroy?.apply(this,args);};
-
-  const intervalMs=isMobileDevice()?33:16;
-  let raf=0,lastSync=-Infinity;
-  const frame=(ts=0)=>{
-    if(game?.pendingDestroy)return;
-    if(!document.hidden&&ts-lastSync>=intervalMs){
-      lastSync=ts;
-      const metrics=frameMetrics(game);
-      for(const [text,entry] of entries)if(!sync(game,text,entry,metrics))entries.delete(text);
-    }
-    raf=requestAnimationFrame(frame);
-  };
+  const intervalMs=isMobileDevice()?33:16;let raf=0,lastSync=-Infinity;
+  const frame=(ts=0)=>{if(game?.pendingDestroy)return;if(!document.hidden&&ts-lastSync>=intervalMs){lastSync=ts;const metrics=frameMetrics(game);for(const [text,entry] of entries)if(!sync(game,text,entry,metrics))entries.delete(text);}raf=requestAnimationFrame(frame);};
   raf=requestAnimationFrame(frame);
   game.events?.once?.('destroy',()=>{
-    cancelAnimationFrame(raf);for(const entry of entries.values())entry.clip.remove();entries.clear();root.remove();
-    proto.destroy=originalDestroy;proto.renderWebGL=originalWebGL;proto.renderCanvas=originalCanvas;
-    if(factory.__tdrNativeHtmlTextFactory){factory.text=originalFactoryText;delete factory.__tdrNativeHtmlTextFactory;}
-    globalThis.__tdrHtmlTextRuntimeInstalled=false;
+    cancelAnimationFrame(raf);for(const entry of entries.values())entry.clip.remove();entries.clear();root.remove();proto.destroy=originalDestroy;proto.renderWebGL=originalWebGL;proto.renderCanvas=originalCanvas;
+    if(factory.__tdrNativeHtmlTextFactory){factory.text=originalFactoryText;delete factory.__tdrNativeHtmlTextFactory;}globalThis.__tdrHtmlTextRuntimeInstalled=false;
   });
 }
