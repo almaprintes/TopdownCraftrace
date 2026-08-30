@@ -4,11 +4,24 @@ const ROOT_ID='tdr-track-selector-dom';
 const TAP_MOVE_PX=14;
 const TAP_TIME_MS=650;
 
+function centerSelectedTrack(root,behavior='smooth'){
+  const list=root?.querySelector?.('.tdr-ts-list');
+  const selected=list?.querySelector?.('.tdr-ts-card.active');
+  if(!list||!selected)return;
+  const top=selected.offsetTop-(list.clientHeight-selected.offsetHeight)/2;
+  const max=Math.max(0,list.scrollHeight-list.clientHeight);
+  const target=Math.max(0,Math.min(max,top));
+  try{list.scrollTo({top:target,behavior});}catch{list.scrollTop=target;}
+}
+
 export class TrackGarageScene extends CurrentTrackGarageScene {
   _installDomSelector(){
     super._installDomSelector?.();
     const root=this._trackSelectorDom||document.getElementById(ROOT_ID);
-    if(!root||root.__tdrPointerTapInstalled)return;
+    if(!root)return;
+
+    requestAnimationFrame(()=>centerSelectedTrack(root,'auto'));
+    if(root.__tdrPointerTapInstalled)return;
     root.__tdrPointerTapInstalled=true;
 
     let down=null;
@@ -51,7 +64,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
         if(i!==this._index){
           this._index=i;
           this._installDomSelector();
-          requestAnimationFrame(()=>this._trackSelectorDom?.querySelector?.(`[data-index="${i}"]`)?.scrollIntoView?.({block:'nearest'}));
+          requestAnimationFrame(()=>centerSelectedTrack(this._trackSelectorDom,'smooth'));
         }
         return;
       }
@@ -62,11 +75,15 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
       if(action.matches('.tdr-ts-back'))this.scene.start('menu');
     },{passive:false});
 
+    // Mouse/desktop clicks are handled by the DOM selector below this class. After
+    // that synchronous render finishes, recenter the newly active circuit here too.
     root.addEventListener('click',(e)=>{
       if(performance.now()<suppressClickUntil&&actionable(e.target)){
         e.preventDefault();
         e.stopImmediatePropagation();
+        return;
       }
-    },true);
+      if(e.target?.closest?.('[data-index]'))requestAnimationFrame(()=>centerSelectedTrack(root,'smooth'));
+    });
   }
 }
