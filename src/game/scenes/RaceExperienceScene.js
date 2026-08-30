@@ -1,8 +1,9 @@
-import { RaceScene as CurrentRaceScene } from './RaceHandbrakeFrontAxleFixScene.js';
-import { getRaceLootSessionSummary } from '../garage/garageStore.js';
+import { RaceScene as CurrentRaceScene } from './RaceHandbrakePhysicsScene.js';
+import { grantRaceLoot, getRaceLootSessionSummary } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { mountRaceSessionRewards } from '../ui/raceSessionUi.js';
 import { mountRacePauseUi } from '../ui/racePauseUi.js';
+import { hideRaceUi, restoreRaceUi } from '../ui/raceUiVisibility.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
 
@@ -12,7 +13,11 @@ const BASE=import.meta.env.BASE_URL||'/';
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
+    this._tdrPauseMenuOpen=false;
     this._experiencePauseUi=null;
+    this._experienceHiddenUi=null;
+    this._tdrRewardHistorySeen=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
+    this._tdrRewardExpected=Number(getRaceLootSessionSummary?.()?.laps||0);
     this.events.once('shutdown',()=>this._destroyExperienceUi());
     this.events.once('destroy',()=>this._destroyExperienceUi());
     return result;
@@ -21,6 +26,11 @@ export class RaceScene extends CurrentRaceScene {
   _destroyExperienceUi(){
     try{this._experiencePauseUi?.destroy?.();}catch{}
     this._experiencePauseUi=null;
+    this._pauseModal=null;
+    if(this._experienceHiddenUi){
+      try{restoreRaceUi(this,this._experienceHiddenUi);}catch{}
+      this._experienceHiddenUi=null;
+    }
     try{this._sessionRewardsDom?.remove?.();}catch{}
     this._sessionRewardsDom=null;
   }
@@ -29,8 +39,7 @@ export class RaceScene extends CurrentRaceScene {
     if(this._experiencePauseUi?.root?.isConnected)return this._experiencePauseUi.root;
     this._tdrPauseMenuOpen=true;
     try{this.physics?.world?.pause?.();}catch{}
-    try{this._pauseButton?.style&&(this._pauseButton.style.display='none');}catch{}
-    try{this._hidePauseHud?.();}catch{}
+    if(!this._experienceHiddenUi)this._experienceHiddenUi=hideRaceUi(this);
 
     const ui=mountRacePauseUi({
       onContinue:()=>this._closePauseMenu(true),
@@ -51,16 +60,11 @@ export class RaceScene extends CurrentRaceScene {
 
     if(resume!==false){
       this._tdrPauseMenuOpen=false;
-      try{this._restorePauseHud?.();}catch{}
+      if(this._experienceHiddenUi){
+        try{restoreRaceUi(this,this._experienceHiddenUi);}catch{}
+        this._experienceHiddenUi=null;
+      }
       try{this.physics?.world?.resume?.();}catch{}
-      try{
-        const button=this._pauseButton;
-        if(button?.isConnected){
-          button.style.removeProperty('display');
-          button.style.display='grid';
-          button.style.pointerEvents='auto';
-        }
-      }catch{}
       try{this._updateSimpleRaceHud?.(100);}catch{}
     }
   }
@@ -89,10 +93,11 @@ export class RaceScene extends CurrentRaceScene {
   _finishSessionFromPause(){
     if(this._sessionFinalizing)return;
     this._sessionFinalizing=true;
-    this._closePauseMenu(false);
+    try{this._experiencePauseUi?.destroy?.();}catch{}
+    this._experiencePauseUi=null;
+    this._pauseModal=null;
     this._tdrPauseMenuOpen=true;
     try{this.physics?.world?.pause?.();}catch{}
-    try{if(this._pauseButton)this._pauseButton.style.display='none';}catch{}
     this._showSessionRewards(null,()=>this._openFinalSessionReportClean());
   }
 
@@ -107,7 +112,9 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _abandonSessionFromPause(){
-    this._closePauseMenu(false);
+    try{this._experiencePauseUi?.destroy?.();}catch{}
+    this._experiencePauseUi=null;
+    this._pauseModal=null;
     this._tdrPauseMenuOpen=true;
     try{this.physics?.world?.pause?.();}catch{}
     if(this._testMode&&this._returnSceneKey)this.scene.start(this._returnSceneKey,this._returnSceneData||{});
@@ -153,5 +160,45 @@ export class RaceScene extends CurrentRaceScene {
     });
     this._sessionRewardsDom=root;
     if(root)try{this._lockSessionRewardsInput?.(root);}catch{}
+  }
+
+  _guardCompletedLapRewards(){
+    const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
+    const seen=Math.max(0,Number(this._tdrRewardHistorySeen)||0);
+    if(hist.length<=seen)return;
+    const rows=hist.slice(seen);
+    this._tdrRewardHistorySeen=hist.length;
+    const validRows=rows.filter(row=>row?.valid!==false&&row?.invalid!==true&&Number.isFinite(Number(row?.lapMs))&&Number(row.lapMs)>0);
+    if(!validRows.length)return;
+
+    this._tdrRewardExpected+=validRows.length;
+    const target=this._tdrRewardExpected;
+    this.time?.delayedCall?.(160,()=>{
+      let delivered=Number(getRaceLootSessionSummary?.()?.laps||0);
+      if(delivered>=target)return;
+      const missing=Math.min(validRows.length,target-delivered);
+      const candidates=validRows.slice(validRows.length-missing);
+      const trackKey=String(this.trackKey||this.track?.key||this.track?.id||'track01');
+      for(const row of candidates){
+        delivered=Number(getRaceLootSessionSummary?.()?.laps||0);
+        if(delivered>=target)break;
+        try{
+          const reward=grantRaceLoot({trackKey,lapMs:Number(row.lapMs)});
+          this._showRaceLoot?.(reward);
+        }catch(err){
+          console.error('[race-reward-integrity] fallback grant failed',err);
+        }
+      }
+    });
+  }
+
+  update(time,delta){
+    if(this._tdrPauseMenuOpen){
+      try{this.physics?.world?.pause?.();}catch{}
+      return;
+    }
+    const result=super.update?.(time,delta);
+    this._guardCompletedLapRewards();
+    return result;
   }
 }
