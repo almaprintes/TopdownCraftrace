@@ -1,8 +1,6 @@
-// Mobile browsers often report one or more intermediate viewport sizes while
-// rotating OR during the very first landscape load. Phaser can receive that
-// transient size, rebuild the active scene, then keep a short canvas until a
-// later orientation change. This helper keeps sampling until the viewport is
-// genuinely settled and prefers the largest trustworthy landscape rectangle.
+// Mobile browsers report intermediate viewport sizes while rotating and during
+// first landscape load. index.html owns the early VisualViewport measurement;
+// once Phaser exists this helper only reacts to that single normalized signal.
 
 function rawViewport() {
   const vv = window.visualViewport;
@@ -24,35 +22,23 @@ function isLandscape() {
 }
 
 function viewportRect() {
+  const root=document.documentElement;
+  const cssW=parseFloat(root.style.getPropertyValue('--tdr-vv-width'))||0;
+  const cssH=parseFloat(root.style.getPropertyValue('--tdr-vv-height'))||0;
   const r = rawViewport();
-  // On iOS a direct landscape launch can expose a stale visualViewport height
-  // for a few hundred ms while innerHeight/clientHeight already contain the
-  // real usable rectangle. Taking the largest current candidate prevents the
-  // game from being permanently letterboxed until the user rotates again.
-  const w = Math.max(1, Math.round(Math.max(r.vvW, r.innerW, r.clientW)));
-  const h = Math.max(1, Math.round(Math.max(r.vvH, r.innerH, r.clientH)));
-  return { w, h, left: 0, top: 0 };
+  const w = Math.max(1, Math.round(Math.max(cssW, r.vvW, r.innerW, r.clientW)));
+  const h = Math.max(1, Math.round(Math.max(cssH, r.vvH, r.innerH, r.clientH)));
+  return { w, h };
 }
 
 function applyViewport(game) {
   if (!game || !isLandscape()) return;
-  const { w, h, left, top } = viewportRect();
-  const root = document.documentElement;
-
-  // Keep DOM scenes and Phaser reading the exact same final viewport. The app
-  // owns the whole page, so do not offset the fixed body by visualViewport's
-  // transient offsetTop/offsetLeft during browser-toolbar settling.
-  root.style.setProperty('--tdr-vv-width', `${w}px`);
-  root.style.setProperty('--tdr-vv-height', `${h}px`);
-  root.style.setProperty('--tdr-vv-left', `${left}px`);
-  root.style.setProperty('--tdr-vv-top', `${top}px`);
-
+  const { w, h } = viewportRect();
   try {
     const scale = game.scale;
     const currentW = Math.round(Number(scale?.width || 0));
     const currentH = Math.round(Number(scale?.height || 0));
     if (currentW !== w || currentH !== h) scale?.resize?.(w, h);
-    else scale?.refresh?.();
   } catch {}
 }
 
@@ -60,13 +46,8 @@ export function installOrientationViewportSettle(game) {
   if (!game || game.__tdrOrientationViewportSettleInstalled) return;
   game.__tdrOrientationViewportSettleInstalled = true;
 
-  // RAF/MAIN diagnostics were useful to isolate the original WebKit cadence
-  // problem, but they must not keep their own rAF loop alive while the shipping
-  // iOS experiment deliberately drives Phaser with setTimeout instead.
-
   let timers = [];
   let raf = 0;
-
   const clear = () => {
     if (raf) cancelAnimationFrame(raf);
     raf = 0;
@@ -77,27 +58,27 @@ export function installOrientationViewportSettle(game) {
   const settle = () => {
     clear();
     if (!isLandscape()) return;
-
     raf = requestAnimationFrame(() => {
       raf = 0;
       applyViewport(game);
     });
-
-    // Rotation normally settles quickly; a cold landscape launch on Safari can
-    // take noticeably longer. These later passes cost virtually nothing and
-    // remove the need for a corrective portrait -> landscape cycle.
-    [80, 180, 360, 650, 1000, 1500].forEach(ms => {
+    [120, 320, 700, 1300].forEach(ms => {
       timers.push(setTimeout(() => applyViewport(game), ms));
     });
   };
 
-  window.addEventListener('orientationchange', settle, { passive: true });
-  window.addEventListener('resize', settle, { passive: true });
-  window.addEventListener('pageshow', settle, { passive: true });
+  // index.html normalizes resize/orientation/VisualViewport events into this.
   window.addEventListener('tdr:viewportchange', settle, { passive: true });
-  window.visualViewport?.addEventListener?.('resize', settle, { passive: true });
-  window.visualViewport?.addEventListener?.('scroll', settle, { passive: true });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) settle(); }, { passive: true });
+  window.addEventListener('pageshow', settle, { passive: true });
+  const onVisible=()=>{if(!document.hidden)settle();};
+  document.addEventListener('visibilitychange',onVisible,{passive:true});
+
+  game.events?.once?.('destroy',()=>{
+    clear();
+    window.removeEventListener('tdr:viewportchange',settle);
+    window.removeEventListener('pageshow',settle);
+    document.removeEventListener('visibilitychange',onVisible);
+  });
 
   settle();
 }
