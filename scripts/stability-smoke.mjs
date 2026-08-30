@@ -24,7 +24,7 @@ const sw=read('sw.js');
 const stats=read('src/game/stats/playerStats.js');
 const htmlText=read('src/game/ui/htmlTextRuntime.js');
 const lobby=read('src/game/ui/LobbyPublishPolish.js');
-const preview=read('.github/workflows/build-pages.yml');
+const pages=read('.github/workflows/pages.yml');
 
 forbid(gfx,'this._completedLapCheck=()=>{}','iOS graphics layer must not disable completed-lap timing');
 forbid(gfx,'this._recordGhostSample=()=>{}','iOS graphics layer must not disable ghost recording');
@@ -97,6 +97,7 @@ forbid(htmlText,'[...entries]','HTML text sync must not clone the full entry map
 requireText(htmlText,'proto.destroy=originalDestroy','HTML text destroy monkey-patch must be restored');
 requireText(htmlText,'factory.text=originalFactoryText','HTML text factory monkey-patch must be restored');
 
-forbid(preview,'source-index.html','preview must not replace the real index.html');
+forbid(pages,'source-index.html','GitHub Pages must not replace the real index.html');
+requireText(pages,'npm run build -- --base=/TopdownCraftrace/','GitHub Pages must build with the repository base path');
 
 console.log('[stability-smoke] OK — mobile stability invariants preserved');
