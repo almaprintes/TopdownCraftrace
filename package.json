@@ -9,10 +9,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "check:stability": "node scripts/stability-smoke.mjs",
+    "check:survival": "node scripts/survival-smoke.mjs",
     "gen:icons": "node scripts/generate-icons.mjs",
     "gen:orientation": "node scripts/generate-orientation-runtime.mjs",
     "bake:track": "node scripts/bake-track-visual.mjs",
-    "prebuild": "npm run check:stability && npm run gen:icons && npm run gen:orientation"
+    "prebuild": "npm run check:stability && npm run check:survival && npm run gen:icons && npm run gen:orientation"
   },
   "dependencies": {
     "phaser": "^3.90.0"
