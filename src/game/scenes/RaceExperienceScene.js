@@ -135,7 +135,7 @@ export class RaceScene extends CurrentRaceScene {
     const entries=Object.entries(summary.totals||{})
       .filter(([id,n])=>GARAGE_ITEMS[id]&&Number(n)>0)
       .sort((a,b)=>Number(b[1])-Number(a[1]))
-      .map(([id,qty])=>({id,qty:Number(qty)||0,name:GARAGE_ITEMS[id]?.name||id,icon:GARAGE_ITEMS[id]?.icon||'◆'}));
+      .map(([id,qty])=>({id,qty:Number(qty)||0,name:GARAGE_ITEMS[id]?.name||id,icon:GARAGE_ITEMS[id]?.icon||'◆',asset:GARAGE_ITEMS[id]?.asset||null}));
 
     if(!entries.length&&laps<5){
       if(resultRoot)resultRoot.style.display='';
