@@ -3,31 +3,20 @@ import { t } from '../i18n/index.js';
 
 const MODE_KEY='tdr2:gameMode';
 const BASE=import.meta.env.BASE_URL||'/';
-const FONT='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 
 const MODES=[
-  {key:'timeattack',asset:'contrarreloj.webp',accent:0x55bfff},
-  {key:'ghost',asset:'fantasma.webp',accent:0x8f7dff},
-  {key:'survival',asset:'supervivencia.webp',accent:0xff6a1a},
-  {key:'duel',asset:'duelo.webp',accent:0xff9f43},
-  {key:'practice',asset:'area-pruebas.webp',accent:0xffc857}
+  {key:'timeattack',asset:'contrarreloj.webp'},
+  {key:'ghost',asset:'fantasma.webp'},
+  {key:'survival',asset:'supervivencia.webp'},
+  {key:'duel',asset:'duelo.webp'},
+  {key:'practice',asset:'area-pruebas.webp'}
 ];
 
-function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 export class MenuScene extends CurrentMenuScene {
-  preload(){
-    if(typeof super.preload==='function')super.preload();
-    for(const mode of MODES){
-      const key=`game_mode_card_${mode.key}`;
-      if(!this.textures.exists(key))this.load.image(key,`${BASE}assets/ui/game-modes/${mode.asset}`);
-    }
-  }
-
   create(data){
-    if(typeof super.create==='function') super.create(data);
-    // Startup overlay must disappear only after the real lobby has been created
-    // and the browser has had a couple of frames to paint it.
+    if(typeof super.create==='function')super.create(data);
     try{
       const started=Number(window.__tdrBootStartedAt)||performance.now();
       requestAnimationFrame(()=>requestAnimationFrame(()=>{
@@ -37,188 +26,96 @@ export class MenuScene extends CurrentMenuScene {
         window.dispatchEvent(new CustomEvent('tdr:bootready'));
       }));
     }catch{}
+    this.events?.once?.('shutdown',()=>this._closeGameModeModal());
+    this.events?.once?.('destroy',()=>this._closeGameModeModal());
+  }
+
+  _selectedModeKey(){
+    try{
+      const key=localStorage.getItem(MODE_KEY)||'timeattack';
+      return MODES.some(m=>m.key===key)?key:'timeattack';
+    }catch{return'timeattack';}
   }
 
   _openGameModeModal(){
-    if(this._gameModeModal?.scene)return;
-    const {width,height}=this.scale;
-    const selected=(()=>{try{return localStorage.getItem(MODE_KEY)||'timeattack';}catch{return'timeattack';}})();
-    this._modeSnapIndex=Math.max(0,MODES.findIndex(m=>m.key===selected));
-    this._modeSnapAnimating=false;
+    if(typeof document==='undefined'||this._gameModeDom?.isConnected)return;
+    const selected=this._selectedModeKey();
+    let index=Math.max(0,MODES.findIndex(m=>m.key===selected));
+    let launching=false;
 
-    const root=this.add.container(0,0).setDepth(9000);
-    this._ui?.add(root);
+    const root=document.createElement('div');
+    root.className='tdr-mode-dom-root';
+    root.dataset.tdrMenuUi='1';
+    root.innerHTML=`<style>
+.tdr-mode-dom-root{position:fixed;inset:0;z-index:2147482000;display:flex;align-items:center;justify-content:center;padding:10px;background:rgba(2,7,13,.84);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff;touch-action:manipulation;overscroll-behavior:none}
+.tdr-mode-panel{position:relative;width:min(94vw,1080px);height:min(86vh,440px);min-height:315px;border:1px solid rgba(255,159,67,.82);background:#07131b;box-shadow:0 24px 80px rgba(0,0,0,.58);overflow:hidden;display:flex;flex-direction:column;padding:14px 58px 12px}
+.tdr-mode-title{text-align:center;font-size:22px;font-weight:900;line-height:1.1;margin-top:2px}.tdr-mode-help{text-align:center;color:#a9bac9;font-size:9px;margin-top:5px;letter-spacing:.04em}
+.tdr-mode-close{position:absolute;right:11px;top:8px;width:42px;height:42px;border:0;background:transparent;color:#a9bac9;font:800 30px/1 system-ui;z-index:5}
+.tdr-mode-carousel{flex:1;display:flex;gap:22px;align-items:center;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;padding:8px calc(50% - 112px) 4px;scrollbar-width:none;touch-action:pan-x}.tdr-mode-carousel::-webkit-scrollbar{display:none}
+.tdr-mode-card{flex:0 0 224px;height:min(67vh,300px);max-height:300px;min-height:220px;scroll-snap-align:center;scroll-snap-stop:always;border:0;background:transparent;padding:0;opacity:.44;transform:scale(.78);transition:transform .18s ease,opacity .18s ease;outline:none;touch-action:manipulation}.tdr-mode-card img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 12px 18px rgba(0,0,0,.48))}.tdr-mode-card.active{opacity:1;transform:scale(1)}
+.tdr-mode-arrow{position:absolute;top:50%;transform:translateY(-35%);width:48px;height:48px;border-radius:50%;border:1px solid #ffb04c;background:#102435;color:#fff;font:800 34px/1 system-ui;z-index:4}.tdr-mode-arrow.prev{left:10px}.tdr-mode-arrow.next{right:10px}.tdr-mode-arrow:disabled{opacity:.3;border-color:#425261}
+.tdr-mode-dots{height:18px;display:flex;justify-content:center;align-items:center;gap:12px}.tdr-mode-dot{width:8px;height:8px;border-radius:50%;background:#51606d;opacity:.7}.tdr-mode-dot.active{width:10px;height:10px;background:#ff9f43;opacity:1}
+@media(max-height:430px){.tdr-mode-panel{height:94vh;min-height:280px;padding-top:9px;padding-bottom:7px}.tdr-mode-title{font-size:19px}.tdr-mode-help{margin-top:2px}.tdr-mode-card{height:230px;min-height:190px;flex-basis:174px}.tdr-mode-carousel{padding-left:calc(50% - 87px);padding-right:calc(50% - 87px)}}
+</style><div class="tdr-mode-panel" role="dialog" aria-modal="true" aria-label="${t('modes.title')}"><button class="tdr-mode-close" type="button" aria-label="Cerrar">×</button><div class="tdr-mode-title">${t('modes.title')}</div><div class="tdr-mode-help">${t('modes.swipe')}</div><button class="tdr-mode-arrow prev" type="button" aria-label="Anterior">‹</button><div class="tdr-mode-carousel">${MODES.map((m,i)=>`<button class="tdr-mode-card${i===index?' active':''}" type="button" data-index="${i}" data-key="${m.key}"><img src="${BASE}assets/ui/game-modes/${m.asset}" alt="${m.key}" draggable="false" loading="eager" decoding="async"></button>`).join('')}</div><button class="tdr-mode-arrow next" type="button" aria-label="Siguiente">›</button><div class="tdr-mode-dots">${MODES.map((_,i)=>`<span class="tdr-mode-dot${i===index?' active':''}" data-dot="${i}"></span>`).join('')}</div></div>`;
+
+    const carousel=root.querySelector('.tdr-mode-carousel');
+    const cards=[...root.querySelectorAll('.tdr-mode-card')];
+    const dots=[...root.querySelectorAll('.tdr-mode-dot')];
+    const prev=root.querySelector('.tdr-mode-arrow.prev');
+    const next=root.querySelector('.tdr-mode-arrow.next');
+    const close=root.querySelector('.tdr-mode-close');
+
+    const update=(nextIndex,{scroll=false,instant=false}={})=>{
+      index=clamp(Number(nextIndex)||0,0,MODES.length-1);
+      cards.forEach((card,i)=>card.classList.toggle('active',i===index));
+      dots.forEach((dot,i)=>dot.classList.toggle('active',i===index));
+      if(prev)prev.disabled=index===0;if(next)next.disabled=index===MODES.length-1;
+      if(scroll){
+        try{cards[index]?.scrollIntoView?.({behavior:instant?'auto':'smooth',block:'nearest',inline:'center'});}catch{}
+      }
+    };
+
+    const startCurrent=()=>{
+      if(launching)return;
+      launching=true;
+      const key=MODES[index]?.key||'timeattack';
+      try{localStorage.setItem(MODE_KEY,key);}catch{}
+      this._closeGameModeModal();
+      try{this._startSelectedMode?.(key);}catch(err){launching=false;console.error('[game-mode-dom] start failed',err);}
+    };
+
+    let scrollTimer=0;
+    const settleFromScroll=()=>{
+      window.clearTimeout(scrollTimer);
+      scrollTimer=window.setTimeout(()=>{
+        if(!carousel?.isConnected)return;
+        const center=carousel.scrollLeft+carousel.clientWidth/2;
+        let best=index,bestDist=Infinity;
+        cards.forEach((card,i)=>{const cardCenter=card.offsetLeft+card.offsetWidth/2;const d=Math.abs(cardCenter-center);if(d<bestDist){best=i;bestDist=d;}});
+        update(best);
+      },70);
+    };
+    carousel?.addEventListener('scroll',settleFromScroll,{passive:true});
+    carousel?.addEventListener('scrollend',()=>settleFromScroll(),{passive:true});
+
+    cards.forEach((card,i)=>card.addEventListener('click',()=>{
+      if(i!==index){update(i,{scroll:true});return;}
+      startCurrent();
+    }));
+    prev?.addEventListener('click',()=>update(index-1,{scroll:true}));
+    next?.addEventListener('click',()=>update(index+1,{scroll:true}));
+    close?.addEventListener('click',()=>this._closeGameModeModal());
+    root.addEventListener('click',e=>{if(e.target===root)this._closeGameModeModal();});
+
+    document.body.appendChild(root);
+    this._gameModeDom=root;
     this._gameModeModal=root;
-
-    const veil=this.add.rectangle(0,0,width,height,0x02070d,.82).setOrigin(0).setInteractive();
-    root.add(veil);
-
-    const panelW=Math.min(width-28,1080,Math.max(760,Math.floor(width*.86)));
-    const panelH=Math.min(height-20,440,Math.max(315,Math.floor(height*.76)));
-    const cx=width/2,cy=height/2,x=cx-panelW/2,y=cy-panelH/2,c=16;
-
-    const panel=this.add.graphics();
-    panel.fillStyle(0x07131b,.99);panel.lineStyle(2,0xff9f43,.82);
-    panel.beginPath();panel.moveTo(x+c,y);panel.lineTo(x+panelW-c,y);panel.lineTo(x+panelW,y+c);
-    panel.lineTo(x+panelW,y+panelH-c);panel.lineTo(x+panelW-c,y+panelH);panel.lineTo(x+c,y+panelH);
-    panel.lineTo(x,y+panelH-c);panel.lineTo(x,y+c);panel.closePath();panel.fillPath();panel.strokePath();
-    panel.lineStyle(1,0xffffff,.07);panel.strokeRect(x+7,y+7,panelW-14,panelH-14);root.add(panel);
-
-    const blocker=this.add.rectangle(x,y,panelW,panelH,0xffffff,.001).setOrigin(0).setInteractive();
-    root.add(blocker);
-
-    root.add(this.add.text(cx,y+17,t('modes.title'),{fontFamily:FONT,fontSize:height<430?'19px':'23px',fontStyle:'bold',color:'#fff'}).setOrigin(.5,0));
-    root.add(this.add.text(cx,y+46,t('modes.swipe'),{fontFamily:FONT,fontSize:'9px',color:'#a9bac9'}).setOrigin(.5,0));
-
-    this._modeSnapCards=this.add.container(0,0);root.add(this._modeSnapCards);
-    this._modeSnapUi={root,x,y,panelW,panelH,cx,cy};
-    this._drawModeSnapCards();
-
-    const closeHit=this.add.rectangle(x+panelW-28,y+25,46,46,0xffffff,.001).setInteractive({useHandCursor:true});
-    const close=this.add.text(x+panelW-28,y+8,'×',{fontFamily:FONT,fontSize:'29px',fontStyle:'bold',color:'#a9bac9'}).setOrigin(.5,0);
-    closeHit.on('pointerup',()=>{if(!this._modeSnapAnimating)this._closeGameModeModal();});
-    root.add([closeHit,close]);
-
-    veil.on('pointerup',()=>{if(!this._modeSnapAnimating)this._closeGameModeModal();});
-  }
-
-  _drawModeSnapCards(){
-    const ui=this._modeSnapUi,layer=this._modeSnapCards;
-    if(!ui||!layer?.scene||this._gameModeModal!==ui.root)return;
-    layer.removeAll(true);
-
-    const visual=this.add.container(0,0);
-    layer.add(visual);
-    this._modeSnapVisual=visual;
-
-    const {x,y,panelW,panelH,cx}=ui;
-    const compact=panelH<370;
-    const cardTop=y+(compact?66:72);
-    const availableH=panelH-(compact?105:116);
-    const centerH=clamp(availableH,210,306);
-    const centerW=Math.round(centerH*.75);
-    const sideScale=.74;
-    const sideW=Math.round(centerW*sideScale),sideH=Math.round(centerH*sideScale);
-    const sideOffset=Math.min(centerW*.94,(panelW-centerW)/2-18);
-    const index=clamp(Number(this._modeSnapIndex)||0,0,MODES.length-1);
-    this._modeSnapIndex=index;
-
-    const ensureTexture=(mode)=>{
-      const key=`game_mode_card_${mode.key}`;
-      return this.textures.exists(key)?key:null;
-    };
-
-    [-1,1].forEach(delta=>{
-      const i=index+delta;if(i<0||i>=MODES.length)return;
-      const m=MODES[i],key=ensureTexture(m);
-      const scx=cx+delta*sideOffset;
-      const sy=cardTop+(centerH-sideH)/2;
-      if(key){
-        const img=this.add.image(scx,sy,key).setOrigin(.5,0).setDisplaySize(sideW,sideH).setAlpha(.46);
-        visual.add(img);
-      }else{
-        visual.add(this.add.rectangle(scx,sy,sideW,sideH,0x10202b,.7).setOrigin(.5,0));
-      }
-    });
-
-    const mode=MODES[index],key=ensureTexture(mode);
-    const centerY=cardTop;
-    if(key){
-      const shadow=this.add.rectangle(cx+5,centerY+7,centerW,centerH,0x000000,.42).setOrigin(.5,0);
-      const img=this.add.image(cx,centerY,key).setOrigin(.5,0).setDisplaySize(centerW,centerH);
-      const border=this.add.rectangle(cx,centerY,centerW+4,centerH+4,0x000000,0).setOrigin(.5,0).setStrokeStyle(3,mode.accent,1);
-      visual.add([shadow,img,border]);
-    }else{
-      const ph=this.add.rectangle(cx,centerY,centerW,centerH,0x10202b,.96).setOrigin(.5,0).setStrokeStyle(3,mode.accent,.9);
-      visual.add(ph);
-    }
-
-    const gestureW=Math.max(centerW+70,Math.min(panelW-150,centerW*1.28));
-    const gesture=this.add.rectangle(cx,centerY,gestureW,centerH,0xffffff,.001).setOrigin(.5,0).setInteractive({useHandCursor:true});
-    layer.add(gesture);
-    let down=false,startX=0,lastX=0;
-    gesture.on('pointerdown',p=>{if(this._modeSnapAnimating)return;down=true;startX=lastX=Number(p.x)||0;});
-    gesture.on('pointermove',p=>{if(down&&!this._modeSnapAnimating)lastX=Number(p.x)||lastX;});
-    gesture.on('pointerout',()=>{if(down&&!this._modeSnapAnimating&&Math.abs(lastX-startX)>52){this._shiftModeSnap(lastX<startX?1:-1);}down=false;});
-    gesture.on('pointerupoutside',p=>{if(!down||this._modeSnapAnimating)return;lastX=Number(p.x)||lastX;const dx=lastX-startX;down=false;if(Math.abs(dx)>42)this._shiftModeSnap(dx<0?1:-1);});
-    gesture.on('pointerup',p=>{
-      if(!down||this._modeSnapAnimating)return;lastX=Number(p.x)||lastX;const dx=lastX-startX;down=false;
-      if(Math.abs(dx)>42){this._shiftModeSnap(dx<0?1:-1);return;}
-      this._startSelectedMode(mode.key);
-    });
-
-    const arrowY=centerY+centerH/2;
-    const arrow=(ax,glyph,enabled,delta)=>{
-      const hit=this.add.circle(ax,arrowY,compact?24:28,0x102435,enabled?.98:.50)
-        .setStrokeStyle(2,enabled?0xffb04c:0x425261,enabled?.95:.42);
-      const txt=this.add.text(ax,arrowY,glyph,{fontFamily:FONT,fontSize:compact?'28px':'34px',fontStyle:'bold',color:enabled?'#fff':'#5c6c79'}).setOrigin(.5);
-      layer.add([hit,txt]);
-      if(enabled){hit.setInteractive({useHandCursor:true});hit.on('pointerup',()=>{if(!this._modeSnapAnimating)this._shiftModeSnap(delta);});}
-    };
-    arrow(x+34,'‹',index>0,-1);
-    arrow(x+panelW-34,'›',index<MODES.length-1,1);
-
-    const dotsY=y+panelH-22;
-    MODES.forEach((m,i)=>{
-      const active=i===index;
-      layer.add(this.add.circle(cx+(i-(MODES.length-1)/2)*20,dotsY,active?5:4,active?m.accent:0x51606d,active?1:.65));
-    });
-  }
-
-  _shiftModeSnap(delta){
-    if(!this._gameModeModal?.scene||this._modeSnapAnimating)return;
-    const direction=Math.sign(Number(delta)||0);
-    const next=clamp((Number(this._modeSnapIndex)||0)+direction,0,MODES.length-1);
-    if(next===this._modeSnapIndex)return;
-
-    const oldVisual=this._modeSnapVisual;
-    this._modeSnapAnimating=true;
-    if(!oldVisual?.scene){
-      this._modeSnapIndex=next;
-      this._drawModeSnapCards();
-      this._modeSnapAnimating=false;
-      return;
-    }
-
-    this.tweens.killTweensOf(oldVisual);
-    this.tweens.add({
-      targets:oldVisual,
-      x:-direction*56,
-      alpha:.52,
-      scaleX:.96,
-      scaleY:.96,
-      duration:115,
-      ease:'Quad.easeIn',
-      onComplete:()=>{
-        if(!this._gameModeModal?.scene){this._modeSnapAnimating=false;return;}
-        this._modeSnapIndex=next;
-        this._drawModeSnapCards();
-        const incoming=this._modeSnapVisual;
-        if(!incoming?.scene){this._modeSnapAnimating=false;return;}
-        incoming.x=direction*78;
-        incoming.alpha=.58;
-        incoming.setScale(.965);
-        this.tweens.add({
-          targets:incoming,
-          x:0,
-          alpha:1,
-          scaleX:1,
-          scaleY:1,
-          duration:360,
-          ease:'Back.easeOut',
-          easeParams:[1.45],
-          onComplete:()=>{this._modeSnapAnimating=false;}
-        });
-      }
-    });
+    requestAnimationFrame(()=>requestAnimationFrame(()=>update(index,{scroll:true,instant:true})));
   }
 
   _closeGameModeModal(){
-    try{if(this._modeSnapVisual)this.tweens.killTweensOf(this._modeSnapVisual);}catch{}
-    this._modeSnapAnimating=false;
-    super._closeGameModeModal();
-    this._modeSnapCards=null;
-    this._modeSnapVisual=null;
-    this._modeSnapUi=null;
+    try{this._gameModeDom?.remove?.();}catch{}
+    this._gameModeDom=null;
+    this._gameModeModal=null;
   }
 }
