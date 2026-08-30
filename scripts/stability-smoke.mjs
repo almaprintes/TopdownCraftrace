@@ -42,12 +42,20 @@ requireText(adaptive,'if(window.__tdrIosSafeMode===true)','iOS safe mode Beauty 
 // Pause is a complete simulation/UI freeze, not just a timer pause.
 requireText(raceFinal,'this._tdrPauseMenuOpen=true;','pause modal must set the final race pause guard');
 requireText(raceFinal,'this._hidePauseHud();','pause modal must hide the full race HUD');
-requireText(raceFinal,"document.querySelectorAll('[data-tdr-race-ui=\"1\"]')",'pause must hide DOM race UI');
-requireText(raceFinal,'if(depth<1000)continue;','pause must hide high-depth Phaser HUD objects');
+requireText(raceFinal,"document.querySelector('.tdr-race-hud')",'pause must explicitly hide the shipping DOM instrument HUD');
+requireText(raceFinal,"hud.style.setProperty('display','none','important')",'shipping DOM instrument HUD must be force-hidden while paused');
+requireText(raceFinal,"document.querySelectorAll('[data-tdr-race-ui=\"1\"]')",'pause must hide other DOM race UI');
+requireText(raceFinal,'if(Number(obj?.depth||0)>=1000)hideObj(obj);','pause must hide high-depth Phaser HUD objects');
+requireText(raceFinal,'this.uiCam.setVisible?.(false);','pause must disable the dedicated Phaser UI camera');
 requireText(raceFinal,'if(this._tdrPauseMenuOpen){','race update chain must be blocked while paused');
-requireText(raceFinal,'return;','paused race update must return before downstream work');
 requireText(raceFinal,'this.physics?.world?.pause?.();','opening pause menu must pause the physics world');
 requireText(raceFinal,'this._restorePauseHud();','continue must restore the exact pre-pause HUD');
+
+// Final shipping wrapper must keep the lap-reward safety net and Season Pass chest override.
+requireText(raceFinal,'_guardCompletedLapRewards()','final race wrapper must guard device-specific missed valid-lap rewards');
+requireText(raceFinal,'getRaceLootSessionSummary','reward guard must compare against delivered economy laps');
+requireText(raceFinal,'grantRaceLoot','reward guard must be able to fill only missing valid-lap grants');
+requireText(raceFinal,"assets/season/reward_cards/free_${tone}.svg",'session chest presenter must use Season Pass reward-card art');
 
 // Mastery unlocks may be earned mid-race but must never interrupt live driving.
 // The lobby owns the informational modal after the session returns there.
