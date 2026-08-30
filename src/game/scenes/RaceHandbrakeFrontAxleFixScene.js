@@ -9,7 +9,64 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export class RaceScene extends CurrentRaceScene {
   create(data){
     this._hbBicycleYawRate=0;
-    return super.create(data);
+    this._tdrPauseMenuOpen=false;
+    const result=super.create(data);
+
+    // Final shipping guard: the pause modal itself is the source of truth for the
+    // live session clock. Some lower layers only looked at physics.world.isPaused,
+    // which was not reliable enough across every pause/menu path.
+    const updateRaceInfoHud=typeof this._updateRaceInfoHud==='function'
+      ? this._updateRaceInfoHud.bind(this)
+      : null;
+    if(updateRaceInfoHud){
+      this._updateRaceInfoHud=(delta=0)=>{
+        if(this._tdrPauseMenuOpen){
+          this._setPauseClockVisible(false);
+          return;
+        }
+        const out=updateRaceInfoHud(delta);
+        this._setPauseClockVisible(true);
+        return out;
+      };
+    }
+
+    return result;
+  }
+
+  _setPauseClockVisible(visible){
+    const hud=this.raceInfoHud;
+    try{hud?._timerLabel?.setVisible?.(!!visible);}catch{}
+    try{hud?._timerText?.setVisible?.(!!visible);}catch{}
+  }
+
+  _openPauseMenu(...args){
+    this._tdrPauseMenuOpen=true;
+    const result=super._openPauseMenu?.(...args);
+    try{this.physics?.world?.pause?.();}catch{}
+    this._setPauseClockVisible(false);
+    return result;
+  }
+
+  _closePauseMenu(resume=true,...rest){
+    const shouldResume=resume!==false;
+    const result=super._closePauseMenu?.(resume,...rest);
+    if(shouldResume){
+      this._tdrPauseMenuOpen=false;
+      try{this.physics?.world?.resume?.();}catch{}
+      this._setPauseClockVisible(true);
+      try{this._updateRaceInfoHud?.(0);}catch{}
+    }else{
+      // Session finish/abandon paths close the modal without returning to live play.
+      this._tdrPauseMenuOpen=true;
+      this._setPauseClockVisible(false);
+    }
+    return result;
+  }
+
+  update(time,delta){
+    const result=super.update?.(time,delta);
+    if(this._tdrPauseMenuOpen)this._setPauseClockVisible(false);
+    return result;
   }
 
   _applyHandbrakePhysics(delta){
