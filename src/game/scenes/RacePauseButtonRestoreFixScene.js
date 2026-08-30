@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceHandbrakeFrontAxleFixScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceLapHistoryBridgeScene.js';
 
 // Shipping hotfix: the generic pause-HUD sweep sees the pause button after the
 // base pause menu has already set it to display:none, so that hidden state can be
