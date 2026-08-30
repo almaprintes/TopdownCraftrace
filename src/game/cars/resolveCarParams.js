@@ -9,11 +9,15 @@ function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 // Applied to every car before garage / external tuning is added.
 const FACTORY_MAX_FWD_MULT = 1.40;
 
-function mergedTuning(external = {}) {
-  let g = {};
-  try { g = garageTuning(loadGarage()) || {}; } catch (_) {}
-  const mul = (key) => (Number(g[key]) || 1) * (Number(external[key]) || 1);
-  const add = (key) => (Number(g[key]) || 0) + (Number(external[key]) || 0);
+const EMPTY_TUNING = Object.freeze({
+  accelMult: 1, brakeMult: 1, dragMult: 1, turnRateMult: 1,
+  maxFwdAdd: 0, maxRevAdd: 0, turnMinAdd: 0,
+  gripCoastAdd: 0, gripDriveAdd: 0, gripBrakeAdd: 0
+});
+
+function normalizedTuning(raw = {}) {
+  const mul = key => Number.isFinite(Number(raw?.[key])) ? Number(raw[key]) : 1;
+  const add = key => Number.isFinite(Number(raw?.[key])) ? Number(raw[key]) : 0;
   return {
     accelMult: mul('accelMult'), brakeMult: mul('brakeMult'), dragMult: mul('dragMult'), turnRateMult: mul('turnRateMult'),
     maxFwdAdd: add('maxFwdAdd'), maxRevAdd: add('maxRevAdd'), turnMinAdd: add('turnMinAdd'),
@@ -21,10 +25,28 @@ function mergedTuning(external = {}) {
   };
 }
 
-// Aplica perfil + piezas equipadas del Workshop + tuning/overrides externos.
-export function resolveCarParams(baseSpec, tuning = {}, overrides = {}) {
-  const t = mergedTuning(tuning);
+function combineTuning(base = EMPTY_TUNING, external = EMPTY_TUNING) {
+  const a = normalizedTuning(base), b = normalizedTuning(external);
+  return {
+    accelMult: a.accelMult * b.accelMult,
+    brakeMult: a.brakeMult * b.brakeMult,
+    dragMult: a.dragMult * b.dragMult,
+    turnRateMult: a.turnRateMult * b.turnRateMult,
+    maxFwdAdd: a.maxFwdAdd + b.maxFwdAdd,
+    maxRevAdd: a.maxRevAdd + b.maxRevAdd,
+    turnMinAdd: a.turnMinAdd + b.turnMinAdd,
+    gripCoastAdd: a.gripCoastAdd + b.gripCoastAdd,
+    gripDriveAdd: a.gripDriveAdd + b.gripDriveAdd,
+    gripBrakeAdd: a.gripBrakeAdd + b.gripBrakeAdd
+  };
+}
 
+function selectedGarageTuning() {
+  try { return garageTuning(loadGarage()) || EMPTY_TUNING; } catch (_) { return EMPTY_TUNING; }
+}
+
+function resolveWithTuning(baseSpec, tuning, overrides = {}) {
+  const t = normalizedTuning(tuning);
   const profileId = baseSpec.handlingProfile || baseSpec.steeringProfile || 'ARCADE';
   const baseProfile = HANDLING_PROFILES[profileId] || HANDLING_PROFILES.ARCADE;
   const specProfile = {
@@ -34,9 +56,6 @@ export function resolveCarParams(baseSpec, tuning = {}, overrides = {}) {
   };
   const profOv = overrides?.profiles?.[profileId] || {};
   const carOv  = overrides?.cars?.[baseSpec.id] || {};
-  // Priority: handling profile -> per-car spec/boot override -> runtime profile override -> runtime car override.
-  // Boot's car-overrides.json patches CAR_SPECS, so nested steering/tires values must be folded back into
-  // the resolved profile here; otherwise those values exist on the spec but never reach race physics.
   const profileFinal = deepMerge(deepMerge(deepMerge(baseProfile, specProfile), profOv), carOv);
 
   return {
@@ -79,4 +98,16 @@ export function resolveCarParams(baseSpec, tuning = {}, overrides = {}) {
       brakeGripLoss: profileFinal.tires?.brakeGripLoss ?? 0.12
     }
   };
+}
+
+// Normal race path: selected-car Workshop equipment + optional external tuning.
+export function resolveCarParams(baseSpec, tuning = {}, overrides = {}) {
+  return resolveWithTuning(baseSpec, combineTuning(selectedGarageTuning(), tuning), overrides);
+}
+
+// Explicit/pure path for opponents and simulations. The supplied tuning is the
+// complete package and is applied exactly once; no selected-car garage state is
+// read again. Survival uses this to give every CPU the player's exact upgrades.
+export function resolveCarParamsWithTuning(baseSpec, tuning = {}, overrides = {}) {
+  return resolveWithTuning(baseSpec, tuning, overrides);
 }
