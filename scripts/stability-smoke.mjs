@@ -14,6 +14,8 @@ const safe=read('src/game/scenes/RaceSafeModeRuntimeScene.js');
 const adaptive=read('src/game/scenes/RaceAdaptiveStartScene.js');
 const modes=read('src/game/scenes/MenuGameModeSnapScene.js');
 const garage=read('src/game/scenes/GarageLazyCardsScene.js');
+const trackSelector=read('src/game/scenes/TrackGaragePlayerLightScene.js');
+const trackTouch=read('src/game/scenes/TrackGarageAndroidTouchScene.js');
 const main=read('src/main.js');
 const index=read('index.html');
 const sw=read('sw.js');
@@ -44,6 +46,13 @@ requireText(garage,"if(this._mode!=='admin')return;",'player garage must skip Ph
 requireText(garage,'BaseScene.prototype.create.call(this);','player garage must bypass legacy Phaser scene construction');
 forbid(garage,'if(!this._fullAccess())','player DOM garage must not depend on development unlock state');
 forbid(garage,"'PLAYER'",'player-facing garage must not expose the legacy PLAYER label');
+
+// The player track selector follows the same rule: DOM only. Hidden Phaser preview
+// canvases and async generated-preview rebuilds must not run under the player overlay.
+requireText(trackSelector,'BaseScene.prototype.create.call(this);','player track selector must bypass legacy Phaser construction');
+requireText(trackSelector,"localStorage.removeItem('tdr2:trackKey')",'stale hidden track keys must be cleared');
+requireText(trackSelector,"this.scene.start('menu');",'valid player track selection must return through the lobby');
+requireText(trackTouch,"./TrackGaragePlayerLightScene.js",'shipping selector must route through the lightweight player scene');
 
 if(count(main,'serviceWorker.register')!==0)fail('src/main.js must not register the service worker');
 if(count(index,"serviceWorker.register('./sw.js')")!==1)fail('index.html must own exactly one service-worker registration');
