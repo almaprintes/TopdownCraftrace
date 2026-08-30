@@ -12,6 +12,7 @@ const game=read('src/game/game.js');
 const gfx=read('src/game/scenes/RaceGraphicsPresetScene.js');
 const safe=read('src/game/scenes/RaceSafeModeRuntimeScene.js');
 const adaptive=read('src/game/scenes/RaceAdaptiveStartScene.js');
+const raceFinal=read('src/game/scenes/RaceHandbrakeFrontAxleFixScene.js');
 const modes=read('src/game/scenes/MenuGameModeSnapScene.js');
 const garage=read('src/game/scenes/GarageLazyCardsScene.js');
 const trackSelector=read('src/game/scenes/TrackGaragePlayerLightScene.js');
@@ -36,6 +37,13 @@ requireText(game,"def.exportName!=='RaceScene'",'desktop warmup must exclude the
 forbid(safe,'patchMethod(','safe mode must not monkey-patch Phaser methods per frame');
 requireText(adaptive,'if(safeMode&&beautyKeys.has(k)) return this;','iOS safe mode must suppress full-resolution Beauty tiles');
 requireText(adaptive,'if(window.__tdrIosSafeMode===true)','iOS safe mode Beauty activation guard is missing');
+
+// Pause modal is authoritative for the live session clock. It must stop feeding
+// delta into the clock and hide both timer label/value until live play resumes.
+requireText(raceFinal,'this._tdrPauseMenuOpen=true;','pause modal must set the final race pause guard');
+requireText(raceFinal,'this._setPauseClockVisible(false);','pause modal must hide the session clock');
+requireText(raceFinal,'if(this._tdrPauseMenuOpen){','session clock update must be blocked while paused');
+requireText(raceFinal,'this.physics?.world?.pause?.();','opening pause menu must pause the physics world');
 
 requireText(modes,'preload(){','game-mode card preload is missing');
 forbid(modes,'this.load.start()','game-mode carousel must not start Loader during interaction');
