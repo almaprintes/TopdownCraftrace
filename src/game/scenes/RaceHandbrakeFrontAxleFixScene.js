@@ -10,40 +10,68 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     this._hbBicycleYawRate=0;
     this._tdrPauseMenuOpen=false;
+    this._tdrPauseHiddenPhaser=[];
+    this._tdrPauseHiddenDom=[];
     const result=super.create(data);
 
-    // Final shipping guard: the pause modal itself is the source of truth for the
-    // live session clock. Some lower layers only looked at physics.world.isPaused,
-    // which was not reliable enough across every pause/menu path.
+    // Final shipping guard: while pause is open, HUD telemetry is not allowed to
+    // consume delta or repaint. The whole race update chain is also stopped below.
     const updateRaceInfoHud=typeof this._updateRaceInfoHud==='function'
       ? this._updateRaceInfoHud.bind(this)
       : null;
     if(updateRaceInfoHud){
       this._updateRaceInfoHud=(delta=0)=>{
-        if(this._tdrPauseMenuOpen){
-          this._setPauseClockVisible(false);
-          return;
-        }
-        const out=updateRaceInfoHud(delta);
-        this._setPauseClockVisible(true);
-        return out;
+        if(this._tdrPauseMenuOpen)return;
+        return updateRaceInfoHud(delta);
       };
     }
 
     return result;
   }
 
-  _setPauseClockVisible(visible){
-    const hud=this.raceInfoHud;
-    try{hud?._timerLabel?.setVisible?.(!!visible);}catch{}
-    try{hud?._timerText?.setVisible?.(!!visible);}catch{}
+  _hidePauseHud(){
+    if(this._tdrPauseHiddenPhaser?.length||this._tdrPauseHiddenDom?.length)return;
+
+    // All shipping Phaser HUD layers live at high depth. Store the exact previous
+    // visibility so resume restores only what was actually visible before pause.
+    const phaser=[];
+    try{
+      for(const obj of this.children?.list||[]){
+        if(!obj?.scene||obj.visible===false)continue;
+        const depth=Number(obj.depth||0);
+        if(depth<1000)continue;
+        try{obj.setVisible?.(false);phaser.push(obj);}catch{}
+      }
+    }catch{}
+    this._tdrPauseHiddenPhaser=phaser;
+
+    // HTML race controls / overlays must disappear too. Never hide the pause modal
+    // itself, even if a future layer marks it as race UI.
+    const dom=[];
+    try{
+      const pause=this._pauseModal;
+      for(const el of document.querySelectorAll('[data-tdr-race-ui="1"]')){
+        if(el===pause||pause?.contains?.(el)||el.contains?.(pause))continue;
+        dom.push([el,el.style.display]);
+        el.style.display='none';
+      }
+    }catch{}
+    this._tdrPauseHiddenDom=dom;
+  }
+
+  _restorePauseHud(){
+    try{for(const obj of this._tdrPauseHiddenPhaser||[])if(obj?.scene)obj.setVisible?.(true);}catch{}
+    this._tdrPauseHiddenPhaser=[];
+    try{for(const [el,display] of this._tdrPauseHiddenDom||[])if(el?.style)el.style.display=display;}catch{}
+    this._tdrPauseHiddenDom=[];
   }
 
   _openPauseMenu(...args){
+    if(this._tdrPauseMenuOpen)return this._pauseModal;
     this._tdrPauseMenuOpen=true;
     const result=super._openPauseMenu?.(...args);
     try{this.physics?.world?.pause?.();}catch{}
-    this._setPauseClockVisible(false);
+    this._hidePauseHud();
     return result;
   }
 
@@ -52,21 +80,26 @@ export class RaceScene extends CurrentRaceScene {
     const result=super._closePauseMenu?.(resume,...rest);
     if(shouldResume){
       this._tdrPauseMenuOpen=false;
+      this._restorePauseHud();
       try{this.physics?.world?.resume?.();}catch{}
-      this._setPauseClockVisible(true);
       try{this._updateRaceInfoHud?.(0);}catch{}
     }else{
       // Session finish/abandon paths close the modal without returning to live play.
       this._tdrPauseMenuOpen=true;
-      this._setPauseClockVisible(false);
+      this._hidePauseHud();
     }
     return result;
   }
 
   update(time,delta){
-    const result=super.update?.(time,delta);
-    if(this._tdrPauseMenuOpen)this._setPauseClockVisible(false);
-    return result;
+    // A pause menu is a real pause, not merely a physics pause. Do not execute any
+    // downstream HUD, timer, telemetry, AI or race-update work until Continue.
+    if(this._tdrPauseMenuOpen){
+      try{this.physics?.world?.pause?.();}catch{}
+      this._hidePauseHud();
+      return;
+    }
+    return super.update?.(time,delta);
   }
 
   _applyHandbrakePhysics(delta){
