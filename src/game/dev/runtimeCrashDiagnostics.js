@@ -1,8 +1,14 @@
 const SESSION_KEY='tdr2:runtimeSession';
 const LAST_EVENT_KEY='tdr2:runtimeLastEvent';
+const AUTO_SAFE_UNTIL_KEY='tdr2:autoIosSafeModeUntil';
 
 function safeJson(raw){try{return JSON.parse(raw);}catch{return null;}}
 function store(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
+function isIOSDevice(){try{const ua=String(navigator?.userAgent||''),platform=String(navigator?.platform||'');return /iPhone|iPad|iPod/i.test(ua)||(platform==='MacIntel'&&Number(navigator?.maxTouchPoints||0)>1);}catch{return false;}}
+function armAutoSafeMode(){
+  if(!isIOSDevice())return;
+  try{localStorage.setItem(AUTO_SAFE_UNTIL_KEY,String(Date.now()+6*60*60*1000));}catch{}
+}
 function sceneName(game){
   try{
     const scenes=game?.scene?.getScenes?.(true)||[];
@@ -47,39 +53,51 @@ export function installRuntimeCrashDiagnostics(game){
   if(previous?.active===true&&previous?.clean!==true){
     const detected={...previous,type:'unexpected_reload',detectedAt:new Date().toISOString()};
     store(LAST_EVENT_KEY,detected);
+    armAutoSafeMode();
     setTimeout(()=>showNotice(detected),1200);
   }
 
   const session={
     id:`${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
-    startedAt:new Date().toISOString(),lastBeat:new Date().toISOString(),active:true,clean:false
+    startedAt:new Date().toISOString(),startedMs:Date.now(),lastBeat:new Date().toISOString(),active:true,clean:false,hadError:false
   };
   store(SESSION_KEY,session);
 
   const beat=()=>{
+    // Diagnostics are not gameplay-critical. 15 s avoids synchronous storage
+    // churn every few seconds while still leaving useful crash breadcrumbs.
     session.lastBeat=new Date().toISOString();
     session.scene=sceneName(game);
     store(SESSION_KEY,session);
   };
-  const timer=setInterval(beat,5000);
+  const timer=setInterval(beat,15000);
 
   const onError=(event)=>{
+    session.hadError=true;
     const info=snapshot(game,'js_error',{message:String(event?.message||'error'),source:String(event?.filename||''),line:Number(event?.lineno||0),column:Number(event?.colno||0)});
     showNotice(info);
   };
   const onRejection=(event)=>{
+    session.hadError=true;
     const reason=event?.reason;
     const info=snapshot(game,'promise_rejection',{message:String(reason?.message||reason||'unhandled rejection')});
     showNotice(info);
   };
   const onContextLost=(event)=>{
+    session.hadError=true;
     try{event?.preventDefault?.();}catch{}
     const info=snapshot(game,'webglcontextlost');
+    armAutoSafeMode();
     showNotice(info);
   };
   const markClean=()=>{
     session.active=false;session.clean=true;session.endedAt=new Date().toISOString();
     session.scene=sceneName(game);store(SESSION_KEY,session);
+    // A clean, error-free minute proves the automatic fallback is no longer
+    // needed. Manual forceIosSafeMode is intentionally untouched.
+    if(isIOSDevice()&&!session.hadError&&Date.now()-Number(session.startedMs||Date.now())>=60000){
+      try{localStorage.removeItem(AUTO_SAFE_UNTIL_KEY);}catch{}
+    }
   };
 
   window.addEventListener('error',onError);
