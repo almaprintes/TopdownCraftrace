@@ -89,7 +89,7 @@ requireText(raceVisibility,"document.querySelectorAll('[data-tdr-race-ui=\"1\"]'
 requireText(raceVisibility,'cam.setVisible?.(false);','UI visibility utility must own Phaser UI camera hiding');
 
 requireText(raceSessionUi,'assets/season/reward_cards/free_${tone}.svg','session reward UI must use canonical Season Pass card art');
-forbid(raceSessionUi,'daily_gift.webp','shipping session reward UI must not use legacy gift chest');
+requireText(raceSessionUi,'assets/store/daily_gift.webp','session reward UI must place the existing chest/gift artwork inside the Season card');
 
 forbid(safe,'patchMethod(','safe mode must not monkey-patch Phaser methods per frame');
 requireText(adaptive,'if(safeMode&&beautyKeys.has(k)) return this;','iOS safe mode must suppress full-resolution Beauty tiles');
