@@ -39,12 +39,15 @@ forbid(safe,'patchMethod(','safe mode must not monkey-patch Phaser methods per f
 requireText(adaptive,'if(safeMode&&beautyKeys.has(k)) return this;','iOS safe mode must suppress full-resolution Beauty tiles');
 requireText(adaptive,'if(window.__tdrIosSafeMode===true)','iOS safe mode Beauty activation guard is missing');
 
-// Pause modal is authoritative for the live session clock. It must stop feeding
-// delta into the clock and hide both timer label/value until live play resumes.
+// Pause is a complete simulation/UI freeze, not just a timer pause.
 requireText(raceFinal,'this._tdrPauseMenuOpen=true;','pause modal must set the final race pause guard');
-requireText(raceFinal,'this._setPauseClockVisible(false);','pause modal must hide the session clock');
-requireText(raceFinal,'if(this._tdrPauseMenuOpen){','session clock update must be blocked while paused');
+requireText(raceFinal,'this._hidePauseHud();','pause modal must hide the full race HUD');
+requireText(raceFinal,"document.querySelectorAll('[data-tdr-race-ui=\"1\"]')",'pause must hide DOM race UI');
+requireText(raceFinal,'if(depth<1000)continue;','pause must hide high-depth Phaser HUD objects');
+requireText(raceFinal,'if(this._tdrPauseMenuOpen){','race update chain must be blocked while paused');
+requireText(raceFinal,'return;','paused race update must return before downstream work');
 requireText(raceFinal,'this.physics?.world?.pause?.();','opening pause menu must pause the physics world');
+requireText(raceFinal,'this._restorePauseHud();','continue must restore the exact pre-pause HUD');
 
 // Mastery unlocks may be earned mid-race but must never interrupt live driving.
 // The lobby owns the informational modal after the session returns there.
