@@ -20,9 +20,11 @@ if(!ui.includes('<h2>BOTÍN DE LA SESIÓN</h2>'))fail('all session reward states
 if(!ui.includes("${hasChest?'is-closed':'is-open'}"))fail('session chest must use explicit closed/open layout states');
 if(!ui.includes('tdr-session-chest-stage'))fail('chest state must live inside the common session body');
 if(!ui.includes('tdr-session-footer'))fail('session reward states must share one footer');
+if(!ui.includes("root.style.setProperty('--session-width'"))fail('session result width must be content-driven');
+if(!css.includes('width:min(92vw,var(--session-width,700px))'))fail('session result card must consume the content-driven width');
 if(!css.includes('.tdr-session-card.is-closed .tdr-session-reward-body{display:none}'))fail('closed chest must remove hidden rewards from layout flow');
 if(!css.includes('.tdr-session-card.is-open .tdr-session-chest-stage{display:none}'))fail('opened chest must remove the chest stage from layout flow');
-if(!css.includes('grid-template-rows:auto minmax(0,1fr) auto'))fail('session card must use a shared header/body/footer frame');
+if(!css.includes('.tdr-session-card{')||!css.includes('display:block'))fail('session card must use intrinsic block layout instead of the legacy expanding grid');
 if(!css.includes('overflow:hidden'))fail('session result card must not require internal scrolling');
 if(!css.includes('@media(orientation:landscape) and (max-height:650px)'))fail('landscape phone compact layout guard is missing');
 if(!experience.includes('asset:GARAGE_ITEMS[id]?.asset||null'))fail('RaceExperience must pass GARAGE_ITEMS canonical assets into the session UI');
@@ -31,4 +33,4 @@ for(const file of ['chatarra.webp','aleacion.webp','goma.webp','disco_metalico.w
   if(!fs.existsSync(path.join(root,'public/assets/crafting/materials',file)))fail(`canonical material file missing: ${file}`);
 }
 
-console.log('[session-reward-assets] OK — chest/no-chest states share one compact session result frame and canonical repository art');
+console.log('[session-reward-assets] OK — chest/no-chest states use intrinsic compact layout and canonical repository art');
