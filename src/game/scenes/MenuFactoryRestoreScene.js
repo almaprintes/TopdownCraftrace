@@ -4,6 +4,20 @@ export class MenuScene extends CurrentMenuScene {
   renderUI(){
     super.renderUI();
     this._renderFactoryButton();
+    this._prewarmFactoryScene();
+  }
+
+  _prewarmFactoryScene(){
+    if(this._factoryWarmStarted)return;
+    this._factoryWarmStarted=true;
+    const warm=()=>{
+      try{window.__tdrEnsureScene?.('upgrade-shop');}catch{}
+    };
+    try{
+      this.time?.delayedCall?.(650,warm);
+    }catch{
+      setTimeout(warm,650);
+    }
   }
 
   _renderFactoryButton(){
