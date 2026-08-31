@@ -86,3 +86,13 @@
   max-width: calc(var(--tdr-vv-width) - var(--tdr-safe-left) - var(--tdr-safe-right) - 16px) !important;
   max-height: calc(var(--tdr-vv-height) - var(--tdr-safe-top) - var(--tdr-safe-bottom) - 16px) !important;
 }
+
+/* Release channel badge on orientation screen. */
+#rotateOverlay .rot-beta-title { font-size: 0 !important; }
+#rotateOverlay .rot-beta-title::after {
+  content: '🧪 DEV v0.1.0-dev';
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  color: #58e8ff;
+}
