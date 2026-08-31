@@ -2,7 +2,7 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   workflow_dispatch:
 
 permissions:
@@ -18,28 +18,64 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout stable main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: stable
+
+      - name: Checkout develop
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          path: develop-src
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - name: Install dependencies
+      - name: Install stable dependencies
+        working-directory: stable
         run: npm ci --no-audit --no-fund
 
-      - name: Stability checks
+      - name: Check stable build
+        working-directory: stable
         run: npm run check:stability
 
-      - name: Build for GitHub Pages
+      - name: Build stable main
+        working-directory: stable
         run: npm run build -- --base=/TopdownCraftrace/
 
-      - name: Copy dropping tutorial assets
+      - name: Copy stable tutorial assets
+        working-directory: stable
         run: |
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
+
+      - name: Install develop dependencies
+        working-directory: develop-src
+        run: npm ci --no-audit --no-fund
+
+      - name: Check develop build
+        working-directory: develop-src
+        run: npm run check:stability
+
+      - name: Build develop
+        working-directory: develop-src
+        run: npm run build -- --base=/TopdownCraftrace/dev/
+
+      - name: Copy develop tutorial assets
+        working-directory: develop-src
+        run: |
+          mkdir -p dist/assets/tutorials/dropping
+          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
+
+      - name: Add develop build under /dev
+        run: |
+          rm -rf stable/dist/dev
+          mkdir -p stable/dist/dev
+          cp -R develop-src/dist/. stable/dist/dev/
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -47,7 +83,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: dist
+          path: stable/dist
 
   deploy:
     environment:
