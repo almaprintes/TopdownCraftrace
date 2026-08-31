@@ -15,13 +15,10 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
   if(typeof document==='undefined')return null;
   const tier=sessionChestTier(laps),tone=sessionChestTone(tier),hasChest=tier>=5;
   const total=entries.reduce((sum,row)=>sum+Math.max(0,Number(row?.qty)||0),0);
-  const visibleCount=Math.max(1,Math.min(4,entries.length||1));
-  const modalWidth=hasChest?620:Math.min(980,420+visibleCount*180);
   const root=document.createElement('div');
   root.className='tdr-session-rewards';
   root.dataset.tdrRaceUi='1';
   root.dataset.rewardCount=String(entries.length||0);
-  root.style.setProperty('--session-width',`${modalWidth}px`);
   root.style.setProperty('--reward-visible',hasChest?'0':'1');
   root.style.setProperty('--reward-transform',hasChest?'translateY(8px)':'none');
 
