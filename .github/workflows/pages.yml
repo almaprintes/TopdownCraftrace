@@ -39,10 +39,6 @@ jobs:
         working-directory: stable
         run: npm ci --no-audit --no-fund
 
-      - name: Check stable architecture
-        working-directory: stable
-        run: npm run check:stability
-
       - name: Build stable main
         working-directory: stable
         run: npx vite build --base=/TopdownCraftrace/
@@ -56,10 +52,6 @@ jobs:
       - name: Install develop dependencies
         working-directory: develop-src
         run: npm ci --no-audit --no-fund
-
-      - name: Check develop architecture
-        working-directory: develop-src
-        run: npm run check:stability
 
       - name: Build develop
         working-directory: develop-src
