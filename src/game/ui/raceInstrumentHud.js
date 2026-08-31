@@ -1,5 +1,8 @@
 import './raceInstrumentHud.css';
 
+const BASE=import.meta.env.BASE_URL||'/';
+const CAR_BRANDS={helix:'HÉLIX',crown:'CROWN',avenir:'AVENIR',forge:'FORGE',veloce:'VELOCE'};
+
 function fmtLap(ms){
   if(!Number.isFinite(Number(ms)))return '--:--.--';
   const t=Math.max(0,Number(ms));
@@ -23,6 +26,15 @@ function readRacePosition(scene){
     }
   }
   return null;
+}
+
+function carBadge(scene){
+  const id=String(scene?.carId||scene?.selectedCarId||'').toLowerCase();
+  const parts=id.split('_');
+  const brand=parts.shift();
+  if(!CAR_BRANDS[brand])return'';
+  const model=parts.join(' ').toUpperCase();
+  return `<div class="tdr-race-car-id"><img class="tdr-race-car-logo" src="${BASE}assets/logos/logo_${brand}_negativo.webp" alt=""><span class="tdr-race-car-model">${model}</span></div>`;
 }
 
 export function destroyRaceInstrumentHud(scene){
@@ -49,6 +61,7 @@ export function mountRaceInstrumentHud(scene){
     </div>
     <div class="tdr-race-hud-bottom">
       <div class="tdr-race-speedbar">${Array.from({length:18},(_,i)=>`<i class="${i>=15?'red':i>=12?'hot':''}"></i>`).join('')}</div>
+      ${carBadge(scene)}
       <div class="tdr-race-speed-wrap"><b class="tdr-race-speed" data-speed>000</b><span class="tdr-race-unit">KM/H</span></div>
       <div class="tdr-race-clock"><small>TIEMPO</small><b data-clock>0:00.00</b></div><div class="tdr-race-pos" data-pos></div>
     </div>`;
