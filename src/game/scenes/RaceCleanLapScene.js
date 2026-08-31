@@ -3,6 +3,7 @@ import { recordCompletedLapClean } from '../seasons/cleanLapTelemetry.js';
 import { showRaceFeedback } from '../ui/raceFeedbackUi.js';
 
 const CLEAN_SAMPLE_MS=100;
+const FEEDBACK_HOLD_MS=4800;
 
 function fmtLap(ms){
   ms=Number(ms);if(!Number.isFinite(ms)||ms<=0)return'--:--.--';
@@ -36,6 +37,18 @@ export class RaceScene extends CurrentRaceScene {
     this._updateSimpleRaceHud=()=>{};
   }
 
+  _retireLegacyRecordNotice(){
+    try{
+      const topLimit=(Number(this.scale?.height)||0)*0.42;
+      for(const child of [...(this.children?.list||[])]){
+        const text=String(child?.text||'').toUpperCase();
+        if(!text.includes('RÉCORD')&&!text.includes('RECORD'))continue;
+        const y=Number(child?.y||0);
+        if(!topLimit||y<topLimit)child?.destroy?.();
+      }
+    }catch{}
+  }
+
   _showLapMilestone(row){
     const ms=Number(row?.lapMs);
     if(!Number.isFinite(ms)||ms<=1000)return;
@@ -44,9 +57,11 @@ export class RaceScene extends CurrentRaceScene {
     const isRecord=!Number.isFinite(previousRecord)||ms<previousRecord-0.5;
     const isSessionFast=!Number.isFinite(previousSessionBest)||ms<previousSessionBest-0.5;
     if(isRecord){
-      showRaceFeedback(this,{type:'record',eyebrow:'NUEVO RÉCORD',title:fmtLap(ms),detail:'RÉCORD DE VUELTA',holdMs:1000});
+      this._retireLegacyRecordNotice();
+      this.time?.delayedCall?.(80,()=>this._retireLegacyRecordNotice());
+      showRaceFeedback(this,{type:'record',eyebrow:'🏆 NUEVO RÉCORD',title:fmtLap(ms),detail:'RÉCORD DEL CIRCUITO',holdMs:FEEDBACK_HOLD_MS});
     }else if(isSessionFast){
-      showRaceFeedback(this,{type:'fast',eyebrow:'VUELTA RÁPIDA',title:fmtLap(ms),detail:'MEJOR DE LA SESIÓN',holdMs:1000});
+      showRaceFeedback(this,{type:'fast',eyebrow:'VUELTA RÁPIDA',title:fmtLap(ms),detail:'MEJOR DE LA SESIÓN',holdMs:FEEDBACK_HOLD_MS});
     }
     if(isRecord)this._feedbackBestLapMs=ms;
     if(isSessionFast)this._feedbackSessionBestMs=ms;
