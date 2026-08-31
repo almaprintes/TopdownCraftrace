@@ -39,13 +39,13 @@ jobs:
         working-directory: stable
         run: npm ci --no-audit --no-fund
 
-      - name: Check stable build
+      - name: Check stable architecture
         working-directory: stable
         run: npm run check:stability
 
       - name: Build stable main
         working-directory: stable
-        run: npm run build -- --base=/TopdownCraftrace/
+        run: npx vite build --base=/TopdownCraftrace/
 
       - name: Copy stable tutorial assets
         working-directory: stable
@@ -57,13 +57,13 @@ jobs:
         working-directory: develop-src
         run: npm ci --no-audit --no-fund
 
-      - name: Check develop build
+      - name: Check develop architecture
         working-directory: develop-src
         run: npm run check:stability
 
       - name: Build develop
         working-directory: develop-src
-        run: npm run build -- --base=/TopdownCraftrace/dev/
+        run: npx vite build --base=/TopdownCraftrace/dev/
 
       - name: Copy develop tutorial assets
         working-directory: develop-src
