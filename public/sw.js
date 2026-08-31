@@ -1,9 +1,7 @@
 /* Top-Down Race 2 service worker — development-safe PWA cache.
-   During active development we prefer fresh network content and keep cache only
-   as an offline fallback. This prevents an installed iPhone PWA from getting
-   stuck on an old circuit/environment build. */
+   DEV preview has its own cache namespace so it never collides with the beta. */
 
-const CACHE_VERSION = 'tdr2-v22';
+const CACHE_VERSION = 'tdr2-dev-v1';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -35,15 +33,7 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(
-        keys.map((key) => key === CACHE_VERSION ? Promise.resolve() : caches.delete(key))
-      );
-      await self.clients.claim();
-    })()
-  );
+  event.waitUntil(self.clients.claim());
 });
 
 async function networkFirst(req) {
@@ -62,9 +52,7 @@ async function networkFirst(req) {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
-
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-
   event.respondWith(networkFirst(req));
 });
