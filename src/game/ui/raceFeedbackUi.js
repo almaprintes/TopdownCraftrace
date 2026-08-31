@@ -1,6 +1,6 @@
 import './raceFeedbackUi.css';
 
-const HOLD_MS=1000;
+const HOLD_MS=2400;
 const EXIT_MS=260;
 
 function esc(value){
