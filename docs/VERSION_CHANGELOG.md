@@ -52,6 +52,8 @@
 - **AÑADIDO:** `RESETEAR PROGRESO` elimina progreso de juego (garaje, piezas, inventario, monedas, estadísticas, récords, maestría, temporadas, desbloqueos y telemetría) pero conserva `tdr2:settings` y herramientas DEV/admin necesarias durante pruebas.
 - **AÑADIDO:** `ELIMINAR CUENTA` elimina todos los datos locales del perfil en el dispositivo, incluidos ajustes, `sessionStorage` y la base IndexedDB `tdr2_track_previews`.
 - **SEGURIDAD UX:** ambas acciones muestran un modal DOM de confirmación explícito indicando que la operación no puede deshacerse y que los datos/progreso no pueden recuperarse.
+- **CORREGIDO:** tras un reset limpio, la reparación histórica `_repairLostGriplinePartsOnce()` reinyectaba automáticamente `tires_street` T1 y `transmission_prototype` T4 al interpretar el inventario vacío como pérdida de piezas antiguas. Esa migración de agosto se retira del flujo normal; un perfil nuevo ya no debe recibir esas piezas.
+- **CAUSA RAÍZ DOCUMENTADA:** el reset sí eliminaba correctamente el inventario; la contaminación ocurría después, al entrar en Fabricación, por una migración legacy que volvía a sembrar las piezas.
 - **NOTA DE ARQUITECTURA:** actualmente la cuenta es local. Si se incorpora backend/sincronización de cuenta, `ELIMINAR CUENTA` deberá ampliarse para solicitar también el borrado remoto antes de considerarse eliminación completa de cuenta.
 - **PENDIENTE DE VALIDACIÓN:** probar en iPhone que `RESETEAR PROGRESO` deja inventario vacío y devuelve la inducción/desbloqueos a estado inicial conservando idioma, controles y gráficos.
 
@@ -72,6 +74,7 @@
 - `dbe5f1b79100cf7f2c80f2611b80abdc458c502a` — versión técnica 0.0.2.
 - `416f8a7a415b62265ef2348170ee456518313601` — centrado robusto del coche en la tarjeta principal de Estadísticas.
 - `f0fe92b2e4410e9611dea6daa5140863ebda906e` — pestaña Cuenta, reset de progreso y eliminación local de cuenta.
+- `38d6576d1a12e60df3cb702b834ccaa4ba35e9f6` — retira la reparación legacy que reinyectaba Neumático Street T1 y Sequential Prototype T4 tras un reset.
 - `78c3c86ad5b947da253204cbf5491132caedc1d1` — disparo de despliegue asociado a la primera publicación de la serie.
 
 ### Validación
