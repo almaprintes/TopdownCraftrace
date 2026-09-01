@@ -3,7 +3,7 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
 import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeFlexibleDom.js';
 import { renderWorkshopMobileDom, closeWorkshopMobileDom } from '../ui/WorkshopMobileDom.js';
-import { openWorkshopQuickInstallDom, closeWorkshopMobileDialog, showWorkshopMobileToast } from '../ui/WorkshopMobileDialogsDom.js';
+import { openWorkshopQuickInstallDom, openWorkshopCraftedPartDom, closeWorkshopMobileDialog, showWorkshopMobileToast } from '../ui/WorkshopMobileDialogsDom.js';
 
 const LEGACY_CAR_IDS=new Set(['stock','touring','power']);
 const ALL_CAR_IDS=Object.keys(CAR_SPECS).filter(id=>!LEGACY_CAR_IDS.has(id)&&CAR_SPECS[id]);
@@ -55,6 +55,11 @@ export class UpgradeShopScene extends CurrentWorkshop {
   _openQuickFamilyInstall(family){
     if(this._nativeWorkshopDomEnabled())return openWorkshopQuickInstallDom(this,family);
     return super._openQuickFamilyInstall(family);
+  }
+
+  _openCraftedPartModal(id){
+    if(this._nativeWorkshopDomEnabled())return openWorkshopCraftedPartDom(this,id);
+    return super._openCraftedPartModal(id);
   }
 
   _toast(message,...args){
