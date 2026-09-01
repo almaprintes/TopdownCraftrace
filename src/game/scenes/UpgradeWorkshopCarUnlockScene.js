@@ -4,6 +4,7 @@ import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/
 import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeFlexibleDom.js';
 import { renderWorkshopMobileDom, closeWorkshopMobileDom } from '../ui/WorkshopMobileDom.js';
 import { openWorkshopQuickInstallDom, openWorkshopCraftedPartDom, closeWorkshopMobileDialog, showWorkshopMobileToast } from '../ui/WorkshopMobileDialogsDom.js';
+import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 
 const LEGACY_CAR_IDS=new Set(['stock','touring','power']);
 const ALL_CAR_IDS=Object.keys(CAR_SPECS).filter(id=>!LEGACY_CAR_IDS.has(id)&&CAR_SPECS[id]);
@@ -34,6 +35,7 @@ export class UpgradeShopScene extends CurrentWorkshop {
       try{localStorage.setItem('tdr2:carId',this.car);}catch{}
       this.render?.();
     }
+    showFirstVisitTutorial('factory',{delay:260});
     this.events.once('shutdown',()=>{
       closeWorkshopMobileDialog();
       closeWorkshopMobileDom(this);
