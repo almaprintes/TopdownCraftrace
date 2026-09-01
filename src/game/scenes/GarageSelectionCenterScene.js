@@ -1,4 +1,5 @@
 import { GarageScene as CurrentGarageScene } from './GarageLazyCardsScene.js';
+import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 
 function centerSelected(root, behavior='smooth'){
   const list=root?.querySelector?.('.tdr-garage-dom-list');
@@ -11,6 +12,11 @@ function centerSelected(root, behavior='smooth'){
 }
 
 export class GarageScene extends CurrentGarageScene {
+  create(...args){
+    super.create(...args);
+    showFirstVisitTutorial('garage',{delay:260});
+  }
+
   _installPlayerDomGarage(){
     super._installPlayerDomGarage?.();
     requestAnimationFrame(()=>centerSelected(this._playerGarageDom,'auto'));
