@@ -1,7 +1,6 @@
 import { EnvironmentBuilderScene as Current } from './EnvironmentBuilderGuardrailAdaptiveScene.js';
 
 const ZOOM_MAX=4;
-const CAMERA_RESPONSE=18;
 const ASSET_SCALE_MIN=.08;
 const ASSET_SCALE_MAX=12;
 
@@ -17,6 +16,7 @@ export class EnvironmentBuilderScene extends Current {
     this._pinchMode=null;
     this._assetPinch=null;
     this._mapPinch=null;
+    this._suppressSinglePanUntilAllUp=false;
 
     const inside=p=>!!p&&this._inside?.(p);
     const pair=()=>Array.from(this._pinchPointers.values()).filter(p=>p?.isDown&&inside(p)).slice(0,2);
@@ -40,19 +40,13 @@ export class EnvironmentBuilderScene extends Current {
     const minZoomFor=cam=>{
       if(!cam)return .08;
       const {worldW,worldH}=worldMetrics(cam);
-      // Never zoom out so far that the visible viewport becomes larger than the
-      // editable world. This prevents the track from escaping outside the canvas.
       const fit=Math.max(Number(cam.width||1)/worldW,Number(cam.height||1)/worldH);
       return Math.max(.06,Math.min(1,fit));
     };
     const boundsFor=(cam,z=cam?.zoom)=>{
       const zoom=Math.max(.0001,Number(z)||1);
       const {minX,minY,worldW,worldH}=worldMetrics(cam);
-      return {
-        minX,minY,
-        maxX:Math.max(minX,minX+worldW-cam.width/zoom),
-        maxY:Math.max(minY,minY+worldH-cam.height/zoom)
-      };
+      return {minX,minY,maxX:Math.max(minX,minX+worldW-cam.width/zoom),maxY:Math.max(minY,minY+worldH-cam.height/zoom)};
     };
     const clampCam=(cam,z=cam?.zoom)=>{
       if(!cam)return;
@@ -69,36 +63,22 @@ export class EnvironmentBuilderScene extends Current {
 
       cancel();
       this._pinching=true;
+      this._suppressSinglePanUntilAllUp=true;
       const d=Math.max(1,dist(ps[0],ps[1]));
       const m=mid(ps[0],ps[1]);
 
-      // The gesture context is fixed when the second finger lands.
       const selected=this._selected;
       if(selected?._env&&selected?.scene){
         this._pinchMode='asset';
         this._mapPinch=null;
-        this._assetPinch={
-          asset:selected,
-          startDistance:d,
-          startAngle:angle(ps[0],ps[1]),
-          startScaleX:Number(selected.scaleX)||1,
-          startScaleY:Number(selected.scaleY)||1,
-          startRotation:Number(selected.rotation)||0
-        };
+        this._assetPinch={asset:selected,startDistance:d,startAngle:angle(ps[0],ps[1]),startScaleX:Number(selected.scaleX)||1,startScaleY:Number(selected.scaleY)||1,startRotation:Number(selected.rotation)||0};
         return;
       }
 
       this._pinchMode='map';
       this._assetPinch=null;
       const anchor=cam.getWorldPoint(m.x,m.y);
-      this._mapPinch={
-        startDistance:d,
-        startZoom:Number(cam.zoom)||1,
-        targetZoom:Number(cam.zoom)||1,
-        minZoom:minZoomFor(cam),
-        mid:{...m},
-        anchor:{x:anchor.x,y:anchor.y}
-      };
+      this._mapPinch={startDistance:d,startZoom:Number(cam.zoom)||1,minZoom:minZoomFor(cam),mid:{...m},anchor:{x:anchor.x,y:anchor.y}};
     });
 
     this.input.on('pointermove',p=>{
@@ -114,10 +94,8 @@ export class EnvironmentBuilderScene extends Current {
         let ratio=d/Math.max(1,ap.startDistance);
         if(!Number.isFinite(ratio))ratio=1;
         ratio=Math.max(ASSET_SCALE_MIN,Math.min(ASSET_SCALE_MAX,ratio));
-        asset.scaleX=ap.startScaleX*ratio;
-        asset.scaleY=ap.startScaleY*ratio;
-        const da=normAngle(angle(ps[0],ps[1])-ap.startAngle);
-        asset.rotation=ap.startRotation+da;
+        asset.scaleX=ap.startScaleX*ratio;asset.scaleY=ap.startScaleY*ratio;
+        asset.rotation=ap.startRotation+normAngle(angle(ps[0],ps[1])-ap.startAngle);
         this._drawSelection?.();
         return;
       }
@@ -128,56 +106,32 @@ export class EnvironmentBuilderScene extends Current {
       const m=mid(ps[0],ps[1]);
       let ratio=d/Math.max(1,mp.startDistance);
       if(!Number.isFinite(ratio))ratio=1;
-      mp.targetZoom=Math.max(mp.minZoom,Math.min(ZOOM_MAX,mp.startZoom*ratio));
+      const z=Math.max(mp.minZoom,Math.min(ZOOM_MAX,mp.startZoom*ratio));
+
+      // Direct transform: zoom and pan are solved together from the original
+      // world anchor and the LIVE midpoint. No easing = no lag behind fingers.
+      cam.setZoom(z);
+      const localX=m.x-cam.x,localY=m.y-cam.y;
+      cam.scrollX=mp.anchor.x-localX/z;
+      cam.scrollY=mp.anchor.y-localY/z;
+      clampCam(cam,z);
       mp.mid={...m};
-    });
-
-    // Zoom remains anchored under the live midpoint between the fingers. After
-    // solving the anchor, clamp immediately to the real track world so the map
-    // never flies outside the editable canvas.
-    this.events.on('update',(_time,delta=16.67)=>{
-      if(!this._pinching||this._pinchMode!=='map')return;
-      const cam=this._editCam,mp=this._mapPinch;
-      if(!cam||!mp)return;
-
-      const dt=Math.max(1,Math.min(50,Number(delta)||16.67))/1000;
-      const k=1-Math.exp(-CAMERA_RESPONSE*dt);
-      const current=Math.max(.0001,Number(cam.zoom)||1);
-      const next=Math.max(mp.minZoom,Math.min(ZOOM_MAX,current+(mp.targetZoom-current)*k));
-      cam.setZoom(next);
-
-      const localX=mp.mid.x-cam.x;
-      const localY=mp.mid.y-cam.y;
-      cam.scrollX=mp.anchor.x-localX/next;
-      cam.scrollY=mp.anchor.y-localY/next;
-      clampCam(cam,next);
-
       if(this._selectedSurface||this._selRail)this._drawSelection?.();
     });
 
     const end=p=>{
       const wasPinching=this._pinching;
-      const endedMode=this._pinchMode;
-      const cam=this._editCam;
-      const mp=this._mapPinch;
       this._pinchPointers.delete(p?.id);
-      if(!wasPinching)return;
+      if(!wasPinching){if(this._pinchPointers.size===0)this._suppressSinglePanUntilAllUp=false;return;}
       if(pair().length>=2)return;
 
       this._pinching=false;
-      if(endedMode==='map'&&cam&&mp){
-        const z=Math.max(mp.minZoom,Math.min(ZOOM_MAX,mp.targetZoom));
-        cam.setZoom(z);
-        const localX=mp.mid.x-cam.x,localY=mp.mid.y-cam.y;
-        cam.scrollX=mp.anchor.x-localX/z;
-        cam.scrollY=mp.anchor.y-localY/z;
-        clampCam(cam,z);
-      }
-
-      this._assetPinch=null;
-      this._mapPinch=null;
-      this._pinchMode=null;
+      clampCam(this._editCam);
+      this._assetPinch=null;this._mapPinch=null;this._pinchMode=null;
       cancel();
+      // Keep single-finger pan suppressed until the remaining finger is also
+      // lifted. This prevents the classic post-pinch camera jump.
+      if(this._pinchPointers.size===0)this._suppressSinglePanUntilAllUp=false;
       this._drawSelection?.();
     };
     this.input.on('pointerup',end);
