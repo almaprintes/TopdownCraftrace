@@ -55,11 +55,22 @@ function polishSeasonCard(scene,season,lang){
   const claim=season.querySelector('.tdr-event-claim');if(claim){claim.type='button';claim.classList.add('tdr-event-claim--notice');claim.innerHTML=`<span class="tdr-event-claim-dot" aria-hidden="true"></span><span>${lang==='en'?'REWARD AVAILABLE':'PREMIO DISPONIBLE'}</span><span class="tdr-event-claim-chevron" aria-hidden="true">›</span>`;claim.setAttribute('aria-label',lang==='en'?'Reward available. Open Season Pass':'Premio disponible. Abrir Pase de Temporada');claim.tabIndex=-1;claim.style.pointerEvents='none';}
   makeCardButton(season,lang==='en'?'Open Season Pass':'Abrir Pase de Temporada',()=>scene.scene.start('season'));
 }
+function installGarageInductionCue(scene,root,season,car,lang){
+  if(!season||!car)return;
+  const mission=String(season.textContent||'').toUpperCase();
+  const active=mission.includes('CONOCE TU MÁQUINA')||mission.includes('KNOW YOUR MACHINE');
+  root.querySelector('[data-garage-induction-cue]')?.remove();
+  car.classList.toggle('tdr-lobby-car--induction-cue',active);
+  if(!active)return;
+  const cue=document.createElement('div');cue.dataset.garageInductionCue='1';cue.className='tdr-garage-induction-cue';cue.innerHTML=`<span>${lang==='en'?'TAP YOUR CAR':'TOCA TU COCHE'}</span><b aria-hidden="true">↓</b>`;root.appendChild(cue);
+  const position=()=>{if(!cue.isConnected||!car.isConnected)return;const rr=root.getBoundingClientRect(),cr=car.getBoundingClientRect();if(!cr.width)return;cue.style.left=`${cr.left-rr.left+cr.width*.5}px`;cue.style.top=`${Math.max(8,cr.top-rr.top-8)}px`;};
+  requestAnimationFrame(position);window.addEventListener('resize',position);car.addEventListener('load',position,{once:true});scene.events.once('shutdown',()=>window.removeEventListener('resize',position));
+}
 export function polishLobbyForPublish(scene, root) {
   if (!root?.isConnected) return;
   const lang = getLanguage() === 'en' ? 'en' : 'es';
   const season = root.querySelector('[data-event-card]');if (season) polishSeasonCard(scene,season,lang);
   const track = root.querySelector('[data-track-card]');if (track) makeCardButton(track,lang === 'en' ? 'Open track selector' : 'Abrir selector de circuitos',() => scene.scene.start('TrackGarageScene', { mode: 'player' }));
   const car=root.querySelector('[data-lobby-car]');if(car){car.classList.add('tdr-lobby-car-preview--interactive');makeCardButton(car,lang==='en'?'Open garage':'Abrir garaje',()=>scene.scene.start('GarageScene',{mode:'player'}));}
-  installMasteryRoofBadge(scene,root);installBottomActions(scene,root,lang);
+  installGarageInductionCue(scene,root,season,car,lang);installMasteryRoofBadge(scene,root);installBottomActions(scene,root,lang);
 }
