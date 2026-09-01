@@ -11,6 +11,15 @@
 - Un arreglo solo se marca como **CORREGIDO** cuando está incorporado en la versión indicada; si aún requiere prueba real, marcar **PENDIENTE DE VALIDACIÓN**.
 - `develop` es el campo de pruebas. `main` no debe asumir una corrección hasta que ésta haya sido validada y fusionada.
 
+## Procedimiento obligatorio de despliegue de DEV
+
+- **NO asumir que un push a `develop` publica correctamente `/dev/`.** Se ha comprobado que el job de build puede completar todos sus pasos con éxito y, aun así, fallar el job final `deploy` de GitHub Pages cuando el workflow se ejecuta desde `develop`.
+- La ruta fiable es: modificar `develop` → dejar que compile si corresponde → **disparar la publicación desde `main`** mediante un commit técnico en `.github/preview-trigger.txt`.
+- El workflow de `main` reconstruye simultáneamente la raíz estable y la build actual de `develop`, copiando esta última bajo `/dev/`.
+- Antes de decir que una nueva DEV está lista para probar, comprobar que el workflow lanzado desde `main` ha terminado con `conclusion: success`.
+- Si una ejecución desde `develop` aparece roja pero el job `build` está verde y solo falla `deploy`, **no diagnosticar el juego**: es un problema de publicación de Pages, no de compilación de la app.
+- Evitar repetir el intento de publicar directamente desde `develop`; usar el trigger de `main` de forma deliberada.
+
 ---
 
 ## DEV 0.0.2 — 2026-09-01
