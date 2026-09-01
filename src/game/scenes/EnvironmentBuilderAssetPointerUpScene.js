@@ -2,158 +2,43 @@ import { EnvironmentBuilderScene as Current } from './EnvironmentBuilderExportPa
 import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
 
 const TAP_PX=9;
+const EDITABLES={guardrail:{label:'GUARDARRAÍL',type:'guardrail',asset:'guardrail_straight_01',path:'environment/barriers/guardrail_straight_01.webp',spacing:105},plastic:{label:'BARRERA PLÁSTICA',type:'plastic',asset:'plastic_barrier_redwhite_01',path:'environment/barriers/plastic_barrier_redwhite_01.webp',spacing:92},concrete:{label:'HORMIGÓN',type:'concrete',asset:'concrete_barrier_straight_01',path:'environment/barriers/concrete_barrier_straight_01.webp',spacing:108},fence:{label:'VALLA',type:'fence',asset:'fence_chainlink_straight_01',path:'environment/props/fence_chainlink_straight_01.webp',spacing:112},tires:{label:'NEUMÁTICOS',type:'tires',asset:'tire_barrier_straight_short_01',path:'environment/barriers/tire_barrier_straight_short_01.webp',spacing:82}};
+const nice=id=>String(id||'').replace(/_01$/,'').replaceAll('_',' ').toUpperCase();
 
 export class EnvironmentBuilderScene extends Current{
-  create(){
-    this._assetTapCandidate=null;
-    this._emptyTapCandidate=null;
-    super.create();
-    this._rewireExistingAssets();
-  }
+  create(){this._assetTapCandidate=null;this._emptyTapCandidate=null;super.create();this._rewireExistingAssets();this._mountDomShell();requestAnimationFrame(()=>this._disableLegacyPhaserUi());this.time.delayedCall(80,()=>this._disableLegacyPhaserUi());this.time.delayedCall(260,()=>this._disableLegacyPhaserUi());this.events.once('shutdown',()=>this._unmountDomShell());}
 
   _load(){
-    try{
-      const raw=localStorage.getItem(this._storageKey?.()||'');
-      if(raw){
-        this._applyProject(JSON.parse(raw));
-        this._flash?.('CARGADO · BORRADOR LOCAL');
-        return true;
-      }
-    }catch(_){
-      this._flash?.('ERROR CARGANDO BORRADOR');
-      return false;
-    }
-
-    try{
-      const repoProject=createTrackEnvironment(this._trackId);
-      if(repoProject){
-        this._applyProject(repoProject);
-        this._flash?.('CARGADO · VERSIÓN DEL REPO');
-        return true;
-      }
-    }catch(_){
-      this._flash?.('ERROR CARGANDO REPO');
-      return false;
-    }
-
-    this._flash?.('SIN PROYECTO');
-    return false;
+    try{const raw=localStorage.getItem(this._storageKey?.()||'');if(raw){this._applyProject(JSON.parse(raw));this._flash?.('CARGADO · BORRADOR LOCAL');return true;}}catch(_){this._flash?.('ERROR CARGANDO BORRADOR');return false;}
+    try{const repoProject=createTrackEnvironment(this._trackId);if(repoProject){this._applyProject(repoProject);this._flash?.('CARGADO · VERSIÓN DEL REPO');return true;}}catch(_){this._flash?.('ERROR CARGANDO REPO');return false;}
+    this._flash?.('SIN PROYECTO');return false;
   }
 
-  _wireAsset(img){
-    if(!img)return img;
-    try{img.setInteractive?.({useHandCursor:true,draggable:true});}catch{}
-    try{this.input?.setDraggable?.(img,true);}catch{}
-    img.removeAllListeners('pointerdown');
-    img.removeAllListeners('drag');
-    img.on('drag',(_p,dx,dy)=>{
-      if(this._pinching||this._mode!=='select'||this._selected!==img)return;
-      img.x=dx;img.y=dy;this._drawSelection?.();
-    });
-    return img;
+  _disableLegacyPhaserUi(){
+    const cam=this._editCam;if(!cam)return;
+    for(const o of this.children?.list||[]){let ui=false;try{ui=!!(Number(o.cameraFilter||0)&Number(cam.id||0));}catch{}if(!ui)continue;try{o.setVisible?.(false);}catch{}try{o.disableInteractive?.();}catch{}try{if(o.input)o.input.enabled=false;}catch{}}
   }
 
-  _rewireExistingAssets(){
-    for(const img of this._objects||[])this._wireAsset(img);
+  _mountDomShell(){
+    this._unmountDomShell();const root=document.createElement('div');root.id='tdr-environment-studio-dom';root.innerHTML=`<header class="es-head"><strong>ENVIRONMENT STUDIO</strong><div class="es-head-actions"><button data-act="save">GUARDAR</button><button data-act="load">CARGAR</button><button data-act="export">EXPORTAR</button><label class="es-track"><span>CIRCUITO</span><select data-track></select></label><button class="danger" data-act="exit">SALIR</button></div></header><aside class="es-left"><button data-act="zoomIn">＋</button><button data-act="zoomOut">−</button><button data-act="pan">PAN</button><button class="on" data-act="select">SEL</button><button class="asphalt" data-act="asphalt">ASF</button></aside><aside class="es-right"><section><h3>ASSETS</h3><div class="es-tabs" data-cats></div><div class="es-assets" data-assets></div></section><section><h3>EDITABLES</h3><div class="es-grid editables" data-editables></div></section><section><h3>CAPAS</h3><div class="es-grid four"><button data-act="back">FONDO</button><button data-act="down">− CAPA</button><button data-act="up">＋ CAPA</button><button data-act="front">FRENTE</button></div></section><section><h3>SELECCIÓN</h3><div class="es-grid four"><button data-act="rotL">↶ 15°</button><button data-act="rotR">↷ 15°</button><button data-act="scaleD">ESC −</button><button data-act="scaleU">ESC ＋</button><button data-act="flipX">↔ X</button><button data-act="flipY">↕ Y</button><button data-act="dup">DUP</button><button class="danger" data-act="delete">BORRAR</button></div></section><section class="es-surface"><b>ASFALTO</b><span data-surface-info></span><div class="es-grid three"><button data-act="physics">FÍSICA</button><button data-act="widthD">W −</button><button data-act="widthU">W ＋</button></div></section></aside><div class="es-status" data-status></div>`;document.body.appendChild(root);this._environmentDom=root;this._installDomStyles();this._wireDomShell();this._renderDomTracks();this._renderDomAssets('ESTRUCTURAS');this._renderDomEditables();this._syncDomStatus();
   }
 
-  _spawn(a,data=null){
-    const img=super._spawn(a,data);
-    return this._wireAsset(img);
-  }
+  _installDomStyles(){if(document.getElementById('tdr-environment-studio-style'))return;const s=document.createElement('style');s.id='tdr-environment-studio-style';s.textContent=`#tdr-environment-studio-dom{position:fixed;inset:0;z-index:34000;pointer-events:none;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:#fff;font-weight:800;letter-spacing:.02em}#tdr-environment-studio-dom button,#tdr-environment-studio-dom select{font:inherit;color:#fff;background:#101a2b;border:1px solid #405677;border-radius:0;min-height:32px;cursor:pointer}#tdr-environment-studio-dom button.on{border-color:#43e88d;background:#17392e}#tdr-environment-studio-dom button.danger{border-color:#ff6767}#tdr-environment-studio-dom button.asphalt{border-color:#e2b84f}.es-head{position:absolute;left:0;right:0;top:0;height:58px;display:flex;align-items:center;gap:20px;padding:0 18px;background:#0c1424;border-bottom:1px solid #243551;pointer-events:auto;box-sizing:border-box}.es-head>strong{font-size:20px;white-space:nowrap}.es-head-actions{display:flex;align-items:center;gap:8px;min-width:0;flex:1}.es-head-actions>button{padding:0 14px}.es-track{margin-left:auto;height:34px;display:flex;align-items:center;border:1px solid #2bff88;background:#0f211b}.es-track span{padding:0 8px;font-size:9px;color:#82dca8}.es-track select{height:32px;max-width:250px;border:0;background:#10231c;padding:0 8px}.es-left{position:absolute;top:58px;bottom:0;left:0;width:64px;background:#0b1321;border-right:1px solid #243551;display:flex;flex-direction:column;gap:10px;padding:14px 8px;box-sizing:border-box;pointer-events:auto}.es-left button{height:48px;min-height:48px;font-size:12px}.es-right{position:absolute;right:0;top:58px;bottom:0;width:300px;padding:12px;background:#0b1321;border-left:1px solid #243551;overflow:auto;box-sizing:border-box;pointer-events:auto}.es-right section{border-bottom:1px solid #263950;padding:0 0 12px;margin:0 0 12px}.es-right h3{font-size:15px;margin:0 0 8px;color:#cfd8ff}.es-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}.es-tabs button{font-size:8px;min-width:0;padding:0 3px}.es-assets{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-height:190px;overflow:auto}.es-asset{min-height:68px!important;padding:4px!important;font-size:7px!important;line-height:1.15;overflow:hidden}.es-asset img{display:block;width:48px;height:42px;object-fit:contain;margin:0 auto 3px}.es-grid{display:grid;gap:6px}.es-grid.four{grid-template-columns:repeat(4,1fr)}.es-grid.three{grid-template-columns:repeat(3,1fr)}.es-grid.editables{grid-template-columns:repeat(2,1fr)}.es-grid button{font-size:8px;padding:0 4px}.es-surface>b{color:#f0c551;font-size:12px}.es-surface>span{display:block;color:#d9b84d;font-size:9px;margin:4px 0 8px}.es-status{position:absolute;left:78px;top:70px;padding:6px 10px;background:rgba(4,15,20,.76);border:1px solid rgba(67,232,141,.35);color:#67f3aa;font-size:10px}@media(max-width:1000px){.es-head>strong{font-size:15px}.es-head-actions{gap:4px}.es-head-actions>button{padding:0 8px;font-size:9px}.es-track span{display:none}.es-track select{max-width:170px;font-size:9px}.es-right{width:285px}.es-assets{max-height:145px}}`;document.head.appendChild(s);}
 
-  _applyProject(p){
-    super._applyProject?.(p);
-    this._rewireExistingAssets();
-  }
+  _wireDomShell(){const r=this._environmentDom;if(!r)return;const on=(a,f)=>r.querySelector(`[data-act="${a}"]`)?.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();f();this._syncDomStatus();});on('save',()=>this._save?.());on('load',()=>this._load?.());on('export',()=>this._export?.());on('exit',()=>this.scene.start('admin-hub'));on('zoomIn',()=>this._zoom?.(1.2));on('zoomOut',()=>this._zoom?.(1/1.2));on('pan',()=>{this._mode='pan';});on('select',()=>{this._disarmCreation?.();this._mode='select';});on('asphalt',()=>this._chooseAsphalt?.());on('rotL',()=>this._rotate?.(-15));on('rotR',()=>this._rotate?.(15));on('scaleD',()=>this._scale?.(.9));on('scaleU',()=>this._scale?.(1.1));on('flipX',()=>this._flip?.('x'));on('flipY',()=>this._flip?.('y'));on('dup',()=>this._duplicate?.());on('delete',()=>this._delete?.());on('back',()=>this._layerToBack?.());on('down',()=>this._layerDown?.());on('up',()=>this._layerUp?.());on('front',()=>this._layerToFront?.());on('physics',()=>{this._surfacePhysics=this._surfacePhysics==='grass'?'asphalt':'grass';this._updateSurfaceInfo?.();});on('widthD',()=>{this._surfaceWidth=Math.max(40,Number(this._surfaceWidth||120)-20);this._updateSurfaceInfo?.();});on('widthU',()=>{this._surfaceWidth=Math.min(320,Number(this._surfaceWidth||120)+20);this._updateSurfaceInfo?.();});r.querySelector('[data-track]')?.addEventListener('change',e=>{const key=e.target.value;if(key&&key!==this._trackId)this._chooseRealTrack?.(key);this._syncDomStatus();});}
 
-  _assetAtWorld(w){
-    if(!w)return null;
-    const objects=this._objects||[];
-    for(let i=objects.length-1;i>=0;i--){
-      const o=objects[i];
-      if(!o?.scene||!o.visible)continue;
-      let b=null;
-      try{b=o.getBounds?.();}catch{}
-      if(!b)continue;
-      if(w.x>=b.x&&w.x<=b.x+b.width&&w.y>=b.y&&w.y<=b.y+b.height)return o;
-    }
-    return null;
-  }
+  _renderDomTracks(){const sel=this._environmentDom?.querySelector('[data-track]');if(!sel)return;sel.innerHTML='';for(const key of this._trackKeys||[]){let name=key;try{const t=key===this._trackId?this._realTrack:null;name=t?.name||key;}catch{}const o=document.createElement('option');o.value=key;o.textContent=name;o.selected=key===this._trackId;sel.appendChild(o);}}
+  _renderDomAssets(category){const r=this._environmentDom;if(!r)return;const cats=['VEGETACIÓN','BARRERAS','PROPS','ESTRUCTURAS'],tabs=r.querySelector('[data-cats]');if(tabs){tabs.innerHTML='';for(const c of cats){const b=document.createElement('button');b.textContent=c.slice(0,5);b.classList.toggle('on',c===category);b.onclick=()=>this._renderDomAssets(c);tabs.appendChild(b);}}const host=r.querySelector('[data-assets]');if(!host)return;host.innerHTML='';let all=[];try{all=this._allAssets?.()||[];}catch{}for(const a of all.filter(x=>x?.cat===category)){const b=document.createElement('button');b.className='es-asset';b.innerHTML=`<img src="${import.meta.env.BASE_URL||'/'}assets/${a.path}" alt=""><span>${nice(a.id)}</span>`;b.onclick=()=>{this._spawn?.(a);this._syncDomStatus();};host.appendChild(b);}}
+  _renderDomEditables(){const h=this._environmentDom?.querySelector('[data-editables]');if(!h)return;h.innerHTML='';const defs=[['ASFALTO',()=>this._chooseAsphalt?.()],...Object.values(EDITABLES).map(d=>[d.label,()=>this._chooseLinear?.(d)])];for(const [label,fn] of defs){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{fn();this._syncDomStatus();};h.appendChild(b);}}
+  _syncDomStatus(){const r=this._environmentDom;if(!r)return;const mode=this._mode==='surface'?'ASFALTO':this._mode==='linear-barrier'?(this._linearDef?.label||'EDITABLE'):this._mode==='pan'?'PAN':'SELECCIÓN';const st=r.querySelector('[data-status]');if(st)st.textContent=`MODO · ${mode}`;const info=r.querySelector('[data-surface-info]');if(info)info.textContent=`física ${this._surfacePhysics==='asphalt'?'ASFALTO':'CÉSPED'} · ancho ${Number(this._surfaceWidth||120)}`;r.querySelectorAll('.es-left button').forEach(b=>b.classList.remove('on'));const active=this._mode==='pan'?'pan':this._mode==='surface'?'asphalt':'select';r.querySelector(`[data-act="${active}"]`)?.classList.add('on');const sel=r.querySelector('[data-track]');if(sel&&sel.value!==this._trackId)sel.value=this._trackId;}
+  _unmountDomShell(){this._environmentDom?.remove?.();this._environmentDom=null;document.getElementById('tdr-environment-studio-style')?.remove?.();}
 
-  _setupInput(){
-    super._setupInput();
-
-    const isAsset=o=>!!o?._env;
-    const worldAt=p=>this._editCam.getWorldPoint(p.x,p.y);
-
-    this.input.on('pointerdown',(p,currentlyOver=[])=>{
-      this._emptyTapCandidate=null;
-      if(this._pinching){
-        this._assetTapCandidate=null;
-        this._emptyTapCandidate=null;
-        return;
-      }
-      if(this._mode!=='select'||!this._inside?.(p))return;
-
-      const w=worldAt(p);
-      // Prefer Phaser's interactive hit, but fall back to visible world bounds.
-      // That makes assets restored from older projects selectable even if their
-      // inherited hit area/listeners were created differently.
-      const asset=(currentlyOver||[]).find(isAsset)||this._assetAtWorld(w);
-      if(asset){
-        if(asset===this._selected){this._assetTapCandidate=null;return;}
-        this._assetTapCandidate={pointerId:p.id,asset,x:p.x,y:p.y};
-        this._freePan={pointerId:p.id,x:p.x,y:p.y,scrollX:this._editCam.scrollX,scrollY:this._editCam.scrollY};
-        this._panStart=null;
-        return;
-      }
-
-      this._assetTapCandidate=null;
-      const onSurfaceHandle=!!this._surfaceHandleAt?.(w);
-      const onRailHandle=!!this._railHandle?.(w);
-      const onSurface=!!this._surfaceAt?.(w);
-      const onRail=!!this._railAt?.(w);
-      if(onSurfaceHandle||onRailHandle||onSurface||onRail)return;
-
-      this._emptyTapCandidate={pointerId:p.id,x:p.x,y:p.y};
-    });
-
-    this.input.on('pointerup',p=>{
-      this._finishAssetTap(p,true);
-      this._finishEmptyTap(p,true);
-    });
-    this.input.on('pointerupoutside',p=>{
-      this._finishAssetTap(p,false);
-      this._finishEmptyTap(p,false);
-    });
-  }
-
-  _finishAssetTap(p,allowSelect){
-    const c=this._assetTapCandidate;
-    if(!c||!p||p.id!==c.pointerId)return;
-    this._assetTapCandidate=null;
-    const dx=p.x-c.x,dy=p.y-c.y;
-    if(allowSelect&&dx*dx+dy*dy<=TAP_PX*TAP_PX&&c.asset?.scene){
-      this._select?.(c.asset);
-    }
-  }
-
-  _finishEmptyTap(p,allowDeselect){
-    const c=this._emptyTapCandidate;
-    if(!c||!p||p.id!==c.pointerId)return;
-    this._emptyTapCandidate=null;
-    const dx=p.x-c.x,dy=p.y-c.y;
-    if(!allowDeselect||dx*dx+dy*dy>TAP_PX*TAP_PX)return;
-
-    this._selected=null;
-    this._selectedSurface=null;
-    this._selRail=null;
-    this._selectionG?.clear?.();
-    this._mode='select';
-    this._refreshSurfaceDepthButton?.();
-    this._updateLayerInfo?.();
-    this._status?.();
-    this._editablesLabel?.setText?.('✎ EDITABLES');
-  }
+  _wireAsset(img){if(!img)return img;try{img.setInteractive?.({useHandCursor:true,draggable:true});this.input?.setDraggable?.(img,true);}catch{}img.removeAllListeners('pointerdown');img.removeAllListeners('drag');img.on('drag',(_p,dx,dy)=>{if(this._pinching||this._mode!=='select'||this._selected!==img)return;img.x=dx;img.y=dy;this._drawSelection?.();});return img;}
+  _rewireExistingAssets(){for(const img of this._objects||[])this._wireAsset(img);}
+  _spawn(a,data=null){const img=super._spawn(a,data);this._syncDomStatus();return this._wireAsset(img);}
+  _applyProject(p){super._applyProject?.(p);this._rewireExistingAssets();this._renderDomTracks();this._syncDomStatus();}
+  _assetAtWorld(w){if(!w)return null;const objects=this._objects||[];for(let i=objects.length-1;i>=0;i--){const o=objects[i];if(!o?.scene||!o.visible)continue;let b=null;try{b=o.getBounds?.();}catch{}if(b&&w.x>=b.x&&w.x<=b.x+b.width&&w.y>=b.y&&w.y<=b.y+b.height)return o;}return null;}
+  _setupInput(){super._setupInput();const isAsset=o=>!!o?._env,worldAt=p=>this._editCam.getWorldPoint(p.x,p.y);this.input.on('pointerdown',(p,currentlyOver=[])=>{this._emptyTapCandidate=null;if(this._pinching){this._assetTapCandidate=null;return;}if(this._mode!=='select'||!this._inside?.(p))return;const w=worldAt(p),asset=(currentlyOver||[]).find(isAsset)||this._assetAtWorld(w);if(asset){if(asset===this._selected){this._assetTapCandidate=null;return;}this._assetTapCandidate={pointerId:p.id,asset,x:p.x,y:p.y};this._freePan={pointerId:p.id,x:p.x,y:p.y,scrollX:this._editCam.scrollX,scrollY:this._editCam.scrollY};this._panStart=null;return;}this._assetTapCandidate=null;const busy=!!this._surfaceHandleAt?.(w)||!!this._railHandle?.(w)||!!this._surfaceAt?.(w)||!!this._railAt?.(w);if(!busy)this._emptyTapCandidate={pointerId:p.id,x:p.x,y:p.y};});this.input.on('pointerup',p=>{this._finishAssetTap(p,true);this._finishEmptyTap(p,true);});this.input.on('pointerupoutside',p=>{this._finishAssetTap(p,false);this._finishEmptyTap(p,false);});}
+  _finishAssetTap(p,allowSelect){const c=this._assetTapCandidate;if(!c||!p||p.id!==c.pointerId)return;this._assetTapCandidate=null;const dx=p.x-c.x,dy=p.y-c.y;if(allowSelect&&dx*dx+dy*dy<=TAP_PX*TAP_PX&&c.asset?.scene)this._select?.(c.asset);this._syncDomStatus();}
+  _finishEmptyTap(p,allowDeselect){const c=this._emptyTapCandidate;if(!c||!p||p.id!==c.pointerId)return;this._emptyTapCandidate=null;const dx=p.x-c.x,dy=p.y-c.y;if(!allowDeselect||dx*dx+dy*dy>TAP_PX*TAP_PX)return;this._selected=null;this._selectedSurface=null;this._selRail=null;this._selectionG?.clear?.();this._mode='select';this._refreshSurfaceDepthButton?.();this._updateLayerInfo?.();this._status?.();this._syncDomStatus();}
 }
