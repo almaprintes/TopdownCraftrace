@@ -11,6 +11,28 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
       if (typeof this._inside === 'function') return this._inside(p);
       return p.x >= this._vx && p.x <= this._vx + this._vw && p.y >= this._vy && p.y <= this._vy + this._vh;
     };
+    const cameraBounds = () => {
+      const cam=this._editCam;
+      const b=cam?._bounds;
+      const minX=Number.isFinite(Number(b?.x))?Number(b.x):0;
+      const minY=Number.isFinite(Number(b?.y))?Number(b.y):0;
+      const worldW=Math.max(1,Number(b?.width)||Number(this._editorWorldW)||8000);
+      const worldH=Math.max(1,Number(b?.height)||Number(this._editorWorldH)||5000);
+      const zoom=Math.max(.0001,Number(cam?.zoom)||1);
+      const visibleW=Number(cam?.width||0)/zoom;
+      const visibleH=Number(cam?.height||0)/zoom;
+      return {
+        minX,minY,
+        maxX:Math.max(minX,minX+worldW-visibleW),
+        maxY:Math.max(minY,minY+worldH-visibleH)
+      };
+    };
+    const clampCamera=()=>{
+      const cam=this._editCam;if(!cam)return;
+      const b=cameraBounds();
+      cam.scrollX=Math.max(b.minX,Math.min(b.maxX,cam.scrollX));
+      cam.scrollY=Math.max(b.minY,Math.min(b.maxY,cam.scrollY));
+    };
 
     this.input.on('pointerdown', (pointer, currentlyOver = []) => {
       if (this._mode !== 'select') return;
@@ -30,25 +52,22 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
 
     this.input.on('pointermove', (pointer) => {
       const pan = this._freePan;
-      if (!pan || !pointer.isDown || pointer.id !== pan.pointerId) return;
+      if (!pan || !pointer.isDown || pointer.id !== pan.pointerId || this._pinching) return;
 
       const zoom = Math.max(0.0001, this._editCam.zoom || 1);
       const dx = (pointer.x - pan.x) / zoom;
       const dy = (pointer.y - pan.y) / zoom;
 
-      const visibleW = this._editCam.width / zoom;
-      const visibleH = this._editCam.height / zoom;
-      const maxX = Math.max(0, 8000 - visibleW);
-      const maxY = Math.max(0, 5000 - visibleH);
-
-      this._editCam.scrollX = Math.max(0, Math.min(maxX, pan.scrollX - dx));
-      this._editCam.scrollY = Math.max(0, Math.min(maxY, pan.scrollY - dy));
+      this._editCam.scrollX = pan.scrollX - dx;
+      this._editCam.scrollY = pan.scrollY - dy;
+      clampCamera();
     });
 
     const stop = (pointer) => {
       if (!this._freePan) return;
       if (pointer && pointer.id !== this._freePan.pointerId) return;
       this._freePan = null;
+      clampCamera();
     };
 
     this.input.on('pointerup', stop);
