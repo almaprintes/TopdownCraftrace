@@ -68,6 +68,18 @@ body {
 }
 @media(max-height:520px){#tdr-season-dom .detail-cell .claim{min-height:28px!important;font-size:9px!important;}}
 
+/* Workshop mobile: the unavailable craft button must keep the same single-line
+   footprint as the active button. Long "FALTAN N MATERIALES" copy may never
+   increase its height or invade the recipe panel below. */
+#tdr-workshop-mobile-dom .craftBtn:not(.ready){
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  line-height:1!important;
+  font-size:7px!important;
+  padding:0 3px!important;
+}
+
 @font-face { font-family:'Orbitron';src:url('/fonts/Orbitron-Regular.ttf') format('truetype');font-weight:normal;font-style:normal; }
 
 #rotateOverlay {
@@ -84,3 +96,7 @@ body {
 #rotateOverlay .rot-phone{margin:22px auto 4px;width:64px;height:108px;border:4px solid #57e9ff;border-radius:13px;box-shadow:0 0 22px rgba(87,233,255,.2);position:relative;animation:tdrRotatePhone 1.8s ease-in-out infinite;}
 #rotateOverlay .rot-phone:before{content:'';position:absolute;width:22px;height:4px;border-radius:4px;background:#57e9ff;left:50%;top:6px;transform:translateX(-50%);opacity:.7;}
 @keyframes tdrRotatePhone{0%,25%{transform:rotate(0deg)}70%,100%{transform:rotate(90deg)}}
+
+/* Develop channel marker. This stylesheet belongs to develop, so the marker
+   does not alter the public main/beta orientation screen. */
+#rotateOverlay .rot-beta-title::after{content:' · DEV 0.0.2';color:#58e8ff;font-weight:950;}
