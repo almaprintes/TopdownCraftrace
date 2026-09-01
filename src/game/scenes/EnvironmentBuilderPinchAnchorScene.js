@@ -3,6 +3,8 @@ import { EnvironmentBuilderScene as Current } from './EnvironmentBuilderGuardrai
 const ZOOM_MAX=4;
 const ASSET_SCALE_MIN=.08;
 const ASSET_SCALE_MAX=12;
+const START_DEADZONE_PX=4;
+const EDGE_OVERSCROLL_PX=28;
 
 function normAngle(a){return Math.atan2(Math.sin(a),Math.cos(a));}
 
@@ -48,12 +50,24 @@ export class EnvironmentBuilderScene extends Current {
       const {minX,minY,worldW,worldH}=worldMetrics(cam);
       return {minX,minY,maxX:Math.max(minX,minX+worldW-cam.width/zoom),maxY:Math.max(minY,minY+worldH-cam.height/zoom)};
     };
-    const clampCam=(cam,z=cam?.zoom)=>{
+    const clampCam=(cam,z=cam?.zoom,padScreen=0)=>{
       if(!cam)return;
-      const b=boundsFor(cam,z);
-      cam.scrollX=Math.max(b.minX,Math.min(b.maxX,cam.scrollX));
-      cam.scrollY=Math.max(b.minY,Math.min(b.maxY,cam.scrollY));
+      const b=boundsFor(cam,z),zoom=Math.max(.0001,Number(z)||1),pad=padScreen/zoom;
+      cam.scrollX=Math.max(b.minX-pad,Math.min(b.maxX+pad,cam.scrollX));
+      cam.scrollY=Math.max(b.minY-pad,Math.min(b.maxY+pad,cam.scrollY));
     };
+    const settleCam=cam=>{
+      if(!cam)return;
+      const b=boundsFor(cam,cam.zoom);
+      const tx=Math.max(b.minX,Math.min(b.maxX,cam.scrollX));
+      const ty=Math.max(b.minY,Math.min(b.maxY,cam.scrollY));
+      if(Math.abs(tx-cam.scrollX)<.01&&Math.abs(ty-cam.scrollY)<.01)return;
+      try{this.tweens.killTweensOf(cam);this.tweens.add({targets:cam,scrollX:tx,scrollY:ty,duration:110,ease:'Sine.Out'});}catch{cam.scrollX=tx;cam.scrollY=ty;}
+    };
+    const worldAtScreen=(cam,p,z=cam?.zoom)=>({
+      x:cam.scrollX+(p.x-cam.x)/Math.max(.0001,Number(z)||1),
+      y:cam.scrollY+(p.y-cam.y)/Math.max(.0001,Number(z)||1)
+    });
 
     this.input.on('pointerdown',p=>{
       if(!inside(p))return;
@@ -61,6 +75,7 @@ export class EnvironmentBuilderScene extends Current {
       const ps=pair(),cam=this._editCam;
       if(ps.length<2||!cam)return;
 
+      try{this.tweens.killTweensOf(cam);}catch{}
       cancel();
       this._pinching=true;
       this._suppressSinglePanUntilAllUp=true;
@@ -77,8 +92,16 @@ export class EnvironmentBuilderScene extends Current {
 
       this._pinchMode='map';
       this._assetPinch=null;
-      const anchor=cam.getWorldPoint(m.x,m.y);
-      this._mapPinch={startDistance:d,startZoom:Number(cam.zoom)||1,minZoom:minZoomFor(cam),mid:{...m},anchor:{x:anchor.x,y:anchor.y}};
+      // Capture the exact camera state at the instant finger #2 lands.
+      // No camera mutation occurs here.
+      this._mapPinch={
+        active:false,
+        minZoom:minZoomFor(cam),
+        initialDistance:d,
+        initialMid:{...m},
+        lastDistance:d,
+        lastMid:{...m}
+      };
     });
 
     this.input.on('pointermove',p=>{
@@ -104,18 +127,35 @@ export class EnvironmentBuilderScene extends Current {
       if(this._pinchMode!=='map'||!mp)return;
       const d=Math.max(1,dist(ps[0],ps[1]));
       const m=mid(ps[0],ps[1]);
-      let ratio=d/Math.max(1,mp.startDistance);
-      if(!Number.isFinite(ratio))ratio=1;
-      const z=Math.max(mp.minZoom,Math.min(ZOOM_MAX,mp.startZoom*ratio));
 
-      // Direct transform: zoom and pan are solved together from the original
-      // world anchor and the LIVE midpoint. No easing = no lag behind fingers.
-      cam.setZoom(z);
-      const localX=m.x-cam.x,localY=m.y-cam.y;
-      cam.scrollX=mp.anchor.x-localX/z;
-      cam.scrollY=mp.anchor.y-localY/z;
-      clampCam(cam,z);
-      mp.mid={...m};
+      if(!mp.active){
+        const panDrift=Math.hypot(m.x-mp.initialMid.x,m.y-mp.initialMid.y);
+        const zoomDrift=Math.abs(d-mp.initialDistance);
+        if(panDrift<START_DEADZONE_PX&&zoomDrift<START_DEADZONE_PX)return;
+        // First meaningful sample becomes the incremental baseline. This throws
+        // away iOS's tiny contact-settling movement when finger #2 lands.
+        mp.active=true;
+        mp.lastDistance=d;
+        mp.lastMid={...m};
+        return;
+      }
+
+      const oldZoom=Math.max(.0001,Number(cam.zoom)||1);
+      let ratio=d/Math.max(1,mp.lastDistance);
+      if(!Number.isFinite(ratio))ratio=1;
+      const newZoom=Math.max(mp.minZoom,Math.min(ZOOM_MAX,oldZoom*ratio));
+
+      // Incremental map transform: preserve the world point that was under the
+      // previous midpoint, then place it under the current midpoint. This makes
+      // pan + zoom one continuous gesture instead of two competing operations.
+      const anchor=worldAtScreen(cam,mp.lastMid,oldZoom);
+      cam.setZoom(newZoom);
+      cam.scrollX=anchor.x-(m.x-cam.x)/newZoom;
+      cam.scrollY=anchor.y-(m.y-cam.y)/newZoom;
+      clampCam(cam,newZoom,EDGE_OVERSCROLL_PX);
+
+      mp.lastDistance=d;
+      mp.lastMid={...m};
       if(this._selectedSurface||this._selRail)this._drawSelection?.();
     });
 
@@ -126,11 +166,9 @@ export class EnvironmentBuilderScene extends Current {
       if(pair().length>=2)return;
 
       this._pinching=false;
-      clampCam(this._editCam);
+      settleCam(this._editCam);
       this._assetPinch=null;this._mapPinch=null;this._pinchMode=null;
       cancel();
-      // Keep single-finger pan suppressed until the remaining finger is also
-      // lifted. This prevents the classic post-pinch camera jump.
       if(this._pinchPointers.size===0)this._suppressSinglePanUntilAllUp=false;
       this._drawSelection?.();
     };
