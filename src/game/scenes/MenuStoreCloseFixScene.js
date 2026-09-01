@@ -1,8 +1,10 @@
 import { MenuScene as CurrentMenuScene } from './MenuGameModeSnapScene.js';
+import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 
 export class MenuScene extends CurrentMenuScene {
   _openStoreModal(section='materials') {
     super._openStoreModal(section);
+    showFirstVisitTutorial('store',{delay:180});
     const root=this._storeModal;
     if(!root?.scene)return;
     const {width:w}=this.scale;
@@ -17,5 +19,11 @@ export class MenuScene extends CurrentMenuScene {
     closeHit.on('pointerup',closeStore);
     closeHit.on('pointerdown',(_pointer,_lx,_ly,event)=>{try{event?.stopPropagation?.();}catch{}});
     root.add(closeHit);
+  }
+
+  _openLobbyInventoryModal(...args){
+    const result=super._openLobbyInventoryModal(...args);
+    showFirstVisitTutorial('inventory',{delay:180});
+    return result;
   }
 }
