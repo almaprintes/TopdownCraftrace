@@ -21,11 +21,7 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
       const zoom=Math.max(.0001,Number(cam?.zoom)||1);
       const visibleW=Number(cam?.width||0)/zoom;
       const visibleH=Number(cam?.height||0)/zoom;
-      return {
-        minX,minY,
-        maxX:Math.max(minX,minX+worldW-visibleW),
-        maxY:Math.max(minY,minY+worldH-visibleH)
-      };
+      return {minX,minY,maxX:Math.max(minX,minX+worldW-visibleW),maxY:Math.max(minY,minY+worldH-visibleH)};
     };
     const clampCamera=()=>{
       const cam=this._editCam;if(!cam)return;
@@ -37,27 +33,18 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     this.input.on('pointerdown', (pointer, currentlyOver = []) => {
       if (this._mode !== 'select') return;
       if (!pointerInsideEditor(pointer)) return;
-
-      // If the gesture starts on a placed environment asset, its own drag wins.
+      if (this._pinching || this._suppressSinglePanUntilAllUp) return;
       if (Array.isArray(currentlyOver) && currentlyOver.some(isWorldAsset)) return;
 
-      this._freePan = {
-        pointerId: pointer.id,
-        x: pointer.x,
-        y: pointer.y,
-        scrollX: this._editCam.scrollX,
-        scrollY: this._editCam.scrollY
-      };
+      this._freePan = {pointerId:pointer.id,x:pointer.x,y:pointer.y,scrollX:this._editCam.scrollX,scrollY:this._editCam.scrollY};
     });
 
     this.input.on('pointermove', (pointer) => {
       const pan = this._freePan;
-      if (!pan || !pointer.isDown || pointer.id !== pan.pointerId || this._pinching) return;
-
+      if (!pan || !pointer.isDown || pointer.id !== pan.pointerId || this._pinching || this._suppressSinglePanUntilAllUp) return;
       const zoom = Math.max(0.0001, this._editCam.zoom || 1);
       const dx = (pointer.x - pan.x) / zoom;
       const dy = (pointer.y - pan.y) / zoom;
-
       this._editCam.scrollX = pan.scrollX - dx;
       this._editCam.scrollY = pan.scrollY - dy;
       clampCamera();
