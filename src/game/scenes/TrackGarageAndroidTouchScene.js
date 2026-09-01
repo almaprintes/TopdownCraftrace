@@ -1,4 +1,5 @@
 import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGaragePlayerLightScene.js';
+import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 
 const ROOT_ID='tdr-track-selector-dom';
 const TAP_MOVE_PX=14;
@@ -15,6 +16,11 @@ function centerSelectedTrack(root,behavior='smooth'){
 }
 
 export class TrackGarageScene extends CurrentTrackGarageScene {
+  create(...args){
+    super.create(...args);
+    showFirstVisitTutorial('tracks',{delay:260});
+  }
+
   _installDomSelector(){
     super._installDomSelector?.();
     const root=this._trackSelectorDom||document.getElementById(ROOT_ID);
@@ -75,8 +81,6 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
       if(action.matches('.tdr-ts-back'))this.scene.start('menu');
     },{passive:false});
 
-    // Mouse/desktop clicks are handled by the DOM selector below this class. After
-    // that synchronous render finishes, recenter the newly active circuit here too.
     root.addEventListener('click',(e)=>{
       if(performance.now()<suppressClickUntil&&actionable(e.target)){
         e.preventDefault();
