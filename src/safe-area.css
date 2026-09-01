@@ -17,20 +17,11 @@
   padding-bottom: var(--tdr-safe-bottom) !important;
 }
 
-/* Lobby: background and hero art remain edge-to-edge; actionable/info blocks do not. */
-.tdr-lobby-header {
-  left: var(--tdr-safe-left) !important;
-  right: var(--tdr-safe-right) !important;
-}
+.tdr-lobby-header { left: var(--tdr-safe-left) !important; right: var(--tdr-safe-right) !important; }
 .tdr-event-card { left: var(--tdr-safe-left) !important; }
 .tdr-track-card { right: var(--tdr-safe-right) !important; }
-.tdr-lobby-bottom-actions {
-  left: var(--tdr-safe-left) !important;
-  right: var(--tdr-safe-right) !important;
-  bottom: var(--tdr-safe-bottom) !important;
-}
+.tdr-lobby-bottom-actions { left: var(--tdr-safe-left) !important; right: var(--tdr-safe-right) !important; bottom: var(--tdr-safe-bottom) !important; }
 
-/* Full-screen DOM screens use the same publish-safe frame. */
 .tdr-stats {
   padding-left: max(clamp(10px,2vw,26px), var(--tdr-safe-left)) !important;
   padding-right: max(clamp(10px,2vw,26px), var(--tdr-safe-right)) !important;
@@ -38,23 +29,11 @@
   padding-bottom: max(8px, var(--tdr-safe-bottom)) !important;
 }
 
-/* Race DOM controls: never sit underneath a side cutout in landscape. */
-#tdr-race-controls .tdr-pedal {
-  right: max(18px, var(--tdr-safe-right)) !important;
-}
-#tdr-race-controls .tdr-stick {
-  left: max(22px, var(--tdr-safe-left)) !important;
-  bottom: max(22px, var(--tdr-safe-bottom)) !important;
-}
-#tdr-race-controls .tdr-pedal-brake {
-  bottom: max(18px, var(--tdr-safe-bottom)) !important;
-}
-#tdr-race-controls .tdr-pedal-gas {
-  bottom: calc(max(18px, var(--tdr-safe-bottom)) + clamp(90px,18vh,135px)) !important;
-}
+#tdr-race-controls .tdr-pedal { right: max(18px, var(--tdr-safe-right)) !important; }
+#tdr-race-controls .tdr-stick { left: max(22px, var(--tdr-safe-left)) !important; bottom: max(22px, var(--tdr-safe-bottom)) !important; }
+#tdr-race-controls .tdr-pedal-brake { bottom: max(18px, var(--tdr-safe-bottom)) !important; }
+#tdr-race-controls .tdr-pedal-gas { bottom: calc(max(18px, var(--tdr-safe-bottom)) + clamp(90px,18vh,135px)) !important; }
 
-/* Real pedal artwork extracted from the approved source image. The DOM pedal
- * remains the touch target; only the old synthetic box visual is replaced. */
 #tdr-race-controls .tdr-pedal {
   border: 0 !important;
   background-color: transparent !important;
@@ -65,19 +44,12 @@
   clip-path: none !important;
   overflow: visible !important;
 }
-#tdr-race-controls .tdr-pedal-gas {
-  background-image: url('/assets/ui/tdr_pedal_gas.webp?v=1') !important;
-}
-#tdr-race-controls .tdr-pedal-brake {
-  background-image: url('/assets/ui/tdr_pedal_brake.webp?v=1') !important;
-}
+#tdr-race-controls .tdr-pedal-gas { background-image: url('/assets/ui/tdr_pedal_gas.webp?v=1') !important; }
+#tdr-race-controls .tdr-pedal-brake { background-image: url('/assets/ui/tdr_pedal_brake.webp?v=1') !important; }
 #tdr-race-controls .tdr-pedal::before,
 #tdr-race-controls .tdr-pedal::after,
-#tdr-race-controls .tdr-pedal-inner {
-  display: none !important;
-}
+#tdr-race-controls .tdr-pedal-inner { display: none !important; }
 
-/* Orientation and legacy edit modals must also respect physical screen cutouts. */
 #rotateOverlay .rot-shell {
   max-width: calc(var(--tdr-vv-width) - var(--tdr-safe-left) - var(--tdr-safe-right)) !important;
   max-height: calc(var(--tdr-vv-height) - var(--tdr-safe-top) - var(--tdr-safe-bottom)) !important;
@@ -87,10 +59,10 @@
   max-height: calc(var(--tdr-vv-height) - var(--tdr-safe-top) - var(--tdr-safe-bottom) - 16px) !important;
 }
 
-/* Release channel badge on orientation screen. */
+/* Release channel badge on orientation screen. Keep synchronized with package.json and docs/VERSION_CHANGELOG.md. */
 #rotateOverlay .rot-beta-title { font-size: 0 !important; }
 #rotateOverlay .rot-beta-title::after {
-  content: '🧪 DEV v0.1.0-dev';
+  content: '🧪 DEV 0.0.2';
   font-size: 14px;
   font-weight: 900;
   letter-spacing: .08em;
