@@ -1,5 +1,6 @@
 import { SettingsScene as CurrentSettingsScene } from './SettingsAudioMusicScene.js';
 import { getLanguage } from '../i18n/index.js';
+import { resetFirstVisitTutorials, showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 
 const STORAGE_KEY='tdr2:settings';
 const RESET_KEEP_EXACT=new Set([
@@ -46,6 +47,7 @@ export class SettingsScene extends CurrentSettingsScene {
     if(tabs&&!tabs.querySelector('[data-tab="account"]')){
       const b=document.createElement('button');b.className='s2tab';b.dataset.tab='account';b.textContent=getLanguage()==='en'?'ACCOUNT':'CUENTA';b.onclick=()=>this._renderTab('account');tabs.appendChild(b);
     }
+    showFirstVisitTutorial('settings',{delay:260});
   }
   _unmount(){
     super._unmount();document.getElementById('tdr-account-settings-style')?.remove?.();document.querySelector('.tdr-account-confirm')?.remove?.();
@@ -57,6 +59,8 @@ export class SettingsScene extends CurrentSettingsScene {
 #tdr-settings2 .s2danger .s2label{color:#ff8a8a!important}
 #tdr-settings2 .s2danger-btn{min-height:38px;padding:0 18px;border:1px solid #ff6767;border-radius:8px;background:#641c1c;color:#fff;font-weight:1000;letter-spacing:.06em;cursor:pointer}
 #tdr-settings2 .s2danger-btn.soft{border-color:#e18d52;background:#512d18}
+#tdr-settings2 .s2tutorial-btn{min-height:38px;padding:0 18px;border:1px solid #45dfff;border-radius:8px;background:#123c4d;color:#fff;font-weight:1000;letter-spacing:.06em;cursor:pointer}
+#tdr-settings2 .s2tutorial-note{margin-left:10px;color:#6ff0b4;font-size:9px;font-weight:900;letter-spacing:.04em}
 .tdr-account-confirm{position:fixed;inset:0;z-index:40000;display:grid;place-items:center;padding:max(16px,var(--tdr-safe-top,8px)) max(16px,var(--tdr-safe-right,10px)) max(16px,var(--tdr-safe-bottom,8px)) max(16px,var(--tdr-safe-left,10px));background:rgba(0,0,0,.78);backdrop-filter:blur(8px)}
 .tdr-account-confirm .panel{width:min(560px,94vw);border:1px solid rgba(255,92,92,.7);border-radius:14px;background:linear-gradient(180deg,#211013,#0d0a0b);box-shadow:0 22px 70px rgba(0,0,0,.65);padding:20px;color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .tdr-account-confirm .eyebrow{font-size:10px;font-weight:1000;letter-spacing:.14em;color:#ff7777}.tdr-account-confirm h2{margin:7px 0 8px;font-size:25px}.tdr-account-confirm p{margin:0;color:#d6c7c9;font-size:13px;line-height:1.45}.tdr-account-confirm .actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px;flex-wrap:wrap}.tdr-account-confirm button{min-height:40px;padding:0 16px;border-radius:8px;font-weight:1000;letter-spacing:.05em}.tdr-account-confirm .cancel{border:1px solid #65717a;background:#182029;color:#fff}.tdr-account-confirm .confirm{border:1px solid #ff6868;background:#811e24;color:#fff}
@@ -83,9 +87,14 @@ export class SettingsScene extends CurrentSettingsScene {
     const body=this.root.querySelector('.s2body');if(!body)return;
     body.innerHTML=`<div class="s2grid">
       <section class="s2card wide"><div class="s2label">${en?'ACCOUNT & DATA':'CUENTA Y DATOS'}</div><div class="s2desc">${en?'Manage your saved progress on this device. Destructive actions always require confirmation.':'Gestiona el progreso guardado en este dispositivo. Las acciones destructivas siempre requieren confirmación.'}</div></section>
+      <section class="s2card wide"><div class="s2label">${en?'MINI TUTORIALS':'MINI TUTORIALES'}</div><div class="s2desc">${en?'Each main section explains itself once on your first visit. Reset only those introductions without changing any game progress.':'Cada sección principal se explica una sola vez en tu primera visita. Puedes reiniciar únicamente esas introducciones sin alterar ningún progreso del juego.'}</div><div class="s2row"><button type="button" class="s2tutorial-btn" data-reset-tutorial>${en?'RESET TUTORIAL':'REINICIAR TUTORIAL'}</button><span class="s2tutorial-note" data-tutorial-note></span></div></section>
       <section class="s2card s2danger"><div class="s2label">${en?'RESET PROGRESS':'RESETEAR PROGRESO'}</div><div class="s2desc">${en?'Starts the game again from zero while keeping your controls, language, audio and graphics preferences.':'Empieza el juego de nuevo desde cero conservando tus controles, idioma, audio y preferencias gráficas.'}</div><div class="s2row"><button type="button" class="s2danger-btn soft" data-reset-progress>${en?'RESET PROGRESS':'RESETEAR PROGRESO'}</button></div></section>
       <section class="s2card s2danger"><div class="s2label">${en?'DELETE ACCOUNT':'ELIMINAR CUENTA'}</div><div class="s2desc">${en?'Deletes all local data associated with this game profile on this device, including settings. There is no recovery.':'Elimina todos los datos locales asociados a este perfil del juego en este dispositivo, incluidos los ajustes. No existe recuperación.'}</div><div class="s2row"><button type="button" class="s2danger-btn" data-delete-account>${en?'DELETE ACCOUNT':'ELIMINAR CUENTA'}</button></div></section>
     </div>`;
+    body.querySelector('[data-reset-tutorial]')?.addEventListener('click',()=>{
+      resetFirstVisitTutorials();
+      const note=body.querySelector('[data-tutorial-note]');if(note)note.textContent=en?'READY · VISIT EACH SECTION AGAIN':'LISTO · VUELVE A VISITAR CADA SECCIÓN';
+    });
     body.querySelector('[data-reset-progress]')?.addEventListener('click',()=>this._showDestructiveConfirm('reset'));
     body.querySelector('[data-delete-account]')?.addEventListener('click',()=>this._showDestructiveConfirm('delete'));
   }
