@@ -57,6 +57,13 @@
 - **NOTA DE ARQUITECTURA:** actualmente la cuenta es local. Si se incorpora backend/sincronización de cuenta, `ELIMINAR CUENTA` deberá ampliarse para solicitar también el borrado remoto antes de considerarse eliminación completa de cuenta.
 - **PENDIENTE DE VALIDACIÓN:** probar en iPhone que `RESETEAR PROGRESO` deja inventario vacío y devuelve la inducción/desbloqueos a estado inicial conservando idioma, controles y gráficos.
 
+### Inducción / Lobby
+
+- **MEJORA UX:** durante la misión 2 `Conoce tu máquina / Know Your Machine`, el lobby identifica visualmente que el coche central es el acceso al Garaje.
+- **AÑADIDO:** pulso cian breve sobre el coche y llamada DOM `TOCA TU COCHE / TAP YOUR CAR` con flecha hacia el vehículo.
+- **REGLA:** la ayuda solo aparece mientras la tarjeta activa del Pase muestra esa misión; al entrar al Garaje deja de existir con la escena y no se muestra en misiones posteriores.
+- **OBJETIVO:** enseñar la navegación mediante la propia interfaz, evitando instrucciones largas del tipo “pulsa el coche central”.
+
 ### Arquitectura / UI
 
 - **REGLA CONFIRMADA:** los textos de estas interfaces deben ser DOM; no reintroducir `Phaser.Text` para solucionar problemas visuales de Fabricación.
@@ -75,11 +82,13 @@
 - `416f8a7a415b62265ef2348170ee456518313601` — centrado robusto del coche en la tarjeta principal de Estadísticas.
 - `f0fe92b2e4410e9611dea6daa5140863ebda906e` — pestaña Cuenta, reset de progreso y eliminación local de cuenta.
 - `38d6576d1a12e60df3cb702b834ccaa4ba35e9f6` — retira la reparación legacy que reinyectaba Neumático Street T1 y Sequential Prototype T4 tras un reset.
+- `89350fa86bfb708d1399642d228f3ec51668a89a` — lógica contextual de ayuda para entrar al Garaje desde el coche del lobby.
+- `b10e461ea15833949e5d24ad86ed95f35ab07d60` — animación/pulso y llamada visual de la misión `Conoce tu máquina`.
 - `78c3c86ad5b947da253204cbf5491132caedc1d1` — disparo de despliegue asociado a la primera publicación de la serie.
 
 ### Validación
 
-Estado actual: **Fabricación considerada funcional y visualmente cerrada**. Estadísticas y limpieza de estado inicial continúan en validación dentro de DEV 0.0.2.
+Estado actual: **Fabricación considerada funcional y visualmente cerrada**. Estadísticas, limpieza de estado inicial y guía contextual de inducción continúan en validación dentro de DEV 0.0.2.
 
 ---
 
