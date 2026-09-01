@@ -38,6 +38,12 @@
 - **CORREGIDO:** botón de fabricación cuando faltan materiales: el texto ya no debe saltar a dos líneas ni desbordar verticalmente su hueco.
 - **CONSERVADO:** comportamiento original de instalación/cambio de piezas y barra inferior, evitando simplificar su lógica al migrar la presentación.
 
+### Estadísticas
+
+- **CORREGIDO:** la imagen del coche en la tarjeta principal de Estadísticas podía quedar anclada demasiado abajo y fuera del área visible, aunque la vista de detalle funcionara correctamente.
+- **CAMBIO:** el arte del coche de la tarjeta resumen ahora se centra dentro de un marco propio en la columna izquierda, independiente de la altura y distribución del bloque de información derecho.
+- **PENDIENTE DE VALIDACIÓN:** comprobar visualmente en iPhone horizontal que el coche permanece centrado con tarjetas de distinta altura y con diferentes modelos.
+
 ### Arquitectura / UI
 
 - **REGLA CONFIRMADA:** los textos de estas interfaces deben ser DOM; no reintroducir `Phaser.Text` para solucionar problemas visuales de Fabricación.
@@ -47,16 +53,18 @@
 
 - Versión técnica incrementada de `0.0.1` a `0.0.2`.
 - La pantalla de orientación identifica esta build como **DEV 0.0.2** para distinguir capturas y reportes de testers.
+- El badge visible de versión está definido también en `src/safe-area.css`; debe mantenerse sincronizado con `package.json` y este registro.
 
 ### Commits relevantes
 
 - `efa976d534dc0bca954fdce680c16be4646ddb66` — pulido visual / identificación DEV 0.0.2.
 - `dbe5f1b79100cf7f2c80f2611b80abdc458c502a` — versión técnica 0.0.2.
-- `78c3c86ad5b947da253204cbf5491132caedc1d1` — disparo de despliegue asociado.
+- `416f8a7a415b62265ef2348170ee456518313601` — centrado robusto del coche en la tarjeta principal de Estadísticas.
+- `78c3c86ad5b947da253204cbf5491132caedc1d1` — disparo de despliegue asociado a la primera publicación de la serie.
 
 ### Validación
 
-Estado al cerrar la versión: **Fabricación considerada funcional y visualmente cerrada**, pendiente únicamente de detectar posibles regresiones durante uso prolongado de DEV.
+Estado actual: **Fabricación considerada funcional y visualmente cerrada**. Estadísticas continúa en afinación visual dentro de DEV 0.0.2.
 
 ---
 
