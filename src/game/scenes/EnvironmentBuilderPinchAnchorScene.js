@@ -1,6 +1,5 @@
 import { EnvironmentBuilderScene as Current } from './EnvironmentBuilderGuardrailAdaptiveScene.js';
 
-const ZOOM_MIN=.012;
 const ZOOM_MAX=4;
 const CAMERA_RESPONSE=18;
 const ASSET_SCALE_MIN=.08;
@@ -30,21 +29,34 @@ export class EnvironmentBuilderScene extends Current {
       this._railStart=null;this._linearStart=null;this._railDrag=null;
       this._assetTapCandidate=null;this._emptyTapCandidate=null;
     };
+    const worldMetrics=cam=>{
+      const b=cam?._bounds;
+      const minX=Number.isFinite(Number(b?.x))?Number(b.x):0;
+      const minY=Number.isFinite(Number(b?.y))?Number(b.y):0;
+      const worldW=Math.max(1,Number(b?.width)||Number(this._editorWorldW)||8000);
+      const worldH=Math.max(1,Number(b?.height)||Number(this._editorWorldH)||5000);
+      return {minX,minY,worldW,worldH};
+    };
+    const minZoomFor=cam=>{
+      if(!cam)return .08;
+      const {worldW,worldH}=worldMetrics(cam);
+      // Never zoom out so far that the visible viewport becomes larger than the
+      // editable world. This prevents the track from escaping outside the canvas.
+      const fit=Math.max(Number(cam.width||1)/worldW,Number(cam.height||1)/worldH);
+      return Math.max(.06,Math.min(1,fit));
+    };
     const boundsFor=(cam,z=cam?.zoom)=>{
       const zoom=Math.max(.0001,Number(z)||1);
-      const b=cam?._bounds;
-      const minX=Number(b?.x)||0,minY=Number(b?.y)||0;
-      const worldW=Number(b?.width)||this._editorWorldW||8000;
-      const worldH=Number(b?.height)||this._editorWorldH||5000;
+      const {minX,minY,worldW,worldH}=worldMetrics(cam);
       return {
         minX,minY,
         maxX:Math.max(minX,minX+worldW-cam.width/zoom),
         maxY:Math.max(minY,minY+worldH-cam.height/zoom)
       };
     };
-    const clampCam=cam=>{
+    const clampCam=(cam,z=cam?.zoom)=>{
       if(!cam)return;
-      const b=boundsFor(cam);
+      const b=boundsFor(cam,z);
       cam.scrollX=Math.max(b.minX,Math.min(b.maxX,cam.scrollX));
       cam.scrollY=Math.max(b.minY,Math.min(b.maxY,cam.scrollY));
     };
@@ -83,14 +95,10 @@ export class EnvironmentBuilderScene extends Current {
         startDistance:d,
         startZoom:Number(cam.zoom)||1,
         targetZoom:Number(cam.zoom)||1,
+        minZoom:minZoomFor(cam),
         mid:{...m},
-        anchor:{x:anchor.x,y:anchor.y},
-        previousUseBounds:cam.useBounds
+        anchor:{x:anchor.x,y:anchor.y}
       };
-
-      // Camera bounds must not fight the fingers during an active map gesture.
-      // They are restored as soon as either finger is released.
-      if('useBounds' in cam)cam.useBounds=false;
     });
 
     this.input.on('pointermove',p=>{
@@ -120,13 +128,13 @@ export class EnvironmentBuilderScene extends Current {
       const m=mid(ps[0],ps[1]);
       let ratio=d/Math.max(1,mp.startDistance);
       if(!Number.isFinite(ratio))ratio=1;
-      mp.targetZoom=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,mp.startZoom*ratio));
+      mp.targetZoom=Math.max(mp.minZoom,Math.min(ZOOM_MAX,mp.startZoom*ratio));
       mp.mid={...m};
     });
 
-    // Zoom is smoothed per frame, but scroll is NOT interpolated separately.
-    // At every frame it is solved from the same world anchor and the live finger
-    // midpoint, so the point between the two fingers cannot drift while zooming.
+    // Zoom remains anchored under the live midpoint between the fingers. After
+    // solving the anchor, clamp immediately to the real track world so the map
+    // never flies outside the editable canvas.
     this.events.on('update',(_time,delta=16.67)=>{
       if(!this._pinching||this._pinchMode!=='map')return;
       const cam=this._editCam,mp=this._mapPinch;
@@ -135,13 +143,14 @@ export class EnvironmentBuilderScene extends Current {
       const dt=Math.max(1,Math.min(50,Number(delta)||16.67))/1000;
       const k=1-Math.exp(-CAMERA_RESPONSE*dt);
       const current=Math.max(.0001,Number(cam.zoom)||1);
-      const next=current+(mp.targetZoom-current)*k;
+      const next=Math.max(mp.minZoom,Math.min(ZOOM_MAX,current+(mp.targetZoom-current)*k));
       cam.setZoom(next);
 
       const localX=mp.mid.x-cam.x;
       const localY=mp.mid.y-cam.y;
       cam.scrollX=mp.anchor.x-localX/next;
       cam.scrollY=mp.anchor.y-localY/next;
+      clampCam(cam,next);
 
       if(this._selectedSurface||this._selRail)this._drawSelection?.();
     });
@@ -157,14 +166,12 @@ export class EnvironmentBuilderScene extends Current {
 
       this._pinching=false;
       if(endedMode==='map'&&cam&&mp){
-        // Finish at the exact requested zoom/anchor before restoring bounds.
-        const z=Math.max(ZOOM_MIN,Math.min(ZOOM_MAX,mp.targetZoom));
+        const z=Math.max(mp.minZoom,Math.min(ZOOM_MAX,mp.targetZoom));
         cam.setZoom(z);
         const localX=mp.mid.x-cam.x,localY=mp.mid.y-cam.y;
         cam.scrollX=mp.anchor.x-localX/z;
         cam.scrollY=mp.anchor.y-localY/z;
-        if('useBounds' in cam)cam.useBounds=mp.previousUseBounds!==false;
-        clampCam(cam);
+        clampCam(cam,z);
       }
 
       this._assetPinch=null;
