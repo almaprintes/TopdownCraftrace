@@ -4,14 +4,8 @@ import { getEquippedForCar, saveGarage } from '../garage/garageStore.js';
 
 const FAMILIES=['engine','brakes','tires','suspension','transmission'];
 const FAMILY_LABEL={engine:'MOTOR',brakes:'FRENOS',tires:'NEUMÁTICOS',suspension:'SUSPENSIÓN',transmission:'TRANSMISIÓN'};
-const REPAIR_KEY='tdr2:repair:unequip-gripline-20260820';
 
 export class UpgradeShopScene extends UnifiedWorkshop {
-  create(){
-    super.create();
-    this._repairLostGriplinePartsOnce();
-  }
-
   _inventoryQty(id){
     return Number(this.state?.inventory?.[id]||0);
   }
@@ -22,22 +16,6 @@ export class UpgradeShopScene extends UnifiedWorkshop {
     // Some legacy equip paths leave the equipped unit at qty 0, while newer ones
     // keep it referenced in inventory. Only restore when no physical copy remains.
     if(this._inventoryQty(id)<1)this.state.inventory[id]=1;
-  }
-
-  _repairLostGriplinePartsOnce(){
-    try{
-      if(localStorage.getItem(REPAIR_KEY)==='1')return;
-      const eq=getEquippedForCar(this.state,'avenir_gripline')||{};
-      const lostTires=!eq.tires&&this._inventoryQty('tires_street')<1;
-      const lostTransmission=!eq.transmission&&this._inventoryQty('transmission_prototype')<1;
-      if(lostTires)this.state.inventory.tires_street=1;
-      if(lostTransmission)this.state.inventory.transmission_prototype=1;
-      if(lostTires||lostTransmission){
-        saveGarage(this.state);
-        this.render();
-      }
-      localStorage.setItem(REPAIR_KEY,'1');
-    }catch(_){}
   }
 
   _familyDock(A,r,compact){
