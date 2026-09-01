@@ -64,6 +64,17 @@
 - **REGLA:** la ayuda solo aparece mientras la tarjeta activa del Pase muestra esa misión; al entrar al Garaje deja de existir con la escena y no se muestra en misiones posteriores.
 - **OBJETIVO:** enseñar la navegación mediante la propia interfaz, evitando instrucciones largas del tipo “pulsa el coche central”.
 
+### Mini tutoriales de primera visita
+
+- **AÑADIDO:** sistema común DOM/CSS de mini tutoriales de una sola aparición para las secciones principales.
+- **SECCIONES CUBIERTAS:** Garaje, Fábrica, Inventario, Tienda, Estadísticas, Circuitos, Pase de Temporada y Configuración.
+- **REGLA DE CONTENIDO:** cada modal explica únicamente la responsabilidad real de su sección. Garaje no habla de equipar piezas; esa función pertenece a Fábrica.
+- **PERSISTENCIA:** cada sección usa su propia marca `tdr2:onboarding:section:<sección>:v1` y deja de mostrarse al pulsar `ENTENDIDO`.
+- **AÑADIDO:** botón `REINICIAR TUTORIAL` en Configuración → Cuenta. Borra únicamente las marcas de estos mini tutoriales; no modifica progreso, monedas, coches, piezas, estadísticas, temporadas ni ajustes.
+- **COMPORTAMIENTO:** después de reiniciar tutorial, cada explicación vuelve a mostrarse una sola vez cuando el jugador vuelva a visitar esa sección.
+- **DOCUMENTADO:** arquitectura y puntos de integración en `docs/continuity/2026-09-01-first-visit-mini-tutorials.md`.
+- **PENDIENTE DE VALIDACIÓN:** revisar en iPhone horizontal que todas las modales caben bien y que Tienda/Inventario aparecen por encima de sus modales Phaser sin bloquear su cierre posterior.
+
 ### Arquitectura / UI
 
 - **REGLA CONFIRMADA:** los textos de estas interfaces deben ser DOM; no reintroducir `Phaser.Text` para solucionar problemas visuales de Fabricación.
@@ -84,11 +95,19 @@
 - `38d6576d1a12e60df3cb702b834ccaa4ba35e9f6` — retira la reparación legacy que reinyectaba Neumático Street T1 y Sequential Prototype T4 tras un reset.
 - `89350fa86bfb708d1399642d228f3ec51668a89a` — lógica contextual de ayuda para entrar al Garaje desde el coche del lobby.
 - `b10e461ea15833949e5d24ad86ed95f35ab07d60` — animación/pulso y llamada visual de la misión `Conoce tu máquina`.
+- `39d3b20bd76bcd1ae85a2ecd480454c73f14c351` — sistema común de mini tutoriales de primera visita.
+- `efb120a581eece388d70b8c81356ba59d27f6085` — bienvenida de Garaje.
+- `c04ccbe5bf0d06c604bd47ff120882c0aad22610` — bienvenida de Fábrica.
+- `47e64f9def93da8eb35e7e63a52c6c99569d67e8` — bienvenida de Estadísticas.
+- `ee19802d73a26854f029f7bc297abdc67db49413` — bienvenida de Pase de Temporada.
+- `938c6d1ed2204b1bb6ae3c4d93fd8720330a8a37` — bienvenida de Circuitos.
+- `16f85a722b972c6e9d52486a745eda1192a7b7a1` — bienvenidas de Tienda e Inventario.
+- `54b82a99ed0f091ce53b983c6a3edc5fc7855e2e` — bienvenida de Configuración y botón Reiniciar tutorial.
 - `78c3c86ad5b947da253204cbf5491132caedc1d1` — disparo de despliegue asociado a la primera publicación de la serie.
 
 ### Validación
 
-Estado actual: **Fabricación considerada funcional y visualmente cerrada**. Estadísticas, limpieza de estado inicial y guía contextual de inducción continúan en validación dentro de DEV 0.0.2.
+Estado actual: **Fabricación considerada funcional y visualmente cerrada**. Estadísticas, limpieza de estado inicial, guía contextual de inducción y mini tutoriales de primera visita continúan en validación dentro de DEV 0.0.2.
 
 ---
 
