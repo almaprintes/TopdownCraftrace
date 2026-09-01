@@ -44,6 +44,17 @@
 - **CAMBIO:** el arte del coche de la tarjeta resumen ahora se centra dentro de un marco propio en la columna izquierda, independiente de la altura y distribución del bloque de información derecho.
 - **PENDIENTE DE VALIDACIÓN:** comprobar visualmente en iPhone horizontal que el coche permanece centrado con tarjetas de distinta altura y con diferentes modelos.
 
+### Cuenta / inicio limpio
+
+- **DETECTADO:** una supuesta partida nueva podía conservar piezas de sesiones anteriores porque el estado `tdr2:garageFusion:v1` y otras claves persistentes no tenían una ruta de borrado canónica desde Configuración.
+- **CONFIRMADO:** el estado base de `garageStore.js` inicia con inventario vacío; un motor T1 o una suspensión T4 al empezar no forman parte del inventario inicial previsto.
+- **AÑADIDO:** nueva pestaña `CUENTA` en Configuración.
+- **AÑADIDO:** `RESETEAR PROGRESO` elimina progreso de juego (garaje, piezas, inventario, monedas, estadísticas, récords, maestría, temporadas, desbloqueos y telemetría) pero conserva `tdr2:settings` y herramientas DEV/admin necesarias durante pruebas.
+- **AÑADIDO:** `ELIMINAR CUENTA` elimina todos los datos locales del perfil en el dispositivo, incluidos ajustes, `sessionStorage` y la base IndexedDB `tdr2_track_previews`.
+- **SEGURIDAD UX:** ambas acciones muestran un modal DOM de confirmación explícito indicando que la operación no puede deshacerse y que los datos/progreso no pueden recuperarse.
+- **NOTA DE ARQUITECTURA:** actualmente la cuenta es local. Si se incorpora backend/sincronización de cuenta, `ELIMINAR CUENTA` deberá ampliarse para solicitar también el borrado remoto antes de considerarse eliminación completa de cuenta.
+- **PENDIENTE DE VALIDACIÓN:** probar en iPhone que `RESETEAR PROGRESO` deja inventario vacío y devuelve la inducción/desbloqueos a estado inicial conservando idioma, controles y gráficos.
+
 ### Arquitectura / UI
 
 - **REGLA CONFIRMADA:** los textos de estas interfaces deben ser DOM; no reintroducir `Phaser.Text` para solucionar problemas visuales de Fabricación.
@@ -60,11 +71,12 @@
 - `efa976d534dc0bca954fdce680c16be4646ddb66` — pulido visual / identificación DEV 0.0.2.
 - `dbe5f1b79100cf7f2c80f2611b80abdc458c502a` — versión técnica 0.0.2.
 - `416f8a7a415b62265ef2348170ee456518313601` — centrado robusto del coche en la tarjeta principal de Estadísticas.
+- `f0fe92b2e4410e9611dea6daa5140863ebda906e` — pestaña Cuenta, reset de progreso y eliminación local de cuenta.
 - `78c3c86ad5b947da253204cbf5491132caedc1d1` — disparo de despliegue asociado a la primera publicación de la serie.
 
 ### Validación
 
-Estado actual: **Fabricación considerada funcional y visualmente cerrada**. Estadísticas continúa en afinación visual dentro de DEV 0.0.2.
+Estado actual: **Fabricación considerada funcional y visualmente cerrada**. Estadísticas y limpieza de estado inicial continúan en validación dentro de DEV 0.0.2.
 
 ---
 
