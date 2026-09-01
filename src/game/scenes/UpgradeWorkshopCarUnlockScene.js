@@ -3,6 +3,7 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
 import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeFlexibleDom.js';
 import { renderWorkshopMobileDom, closeWorkshopMobileDom } from '../ui/WorkshopMobileDom.js';
+import { openWorkshopQuickInstallDom, closeWorkshopMobileDialog, showWorkshopMobileToast } from '../ui/WorkshopMobileDialogsDom.js';
 
 const LEGACY_CAR_IDS=new Set(['stock','touring','power']);
 const ALL_CAR_IDS=Object.keys(CAR_SPECS).filter(id=>!LEGACY_CAR_IDS.has(id)&&CAR_SPECS[id]);
@@ -34,6 +35,7 @@ export class UpgradeShopScene extends CurrentWorkshop {
       this.render?.();
     }
     this.events.once('shutdown',()=>{
+      closeWorkshopMobileDialog();
       closeWorkshopMobileDom(this);
       closeMaterialExchangeDom(this);
     });
@@ -42,14 +44,22 @@ export class UpgradeShopScene extends CurrentWorkshop {
   render(...args){
     this.__nativeWorkshopDom=this._nativeWorkshopDomEnabled();
     if(this.__nativeWorkshopDom){
-      // Mobile workshop is one DOM/CSS surface. Do not create Phaser.Text,
-      // Phaser graphics or Phaser DOMElements for the visible workshop UI.
-      // This removes the two-coordinate-system drift seen on iPhone.
       if(this.ui){try{this.ui.destroy(true);}catch{}this.ui=null;}
       return renderWorkshopMobileDom(this);
     }
+    closeWorkshopMobileDialog();
     closeWorkshopMobileDom(this);
     return super.render(...args);
+  }
+
+  _openQuickFamilyInstall(family){
+    if(this._nativeWorkshopDomEnabled())return openWorkshopQuickInstallDom(this,family);
+    return super._openQuickFamilyInstall(family);
+  }
+
+  _toast(message,...args){
+    if(this._nativeWorkshopDomEnabled())return showWorkshopMobileToast(message);
+    return super._toast?.(message,...args);
   }
 
   _openRecyclerForMaterial(materialId){
