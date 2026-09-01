@@ -2,205 +2,43 @@
   "version": 5,
   "trackId": "karting-tenerife",
   "environment": [
-    {
-      "asset": "tree_broad_02",
-      "path": "environment/vegetation/tree_broad_02.webp",
-      "x": 1181.48,
-      "y": 444.09,
-      "rotation": 0,
-      "displayWidth": 85.03,
-      "flipX": false,
-      "flipY": false,
-      "z": 12
-    },
-    {
-      "asset": "tree_broad_02",
-      "path": "environment/vegetation/tree_broad_02.webp",
-      "x": 1122.2,
-      "y": 473.14,
-      "rotation": -0.40143,
-      "displayWidth": 85.03,
-      "flipX": false,
-      "flipY": false,
-      "z": 12
-    },
-    {
-      "asset": "tree_broad_02",
-      "path": "environment/vegetation/tree_broad_02.webp",
-      "x": 1105.59,
-      "y": 527.53,
-      "rotation": -0.40143,
-      "displayWidth": 85.03,
-      "flipX": false,
-      "flipY": false,
-      "z": 12
-    },
-    {
-      "asset": "shrub_round_01",
-      "path": "environment/shrub_round_01.webp",
-      "x": 1173.11,
-      "y": 483.86,
-      "rotation": 0,
-      "displayWidth": 41.45,
-      "flipX": false,
-      "flipY": false,
-      "z": 12
-    },
-    {
-      "asset": "shrub_flowers_01",
-      "path": "environment/shrub_flowers_01.webp",
-      "x": 1145.39,
-      "y": 506.95,
-      "rotation": 0,
-      "displayWidth": 43.7,
-      "flipX": false,
-      "flipY": false,
-      "z": 12
-    },
-    {
-      "asset": "grandstand_full_01",
-      "path": "environment/structures/grandstand_full_01.webp",
-      "x": 2188.96,
-      "y": 1233.44,
-      "rotation": -1.48353,
-      "displayWidth": 207.26,
-      "flipX": true,
-      "flipY": false,
-      "z": 12
-    },
-    {
-      "asset": "pit_garage_small_01",
-      "path": "environment/structures/pit_garage_small_01.webp",
-      "x": 2696.92,
-      "y": 1285.36,
-      "rotation": 1.66696,
-      "displayWidth": 206.61,
-      "flipX": false,
-      "flipY": false,
-      "z": 12
-    }
+    {"asset":"direction_sign_01","path":"environment/props/direction_sign_01.webp","x":2496.68,"y":1215.28,"rotation":-1.55162,"displayWidth":137.17,"flipX":false,"flipY":true,"z":12},
+    {"asset":"tree_broad_01","path":"environment/tree_deciduous_01.webp","x":2077.09,"y":647.92,"rotation":0.07669,"displayWidth":64.22,"flipX":false,"flipY":false,"z":13},
+    {"asset":"shrub_flowers_01","path":"environment/shrub_flowers_01.webp","x":2092.67,"y":685.92,"rotation":-0.03572,"displayWidth":56.44,"flipX":false,"flipY":false,"z":14},
+    {"asset":"tree_broad_01","path":"environment/tree_deciduous_01.webp","x":2101.47,"y":721.92,"rotation":0.04798,"displayWidth":44.7,"flipX":false,"flipY":false,"z":15},
+    {"asset":"shrub_flowers_01","path":"environment/shrub_flowers_01.webp","x":2104.43,"y":750.45,"rotation":-0.02595,"displayWidth":30.35,"flipX":false,"flipY":false,"z":16},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1181.48,"y":444.09,"rotation":0,"displayWidth":85.03,"flipX":false,"flipY":false,"z":17},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1122.2,"y":473.14,"rotation":-0.40143,"displayWidth":85.03,"flipX":false,"flipY":false,"z":18},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1105.59,"y":527.53,"rotation":-0.40143,"displayWidth":85.03,"flipX":false,"flipY":false,"z":19},
+    {"asset":"shrub_round_01","path":"environment/shrub_round_01.webp","x":1173.11,"y":483.86,"rotation":0,"displayWidth":41.45,"flipX":false,"flipY":false,"z":20},
+    {"asset":"shrub_flowers_01","path":"environment/shrub_flowers_01.webp","x":1145.39,"y":506.95,"rotation":0,"displayWidth":43.7,"flipX":false,"flipY":false,"z":21},
+    {"asset":"grandstand_full_01","path":"environment/structures/grandstand_full_01.webp","x":2207.51,"y":1160.37,"rotation":-1.48353,"displayWidth":207.26,"flipX":true,"flipY":false,"z":22},
+    {"asset":"pit_garage_small_01","path":"environment/structures/pit_garage_small_01.webp","x":2707.56,"y":1247.59,"rotation":1.64957,"displayWidth":246.13,"flipX":false,"flipY":false,"z":23},
+    {"asset":"pit_garage_small_01","path":"environment/structures/pit_garage_small_01.webp","x":2716.27,"y":1051.58,"rotation":1.57266,"displayWidth":239.01,"flipX":false,"flipY":false,"z":24},
+    {"asset":"grandstand_sparse_01","path":"environment/structures/grandstand_sparse_01.webp","x":2189.39,"y":1344.06,"rotation":-1.48794,"displayWidth":203.01,"flipX":false,"flipY":false,"z":25},
+    {"asset":"marshal_post_01","path":"environment/structures/marshal_post_01.webp","x":2515.89,"y":1101.5,"rotation":-1.57804,"displayWidth":103.09,"flipX":false,"flipY":false,"z":26},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1794.41,"y":419.06,"rotation":0.35283,"displayWidth":76.18,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1751.07,"y":422.3,"rotation":0.39907,"displayWidth":99.87,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1705.07,"y":427.11,"rotation":-0.28476,"displayWidth":102.24,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1649.87,"y":425.19,"rotation":-0.39371,"displayWidth":104.04,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1602.12,"y":410.62,"rotation":1.09772,"displayWidth":96,"flipX":false,"flipY":true,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1550.68,"y":422.28,"rotation":1.09772,"displayWidth":96,"flipX":true,"flipY":true,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1242.61,"y":437.49,"rotation":0.34133,"displayWidth":97.51,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1300.48,"y":427.63,"rotation":-0.29062,"displayWidth":96.29,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1427.83,"y":418.2,"rotation":-0.29062,"displayWidth":96.29,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1485.26,"y":418.13,"rotation":0.55989,"displayWidth":98.69,"flipX":false,"flipY":false,"z":12},
+    {"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1360.84,"y":421.12,"rotation":0.55989,"displayWidth":98.69,"flipX":false,"flipY":false,"z":12}
   ],
   "surfaces": [
-    {
-      "x1": 2383.507962953293,
-      "y1": 1678.5058444472725,
-      "x2": 2607.748224892989,
-      "y2": 1340.6635353239133,
-      "width": 60,
-      "visual": "asphalt",
-      "physics": "dirt",
-      "trackLayer": "under",
-      "cpx": 2566.291816230434,
-      "cpy": 1548.6593912995763
-    },
-    {
-      "x1": 2606.4072925796804,
-      "y1": 1347.792364213098,
-      "x2": 2622.7705526239447,
-      "y2": 785.3385604009,
-      "width": 60,
-      "visual": "asphalt",
-      "physics": "dirt",
-      "trackLayer": "under",
-      "cpx": 2641.5893534761053,
-      "cpy": 1062.4941577484035
-    },
-    {
-      "x1": 2622.93583857485,
-      "y1": 788.6283449030102,
-      "x2": 2459.6832606551993,
-      "y2": 459.9385438604047,
-      "width": 60,
-      "visual": "asphalt",
-      "physics": "dirt",
-      "trackLayer": "under",
-      "cpx": 2610.420139104291,
-      "cpy": 587.2486042092798
-    }
+    {"x1":2383.507962953293,"y1":1678.5058444472725,"x2":2607.748224892989,"y2":1340.6635353239133,"width":60,"visual":"asphalt","physics":"dirt","trackLayer":"under","cpx":2566.291816230434,"cpy":1548.6593912995763},
+    {"x1":2606.4072925796804,"y1":1347.792364213098,"x2":2622.7705526239447,"y2":785.3385604009,"width":60,"visual":"asphalt","physics":"dirt","trackLayer":"under","cpx":2641.5893534761053,"cpy":1062.4941577484035},
+    {"x1":2622.93583857485,"y1":788.6283449030102,"x2":2459.6832606551993,"y2":459.9385438604047,"width":60,"visual":"asphalt","physics":"dirt","trackLayer":"under","cpx":2610.420139104291,"cpy":587.2486042092798}
   ],
-  "baseTrack": {
-    "id": "karting-tenerife",
-    "name": "KARTING TENERIFE",
-    "source": "src/game/tracks/library/karting-tenerife/track.json",
-    "locked": true
-  },
-  "repositoryPath": "src/game/tracks/library/karting-tenerife/karting-tenerife.environment.json",
-  "linearBarriers": [
-    {
-      "type": "guardrail",
-      "asset": "guardrail_straight_01",
-      "path": "environment/barriers/guardrail_straight_01.webp",
-      "spacing": 105,
-      "x1": 1924.3318259380064,
-      "y1": 780.9904948033484,
-      "x2": 2197.829198523487,
-      "y2": 423.5843097331011,
-      "points": [
-        {
-          "x": 1924.3318259380064,
-          "y": 780.9904948033484
-        },
-        {
-          "x": 2004.1585880856758,
-          "y": 1057.209234280227
-        },
-        {
-          "x": 2256.7921478371063,
-          "y": 1043.1488386746719
-        },
-        {
-          "x": 2418.2599167267103,
-          "y": 920.2337674132035
-        },
-        {
-          "x": 2197.829198523487,
-          "y": 423.5843097331011
-        }
-      ]
-    },
-    {
-      "type": "plastic",
-      "asset": "plastic_barrier_redwhite_01",
-      "path": "environment/barriers/plastic_barrier_redwhite_01.webp",
-      "spacing": 92,
-      "label": "BARRERA PLÁSTICA",
-      "x1": 2472.8059488112044,
-      "y1": 1505.8351463065358,
-      "x2": 2510.8728525665565,
-      "y2": 611.0313223354826,
-      "points": [
-        {
-          "x": 2472.8059488112044,
-          "y": 1505.8351463065358
-        },
-        {
-          "x": 2535.9286707350484,
-          "y": 1352.846119338467
-        },
-        {
-          "x": 2571.062397579472,
-          "y": 1190.8114686679157
-        },
-        {
-          "x": 2589.524461373356,
-          "y": 864.9827033133694
-        },
-        {
-          "x": 2510.8728525665565,
-          "y": 611.0313223354826
-        }
-      ]
-    },
-    {
-      "type": "concrete",
-      "asset": "concrete_barrier_straight_01",
-      "path": "environment/barriers/concrete_barrier_straight_01.webp",
-      "spacing": 108,
-      "label": "HORMIGÓN",
-      "x1": 2492.659679715854,
-      "y1": 682.7895377109004,
-      "x2": 2443.1762198875927,
-      "y2": 1510.4076377625277
-    }
+  "baseTrack":{"id":"karting-tenerife","name":"KARTING TENERIFE","source":"src/game/tracks/library/karting-tenerife/track.json","locked":true},
+  "repositoryPath":"src/game/tracks/library/karting-tenerife/karting-tenerife.environment.json",
+  "linearBarriers":[
+    {"type":"guardrail","asset":"guardrail_straight_01","path":"environment/barriers/guardrail_straight_01.webp","spacing":105,"x1":1924.3318259380064,"y1":780.9904948033484,"x2":2197.829198523487,"y2":423.5843097331011,"points":[{"x":1924.3318259380064,"y":780.9904948033484},{"x":2004.1585880856758,"y":1057.209234280227},{"x":2256.7921478371063,"y":1043.1488386746719},{"x":2418.2599167267103,"y":920.2337674132035},{"x":2197.829198523487,"y":423.5843097331011}]},
+    {"type":"plastic","asset":"plastic_barrier_redwhite_01","path":"environment/barriers/plastic_barrier_redwhite_01.webp","spacing":92,"label":"BARRERA PLÁSTICA","x1":2472.8059488112044,"y1":1505.8351463065358,"x2":2510.8728525665565,"y2":611.0313223354826,"points":[{"x":2472.8059488112044,"y":1505.8351463065358},{"x":2535.9286707350484,"y":1352.846119338467},{"x":2571.062397579472,"y":1190.8114686679157},{"x":2589.524461373356,"y":864.9827033133694},{"x":2510.8728525665565,"y":611.0313223354826}]},
+    {"type":"concrete","asset":"concrete_barrier_straight_01","path":"environment/barriers/concrete_barrier_straight_01.webp","spacing":108,"label":"HORMIGÓN","x1":2492.659679715854,"y1":682.7895377109004,"x2":2443.1762198875927,"y2":1510.4076377625277}
   ]
 }
