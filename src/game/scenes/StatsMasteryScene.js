@@ -1,12 +1,17 @@
 import { StatsScene as CurrentStatsScene } from './StatsScene.js';
 import { getLanguage } from '../i18n/index.js';
 import { masteryInfoForMeters, masteryMaterialLabel, masteryWheelDataUri } from '../stats/carMastery.js';
+import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
 function fmtKm(n,lang){return Math.max(0,Number(n)||0).toLocaleString(lang==='en'?'en-US':'es-ES',{minimumFractionDigits:1,maximumFractionDigits:1});}
 function lobbyCarSrc(carId){return `${BASE}assets/cars/lobby/${encodeURIComponent(String(carId||''))}.webp`;}
 
 export class StatsScene extends CurrentStatsScene{
+  create(...args){
+    super.create(...args);
+    showFirstVisitTutorial('stats',{delay:260});
+  }
   _installMasteryStyles(){
     if(this._root?.querySelector('[data-mastery-stats-style]'))return;
     const style=document.createElement('style');style.dataset.masteryStatsStyle='1';style.textContent=`
