@@ -1,4 +1,5 @@
 import { SeasonScene as BaseSeasonScene } from './SeasonScene.js';
+import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 
 // UX layer over the season pass DOM. Keep the detail dock inside the visible
 // viewport and size claimable stages from the real rendered content height.
@@ -25,9 +26,6 @@ export class SeasonScene extends BaseSeasonScene {
     dock.style.transform='translateX(-50%)';
     dock.style.bottom='auto';
 
-    // Do not trust the declared CSS height. The claim cell can need more space
-    // than that. Measure every cell's actual scrollHeight and make the dock at
-    // least that tall before positioning it inside the viewport.
     const cells=[...dock.querySelectorAll('.detail-cell')];
     const contentHeight=Math.max(
       dock.scrollHeight||0,
@@ -42,7 +40,6 @@ export class SeasonScene extends BaseSeasonScene {
     const top=Math.max(vv.top+8,vv.bottom-margin-neededHeight);
     dock.style.top=`${Math.round(top)}px`;
 
-    // One final measured clamp after layout settles.
     const rect=dock.getBoundingClientRect();
     const maxBottom=vv.bottom-margin;
     if(rect.bottom>maxBottom){
@@ -59,6 +56,7 @@ export class SeasonScene extends BaseSeasonScene {
 
   _mount(){
     super._mount();
+    showFirstVisitTutorial('season',{delay:260});
     const style=document.getElementById('tdr-season-dom-style');
     if(!style)return;
     style.textContent+=`
