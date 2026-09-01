@@ -1,4 +1,5 @@
 import { EnvironmentBuilderScene as Current } from './EnvironmentBuilderExportPathFixScene.js';
+import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
 
 const TAP_PX=9;
 
@@ -8,6 +9,35 @@ export class EnvironmentBuilderScene extends Current{
     this._emptyTapCandidate=null;
     super.create();
     this._rewireExistingAssets();
+  }
+
+  _load(){
+    try{
+      const raw=localStorage.getItem(this._storageKey?.()||'');
+      if(raw){
+        this._applyProject(JSON.parse(raw));
+        this._flash?.('CARGADO · BORRADOR LOCAL');
+        return true;
+      }
+    }catch(_){
+      this._flash?.('ERROR CARGANDO BORRADOR');
+      return false;
+    }
+
+    try{
+      const repoProject=createTrackEnvironment(this._trackId);
+      if(repoProject){
+        this._applyProject(repoProject);
+        this._flash?.('CARGADO · VERSIÓN DEL REPO');
+        return true;
+      }
+    }catch(_){
+      this._flash?.('ERROR CARGANDO REPO');
+      return false;
+    }
+
+    this._flash?.('SIN PROYECTO');
+    return false;
   }
 
   _wireAsset(img){
