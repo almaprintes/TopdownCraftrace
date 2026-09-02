@@ -6,14 +6,29 @@
     <meta name="theme-color" content="#0b1020" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="TDR2" />
+    <meta name="apple-mobile-web-app-title" content="TDR2 DEV" />
 
-    <link rel="manifest" href="./manifest.webmanifest?v=20260830-stability1" />
+    <link rel="manifest" href="./manifest.webmanifest?v=20260902-dev002" />
     <link rel="icon" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 
-    <title>Top-Down Race</title>
+    <title>Top-Down Race DEV 0.0.2</title>
     <style>
+      #tdrDevBuildBadge {
+        position: fixed;
+        top: max(6px, env(safe-area-inset-top));
+        right: max(8px, env(safe-area-inset-right));
+        z-index: 50000;
+        pointer-events: none;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(0,0,0,.62);
+        border: 1px solid rgba(88,232,255,.55);
+        color: #8fefff;
+        font: 800 10px/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        letter-spacing: .08em;
+        box-shadow: 0 2px 12px rgba(0,0,0,.3);
+      }
       #tdrStartup {
         position: fixed;
         inset: 0;
@@ -51,11 +66,17 @@
     <script>
       window.__tdrBootStartedAt = performance.now();
       window.__tdrBootPhase = 'html';
+      window.__tdrBuildChannel = 'DEV';
+      window.__tdrBuildVersion = '0.0.2';
+      window.__tdrRecoveryBase = '38057072';
 
-      // Single service-worker registration point. The worker never takes over a
-      // running session; the next launch receives the newly deployed shell.
+      // DEV has its own worker URL and /dev/ scope. updateViaCache:none prevents
+      // Safari from reusing an old SW script response during recovery testing.
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=dev002-20260902-1', {
+          scope: './',
+          updateViaCache: 'none'
+        }).then((registration) => registration.update()).catch(() => {});
       }
 
       (() => {
@@ -97,6 +118,7 @@
     </script>
   </head>
   <body>
+    <div id="tdrDevBuildBadge">DEV 0.0.2 · 38057072</div>
     <div id="tdrStartup" aria-live="polite" data-indeterminate="1">
       <div class="tdr-startup-shell">
         <img class="tdr-startup-logo" src="./assets/logo.webp" alt="Top Down RACE" />
@@ -120,16 +142,16 @@
             <div class="rot-title">GIRA TU DISPOSITIVO</div>
             <div class="rot-sub">Top Down RACE se juega en horizontal.</div>
             <div class="rot-beta">
-              <div class="rot-beta-title">⚠ VERSIÓN BETA</div>
-              <div class="rot-beta-text">TODO EL PROGRESO DE LA BETA SE REINICIARÁ CON EL LANZAMIENTO DEL JUEGO.</div>
+              <div class="rot-beta-title">⚠ DEV 0.0.2</div>
+              <div class="rot-beta-text">BUILD DE DESARROLLO · BASE RECUPERADA 38057072</div>
             </div>
           </div>
           <div class="rot-lang rot-en">
             <div class="rot-title">ROTATE YOUR DEVICE</div>
             <div class="rot-sub">Top Down RACE is played in landscape.</div>
             <div class="rot-beta">
-              <div class="rot-beta-title">⚠ BETA VERSION</div>
-              <div class="rot-beta-text">ALL BETA PROGRESS WILL BE RESET WHEN THE GAME LAUNCHES.</div>
+              <div class="rot-beta-title">⚠ DEV 0.0.2</div>
+              <div class="rot-beta-text">DEVELOPMENT BUILD · RECOVERED BASE 38057072</div>
             </div>
           </div>
         </div>
