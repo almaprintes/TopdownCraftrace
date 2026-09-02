@@ -30,6 +30,12 @@ jobs:
           ref: develop
           path: develop-src
 
+      - name: Checkout pre-Production Studio recovery
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/pre-production-studio-2026-09-01
+          path: recovery-src
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -63,11 +69,31 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
+      - name: Install recovery dependencies
+        working-directory: recovery-src
+        run: npm ci --no-audit --no-fund
+
+      - name: Build pre-Production Studio recovery
+        working-directory: recovery-src
+        run: npx vite build --base=/TopdownCraftrace/recovery-pre-production/
+
+      - name: Copy recovery tutorial assets
+        working-directory: recovery-src
+        run: |
+          mkdir -p dist/assets/tutorials/dropping
+          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
+
       - name: Add develop build under /dev
         run: |
           rm -rf stable/dist/dev
           mkdir -p stable/dist/dev
           cp -R develop-src/dist/. stable/dist/dev/
+
+      - name: Add recovery build under /recovery-pre-production
+        run: |
+          rm -rf stable/dist/recovery-pre-production
+          mkdir -p stable/dist/recovery-pre-production
+          cp -R recovery-src/dist/. stable/dist/recovery-pre-production/
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
