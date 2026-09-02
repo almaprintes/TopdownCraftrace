@@ -18,10 +18,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout stable main
+      - name: Checkout BETA 0.0.3
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: beta-0.0.3
           path: stable
 
       - name: Checkout DEV 0.0.3
@@ -41,15 +41,15 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install stable dependencies
+      - name: Install BETA 0.0.3 dependencies
         working-directory: stable
         run: npm ci --no-audit --no-fund
 
-      - name: Build stable main
+      - name: Build BETA 0.0.3
         working-directory: stable
         run: npx vite build --base=/TopdownCraftrace/
 
-      - name: Copy stable tutorial assets
+      - name: Copy BETA 0.0.3 tutorial assets
         working-directory: stable
         run: |
           mkdir -p dist/assets/tutorials/dropping
