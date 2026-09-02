@@ -11,8 +11,37 @@ const BASE=import.meta.env.BASE_URL||'/';
 // Physics/vehicle behaviour stays below this boundary. Pause/session/reward UI
 // belongs here or in composable DOM modules, never in one-feature FixScene wrappers.
 export class RaceScene extends CurrentRaceScene {
+  init(data){
+    // A Track Studio draft is authoring state, never player-race state. Only an
+    // explicit Studio test may allow the base RaceScene to consume it.
+    this._tdrTrackStudioTest=data?.trackStudioTest===true;
+    return super.init?.(data);
+  }
+
   create(data){
-    const result=super.create(data);
+    // Legacy RaceScene checks `trackstudio_project` before resolving the selected
+    // track. That made the last Studio draft override Circuito Atlántico (and any
+    // other player selection). Hide the draft only while the normal race is being
+    // constructed, then restore it so authoring work is never lost.
+    let savedStudioProject=null;
+    let hadStudioProject=false;
+    if(!this._tdrTrackStudioTest){
+      try{
+        savedStudioProject=localStorage.getItem('trackstudio_project');
+        hadStudioProject=savedStudioProject!==null;
+        if(hadStudioProject)localStorage.removeItem('trackstudio_project');
+      }catch{}
+    }
+
+    let result;
+    try{
+      result=super.create(data);
+    }finally{
+      if(!this._tdrTrackStudioTest&&hadStudioProject){
+        try{localStorage.setItem('trackstudio_project',savedStudioProject);}catch{}
+      }
+    }
+
     this._tdrPauseMenuOpen=false;
     this._experiencePauseUi=null;
     this._experienceHiddenUi=null;
