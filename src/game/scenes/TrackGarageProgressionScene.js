@@ -2,6 +2,7 @@ import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGarageHideSp
 import { isTrackUnlocked, devFullTrackAccessEnabled } from '../tracks/trackUnlocks.js';
 import { getLanguage } from '../i18n/index.js';
 import { getTrackPublicName } from '../tracks/trackPublicNames.js';
+import { pxToMeters } from '../cars/speedUnits.js';
 
 const FONT='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
 const ROOT_ID='tdr-track-selector-dom';
@@ -11,7 +12,7 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function pts(track){return (track?.centerline||[]).map(p=>Array.isArray(p)?{x:+p[0],y:+p[1]}:{x:+p?.x,y:+p?.y}).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));}
 function surface(track){return /dirt|tierra|gravel|grava/i.test(String(track?.surface||track?.meta?.trackSurface||track?.meta?.surface||''))?'TIERRA':'ASFALTO';}
 function lengthWorld(track){const direct=Number(track?.length??track?.trackLength??track?.meta?.length??track?.meta?.trackLength);if(Number.isFinite(direct)&&direct>0)return direct;const p=pts(track);let d=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];d+=Math.hypot(b.x-a.x,b.y-a.y);}return d;}
-function lengthM(track){return Math.max(0,Math.round(lengthWorld(track)*.18));}
+function lengthM(track){return Math.max(0,Math.round(pxToMeters(lengthWorld(track))));}
 function sectors(track){const n=Number(track?.sectors);if(Number.isFinite(n)&&n>0)return Math.round(n);return Array.isArray(track?.checkpointFractions)?Math.max(1,track.checkpointFractions.length+1):3;}
 function publicName(track){return getTrackPublicName(track,getLanguage()).toUpperCase();}
 
