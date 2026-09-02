@@ -1,3 +1,5 @@
+import { installRaceEngineAudio } from '../audio/RaceEngineAudio.js';
+
 // Runtime-only visual beauty pass for Karting Tenerife.
 // IMPORTANT: this module consumes track.geom.left/right ONLY as the exact asphalt mask.
 // It never redraws circuit borders and never changes geometry, surfaces, physics,
@@ -118,6 +120,10 @@ function installPass(scene, data) {
 }
 
 export function installExactRuntimeBeautyPass(RaceSceneClass) {
+  // Install the race-audio patch alongside the already-proven runtime pass.
+  // Audio is car-gated internally (currently VELOCE Flash only) and never alters physics.
+  installRaceEngineAudio(RaceSceneClass);
+
   const proto = RaceSceneClass?.prototype;
   if (!proto || proto.__tdrExactRuntimeBeautyInstalled) return;
   const originalCreate = proto.create;
