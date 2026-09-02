@@ -24,10 +24,10 @@ jobs:
           ref: main
           path: stable
 
-      - name: Checkout develop
+      - name: Checkout DEV 0.0.3
         uses: actions/checkout@v4
         with:
-          ref: develop
+          ref: dev-0.0.3
           path: develop-src
 
       - name: Checkout pre-Production Studio recovery
@@ -55,15 +55,15 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Install develop dependencies
+      - name: Install DEV 0.0.3 dependencies
         working-directory: develop-src
         run: npm ci --no-audit --no-fund
 
-      - name: Build develop
+      - name: Build DEV 0.0.3
         working-directory: develop-src
         run: npx vite build --base=/TopdownCraftrace/dev/
 
-      - name: Copy develop tutorial assets
+      - name: Copy DEV 0.0.3 tutorial assets
         working-directory: develop-src
         run: |
           mkdir -p dist/assets/tutorials/dropping
@@ -83,7 +83,7 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Add develop build under /dev
+      - name: Add DEV 0.0.3 build under /dev
         run: |
           rm -rf stable/dist/dev
           mkdir -p stable/dist/dev
