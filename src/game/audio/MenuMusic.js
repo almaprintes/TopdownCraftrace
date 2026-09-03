@@ -29,27 +29,25 @@ class MenuMusic {
     this.audio.src=assetUrl('assets/audio/turbo-carousel.mp3');
     this.audio.loop=true;
     this.audio.preload='auto';
-    this.audio.volume=0;
+    this.audio.volume=1;
+    this.audio.muted=false;
     this.audio.playsInline=true;
     this.audio.setAttribute('playsinline','');
     this.audio.setAttribute('webkit-playsinline','');
-    this.targetVolume=0;
+
+    this.ctx=null;
+    this.source=null;
+    this.gain=null;
     this.unlocked=false;
+    this.targetVolume=0;
     this.fadeTimer=null;
-    this.pauseTimer=null;
 
     this.unlock=()=>{
-      if(this.unlocked && !this.audio.paused){ this._sync(true); return; }
       this.unlocked=true;
-      clearTimeout(this.pauseTimer);this.pauseTimer=null;
-      const p=prefs();
-      if(!this._isMenu()||p.mute||p.master<=0||p.music<=0){ this._sync(true); return; }
-      try{
-        this.audio.volume=Math.max(.01,Math.min(.03,p.master*p.music*.03));
-        const playPromise=this.audio.play();
-        if(playPromise?.then) playPromise.then(()=>this._sync(true)).catch(()=>{});
-        else this._sync(true);
-      }catch{}
+      this._ensureGraph();
+      try{if(this.ctx?.state==='suspended')this.ctx.resume();}catch{}
+      if(this._isMenu())this._play();
+      this._sync(true);
     };
 
     this.onAudioSettings=(ev)=>{
@@ -59,11 +57,9 @@ class MenuMusic {
       const music=clamp(Number.isFinite(Number(d.music))?Number(d.music):stored.music,0,1);
       const mute=typeof d.mute==='boolean'?d.mute:stored.mute;
       const desired=this._isMenu()&&!mute?master*music*.32:0;
-      clearInterval(this.fadeTimer);this.fadeTimer=null;
-      this.targetVolume=desired;
-      this.audio.volume=desired;
-      if(desired>0)this._play();
-      else {try{this.audio.pause();}catch{}}
+      this._ensureGraph();
+      this._setGain(desired,90);
+      if(this._isMenu())this._play();
     };
 
     const opts={capture:true,passive:true};
@@ -78,6 +74,22 @@ class MenuMusic {
     this._sync(false);
   }
 
+  _ensureGraph(){
+    if(this.gain||typeof window==='undefined')return;
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    try{
+      this.ctx=new AC();
+      this.source=this.ctx.createMediaElementSource(this.audio);
+      this.gain=this.ctx.createGain();
+      this.gain.gain.value=0;
+      this.source.connect(this.gain).connect(this.ctx.destination);
+    }catch(e){
+      console.warn('[TDR music] WebAudio graph failed',e);
+      this.ctx=null;this.source=null;this.gain=null;
+    }
+  }
+
   _isMenu(){
     try{
       const active=this.game.scene.getScenes(true)||[];
@@ -87,45 +99,49 @@ class MenuMusic {
   }
 
   _play(){
-    if(!this.unlocked||!this.audio.paused)return;
-    clearTimeout(this.pauseTimer);this.pauseTimer=null;
+    if(!this.unlocked||!this._isMenu())return;
+    this._ensureGraph();
+    try{if(this.ctx?.state==='suspended')this.ctx.resume();}catch{}
+    if(!this.audio.paused)return;
     try{const p=this.audio.play();if(p?.catch)p.catch(()=>{});}catch{}
   }
 
-  _fadeTo(target,duration=220,onDone=null){
+  _setGain(target,duration=120){
     target=clamp(target,0,1);
     this.targetVolume=target;
-    clearInterval(this.fadeTimer);
-    const start=Number(this.audio.volume||0);
-    const started=performance.now();
-    const tick=()=>{
-      const k=clamp((performance.now()-started)/Math.max(1,duration),0,1);
-      const eased=1-Math.pow(1-k,3);
-      this.audio.volume=clamp(start+(target-start)*eased,0,1);
-      if(k>=1){clearInterval(this.fadeTimer);this.fadeTimer=null;onDone?.();}
-    };
-    tick();this.fadeTimer=setInterval(tick,30);
+    this._ensureGraph();
+    if(this.gain&&this.ctx){
+      const now=this.ctx.currentTime;
+      try{
+        const param=this.gain.gain;
+        param.cancelScheduledValues(now);
+        param.setValueAtTime(param.value,now);
+        param.linearRampToValueAtTime(target,now+Math.max(.01,duration/1000));
+      }catch{try{this.gain.gain.value=target;}catch{}}
+      return;
+    }
+    // Fallback for browsers where MediaElementSource cannot be created.
+    this.audio.volume=target;
   }
 
   _sync(force=false){
     const p=prefs();
     const menu=this._isMenu();
     const desired=menu&&!p.mute?p.master*p.music*.32:0;
-    if(menu&&!p.mute&&desired>0){
-      clearTimeout(this.pauseTimer);this.pauseTimer=null;
+    if(menu){
       this._play();
-      if(force||Math.abs(this.audio.volume-desired)>.01)this._fadeTo(desired,220);
+      if(force||Math.abs(this.targetVolume-desired)>.005)this._setGain(desired,120);
       return;
     }
-    if(force||this.targetVolume!==0||this.audio.volume!==0){
-      this._fadeTo(0,120,()=>{try{this.audio.pause();}catch{}});
-    }else if(this.audio.paused===false){
-      try{this.audio.pause();}catch{}
+    if(force||this.targetVolume!==0)this._setGain(0,100);
+    // Only pause when leaving menu/race context, never because a volume slider hit zero.
+    if(!menu&&this.audio.paused===false){
+      setTimeout(()=>{if(!this._isMenu()){try{this.audio.pause();}catch{}}},130);
     }
   }
 
   destroy(){
-    clearInterval(this.watch);clearInterval(this.fadeTimer);clearTimeout(this.pauseTimer);
+    clearInterval(this.watch);clearInterval(this.fadeTimer);
     const opts={capture:true};
     window.removeEventListener('pointerup',this.unlock,opts);
     window.removeEventListener('touchend',this.unlock,opts);
@@ -133,6 +149,8 @@ class MenuMusic {
     window.removeEventListener('keydown',this.unlock,opts);
     window.removeEventListener(AUDIO_EVENT,this.onAudioSettings);
     try{this.audio.pause();this.audio.src='';this.audio.load();}catch{}
+    try{this.source?.disconnect?.();this.gain?.disconnect?.();this.ctx?.close?.();}catch{}
+    this.source=null;this.gain=null;this.ctx=null;
   }
 }
 
