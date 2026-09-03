@@ -36,6 +36,7 @@ export class RaceScene extends CurrentRaceScene{
     this._carAudioPrevThrottle=0;
     this._carAudioGear=1;
     this._carAudioAccum=0;
+    this._carAudioSpeed01=0;
     this._carAudioUnlock=()=>this._ensureCarAudio();
     window.addEventListener('pointerdown',this._carAudioUnlock,{passive:true});
     window.addEventListener('touchstart',this._carAudioUnlock,{passive:true});
@@ -107,36 +108,36 @@ export class RaceScene extends CurrentRaceScene{
     const vel=this.carBody?.body?.velocity;
     const speed=Math.hypot(Number(vel?.x||0),Number(vel?.y||0));
     const maxFwd=Math.max(160,Number(this.carParams?.maxFwd||this.maxFwd||520));
-    const speed01=clamp(speed/maxFwd,0,1);
+    const rawSpeed01=clamp(speed/maxFwd,0,1);
+    const dt=Math.max(.001,Number(delta||33.3)/1000);
+    const speedAlpha=1-Math.exp(-dt/.16);
+    this._carAudioSpeed01+=(rawSpeed01-this._carAudioSpeed01)*speedAlpha;
+    const speed01=clamp(this._carAudioSpeed01,0,1);
     const throttle=clamp(Number(this.touch?.throttle??this._throttle??0),0,1);
     const band=speed01*5;
+    const lower=Math.floor(band),upper=Math.min(5,lower+1),mix=band-lower;
     for(const layer of a.layers){
-      const weight=clamp(1-Math.abs(layer.i-band),0,1);
-      const idleBoost=layer.i===0?clamp(1-speed01*3,0,1)*.40:0;
-      const target=(weight+idleBoost)*(.38+.62*throttle)*p.engine;
-      layer.gain.gain.setTargetAtTime(target,now,.045);
-      const local=clamp(band-layer.i,-.9,.9);
-      layer.src.playbackRate.setTargetAtTime(1+local*.07+throttle*.02,now,.07);
+      let weight=0;
+      if(layer.i===lower)weight=Math.cos(mix*Math.PI*.5);
+      if(layer.i===upper)weight=Math.max(weight,Math.sin(mix*Math.PI*.5));
+      const idleBoost=layer.i===0?clamp(1-speed01*4,0,1)*.32:0;
+      const target=clamp(weight+idleBoost,0,1.12)*(.48+.52*throttle)*p.engine;
+      layer.gain.gain.setTargetAtTime(target,now,.11);
+      layer.src.playbackRate.setTargetAtTime(1,now,.10);
     }
-    a.engineFilter.frequency.setTargetAtTime(1500+speed01*3300+throttle*1000,now,.07);
-    a.engineBus.gain.setTargetAtTime(this._raceStarted?.95:.42,now,.05);
+    a.engineFilter.frequency.setTargetAtTime(1650+speed01*3000+throttle*550,now,.12);
+    a.engineBus.gain.setTargetAtTime(this._raceStarted?.88:.42,now,.08);
     a.master.gain.setTargetAtTime(p.mute?0:p.master*.88,now,.04);
-    const gear=clamp(Math.floor(speed01*6)+1,1,6);
+    const gear=clamp(Math.floor(rawSpeed01*6)+1,1,6);
     if(gear!==this._carAudioGear&&speed>45){
       this._carAudioGear=gear;
       this._playCarOneShot(a.shiftBuffer,.28*p.effects,.96+gear*.015);
-      for(const layer of a.layers){
-        const current=layer.gain.gain.value;
-        layer.gain.gain.cancelScheduledValues(now);
-        layer.gain.gain.setValueAtTime(Math.max(.0001,current),now);
-        layer.gain.gain.linearRampToValueAtTime(Math.max(.0001,current*.48),now+.04);
-      }
     }
-    const turboTarget=Math.pow(speed01,1.35)*throttle*.24*p.effects;
+    const turboTarget=Math.pow(rawSpeed01,1.35)*throttle*.24*p.effects;
     a.turboGain.gain.setTargetAtTime(turboTarget,now,.07);
-    a.turboSrc.playbackRate.setTargetAtTime(.92+speed01*.30,now,.09);
-    if(this._carAudioPrevThrottle>.70&&throttle<.20&&speed01>.32){
-      this._playCarOneShot(a.flutterBuffer,.38*p.effects,.94+speed01*.10);
+    a.turboSrc.playbackRate.setTargetAtTime(.92+rawSpeed01*.30,now,.09);
+    if(this._carAudioPrevThrottle>.70&&throttle<.20&&rawSpeed01>.32){
+      this._playCarOneShot(a.flutterBuffer,.38*p.effects,.94+rawSpeed01*.10);
     }
     this._carAudioPrevThrottle=throttle;
   }
