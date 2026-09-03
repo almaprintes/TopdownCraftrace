@@ -136,8 +136,9 @@ export class RaceScene extends CurrentRaceScene{
     const turboTarget=Math.pow(rawSpeed01,1.35)*throttle*.24*p.effects;
     a.turboGain.gain.setTargetAtTime(turboTarget,now,.07);
     a.turboSrc.playbackRate.setTargetAtTime(.92+rawSpeed01*.30,now,.09);
-    // Throttle-lift flutter intentionally disabled while tuning the engine mix.
-    // The previous one-shot was much louder than the engine and masked transitions.
+    if(this._carAudioPrevThrottle>.70&&throttle<.20&&rawSpeed01>.32){
+      this._playCarOneShot(a.flutterBuffer,.38*p.effects,.94+rawSpeed01*.10);
+    }
     this._carAudioPrevThrottle=throttle;
   }
 
