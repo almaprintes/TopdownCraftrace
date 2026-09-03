@@ -75,6 +75,11 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
+      - name: Copy Veloce car audio into DEV 0.0.4
+        run: |
+          mkdir -p develop-src/dist/assets/audio/cars
+          cp -R audio-src/public/assets/audio/cars/. develop-src/dist/assets/audio/cars/
+
       - name: Install audio-test dependencies
         working-directory: audio-src
         run: npm ci --no-audit --no-fund
