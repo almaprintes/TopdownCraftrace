@@ -1,5 +1,5 @@
 /* Static-cache SW (sin Workbox) — shell fresco online, fallback estable offline */
-const CACHE_VERSION = 'tdr2-v21';
+const CACHE_VERSION = 'tdr2-v22';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -16,8 +16,6 @@ const CORE_ASSETS = [
   './assets/tutorials/dropping/dropping_05_717x330.png'
 ];
 
-// Never seize a running game session. A newly installed worker activates naturally
-// after old clients close; the next launch gets the new shell.
 self.addEventListener('message', () => {});
 
 self.addEventListener('install', (event) => {
@@ -58,8 +56,6 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (isNavigationRequest(req)) {
-    // HTML is version authority. Prefer network so a normal online launch never
-    // boots yesterday's bundle; fall back to the known-good cached shell offline.
     event.respondWith((async () => {
       const cache = await caches.open(CACHE_VERSION);
       const indexUrl = new URL('./index.html', self.location.href).toString();
@@ -77,7 +73,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Hashed Vite chunks and immutable-ish game assets benefit from cache-first.
   event.respondWith((async () => {
     const cache = await caches.open(CACHE_VERSION);
     const cached = await cache.match(req);
