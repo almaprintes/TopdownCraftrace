@@ -38,17 +38,36 @@
   border: 0 !important;
   background-color: transparent !important;
   background-repeat: no-repeat !important;
-  background-position: center bottom !important;
+  background-position: center !important;
   background-size: contain !important;
   box-shadow: none !important;
   clip-path: none !important;
+  -webkit-clip-path: none !important;
   overflow: visible !important;
+  /* The whole rectangular box is the touch target, not only visible pedal pixels. */
+  min-width: clamp(112px, 15vw, 176px) !important;
+  min-height: clamp(112px, 28vh, 176px) !important;
+  touch-action: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 #tdr-race-controls .tdr-pedal-gas { background-image: url('/assets/ui/tdr_pedal_gas.webp?v=1') !important; }
 #tdr-race-controls .tdr-pedal-brake { background-image: url('/assets/ui/tdr_pedal_brake.webp?v=1') !important; }
 #tdr-race-controls .tdr-pedal::before,
 #tdr-race-controls .tdr-pedal::after,
 #tdr-race-controls .tdr-pedal-inner { display: none !important; }
+
+/* Mobile sliders: make the real native control as easy to grab as its visual row. */
+#tdr-settings2 .s2range {
+  min-height: 48px !important;
+  padding: 12px 0 !important;
+  margin: -8px 0 !important;
+  touch-action: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+#tdr-settings2 .s2range::-webkit-slider-thumb {
+  min-width: 30px !important;
+  min-height: 30px !important;
+}
 
 #rotateOverlay .rot-shell {
   max-width: calc(var(--tdr-vv-width) - var(--tdr-safe-left) - var(--tdr-safe-right)) !important;
