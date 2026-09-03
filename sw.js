@@ -1,5 +1,5 @@
 /* Static-cache SW (sin Workbox) — shell fresco online, fallback estable offline */
-const CACHE_VERSION = 'tdr2-v22';
+const CACHE_VERSION = 'tdr2-v23';
 const CORE_ASSETS = [
   './',
   './index.html',
