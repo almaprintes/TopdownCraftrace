@@ -69,11 +69,6 @@
   min-height: 30px !important;
 }
 
-/* Legacy procedural engine-profile selector is retired. Engine character is now per-car sample audio. */
-#tdr-settings2 .s2card:has([data-choice="profile"]) {
-  display: none !important;
-}
-
 #rotateOverlay .rot-shell {
   max-width: calc(var(--tdr-vv-width) - var(--tdr-safe-left) - var(--tdr-safe-right)) !important;
   max-height: calc(var(--tdr-vv-height) - var(--tdr-safe-top) - var(--tdr-safe-bottom)) !important;
