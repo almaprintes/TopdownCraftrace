@@ -12,11 +12,13 @@ export class SettingsScene extends CurrentSettingsScene {
   _ensureDefaults(){
     const s=this.settings||(this.settings={});
     s.controls={scheme:'touch',steeringMode:'stick',sensitivity:1,deadZone:.1,invertSteer:false,...(s.controls||{})};
-    s.audio={master:1,music:1,engine:1,effects:.45,impacts:.8,profile:'per_car',mute:false,...(s.audio||{})};
+    s.audio={master:1,music:1,engine:1,effects:.45,impacts:.8,mute:false,...(s.audio||{})};
+    // Retire any profile value persisted by older procedural-audio builds.
+    if('profile' in s.audio) delete s.audio.profile;
     s.video={quality:'high',targetFps:60,showFPS:false,particles:true,renderScale:'normal',...(s.video||{})};
     s.ui={settingsSubtab:{controls:'mode',video:'performance',audio:'general'},...(s.ui||{})};
     s.ui.settingsSubtab={controls:'mode',video:'performance',audio:'general',...(s.ui.settingsSubtab||{})};
-    if(!['general','effects','engine'].includes(s.ui.settingsSubtab.audio)) s.ui.settingsSubtab.audio='general';
+    if(!['general','effects'].includes(s.ui.settingsSubtab.audio)) s.ui.settingsSubtab.audio='general';
   }
 
   _saveAll(){
@@ -87,7 +89,7 @@ export class SettingsScene extends CurrentSettingsScene {
       this.settings={
         controls:{scheme:'touch',steeringMode:'stick',sensitivity:1,deadZone:.1,invertSteer:false},
         video:{quality:'high',targetFps:60,showFPS:false,particles:true,renderScale:'normal'},
-        audio:{master:1,music:1,engine:1,effects:.45,impacts:.8,profile:'per_car',mute:false},
+        audio:{master:1,music:1,engine:1,effects:.45,impacts:.8,mute:false},
         ui:{settingsSubtab:{controls:'mode',video:'performance',audio:'general'}}
       };
       this._saveAll();this.scene.restart();
@@ -132,10 +134,8 @@ export class SettingsScene extends CurrentSettingsScene {
     }
 
     if(this.activeTab==='audio'){
-      const a=this.settings.audio;const sub=this.settings.ui.settingsSubtab.audio;this._subTabs(x,subY,[['general','GENERAL'],['effects','EFECTOS'],['engine','MOTOR']],sub,val=>this._setSubtab('audio',val));
+      const a=this.settings.audio;const sub=this.settings.ui.settingsSubtab.audio;this._subTabs(x,subY,[['general','GENERAL'],['effects','EFECTOS']],sub,val=>this._setSubtab('audio',val));
       if(sub==='general'){
-        // Two-column layout deliberately keeps every control above the fixed footer
-        // on short landscape phones (iPhone SE-class heights included).
         const gap=Math.max(28,Math.min(48,usableW*.045));
         const colW=Math.floor((usableW-gap)/2);
         const rightX=x+colW+gap;
@@ -147,9 +147,6 @@ export class SettingsScene extends CurrentSettingsScene {
       }
       if(sub==='effects'){
         const colW=Math.min(650,usableW*.68);this._label(x,bodyY,'EFECTOS DE SONIDO',12);this.add.text(x,bodyY+20,'Ajusta los sonidos secundarios sin tocar el motor.',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#aeb9d8'});this._slider('EFECTOS',()=>a.effects,x,bodyY+54,colW,v=>a.effects=v);this._slider('IMPACTOS',()=>a.impacts,x,bodyY+108,colW,v=>a.impacts=v);
-      }
-      if(sub==='engine'){
-        this._label(x,bodyY,'PERFIL DE MOTOR',12);this.add.text(x,bodyY+20,'Elige el carácter sonoro base del motor.',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#aeb9d8'});const bw=Math.min(260,(usableW-14)/2),bh=42,gap=14;const profiles=[['per_car','POR COCHE'],['forge','FORGE'],['avenir','AVENIR'],['crown','CROWN']];profiles.forEach((p,i)=>{const row=Math.floor(i/2),col=i%2;this._pill(x+col*(bw+gap),bodyY+48+row*(bh+12),bw,bh,p[1],a.profile===p[0],()=>{a.profile=p[0];this._saveAll();this.scene.restart();});});
       }
     }
     this._footer(panelX,panelY,panelW,panelH);
