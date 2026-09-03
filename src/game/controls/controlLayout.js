@@ -104,12 +104,7 @@ function placeDom(el,point,sizeScale=true){
 
 function hardenIosRaceControls(root){
   if(!root)return;
-  const nodes=[
-    root,
-    ...root.querySelectorAll('*'),
-    document.getElementById('tdr-handbrake'),
-    document.getElementById('tdr-steering-wheel')
-  ].filter(Boolean);
+  const nodes=[root,...root.querySelectorAll('*'),document.getElementById('tdr-handbrake'),document.getElementById('tdr-steering-wheel')].filter(Boolean);
   for(const el of nodes){
     el.style.setProperty('user-select','none','important');
     el.style.setProperty('-webkit-user-select','none','important');
@@ -122,10 +117,30 @@ function hardenIosRaceControls(root){
 
   for(const pedal of root.querySelectorAll('.tdr-pedal')){
     pedal.style.setProperty('pointer-events','auto','important');
+    // Keep the complete rectangular pedal box interactive. The artwork may have
+    // transparent/angled edges, but the user's finger should never have to hit
+    // the visible pixels exactly.
+    pedal.style.setProperty('clip-path','none','important');
+    pedal.style.setProperty('-webkit-clip-path','none','important');
+    pedal.style.setProperty('touch-action','none','important');
     for(const child of pedal.querySelectorAll('*')){
       child.style.setProperty('pointer-events','none','important');
       child.style.setProperty('-webkit-user-drag','none','important');
       try{child.draggable=false;}catch{}
+    }
+
+    // iOS can emit pointercancel when the finger drifts a few pixels. Capture the
+    // pointer on press so gas/brake keep receiving the same contact until release.
+    if(pedal.dataset.tdrPointerCapture!=='1'){
+      pedal.dataset.tdrPointerCapture='1';
+      pedal.addEventListener('pointerdown',e=>{
+        try{pedal.setPointerCapture?.(e.pointerId);}catch{}
+      },{capture:true,passive:true});
+      const release=e=>{
+        try{if(pedal.hasPointerCapture?.(e.pointerId))pedal.releasePointerCapture?.(e.pointerId);}catch{}
+      };
+      pedal.addEventListener('pointerup',release,{capture:true,passive:true});
+      pedal.addEventListener('pointercancel',release,{capture:true,passive:true});
     }
   }
 
@@ -137,8 +152,6 @@ function hardenIosRaceControls(root){
 
   // Do not cancel touchstart/touchmove here. On iOS that can suppress the
   // Pointer Events used by the pedals, making throttle/brake intermittent.
-  // CSS touch-action/callout/user-select plus non-interactive pedal children
-  // are enough to stop native selection without stealing the racing input.
 }
 
 export function applyDomControlLayout(){
