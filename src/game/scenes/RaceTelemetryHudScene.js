@@ -3,9 +3,6 @@ import { mountRaceInstrumentHud, updateRaceInstrumentHud, destroyRaceInstrumentH
 
 function safeDestroy(obj){if(!obj)return;try{obj.destroy?.(true);}catch{}}
 function isIOSDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
-function raceSessionEnding(scene){
-  return scene?._sessionFinalizing===true||!!scene?._sessionReportModal?.isConnected||!!scene?._survivalResultDom?.isConnected||!!scene?._sessionRewardsDom?.isConnected;
-}
 
 function retireLegacyRaceUi(scene){
   scene._updateGrowthDiag=()=>{};
@@ -53,16 +50,8 @@ export class RaceScene extends CurrentRaceScene {
     return result;
   }
 
-  _ensureRaceInstrumentHud(){
-    if(raceSessionEnding(this))return;
-    if(this._raceHudDom?.isConnected&&this._raceHudRefs)return;
-    mountRaceInstrumentHud(this);
-    updateRaceInstrumentHud(this,100);
-  }
-
   update(time,delta){
     const result=super.update(time,delta);
-    this._ensureRaceInstrumentHud();
     updateRaceInstrumentHud(this,delta);
     return result;
   }
