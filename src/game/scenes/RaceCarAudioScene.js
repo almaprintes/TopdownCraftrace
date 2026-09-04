@@ -32,14 +32,15 @@ export class RaceScene extends CurrentRaceScene{
     this._carAudioReady=false;
     this._carAudioLoading=false;
     this._carAudioDestroyed=false;
+    this._carAudioOwnCtx=false;
     this._carAudioAccum=0;
     this._carAudioSpeed01=0;
     this._carAudioRev01=.03;
     this._carAudioDynoPos=DYNO_START;
     this._carAudioLastGrainAt=-99;
 
-    // iOS: precargamos/decodificamos nada más entrar en carrera. El contexto puede
-    // quedarse suspendido, pero así el primer toque posterior solo tiene que reanudarlo.
+    // Reusar el AudioContext de Phaser es clave en iOS: música/UI ya lo han
+    // desbloqueado con gestos anteriores, así el motor no depende del semáforo.
     this._carAudioUnlock=()=>this._ensureCarAudio();
     window.addEventListener('pointerdown',this._carAudioUnlock,{passive:true,capture:true});
     window.addEventListener('touchstart',this._carAudioUnlock,{passive:true,capture:true});
@@ -57,18 +58,18 @@ export class RaceScene extends CurrentRaceScene{
       return;
     }
     if(this._carAudioLoading){
-      // Si la carga ya empezó antes del gesto, aprovechamos ESTE gesto para reanudar
-      // inmediatamente el contexto, aunque la decodificación siga en curso.
       try{if(this._carAudioCtx?.state!=='running')await this._carAudioCtx.resume();}catch{}
       return;
     }
     const AC=window.AudioContext||window.webkitAudioContext;
-    if(!AC)return;
+    const sharedCtx=this.sound?.context||this.game?.sound?.context||this.sys?.game?.sound?.context||null;
+    if(!sharedCtx&&!AC)return;
     this._carAudioLoading=true;
     try{
-      const ctx=this._carAudioCtx||new AC();
+      const ctx=sharedCtx||this._carAudioCtx||new AC();
       this._carAudioCtx=ctx;
-      try{await ctx.resume();}catch{}
+      this._carAudioOwnCtx=!sharedCtx;
+      try{if(ctx.state!=='running')await ctx.resume();}catch{}
       const dynoBuffer=await decodeUrl(ctx,DYNO_FILE);
       if(this._carAudioDestroyed)return;
       try{if(ctx.state!=='running')await ctx.resume();}catch{}
@@ -95,7 +96,7 @@ export class RaceScene extends CurrentRaceScene{
       this._carAudioReady=true;
       this._carAudioLoading=false;
       this._updateCarAudio(16.7,true);
-      console.info('[TDR2 car audio] Veloce dyno ready',dynoBuffer.duration,ctx.state);
+      console.info('[TDR2 car audio] Veloce dyno ready',dynoBuffer.duration,ctx.state,sharedCtx?'phaser-context':'own-context');
     }catch(err){
       this._carAudioLoading=false;
       console.warn('[TDR2 car audio] dyno engine init failed',err);
@@ -186,7 +187,8 @@ export class RaceScene extends CurrentRaceScene{
       window.removeEventListener('keydown',this._carAudioUnlock,true);
     }
     try{for(const src of this._carAudio?.grains||[])src?.stop?.();}catch{}
-    try{this._carAudioCtx?.close?.();}catch{}
+    // Nunca cerrar el contexto compartido de Phaser: también sostiene música/UI.
+    if(this._carAudioOwnCtx){try{this._carAudioCtx?.close?.();}catch{}}
     this._carAudio=null;
     this._carAudioCtx=null;
     this._carAudioReady=false;
