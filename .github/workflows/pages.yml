@@ -1,8 +1,9 @@
+# Shipping deploy: BETA 0.0.3 + DEV 0.0.4
 name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, dev-0.0.4]
   workflow_dispatch:
 
 permissions:
@@ -18,56 +19,113 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout stable main
+      - name: Checkout BETA 0.0.3
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: beta-0.0.3
           path: stable
 
-      - name: Checkout develop
+      - name: Checkout DEV 0.0.4
         uses: actions/checkout@v4
         with:
-          ref: develop
+          ref: dev-0.0.4
           path: develop-src
+
+      - name: Checkout audio assets
+        uses: actions/checkout@v4
+        with:
+          ref: fix/car-audio-v1
+          path: audio-src
+
+      - name: Checkout pre-Production Studio recovery
+        uses: actions/checkout@v4
+        with:
+          ref: recovery/pre-production-studio-2026-09-01
+          path: recovery-src
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install stable dependencies
+      - name: Install BETA 0.0.3 dependencies
         working-directory: stable
         run: npm ci --no-audit --no-fund
 
-      - name: Build stable main
+      - name: Build BETA 0.0.3
         working-directory: stable
         run: npx vite build --base=/TopdownCraftrace/
 
-      - name: Copy stable tutorial assets
+      - name: Copy BETA tutorial assets
         working-directory: stable
         run: |
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Install develop dependencies
+      - name: Install DEV 0.0.4 dependencies
         working-directory: develop-src
         run: npm ci --no-audit --no-fund
 
-      - name: Build develop
+      - name: Build DEV 0.0.4
         working-directory: develop-src
         run: npx vite build --base=/TopdownCraftrace/dev/
 
-      - name: Copy develop tutorial assets
+      - name: Copy DEV tutorial assets
         working-directory: develop-src
         run: |
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Add develop build under /dev
+      - name: Copy Veloce car audio into DEV 0.0.4
+        run: |
+          mkdir -p develop-src/dist/assets/audio/cars
+          cp -R audio-src/public/assets/audio/cars/. develop-src/dist/assets/audio/cars/
+
+      - name: Install audio-test dependencies
+        working-directory: audio-src
+        run: npm ci --no-audit --no-fund
+
+      - name: Build audio test
+        working-directory: audio-src
+        run: npx vite build --base=/TopdownCraftrace/audio-test/
+
+      - name: Copy audio-test tutorial assets
+        working-directory: audio-src
+        run: |
+          mkdir -p dist/assets/tutorials/dropping
+          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
+
+      - name: Install recovery dependencies
+        working-directory: recovery-src
+        run: npm ci --no-audit --no-fund
+
+      - name: Build pre-Production Studio recovery
+        working-directory: recovery-src
+        run: npx vite build --base=/TopdownCraftrace/recovery-pre-production/
+
+      - name: Copy recovery tutorial assets
+        working-directory: recovery-src
+        run: |
+          mkdir -p dist/assets/tutorials/dropping
+          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
+
+      - name: Add DEV 0.0.4 build under /dev
         run: |
           rm -rf stable/dist/dev
           mkdir -p stable/dist/dev
           cp -R develop-src/dist/. stable/dist/dev/
+
+      - name: Add audio test under /audio-test
+        run: |
+          rm -rf stable/dist/audio-test
+          mkdir -p stable/dist/audio-test
+          cp -R audio-src/dist/. stable/dist/audio-test/
+
+      - name: Add recovery build under /recovery-pre-production
+        run: |
+          rm -rf stable/dist/recovery-pre-production
+          mkdir -p stable/dist/recovery-pre-production
+          cp -R recovery-src/dist/. stable/dist/recovery-pre-production/
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
