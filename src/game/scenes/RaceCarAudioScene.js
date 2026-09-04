@@ -4,8 +4,6 @@ const BASE=import.meta.env.BASE_URL||'/';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const SETTINGS_KEY='tdr2:settings';
 const DYNO_FILE=`${BASE}assets/audio/cars/veloce_flash/engine/freesound_community-import-car-revs-on-chassis-dyno-with-turbo-66272.mp3`;
-const SHIFT_FILE=`${BASE}assets/audio/cars/veloce_flash/transmission/freesound_community-shifting-car-42962.mp3`;
-const TURBO_FILE=`${BASE}assets/audio/cars/veloce_flash/turbo/audley_fergine-car-turbo-loop-288859.mp3`;
 const DYNO_START=.18;
 const DYNO_LIMIT=24.0;
 
@@ -16,16 +14,16 @@ function audioPrefs(){
     return {
       master:clamp(Number(a.master??1),0,1),
       engine:clamp(Number(a.engine??1),0,1),
-      effects:clamp(Number(a.effects??.7),0,1),
       mute:!!a.mute
     };
-  }catch{return{master:1,engine:1,effects:.7,mute:false};}
+  }catch{return{master:1,engine:1,mute:false};}
 }
 
 async function decodeUrl(ctx,url){
   const res=await fetch(url,{cache:'no-store'});
   if(!res.ok)throw new Error(`audio ${res.status}: ${url}`);
-  return ctx.decodeAudioData(await res.arrayBuffer());
+  const ab=await res.arrayBuffer();
+  return ctx.decodeAudioData(ab.slice(0));
 }
 
 export class RaceScene extends CurrentRaceScene{
@@ -34,8 +32,6 @@ export class RaceScene extends CurrentRaceScene{
     this._carAudioReady=false;
     this._carAudioLoading=false;
     this._carAudioDestroyed=false;
-    this._carAudioGear=1;
-    this._carAudioLastShiftAt=-99;
     this._carAudioAccum=0;
     this._carAudioSpeed01=0;
     this._carAudioRev01=0;
@@ -52,7 +48,7 @@ export class RaceScene extends CurrentRaceScene{
 
   async _ensureCarAudio(){
     if(this._carAudioReady){
-      try{if(this._carAudioCtx?.state==='suspended')await this._carAudioCtx.resume();}catch{}
+      try{if(this._carAudioCtx?.state!=='running')await this._carAudioCtx.resume();}catch{}
       return;
     }
     if(this._carAudioLoading)return;
@@ -63,60 +59,61 @@ export class RaceScene extends CurrentRaceScene{
       const ctx=this._carAudioCtx||new AC();
       this._carAudioCtx=ctx;
       try{await ctx.resume();}catch{}
-      const [dynoBuffer,shiftBuffer,turboBuffer]=await Promise.all([
-        decodeUrl(ctx,DYNO_FILE),decodeUrl(ctx,SHIFT_FILE),decodeUrl(ctx,TURBO_FILE)
-      ]);
+
+      // Cargar SOLO el motor. Ningún efecto secundario puede impedir que arranque.
+      const dynoBuffer=await decodeUrl(ctx,DYNO_FILE);
       if(this._carAudioDestroyed)return;
+
+      // En iOS el contexto puede volver a suspendirse durante fetch/decode.
+      // Reanudamos otra vez después de decodificar, igual que en el Dyno Lab validado.
+      try{if(ctx.state!=='running')await ctx.resume();}catch{}
+
       const master=ctx.createGain();
+      master.gain.value=.88;
       const limiter=ctx.createDynamicsCompressor();
-      limiter.threshold.value=-8;limiter.knee.value=18;limiter.ratio.value=5;limiter.attack.value=.008;limiter.release.value=.22;
+      limiter.threshold.value=-8;
+      limiter.knee.value=18;
+      limiter.ratio.value=5;
+      limiter.attack.value=.008;
+      limiter.release.value=.22;
       master.connect(limiter).connect(ctx.destination);
 
       const engineBus=ctx.createGain();
+      engineBus.gain.value=.9;
       const engineFilter=ctx.createBiquadFilter();
-      engineFilter.type='lowpass';engineFilter.frequency.value=3000;engineFilter.Q.value=.35;
+      engineFilter.type='lowpass';
+      engineFilter.frequency.value=3400;
+      engineFilter.Q.value=.30;
       engineBus.connect(engineFilter).connect(master);
 
-      const turboSrc=ctx.createBufferSource(),turboGain=ctx.createGain(),turboFilter=ctx.createBiquadFilter();
-      turboSrc.buffer=turboBuffer;turboSrc.loop=true;turboGain.gain.value=0;
-      turboFilter.type='highpass';turboFilter.frequency.value=1000;
-      turboSrc.connect(turboFilter).connect(turboGain).connect(master);turboSrc.start();
-
-      this._carAudio={master,engineBus,engineFilter,dynoBuffer,shiftBuffer,turboSrc,turboGain,grains:new Set()};
-      this._carAudioReady=true;this._carAudioLoading=false;
+      this._carAudio={master,engineBus,engineFilter,dynoBuffer,grains:new Set()};
+      this._carAudioReady=true;
+      this._carAudioLoading=false;
       this._updateCarAudio(16.7,true);
+      console.info('[TDR2 car audio] Veloce dyno ready',dynoBuffer.duration,ctx.state);
     }catch(err){
       this._carAudioLoading=false;
       console.warn('[TDR2 car audio] dyno engine init failed',err);
     }
   }
 
-  _playCarOneShot(buffer,volume=.3,rate=1){
-    const ctx=this._carAudioCtx,a=this._carAudio;
-    if(!ctx||!a||!buffer||ctx.state!=='running')return;
-    try{
-      const src=ctx.createBufferSource(),gain=ctx.createGain();
-      src.buffer=buffer;src.playbackRate.value=rate;gain.gain.value=volume;
-      src.connect(gain).connect(a.master);src.start();
-    }catch{}
-  }
-
   _spawnDynoGrain(offset,rate,volume){
     const ctx=this._carAudioCtx,a=this._carAudio;
-    if(!ctx||!a?.dynoBuffer||ctx.state!=='running')return;
+    if(!ctx||!a?.dynoBuffer)return;
     const now=ctx.currentTime;
-    const safeOffset=clamp(offset,DYNO_START,Math.min(DYNO_LIMIT,a.dynoBuffer.duration-.4));
+    const safeOffset=clamp(offset,DYNO_START,Math.min(DYNO_LIMIT,a.dynoBuffer.duration-.5));
     try{
-      const src=ctx.createBufferSource(),gain=ctx.createGain();
+      const src=ctx.createBufferSource();
+      const gain=ctx.createGain();
       src.buffer=a.dynoBuffer;
-      src.playbackRate.value=clamp(rate,.92,1.35);
+      src.playbackRate.value=clamp(rate,.94,1.35);
       gain.gain.setValueAtTime(0,now);
-      gain.gain.linearRampToValueAtTime(volume,now+.055);
-      gain.gain.setValueAtTime(volume,now+.19);
-      gain.gain.linearRampToValueAtTime(0,now+.31);
+      gain.gain.linearRampToValueAtTime(volume,now+.045);
+      gain.gain.setValueAtTime(volume,now+.20);
+      gain.gain.linearRampToValueAtTime(0,now+.32);
       src.connect(gain).connect(a.engineBus);
       src.start(now,safeOffset);
-      src.stop(now+.34);
+      src.stop(now+.35);
       a.grains.add(src);
       src.onended=()=>a.grains.delete(src);
     }catch{}
@@ -124,7 +121,15 @@ export class RaceScene extends CurrentRaceScene{
 
   _updateCarAudio(delta,force=false){
     if(!this._carAudioReady){if(force)this._ensureCarAudio();return;}
-    const ctx=this._carAudioCtx,a=this._carAudio;if(!ctx||!a)return;
+    const ctx=this._carAudioCtx,a=this._carAudio;
+    if(!ctx||!a)return;
+
+    // No bloqueamos el motor por state=suspended: pedimos resume y dejamos
+    // los granos programados. El siguiente toque de acelerador también reanuda.
+    if(ctx.state!=='running'){
+      try{ctx.resume();}catch{}
+    }
+
     const now=ctx.currentTime,p=audioPrefs();
     const vel=this.carBody?.body?.velocity;
     const speed=Math.hypot(Number(vel?.x||0),Number(vel?.y||0));
@@ -137,46 +142,31 @@ export class RaceScene extends CurrentRaceScene{
     const speed01=clamp(this._carAudioSpeed01,0,1);
     const throttle=clamp(Number(this.touch?.throttle??this._throttle??0),0,1);
 
-    // RPM audible: la velocidad manda, pero el pedal anticipa la subida.
-    const targetRev=clamp(speed01*.88+throttle*.20,0,1);
-    const tau=targetRev>this._carAudioRev01?.20:.48;
-    const revAlpha=1-Math.exp(-dt/tau);
+    // Pedal anticipa; velocidad mantiene las RPM. Al soltar, rev01 cae suavemente.
+    const targetRev=clamp(speed01*.86+throttle*.24,0,1);
+    const revTau=targetRev>this._carAudioRev01?.18:.52;
+    const revAlpha=1-Math.exp(-dt/revTau);
     this._carAudioRev01+=(targetRev-this._carAudioRev01)*revAlpha;
     const rev01=clamp(this._carAudioRev01,0,1);
 
-    // La grabación completa funciona como una cinta de régimen entre 0.18 y 24 s.
-    // Al levantar gas la posición objetivo retrocede; los granos siempre se reproducen
-    // hacia delante, evitando el efecto artificial de audio literalmente invertido.
+    // Avanza al acelerar y retrocede al levantar, usando siempre microfragmentos
+    // reproducidos hacia delante para evitar el efecto de audio invertido literal.
     const targetPos=DYNO_START+(DYNO_LIMIT-DYNO_START)*rev01;
-    const posTau=targetPos>this._carAudioDynoPos?.16:.34;
+    const posTau=targetPos>this._carAudioDynoPos?.15:.40;
     const posAlpha=1-Math.exp(-dt/posTau);
     this._carAudioDynoPos+=(targetPos-this._carAudioDynoPos)*posAlpha;
     this._carAudioDynoPos=clamp(this._carAudioDynoPos,DYNO_START,DYNO_LIMIT);
 
-    if(now-this._carAudioLastGrainAt>=.105){
+    if(now-this._carAudioLastGrainAt>=.095){
       this._carAudioLastGrainAt=now;
       const rate=.98+rev01*.37;
-      const volume=(.46+.26*throttle+.10*rev01)*p.engine;
+      const volume=(.54+.24*throttle+.08*rev01)*p.engine;
       this._spawnDynoGrain(this._carAudioDynoPos,rate,volume);
     }
 
-    a.engineFilter.frequency.setTargetAtTime(2100+rev01*3600+throttle*450,now,.10);
-    a.engineBus.gain.setTargetAtTime(this._raceStarted?.92:.48,now,.08);
-    a.master.gain.setTargetAtTime(p.mute?0:p.master*.88,now,.04);
-
-    // Cambio solo al subir de marcha y con cooldown para evitar repetición en umbrales.
-    const gear=clamp(Math.floor(rawSpeed01*6)+1,1,6);
-    if(gear>this._carAudioGear&&speed>45&&now-this._carAudioLastShiftAt>.50){
-      this._carAudioGear=gear;
-      this._carAudioLastShiftAt=now;
-      this._playCarOneShot(a.shiftBuffer,.34*p.effects,.97+gear*.012);
-    }else if(gear<this._carAudioGear-1){
-      this._carAudioGear=gear;
-    }
-
-    const turboTarget=Math.pow(rawSpeed01,1.45)*throttle*.16*p.effects;
-    a.turboGain.gain.setTargetAtTime(turboTarget,now,.09);
-    a.turboSrc.playbackRate.setTargetAtTime(.94+rawSpeed01*.24,now,.10);
+    a.engineFilter.frequency.setTargetAtTime(2400+rev01*3300+throttle*400,now,.10);
+    a.engineBus.gain.setTargetAtTime(this._raceStarted?.95:.58,now,.08);
+    a.master.gain.setTargetAtTime(p.mute?0:p.master*.92,now,.04);
   }
 
   _destroyCarAudio(){
@@ -188,15 +178,21 @@ export class RaceScene extends CurrentRaceScene{
       window.removeEventListener('keydown',this._carAudioUnlock);
     }
     try{for(const src of this._carAudio?.grains||[])src?.stop?.();}catch{}
-    try{this._carAudio?.turboSrc?.stop?.();}catch{}
     try{this._carAudioCtx?.close?.();}catch{}
-    this._carAudio=null;this._carAudioCtx=null;this._carAudioReady=false;this._carAudioLoading=false;
+    this._carAudio=null;
+    this._carAudioCtx=null;
+    this._carAudioReady=false;
+    this._carAudioLoading=false;
   }
 
   update(time,delta){
     const result=super.update?.(time,delta);
     this._carAudioAccum+=Number(delta||0);
-    if(this._carAudioAccum>=33){const dt=this._carAudioAccum;this._carAudioAccum=0;this._updateCarAudio(dt);}
+    if(this._carAudioAccum>=33){
+      const dt=this._carAudioAccum;
+      this._carAudioAccum=0;
+      this._updateCarAudio(dt);
+    }
     return result;
   }
 }
