@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-08-19T18:44:00Z",
+  "updated_at": "2026-09-04T17:57:52Z",
   "cars": {
     "stock": { "massKg": 980 },
     "touring": { "massKg": 1280 },
@@ -9,8 +9,8 @@
     "helix_spark": {
       "massKg": 920,
       "handlingProfile": "HELIX_SPARK",
-      "maxFwd": 520.0,
-      "accel": 700.0,
+      "maxFwd": 650.0,
+      "accel": 434.0,
       "brakeForce": 1055.0,
       "engineBrake": 275.0,
       "linearDrag": 0.033,
@@ -23,8 +23,8 @@
     "helix_comet": {
       "massKg": 1040,
       "handlingProfile": "HELIX_COMET",
-      "maxFwd": 540.0,
-      "accel": 730.0,
+      "maxFwd": 675.0,
+      "accel": 452.6,
       "brakeForce": 1080.0,
       "engineBrake": 270.0,
       "linearDrag": 0.032,
@@ -37,8 +37,8 @@
     "helix_pulse": {
       "massKg": 980,
       "handlingProfile": "HELIX_PULSE",
-      "maxFwd": 555.0,
-      "accel": 760.0,
+      "maxFwd": 693.8,
+      "accel": 471.2,
       "brakeForce": 1100.0,
       "engineBrake": 265.0,
       "linearDrag": 0.031,
@@ -48,12 +48,16 @@
       "gripDrive": 0.09,
       "gripBrake": 0.18
     },
+    "helix_vortex": {
+      "maxFwd": 694.5,
+      "accel": 500.3
+    },
 
     "crown_axis": {
       "massKg": 1120,
       "handlingProfile": "CROWN_AXIS",
-      "maxFwd": 548.0,
-      "accel": 748.0,
+      "maxFwd": 685.0,
+      "accel": 463.8,
       "brakeForce": 1110.0,
       "engineBrake": 265.0,
       "linearDrag": 0.031,
@@ -66,8 +70,8 @@
     "crown_vector": {
       "massKg": 900,
       "handlingProfile": "CROWN_VECTOR",
-      "maxFwd": 563.0,
-      "accel": 775.0,
+      "maxFwd": 703.8,
+      "accel": 480.5,
       "brakeForce": 1135.0,
       "engineBrake": 260.0,
       "linearDrag": 0.030,
@@ -80,8 +84,8 @@
     "crown_equinox": {
       "massKg": 1180,
       "handlingProfile": "CROWN_EQUINOX",
-      "maxFwd": 575.0,
-      "accel": 800.0,
+      "maxFwd": 718.8,
+      "accel": 496.0,
       "brakeForce": 1160.0,
       "engineBrake": 255.0,
       "linearDrag": 0.029,
@@ -95,8 +99,8 @@
     "avenir_gripline": {
       "massKg": 1020,
       "handlingProfile": "AVENIR_GRIPLINE",
-      "maxFwd": 558.0,
-      "accel": 760.0,
+      "maxFwd": 697.5,
+      "accel": 471.2,
       "brakeForce": 1145.0,
       "engineBrake": 260.0,
       "linearDrag": 0.031,
@@ -109,8 +113,8 @@
     "avenir_apex": {
       "massKg": 960,
       "handlingProfile": "AVENIR_APEX",
-      "maxFwd": 568.0,
-      "accel": 782.0,
+      "maxFwd": 710.0,
+      "accel": 484.8,
       "brakeForce": 1170.0,
       "engineBrake": 255.0,
       "linearDrag": 0.030,
@@ -123,8 +127,8 @@
     "avenir_torque": {
       "massKg": 1080,
       "handlingProfile": "AVENIR_TORQUE",
-      "maxFwd": 578.0,
-      "accel": 800.0,
+      "maxFwd": 722.5,
+      "accel": 496.0,
       "brakeForce": 1190.0,
       "engineBrake": 250.0,
       "linearDrag": 0.029,
@@ -136,13 +140,15 @@
     },
 
     "veloce_flash": {
-      "massKg": 940
+      "massKg": 940,
+      "maxFwd": 726.4,
+      "accel": 487.1
     },
     "veloce_surge": {
       "massKg": 900,
       "handlingProfile": "VELOCE_SURGE",
-      "maxFwd": 610.0,
-      "accel": 825.0,
+      "maxFwd": 762.5,
+      "accel": 511.5,
       "brakeForce": 1080.0,
       "engineBrake": 245.0,
       "linearDrag": 0.026,
@@ -155,8 +161,8 @@
     "veloce_photon": {
       "massKg": 860,
       "handlingProfile": "VELOCE_PHOTON",
-      "maxFwd": 640.0,
-      "accel": 855.0,
+      "maxFwd": 800.0,
+      "accel": 530.1,
       "brakeForce": 1110.0,
       "engineBrake": 235.0,
       "linearDrag": 0.024,
@@ -170,8 +176,8 @@
     "forge_hammer": {
       "massKg": 2100,
       "handlingProfile": "FORGE_HAMMER",
-      "maxFwd": 495.0,
-      "accel": 900.0,
+      "maxFwd": 618.8,
+      "accel": 558.0,
       "brakeForce": 1085.0,
       "engineBrake": 315.0,
       "linearDrag": 0.040,
@@ -193,8 +199,8 @@
     "forge_anvil": {
       "massKg": 2600,
       "handlingProfile": "FORGE_ANVIL",
-      "maxFwd": 505.0,
-      "accel": 945.0,
+      "maxFwd": 631.3,
+      "accel": 585.9,
       "brakeForce": 1120.0,
       "engineBrake": 335.0,
       "linearDrag": 0.042,
@@ -216,8 +222,8 @@
     "forge_colossus": {
       "massKg": 4200,
       "handlingProfile": "FORGE_COLOSSUS",
-      "maxFwd": 515.0,
-      "accel": 990.0,
+      "maxFwd": 643.8,
+      "accel": 613.8,
       "brakeForce": 1175.0,
       "engineBrake": 365.0,
       "linearDrag": 0.045,
