@@ -7,26 +7,28 @@
 <style>
   :root{font-family:system-ui,-apple-system,sans-serif;color:#eef6ff;background:#071017}
   body{margin:0;padding:18px;background:#071017}
-  h1{font-size:22px;margin:0 0 6px} p{opacity:.78;margin:0 0 16px}
+  h1{font-size:22px;margin:0 0 6px} h2{font-size:18px;margin:0 0 8px} p{opacity:.78;margin:0 0 16px}
   .card{border:1px solid #36506a;border-radius:14px;padding:14px;margin:12px 0;background:#0c1822}
   button{font:inherit;font-weight:700;padding:12px 14px;border-radius:10px;border:1px solid #537899;background:#162b3b;color:white;margin:4px}
   input[type=range]{width:100%;height:46px}
-  .row{display:grid;grid-template-columns:90px 1fr 48px;align-items:center;gap:8px;margin:8px 0}
-  #status{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;line-height:1.4}
-  .ok{color:#96f7bb}.bad{color:#ff9c9c}
+  .row{display:grid;grid-template-columns:90px 1fr 56px;align-items:center;gap:8px;margin:8px 0}
+  #status,#dynoStatus{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;line-height:1.4}
+  .ok{color:#96f7bb}.bad{color:#ff9c9c}.warn{color:#ffd486}
 </style>
 </head>
 <body>
 <h1>Veloce Audio Lab</h1>
-<p>Prueba aislada: los seis loops permanecen reproduciéndose y se mezclan progresivamente entre sí.</p>
+<p>Laboratorio aislado. Nada de esta página modifica la DEV del juego.</p>
+
+<div class="card"><h2>Prueba A · 6 loops</h2><p>Mezcla progresiva equal-power validada.</p></div>
 <div class="card">
-  <button id="start">1 · CARGAR Y SONAR</button>
+  <button id="start">CARGAR Y SONAR</button>
   <button id="stop">PARAR</button>
   <div class="row"><span>Master</span><input id="master" type="range" min="0" max="100" value="70"><b id="mv">70</b></div>
 </div>
 <div class="card">
   <div class="row"><span>RPM</span><input id="rpm" type="range" min="0" max="500" value="0"><b id="rpmv">0.00</b></div>
-  <p>Entre dos loops, uno baja mientras el siguiente entra progresivamente. Nunca saltan de 0 a 80 de golpe.</p>
+  <p>Entre dos loops, uno baja mientras el siguiente entra progresivamente.</p>
 </div>
 <div class="card" id="layers"></div>
 <div class="card">
@@ -34,9 +36,25 @@
   <button id="sweep">BARRIDO 0→5</button>
 </div>
 <div class="card"><div id="status">Esperando toque…</div></div>
+
+<div class="card">
+  <h2>Prueba B · grabación completa de banco</h2>
+  <p>Usa el MP3 largo como una cinta de régimen. Hay un límite duro antes del final para que nunca llegue al turbo/corte de inyección.</p>
+  <button id="dynoLoad">CARGAR DYNO</button>
+  <button id="dynoPlay">REPRODUCIR</button>
+  <button id="dynoPause">PAUSA</button>
+  <div class="row"><span>Posición</span><input id="dynoPos" type="range" min="0" max="1000" value="0"><b id="dynoPosV">0.0s</b></div>
+  <div class="row"><span>Límite</span><input id="dynoLimit" type="range" min="240" max="330" value="310"><b id="dynoLimitV">31.0s</b></div>
+  <div class="row"><span>Velocidad</span><input id="dynoRate" type="range" min="65" max="135" value="100"><b id="dynoRateV">1.00×</b></div>
+  <button id="dynoSweep">SUBIDA 0→LÍMITE</button>
+  <p class="warn">El límite inicial es 31,0 s. Puedes bajarlo mientras escuchas si detectas que la zona de turbo/corte empieza antes.</p>
+</div>
+<div class="card"><div id="dynoStatus">Dyno esperando toque…</div></div>
+
 <script>
 const BASE='/TopdownCraftrace/audio-lab/assets/audio/cars/veloce_flash/engine/';
 const files=Array.from({length:6},(_,i)=>`${BASE}loop_${i}.wav`);
+const DYNO='/TopdownCraftrace/assets/audio/cars/veloce_flash/engine/freesound_community-import-car-revs-on-chassis-dyno-with-turbo-66272.mp3';
 const status=document.querySelector('#status');
 const sliders=[]; const values=[];
 let ctx=null, master=null, nodes=[], sweepTimer=null;
@@ -85,10 +103,7 @@ function setMix(pos,immediate=false){
    const g=nodes[i].gain.gain,now=ctx.currentTime;
    g.cancelScheduledValues(now);
    if(immediate)g.setValueAtTime(target,now);
-   else{
-     g.setValueAtTime(g.value,now);
-     g.linearRampToValueAtTime(target,now+.14);
-   }
+   else{g.setValueAtTime(g.value,now);g.linearRampToValueAtTime(target,now+.14);}
  });
 }
 async function goTo(pos){await load();setMix(pos,false)}
@@ -97,10 +112,32 @@ document.querySelector('#stop').onclick=()=>{clearInterval(sweepTimer);for(const
 document.querySelector('#master').oninput=e=>{document.querySelector('#mv').textContent=e.target.value;if(master&&ctx)master.gain.setTargetAtTime(Number(e.target.value)/100,ctx.currentTime,.05)};
 document.querySelector('#rpm').oninput=e=>goTo(Number(e.target.value)/100);
 document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>goTo(Number(b.dataset.preset)));
-document.querySelector('#sweep').onclick=async()=>{
- await load();clearInterval(sweepTimer);let pos=0;setMix(0,true);
- sweepTimer=setInterval(()=>{pos+=.025;if(pos>=5){pos=5;setMix(pos,false);clearInterval(sweepTimer);return}setMix(pos,false)},30);
-};
+document.querySelector('#sweep').onclick=async()=>{await load();clearInterval(sweepTimer);let pos=0;setMix(0,true);sweepTimer=setInterval(()=>{pos+=.025;if(pos>=5){pos=5;setMix(pos,false);clearInterval(sweepTimer);return}setMix(pos,false)},30)};
+
+const dynoStatus=document.querySelector('#dynoStatus');
+const dyno=new Audio();dyno.preload='auto';dyno.src=DYNO;dyno.playsInline=true;
+let dynoLoaded=false;
+const dPos=document.querySelector('#dynoPos'),dPosV=document.querySelector('#dynoPosV');
+const dLimit=document.querySelector('#dynoLimit'),dLimitV=document.querySelector('#dynoLimitV');
+const dRate=document.querySelector('#dynoRate'),dRateV=document.querySelector('#dynoRateV');
+function safeEnd(){return Number(dLimit.value)/10}
+function dynoLog(s,bad=false){dynoStatus.innerHTML=`<span class="${bad?'bad':'ok'}">${s}</span>`}
+function syncDynoUI(){const end=safeEnd();const ratio=end>0?Math.min(1,dyno.currentTime/end):0;dPos.value=Math.round(ratio*1000);dPosV.textContent=`${dyno.currentTime.toFixed(1)}s`;}
+async function loadDyno(){
+ if(dynoLoaded)return true;
+ dynoLog('Cargando MP3 largo…');
+ try{dyno.load();await new Promise((resolve,reject)=>{const ok=()=>{cleanup();resolve()};const bad=()=>{cleanup();reject(new Error('No se pudo cargar el MP3'))};const cleanup=()=>{dyno.removeEventListener('canplaythrough',ok);dyno.removeEventListener('error',bad)};dyno.addEventListener('canplaythrough',ok,{once:true});dyno.addEventListener('error',bad,{once:true});setTimeout(()=>{if(dyno.readyState>=3){cleanup();resolve()}},1200)});dynoLoaded=true;dyno.currentTime=.15;syncDynoUI();dynoLog(`OK · duración ${Number(dyno.duration||35.52).toFixed(2)} s · límite duro ${safeEnd().toFixed(1)} s`);return true}catch(e){dynoLog(`ERROR: ${e.message}`,true);return false}
+}
+function enforceLimit(){if(dyno.currentTime>=safeEnd()){dyno.pause();dyno.currentTime=Math.max(.15,safeEnd()-.12);syncDynoUI();dynoLog(`PARADA DE SEGURIDAD · no se reproduce más allá de ${safeEnd().toFixed(1)} s`) }else syncDynoUI()}
+dyno.addEventListener('timeupdate',enforceLimit);
+dyno.addEventListener('ended',()=>{dyno.currentTime=.15;syncDynoUI()});
+document.querySelector('#dynoLoad').onclick=loadDyno;
+document.querySelector('#dynoPlay').onclick=async()=>{if(!await loadDyno())return;if(dyno.currentTime>=safeEnd()-.15)dyno.currentTime=.15;try{await dyno.play();dynoLog(`Reproduciendo · límite ${safeEnd().toFixed(1)} s`)}catch(e){dynoLog(`PLAY bloqueado: ${e.message}`,true)}};
+document.querySelector('#dynoPause').onclick=()=>{dyno.pause();dynoLog(`Pausa en ${dyno.currentTime.toFixed(2)} s`)};
+dPos.oninput=async e=>{if(!await loadDyno())return;dyno.currentTime=(Number(e.target.value)/1000)*safeEnd();syncDynoUI()};
+dLimit.oninput=e=>{dLimitV.textContent=`${(Number(e.target.value)/10).toFixed(1)}s`;if(dyno.currentTime>safeEnd())dyno.currentTime=Math.max(.15,safeEnd()-.12);syncDynoUI()};
+dRate.oninput=e=>{const r=Number(e.target.value)/100;dyno.playbackRate=r;dRateV.textContent=`${r.toFixed(2)}×`};
+document.querySelector('#dynoSweep').onclick=async()=>{if(!await loadDyno())return;dyno.pause();dyno.currentTime=.15;dyno.playbackRate=Number(dRate.value)/100;try{await dyno.play();dynoLog(`Subida protegida iniciada · se detendrá a ${safeEnd().toFixed(1)} s`)}catch(e){dynoLog(`PLAY bloqueado: ${e.message}`,true)}};
 </script>
 </body>
 </html>
