@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { applyCarOverrides } from '../cars/carSpecs.js';
+import { CAR_SPECS, applyCarOverrides } from '../cars/carSpecs.js';
 
 function bootMark(phase, extra={}) {
   try {
@@ -60,7 +60,19 @@ export class BootScene extends Phaser.Scene {
   create() {
     bootMark('boot-create');
     this.cameras.main.setBackgroundColor('#000000');
-    try { applyCarOverrides(this.cache.json.get('car_overrides')); } catch {}
+    try {
+      applyCarOverrides(this.cache.json.get('car_overrides'));
+      // DEV 0.0.4b: el drag anterior impedía aprovechar la nueva punta.
+      // Conservamos la aceleración más larga, pero reducimos la resistencia
+      // longitudinal de los coches oficiales para que realmente superen la
+      // velocidad física de la 0.0.3 en vez de quedarse clavados ~37 km/h.
+      for (const spec of Object.values(CAR_SPECS)) {
+        if ((Number(spec?.collectionNo)||0) <= 0) continue;
+        if (Number.isFinite(Number(spec?.linearDrag))) {
+          spec.linearDrag = Number(spec.linearDrag) * 0.34;
+        }
+      }
+    } catch {}
 
     // Startup rule: optional media never sits on the critical path.
     // The intro asset remains in the project for a future one-time/on-demand use,
