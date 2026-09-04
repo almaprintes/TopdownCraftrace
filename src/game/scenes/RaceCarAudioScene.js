@@ -176,25 +176,22 @@ export class RaceScene extends CurrentRaceScene{
     const rawSpeed01=clamp(speed/maxFwd,0,1);
     const dt=Math.max(.001,Number(delta||33.3)/1000);
 
-    const speedAlpha=1-Math.exp(-dt/.18);
+    // La aguja sonora sigue la velocidad física real, suavizada para no transmitir
+    // vibraciones de la simulación. El acelerador sólo aporta una pequeña carga,
+    // nunca puede llevar el motor a altas rpm con el coche todavía lento.
+    const speedAlpha=1-Math.exp(-dt/.14);
     this._carAudioSpeed01+=(rawSpeed01-this._carAudioSpeed01)*speedAlpha;
     const speed01=clamp(this._carAudioSpeed01,0,1);
     const throttle=clamp(Number(this.touch?.throttle??this._throttle??0),0,1);
 
-    // Restore the calmer progression used before the virtual gearbox experiment.
-    // With the longer physical acceleration the engine now has time to climb naturally.
-    const movingFloor=clamp(speed01*.18,0,.18);
-    let rev=this._carAudioRev01;
-    if(throttle>.08){
-      const risePerSecond=.105+.115*throttle;
-      rev+=risePerSecond*dt;
-      rev=Math.max(rev,movingFloor+.05*throttle);
-    }else{
-      const fallPerSecond=.31;
-      rev-=fallPerSecond*dt;
-      rev=Math.max(rev,movingFloor);
-    }
-    this._carAudioRev01=clamp(rev,.025,1);
+    const idleRev=.035;
+    const speedRev=speed01*.84;
+    const loadBlip=throttle*.045*(1-speed01);
+    const targetRev=clamp(idleRev+speedRev+loadBlip,.025,.92);
+    const revTau=targetRev>this._carAudioRev01?.19:.31;
+    const revAlpha=1-Math.exp(-dt/revTau);
+    this._carAudioRev01+=(targetRev-this._carAudioRev01)*revAlpha;
+    this._carAudioRev01=clamp(this._carAudioRev01,.025,.92);
     const rev01=this._carAudioRev01;
 
     const targetPos=DYNO_START+(DYNO_LIMIT-DYNO_START)*rev01;
@@ -206,11 +203,11 @@ export class RaceScene extends CurrentRaceScene{
     if(now-this._carAudioLastGrainAt>=.095){
       this._carAudioLastGrainAt=now;
       const rate=.98+rev01*.37;
-      const volume=(.54+.24*throttle+.08*rev01)*p.engine;
+      const volume=(.54+.20*throttle+.10*speed01)*p.engine;
       this._spawnDynoGrain(this._carAudioDynoPos,rate,volume);
     }
 
-    a.engineFilter.frequency.setTargetAtTime(2400+rev01*3300+throttle*400,now,.10);
+    a.engineFilter.frequency.setTargetAtTime(2400+rev01*3300+throttle*250,now,.10);
     a.engineBus.gain.setTargetAtTime(this._raceStarted?.95:.58,now,.08);
     a.master.gain.setTargetAtTime(p.mute?0:p.master*.92,now,.04);
   }
