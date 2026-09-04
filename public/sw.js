@@ -1,7 +1,7 @@
 /* Top-Down Race 2 service worker — development-safe PWA cache.
    DEV preview has its own cache namespace so it never collides with the beta. */
 
-const CACHE_VERSION = 'tdr2-dev-v1';
+const CACHE_VERSION = 'tdr2-dev-v3';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -33,7 +33,11 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    await Promise.all(keys.filter(k=>k.startsWith('tdr2-dev-')&&k!==CACHE_VERSION).map(k=>caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
 
 async function networkFirst(req) {
