@@ -37,12 +37,13 @@ export class RaceScene extends CurrentRaceScene {
     this._updateSimpleRaceHud=()=>{};
   }
 
-  _retireLegacyRecordNotice(){
+  _retireLegacyLapNotice(){
     try{
-      const topLimit=(Number(this.scale?.height)||0)*0.42;
+      const topLimit=(Number(this.scale?.height)||0)*0.46;
+      const legacyWords=['RÉCORD','RECORD','VUELTA RÁPIDA','VUELTA RAPIDA','MEJOR VUELTA','BEST LAP','FASTEST LAP'];
       for(const child of [...(this.children?.list||[])]){
         const text=String(child?.text||'').toUpperCase();
-        if(!text.includes('RÉCORD')&&!text.includes('RECORD'))continue;
+        if(!legacyWords.some(word=>text.includes(word)))continue;
         const y=Number(child?.y||0);
         if(!topLimit||y<topLimit)child?.destroy?.();
       }
@@ -57,10 +58,14 @@ export class RaceScene extends CurrentRaceScene {
     const isRecord=!Number.isFinite(previousRecord)||ms<previousRecord-0.5;
     const isSessionFast=!Number.isFinite(previousSessionBest)||ms<previousSessionBest-0.5;
     if(isRecord){
-      this._retireLegacyRecordNotice();
-      this.time?.delayedCall?.(80,()=>this._retireLegacyRecordNotice());
+      this._retireLegacyLapNotice();
+      this.time?.delayedCall?.(80,()=>this._retireLegacyLapNotice());
+      this.time?.delayedCall?.(300,()=>this._retireLegacyLapNotice());
       showRaceFeedback(this,{type:'record',eyebrow:'🏆 NUEVO RÉCORD',title:fmtLap(ms),detail:'RÉCORD DEL CIRCUITO',holdMs:FEEDBACK_HOLD_MS});
     }else if(isSessionFast){
+      this._retireLegacyLapNotice();
+      this.time?.delayedCall?.(80,()=>this._retireLegacyLapNotice());
+      this.time?.delayedCall?.(300,()=>this._retireLegacyLapNotice());
       showRaceFeedback(this,{type:'fast',eyebrow:'VUELTA RÁPIDA',title:fmtLap(ms),detail:'MEJOR DE LA SESIÓN',holdMs:FEEDBACK_HOLD_MS});
     }
     if(isRecord)this._feedbackBestLapMs=ms;
