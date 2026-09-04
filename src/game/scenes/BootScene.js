@@ -62,14 +62,19 @@ export class BootScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#000000');
     try {
       applyCarOverrides(this.cache.json.get('car_overrides'));
-      // DEV 0.0.4b: el drag anterior impedía aprovechar la nueva punta.
-      // Conservamos la aceleración más larga, pero reducimos la resistencia
-      // longitudinal de los coches oficiales para que realmente superen la
-      // velocidad física de la 0.0.3 en vez de quedarse clavados ~37 km/h.
+
+      // DEV 0.0.4c: término medio respecto a 0.0.4a/0.0.4b.
+      // Las cifras del JSON ya dejan una aceleración ~38% menor que la original.
+      // Recuperamos parte del empuje (x1.25 => ~22% menor que la original) y
+      // usamos un drag moderado (60% del anterior), evitando tanto el coche
+      // ahogado de 0.0.4a como el latigazo de velocidad de 0.0.4b.
       for (const spec of Object.values(CAR_SPECS)) {
         if ((Number(spec?.collectionNo)||0) <= 0) continue;
+        if (Number.isFinite(Number(spec?.accel))) {
+          spec.accel = Number(spec.accel) * 1.25;
+        }
         if (Number.isFinite(Number(spec?.linearDrag))) {
-          spec.linearDrag = Number(spec.linearDrag) * 0.34;
+          spec.linearDrag = Number(spec.linearDrag) * 0.60;
         }
       }
     } catch {}
