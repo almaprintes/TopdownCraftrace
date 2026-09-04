@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>Veloce Audio Lab</title>
+<style>
+  :root{font-family:system-ui,-apple-system,sans-serif;color:#eef6ff;background:#071017}
+  body{margin:0;padding:18px;background:#071017}
+  h1{font-size:22px;margin:0 0 6px} p{opacity:.78;margin:0 0 16px}
+  .card{border:1px solid #36506a;border-radius:14px;padding:14px;margin:12px 0;background:#0c1822}
+  button{font:inherit;font-weight:700;padding:12px 14px;border-radius:10px;border:1px solid #537899;background:#162b3b;color:white;margin:4px}
+  input[type=range]{width:100%;height:46px}
+  .row{display:grid;grid-template-columns:90px 1fr 48px;align-items:center;gap:8px;margin:8px 0}
+  #status{white-space:pre-wrap;font-family:ui-monospace,monospace;font-size:12px;line-height:1.4}
+  .ok{color:#96f7bb}.bad{color:#ff9c9c}
+</style>
+</head>
+<body>
+<h1>Veloce Audio Lab</h1>
+<p>Prueba aislada: sin física, sin carrera, sin cambios automáticos. Solo los 6 loops del motor.</p>
+<div class="card">
+  <button id="start">1 · CARGAR Y SONAR</button>
+  <button id="stop">PARAR</button>
+  <div class="row"><span>Master</span><input id="master" type="range" min="0" max="100" value="70"><b id="mv">70</b></div>
+</div>
+<div class="card" id="layers"></div>
+<div class="card">
+  <button data-preset="0">Ralentí</button><button data-preset="1">RPM 1</button><button data-preset="2">RPM 2</button><button data-preset="3">RPM 3</button><button data-preset="4">RPM 4</button><button data-preset="5">RPM 5</button>
+  <button id="sweep">BARRIDO 0→5</button>
+</div>
+<div class="card"><div id="status">Esperando toque…</div></div>
+<script>
+const BASE='/TopdownCraftrace/audio-lab/assets/audio/cars/veloce_flash/engine/';
+const files=Array.from({length:6},(_,i)=>`${BASE}loop_${i}.wav`);
+const status=document.querySelector('#status');
+const sliders=[]; const values=[];
+let ctx=null, master=null, nodes=[], sweepTimer=null;
+function log(s,bad=false){status.innerHTML=`<span class="${bad?'bad':'ok'}">${s}</span>`;}
+function buildUI(){
+ const root=document.querySelector('#layers');
+ for(let i=0;i<6;i++){
+  const row=document.createElement('div');row.className='row';
+  row.innerHTML=`<span>Loop ${i}</span><input type="range" min="0" max="100" value="${i===0?60:0}"><b>${i===0?60:0}</b>`;
+  const r=row.querySelector('input'),v=row.querySelector('b'); sliders.push(r);values.push(v);
+  r.addEventListener('input',()=>{v.textContent=r.value; if(nodes[i]&&ctx)nodes[i].gain.gain.setTargetAtTime(Number(r.value)/100,ctx.currentTime,.04)});
+  root.appendChild(row);
+ }
+}
+buildUI();
+async function load(){
+ if(ctx){try{await ctx.resume()}catch{};return;}
+ const AC=window.AudioContext||window.webkitAudioContext; if(!AC){log('AudioContext no disponible',true);return;}
+ ctx=new AC(); await ctx.resume();
+ master=ctx.createGain(); master.gain.value=.7; master.connect(ctx.destination);
+ log(`AudioContext: ${ctx.state}\nCargando 6 WAV…`);
+ try{
+   const bufs=[];
+   for(const url of files){
+     const r=await fetch(url,{cache:'no-store'}); if(!r.ok)throw new Error(`${r.status} ${url}`);
+     bufs.push(await ctx.decodeAudioData(await r.arrayBuffer()));
+   }
+   nodes=bufs.map((buf,i)=>{const src=ctx.createBufferSource(),gain=ctx.createGain(); src.buffer=buf;src.loop=true;gain.gain.value=Number(sliders[i].value)/100;src.connect(gain).connect(master);src.start();return{src,gain}});
+   log(`OK · AudioContext ${ctx.state}\n6/6 WAV cargados y reproduciendo`);
+ }catch(e){log(`ERROR: ${e.message}`,true)}
+}
+function preset(i){sliders.forEach((s,n)=>{s.value=n===i?80:0;s.dispatchEvent(new Event('input'))})}
+document.querySelector('#start').onclick=load;
+document.querySelector('#stop').onclick=()=>{clearInterval(sweepTimer);for(const n of nodes)try{n.src.stop()}catch{};nodes=[];if(ctx){try{ctx.close()}catch{};ctx=null;master=null}log('Parado')};
+document.querySelector('#master').oninput=e=>{document.querySelector('#mv').textContent=e.target.value;if(master&&ctx)master.gain.setTargetAtTime(Number(e.target.value)/100,ctx.currentTime,.04)};
+document.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>preset(Number(b.dataset.preset)));
+document.querySelector('#sweep').onclick=async()=>{await load();clearInterval(sweepTimer);let x=0; preset(0);sweepTimer=setInterval(()=>{x++;if(x>5){clearInterval(sweepTimer);return}preset(x)},1200)};
+</script>
+</body>
+</html>
