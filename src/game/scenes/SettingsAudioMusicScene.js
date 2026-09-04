@@ -4,14 +4,34 @@ import { getLanguage } from '../i18n/index.js';
 const STORAGE_KEY='tdr2:settings';
 const AUDIO_EVENT='tdr2:audio-settings';
 
-function persistAudio(settings){
+function persistSettings(settings){
   try{localStorage.setItem(STORAGE_KEY,JSON.stringify(settings));}catch{}
+}
+
+function persistAudio(settings){
+  persistSettings(settings);
   try{window.dispatchEvent(new CustomEvent(AUDIO_EVENT,{detail:{...(settings.audio||{})}}));}catch{}
 }
 
 export class SettingsScene extends CurrentSettingsScene {
+  init(){
+    super.init();
+    const controls=this.settings?.controls;
+    if(controls?.steeringMode==='wheel'){
+      controls.steeringMode='stick';
+      controls.scheme='touch';
+      persistSettings(this.settings);
+    }
+  }
+
   _renderTab(tab){
     super._renderTab(tab);
+
+    if(tab==='controls' && this.root){
+      this.root.querySelector('[data-choice="steer"] [data-v="wheel"]')?.remove?.();
+      return;
+    }
+
     if(tab!=='audio' || !this.root)return;
 
     const body=this.root.querySelector('.s2body');
