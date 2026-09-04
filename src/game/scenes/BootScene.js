@@ -30,7 +30,7 @@ export class BootScene extends Phaser.Scene {
 
     // Only resources required to paint the first lobby frame belong in Boot.
     this.load.image('logo', 'assets/logos/logo_tdr2_sobres.webp');
-    this.load.json('car_overrides', 'community/car-overrides.json');
+    this.load.json('car_overrides', 'assets/data/car_overrides.json');
     this.load.json('trackjson:track01', 'tracks/library/track01/track.json');
     this.load.image('menu_bg', 'assets/ui/menu_bg.webp');
     this.load.image('lobby-platform', 'assets/ui/lobby/car_platform.webp');
