@@ -1,9 +1,9 @@
-# Deployment refresh: DEV 0.0.4 audio settings cleanup
+# Shipping deploy: BETA 0.0.3 + DEV 0.0.4
 name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev-0.0.4]
   workflow_dispatch:
 
 permissions:
@@ -31,7 +31,7 @@ jobs:
           ref: dev-0.0.4
           path: develop-src
 
-      - name: Checkout audio test
+      - name: Checkout audio assets
         uses: actions/checkout@v4
         with:
           ref: fix/car-audio-v1
@@ -56,7 +56,7 @@ jobs:
         working-directory: stable
         run: npx vite build --base=/TopdownCraftrace/
 
-      - name: Copy BETA 0.0.3 tutorial assets
+      - name: Copy BETA tutorial assets
         working-directory: stable
         run: |
           mkdir -p dist/assets/tutorials/dropping
@@ -70,7 +70,7 @@ jobs:
         working-directory: develop-src
         run: npx vite build --base=/TopdownCraftrace/dev/
 
-      - name: Copy DEV 0.0.4 tutorial assets
+      - name: Copy DEV tutorial assets
         working-directory: develop-src
         run: |
           mkdir -p dist/assets/tutorials/dropping
