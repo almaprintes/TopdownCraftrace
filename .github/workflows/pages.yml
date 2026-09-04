@@ -1,4 +1,4 @@
-# Shipping deploy: BETA 0.0.3 + DEV 0.0.4
+# Shipping deploy: BETA 0.0.3 + DEV 0.0.4 + isolated Veloce audio lab
 name: Deploy GitHub Pages
 
 on:
@@ -30,6 +30,12 @@ jobs:
         with:
           ref: dev-0.0.4
           path: develop-src
+
+      - name: Checkout isolated Veloce audio lab
+        uses: actions/checkout@v4
+        with:
+          ref: lab/veloce-audio
+          path: lab-src
 
       - name: Checkout audio assets
         uses: actions/checkout@v4
@@ -114,6 +120,13 @@ jobs:
           rm -rf stable/dist/dev
           mkdir -p stable/dist/dev
           cp -R develop-src/dist/. stable/dist/dev/
+
+      - name: Add isolated Veloce audio lab under /audio-lab
+        run: |
+          rm -rf stable/dist/audio-lab
+          mkdir -p stable/dist/audio-lab/assets/audio/cars
+          cp lab-src/audio-lab/index.html stable/dist/audio-lab/index.html
+          cp -R audio-src/public/assets/audio/cars/. stable/dist/audio-lab/assets/audio/cars/
 
       - name: Add audio test under /audio-test
         run: |
