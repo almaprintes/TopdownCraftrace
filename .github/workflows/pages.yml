@@ -1,4 +1,4 @@
-# Shipping deploy: BETA 0.0.3 + DEV 0.0.4f + isolated Veloce audio lab
+# Shipping deploy: BETA 0.0.3 + DEV 0.0.4g + isolated Veloce audio lab
 name: Deploy GitHub Pages
 
 on:
@@ -25,7 +25,7 @@ jobs:
           ref: beta-0.0.3
           path: stable
 
-      - name: Checkout DEV 0.0.4f
+      - name: Checkout DEV 0.0.4g
         uses: actions/checkout@v4
         with:
           ref: dev-0.0.4
@@ -74,11 +74,11 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Install DEV 0.0.4f dependencies
+      - name: Install DEV 0.0.4g dependencies
         working-directory: develop-src
         run: npm ci --no-audit --no-fund
 
-      - name: Build DEV 0.0.4f
+      - name: Build DEV 0.0.4g
         working-directory: develop-src
         run: npx vite build --base=/TopdownCraftrace/dev/
 
@@ -88,20 +88,20 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Copy Veloce car audio into DEV 0.0.4f
+      - name: Copy Veloce car audio into DEV 0.0.4g
         run: |
           mkdir -p develop-src/dist/assets/audio/cars
           cp -R audio-src/public/assets/audio/cars/. develop-src/dist/assets/audio/cars/
           mkdir -p develop-src/dist/assets/audio/cars/veloce_flash/engine
           cp main-src/public/assets/audio/cars/veloce_flash/engine/freesound_community-import-car-revs-on-chassis-dyno-with-turbo-66272.mp3 develop-src/dist/assets/audio/cars/veloce_flash/engine/
 
-      - name: Stamp visible DEV 0.0.4f badge
+      - name: Stamp visible DEV 0.0.4g badge
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('develop-src/dist/index.html')
           html = p.read_text(encoding='utf-8')
-          badge = '''<div id="tdr-dev-build-badge" style="position:fixed;top:max(8px,env(safe-area-inset-top));right:8px;z-index:2147483647;padding:5px 8px;border-radius:7px;background:rgba(0,0,0,.72);color:#fff;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;letter-spacing:.35px;pointer-events:none">DEV 0.0.4f</div>'''
+          badge = '''<div id="tdr-dev-build-badge" style="position:fixed;top:max(8px,env(safe-area-inset-top));right:8px;z-index:2147483647;padding:5px 8px;border-radius:7px;background:rgba(0,0,0,.72);color:#fff;font:700 11px/1.2 -apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;letter-spacing:.35px;pointer-events:none">DEV 0.0.4g</div>'''
           html = html.replace('</body>', badge + '</body>')
           p.write_text(html, encoding='utf-8')
           PY
@@ -134,7 +134,7 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Add DEV 0.0.4f build under /dev
+      - name: Add DEV 0.0.4g build under /dev
         run: |
           rm -rf stable/dist/dev
           mkdir -p stable/dist/dev
