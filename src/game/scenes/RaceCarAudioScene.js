@@ -34,7 +34,7 @@ export class RaceScene extends CurrentRaceScene{
     this._carAudioDestroyed=false;
     this._carAudioAccum=0;
     this._carAudioSpeed01=0;
-    this._carAudioRev01=0;
+    this._carAudioRev01=.03;
     this._carAudioDynoPos=DYNO_START;
     this._carAudioLastGrainAt=-99;
     this._carAudioUnlock=()=>this._ensureCarAudio();
@@ -59,13 +59,8 @@ export class RaceScene extends CurrentRaceScene{
       const ctx=this._carAudioCtx||new AC();
       this._carAudioCtx=ctx;
       try{await ctx.resume();}catch{}
-
-      // Cargar SOLO el motor. Ningún efecto secundario puede impedir que arranque.
       const dynoBuffer=await decodeUrl(ctx,DYNO_FILE);
       if(this._carAudioDestroyed)return;
-
-      // En iOS el contexto puede volver a suspendirse durante fetch/decode.
-      // Reanudamos otra vez después de decodificar, igual que en el Dyno Lab validado.
       try{if(ctx.state!=='running')await ctx.resume();}catch{}
 
       const master=ctx.createGain();
@@ -124,8 +119,6 @@ export class RaceScene extends CurrentRaceScene{
     const ctx=this._carAudioCtx,a=this._carAudio;
     if(!ctx||!a)return;
 
-    // No bloqueamos el motor por state=suspended: pedimos resume y dejamos
-    // los granos programados. El siguiente toque de acelerador también reanuda.
     if(ctx.state!=='running'){
       try{ctx.resume();}catch{}
     }
@@ -137,22 +130,32 @@ export class RaceScene extends CurrentRaceScene{
     const rawSpeed01=clamp(speed/maxFwd,0,1);
     const dt=Math.max(.001,Number(delta||33.3)/1000);
 
-    const speedAlpha=1-Math.exp(-dt/.16);
+    const speedAlpha=1-Math.exp(-dt/.18);
     this._carAudioSpeed01+=(rawSpeed01-this._carAudioSpeed01)*speedAlpha;
     const speed01=clamp(this._carAudioSpeed01,0,1);
     const throttle=clamp(Number(this.touch?.throttle??this._throttle??0),0,1);
 
-    // Pedal anticipa; velocidad mantiene las RPM. Al soltar, rev01 cae suavemente.
-    const targetRev=clamp(speed01*.86+throttle*.24,0,1);
-    const revTau=targetRev>this._carAudioRev01?.18:.52;
-    const revAlpha=1-Math.exp(-dt/revTau);
-    this._carAudioRev01+=(targetRev-this._carAudioRev01)*revAlpha;
-    const rev01=clamp(this._carAudioRev01,0,1);
+    // RPM VIRTUALES: ya no dependen de alcanzar la velocidad punta del coche.
+    // Con gas mantenido siguen subiendo aunque un Veloce sin mejorar se quede a 65 km/h.
+    // La velocidad solo aporta una pequeña base para que el sonido acompañe al movimiento.
+    const movingFloor=clamp(speed01*.18,0,.18);
+    let rev=this._carAudioRev01;
+    if(throttle>.08){
+      const risePerSecond=.105+.115*throttle;
+      rev+=risePerSecond*dt;
+      rev=Math.max(rev,movingFloor+.05*throttle);
+    }else{
+      const fallPerSecond=.31;
+      rev-=fallPerSecond*dt;
+      rev=Math.max(rev,movingFloor);
+    }
+    this._carAudioRev01=clamp(rev,.025,1);
+    const rev01=this._carAudioRev01;
 
-    // Avanza al acelerar y retrocede al levantar, usando siempre microfragmentos
-    // reproducidos hacia delante para evitar el efecto de audio invertido literal.
+    // La posición del dyno sigue a las RPM virtuales. Al soltar gas retrocede
+    // progresivamente, pero cada microfragmento se reproduce siempre hacia delante.
     const targetPos=DYNO_START+(DYNO_LIMIT-DYNO_START)*rev01;
-    const posTau=targetPos>this._carAudioDynoPos?.15:.40;
+    const posTau=targetPos>this._carAudioDynoPos?.18:.36;
     const posAlpha=1-Math.exp(-dt/posTau);
     this._carAudioDynoPos+=(targetPos-this._carAudioDynoPos)*posAlpha;
     this._carAudioDynoPos=clamp(this._carAudioDynoPos,DYNO_START,DYNO_LIMIT);
