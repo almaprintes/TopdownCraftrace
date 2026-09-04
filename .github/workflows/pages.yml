@@ -43,6 +43,12 @@ jobs:
           ref: fix/car-audio-v1
           path: audio-src
 
+      - name: Checkout main assets
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main-src
+
       - name: Checkout pre-Production Studio recovery
         uses: actions/checkout@v4
         with:
@@ -127,6 +133,7 @@ jobs:
           mkdir -p stable/dist/audio-lab/assets/audio/cars
           cp lab-src/audio-lab/index.html stable/dist/audio-lab/index.html
           cp -R audio-src/public/assets/audio/cars/. stable/dist/audio-lab/assets/audio/cars/
+          cp main-src/public/assets/audio/cars/veloce_flash/engine/freesound_community-import-car-revs-on-chassis-dyno-with-turbo-66272.mp3 stable/dist/audio-lab/assets/audio/cars/veloce_flash/engine/
 
       - name: Add audio test under /audio-test
         run: |
