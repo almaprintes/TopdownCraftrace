@@ -37,10 +37,15 @@ export class RaceScene extends CurrentRaceScene{
     this._carAudioRev01=.03;
     this._carAudioDynoPos=DYNO_START;
     this._carAudioLastGrainAt=-99;
+
+    // iOS: precargamos/decodificamos nada más entrar en carrera. El contexto puede
+    // quedarse suspendido, pero así el primer toque posterior solo tiene que reanudarlo.
     this._carAudioUnlock=()=>this._ensureCarAudio();
-    window.addEventListener('pointerdown',this._carAudioUnlock,{passive:true});
-    window.addEventListener('touchstart',this._carAudioUnlock,{passive:true});
-    window.addEventListener('keydown',this._carAudioUnlock,{passive:true});
+    window.addEventListener('pointerdown',this._carAudioUnlock,{passive:true,capture:true});
+    window.addEventListener('touchstart',this._carAudioUnlock,{passive:true,capture:true});
+    window.addEventListener('keydown',this._carAudioUnlock,{passive:true,capture:true});
+    this._ensureCarAudio();
+
     this.events.once('shutdown',()=>this._destroyCarAudio());
     this.events.once('destroy',()=>this._destroyCarAudio());
     return result;
@@ -51,7 +56,12 @@ export class RaceScene extends CurrentRaceScene{
       try{if(this._carAudioCtx?.state!=='running')await this._carAudioCtx.resume();}catch{}
       return;
     }
-    if(this._carAudioLoading)return;
+    if(this._carAudioLoading){
+      // Si la carga ya empezó antes del gesto, aprovechamos ESTE gesto para reanudar
+      // inmediatamente el contexto, aunque la decodificación siga en curso.
+      try{if(this._carAudioCtx?.state!=='running')await this._carAudioCtx.resume();}catch{}
+      return;
+    }
     const AC=window.AudioContext||window.webkitAudioContext;
     if(!AC)return;
     this._carAudioLoading=true;
@@ -135,9 +145,6 @@ export class RaceScene extends CurrentRaceScene{
     const speed01=clamp(this._carAudioSpeed01,0,1);
     const throttle=clamp(Number(this.touch?.throttle??this._throttle??0),0,1);
 
-    // RPM VIRTUALES: ya no dependen de alcanzar la velocidad punta del coche.
-    // Con gas mantenido siguen subiendo aunque un Veloce sin mejorar se quede a 65 km/h.
-    // La velocidad solo aporta una pequeña base para que el sonido acompañe al movimiento.
     const movingFloor=clamp(speed01*.18,0,.18);
     let rev=this._carAudioRev01;
     if(throttle>.08){
@@ -152,8 +159,6 @@ export class RaceScene extends CurrentRaceScene{
     this._carAudioRev01=clamp(rev,.025,1);
     const rev01=this._carAudioRev01;
 
-    // La posición del dyno sigue a las RPM virtuales. Al soltar gas retrocede
-    // progresivamente, pero cada microfragmento se reproduce siempre hacia delante.
     const targetPos=DYNO_START+(DYNO_LIMIT-DYNO_START)*rev01;
     const posTau=targetPos>this._carAudioDynoPos?.18:.36;
     const posAlpha=1-Math.exp(-dt/posTau);
@@ -176,9 +181,9 @@ export class RaceScene extends CurrentRaceScene{
     if(this._carAudioDestroyed)return;
     this._carAudioDestroyed=true;
     if(this._carAudioUnlock){
-      window.removeEventListener('pointerdown',this._carAudioUnlock);
-      window.removeEventListener('touchstart',this._carAudioUnlock);
-      window.removeEventListener('keydown',this._carAudioUnlock);
+      window.removeEventListener('pointerdown',this._carAudioUnlock,true);
+      window.removeEventListener('touchstart',this._carAudioUnlock,true);
+      window.removeEventListener('keydown',this._carAudioUnlock,true);
     }
     try{for(const src of this._carAudio?.grains||[])src?.stop?.();}catch{}
     try{this._carAudioCtx?.close?.();}catch{}
