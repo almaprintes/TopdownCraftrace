@@ -3,10 +3,11 @@ import { RaceScene as CurrentRaceScene } from './RaceHandbrakePhysicsScene.js';
 const BASE=import.meta.env.BASE_URL||'/';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const SETTINGS_KEY='tdr2:settings';
-const ENGINE_FILES=Array.from({length:6},(_,i)=>`${BASE}assets/audio/cars/veloce_flash/engine/loop_${i}.wav`);
+const DYNO_FILE=`${BASE}assets/audio/cars/veloce_flash/engine/freesound_community-import-car-revs-on-chassis-dyno-with-turbo-66272.mp3`;
 const SHIFT_FILE=`${BASE}assets/audio/cars/veloce_flash/transmission/freesound_community-shifting-car-42962.mp3`;
 const TURBO_FILE=`${BASE}assets/audio/cars/veloce_flash/turbo/audley_fergine-car-turbo-loop-288859.mp3`;
-const FLUTTER_FILE=`${BASE}assets/audio/cars/veloce_flash/turbo/spinopel-turbo-flutter-336362.mp3`;
+const DYNO_START=.18;
+const DYNO_LIMIT=24.0;
 
 function audioPrefs(){
   try{
@@ -33,10 +34,13 @@ export class RaceScene extends CurrentRaceScene{
     this._carAudioReady=false;
     this._carAudioLoading=false;
     this._carAudioDestroyed=false;
-    this._carAudioPrevThrottle=0;
     this._carAudioGear=1;
+    this._carAudioLastShiftAt=-99;
     this._carAudioAccum=0;
     this._carAudioSpeed01=0;
+    this._carAudioRev01=0;
+    this._carAudioDynoPos=DYNO_START;
+    this._carAudioLastGrainAt=-99;
     this._carAudioUnlock=()=>this._ensureCarAudio();
     window.addEventListener('pointerdown',this._carAudioUnlock,{passive:true});
     window.addEventListener('touchstart',this._carAudioUnlock,{passive:true});
@@ -59,35 +63,31 @@ export class RaceScene extends CurrentRaceScene{
       const ctx=this._carAudioCtx||new AC();
       this._carAudioCtx=ctx;
       try{await ctx.resume();}catch{}
-      const [engineBuffers,shiftBuffer,turboBuffer,flutterBuffer]=await Promise.all([
-        Promise.all(ENGINE_FILES.map(url=>decodeUrl(ctx,url))),
-        decodeUrl(ctx,SHIFT_FILE),decodeUrl(ctx,TURBO_FILE),decodeUrl(ctx,FLUTTER_FILE)
+      const [dynoBuffer,shiftBuffer,turboBuffer]=await Promise.all([
+        decodeUrl(ctx,DYNO_FILE),decodeUrl(ctx,SHIFT_FILE),decodeUrl(ctx,TURBO_FILE)
       ]);
       if(this._carAudioDestroyed)return;
       const master=ctx.createGain();
       const limiter=ctx.createDynamicsCompressor();
       limiter.threshold.value=-8;limiter.knee.value=18;limiter.ratio.value=5;limiter.attack.value=.008;limiter.release.value=.22;
       master.connect(limiter).connect(ctx.destination);
+
       const engineBus=ctx.createGain();
       const engineFilter=ctx.createBiquadFilter();
-      engineFilter.type='lowpass';engineFilter.frequency.value=2400;engineFilter.Q.value=.4;
+      engineFilter.type='lowpass';engineFilter.frequency.value=3000;engineFilter.Q.value=.35;
       engineBus.connect(engineFilter).connect(master);
-      const layers=engineBuffers.map((buffer,i)=>{
-        const src=ctx.createBufferSource(),gain=ctx.createGain();
-        src.buffer=buffer;src.loop=true;gain.gain.value=0;
-        src.connect(gain).connect(engineBus);src.start();
-        return{src,gain,i};
-      });
+
       const turboSrc=ctx.createBufferSource(),turboGain=ctx.createGain(),turboFilter=ctx.createBiquadFilter();
       turboSrc.buffer=turboBuffer;turboSrc.loop=true;turboGain.gain.value=0;
-      turboFilter.type='highpass';turboFilter.frequency.value=900;
+      turboFilter.type='highpass';turboFilter.frequency.value=1000;
       turboSrc.connect(turboFilter).connect(turboGain).connect(master);turboSrc.start();
-      this._carAudio={master,engineBus,engineFilter,layers,shiftBuffer,flutterBuffer,turboSrc,turboGain};
+
+      this._carAudio={master,engineBus,engineFilter,dynoBuffer,shiftBuffer,turboSrc,turboGain,grains:new Set()};
       this._carAudioReady=true;this._carAudioLoading=false;
       this._updateCarAudio(16.7,true);
     }catch(err){
       this._carAudioLoading=false;
-      console.warn('[TDR2 car audio] sample engine init failed',err);
+      console.warn('[TDR2 car audio] dyno engine init failed',err);
     }
   }
 
@@ -101,6 +101,27 @@ export class RaceScene extends CurrentRaceScene{
     }catch{}
   }
 
+  _spawnDynoGrain(offset,rate,volume){
+    const ctx=this._carAudioCtx,a=this._carAudio;
+    if(!ctx||!a?.dynoBuffer||ctx.state!=='running')return;
+    const now=ctx.currentTime;
+    const safeOffset=clamp(offset,DYNO_START,Math.min(DYNO_LIMIT,a.dynoBuffer.duration-.4));
+    try{
+      const src=ctx.createBufferSource(),gain=ctx.createGain();
+      src.buffer=a.dynoBuffer;
+      src.playbackRate.value=clamp(rate,.92,1.35);
+      gain.gain.setValueAtTime(0,now);
+      gain.gain.linearRampToValueAtTime(volume,now+.055);
+      gain.gain.setValueAtTime(volume,now+.19);
+      gain.gain.linearRampToValueAtTime(0,now+.31);
+      src.connect(gain).connect(a.engineBus);
+      src.start(now,safeOffset);
+      src.stop(now+.34);
+      a.grains.add(src);
+      src.onended=()=>a.grains.delete(src);
+    }catch{}
+  }
+
   _updateCarAudio(delta,force=false){
     if(!this._carAudioReady){if(force)this._ensureCarAudio();return;}
     const ctx=this._carAudioCtx,a=this._carAudio;if(!ctx||!a)return;
@@ -110,36 +131,52 @@ export class RaceScene extends CurrentRaceScene{
     const maxFwd=Math.max(160,Number(this.carParams?.maxFwd||this.maxFwd||520));
     const rawSpeed01=clamp(speed/maxFwd,0,1);
     const dt=Math.max(.001,Number(delta||33.3)/1000);
+
     const speedAlpha=1-Math.exp(-dt/.16);
     this._carAudioSpeed01+=(rawSpeed01-this._carAudioSpeed01)*speedAlpha;
     const speed01=clamp(this._carAudioSpeed01,0,1);
     const throttle=clamp(Number(this.touch?.throttle??this._throttle??0),0,1);
-    const band=speed01*5;
-    const lower=Math.floor(band),upper=Math.min(5,lower+1),mix=band-lower;
-    for(const layer of a.layers){
-      let weight=0;
-      if(layer.i===lower)weight=Math.cos(mix*Math.PI*.5);
-      if(layer.i===upper)weight=Math.max(weight,Math.sin(mix*Math.PI*.5));
-      const idleBoost=layer.i===0?clamp(1-speed01*4,0,1)*.32:0;
-      const target=clamp(weight+idleBoost,0,1.12)*(.48+.52*throttle)*p.engine;
-      layer.gain.gain.setTargetAtTime(target,now,.11);
-      layer.src.playbackRate.setTargetAtTime(1,now,.10);
+
+    // RPM audible: la velocidad manda, pero el pedal anticipa la subida.
+    const targetRev=clamp(speed01*.88+throttle*.20,0,1);
+    const tau=targetRev>this._carAudioRev01?.20:.48;
+    const revAlpha=1-Math.exp(-dt/tau);
+    this._carAudioRev01+=(targetRev-this._carAudioRev01)*revAlpha;
+    const rev01=clamp(this._carAudioRev01,0,1);
+
+    // La grabación completa funciona como una cinta de régimen entre 0.18 y 24 s.
+    // Al levantar gas la posición objetivo retrocede; los granos siempre se reproducen
+    // hacia delante, evitando el efecto artificial de audio literalmente invertido.
+    const targetPos=DYNO_START+(DYNO_LIMIT-DYNO_START)*rev01;
+    const posTau=targetPos>this._carAudioDynoPos?.16:.34;
+    const posAlpha=1-Math.exp(-dt/posTau);
+    this._carAudioDynoPos+=(targetPos-this._carAudioDynoPos)*posAlpha;
+    this._carAudioDynoPos=clamp(this._carAudioDynoPos,DYNO_START,DYNO_LIMIT);
+
+    if(now-this._carAudioLastGrainAt>=.105){
+      this._carAudioLastGrainAt=now;
+      const rate=.98+rev01*.37;
+      const volume=(.46+.26*throttle+.10*rev01)*p.engine;
+      this._spawnDynoGrain(this._carAudioDynoPos,rate,volume);
     }
-    a.engineFilter.frequency.setTargetAtTime(1650+speed01*3000+throttle*550,now,.12);
-    a.engineBus.gain.setTargetAtTime(this._raceStarted?.88:.42,now,.08);
+
+    a.engineFilter.frequency.setTargetAtTime(2100+rev01*3600+throttle*450,now,.10);
+    a.engineBus.gain.setTargetAtTime(this._raceStarted?.92:.48,now,.08);
     a.master.gain.setTargetAtTime(p.mute?0:p.master*.88,now,.04);
+
+    // Cambio solo al subir de marcha y con cooldown para evitar repetición en umbrales.
     const gear=clamp(Math.floor(rawSpeed01*6)+1,1,6);
-    if(gear!==this._carAudioGear&&speed>45){
+    if(gear>this._carAudioGear&&speed>45&&now-this._carAudioLastShiftAt>.50){
       this._carAudioGear=gear;
-      this._playCarOneShot(a.shiftBuffer,.28*p.effects,.96+gear*.015);
+      this._carAudioLastShiftAt=now;
+      this._playCarOneShot(a.shiftBuffer,.34*p.effects,.97+gear*.012);
+    }else if(gear<this._carAudioGear-1){
+      this._carAudioGear=gear;
     }
-    const turboTarget=Math.pow(rawSpeed01,1.35)*throttle*.24*p.effects;
-    a.turboGain.gain.setTargetAtTime(turboTarget,now,.07);
-    a.turboSrc.playbackRate.setTargetAtTime(.92+rawSpeed01*.30,now,.09);
-    if(this._carAudioPrevThrottle>.70&&throttle<.20&&rawSpeed01>.32){
-      this._playCarOneShot(a.flutterBuffer,.38*p.effects,.94+rawSpeed01*.10);
-    }
-    this._carAudioPrevThrottle=throttle;
+
+    const turboTarget=Math.pow(rawSpeed01,1.45)*throttle*.16*p.effects;
+    a.turboGain.gain.setTargetAtTime(turboTarget,now,.09);
+    a.turboSrc.playbackRate.setTargetAtTime(.94+rawSpeed01*.24,now,.10);
   }
 
   _destroyCarAudio(){
@@ -150,7 +187,7 @@ export class RaceScene extends CurrentRaceScene{
       window.removeEventListener('touchstart',this._carAudioUnlock);
       window.removeEventListener('keydown',this._carAudioUnlock);
     }
-    try{for(const l of this._carAudio?.layers||[])l.src?.stop?.();}catch{}
+    try{for(const src of this._carAudio?.grains||[])src?.stop?.();}catch{}
     try{this._carAudio?.turboSrc?.stop?.();}catch{}
     try{this._carAudioCtx?.close?.();}catch{}
     this._carAudio=null;this._carAudioCtx=null;this._carAudioReady=false;this._carAudioLoading=false;
