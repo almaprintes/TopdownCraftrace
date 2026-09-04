@@ -1,4 +1,4 @@
-# Shipping deploy: BETA 0.0.3 + DEV 0.0.4
+# Shipping deploy: BETA 0.0.3 + DEV 0.0.4a
 name: Deploy GitHub Pages
 
 on:
@@ -25,7 +25,7 @@ jobs:
           ref: beta-0.0.3
           path: stable
 
-      - name: Checkout DEV 0.0.4
+      - name: Checkout DEV 0.0.4a
         uses: actions/checkout@v4
         with:
           ref: dev-0.0.4
@@ -62,11 +62,11 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Install DEV 0.0.4 dependencies
+      - name: Install DEV 0.0.4a dependencies
         working-directory: develop-src
         run: npm ci --no-audit --no-fund
 
-      - name: Build DEV 0.0.4
+      - name: Build DEV 0.0.4a
         working-directory: develop-src
         run: npx vite build --base=/TopdownCraftrace/dev/
 
@@ -76,7 +76,7 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Copy Veloce car audio into DEV 0.0.4
+      - name: Copy Veloce car audio into DEV 0.0.4a
         run: |
           mkdir -p develop-src/dist/assets/audio/cars
           cp -R audio-src/public/assets/audio/cars/. develop-src/dist/assets/audio/cars/
@@ -109,11 +109,22 @@ jobs:
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Add DEV 0.0.4 build under /dev
+      - name: Add DEV 0.0.4a build under /dev
         run: |
           rm -rf stable/dist/dev
           mkdir -p stable/dist/dev
           cp -R develop-src/dist/. stable/dist/dev/
+
+      - name: Stamp visible DEV 0.0.4a badge
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('stable/dist/dev/index.html')
+          s = p.read_text(encoding='utf-8')
+          badge = '''<div id="dev-version-badge" style="position:fixed;right:8px;top:8px;z-index:2147483647;padding:4px 7px;border-radius:6px;background:rgba(0,0,0,.72);color:#fff;font:700 11px/1.2 system-ui,-apple-system,sans-serif;pointer-events:none;letter-spacing:.3px">DEV 0.0.4a</div>'''
+          s = s.replace('</body>', badge + '</body>')
+          p.write_text(s, encoding='utf-8')
+          PY
 
       - name: Add audio test under /audio-test
         run: |
