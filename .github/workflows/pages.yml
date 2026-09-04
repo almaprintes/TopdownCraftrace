@@ -92,6 +92,8 @@ jobs:
         run: |
           mkdir -p develop-src/dist/assets/audio/cars
           cp -R audio-src/public/assets/audio/cars/. develop-src/dist/assets/audio/cars/
+          mkdir -p develop-src/dist/assets/audio/cars/veloce_flash/engine
+          cp main-src/public/assets/audio/cars/veloce_flash/engine/freesound_community-import-car-revs-on-chassis-dyno-with-turbo-66272.mp3 develop-src/dist/assets/audio/cars/veloce_flash/engine/
 
       - name: Install audio-test dependencies
         working-directory: audio-src
