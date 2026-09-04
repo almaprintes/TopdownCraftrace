@@ -19,11 +19,10 @@ function audioPrefs(){
   }catch{return{master:1,engine:1,mute:false};}
 }
 
-async function decodeUrl(ctx,url){
+async function fetchAudioBytes(url){
   const res=await fetch(url,{cache:'no-store'});
   if(!res.ok)throw new Error(`audio ${res.status}: ${url}`);
-  const ab=await res.arrayBuffer();
-  return ctx.decodeAudioData(ab.slice(0));
+  return res.arrayBuffer();
 }
 
 export class RaceScene extends CurrentRaceScene{
@@ -32,24 +31,68 @@ export class RaceScene extends CurrentRaceScene{
     this._carAudioReady=false;
     this._carAudioLoading=false;
     this._carAudioDestroyed=false;
-    this._carAudioOwnCtx=false;
     this._carAudioAccum=0;
     this._carAudioSpeed01=0;
     this._carAudioRev01=.03;
     this._carAudioDynoPos=DYNO_START;
     this._carAudioLastGrainAt=-99;
+    this._carAudioCtx=null;
+    this._carAudioRawPromise=null;
 
-    // Reusar el AudioContext de Phaser es clave en iOS: música/UI ya lo han
-    // desbloqueado con gestos anteriores, así el motor no depende del semáforo.
-    this._carAudioUnlock=()=>this._ensureCarAudio();
-    window.addEventListener('pointerdown',this._carAudioUnlock,{passive:true,capture:true});
-    window.addEventListener('touchstart',this._carAudioUnlock,{passive:true,capture:true});
-    window.addEventListener('keydown',this._carAudioUnlock,{passive:true,capture:true});
-    this._ensureCarAudio();
+    // iOS: descargar el MP3 cuanto antes, pero NO crear/desbloquear el
+    // AudioContext hasta un gesto real. El antiguo código reutilizaba el
+    // contexto de Phaser suponiendo que la música ya lo había desbloqueado;
+    // la música usa en realidad su propio AudioContext, así que esa suposición
+    // dejaba el motor en suspended si el primer gesto llegaba tras el verde.
+    this._preloadCarAudioRaw();
+    this._carAudioUnlock=()=>this._unlockCarAudioFromGesture();
+    const opts={passive:true,capture:true};
+    window.addEventListener('pointerdown',this._carAudioUnlock,opts);
+    window.addEventListener('pointerup',this._carAudioUnlock,opts);
+    window.addEventListener('touchstart',this._carAudioUnlock,opts);
+    window.addEventListener('touchend',this._carAudioUnlock,opts);
+    window.addEventListener('click',this._carAudioUnlock,opts);
+    window.addEventListener('keydown',this._carAudioUnlock,opts);
 
     this.events.once('shutdown',()=>this._destroyCarAudio());
     this.events.once('destroy',()=>this._destroyCarAudio());
     return result;
+  }
+
+  _preloadCarAudioRaw(){
+    if(this._carAudioRawPromise)return this._carAudioRawPromise;
+    this._carAudioRawPromise=fetchAudioBytes(DYNO_FILE).catch(err=>{
+      this._carAudioRawPromise=null;
+      console.warn('[TDR2 car audio] dyno preload failed',err);
+      throw err;
+    });
+    return this._carAudioRawPromise;
+  }
+
+  _unlockCarAudioFromGesture(){
+    if(this._carAudioDestroyed)return;
+    const AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)return;
+    try{
+      // Crear el contexto dentro del gesto es la ruta fiable de WebAudio en iOS.
+      if(!this._carAudioCtx)this._carAudioCtx=new AC();
+      const ctx=this._carAudioCtx;
+      try{if(ctx.state!=='running')ctx.resume();}catch{}
+
+      // Forzar la apertura de la tubería de audio dentro del mismo gesto.
+      // Es inaudible y evita depender de que el primer grain llegue justo a tiempo.
+      try{
+        const b=ctx.createBuffer(1,1,22050);
+        const s=ctx.createBufferSource();
+        const g=ctx.createGain();
+        g.gain.value=0;
+        s.buffer=b;s.connect(g).connect(ctx.destination);s.start(0);
+      }catch{}
+
+      this._ensureCarAudio();
+    }catch(err){
+      console.warn('[TDR2 car audio] gesture unlock failed',err);
+    }
   }
 
   async _ensureCarAudio(){
@@ -57,20 +100,13 @@ export class RaceScene extends CurrentRaceScene{
       try{if(this._carAudioCtx?.state!=='running')await this._carAudioCtx.resume();}catch{}
       return;
     }
-    if(this._carAudioLoading){
-      try{if(this._carAudioCtx?.state!=='running')await this._carAudioCtx.resume();}catch{}
-      return;
-    }
-    const AC=window.AudioContext||window.webkitAudioContext;
-    const sharedCtx=this.sound?.context||this.game?.sound?.context||this.sys?.game?.sound?.context||null;
-    if(!sharedCtx&&!AC)return;
+    if(this._carAudioLoading)return;
+    const ctx=this._carAudioCtx;
+    if(!ctx)return; // en iOS se crea únicamente desde un gesto real
     this._carAudioLoading=true;
     try{
-      const ctx=sharedCtx||this._carAudioCtx||new AC();
-      this._carAudioCtx=ctx;
-      this._carAudioOwnCtx=!sharedCtx;
-      try{if(ctx.state!=='running')await ctx.resume();}catch{}
-      const dynoBuffer=await decodeUrl(ctx,DYNO_FILE);
+      const raw=await this._preloadCarAudioRaw();
+      const dynoBuffer=await ctx.decodeAudioData(raw.slice(0));
       if(this._carAudioDestroyed)return;
       try{if(ctx.state!=='running')await ctx.resume();}catch{}
 
@@ -96,7 +132,7 @@ export class RaceScene extends CurrentRaceScene{
       this._carAudioReady=true;
       this._carAudioLoading=false;
       this._updateCarAudio(16.7,true);
-      console.info('[TDR2 car audio] Veloce dyno ready',dynoBuffer.duration,ctx.state,sharedCtx?'phaser-context':'own-context');
+      console.info('[TDR2 car audio] Veloce dyno ready',dynoBuffer.duration,ctx.state,'gesture-context');
     }catch(err){
       this._carAudioLoading=false;
       console.warn('[TDR2 car audio] dyno engine init failed',err);
@@ -105,7 +141,7 @@ export class RaceScene extends CurrentRaceScene{
 
   _spawnDynoGrain(offset,rate,volume){
     const ctx=this._carAudioCtx,a=this._carAudio;
-    if(!ctx||!a?.dynoBuffer)return;
+    if(!ctx||!a?.dynoBuffer||ctx.state!=='running')return;
     const now=ctx.currentTime;
     const safeOffset=clamp(offset,DYNO_START,Math.min(DYNO_LIMIT,a.dynoBuffer.duration-.5));
     try{
@@ -128,11 +164,7 @@ export class RaceScene extends CurrentRaceScene{
   _updateCarAudio(delta,force=false){
     if(!this._carAudioReady){if(force)this._ensureCarAudio();return;}
     const ctx=this._carAudioCtx,a=this._carAudio;
-    if(!ctx||!a)return;
-
-    if(ctx.state!=='running'){
-      try{ctx.resume();}catch{}
-    }
+    if(!ctx||!a||ctx.state!=='running')return;
 
     const now=ctx.currentTime,p=audioPrefs();
     const vel=this.carBody?.body?.velocity;
@@ -183,16 +215,19 @@ export class RaceScene extends CurrentRaceScene{
     this._carAudioDestroyed=true;
     if(this._carAudioUnlock){
       window.removeEventListener('pointerdown',this._carAudioUnlock,true);
+      window.removeEventListener('pointerup',this._carAudioUnlock,true);
       window.removeEventListener('touchstart',this._carAudioUnlock,true);
+      window.removeEventListener('touchend',this._carAudioUnlock,true);
+      window.removeEventListener('click',this._carAudioUnlock,true);
       window.removeEventListener('keydown',this._carAudioUnlock,true);
     }
     try{for(const src of this._carAudio?.grains||[])src?.stop?.();}catch{}
-    // Nunca cerrar el contexto compartido de Phaser: también sostiene música/UI.
-    if(this._carAudioOwnCtx){try{this._carAudioCtx?.close?.();}catch{}}
+    try{this._carAudioCtx?.close?.();}catch{}
     this._carAudio=null;
     this._carAudioCtx=null;
     this._carAudioReady=false;
     this._carAudioLoading=false;
+    this._carAudioRawPromise=null;
   }
 
   update(time,delta){
