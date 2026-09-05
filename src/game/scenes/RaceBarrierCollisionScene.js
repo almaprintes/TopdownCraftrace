@@ -12,9 +12,24 @@ function closestPoint(px,py,ax,ay,bx,by){
 }
 
 function barrierHalfWidth(type){
-  if(type==='concrete')return 8;
-  if(type==='guardrail')return 6;
-  return 7;
+  if(type==='concrete')return 10;
+  if(type==='guardrail')return 8;
+  return 9;
+}
+
+function incomingNormal(s,moveX,moveY,px,py){
+  const sx=s.bx-s.ax,sy=s.by-s.ay,sl=Math.hypot(sx,sy)||1;
+  let nx=-sy/sl,ny=sx/sl;
+  const moveLen=Math.hypot(moveX,moveY);
+  if(moveLen>.25){
+    // The collision normal must face the side the car came from. This is what
+    // prevents a fast car from appearing on the far side of a thin barrier.
+    if(moveX*nx+moveY*ny>0){nx=-nx;ny=-ny;}
+  }else{
+    const q=closestPoint(px,py,s.ax,s.ay,s.bx,s.by);
+    if((px-q.x)*nx+(py-q.y)*ny<0){nx=-nx;ny=-ny;}
+  }
+  return{nx,ny};
 }
 
 export class RaceScene extends CurrentRaceScene{
@@ -23,6 +38,7 @@ export class RaceScene extends CurrentRaceScene{
     const trackId=String(this.trackKey||data?.trackKey||this.track?.id||this.track?.key||'').trim();
     const env=createTrackEnvironment(trackId);
     this._linearBarrierSegments=[];
+    this._barrierPrevPositions=new WeakMap();
     for(const barrier of env?.linearBarriers||[]){
       const pts=Array.isArray(barrier?.points)?barrier.points:[];
       for(let i=1;i<pts.length;i++){
@@ -57,35 +73,49 @@ export class RaceScene extends CurrentRaceScene{
     if(!segments?.length)return;
     for(const car of this._barrierCollisionBodies()){
       const vel=car.body.velocity;
+      const currentX=Number(car.x)||0,currentY=Number(car.y)||0;
+      const prev=this._barrierPrevPositions.get(car)||{x:currentX,y:currentY};
+      const moveX=currentX-prev.x,moveY=currentY-prev.y;
+      const travel=Math.hypot(moveX,moveY);
       const shortSide=Math.min(Number(car.displayWidth||28),Number(car.displayHeight||28));
-      const carRadius=clamp(shortSide*.32,8,14);
-      for(const s of segments){
-        const q=closestPoint(car.x,car.y,s.ax,s.ay,s.bx,s.by);
-        let dx=car.x-q.x,dy=car.y-q.y;
-        let dist=Math.hypot(dx,dy);
-        const minDist=carRadius+s.halfWidth;
-        if(dist>=minDist)continue;
-        if(dist<1e-5){
-          const sx=s.bx-s.ax,sy=s.by-s.ay,sl=Math.hypot(sx,sy)||1;
-          let nx=-sy/sl,ny=sx/sl;
-          if((Number(vel.x)||0)*nx+(Number(vel.y)||0)*ny>0){nx=-nx;ny=-ny;}
-          dx=nx;dy=ny;dist=1;
-        }
-        const nx=dx/dist,ny=dy/dist;
-        const penetration=minDist-dist+0.6;
-        car.x+=nx*penetration;
-        car.y+=ny*penetration;
-        const vn=(Number(vel.x)||0)*nx+(Number(vel.y)||0)*ny;
-        if(vn<0){
-          const restitution=.16;
-          vel.x-=(1+restitution)*vn*nx;
-          vel.y-=(1+restitution)*vn*ny;
-          vel.x*=.88;vel.y*=.88;
-        }
-        if(car===this.carBody&&this.carRig?.scene){
-          this.carRig.x=car.x;this.carRig.y=car.y;
+      const carRadius=clamp(shortSide*.38,9,16);
+
+      // Sweep the complete path travelled since the previous frame. Checking only
+      // the final position allows a fast car to jump from one side of a thin wall
+      // to the other without ever overlapping it.
+      const steps=clamp(Math.ceil(travel/4),1,18);
+      let hit=false;
+      for(let step=1;step<=steps&&!hit;step++){
+        const t=step/steps;
+        const px=prev.x+moveX*t,py=prev.y+moveY*t;
+        for(const s of segments){
+          const q=closestPoint(px,py,s.ax,s.ay,s.bx,s.by);
+          const dx=px-q.x,dy=py-q.y;
+          const dist=Math.hypot(dx,dy);
+          const minDist=carRadius+s.halfWidth;
+          if(dist>=minDist)continue;
+
+          const {nx,ny}=incomingNormal(s,moveX,moveY,px,py);
+          car.x=q.x+nx*(minDist+1.0);
+          car.y=q.y+ny*(minDist+1.0);
+
+          const vn=(Number(vel.x)||0)*nx+(Number(vel.y)||0)*ny;
+          if(vn<0){
+            const restitution=.12;
+            vel.x-=(1+restitution)*vn*nx;
+            vel.y-=(1+restitution)*vn*ny;
+          }
+          // A hard barrier should cost speed instead of behaving like a pinball wall.
+          vel.x*=.78;vel.y*=.78;
+          hit=true;
+          break;
         }
       }
+
+      if(car===this.carBody&&this.carRig?.scene){
+        this.carRig.x=car.x;this.carRig.y=car.y;
+      }
+      this._barrierPrevPositions.set(car,{x:Number(car.x)||0,y:Number(car.y)||0});
     }
   }
 
