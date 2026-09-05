@@ -1,4 +1,5 @@
 const RESULT_SCHEMA_VERSION = 1;
+const RACE_RECORD_VERSION = 1;
 const HISTORY_LIMIT = 100;
 const HISTORY_KEY = 'tdr2:raceResults:v1';
 const PB_PREFIX = 'tdr2:personalBest:v1:';
@@ -6,6 +7,7 @@ const GHOST_PREFIX = 'tdr2:ghost:';
 
 export const RACE_RESULT_VERSIONS = Object.freeze({
   schemaVersion: RESULT_SCHEMA_VERSION,
+  recordVersion: RACE_RECORD_VERSION,
   physicsVersion: 'physics-v1',
   carBalanceVersion: 'car-balance-v1'
 });
@@ -20,6 +22,17 @@ function storageGet(key) {
 
 function storageSet(key, value) {
   try { localStorage.setItem(key, value); return true; } catch { return false; }
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  for (const child of Object.values(value)) deepFreeze(child);
+  return Object.freeze(value);
+}
+
+function finiteOrNull(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 export function createUuid() {
@@ -40,6 +53,34 @@ export function createUuid() {
 function normalizeTrackVersion(track) {
   const raw = track?.meta?.version ?? track?.version ?? track?.meta?.revision ?? track?.revision;
   return raw == null || raw === '' ? 'track-v1' : String(raw);
+}
+
+function normalizeTiming(timing, lapMs) {
+  return deepFreeze({
+    lapMs: Math.round(Number(lapMs)),
+    lapTick: finiteOrNull(timing?.lapTick),
+    s1Ms: finiteOrNull(timing?.s1Ms ?? timing?.s1),
+    s1Tick: finiteOrNull(timing?.s1Tick),
+    s2Ms: finiteOrNull(timing?.s2Ms ?? timing?.s2),
+    s2Tick: finiteOrNull(timing?.s2Tick)
+  });
+}
+
+function normalizeLocalValidation(validation, legacy) {
+  if (validation && typeof validation === 'object') {
+    return deepFreeze({
+      version: Number(validation.version || 1),
+      status: String(validation.status || 'unverified'),
+      flags: Array.isArray(validation.flags) ? validation.flags.map(String) : [],
+      authoritative: validation.authoritative === true
+    });
+  }
+  return deepFreeze({
+    version: 1,
+    status: legacy ? 'legacy' : 'unverified',
+    flags: [],
+    authoritative: false
+  });
 }
 
 function pbKey(trackKey, carId) {
@@ -66,15 +107,17 @@ export function readPersonalBest(trackKey, carId) {
 }
 
 function writePersonalBest(result) {
-  const pb = Object.freeze({
+  const pb = deepFreeze({
     schemaVersion: RESULT_SCHEMA_VERSION,
+    recordVersion: result.recordVersion || RACE_RECORD_VERSION,
     raceId: result.raceId,
     resultId: result.resultId,
     trackKey: result.trackKey,
     carId: result.carId,
     lapMs: result.lapMs,
     completedAt: result.completedAt,
-    source: result.source
+    source: result.source,
+    localValidationStatus: result.localValidation?.status || 'unverified'
   });
   storageSet(pbKey(result.trackKey, result.carId), JSON.stringify(pb));
   return pb;
@@ -90,10 +133,14 @@ export function createRaceResult({
   completedAt = Date.now(),
   track = null,
   source = 'runtime',
-  legacy = false
+  legacy = false,
+  timing = null,
+  evidence = null,
+  localValidation = null
 }) {
   const result = {
     schemaVersion: RESULT_SCHEMA_VERSION,
+    recordVersion: RACE_RECORD_VERSION,
     resultId: createUuid(),
     raceId: raceId || createUuid(),
     completedAt: completedAt == null ? null : (Number.isFinite(Number(completedAt)) ? Number(completedAt) : null),
@@ -105,10 +152,13 @@ export function createRaceResult({
     physicsVersion: RACE_RESULT_VERSIONS.physicsVersion,
     trackVersion: normalizeTrackVersion(track),
     carBalanceVersion: RACE_RESULT_VERSIONS.carBalanceVersion,
+    timing: normalizeTiming(timing, lapMs),
+    evidence: evidence && typeof evidence === 'object' ? evidence : null,
+    localValidation: normalizeLocalValidation(localValidation, legacy),
     source: String(source || 'runtime'),
     legacy: !!legacy
   };
-  return Object.freeze(result);
+  return deepFreeze(result);
 }
 
 export function persistRaceResult(result) {
@@ -139,7 +189,10 @@ export function linkGhostToRaceResult(result) {
     ...ghost,
     raceId: result.raceId,
     resultId: result.resultId,
-    raceResultSchemaVersion: RESULT_SCHEMA_VERSION
+    raceResultSchemaVersion: RESULT_SCHEMA_VERSION,
+    raceRecordVersion: RACE_RECORD_VERSION,
+    localValidationStatus: result.localValidation?.status || 'unverified',
+    evidenceFingerprint: result.evidence?.fingerprint || null
   };
   return storageSet(key, JSON.stringify(linked));
 }
@@ -162,7 +215,14 @@ export function migrateLegacyPersonalBest({ trackKey, carId, track = null, ttBes
     completedAt: Number(ghostData?.completedAt ?? ghostData?.t) || null,
     track,
     source: 'legacy-migration',
-    legacy: true
+    legacy: true,
+    timing: {
+      lapTick: ttBest?.lapTick,
+      s1Ms: ttBest?.s1,
+      s1Tick: ttBest?.s1Tick,
+      s2Ms: ttBest?.s2,
+      s2Tick: ttBest?.s2Tick
+    }
   });
   persistRaceResult(legacyResult);
   linkGhostToRaceResult(legacyResult);
@@ -170,5 +230,11 @@ export function migrateLegacyPersonalBest({ trackKey, carId, track = null, ttBes
 }
 
 export function getRaceResultStorageInfo() {
-  return Object.freeze({ schemaVersion: RESULT_SCHEMA_VERSION, historyLimit: HISTORY_LIMIT, historyKey: HISTORY_KEY });
+  return Object.freeze({
+    schemaVersion: RESULT_SCHEMA_VERSION,
+    recordVersion: RACE_RECORD_VERSION,
+    historyLimit: HISTORY_LIMIT,
+    historyKey: HISTORY_KEY,
+    remoteCollectionEnabled: false
+  });
 }
