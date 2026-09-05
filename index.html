@@ -14,32 +14,10 @@
 
     <title>Top-Down Race</title>
     <style>
-      #tdrStartup {
-        position: fixed;
-        inset: 0;
-        z-index: 35000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background:
-          radial-gradient(circle at 50% 42%, rgba(28,73,112,.34), transparent 38%),
-          linear-gradient(145deg,#050b14 0%,#0b1020 55%,#081827 100%);
-        color: #fff;
-        font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-        opacity: 1;
-        transition: opacity .22s ease;
-        pointer-events: none;
-      }
+      #tdrStartup { position: fixed; inset: 0; z-index: 35000; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 42%, rgba(28,73,112,.34), transparent 38%), linear-gradient(145deg,#050b14 0%,#0b1020 55%,#081827 100%); color: #fff; font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; opacity: 1; transition: opacity .22s ease; pointer-events: none; }
       #tdrStartup.tdr-startup-hide { opacity: 0; }
       .tdr-startup-shell { width: min(58vw,480px); text-align:center; }
-      .tdr-startup-logo {
-        display:block;
-        width:min(32vw,280px);
-        max-height:34vh;
-        object-fit:contain;
-        margin:0 auto 20px;
-        filter:drop-shadow(0 12px 28px rgba(0,0,0,.45));
-      }
+      .tdr-startup-logo { display:block; width:min(32vw,280px); max-height:34vh; object-fit:contain; margin:0 auto 20px; filter:drop-shadow(0 12px 28px rgba(0,0,0,.45)); }
       .tdr-startup-title { font-size:clamp(18px,3.2vw,34px); font-weight:950; letter-spacing:.11em; }
       .tdr-startup-sub { margin-top:7px; color:#9cc7dc; font-size:clamp(11px,1.45vw,15px); font-weight:850; letter-spacing:.10em; min-height:1.3em; }
       .tdr-startup-time { margin-top:6px; color:#6f98ad; font-size:clamp(10px,1.15vw,12px); font-weight:750; font-variant-numeric:tabular-nums; }
@@ -51,140 +29,22 @@
     <script>
       window.__tdrBootStartedAt = performance.now();
       window.__tdrBootPhase = 'html';
-
-      // Single service-worker registration point. The worker never takes over a
-      // running session; the next launch receives the newly deployed shell.
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(() => {});
-      }
-
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
       (() => {
-        const root = document.documentElement;
-        let lastW = 0, lastH = 0, lastL = 0, lastT = 0, raf = 0;
-
-        function measure() {
-          raf = 0;
-          const vv = window.visualViewport;
-          const w = Math.max(1, Math.round(vv?.width || window.innerWidth || root.clientWidth || 1));
-          const h = Math.max(1, Math.round(vv?.height || window.innerHeight || root.clientHeight || 1));
-          const l = Math.max(0, Math.round(vv?.offsetLeft || 0));
-          const t = Math.max(0, Math.round(vv?.offsetTop || 0));
-          if (w === lastW && h === lastH && l === lastL && t === lastT) return;
-          lastW = w; lastH = h; lastL = l; lastT = t;
-          root.style.setProperty('--tdr-vv-width', `${w}px`);
-          root.style.setProperty('--tdr-vv-height', `${h}px`);
-          root.style.setProperty('--tdr-vv-left', `${l}px`);
-          root.style.setProperty('--tdr-vv-top', `${t}px`);
-          root.dataset.tdrVisualViewport = '1';
-          try { window.dispatchEvent(new CustomEvent('tdr:viewportchange', { detail: { width:w, height:h, left:l, top:t } })); } catch {}
-        }
-
-        function schedule() {
-          if (raf) cancelAnimationFrame(raf);
-          raf = requestAnimationFrame(measure);
-        }
-
-        measure();
-        window.addEventListener('resize', schedule, { passive:true });
-        window.addEventListener('orientationchange', schedule, { passive:true });
-        window.addEventListener('pageshow', schedule, { passive:true });
-        document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(); }, { passive:true });
-        if (window.visualViewport) {
-          window.visualViewport.addEventListener('resize', schedule, { passive:true });
-          window.visualViewport.addEventListener('scroll', schedule, { passive:true });
-        }
+        const root = document.documentElement; let lastW=0,lastH=0,lastL=0,lastT=0,raf=0;
+        function measure(){raf=0;const vv=window.visualViewport;const w=Math.max(1,Math.round(vv?.width||window.innerWidth||root.clientWidth||1));const h=Math.max(1,Math.round(vv?.height||window.innerHeight||root.clientHeight||1));const l=Math.max(0,Math.round(vv?.offsetLeft||0));const t=Math.max(0,Math.round(vv?.offsetTop||0));if(w===lastW&&h===lastH&&l===lastL&&t===lastT)return;lastW=w;lastH=h;lastL=l;lastT=t;root.style.setProperty('--tdr-vv-width',`${w}px`);root.style.setProperty('--tdr-vv-height',`${h}px`);root.style.setProperty('--tdr-vv-left',`${l}px`);root.style.setProperty('--tdr-vv-top',`${t}px`);root.dataset.tdrVisualViewport='1';try{window.dispatchEvent(new CustomEvent('tdr:viewportchange',{detail:{width:w,height:h,left:l,top:t}}));}catch{}}
+        function schedule(){if(raf)cancelAnimationFrame(raf);raf=requestAnimationFrame(measure)}
+        measure(); window.addEventListener('resize',schedule,{passive:true}); window.addEventListener('orientationchange',schedule,{passive:true}); window.addEventListener('pageshow',schedule,{passive:true}); document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()},{passive:true}); if(window.visualViewport){window.visualViewport.addEventListener('resize',schedule,{passive:true});window.visualViewport.addEventListener('scroll',schedule,{passive:true});}
       })();
     </script>
   </head>
   <body>
-    <div id="tdrStartup" aria-live="polite" data-indeterminate="1">
-      <div class="tdr-startup-shell">
-        <img class="tdr-startup-logo" src="./assets/logo.webp" alt="Top Down RACE" />
-        <div class="tdr-startup-title">TOP DOWN RACE</div>
-        <div class="tdr-startup-sub" id="tdrStartupSub">CARGANDO MOTOR</div>
-        <div class="tdr-startup-time" id="tdrStartupTime">0.0 s</div>
-        <div class="tdr-startup-track"><div class="tdr-startup-bar" id="tdrStartupBar"></div></div>
-      </div>
-    </div>
+    <div id="tdrStartup" aria-live="polite" data-indeterminate="1"><div class="tdr-startup-shell"><img class="tdr-startup-logo" src="./assets/logo.webp" alt="Top Down RACE" /><div class="tdr-startup-title">TOP DOWN RACE</div><div class="tdr-startup-sub" id="tdrStartupSub">CARGANDO MOTOR</div><div class="tdr-startup-time" id="tdrStartupTime">0.0 s</div><div class="tdr-startup-track"><div class="tdr-startup-bar" id="tdrStartupBar"></div></div></div></div>
 
-    <div id="rotateOverlay" aria-hidden="true">
-      <div class="rot-shell">
-        <img
-          class="rot-image"
-          src="./assets/ui/orientation_active.webp"
-          alt=""
-          aria-hidden="true"
-        />
-        <div class="rot-copy" role="status" aria-live="polite">
-          <div class="rot-lang rot-es">
-            <div class="rot-title">GIRA TU DISPOSITIVO</div>
-            <div class="rot-sub">Top Down RACE se juega en horizontal.</div>
-            <div class="rot-beta">
-              <div class="rot-beta-title">⚠ VERSIÓN BETA</div>
-              <div class="rot-beta-text">TODO EL PROGRESO DE LA BETA SE REINICIARÁ CON EL LANZAMIENTO DEL JUEGO.</div>
-            </div>
-          </div>
-          <div class="rot-lang rot-en">
-            <div class="rot-title">ROTATE YOUR DEVICE</div>
-            <div class="rot-sub">Top Down RACE is played in landscape.</div>
-            <div class="rot-beta">
-              <div class="rot-beta-title">⚠ BETA VERSION</div>
-              <div class="rot-beta-text">ALL BETA PROGRESS WILL BE RESET WHEN THE GAME LAUNCHES.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <div id="rotateOverlay" aria-hidden="true"><div class="rot-shell"><img class="rot-image" src="./assets/ui/orientation_active.webp" alt="" aria-hidden="true" /><div class="rot-copy" role="status" aria-live="polite"><div class="rot-lang rot-es"><div class="rot-title">GIRA TU DISPOSITIVO</div><div class="rot-sub">Top Down RACE se juega en horizontal.</div><div class="rot-beta"><div class="rot-beta-title">⚠ DEV 0.0.4</div><div class="rot-beta-text">VERSIÓN DE DESARROLLO · LOS CAMBIOS SE PRUEBAN AQUÍ ANTES DE PASAR A BETA.</div></div></div><div class="rot-lang rot-en"><div class="rot-title">ROTATE YOUR DEVICE</div><div class="rot-sub">Top Down RACE is played in landscape.</div><div class="rot-beta"><div class="rot-beta-title">⚠ DEV 0.0.4</div><div class="rot-beta-text">DEVELOPMENT VERSION · CHANGES ARE TESTED HERE BEFORE PROMOTION TO BETA.</div></div></div></div></div></div>
     <div id="app"></div>
     <script>
-      (() => {
-        const startup = document.getElementById('tdrStartup');
-        const sub = document.getElementById('tdrStartupSub');
-        const time = document.getElementById('tdrStartupTime');
-        const bar = document.getElementById('tdrStartupBar');
-        if (!startup || !sub || !time || !bar) return;
-        const started = Number(window.__tdrBootStartedAt) || performance.now();
-        let done = false;
-        let phase = 'CARGANDO MOTOR';
-        let progress = null;
-        const tick = () => {
-          if (done) return;
-          const elapsed = Math.max(0, performance.now() - started);
-          time.textContent = `${(elapsed/1000).toFixed(1)} s`;
-          sub.textContent = progress == null ? phase : `${phase} · ${progress}%`;
-          requestAnimationFrame(tick);
-        };
-        window.addEventListener('tdr:bootphase', (e) => {
-          const d=e?.detail||{};
-          if(d.phase==='boot-preload') {
-            phase='CARGANDO RECURSOS';
-            progress=Number.isFinite(Number(d.progress))?Math.round(Number(d.progress)):0;
-            startup.dataset.indeterminate='0';
-            bar.style.width=`${Math.max(4,Math.min(100,progress))}%`;
-          } else if(d.phase==='boot-assets-ready') {
-            phase='RECURSOS LISTOS'; progress=100; bar.style.width='100%';
-          } else if(d.phase==='boot-create') {
-            phase='INICIANDO JUEGO'; progress=100; bar.style.width='100%';
-          } else if(d.phase==='intro-request') {
-            phase='ENTRANDO'; progress=100; bar.style.width='100%';
-          } else if(d.phase==='intro-playing') {
-            phase='PRESENTACIÓN'; progress=100; bar.style.width='100%';
-          }
-        });
-        window.addEventListener('tdr:bootready', () => {
-          if (done) return;
-          done = true;
-          phase='LISTO'; progress=100; bar.style.width='100%';
-          const elapsed = Math.max(0, performance.now() - started);
-          sub.textContent='LISTO';
-          time.textContent=`${(elapsed/1000).toFixed(1)} s`;
-          requestAnimationFrame(() => requestAnimationFrame(() => {
-            startup.classList.add('tdr-startup-hide');
-            setTimeout(() => startup.remove(), 260);
-          }));
-        });
-        tick();
-      })();
+      (()=>{const startup=document.getElementById('tdrStartup'),sub=document.getElementById('tdrStartupSub'),time=document.getElementById('tdrStartupTime'),bar=document.getElementById('tdrStartupBar');if(!startup||!sub||!time||!bar)return;const started=Number(window.__tdrBootStartedAt)||performance.now();let done=false,phase='CARGANDO MOTOR',progress=null;const tick=()=>{if(done)return;const elapsed=Math.max(0,performance.now()-started);time.textContent=`${(elapsed/1000).toFixed(1)} s`;sub.textContent=progress==null?phase:`${phase} · ${progress}%`;requestAnimationFrame(tick)};window.addEventListener('tdr:bootphase',(e)=>{const d=e?.detail||{};if(d.phase==='boot-preload'){phase='CARGANDO RECURSOS';progress=Number.isFinite(Number(d.progress))?Math.round(Number(d.progress)):0;startup.dataset.indeterminate='0';bar.style.width=`${Math.max(4,Math.min(100,progress))}%`;}else if(d.phase==='boot-assets-ready'){phase='RECURSOS LISTOS';progress=100;bar.style.width='100%';}else if(d.phase==='boot-create'){phase='INICIANDO JUEGO';progress=100;bar.style.width='100%';}else if(d.phase==='intro-request'){phase='ENTRANDO';progress=100;bar.style.width='100%';}else if(d.phase==='intro-playing'){phase='PRESENTACIÓN';progress=100;bar.style.width='100%';}});window.addEventListener('tdr:bootready',()=>{if(done)return;done=true;phase='LISTO';progress=100;bar.style.width='100%';const elapsed=Math.max(0,performance.now()-started);sub.textContent='LISTO';time.textContent=`${(elapsed/1000).toFixed(1)} s`;requestAnimationFrame(()=>requestAnimationFrame(()=>{startup.classList.add('tdr-startup-hide');setTimeout(()=>startup.remove(),260);}));});tick();})();
     </script>
     <script type="module" src="./src/main.js"></script>
   </body>
