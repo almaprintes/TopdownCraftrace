@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceHandbrakePhysicsScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceCarAudioScene.js';
 import { grantRaceLoot, getRaceLootSessionSummary } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { mountRaceSessionRewards } from '../ui/raceSessionUi.js';
