@@ -26,6 +26,7 @@ function emptyHistory() {
     verification: 'local-only',
     onlineEligible: false,
     remoteCollectionEnabled: false,
+    bootstrapComplete: false,
     totals: {
       laps: 0,
       validLaps: 0,
@@ -104,15 +105,23 @@ export function recordRaceResultInPlayerHistory(result) {
   return history;
 }
 
-export function rebuildPlayerRacingHistoryFromRaceResults() {
-  const rebuilt = emptyHistory();
-  setStorage(rebuilt);
+export function ensurePlayerRacingHistoryBootstrap() {
+  const existing = safeJson(getStorage(), null);
+  if (existing?.schemaVersion === HISTORY_SCHEMA_VERSION && existing.bootstrapComplete === true) return existing;
+
+  const seeded = emptyHistory();
+  seeded.bootstrapComplete = true;
+  setStorage(seeded);
   for (const result of readRaceResultHistory()) recordRaceResultInPlayerHistory(result);
-  return readPlayerRacingHistory();
+  const finalHistory = readPlayerRacingHistory();
+  finalHistory.bootstrapComplete = true;
+  finalHistory.updatedAt = Date.now();
+  setStorage(finalHistory);
+  return finalHistory;
 }
 
 export function createPlayerHistoryMigrationPackage() {
-  const history = readPlayerRacingHistory();
+  const history = ensurePlayerRacingHistoryBootstrap();
   const raceResults = readRaceResultHistory();
   return {
     exportSchemaVersion: 1,
