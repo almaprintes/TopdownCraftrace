@@ -1,8 +1,8 @@
-name: Deploy GitHub Pages
+name: Deploy Top Down Race
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -18,56 +18,56 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout stable main
+      - name: Checkout public beta
+        uses: actions/checkout@v4
+        with:
+          ref: beta-0.0.3
+          path: beta
+
+      - name: Checkout development
         uses: actions/checkout@v4
         with:
           ref: main
-          path: stable
-
-      - name: Checkout develop
-        uses: actions/checkout@v4
-        with:
-          ref: develop
-          path: develop-src
+          path: dev-src
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install stable dependencies
-        working-directory: stable
+      - name: Install beta dependencies
+        working-directory: beta
         run: npm ci --no-audit --no-fund
 
-      - name: Build stable main
-        working-directory: stable
+      - name: Build beta
+        working-directory: beta
         run: npx vite build --base=/TopdownCraftrace/
 
-      - name: Copy stable tutorial assets
-        working-directory: stable
+      - name: Copy beta tutorial assets
+        working-directory: beta
         run: |
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Install develop dependencies
-        working-directory: develop-src
+      - name: Install development dependencies
+        working-directory: dev-src
         run: npm ci --no-audit --no-fund
 
-      - name: Build develop
-        working-directory: develop-src
+      - name: Build development
+        working-directory: dev-src
         run: npx vite build --base=/TopdownCraftrace/dev/
 
-      - name: Copy develop tutorial assets
-        working-directory: develop-src
+      - name: Copy development tutorial assets
+        working-directory: dev-src
         run: |
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Add develop build under /dev
+      - name: Add development build under dev
         run: |
-          rm -rf stable/dist/dev
-          mkdir -p stable/dist/dev
-          cp -R develop-src/dist/. stable/dist/dev/
+          rm -rf beta/dist/dev
+          mkdir -p beta/dist/dev
+          cp -R dev-src/dist/. beta/dist/dev/
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -75,7 +75,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: stable/dist
+          path: beta/dist
 
   deploy:
     environment:
