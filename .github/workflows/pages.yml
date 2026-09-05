@@ -28,7 +28,7 @@ jobs:
       - name: Checkout DEV 0.0.4t
         uses: actions/checkout@v4
         with:
-          ref: dev-0.0.4
+          ref: main
           path: develop-src
 
       - name: Checkout isolated Veloce audio lab
