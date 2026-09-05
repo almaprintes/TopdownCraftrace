@@ -1,10 +1,24 @@
 import { EnvironmentBuilderScene as CurrentEnvironmentBuilderScene } from './EnvironmentBuilderLayersSurfaceScene.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
+const VEGETATION_ITEMS=[
+  {cat:'VEGETACIÓN',id:'tree_broad_01',path:'environment/vegetation/tree_broad_01.webp',w:300},
+  {cat:'VEGETACIÓN',id:'tree_broad_02',path:'environment/vegetation/tree_broad_02.webp',w:300},
+  {cat:'VEGETACIÓN',id:'tree_broad_03',path:'environment/vegetation/tree_broad_03.webp',w:300},
+  {cat:'VEGETACIÓN',id:'tree_broad_04',path:'environment/vegetation/tree_broad_04.webp',w:300},
+  {cat:'VEGETACIÓN',id:'tree_broad_05',path:'environment/vegetation/tree_broad_05.webp',w:300},
+  {cat:'VEGETACIÓN',id:'palm_tall_01',path:'environment/vegetation/palm_tall_01.webp',w:300},
+  {cat:'VEGETACIÓN',id:'bush_round_01',path:'environment/vegetation/bush_round_01.webp',w:220},
+  {cat:'VEGETACIÓN',id:'plant_broadleaf_01',path:'environment/vegetation/plant_broadleaf_01.webp',w:190},
+  {cat:'VEGETACIÓN',id:'plant_rosette_01',path:'environment/vegetation/plant_rosette_01.webp',w:190},
+  {cat:'VEGETACIÓN',id:'plant_sword_01',path:'environment/vegetation/plant_sword_01.webp',w:190},
+  {cat:'VEGETACIÓN',id:'plant_tropical_01',path:'environment/vegetation/plant_tropical_01.webp',w:210},
+  {cat:'VEGETACIÓN',id:'plant_variegated_01',path:'environment/vegetation/plant_variegated_01.webp',w:190},
+  {cat:'VEGETACIÓN',id:'plant_variegated_02',path:'environment/vegetation/plant_variegated_02.webp',w:190}
+];
+
 const ASSETS=[
-  ['tree_broad_01','environment/vegetation/tree_broad_01.webp'],
-  ['tree_broad_02','environment/vegetation/tree_broad_02.webp'],
-  ['palm_tall_01','environment/vegetation/palm_tall_01.webp'],
+  ...VEGETATION_ITEMS.map(a=>[a.id,a.path]),
   ['shrub_round_01','environment/shrub_round_01.webp'],
   ['shrub_flowers_01','environment/shrub_flowers_01.webp'],
   ['concrete_barrier_straight_01','environment/barriers/concrete_barrier_straight_01.webp'],
@@ -38,11 +52,7 @@ const ASSETS=[
   ['santacruz_plaza_espana','environment/structures/santacruz_plaza_espana.webp']
 ];
 
-const CORRECT_PATHS={
-  tree_broad_01:'environment/vegetation/tree_broad_01.webp',
-  tree_broad_02:'environment/vegetation/tree_broad_02.webp',
-  palm_tall_01:'environment/vegetation/palm_tall_01.webp'
-};
+const CORRECT_PATHS=Object.fromEntries(VEGETATION_ITEMS.map(a=>[a.id,a.path]));
 
 const SANTACRUZ_ITEMS=[
   {cat:'ESTRUCTURAS',id:'santacruz_auditorio',path:'environment/structures/santacruz_auditorio.webp',w:520},
@@ -59,6 +69,10 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
   _catalogItemsForCategory(category){
     const items=super._catalogItemsForCategory?.(category)||[];
     const corrected=items.map(a=>CORRECT_PATHS[a.id]?{...a,path:CORRECT_PATHS[a.id]}:a);
+    if(category==='VEGETACIÓN'){
+      const ids=new Set(corrected.map(a=>a.id));
+      return corrected.concat(VEGETATION_ITEMS.filter(a=>!ids.has(a.id)));
+    }
     if(category!=='ESTRUCTURAS')return corrected;
     const ids=new Set(corrected.map(a=>a.id));
     return corrected.concat(SANTACRUZ_ITEMS.filter(a=>!ids.has(a.id)));
