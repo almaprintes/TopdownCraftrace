@@ -59,12 +59,12 @@
   max-height: calc(var(--tdr-vv-height) - var(--tdr-safe-top) - var(--tdr-safe-bottom) - 16px) !important;
 }
 
-/* Release channel badge on orientation screen. Keep synchronized with package.json and docs/VERSION_CHANGELOG.md. */
+/* Development channel badge. Public beta is built from beta-0.0.3 and remains untouched. */
 #rotateOverlay .rot-beta-title { font-size: 0 !important; }
 #rotateOverlay .rot-beta-title::after {
-  content: '⚠ BETA 0.0.3';
+  content: '⚠ DEV 0.0.4';
   font-size: 14px;
   font-weight: 900;
   letter-spacing: .08em;
-  color: #ffd96a;
+  color: #58e8ff;
 }
