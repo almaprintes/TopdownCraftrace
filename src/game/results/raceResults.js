@@ -34,7 +34,7 @@ export function createUuid() {
       return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
     }
   } catch {}
-  return `legacy-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+  return `uuid-fallback-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
 }
 
 function normalizeTrackVersion(track) {
@@ -96,7 +96,7 @@ export function createRaceResult({
     schemaVersion: RESULT_SCHEMA_VERSION,
     resultId: createUuid(),
     raceId: raceId || createUuid(),
-    completedAt: Number.isFinite(Number(completedAt)) ? Number(completedAt) : null,
+    completedAt: completedAt == null ? null : (Number.isFinite(Number(completedAt)) ? Number(completedAt) : null),
     trackKey: String(trackKey || 'track01'),
     carId: String(carId || 'car'),
     lapMs: Math.round(Number(lapMs)),
