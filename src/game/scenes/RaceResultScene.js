@@ -11,6 +11,10 @@ import {
   sampleLocalRaceEvidence,
   finalizeLocalRaceEvidence
 } from '../results/localRaceEvidence.js';
+import {
+  recordRaceResultInPlayerHistory,
+  rebuildPlayerRacingHistoryFromRaceResults
+} from '../results/playerRacingHistory.js';
 
 function currentCarId(scene, data) {
   if (data?.carId) return String(data.carId);
@@ -27,8 +31,8 @@ function currentTrackKey(scene, data) {
 }
 
 // Shipping persistence boundary for local Race Record v1.
-// Nothing in this layer is transmitted. The record, compact evidence and local
-// validation stay in browser storage on the player's device.
+// Nothing in this layer is transmitted. The record, compact evidence, local
+// validation and Player Racing History stay on the player's device.
 export class RaceScene extends CurrentRaceScene {
   create(data) {
     this._raceResultRaceId = createUuid();
@@ -39,8 +43,6 @@ export class RaceScene extends CurrentRaceScene {
     this._raceResultCarId = currentCarId(this, data);
     this._raceResultSeenHistory = Array.isArray(this.ttHistory) ? this.ttHistory.length : 0;
 
-    // Non-destructive migration: legacy ttBest/ghost keys stay exactly where
-    // they are. We only create the new v1 index if one does not exist yet.
     try {
       migrateLegacyPersonalBest({
         trackKey: this._raceResultTrackKey,
@@ -50,6 +52,10 @@ export class RaceScene extends CurrentRaceScene {
         ghost: this._ghostData
       });
     } catch {}
+
+    // One-time-safe bootstrap: rebuilding from the capped RaceResult history is
+    // idempotent and lets existing beta devices seed the new aggregate history.
+    try { rebuildPlayerRacingHistoryFromRaceResults(); } catch {}
 
     return result;
   }
@@ -113,10 +119,9 @@ export class RaceScene extends CurrentRaceScene {
       });
 
       const saved = persistRaceResult(raceResult);
+      try { recordRaceResultInPlayerHistory(raceResult); } catch {}
+
       if (saved?.isPersonalBest) {
-        // The existing ghost implementation saves independently. If this lap
-        // is that same best lap, enrich it with the immutable result identity
-        // and compact evidence fingerprint. Samples/format stay untouched.
         linkGhostToRaceResult(raceResult);
         try {
           if (this._ghostData && Math.abs(Number(this._ghostData.lapMs) - lapMs) <= 2) {
@@ -130,8 +135,6 @@ export class RaceScene extends CurrentRaceScene {
         } catch {}
       }
 
-      // The finish crossing starts a fresh lap in the core RaceScene. Evidence
-      // therefore also starts fresh here, after the completed lap was sealed.
       this._raceEvidence = createLocalRaceEvidenceState();
     }
 
@@ -139,8 +142,6 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   update(time, delta) {
-    // Sample before the base update: if this frame crosses the finish line the
-    // final pre-crossing position still belongs to the lap being sealed.
     try { this._sampleRaceRecordEvidence(time); } catch {}
     const result = super.update(time, delta);
     try { this._captureNewRaceResults(); } catch {}
