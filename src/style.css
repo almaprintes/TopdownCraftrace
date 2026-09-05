@@ -97,6 +97,5 @@ body {
 #rotateOverlay .rot-phone:before{content:'';position:absolute;width:22px;height:4px;border-radius:4px;background:#57e9ff;left:50%;top:6px;transform:translateX(-50%);opacity:.7;}
 @keyframes tdrRotatePhone{0%,25%{transform:rotate(0deg)}70%,100%{transform:rotate(90deg)}}
 
-/* Develop channel marker. This stylesheet belongs to develop, so the marker
-   does not alter the public main/beta orientation screen. */
-#rotateOverlay .rot-beta-title::after{content:' · DEV 0.0.2';color:#58e8ff;font-weight:950;}
+/* Development channel marker for the main -> /dev build only. */
+#rotateOverlay .rot-beta-title::after{content:'⚠ DEV 0.0.4';color:#58e8ff;font-weight:950;}
