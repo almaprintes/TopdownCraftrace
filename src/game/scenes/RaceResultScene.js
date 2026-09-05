@@ -13,7 +13,7 @@ import {
 } from '../results/localRaceEvidence.js';
 import {
   recordRaceResultInPlayerHistory,
-  rebuildPlayerRacingHistoryFromRaceResults
+  ensurePlayerRacingHistoryBootstrap
 } from '../results/playerRacingHistory.js';
 
 function currentCarId(scene, data) {
@@ -53,9 +53,7 @@ export class RaceScene extends CurrentRaceScene {
       });
     } catch {}
 
-    // One-time-safe bootstrap: rebuilding from the capped RaceResult history is
-    // idempotent and lets existing beta devices seed the new aggregate history.
-    try { rebuildPlayerRacingHistoryFromRaceResults(); } catch {}
+    try { ensurePlayerRacingHistoryBootstrap(); } catch {}
 
     return result;
   }
