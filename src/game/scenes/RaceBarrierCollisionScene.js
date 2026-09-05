@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceHandbrakePhysicsScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceCarAudioScene.js';
 import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
