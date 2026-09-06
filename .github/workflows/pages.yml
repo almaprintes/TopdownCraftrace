@@ -3,6 +3,9 @@ name: Deploy Top Down Race
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:
@@ -23,47 +26,55 @@ jobs:
         with:
           ref: beta-0.0.3
           path: beta
+          fetch-depth: 1
+
+      - name: Read beta revision
+        id: beta-rev
+        working-directory: beta
+        shell: bash
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore frozen beta build
+        id: beta-cache
+        uses: actions/cache@v4
+        with:
+          path: beta/dist
+          key: tdr-public-beta-${{ steps.beta-rev.outputs.sha }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Build frozen beta once
+        if: steps.beta-cache.outputs.cache-hit != 'true'
+        working-directory: beta
+        shell: bash
+        run: |
+          npm ci --no-audit --no-fund
+          npx vite build --base=/TopdownCraftrace/
+          mkdir -p dist/assets/tutorials/dropping
+          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
       - name: Checkout development
         uses: actions/checkout@v4
         with:
           ref: main
           path: dev-src
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install beta dependencies
-        working-directory: beta
-        run: npm ci --no-audit --no-fund
-
-      - name: Build beta
-        working-directory: beta
-        run: npx vite build --base=/TopdownCraftrace/
-
-      - name: Copy beta tutorial assets
-        working-directory: beta
-        run: |
-          mkdir -p dist/assets/tutorials/dropping
-          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
-
-      - name: Install development dependencies
-        working-directory: dev-src
-        run: npm ci --no-audit --no-fund
+          fetch-depth: 1
 
       - name: Build development
         working-directory: dev-src
-        run: npx vite build --base=/TopdownCraftrace/dev/
-
-      - name: Copy development tutorial assets
-        working-directory: dev-src
+        shell: bash
         run: |
+          npm ci --no-audit --no-fund
+          npx vite build --base=/TopdownCraftrace/dev/
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
-      - name: Add development build under dev
+      - name: Assemble public beta plus DEV
+        shell: bash
         run: |
           rm -rf beta/dist/dev
           mkdir -p beta/dist/dev
