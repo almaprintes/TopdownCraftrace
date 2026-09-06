@@ -18,6 +18,113 @@ export class RaceScene extends CurrentRaceScene {
     return super.init?.(data);
   }
 
+  createTouchControls(){
+    const state=super.createTouchControls?.();
+    if(!state||state.__tdrPedalCaptureInstalled)return state;
+    state.__tdrPedalCaptureInstalled=true;
+
+    let capturedId=-1;
+    let capturedNativeId=null;
+    let capturedPedal=null;
+
+    const exactHit=(pedal,x,y)=>{
+      const py=pedal==='gas'?state.throttleY:state.brakeY;
+      return x>=state.rightX&&x<=state.rightX+state.btnW&&y>=py&&y<=py+state.btnH;
+    };
+    const expandedHit=(pedal,x,y)=>{
+      const py=pedal==='gas'?state.throttleY:state.brakeY;
+      const px=state.btnW*0.15;
+      const pady=state.btnH*0.15;
+      return x>=state.rightX-px&&x<=state.rightX+state.btnW+px&&y>=py-pady&&y<=py+state.btnH+pady;
+    };
+    const pickPedal=(x,y)=>{
+      if(exactHit('gas',x,y))return 'gas';
+      if(exactHit('brake',x,y))return 'brake';
+      const gas=expandedHit('gas',x,y);
+      const brake=expandedHit('brake',x,y);
+      if(gas&&!brake)return 'gas';
+      if(brake&&!gas)return 'brake';
+      if(!gas&&!brake)return null;
+      const gasCy=state.throttleY+state.btnH*0.5;
+      const brakeCy=state.brakeY+state.btnH*0.5;
+      return Math.abs(y-gasCy)<=Math.abs(y-brakeCy)?'gas':'brake';
+    };
+    const drawCaptured=()=>{
+      if(capturedId<0||!capturedPedal)return;
+      state.rightId=capturedId;
+      state.rightThrottle=capturedPedal==='gas';
+      state.rightBrake=capturedPedal==='brake';
+      state.throttle=state.rightThrottle?1:0;
+      state.brake=state.rightBrake?1:0;
+      state._draw?.();
+    };
+    const releaseCaptured=()=>{
+      if(capturedId<0)return;
+      const canvas=this.game?.canvas;
+      if(capturedNativeId!==null){
+        try{if(canvas?.hasPointerCapture?.(capturedNativeId))canvas.releasePointerCapture(capturedNativeId);}catch{}
+      }
+      if(state.rightId===capturedId)state.rightId=-1;
+      state.rightThrottle=false;
+      state.rightBrake=false;
+      state.throttle=0;
+      state.brake=0;
+      capturedId=-1;
+      capturedNativeId=null;
+      capturedPedal=null;
+      state._draw?.();
+    };
+
+    const onDown=(p)=>{
+      if(capturedId>=0){
+        if(p.id!==capturedId)drawCaptured();
+        return;
+      }
+      const pedal=pickPedal(p.x,p.y);
+      if(!pedal)return;
+      capturedId=p.id;
+      capturedPedal=pedal;
+      const nativeId=Number(p?.event?.pointerId);
+      capturedNativeId=Number.isFinite(nativeId)?nativeId:null;
+      drawCaptured();
+      if(capturedNativeId!==null){
+        try{this.game?.canvas?.setPointerCapture?.(capturedNativeId);}catch{}
+      }
+    };
+    const onMove=(p)=>{
+      if(p.id!==capturedId)return;
+      // The base control recalculates the visual hitbox on every move. Restore
+      // the pedal captured on pointerdown so small finger drift cannot release it.
+      drawCaptured();
+    };
+    const onUp=(p)=>{
+      if(p.id===capturedId)releaseCaptured();
+    };
+    const onNativeCancel=(event)=>{
+      if(capturedNativeId===null||Number(event?.pointerId)!==capturedNativeId)return;
+      releaseCaptured();
+    };
+
+    // Registered after the legacy handlers on purpose: these handlers preserve
+    // the pedal ownership after their pointermove hit-test has run.
+    this.input.on('pointerdown',onDown);
+    this.input.on('pointermove',onMove);
+    this.input.on('pointerup',onUp);
+    const canvas=this.game?.canvas;
+    canvas?.addEventListener?.('pointercancel',onNativeCancel,{passive:true});
+
+    const cleanup=()=>{
+      try{this.input?.off?.('pointerdown',onDown);}catch{}
+      try{this.input?.off?.('pointermove',onMove);}catch{}
+      try{this.input?.off?.('pointerup',onUp);}catch{}
+      try{canvas?.removeEventListener?.('pointercancel',onNativeCancel);}catch{}
+      releaseCaptured();
+    };
+    this.events.once('shutdown',cleanup);
+    this.events.once('destroy',cleanup);
+    return state;
+  }
+
   create(data){
     // Legacy RaceScene checks `trackstudio_project` before resolving the selected
     // track. That made the last Studio draft override Circuito Atlántico (and any
