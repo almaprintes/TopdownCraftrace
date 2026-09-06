@@ -84,10 +84,10 @@ function addStandaloneCollider(list,item,img){
 function linearBarrierHalfThickness(barrier){
   const type=String(barrier?.type||'').toLowerCase();
   if(type==='guardrail')return 8;
-  // Concrete barriers have a visibly wide body. Use a thick capsule along
-  // every authored segment so the car meets the visible perimeter instead
-  // of entering the sprite before the centre-line collision fires.
-  if(type==='concrete')return 22;
+  // Concrete modules are much wider than the guardrail. This capsule follows
+  // the authored polyline but keeps the car centre far enough away that the
+  // visible nose/body cannot enter the concrete sprite before collision.
+  if(type==='concrete')return 36;
   return 11;
 }
 
