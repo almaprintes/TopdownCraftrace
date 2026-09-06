@@ -18,6 +18,7 @@ function captureDimensions(scene){
 function makeProgress(kind){
   if(typeof document==='undefined')return{update:()=>{},remove:()=>{}};
   const root=document.createElement('div');
+  root.dataset.tdrCaptureProgress='1';
   root.style.cssText='position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(4,10,18,.80);color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none';
   root.innerHTML=`<div style="min-width:250px;padding:20px 24px;border:1px solid rgba(88,232,255,.45);border-radius:16px;background:#07101b;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.45)"><div style="font-size:14px;font-weight:900;letter-spacing:.10em">${kind==='technical'?'CAPTURA TÉCNICA':'CAPTURA MUNDO'}</div><div data-p style="margin-top:9px;font-size:12px;color:#9cc7dc">PREPARANDO · 0%</div></div>`;
   document.body.appendChild(root);
@@ -31,7 +32,6 @@ function temporarilyHideCaptureUi(scene){
     const sx=Number(obj?.scrollFactorX),sy=Number(obj?.scrollFactorY);
     if(sx===0&&sy===0)hide(obj);
   }
-  // These are authoring/debug guides, not part of the clean world render.
   hide(scene?.cpGfx);hide(scene?.gridDebug);hide(scene?.finishLineDebug);hide(scene?._touchDbg);
   return()=>{for(const obj of changed)setVisible(obj,true);};
 }
@@ -73,6 +73,11 @@ function drawTechnicalOverlay(ctx,scene,scale){
   checkpoints.forEach((gate,i)=>drawGate(ctx,gate,colors[i%colors.length],Math.max(lineW,5/scale)));
   ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=Math.max(1,2/scale);ctx.setLineDash([12/scale,8/scale]);ctx.strokeRect(1/scale,1/scale,Math.max(0,(Number(scene.worldW)||0)-2/scale),Math.max(0,(Number(scene.worldH)||0)-2/scale));
   ctx.restore();
+}
+function cleanupRaceDom(){
+  if(typeof document==='undefined')return;
+  try{document.getElementById('tdr-race-controls')?.remove?.();}catch{}
+  try{document.querySelectorAll('[data-tdr-capture-progress="1"]').forEach(node=>node.remove?.());}catch{}
 }
 async function renderWholeWorld(scene,technical){
   if(typeof document==='undefined')throw new Error('Capture requires a browser document');
@@ -121,5 +126,13 @@ export function installRaceCaptureRuntime(RaceSceneClass){
   const proto=RaceSceneClass?.prototype;if(!proto||proto.__tdrRaceCaptureInstalled)return;
   proto.exportCaptureWorld=function(){return renderWholeWorld(this,false);};
   proto.exportTechnicalCapture=function(){return renderWholeWorld(this,true);};
+  const originalCreate=proto.create;
+  proto.create=function(...args){
+    cleanupRaceDom();
+    const result=originalCreate?.apply(this,args);
+    this.events?.once?.('shutdown',()=>{cleanupRaceDom();});
+    this.events?.once?.('destroy',()=>{cleanupRaceDom();});
+    return result;
+  };
   proto.__tdrRaceCaptureInstalled=true;
 }
