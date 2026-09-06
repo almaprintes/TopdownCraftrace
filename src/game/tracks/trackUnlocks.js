@@ -5,7 +5,7 @@ const DEV_KEY='tdr2:devFullTrackAccess:v1';
 // A track may exist in src/game/tracks/library for authoring/admin purposes without
 // being considered released. Only IDs in this list are allowed into the normal
 // player selector or normal player selection flow.
-export const PUBLISHED_TRACK_IDS=Object.freeze(['track01','karting-tenerife','karting-canarias']);
+export const PUBLISHED_TRACK_IDS=Object.freeze(['track01','santa-cruz','karting-tenerife','karting-canarias']);
 export const STARTER_TRACK_IDS=PUBLISHED_TRACK_IDS;
 export const isPublishedTrackId=id=>PUBLISHED_TRACK_IDS.includes(String(id||'').trim());
 
