@@ -11,15 +11,30 @@ function envFor(scene){
 function textureKey(asset){return `race-env:${asset}`;}
 
 function ensureLoadingOverlay(scene){
-  if(typeof document==='undefined'||document.getElementById('tdr-track-loading'))return;
-  const root=document.createElement('div');
+  if(typeof document==='undefined')return null;
+  let root=document.getElementById('tdr-track-loading');
+  if(root)return root;
+  root=document.createElement('div');
   root.id='tdr-track-loading';
   root.style.cssText='position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:#07101b;color:#fff;font-family:system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.12em;font-weight:800;pointer-events:auto;';
-  root.innerHTML='<div style="text-align:center"><div style="font-size:18px">CARGANDO CIRCUITO</div><div data-p style="margin-top:10px;font-size:12px;opacity:.75">0%</div></div>';
+  root.innerHTML='<div style="text-align:center;padding:24px"><div data-title style="font-size:18px">CARGANDO CIRCUITO</div><div data-p style="margin-top:10px;font-size:12px;opacity:.75">0%</div></div>';
   document.body.appendChild(root);
   const update=(value)=>{const p=root.querySelector('[data-p]');if(p)p.textContent=`${Math.round((Number(value)||0)*100)}%`;};
   scene._tdrEnvLoadProgress=update;
   scene.load?.on?.('progress',update);
+  return root;
+}
+
+function showLoadingFailure(scene,missing=[]){
+  const root=ensureLoadingOverlay(scene);
+  if(!root)return;
+  const title=root.querySelector('[data-title]');
+  const status=root.querySelector('[data-p]');
+  if(title)title.textContent='ERROR CARGANDO CIRCUITO';
+  if(status){
+    status.style.letterSpacing='normal';
+    status.textContent=missing.length?'Faltan recursos del circuito. Vuelve a intentarlo.':'No se pudo preparar el circuito. Vuelve a intentarlo.';
+  }
 }
 
 function removeLoadingOverlay(scene){
@@ -34,11 +49,16 @@ function preloadEnvironment(scene,env){
   const assets=new Map();
   for(const item of env.environment||[])if(item?.asset&&item?.path)assets.set(item.asset,item.path);
   for(const barrier of env.linearBarriers||[])if(barrier?.asset&&barrier?.path)assets.set(barrier.asset,barrier.path);
+  scene._tdrExpectedEnvironmentTextures=[...assets.keys()].map(textureKey);
   for(const [asset,path] of assets){
     const key=textureKey(asset);
     if(scene.textures?.exists?.(key))continue;
     scene.load.image(key,`${BASE}assets/${path}`);
   }
+}
+
+function missingEnvironmentTextures(scene){
+  return (scene?._tdrExpectedEnvironmentTextures||[]).filter(key=>!scene.textures?.exists?.(key));
 }
 
 function addSegmentCollider(list,a,b,halfThickness=9){
@@ -68,7 +88,7 @@ function spawnEnvironment(scene,env){
 
   for(const item of env.environment||[]){
     const key=textureKey(item?.asset);
-    if(!scene.textures?.exists?.(key))continue;
+    if(!scene.textures?.exists?.(key))throw new Error(`Missing environment texture ${key}`);
     const img=scene.add.image(Number(item.x)||0,Number(item.y)||0,key)
       .setRotation(Number(item.rotation)||0)
       .setFlip(!!item.flipX,!!item.flipY)
@@ -85,12 +105,12 @@ function spawnEnvironment(scene,env){
     const points=Array.isArray(barrier?.points)&&barrier.points.length>1?barrier.points:[{x:barrier?.x1,y:barrier?.y1},{x:barrier?.x2,y:barrier?.y2}];
     const spacing=Math.max(28,Number(barrier?.spacing)||100);
     const key=textureKey(barrier?.asset);
+    if(!scene.textures?.exists?.(key))throw new Error(`Missing barrier texture ${key}`);
     const thickness=String(barrier?.type||'').toLowerCase()==='guardrail'?8:11;
 
     for(let i=0;i<points.length-1;i++){
       const a=points[i],b=points[i+1];
       addSegmentCollider(colliders,a,b,thickness);
-      if(!scene.textures?.exists?.(key))continue;
       const dx=Number(b.x)-Number(a.x),dy=Number(b.y)-Number(a.y),len=Math.hypot(dx,dy);
       if(!Number.isFinite(len)||len<1)continue;
       const count=Math.max(1,Math.ceil(len/spacing));
@@ -134,7 +154,8 @@ function resolveBodyAgainstColliders(scene,body){
         if(d>=min)continue;
         const nx=d>1e-6?dx/d:1,ny=d>1e-6?dy/d:0;
         const push=min-d+.75;px+=nx*push;py+=ny*push;
-        const vn=vx*nx+vy*ny;if(vn<0){vx-=vn*1.18*nx;vy-=vn*1.18*ny;}
+        const vn=vx*nx+vy*ny;
+        if(vn<0){vx-=vn*1.18*nx;vy-=vn*1.18*ny;}
         continue;
       }
 
@@ -147,7 +168,8 @@ function resolveBodyAgainstColliders(scene,body){
       let nx,ny;
       if(d>1e-6){nx=dx/d;ny=dy/d;}else{const inv=1/Math.sqrt(len2);nx=-aby*inv;ny=abx*inv;if(vx*nx+vy*ny>0){nx=-nx;ny=-ny;}}
       const push=min-d+.75;px+=nx*push;py+=ny*push;
-      const vn=vx*nx+vy*ny;if(vn<0){vx-=vn*1.18*nx;vy-=vn*1.18*ny;}
+      const vn=vx*nx+vy*ny;
+      if(vn<0){vx-=vn*1.18*nx;vy-=vn*1.18*ny;}
     }
   }
 
@@ -156,6 +178,7 @@ function resolveBodyAgainstColliders(scene,body){
 }
 
 function applyBarrierCollisions(scene){
+  if(!scene?._tdrEnvironmentReady)return;
   resolveBodyAgainstColliders(scene,scene.carBody||scene.car);
   if(scene.carRig&&scene.carBody){scene.carRig.x=scene.carBody.x;scene.carRig.y=scene.carBody.y;}
   for(const ai of scene.gridCars||[]){
@@ -177,16 +200,29 @@ export function installRaceEnvironmentRuntime(RaceSceneClass){
 
   const originalCreate=proto.create;
   proto.create=function patchedRaceEnvironmentCreate(data){
+    const env=envFor(this);
+    if(!env)return originalCreate?.call(this,data);
+
     const result=originalCreate?.call(this,data);
+    this._tdrEnvironmentReady=false;
+    this.time.paused=true;
+
     try{
-      const env=envFor(this);
-      if(env)spawnEnvironment(this,env);
+      const missing=missingEnvironmentTextures(this);
+      if(missing.length){
+        showLoadingFailure(this,missing);
+        console.error('[race-environment] missing textures',missing);
+        return result;
+      }
+
+      spawnEnvironment(this,env);
       this._tdrEnvironmentReady=true;
+      removeLoadingOverlay(this);
+      this.time.paused=false;
     }catch(err){
       this._tdrEnvironmentReady=false;
+      showLoadingFailure(this);
       console.error('[race-environment] create failed',err);
-    }finally{
-      removeLoadingOverlay(this);
     }
     return result;
   };
