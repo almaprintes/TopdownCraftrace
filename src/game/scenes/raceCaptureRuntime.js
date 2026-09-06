@@ -128,7 +128,6 @@ export function installRaceCaptureRuntime(RaceSceneClass){
   proto.exportTechnicalCapture=function(){return renderWholeWorld(this,true);};
   const originalCreate=proto.create;
   proto.create=function(...args){
-    cleanupRaceDom();
     const result=originalCreate?.apply(this,args);
     this.events?.once?.('shutdown',()=>{cleanupRaceDom();});
     this.events?.once?.('destroy',()=>{cleanupRaceDom();});
