@@ -62,7 +62,7 @@
 /* Development channel badge. Public beta is built from beta-0.0.3 and remains untouched. */
 #rotateOverlay .rot-beta-title { font-size: 0 !important; }
 #rotateOverlay .rot-beta-title::after {
-  content: '⚠ DEV 0.0.4';
+  content: '⚠ DEV 0.0.4 · V';
   font-size: 14px;
   font-weight: 900;
   letter-spacing: .08em;
