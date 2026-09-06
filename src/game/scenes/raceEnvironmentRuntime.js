@@ -101,31 +101,13 @@ function spawnEnvironment(scene,env){
     addStandaloneCollider(colliders,item,img);
   }
 
+  // The race scene already renders the visual modules for linear barriers.
+  // Here we only create the matching collision geometry. Rendering them a
+  // second time produced the parallel/right-angle duplicates seen in DEV.
   for(const barrier of env.linearBarriers||[]){
     const points=Array.isArray(barrier?.points)&&barrier.points.length>1?barrier.points:[{x:barrier?.x1,y:barrier?.y1},{x:barrier?.x2,y:barrier?.y2}];
-    const spacing=Math.max(28,Number(barrier?.spacing)||100);
-    const key=textureKey(barrier?.asset);
-    if(!scene.textures?.exists?.(key))throw new Error(`Missing barrier texture ${key}`);
     const thickness=String(barrier?.type||'').toLowerCase()==='guardrail'?8:11;
-
-    for(let i=0;i<points.length-1;i++){
-      const a=points[i],b=points[i+1];
-      addSegmentCollider(colliders,a,b,thickness);
-      const dx=Number(b.x)-Number(a.x),dy=Number(b.y)-Number(a.y),len=Math.hypot(dx,dy);
-      if(!Number.isFinite(len)||len<1)continue;
-      const count=Math.max(1,Math.ceil(len/spacing));
-      const step=len/count;
-      const r=Math.atan2(dy,dx);
-      for(let j=0;j<count;j++){
-        const d=(j+.5)*step;
-        const x=Number(a.x)+Math.cos(r)*d,y=Number(a.y)+Math.sin(r)*d;
-        const img=scene.add.image(x,y,key).setRotation(r).setDepth(18).setScrollFactor(1);
-        const targetW=step*1.08;
-        if((img.width||0)>0)img.setDisplaySize(targetW,(img.height||1)*(targetW/(img.width||1)));
-        scene.uiCam?.ignore?.(img);
-        objects.push(img);
-      }
-    }
+    for(let i=0;i<points.length-1;i++)addSegmentCollider(colliders,points[i],points[i+1],thickness);
   }
 
   scene._tdrRaceEnvironment={objects,colliders};
