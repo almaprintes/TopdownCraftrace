@@ -2,58 +2,28 @@
   "version": 5,
   "trackId": "santa-cruz",
   "environment": [
-    {
-      "asset": "santacruz_plaza_espana",
-      "path": "environment/structures/santacruz_plaza_espana.webp",
-      "x": 588.93,
-      "y": 2331.29,
-      "rotation": 0.07631,
-      "displayWidth": 431.57,
-      "flipX": true,
-      "flipY": false,
-      "z": 12
-    },
-    {
-      "asset": "santacruz_monumento",
-      "path": "environment/structures/santacruz_monumento.webp",
-      "x": 1064.26,
-      "y": 461.25,
-      "rotation": 0.03297,
-      "displayWidth": 340.98,
-      "flipX": false,
-      "flipY": false,
-      "z": 12
-    },
-    {
-      "asset": "santacruz_auditorio",
-      "path": "environment/structures/santacruz_auditorio.webp",
-      "x": 1124.51,
-      "y": 1587.9,
-      "rotation": 0,
-      "displayWidth": 520,
-      "flipX": false,
-      "flipY": false,
-      "z": 12
-    },
-    {
-      "asset": "santacruz_heliodoro",
-      "path": "environment/structures/santacruz_heliodoro.webp",
-      "x": 86.34,
-      "y": 1538.66,
-      "rotation": 0,
-      "displayWidth": 560,
-      "flipX": false,
-      "flipY": false,
-      "z": 12
-    }
+    {"asset":"grandstand_half_01","path":"environment/structures/grandstand_half_01.webp","x":129.18,"y":2304.48,"rotation":-1.54425,"displayWidth":276.84,"flipX":false,"flipY":false,"z":12},
+    {"asset":"direction_sign_01","path":"environment/props/direction_sign_01.webp","x":443.77,"y":2316.21,"rotation":1.56332,"displayWidth":133.59,"flipX":true,"flipY":false,"z":13},
+    {"asset":"santacruz_heliodoro","path":"environment/structures/santacruz_heliodoro.webp","x":234.24,"y":1691.82,"rotation":-0.21665,"displayWidth":328.48,"flipX":false,"flipY":false,"z":14},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":178.02,"y":1847.98,"rotation":-0.08895,"displayWidth":162.09,"flipX":false,"flipY":false,"z":15},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":158.82,"y":1939.68,"rotation":-0.31989,"displayWidth":136.45,"flipX":false,"flipY":false,"z":16},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":92.61,"y":2014.64,"rotation":-0.31989,"displayWidth":136.45,"flipX":false,"flipY":false,"z":17},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":92.08,"y":1925.88,"rotation":-0.4659,"displayWidth":173.51,"flipX":false,"flipY":false,"z":18},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":164.33,"y":2120.6,"rotation":-0.29866,"displayWidth":124.47,"flipX":false,"flipY":false,"z":19},
+    {"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":138.06,"y":2048.72,"rotation":-0.47962,"displayWidth":194.32,"flipX":false,"flipY":false,"z":20},
+    {"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":982.33,"y":335.19,"rotation":-0.3527,"displayWidth":94.91,"flipX":false,"flipY":false,"z":21},
+    {"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":960.13,"y":389.77,"rotation":0,"displayWidth":125,"flipX":false,"flipY":false,"z":22},
+    {"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":1054.03,"y":374.6,"rotation":0,"displayWidth":125,"flipX":false,"flipY":false,"z":23},
+    {"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":1135.17,"y":417.22,"rotation":0,"displayWidth":125,"flipX":false,"flipY":false,"z":24},
+    {"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":1225.7,"y":466.33,"rotation":-0.12685,"displayWidth":166.69,"flipX":false,"flipY":false,"z":25},
+    {"asset":"santacruz_monumento","path":"environment/structures/santacruz_monumento.webp","x":1076.4,"y":469.14,"rotation":0.04548,"displayWidth":397.72,"flipX":false,"flipY":false,"z":26}
   ],
   "surfaces": [],
-  "baseTrack": {
-    "id": "santa-cruz",
-    "name": "SANTA CRUZ",
-    "source": "src/game/tracks/library/santa-cruz/track.json",
-    "locked": true
-  },
+  "baseTrack": {"id":"santa-cruz","name":"SANTA CRUZ","source":"src/game/tracks/library/santa-cruz/track.json","locked":true},
   "repositoryPath": "src/game/tracks/library/santa-cruz/santa-cruz.environment.json",
-  "linearBarriers": []
+  "linearBarriers": [
+    {"label":"GUARDARRAÍL","type":"guardrail","asset":"guardrail_straight_01","path":"environment/barriers/guardrail_straight_01.webp","spacing":105,"x1":372.3048428811515,"y1":1755.6718521337025,"x2":226.03064690842172,"y2":2170.517496454828,"points":[{"x":372.3048428811515,"y":1755.6718521337025},{"x":269.6730974397954,"y":1820.451790469212},{"x":114.26296198212586,"y":1886.5131708994293},{"x":245.33760892214215,"y":2057.2161141111524},{"x":226.03064690842172,"y":2170.517496454828}]},
+    {"label":"HORMIGÓN","type":"concrete","asset":"concrete_barrier_straight_01","path":"environment/barriers/concrete_barrier_straight_01.webp","spacing":108,"x1":897.573174578073,"y1":506.37639347405513,"x2":674.9574917109594,"y2":1309.2378217453083,"points":[{"x":897.573174578073,"y":506.37639347405513},{"x":866.8675631481261,"y":628.7472860845781},{"x":842.4836952478744,"y":784.0815556713674},{"x":797.7799374307463,"y":888.3903239113333},{"x":674.9574917109594,"y":1309.2378217453083}]}
+  ],
+  "materials": {}
 }
