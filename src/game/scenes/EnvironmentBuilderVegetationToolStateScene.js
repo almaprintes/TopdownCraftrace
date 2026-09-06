@@ -5,6 +5,7 @@ const ASSETS=[
   ['tree_broad_01','environment/vegetation/tree_broad_01.webp'],
   ['tree_broad_02','environment/vegetation/tree_broad_02.webp'],
   ['palm_tall_01','environment/vegetation/palm_tall_01.webp'],
+  ['plant_rosette_01','environment/vegetation/plant_rosette_01.webp'],
   ['shrub_round_01','environment/shrub_round_01.webp'],
   ['shrub_flowers_01','environment/shrub_flowers_01.webp'],
   ['concrete_barrier_straight_01','environment/barriers/concrete_barrier_straight_01.webp'],
@@ -41,8 +42,16 @@ const ASSETS=[
 const CORRECT_PATHS={
   tree_broad_01:'environment/vegetation/tree_broad_01.webp',
   tree_broad_02:'environment/vegetation/tree_broad_02.webp',
-  palm_tall_01:'environment/vegetation/palm_tall_01.webp'
+  palm_tall_01:'environment/vegetation/palm_tall_01.webp',
+  plant_rosette_01:'environment/vegetation/plant_rosette_01.webp'
 };
+
+const VEGETATION_ITEMS=[
+  {cat:'VEGETACIÓN',id:'tree_broad_01',path:'environment/vegetation/tree_broad_01.webp',w:150},
+  {cat:'VEGETACIÓN',id:'tree_broad_02',path:'environment/vegetation/tree_broad_02.webp',w:170},
+  {cat:'VEGETACIÓN',id:'palm_tall_01',path:'environment/vegetation/palm_tall_01.webp',w:180},
+  {cat:'VEGETACIÓN',id:'plant_rosette_01',path:'environment/vegetation/plant_rosette_01.webp',w:110}
+];
 
 const SANTACRUZ_ITEMS=[
   {cat:'ESTRUCTURAS',id:'santacruz_auditorio',path:'environment/structures/santacruz_auditorio.webp',w:520},
@@ -59,6 +68,10 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
   _catalogItemsForCategory(category){
     const items=super._catalogItemsForCategory?.(category)||[];
     const corrected=items.map(a=>CORRECT_PATHS[a.id]?{...a,path:CORRECT_PATHS[a.id]}:a);
+    if(category==='VEGETACIÓN'){
+      const ids=new Set(corrected.map(a=>a.id));
+      return corrected.concat(VEGETATION_ITEMS.filter(a=>!ids.has(a.id)));
+    }
     if(category!=='ESTRUCTURAS')return corrected;
     const ids=new Set(corrected.map(a=>a.id));
     return corrected.concat(SANTACRUZ_ITEMS.filter(a=>!ids.has(a.id)));
