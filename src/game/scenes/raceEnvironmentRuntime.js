@@ -81,6 +81,16 @@ function addStandaloneCollider(list,item,img){
   addSegmentCollider(list,{x:Number(item.x)-dx,y:Number(item.y)-dy},{x:Number(item.x)+dx,y:Number(item.y)+dy},Math.max(7,width*.055));
 }
 
+function linearBarrierHalfThickness(barrier){
+  const type=String(barrier?.type||'').toLowerCase();
+  if(type==='guardrail')return 8;
+  // Concrete barriers have a visibly wide body. Use a thick capsule along
+  // every authored segment so the car meets the visible perimeter instead
+  // of entering the sprite before the centre-line collision fires.
+  if(type==='concrete')return 22;
+  return 11;
+}
+
 function spawnEnvironment(scene,env){
   if(!env)return;
   const objects=[];
@@ -102,11 +112,10 @@ function spawnEnvironment(scene,env){
   }
 
   // The race scene already renders the visual modules for linear barriers.
-  // Here we only create the matching collision geometry. Rendering them a
-  // second time produced the parallel/right-angle duplicates seen in DEV.
+  // Here we only create collision geometry matching the authored polyline.
   for(const barrier of env.linearBarriers||[]){
     const points=Array.isArray(barrier?.points)&&barrier.points.length>1?barrier.points:[{x:barrier?.x1,y:barrier?.y1},{x:barrier?.x2,y:barrier?.y2}];
-    const thickness=String(barrier?.type||'').toLowerCase()==='guardrail'?8:11;
+    const thickness=linearBarrierHalfThickness(barrier);
     for(let i=0;i<points.length-1;i++)addSegmentCollider(colliders,points[i],points[i+1],thickness);
   }
 
