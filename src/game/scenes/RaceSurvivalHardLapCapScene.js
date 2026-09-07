@@ -60,6 +60,40 @@ export class RaceScene extends CurrentRaceScene{
     return true;
   }
 
+  _showSurvivalSessionInfo(resultRoot){
+    // RaceSurvivalPolish temporarily rebuilds ttHistory from lap times for the
+    // inherited report. Intercept only that temporary replacement and merge it
+    // with the five real timing rows so sector data is not discarded.
+    const realHistory=Array.isArray(this.ttHistory)?this.ttHistory.slice(0,SURVIVAL_MAX_LAPS):[];
+    const originalDescriptor=Object.getOwnPropertyDescriptor(this,'ttHistory');
+    let value=this.ttHistory;
+    try{
+      Object.defineProperty(this,'ttHistory',{
+        configurable:true,
+        enumerable:originalDescriptor?.enumerable??true,
+        get:()=>value,
+        set:(next)=>{
+          const rows=Array.isArray(next)?next:null;
+          const lapOnly=rows&&rows.length<=SURVIVAL_MAX_LAPS&&rows.every(row=>{
+            if(!row||typeof row!=='object')return false;
+            const keys=Object.keys(row);
+            return keys.length===1&&keys[0]==='lapMs';
+          });
+          value=lapOnly
+            ?rows.map((row,i)=>({...realHistory[i],lapMs:row.lapMs}))
+            :next;
+        }
+      });
+      return super._showSurvivalSessionInfo(resultRoot);
+    }finally{
+      if(originalDescriptor)Object.defineProperty(this,'ttHistory',originalDescriptor);
+      else{
+        try{delete this.ttHistory;}catch{}
+        this.ttHistory=value;
+      }
+    }
+  }
+
   _survivalPlayerVisualSize(){
     const visual=playerVisual(this);
     if(!visual)return{w:30,h:54};
