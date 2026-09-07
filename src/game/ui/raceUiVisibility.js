@@ -1,5 +1,5 @@
 export function hideRaceUi(scene){
-  const state={raceHud:null,dom:[],phaser:[],uiCameraVisible:null,_restored:false};
+  const state={raceHud:null,dom:[],phaser:[],uiCameraVisible:null};
   try{
     const hud=scene?._raceHudDom||document.querySelector('.tdr-race-hud');
     if(hud?.isConnected){
@@ -34,16 +34,11 @@ export function hideRaceUi(scene){
       el.style.setProperty('display','none','important');
     }
   }catch{}
-
-  const restoreOnExit=()=>restoreRaceUi(scene,state);
-  try{scene?.events?.once?.('shutdown',restoreOnExit);}catch{}
-  try{scene?.events?.once?.('destroy',restoreOnExit);}catch{}
   return state;
 }
 
 export function restoreRaceUi(scene,state){
-  if(!state||state._restored)return;
-  state._restored=true;
+  if(!state)return;
   try{
     const saved=state.raceHud;
     if(saved?.el?.style){
@@ -62,36 +57,7 @@ export function restoreRaceUi(scene,state){
     for(const saved of state.dom||[]){
       const el=saved?.el;if(!el?.style)continue;
       el.style.removeProperty('display');
-      if(saved.display)saved.el.style.setProperty('display',saved.display,saved.priority||'');
+      if(saved.display)el.style.setProperty('display',saved.display,saved.priority||'');
     }
-  }catch{}
-
-  // The DOM control renderer keeps its own visibility cache. Clearing display
-  // here used to leave the root at its stylesheet default (display:none) while
-  // that renderer still believed it was visible. On the next event-loop turn,
-  // explicitly resync the root with the actual race scene lifecycle.
-  try{
-    const controls=document.getElementById('tdr-race-controls');
-    if(controls?.style){
-      controls.style.removeProperty('visibility');
-      controls.style.removeProperty('opacity');
-      controls.style.removeProperty('pointer-events');
-    }
-    for(const el of document.querySelectorAll('#tdr-race-controls [data-tdr-race-ui="1"]')){
-      if(!el?.style)continue;
-      el.style.removeProperty('display');
-      el.style.removeProperty('visibility');
-      el.style.removeProperty('opacity');
-      el.style.removeProperty('pointer-events');
-    }
-    setTimeout(()=>{
-      try{
-        const root=document.getElementById('tdr-race-controls');
-        if(!root?.style)return;
-        const active=!!scene?.sys?.isActive?.();
-        const landscape=window.innerWidth>=window.innerHeight;
-        root.style.display=active&&landscape?'block':'none';
-      }catch{}
-    },0);
   }catch{}
 }
