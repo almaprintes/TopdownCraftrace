@@ -14,6 +14,11 @@ function survivalBotKey(bot){
     .filter(Boolean).join(' ').toLowerCase();
 }
 
+function survivalBotLabel(bot){
+  const raw=bot?.displayName||bot?.name||bot?.model||bot?.carName||bot?.carId||bot?.carKey||bot?.id||bot?.sprite?.texture?.key||'RIVAL';
+  return String(raw).replace(/^car[-_ ]?/i,'').replace(/[_-]+/g,' ').trim().toUpperCase()||'RIVAL';
+}
+
 function survivalBotVisualScale(bot){
   // Colossus is a truck and must keep a visibly larger footprint than the
   // regular field. This is visual-only: the XXIV contact response stays intact.
@@ -24,9 +29,8 @@ export class RaceScene extends CurrentRaceScene{
   _registerFinishCross(racer){
     const isSurvivalPlayer=this._survivalMode&&racer===this._survivalPlayer;
 
-    // IMPORTANT: reject anything after the fifth accepted Survival crossing
-    // before the generic race layer can append history, sectors, loot or rewards.
-    // This makes the same five rounds authoritative for every subsystem.
+    // Reject anything after the fifth accepted Survival crossing before the
+    // generic layer can append history, sectors, loot or rewards.
     if(isSurvivalPlayer&&(this._survivalFinished||Number(racer?.completedLaps||0)>=SURVIVAL_MAX_LAPS))return false;
 
     const completed=super._registerFinishCross(racer);
@@ -52,8 +56,6 @@ export class RaceScene extends CurrentRaceScene{
       if(Number.isFinite(this.carBody?.body?.angularVelocity))this.carBody.body.angularVelocity=0;
     }catch{}
 
-    // Lap five is the final accepted competitive crossing. Finish immediately;
-    // a sixth lap is never opened and therefore cannot leak into any report.
     if(!this._survivalFinished)this._finishSurvival?.(true);
     return true;
   }
@@ -87,9 +89,55 @@ export class RaceScene extends CurrentRaceScene{
     }
   }
 
+  _destroySurvivalEliminationHud(){
+    try{this._survivalEliminationHudDom?.remove?.();}catch{}
+    this._survivalEliminationHudDom=null;
+  }
+
+  _syncSurvivalEliminationHud(){
+    if(typeof document==='undefined'||!this._survivalMode)return;
+    const bots=Array.isArray(this._survivalBots)?this._survivalBots:[];
+    this._survivalSeenActiveBots??=new Set();
+    this._survivalEliminatedBots??=[];
+    this._survivalEliminatedSet??=new Set();
+
+    for(const bot of bots){
+      if(bot?.active&&bot?.sprite?.visible!==false)this._survivalSeenActiveBots.add(bot);
+      const wasActive=this._survivalSeenActiveBots.has(bot);
+      const nowOut=bot?.active===false||bot?.sprite?.visible===false||!bot?.sprite?.scene;
+      if(wasActive&&nowOut&&!this._survivalEliminatedSet.has(bot)){
+        this._survivalEliminatedSet.add(bot);
+        this._survivalEliminatedBots.push(bot);
+      }
+    }
+
+    const eliminated=this._survivalEliminatedBots.slice(0,SURVIVAL_MAX_LAPS);
+    if(!eliminated.length){
+      if(this._survivalEliminationHudDom)this._survivalEliminationHudDom.style.display='none';
+      return;
+    }
+
+    let root=this._survivalEliminationHudDom;
+    if(!root){
+      root=document.createElement('div');
+      root.dataset.tdrRaceUi='1';
+      root.style.cssText='position:fixed;right:max(12px,env(safe-area-inset-right));top:max(58px,env(safe-area-inset-top));z-index:2147482500;pointer-events:none;min-width:150px;max-width:31vw;padding:8px 10px;background:rgba(5,12,20,.86);border:1px solid rgba(88,232,255,.36);box-shadow:0 8px 28px rgba(0,0,0,.38);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#fff;';
+      document.body.appendChild(root);
+      this._survivalEliminationHudDom=root;
+    }
+    root.style.display='block';
+    root.innerHTML=`<div style="font-size:8px;font-weight:950;letter-spacing:.16em;color:#63e8ff;margin-bottom:5px">ELIMINADOS</div>${eliminated.map((bot,i)=>`<div style="font-size:10px;font-weight:850;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="opacity:.55">${i+1}.</span> ${survivalBotLabel(bot)}</div>`).join('')}`;
+  }
+
   _initSurvival(){
     const result=super._initSurvival();
+    this._destroySurvivalEliminationHud();
+    this._survivalSeenActiveBots=new Set();
+    this._survivalEliminatedBots=[];
+    this._survivalEliminatedSet=new Set();
     this._normalizeSurvivalRivals();
+    this.events?.once?.('shutdown',()=>this._destroySurvivalEliminationHud());
+    this.events?.once?.('destroy',()=>this._destroySurvivalEliminationHud());
     return result;
   }
 
@@ -153,6 +201,7 @@ export class RaceScene extends CurrentRaceScene{
     const result=super.update(time,delta);
     if(this._survivalMode){
       this._normalizeSurvivalRivals();
+      this._syncSurvivalEliminationHud();
       this._resolveSurvivalCarContacts(delta);
     }
     return result;
