@@ -1,0 +1,4 @@
+TOPDOWN CRAFTRACE DEV PROBE
+expected-main=0af924057fc7a89e9dca481731755f29ec264264
+expected-version=DEV 0.0.4 · XVI
+purpose=verify GitHub Pages /dev publication independently of app, cache and service worker
