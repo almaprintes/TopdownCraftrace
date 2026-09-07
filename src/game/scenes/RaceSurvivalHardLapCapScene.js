@@ -20,17 +20,12 @@ function survivalBotLabel(bot){
 }
 
 function survivalBotVisualScale(bot){
-  // Colossus is a truck and must keep a visibly larger footprint than the
-  // regular field. This is visual-only: the XXIV contact response stays intact.
   return survivalBotKey(bot).includes('colossus')?1.28:1;
 }
 
 export class RaceScene extends CurrentRaceScene{
   _registerFinishCross(racer){
     const isSurvivalPlayer=this._survivalMode&&racer===this._survivalPlayer;
-
-    // Reject anything after the fifth accepted Survival crossing before the
-    // generic layer can append history, sectors, loot or rewards.
     if(isSurvivalPlayer&&(this._survivalFinished||Number(racer?.completedLaps||0)>=SURVIVAL_MAX_LAPS))return false;
 
     const completed=super._registerFinishCross(racer);
@@ -45,7 +40,6 @@ export class RaceScene extends CurrentRaceScene{
       this._syncSurvivalAuthoritativeHistory?.(racer);
     }
     if(Array.isArray(this.ttHistory)&&this.ttHistory.length>SURVIVAL_MAX_LAPS)this.ttHistory=this.ttHistory.slice(0,SURVIVAL_MAX_LAPS);
-
     this._survivalRound=SURVIVAL_MAX_LAPS;
 
     try{
@@ -60,10 +54,32 @@ export class RaceScene extends CurrentRaceScene{
     return true;
   }
 
+  _survivalAuthoritativePlayerTimes(){
+    const participants=this._survivalRaceState?.participants;
+    const player=Array.isArray(participants)
+      ?participants.find(p=>p?.player===true||p?.id==='TÚ')
+      :null;
+    return (Array.isArray(player?.lapTimesMs)?player.lapTimesMs:[])
+      .map(Number)
+      .filter(ms=>Number.isFinite(ms)&&ms>1000)
+      .slice(0,SURVIVAL_MAX_LAPS);
+  }
+
+  _survivalSessionBestLapMs(){
+    const times=this._survivalAuthoritativePlayerTimes();
+    if(times.length)return Math.min(...times);
+    return super._survivalSessionBestLapMs?.()??null;
+  }
+
   _showSurvivalSessionInfo(resultRoot){
-    // RaceSurvivalPolish temporarily rebuilds ttHistory from lap times for the
-    // inherited report. Intercept only that temporary replacement and merge it
-    // with the five real timing rows so sector data is not discarded.
+    // The race authority is the source of truth. Mirror its five player times
+    // into the legacy fields only while the inherited report is assembled.
+    const authoritativeTimes=this._survivalAuthoritativePlayerTimes();
+    if(authoritativeTimes.length){
+      if(this._survivalPlayer)this._survivalPlayer._survivalLapTimesMs=[...authoritativeTimes];
+      this._survivalPlayerLapTimes=[...authoritativeTimes];
+    }
+
     const realHistory=Array.isArray(this.ttHistory)?this.ttHistory.slice(0,SURVIVAL_MAX_LAPS):[];
     const originalDescriptor=Object.getOwnPropertyDescriptor(this,'ttHistory');
     let value=this.ttHistory;
@@ -73,12 +89,15 @@ export class RaceScene extends CurrentRaceScene{
         enumerable:originalDescriptor?.enumerable??true,
         get:()=>value,
         set:(next)=>{
-          const rows=Array.isArray(next)?next:null;
+          let rows=Array.isArray(next)?next:null;
           const lapOnly=rows&&rows.length<=SURVIVAL_MAX_LAPS&&rows.every(row=>{
             if(!row||typeof row!=='object')return false;
             const keys=Object.keys(row);
             return keys.length===1&&keys[0]==='lapMs';
           });
+          if(lapOnly&&authoritativeTimes.length&&rows.length!==authoritativeTimes.length){
+            rows=authoritativeTimes.map(lapMs=>({lapMs}));
+          }
           value=lapOnly
             ?rows.map((row,i)=>({...realHistory[i],lapMs:row.lapMs}))
             :next;
