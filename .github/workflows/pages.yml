@@ -76,16 +76,20 @@ jobs:
       - name: Assemble public beta plus DEV
         shell: bash
         run: |
-          rm -rf beta/dist/dev
-          mkdir -p beta/dist/dev
+          rm -rf beta/dist/dev beta/dist/dev-live
+          mkdir -p beta/dist/dev beta/dist/dev-live
           cp -R dev-src/dist/. beta/dist/dev/
+          cp -R dev-src/dist/. beta/dist/dev-live/
 
       - name: Verify DEV artifact
         shell: bash
         run: |
           cmp dev-src/dist/index.html beta/dist/dev/index.html
+          cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
+          test -f beta/dist/dev-live/sw.js
           grep -q 'DEV 0\.0\.4' beta/dist/dev/index.html
+          grep -q 'DEV 0\.0\.4' beta/dist/dev-live/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
