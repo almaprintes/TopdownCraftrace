@@ -1,58 +1,35 @@
-/* Top-Down Race 2 service worker — development-safe PWA cache.
-   DEV preview has its own cache namespace so it never collides with the beta. */
+/* Top Down RACE DEV service worker retirement shim.
+   DEV must always load the latest deployment, never an old offline shell. */
 
-const CACHE_VERSION = 'tdr2-dev-v1';
-const CORE_ASSETS = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './assets/data/car_overrides.json',
-  './icons/icon-192.png',
-  './icons/icon-256.png',
-  './icons/icon-384.png',
-  './icons/icon-512.png',
-  './assets/ui/orientation_portrait.png',
-  './assets/tutorials/dropping/dropping_01_717x330.png',
-  './assets/tutorials/dropping/dropping_02_717x330.png',
-  './assets/tutorials/dropping/dropping_03_717x330.png',
-  './assets/tutorials/dropping/dropping_04_717x330.png',
-  './assets/tutorials/dropping/dropping_05_717x330.png'
-];
-
-self.addEventListener('message', (event) => {
-  if (event?.data?.type === 'SKIP_WAITING') self.skipWaiting();
-});
+const DEV_CACHE_RE = /(^|[/:._-])dev([/:._-]|$)|tdr2-dev/i;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_VERSION).then(async (cache) => {
-      await Promise.allSettled(CORE_ASSETS.map((url) => cache.add(url)));
-    })
-  );
-  self.skipWaiting();
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil((async () => {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((key) => DEV_CACHE_RE.test(String(key))).map((key) => caches.delete(key)));
+    } catch {}
+
+    try { await self.registration.unregister(); } catch {}
+    try { await self.clients.claim(); } catch {}
+
+    try {
+      const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of windows) {
+        const url = new URL(client.url);
+        if (!url.pathname.includes('/TopdownCraftrace/dev/')) continue;
+        url.searchParams.set('dev-recovered', 'XV');
+        await client.navigate(url.href);
+      }
+    } catch {}
+  })());
 });
 
-async function networkFirst(req) {
-  const cache = await caches.open(CACHE_VERSION);
-  try {
-    const fresh = await fetch(req, { cache: 'no-store' });
-    if (fresh?.ok) await cache.put(req, fresh.clone());
-    return fresh;
-  } catch {
-    const cached = await cache.match(req);
-    if (cached) return cached;
-    return new Response('', { status: 504, statusText: 'Offline' });
-  }
-}
-
 self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
-  const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
-  event.respondWith(networkFirst(req));
+  if (event.request.method !== 'GET') return;
+  event.respondWith(fetch(event.request, { cache: 'no-store' }));
 });

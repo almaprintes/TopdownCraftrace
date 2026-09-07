@@ -59,7 +59,7 @@ jobs:
       - name: Checkout development
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
           path: dev-src
           fetch-depth: 1
 
@@ -67,6 +67,7 @@ jobs:
         working-directory: dev-src
         shell: bash
         run: |
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
           mkdir -p dist/assets/tutorials/dropping
@@ -78,6 +79,13 @@ jobs:
           rm -rf beta/dist/dev
           mkdir -p beta/dist/dev
           cp -R dev-src/dist/. beta/dist/dev/
+
+      - name: Verify DEV artifact
+        shell: bash
+        run: |
+          cmp dev-src/dist/index.html beta/dist/dev/index.html
+          test -f beta/dist/dev/sw.js
+          grep -q 'DEV 0\.0\.4' beta/dist/dev/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
