@@ -76,7 +76,6 @@ function drawTechnicalOverlay(ctx,scene,scale){
 }
 function cleanupRaceDom(){
   if(typeof document==='undefined')return;
-  try{document.getElementById('tdr-race-controls')?.remove?.();}catch{}
   try{document.querySelectorAll('[data-tdr-capture-progress="1"]').forEach(node=>node.remove?.());}catch{}
 }
 async function renderWholeWorld(scene,technical){
