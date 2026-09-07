@@ -67,7 +67,29 @@ export function restoreRaceUi(scene,state){
     for(const saved of state.dom||[]){
       const el=saved?.el;if(!el?.style)continue;
       el.style.removeProperty('display');
-      if(saved.display)el.style.setProperty('display',saved.display,saved.priority||'');
+      if(saved.display)saved.el.style.setProperty('display',saved.display,saved.priority||'');
+    }
+  }catch{}
+
+  // The legacy touch-control root itself is not guaranteed to carry
+  // data-tdr-race-ui. Results can therefore hide its children while the root
+  // remains in a stale inline-hidden state across scene.restart(). Clear only
+  // visibility state here; mode-specific CSS still decides whether stick/wheel
+  // variants are shown.
+  try{
+    const controls=document.getElementById('tdr-race-controls');
+    if(controls?.style){
+      controls.style.removeProperty('display');
+      controls.style.removeProperty('visibility');
+      controls.style.removeProperty('opacity');
+      controls.style.removeProperty('pointer-events');
+    }
+    for(const el of document.querySelectorAll('#tdr-race-controls [data-tdr-race-ui="1"]')){
+      if(!el?.style)continue;
+      el.style.removeProperty('display');
+      el.style.removeProperty('visibility');
+      el.style.removeProperty('opacity');
+      el.style.removeProperty('pointer-events');
     }
   }catch{}
 }
