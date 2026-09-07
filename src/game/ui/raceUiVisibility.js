@@ -35,11 +35,6 @@ export function hideRaceUi(scene){
     }
   }catch{}
 
-  // A result/retry transition can shut the race scene down before the caller
-  // explicitly restores the hidden controls. Make scene shutdown authoritative:
-  // any DOM/Phaser controls hidden by this helper must be restored before the
-  // next race instance starts, otherwise pedals/steering stay display:none while
-  // independently-created controls such as the handbrake come back normally.
   const restoreOnExit=()=>restoreRaceUi(scene,state);
   try{scene?.events?.once?.('shutdown',restoreOnExit);}catch{}
   try{scene?.events?.once?.('destroy',restoreOnExit);}catch{}
@@ -71,15 +66,13 @@ export function restoreRaceUi(scene,state){
     }
   }catch{}
 
-  // The legacy touch-control root itself is not guaranteed to carry
-  // data-tdr-race-ui. Results can therefore hide its children while the root
-  // remains in a stale inline-hidden state across scene.restart(). Clear only
-  // visibility state here; mode-specific CSS still decides whether stick/wheel
-  // variants are shown.
+  // The DOM control renderer keeps its own visibility cache. Clearing display
+  // here used to leave the root at its stylesheet default (display:none) while
+  // that renderer still believed it was visible. On the next event-loop turn,
+  // explicitly resync the root with the actual race scene lifecycle.
   try{
     const controls=document.getElementById('tdr-race-controls');
     if(controls?.style){
-      controls.style.removeProperty('display');
       controls.style.removeProperty('visibility');
       controls.style.removeProperty('opacity');
       controls.style.removeProperty('pointer-events');
@@ -91,5 +84,14 @@ export function restoreRaceUi(scene,state){
       el.style.removeProperty('opacity');
       el.style.removeProperty('pointer-events');
     }
+    setTimeout(()=>{
+      try{
+        const root=document.getElementById('tdr-race-controls');
+        if(!root?.style)return;
+        const active=!!scene?.sys?.isActive?.();
+        const landscape=window.innerWidth>=window.innerHeight;
+        root.style.display=active&&landscape?'block':'none';
+      }catch{}
+    },0);
   }catch{}
 }
