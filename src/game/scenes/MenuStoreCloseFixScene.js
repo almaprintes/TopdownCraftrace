@@ -12,15 +12,16 @@ export class MenuScene extends CurrentMenuScene {
     if(!root||root.__tdrFreshClickGuardInstalled)return;
     root.__tdrFreshClickGuardInstalled=true;
 
-    let armedButton=null;
-    const buttonFor=target=>target?.closest?.('button')||null;
-    const onDown=event=>{armedButton=buttonFor(event.target);};
-    const onCancel=()=>{armedButton=null;};
+    let armedAction=null;
+    const actionFor=target=>target?.closest?.('button,[role="button"]')||null;
+    const onDown=event=>{armedAction=actionFor(event.target);};
+    const onCancel=()=>{armedAction=null;};
     const onClick=event=>{
-      const button=buttonFor(event.target);
+      const action=actionFor(event.target);
+      if(!action)return;
       const keyboardClick=Number(event.detail)===0;
-      const valid=keyboardClick||!!button&&button===armedButton;
-      armedButton=null;
+      const valid=keyboardClick||action===armedAction;
+      armedAction=null;
       if(valid)return;
       event.preventDefault();
       event.stopPropagation();
@@ -35,7 +36,7 @@ export class MenuScene extends CurrentMenuScene {
       try{root.removeEventListener('pointerdown',onDown,true);}catch{}
       try{root.removeEventListener('pointercancel',onCancel,true);}catch{}
       try{root.removeEventListener('click',onClick,true);}catch{}
-      armedButton=null;
+      armedAction=null;
     };
     this.events?.once?.('shutdown',cleanup);
     this.events?.once?.('destroy',cleanup);
