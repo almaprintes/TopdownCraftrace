@@ -182,6 +182,15 @@ export class RaceScene extends CurrentRaceScene{
     root.innerHTML=`<div style="font-size:8px;font-weight:950;letter-spacing:.16em;color:#63e8ff;margin-bottom:5px">ELIMINADOS</div>${eliminated.map((bot,i)=>`<div style="font-size:10px;font-weight:850;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="opacity:.55">${i+1}.</span> ${survivalBotLabel(bot)}</div>`).join('')}`;
   }
 
+  // El panel DOM de eliminados es la única información de eliminación durante
+  // la carrera. Las antiguas tarjetas Phaser duplicaban esa información y,
+  // además, heredaban la cámara/zoom dinámico, por eso aparecían como cuadros
+  // vacíos que se desplazaban por el circuito.
+  _showSurvivalNotice(){
+    try{this._survivalNotice?.destroy?.(true);}catch{}
+    this._survivalNotice=null;
+  }
+
   _initSurvival(){
     const result=super._initSurvival();
     this._destroySurvivalEliminationHud();
