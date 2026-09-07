@@ -50,6 +50,9 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _showLapMilestone(row){
+    // Survival has its own elimination/round feedback. Never leak the generic
+    // best-lap / circuit-record banner into that mode.
+    if(this._survivalMode)return;
     const ms=Number(row?.lapMs);
     if(!Number.isFinite(ms)||ms<=1000)return;
     const previousRecord=this._feedbackBestLapMs;
