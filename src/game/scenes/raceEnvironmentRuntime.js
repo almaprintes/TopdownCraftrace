@@ -1,5 +1,6 @@
 import track01Environment from '../tracks/library/track01/track01.environment.json';
 import santaCruzEnvironment from '../tracks/library/santa-cruz/santa-cruz.environment.json';
+import { pathPoint, pathLength } from '../environment/EditableSpline.js';
 import { installRaceCaptureRuntime } from './raceCaptureRuntime.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
@@ -24,6 +25,24 @@ function missingEnvironmentTextures(scene){return (scene?._tdrExpectedEnvironmen
 function addSegmentCollider(list,a,b,halfThickness=9,kind='generic'){const ax=Number(a?.x),ay=Number(a?.y),bx=Number(b?.x),by=Number(b?.y);if(![ax,ay,bx,by].every(Number.isFinite)||Math.hypot(bx-ax,by-ay)<1)return;list.push({ax,ay,bx,by,halfThickness:Math.max(4,Number(halfThickness)||9),kind});}
 function addStandaloneInteraction(colliders,slowZones,item,img){if(!String(item?.path||'').includes('environment/barriers/'))return;const id=String(item?.asset||'');const width=Math.max(8,Number(item?.displayWidth)||Number(img?.displayWidth)||40);if(id==='tire_stack_compact_01'){slowZones.push({cx:Number(item.x),cy:Number(item.y),radius:Math.max(12,width*.40),kind:'tires'});return;}if(/stack|compact|curve/i.test(id)){colliders.push({cx:Number(item.x),cy:Number(item.y),radius:Math.max(8,width*.31)});return;}const r=Number(item?.rotation)||0,len=width*.88,dx=Math.cos(r)*len*.5,dy=Math.sin(r)*len*.5;addSegmentCollider(colliders,{x:Number(item.x)-dx,y:Number(item.y)-dy},{x:Number(item.x)+dx,y:Number(item.y)+dy},Math.max(7,width*.055));}
 function linearBarrierHalfThickness(barrier){const type=String(barrier?.type||'').toLowerCase();if(type==='guardrail')return 8;if(type==='concrete')return 12;return 11;}
+function linearBarrierCollisionPoints(barrier,kind){
+  const authored=Array.isArray(barrier?.points)&&barrier.points.length>1?barrier.points:[{x:barrier?.x1,y:barrier?.y1},{x:barrier?.x2,y:barrier?.y2}];
+  // Concrete already matches the visible perimeter in production. Preserve its
+  // proven collision geometry. Guardrails and fences, however, are rendered by
+  // the editor/runtime along EditableSpline.pathPoint(); joining authored handles
+  // with straight collision chords cuts across curves and creates an invisible wall.
+  if(kind==='concrete'||authored.length<3)return authored;
+  let len=0;
+  try{len=pathLength(barrier,120);}catch{}
+  if(!Number.isFinite(len)||len<1)return authored;
+  const steps=Math.max(2,Math.min(160,Math.ceil(len/18)));
+  const sampled=[];
+  for(let i=0;i<=steps;i++){
+    const p=pathPoint(barrier,i/steps);
+    if(Number.isFinite(Number(p?.x))&&Number.isFinite(Number(p?.y)))sampled.push({x:Number(p.x),y:Number(p.y)});
+  }
+  return sampled.length>1?sampled:authored;
+}
 
 function visualSupportRadius(rig,nx,ny,fallback){
   const sprite=rig?.list?.find?.(child=>child&&Number.isFinite(Number(child.displayWidth))&&Number.isFinite(Number(child.displayHeight)));
@@ -35,7 +54,7 @@ function visualSupportRadius(rig,nx,ny,fallback){
   return Number.isFinite(support)?Math.max(fallback,support):fallback;
 }
 function spawnEnvironment(scene,env){if(!env)return;const objects=[],colliders=[],slowZones=[];for(const item of env.environment||[]){const key=textureKey(item?.asset);if(!scene.textures?.exists?.(key))throw new Error(`Missing environment texture ${key}`);const img=scene.add.image(Number(item.x)||0,Number(item.y)||0,key).setRotation(Number(item.rotation)||0).setFlip(!!item.flipX,!!item.flipY).setDepth(Number.isFinite(Number(item.z))?Number(item.z):12).setScrollFactor(1);const targetW=Math.max(1,Number(item.displayWidth)||img.width||1);if((img.width||0)>0)img.setDisplaySize(targetW,(img.height||1)*(targetW/(img.width||1)));scene.uiCam?.ignore?.(img);objects.push(img);addStandaloneInteraction(colliders,slowZones,item,img);}
-  for(const barrier of env.linearBarriers||[]){const points=Array.isArray(barrier?.points)&&barrier.points.length>1?barrier.points:[{x:barrier?.x1,y:barrier?.y1},{x:barrier?.x2,y:barrier?.y2}],thickness=linearBarrierHalfThickness(barrier),kind=String(barrier?.type||'generic').toLowerCase();for(let i=0;i<points.length-1;i++)addSegmentCollider(colliders,points[i],points[i+1],thickness,kind);}
+  for(const barrier of env.linearBarriers||[]){const thickness=linearBarrierHalfThickness(barrier),kind=String(barrier?.type||'generic').toLowerCase(),points=linearBarrierCollisionPoints(barrier,kind);for(let i=0;i<points.length-1;i++)addSegmentCollider(colliders,points[i],points[i+1],thickness,kind);}
   scene._tdrRaceEnvironment={objects,colliders,slowZones};scene.events.once('shutdown',()=>{const runtime=scene._tdrRaceEnvironment;for(const obj of runtime?.objects||[])try{obj?.destroy?.();}catch{}scene._tdrRaceEnvironment=null;removeLoadingOverlay(scene);});}
 function resolveBodyAgainstColliders(scene,body,rig=null){if(!body?.body)return;const list=scene?._tdrRaceEnvironment?.colliders||[];if(!list.length)return;const physicsRadius=Math.max(8,Number(body.body.radius)||14);let px=Number(body.x),py=Number(body.y),vx=Number(body.body.velocity?.x)||0,vy=Number(body.body.velocity?.y)||0;
   for(let pass=0;pass<2;pass++)for(const c of list){if(Number.isFinite(c.radius)){const dx=px-c.cx,dy=py-c.cy,d=Math.hypot(dx,dy),min=physicsRadius+c.radius;if(d>=min)continue;const nx=d>1e-6?dx/d:1,ny=d>1e-6?dy/d:0,push=min-d+.75;px+=nx*push;py+=ny*push;const vn=vx*nx+vy*ny;if(vn<0){vx-=vn*1.18*nx;vy-=vn*1.18*ny;}continue;}
