@@ -9,21 +9,38 @@ function playerVisual(scene){
   return list.find(o=>o?.visible!==false&&o?.texture?.key&&o.texture.key!=='__BODY__'&&scene.textures?.exists?.(o.texture.key))||null;
 }
 
+function survivalBotKey(bot){
+  return [bot?.id,bot?.key,bot?.carId,bot?.carKey,bot?.model,bot?.name,bot?.sprite?.texture?.key]
+    .filter(Boolean).join(' ').toLowerCase();
+}
+
+function survivalBotVisualScale(bot){
+  // Colossus is a truck and must keep a visibly larger footprint than the
+  // regular field. This is visual-only: the XXIV contact response stays intact.
+  return survivalBotKey(bot).includes('colossus')?1.28:1;
+}
+
 export class RaceScene extends CurrentRaceScene{
   _registerFinishCross(racer){
+    const isSurvivalPlayer=this._survivalMode&&racer===this._survivalPlayer;
+
+    // IMPORTANT: reject anything after the fifth accepted Survival crossing
+    // before the generic race layer can append history, sectors, loot or rewards.
+    // This makes the same five rounds authoritative for every subsystem.
+    if(isSurvivalPlayer&&(this._survivalFinished||Number(racer?.completedLaps||0)>=SURVIVAL_MAX_LAPS))return false;
+
     const completed=super._registerFinishCross(racer);
-    if(!completed||!this._survivalMode||racer!==this._survivalPlayer)return completed;
+    if(!completed||!isSurvivalPlayer)return completed;
 
     const laps=Number(racer?.completedLaps||0);
     if(laps<SURVIVAL_MAX_LAPS)return completed;
 
-    // Hard guard in the ACTIVE race chain. Survival is a five-lap / five-round
-    // mode: once the player accepts lap 5, a sixth lap must never be possible.
     racer.completedLaps=SURVIVAL_MAX_LAPS;
     if(Array.isArray(racer._survivalLapTimesMs)){
       racer._survivalLapTimesMs=racer._survivalLapTimesMs.slice(0,SURVIVAL_MAX_LAPS);
       this._syncSurvivalAuthoritativeHistory?.(racer);
     }
+    if(Array.isArray(this.ttHistory)&&this.ttHistory.length>SURVIVAL_MAX_LAPS)this.ttHistory=this.ttHistory.slice(0,SURVIVAL_MAX_LAPS);
 
     this._survivalRound=SURVIVAL_MAX_LAPS;
 
@@ -35,8 +52,8 @@ export class RaceScene extends CurrentRaceScene{
       if(Number.isFinite(this.carBody?.body?.angularVelocity))this.carBody.body.angularVelocity=0;
     }catch{}
 
-    // With two survivors in round 5, crossing the fifth finish line means the
-    // player cannot be the last pending racer: the survival run is won.
+    // Lap five is the final accepted competitive crossing. Finish immediately;
+    // a sixth lap is never opened and therefore cannot leak into any report.
     if(!this._survivalFinished)this._finishSurvival?.(true);
     return true;
   }
@@ -50,9 +67,6 @@ export class RaceScene extends CurrentRaceScene{
     let h=Math.abs(Number(visual.displayHeight||visual.height||54))*(Number.isFinite(rigSY)&&rigSY>0?rigSY:1);
     if(!Number.isFinite(w)||w<8)w=30;
     if(!Number.isFinite(h)||h<12)h=54;
-    // Guard against ever copying the native high-resolution texture dimensions.
-    // The player footprint is the source of truth, but a race car must remain a
-    // world-sized object rather than a several-hundred-pixel asset.
     const long=Math.max(w,h),short=Math.min(w,h);
     const safeShort=clamp(short,18,46);
     const aspect=clamp(long/Math.max(1,short),1.25,2.35);
@@ -66,7 +80,8 @@ export class RaceScene extends CurrentRaceScene{
     this._survivalContactSize=size;
     for(const bot of this._survivalBots){
       const sprite=bot?.sprite;if(!sprite?.scene)continue;
-      try{sprite.setDisplaySize(size.w,size.h);}catch{}
+      const visualScale=survivalBotVisualScale(bot);
+      try{sprite.setDisplaySize(size.w*visualScale,size.h*visualScale);}catch{}
       bot._contactX=Number(bot._contactX)||0;
       bot._contactY=Number(bot._contactY)||0;
     }
@@ -86,8 +101,6 @@ export class RaceScene extends CurrentRaceScene{
     const dt=clamp((Number(delta)||16.67)/1000,.001,.05);
     const size=this._survivalContactSize||this._survivalPlayerVisualSize();
     const short=Math.min(size.w,size.h),long=Math.max(size.w,size.h);
-    // Compact circular footprint: enough to prevent visual overlap without
-    // turning nose-to-tail taps into wide invisible walls.
     const radius=clamp(Math.min(short*.57,long*.31),10,27);
     const minDist=radius*2;
     const decay=Math.exp(-5.2*dt);
@@ -99,9 +112,6 @@ export class RaceScene extends CurrentRaceScene{
       bot.sprite.y+=bot._contactY;
     }
 
-    // Player <-> rivals. Rivals are kinematic path followers, so the contact
-    // response moves the physical player and gives the rival a short-lived
-    // visual/path offset. This prevents sticking and pinball impulses.
     const player=this.carBody;
     if(player&&Number.isFinite(Number(player.x))&&Number.isFinite(Number(player.y))){
       for(let i=0;i<active.length;i++){
@@ -127,8 +137,6 @@ export class RaceScene extends CurrentRaceScene{
       }
     }
 
-    // Rival <-> rival separation. Their pace/path planner remains untouched;
-    // only the short-lived contact offset keeps cars from occupying one space.
     for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
       const a=active[i],b=active[j];
       let dx=Number(b.sprite.x)-Number(a.sprite.x),dy=Number(b.sprite.y)-Number(a.sprite.y),dist=Math.hypot(dx,dy);
