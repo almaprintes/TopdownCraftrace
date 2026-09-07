@@ -102,23 +102,6 @@ function placeDom(el,point,sizeScale=true){
   }
 }
 
-function resetRaceControlVisibility(root){
-  if(!root)return;
-  // A race scene can hide/reposition the shared DOM controls. The same nodes
-  // are reused by the next race, so always restore their interactive baseline
-  // before applying the saved layout.
-  root.style.setProperty('display','block','important');
-  root.style.setProperty('visibility','visible','important');
-  root.style.setProperty('opacity','1','important');
-  root.style.setProperty('pointer-events','none','important');
-  for(const el of root.querySelectorAll('.tdr-pedal,[data-stick]')){
-    el.style.setProperty('display','block','important');
-    el.style.setProperty('visibility','visible','important');
-    el.style.setProperty('opacity','1','important');
-  }
-  for(const pedal of root.querySelectorAll('.tdr-pedal'))pedal.style.setProperty('pointer-events','auto','important');
-}
-
 function hardenIosRaceControls(root){
   if(!root)return;
   const nodes=[
@@ -162,7 +145,6 @@ export function applyDomControlLayout(){
   const {controls,layout}=readControlLayout();
   const root=document.getElementById('tdr-race-controls');
   if(!root)return;
-  resetRaceControlVisibility(root);
   hardenIosRaceControls(root);
   placeDom(root.querySelector('[data-stick]'),layout.steer);
   placeDom(root.querySelector('[data-pedal="gas"]'),layout.gas);
