@@ -13,8 +13,6 @@ function showFatal(msg) {
   `;
 }
 
-// Keep one startup-level error surface. Runtime diagnostics takes over once the
-// Phaser game exists; the former second full-screen error overlay was redundant.
 window.addEventListener('error', (e) => {
   const msg = e?.error?.stack || e?.message || String(e);
   showFatal(msg);
@@ -23,9 +21,6 @@ window.addEventListener('unhandledrejection', (e) => {
   const msg = e?.reason?.stack || e?.reason?.message || String(e?.reason || e);
   showFatal(`UnhandledPromiseRejection:\n${msg}`);
 });
-
-// Service worker registration is owned by index.html. Do not register it again
-// here or force reload/controller changes from two competing bootstrap paths.
 
 let __game = null;
 
@@ -312,10 +307,12 @@ function __installRaceControlVisuals() {
   const brake = root.querySelector('[data-pedal="brake"]');
 
   let lastRace=null;
-  let lastVisible=false;
   let cachedButtonMode=false;
   let nextSettingsRead=0;
-  const setVisible=(visible)=>{if(visible===lastVisible)return;lastVisible=visible;root.style.display=visible?'block':'none';};
+  const setVisible=(visible)=>{
+    const desired=visible?'block':'none';
+    if(root.style.display!==desired)root.style.display=desired;
+  };
 
   const tick = () => {
     try {
@@ -363,8 +360,6 @@ function __installRaceControlVisuals() {
     } catch {}
   };
 
-  // 20 Hz is visually responsive for the DOM decoration while removing the
-  // previous 60/120 Hz requestAnimationFrame workload from WebKit's hot path.
   const timer=setInterval(tick,50);
   window.addEventListener('pagehide',()=>clearInterval(timer),{once:true});
   tick();
