@@ -16,7 +16,10 @@ export class RaceScene extends CurrentRaceScene {
     this._buildPedalRow();
     this._buildHandbrakeControl();
 
-    const applyLayout=()=>{try{applyDomControlLayout();}catch{}};
+    const applyLayout=()=>{
+      try{applyDomControlLayout();}catch{}
+      try{this._syncPedalHitboxes?.();}catch{}
+    };
     this.time?.delayedCall?.(0,applyLayout);
     window.addEventListener('resize',applyLayout,{passive:true});
     this.events.once('shutdown',()=>window.removeEventListener('resize',applyLayout));
@@ -105,6 +108,34 @@ export class RaceScene extends CurrentRaceScene {
         font-size:clamp(5px,.48vw,7px)!important;
         letter-spacing:.08em!important;
       }
+      #tdr-race-controls .tdr-pedal.is-active{
+        filter:brightness(1.55) saturate(1.42) drop-shadow(0 0 16px var(--accent))!important;
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,.32),
+          inset 0 -18px 34px rgba(0,0,0,.18),
+          0 0 14px color-mix(in srgb,var(--accent) 85%,transparent),
+          0 0 30px color-mix(in srgb,var(--accent) 58%,transparent)!important;
+      }
+      #tdr-race-controls .tdr-pedal.is-active::after{
+        height:4px!important;
+        opacity:1!important;
+        box-shadow:0 0 16px var(--accent),0 0 28px var(--accent)!important;
+      }
+      #tdr-race-controls .tdr-pedal-hitbox{
+        position:fixed!important;
+        z-index:81!important;
+        display:block!important;
+        background:transparent!important;
+        border:0!important;
+        padding:0!important;
+        margin:0!important;
+        pointer-events:auto!important;
+        touch-action:none!important;
+        user-select:none!important;
+        -webkit-user-select:none!important;
+        -webkit-touch-callout:none!important;
+        -webkit-tap-highlight-color:transparent!important;
+      }
     `;
     document.head.appendChild(style);
 
@@ -112,6 +143,35 @@ export class RaceScene extends CurrentRaceScene {
     const gas=root?.querySelector?.('[data-pedal="gas"]');
     const brake=root?.querySelector?.('[data-pedal="brake"]');
     if(!gas||!brake)return;
+
+    const makeHitbox=mode=>{
+      root.querySelector?.(`[data-pedal-hitbox="${mode}"]`)?.remove?.();
+      const el=document.createElement('div');
+      el.className='tdr-pedal-hitbox';
+      el.dataset.pedalHitbox=mode;
+      el.setAttribute('aria-hidden','true');
+      root.appendChild(el);
+      return el;
+    };
+    const gasHit=makeHitbox('gas');
+    const brakeHit=makeHitbox('brake');
+
+    const syncHitboxes=()=>{
+      const sync=(visual,hit)=>{
+        const r=visual.getBoundingClientRect();
+        if(!r.width||!r.height)return;
+        const padX=Math.max(24,Math.min(38,r.width*.28));
+        const padY=Math.max(16,Math.min(28,r.height*.14));
+        hit.style.left=`${Math.max(0,r.left-padX)}px`;
+        hit.style.top=`${Math.max(0,r.top-padY)}px`;
+        hit.style.width=`${Math.min(innerWidth,Math.max(150,r.width+padX*2))}px`;
+        hit.style.height=`${Math.min(innerHeight,Math.max(168,r.height+padY*2))}px`;
+      };
+      sync(gas,gasHit);
+      sync(brake,brakeHit);
+    };
+    this._syncPedalHitboxes=syncHitboxes;
+    requestAnimationFrame(()=>requestAnimationFrame(syncHitboxes));
 
     let activeId=null;
     let captureEl=null;
@@ -129,8 +189,8 @@ export class RaceScene extends CurrentRaceScene {
 
       let mode='none';
       if(hb&&paddedHit(hb,x,6)) mode='handbrake';
-      else if(paddedHit(br,x,7)) mode='brake';
-      else if(paddedHit(gr,x,7)) mode='gas';
+      else if(paddedHit(br,x,24)) mode='brake';
+      else if(paddedHit(gr,x,24)) mode='gas';
       else {
         const centers=[
           {mode:'gas',x:(gr.left+gr.right)/2},
@@ -138,7 +198,7 @@ export class RaceScene extends CurrentRaceScene {
         ];
         if(hb)centers.push({mode:'handbrake',x:(hb.left+hb.right)/2});
         centers.sort((a,b)=>Math.abs(a.x-x)-Math.abs(b.x-x));
-        if(centers[0]&&Math.abs(centers[0].x-x)<70)mode=centers[0].mode;
+        if(centers[0]&&Math.abs(centers[0].x-x)<88)mode=centers[0].mode;
       }
 
       if(this.touch){
@@ -168,7 +228,7 @@ export class RaceScene extends CurrentRaceScene {
       e.preventDefault();e.stopPropagation?.();
     };
 
-    [gas,brake].forEach(el=>{
+    [gasHit,brakeHit].forEach(el=>{
       el.addEventListener('pointerdown',down,{passive:false});
       el.addEventListener('pointermove',move,{passive:false});
       el.addEventListener('pointerup',up,{passive:false});
@@ -178,13 +238,15 @@ export class RaceScene extends CurrentRaceScene {
 
     this.events.once('shutdown',()=>{
       clear();
-      [gas,brake].forEach(el=>{
+      [gasHit,brakeHit].forEach(el=>{
         el.removeEventListener('pointerdown',down);
         el.removeEventListener('pointermove',move);
         el.removeEventListener('pointerup',up);
         el.removeEventListener('pointercancel',up);
         el.removeEventListener('lostpointercapture',up);
+        el.remove();
       });
+      this._syncPedalHitboxes=null;
       document.getElementById('tdr-pedal-row-style')?.remove?.();
     });
   }
