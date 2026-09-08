@@ -12,6 +12,14 @@ Rama de trabajo: `main` únicamente.
 - La pista cerrada está creada, pero el lanzamiento está vacío porque todavía no se ha generado/subido ningún APK/AAB.
 - Play Console muestra errores por ausencia de App Bundle.
 
+## Estado de versiones
+
+- La versión que se da por cerrada para publicar es la antigua `DEV 0.0.4 · LXI`.
+- Esa versión queda promovida a **BETA 1.0 FINAL** en la rama congelada `beta-1.0`.
+- A partir de esta promoción, el desarrollo activo continúa en `main` como **DEV 1.0.1**.
+- `beta-0.0.3` queda como histórico y no debe volver a usarse como beta pública actual.
+- GitHub Pages debe publicar `/` desde `beta-1.0` y `/dev` desde `main`.
+
 ## Android
 
 - Package/application ID definitivo en Google Play:
@@ -19,6 +27,7 @@ Rama de trabajo: `main` únicamente.
 - El proyecto actual en `main` es Vite + Phaser.
 - Todavía no existe infraestructura Android/Gradle/Capacitor en el repositorio.
 - Próximo trabajo técnico: envolver el build web con Capacitor, crear proyecto Android y generar un `.aab` firmado.
+- En esta sesión el propietario **no está en el Mac**, por lo que no se debe depender de Terminal, Android Studio ni trabajo local hasta que vuelva a tener acceso al Mac. Mientras tanto se puede avanzar en GitHub, Play Console, documentación y planificación/configuración que sea posible desde el dispositivo actual.
 
 ## RevenueCat — requisito crítico
 
@@ -29,14 +38,16 @@ Rama de trabajo: `main` únicamente.
 
 ## Orden de trabajo recomendado
 
-1. Preparar Capacitor sobre `main` sin tocar `beta-0.0.3`.
-2. Configurar Android con `com.craftracestudio.topdownrace`.
-3. Generar y probar una primera build Android.
-4. Integrar RevenueCat y al menos un producto/flujo de monetización válido para el Shipaton.
-5. Generar `.aab` firmado.
-6. Subirlo a la pista cerrada de Play Console.
-7. Activar testers y validar instalación/compra/restauración en Android.
+1. Mantener congelada `beta-1.0` como BETA 1.0 FINAL.
+2. Continuar trabajo nuevo solo en `main` como DEV 1.0.1.
+3. Preparar Capacitor sobre `main` cuando haya acceso al Mac.
+4. Configurar Android con `com.craftracestudio.topdownrace`.
+5. Integrar RevenueCat y al menos un producto/flujo de monetización válido para el Shipaton.
+6. Generar y probar una primera build Android.
+7. Generar `.aab` firmado.
+8. Subirlo a la pista cerrada de Play Console.
+9. Activar testers y validar instalación/compra/restauración en Android.
 
 ## Regla de continuidad
 
-No volver a tratar RevenueCat como una mejora posterior u opcional cuando se esté preparando la versión del Shipaton. Es una condición obligatoria del objetivo actual.
+No volver a tratar RevenueCat como una mejora posterior u opcional cuando se esté preparando la versión del Shipaton. Es una condición obligatoria del objetivo actual. No pedir al usuario trabajo de Mac mientras haya indicado que no dispone de él.
