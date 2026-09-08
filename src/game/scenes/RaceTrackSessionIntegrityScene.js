@@ -4,6 +4,20 @@ import { getTrackPublicName } from '../tracks/trackPublicNames.js';
 
 const SURVIVAL_MAX_LAPS = 5;
 
+function timingRowScore(row){
+  if(!row||typeof row!=='object')return 0;
+  const sectors=Array.isArray(row.sectors)?row.sectors:[];
+  const values=[row.s1??sectors[0],row.s2??sectors[1],row.s3??sectors[2]];
+  return values.reduce((n,v)=>n+(Number.isFinite(Number(v))&&Number(v)>0?1:0),0);
+}
+
+function cloneTimingRow(row){
+  if(!row||typeof row!=='object')return null;
+  const out={...row};
+  if(Array.isArray(row.sectors))out.sectors=[...row.sectors];
+  return out;
+}
+
 export class RaceScene extends CurrentRaceScene {
   init(data){
     // Session integrity must never rewrite authored race geometry. Finish line,
@@ -11,11 +25,23 @@ export class RaceScene extends CurrentRaceScene {
     super.init(data);
     this._tdrRestoreTrackIdentity();
     this._tdrSurvivalLapRows=[];
+    this._tdrSeenTimingRows=new Set();
   }
 
   create(data){
     super.create(data);
     this._tdrRestoreTrackIdentity();
+    this._tdrCaptureTimingHistory();
+  }
+
+  update(time,delta){
+    // Capture both sides of the inherited update. Survival can replace ttHistory
+    // between rounds; completed rows must be copied before that transient history
+    // disappears. This observes timing data only and never changes track geometry.
+    this._tdrCaptureTimingHistory();
+    const out=super.update?.(time,delta);
+    this._tdrCaptureTimingHistory();
+    return out;
   }
 
   _tdrTrackKey(){
@@ -54,54 +80,78 @@ export class RaceScene extends CurrentRaceScene {
     return this._tdrFixReportIdentity(super._buildReport?.(...args));
   }
 
-  _tdrCaptureSurvivalLap(racer){
-    if(!this._survivalMode||racer!==this._survivalPlayer)return;
-    const lap=Number(racer?.completedLaps||0);
-    if(!(lap>=1&&lap<=SURVIVAL_MAX_LAPS))return;
-
-    const authoritative=this._survivalAuthoritativePlayerTimes?.()||[];
-    const lapMs=Number(authoritative[lap-1]??racer?._survivalLapTimesMs?.[lap-1]);
-    const history=Array.isArray(this.ttHistory)?this.ttHistory:[];
-    let source=null;
-    if(Number.isFinite(lapMs)){
-      for(let i=history.length-1;i>=0;i--){
-        const ms=Number(history[i]?.lapMs);
-        if(Number.isFinite(ms)&&Math.abs(ms-lapMs)<5){source=history[i];break;}
-      }
-    }
-    if(!source&&history.length)source=history[history.length-1];
-    const row={...(source&&typeof source==='object'?source:{}),...(Number.isFinite(lapMs)?{lapMs}:{})};
-    if(!Number.isFinite(Number(row.lapMs)))return;
-    this._tdrSurvivalLapRows??=[];
-    this._tdrSurvivalLapRows[lap-1]=row;
+  _tdrTimingSignature(row){
+    const sectors=Array.isArray(row?.sectors)?row.sectors:[];
+    const lapMs=Number(row?.lapMs);
+    const s1=Number(row?.s1??sectors[0]);
+    const s2=Number(row?.s2??sectors[1]);
+    const s3=Number(row?.s3??sectors[2]);
+    const f=v=>Number.isFinite(v)?Math.round(v*1000)/1000:'-';
+    return `${f(lapMs)}|${f(s1)}|${f(s2)}|${f(s3)}`;
   }
 
-  _registerFinishCross(racer){
-    const completed=super._registerFinishCross(racer);
-    if(completed)this._tdrCaptureSurvivalLap(racer);
-    return completed;
+  _tdrCaptureTimingHistory(){
+    if(!this._survivalMode)return;
+    const history=Array.isArray(this.ttHistory)?this.ttHistory:[];
+    if(!history.length)return;
+    this._tdrSurvivalLapRows??=[];
+    this._tdrSeenTimingRows??=new Set();
+
+    for(const raw of history){
+      const lapMs=Number(raw?.lapMs);
+      if(!(Number.isFinite(lapMs)&&lapMs>0))continue;
+      const row=cloneTimingRow(raw);
+      if(!row)continue;
+      const sig=this._tdrTimingSignature(row);
+      if(this._tdrSeenTimingRows.has(sig))continue;
+      this._tdrSeenTimingRows.add(sig);
+      this._tdrSurvivalLapRows.push(row);
+      if(this._tdrSurvivalLapRows.length>SURVIVAL_MAX_LAPS*4){
+        this._tdrSurvivalLapRows.splice(0,this._tdrSurvivalLapRows.length-SURVIVAL_MAX_LAPS*4);
+      }
+    }
+  }
+
+  _tdrBestTimingRowFor(lapMs){
+    const pools=[
+      ...(Array.isArray(this._tdrSurvivalLapRows)?this._tdrSurvivalLapRows:[]),
+      ...(Array.isArray(this.ttHistory)?this.ttHistory:[])
+    ];
+    let best=null;
+    let bestScore=-1;
+    let bestDiff=Infinity;
+    for(const row of pools){
+      const ms=Number(row?.lapMs);
+      if(!Number.isFinite(ms))continue;
+      const diff=Math.abs(ms-lapMs);
+      if(diff>=5)continue;
+      const score=timingRowScore(row);
+      if(score>bestScore||(score===bestScore&&diff<bestDiff)){
+        best=row;
+        bestScore=score;
+        bestDiff=diff;
+      }
+    }
+    return best;
   }
 
   _tdrSurvivalReportRows(){
+    this._tdrCaptureTimingHistory();
     const authoritative=this._survivalAuthoritativePlayerTimes?.()||[];
     if(!authoritative.length)return null;
-    const captured=Array.isArray(this._tdrSurvivalLapRows)?this._tdrSurvivalLapRows:[];
-    const history=Array.isArray(this.ttHistory)?this.ttHistory:[];
 
-    return authoritative.slice(0,SURVIVAL_MAX_LAPS).map((rawMs,i)=>{
+    return authoritative.slice(0,SURVIVAL_MAX_LAPS).map(rawMs=>{
       const lapMs=Number(rawMs);
-      let source=captured[i]||null;
-      if(!source){
-        for(let j=history.length-1;j>=0;j--){
-          const ms=Number(history[j]?.lapMs);
-          if(Number.isFinite(ms)&&Math.abs(ms-lapMs)<5){source=history[j];break;}
-        }
-      }
-      return {...(source&&typeof source==='object'?source:{}),lapMs};
-    }).filter(row=>Number.isFinite(Number(row.lapMs))&&Number(row.lapMs)>0);
+      if(!(Number.isFinite(lapMs)&&lapMs>0))return null;
+      const source=this._tdrBestTimingRowFor(lapMs);
+      return {...(cloneTimingRow(source)||{}),lapMs};
+    }).filter(Boolean);
   }
 
   _showSurvivalSessionInfo(...args){
+    // Keep every completed timing row across round transitions, then pair the
+    // authoritative Survival lap totals with the richest matching sector row.
+    this._tdrCaptureTimingHistory();
     const reportRows=this._tdrSurvivalReportRows();
     const originalHistory=this.ttHistory;
     if(reportRows?.length)this.ttHistory=reportRows;
