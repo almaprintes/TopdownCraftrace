@@ -186,19 +186,25 @@ export class RaceScene extends CurrentRaceScene {
       const gr=gas.getBoundingClientRect();
       const br=brake.getBoundingClientRect();
       const hb=this._tdrHandbrakeVisual?.getBoundingClientRect?.();
+      const gc=(gr.left+gr.right)/2;
+      const bc=(br.left+br.right)/2;
 
       let mode='none';
       if(hb&&paddedHit(hb,x,6)) mode='handbrake';
-      else if(paddedHit(br,x,24)) mode='brake';
-      else if(paddedHit(gr,x,24)) mode='gas';
       else {
-        const centers=[
-          {mode:'gas',x:(gr.left+gr.right)/2},
-          {mode:'brake',x:(br.left+br.right)/2}
-        ];
-        if(hb)centers.push({mode:'handbrake',x:(hb.left+hb.right)/2});
-        centers.sort((a,b)=>Math.abs(a.x-x)-Math.abs(b.x-x));
-        if(centers[0]&&Math.abs(centers[0].x-x)<88)mode=centers[0].mode;
+        const gasReach=paddedHit(gr,x,38);
+        const brakeReach=paddedHit(br,x,38);
+        if(gasReach||brakeReach){
+          mode=Math.abs(x-gc)<=Math.abs(x-bc)?'gas':'brake';
+        }else{
+          const centers=[
+            {mode:'gas',x:gc},
+            {mode:'brake',x:bc}
+          ];
+          if(hb)centers.push({mode:'handbrake',x:(hb.left+hb.right)/2});
+          centers.sort((a,b)=>Math.abs(a.x-x)-Math.abs(b.x-x));
+          if(centers[0]&&Math.abs(centers[0].x-x)<88)mode=centers[0].mode;
+        }
       }
 
       if(this.touch){
