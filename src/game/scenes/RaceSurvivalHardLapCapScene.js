@@ -210,10 +210,14 @@ export class RaceScene extends CurrentRaceScene{
 
     const dt=clamp((Number(delta)||16.67)/1000,.001,.05);
     const size=this._survivalContactSize||this._survivalPlayerVisualSize();
-    const short=Math.min(size.w,size.h),long=Math.max(size.w,size.h);
-    const radius=clamp(Math.min(short*.57,long*.31),10,27);
-    const minDist=radius*2;
-    const decay=Math.exp(-5.2*dt);
+    const short=Math.min(size.w,size.h);
+    // Contact is deliberately inset from the artwork. Equal-size cars can
+    // overlap visually by roughly 10-15 px before their collision response
+    // starts, which makes bodywork contact read naturally instead of as an
+    // invisible force field.
+    const desiredVisualOverlap=clamp(short*.34,10,15);
+    const decay=Math.exp(-4.2*dt);
+    const contactDistanceFor=(aScale=1,bScale=1)=>Math.max(14,short*(aScale+bScale)*.5-desiredVisualOverlap);
 
     for(const bot of active){
       bot._contactX=(Number(bot._contactX)||0)*decay;
@@ -226,33 +230,44 @@ export class RaceScene extends CurrentRaceScene{
     if(player&&Number.isFinite(Number(player.x))&&Number.isFinite(Number(player.y))){
       for(let i=0;i<active.length;i++){
         const bot=active[i],sx=Number(bot.sprite.x),sy=Number(bot.sprite.y),px=Number(player.x),py=Number(player.y);
+        const botScale=survivalBotVisualScale(bot);
+        const minDist=contactDistanceFor(1,botScale);
         let dx=sx-px,dy=sy-py,dist=Math.hypot(dx,dy);
         if(dist>=minDist)continue;
         if(dist<.001){const a=(i+1)*1.91;dx=Math.cos(a);dy=Math.sin(a);dist=1;}
-        const nx=dx/dist,ny=dy/dist,overlap=minDist-dist+.15;
-        const playerPush=overlap*.58,botPush=overlap*.42;
+        const nx=dx/dist,ny=dy/dist,overlap=minDist-dist+.08;
+        const playerPush=overlap*.5,botPush=overlap*.5;
         try{player.x-=nx*playerPush;player.y-=ny*playerPush;}catch{}
-        bot._contactX=(Number(bot._contactX)||0)+nx*botPush;
-        bot._contactY=(Number(bot._contactY)||0)+ny*botPush;
-        bot.sprite.x+=nx*botPush;bot.sprite.y+=ny*botPush;
 
         const body=player.body;
+        let impactKick=0;
         if(body?.velocity){
           const vn=Number(body.velocity.x||0)*nx+Number(body.velocity.y||0)*ny;
           if(vn>0){
-            body.velocity.x-=nx*vn*.72;
-            body.velocity.y-=ny*vn*.72;
+            // The player keeps most of the incoming speed instead of being
+            // stopped dead. Part of the impact is transferred into visible
+            // rival knockback so the contact affects both cars.
+            const absorbed=vn*.32;
+            body.velocity.x-=nx*absorbed;
+            body.velocity.y-=ny*absorbed;
+            impactKick=clamp(vn*dt*.38,0,6);
           }
         }
+
+        const botContact=botPush+impactKick;
+        bot._contactX=(Number(bot._contactX)||0)+nx*botContact;
+        bot._contactY=(Number(bot._contactY)||0)+ny*botContact;
+        bot.sprite.x+=nx*botContact;bot.sprite.y+=ny*botContact;
       }
     }
 
     for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){
       const a=active[i],b=active[j];
+      const minDist=contactDistanceFor(survivalBotVisualScale(a),survivalBotVisualScale(b));
       let dx=Number(b.sprite.x)-Number(a.sprite.x),dy=Number(b.sprite.y)-Number(a.sprite.y),dist=Math.hypot(dx,dy);
       if(dist>=minDist)continue;
       if(dist<.001){const ang=(i*7+j*3)*.73;dx=Math.cos(ang);dy=Math.sin(ang);dist=1;}
-      const nx=dx/dist,ny=dy/dist,push=(minDist-dist+.1)*.5;
+      const nx=dx/dist,ny=dy/dist,push=(minDist-dist+.08)*.5;
       a._contactX=(Number(a._contactX)||0)-nx*push;a._contactY=(Number(a._contactY)||0)-ny*push;
       b._contactX=(Number(b._contactX)||0)+nx*push;b._contactY=(Number(b._contactY)||0)+ny*push;
       a.sprite.x-=nx*push;a.sprite.y-=ny*push;b.sprite.x+=nx*push;b.sprite.y+=ny*push;
