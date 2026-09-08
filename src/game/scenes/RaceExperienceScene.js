@@ -51,7 +51,7 @@ export class RaceScene extends CurrentRaceScene {
       const root=document.getElementById('tdr-race-controls');
       if(!root?.style)return;
       root.style.setProperty('display',visible?'block':'none','important');
-      root.style.pointerEvents=visible?'none':'none';
+      root.style.pointerEvents='none';
     }catch{}
   }
 
@@ -90,16 +90,18 @@ export class RaceScene extends CurrentRaceScene {
     this._experiencePauseUi=null;
     this._pauseModal=null;
     if(resume!==false){
+      // Resume simulation first. UI restoration must never hold the car frozen.
       this._tdrPauseMenuOpen=false;
+      try{this.physics?.world?.resume?.();}catch{}
+
       if(this._experienceHiddenUi){
         try{restoreRaceUi(this,this._experienceHiddenUi);}catch{}
         this._experienceHiddenUi=null;
       }
-      // Keep the explicit legacy restore as well as the generic snapshot restore.
-      // Several HUD/control owners are outside the DOM snapshot and iOS needs the
-      // pause button to be made interactive again deterministically.
-      try{this._restorePauseHud?.();}catch{}
       this._setSharedRaceControlsVisible(true);
+      // Historical fix only needs the pause button restored explicitly. Do not
+      // call the legacy _restorePauseHud path here; it duplicates pause teardown
+      // and can introduce a long resume delay on iOS.
       try{
         const button=this._pauseButton;
         if(button?.isConnected){
@@ -108,7 +110,6 @@ export class RaceScene extends CurrentRaceScene {
           button.style.pointerEvents='auto';
         }
       }catch{}
-      try{this.physics?.world?.resume?.();}catch{}
       try{this._updateSimpleRaceHud?.(100);}catch{}
     }
   }
