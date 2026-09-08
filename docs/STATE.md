@@ -1,5 +1,20 @@
 Top-Down Race 2 — STATE (Fuente de verdad)
 
+## ACTUALIZACIÓN PRIORITARIA — 2026-09-08
+
+### Supervivencia
+- Decisión de producto: **Supervivencia NO forma parte de la versión 1.0**.
+- No se borra el modo ni sus assets/código; queda pospuesto para una actualización posterior.
+- Debe quedar oculto de todos los menús/selectores/accesos públicos para evitar uso accidental.
+- No seguir refactorizando su lógica interna durante la preparación de 1.0 salvo instrucción explícita.
+- La referencia estable para investigar el modo en el futuro es `beta-0.0.3`, que se puede leer pero no modificar.
+- El periplo completo de bugs, parches, regresiones, recuperación desde Beta 003 y lecciones está documentado en:
+  `docs/continuity/2026-09-08-survival-debugging-retirement-from-1.0.md`
+- Último DEV de este periplo antes de documentar: `DEV 0.0.4 · LVIX`.
+- Regla reforzada: **si algo funciona, no se toca; una misión, una finalidad, cambios quirúrgicos**.
+
+---
+
 Regla de oro
 
 El estado real del proyecto lo determina:
