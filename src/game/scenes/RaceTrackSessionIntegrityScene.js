@@ -181,12 +181,34 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrCaptureSurvivalTiming();
     const reportRows=this._tdrSurvivalReportRows();
     const originalHistory=this.ttHistory;
-    if(reportRows?.length)this.ttHistory=reportRows;
+    const originalPlayerTimes=Array.isArray(this._survivalPlayer?._survivalLapTimesMs)
+      ?[...this._survivalPlayer._survivalLapTimesMs]:null;
+    const originalSessionTimes=Array.isArray(this._survivalPlayerLapTimes)
+      ?[...this._survivalPlayerLapTimes]:null;
+
+    if(reportRows?.length){
+      this.ttHistory=reportRows;
+      // RaceSurvivalPolish rebuilds ttHistory from these legacy player arrays
+      // while opening the automatic report. Feed it the already-preserved laps
+      // so that an empty teardown state cannot overwrite the report with [].
+      const lapTimes=reportRows.map(row=>Number(row?.lapMs)).filter(ms=>Number.isFinite(ms)&&ms>0);
+      if(lapTimes.length){
+        if(this._survivalPlayer)this._survivalPlayer._survivalLapTimesMs=[...lapTimes];
+        this._survivalPlayerLapTimes=[...lapTimes];
+      }
+    }
+
     let out;
     try{
       out=super._showSurvivalSessionInfo?.(...args);
     }finally{
       this.ttHistory=originalHistory;
+      if(this._survivalPlayer){
+        if(originalPlayerTimes)this._survivalPlayer._survivalLapTimesMs=originalPlayerTimes;
+        else delete this._survivalPlayer._survivalLapTimesMs;
+      }
+      if(originalSessionTimes)this._survivalPlayerLapTimes=originalSessionTimes;
+      else this._survivalPlayerLapTimes=[];
     }
     this._tdrRestoreTrackIdentity();
     this._tdrFixReportIdentity(out);
