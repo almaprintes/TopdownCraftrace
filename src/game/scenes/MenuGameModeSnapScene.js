@@ -7,7 +7,6 @@ const BASE=import.meta.env.BASE_URL||'/';
 const MODES=[
   {key:'timeattack',asset:'contrarreloj.webp'},
   {key:'ghost',asset:'fantasma.webp'},
-  {key:'survival',asset:'supervivencia.webp'},
   {key:'duel',asset:'duelo.webp'},
   {key:'practice',asset:'area-pruebas.webp'}
 ];
