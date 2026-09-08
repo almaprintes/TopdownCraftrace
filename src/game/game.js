@@ -25,7 +25,7 @@ const LAZY_SCENES={
   race:{
     load:async()=>{
       const [{RaceScene},{installExactRuntimeBeautyPass},{installRaceEnvironmentRuntime},{installRaceLoadingExperience}]=await Promise.all([
-        import('./scenes/RaceTrackSessionIntegrityScene.js'),
+        import('./scenes/RaceExperienceScene.js'),
         import('./scenes/raceExactRuntimeBeautyPass.js'),
         import('./scenes/raceEnvironmentRuntime.js'),
         import('./ui/raceLoadingExperience.js')
