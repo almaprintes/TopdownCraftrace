@@ -175,12 +175,30 @@ export class RaceScene extends CurrentRaceScene {
     }).filter(Boolean);
   }
 
+  _finishSurvival(...args){
+    // Automatic victory/elimination enters the report inside the inherited call.
+    // Freeze every completed row BEFORE that teardown begins, then seed the exact
+    // legacy arrays consumed by the report stack. This is intentionally limited
+    // to report state; race geometry/timing detection are untouched.
+    this._tdrCaptureSurvivalTiming();
+    const rows=this._tdrSurvivalReportRows();
+    if(rows?.length){
+      const lapTimes=rows.map(row=>Number(row?.lapMs)).filter(ms=>Number.isFinite(ms)&&ms>0);
+      this._tdrSurvivalLapRows=rows.map(cloneTimingRow).filter(Boolean);
+      this._tdrSurvivalAuthoritativeTimes=[...lapTimes];
+      if(this._survivalPlayer)this._survivalPlayer._survivalLapTimesMs=[...lapTimes];
+      this._survivalPlayerLapTimes=[...lapTimes];
+    }
+    return super._finishSurvival?.(...args);
+  }
+
   _showSurvivalSessionInfo(...args){
     // Snapshot first: automatic victory/elimination is allowed to tear down its
     // live race state only after completed laps are safe in this scene-owned copy.
     this._tdrCaptureSurvivalTiming();
     const reportRows=this._tdrSurvivalReportRows();
     const originalHistory=this.ttHistory;
+    const originalBaseline=this._sessionLapBaseline;
     const originalPlayerTimes=Array.isArray(this._survivalPlayer?._survivalLapTimesMs)
       ?[...this._survivalPlayer._survivalLapTimesMs]:null;
     const originalSessionTimes=Array.isArray(this._survivalPlayerLapTimes)
@@ -188,9 +206,11 @@ export class RaceScene extends CurrentRaceScene {
 
     if(reportRows?.length){
       this.ttHistory=reportRows;
-      // RaceSurvivalPolish rebuilds ttHistory from these legacy player arrays
-      // while opening the automatic report. Feed it the already-preserved laps
-      // so that an empty teardown state cannot overwrite the report with [].
+      // The generic session report slices ttHistory from _sessionLapBaseline.
+      // Survival resets/rebuilds timing during rounds, so an automatic finish can
+      // leave that baseline at the end of the array and produce 0 visible laps.
+      // For this one report, the injected rows ARE the whole Survival session.
+      this._sessionLapBaseline=0;
       const lapTimes=reportRows.map(row=>Number(row?.lapMs)).filter(ms=>Number.isFinite(ms)&&ms>0);
       if(lapTimes.length){
         if(this._survivalPlayer)this._survivalPlayer._survivalLapTimesMs=[...lapTimes];
@@ -203,6 +223,7 @@ export class RaceScene extends CurrentRaceScene {
       out=super._showSurvivalSessionInfo?.(...args);
     }finally{
       this.ttHistory=originalHistory;
+      this._sessionLapBaseline=originalBaseline;
       if(this._survivalPlayer){
         if(originalPlayerTimes)this._survivalPlayer._survivalLapTimesMs=originalPlayerTimes;
         else delete this._survivalPlayer._survivalLapTimesMs;
