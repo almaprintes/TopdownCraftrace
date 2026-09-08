@@ -3,6 +3,7 @@ import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { getTrackPublicName } from '../tracks/trackPublicNames.js';
 
 const TIMING_SEAM_TRACKS = new Set(['track01', 'santa-cruz']);
+const SURVIVAL_MAX_LAPS = 5;
 
 function wrapPi(a){ while(a>Math.PI)a-=Math.PI*2; while(a<-Math.PI)a+=Math.PI*2; return a; }
 function gateAt(point,width){
@@ -41,12 +42,52 @@ function pointAt(center,metrics,distance){
   }
   return null;
 }
+function canonicalTimingSeam(track){
+  const center=Array.isArray(track?.centerline)?track.centerline.filter(p=>Number.isFinite(Number(p?.x))&&Number.isFinite(Number(p?.y))):[];
+  if(center.length<8)return false;
+
+  const first=center[0], prev=center[center.length-1], next=center[1];
+  let dx=Number(next.x)-Number(prev.x), dy=Number(next.y)-Number(prev.y);
+  if(Math.hypot(dx,dy)<1){ dx=Number(next.x)-Number(first.x); dy=Number(next.y)-Number(first.y); }
+  const r=wrapPi(Math.atan2(dy,dx));
+  const width=Number(first.width)||Number(track.trackWidth)||Number(track?.meta?.trackWidth)||80;
+  const anchor={x:Number(first.x),y:Number(first.y),r};
+  const finish=gateAt(anchor,width);
+  const metrics=loopMetrics(center);
+  if(!(metrics.total>1))return false;
+
+  const cp1=pointAt(center,metrics,metrics.total/3);
+  const cp2=pointAt(center,metrics,metrics.total*2/3);
+  const checkpoints=[cp1,cp2].filter(Boolean).map(p=>gateAt(p,p.width||width));
+
+  track.finishAnchor={...anchor};
+  track.finishLine=finish;
+  track.finish=finish;
+  track.checkpoints=checkpoints;
+  track.checkpointFractions=[1/3,2/3];
+  track.start={
+    x:anchor.x-Math.cos(r)*Math.max(110,width*.82),
+    y:anchor.y-Math.sin(r)*Math.max(110,width*.82),
+    r
+  };
+  return {finish,checkpoints};
+}
 
 export class RaceScene extends CurrentRaceScene {
   init(data){
+    // XLV installed the canonical seam after super.init(). That was too late for
+    // the base scene: spawn/grid state had already been derived from the previous
+    // finish/start, so Santa Cruz could record a short V1 before any sector gate.
+    // Prepare the registry entry first so spawn, finish and sectors are born from
+    // one geometry on the very first frame of the session.
+    let requested=String(data?.trackKey||data?.trackId||'').trim();
+    if(!requested){ try{requested=String(localStorage.getItem('tdr2:trackKey')||'').trim();}catch{} }
+    if(TIMING_SEAM_TRACKS.has(requested)&&TRACK_REGISTRY[requested]) canonicalTimingSeam(TRACK_REGISTRY[requested]);
+
     super.init(data);
     this._tdrRestoreTrackIdentity();
     this._tdrInstallCanonicalTimingSeam();
+    this._tdrSurvivalLapRows=[];
   }
 
   create(data){
@@ -76,42 +117,12 @@ export class RaceScene extends CurrentRaceScene {
   _tdrInstallCanonicalTimingSeam(){
     const key=this._tdrTrackKey();
     if(!TIMING_SEAM_TRACKS.has(key))return;
-    const track=this.track;
-    const center=Array.isArray(track?.centerline)?track.centerline.filter(p=>Number.isFinite(Number(p?.x))&&Number.isFinite(Number(p?.y))):[];
-    if(center.length<8)return;
+    const timing=canonicalTimingSeam(this.track);
+    if(!timing)return;
 
-    // These imported circuits had no authored finishSegment. The registry therefore
-    // picked whichever straight happened to score longest, while the session timer,
-    // sectors and authored start semantics expected the centerline seam. Pin all timing
-    // geometry to that seam so first-lap arming is deterministic on every load.
-    const first=center[0], prev=center[center.length-1], next=center[1];
-    let dx=Number(next.x)-Number(prev.x), dy=Number(next.y)-Number(prev.y);
-    if(Math.hypot(dx,dy)<1){ dx=Number(next.x)-Number(first.x); dy=Number(next.y)-Number(first.y); }
-    const r=wrapPi(Math.atan2(dy,dx));
-    const width=Number(first.width)||Number(track.trackWidth)||Number(track?.meta?.trackWidth)||80;
-    const anchor={x:Number(first.x),y:Number(first.y),r};
-    const finish=gateAt(anchor,width);
-
-    const metrics=loopMetrics(center);
-    if(!(metrics.total>1))return;
-    const cp1=pointAt(center,metrics,metrics.total/3);
-    const cp2=pointAt(center,metrics,metrics.total*2/3);
-    const checkpoints=[cp1,cp2].filter(Boolean).map(p=>gateAt(p,p.width||width));
-
-    track.finishAnchor={...anchor};
-    track.finishLine=finish;
-    track.finish=finish;
-    track.checkpoints=checkpoints;
-    track.checkpointFractions=[1/3,2/3];
-    track.start={
-      x:anchor.x-Math.cos(r)*Math.max(110,width*.82),
-      y:anchor.y-Math.sin(r)*Math.max(110,width*.82),
-      r
-    };
-
-    // Some older timing layers cache these fields directly on the scene.
-    this.finishLine=finish;
-    this.checkpoints=checkpoints;
+    // Older timing layers also cache these fields directly on the scene.
+    this.finishLine=timing.finish;
+    this.checkpoints=timing.checkpoints;
   }
 
   _tdrFixReportIdentity(report){
@@ -131,8 +142,68 @@ export class RaceScene extends CurrentRaceScene {
     return this._tdrFixReportIdentity(super._buildReport?.(...args));
   }
 
+  _tdrCaptureSurvivalLap(racer){
+    if(!this._survivalMode||racer!==this._survivalPlayer)return;
+    const lap=Number(racer?.completedLaps||0);
+    if(!(lap>=1&&lap<=SURVIVAL_MAX_LAPS))return;
+
+    const authoritative=this._survivalAuthoritativePlayerTimes?.()||[];
+    const lapMs=Number(authoritative[lap-1]??racer?._survivalLapTimesMs?.[lap-1]);
+    const history=Array.isArray(this.ttHistory)?this.ttHistory:[];
+    let source=null;
+    if(Number.isFinite(lapMs)){
+      for(let i=history.length-1;i>=0;i--){
+        const ms=Number(history[i]?.lapMs);
+        if(Number.isFinite(ms)&&Math.abs(ms-lapMs)<5){source=history[i];break;}
+      }
+    }
+    if(!source&&history.length)source=history[history.length-1];
+    const row={...(source&&typeof source==='object'?source:{}),...(Number.isFinite(lapMs)?{lapMs}:{})};
+    if(!Number.isFinite(Number(row.lapMs)))return;
+    this._tdrSurvivalLapRows??=[];
+    this._tdrSurvivalLapRows[lap-1]=row;
+  }
+
+  _registerFinishCross(racer){
+    const completed=super._registerFinishCross(racer);
+    if(completed)this._tdrCaptureSurvivalLap(racer);
+    return completed;
+  }
+
+  _tdrSurvivalReportRows(){
+    const authoritative=this._survivalAuthoritativePlayerTimes?.()||[];
+    if(!authoritative.length)return null;
+    const captured=Array.isArray(this._tdrSurvivalLapRows)?this._tdrSurvivalLapRows:[];
+    const history=Array.isArray(this.ttHistory)?this.ttHistory:[];
+
+    return authoritative.slice(0,SURVIVAL_MAX_LAPS).map((rawMs,i)=>{
+      const lapMs=Number(rawMs);
+      let source=captured[i]||null;
+      if(!source){
+        for(let j=history.length-1;j>=0;j--){
+          const ms=Number(history[j]?.lapMs);
+          if(Number.isFinite(ms)&&Math.abs(ms-lapMs)<5){source=history[j];break;}
+        }
+      }
+      return {...(source&&typeof source==='object'?source:{}),lapMs};
+    }).filter(row=>Number.isFinite(Number(row.lapMs))&&Number(row.lapMs)>0);
+  }
+
   _showSurvivalSessionInfo(...args){
-    const out=super._showSurvivalSessionInfo?.(...args);
+    // Survival's race authority keeps the player lap times across all five rounds,
+    // while legacy ttHistory can be replaced/reset during round transitions. Build
+    // the report from the authoritative five-lap sequence, enriching each row with
+    // sector data captured when that lap finished. This prevents a champion report
+    // from ending with VUELTAS 0 after a complete five-lap race.
+    const reportRows=this._tdrSurvivalReportRows();
+    const originalHistory=this.ttHistory;
+    if(reportRows?.length)this.ttHistory=reportRows;
+    let out;
+    try{
+      out=super._showSurvivalSessionInfo?.(...args);
+    }finally{
+      this.ttHistory=originalHistory;
+    }
     this._tdrRestoreTrackIdentity();
     this._tdrFixReportIdentity(out);
     this._tdrRepairSessionReportDom();
