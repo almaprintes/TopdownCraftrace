@@ -109,17 +109,17 @@ export class RaceScene extends CurrentRaceScene {
         letter-spacing:.08em!important;
       }
       #tdr-race-controls .tdr-pedal.is-active{
-        filter:brightness(1.55) saturate(1.42) drop-shadow(0 0 16px var(--accent))!important;
+        filter:brightness(1.7) saturate(1.55) drop-shadow(0 0 18px var(--accent))!important;
         box-shadow:
-          inset 0 1px 0 rgba(255,255,255,.32),
-          inset 0 -18px 34px rgba(0,0,0,.18),
-          0 0 14px color-mix(in srgb,var(--accent) 85%,transparent),
-          0 0 30px color-mix(in srgb,var(--accent) 58%,transparent)!important;
+          inset 0 1px 0 rgba(255,255,255,.38),
+          inset 0 -18px 34px rgba(0,0,0,.12),
+          0 0 16px color-mix(in srgb,var(--accent) 92%,transparent),
+          0 0 34px color-mix(in srgb,var(--accent) 68%,transparent)!important;
       }
       #tdr-race-controls .tdr-pedal.is-active::after{
-        height:4px!important;
+        height:5px!important;
         opacity:1!important;
-        box-shadow:0 0 16px var(--accent),0 0 28px var(--accent)!important;
+        box-shadow:0 0 18px var(--accent),0 0 32px var(--accent)!important;
       }
       #tdr-race-controls .tdr-pedal-hitbox{
         position:fixed!important;
@@ -160,12 +160,20 @@ export class RaceScene extends CurrentRaceScene {
       const sync=(visual,hit)=>{
         const r=visual.getBoundingClientRect();
         if(!r.width||!r.height)return;
-        const padX=Math.max(24,Math.min(38,r.width*.28));
-        const padY=Math.max(16,Math.min(28,r.height*.14));
-        hit.style.left=`${Math.max(0,r.left-padX)}px`;
-        hit.style.top=`${Math.max(0,r.top-padY)}px`;
-        hit.style.width=`${Math.min(innerWidth,Math.max(150,r.width+padX*2))}px`;
-        hit.style.height=`${Math.min(innerHeight,Math.max(168,r.height+padY*2))}px`;
+        // Preserve the old large rectangular touch area around the slimmer
+        // visual pedal. The top extension is deliberately generous so the
+        // full rectangle shown by control customisation is touch-sensitive.
+        const padX=Math.max(28,Math.min(44,r.width*.34));
+        const padTop=Math.max(52,Math.min(76,r.height*.40));
+        const padBottom=Math.max(18,Math.min(30,r.height*.16));
+        const left=Math.max(0,r.left-padX);
+        const top=Math.max(0,r.top-padTop);
+        const right=Math.min(innerWidth,r.right+padX);
+        const bottom=Math.min(innerHeight,r.bottom+padBottom);
+        hit.style.left=`${left}px`;
+        hit.style.top=`${top}px`;
+        hit.style.width=`${Math.max(1,right-left)}px`;
+        hit.style.height=`${Math.max(1,bottom-top)}px`;
       };
       sync(gas,gasHit);
       sync(brake,brakeHit);
@@ -176,8 +184,13 @@ export class RaceScene extends CurrentRaceScene {
     let activeId=null;
     let captureEl=null;
 
+    const setPedalVisual=mode=>{
+      gas.classList.toggle('is-active',mode==='gas');
+      brake.classList.toggle('is-active',mode==='brake');
+    };
     const clear=()=>{
       if(this.touch){this.touch.throttle=0;this.touch.brake=0;}
+      setPedalVisual('none');
       this._setHandbrakeFromSwipe(false);
     };
 
@@ -192,8 +205,8 @@ export class RaceScene extends CurrentRaceScene {
       let mode='none';
       if(hb&&paddedHit(hb,x,6)) mode='handbrake';
       else {
-        const gasReach=paddedHit(gr,x,38);
-        const brakeReach=paddedHit(br,x,38);
+        const gasReach=paddedHit(gr,x,44);
+        const brakeReach=paddedHit(br,x,44);
         if(gasReach||brakeReach){
           mode=Math.abs(x-gc)<=Math.abs(x-bc)?'gas':'brake';
         }else{
@@ -203,7 +216,7 @@ export class RaceScene extends CurrentRaceScene {
           ];
           if(hb)centers.push({mode:'handbrake',x:(hb.left+hb.right)/2});
           centers.sort((a,b)=>Math.abs(a.x-x)-Math.abs(b.x-x));
-          if(centers[0]&&Math.abs(centers[0].x-x)<88)mode=centers[0].mode;
+          if(centers[0]&&Math.abs(centers[0].x-x)<96)mode=centers[0].mode;
         }
       }
 
@@ -211,6 +224,7 @@ export class RaceScene extends CurrentRaceScene {
         this.touch.throttle=mode==='gas'?1:0;
         this.touch.brake=mode==='brake'?1:0;
       }
+      setPedalVisual(mode);
       this._setHandbrakeFromSwipe(mode==='handbrake');
     };
 
@@ -229,8 +243,10 @@ export class RaceScene extends CurrentRaceScene {
     };
     const up=e=>{
       if(activeId!==e.pointerId)return;
-      try{captureEl?.releasePointerCapture?.(e.pointerId);}catch{}
-      activeId=null;captureEl=null;clear();
+      const el=captureEl;
+      activeId=null;captureEl=null;
+      try{el?.releasePointerCapture?.(e.pointerId);}catch{}
+      clear();
       e.preventDefault();e.stopPropagation?.();
     };
 
