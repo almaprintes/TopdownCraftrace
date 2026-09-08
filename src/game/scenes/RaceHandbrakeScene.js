@@ -183,6 +183,7 @@ export class RaceScene extends CurrentRaceScene {
 
     let activeId=null;
     let captureEl=null;
+    let adoptedFromOutside=false;
 
     const setPedalVisual=mode=>{
       gas.classList.toggle('is-active',mode==='gas');
@@ -232,6 +233,7 @@ export class RaceScene extends CurrentRaceScene {
       if(activeId!==null)return;
       activeId=e.pointerId;
       captureEl=e.currentTarget;
+      adoptedFromOutside=false;
       try{captureEl.setPointerCapture?.(e.pointerId);}catch{}
       applyAt(e.clientX);
       e.preventDefault();e.stopPropagation?.();
@@ -244,10 +246,50 @@ export class RaceScene extends CurrentRaceScene {
     const up=e=>{
       if(activeId!==e.pointerId)return;
       const el=captureEl;
-      activeId=null;captureEl=null;
+      activeId=null;captureEl=null;adoptedFromOutside=false;
       try{el?.releasePointerCapture?.(e.pointerId);}catch{}
       clear();
       e.preventDefault();e.stopPropagation?.();
+    };
+
+    const rectContains=(rect,x,y,pad=0)=>!!rect&&
+      x>=rect.left-pad&&x<=rect.right+pad&&y>=rect.top-pad&&y<=rect.bottom+pad;
+
+    const globalMove=e=>{
+      // A direct pedal press is already handled by the hitbox listeners above.
+      // This path exists for iOS touches that START elsewhere and later slide
+      // into a pedal. It adopts the pointer only after it physically enters one
+      // of the large rectangular hit areas, so steering touches elsewhere are
+      // left completely alone.
+      if(activeId!==null){
+        if(adoptedFromOutside&&activeId===e.pointerId){
+          applyAt(e.clientX);
+          e.preventDefault();
+        }
+        return;
+      }
+      if(e.pointerType==='mouse'&&e.buttons===0)return;
+
+      const x=Number(e.clientX),y=Number(e.clientY);
+      if(!Number.isFinite(x)||!Number.isFinite(y))return;
+      const gh=gasHit.getBoundingClientRect();
+      const bh=brakeHit.getBoundingClientRect();
+      const hb=this._tdrHandbrakeVisual?.getBoundingClientRect?.();
+      const inGas=rectContains(gh,x,y);
+      const inBrake=rectContains(bh,x,y);
+      const inHandbrake=rectContains(hb,x,y,6);
+      if(!inGas&&!inBrake&&!inHandbrake)return;
+
+      activeId=e.pointerId;
+      captureEl=null;
+      adoptedFromOutside=true;
+      applyAt(x);
+      e.preventDefault();
+    };
+    const globalUp=e=>{
+      if(!adoptedFromOutside||activeId!==e.pointerId)return;
+      activeId=null;captureEl=null;adoptedFromOutside=false;
+      clear();
     };
 
     [gasHit,brakeHit].forEach(el=>{
@@ -257,9 +299,15 @@ export class RaceScene extends CurrentRaceScene {
       el.addEventListener('pointercancel',up,{passive:false});
       el.addEventListener('lostpointercapture',up,{passive:false});
     });
+    window.addEventListener('pointermove',globalMove,{capture:true,passive:false});
+    window.addEventListener('pointerup',globalUp,{capture:true,passive:true});
+    window.addEventListener('pointercancel',globalUp,{capture:true,passive:true});
 
     this.events.once('shutdown',()=>{
       clear();
+      window.removeEventListener('pointermove',globalMove,true);
+      window.removeEventListener('pointerup',globalUp,true);
+      window.removeEventListener('pointercancel',globalUp,true);
       [gasHit,brakeHit].forEach(el=>{
         el.removeEventListener('pointerdown',down);
         el.removeEventListener('pointermove',move);
