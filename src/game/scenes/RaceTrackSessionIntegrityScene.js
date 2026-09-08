@@ -2,7 +2,7 @@ import { RaceScene as CurrentRaceScene } from './RaceExperienceScene.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { getTrackPublicName } from '../tracks/trackPublicNames.js';
 
-const TIMING_SEAM_TRACKS = new Set(['track01', 'santa-cruz']);
+const TIMING_SEAM_TRACKS = new Set(['santa-cruz']);
 const SURVIVAL_MAX_LAPS = 5;
 
 function wrapPi(a){ while(a>Math.PI)a-=Math.PI*2; while(a<-Math.PI)a+=Math.PI*2; return a; }
