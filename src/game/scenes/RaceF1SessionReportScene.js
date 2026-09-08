@@ -25,10 +25,15 @@ function sectorsFromRecord(rec){
   if(![s1,s2,s3].every(v=>Number.isFinite(v)&&v>0))return [null,null,null];
   return [s1,s2,s3];
 }
+function sectorValues(rec){
+  const direct=Array.isArray(rec?.sectors)?rec.sectors.map(Number):null;
+  if(direct?.length>=3&&direct.slice(0,3).every(v=>Number.isFinite(v)&&v>0))return direct.slice(0,3);
+  return sectorsFromRecord(rec);
+}
 function bestBySector(records){
   const best=[Infinity,Infinity,Infinity];
   for(const rec of records||[]){
-    const sectors=Array.isArray(rec?.sectors)?rec.sectors:sectorsFromRecord(rec);
+    const sectors=sectorValues(rec);
     sectors.forEach((v,i)=>{if(Number.isFinite(v)&&v>0&&v<best[i])best[i]=v;});
   }
   return best.map(v=>Number.isFinite(v)?v:null);
@@ -42,7 +47,12 @@ export class RaceScene extends CurrentRaceScene {
     const base=Math.max(0,Number(this._sessionLapBaseline)||0);
     return laps.map((lap,i)=>{
       const rec=history[base+i]||{};
-      return {...lap,sectors:sectorsFromRecord({...rec,rawLapMs:lap.rawLapMs??rec.rawLapMs,lapMs:lap.lapMs??rec.lapMs})};
+      const merged={...rec,rawLapMs:lap.rawLapMs??rec.rawLapMs,lapMs:lap.lapMs??rec.lapMs};
+      const existing=Array.isArray(lap?.sectors)?lap.sectors.map(Number):null;
+      const sectors=existing?.length>=3&&existing.slice(0,3).every(v=>Number.isFinite(v)&&v>0)
+        ?existing.slice(0,3)
+        :sectorValues(merged);
+      return {...lap,sectors};
     });
   }
 
