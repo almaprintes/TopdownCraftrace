@@ -15,6 +15,35 @@ export class MenuScene extends PreviousMenuScene {
 
   _renderGlobalEventCard() {}
 
+  _liveLobbyTrackKey() {
+    let persisted = '';
+    try { persisted = String(localStorage.getItem('tdr2:trackKey') || '').trim(); } catch {}
+    const registered = String(this.registry?.get?.('selectedTrackKey') || '').trim();
+    return persisted || registered || String(this.selectedTrackKey || 'track01');
+  }
+
+  _syncLobbyTrackPreview() {
+    const liveTrackKey = this._liveLobbyTrackKey();
+    if (!liveTrackKey) return;
+
+    // The selector persists the chosen track before returning to this scene.
+    // Keep the scene value aligned with that source of truth even when Phaser
+    // resumes/reuses a live lobby instead of rebuilding it from create().
+    if (this.selectedTrackKey !== liveTrackKey) {
+      this.selectedTrackKey = liveTrackKey;
+      try { this.registry?.set?.('selectedTrackKey', liveTrackKey); } catch {}
+    }
+
+    // The DOM track card is rendered from selectedTrackKey, but it can remain
+    // connected across a lifecycle transition. Re-render it whenever the key
+    // used for the visible preview no longer matches the current selection.
+    if (this._lobbyDomRoot?.isConnected && this._lobbyRenderedTrackKey !== liveTrackKey) {
+      const lobbyRoot = installLobbyDom(this);
+      polishLobbyForPublish(this, lobbyRoot);
+      this._lobbyRenderedTrackKey = liveTrackKey;
+    }
+  }
+
   renderUI() {
     if (this._ui) {
       try { this.tweens?.killTweensOf?.(this._ui); } catch {}
@@ -34,12 +63,19 @@ export class MenuScene extends PreviousMenuScene {
 
     this._installCarPlatform();
 
+    const liveTrackKey = this._liveLobbyTrackKey();
+    if (liveTrackKey) {
+      this.selectedTrackKey = liveTrackKey;
+      try { this.registry?.set?.('selectedTrackKey', liveTrackKey); } catch {}
+    }
     const lobbyRoot = installLobbyDom(this);
     polishLobbyForPublish(this, lobbyRoot);
+    this._lobbyRenderedTrackKey = this.selectedTrackKey;
   }
 
   update(time, delta) {
     super.update?.(time, delta);
+    this._syncLobbyTrackPreview();
     const modalOpen = Boolean(
       this._storeModal?.scene ||
       this._lobbyInventoryModal?.scene ||
