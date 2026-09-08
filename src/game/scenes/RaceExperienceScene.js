@@ -34,8 +34,10 @@ export class RaceScene extends CurrentRaceScene {
       }
     }
     this._tdrPauseMenuOpen=false;
+    this._sessionFinalizing=false;
     this._experiencePauseUi=null;
     this._experienceHiddenUi=null;
+    this._setSharedRaceControlsVisible(true);
     this._tdrRewardHistorySeen=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
     this._tdrRewardExpected=Number(getRaceLootSessionSummary?.()?.laps||0);
     this.events.once('shutdown',()=>this._destroyExperienceUi());
@@ -43,14 +45,25 @@ export class RaceScene extends CurrentRaceScene {
     return result;
   }
 
+  _setSharedRaceControlsVisible(visible){
+    if(typeof document==='undefined')return;
+    try{
+      const root=document.getElementById('tdr-race-controls');
+      if(!root?.style)return;
+      root.style.setProperty('display',visible?'block':'none','important');
+      root.style.pointerEvents=visible?'none':'none';
+    }catch{}
+  }
+
   _destroyExperienceUi(){
     try{this._experiencePauseUi?.destroy?.();}catch{}
     this._experiencePauseUi=null;
     this._pauseModal=null;
-    if(this._experienceHiddenUi){
-      try{restoreRaceUi(this,this._experienceHiddenUi);}catch{}
-      this._experienceHiddenUi=null;
-    }
+    // Never restore a paused race snapshot while the scene is shutting down.
+    // The shared DOM control root is app-owned and must survive, but remain
+    // hidden in the lobby until the next race explicitly reveals it.
+    this._experienceHiddenUi=null;
+    this._setSharedRaceControlsVisible(false);
     try{this._sessionRewardsDom?.remove?.();}catch{}
     this._sessionRewardsDom=null;
   }
@@ -82,6 +95,19 @@ export class RaceScene extends CurrentRaceScene {
         try{restoreRaceUi(this,this._experienceHiddenUi);}catch{}
         this._experienceHiddenUi=null;
       }
+      // Keep the explicit legacy restore as well as the generic snapshot restore.
+      // Several HUD/control owners are outside the DOM snapshot and iOS needs the
+      // pause button to be made interactive again deterministically.
+      try{this._restorePauseHud?.();}catch{}
+      this._setSharedRaceControlsVisible(true);
+      try{
+        const button=this._pauseButton;
+        if(button?.isConnected){
+          button.style.removeProperty('display');
+          button.style.display='grid';
+          button.style.pointerEvents='auto';
+        }
+      }catch{}
       try{this.physics?.world?.resume?.();}catch{}
       try{this._updateSimpleRaceHud?.(100);}catch{}
     }
@@ -126,6 +152,8 @@ export class RaceScene extends CurrentRaceScene {
     this._pauseModal=null;
     this._tdrPauseMenuOpen=true;
     try{this.physics?.world?.pause?.();}catch{}
+    this._experienceHiddenUi=null;
+    this._setSharedRaceControlsVisible(false);
     if(this._testMode&&this._returnSceneKey)this.scene.start(this._returnSceneKey,this._returnSceneData||{});
     else this.scene.start('menu');
   }
