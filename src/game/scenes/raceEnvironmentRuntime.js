@@ -1,14 +1,29 @@
 import track01Environment from '../tracks/library/track01/track01.environment.json';
 import santaCruzEnvironment from '../tracks/library/santa-cruz/santa-cruz.environment.json';
+import kartingTenerifeEnvironment from '../tracks/library/karting-tenerife/karting-tenerife.environment.json';
+import kartingCanariasEnvironment from '../tracks/library/karting-canarias/karting-canarias.environment.json';
 import { pathPoint, pathLength } from '../environment/EditableSpline.js';
 import { installRaceCaptureRuntime } from './raceCaptureRuntime.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
-const ENVIRONMENTS={track01:track01Environment,'santa-cruz':santaCruzEnvironment};
+const ENVIRONMENTS={
+  track01:track01Environment,
+  'santa-cruz':santaCruzEnvironment,
+  'karting-tenerife':kartingTenerifeEnvironment,
+  'karting-canarias':kartingCanariasEnvironment
+};
 
+function normalizeTrackKey(value){return String(value||'').trim().toLowerCase().replace(/_/g,'-');}
 function envFor(scene){
-  const key=String(scene?.trackKey||scene?.track?.meta?.id||'').trim();
-  return ENVIRONMENTS[key]||null;
+  const candidates=[
+    scene?.trackKey,
+    scene?.track?.meta?.id,
+    scene?.track?.id,
+    scene?.track?.trackId,
+    scene?.track?.meta?.trackId
+  ].map(normalizeTrackKey).filter(Boolean);
+  for(const key of candidates)if(ENVIRONMENTS[key])return ENVIRONMENTS[key];
+  return null;
 }
 function textureKey(asset){return `race-env:${asset}`;}
 function ensureLoadingOverlay(scene){
@@ -27,10 +42,6 @@ function addStandaloneInteraction(colliders,slowZones,item,img){if(!String(item?
 function linearBarrierHalfThickness(barrier){const type=String(barrier?.type||'').toLowerCase();if(type==='guardrail')return 8;if(type==='concrete')return 12;return 11;}
 function linearBarrierCollisionPoints(barrier,kind){
   const authored=Array.isArray(barrier?.points)&&barrier.points.length>1?barrier.points:[{x:barrier?.x1,y:barrier?.y1},{x:barrier?.x2,y:barrier?.y2}];
-  // Concrete already matches the visible perimeter in production. Preserve its
-  // proven collision geometry. Guardrails and fences, however, are rendered by
-  // the editor/runtime along EditableSpline.pathPoint(); joining authored handles
-  // with straight collision chords cuts across curves and creates an invisible wall.
   if(kind==='concrete'||authored.length<3)return authored;
   let len=0;
   try{len=pathLength(barrier,120);}catch{}
