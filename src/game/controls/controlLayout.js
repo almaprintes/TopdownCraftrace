@@ -22,10 +22,10 @@ function factoryPedalLayout(){
   const bottom=Math.max(8,h*.015);
   const y=1-(bottom+pedalH*.5)/h;
   const handbrake={x:1-(edge+handW*.5)/w,y,scale:1};
-  const brakeRight=edge+handW+5;
-  const brake={x:1-(brakeRight+pedalW*.5)/w,y,scale:1};
-  const gasRight=brakeRight+pedalW+6;
+  const gasRight=edge+handW+5;
   const gas={x:1-(gasRight+pedalW*.5)/w,y,scale:1};
+  const brakeRight=gasRight+pedalW+6;
+  const brake={x:1-(brakeRight+pedalW*.5)/w,y,scale:1};
   return {gas,brake,handbrake};
 }
 
