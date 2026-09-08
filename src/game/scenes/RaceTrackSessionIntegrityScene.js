@@ -26,21 +26,22 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrRestoreTrackIdentity();
     this._tdrSurvivalLapRows=[];
     this._tdrSeenTimingRows=new Set();
+    this._tdrSurvivalAuthoritativeTimes=[];
   }
 
   create(data){
     super.create(data);
     this._tdrRestoreTrackIdentity();
-    this._tdrCaptureTimingHistory();
+    this._tdrCaptureSurvivalTiming();
   }
 
   update(time,delta){
-    // Capture both sides of the inherited update. Survival can replace ttHistory
-    // between rounds; completed rows must be copied before that transient history
-    // disappears. This observes timing data only and never changes track geometry.
-    this._tdrCaptureTimingHistory();
+    // Capture both sides of the inherited update. Automatic Survival finish can
+    // replace/clear its live state in the same frame that it opens results, so
+    // completed timing must already exist in our session-owned snapshot.
+    this._tdrCaptureSurvivalTiming();
     const out=super.update?.(time,delta);
-    this._tdrCaptureTimingHistory();
+    this._tdrCaptureSurvivalTiming();
     return out;
   }
 
@@ -112,6 +113,23 @@ export class RaceScene extends CurrentRaceScene {
     }
   }
 
+  _tdrCaptureAuthoritativeTimes(){
+    if(!this._survivalMode)return;
+    let live=[];
+    try{live=this._survivalAuthoritativePlayerTimes?.()||[];}catch{}
+    const clean=Array.isArray(live)?live.map(Number).filter(v=>Number.isFinite(v)&&v>0).slice(0,SURVIVAL_MAX_LAPS):[];
+    // Never replace a richer snapshot with the empty/transient state produced
+    // while automatic victory/elimination tears Survival down.
+    if(clean.length>=(this._tdrSurvivalAuthoritativeTimes?.length||0)){
+      this._tdrSurvivalAuthoritativeTimes=[...clean];
+    }
+  }
+
+  _tdrCaptureSurvivalTiming(){
+    this._tdrCaptureTimingHistory();
+    this._tdrCaptureAuthoritativeTimes();
+  }
+
   _tdrBestTimingRowFor(lapMs){
     const pools=[
       ...(Array.isArray(this._tdrSurvivalLapRows)?this._tdrSurvivalLapRows:[]),
@@ -136,9 +154,18 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _tdrSurvivalReportRows(){
-    this._tdrCaptureTimingHistory();
-    const authoritative=this._survivalAuthoritativePlayerTimes?.()||[];
-    if(!authoritative.length)return null;
+    this._tdrCaptureSurvivalTiming();
+    let live=[];
+    try{live=this._survivalAuthoritativePlayerTimes?.()||[];}catch{}
+    const current=Array.isArray(live)?live.map(Number).filter(v=>Number.isFinite(v)&&v>0):[];
+    const saved=Array.isArray(this._tdrSurvivalAuthoritativeTimes)?this._tdrSurvivalAuthoritativeTimes:[];
+    const authoritative=current.length>=saved.length?current:saved;
+    if(!authoritative.length){
+      // Last-resort report path: timing rows themselves are already completed
+      // laps, so automatic finish must never display zero if those rows survived.
+      const rows=(this._tdrSurvivalLapRows||[]).slice(0,SURVIVAL_MAX_LAPS).map(cloneTimingRow).filter(Boolean);
+      return rows.length?rows:null;
+    }
 
     return authoritative.slice(0,SURVIVAL_MAX_LAPS).map(rawMs=>{
       const lapMs=Number(rawMs);
@@ -149,9 +176,9 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _showSurvivalSessionInfo(...args){
-    // Keep every completed timing row across round transitions, then pair the
-    // authoritative Survival lap totals with the richest matching sector row.
-    this._tdrCaptureTimingHistory();
+    // Snapshot first: automatic victory/elimination is allowed to tear down its
+    // live race state only after completed laps are safe in this scene-owned copy.
+    this._tdrCaptureSurvivalTiming();
     const reportRows=this._tdrSurvivalReportRows();
     const originalHistory=this.ttHistory;
     if(reportRows?.length)this.ttHistory=reportRows;
