@@ -72,8 +72,6 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _showSurvivalSessionInfo(resultRoot){
-    // The race authority is the source of truth. Mirror its five player times
-    // into the legacy fields only while the inherited report is assembled.
     const authoritativeTimes=this._survivalAuthoritativePlayerTimes();
     if(authoritativeTimes.length){
       if(this._survivalPlayer)this._survivalPlayer._survivalLapTimesMs=[...authoritativeTimes];
@@ -182,10 +180,6 @@ export class RaceScene extends CurrentRaceScene{
     root.innerHTML=`<div style="font-size:8px;font-weight:950;letter-spacing:.16em;color:#63e8ff;margin-bottom:5px">ELIMINADOS</div>${eliminated.map((bot,i)=>`<div style="font-size:10px;font-weight:850;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="opacity:.55">${i+1}.</span> ${survivalBotLabel(bot)}</div>`).join('')}`;
   }
 
-  // El panel DOM de eliminados es la única información de eliminación durante
-  // la carrera. Las antiguas tarjetas Phaser duplicaban esa información y,
-  // además, heredaban la cámara/zoom dinámico, por eso aparecían como cuadros
-  // vacíos que se desplazaban por el circuito.
   _showSurvivalNotice(){
     try{this._survivalNotice?.destroy?.(true);}catch{}
     this._survivalNotice=null;
@@ -211,13 +205,12 @@ export class RaceScene extends CurrentRaceScene{
     const dt=clamp((Number(delta)||16.67)/1000,.001,.05);
     const size=this._survivalContactSize||this._survivalPlayerVisualSize();
     const short=Math.min(size.w,size.h);
-    // Contact is deliberately inset from the artwork. Equal-size cars can
-    // overlap visually by roughly 10-15 px before their collision response
-    // starts, which makes bodywork contact read naturally instead of as an
-    // invisible force field.
-    const desiredVisualOverlap=clamp(short*.34,10,15);
-    const decay=Math.exp(-4.2*dt);
-    const contactDistanceFor=(aScale=1,bScale=1)=>Math.max(14,short*(aScale+bScale)*.5-desiredVisualOverlap);
+    // Keep only a small amount of visual bodywork overlap. LIII allowed too
+    // much penetration at speed; this tighter inset still avoids the old
+    // invisible force-field look without letting cars pass through each other.
+    const desiredVisualOverlap=clamp(short*.18,5,8);
+    const decay=Math.exp(-5.0*dt);
+    const contactDistanceFor=(aScale=1,bScale=1)=>Math.max(16,short*(aScale+bScale)*.5-desiredVisualOverlap);
 
     for(const bot of active){
       bot._contactX=(Number(bot._contactX)||0)*decay;
@@ -235,7 +228,7 @@ export class RaceScene extends CurrentRaceScene{
         let dx=sx-px,dy=sy-py,dist=Math.hypot(dx,dy);
         if(dist>=minDist)continue;
         if(dist<.001){const a=(i+1)*1.91;dx=Math.cos(a);dy=Math.sin(a);dist=1;}
-        const nx=dx/dist,ny=dy/dist,overlap=minDist-dist+.08;
+        const nx=dx/dist,ny=dy/dist,overlap=minDist-dist+.18;
         const playerPush=overlap*.5,botPush=overlap*.5;
         try{player.x-=nx*playerPush;player.y-=ny*playerPush;}catch{}
 
@@ -244,13 +237,10 @@ export class RaceScene extends CurrentRaceScene{
         if(body?.velocity){
           const vn=Number(body.velocity.x||0)*nx+Number(body.velocity.y||0)*ny;
           if(vn>0){
-            // The player keeps most of the incoming speed instead of being
-            // stopped dead. Part of the impact is transferred into visible
-            // rival knockback so the contact affects both cars.
-            const absorbed=vn*.32;
+            const absorbed=vn*.36;
             body.velocity.x-=nx*absorbed;
             body.velocity.y-=ny*absorbed;
-            impactKick=clamp(vn*dt*.38,0,6);
+            impactKick=clamp(vn*dt*.34,0,5.5);
           }
         }
 
@@ -267,7 +257,7 @@ export class RaceScene extends CurrentRaceScene{
       let dx=Number(b.sprite.x)-Number(a.sprite.x),dy=Number(b.sprite.y)-Number(a.sprite.y),dist=Math.hypot(dx,dy);
       if(dist>=minDist)continue;
       if(dist<.001){const ang=(i*7+j*3)*.73;dx=Math.cos(ang);dy=Math.sin(ang);dist=1;}
-      const nx=dx/dist,ny=dy/dist,push=(minDist-dist+.08)*.5;
+      const nx=dx/dist,ny=dy/dist,push=(minDist-dist+.18)*.5;
       a._contactX=(Number(a._contactX)||0)-nx*push;a._contactY=(Number(a._contactY)||0)-ny*push;
       b._contactX=(Number(b._contactX)||0)+nx*push;b._contactY=(Number(b._contactY)||0)+ny*push;
       a.sprite.x-=nx*push;a.sprite.y-=ny*push;b.sprite.x+=nx*push;b.sprite.y+=ny*push;
