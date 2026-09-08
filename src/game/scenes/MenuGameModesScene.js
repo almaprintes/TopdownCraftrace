@@ -3,12 +3,18 @@ import { recordModeStart } from '../seasons/seasonTelemetry.js';
 
 const MODE_KEY='tdr2:gameMode';
 const PRACTICE_TRACK_KEY='practice-area';
+const RELEASE_MODES=new Set(['timeattack','ghost','practice']);
 
 function walk(node,fn){
   if(!node)return;
   fn(node);
   const list=node?.list;
   if(Array.isArray(list))for(const child of list)walk(child,fn);
+}
+
+function releaseMode(mode){
+  const key=String(mode||'').trim();
+  return RELEASE_MODES.has(key)?key:'timeattack';
 }
 
 export class MenuScene extends CurrentMenuScene{
@@ -34,6 +40,10 @@ export class MenuScene extends CurrentMenuScene{
   }
 
   _startSelectedMode(mode){
+    // Supervivencia queda preservada en código para una actualización futura,
+    // pero no es un modo publicable en 1.0. Cualquier estado antiguo guardado
+    // o llamada accidental cae de forma segura en Contrarreloj.
+    mode=releaseMode(mode);
     let trackKey=this.selectedTrackKey||'track01';
     try{
       const live=localStorage.getItem('tdr2:trackKey');
@@ -61,7 +71,8 @@ export class MenuScene extends CurrentMenuScene{
   _openGameModeModal(){
     if(this._gameModeModal?.scene)return;
     const {width,height}=this.scale;
-    const selected=(()=>{try{return localStorage.getItem(MODE_KEY)||'timeattack';}catch{return'timeattack';}})();
+    const selected=(()=>{try{return releaseMode(localStorage.getItem(MODE_KEY));}catch{return'timeattack';}})();
+    try{localStorage.setItem(MODE_KEY,selected);}catch{}
 
     const root=this.add.container(0,0).setDepth(9000);
     this._ui?.add(root);
@@ -94,12 +105,11 @@ export class MenuScene extends CurrentMenuScene{
     this._gameModeMarqueeTween=this.tweens.add({targets:marquee,x:{from:cx-38,to:cx+38},duration:2200,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
 
     root.add(this.add.text(cx,y+66,'¿CÓMO QUIERES CONDUCIR?',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'25px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
-    root.add(this.add.text(cx,y+99,'Carrera, fantasma, supervivencia o conducción libre',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',color:'#a9bac9'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,y+99,'Contrarreloj, fantasma o conducción libre',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',color:'#a9bac9'}).setOrigin(.5,0));
 
     const modes=[
       {key:'timeattack',icon:'🏁',title:'CONTRARRELOJ',sub:'Persigue tu mejor vuelta',detail:'Pista libre · cronómetro puro',accent:0x55bfff},
       {key:'ghost',icon:'👻',title:'FANTASMA',sub:'Compite contra tu récord',detail:'Tu mejor vuelta como rival',accent:0x8f7dff},
-      {key:'survival',icon:'⚡',title:'SUPERVIVENCIA',sub:'6 coches · último fuera',detail:'Una eliminación por vuelta',accent:0x42ff9d},
       {key:'practice',icon:'🧪',title:'ÁREA DE PRUEBAS',sub:'Conducción libre',detail:'Velocidad · drift · superficies',accent:0xffc857}
     ];
     const gap=14,cols=modes.length;
