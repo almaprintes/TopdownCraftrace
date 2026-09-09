@@ -9,6 +9,79 @@ import { hideRaceUi, restoreRaceUi } from '../ui/raceUiVisibility.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
 
+function fmtEngineerLap(ms){
+  const value=Number(ms);
+  if(!Number.isFinite(value)||value<=0)return'';
+  const min=Math.floor(value/60000);
+  const sec=(value-min*60000)/1000;
+  return`${min}:${sec.toFixed(3).padStart(6,'0')}`;
+}
+
+function validSessionRows(history){
+  return(Array.isArray(history)?history:[]).filter(row=>row?.valid!==false&&row?.invalid!==true&&Number.isFinite(Number(row?.lapMs))&&Number(row.lapMs)>0);
+}
+
+function buildSessionReading(history){
+  const rows=validSessionRows(history);
+  if(!rows.length)return'No hay suficientes vueltas válidas para analizar la tanda todavía.';
+  const times=rows.map(row=>Number(row.lapMs));
+  const bestMs=Math.min(...times),worstMs=Math.max(...times);
+  const bestIndex=times.indexOf(bestMs);
+  const first=times[0],last=times[times.length-1];
+  const spreadPct=bestMs>0?(worstMs-bestMs)/bestMs:0;
+  const trendPct=first>0?(last-first)/first:0;
+  const knownClean=rows.filter(row=>typeof row?.tdrCleanLap==='boolean');
+  const dirtyCount=knownClean.filter(row=>row.tdrCleanLap===false).length;
+  const allKnownClean=knownClean.length===rows.length&&dirtyCount===0;
+  const bestLabel=`V${bestIndex+1} (${fmtEngineerLap(bestMs)})`;
+
+  if(rows.length===1){
+    if(allKnownClean)return`Primera referencia de la tanda: ${bestLabel}. Vuelta limpia; ahora toca construir ritmo sobre ella.`;
+    return`Primera referencia de la tanda: ${bestLabel}. Necesitamos más vueltas para leer la evolución del ritmo.`;
+  }
+
+  // Off-track advice is only legal when clean-lap telemetry explicitly marked it.
+  if(dirtyCount>0){
+    const word=dirtyCount===1?'una vuelta registró una salida de pista':`${dirtyCount} vueltas registraron salidas de pista`;
+    return`Tu mejor referencia fue ${bestLabel}, pero ${word}. Hay tiempo disponible simplemente manteniendo el coche dentro de pista.`;
+  }
+
+  if(allKnownClean&&spreadPct<=0.025){
+    const delta=((worstMs-bestMs)/1000).toFixed(3);
+    return`Tanda muy sólida y limpia. Solo ${delta} s separan tu mejor y tu peor vuelta; estás construyendo una base de ritmo muy consistente.`;
+  }
+
+  if(bestIndex===rows.length-1&&trendPct<=-0.025){
+    return`Has ido de menos a más y cerraste con tu mejor vuelta: ${bestLabel}. Buena progresión; la siguiente tanda empieza con una referencia más alta.`;
+  }
+
+  if(bestIndex===0&&trendPct>=0.07&&rows.length>=3){
+    return`Saliste muy fuerte: ${bestLabel} fue tu mejor vuelta. Después el ritmo cayó progresivamente; intenta repetir la precisión de esa primera vuelta.`;
+  }
+
+  if(trendPct<=-0.045&&rows.length>=3){
+    return`La tanda fue mejorando vuelta a vuelta. Terminaste un ${Math.abs(trendPct*100).toFixed(1)}% más rápido que empezaste; sigue afinando esa progresión.`;
+  }
+
+  if(spreadPct<=0.045){
+    return`Buen nivel de consistencia. Tu mejor referencia fue ${bestLabel} y las vueltas se mantuvieron en una ventana pequeña; ahora toca buscar décimas sin romper ese ritmo.`;
+  }
+
+  if(bestIndex===0&&rows.length>=3){
+    return`La velocidad estaba desde el principio: ${bestLabel} fue la referencia. El reto está en sostener ese nivel durante toda la tanda.`;
+  }
+
+  if(bestIndex===rows.length-1){
+    return`Terminaste encontrando tu mejor ritmo: ${bestLabel}. Buena señal; estabas entendiendo mejor el circuito conforme avanzaba la tanda.`;
+  }
+
+  return`Tu mejor vuelta fue ${bestLabel}. Hay rendimiento, pero todavía existe variación entre vueltas; el siguiente paso es convertir esa vuelta rápida en ritmo repetible.`;
+}
+
+function normalizedText(value){
+  return String(value||'').replace(/\s+/g,' ').trim().toUpperCase();
+}
+
 // Shipping authority for race-session UX.
 // Physics/vehicle behaviour stays below this boundary. Pause/session/reward UI
 // belongs here or in composable DOM modules, never in one-feature FixScene wrappers.
@@ -139,6 +212,38 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrPauseMenuOpen=true;
     try{this.physics?.world?.pause?.();}catch{}
     this._showSessionRewards(null,()=>this._openFinalSessionReportClean());
+  }
+
+  _patchSessionReading(){
+    const modal=this._sessionReportModal;
+    if(!modal?.querySelectorAll)return false;
+    const reading=buildSessionReading(this.ttHistory);
+    const leaves=[...modal.querySelectorAll('*')].filter(el=>!el.children?.length);
+    const heading=leaves.find(el=>normalizedText(el.textContent)==='LECTURA DE LA TANDA');
+    if(!heading)return false;
+    let scope=heading.parentElement;
+    for(let depth=0;scope&&depth<4;depth++,scope=scope.parentElement){
+      const candidates=[...scope.querySelectorAll('*')]
+        .filter(el=>!el.children?.length&&el!==heading)
+        .map(el=>({el,text:String(el.textContent||'').trim()}))
+        .filter(row=>row.text.length>=20&&normalizedText(row.text)!=='LECTURA DE LA TANDA')
+        .sort((a,b)=>b.text.length-a.text.length);
+      if(candidates.length){
+        candidates[0].el.textContent=reading;
+        candidates[0].el.dataset.tdrDynamicSessionReading='1';
+        return true;
+      }
+    }
+    return false;
+  }
+
+  _openSessionReport(...args){
+    const result=super._openSessionReport?.(...args);
+    try{this._patchSessionReading();}catch(error){console.warn('[session-engineer] immediate patch failed',error);}
+    // Some legacy report builders finish their DOM synchronously one tick later.
+    setTimeout(()=>{try{this._patchSessionReading();}catch{}},0);
+    setTimeout(()=>{try{this._patchSessionReading();}catch{}},80);
+    return result;
   }
 
   _openFinalSessionReportClean(){
