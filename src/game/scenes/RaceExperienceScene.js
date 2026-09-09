@@ -1,6 +1,8 @@
 import { RaceScene as CurrentRaceScene } from './RaceHandbrakePhysicsScene.js';
 import { grantRaceLoot, getRaceLootSessionSummary } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
+import { isRewardedAdAvailable, showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { claimPostRaceDoubleLoot, createPostRaceClaimId, hasClaimedPostRaceDouble } from '../monetization/postRaceDoubleLoot.js';
 import { mountRaceSessionRewards } from '../ui/raceSessionUi.js';
 import { mountRacePauseUi } from '../ui/racePauseUi.js';
 import { hideRaceUi, restoreRaceUi } from '../ui/raceUiVisibility.js';
@@ -40,6 +42,8 @@ export class RaceScene extends CurrentRaceScene {
     this._setSharedRaceControlsVisible(true);
     this._tdrRewardHistorySeen=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
     this._tdrRewardExpected=Number(getRaceLootSessionSummary?.()?.laps||0);
+    this._tdrPostRaceClaimId=createPostRaceClaimId(this.trackKey||this.track?.key||this.track?.id||'race');
+    this._tdrRaceLootDoubled=hasClaimedPostRaceDouble(this._tdrPostRaceClaimId);
     this.events.once('shutdown',()=>this._destroyExperienceUi());
     this.events.once('destroy',()=>this._destroyExperienceUi());
     return result;
@@ -187,9 +191,21 @@ export class RaceScene extends CurrentRaceScene {
       .map(([id,qty])=>({id,qty:Number(qty)||0,name:GARAGE_ITEMS[id]?.name||id,icon:GARAGE_ITEMS[id]?.icon||'◆',asset:GARAGE_ITEMS[id]?.asset||null}));
     if(!entries.length&&laps<5){if(resultRoot)resultRoot.style.display='';onDone?.();return;}
     if(resultRoot)resultRoot.style.display='none';
+
+    const claimId=this._tdrPostRaceClaimId||(this._tdrPostRaceClaimId=createPostRaceClaimId(summary.trackKey||this.trackKey||'race'));
+    const canDouble=entries.length>0&&!this._tdrRaceLootDoubled&&!hasClaimedPostRaceDouble(claimId)&&isRewardedAdAvailable();
     const root=mountRaceSessionRewards({
       baseUrl:BASE,laps,bonusLaps:Number(summary.bonusLaps)||0,entries,
       resultLabel:resultRoot?'VER RESULTADOS':'VER INFORME',
+      canDouble,
+      onDouble:async()=>{
+        if(this._tdrRaceLootDoubled||hasClaimedPostRaceDouble(claimId))return{ok:false,reason:'already_claimed'};
+        const ad=await showRewardedAd(this,{title:'×2 BOTÍN · ANUNCIO RECOMPENSADO',placement:'post_race_double_loot',claimId});
+        if(ad?.completed!==true||ad?.verified!==true)return{ok:false,reason:ad?.reason||'ad_not_verified'};
+        const claim=claimPostRaceDoubleLoot({claimId,entries});
+        if(claim?.ok)this._tdrRaceLootDoubled=true;
+        return claim;
+      },
       onFinish:()=>{
         if(this._sessionRewardsDom===root)this._sessionRewardsDom=null;
         try{this._restoreSessionRewardsInput?.();}catch{}
