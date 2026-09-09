@@ -1,127 +1,124 @@
 import { RaceScene as CurrentRaceScene } from './RaceExperienceScene.js';
 
-function normalized(value){
-  return String(value||'').replace(/\s+/g,' ').trim().toUpperCase();
+function fmtLap(ms){
+  const value=Number(ms);
+  if(!Number.isFinite(value)||value<=0)return'—';
+  const m=Math.floor(value/60000),s=Math.floor((value%60000)/1000),x=Math.floor(value%1000);
+  return`${m}:${String(s).padStart(2,'0')}.${String(x).padStart(3,'0')}`;
 }
 
-function dynamicReadingFromReport(scene){
-  try{
-    const modal=scene?._sessionReportModal;
-    const marked=modal?.querySelector?.('[data-tdr-dynamic-session-reading="1"]');
-    const text=String(marked?.textContent||'').trim();
-    if(text)return text;
-  }catch{}
-  return'';
+function pct(value){
+  return Number(value).toFixed(1).replace('.',',');
 }
 
-function patchReadingInTree(root,reading){
-  if(!root||!reading)return false;
-  let changed=false;
-  const nodes=[];
-  try{
-    if(root.nodeType===Node.ELEMENT_NODE)nodes.push(root);
-    if(root.querySelectorAll)nodes.push(...root.querySelectorAll('*'));
-  }catch{return false;}
+function validSectorSet(value){
+  return Array.isArray(value)&&value.length>=3&&value.slice(0,3).every(v=>Number.isFinite(Number(v))&&Number(v)>0);
+}
 
-  for(const el of nodes){
-    if(el?.children?.length)continue;
-    const text=String(el?.textContent||'').trim();
-    const key=normalized(text);
-    if(key==='SESIÓN DE REFERENCIA.'||key==='SESION DE REFERENCIA.'||key==='SESIÓN DE REFERENCIA'||key==='SESION DE REFERENCIA'){
-      el.textContent=reading;
-      el.dataset.tdrDynamicSessionReading='1';
-      changed=true;
-    }
+function mainSectorLoss(current,reference){
+  if(!validSectorSet(current)||!validSectorSet(reference))return null;
+  const delta=current.slice(0,3).map((v,i)=>Number(v)-Number(reference[i]));
+  let index=0;
+  for(let i=1;i<delta.length;i++)if(delta[i]>delta[index])index=i;
+  return delta[index]>20?{sector:index+1,deltaMs:delta[index]}:null;
+}
+
+function sessionEngineerReading(report,scene){
+  const laps=(Array.isArray(report?.laps)?report.laps:[])
+    .filter(l=>Number.isFinite(Number(l?.lapMs))&&Number(l.lapMs)>0)
+    .map((l,i)=>({...l,n:Number(l?.n)||i+1,lapMs:Number(l.lapMs)}));
+  if(!laps.length)return'No hay suficientes vueltas válidas para analizar la tanda todavía.';
+
+  const history=Array.isArray(scene?.ttHistory)?scene.ttHistory:[];
+  const baseline=Math.max(0,Number(scene?._sessionLapBaseline)||0);
+  const clean=laps.map((_,i)=>history[baseline+i]).map(r=>typeof r?.tdrCleanLap==='boolean'?r.tdrCleanLap:null);
+  const dirtyCount=clean.filter(v=>v===false).length;
+  const allKnownClean=clean.length===laps.length&&clean.every(v=>v===true);
+
+  const times=laps.map(l=>l.lapMs);
+  const bestMs=Math.min(...times),worstMs=Math.max(...times);
+  const bestIndex=times.indexOf(bestMs);
+  const first=laps[0],best=laps[bestIndex],last=laps[laps.length-1];
+  const spreadPct=bestMs>0?(worstMs-bestMs)/bestMs:0;
+  const improvementPct=first.lapMs>0?(first.lapMs-bestMs)/first.lapMs:0;
+  const bestLabel=`V${best.n} (${fmtLap(bestMs)})`;
+
+  if(laps.length===1){
+    return allKnownClean
+      ?`Primera referencia de la tanda: ${bestLabel}. Vuelta limpia; ahora toca construir ritmo sobre ella.`
+      :`Primera referencia de la tanda: ${bestLabel}. Necesitamos más vueltas para leer la evolución del ritmo.`;
   }
 
-  // The export layout is rebuilt independently from the visible report. Inside
-  // the card headed "LECTURA DE LA TANDA", force its narrative body to the
-  // exact telemetry-driven sentence currently shown to the player, regardless
-  // of the placeholder/legacy wording used by the export template.
-  const leaves=nodes.filter(el=>!el?.children?.length);
-  const headings=leaves.filter(el=>normalized(el?.textContent)==='LECTURA DE LA TANDA');
-  for(const heading of headings){
-    let scope=heading.parentElement;
-    for(let depth=0;scope&&depth<4;depth++,scope=scope.parentElement){
-      const candidates=[...scope.querySelectorAll('*')]
-        .filter(el=>!el.children?.length&&el!==heading&&!el.closest?.('[data-tdr-session-trend="1"]'))
-        .map(el=>({el,text:String(el.textContent||'').replace(/\s+/g,' ').trim()}))
-        .filter(row=>{
-          const key=normalized(row.text);
-          return row.text.length>20&&
-            key!=='LECTURA DE LA TANDA'&&
-            !key.startsWith('EVOLUCIÓN DE LA TANDA')&&
-            !key.startsWith('EVOLUCION DE LA TANDA');
-        });
-      const target=
-        candidates.find(row=>row.el.dataset?.tdrDynamicSessionReading==='1')||
-        candidates.find(row=>/SESI[ÓO]N DE REFERENCIA/i.test(row.text))||
-        candidates.sort((a,b)=>b.text.length-a.text.length)[0];
-      if(target){
-        if(target.text!==reading)target.el.textContent=reading;
-        target.el.dataset.tdrDynamicSessionReading='1';
-        changed=true;
-        break;
-      }
-    }
+  if(dirtyCount>0){
+    const word=dirtyCount===1?'una vuelta quedó marcada como no limpia':`${dirtyCount} vueltas quedaron marcadas como no limpias`;
+    return`Tu mejor referencia fue ${bestLabel}, pero ${word}. Antes de buscar más velocidad, conviene consolidar vueltas válidas y repetibles.`;
   }
-  return changed;
+
+  // Progress is measured from the first canonical lap in the report to the
+  // actual best canonical lap. This is a reduction in lap time, not an
+  // ambiguous "percent faster" calculation.
+  if(bestIndex>0&&improvementPct>=0.025){
+    let text=`Gran progresión: bajaste de ${fmtLap(first.lapMs)} en V${first.n} a ${fmtLap(bestMs)} en V${best.n}, reduciendo el tiempo un ${pct(improvementPct*100)} %.`;
+    if(bestIndex<laps.length-1&&last.lapMs>bestMs+20){
+      const loss=last.lapMs-bestMs;
+      const sectorLoss=mainSectorLoss(last.sectors,best.sectors);
+      text+=` En V${last.n} cediste ${(loss/1000).toFixed(3).replace('.',',')} s respecto a esa referencia`;
+      if(sectorLoss)text+=`, principalmente en S${sectorLoss.sector}`;
+      text+='.';
+    }else if(bestIndex===laps.length-1){
+      text+=' Cerraste la tanda con tu mejor vuelta.';
+    }
+    return text;
+  }
+
+  if(allKnownClean&&spreadPct<=0.025){
+    const delta=((worstMs-bestMs)/1000).toFixed(3).replace('.',',');
+    return`Tanda muy sólida y limpia. Solo ${delta} s separan tu mejor y tu peor vuelta; estás construyendo una base de ritmo muy consistente.`;
+  }
+
+  if(bestIndex===0&&last.lapMs>=first.lapMs*1.07&&laps.length>=3){
+    return`Saliste muy fuerte: ${bestLabel} fue tu mejor vuelta. Después el ritmo cayó; intenta recuperar la precisión de esa primera referencia.`;
+  }
+
+  if(spreadPct<=0.045){
+    return`Buen nivel de consistencia. Tu mejor referencia fue ${bestLabel} y las vueltas se mantuvieron en una ventana pequeña; ahora toca buscar décimas sin romper ese ritmo.`;
+  }
+
+  if(bestIndex===0&&laps.length>=3){
+    return`La velocidad estaba desde el principio: ${bestLabel} fue la referencia. El reto está en sostener ese nivel durante toda la tanda.`;
+  }
+
+  if(bestIndex===laps.length-1){
+    return`Terminaste encontrando tu mejor ritmo: ${bestLabel}. Buena señal; estabas entendiendo mejor el circuito conforme avanzaba la tanda.`;
+  }
+
+  return`Tu mejor vuelta fue ${bestLabel}. Hay rendimiento, pero todavía existe variación entre vueltas; el siguiente paso es convertir esa vuelta rápida en ritmo repetible.`;
 }
 
-function patchWholeDocument(reading){
-  if(typeof document==='undefined'||!reading)return false;
-  return patchReadingInTree(document.body,reading);
-}
-
-// The legacy exporter may clone and rasterize its DOM synchronously inside the
-// EXPORTAR click handler. MutationObserver is intentionally asynchronous, so a
-// clone could previously be captured with the legacy sentence before our
-// observer saw it. Patch clones and inserted export trees synchronously for the
-// duration of that click stack, then restore the native DOM methods immediately.
-function armSynchronousExportPatch(reading){
-  if(typeof Node==='undefined'||!reading)return()=>{};
-  const proto=Node.prototype;
-  const original={
-    cloneNode:proto.cloneNode,
-    appendChild:proto.appendChild,
-    insertBefore:proto.insertBefore,
-    replaceChild:proto.replaceChild
-  };
-  let active=true;
-
-  try{
-    proto.cloneNode=function(deep){
-      const clone=original.cloneNode.call(this,deep);
-      try{patchReadingInTree(clone,reading);}catch{}
-      return clone;
-    };
-    proto.appendChild=function(child){
-      try{patchReadingInTree(child,reading);}catch{}
-      return original.appendChild.call(this,child);
-    };
-    proto.insertBefore=function(child,before){
-      try{patchReadingInTree(child,reading);}catch{}
-      return original.insertBefore.call(this,child,before);
-    };
-    proto.replaceChild=function(child,oldChild){
-      try{patchReadingInTree(child,reading);}catch{}
-      return original.replaceChild.call(this,child,oldChild);
-    };
-  }catch{}
-
-  const restore=()=>{
-    if(!active)return;
-    active=false;
-    try{proto.cloneNode=original.cloneNode;}catch{}
-    try{proto.appendChild=original.appendChild;}catch{}
-    try{proto.insertBefore=original.insertBefore;}catch{}
-    try{proto.replaceChild=original.replaceChild;}catch{}
-  };
-  setTimeout(restore,0);
-  return restore;
-}
-
+// Final authority for the session report narrative. The legacy report exporter
+// serializes the report object created by _buildReport(), so the engineer text
+// must live in report.verdict BEFORE either the visible DOM or exported asset is
+// rendered. Patching the DOM afterwards cannot change an already-captured r.
 export class RaceScene extends CurrentRaceScene {
+  _buildReport(...args){
+    const report=super._buildReport?.(...args)||{};
+    const reading=sessionEngineerReading(report,this);
+    report.verdict=reading;
+    this._tdrSessionEngineerReading=reading;
+    return report;
+  }
+
+  _patchSessionReading(){
+    const modal=this._sessionReportModal;
+    const reading=String(this._tdrSessionEngineerReading||'').trim();
+    if(!modal?.querySelector||!reading)return false;
+    const target=modal.querySelector('.insight p');
+    if(!target)return false;
+    target.textContent=reading;
+    target.dataset.tdrDynamicSessionReading='1';
+    return true;
+  }
+
   _openPauseMenu(...args){
     const alreadyPaused=this._tdrPauseMenuOpen===true||!!this._experiencePauseUi?.root?.isConnected;
     if(!alreadyPaused&&!Number.isFinite(this._tdrPauseTimingStartedAt)){
@@ -142,74 +139,12 @@ export class RaceScene extends CurrentRaceScene {
     // Advance BOTH timing origins before resuming so menu time never enters
     // lap/sector times, history, ghost timing or telemetry tick deltas.
     if(resume!==false){
-      if(pausedMs>0&&this.timing?.started&&Number.isFinite(this.timing?.lapStart)){
-        this.timing.lapStart+=pausedMs;
-      }
-      if(pausedTicks>0&&Number.isFinite(this.lapStartTick)){
-        this.lapStartTick+=pausedTicks;
-      }
+      if(pausedMs>0&&this.timing?.started&&Number.isFinite(this.timing?.lapStart))this.timing.lapStart+=pausedMs;
+      if(pausedTicks>0&&Number.isFinite(this.lapStartTick))this.lapStartTick+=pausedTicks;
       this._tdrPauseTimingStartedAt=NaN;
       this._tdrPauseTimingStartedTick=null;
     }
 
     return super._closePauseMenu?.(resume);
-  }
-
-  _armSessionExportReadingBridge(){
-    const modal=this._sessionReportModal;
-    if(!modal?.querySelectorAll||modal.dataset?.tdrExportReadingBridge==='1')return;
-    const reading=dynamicReadingFromReport(this);
-    if(!reading)return;
-    modal.dataset.tdrExportReadingBridge='1';
-    this._tdrSessionEngineerReading=reading;
-
-    const buttons=[...modal.querySelectorAll('button')];
-    const exportBtn=buttons.find(btn=>normalized(btn.textContent)==='EXPORTAR');
-    if(!exportBtn)return;
-
-    exportBtn.addEventListener('click',()=>{
-      const current=dynamicReadingFromReport(this)||this._tdrSessionEngineerReading||reading;
-      this._tdrSessionEngineerReading=current;
-
-      // The export renderer can clone/capture in this same event dispatch. Patch
-      // those clones synchronously, before its own click handler can rasterize
-      // the legacy wording. The observer below remains as a safety net for any
-      // asynchronous export/share DOM created afterwards.
-      armSynchronousExportPatch(current);
-
-      let observer=null;
-      try{
-        observer=new MutationObserver(records=>{
-          for(const record of records){
-            for(const node of record.addedNodes||[])patchReadingInTree(node,current);
-          }
-          patchWholeDocument(current);
-        });
-        observer.observe(document.body,{childList:true,subtree:true});
-      }catch{}
-
-      patchWholeDocument(current);
-      for(const delay of [0,40,120,300,700]){
-        setTimeout(()=>patchWholeDocument(current),delay);
-      }
-      setTimeout(()=>{try{observer?.disconnect?.();}catch{}},1400);
-    },{capture:true});
-  }
-
-  _openSessionReport(...args){
-    const result=super._openSessionReport?.(...args);
-    const arm=()=>{
-      try{
-        // The parent scene first replaces the legacy generic sentence with the
-        // telemetry-driven reading. Capture that exact final text for export.
-        this._patchSessionReading?.();
-        this._tdrSessionEngineerReading=dynamicReadingFromReport(this)||this._tdrSessionEngineerReading||'';
-        this._armSessionExportReadingBridge();
-      }catch(error){console.warn('[session-engineer-export] bridge failed',error);}
-    };
-    arm();
-    setTimeout(arm,0);
-    setTimeout(arm,100);
-    return result;
   }
 }
