@@ -3,7 +3,7 @@ const NS='http://www.w3.org/2000/svg';
 function parseTime(text){
   const value=String(text||'').trim();
   if(!value)return NaN;
-  const match=value.match(/(?:(\d+):)?(\d+)\.(\d{3})/);
+  const match=value.match(/^(?:(\d+):)?(\d+)\.(\d{3})$/);
   if(!match)return NaN;
   const minutes=Number(match[1]||0),seconds=Number(match[2]||0),ms=Number(match[3]||0);
   return minutes*60000+seconds*1000+ms;
@@ -31,24 +31,46 @@ function findReadingCard(heading){
   return heading?.parentElement||null;
 }
 
+function leafTexts(root){
+  return [...root.querySelectorAll('*')]
+    .filter(el=>!el.children?.length)
+    .map(el=>({el,text:textOf(el)}))
+    .filter(x=>x.text);
+}
+
+function findLapContainer(lapLeaf){
+  let node=lapLeaf?.parentElement||null;
+  for(let depth=0;node&&depth<6;depth++,node=node.parentElement){
+    const leaves=leafTexts(node);
+    const lapLeaves=leaves.filter(x=>/^V\d{1,3}$/i.test(x.text));
+    const timeLeaves=leaves.filter(x=>Number.isFinite(parseTime(x.text)));
+    // A real lap row has exactly one Vn label and at least TOTAL plus sectors.
+    // Stop before reaching a parent that contains several complete lap rows.
+    if(lapLeaves.length===1&&timeLeaves.length>=1&&timeLeaves.length<=5)return node;
+    if(lapLeaves.length>1)break;
+  }
+  return null;
+}
+
 function extractRows(root){
-  const candidates=[...root.querySelectorAll('tr,[role="row"],div')];
-  const rows=[];
-  for(const row of candidates){
-    const txt=textOf(row);
-    const lap=txt.match(/\bV(\d+)\b/i);
-    if(!lap)continue;
-    const values=[...txt.matchAll(/(?:(?:\d+):)?\d+\.\d{3}/g)].map(m=>m[0]);
-    if(values.length<1)continue;
+  const lapLeaves=leafTexts(root).filter(x=>/^V\d{1,3}$/i.test(x.text));
+  const byLap=new Map();
+  for(const lapLeaf of lapLeaves){
+    const lap=Number(lapLeaf.text.slice(1));
+    if(!Number.isInteger(lap)||lap<=0)continue;
+    const row=findLapContainer(lapLeaf.el);
+    if(!row)continue;
+    const leaves=leafTexts(row);
+    const values=leaves
+      .filter(x=>x.el!==lapLeaf.el)
+      .map(x=>x.text)
+      .filter(text=>Number.isFinite(parseTime(text)));
+    if(!values.length)continue;
     const total=parseTime(values[values.length-1]);
     if(!Number.isFinite(total)||total<=0)continue;
-    const sectors=values.slice(0,-1).slice(-3).map(parseTime).filter(Number.isFinite);
-    rows.push({lap:Number(lap[1]),total,sectors,row});
-  }
-  const byLap=new Map();
-  for(const item of rows){
-    const prev=byLap.get(item.lap);
-    if(!prev||textOf(item.row).length<textOf(prev.row).length)byLap.set(item.lap,item);
+    const sectorValues=values.length>=4?values.slice(values.length-4,values.length-1):values.slice(0,-1);
+    const sectors=sectorValues.map(parseTime).filter(Number.isFinite);
+    byLap.set(lap,{lap,total,sectors,row});
   }
   return [...byLap.values()].sort((a,b)=>a.lap-b.lap);
 }
@@ -79,14 +101,35 @@ function improvedProgressionText(rows,currentText){
   return `Gran progresión: bajaste de ${fmtMs(first.total)} s en V${first.lap} a ${fmtMs(best.total)} s en V${best.lap}, una mejora del ${gainPct.toFixed(1).replace('.',',')} %.${suffix}`;
 }
 
+function median(values){
+  const sorted=[...values].sort((a,b)=>a-b);
+  const mid=Math.floor(sorted.length/2);
+  return sorted.length%2?sorted[mid]:(sorted[mid-1]+sorted[mid])/2;
+}
+
+function chartScale(times){
+  const med=median(times);
+  // A stopped/spun lap can be perfectly valid telemetry but would flatten every
+  // normal lap into a straight line. Keep the point visible at the graph ceiling
+  // while scaling the useful racing range from the non-extreme laps.
+  const regular=times.filter(v=>v<=med*2);
+  const basis=regular.length>=2?regular:times;
+  const min=Math.min(...basis),max=Math.max(...basis);
+  return{min,max:Math.max(min+1,max)};
+}
+
 function makeSvg(rows){
   const w=760,h=150,padX=34,padTop=18,padBottom=34;
-  const times=rows.map(r=>r.total),min=Math.min(...times),max=Math.max(...times);
-  const span=Math.max(1,max-min);
+  const times=rows.map(r=>r.total),bestMs=Math.min(...times);
+  const scale=chartScale(times),span=Math.max(1,scale.max-scale.min);
   const x=i=>rows.length===1?w/2:padX+i*((w-padX*2)/(rows.length-1));
-  // Lower time is drawn lower on the panel so an improving stint visually descends.
-  const y=value=>padTop+((value-min)/span)*(h-padTop-padBottom);
-  const bestIndex=times.indexOf(min);
+  // Faster laps descend, like a performance trend. Extreme slow laps are clipped
+  // to the top edge so they remain obvious without destroying useful resolution.
+  const y=value=>{
+    const clipped=Math.min(scale.max,Math.max(scale.min,value));
+    return padTop+((scale.max-clipped)/span)*(h-padTop-padBottom);
+  };
+  const bestIndex=times.indexOf(bestMs);
   const svg=document.createElementNS(NS,'svg');
   svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
   svg.setAttribute('preserveAspectRatio','none');
@@ -105,13 +148,15 @@ function makeSvg(rows){
   poly.setAttribute('points',points);poly.setAttribute('fill','none');poly.setAttribute('stroke','#5fe3c0');poly.setAttribute('stroke-width','4');poly.setAttribute('stroke-linecap','round');poly.setAttribute('stroke-linejoin','round');
   svg.appendChild(poly);
   rows.forEach((r,i)=>{
-    const cx=x(i),cy=y(r.total),best=i===bestIndex;
+    const cx=x(i),cy=y(r.total),best=i===bestIndex,extreme=r.total>scale.max;
     const dot=document.createElementNS(NS,'circle');
-    dot.setAttribute('cx',String(cx));dot.setAttribute('cy',String(cy));dot.setAttribute('r',best?'7':'5');dot.setAttribute('fill',best?'#65f2bd':'#dbe7f5');dot.setAttribute('stroke',best?'#b8ffe1':'#5fe3c0');dot.setAttribute('stroke-width',best?'3':'2');svg.appendChild(dot);
+    dot.setAttribute('cx',String(cx));dot.setAttribute('cy',String(cy));dot.setAttribute('r',best?'7':'5');dot.setAttribute('fill',best?'#65f2bd':extreme?'#f2c65f':'#dbe7f5');dot.setAttribute('stroke',best?'#b8ffe1':extreme?'#ffd98a':'#5fe3c0');dot.setAttribute('stroke-width',best?'3':'2');svg.appendChild(dot);
     const label=document.createElementNS(NS,'text');
     label.setAttribute('x',String(cx));label.setAttribute('y',String(h-12));label.setAttribute('text-anchor','middle');label.setAttribute('fill',best?'#65f2bd':'#9baabd');label.setAttribute('font-size','15');label.setAttribute('font-weight',best?'800':'700');label.textContent=`V${r.lap}`;svg.appendChild(label);
     if(best){
       const tag=document.createElementNS(NS,'text');tag.setAttribute('x',String(cx));tag.setAttribute('y',String(Math.max(13,cy-13)));tag.setAttribute('text-anchor','middle');tag.setAttribute('fill','#65f2bd');tag.setAttribute('font-size','12');tag.setAttribute('font-weight','900');tag.textContent=`MEJOR · ${fmtMs(r.total)} s`;svg.appendChild(tag);
+    }else if(extreme){
+      const tag=document.createElementNS(NS,'text');tag.setAttribute('x',String(cx));tag.setAttribute('y',String(Math.min(h-42,cy+17)));tag.setAttribute('text-anchor','middle');tag.setAttribute('fill','#f2c65f');tag.setAttribute('font-size','10');tag.setAttribute('font-weight','800');tag.textContent=`${fmtMs(r.total)} s`;svg.appendChild(tag);
     }
   });
   return svg;
