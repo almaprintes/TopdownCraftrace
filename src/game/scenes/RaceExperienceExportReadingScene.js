@@ -73,6 +73,54 @@ function patchWholeDocument(reading){
   return patchReadingInTree(document.body,reading);
 }
 
+// The legacy exporter may clone and rasterize its DOM synchronously inside the
+// EXPORTAR click handler. MutationObserver is intentionally asynchronous, so a
+// clone could previously be captured with the legacy sentence before our
+// observer saw it. Patch clones and inserted export trees synchronously for the
+// duration of that click stack, then restore the native DOM methods immediately.
+function armSynchronousExportPatch(reading){
+  if(typeof Node==='undefined'||!reading)return()=>{};
+  const proto=Node.prototype;
+  const original={
+    cloneNode:proto.cloneNode,
+    appendChild:proto.appendChild,
+    insertBefore:proto.insertBefore,
+    replaceChild:proto.replaceChild
+  };
+  let active=true;
+
+  try{
+    proto.cloneNode=function(deep){
+      const clone=original.cloneNode.call(this,deep);
+      try{patchReadingInTree(clone,reading);}catch{}
+      return clone;
+    };
+    proto.appendChild=function(child){
+      try{patchReadingInTree(child,reading);}catch{}
+      return original.appendChild.call(this,child);
+    };
+    proto.insertBefore=function(child,before){
+      try{patchReadingInTree(child,reading);}catch{}
+      return original.insertBefore.call(this,child,before);
+    };
+    proto.replaceChild=function(child,oldChild){
+      try{patchReadingInTree(child,reading);}catch{}
+      return original.replaceChild.call(this,child,oldChild);
+    };
+  }catch{}
+
+  const restore=()=>{
+    if(!active)return;
+    active=false;
+    try{proto.cloneNode=original.cloneNode;}catch{}
+    try{proto.appendChild=original.appendChild;}catch{}
+    try{proto.insertBefore=original.insertBefore;}catch{}
+    try{proto.replaceChild=original.replaceChild;}catch{}
+  };
+  setTimeout(restore,0);
+  return restore;
+}
+
 export class RaceScene extends CurrentRaceScene {
   _openPauseMenu(...args){
     const alreadyPaused=this._tdrPauseMenuOpen===true||!!this._experiencePauseUi?.root?.isConnected;
@@ -123,9 +171,12 @@ export class RaceScene extends CurrentRaceScene {
       const current=dynamicReadingFromReport(this)||this._tdrSessionEngineerReading||reading;
       this._tdrSessionEngineerReading=current;
 
-      // Arm before the legacy export click handler runs. MutationObserver fires
-      // as soon as the export/share DOM is inserted, before the next paint, so
-      // the exported card and the on-screen report stay identical.
+      // The export renderer can clone/capture in this same event dispatch. Patch
+      // those clones synchronously, before its own click handler can rasterize
+      // the legacy wording. The observer below remains as a safety net for any
+      // asynchronous export/share DOM created afterwards.
+      armSynchronousExportPatch(current);
+
       let observer=null;
       try{
         observer=new MutationObserver(records=>{
