@@ -89,7 +89,12 @@ export class RaceScene extends CurrentRaceScene {
           const row=hist[i]||{};
           const valid=row.valid!==false&&row.invalid!==true;
           if(valid){
-            recordCompletedLapClean(this._cleanLapTrackId,this._currentLapClean===true);
+            const clean=this._currentLapClean===true;
+            // Keep the clean/dirty result on the actual history row so the final
+            // session report can only mention an off-track excursion when the
+            // race telemetry really observed one.
+            try{row.tdrCleanLap=clean;}catch{}
+            recordCompletedLapClean(this._cleanLapTrackId,clean);
             this._showLapMilestone(row);
           }
           this._currentLapClean=true;
