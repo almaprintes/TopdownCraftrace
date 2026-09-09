@@ -1,4 +1,5 @@
 import { TRACK_REGISTRY } from './trackRegistry.js';
+import '../ui/sessionEngineerTrendRuntime.js';
 
 // Circuit names are proper names: their public identity belongs to the registry key
 // and never changes with UI language, selector position or legacy track metadata.
