@@ -40,32 +40,46 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
       <div class="tdr-session-chest-copy"><strong>COFRE DE ${tier} VUELTAS</strong><span>Has alcanzado el siguiente tramo de recompensa.</span><b>TOCA PARA ABRIR</b></div>
     </div>`:'';
 
-  const doubleButton=doubleEnabled?`<button data-a="double" type="button" aria-label="Duplicar botín viendo un anuncio recompensado" style="width:100%;min-height:48px;border:1px solid #f6c94c;background:linear-gradient(180deg,#503d09,#251c05);color:#fff;font-size:11px;font-weight:1000;letter-spacing:.08em;display:grid;place-items:center;gap:2px;padding:7px 12px;opacity:${hasChest?'0':'1'};pointer-events:${hasChest?'none':'auto'};transition:.2s"><span data-a="double-main">▶ ×2 DUPLICAR BOTÍN</span><small data-a="double-sub" style="font-size:7px;letter-spacing:.11em;color:#ffe79a">ANUNCIO RECOMPENSADO · OPCIONAL</small></button>`:'';
+  const previewAssets=entries.filter(row=>row?.asset).slice(0,2);
+  const previewSource=previewAssets[0]||entries[0]||null;
+  const previewVisual=previewSource?.asset
+    ? `<div class="tdr-x2-preview"><img src="${esc(previewSource.asset)}" alt=""><span class="tdr-x2-arrow">↻</span><img src="${esc(previewSource.asset)}" alt=""></div>`
+    : `<div class="tdr-x2-preview tdr-x2-preview-symbol"><span>◆</span><span class="tdr-x2-arrow">↻</span><span>◆</span></div>`;
 
-  root.innerHTML=`<section class="tdr-session-card ${hasChest?'is-closed':'is-open'}">
+  const doubleButton=doubleEnabled?`
+    <button class="tdr-x2-button" data-a="double" type="button" aria-label="Duplicar botín viendo un anuncio recompensado">
+      <span class="tdr-x2-play">▶</span>
+      <span class="tdr-x2-big" data-a="double-x">×2</span>
+      <span class="tdr-x2-copy"><strong data-a="double-main">DUPLICAR BOTÍN</strong><small data-a="double-sub">MIRA UN ANUNCIO RECOMPENSADO</small></span>
+      ${previewVisual}
+    </button>`:'';
+
+  root.innerHTML=`<section class="tdr-session-card ${hasChest?'is-closed':'is-open'} ${doubleEnabled?'has-x2':''}">
+    <div class="tdr-session-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <button class="tdr-session-close" data-a="close" aria-label="Cerrar">×</button>
     <header class="tdr-session-header">
       <div class="tdr-session-kicker">SESIÓN FINALIZADA</div>
-      <h2>BOTÍN DE LA SESIÓN</h2>
+      <h2>${doubleEnabled?'¡BUEN TRABAJO!':'BOTÍN DE LA SESIÓN'}</h2>
       <div class="tdr-session-sub">Todo lo conseguido durante la tanda se entrega junto.</div>
     </header>
     <main class="tdr-session-main">
       ${chestHero}
       <div class="tdr-session-reward-body">
-        <div class="tdr-session-head"><small>RECOMPENSAS TOTALES</small><strong data-a="total">${total} PIEZAS</strong></div>
+        <div class="tdr-session-head"><small>RECOMPENSAS TOTALES</small><strong data-a="total">${total} ${total===1?'PIEZA':'PIEZAS'}</strong></div>
         <div class="tdr-session-grid">${rewardRows}</div>
       </div>
     </main>
     <footer class="tdr-session-footer">
       <div class="tdr-session-meta"><span class="tdr-session-chip">🏁 ${Math.max(0,Number(laps)||0)} VUELTAS PREMIADAS</span>${Number(bonusLaps)>0?`<span class="tdr-session-chip">⚡ ${Math.max(0,Number(bonusLaps)||0)} BONUS</span>`:''}${hasChest?`<span class="tdr-session-chip">▣ COFRE ${tier}</span>`:''}</div>
       ${doubleButton}
-      <button class="tdr-session-next" data-a="next">${esc(resultLabel)}</button>
+      <button class="tdr-session-next" data-a="next"><strong>${doubleEnabled?'NO, GRACIAS':esc(resultLabel)}</strong>${doubleEnabled?`<small>${esc(resultLabel)}</small>`:''}</button>
+      ${doubleEnabled?'<div class="tdr-x2-note">ⓘ Puedes duplicar tu botín una vez por carrera.</div>':''}
     </footer>
   </section>`;
 
-  const card=root.querySelector('.tdr-session-card'),open=root.querySelector('[data-a="open"]'),next=root.querySelector('[data-a="next"]'),close=root.querySelector('[data-a="close"]'),doubleBtn=root.querySelector('[data-a="double"]'),doubleMain=root.querySelector('[data-a="double-main"]'),doubleSub=root.querySelector('[data-a="double-sub"]'),totalEl=root.querySelector('[data-a="total"]');
+  const card=root.querySelector('.tdr-session-card'),open=root.querySelector('[data-a="open"]'),next=root.querySelector('[data-a="next"]'),close=root.querySelector('[data-a="close"]'),doubleBtn=root.querySelector('[data-a="double"]'),doubleMain=root.querySelector('[data-a="double-main"]'),doubleSub=root.querySelector('[data-a="double-sub"]'),doubleX=root.querySelector('[data-a="double-x"]'),totalEl=root.querySelector('[data-a="total"]');
   let opened=!hasChest,finished=false,doubling=false,doubled=false;
-  const revealDouble=()=>{if(!doubleBtn||doubled)return;doubleBtn.style.opacity='1';doubleBtn.style.pointerEvents='auto';};
+  const revealDouble=()=>{if(!doubleBtn||doubled)return;doubleBtn.classList.add('is-ready');};
   const reveal=()=>{
     if(opened)return;
     opened=true;
@@ -77,12 +91,11 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
   const resetDoubleButton=()=>{
     if(!doubleBtn||doubled)return;
     doubleBtn.disabled=false;
-    doubleBtn.style.opacity='1';
-    doubleBtn.style.pointerEvents='auto';
-    doubleBtn.style.borderColor='#f6c94c';
-    doubleBtn.style.background='linear-gradient(180deg,#503d09,#251c05)';
-    if(doubleMain)doubleMain.textContent='▶ ×2 DUPLICAR BOTÍN';
-    if(doubleSub)doubleSub.textContent='ANUNCIO RECOMPENSADO · OPCIONAL';
+    doubleBtn.classList.remove('is-loading','is-failed','is-doubled');
+    doubleBtn.classList.add('is-ready');
+    if(doubleX)doubleX.textContent='×2';
+    if(doubleMain)doubleMain.textContent='DUPLICAR BOTÍN';
+    if(doubleSub)doubleSub.textContent='MIRA UN ANUNCIO RECOMPENSADO';
   };
   const applyDoubledVisuals=()=>{
     doubled=true;
@@ -91,30 +104,33 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
       const qtyEl=row.querySelector('.tdr-session-qty');
       if(qtyEl)qtyEl.textContent=`×${qty*2}`;
     }
-    if(totalEl)totalEl.textContent=`${total*2} PIEZAS`;
+    if(totalEl)totalEl.textContent=`${total*2} ${total*2===1?'PIEZA':'PIEZAS'}`;
     if(doubleBtn){
       doubleBtn.disabled=true;
-      doubleBtn.style.pointerEvents='none';
-      doubleBtn.style.opacity='1';
-      doubleBtn.style.borderColor='#62edbd';
-      doubleBtn.style.background='linear-gradient(180deg,#164c3d,#0b2c25)';
+      doubleBtn.classList.remove('is-loading','is-failed','is-ready');
+      doubleBtn.classList.add('is-doubled');
     }
-    if(doubleMain)doubleMain.textContent='✓ BOTÍN DUPLICADO';
+    if(doubleX)doubleX.textContent='✓';
+    if(doubleMain)doubleMain.textContent='BOTÍN DUPLICADO';
     if(doubleSub)doubleSub.textContent='RECOMPENSA CONCEDIDA';
+    card?.classList.add('reward-doubled');
   };
   const requestDouble=async()=>{
     if(!opened||doubling||doubled||finished||!doubleEnabled)return;
     doubling=true;
-    if(doubleBtn){doubleBtn.disabled=true;doubleBtn.style.pointerEvents='none';doubleBtn.style.opacity='.72';}
+    if(doubleBtn){doubleBtn.disabled=true;doubleBtn.classList.remove('is-ready','is-failed');doubleBtn.classList.add('is-loading');}
+    if(doubleX)doubleX.textContent='…';
     if(doubleMain)doubleMain.textContent='CARGANDO ANUNCIO…';
     if(doubleSub)doubleSub.textContent='NO CIERRES ESTA PANTALLA';
     let result=null;
     try{result=await onDouble();}catch(error){console.error('[post-race-x2] UI callback failed',error);}
     doubling=false;
     if(result?.ok){applyDoubledVisuals();return;}
+    if(doubleBtn){doubleBtn.disabled=false;doubleBtn.classList.remove('is-loading');doubleBtn.classList.add('is-failed');}
+    if(doubleX)doubleX.textContent='!';
     if(doubleMain)doubleMain.textContent='ANUNCIO NO COMPLETADO';
-    if(doubleSub)doubleSub.textContent='CONSERVAS TODO TU BOTÍN · PUEDES REINTENTAR';
-    setTimeout(resetDoubleButton,1400);
+    if(doubleSub)doubleSub.textContent='CONSERVAS TU BOTÍN · PUEDES REINTENTAR';
+    setTimeout(resetDoubleButton,1500);
   };
   const finish=()=>{if(finished||doubling)return;finished=true;try{root.remove();}catch{}onFinish();};
   open?.addEventListener('click',reveal,{once:true});
@@ -123,5 +139,6 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
   next?.addEventListener('click',finish);
   close?.addEventListener('click',finish);
   document.body.appendChild(root);
+  if(!hasChest)requestAnimationFrame(()=>revealDouble());
   return root;
 }
