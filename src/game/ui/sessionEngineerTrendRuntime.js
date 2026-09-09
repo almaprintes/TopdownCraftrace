@@ -44,8 +44,6 @@ function findLapContainer(lapLeaf){
     const leaves=leafTexts(node);
     const lapLeaves=leaves.filter(x=>/^V\d{1,3}$/i.test(x.text));
     const timeLeaves=leaves.filter(x=>Number.isFinite(parseTime(x.text)));
-    // A real lap row has exactly one Vn label and at least TOTAL plus sectors.
-    // Stop before reaching a parent that contains several complete lap rows.
     if(lapLeaves.length===1&&timeLeaves.length>=1&&timeLeaves.length<=5)return node;
     if(lapLeaves.length>1)break;
   }
@@ -60,45 +58,16 @@ function extractRows(root){
     if(!Number.isInteger(lap)||lap<=0)continue;
     const row=findLapContainer(lapLeaf.el);
     if(!row)continue;
-    const leaves=leafTexts(row);
-    const values=leaves
+    const values=leafTexts(row)
       .filter(x=>x.el!==lapLeaf.el)
       .map(x=>x.text)
       .filter(text=>Number.isFinite(parseTime(text)));
     if(!values.length)continue;
     const total=parseTime(values[values.length-1]);
     if(!Number.isFinite(total)||total<=0)continue;
-    const sectorValues=values.length>=4?values.slice(values.length-4,values.length-1):values.slice(0,-1);
-    const sectors=sectorValues.map(parseTime).filter(Number.isFinite);
-    byLap.set(lap,{lap,total,sectors,row});
+    byLap.set(lap,{lap,total});
   }
   return [...byLap.values()].sort((a,b)=>a.lap-b.lap);
-}
-
-function improvedProgressionText(rows,currentText){
-  if(rows.length<2)return currentText;
-  const first=rows[0];
-  const best=rows.reduce((a,b)=>b.total<a.total?b:a,rows[0]);
-  if(best.lap===first.lap||best.total>=first.total)return currentText;
-  const gainMs=first.total-best.total;
-  const gainPct=gainMs/first.total*100;
-  const after=rows.filter(r=>r.lap>best.lap);
-  let suffix='';
-  if(after.length){
-    const last=after[after.length-1];
-    const loss=last.total-best.total;
-    if(loss>120){
-      let sectorNote='';
-      if(best.sectors.length===3&&last.sectors.length===3){
-        const deltas=last.sectors.map((v,i)=>v-best.sectors[i]);
-        const max=Math.max(...deltas);
-        const idx=deltas.indexOf(max);
-        if(max>100)sectorNote=` La mayor pérdida llegó en S${idx+1}.`;
-      }
-      suffix=` Después cediste ${fmtMs(loss)} s respecto a esa referencia.${sectorNote}`;
-    }
-  }
-  return `Gran progresión: bajaste de ${fmtMs(first.total)} s en V${first.lap} a ${fmtMs(best.total)} s en V${best.lap}, una mejora del ${gainPct.toFixed(1).replace('.',',')} %.${suffix}`;
 }
 
 function median(values){
@@ -109,9 +78,6 @@ function median(values){
 
 function chartScale(times){
   const med=median(times);
-  // A stopped/spun lap can be perfectly valid telemetry but would flatten every
-  // normal lap into a straight line. Keep the point visible at the graph ceiling
-  // while scaling the useful racing range from the non-extreme laps.
   const regular=times.filter(v=>v<=med*2);
   const basis=regular.length>=2?regular:times;
   const min=Math.min(...basis),max=Math.max(...basis);
@@ -123,8 +89,6 @@ function makeSvg(rows){
   const times=rows.map(r=>r.total),bestMs=Math.min(...times);
   const scale=chartScale(times),span=Math.max(1,scale.max-scale.min);
   const x=i=>rows.length===1?w/2:padX+i*((w-padX*2)/(rows.length-1));
-  // Faster laps descend, like a performance trend. Extreme slow laps are clipped
-  // to the top edge so they remain obvious without destroying useful resolution.
   const y=value=>{
     const clipped=Math.min(scale.max,Math.max(scale.min,value));
     return padTop+((scale.max-clipped)/span)*(h-padTop-padBottom);
@@ -143,9 +107,9 @@ function makeSvg(rows){
     line.setAttribute('x1',String(padX));line.setAttribute('x2',String(w-padX));line.setAttribute('y1',String(gy));line.setAttribute('y2',String(gy));line.setAttribute('stroke','rgba(255,255,255,.07)');line.setAttribute('stroke-width','1');
     svg.appendChild(line);
   }
-  const points=rows.map((r,i)=>`${x(i)},${y(r.total)}`).join(' ');
   const poly=document.createElementNS(NS,'polyline');
-  poly.setAttribute('points',points);poly.setAttribute('fill','none');poly.setAttribute('stroke','#5fe3c0');poly.setAttribute('stroke-width','4');poly.setAttribute('stroke-linecap','round');poly.setAttribute('stroke-linejoin','round');
+  poly.setAttribute('points',rows.map((r,i)=>`${x(i)},${y(r.total)}`).join(' '));
+  poly.setAttribute('fill','none');poly.setAttribute('stroke','#5fe3c0');poly.setAttribute('stroke-width','4');poly.setAttribute('stroke-linecap','round');poly.setAttribute('stroke-linejoin','round');
   svg.appendChild(poly);
   rows.forEach((r,i)=>{
     const cx=x(i),cy=y(r.total),best=i===bestIndex,extreme=r.total>scale.max;
@@ -166,23 +130,15 @@ function patchCard(root){
   const heading=findReadingHeading(root);if(!heading)return;
   const card=findReadingCard(heading);if(!card)return;
   const rows=extractRows(root);if(rows.length<2)return;
-  let graph=card.querySelector('[data-tdr-session-trend="1"]');
-  if(!graph){
-    graph=document.createElement('div');
-    graph.dataset.tdrSessionTrend='1';
-    graph.style.cssText='margin:12px 0 14px;padding:10px 12px 6px;border-radius:14px;background:linear-gradient(180deg,rgba(10,28,45,.82),rgba(6,18,31,.62));border:1px solid rgba(95,227,192,.22);box-shadow:inset 0 0 22px rgba(51,201,169,.04)';
-    const cap=document.createElement('div');
-    cap.textContent='EVOLUCIÓN DE LA TANDA · MENOR TIEMPO = MEJOR';
-    cap.style.cssText='font:800 11px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:.12em;color:#8fa4b8;margin:0 0 5px 2px';
-    graph.append(cap,makeSvg(rows));
-    heading.insertAdjacentElement('afterend',graph);
-  }
-  const leaves=[...card.querySelectorAll('*')].filter(el=>!el.children.length&&el!==heading&&!graph.contains(el));
-  const body=leaves.map(el=>({el,text:textOf(el)})).filter(x=>x.text.length>20).sort((a,b)=>b.text.length-a.text.length)[0];
-  if(body){
-    const next=improvedProgressionText(rows,body.text);
-    if(next!==body.text)body.el.textContent=next;
-  }
+  if(card.querySelector('[data-tdr-session-trend="1"]'))return;
+  const graph=document.createElement('div');
+  graph.dataset.tdrSessionTrend='1';
+  graph.style.cssText='margin:12px 0 14px;padding:10px 12px 6px;border-radius:14px;background:linear-gradient(180deg,rgba(10,28,45,.82),rgba(6,18,31,.62));border:1px solid rgba(95,227,192,.22);box-shadow:inset 0 0 22px rgba(51,201,169,.04)';
+  const cap=document.createElement('div');
+  cap.textContent='EVOLUCIÓN DE LA TANDA · MENOR TIEMPO = MEJOR';
+  cap.style.cssText='font:800 11px/1.2 system-ui,-apple-system,sans-serif;letter-spacing:.12em;color:#8fa4b8;margin:0 0 5px 2px';
+  graph.append(cap,makeSvg(rows));
+  heading.insertAdjacentElement('afterend',graph);
 }
 
 function scan(){
