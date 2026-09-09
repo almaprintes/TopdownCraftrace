@@ -64,6 +64,27 @@ function patchWholeDocument(reading){
 }
 
 export class RaceScene extends CurrentRaceScene {
+  _openPauseMenu(...args){
+    const alreadyPaused=this._tdrPauseMenuOpen===true||!!this._experiencePauseUi?.root?.isConnected;
+    if(!alreadyPaused&&!Number.isFinite(this._tdrPauseTimingStartedAt)){
+      this._tdrPauseTimingStartedAt=performance.now();
+    }
+    return super._openPauseMenu?.(...args);
+  }
+
+  _closePauseMenu(resume=true){
+    const startedAt=Number(this._tdrPauseTimingStartedAt);
+    const pausedMs=Number.isFinite(startedAt)?Math.max(0,performance.now()-startedAt):0;
+    const result=super._closePauseMenu?.(resume);
+    if(resume!==false){
+      this._tdrPauseTimingStartedAt=NaN;
+      if(pausedMs>0&&Number.isFinite(this.timing?.lapStart)){
+        this.timing.lapStart+=pausedMs;
+      }
+    }
+    return result;
+  }
+
   _armSessionExportReadingBridge(){
     const modal=this._sessionReportModal;
     if(!modal?.querySelectorAll||modal.dataset?.tdrExportReadingBridge==='1')return;
