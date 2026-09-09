@@ -68,21 +68,33 @@ export class RaceScene extends CurrentRaceScene {
     const alreadyPaused=this._tdrPauseMenuOpen===true||!!this._experiencePauseUi?.root?.isConnected;
     if(!alreadyPaused&&!Number.isFinite(this._tdrPauseTimingStartedAt)){
       this._tdrPauseTimingStartedAt=performance.now();
+      this._tdrPauseTimingStartedTick=Number.isFinite(Number(this.simTick))?Number(this.simTick):null;
     }
     return super._openPauseMenu?.(...args);
   }
 
   _closePauseMenu(resume=true){
     const startedAt=Number(this._tdrPauseTimingStartedAt);
+    const startedTick=Number(this._tdrPauseTimingStartedTick);
     const pausedMs=Number.isFinite(startedAt)?Math.max(0,performance.now()-startedAt):0;
-    const result=super._closePauseMenu?.(resume);
+    const currentTick=Number(this.simTick);
+    const pausedTicks=Number.isFinite(startedTick)&&Number.isFinite(currentTick)?Math.max(0,currentTick-startedTick):0;
+
+    // Physics pause stops the car but the base timing clocks keep advancing.
+    // Advance BOTH timing origins before resuming so menu time never enters
+    // lap/sector times, history, ghost timing or telemetry tick deltas.
     if(resume!==false){
-      this._tdrPauseTimingStartedAt=NaN;
-      if(pausedMs>0&&Number.isFinite(this.timing?.lapStart)){
+      if(pausedMs>0&&this.timing?.started&&Number.isFinite(this.timing?.lapStart)){
         this.timing.lapStart+=pausedMs;
       }
+      if(pausedTicks>0&&Number.isFinite(this.lapStartTick)){
+        this.lapStartTick+=pausedTicks;
+      }
+      this._tdrPauseTimingStartedAt=NaN;
+      this._tdrPauseTimingStartedTick=null;
     }
-    return result;
+
+    return super._closePauseMenu?.(resume);
   }
 
   _armSessionExportReadingBridge(){
