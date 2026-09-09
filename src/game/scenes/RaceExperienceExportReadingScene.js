@@ -34,22 +34,32 @@ function patchReadingInTree(root,reading){
     }
   }
 
-  // Some export layouts build the reading card with a heading and a generic
-  // sentence that may change wording. Patch that card too, but only inside a
-  // scope explicitly headed "LECTURA DE LA TANDA".
+  // The export layout is rebuilt independently from the visible report. Inside
+  // the card headed "LECTURA DE LA TANDA", force its narrative body to the
+  // exact telemetry-driven sentence currently shown to the player, regardless
+  // of the placeholder/legacy wording used by the export template.
   const leaves=nodes.filter(el=>!el?.children?.length);
   const headings=leaves.filter(el=>normalized(el?.textContent)==='LECTURA DE LA TANDA');
   for(const heading of headings){
     let scope=heading.parentElement;
     for(let depth=0;scope&&depth<4;depth++,scope=scope.parentElement){
       const candidates=[...scope.querySelectorAll('*')]
-        .filter(el=>!el.children?.length&&el!==heading)
-        .map(el=>({el,text:String(el.textContent||'').trim()}))
-        .filter(row=>row.text.length>=4&&normalized(row.text)!=='LECTURA DE LA TANDA');
-      const generic=candidates.find(row=>/SESI[ÓO]N DE REFERENCIA/i.test(row.text));
-      if(generic){
-        generic.el.textContent=reading;
-        generic.el.dataset.tdrDynamicSessionReading='1';
+        .filter(el=>!el.children?.length&&el!==heading&&!el.closest?.('[data-tdr-session-trend="1"]'))
+        .map(el=>({el,text:String(el.textContent||'').replace(/\s+/g,' ').trim()}))
+        .filter(row=>{
+          const key=normalized(row.text);
+          return row.text.length>20&&
+            key!=='LECTURA DE LA TANDA'&&
+            !key.startsWith('EVOLUCIÓN DE LA TANDA')&&
+            !key.startsWith('EVOLUCION DE LA TANDA');
+        });
+      const target=
+        candidates.find(row=>row.el.dataset?.tdrDynamicSessionReading==='1')||
+        candidates.find(row=>/SESI[ÓO]N DE REFERENCIA/i.test(row.text))||
+        candidates.sort((a,b)=>b.text.length-a.text.length)[0];
+      if(target){
+        if(target.text!==reading)target.el.textContent=reading;
+        target.el.dataset.tdrDynamicSessionReading='1';
         changed=true;
         break;
       }
