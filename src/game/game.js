@@ -24,19 +24,17 @@ const LAZY_SCENES={
   TrackGarageScene:{load:()=>import('./scenes/TrackGarageAndroidTouchScene.js'),exportName:'TrackGarageScene',warm:60},
   race:{
     load:async()=>{
-      const [{RaceScene},{installExactRuntimeBeautyPass},{installRaceEnvironmentRuntime},{installRaceLoadingExperience},{installLiveDeltaReferenceRuntime},{installLapGhostRuntime}]=await Promise.all([
+      const [{RaceScene},{installExactRuntimeBeautyPass},{installRaceEnvironmentRuntime},{installRaceLoadingExperience},{installLiveDeltaReferenceRuntime}]=await Promise.all([
         import('./scenes/RaceExperienceExportReadingScene.js'),
         import('./scenes/raceExactRuntimeBeautyPass.js'),
         import('./scenes/raceEnvironmentRuntime.js'),
         import('./ui/raceLoadingExperience.js'),
-        import('./ui/liveDeltaReferenceRuntime.js'),
-        import('./ui/lapGhostRuntime.js')
+        import('./ui/liveDeltaReferenceRuntime.js')
       ]);
       installRaceEnvironmentRuntime(RaceScene);
       installExactRuntimeBeautyPass(RaceScene);
       installRaceLoadingExperience(RaceScene);
       installLiveDeltaReferenceRuntime(RaceScene);
-      installLapGhostRuntime(RaceScene);
       return {RaceScene};
     },
     exportName:'RaceScene',warm:70
