@@ -12,7 +12,8 @@ function raceControlsRoot(){
 
 function isRaceVisible(){
   const controls=raceControlsRoot();
-  if(!controls?.isConnected)return false;
+  const hud=document.querySelector('.tdr-race-hud');
+  if(!controls?.isConnected||!hud?.isConnected)return false;
   const style=getComputedStyle(controls);
   if(style.display==='none'||style.visibility==='hidden')return false;
   if(document.getElementById('tdrStartup'))return false;
@@ -170,7 +171,7 @@ function polishPanel(panel){
   const label=kids[0],value=kids[1],state=kids[2],rail=kids[3];
   const estimated=String(label?.textContent||'').toUpperCase().includes('ESTIMACIÓN');
   if(estimated&&label&&value&&state){
-    label.textContent='VS MEJOR VUELTA';
+    label.textContent='VS MEJOR DE SESIÓN';
     value.textContent='SIN REFERENCIA';
     value.style.color='#ffffff';
     value.style.fontSize='clamp(18px, 2.1vw, 25px)';
@@ -202,7 +203,6 @@ function positionPanel(panel,control){
   panel.style.setProperty('transform-origin','top right','important');
   panel.style.setProperty('transition','transform .22s cubic-bezier(.2,.8,.2,1), opacity .18s ease','important');
   panel.style.setProperty('z-index','2147483050','important');
-  // It visually lives under the HUD/control instead of floating in the track.
   if(enabled&&isRaceVisible()){
     panel.style.setProperty('visibility','visible','important');
     panel.style.setProperty('transform','translateY(0)','important');
@@ -210,8 +210,7 @@ function positionPanel(panel,control){
   }else{
     panel.style.setProperty('transform','translateY(calc(-100% - 6px))','important');
     panel.style.setProperty('opacity','0','important');
-    // Keep it mounted so the slide-out animation can complete.
-    panel.style.setProperty('visibility','visible','important');
+    panel.style.setProperty('visibility','hidden','important');
   }
 }
 
@@ -221,7 +220,7 @@ function apply(){
   const race=isRaceVisible();
 
   retireLegacyDomDelta();
-  positionControl(root);
+  if(race)positionControl(root);
   if(!race&&lastRace)enabled=false;
   lastRace=race;
   root.style.display=race?'flex':'none';
@@ -237,18 +236,18 @@ function apply(){
     panel.dataset.tdrUserDeltaEnabled=enabled?'1':'0';
     polishPanel(panel);
     positionPanel(panel,root);
-    if(!race){
-      panel.style.setProperty('opacity','0','important');
-      panel.style.setProperty('transform','translateY(calc(-100% - 6px))','important');
-    }
   }
 }
 
 function frame(){
   const panel=document.getElementById(DELTA_PANEL_ID);
   const root=document.getElementById(CONTROL_ID);
+  const race=isRaceVisible();
   retireLegacyDomDelta();
-  if(root&&isRaceVisible())positionControl(root);
+  if(root){
+    if(race)positionControl(root);
+    else root.style.display='none';
+  }
   if(panel&&root){polishPanel(panel);positionPanel(panel,root);}
   raf=requestAnimationFrame(frame);
 }
