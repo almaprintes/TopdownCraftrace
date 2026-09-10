@@ -1,10 +1,12 @@
 export function hideRaceUi(scene){
   const state={raceHud:null,dom:[],phaser:[],uiCameraVisible:null};
+  let raceHud=null;
   try{
     const hud=scene?._raceHudDom||document.querySelector('.tdr-race-hud');
-    if(hud?.isConnected){
-      state.raceHud={el:hud,display:hud.style.display,priority:hud.style.getPropertyPriority('display')};
-      hud.style.setProperty('display','none','important');
+    raceHud=hud?.isConnected?hud:null;
+    if(raceHud){
+      state.raceHud={el:raceHud,display:raceHud.style.display,priority:raceHud.style.getPropertyPriority('display')};
+      raceHud.style.setProperty('display','none','important');
     }
   }catch{}
 
@@ -30,6 +32,10 @@ export function hideRaceUi(scene){
   try{
     for(const el of document.querySelectorAll('[data-tdr-race-ui="1"]')){
       if(!el?.style)continue;
+      // The instrument HUD is already snapshotted above. Recording it again
+      // here would capture the temporary display:none state we just applied,
+      // so restoreRaceUi would show it and immediately hide it again.
+      if(el===raceHud)continue;
       state.dom.push({el,display:el.style.display,priority:el.style.getPropertyPriority('display')});
       el.style.setProperty('display','none','important');
     }
