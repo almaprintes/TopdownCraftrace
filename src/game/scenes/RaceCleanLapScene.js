@@ -21,7 +21,35 @@ export class RaceScene extends CurrentRaceScene {
     this._liveHudClosedForSessionEnd=false;
     this._feedbackBestLapMs=Number.isFinite(Number(this.ttBest?.lapMs))?Number(this.ttBest.lapMs):null;
     this._feedbackSessionBestMs=null;
+    this._retireLegacyDeltaHud();
     return result;
+  }
+
+  _retireLegacyDeltaHud(){
+    try{
+      const flat=[];
+      const visit=node=>{
+        if(!node)return;
+        flat.push(node);
+        if(Array.isArray(node.list))for(const child of node.list)visit(child);
+      };
+      for(const child of this.children?.list||[])visit(child);
+      const labels=flat.filter(child=>String(child?.text||'').trim().toUpperCase()==='DELTA');
+      for(const label of labels){
+        const lx=Number(label?.x),ly=Number(label?.y);
+        try{label.setVisible?.(false);}catch{}
+        // Retire the value immediately beneath the legacy DELTA heading while
+        // leaving LAST/BEST and unrelated HUD text untouched.
+        for(const candidate of flat){
+          if(candidate===label||typeof candidate?.text!=='string')continue;
+          const x=Number(candidate?.x),y=Number(candidate?.y);
+          if(![lx,ly,x,y].every(Number.isFinite))continue;
+          if(Math.abs(x-lx)<=44&&y>ly&&y-ly<=34){
+            try{candidate.setVisible?.(false);}catch{}
+          }
+        }
+      }
+    }catch{}
   }
 
   _closeLiveHudForSessionEnd(){
@@ -35,6 +63,12 @@ export class RaceScene extends CurrentRaceScene {
     try{this._raceHudDom?.remove?.();}catch{}
     this._raceHudDom=null;
     this._updateSimpleRaceHud=()=>{};
+    try{
+      const panel=document.getElementById('tdr-live-delta-panel');
+      const toggle=document.getElementById('tdr-live-delta-toggle');
+      if(panel)panel.style.setProperty('visibility','hidden','important');
+      if(toggle)toggle.style.setProperty('display','none','important');
+    }catch{}
   }
 
   _retireLegacyRecordNotice(){
@@ -72,6 +106,7 @@ export class RaceScene extends CurrentRaceScene {
 
   update(time,delta){
     super.update?.(time,delta);
+    this._retireLegacyDeltaHud();
     this._closeLiveHudForSessionEnd();
     this._cleanLapAccum+=Math.max(0,Number(delta)||0);
     if(this._cleanLapAccum<CLEAN_SAMPLE_MS)return;
