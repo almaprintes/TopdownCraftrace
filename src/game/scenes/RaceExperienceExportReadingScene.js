@@ -95,6 +95,37 @@ function sessionEngineerReading(report,scene){
   return`Tu mejor vuelta fue ${bestLabel}. Hay rendimiento, pero todavía existe variación entre vueltas; el siguiente paso es convertir esa vuelta rápida en ritmo repetible.`;
 }
 
+function clamp01(value){
+  const n=Number(value);
+  return Number.isFinite(n)?Math.max(0,Math.min(1,n)):0;
+}
+
+function formatDelta(ms,approx=false){
+  const value=Number(ms);
+  if(!Number.isFinite(value))return'Δ —';
+  const sign=value>0?'+':value<0?'−':'±';
+  return`Δ${approx?'~':''} ${sign}${(Math.abs(value)/1000).toFixed(3)}`;
+}
+
+function interpolateTrace(trace,progress){
+  if(!Array.isArray(trace)||trace.length<2)return null;
+  const p=clamp01(progress);
+  let previous=trace[0];
+  for(let i=1;i<trace.length;i++){
+    const next=trace[i];
+    if(p<=Number(next?.p)){
+      const p0=Number(previous?.p),p1=Number(next?.p);
+      const t0=Number(previous?.t),t1=Number(next?.t);
+      if(![p0,p1,t0,t1].every(Number.isFinite)||p1<=p0)return Number.isFinite(t1)?t1:null;
+      const f=Math.max(0,Math.min(1,(p-p0)/(p1-p0)));
+      return t0+(t1-t0)*f;
+    }
+    previous=next;
+  }
+  const last=trace[trace.length-1];
+  return Number.isFinite(Number(last?.t))?Number(last.t):null;
+}
+
 // Final authority for the session report narrative. The legacy report exporter
 // serializes the report object created by _buildReport(), so the engineer text
 // must live in report.verdict BEFORE either the visible DOM or exported asset is
@@ -146,5 +177,122 @@ export class RaceScene extends CurrentRaceScene {
     }
 
     return super._closePauseMenu?.(resume);
+  }
+
+  _tdrDeltaStorageKey(){
+    const track=String(this.trackKey||this.track?.key||this.track?.id||'track');
+    return`tdr2:liveDeltaTrace:v1:${track}`;
+  }
+
+  _tdrEnsureLiveDeltaUi(){
+    if(this._tdrLiveDeltaText?.active)return this._tdrLiveDeltaText;
+    const anchor=this.ttHud?.timeText||this.ttHud?.bestLapText;
+    if(!anchor||typeof this.add?.text!=='function')return null;
+    const x=Number(anchor.x)||0;
+    const y=(Number(anchor.y)||0)+(Number(anchor.height)||24)+2;
+    const size=Math.max(13,Math.min(18,Math.round(Number(anchor.style?.fontSize)||16)));
+    const text=this.add.text(x,y,'Δ —',{
+      fontFamily:'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontSize:`${size}px`,fontStyle:'bold',color:'#ffffff',stroke:'#000000',strokeThickness:2
+    }).setOrigin(Number(anchor.originX)||0.5,0).setScrollFactor(0).setDepth(2001).setVisible(false);
+    try{this.mainCam?.ignore?.(text);}catch{}
+    this._tdrLiveDeltaText=text;
+    return text;
+  }
+
+  _tdrLoadDeltaReference(bestMs){
+    const lapMs=Number(bestMs);
+    if(!Number.isFinite(lapMs)||lapMs<=0)return null;
+    if(this._tdrDeltaReference&&Math.abs(Number(this._tdrDeltaReference.lapMs)-lapMs)<=5)return this._tdrDeltaReference;
+    try{
+      const stored=JSON.parse(localStorage.getItem(this._tdrDeltaStorageKey())||'null');
+      if(stored&&Math.abs(Number(stored.lapMs)-lapMs)<=5&&Array.isArray(stored.trace)&&stored.trace.length>=2){
+        this._tdrDeltaReference={lapMs:Number(stored.lapMs),trace:stored.trace};
+        return this._tdrDeltaReference;
+      }
+    }catch{}
+    this._tdrDeltaReference=null;
+    return null;
+  }
+
+  _tdrSaveBestDeltaTrace(lapMs,trace){
+    const total=Number(lapMs);
+    if(!Number.isFinite(total)||total<=0||!Array.isArray(trace)||trace.length<2)return;
+    const clean=[{p:0,t:0}];
+    for(const sample of trace){
+      const p=clamp01(sample?.p),t=Number(sample?.t);
+      if(!Number.isFinite(t)||t<0||p<=clean[clean.length-1].p)continue;
+      clean.push({p:Number(p.toFixed(5)),t:Math.round(t)});
+    }
+    if(clean[clean.length-1].p<0.999)clean.push({p:1,t:Math.round(total)});
+    else clean[clean.length-1]={p:1,t:Math.round(total)};
+    if(clean.length<3)return;
+    const payload={lapMs:Math.round(total),trace:clean};
+    try{localStorage.setItem(this._tdrDeltaStorageKey(),JSON.stringify(payload));}catch{}
+    this._tdrDeltaReference=payload;
+  }
+
+  _tdrSampleDeltaLap(now){
+    const lapStart=Number(this.timing?.lapStart);
+    if(!this.timing?.started||!Number.isFinite(lapStart))return;
+    if(this._tdrDeltaLapStart!==lapStart){
+      this._tdrDeltaLapStart=lapStart;
+      this._tdrDeltaCurrentTrace=[];
+    }
+    const progress=clamp01(this.ttHud?.progress01);
+    const elapsed=Math.max(0,Number(now)-lapStart);
+    if(!Number.isFinite(elapsed)||progress<=0)return;
+    const trace=this._tdrDeltaCurrentTrace||(this._tdrDeltaCurrentTrace=[]);
+    const last=trace[trace.length-1];
+    if(!last||progress-last.p>=0.004){
+      trace.push({p:progress,t:elapsed});
+      if(trace.length>320)trace.splice(1,1);
+    }
+  }
+
+  _tdrRenderLiveDelta(now){
+    const text=this._tdrEnsureLiveDeltaUi();
+    if(!text)return;
+    const bestMs=Number(this.ttBest?.lapMs);
+    const lapStart=Number(this.timing?.lapStart);
+    const progress=clamp01(this.ttHud?.progress01);
+    if(!this.timing?.started||!Number.isFinite(lapStart)||!Number.isFinite(bestMs)||bestMs<=0||progress<0.01){
+      text.setVisible(false);
+      return;
+    }
+    const elapsed=Math.max(0,Number(now)-lapStart);
+    const reference=this._tdrLoadDeltaReference(bestMs);
+    const referenceMs=reference?interpolateTrace(reference.trace,progress):bestMs*progress;
+    if(!Number.isFinite(referenceMs)){
+      text.setVisible(false);
+      return;
+    }
+    const delta=elapsed-referenceMs;
+    text.setText(formatDelta(delta,!reference));
+    text.setColor(delta<-15?'#37e87c':delta>15?'#ff5c70':'#ffffff');
+    text.setVisible(true);
+  }
+
+  update(time,delta){
+    const now=performance.now();
+    const historyBefore=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
+    this._tdrSampleDeltaLap(now);
+    const completedTrace=Array.isArray(this._tdrDeltaCurrentTrace)?this._tdrDeltaCurrentTrace.slice():[];
+    const result=super.update?.(time,delta);
+
+    const historyAfter=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
+    if(historyAfter>historyBefore){
+      const row=this.ttHistory[historyAfter-1];
+      const lapMs=Number(row?.lapMs);
+      const bestMs=Number(this.ttBest?.lapMs);
+      if(Number.isFinite(lapMs)&&lapMs>0&&Number.isFinite(bestMs)&&Math.abs(lapMs-bestMs)<=5){
+        this._tdrSaveBestDeltaTrace(lapMs,completedTrace);
+      }
+      this._tdrDeltaLapStart=Number(this.timing?.lapStart);
+      this._tdrDeltaCurrentTrace=[];
+    }
+
+    this._tdrRenderLiveDelta(performance.now());
+    return result;
   }
 }
