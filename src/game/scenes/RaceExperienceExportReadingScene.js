@@ -100,11 +100,11 @@ function clamp01(value){
   return Number.isFinite(n)?Math.max(0,Math.min(1,n)):0;
 }
 
-function formatDelta(ms,approx=false){
+function formatDeltaValue(ms){
   const value=Number(ms);
-  if(!Number.isFinite(value))return'Δ —';
-  const sign=value>0?'+':value<0?'−':'±';
-  return`Δ${approx?'~':''} ${sign}${(Math.abs(value)/1000).toFixed(3)}`;
+  if(!Number.isFinite(value))return'—';
+  const sign=value>15?'+':value<-15?'−':'±';
+  return`${sign}${(Math.abs(value)/1000).toFixed(3)} s`;
 }
 
 function interpolateTrace(trace,progress){
@@ -185,19 +185,83 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _tdrEnsureLiveDeltaUi(){
-    if(this._tdrLiveDeltaText?.active)return this._tdrLiveDeltaText;
-    const anchor=this.ttHud?.timeText||this.ttHud?.bestLapText;
-    if(!anchor||typeof this.add?.text!=='function')return null;
-    const x=Number(anchor.x)||0;
-    const y=(Number(anchor.y)||0)+(Number(anchor.height)||24)+2;
-    const size=Math.max(13,Math.min(18,Math.round(Number(anchor.style?.fontSize)||16)));
-    const text=this.add.text(x,y,'Δ —',{
-      fontFamily:'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-      fontSize:`${size}px`,fontStyle:'bold',color:'#ffffff',stroke:'#000000',strokeThickness:2
-    }).setOrigin(Number(anchor.originX)||0.5,0).setScrollFactor(0).setDepth(2001).setVisible(false);
-    try{this.mainCam?.ignore?.(text);}catch{}
-    this._tdrLiveDeltaText=text;
-    return text;
+    if(typeof document==='undefined')return null;
+    if(this._tdrLiveDeltaUi?.root?.isConnected)return this._tdrLiveDeltaUi;
+
+    const parent=this.game?.canvas?.parentElement||document.body;
+    const root=document.createElement('div');
+    root.id='tdr-live-delta-panel';
+    root.setAttribute('aria-hidden','true');
+    Object.assign(root.style,{
+      position:'absolute',
+      left:'50%',
+      top:'calc(env(safe-area-inset-top, 0px) + 86px)',
+      transform:'translateX(-50%)',
+      width:'clamp(190px, 25vw, 292px)',
+      minWidth:'190px',
+      boxSizing:'border-box',
+      padding:'7px 12px 8px',
+      borderRadius:'12px',
+      border:'1px solid rgba(255,255,255,.18)',
+      background:'linear-gradient(180deg,rgba(6,10,18,.88),rgba(6,10,18,.72))',
+      boxShadow:'0 6px 20px rgba(0,0,0,.30)',
+      backdropFilter:'blur(7px)',
+      WebkitBackdropFilter:'blur(7px)',
+      pointerEvents:'none',
+      zIndex:'2147483000',
+      color:'#fff',
+      fontFamily:'system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+      textAlign:'center',
+      opacity:'0',
+      transition:'opacity .12s ease',
+      userSelect:'none'
+    });
+
+    const label=document.createElement('div');
+    label.textContent='VS MEJOR VUELTA';
+    Object.assign(label.style,{
+      fontSize:'9px',fontWeight:'800',letterSpacing:'.18em',opacity:'.72',lineHeight:'1.15'
+    });
+
+    const value=document.createElement('div');
+    value.textContent='±0.000 s';
+    Object.assign(value.style,{
+      marginTop:'2px',fontSize:'clamp(22px, 2.55vw, 31px)',fontWeight:'900',letterSpacing:'.035em',lineHeight:'1.05',
+      fontVariantNumeric:'tabular-nums',textShadow:'0 2px 4px rgba(0,0,0,.55)'
+    });
+
+    const state=document.createElement('div');
+    state.textContent='IGUALADO';
+    Object.assign(state.style,{
+      marginTop:'2px',fontSize:'9px',fontWeight:'850',letterSpacing:'.12em',lineHeight:'1.15'
+    });
+
+    const rail=document.createElement('div');
+    Object.assign(rail.style,{
+      position:'relative',height:'5px',marginTop:'6px',borderRadius:'999px',background:'rgba(255,255,255,.14)',overflow:'visible'
+    });
+    const center=document.createElement('div');
+    Object.assign(center.style,{
+      position:'absolute',left:'50%',top:'-2px',width:'1px',height:'9px',background:'rgba(255,255,255,.55)',transform:'translateX(-.5px)'
+    });
+    const marker=document.createElement('div');
+    Object.assign(marker.style,{
+      position:'absolute',left:'50%',top:'50%',width:'11px',height:'11px',borderRadius:'50%',transform:'translate(-50%,-50%)',
+      background:'#fff',boxShadow:'0 0 0 2px rgba(0,0,0,.35),0 0 10px rgba(255,255,255,.25)',transition:'left .08s linear, background-color .08s linear'
+    });
+    rail.append(center,marker);
+
+    root.append(label,value,state,rail);
+    parent.appendChild(root);
+
+    const destroy=()=>{
+      try{root.remove();}catch{}
+      if(this._tdrLiveDeltaUi?.root===root)this._tdrLiveDeltaUi=null;
+    };
+    try{this.events?.once?.('shutdown',destroy);this.events?.once?.('destroy',destroy);}catch{}
+
+    this._tdrLiveDeltaUi={root,label,value,state,rail,marker};
+    return this._tdrLiveDeltaUi;
   }
 
   _tdrLoadDeltaReference(bestMs){
@@ -251,26 +315,42 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _tdrRenderLiveDelta(now){
-    const text=this._tdrEnsureLiveDeltaUi();
-    if(!text)return;
+    const ui=this._tdrEnsureLiveDeltaUi();
+    if(!ui)return;
     const bestMs=Number(this.ttBest?.lapMs);
     const lapStart=Number(this.timing?.lapStart);
     const progress=clamp01(this.ttHud?.progress01);
-    if(!this.timing?.started||!Number.isFinite(lapStart)||!Number.isFinite(bestMs)||bestMs<=0||progress<0.01){
-      text.setVisible(false);
+    if(!this.timing?.started||!Number.isFinite(lapStart)||!Number.isFinite(bestMs)||bestMs<=0||progress<0.015){
+      ui.root.style.opacity='0';
       return;
     }
+
     const elapsed=Math.max(0,Number(now)-lapStart);
     const reference=this._tdrLoadDeltaReference(bestMs);
     const referenceMs=reference?interpolateTrace(reference.trace,progress):bestMs*progress;
     if(!Number.isFinite(referenceMs)){
-      text.setVisible(false);
+      ui.root.style.opacity='0';
       return;
     }
+
     const delta=elapsed-referenceMs;
-    text.setText(formatDelta(delta,!reference));
-    text.setColor(delta<-15?'#37e87c':delta>15?'#ff5c70':'#ffffff');
-    text.setVisible(true);
+    const faster=delta<-15;
+    const slower=delta>15;
+    const color=faster?'#43f58b':slower?'#ff5f73':'#ffffff';
+    const state=faster?'GANANDO TIEMPO':slower?'PERDIENDO TIEMPO':'IGUALADO';
+
+    ui.label.textContent=reference?'VS MEJOR VUELTA':'ESTIMACIÓN · VS MEJOR';
+    ui.value.textContent=formatDeltaValue(delta);
+    ui.value.style.color=color;
+    ui.state.textContent=state;
+    ui.state.style.color=color;
+    ui.marker.style.background=color;
+
+    // ±3 s fills the useful visual range. Negative (faster) moves left,
+    // positive (slower) moves right; extreme values remain readable.
+    const normalized=Math.max(-1,Math.min(1,delta/3000));
+    ui.marker.style.left=`${50+normalized*46}%`;
+    ui.root.style.opacity='1';
   }
 
   update(time,delta){
