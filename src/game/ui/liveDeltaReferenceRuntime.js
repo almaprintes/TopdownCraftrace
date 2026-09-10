@@ -27,10 +27,8 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
   const originalSample=proto._tdrSampleDeltaLap;
   const originalUpdate=proto.update;
 
-  // DELTA is deliberately session-only: every race starts with no reference.
-  // The first valid completed lap becomes an invisible temporal ghost. Any
-  // faster valid lap in the same session replaces it. Nothing is loaded from
-  // or written to historical PB/localStorage data.
+  // DELTA is session-only. Every race starts without a reference and the
+  // first completed timed lap becomes the invisible timing trace to beat.
   proto.create=function(...args){
     this._tdrSessionDeltaReference=null;
     this._tdrDeltaReference=null;
@@ -47,16 +45,13 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
     };
   }
 
-  // Ignore the historical best requested by the legacy renderer. The only
-  // legal reference is the best completed lap of this current session.
+  // Never load an historical PB. The live delta may only compare with the
+  // best completed lap recorded since this RaceScene was created.
   proto._tdrLoadDeltaReference=function(){
     const reference=this._tdrSessionDeltaReference;
     return reference&&Array.isArray(reference.trace)&&reference.trace.length>=2?reference:null;
   };
 
-  // The legacy update calls this when a lap matches the historical PB. Keep
-  // the method name for compatibility, but make it session-local and never
-  // persist it. The wrapper below also calls it for every valid completed lap.
   proto._tdrSaveBestDeltaTrace=function(lapMs,trace){
     const next=buildReference(lapMs,trace);
     if(!next)return;
@@ -76,12 +71,18 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
         const row=this.ttHistory[historyAfter-1];
         const lapMs=Number(row?.lapMs);
         const trace=Array.isArray(this._tdrLastSampledDeltaTrace)?this._tdrLastSampledDeltaTrace.slice():[];
-        const valid=row?.valid!==false&&row?.invalid!==true&&Number.isFinite(lapMs)&&lapMs>0&&trace.length>=2;
-        if(valid)this._tdrSaveBestDeltaTrace(lapMs,trace);
+
+        // Some race modes mark the opening timed lap with legacy validity
+        // metadata even though it is a normal completed lap. That delayed the
+        // first usable delta reference until lap two, so lap two behaved like
+        // an ordinary stopwatch. For session delta purposes, any completed
+        // timed lap is eligible unless clean-lap telemetry explicitly says it
+        // was off-track. This makes lap 1 the reference for lap 2 as intended.
+        const completed=Number.isFinite(lapMs)&&lapMs>0&&trace.length>=2;
+        const explicitlyDirty=row?.tdrCleanLap===false;
+        if(completed&&!explicitlyDirty)this._tdrSaveBestDeltaTrace(lapMs,trace);
       }
 
-      // The underlying renderer still calls the reference generically
-      // "mejor vuelta". Make the contract explicit in the visible HUD.
       const ui=this._tdrLiveDeltaUi;
       if(ui?.label&&this._tdrSessionDeltaReference){
         ui.label.textContent='VS MEJOR DE SESIÓN';
