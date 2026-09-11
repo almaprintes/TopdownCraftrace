@@ -19,6 +19,17 @@ function esc(s){ return String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'
 function mean(a){ return a.length?a.reduce((s,v)=>s+v,0)/a.length:0; }
 function stddev(a){ if(a.length<2)return 0; const m=mean(a); return Math.sqrt(a.reduce((s,v)=>s+(v-m)*(v-m),0)/a.length); }
 
+let lastSessionVerdict='';
+function pickVerdict(options){
+  const choices=(Array.isArray(options)?options:[]).filter(Boolean);
+  if(!choices.length) return '';
+  const nonRepeat=choices.length>1?choices.filter(v=>v!==lastSessionVerdict):choices;
+  const pool=nonRepeat.length?nonRepeat:choices;
+  const verdict=pool[Math.floor(Math.random()*pool.length)]||choices[0];
+  lastSessionVerdict=verdict;
+  return verdict;
+}
+
 export class RaceScene extends CurrentRaceScene {
   constructor(){
     super();
@@ -142,12 +153,48 @@ export class RaceScene extends CurrentRaceScene {
     const trackName=this.track?.meta?.name||this.track?.name||this.trackId||'Circuito';
     const avgKmh=(s.elapsed||0)>0?(s.speedIntegral||0)/s.elapsed:0;
     const pct=v=>100*(v||0)/active;
-    let verdict='Sesión de referencia.';
-    if((s.offTrackEvents||0)===0 && times.length>=2 && consistency<1500) verdict='Tanda limpia y consistente. Buena base para buscar décimas.';
-    else if((s.offTrackEvents||0)>2) verdict='Hay velocidad, pero las salidas de pista están costando tiempo. Conviene priorizar entradas más limpias.';
-    else if(pct(s.brakeTime)>22) verdict='Uso de freno elevado. Puede haber margen frenando algo antes y liberando el pedal progresivamente.';
-    else if(pct(s.coastTime)>32) verdict='Mucho tiempo en coasting: buena gestión de inercia; revisa si puedes volver al gas antes en algunas curvas.';
-    else if(times.length>=2 && consistency>3000) verdict='El ritmo existe, pero hay bastante dispersión entre vueltas. La siguiente mejora está en la repetibilidad.';
+    let verdict=pickVerdict([
+      'Sesión registrada. Ya tienes una referencia sobre la que seguir trabajando.',
+      'Tanda completada. Los datos ya dejan una base clara para la siguiente salida.',
+      'Primera lectura hecha. Usa esta tanda como punto de comparación para la siguiente.',
+      'Sesión anotada. La próxima tanda servirá para confirmar dónde aparece la mejora.',
+      'Referencia guardada. Ahora toca comparar sensaciones y tiempos en la siguiente salida.'
+    ]);
+    if((s.offTrackEvents||0)===0 && times.length>=2 && consistency<1500) verdict=pickVerdict([
+      'Tanda limpia y consistente. Buena base para buscar décimas.',
+      'Ritmo muy estable y sin salidas. Hay una base sólida para empezar a apretar.',
+      'Buena repetibilidad vuelta tras vuelta. El siguiente paso es buscar pequeñas mejoras sin perder limpieza.',
+      'Sesión ordenada y constante. Puedes centrarte ya en arañar tiempo en puntos concretos.',
+      'La consistencia está ahí y la pista se ha mantenido limpia. Buen momento para atacar detalles.'
+    ]);
+    else if((s.offTrackEvents||0)>2) verdict=pickVerdict([
+      'Hay velocidad, pero las salidas de pista están costando tiempo. Conviene priorizar entradas más limpias.',
+      'El ritmo aparece, aunque demasiadas salidas están rompiendo la tanda. Primero limpia la trazada y luego aprieta.',
+      'La velocidad está, pero falta cerrar vueltas limpias. Ganarás más controlando los límites que forzando de más.',
+      'Varias salidas están escondiendo tu ritmo real. Busca una vuelta más controlada antes de subir el ataque.',
+      'El potencial se ve, pero las excursiones fuera de pista penalizan demasiado. Prioriza precisión en las entradas.'
+    ]);
+    else if(pct(s.brakeTime)>22) verdict=pickVerdict([
+      'Uso de freno elevado. Puede haber margen frenando algo antes y liberando el pedal progresivamente.',
+      'Has pasado bastante tiempo sobre el freno. Prueba a hacer la frenada más corta y dejar correr más el coche.',
+      'El freno pesa mucho en esta tanda. Puede haber tiempo en soltar antes y mantener más velocidad de paso.',
+      'La sesión muestra bastante apoyo de freno. Busca una transición más rápida hacia el giro y el gas.',
+      'Hay margen en la fase de frenada. Intenta reducir tiempo de pedal sin comprometer la entrada en curva.'
+    ]);
+    else if(pct(s.coastTime)>32) verdict=pickVerdict([
+      'Mucho tiempo en coasting: buena gestión de inercia; revisa si puedes volver al gas antes en algunas curvas.',
+      'Has dejado rodar bastante el coche. Comprueba si en algunas curvas puedes adelantar la vuelta al acelerador.',
+      'La inercia está jugando un papel importante. Quizá haya décimas entrando antes al gas en las salidas más claras.',
+      'Hay bastante tramo sin gas ni freno. Revisa dónde puedes reducir ese tiempo muerto sin descolocar el coche.',
+      'Tanda con mucho coasting. Mantén la fluidez, pero prueba a enlazar antes la fase de apoyo con la aceleración.'
+    ]);
+    else if(times.length>=2 && consistency>3000) verdict=pickVerdict([
+      'El ritmo existe, pero hay bastante dispersión entre vueltas. La siguiente mejora está en la repetibilidad.',
+      'Tus vueltas están demasiado separadas entre sí. Antes de buscar el límite, intenta repetir una misma referencia.',
+      'Hay vueltas rápidas, pero falta continuidad. El objetivo ahora es convertir el mejor ritmo en algo repetible.',
+      'La tanda tiene picos buenos y otros bastante más lentos. Busca una secuencia de vueltas más uniforme.',
+      'El potencial está claro, aunque la consistencia todavía puede mejorar. Trabaja en repetir puntos de frenada y gas.'
+    ]);
 
     return {
       createdAt:new Date().toISOString(), trackName, carName:car.name||car.label||this.carId||'Coche', carId:this.carId,
