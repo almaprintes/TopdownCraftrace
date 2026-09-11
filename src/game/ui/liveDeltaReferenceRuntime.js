@@ -18,6 +18,16 @@ function buildReference(lapMs,trace){
   return clean.length>=3?{lapMs:Math.round(total),trace:clean}:null;
 }
 
+function saveSessionReference(scene,lapMs,trace){
+  const next=buildReference(lapMs,trace);
+  if(!next)return false;
+  const previous=scene._tdrSessionDeltaReference;
+  if(previous&&Number(previous.lapMs)<=Number(next.lapMs)+5)return false;
+  scene._tdrSessionDeltaReference=next;
+  scene._tdrDeltaReference=next;
+  return true;
+}
+
 function interpolateTrace(trace,progress){
   if(!Array.isArray(trace)||trace.length<2)return null;
   const p=clamp01(progress);
@@ -73,11 +83,12 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
     this._tdrDeltaReference=null;
     this._tdrSessionCurrentTrace=[];
     this._tdrSessionTraceLapStart=null;
+    this._tdrSessionPendingTrace=null;
     const result=originalCreate?.apply(this,args);
-    // Core code may know about historical traces, but live DELTA never does.
     this._tdrSessionDeltaReference=null;
     this._tdrDeltaReference=null;
     this._tdrSessionCurrentTrace=[];
+    this._tdrSessionPendingTrace=null;
     this._tdrSessionTraceLapStart=Number.isFinite(Number(this.timing?.lapStart))?Number(this.timing.lapStart):null;
     return result;
   };
@@ -87,19 +98,15 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
     return reference&&Array.isArray(reference.trace)&&reference.trace.length>=2?reference:null;
   };
 
-  proto._tdrSaveBestDeltaTrace=function(lapMs,trace){
-    const next=buildReference(lapMs,trace);
-    if(!next)return false;
-    const previous=this._tdrSessionDeltaReference;
-    if(previous&&Number(previous.lapMs)<=Number(next.lapMs)+5)return false;
-    this._tdrSessionDeltaReference=next;
-    this._tdrDeltaReference=next;
-    return true;
+  // The base RaceExperience scene still calls this legacy hook when its
+  // historical PB changes. It must NOT be allowed to create the live session
+  // reference, otherwise its own trace can win the race against our session
+  // trace and lap two ends up behaving like a stopwatch. Session reference
+  // ownership lives exclusively in the wrapper below.
+  proto._tdrSaveBestDeltaTrace=function(){
+    return false;
   };
 
-  // Own the visible DELTA rendering too. This removes the old historical-PB
-  // fallback/estimate completely: no session reference means "SIN REFERENCIA";
-  // once lap 1 finishes, lap 2 immediately compares against that real trace.
   proto._tdrRenderLiveDelta=function(now){
     const ui=this._tdrEnsureLiveDeltaUi?.();
     if(!ui)return;
@@ -156,20 +163,30 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
       const historyAfter=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
       const lapChanged=Number.isFinite(beforeStart)&&Number.isFinite(afterStart)&&Math.abs(afterStart-beforeStart)>1;
       const historyChanged=historyAfter>historyBefore;
+      const row=historyChanged?this.ttHistory[historyAfter-1]:null;
 
-      if(lapChanged||historyChanged){
-        const row=historyChanged?this.ttHistory[historyAfter-1]:null;
-        const lapMs=Number.isFinite(Number(row?.lapMs))?Number(row.lapMs):Number(this.timing?.lastLap);
-        const explicitlyDirty=row?.tdrCleanLap===false;
-        if(Number.isFinite(lapMs)&&lapMs>0&&completedTrace.length>=2&&!explicitlyDirty){
-          this._tdrSaveBestDeltaTrace(lapMs,completedTrace);
+      if(lapChanged){
+        // Keep the just-finished trace before resetting for the new lap. The
+        // lap-start delta is available immediately at the line, so lap two can
+        // have a reference on its very first frame even if history is written
+        // one frame later on a short circuit such as Karting Tenerife.
+        this._tdrSessionPendingTrace=completedTrace;
+        const measuredLap=Number.isFinite(Number(row?.lapMs))?Number(row.lapMs):Math.max(0,afterStart-beforeStart);
+        if(Number.isFinite(measuredLap)&&measuredLap>1000&&completedTrace.length>=2){
+          if(saveSessionReference(this,measuredLap,completedTrace))this._tdrSessionPendingTrace=null;
         }
-        this._tdrSessionTraceLapStart=Number.isFinite(afterStart)?afterStart:null;
+        this._tdrSessionTraceLapStart=afterStart;
         this._tdrSessionCurrentTrace=[];
+      }else if(historyChanged&&Array.isArray(this._tdrSessionPendingTrace)){
+        // Fallback only for modes that publish the completed lap to history
+        // after the lap-start clock has already rolled over.
+        const lapMs=Number(row?.lapMs);
+        if(Number.isFinite(lapMs)&&lapMs>1000&&this._tdrSessionPendingTrace.length>=2){
+          saveSessionReference(this,lapMs,this._tdrSessionPendingTrace);
+          this._tdrSessionPendingTrace=null;
+        }
       }
 
-      // Capture the very beginning of the new lap immediately after crossing
-      // the line so Karting Tenerife and other short tracks cannot lose lap 1.
       sampleSessionTrace(this,performance.now());
       this._tdrRenderLiveDelta(performance.now());
       return result;
