@@ -14,8 +14,10 @@ function isRaceVisible(){
   const controls=raceControlsRoot();
   const hud=document.querySelector('.tdr-race-hud');
   if(!controls?.isConnected||!hud?.isConnected)return false;
-  const style=getComputedStyle(controls);
-  if(style.display==='none'||style.visibility==='hidden')return false;
+  const controlStyle=getComputedStyle(controls);
+  const hudStyle=getComputedStyle(hud);
+  if(controlStyle.display==='none'||controlStyle.visibility==='hidden')return false;
+  if(hudStyle.display==='none'||hudStyle.visibility==='hidden'||Number(hudStyle.opacity)===0)return false;
   if(document.getElementById('tdrStartup'))return false;
   if(document.querySelector('.session-report,.race-report,[data-session-report],#session-report'))return false;
   if(document.querySelector('[data-tdr-session-rewards],#tdr-session-rewards'))return false;
@@ -74,20 +76,9 @@ function makeSegment(label,aria){
   button.textContent=label;
   button.setAttribute('aria-label',aria);
   Object.assign(button.style,{
-    flex:'1 1 50%',
-    minWidth:'0',
-    height:'100%',
-    border:'0',
-    margin:'0',
-    padding:'0 12px',
-    background:'transparent',
-    color:'rgba(255,255,255,.78)',
-    font:'900 11px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
-    letterSpacing:'.12em',
-    touchAction:'none',
-    WebkitUserSelect:'none',
-    userSelect:'none',
-    cursor:'pointer'
+    flex:'1 1 50%',minWidth:'0',height:'100%',border:'0',margin:'0',padding:'0 12px',background:'transparent',
+    color:'rgba(255,255,255,.78)',font:'900 11px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+    letterSpacing:'.12em',touchAction:'none',WebkitUserSelect:'none',userSelect:'none',cursor:'pointer'
   });
   return button;
 }
@@ -100,20 +91,10 @@ function makeControl(){
   root.setAttribute('role','group');
   root.setAttribute('aria-label','Controles de carrera');
   Object.assign(root.style,{
-    position:'fixed',
-    zIndex:'2147483100',
-    display:'none',
-    alignItems:'stretch',
-    overflow:'hidden',
-    borderRadius:'16px',
-    border:'1px solid rgba(255,255,255,.24)',
-    background:'linear-gradient(180deg,rgba(15,20,30,.94),rgba(7,11,19,.90))',
-    boxShadow:'0 5px 18px rgba(0,0,0,.32)',
-    backdropFilter:'blur(8px)',
-    WebkitBackdropFilter:'blur(8px)',
-    touchAction:'none',
-    WebkitUserSelect:'none',
-    userSelect:'none'
+    position:'fixed',zIndex:'2147483100',display:'none',alignItems:'stretch',overflow:'hidden',borderRadius:'16px',
+    border:'1px solid rgba(255,255,255,.24)',background:'linear-gradient(180deg,rgba(15,20,30,.94),rgba(7,11,19,.90))',
+    boxShadow:'0 5px 18px rgba(0,0,0,.32)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',
+    touchAction:'none',WebkitUserSelect:'none',userSelect:'none'
   });
 
   const delta=makeSegment('DELTA','Mostrar u ocultar delta de vuelta');
@@ -130,15 +111,12 @@ function makeControl(){
     let touchHandled=false;
     button.addEventListener('pointerdown',e=>{
       if(e.pointerType==='touch'||e.pointerType==='pen'){
-        touchHandled=true;
-        e.preventDefault();e.stopPropagation();
-        fn();
+        touchHandled=true;e.preventDefault();e.stopPropagation();fn();
       }
     },{capture:true,passive:false});
     button.addEventListener('click',e=>{
       e.preventDefault();e.stopPropagation();
-      if(touchHandled){touchHandled=false;return;}
-      fn();
+      if(touchHandled){touchHandled=false;return;}fn();
     },{capture:true});
   };
 
@@ -188,30 +166,38 @@ function polishPanel(panel){
   }
 }
 
-function positionPanel(panel,control){
+function positionPanel(panel,control,race){
   if(!panel||!control)return;
   const cr=control.getBoundingClientRect();
-  const width=Math.max(220,Math.min(310,cr.width*2.15));
+  const overlap=Math.max(8,Math.round(cr.height*.18));
   const right=Math.max(8,window.innerWidth-cr.right);
-  const top=Math.round(cr.bottom+3);
+  const top=Math.round(cr.bottom-overlap);
   panel.style.setProperty('position','fixed','important');
-  panel.style.setProperty('width',`${Math.round(width)}px`,'important');
+  // Same footprint as the DELTA | PAUSE control: when retracted the whole
+  // panel can physically sit behind it instead of floating above the track.
+  panel.style.setProperty('width',`${Math.round(cr.width)}px`,'important');
   panel.style.setProperty('min-width','0','important');
   panel.style.setProperty('left','auto','important');
   panel.style.setProperty('right',`${Math.round(right)}px`,'important');
   panel.style.setProperty('top',`${top}px`,'important');
+  panel.style.setProperty('border-radius','0 0 12px 12px','important');
   panel.style.setProperty('transform-origin','top right','important');
-  panel.style.setProperty('transition','transform .22s cubic-bezier(.2,.8,.2,1), opacity .18s ease','important');
+  panel.style.setProperty('transition','transform .24s cubic-bezier(.2,.8,.2,1), opacity .16s ease','important');
   panel.style.setProperty('z-index','2147483050','important');
-  if(enabled&&isRaceVisible()){
-    panel.style.setProperty('visibility','visible','important');
-    panel.style.setProperty('transform','translateY(0)','important');
-    panel.style.setProperty('opacity','1','important');
-  }else{
-    panel.style.setProperty('transform','translateY(calc(-100% - 6px))','important');
+
+  if(!race){
+    panel.style.setProperty('transform',`translateY(calc(-100% + ${overlap}px))`,'important');
     panel.style.setProperty('opacity','0','important');
     panel.style.setProperty('visibility','hidden','important');
+    return;
   }
+
+  // Open: slide DOWN from behind the control and stop tucked directly under it.
+  // Closed: slide UP behind the control. Keep visibility while racing so the
+  // movement is actually animated instead of disappearing instantly.
+  panel.style.setProperty('visibility','visible','important');
+  panel.style.setProperty('opacity','1','important');
+  panel.style.setProperty('transform',enabled?'translateY(0)':`translateY(calc(-100% + ${overlap}px))`,'important');
 }
 
 function apply(){
@@ -235,7 +221,7 @@ function apply(){
   if(panel){
     panel.dataset.tdrUserDeltaEnabled=enabled?'1':'0';
     polishPanel(panel);
-    positionPanel(panel,root);
+    positionPanel(panel,root,race);
   }
 }
 
@@ -248,7 +234,7 @@ function frame(){
     if(race)positionControl(root);
     else root.style.display='none';
   }
-  if(panel&&root){polishPanel(panel);positionPanel(panel,root);}
+  if(panel&&root){polishPanel(panel);positionPanel(panel,root,race);}
   raf=requestAnimationFrame(frame);
 }
 
