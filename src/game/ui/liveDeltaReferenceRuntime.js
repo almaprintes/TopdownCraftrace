@@ -3,27 +3,27 @@ function clamp01(value){
   return Number.isFinite(n)?Math.max(0,Math.min(1,n)):0;
 }
 
-function buildReference(lapMs,trace){
-  const total=Number(lapMs);
-  if(!Number.isFinite(total)||total<=0||!Array.isArray(trace)||trace.length<2)return null;
-  const usable=trace.filter(s=>Number.isFinite(Number(s?.p))&&Number.isFinite(Number(s?.t))&&Number(s.t)>=0);
+function buildReference(lapMs,trace,totalDistance){
+  const total=Number(lapMs),distance=Number(totalDistance);
+  if(!Number.isFinite(total)||total<=0||!Number.isFinite(distance)||distance<=0.15||!Array.isArray(trace)||trace.length<2)return null;
+  const usable=trace.filter(s=>Number.isFinite(Number(s?.d))&&Number.isFinite(Number(s?.t))&&Number(s.d)>=0&&Number(s.t)>=0);
   if(usable.length<2)return null;
   const rawEnd=Math.max(1,Number(usable[usable.length-1]?.t)||total);
-  const scale=total/rawEnd;
+  const timeScale=total/rawEnd;
   const clean=[{p:0,t:0}];
   for(const sample of usable){
-    const p=clamp01(sample.p),t=Number(sample.t)*scale;
+    const p=clamp01(Number(sample.d)/distance),t=Number(sample.t)*timeScale;
     if(p<=clean[clean.length-1].p)continue;
     clean.push({p:Number(p.toFixed(5)),t:Math.round(t)});
   }
   if(clean.length<2)return null;
   if(clean[clean.length-1].p<0.999)clean.push({p:1,t:Math.round(total)});
   else clean[clean.length-1]={p:1,t:Math.round(total)};
-  return clean.length>=3?{lapMs:Math.round(total),trace:clean}:null;
+  return clean.length>=3?{lapMs:Math.round(total),distanceTotal:distance,trace:clean}:null;
 }
 
-function saveSessionReference(scene,lapMs,trace){
-  const next=buildReference(lapMs,trace);
+function saveSessionReference(scene,lapMs,trace,totalDistance){
+  const next=buildReference(lapMs,trace,totalDistance);
   if(!next)return false;
   const previous=scene._tdrSessionDeltaReference;
   if(previous&&Number(previous.lapMs)<=Number(next.lapMs)+5)return false;
@@ -56,24 +56,36 @@ function formatDelta(ms){
   return`${sign}${(Math.abs(value)/1000).toFixed(3)} s`;
 }
 
-function beginLapClock(scene,now,progress){
+function beginLapClock(scene,now,rawProgress){
   scene._tdrSessionLapClockStart=Number(now);
   scene._tdrSessionCurrentTrace=[];
-  scene._tdrSessionLastProgress=clamp01(progress);
+  scene._tdrSessionDistance=0;
+  scene._tdrSessionLastRawProgress=clamp01(rawProgress);
 }
 
 function sampleCurrentLap(scene,now){
   if(!scene.timing?.started)return;
-  const progress=clamp01(scene.ttHud?.progress01);
-  if(!Number.isFinite(scene._tdrSessionLapClockStart))beginLapClock(scene,now,progress);
+  const raw=clamp01(scene.ttHud?.progress01);
+  if(!Number.isFinite(scene._tdrSessionLapClockStart))beginLapClock(scene,now,raw);
+
+  const previous=Number(scene._tdrSessionLastRawProgress);
+  if(Number.isFinite(previous)){
+    let advance=raw-previous;
+    if(advance<-0.5)advance+=1;
+    else if(advance>0.5)advance-=1;
+    // Small reverse movements must not make the lap progress run backwards.
+    if(advance>0)scene._tdrSessionDistance=Math.max(0,Number(scene._tdrSessionDistance)||0)+advance;
+  }
+  scene._tdrSessionLastRawProgress=raw;
+
   const elapsed=Math.max(0,Number(now)-Number(scene._tdrSessionLapClockStart));
+  const distance=Math.max(0,Number(scene._tdrSessionDistance)||0);
   const trace=scene._tdrSessionCurrentTrace||(scene._tdrSessionCurrentTrace=[]);
   const last=trace[trace.length-1];
-  if(progress>0&&(!last||progress-last.p>=0.0035)){
-    trace.push({p:progress,t:elapsed});
+  if(distance>0&&(!last||distance-last.d>=0.0035)){
+    trace.push({d:distance,t:elapsed});
     if(trace.length>480)trace.splice(1,1);
   }
-  scene._tdrSessionLastProgress=progress;
 }
 
 export function installLiveDeltaReferenceRuntime(RaceScene){
@@ -89,13 +101,15 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
     this._tdrDeltaReference=null;
     this._tdrSessionCurrentTrace=[];
     this._tdrSessionLapClockStart=NaN;
-    this._tdrSessionLastProgress=0;
+    this._tdrSessionDistance=0;
+    this._tdrSessionLastRawProgress=NaN;
     const result=originalCreate?.apply(this,args);
     this._tdrSessionDeltaReference=null;
     this._tdrDeltaReference=null;
     this._tdrSessionCurrentTrace=[];
     this._tdrSessionLapClockStart=NaN;
-    this._tdrSessionLastProgress=clamp01(this.ttHud?.progress01);
+    this._tdrSessionDistance=0;
+    this._tdrSessionLastRawProgress=NaN;
     return result;
   };
 
@@ -111,8 +125,7 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
     const ui=this._tdrEnsureLiveDeltaUi?.();
     if(!ui)return;
     const reference=this._tdrSessionDeltaReference;
-    const progress=clamp01(this.ttHud?.progress01);
-    if(!this.timing?.started||!Number.isFinite(this._tdrSessionLapClockStart)||progress<0.01){
+    if(!this.timing?.started||!Number.isFinite(this._tdrSessionLapClockStart)){
       ui.root.style.opacity='0';
       return;
     }
@@ -130,6 +143,9 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
     }
 
     const elapsed=Math.max(0,Number(now)-Number(this._tdrSessionLapClockStart));
+    const distanceTotal=Math.max(0.001,Number(reference.distanceTotal)||1);
+    const progress=clamp01((Number(this._tdrSessionDistance)||0)/distanceTotal);
+    if(progress<0.005){ui.root.style.opacity='0';return;}
     const referenceMs=interpolateTrace(reference.trace,progress);
     if(!Number.isFinite(referenceMs)){ui.root.style.opacity='0';return;}
     const delta=elapsed-referenceMs;
@@ -152,29 +168,29 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
   if(typeof originalUpdate==='function'){
     proto.update=function(time,delta){
       const nowBefore=performance.now();
-      const progressBefore=clamp01(this.ttHud?.progress01);
       sampleCurrentLap(this,nowBefore);
       const completedTrace=Array.isArray(this._tdrSessionCurrentTrace)?this._tdrSessionCurrentTrace.slice():[];
-      const clockStart=Number(this._tdrSessionLapClockStart);
+      const completedDistance=Math.max(0,Number(this._tdrSessionDistance)||0);
       const historyBefore=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
 
       const result=originalUpdate.call(this,time,delta);
 
       const nowAfter=performance.now();
-      const progressAfter=clamp01(this.ttHud?.progress01);
       const historyAfter=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
       const historyChanged=historyAfter>historyBefore;
-      const row=historyChanged?this.ttHistory[historyAfter-1]:null;
-      const progressWrapped=progressBefore>0.65&&progressAfter<0.35;
 
-      if(historyChanged||progressWrapped){
-        const measured=Math.max(0,nowAfter-clockStart);
+      // ttHistory is the authoritative lap boundary. progress01 can wrap at a
+      // centerline seam that is not the finish line, so it must never decide
+      // when a lap ends.
+      if(historyChanged){
+        const row=this.ttHistory[historyAfter-1];
         const rowLap=Number(row?.lapMs);
+        const measured=Math.max(0,nowAfter-Number(this._tdrSessionLapClockStart));
         const lapMs=Number.isFinite(rowLap)&&rowLap>1000?rowLap:measured;
-        if(Number.isFinite(lapMs)&&lapMs>1000&&completedTrace.length>=2){
-          saveSessionReference(this,lapMs,completedTrace);
+        if(Number.isFinite(lapMs)&&lapMs>1000&&completedTrace.length>=2&&completedDistance>0.15){
+          saveSessionReference(this,lapMs,completedTrace,completedDistance);
         }
-        beginLapClock(this,nowAfter,progressAfter);
+        beginLapClock(this,nowAfter,this.ttHud?.progress01);
       }
 
       sampleCurrentLap(this,nowAfter);
