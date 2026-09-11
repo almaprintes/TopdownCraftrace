@@ -20,6 +20,7 @@ function isRaceVisible(){
   if(hudStyle.display==='none'||hudStyle.visibility==='hidden'||Number(hudStyle.opacity)===0)return false;
   if(document.getElementById('tdrStartup'))return false;
   if(document.querySelector('.session-report,.race-report,[data-session-report],#session-report'))return false;
+  if(document.querySelector('.veil .modal .report'))return false;
   if(document.querySelector('[data-tdr-session-rewards],#tdr-session-rewards'))return false;
   return true;
 }
