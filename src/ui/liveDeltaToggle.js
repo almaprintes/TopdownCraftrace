@@ -147,57 +147,74 @@ function polishPanel(panel){
   if(!panel)return;
   const kids=[...panel.children];
   const label=kids[0],value=kids[1],state=kids[2],rail=kids[3];
-  const estimated=String(label?.textContent||'').toUpperCase().includes('ESTIMACIÓN');
-  if(estimated&&label&&value&&state){
-    label.textContent='VS MEJOR DE SESIÓN';
-    value.textContent='SIN REFERENCIA';
-    value.style.color='#ffffff';
-    value.style.fontSize='clamp(18px, 2.1vw, 25px)';
-    state.textContent='COMPLETA UNA VUELTA';
-    state.style.color='rgba(255,255,255,.72)';
-    if(rail){
-      rail.style.opacity='.45';
-      const marker=rail.lastElementChild;
-      if(marker){marker.style.left='50%';marker.style.background='#ffffff';}
-    }
-  }else if(value&&rail){
-    value.style.fontSize='clamp(22px, 2.55vw, 31px)';
-    rail.style.opacity='1';
+  if(label){
+    label.style.fontSize='7px';
+    label.style.lineHeight='1.05';
+    label.style.letterSpacing='.14em';
+    label.style.whiteSpace='normal';
+  }
+  if(state){
+    state.style.fontSize='7px';
+    state.style.lineHeight='1.05';
+    state.style.letterSpacing='.09em';
+    state.style.whiteSpace='normal';
+  }
+  if(value){
+    const noReference=String(value.textContent||'').toUpperCase().includes('SIN REFERENCIA');
+    value.style.fontSize=noReference?'15px':'20px';
+    value.style.lineHeight='1.0';
+    value.style.letterSpacing=noReference?'.01em':'.025em';
+    value.style.whiteSpace='normal';
+    value.style.wordBreak='normal';
+  }
+  if(rail)rail.style.marginTop='5px';
+}
+
+function setPanelContentVisible(panel,visible){
+  if(!panel)return;
+  for(const child of [...panel.children]){
+    child.style.setProperty('transition','opacity .10s ease','important');
+    child.style.setProperty('opacity',visible?'1':'0','important');
   }
 }
 
 function positionPanel(panel,control,race){
   if(!panel||!control)return;
   const cr=control.getBoundingClientRect();
-  const overlap=Math.max(8,Math.round(cr.height*.18));
+  const peek=Math.max(7,Math.round(cr.height*.14));
   const right=Math.max(8,window.innerWidth-cr.right);
-  const top=Math.round(cr.bottom-overlap);
+  const top=Math.round(cr.bottom-peek);
   panel.style.setProperty('position','fixed','important');
-  // Same footprint as the DELTA | PAUSE control: when retracted the whole
-  // panel can physically sit behind it instead of floating above the track.
   panel.style.setProperty('width',`${Math.round(cr.width)}px`,'important');
   panel.style.setProperty('min-width','0','important');
+  panel.style.setProperty('max-width',`${Math.round(cr.width)}px`,'important');
   panel.style.setProperty('left','auto','important');
   panel.style.setProperty('right',`${Math.round(right)}px`,'important');
   panel.style.setProperty('top',`${top}px`,'important');
+  panel.style.setProperty('padding','9px 10px 8px','important');
   panel.style.setProperty('border-radius','0 0 12px 12px','important');
+  panel.style.setProperty('overflow','hidden','important');
   panel.style.setProperty('transform-origin','top right','important');
   panel.style.setProperty('transition','transform .24s cubic-bezier(.2,.8,.2,1), opacity .16s ease','important');
   panel.style.setProperty('z-index','2147483050','important');
 
   if(!race){
-    panel.style.setProperty('transform',`translateY(calc(-100% + ${overlap}px))`,'important');
+    setPanelContentVisible(panel,false);
+    panel.style.setProperty('transform',`translateY(calc(-100% + ${peek}px))`,'important');
     panel.style.setProperty('opacity','0','important');
     panel.style.setProperty('visibility','hidden','important');
     return;
   }
 
-  // Open: slide DOWN from behind the control and stop tucked directly under it.
-  // Closed: slide UP behind the control. Keep visibility while racing so the
-  // movement is actually animated instead of disappearing instantly.
   panel.style.setProperty('visibility','visible','important');
   panel.style.setProperty('opacity','1','important');
-  panel.style.setProperty('transform',enabled?'translateY(0)':`translateY(calc(-100% + ${overlap}px))`,'important');
+  if(enabled){
+    panel.style.setProperty('transform','translateY(0)','important');
+    setPanelContentVisible(panel,true);
+  }else{
+    setPanelContentVisible(panel,false);
+    panel.style.setProperty('transform',`translateY(calc(-100% + ${peek}px))`,'important');
+  }
 }
 
 function apply(){
