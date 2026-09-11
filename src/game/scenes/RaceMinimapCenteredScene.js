@@ -94,14 +94,15 @@ export class RaceScene extends CompetitionRaceScene {
         if (typeof child.cameraFilter === 'number') child.cameraFilter &= ~main.id;
       }
 
-      // Screen-locked HUD element. Keeping camera scroll out of the transform
-      // removes the visible shake that appeared while dynamic zoom was moving.
-      panel.setScrollFactor(0, 0);
+      // Use the proven camera-space pinning path so the minimap remains visible.
+      // World coordinates are snapped to physical screen pixels to remove the
+      // sub-pixel shimmer caused by dynamic zoom.
+      panel.setScrollFactor(1, 1);
 
       this._layoutMinimapUnified = () => {
         const vw = Math.max(1, Number(this.scale?.width || 1));
         this._minimapUnifiedState = {
-          screenX: vw - frameW + 2,
+          screenX: vw - frameW - 2,
           screenY: 24,
           scale: 1
         };
@@ -113,7 +114,9 @@ export class RaceScene extends CompetitionRaceScene {
         const p = this.minimapUnifiedPanel;
         if (!cam || !s || !p?.scene) return;
         const zoom = Math.max(0.001, Number(cam.zoom || 1));
-        p.setPosition(s.screenX / zoom, s.screenY / zoom);
+        const world = cam.getWorldPoint(s.screenX, s.screenY);
+        const snap = (v) => Math.round(v * zoom) / zoom;
+        p.setPosition(snap(world.x), snap(world.y));
         p.setScale(s.scale / zoom);
       };
 
