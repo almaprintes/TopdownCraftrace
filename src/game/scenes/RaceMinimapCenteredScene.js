@@ -102,7 +102,7 @@ export class RaceScene extends CompetitionRaceScene {
       this._layoutMinimapUnified = () => {
         const vw = Math.max(1, Number(this.scale?.width || 1));
         this._minimapUnifiedState = {
-          screenX: vw - frameW - 2,
+          screenX: vw - frameW + 18,
           screenY: 24,
           scale: 1
         };
