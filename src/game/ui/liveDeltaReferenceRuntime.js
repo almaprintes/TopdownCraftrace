@@ -6,10 +6,14 @@ function clamp01(value){
 function buildReference(lapMs,trace){
   const total=Number(lapMs);
   if(!Number.isFinite(total)||total<=0||!Array.isArray(trace)||trace.length<2)return null;
+  const usable=trace.filter(s=>Number.isFinite(Number(s?.p))&&Number.isFinite(Number(s?.t))&&Number(s.t)>=0);
+  if(usable.length<2)return null;
+  const rawEnd=Math.max(1,Number(usable[usable.length-1]?.t)||total);
+  const scale=total/rawEnd;
   const clean=[{p:0,t:0}];
-  for(const sample of trace){
-    const p=clamp01(sample?.p),t=Number(sample?.t);
-    if(!Number.isFinite(t)||t<0||p<=clean[clean.length-1].p)continue;
+  for(const sample of usable){
+    const p=clamp01(sample.p),t=Number(sample.t)*scale;
+    if(p<=clean[clean.length-1].p)continue;
     clean.push({p:Number(p.toFixed(5)),t:Math.round(t)});
   }
   if(clean.length<2)return null;
@@ -52,22 +56,24 @@ function formatDelta(ms){
   return`${sign}${(Math.abs(value)/1000).toFixed(3)} s`;
 }
 
-function sampleSessionTrace(scene,now){
-  const lapStart=Number(scene.timing?.lapStart);
-  if(!scene.timing?.started||!Number.isFinite(lapStart))return;
-  if(scene._tdrSessionTraceLapStart!==lapStart){
-    scene._tdrSessionTraceLapStart=lapStart;
-    scene._tdrSessionCurrentTrace=[];
-  }
+function beginLapClock(scene,now,progress){
+  scene._tdrSessionLapClockStart=Number(now);
+  scene._tdrSessionCurrentTrace=[];
+  scene._tdrSessionLastProgress=clamp01(progress);
+}
+
+function sampleCurrentLap(scene,now){
+  if(!scene.timing?.started)return;
   const progress=clamp01(scene.ttHud?.progress01);
-  const elapsed=Math.max(0,Number(now)-lapStart);
-  if(!Number.isFinite(elapsed)||progress<=0)return;
+  if(!Number.isFinite(scene._tdrSessionLapClockStart))beginLapClock(scene,now,progress);
+  const elapsed=Math.max(0,Number(now)-Number(scene._tdrSessionLapClockStart));
   const trace=scene._tdrSessionCurrentTrace||(scene._tdrSessionCurrentTrace=[]);
   const last=trace[trace.length-1];
-  if(!last||progress-last.p>=0.0035){
+  if(progress>0&&(!last||progress-last.p>=0.0035)){
     trace.push({p:progress,t:elapsed});
-    if(trace.length>420)trace.splice(1,1);
+    if(trace.length>480)trace.splice(1,1);
   }
+  scene._tdrSessionLastProgress=progress;
 }
 
 export function installLiveDeltaReferenceRuntime(RaceScene){
@@ -82,14 +88,14 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
     this._tdrSessionDeltaReference=null;
     this._tdrDeltaReference=null;
     this._tdrSessionCurrentTrace=[];
-    this._tdrSessionTraceLapStart=null;
-    this._tdrSessionPendingTrace=null;
+    this._tdrSessionLapClockStart=NaN;
+    this._tdrSessionLastProgress=0;
     const result=originalCreate?.apply(this,args);
     this._tdrSessionDeltaReference=null;
     this._tdrDeltaReference=null;
     this._tdrSessionCurrentTrace=[];
-    this._tdrSessionPendingTrace=null;
-    this._tdrSessionTraceLapStart=Number.isFinite(Number(this.timing?.lapStart))?Number(this.timing.lapStart):null;
+    this._tdrSessionLapClockStart=NaN;
+    this._tdrSessionLastProgress=clamp01(this.ttHud?.progress01);
     return result;
   };
 
@@ -98,22 +104,15 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
     return reference&&Array.isArray(reference.trace)&&reference.trace.length>=2?reference:null;
   };
 
-  // The base RaceExperience scene still calls this legacy hook when its
-  // historical PB changes. It must NOT be allowed to create the live session
-  // reference, otherwise its own trace can win the race against our session
-  // trace and lap two ends up behaving like a stopwatch. Session reference
-  // ownership lives exclusively in the wrapper below.
-  proto._tdrSaveBestDeltaTrace=function(){
-    return false;
-  };
+  // Historical PB persistence is deliberately disabled for live DELTA.
+  proto._tdrSaveBestDeltaTrace=function(){return false;};
 
   proto._tdrRenderLiveDelta=function(now){
     const ui=this._tdrEnsureLiveDeltaUi?.();
     if(!ui)return;
     const reference=this._tdrSessionDeltaReference;
-    const lapStart=Number(this.timing?.lapStart);
     const progress=clamp01(this.ttHud?.progress01);
-    if(!this.timing?.started||!Number.isFinite(lapStart)||progress<0.01){
+    if(!this.timing?.started||!Number.isFinite(this._tdrSessionLapClockStart)||progress<0.01){
       ui.root.style.opacity='0';
       return;
     }
@@ -130,7 +129,7 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
       return;
     }
 
-    const elapsed=Math.max(0,Number(now)-lapStart);
+    const elapsed=Math.max(0,Number(now)-Number(this._tdrSessionLapClockStart));
     const referenceMs=interpolateTrace(reference.trace,progress);
     if(!Number.isFinite(referenceMs)){ui.root.style.opacity='0';return;}
     const delta=elapsed-referenceMs;
@@ -152,43 +151,34 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
 
   if(typeof originalUpdate==='function'){
     proto.update=function(time,delta){
-      const beforeStart=Number(this.timing?.lapStart);
-      sampleSessionTrace(this,performance.now());
+      const nowBefore=performance.now();
+      const progressBefore=clamp01(this.ttHud?.progress01);
+      sampleCurrentLap(this,nowBefore);
       const completedTrace=Array.isArray(this._tdrSessionCurrentTrace)?this._tdrSessionCurrentTrace.slice():[];
+      const clockStart=Number(this._tdrSessionLapClockStart);
       const historyBefore=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
 
       const result=originalUpdate.call(this,time,delta);
 
-      const afterStart=Number(this.timing?.lapStart);
+      const nowAfter=performance.now();
+      const progressAfter=clamp01(this.ttHud?.progress01);
       const historyAfter=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
-      const lapChanged=Number.isFinite(beforeStart)&&Number.isFinite(afterStart)&&Math.abs(afterStart-beforeStart)>1;
       const historyChanged=historyAfter>historyBefore;
       const row=historyChanged?this.ttHistory[historyAfter-1]:null;
+      const progressWrapped=progressBefore>0.65&&progressAfter<0.35;
 
-      if(lapChanged){
-        // Keep the just-finished trace before resetting for the new lap. The
-        // lap-start delta is available immediately at the line, so lap two can
-        // have a reference on its very first frame even if history is written
-        // one frame later on a short circuit such as Karting Tenerife.
-        this._tdrSessionPendingTrace=completedTrace;
-        const measuredLap=Number.isFinite(Number(row?.lapMs))?Number(row.lapMs):Math.max(0,afterStart-beforeStart);
-        if(Number.isFinite(measuredLap)&&measuredLap>1000&&completedTrace.length>=2){
-          if(saveSessionReference(this,measuredLap,completedTrace))this._tdrSessionPendingTrace=null;
+      if(historyChanged||progressWrapped){
+        const measured=Math.max(0,nowAfter-clockStart);
+        const rowLap=Number(row?.lapMs);
+        const lapMs=Number.isFinite(rowLap)&&rowLap>1000?rowLap:measured;
+        if(Number.isFinite(lapMs)&&lapMs>1000&&completedTrace.length>=2){
+          saveSessionReference(this,lapMs,completedTrace);
         }
-        this._tdrSessionTraceLapStart=afterStart;
-        this._tdrSessionCurrentTrace=[];
-      }else if(historyChanged&&Array.isArray(this._tdrSessionPendingTrace)){
-        // Fallback only for modes that publish the completed lap to history
-        // after the lap-start clock has already rolled over.
-        const lapMs=Number(row?.lapMs);
-        if(Number.isFinite(lapMs)&&lapMs>1000&&this._tdrSessionPendingTrace.length>=2){
-          saveSessionReference(this,lapMs,this._tdrSessionPendingTrace);
-          this._tdrSessionPendingTrace=null;
-        }
+        beginLapClock(this,nowAfter,progressAfter);
       }
 
-      sampleSessionTrace(this,performance.now());
-      this._tdrRenderLiveDelta(performance.now());
+      sampleCurrentLap(this,nowAfter);
+      this._tdrRenderLiveDelta(nowAfter);
       return result;
     };
   }
