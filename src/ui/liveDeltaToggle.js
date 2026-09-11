@@ -5,6 +5,7 @@ let enabled=false;
 let raf=0;
 let lastRace=false;
 let pauseRect=null;
+let preserveEnabledThroughPause=false;
 
 function raceControlsRoot(){
   return document.getElementById('tdr-race-controls');
@@ -122,7 +123,10 @@ function makeControl(){
   };
 
   arm(delta,()=>{enabled=!enabled;apply();});
-  arm(pause,()=>fireOriginalPause());
+  arm(pause,()=>{
+    preserveEnabledThroughPause=true;
+    fireOriginalPause();
+  });
   root.append(delta,divider,pause);
   document.body.appendChild(root);
   return root;
@@ -222,10 +226,21 @@ function apply(){
   const root=makeControl();
   const panel=document.getElementById(DELTA_PANEL_ID);
   const race=isRaceVisible();
+  const controls=raceControlsRoot();
+  const hud=document.querySelector('.tdr-race-hud');
 
   retireLegacyDomDelta();
   if(race)positionControl(root);
-  if(!race&&lastRace)enabled=false;
+
+  if(race&&preserveEnabledThroughPause){
+    preserveEnabledThroughPause=false;
+  }else if(!race&&lastRace&&!preserveEnabledThroughPause){
+    enabled=false;
+  }else if(!race&&preserveEnabledThroughPause&&(!controls?.isConnected||!hud?.isConnected)){
+    preserveEnabledThroughPause=false;
+    enabled=false;
+  }
+
   lastRace=race;
   root.style.display=race?'flex':'none';
 
@@ -258,6 +273,7 @@ function frame(){
 
 function boot(){
   enabled=false;
+  preserveEnabledThroughPause=false;
   makeControl();
   const observer=new MutationObserver(()=>apply());
   observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
