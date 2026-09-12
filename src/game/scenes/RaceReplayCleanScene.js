@@ -1,5 +1,4 @@
 import { RaceScene as CurrentRaceScene } from './RaceTop10ReplayScene.js';
-import { hideRaceUi, restoreRaceUi } from '../ui/raceUiVisibility.js';
 
 function flattenScene(scene){
   const out=[];
@@ -17,13 +16,6 @@ function flattenScene(scene){
 export class RaceScene extends CurrentRaceScene{
   _hideStatsReplayGameplayUi(){
     super._hideStatsReplayGameplayUi?.();
-
-    // Use the race's own visibility boundary while the native replay is active.
-    // In particular this disables uiCam, which owns the visual brake, gas and
-    // handbrake controls. Nothing about their creation/input/position is changed.
-    if(!this._tdrNativeReplayRaceUiState){
-      try{this._tdrNativeReplayRaceUiState=hideRaceUi(this);}catch{}
-    }
 
     const keep=new Set([this.car,this.carBody,this.carRig]);
     const hidden=this._tdrStatsReplayHiddenObjects||(this._tdrStatsReplayHiddenObjects=[]);
@@ -55,9 +47,10 @@ export class RaceScene extends CurrentRaceScene{
       this.minimapSportFrame,this.minimapWideFrame,this._tdrLiveDeltaUi?.root
     ]) hide(obj);
 
-    // DOM wrappers such as the static minimap deliberately restore themselves
-    // during postupdate. A replay-mode CSS gate with !important is therefore
-    // the authoritative switch while the native replay is active.
+    // The current mobile driving controls are DOM, not Phaser. Their exact
+    // roots are #tdr-race-controls (stick + brake + gas), #tdr-handbrake and,
+    // when wheel steering is selected, #tdr-steering-wheel. Keep their normal
+    // creation/input code untouched and gate only their visibility in replay.
     try{
       const parent=this.game?.canvas?.parentElement;
       if(parent){
@@ -72,9 +65,11 @@ export class RaceScene extends CurrentRaceScene{
           [data-tdr-native-replay="1"] > :not(canvas){display:none!important;visibility:hidden!important;pointer-events:none!important}
           body.tdr-native-replay-clean #tdr-static-minimap,
           body.tdr-native-replay-clean #tdr-static-ghost-status,
+          body.tdr-native-replay-clean #tdr-race-controls,
+          body.tdr-native-replay-clean #tdr-handbrake,
+          body.tdr-native-replay-clean #tdr-steering-wheel,
           body.tdr-native-replay-clean [data-tdr-race-ui="1"],
           body.tdr-native-replay-clean [data-tdr-touch-controls],
-          body.tdr-native-replay-clean [data-tdr-race-controls],
           body.tdr-native-replay-clean [data-tdr-race-hud]{display:none!important;visibility:hidden!important;pointer-events:none!important}
         `;
         document.head.appendChild(style);
@@ -87,10 +82,6 @@ export class RaceScene extends CurrentRaceScene{
     try{this._tdrReplayDomParent?.removeAttribute?.('data-tdr-native-replay');}catch{}
     this._tdrReplayDomParent=null;
     try{document.body.classList.remove('tdr-native-replay-clean');}catch{}
-    if(this._tdrNativeReplayRaceUiState){
-      try{restoreRaceUi(this,this._tdrNativeReplayRaceUiState);}catch{}
-      this._tdrNativeReplayRaceUiState=null;
-    }
   }
 
   _destroyStatsReplayOverlay(restore=true){
