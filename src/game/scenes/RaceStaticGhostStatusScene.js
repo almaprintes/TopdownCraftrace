@@ -3,6 +3,8 @@ import { RaceScene as CurrentRaceScene } from './RaceStaticMinimapScene.js';
 const PANEL_W = 282;
 const ROW_H = 30;
 const PANEL_H = ROW_H * 3;
+const GHOST_BASE_ALPHA = 0.48;
+const GHOST_VISIBILITY_LEVELS = [1, 0.75, 0.5, 0.25];
 
 function normalized(value) {
   return String(value || '').replace(/\s+/g, ' ').trim().toUpperCase();
@@ -56,7 +58,10 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrGhostPanelAnchor = null;
     this._tdrGhostPanelObjects = new Set();
     this._tdrGhostPanelLabels = null;
+    this._tdrGhostPanelRows = null;
     this._tdrGhostPanelProbeUntil = performance.now() + 5000;
+    this._tdrGhostVisibleEnabled = true;
+    this._tdrGhostVisibilityIndex = 0;
 
     this._tdrGhostPanelPostUpdate = () => this._syncStaticGhostPanel();
     this.events?.on?.('postupdate', this._tdrGhostPanelPostUpdate, this);
@@ -72,6 +77,7 @@ export class RaceScene extends CurrentRaceScene {
       this._tdrStaticGhostPanel = null;
       this._tdrGhostPanelPostUpdate = null;
       this._tdrGhostPanelResize = null;
+      this._tdrGhostPanelRows = null;
       this._tdrGhostPanelObjects?.clear?.();
     });
 
@@ -101,18 +107,45 @@ export class RaceScene extends CurrentRaceScene {
       if (!Number.isFinite(cx) || !Number.isFinite(cy)) continue;
       if (cx < panel.left - 12 || cx > panel.right + 12 || cy < panel.top - 10 || cy > panel.bottom + 10) continue;
       const type = String(obj.type || obj.constructor?.name || '').toLowerCase();
-      const panelShape = type.includes('rectangle') || type.includes('graphics') || type.includes('text');
+      const panelShape = type.includes('rectangle') || type.includes('graphics') || type.includes('text') || type.includes('container');
       if (!panelShape) continue;
-      // Only retire the ghost panel's own labels and chrome. Do not touch the DOM minimap,
-      // pause/delta control, vehicle, track or unrelated HUD objects.
+      // Only retire the ghost panel's own labels/chrome/replay control. Do not touch
+      // the DOM minimap, pause/delta control, vehicle, track or unrelated HUD objects.
       if (isText && obj !== ghost && obj !== record) {
         const t = normalized(obj.text);
-        if (t && !t.includes('FANTASMA') && !t.includes('GHOST') && !t.includes('RÉCORD') && !t.includes('RECORD')) continue;
+        if (t && !t.includes('FANTASMA') && !t.includes('GHOST') && !t.includes('RÉCORD') && !t.includes('RECORD') && !t.includes('REPETICIÓN') && !t.includes('REPLAY')) continue;
       }
       owned.push(obj);
     }
 
     return { ghost, record, gp, rp, centerX, topY, owned };
+  }
+
+  _makeGhostPanelText(topPercent, value, color = '#f7fbff') {
+    const text = document.createElement('div');
+    text.textContent = value;
+    Object.assign(text.style, {
+      position: 'absolute', left: '0', right: '0', top: topPercent,
+      height: `${ROW_H / PANEL_H * 100}%`, display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '0 5px', boxSizing: 'border-box', pointerEvents: 'none',
+      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      fontWeight: '900', letterSpacing: '.025em', color,
+      textShadow: '0 1px 2px rgba(0,0,0,.8)'
+    });
+    return text;
+  }
+
+  _wireGhostPanelRow(row, onTap) {
+    if (!row || typeof onTap !== 'function') return;
+    row.style.pointerEvents = 'auto';
+    row.style.cursor = 'pointer';
+    row.style.touchAction = 'manipulation';
+    const activate = (event) => {
+      try { event.preventDefault(); event.stopPropagation(); } catch (_) {}
+      onTap();
+      this._refreshStaticGhostPanelLabels();
+    };
+    row.addEventListener('pointerdown', activate);
   }
 
   _ensureStaticGhostPanel(found) {
@@ -129,46 +162,53 @@ export class RaceScene extends CurrentRaceScene {
       textAlign: 'center', boxSizing: 'border-box', transform: 'translateZ(0)', contain: 'layout paint style'
     });
 
+    const rows = [];
     for (let i = 0; i < 3; i++) {
       const row = document.createElement('div');
       row.className = 'tdr-static-ghost-row';
+      row.dataset.row = String(i);
       Object.assign(row.style, {
         position: 'absolute', left: '0', right: '0', top: `${i * ROW_H / PANEL_H * 100}%`,
         height: `${ROW_H / PANEL_H * 100}%`, boxSizing: 'border-box',
         border: '1px solid rgba(67,220,255,.68)', background: 'rgba(4,17,24,.78)',
         boxShadow: i === 0 ? 'inset 0 0 14px rgba(55,205,255,.05)' : 'none'
       });
+      rows.push(row);
       root.appendChild(row);
     }
 
-    const ghostText = document.createElement('div');
+    const ghostText = this._makeGhostPanelText('0', '👻 FANTASMA · ON', '#c9f5ff');
     ghostText.dataset.ghost = '1';
-    ghostText.textContent = String(found.ghost.text || '👻 FANTASMA');
-    Object.assign(ghostText.style, {
-      position: 'absolute', left: '50%', top: '0', height: `${ROW_H / PANEL_H * 100}%`,
-      transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      whiteSpace: 'nowrap', fontWeight: '900', letterSpacing: '.035em', color: '#c9f5ff',
-      textShadow: '0 1px 2px rgba(0,0,0,.8)'
-    });
-
-    const recordText = document.createElement('div');
+    const recordText = this._makeGhostPanelText(`${ROW_H / PANEL_H * 100}%`, '🏆 RÉCORD PERSONAL · ▶');
     recordText.dataset.record = '1';
-    recordText.textContent = String(found.record.text || 'RÉCORD CARGADO');
-    Object.assign(recordText.style, {
-      position: 'absolute', left: '50%', top: `${ROW_H / PANEL_H * 100}%`, height: `${ROW_H / PANEL_H * 100}%`,
-      transform: 'translateX(-50%)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      whiteSpace: 'nowrap', fontWeight: '900', letterSpacing: '.02em', color: '#f7fbff',
-      textShadow: '0 1px 2px rgba(0,0,0,.8)'
-    });
+    const visibilityText = this._makeGhostPanelText(`${ROW_H * 2 / PANEL_H * 100}%`, '◐ VISIBILIDAD · 100%', '#d8f8ff');
+    visibilityText.dataset.visibility = '1';
 
-    root.append(ghostText, recordText);
+    root.append(ghostText, recordText, visibilityText);
     (this.game?.canvas?.parentElement || document.body).appendChild(root);
     this._tdrStaticGhostPanel = root;
-    this._tdrGhostPanelLabels = { ghostText, recordText };
+    this._tdrGhostPanelLabels = { ghostText, recordText, visibilityText };
+    this._tdrGhostPanelRows = rows;
+
+    this._wireGhostPanelRow(rows[0], () => {
+      this._tdrGhostVisibleEnabled = !this._tdrGhostVisibleEnabled;
+      if (!this._tdrGhostVisibleEnabled && !this._replayActive) {
+        try { this._ghostSprite?.setVisible?.(false); } catch (_) {}
+      }
+    });
+    this._wireGhostPanelRow(rows[1], () => {
+      if (!this._ghostData || this._replayActive || typeof this._enterReplay !== 'function') return;
+      this._enterReplay();
+    });
+    this._wireGhostPanelRow(rows[2], () => {
+      this._tdrGhostVisibilityIndex = (Number(this._tdrGhostVisibilityIndex || 0) + 1) % GHOST_VISIBILITY_LEVELS.length;
+      this._applyGhostPanelPreference();
+    });
 
     this._tdrGhostPanelResize = () => this._layoutStaticGhostPanel?.();
     this.scale?.on?.('resize', this._tdrGhostPanelResize, this);
     if (typeof window !== 'undefined') window.addEventListener('tdr:viewportchange', this._tdrGhostPanelResize, { passive: true });
+    this._refreshStaticGhostPanelLabels();
     return root;
   }
 
@@ -188,8 +228,33 @@ export class RaceScene extends CurrentRaceScene {
     root.style.height = `${(PANEL_H / vh) * rect.height}px`;
     const scale = rect.width / vw;
     const fontPx = Math.max(9, Math.min(15, 12 * scale));
-    if (this._tdrGhostPanelLabels?.ghostText) this._tdrGhostPanelLabels.ghostText.style.fontSize = `${fontPx}px`;
-    if (this._tdrGhostPanelLabels?.recordText) this._tdrGhostPanelLabels.recordText.style.fontSize = `${fontPx}px`;
+    for (const label of Object.values(this._tdrGhostPanelLabels || {})) {
+      if (label) label.style.fontSize = `${fontPx}px`;
+    }
+  }
+
+  _refreshStaticGhostPanelLabels() {
+    const labels = this._tdrGhostPanelLabels;
+    if (!labels) return;
+    const level = GHOST_VISIBILITY_LEVELS[Number(this._tdrGhostVisibilityIndex || 0)] ?? 1;
+    if (labels.ghostText) labels.ghostText.textContent = `👻 FANTASMA · ${this._tdrGhostVisibleEnabled ? 'ON' : 'OFF'}`;
+    if (labels.recordText) labels.recordText.textContent = this._ghostData ? '🏆 RÉCORD PERSONAL · ▶' : 'RÉCORD NO DISPONIBLE';
+    if (labels.visibilityText) labels.visibilityText.textContent = `◐ VISIBILIDAD · ${Math.round(level * 100)}%`;
+    if (this._tdrGhostPanelRows?.[1]) {
+      this._tdrGhostPanelRows[1].style.opacity = this._ghostData ? '1' : '.52';
+      this._tdrGhostPanelRows[1].style.cursor = this._ghostData ? 'pointer' : 'default';
+    }
+  }
+
+  _applyGhostPanelPreference() {
+    if (this._replayActive) return;
+    const ghost = this._ghostSprite;
+    if (!ghost?.scene) return;
+    const level = GHOST_VISIBILITY_LEVELS[Number(this._tdrGhostVisibilityIndex || 0)] ?? 1;
+    try { ghost.setAlpha(GHOST_BASE_ALPHA * level); } catch (_) {}
+    if (!this._tdrGhostVisibleEnabled) {
+      try { ghost.setVisible(false); } catch (_) {}
+    }
   }
 
   _syncStaticGhostPanel() {
@@ -205,11 +270,14 @@ export class RaceScene extends CurrentRaceScene {
     }
 
     for (const obj of this._tdrGhostPanelObjects || []) hidePhaserObject(obj);
+    this._applyGhostPanelPreference();
+    this._refreshStaticGhostPanelLabels();
 
     const root = this._tdrStaticGhostPanel;
     if (!root?.isConnected) return;
     const active = !!this.sys?.isActive?.();
     const hiddenByReport = !!this._sessionReportOpen;
-    root.style.display = active && !hiddenByReport ? 'block' : 'none';
+    const hiddenByReplay = !!this._replayActive;
+    root.style.display = active && !hiddenByReport && !hiddenByReplay ? 'block' : 'none';
   }
 }
