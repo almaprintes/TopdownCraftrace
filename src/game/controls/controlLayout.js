@@ -102,6 +102,35 @@ function placeDom(el,point,sizeScale=true){
   }
 }
 
+function buttonCandidates(root,side){
+  const selectors=side==='left'
+    ? ['[data-steer="left"]','[data-steering="left"]','[data-direction="left"]','[data-left]','.tdr-steer-left','.tdr-control-left']
+    : ['[data-steer="right"]','[data-steering="right"]','[data-direction="right"]','[data-right]','.tdr-steer-right','.tdr-control-right'];
+  for(const selector of selectors){
+    const el=root.querySelector(selector);
+    if(el)return el;
+  }
+  return null;
+}
+
+function placeButtonSteering(root,layout){
+  const left=buttonCandidates(root,'left');
+  const right=buttonCandidates(root,'right');
+  if(left&&right){
+    placeDom(left,layout.left);
+    placeDom(right,layout.right);
+    return true;
+  }
+
+  // Some builds render the two steering buttons inside one DOM group. Keep
+  // that whole group screen-fixed so arrows and captions move together.
+  const group=root.querySelector('[data-buttons],[data-steering-buttons],.tdr-steering-buttons,.tdr-button-steering');
+  if(!group)return false;
+  const a=sanitizeLayoutPoint(layout.left),b=sanitizeLayoutPoint(layout.right);
+  placeDom(group,{x:(a.x+b.x)/2,y:(a.y+b.y)/2,scale:(a.scale+b.scale)/2});
+  return true;
+}
+
 function hardenIosRaceControls(root){
   if(!root)return;
   const nodes=[
@@ -146,7 +175,8 @@ export function applyDomControlLayout(){
   const root=document.getElementById('tdr-race-controls');
   if(!root)return;
   hardenIosRaceControls(root);
-  placeDom(root.querySelector('[data-stick]'),layout.steer);
+  if(controls.steeringMode==='buttons')placeButtonSteering(root,layout);
+  else placeDom(root.querySelector('[data-stick]'),layout.steer);
   placeDom(root.querySelector('[data-pedal="gas"]'),layout.gas);
   placeDom(root.querySelector('[data-pedal="brake"]'),layout.brake);
   placeDom(document.getElementById('tdr-handbrake'),layout.handbrake);
