@@ -168,7 +168,13 @@ export class RaceScene extends CleanRaceScene{
 
   _applyStatsReplayFrame(t){
     super._applyStatsReplayFrame(t);
-    if(this._tdrEmbeddedReplay)this._syncEmbeddedSourceCamera();
+    if(!this._tdrEmbeddedReplay)return;
+    this._syncEmbeddedSourceCamera();
+    const state=this._tdrStatsReplay;
+    const samples=state?.payload?.samples;
+    const i=this._sampleIndexAtTime(samples,Number(t)||0);
+    const p=Array.isArray(samples)?samples[i]:null;
+    if(p){try{this.cameras?.main?.stopFollow?.();this.cameras?.main?.centerOn?.(Number(p.x)||0,Number(p.y)||0);}catch{}}
   }
 
   _destroyStatsReplayOverlay(restore=true){
