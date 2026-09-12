@@ -55,21 +55,20 @@ jobs:
           test -f src/game/scenes/RaceNoDiagScene.js
           test -f src/game/scenes/RaceStaticMinimapScene.js
           test -f src/game/scenes/RaceStaticGhostStatusScene.js
+          test -f src/game/scenes/RaceTop10ReplayScene.js
           test -f src/game/stats/localRaceRecords.js
           test -f src/game/scenes/StatsBroadcastScene.js
           test -f src/game/scenes/StatsBroadcastCompactScene.js
           test -f src/game/scenes/StatsBroadcastReplayScene.js
-          grep -q "RaceStaticGhostStatusScene.js" src/game/game.js
+          grep -q "RaceTop10ReplayScene.js" src/game/game.js
           grep -q "StatsBroadcastReplayScene.js" src/game/game.js
           grep -q "this._diag = () => {}" src/game/scenes/RaceNoDiagScene.js
           grep -q "tdr-static-minimap" src/game/scenes/RaceStaticMinimapScene.js
           grep -q "tdr-static-ghost-status" src/game/scenes/RaceStaticGhostStatusScene.js
           grep -q "VISIBILIDAD" src/game/scenes/RaceStaticGhostStatusScene.js
           grep -q "circuit-personal-best" src/game/scenes/RaceStaticGhostStatusScene.js
-          grep -q "tdr2:raceRecords:v1" src/game/stats/localRaceRecords.js
-          grep -q "cloudSnapshotPolicy" src/game/stats/localRaceRecords.js
-          grep -q "RACING INTELLIGENCE SUITE" src/game/scenes/StatsBroadcastScene.js
-          grep -q "horizontal fit only" src/game/scenes/StatsBroadcastCompactScene.js
+          grep -q "tdr2:topReplay:" src/game/scenes/RaceTop10ReplayScene.js
+          grep -q "replayKey" src/game/stats/localRaceRecords.js
           grep -q "RACE CONTROL // REPLAY" src/game/scenes/StatsBroadcastReplayScene.js
       - name: Build development
         working-directory: dev-src
@@ -78,7 +77,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.41/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.42/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -95,8 +94,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.41' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.41' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.42' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.42' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
