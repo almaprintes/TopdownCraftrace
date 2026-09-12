@@ -31,11 +31,14 @@ export class RaceScene extends CurrentRaceScene{
 
     // Several legacy HUD/control elements live inside Containers, so the old
     // first-level scan missed them. Fixed-camera elements and the high-depth
-    // presentation layer are UI, not world scenery.
+    // presentation layer are UI, not world scenery. Native replay has input
+    // disabled, so any remaining interactive Phaser object is also a gameplay
+    // control and must not be visible (brake, gas, handbrake, etc.).
     for(const obj of flattenScene(this)){
       const sx=Number(obj?.scrollFactorX),sy=Number(obj?.scrollFactorY);
       const depth=Number(obj?.depth);
-      if((sx===0&&sy===0)||(Number.isFinite(depth)&&depth>=900))hide(obj);
+      const interactive=!!obj?.input && obj.input.enabled!==false;
+      if((sx===0&&sy===0)||(Number.isFinite(depth)&&depth>=900)||interactive)hide(obj);
     }
 
     for(const obj of [
