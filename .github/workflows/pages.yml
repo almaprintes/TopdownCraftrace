@@ -27,32 +27,27 @@ jobs:
           ref: beta-1.0
           path: beta
           fetch-depth: 1
-
       - name: Read beta revision
         id: beta-rev
         working-directory: beta
         shell: bash
         run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
       - name: Restore frozen beta build
         id: beta-cache
         uses: actions/cache@v4
         with:
           path: beta/dist
           key: tdr-public-beta-${{ steps.beta-rev.outputs.sha }}
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: Checkout development
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           path: dev-src
           fetch-depth: 1
-
       - name: Verify race wrappers
         working-directory: dev-src
         shell: bash
@@ -61,7 +56,9 @@ jobs:
           test -f src/game/scenes/RaceStaticMinimapScene.js
           test -f src/game/scenes/RaceStaticGhostStatusScene.js
           test -f src/game/stats/localRaceRecords.js
+          test -f src/game/scenes/StatsBroadcastScene.js
           grep -q "RaceStaticGhostStatusScene.js" src/game/game.js
+          grep -q "StatsBroadcastScene.js" src/game/game.js
           grep -q "this._diag = () => {}" src/game/scenes/RaceNoDiagScene.js
           grep -q "tdr-static-minimap" src/game/scenes/RaceStaticMinimapScene.js
           grep -q "tdr-static-ghost-status" src/game/scenes/RaceStaticGhostStatusScene.js
@@ -69,7 +66,7 @@ jobs:
           grep -q "circuit-personal-best" src/game/scenes/RaceStaticGhostStatusScene.js
           grep -q "tdr2:raceRecords:v1" src/game/stats/localRaceRecords.js
           grep -q "cloudSnapshotPolicy" src/game/stats/localRaceRecords.js
-
+          grep -q "RACING INTELLIGENCE SUITE" src/game/scenes/StatsBroadcastScene.js
       - name: Build development
         working-directory: dev-src
         shell: bash
@@ -77,10 +74,9 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.38/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.39/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
-
       - name: Assemble public beta plus DEV
         shell: bash
         run: |
@@ -88,7 +84,6 @@ jobs:
           mkdir -p beta/dist/dev beta/dist/dev-live
           cp -R dev-src/dist/. beta/dist/dev/
           cp -R dev-src/dist/. beta/dist/dev-live/
-
       - name: Verify DEV artifact
         shell: bash
         run: |
@@ -96,17 +91,14 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.38' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.38' beta/dist/dev-live/index.html
-
+          grep -q 'DEV 1\.0\.39' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.39' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: beta/dist
-
   deploy:
     environment:
       name: github-pages
