@@ -23,6 +23,7 @@ export class RaceScene extends CurrentRaceScene{
     this._tdrReplayCameraSamples=[];
     this._tdrReplayCameraLastT=-Infinity;
     this._tdrStatsReplay=null;
+    this._tdrStatsReplayHiddenObjects=[];
     if(pending)this.time?.delayedCall?.(0,()=>this._startStatsNativeReplay(pending));
     this.events?.once?.('shutdown',()=>{this._tdrReplayCameraSamples=[];this._destroyStatsReplayOverlay();});
     return result;
@@ -43,15 +44,28 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _hideStatsReplayGameplayUi(){
-    const hide=o=>{try{o?.setVisible?.(false);}catch{}};
-    hide(this.touchUI);hide(this.ttPanel);hide(this._startModal);hide(this._startModalBg);hide(this._ghostSprite);
+    this._tdrStatsReplayHiddenObjects=[];
+    const keep=new Set([this.car,this.carBody,this.carRig]);
+    const hide=o=>{if(!o||keep.has(o)||o.visible===false)return;try{this._tdrStatsReplayHiddenObjects.push(o);o.setVisible?.(false);}catch{}};
+    // Replay real: hide every camera-fixed Phaser HUD/control object, not only known panels.
+    for(const obj of this.children?.list||[]){
+      const sx=Number(obj?.scrollFactorX),sy=Number(obj?.scrollFactorY);
+      if(sx===0&&sy===0)hide(obj);
+    }
+    hide(this.touchUI);hide(this.hud);hide(this.ttPanel);hide(this._startModal);hide(this._startModalBg);hide(this._ghostSprite);hide(this.cpGfx);hide(this.gridDebug);hide(this.finishLineDebug);hide(this._touchDbg);
     for(const value of Object.values(this.ttHud||{}))hide(value);
     for(const value of Object.values(this.minimap||{}))hide(value);
-    try{document.querySelectorAll('[data-tdr-static-minimap],[data-tdr-static-ghost-status],[data-tdr-touch-controls]').forEach(el=>{el.dataset.tdrReplayWasDisplay=el.style.display||'';el.style.display='none';});}catch{}
+    // DOM HUD created by the race wrappers.
+    try{
+      document.querySelectorAll('[data-tdr-static-minimap],[data-tdr-static-ghost-status],[data-tdr-touch-controls],[data-tdr-race-controls],[data-tdr-race-hud]').forEach(el=>{
+        el.dataset.tdrReplayWasDisplay=el.style.display||'';
+        el.style.display='none';
+      });
+    }catch{}
   }
 
   _createStatsReplayOverlay(payload){
-    this._destroyStatsReplayOverlay();
+    this._destroyStatsReplayOverlay(false);
     const root=document.createElement('div');root.dataset.tdrStatsNativeReplay='1';
     root.style.cssText='position:fixed;inset:0;z-index:2147483300;pointer-events:none;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff';
     root.innerHTML=`<div style="position:absolute;left:max(12px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top));padding:8px 11px;background:rgba(3,14,22,.86);border:1px solid rgba(82,232,255,.45);box-shadow:0 8px 24px rgba(0,0,0,.25)"><div style="font-size:8px;font-weight:1000;letter-spacing:.18em;color:#63edff">RACE CONTROL // REPLAY REAL</div><div style="margin-top:2px;font-size:17px;font-weight:1000;letter-spacing:.03em">${String(payload.trackId||this.trackKey||'CIRCUITO').toUpperCase()}</div><div style="font-size:9px;font-weight:850;color:#90a9b7">${String(payload.carId||this.carId||'COCHE').toUpperCase()} · ${fmt(payload.lapMs)}</div></div><div style="position:absolute;right:max(12px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));display:flex;gap:7px;pointer-events:auto"><button data-pause style="height:38px;min-width:48px;border:1px solid #4feaff;background:rgba(5,29,40,.9);color:#fff;font-weight:1000;font-size:15px">Ⅱ</button><button data-back style="height:38px;border:1px solid #4feaff;background:rgba(5,29,40,.9);color:#fff;padding:0 14px;font-weight:1000;letter-spacing:.06em">← RACE CONTROL</button></div><div style="position:absolute;left:50%;bottom:max(13px,env(safe-area-inset-bottom));transform:translateX(-50%);min-width:260px;padding:7px 12px;background:rgba(3,14,22,.82);border:1px solid rgba(82,232,255,.28);text-align:center"><div data-time style="font-size:22px;font-weight:1000;font-variant-numeric:tabular-nums">0:00.000</div><div style="height:3px;margin-top:5px;background:#173542"><i data-progress style="display:block;width:0;height:100%;background:#58efff;box-shadow:0 0 10px rgba(88,239,255,.6)"></i></div></div>`;
@@ -60,9 +74,20 @@ export class RaceScene extends CurrentRaceScene{
     root.querySelector('[data-back]')?.addEventListener('click',()=>this._exitStatsNativeReplay());
   }
 
-  _destroyStatsReplayOverlay(){try{this._tdrStatsReplayOverlay?.remove?.();}catch{}this._tdrStatsReplayOverlay=null;try{document.querySelectorAll('[data-tdr-static-minimap],[data-tdr-static-ghost-status],[data-tdr-touch-controls]').forEach(el=>{if(el.dataset.tdrReplayWasDisplay!=null){el.style.display=el.dataset.tdrReplayWasDisplay;delete el.dataset.tdrReplayWasDisplay;}});}catch{}}
+  _restoreStatsReplayGameplayUi(){
+    for(const obj of this._tdrStatsReplayHiddenObjects||[]){try{obj?.setVisible?.(true);}catch{}}
+    this._tdrStatsReplayHiddenObjects=[];
+    try{document.querySelectorAll('[data-tdr-static-minimap],[data-tdr-static-ghost-status],[data-tdr-touch-controls],[data-tdr-race-controls],[data-tdr-race-hud]').forEach(el=>{if(el.dataset.tdrReplayWasDisplay!=null){el.style.display=el.dataset.tdrReplayWasDisplay;delete el.dataset.tdrReplayWasDisplay;}});}catch{}
+  }
 
-  _exitStatsNativeReplay(){const trackId=String(this._tdrStatsReplay?.payload?.returnTrackId||this.trackKey||'track01');try{sessionStorage.removeItem(SESSION_KEY);sessionStorage.setItem('tdr2:statsReturnTrack',trackId);}catch{}this._destroyStatsReplayOverlay();this.scene.start('StatsScene',{raceControlTrackId:trackId});}
+  _destroyStatsReplayOverlay(restore=true){try{this._tdrStatsReplayOverlay?.remove?.();}catch{}this._tdrStatsReplayOverlay=null;if(restore)this._restoreStatsReplayGameplayUi();}
+
+  _exitStatsNativeReplay(){
+    const trackId=String(this._tdrStatsReplay?.payload?.returnTrackId||this.trackKey||'track01');
+    try{sessionStorage.removeItem(SESSION_KEY);sessionStorage.setItem('tdr2:statsReturnTrack',trackId);}catch{}
+    this._destroyStatsReplayOverlay(false);
+    this.scene.start('StatsScene',{raceControlTrackId:trackId});
+  }
 
   _applyStatsReplayFrame(t){const state=this._tdrStatsReplay;if(!state)return;const p=sampleAt(state.payload.samples,t);if(!p)return;try{this.carBody.setPosition(p.x,p.y);this.carBody.rotation=p.r;}catch{}try{this.carRig.setPosition(p.x,p.y);this.carRig.rotation=p.r+(this._carVisualRotOffset||0);}catch{}
     const cam=camAt(state.payload.cameraSamples,t);if(cam){try{this.cameras.main.stopFollow();this.cameras.main.setZoom(cam.zoom);this.cameras.main.setScroll(cam.x,cam.y);}catch{}}else{try{this.cameras.main.centerOn(p.x,p.y);}catch{}}
@@ -87,7 +112,7 @@ export class RaceScene extends CurrentRaceScene{
     const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
     if(hist.length>this._ghostHistoryLen){
       const last=hist[hist.length-1]||{};const lapMs=positive(last.lapMs??this.timing?.lastLap);const trackId=String(this._ghostTrackKey||this.trackKey||'track01');const ranked=hist.filter(validLap).map((row,index)=>({row,index,ms:positive(row?.lapMs??row?.ms??row?.time)})).sort((a,b)=>a.ms-b.ms);const rankedIndex=ranked.findIndex(item=>item.row===last);const qualifies=lapMs&&rankedIndex>=0&&rankedIndex<10&&Array.isArray(this._ghostSamples)&&this._ghostSamples.length>4;
-      if(qualifies){const samples=this._ghostSamples.filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),r:Number(s.r||0)}));if(this.carBody)samples.push({t:Math.round(lapMs),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});const cameraSamples=(this._tdrReplayCameraSamples||[]).filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<=lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),w:Number(s.w),h:Number(s.h),zoom:Number(s.zoom)}));const finalCam=cameraSample(this,lapMs);if(finalCam)cameraSamples.push(finalCam);const key=replayKey(trackId,last,hist.length-1);if(samples.length>4)write(key,{version:4,kind:'local-top10-lap',trackKey:trackId,carId:text(last.carId)||this._tdrCurrentGhostCarId||this.carId||null,lapMs:Math.round(lapMs),recordedAt:Number(last.t||last.timestamp)||Date.now(),historyIndex:hist.length-1,samples,cameraSamples,viewport:{w:Number(this.scale?.width)||0,h:Number(this.scale?.height)||0}});}
+      if(qualifies){const samples=this._ghostSamples.filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),r:Number(s.r||0)}));if(this.carBody)samples.push({t:Math.round(lapMs),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});const cameraSamples=(this._tdrReplayCameraSamples||[]).filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<=lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),w:Number(s.w),h:Number(s.h),zoom:Number(s.zoom)}));const finalCam=cameraSample(this,lapMs);if(finalCam)cameraSamples.push(finalCam);const key=replayKey(trackId,last,hist.length-1);if(samples.length>4)write(key,{version:5,kind:'local-top10-lap',trackKey:trackId,carId:text(last.carId)||this._tdrCurrentGhostCarId||this.carId||null,lapMs:Math.round(lapMs),recordedAt:Number(last.t||last.timestamp)||Date.now(),historyIndex:hist.length-1,samples,cameraSamples,viewport:{w:Number(this.scale?.width)||0,h:Number(this.scale?.height)||0}});}
       const keep=new Set(ranked.slice(0,10).map(item=>replayKey(trackId,item.row,item.index)));try{const prefix=`${TOP_REPLAY_PREFIX}${encodeURIComponent(trackId)}:`;for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i)||'';if(key.startsWith(prefix)&&!keep.has(key))remove(key);}}catch{}
     }
     const result=super._completedLapCheck(now);this._tdrReplayCameraSamples=[];this._tdrReplayCameraLastT=-Infinity;return result;
