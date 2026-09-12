@@ -149,11 +149,34 @@ export class RaceScene extends CurrentRaceScene {
     return state;
   }
 
+  _allowSteeringButtonsOnMainCamera() {
+    const main = this.cameras?.main;
+    if (!main) return;
+    const allow = (obj) => {
+      if (!obj) return;
+      if (typeof obj.cameraFilter === 'number') obj.cameraFilter &= ~main.id;
+      const children = obj.list || obj.getAll?.();
+      if (Array.isArray(children)) for (const child of children) allow(child);
+    };
+    allow(this._tdrSteerButtons);
+  }
+
+  _pinButtonSteeringUi() {
+    const c = this._tdrSteerButtons;
+    const cam = this.cameras?.main;
+    if (this._tdrSteeringMode !== 'buttons' || !c?.scene || !cam) return;
+    this._allowSteeringButtonsOnMainCamera();
+    const zoom = Math.max(0.001, Number(cam.zoom || 1));
+    const world = cam.getWorldPoint(0, 0);
+    c.setPosition(world.x, world.y);
+    c.setScale(1 / zoom);
+    c.setScrollFactor(1, 1);
+  }
+
   _buildButtonSteeringUi() {
     if (this._tdrSteeringMode !== 'buttons' || this._tdrSteerButtons?.scene) return;
-    const c = this.add.container(0, 0).setScrollFactor(0).setDepth(1100);
+    const c = this.add.container(0, 0).setScrollFactor(1).setDepth(1100);
     this._tdrSteerButtons = c;
-    try { this.cameras.main.ignore(c); } catch (_) {}
 
     const make = (dir, glyph, label) => {
       const bg = this.add.rectangle(0, 0, 10, 10, 0x07131e, 0.72).setOrigin(0).setStrokeStyle(2, 0x67cfff, 0.55).setInteractive({ useHandCursor: true });
@@ -174,25 +197,45 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrLeftButton = make(-1, '◀', 'IZQUIERDA');
     this._tdrRightButton = make(1, '▶', 'DERECHA');
     this._layoutButtonSteeringUi();
+    this._pinButtonSteeringUi();
   }
 
   _layoutButtonSteeringUi() {
     if (this._tdrSteeringMode !== 'buttons' || !this._tdrSteerButtons?.scene) return;
-    const w = Number(this.scale?.width || 0), h = Number(this.scale?.height || 0);
+    const w = Math.max(1, Number(this.scale?.width || 0)), h = Math.max(1, Number(this.scale?.height || 0));
     const pad = Math.max(14, Math.min(28, Math.floor(Math.min(w, h) * 0.04)));
     const baseH = Math.max(76, Math.min(118, Math.floor(h * 0.22)));
     const baseW = Math.max(92, Math.min(150, Math.floor(w * 0.14)));
     const custom=readControlLayout().layout;
     const lp=sanitizeLayoutPoint(custom.left||{x:(pad+baseW/2)/w,y:(h-pad-baseH/2)/h,scale:1});
     const rp=sanitizeLayoutPoint(custom.right||{x:(pad+baseW*1.5+14)/w,y:(h-pad-baseH/2)/h,scale:1});
-    const place = (parts,p) => {
-      if (!parts) return;
-      const bw=baseW*p.scale,bh=baseH*p.scale,x=p.x*w-bw/2,y=p.y*h-bh/2;
-      parts.bg.setPosition(x,y).setSize(bw,bh).setDisplaySize(bw,bh);
-      parts.arrow.setPosition(x+bw/2,y+bh*.42).setFontSize(Math.floor(bh*.42));
-      parts.tx.setPosition(x+bw/2,y+bh-13);
+
+    const left={p:lp,bw:baseW*lp.scale,bh:baseH*lp.scale,cx:lp.x*w,cy:lp.y*h};
+    const right={p:rp,bw:baseW*rp.scale,bh:baseH*rp.scale,cx:rp.x*w,cy:rp.y*h};
+    const sign=right.cx>=left.cx?1:-1;
+    const minGap=Math.max(12,Math.min(18,w*0.016));
+    const required=(left.bw+right.bw)/2+minGap;
+    if(Math.abs(right.cx-left.cx)<required){
+      const mid=(left.cx+right.cx)/2;
+      left.cx=mid-sign*required/2;
+      right.cx=mid+sign*required/2;
+    }
+
+    const minX=Math.min(left.cx-left.bw/2,right.cx-right.bw/2);
+    if(minX<pad){left.cx+=pad-minX;right.cx+=pad-minX;}
+    const maxX=Math.max(left.cx+left.bw/2,right.cx+right.bw/2);
+    if(maxX>w-pad){const shift=maxX-(w-pad);left.cx-=shift;right.cx-=shift;}
+
+    const place=(parts,g)=>{
+      if(!parts)return;
+      const x=g.cx-g.bw/2,y=g.cy-g.bh/2;
+      parts.bg.setPosition(x,y).setSize(g.bw,g.bh).setDisplaySize(g.bw,g.bh);
+      parts.arrow.setPosition(g.cx,y+g.bh*.42).setFontSize(Math.floor(g.bh*.42));
+      parts.tx.setPosition(g.cx,y+g.bh-13);
     };
-    place(this._tdrLeftButton,lp); place(this._tdrRightButton,rp);
+    place(this._tdrLeftButton,left);
+    place(this._tdrRightButton,right);
+    this._pinButtonSteeringUi();
   }
 
   update(time, delta) {
@@ -205,6 +248,12 @@ export class RaceScene extends CurrentRaceScene {
       if (this.touch) { this.touch.stickX = 0; this.touch.stickY = 0; this.touch.steer = 0; }
     }
     try { super.update(time, delta); }
-    finally { if (buttonMode) { if (leftKey) leftKey.isDown = prevLeft; if (rightKey) rightKey.isDown = prevRight; } }
+    finally {
+      if (buttonMode) {
+        if (leftKey) leftKey.isDown = prevLeft;
+        if (rightKey) rightKey.isDown = prevRight;
+        this._pinButtonSteeringUi();
+      }
+    }
   }
 }
