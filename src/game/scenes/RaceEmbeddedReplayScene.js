@@ -11,136 +11,94 @@ function camAt(samples,t){
   const mix=k=>Number(a?.[k])+(Number(b?.[k])-Number(a?.[k]))*q;
   return{x:mix('x'),y:mix('y'),w:mix('w'),h:mix('h'),zoom:mix('zoom')};
 }
-
-function fmt(ms){
-  ms=Math.max(0,Number(ms)||0);
-  const m=Math.floor(ms/60000),s=(ms%60000)/1000;
-  return`${m}:${s.toFixed(3).padStart(6,'0')}`;
-}
+function fmt(ms){ms=Math.max(0,Number(ms)||0);const m=Math.floor(ms/60000),s=(ms%60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;}
 
 export class RaceScene extends CleanRaceScene{
   _startStatsNativeReplay(payload){
     this._tdrEmbeddedReplay=payload?.embedded===true;
     const result=super._startStatsNativeReplay(payload);
-    if(this._tdrEmbeddedReplay){
-      this._syncEmbeddedReplayViewport();
-      this._applyStatsReplayFrame(0);
-    }
+    if(this._tdrEmbeddedReplay){this._prepareEmbeddedBackdrop();this._syncEmbeddedReplayViewport();this._applyStatsReplayFrame(0);}
     return result;
   }
-
   _hideStatsReplayGameplayUi(){
     super._hideStatsReplayGameplayUi?.();
     if(!this._tdrEmbeddedReplay)return;
-    // Full-screen replay intentionally hides siblings of the canvas. Embedded
-    // replay must leave Race Control alive, so only the exact driving/HUD roots
-    // hidden by RaceReplayCleanScene remain gated.
     try{this._tdrReplayDomParent?.removeAttribute?.('data-tdr-native-replay');}catch{}
     this._tdrReplayDomParent=null;
   }
-
-  _embeddedReplayTarget(){
-    try{return document.querySelector('[data-br-native-replay-screen="1"]');}catch{return null;}
+  _embeddedReplayTarget(){try{return document.querySelector('[data-br-native-replay-screen="1"]');}catch{return null;}}
+  _prepareEmbeddedBackdrop(){
+    const target=this._embeddedReplayTarget(),hub=target?.closest?.('.tdr-stats-hub');
+    if(!target||!hub)return;
+    this._tdrEmbeddedHub=hub;
+    this._tdrEmbeddedHubBackground=hub.style.background||'';
+    hub.style.background='transparent';
+    let cover=hub.querySelector('[data-tdr-embedded-cover="1"]');
+    if(!cover){
+      cover=document.createElement('div');cover.dataset.tdrEmbeddedCover='1';
+      cover.style.cssText='position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden';
+      cover.innerHTML='<i data-c="top"></i><i data-c="left"></i><i data-c="right"></i><i data-c="bottom"></i>';
+      for(const el of cover.children)el.style.cssText='position:absolute;background:#020a11;display:block';
+      hub.prepend(cover);
+    }
+    this._tdrEmbeddedCover=cover;
+    const head=hub.querySelector('.sh-head'),body=hub.querySelector('.sh-body');
+    if(head){this._tdrEmbeddedHeadPos=head.style.position||'';this._tdrEmbeddedHeadZ=head.style.zIndex||'';head.style.position='relative';head.style.zIndex='1';}
+    if(body){this._tdrEmbeddedBodyPos=body.style.position||'';this._tdrEmbeddedBodyZ=body.style.zIndex||'';body.style.position='relative';body.style.zIndex='1';}
+    target.style.zIndex='2';
+    this._syncEmbeddedCover();
   }
-
+  _syncEmbeddedCover(){
+    const hub=this._tdrEmbeddedHub,target=this._embeddedReplayTarget(),cover=this._tdrEmbeddedCover;
+    if(!hub||!target||!cover)return;
+    const hr=hub.getBoundingClientRect(),tr=target.getBoundingClientRect();
+    const x=Math.max(0,tr.left-hr.left),y=Math.max(0,tr.top-hr.top),r=Math.max(0,hr.right-tr.right),b=Math.max(0,hr.bottom-tr.bottom);
+    const top=cover.querySelector('[data-c="top"]'),left=cover.querySelector('[data-c="left"]'),right=cover.querySelector('[data-c="right"]'),bottom=cover.querySelector('[data-c="bottom"]');
+    if(top)top.style.cssText+=`;left:0;top:0;width:100%;height:${y}px`;
+    if(left)left.style.cssText+=`;left:0;top:${y}px;width:${x}px;height:${Math.max(0,tr.height)}px`;
+    if(right)right.style.cssText+=`;right:0;top:${y}px;width:${r}px;height:${Math.max(0,tr.height)}px`;
+    if(bottom)bottom.style.cssText+=`;left:0;bottom:0;width:100%;height:${b}px`;
+  }
+  _cleanupEmbeddedBackdrop(){
+    try{this._tdrEmbeddedCover?.remove?.();}catch{}
+    const hub=this._tdrEmbeddedHub;
+    if(hub)hub.style.background=this._tdrEmbeddedHubBackground||'';
+    const head=hub?.querySelector?.('.sh-head'),body=hub?.querySelector?.('.sh-body');
+    if(head){head.style.position=this._tdrEmbeddedHeadPos||'';head.style.zIndex=this._tdrEmbeddedHeadZ||'';}
+    if(body){body.style.position=this._tdrEmbeddedBodyPos||'';body.style.zIndex=this._tdrEmbeddedBodyZ||'';}
+    this._tdrEmbeddedCover=null;this._tdrEmbeddedHub=null;
+  }
   _syncEmbeddedReplayViewport(){
     if(!this._tdrEmbeddedReplay)return null;
-    const target=this._embeddedReplayTarget();
-    const canvas=this.game?.canvas;
-    const cam=this.cameras?.main;
+    const target=this._embeddedReplayTarget(),canvas=this.game?.canvas,cam=this.cameras?.main;
     if(!target||!canvas||!cam)return null;
-    const tr=target.getBoundingClientRect?.();
-    const cr=canvas.getBoundingClientRect?.();
-    const gw=Number(this.scale?.width)||Number(canvas.width)||0;
-    const gh=Number(this.scale?.height)||Number(canvas.height)||0;
+    const tr=target.getBoundingClientRect?.(),cr=canvas.getBoundingClientRect?.();
+    const gw=Number(this.scale?.width)||Number(canvas.width)||0,gh=Number(this.scale?.height)||Number(canvas.height)||0;
     if(!tr||!cr||cr.width<=0||cr.height<=0||gw<=0||gh<=0)return null;
-    const sx=gw/cr.width,sy=gh/cr.height;
-    const x=Math.max(0,(tr.left-cr.left)*sx);
-    const y=Math.max(0,(tr.top-cr.top)*sy);
-    const w=Math.max(1,Math.min(gw-x,tr.width*sx));
-    const h=Math.max(1,Math.min(gh-y,tr.height*sy));
+    const sx=gw/cr.width,sy=gh/cr.height,x=Math.max(0,(tr.left-cr.left)*sx),y=Math.max(0,(tr.top-cr.top)*sy);
+    const w=Math.max(1,Math.min(gw-x,tr.width*sx)),h=Math.max(1,Math.min(gh-y,tr.height*sy));
     try{cam.setViewport(x,y,w,h);}catch{}
-    return{x,y,w,h};
+    this._syncEmbeddedCover();return{x,y,w,h};
   }
-
   _createStatsReplayOverlay(payload){
     if(!this._tdrEmbeddedReplay)return super._createStatsReplayOverlay(payload);
     this._destroyStatsReplayOverlay(false);
-    const target=this._embeddedReplayTarget();
-    if(!target){
-      this._tdrEmbeddedReplay=false;
-      return super._createStatsReplayOverlay(payload);
-    }
-    const state=this._tdrStatsReplay;
-    try{target.style.position='relative';target.style.overflow='hidden';}catch{}
-    const root=document.createElement('div');
-    root.dataset.tdrStatsNativeReplay='1';
-    root.dataset.tdrEmbeddedReplay='1';
-    root.style.cssText='position:absolute;inset:0;z-index:6;pointer-events:none;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff';
+    const target=this._embeddedReplayTarget();if(!target){this._tdrEmbeddedReplay=false;return super._createStatsReplayOverlay(payload);}
+    const state=this._tdrStatsReplay;try{target.style.position='relative';target.style.overflow='hidden';target.style.background='transparent';}catch{}
+    const root=document.createElement('div');root.dataset.tdrStatsNativeReplay='1';root.dataset.tdrEmbeddedReplay='1';root.style.cssText='position:absolute;inset:0;z-index:6;pointer-events:none;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff';
     const button='height:32px;min-width:38px;border:1px solid rgba(79,234,255,.72);background:rgba(5,29,40,.90);color:#fff;font-weight:1000;font-size:12px;padding:0 8px;touch-action:manipulation';
-    root.innerHTML=`
-      <div style="position:absolute;left:8px;top:8px;padding:5px 7px;background:rgba(3,14,22,.78);border:1px solid rgba(82,232,255,.28);pointer-events:none">
-        <div style="font-size:6px;font-weight:1000;letter-spacing:.16em;color:#63edff">REPLAY REAL</div>
-        <div style="display:flex;align-items:baseline;gap:6px;margin-top:1px"><strong data-time style="font-size:15px;font-variant-numeric:tabular-nums">0:00.000</strong><span style="font-size:7px;color:#8fa9b7">/ ${fmt(state?.duration||payload?.lapMs)}</span></div>
-      </div>
-      <div style="position:absolute;left:8px;right:8px;bottom:7px;padding:5px 7px 6px;background:rgba(3,14,22,.86);border:1px solid rgba(82,232,255,.25);pointer-events:auto">
-        <input data-seek aria-label="Posición del replay" type="range" min="0" max="${Math.max(1,Math.round(state?.duration||payload?.lapMs||1))}" step="1" value="0" style="display:block;width:100%;height:18px;margin:0 0 3px;accent-color:#58efff;touch-action:none">
-        <div style="display:flex;align-items:center;justify-content:center;gap:5px">
-          <button data-start title="Volver al inicio" aria-label="Volver al inicio" style="${button}">↶ 0</button>
-          <button data-prev title="Muestra anterior" aria-label="Muestra anterior" style="${button}">◀│</button>
-          <button data-pause title="Reproducir o pausar" aria-label="Reproducir o pausar" style="${button};min-width:46px;font-size:15px">Ⅱ</button>
-          <button data-next title="Muestra siguiente" aria-label="Muestra siguiente" style="${button}">│▶</button>
-          <button data-speed title="Velocidad de reproducción" aria-label="Velocidad de reproducción" style="${button};min-width:48px">1×</button>
-        </div>
-      </div>`;
-    target.appendChild(root);
-    this._tdrStatsReplayOverlay=root;
-    root.querySelector('[data-start]')?.addEventListener('click',()=>this._seekStatsReplay(0,true));
-    root.querySelector('[data-prev]')?.addEventListener('click',()=>this._stepStatsReplaySample(-1));
-    root.querySelector('[data-next]')?.addEventListener('click',()=>this._stepStatsReplaySample(1));
-    root.querySelector('[data-pause]')?.addEventListener('click',()=>{
-      const s=this._tdrStatsReplay;if(!s)return;
-      if(s.finished){s.elapsed=0;s.finished=false;s.playing=true;this._applyStatsReplayFrame(0);}else s.playing=!s.playing;
-      this._syncStatsReplayControls();
-    });
-    root.querySelector('[data-speed]')?.addEventListener('click',()=>{
-      const s=this._tdrStatsReplay;if(!s)return;
-      const speeds=[0.25,0.5,1,2];
-      const current=Number(s.speed)||1;
-      const idx=Math.max(0,speeds.indexOf(current));
-      s.speed=speeds[(idx+1)%speeds.length];
-      this._syncStatsReplayControls();
-    });
-    root.querySelector('[data-seek]')?.addEventListener('input',e=>this._seekStatsReplay(Number(e.currentTarget?.value)||0,true));
-    requestAnimationFrame(()=>this._syncEmbeddedReplayViewport());
+    root.innerHTML=`<div style="position:absolute;left:8px;top:8px;padding:5px 7px;background:rgba(3,14,22,.78);border:1px solid rgba(82,232,255,.28)"><div style="font-size:6px;font-weight:1000;letter-spacing:.16em;color:#63edff">REPLAY REAL</div><div style="display:flex;align-items:baseline;gap:6px;margin-top:1px"><strong data-time style="font-size:15px;font-variant-numeric:tabular-nums">0:00.000</strong><span style="font-size:7px;color:#8fa9b7">/ ${fmt(state?.duration||payload?.lapMs)}</span></div></div><div style="position:absolute;left:8px;right:8px;bottom:7px;padding:5px 7px 6px;background:rgba(3,14,22,.86);border:1px solid rgba(82,232,255,.25);pointer-events:auto"><input data-seek aria-label="Posición del replay" type="range" min="0" max="${Math.max(1,Math.round(state?.duration||payload?.lapMs||1))}" step="1" value="0" style="display:block;width:100%;height:18px;margin:0 0 3px;accent-color:#58efff;touch-action:none"><div style="display:flex;align-items:center;justify-content:center;gap:5px"><button data-start style="${button}">↶ 0</button><button data-prev style="${button}">◀│</button><button data-pause style="${button};min-width:46px;font-size:15px">Ⅱ</button><button data-next style="${button}">│▶</button><button data-speed style="${button};min-width:48px">1×</button></div></div>`;
+    target.appendChild(root);this._tdrStatsReplayOverlay=root;
+    root.querySelector('[data-start]')?.addEventListener('click',()=>this._seekStatsReplay(0,true));root.querySelector('[data-prev]')?.addEventListener('click',()=>this._stepStatsReplaySample(-1));root.querySelector('[data-next]')?.addEventListener('click',()=>this._stepStatsReplaySample(1));
+    root.querySelector('[data-pause]')?.addEventListener('click',()=>{const s=this._tdrStatsReplay;if(!s)return;if(s.finished){s.elapsed=0;s.finished=false;s.playing=true;this._applyStatsReplayFrame(0);}else s.playing=!s.playing;this._syncStatsReplayControls();});
+    root.querySelector('[data-speed]')?.addEventListener('click',()=>{const s=this._tdrStatsReplay;if(!s)return;const speeds=[.25,.5,1,2],idx=Math.max(0,speeds.indexOf(Number(s.speed)||1));s.speed=speeds[(idx+1)%speeds.length];this._syncStatsReplayControls();});
+    root.querySelector('[data-seek]')?.addEventListener('input',e=>this._seekStatsReplay(Number(e.currentTarget?.value)||0,true));requestAnimationFrame(()=>this._syncEmbeddedReplayViewport());
   }
-
   _applyStatsReplayFrame(t){
-    super._applyStatsReplayFrame(t);
-    if(!this._tdrEmbeddedReplay)return;
-    const viewport=this._syncEmbeddedReplayViewport();
-    const state=this._tdrStatsReplay;
-    if(!viewport||!state)return;
-    const recorded=camAt(state.payload?.cameraSamples,t);
-    if(recorded&&Number.isFinite(recorded.w)&&Number.isFinite(recorded.h)&&recorded.w>0&&recorded.h>0){
-      const zoom=Math.max(.01,Math.min(viewport.w/recorded.w,viewport.h/recorded.h));
-      try{
-        this.cameras.main.stopFollow();
-        this.cameras.main.setZoom(zoom);
-        this.cameras.main.centerOn(recorded.x+recorded.w*.5,recorded.y+recorded.h*.5);
-      }catch{}
-    }
+    super._applyStatsReplayFrame(t);if(!this._tdrEmbeddedReplay)return;const viewport=this._syncEmbeddedReplayViewport(),state=this._tdrStatsReplay;if(!viewport||!state)return;
+    const recorded=camAt(state.payload?.cameraSamples,t);if(recorded&&Number.isFinite(recorded.w)&&Number.isFinite(recorded.h)&&recorded.w>0&&recorded.h>0){const zoom=Math.max(.01,Math.min(viewport.w/recorded.w,viewport.h/recorded.h));try{this.cameras.main.stopFollow();this.cameras.main.setZoom(zoom);this.cameras.main.centerOn(recorded.x+recorded.w*.5,recorded.y+recorded.h*.5);}catch{}}
   }
-
-  _exitStatsNativeReplay(){
-    if(!this._tdrEmbeddedReplay)return super._exitStatsNativeReplay?.();
-    try{sessionStorage.removeItem('tdr2:statsNativeReplay');}catch{}
-    this._destroyStatsReplayOverlay(false);
-    try{this.scene.stop();}catch{}
-  }
-
-  update(time,delta){
-    if(this._tdrEmbeddedReplay)this._syncEmbeddedReplayViewport();
-    return super.update(time,delta);
-  }
+  _destroyStatsReplayOverlay(restore=true){const result=super._destroyStatsReplayOverlay?.(restore);if(this._tdrEmbeddedReplay)this._cleanupEmbeddedBackdrop();return result;}
+  _exitStatsNativeReplay(){if(!this._tdrEmbeddedReplay)return super._exitStatsNativeReplay?.();try{sessionStorage.removeItem('tdr2:statsNativeReplay');}catch{}this._destroyStatsReplayOverlay(false);try{this.scene.stop();}catch{}}
+  update(time,delta){if(this._tdrEmbeddedReplay)this._syncEmbeddedReplayViewport();return super.update(time,delta);}
 }
