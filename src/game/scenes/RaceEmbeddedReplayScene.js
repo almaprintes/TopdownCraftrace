@@ -1,4 +1,5 @@
 import { RaceScene as CleanRaceScene } from './RaceReplayCleanScene.js';
+import { pxpsToKmh } from '../cars/speedUnits.js';
 
 function fmt(ms){ms=Math.max(0,Number(ms)||0);const m=Math.floor(ms/60000),s=(ms%60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;}
 function sampleSpeed(samples,index){
@@ -93,12 +94,12 @@ export class RaceScene extends CleanRaceScene{
     const pos=map(samples[current]);
     ctx.fillStyle='#ffd85c';ctx.strokeStyle='#ffffff';ctx.lineWidth=Math.max(1,geom.dpr);
     ctx.beginPath();ctx.arc(pos.x,pos.y,Math.max(4,geom.dpr*3.5),0,Math.PI*2);ctx.fill();ctx.stroke();
-    const speed=sampleSpeed(samples,current),ratio=this._tdrReplayMaxSpeed>0?Math.min(100,Math.round(speed/this._tdrReplayMaxSpeed*100)):0;
+    const speed=sampleSpeed(samples,current),speedKmh=pxpsToKmh(speed),ratio=this._tdrReplayMaxSpeed>0?Math.min(100,Math.round(speed/this._tdrReplayMaxSpeed*100)):0;
     const boxW=112*geom.dpr,boxH=42*geom.dpr,x=geom.dw-boxW-9*geom.dpr,y=9*geom.dpr;
     ctx.fillStyle='rgba(3,14,22,.82)';ctx.strokeStyle='rgba(79,235,255,.45)';ctx.lineWidth=geom.dpr;
     ctx.fillRect(x,y,boxW,boxH);ctx.strokeRect(x,y,boxW,boxH);
     ctx.fillStyle='#63edff';ctx.font=`${6*geom.dpr}px system-ui`;ctx.textAlign='left';ctx.fillText('ANÁLISIS TRAZADA',x+7*geom.dpr,y+10*geom.dpr);
-    ctx.fillStyle='#ffffff';ctx.font=`700 ${12*geom.dpr}px system-ui`;ctx.fillText(`${Math.round(speed)} u/s`,x+7*geom.dpr,y+25*geom.dpr);
+    ctx.fillStyle='#ffffff';ctx.font=`700 ${12*geom.dpr}px system-ui`;ctx.fillText(`${Math.round(speedKmh)} km/h`,x+7*geom.dpr,y+25*geom.dpr);
     ctx.fillStyle='#8fa9b7';ctx.font=`700 ${7*geom.dpr}px system-ui`;ctx.fillText(`RITMO ${ratio}%`,x+7*geom.dpr,y+36*geom.dpr);
     ctx.restore();
   }
