@@ -2,13 +2,23 @@ import { RaceScene as CleanRaceScene } from './RaceReplayCleanScene.js';
 import { pxpsToKmh } from '../cars/speedUnits.js';
 
 function fmt(ms){ms=Math.max(0,Number(ms)||0);const m=Math.floor(ms/60000),s=(ms%60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;}
-function sampleSpeed(samples,index){
+function samplePositionAt(samples,t){
+  if(!Array.isArray(samples)||!samples.length)return null;
+  let i=1;while(i<samples.length&&Number(samples[i]?.t)<t)i++;
+  const a=samples[Math.max(0,i-1)]||samples[0],b=samples[Math.min(samples.length-1,i)]||a;
+  const ta=Number(a?.t)||0,tb=Number(b?.t)||ta,span=Math.max(1,tb-ta),q=Math.max(0,Math.min(1,(Number(t)-ta)/span));
+  const ax=Number(a?.x),ay=Number(a?.y),bx=Number(b?.x),by=Number(b?.y);
+  if(![ax,ay,bx,by].every(Number.isFinite))return null;
+  return{x:ax+(bx-ax)*q,y:ay+(by-ay)*q};
+}
+function sampleSpeedAtTime(samples,t,windowMs=180){
   if(!Array.isArray(samples)||samples.length<2)return 0;
-  const i=Math.max(0,Math.min(samples.length-1,index));
-  const a=samples[Math.max(0,i-1)]||samples[i],b=samples[Math.min(samples.length-1,i+1)]||samples[i];
-  const dt=Math.max(1,Number(b?.t)-Number(a?.t))/1000;
-  const dx=Number(b?.x)-Number(a?.x),dy=Number(b?.y)-Number(a?.y);
-  return Number.isFinite(dx)&&Number.isFinite(dy)?Math.hypot(dx,dy)/dt:0;
+  const first=Number(samples[0]?.t)||0,last=Number(samples.at(-1)?.t)||first;
+  const half=Math.max(60,Number(windowMs)||180)*.5;
+  const ta=Math.max(first,Number(t)-half),tb=Math.min(last,Number(t)+half);
+  const a=samplePositionAt(samples,ta),b=samplePositionAt(samples,tb);
+  const dt=Math.max(1,tb-ta)/1000;
+  return a&&b?Math.hypot(b.x-a.x,b.y-a.y)/dt:0;
 }
 
 export class RaceScene extends CleanRaceScene{
@@ -17,7 +27,7 @@ export class RaceScene extends CleanRaceScene{
     this._tdrReplayAnalysisEnabled=true;
     this._tdrReplayMaxSpeed=0;
     if(Array.isArray(payload?.samples)){
-      for(let i=0;i<payload.samples.length;i++)this._tdrReplayMaxSpeed=Math.max(this._tdrReplayMaxSpeed,sampleSpeed(payload.samples,i));
+      for(const sample of payload.samples)this._tdrReplayMaxSpeed=Math.max(this._tdrReplayMaxSpeed,sampleSpeedAtTime(payload.samples,Number(sample?.t)||0));
     }
     const result=super._startStatsNativeReplay(payload);
     if(this._tdrEmbeddedReplay){
@@ -80,7 +90,7 @@ export class RaceScene extends CleanRaceScene{
       const screenY=(Number(p?.y)-Number(view.y))*zoom*srcScaleY;
       return{x:(screenX-geom.sx)/geom.cw*geom.dw,y:(screenY-geom.sy)/geom.ch*geom.dh};
     };
-    const current=this._sampleIndexAtTime(samples,Number(state.elapsed)||0);
+    const elapsed=Number(state.elapsed)||0,current=this._sampleIndexAtTime(samples,elapsed);
     ctx.save();
     ctx.lineCap='round';ctx.lineJoin='round';
     ctx.strokeStyle='rgba(230,245,248,.30)';ctx.lineWidth=Math.max(1.5,geom.dpr*1.2);
@@ -91,10 +101,10 @@ export class RaceScene extends CleanRaceScene{
     ctx.beginPath();
     for(let i=0;i<=current;i++){const p=map(samples[i]);if(i===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);}ctx.stroke();
     ctx.shadowBlur=0;
-    const pos=map(samples[current]);
+    const livePos=samplePositionAt(samples,elapsed)||samples[current],pos=map(livePos);
     ctx.fillStyle='#ffd85c';ctx.strokeStyle='#ffffff';ctx.lineWidth=Math.max(1,geom.dpr);
     ctx.beginPath();ctx.arc(pos.x,pos.y,Math.max(4,geom.dpr*3.5),0,Math.PI*2);ctx.fill();ctx.stroke();
-    const speed=sampleSpeed(samples,current),speedKmh=pxpsToKmh(speed),ratio=this._tdrReplayMaxSpeed>0?Math.min(100,Math.round(speed/this._tdrReplayMaxSpeed*100)):0;
+    const speed=sampleSpeedAtTime(samples,elapsed),speedKmh=pxpsToKmh(speed),ratio=this._tdrReplayMaxSpeed>0?Math.min(100,Math.round(speed/this._tdrReplayMaxSpeed*100)):0;
     const boxW=112*geom.dpr,boxH=42*geom.dpr,x=geom.dw-boxW-9*geom.dpr,y=9*geom.dpr;
     ctx.fillStyle='rgba(3,14,22,.82)';ctx.strokeStyle='rgba(79,235,255,.45)';ctx.lineWidth=geom.dpr;
     ctx.fillRect(x,y,boxW,boxH);ctx.strokeRect(x,y,boxW,boxH);
@@ -170,11 +180,8 @@ export class RaceScene extends CleanRaceScene{
     super._applyStatsReplayFrame(t);
     if(!this._tdrEmbeddedReplay)return;
     this._syncEmbeddedSourceCamera();
-    const state=this._tdrStatsReplay;
-    const samples=state?.payload?.samples;
-    const i=this._sampleIndexAtTime(samples,Number(t)||0);
-    const p=Array.isArray(samples)?samples[i]:null;
-    if(p){try{this.cameras?.main?.stopFollow?.();this.cameras?.main?.centerOn?.(Number(p.x)||0,Number(p.y)||0);}catch{}}
+    const x=Number(this.carBody?.x),y=Number(this.carBody?.y);
+    if(Number.isFinite(x)&&Number.isFinite(y)){try{this.cameras?.main?.stopFollow?.();this.cameras?.main?.centerOn?.(x,y);}catch{}}
   }
 
   _destroyStatsReplayOverlay(restore=true){
