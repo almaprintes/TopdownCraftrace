@@ -1,42 +1,26 @@
 import { StatsScene as ReplayStatsScene } from './StatsBroadcastReplayScene.js';
-import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
-import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
-import { CAR_SPECS } from '../cars/carSpecs.js';
-import track01Environment from '../tracks/library/track01/track01.environment.json';
-import santaCruzEnvironment from '../tracks/library/santa-cruz/santa-cruz.environment.json';
-import kartingTenerifeEnvironment from '../tracks/library/karting-tenerife/karting-tenerife.environment.json';
-import kartingCanariasEnvironment from '../tracks/library/karting-canarias/karting-canarias.environment.json';
 
-const BASE=import.meta.env.BASE_URL||'/';
-const ENVIRONMENTS={track01:track01Environment,'santa-cruz':santaCruzEnvironment,'karting-tenerife':kartingTenerifeEnvironment,'karting-canarias':kartingCanariasEnvironment};
-const fmt=ms=>{ms=Math.max(0,Number(ms)||0);const m=Math.floor(ms/60000),s=(ms%60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;};
-const imgCache=new Map();
-function loadImage(src){if(!src)return Promise.resolve(null);if(imgCache.has(src))return imgCache.get(src);const p=new Promise(resolve=>{const im=new Image();im.decoding='async';im.onload=()=>resolve(im);im.onerror=()=>resolve(null);im.src=src;});imgCache.set(src,p);return p;}
-function lerpAngle(a,b,q){let d=Number(b)-Number(a);while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;return Number(a)+d*q;}
-function pointAt(samples,t){let i=1;while(i<samples.length&&Number(samples[i].t)<t)i++;const a=samples[Math.max(0,i-1)]||samples[0],b=samples[Math.min(samples.length-1,i)]||a;const span=Math.max(1,Number(b.t)-Number(a.t)),q=Math.max(0,Math.min(1,(t-Number(a.t))/span));return{x:Number(a.x)+(Number(b.x)-Number(a.x))*q,y:Number(a.y)+(Number(b.y)-Number(a.y))*q,r:lerpAngle(a.r,b.r,q)};}
-function cameraAt(samples,t){if(!Array.isArray(samples)||!samples.length)return null;let i=1;while(i<samples.length&&Number(samples[i].t)<t)i++;const a=samples[Math.max(0,i-1)]||samples[0],b=samples[Math.min(samples.length-1,i)]||a;const span=Math.max(1,Number(b.t)-Number(a.t)),q=Math.max(0,Math.min(1,(t-Number(a.t))/span));const mix=k=>Number(a[k])+(Number(b[k])-Number(a[k]))*q;return{x:mix('x'),y:mix('y'),w:mix('w'),h:mix('h'),zoom:mix('zoom')};}
-function worldToScreen(x,y,cam,w,h){return{x:(Number(x)-cam.x)/cam.w*w,y:(Number(y)-cam.y)/cam.h*h};}
-function path(ctx,points,cam,w,h){ctx.beginPath();points.forEach((p,i)=>{const q=worldToScreen(Array.isArray(p)?p[0]:p.x,Array.isArray(p)?p[1]:p.y,cam,w,h);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);});}
-function drawRibbon(ctx,ribbon,cam,w,h){const left=ribbon?.left||[],right=ribbon?.right||[];if(left.length<2||right.length<2)return;ctx.beginPath();left.forEach((p,i)=>{const q=worldToScreen(p[0],p[1],cam,w,h);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);});for(let i=right.length-1;i>=0;i--){const q=worldToScreen(right[i][0],right[i][1],cam,w,h);ctx.lineTo(q.x,q.y);}ctx.closePath();ctx.fillStyle='#575b5d';ctx.fill();for(const edge of [left,right]){path(ctx,edge,cam,w,h);ctx.strokeStyle='#f4f1e8';ctx.lineWidth=3;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();}}
-function replayWorldCache(trackId){try{return window.__tdrReplayWorldCache?.[trackId]||null;}catch{return null;}}
+const SESSION_KEY='tdr2:statsNativeReplay';
 
 export class StatsScene extends ReplayStatsScene{
-  _installBroadcastStyles(){super._installBroadcastStyles();if(this._root?.querySelector('[data-real-replay-style]'))return;const s=document.createElement('style');s.dataset.realReplayStyle='1';s.textContent=`.br-real-screen{position:relative;height:330px;overflow:hidden;background:#111}.br-real-screen canvas{display:block;width:100%;height:100%;background:#111}.br-real-screen:after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 34px rgba(0,0,0,.22)}.br-camera-tag{position:absolute;left:10px;bottom:9px;background:rgba(2,10,16,.78);border:1px solid rgba(85,239,255,.25);padding:4px 7px;color:#8cefff;font-size:6px;font-weight:1000;letter-spacing:.12em}.br-monitor-real{min-height:406px}.br-monitor-real .br-monitor-head{height:48px}.br-monitor-real .br-controls{height:42px}@media(max-height:520px){.br-real-screen{height:270px}.br-monitor-real{min-height:346px}}`;this._root.appendChild(s);}
-  async _showRaceControlReplay(record,ghost){
-    this._stopRaceControlReplay();const main=this._root?.querySelector('.br-main');if(!main||!ghost?.samples?.length)return;
-    const trackId=String(ghost.trackKey||record?.trackId||'track01'),track=TRACK_REGISTRY?.[trackId];if(!track)return super._showRaceControlReplay(record,ghost);
-    const spec=CAR_SPECS?.[ghost.carId]||{},carSrc=spec?.skin?`${BASE}assets/skins/${spec.skin}`:null,carImg=await loadImage(carSrc);if(!this._root?.isConnected)return;
-    const cached=replayWorldCache(trackId),hasRecordedCamera=Array.isArray(ghost.cameraSamples)&&ghost.cameraSamples.length>2;
-    const centerline=track.centerline||track?.meta?.centerline||[],roadWidth=Number(track.trackWidth||track?.meta?.trackWidth)||80,ribbon=buildTrackRibbon({centerline,trackWidth:roadWidth,grassMargin:Number(track.grassMargin)||0,sampleStepPx:Number(track.sampleStepPx)||10});
-    const env=ENVIRONMENTS[trackId]||null,envItems=(env?.environment||[]).filter(item=>item?.path);let envMap=new Map();if(!cached){const unique=[...new Set(envItems.map(item=>`${BASE}assets/${item.path}`))];const imgs=await Promise.all(unique.map(loadImage));envMap=new Map(unique.map((src,i)=>[src,imgs[i]]));}
-    this._brAnalysisMarkup=main.innerHTML;main.innerHTML=`<section class="br-panel br-monitor br-monitor-real"><div class="br-monitor-head"><div><div class="br-label">RACE CONTROL // REPLAY</div><strong>${String(track.name||trackId).toUpperCase()}</strong><small>${String(spec.name||ghost.carId||'COCHE').toUpperCase()} · ${fmt(ghost.lapMs)}</small></div><span class="br-monitor-live">● REPLAY</span></div><div class="br-real-screen"><canvas data-br-real-canvas width="900" height="420"></canvas><div class="br-replay-hud"><div><small>TIEMPO</small><strong data-br-replay-time>0:00.000</strong></div><div><small>VUELTA</small><strong>${fmt(ghost.lapMs)}</strong></div></div><div class="br-camera-tag">${cached&&hasRecordedCamera?'TV CAM · RECORDED GAMEPLAY':cached?'TV CAM · PHASER WORLD':'TV CAM · FALLBACK'}</div></div><div class="br-controls"><button data-br-toggle>Ⅱ</button><div class="br-seek"><i></i></div><button class="br-analysis-back" data-br-analysis>ANÁLISIS</button></div></section>`;
-    const canvas=main.querySelector('[data-br-real-canvas]'),ctx=canvas?.getContext('2d');if(!ctx)return;const timeEl=main.querySelector('[data-br-replay-time]'),bar=main.querySelector('.br-seek i'),toggle=main.querySelector('[data-br-toggle]');
-    let playing=true,start=performance.now(),elapsed=0;const duration=Number(ghost.lapMs)||Number(ghost.samples.at(-1)?.t)||1;
-    const fallbackView={x:Number(ghost.samples[0]?.x||0)-450,y:Number(ghost.samples[0]?.y||0)-210,w:900,h:420,zoom:1};
-    const render=t=>{const car=pointAt(ghost.samples,t),w=canvas.width,h=canvas.height;const cam=cameraAt(ghost.cameraSamples,t)||fallbackView;ctx.clearRect(0,0,w,h);
-      if(cached?.canvas&&hasRecordedCamera){const cScale=Number(cached.scale)||1;let sx=cam.x*cScale,sy=cam.y*cScale,sw=cam.w*cScale,sh=cam.h*cScale;sx=Math.max(0,Math.min(cached.width-sw,sx));sy=Math.max(0,Math.min(cached.height-sh,sy));ctx.drawImage(cached.canvas,sx,sy,sw,sh,0,0,w,h);}else if(cached?.canvas){const cScale=Number(cached.scale)||1;const view=fallbackView;let sx=view.x*cScale,sy=view.y*cScale,sw=view.w*cScale,sh=view.h*cScale;sx=Math.max(0,Math.min(cached.width-sw,sx));sy=Math.max(0,Math.min(cached.height-sh,sy));ctx.drawImage(cached.canvas,sx,sy,sw,sh,0,0,w,h);}else{ctx.fillStyle='#183d24';ctx.fillRect(0,0,w,h);drawRibbon(ctx,ribbon,cam,w,h);}
-      const cp=worldToScreen(car.x,car.y,cam,w,h);if(carImg){const vm=cached?.carVisual||{},worldW=Number(vm.width)>0?Number(vm.width):roadWidth*.29,worldH=Number(vm.height)>0?Number(vm.height):worldW*((carImg.naturalHeight||1)/(carImg.naturalWidth||1)),sx=w/cam.w,sy=h/cam.h;ctx.save();ctx.translate(cp.x,cp.y);ctx.rotate(car.r+Math.PI/2+(Number(vm.rotation)||0));ctx.shadowColor='rgba(0,0,0,.42)';ctx.shadowBlur=5;ctx.drawImage(carImg,-worldW*sx/2,-worldH*sy/2,worldW*sx,worldH*sy);ctx.restore();}}
-    const frame=now=>{if(!this._brReplayState)return;if(playing)elapsed=Math.min(duration,elapsed+(now-start));start=now;render(elapsed);if(timeEl)timeEl.textContent=fmt(elapsed);if(bar)bar.style.width=`${Math.min(100,elapsed/duration*100)}%`;if(elapsed>=duration){playing=false;if(toggle)toggle.textContent='↻';}this._brReplayState.raf=requestAnimationFrame(frame);};render(0);this._brReplayState={raf:requestAnimationFrame(frame)};
-    toggle?.addEventListener('click',()=>{if(elapsed>=duration){elapsed=0;playing=true;toggle.textContent='Ⅱ';start=performance.now();return;}playing=!playing;toggle.textContent=playing?'Ⅱ':'▶';start=performance.now();});main.querySelector('[data-br-analysis]')?.addEventListener('click',()=>this._restoreRaceControlAnalysis(main));
+  _showRaceControlReplay(record,ghost){
+    this._stopRaceControlReplay();
+    if(!ghost?.samples?.length)return;
+    const trackId=String(ghost.trackKey||record?.trackId||'track01');
+    const carId=String(ghost.carId||record?.selectedLap?.carId||'stock');
+    try{
+      sessionStorage.setItem(SESSION_KEY,JSON.stringify({
+        version:1,
+        source:'race-control',
+        returnTrackId:trackId,
+        trackId,
+        carId,
+        lapMs:Number(ghost.lapMs)||0,
+        recordedAt:Number(ghost.recordedAt)||0,
+        samples:ghost.samples,
+        cameraSamples:Array.isArray(ghost.cameraSamples)?ghost.cameraSamples:[]
+      }));
+    }catch{return;}
+    this.scene.start('race',{trackKey:trackId,carId,statsNativeReplay:true});
   }
 }
