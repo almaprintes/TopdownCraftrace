@@ -101,6 +101,22 @@ export class RaceScene extends CleanRaceScene{
     this._syncEmbeddedCover();
     return{x,y,w,h,fullW,fullH,clipX,clipY};
   }
+  _syncEmbeddedReplayCamera(t){
+    if(!this._tdrEmbeddedReplay)return;
+    const viewport=this._syncEmbeddedReplayViewport(),state=this._tdrStatsReplay;
+    if(!viewport||!state)return;
+    const recorded=camAt(state.payload?.cameraSamples,Number(t)||0);
+    if(!recorded||!Number.isFinite(recorded.w)||!Number.isFinite(recorded.h)||recorded.w<=0||recorded.h<=0)return;
+    const zoom=Math.max(.01,Math.min(viewport.fullW/recorded.w,viewport.fullH/recorded.h));
+    const baseCx=recorded.x+recorded.w*.5,baseCy=recorded.y+recorded.h*.5;
+    const dxPx=viewport.clipX+viewport.w*.5-viewport.fullW*.5;
+    const dyPx=viewport.clipY+viewport.h*.5-viewport.fullH*.5;
+    try{
+      this.cameras.main.stopFollow();
+      this.cameras.main.setZoom(zoom);
+      this.cameras.main.centerOn(baseCx+dxPx/zoom,baseCy+dyPx/zoom);
+    }catch{}
+  }
   _createStatsReplayOverlay(payload){
     if(!this._tdrEmbeddedReplay)return super._createStatsReplayOverlay(payload);
     this._destroyStatsReplayOverlay(false);
@@ -117,23 +133,13 @@ export class RaceScene extends CleanRaceScene{
   }
   _applyStatsReplayFrame(t){
     super._applyStatsReplayFrame(t);
-    if(!this._tdrEmbeddedReplay)return;
-    const viewport=this._syncEmbeddedReplayViewport(),state=this._tdrStatsReplay;
-    if(!viewport||!state)return;
-    const recorded=camAt(state.payload?.cameraSamples,t);
-    if(recorded&&Number.isFinite(recorded.w)&&Number.isFinite(recorded.h)&&recorded.w>0&&recorded.h>0){
-      const zoom=Math.max(.01,Math.min(viewport.fullW/recorded.w,viewport.fullH/recorded.h));
-      const baseCx=recorded.x+recorded.w*.5,baseCy=recorded.y+recorded.h*.5;
-      const dxPx=viewport.clipX+viewport.w*.5-viewport.fullW*.5;
-      const dyPx=viewport.clipY+viewport.h*.5-viewport.fullH*.5;
-      try{
-        this.cameras.main.stopFollow();
-        this.cameras.main.setZoom(zoom);
-        this.cameras.main.centerOn(baseCx+dxPx/zoom,baseCy+dyPx/zoom);
-      }catch{}
-    }
+    if(this._tdrEmbeddedReplay)this._syncEmbeddedReplayCamera(t);
   }
   _destroyStatsReplayOverlay(restore=true){const result=super._destroyStatsReplayOverlay?.(restore);if(this._tdrEmbeddedReplay)this._cleanupEmbeddedBackdrop();return result;}
   _exitStatsNativeReplay(){if(!this._tdrEmbeddedReplay)return super._exitStatsNativeReplay?.();try{sessionStorage.removeItem('tdr2:statsNativeReplay');}catch{}this._destroyStatsReplayOverlay(false);try{this.scene.stop();}catch{}}
-  update(time,delta){if(this._tdrEmbeddedReplay)this._syncEmbeddedReplayViewport();return super.update(time,delta);}
+  update(time,delta){
+    const result=super.update(time,delta);
+    if(this._tdrEmbeddedReplay)this._syncEmbeddedReplayCamera(this._tdrStatsReplay?.elapsed||0);
+    return result;
+  }
 }
