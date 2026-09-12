@@ -25,6 +25,7 @@ export class RaceScene extends CurrentRaceScene{
         if(this.carBody)samples.push({t:Math.round(lapMs),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});
         const key=replayKey(trackId,last,hist.length-1);
         if(samples.length>4)write(key,{version:1,kind:'local-top10-lap',trackKey:trackId,carId:text(last.carId)||this._tdrCurrentGhostCarId||this.carId||null,lapMs:Math.round(lapMs),recordedAt:Number(last.t||last.timestamp)||Date.now(),historyIndex:hist.length-1,samples});
+        try{Promise.resolve(this.cacheReplayWorldSnapshot?.()).catch(()=>{});}catch{}
       }
       const keep=new Set(ranked.slice(0,10).map(item=>replayKey(trackId,item.row,item.index)));
       try{const prefix=`${TOP_REPLAY_PREFIX}${encodeURIComponent(trackId)}:`;for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i)||'';if(key.startsWith(prefix)&&!keep.has(key))remove(key);}}catch{}
