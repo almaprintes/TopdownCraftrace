@@ -23,14 +23,14 @@ export class StatsScene extends ReplayStatsScene{
     const s=document.createElement('style');
     s.dataset.brNativeReplayStyle='1';
     s.textContent=`
-      .br-native-monitor{min-height:365px;background:transparent!important;overflow:hidden}
+      .br-native-monitor{min-height:0!important;height:auto!important;background:transparent!important;overflow:hidden}
       .br-native-monitor .br-monitor-head{height:48px;background:linear-gradient(145deg,rgba(8,27,39,.98),rgba(3,12,19,.98));position:relative;z-index:8}
-      .br-native-screen{position:relative;height:307px;overflow:hidden;background:transparent!important;isolation:isolate}
+      .br-native-screen{position:relative;height:307px;overflow:hidden;background:#020a11!important;isolation:isolate;display:block}
       .br-native-screen:after{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(82,232,255,.16),inset 0 -35px 45px rgba(0,0,0,.08)}
       .br-native-close{height:30px;border:1px solid #386b7c;background:#0a2531;color:#77eefa;padding:0 10px;font-size:8px;font-weight:1000;letter-spacing:.08em}
       .br-native-loading{position:absolute;inset:0;display:grid;place-items:center;color:#6f8c9b;font-size:8px;font-weight:1000;letter-spacing:.12em;pointer-events:none}
       .br-main>.br-chart{display:block}
-      @media(max-height:430px){.br-native-monitor{min-height:300px}.br-native-screen{height:252px}.br-native-monitor .br-monitor-head{height:44px}}
+      @media(max-height:430px){.br-native-monitor{min-height:0!important;height:auto!important}.br-native-screen{height:252px}.br-native-monitor .br-monitor-head{height:44px}}
     `;
     this._root.appendChild(s);
   }
