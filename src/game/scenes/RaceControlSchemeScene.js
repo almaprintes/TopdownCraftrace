@@ -18,6 +18,16 @@ export class RaceScene extends CurrentRaceScene {
   create(data) {
     this._tdrSteeringMode = loadSteeringMode();
     const result = super.create(data);
+
+    // The old base RaceScene still creates an on-screen DEV diagnostic overlay.
+    // It is not gameplay UI and, with the single-camera iOS fix, visibly rides
+    // the dynamic zoom for a few frames. Remove it here without touching track
+    // calculations or console diagnostics.
+    try { if (this._diagText?.scene) this._diagText.destroy(); } catch (_) {}
+    this._diagText = null;
+    this._diagLines = [];
+    this._diag = () => {};
+
     this._buildButtonSteeringUi?.();
     return result;
   }
@@ -161,11 +171,32 @@ export class RaceScene extends CurrentRaceScene {
     allow(this._tdrSteerButtons);
   }
 
+  _forgetSteeringChildrenFromAutoHud() {
+    // RaceFixedScene discovers scrollFactor(0) objects and pins them on its own.
+    // The steering button children must never be pinned independently: the
+    // parent container is the single screen-space transform for the whole unit.
+    const children = [
+      this._tdrLeftButton?.bg,
+      this._tdrLeftButton?.arrow,
+      this._tdrLeftButton?.tx,
+      this._tdrRightButton?.bg,
+      this._tdrRightButton?.arrow,
+      this._tdrRightButton?.tx
+    ].filter(Boolean);
+
+    for (const obj of children) {
+      try { this._fixedUiRoots?.delete?.(obj); } catch (_) {}
+      try { this._fixedUiState?.delete?.(obj); } catch (_) {}
+      try { obj.setScrollFactor?.(1, 1); } catch (_) {}
+    }
+  }
+
   _pinButtonSteeringUi() {
     const c = this._tdrSteerButtons;
     const cam = this.cameras?.main;
     if (this._tdrSteeringMode !== 'buttons' || !c?.scene || !cam) return;
     this._allowSteeringButtonsOnMainCamera();
+    this._forgetSteeringChildrenFromAutoHud();
     const zoom = Math.max(0.001, Number(cam.zoom || 1));
     const world = cam.getWorldPoint(0, 0);
     c.setPosition(world.x, world.y);
@@ -196,6 +227,7 @@ export class RaceScene extends CurrentRaceScene {
     };
     this._tdrLeftButton = make(-1, '◀', 'IZQUIERDA');
     this._tdrRightButton = make(1, '▶', 'DERECHA');
+    this._forgetSteeringChildrenFromAutoHud();
     this._layoutButtonSteeringUi();
     this._pinButtonSteeringUi();
   }
@@ -235,6 +267,7 @@ export class RaceScene extends CurrentRaceScene {
     };
     place(this._tdrLeftButton,left);
     place(this._tdrRightButton,right);
+    this._forgetSteeringChildrenFromAutoHud();
     this._pinButtonSteeringUi();
   }
 
@@ -252,6 +285,7 @@ export class RaceScene extends CurrentRaceScene {
       if (buttonMode) {
         if (leftKey) leftKey.isDown = prevLeft;
         if (rightKey) rightKey.isDown = prevRight;
+        this._forgetSteeringChildrenFromAutoHud();
         this._pinButtonSteeringUi();
       }
     }
