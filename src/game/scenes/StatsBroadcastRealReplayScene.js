@@ -23,6 +23,8 @@ export class StatsScene extends ReplayStatsScene{
     const s=document.createElement('style');
     s.dataset.brNativeReplayStyle='1';
     s.textContent=`
+      .br-main.br-native-active{align-content:start!important;grid-auto-rows:max-content!important}
+      .br-main.br-native-active>.br-native-monitor,.br-main.br-native-active>.br-chart{align-self:start!important}
       .br-native-monitor{min-height:0!important;height:auto!important;background:transparent!important;overflow:hidden}
       .br-native-monitor .br-monitor-head{height:48px;background:linear-gradient(145deg,rgba(8,27,39,.98),rgba(3,12,19,.98));position:relative;z-index:8}
       .br-native-screen{position:relative;height:307px;overflow:hidden;background:#020a11!important;isolation:isolate;display:block}
@@ -43,6 +45,7 @@ export class StatsScene extends ReplayStatsScene{
     const trackId=String(ghost.trackKey||record?.trackId||'track01');
     const carId=String(ghost.carId||record?.selectedLap?.carId||'stock');
     const chart=main.querySelector('.br-chart')?.cloneNode?.(true)||null;
+    main.classList.add('br-native-active');
     main.innerHTML=`
       <section class="br-panel br-monitor br-native-monitor">
         <div class="br-monitor-head">
