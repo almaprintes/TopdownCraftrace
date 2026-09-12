@@ -29,6 +29,7 @@ export class StatsScene extends ReplayStatsScene{
       .br-native-screen:after{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(82,232,255,.16),inset 0 -35px 45px rgba(0,0,0,.08)}
       .br-native-close{height:30px;border:1px solid #386b7c;background:#0a2531;color:#77eefa;padding:0 10px;font-size:8px;font-weight:1000;letter-spacing:.08em}
       .br-native-loading{position:absolute;inset:0;display:grid;place-items:center;color:#6f8c9b;font-size:8px;font-weight:1000;letter-spacing:.12em;pointer-events:none}
+      .br-main>.br-chart{display:block}
       @media(max-height:430px){.br-native-monitor{min-height:300px}.br-native-screen{height:252px}.br-native-monitor .br-monitor-head{height:44px}}
     `;
     this._root.appendChild(s);
@@ -41,6 +42,7 @@ export class StatsScene extends ReplayStatsScene{
     if(!main)return;
     const trackId=String(ghost.trackKey||record?.trackId||'track01');
     const carId=String(ghost.carId||record?.selectedLap?.carId||'stock');
+    const chart=main.querySelector('.br-chart')?.cloneNode?.(true)||null;
     main.innerHTML=`
       <section class="br-panel br-monitor br-native-monitor">
         <div class="br-monitor-head">
@@ -53,6 +55,7 @@ export class StatsScene extends ReplayStatsScene{
         </div>
         <div class="br-native-screen" data-br-native-replay-screen="1"><div class="br-native-loading" data-br-native-loading>CARGANDO REPLAY REAL…</div></div>
       </section>`;
+    if(chart)main.appendChild(chart);
     main.querySelector('[data-br-native-close]')?.addEventListener('click',()=>this._renderBroadcastRecords(trackId));
     try{
       sessionStorage.setItem(SESSION_KEY,JSON.stringify({
