@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceTop10ReplayScene.js';
+import { hideRaceUi, restoreRaceUi } from '../ui/raceUiVisibility.js';
 
 function flattenScene(scene){
   const out=[];
@@ -17,6 +18,13 @@ export class RaceScene extends CurrentRaceScene{
   _hideStatsReplayGameplayUi(){
     super._hideStatsReplayGameplayUi?.();
 
+    // Use the race's own visibility boundary while the native replay is active.
+    // In particular this disables uiCam, which owns the visual brake, gas and
+    // handbrake controls. Nothing about their creation/input/position is changed.
+    if(!this._tdrNativeReplayRaceUiState){
+      try{this._tdrNativeReplayRaceUiState=hideRaceUi(this);}catch{}
+    }
+
     const keep=new Set([this.car,this.carBody,this.carRig]);
     const hidden=this._tdrStatsReplayHiddenObjects||(this._tdrStatsReplayHiddenObjects=[]);
     const hiddenSet=new Set(hidden);
@@ -33,7 +41,7 @@ export class RaceScene extends CurrentRaceScene{
     // first-level scan missed them. Fixed-camera elements and the high-depth
     // presentation layer are UI, not world scenery. Native replay has input
     // disabled, so any remaining interactive Phaser object is also a gameplay
-    // control and must not be visible (brake, gas, handbrake, etc.).
+    // control and must not be visible.
     for(const obj of flattenScene(this)){
       const sx=Number(obj?.scrollFactorX),sy=Number(obj?.scrollFactorY);
       const depth=Number(obj?.depth);
@@ -79,6 +87,10 @@ export class RaceScene extends CurrentRaceScene{
     try{this._tdrReplayDomParent?.removeAttribute?.('data-tdr-native-replay');}catch{}
     this._tdrReplayDomParent=null;
     try{document.body.classList.remove('tdr-native-replay-clean');}catch{}
+    if(this._tdrNativeReplayRaceUiState){
+      try{restoreRaceUi(this,this._tdrNativeReplayRaceUiState);}catch{}
+      this._tdrNativeReplayRaceUiState=null;
+    }
   }
 
   _destroyStatsReplayOverlay(restore=true){
