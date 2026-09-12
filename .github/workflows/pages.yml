@@ -57,12 +57,13 @@ jobs:
           test -f src/game/scenes/RaceStaticGhostStatusScene.js
           test -f src/game/scenes/RaceTop10ReplayScene.js
           test -f src/game/scenes/RaceReplayCleanScene.js
+          test -f src/game/scenes/RaceEmbeddedReplayScene.js
           test -f src/game/stats/localRaceRecords.js
           test -f src/game/scenes/StatsBroadcastScene.js
           test -f src/game/scenes/StatsBroadcastCompactScene.js
           test -f src/game/scenes/StatsBroadcastReplayScene.js
           test -f src/game/scenes/StatsBroadcastRealReplayScene.js
-          grep -q "RaceReplayCleanScene.js" src/game/game.js
+          grep -q "RaceEmbeddedReplayScene.js" src/game/game.js
           grep -q "StatsBroadcastRealReplayScene.js" src/game/game.js
           grep -q "this._diag = () => {}" src/game/scenes/RaceNoDiagScene.js
           grep -q "tdr-static-minimap" src/game/scenes/RaceStaticMinimapScene.js
@@ -81,8 +82,11 @@ jobs:
           grep -q "#tdr-steering-wheel" src/game/scenes/RaceReplayCleanScene.js
           ! grep -q "hideRaceUi" src/game/scenes/RaceReplayCleanScene.js
           ! grep -q "restoreRaceUi" src/game/scenes/RaceReplayCleanScene.js
-          grep -q "statsReturnTrack" src/game/scenes/StatsBroadcastRealReplayScene.js
-          grep -q "raceControlTrackId" src/game/scenes/StatsBroadcastRealReplayScene.js
+          grep -q "data-br-native-replay-screen" src/game/scenes/RaceEmbeddedReplayScene.js
+          grep -q "_syncEmbeddedReplayViewport" src/game/scenes/RaceEmbeddedReplayScene.js
+          grep -q "embedded:true" src/game/scenes/StatsBroadcastRealReplayScene.js
+          grep -q "scene.launch('race'" src/game/scenes/StatsBroadcastRealReplayScene.js
+          grep -q "data-br-native-replay-screen" src/game/scenes/StatsBroadcastRealReplayScene.js
       - name: Build development
         working-directory: dev-src
         shell: bash
@@ -90,7 +94,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.54/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.55/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -107,8 +111,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.54' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.54' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.55' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.55' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
