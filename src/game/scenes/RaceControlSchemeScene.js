@@ -75,6 +75,8 @@ export class RaceScene extends CurrentRaceScene {
       this._onResizeButtonTouchControls = null;
       try { this._tdrSteerButtons?.destroy(true); } catch (_) {}
       this._tdrSteerButtons = null;
+      this._tdrLeftButton = null;
+      this._tdrRightButton = null;
     });
     this.time?.delayedCall?.(0, () => this._buildButtonSteeringUi?.());
     return state;
@@ -151,26 +153,57 @@ export class RaceScene extends CurrentRaceScene {
 
   _buildButtonSteeringUi() {
     if (this._tdrSteeringMode !== 'buttons' || this._tdrSteerButtons?.scene) return;
-    const c = this.add.container(0, 0).setScrollFactor(0).setDepth(1100);
-    this._tdrSteerButtons = c;
-    try { this.cameras.main.ignore(c); } catch (_) {}
+
+    // Screen HUD root. The world camera must never render these controls: its
+    // dynamic zoom is allowed to move the circuit, never the steering buttons.
+    const root = this.add.container(0, 0).setScrollFactor(0).setDepth(1100);
+    this._tdrSteerButtons = root;
+    try { this.cameras.main.ignore(root); } catch (_) {}
 
     const make = (dir, glyph, label) => {
-      const bg = this.add.rectangle(0, 0, 10, 10, 0x07131e, 0.72).setOrigin(0).setStrokeStyle(2, 0x67cfff, 0.55).setInteractive({ useHandCursor: true });
-      const arrow = this.add.text(0, 0, glyph, {fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',fontSize: '42px', fontStyle: '900', color: '#ffffff'}).setOrigin(0.5);
-      const tx = this.add.text(0, 0, label, {fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',fontSize: '10px', fontStyle: '800', color: '#9fdfff'}).setOrigin(0.5, 1);
+      // One local container per button keeps frame, arrow, caption and hit area
+      // under the exact same transform. They cannot drift apart independently.
+      const button = this.add.container(0, 0).setScrollFactor(0);
+      const bg = this.add.rectangle(0, 0, 100, 90, 0x07131e, 0.72)
+        .setOrigin(0.5)
+        .setStrokeStyle(2, 0x67cfff, 0.55)
+        .setInteractive({ useHandCursor: true });
+      const arrow = this.add.text(0, -7, glyph, {
+        fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
+        fontSize: '42px',
+        fontStyle: '900',
+        color: '#ffffff'
+      }).setOrigin(0.5);
+      const tx = this.add.text(0, 31, label, {
+        fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
+        fontSize: '10px',
+        fontStyle: '800',
+        color: '#9fdfff'
+      }).setOrigin(0.5, 1);
+
+      button.add([bg, arrow, tx]);
+      root.add(button);
+
       let activePointer = null;
       const setPressed = (pressed) => {
         bg.setFillStyle(pressed ? 0x103b53 : 0x07131e, pressed ? 0.92 : 0.72);
         bg.setStrokeStyle(2, pressed ? 0x2bff88 : 0x67cfff, pressed ? 0.9 : 0.55);
         if (!this.touch) return;
-        if (pressed) this.touch.buttonSteer = dir; else if (this.touch.buttonSteer === dir) this.touch.buttonSteer = 0;
+        if (pressed) this.touch.buttonSteer = dir;
+        else if (this.touch.buttonSteer === dir) this.touch.buttonSteer = 0;
+      };
+      const release = (p) => {
+        if (activePointer !== null && (!p || activePointer === p.id)) setPressed(false);
+        activePointer = null;
       };
       bg.on('pointerdown', (p) => { activePointer = p.id; setPressed(true); });
-      bg.on('pointerup', (p) => { if (activePointer === p.id) setPressed(false); activePointer = null; });
-      bg.on('pointerout', (p) => { if (!p.isDown && activePointer === p.id) { setPressed(false); activePointer = null; } });
-      c.add([bg, arrow, tx]); return { bg, arrow, tx };
+      bg.on('pointerup', release);
+      bg.on('pointerupoutside', release);
+      bg.on('pointerout', (p) => { if (!p.isDown) release(p); });
+
+      return { button, bg, arrow, tx };
     };
+
     this._tdrLeftButton = make(-1, '◀', 'IZQUIERDA');
     this._tdrRightButton = make(1, '▶', 'DERECHA');
     this._layoutButtonSteeringUi();
@@ -178,21 +211,69 @@ export class RaceScene extends CurrentRaceScene {
 
   _layoutButtonSteeringUi() {
     if (this._tdrSteeringMode !== 'buttons' || !this._tdrSteerButtons?.scene) return;
-    const w = Number(this.scale?.width || 0), h = Number(this.scale?.height || 0);
+
+    const w = Math.max(1, Number(this.scale?.width || 0));
+    const h = Math.max(1, Number(this.scale?.height || 0));
     const pad = Math.max(14, Math.min(28, Math.floor(Math.min(w, h) * 0.04)));
     const baseH = Math.max(76, Math.min(118, Math.floor(h * 0.22)));
     const baseW = Math.max(92, Math.min(150, Math.floor(w * 0.14)));
-    const custom=readControlLayout().layout;
-    const lp=sanitizeLayoutPoint(custom.left||{x:(pad+baseW/2)/w,y:(h-pad-baseH/2)/h,scale:1});
-    const rp=sanitizeLayoutPoint(custom.right||{x:(pad+baseW*1.5+14)/w,y:(h-pad-baseH/2)/h,scale:1});
-    const place = (parts,p) => {
-      if (!parts) return;
-      const bw=baseW*p.scale,bh=baseH*p.scale,x=p.x*w-bw/2,y=p.y*h-bh/2;
-      parts.bg.setPosition(x,y).setSize(bw,bh).setDisplaySize(bw,bh);
-      parts.arrow.setPosition(x+bw/2,y+bh*.42).setFontSize(Math.floor(bh*.42));
-      parts.tx.setPosition(x+bw/2,y+bh-13);
+    const custom = readControlLayout().layout;
+    const lp = sanitizeLayoutPoint(custom.left || { x: (pad + baseW / 2) / w, y: (h - pad - baseH / 2) / h, scale: 1 });
+    const rp = sanitizeLayoutPoint(custom.right || { x: (pad + baseW * 1.5 + 14) / w, y: (h - pad - baseH / 2) / h, scale: 1 });
+
+    const lw = baseW * lp.scale;
+    const rw = baseW * rp.scale;
+    let lx = lp.x * w;
+    let rx = rp.x * w;
+    const ly = lp.y * h;
+    const ry = rp.y * h;
+
+    // Existing defaults placed the two centres closer than the physical widths
+    // of the buttons on common iPhone landscape sizes. Keep saved placement as
+    // much as possible but never allow the two steering hit areas to overlap.
+    const minGap = Math.max(10, Math.min(18, w * 0.014));
+    const minDistance = (lw + rw) * 0.5 + minGap;
+    if (rx - lx < minDistance) {
+      const mid = (lx + rx) * 0.5;
+      lx = mid - minDistance * 0.5;
+      rx = mid + minDistance * 0.5;
+    }
+
+    // Shift the pair as a unit when separation would push it off-screen.
+    const leftEdge = lx - lw * 0.5;
+    if (leftEdge < pad) {
+      const shift = pad - leftEdge;
+      lx += shift;
+      rx += shift;
+    }
+    const rightEdge = rx + rw * 0.5;
+    if (rightEdge > w - pad) {
+      const shift = rightEdge - (w - pad);
+      lx -= shift;
+      rx -= shift;
+    }
+
+    const place = (parts, x, y, p) => {
+      if (!parts?.button?.scene) return;
+      parts.button.setPosition(Math.round(x), Math.round(y));
+      parts.button.setScale(p.scale);
+      parts.bg.setSize(baseW, baseH).setDisplaySize(baseW, baseH);
+      parts.arrow.setPosition(0, -baseH * 0.08).setFontSize(Math.floor(baseH * 0.42));
+      parts.tx.setPosition(0, baseH * 0.5 - 10).setFontSize(Math.max(9, Math.floor(baseH * 0.095)));
     };
-    place(this._tdrLeftButton,lp); place(this._tdrRightButton,rp);
+
+    place(this._tdrLeftButton, lx, ly, lp);
+    place(this._tdrRightButton, rx, ry, rp);
+
+    // Reassert camera ownership after layout/resize. Dynamic world zoom must not
+    // be able to affect the steering HUD even after a camera or viewport rebuild.
+    try { this.cameras.main.ignore(this._tdrSteerButtons); } catch (_) {}
+    try {
+      if (this.uiCam) {
+        this.uiCam.setScroll(0, 0);
+        this.uiCam.setZoom(1);
+      }
+    } catch (_) {}
   }
 
   update(time, delta) {
