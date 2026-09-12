@@ -63,6 +63,14 @@ jobs:
           path: dev-src
           fetch-depth: 1
 
+      - name: Verify no-diagnostic race wiring
+        working-directory: dev-src
+        shell: bash
+        run: |
+          test -f src/game/scenes/RaceNoDiagScene.js
+          grep -q "RaceNoDiagScene.js" src/game/game.js
+          grep -q "this._diag = () => {}" src/game/scenes/RaceNoDiagScene.js
+
       - name: Build development
         working-directory: dev-src
         shell: bash
@@ -91,8 +99,6 @@ jobs:
           test -f beta/dist/dev-live/sw.js
           grep -q 'DEV 1\.0\.33' beta/dist/dev/index.html
           grep -q 'DEV 1\.0\.33' beta/dist/dev-live/index.html
-          ! grep -R -q '\[DIAG\] geomCells=' beta/dist/dev/assets
-          ! grep -R -q '\[DIAG\] geomCells=' beta/dist/dev-live/assets
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
