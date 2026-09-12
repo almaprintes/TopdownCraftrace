@@ -12,6 +12,13 @@ function camAt(samples,t){
   return{x:mix('x'),y:mix('y'),w:mix('w'),h:mix('h'),zoom:mix('zoom')};
 }
 function fmt(ms){ms=Math.max(0,Number(ms)||0);const m=Math.floor(ms/60000),s=(ms%60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;}
+function intersectRect(a,b){
+  if(!a||!b)return null;
+  const left=Math.max(a.left,b.left,0),top=Math.max(a.top,b.top,0);
+  const right=Math.min(a.right,b.right,window.innerWidth||Infinity),bottom=Math.min(a.bottom,b.bottom,window.innerHeight||Infinity);
+  if(right-left<=1||bottom-top<=1)return null;
+  return{left,top,right,bottom,width:right-left,height:bottom-top};
+}
 
 export class RaceScene extends CleanRaceScene{
   _startStatsNativeReplay(payload){
@@ -27,6 +34,12 @@ export class RaceScene extends CleanRaceScene{
     this._tdrReplayDomParent=null;
   }
   _embeddedReplayTarget(){try{return document.querySelector('[data-br-native-replay-screen="1"]');}catch{return null;}}
+  _visibleEmbeddedRect(){
+    const target=this._embeddedReplayTarget();
+    const body=target?.closest?.('.sh-body');
+    if(!target||!body)return null;
+    return intersectRect(target.getBoundingClientRect(),body.getBoundingClientRect());
+  }
   _prepareEmbeddedBackdrop(){
     const target=this._embeddedReplayTarget(),hub=target?.closest?.('.tdr-stats-hub');
     if(!target||!hub)return;
@@ -49,15 +62,22 @@ export class RaceScene extends CleanRaceScene{
     this._syncEmbeddedCover();
   }
   _syncEmbeddedCover(){
-    const hub=this._tdrEmbeddedHub,target=this._embeddedReplayTarget(),cover=this._tdrEmbeddedCover;
-    if(!hub||!target||!cover)return;
-    const hr=hub.getBoundingClientRect(),tr=target.getBoundingClientRect();
-    const x=Math.max(0,tr.left-hr.left),y=Math.max(0,tr.top-hr.top),r=Math.max(0,hr.right-tr.right),b=Math.max(0,hr.bottom-tr.bottom);
+    const hub=this._tdrEmbeddedHub,cover=this._tdrEmbeddedCover;
+    if(!hub||!cover)return;
+    const hr=hub.getBoundingClientRect(),vr=this._visibleEmbeddedRect();
     const top=cover.querySelector('[data-c="top"]'),left=cover.querySelector('[data-c="left"]'),right=cover.querySelector('[data-c="right"]'),bottom=cover.querySelector('[data-c="bottom"]');
-    if(top)top.style.cssText+=`;left:0;top:0;width:100%;height:${y}px`;
-    if(left)left.style.cssText+=`;left:0;top:${y}px;width:${x}px;height:${Math.max(0,tr.height)}px`;
-    if(right)right.style.cssText+=`;right:0;top:${y}px;width:${r}px;height:${Math.max(0,tr.height)}px`;
-    if(bottom)bottom.style.cssText+=`;left:0;bottom:0;width:100%;height:${b}px`;
+    const paint=(el,css)=>{if(el)el.style.cssText=`position:absolute;background:#020a11;display:block;${css}`;};
+    if(!vr){
+      paint(top,'left:0;top:0;width:100%;height:100%');
+      paint(left,'display:none');paint(right,'display:none');paint(bottom,'display:none');
+      return;
+    }
+    const x=Math.max(0,vr.left-hr.left),y=Math.max(0,vr.top-hr.top);
+    const r=Math.max(0,hr.right-vr.right),b=Math.max(0,hr.bottom-vr.bottom);
+    paint(top,`left:0;top:0;width:100%;height:${y}px`);
+    paint(left,`left:0;top:${y}px;width:${x}px;height:${vr.height}px`);
+    paint(right,`right:0;top:${y}px;width:${r}px;height:${vr.height}px`);
+    paint(bottom,`left:0;bottom:0;width:100%;height:${b}px`);
   }
   _cleanupEmbeddedBackdrop(){
     try{this._tdrEmbeddedCover?.remove?.();}catch{}
@@ -70,13 +90,16 @@ export class RaceScene extends CleanRaceScene{
   }
   _syncEmbeddedReplayViewport(){
     if(!this._tdrEmbeddedReplay)return null;
-    const target=this._embeddedReplayTarget(),canvas=this.game?.canvas,cam=this.cameras?.main;
-    if(!target||!canvas||!cam)return null;
-    const tr=target.getBoundingClientRect?.(),cr=canvas.getBoundingClientRect?.();
+    const canvas=this.game?.canvas,cam=this.cameras?.main,vr=this._visibleEmbeddedRect();
+    if(!canvas||!cam)return null;
+    if(!vr){try{cam.setVisible(false);}catch{}this._syncEmbeddedCover();return null;}
+    try{cam.setVisible(true);}catch{}
+    const cr=canvas.getBoundingClientRect?.();
     const gw=Number(this.scale?.width)||Number(canvas.width)||0,gh=Number(this.scale?.height)||Number(canvas.height)||0;
-    if(!tr||!cr||cr.width<=0||cr.height<=0||gw<=0||gh<=0)return null;
-    const sx=gw/cr.width,sy=gh/cr.height,x=Math.max(0,(tr.left-cr.left)*sx),y=Math.max(0,(tr.top-cr.top)*sy);
-    const w=Math.max(1,Math.min(gw-x,tr.width*sx)),h=Math.max(1,Math.min(gh-y,tr.height*sy));
+    if(!cr||cr.width<=0||cr.height<=0||gw<=0||gh<=0)return null;
+    const sx=gw/cr.width,sy=gh/cr.height;
+    const x=Math.max(0,(vr.left-cr.left)*sx),y=Math.max(0,(vr.top-cr.top)*sy);
+    const w=Math.max(1,Math.min(gw-x,vr.width*sx)),h=Math.max(1,Math.min(gh-y,vr.height*sy));
     try{cam.setViewport(x,y,w,h);}catch{}
     this._syncEmbeddedCover();return{x,y,w,h};
   }
