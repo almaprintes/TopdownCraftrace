@@ -2,6 +2,7 @@ import { RaceScene as CurrentRaceScene } from './RaceStaticGhostStatusScene.js';
 
 const TOP_REPLAY_PREFIX='tdr2:topReplay:';
 const SESSION_KEY='tdr2:statsNativeReplay';
+const REPLAY_SPEEDS=[0.25,0.5,1,2];
 const positive=v=>{const n=Number(v);return Number.isFinite(n)&&n>0?n:null;};
 const text=v=>String(v??'').trim();
 function lapId(trackId,row,index=0){const t=Number(row?.t||row?.timestamp||0);const car=text(row?.carId)||'car';const ms=Math.round(positive(row?.lapMs??row?.ms??row?.time)||0);return`${trackId}:${car}:${t||index}:${ms}`;}
@@ -32,7 +33,7 @@ export class RaceScene extends CurrentRaceScene{
   _startStatsNativeReplay(payload){
     if(!payload?.samples?.length||!this.carBody||!this.carRig)return;
     const duration=positive(payload.lapMs)||positive(payload.samples.at(-1)?.t)||1;
-    this._tdrStatsReplay={payload,duration,elapsed:0,playing:true,finished:false};
+    this._tdrStatsReplay={payload,duration,elapsed:0,playing:true,finished:false,speed:1};
     try{this.physics?.world?.pause?.();}catch{}
     try{this.input.enabled=false;}catch{}
     try{this.carBody.setVelocity?.(0,0);}catch{}
@@ -41,37 +42,96 @@ export class RaceScene extends CurrentRaceScene{
     this._hideStatsReplayGameplayUi();
     this._createStatsReplayOverlay(payload);
     this._applyStatsReplayFrame(0);
+    this._syncStatsReplayControls();
   }
 
   _hideStatsReplayGameplayUi(){
     this._tdrStatsReplayHiddenObjects=[];
     const keep=new Set([this.car,this.carBody,this.carRig]);
     const hide=o=>{if(!o||keep.has(o)||o.visible===false)return;try{this._tdrStatsReplayHiddenObjects.push(o);o.setVisible?.(false);}catch{}};
-    // Replay real: hide every camera-fixed Phaser HUD/control object, not only known panels.
-    for(const obj of this.children?.list||[]){
-      const sx=Number(obj?.scrollFactorX),sy=Number(obj?.scrollFactorY);
-      if(sx===0&&sy===0)hide(obj);
-    }
+    for(const obj of this.children?.list||[]){const sx=Number(obj?.scrollFactorX),sy=Number(obj?.scrollFactorY);if(sx===0&&sy===0)hide(obj);}
     hide(this.touchUI);hide(this.hud);hide(this.ttPanel);hide(this._startModal);hide(this._startModalBg);hide(this._ghostSprite);hide(this.cpGfx);hide(this.gridDebug);hide(this.finishLineDebug);hide(this._touchDbg);
     for(const value of Object.values(this.ttHud||{}))hide(value);
     for(const value of Object.values(this.minimap||{}))hide(value);
-    // DOM HUD created by the race wrappers.
-    try{
-      document.querySelectorAll('[data-tdr-static-minimap],[data-tdr-static-ghost-status],[data-tdr-touch-controls],[data-tdr-race-controls],[data-tdr-race-hud]').forEach(el=>{
-        el.dataset.tdrReplayWasDisplay=el.style.display||'';
-        el.style.display='none';
-      });
-    }catch{}
+    try{document.querySelectorAll('[data-tdr-static-minimap],[data-tdr-static-ghost-status],[data-tdr-touch-controls],[data-tdr-race-controls],[data-tdr-race-hud]').forEach(el=>{el.dataset.tdrReplayWasDisplay=el.style.display||'';el.style.display='none';});}catch{}
   }
 
   _createStatsReplayOverlay(payload){
     this._destroyStatsReplayOverlay(false);
+    const state=this._tdrStatsReplay;
     const root=document.createElement('div');root.dataset.tdrStatsNativeReplay='1';
     root.style.cssText='position:fixed;inset:0;z-index:2147483300;pointer-events:none;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff';
-    root.innerHTML=`<div style="position:absolute;left:max(12px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top));padding:8px 11px;background:rgba(3,14,22,.86);border:1px solid rgba(82,232,255,.45);box-shadow:0 8px 24px rgba(0,0,0,.25)"><div style="font-size:8px;font-weight:1000;letter-spacing:.18em;color:#63edff">RACE CONTROL // REPLAY REAL</div><div style="margin-top:2px;font-size:17px;font-weight:1000;letter-spacing:.03em">${String(payload.trackId||this.trackKey||'CIRCUITO').toUpperCase()}</div><div style="font-size:9px;font-weight:850;color:#90a9b7">${String(payload.carId||this.carId||'COCHE').toUpperCase()} · ${fmt(payload.lapMs)}</div></div><div style="position:absolute;right:max(12px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));display:flex;gap:7px;pointer-events:auto"><button data-pause style="height:38px;min-width:48px;border:1px solid #4feaff;background:rgba(5,29,40,.9);color:#fff;font-weight:1000;font-size:15px">Ⅱ</button><button data-back style="height:38px;border:1px solid #4feaff;background:rgba(5,29,40,.9);color:#fff;padding:0 14px;font-weight:1000;letter-spacing:.06em">← RACE CONTROL</button></div><div style="position:absolute;left:50%;bottom:max(13px,env(safe-area-inset-bottom));transform:translateX(-50%);min-width:260px;padding:7px 12px;background:rgba(3,14,22,.82);border:1px solid rgba(82,232,255,.28);text-align:center"><div data-time style="font-size:22px;font-weight:1000;font-variant-numeric:tabular-nums">0:00.000</div><div style="height:3px;margin-top:5px;background:#173542"><i data-progress style="display:block;width:0;height:100%;background:#58efff;box-shadow:0 0 10px rgba(88,239,255,.6)"></i></div></div>`;
+    const button='height:38px;min-width:44px;border:1px solid #4feaff;background:rgba(5,29,40,.94);color:#fff;font-weight:1000;font-size:14px;padding:0 10px;touch-action:manipulation';
+    root.innerHTML=`
+      <div style="position:absolute;left:max(12px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top));padding:8px 11px;background:rgba(3,14,22,.86);border:1px solid rgba(82,232,255,.45);box-shadow:0 8px 24px rgba(0,0,0,.25)">
+        <div style="font-size:8px;font-weight:1000;letter-spacing:.18em;color:#63edff">RACE CONTROL // REPLAY REAL</div>
+        <div style="margin-top:2px;font-size:17px;font-weight:1000;letter-spacing:.03em">${String(payload.trackId||this.trackKey||'CIRCUITO').toUpperCase()}</div>
+        <div style="font-size:9px;font-weight:850;color:#90a9b7">${String(payload.carId||this.carId||'COCHE').toUpperCase()} · ${fmt(payload.lapMs)}</div>
+      </div>
+      <div style="position:absolute;right:max(12px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));display:flex;gap:7px;pointer-events:auto">
+        <button data-back style="${button};padding:0 14px;letter-spacing:.06em">← RACE CONTROL</button>
+      </div>
+      <div style="position:absolute;left:50%;bottom:max(13px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(590px,calc(100vw - 24px));box-sizing:border-box;padding:8px 12px 9px;background:rgba(3,14,22,.88);border:1px solid rgba(82,232,255,.32);text-align:center;pointer-events:auto">
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:9px"><div data-time style="font-size:22px;font-weight:1000;font-variant-numeric:tabular-nums">0:00.000</div><div data-total style="font-size:10px;font-weight:850;color:#8fa9b7">/ ${fmt(state?.duration||payload.lapMs)}</div></div>
+        <input data-seek aria-label="Posición del replay" type="range" min="0" max="${Math.max(1,Math.round(state?.duration||payload.lapMs||1))}" step="1" value="0" style="display:block;width:100%;height:22px;margin:1px 0 3px;accent-color:#58efff;touch-action:none">
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap">
+          <button data-start title="Volver al inicio" aria-label="Volver al inicio" style="${button}">↶ 0</button>
+          <button data-prev title="Muestra anterior" aria-label="Muestra anterior" style="${button}">◀│</button>
+          <button data-pause title="Reproducir o pausar" aria-label="Reproducir o pausar" style="${button};min-width:54px;font-size:17px">Ⅱ</button>
+          <button data-next title="Muestra siguiente" aria-label="Muestra siguiente" style="${button}">│▶</button>
+          <button data-speed title="Velocidad de reproducción" aria-label="Velocidad de reproducción" style="${button};min-width:58px">1×</button>
+        </div>
+      </div>`;
     document.body.appendChild(root);this._tdrStatsReplayOverlay=root;
-    root.querySelector('[data-pause]')?.addEventListener('click',()=>{const s=this._tdrStatsReplay;if(!s)return;if(s.finished){s.elapsed=0;s.finished=false;s.playing=true;this._applyStatsReplayFrame(0);}else s.playing=!s.playing;const b=root.querySelector('[data-pause]');if(b)b.textContent=s.playing?'Ⅱ':'▶';});
     root.querySelector('[data-back]')?.addEventListener('click',()=>this._exitStatsNativeReplay());
+    root.querySelector('[data-start]')?.addEventListener('click',()=>this._seekStatsReplay(0,true));
+    root.querySelector('[data-prev]')?.addEventListener('click',()=>this._stepStatsReplaySample(-1));
+    root.querySelector('[data-next]')?.addEventListener('click',()=>this._stepStatsReplaySample(1));
+    root.querySelector('[data-pause]')?.addEventListener('click',()=>{
+      const s=this._tdrStatsReplay;if(!s)return;
+      if(s.finished){s.elapsed=0;s.finished=false;s.playing=true;this._applyStatsReplayFrame(0);}else s.playing=!s.playing;
+      this._syncStatsReplayControls();
+    });
+    root.querySelector('[data-speed]')?.addEventListener('click',()=>{
+      const s=this._tdrStatsReplay;if(!s)return;
+      const idx=Math.max(0,REPLAY_SPEEDS.indexOf(Number(s.speed)||1));
+      s.speed=REPLAY_SPEEDS[(idx+1)%REPLAY_SPEEDS.length];
+      this._syncStatsReplayControls();
+    });
+    root.querySelector('[data-seek]')?.addEventListener('input',e=>this._seekStatsReplay(Number(e.currentTarget?.value)||0,true));
+  }
+
+  _seekStatsReplay(t,pause=false){
+    const s=this._tdrStatsReplay;if(!s)return;
+    s.elapsed=Math.max(0,Math.min(s.duration,Number(t)||0));
+    if(pause)s.playing=false;
+    s.finished=s.elapsed>=s.duration;
+    this._applyStatsReplayFrame(s.elapsed);
+    this._syncStatsReplayControls();
+  }
+
+  _stepStatsReplaySample(direction){
+    const s=this._tdrStatsReplay;if(!s)return;
+    const samples=Array.isArray(s.payload?.samples)?s.payload.samples:[];
+    if(!samples.length)return;
+    const now=Number(s.elapsed)||0;
+    let target=now;
+    if(direction<0){
+      for(let i=samples.length-1;i>=0;i--){const t=Number(samples[i]?.t);if(Number.isFinite(t)&&t<now-.5){target=t;break;}}
+      if(target===now)target=0;
+    }else{
+      for(let i=0;i<samples.length;i++){const t=Number(samples[i]?.t);if(Number.isFinite(t)&&t>now+.5){target=t;break;}}
+      if(target===now)target=s.duration;
+    }
+    this._seekStatsReplay(target,true);
+  }
+
+  _syncStatsReplayControls(){
+    const s=this._tdrStatsReplay,root=this._tdrStatsReplayOverlay;if(!s||!root)return;
+    const pause=root.querySelector('[data-pause]'),speed=root.querySelector('[data-speed]'),seek=root.querySelector('[data-seek]');
+    if(pause)pause.textContent=s.finished?'↻':(s.playing?'Ⅱ':'▶');
+    if(speed)speed.textContent=`${Number(s.speed)||1}×`;
+    if(seek)seek.value=String(Math.round(Math.max(0,Math.min(s.duration,s.elapsed))));
   }
 
   _restoreStatsReplayGameplayUi(){
@@ -89,14 +149,26 @@ export class RaceScene extends CurrentRaceScene{
     this.scene.start('StatsScene',{raceControlTrackId:trackId});
   }
 
-  _applyStatsReplayFrame(t){const state=this._tdrStatsReplay;if(!state)return;const p=sampleAt(state.payload.samples,t);if(!p)return;try{this.carBody.setPosition(p.x,p.y);this.carBody.rotation=p.r;}catch{}try{this.carRig.setPosition(p.x,p.y);this.carRig.rotation=p.r+(this._carVisualRotOffset||0);}catch{}
-    const cam=camAt(state.payload.cameraSamples,t);if(cam){try{this.cameras.main.stopFollow();this.cameras.main.setZoom(cam.zoom);this.cameras.main.setScroll(cam.x,cam.y);}catch{}}else{try{this.cameras.main.centerOn(p.x,p.y);}catch{}}
-    const root=this._tdrStatsReplayOverlay;if(root){const time=root.querySelector('[data-time]'),progress=root.querySelector('[data-progress]');if(time)time.textContent=fmt(t);if(progress)progress.style.width=`${Math.min(100,t/state.duration*100)}%`;}
+  _applyStatsReplayFrame(t){
+    const state=this._tdrStatsReplay;if(!state)return;
+    const p=sampleAt(state.payload.samples,t);if(!p)return;
+    try{this.carBody.setPosition(p.x,p.y);this.carBody.rotation=p.r;}catch{}
+    try{this.carRig.setPosition(p.x,p.y);this.carRig.rotation=p.r+(this._carVisualRotOffset||0);}catch{}
+    const cam=camAt(state.payload.cameraSamples,t);
+    if(cam){try{this.cameras.main.stopFollow();this.cameras.main.setZoom(cam.zoom);this.cameras.main.setScroll(cam.x,cam.y);}catch{}}else{try{this.cameras.main.centerOn(p.x,p.y);}catch{}}
+    const root=this._tdrStatsReplayOverlay;if(root){const time=root.querySelector('[data-time]'),seek=root.querySelector('[data-seek]');if(time)time.textContent=fmt(t);if(seek&&!seek.matches(':active'))seek.value=String(Math.round(Math.max(0,Math.min(state.duration,t))));}
   }
 
   update(time,delta){
     if(this._tdrStatsReplay){
-      const s=this._tdrStatsReplay;if(s.playing&&!s.finished){s.elapsed=Math.min(s.duration,s.elapsed+Math.max(0,Number(delta)||0));this._applyStatsReplayFrame(s.elapsed);if(s.elapsed>=s.duration){s.playing=false;s.finished=true;const b=this._tdrStatsReplayOverlay?.querySelector('[data-pause]');if(b)b.textContent='↻';}}return;
+      const s=this._tdrStatsReplay;
+      if(s.playing&&!s.finished){
+        s.elapsed=Math.min(s.duration,s.elapsed+Math.max(0,Number(delta)||0)*(Number(s.speed)||1));
+        this._applyStatsReplayFrame(s.elapsed);
+        if(s.elapsed>=s.duration){s.playing=false;s.finished=true;}
+        this._syncStatsReplayControls();
+      }
+      return;
     }
     const result=super.update?.(time,delta);
     if(this._replayActive)return result;
