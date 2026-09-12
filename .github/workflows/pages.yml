@@ -80,12 +80,11 @@ jobs:
           grep -q "#tdr-race-controls" src/game/scenes/RaceReplayCleanScene.js
           grep -q "#tdr-handbrake" src/game/scenes/RaceReplayCleanScene.js
           grep -q "#tdr-steering-wheel" src/game/scenes/RaceReplayCleanScene.js
-          grep -q "data-br-native-replay-screen" src/game/scenes/RaceEmbeddedReplayScene.js
-          grep -q "_syncEmbeddedReplayViewport" src/game/scenes/RaceEmbeddedReplayScene.js
-          grep -q "_syncEmbeddedReplayCamera" src/game/scenes/RaceEmbeddedReplayScene.js
-          grep -q "_visibleEmbeddedRect" src/game/scenes/RaceEmbeddedReplayScene.js
-          grep -q "fullW" src/game/scenes/RaceEmbeddedReplayScene.js
-          grep -q "clipY" src/game/scenes/RaceEmbeddedReplayScene.js
+          grep -q "data-tdr-embedded-feed" src/game/scenes/RaceEmbeddedReplayScene.js
+          grep -q "_copyEmbeddedReplayFrame" src/game/scenes/RaceEmbeddedReplayScene.js
+          grep -q "drawImage" src/game/scenes/RaceEmbeddedReplayScene.js
+          grep -q "_startEmbeddedFeedLoop" src/game/scenes/RaceEmbeddedReplayScene.js
+          grep -q "min-height:0!important" src/game/scenes/StatsBroadcastRealReplayScene.js
           grep -q "cloneNode" src/game/scenes/StatsBroadcastRealReplayScene.js
           grep -q "br-chart" src/game/scenes/StatsBroadcastRealReplayScene.js
           grep -q "embedded:true" src/game/scenes/StatsBroadcastRealReplayScene.js
@@ -97,7 +96,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.59/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.60/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -114,8 +113,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.59' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.59' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.60' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.60' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
