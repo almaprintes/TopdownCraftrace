@@ -1,10 +1,12 @@
 import { RaceScene as CurrentRaceScene } from './RaceStaticMinimapScene.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
 
 const PANEL_W = 282;
 const ROW_H = 30;
 const PANEL_H = ROW_H * 3;
 const GHOST_BASE_ALPHA = 0.48;
 const GHOST_VISIBILITY_LEVELS = [1, 0.75, 0.5, 0.25];
+const PB_GHOST_PREFIX = 'tdr2:ghostPb:';
 
 function normalized(value) {
   return String(value || '').replace(/\s+/g, ' ').trim().toUpperCase();
@@ -52,9 +54,58 @@ function hidePhaserObject(obj) {
   try { obj?.setAlpha?.(0); } catch (_) {}
 }
 
+function fmtPb(ms) {
+  const value = Number(ms);
+  if (!Number.isFinite(value) || value <= 0) return '—';
+  const m = Math.floor(value / 60000);
+  const s = Math.floor((value % 60000) / 1000);
+  const cs = Math.floor((value % 1000) / 10);
+  return `${m}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
+}
+
+function pbGhostKey(trackKey) {
+  return `${PB_GHOST_PREFIX}${trackKey || 'track01'}`;
+}
+
+function readPbGhost(key) {
+  try {
+    const data = JSON.parse(localStorage.getItem(key) || 'null');
+    if (!data || !Array.isArray(data.samples) || data.samples.length < 2 || !Number.isFinite(Number(data.lapMs))) return null;
+    return data;
+  } catch (_) {
+    return null;
+  }
+}
+
+function writePbGhost(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 export class RaceScene extends CurrentRaceScene {
   create(data) {
     const result = super.create(data);
+
+    // The official Time Trial PB is the single source of truth. Legacy per-car ghosts
+    // are deliberately not migrated because their lap time may not match the current PB.
+    this._tdrCurrentGhostCarId = this._ghostCarId || this.carId || data?.carId || 'car';
+    this._tdrPbGhostStorageKey = pbGhostKey(this._ghostTrackKey || this.trackKey);
+    this._ghostStorageKey = this._tdrPbGhostStorageKey;
+    this._ghostData = readPbGhost(this._tdrPbGhostStorageKey);
+    this._tdrGhostKnownBestMs = Number.isFinite(Number(this.ttBest?.lapMs)) ? Number(this.ttBest.lapMs) : null;
+
+    // Only expose a replay as PERSONAL BEST when its stored official lap equals ttBest.
+    if (this._ghostData && !this._isGhostCurrentPersonalBest()) this._ghostData = null;
+
+    const ghostCarId = this._ghostData?.carId;
+    if (ghostCarId && CAR_SPECS?.[ghostCarId]) {
+      try { this.ensureCarSkinTexture?.(CAR_SPECS[ghostCarId]); } catch (_) {}
+    }
+
     this._tdrGhostPanelAnchor = null;
     this._tdrGhostPanelObjects = new Set();
     this._tdrGhostPanelLabels = null;
@@ -84,6 +135,103 @@ export class RaceScene extends CurrentRaceScene {
     return result;
   }
 
+  _isGhostCurrentPersonalBest() {
+    const ghostMs = Number(this._ghostData?.lapMs);
+    const bestMs = Number(this.ttBest?.lapMs);
+    const ghostTrack = String(this._ghostData?.trackKey || this._ghostTrackKey || '');
+    const currentTrack = String(this._ghostTrackKey || this.trackKey || '');
+    return Number.isFinite(ghostMs)
+      && Number.isFinite(bestMs)
+      && Math.abs(ghostMs - bestMs) <= 1
+      && ghostTrack === currentTrack;
+  }
+
+  _runtimeGhostTextureKey() {
+    const replayCarId = this._ghostData?.carId;
+    const replayKey = replayCarId ? `car_${replayCarId}` : null;
+    if (replayKey && this.textures?.exists?.(replayKey)) return replayKey;
+    return super._runtimeGhostTextureKey?.() || null;
+  }
+
+  _completedLapCheck(now) {
+    if (this._replayActive) return;
+    const hist = Array.isArray(this.ttHistory) ? this.ttHistory : [];
+    if (hist.length <= this._ghostHistoryLen) return;
+
+    const last = hist[hist.length - 1] || {};
+    const lapMs = Number(last.lapMs ?? this.timing?.lastLap);
+    const valid = last.valid !== false && last.invalid !== true && Number.isFinite(lapMs) && lapMs > 1000;
+    const officialBestMs = Number(this.ttBest?.lapMs);
+    const previousBestMs = Number(this._tdrGhostKnownBestMs);
+    const isOfficialNewPb = valid
+      && Number.isFinite(officialBestMs)
+      && Math.abs(lapMs - officialBestMs) <= 1
+      && (!Number.isFinite(previousBestMs) || officialBestMs < previousBestMs - 0.5);
+
+    if (isOfficialNewPb && this._ghostSamples.length > 4) {
+      const samples = this._ghostSamples
+        .filter(sample => Number.isFinite(Number(sample?.t)) && Number(sample.t) >= 0 && Number(sample.t) < officialBestMs)
+        .map(sample => ({ t: Number(sample.t), x: Number(sample.x), y: Number(sample.y), r: Number(sample.r || 0) }));
+
+      // Force the final replay sample to the exact official PB duration and current
+      // finish-line position. This removes the old 0–45 ms gap caused by sample cadence.
+      if (this.carBody) {
+        samples.push({
+          t: Math.round(officialBestMs),
+          x: Number(this.carBody.x || 0),
+          y: Number(this.carBody.y || 0),
+          r: Number(this.carBody.rotation || 0)
+        });
+      }
+
+      const saved = {
+        version: 5,
+        kind: 'circuit-personal-best',
+        trackKey: this._ghostTrackKey,
+        carId: this._tdrCurrentGhostCarId,
+        lapMs: Math.round(officialBestMs),
+        recordedAt: Date.now(),
+        samples
+      };
+
+      if (samples.length > 4 && writePbGhost(this._tdrPbGhostStorageKey, saved)) {
+        this._ghostData = saved;
+
+        // Enrich the existing official ttBest record without changing its key or timing
+        // semantics. These fields are ready for the future local records table/leaderboard.
+        try {
+          const current = JSON.parse(localStorage.getItem(this.ttKey) || '{}');
+          const enriched = {
+            ...current,
+            lapMs: Number(this.ttBest?.lapMs ?? officialBestMs),
+            carId: saved.carId,
+            ghostKey: this._tdrPbGhostStorageKey,
+            ghostVersion: saved.version,
+            recordedAt: saved.recordedAt
+          };
+          localStorage.setItem(this.ttKey, JSON.stringify(enriched));
+          if (this.ttBest) Object.assign(this.ttBest, enriched);
+        } catch (_) {}
+
+        try { this._ghostSprite?.destroy?.(); } catch (_) {}
+        this._ghostSprite = null;
+        if (saved.carId && CAR_SPECS?.[saved.carId]) {
+          try { this.ensureCarSkinTexture?.(CAR_SPECS[saved.carId]); } catch (_) {}
+        }
+        this._createGhostSprite?.();
+        this._syncGhostVisual?.();
+        this._setGhostHudLabels?.('👻 NUEVO FANTASMA', 'RÉCORD PERSONAL GUARDADO');
+        this._ensureReplayEntryButton?.();
+      }
+    }
+
+    if (Number.isFinite(officialBestMs)) this._tdrGhostKnownBestMs = officialBestMs;
+    this._ghostHistoryLen = hist.length;
+    this._ghostSamples = [];
+    this._ghostLapStartPerf = now;
+    this._ghostLastSamplePerf = 0;
+  }
+
   _findGhostPanelObjects() {
     const flat = flattenScene(this);
     const ghost = flat.find(isGhostLabel);
@@ -109,8 +257,6 @@ export class RaceScene extends CurrentRaceScene {
       const type = String(obj.type || obj.constructor?.name || '').toLowerCase();
       const panelShape = type.includes('rectangle') || type.includes('graphics') || type.includes('text') || type.includes('container');
       if (!panelShape) continue;
-      // Only retire the ghost panel's own labels/chrome/replay control. Do not touch
-      // the DOM minimap, pause/delta control, vehicle, track or unrelated HUD objects.
       if (isText && obj !== ghost && obj !== record) {
         const t = normalized(obj.text);
         if (t && !t.includes('FANTASMA') && !t.includes('GHOST') && !t.includes('RÉCORD') && !t.includes('RECORD') && !t.includes('REPETICIÓN') && !t.includes('REPLAY')) continue;
@@ -179,7 +325,7 @@ export class RaceScene extends CurrentRaceScene {
 
     const ghostText = this._makeGhostPanelText('0', '👻 FANTASMA · ON', '#c9f5ff');
     ghostText.dataset.ghost = '1';
-    const recordText = this._makeGhostPanelText(`${ROW_H / PANEL_H * 100}%`, '🏆 RÉCORD PERSONAL · ▶');
+    const recordText = this._makeGhostPanelText(`${ROW_H / PANEL_H * 100}%`, '🏆 RÉCORD PERSONAL');
     recordText.dataset.record = '1';
     const visibilityText = this._makeGhostPanelText(`${ROW_H * 2 / PANEL_H * 100}%`, '◐ VISIBILIDAD · 100%', '#d8f8ff');
     visibilityText.dataset.visibility = '1';
@@ -197,7 +343,7 @@ export class RaceScene extends CurrentRaceScene {
       }
     });
     this._wireGhostPanelRow(rows[1], () => {
-      if (!this._ghostData || this._replayActive || typeof this._enterReplay !== 'function') return;
+      if (!this._isGhostCurrentPersonalBest() || this._replayActive || typeof this._enterReplay !== 'function') return;
       this._enterReplay();
     });
     this._wireGhostPanelRow(rows[2], () => {
@@ -237,12 +383,19 @@ export class RaceScene extends CurrentRaceScene {
     const labels = this._tdrGhostPanelLabels;
     if (!labels) return;
     const level = GHOST_VISIBILITY_LEVELS[Number(this._tdrGhostVisibilityIndex || 0)] ?? 1;
+    const hasPbReplay = this._isGhostCurrentPersonalBest();
+    const bestMs = Number(this.ttBest?.lapMs);
+
     if (labels.ghostText) labels.ghostText.textContent = `👻 FANTASMA · ${this._tdrGhostVisibleEnabled ? 'ON' : 'OFF'}`;
-    if (labels.recordText) labels.recordText.textContent = this._ghostData ? '🏆 RÉCORD PERSONAL · ▶' : 'RÉCORD NO DISPONIBLE';
+    if (labels.recordText) {
+      if (hasPbReplay) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · ▶`;
+      else if (Number.isFinite(bestMs)) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · SIN REPLAY`;
+      else labels.recordText.textContent = 'RÉCORD NO DISPONIBLE';
+    }
     if (labels.visibilityText) labels.visibilityText.textContent = `◐ VISIBILIDAD · ${Math.round(level * 100)}%`;
     if (this._tdrGhostPanelRows?.[1]) {
-      this._tdrGhostPanelRows[1].style.opacity = this._ghostData ? '1' : '.52';
-      this._tdrGhostPanelRows[1].style.cursor = this._ghostData ? 'pointer' : 'default';
+      this._tdrGhostPanelRows[1].style.opacity = hasPbReplay ? '1' : '.58';
+      this._tdrGhostPanelRows[1].style.cursor = hasPbReplay ? 'pointer' : 'default';
     }
   }
 
