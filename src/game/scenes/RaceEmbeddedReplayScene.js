@@ -67,13 +67,8 @@ export class RaceScene extends CleanRaceScene{
     const hr=hub.getBoundingClientRect(),vr=this._visibleEmbeddedRect();
     const top=cover.querySelector('[data-c="top"]'),left=cover.querySelector('[data-c="left"]'),right=cover.querySelector('[data-c="right"]'),bottom=cover.querySelector('[data-c="bottom"]');
     const paint=(el,css)=>{if(el)el.style.cssText=`position:absolute;background:#020a11;display:block;${css}`;};
-    if(!vr){
-      paint(top,'left:0;top:0;width:100%;height:100%');
-      paint(left,'display:none');paint(right,'display:none');paint(bottom,'display:none');
-      return;
-    }
-    const x=Math.max(0,vr.left-hr.left),y=Math.max(0,vr.top-hr.top);
-    const r=Math.max(0,hr.right-vr.right),b=Math.max(0,hr.bottom-vr.bottom);
+    if(!vr){paint(top,'left:0;top:0;width:100%;height:100%');paint(left,'display:none');paint(right,'display:none');paint(bottom,'display:none');return;}
+    const x=Math.max(0,vr.left-hr.left),y=Math.max(0,vr.top-hr.top),r=Math.max(0,hr.right-vr.right),b=Math.max(0,hr.bottom-vr.bottom);
     paint(top,`left:0;top:0;width:100%;height:${y}px`);
     paint(left,`left:0;top:${y}px;width:${x}px;height:${vr.height}px`);
     paint(right,`right:0;top:${y}px;width:${r}px;height:${vr.height}px`);
@@ -90,18 +85,21 @@ export class RaceScene extends CleanRaceScene{
   }
   _syncEmbeddedReplayViewport(){
     if(!this._tdrEmbeddedReplay)return null;
-    const canvas=this.game?.canvas,cam=this.cameras?.main,vr=this._visibleEmbeddedRect();
-    if(!canvas||!cam)return null;
+    const target=this._embeddedReplayTarget(),canvas=this.game?.canvas,cam=this.cameras?.main;
+    if(!target||!canvas||!cam)return null;
+    const tr=target.getBoundingClientRect?.(),vr=this._visibleEmbeddedRect(),cr=canvas.getBoundingClientRect?.();
+    const gw=Number(this.scale?.width)||Number(canvas.width)||0,gh=Number(this.scale?.height)||Number(canvas.height)||0;
+    if(!tr||!cr||cr.width<=0||cr.height<=0||gw<=0||gh<=0)return null;
     if(!vr){try{cam.setVisible(false);}catch{}this._syncEmbeddedCover();return null;}
     try{cam.setVisible(true);}catch{}
-    const cr=canvas.getBoundingClientRect?.();
-    const gw=Number(this.scale?.width)||Number(canvas.width)||0,gh=Number(this.scale?.height)||Number(canvas.height)||0;
-    if(!cr||cr.width<=0||cr.height<=0||gw<=0||gh<=0)return null;
     const sx=gw/cr.width,sy=gh/cr.height;
     const x=Math.max(0,(vr.left-cr.left)*sx),y=Math.max(0,(vr.top-cr.top)*sy);
     const w=Math.max(1,Math.min(gw-x,vr.width*sx)),h=Math.max(1,Math.min(gh-y,vr.height*sy));
+    const fullW=Math.max(1,tr.width*sx),fullH=Math.max(1,tr.height*sy);
+    const clipX=(vr.left-tr.left)*sx,clipY=(vr.top-tr.top)*sy;
     try{cam.setViewport(x,y,w,h);}catch{}
-    this._syncEmbeddedCover();return{x,y,w,h};
+    this._syncEmbeddedCover();
+    return{x,y,w,h,fullW,fullH,clipX,clipY};
   }
   _createStatsReplayOverlay(payload){
     if(!this._tdrEmbeddedReplay)return super._createStatsReplayOverlay(payload);
@@ -118,8 +116,22 @@ export class RaceScene extends CleanRaceScene{
     root.querySelector('[data-seek]')?.addEventListener('input',e=>this._seekStatsReplay(Number(e.currentTarget?.value)||0,true));requestAnimationFrame(()=>this._syncEmbeddedReplayViewport());
   }
   _applyStatsReplayFrame(t){
-    super._applyStatsReplayFrame(t);if(!this._tdrEmbeddedReplay)return;const viewport=this._syncEmbeddedReplayViewport(),state=this._tdrStatsReplay;if(!viewport||!state)return;
-    const recorded=camAt(state.payload?.cameraSamples,t);if(recorded&&Number.isFinite(recorded.w)&&Number.isFinite(recorded.h)&&recorded.w>0&&recorded.h>0){const zoom=Math.max(.01,Math.min(viewport.w/recorded.w,viewport.h/recorded.h));try{this.cameras.main.stopFollow();this.cameras.main.setZoom(zoom);this.cameras.main.centerOn(recorded.x+recorded.w*.5,recorded.y+recorded.h*.5);}catch{}}
+    super._applyStatsReplayFrame(t);
+    if(!this._tdrEmbeddedReplay)return;
+    const viewport=this._syncEmbeddedReplayViewport(),state=this._tdrStatsReplay;
+    if(!viewport||!state)return;
+    const recorded=camAt(state.payload?.cameraSamples,t);
+    if(recorded&&Number.isFinite(recorded.w)&&Number.isFinite(recorded.h)&&recorded.w>0&&recorded.h>0){
+      const zoom=Math.max(.01,Math.min(viewport.fullW/recorded.w,viewport.fullH/recorded.h));
+      const baseCx=recorded.x+recorded.w*.5,baseCy=recorded.y+recorded.h*.5;
+      const dxPx=viewport.clipX+viewport.w*.5-viewport.fullW*.5;
+      const dyPx=viewport.clipY+viewport.h*.5-viewport.fullH*.5;
+      try{
+        this.cameras.main.stopFollow();
+        this.cameras.main.setZoom(zoom);
+        this.cameras.main.centerOn(baseCx+dxPx/zoom,baseCy+dyPx/zoom);
+      }catch{}
+    }
   }
   _destroyStatsReplayOverlay(restore=true){const result=super._destroyStatsReplayOverlay?.(restore);if(this._tdrEmbeddedReplay)this._cleanupEmbeddedBackdrop();return result;}
   _exitStatsNativeReplay(){if(!this._tdrEmbeddedReplay)return super._exitStatsNativeReplay?.();try{sessionStorage.removeItem('tdr2:statsNativeReplay');}catch{}this._destroyStatsReplayOverlay(false);try{this.scene.stop();}catch{}}
