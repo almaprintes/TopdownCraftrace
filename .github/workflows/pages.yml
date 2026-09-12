@@ -70,6 +70,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
+          sed -i 's/DEV 1\.0\.31/DEV 1.0.32/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
 
@@ -88,6 +89,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
+          grep -q 'DEV 1\.0\.32' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.32' beta/dist/dev-live/index.html
           grep -R -q 'DEV 1\.0\.32' beta/dist/dev/assets
           grep -R -q 'DEV 1\.0\.32' beta/dist/dev-live/assets
 
