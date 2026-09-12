@@ -9,7 +9,6 @@ export class RaceScene extends CleanRaceScene{
     if(this._tdrEmbeddedReplay){
       this._syncEmbeddedSourceCamera();
       this._applyStatsReplayFrame(0);
-      this._copyEmbeddedReplayFrame();
     }
     return result;
   }
@@ -65,21 +64,28 @@ export class RaceScene extends CleanRaceScene{
     try{
       const ctx=feed.getContext('2d',{alpha:false});
       if(!ctx)return;
-      ctx.clearRect(0,0,dw,dh);
+      // Do not clear first: if a browser misses one WebGL readback, retaining the
+      // previous complete frame is preferable to flashing the dark background.
       ctx.drawImage(src,sx,sy,cw,ch,0,0,dw,dh);
     }catch{}
   }
 
   _startEmbeddedFeedLoop(){
     if(!this._tdrEmbeddedReplay)return;
-    if(this._tdrEmbeddedFeedRaf)cancelAnimationFrame(this._tdrEmbeddedFeedRaf);
-    const tick=()=>{
-      if(!this._tdrEmbeddedReplay||!this._tdrEmbeddedFeedCanvas?.isConnected){this._tdrEmbeddedFeedRaf=0;return;}
-      this._syncEmbeddedSourceCamera();
-      this._copyEmbeddedReplayFrame();
-      this._tdrEmbeddedFeedRaf=requestAnimationFrame(tick);
-    };
-    this._tdrEmbeddedFeedRaf=requestAnimationFrame(tick);
+    this._stopEmbeddedFeedLoop();
+    // Copy only after Phaser has finished rendering its frame. An independent
+    // requestAnimationFrame can run between WebGL clear and draw, producing the
+    // intermittent dark flashes seen on iOS.
+    const copy=()=>this._copyEmbeddedReplayFrame();
+    this._tdrEmbeddedPostRenderHandler=copy;
+    try{this.game?.events?.on?.('postrender',copy);}catch{}
+    requestAnimationFrame(copy);
+  }
+
+  _stopEmbeddedFeedLoop(){
+    const copy=this._tdrEmbeddedPostRenderHandler;
+    if(copy){try{this.game?.events?.off?.('postrender',copy);}catch{}}
+    this._tdrEmbeddedPostRenderHandler=null;
   }
 
   _createStatsReplayOverlay(payload){
@@ -107,11 +113,11 @@ export class RaceScene extends CleanRaceScene{
 
   _applyStatsReplayFrame(t){
     super._applyStatsReplayFrame(t);
-    if(this._tdrEmbeddedReplay){this._syncEmbeddedSourceCamera();this._copyEmbeddedReplayFrame();}
+    if(this._tdrEmbeddedReplay)this._syncEmbeddedSourceCamera();
   }
 
   _destroyStatsReplayOverlay(restore=true){
-    if(this._tdrEmbeddedFeedRaf){cancelAnimationFrame(this._tdrEmbeddedFeedRaf);this._tdrEmbeddedFeedRaf=0;}
+    this._stopEmbeddedFeedLoop();
     try{this._tdrEmbeddedFeedCanvas?.remove?.();}catch{}
     this._tdrEmbeddedFeedCanvas=null;
     return super._destroyStatsReplayOverlay?.(restore);
