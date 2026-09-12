@@ -1,6 +1,6 @@
-import { RaceTop10ReplayScene } from './RaceTop10ReplayScene.js';
+import { RaceScene as CleanReplayRaceScene } from './RaceReplayCleanScene.js';
 
-export class RaceScene extends RaceTop10ReplayScene {
+export class RaceScene extends CleanReplayRaceScene {
   _startStatsNativeReplay(payload){
     super._startStatsNativeReplay(payload);
     this._hideReplayDrivingControlsOnly();
@@ -19,7 +19,7 @@ export class RaceScene extends RaceTop10ReplayScene {
         obj?.name ??
         ''
       ).toLowerCase();
-      const interactive=!!obj?.input?.enabled;
+      const interactive=!!obj?.input && obj.input.enabled!==false;
       const looksLikeDrivingControl=/brake|freno|gas|acceler|throttle|handbrake|parking/.test(texKey);
       if(interactive && looksLikeDrivingControl && obj.visible!==false){
         try{obj.setVisible?.(false);hidden.push(obj);}catch{}
