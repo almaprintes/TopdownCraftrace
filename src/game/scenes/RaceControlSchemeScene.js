@@ -75,8 +75,6 @@ export class RaceScene extends CurrentRaceScene {
       this._onResizeButtonTouchControls = null;
       try { this._tdrSteerButtons?.destroy(true); } catch (_) {}
       this._tdrSteerButtons = null;
-      this._tdrLeftButton = null;
-      this._tdrRightButton = null;
     });
     this.time?.delayedCall?.(0, () => this._buildButtonSteeringUi?.());
     return state;
@@ -153,131 +151,48 @@ export class RaceScene extends CurrentRaceScene {
 
   _buildButtonSteeringUi() {
     if (this._tdrSteeringMode !== 'buttons' || this._tdrSteerButtons?.scene) return;
-
-    const root = this.add.container(0, 0).setScrollFactor(0).setDepth(1100);
-    this._tdrSteerButtons = root;
+    const c = this.add.container(0, 0).setScrollFactor(0).setDepth(1100);
+    this._tdrSteerButtons = c;
+    try { this.cameras.main.ignore(c); } catch (_) {}
 
     const make = (dir, glyph, label) => {
-      // The complete visual button is ONE Phaser Text object. Its dark square,
-      // arrow, caption and hit area therefore share exactly the same transform.
-      // There are no independent labels left that can drift while the car moves.
-      const control = this.add.text(0, 0, `${glyph}\n${label}`, {
-        fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',
-        fontSize: '18px',
-        fontStyle: '900',
-        color: '#ffffff',
-        align: 'center',
-        backgroundColor: '#07131e',
-        lineSpacing: 5,
-        padding: { left: 6, right: 6, top: 10, bottom: 8 }
-      })
-        .setOrigin(0.5)
-        .setScrollFactor(0)
-        .setDepth(1100)
-        .setInteractive({ useHandCursor: true });
-
-      root.add(control);
-
+      const bg = this.add.rectangle(0, 0, 10, 10, 0x07131e, 0.72).setOrigin(0).setStrokeStyle(2, 0x67cfff, 0.55).setInteractive({ useHandCursor: true });
+      const arrow = this.add.text(0, 0, glyph, {fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',fontSize: '42px', fontStyle: '900', color: '#ffffff'}).setOrigin(0.5);
+      const tx = this.add.text(0, 0, label, {fontFamily: 'system-ui, -apple-system, Segoe UI, Arial',fontSize: '10px', fontStyle: '800', color: '#9fdfff'}).setOrigin(0.5, 1);
       let activePointer = null;
       const setPressed = (pressed) => {
-        control.setBackgroundColor(pressed ? '#103b53' : '#07131e');
+        bg.setFillStyle(pressed ? 0x103b53 : 0x07131e, pressed ? 0.92 : 0.72);
+        bg.setStrokeStyle(2, pressed ? 0x2bff88 : 0x67cfff, pressed ? 0.9 : 0.55);
         if (!this.touch) return;
-        if (pressed) this.touch.buttonSteer = dir;
-        else if (this.touch.buttonSteer === dir) this.touch.buttonSteer = 0;
+        if (pressed) this.touch.buttonSteer = dir; else if (this.touch.buttonSteer === dir) this.touch.buttonSteer = 0;
       };
-      const release = (p) => {
-        if (activePointer !== null && (!p || activePointer === p.id)) setPressed(false);
-        activePointer = null;
-      };
-      control.on('pointerdown', (p) => { activePointer = p.id; setPressed(true); });
-      control.on('pointerup', release);
-      control.on('pointerupoutside', release);
-      control.on('pointerout', (p) => { if (!p.isDown) release(p); });
-
-      return { control };
+      bg.on('pointerdown', (p) => { activePointer = p.id; setPressed(true); });
+      bg.on('pointerup', (p) => { if (activePointer === p.id) setPressed(false); activePointer = null; });
+      bg.on('pointerout', (p) => { if (!p.isDown && activePointer === p.id) { setPressed(false); activePointer = null; } });
+      c.add([bg, arrow, tx]); return { bg, arrow, tx };
     };
-
     this._tdrLeftButton = make(-1, '◀', 'IZQUIERDA');
     this._tdrRightButton = make(1, '▶', 'DERECHA');
     this._layoutButtonSteeringUi();
-
-    // The controls belong only to the HUD camera. Ignore both the parent and
-    // the actual drawable children in the moving/zooming world camera.
-    this._pinButtonSteeringCamera?.();
-    this.time?.delayedCall?.(0, () => this._pinButtonSteeringCamera?.());
-    this.time?.delayedCall?.(120, () => this._pinButtonSteeringCamera?.());
-  }
-
-  _pinButtonSteeringCamera() {
-    if (this._tdrSteeringMode !== 'buttons') return;
-    const controls = [
-      this._tdrSteerButtons,
-      this._tdrLeftButton?.control,
-      this._tdrRightButton?.control
-    ].filter(Boolean);
-    try { this.cameras.main.ignore(controls); } catch (_) {}
-    try {
-      if (this.uiCam) {
-        this.uiCam.setScroll(0, 0);
-        this.uiCam.setZoom(1);
-        this.uiCam.setRotation?.(0);
-      }
-    } catch (_) {}
   }
 
   _layoutButtonSteeringUi() {
     if (this._tdrSteeringMode !== 'buttons' || !this._tdrSteerButtons?.scene) return;
-
-    const w = Math.max(1, Number(this.scale?.width || 0));
-    const h = Math.max(1, Number(this.scale?.height || 0));
+    const w = Number(this.scale?.width || 0), h = Number(this.scale?.height || 0);
     const pad = Math.max(14, Math.min(28, Math.floor(Math.min(w, h) * 0.04)));
     const baseH = Math.max(76, Math.min(118, Math.floor(h * 0.22)));
     const baseW = Math.max(92, Math.min(150, Math.floor(w * 0.14)));
-    const custom = readControlLayout().layout;
-    const lp = sanitizeLayoutPoint(custom.left || { x: (pad + baseW / 2) / w, y: (h - pad - baseH / 2) / h, scale: 1 });
-    const rp = sanitizeLayoutPoint(custom.right || { x: (pad + baseW * 1.5 + 14) / w, y: (h - pad - baseH / 2) / h, scale: 1 });
-
-    const lw = baseW * lp.scale;
-    const rw = baseW * rp.scale;
-    let lx = lp.x * w;
-    let rx = rp.x * w;
-    const ly = lp.y * h;
-    const ry = rp.y * h;
-
-    const minGap = Math.max(10, Math.min(18, w * 0.014));
-    const minDistance = (lw + rw) * 0.5 + minGap;
-    if (rx - lx < minDistance) {
-      const mid = (lx + rx) * 0.5;
-      lx = mid - minDistance * 0.5;
-      rx = mid + minDistance * 0.5;
-    }
-
-    const leftEdge = lx - lw * 0.5;
-    if (leftEdge < pad) {
-      const shift = pad - leftEdge;
-      lx += shift;
-      rx += shift;
-    }
-    const rightEdge = rx + rw * 0.5;
-    if (rightEdge > w - pad) {
-      const shift = rightEdge - (w - pad);
-      lx -= shift;
-      rx -= shift;
-    }
-
-    const place = (parts, x, y, p) => {
-      const control = parts?.control;
-      if (!control?.scene) return;
-      control.setPosition(Math.round(x), Math.round(y));
-      control.setScale(1);
-      control.setFixedSize(Math.round(baseW * p.scale), Math.round(baseH * p.scale));
-      control.setFontSize(Math.max(13, Math.floor(baseH * 0.18 * p.scale)));
-      control.setLineSpacing(Math.max(2, Math.floor(baseH * 0.04 * p.scale)));
+    const custom=readControlLayout().layout;
+    const lp=sanitizeLayoutPoint(custom.left||{x:(pad+baseW/2)/w,y:(h-pad-baseH/2)/h,scale:1});
+    const rp=sanitizeLayoutPoint(custom.right||{x:(pad+baseW*1.5+14)/w,y:(h-pad-baseH/2)/h,scale:1});
+    const place = (parts,p) => {
+      if (!parts) return;
+      const bw=baseW*p.scale,bh=baseH*p.scale,x=p.x*w-bw/2,y=p.y*h-bh/2;
+      parts.bg.setPosition(x,y).setSize(bw,bh).setDisplaySize(bw,bh);
+      parts.arrow.setPosition(x+bw/2,y+bh*.42).setFontSize(Math.floor(bh*.42));
+      parts.tx.setPosition(x+bw/2,y+bh-13);
     };
-
-    place(this._tdrLeftButton, lx, ly, lp);
-    place(this._tdrRightButton, rx, ry, rp);
-    this._pinButtonSteeringCamera?.();
+    place(this._tdrLeftButton,lp); place(this._tdrRightButton,rp);
   }
 
   update(time, delta) {
@@ -290,12 +205,6 @@ export class RaceScene extends CurrentRaceScene {
       if (this.touch) { this.touch.stickX = 0; this.touch.stickY = 0; this.touch.steer = 0; }
     }
     try { super.update(time, delta); }
-    finally {
-      if (buttonMode) {
-        if (leftKey) leftKey.isDown = prevLeft;
-        if (rightKey) rightKey.isDown = prevRight;
-        this._pinButtonSteeringCamera?.();
-      }
-    }
+    finally { if (buttonMode) { if (leftKey) leftKey.isDown = prevLeft; if (rightKey) rightKey.isDown = prevRight; } }
   }
 }
