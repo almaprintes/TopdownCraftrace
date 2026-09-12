@@ -5,20 +5,17 @@ export class StatsScene extends BroadcastStatsScene{
     super._installBroadcastStyles();
     if(this._root?.querySelector('[data-broadcast-compact-style]'))return;
     const style=document.createElement('style');style.dataset.broadcastCompactStyle='1';style.textContent=`
-/* DEV 1.0.40 — broadcast suite: one-screen landscape composition */
-.tdr-stats-hub:has(.br-shell) .sh-head{min-height:clamp(40px,7.2vh,58px)}
-.tdr-stats-hub:has(.br-shell) .sh-body{overflow:hidden;padding-top:clamp(5px,.8vh,8px);padding-bottom:5px}
-.br-shell{height:100%;min-height:0;padding-bottom:0;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:6px;overflow:hidden}
-.br-topline{margin-bottom:0;min-height:26px}.br-live{padding:4px 8px}.br-topline h2{font-size:clamp(15px,1.75vw,23px)}
-.br-grid{min-height:0;height:100%;grid-template-columns:minmax(220px,.68fr) minmax(380px,1.42fr) minmax(245px,.82fr);gap:7px;overflow:hidden}
-.br-circuits{min-height:0;height:100%;padding:8px;overflow:auto}.br-circuit{padding:6px 7px}.br-pos{font-size:15px}.br-circuit strong{font-size:10px}.br-circuit time{font-size:12px}
-.br-main{min-height:0;height:100%;grid-template-rows:minmax(118px,.78fr) minmax(128px,1.05fr);gap:7px}.br-hero{min-height:0;height:100%;padding:8px 12px}.br-hero h3{font-size:clamp(19px,2.4vw,31px)}.br-pb strong{font-size:clamp(25px,3.45vw,43px)}
-.br-car-strip{height:58px;margin-top:4px}.br-car-strip img{height:54px}.br-car-meta strong{font-size:13px}
-.br-chart{min-height:0;height:100%;padding:8px 10px}.br-chart svg{height:calc(100% - 35px);min-height:78px;margin-top:3px}.br-empty-chart{height:calc(100% - 32px);min-height:78px}
-.br-side{min-height:0;height:100%;grid-template-rows:minmax(0,1.35fr) auto;gap:7px;overflow:hidden}.br-top10{min-height:0;padding:8px;overflow:auto}.br-top10 h4,.br-sync h4{margin:2px 0 5px;font-size:12px}.br-lap{padding:4px 3px}.br-lap strong{font-size:8px}.br-lap time{font-size:10px}
-.br-sync{padding:8px}.br-sync-row{padding:4px 0;font-size:7px}.br-cloud-tabs{margin-top:5px}.br-cloud-tabs button{padding:5px 1px;font-size:6px}.br-cloud-note{margin-top:4px;font-size:6px}
-.br-foot{margin-top:0;gap:6px}.br-kpi{padding:5px 8px;min-height:42px}.br-kpi strong{font-size:13px}.br-kpi small{font-size:6px}
-@media(max-height:520px){.tdr-stats-hub:has(.br-shell) .sh-head{min-height:40px}.tdr-stats-hub:has(.br-shell) .sh-title{font-size:clamp(20px,3vw,31px)}.br-topline{min-height:22px}.br-topline h2{font-size:15px}.br-grid{grid-template-columns:minmax(190px,.65fr) minmax(360px,1.48fr) minmax(230px,.82fr)}.br-main{grid-template-rows:minmax(105px,.72fr) minmax(112px,1fr)}.br-hero{padding:7px 10px}.br-car-strip{height:48px}.br-car-strip img{height:45px}.br-chart svg,.br-empty-chart{min-height:66px}.br-circuit{padding:5px 6px}.br-lap{padding:3px}.br-sync-row{padding:3px 0}.br-kpi{min-height:36px;padding:4px 7px}}
+/* DEV 1.0.40 — horizontal fit only. Preserve the original vertical broadcast composition. */
+.tdr-stats-hub:has(.br-shell) .sh-body{overflow-y:auto;overflow-x:hidden;padding-left:clamp(4px,.65vw,9px);padding-right:clamp(4px,.65vw,9px)}
+.br-shell{width:100%;max-width:100%;overflow-x:hidden}
+.br-grid{width:100%;max-width:100%;grid-template-columns:minmax(190px,.64fr) minmax(320px,1.24fr) minmax(205px,.72fr);gap:6px}
+.br-circuits{padding-left:8px;padding-right:8px}.br-circuit{grid-template-columns:24px minmax(0,1fr) auto;gap:6px;padding-left:5px;padding-right:5px}.br-circuit strong,.br-circuit small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.br-pos{font-size:15px}.br-circuit time{font-size:12px}
+.br-main{min-width:0;gap:6px}.br-hero{padding-left:11px;padding-right:11px}.br-hero-head{gap:8px}.br-hero h3{font-size:clamp(20px,2.55vw,34px)}.br-pb strong{font-size:clamp(27px,3.6vw,46px)}
+.br-car-strip{grid-template-columns:minmax(0,1fr) minmax(105px,.5fr)}.br-car-meta{padding-left:9px}.br-car-meta strong{font-size:13px}
+.br-chart{padding-left:9px;padding-right:9px}.br-side{min-width:0;gap:6px}.br-top10,.br-sync{padding-left:8px;padding-right:8px}.br-lap{grid-template-columns:22px minmax(0,1fr) auto;gap:5px}.br-lap span{min-width:0}.br-lap strong,.br-lap small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.br-lap time{font-size:10px}.br-cloud-tabs{gap:3px}.br-cloud-tabs button{font-size:6px;padding-left:1px;padding-right:1px}
+.br-foot{width:100%;max-width:100%;gap:5px}.br-kpi{min-width:0;padding-left:8px;padding-right:8px}.br-kpi strong{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:1180px){.br-grid{grid-template-columns:minmax(178px,.60fr) minmax(300px,1.18fr) minmax(195px,.68fr)}.br-circuit{grid-template-columns:22px minmax(0,1fr) auto}.br-circuit small{font-size:6px}.br-circuit time{font-size:11px}.br-hero{padding-left:9px;padding-right:9px}.br-pb strong{font-size:clamp(25px,3.35vw,42px)}.br-car-strip{grid-template-columns:minmax(0,1fr) minmax(95px,.46fr)}.br-top10,.br-sync{padding-left:7px;padding-right:7px}}
+@media(max-width:1000px){.br-grid{grid-template-columns:minmax(165px,.58fr) minmax(280px,1.13fr) minmax(182px,.65fr);gap:5px}.br-topline{gap:7px}.br-topline h2{font-size:clamp(16px,2vw,23px)}.br-topline p{font-size:7px}.br-circuit{padding-left:4px;padding-right:4px}.br-circuit strong{font-size:10px}.br-circuit time{font-size:10px}.br-hero h3{font-size:clamp(19px,2.4vw,30px)}.br-car-meta{padding-left:7px}.br-car-meta strong{font-size:12px}.br-sync-row{font-size:7px}.br-kpi{padding-left:6px;padding-right:6px}.br-kpi strong{font-size:13px}}
 `;this._root.appendChild(style);
   }
 }
