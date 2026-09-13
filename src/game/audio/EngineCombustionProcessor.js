@@ -19,7 +19,16 @@ class Resonator{
     this.gain=gain;
   }
   process(x){
-    const y=x+this.a1*this.y1+this.a2*this.y2;
+    let y=x+this.a1*this.y1+this.a2*this.y2;
+    // A recursive resonator that ever reaches NaN/Infinity poisons the whole
+    // AudioWorklet output and mobile browsers then appear to go completely mute.
+    // Keep its internal state bounded without changing the normal operating tone.
+    if(!Number.isFinite(y)){
+      this.y1=0;
+      this.y2=0;
+      return 0;
+    }
+    y=clamp(y,-12,12);
     this.y2=this.y1;
     this.y1=y;
     return y*this.gain;
@@ -86,8 +95,6 @@ class TdrEngineCombustionProcessor extends AudioWorkletProcessor{
     const level=clamp(parameters.level[0]??.7,0,1);
     const rpm01=clamp((rpm-950)/(7200-950),0,1);
 
-    // The resonators are the acoustic system around the combustion source: block,
-    // exhaust manifold/pipe, intake tract and mechanical valvetrain.
     this.blockR.tune(82+rpm01*58,.050-rpm01*.012,.105);
     this.exhaustLowR.tune(118+rpm01*122+load*24,.060-rpm01*.014,.115);
     this.exhaustMidR.tune(245+rpm01*275+load*48,.044-rpm01*.010,.070);
@@ -96,8 +103,8 @@ class TdrEngineCombustionProcessor extends AudioWorkletProcessor{
     this.mechR.tune(1550+rpm01*2300,.010,.008);
 
     const degPerSample=rpm*6/sampleRate;
-    const pulseWidth=64-rpm01*20; // broad overlapping pressure events, not isolated pops.
-    const firingMean=4*(pulseWidth/180)*.457; // approximate DC component of the pulse train.
+    const pulseWidth=64-rpm01*20;
+    const firingMean=4*(pulseWidth/180)*.457;
     const crankOmega=TAU*(rpm/60)/sampleRate;
     let crankPhase=(this.phase/720)*TAU*2;
 
@@ -110,8 +117,6 @@ class TdrEngineCombustionProcessor extends AudioWorkletProcessor{
         const d=phaseDistance(this.phase,this.firePhases[c]);
         pressure+=smoothPulse(d,pulseWidth)*this.cylinderStrength[c];
       }
-      // Remove most of the DC term so the resonators receive a flowing pressure waveform
-      // rather than four isolated impulses.
       const acPressure=pressure-firingMean;
 
       const white=this._rand();
@@ -127,12 +132,10 @@ class TdrEngineCombustionProcessor extends AudioWorkletProcessor{
       const combustionEnergy=.50+load*.82-coast*.16;
       const combustion=acPressure*combustionEnergy*(1+grit*.055);
 
-      // Short exhaust reflections emulate primary/collector/pipe interaction and make
-      // the source feel like gas moving through an exhaust rather than a dry pulse train.
       const di=this.delayIndex;
       const d1=this.delay[(di-tap1+this.delay.length)%this.delay.length];
       const d2=this.delay[(di-tap2+this.delay.length)%this.delay.length];
-      this.delay[di]=combustion;
+      this.delay[di]=Number.isFinite(combustion)?combustion:0;
       this.delayIndex=(di+1)%this.delay.length;
       const exhaustDrive=combustion+d1*(.22+load*.08)-d2*.11;
 
@@ -149,11 +152,10 @@ class TdrEngineCombustionProcessor extends AudioWorkletProcessor{
       y+=this.intakeR.process(intakeDrive);
       y+=this.mechR.process(mechDrive);
 
-      // Continuous gas flow fills the gaps between combustion events. It grows with load
-      // and RPM, while closed-throttle running becomes drier and more mechanical.
       y+=flow*(.005+load*.014+rpm01*.008);
       y+=coast*rpm01*(grit*.008+mech*.006);
 
+      if(!Number.isFinite(y))y=0;
       y=Math.tanh(y*1.08)*level;
       const side=(flow*.0025+grit*.0015)*(0.4+rpm01*.6);
       left[i]=y-side;
