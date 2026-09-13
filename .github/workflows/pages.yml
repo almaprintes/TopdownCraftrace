@@ -86,6 +86,10 @@ jobs:
           grep -q "data-seek" src/game/scenes/RaceTop10ReplayScene.js
           grep -q "_stepStatsReplaySample" src/game/scenes/RaceTop10ReplayScene.js
           grep -q "tdr-native-replay-clean" src/game/scenes/RaceReplayCleanScene.js
+          grep -q "_tdrPauseClockGuard" src/game/scenes/RaceReplayCleanScene.js
+          grep -q "this.time.paused=true" src/game/scenes/RaceReplayCleanScene.js
+          grep -q "pauseAll" src/game/scenes/RaceReplayCleanScene.js
+          grep -q "resumeAll" src/game/scenes/RaceReplayCleanScene.js
           grep -q "depth>=900" src/game/scenes/RaceReplayCleanScene.js
           grep -q "interactive" src/game/scenes/RaceReplayCleanScene.js
           grep -q "#tdr-race-controls" src/game/scenes/RaceReplayCleanScene.js
@@ -125,7 +129,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.73/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.74/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -142,8 +146,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.73' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.73' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.74' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.74' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
