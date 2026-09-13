@@ -52,6 +52,61 @@ function mountPrompt(){
   setTimeout(()=>input?.focus?.(),180);
 }
 
+function ensureSettingsStyle(){
+  if(typeof document==='undefined'||document.getElementById('tdr-pilot-account-style'))return;
+  const style=document.createElement('style');style.id='tdr-pilot-account-style';style.textContent=`
+#tdr-settings2 [data-tdr-pilot-profile-settings] .tdr-pilot-name{min-width:180px;flex:1;height:40px;box-sizing:border-box;border:1px solid #3e7184;border-radius:8px;background:#06131d;color:#fff;padding:0 12px;font:900 14px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.05em;outline:none}
+#tdr-settings2 [data-tdr-pilot-profile-settings] .tdr-pilot-name:focus{border-color:#59eaff;box-shadow:0 0 0 2px rgba(89,234,255,.12)}
+#tdr-settings2 [data-tdr-pilot-profile-settings] .tdr-pilot-save{min-height:40px;padding:0 18px;border:1px solid #45dfff;border-radius:8px;background:#123c4d;color:#fff;font-weight:1000;letter-spacing:.06em;cursor:pointer;touch-action:manipulation}
+#tdr-settings2 [data-tdr-pilot-profile-settings] .tdr-pilot-status{min-height:14px;margin-top:8px;color:#6ff0b4;font-size:9px;font-weight:900;letter-spacing:.04em}
+`;
+  document.head.appendChild(style);
+}
+
+function mountSettingsProfile(){
+  if(typeof document==='undefined')return;
+  const root=document.getElementById('tdr-settings2');
+  if(!root)return;
+  const accountTab=root.querySelector('[data-tab="account"]');
+  if(!accountTab?.classList?.contains('on'))return;
+  const grid=root.querySelector('.s2body .s2grid');
+  if(!grid||grid.querySelector('[data-tdr-pilot-profile-settings]'))return;
+  ensureSettingsStyle();
+  const en=String(document.documentElement?.lang||'').toLowerCase().startsWith('en');
+  const profile=getPilotProfile();
+  const card=document.createElement('section');card.className='s2card wide';card.dataset.tdrPilotProfileSettings='1';
+  card.innerHTML=`<div class="s2label">${en?'DRIVER PROFILE':'PERFIL DE PILOTO'}</div><div class="s2desc">${en?'This is the name attached to laps and replays you share with other testers. Changing it keeps your internal driver identity.':'Este es el nombre que acompaña a las vueltas y repeticiones que compartes con otros testers. Cambiarlo conserva tu identidad interna de piloto.'}</div><div class="s2row"><input class="tdr-pilot-name" data-pilot-settings-name maxlength="16" autocomplete="nickname" autocapitalize="characters" spellcheck="false" aria-label="${en?'Driver name':'Nombre de piloto'}"><button type="button" class="tdr-pilot-save" data-pilot-settings-save>${en?'SAVE NAME':'GUARDAR NOMBRE'}</button></div><div class="tdr-pilot-status" data-pilot-settings-status>${profile.name?(en?`CURRENT: ${profile.name}`:`ACTUAL: ${profile.name}`):''}</div>`;
+  const firstCard=grid.querySelector('.s2card');
+  if(firstCard?.nextSibling)grid.insertBefore(card,firstCard.nextSibling);else grid.appendChild(card);
+  const input=card.querySelector('[data-pilot-settings-name]'),button=card.querySelector('[data-pilot-settings-save]'),status=card.querySelector('[data-pilot-settings-status]');
+  if(input)input.value=profile.name||'';
+  let lastPointerAt=0;
+  const saveName=()=>{
+    try{
+      const next=setPilotName(input?.value||'');
+      if(input)input.value=next.name;
+      if(status){status.style.color='#6ff0b4';status.textContent=en?`SAVED: ${next.name}`:`GUARDADO: ${next.name}`;}
+    }catch(err){
+      if(status){status.style.color='#ff8a93';status.textContent=en?'Driver name must contain 3–16 characters.':String(err?.message||'Nombre no válido');}
+      input?.focus?.();
+    }
+  };
+  button?.addEventListener('pointerup',e=>{e.preventDefault();lastPointerAt=Date.now();saveName();});
+  button?.addEventListener('click',()=>{if(Date.now()-lastPointerAt<500)return;saveName();});
+  input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveName();}});
+}
+
+function installSettingsProfileBridge(){
+  if(typeof window==='undefined'||typeof document==='undefined')return;
+  const run=()=>{try{mountSettingsProfile();}catch{}};
+  const start=()=>{
+    run();
+    const observer=new MutationObserver(()=>run());
+    observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+}
+
 export function installPilotProfilePrompt(){
   if(typeof window==='undefined')return;
   const run=()=>setTimeout(mountPrompt,180);
@@ -61,3 +116,4 @@ export function installPilotProfilePrompt(){
 
 try{window.__tdrPilotProfile={get:getPilotProfile,setName:setPilotName};}catch{}
 installPilotProfilePrompt();
+installSettingsProfileBridge();
