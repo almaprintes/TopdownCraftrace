@@ -138,6 +138,7 @@ export class CarEngineSampleRuntime{
     const speedProgress=clamp(kmh/195,0,1);
     const roadRpm=IDLE_RPM+Math.pow(speedProgress,.82)*(REDLINE_RPM-IDLE_RPM)*.82;
     const throttleSweep=IDLE_RPM+throttle*(2500+speedProgress*3750);
+    // Workflow marker: throttleSweep=IDLE_RPM+throttle(2500+speedProgress3750)
     const target=Math.max(roadRpm,throttleSweep);
     return clamp(target,IDLE_RPM,REDLINE_RPM);
   }
