@@ -100,16 +100,26 @@ Documento de trabajo para conservar una trazabilidad clara de los cambios realiz
 
 **Problema detectado en prueba real con Android:** en determinados teléfonos en horizontal, la pantalla `PREPARACIÓN DE CARRERA` no cabía dentro del área realmente visible de la WebView. La barra de estado superior y la zona de navegación lateral reducían el espacio útil y la parte inferior quedaba recortada, ocultando el consejo de conducción y contenido inferior.
 
-**Corrección:** se añadió una capa responsive específica sobre la experiencia de carga que utiliza las dimensiones y desplazamiento del `visualViewport` ya medidos por el juego. El contenedor de carga se limita al ancho y alto realmente visibles y, en pantallas horizontales de poca altura, reduce de forma progresiva padding, separación, título, tarjeta del coche, mapa y consejo para conservar todos los elementos dentro del área útil.
+**Corrección:** se añadió una capa responsive sobre la experiencia de carga para reducir progresivamente padding, separación, título, tarjeta del coche, mapa y consejo en pantallas horizontales de poca altura.
 
-**Compatibilidad:** se mantienen el circuito, coche seleccionado, progreso de carga, consejos y lógica existente. No se modifican física, carrera, inventario, economía ni monetización. La corrección afecta únicamente al ajuste visual de la pantalla de preparación/carga.
+**Regresión detectada:** la primera implementación aplicaba ese CSS compacto a cualquier dispositivo con poca altura, incluido iPhone, aunque el problema original se había observado únicamente en Android.
+
+### DEV 1.0.73 — corrección de regresión iPhone y ajuste Android aislado
+
+**Problema detectado inmediatamente en iPhone:** la pantalla de preparación, que antes ya cabía correctamente, también quedó innecesariamente estrechada por las reglas de DEV 1.0.72.
+
+**Corrección:** el ajuste de viewport y las reglas compactas de la pantalla de carga se activan ahora únicamente cuando el `userAgent` corresponde a Android. iPhone/iOS vuelve a utilizar exactamente la presentación anterior de la pantalla de carga.
+
+**Mejora adicional en Android:** el ajuste obtiene ancho, alto y desplazamientos directamente de `window.visualViewport` y actualiza esas medidas al cambiar el viewport o la orientación, de modo que el recorte provocado por barras del sistema se corrige sin afectar otras plataformas.
+
+**Alcance:** exclusivamente presentación responsive de la pantalla de preparación; no se modifican física, carrera, controles, inventario, economía ni monetización.
 
 ## Resumen orientado a futura explicación a Google
 
 Durante la prueba cerrada se han realizado principalmente cuatro tipos de trabajo:
 
 1. **Corrección de errores encontrados durante pruebas reales**, como inconsistencias de HUD, replay, cámara, inventario, sincronización entre pantallas, superposiciones de interfaz Android y recortes provocados por el viewport útil del dispositivo.
-2. **Mejoras de estabilidad y presentación móvil**, especialmente en elementos que antes dependían de la cámara de Phaser o de dimensiones nominales de pantalla y ahora respetan mejor el área realmente visible.
+2. **Mejoras de estabilidad y presentación móvil**, incluyendo validación cruzada entre Android e iOS para evitar que una corrección específica de una plataforma introduzca regresiones en la otra.
 3. **Mejoras de Race Control y repeticiones locales**, incluyendo Top 10, almacenamiento local, visualización de vueltas, telemetría y análisis de trazada.
 4. **Mejoras de claridad de interfaz**, incluyendo la centralización de opciones legales y de privacidad, sin alterar de forma arbitraria la economía ni las reglas centrales del juego.
 
