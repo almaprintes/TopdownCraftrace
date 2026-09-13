@@ -180,6 +180,9 @@ export class RaceScene extends CleanRaceScene{
     super._applyStatsReplayFrame(t);
     if(!this._tdrEmbeddedReplay)return;
     this._syncEmbeddedSourceCamera();
+    const cameraSamples=this._tdrStatsReplay?.payload?.cameraSamples;
+    const hasRecordedCamera=Array.isArray(cameraSamples)&&cameraSamples.length>1;
+    if(hasRecordedCamera)return;
     const x=Number(this.carBody?.x),y=Number(this.carBody?.y);
     if(Number.isFinite(x)&&Number.isFinite(y)){try{this.cameras?.main?.stopFollow?.();this.cameras?.main?.centerOn?.(x,y);}catch{}}
   }
