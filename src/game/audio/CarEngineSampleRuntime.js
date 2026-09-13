@@ -46,8 +46,6 @@ export class CarEngineSampleRuntime{
     this._nodes=null;
     this._lastUpdate=0;
     this._rpm=IDLE_RPM;
-    this._gear=1;
-    this._shiftUntil=0;
     this._graphPromise=null;
   }
 
@@ -81,7 +79,6 @@ export class CarEngineSampleRuntime{
     });
     combustion.connect(engineBus);
 
-    // Aerodynamic layer is deliberately independent from engine RPM.
     const windNoise=ctx.createBufferSource();windNoise.buffer=makeNoiseBuffer(ctx);windNoise.loop=true;
     const windFilter=ctx.createBiquadFilter();windFilter.type='highpass';windFilter.frequency.value=1250;windFilter.Q.value=.20;
     const windGain=ctx.createGain();windGain.gain.value=0;
@@ -121,8 +118,6 @@ export class CarEngineSampleRuntime{
       }
       if(this._ctx.state==='suspended')this._ctx.resume();
       this._rpm=IDLE_RPM;
-      this._gear=1;
-      this._shiftUntil=0;
       this._playStarter();
       if(!this._nodes&&!this._graphPromise){
         this._graphPromise=this._buildGraph().then(()=>{
@@ -136,26 +131,14 @@ export class CarEngineSampleRuntime{
     }catch(e){console.warn('[TDR2 engine] procedural init failed',e);}
   }
 
-  _targetRpm(kmh,throttle,nowMs){
-    // Acoustic gearbox: RPM rises continuously through each gear. The previous
-    // model imposed a fixed throttle RPM floor while moving, which created a
-    // long audible plateau followed by an artificial jump.
-    const gearBySpeed=kmh<52?1:kmh<86?2:kmh<124?3:kmh<164?4:5;
-    if(gearBySpeed!==this._gear&&kmh>8){
-      this._gear=gearBySpeed;
-      this._shiftUntil=nowMs+105;
-    }
-
-    const redlineSpeed=[0,52,86,124,164,210][this._gear]||210;
-    const roadProgress=clamp(kmh/Math.max(1,redlineSpeed),0,1);
-    const roadRpm=IDLE_RPM+roadProgress*(REDLINE_RPM-IDLE_RPM);
-    const coupledRpm=roadRpm+throttle*260;
-
-    // Launch clutch slip: the engine can rev freely at walking speed, then
-    // couples progressively to road RPM instead of snapping to a fixed band.
-    const freeRev=IDLE_RPM+throttle*3800;
-    const clutch=clamp((kmh-4)/18,0,1);
-    const target=kmh<4?freeRev:(freeRev*(1-clutch)+coupledRpm*clutch);
+  _targetRpm(kmh,throttle){
+    // One continuous acoustic ratio. No virtual shifts, no RPM drops and no
+    // plateaus between gears: preserve the excellent initial blip, then sweep
+    // progressively to redline as road speed builds.
+    const speedProgress=clamp(kmh/195,0,1);
+    const roadRpm=IDLE_RPM+Math.pow(speedProgress,.82)*(REDLINE_RPM-IDLE_RPM)*.82;
+    const throttleSweep=IDLE_RPM+throttle*(2500+speedProgress*3750);
+    const target=Math.max(roadRpm,throttleSweep);
     return clamp(target,IDLE_RPM,REDLINE_RPM);
   }
 
@@ -172,7 +155,7 @@ export class CarEngineSampleRuntime{
     const kmh=Math.max(0,pxpsToKmh(speedPx));
     const throttle=clamp(Number(this.scene.touch?.throttle||0),0,1);
     const p=prefs();
-    const target=this._targetRpm(kmh,throttle,perfNow);
+    const target=this._targetRpm(kmh,throttle);
 
     const risePerSecond=throttle>.05?5900:2250;
     const fallPerSecond=4050;
@@ -182,18 +165,15 @@ export class CarEngineSampleRuntime{
 
     const rpm01=clamp((this._rpm-IDLE_RPM)/(REDLINE_RPM-IDLE_RPM),0,1);
     const speed01=clamp(kmh/180,0,1);
-    const shifting=perfNow<this._shiftUntil;
     const coast=clamp((1-throttle)*rpm01*(kmh>8?1:0),0,1);
-    // Load is not RPM. It follows throttle, with a little drivetrain load while accelerating.
-    const load=clamp(throttle*.86+Math.max(0,target-this._rpm)/2200*.14,0,1);
+    const load=clamp(throttle*.88+Math.max(0,target-this._rpm)/2200*.12,0,1);
     const n=this._nodes,now=this._ctx.currentTime;
 
     n.combustion.parameters.get('rpm')?.setTargetAtTime(this._rpm,now,.035);
     n.combustion.parameters.get('load')?.setTargetAtTime(load,now,.045);
     n.combustion.parameters.get('coast')?.setTargetAtTime(coast,now,.055);
-    n.combustion.parameters.get('level')?.setTargetAtTime((.64+rpm01*.09)*(shifting?.94:1),now,.055);
+    n.combustion.parameters.get('level')?.setTargetAtTime(.64+rpm01*.09,now,.055);
 
-    // Body resonance opens progressively with RPM and load, without turning into a whistle.
     n.cabin.frequency.setTargetAtTime(360+rpm01*420,now,.12);
     n.cabin.gain.setTargetAtTime(2.8-rpm01*.9+load*.45,now,.12);
     n.roof.frequency.setTargetAtTime(2500+rpm01*3900+load*550,now,.10);
