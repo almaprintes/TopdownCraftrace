@@ -113,14 +113,16 @@ jobs:
           grep -q "UPDATE_MS=45" src/game/audio/CarEngineSampleRuntime.js
           grep -q "IDLE_RPM=950" src/game/audio/CarEngineSampleRuntime.js
           grep -q "REDLINE_RPM=7200" src/game/audio/CarEngineSampleRuntime.js
-          grep -q "speedProgress=clamp(kmh/195,0,1)" src/game/audio/CarEngineSampleRuntime.js
-          grep -q "throttleSweep=IDLE_RPM+throttle*(2500+speedProgress*3750)" src/game/audio/CarEngineSampleRuntime.js
+          grep -Fq "if(throttle>.05)return REDLINE_RPM" src/game/audio/CarEngineSampleRuntime.js
+          grep -Fq "this._rpm<3300?5900:this._rpm<5600?1250:900" src/game/audio/CarEngineSampleRuntime.js
           if grep -q "_shiftUntil" src/game/audio/CarEngineSampleRuntime.js; then echo "Single-sweep engine must not contain acoustic shift state"; exit 1; fi
           grep -q "_targetRpm" src/game/audio/CarEngineSampleRuntime.js
           grep -q "registerProcessor('tdr-engine-combustion'" src/game/audio/EngineCombustionProcessor.js
           grep -q "firePhases=\[0,180,360,540\]" src/game/audio/EngineCombustionProcessor.js
           grep -q "cylinderStrength" src/game/audio/EngineCombustionProcessor.js
           grep -q "class Resonator" src/game/audio/EngineCombustionProcessor.js
+          grep -q "Number.isFinite(y)" src/game/audio/EngineCombustionProcessor.js
+          grep -Fq "y=clamp(y,-12,12)" src/game/audio/EngineCombustionProcessor.js
           grep -q "StatsBroadcastRealReplayScene.js" src/game/game.js
           grep -q "MenuRewardedAdsScene.js" src/game/game.js
           grep -q "store_rewarded_coins" src/game/scenes/MenuRewardedAdsScene.js
@@ -185,7 +187,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.99/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.100/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -202,8 +204,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.99' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.99' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.100' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.100' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
