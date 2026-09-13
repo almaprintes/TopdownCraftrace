@@ -54,7 +54,7 @@ export class SettingsScene extends Phaser.Scene{
     `;
     document.head.appendChild(style);
     const root=document.createElement('div');root.id='tdr-settings2';this.root=root;
-    root.innerHTML=`<div class="s2top"><button class="s2back">← VOLVER</button><div class="s2title">CONFIGURACIÓN 2.0</div><div class="s2save">Guardado automático ✓</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">CONTROLES</button><button class="s2tab" data-tab="video">VÍDEO</button><button class="s2tab" data-tab="audio">AUDIO</button></div><div class="s2body"></div>`;
+    root.innerHTML=`<div class="s2top"><button class="s2back">← VOLVER</button><div class="s2title">CONFIGURACIÓN 2.0</div><div class="s2save">Guardado automático ✓</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">CONTROLES</button><button class="s2tab" data-tab="video">VÍDEO</button><button class="s2tab" data-tab="audio">AUDIO</button><button class="s2tab" data-tab="legal">LEGAL</button></div><div class="s2body"></div>`;
     document.body.appendChild(root);
     root.querySelector('.s2back').onclick=()=>this.scene.start('menu');
     root.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>this._renderTab(b.dataset.tab));
@@ -140,6 +140,14 @@ export class SettingsScene extends Phaser.Scene{
       this._switch(body.querySelector('.s2card'),['audio','mute']);
       body.querySelectorAll('[data-a]').forEach(r=>r.oninput=()=>{a[r.dataset.a]=Number(r.value);r.nextElementSibling.textContent=`${Math.round(a[r.dataset.a]*100)}%`;save(this.settings);});
       body.querySelector('[data-choice="profile"]').onclick=e=>{const b=e.target.closest('[data-v]');if(!b)return;a.profile=b.dataset.v;save(this.settings);this._renderTab('audio');};
+    }
+    if(tab==='legal'){
+      body.innerHTML=`<div class="s2grid">
+        <section class="s2card wide"><div class="s2label">PRIVACIDAD DE ANUNCIOS</div><div class="s2desc">Punto de acceso previsto para gestionar el consentimiento de anuncios en Android mediante Google UMP. En la próxima compilación Android este acceso sustituirá al botón flotante que actualmente se superpone al juego.</div><div class="s2row"><button class="s2cta" disabled>GESTIONAR PRIVACIDAD</button><span class="s2note">Pendiente de conexión con Android</span></div></section>
+        <section class="s2card"><div class="s2label">POLÍTICA DE PRIVACIDAD</div><div class="s2desc">Documento público asociado a Top Down RACE y enlazado desde Google Play.</div></section>
+        <section class="s2card"><div class="s2label">SOPORTE</div><div class="s2desc">Información y asistencia oficial del juego.</div></section>
+        <section class="s2card wide"><div class="s2label">INFORMACIÓN LEGAL</div><div class="s2desc">Top Down RACE · CraftRace Studio. Esta sección será el punto único para privacidad, consentimiento y avisos legales de las compilaciones móviles.</div></section>
+      </div>`;
     }
   }
 }
