@@ -1,7 +1,12 @@
 import { TRACK_REGISTRY } from './trackRegistry.js';
 import '../ui/sessionEngineerTrendRuntime.js';
 import '../social/pilotProfile.js';
-import '../scenes/statsTesterExchangePatch.js';
+
+if(typeof window!=='undefined'){
+  window.addEventListener('tdr:bootready',()=>{
+    import('../scenes/statsTesterExchangePatch.js').catch(err=>console.warn('[tester-exchange] patch load failed',err));
+  },{once:true});
+}
 
 // Circuit names are proper names: their public identity belongs to the registry key
 // and never changes with UI language, selector position or legacy track metadata.
