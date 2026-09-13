@@ -114,13 +114,42 @@ Documento de trabajo para conservar una trazabilidad clara de los cambios realiz
 
 **Alcance:** exclusivamente presentación responsive de la pantalla de preparación; no se modifican física, carrera, controles, inventario, economía ni monetización.
 
+### DEV 1.0.74 — pausa coherente durante la salida
+
+**Problema detectado en prueba real:** al pulsar pausa justo antes de la luz verde del semáforo de salida y después continuar, la carrera podía aparecer ya iniciada mientras el semáforo quedaba visualmente apagado/fijo sobre la pista.
+
+**Causa:** la pausa detenía la física, pero el reloj de escena y los tweens podían seguir avanzando. Eso permitía que la secuencia temporal de salida y el estado físico de la carrera dejasen de estar sincronizados.
+
+**Corrección:** la pausa congela también el reloj de la escena y los tweens y los reanuda al continuar, manteniendo sincronizados física, temporización y presentación.
+
+**Validación:** el caso límite se volvió a probar manualmente y dejó de reproducirse.
+
+### DEV 1.0.75 — optimización del overlay de pausa en móvil
+
+**Observación durante prueba:** la salida de pausa podía sentirse pesada en móvil.
+
+**Mejora:** se eliminó el `backdrop-filter: blur(8px)` aplicado a pantalla completa sobre el canvas WebGL y se mantuvo el oscurecimiento mediante fondo semitransparente. El cambio reduce trabajo de composición sin alterar la función del menú.
+
+### DEV 1.0.76 — respuesta táctil inmediata del menú de pausa
+
+**Problema identificado tras repetir la prueba:** el supuesto “retraso” al continuar no era principalmente tiempo de procesamiento. En algunos intentos, el primer toque sobre `CONTINUAR` no activaba la acción; al tocar repetidamente, la carrera sí reanudaba.
+
+**Causa:** los botones del menú dependían exclusivamente del evento `click`. En la capa táctil de pausa de móvil, que además controla gestos y movimiento táctil, ese evento no resultaba suficientemente fiable para una interacción crítica.
+
+**Corrección:** los botones del menú de pausa responden directamente a `pointerup`, conservan `click` como respaldo de compatibilidad y utilizan un guard para evitar dobles activaciones.
+
+**Validación en dispositivo real:** tras desplegar la corrección se realizaron varias pausas y reanudaciones consecutivas. El propietario confirmó que el fallo quedó **completamente arreglado** y que `CONTINUAR` responde al primer toque.
+
+**Valor para la prueba cerrada:** esta incidencia muestra un ciclo completo de testing real: observación inicial, reproducción, diagnóstico progresivo, corrección aislada y revalidación en dispositivo.
+
 ## Resumen orientado a futura explicación a Google
 
-Durante la prueba cerrada se han realizado principalmente cuatro tipos de trabajo:
+Durante la prueba cerrada se han realizado principalmente cinco tipos de trabajo:
 
-1. **Corrección de errores encontrados durante pruebas reales**, como inconsistencias de HUD, replay, cámara, inventario, sincronización entre pantallas, superposiciones de interfaz Android y recortes provocados por el viewport útil del dispositivo.
+1. **Corrección de errores encontrados durante pruebas reales**, como inconsistencias de HUD, replay, cámara, inventario, sincronización entre pantallas, superposiciones de interfaz Android, recortes por viewport y fallos de interacción táctil.
 2. **Mejoras de estabilidad y presentación móvil**, incluyendo validación cruzada entre Android e iOS para evitar que una corrección específica de una plataforma introduzca regresiones en la otra.
 3. **Mejoras de Race Control y repeticiones locales**, incluyendo Top 10, almacenamiento local, visualización de vueltas, telemetría y análisis de trazada.
 4. **Mejoras de claridad de interfaz**, incluyendo la centralización de opciones legales y de privacidad, sin alterar de forma arbitraria la economía ni las reglas centrales del juego.
+5. **Revalidación después de cada corrección importante**, especialmente en problemas de pausa, interacción táctil y presentación móvil, para confirmar que el síntoma desaparece y que no se introducen regresiones evidentes.
 
 Este documento debe seguir actualizándose con cada cambio relevante realizado durante la prueba cerrada para poder elaborar posteriormente una respuesta precisa a Google Play sobre qué feedback se recibió, qué problemas se detectaron y qué acciones se tomaron.
