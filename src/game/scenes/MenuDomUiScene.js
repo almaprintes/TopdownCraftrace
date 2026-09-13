@@ -2,6 +2,7 @@ import { MenuScene as PreviousMenuScene } from './MenuStoreScene.js';
 import { installLobbyDom } from '../ui/LobbyDomUi.js';
 import { polishLobbyForPublish } from '../ui/LobbyPublishPolish.js';
 import '../ui/floating-chrome.css';
+import '../ui/lobby-tablet.css';
 import '../ui/seasonPassBehavior.js';
 
 export class MenuScene extends PreviousMenuScene {
@@ -92,7 +93,17 @@ export class MenuScene extends PreviousMenuScene {
     const { width, height } = this.scale;
     const centerX = width * .5;
     const centerY = height * .505;
-    const diameter = Math.max(260, Math.min(380, width * .26, height * .48));
+    const tabletLandscape = (() => {
+      try {
+        const coarse = window.matchMedia?.('(pointer: coarse)')?.matches;
+        const landscape = width >= height;
+        const ratio = width / Math.max(1, height);
+        return Boolean(coarse && landscape && width >= 820 && height >= 600 && ratio <= 1.6);
+      } catch { return false; }
+    })();
+    const diameter = tabletLandscape
+      ? Math.max(310, Math.min(350, width * .34, height * .46))
+      : Math.max(260, Math.min(380, width * .26, height * .48));
 
     const glow = this.add.graphics();
     glow.fillStyle(0x07131b, .58);
