@@ -80,13 +80,21 @@ Documento de trabajo para conservar una trazabilidad clara de los cambios realiz
 
 **Alcance controlado:** no se modificaron ratios, comisión, límite diario, publicidad recompensada, recetas ni economía de la recicladora. El cambio afecta únicamente a la sincronización visual y funcional del inventario después del intercambio.
 
+### DEV 1.0.70 — nueva sección Legal en Configuración
+
+**Problema detectado en prueba real Android:** la versión distribuida mediante Google Play muestra un control flotante de “Privacidad de anuncios” por encima de todas las pantallas. En Fabricación llega a cubrir información de la pieza instalada, por lo que la solución no debe consistir en moverlo a otra esquina sino en eliminar la superposición global en la siguiente compilación Android.
+
+**Mejora preparada en DEV:** Configuración 2.0 incorpora una nueva pestaña `LEGAL` como punto único para privacidad, consentimiento, política de privacidad, soporte e información legal. Dentro de ella se ha reservado específicamente el acceso `PRIVACIDAD DE ANUNCIOS` para conectarlo con Google UMP en la siguiente actualización Android.
+
+**Pendiente de la próxima compilación Android:** conectar el acceso de la sección Legal al formulario UMP y ordenar al proceso de compilación que no cree ni conserve el botón flotante global de privacidad. La versión web DEV no muestra dicho botón porque la superposición pertenece a la integración Android publicada, no a la interfaz Phaser.
+
 ## Resumen orientado a futura explicación a Google
 
 Durante la prueba cerrada se han realizado principalmente cuatro tipos de trabajo:
 
-1. **Corrección de errores encontrados durante pruebas reales**, como inconsistencias de HUD, replay, cámara, inventario y sincronización entre pantallas.
+1. **Corrección de errores encontrados durante pruebas reales**, como inconsistencias de HUD, replay, cámara, inventario, sincronización entre pantallas y superposiciones de interfaz Android.
 2. **Mejoras de estabilidad y presentación móvil**, especialmente en elementos que antes dependían de la cámara de Phaser y ahora permanecen correctamente fijos en pantalla.
 3. **Mejoras de Race Control y repeticiones locales**, incluyendo Top 10, almacenamiento local, visualización de vueltas, telemetría y análisis de trazada.
-4. **Mejoras de claridad de interfaz**, sin alterar de forma arbitraria la economía ni las reglas centrales del juego.
+4. **Mejoras de claridad de interfaz**, incluyendo la centralización de opciones legales y de privacidad, sin alterar de forma arbitraria la economía ni las reglas centrales del juego.
 
 Este documento debe seguir actualizándose con cada cambio relevante realizado durante la prueba cerrada para poder elaborar posteriormente una respuesta precisa a Google Play sobre qué feedback se recibió, qué problemas se detectaron y qué acciones se tomaron.
