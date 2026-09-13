@@ -1,6 +1,7 @@
 import { UpgradeShopScene as CurrentWorkshop } from './UpgradeWorkshopLowHeightRecipeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
+import { loadGarage } from '../garage/garageStore.js';
 import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeFlexibleDom.js';
 import { renderWorkshopMobileDom, closeWorkshopMobileDom } from '../ui/WorkshopMobileDom.js';
 import { openWorkshopQuickInstallDom, openWorkshopCraftedPartDom, closeWorkshopMobileDialog, showWorkshopMobileToast } from '../ui/WorkshopMobileDialogsDom.js';
@@ -26,6 +27,15 @@ export class UpgradeShopScene extends CurrentWorkshop {
     return touchMobile()&&h<=520;
   }
 
+  _refreshWorkshopInventoryFromStore(){
+    try{
+      this.state=loadGarage();
+      this.render?.();
+    }catch(err){
+      console.warn('[workshop] recycler inventory refresh failed',err);
+    }
+  }
+
   create(...args){
     this.__nativeWorkshopDom=this._nativeWorkshopDomEnabled();
     super.create(...args);
@@ -36,7 +46,19 @@ export class UpgradeShopScene extends CurrentWorkshop {
       this.render?.();
     }
     showFirstVisitTutorial('factory',{delay:260});
+
+    this.__recyclerCloseRefresh=(event)=>{
+      const target=event?.target;
+      if(!target?.closest?.('#tdr-material-exchange-dom .rx-close'))return;
+      setTimeout(()=>{
+        try{if(this.sys?.isActive?.())this._refreshWorkshopInventoryFromStore();}catch{}
+      },0);
+    };
+    try{document.addEventListener('click',this.__recyclerCloseRefresh,true);}catch{}
+
     this.events.once('shutdown',()=>{
+      try{document.removeEventListener('click',this.__recyclerCloseRefresh,true);}catch{}
+      this.__recyclerCloseRefresh=null;
       closeWorkshopMobileDialog();
       closeWorkshopMobileDom(this);
       closeMaterialExchangeDom(this);
