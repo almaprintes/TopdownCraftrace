@@ -1,21 +1,116 @@
 import { RaceScene as EmbeddedReplayRaceScene } from './RaceEmbeddedReplayScene.js';
 import { CarEngineSampleRuntime } from '../audio/CarEngineSampleRuntime.js';
 
+const clamp01=n=>Math.max(0,Math.min(1,Number(n)||0));
+
 export class RaceScene extends EmbeddedReplayRaceScene{
   create(data){
-    const result=super.create(data);
+    let blockedAutoStart=false;
+    const clock=this.time;
+    const originalDelayed=clock?.delayedCall?.bind(clock);
+    if(originalDelayed){
+      clock.delayedCall=(delay,cb,args,scope)=>{
+        const src=String(cb||'');
+        if(Number(delay)===150&&src.includes('_startAutoFired')&&src.includes('RED LIGHTS')){
+          blockedAutoStart=true;
+          return {remove(){},destroy(){}};
+        }
+        return originalDelayed(delay,cb,args,scope);
+      };
+    }
+    let result;
+    try{result=super.create(data);}finally{if(originalDelayed)clock.delayedCall=originalDelayed;}
     if(!this._tdrEmbeddedReplay){
       try{
         this._tdrEngineSample?.destroy?.();
         this._tdrEngineSample=new CarEngineSampleRuntime(this);
-        this.events.once('shutdown',()=>{this._tdrEngineSample?.destroy?.();this._tdrEngineSample=null;});
-      }catch(e){console.warn('[TDR2 engine sample] init failed',e);}
+        this._tdrInstallIgnitionStart(blockedAutoStart);
+        this.events.once('shutdown',()=>{
+          this._tdrRemoveIgnitionButton();
+          this._tdrEngineSample?.destroy?.();
+          this._tdrEngineSample=null;
+        });
+      }catch(e){console.warn('[TDR2 ignition] init failed',e);}
     }
     return result;
   }
 
+  _tdrInstallIgnitionStart(blockedAutoStart){
+    this._raceStarted=false;
+    this._startAutoFired=true;
+    this._startState='WAIT_ENGINE';
+    if(this._startHint)this._startHint.setText('Arranca el motor para preparar la salida');
+    if(this._startStatus){this._startStatus.setText('ENGINE OFF');this._startStatus.setColor('#ffffff');}
+    if(!blockedAutoStart)console.warn('[TDR2 ignition] legacy auto-start timer was not intercepted');
+
+    this._tdrRemoveIgnitionButton();
+    const host=this.game?.canvas?.parentElement||document.body;
+    const btn=document.createElement('button');
+    btn.id='tdr-ignition-start';
+    btn.type='button';
+    btn.textContent='◉  ARRANCAR MOTOR';
+    Object.assign(btn.style,{
+      position:'fixed',left:'50%',top:'58%',transform:'translate(-50%,-50%)',zIndex:'2147483000',
+      minWidth:'230px',padding:'16px 24px',borderRadius:'14px',border:'1px solid rgba(255,255,255,.34)',
+      background:'rgba(5,12,22,.94)',color:'#fff',font:'800 16px Orbitron,system-ui,sans-serif',
+      letterSpacing:'.08em',boxShadow:'0 10px 36px rgba(0,0,0,.48)',touchAction:'manipulation'
+    });
+    const start=(ev)=>{
+      ev?.preventDefault?.();ev?.stopPropagation?.();
+      if(this._startState!=='WAIT_ENGINE')return;
+      try{navigator.vibrate?.(35);}catch{}
+      this._tdrEngineSample?.startEngine?.();
+      this._startState='READY';
+      if(this._startHint)this._startHint.setText('Motor encendido · puedes acelerar');
+      if(this._startStatus){this._startStatus.setText('ENGINE ON');this._startStatus.setColor('#2bff88');}
+      btn.textContent='MOTOR ENCENDIDO ✓';
+      btn.disabled=true;
+      setTimeout(()=>{this._tdrRemoveIgnitionButton();this._tdrBeginLights();},650);
+    };
+    btn.addEventListener('pointerup',start,{once:true});
+    host.appendChild(btn);
+    this._tdrIgnitionButton=btn;
+  }
+
+  _tdrRemoveIgnitionButton(){
+    try{this._tdrIgnitionButton?.remove?.();}catch{}
+    this._tdrIgnitionButton=null;
+  }
+
+  _tdrBeginLights(){
+    if(this._startState!=='READY')return;
+    this._startState='COUNTDOWN';
+    if(this._startHint)this._startHint.setText('Mantente listo...');
+    if(this._startStatus){this._startStatus.setText('RED LIGHTS');this._startStatus.setColor('#ffffff');}
+    if(this._startAsset)this._startAsset.setTexture('start_base');
+    const stepMs=600;
+    for(let i=1;i<=6;i++)this.time.delayedCall(stepMs*i,()=>{if(this._startAsset)this._startAsset.setTexture(`start_l${i}`);});
+    const randMs=800+Math.floor(Math.random()*700);
+    this.time.delayedCall(stepMs*6+randMs,()=>{
+      this._startState='GO';
+      if(this._startAsset)this._startAsset.setTexture('start_base');
+      if(this._startStatus){this._startStatus.setText('GO!');this._startStatus.setColor('#2bff88');}
+      if(this.timing){
+        this.timing.lapStart=performance.now();this.timing.started=true;
+        this.timing.s1=null;this.timing.s2=null;this.timing.s3=null;
+      }
+      this._raceStarted=true;
+      this._tdrClutchReleaseAt=performance.now();
+      this.time.delayedCall(350,()=>{
+        this._startState='RACING';
+        if(this._startModal)this._startModal.setVisible(false);
+      });
+    });
+  }
+
   update(time,delta){
-    super.update(time,delta);
+    let originalThrottle=null;
+    if(this._raceStarted&&this._tdrClutchReleaseAt&&this.touch){
+      originalThrottle=Number(this.touch.throttle)||0;
+      const clutch=clamp01((performance.now()-this._tdrClutchReleaseAt)/350);
+      this.touch.throttle=originalThrottle*clutch;
+    }
+    try{super.update(time,delta);}finally{if(originalThrottle!==null&&this.touch)this.touch.throttle=originalThrottle;}
     try{this._tdrEngineSample?.update?.();}catch{}
   }
 
