@@ -1,6 +1,24 @@
 import { RaceScene as EmbeddedReplayRaceScene } from './RaceEmbeddedReplayScene.js';
+import { CarEngineSampleRuntime } from '../audio/CarEngineSampleRuntime.js';
 
 export class RaceScene extends EmbeddedReplayRaceScene{
+  create(data){
+    const result=super.create(data);
+    if(!this._tdrEmbeddedReplay){
+      try{
+        this._tdrEngineSample?.destroy?.();
+        this._tdrEngineSample=new CarEngineSampleRuntime(this);
+        this.events.once('shutdown',()=>{this._tdrEngineSample?.destroy?.();this._tdrEngineSample=null;});
+      }catch(e){console.warn('[TDR2 engine sample] init failed',e);}
+    }
+    return result;
+  }
+
+  update(time,delta){
+    super.update(time,delta);
+    try{this._tdrEngineSample?.update?.();}catch{}
+  }
+
   _syncEmbeddedSourceCamera(){
     if(!this._tdrEmbeddedReplay)return;
     const cam=this.cameras?.main;
