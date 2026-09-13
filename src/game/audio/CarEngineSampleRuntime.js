@@ -132,15 +132,12 @@ export class CarEngineSampleRuntime{
   }
 
   _targetRpm(kmh,throttle){
-    // One continuous acoustic ratio. No virtual shifts, no RPM drops and no
-    // plateaus between gears: preserve the excellent initial blip, then sweep
-    // progressively to redline as road speed builds.
+    // One continuous acoustic sweep. Holding throttle aims continuously at
+    // redline; lift-off keeps a speed-related RPM floor so it falls naturally.
     const speedProgress=clamp(kmh/195,0,1);
-    const roadRpm=IDLE_RPM+Math.pow(speedProgress,.82)*(REDLINE_RPM-IDLE_RPM)*.82;
-    const throttleSweep=IDLE_RPM+throttle*(2500+speedProgress*3750);
-    // Workflow marker: throttleSweep=IDLE_RPM+throttle(2500+speedProgress3750)
-    const target=Math.max(roadRpm,throttleSweep);
-    return clamp(target,IDLE_RPM,REDLINE_RPM);
+    const roadCarry=IDLE_RPM+Math.pow(speedProgress,.86)*3450;
+    if(throttle>.05)return REDLINE_RPM;
+    return clamp(roadCarry,IDLE_RPM,REDLINE_RPM);
   }
 
   update(force=false){
@@ -158,8 +155,11 @@ export class CarEngineSampleRuntime{
     const p=prefs();
     const target=this._targetRpm(kmh,throttle);
 
-    const risePerSecond=throttle>.05?5900:2250;
-    const fallPerSecond=4050;
+    // Keep the first punch exactly where it worked, then make the remaining
+    // sweep deliberately much slower so the whole rev range is audible.
+    let risePerSecond=2250;
+    if(throttle>.05)risePerSecond=this._rpm<3300?5900:this._rpm<5600?1250:900;
+    const fallPerSecond=2850;
     const maxStep=(this._rpm<target?risePerSecond:fallPerSecond)*(elapsed/1000);
     if(this._rpm<target)this._rpm=Math.min(target,this._rpm+maxStep);
     else this._rpm=Math.max(target,this._rpm-maxStep);
@@ -167,13 +167,13 @@ export class CarEngineSampleRuntime{
     const rpm01=clamp((this._rpm-IDLE_RPM)/(REDLINE_RPM-IDLE_RPM),0,1);
     const speed01=clamp(kmh/180,0,1);
     const coast=clamp((1-throttle)*rpm01*(kmh>8?1:0),0,1);
-    const load=clamp(throttle*.88+Math.max(0,target-this._rpm)/2200*.12,0,1);
+    const load=clamp(throttle*.94+speed01*.06,0,1);
     const n=this._nodes,now=this._ctx.currentTime;
 
-    n.combustion.parameters.get('rpm')?.setTargetAtTime(this._rpm,now,.035);
-    n.combustion.parameters.get('load')?.setTargetAtTime(load,now,.045);
-    n.combustion.parameters.get('coast')?.setTargetAtTime(coast,now,.055);
-    n.combustion.parameters.get('level')?.setTargetAtTime(.64+rpm01*.09,now,.055);
+    n.combustion.parameters.get('rpm')?.setTargetAtTime(this._rpm,now,.055);
+    n.combustion.parameters.get('load')?.setTargetAtTime(load,now,.055);
+    n.combustion.parameters.get('coast')?.setTargetAtTime(coast,now,.070);
+    n.combustion.parameters.get('level')?.setTargetAtTime(.64+rpm01*.09,now,.070);
 
     n.cabin.frequency.setTargetAtTime(360+rpm01*420,now,.12);
     n.cabin.gain.setTargetAtTime(2.8-rpm01*.9+load*.45,now,.12);
