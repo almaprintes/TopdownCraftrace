@@ -1,6 +1,9 @@
 import { pxpsToKmh } from '../cars/speedUnits.js';
 
 const SETTINGS_KEY='tdr2:settings';
+const UPDATE_MS=120;
+const RATE_EPSILON=.025;
+const VOLUME_EPSILON=.012;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 function prefs(){
@@ -28,11 +31,17 @@ export class CarEngineSampleRuntime{
     this.audio.playsInline=true;
     this.audio.volume=0;
     this.audio.playbackRate=.65;
+    // Engine pitch should follow playback rate. Disabling pitch preservation also
+    // avoids asking iOS/Safari to run real-time time-stretch DSP on every rate change.
+    try{this.audio.preservesPitch=false;}catch{}
+    try{this.audio.webkitPreservesPitch=false;}catch{}
     this.audio.setAttribute('playsinline','');
     this.audio.setAttribute('webkit-playsinline','');
     this.unlocked=false;
     this.engineStarted=false;
     this._lastUpdate=0;
+    this._lastAppliedRate=.65;
+    this._lastAppliedVolume=0;
     try{this.audio.load();}catch{}
   }
 
@@ -43,6 +52,8 @@ export class CarEngineSampleRuntime{
       this.audio.currentTime=0;
       this.audio.volume=.03;
       this.audio.playbackRate=.58;
+      this._lastAppliedRate=.58;
+      this._lastAppliedVolume=.03;
       const p=this.audio.play();
       if(p?.catch)p.catch(()=>{});
     }catch{}
@@ -52,11 +63,11 @@ export class CarEngineSampleRuntime{
   update(force=false){
     if(!this.scene||this.scene._tdrEmbeddedReplay)return;
     const now=performance.now();
-    if(!force&&now-this._lastUpdate<45)return;
+    if(!force&&now-this._lastUpdate<UPDATE_MS)return;
     this._lastUpdate=now;
     const p=prefs();
     if(!this.engineStarted){
-      try{this.audio.volume=0;}catch{}
+      try{if(this._lastAppliedVolume!==0){this.audio.volume=0;this._lastAppliedVolume=0;}}catch{}
       return;
     }
     const body=this.scene.carBody?.body;
@@ -68,11 +79,19 @@ export class CarEngineSampleRuntime{
     const rpm=clamp(.06+low*.08+road*.68+throttle*.38,0,1);
     const targetRate=clamp(.58+rpm*.92,.58,1.5);
     const preGrid=this.scene._startState==='WAIT_ENGINE'||this.scene._startState==='READY';
-    const targetVolume=(p.mute?0:p.master*p.engine)*(.14+rpm*.30+throttle*.14)*(preGrid?.72:1);
+    const targetVolume=clamp((p.mute?0:p.master*p.engine)*(.14+rpm*.30+throttle*.14)*(preGrid?.72:1),0,.66);
     try{
-      this.audio.playbackRate=this.audio.playbackRate+(targetRate-this.audio.playbackRate)*.22;
-      this.audio.volume=clamp(targetVolume,0,.66);
-      if(this.unlocked&&this.audio.paused&&this.audio.volume>.001){const q=this.audio.play();if(q?.catch)q.catch(()=>{});}
+      const nextRate=this._lastAppliedRate+(targetRate-this._lastAppliedRate)*.34;
+      if(force||Math.abs(nextRate-this._lastAppliedRate)>=RATE_EPSILON){
+        this.audio.playbackRate=nextRate;
+        this._lastAppliedRate=nextRate;
+      }
+      if(force||Math.abs(targetVolume-this._lastAppliedVolume)>=VOLUME_EPSILON){
+        this.audio.volume=targetVolume;
+        this._lastAppliedVolume=targetVolume;
+      }
+      // Do not keep calling play() from the race loop. The start button provides
+      // the user gesture once; repeated play attempts under load are counterproductive on iOS.
     }catch{}
   }
 
