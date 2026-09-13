@@ -68,12 +68,13 @@ jobs:
           test -f src/game/ui/raceLoadingExperienceV8.js
           test -f src/game/ui/raceLoadingExperienceV9.js
           test -f src/game/ui/raceLoadingExperienceV10.js
+          test -f src/game/ui/raceLoadingExperienceV11.js
           test -f src/game/ui/racePauseUi.css
           test -f src/game/ui/racePauseUi.js
           grep -q "settingsLegalEnhancer.js" index.html
           grep -q "tdr-legal-modal" src/ui/settingsLegalEnhancer.js
           grep -q "PRIVACIDAD DE ANUNCIOS" src/ui/settingsLegalEnhancer.js
-          grep -q "raceLoadingExperienceV10.js" src/game/ui/raceLoadingExperience.js
+          grep -q "raceLoadingExperienceV11.js" src/game/ui/raceLoadingExperience.js
           grep -q -- "--tdr-vv-height" src/game/ui/raceLoadingExperienceV7.js
           grep -q "max-height:520px" src/game/ui/raceLoadingExperienceV7.js
           grep -q "function isAndroid" src/game/ui/raceLoadingExperienceV7.js
@@ -87,6 +88,8 @@ jobs:
           grep -q "tdr-race-loading-experience-v10-car-label-inset" src/game/ui/raceLoadingExperienceV10.js
           grep -q "right:12px!important" src/game/ui/raceLoadingExperienceV10.js
           grep -q "max-width:calc(100% - 36px)!important" src/game/ui/raceLoadingExperienceV10.js
+          grep -q "tdr-race-loading-experience-v11-car-label-gap" src/game/ui/raceLoadingExperienceV11.js
+          grep -q "left:72%!important" src/game/ui/raceLoadingExperienceV11.js
           grep -q "background:rgba(3,7,12,.82)" src/game/ui/racePauseUi.css
           if grep -q "backdrop-filter" src/game/ui/racePauseUi.css; then echo "Pause overlay must not use full-screen backdrop blur"; exit 1; fi
           grep -q "pointerup" src/game/ui/racePauseUi.js
@@ -146,7 +149,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.79/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.80/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -163,8 +166,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.79' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.79' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.80' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.80' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
