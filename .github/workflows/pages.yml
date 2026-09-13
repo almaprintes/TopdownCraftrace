@@ -106,10 +106,13 @@ jobs:
           grep -q "RaceEmbeddedReplaySceneV2.js" src/game/game.js
           grep -q "CarEngineSampleRuntime" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "AudioContext" src/game/audio/CarEngineSampleRuntime.js
-          grep -q "UPDATE_MS=50" src/game/audio/CarEngineSampleRuntime.js
+          grep -q "UPDATE_MS=45" src/game/audio/CarEngineSampleRuntime.js
           grep -q "IDLE_RPM=950" src/game/audio/CarEngineSampleRuntime.js
           grep -q "REDLINE_RPM=7200" src/game/audio/CarEngineSampleRuntime.js
           grep -q "makeNoiseBuffer" src/game/audio/CarEngineSampleRuntime.js
+          grep -q "makeExhaustWave" src/game/audio/CarEngineSampleRuntime.js
+          grep -q "createPeriodicWave" src/game/audio/CarEngineSampleRuntime.js
+          grep -q "coastGain" src/game/audio/CarEngineSampleRuntime.js
           grep -q "_targetRpm" src/game/audio/CarEngineSampleRuntime.js
           grep -q "firingHz" src/game/audio/CarEngineSampleRuntime.js
           grep -q "StatsBroadcastRealReplayScene.js" src/game/game.js
@@ -176,7 +179,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.94/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.95/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -193,8 +196,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.94' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.94' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.95' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.95' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
