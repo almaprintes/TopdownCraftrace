@@ -10,44 +10,31 @@ function prefs(){
   try{
     const s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');
     const a=s?.audio||{};
-    return {master:clamp(Number(a.master??1),0,1),engine:clamp(Number(a.engine??1),0,1),mute:!!a.mute};
-  }catch{return {master:1,engine:1,mute:false};}
+    return {master:clamp(Number(a.master??1),0,1),engine:clamp(Number(a.engine??1),0,1),effects:clamp(Number(a.effects??.45),0,1),mute:!!a.mute};
+  }catch{return {master:1,engine:1,effects:.45,mute:false};}
 }
 
-function makeNoiseBuffer(ctx,seconds=2.4){
+function makeNoiseBuffer(ctx,seconds=2.2){
   const length=Math.max(1,Math.floor(ctx.sampleRate*seconds));
   const b=ctx.createBuffer(1,length,ctx.sampleRate);
   const d=b.getChannelData(0);
-  let slow=0,mid=0;
+  let slow=0,fast=0;
   for(let i=0;i<length;i++){
     const white=Math.random()*2-1;
-    slow=slow*.992+white*.008;
-    mid=mid*.78+white*.22;
-    d[i]=clamp(slow*.34+mid*.46+white*.20,-1,1);
+    slow=slow*.988+white*.012;
+    fast=fast*.70+white*.30;
+    d[i]=clamp(slow*.40+fast*.44+white*.16,-1,1);
   }
   return b;
 }
 
-function makeDriveCurve(amount=1.25){
+function makeDriveCurve(amount=1.18){
   const n=1024,curve=new Float32Array(n);
   for(let i=0;i<n;i++){
     const x=(i/(n-1))*2-1;
     curve[i]=Math.tanh(x*amount)/Math.tanh(amount);
   }
   return curve;
-}
-
-function makeExhaustWave(ctx,brightness=1){
-  const partials=18;
-  const real=new Float32Array(partials+1);
-  const imag=new Float32Array(partials+1);
-  for(let h=1;h<=partials;h++){
-    const roll=Math.pow(h,1.12+brightness*.18);
-    const odd=h%2?1:.72;
-    imag[h]=(odd/roll)*(1+.08*Math.sin(h*1.73));
-    real[h]=(0.16/roll)*Math.cos(h*.61);
-  }
-  return ctx.createPeriodicWave(real,imag,{disableNormalization:false});
 }
 
 export class CarEngineSampleRuntime{
@@ -61,73 +48,66 @@ export class CarEngineSampleRuntime{
     this._rpm=IDLE_RPM;
     this._gear=1;
     this._shiftUntil=0;
-    this._lastGear=1;
+    this._graphPromise=null;
   }
 
-  _buildGraph(){
+  async _buildGraph(){
     if(this._nodes||!this._ctx)return;
     const ctx=this._ctx;
+    if(!ctx.audioWorklet||typeof AudioWorkletNode==='undefined')throw new Error('AudioWorklet unavailable');
 
-    const master=ctx.createGain(); master.gain.value=0;
+    const moduleUrl=new URL('./EngineCombustionProcessor.js',import.meta.url);
+    await ctx.audioWorklet.addModule(moduleUrl);
+    if(!this._ctx||this._ctx!==ctx)return;
+
+    const master=ctx.createGain();master.gain.value=0;
     const compressor=ctx.createDynamicsCompressor();
-    compressor.threshold.value=-13; compressor.knee.value=20; compressor.ratio.value=3.4;
-    compressor.attack.value=.004; compressor.release.value=.16;
+    compressor.threshold.value=-12;compressor.knee.value=18;compressor.ratio.value=3.1;
+    compressor.attack.value=.003;compressor.release.value=.18;
     master.connect(compressor).connect(ctx.destination);
 
-    const engineBus=ctx.createGain(); engineBus.gain.value=0;
-    const drive=ctx.createWaveShaper(); drive.curve=makeDriveCurve(1.18); drive.oversample='2x';
-    const warmth=ctx.createBiquadFilter(); warmth.type='lowshelf'; warmth.frequency.value=170; warmth.gain.value=5;
-    const body=ctx.createBiquadFilter(); body.type='peaking'; body.frequency.value=480; body.Q.value=.58; body.gain.value=3.4;
-    const roof=ctx.createBiquadFilter(); roof.type='lowpass'; roof.frequency.value=3000; roof.Q.value=.32;
-    engineBus.connect(drive).connect(warmth).connect(body).connect(roof).connect(master);
+    const engineBus=ctx.createGain();engineBus.gain.value=0;
+    const drive=ctx.createWaveShaper();drive.curve=makeDriveCurve(1.12);drive.oversample='2x';
+    const lowBody=ctx.createBiquadFilter();lowBody.type='lowshelf';lowBody.frequency.value=150;lowBody.gain.value=3.5;
+    const cabin=ctx.createBiquadFilter();cabin.type='peaking';cabin.frequency.value=410;cabin.Q.value=.50;cabin.gain.value=2.4;
+    const roof=ctx.createBiquadFilter();roof.type='lowpass';roof.frequency.value=5400;roof.Q.value=.28;
+    engineBus.connect(drive).connect(lowBody).connect(cabin).connect(roof).connect(master);
 
-    // Exhaust pulse train: custom wavetable instead of stock oscillator shapes.
-    const pulseA=ctx.createOscillator(); pulseA.setPeriodicWave(makeExhaustWave(ctx,.35));
-    const pulseB=ctx.createOscillator(); pulseB.setPeriodicWave(makeExhaustWave(ctx,.78));
-    const crank=ctx.createOscillator(); crank.type='sine';
-    const pulseAGain=ctx.createGain(),pulseBGain=ctx.createGain(),crankGain=ctx.createGain();
-    pulseAGain.gain.value=.14; pulseBGain.gain.value=.055; crankGain.gain.value=.12;
-    pulseA.connect(pulseAGain).connect(engineBus);
-    pulseB.connect(pulseBGain).connect(engineBus);
-    crank.connect(crankGain).connect(engineBus);
+    const combustion=new AudioWorkletNode(ctx,'tdr-engine-combustion',{
+      numberOfInputs:0,
+      numberOfOutputs:1,
+      outputChannelCount:[2],
+      parameterData:{rpm:IDLE_RPM,load:0,coast:0,level:.72},
+    });
+    combustion.connect(engineBus);
 
-    // Combustion texture: broad, filtered noise carries most of the realism.
-    const combustionNoise=ctx.createBufferSource(); combustionNoise.buffer=makeNoiseBuffer(ctx); combustionNoise.loop=true;
-    const combustionLow=ctx.createBiquadFilter(); combustionLow.type='bandpass'; combustionLow.frequency.value=360; combustionLow.Q.value=.48;
-    const combustionHigh=ctx.createBiquadFilter(); combustionHigh.type='bandpass'; combustionHigh.frequency.value=980; combustionHigh.Q.value=.62;
-    const combustionLowGain=ctx.createGain(),combustionHighGain=ctx.createGain();
-    combustionLowGain.gain.value=.024; combustionHighGain.gain.value=.008;
-    combustionNoise.connect(combustionLow).connect(combustionLowGain).connect(engineBus);
-    combustionNoise.connect(combustionHigh).connect(combustionHighGain).connect(engineBus);
+    // Aerodynamic layer is deliberately independent from engine RPM.
+    const windNoise=ctx.createBufferSource();windNoise.buffer=makeNoiseBuffer(ctx);windNoise.loop=true;
+    const windFilter=ctx.createBiquadFilter();windFilter.type='highpass';windFilter.frequency.value=1250;windFilter.Q.value=.20;
+    const windGain=ctx.createGain();windGain.gain.value=0;
+    windNoise.connect(windFilter).connect(windGain).connect(master);windNoise.start();
 
-    // Intake gets stronger with throttle; coast texture gets stronger with closed throttle at RPM.
-    const intakeNoise=ctx.createBufferSource(); intakeNoise.buffer=makeNoiseBuffer(ctx); intakeNoise.loop=true;
-    const intakeFilter=ctx.createBiquadFilter(); intakeFilter.type='bandpass'; intakeFilter.frequency.value=1050; intakeFilter.Q.value=.72;
-    const intakeGain=ctx.createGain(); intakeGain.gain.value=0;
-    intakeNoise.connect(intakeFilter).connect(intakeGain).connect(engineBus);
+    this._nodes={master,compressor,engineBus,drive,lowBody,cabin,roof,combustion,windNoise,windFilter,windGain};
+  }
 
-    const coastNoise=ctx.createBufferSource(); coastNoise.buffer=makeNoiseBuffer(ctx); coastNoise.loop=true;
-    const coastFilter=ctx.createBiquadFilter(); coastFilter.type='bandpass'; coastFilter.frequency.value=620; coastFilter.Q.value=.55;
-    const coastGain=ctx.createGain(); coastGain.gain.value=0;
-    coastNoise.connect(coastFilter).connect(coastGain).connect(engineBus);
-
-    const mechNoise=ctx.createBufferSource(); mechNoise.buffer=makeNoiseBuffer(ctx); mechNoise.loop=true;
-    const mechFilter=ctx.createBiquadFilter(); mechFilter.type='highpass'; mechFilter.frequency.value=1900; mechFilter.Q.value=.2;
-    const mechGain=ctx.createGain(); mechGain.gain.value=0;
-    mechNoise.connect(mechFilter).connect(mechGain).connect(engineBus);
-
-    const windNoise=ctx.createBufferSource(); windNoise.buffer=makeNoiseBuffer(ctx); windNoise.loop=true;
-    const windFilter=ctx.createBiquadFilter(); windFilter.type='highpass'; windFilter.frequency.value=1350;
-    const windGain=ctx.createGain(); windGain.gain.value=0;
-    windNoise.connect(windFilter).connect(windGain).connect(master);
-
-    pulseA.start(); pulseB.start(ctx.currentTime+.006); crank.start();
-    combustionNoise.start(); intakeNoise.start(); coastNoise.start(); mechNoise.start(); windNoise.start();
-
-    this._nodes={master,compressor,engineBus,drive,warmth,body,roof,pulseA,pulseB,crank,pulseAGain,pulseBGain,crankGain,
-      combustionNoise,combustionLow,combustionHigh,combustionLowGain,combustionHighGain,
-      intakeNoise,intakeFilter,intakeGain,coastNoise,coastFilter,coastGain,
-      mechNoise,mechFilter,mechGain,windNoise,windFilter,windGain};
+  _playStarter(){
+    const ctx=this._ctx;if(!ctx)return;
+    const now=ctx.currentTime;
+    try{
+      const bus=ctx.createGain();
+      const filter=ctx.createBiquadFilter();filter.type='bandpass';filter.frequency.value=420;filter.Q.value=.70;
+      const osc=ctx.createOscillator();osc.type='triangle';
+      const oscGain=ctx.createGain();
+      const noise=ctx.createBufferSource();noise.buffer=makeNoiseBuffer(ctx,.55);
+      const noiseFilter=ctx.createBiquadFilter();noiseFilter.type='highpass';noiseFilter.frequency.value=900;
+      const noiseGain=ctx.createGain();
+      bus.connect(filter).connect(ctx.destination);
+      osc.connect(oscGain).connect(bus);noise.connect(noiseFilter).connect(noiseGain).connect(bus);
+      osc.frequency.setValueAtTime(72,now);osc.frequency.exponentialRampToValueAtTime(118,now+.34);
+      oscGain.gain.setValueAtTime(.0001,now);oscGain.gain.exponentialRampToValueAtTime(.12,now+.025);oscGain.gain.exponentialRampToValueAtTime(.0001,now+.44);
+      noiseGain.gain.setValueAtTime(.0001,now);noiseGain.gain.exponentialRampToValueAtTime(.035,now+.018);noiseGain.gain.exponentialRampToValueAtTime(.0001,now+.31);
+      osc.start(now);noise.start(now);osc.stop(now+.46);noise.stop(now+.48);
+    }catch{}
   }
 
   startEngine(){
@@ -138,31 +118,37 @@ export class CarEngineSampleRuntime{
         const AC=window.AudioContext||window.webkitAudioContext;
         if(!AC)return;
         this._ctx=new AC({latencyHint:'interactive'});
-        this._buildGraph();
       }
       if(this._ctx.state==='suspended')this._ctx.resume();
       this._rpm=IDLE_RPM;
       this._gear=1;
-      this._lastGear=1;
       this._shiftUntil=0;
-      this.update(true);
+      this._playStarter();
+      if(!this._nodes&&!this._graphPromise){
+        this._graphPromise=this._buildGraph().then(()=>{
+          this._graphPromise=null;
+          this.update(true);
+        }).catch(e=>{
+          this._graphPromise=null;
+          console.warn('[TDR2 engine] combustion worklet init failed',e);
+        });
+      }else this.update(true);
     }catch(e){console.warn('[TDR2 engine] procedural init failed',e);}
   }
 
   _targetRpm(kmh,throttle,nowMs){
     const gearBySpeed=kmh<43?1:kmh<79?2:kmh<116?3:kmh<154?4:5;
     if(gearBySpeed!==this._gear&&kmh>8){
-      this._lastGear=this._gear;
       this._gear=gearBySpeed;
-      this._shiftUntil=nowMs+175;
+      this._shiftUntil=nowMs+185;
     }
     const gearLow=[0,0,34,69,105,143][this._gear]||0;
     const gearHigh=[0,49,85,123,161,205][this._gear]||205;
     const progress=clamp((kmh-gearLow)/Math.max(1,gearHigh-gearLow),0,1);
-    const roadRpm=IDLE_RPM+progress*4725;
-    const freeRev=IDLE_RPM+throttle*5050;
-    let target=kmh<5?freeRev:Math.max(roadRpm,IDLE_RPM+throttle*2450);
-    if(nowMs<this._shiftUntil)target*=.68;
+    const roadRpm=IDLE_RPM+progress*4750;
+    const freeRev=IDLE_RPM+throttle*5100;
+    let target=kmh<5?freeRev:Math.max(roadRpm,IDLE_RPM+throttle*2500);
+    if(nowMs<this._shiftUntil)target*=.67;
     return clamp(target,IDLE_RPM,REDLINE_RPM);
   }
 
@@ -181,63 +167,46 @@ export class CarEngineSampleRuntime{
     const p=prefs();
     const target=this._targetRpm(kmh,throttle,perfNow);
 
-    const risePerSecond=throttle>.05?6100:2350;
-    const fallPerSecond=3900;
+    const risePerSecond=throttle>.05?5900:2250;
+    const fallPerSecond=4050;
     const maxStep=(this._rpm<target?risePerSecond:fallPerSecond)*(elapsed/1000);
     if(this._rpm<target)this._rpm=Math.min(target,this._rpm+maxStep);
     else this._rpm=Math.max(target,this._rpm-maxStep);
 
     const rpm01=clamp((this._rpm-IDLE_RPM)/(REDLINE_RPM-IDLE_RPM),0,1);
-    const crankHz=this._rpm/60;
-    const firingHz=this._rpm/30;
-    const roughness=1+Math.sin(perfNow*.0113)*.0027+Math.sin(perfNow*.0047)*.0019+Math.sin(perfNow*.0231)*.0012;
-    const n=this._nodes,now=this._ctx.currentTime;
-    const shifting=perfNow<this._shiftUntil;
-
-    n.crank.frequency.setTargetAtTime(crankHz*roughness,now,.05);
-    n.pulseA.frequency.setTargetAtTime(firingHz*roughness,now,.043);
-    n.pulseB.frequency.setTargetAtTime(firingHz*(1.0035+rpm01*.0015),now,.052);
-
-    // Keep pure tone subordinate to texture; load opens the exhaust rather than simply making it louder.
-    n.crankGain.gain.setTargetAtTime(.095-rpm01*.035,now,.08);
-    n.pulseAGain.gain.setTargetAtTime(.105-rpm01*.025+throttle*.018,now,.08);
-    n.pulseBGain.gain.setTargetAtTime(.032+rpm01*.020+throttle*.012,now,.09);
-
-    n.combustionLow.frequency.setTargetAtTime(280+rpm01*690,now,.10);
-    n.combustionLowGain.gain.setTargetAtTime((.030+rpm01*.028+throttle*.014)*p.engine,now,.08);
-    n.combustionHigh.frequency.setTargetAtTime(760+rpm01*1500,now,.10);
-    n.combustionHighGain.gain.setTargetAtTime((.008+rpm01*.023+throttle*.014)*p.engine,now,.08);
-
-    n.intakeFilter.frequency.setTargetAtTime(720+rpm01*2100,now,.11);
-    n.intakeGain.gain.setTargetAtTime((.004+throttle*.046+rpm01*throttle*.018)*p.engine,now,.08);
-    const coastAmount=(1-throttle)*rpm01;
-    n.coastFilter.frequency.setTargetAtTime(430+rpm01*1050,now,.12);
-    n.coastGain.gain.setTargetAtTime((coastAmount*.030)*p.engine,now,.09);
-    n.mechFilter.frequency.setTargetAtTime(1650+rpm01*2100,now,.12);
-    n.mechGain.gain.setTargetAtTime((rpm01*.011+Math.max(0,rpm01-.55)*.030)*p.engine,now,.10);
-
-    n.body.frequency.setTargetAtTime(420+rpm01*560,now,.12);
-    n.body.gain.setTargetAtTime(4.4-rpm01*1.8,now,.12);
-    n.roof.frequency.setTargetAtTime(1450+rpm01*3300+throttle*620,now,.10);
-
     const speed01=clamp(kmh/180,0,1);
-    n.windFilter.frequency.setTargetAtTime(1150+speed01*2200,now,.14);
-    n.windGain.gain.setTargetAtTime(Math.pow(speed01,1.8)*.010,now,.12);
+    const shifting=perfNow<this._shiftUntil;
+    const coast=clamp((1-throttle)*rpm01*(kmh>8?1:0),0,1);
+    // Load is not RPM. It follows throttle, with a little drivetrain load while accelerating.
+    const load=clamp(throttle*.86+Math.max(0,target-this._rpm)/2200*.14,0,1);
+    const n=this._nodes,now=this._ctx.currentTime;
+
+    n.combustion.parameters.get('rpm')?.setTargetAtTime(this._rpm,now,.035);
+    n.combustion.parameters.get('load')?.setTargetAtTime(load,now,.045);
+    n.combustion.parameters.get('coast')?.setTargetAtTime(coast,now,.055);
+    n.combustion.parameters.get('level')?.setTargetAtTime((.64+rpm01*.09)*(shifting?.80:1),now,.055);
+
+    // Body resonance opens progressively with RPM and load, without turning into a whistle.
+    n.cabin.frequency.setTargetAtTime(360+rpm01*420,now,.12);
+    n.cabin.gain.setTargetAtTime(2.8-rpm01*.9+load*.45,now,.12);
+    n.roof.frequency.setTargetAtTime(2500+rpm01*3900+load*550,now,.10);
+
+    n.windFilter.frequency.setTargetAtTime(1120+speed01*2450,now,.14);
+    n.windGain.gain.setTargetAtTime(Math.pow(speed01,1.8)*.010*p.effects,now,.12);
 
     const preGrid=this.scene._startState==='WAIT_ENGINE'||this.scene._startState==='READY';
-    const shiftDip=shifting?.78:1;
-    const engineLevel=(.050+rpm01*.036+throttle*.026)*(preGrid?.72:1)*shiftDip*p.engine;
-    n.engineBus.gain.setTargetAtTime(engineLevel,now,.065);
-    n.master.gain.setTargetAtTime(p.mute?0:p.master*.86,now,.055);
+    const engineLevel=(.64+rpm01*.18+load*.10)*(preGrid?.72:1)*p.engine;
+    n.engineBus.gain.setTargetAtTime(engineLevel,now,.06);
+    n.master.gain.setTargetAtTime(p.mute?0:p.master*.82,now,.055);
   }
 
   destroy(){
-    try{
-      const n=this._nodes;
-      n?.pulseA?.stop?.();n?.pulseB?.stop?.();n?.crank?.stop?.();
-      n?.combustionNoise?.stop?.();n?.intakeNoise?.stop?.();n?.coastNoise?.stop?.();n?.mechNoise?.stop?.();n?.windNoise?.stop?.();
-    }catch{}
+    try{this._nodes?.windNoise?.stop?.();}catch{}
+    try{this._nodes?.combustion?.disconnect?.();}catch{}
     try{this._ctx?.close?.();}catch{}
-    this._nodes=null;this._ctx=null;this.scene=null;
+    this._nodes=null;
+    this._graphPromise=null;
+    this._ctx=null;
+    this.scene=null;
   }
 }
