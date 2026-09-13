@@ -31,21 +31,21 @@ export class CarEngineSampleRuntime{
     this.audio.setAttribute('playsinline','');
     this.audio.setAttribute('webkit-playsinline','');
     this.unlocked=false;
+    this.engineStarted=false;
     this._lastUpdate=0;
-    this.unlock=()=>this._unlock();
-    const opts={capture:true,passive:true};
-    window.addEventListener('pointerup',this.unlock,opts);
-    window.addEventListener('touchend',this.unlock,opts);
-    window.addEventListener('click',this.unlock,opts);
-    window.addEventListener('keydown',this.unlock,opts);
     try{this.audio.load();}catch{}
   }
 
-  _unlock(){
+  startEngine(){
+    this.engineStarted=true;
     this.unlocked=true;
-    if(this.audio.paused){
-      try{const p=this.audio.play();if(p?.catch)p.catch(()=>{});}catch{}
-    }
+    try{
+      this.audio.currentTime=0;
+      this.audio.volume=.03;
+      this.audio.playbackRate=.58;
+      const p=this.audio.play();
+      if(p?.catch)p.catch(()=>{});
+    }catch{}
     this.update(true);
   }
 
@@ -55,27 +55,28 @@ export class CarEngineSampleRuntime{
     if(!force&&now-this._lastUpdate<45)return;
     this._lastUpdate=now;
     const p=prefs();
+    if(!this.engineStarted){
+      try{this.audio.volume=0;}catch{}
+      return;
+    }
     const body=this.scene.carBody?.body;
     const speedPx=Math.hypot(Number(body?.velocity?.x||0),Number(body?.velocity?.y||0));
     const kmh=Math.max(0,pxpsToKmh(speedPx));
     const throttle=clamp(Number(this.scene.touch?.throttle||0),0,1);
     const low=clamp(kmh/15,0,1);
     const road=clamp((kmh-15)/145,0,1);
-    const rpm=clamp(.06+low*.08+road*.68+throttle*.26,0,1);
-    const targetRate=clamp(.58+rpm*.82,.58,1.4);
-    const targetVolume=(p.mute?0:p.master*p.engine)*(.12+rpm*.28+throttle*.12)*(this.scene._raceStarted?1:.42);
+    const rpm=clamp(.06+low*.08+road*.68+throttle*.38,0,1);
+    const targetRate=clamp(.58+rpm*.92,.58,1.5);
+    const preGrid=this.scene._startState==='WAIT_ENGINE'||this.scene._startState==='READY';
+    const targetVolume=(p.mute?0:p.master*p.engine)*(.14+rpm*.30+throttle*.14)*(preGrid?.72:1);
     try{
       this.audio.playbackRate=this.audio.playbackRate+(targetRate-this.audio.playbackRate)*.22;
-      this.audio.volume=clamp(targetVolume,0,.62);
+      this.audio.volume=clamp(targetVolume,0,.66);
       if(this.unlocked&&this.audio.paused&&this.audio.volume>.001){const q=this.audio.play();if(q?.catch)q.catch(()=>{});}
     }catch{}
   }
 
   destroy(){
-    window.removeEventListener('pointerup',this.unlock,true);
-    window.removeEventListener('touchend',this.unlock,true);
-    window.removeEventListener('click',this.unlock,true);
-    window.removeEventListener('keydown',this.unlock,true);
     try{this.audio.pause();this.audio.removeAttribute('src');this.audio.load();}catch{}
     this.audio=null;this.scene=null;
   }
