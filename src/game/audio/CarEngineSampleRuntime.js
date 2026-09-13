@@ -3,8 +3,12 @@ import { pxpsToKmh } from '../cars/speedUnits.js';
 const SETTINGS_KEY='tdr2:settings';
 const UPDATE_MS=120;
 const VOLUME_EPSILON=.012;
-const LOOP_FRACTION_START=.28;
-const LOOP_FRACTION_END=.40;
+const ZONES=[
+  {start:.16,end:.23},
+  {start:.31,end:.38},
+  {start:.47,end:.54},
+  {start:.63,end:.70},
+];
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 function prefs(){
@@ -40,44 +44,59 @@ export class CarEngineSampleRuntime{
     this.engineStarted=false;
     this._lastUpdate=0;
     this._lastAppliedVolume=0;
-    this._loopStart=0;
-    this._loopEnd=0;
-    this._loopReady=false;
-    this._onLoadedMetadata=()=>this._prepareLoopWindow();
+    this._zoneWindows=[];
+    this._zoneIndex=0;
+    this._zonesReady=false;
+    this._onLoadedMetadata=()=>this._prepareZoneWindows();
     this.audio.addEventListener('loadedmetadata',this._onLoadedMetadata);
     try{this.audio.load();}catch{}
   }
 
-  _prepareLoopWindow(){
+  _prepareZoneWindows(){
     const duration=Number(this.audio?.duration||0);
-    if(!Number.isFinite(duration)||duration<=1)return;
-    let start=duration*LOOP_FRACTION_START;
-    let end=duration*LOOP_FRACTION_END;
-    const minSpan=Math.min(2.2,Math.max(.8,duration*.08));
-    if(end-start<minSpan)end=Math.min(duration-.15,start+minSpan);
-    if(end<=start+.5){start=Math.max(.1,duration*.2);end=Math.min(duration-.1,start+Math.max(.8,duration*.12));}
-    this._loopStart=clamp(start,0,Math.max(0,duration-.6));
-    this._loopEnd=clamp(end,this._loopStart+.5,duration);
-    this._loopReady=this._loopEnd>this._loopStart+.45;
+    if(!Number.isFinite(duration)||duration<=2)return;
+    this._zoneWindows=ZONES.map(zone=>{
+      let start=duration*zone.start;
+      let end=duration*zone.end;
+      const minSpan=Math.min(1.8,Math.max(.75,duration*.045));
+      if(end-start<minSpan)end=Math.min(duration-.12,start+minSpan);
+      start=clamp(start,.05,Math.max(.05,duration-.8));
+      end=clamp(end,start+.55,duration-.05);
+      return {start,end};
+    });
+    this._zonesReady=this._zoneWindows.length===ZONES.length&&this._zoneWindows.every(z=>z.end>z.start+.5);
   }
 
-  _keepInsideLoop(){
-    if(!this._loopReady||!this.audio)return;
+  _setZone(index,force=false){
+    if(!this._zonesReady||!this.audio)return;
+    const next=clamp(Math.round(index),0,this._zoneWindows.length-1);
+    if(!force&&next===this._zoneIndex)return;
+    this._zoneIndex=next;
+    const zone=this._zoneWindows[next];
+    try{this.audio.currentTime=zone.start;}catch{}
+  }
+
+  _keepInsideZone(){
+    if(!this._zonesReady||!this.audio)return;
+    const zone=this._zoneWindows[this._zoneIndex];
+    if(!zone)return;
     const t=Number(this.audio.currentTime||0);
-    if(t<this._loopStart-.05||t>=this._loopEnd){
-      try{this.audio.currentTime=this._loopStart;}catch{}
+    if(t<zone.start-.05||t>=zone.end){
+      try{this.audio.currentTime=zone.start;}catch{}
     }
   }
 
   startEngine(){
     this.engineStarted=true;
     this.unlocked=true;
-    if(!this._loopReady)this._prepareLoopWindow();
+    if(!this._zonesReady)this._prepareZoneWindows();
     try{
       this.audio.playbackRate=1;
       this.audio.volume=.03;
       this._lastAppliedVolume=.03;
-      this.audio.currentTime=this._loopReady?this._loopStart:0;
+      this._zoneIndex=0;
+      if(this._zonesReady)this.audio.currentTime=this._zoneWindows[0].start;
+      else this.audio.currentTime=0;
       const p=this.audio.play();
       if(p?.catch)p.catch(()=>{});
     }catch{}
@@ -95,15 +114,18 @@ export class CarEngineSampleRuntime{
       return;
     }
 
-    this._keepInsideLoop();
-
     const body=this.scene.carBody?.body;
     const speedPx=Math.hypot(Number(body?.velocity?.x||0),Number(body?.velocity?.y||0));
     const kmh=Math.max(0,pxpsToKmh(speedPx));
     const throttle=clamp(Number(this.scene.touch?.throttle||0),0,1);
-    const motion=clamp(kmh/120,0,1);
+    const motion=clamp(kmh/145,0,1);
+    const demand=clamp(throttle*.72+motion*.28,0,1);
+    const nextZone=demand<.18?0:demand<.43?1:demand<.70?2:3;
+    this._setZone(nextZone);
+    this._keepInsideZone();
+
     const preGrid=this.scene._startState==='WAIT_ENGINE'||this.scene._startState==='READY';
-    const targetVolume=clamp((p.mute?0:p.master*p.engine)*(.16+motion*.18+throttle*.22)*(preGrid?.72:1),0,.62);
+    const targetVolume=clamp((p.mute?0:p.master*p.engine)*(.16+motion*.17+throttle*.24)*(preGrid?.72:1),0,.64);
     try{
       if(force||Math.abs(targetVolume-this._lastAppliedVolume)>=VOLUME_EPSILON){
         this.audio.volume=targetVolume;
