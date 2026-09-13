@@ -14,6 +14,34 @@ function flattenScene(scene){
 }
 
 export class RaceScene extends CurrentRaceScene{
+  _openPauseMenu(...args){
+    const alreadyOpen=this._tdrPauseMenuOpen===true||!!this._experiencePauseUi?.root?.isConnected;
+    const result=super._openPauseMenu?.(...args);
+    if(!alreadyOpen&&!this._tdrPauseClockGuard){
+      this._tdrPauseClockGuard={
+        timeWasPaused:!!this.time?.paused,
+        tweensPaused:true
+      };
+      // Physics alone is not enough: Phaser Clock events drive the start-light
+      // countdown and other race sequencing. Freeze scene time/tweens as well so
+      // pausing on red cannot let the race start behind the pause menu.
+      try{if(this.time)this.time.paused=true;}catch{}
+      try{this.tweens?.pauseAll?.();}catch{}
+    }
+    return result;
+  }
+
+  _closePauseMenu(resume=true){
+    const guard=this._tdrPauseClockGuard;
+    const result=super._closePauseMenu?.(resume);
+    if(resume!==false&&guard){
+      try{if(this.time)this.time.paused=guard.timeWasPaused===true;}catch{}
+      try{this.tweens?.resumeAll?.();}catch{}
+      this._tdrPauseClockGuard=null;
+    }
+    return result;
+  }
+
   _hideStatsReplayGameplayUi(){
     super._hideStatsReplayGameplayUi?.();
 
