@@ -1,1 +1,1 @@
-export { installRaceLoadingExperience } from './raceLoadingExperienceV7.js';
+export { installRaceLoadingExperience } from './raceLoadingExperienceV8.js';
