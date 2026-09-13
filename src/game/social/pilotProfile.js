@@ -60,3 +60,4 @@ export function installPilotProfilePrompt(){
 }
 
 try{window.__tdrPilotProfile={get:getPilotProfile,setName:setPilotName};}catch{}
+installPilotProfilePrompt();
