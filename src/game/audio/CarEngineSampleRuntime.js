@@ -2,8 +2,9 @@ import { pxpsToKmh } from '../cars/speedUnits.js';
 
 const SETTINGS_KEY='tdr2:settings';
 const UPDATE_MS=120;
-const RATE_EPSILON=.025;
 const VOLUME_EPSILON=.012;
+const LOOP_FRACTION_START=.28;
+const LOOP_FRACTION_END=.40;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 function prefs(){
@@ -26,13 +27,11 @@ export class CarEngineSampleRuntime{
     this.scene=scene;
     this.audio=new Audio();
     this.audio.src=assetUrl('assets/audio/cars/veloce_flash/engine/freesound_community-import-car-revs-on-chassis-dyno-with-turbo-66272.mp3');
-    this.audio.loop=true;
+    this.audio.loop=false;
     this.audio.preload='auto';
     this.audio.playsInline=true;
     this.audio.volume=0;
-    this.audio.playbackRate=.65;
-    // Engine pitch should follow playback rate. Disabling pitch preservation also
-    // avoids asking iOS/Safari to run real-time time-stretch DSP on every rate change.
+    this.audio.playbackRate=1;
     try{this.audio.preservesPitch=false;}catch{}
     try{this.audio.webkitPreservesPitch=false;}catch{}
     this.audio.setAttribute('playsinline','');
@@ -40,20 +39,45 @@ export class CarEngineSampleRuntime{
     this.unlocked=false;
     this.engineStarted=false;
     this._lastUpdate=0;
-    this._lastAppliedRate=.65;
     this._lastAppliedVolume=0;
+    this._loopStart=0;
+    this._loopEnd=0;
+    this._loopReady=false;
+    this._onLoadedMetadata=()=>this._prepareLoopWindow();
+    this.audio.addEventListener('loadedmetadata',this._onLoadedMetadata);
     try{this.audio.load();}catch{}
+  }
+
+  _prepareLoopWindow(){
+    const duration=Number(this.audio?.duration||0);
+    if(!Number.isFinite(duration)||duration<=1)return;
+    let start=duration*LOOP_FRACTION_START;
+    let end=duration*LOOP_FRACTION_END;
+    const minSpan=Math.min(2.2,Math.max(.8,duration*.08));
+    if(end-start<minSpan)end=Math.min(duration-.15,start+minSpan);
+    if(end<=start+.5){start=Math.max(.1,duration*.2);end=Math.min(duration-.1,start+Math.max(.8,duration*.12));}
+    this._loopStart=clamp(start,0,Math.max(0,duration-.6));
+    this._loopEnd=clamp(end,this._loopStart+.5,duration);
+    this._loopReady=this._loopEnd>this._loopStart+.45;
+  }
+
+  _keepInsideLoop(){
+    if(!this._loopReady||!this.audio)return;
+    const t=Number(this.audio.currentTime||0);
+    if(t<this._loopStart-.05||t>=this._loopEnd){
+      try{this.audio.currentTime=this._loopStart;}catch{}
+    }
   }
 
   startEngine(){
     this.engineStarted=true;
     this.unlocked=true;
+    if(!this._loopReady)this._prepareLoopWindow();
     try{
-      this.audio.currentTime=0;
+      this.audio.playbackRate=1;
       this.audio.volume=.03;
-      this.audio.playbackRate=.58;
-      this._lastAppliedRate=.58;
       this._lastAppliedVolume=.03;
+      this.audio.currentTime=this._loopReady?this._loopStart:0;
       const p=this.audio.play();
       if(p?.catch)p.catch(()=>{});
     }catch{}
@@ -70,32 +94,26 @@ export class CarEngineSampleRuntime{
       try{if(this._lastAppliedVolume!==0){this.audio.volume=0;this._lastAppliedVolume=0;}}catch{}
       return;
     }
+
+    this._keepInsideLoop();
+
     const body=this.scene.carBody?.body;
     const speedPx=Math.hypot(Number(body?.velocity?.x||0),Number(body?.velocity?.y||0));
     const kmh=Math.max(0,pxpsToKmh(speedPx));
     const throttle=clamp(Number(this.scene.touch?.throttle||0),0,1);
-    const low=clamp(kmh/15,0,1);
-    const road=clamp((kmh-15)/145,0,1);
-    const rpm=clamp(.06+low*.08+road*.68+throttle*.38,0,1);
-    const targetRate=clamp(.58+rpm*.92,.58,1.5);
+    const motion=clamp(kmh/120,0,1);
     const preGrid=this.scene._startState==='WAIT_ENGINE'||this.scene._startState==='READY';
-    const targetVolume=clamp((p.mute?0:p.master*p.engine)*(.14+rpm*.30+throttle*.14)*(preGrid?.72:1),0,.66);
+    const targetVolume=clamp((p.mute?0:p.master*p.engine)*(.16+motion*.18+throttle*.22)*(preGrid?.72:1),0,.62);
     try{
-      const nextRate=this._lastAppliedRate+(targetRate-this._lastAppliedRate)*.34;
-      if(force||Math.abs(nextRate-this._lastAppliedRate)>=RATE_EPSILON){
-        this.audio.playbackRate=nextRate;
-        this._lastAppliedRate=nextRate;
-      }
       if(force||Math.abs(targetVolume-this._lastAppliedVolume)>=VOLUME_EPSILON){
         this.audio.volume=targetVolume;
         this._lastAppliedVolume=targetVolume;
       }
-      // Do not keep calling play() from the race loop. The start button provides
-      // the user gesture once; repeated play attempts under load are counterproductive on iOS.
     }catch{}
   }
 
   destroy(){
+    try{this.audio?.removeEventListener('loadedmetadata',this._onLoadedMetadata);}catch{}
     try{this.audio.pause();this.audio.removeAttribute('src');this.audio.load();}catch{}
     this.audio=null;this.scene=null;
   }
