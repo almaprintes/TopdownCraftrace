@@ -136,6 +136,7 @@ jobs:
           grep -q "pxpsToKmh" src/game/scenes/RaceEmbeddedReplayScene.js
           grep -q "sampleSpeedAtTime" src/game/scenes/RaceEmbeddedReplayScene.js
           grep -q "samplePositionAt" src/game/scenes/RaceEmbeddedReplayScene.js
+          grep -q "hasRecordedCamera" src/game/scenes/RaceEmbeddedReplayScene.js
           grep -q "km/h" src/game/scenes/RaceEmbeddedReplayScene.js
           grep -q "centerOn" src/game/scenes/RaceEmbeddedReplayScene.js
           grep -q "matchingLap" src/game/stats/localRaceRecords.js
@@ -158,7 +159,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.81/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.82/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -175,8 +176,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.81' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.81' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.82' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.82' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
