@@ -26,6 +26,19 @@ class Resonator{
   }
 }
 
+function phaseDistance(a,b){
+  let d=Math.abs(a-b)%720;
+  if(d>360)d=720-d;
+  return d;
+}
+
+function smoothPulse(distance,width){
+  const x=distance/Math.max(1,width);
+  if(x>=1)return 0;
+  const q=1-x*x;
+  return q*q*q;
+}
+
 class TdrEngineCombustionProcessor extends AudioWorkletProcessor{
   static get parameterDescriptors(){
     return [
@@ -38,24 +51,21 @@ class TdrEngineCombustionProcessor extends AudioWorkletProcessor{
 
   constructor(){
     super();
-    this.phase=0; // 0..720 crank degrees: one four-stroke cycle.
-    this.cycle=0;
+    this.phase=0;
     this.seed=0x6d2b79f5;
-    this.exhaustEnv=0;
-    this.blockEnv=0;
-    this.intakeEnv=0;
-    this.valveEnv=0;
     this.prevNoise=0;
+    this.prevFlow=0;
     this.prevMech=0;
     this.firePhases=[0,180,360,540];
-    // I4 firing order 1-3-4-2. Small cylinder-to-cylinder differences stop perfect repetition.
-    this.cylinderStrength=[1.000,.968,1.022,.987];
-    this.cylinderPan=[-.045,.028,-.025,.042];
+    this.cylinderStrength=[1.000,.975,1.018,.988];
     this.blockR=new Resonator(sampleRate);
     this.exhaustLowR=new Resonator(sampleRate);
+    this.exhaustMidR=new Resonator(sampleRate);
     this.exhaustHighR=new Resonator(sampleRate);
     this.intakeR=new Resonator(sampleRate);
     this.mechR=new Resonator(sampleRate);
+    this.delay=new Float32Array(Math.max(2048,Math.ceil(sampleRate*.05)));
+    this.delayIndex=0;
   }
 
   _rand(){
@@ -63,11 +73,6 @@ class TdrEngineCombustionProcessor extends AudioWorkletProcessor{
     x^=x<<13;x^=x>>>17;x^=x<<5;
     this.seed=x|0;
     return ((x>>>0)/4294967295)*2-1;
-  }
-
-  _crossed(prev,next,target){
-    if(next>=720)return target>prev||target<=next-720;
-    return target>prev&&target<=next;
   }
 
   process(inputs,outputs,parameters){
@@ -81,76 +86,83 @@ class TdrEngineCombustionProcessor extends AudioWorkletProcessor{
     const level=clamp(parameters.level[0]??.7,0,1);
     const rpm01=clamp((rpm-950)/(7200-950),0,1);
 
-    // Resonances are retuned once per render quantum, not per sample.
-    // They represent block/cabin, exhaust primary/secondary and intake tract.
-    this.blockR.tune(92+rpm01*72,.030-rpm01*.010,.17);
-    this.exhaustLowR.tune(138+rpm01*145+load*32,.042-rpm01*.014,.19);
-    this.exhaustHighR.tune(390+rpm01*560+load*90,.024-rpm01*.009,.070);
-    this.intakeR.tune(620+rpm01*1320,.018-rpm01*.006,.050);
-    this.mechR.tune(1450+rpm01*2050,.008,.014);
+    // The resonators are the acoustic system around the combustion source: block,
+    // exhaust manifold/pipe, intake tract and mechanical valvetrain.
+    this.blockR.tune(82+rpm01*58,.050-rpm01*.012,.105);
+    this.exhaustLowR.tune(118+rpm01*122+load*24,.060-rpm01*.014,.115);
+    this.exhaustMidR.tune(245+rpm01*275+load*48,.044-rpm01*.010,.070);
+    this.exhaustHighR.tune(520+rpm01*820+load*100,.027-rpm01*.007,.031);
+    this.intakeR.tune(560+rpm01*1420,.026-rpm01*.006,.038);
+    this.mechR.tune(1550+rpm01*2300,.010,.008);
 
     const degPerSample=rpm*6/sampleRate;
-    const exhaustDecay=Math.exp(-1/(sampleRate*(.0085-rpm01*.0025)));
-    const blockDecay=Math.exp(-1/(sampleRate*.014));
-    const intakeDecay=Math.exp(-1/(sampleRate*.0065));
-    const valveDecay=Math.exp(-1/(sampleRate*.0028));
+    const pulseWidth=64-rpm01*20; // broad overlapping pressure events, not isolated pops.
+    const firingMean=4*(pulseWidth/180)*.457; // approximate DC component of the pulse train.
+    const crankOmega=TAU*(rpm/60)/sampleRate;
+    let crankPhase=(this.phase/720)*TAU*2;
+
+    const tap1=Math.max(1,Math.min(this.delay.length-1,Math.round(sampleRate*.0037)));
+    const tap2=Math.max(1,Math.min(this.delay.length-1,Math.round(sampleRate*.0074)));
 
     for(let i=0;i<left.length;i++){
-      const prev=this.phase;
-      let next=prev+degPerSample;
-      let fireIndex=-1;
+      let pressure=0;
       for(let c=0;c<4;c++){
-        if(this._crossed(prev,next,this.firePhases[c])){fireIndex=c;break;}
+        const d=phaseDistance(this.phase,this.firePhases[c]);
+        pressure+=smoothPulse(d,pulseWidth)*this.cylinderStrength[c];
       }
-      if(next>=720){next-=720;this.cycle++;}
-      this.phase=next;
-
-      let pan=0;
-      if(fireIndex>=0){
-        const variation=1+this._rand()*.035;
-        const cyl=this.cylinderStrength[fireIndex];
-        const energy=(.42+load*.72)*(1-coast*.18)*variation*cyl;
-        this.exhaustEnv+=energy*(.60+rpm01*.23);
-        this.blockEnv+=energy*(.44-rpm01*.12);
-        this.intakeEnv+=(load*.58+rpm01*load*.22)*variation;
-        this.valveEnv+=(.15+rpm01*.33)*(1+this._rand()*.08);
-        pan=this.cylinderPan[fireIndex];
-      }
-
-      this.exhaustEnv*=exhaustDecay;
-      this.blockEnv*=blockDecay;
-      this.intakeEnv*=intakeDecay;
-      this.valveEnv*=valveDecay;
+      // Remove most of the DC term so the resonators receive a flowing pressure waveform
+      // rather than four isolated impulses.
+      const acPressure=pressure-firingMean;
 
       const white=this._rand();
-      this.prevNoise=this.prevNoise*.64+white*.36;
-      const gritty=this.prevNoise;
+      this.prevNoise=this.prevNoise*.82+white*.18;
+      const grit=this.prevNoise;
+      const flowWhite=this._rand();
+      this.prevFlow=this.prevFlow*.965+flowWhite*.035;
+      const flow=this.prevFlow;
       const mechWhite=this._rand();
-      this.prevMech=this.prevMech*.18+mechWhite*.82;
+      this.prevMech=this.prevMech*.35+mechWhite*.65;
       const mech=this.prevMech;
 
-      const combustionImpulse=this.exhaustEnv*(.70+gritty*.18);
-      const blockImpulse=this.blockEnv*(.78+gritty*.12);
-      const intakeImpulse=this.intakeEnv*(.60+gritty*.30);
-      const valveImpulse=this.valveEnv*(.65+mech*.35);
+      const combustionEnergy=.50+load*.82-coast*.16;
+      const combustion=acPressure*combustionEnergy*(1+grit*.055);
+
+      // Short exhaust reflections emulate primary/collector/pipe interaction and make
+      // the source feel like gas moving through an exhaust rather than a dry pulse train.
+      const di=this.delayIndex;
+      const d1=this.delay[(di-tap1+this.delay.length)%this.delay.length];
+      const d2=this.delay[(di-tap2+this.delay.length)%this.delay.length];
+      this.delay[di]=combustion;
+      this.delayIndex=(di+1)%this.delay.length;
+      const exhaustDrive=combustion+d1*(.22+load*.08)-d2*.11;
+
+      const rotational=Math.sin(crankPhase)*(.020-rpm01*.006)
+        +Math.sin(crankPhase*2+.37)*(.010+rpm01*.005);
+      const intakeDrive=(acPressure*.24+flow*.17)*(load*(.55+rpm01*.45));
+      const mechDrive=(mech*.22+acPressure*.055)*(.15+rpm01*.85);
 
       let y=0;
-      y+=this.blockR.process(blockImpulse);
-      y+=this.exhaustLowR.process(combustionImpulse);
-      y+=this.exhaustHighR.process(combustionImpulse*(.42+load*.34));
-      y+=this.intakeR.process(intakeImpulse*(.32+load*.90));
-      y+=this.mechR.process(valveImpulse*(.25+rpm01*.80));
+      y+=this.blockR.process(combustion*.52+rotational);
+      y+=this.exhaustLowR.process(exhaustDrive*.70);
+      y+=this.exhaustMidR.process(exhaustDrive*(.38+load*.24));
+      y+=this.exhaustHighR.process(exhaustDrive*(.13+load*.23+rpm01*.11));
+      y+=this.intakeR.process(intakeDrive);
+      y+=this.mechR.process(mechDrive);
 
-      // Continuous gas-flow texture masks mathematical periodicity without hiding firing pulses.
-      y+=gritty*(.008+load*.018+rpm01*.009);
-      // Closed-throttle overrun: less combustion, more dry mechanical/exhaust texture.
-      y+=coast*(rpm01*.020)*(gritty*.72+mech*.28);
+      // Continuous gas flow fills the gaps between combustion events. It grows with load
+      // and RPM, while closed-throttle running becomes drier and more mechanical.
+      y+=flow*(.005+load*.014+rpm01*.008);
+      y+=coast*rpm01*(grit*.008+mech*.006);
 
-      // Soft saturation, preserving transients.
-      y=Math.tanh(y*1.42)*level;
-      const stereoSpread=.018+rpm01*.012;
-      left[i]=y*(1-pan*stereoSpread);
-      if(right!==left)right[i]=y*(1+pan*stereoSpread);
+      y=Math.tanh(y*1.08)*level;
+      const side=(flow*.0025+grit*.0015)*(0.4+rpm01*.6);
+      left[i]=y-side;
+      if(right!==left)right[i]=y+side;
+
+      this.phase+=degPerSample;
+      if(this.phase>=720)this.phase-=720;
+      crankPhase+=crankOmega;
+      if(crankPhase>TAU)crankPhase-=TAU;
     }
     return true;
   }
