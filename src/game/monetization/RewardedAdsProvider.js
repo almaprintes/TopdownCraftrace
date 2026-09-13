@@ -85,8 +85,16 @@ function devVideoRewardedAd(scene,{title='RECOMPENSA PATROCINADA'}={}){
   });
 }
 
+function resolvedPlacement(placement,title){
+  if(placement&&placement!=='generic_reward')return placement;
+  const label=String(title||'').toUpperCase();
+  if(label.includes('RECICLA'))return 'recycler_exchange';
+  return placement||'generic_reward';
+}
+
 export async function showRewardedAd(scene,{title='RECOMPENSA PATROCINADA',placement='generic_reward',claimId=null}={}){
-  if(nativeBridge())return nativeRewardedAd({placement,claimId});
+  const routedPlacement=resolvedPlacement(placement,title);
+  if(nativeBridge())return nativeRewardedAd({placement:routedPlacement,claimId});
   if(isDevPreview())return devVideoRewardedAd(scene,{title});
   return{completed:false,verified:false,source:'none',reason:'rewarded_ad_unavailable'};
 }
