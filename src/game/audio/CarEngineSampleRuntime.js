@@ -137,18 +137,25 @@ export class CarEngineSampleRuntime{
   }
 
   _targetRpm(kmh,throttle,nowMs){
-    const gearBySpeed=kmh<43?1:kmh<79?2:kmh<116?3:kmh<154?4:5;
+    // Acoustic gearbox: RPM rises continuously through each gear. The previous
+    // model imposed a fixed throttle RPM floor while moving, which created a
+    // long audible plateau followed by an artificial jump.
+    const gearBySpeed=kmh<52?1:kmh<86?2:kmh<124?3:kmh<164?4:5;
     if(gearBySpeed!==this._gear&&kmh>8){
       this._gear=gearBySpeed;
-      this._shiftUntil=nowMs+185;
+      this._shiftUntil=nowMs+105;
     }
-    const gearLow=[0,0,34,69,105,143][this._gear]||0;
-    const gearHigh=[0,49,85,123,161,205][this._gear]||205;
-    const progress=clamp((kmh-gearLow)/Math.max(1,gearHigh-gearLow),0,1);
-    const roadRpm=IDLE_RPM+progress*4750;
-    const freeRev=IDLE_RPM+throttle*5100;
-    let target=kmh<5?freeRev:Math.max(roadRpm,IDLE_RPM+throttle*2500);
-    if(nowMs<this._shiftUntil)target*=.67;
+
+    const redlineSpeed=[0,52,86,124,164,210][this._gear]||210;
+    const roadProgress=clamp(kmh/Math.max(1,redlineSpeed),0,1);
+    const roadRpm=IDLE_RPM+roadProgress*(REDLINE_RPM-IDLE_RPM);
+    const coupledRpm=roadRpm+throttle*260;
+
+    // Launch clutch slip: the engine can rev freely at walking speed, then
+    // couples progressively to road RPM instead of snapping to a fixed band.
+    const freeRev=IDLE_RPM+throttle*3800;
+    const clutch=clamp((kmh-4)/18,0,1);
+    const target=kmh<4?freeRev:(freeRev*(1-clutch)+coupledRpm*clutch);
     return clamp(target,IDLE_RPM,REDLINE_RPM);
   }
 
@@ -184,7 +191,7 @@ export class CarEngineSampleRuntime{
     n.combustion.parameters.get('rpm')?.setTargetAtTime(this._rpm,now,.035);
     n.combustion.parameters.get('load')?.setTargetAtTime(load,now,.045);
     n.combustion.parameters.get('coast')?.setTargetAtTime(coast,now,.055);
-    n.combustion.parameters.get('level')?.setTargetAtTime((.64+rpm01*.09)*(shifting?.80:1),now,.055);
+    n.combustion.parameters.get('level')?.setTargetAtTime((.64+rpm01*.09)*(shifting?.94:1),now,.055);
 
     // Body resonance opens progressively with RPM and load, without turning into a whistle.
     n.cabin.frequency.setTargetAtTime(360+rpm01*420,now,.12);
