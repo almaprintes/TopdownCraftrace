@@ -7,8 +7,7 @@ const BASE=import.meta.env.BASE_URL||'/';
 const MODES=[
   {key:'timeattack',asset:'contrarreloj.webp'},
   {key:'ghost',asset:'fantasma.webp'},
-  {key:'duel',asset:'duelo.webp'},
-  {key:'practice',asset:'area-pruebas.webp'}
+  {key:'duel',asset:'duelo.webp'}
 ];
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
