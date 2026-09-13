@@ -69,7 +69,7 @@ jobs:
           grep -q "tdr-legal-modal" src/ui/settingsLegalEnhancer.js
           grep -q "PRIVACIDAD DE ANUNCIOS" src/ui/settingsLegalEnhancer.js
           grep -q "raceLoadingExperienceV7.js" src/game/ui/raceLoadingExperience.js
-          grep -q "--tdr-vv-height" src/game/ui/raceLoadingExperienceV7.js
+          grep -q -- "--tdr-vv-height" src/game/ui/raceLoadingExperienceV7.js
           grep -q "max-height:520px" src/game/ui/raceLoadingExperienceV7.js
           grep -q "RaceEmbeddedReplayScene.js" src/game/game.js
           grep -q "StatsBroadcastRealReplayScene.js" src/game/game.js
