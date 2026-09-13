@@ -47,6 +47,7 @@ export class CarEngineSampleRuntime{
     this._zoneWindows=[];
     this._zoneIndex=0;
     this._zonesReady=false;
+    this._rpmState=.08;
     this._onLoadedMetadata=()=>this._prepareZoneWindows();
     this.audio.addEventListener('loadedmetadata',this._onLoadedMetadata);
     try{this.audio.load();}catch{}
@@ -94,6 +95,7 @@ export class CarEngineSampleRuntime{
       this.audio.playbackRate=1;
       this.audio.volume=.03;
       this._lastAppliedVolume=.03;
+      this._rpmState=.08;
       this._zoneIndex=0;
       if(this._zonesReady)this.audio.currentTime=this._zoneWindows[0].start;
       else this.audio.currentTime=0;
@@ -118,14 +120,27 @@ export class CarEngineSampleRuntime{
     const speedPx=Math.hypot(Number(body?.velocity?.x||0),Number(body?.velocity?.y||0));
     const kmh=Math.max(0,pxpsToKmh(speedPx));
     const throttle=clamp(Number(this.scene.touch?.throttle||0),0,1);
-    const motion=clamp(kmh/145,0,1);
-    const demand=clamp(throttle*.72+motion*.28,0,1);
-    const nextZone=demand<.18?0:demand<.43?1:demand<.70?2:3;
+    const motion=clamp(kmh/150,0,1);
+
+    // DEV 1.0.93: throttle is effectively digital on touch devices, so do not map
+    // it directly to a zone. Maintain a virtual RPM state that rises/falls over time.
+    // This makes 0 -> 1 throttle travel through low, mid-low, mid-high and high RPM
+    // instead of jumping straight from idle to the highest sample.
+    const speedFloor=.06+motion*.42;
+    const throttleTarget=throttle>.05?clamp(.20+motion*.25+throttle*.55,0,1):speedFloor;
+    const target=Math.max(speedFloor,throttleTarget);
+    const rise=throttle>.05?.085:.035;
+    const fall=.055;
+    if(this._rpmState<target)this._rpmState=Math.min(target,this._rpmState+rise);
+    else if(this._rpmState>target)this._rpmState=Math.max(target,this._rpmState-fall);
+    this._rpmState=clamp(this._rpmState,.04,1);
+
+    const nextZone=this._rpmState<.24?0:this._rpmState<.48?1:this._rpmState<.72?2:3;
     this._setZone(nextZone);
     this._keepInsideZone();
 
     const preGrid=this.scene._startState==='WAIT_ENGINE'||this.scene._startState==='READY';
-    const targetVolume=clamp((p.mute?0:p.master*p.engine)*(.16+motion*.17+throttle*.24)*(preGrid?.72:1),0,.64);
+    const targetVolume=clamp((p.mute?0:p.master*p.engine)*(.16+this._rpmState*.18+throttle*.18)*(preGrid?.72:1),0,.64);
     try{
       if(force||Math.abs(targetVolume-this._lastAppliedVolume)>=VOLUME_EPSILON){
         this.audio.volume=targetVolume;
