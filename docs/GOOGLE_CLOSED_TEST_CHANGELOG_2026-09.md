@@ -88,12 +88,28 @@ Documento de trabajo para conservar una trazabilidad clara de los cambios realiz
 
 **Pendiente de la próxima compilación Android:** conectar el acceso de la sección Legal al formulario UMP y ordenar al proceso de compilación que no cree ni conserve el botón flotante global de privacidad. La versión web DEV no muestra dicho botón porque la superposición pertenece a la integración Android publicada, no a la interfaz Phaser.
 
+### DEV 1.0.71 — compactación de Configuración y contenido Legal
+
+**Problema detectado en dispositivo:** al crecer Configuración con nuevas secciones, las pastillas superiores empezaban a superar el ancho útil de algunos dispositivos en horizontal.
+
+**Corrección:** las pestañas de Configuración se compactaron y distribuyen el ancho disponible de forma adaptativa. La sección Legal pasó a ofrecer paneles seleccionables con textos de privacidad, soporte e información legal en una modal sobria y fácilmente descartable.
+
+**Alcance:** cambio de presentación y accesibilidad de información; no modifica consentimiento, publicidad, economía ni lógica de juego.
+
+### DEV 1.0.72 — pantalla de carga adaptada al viewport visible de Android
+
+**Problema detectado en prueba real con Android:** en determinados teléfonos en horizontal, la pantalla `PREPARACIÓN DE CARRERA` no cabía dentro del área realmente visible de la WebView. La barra de estado superior y la zona de navegación lateral reducían el espacio útil y la parte inferior quedaba recortada, ocultando el consejo de conducción y contenido inferior.
+
+**Corrección:** se añadió una capa responsive específica sobre la experiencia de carga que utiliza las dimensiones y desplazamiento del `visualViewport` ya medidos por el juego. El contenedor de carga se limita al ancho y alto realmente visibles y, en pantallas horizontales de poca altura, reduce de forma progresiva padding, separación, título, tarjeta del coche, mapa y consejo para conservar todos los elementos dentro del área útil.
+
+**Compatibilidad:** se mantienen el circuito, coche seleccionado, progreso de carga, consejos y lógica existente. No se modifican física, carrera, inventario, economía ni monetización. La corrección afecta únicamente al ajuste visual de la pantalla de preparación/carga.
+
 ## Resumen orientado a futura explicación a Google
 
 Durante la prueba cerrada se han realizado principalmente cuatro tipos de trabajo:
 
-1. **Corrección de errores encontrados durante pruebas reales**, como inconsistencias de HUD, replay, cámara, inventario, sincronización entre pantallas y superposiciones de interfaz Android.
-2. **Mejoras de estabilidad y presentación móvil**, especialmente en elementos que antes dependían de la cámara de Phaser y ahora permanecen correctamente fijos en pantalla.
+1. **Corrección de errores encontrados durante pruebas reales**, como inconsistencias de HUD, replay, cámara, inventario, sincronización entre pantallas, superposiciones de interfaz Android y recortes provocados por el viewport útil del dispositivo.
+2. **Mejoras de estabilidad y presentación móvil**, especialmente en elementos que antes dependían de la cámara de Phaser o de dimensiones nominales de pantalla y ahora respetan mejor el área realmente visible.
 3. **Mejoras de Race Control y repeticiones locales**, incluyendo Top 10, almacenamiento local, visualización de vueltas, telemetría y análisis de trazada.
 4. **Mejoras de claridad de interfaz**, incluyendo la centralización de opciones legales y de privacidad, sin alterar de forma arbitraria la economía ni las reglas centrales del juego.
 
