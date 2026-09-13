@@ -66,6 +66,7 @@ jobs:
           test -f src/game/scenes/StatsBroadcastRealReplayScene.js
           test -f src/game/scenes/StatsTesterExchangeScene.js
           test -f src/game/scenes/statsTesterExchangePatch.js
+          test -f src/game/scenes/MenuRewardedAdsScene.js
           test -f src/game/social/pilotProfile.js
           test -f src/game/social/sharedLapExchange.js
           test -f src/game/social/sharedLapStore.js
@@ -102,6 +103,9 @@ jobs:
           grep -q "lastPointerAt" src/game/ui/racePauseUi.js
           grep -q "RaceEmbeddedReplaySceneV2.js" src/game/game.js
           grep -q "StatsBroadcastRealReplayScene.js" src/game/game.js
+          grep -q "MenuRewardedAdsScene.js" src/game/game.js
+          grep -q "store_rewarded_coins" src/game/scenes/MenuRewardedAdsScene.js
+          grep -q "recycler_exchange" src/game/monetization/RewardedAdsProvider.js
           grep -q "TDRLAP1:" src/game/social/sharedLapExchange.js
           grep -q "PERFIL DE PILOTO" src/game/social/pilotProfile.js
           grep -q "TESTERS" src/game/scenes/StatsTesterExchangeScene.js
@@ -160,7 +164,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.84/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.85/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -177,8 +181,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.84' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.84' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.85' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.85' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
