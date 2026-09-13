@@ -64,9 +64,13 @@ jobs:
           test -f src/game/scenes/StatsBroadcastReplayScene.js
           test -f src/game/scenes/StatsBroadcastRealReplayScene.js
           test -f src/ui/settingsLegalEnhancer.js
+          test -f src/game/ui/raceLoadingExperienceV7.js
           grep -q "settingsLegalEnhancer.js" index.html
           grep -q "tdr-legal-modal" src/ui/settingsLegalEnhancer.js
           grep -q "PRIVACIDAD DE ANUNCIOS" src/ui/settingsLegalEnhancer.js
+          grep -q "raceLoadingExperienceV7.js" src/game/ui/raceLoadingExperience.js
+          grep -q "--tdr-vv-height" src/game/ui/raceLoadingExperienceV7.js
+          grep -q "max-height:520px" src/game/ui/raceLoadingExperienceV7.js
           grep -q "RaceEmbeddedReplayScene.js" src/game/game.js
           grep -q "StatsBroadcastRealReplayScene.js" src/game/game.js
           grep -q "this._diag = () => {}" src/game/scenes/RaceNoDiagScene.js
@@ -118,7 +122,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.71/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.72/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -135,8 +139,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.71' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.71' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.72' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.72' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
@@ -146,7 +150,7 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: $${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
     steps:
