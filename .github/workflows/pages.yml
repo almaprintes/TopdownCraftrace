@@ -59,6 +59,7 @@ jobs:
           test -f src/game/scenes/RaceReplayCleanScene.js
           test -f src/game/scenes/RaceEmbeddedReplayScene.js
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          test -f src/game/scenes/RaceDuelOpponentRepairScene.js
           test -f src/game/audio/CarEngineSampleRuntime.js
           test -f src/game/audio/EngineCombustionProcessor.js
           test -f src/game/stats/localRaceRecords.js
@@ -168,6 +169,9 @@ jobs:
           grep -q "embeddedRequested" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "replayTrackKey" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -Fq "this._tdrEmbeddedReplay=embeddedRequested===true" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -q "RaceDuelOpponentRepairScene.js" src/game/scenes/RaceSurvivalHardLapCapScene.js
+          grep -q "findNestedVisual" src/game/scenes/RaceDuelOpponentRepairScene.js
+          grep -q "_tdrDuelOpponentInitAttempts" src/game/scenes/RaceDuelOpponentRepairScene.js
           grep -q "matchingLap" src/game/stats/localRaceRecords.js
           grep -q "br-brand-watermark" src/game/scenes/StatsBroadcastScene.js
           grep -q "logo_.*_negativo" src/game/scenes/StatsBroadcastScene.js
@@ -190,7 +194,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
-          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.107/g' dist/index.html
+          sed -i -E 's/DEV 1\.0\.[0-9]+/DEV 1.0.108/g' dist/index.html
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
@@ -207,8 +211,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.107' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.107' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.108' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.108' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
