@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RacePracticeAreaSurfaceTuningScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceDuelOpponentRepairScene.js';
 
 const SURVIVAL_MAX_LAPS=5;
 
