@@ -2,9 +2,27 @@ import { RaceScene as EmbeddedReplayRaceScene } from './RaceEmbeddedReplayScene.
 import { CarEngineSampleRuntime } from '../audio/CarEngineSampleRuntime.js';
 
 const clamp01=n=>Math.max(0,Math.min(1,Number(n)||0));
+const STATS_REPLAY_KEY='tdr2:statsNativeReplay';
+
+function readPendingReplay(){
+  try{
+    const raw=JSON.parse(sessionStorage.getItem(STATS_REPLAY_KEY)||'null');
+    return raw&&Array.isArray(raw.samples)&&raw.samples.length>4?raw:null;
+  }catch{return null;}
+}
 
 export class RaceScene extends EmbeddedReplayRaceScene{
   create(data){
+    const pending=data?.statsNativeReplay?readPendingReplay():null;
+    const embeddedRequested=data?.statsEmbeddedReplay===true||pending?.embedded===true;
+    const replayTrackKey=String(pending?.trackId||data?.trackKey||'').trim();
+    const createData=replayTrackKey?{...(data||{}),trackKey:replayTrackKey}:data;
+
+    // RaceTop10ReplayScene starts the native replay on a zero-delay callback.
+    // Seed the embedded state before the normal race create chain runs so no
+    // gameplay-only UI/state (notably ignition) can be installed in the gap.
+    if(embeddedRequested)this._tdrEmbeddedReplay=true;
+
     let blockedAutoStart=false;
     const clock=this.time;
     const originalDelayed=clock?.delayedCall?.bind(clock);
@@ -19,8 +37,8 @@ export class RaceScene extends EmbeddedReplayRaceScene{
       };
     }
     let result;
-    try{result=super.create(data);}finally{if(originalDelayed)clock.delayedCall=originalDelayed;}
-    if(!this._tdrEmbeddedReplay){
+    try{result=super.create(createData);}finally{if(originalDelayed)clock.delayedCall=originalDelayed;}
+    if(!embeddedRequested&&!this._tdrEmbeddedReplay){
       try{
         this._tdrEngineSample?.destroy?.();
         this._tdrEngineSample=new CarEngineSampleRuntime(this);
@@ -31,6 +49,8 @@ export class RaceScene extends EmbeddedReplayRaceScene{
           this._tdrEngineSample=null;
         });
       }catch(e){console.warn('[TDR2 ignition] init failed',e);}
+    }else{
+      this._tdrRemoveIgnitionButton();
     }
     return result;
   }
