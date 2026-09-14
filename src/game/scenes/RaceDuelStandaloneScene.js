@@ -11,9 +11,21 @@ function readDuelLaps(){
   try{const n=Number(localStorage.getItem(DUEL_LAPS_KEY)||15);return[5,10,15].includes(n)?n:15;}catch{return 15;}
 }
 function visualCarSprite(scene){
-  const list=scene?.carRig?.list;
-  if(!Array.isArray(list))return null;
-  return list.find(o=>o?.visible!==false&&o?.texture?.key&&o.texture.key!=='__BODY__'&&scene.textures?.exists?.(o.texture.key))||null;
+  const seen=new Set();
+  const isVisual=obj=>obj?.visible!==false&&obj?.texture?.key&&obj.texture.key!=='__BODY__'&&scene?.textures?.exists?.(obj.texture.key);
+  const visit=obj=>{
+    if(!obj||seen.has(obj))return null;
+    seen.add(obj);
+    if(obj!==scene?.carRig&&isVisual(obj))return obj;
+    if(Array.isArray(obj?.list)){
+      for(const child of obj.list){
+        const found=visit(child);
+        if(found)return found;
+      }
+    }
+    return null;
+  };
+  return visit(scene?.carRig)||(isVisual(scene?.car)?scene.car:null);
 }
 function centerline(scene){
   const cl=scene.track?.meta?.raceCenterline||scene.track?.meta?.centerline||scene.track?.raceCenterline||scene.track?.centerline;
