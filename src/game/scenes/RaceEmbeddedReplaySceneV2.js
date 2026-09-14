@@ -18,10 +18,9 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     const replayTrackKey=String(pending?.trackId||data?.trackKey||'').trim();
     const createData=replayTrackKey?{...(data||{}),trackKey:replayTrackKey}:data;
 
-    // RaceTop10ReplayScene starts the native replay on a zero-delay callback.
-    // Seed the embedded state before the normal race create chain runs so no
-    // gameplay-only UI/state (notably ignition) can be installed in the gap.
-    if(embeddedRequested)this._tdrEmbeddedReplay=true;
+    // Phaser reuses the RaceScene instance after stop/start. A previous Race
+    // Control replay must never leak its embedded flag into a later real race.
+    this._tdrEmbeddedReplay=embeddedRequested===true;
 
     let blockedAutoStart=false;
     const clock=this.time;
