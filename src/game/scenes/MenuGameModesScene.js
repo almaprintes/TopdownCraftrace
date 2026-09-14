@@ -3,7 +3,7 @@ import { recordModeStart } from '../seasons/seasonTelemetry.js';
 
 const MODE_KEY='tdr2:gameMode';
 const PRACTICE_TRACK_KEY='practice-area';
-const RELEASE_MODES=new Set(['timeattack','ghost','practice']);
+const RELEASE_MODES=new Set(['timeattack','ghost','duel','practice']);
 
 function walk(node,fn){
   if(!node)return;
