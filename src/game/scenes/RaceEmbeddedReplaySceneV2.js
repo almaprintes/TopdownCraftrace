@@ -12,6 +12,17 @@ function readPendingReplay(){
 }
 
 export class RaceScene extends EmbeddedReplayRaceScene{
+  init(data){
+    // Phaser runs init() before preload(). Environment Studio assets are loaded
+    // from preload, so the selected circuit must already be bound here. Waiting
+    // until create() made the environment runtime depend on stale scene state
+    // after Phaser reused the race scene (especially visible in Ghost/Atlántico).
+    const pending=data?.statsNativeReplay?readPendingReplay():null;
+    const requested=String(pending?.trackId||data?.trackKey||'').trim();
+    if(requested)this.trackKey=requested;
+    return super.init?.(data);
+  }
+
   create(data){
     const pending=data?.statsNativeReplay?readPendingReplay():null;
     const embeddedRequested=data?.statsEmbeddedReplay===true||pending?.embedded===true;
