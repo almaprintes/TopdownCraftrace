@@ -9,7 +9,6 @@ const SLIP_STRONG = 72;
 const DIRT_CARRY_MS = 1250;
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
-function isIOSDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
 function currentTrackKey(scene){
   let stored='';
   try{stored=localStorage.getItem('tdr2:trackKey')||'';}catch{}
@@ -32,8 +31,9 @@ export class RaceScene extends CurrentRaceScene {
   }
   update(time, delta){
     const result = super.update?.(time, delta);
-    // Controlled iOS performance A/B: skip transient Graphics + Tween churn only.
-    if (isIOSDevice()) return result;
+    // Graphics preset owns this visual effect on every platform, including iOS.
+    // High + Ultra: enabled. Performance + Medium: disabled.
+    if (this._tdrAllowDriftEffects !== true) return result;
     if (window.__tdrIosSafeMode === true) return result;
     if (!this._raceStarted || !this.car?.body) return result;
     if (Number(time || 0) < Number(this._nextTireMarkAt || 0)) return result;
@@ -58,10 +58,7 @@ export class RaceScene extends CurrentRaceScene {
 
     let carryingDirt=false;
     if(raven){
-      // Raven Hollow: pista=tierra, exterior inmediato=asfalto.
-      // Tierra -> asfalto: arrastre marrón claro.
       if(prevOnTrack===true && offRoad) this._dirtCarryUntil=nowMs+DIRT_CARRY_MS;
-      // Asfalto -> tierra: cortar inmediatamente cualquier arrastre.
       if(onTrack) this._dirtCarryUntil=0;
       carryingDirt=offRoad && nowMs<Number(this._dirtCarryUntil||0);
     }else{
@@ -80,7 +77,6 @@ export class RaceScene extends CurrentRaceScene {
     let width = 2.2 + clamp01(slip / 120) * 1.4, life = 1150, markKind = 'rubber';
 
     if(raven && onTrack){
-      // Tierra: huella muy oscura, gruesa y prácticamente continua mientras el coche rueda.
       color = 0x2f1d12;
       alpha = 0.52 + clamp01(speed / 330) * 0.16;
       width = 6.4 + clamp01(slip / 110) * 2.0;
@@ -91,7 +87,6 @@ export class RaceScene extends CurrentRaceScene {
     if(offRoad){
       if(raven){
         if(carryingDirt){
-          // Acaba de salir de tierra hacia asfalto: polvo/tierra clara arrastrada.
           const carry = clamp01((Number(this._dirtCarryUntil || 0) - nowMs) / DIRT_CARRY_MS);
           color = 0xb89562;
           alpha = 0.13 + carry * 0.20;
@@ -99,7 +94,6 @@ export class RaceScene extends CurrentRaceScene {
           life = 1000;
           markKind = 'raven-dirt-to-asphalt';
         }else{
-          // Ya está rodando sobre asfalto: goma oscura, más fina y fugaz.
           color = 0x201d1a;
           alpha = 0.22 + clamp01(slip / 100) * 0.12;
           width = 2.6 + clamp01(slip / 120) * 0.8;
