@@ -2,7 +2,6 @@ import { StatsScene as CurrentStatsScene } from './StatsBroadcastRealReplayScene
 import { shareLapCode, decodeSharedLap } from '../social/sharedLapExchange.js';
 import { loadSharedLaps } from '../social/sharedLapStore.js';
 
-const readGhost=key=>{try{const g=JSON.parse(localStorage.getItem(key)||'null');return g&&Array.isArray(g.samples)&&g.samples.length>4?g:null;}catch{return null;}};
 const fmt=ms=>{const n=Math.max(0,Number(ms)||0),m=Math.floor(n/60000),s=(n%60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;};
 
 export class StatsScene extends CurrentStatsScene{
@@ -14,16 +13,22 @@ export class StatsScene extends CurrentStatsScene{
     b.style.cssText='position:absolute;right:12px;bottom:12px;z-index:30;height:34px;border:1px solid #55eaff;background:#0a3443;color:#fff;padding:0 13px;font:1000 9px system-ui;letter-spacing:.08em';
     b.onclick=()=>this._openTesterExchange(trackId||this._selectedTrack());
     main.appendChild(b);
-    try{this._addShareButtons(trackId||this._selectedTrack());}catch(err){console.warn('[tester-share] controls skipped',err);}
   }
 
   _selectedTrack(){for(const el of this._root?.querySelectorAll('[data-br-track]')||[])if(el.classList.contains('active'))return String(el.dataset.brTrack||'');return'';}
 
-  _addShareButtons(trackId){
-    const state=this._getSelectedRecord?.(trackId);if(!state)return;
-    const laps=Array.isArray(state.topLaps)?state.topLaps.slice(0,10):[];
-    const rows=[...(this._root?.querySelectorAll('.br-lap')||[])];
-    rows.forEach((row,index)=>{const lap=laps[index];if(!lap)return;let key=lap.replayKey||null;if(!key&&state.ghostKey&&Math.abs(Number(lap.lapMs)-Number(state.bestLapMs))<=1)key=state.ghostKey;const ghost=key?readGhost(key):null;if(!ghost)return;const share=document.createElement('button');share.type='button';share.textContent='⇧';share.title='Compartir vuelta';share.style.cssText='width:25px;height:25px;border:1px solid #e5a646;background:#4a2d0c;color:#ffd68d;font-weight:1000';share.onclick=async e=>{e.stopPropagation();try{await shareLapCode(ghost);}catch(err){if(err?.name!=='AbortError')console.warn('[tester-share]',err);}};row.appendChild(share);});
+  _showRaceControlReplay(record,ghost){
+    super._showRaceControlReplay(record,ghost);
+    if(!ghost?.samples?.length)return;
+    const head=this._root?.querySelector('.br-native-monitor .br-monitor-head');
+    if(!head)return;
+    head.querySelector('[data-br-share-replay]')?.remove();
+    const share=document.createElement('button');
+    share.type='button';share.dataset.brShareReplay='1';share.textContent='⇧';share.title='Compartir esta vuelta';
+    share.style.cssText='height:30px;min-width:34px;margin-left:auto;margin-right:7px;border:1px solid #e5a646;background:#4a2d0c;color:#ffd68d;font-size:18px;font-weight:1000;line-height:1';
+    share.onclick=async e=>{e.stopPropagation();try{await shareLapCode(ghost);}catch(err){if(err?.name!=='AbortError')console.warn('[tester-share]',err);}};
+    const close=head.querySelector('[data-br-native-close]');
+    if(close)head.insertBefore(share,close);else head.appendChild(share);
   }
 
   _openTesterExchange(trackId){
