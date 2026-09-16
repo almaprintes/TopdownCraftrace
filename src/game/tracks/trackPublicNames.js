@@ -1,12 +1,7 @@
 import { TRACK_REGISTRY, CANONICAL_TRACK_IDS, canonicalTrackId } from './trackIdentity.js';
 import '../ui/sessionEngineerTrendRuntime.js';
 import '../social/pilotProfile.js';
-
-if(typeof window!=='undefined'){
-  window.addEventListener('tdr:bootready',()=>{
-    import('../scenes/statsTesterExchangePatch.js').catch(err=>console.warn('[tester-exchange] patch load failed',err));
-  },{once:true});
-}
+import '../scenes/statsTesterExchangePatch.js';
 
 const PUBLIC_TRACK_NAMES=Object.freeze({
   [CANONICAL_TRACK_IDS.ATLANTICO]:'CIRCUITO ATLÁNTICO',
