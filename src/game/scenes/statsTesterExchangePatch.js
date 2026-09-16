@@ -20,16 +20,22 @@ if(current&&tester&&!current.__tdrTesterExchangePatch){
     root.appendChild(b);
 
     // Replay controls can be painted after the records themselves. Observe the records
-    // panel instead of racing that asynchronous paint with timers: every time TOP rows
-    // change, rebuild the share controls against the final DOM.
+    // panel instead of racing that asynchronous paint with timers. Ignore mutations made
+    // by our own share buttons so the observer cannot feed itself.
     const decorate=()=>{
       if(!this._root?.isConnected)return;
-      this._root.querySelectorAll('button[title="Compartir vuelta"]').forEach(el=>el.remove());
-      try{this._addShareButtons?.(selected());}catch(err){console.warn('[tester-share] controls skipped',err);}
+      this._tdrShareDecorating=true;
+      try{
+        this._root.querySelectorAll('button[title="Compartir vuelta"]').forEach(el=>el.remove());
+        this._addShareButtons?.(selected());
+      }catch(err){console.warn('[tester-share] controls skipped',err);}
+      finally{this._tdrShareDecorating=false;}
     };
     try{this._tdrShareObserver?.disconnect?.();}catch{}
     this._tdrShareObserver=new MutationObserver(mutations=>{
-      if(mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(n=>n?.nodeType===1)))decorate();
+      if(this._tdrShareDecorating)return;
+      const external=mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(n=>n?.nodeType===1&&!(n.matches?.('button[title="Compartir vuelta"]'))));
+      if(external)queueMicrotask(decorate);
     });
     this._tdrShareObserver.observe(root,{childList:true,subtree:true});
     queueMicrotask(decorate);
