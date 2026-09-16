@@ -1,7 +1,15 @@
 import { RaceScene as CurrentRaceScene } from './RaceGraphicsPresetScene.js';
 import { recordCompletedLapClean } from '../seasons/cleanLapTelemetry.js';
+import { showRaceFeedback } from '../ui/raceFeedbackUi.js';
 
 const CLEAN_SAMPLE_MS=100;
+const FEEDBACK_HOLD_MS=4800;
+
+function fmtLap(ms){
+  ms=Number(ms);if(!Number.isFinite(ms)||ms<=0)return'--:--.--';
+  const m=Math.floor(ms/60000),s=(ms-m*60000)/1000;
+  return`${m}:${s.toFixed(2).padStart(5,'0')}`;
+}
 
 export class RaceScene extends CurrentRaceScene {
   create(data){
@@ -11,6 +19,8 @@ export class RaceScene extends CurrentRaceScene {
     this._currentLapClean=true;
     this._cleanLapAccum=CLEAN_SAMPLE_MS;
     this._liveHudClosedForSessionEnd=false;
+    this._feedbackBestLapMs=Number.isFinite(Number(this.ttBest?.lapMs))?Number(this.ttBest.lapMs):null;
+    this._feedbackSessionBestMs=null;
     this._retireLegacyDeltaHud();
     return result;
   }
@@ -28,8 +38,6 @@ export class RaceScene extends CurrentRaceScene {
       for(const label of labels){
         const lx=Number(label?.x),ly=Number(label?.y);
         try{label.setVisible?.(false);}catch{}
-        // Retire the value immediately beneath the legacy DELTA heading while
-        // leaving LAST/BEST and unrelated HUD text untouched.
         for(const candidate of flat){
           if(candidate===label||typeof candidate?.text!=='string')continue;
           const x=Number(candidate?.x),y=Number(candidate?.y);
@@ -61,6 +69,37 @@ export class RaceScene extends CurrentRaceScene {
     }catch{}
   }
 
+  _retireLegacyRecordNotice(){
+    try{
+      const topLimit=(Number(this.scale?.height)||0)*0.42;
+      for(const child of [...(this.children?.list||[])]){
+        const text=String(child?.text||'').toUpperCase();
+        if(!text.includes('RÉCORD')&&!text.includes('RECORD'))continue;
+        const y=Number(child?.y||0);
+        if(!topLimit||y<topLimit)child?.destroy?.();
+      }
+    }catch{}
+  }
+
+  _showLapMilestone(row){
+    if(this._survivalMode)return;
+    const ms=Number(row?.lapMs);
+    if(!Number.isFinite(ms)||ms<=1000)return;
+    const previousRecord=this._feedbackBestLapMs;
+    const previousSessionBest=this._feedbackSessionBestMs;
+    const isRecord=!Number.isFinite(previousRecord)||ms<previousRecord-0.5;
+    const isSessionFast=!Number.isFinite(previousSessionBest)||ms<previousSessionBest-0.5;
+    if(isRecord){
+      this._retireLegacyRecordNotice();
+      this.time?.delayedCall?.(80,()=>this._retireLegacyRecordNotice());
+      showRaceFeedback(this,{type:'record',eyebrow:'🏆 NUEVO RÉCORD',title:fmtLap(ms),detail:'RÉCORD DEL CIRCUITO',holdMs:FEEDBACK_HOLD_MS});
+    }else if(isSessionFast){
+      showRaceFeedback(this,{type:'fast',eyebrow:'VUELTA RÁPIDA',title:fmtLap(ms),detail:'MEJOR DE LA SESIÓN',holdMs:FEEDBACK_HOLD_MS});
+    }
+    if(isRecord)this._feedbackBestLapMs=ms;
+    if(isSessionFast)this._feedbackSessionBestMs=ms;
+  }
+
   update(time,delta){
     super.update?.(time,delta);
     this._retireLegacyDeltaHud();
@@ -82,11 +121,9 @@ export class RaceScene extends CurrentRaceScene {
           const valid=row.valid!==false&&row.invalid!==true;
           if(valid){
             const clean=this._currentLapClean===true;
-            // Keep the clean/dirty result on the actual history row so the final
-            // session report can only mention an off-track excursion when the
-            // race telemetry really observed one.
             try{row.tdrCleanLap=clean;}catch{}
             recordCompletedLapClean(this._cleanLapTrackId,clean);
+            this._showLapMilestone(row);
           }
           this._currentLapClean=true;
         }
