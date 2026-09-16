@@ -11,7 +11,7 @@ export class StatsScene extends CurrentStatsScene{
     main.querySelector('[data-tester-exchange]')?.remove();
     const b=document.createElement('button');b.type='button';b.dataset.testerExchange='1';b.textContent='TESTERS';
     b.style.cssText='position:absolute;right:12px;bottom:12px;z-index:30;height:34px;border:1px solid #55eaff;background:#0a3443;color:#fff;padding:0 13px;font:1000 9px system-ui;letter-spacing:.08em';
-    b.onclick=()=>this._openTesterExchange(trackId||this._selectedTrack());
+    b.onclick=e=>{e.preventDefault();e.stopPropagation();this._openTesterExchange(String(trackId||this._selectedTrack()||''));};
     main.appendChild(b);
   }
 
@@ -31,15 +31,17 @@ export class StatsScene extends CurrentStatsScene{
     if(close)head.insertBefore(share,close);else head.appendChild(share);
   }
 
-  _openTesterExchange(trackId){
+  _openTesterExchange(trackId=''){
+    try{this._stopRaceControlReplay?.();}catch{}
     document.querySelector('[data-tester-modal]')?.remove();
+    const selectedTrack=String(trackId||this._selectedTrack()||'');
     const root=document.createElement('div');root.dataset.testerModal='1';root.style.cssText='position:fixed;inset:0;z-index:2147483500;display:grid;place-items:center;background:rgba(2,7,12,.92);font-family:system-ui;color:#fff';
     const card=document.createElement('div');card.style.cssText='width:min(680px,92vw);max-height:88vh;overflow:auto;padding:18px;border:1px solid #3c7b8f;background:#06131d';
-    card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><b>VUELTAS DE TESTERS</b><button data-close>✕</button></div><textarea data-code placeholder="Pega aquí el código TDRLAP1" style="width:100%;height:70px;box-sizing:border-box;margin-top:12px;background:#02090e;color:#fff;border:1px solid #315767"></textarea><button data-import style="margin-top:7px;height:34px">IMPORTAR VUELTA</button><div data-status style="font-size:10px;margin:8px 0;color:#8eb0bd"></div><div data-list></div>`;
+    card.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><b>VUELTAS DE TESTERS</b><button type="button" data-close>✕</button></div><textarea data-code placeholder="Pega aquí el código TDRLAP1" style="width:100%;height:70px;box-sizing:border-box;margin-top:12px;background:#02090e;color:#fff;border:1px solid #315767"></textarea><button type="button" data-import style="margin-top:7px;height:34px">IMPORTAR VUELTA</button><div data-status style="font-size:10px;margin:8px 0;color:#8eb0bd"></div><div data-list></div>`;
     root.appendChild(card);document.body.appendChild(root);
-    const draw=()=>{const list=card.querySelector('[data-list]'),fresh=loadSharedLaps(trackId);list.innerHTML=fresh.map((lap,i)=>`<div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px;border-top:1px solid #17333f"><div><b>${lap.pilot?.name||'PILOTO'}</b><div style="font-size:9px;color:#7893a0">${lap.carId}</div></div><b>${fmt(lap.lapMs)}</b><button data-play="${i}">▶</button></div>`).join('')||'<div style="font-size:10px;color:#7893a0">Sin vueltas recibidas todavía.</div>';list.querySelectorAll('[data-play]').forEach(btn=>btn.onclick=()=>{const lap=fresh[Number(btn.dataset.play)];root.remove();this._showRaceControlReplay({trackId:lap.trackId,selectedLap:{carId:lap.carId,lapMs:lap.lapMs}},{trackKey:lap.trackId,carId:lap.carId,lapMs:lap.lapMs,recordedAt:lap.recordedAt,samples:lap.replay.samples,cameraSamples:lap.replay.cameraSamples||[],viewport:lap.replay.viewport||null});});};
-    card.querySelector('[data-close]').onclick=()=>root.remove();
-    card.querySelector('[data-import]').onclick=()=>{const status=card.querySelector('[data-status]');try{const raw=card.querySelector('[data-code]').value;const pos=raw.indexOf('TDRLAP1:');const imported=decodeSharedLap(pos>=0?raw.slice(pos).trim():raw);status.textContent=`Importada: ${imported.pilot.name} · ${fmt(imported.lapMs)}`;draw();}catch(err){status.textContent=String(err?.message||'Código no válido');}};
+    const draw=()=>{const list=card.querySelector('[data-list]');if(!list)return;const fresh=loadSharedLaps(selectedTrack);list.innerHTML=fresh.map((lap,i)=>`<div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px;border-top:1px solid #17333f"><div><b>${lap.pilot?.name||'PILOTO'}</b><div style="font-size:9px;color:#7893a0">${lap.carId}</div></div><b>${fmt(lap.lapMs)}</b><button type="button" data-play="${i}">▶</button></div>`).join('')||'<div style="font-size:10px;color:#7893a0">Sin vueltas recibidas todavía.</div>';list.querySelectorAll('[data-play]').forEach(btn=>btn.onclick=e=>{e.preventDefault();e.stopPropagation();const lap=fresh[Number(btn.dataset.play)];if(!lap?.replay?.samples?.length)return;root.remove();this._showRaceControlReplay({trackId:lap.trackId,selectedLap:{carId:lap.carId,lapMs:lap.lapMs}},{trackKey:lap.trackId,carId:lap.carId,lapMs:lap.lapMs,recordedAt:lap.recordedAt,samples:lap.replay.samples,cameraSamples:lap.replay.cameraSamples||[],viewport:lap.replay.viewport||null});});};
+    card.querySelector('[data-close]').onclick=e=>{e.preventDefault();e.stopPropagation();root.remove();};
+    card.querySelector('[data-import]').onclick=e=>{e.preventDefault();e.stopPropagation();const status=card.querySelector('[data-status]');try{const raw=card.querySelector('[data-code]').value;const pos=raw.indexOf('TDRLAP1:');const imported=decodeSharedLap(pos>=0?raw.slice(pos).trim():raw);status.textContent=`Importada: ${imported.pilot.name} · ${fmt(imported.lapMs)}`;draw();}catch(err){status.textContent=String(err?.message||'Código no válido');}};
     draw();
   }
 }
