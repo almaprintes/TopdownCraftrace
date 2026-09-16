@@ -8,34 +8,24 @@ if(typeof window!=='undefined'){
   },{once:true});
 }
 
-// Circuit names are proper names: their public identity belongs to the canonical
-// circuit identity and never changes with UI language, selector position or
-// legacy track metadata. Legacy ids remain accepted during storage migration.
-const PUBLIC_TRACK_NAMES = Object.freeze({
-  [CANONICAL_TRACK_IDS.ATLANTICO]: 'CIRCUITO ATLÁNTICO',
-  track01: 'CIRCUITO ATLÁNTICO',
-  'karting-tenerife': 'KARTING TENERIFE',
-  'karting-canarias': 'KARTING CANARIAS'
+const PUBLIC_TRACK_NAMES=Object.freeze({
+  [CANONICAL_TRACK_IDS.ATLANTICO]:'CIRCUITO ATLÁNTICO',
+  'santa-cruz':'SANTA CRUZ',
+  'karting-tenerife':'KARTING TENERIFE',
+  'karting-canarias':'KARTING CANARIAS'
 });
 
-export function getTrackPublicName(trackOrId, language='es') {
-  const rawId=String(typeof trackOrId==='string'?trackOrId:(trackOrId?.key||trackOrId?.id||'')).trim();
-  const id=canonicalTrackId(rawId);
-  const forced=PUBLIC_TRACK_NAMES[id]||PUBLIC_TRACK_NAMES[rawId];
+export function getTrackPublicName(trackOrId,language='es'){
+  const id=canonicalTrackId(trackOrId);
+  const forced=PUBLIC_TRACK_NAMES[id];
   if(forced)return forced;
-  const track=typeof trackOrId==='object'&&trackOrId?trackOrId:TRACK_REGISTRY[id]||TRACK_REGISTRY[rawId];
+  const track=typeof trackOrId==='object'&&trackOrId?trackOrId:TRACK_REGISTRY[id];
   return String(track?.meta?.publicName||track?.name||id||'').trim();
 }
 
-// Keep every legacy consumer aligned with the same canonical public name.
-for (const [key, name] of Object.entries(PUBLIC_TRACK_NAMES)) {
-  const track=TRACK_REGISTRY[key];
-  if(!track)continue;
-  try {
-    Object.defineProperty(track,'name',{configurable:true,enumerable:true,get:()=>name,set:()=>{}});
-  } catch {
-    track.name=name;
-  }
+for(const [key,name] of Object.entries(PUBLIC_TRACK_NAMES)){
+  const track=TRACK_REGISTRY[key];if(!track)continue;
+  try{Object.defineProperty(track,'name',{configurable:true,enumerable:true,get:()=>name,set:()=>{}});}catch{track.name=name;}
   track.meta={...(track.meta||{}),publicName:name};
 }
 
