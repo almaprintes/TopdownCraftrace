@@ -30,10 +30,29 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _sessionLaps(){
-    const laps=super._sessionLaps?.()||[];
     const history=Array.isArray(this.ttHistory)?this.ttHistory:[];
     const base=Math.max(0,Number(this._sessionLapBaseline)||0);
-    return laps.map((lap,i)=>({...lap,pit:!!history[base+i]?.pit}));
+    let laps=super._sessionLaps?.()||[];
+
+    // Fuente de verdad de emergencia: RaceScene añade una entrada a ttHistory
+    // exactamente cuando valida una vuelta (CP1 + CP2 + meta). Si una capa de
+    // sesión pierde su espejo de esas vueltas, reconstruimos el informe desde
+    // ese histórico canónico en vez de mostrar una tanda vacía.
+    if(!laps.length&&history.length>base){
+      laps=history.slice(base).map((rec,i)=>{
+        const lapMs=Number(rec?.lapMs);
+        const s1=Number(rec?.s1);
+        const s2Cum=Number(rec?.s2);
+        const sectors=[
+          Number.isFinite(s1)&&s1>0?s1:null,
+          Number.isFinite(s1)&&Number.isFinite(s2Cum)&&s2Cum>s1?s2Cum-s1:null,
+          Number.isFinite(s2Cum)&&Number.isFinite(lapMs)&&lapMs>s2Cum?lapMs-s2Cum:null
+        ];
+        return {n:i+1,lapMs:Number.isFinite(lapMs)?lapMs:null,sectors,pit:!!rec?.pit};
+      }).filter(lap=>Number.isFinite(lap.lapMs)&&lap.lapMs>1000);
+    }
+
+    return laps.map((lap,i)=>({...lap,pit:!!(lap?.pit||history[base+i]?.pit)}));
   }
 
   _f1LapTable(r){
