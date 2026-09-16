@@ -3,9 +3,23 @@ import { RaceScene as CurrentRaceScene } from './RacePracticeAreaScene.js';
 const PRACTICE_KEY='practice-area';
 const MODE_KEY='tdr2:gameMode';
 
+// Practice was retired from the shipping mode selector. A legacy saved
+// `tdr2:gameMode=practice` must never reactivate its race wrappers when a real
+// mode (timeattack/ghost/duel) launches. Only an explicit legacy/dev launch may
+// opt into the old practice runtime.
 function isPractice(data){
-  if(data?.gameMode==='practice')return true;
-  try{return localStorage.getItem(MODE_KEY)==='practice';}catch{return false;}
+  return data?.gameMode==='practice';
+}
+
+function retireStalePracticeMode(data){
+  if(data?.gameMode==='practice')return;
+  try{
+    if(localStorage.getItem(MODE_KEY)!=='practice')return;
+    const incoming=String(data?.gameMode||'').trim();
+    if(incoming)localStorage.setItem(MODE_KEY,incoming);
+    else localStorage.removeItem(MODE_KEY);
+    console.info('[TDR2] retired stale practice gameMode before race init',{incoming:incoming||null});
+  }catch{}
 }
 
 function hideCell(cell){
@@ -17,6 +31,7 @@ function hideCell(cell){
 
 export class RaceScene extends CurrentRaceScene{
   init(data){
+    retireStalePracticeMode(data);
     const practice=isPractice(data);
     let savedTrack=null;
     let hadSaved=false;
