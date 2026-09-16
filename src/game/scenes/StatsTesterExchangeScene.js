@@ -11,12 +11,12 @@ export class StatsScene extends CurrentStatsScene{
     main.querySelector('[data-tester-exchange]')?.remove();
     const b=document.createElement('button');b.type='button';b.dataset.testerExchange='1';b.textContent='TESTERS';
     b.style.cssText='position:absolute;right:12px;bottom:12px;z-index:30;height:34px;border:1px solid #55eaff;background:#0a3443;color:#fff;padding:0 13px;font:1000 9px system-ui;letter-spacing:.08em';
-    const selectedTrack=String(trackId||this._selectedTrack()||'');
+    const selectedTrack=String(trackId||this._testerSelectedTrack()||'');
     b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();try{this._openTesterExchange(selectedTrack);}catch(err){console.error('[tester-exchange] open failed',err);}},false);
     main.appendChild(b);
   }
 
-  _selectedTrack(){for(const el of this._root?.querySelectorAll('[data-br-track]')||[])if(el.classList.contains('active'))return String(el.dataset.brTrack||'');return'';}
+  _testerSelectedTrack(){for(const el of this._root?.querySelectorAll('[data-br-track]')||[])if(el.classList.contains('active'))return String(el.dataset.brTrack||'');return'';}
 
   _showRaceControlReplay(record,ghost){
     super._showRaceControlReplay(record,ghost);
