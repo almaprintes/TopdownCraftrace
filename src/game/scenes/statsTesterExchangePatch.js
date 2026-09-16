@@ -18,7 +18,9 @@ if(current&&tester&&!current.__tdrTesterExchangePatch){
     b.style.cssText='position:absolute;right:12px;bottom:12px;z-index:30;height:34px;border:1px solid #55eaff;background:#0a3443;color:#fff;padding:0 13px;font:1000 9px system-ui;letter-spacing:.08em';
     b.onclick=()=>this._openTesterExchange?.(this._selectedTrack?.()||id);
     root.appendChild(b);
-    this._addShareButtons?.(this._selectedTrack?.()||id);
+    const decorate=()=>{if(!this._root?.isConnected)return;this._root.querySelectorAll('[data-tdr-share-lap]').forEach(el=>el.remove());this._addShareButtons?.(this._selectedTrack?.()||id);};
+    decorate();
+    requestAnimationFrame(decorate);
     return out;
   };
   current.__tdrTesterExchangePatch=true;
