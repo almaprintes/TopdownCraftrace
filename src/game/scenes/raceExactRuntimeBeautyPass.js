@@ -56,6 +56,10 @@ function buildExactRoadMask(scene) {
 }
 
 function installPass(scene, data) {
+  if (scene?._tdrAllowBeautyLayer === false) {
+    console.info('[TDR2] exact runtime beauty disabled by graphics preset');
+    return;
+  }
   if (trackId(scene, data) !== 'karting-tenerife') return;
 
   // The baked Beauty Layer already contains asphalt + grass + outer terrain.
