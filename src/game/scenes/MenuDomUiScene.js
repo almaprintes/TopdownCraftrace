@@ -1,9 +1,12 @@
 import { MenuScene as PreviousMenuScene } from './MenuStoreScene.js';
 import { installLobbyDom } from '../ui/LobbyDomUi.js';
 import { polishLobbyForPublish } from '../ui/LobbyPublishPolish.js';
+import { CANONICAL_TRACK_IDS } from '../tracks/trackIdentity.js';
 import '../ui/floating-chrome.css';
 import '../ui/lobby-tablet.css';
 import '../ui/seasonPassBehavior.js';
+
+const canonicalLobbyTrackKey=value=>{const key=String(value||'').trim();return !key||key==='track01'||key==='track1'?CANONICAL_TRACK_IDS.ATLANTICO:key;};
 
 export class MenuScene extends PreviousMenuScene {
   preload() {
@@ -20,24 +23,18 @@ export class MenuScene extends PreviousMenuScene {
     let persisted = '';
     try { persisted = String(localStorage.getItem('tdr2:trackKey') || '').trim(); } catch {}
     const registered = String(this.registry?.get?.('selectedTrackKey') || '').trim();
-    return persisted || registered || String(this.selectedTrackKey || 'track01');
+    const live=canonicalLobbyTrackKey(persisted || registered || this.selectedTrackKey);
+    try{if(persisted!==live)localStorage.setItem('tdr2:trackKey',live);}catch{}
+    return live;
   }
 
   _syncLobbyTrackPreview() {
     const liveTrackKey = this._liveLobbyTrackKey();
     if (!liveTrackKey) return;
-
-    // The selector persists the chosen track before returning to this scene.
-    // Keep the scene value aligned with that source of truth even when Phaser
-    // resumes/reuses a live lobby instead of rebuilding it from create().
     if (this.selectedTrackKey !== liveTrackKey) {
       this.selectedTrackKey = liveTrackKey;
       try { this.registry?.set?.('selectedTrackKey', liveTrackKey); } catch {}
     }
-
-    // The DOM track card is rendered from selectedTrackKey, but it can remain
-    // connected across a lifecycle transition. Re-render it whenever the key
-    // used for the visible preview no longer matches the current selection.
     if (this._lobbyDomRoot?.isConnected && this._lobbyRenderedTrackKey !== liveTrackKey) {
       const lobbyRoot = installLobbyDom(this);
       polishLobbyForPublish(this, lobbyRoot);
