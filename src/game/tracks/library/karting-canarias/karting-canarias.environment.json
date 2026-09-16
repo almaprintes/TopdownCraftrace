@@ -1,1 +1,677 @@
-{"version":5,"trackId":"karting-canarias","environment":[{"asset":"direction_sign_01","path":"environment/props/direction_sign_01.webp","x":1822.96,"y":2376.59,"rotation":1.43951,"displayWidth":192.77,"flipX":true,"flipY":false,"z":12},{"asset":"direction_sign_01","path":"environment/props/direction_sign_01.webp","x":1472.59,"y":2417,"rotation":1.45669,"displayWidth":217.09,"flipX":true,"flipY":true,"z":12},{"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":975.65,"y":939.75,"rotation":0,"displayWidth":130,"flipX":false,"flipY":false,"z":12},{"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":936.39,"y":868.53,"rotation":0.83426,"displayWidth":107.98,"flipX":false,"flipY":false,"z":12},{"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":844.18,"y":900.49,"rotation":0.48335,"displayWidth":172.32,"flipX":false,"flipY":false,"z":12},{"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":768.41,"y":973.53,"rotation":0.70955,"displayWidth":127.93,"flipX":false,"flipY":false,"z":12},{"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":767.49,"y":1059.35,"rotation":0.13449,"displayWidth":178.4,"flipX":false,"flipY":false,"z":12},{"asset":"palm_tall_01","path":"environment/vegetation/palm_tall_01.webp","x":982.96,"y":1028.31,"rotation":0.66868,"displayWidth":176.24,"flipX":false,"flipY":false,"z":12},{"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":509.88,"y":2190.65,"rotation":0.45038,"displayWidth":402.38,"flipX":false,"flipY":false,"z":12},{"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":1150.31,"y":3387.86,"rotation":0.04706,"displayWidth":309.1,"flipX":false,"flipY":false,"z":12},{"asset":"tree_broad_02","path":"environment/vegetation/tree_broad_02.webp","x":686.21,"y":3513.01,"rotation":0.05638,"displayWidth":342.25,"flipX":false,"flipY":false,"z":12},{"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":1247.68,"y":516.7,"rotation":-0.05265,"displayWidth":184.77,"flipX":false,"flipY":false,"z":12},{"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":1168.04,"y":436.03,"rotation":-1.01233,"displayWidth":154.11,"flipX":false,"flipY":false,"z":12},{"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":1041.61,"y":407.5,"rotation":-0.10662,"displayWidth":192.61,"flipX":false,"flipY":false,"z":12},{"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":921.53,"y":406.8,"rotation":1.06948,"displayWidth":188.2,"flipX":false,"flipY":false,"z":12},{"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":812.36,"y":386.73,"rotation":0.13432,"displayWidth":162.11,"flipX":false,"flipY":false,"z":12},{"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":821.51,"y":471.95,"rotation":0,"displayWidth":125,"flipX":false,"flipY":false,"z":12},{"asset":"plant_tropical_01","path":"environment/vegetation/plant_tropical_01.webp","x":690.86,"y":463.85,"rotation":-1.0514,"displayWidth":214.75,"flipX":false,"flipY":false,"z":12},{"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":1367.43,"y":186.79,"rotation":0.59094,"displayWidth":153.92,"flipX":false,"flipY":false,"z":12},{"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":1282.52,"y":141.43,"rotation":-2.6483,"displayWidth":155.17,"flipX":false,"flipY":false,"z":12},{"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":1184.29,"y":99.8,"rotation":0.26531,"displayWidth":160.3,"flipX":false,"flipY":false,"z":12},{"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":1081.68,"y":73.03,"rotation":-2.94057,"displayWidth":165.96,"flipX":false,"flipY":false,"z":12},{"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":976.15,"y":70.84,"rotation":-0.05419,"displayWidth":152.86,"flipX":false,"flipY":false,"z":12},{"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":870.98,"y":71.57,"rotation":3.07683,"displayWidth":148.67,"flipX":false,"flipY":false,"z":12},{"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":774.21,"y":91.29,"rotation":-0.12239,"displayWidth":149.71,"flipX":false,"flipY":false,"z":12},{"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":678.9,"y":115.03,"rotation":2.82445,"displayWidth":158.83,"flipX":false,"flipY":false,"z":12},{"asset":"tire_stack_compact_01","path":"environment/barriers/tire_stack_compact_01.webp","x":582.49,"y":161.04,"rotation":-0.40473,"displayWidth":149.44,"flipX":false,"flipY":false,"z":12}],"surfaces":[],"baseTrack":{"id":"karting-canarias","name":"KARTING CANARIAS","source":"src/game/tracks/library/karting-canarias/track.json","locked":true},"repositoryPath":"src/game/tracks/library/karting-canarias/karting-canarias.environment.json","linearBarriers":[{"type":"fence","asset":"fence_chainlink_straight_01","path":"environment/props/fence_chainlink_straight_01.webp","spacing":112,"label":"VALLA","x1":497.09635702697585,"y1":1135.8884862443074,"x2":1278.7456007921814,"y2":1091.7537592560784,"points":[{"x":497.09635702697585,"y":1135.8884862443074},{"x":422.76418525732754,"y":778.1649096028756},{"x":771.1962404275529,"y":399.53540965123113},{"x":1227.0322978409686,"y":496.24054452726784},{"x":1278.7456007921814,"y":1091.7537592560784}]},{"type":"guardrail","asset":"guardrail_straight_01","path":"environment/barriers/guardrail_straight_01.webp","spacing":105,"label":"GUARDARRAÍL","x1":696.8294837819069,"y1":3658.52244606319,"x2":1411.149781756867,"y2":2105.7761263035177,"points":[{"x":696.8294837819069,"y":3658.52244606319},{"x":381.5965515157248,"y":3581.3225442837165},{"x":650.4064613018746,"y":3125.520607768378},{"x":1397.022057670258,"y":2628.0207268553736},{"x":1411.149781756867,"y":2105.7761263035177}]},{"type":"guardrail","asset":"guardrail_straight_01","path":"environment/barriers/guardrail_straight_01.webp","spacing":105,"label":"GUARDARRAÍL","x1":1220.1054051483381,"y1":3255.3716276441096,"x2":344.2312491577918,"y2":3483.276167076924,"points":[{"x":1220.1054051483381,"y":3255.3716276441096},{"x":725.9926459521732,"y":3201.452346229143},{"x":1587.2361298038916,"y":4155.7059697329705},{"x":223.51453844254092,"y":4106.6648060049},{"x":344.2312491577918,"y":3483.276167076924}]},{"type":"guardrail","asset":"guardrail_straight_01","path":"environment/barriers/guardrail_straight_01.webp","spacing":105,"label":"GUARDARRAÍL","x1":1114.4298359686404,"y1":3011.726515845476,"x2":1502.9867485833545,"y2":3863.3839283575257,"points":[{"x":1114.4298359686404,"y":3011.726515845476},{"x":1541.6538199843333,"y":3013.6514568384546},{"x":1730.2736804769131,"y":3324.874226651211},{"x":1165.357198301637,"y":3838.8633464934896},{"x":1502.9867485833545,"y":3863.3839283575257}]},{"type":"concrete","asset":"concrete_barrier_straight_01","path":"environment/barriers/concrete_barrier_straight_01.webp","spacing":108,"label":"HORMIGÓN","x1":1518.6625275455876,"y1":2345.4529317334395,"x2":1360.6611808267644,"y2":684.1054379642148,"points":[{"x":1518.6625275455876,"y":2345.4529317334395},{"x":1478.6621866041135,"y":1918.7826283577158},{"x":1475.3288248589904,"y":1716.1142342542469},{"x":1434.6618115684919,"y":1318.1108418865795},{"x":1360.6611808267644,"y":684.1054379642148}]},{"type":"plastic","asset":"plastic_barrier_redwhite_01","path":"environment/barriers/plastic_barrier_redwhite_01.webp","spacing":92,"label":"BARRERA PLÁSTICA","x1":350.67865478905014,"y1":846.0676255141985,"x2":375.09037210288864,"y2":2275.548258300648,"points":[{"x":350.67865478905014,"y":846.0676255141985},{"x":347.7116132481076,"y":1140.711254382222},{"x":354.630897345001,"y":1369.6481815208494},{"x":338.31128701658076,"y":1696.3241598714571},{"x":375.09037210288864,"y":2275.548258300648}]},{"label":"GUARDARRAÍL","type":"guardrail","asset":"guardrail_straight_01","path":"environment/barriers/guardrail_straight_01.webp","spacing":105,"x1":492.5130479922985,"y1":229.8932824507708,"x2":121.06753518359619,"y2":848.6256831210225,"points":[{"x":492.5130479922985,"y":229.8932824507708},{"x":334.86765698056075,"y":328.2928565790123},{"x":257.5905045238266,"y":430.8138788382797},{"x":122.09789721635269,"y":646.6747247007571},{"x":121.06753518359619,"y":848.6256831210225}]},{"label":"VALLA","type":"fence","asset":"fence_chainlink_straight_01","path":"environment/props/fence_chainlink_straight_01.webp","spacing":112,"x1":248.15259506344955,"y1":2587.808945332243,"x2":893.9072235721617,"y2":2087.6982546643226,"points":[{"x":248.15259506344955,"y":2587.808945332243},{"x":522.9599028137375,"y":2730.8437956059543},{"x":819.6747461133941,"y":2572.843141548887},{"x":903.8828357530379,"y":2328.443028629465},{"x":893.9072235721617,"y":2087.6982546643226}]},{"label":"BARRERA PLÁSTICA","type":"plastic","asset":"plastic_barrier_redwhite_01","path":"environment/barriers/plastic_barrier_redwhite_01.webp","spacing":92,"x1":737.1745119934424,"y1":1128.6086461039226,"x2":889.3205892098176,"y2":2055.498563882628,"points":[{"x":737.1745119934424,"y":1128.6086461039226},{"x":675.9156966931655,"y":1258.7335805652958},{"x":862.4948334900882,"y":1479.3453925290396},{"x":857.6902205253607,"y":1754.009100345969},{"x":889.3205892098176,"y":2055.498563882628}]},{"label":"BARRERA PLÁSTICA","type":"plastic","asset":"plastic_barrier_redwhite_01","path":"environment/barriers/plastic_barrier_redwhite_01.webp","spacing":92,"x1":1409.3081973033425,"y1":2078.522101127729,"x2":1279.8473985970102,"y2":1062.2160705648455,"points":[{"x":1409.3081973033425,"y":2078.522101127729},{"x":1369.7722647642827,"y":1754.870104361899},{"x":1337.6008686785774,"y":1542.4613687598926},{"x":1272.0952549619005,"y":1306.7962022525571},{"x":1279.8473985970102,"y":1062.2160705648455}]},{"label":"BARRERA PLÁSTICA","type":"plastic","asset":"plastic_barrier_redwhite_01","path":"environment/barriers/plastic_barrier_redwhite_01.webp","spacing":92,"x1":1724.8951690235494,"y1":3984.5155651535615,"x2":1278.330527385454,"y2":4010.147464227177,"points":[{"x":1724.8951690235494,"y":3984.5155651535615},{"x":1624.076366000663,"y":4100.713507620617},{"x":1493.6384796038212,"y":4093.308736777129},{"x":1384.2757102230632,"y":4112.390261643041},{"x":1278.330527385454,"y":4010.147464227177}]}],"materials":{}}
+{
+  "version": 5,
+  "trackId": "karting-canarias",
+  "environment": [
+    {
+      "asset": "direction_sign_01",
+      "path": "environment/props/direction_sign_01.webp",
+      "x": 1822.96,
+      "y": 2376.59,
+      "rotation": 1.43951,
+      "displayWidth": 192.77,
+      "flipX": true,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "direction_sign_01",
+      "path": "environment/props/direction_sign_01.webp",
+      "x": 1472.59,
+      "y": 2417,
+      "rotation": 1.45669,
+      "displayWidth": 217.09,
+      "flipX": true,
+      "flipY": true,
+      "z": 12
+    },
+    {
+      "asset": "palm_tall_01",
+      "path": "environment/vegetation/palm_tall_01.webp",
+      "x": 975.65,
+      "y": 939.75,
+      "rotation": 0,
+      "displayWidth": 130,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "palm_tall_01",
+      "path": "environment/vegetation/palm_tall_01.webp",
+      "x": 936.39,
+      "y": 868.53,
+      "rotation": 0.83426,
+      "displayWidth": 107.98,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "palm_tall_01",
+      "path": "environment/vegetation/palm_tall_01.webp",
+      "x": 844.18,
+      "y": 900.49,
+      "rotation": 0.48335,
+      "displayWidth": 172.32,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "palm_tall_01",
+      "path": "environment/vegetation/palm_tall_01.webp",
+      "x": 768.41,
+      "y": 973.53,
+      "rotation": 0.70955,
+      "displayWidth": 127.93,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "palm_tall_01",
+      "path": "environment/vegetation/palm_tall_01.webp",
+      "x": 767.49,
+      "y": 1059.35,
+      "rotation": 0.13449,
+      "displayWidth": 178.4,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "palm_tall_01",
+      "path": "environment/vegetation/palm_tall_01.webp",
+      "x": 982.96,
+      "y": 1028.31,
+      "rotation": 0.66868,
+      "displayWidth": 176.24,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tree_broad_02",
+      "path": "environment/vegetation/tree_broad_02.webp",
+      "x": 509.88,
+      "y": 2190.65,
+      "rotation": 0.45038,
+      "displayWidth": 402.38,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tree_broad_02",
+      "path": "environment/vegetation/tree_broad_02.webp",
+      "x": 1150.31,
+      "y": 3387.86,
+      "rotation": 0.04706,
+      "displayWidth": 309.1,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tree_broad_02",
+      "path": "environment/vegetation/tree_broad_02.webp",
+      "x": 686.21,
+      "y": 3513.01,
+      "rotation": 0.05638,
+      "displayWidth": 342.25,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "plant_tropical_01",
+      "path": "environment/vegetation/plant_tropical_01.webp",
+      "x": 1247.68,
+      "y": 516.7,
+      "rotation": -0.05265,
+      "displayWidth": 184.77,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "plant_tropical_01",
+      "path": "environment/vegetation/plant_tropical_01.webp",
+      "x": 1168.04,
+      "y": 436.03,
+      "rotation": -1.01233,
+      "displayWidth": 154.11,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "plant_tropical_01",
+      "path": "environment/vegetation/plant_tropical_01.webp",
+      "x": 1041.61,
+      "y": 407.5,
+      "rotation": -0.10662,
+      "displayWidth": 192.61,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "plant_tropical_01",
+      "path": "environment/vegetation/plant_tropical_01.webp",
+      "x": 921.53,
+      "y": 406.8,
+      "rotation": 1.06948,
+      "displayWidth": 188.2,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "plant_tropical_01",
+      "path": "environment/vegetation/plant_tropical_01.webp",
+      "x": 812.36,
+      "y": 386.73,
+      "rotation": 0.13432,
+      "displayWidth": 162.11,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "plant_tropical_01",
+      "path": "environment/vegetation/plant_tropical_01.webp",
+      "x": 821.51,
+      "y": 471.95,
+      "rotation": 0,
+      "displayWidth": 125,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "plant_tropical_01",
+      "path": "environment/vegetation/plant_tropical_01.webp",
+      "x": 690.86,
+      "y": 463.85,
+      "rotation": -1.0514,
+      "displayWidth": 214.75,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tire_stack_compact_01",
+      "path": "environment/barriers/tire_stack_compact_01.webp",
+      "x": 1367.43,
+      "y": 186.79,
+      "rotation": 0.59094,
+      "displayWidth": 153.92,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tire_stack_compact_01",
+      "path": "environment/barriers/tire_stack_compact_01.webp",
+      "x": 1282.52,
+      "y": 141.43,
+      "rotation": -2.6483,
+      "displayWidth": 155.17,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tire_stack_compact_01",
+      "path": "environment/barriers/tire_stack_compact_01.webp",
+      "x": 1184.29,
+      "y": 99.8,
+      "rotation": 0.26531,
+      "displayWidth": 160.3,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tire_stack_compact_01",
+      "path": "environment/barriers/tire_stack_compact_01.webp",
+      "x": 1081.68,
+      "y": 73.03,
+      "rotation": -2.94057,
+      "displayWidth": 165.96,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tire_stack_compact_01",
+      "path": "environment/barriers/tire_stack_compact_01.webp",
+      "x": 976.15,
+      "y": 70.84,
+      "rotation": -0.05419,
+      "displayWidth": 152.86,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tire_stack_compact_01",
+      "path": "environment/barriers/tire_stack_compact_01.webp",
+      "x": 870.98,
+      "y": 71.57,
+      "rotation": 3.07683,
+      "displayWidth": 148.67,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tire_stack_compact_01",
+      "path": "environment/barriers/tire_stack_compact_01.webp",
+      "x": 774.21,
+      "y": 91.29,
+      "rotation": -0.12239,
+      "displayWidth": 149.71,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tire_stack_compact_01",
+      "path": "environment/barriers/tire_stack_compact_01.webp",
+      "x": 678.9,
+      "y": 115.03,
+      "rotation": 2.82445,
+      "displayWidth": 158.83,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    },
+    {
+      "asset": "tire_stack_compact_01",
+      "path": "environment/barriers/tire_stack_compact_01.webp",
+      "x": 582.49,
+      "y": 161.04,
+      "rotation": -0.40473,
+      "displayWidth": 149.44,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    }
+  ],
+  "surfaces": [],
+  "baseTrack": {
+    "id": "karting-canarias",
+    "name": "KARTING CANARIAS",
+    "source": "src/game/tracks/library/karting-canarias/track.json",
+    "locked": true
+  },
+  "repositoryPath": "src/game/tracks/library/karting-canarias/karting-canarias.environment.json",
+  "linearBarriers": [
+    {
+      "type": "fence",
+      "asset": "fence_chainlink_straight_01",
+      "path": "environment/props/fence_chainlink_straight_01.webp",
+      "spacing": 112,
+      "label": "VALLA",
+      "x1": 497.09635702697585,
+      "y1": 1135.8884862443074,
+      "x2": 1278.7456007921814,
+      "y2": 1091.7537592560784,
+      "points": [
+        {
+          "x": 497.09635702697585,
+          "y": 1135.8884862443074
+        },
+        {
+          "x": 422.76418525732754,
+          "y": 778.1649096028756
+        },
+        {
+          "x": 771.1962404275529,
+          "y": 399.53540965123113
+        },
+        {
+          "x": 1227.0322978409686,
+          "y": 496.24054452726784
+        },
+        {
+          "x": 1278.7456007921814,
+          "y": 1091.7537592560784
+        }
+      ]
+    },
+    {
+      "type": "guardrail",
+      "asset": "guardrail_straight_01",
+      "path": "environment/barriers/guardrail_straight_01.webp",
+      "spacing": 105,
+      "label": "GUARDARRAÍL",
+      "x1": 696.8294837819069,
+      "y1": 3658.52244606319,
+      "x2": 1411.149781756867,
+      "y2": 2105.7761263035177,
+      "points": [
+        {
+          "x": 696.8294837819069,
+          "y": 3658.52244606319
+        },
+        {
+          "x": 381.5965515157248,
+          "y": 3581.3225442837165
+        },
+        {
+          "x": 650.4064613018746,
+          "y": 3125.520607768378
+        },
+        {
+          "x": 1397.022057670258,
+          "y": 2628.0207268553736
+        },
+        {
+          "x": 1411.149781756867,
+          "y": 2105.7761263035177
+        }
+      ]
+    },
+    {
+      "type": "guardrail",
+      "asset": "guardrail_straight_01",
+      "path": "environment/barriers/guardrail_straight_01.webp",
+      "spacing": 105,
+      "label": "GUARDARRAÍL",
+      "x1": 1220.1054051483381,
+      "y1": 3255.3716276441096,
+      "x2": 344.2312491577918,
+      "y2": 3483.276167076924,
+      "points": [
+        {
+          "x": 1220.1054051483381,
+          "y": 3255.3716276441096
+        },
+        {
+          "x": 725.9926459521732,
+          "y": 3201.452346229143
+        },
+        {
+          "x": 1587.2361298038916,
+          "y": 4155.7059697329705
+        },
+        {
+          "x": 223.51453844254092,
+          "y": 4106.6648060049
+        },
+        {
+          "x": 344.2312491577918,
+          "y": 3483.276167076924
+        }
+      ]
+    },
+    {
+      "type": "guardrail",
+      "asset": "guardrail_straight_01",
+      "path": "environment/barriers/guardrail_straight_01.webp",
+      "spacing": 105,
+      "label": "GUARDARRAÍL",
+      "x1": 1114.4298359686404,
+      "y1": 3011.726515845476,
+      "x2": 1502.9867485833545,
+      "y2": 3863.3839283575257,
+      "points": [
+        {
+          "x": 1114.4298359686404,
+          "y": 3011.726515845476
+        },
+        {
+          "x": 1541.6538199843333,
+          "y": 3013.6514568384546
+        },
+        {
+          "x": 1730.2736804769131,
+          "y": 3324.874226651211
+        },
+        {
+          "x": 1165.357198301637,
+          "y": 3838.8633464934896
+        },
+        {
+          "x": 1502.9867485833545,
+          "y": 3863.3839283575257
+        }
+      ]
+    },
+    {
+      "type": "concrete",
+      "asset": "concrete_barrier_straight_01",
+      "path": "environment/barriers/concrete_barrier_straight_01.webp",
+      "spacing": 108,
+      "label": "HORMIGÓN",
+      "x1": 1518.6625275455876,
+      "y1": 2345.4529317334395,
+      "x2": 1360.6611808267644,
+      "y2": 684.1054379642148,
+      "points": [
+        {
+          "x": 1518.6625275455876,
+          "y": 2345.4529317334395
+        },
+        {
+          "x": 1478.6621866041135,
+          "y": 1918.7826283577158
+        },
+        {
+          "x": 1475.3288248589904,
+          "y": 1716.1142342542469
+        },
+        {
+          "x": 1434.6618115684919,
+          "y": 1318.1108418865795
+        },
+        {
+          "x": 1360.6611808267644,
+          "y": 684.1054379642148
+        }
+      ]
+    },
+    {
+      "type": "plastic",
+      "asset": "plastic_barrier_redwhite_01",
+      "path": "environment/barriers/plastic_barrier_redwhite_01.webp",
+      "spacing": 92,
+      "label": "BARRERA PLÁSTICA",
+      "x1": 350.67865478905014,
+      "y1": 846.0676255141985,
+      "x2": 375.09037210288864,
+      "y2": 2275.548258300648,
+      "points": [
+        {
+          "x": 350.67865478905014,
+          "y": 846.0676255141985
+        },
+        {
+          "x": 347.7116132481076,
+          "y": 1140.711254382222
+        },
+        {
+          "x": 354.630897345001,
+          "y": 1369.6481815208494
+        },
+        {
+          "x": 338.31128701658076,
+          "y": 1696.3241598714571
+        },
+        {
+          "x": 375.09037210288864,
+          "y": 2275.548258300648
+        }
+      ]
+    },
+    {
+      "label": "GUARDARRAÍL",
+      "type": "guardrail",
+      "asset": "guardrail_straight_01",
+      "path": "environment/barriers/guardrail_straight_01.webp",
+      "spacing": 105,
+      "x1": 492.5130479922985,
+      "y1": 229.8932824507708,
+      "x2": 121.06753518359619,
+      "y2": 848.6256831210225,
+      "points": [
+        {
+          "x": 492.5130479922985,
+          "y": 229.8932824507708
+        },
+        {
+          "x": 334.86765698056075,
+          "y": 328.2928565790123
+        },
+        {
+          "x": 257.5905045238266,
+          "y": 430.8138788382797
+        },
+        {
+          "x": 122.09789721635269,
+          "y": 646.6747247007571
+        },
+        {
+          "x": 121.06753518359619,
+          "y": 848.6256831210225
+        }
+      ]
+    },
+    {
+      "label": "VALLA",
+      "type": "fence",
+      "asset": "fence_chainlink_straight_01",
+      "path": "environment/props/fence_chainlink_straight_01.webp",
+      "spacing": 112,
+      "x1": 248.15259506344955,
+      "y1": 2587.808945332243,
+      "x2": 893.9072235721617,
+      "y2": 2087.6982546643226,
+      "points": [
+        {
+          "x": 248.15259506344955,
+          "y": 2587.808945332243
+        },
+        {
+          "x": 522.9599028137375,
+          "y": 2730.8437956059543
+        },
+        {
+          "x": 819.6747461133941,
+          "y": 2572.843141548887
+        },
+        {
+          "x": 903.8828357530379,
+          "y": 2328.443028629465
+        },
+        {
+          "x": 893.9072235721617,
+          "y": 2087.6982546643226
+        }
+      ]
+    },
+    {
+      "label": "BARRERA PLÁSTICA",
+      "type": "plastic",
+      "asset": "plastic_barrier_redwhite_01",
+      "path": "environment/barriers/plastic_barrier_redwhite_01.webp",
+      "spacing": 92,
+      "x1": 737.1745119934424,
+      "y1": 1128.6086461039226,
+      "x2": 889.3205892098176,
+      "y2": 2055.498563882628,
+      "points": [
+        {
+          "x": 737.1745119934424,
+          "y": 1128.6086461039226
+        },
+        {
+          "x": 675.9156966931655,
+          "y": 1258.7335805652958
+        },
+        {
+          "x": 862.4948334900882,
+          "y": 1479.3453925290396
+        },
+        {
+          "x": 857.6902205253607,
+          "y": 1754.009100345969
+        },
+        {
+          "x": 889.3205892098176,
+          "y": 2055.498563882628
+        }
+      ]
+    },
+    {
+      "label": "BARRERA PLÁSTICA",
+      "type": "plastic",
+      "asset": "plastic_barrier_redwhite_01",
+      "path": "environment/barriers/plastic_barrier_redwhite_01.webp",
+      "spacing": 92,
+      "x1": 1409.3081973033425,
+      "y1": 2078.522101127729,
+      "x2": 1279.8473985970102,
+      "y2": 1062.2160705648455,
+      "points": [
+        {
+          "x": 1409.3081973033425,
+          "y": 2078.522101127729
+        },
+        {
+          "x": 1369.7722647642827,
+          "y": 1754.870104361899
+        },
+        {
+          "x": 1337.6008686785774,
+          "y": 1542.4613687598926
+        },
+        {
+          "x": 1272.0952549619005,
+          "y": 1306.7962022525571
+        },
+        {
+          "x": 1279.8473985970102,
+          "y": 1062.2160705648455
+        }
+      ]
+    },
+    {
+      "label": "BARRERA PLÁSTICA",
+      "type": "plastic",
+      "asset": "plastic_barrier_redwhite_01",
+      "path": "environment/barriers/plastic_barrier_redwhite_01.webp",
+      "spacing": 92,
+      "x1": 1724.8951690235494,
+      "y1": 3984.5155651535615,
+      "x2": 1278.330527385454,
+      "y2": 4010.147464227177,
+      "points": [
+        {
+          "x": 1724.8951690235494,
+          "y": 3984.5155651535615
+        },
+        {
+          "x": 1624.076366000663,
+          "y": 4100.713507620617
+        },
+        {
+          "x": 1493.6384796038212,
+          "y": 4093.308736777129
+        },
+        {
+          "x": 1384.2757102230632,
+          "y": 4112.390261643041
+        },
+        {
+          "x": 1278.330527385454,
+          "y": 4010.147464227177
+        }
+      ]
+    }
+  ],
+  "materials": {}
+}
