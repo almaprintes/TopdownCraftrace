@@ -12,6 +12,10 @@ for(const [path,mod] of Object.entries(envModules)){
   REGISTRY[m[1]]=data;
 }
 
+// Atlántico canonical identity. Keep the legacy environment id as an alias so
+// old saves and existing authored environment files remain valid.
+if(REGISTRY.track01&&!REGISTRY['circuito-atlantico'])REGISTRY['circuito-atlantico']=REGISTRY.track01;
+
 export function hasTrackEnvironment(trackId){return !!REGISTRY[trackId];}
 export function createTrackEnvironment(trackId){return clone(REGISTRY[trackId]||null);}
 export function getTrackEnvironmentKeys(){return Object.keys(REGISTRY);}
