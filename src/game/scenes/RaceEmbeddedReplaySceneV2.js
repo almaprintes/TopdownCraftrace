@@ -54,6 +54,20 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     return result;
   }
 
+  _startStatsNativeReplay(payload){
+    // Native replay bypasses the normal RaceScene update while it is playing.
+    // That also bypassed track-cell culling, leaving only the cells created near
+    // the start visible and producing apparent holes in Atlántico. Materialize
+    // the complete authored ribbon once before replay takes control.
+    if(payload?.embedded===true&&this.track?.geom?.cells){
+      const previousCull=this._cullEnabled;
+      this._cullEnabled=false;
+      try{super.update(performance.now(),0);}catch(err){console.warn('[TDR replay] full-track warmup skipped',err);}
+      this._cullEnabled=previousCull;
+    }
+    return super._startStatsNativeReplay(payload);
+  }
+
   _tdrInstallIgnitionStart(blockedAutoStart){
     this._raceStarted=false;
     this._startAutoFired=true;
