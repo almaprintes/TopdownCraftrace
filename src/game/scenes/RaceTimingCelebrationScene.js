@@ -1,7 +1,7 @@
 import { RaceScene as TimingRaceScene } from './RaceWideCameraPreviewScene.js';
 
-// Legacy top-of-screen timing celebration retired.
-// Lap/record feedback is handled by the current side-panel feedback system.
+// Legacy Phaser timing/loot banners retired.
+// Lap/record feedback is handled by the current DOM side-panel feedback system.
 // Keep this scene in the inheritance chain so downstream race scenes remain stable.
 export class RaceScene extends TimingRaceScene {
   _destroyTimingBanner() {
@@ -24,9 +24,17 @@ export class RaceScene extends TimingRaceScene {
     this._timingHudWasVisible = null;
   }
 
-  // Intentionally kept as a no-op because older timing code still calls this hook.
-  // Removing the hook would make the legacy caller responsible for UI policy again.
+  // Older timing code still calls this hook after registering lap records.
+  // Keep record persistence intact, but never create the obsolete Phaser banner.
   _showTimingAchievement() {
     this._destroyTimingBanner();
+  }
+
+  // RaceWideCameraPreviewScene also creates a transient Phaser loot text after each
+  // completed lap. On multi-camera layouts it can survive as an empty dark/green box.
+  // Loot is already granted before this visual hook is called, so retiring only the
+  // presentation cannot affect rewards, timing, physics or lap registration.
+  _showRaceLoot() {
+    // Intentionally no-op: current race UI owns transient feedback.
   }
 }
