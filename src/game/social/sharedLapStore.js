@@ -14,7 +14,8 @@ export function saveSharedLap(pkg){
   validateSharedLap(pkg);
   const id=`${pkg.pilot.id}:${pkg.trackId}:${Math.round(Number(pkg.lapMs))}:${Number(pkg.recordedAt)||0}`;
   const key=`${PREFIX}${encodeURIComponent(id)}`;
-  const stored={...pkg,importedAt:Date.now(),storageKey:key};
+  const existed=localStorage.getItem(key)!==null;
+  const stored={...pkg,importedAt:Date.now(),storageKey:key,importStatus:existed?'duplicate':'new'};
   localStorage.setItem(key,JSON.stringify(stored));
   let index=[];try{index=JSON.parse(localStorage.getItem(INDEX)||'[]');}catch{}
   if(!Array.isArray(index))index=[];
