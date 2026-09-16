@@ -1,10 +1,10 @@
 import { RaceScene as CurrentRaceScene } from './RaceTelemetryHudScene.js';
 
 const PRESET_BUDGETS={
-  performance:{cullRadius:1,lookahead:false,overlay:false,particles:false,environmentDensity:.45,studioMaterials:['asphalt'],beauty:false},
-  medium:{cullRadius:1,lookahead:true,overlay:false,particles:false,environmentDensity:.70,studioMaterials:['asphalt','grass'],beauty:true},
-  high:{cullRadius:2,lookahead:true,overlay:true,particles:true,environmentDensity:.88,studioMaterials:['asphalt','grass','offroad'],beauty:true},
-  ultra:{cullRadius:3,lookahead:true,overlay:true,particles:true,environmentDensity:1,studioMaterials:['asphalt','grass','offroad'],beauty:true}
+  performance:{cullRadius:1,lookahead:false,overlay:false,particles:false,driftEffects:false,brakeLights:false,environmentDensity:.45,studioMaterials:['asphalt'],beauty:false},
+  medium:{cullRadius:1,lookahead:true,overlay:false,particles:false,driftEffects:false,brakeLights:true,environmentDensity:.70,studioMaterials:['asphalt','grass'],beauty:true},
+  high:{cullRadius:2,lookahead:true,overlay:true,particles:true,driftEffects:true,brakeLights:true,environmentDensity:.88,studioMaterials:['asphalt','grass','offroad'],beauty:true},
+  ultra:{cullRadius:3,lookahead:true,overlay:true,particles:true,driftEffects:true,brakeLights:true,environmentDensity:1,studioMaterials:['asphalt','grass','offroad'],beauty:true}
 };
 
 function readVideo(){
@@ -34,6 +34,8 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrEnvironmentDensity=this._gfxBudget.environmentDensity;
     this._tdrStudioMaterialTypes=new Set(this._gfxBudget.studioMaterials);
     this._tdrAllowBeautyLayer=this._gfxBudget.beauty;
+    this._tdrAllowDriftEffects=this._gfxBudget.driftEffects;
+    this._tdrAllowBrakeLights=this._gfxBudget.brakeLights;
 
     if(this.track)this.track.cullRadiusCells=this._gfxBudget.cullRadius;
 
