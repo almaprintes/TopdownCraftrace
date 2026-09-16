@@ -19,17 +19,19 @@ if(current&&tester&&!current.__tdrTesterExchangePatch){
     b.onclick=()=>this._openTesterExchange?.(selected());
     root.appendChild(b);
 
-    // The first Race Control paint can finish its replay decoration after this wrapper.
-    // Decorate only once the final TOP rows/play controls exist, and repeat briefly
-    // while that initial DOM settles. Circuit changes remain synchronous.
-    let attempts=0;
+    // Replay controls can be painted after the records themselves. Observe the records
+    // panel instead of racing that asynchronous paint with timers: every time TOP rows
+    // change, rebuild the share controls against the final DOM.
     const decorate=()=>{
       if(!this._root?.isConnected)return;
       this._root.querySelectorAll('button[title="Compartir vuelta"]').forEach(el=>el.remove());
       try{this._addShareButtons?.(selected());}catch(err){console.warn('[tester-share] controls skipped',err);}
-      attempts++;
-      if(attempts<8)setTimeout(decorate,attempts<3?0:40);
     };
+    try{this._tdrShareObserver?.disconnect?.();}catch{}
+    this._tdrShareObserver=new MutationObserver(mutations=>{
+      if(mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(n=>n?.nodeType===1)))decorate();
+    });
+    this._tdrShareObserver.observe(root,{childList:true,subtree:true});
     queueMicrotask(decorate);
     requestAnimationFrame(decorate);
     return out;
