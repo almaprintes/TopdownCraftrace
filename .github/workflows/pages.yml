@@ -59,6 +59,7 @@ jobs:
           test -f src/game/scenes/RaceReplayCleanScene.js
           test -f src/game/scenes/RaceEmbeddedReplayScene.js
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          test -f src/game/scenes/RaceGamepadScene.js
           test -f src/game/scenes/RaceDuelOpponentRepairScene.js
           test -f src/game/audio/CarEngineSampleRuntime.js
           test -f src/game/audio/EngineCombustionProcessor.js
@@ -105,7 +106,8 @@ jobs:
           if grep -q "backdrop-filter" src/game/ui/racePauseUi.css; then echo "Pause overlay must not use full-screen backdrop blur"; exit 1; fi
           grep -q "pointerup" src/game/ui/racePauseUi.js
           grep -q "lastPointerAt" src/game/ui/racePauseUi.js
-          grep -q "RaceEmbeddedReplaySceneV2.js" src/game/game.js
+          grep -q "RaceGamepadScene.js" src/game/game.js
+          grep -q "RaceEmbeddedReplaySceneV2.js" src/game/scenes/RaceGamepadScene.js
           grep -q "CarEngineSampleRuntime" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "AudioContext" src/game/audio/CarEngineSampleRuntime.js
           grep -q "audioWorklet" src/game/audio/CarEngineSampleRuntime.js
@@ -210,8 +212,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.145' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.145' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.159' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.159' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
