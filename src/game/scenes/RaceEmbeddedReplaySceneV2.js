@@ -3,12 +3,33 @@ import { CarEngineSampleRuntime } from '../audio/CarEngineSampleRuntime.js';
 
 const clamp01=n=>Math.max(0,Math.min(1,Number(n)||0));
 const STATS_REPLAY_KEY='tdr2:statsNativeReplay';
+const GAMEPAD_UI_CLASS='tdr-gamepad-active';
+const GAMEPAD_UI_STYLE='tdr-gamepad-touch-ui-style';
 
 function readPendingReplay(){
   try{
     const raw=JSON.parse(sessionStorage.getItem(STATS_REPLAY_KEY)||'null');
     return raw&&Array.isArray(raw.samples)&&raw.samples.length>4?raw:null;
   }catch{return null;}
+}
+
+function connectedGamepad(){
+  try{return Array.from(navigator.getGamepads?.()||[]).some(pad=>pad&&pad.connected!==false);}catch{return false;}
+}
+
+function installGamepadUiStyle(){
+  try{
+    if(document.getElementById(GAMEPAD_UI_STYLE))return;
+    const style=document.createElement('style');
+    style.id=GAMEPAD_UI_STYLE;
+    style.textContent=`
+      body.${GAMEPAD_UI_CLASS} #tdr-race-controls,
+      body.${GAMEPAD_UI_CLASS} #tdr-handbrake,
+      body.${GAMEPAD_UI_CLASS} #tdr-steering-wheel,
+      body.${GAMEPAD_UI_CLASS} [data-tdr-touch-controls]{display:none!important;visibility:hidden!important;pointer-events:none!important}
+    `;
+    document.head.appendChild(style);
+  }catch{}
 }
 
 export class RaceScene extends EmbeddedReplayRaceScene{
@@ -18,7 +39,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     // until create() made the environment runtime depend on stale scene state
     // after Phaser reused the race scene (especially visible in Ghost/Atlántico).
     const pending=data?.statsNativeReplay?readPendingReplay():null;
-    const requested=String(pending?.trackId||data?.trackKey||'').trim();
+    const requested=String(pending?.trackId||data?.trackKey||this.track?.id||this.track?.key||'').trim();
     if(requested)this.trackKey=requested;
     return super.init?.(data);
   }
@@ -48,6 +69,16 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     }
     let result;
     try{result=super.create(createData);}finally{if(originalDelayed)clock.delayedCall=originalDelayed;}
+
+    installGamepadUiStyle();
+    this._tdrGamepadConnectedHandler=()=>this._tdrSyncGamepadUi(true);
+    this._tdrGamepadDisconnectedHandler=()=>this._tdrSyncGamepadUi(true);
+    try{
+      window.addEventListener('gamepadconnected',this._tdrGamepadConnectedHandler);
+      window.addEventListener('gamepaddisconnected',this._tdrGamepadDisconnectedHandler);
+    }catch{}
+    this._tdrSyncGamepadUi(true);
+
     if(!embeddedRequested&&!this._tdrEmbeddedReplay){
       try{
         this._tdrEngineSample?.destroy?.();
@@ -62,7 +93,27 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     }else{
       this._tdrRemoveIgnitionButton();
     }
+    this.events.once('shutdown',()=>this._tdrCleanupGamepadUi());
     return result;
+  }
+
+  _tdrSyncGamepadUi(force=false){
+    if(this._tdrEmbeddedReplay)return;
+    const active=connectedGamepad();
+    if(!force&&active===this._tdrGamepadUiActive)return;
+    this._tdrGamepadUiActive=active;
+    try{document.body.classList.toggle(GAMEPAD_UI_CLASS,active);}catch{}
+  }
+
+  _tdrCleanupGamepadUi(){
+    try{
+      window.removeEventListener('gamepadconnected',this._tdrGamepadConnectedHandler);
+      window.removeEventListener('gamepaddisconnected',this._tdrGamepadDisconnectedHandler);
+      document.body.classList.remove(GAMEPAD_UI_CLASS);
+    }catch{}
+    this._tdrGamepadConnectedHandler=null;
+    this._tdrGamepadDisconnectedHandler=null;
+    this._tdrGamepadUiActive=false;
   }
 
   _startStatsNativeReplay(payload){
@@ -148,6 +199,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
   }
 
   update(time,delta){
+    this._tdrSyncGamepadUi();
     let originalThrottle=null;
     if(this._raceStarted&&this._tdrClutchReleaseAt&&this.touch){
       originalThrottle=Number(this.touch.throttle)||0;
