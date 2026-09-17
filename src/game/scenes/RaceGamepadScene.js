@@ -45,11 +45,11 @@ export class RaceScene extends TouchRaceScene {
 
     this._tdrSteeringMode='gamepad';
     this._destroyButtonSteeringUi?.();
-    try{this.touchUI?.setVisible?.(false);}catch(_){}
+    this._tdrDestroyTouchSteeringUi();
     this._tdrHideTouchDrivingDom();
     this._tdrEnsurePadMeters();
     this._tdrPadPrevOptions=false;
-    this._tdrPadRefresh=()=>{this._tdrHideTouchDrivingDom();this._tdrEnsurePadMeters();};
+    this._tdrPadRefresh=()=>{this._tdrDestroyTouchSteeringUi();this._tdrHideTouchDrivingDom();this._tdrEnsurePadMeters();};
     for(const ev of ['focus','pageshow','gamepadconnected'])window.addEventListener(ev,this._tdrPadRefresh,{passive:true});
     document.addEventListener('visibilitychange',this._tdrPadRefresh,{passive:true});
 
@@ -64,6 +64,21 @@ export class RaceScene extends TouchRaceScene {
 
     this.events.once('shutdown',()=>this._tdrPadCleanup());
     return result;
+  }
+
+  _tdrDestroyTouchSteeringUi(){
+    if(!this._tdrGamepadMode)return;
+    // In gamepad mode the physical stick writes directly into this.touch.
+    // The Phaser touch container is presentation-only, so destroy it instead
+    // of repeatedly hiding by geometry. This removes the legacy joystick at source.
+    const ui=this.touchUI;
+    if(ui){
+      try{for(const child of [...(ui.list||[])]){try{child?.disableInteractive?.();}catch(_){}}}catch(_){}
+      try{ui.destroy?.(true);}catch(_){}
+      if(this.touchUI===ui)this.touchUI=null;
+    }
+    try{this._destroyButtonSteeringUi?.();}catch(_){}
+    try{document.querySelectorAll('[data-tdr-steering-button],#tdr-steering-wheel').forEach(el=>el.remove());}catch(_){}
   }
 
   _tdrHideTouchDrivingDom(){
