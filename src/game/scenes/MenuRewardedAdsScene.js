@@ -2,8 +2,69 @@ import { MenuScene as CurrentMenuScene } from './MenuStoreCloseFixScene.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 import { rewardedStatus, claimRewardedCoins } from '../store/storeEconomy.js';
 import { getLanguage } from '../i18n/index.js';
+import { showStoreDomConfirm, closeStoreDomConfirm } from '../ui/storeDomConfirm.js';
 
 export class MenuScene extends CurrentMenuScene {
+  _confirmStoreSpend({title='CONFIRMAR COMPRA',detail='',confirm='COMPRAR',onConfirm}={}){
+    return showStoreDomConfirm({title,detail,confirm,onConfirm});
+  }
+
+  _openStoreModal(section='materials'){
+    closeStoreDomConfirm();
+    super._openStoreModal(section);
+    const root=this._storeModal;
+    if(!root?.scene)return;
+    this._installStoreTextViewportClip(root);
+    root.once?.('destroy',()=>closeStoreDomConfirm());
+  }
+
+  _installStoreTextViewportClip(root){
+    const {width:w,height:h}=this.scale;
+    const left=24,right=w-24,top=112,bottom=h-8;
+    const content=root?.list?.find(child=>child?.type==='Container'&&child?.mask);
+    if(!content?.list)return;
+    const texts=[];
+    const walk=node=>{
+      for(const child of node?.list||[]){
+        if(child?.type==='Text')texts.push(child);
+        if(child?.list)walk(child);
+      }
+    };
+    walk(content);
+    const apply=()=>{
+      if(!root?.scene)return;
+      for(const text of texts){
+        if(!text?.scene)continue;
+        const b=text.getBounds?.();
+        if(!b||!Number.isFinite(b.left)||!Number.isFinite(b.right))continue;
+        const vl=Math.max(left,b.left),vr=Math.min(right,b.right),vt=Math.max(top,b.top),vb=Math.min(bottom,b.bottom);
+        if(vr<=vl||vb<=vt){text.setVisible(false);continue;}
+        text.setVisible(true);
+        const sx=b.width>0?(text.width||b.width)/b.width:1,sy=b.height>0?(text.height||b.height)/b.height:1;
+        const cropX=Math.max(0,(vl-b.left)*sx),cropY=Math.max(0,(vt-b.top)*sy);
+        const cropW=Math.max(0,(vr-vl)*sx),cropH=Math.max(0,(vb-vt)*sy);
+        text.setCrop(cropX,cropY,cropW,cropH);
+      }
+    };
+    let queued=false;
+    const schedule=()=>{
+      if(queued||!root?.scene)return;
+      queued=true;
+      requestAnimationFrame(()=>{queued=false;apply();});
+    };
+    const input=this.input;
+    input.on('drag',schedule);
+    input.on('pointerup',schedule);
+    input.on('wheel',schedule);
+    root.once?.('destroy',()=>{
+      input.off('drag',schedule);
+      input.off('pointerup',schedule);
+      input.off('wheel',schedule);
+      for(const text of texts){try{text.setCrop();text.setVisible(true);}catch{}}
+    });
+    apply();
+  }
+
   _storeCard(parent,p,x,y,w,h){
     super._storeCard(parent,p,x,y,w,h);
     if(p?.type!=='reward')return;
