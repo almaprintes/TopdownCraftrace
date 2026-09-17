@@ -62,15 +62,32 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     return result;
   }
 
+  _tdrHideResidualPhaserSteering(){
+    if(!this._tdrGamepadUiActive)return;
+    // The last visible stick is a legacy Phaser HUD object outside touchUI.
+    // Target only fixed-camera graphics/images in the lower-left steering zone;
+    // world scenery and the central HUD use different scroll factors/positions.
+    const w=Number(this.scale?.width)||0,h=Number(this.scale?.height)||0;
+    if(!w||!h)return;
+    try{
+      for(const obj of this.children?.list||[]){
+        if(!obj||obj===this.carBody||obj.visible===false)continue;
+        const sx=Number(obj.scrollFactorX),sy=Number(obj.scrollFactorY),x=Number(obj.x),y=Number(obj.y);
+        if(sx!==0||sy!==0||!Number.isFinite(x)||!Number.isFinite(y))continue;
+        if(x>w*.34||y<h*.42)continue;
+        const type=String(obj.type||obj.constructor?.name||'').toLowerCase();
+        if(!/(graphics|image|sprite|ellipse|circle|arc)/.test(type))continue;
+        try{obj.setVisible?.(false);obj.disableInteractive?.();}catch{}
+      }
+    }catch{}
+  }
+
   _tdrApplyGamepadDrivingUi(active){
     try{document.body.classList.toggle(GAMEPAD_UI_CLASS,active);}catch{}
     if(!active)return;
-    // Phaser joystick/buttons are outside the DOM pedal layer, so hide/destroy them explicitly.
     try{this.touchUI?.setVisible?.(false);}catch{}
     try{this._destroyButtonSteeringUi?.();}catch{}
     try{document.querySelectorAll('[data-tdr-steering-button]').forEach(el=>el.remove());}catch{}
-    // Commercial pedal art lives inside the race-controls host together with DELTA/PAUSE.
-    // Hide only descendants that identify themselves as driving controls; preserve HUD descendants.
     try{
       const root=document.getElementById('tdr-race-controls');
       root?.querySelectorAll?.('*')?.forEach?.(el=>{
@@ -78,12 +95,11 @@ export class RaceScene extends EmbeddedReplayRaceScene{
         if(/pedal|throttle|acceler|gas|brake|freno|handbrake|steer|joystick/.test(sig))el.style.setProperty('display','none','important');
       });
     }catch{}
+    this._tdrHideResidualPhaserSteering();
   }
 
   _tdrSyncGamepadUi(force=false){
     if(this._tdrEmbeddedReplay)return;
-    // iOS may not expose navigator.getGamepads() until the first physical input.
-    // The user's selected control mode is therefore authoritative from the first frame.
     const active=gamepadSelected()||connectedGamepad();
     if(!force&&active===this._tdrGamepadUiActive)return;
     this._tdrGamepadUiActive=active;
@@ -126,9 +142,12 @@ export class RaceScene extends EmbeddedReplayRaceScene{
   }
 
   update(time,delta){
-    this._tdrSyncGamepadUi();let originalThrottle=null;
+    this._tdrSyncGamepadUi();
+    this._tdrHideResidualPhaserSteering();
+    let originalThrottle=null;
     if(this._raceStarted&&this._tdrClutchReleaseAt&&this.touch){originalThrottle=Number(this.touch.throttle)||0;const clutch=clamp01((performance.now()-this._tdrClutchReleaseAt)/350);this.touch.throttle=originalThrottle*clutch;}
     try{super.update(time,delta);}finally{if(originalThrottle!==null&&this.touch)this.touch.throttle=originalThrottle;}
+    this._tdrHideResidualPhaserSteering();
     try{this._tdrEngineSample?.update?.();}catch{}
   }
 
