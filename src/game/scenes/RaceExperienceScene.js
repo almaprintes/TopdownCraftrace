@@ -152,6 +152,7 @@ export class RaceScene extends CurrentRaceScene {
     if(!this._experienceHiddenUi)this._experienceHiddenUi=hideRaceUi(this);
     const ui=mountRacePauseUi({
       onContinue:()=>this._closePauseMenu(true),
+      onControls:()=>this._openGamepadGuide(),
       onCaptureWorld:()=>this._runPauseCapture('world'),
       onCaptureTechnical:()=>this._runPauseCapture('technical'),
       onFinish:()=>this._finishSessionFromPause(),
@@ -189,6 +190,33 @@ export class RaceScene extends CurrentRaceScene {
       }catch{}
       try{this._updateSimpleRaceHud?.(100);}catch{}
     }
+  }
+
+  _openGamepadGuide(){
+    if(typeof document==='undefined'||document.getElementById('tdr-gamepad-guide'))return;
+    const overlay=document.createElement('div');
+    overlay.id='tdr-gamepad-guide';
+    overlay.dataset.tdrRaceUi='gamepad-guide';
+    overlay.innerHTML=`
+      <section style="width:min(760px,92vw);background:linear-gradient(180deg,#101a29,#07101b);border:1px solid #5bcfff88;border-radius:18px;padding:22px;color:#fff;font-family:system-ui;box-shadow:0 24px 80px #000b">
+        <div style="font-size:12px;letter-spacing:.18em;color:#67cfff;font-weight:900">CONTROLES · MANDO</div>
+        <h2 style="margin:5px 0 18px;font-size:26px">PlayStation</h2>
+        <div style="display:grid;grid-template-columns:1fr minmax(210px,1.25fr) 1fr;gap:14px;align-items:center">
+          <div style="display:grid;gap:12px"><div><b>L2</b><br><small>FRENO · ANALÓGICO</small></div><div><b>STICK IZQUIERDO</b><br><small>DIRECCIÓN</small></div></div>
+          <div aria-hidden="true" style="position:relative;aspect-ratio:1.7;border:3px solid #b9d7e8;border-radius:42% 42% 48% 48%;background:#172435;box-shadow:inset 0 0 0 4px #ffffff12">
+            <span style="position:absolute;left:18%;top:48%;width:22%;aspect-ratio:1;border:3px solid #8fb5ca;border-radius:50%;transform:translate(-50%,-50%);box-shadow:inset 0 0 0 8px #0b1420"></span>
+            <span style="position:absolute;right:18%;top:43%;font-size:30px;transform:translate(50%,-50%);color:#ff6b83">○</span>
+            <span style="position:absolute;left:50%;top:39%;transform:translate(-50%,-50%);font-size:10px;border:1px solid #8fb5ca;border-radius:8px;padding:4px 7px">OPTIONS</span>
+            <span style="position:absolute;left:8%;top:-14px;font-size:12px;font-weight:900">L2</span><span style="position:absolute;right:8%;top:-14px;font-size:12px;font-weight:900">R2</span>
+          </div>
+          <div style="display:grid;gap:12px;text-align:right"><div><b>R2</b><br><small>ACELERADOR · ANALÓGICO</small></div><div><b>○ CÍRCULO</b><br><small>FRENO DE MANO</small></div><div><b>OPTIONS</b><br><small>PAUSA / REANUDAR</small></div></div>
+        </div>
+        <button data-close style="margin-top:20px;width:100%;padding:13px;border-radius:10px;border:1px solid #67cfff;background:#102b40;color:#fff;font-weight:900">VOLVER</button>
+      </section>`;
+    Object.assign(overlay.style,{position:'fixed',inset:'0',zIndex:'25000',display:'grid',placeItems:'center',background:'rgba(0,0,0,.72)',padding:'16px'});
+    const close=()=>overlay.remove();
+    overlay.querySelector('[data-close]')?.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();close();});
+    document.body.appendChild(overlay);
   }
 
   _runPauseCapture(kind){
