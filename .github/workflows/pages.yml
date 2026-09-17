@@ -48,22 +48,21 @@ jobs:
           ref: ${{ github.sha }}
           path: dev-src
           fetch-depth: 1
-      - name: Verify recovered race path
+      - name: Verify recovered 1.0.157 baseline
         working-directory: dev-src
         shell: bash
         run: |
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
-          test -f src/game/scenes/MenuRewardedAdsScene.js
-          test -f src/game/ui/racePauseUi.js
-          test -f src/game/ui/lobby-tablet.css
+          test -f src/game/scenes/RaceGamepadScene.js
+          test ! -f src/mainStableBootstrap.js
+          test ! -f src/ui/gamepadSettingsEnhancer.js
           grep -q "RaceEmbeddedReplaySceneV2.js" src/game/game.js
+          grep -q "RaceControlSchemeScene.js" src/game/scenes/RaceGamepadScene.js
           grep -q "this.scene.start('race'" src/game/scenes/MenuGameModesScene.js
-          grep -q "CarEngineSampleRuntime" src/game/scenes/RaceEmbeddedReplaySceneV2.js
-          grep -q "lobby-tablet.css" src/game/scenes/MenuDomUiScene.js
-          grep -q "settingsLegalEnhancer.js" index.html
           grep -q "src/main.js" index.html
-          if grep -q "mainStableBootstrap.js" index.html; then echo "Recovered DEV must use the proven main.js entrypoint"; exit 1; fi
+          if grep -q "mainStableBootstrap.js" index.html; then exit 1; fi
+          if grep -q "gamepadSettingsEnhancer.js" index.html; then exit 1; fi
       - name: Build development
         working-directory: dev-src
         shell: bash
@@ -87,8 +86,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.171' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.171' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.172' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.172' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
