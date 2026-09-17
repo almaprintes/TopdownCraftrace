@@ -1,0 +1,1 @@
+const stamp=()=>{document.querySelectorAll('.rot-beta-title').forEach(el=>{const spans=el.querySelectorAll('span');if(spans.length>1)spans[spans.length-1].textContent='149';});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',stamp,{once:true});else stamp();
