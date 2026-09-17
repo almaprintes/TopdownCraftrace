@@ -58,8 +58,9 @@ jobs:
           test ! -f src/mainStableBootstrap.js
           test ! -f src/ui/gamepadSettingsEnhancer.js
           grep -q "RaceEmbeddedReplaySceneV2.js" src/game/game.js
-          grep -q "RaceControlSchemeScene.js" src/game/scenes/RaceGamepadScene.js
-          grep -q "tdr-gamepad-pedals" src/game/scenes/RaceGamepadScene.js
+          grep -q "gamepadSelected()||connectedGamepad()" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -q "Never hide #tdr-race-controls" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -q "_destroyButtonSteeringUi" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "start_red.webp" src/game/scenes/RaceCleanStartLightsScene.js
           grep -q "Surface physics only" src/game/scenes/RaceSurfaceProfileScene.js
           if grep -q "setTexture?.('off')" src/game/scenes/RaceSurfaceProfileScene.js; then exit 1; fi
@@ -88,8 +89,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.174' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.174' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.175' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.175' beta/dist/dev-live/index.html
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
