@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceGraphicsPresetScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceSteeringSensitivityScene.js';
 import { recordCompletedLapClean } from '../seasons/cleanLapTelemetry.js';
 import { showRaceFeedback } from '../ui/raceFeedbackUi.js';
 
