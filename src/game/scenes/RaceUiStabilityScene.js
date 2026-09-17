@@ -39,7 +39,7 @@ export class RaceScene extends CurrentRaceScene {
     try { result = super.create(data); }
     finally { scale.on = originalOn; }
 
-    try { document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.176'; }); }
+    try { document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.178'; }); }
     catch (_) {}
 
     this._raceResizeCaptured = capturedResize;
@@ -80,10 +80,18 @@ export class RaceScene extends CurrentRaceScene {
     this._hideLegacyPedalVisuals = () => {
       const list = this.touchUI?.list;
       if (!Array.isArray(list)) return;
-      // Legacy order: joystick base, joystick knob, gas bg, gas text, brake bg, brake text.
-      // Gamepad mode has no touch driving UI at all; touch modes retain their steering control.
-      const first = gamepadModeSelected() ? 0 : 2;
-      for (let i = first; i <= 5; i++) {
+      // The legacy touch container owns the joystick and pedal graphics only.
+      // In gamepad mode hide the container itself so nested/recreated stick parts
+      // cannot survive; Delta/Pause are separate DOM HUD controls and stay visible.
+      if (gamepadModeSelected()) {
+        try { this.touchUI?.setVisible?.(false); } catch (_) {}
+        for (const obj of list) {
+          try { obj?.setVisible?.(false); obj?.disableInteractive?.(); } catch (_) {}
+        }
+        return;
+      }
+      try { this.touchUI?.setVisible?.(true); } catch (_) {}
+      for (let i = 2; i <= 5; i++) {
         try { list[i]?.setVisible?.(false); } catch (_) {}
       }
     };
