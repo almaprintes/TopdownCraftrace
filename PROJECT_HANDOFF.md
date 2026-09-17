@@ -3,6 +3,22 @@
 > Documento vivo para continuar el proyecto en un chat nuevo sin perder decisiones, soluciones técnicas ni el estado de trabajo.
 > Fuente oficial: `almaprintes/TopdownCraftrace`. Desarrollo normal en `main`; beta pública estable en `beta-1.0`.
 
+## ACTUALIZACIÓN DE CONTINUIDAD — 17/09/2026
+
+### Supabase / leaderboard online
+
+Se creó y configuró el proyecto Supabase para preparar los futuros leaderboards online. La configuración completa y las decisiones de seguridad/privacidad quedan registradas en:
+
+- `docs/continuity/2026-09-17-supabase-bootstrap.md`
+
+Estado a 17/09/2026: organización `CraftRace Studio`, plan Free, proyecto `TopDown RACE - Craftrace` en West EU (Ireland), PostgreSQL estándar, GitHub autorizado únicamente para este repositorio, Data API activada, exposición automática de tablas nuevas desactivada, Automatic RLS activado y Auth anónimo activado con Email y demás proveedores no usados/desactivados.
+
+Arquitectura prevista: UUID anónimo de Supabase asociado al nick que ya pide Craftrace. Los usuarios anónimos usan rol `authenticated`, por lo que las futuras políticas RLS deberán aplicar mínimo privilegio mediante `auth.uid()` y no conceder acceso general por el mero rol. Antes de publicar una build que envíe UUID/nick/datos de leaderboard habrá que revisar y actualizar Data Safety en Google Play según la implementación real.
+
+**Todavía NO se han creado tablas ni integrado Supabase en el código del juego.** La conexión GitHub de Supabase tampoco implica despliegue automático de migraciones: el futuro esquema/migraciones SQL deberá versionarse en el repo y su despliegue configurarse explícitamente. No guardar contraseña DB, `service_role` ni secretos en GitHub.
+
+Esta actualización es solo documental y no cambia la versión visible de DEV ni toca `beta-1.0`.
+
 ## ESTADO OPERATIVO — 13/09/2026
 
 ### Reglas obligatorias
