@@ -1,3 +1,5 @@
+import { evaluationAccessEnabled } from '../shipaton/ShipatonJudgeMode.js';
+
 const KEY='tdr2:trackUnlocks:v1';
 const DEV_KEY='tdr2:devFullTrackAccess:v1';
 
@@ -16,9 +18,9 @@ export function loadTrackUnlocks(){
 }
 export function saveTrackUnlocks(state){const unlocked=normalize(state?.unlocked).filter(isPublishedTrackId);for(const id of STARTER_TRACK_IDS)if(!unlocked.includes(id))unlocked.push(id);const next={unlocked};try{localStorage.setItem(KEY,JSON.stringify(next));}catch{}return next;}
 export function unlockTrack(trackId){const id=String(trackId||'').trim();if(!id||!isPublishedTrackId(id))return false;const state=loadTrackUnlocks(),had=state.unlocked.includes(id);if(!had)state.unlocked.push(id);saveTrackUnlocks(state);return !had;}
-export function isTrackUnlocked(trackId){const id=String(trackId||'');return isPublishedTrackId(id)&&loadTrackUnlocks().unlocked.includes(id);}
+export function isTrackUnlocked(trackId){const id=String(trackId||'');return isPublishedTrackId(id)&&(evaluationAccessEnabled()||loadTrackUnlocks().unlocked.includes(id));}
 export function unlockedTrackIds(){return [...loadTrackUnlocks().unlocked];}
-export function devFullTrackAccessEnabled(){try{return localStorage.getItem(DEV_KEY)==='1';}catch{return false;}}
+export function devFullTrackAccessEnabled(){if(evaluationAccessEnabled())return true;try{return localStorage.getItem(DEV_KEY)==='1';}catch{return false;}}
 export function setDevFullTrackAccess(enabled){try{localStorage.setItem(DEV_KEY,enabled?'1':'0');}catch{}return !!enabled;}
 export const TRACK_UNLOCKS_KEY=KEY;
 export const DEV_FULL_TRACK_ACCESS_KEY=DEV_KEY;
