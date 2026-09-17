@@ -52,6 +52,16 @@ export class RaceScene extends TouchRaceScene {
     this._tdrPadRefresh=()=>{this._tdrHideTouchDrivingDom();this._tdrEnsurePadMeters();};
     for(const ev of ['focus','pageshow','gamepadconnected'])window.addEventListener(ev,this._tdrPadRefresh,{passive:true});
     document.addEventListener('visibilitychange',this._tdrPadRefresh,{passive:true});
+
+    // Poll OPTIONS outside Phaser's update clock too. The pause stack can freeze
+    // scene updates, but a second OPTIONS press must always resume the race.
+    const pollOptions=()=>{
+      if(!this._tdrGamepadMode||!this.sys?.isActive?.())return;
+      this._tdrHandleOptions(firstPad());
+      this._tdrPadOptionsRaf=requestAnimationFrame(pollOptions);
+    };
+    this._tdrPadOptionsRaf=requestAnimationFrame(pollOptions);
+
     this.events.once('shutdown',()=>this._tdrPadCleanup());
     return result;
   }
@@ -79,14 +89,17 @@ export class RaceScene extends TouchRaceScene {
   }
   _tdrHandleOptions(p){
     const down=digital(p,9);
-    if(down&&!this._tdrPadPrevOptions){const open=this._tdrPauseMenuOpen===true||!!this._experiencePauseUi?.root?.isConnected;try{open?this._closePauseMenu?.(true):this._openPauseMenu?.();}catch(_){}}
+    if(down&&!this._tdrPadPrevOptions){
+      const open=this._tdrPauseMenuOpen===true||!!this._experiencePauseUi?.root?.isConnected;
+      try{open?this._closePauseMenu?.(true):this._openPauseMenu?.();}catch(_){}
+    }
     this._tdrPadPrevOptions=down;
   }
 
   update(time,delta){
     if(!this._tdrGamepadMode){super.update(time,delta);return;}
     const p=firstPad(),touch=this.touch;
-    let gas=0,brake=0;
+    let gas=0,brake=0,handbrake=false;
     if(touch){
       if(p){
         const v=stickVector(p.axes?.[0],p.axes?.[1]);
@@ -94,22 +107,25 @@ export class RaceScene extends TouchRaceScene {
         if(dpad){touch.stickX=0;touch.stickY=0;touch.targetAngle=null;touch.steer=dpad;touch.leftActive=true;touch.buttonSteer=0;}
         else if(v.mag>=.02){touch.stickX=v.x;touch.stickY=v.y;touch.steer=v.x;touch.leftActive=true;touch.buttonSteer=0;touch.targetAngle=Math.atan2(v.y,v.x)-(Math.PI/2);}
         else{touch.stickX=0;touch.stickY=0;touch.targetAngle=null;touch.steer=0;touch.leftActive=false;touch.buttonSteer=0;}
-        gas=triggerValue(p.buttons?.[7]);brake=triggerValue(p.buttons?.[6]);
+        gas=triggerValue(p.buttons?.[7]);brake=triggerValue(p.buttons?.[6]);handbrake=digital(p,1);
         touch.throttle=gas;touch.brake=brake;touch.rightThrottle=gas>.01;touch.rightBrake=brake>.01;
-        touch.handbrake=digital(p,1);touch.handBrake=touch.handbrake;
-        this._tdrHandleOptions(p);
+        touch.handbrake=handbrake;touch.handBrake=handbrake;
+        // RaceHandbrakePhysicsScene consumes this authoritative flag.
+        this._tdrHandbrake=handbrake;
       }else{
-        touch.stickX=0;touch.stickY=0;touch.targetAngle=null;touch.steer=0;touch.leftActive=false;touch.buttonSteer=0;touch.throttle=0;touch.brake=0;touch.rightThrottle=false;touch.rightBrake=false;touch.handbrake=false;touch.handBrake=false;
+        touch.stickX=0;touch.stickY=0;touch.targetAngle=null;touch.steer=0;touch.leftActive=false;touch.buttonSteer=0;touch.throttle=0;touch.brake=0;touch.rightThrottle=false;touch.rightBrake=false;touch.handbrake=false;touch.handBrake=false;this._tdrHandbrake=false;
       }
     }
     this._tdrMeters(gas,brake);
     super.update(time,delta);
-    if(p&&touch){touch.throttle=gas;touch.brake=brake;touch.handbrake=digital(p,1);touch.handBrake=touch.handbrake;}
+    if(p&&touch){touch.throttle=gas;touch.brake=brake;touch.handbrake=handbrake;touch.handBrake=handbrake;this._tdrHandbrake=handbrake;}
   }
 
   _tdrPadCleanup(){
+    try{cancelAnimationFrame(this._tdrPadOptionsRaf);}catch(_){} this._tdrPadOptionsRaf=null;
     for(const ev of ['focus','pageshow','gamepadconnected'])try{window.removeEventListener(ev,this._tdrPadRefresh);}catch(_){}
     try{document.removeEventListener('visibilitychange',this._tdrPadRefresh);}catch(_){}
     try{this._tdrPadMeters?.remove?.();}catch(_){} this._tdrPadMeters=null;
+    this._tdrHandbrake=false;
   }
 }
