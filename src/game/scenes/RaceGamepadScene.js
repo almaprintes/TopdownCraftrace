@@ -1,159 +1,115 @@
 import { RaceScene as TouchRaceScene } from './RaceControlSchemeScene.js';
 
 const SETTINGS_KEY = 'tdr2:settings';
+const clamp01 = (v) => Math.max(0, Math.min(1, Number(v) || 0));
 
 function readSettings() {
   try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); }
   catch (_) { return {}; }
 }
-
-function selectedMode() {
-  return readSettings()?.controls?.steeringMode || 'stick';
-}
-
+function selectedMode() { return readSettings()?.controls?.steeringMode || 'stick'; }
 function firstPad() {
-  try { return Array.from(navigator.getGamepads?.() || []).find(Boolean) || null; }
+  try { return Array.from(navigator.getGamepads?.() || []).find(p => p && p.connected !== false) || null; }
   catch (_) { return null; }
 }
-
-// Same idea as the on-screen joystick: circular deadzone, preserve direction,
-// then remap the usable radius back to 0..1. This avoids diagonal distortion.
-function stickVector(rawX, rawY, dz = 0.12) {
-  let x = Math.max(-1, Math.min(1, Number(rawX) || 0));
-  let y = Math.max(-1, Math.min(1, Number(rawY) || 0));
-  const mag = Math.hypot(x, y);
-  if (mag <= dz) return { x: 0, y: 0, mag: 0 };
-
-  const clampedMag = Math.min(1, mag);
-  const usable = (clampedMag - dz) / (1 - dz);
-  const nx = x / mag;
-  const ny = y / mag;
-  return { x: nx * usable, y: ny * usable, mag: usable };
-}
-
+function digital(p, i) { const b=p?.buttons?.[i]; return !!b && (b.pressed || Number(b.value)>.5); }
 function triggerValue(button) {
   if (!button) return 0;
   const v = Number(button.value);
-  if (Number.isFinite(v)) return Math.max(0, Math.min(1, v));
-  return button.pressed ? 1 : 0;
+  return clamp01(Number.isFinite(v) ? v : (button.pressed ? 1 : 0));
+}
+function stickVector(rawX, rawY, dz = 0.12) {
+  const x=Math.max(-1,Math.min(1,Number(rawX)||0)), y=Math.max(-1,Math.min(1,Number(rawY)||0));
+  const mag=Math.hypot(x,y); if(mag<=dz)return{x:0,y:0,mag:0};
+  const usable=(Math.min(1,mag)-dz)/(1-dz); return{x:(x/mag)*usable,y:(y/mag)*usable,mag:usable};
 }
 
 export class RaceScene extends TouchRaceScene {
   create(data) {
-    const wanted = selectedMode();
-    this._tdrGamepadMode = wanted === 'gamepad';
-
-    // Reuse the button-mode touch state because it creates no analogue joystick.
-    let originalRaw = null;
-    if (this._tdrGamepadMode) {
-      try {
-        originalRaw = localStorage.getItem(SETTINGS_KEY);
-        const temp = originalRaw ? JSON.parse(originalRaw) : {};
-        temp.controls = { ...(temp.controls || {}), steeringMode: 'buttons', scheme: 'gamepad' };
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(temp));
-      } catch (_) {}
+    const wanted=selectedMode();
+    this._tdrGamepadMode=wanted==='gamepad';
+    let originalRaw=null;
+    if(this._tdrGamepadMode){
+      try{
+        originalRaw=localStorage.getItem(SETTINGS_KEY);
+        const temp=originalRaw?JSON.parse(originalRaw):{};
+        temp.controls={...(temp.controls||{}),steeringMode:'buttons',scheme:'gamepad'};
+        localStorage.setItem(SETTINGS_KEY,JSON.stringify(temp));
+      }catch(_){}
     }
-
     let result;
-    try {
-      result = super.create(data);
-    } finally {
-      if (this._tdrGamepadMode) {
-        try {
-          if (originalRaw == null) localStorage.removeItem(SETTINGS_KEY);
-          else localStorage.setItem(SETTINGS_KEY, originalRaw);
-        } catch (_) {}
-      }
+    try{result=super.create(data);}finally{
+      if(this._tdrGamepadMode){try{if(originalRaw==null)localStorage.removeItem(SETTINGS_KEY);else localStorage.setItem(SETTINGS_KEY,originalRaw);}catch(_){}}
     }
+    if(!this._tdrGamepadMode)return result;
 
-    if (!this._tdrGamepadMode) return result;
-
-    this._tdrSteeringMode = 'gamepad';
-    try { this._tdrSteerButtons?.destroy(true); } catch (_) {}
-    this._tdrSteerButtons = null;
-    this._tdrLeftButton = null;
-    this._tdrRightButton = null;
-
-    this._tdrGamepadStyle = document.createElement('style');
-    this._tdrGamepadStyle.textContent = '#tdr-race-controls{display:none!important}';
-    document.head.appendChild(this._tdrGamepadStyle);
-
-    this._tdrGamepadWasConnected = false;
-    this.events.once('shutdown', () => {
-      try { this._tdrGamepadStyle?.remove?.(); } catch (_) {}
-      this._tdrGamepadStyle = null;
-    });
-
+    this._tdrSteeringMode='gamepad';
+    this._destroyButtonSteeringUi?.();
+    try{this.touchUI?.setVisible?.(false);}catch(_){}
+    this._tdrHideTouchDrivingDom();
+    this._tdrEnsurePadMeters();
+    this._tdrPadPrevOptions=false;
+    this._tdrPadRefresh=()=>{this._tdrHideTouchDrivingDom();this._tdrEnsurePadMeters();};
+    for(const ev of ['focus','pageshow','gamepadconnected'])window.addEventListener(ev,this._tdrPadRefresh,{passive:true});
+    document.addEventListener('visibilitychange',this._tdrPadRefresh,{passive:true});
+    this.events.once('shutdown',()=>this._tdrPadCleanup());
     return result;
   }
 
-  update(time, delta) {
-    if (!this._tdrGamepadMode) {
-      super.update(time, delta);
-      return;
-    }
+  _tdrHideTouchDrivingDom(){
+    try{
+      document.querySelectorAll('[data-tdr-steering-button]').forEach(el=>el.remove());
+      const root=document.getElementById('tdr-race-controls');
+      if(root)root.style.setProperty('display','none','important');
+    }catch(_){}
+  }
 
-    const pad = firstPad();
-    const touch = this.touch;
+  _tdrEnsurePadMeters(){
+    if(this._tdrPadMeters?.isConnected)return;
+    const root=document.createElement('div');
+    root.id='tdr-gamepad-pedals'; root.dataset.tdrGamepadFeedback='1';
+    root.style.cssText='position:fixed;right:max(18px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));z-index:8100;display:flex;gap:9px;pointer-events:none;color:#fff;font-family:system-ui';
+    root.innerHTML='<div style="width:46px"><div style="font:900 8px system-ui;text-align:center;margin-bottom:3px">L2</div><div style="height:64px;border:1px solid #ff667a88;background:#18090dcc;border-radius:8px;overflow:hidden;display:flex;align-items:flex-end"><i data-brake style="display:block;width:100%;height:0%;background:#ff405c;opacity:.9"></i></div></div><div style="width:46px"><div style="font:900 8px system-ui;text-align:center;margin-bottom:3px">R2</div><div style="height:64px;border:1px solid #52ff9b88;background:#07150dcc;border-radius:8px;overflow:hidden;display:flex;align-items:flex-end"><i data-gas style="display:block;width:100%;height:0%;background:#32e97d;opacity:.9"></i></div></div>';
+    document.body.appendChild(root); this._tdrPadMeters=root;
+  }
+  _tdrMeters(gas,brake){
+    const r=this._tdrPadMeters;if(!r)return;
+    const g=r.querySelector('[data-gas]'),b=r.querySelector('[data-brake]');
+    if(g)g.style.height=`${Math.round(gas*100)}%`; if(b)b.style.height=`${Math.round(brake*100)}%`;
+  }
+  _tdrHandleOptions(p){
+    const down=digital(p,9);
+    if(down&&!this._tdrPadPrevOptions){const open=this._tdrPauseMenuOpen===true||!!this._experiencePauseUi?.root?.isConnected;try{open?this._closePauseMenu?.(true):this._openPauseMenu?.();}catch(_){}}
+    this._tdrPadPrevOptions=down;
+  }
 
-    if (touch) {
-      if (pad) {
-        // Analogue stick: mirror the on-screen joystick one-for-one. It keeps
-        // the full X/Y vector and therefore the same absolute-stick behaviour.
-        const v = stickVector(pad.axes?.[0] || 0, pad.axes?.[1] || 0);
-
-        const dLeft = !!pad.buttons?.[14]?.pressed;
-        const dRight = !!pad.buttons?.[15]?.pressed;
-        const dpadSteer = dLeft && !dRight ? -1 : dRight && !dLeft ? 1 : 0;
-
-        if (v.mag >= 0.02) {
-          touch.stickX = v.x;
-          touch.stickY = v.y;
-          touch.steer = v.x;
-          touch.leftActive = true;
-          touch.buttonSteer = 0;
-          touch.targetAngle = Math.atan2(v.y, v.x) - (Math.PI / 2);
-        } else if (dpadSteer !== 0) {
-          // D-pad is NOT a virtual analogue stick. Left/right means "keep
-          // steering left/right" relative to the car, so it must never create
-          // a world-space targetAngle. This lets the car turn continuously
-          // through 360 degrees while the direction is held.
-          touch.stickX = 0;
-          touch.stickY = 0;
-          touch.targetAngle = null;
-          touch.steer = dpadSteer;
-          touch.leftActive = true;
-          touch.buttonSteer = 0;
-        } else {
-          touch.stickX = 0;
-          touch.stickY = 0;
-          touch.targetAngle = null;
-          touch.steer = 0;
-          touch.leftActive = false;
-          touch.buttonSteer = 0;
-        }
-
-        // Standard browser mapping for DualShock 4 / DualSense:
-        // L2 = 6, R2 = 7.
-        touch.throttle = triggerValue(pad.buttons?.[7]);
-        touch.brake = triggerValue(pad.buttons?.[6]);
-        touch.rightThrottle = touch.throttle > 0.05;
-        touch.rightBrake = touch.brake > 0.05;
-        this._tdrGamepadWasConnected = true;
-      } else {
-        touch.stickX = 0;
-        touch.stickY = 0;
-        touch.targetAngle = null;
-        touch.steer = 0;
-        touch.leftActive = false;
-        touch.buttonSteer = 0;
-        touch.throttle = 0;
-        touch.brake = 0;
-        touch.rightThrottle = false;
-        touch.rightBrake = false;
+  update(time,delta){
+    if(!this._tdrGamepadMode){super.update(time,delta);return;}
+    const p=firstPad(),touch=this.touch;
+    let gas=0,brake=0;
+    if(touch){
+      if(p){
+        const v=stickVector(p.axes?.[0],p.axes?.[1]);
+        const dl=digital(p,14),dr=digital(p,15),dpad=dl&&!dr?-1:dr&&!dl?1:0;
+        if(dpad){touch.stickX=0;touch.stickY=0;touch.targetAngle=null;touch.steer=dpad;touch.leftActive=true;touch.buttonSteer=0;}
+        else if(v.mag>=.02){touch.stickX=v.x;touch.stickY=v.y;touch.steer=v.x;touch.leftActive=true;touch.buttonSteer=0;touch.targetAngle=Math.atan2(v.y,v.x)-(Math.PI/2);}
+        else{touch.stickX=0;touch.stickY=0;touch.targetAngle=null;touch.steer=0;touch.leftActive=false;touch.buttonSteer=0;}
+        gas=triggerValue(p.buttons?.[7]);brake=triggerValue(p.buttons?.[6]);
+        touch.throttle=gas;touch.brake=brake;touch.rightThrottle=gas>.01;touch.rightBrake=brake>.01;
+        touch.handbrake=digital(p,1);touch.handBrake=touch.handbrake;
+        this._tdrHandleOptions(p);
+      }else{
+        touch.stickX=0;touch.stickY=0;touch.targetAngle=null;touch.steer=0;touch.leftActive=false;touch.buttonSteer=0;touch.throttle=0;touch.brake=0;touch.rightThrottle=false;touch.rightBrake=false;touch.handbrake=false;touch.handBrake=false;
       }
     }
+    this._tdrMeters(gas,brake);
+    super.update(time,delta);
+    if(p&&touch){touch.throttle=gas;touch.brake=brake;touch.handbrake=digital(p,1);touch.handBrake=touch.handbrake;}
+  }
 
-    super.update(time, delta);
+  _tdrPadCleanup(){
+    for(const ev of ['focus','pageshow','gamepadconnected'])try{window.removeEventListener(ev,this._tdrPadRefresh);}catch(_){}
+    try{document.removeEventListener('visibilitychange',this._tdrPadRefresh);}catch(_){}
+    try{this._tdrPadMeters?.remove?.();}catch(_){} this._tdrPadMeters=null;
   }
 }
