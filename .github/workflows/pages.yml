@@ -66,10 +66,12 @@ jobs:
           grep -q "this.touchUI?.setVisible?.(false)" src/game/scenes/RaceUiStabilityScene.js
           grep -q "_hideResidualGamepadSteeringVisual" src/game/scenes/RaceUiStabilityScene.js
           grep -q "document.body.querySelectorAll('\*')" src/game/scenes/RaceUiStabilityScene.js
-          grep -q "DEV 1.0.180" src/game/scenes/RaceUiStabilityScene.js
+          grep -q "DEV 1.0.181" src/game/scenes/RaceUiStabilityScene.js
+          grep -q "_tdrDestroyTouchSteeringUi" src/game/scenes/RaceGamepadScene.js
+          grep -q "ui.destroy?.(true)" src/game/scenes/RaceGamepadScene.js
           grep -q "this._tdrHandbrake=handbrake" src/game/scenes/RaceGamepadScene.js
           grep -q "requestAnimationFrame(pollOptions)" src/game/scenes/RaceGamepadScene.js
-          grep -q "DEV 1.0.180 visible development version" index.html
+          grep -q "DEV 1.0.181 visible development version" index.html
           grep -q "start_red.webp" src/game/scenes/RaceCleanStartLightsScene.js
           grep -q "Surface physics only" src/game/scenes/RaceSurfaceProfileScene.js
           if grep -q "setTexture?.('off')" src/game/scenes/RaceSurfaceProfileScene.js; then exit 1; fi
@@ -98,10 +100,10 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV 1\.0\.180 visible development version' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.180 visible development version' beta/dist/dev-live/index.html
-          grep -R -q 'DEV 1\.0\.180' beta/dist/dev/assets
-          grep -R -q 'DEV 1\.0\.180' beta/dist/dev-live/assets
+          grep -q 'DEV 1\.0\.181 visible development version' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.181 visible development version' beta/dist/dev-live/index.html
+          grep -R -q 'DEV 1\.0\.181' beta/dist/dev/assets
+          grep -R -q 'DEV 1\.0\.181' beta/dist/dev-live/assets
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
