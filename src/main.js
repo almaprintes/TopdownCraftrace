@@ -23,18 +23,9 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 let __game = null;
-let __orientationStartPending = false;
-let __orientationSettleTimers = [];
 
 function __isLandscape() {
-  try {
-    if (screen.orientation?.type?.startsWith('landscape')) return true;
-    if (screen.orientation?.type?.startsWith('portrait')) return false;
-  } catch {}
-  const vv = window.visualViewport;
-  const vw = Number(vv?.width || 0), vh = Number(vv?.height || 0);
-  if (vw > 0 && vh > 0 && Math.abs(vw-vh) > 24) return vw > vh;
-  return Number(window.innerWidth || 0) >= Number(window.innerHeight || 0);
+  return window.innerWidth >= window.innerHeight;
 }
 
 function __setOverlayVisible(visible) {
@@ -42,7 +33,6 @@ function __setOverlayVisible(visible) {
   if (!ov) return;
   ov.style.display = visible ? 'flex' : 'none';
   ov.setAttribute('aria-hidden', visible ? 'false' : 'true');
-  try { document.documentElement.classList.toggle('tdr-portrait', !!visible); } catch {}
 }
 
 function __sleepGame() {
@@ -179,45 +169,136 @@ function __installRaceControlVisuals() {
       --y: 0;
       --mag: 0;
       position: absolute;
-      left: max(20px, 2.1vw);
-      bottom: max(18px, 2.8vh);
-      width: clamp(154px, 17vw, 250px);
+      left: max(22px, 2vw);
+      bottom: max(22px, 3vh);
+      width: clamp(142px, 17vw, 190px);
       aspect-ratio: 1;
+      opacity: .78;
+      transition: opacity 90ms linear;
+      filter: drop-shadow(0 7px 18px rgba(0,0,0,.20));
+    }
+
+    .tdr-stick.is-active { opacity: .98; }
+
+    .tdr-stick-ring,
+    .tdr-stick-core,
+    .tdr-stick-energy {
+      position: absolute;
       border-radius: 50%;
-      background: radial-gradient(circle at 50% 50%, rgba(7,16,24,.86) 0 39%, rgba(21,34,43,.78) 40% 64%, rgba(4,10,15,.75) 65% 100%);
-      border: 1px solid rgba(98,239,255,.38);
-      box-shadow: inset 0 0 0 8px rgba(255,255,255,.025), inset 0 0 30px rgba(68,226,255,.08), 0 8px 24px rgba(0,0,0,.18);
+      inset: 0;
+      margin: auto;
     }
-    .tdr-stick::before {
-      content:'';
-      position:absolute;
-      inset:10%;
-      border-radius:50%;
-      border:1px dashed rgba(106,231,255,.18);
+
+    .tdr-stick-ring {
+      width: 84%;
+      height: 84%;
+      border: 3px solid rgba(220,235,255,.30);
+      background:
+        radial-gradient(circle, rgba(20,40,55,.08) 0 54%, transparent 55%),
+        conic-gradient(from -90deg,
+          rgba(110,215,255,calc(.05 + var(--mag) * .15)),
+          transparent 22%, transparent 78%,
+          rgba(110,215,255,calc(.05 + var(--mag) * .15)));
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.055),
+        0 0 14px rgba(100,200,255,.11);
     }
+
+    .tdr-stick-ring::before,
+    .tdr-stick-ring::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      background: rgba(185,225,255,.12);
+      transform: translate(-50%,-50%);
+    }
+    .tdr-stick-ring::before { width: 62%; height: 1px; }
+    .tdr-stick-ring::after { width: 1px; height: 62%; }
+
+    .tdr-stick-energy {
+      width: 63%;
+      height: 63%;
+      border: 1px solid rgba(115,210,255,calc(.10 + var(--mag) * .28));
+      box-shadow: 0 0 calc(5px + var(--mag) * 10px) rgba(80,190,255,.14);
+      transform: translate(calc(var(--x) * 8px), calc(var(--y) * 8px));
+      transition: border-color 80ms linear;
+    }
+
+    .tdr-stick-vector {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: calc(var(--mag) * 32%);
+      height: 3px;
+      transform-origin: 0 50%;
+      transform: rotate(calc(atan2(var(--y), var(--x))));
+      background: linear-gradient(90deg, rgba(120,220,255,.08), rgba(120,220,255,.52));
+      box-shadow: 0 0 9px rgba(80,200,255,.24);
+      opacity: calc(var(--mag) * .9);
+      border-radius: 2px;
+    }
+
     .tdr-stick-knob {
-      position:absolute;
-      left:50%;
-      top:50%;
-      width:42%;
-      aspect-ratio:1;
-      border-radius:50%;
-      transform:translate(calc(-50% + var(--x) * 48%),calc(-50% + var(--y) * 48%));
-      background:radial-gradient(circle at 36% 30%,rgba(255,255,255,.20),rgba(35,58,70,.92) 32%,rgba(8,16,22,.98) 78%);
-      border:1px solid rgba(105,239,255,.42);
-      box-shadow:0 7px 18px rgba(0,0,0,.36),0 0 calc(4px + var(--mag) * 13px) rgba(65,224,255,.36);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: clamp(42px, 5vw, 54px);
+      height: clamp(42px, 5vw, 54px);
+      border-radius: 50%;
+      transform:
+        translate(-50%, -50%)
+        translate(calc(var(--x) * 42px), calc(var(--y) * 42px))
+        scale(calc(1 + var(--mag) * .10));
+      background:
+        radial-gradient(circle at 38% 32%, rgba(255,255,255,.98), rgba(189,232,255,.92) 28%, rgba(67,145,205,.92) 72%, rgba(17,51,78,.98));
+      border: 2px solid rgba(255,255,255,.38);
+      box-shadow:
+        0 4px 14px rgba(0,0,0,.28),
+        0 0 calc(10px + var(--mag) * 10px) rgba(80,190,255,.22),
+        inset 0 1px 2px rgba(255,255,255,.55);
+      transition: box-shadow 80ms linear, transform 90ms ease-out;
     }
-    .tdr-stick.is-active { filter:brightness(1.12); }
+
+    .tdr-stick-knob::after {
+      content: '';
+      position: absolute;
+      inset: 27%;
+      border-radius: 50%;
+      border: 1px solid rgba(10,55,90,.38);
+      background: rgba(255,255,255,.08);
+    }
   `;
   document.head.appendChild(style);
 
-  const root=document.createElement('div');
-  root.id='tdr-race-controls';
-  root.setAttribute('data-tdr-touch-controls','');
-  root.innerHTML=`
-    <div class="tdr-stick" data-stick><div class="tdr-stick-knob"></div></div>
-    <div class="tdr-pedal tdr-pedal-gas" data-pedal="gas"><div class="tdr-pedal-inner"><div class="tdr-pedal-icon"></div><div class="tdr-pedal-copy"><span class="tdr-pedal-label">GAS</span><span class="tdr-pedal-sub">ACELERADOR</span></div></div></div>
-    <div class="tdr-pedal tdr-pedal-brake" data-pedal="brake"><div class="tdr-pedal-inner"><div class="tdr-pedal-icon"></div><div class="tdr-pedal-copy"><span class="tdr-pedal-label">FRENO</span><span class="tdr-pedal-sub">BRAKE</span></div></div></div>
+  const root = document.createElement('div');
+  root.id = 'tdr-race-controls';
+  root.innerHTML = `
+    <div class="tdr-stick" data-stick>
+      <div class="tdr-stick-ring"></div>
+      <div class="tdr-stick-core"></div>
+      <div class="tdr-stick-energy"></div>
+      <div class="tdr-stick-vector"></div>
+      <div class="tdr-stick-knob"></div>
+    </div>
+    <div class="tdr-pedal tdr-pedal-gas" data-pedal="gas">
+      <div class="tdr-pedal-inner">
+        <div class="tdr-pedal-icon"></div>
+        <div class="tdr-pedal-copy">
+          <div class="tdr-pedal-label">GAS</div>
+          <div class="tdr-pedal-sub">ACELERADOR</div>
+        </div>
+      </div>
+    </div>
+    <div class="tdr-pedal tdr-pedal-brake" data-pedal="brake">
+      <div class="tdr-pedal-inner">
+        <div class="tdr-pedal-icon"></div>
+        <div class="tdr-pedal-copy">
+          <div class="tdr-pedal-label">FRENO</div>
+          <div class="tdr-pedal-sub">BRAKE</div>
+        </div>
+      </div>
+    </div>
   `;
   document.body.appendChild(root);
 
@@ -284,45 +365,22 @@ function __installRaceControlVisuals() {
   tick();
 }
 
-function __startGameOnceLandscape() {
-  if (__game || __orientationStartPending || !__isLandscape()) return;
-  __orientationStartPending = true;
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    if (__game || !__isLandscape()) { __orientationStartPending=false; return; }
-    try {
-      __game = createGame('app');
-      __installRaceControlVisuals();
-    } finally {
-      __orientationStartPending=false;
-    }
-  }));
-}
-
 function __tickOrientation() {
   const landscape = __isLandscape();
   __setOverlayVisible(!landscape);
-  if (landscape) {
-    __startGameOnceLandscape();
-    __wakeGame();
-  } else {
-    __sleepGame();
+
+  if (landscape && !__game) {
+    __game = createGame('app');
+    __installRaceControlVisuals();
+    return;
+  }
+
+  if (__game) {
+    if (landscape) __wakeGame();
+    else __sleepGame();
   }
 }
 
-function __settleOrientation() {
-  __orientationSettleTimers.forEach(clearTimeout);
-  __orientationSettleTimers=[];
-  __tickOrientation();
-  requestAnimationFrame(()=>{ __tickOrientation(); requestAnimationFrame(__tickOrientation); });
-  [80,180,350,650,1000,1500].forEach(ms=>{
-    __orientationSettleTimers.push(setTimeout(__tickOrientation,ms));
-  });
-}
-
-__settleOrientation();
+__tickOrientation();
 window.addEventListener('resize', __tickOrientation, {passive:true});
-window.addEventListener('orientationchange', __settleOrientation, {passive:true});
-window.addEventListener('pageshow', __settleOrientation, {passive:true});
-window.addEventListener('focus', __settleOrientation, {passive:true});
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden)__settleOrientation(); },{passive:true});
-if(window.visualViewport)window.visualViewport.addEventListener('resize',__tickOrientation,{passive:true});
+window.addEventListener('orientationchange', __tickOrientation, {passive:true});
