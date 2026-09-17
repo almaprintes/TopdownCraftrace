@@ -10,13 +10,40 @@ export class MenuScene extends CurrentMenuScene {
   _openStoreModal(section='materials'){
     super._openStoreModal(section);
     const root=this._storeModal;
-    if(section!=='materials'||!root?.scene)return;
+    if(!root?.scene)return;
     const {width:w}=this.scale;
     const bw=156,bh=32,x=w-24-bw,y=71;
     const b=this.add.rectangle(x,y,bw,bh,0x143b36,.98).setOrigin(0).setStrokeStyle(2,0x5df0b0,.85).setInteractive({useHandCursor:true});
     const t=this.add.text(x+bw/2,y+bh/2,'♻  RECICLADORA',{fontFamily:UI,fontSize:'9px',fontStyle:'900',color:'#d9ffef'}).setOrigin(.5);
     root.add([b,t]);
     b.on('pointerdown',()=>this._openMaterialExchange());
+  }
+
+  _confirmStoreSpend({title='CONFIRMAR COMPRA',detail='',confirm='COMPRAR',onConfirm}={}){
+    try{this._storeConfirmModal?.destroy?.(true);}catch{}
+    const {width:w,height:h}=this.scale,compact=h<520;
+    const root=this.add.container(0,0).setDepth(60000);this._storeConfirmModal=root;
+    const A=o=>{root.add(o);return o;};
+    A(this.add.rectangle(0,0,w,h,0x02070d,.82).setOrigin(0).setInteractive());
+    const pw=Math.min(w-40,compact?500:560),ph=compact?190:220,x=(w-pw)/2,y=(h-ph)/2;
+    A(this.add.rectangle(x,y,pw,ph,0x0a1726,1).setOrigin(0).setStrokeStyle(2,0x49c8ff,.9));
+    A(this.add.text(x+24,y+22,title,{fontFamily:UI,fontSize:compact?'18px':'22px',fontStyle:'900',color:'#fff'}));
+    A(this.add.text(x+24,y+(compact?57:66),'¿Seguro que quieres realizar esta compra?',{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'700',color:'#c6d5e2'}));
+    A(this.add.text(x+24,y+(compact?83:98),detail,{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'900',color:'#ffd85a',wordWrap:{width:pw-48}}));
+    const bh=compact?36:42,gap=12,bw=(pw-48-gap)/2,by=y+ph-bh-20;
+    const cancel=A(this.add.rectangle(x+24,by,bw,bh,0x202b38,1).setOrigin(0).setStrokeStyle(1,0x607286,.9).setInteractive({useHandCursor:true}));
+    A(this.add.text(x+24+bw/2,by+bh/2,'CANCELAR',{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'900',color:'#d7e0e8'}).setOrigin(.5));
+    const accept=A(this.add.rectangle(x+24+bw+gap,by,bw,bh,0x17683f,1).setOrigin(0).setStrokeStyle(2,0x5df0b0,.9).setInteractive({useHandCursor:true}));
+    A(this.add.text(x+24+bw+gap+bw/2,by+bh/2,confirm,{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'900',color:'#fff'}).setOrigin(.5));
+    const close=()=>{try{root.destroy(true);}catch{}this._storeConfirmModal=null;};
+    cancel.on('pointerdown',close);
+    accept.on('pointerdown',()=>{close();onConfirm?.();});
+  }
+
+  _buyButton(card,w,h,label,fn,enabled=true,accent=0x48cf8b,showCoin=false){
+    const needsConfirmation=enabled&&(showCoin||/€/.test(String(label||'')));
+    const action=needsConfirmation?()=>this._confirmStoreSpend({detail:String(label||''),onConfirm:fn}):fn;
+    return super._buyButton(card,w,h,label,action,enabled,accent,showCoin);
   }
 
   _closeMaterialExchange(){
@@ -27,8 +54,6 @@ export class MenuScene extends CurrentMenuScene {
 
   _openMaterialExchange(fromId=this._exchangeFrom||'scrap',toId=this._exchangeTo||'compound',amount=this._exchangeAmount||100,openPicker=null){
     this._closeMaterialExchange();
-    // The recycler is a full modal, not a translucent layer over the store.
-    // Hide the store while it is open so legacy/store labels can never bleed through.
     try{if(this._storeModal?.scene)this._storeModal.setVisible(false);}catch{}
     const {width:w,height:h}=this.scale;
     const compact=h<520;
@@ -46,6 +71,7 @@ export class MenuScene extends CurrentMenuScene {
     A(this.add.text(x+24,y+(compact?14:18),'RECICLADORA DE MATERIALES',{fontFamily:UI,fontSize:compact?'18px':'23px',fontStyle:'900',color:'#ffffff'}));
     A(this.add.text(x+24,y+(compact?39:49),'Convierte excedentes para completar tus piezas',{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'700',color:'#a9bfd0'}));
     const status=materialExchangeStatus();
+    const requiresVideo=status.used>=1;
     A(this.add.text(x+pw-58,y+(compact?18:23),`${status.remaining}/3 HOY`,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'900',color:status.available?'#71f0b2':'#ff707a'}).setOrigin(1,0));
     const close=A(this.add.text(x+pw-20,y+10,'×',{fontFamily:UI,fontSize:compact?'25px':'30px',fontStyle:'900',color:'#fff'}).setOrigin(1,0).setInteractive({useHandCursor:true}));
     close.on('pointerdown',()=>this._closeMaterialExchange());
@@ -88,10 +114,15 @@ export class MenuScene extends CurrentMenuScene {
     const btnH=compact?34:40,btnY=y+ph-btnH-(compact?14:18),btnW=compact?255:300,btnX=x+pw-btnW-24;
     const enabled=status.available&&quote.ok&&currentHave>=amount;
     const btn=A(this.add.rectangle(btnX,btnY,btnW,btnH,enabled?0x17683f:0x293342,.99).setOrigin(0).setStrokeStyle(2,enabled?0x5df0b0:0x526171,.9));
-    const label=!status.available?'LÍMITE DIARIO ALCANZADO':quote.ok?'▶  VER VÍDEO E INTERCAMBIAR':'AJUSTA LA CANTIDAD';
+    const label=!status.available?'LÍMITE DIARIO ALCANZADO':quote.ok?(requiresVideo?'▶  VER VÍDEO E INTERCAMBIAR':'INTERCAMBIAR GRATIS'):'AJUSTA LA CANTIDAD';
     A(this.add.text(btnX+btnW/2,btnY+btnH/2,label,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:enabled?'#fff':'#aab6c1'}).setOrigin(.5));
-    A(this.add.text(x+24,btnY+btnH/2,'3 intercambios/día · sin coste en monedas',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8fa6b7'}).setOrigin(0,.5));
-    if(enabled){btn.setInteractive({useHandCursor:true});btn.on('pointerdown',async()=>{const ok=await showRewardedAd(this,{title:'RECICLAJE DE MATERIALES'});if(!ok)return;const result=executeMaterialExchange(fromId,toId,amount);this._toastStore?.(result.ok?`${result.spend} ${materialName(fromId)} → ${result.receive} ${materialName(toId)}`:result.reason,result.ok);if(result.ok)this._exchangeAmount=Math.min(amount,Math.max(1,qty(loadGarage(),fromId)));this._openMaterialExchange(fromId,toId,this._exchangeAmount);});}
+    A(this.add.text(x+24,btnY+btnH/2,'1.º gratis · 2.º y 3.º con vídeo',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8fa6b7'}).setOrigin(0,.5));
+    if(enabled){btn.setInteractive({useHandCursor:true});btn.on('pointerdown',()=>{
+      this._confirmStoreSpend({title:'CONFIRMAR INTERCAMBIO',detail:`${amount} ${materialName(fromId)}  →  ${receive} ${materialName(toId)}${requiresVideo?' · REQUIERE VÍDEO':' · PRIMER CAMBIO GRATIS'}`,confirm:'CONFIRMAR',onConfirm:async()=>{
+        if(requiresVideo){const ad=await showRewardedAd(this,{title:'RECICLAJE DE MATERIALES',placement:'recycler_exchange',claimId:`recycler-${Date.now()}`});if(!ad?.completed||!ad?.verified){this._toastStore?.('VÍDEO NO COMPLETADO',false);return;}}
+        const result=executeMaterialExchange(fromId,toId,amount);this._toastStore?.(result.ok?`${result.spend} ${materialName(fromId)} → ${result.receive} ${materialName(toId)}`:result.reason,result.ok);if(result.ok)this._exchangeAmount=Math.min(amount,Math.max(1,qty(loadGarage(),fromId)));this._openMaterialExchange(fromId,toId,this._exchangeAmount);
+      }});
+    });}
 
     if(openPicker==='from'||openPicker==='to'){
       const pickFrom=openPicker==='from',anchorX=pickFrom?leftX:rightX,py=selectorY+selectorH+4;
