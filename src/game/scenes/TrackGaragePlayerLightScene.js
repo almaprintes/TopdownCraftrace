@@ -2,11 +2,14 @@ import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGarageProgre
 import { BaseScene } from './BaseScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 import { isPublishedTrackId } from '../tracks/trackUnlocks.js';
+import { evaluationAccessEnabled } from '../shipaton/ShipatonJudgeMode.js';
 
 function trackKey(track){return String(track?.key||track?.id||'');}
+function judgeVisibleKey(key){return evaluationAccessEnabled()&&!!key&&key!=='practice-area';}
+function selectableKey(key){return isPublishedTrackId(key)||judgeVisibleKey(key);}
 function playerVisible(track){
   const key=trackKey(track);
-  return !!key && isPublishedTrackId(key) && track?.meta?.hiddenFromTrackSelect!==true;
+  return !!key && selectableKey(key) && track?.meta?.hiddenFromTrackSelect!==true;
 }
 
 export class TrackGarageScene extends CurrentTrackGarageScene {
@@ -25,9 +28,10 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
     const tracks=[];
     for(const key of getTrackKeys()){
-      // Library presence is not publication. Prototypes and authoring leftovers stay
-      // available to Admin/Studio but can never leak into the normal player selector.
-      if(!isPublishedTrackId(key))continue;
+      // Normal players only see canonical published circuits. Ship-a-ton Judge Mode
+      // may additionally expose registry circuits for evaluation, but this visibility
+      // never changes their canonical published identity or normal progression state.
+      if(!selectableKey(key))continue;
       try{
         const track=createTrack(key);
         if(playerVisible(track))tracks.push(track);
@@ -37,8 +41,9 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
     let saved='';
     try{saved=String(localStorage.getItem('tdr2:trackKey')||'');}catch{}
-    // Reject stale prototype/legacy selections before they can influence the UI or race.
-    if(saved&&!isPublishedTrackId(saved)){
+    // Reject stale prototype/legacy selections for normal play. Judge Mode may keep
+    // an evaluation-only selection while the mode is active.
+    if(saved&&!selectableKey(saved)){
       try{localStorage.removeItem('tdr2:trackKey');}catch{}
       try{this.registry.remove?.('selectedTrackKey');this.registry.remove?.('selectedTrack');}catch{}
       saved='';
@@ -59,9 +64,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     if(index<0||this._lockedTrack(this._tracks[index]))index=this._tracks.findIndex(track=>!this._lockedTrack(track));
     this._index=index>=0?index:0;
 
-    // Never leave a hidden/obsolete track key armed behind the selector. If a stale
-    // development/fallback key exists, clear it instead of letting the lobby/race
-    // inherit a circuit that the player cannot select from this collection.
+    // Never leave a hidden/obsolete track key armed behind the selector.
     if(saved&&!this._tracks.some(track=>trackKey(track)===saved&&!this._lockedTrack(track))){
       try{localStorage.removeItem('tdr2:trackKey');}catch{}
       try{this.registry.remove?.('selectedTrackKey');this.registry.remove?.('selectedTrack');}catch{}
@@ -76,7 +79,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     if(this._launchingTrackSelection)return;
     const track=this._tracks?.[this._index];
     const key=trackKey(track);
-    if(!key||!isPublishedTrackId(key)||!playerVisible(track)||this._lockedTrack(track))return;
+    if(!key||!selectableKey(key)||!playerVisible(track)||this._lockedTrack(track))return;
 
     this._launchingTrackSelection=true;
     try{localStorage.setItem('tdr2:trackKey',key);}catch{}
