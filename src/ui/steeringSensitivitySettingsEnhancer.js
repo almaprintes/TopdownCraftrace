@@ -2,13 +2,12 @@ const SETTINGS_KEY='tdr2:settings';
 const CONTROL_EVENT='tdr2:control-settings';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function persistSensitivity(value){try{const settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}');settings.controls={...(settings.controls||{}),sensitivity:value};localStorage.setItem(SETTINGS_KEY,JSON.stringify(settings));window.dispatchEvent(new CustomEvent(CONTROL_EVENT,{detail:{...settings.controls}}));}catch{}}
+function stampVersion(){document.querySelectorAll('.rot-beta-title').forEach(el=>{const spans=el.querySelectorAll('span');if(spans.length>1)spans[spans.length-1].textContent='149';});}
 function enhance(){
+  stampVersion();
   const root=document.querySelector('#tdr-settings2');if(!root)return;
-  // Match the sensitivity range by its legacy 0.4-1.4 signature as well as its
-  // label, so localization or DOM timing can no longer leave the old limits.
   root.querySelectorAll('input.s2range[type="range"]').forEach(range=>{
-    const card=range.closest('.s2card');
-    const label=card?.querySelector('.s2label')?.textContent?.trim()||'';
+    const card=range.closest('.s2card');const label=card?.querySelector('.s2label')?.textContent?.trim()||'';
     const legacyRange=range.getAttribute('min')==='0.4'&&range.getAttribute('max')==='1.4';
     if(!legacyRange&&!/SENSIBILIDAD|SENSITIVITY/i.test(label))return;
     range.min='0.5';range.max='1.5';range.step='0.05';
