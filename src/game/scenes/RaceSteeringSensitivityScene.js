@@ -15,6 +15,33 @@ function readSensitivity(){
   }catch{return 1;}
 }
 
+// Keep the existing Settings DOM untouched visually, but correct the permitted
+// sensitivity range to the agreed 50-150%. This module is loaded with the race
+// scene graph, so the patch is available before Settings is opened.
+function alignSensitivityControl(){
+  try{
+    document.querySelectorAll('#tdr-settings2 .s2card').forEach(card=>{
+      if(card.querySelector('.s2label')?.textContent?.trim()!=='SENSIBILIDAD')return;
+      const range=card.querySelector('input.s2range');
+      if(!range)return;
+      range.min='0.5';
+      range.max='1.5';
+      range.step='0.05';
+      if(Number(range.value)<.5)range.value='0.5';
+      if(Number(range.value)>1.5)range.value='1.5';
+      const val=card.querySelector('.s2val');
+      if(val)val.textContent=`${Math.round(Number(range.value)*100)}%`;
+    });
+  }catch{}
+}
+try{
+  if(typeof document!=='undefined'){
+    const observer=new MutationObserver(()=>alignSensitivityControl());
+    observer.observe(document.documentElement,{childList:true,subtree:true});
+    queueMicrotask(()=>alignSensitivityControl());
+  }
+}catch{}
+
 // Input-response boundary only. Sensitivity changes how quickly the driver's
 // requested direction reaches the existing steering physics. It never changes
 // turnRate, grip, steering lock, mass, speed or any visual/touch geometry.
@@ -34,6 +61,11 @@ export class RaceScene extends CurrentRaceScene {
   update(time,deltaMs){
     const t=this.touch;
     if(!t)return super.update(time,deltaMs);
+
+    // Settings currently persists immediately; reading the tiny local setting
+    // here also makes changes authoritative even if an older Settings scene did
+    // not emit the control-settings event.
+    this._tdrSteerSensitivity=readSensitivity();
 
     const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
     const sensitivity=clamp(Number(this._tdrSteerSensitivity)||1,.5,1.5);
