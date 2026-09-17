@@ -39,10 +39,9 @@ export class MenuScene extends CurrentMenuScene{
     });
   }
 
-  _startSelectedMode(mode){
-    // Supervivencia queda preservada en código para una actualización futura,
-    // pero no es un modo publicable en 1.0. Cualquier estado antiguo guardado
-    // o llamada accidental cae de forma segura en Contrarreloj.
+  async _startSelectedMode(mode){
+    if(this._startingSelectedMode)return;
+    this._startingSelectedMode=true;
     mode=releaseMode(mode);
     let trackKey=this.selectedTrackKey||'track01';
     try{
@@ -50,13 +49,23 @@ export class MenuScene extends CurrentMenuScene{
       if(live?.trim())trackKey=live.trim();
       localStorage.setItem('tdr2:carId',this.selectedCarId);
       localStorage.setItem(MODE_KEY,mode);
-      // Área de Pruebas es un modo, no un circuito seleccionado.
       if(mode!=='practice')localStorage.setItem('tdr2:trackKey',trackKey);
     }catch{}
-    recordModeStart(mode);
     const launchTrack=mode==='practice'?PRACTICE_TRACK_KEY:trackKey;
-    this._closeGameModeModal();
-    this.scene.start('race',{carId:this.selectedCarId,trackKey:launchTrack,gameMode:mode});
+    const raceData={carId:this.selectedCarId,trackKey:launchTrack,gameMode:mode};
+    try{
+      const ensure=window.__tdrEnsureScene;
+      if(typeof ensure==='function'){
+        const ready=await ensure('race');
+        if(!ready)throw new Error('race scene registration failed');
+      }
+      recordModeStart(mode);
+      this._closeGameModeModal();
+      this.scene.start('race',raceData);
+    }catch(err){
+      console.error('[menu] race launch failed',err);
+      this._startingSelectedMode=false;
+    }
   }
 
   _closeGameModeModal(){
