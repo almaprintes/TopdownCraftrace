@@ -39,7 +39,7 @@ export class RaceScene extends CurrentRaceScene {
     try { result = super.create(data); }
     finally { scale.on = originalOn; }
 
-    try { document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.180'; }); }
+    try { document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.181'; }); }
     catch (_) {}
 
     this._raceResizeCaptured = capturedResize;
@@ -99,8 +99,6 @@ export class RaceScene extends CurrentRaceScene {
       const w = Number(this.scale?.width) || 0, h = Number(this.scale?.height) || 0;
       if (!w || !h) return;
 
-      // Phaser: recurse through nested HUD containers, not only top-level children.
-      // The stubborn legacy lever lives in the lower-left steering zone.
       try {
         const seen = new Set();
         const visit = (obj) => {
@@ -119,8 +117,6 @@ export class RaceScene extends CurrentRaceScene {
         for (const obj of this.children?.list || []) visit(obj);
       } catch (_) {}
 
-      // DOM fallback: remove only small controls physically occupying that same
-      // lower-left steering zone. DELTA/PAUSE and the canvas/root are excluded.
       try {
         const vw = window.innerWidth || 0, vh = window.innerHeight || 0;
         for (const el of document.body.querySelectorAll('*')) {
