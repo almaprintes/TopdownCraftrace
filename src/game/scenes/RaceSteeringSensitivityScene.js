@@ -15,9 +15,9 @@ function readSensitivity(){
   }catch{return 1;}
 }
 
-// Input-response boundary only. This intentionally does not alter turnRate,
-// grip, steering lock or any vehicle parameter: sensitivity changes how soon
-// the requested steering reaches the physics layer, never how much it can turn.
+// Input-response boundary only. Sensitivity changes how quickly the driver's
+// requested direction reaches the existing steering physics. It never changes
+// turnRate, grip, steering lock, mass, speed or any visual/touch geometry.
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
@@ -37,9 +37,11 @@ export class RaceScene extends CurrentRaceScene {
 
     const dt=clamp(Number(deltaMs||16.67)/1000,.001,.05);
     const sensitivity=clamp(Number(this._tdrSteerSensitivity)||1,.5,1.5);
-    // 50% = deliberate/progressive, 100% = reference, 150% = very reactive.
-    // Rate is units/second, so behaviour is independent of frame rate.
-    const responseRate=4*Math.pow(3.5,(sensitivity-.5));
+
+    // Deliberately wide response window so 50% vs 150% is obvious on the
+    // first corner. Full input is still exactly +/-1 at every setting.
+    // 50%: ~0.70 s full-scale; 100%: ~0.20 s; 150%: ~0.055 s.
+    const responseRate=1.43*Math.pow(3.74,(sensitivity-.5)*2);
     const maxDelta=responseRate*dt;
     const state=this._tdrSteerResponse||(this._tdrSteerResponse={x:0,y:0,steer:0});
 
@@ -57,8 +59,8 @@ export class RaceScene extends CurrentRaceScene {
 
     try{return super.update(time,deltaMs);}
     finally{
-      // Keep raw controls authoritative. The filter is applied afresh each frame
-      // and never feeds its filtered value back into the touch/gamepad producer.
+      // Raw controls remain authoritative; no filtered value is fed back into
+      // the DOM/touch/gamepad producer and no control is moved or resized.
       t.stickX=rawX;
       t.stickY=rawY;
       if('steer' in t)t.steer=rawSteer;
