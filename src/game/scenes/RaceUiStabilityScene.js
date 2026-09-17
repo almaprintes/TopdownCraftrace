@@ -1,14 +1,32 @@
 import { RaceScene as CurrentRaceScene } from './RaceRuntimeSafetyScene.js';
 
+const SETTINGS_KEY = 'tdr2:settings';
+const TRIGGER_DEADZONE = 0.025;
+
+function gamepadModeSelected() {
+  try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')?.controls?.steeringMode === 'gamepad'; }
+  catch (_) { return false; }
+}
+
+function firstPad() {
+  try { return Array.from(navigator.getGamepads?.() || []).find((p) => p && p.connected !== false) || null; }
+  catch (_) { return null; }
+}
+
+function triggerValue(button) {
+  if (!button) return 0;
+  const raw = Number(button.value);
+  const value = Number.isFinite(raw) ? raw : (button.pressed ? 1 : 0);
+  if (value <= TRIGGER_DEADZONE) return 0;
+  return Math.max(0, Math.min(1, (value - TRIGGER_DEADZONE) / (1 - TRIGGER_DEADZONE)));
+}
+
 export class RaceScene extends CurrentRaceScene {
   create(data) {
     const scale = this.scale;
     const originalOn = scale.on;
     const capturedResize = [];
 
-    // RaceScene registers several independent resize callbacks. On iOS/PWA a burst
-    // of resize events can make them rebuild UI repeatedly in the same moment.
-    // Capture them and replay them once, after the viewport settles.
     scale.on = function(event, fn, context, ...rest) {
       if (event === 'resize' && typeof fn === 'function') {
         capturedResize.push({ fn, context });
@@ -18,15 +36,11 @@ export class RaceScene extends CurrentRaceScene {
     };
 
     let result;
-    try {
-      result = super.create(data);
-    } finally {
-      scale.on = originalOn;
-    }
+    try { result = super.create(data); }
+    finally { scale.on = originalOn; }
 
-    try {
-      document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.32'; });
-    } catch (_) {}
+    try { document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.176'; }); }
+    catch (_) {}
 
     this._raceResizeCaptured = capturedResize;
     this._raceResizeW = Math.round(this.scale.width || 0);
@@ -39,7 +53,6 @@ export class RaceScene extends CurrentRaceScene {
       if (Math.abs(w - this._raceResizeW) <= 2 && Math.abs(h - this._raceResizeH) <= 2) return;
       this._raceResizeW = w;
       this._raceResizeH = h;
-
       try { this._raceResizeTimer?.remove?.(false); } catch (_) {}
       this._raceResizeTimer = this.time.delayedCall(90, () => {
         if (!this.sys?.isActive?.()) return;
@@ -59,26 +72,67 @@ export class RaceScene extends CurrentRaceScene {
       this._raceResizeTimer = null;
       this._raceResizeCaptured = [];
     });
-
     return result;
   }
 
   createTouchControls() {
     const state = super.createTouchControls();
-
-    // The current game has its commercial GAS / FRENO artwork layered elsewhere.
-    // The old touch system still recreated its obsolete rectangles/text on resize,
-    // which is exactly the 'deleted action zones' that could flash on screen.
     this._hideLegacyPedalVisuals = () => {
       const list = this.touchUI?.list;
       if (!Array.isArray(list)) return;
       // Legacy order: joystick base, joystick knob, gas bg, gas text, brake bg, brake text.
-      for (let i = 2; i <= 5; i++) {
+      // Gamepad mode has no touch driving UI at all; touch modes retain their steering control.
+      const first = gamepadModeSelected() ? 0 : 2;
+      for (let i = first; i <= 5; i++) {
         try { list[i]?.setVisible?.(false); } catch (_) {}
       }
     };
-
     this._hideLegacyPedalVisuals();
     return state;
+  }
+
+  update(time, delta) {
+    if (!gamepadModeSelected()) {
+      super.update(time, delta);
+      return;
+    }
+
+    // RaceScene historically converts throttle/brake to booleans at > 0.5.
+    // Preserve its physics path, but feed it an active boolean while scaling the
+    // actual acceleration/braking force by the browser's analogue trigger value.
+    const pad = firstPad();
+    const gas = triggerValue(pad?.buttons?.[7]);
+    const brake = triggerValue(pad?.buttons?.[6]);
+    const touch = this.touch;
+    const originalAccel = this.accel;
+    const originalBrakeForce = this.brakeForce;
+    const originalThrottle = touch?.throttle;
+    const originalBrake = touch?.brake;
+
+    if (touch && pad) {
+      touch.throttle = gas > 0 ? 1 : 0;
+      touch.brake = brake > 0 ? 1 : 0;
+      touch.rightThrottle = gas > 0;
+      touch.rightBrake = brake > 0;
+      if (Number.isFinite(originalAccel)) this.accel = originalAccel * gas;
+      if (Number.isFinite(originalBrakeForce)) this.brakeForce = originalBrakeForce * brake;
+    }
+
+    try { super.update(time, delta); }
+    finally {
+      if (Number.isFinite(originalAccel)) this.accel = originalAccel;
+      if (Number.isFinite(originalBrakeForce)) this.brakeForce = originalBrakeForce;
+      if (touch && pad) {
+        touch.throttle = gas;
+        touch.brake = brake;
+        touch.rightThrottle = gas > 0;
+        touch.rightBrake = brake > 0;
+      } else if (touch) {
+        touch.throttle = originalThrottle;
+        touch.brake = originalBrake;
+      }
+    }
+
+    this._hideLegacyPedalVisuals?.();
   }
 }
