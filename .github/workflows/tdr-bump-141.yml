@@ -1,0 +1,30 @@
+name: TDR one-shot DEV 1.0.141 workflow alignment
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/tdr-bump-141.yml']
+permissions:
+  contents: write
+  actions: write
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Align DEV workflow stamp without changing guards
+        shell: bash
+        run: |
+          sed -i 's/1\.0\.137/1.0.141/g' .github/workflows/pages.yml
+          git rm .github/workflows/tdr-bump-141.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .github/workflows/pages.yml
+          git commit -m 'DEV 1.0.141 align Pages build verification'
+          git push origin HEAD:main
+      - name: Dispatch Pages after token-authored alignment commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
