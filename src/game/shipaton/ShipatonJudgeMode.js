@@ -1,40 +1,12 @@
 const KEY='tdr2:shipatonJudgeMode:v1';
 const EVENT='tdr2:shipaton-judge-mode';
-
-export function shipatonJudgeModeEnabled(){
-  try{return localStorage.getItem(KEY)==='1';}catch{return false;}
-}
-
-export function setShipatonJudgeMode(enabled){
-  const value=!!enabled;
-  try{localStorage.setItem(KEY,value?'1':'0');}catch{}
-  try{window.dispatchEvent(new CustomEvent(EVENT,{detail:{enabled:value}}));}catch{}
-  syncJudgeBadge();
-  return value;
-}
-
+export function shipatonJudgeModeEnabled(){try{return localStorage.getItem(KEY)==='1';}catch{return false;}}
+export function setShipatonJudgeMode(enabled){const value=!!enabled;try{localStorage.setItem(KEY,value?'1':'0');}catch{}try{window.dispatchEvent(new CustomEvent(EVENT,{detail:{enabled:value}}));}catch{}syncJudgeBadge();return value;}
 export function toggleShipatonJudgeMode(){return setShipatonJudgeMode(!shipatonJudgeModeEnabled());}
-
-// Evaluation access is deliberately read-only with respect to normal progression.
-// Systems may use this as an additional access condition, but must never persist
-// unlocks, currency, materials or ownership merely because Judge Mode is active.
+// Read-only access authority: consumers may bypass access checks, never persist rewards/unlocks merely because it is active.
 export function evaluationAccessEnabled(){return shipatonJudgeModeEnabled();}
-
-export function syncJudgeBadge(){
-  const active=shipatonJudgeModeEnabled();
-  let badge=document.getElementById('tdr-shipaton-judge-badge');
-  if(!active){badge?.remove();return;}
-  if(!badge){
-    badge=document.createElement('div');badge.id='tdr-shipaton-judge-badge';badge.textContent='SHIPATON 2026 · MODO JUECES';
-    Object.assign(badge.style,{position:'fixed',right:'max(10px,env(safe-area-inset-right,0px))',bottom:'max(8px,env(safe-area-inset-bottom,0px))',zIndex:'8500',pointerEvents:'none',padding:'6px 9px',border:'1px solid rgba(88,232,255,.55)',borderRadius:'8px',background:'rgba(4,12,20,.78)',color:'#8eefff',font:'800 9px system-ui,-apple-system,Segoe UI,sans-serif',letterSpacing:'.08em',boxShadow:'0 4px 18px rgba(0,0,0,.35)'});
-    document.body.appendChild(badge);
-  }
-}
-
-export const SHIPATON_JUDGE_MODE_KEY=KEY;
-export const SHIPATON_JUDGE_MODE_EVENT=EVENT;
-
-if(typeof window!=='undefined'){
-  queueMicrotask(()=>syncJudgeBadge());
-  window.addEventListener('pageshow',()=>syncJudgeBadge(),{passive:true});
-}
+export function syncJudgeBadge(){const active=shipatonJudgeModeEnabled();let badge=document.getElementById('tdr-shipaton-judge-badge');if(!active){badge?.remove();return}if(!badge){badge=document.createElement('div');badge.id='tdr-shipaton-judge-badge';badge.textContent='SHIPATON 2026 · MODO JUECES';Object.assign(badge.style,{position:'fixed',right:'max(10px,env(safe-area-inset-right,0px))',bottom:'max(8px,env(safe-area-inset-bottom,0px))',zIndex:'8500',pointerEvents:'none',padding:'6px 9px',border:'1px solid rgba(88,232,255,.55)',borderRadius:'8px',background:'rgba(4,12,20,.78)',color:'#8eefff',font:'800 9px system-ui,-apple-system,Segoe UI,sans-serif',letterSpacing:'.08em'});document.body.appendChild(badge)}}
+function openJudgePanel(){document.querySelector('.tdr-judge-modal')?.remove();const active=shipatonJudgeModeEnabled(),m=document.createElement('div');m.className='tdr-judge-modal';Object.assign(m.style,{position:'fixed',inset:'0',zIndex:'31000',background:'#000c',display:'grid',placeItems:'center',padding:'5vh 6vw',fontFamily:'system-ui',color:'#c9d4dd'});m.innerHTML=`<article style="width:min(760px,90vw);max-height:82vh;overflow:auto;background:#0b141d;border:1px solid #58e8ff88;border-radius:12px;padding:22px;box-shadow:0 20px 70px #000"><h2 style="margin:0;color:#fff">SHIPATON 2026 · MODO JUECES</h2><p>Acceso de evaluación para ver y probar el contenido sin convertir ese acceso en progresión normal.</p><div style="margin:14px 0;padding:11px;border:1px solid ${active?'#58e8ff':'#3b4b58'};border-radius:8px;color:${active?'#8eefff':'#c9d4dd'}">${active?'● MODO JUECES ACTIVO':'○ MODO JUECES DESACTIVADO'}</div><p><b style="color:#fff">GUÍA DEL JURADO</b><br>• Garaje: inspecciona y prueba la flota completa disponible.<br>• Circuitos: accede al contenido disponible para evaluación.<br>• Monetización: prueba Recicladora, vídeo recompensado de Tienda y x2 de botín postcarrera.<br>• Activar este modo no concede por sí mismo monedas, materiales ni desbloqueos permanentes.</p><div style="display:flex;gap:10px;margin-top:16px"><button data-close style="flex:1;padding:11px">CERRAR</button><button data-toggle style="flex:1;padding:11px;border:1px solid #58e8ff;background:#103c4a;color:#9bf2ff;font-weight:900">${active?'DESACTIVAR':'ACTIVAR'} MODO JUECES</button></div></article>`;document.body.appendChild(m);m.querySelector('[data-close]').onclick=()=>m.remove();m.querySelector('[data-toggle]').onclick=()=>{setShipatonJudgeMode(!active);m.remove();openJudgePanel()}}
+function wireSettings(){const tabs=document.querySelector('#tdr-settings2 .s2tabs');if(!tabs||tabs.querySelector('[data-shipaton-judge]'))return;const b=document.createElement('button');b.className='s2tab';b.dataset.shipatonJudge='1';b.textContent='SHIPATON 2026';b.onclick=e=>{e.preventDefault();openJudgePanel()};tabs.appendChild(b)}
+export const SHIPATON_JUDGE_MODE_KEY=KEY;export const SHIPATON_JUDGE_MODE_EVENT=EVENT;
+if(typeof window!=='undefined'){queueMicrotask(()=>{syncJudgeBadge();wireSettings()});window.addEventListener('pageshow',()=>{syncJudgeBadge();wireSettings()},{passive:true});new MutationObserver(wireSettings).observe(document.documentElement,{subtree:true,childList:true});}
