@@ -39,7 +39,7 @@ export class RaceScene extends CurrentRaceScene {
     try { result = super.create(data); }
     finally { scale.on = originalOn; }
 
-    try { document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.182'; }); }
+    try { document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.183'; }); }
     catch (_) {}
 
     this._raceResizeCaptured = capturedResize;
