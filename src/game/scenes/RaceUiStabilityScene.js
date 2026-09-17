@@ -39,7 +39,7 @@ export class RaceScene extends CurrentRaceScene {
     try { result = super.create(data); }
     finally { scale.on = originalOn; }
 
-    try { document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.179'; }); }
+    try { document.querySelectorAll('.rot-beta-title').forEach((el) => { el.textContent = '⚠ DEV 1.0.180'; }); }
     catch (_) {}
 
     this._raceResizeCaptured = capturedResize;
@@ -60,11 +60,13 @@ export class RaceScene extends CurrentRaceScene {
           try { entry.fn.call(entry.context ?? this, gameSize, ...args); } catch (_) {}
         }
         this._hideLegacyPedalVisuals?.();
+        this._hideResidualGamepadSteeringVisual?.();
       });
     };
 
     this.scale.on('resize', this._onStableRaceResize, this);
     this._hideLegacyPedalVisuals?.();
+    this._hideResidualGamepadSteeringVisual?.();
 
     this.events.once('shutdown', () => {
       this.scale.off('resize', this._onStableRaceResize, this);
@@ -80,9 +82,6 @@ export class RaceScene extends CurrentRaceScene {
     this._hideLegacyPedalVisuals = () => {
       const list = this.touchUI?.list;
       if (!Array.isArray(list)) return;
-      // The legacy touch container owns the joystick and pedal graphics only.
-      // In gamepad mode hide the container itself so nested/recreated stick parts
-      // cannot survive; Delta/Pause are separate DOM HUD controls and stay visible.
       if (gamepadModeSelected()) {
         try { this.touchUI?.setVisible?.(false); } catch (_) {}
         for (const obj of list) {
@@ -95,7 +94,51 @@ export class RaceScene extends CurrentRaceScene {
         try { list[i]?.setVisible?.(false); } catch (_) {}
       }
     };
+    this._hideResidualGamepadSteeringVisual = () => {
+      if (!gamepadModeSelected()) return;
+      const w = Number(this.scale?.width) || 0, h = Number(this.scale?.height) || 0;
+      if (!w || !h) return;
+
+      // Phaser: recurse through nested HUD containers, not only top-level children.
+      // The stubborn legacy lever lives in the lower-left steering zone.
+      try {
+        const seen = new Set();
+        const visit = (obj) => {
+          if (!obj || seen.has(obj)) return;
+          seen.add(obj);
+          if (obj !== this.touchUI) {
+            const sx = Number(obj.scrollFactorX), sy = Number(obj.scrollFactorY);
+            const x = Number(obj.x), y = Number(obj.y);
+            const type = String(obj.type || obj.constructor?.name || '').toLowerCase();
+            if (sx === 0 && sy === 0 && Number.isFinite(x) && Number.isFinite(y) && x < w * .38 && y > h * .45 && /(graphics|image|sprite|ellipse|circle|arc|rectangle|container)/.test(type)) {
+              try { obj.setVisible?.(false); obj.disableInteractive?.(); } catch (_) {}
+            }
+          }
+          if (Array.isArray(obj.list)) for (const child of obj.list) visit(child);
+        };
+        for (const obj of this.children?.list || []) visit(obj);
+      } catch (_) {}
+
+      // DOM fallback: remove only small controls physically occupying that same
+      // lower-left steering zone. DELTA/PAUSE and the canvas/root are excluded.
+      try {
+        const vw = window.innerWidth || 0, vh = window.innerHeight || 0;
+        for (const el of document.body.querySelectorAll('*')) {
+          if (el === this.game?.canvas || el.id === 'app' || el.id === 'tdr-race-controls') continue;
+          const sig = `${el.id || ''} ${el.className || ''} ${el.dataset?.role || ''} ${el.dataset?.control || ''}`.toLowerCase();
+          if (/delta|pause|pausa|gamepad-pedals|ignition|startup|rotate/.test(sig)) continue;
+          const r = el.getBoundingClientRect?.();
+          if (!r || r.width < 18 || r.height < 18 || r.width > vw * .38 || r.height > vh * .48) continue;
+          const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+          if (cx < vw * .38 && cy > vh * .45) {
+            el.style.setProperty('display', 'none', 'important');
+            el.style.setProperty('pointer-events', 'none', 'important');
+          }
+        }
+      } catch (_) {}
+    };
     this._hideLegacyPedalVisuals();
+    this._hideResidualGamepadSteeringVisual();
     return state;
   }
 
@@ -105,9 +148,6 @@ export class RaceScene extends CurrentRaceScene {
       return;
     }
 
-    // RaceScene historically converts throttle/brake to booleans at > 0.5.
-    // Preserve its physics path, but feed it an active boolean while scaling the
-    // actual acceleration/braking force by the browser's analogue trigger value.
     const pad = firstPad();
     const gas = triggerValue(pad?.buttons?.[7]);
     const brake = triggerValue(pad?.buttons?.[6]);
@@ -142,5 +182,6 @@ export class RaceScene extends CurrentRaceScene {
     }
 
     this._hideLegacyPedalVisuals?.();
+    this._hideResidualGamepadSteeringVisual?.();
   }
 }
