@@ -4803,6 +4803,20 @@ const build = () => {
   state.brakeY    = h - pad - state.btnH;
   state.throttleY = state.brakeY - Math.floor(state.btnH * 1.08);
 
+  // Gamepad owns steering/pedals. Do not recreate the legacy touch visuals on
+  // resize: creating the circles before a destroyed container can leave them
+  // orphaned on the display list (the stubborn lower-left joystick).
+  let gamepadVisualsOff = false;
+  try {
+    const settings = JSON.parse(localStorage.getItem('tdr2:settings') || '{}');
+    const controls = settings?.controls || {};
+    gamepadVisualsOff = controls.steeringMode === 'gamepad' || controls.scheme === 'gamepad';
+  } catch (_) {}
+  if (gamepadVisualsOff) {
+    state._draw = () => {};
+    return;
+  }
+
   // --- Stick visuals ---
   const baseCircle = this.add.circle(state.baseX, state.baseY, state.stickR, 0x000000, 0.18)
     .setStrokeStyle(3, 0xffffff, 0.25);
