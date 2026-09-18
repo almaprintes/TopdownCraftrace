@@ -12,13 +12,17 @@ export class SettingsScene extends CurrentSettingsScene {
     super._renderTab(tab);
     if(tab!=='controls' || !this.root) return;
     const row=this.root.querySelector('[data-choice="steer"]');
-    if(!row || row.querySelector('[data-v="wheel"]')) return;
+    if(!row) return;
     const c=this.settings.controls;
-    const btn=document.createElement('button');
-    btn.className=`s2choice ${c.steeringMode==='wheel'?'on':''}`;
-    btn.dataset.v='wheel';
-    btn.textContent='◉ VOLANTE';
-    row.appendChild(btn);
+    if(!row.querySelector('[data-v="wheel"]')){
+      const btn=document.createElement('button');
+      btn.className=`s2choice ${c.steeringMode==='wheel'?'on':''}`;
+      btn.dataset.v='wheel';
+      btn.textContent='◉ VOLANTE';
+      row.appendChild(btn);
+    }
+    // Always own the active selector handler. SettingsDomScene already renders
+    // VOLANTE, so returning early here used to skip the gamepad-guide hook entirely.
     row.onclick=e=>{
       const b=e.target.closest('[data-v]');
       if(!b)return;
