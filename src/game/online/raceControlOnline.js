@@ -23,4 +23,11 @@ export async function activateRaceControlOnline(){
   saveSession(session);api={session};return api;
 }
 
+export async function syncRaceControlProfile({nick,continentCode,countryCode,regionCode}){
+  const online=await activateRaceControlOnline();
+  const token=online?.session?.access_token;
+  if(!token)throw new Error('Online session unavailable');
+  return request('/rest/v1/rpc/upsert_my_profile',{method:'POST',token,body:{p_nick:nick,p_continent_code:continentCode,p_country_code:countryCode,p_region_code:regionCode}});
+}
+
 export function raceControlOnlineIsActive(){return Boolean(api?.session?.user?.id||readSession()?.user?.id);}
