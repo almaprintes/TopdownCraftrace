@@ -25,8 +25,26 @@ export class SettingsScene extends CurrentSettingsScene {
       c.steeringMode=b.dataset.v;
       c.scheme=c.steeringMode==='gamepad'?'gamepad':'touch';
       persist(this.settings);
-      this._renderTab('controls');
+      if(c.steeringMode==='gamepad')this._showGamepadGuide();
+      else this._renderTab('controls');
     };
+  }
+
+  _showGamepadGuide(){
+    if(typeof document==='undefined'||document.getElementById('tdr-settings-gamepad-guide'))return;
+    const root=document.createElement('div');
+    root.id='tdr-settings-gamepad-guide';
+    root.innerHTML=`<div class="tdr-gamepad-guide-card"><img src="${import.meta.env.BASE_URL||'/'}assets/ui/gamepad/gamepad-controls.webp" alt="Controles del mando: L2 freno, R2 acelerador, stick izquierdo dirección, círculo freno de mano y Options pausa o reanudar"><button data-close aria-label="Entendido"></button></div>`;
+    Object.assign(root.style,{position:'fixed',inset:'0',zIndex:'30000',display:'grid',placeItems:'center',background:'rgba(0,0,0,.84)',padding:'8px'});
+    const card=root.firstElementChild;
+    Object.assign(card.style,{position:'relative',width:'min(1536px,96vw)',maxHeight:'94vh'});
+    const img=card.querySelector('img');
+    Object.assign(img.style,{display:'block',width:'100%',maxHeight:'94vh',objectFit:'contain',borderRadius:'18px',boxShadow:'0 24px 80px #000c'});
+    const btn=card.querySelector('[data-close]');
+    Object.assign(btn.style,{position:'absolute',left:'32.8%',bottom:'3.2%',width:'34.4%',height:'10.8%',opacity:'0',cursor:'pointer',border:'0'});
+    const close=e=>{e?.preventDefault?.();e?.stopPropagation?.();root.remove();this._renderTab('controls');};
+    btn.addEventListener('pointerup',close,{passive:false});
+    document.body.appendChild(root);
   }
 
   _openCalibration(){
