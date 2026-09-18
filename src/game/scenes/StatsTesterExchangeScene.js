@@ -7,13 +7,6 @@ const fmt=ms=>{const n=Math.max(0,Number(ms)||0),m=Math.floor(n/60000),s=(n%6000
 export class StatsScene extends CurrentStatsScene{
   _renderBroadcastRecords(trackId=null){
     super._renderBroadcastRecords(trackId);
-    const main=this._root;if(!main)return;
-    main.querySelector('[data-tester-exchange]')?.remove();
-    const b=document.createElement('button');b.type='button';b.dataset.testerExchange='1';b.textContent='TESTERS';
-    b.style.cssText='position:absolute;right:12px;bottom:12px;z-index:30;height:34px;border:1px solid #55eaff;background:#0a3443;color:#fff;padding:0 13px;font:1000 9px system-ui;letter-spacing:.08em';
-    const selectedTrack=String(trackId||this._testerSelectedTrack()||'');
-    b.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();try{this._openTesterExchange(selectedTrack);}catch(err){console.error('[tester-exchange] open failed',err);}},false);
-    main.appendChild(b);
   }
 
   _testerSelectedTrack(){for(const el of this._root?.querySelectorAll('[data-br-track]')||[])if(el.classList.contains('active'))return String(el.dataset.brTrack||'');return'';}
