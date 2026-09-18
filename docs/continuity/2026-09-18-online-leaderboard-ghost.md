@@ -52,3 +52,20 @@ Measured raw movement streams are ~1.1 KB (Atlántico) to ~3.5 KB (Tenerife), pl
 4. Add opaque public record ref and controlled ghost download path without UUID exposure.
 5. Then wire lazy Supabase client/auth and rewarded gates into RACE Control.
 6. Before public Google Play release, update Data Safety for the data actually transmitted.
+
+
+## Phase 7 schema prepared in repository
+
+Migration `20260918_007_track_record_ghost.sql` is now versioned on `main` but must be applied manually to the Supabase project before client use.
+
+It extends each best record with:
+- opaque `record_ref uuid` (rotated whenever the best published record improves);
+- `ghost_format` (format 1 = validated native delta/ZigZag/varint);
+- compact `ghost_payload bytea`;
+- sample count and byte size integrity metadata.
+
+`submit_track_record_with_ghost` performs record+ghost replacement in one database transaction and only replaces an existing row when the submitted time is faster. `get_track_record_ghost(record_ref)` requires authentication and returns a ghost by opaque reference without exposing the owner's auth UUID.
+
+Safety bounds: payload <= 128 KiB and sample count <= 20,000. These are abuse/accident guards, not expected normal sizes (measured real payloads are only a few KiB).
+
+This migration does not yet alter leaderboard snapshot return types to expose `record_ref`; that should be done in a subsequent versioned RPC after migration 007 is applied/tested. Existing local replay behavior remains untouched.
