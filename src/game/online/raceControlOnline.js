@@ -5,6 +5,7 @@ const cfg=()=>({url:String(import.meta.env.VITE_TDR_ONLINE_URL||'').trim(),key:S
 const headers=(key,token)=>({'apikey':key,'Authorization':`Bearer ${token||key}`,'Content-Type':'application/json'});
 const readSession=()=>{try{return JSON.parse(localStorage.getItem('tdr2:onlineSession:v1')||'null');}catch{return null;}};
 const saveSession=s=>{try{localStorage.setItem('tdr2:onlineSession:v1',JSON.stringify(s));}catch{}};
+const sessionUsable=s=>Boolean(s?.access_token&&s?.user?.id&&Number(s?.expires_at||0)*1000>Date.now()+30000);
 
 async function request(path,{method='GET',body,token}={}){
   const {url,key}=cfg();if(!url||!key)throw new Error('Online backend not configured');
@@ -15,9 +16,15 @@ async function request(path,{method='GET',body,token}={}){
 }
 
 export async function activateRaceControlOnline(){
-  if(api?.session?.access_token)return api;
+  if(sessionUsable(api?.session))return api;
   const old=readSession();
-  if(old?.access_token&&old?.user?.id){api={session:old};return api;}
+  if(sessionUsable(old)){api={session:old};return api;}
+  if(old?.refresh_token){
+    try{
+      const refreshed=await request('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:old.refresh_token}});
+      if(sessionUsable(refreshed)){saveSession(refreshed);api={session:refreshed};return api;}
+    }catch{}
+  }
   const session=await request('/auth/v1/signup',{method:'POST',body:{}});
   if(!session?.access_token||!session?.user?.id)throw new Error('Anonymous session unavailable');
   saveSession(session);api={session};return api;
