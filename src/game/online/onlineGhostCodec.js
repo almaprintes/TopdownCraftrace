@@ -74,6 +74,20 @@ export function encodeOnlineGhostNative(ghost){
   };
 }
 
+function zigzag(n){const v=Math.trunc(Number(n)||0);return v>=0?v*2:-v*2-1;}
+function varintBytes(n){let v=Math.max(0,Math.trunc(Number(n)||0)),bytes=1;while(v>=128){v=Math.floor(v/128);bytes++;}return bytes;}
+export function onlineGhostNativeDeltaBinaryBytes(packet){
+  if(!packet||Number(packet.v)!==2||!Array.isArray(packet.p)||packet.p.length<2)throw new Error('Native online ghost payload is invalid.');
+  let bytes=0,prev=[0,0,0,0];
+  for(let i=0;i<packet.p.length;i++){
+    const row=packet.p[i].map(v=>Math.trunc(Number(v)||0));
+    for(let j=0;j<4;j++){const value=i===0?row[j]:row[j]-prev[j];bytes+=varintBytes(zigzag(value));}
+    prev=row;
+  }
+  const meta=new TextEncoder().encode(JSON.stringify({f:packet.f,v:packet.v,ms:packet.ms,tr:packet.tr,car:packet.car,at:packet.at,q:packet.q,n:packet.p.length})).byteLength;
+  return meta+bytes;
+}
+
 export function decodeOnlineGhostNative(packet){
   if(!packet||packet.f!==ONLINE_GHOST_FORMAT||Number(packet.v)!==2)throw new Error('Unsupported native online ghost format.');
   const lapMs=Math.round(Number(packet.ms)||0),xy=Number(packet?.q?.[0])||XY_SCALE,ang=Number(packet?.q?.[1])||ANGLE_SCALE;
