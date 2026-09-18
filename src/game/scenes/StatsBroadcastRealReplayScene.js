@@ -1,4 +1,5 @@
 import { StatsScene as ReplayStatsScene } from './StatsBroadcastReplayScene.js';
+import { encodeOnlineGhost, onlineGhostJsonBytes, measureOnlineGhostError } from '../online/onlineGhostCodec.js';
 
 const SESSION_KEY='tdr2:statsNativeReplay';
 const RETURN_TRACK_KEY='tdr2:statsReturnTrack';
@@ -59,6 +60,17 @@ export class StatsScene extends ReplayStatsScene{
         <div class="br-native-screen" data-br-native-replay-screen="1"><div class="br-native-loading" data-br-native-loading>CARGANDO REPLAY REAL…</div></div>
       </section>`;
     if(chart)main.appendChild(chart);
+    try{
+      const packet=encodeOnlineGhost(ghost),error=measureOnlineGhostError(ghost,packet);
+      const originalBytes=new TextEncoder().encode(JSON.stringify(ghost)).byteLength,compactBytes=onlineGhostJsonBytes(packet);
+      const saving=originalBytes?Math.round((1-compactBytes/originalBytes)*1000)/10:0;
+      const panel=document.createElement('div');panel.dataset.brGhostDiag='1';
+      panel.style.cssText='margin:7px 0 0;padding:8px 10px;border:1px solid rgba(99,243,165,.55);background:#061a18;color:#fff;font:800 9px/1.4 system-ui';
+      panel.innerHTML='<b style="color:#63f3a5">ONLINE GHOST · DEV 1.0.193</b> · SIZE '+originalBytes.toLocaleString()+' → '+compactBytes.toLocaleString()+' B · SAVE '+saving+'% · SAMPLES '+ghost.samples.length+' → '+packet.p.length+' · ERROR MAX '+Number(error.maxPositionError||0).toFixed(3)+' · RMS '+Number(error.rmsPositionError||0).toFixed(3)+' · ANGLE '+Number(error.maxAngleError||0).toFixed(5)+' rad';
+      main.querySelector('.br-native-monitor')?.appendChild(panel);
+    }catch(err){
+      const panel=document.createElement('div');panel.dataset.brGhostDiag='1';panel.style.cssText='margin:7px 0 0;padding:8px 10px;border:1px solid #ff6b6b;background:#240b0b;color:#fff;font:800 9px system-ui';panel.textContent='GHOST DIAGNOSTIC ERROR: '+String(err?.message||err);main.querySelector('.br-native-monitor')?.appendChild(panel);
+    }
     main.querySelector('[data-br-native-close]')?.addEventListener('click',()=>this._renderBroadcastRecords(trackId));
     try{
       sessionStorage.setItem(SESSION_KEY,JSON.stringify({
