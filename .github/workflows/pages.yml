@@ -97,7 +97,7 @@ jobs:
         run: |
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
-          VITE_TDR_ONLINE_URL='https://juukbnkjboiazqggqcyv.supabase.co' VITE_TDR_ONLINE_PUBLIC='sb_publishable_l5cHUHrGHoFzGqmUyfQKSA_d3VjWksB' npx vite build --base=/TopdownCraftrace/dev/
+          npx vite build --base=/TopdownCraftrace/dev/
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
