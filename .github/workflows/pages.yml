@@ -86,6 +86,13 @@ jobs:
           if grep -q "setTexture?.('off')" src/game/scenes/RaceSurfaceProfileScene.js; then exit 1; fi
           grep -q "this.scene.start('race'" src/game/scenes/MenuGameModesScene.js
           grep -q "src/main.js" index.html
+      - name: Verify DEV source version
+        working-directory: dev-src
+        shell: bash
+        run: |
+          echo "Deploying commit: $(git rev-parse HEAD)"
+          grep -n "DEV 1.0.189 visible development version" index.html
+          grep -n "DEV 1.0.189" src/game/scenes/RaceUiStabilityScene.js
       - name: Build development
         working-directory: dev-src
         shell: bash
