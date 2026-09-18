@@ -69,3 +69,8 @@ It extends each best record with:
 Safety bounds: payload <= 128 KiB and sample count <= 20,000. These are abuse/accident guards, not expected normal sizes (measured real payloads are only a few KiB).
 
 This migration does not yet alter leaderboard snapshot return types to expose `record_ref`; that should be done in a subsequent versioned RPC after migration 007 is applied/tested. Existing local replay behavior remains untouched.
+
+
+## Phase 8 prepared
+
+Migration `20260918_008_leaderboard_ghost_refs.sql` is versioned on `main`. It replaces the leaderboard/snapshot RPC return signatures so each row includes only `record_ref` and `ghost_available`; owner `user_id` remains internal. This gives the client an exact, public-safe selector for rewarded ghost download. Migration 008 must be applied manually and auth-negative-tested before client wiring.
