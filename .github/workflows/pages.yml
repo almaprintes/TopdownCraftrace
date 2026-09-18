@@ -66,7 +66,6 @@ jobs:
           grep -q "this.touchUI?.setVisible?.(false)" src/game/scenes/RaceUiStabilityScene.js
           grep -q "_hideResidualGamepadSteeringVisual" src/game/scenes/RaceUiStabilityScene.js
           grep -q "document.body.querySelectorAll('\*')" src/game/scenes/RaceUiStabilityScene.js
-          grep -q "DEV 1.0.189" src/game/scenes/RaceUiStabilityScene.js
           test -f public/assets/ui/gamepad/gamepad-controls.webp
           grep -Fq "_showGamepadGuide" src/game/scenes/SettingsWheelModeScene.js
           grep -Fq "if(!row) return;" src/game/scenes/SettingsWheelModeScene.js
@@ -92,7 +91,6 @@ jobs:
         run: |
           echo "Deploying commit: $(git rev-parse HEAD)"
           grep -n "DEV 1.0.189 visible development version" index.html
-          grep -n "DEV 1.0.189" src/game/scenes/RaceUiStabilityScene.js
       - name: Build development
         working-directory: dev-src
         shell: bash
