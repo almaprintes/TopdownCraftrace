@@ -3,6 +3,7 @@ import { encodeOnlineGhost, onlineGhostJsonBytes, measureOnlineGhostError } from
 
 const TOP_REPLAY_PREFIX='tdr2:topReplay:';
 const SESSION_KEY='tdr2:statsNativeReplay';
+const GHOST_REPORT_KEY='tdr2:onlineGhostCodec:lastReport';
 const REPLAY_SPEEDS=[0.25,0.5,1,2];
 const positive=v=>{const n=Number(v);return Number.isFinite(n)&&n>0?n:null;};
 const text=v=>String(v??'').trim();
@@ -84,6 +85,23 @@ export class RaceScene extends CurrentRaceScene{
         </div>
       </div>`;
     document.body.appendChild(root);this._tdrStatsReplayOverlay=root;
+    try{
+      const report=JSON.parse(localStorage.getItem(GHOST_REPORT_KEY)||'null');
+      if(report&&Number(report.createdAt)>0){
+        const diag=document.createElement('div');diag.dataset.tdrGhostDiag='1';
+        diag.style.cssText='position:absolute;right:max(12px,env(safe-area-inset-right));bottom:max(64px,calc(env(safe-area-inset-bottom) + 58px));z-index:2;width:min(360px,42vw);padding:8px 10px;background:rgba(3,14,22,.92);border:1px solid rgba(99,243,165,.55);font-size:9px;line-height:1.35;pointer-events:none';
+        const age=Math.max(0,Date.now()-Number(report.createdAt));
+        diag.innerHTML='<div style="font-size:8px;font-weight:1000;letter-spacing:.14em;color:#63f3a5">DEV 1.0.190 · ONLINE GHOST DIAGNOSTIC</div>'+
+          '<div style="margin-top:4px;font-weight:900">'+String(report.trackId||'')+' · '+fmt(report.lapMs)+'</div>'+
+          '<div>SIZE: '+Number(report.originalBytes||0).toLocaleString()+' → '+Number(report.compactBytes||0).toLocaleString()+' B · SAVE '+Number(report.savingPct||0)+'%</div>'+
+          '<div>SAMPLES: '+Number(report.originalSamples||0)+' → '+Number(report.compactSamples||0)+'</div>'+
+          '<div>POSITION ERROR: MAX '+Number(report.maxPositionError||0).toFixed(3)+' · RMS '+Number(report.rmsPositionError||0).toFixed(3)+'</div>'+
+          '<div>ANGLE ERROR: MAX '+Number(report.maxAngleError||0).toFixed(5)+' rad · PROBES '+Number(report.probes||0)+'</div>'+
+          '<div style="color:#8fa9b7">SAVED '+Math.round(age/1000)+' s AGO</div>';
+        root.appendChild(diag);
+      }
+    }catch{}
+
     root.querySelector('[data-back]')?.addEventListener('click',()=>this._exitStatsNativeReplay());
     root.querySelector('[data-start]')?.addEventListener('click',()=>this._seekStatsReplay(0,true));
     root.querySelector('[data-prev]')?.addEventListener('click',()=>this._stepStatsReplaySample(-1));
@@ -185,7 +203,7 @@ export class RaceScene extends CurrentRaceScene{
     const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
     if(hist.length>this._ghostHistoryLen){
       const last=hist[hist.length-1]||{};const lapMs=positive(last.lapMs??this.timing?.lastLap);const trackId=String(this._ghostTrackKey||this.trackKey||'track01');const ranked=hist.filter(validLap).map((row,index)=>({row,index,ms:positive(row?.lapMs??row?.ms??row?.time)})).sort((a,b)=>a.ms-b.ms);const rankedIndex=ranked.findIndex(item=>item.row===last);const qualifies=lapMs&&rankedIndex>=0&&rankedIndex<10&&Array.isArray(this._ghostSamples)&&this._ghostSamples.length>4;
-      if(qualifies){const samples=this._ghostSamples.filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),r:Number(s.r||0)}));if(this.carBody)samples.push({t:Math.round(lapMs),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});const cameraSamples=(this._tdrReplayCameraSamples||[]).filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<=lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),w:Number(s.w),h:Number(s.h),zoom:Number(s.zoom)}));const finalCam=cameraSample(this,lapMs);if(finalCam)cameraSamples.push(finalCam);const key=replayKey(trackId,last,hist.length-1);if(samples.length>4){const replay={version:5,kind:'local-top10-lap',trackKey:trackId,carId:text(last.carId)||this._tdrCurrentGhostCarId||this.carId||null,lapMs:Math.round(lapMs),recordedAt:Number(last.t||last.timestamp)||Date.now(),historyIndex:hist.length-1,samples,cameraSamples,viewport:{w:Number(this.scale?.width)||0,h:Number(this.scale?.height)||0}};write(key,replay);try{const packet=encodeOnlineGhost(replay),error=measureOnlineGhostError(replay,packet),originalBytes=new TextEncoder().encode(JSON.stringify(replay)).byteLength,compactBytes=onlineGhostJsonBytes(packet);localStorage.setItem('tdr2:onlineGhostCodec:lastReport',JSON.stringify({version:'DEV 1.0.189',trackId,lapMs:Math.round(lapMs),originalSamples:samples.length,compactSamples:packet.p.length,originalBytes,compactBytes,savingPct:originalBytes?Math.round((1-compactBytes/originalBytes)*1000)/10:0,maxPositionError:Math.round(error.maxPositionError*1000)/1000,rmsPositionError:Math.round(error.rmsPositionError*1000)/1000,maxAngleError:Math.round(error.maxAngleError*100000)/100000,probes:error.probes,createdAt:Date.now()}));}catch{}}}
+      if(qualifies){const samples=this._ghostSamples.filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),r:Number(s.r||0)}));if(this.carBody)samples.push({t:Math.round(lapMs),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});const cameraSamples=(this._tdrReplayCameraSamples||[]).filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<=lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),w:Number(s.w),h:Number(s.h),zoom:Number(s.zoom)}));const finalCam=cameraSample(this,lapMs);if(finalCam)cameraSamples.push(finalCam);const key=replayKey(trackId,last,hist.length-1);if(samples.length>4){const replay={version:5,kind:'local-top10-lap',trackKey:trackId,carId:text(last.carId)||this._tdrCurrentGhostCarId||this.carId||null,lapMs:Math.round(lapMs),recordedAt:Number(last.t||last.timestamp)||Date.now(),historyIndex:hist.length-1,samples,cameraSamples,viewport:{w:Number(this.scale?.width)||0,h:Number(this.scale?.height)||0}};write(key,replay);try{const packet=encodeOnlineGhost(replay),error=measureOnlineGhostError(replay,packet),originalBytes=new TextEncoder().encode(JSON.stringify(replay)).byteLength,compactBytes=onlineGhostJsonBytes(packet);localStorage.setItem('tdr2:onlineGhostCodec:lastReport',JSON.stringify({version:'DEV 1.0.190',trackId,lapMs:Math.round(lapMs),originalSamples:samples.length,compactSamples:packet.p.length,originalBytes,compactBytes,savingPct:originalBytes?Math.round((1-compactBytes/originalBytes)*1000)/10:0,maxPositionError:Math.round(error.maxPositionError*1000)/1000,rmsPositionError:Math.round(error.rmsPositionError*1000)/1000,maxAngleError:Math.round(error.maxAngleError*100000)/100000,probes:error.probes,createdAt:Date.now()}));}catch{}}}
       const keep=new Set(ranked.slice(0,10).map(item=>replayKey(trackId,item.row,item.index)));try{const prefix=`${TOP_REPLAY_PREFIX}${encodeURIComponent(trackId)}:`;for(let i=localStorage.length-1;i>=0;i--){const key=localStorage.key(i)||'';if(key.startsWith(prefix)&&!keep.has(key))remove(key);}}catch{}
     }
     const result=super._completedLapCheck(now);this._tdrReplayCameraSamples=[];this._tdrReplayCameraLastT=-Infinity;return result;
