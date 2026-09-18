@@ -49,3 +49,10 @@ export async function submitRaceControlRecordWithGhost({trackId,bestTimeMs,carId
   const payload='\\x'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
   return request('/rest/v1/rpc/submit_track_record_with_ghost',{method:'POST',token,body:{p_track_id:String(trackId||''),p_best_time_ms:Math.round(Number(bestTimeMs)||0),p_car_id:String(carId||''),p_ghost_payload:payload,p_ghost_sample_count:Math.round(Number(ghostSampleCount)||0),p_ghost_format:1}});
 }
+
+export async function getRaceControlSnapshot(trackId){
+  const online=await activateRaceControlOnline();
+  const token=online?.session?.access_token;
+  if(!token)throw new Error('Online session unavailable');
+  return request('/rest/v1/rpc/get_race_control_snapshot',{method:'POST',token,body:{p_track_id:String(trackId||'')}});
+}
