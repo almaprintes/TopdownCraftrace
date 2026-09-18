@@ -100,7 +100,9 @@ export class RaceScene extends EmbeddedReplayRaceScene{
 
   _tdrSyncGamepadUi(force=false){
     if(this._tdrEmbeddedReplay)return;
-    const active=gamepadSelected()||connectedGamepad();
+    // A connected pad must not suppress touch controls unless MANDO is explicitly selected.
+    // Browsers keep paired controllers visible in navigator.getGamepads() even after the user switches back to PALANCA/BOTONES/VOLANTE.
+    const active=gamepadSelected();
     if(!force&&active===this._tdrGamepadUiActive)return;
     this._tdrGamepadUiActive=active;
     this._tdrApplyGamepadDrivingUi(active);
