@@ -276,8 +276,30 @@ _renderTabContent(panelX, panelY, panelW, panelH) {
 
   if (this.activeTab === 'controls') {
     title('CONTROLES');
-    this._textLine(`Tipo de control: ${this.settings.controls.scheme}`, contentX, y);
-    y += 26 + rowGap;
+    this._sectionTitle('Tipo de control', contentX, y);
+    y += 28;
+    const modes=[
+      {id:'touch',label:'TÁCTIL'},
+      {id:'buttons',label:'BOTONES'},
+      {id:'gamepad',label:'MANDO'}
+    ];
+    const modeW=Math.min(150,Math.floor((panelW-pad*2-20)/3));
+    modes.forEach((mode,index)=>{
+      const selected=this.settings.controls.scheme===mode.id;
+      const button=this.add.rectangle(contentX+index*(modeW+10),y,modeW,38,selected?0x123b50:0x141b33,selected?.92:.58)
+        .setOrigin(0).setStrokeStyle(1,selected?0x55cfff:0xb7c0ff,selected?.75:.22)
+        .setInteractive({useHandCursor:true});
+      const label=this.add.text(button.x+modeW/2,y+19,mode.label,{fontFamily:'system-ui, -apple-system, Segoe UI, Roboto, Arial',fontSize:'12px',color:'#ffffff',fontStyle:'bold'}).setOrigin(.5);
+      button.on('pointerup',()=>{
+        this.settings.controls.scheme=mode.id;
+        if(mode.id==='gamepad')this.settings.controls.steeringMode='gamepad';
+        else if(this.settings.controls.steeringMode==='gamepad')this.settings.controls.steeringMode=mode.id==='buttons'?'buttons':'stick';
+        this._saveSettings();
+        if(mode.id==='gamepad')this._showGamepadGuide();
+        else this.scene.restart();
+      });
+    });
+    y += 38 + rowGap;
 
     this._sectionTitle('Invertir dirección', contentX, y);
     y += 26;
@@ -327,6 +349,22 @@ _renderTabContent(panelX, panelY, panelW, panelH) {
     );
   }
 }
+
+  _showGamepadGuide() {
+    if(typeof document==='undefined'||document.getElementById('tdr-settings-gamepad-guide'))return;
+    const root=document.createElement('div');
+    root.id='tdr-settings-gamepad-guide';
+    root.innerHTML=`
+      <div style="position:relative;width:min(1536px,96vw);max-height:94vh">
+        <img src="${import.meta.env.BASE_URL||'/'}assets/ui/gamepad/gamepad-controls.webp" alt="Controles del mando: L2 freno, R2 acelerador, stick izquierdo dirección, círculo freno de mano y Options pausa o reanudar" style="display:block;width:100%;max-height:94vh;object-fit:contain;border-radius:18px;box-shadow:0 24px 80px #000c">
+        <button data-close aria-label="Entendido, cerrar instrucciones" style="position:absolute;left:32.8%;bottom:3.2%;width:34.4%;height:10.8%;opacity:0;cursor:pointer;border:0"></button>
+      </div>`;
+    Object.assign(root.style,{position:'fixed',inset:'0',zIndex:'30000',display:'grid',placeItems:'center',background:'rgba(0,0,0,.82)',padding:'8px'});
+    const close=()=>{root.remove();this.scene.restart();};
+    const btn=root.querySelector('[data-close]');
+    btn?.addEventListener('pointerup',e=>{e.preventDefault();e.stopPropagation();close();});
+    document.body.appendChild(root);
+  }
 
   // ===============================
   // UI Helpers
