@@ -58,6 +58,39 @@ export function encodeOnlineGhost(ghost,{intervalMs=ONLINE_GHOST_INTERVAL_MS}={}
   };
 }
 
+export function encodeOnlineGhostNative(ghost){
+  const source=normalizeSamples(ghost?.samples);
+  const lapMs=Math.round(Number(ghost?.lapMs)||Number(source.at(-1)?.t)||0);
+  if(source.length<2||lapMs<=0)throw new Error('Ghost replay is empty or invalid.');
+  return{
+    f:ONLINE_GHOST_FORMAT,
+    v:2,
+    ms:lapMs,
+    tr:String(ghost?.trackKey||ghost?.trackId||''),
+    car:String(ghost?.carId||''),
+    at:Number(ghost?.recordedAt)||0,
+    q:[XY_SCALE,ANGLE_SCALE],
+    p:source.map(s=>[Math.round(s.t),round(s.x,XY_SCALE),round(s.y,XY_SCALE),round(s.r,ANGLE_SCALE)])
+  };
+}
+
+export function decodeOnlineGhostNative(packet){
+  if(!packet||packet.f!==ONLINE_GHOST_FORMAT||Number(packet.v)!==2)throw new Error('Unsupported native online ghost format.');
+  const lapMs=Math.round(Number(packet.ms)||0),xy=Number(packet?.q?.[0])||XY_SCALE,ang=Number(packet?.q?.[1])||ANGLE_SCALE;
+  const samples=(Array.isArray(packet.p)?packet.p:[]).map(row=>({t:Number(row?.[0]),x:Number(row?.[1])/xy,y:Number(row?.[2])/xy,r:Number(row?.[3])/ang})).filter(s=>finite(s.t)&&finite(s.x)&&finite(s.y)&&finite(s.r));
+  if(lapMs<=0||samples.length<2)throw new Error('Native online ghost payload is invalid.');
+  return{version:2,kind:'online-ghost-native',trackKey:String(packet.tr||''),carId:String(packet.car||''),lapMs,recordedAt:Number(packet.at)||0,samples};
+}
+
+export function measureNativeOnlineGhostError(originalGhost,packet,{probeMs=10}={}){
+  const original=normalizeSamples(originalGhost?.samples),decoded=decodeOnlineGhostNative(packet).samples;
+  const lapMs=Math.min(Math.round(Number(originalGhost?.lapMs)||0),Number(packet?.ms)||0);
+  if(original.length<2||decoded.length<2||lapMs<=0)return{maxPositionError:Infinity,rmsPositionError:Infinity,maxAngleError:Infinity,probes:0};
+  const step=Math.max(5,Math.round(Number(probeMs)||10));let maxPositionError=0,maxAngleError=0,sumSq=0,probes=0;
+  for(let t=0;t<=lapMs;t+=step){const a=sampleAt(original,t),b=sampleAt(decoded,t);if(!a||!b)continue;const pos=Math.hypot(a.x-b.x,a.y-b.y),ang=Math.abs(normAngle(a.r-b.r));maxPositionError=Math.max(maxPositionError,pos);maxAngleError=Math.max(maxAngleError,ang);sumSq+=pos*pos;probes++;}
+  return{maxPositionError,rmsPositionError:probes?Math.sqrt(sumSq/probes):Infinity,maxAngleError,probes};
+}
+
 export function decodeOnlineGhost(packet){
   if(!packet||packet.f!==ONLINE_GHOST_FORMAT||Number(packet.v)!==ONLINE_GHOST_VERSION)throw new Error('Unsupported online ghost format.');
   const step=Math.max(1,Math.round(Number(packet.dt)||0)),lapMs=Math.round(Number(packet.ms)||0);
