@@ -1,4 +1,5 @@
 // src/scenes/SettingsScene.js
+// DEV 1.0.185 deployment trigger — controller onboarding lives in Settings.
 import Phaser from 'phaser';
 
 const STORAGE_KEY = 'tdr2:settings';
