@@ -3,6 +3,20 @@
 > Documento vivo para continuar el proyecto en un chat nuevo sin perder decisiones, soluciones técnicas ni el estado de trabajo.
 > Fuente oficial: `almaprintes/TopdownCraftrace`. Desarrollo normal en `main`; beta pública estable en `beta-1.0`.
 
+## ACTUALIZACIÓN DE CONTINUIDAD — 18/09/2026
+
+### Leaderboard online / ghost validado
+
+Se completó la investigación real en dispositivo del formato de ghost online. La arquitectura, mediciones Atlántico/Tenerife, decisiones de monetización, estado de Supabase y próximos pasos están documentados en:
+
+- `docs/continuity/2026-09-18-online-leaderboard-ghost.md`
+
+Decisión vigente: conservar todas las muestras nativas `{t,x,y,r}`, cuantizar X/Y a 0,25 unidades y rotación a 0,0001 rad, y serializar el movimiento con delta + ZigZag + varint. No usar remuestreo fijo de 20–50 ms: las pruebas demostraron más error de trazada y/o más tamaño.
+
+DEV 1.0.197 validó en Tenerife 596 muestras con **ROUNDTRIP EXACT** tras encode binario -> decode. Flujo de movimiento real: 3.475 B frente a 48.061 B del replay local completo; el binario no añade pérdida respecto al NATIVE cuantizado. El replay local no se sustituye ni se modifica.
+
+Tras la validación se retiró el panel visual de laboratorio de Race Control. El codec validado permanece para la futura integración. Próximo paso: esquema/RPC atómico de récord+ghost en Supabase, referencia pública opaca y descarga controlada; después integración cliente/rewarded.
+
 ## ACTUALIZACIÓN DE CONTINUIDAD — 17/09/2026
 
 ### Supabase / leaderboard online
