@@ -123,8 +123,8 @@ jobs:
           test -f beta/dist/dev-live/sw.js
           grep -q 'DEV_VERSION=1.0.204' beta/dist/dev/dev-build.txt
           grep -q 'DEV_VERSION=1.0.204' beta/dist/dev-live/dev-build.txt
-          grep -q 'DEV 1\.0\.203 visible development version' beta/dist/dev/index.html
-          grep -q 'DEV 1\.0\.203 visible development version' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.0\.204 visible development version' beta/dist/dev/index.html
+          grep -q 'DEV 1\.0\.204 visible development version' beta/dist/dev-live/index.html
           test "$(grep -o '<span>DEV 1\.0\.</span><span>204</span>' beta/dist/dev/index.html | wc -l | tr -d ' ')" = "2"
           test "$(grep -o '<span>DEV 1\.0\.</span><span>204</span>' beta/dist/dev-live/index.html | wc -l | tr -d ' ')" = "2"
       - name: Configure GitHub Pages
