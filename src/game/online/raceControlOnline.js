@@ -56,3 +56,10 @@ export async function getRaceControlSnapshot(trackId){
   if(!token)throw new Error('Online session unavailable');
   return request('/rest/v1/rpc/get_race_control_snapshot',{method:'POST',token,body:{p_track_id:String(trackId||'')}});
 }
+
+export async function getRaceControlGhost(recordRef){
+  const online=await activateRaceControlOnline();
+  const token=online?.session?.access_token;
+  if(!token)throw new Error('Online session unavailable');
+  return request('/rest/v1/rpc/get_track_record_ghost',{method:'POST',token,body:{p_record_ref:String(recordRef||'')}});
+}
