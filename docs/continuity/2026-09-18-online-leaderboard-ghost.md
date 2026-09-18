@@ -74,3 +74,20 @@ This migration does not yet alter leaderboard snapshot return types to expose `r
 ## Phase 8 prepared
 
 Migration `20260918_008_leaderboard_ghost_refs.sql` is versioned on `main`. It replaces the leaderboard/snapshot RPC return signatures so each row includes only `record_ref` and `ghost_available`; owner `user_id` remains internal. This gives the client an exact, public-safe selector for rewarded ghost download. Migration 008 must be applied manually and auth-negative-tested before client wiring.
+
+
+## Race Control product rules — confirmed 2026-09-18
+- The online leaderboard is the visual star of Race Control and belongs in the large central area, not a small technical Cloud Link panel.
+- Each leaderboard row is a challenge card: rank, pilot, record time, real thumbnail of the car used for that record, ghost availability, and a prominent VS action.
+- VS targets the exact opaque record_ref. The rival ghost uses the recorded path/timing and record car visual; the player enters that same circuit with the car they currently have equipped. Never auto-switch the player's car to the rival's car.
+- Downloading a new uncached rival ghost is rewarded-gated once; after successful unlock/download it is cached and can be raced again without another rewarded, including offline when possible.
+- Publishing a PB and refreshing the online snapshot are also rewarded-gated when monetization is enabled.
+- HARD UX RULE: no action that costs a rewarded ad, currency, purchase, or limited resource may execute from a single tap. First tap opens an explicit confirmation explaining the exact cost/consequence. Only the affirmative confirmation may start payment/rewarded flow. Cancellation changes nothing. If an ad is closed, fails, or is not verified, the paid/gated action must not execute.
+- If an action is already unlocked/free (for example a cached ghost), VS may launch directly without a payment confirmation.
+- Cache/TTL/backend diagnostics are secondary UI; the ranking itself receives the premium visual treatment.
+
+## Validated live milestone — DEV 1.0.204/1.0.205
+- Anonymous online activation and profile sync work end-to-end. Live profile RPC ambiguity was fixed by targeting constraint profiles_pkey rather than ambiguous ON CONFLICT (user_id).
+- First real atomic PB+ghost publication succeeded: circuito-atlantico, 9054 ms, helix_vortex, ghost format 1, 169 samples, 976 bytes. track_records changed 0 -> 1.
+- DEV 1.0.205 reads the real Race Control snapshot and displayed JUANFRIKAZO_DEV as #1 from Supabase. This proved leaderboard transport/cache/rendering, but the compact side-panel presentation is explicitly rejected and will be replaced by the central challenge leaderboard.
+- Migration 008 is applied and live: snapshot rows expose opaque record_ref + ghost_available without exposing owner UUID.
