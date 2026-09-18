@@ -76,6 +76,28 @@ export function encodeOnlineGhostNative(ghost){
 
 function zigzag(n){const v=Math.trunc(Number(n)||0);return v>=0?v*2:-v*2-1;}
 function varintBytes(n){let v=Math.max(0,Math.trunc(Number(n)||0)),bytes=1;while(v>=128){v=Math.floor(v/128);bytes++;}return bytes;}
+function writeVarint(out,n){let v=Math.max(0,Math.trunc(Number(n)||0));while(v>=128){out.push((v%128)|128);v=Math.floor(v/128);}out.push(v);}
+function readVarint(bytes,state){let value=0,mul=1;for(let guard=0;guard<8;guard++){if(state.i>=bytes.length)throw new Error('Truncated ghost binary.');const b=bytes[state.i++];value+=(b&127)*mul;if((b&128)===0)return value;mul*=128;}throw new Error('Invalid ghost varint.');}
+function unzigzag(v){return v%2===0?v/2:-(v+1)/2;}
+export function encodeOnlineGhostNativeBinary(packet){
+  if(!packet||Number(packet.v)!==2||!Array.isArray(packet.p)||packet.p.length<2)throw new Error('Native online ghost payload is invalid.');
+  const out=[],prev=[0,0,0,0];
+  for(let i=0;i<packet.p.length;i++){const row=packet.p[i].map(v=>Math.trunc(Number(v)||0));for(let j=0;j<4;j++){writeVarint(out,zigzag(i===0?row[j]:row[j]-prev[j]));}for(let j=0;j<4;j++)prev[j]=row[j];}
+  return Uint8Array.from(out);
+}
+export function decodeOnlineGhostNativeBinary(bytes,meta){
+  const src=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes||[]),state={i:0},prev=[0,0,0,0],rows=[],count=Math.max(0,Math.trunc(Number(meta?.n)||0));
+  if(count<2)throw new Error('Native ghost binary metadata is invalid.');
+  for(let i=0;i<count;i++){const row=[];for(let j=0;j<4;j++){const delta=unzigzag(readVarint(src,state));row[j]=i===0?delta:prev[j]+delta;}rows.push(row);for(let j=0;j<4;j++)prev[j]=row[j];}
+  if(state.i!==src.length)throw new Error('Native ghost binary has trailing data.');
+  return{f:ONLINE_GHOST_FORMAT,v:2,ms:Number(meta.ms)||0,tr:String(meta.tr||''),car:String(meta.car||''),at:Number(meta.at)||0,q:Array.isArray(meta.q)?meta.q:[XY_SCALE,ANGLE_SCALE],p:rows};
+}
+export function verifyOnlineGhostNativeBinary(packet){
+  const bytes=encodeOnlineGhostNativeBinary(packet),meta={ms:packet.ms,tr:packet.tr,car:packet.car,at:packet.at,q:packet.q,n:packet.p.length},decoded=decodeOnlineGhostNativeBinary(bytes,meta);
+  const exact=JSON.stringify(decoded.p)===JSON.stringify(packet.p);
+  return{exact,bytes:bytes.byteLength,frames:decoded.p.length,decoded};
+}
+
 export function onlineGhostNativeDeltaBinaryBytes(packet){
   if(!packet||Number(packet.v)!==2||!Array.isArray(packet.p)||packet.p.length<2)throw new Error('Native online ghost payload is invalid.');
   let bytes=0,prev=[0,0,0,0];
