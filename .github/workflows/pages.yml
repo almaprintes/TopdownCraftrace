@@ -95,7 +95,12 @@ jobs:
       - name: Build development
         working-directory: dev-src
         shell: bash
+        env:
+          VITE_TDR_ONLINE_URL: ${{ vars.VITE_TDR_ONLINE_URL }}
+          VITE_TDR_ONLINE_PUBLIC: ${{ vars.VITE_TDR_ONLINE_PUBLIC }}
         run: |
+          test -n "${VITE_TDR_ONLINE_URL}"
+          test -n "${VITE_TDR_ONLINE_PUBLIC}"
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
