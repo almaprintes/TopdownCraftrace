@@ -352,6 +352,17 @@ export class RaceScene extends CurrentRaceScene {
     `;
     document.head.appendChild(style);
 
+    // Force both visual states into the browser cache/decoder immediately.
+    // CSS only requested the active image on first press, which is why Android
+    // could show idle instantly but spend many seconds decoding "pulled".
+    for(const src of ['assets/ui/tdr_handbrake_idle.webp?v=3','assets/ui/tdr_handbrake_pulled.webp?v=3']){
+      try{
+        const img=new Image();
+        img.src=src;
+        img.decode?.().catch(()=>{});
+      }catch{}
+    }
+
     const root=document.createElement('div');
     root.id='tdr-handbrake';
     root.setAttribute('role','button');
