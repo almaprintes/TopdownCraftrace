@@ -213,7 +213,7 @@ export class RaceScene extends CurrentRaceScene {
       fontFamily:'system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
       textAlign:'center',
       opacity:'0',
-      transition:'opacity .12s ease',
+      transition:(typeof navigator!=='undefined'&&/Android/i.test(String(navigator.userAgent||'')))?'none':'opacity .12s ease',
       userSelect:'none'
     });
 
@@ -342,18 +342,21 @@ export class RaceScene extends CurrentRaceScene {
     const color=faster?'#43f58b':slower?'#ff5f73':'#ffffff';
     const state=faster?'GANANDO TIEMPO':slower?'PERDIENDO TIEMPO':'IGUALADO';
 
-    ui.label.textContent=reference?'VS MEJOR VUELTA':'ESTIMACIÓN · VS MEJOR';
-    ui.value.textContent=formatDeltaValue(delta);
-    ui.value.style.color=color;
-    ui.state.textContent=state;
-    ui.state.style.color=color;
-    ui.marker.style.background=color;
+    const labelText=reference?'VS MEJOR VUELTA':'ESTIMACIÓN · VS MEJOR';
+    const valueText=formatDeltaValue(delta);
+    if(ui.label.textContent!==labelText)ui.label.textContent=labelText;
+    if(ui.value.textContent!==valueText)ui.value.textContent=valueText;
+    if(ui.value.style.color!==color)ui.value.style.color=color;
+    if(ui.state.textContent!==state)ui.state.textContent=state;
+    if(ui.state.style.color!==color)ui.state.style.color=color;
+    if(ui.marker.style.background!==color)ui.marker.style.background=color;
 
     // ±3 s fills the useful visual range. Negative (faster) moves left,
     // positive (slower) moves right; extreme values remain readable.
     const normalized=Math.max(-1,Math.min(1,delta/3000));
-    ui.marker.style.left=`${50+normalized*46}%`;
-    ui.root.style.opacity='1';
+    const markerLeft=`${50+normalized*46}%`;
+    if(ui.marker.style.left!==markerLeft)ui.marker.style.left=markerLeft;
+    if(ui.root.style.opacity!=='1')ui.root.style.opacity='1';
   }
 
   update(time,delta){
