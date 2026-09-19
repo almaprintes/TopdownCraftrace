@@ -3,6 +3,24 @@ import { applyDomControlLayout } from '../controls/controlLayout.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
+const CONTROL_ASSETS=[
+  'assets/ui/tdr_pedal_gas.webp',
+  'assets/ui/tdr_pedal_brake.webp',
+  'assets/ui/tdr_handbrake_idle.webp?v=3',
+  'assets/ui/tdr_handbrake_pulled.webp?v=3'
+];
+function warmImage(src){
+  return new Promise(resolve=>{
+    try{
+      const img=new Image();
+      const done=()=>resolve();
+      img.onload=done;img.onerror=done;img.src=src;
+      if(img.complete){img.decode?.().catch(()=>{}).finally(done);}
+      else img.decode?.().then(done).catch(()=>{});
+    }catch{resolve();}
+  });
+}
+
 export class RaceScene extends CurrentRaceScene {
   create(data){
     this._tdrHandbrake=false;
@@ -19,6 +37,9 @@ export class RaceScene extends CurrentRaceScene {
     // and hitbox geometry to observe a partially-built control row.
     this._buildPedalRow();
     this._buildHandbrakeControl();
+    // DOM controls use browser images, not Phaser's loader. Warm/decode them as
+    // one readiness unit so Android does not decode each control during racing.
+    this._tdrControlAssetsReady=Promise.all(CONTROL_ASSETS.map(warmImage)).then(()=>true);
 
     const applyLayout=()=>{
       try{applyDomControlLayout();}catch{}
