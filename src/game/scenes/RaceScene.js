@@ -1598,7 +1598,16 @@ const curbSides = exportedCurbs?.sides || { inner: true, outer: true };
 this._curbOuter = null;
 this._curbInner = null;
 
+// DEV 1.1.26 A/B: Atlántico is the only shipped track carrying the full exported
+// curb geometry (2 x 106 filled quads). On Android those global Graphics are a strong
+// track-specific render-cost suspect. Disable only their VISUAL rendering for this test;
+// physics, racing line, surface detection and track geometry stay untouched.
+const androidAtlanticCurbAB =
+  /Android/i.test(String(navigator?.userAgent || '')) &&
+  String(t01?.id || t01?.key || this.trackKey || '').includes('circuito-atlantico');
+
 if (
+  !androidAtlanticCurbAB &&
   curbsEnabled &&
   exportedGeom &&
   Array.isArray(exportedGeom.trackOuter) &&
