@@ -97,7 +97,7 @@ export class RaceScene extends CurrentRaceScene {
     for (let i = 0; i < 6; i++) this.touchUI.add(this.add.rectangle(0, 0, 1, 1, 0x000000, 0).setVisible(false));
     try { this.cameras.main.ignore(this.touchUI); } catch (_) {}
 
-    let cx = 0, cy = 0, radius = 64, activationRadius = 86;
+    let cx = 0, cy = 0, radius = 64, activationRadius = 86, grabOffsetX = 0, grabOffsetY = 0;
     const layout = () => {
       const w = Number(this.scale?.width || 0), h = Number(this.scale?.height || 0);
       const p = sanitizeLayoutPoint(readControlLayout().layout.steer || {});
@@ -109,7 +109,7 @@ export class RaceScene extends CurrentRaceScene {
     };
 
     const setStick = (p) => {
-      const dx = p.x - cx, dy = p.y - cy;
+      const dx = p.x - cx - grabOffsetX, dy = p.y - cy - grabOffsetY;
       const d = Math.hypot(dx, dy);
       const m = d > radius ? radius / Math.max(1e-6, d) : 1;
       state.stickX = (dx * m) / radius;
@@ -122,7 +122,9 @@ export class RaceScene extends CurrentRaceScene {
       if (state.leftId !== null) return;
       if (Math.hypot(p.x - cx, p.y - cy) > activationRadius) return;
       state.leftId = p.id;
-      setStick(p);
+      grabOffsetX = p.x - cx - state.stickX * radius;
+      grabOffsetY = p.y - cy - state.stickY * radius;
+      state.leftActive = true;
     };
     const onMove = (p) => {
       if (!p.isDown || state.leftId !== p.id) return;
@@ -135,6 +137,8 @@ export class RaceScene extends CurrentRaceScene {
       state.stickX = 0;
       state.stickY = 0;
       state.steer = 0;
+      grabOffsetX = 0;
+      grabOffsetY = 0;
     };
 
     this.input.on('pointerdown', onDown);
