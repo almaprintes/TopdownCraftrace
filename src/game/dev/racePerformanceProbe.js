@@ -10,10 +10,11 @@ export function installRacePerformanceProbe(RaceScene){
     try{
       let root=document.getElementById(PROBE_ID);root?.remove?.();root=document.createElement('div');root.id=PROBE_ID;
       Object.assign(root.style,{position:'fixed',left:'8px',top:'8px',zIndex:'2147483200',padding:'6px 8px',borderRadius:'7px',background:'rgba(0,0,0,.72)',color:'#fff',font:'700 10px/1.28 ui-monospace,SFMono-Regular,Menlo,monospace',whiteSpace:'pre',pointerEvents:'none',fontVariantNumeric:'tabular-nums'});
-      (this.game?.canvas?.parentElement||document.body).appendChild(root);this._tdrPerfProbe=root;this._tdrPerfFrames=0;this._tdrPerfElapsed=0;this._tdrPerfSamples=[];this._tdrPerfLast=performance.now();this._tdrPerfOver33=0;this._tdrPerfOver50=0;this._tdrSpikeCount=0;this._tdrSpikeLast='—';this._tdrSpikeWorst=0;this._tdrPhase={update:0,post:0,other:0};this._tdrLastUpdateEnd=performance.now();
+      (this.game?.canvas?.parentElement||document.body).appendChild(root);this._tdrPerfProbe=root;this._tdrPerfFrames=0;this._tdrPerfElapsed=0;this._tdrPerfSamples=[];this._tdrPerfLast=performance.now();this._tdrPerfOver33=0;this._tdrPerfOver50=0;this._tdrSpikeCount=0;this._tdrSpikeLast='—';this._tdrSpikeWorst=0;this._tdrPhase={update:0,post:0,other:0};this._tdrLastUpdateEnd=performance.now();this._tdrRafGap=0;this._tdrRafWorst=0;this._tdrRafLast=performance.now();
+      this._tdrRafTick=(ts)=>{const gap=Math.max(0,ts-(this._tdrRafLast||ts));this._tdrRafLast=ts;this._tdrRafGap=gap;if(gap>this._tdrRafWorst)this._tdrRafWorst=gap;this._tdrRafId=requestAnimationFrame(this._tdrRafTick);};this._tdrRafId=requestAnimationFrame(this._tdrRafTick);
       this._tdrPostRender=()=>{const now=performance.now();this._tdrPhase.post=Math.max(0,now-(this._tdrUpdateEnd||now));this._tdrPostAt=now;};
       this.game?.events?.on?.('postrender',this._tdrPostRender);
-      this.events?.once?.('shutdown',()=>{try{this.game?.events?.off?.('postrender',this._tdrPostRender);}catch{}});
+      this.events?.once?.('shutdown',()=>{try{this.game?.events?.off?.('postrender',this._tdrPostRender);cancelAnimationFrame(this._tdrRafId);}catch{}});
       this.events?.once?.('shutdown',()=>{try{this._tdrPerfProbe?.remove?.();}catch{}this._tdrPerfProbe=null;});
     }catch{}
     return result;
@@ -25,8 +26,8 @@ export function installRacePerformanceProbe(RaceScene){
       if(this._tdrPerfElapsed>=750&&this._tdrPerfProbe){
         const fps=this._tdrPerfFrames*1000/this._tdrPerfElapsed,canvas=this.game?.canvas,rect=canvas?.getBoundingClientRect?.(),cfg=Number(this.game?.config?.resolution)||Number(window.__tdrRenderResolution)||1,dpr=Number(window.devicePixelRatio)||1;
         const samples=(this._tdrPerfSamples||[]).slice().sort((a,b)=>a-b),pct=p=>samples.length?samples[Math.min(samples.length-1,Math.floor((samples.length-1)*p))]:0;
-        this._tdrPerfProbe.textContent=`DEV 1.1.23 WORST PHASE · ${platformLabel()}\nFPS ${fps.toFixed(1)} · P50 ${pct(.5).toFixed(1)} · P95 ${pct(.95).toFixed(1)} · P99 ${pct(.99).toFixed(1)}ms\n>33 ${this._tdrPerfOver33||0} · >50 ${this._tdrPerfOver50||0} · SPIKE ${this._tdrSpikeCount||0}\nLAST ${this._tdrSpikeLast||'—'}\nNOW U${(this._tdrPhase.update||0).toFixed(1)} P${(this._tdrPhase.post||0).toFixed(1)} O${(this._tdrPhase.other||0).toFixed(1)} · DPR ${dpr.toFixed(2)} RES ${cfg.toFixed(2)}`;
-        this._tdrPerfFrames=0;this._tdrPerfElapsed=0;this._tdrSpikeWorst=0;
+        this._tdrPerfProbe.textContent=`DEV 1.1.24 RAF GAP · ${platformLabel()}\nFPS ${fps.toFixed(1)} · P50 ${pct(.5).toFixed(1)} · P95 ${pct(.95).toFixed(1)} · P99 ${pct(.99).toFixed(1)}ms\n>33 ${this._tdrPerfOver33||0} · >50 ${this._tdrPerfOver50||0} · SPIKE ${this._tdrSpikeCount||0}\nLAST ${this._tdrSpikeLast||'—'}\nNOW U${(this._tdrPhase.update||0).toFixed(1)} P${(this._tdrPhase.post||0).toFixed(1)} O${(this._tdrPhase.other||0).toFixed(1)} · RAF ${(this._tdrRafGap||0).toFixed(1)}/${(this._tdrRafWorst||0).toFixed(1)}`;
+        this._tdrPerfFrames=0;this._tdrPerfElapsed=0;this._tdrSpikeWorst=0;this._tdrRafWorst=this._tdrRafGap||0;
       }
     }catch{}
     return result;
