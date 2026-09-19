@@ -90,8 +90,8 @@ jobs:
         shell: bash
         run: |
           echo "Deploying commit: $(git rev-parse HEAD)"
-          grep -n "DEV 1.0.214 visible development version" index.html
-          test "$(grep -o '<span>DEV 1\.0\.</span><span>214</span>' index.html | wc -l | tr -d ' ')" = "2"
+          grep -n "DEV 1.1.0 visible development version" index.html
+          test "$(grep -o '<span>DEV 1\.1\.</span><span>0</span>' index.html | wc -l | tr -d ' ')" = "2"
       - name: Build development
         working-directory: dev-src
         shell: bash
@@ -125,8 +125,8 @@ jobs:
           grep -q 'DEV_VERSION=1.1.0' beta/dist/dev-live/dev-build.txt
           grep -q 'DEV 1\.0\.214 visible development version' beta/dist/dev/index.html
           grep -q 'DEV 1\.0\.214 visible development version' beta/dist/dev-live/index.html
-          test "$(grep -o '<span>DEV 1\.0\.</span><span>214</span>' beta/dist/dev/index.html | wc -l | tr -d ' ')" = "2"
-          test "$(grep -o '<span>DEV 1\.0\.</span><span>214</span>' beta/dist/dev-live/index.html | wc -l | tr -d ' ')" = "2"
+          test "$(grep -o '<span>DEV 1\.1\.</span><span>0</span>' beta/dist/dev/index.html | wc -l | tr -d ' ')" = "2"
+          test "$(grep -o '<span>DEV 1\.1\.</span><span>0</span>' beta/dist/dev-live/index.html | wc -l | tr -d ' ')" = "2"
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
