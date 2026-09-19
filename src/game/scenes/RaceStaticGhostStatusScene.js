@@ -411,7 +411,6 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _syncStaticGhostPanel() {
-    const __t=performance.now();
     let found = null;
     if (!this._tdrGhostPanelAnchor || performance.now() < Number(this._tdrGhostPanelProbeUntil || 0)) {
       found = this._findGhostPanelObjects();
@@ -433,6 +432,5 @@ export class RaceScene extends CurrentRaceScene {
     const hiddenByReport = !!this._sessionReportOpen;
     const hiddenByReplay = !!this._replayActive;
     root.style.display = active && !hiddenByReport && !hiddenByReplay ? 'block' : 'none';
-    if(this._tdrCost)this._tdrCost.ghost=performance.now()-__t;
-  }
+    }
 }
