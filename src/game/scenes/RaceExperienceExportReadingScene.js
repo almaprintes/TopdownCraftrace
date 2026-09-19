@@ -95,6 +95,10 @@ function sessionEngineerReading(report,scene){
   return`Tu mejor vuelta fue ${bestLabel}. Hay rendimiento, pero todavía existe variación entre vueltas; el siguiente paso es convertir esa vuelta rápida en ritmo repetible.`;
 }
 
+function androidDeltaLite(){
+  try{return /Android/i.test(String(navigator.userAgent||''));}catch{return false;}
+}
+
 function clamp01(value){
   const n=Number(value);
   return Number.isFinite(n)?Math.max(0,Math.min(1,n)):0;
@@ -205,15 +209,15 @@ export class RaceScene extends CurrentRaceScene {
       border:'1px solid rgba(255,255,255,.18)',
       background:'linear-gradient(180deg,rgba(6,10,18,.88),rgba(6,10,18,.72))',
       boxShadow:'0 6px 20px rgba(0,0,0,.30)',
-      backdropFilter:(typeof navigator!=='undefined'&&/Android/i.test(String(navigator.userAgent||'')))?'none':'blur(7px)',
-      WebkitBackdropFilter:(typeof navigator!=='undefined'&&/Android/i.test(String(navigator.userAgent||'')))?'none':'blur(7px)',
+      backdropFilter:androidDeltaLite()?'none':'blur(7px)',
+      WebkitBackdropFilter:androidDeltaLite()?'none':'blur(7px)',
       pointerEvents:'none',
       zIndex:'2147483000',
       color:'#fff',
       fontFamily:'system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
       textAlign:'center',
       opacity:'0',
-      transition:(typeof navigator!=='undefined'&&/Android/i.test(String(navigator.userAgent||'')))?'none':'opacity .12s ease',
+      transition:androidDeltaLite()?'none':'opacity .12s ease',
       userSelect:'none'
     });
 
@@ -247,7 +251,7 @@ export class RaceScene extends CurrentRaceScene {
     const marker=document.createElement('div');
     Object.assign(marker.style,{
       position:'absolute',left:'50%',top:'50%',width:'11px',height:'11px',borderRadius:'50%',transform:'translate(-50%,-50%)',
-      background:'#fff',boxShadow:'0 0 0 2px rgba(0,0,0,.35),0 0 10px rgba(255,255,255,.25)',transition:'left .08s linear, background-color .08s linear'
+      background:'#fff',boxShadow:androidDeltaLite()?'none':'0 0 0 2px rgba(0,0,0,.35),0 0 10px rgba(255,255,255,.25)',transition:androidDeltaLite()?'none':'left .08s linear, background-color .08s linear'
     });
     rail.append(center,marker);
 
@@ -315,7 +319,7 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _tdrRenderLiveDelta(now){
-    const android=typeof navigator!=='undefined'&&/Android/i.test(String(navigator.userAgent||''));
+    const android=androidDeltaLite();
     if(android&&Number.isFinite(this._tdrDeltaLastRenderAt)&&now-this._tdrDeltaLastRenderAt<100)return;
     if(android)this._tdrDeltaLastRenderAt=now;
     const ui=this._tdrEnsureLiveDeltaUi();
