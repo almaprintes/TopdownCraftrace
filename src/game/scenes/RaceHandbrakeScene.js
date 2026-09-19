@@ -40,6 +40,18 @@ export class RaceScene extends CurrentRaceScene {
     // DOM controls use browser images, not Phaser's loader. Warm/decode them as
     // one readiness unit so Android does not decode each control during racing.
     this._tdrControlAssetsReady=Promise.all(CONTROL_ASSETS.map(warmImage)).then(()=>true);
+    // RaceScene schedules the light sequence in create(). Pause that scene clock
+    // until the browser has decoded the DOM control images, then resume it.
+    // This is readiness-based (no arbitrary delay): the countdown simply cannot
+    // advance while GAS/FRENO/HANDBRAKE are still decoding.
+    try{this.time?.paused!==undefined&&(this.time.paused=true);}catch{}
+    this._tdrControlAssetsReady.finally(()=>{
+      try{
+        applyDomControlLayout();
+        this._syncPedalHitboxes?.();
+        if(this.sys?.isActive?.())this.time.paused=false;
+      }catch{try{this.time.paused=false;}catch{}}
+    });
 
     const applyLayout=()=>{
       try{applyDomControlLayout();}catch{}
