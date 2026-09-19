@@ -84,7 +84,24 @@ export class RaceScene extends EmbeddedReplayRaceScene{
 
   _tdrApplyGamepadDrivingUi(active){
     try{document.body.classList.toggle(GAMEPAD_UI_CLASS,active);}catch{}
-    if(!active)return;
+    if(!active){
+      // Gamepad mode may have hidden Phaser touch visuals and stamped inline
+      // display:none!important on DOM controls. Restore presentation only;
+      // input/physics remain untouched.
+      try{this.touchUI?.setVisible?.(true);}catch{}
+      try{
+        const root=document.getElementById('tdr-race-controls');
+        root?.querySelectorAll?.('*')?.forEach?.(el=>{
+          const sig=`${el.id||''} ${el.className||''} ${el.dataset?.role||''} ${el.dataset?.control||''}`.toLowerCase();
+          if(/pedal|throttle|acceler|gas|brake|freno|handbrake|steer|joystick/.test(sig)){
+            el.style.removeProperty('display');
+            el.style.removeProperty('visibility');
+            el.style.removeProperty('pointer-events');
+          }
+        });
+      }catch{}
+      return;
+    }
     try{this.touchUI?.setVisible?.(false);}catch{}
     try{this._destroyButtonSteeringUi?.();}catch{}
     try{document.querySelectorAll('[data-tdr-steering-button],#tdr-race-controls [data-stick]').forEach(el=>el.remove());}catch{}
