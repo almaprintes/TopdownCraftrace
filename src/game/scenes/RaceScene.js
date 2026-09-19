@@ -3830,6 +3830,16 @@ if (steeringInput) {
 // === Track culling render (solo celdas cercanas) ===
 // IMPORTANTE: si aquí explota, no debe tumbar el update entero.
 try {
+  const androidAtlanticCullAB =
+    /Android/i.test(String(navigator?.userAgent || '')) &&
+    String(this.trackKey || this.track?.meta?.id || this.track?.meta?.key || '').includes('circuito-atlantico');
+
+  // DEV 1.1.27 A/B: freeze Atlántico's chunk renderer after the start area is
+  // materialized. If driving becomes smooth, chunk visibility/mask churn is causal.
+  // Physics/surface/laps remain live; this changes only asphalt chunk rendering.
+  if (androidAtlanticCullAB && this._raceStarted && this.track?.gfxByCell?.size) {
+    // no-op: keep already-created start-area chunks exactly as they are
+  } else {
   const geom = this.track?.geom;
   const cells = geom?.cells;
 
@@ -3995,6 +4005,7 @@ if (cell.overlay && !cell.overlay.visible) cell.overlay.setVisible(true);
     }
 
     this.track.activeCells = want;
+  }
   }
 } catch (e) {
   if (!this._cullErrLogged) {
