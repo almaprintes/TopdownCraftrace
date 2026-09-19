@@ -1021,6 +1021,7 @@ try {
       meta = saved.gameTrack;
       console.log('[RaceScene] usando track exportado desde TrackStudio');
     }
+  }
 } catch (e) {
   console.warn('[RaceScene] no se pudo leer trackstudio_project', e);
 }
@@ -5246,5 +5247,4 @@ const fl = j.finishLine || j.finish || j.__autoFinishLine || null;
       onComplete:()=>{ bg.destroy(); tx.destroy(); } });
   }
 
-}
 }
