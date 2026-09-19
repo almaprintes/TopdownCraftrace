@@ -1021,7 +1021,6 @@ try {
       meta = saved.gameTrack;
       console.log('[RaceScene] usando track exportado desde TrackStudio');
     }
-  }
 } catch (e) {
   console.warn('[RaceScene] no se pudo leer trackstudio_project', e);
 }
@@ -1598,16 +1597,7 @@ const curbSides = exportedCurbs?.sides || { inner: true, outer: true };
 this._curbOuter = null;
 this._curbInner = null;
 
-// DEV 1.1.26 A/B: Atlántico is the only shipped track carrying the full exported
-// curb geometry (2 x 106 filled quads). On Android those global Graphics are a strong
-// track-specific render-cost suspect. Disable only their VISUAL rendering for this test;
-// physics, racing line, surface detection and track geometry stay untouched.
-const androidAtlanticCurbAB =
-  /Android/i.test(String(navigator?.userAgent || '')) &&
-  String(t01?.id || t01?.key || this.trackKey || '').includes('circuito-atlantico');
-
 if (
-  !androidAtlanticCurbAB &&
   curbsEnabled &&
   exportedGeom &&
   Array.isArray(exportedGeom.trackOuter) &&
@@ -3834,12 +3824,6 @@ try {
     /Android/i.test(String(navigator?.userAgent || '')) &&
     String(this.trackKey || this.track?.meta?.id || this.track?.meta?.key || '').includes('circuito-atlantico');
 
-  // DEV 1.1.27 A/B: freeze Atlántico's chunk renderer after the start area is
-  // materialized. If driving becomes smooth, chunk visibility/mask churn is causal.
-  // Physics/surface/laps remain live; this changes only asphalt chunk rendering.
-  if (androidAtlanticCullAB && this._raceStarted && this.track?.gfxByCell?.size) {
-    // no-op: keep already-created start-area chunks exactly as they are
-  } else {
   const geom = this.track?.geom;
   const cells = geom?.cells;
 
