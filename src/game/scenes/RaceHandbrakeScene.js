@@ -3,21 +3,19 @@ import { applyDomControlLayout } from '../controls/controlLayout.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
-const CONTROL_ASSETS=[
-  'assets/ui/tdr_pedal_gas.webp',
-  'assets/ui/tdr_pedal_brake.webp',
-  'assets/ui/tdr_handbrake_idle.webp?v=3',
-  'assets/ui/tdr_handbrake_pulled.webp?v=3'
-];
-function warmImage(src){
-  return new Promise(resolve=>{
-    try{
-      const img=new Image();
-      const done=()=>resolve();
-      img.onload=done;img.onerror=done;img.src=src;
-      if(img.complete){img.decode?.().catch(()=>{}).finally(done);}
-      else img.decode?.().then(done).catch(()=>{});
-    }catch{resolve();}
+function waitForRealImage(img){
+  if(!img)return Promise.reject(new Error('missing control image'));
+  return new Promise((resolve,reject)=>{
+    let settled=false;
+    const ok=async()=>{
+      if(settled)return;
+      try{if(img.decode)await img.decode();}catch{}
+      if(img.complete&&img.naturalWidth>0){settled=true;resolve(true);}
+    };
+    const bad=()=>{if(!settled){settled=true;reject(new Error(`control image failed: ${img.currentSrc||img.src}`));}};
+    img.addEventListener('load',ok,{once:true});
+    img.addEventListener('error',bad,{once:true});
+    if(img.complete) queueMicrotask(img.naturalWidth>0?ok:bad);
   });
 }
 
@@ -37,20 +35,19 @@ export class RaceScene extends CurrentRaceScene {
     // and hitbox geometry to observe a partially-built control row.
     this._buildPedalRow();
     this._buildHandbrakeControl();
-    // DOM controls use browser images, not Phaser's loader. Warm/decode them as
-    // one readiness unit so Android does not decode each control during racing.
-    this._tdrControlAssetsReady=Promise.all(CONTROL_ASSETS.map(warmImage)).then(()=>true);
-    // RaceScene schedules the light sequence in create(). Pause that scene clock
-    // until the browser has decoded the DOM control images, then resume it.
-    // This is readiness-based (no arbitrary delay): the countdown simply cannot
-    // advance while GAS/FRENO/HANDBRAKE are still decoding.
+    // Gate the countdown on the actual handbrake DOM images, not throwaway
+    // preloader images. GAS/FRENO are already present as CSS/DOM controls.
+    const hbImages=[...this._tdrHandbrakeVisual?.querySelectorAll?.('img')||[]];
+    this._tdrControlAssetsReady=Promise.all(hbImages.map(waitForRealImage));
     try{this.time?.paused!==undefined&&(this.time.paused=true);}catch{}
-    this._tdrControlAssetsReady.finally(()=>{
-      try{
-        applyDomControlLayout();
-        this._syncPedalHitboxes?.();
-        if(this.sys?.isActive?.())this.time.paused=false;
-      }catch{try{this.time.paused=false;}catch{}}
+    this._tdrControlAssetsReady.then(()=>{
+      applyDomControlLayout();
+      this._syncPedalHitboxes?.();
+      if(this.sys?.isActive?.())this.time.paused=false;
+    }).catch(err=>{
+      console.error('[TDR2] handbrake asset readiness failed',err);
+      // Never turn a network/asset failure into a minute-long blocked race.
+      try{if(this.sys?.isActive?.())this.time.paused=false;}catch{}
     });
 
     const applyLayout=()=>{
