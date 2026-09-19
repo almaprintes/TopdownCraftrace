@@ -5,9 +5,6 @@ const FRAME_W = 184;
 const FRAME_H = 112;
 const INNER = { x: 8, y: 8, w: FRAME_W - 16, h: FRAME_H - 16 };
 
-function androidMinimapProbe(){
-  try{return /Android/i.test(String(navigator.userAgent||''));}catch{return false;}
-}
 
 function svgEl(name, attrs = {}) {
   const el = document.createElementNS(SVG_NS, name);
@@ -145,16 +142,8 @@ export class RaceScene extends CurrentRaceScene {
     this.scale?.on?.('resize', this._onStaticMinimapResize, this);
     if (typeof window !== 'undefined') window.addEventListener('tdr:viewportchange', this._onStaticMinimapResize, { passive: true });
 
-    this._tdrStaticMinimapLastUpdate = 0;
     this._tdrStaticMinimapPostUpdate = () => {
       this._hidePhaserMinimap();
-      // DEV 1.1.9 diagnostic: keep the Android minimap visible but move its DOM/SVG
-      // marker only at 10 Hz. iOS and desktop retain the original per-frame path.
-      if (androidMinimapProbe()) {
-        const now = performance.now();
-        if (now - this._tdrStaticMinimapLastUpdate < 100) return;
-        this._tdrStaticMinimapLastUpdate = now;
-      }
       this._updateStaticDomMinimap?.();
     };
     this.events?.on?.('postupdate', this._tdrStaticMinimapPostUpdate, this);
