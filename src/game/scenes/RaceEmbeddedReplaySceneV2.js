@@ -15,7 +15,7 @@ function installGamepadUiStyle(){
     if(document.getElementById(GAMEPAD_UI_STYLE))return;
     const style=document.createElement('style');style.id=GAMEPAD_UI_STYLE;
     // Never hide #tdr-race-controls: it also owns DELTA/PAUSE. Only driving touch UI is hidden.
-    style.textContent=`body.${GAMEPAD_UI_CLASS} #tdr-handbrake,body.${GAMEPAD_UI_CLASS} #tdr-steering-wheel,body.${GAMEPAD_UI_CLASS} #tdr-race-controls [data-stick],body.${GAMEPAD_UI_CLASS} [data-tdr-touch-controls],body.${GAMEPAD_UI_CLASS} [data-tdr-steering-button]{display:none!important;visibility:hidden!important;pointer-events:none!important}`;
+    style.textContent=`body.${GAMEPAD_UI_CLASS} #tdr-steering-wheel,body.${GAMEPAD_UI_CLASS} #tdr-race-controls [data-stick],body.${GAMEPAD_UI_CLASS} [data-tdr-touch-controls],body.${GAMEPAD_UI_CLASS} [data-tdr-steering-button]{display:none!important;visibility:hidden!important;pointer-events:none!important}`;
     document.head.appendChild(style);
   }catch{}
 }
