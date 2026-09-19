@@ -319,17 +319,19 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _tdrRenderLiveDelta(now){
+    const __t=performance.now();
+    const finish=()=>{if(this._tdrCost)this._tdrCost.delta=performance.now()-__t;};
     const android=androidDeltaLite();
-    if(android&&Number.isFinite(this._tdrDeltaLastRenderAt)&&now-this._tdrDeltaLastRenderAt<100)return;
+    if(android&&Number.isFinite(this._tdrDeltaLastRenderAt)&&now-this._tdrDeltaLastRenderAt<100){finish();return;}
     if(android)this._tdrDeltaLastRenderAt=now;
     const ui=this._tdrEnsureLiveDeltaUi();
-    if(!ui)return;
+    if(!ui){finish();return;}
     const bestMs=Number(this.ttBest?.lapMs);
     const lapStart=Number(this.timing?.lapStart);
     const progress=clamp01(this.ttHud?.progress01);
     if(!this.timing?.started||!Number.isFinite(lapStart)||!Number.isFinite(bestMs)||bestMs<=0||progress<0.015){
       ui.root.style.opacity='0';
-      return;
+      finish();return;
     }
 
     const elapsed=Math.max(0,Number(now)-lapStart);
@@ -337,7 +339,7 @@ export class RaceScene extends CurrentRaceScene {
     const referenceMs=reference?interpolateTrace(reference.trace,progress):bestMs*progress;
     if(!Number.isFinite(referenceMs)){
       ui.root.style.opacity='0';
-      return;
+      finish();return;
     }
 
     const delta=elapsed-referenceMs;
@@ -361,6 +363,7 @@ export class RaceScene extends CurrentRaceScene {
     const markerLeft=`${50+normalized*46}%`;
     if(ui.marker.style.left!==markerLeft)ui.marker.style.left=markerLeft;
     if(ui.root.style.opacity!=='1')ui.root.style.opacity='1';
+    finish();
   }
 
   update(time,delta){
