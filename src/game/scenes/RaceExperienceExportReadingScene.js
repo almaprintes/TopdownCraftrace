@@ -205,8 +205,8 @@ export class RaceScene extends CurrentRaceScene {
       border:'1px solid rgba(255,255,255,.18)',
       background:'linear-gradient(180deg,rgba(6,10,18,.88),rgba(6,10,18,.72))',
       boxShadow:'0 6px 20px rgba(0,0,0,.30)',
-      backdropFilter:'blur(7px)',
-      WebkitBackdropFilter:'blur(7px)',
+      backdropFilter:(typeof navigator!=='undefined'&&/Android/i.test(String(navigator.userAgent||'')))?'none':'blur(7px)',
+      WebkitBackdropFilter:(typeof navigator!=='undefined'&&/Android/i.test(String(navigator.userAgent||'')))?'none':'blur(7px)',
       pointerEvents:'none',
       zIndex:'2147483000',
       color:'#fff',
@@ -315,6 +315,9 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _tdrRenderLiveDelta(now){
+    const android=typeof navigator!=='undefined'&&/Android/i.test(String(navigator.userAgent||''));
+    if(android&&Number.isFinite(this._tdrDeltaLastRenderAt)&&now-this._tdrDeltaLastRenderAt<100)return;
+    if(android)this._tdrDeltaLastRenderAt=now;
     const ui=this._tdrEnsureLiveDeltaUi();
     if(!ui)return;
     const bestMs=Number(this.ttBest?.lapMs);
