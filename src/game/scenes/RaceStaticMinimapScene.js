@@ -143,8 +143,10 @@ export class RaceScene extends CurrentRaceScene {
     if (typeof window !== 'undefined') window.addEventListener('tdr:viewportchange', this._onStaticMinimapResize, { passive: true });
 
     this._tdrStaticMinimapPostUpdate = () => {
+      const t=performance.now();
       this._hidePhaserMinimap();
       this._updateStaticDomMinimap?.();
+      if(this._tdrCost)this._tdrCost.map=performance.now()-t;
     };
     this.events?.on?.('postupdate', this._tdrStaticMinimapPostUpdate, this);
 
