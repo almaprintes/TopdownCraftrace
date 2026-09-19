@@ -3,22 +3,6 @@ import { applyDomControlLayout } from '../controls/controlLayout.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
-function waitForRealImage(img){
-  if(!img)return Promise.reject(new Error('missing control image'));
-  return new Promise((resolve,reject)=>{
-    let settled=false;
-    const ok=async()=>{
-      if(settled)return;
-      try{if(img.decode)await img.decode();}catch{}
-      if(img.complete&&img.naturalWidth>0){settled=true;resolve(true);}
-    };
-    const bad=()=>{if(!settled){settled=true;reject(new Error(`control image failed: ${img.currentSrc||img.src}`));}};
-    img.addEventListener('load',ok,{once:true});
-    img.addEventListener('error',bad,{once:true});
-    if(img.complete) queueMicrotask(img.naturalWidth>0?ok:bad);
-  });
-}
-
 export class RaceScene extends CurrentRaceScene {
   create(data){
     this._tdrHandbrake=false;
@@ -35,21 +19,6 @@ export class RaceScene extends CurrentRaceScene {
     // and hitbox geometry to observe a partially-built control row.
     this._buildPedalRow();
     this._buildHandbrakeControl();
-    // Gate the countdown on the actual handbrake DOM images, not throwaway
-    // preloader images. GAS/FRENO are already present as CSS/DOM controls.
-    const hbImages=[...this._tdrHandbrakeVisual?.querySelectorAll?.('img')||[]];
-    this._tdrControlAssetsReady=Promise.all(hbImages.map(waitForRealImage));
-    try{this.time?.paused!==undefined&&(this.time.paused=true);}catch{}
-    this._tdrControlAssetsReady.then(()=>{
-      applyDomControlLayout();
-      this._syncPedalHitboxes?.();
-      if(this.sys?.isActive?.())this.time.paused=false;
-    }).catch(err=>{
-      console.error('[TDR2] handbrake asset readiness failed',err);
-      // Never turn a network/asset failure into a minute-long blocked race.
-      try{if(this.sys?.isActive?.())this.time.paused=false;}catch{}
-    });
-
     const applyLayout=()=>{
       try{applyDomControlLayout();}catch{}
       try{this._syncPedalHitboxes?.();}catch{}
@@ -375,25 +344,18 @@ export class RaceScene extends CurrentRaceScene {
         width:clamp(78px,8vw,102px);aspect-ratio:859/1024;
         touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
         pointer-events:auto;filter:drop-shadow(0 7px 15px rgba(0,0,0,.42));
+        background:center/100% 100% no-repeat url("assets/ui/tdr_handbrake_idle.webp?v=3");
       }
-      #tdr-handbrake img{
-        position:absolute;left:0;top:0;width:100%;height:100%;
-        object-fit:fill;object-position:0 0;pointer-events:none;
-        transform:none!important;transition:none!important;
+      #tdr-handbrake.active{
+        background-image:url("assets/ui/tdr_handbrake_pulled.webp?v=3");
       }
-      #tdr-handbrake .idle{opacity:1;}
-      #tdr-handbrake .pulled{opacity:0;}
-      #tdr-handbrake.active .idle{opacity:0;}
-      #tdr-handbrake.active .pulled{opacity:1;}
     `;
     document.head.appendChild(style);
 
     const root=document.createElement('div');
     root.id='tdr-handbrake';
-    root.innerHTML=`
-      <img class="idle" src="assets/ui/tdr_handbrake_idle.webp?v=3" width="859" height="1024" alt="Freno de mano">
-      <img class="pulled" src="assets/ui/tdr_handbrake_pulled.webp?v=3" width="859" height="1024" alt="Freno de mano accionado">
-    `;
+    root.setAttribute('role','button');
+    root.setAttribute('aria-label','Freno de mano');
     document.body.appendChild(root);
     this._tdrHandbrakeVisual=root;
 
