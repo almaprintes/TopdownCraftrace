@@ -65,13 +65,14 @@ jobs:
           grep -q "originalAccel \* gas" src/game/scenes/RaceUiStabilityScene.js
           grep -q "this.touchUI?.setVisible?.(false)" src/game/scenes/RaceUiStabilityScene.js
           grep -q "_hideResidualGamepadSteeringVisual" src/game/scenes/RaceUiStabilityScene.js
-          grep -q "document.body.querySelectorAll('\*')" src/game/scenes/RaceUiStabilityScene.js
+          if grep -q "document.body.querySelectorAll('\*')" src/game/scenes/RaceUiStabilityScene.js; then echo "Broad DOM hiding must not return"; exit 1; fi
           test -f public/assets/ui/gamepad/gamepad-controls.webp
           grep -Fq "_showGamepadGuide" src/game/scenes/SettingsWheelModeScene.js
           grep -Fq "if(!row) return;" src/game/scenes/SettingsWheelModeScene.js
           grep -Fq "assets/ui/gamepad/gamepad-controls.webp" src/game/scenes/SettingsWheelModeScene.js
           if grep -Fq "CONTROLES · MANDO" src/game/ui/racePauseUi.js; then exit 1; fi
-          grep -Fq "#tdr-race-controls [data-stick]" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -Fq "document.body.classList.toggle(GAMEPAD_UI_CLASS,active)" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          if grep -Fq "root?.querySelectorAll?.('*')" src/game/scenes/RaceEmbeddedReplaySceneV2.js; then echo "Touch restore patch must not return"; exit 1; fi
           grep -Fq "const active=gamepadSelected();" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "gamepadVisualsOff" src/game/scenes/RaceScene.js
           grep -q "controls.scheme === 'gamepad'" src/game/scenes/RaceScene.js
