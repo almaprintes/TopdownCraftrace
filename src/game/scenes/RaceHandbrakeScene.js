@@ -13,6 +13,10 @@ export class RaceScene extends CurrentRaceScene {
     this._showTTPanel=()=>{};
     this._hideTTPanel=()=>{};
 
+    // Build every right-side driving control before applying the saved layout.
+    // Previously _buildPedalRow() scheduled its own double-rAF hitbox sync while
+    // the handbrake did not exist yet. On Android that allowed the saved layout
+    // and hitbox geometry to observe a partially-built control row.
     this._buildPedalRow();
     this._buildHandbrakeControl();
 
@@ -20,7 +24,11 @@ export class RaceScene extends CurrentRaceScene {
       try{applyDomControlLayout();}catch{}
       try{this._syncPedalHitboxes?.();}catch{}
     };
-    this.time?.delayedCall?.(0,applyLayout);
+    // Apply once synchronously now that GAS/FRENO/HANDBRAKE all exist, then
+    // once on the next frame for final viewport metrics. No element is restored
+    // or forced visible: this only establishes geometry from the source layout.
+    applyLayout();
+    requestAnimationFrame(applyLayout);
     window.addEventListener('resize',applyLayout,{passive:true});
     this.events.once('shutdown',()=>window.removeEventListener('resize',applyLayout));
     return result;
