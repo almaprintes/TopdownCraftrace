@@ -41,13 +41,7 @@ export class RaceScene extends TouchRaceScene {
     try{result=super.create(data);}finally{
       if(this._tdrGamepadMode){try{if(originalRaw==null)localStorage.removeItem(SETTINGS_KEY);else localStorage.setItem(SETTINGS_KEY,originalRaw);}catch(_){}}
     }
-    if(!this._tdrGamepadMode){
-      // GamepadScene must not leave the temporary gamepad setting cached in
-      // downstream UI layers when PALANCA/BOTONES is actually selected.
-      this._tdrGamepadUiActive=false;
-      try{document.body.classList.remove('tdr-gamepad-active');}catch(_){}
-      return result;
-    }
+    if(!this._tdrGamepadMode)return result;
 
     this._tdrSteeringMode='gamepad';
     this._destroyButtonSteeringUi?.();
@@ -90,8 +84,9 @@ export class RaceScene extends TouchRaceScene {
   _tdrHideTouchDrivingDom(){
     try{
       document.querySelectorAll('[data-tdr-steering-button]').forEach(el=>el.remove());
-      const root=document.getElementById('tdr-race-controls');
-      if(root)root.style.setProperty('display','none','important');
+      // Do not mutate the shared #tdr-race-controls root: it owns unrelated
+      // race HUD and touch controls. Gamepad-specific presentation is handled
+      // by the gamepad CSS class and this scene's own Phaser UI teardown.
     }catch(_){}
   }
 
