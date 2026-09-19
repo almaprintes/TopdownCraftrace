@@ -15,7 +15,7 @@ export class RaceScene extends CurrentRaceScene {
     const result = super.create(data);
     this._disableRaceDiagnostics();
 
-    this._tdrNoDiagPostUpdate = () => {const t=performance.now();this._disableRaceDiagnostics();if(this._tdrCost)this._tdrCost.nodiag=performance.now()-t;};
+    this._tdrNoDiagPostUpdate = () => this._disableRaceDiagnostics();
     this.events?.on?.('postupdate', this._tdrNoDiagPostUpdate, this);
     this.events?.once?.('shutdown', () => {
       try { this.events?.off?.('postupdate', this._tdrNoDiagPostUpdate, this); } catch (_) {}
