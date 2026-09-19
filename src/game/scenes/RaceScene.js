@@ -3820,10 +3820,6 @@ if (steeringInput) {
 // === Track culling render (solo celdas cercanas) ===
 // IMPORTANTE: si aquí explota, no debe tumbar el update entero.
 try {
-  const androidAtlanticCullAB =
-    /Android/i.test(String(navigator?.userAgent || '')) &&
-    String(this.trackKey || this.track?.meta?.id || this.track?.meta?.key || '').includes('circuito-atlantico');
-
   const geom = this.track?.geom;
   const cells = geom?.cells;
 
@@ -3989,7 +3985,6 @@ if (cell.overlay && !cell.overlay.visible) cell.overlay.setVisible(true);
     }
 
     this.track.activeCells = want;
-  }
   }
 } catch (e) {
   if (!this._cullErrLogged) {
