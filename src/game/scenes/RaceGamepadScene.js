@@ -41,7 +41,13 @@ export class RaceScene extends TouchRaceScene {
     try{result=super.create(data);}finally{
       if(this._tdrGamepadMode){try{if(originalRaw==null)localStorage.removeItem(SETTINGS_KEY);else localStorage.setItem(SETTINGS_KEY,originalRaw);}catch(_){}}
     }
-    if(!this._tdrGamepadMode)return result;
+    if(!this._tdrGamepadMode){
+      // GamepadScene must not leave the temporary gamepad setting cached in
+      // downstream UI layers when PALANCA/BOTONES is actually selected.
+      this._tdrGamepadUiActive=false;
+      try{document.body.classList.remove('tdr-gamepad-active');}catch(_){}
+      return result;
+    }
 
     this._tdrSteeringMode='gamepad';
     this._destroyButtonSteeringUi?.();
