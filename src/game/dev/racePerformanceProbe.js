@@ -1,10 +1,12 @@
 const PROBE_ID='tdr-race-performance-probe';
+function androidDevice(){try{return /Android/i.test(String(navigator.userAgent||''));}catch{return false;}}
+function installAndroidDomIsolation(){if(!androidDevice()||document.getElementById('tdr-android-dom-isolation'))return;const s=document.createElement('style');s.id='tdr-android-dom-isolation';s.textContent='#tdr-live-delta-panel,#tdr-static-minimap,#tdr-static-ghost-status{display:none!important;visibility:hidden!important;pointer-events:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}';document.head.appendChild(s);}
 function platformLabel(){try{const ua=String(navigator.userAgent||'');if(/Android/i.test(ua))return'ANDROID';if(/iPhone|iPad|iPod/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1))return'IOS';return'WEB';}catch{return'WEB';}}
 export function installRacePerformanceProbe(RaceScene){
   if(!RaceScene?.prototype||RaceScene.prototype.__tdrPerfProbeInstalled)return;
   const proto=RaceScene.prototype,originalCreate=proto.create,originalUpdate=proto.update;
   proto.create=function(...args){
-    const result=originalCreate?.apply(this,args);
+    const result=originalCreate?.apply(this,args);installAndroidDomIsolation();
     try{
       let root=document.getElementById(PROBE_ID);root?.remove?.();root=document.createElement('div');root.id=PROBE_ID;
       Object.assign(root.style,{position:'fixed',left:'8px',top:'8px',zIndex:'2147483200',padding:'6px 8px',borderRadius:'7px',background:'rgba(0,0,0,.72)',color:'#fff',font:'700 10px/1.28 ui-monospace,SFMono-Regular,Menlo,monospace',whiteSpace:'pre',pointerEvents:'none',fontVariantNumeric:'tabular-nums'});
@@ -22,7 +24,7 @@ export function installRacePerformanceProbe(RaceScene){
       if(this._tdrPerfElapsed>=750&&this._tdrPerfProbe){
         const fps=this._tdrPerfFrames*1000/this._tdrPerfElapsed,canvas=this.game?.canvas,rect=canvas?.getBoundingClientRect?.(),cfg=Number(this.game?.config?.resolution)||Number(window.__tdrRenderResolution)||1,dpr=Number(window.devicePixelRatio)||1;
         const samples=(this._tdrPerfSamples||[]).slice().sort((a,b)=>a-b),pct=p=>samples.length?samples[Math.min(samples.length-1,Math.floor((samples.length-1)*p))]:0;
-        this._tdrPerfProbe.textContent=`DEV 1.1.1 JANK · ${platformLabel()}\nFPS ${fps.toFixed(1)} · P50 ${pct(.5).toFixed(1)} · P95 ${pct(.95).toFixed(1)} · P99 ${pct(.99).toFixed(1)}ms\n>20 ${this._tdrPerfOver20||0} · >33 ${this._tdrPerfOver33||0} · >50 ${this._tdrPerfOver50||0} · MAX ${this._tdrPerfWorst.toFixed(1)}\nINPUT ${(this._tdrInputLastLatency||0).toFixed(1)}ms · MAX ${(this._tdrInputMaxLatency||0).toFixed(1)}ms\nDPR ${dpr.toFixed(2)} · RES ${cfg.toFixed(2)} · ${String(window.__tdrVideoPreset||'?').toUpperCase()}\nCSS ${Math.round(rect?.width||0)}×${Math.round(rect?.height||0)} · BUF ${canvas?.width||0}×${canvas?.height||0}`;
+        this._tdrPerfProbe.textContent=`DEV 1.1.2 A/B DOM-OFF · ${platformLabel()}\nFPS ${fps.toFixed(1)} · P50 ${pct(.5).toFixed(1)} · P95 ${pct(.95).toFixed(1)} · P99 ${pct(.99).toFixed(1)}ms\n>20 ${this._tdrPerfOver20||0} · >33 ${this._tdrPerfOver33||0} · >50 ${this._tdrPerfOver50||0} · MAX ${this._tdrPerfWorst.toFixed(1)}\nINPUT ${(this._tdrInputLastLatency||0).toFixed(1)}ms · MAX ${(this._tdrInputMaxLatency||0).toFixed(1)}ms\nDPR ${dpr.toFixed(2)} · RES ${cfg.toFixed(2)} · ${String(window.__tdrVideoPreset||'?').toUpperCase()}\nCSS ${Math.round(rect?.width||0)}×${Math.round(rect?.height||0)} · BUF ${canvas?.width||0}×${canvas?.height||0}`;
         this._tdrPerfFrames=0;this._tdrPerfElapsed=0;this._tdrPerfWorst=0;
       }
     }catch{}
