@@ -102,6 +102,11 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   update(time, delta) {
+    // DEV 1.1.33 A/B: Android touch mode uses the Beta-1 behaviour of this layer:
+    // no gamepad polling/wrapping in the race frame loop.
+    if (/Android/i.test(String(navigator?.userAgent || '')) && !gamepadModeSelected()) {
+      return super.update(time, delta);
+    }
     if (!gamepadModeSelected()) {
       super.update(time, delta);
       return;
