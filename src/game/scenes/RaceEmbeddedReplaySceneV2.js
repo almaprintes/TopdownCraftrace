@@ -190,10 +190,28 @@ export class RaceScene extends EmbeddedReplayRaceScene{
   }
 
   _syncEmbeddedSourceCamera(){
-    if(!this._tdrEmbeddedReplay)return;const cam=this.cameras?.main,target=this._embeddedReplayTarget?.(),gameW=Number(this.scale?.width)||Number(this.game?.canvas?.width)||1,gameH=Number(this.scale?.height)||Number(this.game?.canvas?.height)||1;let vw=gameW,vh=gameH,vx=0,vy=0;const rect=target?.getBoundingClientRect?.();if(rect?.width>1&&rect?.height>1){const targetAspect=rect.width/rect.height,gameAspect=gameW/gameH;if(gameAspect>targetAspect){vw=Math.max(1,gameH*targetAspect);vx=(gameW-vw)*.5;}else{vh=Math.max(1,gameW/targetAspect);vy=(gameH-vh)*.5;}}this._tdrEmbeddedViewport={x:vx,y:vy,w:vw,h:vh};try{cam?.setVisible?.(true);cam?.setViewport?.(vx,vy,vw,vh);}catch{}
+    if(!this._tdrEmbeddedReplay)return;
+    // Keep the race renderer at its native full canvas. The Race Control feed below
+    // is responsible for fitting that complete frame into the viewer; changing the
+    // Phaser viewport here only masks/crops a full-screen replay.
+    const cam=this.cameras?.main,gameW=Number(this.scale?.width)||Number(this.game?.canvas?.width)||1,gameH=Number(this.scale?.height)||Number(this.game?.canvas?.height)||1;
+    this._tdrEmbeddedViewport={x:0,y:0,w:gameW,h:gameH};
+    try{cam?.setVisible?.(true);cam?.setViewport?.(0,0,gameW,gameH);}catch{}
   }
   _applyStatsReplayFrame(t){super._applyStatsReplayFrame(t);if(!this._tdrEmbeddedReplay)return;this._syncEmbeddedSourceCamera();const x=Number(this.carBody?.x),y=Number(this.carBody?.y);if(Number.isFinite(x)&&Number.isFinite(y)){try{this.cameras?.main?.stopFollow?.();this.cameras?.main?.centerOn?.(x,y);}catch{}}}
   _copyEmbeddedReplayFrame(){
-    if(!this._tdrEmbeddedReplay)return;const src=this.game?.canvas,feed=this._ensureEmbeddedFeed?.(),target=this._embeddedReplayTarget?.();if(!src||!feed||!target)return;const rect=target.getBoundingClientRect?.();if(!rect||rect.width<=1||rect.height<=1)return;this._syncEmbeddedSourceCamera();const dpr=Math.min(2,Math.max(1,Number(window.devicePixelRatio)||1)),dw=Math.max(1,Math.round(rect.width*dpr)),dh=Math.max(1,Math.round(rect.height*dpr));if(feed.width!==dw)feed.width=dw;if(feed.height!==dh)feed.height=dh;const sw=Number(src.width)||1,sh=Number(src.height)||1,gameW=Number(this.scale?.width)||1,gameH=Number(this.scale?.height)||1,scaleX=sw/gameW,scaleY=sh/gameH,vp=this._tdrEmbeddedViewport||{x:0,y:0,w:gameW,h:gameH},sx=Math.max(0,Math.round(vp.x*scaleX)),sy=Math.max(0,Math.round(vp.y*scaleY)),cw=Math.max(1,Math.min(sw-sx,Math.round(vp.w*scaleX))),ch=Math.max(1,Math.min(sh-sy,Math.round(vp.h*scaleY)));try{const ctx=feed.getContext('2d',{alpha:false});if(!ctx)return;ctx.drawImage(src,sx,sy,cw,ch,0,0,dw,dh);this._drawReplayAnalysis?.(ctx,{sx:0,sy:0,cw,ch,dw,dh,dpr});}catch{}
+    if(!this._tdrEmbeddedReplay)return;
+    const src=this.game?.canvas,feed=this._ensureEmbeddedFeed?.(),target=this._embeddedReplayTarget?.();
+    if(!src||!feed||!target)return;
+    const rect=target.getBoundingClientRect?.();if(!rect||rect.width<=1||rect.height<=1)return;
+    const dpr=Math.min(2,Math.max(1,Number(window.devicePixelRatio)||1)),dw=Math.max(1,Math.round(rect.width*dpr)),dh=Math.max(1,Math.round(rect.height*dpr));
+    if(feed.width!==dw)feed.width=dw;if(feed.height!==dh)feed.height=dh;
+    const sw=Number(src.width)||1,sh=Number(src.height)||1,scale=Math.min(dw/sw,dh/sh),rw=Math.max(1,Math.round(sw*scale)),rh=Math.max(1,Math.round(sh*scale)),dx=Math.round((dw-rw)*.5),dy=Math.round((dh-rh)*.5);
+    try{
+      const ctx=feed.getContext('2d',{alpha:false});if(!ctx)return;
+      ctx.fillStyle='#020a11';ctx.fillRect(0,0,dw,dh);
+      ctx.drawImage(src,0,0,sw,sh,dx,dy,rw,rh);
+      this._drawReplayAnalysis?.(ctx,{sx:0,sy:0,cw:sw,ch:sh,dw:rw,dh:rh,dpr,dx,dy});
+    }catch{}
   }
 }
