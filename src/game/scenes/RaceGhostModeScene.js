@@ -222,7 +222,7 @@ export class RaceScene extends CurrentRaceScene{
 
   _recordGhostSample(now){
     if(this._replayActive||!this._raceStarted||!this.carBody)return;
-    if(this._ghostLapStartPerf==null){const started=Number(this.timing?.lapStart);this._ghostLapStartPerf=Number.isFinite(started)&&started>0?started:now;}
+    if(this._ghostLapStartPerf==null)this._ghostLapStartPerf=now;
     if(now-this._ghostLastSamplePerf<45)return;
     this._ghostLastSamplePerf=now;
     this._ghostSamples.push({t:Math.max(0,Math.round(now-this._ghostLapStartPerf)),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});
@@ -255,10 +255,7 @@ export class RaceScene extends CurrentRaceScene{
     }
     this._ghostHistoryLen=hist.length;
     this._ghostSamples=[];
-    // Anchor every new recording lap to the official lap timer. Using the finish
-    // callback timestamp here shifted the sample clock away from timing.lapStart.
-    const officialStart=Number(this.timing?.lapStart);
-    this._ghostLapStartPerf=Number.isFinite(officialStart)&&officialStart>0?officialStart:now;
+    this._ghostLapStartPerf=now;
     this._ghostLastSamplePerf=0;
   }
 
