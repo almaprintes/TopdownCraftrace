@@ -174,7 +174,7 @@ export class RaceScene extends CurrentRaceScene{
 
   _applyStatsReplayFrame(t){
     const state=this._tdrStatsReplay;if(!state)return;
-    const p=sampleAt(state.payload.samples,t);if(!p)return;
+    const previousGhostData=this._ghostData;this._ghostData=state.payload;const p=this._sampleGhostAt?.(t)||sampleAt(state.payload.samples,t);this._ghostData=previousGhostData;if(!p)return;
     try{this.carBody.setPosition(p.x,p.y);this.carBody.rotation=p.r;}catch{}
     try{this.carRig.setPosition(p.x,p.y);this.carRig.rotation=p.r+(this._carVisualRotOffset||0);}catch{}
     const cam=camAt(state.payload.cameraSamples,t);
