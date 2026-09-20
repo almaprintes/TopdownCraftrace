@@ -78,6 +78,7 @@ export class StatsScene extends ReplayStatsScene{
 
   _showRaceControlReplayModal(record,ghost,label='REPLAY'){
     this._closeReplayModal();
+    this._purgeReplayResidue();
     if(!ghost?.samples?.length||!this._root)return;
     const trackId=String(ghost.trackKey||record?.trackId||'track01'),carId=String(ghost.carId||record?.selectedLap?.carId||'stock');
     const modal=document.createElement('div');modal.className='br-replay-modal';modal.dataset.brReplayModal='1';
@@ -120,9 +121,13 @@ export class StatsScene extends ReplayStatsScene{
     try{if(this.scene?.isActive?.('race'))this.scene.stop('race');}catch{}
     try{sessionStorage.removeItem(SESSION_KEY);}catch{}
     try{this._root?.querySelector('[data-br-replay-modal]')?.remove?.();}catch{}
+    this._purgeReplayResidue();
   }
 
   _showRaceControlReplay(record,ghost){
+    // Legacy inline replay retired: every replay (local or online) uses the same modal player.
+    return this._showRaceControlReplayModal(record,ghost,'LOCAL REPLAY');
+    /* legacy inline path
     this._stopRaceControlReplay();
     if(!ghost?.samples?.length)return;
     const main=this._root?.querySelector('.br-main');
@@ -181,8 +186,19 @@ export class StatsScene extends ReplayStatsScene{
     }catch{launch();}
   }
 
+    */
+  }
+
   _stopRaceControlReplay(){
     super._stopRaceControlReplay?.();
     this._closeReplayModal();
+    this._purgeReplayResidue();
+  }
+
+  _purgeReplayResidue(){
+    try{document.querySelectorAll('#tdr-replay-controls,[data-tdr-stats-native-replay="1"],[data-tdr-embedded-replay="1"]').forEach(n=>n.remove());}catch{}
+    try{document.body.classList.remove('tdr-native-replay-clean');}catch{}
+    try{const parent=this.game?.canvas?.parentElement;parent?.removeAttribute?.('data-tdr-native-replay');}catch{}
+    try{sessionStorage.removeItem(SESSION_KEY);}catch{}
   }
 }
