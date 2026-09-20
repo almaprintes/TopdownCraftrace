@@ -31,6 +31,11 @@ export class RaceScene extends EmbeddedReplayRaceScene{
   create(data){
     const pending=data?.statsNativeReplay?readPendingReplay():null;
     const embeddedRequested=data?.statsEmbeddedReplay===true||pending?.embedded===true;
+    if(embeddedRequested){
+      // Replay is a viewer, never a live race. Remove old race/debug DOM before
+      // the scene is built so it cannot leak into Race Control or survive shutdown.
+      try{document.querySelectorAll('#tdr-replay-controls,[data-tdr-race-ui="1"],[data-tdr-ghost-diagnostic],[data-online-ghost-diagnostic]').forEach(n=>n.remove());}catch{}
+    }
     const replayTrackKey=String(pending?.trackId||data?.trackKey||'').trim();
     const createData=replayTrackKey?{...(data||{}),trackKey:replayTrackKey}:data;
     this._tdrEmbeddedReplay=embeddedRequested===true;
@@ -58,7 +63,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
         this.events.once('shutdown',()=>{this._tdrRemoveIgnitionButton();this._tdrEngineSample?.destroy?.();this._tdrEngineSample=null;});
       }catch(e){console.warn('[TDR2 ignition] init failed',e);}
     }else this._tdrRemoveIgnitionButton();
-    this.events.once('shutdown',()=>this._tdrCleanupGamepadUi());
+    this.events.once('shutdown',()=>{this._tdrCleanupGamepadUi();try{document.querySelectorAll('#tdr-replay-controls,[data-tdr-stats-native-replay="1"],[data-tdr-embedded-replay="1"],[data-tdr-ghost-diagnostic],[data-online-ghost-diagnostic]').forEach(n=>n.remove());}catch{}try{document.body.classList.remove('tdr-native-replay-clean');}catch{}});
     return result;
   }
 
