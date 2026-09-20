@@ -135,12 +135,18 @@ export class RaceScene extends EmbeddedReplayRaceScene{
   }
 
   update(time,delta){
-    this._tdrSyncGamepadUi();
-    this._tdrHideResidualPhaserSteering();
+    const androidNormal=/Android/i.test(String(navigator?.userAgent||''))&&!this._tdrEmbeddedReplay;
+    // DEV 1.1.32 A/B: keep the V2 scene in the inheritance chain so race entry stays
+    // intact, but bypass its per-frame UI/gamepad scanning on normal Android races.
+    // Ignition/audio setup remains untouched; this isolates the frame-loop additions.
+    if(!androidNormal){
+      this._tdrSyncGamepadUi();
+      this._tdrHideResidualPhaserSteering();
+    }
     let originalThrottle=null;
     if(this._raceStarted&&this._tdrClutchReleaseAt&&this.touch){originalThrottle=Number(this.touch.throttle)||0;const clutch=clamp01((performance.now()-this._tdrClutchReleaseAt)/350);this.touch.throttle=originalThrottle*clutch;}
     try{super.update(time,delta);}finally{if(originalThrottle!==null&&this.touch)this.touch.throttle=originalThrottle;}
-    this._tdrHideResidualPhaserSteering();
+    if(!androidNormal)this._tdrHideResidualPhaserSteering();
     try{this._tdrEngineSample?.update?.();}catch{}
   }
 
