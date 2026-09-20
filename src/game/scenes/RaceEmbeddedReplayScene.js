@@ -127,8 +127,11 @@ export class RaceScene extends CleanRaceScene{
     const sw=Number(src.width)||1,sh=Number(src.height)||1;
     const srcAspect=sw/sh,dstAspect=dw/dh;
     let sx=0,sy=0,cw=sw,ch=sh;
-    if(srcAspect>dstAspect){cw=sh*dstAspect;sx=(sw-cw)*.5;}
-    else{ch=sw/dstAspect;sy=(sh-ch)*.5;}
+    // Embedded Race Control replay: use a centered cover crop. The modal now reserves
+    // real side/bottom telemetry space, so the feed itself must stay optically centered.
+    if(srcAspect>dstAspect){cw=sh*dstAspect;sx=Math.max(0,(sw-cw)*.5);}
+    else{ch=sw/dstAspect;sy=Math.max(0,(sh-ch)*.5);}
+    sx=Math.round(sx);sy=Math.round(sy);cw=Math.round(cw);ch=Math.round(ch);
     try{
       const ctx=feed.getContext('2d',{alpha:false});
       if(!ctx)return;
