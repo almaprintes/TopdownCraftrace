@@ -25,6 +25,10 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     const pending=data?.statsNativeReplay?readPendingReplay():null;
     const requested=String(pending?.trackId||data?.trackKey||this.track?.id||this.track?.key||'').trim();
     if(requested)this.trackKey=requested;
+    // Must exist before Phaser calls preload(): the loading experience is mounted
+    // there, before create() gets a chance to derive the embedded replay mode.
+    this.statsEmbeddedReplay=data?.statsEmbeddedReplay===true||pending?.embedded===true;
+    this._tdrEmbeddedReplay=this.statsEmbeddedReplay;
     return super.init?.(data);
   }
 
