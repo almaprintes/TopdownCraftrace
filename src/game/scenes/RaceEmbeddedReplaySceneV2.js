@@ -36,6 +36,11 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     const pending=data?.statsNativeReplay?readPendingReplay():null;
     const embeddedRequested=data?.statsEmbeddedReplay===true||pending?.embedded===true;
     if(embeddedRequested){
+      // Race Control owns replay loading. Suppress every legacy Phaser loading/HUD
+      // object before the live race scene is built so none can leak behind the DOM viewer.
+      try{this._tdrSuppressEmbeddedLoadingPhaser=true;}catch{}
+    }
+    if(embeddedRequested){
       // Replay is a viewer, never a live race. Remove old race/debug DOM before
       // the scene is built so it cannot leak into Race Control or survive shutdown.
       try{document.querySelectorAll('#tdr-replay-controls,[data-tdr-race-ui="1"],[data-tdr-ghost-diagnostic],[data-online-ghost-diagnostic]').forEach(n=>n.remove());}catch{}
@@ -143,7 +148,23 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     const randMs=800+Math.floor(Math.random()*700);this.time.delayedCall(stepMs*6+randMs,()=>{this._startState='GO';if(this._startAsset)this._startAsset.setTexture('start_base');if(this._startStatus){this._startStatus.setText('GO!');this._startStatus.setColor('#2bff88');}if(this.timing){this.timing.lapStart=performance.now();this.timing.started=true;this.timing.s1=null;this.timing.s2=null;this.timing.s3=null;}this._raceStarted=true;this._tdrClutchReleaseAt=performance.now();this.time.delayedCall(350,()=>{this._startState='RACING';if(this._startModal)this._startModal.setVisible(false);});});
   }
 
+  _tdrHideEmbeddedLoadingPhaserResidue(){
+    if(!this._tdrEmbeddedReplay)return;
+    const keep=new Set([this.car,this.carBody,this.carRig]);
+    try{
+      for(const obj of this.children?.list||[]){
+        if(!obj||keep.has(obj)||obj.visible===false)continue;
+        const sx=Number(obj.scrollFactorX),sy=Number(obj.scrollFactorY),depth=Number(obj.depth);
+        const text=String(obj.text||obj._text||'').toUpperCase();
+        const loadingText=/CIRCUITO|PREPARANDO|SINCRONIZANDO|SESI[ÓO]N|SUPERFICIE|GR[ÁA]FICOS|CARGANDO|ARRANCANDO|PISTA LISTA|CALENTANDO/.test(text);
+        const fixedUi=sx===0&&sy===0&&Number.isFinite(depth)&&depth>=500;
+        if(loadingText||fixedUi){try{obj.setVisible?.(false);obj.disableInteractive?.();}catch{}}
+      }
+    }catch{}
+  }
+
   update(time,delta){
+    if(this._tdrEmbeddedReplay)this._tdrHideEmbeddedLoadingPhaserResidue();
     const androidNormal=/Android/i.test(String(navigator?.userAgent||''))&&!this._tdrEmbeddedReplay;
     // DEV 1.1.32 A/B: keep the V2 scene in the inheritance chain so race entry stays
     // intact, but bypass its per-frame UI/gamepad scanning on normal Android races.
@@ -156,6 +177,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     if(this._raceStarted&&this._tdrClutchReleaseAt&&this.touch){originalThrottle=Number(this.touch.throttle)||0;const clutch=clamp01((performance.now()-this._tdrClutchReleaseAt)/350);this.touch.throttle=originalThrottle*clutch;}
     try{super.update(time,delta);}finally{if(originalThrottle!==null&&this.touch)this.touch.throttle=originalThrottle;}
     if(!androidNormal)this._tdrHideResidualPhaserSteering();
+    if(this._tdrEmbeddedReplay)this._tdrHideEmbeddedLoadingPhaserResidue();
     try{this._tdrEngineSample?.update?.();}catch{}
   }
 
