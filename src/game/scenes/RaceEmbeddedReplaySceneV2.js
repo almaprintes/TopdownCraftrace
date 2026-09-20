@@ -124,7 +124,15 @@ export class RaceScene extends EmbeddedReplayRaceScene{
 
   _startStatsNativeReplay(payload){
     if(payload?.embedded===true&&this.track?.geom?.cells){const previousCull=this._cullEnabled;this._cullEnabled=false;try{super.update(performance.now(),0);}catch(err){console.warn('[TDR replay] full-track warmup skipped',err);}this._cullEnabled=previousCull;}
-    return super._startStatsNativeReplay(payload);
+    const result=super._startStatsNativeReplay(payload);
+    if(payload?.embedded===true&&this._tdrStatsReplay){
+      // Embedded replay has a strict lifecycle: READY means frame 0, paused.
+      // Race Control is the only owner allowed to start playback.
+      this._tdrStatsReplay.elapsed=0;this._tdrStatsReplay.playing=false;this._tdrStatsReplay.finished=false;
+      try{this._applyStatsReplayFrame?.(0);this._copyEmbeddedReplayFrame?.();}catch{}
+      requestAnimationFrame(()=>{try{this._copyEmbeddedReplayFrame?.();window.dispatchEvent(new CustomEvent('tdr:embedded-replay-ready'));}catch{}});
+    }
+    return result;
   }
 
   _tdrInstallIgnitionStart(blockedAutoStart){
