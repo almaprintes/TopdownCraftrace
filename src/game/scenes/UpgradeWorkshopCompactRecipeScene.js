@@ -74,69 +74,75 @@ export class UpgradeShopScene extends PreviousWorkshop {
     if(!EXCHANGEABLE.has(toId))return;
     this._closeWorkshopRecycler(false);
     const {width:w,height:h}=this.scale,compact=h<520,garage=loadGarage();
-    if(!EXCHANGEABLE.has(fromId)||fromId===toId)fromId=EXCHANGE_MATERIALS.find(id=>id!==toId&&qty(garage,id)>0)||EXCHANGE_MATERIALS.find(id=>id!==toId);
+    const materialName=id=>String(GARAGE_ITEMS[id]?.name||id).toUpperCase();
+    const candidates=EXCHANGE_MATERIALS.filter(id=>id!==toId&&qty(garage,id)>0)
+      .sort((a,b)=>(qty(garage,b)*Number(MATERIAL_EXCHANGE_VALUE[b]||0))-(qty(garage,a)*Number(MATERIAL_EXCHANGE_VALUE[a]||0)));
+    if(!EXCHANGEABLE.has(fromId)||fromId===toId||qty(garage,fromId)<=0)fromId=candidates[0]||EXCHANGE_MATERIALS.find(id=>id!==toId);
     const currentHave=qty(garage,fromId);
     amount=Math.max(1,Math.min(Math.max(1,currentHave),Math.floor(Number(amount)||1)));
     this._workshopExchangeFrom=fromId;this._workshopExchangeAmount=amount;
 
     const root=this.add.container(0,0).setDepth(50000);this._workshopRecycler=root;
     const A=o=>{root.add(o);return o;};
-    A(this.add.rectangle(0,0,w,h,0x02070d,.88).setOrigin(0).setInteractive());
-    const pw=Math.min(w-30,compact?700:760),ph=Math.min(h-24,compact?310:360),x=(w-pw)/2,y=(h-ph)/2;
-    A(this.add.rectangle(x,y,pw,ph,0x081522,.998).setOrigin(0).setStrokeStyle(2,0x5df0b0,.9));
-    A(this.add.text(x+22,y+(compact?13:17),'RECICLADORA',{fontFamily:UI,fontSize:compact?'18px':'22px',fontStyle:'900',color:'#fff'}));
-    A(this.add.text(x+22,y+(compact?38:47),'Convierte excedentes sin salir de Fabricación',{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'700',color:'#a9bfd0'}));
-    const status=materialExchangeStatus();
+    A(this.add.rectangle(0,0,w,h,0x02070d,.98).setOrigin(0).setInteractive());
+    const pw=Math.min(w-30,compact?720:800),ph=Math.min(h-24,compact?320:390),x=(w-pw)/2,y=(h-ph)/2;
+    A(this.add.rectangle(x,y,pw,ph,0x081522,1).setOrigin(0).setStrokeStyle(2,0x5df0b0,.9));
+    A(this.add.text(x+22,y+(compact?12:17),'RECICLADORA',{fontFamily:UI,fontSize:compact?'18px':'22px',fontStyle:'900',color:'#fff'}));
+    A(this.add.text(x+22,y+(compact?37:48),`TE FALTA ${materialName(toId)} · ELIGE QUÉ MATERIAL TE SOBRA`,{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'800',color:'#a9bfd0'}));
+    const status=materialExchangeStatus(),requiresVideo=status.used>=1;
     A(this.add.text(x+pw-54,y+(compact?17:22),`${status.remaining}/3 HOY`,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'900',color:status.available?'#71f0b2':'#ff707a'}).setOrigin(1,0));
     const close=A(this.add.text(x+pw-18,y+8,'×',{fontFamily:UI,fontSize:compact?'25px':'30px',fontStyle:'900',color:'#fff'}).setOrigin(1,0).setInteractive({useHandCursor:true}));
     close.on('pointerdown',()=>this._closeWorkshopRecycler(true));
 
-    const materialName=id=>String(GARAGE_ITEMS[id]?.name||id).toUpperCase();
-    const sy=y+(compact?73:88),sh=compact?58:66,sw=(pw-(compact?108:128))/2,left=x+22,right=x+pw-22-sw;
+    const sy=y+(compact?72:92),sh=compact?72:86,sw=(pw-(compact?104:126))/2,left=x+22,right=x+pw-22-sw;
     const selector=(sx,label,id,tone,picker)=>{
-      A(this.add.text(sx,sy-(compact?18:20),label,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:tone}));
-      const hit=A(this.add.rectangle(sx,sy,sw,sh,0x102434,.99).setOrigin(0).setStrokeStyle(2,tone==='#ffbe68'?0xd89548:0x50dca2,.9).setInteractive({useHandCursor:true}));
-      A(this.add.text(sx+13,sy+sh*.36,materialName(id),{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'900',color:'#fff'}).setOrigin(0,.5));
-      A(this.add.text(sx+13,sy+sh*.72,`TIENES ${qty(garage,id)} · VALOR ${MATERIAL_EXCHANGE_VALUE[id]}`,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#9fc0d4'}).setOrigin(0,.5));
-      A(this.add.text(sx+sw-14,sy+sh/2,'▼',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:'#d9f5ff'}).setOrigin(.5));
-      hit.on('pointerdown',()=>this._openRecyclerForMaterial(toId,fromId,amount,picker));
+      A(this.add.text(sx,sy-(compact?17:20),label,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:tone}));
+      const hit=A(this.add.rectangle(sx,sy,sw,sh,0x102434,1).setOrigin(0).setStrokeStyle(2,tone==='#ffbe68'?0xd89548:0x50dca2,.95));
+      if(picker)hit.setInteractive({useHandCursor:true});
+      A(this.add.text(sx+13,sy+sh*.34,materialName(id),{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'900',color:'#fff'}).setOrigin(0,.5));
+      A(this.add.text(sx+13,sy+sh*.68,picker?`TIENES ${qty(garage,id)} · TOCA PARA CAMBIAR`:`OBJETIVO · RECIBIRÁS ESTE MATERIAL`,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#9fc0d4'}).setOrigin(0,.5));
+      if(picker){A(this.add.text(sx+sw-14,sy+sh/2,'▼',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:'#d9f5ff'}).setOrigin(.5));hit.on('pointerdown',()=>this._openRecyclerForMaterial(toId,fromId,amount,'from'));}
     };
-    selector(left,'ENTREGAS',fromId,'#ffbe68','from');
-    selector(right,'RECIBES',toId,'#72efb4','to');
-    A(this.add.text(x+pw/2,sy+sh/2,'→',{fontFamily:UI,fontSize:compact?'24px':'29px',fontStyle:'900',color:'#fff'}).setOrigin(.5));
+    selector(left,'QUÉ ENTREGAS',fromId,'#ffbe68','from');
+    selector(right,'QUÉ RECIBES',toId,'#72efb4',null);
+    A(this.add.text(x+pw/2,sy+sh/2,'→',{fontFamily:UI,fontSize:compact?'25px':'31px',fontStyle:'900',color:'#fff'}).setOrigin(.5));
 
-    const controlsY=sy+sh+(compact?28:34);
-    A(this.add.text(x+22,controlsY,'CANTIDAD',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:'#aebfd0'}).setOrigin(0,.5));
-    let bx=x+(compact?102:118);
+    const controlsY=sy+sh+(compact?26:34);
+    A(this.add.text(x+22,controlsY,'CUÁNTO ENTREGAS',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:'#aebfd0'}).setOrigin(0,.5));
+    let bx=x+(compact?132:158);
     [25,100,250,'MAX'].forEach(p=>{
-      const val=p==='MAX'?currentHave:Math.min(currentHave,p),on=(p==='MAX'&&amount===currentHave)||(p!=='MAX'&&amount===val),bw=compact?56:64,bh=compact?27:30;
+      const val=p==='MAX'?currentHave:Math.min(currentHave,p),on=(p==='MAX'&&amount===currentHave)||(p!=='MAX'&&amount===val),bw=compact?55:64,bh=compact?27:30;
       const hit=A(this.add.rectangle(bx,controlsY-bh/2,bw,bh,on?0x1b4d3d:0x112538,.98).setOrigin(0).setStrokeStyle(on?2:1,on?0x5df0b0:0x496477,.85));
       A(this.add.text(bx+bw/2,controlsY,String(p),{fontFamily:UI,fontSize:compact?'9px':'10px',fontStyle:'900',color:val>0?'#fff':'#53606a'}).setOrigin(.5));
       if(val>0){hit.setInteractive({useHandCursor:true});hit.on('pointerdown',()=>this._openRecyclerForMaterial(toId,fromId,val));}
       bx+=bw+(compact?6:8);
     });
 
-    const quote=quoteMaterialExchange(fromId,toId,amount),receive=quote.ok?quote.receive:0,summaryY=controlsY+(compact?30:37),summaryH=compact?52:61;
-    A(this.add.rectangle(x+22,summaryY,pw-44,summaryH,0x0b1b27,.98).setOrigin(0).setStrokeStyle(1,quote.ok?0x5df0b0:0xff6670,.6));
-    A(this.add.text(x+38,summaryY+(compact?10:12),`${amount} ${materialName(fromId)} → ${receive} ${materialName(toId)}`,{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'900',color:quote.ok?'#fff':'#ff9aa1'}));
-    A(this.add.text(x+38,summaryY+(compact?33:37),`COMISIÓN DE RECICLAJE: ${Math.round((1-MATERIAL_EXCHANGE_EFFICIENCY)*100)}% · protege el valor de los materiales`,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'800',color:'#ffcf7b'}));
+    const quote=quoteMaterialExchange(fromId,toId,amount),receive=quote.ok?quote.receive:0,summaryY=controlsY+(compact?29:38),summaryH=compact?48:58;
+    A(this.add.rectangle(x+22,summaryY,pw-44,summaryH,0x0b1b27,1).setOrigin(0).setStrokeStyle(1,quote.ok?0x5df0b0:0xff6670,.7));
+    A(this.add.text(x+pw/2,summaryY+(compact?15:18),`${amount} ${materialName(fromId)}  →  ${receive} ${materialName(toId)}`,{fontFamily:UI,fontSize:compact?'14px':'17px',fontStyle:'900',color:quote.ok?'#fff':'#ff9aa1'}).setOrigin(.5,0));
+    A(this.add.text(x+pw/2,summaryY+(compact?34:40),'LA RECICLADORA CONSERVA EL 75% DEL VALOR',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#ffcf7b'}).setOrigin(.5,0));
 
-    const btnH=compact?34:40,btnY=y+ph-btnH-(compact?13:17),btnW=compact?250:290,btnX=x+pw-btnW-22,enabled=status.available&&quote.ok&&currentHave>=amount;
-    const btn=A(this.add.rectangle(btnX,btnY,btnW,btnH,enabled?0x17683f:0x293342,.99).setOrigin(0).setStrokeStyle(2,enabled?0x5df0b0:0x526171,.9));
-    A(this.add.text(btnX+btnW/2,btnY+btnH/2,!status.available?'LÍMITE DIARIO':quote.ok?'▶ VER VÍDEO E INTERCAMBIAR':'AJUSTA CANTIDAD',{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:enabled?'#fff':'#aab6c1'}).setOrigin(.5));
-    A(this.add.text(x+22,btnY+btnH/2,'3 intercambios/día · sin monedas',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8fa6b7'}).setOrigin(0,.5));
-    if(enabled){btn.setInteractive({useHandCursor:true});btn.on('pointerdown',async()=>{const ok=await showRewardedAd(this,{title:'RECICLAJE DE MATERIALES'});if(!ok)return;const result=executeMaterialExchange(fromId,toId,amount);this.state=loadGarage();this._toast?.(result.ok?`${result.spend} ${materialName(fromId)} → ${result.receive} ${materialName(toId)}`:result.reason);if(result.ok)this._workshopExchangeAmount=Math.min(amount,Math.max(1,qty(this.state,fromId)));this._openRecyclerForMaterial(toId,fromId,this._workshopExchangeAmount);});}
+    const btnH=compact?34:42,btnY=y+ph-btnH-(compact?13:18),btnW=compact?270:320,btnX=x+pw-btnW-22,enabled=status.available&&quote.ok&&currentHave>=amount;
+    const btn=A(this.add.rectangle(btnX,btnY,btnW,btnH,enabled?0x17683f:0x293342,1).setOrigin(0).setStrokeStyle(2,enabled?0x5df0b0:0x526171,.9));
+    const label=!status.available?'LÍMITE DIARIO ALCANZADO':quote.ok?(requiresVideo?'▶ VER VÍDEO Y RECICLAR':'RECICLAR'):'AJUSTA LA CANTIDAD';
+    A(this.add.text(btnX+btnW/2,btnY+btnH/2,label,{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'900',color:enabled?'#fff':'#aab6c1'}).setOrigin(.5));
+    A(this.add.text(x+22,btnY+btnH/2,requiresVideo?'ESTE RECICLAJE REQUIERE VÍDEO':'PRIMER RECICLAJE GRATIS',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8fa6b7'}).setOrigin(0,.5));
+    if(enabled){btn.setInteractive({useHandCursor:true});btn.on('pointerdown',async()=>{
+      if(requiresVideo){const ad=await showRewardedAd(this,{title:'RECICLAJE DE MATERIALES',placement:'recycler_exchange',claimId:`recycler-${Date.now()}`});if(!ad?.completed||!ad?.verified){this._toast?.('VÍDEO NO COMPLETADO');return;}}
+      const result=executeMaterialExchange(fromId,toId,amount);this.state=loadGarage();this._toast?.(result.ok?`${result.spend} ${materialName(fromId)} → ${result.receive} ${materialName(toId)}`:result.reason);
+      if(result.ok)this._workshopExchangeAmount=Math.min(amount,Math.max(1,qty(this.state,fromId)));
+      this._openRecyclerForMaterial(toId,fromId,this._workshopExchangeAmount);
+    });}
 
-    if(openPicker==='from'||openPicker==='to'){
-      const pickFrom=openPicker==='from',anchor=pickFrom?left:right,py=sy+sh+4,options=EXCHANGE_MATERIALS.filter(id=>id!==(pickFrom?toId:fromId)),oh=compact?27:30,boxH=options.length*oh;
-      A(this.add.rectangle(anchor,py,sw,boxH,0x07131f,1).setOrigin(0).setStrokeStyle(2,0x65d9c1,.95));
+    if(openPicker==='from'){
+      const options=candidates.filter(id=>id!==fromId),cols=2,oh=compact?31:35,rows=Math.ceil(options.length/cols),boxW=sw,boxH=rows*oh,py=sy+sh+4;
+      A(this.add.rectangle(left,py,boxW,boxH,0x07131f,1).setOrigin(0).setStrokeStyle(2,0x65d9c1,.95));
       options.forEach((id,i)=>{
-        const yy=py+i*oh,hit=A(this.add.rectangle(anchor,yy,sw,oh,i%2?0x0c1d2b:0x102434,.99).setOrigin(0).setInteractive({useHandCursor:true}));
-        A(this.add.text(anchor+10,yy+oh/2,`${materialName(id)}  ×${qty(garage,id)}`,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'900',color:'#fff'}).setOrigin(0,.5));
-        hit.on('pointerdown',()=>{
-          if(pickFrom){this._openRecyclerForMaterial(toId,id,Math.min(amount,Math.max(1,qty(loadGarage(),id))));}
-          else{this._openRecyclerForMaterial(id,fromId,amount);}
-        });
+        const cw=boxW/cols,cx=left+(i%cols)*cw,cy=py+Math.floor(i/cols)*oh;
+        const hit=A(this.add.rectangle(cx,cy,cw,oh,i%2?0x0c1d2b:0x102434,1).setOrigin(0).setInteractive({useHandCursor:true}));
+        A(this.add.text(cx+8,cy+oh/2,`${materialName(id)} ×${qty(garage,id)}`,{fontFamily:UI,fontSize:compact?'8px':'9px',fontStyle:'900',color:'#fff'}).setOrigin(0,.5));
+        hit.on('pointerdown',()=>this._openRecyclerForMaterial(toId,id,Math.min(amount,Math.max(1,qty(loadGarage(),id)))));
       });
     }
   }
