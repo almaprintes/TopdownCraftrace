@@ -45,7 +45,7 @@
   .tdr-lobby-car-preview {
     top: 28%;
     width: clamp(205px, 20vw, 255px);
-    transform: translate(-50%, 34px);
+    transform: translate(-50%, 72px);
     height: clamp(390px, 54vh, 470px);
   }
 
