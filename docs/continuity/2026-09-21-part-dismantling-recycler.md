@@ -24,3 +24,31 @@ A Street engine uses the canonical Street engine recipe (8 scrap + 2 alloy). One
 - `src/game/ui/PartDismantleDom.js` — part inventory, quantity, exact recovery preview, confirmation.
 - `src/game/ui/MaterialExchangeDom.js` — entry from Recycler to PARTS.
 - DEV version: 1.1.101.
+
+
+## Closed-testing feedback and product response
+
+This feature is a direct response to feedback and observed behaviour during the Google Play closed beta.
+
+A tester who was not yet familiar with CraftRace's progression and crafting rules unintentionally crafted five Street engines. The game allowed the action correctly, but there was no way to recover resources from unwanted duplicate crafted parts. This exposed a usability/economy problem that could affect other new players: an understandable crafting mistake could permanently lock a significant amount of progression materials into duplicate parts.
+
+We treated this as a beta finding rather than as user error. Based on that tester experience, the Recycler was expanded from material exchange only to include a dedicated part-dismantling flow.
+
+The resulting design:
+- lets players select unwanted crafted parts and dismantle one or several copies;
+- previews the exact materials that will be recovered before confirmation;
+- returns 90% of the original raw-material investment and keeps 10% as a dismantling cost, preserving an economic consequence without making the mistake permanent;
+- protects an equipped copy so an active car part cannot be accidentally destroyed;
+- requires explicit confirmation because dismantling is irreversible;
+- uses a simple three-step interface: choose a part, choose quantity, see what comes back;
+- was subsequently adjusted for short screens so the primary dismantle action remains reachable.
+
+No rewarded advertisement is required for part dismantling. The material loss itself is the balancing cost.
+
+### Google Play closed-test evidence
+
+This change is an example of the closed-testing phase directly influencing the product before production review. Tester behaviour identified a real onboarding/progression issue that was not obvious from development testing alone. The beta feedback led to a concrete gameplay and UX change, implemented and tested in DEV 1.1.101 and visually refined in DEV 1.1.102-1.1.103.
+
+For production-review questionnaires, the factual summary is:
+
+> During closed testing, a tester accidentally crafted several duplicate upgrade parts and had no way to recover the materials. We used that feedback to add part dismantling to the Recycler. Players can now recover 90% of the materials from unwanted crafted parts, with safeguards for equipped parts, quantity selection, a recovery preview and irreversible-action confirmation. We also simplified the interface after testing so the process is easy to understand and the main action remains accessible on smaller screens.
