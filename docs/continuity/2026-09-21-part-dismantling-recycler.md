@@ -52,3 +52,14 @@ This change is an example of the closed-testing phase directly influencing the p
 For production-review questionnaires, the factual summary is:
 
 > During closed testing, a tester accidentally crafted several duplicate upgrade parts and had no way to recover the materials. We used that feedback to add part dismantling to the Recycler. Players can now recover 90% of the materials from unwanted crafted parts, with safeguards for equipped parts, quantity selection, a recovery preview and irreversible-action confirmation. We also simplified the interface after testing so the process is easy to understand and the main action remains accessible on smaller screens.
+
+
+## Additional closed-test feedback — engine audio
+
+At least one closed-test tester specifically asked for an improvement to the car/engine audio. This feedback has been accepted and is part of the next polish work planned after the Recycler changes.
+
+The current plan is to improve the engine sound using original/legal source recordings and a more convincing RPM-based audio treatment. Work is planned to begin on 2026-09-22. This item should be recorded as tester feedback that influenced the pre-production polish roadmap, but it must not be described as completed until the improved audio has actually been implemented and validated.
+
+For production-review questionnaires, while the work is still pending, the factual summary is:
+
+> A tester also specifically asked us to improve the vehicle audio. We took that feedback into account and added engine sound improvement to our pre-production polish work. We are preparing original engine recordings and an RPM-based implementation so the sound responds more naturally to the car. This work is being carried out as a direct result of closed-test feedback.
