@@ -4,3 +4,5 @@ const human=/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ¿¡]{3,}\s+[A-Za-zÁÉÍÓÚÜ�
 function walk(d,out=[]){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p,out);else if(/\.(js|html)$/.test(e.name))out.push(p)}return out}
 let rows=[];for(const file of walk(ROOT)){const norm=file.replaceAll('\\','/');if(SKIP.some(x=>norm.includes(x)))continue;const lines=fs.readFileSync(file,'utf8').split(/\r?\n/);for(let i=0;i<lines.length;i++){const line=lines[i];if(!uiHints.test(line))continue;const lits=[...line.matchAll(/(['"`])((?:\\.|(?!\1).){2,}?)\1/g)].map(m=>m[2]);for(const lit of lits){if(human.test(lit)&&!/^[-.#\w/:]+$/.test(lit))rows.push({file:norm,line:i+1,text:lit.slice(0,180)})}}}
 console.log('I18N_AUDIT_COUNT='+rows.length);for(const r of rows)console.log(`${r.file}:${r.line}\t${r.text}`);
+
+// DEV 1.1.105 audit marker.
