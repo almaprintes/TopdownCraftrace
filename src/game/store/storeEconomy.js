@@ -11,12 +11,6 @@ export const MATERIAL_PACKS=[
   {id:'mixed',name:'PACK PADDOCK',price:800,items:{scrap:170,alloy:30,rubber:30,compound:18,disc:30,spring:30,gear:30,ecu:6}}
 ];
 
-export const COIN_PACKS=[
-  {id:'coins_s',name:'2.500 MONEDAS',coins:2500,priceLabel:'DESARROLLO'},
-  {id:'coins_m',name:'7.500 MONEDAS',coins:7500,priceLabel:'DESARROLLO'},
-  {id:'coins_l',name:'20.000 MONEDAS',coins:20000,priceLabel:'DESARROLLO'},
-  {id:'coins_xl',name:'50.000 MONEDAS',coins:50000,priceLabel:'DESARROLLO'}
-];
 
 const FOUR_HOURS=4*60*60*1000;
 const DAY=24*60*60*1000;
@@ -46,8 +40,3 @@ export function claimDailyCoins(amount=250,now=Date.now()){
   const s=loadGarage(); s.coins=Number(s.coins||0)+amount; s.storeDailyAt=now; saveGarage(s); return {ok:true,amount,state:s};
 }
 
-// Development purchase provider. Native builds will replace this with IAP.
-export function simulateCoinPurchase(id){
-  const pack=COIN_PACKS.find(p=>p.id===id); if(!pack)return {ok:false};
-  const s=loadGarage(); s.coins=Number(s.coins||0)+pack.coins; saveGarage(s); return {ok:true,pack,state:s,simulated:true};
-}
