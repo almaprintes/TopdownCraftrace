@@ -35,6 +35,10 @@ export class MenuScene extends CurrentMenuScene {
       if(!root?.scene)return;
       for(const text of texts){
         if(!text?.scene)continue;
+        // Recalculate from the uncropped text every time. Otherwise a previous
+        // horizontal crop becomes the next getBounds() input while dragging and
+        // text can leak past the store viewport on iOS/WebGL.
+        try{text.setCrop();}catch{}
         const b=text.getBounds?.();
         if(!b||!Number.isFinite(b.left)||!Number.isFinite(b.right))continue;
         const vl=Math.max(left,b.left),vr=Math.min(right,b.right),vt=Math.max(top,b.top),vb=Math.min(bottom,b.bottom);
