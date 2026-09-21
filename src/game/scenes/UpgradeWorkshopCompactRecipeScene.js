@@ -22,6 +22,14 @@ export class UpgradeShopScene extends PreviousWorkshop {
     }catch{return false;}
   }
 
+  _isWorkshopPhoneLandscape(){
+    try{
+      const w=Number(this.scale?.width||0),h=Number(this.scale?.height||0);
+      const coarse=window.matchMedia?.('(pointer: coarse)')?.matches ?? (Number(navigator?.maxTouchPoints||0)>1);
+      return Boolean(coarse&&w>=h&&h<600);
+    }catch{return false;}
+  }
+
   _tabletRecipeCard(A,r){
     const out=`${this.craftFamily}_${this.craftTier}`;
     const item=GARAGE_ITEMS[out],recipe=DIRECT_CRAFT_RECIPES[out],accent=TIER_COLOR[this.craftTier]||0x66c6ff;
@@ -141,8 +149,44 @@ export class UpgradeShopScene extends PreviousWorkshop {
     }
   }
 
+  _mobileVisualRecipeCard(A,r){
+    const out=`${this.craftFamily}_${this.craftTier}`;
+    const item=GARAGE_ITEMS[out],recipe=DIRECT_CRAFT_RECIPES[out],accent=TIER_COLOR[this.craftTier]||0x66c6ff;
+    const g=A(this.add.graphics());g.fillStyle(0x071225,.98);g.fillRoundedRect(r.x,r.y,r.w,r.h,11);g.lineStyle(1,accent,.7);g.strokeRoundedRect(r.x,r.y,r.w,r.h,11);
+    if(!item||!recipe)return;
+
+    const pad=6,gap=7,titleH=24,buttonH=25;
+    const artW=Math.round(r.w*.34),art={x:r.x+pad,y:r.y+titleH,w:artW,h:Math.max(38,r.h-titleH-buttonH-pad*2-4)};
+    A(this.add.text(r.x+r.w/2,r.y+5,item.name.toUpperCase(),{fontFamily:UI,fontSize:'12px',fontStyle:'900',color:'#fff'}).setOrigin(.5,0));
+    const artBg=A(this.add.graphics());artBg.fillStyle(0x09182b,.72);artBg.fillRoundedRect(art.x,art.y,art.w,art.h,9);artBg.lineStyle(1,accent,.3);artBg.strokeRoundedRect(art.x,art.y,art.w,art.h,9);
+    this._itemArt(A,item,art.x+art.w/2,art.y+art.h*.47,Math.min(art.w*.84,art.h*.78));
+
+    let can=true;
+    const state=(recipe.requires||[]).map(req=>{const have=qty(this.state,req.id),need=Math.max(1,Number(req.qty)||1),ok=have>=need;if(!ok)can=false;const raw=have/need;return{req,have,need,ok,progress:Math.max(0,Math.min(1,raw)),percent:Math.round(raw*100),item:GARAGE_ITEMS[req.id]};});
+    const infoX=art.x+art.w+gap,infoW=r.x+r.w-pad-infoX;
+    const cols=state.length<=2?state.length:Math.min(3,state.length),rows=Math.max(1,Math.ceil(state.length/Math.max(1,cols))),cg=5;
+    const gridH=art.h,cardH=(gridH-cg*(rows-1))/rows,cardW=(infoW-cg*(cols-1))/cols;
+    state.forEach((s,i)=>{
+      const col=i%cols,row=Math.floor(i/cols),x=infoX+col*(cardW+cg),y=art.y+row*(cardH+cg),tone=progressColor(s.progress),toneHex=hexColor(tone);
+      const cell=A(this.add.graphics());cell.fillStyle(0x101b2b,.98);cell.fillRoundedRect(x,y,cardW,cardH,7);cell.lineStyle(s.ok?2:1,tone,s.ok?1:.9);cell.strokeRoundedRect(x,y,cardW,cardH,7);
+      const name=String(s.item?.name||s.req.id).toUpperCase();
+      A(this.add.text(x+cardW/2,y+cardH*.17,name,{fontFamily:UI,fontSize:'6px',fontStyle:'900',color:'#fff',align:'center',wordWrap:{width:Math.max(30,cardW-6),useAdvancedWrap:true}}).setOrigin(.5));
+      A(this.add.text(x+cardW/2,y+cardH*.40,`${Math.min(999,s.percent)}%`,{fontFamily:UI,fontSize:'10px',fontStyle:'900',color:toneHex}).setOrigin(.5));
+      A(this.add.text(x+cardW/2,y+cardH*.62,`${s.have} / ${s.need}`,{fontFamily:UI,fontSize:'7px',fontStyle:'900',color:'#fff'}).setOrigin(.5));
+      A(this.add.text(x+cardW/2,y+cardH*.79,s.ok?'LISTO':`FALTAN ${Math.max(0,s.need-s.have)}`,{fontFamily:UI,fontSize:'6px',fontStyle:'900',color:s.ok?'#7dffb6':'#ffd4d7'}).setOrigin(.5));
+      const bx=x+5,by=y+cardH-7,bw=Math.max(4,cardW-10);cell.fillStyle(0x18263a,1);cell.fillRoundedRect(bx,by,bw,3,2);cell.fillStyle(tone,1);cell.fillRoundedRect(bx,by,bw*s.progress,3,2);
+      if(!s.ok&&EXCHANGEABLE.has(s.req.id)){const hit=A(this.add.rectangle(x,y,cardW,cardH,0xffffff,.001).setOrigin(0).setInteractive({useHandCursor:true}));hit.on('pointerup',()=>this._openRecyclerForMaterial(s.req.id));}
+    });
+
+    const by=r.y+r.h-buttonH-pad,b=A(this.add.rectangle(art.x,by,art.w,buttonH,can?0x17683f:0x273247,.98).setOrigin(0).setStrokeStyle(2,can?0x55f29b:0x526077,.9));
+    const missingCount=state.filter(s=>!s.ok).length,label=can?'FABRICAR':missingCount===1?'FALTA 1 MATERIAL':`FALTAN ${missingCount} MATERIALES`;
+    A(this.add.text(art.x+art.w/2,by+buttonH/2,label,{fontFamily:UI,fontSize:'8px',fontStyle:'900',color:can?'#fff':'#d8e0e8'}).setOrigin(.5));
+    if(can){b.setInteractive({useHandCursor:true});b.on('pointerup',()=>this._craftDirect(out,recipe));}
+  }
+
   _recipeCard(A,r,compact){
     if(this._isWorkshopTablet())return this._tabletRecipeCard(A,r);
+    if(this._isWorkshopPhoneLandscape())return this._mobileVisualRecipeCard(A,r);
     const out=`${this.craftFamily}_${this.craftTier}`;
     const item=GARAGE_ITEMS[out],recipe=DIRECT_CRAFT_RECIPES[out],g=A(this.add.graphics()),accent=TIER_COLOR[this.craftTier]||0x66c6ff;
     g.fillStyle(0x071225,.96);g.fillRoundedRect(r.x,r.y,r.w,r.h,15);g.lineStyle(1,accent,.55);g.strokeRoundedRect(r.x,r.y,r.w,r.h,15);if(!item||!recipe)return;
