@@ -19,18 +19,10 @@ export class MenuScene extends CurrentMenuScene {
   }
 
   _installStoreTextViewportClip(root){
-    // Store clipping belongs to the moving content container. Do not toggle child
-    // Text visibility or crop individual labels: both bypass/lag the geometry mask
-    // on some WebGL/iOS frames and cause the side overflow seen while scrolling.
-    const content=root?.list?.find(child=>child?.type==='Container'&&child?.mask);
-    if(!content)return;
-    const clearChildCrop=node=>{
-      for(const child of node?.list||[]){
-        if(child?.type==='Text'){try{child.setCrop();child.setVisible(true);}catch{}}
-        if(child?.list)clearChildCrop(child);
-      }
-    };
-    clearChildCrop(content);
+    // Intentionally empty. The viewport mask is now propagated at construction
+    // time by MenuStoreScene to every nested renderable (including Phaser Text).
+    // Keeping post-render crop/visibility logic here would reintroduce the iOS
+    // overflow/pop-in bug.
   }
 
   _storeCard(parent,p,x,y,w,h){
