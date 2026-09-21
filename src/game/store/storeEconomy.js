@@ -1,11 +1,14 @@
 import { loadGarage, saveGarage, addItem } from '../garage/garageStore.js';
 import { recordStoreBuy } from '../seasons/seasonTelemetry.js';
 
+// Balanced against Economy 2.0 natural material income (171 scrap/h, 30 family/h,
+// 18 compound/h, 6 ECU/h). Pack progression value scales roughly 30/37/50/60
+// minutes with price while preserving the five-family recipe symmetry.
 export const MATERIAL_PACKS=[
-  {id:'mechanic',name:'PACK MECÁNICA',price:450,items:{scrap:28,disc:12,gear:10}},
-  {id:'chassis',name:'PACK CHASIS',price:500,items:{alloy:22,compound:12,spring:10}},
-  {id:'technology',name:'PACK TECNOLOGÍA',price:650,items:{alloy:16,gear:10,ecu:6}},
-  {id:'mixed',name:'PACK PADDOCK',price:800,items:{scrap:24,alloy:18,rubber:18,compound:10,disc:8,spring:8,gear:8,ecu:4}}
+  {id:'mechanic',name:'PACK MECÁNICA',price:450,items:{scrap:85,alloy:15,disc:15,gear:15}},
+  {id:'chassis',name:'PACK CHASIS',price:500,items:{rubber:18,spring:18,compound:11,alloy:18}},
+  {id:'technology',name:'PACK TECNOLOGÍA',price:650,items:{ecu:5,compound:15,alloy:25,gear:25}},
+  {id:'mixed',name:'PACK PADDOCK',price:800,items:{scrap:170,alloy:30,rubber:30,compound:18,disc:30,spring:30,gear:30,ecu:6}}
 ];
 
 export const COIN_PACKS=[
