@@ -1,6 +1,6 @@
 import { getLanguage } from '../i18n/index.js';
 
-const BASE=import.meta.env.BASE_URL||'/';
+const BASE=import.meta.env.BASE_URL||'/'; // DEV 1.1.82 reward layout: artwork block cannot flex-shrink into reward text.
 const MATERIAL_ART={scrap:'chatarra.webp',alloy:'aleacion.webp',rubber:'goma.webp',compound:'compuesto.webp',disc:'disco_metalico.webp',spring:'muelle.webp',gear:'engranaje.webp',ecu:'electronica.webp'};
 const MATERIAL_NAMES={scrap:{es:'Chatarra',en:'Scrap'},alloy:{es:'Aleación',en:'Alloy'},rubber:{es:'Goma',en:'Rubber'},compound:{es:'Compuesto',en:'Compound'},disc:{es:'Disco metálico',en:'Metal Disc'},spring:{es:'Muelle',en:'Spring'},gear:{es:'Engranaje',en:'Gear'},ecu:{es:'Electrónica',en:'Electronics'}};
 
