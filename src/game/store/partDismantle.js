@@ -10,4 +10,4 @@ export function quotePartDismantle(partId,count=1,s=loadGarage()){const item=GAR
 export function executePartDismantle(partId,count=1){const s=loadGarage(),q=quotePartDismantle(partId,count,s);if(!q.ok)return q;if(!consume(s,partId,q.count))return{ok:false,reason:'Inventario insuficiente'};for(const[id,n]of Object.entries(q.returns))addItem(s,id,n);saveGarage(s);return q;}
 export function dismantleCandidates(s=loadGarage()){return Object.values(GARAGE_ITEMS).filter(x=>x?.kind==='part'&&qty(s,x.id)>0).map(item=>({item,owned:qty(s,item.id),available:dismantleAvailableCount(s,item.id)}));}
 
-// DEV 1.1.101: part dismantling uses canonical recursive recipes and protects equipped stock.
+// DEV 1.1.101: part dismantling uses canonical recursive recipes, batch rounding, and protects equipped stock.
