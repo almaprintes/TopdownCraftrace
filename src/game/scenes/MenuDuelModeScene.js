@@ -28,7 +28,7 @@ export class MenuScene extends CurrentMenuScene {
     const root=this._storeModal;
     if(!root?.scene)return;
 
-    const tabs=['materials','coins','rewards'];
+    const tabs=['materials','rewards'];
     const tabY=68,tabW=170,tabH=38;
     tabs.forEach((id,i)=>{
       const x=24+i*(tabW+10);
@@ -144,13 +144,10 @@ export class MenuScene extends CurrentMenuScene {
       if(card?.bringToTop){
         const topText=(card.list||[]).filter(child=>child?.type==='Text'&&Number(child.y)<82);
         topText.forEach(child=>card.bringToTop(child));
-        const artKeys=new Set(['store:coins_2500','store:coins_7500','store:coins_20000','store:rewarded_video','store:daily_gift']);
+        const artKeys=new Set(['store:rewarded_video','store:daily_gift']);
         const arts=(card.list||[]).filter(child=>child?.type==='Image'&&artKeys.has(child.texture?.key));
         arts.forEach(child=>{child.y+=22;});
-        if(p.type==='coin'){
-          const duplicatePrice=(card.list||[]).find(child=>child?.type==='Text'&&child.text===p.priceLabel&&Number(child.y)<h*.75);
-          duplicatePrice?.destroy();
-        }
+
       }
       return;
     }
