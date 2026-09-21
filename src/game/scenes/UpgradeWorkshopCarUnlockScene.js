@@ -94,7 +94,7 @@ export class UpgradeShopScene extends CurrentWorkshop {
   _openRecyclerForMaterial(materialId){
     const target=String(materialId||'compound');
     const from=target==='scrap'?'alloy':'scrap';
-    return openMaterialExchangeDom(this,from,target,100);
+    return openMaterialExchangeDom(this,from,target,100,{lockTarget:true});
   }
 
   _header(A,w,compact){
