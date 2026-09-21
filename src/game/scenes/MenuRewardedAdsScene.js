@@ -19,33 +19,18 @@ export class MenuScene extends CurrentMenuScene {
   }
 
   _installStoreTextViewportClip(root){
-    const {width:w,height:h}=this.scale;
-    const left=24,right=w-24,top=112,bottom=h-8;
+    // Store clipping belongs to the moving content container. Do not toggle child
+    // Text visibility or crop individual labels: both bypass/lag the geometry mask
+    // on some WebGL/iOS frames and cause the side overflow seen while scrolling.
     const content=root?.list?.find(child=>child?.type==='Container'&&child?.mask);
-    if(!content?.list)return;
-    // One viewport crop pass after movement settles. Phaser's per-Text setCrop()
-    // was fighting the moving geometry mask on iOS and made labels pop/load while
-    // swiping. The container mask is the single clipping authority.
-    const texts=[];
-    const walk=node=>{for(const child of node?.list||[]){if(child?.type==='Text')texts.push(child);if(child?.list)walk(child);}};
-    walk(content);
-    for(const text of texts){try{text.setCrop();text.setVisible(true);}catch{}}
-    const applyVisibility=()=>{
-      if(!root?.scene)return;
-      for(const text of texts){
-        if(!text?.scene)continue;
-        const b=text.getBounds?.();
-        if(!b)continue;
-        text.setVisible(!(b.right<=left||b.left>=right||b.bottom<=top||b.top>=bottom));
+    if(!content)return;
+    const clearChildCrop=node=>{
+      for(const child of node?.list||[]){
+        if(child?.type==='Text'){try{child.setCrop();child.setVisible(true);}catch{}}
+        if(child?.list)clearChildCrop(child);
       }
     };
-    let timer=null;
-    const settle=()=>{if(timer)clearTimeout(timer);timer=setTimeout(applyVisibility,90);};
-    const input=this.input;
-    input.on('dragstart',()=>{for(const text of texts){try{text.setVisible(true);}catch{}}});
-    input.on('drag',settle);input.on('pointerup',settle);input.on('wheel',settle);
-    root.once?.('destroy',()=>{if(timer)clearTimeout(timer);input.off('drag',settle);input.off('pointerup',settle);input.off('wheel',settle);});
-    applyVisibility();
+    clearChildCrop(content);
   }
 
   _storeCard(parent,p,x,y,w,h){
