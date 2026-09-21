@@ -16,3 +16,5 @@ export class StatsScene extends CompactStatsScene{
   _restoreRaceControlAnalysis(main){this._stopRaceControlReplay();if(this._brAnalysisMarkup){main.innerHTML=this._brAnalysisMarkup;this._brAnalysisMarkup=null;}}
   _stopRaceControlReplay(){if(this._brReplayState?.raf)cancelAnimationFrame(this._brReplayState.raf);this._brReplayState=null;}
 }
+
+// DEV 1.1.114 validation trigger: compact replay copy uses i18n keys.
