@@ -2,7 +2,7 @@ import { openMaterialExchangeDom as openBase, closeMaterialExchangeDom } from '.
 import { loadGarage, qty } from '../garage/garageStore.js';
 import { getLanguage } from '../i18n/index.js';
 
-function enhance(scene, fromId, toId, amount){
+function enhance(scene, fromId, toId, amount, options={}){
   const root=scene?._materialExchangeDom;
   const row=root?.querySelector?.('.tdr-recycler-amount');
   if(!root||!row)return root;
@@ -21,16 +21,16 @@ function enhance(scene, fromId, toId, amount){
     if(currentHave<=0)return;
     value=Math.max(1,Math.min(currentHave,value));
     input.value=String(value);
-    if(value!==Number(amount))openMaterialExchangeDom(scene,fromId,toId,value);
+    if(value!==Number(amount))openMaterialExchangeDom(scene,fromId,toId,value,options);
   };
   input?.addEventListener('change',apply);
   input?.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();input.blur();apply();}});
   return root;
 }
 
-export function openMaterialExchangeDom(scene,fromId='scrap',toId='compound',amount=100){
-  openBase(scene,fromId,toId,amount);
-  return enhance(scene,fromId,toId,amount);
+export function openMaterialExchangeDom(scene,fromId='scrap',toId='compound',amount=100,options={}){
+  openBase(scene,fromId,toId,amount,options);
+  return enhance(scene,fromId,toId,amount,options);
 }
 
 export { closeMaterialExchangeDom };
