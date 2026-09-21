@@ -205,3 +205,5 @@ export class StatsScene extends ReplayStatsScene{
     try{sessionStorage.removeItem(SESSION_KEY);}catch{}
   }
 }
+
+// DEV 1.1.113 validation trigger: replay player copy uses i18n keys.
