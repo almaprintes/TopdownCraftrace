@@ -99,7 +99,7 @@ export class MenuScene extends PreviousMenuScene {
       } catch { return false; }
     })();
     const diameter = tabletLandscape
-      ? Math.max(310, Math.min(350, width * .34, height * .46))
+      ? Math.max(400, Math.min(480, width * .42, height * .60))
       : Math.max(260, Math.min(380, width * .26, height * .48));
 
     const glow = this.add.graphics();
