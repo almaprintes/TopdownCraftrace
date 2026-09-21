@@ -1,0 +1,20 @@
+# Store material cards + coin IAP deferred — 2026-09-21
+
+## Decision
+Real-money coin packs are intentionally not part of the current Google Play review build. They are deferred to a future update after the current production/review milestone. Do not reintroduce them accidentally during Store work.
+
+## Removed from current runtime/source
+- Store MONEDAS / COINS tab and real-money coin-pack carousel.
+- Coin-pack definitions and simulated purchase helper from src/game/store/storeEconomy.js.
+- Coin-pack preload/render hooks and descendant decoration code.
+- Current Store remains: material packs bought with earned in-game coins, rewards, and material recycler.
+- Rewarded ads are a separate system and are not removed by this decision.
+
+## Material cards
+The active material-card renderer is in MenuDuelModeScene.js, which overrides the inherited Store renderer. On 2026-09-21 this was redesigned to show total units plus explicit material rows (asset, material name, quantity), with dense packs using two columns. Earlier edits to the inherited renderer alone did not change the visible cards because this descendant owns the final material rendering.
+
+## Horizontal scrolling / clipping
+The Store content container already owns a Phaser geometry mask. Per-Text setCrop() was also being recalculated while dragging, producing text pop-in/loading artifacts and occasional side leakage on iOS/WebGL. DEV 1.1.96 makes the container geometry mask the clipping authority during movement; text visibility cleanup is deferred until motion settles so swiping stays visually continuous.
+
+## Future reintroduction
+When real-money coin purchases return, implement them as a fresh, review-ready IAP feature (Google Play Billing / RevenueCat as selected at that time), restore UI only together with the purchase provider and entitlement/delivery validation, and update Play Console declarations/testing. Do not revive the removed development simulator as production purchase logic.
