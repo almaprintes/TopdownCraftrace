@@ -43,7 +43,7 @@
   .tdr-car-card-row em { font-size: 9px; padding: 5px 8px; }
 
   .tdr-lobby-car-preview {
-    top: 24.5%;
+    top: 28%;
     width: clamp(205px, 20vw, 255px);
     height: clamp(390px, 54vh, 470px);
   }
