@@ -14,15 +14,7 @@ export class MenuScene extends CurrentMenuScene {
     super._openStoreModal(section);
     const root=this._storeModal;
     if(!root?.scene)return;
-    this._installStoreTextViewportClip(root);
     root.once?.('destroy',()=>closeStoreDomConfirm());
-  }
-
-  _installStoreTextViewportClip(root){
-    // Intentionally empty. The viewport mask is now propagated at construction
-    // time by MenuStoreScene to every nested renderable (including Phaser Text).
-    // Keeping post-render crop/visibility logic here would reintroduce the iOS
-    // overflow/pop-in bug.
   }
 
   _storeCard(parent,p,x,y,w,h){
