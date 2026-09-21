@@ -40,3 +40,5 @@ export class StatsScene extends MasteryStatsScene{
   _renderCars(){super._renderCars();this._installBroadcastTab();}
   _renderCarDetail(carId){super._renderCarDetail(carId);this._installBroadcastTab();}
 }
+
+// DEV 1.1.111 validation trigger: Race Control primary copy uses i18n keys.
