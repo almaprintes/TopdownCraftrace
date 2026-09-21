@@ -18,3 +18,6 @@ The Store content container already owns a Phaser geometry mask. Per-Text setCro
 
 ## Future reintroduction
 When real-money coin purchases return, implement them as a fresh, review-ready IAP feature (Google Play Billing / RevenueCat as selected at that time), restore UI only together with the purchase provider and entitlement/delivery validation, and update Play Console declarations/testing. Do not revive the removed development simulator as production purchase logic.
+
+## DEV 1.1.98 — root cause of lateral text overflow
+The store scroll content contains nested card Containers. The viewport GeometryMask on the outer moving Container correctly clipped card Graphics/images, but Phaser Text inside nested Containers was not reliably inheriting that ancestor mask on the affected iOS/WebGL path. This is why screenshots showed card borders clipped at the viewport while their labels continued outside it. The fix is structural: the same viewport GeometryMask is propagated once, immediately after Store construction, to every nested renderable (including Text). Legacy per-Text crop/visibility code is retired. Do not reintroduce per-frame/per-drag text cropping.
