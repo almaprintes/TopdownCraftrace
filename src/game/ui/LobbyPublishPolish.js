@@ -73,3 +73,5 @@ export function polishLobbyForPublish(scene, root) {
   const car=root.querySelector('[data-lobby-car]');if(car){car.classList.add('tdr-lobby-car-preview--interactive');makeCardButton(car,t('lobby.openGarage'),()=>scene.scene.start('GarageScene',{mode:'player'}));}
   installGarageInductionCue(scene,root,season,car);installMasteryRoofBadge(scene,root);installBottomActions(scene,root);
 }
+
+// DEV 1.1.109 validation trigger: publish lobby copy uses i18n keys.
