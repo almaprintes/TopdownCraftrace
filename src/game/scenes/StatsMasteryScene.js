@@ -56,3 +56,5 @@ export class StatsScene extends CurrentStatsScene{
     table.before(panel);
   }
 }
+
+// DEV 1.1.110 validation trigger: mastery statistics copy uses i18n keys.
