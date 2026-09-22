@@ -373,20 +373,15 @@ export class RaceScene extends CurrentRaceScene {
     const vh = Math.max(1, Number(this.scale?.height || 1));
     if (!rect || rect.width <= 0 || rect.height <= 0) return;
 
-    // Convert the fixed HUD anchor to canvas CSS pixels. This depends only on
-    // viewport/canvas geometry, never on the race camera zoom/scroll.
+    // The Ghost panel is HUD, not world content. Pin it to fixed viewport
+    // coordinates once and never derive its position from camera-sensitive Phaser
+    // objects. Dynamic zoom/scroll therefore cannot move the DOM rows.
     const sx=rect.width/vw,sy=rect.height/vh;
-    // Keep the DOM rows attached to the fixed HUD labels. Dynamic camera zoom
-    // changes the Phaser panel shapes but the HUD labels themselves stay fixed;
-    // re-sample their screen anchor and move the DOM hit/background layer with it.
-    const live=this._findGhostPanelObjects?.();
-    if(live?.gp&&live?.rp){
-      const centerX=Number.isFinite(live.rp.x)?live.rp.x:live.gp.x;
-      anchor.left=centerX-PANEL_W*.5;
-      anchor.top=Math.min(live.gp.y,live.rp.y)-ROW_H*.55;
-    }
-    root.style.left = `${rect.left + anchor.left * sx}px`;
-    root.style.top = `${rect.top + anchor.top * sy}px`;
+    const fixedRight=10;
+    const fixedTop=Math.max(118,Math.min(150,Math.round(vh*.315)));
+    const fixedLeft=vw-fixedRight-PANEL_W;
+    root.style.left = `${rect.left + fixedLeft * sx}px`;
+    root.style.top = `${rect.top + fixedTop * sy}px`;
     root.style.width = `${PANEL_W * sx}px`;
     root.style.height = `${PANEL_H * sy}px`;
     const scale = rect.width / vw;
@@ -452,7 +447,6 @@ export class RaceScene extends CurrentRaceScene {
 
     const root = this._tdrStaticGhostPanel;
     if (!root?.isConnected) return;
-    this._layoutStaticGhostPanel();
     const active = !!this.sys?.isActive?.();
     const hiddenByReport = !!this._sessionReportOpen;
     const hiddenByReplay = !!this._replayActive;
