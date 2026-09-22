@@ -10,7 +10,7 @@ export const LONGITUDINAL_PROFILES = Object.freeze({
     coastEngineBrakeRestore: 0
   }),
   RACE_STARTER: Object.freeze({
-    longitudinalResponse: 0.60,
+    longitudinalResponse: 0.72,
     coastBlendStartKmh: 12,
     coastBlendEndKmh: 45,
     coastHighSpeedDragScale: 45,

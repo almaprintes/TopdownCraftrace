@@ -10,6 +10,11 @@ import {
   targetSparkRpm
 } from '../src/game/audio/SparkEngineModel.js';
 import { ENGINE_AUDIO_PROFILES } from '../src/game/audio/EngineAudioProfiles.js';
+import {
+  advanceProfiledRpm,
+  profiledSampleMix,
+  targetProfiledRpm
+} from '../src/game/audio/ProfiledRpmEngineModel.js';
 import { CAR_SPECS } from '../src/game/cars/carSpecs.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -77,4 +82,25 @@ assert.equal(jeepBytes.subarray(0, 4).toString('ascii'), 'RIFF', 'Jeep profile m
 assert.equal(jeepBytes.subarray(8, 12).toString('ascii'), 'WAVE', 'Jeep profile must be RIFF/WAV');
 assert.equal(createHash('sha256').update(jeepBytes).digest('hex'), jeep.sourceSha256, 'Jeep WAV must match the preserved source');
 
-console.log('Spark engine audio smoke: OK');
+const gripline = ENGINE_AUDIO_PROFILES.AVENIR_GRIPLINE;
+assert.equal(CAR_SPECS.avenir_gripline.engineAudioProfile, 'AVENIR_GRIPLINE', 'Gripline must declare its RPM-bank profile');
+assert.equal(gripline.kind, 'rpm-bank');
+assert.equal(gripline.sampleBank, 'SPARK_SIX');
+assert.equal(gripline.idleRpm, 1050);
+assert.equal(gripline.redlineRpm, 7600);
+assert.equal(gripline.sampleRpmAnchors.length, names.length, 'Gripline must map every audited RPM sample');
+assert.ok(gripline.pitchScale > 1, 'Gripline must sound brighter than the starter');
+assert.equal(targetProfiledRpm(gripline, 0, 0, 90), gripline.idleRpm, 'Gripline stationary idle must remain stable');
+const griplineStationaryRev = targetProfiledRpm(gripline, 0, 1, 90);
+assert.ok(griplineStationaryRev >= 4500 && griplineStationaryRev <= 4800, 'Gripline must rev eagerly while stationary without jumping to redline');
+assert.equal(targetProfiledRpm(gripline, 90, 1, 90), gripline.redlineRpm, 'Gripline must reach redline at attainable top speed');
+assert.ok(advanceProfiledRpm(gripline, 1100, 7000, 1, 0.05) > 1100, 'Gripline RPM must rise under throttle');
+assert.ok(advanceProfiledRpm(gripline, 7000, 2000, 0, 0.05) < 7000, 'Gripline RPM must fall after throttle release');
+const griplineMix = profiledSampleMix(gripline, 3750);
+assert.equal(griplineMix.levels.filter(level => level > 0).length, 2, 'Gripline may only crossfade adjacent layers');
+const griplinePower = griplineMix.levels.reduce((sum, level) => sum + level * level, 0);
+assert.ok(Math.abs(griplinePower - 1) < 1e-9, 'Gripline crossfade must preserve constant power');
+assert.ok(griplineMix.rates.some(rate => rate > 1), 'Gripline pitch calibration must be applied');
+assert.ok(runtime.includes("mode === 'rpm-bank'"), 'runtime must build and update profiled RPM banks');
+
+console.log('Spark + Gripline engine audio smoke: OK');

@@ -1,5 +1,11 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## ACTUALIZACIÓN 22/09/2026 — GRIPLINE CON MOTOR RPM Y SPARK MÁS VIVO
+
+DEV 1.1.169 asigna al primer desbloqueable, AVENIR Gripline, un perfil de motor de seis capas RPM. Reutiliza el banco CC0 local ya auditado, pero con ralentí, corte, curva, pitch y ecualización propios: resulta más agudo y rápido que Spark sin añadir ninguna dependencia de red. El runtime generaliza el banco mediante `ProfiledRpmEngineModel.js`; Spark conserva su modelo exacto y Vortex conserva `JEEP`.
+
+Spark sube `RACE_STARTER` de `0.60` a `0.72`: 0–84 km/h pasa de ~7,6 s a ~6,4 s, conservando su punta sostenible de ~84,5 km/h y la curva continua de retención. `TOURING` 0.30 permanece disponible. Audio, cifras, pruebas y alcance de salida: `docs/continuity/2026-09-22-gripline-audio-and-launch-triage.md`.
+
 ## ACTUALIZACIÓN 22/09/2026 — SPARK RECUPERA CARÁCTER DE CARRERAS
 
 DEV 1.1.168 eleva la respuesta longitudinal de Spark de `0.30` a `0.60`: conserva la punta stock publicada de ~84 km/h, pero pasa de 0 a 84 km/h en ~7,6 s en lugar de ~14,8 s. El régimen a fondo con el coche parado sube ahora a ~4.200 RPM, y la progresión móvil continúa vinculada a la velocidad real.

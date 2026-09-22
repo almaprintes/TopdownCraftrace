@@ -390,6 +390,7 @@ handlingProfile: 'F1_DOWNFORCE',
     cardAssetVersion: 4,
     skin: 'skin_avenir_gripline.webp',
     visualScale: 1.02,
+    engineAudioProfile: 'AVENIR_GRIPLINE',
 
     // Stats diseño (01–99): VEL/ACC/GIR/EST/FRN
     designStats: { VEL: 57, ACC: 55, GIR: 82, EST: 64, FRN: 71 },

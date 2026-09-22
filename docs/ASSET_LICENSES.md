@@ -2,6 +2,19 @@
 
 Registro de procedencia, autoría y licencia de assets externos usados por Top Down RACE / TopdownCraftrace.
 
+## domasx2 / OpenGameArt — banco RPM de Spark y Gripline
+
+Los seis loops de motor usados por HÉLIX Spark y AVENIR Gripline proceden de **Racing Car Engine Sound Loops**, publicado por `domasx2` en OpenGameArt bajo licencia **CC0 1.0 Universal**.
+
+- Fuente: https://opengameart.org/content/racing-car-engine-sound-loops
+- Autor: `domasx2`
+- Licencia: https://creativecommons.org/publicdomain/zero/1.0/
+- Rutas locales: `public/assets/audio/engine/spark/loop_0.wav` a `loop_5_0.wav`
+- Perfiles runtime: modelo específico de Spark y `ENGINE_AUDIO_PROFILES.AVENIR_GRIPLINE`
+- Hashes individuales: `public/assets/audio/engine/spark/README.md`
+
+Ambos coches comparten los WAV auditados, pero usan curvas de RPM, tono y mezcla diferentes. No existe descarga remota durante el juego.
+
 ## buntine/CarEngines — motor del perfil JEEP
 
 La muestra aprobada para el perfil de audio `JEEP`, asignado al HÉLIX Vortex, procede del repositorio público `buntine/CarEngines`, publicado bajo licencia **CC0 1.0**.

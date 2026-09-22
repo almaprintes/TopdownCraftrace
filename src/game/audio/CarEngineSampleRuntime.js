@@ -7,6 +7,11 @@ import {
   targetSparkRpm
 } from './SparkEngineModel.js';
 import { ENGINE_AUDIO_PROFILES } from './EngineAudioProfiles.js';
+import {
+  advanceProfiledRpm,
+  profiledSampleMix,
+  targetProfiledRpm
+} from './ProfiledRpmEngineModel.js';
 
 const SETTINGS_KEY = 'tdr2:settings';
 const UPDATE_MS = 40;
@@ -127,7 +132,7 @@ export class CarEngineSampleRuntime {
 
     // Fetch and decode before the ignition gesture whenever the platform permits
     // it. The context remains silent/suspended until ARRANCAR MOTOR resumes it.
-    if (this._mode() === 'spark-samples') this._prepareSparkBank();
+    if (this._usesRpmBank()) this._prepareSparkBank();
   }
 
   _carId() {
@@ -147,8 +152,15 @@ export class CarEngineSampleRuntime {
   _mode() {
     const id = this._carId();
     if (id === 'helix_spark') return 'spark-samples';
-    if (this._sampleProfile()) return 'profile-sample';
+    const profile = this._sampleProfile();
+    if (profile?.kind === 'rpm-bank') return 'rpm-bank';
+    if (profile) return 'profile-sample';
     return 'procedural';
+  }
+
+  _usesRpmBank() {
+    const mode = this._mode();
+    return mode === 'spark-samples' || mode === 'rpm-bank';
   }
 
   _sampleProfile() {
@@ -185,21 +197,21 @@ export class CarEngineSampleRuntime {
       const context = this._ensureContext();
       if (this._sparkBufferPromise && this._sparkBufferContext === context) return this._sparkBufferPromise;
       this._sparkBufferContext = context;
-      console.info('[TDR2 engine] Spark preloading six local RPM samples');
+      console.info('[TDR2 engine] Preloading six local RPM samples', this._carId());
       const pending = preloadSparkBytes()
         .then(allBytes => Promise.all(allBytes.map(bytes => decodeAudioData(context, bytes))))
         .then(buffers => {
-          console.info('[TDR2 engine] Spark local RPM samples decoded', buffers.map(buffer => buffer.duration.toFixed(3)));
+          console.info('[TDR2 engine] Local RPM samples decoded', this._carId(), buffers.map(buffer => buffer.duration.toFixed(3)));
           return buffers;
         });
       this._sparkBufferPromise = pending;
       pending.catch(error => {
         if (this._sparkBufferPromise === pending) this._sparkBufferPromise = null;
-        console.warn('[TDR2 engine] Spark sample bank failed; procedural fallback is disabled', error);
+        console.warn('[TDR2 engine] RPM sample bank failed; procedural fallback is disabled', error);
       });
       return pending;
     } catch (error) {
-      console.warn('[TDR2 engine] Spark preload unavailable', error);
+      console.warn('[TDR2 engine] RPM bank preload unavailable', error);
       return null;
     }
   }
@@ -248,7 +260,7 @@ export class CarEngineSampleRuntime {
     let sampleSources = [];
     let sampleGains = [];
 
-    if (mode === 'spark-samples') {
+    if (mode === 'spark-samples' || mode === 'rpm-bank') {
       const buffers = await (this._sparkBufferPromise || this._prepareSparkBank());
       if (!buffers?.length || this._ctx !== context) throw new Error('Spark sample bank unavailable');
       const startAt = context.currentTime + 0.025;
@@ -263,7 +275,7 @@ export class CarEngineSampleRuntime {
         sampleSources.push(source);
         sampleGains.push(gain);
       }
-      console.info('[TDR2 engine] Spark sample graph started on one WebAudio clock');
+      console.info('[TDR2 engine] RPM sample graph started on one WebAudio clock', this._carId());
     } else if (mode === 'profile-sample') {
       const buffer = await loadBuffer(context, publicAssetUrl(audioProfile.sourceUrl));
       if (this._ctx !== context) return;
@@ -363,7 +375,7 @@ export class CarEngineSampleRuntime {
       if (context.state === 'suspended') {
         context.resume().catch(error => console.warn('[TDR2 engine] ignition resume failed', error));
       }
-      this._rpm = SPARK_IDLE_RPM;
+      this._rpm = this._sampleProfile()?.idleRpm || SPARK_IDLE_RPM;
       this._lastUpdate = performance.now();
       this._playStarter();
       if (!this._nodes && !this._graphPromise) {
@@ -426,22 +438,33 @@ export class CarEngineSampleRuntime {
     const audio = preferences();
     const nodes = this._nodes;
     const now = this._ctx.currentTime;
+    const rpmProfile = nodes.mode === 'rpm-bank' ? nodes.audioProfile : null;
     const target = nodes.mode === 'spark-samples'
       ? targetSparkRpm(kmh, throttle, this._sparkTopKmh)
-      : this._legacyTargetRpm(kmh, throttle);
+      : nodes.mode === 'rpm-bank'
+        ? targetProfiledRpm(rpmProfile, kmh, throttle, this._sparkTopKmh)
+        : this._legacyTargetRpm(kmh, throttle);
     this._rpm = nodes.mode === 'spark-samples'
       ? advanceSparkRpm(this._rpm, target, throttle, elapsedSeconds)
-      : this._advanceLegacyRpm(target, throttle, elapsedSeconds);
+      : nodes.mode === 'rpm-bank'
+        ? advanceProfiledRpm(rpmProfile, this._rpm, target, throttle, elapsedSeconds)
+        : this._advanceLegacyRpm(target, throttle, elapsedSeconds);
 
-    const rpm01 = clamp((this._rpm - SPARK_IDLE_RPM) / (SPARK_REDLINE_RPM - SPARK_IDLE_RPM), 0, 1);
+    const idleRpm = Number(rpmProfile?.idleRpm) || SPARK_IDLE_RPM;
+    const redlineRpm = Number(rpmProfile?.redlineRpm) || SPARK_REDLINE_RPM;
+    const rpm01 = clamp((this._rpm - idleRpm) / (redlineRpm - idleRpm), 0, 1);
     const speed01 = clamp(kmh / 180, 0, 1);
     const coast = clamp((1 - throttle) * rpm01 * (kmh > 8 ? 1 : 0), 0, 1);
     const load = clamp(throttle * 0.94 + speed01 * 0.06, 0, 1);
 
-    if (nodes.mode === 'spark-samples') {
-      const mix = sparkSampleMix(this._rpm);
+    if (nodes.mode === 'spark-samples' || nodes.mode === 'rpm-bank') {
+      const mix = nodes.mode === 'rpm-bank'
+        ? profiledSampleMix(rpmProfile, this._rpm)
+        : sparkSampleMix(this._rpm);
       nodes.sampleGains.forEach((gain, index) => {
-        const targetLevel = (mix.levels[index] || 0) * (0.72 + load * 0.18);
+        const sampleGainBase = Number(rpmProfile?.sampleGainBase) || 0.72;
+        const sampleLoadGain = Number(rpmProfile?.sampleLoadGain) || 0.18;
+        const targetLevel = (mix.levels[index] || 0) * (sampleGainBase + load * sampleLoadGain);
         gain.gain.cancelScheduledValues(now);
         gain.gain.setTargetAtTime(targetLevel, now, 0.035);
         const rate = nodes.sampleSources[index]?.playbackRate;
@@ -471,10 +494,10 @@ export class CarEngineSampleRuntime {
       nodes.combustion?.parameters.get('level')?.setTargetAtTime(0.64 + rpm01 * 0.09, now, 0.070);
     }
 
-    nodes.cabin.frequency.setTargetAtTime(420 + rpm01 * 420, now, 0.12);
-    nodes.cabin.gain.setTargetAtTime(1.8 - rpm01 * 0.5 + load * 0.3, now, 0.12);
-    nodes.lowBody.gain.setTargetAtTime(2.5 - rpm01 * 0.8, now, 0.12);
-    nodes.roof.frequency.setTargetAtTime(4200 + rpm01 * 3200 + load * 500, now, 0.10);
+    nodes.cabin.frequency.setTargetAtTime((Number(rpmProfile?.cabinFrequencyBase) || 420) + rpm01 * (Number(rpmProfile?.cabinFrequencyRange) || 420), now, 0.12);
+    nodes.cabin.gain.setTargetAtTime((Number(rpmProfile?.cabinGainBase) || 1.8) - rpm01 * (Number(rpmProfile?.cabinGainRpmReduction) || 0.5) + load * (Number(rpmProfile?.cabinLoadGain) || 0.3), now, 0.12);
+    nodes.lowBody.gain.setTargetAtTime((Number(rpmProfile?.lowBodyGainBase) || 2.5) - rpm01 * (Number(rpmProfile?.lowBodyRpmReduction) || 0.8), now, 0.12);
+    nodes.roof.frequency.setTargetAtTime((Number(rpmProfile?.roofFrequencyBase) || 4200) + rpm01 * (Number(rpmProfile?.roofFrequencyRange) || 3200) + load * (Number(rpmProfile?.roofLoadRange) || 500), now, 0.10);
     nodes.windFilter.frequency.setTargetAtTime(1120 + speed01 * 2450, now, 0.14);
     nodes.windGain.gain.setTargetAtTime(Math.pow(speed01, 1.8) * 0.010 * audio.effects, now, 0.12);
     const preGrid = this.scene._startState === 'WAIT_ENGINE' || this.scene._startState === 'READY';

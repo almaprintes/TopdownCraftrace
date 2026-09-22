@@ -1,6 +1,6 @@
-# HÉLIX Spark engine sample bank
+# HÉLIX Spark / AVENIR Gripline engine sample bank
 
-Six real engine loops used as RPM layers by `CarEngineSampleRuntime.js`.
+Six real engine loops used as RPM layers by `CarEngineSampleRuntime.js`. Spark and Gripline share the audited source files but use separate RPM, pitch and filter profiles.
 
 - Source: [OpenGameArt — Racing Car Engine Sound Loops](https://opengameart.org/content/racing-car-engine-sound-loops)
 - Author: `domasx2`

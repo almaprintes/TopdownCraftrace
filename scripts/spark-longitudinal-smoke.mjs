@@ -16,7 +16,7 @@ const spark = {
   maxFwd: publishedSpark.maxFwd * 1.40
 };
 assert.equal(LONGITUDINAL_PROFILES.TOURING.longitudinalResponse, 0.30, 'the approved touring response must remain reusable');
-assert.equal(spark.longitudinalResponse, 0.60, 'Spark must use the race starter response');
+assert.equal(spark.longitudinalResponse, 0.72, 'Spark must use the race starter response');
 for (const [carId, spec] of Object.entries(CAR_SPECS)) {
   if (carId !== 'helix_spark') {
     assert.equal(spec.longitudinalResponse, undefined, `${carId} must retain its established longitudinal response`);
@@ -68,16 +68,16 @@ function coastSeconds(startKmh, targetKmh) {
 }
 
 const marks = accelerationMarks();
-assert.ok(marks.get(15) >= 0.25 && marks.get(15) <= 0.45, `0–15 km/h must feel immediate but progressive (${marks.get(15)} s)`);
-assert.ok(marks.get(45) >= 1.0 && marks.get(45) <= 1.5, `0–45 km/h must feel like a race car (${marks.get(45)} s)`);
-assert.ok(marks.get(55) >= 1.5 && marks.get(55) <= 2.2, `the approach through 55 km/h must remain progressive (${marks.get(55)} s)`);
-assert.ok(marks.get(80) >= 4 && marks.get(80) <= 5, `the approach through 80 km/h must take time (${marks.get(80)} s)`);
-assert.ok(marks.get(84) >= 7 && marks.get(84) <= 8.3, `0–84 km/h must remain progressive (${marks.get(84)} s)`);
+assert.ok(marks.get(15) >= 0.20 && marks.get(15) <= 0.35, `0–15 km/h must feel immediate but progressive (${marks.get(15)} s)`);
+assert.ok(marks.get(45) >= 0.85 && marks.get(45) <= 1.2, `0–45 km/h must feel like a race car (${marks.get(45)} s)`);
+assert.ok(marks.get(55) >= 1.2 && marks.get(55) <= 1.7, `the approach through 55 km/h must remain progressive (${marks.get(55)} s)`);
+assert.ok(marks.get(80) >= 3.3 && marks.get(80) <= 4.1, `the approach through 80 km/h must take time (${marks.get(80)} s)`);
+assert.ok(marks.get(84) >= 5.8 && marks.get(84) <= 7.0, `0–84 km/h must remain progressive (${marks.get(84)} s)`);
 
 const highCoast = coastSeconds(45, 15);
 const lowCoast = coastSeconds(15, 0.5);
-assert.ok(highCoast >= 2.1 && highCoast <= 2.8, `45–15 coast must be controlled (${highCoast} s)`);
-assert.ok(lowCoast >= 2.5 && lowCoast <= 3.2, `15–0 coast must not collapse abruptly (${lowCoast} s)`);
+assert.ok(highCoast >= 1.8 && highCoast <= 2.4, `45–15 coast must be controlled (${highCoast} s)`);
+assert.ok(lowCoast >= 2.3 && lowCoast <= 2.9, `15–0 coast must not collapse abruptly (${lowCoast} s)`);
 assert.ok(Math.abs(highCoast - lowCoast) < 0.8, 'coast timing must remain continuous around 15 km/h');
 
 const top = attainableTopSpeedKmh(spark, 40);
