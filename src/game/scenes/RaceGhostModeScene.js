@@ -62,7 +62,9 @@ export class RaceScene extends CurrentRaceScene{
     this._ghostTrackKey=data?.trackKey||this.trackKey||(()=>{try{return localStorage.getItem('tdr2:trackKey')||'track01';}catch{return 'track01';}})();
     this._ghostCarId=data?.carId||this.carId||(()=>{try{return localStorage.getItem('tdr2:carId')||'car';}catch{return 'car';}})();
     this._ghostStorageKey=keyFor(this._ghostTrackKey,this._ghostCarId);
-    this._ghostData=readGhost(this._ghostStorageKey);
+    const onlineChallenge=(()=>{try{const v=window.__tdrOnlineGhostChallenge;return data?.onlineGhostRef&&String(v?.ref||'')===String(data.onlineGhostRef)&&String(v?.trackId||'')===String(this._ghostTrackKey||'')?v:null;}catch{return null;}})();
+    this._ghostData=onlineChallenge?.ghost||readGhost(this._ghostStorageKey);
+    this._onlineGhostChallenge=onlineChallenge;
     this._ghostSamples=[];
     this._ghostLapStartPerf=null;
     this._ghostLastSamplePerf=0;
@@ -107,7 +109,8 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _runtimeGhostTextureKey(){
-    const runtimeKey=`car_${this._ghostCarId}`;
+    const ghostCarId=String(this._onlineGhostChallenge?.ghost?.carId||this._ghostCarId||'');
+    const runtimeKey=`car_${ghostCarId}`;
     if(this.textures?.exists?.(runtimeKey))return runtimeKey;
     const visual=visualCarSprite(this);
     const current=visual?.texture?.key;
