@@ -6,6 +6,10 @@ import { t } from '../i18n/index.js';
 
 const SESSION_KEY='tdr2:statsNativeReplay';
 const RETURN_TRACK_KEY='tdr2:statsReturnTrack';
+// Session-memory cache: one Supabase ghost download can feed replay and VS Ghost.
+const ONLINE_GHOST_CACHE=new Map();
+const cacheOnlineGhost=(ref,data,ghost)=>{const key=String(ref||'');if(key&&ghost?.samples?.length)ONLINE_GHOST_CACHE.set(key,{data,ghost});return ghost;};
+const cachedOnlineGhost=ref=>ONLINE_GHOST_CACHE.get(String(ref||''))||null;
 const esc=v=>String(v??'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
 const fmt=ms=>{ms=Math.max(0,Number(ms)||0);const m=Math.floor(ms/60000),s=(ms%60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;};
 const readLocalGhost=key=>{try{const g=JSON.parse(localStorage.getItem(key)||'null');return g&&Array.isArray(g.samples)&&g.samples.length>4?g:null;}catch{return null;}};
@@ -72,9 +76,22 @@ export class StatsScene extends ReplayStatsScene{
       const ref=vs.dataset.brVs;if(!ref)return;
       const actions=document.createElement('span');actions.className='br-online-actions';
       const watch=document.createElement('button');watch.type='button';watch.className='br-watch';watch.title=t('replay.watch');watch.textContent='▶';
-      watch.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();watch.disabled=true;watch.textContent='…';try{const out=await getRaceControlGhost(ref);const data=Array.isArray(out)?out[0]:out;const ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Replay unavailable');this._showRaceControlReplayModal({trackId:data.track_id,selectedLap:{carId:data.car_id}},ghost,t('replay.onlineReplay'));}catch(err){console.error('[race-control] replay download failed',err);watch.textContent='!';setTimeout(()=>{if(watch.isConnected){watch.disabled=false;watch.textContent='▶';}},1200);}});
+      watch.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();watch.disabled=true;watch.textContent='…';try{let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Replay unavailable');cacheOnlineGhost(ref,data,ghost);}this._showRaceControlReplayModal({trackId:data.track_id,selectedLap:{carId:data.car_id}},ghost,t('replay.onlineReplay'));}catch(err){console.error('[race-control] replay download failed',err);watch.textContent='!';setTimeout(()=>{if(watch.isConnected){watch.disabled=false;watch.textContent='▶';}},1200);}});
+      vs.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();if(vs.dataset.brVsLaunching==='1')return;const unlocked=localStorage.getItem('tdr2:onlineGhostUnlocked:'+ref)==='1';if(!unlocked){const message=t('raceControl.unlockGhostRewarded');if(!window.confirm(message))return;vs.dataset.brVsConfirmed='1';vs.textContent=t('raceControl.rewardRequired');return;}vs.dataset.brVsLaunching='1';const original=vs.textContent;vs.textContent='…';try{let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Ghost unavailable');cacheOnlineGhost(ref,data,ghost);}this._launchOnlineGhostChallenge(ref,data,ghost);}catch(err){console.error('[race-control] VS ghost launch failed',err);vs.dataset.brVsLaunching='0';vs.textContent=original;}});
       vs.replaceWith(actions);actions.append(watch,vs);
     });
+  }
+
+  _launchOnlineGhostChallenge(ref,data,ghost){
+    if(!ghost?.samples?.length)return;
+    const trackId=String(ghost.trackKey||data?.track_id||'track01');
+    const playerCarId=(()=>{try{return localStorage.getItem('tdr2:carId')||this.selectedCarId||'car';}catch{return this.selectedCarId||'car';}})();
+    // Pass the already-decoded object by reference. This remains memory-only and
+    // avoids serialising the online ghost or issuing a second Supabase request.
+    try{window.__tdrOnlineGhostChallenge={ref:String(ref||''),trackId,ghost};}catch{}
+    try{localStorage.setItem('tdr2:gameMode','ghost');localStorage.setItem('tdr2:trackKey',trackId);}catch{}
+    this._closeReplayModal();
+    this.scene.start('race',{trackKey:trackId,carId:playerCarId,gameMode:'ghost',onlineGhostRef:String(ref||'')});
   }
 
   _showRaceControlReplayModal(record,ghost,label='REPLAY'){
