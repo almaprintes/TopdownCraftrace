@@ -45,10 +45,10 @@ export class RaceScene extends GhostRaceScene {
     ident.innerHTML=`<div style="font-size:10px;font-weight:900;letter-spacing:.16em;color:#7feaff">${t('replay.replay')} · ${t('replay.fastLap')}</div><div style="font-size:14px;font-weight:900;margin-top:2px">${this._replayCarName()}</div><div style="font-size:9px;opacity:.72;letter-spacing:.08em">${this._replayTrackName()}</div>`;
 
     const delta=document.createElement('div'); Object.assign(delta.style,{position:'absolute',left:'50%',top:'13px',transform:'translateX(-50%)',padding:'7px 14px',textAlign:'center',minWidth:'92px',opacity:'0',transition:'opacity .18s',...glass});
-    delta.innerHTML='<div style="font-size:8px;letter-spacing:.14em;opacity:.65">${t('replay.delta')}</div><div data-v style="font:900 17px ui-monospace,SFMono-Regular,Menlo,monospace">±0.000</div>';
+    delta.innerHTML=`<div style="font-size:8px;letter-spacing:.14em;opacity:.65">${t('replay.delta')}</div><div data-v style="font:900 17px ui-monospace,SFMono-Regular,Menlo,monospace">±0.000</div>`;
 
     const sectors=document.createElement('div'); Object.assign(sectors.style,{position:'absolute',right:'14px',top:'12px',width:'142px',padding:'7px 9px',...glass});
-    sectors.innerHTML='<div style="font-size:8px;letter-spacing:.16em;color:#7feaff;font-weight:900;margin-bottom:4px">${t('track.sectors')}</div>';
+    sectors.innerHTML=`<div style="font-size:8px;letter-spacing:.16em;color:#7feaff;font-weight:900;margin-bottom:4px">${t('track.sectors')}</div>`;
     this._replaySectors=[];
     for(let i=0;i<3;i++){const r=document.createElement('div');Object.assign(r.style,{display:'grid',gridTemplateColumns:'24px 1fr 45px',gap:'4px',font:'800 9px ui-monospace,SFMono-Regular,Menlo,monospace',padding:'2px 0',opacity:'.45'});r.innerHTML=`<span>S${i+1}</span><span data-t>--.--</span><span data-d>--</span>`;sectors.appendChild(r);this._replaySectors.push(r);}
 
