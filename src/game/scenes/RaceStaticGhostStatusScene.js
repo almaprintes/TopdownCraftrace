@@ -336,7 +336,9 @@ export class RaceScene extends CurrentRaceScene {
     visibilityText.dataset.visibility = '1';
 
     root.append(ghostText, recordText, visibilityText);
-    (this.game?.canvas?.parentElement || document.body).appendChild(root);
+    // A fixed element inside a transformed game parent is not truly viewport-fixed
+    // in CSS. Mount on document.body so camera/canvas transforms can never move it.
+    document.body.appendChild(root);
     this._tdrStaticGhostPanel = root;
     this._tdrGhostPanelLabels = { ghostText, recordText, visibilityText };
     this._tdrGhostPanelRows = rows;
