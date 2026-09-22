@@ -373,10 +373,13 @@ export class RaceScene extends CurrentRaceScene {
     const vh = Math.max(1, Number(this.scale?.height || 1));
     if (!rect || rect.width <= 0 || rect.height <= 0) return;
 
-    root.style.left = `${rect.left + (anchor.left / vw) * rect.width}px`;
-    root.style.top = `${rect.top + (anchor.top / vh) * rect.height}px`;
-    root.style.width = `${(PANEL_W / vw) * rect.width}px`;
-    root.style.height = `${(PANEL_H / vh) * rect.height}px`;
+    // Convert the fixed HUD anchor to canvas CSS pixels. This depends only on
+    // viewport/canvas geometry, never on the race camera zoom/scroll.
+    const sx=rect.width/vw,sy=rect.height/vh;
+    root.style.left = `${rect.left + anchor.left * sx}px`;
+    root.style.top = `${rect.top + anchor.top * sy}px`;
+    root.style.width = `${PANEL_W * sx}px`;
+    root.style.height = `${PANEL_H * sy}px`;
     const scale = rect.width / vw;
     const fontPx = Math.max(9, Math.min(15, 12 * scale));
     for (const label of Object.values(this._tdrGhostPanelLabels || {})) {
@@ -422,8 +425,12 @@ export class RaceScene extends CurrentRaceScene {
     let found = null;
     if (!this._tdrGhostPanelAnchor || performance.now() < Number(this._tdrGhostPanelProbeUntil || 0)) {
       found = this._findGhostPanelObjects();
-      if (found && !this._tdrGhostPanelAnchor) {
-        this._tdrGhostPanelAnchor = { left: found.centerX - PANEL_W * 0.5, top: found.topY };
+      if (found) {
+        // The legacy Phaser panel is camera-sensitive: dynamic race zoom moves its
+        // rectangles while fixed HUD text stays put. Use it only once to discover
+        // which objects belong to the panel, but anchor the DOM panel to viewport
+        // coordinates so zoom can never move the clickable rows.
+        if (!this._tdrGhostPanelAnchor) this._tdrGhostPanelAnchor = { left: found.centerX - PANEL_W * 0.5, top: found.topY };
         for (const obj of found.owned) this._tdrGhostPanelObjects.add(obj);
         this._ensureStaticGhostPanel(found);
         this._layoutStaticGhostPanel();
