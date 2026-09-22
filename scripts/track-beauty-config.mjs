@@ -43,8 +43,10 @@ function baseline(trackKey,title){
 }
 
 export const TRACK_BEAUTY_CONFIGS = Object.freeze({
-  track01: Object.freeze({
+  'circuito-atlantico': Object.freeze({
     title:'Atlantico', approved:true,
+    // The source folder predates the canonical public identity. It is only an
+    // authoring path; runtime and generated catalog keys remain canonical.
     trackPath:'src/game/tracks/library/track01/track.json',
     revision:'atlantico-polyhaven-v10-clean-asphalt',
     materials:ATLANTICO_MATERIALS,
@@ -82,7 +84,8 @@ export const TRACK_BEAUTY_CONFIGS = Object.freeze({
 });
 
 export function getTrackBeautyConfig(trackKey) {
-  const config=TRACK_BEAUTY_CONFIGS[trackKey];
+  const canonicalKey=String(trackKey||'').trim().toLowerCase()==='track01'?'circuito-atlantico':trackKey;
+  const config=TRACK_BEAUTY_CONFIGS[canonicalKey];
   if(!config) throw new Error(`No approved beauty config for ${trackKey}`);
   return config;
 }

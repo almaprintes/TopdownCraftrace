@@ -14,6 +14,19 @@ export const GENERATED_TRACK_BEAUTY_LAYERS = Object.freeze({
       Object.freeze({ key:"beauty-chicane-vale-3", path:"assets/tracks/chicane-vale/beauty/chicane-vale-beauty-3.webp?v=atlantico-polyhaven-baseline-v1", x:3350, y:2250, w:3350, h:2250 }),
     ])
   }),
+  "circuito-atlantico": Object.freeze({
+    useBeautyLayer: true,
+    assetRevision: "atlantico-polyhaven-v10-clean-asphalt",
+    assetsAvailable: true,
+    worldW: 2430, worldH: 2000, depth: 9,
+    replaces: Object.freeze({ asphalt:true, grass:true, offroad:true, kerbs:false, props:false }),
+    tiles: Object.freeze([
+      Object.freeze({ key:"beauty-circuito-atlantico-0", path:"assets/tracks/track01/beauty/track01-beauty-0.webp?v=atlantico-polyhaven-v10-clean-asphalt", x:0, y:0, w:1215, h:1000 }),
+      Object.freeze({ key:"beauty-circuito-atlantico-1", path:"assets/tracks/track01/beauty/track01-beauty-1.webp?v=atlantico-polyhaven-v10-clean-asphalt", x:1215, y:0, w:1215, h:1000 }),
+      Object.freeze({ key:"beauty-circuito-atlantico-2", path:"assets/tracks/track01/beauty/track01-beauty-2.webp?v=atlantico-polyhaven-v10-clean-asphalt", x:0, y:1000, w:1215, h:1000 }),
+      Object.freeze({ key:"beauty-circuito-atlantico-3", path:"assets/tracks/track01/beauty/track01-beauty-3.webp?v=atlantico-polyhaven-v10-clean-asphalt", x:1215, y:1000, w:1215, h:1000 }),
+    ])
+  }),
   "f1-baku": Object.freeze({
     useBeautyLayer: true,
     assetRevision: "atlantico-polyhaven-baseline-v1",
@@ -194,19 +207,6 @@ export const GENERATED_TRACK_BEAUTY_LAYERS = Object.freeze({
       Object.freeze({ key:"beauty-santa-cruz-1", path:"assets/tracks/santa-cruz/beauty/santa-cruz-beauty-1.webp?v=atlantico-polyhaven-baseline-v1", x:950, y:0, w:950, h:1450 }),
       Object.freeze({ key:"beauty-santa-cruz-2", path:"assets/tracks/santa-cruz/beauty/santa-cruz-beauty-2.webp?v=atlantico-polyhaven-baseline-v1", x:0, y:1450, w:950, h:1450 }),
       Object.freeze({ key:"beauty-santa-cruz-3", path:"assets/tracks/santa-cruz/beauty/santa-cruz-beauty-3.webp?v=atlantico-polyhaven-baseline-v1", x:950, y:1450, w:950, h:1450 }),
-    ])
-  }),
-  "track01": Object.freeze({
-    useBeautyLayer: true,
-    assetRevision: "atlantico-polyhaven-v10-clean-asphalt",
-    assetsAvailable: true,
-    worldW: 2430, worldH: 2000, depth: 9,
-    replaces: Object.freeze({ asphalt:true, grass:true, offroad:true, kerbs:false, props:false }),
-    tiles: Object.freeze([
-      Object.freeze({ key:"beauty-track01-0", path:"assets/tracks/track01/beauty/track01-beauty-0.webp?v=atlantico-polyhaven-v10-clean-asphalt", x:0, y:0, w:1215, h:1000 }),
-      Object.freeze({ key:"beauty-track01-1", path:"assets/tracks/track01/beauty/track01-beauty-1.webp?v=atlantico-polyhaven-v10-clean-asphalt", x:1215, y:0, w:1215, h:1000 }),
-      Object.freeze({ key:"beauty-track01-2", path:"assets/tracks/track01/beauty/track01-beauty-2.webp?v=atlantico-polyhaven-v10-clean-asphalt", x:0, y:1000, w:1215, h:1000 }),
-      Object.freeze({ key:"beauty-track01-3", path:"assets/tracks/track01/beauty/track01-beauty-3.webp?v=atlantico-polyhaven-v10-clean-asphalt", x:1215, y:1000, w:1215, h:1000 }),
     ])
   })
 });
