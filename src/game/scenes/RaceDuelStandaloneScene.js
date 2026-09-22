@@ -103,9 +103,14 @@ export class RaceScene extends CurrentRaceScene {
       this._showDuelInitError('No se pudo calcular la trazada de CPU1');return;
     }
 
+    // Start CPU1 beside the player on the same grid row and heading.
+    // Derive the lateral axis from the player's physical heading and never add
+    // a longitudinal offset: Duel should read as a true side-by-side start.
     const rot=Number(player.rotation||0),fx=Math.cos(rot),fy=Math.sin(rot),rx=-fy,ry=fx;
-    const startX=Number(player.x)-fx*46+rx*26;
-    const startY=Number(player.y)-fy*46+ry*26;
+    const playerVisualWidth=Math.min(Number(visual.displayWidth||28),Number(visual.displayHeight||48));
+    const sideGap=Math.max(26,Math.min(trackWidth*.24,playerVisualWidth*1.15));
+    const startX=Number(player.x)+rx*sideGap;
+    const startY=Number(player.y)+ry*sideGap;
     const sprite=this.add.image(startX,startY,visual.texture.key)
       .setOrigin(visual.originX??.5,visual.originY??.5)
       .setScale(Number(visual.scaleX||1),Number(visual.scaleY||1))
@@ -117,6 +122,9 @@ export class RaceScene extends CurrentRaceScene {
     body.setVisible(false);
     body.setCircle(Math.max(7,Math.round(Math.min(Number(sprite.displayWidth||28),Number(sprite.displayHeight||48))*.22)));
     body.setCollideWorldBounds(true);body.setBounce(0);body.setDrag(0,0);body.rotation=rot;body.setVelocity(0,0);
+    // Match the visible orientation immediately on the grid. The normal update
+    // loop keeps applying the same visual offset once the race starts.
+    sprite.rotation=rot+Number(this._carVisualRotOffset||0);
 
     const samples=this._duelProfile.samples;
     let nearest=0,bestD=Infinity;
