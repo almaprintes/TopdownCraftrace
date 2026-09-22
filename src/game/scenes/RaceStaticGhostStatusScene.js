@@ -463,3 +463,5 @@ export class RaceScene extends CurrentRaceScene {
 // DEV 1.1.147 validation trigger: normal and online Ghost DOM rows follow their fixed HUD labels through dynamic zoom.
 
 // DEV 1.1.148 validation trigger: Ghost DOM panel is fixed HUD geometry and never follows camera zoom.
+
+// DEV 1.1.149 validation trigger: Ghost HUD panel is mounted on document.body for true fixed positioning.
