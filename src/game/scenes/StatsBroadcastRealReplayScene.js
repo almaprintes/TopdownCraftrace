@@ -95,7 +95,13 @@ export class StatsScene extends ReplayStatsScene{
     // avoids serialising the online ghost or issuing a second Supabase request.
     try{window.__tdrOnlineGhostChallenge={ref:String(ref||''),trackId,ghost};}catch{}
     try{localStorage.setItem('tdr2:gameMode','ghost');localStorage.setItem('tdr2:trackKey',trackId);}catch{}
-    this._closeReplayModal();
+    // Closing the replay modal normally stops the shared lazy "race" scene.
+    // For VS we are about to start that same scene, so clean only replay-owned
+    // UI/state and leave the scene lifecycle to scene.start below.
+    this._stopReplayTelemetry();
+    try{sessionStorage.removeItem(SESSION_KEY);}catch{}
+    try{this._root?.querySelector('[data-br-replay-modal]')?.remove?.();}catch{}
+    this._purgeReplayResidue();
     this.scene.start('race',{trackKey:trackId,carId:playerCarId,gameMode:'ghost',onlineGhostRef:String(ref||'')});
   }
 
