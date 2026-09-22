@@ -62,7 +62,16 @@ export class RaceScene extends CurrentRaceScene{
     this._ghostTrackKey=data?.trackKey||this.trackKey||(()=>{try{return localStorage.getItem('tdr2:trackKey')||'track01';}catch{return 'track01';}})();
     this._ghostCarId=data?.carId||this.carId||(()=>{try{return localStorage.getItem('tdr2:carId')||'car';}catch{return 'car';}})();
     this._ghostStorageKey=keyFor(this._ghostTrackKey,this._ghostCarId);
-    const onlineChallenge=(()=>{try{const v=window.__tdrOnlineGhostChallenge;return data?.onlineGhostRef&&String(v?.ref||'')===String(data.onlineGhostRef)&&String(v?.trackId||'')===String(this._ghostTrackKey||'')?v:null;}catch{return null;}})();
+    const onlineChallenge=(()=>{try{
+      const v=window.__tdrOnlineGhostChallenge;
+      if(this._tdrGameMode!=='ghost'||!v?.ghost?.samples?.length)return null;
+      // Some late race wrappers do not preserve arbitrary launch-data fields.
+      // The session-memory challenge itself is authoritative for this one launch:
+      // accept it when its circuit matches the race that actually opened.
+      const sameTrack=String(v.trackId||v.ghost?.trackKey||'')===String(this._ghostTrackKey||'');
+      const sameRef=!data?.onlineGhostRef||String(v.ref||'')===String(data.onlineGhostRef);
+      return sameTrack&&sameRef?v:null;
+    }catch{return null;}})();
     this._ghostData=onlineChallenge?.ghost||readGhost(this._ghostStorageKey);
     this._onlineGhostChallenge=onlineChallenge;
     this._ghostSamples=[];
@@ -91,6 +100,11 @@ export class RaceScene extends CurrentRaceScene{
 
     this._onGhostResize=()=>this._positionGhostControls();
     this.scale.on('resize',this._onGhostResize);
+    // Race HUD/control layers finish settling after create() on mobile. Re-apply
+    // the Ghost HUD geometry after those passes so boxes and labels stay aligned.
+    this.time.delayedCall(0,()=>this._positionGhostControls());
+    this.time.delayedCall(220,()=>this._positionGhostControls());
+    this.time.delayedCall(700,()=>this._positionGhostControls());
 
     this.events.once('shutdown',()=>{
       try{this._replayRecorder?.state!=='inactive'&&this._replayRecorder?.stop?.();}catch{}
