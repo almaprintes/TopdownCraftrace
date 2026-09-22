@@ -253,3 +253,5 @@ export class StatsScene extends ReplayStatsScene{
 // DEV 1.1.137 validation trigger: Race Control VS invokes rewarded provider before ghost unlock.
 
 // DEV 1.1.139 validation trigger: replay telemetry waits for the real RaceScene and replay opening owns scene teardown.
+
+// DEV 1.1.140 validation trigger: VS cleans replay UI without stopping the race scene before online Ghost handoff.
