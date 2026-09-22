@@ -135,6 +135,8 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     return result;
   }
 
+  _tdrStopEngineAudio(){try{this._tdrEngineSample?.destroy?.();}catch{}this._tdrEngineSample=null;}
+
   _tdrInstallIgnitionStart(blockedAutoStart){
     this._raceStarted=false;this._startAutoFired=true;this._startState='WAIT_ENGINE';
     if(this._startHint)this._startHint.setText('Arranca el motor para preparar la salida');
@@ -277,7 +279,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
 
     if(!androidNormal)this._tdrHideResidualPhaserSteering();
     if(this._tdrEmbeddedReplay)this._tdrHideEmbeddedLoadingPhaserResidue();
-    try{this._tdrEngineSample?.update?.();}catch{}
+    if(this._raceFinished||this.raceFinished||this.finished||this._finished||this._showingResults||this._resultsShown){this._tdrStopEngineAudio();}else{try{this._tdrEngineSample?.update?.();}catch{}}
   }
 
   _syncEmbeddedSourceCamera(){
