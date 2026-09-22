@@ -145,3 +145,5 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
   if(!hasChest)requestAnimationFrame(()=>revealDouble());
   return root;
 }
+
+// DEV 1.1.134 validation trigger: granted x2 changes the footer action from decline to continue.
