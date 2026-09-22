@@ -144,10 +144,10 @@ export class SettingsScene extends Phaser.Scene{
     }
     if(tab==='legal'){
       body.innerHTML=`<div class="s2grid">
-        <section class="s2card wide"><div class="s2label">PRIVACIDAD DE ANUNCIOS</div><div class="s2desc">Punto de acceso previsto para gestionar el consentimiento de anuncios en Android mediante Google UMP. En la próxima compilación Android este acceso sustituirá al botón flotante que actualmente se superpone al juego.</div><div class="s2row"><button class="s2cta" disabled>GESTIONAR PRIVACIDAD</button><span class="s2note">Pendiente de conexión con Android</span></div></section>
-        <section class="s2card"><div class="s2label">POLÍTICA DE PRIVACIDAD</div><div class="s2desc">Documento público asociado a Top Down RACE y enlazado desde Google Play.</div></section>
-        <section class="s2card"><div class="s2label">SOPORTE</div><div class="s2desc">Información y asistencia oficial del juego.</div></section>
-        <section class="s2card wide"><div class="s2label">INFORMACIÓN LEGAL</div><div class="s2desc">Top Down RACE · CraftRace Studio. Esta sección será el punto único para privacidad, consentimiento y avisos legales de las compilaciones móviles.</div></section>
+        <section class="s2card wide" data-legal-kind="ads"><div class="s2label">${t('settings.adPrivacy')}</div><div class="s2desc">${t('settings.adPrivacyDesc')}</div><div class="s2row"><button class="s2cta" disabled>${t('settings.managePrivacy')}</button><span class="s2note">${t('settings.androidPending')}</span></div></section>
+        <section class="s2card" data-legal-kind="privacy"><div class="s2label">${t('settings.privacyPolicy')}</div><div class="s2desc">${t('settings.privacyPolicyDesc')}</div></section>
+        <section class="s2card" data-legal-kind="support"><div class="s2label">${t('settings.support')}</div><div class="s2desc">${t('settings.supportDesc')}</div></section>
+        <section class="s2card wide" data-legal-kind="legal"><div class="s2label">${t('settings.legalInfo')}</div><div class="s2desc">${t('settings.legalInfoDesc')}</div></section>
       </div>`;
     }
   }
