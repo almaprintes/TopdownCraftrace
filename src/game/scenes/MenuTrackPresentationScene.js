@@ -88,3 +88,5 @@ export class MenuScene extends CurrentMenuScene{
 
   _formatMissionTime(ms){const t=Math.max(0,Number(ms)||0),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000),cs=Math.floor((t%1000)/10);return`${m}:${String(s).padStart(2,'0')}.${String(cs).padStart(2,'0')}`;}
 }
+
+// DEV 1.1.125 validation trigger: menu presentation and Race Control player copy use keyed i18n.
