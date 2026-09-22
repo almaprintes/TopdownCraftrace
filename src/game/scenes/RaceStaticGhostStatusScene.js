@@ -95,11 +95,15 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrCurrentGhostCarId = this._ghostCarId || this.carId || data?.carId || 'car';
     this._tdrPbGhostStorageKey = pbGhostKey(this._ghostTrackKey || this.trackKey);
     this._ghostStorageKey = this._tdrPbGhostStorageKey;
-    this._ghostData = readPbGhost(this._tdrPbGhostStorageKey);
+    // RaceGhostModeScene may already have injected an online leaderboard rival.
+    // Never replace that live rival with the circuit PB in this later presentation layer.
+    const onlineGhost = this._onlineGhostChallenge && this._ghostData?.samples?.length ? this._ghostData : null;
+    this._ghostData = onlineGhost || readPbGhost(this._tdrPbGhostStorageKey);
     this._tdrGhostKnownBestMs = Number.isFinite(Number(this.ttBest?.lapMs)) ? Number(this.ttBest.lapMs) : null;
 
-    // Only expose a replay as PERSONAL BEST when its stored official lap equals ttBest.
-    if (this._ghostData && !this._isGhostCurrentPersonalBest()) this._ghostData = null;
+    // PB validation applies only to local ghosts. Online rivals are intentionally
+    // independent from ttBest and remain read-only for this race.
+    if (!onlineGhost && this._ghostData && !this._isGhostCurrentPersonalBest()) this._ghostData = null;
 
     const ghostCarId = this._ghostData?.carId;
     if (ghostCarId && CAR_SPECS?.[ghostCarId]) {
@@ -154,6 +158,7 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _completedLapCheck(now) {
+    if (this._onlineGhostChallenge) return super._completedLapCheck?.(now);
     if (this._replayActive) return;
     const hist = Array.isArray(this.ttHistory) ? this.ttHistory : [];
     if (hist.length <= this._ghostHistoryLen) return;
@@ -343,7 +348,7 @@ export class RaceScene extends CurrentRaceScene {
       }
     });
     this._wireGhostPanelRow(rows[1], () => {
-      if (!this._isGhostCurrentPersonalBest() || this._replayActive || typeof this._enterReplay !== 'function') return;
+      if ((!this._onlineGhostChallenge && !this._isGhostCurrentPersonalBest()) || this._replayActive || typeof this._enterReplay !== 'function') return;
       this._enterReplay();
     });
     this._wireGhostPanelRow(rows[2], () => {
@@ -384,18 +389,21 @@ export class RaceScene extends CurrentRaceScene {
     if (!labels) return;
     const level = GHOST_VISIBILITY_LEVELS[Number(this._tdrGhostVisibilityIndex || 0)] ?? 1;
     const hasPbReplay = this._isGhostCurrentPersonalBest();
+    const onlineReplay = !!this._onlineGhostChallenge && !!this._ghostData?.samples?.length;
+    const hasReplay = onlineReplay || hasPbReplay;
     const bestMs = Number(this.ttBest?.lapMs);
 
     if (labels.ghostText) labels.ghostText.textContent = `👻 FANTASMA · ${this._tdrGhostVisibleEnabled ? 'ON' : 'OFF'}`;
     if (labels.recordText) {
-      if (hasPbReplay) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · ▶`;
+      if (onlineReplay) labels.recordText.textContent = `🌐 ONLINE ${fmtPb(this._ghostData?.lapMs)} · ▶`;
+      else if (hasPbReplay) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · ▶`;
       else if (Number.isFinite(bestMs)) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · SIN REPLAY`;
       else labels.recordText.textContent = 'RÉCORD NO DISPONIBLE';
     }
     if (labels.visibilityText) labels.visibilityText.textContent = `◐ VISIBILIDAD · ${Math.round(level * 100)}%`;
     if (this._tdrGhostPanelRows?.[1]) {
-      this._tdrGhostPanelRows[1].style.opacity = hasPbReplay ? '1' : '.58';
-      this._tdrGhostPanelRows[1].style.cursor = hasPbReplay ? 'pointer' : 'default';
+      this._tdrGhostPanelRows[1].style.opacity = hasReplay ? '1' : '.58';
+      this._tdrGhostPanelRows[1].style.cursor = hasReplay ? 'pointer' : 'default';
     }
   }
 
