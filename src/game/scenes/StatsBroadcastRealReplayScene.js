@@ -3,6 +3,7 @@ import { getRaceControlGhost } from '../online/raceControlOnline.js';
 import { decodeOnlineGhostNativeBinary, decodeOnlineGhostNative } from '../online/onlineGhostCodec.js';
 import { pxpsToKmh } from '../cars/speedUnits.js';
 import { t } from '../i18n/index.js';
+import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 
 const SESSION_KEY='tdr2:statsNativeReplay';
 const RETURN_TRACK_KEY='tdr2:statsReturnTrack';
@@ -72,13 +73,17 @@ export class StatsScene extends ReplayStatsScene{
       }
     }
     this._root?.querySelectorAll('.br-online-row').forEach(row=>{
-      const vs=row.querySelector('[data-br-vs]');if(!vs)return;
-      const ref=vs.dataset.brVs;if(!ref)return;
+      const originalVs=row.querySelector('[data-br-vs]');if(!originalVs)return;
+      const ref=originalVs.dataset.brVs;if(!ref)return;
+      // StatsBroadcastScene installs a placeholder confirm-only VS handler.
+      // Clone the button here so the real replay layer owns the complete
+      // rewarded-ad -> unlock -> download -> Ghost mode flow without double handlers.
+      const vs=originalVs.cloneNode(true);
       const actions=document.createElement('span');actions.className='br-online-actions';
       const watch=document.createElement('button');watch.type='button';watch.className='br-watch';watch.title=t('replay.watch');watch.textContent='▶';
       watch.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();watch.disabled=true;watch.textContent='…';try{let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Replay unavailable');cacheOnlineGhost(ref,data,ghost);}this._showRaceControlReplayModal({trackId:data.track_id,selectedLap:{carId:data.car_id}},ghost,t('replay.onlineReplay'));}catch(err){console.error('[race-control] replay download failed',err);watch.textContent='!';setTimeout(()=>{if(watch.isConnected){watch.disabled=false;watch.textContent='▶';}},1200);}});
-      vs.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();if(vs.dataset.brVsLaunching==='1')return;const unlocked=localStorage.getItem('tdr2:onlineGhostUnlocked:'+ref)==='1';if(!unlocked){const message=t('raceControl.unlockGhostRewarded');if(!window.confirm(message))return;vs.dataset.brVsConfirmed='1';vs.textContent=t('raceControl.rewardRequired');return;}vs.dataset.brVsLaunching='1';const original=vs.textContent;vs.textContent='…';try{let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Ghost unavailable');cacheOnlineGhost(ref,data,ghost);}this._launchOnlineGhostChallenge(ref,data,ghost);}catch(err){console.error('[race-control] VS ghost launch failed',err);vs.dataset.brVsLaunching='0';vs.textContent=original;}});
-      vs.replaceWith(actions);actions.append(watch,vs);
+      vs.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();if(vs.dataset.brVsLaunching==='1')return;vs.dataset.brVsLaunching='1';const original=vs.innerHTML;try{let unlocked=localStorage.getItem('tdr2:onlineGhostUnlocked:'+ref)==='1';if(!unlocked){if(!window.confirm(t('raceControl.unlockGhostRewarded')))return;vs.textContent='…';const ad=await showRewardedAd(this,{title:t('raceControl.unlockGhostRewarded'),placement:'race_control_vs_ghost',claimId:'race-control-ghost:'+ref});if(!ad?.completed||!ad?.verified)throw new Error(ad?.reason||'rewarded_ad_not_completed');localStorage.setItem('tdr2:onlineGhostUnlocked:'+ref,'1');unlocked=true;}vs.textContent='…';let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Ghost unavailable');cacheOnlineGhost(ref,data,ghost);}this._launchOnlineGhostChallenge(ref,data,ghost);}catch(err){console.error('[race-control] VS ghost launch failed',err);vs.innerHTML=original;}finally{vs.dataset.brVsLaunching='0';}});
+      originalVs.replaceWith(actions);actions.append(watch,vs);
     });
   }
 
