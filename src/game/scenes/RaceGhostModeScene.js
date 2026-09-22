@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceVideoPreferencesScene.js';
+import { consumeOnlineGhostChallenge } from '../online/onlineGhostSession.js';
 
 const MODE_KEY='tdr2:gameMode';
 const GHOST_PREFIX='tdr2:ghost:';
@@ -62,16 +63,9 @@ export class RaceScene extends CurrentRaceScene{
     this._ghostTrackKey=data?.trackKey||this.trackKey||(()=>{try{return localStorage.getItem('tdr2:trackKey')||'track01';}catch{return 'track01';}})();
     this._ghostCarId=data?.carId||this.carId||(()=>{try{return localStorage.getItem('tdr2:carId')||'car';}catch{return 'car';}})();
     this._ghostStorageKey=keyFor(this._ghostTrackKey,this._ghostCarId);
-    const onlineChallenge=(()=>{try{
-      const v=window.__tdrOnlineGhostChallenge;
-      if(this._tdrGameMode!=='ghost'||!v?.ghost?.samples?.length)return null;
-      // Some late race wrappers do not preserve arbitrary launch-data fields.
-      // The session-memory challenge itself is authoritative for this one launch:
-      // accept it when its circuit matches the race that actually opened.
-      const sameTrack=String(v.trackId||v.ghost?.trackKey||'')===String(this._ghostTrackKey||'');
-      const sameRef=!data?.onlineGhostRef||String(v.ref||'')===String(data.onlineGhostRef);
-      return sameTrack&&sameRef?v:null;
-    }catch{return null;}})();
+    // A VS launch deposits exactly one challenge in shared module memory. Consume it
+    // once here; normal Ghost entries have no pending challenge and keep using PB.
+    const onlineChallenge=this._tdrGameMode==='ghost'?consumeOnlineGhostChallenge():null;
     this._ghostData=onlineChallenge?.ghost||readGhost(this._ghostStorageKey);
     this._onlineGhostChallenge=onlineChallenge;
     this._ghostSamples=[];
@@ -219,7 +213,7 @@ export class RaceScene extends CurrentRaceScene{
     if(this._ghostHud?.scene)return;
     const p=this._ghostControlsLayout();
     const top='👻 FANTASMA';
-    const bottom=this._ghostData?'RÉCORD CARGADO':'CREA TU PRIMERA VUELTA';
+    const bottom=this._onlineGhostChallenge?`ONLINE · ${fmtMs(this._ghostData?.lapMs)}`:(this._ghostData?'RÉCORD CARGADO':'CREA TU PRIMERA VUELTA');
     const border=0x64e8ff,fill=0x07131d;
     this._ghostTopBg=this.add.rectangle(p.x,p.topY+p.row1H/2,p.controlWidth,p.row1H,fill,.92).setStrokeStyle(1,border,.55).setDepth(5004).setScrollFactor(0);
     this._ghostSubBg=this.add.rectangle(p.x,p.secondY+p.row2H/2,p.controlWidth,p.row2H,fill,.92).setStrokeStyle(1,border,.55).setDepth(5004).setScrollFactor(0);
@@ -248,6 +242,13 @@ export class RaceScene extends CurrentRaceScene{
 
   _completedLapCheck(now){
     if(this._replayActive)return;
+    // An online rival is read-only competition. Never compare/save the player's
+    // lap against it as if it were the local PB; that could overwrite a faster PB.
+    if(this._onlineGhostChallenge){
+      const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
+      if(hist.length>this._ghostHistoryLen){this._ghostHistoryLen=hist.length;this._ghostSamples=[];this._ghostLapStartPerf=now;this._ghostLastSamplePerf=0;}
+      return;
+    }
     const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
     if(hist.length<=this._ghostHistoryLen)return;
     const last=hist[hist.length-1]||{};
