@@ -46,7 +46,6 @@ export class MenuScene extends CurrentMenuScene {
         if(child?.type==='Container'){
           const texts=(child.list||[]).filter(o=>o?.type==='Text');
           const title=texts.map(o=>String(o.text||'').toUpperCase()).join(' | ');
-          const title=texts.map(o=>String(o.text||'').toUpperCase()).join(' | ');
           if(title.includes(rewardTitles.video))out.push({kind:'video',card:child,texts});
           else if(title.includes(rewardTitles.daily))out.push({kind:'daily',card:child,texts});
           collectCards(child,out);
