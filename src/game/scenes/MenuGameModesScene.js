@@ -140,3 +140,5 @@ export class MenuScene extends CurrentMenuScene{
     veil.on('pointerup',()=>this._closeGameModeModal());
   }
 }
+
+// DEV 1.1.118 validation trigger: game mode selector copy uses i18n keys.
