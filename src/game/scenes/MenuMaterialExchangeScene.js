@@ -138,3 +138,5 @@ export class MenuScene extends CurrentMenuScene {
     }
   }
 }
+
+// DEV 1.1.133 validation trigger: purchase confirmation visually isolates the underlying store.
