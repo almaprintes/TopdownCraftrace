@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { defaultControlLayout, saveControlLayout, resetControlLayout, sanitizeLayoutPoint } from '../controls/controlLayout.js';
+import { t } from '../i18n/index.js';
 
 const STORAGE_KEY='tdr2:settings';
 const AUDIO_EVENT='tdr2:audio-settings';
@@ -54,7 +55,7 @@ export class SettingsScene extends Phaser.Scene{
     `;
     document.head.appendChild(style);
     const root=document.createElement('div');root.id='tdr-settings2';this.root=root;
-    root.innerHTML=`<div class="s2top"><button class="s2back">← VOLVER</button><div class="s2title">CONFIGURACIÓN 2.0</div><div class="s2save">Guardado automático ✓</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">CONTROLES</button><button class="s2tab" data-tab="video">VÍDEO</button><button class="s2tab" data-tab="audio">AUDIO</button><button class="s2tab" data-tab="legal">LEGAL</button></div><div class="s2body"></div>`;
+    root.innerHTML=`<div class="s2top"><button class="s2back">${t('settings.back')}</button><div class="s2title">${t('settings.title')}</div><div class="s2save">${t('settings.saved')}</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">${t('settings.controls')}</button><button class="s2tab" data-tab="video">${t('settings.video')}</button><button class="s2tab" data-tab="audio">${t('settings.audio')}</button><button class="s2tab" data-tab="legal">${t('settings.legal')}</button></div><div class="s2body"></div>`;
     document.body.appendChild(root);
     root.querySelector('.s2back').onclick=()=>this.scene.start('menu');
     root.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>this._renderTab(b.dataset.tab));
@@ -74,13 +75,13 @@ export class SettingsScene extends Phaser.Scene{
     const current=c.layouts?.[key];
     this._calLayout=structuredClone(current||defaultControlLayout(c));
     const root=document.createElement('div');root.id='tdr-control-cal';this._calRoot=root;
-    root.innerHTML=`<div class="ccgame"><div class="ccroad"></div><div class="cccar"></div></div><div class="ccprotected ccp1">HUD VUELTA/POSICIÓN</div><div class="ccprotected ccp2">MINIMAPA / FANTASMA</div><div class="ccprotected ccp3">MENSAJES</div><div class="cctop"><button class="ccbtn" data-act="back">← CANCELAR</button><div class="cctitle">PERSONALIZAR CONTROLES</div><div class="ccspacer"></div><button class="ccbtn warn" data-act="reset">RESTABLECER</button><button class="ccbtn" data-act="test">PROBAR</button><button class="ccbtn good" data-act="save">GUARDAR</button></div><div class="ccscale"><button class="ccbtn" data-scale="-">−</button><span>100%</span><button class="ccbtn" data-scale="+">+</button></div><div class="cchelp">Arrastra · toca un control para ajustar tamaño · las zonas rojas están protegidas</div>`;
+    root.innerHTML=`<div class="ccgame"><div class="ccroad"></div><div class="cccar"></div></div><div class="ccprotected ccp1">${t('settings.protectedLapPosition')}</div><div class="ccprotected ccp2">${t('settings.protectedMinimapGhost')}</div><div class="ccprotected ccp3">${t('settings.protectedMessages')}</div><div class="cctop"><button class="ccbtn" data-act="back">${t('settings.cancel')}</button><div class="cctitle">${t('settings.customizeControls')}</div><div class="ccspacer"></div><button class="ccbtn warn" data-act="reset">${t('settings.reset')}</button><button class="ccbtn" data-act="test">${t('settings.test')}</button><button class="ccbtn good" data-act="save">${t('settings.save')}</button></div><div class="ccscale"><button class="ccbtn" data-scale="-">−</button><span>100%</span><button class="ccbtn" data-scale="+">+</button></div><div class="cchelp">${t('settings.calibrationHelp')}</div>`;
     document.body.appendChild(root);
     const controls=[];
     const add=(id,klass,label,html='')=>{const el=document.createElement('div');el.className=`cccontrol edit ${klass}`;el.dataset.id=id;el.innerHTML=`${html}<span class="ccname">${label}</span>`;root.appendChild(el);controls.push(el);return el;};
-    if(c.steeringMode==='buttons'){add('left','ccdir','IZQUIERDA','◀');add('right','ccdir','DERECHA','▶');}
-    else add('steer',c.steeringMode==='wheel'?'ccwheel':'ccstick',c.steeringMode==='wheel'?'VOLANTE':'PALANCA');
-    add('gas','ccpedal','GAS','GAS');add('brake','ccpedal brake','FRENO','FRENO');add('handbrake','cchand','FRENO DE MANO');
+    if(c.steeringMode==='buttons'){add('left','ccdir',t('settings.left'),'◀');add('right','ccdir',t('settings.right'),'▶');}
+    else add('steer',c.steeringMode==='wheel'?'ccwheel':'ccstick',c.steeringMode==='wheel'?t('settings.wheel'):t('settings.stick'));
+    add('gas','ccpedal',t('settings.gas'),t('settings.gas'));add('brake','ccpedal brake',t('settings.brake'),t('settings.brake'));add('handbrake','cchand',t('settings.handbrake'));
     const protectedRects=()=>[...root.querySelectorAll('.ccprotected')].map(e=>e.getBoundingClientRect());
     const intersects=(a,b)=>!(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom);
     const place=(el)=>{const p=sanitizeLayoutPoint(this._calLayout[el.dataset.id]||{});el.style.left=`${p.x*100}%`;el.style.top=`${p.y*100}%`;el.style.scale=String(p.scale);};
