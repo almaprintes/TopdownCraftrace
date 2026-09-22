@@ -61,6 +61,7 @@ jobs:
           grep -Fq "const active=gamepadSelected();" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "Never hide #tdr-race-controls" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "_tdrHideResidualPhaserSteering" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -q "_vortexFeelTelemetry" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "TRIGGER_DEADZONE = 0.025" src/game/scenes/RaceUiStabilityScene.js
           grep -q "originalAccel \* gas" src/game/scenes/RaceUiStabilityScene.js
           grep -q "this.touchUI?.setVisible?.(false)" src/game/scenes/RaceUiStabilityScene.js
