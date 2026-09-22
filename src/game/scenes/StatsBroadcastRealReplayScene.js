@@ -228,3 +228,5 @@ export class StatsScene extends ReplayStatsScene{
 // DEV 1.1.136 validation trigger: leaderboard replay and VS share one session-memory ghost cache.
 
 // DEV 1.1.136 final trigger after workflow verifier correction.
+
+// DEV 1.1.136 deployment trigger after complete verifier bump.
