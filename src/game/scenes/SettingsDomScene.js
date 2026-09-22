@@ -153,4 +153,4 @@ export class SettingsScene extends Phaser.Scene{
   }
 }
 
-// DEV 1.1.127 validation trigger: settings shell and calibration copy use keyed i18n.
+// DEV 1.1.128 validation trigger: settings controls, video, audio and legal cards use keyed i18n.
