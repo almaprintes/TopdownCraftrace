@@ -193,7 +193,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     if(vortexFeel){
       const b=this.carBody,rot=Number(b.rotation||0),vx=Number(b.body.velocity.x||0),vy=Number(b.body.velocity.y||0);
       const fx=Math.cos(rot),fy=Math.sin(rot),rx=-fy,ry=fx;
-      vortexBefore={vx,vy,vF:vx*fx+vy*fy,vL:vx*rx+vy*ry,rot};
+      vortexBefore={vx,vy,vF:vx*fx+vy*fy,vL:vx*rx+vy*ry,rot,throttle:Math.max(0,Math.min(1,Number(this.touch?.throttle||0)))};
     }
 
     try{super.update(time,delta);}finally{if(originalThrottle!==null&&this.touch)this.touch.throttle=originalThrottle;}
@@ -219,9 +219,24 @@ export class RaceScene extends EmbeddedReplayRaceScene{
         const steerLoad=clamp01((steer-.08)/.72);
         const slipLoad=clamp01((slipDeg-1.5)/8.5);
         const loaded=clamp01(.62*steerLoad*speedLoad+.38*slipLoad);
+        // Weight-transfer pass: a throttle lift while corner-loaded shifts authority
+        // toward the nose and helps rotation; feeding power back in sustains the rear
+        // slip progressively instead of switching between grip and drift states.
+        const throttleDrop=Math.max(0,Number(vortexBefore.throttle||0)-throttle);
+        this._vortexLiftLoad=Number(this._vortexLiftLoad||0)*Math.exp(-5.2*dt);
+        if(throttleDrop>.035&&loaded>.16)this._vortexLiftLoad=Math.max(this._vortexLiftLoad,throttleDrop*loaded);
+        const liftLoad=clamp01(Number(this._vortexLiftLoad||0));
+
         const driveSupport=1+.18*throttle*(1-brake);
         const retention=Math.min(.82,(.18+.58*loaded)*driveSupport);
         let targetL=vL+(preL-vL)*retention;
+
+        // Lift-off closes the line through lateral load transfer, not an artificial
+        // rotation impulse. Keep it subtle so the 1.1.141 rear balance survives.
+        if(liftLoad>0&&steer>.08){
+          const liftBite=.12*liftLoad*speedLoad*(1-.45*slipLoad);
+          targetL*=1-liftBite;
+        }
 
         // Vortex turn-in: keep the useful rear movement, but do not let inherited
         // lateral momentum dominate the first phase of a new steering command.
@@ -247,7 +262,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
         const outSpeed=Math.hypot(outX,outY);
         if(outSpeed>cap&&outSpeed>0){const k=cap/outSpeed;outX*=k;outY*=k;}
         b.body.velocity.x=outX;b.body.velocity.y=outY;
-        this._vortexFeelTelemetry={slipDeg,retention,lateral:preservedL,loaded};
+        this._vortexFeelTelemetry={slipDeg,retention,lateral:preservedL,loaded,liftLoad};
       }
     }
 
