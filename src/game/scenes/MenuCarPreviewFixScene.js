@@ -321,3 +321,5 @@ export class MenuScene extends CurrentMenuScene {
 }
 
 // DEV 1.1.117 validation trigger: lobby event and track card copy uses i18n keys.
+
+// DEV 1.1.123 validation trigger: lobby matching is language-independent.
