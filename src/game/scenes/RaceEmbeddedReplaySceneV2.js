@@ -188,7 +188,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     // Keep the established Physics Base 1.0 untouched for every other car. Vortex is
     // deliberately the development mule: preserve some lateral momentum through the
     // base tyre scrub so body heading and travel direction can separate naturally.
-    const vortexFeel=(this.carId==='helix_vortex'||this.carId==='veloce_spark')&&!this._tdrEmbeddedReplay&&this.carBody?.body?.velocity;
+    const vortexFeel=(this.carId==='helix_vortex'||this.carId==='helix_spark')&&!this._tdrEmbeddedReplay&&this.carBody?.body?.velocity;
     let vortexBefore=null;
     if(vortexFeel){
       const b=this.carBody,rot=Number(b.rotation||0),vx=Number(b.body.velocity.x||0),vy=Number(b.body.velocity.y||0);
