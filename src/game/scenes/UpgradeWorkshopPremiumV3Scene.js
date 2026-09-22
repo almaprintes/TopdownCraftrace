@@ -324,3 +324,5 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     });
   }
 }
+
+// DEV 1.1.124 validation trigger: Workshop player copy uses keyed i18n.
