@@ -58,6 +58,11 @@ export class RaceScene extends CurrentRaceScene{
     this._replayRecorder=null;
     this._replayChunks=[];
     this._replayHidden=[];
+    // Consume the online challenge BEFORE the base race create. The base Ghost
+    // layers may read/prepare the local PB during super.create(); waiting until
+    // afterwards lets that PB become the live rival even if our HUD says ONLINE.
+    const pendingOnline=this._tdrGameMode==='ghost'?consumeOnlineGhostChallenge():null;
+    this._tdrPendingOnlineGhost=pendingOnline;
     const result=super.create(data);
 
     this._ghostTrackKey=data?.trackKey||this.trackKey||(()=>{try{return localStorage.getItem('tdr2:trackKey')||'track01';}catch{return 'track01';}})();
@@ -65,7 +70,6 @@ export class RaceScene extends CurrentRaceScene{
     this._ghostStorageKey=keyFor(this._ghostTrackKey,this._ghostCarId);
     // A VS launch deposits exactly one challenge in shared module memory. Consume it
     // once here; normal Ghost entries have no pending challenge and keep using PB.
-    const pendingOnline=this._tdrGameMode==='ghost'?consumeOnlineGhostChallenge():null;
     // Never silently fall back to the local PB for an online challenge. Also
     // require the downloaded payload time to agree with the leaderboard row:
     // the HUD must describe the exact samples that will actually be played.
