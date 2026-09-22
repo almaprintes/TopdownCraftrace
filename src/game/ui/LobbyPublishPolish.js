@@ -1,5 +1,6 @@
 import { t } from '../i18n/index.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import { getCurrentRaceEvent } from '../events/raceEvents.js';
 import { loadPlayerStatsPersisted } from '../stats/playerStats.js';
 import { acknowledgedMasteryLevel, masteryInfoForMeters, masteryRoofVisible, masteryWheelDataUri } from '../stats/carMastery.js';
 import { showMasteryUnlockModal } from './MasteryUnlockModal.js';
@@ -57,8 +58,7 @@ function polishSeasonCard(scene,season){
 }
 function installGarageInductionCue(scene,root,season,car){
   if(!season||!car)return;
-  const mission=String(season.textContent||'').toUpperCase();
-  const active=mission.includes('CONOCE TU MÁQUINA')||mission.includes('KNOW YOUR MACHINE');
+  const active=getCurrentRaceEvent()?.event?.id==='garage-visit';
   root.querySelector('[data-garage-induction-cue]')?.remove();
   car.classList.toggle('tdr-lobby-car--induction-cue',active);
   if(!active)return;
