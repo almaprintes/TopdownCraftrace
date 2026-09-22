@@ -1,72 +1,482 @@
 import { pxpsToKmh } from '../cars/speedUnits.js';
+import {
+  SPARK_IDLE_RPM,
+  SPARK_REDLINE_RPM,
+  advanceSparkRpm,
+  sparkSampleMix,
+  targetSparkRpm
+} from './SparkEngineModel.js';
 
-const SETTINGS_KEY='tdr2:settings';
-const UPDATE_MS=45,IDLE_RPM=950,REDLINE_RPM=7200;
-const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-const SPARK_URLS=[
-'https://raw.githubusercontent.com/yashimosh/border-run/main/public/sfx/engine/loop_0.wav',
-'https://raw.githubusercontent.com/yashimosh/border-run/main/public/sfx/engine/loop_1_0.wav',
-'https://raw.githubusercontent.com/yashimosh/border-run/main/public/sfx/engine/loop_2_0.wav',
-'https://raw.githubusercontent.com/yashimosh/border-run/main/public/sfx/engine/loop_3_0.wav',
-'https://raw.githubusercontent.com/yashimosh/border-run/main/public/sfx/engine/loop_4_0.wav',
-'https://raw.githubusercontent.com/yashimosh/border-run/main/public/sfx/engine/loop_5_0.wav'];
-const VORTEX_URL='https://raw.githubusercontent.com/buntine/CarEngines/master/sounds/engine.wav';
-const SAMPLE_CARS=new Set(['helix_spark']);
+const SETTINGS_KEY = 'tdr2:settings';
+const UPDATE_MS = 40;
+const SPARK_ASSETS = [
+  'assets/audio/engine/spark/loop_0.wav',
+  'assets/audio/engine/spark/loop_1_0.wav',
+  'assets/audio/engine/spark/loop_2_0.wav',
+  'assets/audio/engine/spark/loop_3_0.wav',
+  'assets/audio/engine/spark/loop_4_0.wav',
+  'assets/audio/engine/spark/loop_5_0.wav'
+];
+const VORTEX_URL = 'https://raw.githubusercontent.com/buntine/CarEngines/master/sounds/engine.wav';
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-function prefs(){try{const s=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}'),a=s?.audio||{};return{master:clamp(Number(a.master??1),0,1),engine:clamp(Number(a.engine??1),0,1),effects:clamp(Number(a.effects??.45),0,1),mute:!!a.mute};}catch{return{master:1,engine:1,effects:.45,mute:false};}}
-function makeNoiseBuffer(ctx,seconds=2.2){const length=Math.max(1,Math.floor(ctx.sampleRate*seconds)),b=ctx.createBuffer(1,length,ctx.sampleRate),d=b.getChannelData(0);let slow=0,fast=0;for(let i=0;i<length;i++){const white=Math.random()*2-1;slow=slow*.988+white*.012;fast=fast*.70+white*.30;d[i]=clamp(slow*.40+fast*.44+white*.16,-1,1);}return b;}
-function makeDriveCurve(amount=1.18){const n=1024,curve=new Float32Array(n);for(let i=0;i<n;i++){const x=(i/(n-1))*2-1;curve[i]=Math.tanh(x*amount)/Math.tanh(amount);}return curve;}
-async function loadBuffer(ctx,url){const r=await fetch(url,{mode:'cors',cache:'force-cache'});if(!r.ok)throw new Error(`engine sample HTTP ${r.status}`);return ctx.decodeAudioData(await r.arrayBuffer());}
+let sparkBytesPromise = null;
 
-export class CarEngineSampleRuntime{
- constructor(scene){this.scene=scene;this.engineStarted=false;this.unlocked=false;this._ctx=null;this._nodes=null;this._mediaSamples=[];this._lastUpdate=0;this._rpm=IDLE_RPM;this._graphPromise=null;}
- _carId(){try{return String(this.scene?.carId||this.scene?.car?.id||this.scene?.playerCar?.id||localStorage.getItem('tdr2:carId')||'').trim();}catch{return String(this.scene?.carId||'').trim();}}
- _mode(){const id=this._carId();return id==='helix_spark'?'spark-samples':id==='helix_vortex'?'vortex-sample':'procedural';}
- async _buildGraph(){
-  if(this._nodes||!this._ctx)return;const ctx=this._ctx,mode=this._mode();
-  const master=ctx.createGain();master.gain.value=0;const compressor=ctx.createDynamicsCompressor();compressor.threshold.value=-12;compressor.knee.value=18;compressor.ratio.value=3.1;compressor.attack.value=.003;compressor.release.value=.18;master.connect(compressor).connect(ctx.destination);
-  const engineBus=ctx.createGain();engineBus.gain.value=0,drive=ctx.createWaveShaper();drive.curve=makeDriveCurve(1.08);drive.oversample='2x';const lowBody=ctx.createBiquadFilter();lowBody.type='lowshelf';lowBody.frequency.value=150;lowBody.gain.value=3.2;const cabin=ctx.createBiquadFilter();cabin.type='peaking';cabin.frequency.value=410;cabin.Q.value=.50;cabin.gain.value=2.2;const roof=ctx.createBiquadFilter();roof.type='lowpass';roof.frequency.value=5600;roof.Q.value=.28;engineBus.connect(drive).connect(lowBody).connect(cabin).connect(roof).connect(master);
-  let combustion=null,sampleSources=[],sampleGains=[];
-  if(mode==='spark-samples'){
-   console.info('[TDR2 engine] Spark loading six real RPM samples');
-   const buffers=await Promise.all(SPARK_URLS.map(u=>loadBuffer(ctx,u)));
-   for(const buffer of buffers){const src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=buffer;src.loop=true;gain.gain.value=0;src.connect(gain).connect(engineBus);src.start();sampleSources.push(src);sampleGains.push(gain);}console.info('[TDR2 engine] Spark six RPM samples decoded',buffers.map(b=>b.duration.toFixed(3)));
-  }else if(mode==='vortex-sample'){
-   const buffer=await loadBuffer(ctx,VORTEX_URL),src=ctx.createBufferSource(),gain=ctx.createGain();src.buffer=buffer;src.loop=true;src.playbackRate.value=1.1;gain.gain.value=.8;src.connect(gain).connect(engineBus);src.start();sampleSources=[src];sampleGains=[gain];
-  }else{
-   if(!ctx.audioWorklet||typeof AudioWorkletNode==='undefined')throw new Error('AudioWorklet unavailable');
-   await ctx.audioWorklet.addModule(new URL('./EngineCombustionProcessor.js',import.meta.url));if(!this._ctx||this._ctx!==ctx)return;
-   combustion=new AudioWorkletNode(ctx,'tdr-engine-combustion',{numberOfInputs:0,numberOfOutputs:1,outputChannelCount:[2],parameterData:{rpm:IDLE_RPM,load:0,coast:0,level:.72}});combustion.connect(engineBus);
+function preferences() {
+  try {
+    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    const audio = settings?.audio || {};
+    return {
+      master: clamp(Number(audio.master ?? 1), 0, 1),
+      engine: clamp(Number(audio.engine ?? 1), 0, 1),
+      effects: clamp(Number(audio.effects ?? 0.45), 0, 1),
+      mute: Boolean(audio.mute)
+    };
+  } catch {
+    return { master: 1, engine: 1, effects: 0.45, mute: false };
   }
-  const windNoise=ctx.createBufferSource();windNoise.buffer=makeNoiseBuffer(ctx);windNoise.loop=true;const windFilter=ctx.createBiquadFilter();windFilter.type='highpass';windFilter.frequency.value=1250;windFilter.Q.value=.20;const windGain=ctx.createGain();windGain.gain.value=0;windNoise.connect(windFilter).connect(windGain).connect(master);windNoise.start();
-  this._nodes={mode,master,compressor,engineBus,drive,lowBody,cabin,roof,combustion,sampleSources,sampleGains,windNoise,windFilter,windGain};
- }
- _playStarter(){const ctx=this._ctx;if(!ctx)return;const now=ctx.currentTime;try{const bus=ctx.createGain(),filter=ctx.createBiquadFilter();filter.type='bandpass';filter.frequency.value=420;filter.Q.value=.70;const osc=ctx.createOscillator();osc.type='triangle';const oscGain=ctx.createGain(),noise=ctx.createBufferSource();noise.buffer=makeNoiseBuffer(ctx,.55);const noiseFilter=ctx.createBiquadFilter();noiseFilter.type='highpass';noiseFilter.frequency.value=900;const noiseGain=ctx.createGain();bus.connect(filter).connect(ctx.destination);osc.connect(oscGain).connect(bus);noise.connect(noiseFilter).connect(noiseGain).connect(bus);osc.frequency.setValueAtTime(72,now);osc.frequency.exponentialRampToValueAtTime(118,now+.34);oscGain.gain.setValueAtTime(.0001,now);oscGain.gain.exponentialRampToValueAtTime(.12,now+.025);oscGain.gain.exponentialRampToValueAtTime(.0001,now+.44);noiseGain.gain.setValueAtTime(.0001,now);noiseGain.gain.exponentialRampToValueAtTime(.035,now+.018);noiseGain.gain.exponentialRampToValueAtTime(.0001,now+.31);osc.start(now);noise.start(now);osc.stop(now+.46);noise.stop(now+.48);}catch{}}
- _startSparkMedia(){
-  if(this._mediaSamples.length)return;
-  this._mediaSamples=SPARK_URLS.map((url,i)=>{const a=new Audio();a.src=url;a.loop=true;a.preload='auto';a.playsInline=true;a.volume=i===0?.01:.001;const play=a.play();if(play?.catch)play.catch(e=>console.warn('[TDR2 engine] Spark media play failed',i,e));return a;});
-  console.info('[TDR2 engine] Spark six native media loops started');
- }
- startEngine(){this.engineStarted=true;this.unlocked=true;try{if(!this._ctx){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;this._ctx=new AC({latencyHint:'interactive'});}if(this._ctx.state==='suspended')this._ctx.resume();this._rpm=IDLE_RPM;this._playStarter();if(this._mode()==='spark-samples'){this._startSparkMedia();this.update(true);return;}if(!this._nodes&&!this._graphPromise){this._graphPromise=this._buildGraph().then(()=>{this._graphPromise=null;this.update(true);}).catch(e=>{this._graphPromise=null;console.warn('[TDR2 engine] sample/procedural init failed',e);});}else this.update(true);}catch(e){console.warn('[TDR2 engine] init failed',e);}}
- _buildFallbackSampleGraph(){try{if(this._nodes||!this._ctx)return;const ctx=this._ctx,master=ctx.createGain(),compressor=ctx.createDynamicsCompressor(),engineBus=ctx.createGain(),roof=ctx.createBiquadFilter(),cabin=ctx.createBiquadFilter(),lowBody=ctx.createBiquadFilter(),drive=ctx.createWaveShaper();master.gain.value=0;compressor.threshold.value=-12;compressor.ratio.value=3;master.connect(compressor).connect(ctx.destination);drive.curve=makeDriveCurve(1.08);lowBody.type='lowshelf';lowBody.frequency.value=150;lowBody.gain.value=3;cabin.type='peaking';cabin.frequency.value=410;cabin.Q.value=.5;cabin.gain.value=2;roof.type='lowpass';roof.frequency.value=5600;engineBus.connect(drive).connect(lowBody).connect(cabin).connect(roof).connect(master);const osc=ctx.createOscillator(),osc2=ctx.createOscillator(),g=ctx.createGain(),g2=ctx.createGain();osc.type='sawtooth';osc2.type='triangle';g.gain.value=.07;g2.gain.value=.035;osc.frequency.value=70;osc2.frequency.value=140;osc.connect(g).connect(engineBus);osc2.connect(g2).connect(engineBus);osc.start();osc2.start();const windNoise=ctx.createBufferSource();windNoise.buffer=makeNoiseBuffer(ctx);windNoise.loop=true;const windFilter=ctx.createBiquadFilter();windFilter.type='highpass';windFilter.frequency.value=1250;const windGain=ctx.createGain();windGain.gain.value=0;windNoise.connect(windFilter).connect(windGain).connect(master);windNoise.start();this._nodes={mode:'fallback-sample',master,compressor,engineBus,drive,lowBody,cabin,roof,combustion:null,sampleSources:[osc,osc2],sampleGains:[g,g2],windNoise,windFilter,windGain};this.update(true);}catch(e){console.warn('[TDR2 engine] fallback failed',e);}}
- _targetRpm(kmh,throttle){const speedProgress=clamp(kmh/195,0,1),roadCarry=IDLE_RPM+Math.pow(speedProgress,.82)*3600,freeRev=IDLE_RPM+Math.pow(clamp(throttle,0,1),.72)*(REDLINE_RPM-IDLE_RPM);return clamp(Math.max(roadCarry,freeRev),IDLE_RPM,REDLINE_RPM);}
- update(force=false){
-  if(!this.scene||this.scene._tdrEmbeddedReplay||!this.engineStarted)return;const perfNow=performance.now();if(!force&&perfNow-this._lastUpdate<UPDATE_MS)return;const elapsed=Math.max(UPDATE_MS,perfNow-this._lastUpdate||UPDATE_MS);this._lastUpdate=perfNow;
-  if(this._mode()==='spark-samples'&&this._mediaSamples.length){const bodyObj=this.scene.carBody?.body,speedPx=Math.hypot(Number(bodyObj?.velocity?.x||0),Number(bodyObj?.velocity?.y||0)),kmh=Math.max(0,pxpsToKmh(speedPx)),raceStarted=!!this.scene._raceStarted,throttle=clamp(Number(this.scene.touch?.throttle||0),0,1),p=prefs(),target=raceStarted?this._targetRpm(kmh,throttle):IDLE_RPM,step=(this._rpm<target?2600+throttle*3300:3100)*(elapsed/1000);this._rpm=this._rpm<target?Math.min(target,this._rpm+step):Math.max(target,this._rpm-step);const rpm01=clamp((this._rpm-IDLE_RPM)/(REDLINE_RPM-IDLE_RPM),0,1),road01=clamp(kmh/195,0,1),drive01=raceStarted?Math.max(rpm01,road01):0,pos=drive01*(this._mediaSamples.length-1),base=Math.floor(pos),frac=pos-base,master=p.mute?0:p.master*p.engine*.82;this._mediaSamples.forEach((a,i)=>{let level=0;if(i===base)level=1-frac;if(i===Math.min(base+1,this._mediaSamples.length-1))level=Math.max(level,frac);a.muted=false;a.playbackRate=clamp(.86+drive01*.62,.86,1.48);a.volume=clamp(level*(.72+throttle*.18)*master,0,1);if(a.paused){const play=a.play();if(play?.catch)play.catch(()=>{});}});return;}
-  if(!this._ctx||!this._nodes||this._ctx.state==='suspended')return;
-  const bodyObj=this.scene.carBody?.body,speedPx=Math.hypot(Number(bodyObj?.velocity?.x||0),Number(bodyObj?.velocity?.y||0)),kmh=Math.max(0,pxpsToKmh(speedPx)),throttle=clamp(Number(this.scene.touch?.throttle||0),0,1),p=prefs(),target=this._targetRpm(kmh,throttle);
-  let risePerSecond=2600+throttle*3300;const fallPerSecond=3100,maxStep=(this._rpm<target?risePerSecond:fallPerSecond)*(elapsed/1000);if(this._rpm<target)this._rpm=Math.min(target,this._rpm+maxStep);else this._rpm=Math.max(target,this._rpm-maxStep);
-  const rpm01=clamp((this._rpm-IDLE_RPM)/(REDLINE_RPM-IDLE_RPM),0,1),speed01=clamp(kmh/180,0,1),coast=clamp((1-throttle)*rpm01*(kmh>8?1:0),0,1),load=clamp(throttle*.94+speed01*.06,0,1),n=this._nodes,now=this._ctx.currentTime;
-  if(n.mode==='spark-samples'){
-   const pos=rpm01*(n.sampleGains.length-1),base=Math.floor(pos),frac=pos-base;
-   n.sampleGains.forEach((g,i)=>{let level=0;if(i===base)level=1-frac;if(i===Math.min(base+1,n.sampleGains.length-1))level=Math.max(level,frac);g.gain.setTargetAtTime(level*(.72+load*.18),now,.045);});
-  }else if(n.mode==='vortex-sample'){
-   const src=n.sampleSources[0],gain=n.sampleGains[0];src?.playbackRate?.setTargetAtTime?.(.62+rpm01*1.28,now,.045);gain?.gain?.setTargetAtTime?.(.62+load*.25-coast*.10,now,.055);
-  }else{
-   n.combustion?.parameters.get('rpm')?.setTargetAtTime(this._rpm,now,.055);n.combustion?.parameters.get('load')?.setTargetAtTime(load,now,.055);n.combustion?.parameters.get('coast')?.setTargetAtTime(coast,now,.070);n.combustion?.parameters.get('level')?.setTargetAtTime(.64+rpm01*.09,now,.070);
+}
+
+function publicAssetUrl(path) {
+  return new URL(path, document.baseURI).href;
+}
+
+async function fetchArrayBuffer(url) {
+  const response = await fetch(url, { cache: 'force-cache' });
+  if (!response.ok) throw new Error(`engine sample HTTP ${response.status}: ${url}`);
+  return response.arrayBuffer();
+}
+
+function preloadSparkBytes() {
+  if (!sparkBytesPromise) {
+    sparkBytesPromise = Promise.all(SPARK_ASSETS.map(path => fetchArrayBuffer(publicAssetUrl(path))))
+      .catch(error => {
+        sparkBytesPromise = null;
+        throw error;
+      });
   }
-  n.cabin.frequency.setTargetAtTime(420+rpm01*420,now,.12);n.cabin.gain.setTargetAtTime(1.8-rpm01*.5+load*.3,now,.12);n.lowBody.gain.setTargetAtTime(2.5-rpm01*.8,now,.12);n.roof.frequency.setTargetAtTime(4200+rpm01*3200+load*500,now,.10);n.windFilter.frequency.setTargetAtTime(1120+speed01*2450,now,.14);n.windGain.gain.setTargetAtTime(Math.pow(speed01,1.8)*.010*p.effects,now,.12);
-  const preGrid=this.scene._startState==='WAIT_ENGINE'||this.scene._startState==='READY',engineLevel=(.64+rpm01*.18+load*.10)*(preGrid?.72:1)*p.engine;n.engineBus.gain.setTargetAtTime(engineLevel,now,.06);n.master.gain.setTargetAtTime(p.mute?0:p.master*.82,now,.055);
- }
- destroy(){for(const a of this._mediaSamples||[]){try{a.pause();a.removeAttribute('src');a.load();}catch{}}this._mediaSamples=[];try{this._nodes?.windNoise?.stop?.();}catch{}for(const s of this._nodes?.sampleSources||[]){try{s.stop?.();}catch{}}try{this._nodes?.combustion?.disconnect?.();}catch{}try{this._ctx?.close?.();}catch{}this._nodes=null;this._graphPromise=null;this._ctx=null;this.scene=null;}
+  return sparkBytesPromise;
+}
+
+function decodeAudioData(context, bytes) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const accept = buffer => {
+      if (settled) return;
+      settled = true;
+      resolve(buffer);
+    };
+    const fail = error => {
+      if (settled) return;
+      settled = true;
+      reject(error);
+    };
+    try {
+      const pending = context.decodeAudioData(bytes.slice(0), accept, fail);
+      pending?.then?.(accept, fail);
+    } catch (error) {
+      fail(error);
+    }
+  });
+}
+
+async function loadBuffer(context, url) {
+  return decodeAudioData(context, await fetchArrayBuffer(url));
+}
+
+function makeNoiseBuffer(context, seconds = 2.2) {
+  const length = Math.max(1, Math.floor(context.sampleRate * seconds));
+  const buffer = context.createBuffer(1, length, context.sampleRate);
+  const data = buffer.getChannelData(0);
+  let slow = 0;
+  let fast = 0;
+  for (let index = 0; index < length; index += 1) {
+    const white = Math.random() * 2 - 1;
+    slow = slow * 0.988 + white * 0.012;
+    fast = fast * 0.70 + white * 0.30;
+    data[index] = clamp(slow * 0.40 + fast * 0.44 + white * 0.16, -1, 1);
+  }
+  return buffer;
+}
+
+function makeDriveCurve(amount = 1.18) {
+  const size = 1024;
+  const curve = new Float32Array(size);
+  for (let index = 0; index < size; index += 1) {
+    const x = (index / (size - 1)) * 2 - 1;
+    curve[index] = Math.tanh(x * amount) / Math.tanh(amount);
+  }
+  return curve;
+}
+
+export class CarEngineSampleRuntime {
+  constructor(scene) {
+    this.scene = scene;
+    this.engineStarted = false;
+    this.unlocked = false;
+    this._ctx = null;
+    this._nodes = null;
+    this._lastUpdate = 0;
+    this._lastResumeAttempt = 0;
+    this._rpm = SPARK_IDLE_RPM;
+    this._graphPromise = null;
+    this._sparkBufferPromise = null;
+    this._sparkBufferContext = null;
+    this._contextRecovery = () => this._resumeContext('lifecycle');
+
+    // Fetch and decode before the ignition gesture whenever the platform permits
+    // it. The context remains silent/suspended until ARRANCAR MOTOR resumes it.
+    if (this._mode() === 'spark-samples') this._prepareSparkBank();
+  }
+
+  _carId() {
+    try {
+      return String(
+        this.scene?.carId ||
+        this.scene?.car?.id ||
+        this.scene?.playerCar?.id ||
+        localStorage.getItem('tdr2:carId') ||
+        ''
+      ).trim();
+    } catch {
+      return String(this.scene?.carId || '').trim();
+    }
+  }
+
+  _mode() {
+    const id = this._carId();
+    if (id === 'helix_spark') return 'spark-samples';
+    if (id === 'helix_vortex') return 'vortex-sample';
+    return 'procedural';
+  }
+
+  _ensureContext() {
+    if (this._ctx) return this._ctx;
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('WebAudio unavailable');
+    this._ctx = new AudioContextClass({ latencyHint: 'interactive' });
+    document.addEventListener('visibilitychange', this._contextRecovery, { passive: true });
+    window.addEventListener('pageshow', this._contextRecovery, { passive: true });
+    window.addEventListener('focus', this._contextRecovery, { passive: true });
+    return this._ctx;
+  }
+
+  _resumeContext(reason) {
+    const context = this._ctx;
+    if (!this.engineStarted || !context || context.state !== 'suspended' || document.hidden) return;
+    const now = performance.now();
+    if (reason === 'update' && now - this._lastResumeAttempt < 1000) return;
+    this._lastResumeAttempt = now;
+    context.resume().catch(error => console.warn('[TDR2 engine] AudioContext resume failed', reason, error));
+  }
+
+  _prepareSparkBank() {
+    try {
+      const context = this._ensureContext();
+      if (this._sparkBufferPromise && this._sparkBufferContext === context) return this._sparkBufferPromise;
+      this._sparkBufferContext = context;
+      console.info('[TDR2 engine] Spark preloading six local RPM samples');
+      const pending = preloadSparkBytes()
+        .then(allBytes => Promise.all(allBytes.map(bytes => decodeAudioData(context, bytes))))
+        .then(buffers => {
+          console.info('[TDR2 engine] Spark local RPM samples decoded', buffers.map(buffer => buffer.duration.toFixed(3)));
+          return buffers;
+        });
+      this._sparkBufferPromise = pending;
+      pending.catch(error => {
+        if (this._sparkBufferPromise === pending) this._sparkBufferPromise = null;
+        console.warn('[TDR2 engine] Spark sample bank failed; procedural fallback is disabled', error);
+      });
+      return pending;
+    } catch (error) {
+      console.warn('[TDR2 engine] Spark preload unavailable', error);
+      return null;
+    }
+  }
+
+  _createOutputGraph(context, mode) {
+    const master = context.createGain();
+    master.gain.value = 0;
+    const compressor = context.createDynamicsCompressor();
+    compressor.threshold.value = -12;
+    compressor.knee.value = 18;
+    compressor.ratio.value = 3.1;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.18;
+    master.connect(compressor).connect(context.destination);
+
+    const engineBus = context.createGain();
+    engineBus.gain.value = 0;
+    const drive = context.createWaveShaper();
+    drive.curve = makeDriveCurve(1.08);
+    drive.oversample = '2x';
+    const lowBody = context.createBiquadFilter();
+    lowBody.type = 'lowshelf';
+    lowBody.frequency.value = 150;
+    lowBody.gain.value = 3.2;
+    const cabin = context.createBiquadFilter();
+    cabin.type = 'peaking';
+    cabin.frequency.value = 410;
+    cabin.Q.value = 0.50;
+    cabin.gain.value = 2.2;
+    const roof = context.createBiquadFilter();
+    roof.type = 'lowpass';
+    roof.frequency.value = 5600;
+    roof.Q.value = 0.28;
+    engineBus.connect(drive).connect(lowBody).connect(cabin).connect(roof).connect(master);
+
+    return { mode, master, compressor, engineBus, drive, lowBody, cabin, roof };
+  }
+
+  async _buildGraph() {
+    if (this._nodes) return;
+    const context = this._ensureContext();
+    const mode = this._mode();
+    const graph = this._createOutputGraph(context, mode);
+    let combustion = null;
+    let sampleSources = [];
+    let sampleGains = [];
+
+    if (mode === 'spark-samples') {
+      const buffers = await (this._sparkBufferPromise || this._prepareSparkBank());
+      if (!buffers?.length || this._ctx !== context) throw new Error('Spark sample bank unavailable');
+      const startAt = context.currentTime + 0.025;
+      for (const buffer of buffers) {
+        const source = context.createBufferSource();
+        const gain = context.createGain();
+        source.buffer = buffer;
+        source.loop = true;
+        gain.gain.value = 0;
+        source.connect(gain).connect(graph.engineBus);
+        source.start(startAt);
+        sampleSources.push(source);
+        sampleGains.push(gain);
+      }
+      console.info('[TDR2 engine] Spark sample graph started on one WebAudio clock');
+    } else if (mode === 'vortex-sample') {
+      const buffer = await loadBuffer(context, VORTEX_URL);
+      if (this._ctx !== context) return;
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      source.buffer = buffer;
+      source.loop = true;
+      source.playbackRate.value = 1.1;
+      gain.gain.value = 0.8;
+      source.connect(gain).connect(graph.engineBus);
+      source.start();
+      sampleSources = [source];
+      sampleGains = [gain];
+    } else {
+      if (!context.audioWorklet || typeof AudioWorkletNode === 'undefined') throw new Error('AudioWorklet unavailable');
+      await context.audioWorklet.addModule(new URL('./EngineCombustionProcessor.js', import.meta.url));
+      if (this._ctx !== context) return;
+      combustion = new AudioWorkletNode(context, 'tdr-engine-combustion', {
+        numberOfInputs: 0,
+        numberOfOutputs: 1,
+        outputChannelCount: [2],
+        parameterData: { rpm: SPARK_IDLE_RPM, load: 0, coast: 0, level: 0.72 }
+      });
+      combustion.connect(graph.engineBus);
+    }
+
+    const windNoise = context.createBufferSource();
+    windNoise.buffer = makeNoiseBuffer(context);
+    windNoise.loop = true;
+    const windFilter = context.createBiquadFilter();
+    windFilter.type = 'highpass';
+    windFilter.frequency.value = 1250;
+    windFilter.Q.value = 0.20;
+    const windGain = context.createGain();
+    windGain.gain.value = 0;
+    windNoise.connect(windFilter).connect(windGain).connect(graph.master);
+    windNoise.start();
+
+    this._nodes = {
+      ...graph,
+      combustion,
+      sampleSources,
+      sampleGains,
+      windNoise,
+      windFilter,
+      windGain
+    };
+  }
+
+  _playStarter() {
+    const context = this._ctx;
+    if (!context) return;
+    const audio = preferences();
+    const now = context.currentTime;
+    try {
+      const bus = context.createGain();
+      bus.gain.value = audio.mute ? 0 : audio.master * audio.engine;
+      const filter = context.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 420;
+      filter.Q.value = 0.70;
+      const oscillator = context.createOscillator();
+      oscillator.type = 'triangle';
+      const oscillatorGain = context.createGain();
+      const noise = context.createBufferSource();
+      noise.buffer = makeNoiseBuffer(context, 0.55);
+      const noiseFilter = context.createBiquadFilter();
+      noiseFilter.type = 'highpass';
+      noiseFilter.frequency.value = 900;
+      const noiseGain = context.createGain();
+      bus.connect(filter).connect(context.destination);
+      oscillator.connect(oscillatorGain).connect(bus);
+      noise.connect(noiseFilter).connect(noiseGain).connect(bus);
+      oscillator.frequency.setValueAtTime(72, now);
+      oscillator.frequency.exponentialRampToValueAtTime(118, now + 0.34);
+      oscillatorGain.gain.setValueAtTime(0.0001, now);
+      oscillatorGain.gain.exponentialRampToValueAtTime(0.12, now + 0.025);
+      oscillatorGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.44);
+      noiseGain.gain.setValueAtTime(0.0001, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.035, now + 0.018);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.31);
+      oscillator.start(now);
+      noise.start(now);
+      oscillator.stop(now + 0.46);
+      noise.stop(now + 0.48);
+    } catch (error) {
+      console.warn('[TDR2 engine] starter failed', error);
+    }
+  }
+
+  startEngine() {
+    this.engineStarted = true;
+    this.unlocked = true;
+    try {
+      const context = this._ensureContext();
+      if (context.state === 'suspended') {
+        context.resume().catch(error => console.warn('[TDR2 engine] ignition resume failed', error));
+      }
+      this._rpm = SPARK_IDLE_RPM;
+      this._lastUpdate = performance.now();
+      this._playStarter();
+      if (!this._nodes && !this._graphPromise) {
+        this._graphPromise = this._buildGraph()
+          .then(() => {
+            this._graphPromise = null;
+            this.update(true);
+          })
+          .catch(error => {
+            this._graphPromise = null;
+            console.warn('[TDR2 engine] sample/procedural init failed', error);
+          });
+      } else {
+        this.update(true);
+      }
+    } catch (error) {
+      console.warn('[TDR2 engine] init failed', error);
+    }
+  }
+
+  _driveState() {
+    const velocity = this.scene?.carBody?.body?.velocity || this.scene?.car?.body?.velocity || {};
+    const speedPx = Math.hypot(Number(velocity.x) || 0, Number(velocity.y) || 0);
+    const touchThrottle = clamp(Number(this.scene?.touch?.throttle) || 0, 0, 1);
+    const keyboardThrottle = this.scene?.keys?.up?.isDown || this.scene?.keys?.up2?.isDown ? 1 : 0;
+    return {
+      kmh: Math.max(0, pxpsToKmh(speedPx)),
+      throttle: Math.max(touchThrottle, keyboardThrottle)
+    };
+  }
+
+  _legacyTargetRpm(kmh, throttle) {
+    const speedProgress = clamp(kmh / 195, 0, 1);
+    const roadCarry = SPARK_IDLE_RPM + Math.pow(speedProgress, 0.82) * 3600;
+    const freeRev = SPARK_IDLE_RPM + Math.pow(clamp(throttle, 0, 1), 0.72) * (SPARK_REDLINE_RPM - SPARK_IDLE_RPM);
+    return clamp(Math.max(roadCarry, freeRev), SPARK_IDLE_RPM, SPARK_REDLINE_RPM);
+  }
+
+  _advanceLegacyRpm(target, throttle, elapsedSeconds) {
+    const rate = this._rpm < target ? 2600 + throttle * 3300 : 3100;
+    const step = rate * elapsedSeconds;
+    return this._rpm < target
+      ? Math.min(target, this._rpm + step)
+      : Math.max(target, this._rpm - step);
+  }
+
+  update(force = false) {
+    if (!this.scene || this.scene._tdrEmbeddedReplay || !this.engineStarted) return;
+    const perfNow = performance.now();
+    if (!force && perfNow - this._lastUpdate < UPDATE_MS) return;
+    const elapsedSeconds = clamp((perfNow - this._lastUpdate || UPDATE_MS) / 1000, 0.001, 0.12);
+    this._lastUpdate = perfNow;
+    if (!this._ctx || !this._nodes) return;
+    if (this._ctx.state === 'suspended') {
+      this._resumeContext('update');
+      return;
+    }
+
+    const { kmh, throttle } = this._driveState();
+    const audio = preferences();
+    const nodes = this._nodes;
+    const now = this._ctx.currentTime;
+    const target = nodes.mode === 'spark-samples'
+      ? targetSparkRpm(kmh, throttle)
+      : this._legacyTargetRpm(kmh, throttle);
+    this._rpm = nodes.mode === 'spark-samples'
+      ? advanceSparkRpm(this._rpm, target, throttle, elapsedSeconds)
+      : this._advanceLegacyRpm(target, throttle, elapsedSeconds);
+
+    const rpm01 = clamp((this._rpm - SPARK_IDLE_RPM) / (SPARK_REDLINE_RPM - SPARK_IDLE_RPM), 0, 1);
+    const speed01 = clamp(kmh / 180, 0, 1);
+    const coast = clamp((1 - throttle) * rpm01 * (kmh > 8 ? 1 : 0), 0, 1);
+    const load = clamp(throttle * 0.94 + speed01 * 0.06, 0, 1);
+
+    if (nodes.mode === 'spark-samples') {
+      const mix = sparkSampleMix(this._rpm);
+      nodes.sampleGains.forEach((gain, index) => {
+        const targetLevel = (mix.levels[index] || 0) * (0.72 + load * 0.18);
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setTargetAtTime(targetLevel, now, 0.035);
+        const rate = nodes.sampleSources[index]?.playbackRate;
+        if (rate) {
+          rate.cancelScheduledValues(now);
+          rate.setTargetAtTime(mix.rates[index] || 1, now, 0.05);
+        }
+      });
+    } else if (nodes.mode === 'vortex-sample') {
+      const source = nodes.sampleSources[0];
+      const gain = nodes.sampleGains[0];
+      source?.playbackRate?.setTargetAtTime?.(0.62 + rpm01 * 1.28, now, 0.045);
+      gain?.gain?.setTargetAtTime?.(0.62 + load * 0.25 - coast * 0.10, now, 0.055);
+    } else {
+      nodes.combustion?.parameters.get('rpm')?.setTargetAtTime(this._rpm, now, 0.055);
+      nodes.combustion?.parameters.get('load')?.setTargetAtTime(load, now, 0.055);
+      nodes.combustion?.parameters.get('coast')?.setTargetAtTime(coast, now, 0.070);
+      nodes.combustion?.parameters.get('level')?.setTargetAtTime(0.64 + rpm01 * 0.09, now, 0.070);
+    }
+
+    nodes.cabin.frequency.setTargetAtTime(420 + rpm01 * 420, now, 0.12);
+    nodes.cabin.gain.setTargetAtTime(1.8 - rpm01 * 0.5 + load * 0.3, now, 0.12);
+    nodes.lowBody.gain.setTargetAtTime(2.5 - rpm01 * 0.8, now, 0.12);
+    nodes.roof.frequency.setTargetAtTime(4200 + rpm01 * 3200 + load * 500, now, 0.10);
+    nodes.windFilter.frequency.setTargetAtTime(1120 + speed01 * 2450, now, 0.14);
+    nodes.windGain.gain.setTargetAtTime(Math.pow(speed01, 1.8) * 0.010 * audio.effects, now, 0.12);
+    const preGrid = this.scene._startState === 'WAIT_ENGINE' || this.scene._startState === 'READY';
+    const engineLevel = (0.64 + rpm01 * 0.18 + load * 0.10) * (preGrid ? 0.72 : 1) * audio.engine;
+    nodes.engineBus.gain.setTargetAtTime(engineLevel, now, 0.06);
+    nodes.master.gain.setTargetAtTime(audio.mute ? 0 : audio.master * 0.82, now, 0.055);
+  }
+
+  destroy() {
+    document.removeEventListener('visibilitychange', this._contextRecovery);
+    window.removeEventListener('pageshow', this._contextRecovery);
+    window.removeEventListener('focus', this._contextRecovery);
+    try { this._nodes?.windNoise?.stop?.(); } catch {}
+    for (const source of this._nodes?.sampleSources || []) {
+      try { source.stop?.(); } catch {}
+    }
+    try { this._nodes?.combustion?.disconnect?.(); } catch {}
+    try { this._ctx?.close?.(); } catch {}
+    this._nodes = null;
+    this._graphPromise = null;
+    this._sparkBufferPromise = null;
+    this._sparkBufferContext = null;
+    this._ctx = null;
+    this.scene = null;
+  }
 }
