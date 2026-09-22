@@ -316,3 +316,5 @@ export class MenuScene extends CurrentMenuScene {
     cancel.on('pointerdown',()=>{this._duelLapModal=null;c.destroy(true);});c.add(cancel);
   }
 }
+
+// DEV 1.1.129 validation trigger: material store copy is centralized in i18n.
