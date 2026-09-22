@@ -2,6 +2,7 @@ import { UpgradeShopScene as PremiumWorkshopV2 } from './UpgradeWorkshopPremiumV
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { GARAGE_ITEMS, findStripRecipe, stripRecipeCanAccept } from '../garage/partsCatalog.js';
 import { getEquippedForCar, qty, garageDisplayStats } from '../garage/garageStore.js';
+import { t } from '../i18n/index.js';
 
 const WORKSHOP_BASE=`${import.meta.env.BASE_URL || './'}assets/cars/workshop/`;
 const CRAFT_BASE=`${import.meta.env.BASE_URL || './'}assets/crafting/`;
@@ -42,9 +43,9 @@ const CRAFT_ASSETS={
   transmission_prototype:'parts/transmission/transmission_prototype_t4.webp'
 };
 
-const FAMILY_LABEL={engine:'MOTOR',brakes:'FRENOS',tires:'NEUMÁTICOS',suspension:'SUSPENSIÓN',transmission:'TRANSMISIÓN'};
+const familyLabel=f=>t(`workshop.family.${f}`);
 const FAMILIES=['engine','brakes','tires','suspension','transmission'];
-const STATS=[['speed','VELOCIDAD'],['accel','ACELERACIÓN'],['grip','AGARRE'],['control','CONTROL']];
+const statRows=()=>[['speed',t('workshop.stat.speed')],['accel',t('workshop.stat.acceleration')],['grip',t('workshop.stat.grip')],['control',t('workshop.stat.control')]];
 
 const WORKSHOP_CAR_LAYOUT={
   avenir_gripline:{x:0.49,y:0.55,scale:1.18},
@@ -88,9 +89,9 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     const spec=CAR_SPECS[this.car]||CAR_SPECS.stock;
     const y=r.y+(compact?9:13);
 
-    A(this.add.text(r.x+13,y,'COCHE ACTUAL',{fontFamily:'system-ui',fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8da3ae'}));
+    A(this.add.text(r.x+13,y,t('workshop.currentCar'),{fontFamily:'system-ui',fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8da3ae'}));
     A(this.add.text(r.x+13,y+(compact?14:18),spec.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'17px':'23px',fontStyle:'900 italic',color:'#fff'}));
-    A(this.add.text(r.x+r.w-12,y+1,String(spec.rarity||'COMÚN').toUpperCase(),{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'900',color:'#ffd05a'}).setOrigin(1,0));
+    A(this.add.text(r.x+r.w-12,y+1,String(spec.rarity||t('workshop.rarity.common')).toUpperCase(),{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'900',color:'#ffd05a'}).setOrigin(1,0));
 
     const imageH=Math.round(r.h*(compact?.43:.50));
     const carR={x:r.x+9,y:r.y+(compact?45:57),w:r.w-18,h:imageH};
@@ -106,10 +107,10 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     const result=recipe?GARAGE_ITEMS[recipe.out]:null;
     const cur=garageDisplayStats(spec,this.state,this.car,null);
     const next=result?.kind==='part'?garageDisplayStats(spec,this.state,this.car,result.id):cur;
-    A(this.add.text(r.x,r.y,'RENDIMIENTO',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'12px',fontStyle:'900',color:'#fff'}));
+    A(this.add.text(r.x,r.y,t('workshop.performance'),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'12px',fontStyle:'900',color:'#fff'}));
     const start=r.y+(compact?17:22);
     const row=Math.max(compact?24:31,(r.h-(compact?18:24))/4);
-    STATS.forEach(([k,label],i)=>{
+    statRows().forEach(([k,label],i)=>{
       const y=start+i*row,v=cur[k],nv=next[k],d=nv-v;
       A(this.add.text(r.x,y,label,{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'800',color:'#d8e4e9'}));
       A(this.add.text(r.x+r.w,y,d?`${v}  +${d}`:`${v}`,{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'9px':'11px',fontStyle:'900',color:d?'#64ef73':'#fff'}).setOrigin(1,0));
@@ -150,8 +151,8 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
 
   _forgePanel(A,r,compact){
     this._panel(A,r,0xffb72b);
-    A(this.add.text(r.x+15,r.y+10,'FORJA CENTRAL',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'15px':'21px',fontStyle:'900 italic',color:'#fff'}));
-    A(this.add.text(r.x+r.w-15,r.y+12,'3 COMPONENTES  →  1 PIEZA',{fontFamily:'system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#ffd46b'}).setOrigin(1,0));
+    A(this.add.text(r.x+15,r.y+10,t('workshop.centralForge'),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'15px':'21px',fontStyle:'900 italic',color:'#fff'}));
+    A(this.add.text(r.x+r.w-15,r.y+12,t('workshop.threeToOne'),{fontFamily:'system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#ffd46b'}).setOrigin(1,0));
 
     const inner={x:r.x+12,y:r.y+(compact?34:43),w:r.w-24,h:r.h-(compact?42:53)};
     const inventoryH=compact?67:100;
@@ -216,24 +217,24 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     g.lineStyle(item?2:1,item?0xd45aff:0x38505a,.9);g.strokeRoundedRect(r.x,r.y,r.w,r.h,13);
 
     if(!item){
-      A(this.add.text(r.x+r.w/2,r.y+r.h*.42,this.slots.length?'COMPLETA\nLA RECETA':'PIEZA\nRESULTANTE',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'13px':'20px',fontStyle:'900',color:'#6e828c',align:'center'}).setOrigin(.5));
-      A(this.add.text(r.x+r.w/2,r.y+r.h*.70,`${this.slots.length}/3 COMPONENTES`,{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'900',color:'#41545c'}).setOrigin(.5));
+      A(this.add.text(r.x+r.w/2,r.y+r.h*.42,this.slots.length?t('workshop.completeRecipeMultiline'):t('workshop.resultingPartMultiline'),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'13px':'20px',fontStyle:'900',color:'#6e828c',align:'center'}).setOrigin(.5));
+      A(this.add.text(r.x+r.w/2,r.y+r.h*.70,t('workshop.componentCount',{count:this.slots.length}),{fontFamily:'system-ui',fontSize:compact?'7px':'9px',fontStyle:'900',color:'#41545c'}).setOrigin(.5));
       return;
     }
 
     const artSize=Math.min(r.w*.82,r.h*.50);
     this._itemArt(A,item,r.x+r.w/2,r.y+r.h*.31,artSize);
     A(this.add.text(r.x+r.w/2,r.y+r.h*.57,item.name.toUpperCase(),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'14px':'21px',fontStyle:'900 italic',color:'#e260ff',align:'center',wordWrap:{width:r.w-12}}).setOrigin(.5));
-    A(this.add.text(r.x+r.w/2,r.y+r.h*.68,`${FAMILY_LABEL[item.family]||'PIEZA'} · T${item.tier||1}`,{fontFamily:'system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#dbc4e1'}).setOrigin(.5));
+    A(this.add.text(r.x+r.w/2,r.y+r.h*.68,`${familyLabel(item.family)||t('workshop.part')} · T${item.tier||1}`,{fontFamily:'system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#dbc4e1'}).setOrigin(.5));
 
     const spec=CAR_SPECS[this.car]||CAR_SPECS.stock;
     const cur=garageDisplayStats(spec,this.state,this.car,null),next=garageDisplayStats(spec,this.state,this.car,item.id);
-    const changes=STATS.filter(([k])=>next[k]!==cur[k]).map(([k,l])=>`${l} +${next[k]-cur[k]}`).slice(0,2).join(' · ');
-    A(this.add.text(r.x+r.w/2,r.y+r.h*.77,changes||'LISTA PARA EQUIPAR',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#65ef70',align:'center'}).setOrigin(.5));
+    const changes=statRows().filter(([k])=>next[k]!==cur[k]).map(([k,l])=>`${l} +${next[k]-cur[k]}`).slice(0,2).join(' · ');
+    A(this.add.text(r.x+r.w/2,r.y+r.h*.77,changes||t('workshop.readyToEquip'),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'7px':'10px',fontStyle:'900',color:'#65ef70',align:'center'}).setOrigin(.5));
 
     const bw=r.w*.78,bh=compact?25:36,bx=r.x+(r.w-bw)/2,by=r.y+r.h-bh-(compact?6:9);
     const btn=A(this.add.rectangle(bx,by,bw,bh,0xf6bb13).setOrigin(0).setStrokeStyle(1,0xffdf59).setInteractive({useHandCursor:true}));
-    A(this.add.text(bx+bw/2,by+bh/2,'FABRICAR',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'11px':'16px',fontStyle:'900',color:'#111'}).setOrigin(.5));
+    A(this.add.text(bx+bw/2,by+bh/2,t('workshop.craft'),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'11px':'16px',fontStyle:'900',color:'#111'}).setOrigin(.5));
     btn.on('pointerdown',()=>this._craft());
   }
 
@@ -242,8 +243,8 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     g.fillStyle(0x060d11,.98);g.fillRoundedRect(r.x,r.y,r.w,r.h,10);g.lineStyle(1,0x28404a,.85);g.strokeRoundedRect(r.x,r.y,r.w,r.h,10);
 
     const tabW=compact?70:94,tabH=compact?20:25;
-    this._miniTab(A,r.x+7,r.y+6,tabW,tabH,'MATERIALES','materials',compact);
-    this._miniTab(A,r.x+12+tabW,r.y+6,tabW,tabH,'PIEZAS','parts',compact);
+    this._miniTab(A,r.x+7,r.y+6,tabW,tabH,t('workshop.materials'),'materials',compact);
+    this._miniTab(A,r.x+12+tabW,r.y+6,tabW,tabH,t('workshop.parts'),'parts',compact);
 
     const used={};for(const id of this.slots)used[id]=(used[id]||0)+1;
     let ids=Object.keys(GARAGE_ITEMS).filter(id=>{
@@ -270,7 +271,7 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     });
 
     if(!ids.length){
-      A(this.add.text(startX+areaW/2,r.y+r.h/2,this.slots.length===3?'RECETA COMPLETA':'SIN COMPONENTES COMPATIBLES',{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'8px':'10px',fontStyle:'900',color:'#5d737c'}).setOrigin(.5));
+      A(this.add.text(startX+areaW/2,r.y+r.h/2,this.slots.length===3?t('workshop.recipeComplete'):t('workshop.noCompatibleComponents'),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'8px':'10px',fontStyle:'900',color:'#5d737c'}).setOrigin(.5));
     }
   }
 
@@ -317,8 +318,8 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
     FAMILIES.forEach((f,i)=>{
       const x=r.x+i*(cw+gap),item=eq[f]?GARAGE_ITEMS[eq[f]]:null,on=this.filter==='parts'&&this.selectedFamily===f;
       const q=A(this.add.rectangle(x+2,r.y+2,cw-4,r.h-4,on?0x123142:0x081116).setOrigin(0).setStrokeStyle(on?2:1,on?0x36d7ff:(item?.tone||0x2b424c),on?1:.7).setInteractive({useHandCursor:true}));
-      A(this.add.text(x+cw/2,r.y+(compact?12:16),FAMILY_LABEL[f],{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'8px':'10px',fontStyle:'900',color:on?'#8eeaff':'#fff'}).setOrigin(.5));
-      A(this.add.text(x+cw/2,r.y+r.h-(compact?10:13),item?`EQUIPADA · T${item.tier}`:'SIN EQUIPAR',{fontFamily:'system-ui',fontSize:compact?'7px':'8px',fontStyle:'800',color:item?'#65dfff':'#637780'}).setOrigin(.5));
+      A(this.add.text(x+cw/2,r.y+(compact?12:16),familyLabel(f),{fontFamily:'Arial Narrow,system-ui',fontSize:compact?'8px':'10px',fontStyle:'900',color:on?'#8eeaff':'#fff'}).setOrigin(.5));
+      A(this.add.text(x+cw/2,r.y+r.h-(compact?10:13),item?`${t('workshop.equipped')} · T${item.tier}`:t('workshop.unequipped'),{fontFamily:'system-ui',fontSize:compact?'7px':'8px',fontStyle:'800',color:item?'#65dfff':'#637780'}).setOrigin(.5));
       q.on('pointerdown',()=>{if(this.busy)return;this.selectedFamily=f;this.filter='parts';this.render();});
     });
   }
