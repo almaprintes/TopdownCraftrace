@@ -156,3 +156,5 @@ export class SettingsScene extends CurrentSettingsScene {
     this._footer(panelX,panelY,panelW,panelH);
   }
 }
+
+// DEV 1.1.116 validation trigger: AV/control settings copy uses i18n keys.
