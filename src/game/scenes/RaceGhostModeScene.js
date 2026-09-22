@@ -455,3 +455,5 @@ export class RaceScene extends CurrentRaceScene{
     this._playGhost(now);
   }
 }
+
+// DEV 1.1.138 validation trigger: cached online ghost is consumed by Ghost mode and HUD is positioned after mobile layout.
