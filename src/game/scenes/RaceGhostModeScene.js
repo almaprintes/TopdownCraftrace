@@ -458,3 +458,5 @@ export class RaceScene extends CurrentRaceScene{
 }
 
 // DEV 1.1.138 validation trigger: cached online ghost is consumed by Ghost mode and HUD is positioned after mobile layout.
+
+// DEV 1.1.142 validation trigger: online VS consumes shared memory handoff and never falls through to local PB.
