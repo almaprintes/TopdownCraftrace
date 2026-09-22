@@ -253,3 +253,5 @@ export class RaceScene extends CurrentRaceScene {
     return result;
   }
 }
+
+// DEV 1.1.135 validation trigger: CPU1 starts side-by-side with matching grid orientation.
