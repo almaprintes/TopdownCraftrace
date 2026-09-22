@@ -1,5 +1,6 @@
 // src/game/cars/carSpecs.js
 // Unidades internas: px/s, px/s^2, rad/s, coeficientes adimensionales
+import { LONGITUDINAL_PROFILES } from './longitudinalProfiles.js';
 
 export const CAR_SPECS = {
 stock: {
@@ -134,14 +135,8 @@ power: {
     engineBrake: 260,
     linearDrag: 0.031,
 
-    // El mismo equilibrio entre empuje y drag conserva la punta, pero una masa
-    // longitudinal mayor evita alcanzarla en menos de un segundo. La retención
-    // se mezcla de forma continua para que no exista un escalón a 15 km/h.
-    longitudinalResponse: 0.30,
-    coastBlendStartKmh: 12,
-    coastBlendEndKmh: 45,
-    coastHighSpeedDragScale: 45,
-    coastEngineBrakeRestore: 0,
+    // Conserva la punta publicada, con la respuesta viva de un coche de carreras.
+    ...LONGITUDINAL_PROFILES.RACE_STARTER,
 
     // Dirección
     turnRate: 3.8,
@@ -237,6 +232,7 @@ steeringProfile: 'DIRECT',
     category: 'All-Rounder',
     role: 'Crossover ágil',
     steeringProfile: 'DIRECT',
+    engineAudioProfile: 'JEEP',
 
     // UI / Colección
     collectionNo: 16,

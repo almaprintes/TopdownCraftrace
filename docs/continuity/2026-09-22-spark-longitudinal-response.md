@@ -3,6 +3,8 @@
 Fecha: 22/09/2026
 Versión: DEV 1.1.167
 
+Estado posterior: esta curva se conserva desde DEV 1.1.168 como perfil reutilizable `LONGITUDINAL_PROFILES.TOURING`. Spark pasó al perfil de carreras documentado en `2026-09-22-spark-race-response.md`.
+
 ## Diagnóstico medido
 
 La configuración publicada de Spark procede de `public/community/car-overrides.json`: `maxFwd: 650`, `accel: 434` y `linearDrag: 0.01122`. Con el multiplicador de fábrica y la conversión canónica de 0,185 km/h por px/s, su punta sostenible es 84,39 km/h.

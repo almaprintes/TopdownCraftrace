@@ -9,6 +9,8 @@ import {
   sparkSampleMix,
   targetSparkRpm
 } from '../src/game/audio/SparkEngineModel.js';
+import { ENGINE_AUDIO_PROFILES } from '../src/game/audio/EngineAudioProfiles.js';
+import { CAR_SPECS } from '../src/game/cars/carSpecs.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const names = ['loop_0.wav', 'loop_1_0.wav', 'loop_2_0.wav', 'loop_3_0.wav', 'loop_4_0.wav', 'loop_5_0.wav'];
@@ -23,7 +25,7 @@ const hashes = [
 
 assert.equal(targetSparkRpm(0, 0), SPARK_IDLE_RPM, 'stationary idle must remain at idle');
 const stationaryRev = targetSparkRpm(0, 1, 84);
-assert.ok(stationaryRev >= 2500 && stationaryRev <= 3000, 'stationary throttle must rev clearly without jumping to redline');
+assert.ok(stationaryRev >= 4000 && stationaryRev <= 4400, 'stationary throttle must rev like a race car without jumping to redline');
 assert.ok(targetSparkRpm(15, 1, 84) < targetSparkRpm(45, 1, 84), 'moving RPM must rise with real road speed');
 assert.equal(targetSparkRpm(84, 1, 84), SPARK_REDLINE_RPM, 'full throttle at attainable top speed must reach redline');
 assert.ok(targetSparkRpm(45, 1, 84) > targetSparkRpm(45, 0, 84), 'throttle must add engine load at the same speed');
@@ -50,5 +52,29 @@ assert.ok(!runtime.includes('raw.githubusercontent.com/yashimosh'), 'Spark must 
 assert.ok(!runtime.includes('new Audio('), 'Spark must not use independent HTML media clocks');
 assert.ok(runtime.includes('createBufferSource'), 'Spark must use WebAudio buffer sources');
 assert.ok(runtime.includes('attainableTopSpeedKmh'), 'Spark RPM must use the car attainable speed');
+
+const jeep = ENGINE_AUDIO_PROFILES.JEEP;
+assert.equal(CAR_SPECS.helix_vortex.engineAudioProfile, 'JEEP', 'Vortex must keep the approved Jeep audio profile');
+assert.equal(jeep.sourceUrl, 'assets/audio/engine/jeep/engine.wav');
+assert.equal(jeep.sourceSha256, '8299d3d595fe4c6b2ed9cf73f7d4ead854e7f97470e59178e8ff9a0b15a41645');
+assert.equal(jeep.initialPlaybackRate, 1.1);
+assert.equal(jeep.initialGain, 0.8);
+assert.equal(jeep.minPlaybackRate, 0.62);
+assert.equal(jeep.playbackRateRange, 1.28);
+assert.equal(jeep.playbackRateSmoothing, 0.045);
+assert.equal(jeep.baseGain, 0.62);
+assert.equal(jeep.loadGain, 0.25);
+assert.equal(jeep.coastGainReduction, 0.10);
+assert.equal(jeep.gainSmoothing, 0.055);
+assert.ok(runtime.includes("ENGINE_AUDIO_PROFILES[requested]"), 'sample cars must resolve their named audio profile');
+assert.ok(!runtime.includes('const VORTEX_URL'), 'Vortex sample settings must not remain as loose constants');
+
+const jeepPath = `${root}public/${jeep.sourceUrl}`;
+const jeepInfo = await stat(jeepPath);
+assert.ok(jeepInfo.size > 300_000, 'Jeep profile must contain the real local WAV asset');
+const jeepBytes = await readFile(jeepPath, { encoding: null });
+assert.equal(jeepBytes.subarray(0, 4).toString('ascii'), 'RIFF', 'Jeep profile must be RIFF/WAV');
+assert.equal(jeepBytes.subarray(8, 12).toString('ascii'), 'WAVE', 'Jeep profile must be RIFF/WAV');
+assert.equal(createHash('sha256').update(jeepBytes).digest('hex'), jeep.sourceSha256, 'Jeep WAV must match the preserved source');
 
 console.log('Spark engine audio smoke: OK');

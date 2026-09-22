@@ -6,6 +6,7 @@ import {
   sparkSampleMix,
   targetSparkRpm
 } from './SparkEngineModel.js';
+import { ENGINE_AUDIO_PROFILES } from './EngineAudioProfiles.js';
 
 const SETTINGS_KEY = 'tdr2:settings';
 const UPDATE_MS = 40;
@@ -17,7 +18,6 @@ const SPARK_ASSETS = [
   'assets/audio/engine/spark/loop_4_0.wav',
   'assets/audio/engine/spark/loop_5_0.wav'
 ];
-const VORTEX_URL = 'https://raw.githubusercontent.com/buntine/CarEngines/master/sounds/engine.wav';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 let sparkBytesPromise = null;
@@ -147,8 +147,17 @@ export class CarEngineSampleRuntime {
   _mode() {
     const id = this._carId();
     if (id === 'helix_spark') return 'spark-samples';
-    if (id === 'helix_vortex') return 'vortex-sample';
+    if (this._sampleProfile()) return 'profile-sample';
     return 'procedural';
+  }
+
+  _sampleProfile() {
+    const requested = String(
+      this.scene?.carParams?.engineAudioProfile ||
+      this.scene?.baseSpec?.engineAudioProfile ||
+      (this._carId() === 'helix_vortex' ? 'JEEP' : '')
+    ).trim();
+    return ENGINE_AUDIO_PROFILES[requested] || null;
   }
 
   _ensureContext() {
@@ -234,6 +243,7 @@ export class CarEngineSampleRuntime {
     const context = this._ensureContext();
     const mode = this._mode();
     const graph = this._createOutputGraph(context, mode);
+    const audioProfile = this._sampleProfile();
     let combustion = null;
     let sampleSources = [];
     let sampleGains = [];
@@ -254,15 +264,15 @@ export class CarEngineSampleRuntime {
         sampleGains.push(gain);
       }
       console.info('[TDR2 engine] Spark sample graph started on one WebAudio clock');
-    } else if (mode === 'vortex-sample') {
-      const buffer = await loadBuffer(context, VORTEX_URL);
+    } else if (mode === 'profile-sample') {
+      const buffer = await loadBuffer(context, publicAssetUrl(audioProfile.sourceUrl));
       if (this._ctx !== context) return;
       const source = context.createBufferSource();
       const gain = context.createGain();
       source.buffer = buffer;
-      source.loop = true;
-      source.playbackRate.value = 1.1;
-      gain.gain.value = 0.8;
+      source.loop = audioProfile.loop;
+      source.playbackRate.value = audioProfile.initialPlaybackRate;
+      gain.gain.value = audioProfile.initialGain;
       source.connect(gain).connect(graph.engineBus);
       source.start();
       sampleSources = [source];
@@ -297,6 +307,7 @@ export class CarEngineSampleRuntime {
       combustion,
       sampleSources,
       sampleGains,
+      audioProfile,
       windNoise,
       windFilter,
       windGain
@@ -439,11 +450,20 @@ export class CarEngineSampleRuntime {
           rate.setTargetAtTime(mix.rates[index] || 1, now, 0.05);
         }
       });
-    } else if (nodes.mode === 'vortex-sample') {
+    } else if (nodes.mode === 'profile-sample') {
+      const profile = nodes.audioProfile;
       const source = nodes.sampleSources[0];
       const gain = nodes.sampleGains[0];
-      source?.playbackRate?.setTargetAtTime?.(0.62 + rpm01 * 1.28, now, 0.045);
-      gain?.gain?.setTargetAtTime?.(0.62 + load * 0.25 - coast * 0.10, now, 0.055);
+      source?.playbackRate?.setTargetAtTime?.(
+        profile.minPlaybackRate + rpm01 * profile.playbackRateRange,
+        now,
+        profile.playbackRateSmoothing
+      );
+      gain?.gain?.setTargetAtTime?.(
+        profile.baseGain + load * profile.loadGain - coast * profile.coastGainReduction,
+        now,
+        profile.gainSmoothing
+      );
     } else {
       nodes.combustion?.parameters.get('rpm')?.setTargetAtTime(this._rpm, now, 0.055);
       nodes.combustion?.parameters.get('load')?.setTargetAtTime(load, now, 0.055);

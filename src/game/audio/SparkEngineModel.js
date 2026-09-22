@@ -13,7 +13,7 @@ export function targetSparkRpm(kmh, throttle, attainableTopKmh = 60) {
   const road = clamp(Number(kmh) || 0, 0, top) / top;
   const gas = clamp(Number(throttle) || 0, 0, 1);
   const roadRpm = SPARK_IDLE_RPM + Math.pow(road, 0.82) * 5200;
-  const loadRpm = Math.pow(gas, 0.72) * (1700 + road * 350);
+  const loadRpm = Math.pow(gas, 0.72) * (3250 - road * 1200);
   return clamp(roadRpm + loadRpm, SPARK_IDLE_RPM, SPARK_REDLINE_RPM);
 }
 

@@ -1,5 +1,13 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## ACTUALIZACIÓN 22/09/2026 — SPARK RECUPERA CARÁCTER DE CARRERAS
+
+DEV 1.1.168 eleva la respuesta longitudinal de Spark de `0.30` a `0.60`: conserva la punta stock publicada de ~84 km/h, pero pasa de 0 a 84 km/h en ~7,6 s en lugar de ~14,8 s. El régimen a fondo con el coche parado sube ahora a ~4.200 RPM, y la progresión móvil continúa vinculada a la velocidad real.
+
+La curva anterior no se pierde: queda como `LONGITUDINAL_PROFILES.TOURING` para un futuro turismo. Spark usa `RACE_STARTER`. Documentación y cifras: `docs/continuity/2026-09-22-spark-race-response.md`.
+
+El sonido aprobado del HÉLIX Vortex también queda congelado en esta versión como perfil reutilizable `ENGINE_AUDIO_PROFILES.JEEP`, sin cambiar su muestra ni sus curvas de pitch y ganancia. El Vortex declara el perfil en `carSpecs.js`; parámetros, fuente CC0 y prueba de regresión: `docs/continuity/2026-09-22-vortex-jeep-audio-profile.md`.
+
 ## ACTUALIZACIÓN 22/09/2026 — RESPUESTA LONGITUDINAL HÉLIX SPARK
 
 DEV 1.1.167 corrige la curva física que hacía que el Spark publicado alcanzase 45 km/h en aproximadamente 0,7 s y cambiase bruscamente su retención al cruzar 15 km/h. El ajuste es exclusivo de Spark: escala conjuntamente empuje y drag para conservar su punta sostenible real de 84 km/h, amplía la transición de retención a 12–45 km/h y elimina la compensación que prolongaba en exceso la caída desde velocidad media.
