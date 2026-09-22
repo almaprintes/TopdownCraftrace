@@ -34,7 +34,21 @@ function isGhostLabel(obj) {
 function isRecordLoadedLabel(obj) {
   if (typeof obj?.text !== 'string') return false;
   const text = normalized(obj.text);
-  return (text.includes('RÉCORD') || text.includes('RECORD')) && (text.includes('CARGADO') || text.includes('LOADED'));
+  // The second Ghost HUD row is stateful. Historically this finder only matched
+  // "RÉCORD CARGADO", so ONLINE and "CREA TU PRIMERA VUELTA" never activated the
+  // static DOM replacement; the moving Phaser rectangles remained visible.
+  return (
+    ((text.includes('RÉCORD') || text.includes('RECORD')) && (text.includes('CARGADO') || text.includes('LOADED'))) ||
+    text.includes('CREA TU PRIMERA VUELTA') ||
+    text.includes('CREATE YOUR FIRST LAP') ||
+    text.includes('ONLINE') ||
+    text.includes('DATOS NO VÁLIDOS') ||
+    text.includes('INVALID DATA') ||
+    text.includes('SIGUIENTE VUELTA') ||
+    text.includes('NEXT LAP') ||
+    text.includes('RÉCORD MEJORADO') ||
+    text.includes('RECORD IMPROVED')
+  );
 }
 
 function objectPoint(obj) {
@@ -336,9 +350,7 @@ export class RaceScene extends CurrentRaceScene {
     visibilityText.dataset.visibility = '1';
 
     root.append(ghostText, recordText, visibilityText);
-    // A fixed element inside a transformed game parent is not truly viewport-fixed
-    // in CSS. Mount on document.body so camera/canvas transforms can never move it.
-    document.body.appendChild(root);
+    (this.game?.canvas?.parentElement || document.body).appendChild(root);
     this._tdrStaticGhostPanel = root;
     this._tdrGhostPanelLabels = { ghostText, recordText, visibilityText };
     this._tdrGhostPanelRows = rows;
@@ -375,17 +387,10 @@ export class RaceScene extends CurrentRaceScene {
     const vh = Math.max(1, Number(this.scale?.height || 1));
     if (!rect || rect.width <= 0 || rect.height <= 0) return;
 
-    // The Ghost panel is HUD, not world content. Pin it to fixed viewport
-    // coordinates once and never derive its position from camera-sensitive Phaser
-    // objects. Dynamic zoom/scroll therefore cannot move the DOM rows.
-    const sx=rect.width/vw,sy=rect.height/vh;
-    const fixedRight=10;
-    const fixedTop=Math.max(118,Math.min(150,Math.round(vh*.315)));
-    const fixedLeft=vw-fixedRight-PANEL_W;
-    root.style.left = `${rect.left + fixedLeft * sx}px`;
-    root.style.top = `${rect.top + fixedTop * sy}px`;
-    root.style.width = `${PANEL_W * sx}px`;
-    root.style.height = `${PANEL_H * sy}px`;
+    root.style.left = `${rect.left + (anchor.left / vw) * rect.width}px`;
+    root.style.top = `${rect.top + (anchor.top / vh) * rect.height}px`;
+    root.style.width = `${(PANEL_W / vw) * rect.width}px`;
+    root.style.height = `${(PANEL_H / vh) * rect.height}px`;
     const scale = rect.width / vw;
     const fontPx = Math.max(9, Math.min(15, 12 * scale));
     for (const label of Object.values(this._tdrGhostPanelLabels || {})) {
