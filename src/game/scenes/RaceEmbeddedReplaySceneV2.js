@@ -188,7 +188,15 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     // Keep the established Physics Base 1.0 untouched for every other car. Vortex is
     // deliberately the development mule: preserve some lateral momentum through the
     // base tyre scrub so body heading and travel direction can separate naturally.
-    const vortexFeel=(this.carId==='helix_vortex'||this.carId==='helix_spark')&&!this._tdrEmbeddedReplay&&this.carBody?.body?.velocity;
+    const handlingLabProfiles={
+      helix_vortex:{retention:.58,lift:.12,recovery:1.00},
+      helix_spark:{retention:.50,lift:.10,recovery:1.12},
+      avenir_apex:{retention:.42,lift:.08,recovery:1.22},
+      veloce_photon:{retention:.68,lift:.15,recovery:.88},
+      forge_anvil:{retention:.74,lift:.18,recovery:.78}
+    };
+    const handlingLab=handlingLabProfiles[this.carId]||null;
+    const vortexFeel=!!handlingLab&&!this._tdrEmbeddedReplay&&this.carBody?.body?.velocity;
     let vortexBefore=null;
     if(vortexFeel){
       const b=this.carBody,rot=Number(b.rotation||0),vx=Number(b.body.velocity.x||0),vy=Number(b.body.velocity.y||0);
@@ -228,13 +236,13 @@ export class RaceScene extends EmbeddedReplayRaceScene{
         const liftLoad=clamp01(Number(this._vortexLiftLoad||0));
 
         const driveSupport=1+.18*throttle*(1-brake);
-        const retention=Math.min(.82,(.18+.58*loaded)*driveSupport);
+        const retention=Math.min(.86,(.18+handlingLab.retention*loaded)*driveSupport);
         let targetL=vL+(preL-vL)*retention;
 
         // Lift-off closes the line through lateral load transfer, not an artificial
         // rotation impulse. Keep it subtle so the 1.1.141 rear balance survives.
         if(liftLoad>0&&steer>.08){
-          const liftBite=.12*liftLoad*speedLoad*(1-.45*slipLoad);
+          const liftBite=handlingLab.lift*liftLoad*speedLoad*(1-.45*slipLoad);
           targetL*=1-liftBite;
         }
 
@@ -251,7 +259,8 @@ export class RaceScene extends EmbeddedReplayRaceScene{
         // Recovery is intentionally slower than breakaway. Counter-steer changes the
         // heading first; the mass follows afterwards instead of snapping to the nose.
         const neutral=steer<.07;
-        const recoveryRate=neutral?(1.25+1.15*(1-slipLoad)):(.48+.72*(1-loaded));
+        const recoveryBase=neutral?(1.25+1.15*(1-slipLoad)):(.48+.72*(1-loaded));
+        const recoveryRate=recoveryBase*handlingLab.recovery;
         const recovery=Math.exp(-recoveryRate*dt);
         const preservedL=targetL*recovery;
 
@@ -262,7 +271,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
         const outSpeed=Math.hypot(outX,outY);
         if(outSpeed>cap&&outSpeed>0){const k=cap/outSpeed;outX*=k;outY*=k;}
         b.body.velocity.x=outX;b.body.velocity.y=outY;
-        this._vortexFeelTelemetry={slipDeg,retention,lateral:preservedL,loaded,liftLoad};
+        this._vortexFeelTelemetry={profile:this.carId,slipDeg,retention,lateral:preservedL,loaded,liftLoad};
       }
     }
 
