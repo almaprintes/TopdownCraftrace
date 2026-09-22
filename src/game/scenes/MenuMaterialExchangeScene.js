@@ -22,7 +22,7 @@ export class MenuScene extends CurrentMenuScene {
   _confirmStoreSpend({title='CONFIRMAR COMPRA',detail='',confirm='COMPRAR',onConfirm}={}){
     try{this._storeConfirmModal?.destroy?.(true);}catch{}
     const {width:w,height:h}=this.scale,compact=h<520;
-    const root=this.add.container(0,0).setDepth(60000);this._storeConfirmModal=root;
+    const root=this.add.container(0,0).setDepth(60000);this._storeConfirmModal=root;\n    // Hide the store while the Phaser confirmation is open. The store text\n    // otherwise remains visible through/over the modal on iOS WebGL.\n    const store=this._storeModal,storeWasVisible=!!store?.visible;\n    try{if(store?.scene)store.setVisible(false);}catch{}
     const A=o=>{root.add(o);return o;};
     A(this.add.rectangle(0,0,w,h,0x02070d,.82).setOrigin(0).setInteractive());
     const pw=Math.min(w-40,compact?500:560),ph=compact?190:220,x=(w-pw)/2,y=(h-ph)/2;
@@ -35,7 +35,7 @@ export class MenuScene extends CurrentMenuScene {
     A(this.add.text(x+24+bw/2,by+bh/2,'CANCELAR',{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'900',color:'#d7e0e8'}).setOrigin(.5));
     const accept=A(this.add.rectangle(x+24+bw+gap,by,bw,bh,0x17683f,1).setOrigin(0).setStrokeStyle(2,0x5df0b0,.9).setInteractive({useHandCursor:true}));
     A(this.add.text(x+24+bw+gap+bw/2,by+bh/2,confirm,{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'900',color:'#fff'}).setOrigin(.5));
-    const close=()=>{try{root.destroy(true);}catch{}this._storeConfirmModal=null;};
+    const close=()=>{try{root.destroy(true);}catch{}this._storeConfirmModal=null;try{if(store?.scene&&storeWasVisible)store.setVisible(true);}catch{}};
     cancel.on('pointerdown',close);
     accept.on('pointerdown',()=>{close();onConfirm?.();});
   }
