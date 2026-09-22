@@ -451,3 +451,5 @@ export class RaceScene extends CurrentRaceScene {
 }
 
 // DEV 1.1.145 validation trigger: active static Ghost layer preserves online rival and its stable DOM controls.
+
+// DEV 1.1.146 validation trigger: Ghost DOM rows are viewport-fixed and independent from dynamic camera zoom.
