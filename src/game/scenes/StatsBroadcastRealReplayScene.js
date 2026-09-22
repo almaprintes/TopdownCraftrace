@@ -224,3 +224,5 @@ export class StatsScene extends ReplayStatsScene{
 }
 
 // DEV 1.1.113 validation trigger: replay player copy uses i18n keys.
+
+// DEV 1.1.136 validation trigger: leaderboard replay and VS share one session-memory ghost cache.
