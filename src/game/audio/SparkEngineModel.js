@@ -8,12 +8,13 @@ export const SPARK_SAMPLE_RPM = Object.freeze([950, 1850, 2900, 4050, 5350, 7100
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
-export function targetSparkRpm(kmh, throttle) {
-  const road = clamp(Number(kmh) || 0, 0, 195) / 195;
+export function targetSparkRpm(kmh, throttle, attainableTopKmh = 60) {
+  const top = Math.max(30, Number(attainableTopKmh) || 60);
+  const road = clamp(Number(kmh) || 0, 0, top) / top;
   const gas = clamp(Number(throttle) || 0, 0, 1);
-  const roadRpm = SPARK_IDLE_RPM + Math.pow(road, 0.82) * 4400;
-  const freeRevRpm = SPARK_IDLE_RPM + Math.pow(gas, 0.72) * (SPARK_REDLINE_RPM - SPARK_IDLE_RPM);
-  return clamp(Math.max(roadRpm, freeRevRpm), SPARK_IDLE_RPM, SPARK_REDLINE_RPM);
+  const roadRpm = SPARK_IDLE_RPM + Math.pow(road, 0.82) * 5200;
+  const loadRpm = Math.pow(gas, 0.72) * (1700 + road * 350);
+  return clamp(roadRpm + loadRpm, SPARK_IDLE_RPM, SPARK_REDLINE_RPM);
 }
 
 export function advanceSparkRpm(currentRpm, targetRpm, throttle, elapsedSeconds) {

@@ -1,5 +1,11 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## ACTUALIZACIÓN 22/09/2026 — RESPUESTA LONGITUDINAL HÉLIX SPARK
+
+DEV 1.1.167 corrige la curva física que hacía que el Spark publicado alcanzase 45 km/h en aproximadamente 0,7 s y cambiase bruscamente su retención al cruzar 15 km/h. El ajuste es exclusivo de Spark: escala conjuntamente empuje y drag para conservar su punta sostenible real de 84 km/h, amplía la transición de retención a 12–45 km/h y elimina la compensación que prolongaba en exceso la caída desde velocidad media.
+
+El audio conserva el banco y la mezcla de DEV 1.1.166. Solo cambia el objetivo de RPM: al moverse sigue la velocidad sostenible real del coche y el gas añade carga, de modo que el último sample llega con la punta en vez de inmediatamente al pisar. Cifras, alcance y prueba: `docs/continuity/2026-09-22-spark-longitudinal-response.md`.
+
 ## ACTUALIZACIÓN 22/09/2026 — RECONSTRUCCIÓN DEL MOTOR HÉLIX SPARK
 
 DEV 1.1.166 sustituye la ruta experimental de seis `HTMLAudioElement` remotos por un único grafo WebAudio con muestras locales. Los seis WAV CC0 viven en `public/assets/audio/engine/spark/`, se descargan y decodifican antes del gesto de encendido cuando la plataforma lo permite, comienzan sobre el mismo reloj de audio y se mezclan por RPM con crossfade de potencia constante. Spark no tiene fallback procedural: cualquier fallo del banco real queda visible en consola.

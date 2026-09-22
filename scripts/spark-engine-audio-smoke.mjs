@@ -22,8 +22,11 @@ const hashes = [
 ];
 
 assert.equal(targetSparkRpm(0, 0), SPARK_IDLE_RPM, 'stationary idle must remain at idle');
-assert.equal(targetSparkRpm(0, 1), SPARK_REDLINE_RPM, 'stationary throttle must reach redline target');
-assert.ok(targetSparkRpm(150, 0) > SPARK_IDLE_RPM, 'road speed must carry engine RPM');
+const stationaryRev = targetSparkRpm(0, 1, 84);
+assert.ok(stationaryRev >= 2500 && stationaryRev <= 3000, 'stationary throttle must rev clearly without jumping to redline');
+assert.ok(targetSparkRpm(15, 1, 84) < targetSparkRpm(45, 1, 84), 'moving RPM must rise with real road speed');
+assert.equal(targetSparkRpm(84, 1, 84), SPARK_REDLINE_RPM, 'full throttle at attainable top speed must reach redline');
+assert.ok(targetSparkRpm(45, 1, 84) > targetSparkRpm(45, 0, 84), 'throttle must add engine load at the same speed');
 assert.ok(advanceSparkRpm(1000, 7000, 1, 0.05) > 1000, 'RPM must rise under throttle');
 assert.ok(advanceSparkRpm(7000, 2000, 0, 0.05) < 7000, 'RPM must fall when throttle is released');
 
@@ -46,5 +49,6 @@ const runtime = await readFile(`${root}src/game/audio/CarEngineSampleRuntime.js`
 assert.ok(!runtime.includes('raw.githubusercontent.com/yashimosh'), 'Spark must not depend on GitHub Raw at runtime');
 assert.ok(!runtime.includes('new Audio('), 'Spark must not use independent HTML media clocks');
 assert.ok(runtime.includes('createBufferSource'), 'Spark must use WebAudio buffer sources');
+assert.ok(runtime.includes('attainableTopSpeedKmh'), 'Spark RPM must use the car attainable speed');
 
 console.log('Spark engine audio smoke: OK');

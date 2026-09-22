@@ -1,4 +1,4 @@
-import { pxpsToKmh } from '../cars/speedUnits.js';
+import { attainableTopSpeedKmh, pxpsToKmh } from '../cars/speedUnits.js';
 import {
   SPARK_IDLE_RPM,
   SPARK_REDLINE_RPM,
@@ -122,6 +122,7 @@ export class CarEngineSampleRuntime {
     this._graphPromise = null;
     this._sparkBufferPromise = null;
     this._sparkBufferContext = null;
+    this._sparkTopKmh = Math.max(30, attainableTopSpeedKmh(scene?.carParams || {}, 40) || 60);
     this._contextRecovery = () => this._resumeContext('lifecycle');
 
     // Fetch and decode before the ignition gesture whenever the platform permits
@@ -415,7 +416,7 @@ export class CarEngineSampleRuntime {
     const nodes = this._nodes;
     const now = this._ctx.currentTime;
     const target = nodes.mode === 'spark-samples'
-      ? targetSparkRpm(kmh, throttle)
+      ? targetSparkRpm(kmh, throttle, this._sparkTopKmh)
       : this._legacyTargetRpm(kmh, throttle);
     this._rpm = nodes.mode === 'spark-samples'
       ? advanceSparkRpm(this._rpm, target, throttle, elapsedSeconds)

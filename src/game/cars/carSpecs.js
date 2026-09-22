@@ -134,6 +134,15 @@ power: {
     engineBrake: 260,
     linearDrag: 0.031,
 
+    // El mismo equilibrio entre empuje y drag conserva la punta, pero una masa
+    // longitudinal mayor evita alcanzarla en menos de un segundo. La retención
+    // se mezcla de forma continua para que no exista un escalón a 15 km/h.
+    longitudinalResponse: 0.30,
+    coastBlendStartKmh: 12,
+    coastBlendEndKmh: 45,
+    coastHighSpeedDragScale: 45,
+    coastEngineBrakeRestore: 0,
+
     // Dirección
     turnRate: 3.8,
     turnMin: 0.27,
