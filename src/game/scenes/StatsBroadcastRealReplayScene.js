@@ -4,6 +4,7 @@ import { decodeOnlineGhostNativeBinary, decodeOnlineGhostNative } from '../onlin
 import { pxpsToKmh } from '../cars/speedUnits.js';
 import { t } from '../i18n/index.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { REWARDED_PLACEMENTS, raceControlGhostClaimId, verifiedReward } from '../monetization/rewardedActions.js';
 import { setOnlineGhostChallenge } from '../online/onlineGhostSession.js';
 
 const SESSION_KEY='tdr2:statsNativeReplay';
@@ -82,10 +83,24 @@ export class StatsScene extends ReplayStatsScene{
       const vs=originalVs.cloneNode(true);
       const actions=document.createElement('span');actions.className='br-online-actions';
       const watch=document.createElement('button');watch.type='button';watch.className='br-watch';watch.title=t('replay.watch');watch.textContent='▶';
-      watch.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();watch.disabled=true;watch.textContent='…';try{let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Replay unavailable');cacheOnlineGhost(ref,data,ghost);}this._showRaceControlReplayModal({trackId:data.track_id,selectedLap:{carId:data.car_id}},ghost,t('replay.onlineReplay'));}catch(err){console.error('[race-control] replay download failed',err);watch.textContent='!';setTimeout(()=>{if(watch.isConnected){watch.disabled=false;watch.textContent='▶';}},1200);}});
-      vs.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();if(vs.dataset.brVsLaunching==='1')return;vs.dataset.brVsLaunching='1';const original=vs.innerHTML;try{let unlocked=localStorage.getItem('tdr2:onlineGhostUnlocked:'+ref)==='1';if(!unlocked){if(!window.confirm(t('raceControl.unlockGhostRewarded')))return;vs.textContent='…';const ad=await showRewardedAd(this,{title:t('raceControl.unlockGhostRewarded'),placement:'race_control_vs_ghost',claimId:'race-control-ghost:'+ref});if(!ad?.completed||!ad?.verified)throw new Error(ad?.reason||'rewarded_ad_not_completed');localStorage.setItem('tdr2:onlineGhostUnlocked:'+ref,'1');unlocked=true;}vs.textContent='…';let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Ghost unavailable');cacheOnlineGhost(ref,data,ghost);}this._launchOnlineGhostChallenge(ref,data,ghost);}catch(err){console.error('[race-control] VS ghost launch failed',err);vs.innerHTML=original;}finally{vs.dataset.brVsLaunching='0';}});
+      watch.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();watch.disabled=true;watch.textContent='…';try{if(!await this._ensureOnlineGhostReward(ref))return;let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Replay unavailable');cacheOnlineGhost(ref,data,ghost);}this._showRaceControlReplayModal({trackId:data.track_id,selectedLap:{carId:data.car_id}},ghost,t('replay.onlineReplay'));}catch(err){console.error('[race-control] rewarded replay download failed',err);watch.textContent='!';setTimeout(()=>{if(watch.isConnected){watch.disabled=false;watch.textContent='▶';}},1200);}finally{if(watch.isConnected&&watch.textContent==='…'){watch.disabled=false;watch.textContent='▶';}}});
+      vs.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();if(vs.dataset.brVsLaunching==='1')return;vs.dataset.brVsLaunching='1';const original=vs.innerHTML;try{if(!await this._ensureOnlineGhostReward(ref))return;vs.textContent='…';let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Ghost unavailable');cacheOnlineGhost(ref,data,ghost);}this._launchOnlineGhostChallenge(ref,data,ghost);}catch(err){console.error('[race-control] VS ghost launch failed',err);vs.innerHTML=original;}finally{vs.dataset.brVsLaunching='0';}});
       originalVs.replaceWith(actions);actions.append(watch,vs);
     });
+  }
+
+  async _ensureOnlineGhostReward(ref){
+    const unlockKey='tdr2:onlineGhostUnlocked:'+ref;
+    if(localStorage.getItem(unlockKey)==='1')return true;
+    if(!window.confirm(t('raceControl.unlockGhostRewarded')))return false;
+    const ad=await showRewardedAd(this,{
+      title:t('raceControl.ghostRewardedTitle'),
+      placement:REWARDED_PLACEMENTS.RACE_CONTROL_GHOST,
+      claimId:raceControlGhostClaimId(ref)
+    });
+    if(!verifiedReward(ad))throw new Error(ad?.reason||'rewarded_ad_not_completed');
+    localStorage.setItem(unlockKey,'1');
+    return true;
   }
 
   _launchOnlineGhostChallenge(ref,data,ghost){

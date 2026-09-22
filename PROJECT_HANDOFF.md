@@ -1,5 +1,11 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## ACTUALIZACIÓN 22/09/2026 — REWARDED COMPLETO Y ACCESO SEGURO PARA JUECES
+
+DEV 1.1.170 añade placements RevenueCat separados para publicar un récord, descargar un fantasma, los intercambios 2.º/3.º de la Recicladora y las 100 monedas de Tienda cada cuatro horas, manteniendo el x2 postcarrera. Todas las acciones exigen `completed + verified`; un cierre, error o SSV fallido no concede nada. Publicar actualiza inmediatamente el leaderboard del circuito.
+
+El acceso Shipaton ya no se autoriza con `localStorage`: Supabase valida un código hasheado y concede un entitlement temporal al UUID anónimo. El modo de evaluación usa un Garaje/Factory en memoria y no altera la progresión real. Migraciones, placements, seguridad y validación: `docs/continuity/2026-09-22-rewarded-actions-and-shipaton-judge-access.md`.
+
 ## ACTUALIZACIÓN 22/09/2026 — GRIPLINE CON MOTOR RPM Y SPARK MÁS VIVO
 
 DEV 1.1.169 asigna al primer desbloqueable, AVENIR Gripline, un perfil de motor de seis capas RPM. Reutiliza el banco CC0 local ya auditado, pero con ralentí, corte, curva, pitch y ecualización propios: resulta más agudo y rápido que Spark sin añadir ninguna dependencia de red. El runtime generaliza el banco mediante `ProfiledRpmEngineModel.js`; Spark conserva su modelo exacto y Vortex conserva `JEEP`.

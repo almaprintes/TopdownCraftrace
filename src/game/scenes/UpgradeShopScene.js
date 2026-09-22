@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GARAGE_ITEMS, EVOLUTION_CHAIN, EVOLUTION_COST, findRecipe } from '../garage/partsCatalog.js';
 import { loadGarage, qty, craft, evolve, equip, duplicateLastReward } from '../garage/garageStore.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { legacyPostRaceClaimId, REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
 import { t } from '../i18n/index.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -160,6 +161,6 @@ export class UpgradeShopScene extends Phaser.Scene {
   }
   _doEvolve(id){const r=evolve(this.state,id);this.state=loadGarage();this._toast(r.ok?`EVOLUCIÓN · ${r.item.name}`:r.reason);this.render();}
   _doEquip(id){if(equip(this.state,id)){this.state=loadGarage();this._toast(`${GARAGE_ITEMS[id].name} equipada en ${FAMILY_LABEL[GARAGE_ITEMS[id].family]}`);}this.render();}
-  async _doubleReward(){const ok=await showRewardedAd(this,{title:'DUPLICAR BOTÍN'});if(ok){const r=duplicateLastReward();this.state=loadGarage();this._toast(r?'Botín duplicado':'Ya reclamado');this.render();}}
+  async _doubleReward(){const reward=loadGarage().lastReward||{};const ad=await showRewardedAd(this,{title:'DUPLICAR BOTÍN',placement:REWARDED_PLACEMENTS.POST_RACE_DOUBLE_LOOT,claimId:legacyPostRaceClaimId(reward)});if(verifiedReward(ad)){const r=duplicateLastReward();this.state=loadGarage();this._toast(r?'Botín duplicado':'Ya reclamado');this.render();}}
   _toast(msg){const {width,height}=this.scale;const t=this.add.text(width/2,height-32,msg,{fontFamily:'system-ui',fontSize:'12px',fontStyle:'900',color:'#fff',backgroundColor:'#102a24',padding:{x:14,y:8}}).setOrigin(.5).setDepth(999);this.tweens.add({targets:t,alpha:0,y:t.y-10,delay:1400,duration:350,onComplete:()=>t.destroy()});}
 }

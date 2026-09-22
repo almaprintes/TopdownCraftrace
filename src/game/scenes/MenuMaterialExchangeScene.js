@@ -2,6 +2,7 @@ import { MenuScene as CurrentMenuScene } from './MenuDuelModeScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage, qty } from '../garage/garageStore.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { recyclerRewardedClaimId, recyclerRewardedPlacement, verifiedReward } from '../monetization/rewardedActions.js';
 import { EXCHANGE_MATERIALS, MATERIAL_EXCHANGE_VALUE, MATERIAL_EXCHANGE_EFFICIENCY, materialExchangeStatus, quoteMaterialExchange, executeMaterialExchange } from '../store/materialExchange.js';
 
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
@@ -123,7 +124,7 @@ export class MenuScene extends CurrentMenuScene {
     A(this.add.text(x+24,btnY+btnH/2,'1.º gratis · 2.º y 3.º con vídeo',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8fa6b7'}).setOrigin(0,.5));
     if(enabled){btn.setInteractive({useHandCursor:true});btn.on('pointerdown',()=>{
       this._confirmStoreSpend({title:'CONFIRMAR INTERCAMBIO',detail:`${amount} ${materialName(fromId)}  →  ${receive} ${materialName(toId)}${requiresVideo?' · REQUIERE VÍDEO':' · PRIMER CAMBIO GRATIS'}`,confirm:'CONFIRMAR',onConfirm:async()=>{
-        if(requiresVideo){const ad=await showRewardedAd(this,{title:'RECICLAJE DE MATERIALES',placement:'recycler_exchange',claimId:`recycler-${Date.now()}`});if(!ad?.completed||!ad?.verified){this._toastStore?.('VÍDEO NO COMPLETADO',false);return;}}
+        if(requiresVideo){const ordinal=status.nextOrdinal;const ad=await showRewardedAd(this,{title:'RECICLAJE DE MATERIALES',placement:recyclerRewardedPlacement(ordinal),claimId:recyclerRewardedClaimId(status.day,ordinal)});if(!verifiedReward(ad)){this._toastStore?.('VÍDEO NO COMPLETADO',false);return;}}
         const result=executeMaterialExchange(fromId,toId,amount);this._toastStore?.(result.ok?`${result.spend} ${materialName(fromId)} → ${result.receive} ${materialName(toId)}`:result.reason,result.ok);if(result.ok)this._exchangeAmount=Math.min(amount,Math.max(1,qty(loadGarage(),fromId)));this._openMaterialExchange(fromId,toId,this._exchangeAmount);
       }});
     });}

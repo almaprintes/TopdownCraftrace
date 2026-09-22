@@ -1,5 +1,6 @@
 import { MenuScene as CurrentMenuScene } from './MenuStoreCloseFixScene.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
 import { rewardedStatus, claimRewardedCoins } from '../store/storeEconomy.js';
 import { getLanguage } from '../i18n/index.js';
 import { showStoreDomConfirm, closeStoreDomConfirm } from '../ui/storeDomConfirm.js';
@@ -96,10 +97,10 @@ export class MenuScene extends CurrentMenuScene {
       try{
         const ad=await showRewardedAd(this,{
           title:getLanguage()==='en'?'REWARDED VIDEO':'VÍDEO RECOMPENSADO',
-          placement:'store_rewarded_coins',
-          claimId:`store-coins-${Date.now()}`
+          placement:REWARDED_PLACEMENTS.STORE_COINS_100,
+          claimId:status.claimId
         });
-        if(!ad?.completed||!ad?.verified){
+        if(!verifiedReward(ad)){
           this._toastStore?.(getLanguage()==='en'?'VIDEO NOT COMPLETED':'VÍDEO NO COMPLETADO',false);
           return;
         }

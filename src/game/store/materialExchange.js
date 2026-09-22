@@ -28,7 +28,7 @@ export function materialExchangeStatus(now=Date.now()){
   const s=loadGarage();
   const day=dayKey(now);
   const used=s.materialExchangeDay===day?Math.max(0,Number(s.materialExchangeCount||0)):0;
-  return {day,used,remaining:Math.max(0,MATERIAL_EXCHANGES_PER_DAY-used),available:used<MATERIAL_EXCHANGES_PER_DAY};
+  return {day,used,nextOrdinal:used+1,remaining:Math.max(0,MATERIAL_EXCHANGES_PER_DAY-used),available:used<MATERIAL_EXCHANGES_PER_DAY};
 }
 
 export function quoteMaterialExchange(fromId,toId,fromQty){

@@ -1,5 +1,6 @@
 import { loadGarage, saveGarage, addItem } from '../garage/garageStore.js';
 import { recordStoreBuy } from '../seasons/seasonTelemetry.js';
+import { storeRewardedWindow } from '../monetization/rewardedActions.js';
 
 // Balanced against Economy 2.0 natural material income (171 scrap/h, 30 family/h,
 // 18 compound/h, 6 ECU/h). Pack progression value scales roughly 30/37/50/60
@@ -22,8 +23,8 @@ export function buyMaterialPack(id){
 }
 
 export function rewardedStatus(now=Date.now()){
-  const s=loadGarage(),last=Number(s.storeRewardedAt||0),remaining=Math.max(0,FOUR_HOURS-(now-last));
-  return {available:!last||remaining<=0,remaining};
+  const s=loadGarage(),last=Number(s.storeRewardedAt||0);
+  return storeRewardedWindow(last,now,FOUR_HOURS);
 }
 
 export function claimRewardedCoins(amount=100,now=Date.now()){
@@ -39,4 +40,3 @@ export function claimDailyCoins(amount=250,now=Date.now()){
   const st=dailyStatus(now); if(!st.available)return {ok:false,reason:'YA RECLAMADA',remaining:st.remaining};
   const s=loadGarage(); s.coins=Number(s.coins||0)+amount; s.storeDailyAt=now; saveGarage(s); return {ok:true,amount,state:s};
 }
-

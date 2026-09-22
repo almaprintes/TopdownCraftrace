@@ -265,3 +265,13 @@ PREPRODUCTION está lista cuando:
 10. Build + Deploy y verificaciones finales están en success.
 
 Este documento es el plan de referencia preproduction. Si una decisión posterior lo modifica, actualizar aquí el cambio y su motivo.
+
+## 12. Estado aplicado — DEV 1.1.170 (22/09/2026)
+
+- FASE 2 / autoridad Judge: implementada en Supabase mediante código hasheado, entitlement por `auth.uid()`, caducidad, límite de activaciones y RPCs autenticados. El flag local solo conserva la preferencia y no concede autoridad.
+- Cobertura de evaluación: coches, circuitos y modos por bypass temporal; Garage/Factory mediante sandbox en memoria sin modificar la progresión almacenada.
+- Rewarded adicionales: publicación de récord, descarga de ghost, intercambios 2.º/3.º y +100 monedas cada cuatro horas, cada uno con placement y claim propios.
+- Race Control refresca el leaderboard del circuito después de publicar correctamente.
+- Quedan pendientes antes del AAB: ejecutar la prueba unitaria del wrapper con JDK 21, recorrido manual de los seis placements en la variante Android de prueba y validación final de SSV real en el build de producción.
+
+Detalle operativo: `docs/continuity/2026-09-22-rewarded-actions-and-shipaton-judge-access.md`.

@@ -4,6 +4,7 @@ import { loadGarage, qty, craft, equip, duplicateLastReward, getEquippedForCar, 
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { legacyPostRaceClaimId, REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
 import { t } from '../i18n/index.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -191,7 +192,7 @@ export class UpgradeShopScene extends Phaser.Scene{
   }
 
   _craft(){if(!this.selA||!this.selB)return this._toast(t('workshop.dragTwoToBench'));const r=craft(this.state,this.selA,this.selB);if(!r.ok)return this._toast(r.reason);this.lastCraftedId=r.item.id;this.selA=this.selB=null;this.state=loadGarage();this.filter=r.item.kind==='part'?'parts':'materials';this._toast(`${t('workshop.crafted')} · ${r.item.name}`);this.render();}
-  async _double(){const ok=await showRewardedAd(this,{title:t('workshop.doubleLoot')});if(ok){const r=duplicateLastReward();this.state=loadGarage();this._toast(r?t('workshop.lootDoubled'):t('workshop.alreadyClaimed'));this.render();}}
+  async _double(){const reward=loadGarage().lastReward||{};const ad=await showRewardedAd(this,{title:t('workshop.doubleLoot'),placement:REWARDED_PLACEMENTS.POST_RACE_DOUBLE_LOOT,claimId:legacyPostRaceClaimId(reward)});if(verifiedReward(ad)){const r=duplicateLastReward();this.state=loadGarage();this._toast(r?t('workshop.lootDoubled'):t('workshop.alreadyClaimed'));this.render();}}
   _toast(msg){const {width,height}=this.scale;const t=this.add.text(width/2,height-30,msg,{fontFamily:'system-ui',fontSize:'11px',fontStyle:'900',color:'#fff',backgroundColor:'#113129',padding:{x:14,y:8}}).setOrigin(.5).setDepth(9999);this.time.delayedCall(1500,()=>t.destroy());}
 }
 

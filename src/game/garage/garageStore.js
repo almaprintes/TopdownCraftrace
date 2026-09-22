@@ -1,12 +1,29 @@
 import { GARAGE_ITEMS, EVOLUTION_CHAIN, EVOLUTION_COST, findRecipe, findStripRecipe, statDeltaForPart, tuningForPart } from './partsCatalog.js';
+import { evaluationAccessEnabled } from '../shipaton/ShipatonJudgeMode.js';
 const KEY='tdr2:garageFusion:v1';
 const STARTER={};
 const EMPTY_LOOT_COUNTS={scrap:0,alloy:0,rubber:0,disc:0,spring:0,gear:0,compound:0,ecu:0};
 const EMPTY_TIME_CREDIT={baseMs:0,bonusMs:0,chestMs:0};
 const DEFAULT={inventory:{},equipped:{},equippedByCar:{},discoveries:[],coins:250,lastReward:null,rewardedToday:0,rewardedDay:'',lootPityEcu:0,lootBalance:{draws:0,counts:{...EMPTY_LOOT_COUNTS}},lootTimeCredit:{...EMPTY_TIME_CREDIT}};
+let JUDGE_GARAGE=null;
 function selectedCarId(){try{return localStorage.getItem('tdr2:carId')||'stock';}catch{return'stock';}}
-export function loadGarage(){try{const raw=localStorage.getItem(KEY);if(!raw)return structuredClone(DEFAULT);const x=JSON.parse(raw)||{};return{...structuredClone(DEFAULT),...x,inventory:{...STARTER,...(x.inventory||{})},equipped:{...(x.equipped||{})},equippedByCar:{...(x.equippedByCar||{})},lootBalance:{draws:Number(x?.lootBalance?.draws||0),counts:{...EMPTY_LOOT_COUNTS,...(x?.lootBalance?.counts||{})}},lootTimeCredit:{baseMs:Math.max(0,Number(x?.lootTimeCredit?.baseMs||0)),bonusMs:Math.max(0,Number(x?.lootTimeCredit?.bonusMs||0)),chestMs:Math.max(0,Number(x?.lootTimeCredit?.chestMs||0))}};}catch{return structuredClone(DEFAULT);}}
-export function saveGarage(s){localStorage.setItem(KEY,JSON.stringify(s));return s;}
+function loadStoredGarage(){try{const raw=localStorage.getItem(KEY);if(!raw)return structuredClone(DEFAULT);const x=JSON.parse(raw)||{};return{...structuredClone(DEFAULT),...x,inventory:{...STARTER,...(x.inventory||{})},equipped:{...(x.equipped||{})},equippedByCar:{...(x.equippedByCar||{})},lootBalance:{draws:Number(x?.lootBalance?.draws||0),counts:{...EMPTY_LOOT_COUNTS,...(x?.lootBalance?.counts||{})}},lootTimeCredit:{baseMs:Math.max(0,Number(x?.lootTimeCredit?.baseMs||0)),bonusMs:Math.max(0,Number(x?.lootTimeCredit?.bonusMs||0)),chestMs:Math.max(0,Number(x?.lootTimeCredit?.chestMs||0))}};}catch{return structuredClone(DEFAULT);}}
+function judgeGarage(base){
+  const state=structuredClone(base),inventory={...(state.inventory||{})},discoveries=new Set(state.discoveries||[]);
+  for(const [id,item] of Object.entries(GARAGE_ITEMS||{})){
+    inventory[id]=Math.max(Number(inventory[id]||0),item?.kind==='material'?9999:9);
+    if(item?.kind==='part')discoveries.add(id);
+  }
+  state.inventory=inventory;state.discoveries=[...discoveries];state.coins=Math.max(Number(state.coins||0),999999);
+  return state;
+}
+export function loadGarage(){
+  const stored=loadStoredGarage();
+  if(!evaluationAccessEnabled()){JUDGE_GARAGE=null;return stored;}
+  if(!JUDGE_GARAGE)JUDGE_GARAGE=judgeGarage(stored);
+  return structuredClone(JUDGE_GARAGE);
+}
+export function saveGarage(s){if(evaluationAccessEnabled()){JUDGE_GARAGE=structuredClone(s);return s;}localStorage.setItem(KEY,JSON.stringify(s));return s;}
 export function qty(s,id){return Number(s.inventory?.[id]||0);}
 export function addItem(s,id,n=1){s.inventory[id]=(s.inventory[id]||0)+n;return s;}
 export function consume(s,id,n=1){if(qty(s,id)<n)return false;s.inventory[id]-=n;return true;}

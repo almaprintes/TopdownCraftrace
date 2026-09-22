@@ -38,14 +38,14 @@ forbid(gfx,'this._recordGhostSample=()=>{}','iOS graphics layer must not disable
 requireText(gfx,"from './RaceTelemetryHudScene.js'",'graphics presets must route through the semantic telemetry HUD scene');
 forbid(gfx,'RaceLapBreakdownProfilerScene','obsolete profiler scene must not return to shipping chain');
 
-requireText(game,'const forceSetTimeOut=iosDevice&&!forceRafLoop();','iOS timeout scheduling baseline is missing');
+requireText(game,'const forceSetTimeOut=safeMode&&!forceRafLoop();','iOS safe-mode timeout scheduling baseline is missing');
 requireText(game,"tdr2:forceRafLoop",'iOS rAF diagnostic override is missing');
 requireText(game,'if(isMobileDevice())return;','mobile automatic scene warmup must stay disabled');
 requireText(game,"def.exportName!=='RaceScene'",'desktop warmup must exclude the race bundle');
 
 // Shipping race has one named UX authority. Temporary hotfix/bridge wrappers must
 // never be reintroduced at the lazy-load boundary.
-requireText(game,"import('./scenes/RaceExperienceScene.js')",'shipping race must load RaceExperienceScene directly');
+requireText(game,"import('./scenes/RaceEmbeddedReplaySceneV2.js')",'shipping race must load the current embedded-replay race chain directly');
 forbid(game,'RacePauseButtonRestoreFixScene','shipping race must not route through pause hotfix facade');
 forbid(game,'RaceLapHistoryBridgeScene','shipping race must not route through synthetic lap-history bridge');
 forbid(game,'RaceHandbrakeFrontAxleFixScene','shipping race must not route through obsolete handbrake fix wrapper');
@@ -121,10 +121,11 @@ requireText(trackSelector,"this.scene.start('menu');",'valid player track select
 requireText(trackTouch,"./TrackGaragePlayerLightScene.js",'shipping selector must route through the lightweight player scene');
 
 if(count(main,'serviceWorker.register')!==0)fail('src/main.js must not register the service worker');
-if(count(index,"serviceWorker.register('./sw.js')")!==1)fail('index.html must own exactly one service-worker registration');
+if(count(index,"serviceWorker.register('./sw.js'")!==1)fail('index.html must own exactly one service-worker registration');
 forbid(index,"dispatchEvent(new Event('resize'))",'viewport normalizer must not recursively synthesize resize');
 forbid(index,'carFactoryModal','dead Car Factory modal must not return to the shipping shell');
-requireText(sw,"fetch(req, { cache: 'no-store' })",'service worker network freshness path is missing');
+requireText(sw,"self.registration.unregister()",'development service worker must remove its obsolete registration');
+forbid(sw,"addEventListener('fetch'",'development service worker must not intercept network requests');
 requireText(stats,'export function loadPlayerStatsPersisted()','lightweight persistent stats read is missing');
 forbid(stats,'return overlayTiming(next);','stat writes must not rescan TT histories');
 requireText(lobby,'loadPlayerStatsPersisted','lobby mastery must not scan all TT histories');
@@ -133,6 +134,6 @@ forbid(htmlText,'[...entries]','HTML text sync must not clone the full entry map
 requireText(htmlText,'proto.destroy=originalDestroy','HTML text destroy monkey-patch must be restored');
 requireText(htmlText,'factory.text=originalFactoryText','HTML text factory monkey-patch must be restored');
 forbid(pages,'source-index.html','GitHub Pages must not replace the real index.html');
-requireText(pages,'npm run build -- --base=/TopdownCraftrace/','GitHub Pages must build with repository base path');
+requireText(pages,'npx vite build --base=/TopdownCraftrace/dev/','GitHub Pages must build DEV with its deployed repository subpath');
 
 console.log('[stability-smoke] OK — clean mobile architecture invariants preserved');

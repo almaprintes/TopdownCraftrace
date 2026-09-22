@@ -28,6 +28,7 @@ export function saveCarUnlocks(state){
 export function unlockCar(carId){
   const id=String(carId||'').trim();
   if(!id)return false;
+  if(evaluationAccessEnabled())return true;
   const state=loadCarUnlocks();
   const had=state.unlocked.includes(id);
   if(!had)state.unlocked.push(id);
