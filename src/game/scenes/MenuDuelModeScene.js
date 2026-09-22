@@ -40,12 +40,15 @@ export class MenuScene extends CurrentMenuScene {
 
   _installStoreCountdownTicker(root){
     const prefix=t('store.availableIn');
+    const rewardTitles={video:t('store.rewardedVideo').toUpperCase(),daily:t('store.dailyGift').toUpperCase()};
     const collectCards=(node,out=[])=>{
       for(const child of node?.list||[]){
         if(child?.type==='Container'){
           const texts=(child.list||[]).filter(o=>o?.type==='Text');
           const title=texts.map(o=>String(o.text||'').toUpperCase()).join(' | ');
-          if(child?.getData?.('storeRewardKind'))out.push({kind:child.getData('storeRewardKind'),card:child,texts});
+          const title=texts.map(o=>String(o.text||'').toUpperCase()).join(' | ');
+          if(title.includes(rewardTitles.video))out.push({kind:'video',card:child,texts});
+          else if(title.includes(rewardTitles.daily))out.push({kind:'daily',card:child,texts});
           collectCards(child,out);
         }
       }
@@ -58,7 +61,7 @@ export class MenuScene extends CurrentMenuScene {
       let becameAvailable=false;
       for(const entry of cards){
         const status=entry.kind==='video'?rewardedStatus():dailyStatus();
-        const label=entry.texts.find(o=>o?.getData?.('storeCountdownLabel'));
+        const label=entry.texts.find(o=>String(o.text||'').startsWith(prefix));
         if(status.available){
           if(label)becameAvailable=true;
           continue;
