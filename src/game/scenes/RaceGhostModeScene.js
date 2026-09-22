@@ -65,9 +65,16 @@ export class RaceScene extends CurrentRaceScene{
     this._ghostStorageKey=keyFor(this._ghostTrackKey,this._ghostCarId);
     // A VS launch deposits exactly one challenge in shared module memory. Consume it
     // once here; normal Ghost entries have no pending challenge and keep using PB.
-    const onlineChallenge=this._tdrGameMode==='ghost'?consumeOnlineGhostChallenge():null;
-    this._ghostData=onlineChallenge?.ghost||readGhost(this._ghostStorageKey);
-    this._onlineGhostChallenge=onlineChallenge;
+    const pendingOnline=this._tdrGameMode==='ghost'?consumeOnlineGhostChallenge():null;
+    // Never silently fall back to the local PB for an online challenge. Also
+    // require the downloaded payload time to agree with the leaderboard row:
+    // the HUD must describe the exact samples that will actually be played.
+    const onlineGhost=pendingOnline?.ghost?.samples?.length?pendingOnline.ghost:null;
+    const expectedMs=Math.round(Number(pendingOnline?.bestTimeMs)||0);
+    const actualMs=Math.round(Number(onlineGhost?.lapMs)||0);
+    const onlineValid=!!onlineGhost&&(!expectedMs||Math.abs(actualMs-expectedMs)<=2);
+    this._onlineGhostChallenge=onlineValid?pendingOnline:(pendingOnline?{...pendingOnline,invalid:true}:null);
+    this._ghostData=pendingOnline?(onlineValid?onlineGhost:null):readGhost(this._ghostStorageKey);
     this._ghostSamples=[];
     this._ghostLapStartPerf=null;
     this._ghostLastSamplePerf=0;
@@ -94,11 +101,6 @@ export class RaceScene extends CurrentRaceScene{
 
     this._onGhostResize=()=>this._positionGhostControls();
     this.scale.on('resize',this._onGhostResize);
-    // Race HUD/control layers finish settling after create() on mobile. Re-apply
-    // the Ghost HUD geometry after those passes so boxes and labels stay aligned.
-    this.time.delayedCall(0,()=>this._positionGhostControls());
-    this.time.delayedCall(220,()=>this._positionGhostControls());
-    this.time.delayedCall(700,()=>this._positionGhostControls());
 
     this.events.once('shutdown',()=>{
       try{this._replayRecorder?.state!=='inactive'&&this._replayRecorder?.stop?.();}catch{}
@@ -213,7 +215,7 @@ export class RaceScene extends CurrentRaceScene{
     if(this._ghostHud?.scene)return;
     const p=this._ghostControlsLayout();
     const top='👻 FANTASMA';
-    const bottom=this._onlineGhostChallenge?`ONLINE · ${fmtMs(this._ghostData?.lapMs)}`:(this._ghostData?'RÉCORD CARGADO':'CREA TU PRIMERA VUELTA');
+    const bottom=this._onlineGhostChallenge?(this._ghostData?`ONLINE · ${fmtMs(this._ghostData.lapMs)}`:'ONLINE · DATOS NO VÁLIDOS'):(this._ghostData?'RÉCORD CARGADO':'CREA TU PRIMERA VUELTA');
     const border=0x64e8ff,fill=0x07131d;
     this._ghostTopBg=this.add.rectangle(p.x,p.topY+p.row1H/2,p.controlWidth,p.row1H,fill,.92).setStrokeStyle(1,border,.55).setDepth(5004).setScrollFactor(0);
     this._ghostSubBg=this.add.rectangle(p.x,p.secondY+p.row2H/2,p.controlWidth,p.row2H,fill,.92).setStrokeStyle(1,border,.55).setDepth(5004).setScrollFactor(0);
