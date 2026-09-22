@@ -5,8 +5,13 @@ import { getLanguage } from '../i18n/index.js';
 import { showStoreDomConfirm, closeStoreDomConfirm } from '../ui/storeDomConfirm.js';
 
 export class MenuScene extends CurrentMenuScene {
-  _confirmStoreSpend({title='CONFIRMAR COMPRA',detail='',confirm='COMPRAR',onConfirm}={}){
-    return showStoreDomConfirm({title,detail,confirm,onConfirm});
+  _confirmStoreSpend(options={}){
+    // Keep purchase confirmation inside Phaser. On iPhone/iOS, handing the
+    // active gesture from the Phaser canvas to a fixed DOM overlay and then
+    // removing that overlay on Cancel can leave the store input path inert.
+    // The inherited Phaser confirmation never leaves the game input system.
+    closeStoreDomConfirm();
+    return super._confirmStoreSpend(options);
   }
 
   _openStoreModal(section='materials'){
