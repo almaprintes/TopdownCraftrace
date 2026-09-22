@@ -183,7 +183,64 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     }
     let originalThrottle=null;
     if(this._raceStarted&&this._tdrClutchReleaseAt&&this.touch){originalThrottle=Number(this.touch.throttle)||0;const clutch=clamp01((performance.now()-this._tdrClutchReleaseAt)/350);this.touch.throttle=originalThrottle*clutch;}
+
+    // HÉLIX Vortex handling laboratory.
+    // Keep the established Physics Base 1.0 untouched for every other car. Vortex is
+    // deliberately the development mule: preserve some lateral momentum through the
+    // base tyre scrub so body heading and travel direction can separate naturally.
+    const vortexFeel=this.carId==='helix_vortex'&&!this._tdrEmbeddedReplay&&this.carBody?.body?.velocity;
+    let vortexBefore=null;
+    if(vortexFeel){
+      const b=this.carBody,rot=Number(b.rotation||0),vx=Number(b.body.velocity.x||0),vy=Number(b.body.velocity.y||0);
+      const fx=Math.cos(rot),fy=Math.sin(rot),rx=-fy,ry=fx;
+      vortexBefore={vx,vy,vF:vx*fx+vy*fy,vL:vx*rx+vy*ry,rot};
+    }
+
     try{super.update(time,delta);}finally{if(originalThrottle!==null&&this.touch)this.touch.throttle=originalThrottle;}
+
+    if(vortexBefore&&this.carBody?.body?.velocity){
+      const b=this.carBody,dt=Math.max(.001,Math.min(.05,Number(delta||16.67)/1000));
+      const rot=Number(b.rotation||vortexBefore.rot),fx=Math.cos(rot),fy=Math.sin(rot),rx=-fy,ry=fx;
+      const vx=Number(b.body.velocity.x||0),vy=Number(b.body.velocity.y||0);
+      const vF=vx*fx+vy*fy,vL=vx*rx+vy*ry;
+      const preL=vortexBefore.vx*rx+vortexBefore.vy*ry;
+      const speed=Math.hypot(vx,vy),kmh=speed*.185;
+      const slipDeg=Math.abs(Math.atan2(vL,Math.max(18,Math.abs(vF))))*180/Math.PI;
+      const steer=Math.min(1,Math.abs(Number(this._steerFiltered??this.touch?.steer??this.touch?.stickX??0)));
+      const throttle=Math.max(0,Math.min(1,Number(this.touch?.throttle||0)));
+      const brake=Math.max(0,Math.min(1,Number(this.touch?.brake||0)));
+      const surface=String(this._surface||'TRACK').toUpperCase();
+      const asphalt=surface!=='DIRT'&&surface!=='GRASS'&&surface!=='OFF';
+
+      if(asphalt&&kmh>22){
+        // Breakaway builds from steering load and existing slip. Once the car is moving
+        // sideways, momentum survives even while the nose is already being corrected.
+        const speedLoad=clamp01((kmh-22)/88);
+        const steerLoad=clamp01((steer-.08)/.72);
+        const slipLoad=clamp01((slipDeg-1.5)/8.5);
+        const loaded=clamp01(.62*steerLoad*speedLoad+.38*slipLoad);
+        const driveSupport=1+.18*throttle*(1-brake);
+        const retention=Math.min(.82,(.18+.58*loaded)*driveSupport);
+        const targetL=vL+(preL-vL)*retention;
+
+        // Recovery is intentionally slower than breakaway. Counter-steer changes the
+        // heading first; the mass follows afterwards instead of snapping to the nose.
+        const neutral=steer<.07;
+        const recoveryRate=neutral?(1.25+1.15*(1-slipLoad)):(.48+.72*(1-loaded));
+        const recovery=Math.exp(-recoveryRate*dt);
+        const preservedL=targetL*recovery;
+
+        // Do not manufacture energy: retain the post-controller forward component and
+        // cap the reconstructed vector to the larger of pre/post frame speed.
+        let outX=fx*vF+rx*preservedL,outY=fy*vF+ry*preservedL;
+        const cap=Math.max(speed,Math.hypot(vortexBefore.vx,vortexBefore.vy))*1.002;
+        const outSpeed=Math.hypot(outX,outY);
+        if(outSpeed>cap&&outSpeed>0){const k=cap/outSpeed;outX*=k;outY*=k;}
+        b.body.velocity.x=outX;b.body.velocity.y=outY;
+        this._vortexFeelTelemetry={slipDeg,retention,lateral:preservedL,loaded};
+      }
+    }
+
     if(!androidNormal)this._tdrHideResidualPhaserSteering();
     if(this._tdrEmbeddedReplay)this._tdrHideEmbeddedLoadingPhaserResidue();
     try{this._tdrEngineSample?.update?.();}catch{}
