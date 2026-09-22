@@ -194,3 +194,5 @@ export class UpgradeShopScene extends Phaser.Scene{
   async _double(){const ok=await showRewardedAd(this,{title:t('workshop.doubleLoot')});if(ok){const r=duplicateLastReward();this.state=loadGarage();this._toast(r?t('workshop.lootDoubled'):t('workshop.alreadyClaimed'));this.render();}}
   _toast(msg){const {width,height}=this.scale;const t=this.add.text(width/2,height-30,msg,{fontFamily:'system-ui',fontSize:'11px',fontStyle:'900',color:'#fff',backgroundColor:'#113129',padding:{x:14,y:8}}).setOrigin(.5).setDepth(9999);this.time.delayedCall(1500,()=>t.destroy());}
 }
+
+// DEV 1.1.121 validation trigger: workshop performance UI uses i18n.
