@@ -20,7 +20,8 @@ async function loadBuffer(ctx,url){const r=await fetch(url,{mode:'cors',cache:'f
 
 export class CarEngineSampleRuntime{
  constructor(scene){this.scene=scene;this.engineStarted=false;this.unlocked=false;this._ctx=null;this._nodes=null;this._lastUpdate=0;this._rpm=IDLE_RPM;this._graphPromise=null;}
- _mode(){return this.scene?.carId==='helix_spark'?'spark-samples':this.scene?.carId==='helix_vortex'?'vortex-sample':'procedural';}
+ _carId(){try{return String(this.scene?.carId||this.scene?.car?.id||this.scene?.playerCar?.id||localStorage.getItem('tdr2:carId')||'').trim();}catch{return String(this.scene?.carId||'').trim();}}
+ _mode(){const id=this._carId();return id==='helix_spark'?'spark-samples':id==='helix_vortex'?'vortex-sample':'procedural';}
  async _buildGraph(){
   if(this._nodes||!this._ctx)return;const ctx=this._ctx,mode=this._mode();
   const master=ctx.createGain();master.gain.value=0;const compressor=ctx.createDynamicsCompressor();compressor.threshold.value=-12;compressor.knee.value=18;compressor.ratio.value=3.1;compressor.attack.value=.003;compressor.release.value=.18;master.connect(compressor).connect(ctx.destination);
