@@ -114,7 +114,7 @@ export class MenuScene extends CurrentMenuScene {
 
     const shiftCarCard=(node)=>{
       if(!node)return false;
-      if(typeof node.text==='string'&&node.text.trim().toUpperCase()==='COCHE SELECCIONADO'){
+      if(typeof node.text==='string'&&node.text.trim().toUpperCase()===t('lobby.selectedCar').toUpperCase()){
         const panel=node.parentContainer;
         const b=panel?.getBounds?.();
         if(panel&&b&&b.top<barH+5)panel.y+=barH+5-b.top;
@@ -181,7 +181,7 @@ export class MenuScene extends CurrentMenuScene {
 
     const event=data.event,progress=data.progress;
     const reward=raceEventRewardLabel(event.reward);
-    const stage=`EVENTO ${data.index+1}/${data.total}`;
+    const stage=t('event.stage',{current:data.index+1,total:data.total});
     c.add(this.add.text(0,top+14,complete?t('event.completed'):stage,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:complete?'#62ffb2':'#6deaff',letterSpacing:1,align:'center'}).setOrigin(.5,0));
     c.add(this.add.text(0,top+46,event.title,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'21px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-28}}).setOrigin(.5,0));
     c.add(this.add.text(0,top+83,event.description.toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#b8c7d3',align:'center',lineSpacing:2,wordWrap:{width:w-30}}).setOrigin(.5,0));
@@ -303,7 +303,7 @@ export class MenuScene extends CurrentMenuScene {
       if (!node) return;
       if (typeof node.text === 'string') {
         const label = node.text.trim().toUpperCase();
-        if (label === t('stats.selectedCircuit') || label.startsWith('EVENTO ') || label === t('season.completed')) {
+        if (label === t('stats.selectedCircuit') || label.startsWith(t('event.stagePrefix').toUpperCase()) || label === t('season.completed')) {
           const panel = node.parentContainer;
           if (panel && panel !== ui) panels.set(panel, label === t('stats.selectedCircuit') ? baseInset + 1 : baseInset);
         }
