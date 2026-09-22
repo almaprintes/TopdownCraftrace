@@ -94,7 +94,7 @@ export class StatsScene extends ReplayStatsScene{
     const playerCarId=(()=>{try{return localStorage.getItem('tdr2:carId')||this.selectedCarId||'car';}catch{return this.selectedCarId||'car';}})();
     // Pass the already-decoded object by reference. This remains memory-only and
     // avoids serialising the online ghost or issuing a second Supabase request.
-    setOnlineGhostChallenge({ref:String(ref||''),trackId,ghost});
+    setOnlineGhostChallenge({ref:String(ref||''),trackId,ghost,bestTimeMs:Number(data?.best_time_ms)||Number(ghost?.lapMs)||0,carId:String(data?.car_id||ghost?.carId||'')});
     try{localStorage.setItem('tdr2:gameMode','ghost');localStorage.setItem('tdr2:trackKey',trackId);}catch{}
     // Closing the replay modal normally stops the shared lazy "race" scene.
     // For VS we are about to start that same scene, so clean only replay-owned
