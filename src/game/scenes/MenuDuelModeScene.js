@@ -316,4 +316,4 @@ export class MenuScene extends CurrentMenuScene {
   }
 }
 
-// DEV 1.1.129 validation trigger: material store copy is centralized in i18n.
+// DEV 1.1.129 validation trigger: material store copy is centralized in i18n; duplicate declaration fixed.
