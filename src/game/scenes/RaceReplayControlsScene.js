@@ -90,3 +90,5 @@ export class RaceScene extends GhostRaceScene {
   _exitReplay(){super._exitReplay();this._destroyReplayDom();}
   update(time,delta){const result=super.update(time,delta);if(this._replayActive)this._updateReplayIdentity(Number(this._replayElapsed)||Math.max(0,performance.now()-Number(this._replayStartedAt||performance.now())));return result;}
 }
+
+// DEV 1.1.119 validation trigger: replay controls, help and tester exchange use i18n.
