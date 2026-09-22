@@ -75,3 +75,5 @@ export function polishLobbyForPublish(scene, root) {
 }
 
 // DEV 1.1.109 validation trigger: publish lobby copy uses i18n keys.
+
+// DEV 1.1.126 validation trigger: induction cue is event-id based, not translation-text based.
