@@ -113,3 +113,5 @@ export class MenuScene extends CurrentMenuScene {
     });
   }
 }
+
+// DEV 1.1.132 validation trigger: store purchase confirmation remains in Phaser on iOS.
