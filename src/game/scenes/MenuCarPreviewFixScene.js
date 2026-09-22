@@ -319,3 +319,5 @@ export class MenuScene extends CurrentMenuScene {
     }
   }
 }
+
+// DEV 1.1.117 validation trigger: lobby event and track card copy uses i18n keys.
