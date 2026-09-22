@@ -12,3 +12,5 @@ function styleShipatonTab(b){if(!b||b.dataset.shipatonStyled==='1')return;b.data
 function wireSettings(){const tabs=document.querySelector('#tdr-settings2 .s2tabs');if(!tabs)return;let b=tabs.querySelector('[data-shipaton-judge]');if(!b){b=document.createElement('button');b.className='s2tab';b.dataset.shipatonJudge='1';b.onclick=e=>{e.preventDefault();openJudgePanel()};tabs.appendChild(b)}styleShipatonTab(b)}
 export const SHIPATON_JUDGE_MODE_KEY=KEY;export const SHIPATON_JUDGE_MODE_EVENT=EVENT;
 if(typeof window!=='undefined'){queueMicrotask(()=>{syncJudgeBadge();wireSettings()});window.addEventListener('pageshow',()=>{syncJudgeBadge();wireSettings()},{passive:true});let scheduled=false;const observer=new MutationObserver(()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;wireSettings()})});observer.observe(document.documentElement,{subtree:true,childList:true});}
+
+// DEV 1.1.130 validation trigger: judges mode is fully localized through central i18n.
