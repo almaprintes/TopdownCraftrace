@@ -1,4 +1,5 @@
 import { SettingsScene as CurrentSettingsScene } from './SettingsAVOptionsScene.js';
+import { t } from '../i18n/index.js';
 
 const TUTORIAL_KEYS = [1,2,3,4,5].map(i => `dropTutorial${i}`);
 
@@ -10,7 +11,7 @@ export class SettingsScene extends CurrentSettingsScene {
   _buildTabs(panelX,panelY,panelW){
     const { headH } = this._panel;
     const tabs=['controls','video','audio','help'];
-    const labels={controls:'CONTROLES',video:'VÍDEO',audio:'AUDIO',help:'❓ AYUDA'};
+    const labels={controls:t('settings.controls'),video:t('settings.video'),audio:t('settings.audio'),help:`❓ ${t('settings.help')}`};
     const pad=14,pillH=36,gap=10;
     let x=panelX+pad;
     const y=panelY+Math.floor((headH-pillH)/2);
@@ -51,17 +52,17 @@ export class SettingsScene extends CurrentSettingsScene {
     const cardW=Math.min(520,panelW-48);
     const cardH=72;
 
-    this.add.text(x,y,'AYUDA Y TUTORIALES',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'15px',fontStyle:'bold',color:'#fff'});
-    this.add.text(x,y+24,'Reglas y sistemas del juego.',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',color:'#aeb9d8'});
+    this.add.text(x,y,t('help.title'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'15px',fontStyle:'bold',color:'#fff'});
+    this.add.text(x,y+24,t('help.subtitle'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',color:'#aeb9d8'});
 
     const cy=y+48;
     const card=this.add.rectangle(x,cy,cardW,cardH,0x09131f,.88).setOrigin(0).setStrokeStyle(1,0x2bff88,.52).setInteractive({useHandCursor:true});
-    this.add.text(x+16,cy+12,'🎁  SISTEMA DE DROP',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'14px',fontStyle:'bold',color:'#7dffc1'});
-    this.add.text(x+16,cy+36,'Materiales · bonus · ECU · cofres',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#d9e4f5'});
+    this.add.text(x+16,cy+12,`🎁  ${t('help.dropSystem')}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'14px',fontStyle:'bold',color:'#7dffc1'});
+    this.add.text(x+16,cy+36,t('help.dropContents'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',color:'#d9e4f5'});
 
     const bw=132,bh=32,bx=x+cardW-bw-12,by=cy+(cardH-bh)/2;
     const btn=this.add.rectangle(bx,by,bw,bh,0x2bff88,.9).setOrigin(0).setStrokeStyle(1,0x9dffd0,.85).setInteractive({useHandCursor:true});
-    this.add.text(bx+bw/2,by+bh/2,'VER TUTORIAL  ›',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#06120d'}).setOrigin(.5);
+    this.add.text(bx+bw/2,by+bh/2,`${t('help.viewTutorial')}  ›`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#06120d'}).setOrigin(.5);
     const open=()=>this._openDroppingTutorial(0);
     card.on('pointerup',open); btn.on('pointerup',open);
   }
@@ -114,7 +115,7 @@ export class SettingsScene extends CurrentSettingsScene {
         fitAndPlaceHits();
       }else{
         img.setVisible(false);
-        status.setText('TUTORIAL NO PRECARGADO · RECARGA LA APP').setVisible(true);
+        status.setText(t('help.notPreloaded')).setVisible(true);
       }
       // En la primera pantalla la zona ANTERIOR queda desactivada.
       prevHit.input.enabled=index>0;
