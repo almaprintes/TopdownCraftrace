@@ -82,3 +82,5 @@ export class StatsScene extends Phaser.Scene{
     this._updateTrackComparison(carId,selected);
   }
 }
+
+// DEV 1.1.115 validation trigger: statistics hub copy uses i18n keys.
