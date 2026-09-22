@@ -9,17 +9,6 @@ const BASE=import.meta.env.BASE_URL||'/';
 const FONT='system-ui,-apple-system,Segoe UI,Arial';
 const STORE_TIME_LABEL=ms=>{const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;};
 
-const PACK_UI={
-  mechanic:{es:'PACK MECÁNICA',en:'MECHANICS PACK',esCopy:'Base mecánica para mantener y mejorar.',enCopy:'Mechanical essentials for upkeep and upgrades.'},
-  chassis:{es:'PACK CHASIS',en:'CHASSIS PACK',esCopy:'Refuerzo de estructura y comportamiento.',enCopy:'Chassis essentials for structure and handling.'},
-  technology:{es:'PACK TECNOLOGÍA',en:'TECH PACK',esCopy:'Electrónica y componentes de alto rendimiento.',enCopy:'Electronics and high-performance components.'},
-  mixed:{es:'PACK PADDOCK',en:'PADDOCK PACK',esCopy:'Selección variada para fabricar y evolucionar.',enCopy:'A mixed selection for crafting and progression.'}
-};
-const MATERIAL_LABELS={
-  scrap:{es:'Chatarra',en:'Scrap'},alloy:{es:'Aleación',en:'Alloy'},rubber:{es:'Goma',en:'Rubber'},compound:{es:'Compuesto',en:'Compound'},
-  disc:{es:'Disco metálico',en:'Metal disc'},spring:{es:'Muelle',en:'Spring'},gear:{es:'Engranaje',en:'Gear'},ecu:{es:'Electrónica',en:'Electronics'}
-};
-
 export class MenuScene extends CurrentMenuScene {
   _openStoreModal(section='materials'){
     this._storeCountdownEvent?.remove?.(false);
@@ -50,14 +39,13 @@ export class MenuScene extends CurrentMenuScene {
   }
 
   _installStoreCountdownTicker(root){
-    const prefix=getLanguage()==='en'?'AVAILABLE IN':'DISPONIBLE EN';
+    const prefix=t('store.availableIn');
     const collectCards=(node,out=[])=>{
       for(const child of node?.list||[]){
         if(child?.type==='Container'){
           const texts=(child.list||[]).filter(o=>o?.type==='Text');
           const title=texts.map(o=>String(o.text||'').toUpperCase()).join(' | ');
-          if(title.includes('REWARDED VIDEO')||title.includes('VÍDEO RECOMPENSADO'))out.push({kind:'video',card:child,texts});
-          else if(title.includes('DAILY GIFT')||title.includes('REGALO DIARIO'))out.push({kind:'daily',card:child,texts});
+          if(child?.getData?.('storeRewardKind'))out.push({kind:child.getData('storeRewardKind'),card:child,texts});
           collectCards(child,out);
         }
       }
@@ -70,7 +58,7 @@ export class MenuScene extends CurrentMenuScene {
       let becameAvailable=false;
       for(const entry of cards){
         const status=entry.kind==='video'?rewardedStatus():dailyStatus();
-        const label=entry.texts.find(o=>/^(AVAILABLE IN|DISPONIBLE EN)\b/i.test(String(o.text||'')));
+        const label=entry.texts.find(o=>o?.getData?.('storeCountdownLabel'));
         if(status.available){
           if(label)becameAvailable=true;
           continue;
@@ -156,19 +144,19 @@ export class MenuScene extends CurrentMenuScene {
 
   _renderMaterialPackCard(parent,p,x,y,w,h){
     const lang=getLanguage()==='en'?'en':'es';
-    const ui=PACK_UI[p.id]||{es:p.name,en:p.name,esCopy:'Pack de materiales',enCopy:'Materials pack'};
+    const packKey=`store.pack.${p.id}`,packTitle=t(`${packKey}.title`),packCopy=t(`${packKey}.copy`);
     const card=this.add.container(x,y);parent.add(card);
     const compact=h<250,accent=p.accent||0x31aaff,entries=Object.entries(p.items||{});
     const totalUnits=entries.reduce((sum,[,n])=>sum+Math.max(0,Number(n)||0),0);
     const shadow=this.add.graphics();shadow.fillStyle(0x000000,.44);shadow.fillRoundedRect(7,8,w,h,18);card.add(shadow);
     const frame=this.add.graphics();frame.fillGradientStyle(0x091521,0x08111c,0x07101a,0x0b1721,1);frame.fillRoundedRect(0,0,w,h,18);frame.lineStyle(2,accent,.95);frame.strokeRoundedRect(0,0,w,h,18);frame.lineStyle(8,accent,.045);frame.strokeRoundedRect(5,5,w-10,h-10,14);card.add(frame);
 
-    const title=this.add.text(16,compact?10:14,ui[lang],{fontFamily:FONT,fontSize:compact?'15px':'19px',fontStyle:'bold',color:'#fff',wordWrap:{width:w-126}});title.setShadow(0,2,'#000',4,true,true);card.add(title);
+    const title=this.add.text(16,compact?10:14,packTitle,{fontFamily:FONT,fontSize:compact?'15px':'19px',fontStyle:'bold',color:'#fff',wordWrap:{width:w-126}});title.setShadow(0,2,'#000',4,true,true);card.add(title);
     const badgeW=compact?82:98,badgeH=compact?34:40,bx=w-badgeW-12,by=compact?8:11,badge=this.add.graphics();badge.fillStyle(accent,.18);badge.fillRoundedRect(bx,by,badgeW,badgeH,8);badge.lineStyle(1.4,accent,.95);badge.strokeRoundedRect(bx,by,badgeW,badgeH,8);card.add(badge);
     card.add(this.add.text(bx+badgeW/2,by+badgeH*.38,String(totalUnits),{fontFamily:FONT,fontSize:compact?'17px':'20px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));
-    card.add(this.add.text(bx+badgeW/2,by+badgeH*.77,lang==='en'?'TOTAL UNITS':'UNIDADES',{fontFamily:FONT,fontSize:compact?'6px':'7px',fontStyle:'bold',color:'#d9e6ef'}).setOrigin(.5));
-    const copyY=compact?36:48;card.add(this.add.text(16,copyY,ui[`${lang}Copy`],{fontFamily:FONT,fontSize:compact?'7px':'9px',color:'#aebdcc',wordWrap:{width:w-32},lineSpacing:1}));
-    const labelY=compact?58:72;card.add(this.add.text(16,labelY,lang==='en'?'CONTENTS':'CONTENIDO',{fontFamily:FONT,fontSize:compact?'6px':'8px',fontStyle:'bold',color:'#8299ad'}));
+    card.add(this.add.text(bx+badgeW/2,by+badgeH*.77,t('store.totalUnits'),{fontFamily:FONT,fontSize:compact?'6px':'7px',fontStyle:'bold',color:'#d9e6ef'}).setOrigin(.5));
+    const copyY=compact?36:48;card.add(this.add.text(16,copyY,packCopy,{fontFamily:FONT,fontSize:compact?'7px':'9px',color:'#aebdcc',wordWrap:{width:w-32},lineSpacing:1}));
+    const labelY=compact?58:72;card.add(this.add.text(16,labelY,t('store.contents'),{fontFamily:FONT,fontSize:compact?'6px':'8px',fontStyle:'bold',color:'#8299ad'}));
 
     const buttonH=compact?34:44,buttonY=h-buttonH-10,gridTop=labelY+(compact?12:16),gridBottom=buttonY-7;
     const cols=entries.length>=5?2:1,rows=Math.ceil(entries.length/cols),gap=compact?4:6,cellW=(w-28-gap*(cols-1))/cols,cellH=Math.max(22,(gridBottom-gridTop-gap*(rows-1))/rows);
@@ -177,13 +165,13 @@ export class MenuScene extends CurrentMenuScene {
       box.fillStyle(0x07131f,.96);box.fillRoundedRect(cx,cy,cellW,cellH,7);box.lineStyle(1,0x35566f,.9);box.strokeRoundedRect(cx,cy,cellW,cellH,7);card.add(box);
       const key=`store:${id}`,iconSize=Math.max(18,Math.min(compact?27:34,cellH*.66,cellW*.18));
       if(this.textures.exists(key)){const im=this.add.image(cx+7+iconSize/2,cy+cellH/2,key),scale=Math.min(iconSize/(im.width||1),iconSize/(im.height||1));im.setScale(scale);card.add(im);}
-      const name=MATERIAL_LABELS[id]?.[lang]||GARAGE_ITEMS[id]?.name||id,tx=cx+13+iconSize;
+      const name=t(`materials.${id}`)||GARAGE_ITEMS[id]?.name||id,tx=cx+13+iconSize;
       card.add(this.add.text(tx,cy+cellH/2,String(name).toUpperCase(),{fontFamily:FONT,fontSize:cols>1?(compact?'7px':'8px'):(compact?'8px':'10px'),fontStyle:'bold',color:'#dfe8f1',wordWrap:{width:Math.max(28,cellW-iconSize-58)}}).setOrigin(0,.5));
       card.add(this.add.text(cx+cellW-9,cy+cellH/2,`×${count}`,{fontFamily:FONT,fontSize:cols>1?(compact?'11px':'13px'):(compact?'13px':'16px'),fontStyle:'bold',color:'#fff'}).setOrigin(1,.5));
     });
 
-    const price=Number(p.price||0).toLocaleString(lang==='en'?'en-US':'es-ES'),buyLabel=lang==='en'?`${price} COINS`:`${price} MONEDAS`;
-    this._buyButton(card,w,h,buyLabel,()=>{const r=buyMaterialPack(p.id),okLabel=lang==='en'?'PACK ADDED':'PACK AÑADIDO';this._toastStore(r.ok?okLabel:r.reason,r.ok);if(r.ok)this._openStoreModal('materials');},true,accent,true);
+    const price=Number(p.price||0).toLocaleString(lang==='en'?'en-US':'es-ES'),buyLabel=`${price} ${t('store.coins')}`;
+    this._buyButton(card,w,h,buyLabel,()=>{const r=buyMaterialPack(p.id),okLabel=t('store.packAdded');this._toastStore(r.ok?okLabel:r.reason,r.ok);if(r.ok)this._openStoreModal('materials');},true,accent,true);
   }
 
   _openGameModeModal(){
