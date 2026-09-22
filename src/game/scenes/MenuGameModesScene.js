@@ -1,5 +1,6 @@
 import { MenuScene as CurrentMenuScene } from './MenuUiStabilityScene.js';
 import { recordModeStart } from '../seasons/seasonTelemetry.js';
+import { t } from '../i18n/index.js';
 
 const MODE_KEY='tdr2:gameMode';
 const PRACTICE_TRACK_KEY='practice-area';
@@ -100,17 +101,17 @@ export class MenuScene extends CurrentMenuScene{
     const marqueeY=y+18;
     const marqueeBg=this.add.rectangle(cx,marqueeY,panelW-38,32,0x0b2230,.92).setOrigin(.5,0).setStrokeStyle(1,0x45dfff,.35);
     root.add(marqueeBg);
-    const marquee=this.add.text(cx,marqueeY+8,'◆  ELIGE MODO DE JUEGO   •   LISTO PARA CORRER   •   CONDUCCIÓN LIBRE  ◆',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#77ecff',letterSpacing:1}).setOrigin(.5,0);
+    const marquee=this.add.text(cx,marqueeY+8,`◆  ${t('modes.choose')}   •   ${t('modes.ready')}   •   ${t('modes.freeDrive')}  ◆`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#77ecff',letterSpacing:1}).setOrigin(.5,0);
     root.add(marquee);
     this._gameModeMarqueeTween=this.tweens.add({targets:marquee,x:{from:cx-38,to:cx+38},duration:2200,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
 
-    root.add(this.add.text(cx,y+66,'¿CÓMO QUIERES CONDUCIR?',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'25px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
-    root.add(this.add.text(cx,y+99,'Contrarreloj, fantasma o conducción libre',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',color:'#a9bac9'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,y+66,t('modes.howDrive'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'25px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,y+99,t('modes.subtitle'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',color:'#a9bac9'}).setOrigin(.5,0));
 
     const modes=[
-      {key:'timeattack',icon:'🏁',title:'CONTRARRELOJ',sub:'Persigue tu mejor vuelta',detail:'Pista libre · cronómetro puro',accent:0x55bfff},
-      {key:'ghost',icon:'👻',title:'FANTASMA',sub:'Compite contra tu récord',detail:'Tu mejor vuelta como rival',accent:0x8f7dff},
-      {key:'practice',icon:'🧪',title:'ÁREA DE PRUEBAS',sub:'Conducción libre',detail:'Velocidad · drift · superficies',accent:0xffc857}
+      {key:'timeattack',icon:'🏁',title:t('modes.timeAttack'),sub:t('modes.timeAttackSub'),detail:t('modes.timeAttackDetail'),accent:0x55bfff},
+      {key:'ghost',icon:'👻',title:t('modes.ghost'),sub:t('modes.ghostSub'),detail:t('modes.ghostDetail'),accent:0x8f7dff},
+      {key:'practice',icon:'🧪',title:t('modes.practice'),sub:t('modes.practiceSub'),detail:t('modes.practiceDetail'),accent:0xffc857}
     ];
     const gap=14,cols=modes.length;
     const cardW=Math.floor((panelW-64-gap*(cols-1))/cols);
@@ -127,7 +128,7 @@ export class MenuScene extends CurrentMenuScene{
       root.add(this.add.text(bx+cardW/2,cardY+54,m.title,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:m.key==='practice'?'13px':'14px',fontStyle:'bold',color:'#ffffff',align:'center',wordWrap:{width:cardW-12}}).setOrigin(.5,0));
       root.add(this.add.text(bx+cardW/2,cardY+84,m.sub,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9.5px',fontStyle:'bold',color:active?'#baffdf':'#c4cfda',align:'center',wordWrap:{width:cardW-16}}).setOrigin(.5,0));
       root.add(this.add.text(bx+cardW/2,cardY+113,m.detail,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8.5px',color:'#8295a8',align:'center',wordWrap:{width:cardW-16}}).setOrigin(.5,0));
-      if(active)root.add(this.add.text(bx+cardW/2,cardY+cardH-22,'ÚLTIMO USADO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#72ffc1',letterSpacing:1}).setOrigin(.5,0));
+      if(active)root.add(this.add.text(bx+cardW/2,cardY+cardH-22,t('modes.lastUsed'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#72ffc1',letterSpacing:1}).setOrigin(.5,0));
       bg.on('pointerover',()=>{bg.setFillStyle(0x153244,.98);bg.setStrokeStyle(2,m.accent,.95);});
       bg.on('pointerout',()=>{bg.setFillStyle(active?0x102c2b:0x0a1620,.98);bg.setStrokeStyle(2,active?m.accent:0x52677b,active?.95:.42);});
       bg.on('pointerup',()=>this._startSelectedMode(m.key));
