@@ -62,10 +62,10 @@ jobs:
           grep -q "Never hide #tdr-race-controls" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "_tdrHideResidualPhaserSteering" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "_vortexFeelTelemetry" src/game/scenes/RaceEmbeddedReplaySceneV2.js
-          grep -Fq "helix_spark:{retention:.50,lift:.10,recovery:1.12}" src/game/scenes/RaceEmbeddedReplaySceneV2.js
-          grep -Fq "avenir_apex:{retention:.42,lift:.08,recovery:1.22}" src/game/scenes/RaceEmbeddedReplaySceneV2.js
-          grep -Fq "veloce_photon:{retention:.68,lift:.15,recovery:.88}" src/game/scenes/RaceEmbeddedReplaySceneV2.js
-          grep -Fq "forge_anvil:{retention:.74,lift:.18,recovery:.78}" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -Fq 'helix_spark:{retention:.50,lift:.10,recovery:1.12}' src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -Fq 'avenir_apex:{retention:.42,lift:.08,recovery:1.22}' src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -Fq 'veloce_photon:{retention:.68,lift:.15,recovery:.88}' src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -Fq 'forge_anvil:{retention:.74,lift:.18,recovery:.78}' src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "TRIGGER_DEADZONE = 0.025" src/game/scenes/RaceUiStabilityScene.js
           grep -q "originalAccel \* gas" src/game/scenes/RaceUiStabilityScene.js
           grep -q "this.touchUI?.setVisible?.(false)" src/game/scenes/RaceUiStabilityScene.js
