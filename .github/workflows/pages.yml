@@ -62,7 +62,10 @@ jobs:
           grep -q "Never hide #tdr-race-controls" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "_tdrHideResidualPhaserSteering" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "_vortexFeelTelemetry" src/game/scenes/RaceEmbeddedReplaySceneV2.js
-          grep -Fq "this.carId==='helix_spark'" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -Fq "helix_spark:{retention:.50" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -Fq "avenir_apex:{retention:.42" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -Fq "veloce_photon:{retention:.68" src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          grep -Fq "forge_anvil:{retention:.74" src/game/scenes/RaceEmbeddedReplaySceneV2.js
           grep -q "TRIGGER_DEADZONE = 0.025" src/game/scenes/RaceUiStabilityScene.js
           grep -q "originalAccel \* gas" src/game/scenes/RaceUiStabilityScene.js
           grep -q "this.touchUI?.setVisible?.(false)" src/game/scenes/RaceUiStabilityScene.js
@@ -116,7 +119,7 @@ jobs:
       - name: Assemble public beta plus DEV
         shell: bash
         run: |
-          printf 'DEV_SOURCE_SHA=%s\nDEV_VERSION=1.1.151\n' "${GITHUB_SHA}" > dev-src/dist/dev-build.txt
+          printf 'DEV_SOURCE_SHA=%s\nDEV_VERSION=1.1.152\n' "${GITHUB_SHA}" > dev-src/dist/dev-build.txt
           rm -rf beta/dist/dev beta/dist/dev-live
           mkdir -p beta/dist/dev beta/dist/dev-live
           cp -R dev-src/dist/. beta/dist/dev/
@@ -128,8 +131,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV_VERSION=1.1.151' beta/dist/dev/dev-build.txt
-          grep -q 'DEV_VERSION=1.1.151' beta/dist/dev-live/dev-build.txt
+          grep -q 'DEV_VERSION=1.1.152' beta/dist/dev/dev-build.txt
+          grep -q 'DEV_VERSION=1.1.152' beta/dist/dev-live/dev-build.txt
           grep -q 'DEV 1\.1\.151 visible development version' beta/dist/dev/index.html
           grep -q 'DEV 1\.1\.151 visible development version' beta/dist/dev-live/index.html
           test "$(grep -o '<span>DEV 1\.1\.</span><span>151</span>' beta/dist/dev/index.html | wc -l | tr -d ' ')" = "2"
