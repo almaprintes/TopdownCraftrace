@@ -442,3 +442,5 @@ export class RaceScene extends CurrentRaceScene {
     root.style.display = active && !hiddenByReport && !hiddenByReplay ? 'block' : 'none';
     }
 }
+
+// DEV 1.1.145 validation trigger: active static Ghost layer preserves online rival and its stable DOM controls.
