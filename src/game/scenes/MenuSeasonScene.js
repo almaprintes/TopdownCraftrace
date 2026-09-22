@@ -1,5 +1,6 @@
 import { MenuScene as CurrentMenuScene } from './MenuMaterialExchangeScene.js';
 import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeFlexibleDom.js';
+import { t } from '../i18n/index.js';
 
 // The publish lobby owns the Season Pass UI in DOM. The former Phaser season
 // card is intentionally retired at its source instead of being rendered and
@@ -30,7 +31,7 @@ export class MenuScene extends CurrentMenuScene {
       try{closeMaterialExchangeDom(this);}catch{}
       this._materialExchangeModal=null;
       try{if(this._storeModal?.scene)this._storeModal.setVisible(true);}catch{}
-      try{this._toastStore?.('NO SE PUDO ABRIR LA RECICLADORA',false);}catch{}
+      try{this._toastStore?.(t('recycler.openError'),false);}catch{}
       return null;
     }
   }
