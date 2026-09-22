@@ -4,6 +4,7 @@ import { decodeOnlineGhostNativeBinary, decodeOnlineGhostNative } from '../onlin
 import { pxpsToKmh } from '../cars/speedUnits.js';
 import { t } from '../i18n/index.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { setOnlineGhostChallenge } from '../online/onlineGhostSession.js';
 
 const SESSION_KEY='tdr2:statsNativeReplay';
 const RETURN_TRACK_KEY='tdr2:statsReturnTrack';
@@ -93,7 +94,7 @@ export class StatsScene extends ReplayStatsScene{
     const playerCarId=(()=>{try{return localStorage.getItem('tdr2:carId')||this.selectedCarId||'car';}catch{return this.selectedCarId||'car';}})();
     // Pass the already-decoded object by reference. This remains memory-only and
     // avoids serialising the online ghost or issuing a second Supabase request.
-    try{window.__tdrOnlineGhostChallenge={ref:String(ref||''),trackId,ghost};}catch{}
+    setOnlineGhostChallenge({ref:String(ref||''),trackId,ghost});
     try{localStorage.setItem('tdr2:gameMode','ghost');localStorage.setItem('tdr2:trackKey',trackId);}catch{}
     // Closing the replay modal normally stops the shared lazy "race" scene.
     // For VS we are about to start that same scene, so clean only replay-owned
