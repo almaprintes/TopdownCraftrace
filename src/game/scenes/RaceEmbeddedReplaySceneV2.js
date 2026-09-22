@@ -221,7 +221,17 @@ export class RaceScene extends EmbeddedReplayRaceScene{
         const loaded=clamp01(.62*steerLoad*speedLoad+.38*slipLoad);
         const driveSupport=1+.18*throttle*(1-brake);
         const retention=Math.min(.82,(.18+.58*loaded)*driveSupport);
-        const targetL=vL+(preL-vL)*retention;
+        let targetL=vL+(preL-vL)*retention;
+
+        // Vortex turn-in: keep the useful rear movement, but do not let inherited
+        // lateral momentum dominate the first phase of a new steering command.
+        // This gives the front axle authority to bite before the whole car washes wide.
+        const turnIn=clamp01((steer-.10)/.48)*speedLoad*(1-.42*slipLoad);
+        const sameSide=Math.sign(preL)===Math.sign(vL)||Math.abs(vL)<.5;
+        if(sameSide&&turnIn>0){
+          const frontBite=.28*turnIn*(1-.35*throttle);
+          targetL*=1-frontBite;
+        }
 
         // Recovery is intentionally slower than breakaway. Counter-steer changes the
         // heading first; the mass follows afterwards instead of snapping to the nose.
