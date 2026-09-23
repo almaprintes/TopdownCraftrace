@@ -1,7 +1,16 @@
 // RACE Control Online — no request is made until activateRaceControlOnline().
 // Uses the public browser endpoint/key supplied by the deployment build.
 let api=null;
-const cfg=()=>({url:String(import.meta.env.VITE_TDR_ONLINE_URL||'').trim(),key:String(import.meta.env.VITE_TDR_ONLINE_PUBLIC||'').trim()});
+// Supabase's project URL and publishable key are intentionally public client
+// configuration. Keep env overrides for deployments, but ship a production-safe
+// fallback so Android cannot silently lose Race Control when a local build omits
+// Vite env injection. Security remains enforced by Auth + RLS/RPC policies.
+const PUBLIC_ONLINE_URL='https://juukbnkjboiazqggqcyv.supabase.co';
+const PUBLIC_ONLINE_KEY='sb_publishable_l5cHUHrGHoFzGqmUyfQKSA_d3VjWksB';
+const cfg=()=>({
+  url:String(import.meta.env.VITE_TDR_ONLINE_URL||PUBLIC_ONLINE_URL).trim(),
+  key:String(import.meta.env.VITE_TDR_ONLINE_PUBLIC||PUBLIC_ONLINE_KEY).trim()
+});
 const headers=(key,token)=>({'apikey':key,'Authorization':`Bearer ${token||key}`,'Content-Type':'application/json'});
 const readSession=()=>{try{return JSON.parse(localStorage.getItem('tdr2:onlineSession:v1')||'null');}catch{return null;}};
 const saveSession=s=>{try{localStorage.setItem('tdr2:onlineSession:v1',JSON.stringify(s));}catch{}};
