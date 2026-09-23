@@ -30,8 +30,7 @@ class RewardedBridgeReleaseTest {
             assertEquals("object|function", bridgeTypes)
 
             val nativeResult = eventually(webView) {
-                """
-                (()=>{
+                """(()=>{
                   const key='tdrRewardedNativeProbe';
                   if(!document.documentElement.dataset[key]){
                     document.documentElement.dataset[key]='pending';
@@ -42,8 +41,7 @@ class RewardedBridgeReleaseTest {
                       .catch(error=>document.documentElement.dataset[key]=JSON.stringify({reason:String(error?.message||error)}));
                   }
                   return document.documentElement.dataset[key];
-                })()
-                """.trimIndent()
+                })()"""
             }
             assertTrue(nativeResult.contains("native_rewarded_not_configured"))
             assertTrue(nativeResult.contains("\"verified\":false"))
@@ -67,11 +65,11 @@ class RewardedBridgeReleaseTest {
             val latch = CountDownLatch(1)
             webView.post {
                 webView.evaluateJavascript(expression()) { raw ->
-                    last = raw
-                        .removePrefix("\"")
-                        .removeSuffix("\"")
-                        .replace("\\\"", "\"")
-                        .replace("\\\\", "\\")
+                    var decoded = raw
+                    if (decoded.length >= 2 && decoded[0] == '"' && decoded[decoded.length - 1] == '"') {
+                        decoded = decoded.substring(1, decoded.length - 1)
+                    }
+                    last = decoded.replace("\\\"", "\"").replace("\\\\", "\\")
                     latch.countDown()
                 }
             }
