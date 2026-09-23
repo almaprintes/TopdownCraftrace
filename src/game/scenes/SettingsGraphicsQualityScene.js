@@ -1,18 +1,14 @@
 import { SettingsScene as CurrentSettingsScene } from './SettingsAudioMusicScene.js';
 import { getLanguage } from '../i18n/index.js';
 import { resetFirstVisitTutorials, showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 
 const STORAGE_KEY='tdr2:settings';
-const RESET_KEEP_EXACT=new Set([
-  STORAGE_KEY,
-  'tdr2:admin',
-  'tdr2:devFullCarAccess:v1',
-  'tdr2:devFullTrackAccess:v1',
-  'tdr2:survivalAiMode',
-  'tdr2:survivalAiDebug',
-  'tdr2_dev_tuning_v1'
+const RESET_KEEP_EXACT=new Set(IS_PROD_BUILD?[STORAGE_KEY]:[
+  STORAGE_KEY,'tdr2:admin','tdr2:devFullCarAccess:v1','tdr2:devFullTrackAccess:v1',
+  'tdr2:survivalAiMode','tdr2:survivalAiDebug','tdr2_dev_tuning_v1'
 ]);
-const RESET_KEEP_PREFIX=['tdr2:dev','tdr2_dev_'];
+const RESET_KEEP_PREFIX=IS_PROD_BUILD?[]:['tdr2:dev','tdr2_dev_'];
 
 const PRESETS=Object.freeze({
   performance:Object.freeze({quality:'low',targetFps:30,antialias:false,particles:false,surfaceResolution:'1k',lighting:false,es:'Prioriza estabilidad, temperatura y batería. Ideal para móviles modestos o sesiones largas.',en:'Prioritizes stability, thermals and battery life. Ideal for modest phones or long sessions.'}),

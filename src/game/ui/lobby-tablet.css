@@ -1,49 +1,38 @@
-/* DEV 1.0.88 — iPad/tablet landscape lobby scaling.
-   Narrowly scoped to coarse-pointer 4:3-ish tablets so phone and desktop layouts stay unchanged. */
+/* DEV 1.1.76 — tablet landscape lobby composition.
+   Isolated to coarse-pointer, 4:3-ish tablet viewports so phones and widescreen desktop keep the existing layout. */
 @media (pointer: coarse) and (orientation: landscape) and (min-width: 820px) and (min-height: 600px) and (max-aspect-ratio: 8/5) {
-  .tdr-lobby-header {
-    height: 82px;
-    gap: 14px;
-    padding: 7px 20px;
-  }
-
+  .tdr-lobby-header { height: 82px; gap: 14px; padding: 7px 20px; }
   .tdr-lobby-brand { width: 122px; }
   .tdr-lobby-wallet { min-width: 118px; gap: 9px; }
   .tdr-lobby-wallet > img { width: 38px; height: 38px; }
   .tdr-lobby-wallet small { font-size: 9px; }
   .tdr-lobby-wallet strong { font-size: 23px; }
-
   .tdr-lobby-top-actions { gap: 9px; }
-  .tdr-lobby-top-actions .tdr-lobby-button {
-    min-width: 142px;
-    height: 52px;
-    padding: 0 15px;
-    gap: 9px;
-  }
+  .tdr-lobby-top-actions .tdr-lobby-button { min-width: 142px; height: 52px; padding: 0 15px; gap: 9px; }
   .tdr-lobby-top-actions .tdr-lobby-button img { width: 29px; height: 29px; }
   .tdr-lobby-top-actions .tdr-lobby-button span { font-size: 12px; letter-spacing: .065em; }
 
   .tdr-event-card,
   .tdr-track-card {
-    top: 15%;
-    bottom: 25.5%;
+    top: 14.5%;
+    bottom: 24%;
     width: 25.5%;
-    padding: 25px 20px 18px;
+    padding: 24px 20px 18px;
   }
-
   .tdr-card-kicker { font-size: 12px; }
   .tdr-lobby-card h2 { font-size: 23px; }
-  .tdr-event-card p { font-size: 11px; line-height: 1.42; }
-  .tdr-event-reward { font-size: 10px; }
-  .tdr-event-card > strong,
-  .tdr-event-finished { font-size: 15px; }
 
-  .tdr-car-card {
-    top: 15%;
-    width: 40%;
-    min-height: 72px;
-    padding: 8px 14px;
+  .tdr-event-card {
+    justify-content: flex-start;
+    gap: 12px;
   }
+  .tdr-event-card p { max-width: 96%; font-size: 11px; line-height: 1.42; }
+  .tdr-event-reward { margin-top: 8px; font-size: 10px; }
+  .tdr-event-progress { margin-top: 2px; height: 13px; }
+  .tdr-event-card > strong,
+  .tdr-event-finished { margin-top: 0; font-size: 15px; }
+
+  .tdr-car-card { top: 14.5%; width: 40%; min-height: 72px; padding: 8px 14px; }
   .tdr-car-card-row { gap: 11px; margin-top: 4px; }
   .tdr-car-card-row h2 { font-size: 20px; }
   .tdr-car-card-row strong { font-size: 13px; }
@@ -54,34 +43,33 @@
   .tdr-car-card-row em { font-size: 9px; padding: 5px 8px; }
 
   .tdr-lobby-car-preview {
-    top: 27%;
-    width: 142px;
-    height: 350px;
+    top: 28%;
+    width: clamp(205px, 20vw, 255px);
+    transform: translate(-50%, 72px);
+    height: clamp(390px, 54vh, 470px);
   }
 
-  .tdr-track-card h2 { margin-top: 13px; }
-  .tdr-track-map { width: 80%; height: 112px; margin: 11px auto 8px; }
-  .tdr-track-stats { gap: 10px 16px; }
+  .tdr-track-card { gap: 8px; justify-content: flex-start; }
+  .tdr-track-card h2 { margin-top: 5px; }
+  .tdr-track-map {
+    flex: 1 1 170px;
+    width: 91%;
+    min-height: 145px;
+    max-height: 205px;
+    height: auto;
+    margin: 6px auto 5px;
+  }
+  .tdr-track-stats { margin-top: auto; gap: 11px 16px; }
   .tdr-track-stats small { font-size: 9px; }
   .tdr-track-stats strong { font-size: 15px; }
 
-  .tdr-lobby-play-slot {
-    bottom: 103px;
-    width: min(58vw, 660px);
-  }
-  .tdr-lobby-play { height: 67px; }
+  .tdr-lobby-play-slot { bottom: 101px; width: min(54vw, 620px); }
+  .tdr-lobby-play { height: 64px; }
   .tdr-lobby-play span:last-child { font-size: 24px; }
   .tdr-lobby-play-triangle { font-size: 20px; }
 
-  .tdr-lobby-bottom-actions {
-    height: 92px;
-    gap: 38px;
-    padding: 9px 38px;
-  }
-  .tdr-lobby-bottom-actions .tdr-lobby-button {
-    height: 54px;
-    max-width: 340px;
-  }
+  .tdr-lobby-bottom-actions { height: 92px; gap: 38px; padding: 9px 38px; }
+  .tdr-lobby-bottom-actions .tdr-lobby-button { height: 54px; max-width: 340px; }
   .tdr-lobby-bottom-actions .tdr-lobby-button img { width: 30px; height: 30px; }
   .tdr-lobby-bottom-actions .tdr-lobby-button span { font-size: 12px; }
 }

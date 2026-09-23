@@ -19,7 +19,7 @@ function selectedTrackKey(scene){
 
 export class RaceScene extends CurrentRaceScene {
   _activateAtlanticoPbrPilot(trackId){
-    if(String(trackId||'').trim().toLowerCase()==='track01'){
+    if(String(trackId||'').trim().toLowerCase()==='circuito-atlantico'){
       this._atlanticoPbrActive=false;
       return;
     }

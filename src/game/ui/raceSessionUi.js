@@ -113,6 +113,9 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
     if(doubleX)doubleX.textContent='✓';
     if(doubleMain)doubleMain.textContent='BOTÍN DUPLICADO';
     if(doubleSub)doubleSub.textContent='RECOMPENSA CONCEDIDA';
+    // Once x2 has been granted, declining is no longer a meaningful action.
+    // Turn the footer action into the normal continuation/report action.
+    if(next){const strong=next.querySelector('strong'),small=next.querySelector('small');if(strong)strong.textContent='CONTINUAR';if(small)small.textContent=String(resultLabel||'').trim();next.setAttribute('aria-label','Continuar');}
     card?.classList.add('reward-doubled');
   };
   const requestDouble=async()=>{
@@ -142,3 +145,5 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
   if(!hasChest)requestAnimationFrame(()=>revealDouble());
   return root;
 }
+
+// DEV 1.1.134 validation trigger: granted x2 changes the footer action from decline to continue.

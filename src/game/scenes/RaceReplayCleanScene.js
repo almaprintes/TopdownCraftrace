@@ -90,7 +90,8 @@ export class RaceScene extends CurrentRaceScene{
         style=document.createElement('style');
         style.id='tdr-native-replay-clean-style';
         style.textContent=`
-          [data-tdr-native-replay="1"] > :not(canvas){display:none!important;visibility:hidden!important;pointer-events:none!important}
+          [data-tdr-native-replay="1"] > :not(canvas):not(.br-replay-modal){display:none!important;visibility:hidden!important;pointer-events:none!important}
+          [data-tdr-native-replay="1"] > .br-replay-modal{display:flex!important;visibility:visible!important;pointer-events:auto!important}
           body.tdr-native-replay-clean #tdr-static-minimap,
           body.tdr-native-replay-clean #tdr-static-ghost-status,
           body.tdr-native-replay-clean #tdr-race-controls,

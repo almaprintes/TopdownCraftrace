@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { defaultControlLayout, saveControlLayout, resetControlLayout, sanitizeLayoutPoint } from '../controls/controlLayout.js';
+import { t } from '../i18n/index.js';
 
 const STORAGE_KEY='tdr2:settings';
 const AUDIO_EVENT='tdr2:audio-settings';
@@ -54,7 +55,7 @@ export class SettingsScene extends Phaser.Scene{
     `;
     document.head.appendChild(style);
     const root=document.createElement('div');root.id='tdr-settings2';this.root=root;
-    root.innerHTML=`<div class="s2top"><button class="s2back">← VOLVER</button><div class="s2title">CONFIGURACIÓN 2.0</div><div class="s2save">Guardado automático ✓</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">CONTROLES</button><button class="s2tab" data-tab="video">VÍDEO</button><button class="s2tab" data-tab="audio">AUDIO</button><button class="s2tab" data-tab="legal">LEGAL</button></div><div class="s2body"></div>`;
+    root.innerHTML=`<div class="s2top"><button class="s2back">${t('settings.back')}</button><div class="s2title">${t('settings.title')}</div><div class="s2save">${t('settings.saved')}</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">${t('settings.controls')}</button><button class="s2tab" data-tab="video">${t('settings.video')}</button><button class="s2tab" data-tab="audio">${t('settings.audio')}</button><button class="s2tab" data-tab="legal">${t('settings.legal')}</button></div><div class="s2body"></div>`;
     document.body.appendChild(root);
     root.querySelector('.s2back').onclick=()=>this.scene.start('menu');
     root.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>this._renderTab(b.dataset.tab));
@@ -74,13 +75,13 @@ export class SettingsScene extends Phaser.Scene{
     const current=c.layouts?.[key];
     this._calLayout=structuredClone(current||defaultControlLayout(c));
     const root=document.createElement('div');root.id='tdr-control-cal';this._calRoot=root;
-    root.innerHTML=`<div class="ccgame"><div class="ccroad"></div><div class="cccar"></div></div><div class="ccprotected ccp1">HUD VUELTA/POSICIÓN</div><div class="ccprotected ccp2">MINIMAPA / FANTASMA</div><div class="ccprotected ccp3">MENSAJES</div><div class="cctop"><button class="ccbtn" data-act="back">← CANCELAR</button><div class="cctitle">PERSONALIZAR CONTROLES</div><div class="ccspacer"></div><button class="ccbtn warn" data-act="reset">RESTABLECER</button><button class="ccbtn" data-act="test">PROBAR</button><button class="ccbtn good" data-act="save">GUARDAR</button></div><div class="ccscale"><button class="ccbtn" data-scale="-">−</button><span>100%</span><button class="ccbtn" data-scale="+">+</button></div><div class="cchelp">Arrastra · toca un control para ajustar tamaño · las zonas rojas están protegidas</div>`;
+    root.innerHTML=`<div class="ccgame"><div class="ccroad"></div><div class="cccar"></div></div><div class="ccprotected ccp1">${t('settings.protectedLapPosition')}</div><div class="ccprotected ccp2">${t('settings.protectedMinimapGhost')}</div><div class="ccprotected ccp3">${t('settings.protectedMessages')}</div><div class="cctop"><button class="ccbtn" data-act="back">${t('settings.cancel')}</button><div class="cctitle">${t('settings.customizeControls')}</div><div class="ccspacer"></div><button class="ccbtn warn" data-act="reset">${t('settings.reset')}</button><button class="ccbtn" data-act="test">${t('settings.test')}</button><button class="ccbtn good" data-act="save">${t('settings.save')}</button></div><div class="ccscale"><button class="ccbtn" data-scale="-">−</button><span>100%</span><button class="ccbtn" data-scale="+">+</button></div><div class="cchelp">${t('settings.calibrationHelp')}</div>`;
     document.body.appendChild(root);
     const controls=[];
     const add=(id,klass,label,html='')=>{const el=document.createElement('div');el.className=`cccontrol edit ${klass}`;el.dataset.id=id;el.innerHTML=`${html}<span class="ccname">${label}</span>`;root.appendChild(el);controls.push(el);return el;};
-    if(c.steeringMode==='buttons'){add('left','ccdir','IZQUIERDA','◀');add('right','ccdir','DERECHA','▶');}
-    else add('steer',c.steeringMode==='wheel'?'ccwheel':'ccstick',c.steeringMode==='wheel'?'VOLANTE':'PALANCA');
-    add('gas','ccpedal','GAS','GAS');add('brake','ccpedal brake','FRENO','FRENO');add('handbrake','cchand','FRENO DE MANO');
+    if(c.steeringMode==='buttons'){add('left','ccdir',t('settings.left'),'◀');add('right','ccdir',t('settings.right'),'▶');}
+    else add('steer',c.steeringMode==='wheel'?'ccwheel':'ccstick',c.steeringMode==='wheel'?t('settings.wheel'):t('settings.stick'));
+    add('gas','ccpedal',t('settings.gas'),t('settings.gas'));add('brake','ccpedal brake',t('settings.brake'),t('settings.brake'));add('handbrake','cchand',t('settings.handbrake'));
     const protectedRects=()=>[...root.querySelectorAll('.ccprotected')].map(e=>e.getBoundingClientRect());
     const intersects=(a,b)=>!(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom);
     const place=(el)=>{const p=sanitizeLayoutPoint(this._calLayout[el.dataset.id]||{});el.style.left=`${p.x*100}%`;el.style.top=`${p.y*100}%`;el.style.scale=String(p.scale);};
@@ -95,8 +96,8 @@ export class SettingsScene extends Phaser.Scene{
     });
     root.querySelector('[data-act="back"]').onclick=()=>this._closeCalibration();
     root.querySelector('[data-act="reset"]').onclick=()=>{this._calLayout=structuredClone(defaultControlLayout(c));controls.forEach(el=>{place(el);validity(el);});select(null);};
-    root.querySelector('[data-act="test"]').onclick=e=>{this._calTesting=!this._calTesting;e.currentTarget.textContent=this._calTesting?'EDITAR':'PROBAR';controls.forEach(el=>el.classList.toggle('edit',!this._calTesting));select(null);root.querySelector('.cchelp').textContent=this._calTesting?'Modo prueba de alcance · pulsa EDITAR para seguir ajustando':'Arrastra · toca un control para ajustar tamaño · las zonas rojas están protegidas';};
-    root.querySelector('[data-act="save"]').onclick=()=>{if(controls.some(el=>!validity(el))){root.querySelector('.cchelp').textContent='⚠ Mueve los controles fuera de las zonas protegidas';return;}c.layouts={...(c.layouts||{}),[key]:this._calLayout};save(this.settings);saveControlLayout(this._calLayout,c);this._closeCalibration();};
+    root.querySelector('[data-act="test"]').onclick=e=>{this._calTesting=!this._calTesting;e.currentTarget.textContent=this._calTesting?t('settings.edit'):t('settings.test');controls.forEach(el=>el.classList.toggle('edit',!this._calTesting));select(null);root.querySelector('.cchelp').textContent=this._calTesting?t('settings.testModeHelp'):t('settings.calibrationHelp');};
+    root.querySelector('[data-act="save"]').onclick=()=>{if(controls.some(el=>!validity(el))){root.querySelector('.cchelp').textContent=t('settings.protectedWarning');return;}c.layouts={...(c.layouts||{}),[key]:this._calLayout};save(this.settings);saveControlLayout(this._calLayout,c);this._closeCalibration();};
     root.querySelectorAll('[data-scale]').forEach(b=>b.onclick=()=>{const el=this._calSelected;if(!el)return;const id=el.dataset.id,p=sanitizeLayoutPoint(this._calLayout[id]);p.scale=Math.max(.65,Math.min(1.55,p.scale+(b.dataset.scale==='+'?.05:-.05)));this._calLayout[id]=p;place(el);validity(el);select(el);});
   }
   _closeCalibration(){try{this._calRoot?.remove();}catch{}this._calRoot=null;this._calLayout=null;this._calSelected=null;this._calTesting=false;}
@@ -105,11 +106,11 @@ export class SettingsScene extends Phaser.Scene{
     const body=this.root.querySelector('.s2body');const c=this.settings.controls,v=this.settings.video,a=this.settings.audio;
     if(tab==='controls'){
       body.innerHTML=`<div class="s2grid">
-        <section class="s2card wide"><div class="s2label">MODO DE DIRECCIÓN</div><div class="s2desc">Elige el control principal para conducir.</div><div class="s2row" data-choice="steer">${this._choiceWrap([['stick','◉ PALANCA'],['buttons','◀ ▶ BOTONES'],['wheel','◉ VOLANTE'],['gamepad','🎮 MANDO']],c.steeringMode)}</div></section>
-        <section class="s2card wide"><div class="s2label">DISPOSICIÓN EN PANTALLA</div><div class="s2desc">Coloca y escala tus controles con precisión. Cada modo y cada mano conservan su propia distribución.</div><div class="s2row"><button class="s2cta" data-customize ${c.steeringMode==='gamepad'?'disabled':''}>✥ PERSONALIZAR CONTROLES</button><span class="s2note">Arrastrar · tamaño · zonas protegidas · prueba de alcance</span></div></section>
-        <section class="s2card"><div class="s2label">MODO ZURDO</div><div class="s2desc">Intercambia dirección y pedales de lado.</div><div class="s2row"><span class="s2note">La calibración se guarda por separado</span><button class="s2switch ${c.leftHanded?'on':''}"><i></i></button></div></section>
-        <section class="s2card"><div class="s2label">INVERTIR DIRECCIÓN</div><div class="s2desc">Invierte izquierda y derecha.</div><div class="s2row"><button class="s2switch ${c.invertSteer?'on':''}"><i></i></button></div></section>
-        <section class="s2card wide"><div class="s2label">SENSIBILIDAD</div><div class="s2desc">Respuesta de la dirección táctil.</div><div class="s2row"><input class="s2range" type="range" min="0.4" max="1.4" step="0.05" value="${c.sensitivity}"><span class="s2val">${Math.round(c.sensitivity*100)}%</span></div></section>
+        <section class="s2card wide"><div class="s2label">${t('settings.steeringMode')}</div><div class="s2desc">${t('settings.steeringModeDesc')}</div><div class="s2row" data-choice="steer">${this._choiceWrap([['stick',`◉ ${t('settings.stick')}`],['buttons',`◀ ▶ ${t('settings.buttons')}`],['wheel',`◉ ${t('settings.wheel')}`],['gamepad',`🎮 ${t('settings.gamepad')}`]],c.steeringMode)}</div></section>
+        <section class="s2card wide"><div class="s2label">${t('settings.screenLayout')}</div><div class="s2desc">${t('settings.screenLayoutDesc')}</div><div class="s2row"><button class="s2cta" data-customize ${c.steeringMode==='gamepad'?'disabled':''}>✥ ${t('settings.customizeControls')}</button><span class="s2note">${t('settings.screenLayoutNote')}</span></div></section>
+        <section class="s2card"><div class="s2label">${t('settings.leftHanded')}</div><div class="s2desc">${t('settings.leftHandedDesc')}</div><div class="s2row"><span class="s2note">${t('settings.leftHandedNote')}</span><button class="s2switch ${c.leftHanded?'on':''}"><i></i></button></div></section>
+        <section class="s2card"><div class="s2label">${t('settings.invertSteering')}</div><div class="s2desc">${t('settings.invertSteeringDesc')}</div><div class="s2row"><button class="s2switch ${c.invertSteer?'on':''}"><i></i></button></div></section>
+        <section class="s2card wide"><div class="s2label">${t('settings.sensitivity')}</div><div class="s2desc">${t('settings.sensitivityDesc')}</div><div class="s2row"><input class="s2range" type="range" min="0.4" max="1.4" step="0.05" value="${c.sensitivity}"><span class="s2val">${Math.round(c.sensitivity*100)}%</span></div></section>
       </div>`;
       body.querySelector('[data-choice="steer"]').onclick=e=>{const b=e.target.closest('[data-v]');if(!b)return;c.steeringMode=b.dataset.v;c.scheme=c.steeringMode==='gamepad'?'gamepad':'touch';save(this.settings);this._renderTab('controls');};
       this._switch(body.querySelectorAll('.s2card')[2],['controls','leftHanded']);this._switch(body.querySelectorAll('.s2card')[3],['controls','invertSteer']);
@@ -118,11 +119,11 @@ export class SettingsScene extends Phaser.Scene{
     }
     if(tab==='video'){
       body.innerHTML=`<div class="s2grid">
-        <section class="s2card"><div class="s2label">FPS OBJETIVO</div><div class="s2desc">Se aplica al reiniciar el motor gráfico.</div><div class="s2row" data-choice="fps">${this._choiceWrap([[30,'30 FPS'],[60,'60 FPS']],Number(v.targetFps))}</div></section>
-        <section class="s2card"><div class="s2label">CALIDAD</div><div class="s2desc">Perfil general de render.</div><div class="s2row" data-choice="quality">${this._choiceWrap([['low','BAJA'],['medium','MEDIA'],['high','ALTA']],v.quality)}</div></section>
-        <section class="s2card"><div class="s2label">MOSTRAR FPS</div><div class="s2desc">Contador de rendimiento durante la carrera.</div><div class="s2row"><button class="s2switch ${v.showFPS?'on':''}"><i></i></button></div></section>
-        <section class="s2card"><div class="s2label">PARTÍCULAS</div><div class="s2desc">Efectos secundarios de carrera.</div><div class="s2row"><button class="s2switch ${v.particles?'on':''}"><i></i></button></div></section>
-        <section class="s2card wide"><div class="s2label">ESCALA DE RENDER</div><div class="s2desc">Ahorro reduce carga; Nítida aumenta definición.</div><div class="s2row" data-choice="render">${this._choiceWrap([['eco','AHORRO'],['normal','NORMAL'],['sharp','NÍTIDA']],v.renderScale)}<button class="s2apply" ${this._videoDirty?'':'hidden'}>APLICAR Y REINICIAR</button></div></section>
+        <section class="s2card"><div class="s2label">${t('settings.targetFps')}</div><div class="s2desc">${t('settings.targetFpsDesc')}</div><div class="s2row" data-choice="fps">${this._choiceWrap([[30,'30 FPS'],[60,'60 FPS']],Number(v.targetFps))}</div></section>
+        <section class="s2card"><div class="s2label">${t('settings.quality')}</div><div class="s2desc">${t('settings.qualityDesc')}</div><div class="s2row" data-choice="quality">${this._choiceWrap([['low',t('settings.qualityLow')],['medium',t('settings.qualityMedium')],['high',t('settings.qualityHigh')]],v.quality)}</div></section>
+        <section class="s2card"><div class="s2label">${t('settings.showFps')}</div><div class="s2desc">${t('settings.showFpsDesc')}</div><div class="s2row"><button class="s2switch ${v.showFPS?'on':''}"><i></i></button></div></section>
+        <section class="s2card"><div class="s2label">${t('settings.particles')}</div><div class="s2desc">${t('settings.particlesDesc')}</div><div class="s2row"><button class="s2switch ${v.particles?'on':''}"><i></i></button></div></section>
+        <section class="s2card wide"><div class="s2label">${t('settings.renderScale')}</div><div class="s2desc">${t('settings.renderScaleDesc')}</div><div class="s2row" data-choice="render">${this._choiceWrap([['eco',t('settings.renderEco')],['normal',t('settings.renderNormal')],['sharp',t('settings.renderSharp')]],v.renderScale)}<button class="s2apply" ${this._videoDirty?'':'hidden'}>${t('settings.applyRestart')}</button></div></section>
       </div>`;
       const dirty=()=>{this._videoDirty=true;body.querySelector('.s2apply').hidden=false;save(this.settings);};
       body.querySelector('[data-choice="fps"]').onclick=e=>{const b=e.target.closest('[data-v]');if(!b)return;v.targetFps=Number(b.dataset.v);dirty();this._renderTab('video');};
@@ -133,9 +134,9 @@ export class SettingsScene extends Phaser.Scene{
     }
     if(tab==='audio'){
       body.innerHTML=`<div class="s2grid">
-        <section class="s2card"><div class="s2label">MODO SILENCIO</div><div class="s2desc">Apaga todo el audio.</div><div class="s2row"><button class="s2switch ${a.mute?'on':''}"><i></i></button></div></section>
-        ${[['master','VOLUMEN GENERAL'],['engine','MOTOR'],['effects','EFECTOS'],['impacts','IMPACTOS']].map(([k,l])=>`<section class="s2card"><div class="s2label">${l}</div><div class="s2row"><input class="s2range" data-a="${k}" type="range" min="0" max="1" step="0.02" value="${a[k]}"><span class="s2val">${Math.round(a[k]*100)}%</span></div></section>`).join('')}
-        <section class="s2card wide"><div class="s2label">PERFIL DE MOTOR</div><div class="s2row" data-choice="profile">${this._choiceWrap([['per_car','POR COCHE'],['forge','FORGE'],['avenir','AVENIR'],['crown','CROWN']],a.profile)}</div></section>
+        <section class="s2card"><div class="s2label">${t('settings.muteMode')}</div><div class="s2desc">${t('settings.muteModeDesc')}</div><div class="s2row"><button class="s2switch ${a.mute?'on':''}"><i></i></button></div></section>
+        ${[['master',t('settings.volumeMaster')],['engine',t('settings.volumeEngine')],['effects',t('settings.volumeEffects')],['impacts',t('settings.volumeImpacts')]].map(([k,l])=>`<section class="s2card"><div class="s2label">${l}</div><div class="s2row"><input class="s2range" data-a="${k}" type="range" min="0" max="1" step="0.02" value="${a[k]}"><span class="s2val">${Math.round(a[k]*100)}%</span></div></section>`).join('')}
+        <section class="s2card wide"><div class="s2label">${t('settings.engineProfile')}</div><div class="s2row" data-choice="profile">${this._choiceWrap([['per_car',t('settings.perCar')],['forge','FORGE'],['avenir','AVENIR'],['crown','CROWN']],a.profile)}</div></section>
       </div>`;
       this._switch(body.querySelector('.s2card'),['audio','mute']);
       body.querySelectorAll('[data-a]').forEach(r=>r.oninput=()=>{a[r.dataset.a]=Number(r.value);r.nextElementSibling.textContent=`${Math.round(a[r.dataset.a]*100)}%`;save(this.settings);});
@@ -143,11 +144,13 @@ export class SettingsScene extends Phaser.Scene{
     }
     if(tab==='legal'){
       body.innerHTML=`<div class="s2grid">
-        <section class="s2card wide"><div class="s2label">PRIVACIDAD DE ANUNCIOS</div><div class="s2desc">Punto de acceso previsto para gestionar el consentimiento de anuncios en Android mediante Google UMP. En la próxima compilación Android este acceso sustituirá al botón flotante que actualmente se superpone al juego.</div><div class="s2row"><button class="s2cta" disabled>GESTIONAR PRIVACIDAD</button><span class="s2note">Pendiente de conexión con Android</span></div></section>
-        <section class="s2card"><div class="s2label">POLÍTICA DE PRIVACIDAD</div><div class="s2desc">Documento público asociado a Top Down RACE y enlazado desde Google Play.</div></section>
-        <section class="s2card"><div class="s2label">SOPORTE</div><div class="s2desc">Información y asistencia oficial del juego.</div></section>
-        <section class="s2card wide"><div class="s2label">INFORMACIÓN LEGAL</div><div class="s2desc">Top Down RACE · CraftRace Studio. Esta sección será el punto único para privacidad, consentimiento y avisos legales de las compilaciones móviles.</div></section>
+        <section class="s2card wide" data-legal-kind="ads"><div class="s2label">${t('settings.adPrivacy')}</div><div class="s2desc">${t('settings.adPrivacyDesc')}</div><div class="s2row"><button class="s2cta" disabled>${t('settings.managePrivacy')}</button><span class="s2note">${t('settings.androidPending')}</span></div></section>
+        <section class="s2card" data-legal-kind="privacy"><div class="s2label">${t('settings.privacyPolicy')}</div><div class="s2desc">${t('settings.privacyPolicyDesc')}</div></section>
+        <section class="s2card" data-legal-kind="support"><div class="s2label">${t('settings.support')}</div><div class="s2desc">${t('settings.supportDesc')}</div></section>
+        <section class="s2card wide" data-legal-kind="legal"><div class="s2label">${t('settings.legalInfo')}</div><div class="s2desc">${t('settings.legalInfoDesc')}</div></section>
       </div>`;
     }
   }
 }
+
+// DEV 1.1.128 validation trigger: settings controls, video, audio and legal cards use keyed i18n.

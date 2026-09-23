@@ -16,12 +16,11 @@ if(ui.includes('class=\"mark\"'))fail('fake diamond/chest marker must not return
 if(!ui.includes('assets/season/reward_cards/free_${tone}.svg'))fail('official Season reward-card frame must remain the chest presentation');
 if(!ui.includes('assets/store/daily_gift.webp'))fail('session chest must include the existing official chest/gift artwork');
 if(!fs.existsSync(path.join(root,'public/assets/store/daily_gift.webp')))fail('official chest/gift artwork is missing');
-if(!ui.includes('<h2>BOTÍN DE LA SESIÓN</h2>'))fail('all session reward states must share the same title');
+if(!ui.includes("<h2>${doubleEnabled?'¡BUEN TRABAJO!':'BOTÍN DE LA SESIÓN'}</h2>"))fail('session reward title must distinguish the x2 offer without changing the base-loot state');
 if(!ui.includes("${hasChest?'is-closed':'is-open'}"))fail('session chest must use explicit closed/open layout states');
 if(!ui.includes('tdr-session-chest-stage'))fail('chest state must live inside the common session body');
 if(!ui.includes('tdr-session-footer'))fail('session reward states must share one footer');
-if(!ui.includes("root.style.setProperty('--session-width'"))fail('session result width must be content-driven');
-if(!css.includes('width:min(92vw,var(--session-width,700px))'))fail('session result card must consume the content-driven width');
+if(!css.includes('width:max-content;max-width:92vw'))fail('session result card must use intrinsic content width with a viewport cap');
 if(!css.includes('.tdr-session-card.is-closed .tdr-session-reward-body{display:none}'))fail('closed chest must remove hidden rewards from layout flow');
 if(!css.includes('.tdr-session-card.is-open .tdr-session-chest-stage{display:none}'))fail('opened chest must remove the chest stage from layout flow');
 if(!css.includes('.tdr-session-card{')||!css.includes('display:block'))fail('session card must use intrinsic block layout instead of the legacy expanding grid');

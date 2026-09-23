@@ -84,8 +84,9 @@ export class RaceScene extends TouchRaceScene {
   _tdrHideTouchDrivingDom(){
     try{
       document.querySelectorAll('[data-tdr-steering-button]').forEach(el=>el.remove());
-      const root=document.getElementById('tdr-race-controls');
-      if(root)root.style.setProperty('display','none','important');
+      // Do not mutate the shared #tdr-race-controls root: it owns unrelated
+      // race HUD and touch controls. Gamepad-specific presentation is handled
+      // by the gamepad CSS class and this scene's own Phaser UI teardown.
     }catch(_){}
   }
 

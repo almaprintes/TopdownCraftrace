@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceVideoPreferencesScene.js';
+import { consumeOnlineGhostChallenge } from '../online/onlineGhostSession.js';
 
 const MODE_KEY='tdr2:gameMode';
 const GHOST_PREFIX='tdr2:ghost:';
@@ -57,12 +58,27 @@ export class RaceScene extends CurrentRaceScene{
     this._replayRecorder=null;
     this._replayChunks=[];
     this._replayHidden=[];
+    // Consume the online challenge BEFORE the base race create. The base Ghost
+    // layers may read/prepare the local PB during super.create(); waiting until
+    // afterwards lets that PB become the live rival even if our HUD says ONLINE.
+    const pendingOnline=this._tdrGameMode==='ghost'?consumeOnlineGhostChallenge():null;
+    this._tdrPendingOnlineGhost=pendingOnline;
     const result=super.create(data);
 
     this._ghostTrackKey=data?.trackKey||this.trackKey||(()=>{try{return localStorage.getItem('tdr2:trackKey')||'track01';}catch{return 'track01';}})();
     this._ghostCarId=data?.carId||this.carId||(()=>{try{return localStorage.getItem('tdr2:carId')||'car';}catch{return 'car';}})();
     this._ghostStorageKey=keyFor(this._ghostTrackKey,this._ghostCarId);
-    this._ghostData=readGhost(this._ghostStorageKey);
+    // A VS launch deposits exactly one challenge in shared module memory. Consume it
+    // once here; normal Ghost entries have no pending challenge and keep using PB.
+    // Never silently fall back to the local PB for an online challenge. Also
+    // require the downloaded payload time to agree with the leaderboard row:
+    // the HUD must describe the exact samples that will actually be played.
+    const onlineGhost=pendingOnline?.ghost?.samples?.length?pendingOnline.ghost:null;
+    const expectedMs=Math.round(Number(pendingOnline?.bestTimeMs)||0);
+    const actualMs=Math.round(Number(onlineGhost?.lapMs)||0);
+    const onlineValid=!!onlineGhost&&(!expectedMs||Math.abs(actualMs-expectedMs)<=2);
+    this._onlineGhostChallenge=onlineValid?pendingOnline:(pendingOnline?{...pendingOnline,invalid:true}:null);
+    this._ghostData=pendingOnline?(onlineValid?onlineGhost:null):readGhost(this._ghostStorageKey);
     this._ghostSamples=[];
     this._ghostLapStartPerf=null;
     this._ghostLastSamplePerf=0;
@@ -107,7 +123,8 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _runtimeGhostTextureKey(){
-    const runtimeKey=`car_${this._ghostCarId}`;
+    const ghostCarId=String(this._onlineGhostChallenge?.ghost?.carId||this._ghostCarId||'');
+    const runtimeKey=`car_${ghostCarId}`;
     if(this.textures?.exists?.(runtimeKey))return runtimeKey;
     const visual=visualCarSprite(this);
     const current=visual?.texture?.key;
@@ -202,7 +219,7 @@ export class RaceScene extends CurrentRaceScene{
     if(this._ghostHud?.scene)return;
     const p=this._ghostControlsLayout();
     const top='👻 FANTASMA';
-    const bottom=this._ghostData?'RÉCORD CARGADO':'CREA TU PRIMERA VUELTA';
+    const bottom=this._onlineGhostChallenge?(this._ghostData?`ONLINE · ${fmtMs(this._ghostData.lapMs)}`:'ONLINE · DATOS NO VÁLIDOS'):(this._ghostData?'RÉCORD CARGADO':'CREA TU PRIMERA VUELTA');
     const border=0x64e8ff,fill=0x07131d;
     this._ghostTopBg=this.add.rectangle(p.x,p.topY+p.row1H/2,p.controlWidth,p.row1H,fill,.92).setStrokeStyle(1,border,.55).setDepth(5004).setScrollFactor(0);
     this._ghostSubBg=this.add.rectangle(p.x,p.secondY+p.row2H/2,p.controlWidth,p.row2H,fill,.92).setStrokeStyle(1,border,.55).setDepth(5004).setScrollFactor(0);
@@ -231,6 +248,13 @@ export class RaceScene extends CurrentRaceScene{
 
   _completedLapCheck(now){
     if(this._replayActive)return;
+    // An online rival is read-only competition. Never compare/save the player's
+    // lap against it as if it were the local PB; that could overwrite a faster PB.
+    if(this._onlineGhostChallenge){
+      const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
+      if(hist.length>this._ghostHistoryLen){this._ghostHistoryLen=hist.length;this._ghostSamples=[];this._ghostLapStartPerf=now;this._ghostLastSamplePerf=0;}
+      return;
+    }
     const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
     if(hist.length<=this._ghostHistoryLen)return;
     const last=hist[hist.length-1]||{};
@@ -438,3 +462,11 @@ export class RaceScene extends CurrentRaceScene{
     this._playGhost(now);
   }
 }
+
+// DEV 1.1.138 validation trigger: cached online ghost is consumed by Ghost mode and HUD is positioned after mobile layout.
+
+// DEV 1.1.142 validation trigger: online VS consumes shared memory handoff and never falls through to local PB.
+
+// DEV 1.1.143 validation trigger: online Ghost fails closed on time mismatch and Ghost HUD uses stable layout.
+
+// DEV 1.1.144 validation trigger: online challenge is claimed before inherited Ghost/base create can initialise PB state.

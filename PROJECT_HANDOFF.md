@@ -1,7 +1,77 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## ACTUALIZACIÓN 22/09/2026 — REWARDED COMPLETO Y ACCESO SEGURO PARA JUECES
+
+DEV 1.1.170 añade placements RevenueCat separados para publicar un récord, descargar un fantasma, los intercambios 2.º/3.º de la Recicladora y las 100 monedas de Tienda cada cuatro horas, manteniendo el x2 postcarrera. Todas las acciones exigen `completed + verified`; un cierre, error o SSV fallido no concede nada. Publicar actualiza inmediatamente el leaderboard del circuito.
+
+El acceso Shipaton ya no se autoriza con `localStorage`: Supabase valida un código hasheado y concede un entitlement temporal al UUID anónimo. El modo de evaluación usa un Garaje/Factory en memoria y no altera la progresión real. Migraciones, placements, seguridad y validación: `docs/continuity/2026-09-22-rewarded-actions-and-shipaton-judge-access.md`.
+
+## ACTUALIZACIÓN 22/09/2026 — GRIPLINE CON MOTOR RPM Y SPARK MÁS VIVO
+
+DEV 1.1.169 asigna al primer desbloqueable, AVENIR Gripline, un perfil de motor de seis capas RPM. Reutiliza el banco CC0 local ya auditado, pero con ralentí, corte, curva, pitch y ecualización propios: resulta más agudo y rápido que Spark sin añadir ninguna dependencia de red. El runtime generaliza el banco mediante `ProfiledRpmEngineModel.js`; Spark conserva su modelo exacto y Vortex conserva `JEEP`.
+
+Spark sube `RACE_STARTER` de `0.60` a `0.72`: 0–84 km/h pasa de ~7,6 s a ~6,4 s, conservando su punta sostenible de ~84,5 km/h y la curva continua de retención. `TOURING` 0.30 permanece disponible. Audio, cifras, pruebas y alcance de salida: `docs/continuity/2026-09-22-gripline-audio-and-launch-triage.md`.
+
+## ACTUALIZACIÓN 22/09/2026 — SPARK RECUPERA CARÁCTER DE CARRERAS
+
+DEV 1.1.168 eleva la respuesta longitudinal de Spark de `0.30` a `0.60`: conserva la punta stock publicada de ~84 km/h, pero pasa de 0 a 84 km/h en ~7,6 s en lugar de ~14,8 s. El régimen a fondo con el coche parado sube ahora a ~4.200 RPM, y la progresión móvil continúa vinculada a la velocidad real.
+
+La curva anterior no se pierde: queda como `LONGITUDINAL_PROFILES.TOURING` para un futuro turismo. Spark usa `RACE_STARTER`. Documentación y cifras: `docs/continuity/2026-09-22-spark-race-response.md`.
+
+El sonido aprobado del HÉLIX Vortex también queda congelado en esta versión como perfil reutilizable `ENGINE_AUDIO_PROFILES.JEEP`, sin cambiar su muestra ni sus curvas de pitch y ganancia. El Vortex declara el perfil en `carSpecs.js`; parámetros, fuente CC0 y prueba de regresión: `docs/continuity/2026-09-22-vortex-jeep-audio-profile.md`.
+
+## ACTUALIZACIÓN 22/09/2026 — RESPUESTA LONGITUDINAL HÉLIX SPARK
+
+DEV 1.1.167 corrige la curva física que hacía que el Spark publicado alcanzase 45 km/h en aproximadamente 0,7 s y cambiase bruscamente su retención al cruzar 15 km/h. El ajuste es exclusivo de Spark: escala conjuntamente empuje y drag para conservar su punta sostenible real de 84 km/h, amplía la transición de retención a 12–45 km/h y elimina la compensación que prolongaba en exceso la caída desde velocidad media.
+
+El audio conserva el banco y la mezcla de DEV 1.1.166. Solo cambia el objetivo de RPM: al moverse sigue la velocidad sostenible real del coche y el gas añade carga, de modo que el último sample llega con la punta en vez de inmediatamente al pisar. Cifras, alcance y prueba: `docs/continuity/2026-09-22-spark-longitudinal-response.md`.
+
+## ACTUALIZACIÓN 22/09/2026 — RECONSTRUCCIÓN DEL MOTOR HÉLIX SPARK
+
+DEV 1.1.166 sustituye la ruta experimental de seis `HTMLAudioElement` remotos por un único grafo WebAudio con muestras locales. Los seis WAV CC0 viven en `public/assets/audio/engine/spark/`, se descargan y decodifican antes del gesto de encendido cuando la plataforma lo permite, comienzan sobre el mismo reloj de audio y se mezclan por RPM con crossfade de potencia constante. Spark no tiene fallback procedural: cualquier fallo del banco real queda visible en consola.
+
+La señal de audio lee exclusivamente `carBody.body.velocity`, `touch.throttle` y las teclas de aceleración ya usadas por la carrera. No escribe input, aceleración ni física. El gas puede subir RPM con el coche parado desde que se enciende el motor. El grafo se cierra tanto en resultados como en `shutdown`, y reintenta reanudar el `AudioContext` después de suspensión de página.
+
+Auditoría, hashes, licencia, arquitectura y checklist de dispositivo: `docs/continuity/2026-09-22-spark-engine-audio-rebuild.md`.
+
+## ACTUALIZACIÓN 21/09/2026 — TIENDA / IAP DE MONEDAS APLAZADO
+- Los packs de monedas por dinero real se han retirado del código/runtime de la build actual antes de revisión de Google Play. No reintroducirlos hasta una actualización futura explícita.
+- La tienda actual conserva packs de materiales comprados con moneda interna, recompensas y recicladora.
+- El renderer visible final de tarjetas de materiales está en MenuDuelModeScene.js (override del renderer heredado).
+- DEV 1.1.96 elimina el doble recorte de textos durante el scroll: la máscara geométrica del contenedor es la autoridad para clipping y la limpieza de visibilidad ocurre al asentarse el movimiento.
+- Continuidad detallada: docs/continuity/2026-09-21-store-material-cards-coin-iap-deferred.md
+
+
 > Documento vivo para continuar el proyecto en un chat nuevo sin perder decisiones, soluciones técnicas ni el estado de trabajo.
 > Fuente oficial: `almaprintes/TopdownCraftrace`. Desarrollo normal en `main`; beta pública estable en `beta-1.0`.
+
+
+## ACTUALIZACIÓN DE CONTINUIDAD — 19/09/2026 — BETA GOOGLE PLAY 1.0.214: INCIDENCIAS REALES
+
+La beta cerrada de Google Play fue actualizada correctamente desde 1.0.0 a **1.0.214 (versionCode 2)** y quedó disponible para los 16 testers. Prueba real en Android mediante actualización desde Play Store, sin desinstalar: **progreso local preservado** (monedas, coche seleccionado, temporada y PB locales). `beta-1.0` queda congelada; no tocarla.
+
+### PRIORIDAD ABSOLUTA AL ABRIR DEV 1.1.x
+Antes de implementar VS Ghost, rewarded nuevos o compras reales, reproducir/auditar y corregir estas incidencias de la build Android publicada. No asumir causas sin inspección/profiling.
+
+1. **Rendimiento Android release: ~25 FPS en carrera.** Confirmado visualmente por el contador FPS en la build de Google Play, también fuera del modo Fantasma. Es prioridad nº1: medir antes de degradar gráficos al azar. Investigar WebView/Capacitor, DPR/render scale, Phaser, HUD/minimapa, objetos/vegetación, efectos y regresiones recientes. No añadir carga de VS Ghost hasta entenderlo.
+2. **Race Control online no conecta en el AAB publicado.** La UI/local funciona y conserva PB, pero ACTUALIZAR pasa de SIN CACHÉ a ERROR/REINTENTAR. Hipótesis fuerte pendiente de verificación: el build local usado para el AAB no recibió `VITE_TDR_ONLINE_URL` y `VITE_TDR_ONLINE_PUBLIC`; GitHub Pages DEV sí las inyecta explícitamente. El cliente lanza `Online backend not configured` si faltan. Verificar el contenido/build Android antes de tocar Supabase. No tocar tablas/RLS/backend por esta incidencia sin evidencia.
+3. **Rewarded x2 ausente.** Tras finalizar una sesión aparece BOTÍN DE LA SESIÓN (piezas, vueltas premiadas, bonus, cofre) pero no aparece opción x2. Auditar integración Android real de AdMob/RevenueCat/placement y detección de plataforma. No asumir que comparte causa con Supabase.
+4. **Selector de circuitos: último elemento no recibe toque.** En Android el elemento inferior visible (Circuito Atlántico en la prueba) no se puede seleccionar. Investigar hit area/overlay/overflow/z-index/viewport del modal/lista; no modificar datos/coordenadas de circuitos para corregirlo.
+5. **Modo Fantasma: HUD flotante mal adaptado en Android.** Los elementos que se estabilizaron en iPhone no quedan correctamente posicionados en este viewport Android; DELTA/estado de fantasma/minimapa invaden zonas. Corregir responsive/safe-area específicamente sin romper el HUD estable de iPhone ni tocar DELTA funcional.
+
+### Validaciones positivas de la build publicada
+- Google Play ofreció ACTUALIZAR sobre la instalación anterior y Play Protect la verificó.
+- El juego arrancó tras actualizar sin reinstalar.
+- Perfil de piloto nuevo funcionó (prueba: JUANFRIKI).
+- Se conservaron 5.100 monedas, Hélix Spark seleccionado, progreso 1/3 de temporada y PB locales (ej. Santa Cruz 0:13.744).
+- Race Control carga correctamente su capa local y lista de circuitos/PB; el fallo aparece al intentar la operación online.
+- Carrera y entrega de botín funcionan; el problema de rendimiento es real pero el loop base no quedó bloqueado.
+
+### Regla nueva de publicación Android
+Antes de subir el próximo AAB a Play Console, instalar/probar el **release Android equivalente** y exigir como mínimo: progreso preservado al actualizar; Race Control conecta a Supabase; rewarded x2 aparece y completa correctamente; selector de circuitos totalmente táctil; modo Fantasma/HUD correcto en Android; FPS aceptables en los escenarios de referencia; y, cuando se implemente, compra de prueba Google Play/RevenueCat sin doble entrega. Verificar además que las variables públicas de Supabase están embebidas en el build release. No publicar basándose únicamente en que DEV web funciona.
+
+### Orden recomendado para el chat DEV 1.1.x
+Primero auditoría y diagnóstico de estas cinco incidencias, empezando por rendimiento Android y configuración del AAB. Después corregirlas en bloques pequeños verificables. Solo entonces continuar con VS Ghost, rewarded para Race Control y paquetes consumibles de monedas. La función protagonista de la próxima actualización sigue siendo **VS Ghost / desafíos online**; monetización se integra en la misma etapa, pero no debe ocultar estos bugs de la beta real.
 
 ## ACTUALIZACIÓN DE CONTINUIDAD — 18/09/2026
 

@@ -1,4 +1,5 @@
 import { RaceScene as GhostRaceScene } from './RaceGhostModeScene.js';
+import { t } from '../i18n/index.js';
 
 function textAdapter(el){
   return {
@@ -24,10 +25,10 @@ export class RaceScene extends GhostRaceScene {
   }
 
   _replayCarName(){
-    return String(this.carDef?.name||this.carDef?.displayName||this._ghostData?.carName||this._ghostCarId||'COCHE').replace(/[_-]+/g,' ').toUpperCase();
+    return String(this.carDef?.name||this.carDef?.displayName||this._ghostData?.carName||this._ghostCarId||t('raceControl.car')).replace(/[_-]+/g,' ').toUpperCase();
   }
   _replayTrackName(){
-    return String(this.track?.name||this.trackDef?.name||this._ghostData?.trackName||this._ghostTrackKey||'CIRCUITO').replace(/[_-]+/g,' ').toUpperCase();
+    return String(this.track?.name||this.trackDef?.name||this._ghostData?.trackName||this._ghostTrackKey||t('replay.track')).replace(/[_-]+/g,' ').toUpperCase();
   }
   _fmtReplayMs(ms){
     const t=Math.max(0,Number(ms)||0),m=Math.floor(t/60000),s=Math.floor((t%60000)/1000),cs=Math.floor((t%1000)/10);
@@ -41,29 +42,29 @@ export class RaceScene extends GhostRaceScene {
     const glass={background:'linear-gradient(135deg,rgba(3,13,22,.86),rgba(5,29,38,.68))',border:'1px solid rgba(100,232,255,.34)',boxShadow:'0 0 18px rgba(43,211,255,.10),inset 0 0 16px rgba(36,195,229,.04)',borderRadius:'7px'};
 
     const ident=document.createElement('div'); Object.assign(ident.style,{position:'absolute',left:'14px',top:'12px',padding:'8px 11px',minWidth:'180px',...glass});
-    ident.innerHTML=`<div style="font-size:10px;font-weight:900;letter-spacing:.16em;color:#7feaff">REPLAY · VUELTA RÁPIDA</div><div style="font-size:14px;font-weight:900;margin-top:2px">${this._replayCarName()}</div><div style="font-size:9px;opacity:.72;letter-spacing:.08em">${this._replayTrackName()}</div>`;
+    ident.innerHTML=`<div style="font-size:10px;font-weight:900;letter-spacing:.16em;color:#7feaff">${t('replay.replay')} · ${t('replay.fastLap')}</div><div style="font-size:14px;font-weight:900;margin-top:2px">${this._replayCarName()}</div><div style="font-size:9px;opacity:.72;letter-spacing:.08em">${this._replayTrackName()}</div>`;
 
     const delta=document.createElement('div'); Object.assign(delta.style,{position:'absolute',left:'50%',top:'13px',transform:'translateX(-50%)',padding:'7px 14px',textAlign:'center',minWidth:'92px',opacity:'0',transition:'opacity .18s',...glass});
-    delta.innerHTML='<div style="font-size:8px;letter-spacing:.14em;opacity:.65">DELTA</div><div data-v style="font:900 17px ui-monospace,SFMono-Regular,Menlo,monospace">±0.000</div>';
+    delta.innerHTML=`<div style="font-size:8px;letter-spacing:.14em;opacity:.65">${t('replay.delta')}</div><div data-v style="font:900 17px ui-monospace,SFMono-Regular,Menlo,monospace">±0.000</div>`;
 
     const sectors=document.createElement('div'); Object.assign(sectors.style,{position:'absolute',right:'14px',top:'12px',width:'142px',padding:'7px 9px',...glass});
-    sectors.innerHTML='<div style="font-size:8px;letter-spacing:.16em;color:#7feaff;font-weight:900;margin-bottom:4px">SECTORES</div>';
+    sectors.innerHTML=`<div style="font-size:8px;letter-spacing:.16em;color:#7feaff;font-weight:900;margin-bottom:4px">${t('track.sectors')}</div>`;
     this._replaySectors=[];
     for(let i=0;i<3;i++){const r=document.createElement('div');Object.assign(r.style,{display:'grid',gridTemplateColumns:'24px 1fr 45px',gap:'4px',font:'800 9px ui-monospace,SFMono-Regular,Menlo,monospace',padding:'2px 0',opacity:'.45'});r.innerHTML=`<span>S${i+1}</span><span data-t>--.--</span><span data-d>--</span>`;sectors.appendChild(r);this._replaySectors.push(r);}
 
     const telemetry=document.createElement('div'); Object.assign(telemetry.style,{position:'absolute',right:'14px',bottom:'62px',width:'178px',padding:'8px 10px',...glass});
-    telemetry.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between"><span data-speed style="font:900 22px ui-monospace,SFMono-Regular,Menlo,monospace">000</span><span style="font-size:8px;opacity:.7">km/h</span><span data-gear style="font-size:14px;font-weight:900;color:#7feaff">1ª</span></div><div style="font-size:7px;letter-spacing:.12em;margin-top:5px">GAS</div><div style="height:3px;background:#17313a"><i data-gas style="display:block;height:100%;width:0%;background:#35f3a0"></i></div><div style="font-size:7px;letter-spacing:.12em;margin-top:4px">FRENO</div><div style="height:3px;background:#3a2025"><i data-brake style="display:block;height:100%;width:0%;background:#ff667d"></i></div><div style="display:flex;align-items:center;gap:6px;margin-top:6px"><span style="font-size:7px;opacity:.65">DIRECCIÓN</span><div style="position:relative;height:3px;flex:1;background:#18323a"><i data-steer style="position:absolute;top:-2px;left:50%;width:3px;height:7px;background:#8ff2ff"></i></div></div>`;
+    telemetry.innerHTML=`<div style="display:flex;align-items:baseline;justify-content:space-between"><span data-speed style="font:900 22px ui-monospace,SFMono-Regular,Menlo,monospace">000</span><span style="font-size:8px;opacity:.7">km/h</span><span data-gear style="font-size:14px;font-weight:900;color:#7feaff">1ª</span></div><div style="font-size:7px;letter-spacing:.12em;margin-top:5px">${t('replay.throttle')}</div><div style="height:3px;background:#17313a"><i data-gas style="display:block;height:100%;width:0%;background:#35f3a0"></i></div><div style="font-size:7px;letter-spacing:.12em;margin-top:4px">${t('replay.brake')}</div><div style="height:3px;background:#3a2025"><i data-brake style="display:block;height:100%;width:0%;background:#ff667d"></i></div><div style="display:flex;align-items:center;gap:6px;margin-top:6px"><span style="font-size:7px;opacity:.65">${t('replay.steering')}</span><div style="position:relative;height:3px;flex:1;background:#18323a"><i data-steer style="position:absolute;top:-2px;left:50%;width:3px;height:7px;background:#8ff2ff"></i></div></div>`;
 
-    const brand=document.createElement('div'); brand.textContent='TOPDOWN CRAFTRACE // REPLAY'; Object.assign(brand.style,{position:'absolute',left:'14px',bottom:'65px',fontSize:'8px',fontWeight:'900',letterSpacing:'.15em',color:'#a7f5ff',opacity:'.68'});
+    const brand=document.createElement('div'); brand.textContent=`TOPDOWN CRAFTRACE // ${t('replay.replay')}`; Object.assign(brand.style,{position:'absolute',left:'14px',bottom:'65px',fontSize:'8px',fontWeight:'900',letterSpacing:'.15em',color:'#a7f5ff',opacity:'.68'});
 
     const intro=document.createElement('div'); Object.assign(intro.style,{position:'absolute',left:'50%',top:'48%',transform:'translate(-50%,-50%)',textAlign:'center',padding:'16px 28px',transition:'opacity .35s',...glass});
-    intro.innerHTML=`<div style="font-size:10px;font-weight:900;letter-spacing:.22em;color:#59f3b1">PERSONAL BEST</div><div style="font:900 34px ui-monospace,SFMono-Regular,Menlo,monospace;margin:2px 0">${this._fmtReplayMs(this._ghostData?.lapMs)}</div><div style="font-size:9px;letter-spacing:.12em;opacity:.8">${this._replayCarName()} · ${this._replayTrackName()}</div>`;
+    intro.innerHTML=`<div style="font-size:10px;font-weight:900;letter-spacing:.22em;color:#59f3b1">${t('raceControl.personalBest')}</div><div style="font:900 34px ui-monospace,SFMono-Regular,Menlo,monospace;margin:2px 0">${this._fmtReplayMs(this._ghostData?.lapMs)}</div><div style="font-size:9px;letter-spacing:.12em;opacity:.8">${this._replayCarName()} · ${this._replayTrackName()}</div>`;
 
     const timer=document.createElement('div'); timer.textContent='0:00.00'; Object.assign(timer.style,{position:'absolute',left:'50%',bottom:'62px',transform:'translateX(-50%)',padding:'5px 9px',font:'800 10px ui-monospace,SFMono-Regular,Menlo,monospace',color:'#8ff2ff',...glass});
 
     const bar=document.createElement('div'); Object.assign(bar.style,{position:'absolute',left:'10px',right:'10px',bottom:'calc(10px + env(safe-area-inset-bottom, 0px))',display:'flex',justifyContent:'center',gap:'8px',pointerEvents:'auto'});
     const makeBtn=(label,fn,wide=false)=>{const b=document.createElement('button');b.type='button';b.textContent=label;Object.assign(b.style,{appearance:'none',WebkitAppearance:'none',border:'1px solid rgba(100,232,255,.62)',background:'rgba(7,19,29,.94)',color:'#e9fbff',borderRadius:'8px',height:'38px',padding:wide?'0 16px':'0 13px',fontSize:'10px',fontWeight:'900',whiteSpace:'nowrap',touchAction:'manipulation'});let fired=0;const fire=ev=>{ev.preventDefault();ev.stopPropagation();const n=performance.now();if(n-fired<180)return;fired=n;fn?.();};b.addEventListener('pointerup',fire,{passive:false});b.addEventListener('click',fire,{passive:false});return b;};
-    const back=makeBtn('← VOLVER',()=>this._exitReplay()),restart=makeBtn('↺ INICIO',()=>this._restartReplay()),play=makeBtn('⏸ PAUSA',()=>this._toggleReplayPause()),cam=makeBtn('🎥 SEGUIMIENTO',()=>this._setReplayCamera(this._replayCameraMode==='follow'?'wide':'follow'),true),exp=makeBtn('⬆ EXPORTAR VÍDEO',()=>this._startReplayExport(),true);bar.append(back,restart,play,cam,exp);
+    const back=makeBtn(`← ${t('common.back')}`,()=>this._exitReplay()),restart=makeBtn(`↺ ${t('replay.start')}`,()=>this._restartReplay()),play=makeBtn(`⏸ ${t('replay.pause')}`,()=>this._toggleReplayPause()),cam=makeBtn(`🎥 ${t('replay.follow')}`,()=>this._setReplayCamera(this._replayCameraMode==='follow'?'wide':'follow'),true),exp=makeBtn(`⬆ ${t('replay.exportVideo')}`,()=>this._startReplayExport(),true);bar.append(back,restart,play,cam,exp);
 
     root.append(ident,delta,sectors,telemetry,brand,intro,timer,bar);document.body.appendChild(root);
     this._replayDom=root;this._replayIntro=intro;this._replayDelta=delta;this._replayTelemetry=telemetry;
@@ -89,3 +90,5 @@ export class RaceScene extends GhostRaceScene {
   _exitReplay(){super._exitReplay();this._destroyReplayDom();}
   update(time,delta){const result=super.update(time,delta);if(this._replayActive)this._updateReplayIdentity(Number(this._replayElapsed)||Math.max(0,performance.now()-Number(this._replayStartedAt||performance.now())));return result;}
 }
+
+// DEV 1.1.119 validation trigger: replay controls, help and tester exchange use i18n.

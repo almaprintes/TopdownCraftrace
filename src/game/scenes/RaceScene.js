@@ -3606,8 +3606,10 @@ this._surface = surface;
 // Params (por si init no llegó a setearlos aún)
 let accel = this.accel ?? 0;
 const brakeForce = this.brakeForce ?? 0;
-const linearDrag = this.linearDrag ?? 0;
+const longitudinalResponse = clamp(Number(this.carParams?.longitudinalResponse ?? 1), 0.05, 1);
+const linearDrag = (this.linearDrag ?? 0) * (down ? 1 : longitudinalResponse);
 const engineBrake = this.engineBrake ?? 0; // <- IMPORTANTE (evita "engineBrake is not defined")
+accel *= longitudinalResponse;
 
 let maxFwd = this.maxFwd ?? 1; // let (lo vamos a poder penalizar por terreno)
 let maxRev = this.maxRev ?? 1;

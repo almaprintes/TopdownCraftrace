@@ -1,12 +1,18 @@
 import { MenuScene as CurrentMenuScene } from './MenuStoreCloseFixScene.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
 import { rewardedStatus, claimRewardedCoins } from '../store/storeEconomy.js';
 import { getLanguage } from '../i18n/index.js';
 import { showStoreDomConfirm, closeStoreDomConfirm } from '../ui/storeDomConfirm.js';
 
 export class MenuScene extends CurrentMenuScene {
-  _confirmStoreSpend({title='CONFIRMAR COMPRA',detail='',confirm='COMPRAR',onConfirm}={}){
-    return showStoreDomConfirm({title,detail,confirm,onConfirm});
+  _confirmStoreSpend(options={}){
+    // Keep purchase confirmation inside Phaser. On iPhone/iOS, handing the
+    // active gesture from the Phaser canvas to a fixed DOM overlay and then
+    // removing that overlay on Cancel can leave the store input path inert.
+    // The inherited Phaser confirmation never leaves the game input system.
+    closeStoreDomConfirm();
+    return super._confirmStoreSpend(options);
   }
 
   _openStoreModal(section='materials'){
@@ -35,6 +41,10 @@ export class MenuScene extends CurrentMenuScene {
       if(!root?.scene)return;
       for(const text of texts){
         if(!text?.scene)continue;
+        // Recalculate from the uncropped text every time. Otherwise a previous
+        // horizontal crop becomes the next getBounds() input while dragging and
+        // text can leak past the store viewport on iOS/WebGL.
+        try{text.setCrop();}catch{}
         const b=text.getBounds?.();
         if(!b||!Number.isFinite(b.left)||!Number.isFinite(b.right))continue;
         const vl=Math.max(left,b.left),vr=Math.min(right,b.right),vt=Math.max(top,b.top),vb=Math.min(bottom,b.bottom);
@@ -87,10 +97,10 @@ export class MenuScene extends CurrentMenuScene {
       try{
         const ad=await showRewardedAd(this,{
           title:getLanguage()==='en'?'REWARDED VIDEO':'VÍDEO RECOMPENSADO',
-          placement:'store_rewarded_coins',
-          claimId:`store-coins-${Date.now()}`
+          placement:REWARDED_PLACEMENTS.STORE_COINS_100,
+          claimId:status.claimId
         });
-        if(!ad?.completed||!ad?.verified){
+        if(!verifiedReward(ad)){
           this._toastStore?.(getLanguage()==='en'?'VIDEO NOT COMPLETED':'VÍDEO NO COMPLETADO',false);
           return;
         }
@@ -104,3 +114,5 @@ export class MenuScene extends CurrentMenuScene {
     });
   }
 }
+
+// DEV 1.1.132 validation trigger: store purchase confirmation remains in Phaser on iOS.

@@ -9,17 +9,6 @@ const BASE=import.meta.env.BASE_URL||'/';
 const FONT='system-ui,-apple-system,Segoe UI,Arial';
 const STORE_TIME_LABEL=ms=>{const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;};
 
-const PACK_UI={
-  mechanic:{es:'PACK MECÁNICA',en:'MECHANICS PACK',esCopy:'Base mecánica para mantener y mejorar.',enCopy:'Mechanical essentials for upkeep and upgrades.'},
-  chassis:{es:'PACK CHASIS',en:'CHASSIS PACK',esCopy:'Refuerzo de estructura y comportamiento.',enCopy:'Chassis essentials for structure and handling.'},
-  technology:{es:'PACK TECNOLOGÍA',en:'TECH PACK',esCopy:'Electrónica y componentes de alto rendimiento.',enCopy:'Electronics and high-performance components.'},
-  mixed:{es:'PACK PADDOCK',en:'PADDOCK PACK',esCopy:'Selección variada para fabricar y evolucionar.',enCopy:'A mixed selection for crafting and progression.'}
-};
-const MATERIAL_LABELS={
-  scrap:{es:'Chatarra',en:'Scrap'},alloy:{es:'Aleación',en:'Alloy'},rubber:{es:'Goma',en:'Rubber'},compound:{es:'Compuesto',en:'Compound'},
-  disc:{es:'Disco metálico',en:'Metal disc'},spring:{es:'Muelle',en:'Spring'},gear:{es:'Engranaje',en:'Gear'},ecu:{es:'Electrónica',en:'Electronics'}
-};
-
 export class MenuScene extends CurrentMenuScene {
   _openStoreModal(section='materials'){
     this._storeCountdownEvent?.remove?.(false);
@@ -28,7 +17,7 @@ export class MenuScene extends CurrentMenuScene {
     const root=this._storeModal;
     if(!root?.scene)return;
 
-    const tabs=['materials','coins','rewards'];
+    const tabs=['materials','rewards'];
     const tabY=68,tabW=170,tabH=38;
     tabs.forEach((id,i)=>{
       const x=24+i*(tabW+10);
@@ -50,14 +39,15 @@ export class MenuScene extends CurrentMenuScene {
   }
 
   _installStoreCountdownTicker(root){
-    const prefix=getLanguage()==='en'?'AVAILABLE IN':'DISPONIBLE EN';
+    const prefix=t('store.availableIn');
+    const rewardTitles={video:t('store.rewardedVideo').toUpperCase(),daily:t('store.dailyGift').toUpperCase()};
     const collectCards=(node,out=[])=>{
       for(const child of node?.list||[]){
         if(child?.type==='Container'){
           const texts=(child.list||[]).filter(o=>o?.type==='Text');
           const title=texts.map(o=>String(o.text||'').toUpperCase()).join(' | ');
-          if(title.includes('REWARDED VIDEO')||title.includes('VÍDEO RECOMPENSADO'))out.push({kind:'video',card:child,texts});
-          else if(title.includes('DAILY GIFT')||title.includes('REGALO DIARIO'))out.push({kind:'daily',card:child,texts});
+          if(title.includes(rewardTitles.video))out.push({kind:'video',card:child,texts});
+          else if(title.includes(rewardTitles.daily))out.push({kind:'daily',card:child,texts});
           collectCards(child,out);
         }
       }
@@ -70,7 +60,7 @@ export class MenuScene extends CurrentMenuScene {
       let becameAvailable=false;
       for(const entry of cards){
         const status=entry.kind==='video'?rewardedStatus():dailyStatus();
-        const label=entry.texts.find(o=>/^(AVAILABLE IN|DISPONIBLE EN)\b/i.test(String(o.text||'')));
+        const label=entry.texts.find(o=>String(o.text||'').startsWith(prefix));
         if(status.available){
           if(label)becameAvailable=true;
           continue;
@@ -144,13 +134,10 @@ export class MenuScene extends CurrentMenuScene {
       if(card?.bringToTop){
         const topText=(card.list||[]).filter(child=>child?.type==='Text'&&Number(child.y)<82);
         topText.forEach(child=>card.bringToTop(child));
-        const artKeys=new Set(['store:coins_2500','store:coins_7500','store:coins_20000','store:rewarded_video','store:daily_gift']);
+        const artKeys=new Set(['store:rewarded_video','store:daily_gift']);
         const arts=(card.list||[]).filter(child=>child?.type==='Image'&&artKeys.has(child.texture?.key));
         arts.forEach(child=>{child.y+=22;});
-        if(p.type==='coin'){
-          const duplicatePrice=(card.list||[]).find(child=>child?.type==='Text'&&child.text===p.priceLabel&&Number(child.y)<h*.75);
-          duplicatePrice?.destroy();
-        }
+
       }
       return;
     }
@@ -159,77 +146,34 @@ export class MenuScene extends CurrentMenuScene {
 
   _renderMaterialPackCard(parent,p,x,y,w,h){
     const lang=getLanguage()==='en'?'en':'es';
-    const ui=PACK_UI[p.id]||{es:p.name,en:p.name,esCopy:'Pack de materiales',enCopy:'Materials pack'};
-    const card=this.add.container(x,y);
-    parent.add(card);
-    const compact=h<250;
-    const accent=p.accent||0x31aaff;
+    const packKey=`store.pack.${p.id}`,packTitle=t(`${packKey}.title`),packCopy=t(`${packKey}.copy`);
+    const card=this.add.container(x,y);parent.add(card);
+    const compact=h<250,accent=p.accent||0x31aaff,entries=Object.entries(p.items||{});
+    const totalUnits=entries.reduce((sum,[,n])=>sum+Math.max(0,Number(n)||0),0);
+    const shadow=this.add.graphics();shadow.fillStyle(0x000000,.44);shadow.fillRoundedRect(7,8,w,h,18);card.add(shadow);
+    const frame=this.add.graphics();frame.fillGradientStyle(0x091521,0x08111c,0x07101a,0x0b1721,1);frame.fillRoundedRect(0,0,w,h,18);frame.lineStyle(2,accent,.95);frame.strokeRoundedRect(0,0,w,h,18);frame.lineStyle(8,accent,.045);frame.strokeRoundedRect(5,5,w-10,h-10,14);card.add(frame);
 
-    const shadow=this.add.graphics();
-    shadow.fillStyle(0x000000,.44);
-    shadow.fillRoundedRect(7,8,w,h,18);
-    card.add(shadow);
+    const title=this.add.text(16,compact?10:14,packTitle,{fontFamily:FONT,fontSize:compact?'15px':'19px',fontStyle:'bold',color:'#fff',wordWrap:{width:w-126}});title.setShadow(0,2,'#000',4,true,true);card.add(title);
+    const badgeW=compact?82:98,badgeH=compact?34:40,bx=w-badgeW-12,by=compact?8:11,badge=this.add.graphics();badge.fillStyle(accent,.18);badge.fillRoundedRect(bx,by,badgeW,badgeH,8);badge.lineStyle(1.4,accent,.95);badge.strokeRoundedRect(bx,by,badgeW,badgeH,8);card.add(badge);
+    card.add(this.add.text(bx+badgeW/2,by+badgeH*.38,String(totalUnits),{fontFamily:FONT,fontSize:compact?'17px':'20px',fontStyle:'bold',color:'#fff'}).setOrigin(.5));
+    card.add(this.add.text(bx+badgeW/2,by+badgeH*.77,t('store.totalUnits'),{fontFamily:FONT,fontSize:compact?'6px':'7px',fontStyle:'bold',color:'#d9e6ef'}).setOrigin(.5));
+    const copyY=compact?36:48;card.add(this.add.text(16,copyY,packCopy,{fontFamily:FONT,fontSize:compact?'7px':'9px',color:'#aebdcc',wordWrap:{width:w-32},lineSpacing:1}));
+    const labelY=compact?58:72;card.add(this.add.text(16,labelY,t('store.contents'),{fontFamily:FONT,fontSize:compact?'6px':'8px',fontStyle:'bold',color:'#8299ad'}));
 
-    const frame=this.add.graphics();
-    frame.fillGradientStyle(0x091521,0x08111c,0x07101a,0x0b1721,1);
-    frame.fillRoundedRect(0,0,w,h,18);
-    frame.lineStyle(2,accent,.95);
-    frame.strokeRoundedRect(0,0,w,h,18);
-    frame.lineStyle(8,accent,.045);
-    frame.strokeRoundedRect(5,5,w-10,h-10,14);
-    card.add(frame);
-
-    const heroH=Math.round(h*(compact?.54:.60));
-    const hero=this.add.graphics();
-    hero.fillGradientStyle(0x0b2233,0x0a1722,0x071018,0x0a1723,1);
-    hero.fillRoundedRect(2,2,w-4,heroH,16);
-    hero.fillStyle(accent,.09);
-    hero.beginPath();
-    hero.moveTo(w*.48,2);hero.lineTo(w-2,2);hero.lineTo(w-2,heroH);hero.lineTo(w*.28,heroH);hero.closePath();hero.fillPath();
-    card.add(hero);
-
-    const title=this.add.text(18,compact?12:16,ui[lang],{fontFamily:FONT,fontSize:compact?'17px':'22px',fontStyle:'bold',color:'#ffffff'});
-    title.setShadow(0,3,'#000',5,true,true);
-    const copy=this.add.text(18,compact?36:45,ui[`${lang}Copy`],{fontFamily:FONT,fontSize:compact?'7px':'9px',color:'#b9c7d4',wordWrap:{width:w*.48},lineSpacing:1});
-    card.add([title,copy]);
-
-    const entries=Object.entries(p.items||{});
-    const preview=entries.slice(0,Math.min(4,entries.length));
-    const cx=w*.72,cy=heroH*.52;
-    const offsets=[[-52,14],[-8,-12],[38,12],[5,35]];
-    const angles=[-13,8,-6,14];
-    const sizes=compact?[70,82,68,57]:[88,104,84,68];
-    preview.forEach(([id],i)=>{
-      const key=`store:${id}`;
-      if(!this.textures.exists(key))return;
-      const [ox,oy]=offsets[i]||[i*18,0];
-      const im=this.add.image(cx+ox,cy+oy,key).setAngle(angles[i]||0);
-      const target=sizes[i]||72;
-      im.setScale(Math.min(target/(im.width||1),target/(im.height||1)));
-      im.setAlpha(i===3?.82:1);
-      im.setShadow?.(0,5,'#000',8);
-      card.add(im);
+    const buttonH=compact?34:44,buttonY=h-buttonH-10,gridTop=labelY+(compact?12:16),gridBottom=buttonY-7;
+    const cols=entries.length>=5?2:1,rows=Math.ceil(entries.length/cols),gap=compact?4:6,cellW=(w-28-gap*(cols-1))/cols,cellH=Math.max(22,(gridBottom-gridTop-gap*(rows-1))/rows);
+    entries.forEach(([id,count],i)=>{
+      const col=i%cols,row=Math.floor(i/cols),cx=14+col*(cellW+gap),cy=gridTop+row*(cellH+gap),box=this.add.graphics();
+      box.fillStyle(0x07131f,.96);box.fillRoundedRect(cx,cy,cellW,cellH,7);box.lineStyle(1,0x35566f,.9);box.strokeRoundedRect(cx,cy,cellW,cellH,7);card.add(box);
+      const key=`store:${id}`,iconSize=Math.max(18,Math.min(compact?27:34,cellH*.66,cellW*.18));
+      if(this.textures.exists(key)){const im=this.add.image(cx+7+iconSize/2,cy+cellH/2,key),scale=Math.min(iconSize/(im.width||1),iconSize/(im.height||1));im.setScale(scale);card.add(im);}
+      const name=t(`materials.${id}`)||GARAGE_ITEMS[id]?.name||id,tx=cx+13+iconSize;
+      card.add(this.add.text(tx,cy+cellH/2,String(name).toUpperCase(),{fontFamily:FONT,fontSize:cols>1?(compact?'7px':'8px'):(compact?'8px':'10px'),fontStyle:'bold',color:'#dfe8f1',wordWrap:{width:Math.max(28,cellW-iconSize-58)}}).setOrigin(0,.5));
+      card.add(this.add.text(cx+cellW-9,cy+cellH/2,`×${count}`,{fontFamily:FONT,fontSize:cols>1?(compact?'11px':'13px'):(compact?'13px':'16px'),fontStyle:'bold',color:'#fff'}).setOrigin(1,.5));
     });
 
-    const divider=this.add.graphics();
-    divider.fillStyle(accent,.9);
-    divider.fillRoundedRect(18,heroH-4,compact?48:64,4,2);
-    card.add(divider);
-
-    const exact=entries.map(([id,n])=>`${n}× ${MATERIAL_LABELS[id]?.[lang]||GARAGE_ITEMS[id]?.name||id}`).join('  ·  ');
-    const detailsY=heroH+(compact?10:13);
-    const detailsLabel=lang==='en'?'INCLUDES':'INCLUYE';
-    card.add(this.add.text(18,detailsY,detailsLabel,{fontFamily:FONT,fontSize:compact?'6px':'7px',fontStyle:'bold',color:'#7f95a8'}));
-    card.add(this.add.text(18,detailsY+(compact?10:13),exact,{fontFamily:FONT,fontSize:compact?'7px':'8px',fontStyle:'bold',color:'#e3eaf1',wordWrap:{width:w-36},lineSpacing:2}));
-
-    const price=Number(p.price||0).toLocaleString(lang==='en'?'en-US':'es-ES');
-    const buyLabel=lang==='en'?`${price} COINS`:`${price} MONEDAS`;
-    this._buyButton(card,w,h,buyLabel,()=>{
-      const r=buyMaterialPack(p.id);
-      const okLabel=lang==='en'?'PACK ADDED':'PACK AÑADIDO';
-      this._toastStore(r.ok?okLabel:r.reason,r.ok);
-      if(r.ok)this._openStoreModal('materials');
-    },true,accent,true);
+    const price=Number(p.price||0).toLocaleString(lang==='en'?'en-US':'es-ES'),buyLabel=`${price} ${t('store.coins')}`;
+    this._buyButton(card,w,h,buyLabel,()=>{const r=buyMaterialPack(p.id),okLabel=t('store.packAdded');this._toastStore(r.ok?okLabel:r.reason,r.ok);if(r.ok)this._openStoreModal('materials');},true,accent,true);
   }
 
   _openGameModeModal(){
@@ -371,3 +315,5 @@ export class MenuScene extends CurrentMenuScene {
     cancel.on('pointerdown',()=>{this._duelLapModal=null;c.destroy(true);});c.add(cancel);
   }
 }
+
+// DEV 1.1.129 validation trigger: material store copy is centralized in i18n; duplicate declaration fixed.

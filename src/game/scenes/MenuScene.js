@@ -3,6 +3,7 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { DEV_FACTORY } from '../dev/devFlags.js';
 import { BaseScene } from './BaseScene.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 const LEGACY_CAR_IDS = new Set(['stock', 'touring', 'power']);
 
@@ -35,7 +36,7 @@ this.selectedTrackKey = 'track01';
 
   init(data) {
     // Si venimos desde "Salir ADMIN", forzamos estado jugador (determinista)
-    if (data?.forcePlayer) {
+    if (!IS_PROD_BUILD && data?.forcePlayer) {
       try { localStorage.setItem('tdr2:admin', '0'); } catch {}
     }
   }
@@ -165,7 +166,7 @@ const targetH = clamp(Math.floor(topH * 0.9), 48, 72);
     .setOrigin(0, 0.5)
     .setInteractive({ useHandCursor: true });
 
-  // Long press = ADMIN
+  // Long press = ADMIN (DEV build only)
   let pressTimer = null;
 
   const clearPress = () => {
@@ -173,7 +174,7 @@ const targetH = clamp(Math.floor(topH * 0.9), 48, 72);
     pressTimer = null;
   };
 
-  hit.on('pointerdown', () => {
+  if(!IS_PROD_BUILD)hit.on('pointerdown', () => {
     clearPress();
     pressTimer = this.time.delayedCall(700, () => {
       const nowAdmin =
@@ -191,8 +192,7 @@ if (nowAdmin === '1') {
     });
   });
 
-  hit.on('pointerup', clearPress);
-  hit.on('pointerout', clearPress);
+  if(!IS_PROD_BUILD){hit.on('pointerup', clearPress);hit.on('pointerout', clearPress);}
 
   topBar.add([hit, logoImg]);
 }

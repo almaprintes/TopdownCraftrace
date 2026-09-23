@@ -2,6 +2,7 @@ import { MenuScene as CurrentMenuScene } from './MenuDuelModeScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage, qty } from '../garage/garageStore.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { recyclerRewardedClaimId, recyclerRewardedPlacement, verifiedReward } from '../monetization/rewardedActions.js';
 import { EXCHANGE_MATERIALS, MATERIAL_EXCHANGE_VALUE, MATERIAL_EXCHANGE_EFFICIENCY, materialExchangeStatus, quoteMaterialExchange, executeMaterialExchange } from '../store/materialExchange.js';
 
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
@@ -23,6 +24,10 @@ export class MenuScene extends CurrentMenuScene {
     try{this._storeConfirmModal?.destroy?.(true);}catch{}
     const {width:w,height:h}=this.scale,compact=h<520;
     const root=this.add.container(0,0).setDepth(60000);this._storeConfirmModal=root;
+    // Hide the store while the Phaser confirmation is open. The store text
+    // otherwise remains visible through/over the modal on iOS WebGL.
+    const store=this._storeModal,storeWasVisible=!!store?.visible;
+    try{if(store?.scene)store.setVisible(false);}catch{}
     const A=o=>{root.add(o);return o;};
     A(this.add.rectangle(0,0,w,h,0x02070d,.82).setOrigin(0).setInteractive());
     const pw=Math.min(w-40,compact?500:560),ph=compact?190:220,x=(w-pw)/2,y=(h-ph)/2;
@@ -35,7 +40,7 @@ export class MenuScene extends CurrentMenuScene {
     A(this.add.text(x+24+bw/2,by+bh/2,'CANCELAR',{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'900',color:'#d7e0e8'}).setOrigin(.5));
     const accept=A(this.add.rectangle(x+24+bw+gap,by,bw,bh,0x17683f,1).setOrigin(0).setStrokeStyle(2,0x5df0b0,.9).setInteractive({useHandCursor:true}));
     A(this.add.text(x+24+bw+gap+bw/2,by+bh/2,confirm,{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'900',color:'#fff'}).setOrigin(.5));
-    const close=()=>{try{root.destroy(true);}catch{}this._storeConfirmModal=null;};
+    const close=()=>{try{root.destroy(true);}catch{}this._storeConfirmModal=null;try{if(store?.scene&&storeWasVisible)store.setVisible(true);}catch{}};
     cancel.on('pointerdown',close);
     accept.on('pointerdown',()=>{close();onConfirm?.();});
   }
@@ -119,7 +124,7 @@ export class MenuScene extends CurrentMenuScene {
     A(this.add.text(x+24,btnY+btnH/2,'1.º gratis · 2.º y 3.º con vídeo',{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:'#8fa6b7'}).setOrigin(0,.5));
     if(enabled){btn.setInteractive({useHandCursor:true});btn.on('pointerdown',()=>{
       this._confirmStoreSpend({title:'CONFIRMAR INTERCAMBIO',detail:`${amount} ${materialName(fromId)}  →  ${receive} ${materialName(toId)}${requiresVideo?' · REQUIERE VÍDEO':' · PRIMER CAMBIO GRATIS'}`,confirm:'CONFIRMAR',onConfirm:async()=>{
-        if(requiresVideo){const ad=await showRewardedAd(this,{title:'RECICLAJE DE MATERIALES',placement:'recycler_exchange',claimId:`recycler-${Date.now()}`});if(!ad?.completed||!ad?.verified){this._toastStore?.('VÍDEO NO COMPLETADO',false);return;}}
+        if(requiresVideo){const ordinal=status.nextOrdinal;const ad=await showRewardedAd(this,{title:'RECICLAJE DE MATERIALES',placement:recyclerRewardedPlacement(ordinal),claimId:recyclerRewardedClaimId(status.day,ordinal)});if(!verifiedReward(ad)){this._toastStore?.('VÍDEO NO COMPLETADO',false);return;}}
         const result=executeMaterialExchange(fromId,toId,amount);this._toastStore?.(result.ok?`${result.spend} ${materialName(fromId)} → ${result.receive} ${materialName(toId)}`:result.reason,result.ok);if(result.ok)this._exchangeAmount=Math.min(amount,Math.max(1,qty(loadGarage(),fromId)));this._openMaterialExchange(fromId,toId,this._exchangeAmount);
       }});
     });}
@@ -138,3 +143,5 @@ export class MenuScene extends CurrentMenuScene {
     }
   }
 }
+
+// DEV 1.1.133 validation trigger: purchase confirmation visually isolates the underlying store; syntax corrected.

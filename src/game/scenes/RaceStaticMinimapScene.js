@@ -5,6 +5,7 @@ const FRAME_W = 184;
 const FRAME_H = 112;
 const INNER = { x: 8, y: 8, w: FRAME_W - 16, h: FRAME_H - 16 };
 
+
 function svgEl(name, attrs = {}) {
   const el = document.createElementNS(SVG_NS, name);
   for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, String(value));
@@ -144,7 +145,7 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrStaticMinimapPostUpdate = () => {
       this._hidePhaserMinimap();
       this._updateStaticDomMinimap?.();
-    };
+      };
     this.events?.on?.('postupdate', this._tdrStaticMinimapPostUpdate, this);
 
     this.events?.once?.('shutdown', () => {

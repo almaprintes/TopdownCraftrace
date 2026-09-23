@@ -2,9 +2,11 @@ import Phaser from 'phaser';
 import { GARAGE_ITEMS, EVOLUTION_CHAIN, EVOLUTION_COST, findRecipe } from '../garage/partsCatalog.js';
 import { loadGarage, qty, craft, evolve, equip, duplicateLastReward } from '../garage/garageStore.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
+import { legacyPostRaceClaimId, REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
+import { t } from '../i18n/index.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-const FAMILY_LABEL={engine:'MOTOR',brakes:'FRENOS',tires:'RUEDAS',suspension:'SUSPENSIÓN',transmission:'CAJA'};
+const familyLabel=f=>t(`workshop.family.${f}`);
 const FAMILIES=['engine','brakes','tires','suspension','transmission'];
 
 export class UpgradeShopScene extends Phaser.Scene {
@@ -32,9 +34,9 @@ export class UpgradeShopScene extends Phaser.Scene {
     bg.lineStyle(1,0xffffff,.025);for(let x=0;x<width;x+=72)bg.lineBetween(x,0,x,height);for(let y=0;y<height;y+=72)bg.lineBetween(0,y,width,y);
 
     const pad=clamp(width*.025,16,30),headerH=82;
-    add(this.add.text(pad,14,'TDR WORKSHOP',{fontFamily:'Orbitron,system-ui',fontSize:clamp(width*.022,22,34)+'px',fontStyle:'900',color:'#fff'}));
-    add(this.add.text(pad,46,'1 · CONSIGUE  →  2 · FUSIONA  →  3 · GUARDA  →  4 · EQUIPA',{fontFamily:'system-ui',fontSize:'10px',fontStyle:'800',color:'#58e99c',letterSpacing:1.2}));
-    const back=add(this.add.text(width-pad,20,'← GARAGE',{fontFamily:'system-ui',fontSize:'13px',fontStyle:'800',color:'#dcecef'}).setOrigin(1,0).setInteractive({useHandCursor:true}));
+    add(this.add.text(pad,14,t('workshop.title'),{fontFamily:'Orbitron,system-ui',fontSize:clamp(width*.022,22,34)+'px',fontStyle:'900',color:'#fff'}));
+    add(this.add.text(pad,46,t('workshop.flowTop'),{fontFamily:'system-ui',fontSize:'10px',fontStyle:'800',color:'#58e99c',letterSpacing:1.2}));
+    const back=add(this.add.text(width-pad,20,`← ${t('workshop.garage')}`,{fontFamily:'system-ui',fontSize:'13px',fontStyle:'800',color:'#dcecef'}).setOrigin(1,0).setInteractive({useHandCursor:true}));
     back.on('pointerdown',()=>this.scene.start('menu'));
 
     const contentY=headerH,contentH=height-headerH-pad;
@@ -46,7 +48,7 @@ export class UpgradeShopScene extends Phaser.Scene {
 
     // INVENTORY
     panel(pad,contentY,leftW,contentH,'1 · ALMACÉN');
-    add(this.add.text(pad+14,contentY+34,'Todo lo que fabricas aparece aquí, en la pestaña PIEZAS.',{fontFamily:'system-ui',fontSize:'9px',color:'#77919a'}));
+    add(this.add.text(pad+14,contentY+34,t('workshop.storageDesc'),{fontFamily:'system-ui',fontSize:'9px',color:'#77919a'}));
     const tabY=contentY+52,tabW=(leftW-28-8)/2;
     this._tab(add,pad+14,tabY,tabW,'MATERIALES','materials');
     this._tab(add,pad+14+tabW+8,tabY,tabW,'PIEZAS','parts');
@@ -65,10 +67,10 @@ export class UpgradeShopScene extends Phaser.Scene {
       add(this.add.text(x+10,y+8,item.icon,{fontFamily:'system-ui',fontSize:'24px',color:'#fff'}));
       add(this.add.text(x+cellW-8,y+8,`×${q}`,{fontFamily:'Orbitron,system-ui',fontSize:'10px',fontStyle:'900',color:'#68e6ff'}).setOrigin(1,0));
       add(this.add.text(x+10,y+41,item.name,{fontFamily:'system-ui',fontSize:'9px',fontStyle:'800',color:'#eaf4f5',wordWrap:{width:cellW-18}}));
-      if(justMade)add(this.add.text(x+10,y+66,'NUEVA',{fontFamily:'system-ui',fontSize:'8px',fontStyle:'900',color:'#ffd166'}));
+      if(justMade)add(this.add.text(x+10,y+66,t('workshop.new'),{fontFamily:'system-ui',fontSize:'8px',fontStyle:'900',color:'#ffd166'}));
       if(item.kind==='part'){
         const eq=this.state.equipped?.[item.family]===id;
-        const label=eq?'EQUIPADA':'EQUIPAR';
+        const label=eq?t('workshop.equipped'):t('workshop.equip');
         const act=add(this.add.text(x+cellW/2,y+76,label,{fontFamily:'system-ui',fontSize:'8px',fontStyle:'900',color:eq?'#58e99c':'#ffffff',backgroundColor:eq?'#153525':'#17465a',padding:{x:7,y:3}}).setOrigin(.5).setInteractive({useHandCursor:true}));
         act.on('pointerdown',(p)=>{p.event?.stopPropagation?.();if(!eq)this._doEquip(id);});
       }
@@ -76,13 +78,13 @@ export class UpgradeShopScene extends Phaser.Scene {
     });
 
     if(this.filter==='parts'&&ids.length===0){
-      add(this.add.text(pad+leftW/2,gridY+70,'AÚN NO HAS FABRICADO PIEZAS\n\nFusiona materiales en el banco central.',{fontFamily:'system-ui',fontSize:'11px',fontStyle:'800',align:'center',color:'#607780'}).setOrigin(.5,0));
+      add(this.add.text(pad+leftW/2,gridY+70,t('workshop.emptyParts'),{fontFamily:'system-ui',fontSize:'11px',fontStyle:'800',align:'center',color:'#607780'}).setOrigin(.5,0));
     }
 
     // WORKBENCH
     const midX=pad+leftW+12;
     panel(midX,contentY,midW,contentH,'2 · BANCO DE FUSIÓN',0x68e6ff);
-    add(this.add.text(midX+14,contentY+38,'Toca dos materiales del almacén.\nSi existe receta, verás el resultado antes de fabricar.',{fontFamily:'system-ui',fontSize:'10px',color:'#7f9da8',lineSpacing:4,wordWrap:{width:midW-28}}));
+    add(this.add.text(midX+14,contentY+38,t('workshop.benchDesc'),{fontFamily:'system-ui',fontSize:'10px',color:'#7f9da8',lineSpacing:4,wordWrap:{width:midW-28}}));
 
     const slotY=contentY+94,slotW=(midW-42)/2;
     this._slot(add,midX+14,slotY,slotW,104,this.selA,'A');
@@ -92,37 +94,37 @@ export class UpgradeShopScene extends Phaser.Scene {
     const recipe=this.selA&&this.selB?findRecipe(this.selA,this.selB):null;
     const resultItem=recipe?GARAGE_ITEMS[recipe.out]:null;
     const resultY=slotY+110;
-    add(this.add.text(midX+midW/2,resultY,resultItem?`RESULTADO  →  ${resultItem.icon} ${resultItem.name}`:'RESULTADO  →  —',{fontFamily:'system-ui',fontSize:'10px',fontStyle:'900',color:resultItem?'#ffd166':'#526973'}).setOrigin(.5,0));
+    add(this.add.text(midX+midW/2,resultY,t('workshop.result',{result:resultItem?`${resultItem.icon} ${resultItem.name}`:'—'}),{fontFamily:'system-ui',fontSize:'10px',fontStyle:'900',color:resultItem?'#ffd166':'#526973'}).setOrigin(.5,0));
 
     const can=!!resultItem,craftY=resultY+28;
     const craftBtn=add(this.add.rectangle(midX+14,craftY,midW-28,46,can?0x42f18b:0x203138,1).setOrigin(0).setInteractive({useHandCursor:true}));
-    add(this.add.text(midX+midW/2,craftY+23,can?'FABRICAR PIEZA':'SELECCIONA UNA RECETA',{fontFamily:'Orbitron,system-ui',fontSize:'11px',fontStyle:'900',color:can?'#062014':'#78909a'}).setOrigin(.5));
+    add(this.add.text(midX+midW/2,craftY+23,can?t('workshop.craftPart'):t('workshop.selectRecipe'),{fontFamily:'Orbitron,system-ui',fontSize:'11px',fontStyle:'900',color:can?'#062014':'#78909a'}).setOrigin(.5));
     craftBtn.on('pointerdown',()=>this._doCraft());
 
     const hintY=craftY+58;
-    add(this.add.text(midX+14,hintY,'EJEMPLOS',{fontFamily:'system-ui',fontSize:'9px',fontStyle:'900',color:'#6d8790'}));
+    add(this.add.text(midX+14,hintY,t('workshop.examples'),{fontFamily:'system-ui',fontSize:'9px',fontStyle:'900',color:'#6d8790'}));
     add(this.add.text(midX+14,hintY+18,'◎ Disco + ◆ Compuesto → Pastilla\n◉ Goma + ◆ Compuesto → Neumático\n〰 Muelle + ⬡ Aleación → Suspensión\n⚙ Engranaje + ⬡ Aleación → Caja',{fontFamily:'system-ui',fontSize:'9px',color:'#b6cbd1',lineSpacing:5}));
 
     if(this.state.lastReward&&!this.state.lastReward.doubled){
       const ry=contentY+contentH-48;
       const rb=add(this.add.rectangle(midX+14,ry,midW-28,36,0x163329,.96).setOrigin(0).setStrokeStyle(1,0x58e99c,.65).setInteractive({useHandCursor:true}));
-      add(this.add.text(midX+midW/2,ry+18,'▶ DUPLICAR ÚLTIMO BOTÍN',{fontFamily:'system-ui',fontSize:'9px',fontStyle:'900',color:'#caffdf'}).setOrigin(.5));
+      add(this.add.text(midX+midW/2,ry+18,`▶ ${t('workshop.doubleLoot').replace(/^▶\s*/, '')}`,{fontFamily:'system-ui',fontSize:'9px',fontStyle:'900',color:'#caffdf'}).setOrigin(.5));
       rb.on('pointerdown',()=>this._doubleReward());
     }
 
     // LOADOUT
     panel(rightX,contentY,rightW,contentH,'3 · COCHE / MONTAJE',0xffc95a);
-    add(this.add.text(rightX+14,contentY+38,'Las piezas fabricadas se equipan desde ALMACÉN → PIEZAS.',{fontFamily:'system-ui',fontSize:'10px',color:'#879ba1',wordWrap:{width:rightW-28}}));
+    add(this.add.text(rightX+14,contentY+38,t('workshop.loadoutDesc'),{fontFamily:'system-ui',fontSize:'10px',color:'#879ba1',wordWrap:{width:rightW-28}}));
     const sy=contentY+76,sh=58,sg=7;
     FAMILIES.forEach((f,i)=>{
       const y=sy+i*(sh+sg),id=this.state.equipped?.[f],item=id?GARAGE_ITEMS[id]:null;
       add(this.add.rectangle(rightX+14,y,rightW-28,sh,item?0x173126:0x101d21,.96).setOrigin(0).setStrokeStyle(1,item?0x4ee1a0:0x30444b,.7));
-      add(this.add.text(rightX+25,y+9,FAMILY_LABEL[f],{fontFamily:'system-ui',fontSize:'9px',fontStyle:'900',color:'#789098'}));
-      add(this.add.text(rightX+25,y+27,item?`${item.icon} ${item.name}`:'SIN PIEZA EQUIPADA',{fontFamily:'system-ui',fontSize:'10px',fontStyle:'800',color:item?'#fff':'#53666d',wordWrap:{width:rightW-55}}));
+      add(this.add.text(rightX+25,y+9,familyLabel(f),{fontFamily:'system-ui',fontSize:'9px',fontStyle:'900',color:'#789098'}));
+      add(this.add.text(rightX+25,y+27,item?`${item.icon} ${item.name}`:t('workshop.noPart'),{fontFamily:'system-ui',fontSize:'10px',fontStyle:'800',color:item?'#fff':'#53666d',wordWrap:{width:rightW-55}}));
       if(item)add(this.add.text(rightX+rightW-24,y+19,`T${item.tier}`,{fontFamily:'Orbitron,system-ui',fontSize:'12px',fontStyle:'900',color:'#4ee1a0'}).setOrigin(1,0));
     });
 
-    add(this.add.text(rightX+14,contentY+contentH-62,'FLUJO\nFABRICAR → se guarda en PIEZAS → pulsa EQUIPAR → aparece aquí',{fontFamily:'system-ui',fontSize:'9px',fontStyle:'800',color:'#87a0a8',lineSpacing:4,wordWrap:{width:rightW-28}}));
+    add(this.add.text(rightX+14,contentY+contentH-62,t('workshop.flow'),{fontFamily:'system-ui',fontSize:'9px',fontStyle:'800',color:'#87a0a8',lineSpacing:4,wordWrap:{width:rightW-28}}));
   }
 
   _tab(add,x,y,w,label,key){
@@ -136,7 +138,7 @@ export class UpgradeShopScene extends Phaser.Scene {
     const item=id?GARAGE_ITEMS[id]:null;
     add(this.add.rectangle(x,y,w,h,0x071116,1).setOrigin(0).setStrokeStyle(2,item?0x68e6ff:0x29414f,.9));
     add(this.add.text(x+w/2,y+12,item?item.icon:label,{fontFamily:'system-ui',fontSize:item?'30px':'23px',fontStyle:'900',color:item?'#fff':'#405b66'}).setOrigin(.5,0));
-    add(this.add.text(x+w/2,y+57,item?item.name:'Selecciona',{fontFamily:'system-ui',fontSize:'9px',fontStyle:'800',color:item?'#dcebef':'#58717b',align:'center',wordWrap:{width:w-12}}).setOrigin(.5,0));
+    add(this.add.text(x+w/2,y+57,item?item.name:t('workshop.select'),{fontFamily:'system-ui',fontSize:'9px',fontStyle:'800',color:item?'#dcebef':'#58717b',align:'center',wordWrap:{width:w-12}}).setOrigin(.5,0));
   }
 
   _pick(id){
@@ -159,6 +161,6 @@ export class UpgradeShopScene extends Phaser.Scene {
   }
   _doEvolve(id){const r=evolve(this.state,id);this.state=loadGarage();this._toast(r.ok?`EVOLUCIÓN · ${r.item.name}`:r.reason);this.render();}
   _doEquip(id){if(equip(this.state,id)){this.state=loadGarage();this._toast(`${GARAGE_ITEMS[id].name} equipada en ${FAMILY_LABEL[GARAGE_ITEMS[id].family]}`);}this.render();}
-  async _doubleReward(){const ok=await showRewardedAd(this,{title:'DUPLICAR BOTÍN'});if(ok){const r=duplicateLastReward();this.state=loadGarage();this._toast(r?'Botín duplicado':'Ya reclamado');this.render();}}
+  async _doubleReward(){const reward=loadGarage().lastReward||{};const ad=await showRewardedAd(this,{title:'DUPLICAR BOTÍN',placement:REWARDED_PLACEMENTS.POST_RACE_DOUBLE_LOOT,claimId:legacyPostRaceClaimId(reward)});if(verifiedReward(ad)){const r=duplicateLastReward();this.state=loadGarage();this._toast(r?'Botín duplicado':'Ya reclamado');this.render();}}
   _toast(msg){const {width,height}=this.scale;const t=this.add.text(width/2,height-32,msg,{fontFamily:'system-ui',fontSize:'12px',fontStyle:'900',color:'#fff',backgroundColor:'#102a24',padding:{x:14,y:8}}).setOrigin(.5).setDepth(999);this.tweens.add({targets:t,alpha:0,y:t.y-10,delay:1400,duration:350,onComplete:()=>t.destroy()});}
 }

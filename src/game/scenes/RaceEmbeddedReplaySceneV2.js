@@ -15,7 +15,7 @@ function installGamepadUiStyle(){
     if(document.getElementById(GAMEPAD_UI_STYLE))return;
     const style=document.createElement('style');style.id=GAMEPAD_UI_STYLE;
     // Never hide #tdr-race-controls: it also owns DELTA/PAUSE. Only driving touch UI is hidden.
-    style.textContent=`body.${GAMEPAD_UI_CLASS} #tdr-handbrake,body.${GAMEPAD_UI_CLASS} #tdr-steering-wheel,body.${GAMEPAD_UI_CLASS} #tdr-race-controls [data-stick],body.${GAMEPAD_UI_CLASS} [data-tdr-touch-controls],body.${GAMEPAD_UI_CLASS} [data-tdr-steering-button]{display:none!important;visibility:hidden!important;pointer-events:none!important}`;
+    style.textContent=`body.${GAMEPAD_UI_CLASS} #tdr-steering-wheel,body.${GAMEPAD_UI_CLASS} #tdr-race-controls [data-stick],body.${GAMEPAD_UI_CLASS} [data-tdr-touch-controls],body.${GAMEPAD_UI_CLASS} [data-tdr-steering-button]{display:none!important;visibility:hidden!important;pointer-events:none!important}`;
     document.head.appendChild(style);
   }catch{}
 }
@@ -25,12 +25,26 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     const pending=data?.statsNativeReplay?readPendingReplay():null;
     const requested=String(pending?.trackId||data?.trackKey||this.track?.id||this.track?.key||'').trim();
     if(requested)this.trackKey=requested;
+    // Must exist before Phaser calls preload(): the loading experience is mounted
+    // there, before create() gets a chance to derive the embedded replay mode.
+    this.statsEmbeddedReplay=data?.statsEmbeddedReplay===true||pending?.embedded===true;
+    this._tdrEmbeddedReplay=this.statsEmbeddedReplay;
     return super.init?.(data);
   }
 
   create(data){
     const pending=data?.statsNativeReplay?readPendingReplay():null;
     const embeddedRequested=data?.statsEmbeddedReplay===true||pending?.embedded===true;
+    if(embeddedRequested){
+      // Race Control owns replay loading. Suppress every legacy Phaser loading/HUD
+      // object before the live race scene is built so none can leak behind the DOM viewer.
+      try{this._tdrSuppressEmbeddedLoadingPhaser=true;}catch{}
+    }
+    if(embeddedRequested){
+      // Replay is a viewer, never a live race. Remove old race/debug DOM before
+      // the scene is built so it cannot leak into Race Control or survive shutdown.
+      try{document.querySelectorAll('#tdr-replay-controls,[data-tdr-race-ui="1"],[data-tdr-ghost-diagnostic],[data-online-ghost-diagnostic]').forEach(n=>n.remove());}catch{}
+    }
     const replayTrackKey=String(pending?.trackId||data?.trackKey||'').trim();
     const createData=replayTrackKey?{...(data||{}),trackKey:replayTrackKey}:data;
     this._tdrEmbeddedReplay=embeddedRequested===true;
@@ -58,7 +72,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
         this.events.once('shutdown',()=>{this._tdrRemoveIgnitionButton();this._tdrEngineSample?.destroy?.();this._tdrEngineSample=null;});
       }catch(e){console.warn('[TDR2 ignition] init failed',e);}
     }else this._tdrRemoveIgnitionButton();
-    this.events.once('shutdown',()=>this._tdrCleanupGamepadUi());
+    this.events.once('shutdown',()=>{this._tdrCleanupGamepadUi();try{document.querySelectorAll('#tdr-replay-controls,[data-tdr-stats-native-replay="1"],[data-tdr-embedded-replay="1"],[data-tdr-ghost-diagnostic],[data-online-ghost-diagnostic]').forEach(n=>n.remove());}catch{}try{document.body.classList.remove('tdr-native-replay-clean');}catch{}});
     return result;
   }
 
@@ -83,19 +97,10 @@ export class RaceScene extends EmbeddedReplayRaceScene{
   }
 
   _tdrApplyGamepadDrivingUi(active){
+    // Single ownership rule: this layer only toggles the gamepad CSS class.
+    // PALANCA/BOTONES/VOLANTE are never repaired or rewritten here.
+    // Gamepad-only destruction/hiding is owned by RaceGamepadScene at scene creation.
     try{document.body.classList.toggle(GAMEPAD_UI_CLASS,active);}catch{}
-    if(!active)return;
-    try{this.touchUI?.setVisible?.(false);}catch{}
-    try{this._destroyButtonSteeringUi?.();}catch{}
-    try{document.querySelectorAll('[data-tdr-steering-button],#tdr-race-controls [data-stick]').forEach(el=>el.remove());}catch{}
-    try{
-      const root=document.getElementById('tdr-race-controls');
-      root?.querySelectorAll?.('*')?.forEach?.(el=>{
-        const sig=`${el.id||''} ${el.className||''} ${el.dataset?.role||''} ${el.dataset?.control||''}`.toLowerCase();
-        if(/pedal|throttle|acceler|gas|brake|freno|handbrake|steer|joystick/.test(sig))el.style.setProperty('display','none','important');
-      });
-    }catch{}
-    this._tdrHideResidualPhaserSteering();
   }
 
   _tdrSyncGamepadUi(force=false){
@@ -119,8 +124,18 @@ export class RaceScene extends EmbeddedReplayRaceScene{
 
   _startStatsNativeReplay(payload){
     if(payload?.embedded===true&&this.track?.geom?.cells){const previousCull=this._cullEnabled;this._cullEnabled=false;try{super.update(performance.now(),0);}catch(err){console.warn('[TDR replay] full-track warmup skipped',err);}this._cullEnabled=previousCull;}
-    return super._startStatsNativeReplay(payload);
+    const result=super._startStatsNativeReplay(payload);
+    if(payload?.embedded===true&&this._tdrStatsReplay){
+      // Embedded replay has a strict lifecycle: READY means frame 0, paused.
+      // Race Control is the only owner allowed to start playback.
+      this._tdrStatsReplay.elapsed=0;this._tdrStatsReplay.playing=false;this._tdrStatsReplay.finished=false;
+      try{this._applyStatsReplayFrame?.(0);this._copyEmbeddedReplayFrame?.();}catch{}
+      requestAnimationFrame(()=>{try{this._copyEmbeddedReplayFrame?.();window.dispatchEvent(new CustomEvent('tdr:embedded-replay-ready'));}catch{}});
+    }
+    return result;
   }
+
+  _tdrStopEngineAudio(){try{this._tdrEngineSample?.destroy?.();}catch{}this._tdrEngineSample=null;}
 
   _tdrInstallIgnitionStart(blockedAutoStart){
     this._raceStarted=false;this._startAutoFired=true;this._startState='WAIT_ENGINE';
@@ -143,21 +158,153 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     const randMs=800+Math.floor(Math.random()*700);this.time.delayedCall(stepMs*6+randMs,()=>{this._startState='GO';if(this._startAsset)this._startAsset.setTexture('start_base');if(this._startStatus){this._startStatus.setText('GO!');this._startStatus.setColor('#2bff88');}if(this.timing){this.timing.lapStart=performance.now();this.timing.started=true;this.timing.s1=null;this.timing.s2=null;this.timing.s3=null;}this._raceStarted=true;this._tdrClutchReleaseAt=performance.now();this.time.delayedCall(350,()=>{this._startState='RACING';if(this._startModal)this._startModal.setVisible(false);});});
   }
 
+  _tdrHideEmbeddedLoadingPhaserResidue(){
+    if(!this._tdrEmbeddedReplay)return;
+    const keep=new Set([this.car,this.carBody,this.carRig]);
+    try{
+      for(const obj of this.children?.list||[]){
+        if(!obj||keep.has(obj)||obj.visible===false)continue;
+        const sx=Number(obj.scrollFactorX),sy=Number(obj.scrollFactorY),depth=Number(obj.depth);
+        const text=String(obj.text||obj._text||'').toUpperCase();
+        const loadingText=/CIRCUITO|PREPARANDO|SINCRONIZANDO|SESI[ÓO]N|SUPERFICIE|GR[ÁA]FICOS|CARGANDO|ARRANCANDO|PISTA LISTA|CALENTANDO/.test(text);
+        const fixedUi=sx===0&&sy===0&&Number.isFinite(depth)&&depth>=500;
+        if(loadingText||fixedUi){try{obj.setVisible?.(false);obj.disableInteractive?.();}catch{}}
+      }
+    }catch{}
+  }
+
   update(time,delta){
-    this._tdrSyncGamepadUi();
-    this._tdrHideResidualPhaserSteering();
+    if(this._tdrEmbeddedReplay)this._tdrHideEmbeddedLoadingPhaserResidue();
+    const androidNormal=/Android/i.test(String(navigator?.userAgent||''))&&!this._tdrEmbeddedReplay;
+    // DEV 1.1.32 A/B: keep the V2 scene in the inheritance chain so race entry stays
+    // intact, but bypass its per-frame UI/gamepad scanning on normal Android races.
+    // Ignition/audio setup remains untouched; this isolates the frame-loop additions.
+    if(!androidNormal){
+      this._tdrSyncGamepadUi();
+      this._tdrHideResidualPhaserSteering();
+    }
     let originalThrottle=null;
     if(this._raceStarted&&this._tdrClutchReleaseAt&&this.touch){originalThrottle=Number(this.touch.throttle)||0;const clutch=clamp01((performance.now()-this._tdrClutchReleaseAt)/350);this.touch.throttle=originalThrottle*clutch;}
+
+    // HÉLIX Vortex handling laboratory.
+    // Keep the established Physics Base 1.0 untouched for every other car. Vortex is
+    // deliberately the development mule: preserve some lateral momentum through the
+    // base tyre scrub so body heading and travel direction can separate naturally.
+    const handlingLabProfiles={
+      helix_vortex:{retention:.58,lift:.12,recovery:1.00},
+      helix_spark:{retention:.50,lift:.10,recovery:1.12},
+      avenir_apex:{retention:.42,lift:.08,recovery:1.22},
+      veloce_photon:{retention:.68,lift:.15,recovery:.88},
+      forge_anvil:{retention:.74,lift:.18,recovery:.78}
+    };
+    const handlingLab=handlingLabProfiles[this.carId]||null;
+    const vortexFeel=!!handlingLab&&!this._tdrEmbeddedReplay&&this.carBody?.body?.velocity;
+    let vortexBefore=null;
+    if(vortexFeel){
+      const b=this.carBody,rot=Number(b.rotation||0),vx=Number(b.body.velocity.x||0),vy=Number(b.body.velocity.y||0);
+      const fx=Math.cos(rot),fy=Math.sin(rot),rx=-fy,ry=fx;
+      vortexBefore={vx,vy,vF:vx*fx+vy*fy,vL:vx*rx+vy*ry,rot,throttle:Math.max(0,Math.min(1,Number(this.touch?.throttle||0)))};
+    }
+
     try{super.update(time,delta);}finally{if(originalThrottle!==null&&this.touch)this.touch.throttle=originalThrottle;}
-    this._tdrHideResidualPhaserSteering();
-    try{this._tdrEngineSample?.update?.();}catch{}
+
+    if(vortexBefore&&this.carBody?.body?.velocity){
+      const b=this.carBody,dt=Math.max(.001,Math.min(.05,Number(delta||16.67)/1000));
+      const rot=Number(b.rotation||vortexBefore.rot),fx=Math.cos(rot),fy=Math.sin(rot),rx=-fy,ry=fx;
+      const vx=Number(b.body.velocity.x||0),vy=Number(b.body.velocity.y||0);
+      const vF=vx*fx+vy*fy,vL=vx*rx+vy*ry;
+      const preL=vortexBefore.vx*rx+vortexBefore.vy*ry;
+      const speed=Math.hypot(vx,vy),kmh=speed*.185;
+      const slipDeg=Math.abs(Math.atan2(vL,Math.max(18,Math.abs(vF))))*180/Math.PI;
+      const steer=Math.min(1,Math.abs(Number(this._steerFiltered??this.touch?.steer??this.touch?.stickX??0)));
+      const throttle=Math.max(0,Math.min(1,Number(this.touch?.throttle||0)));
+      const brake=Math.max(0,Math.min(1,Number(this.touch?.brake||0)));
+      const surface=String(this._surface||'TRACK').toUpperCase();
+      const asphalt=surface!=='DIRT'&&surface!=='GRASS'&&surface!=='OFF';
+
+      if(asphalt&&kmh>22){
+        // Breakaway builds from steering load and existing slip. Once the car is moving
+        // sideways, momentum survives even while the nose is already being corrected.
+        const speedLoad=clamp01((kmh-22)/88);
+        const steerLoad=clamp01((steer-.08)/.72);
+        const slipLoad=clamp01((slipDeg-1.5)/8.5);
+        const loaded=clamp01(.62*steerLoad*speedLoad+.38*slipLoad);
+        // Weight-transfer pass: a throttle lift while corner-loaded shifts authority
+        // toward the nose and helps rotation; feeding power back in sustains the rear
+        // slip progressively instead of switching between grip and drift states.
+        const throttleDrop=Math.max(0,Number(vortexBefore.throttle||0)-throttle);
+        this._vortexLiftLoad=Number(this._vortexLiftLoad||0)*Math.exp(-5.2*dt);
+        if(throttleDrop>.035&&loaded>.16)this._vortexLiftLoad=Math.max(this._vortexLiftLoad,throttleDrop*loaded);
+        const liftLoad=clamp01(Number(this._vortexLiftLoad||0));
+
+        const driveSupport=1+.18*throttle*(1-brake);
+        const retention=Math.min(.86,(.18+handlingLab.retention*loaded)*driveSupport);
+        let targetL=vL+(preL-vL)*retention;
+
+        // Lift-off closes the line through lateral load transfer, not an artificial
+        // rotation impulse. Keep it subtle so the 1.1.141 rear balance survives.
+        if(liftLoad>0&&steer>.08){
+          const liftBite=handlingLab.lift*liftLoad*speedLoad*(1-.45*slipLoad);
+          targetL*=1-liftBite;
+        }
+
+        // Vortex turn-in: keep the useful rear movement, but do not let inherited
+        // lateral momentum dominate the first phase of a new steering command.
+        // This gives the front axle authority to bite before the whole car washes wide.
+        const turnIn=clamp01((steer-.10)/.48)*speedLoad*(1-.42*slipLoad);
+        const sameSide=Math.sign(preL)===Math.sign(vL)||Math.abs(vL)<.5;
+        if(sameSide&&turnIn>0){
+          const frontBite=.28*turnIn*(1-.35*throttle);
+          targetL*=1-frontBite;
+        }
+
+        // Recovery is intentionally slower than breakaway. Counter-steer changes the
+        // heading first; the mass follows afterwards instead of snapping to the nose.
+        const neutral=steer<.07;
+        const recoveryBase=neutral?(1.25+1.15*(1-slipLoad)):(.48+.72*(1-loaded));
+        const recoveryRate=recoveryBase*handlingLab.recovery;
+        const recovery=Math.exp(-recoveryRate*dt);
+        const preservedL=targetL*recovery;
+
+        // Do not manufacture energy: retain the post-controller forward component and
+        // cap the reconstructed vector to the larger of pre/post frame speed.
+        let outX=fx*vF+rx*preservedL,outY=fy*vF+ry*preservedL;
+        const cap=Math.max(speed,Math.hypot(vortexBefore.vx,vortexBefore.vy))*1.002;
+        const outSpeed=Math.hypot(outX,outY);
+        if(outSpeed>cap&&outSpeed>0){const k=cap/outSpeed;outX*=k;outY*=k;}
+        b.body.velocity.x=outX;b.body.velocity.y=outY;
+        this._vortexFeelTelemetry={profile:this.carId,slipDeg,retention,lateral:preservedL,loaded,liftLoad};
+      }
+    }
+
+    if(!androidNormal)this._tdrHideResidualPhaserSteering();
+    if(this._tdrEmbeddedReplay)this._tdrHideEmbeddedLoadingPhaserResidue();
+    if(this._raceFinished||this.raceFinished||this.finished||this._finished||this._showingResults||this._resultsShown){this._tdrStopEngineAudio();}else{try{this._tdrEngineSample?.update?.();}catch{}}
   }
 
   _syncEmbeddedSourceCamera(){
-    if(!this._tdrEmbeddedReplay)return;const cam=this.cameras?.main,target=this._embeddedReplayTarget?.(),gameW=Number(this.scale?.width)||Number(this.game?.canvas?.width)||1,gameH=Number(this.scale?.height)||Number(this.game?.canvas?.height)||1;let vw=gameW,vh=gameH,vx=0,vy=0;const rect=target?.getBoundingClientRect?.();if(rect?.width>1&&rect?.height>1){const targetAspect=rect.width/rect.height,gameAspect=gameW/gameH;if(gameAspect>targetAspect){vw=Math.max(1,gameH*targetAspect);vx=(gameW-vw)*.5;}else{vh=Math.max(1,gameW/targetAspect);vy=(gameH-vh)*.5;}}this._tdrEmbeddedViewport={x:vx,y:vy,w:vw,h:vh};try{cam?.setVisible?.(true);cam?.setViewport?.(vx,vy,vw,vh);}catch{}
+    if(!this._tdrEmbeddedReplay)return;
+    // Keep the race renderer at its native full canvas. The Race Control feed below
+    // is responsible for fitting that complete frame into the viewer; changing the
+    // Phaser viewport here only masks/crops a full-screen replay.
+    const cam=this.cameras?.main,gameW=Number(this.scale?.width)||Number(this.game?.canvas?.width)||1,gameH=Number(this.scale?.height)||Number(this.game?.canvas?.height)||1;
+    this._tdrEmbeddedViewport={x:0,y:0,w:gameW,h:gameH};
+    try{cam?.setVisible?.(true);cam?.setViewport?.(0,0,gameW,gameH);}catch{}
   }
   _applyStatsReplayFrame(t){super._applyStatsReplayFrame(t);if(!this._tdrEmbeddedReplay)return;this._syncEmbeddedSourceCamera();const x=Number(this.carBody?.x),y=Number(this.carBody?.y);if(Number.isFinite(x)&&Number.isFinite(y)){try{this.cameras?.main?.stopFollow?.();this.cameras?.main?.centerOn?.(x,y);}catch{}}}
   _copyEmbeddedReplayFrame(){
-    if(!this._tdrEmbeddedReplay)return;const src=this.game?.canvas,feed=this._ensureEmbeddedFeed?.(),target=this._embeddedReplayTarget?.();if(!src||!feed||!target)return;const rect=target.getBoundingClientRect?.();if(!rect||rect.width<=1||rect.height<=1)return;this._syncEmbeddedSourceCamera();const dpr=Math.min(2,Math.max(1,Number(window.devicePixelRatio)||1)),dw=Math.max(1,Math.round(rect.width*dpr)),dh=Math.max(1,Math.round(rect.height*dpr));if(feed.width!==dw)feed.width=dw;if(feed.height!==dh)feed.height=dh;const sw=Number(src.width)||1,sh=Number(src.height)||1,gameW=Number(this.scale?.width)||1,gameH=Number(this.scale?.height)||1,scaleX=sw/gameW,scaleY=sh/gameH,vp=this._tdrEmbeddedViewport||{x:0,y:0,w:gameW,h:gameH},sx=Math.max(0,Math.round(vp.x*scaleX)),sy=Math.max(0,Math.round(vp.y*scaleY)),cw=Math.max(1,Math.min(sw-sx,Math.round(vp.w*scaleX))),ch=Math.max(1,Math.min(sh-sy,Math.round(vp.h*scaleY)));try{const ctx=feed.getContext('2d',{alpha:false});if(!ctx)return;ctx.drawImage(src,sx,sy,cw,ch,0,0,dw,dh);this._drawReplayAnalysis?.(ctx,{sx:0,sy:0,cw,ch,dw,dh,dpr});}catch{}
+    if(!this._tdrEmbeddedReplay)return;
+    const src=this.game?.canvas,feed=this._ensureEmbeddedFeed?.(),target=this._embeddedReplayTarget?.();
+    if(!src||!feed||!target)return;
+    const rect=target.getBoundingClientRect?.();if(!rect||rect.width<=1||rect.height<=1)return;
+    const dpr=Math.min(2,Math.max(1,Number(window.devicePixelRatio)||1)),dw=Math.max(1,Math.round(rect.width*dpr)),dh=Math.max(1,Math.round(rect.height*dpr));
+    if(feed.width!==dw)feed.width=dw;if(feed.height!==dh)feed.height=dh;
+    const sw=Number(src.width)||1,sh=Number(src.height)||1,scale=Math.min(dw/sw,dh/sh),rw=Math.max(1,Math.round(sw*scale)),rh=Math.max(1,Math.round(sh*scale)),dx=Math.round((dw-rw)*.5),dy=Math.round((dh-rh)*.5);
+    try{
+      const ctx=feed.getContext('2d',{alpha:false});if(!ctx)return;
+      ctx.fillStyle='#020a11';ctx.fillRect(0,0,dw,dh);
+      ctx.drawImage(src,0,0,sw,sh,dx,dy,rw,rh);
+      this._drawReplayAnalysis?.(ctx,{sx:0,sy:0,cw:sw,ch:sh,dw:rw,dh:rh,dpr,dx,dy});
+    }catch{}
   }
 }

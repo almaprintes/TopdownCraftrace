@@ -88,7 +88,7 @@ export class RaceScene extends CleanRaceScene{
     const map=p=>{
       const screenX=(Number(p?.x)-Number(view.x))*zoom*srcScaleX;
       const screenY=(Number(p?.y)-Number(view.y))*zoom*srcScaleY;
-      return{x:(screenX-geom.sx)/geom.cw*geom.dw,y:(screenY-geom.sy)/geom.ch*geom.dh};
+      return{x:(Number(geom.dx)||0)+(screenX-geom.sx)/geom.cw*geom.dw,y:(Number(geom.dy)||0)+(screenY-geom.sy)/geom.ch*geom.dh};
     };
     const elapsed=Number(state.elapsed)||0,current=this._sampleIndexAtTime(samples,elapsed);
     ctx.save();
@@ -105,7 +105,7 @@ export class RaceScene extends CleanRaceScene{
     ctx.fillStyle='#ffd85c';ctx.strokeStyle='#ffffff';ctx.lineWidth=Math.max(1,geom.dpr);
     ctx.beginPath();ctx.arc(pos.x,pos.y,Math.max(4,geom.dpr*3.5),0,Math.PI*2);ctx.fill();ctx.stroke();
     const speed=sampleSpeedAtTime(samples,elapsed),speedKmh=pxpsToKmh(speed),ratio=this._tdrReplayMaxSpeed>0?Math.min(100,Math.round(speed/this._tdrReplayMaxSpeed*100)):0;
-    const boxW=112*geom.dpr,boxH=42*geom.dpr,x=geom.dw-boxW-9*geom.dpr,y=9*geom.dpr;
+    const boxW=112*geom.dpr,boxH=42*geom.dpr,x=(Number(geom.dx)||0)+geom.dw-boxW-9*geom.dpr,y=(Number(geom.dy)||0)+9*geom.dpr;
     ctx.fillStyle='rgba(3,14,22,.82)';ctx.strokeStyle='rgba(79,235,255,.45)';ctx.lineWidth=geom.dpr;
     ctx.fillRect(x,y,boxW,boxH);ctx.strokeRect(x,y,boxW,boxH);
     ctx.fillStyle='#63edff';ctx.font=`${6*geom.dpr}px system-ui`;ctx.textAlign='left';ctx.fillText('ANÁLISIS TRAZADA',x+7*geom.dpr,y+10*geom.dpr);
@@ -127,8 +127,11 @@ export class RaceScene extends CleanRaceScene{
     const sw=Number(src.width)||1,sh=Number(src.height)||1;
     const srcAspect=sw/sh,dstAspect=dw/dh;
     let sx=0,sy=0,cw=sw,ch=sh;
-    if(srcAspect>dstAspect){cw=sh*dstAspect;sx=(sw-cw)*.5;}
-    else{ch=sw/dstAspect;sy=(sh-ch)*.5;}
+    // Embedded Race Control replay: use a centered cover crop. The modal now reserves
+    // real side/bottom telemetry space, so the feed itself must stay optically centered.
+    if(srcAspect>dstAspect){cw=sh*dstAspect;sx=Math.max(0,(sw-cw)*.5);}
+    else{ch=sw/dstAspect;sy=Math.max(0,(sh-ch)*.5);}
+    sx=Math.round(sx);sy=Math.round(sy);cw=Math.round(cw);ch=Math.round(ch);
     try{
       const ctx=feed.getContext('2d',{alpha:false});
       if(!ctx)return;
@@ -154,25 +157,14 @@ export class RaceScene extends CleanRaceScene{
 
   _createStatsReplayOverlay(payload){
     if(!this._tdrEmbeddedReplay)return super._createStatsReplayOverlay(payload);
+    // Single-owner replay UI: Race Control owns all telemetry and controls.
+    // The race scene only supplies the rendered world feed.
     this._destroyStatsReplayOverlay(false);
     const target=this._embeddedReplayTarget();
     if(!target){this._tdrEmbeddedReplay=false;return super._createStatsReplayOverlay(payload);}
-    const state=this._tdrStatsReplay;
     try{target.style.position='relative';target.style.overflow='hidden';target.style.background='#020a11';}catch{}
     this._ensureEmbeddedFeed();
-    const root=document.createElement('div');
-    root.dataset.tdrStatsNativeReplay='1';root.dataset.tdrEmbeddedReplay='1';
-    root.style.cssText='position:absolute;inset:0;z-index:2;pointer-events:none;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff';
-    const button='height:32px;min-width:38px;border:1px solid rgba(79,234,255,.72);background:rgba(5,29,40,.90);color:#fff;font-weight:1000;font-size:12px;padding:0 8px;touch-action:manipulation';
-    root.innerHTML=`<div style="position:absolute;left:8px;top:8px;padding:5px 7px;background:rgba(3,14,22,.78);border:1px solid rgba(82,232,255,.28)"><div style="font-size:6px;font-weight:1000;letter-spacing:.16em;color:#63edff">REPLAY REAL</div><div style="display:flex;align-items:baseline;gap:6px;margin-top:1px"><strong data-time style="font-size:15px;font-variant-numeric:tabular-nums">0:00.000</strong><span style="font-size:7px;color:#8fa9b7">/ ${fmt(state?.duration||payload?.lapMs)}</span></div></div><div style="position:absolute;left:8px;right:8px;bottom:7px;padding:5px 7px 6px;background:rgba(3,14,22,.86);border:1px solid rgba(82,232,255,.25);pointer-events:auto"><input data-seek aria-label="Posición del replay" type="range" min="0" max="${Math.max(1,Math.round(state?.duration||payload?.lapMs||1))}" step="1" value="0" style="display:block;width:100%;height:18px;margin:0 0 3px;accent-color:#58efff;touch-action:none"><div style="display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap"><button data-start style="${button}">↶ 0</button><button data-prev style="${button}">◀│</button><button data-pause style="${button};min-width:46px;font-size:15px">Ⅱ</button><button data-next style="${button}">│▶</button><button data-speed style="${button};min-width:48px">1×</button><button data-analysis style="${button};min-width:72px;color:#63edff">TRAZADA ✓</button></div></div>`;
-    target.appendChild(root);this._tdrStatsReplayOverlay=root;
-    root.querySelector('[data-start]')?.addEventListener('click',()=>this._seekStatsReplay(0,true));
-    root.querySelector('[data-prev]')?.addEventListener('click',()=>this._stepStatsReplaySample(-1));
-    root.querySelector('[data-next]')?.addEventListener('click',()=>this._stepStatsReplaySample(1));
-    root.querySelector('[data-pause]')?.addEventListener('click',()=>{const s=this._tdrStatsReplay;if(!s)return;if(s.finished){s.elapsed=0;s.finished=false;s.playing=true;this._applyStatsReplayFrame(0);}else s.playing=!s.playing;this._syncStatsReplayControls();});
-    root.querySelector('[data-speed]')?.addEventListener('click',()=>{const s=this._tdrStatsReplay;if(!s)return;const speeds=[.25,.5,1,2],idx=Math.max(0,speeds.indexOf(Number(s.speed)||1));s.speed=speeds[(idx+1)%speeds.length];this._syncStatsReplayControls();});
-    root.querySelector('[data-analysis]')?.addEventListener('click',e=>{this._tdrReplayAnalysisEnabled=!this._tdrReplayAnalysisEnabled;e.currentTarget.textContent=this._tdrReplayAnalysisEnabled?'TRAZADA ✓':'TRAZADA';this._copyEmbeddedReplayFrame();});
-    root.querySelector('[data-seek]')?.addEventListener('input',e=>this._seekStatsReplay(Number(e.currentTarget?.value)||0,true));
+    this._tdrStatsReplayOverlay=null;
     this._startEmbeddedFeedLoop();
   }
 

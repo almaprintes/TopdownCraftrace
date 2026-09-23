@@ -4,6 +4,7 @@ import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage } from '../garage/garageStore.js';
 import { METERS_PER_PX } from '../cars/speedUnits.js';
+import { t } from '../i18n/index.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const INVENTORY_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
@@ -28,7 +29,7 @@ function loopLength(center){
 function surfaceLabel(track){
   const id=String(track?.id||track?.key||'').toLowerCase();
   const cat=String(track?.category||'').toLowerCase();
-  return(id.includes('offroad')||id.includes('raven')||cat.includes('dirt')||cat.includes('tierra'))?'TIERRA':'ASFALTO';
+  return(id.includes('offroad')||id.includes('raven')||cat.includes('dirt')||cat.includes('tierra'))?t('track.dirt'):t('track.asphalt');
 }
 
 export class MenuScene extends CurrentMenuScene {
@@ -92,7 +93,7 @@ export class MenuScene extends CurrentMenuScene {
     const garage=loadGarage();
     const coins=Math.max(0,Math.floor(Number(garage?.coins)||0));
     const coinX=96;
-    root.add(this.add.text(coinX,12,'MONEDAS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#a5b2bf',letterSpacing:1}).setOrigin(0,.5));
+    root.add(this.add.text(coinX,12,t('common.coins'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#a5b2bf',letterSpacing:1}).setOrigin(0,.5));
     root.add(this.add.text(coinX,32,'◈',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(0,.5));
     root.add(this.add.text(coinX+23,32,String(coins),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'17px',fontStyle:'bold',color:'#ffffff'}).setOrigin(0,.5));
 
@@ -108,12 +109,12 @@ export class MenuScene extends CurrentMenuScene {
     };
 
     let right=width-12;
-    right=makeHeaderButton(right,148,'CONFIGURACIÓN','⚙',0x45dfff,()=>this.scene.start('SettingsScene'));
-    makeHeaderButton(right,142,'INVENTARIO','▦',0xd8a73a,()=>this._openLobbyInventoryModal());
+    right=makeHeaderButton(right,148,t('menu.settings'),'⚙',0x45dfff,()=>this.scene.start('SettingsScene'));
+    makeHeaderButton(right,142,t('menu.inventory'),'▦',0xd8a73a,()=>this._openLobbyInventoryModal());
 
     const shiftCarCard=(node)=>{
       if(!node)return false;
-      if(typeof node.text==='string'&&node.text.trim().toUpperCase()==='COCHE SELECCIONADO'){
+      if(typeof node.text==='string'&&node.text.trim().toUpperCase()===t('lobby.selectedCar').toUpperCase()){
         const panel=node.parentContainer;
         const b=panel?.getBounds?.();
         if(panel&&b&&b.top<barH+5)panel.y+=barH+5-b.top;
@@ -137,8 +138,8 @@ export class MenuScene extends CurrentMenuScene {
     const veil=this.add.rectangle(0,0,width,height,0x02070d,.84).setOrigin(0).setInteractive();
     root.add(veil);
     root.add(this.add.rectangle(cx,cy,panelW,panelH,0x08131d,.995).setStrokeStyle(2,0x45dfff,.75));
-    root.add(this.add.text(cx,cy-panelH/2+18,'INVENTARIO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'24px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
-    root.add(this.add.text(cx,cy-panelH/2+54,`◈ ${Math.max(0,Math.floor(Number(garage.coins)||0))} MONEDAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'14px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,cy-panelH/2+18,t('menu.inventory'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'24px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
+    root.add(this.add.text(cx,cy-panelH/2+54,`◈ ${Math.max(0,Math.floor(Number(garage.coins)||0))} ${t('common.coins')}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'14px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(.5,0));
 
     const cols=4,gap=9,pad=22,gridW=panelW-pad*2,cardW=(gridW-gap*(cols-1))/cols;
     const cardH=Math.min(88,(panelH-136-gap)/2),startX=cx-gridW/2,startY=cy-panelH/2+91;
@@ -153,7 +154,7 @@ export class MenuScene extends CurrentMenuScene {
 
     const btnY=cy+panelH/2-27;
     const closeBg=this.add.rectangle(cx,btnY,180,34,0x153244,.98).setStrokeStyle(1,0x45dfff,.65).setInteractive({useHandCursor:true});
-    const closeText=this.add.text(cx,btnY,'CERRAR',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff',letterSpacing:1}).setOrigin(.5);
+    const closeText=this.add.text(cx,btnY,t('common.close'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff',letterSpacing:1}).setOrigin(.5);
     root.add([closeBg,closeText]);
     const close=()=>{try{root.destroy(true);}catch{} if(this._lobbyInventoryModal===root)this._lobbyInventoryModal=null;};
     closeBg.on('pointerup',close);
@@ -171,20 +172,20 @@ export class MenuScene extends CurrentMenuScene {
     const top=-h/2,bottom=h/2;
 
     if(finished){
-      c.add(this.add.text(0,top+15,'TEMPORADA COMPLETADA',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#f0c65a',letterSpacing:1,align:'center'}).setOrigin(.5,0));
-      c.add(this.add.text(0,top+52,'PILOTO\nDE ÉLITE',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'23px',fontStyle:'bold',color:'#fff',align:'center',lineSpacing:1}).setOrigin(.5,0));
-      c.add(this.add.text(0,top+125,'HAS COMPLETADO LOS 7 EVENTOS\nDE PROGRESIÓN',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#b7c4d0',align:'center',lineSpacing:2}).setOrigin(.5,0));
-      c.add(this.add.text(0,bottom-30,'7/7 EVENTOS',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(.5,0));
+      c.add(this.add.text(0,top+15,t('season.completed'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#f0c65a',letterSpacing:1,align:'center'}).setOrigin(.5,0));
+      c.add(this.add.text(0,top+52,t('season.eliteDriver'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'23px',fontStyle:'bold',color:'#fff',align:'center',lineSpacing:1}).setOrigin(.5,0));
+      c.add(this.add.text(0,top+125,t('season.allProgressionEvents'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#b7c4d0',align:'center',lineSpacing:2}).setOrigin(.5,0));
+      c.add(this.add.text(0,bottom-30,t('season.eventsSeven'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'12px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(.5,0));
       return;
     }
 
     const event=data.event,progress=data.progress;
     const reward=raceEventRewardLabel(event.reward);
-    const stage=`EVENTO ${data.index+1}/${data.total}`;
-    c.add(this.add.text(0,top+14,complete?'EVENTO COMPLETADO':stage,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:complete?'#62ffb2':'#6deaff',letterSpacing:1,align:'center'}).setOrigin(.5,0));
+    const stage=t('event.stage',{current:data.index+1,total:data.total});
+    c.add(this.add.text(0,top+14,complete?t('event.completed'):stage,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:complete?'#62ffb2':'#6deaff',letterSpacing:1,align:'center'}).setOrigin(.5,0));
     c.add(this.add.text(0,top+46,event.title,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'21px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-28}}).setOrigin(.5,0));
     c.add(this.add.text(0,top+83,event.description.toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'9px',fontStyle:'bold',color:'#b8c7d3',align:'center',lineSpacing:2,wordWrap:{width:w-30}}).setOrigin(.5,0));
-    c.add(this.add.text(0,top+126,`PREMIO · ${reward}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#f0c65a',align:'center',lineSpacing:1,wordWrap:{width:w-28}}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+126,`${t('event.reward')} · ${reward}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',fontStyle:'bold',color:'#f0c65a',align:'center',lineSpacing:1,wordWrap:{width:w-28}}).setOrigin(.5,0));
 
     const barW=w-34,barY=bottom-54;
     c.add(this.add.rectangle(-barW/2,barY,barW,11,0x10202b,.95).setOrigin(0).setStrokeStyle(1,0xffffff,.14));
@@ -194,7 +195,7 @@ export class MenuScene extends CurrentMenuScene {
     if(complete){
       const btn=this.add.rectangle(0,bottom-28,w-34,32,0x174b37,.98).setStrokeStyle(1,0x62ffb2,.8).setInteractive({useHandCursor:true});
       c.add(btn);
-      const label=this.add.text(0,bottom-28,'RECLAMAR PREMIO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff',letterSpacing:1}).setOrigin(.5);
+      const label=this.add.text(0,bottom-28,t('event.claimReward'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff',letterSpacing:1}).setOrigin(.5);
       c.add(label);
       btn.on('pointerover',()=>btn.setFillStyle(0x206448,.98));
       btn.on('pointerout',()=>btn.setFillStyle(0x174b37,.98));
@@ -214,7 +215,7 @@ export class MenuScene extends CurrentMenuScene {
     const c=this.add.container(x,y).setDepth(36);this._ui?.add(c);addEventFrame(this,c,w,h,0xd8a73a);
     const top=-h/2,bottom=h/2;
 
-    c.add(this.add.text(0,top+14,'CIRCUITO SELECCIONADO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#f0c65a',letterSpacing:1,align:'center'}).setOrigin(.5,0));
+    c.add(this.add.text(0,top+14,t('stats.selectedCircuit'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#f0c65a',letterSpacing:1,align:'center'}).setOrigin(.5,0));
     c.add(this.add.text(0,top+43,String(track.name||this._trackTitle(key)).toUpperCase(),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'19px',fontStyle:'bold',color:'#fff',align:'center',wordWrap:{width:w-28}}).setOrigin(.5,0));
 
     const previewW=Math.min(154,w-30),previewH=70,previewY=top+109;
@@ -237,8 +238,8 @@ export class MenuScene extends CurrentMenuScene {
     const lengthM=Math.round(loopLength(center)*METERS_PER_PX);
     const sectors=Math.max(1,(track.checkpoints?.length||2)+1);
     const surface=surfaceLabel(track);
-    const direction=String(track.raceDirection||'forward').toLowerCase()==='reverse'?'ANTIHORARIO':'HORARIO';
-    const stats=[['LONGITUD',`${lengthM} m`],['SECTORES',String(sectors)],['SUPERFICIE',surface],['SENTIDO',direction]];
+    const direction=String(track.raceDirection||'forward').toLowerCase()==='reverse'?t('track.counterclockwise'):t('track.clockwise');
+    const stats=[[t('track.length'),`${lengthM} m`],[t('track.sectors'),String(sectors)],[t('track.surface'),surface],[t('track.direction'),direction]];
     const colX=[-w*.25,w*.25],rowY=[bottom-65,bottom-30];
     for(let i=0;i<stats.length;i++){
       const [label,value]=stats[i],cx=colX[i%2],cy=rowY[Math.floor(i/2)];
@@ -263,12 +264,12 @@ export class MenuScene extends CurrentMenuScene {
     const veil=this.add.rectangle(0,0,width,height,0x02070d,.82).setOrigin(0).setInteractive();
     root.add(veil);
     root.add(this.add.rectangle(cx,cy,panelW,panelH,0x08131d,.995).setStrokeStyle(2,0x62ffb2,.78));
-    root.add(this.add.text(cx,cy-panelH/2+17,'EVENTO COMPLETADO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#62ffb2',letterSpacing:2}).setOrigin(.5,0));
+    root.add(this.add.text(cx,cy-panelH/2+17,t('event.completed'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'10px',fontStyle:'bold',color:'#62ffb2',letterSpacing:2}).setOrigin(.5,0));
     root.add(this.add.text(cx,cy-panelH/2+42,event.title,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'24px',fontStyle:'bold',color:'#ffffff'}).setOrigin(.5,0));
-    root.add(this.add.text(cx,cy-panelH/2+76,'PREMIO CONSEGUIDO',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#aebdca',letterSpacing:1}).setOrigin(.5,0));
+    root.add(this.add.text(cx,cy-panelH/2+76,t('event.rewardObtained'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#aebdca',letterSpacing:1}).setOrigin(.5,0));
 
     const coins=Math.max(0,Number(event.reward?.coins)||0);
-    if(coins)root.add(this.add.text(cx,cy-panelH/2+98,`◈ +${coins} MONEDAS`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(.5,0));
+    if(coins)root.add(this.add.text(cx,cy-panelH/2+98,`◈ +${coins} ${t('common.coins')}`,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'16px',fontStyle:'bold',color:'#f0c65a'}).setOrigin(.5,0));
 
     if(items.length){
       const gap=8,gridW=panelW-34,cardW=(gridW-gap*(cols-1))/cols,cardH=68,startX=cx-gridW/2,startY=cy-panelH/2+128;
@@ -284,9 +285,9 @@ export class MenuScene extends CurrentMenuScene {
 
     const btnY=cy+panelH/2-28;
     const btn=this.add.rectangle(cx,btnY,210,36,0x174b37,.98).setStrokeStyle(1,0x62ffb2,.85).setInteractive({useHandCursor:true});
-    const label=this.add.text(cx,btnY,'CONTINUAR',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff',letterSpacing:1}).setOrigin(.5);
+    const label=this.add.text(cx,btnY,t('common.continue'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'11px',fontStyle:'bold',color:'#ffffff',letterSpacing:1}).setOrigin(.5);
     root.add([btn,label]);
-    root.add(this.add.text(cx,btnY-25,'El premio ya está guardado en tu inventario',{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',color:'#8295a8'}).setOrigin(.5,1));
+    root.add(this.add.text(cx,btnY-25,t('event.rewardStored'),{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',fontSize:'8px',color:'#8295a8'}).setOrigin(.5,1));
 
     const close=()=>{try{root.destroy(true);}catch{}if(this._eventRewardModal===root)this._eventRewardModal=null;this.scene.restart();};
     btn.on('pointerup',close);
@@ -302,9 +303,9 @@ export class MenuScene extends CurrentMenuScene {
       if (!node) return;
       if (typeof node.text === 'string') {
         const label = node.text.trim().toUpperCase();
-        if (label === 'CIRCUITO SELECCIONADO' || label.startsWith('EVENTO ') || label === 'TEMPORADA COMPLETADA') {
+        if (label === t('stats.selectedCircuit') || label.startsWith(t('event.stagePrefix').toUpperCase()) || label === t('season.completed')) {
           const panel = node.parentContainer;
-          if (panel && panel !== ui) panels.set(panel, label === 'CIRCUITO SELECCIONADO' ? baseInset + 1 : baseInset);
+          if (panel && panel !== ui) panels.set(panel, label === t('stats.selectedCircuit') ? baseInset + 1 : baseInset);
         }
       }
       if (Array.isArray(node.list)) for (const child of node.list) visit(child);
@@ -318,3 +319,7 @@ export class MenuScene extends CurrentMenuScene {
     }
   }
 }
+
+// DEV 1.1.117 validation trigger: lobby event and track card copy uses i18n keys.
+
+// DEV 1.1.123 validation trigger: lobby matching is language-independent.

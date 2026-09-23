@@ -63,3 +63,17 @@ export async function getRaceControlGhost(recordRef){
   if(!token)throw new Error('Online session unavailable');
   return request('/rest/v1/rpc/get_track_record_ghost',{method:'POST',token,body:{p_record_ref:String(recordRef||'')}});
 }
+
+export async function getMyShipatonJudgeAccess(){
+  const online=await activateRaceControlOnline();
+  const token=online?.session?.access_token;
+  if(!token)throw new Error('Online session unavailable');
+  return request('/rest/v1/rpc/get_my_shipaton_judge_access',{method:'POST',token,body:{}});
+}
+
+export async function activateShipatonJudgeAccess(code){
+  const online=await activateRaceControlOnline();
+  const token=online?.session?.access_token;
+  if(!token)throw new Error('Online session unavailable');
+  return request('/rest/v1/rpc/activate_shipaton_judge_access',{method:'POST',token,body:{p_code:String(code||'').trim()}});
+}

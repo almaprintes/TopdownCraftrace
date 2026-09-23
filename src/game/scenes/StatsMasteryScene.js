@@ -1,5 +1,5 @@
 import { StatsScene as CurrentStatsScene } from './StatsScene.js';
-import { getLanguage } from '../i18n/index.js';
+import { getLanguage, t } from '../i18n/index.js';
 import { masteryInfoForMeters, masteryMaterialLabel, masteryWheelDataUri } from '../stats/carMastery.js';
 import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 
@@ -41,7 +41,7 @@ export class StatsScene extends CurrentStatsScene{
       const row=rows.find(r=>r.id===card.dataset.car),badge=card.querySelector('.sh-car__badge');if(!row||!badge)return;
       const img=badge.querySelector('img');if(img)img.src=masteryWheelDataUri(row.mastery.level,{size:128,blackBackground:true});
       badge.querySelector('.sh-car__badge-copy')?.remove?.();
-      const copy=document.createElement('span');copy.className='sh-car__badge-copy';copy.innerHTML=`<small>MAESTRÍA</small><strong>${row.mastery.level?`NIVEL ${row.mastery.level}`:'SIN NIVEL'}</strong>`;badge.appendChild(copy);
+      const copy=document.createElement('span');copy.className='sh-car__badge-copy';copy.innerHTML=`<small>${t('stats.mastery')}</small><strong>${row.mastery.level?t('stats.levelValue',{level:row.mastery.level}):t('stats.noLevel')}</strong>`;badge.appendChild(copy);
     });
   }
   _renderCarDetail(carId){
@@ -49,10 +49,12 @@ export class StatsScene extends CurrentStatsScene{
     const lang=getLanguage()==='en'?'en':'es',row=this._data().find(r=>r.id===carId);if(!row)return;
     const m=masteryInfoForMeters(row.car.meters||0),body=this._root?.querySelector('.sh-body'),table=body?.querySelector('.sh-table-wrap');if(!body||!table)return;
     const panel=document.createElement('section');panel.className='sh-mastery-panel';
-    const material=m.level?masteryMaterialLabel(m.material,lang):(lang==='en'?'NOT UNLOCKED':'SIN DESBLOQUEAR');
-    const target=m.nextKm==null?(lang==='en'?'MAXIMUM MASTERY':'MAESTRÍA MÁXIMA'):`${fmtKm(m.km,lang)} / ${fmtKm(m.nextKm,lang)} KM`;
-    const desc=lang==='en'?'Mastery increases with the distance you drive this car. Each level awards a new badge that represents your experience with it.':'La maestría aumenta con la distancia que conduces este coche. Cada nivel concede una nueva insignia que representa tu experiencia con él.';
-    panel.innerHTML=`<img class="sh-mastery-panel__badge" src="${masteryWheelDataUri(m.level,{size:192,blackBackground:true})}" alt=""><div><div class="sh-mastery-panel__head"><div><div class="sh-mastery-panel__kicker">${lang==='en'?'CAR MASTERY':'MAESTRÍA DEL COCHE'}</div><h3>${material} · ${m.spokes||0} ${lang==='en'?'SPOKES':'RADIOS'}</h3></div><div class="sh-mastery-panel__level">${lang==='en'?'LEVEL':'NIVEL'} ${m.level}/9</div></div><p class="sh-mastery-panel__desc">${desc}</p><div class="sh-mastery-progress"><i style="width:${Math.round(m.progress*100)}%"></i></div><div class="sh-mastery-panel__foot"><span>${m.nextKm==null?(lang==='en'?'All badges unlocked':'Todas las insignias desbloqueadas'):(lang==='en'?'NEXT BADGE':'SIGUIENTE INSIGNIA')}</span><strong>${target}</strong></div></div>`;
+    const material=m.level?masteryMaterialLabel(m.material,lang):t('stats.notUnlocked');
+    const target=m.nextKm==null?t('stats.maximumMastery'):`${fmtKm(m.km,lang)} / ${fmtKm(m.nextKm,lang)} KM`;
+    const desc=t('stats.masteryDesc');
+    panel.innerHTML=`<img class="sh-mastery-panel__badge" src="${masteryWheelDataUri(m.level,{size:192,blackBackground:true})}" alt=""><div><div class="sh-mastery-panel__head"><div><div class="sh-mastery-panel__kicker">${t('stats.carMastery')}</div><h3>${material} · ${m.spokes||0} ${t('stats.spokes')}</h3></div><div class="sh-mastery-panel__level">${t('stats.level')} ${m.level}/9</div></div><p class="sh-mastery-panel__desc">${desc}</p><div class="sh-mastery-progress"><i style="width:${Math.round(m.progress*100)}%"></i></div><div class="sh-mastery-panel__foot"><span>${m.nextKm==null?t('stats.allBadgesUnlocked'):t('stats.nextBadge')}</span><strong>${target}</strong></div></div>`;
     table.before(panel);
   }
 }
+
+// DEV 1.1.110 validation trigger: mastery statistics copy uses i18n keys.

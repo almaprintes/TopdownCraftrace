@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 17,
   "generator": "scripts/bake-track-beauty.mjs",
   "trackKey": "track01",
   "title": "Atlantico",
@@ -15,6 +15,10 @@
     "kerbs": false,
     "props": false
   },
+  "geometry": {
+    "renderTopology": "atlantico-quad-ribbon",
+    "visualRoadWidthScale": 1
+  },
   "materials": {
     "road": {
       "material": "asphalt02Clean",
@@ -23,6 +27,8 @@
       "brightness": 0.96,
       "id": "asphalt02Clean",
       "source": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/asphalt_02/asphalt_02_diff_2k.jpg",
+      "normalSource": null,
+      "roughnessSource": null,
       "processing": "cleanMicrodetail"
     },
     "shoulder": {

@@ -1,0 +1,8 @@
+import fs from 'node:fs';import path from 'node:path';
+const ROOT='src',SKIP=['/i18n/'];const uiHints=/\b(add\.text|setText|innerHTML|textContent|placeholder|aria-label|window\.confirm|window\.alert|toast|title\s*:|desc\s*:|label\s*:|message\s*:)/;
+const human=/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ¿¡]{3,}\s+[A-Za-zÁÉÍÓÚÜÑáéíóúüñ¿¡]{2,}|^(?:GARAJE|TIENDA|VOLVER|CERRAR|CANCELAR|CONTINUAR|SELECCIONAR|MATERIALES|PIEZAS|PAUSA|FRENO|GAS|MOTOR|ENGINE|BACK|CLOSE|CANCEL|CONTINUE|SELECT|MATERIALS|PARTS|BRAKE|THROTTLE)$/i;
+function walk(d,out=[]){for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isDirectory())walk(p,out);else if(/\.(js|html)$/.test(e.name))out.push(p)}return out}
+const DEV_ONLY=/(^|\/)(dev\/|AdminHubScene|CarEditor|TrackEditor|TrackStudio|EnvironmentBuilder|CarFactory)/;let rows=[];for(const file of walk(ROOT)){const norm=file.replaceAll('\\','/');if(SKIP.some(x=>norm.includes(x)))continue;const lines=fs.readFileSync(file,'utf8').split(/\r?\n/);for(let i=0;i<lines.length;i++){const line=lines[i];if(!uiHints.test(line))continue;const lits=[...line.matchAll(/(['"`])((?:\\.|(?!\1).){2,}?)\1/g)].map(m=>m[2]);for(const lit of lits){if(human.test(lit)&&!/^[-.#\w/:]+$/.test(lit))rows.push({file:norm,line:i+1,text:lit.slice(0,180)})}}}
+console.log('I18N_AUDIT_COUNT='+rows.length);const byFile=new Map();for(const r of rows)byFile.set(r.file,(byFile.get(r.file)||0)+1);console.log('I18N_AUDIT_FILES='+byFile.size);for(const [file,count] of [...byFile].sort((a,b)=>b[1]-a[1]))console.log('I18N_FILE\\t'+count+'\\t'+file);for(const r of rows)console.log(`${r.file}:${r.line}\t${r.text}`);
+
+// DEV 1.1.106 player-runtime audit marker.

@@ -3,7 +3,9 @@
 // RevenueCat Ads integration. Until then, /dev can exercise the full flow with
 // a local video without pretending that an ad network has already been wired.
 const VIDEO_SRC='assets/intro/intro.mp4';
-const NATIVE_TIMEOUT_MS=45000;
+// Covers consent, inventory/load, playback and RevenueCat SSV polling. Android's
+// native watchdog resolves first at 170 s with a concrete failure reason.
+const NATIVE_TIMEOUT_MS=180000;
 
 function isDevPreview(){
   try{
@@ -24,20 +26,22 @@ export function isRewardedAdAvailable(){
 function nativeRewardedAd({placement,claimId}){
   const bridge=nativeBridge();
   if(!bridge)return Promise.resolve({completed:false,verified:false,reason:'native_bridge_unavailable'});
-  return Promise.race([
+  return new Promise(resolve=>{
+    let settled=false;
+    const finish=result=>{if(settled)return;settled=true;clearTimeout(timer);resolve(result);};
+    const timer=setTimeout(()=>finish({completed:false,verified:false,source:'native',reason:'timeout'}),NATIVE_TIMEOUT_MS);
     Promise.resolve().then(()=>bridge.show({placement,claimId})).then(result=>{
       const completed=result?.completed===true;
       const verified=result?.verified===true;
-      return{
+      finish({
         completed:completed&&verified,
         verified,
         source:'native',
         transactionId:result?.transactionId||result?.rewardId||null,
         reason:completed&&verified?null:(result?.reason||'reward_not_verified')
-      };
-    }).catch(error=>({completed:false,verified:false,source:'native',reason:error?.message||'native_error'})),
-    new Promise(resolve=>setTimeout(()=>resolve({completed:false,verified:false,source:'native',reason:'timeout'}),NATIVE_TIMEOUT_MS))
-  ]);
+      });
+    }).catch(error=>finish({completed:false,verified:false,source:'native',reason:error?.message||'native_error'}));
+  });
 }
 
 function devVideoRewardedAd(scene,{title='RECOMPENSA PATROCINADA'}={}){

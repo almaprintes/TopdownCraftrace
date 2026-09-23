@@ -1,7 +1,7 @@
 import { RaceScene as RealSurfaceRaceScene } from './RaceRealSurfaceAssetsScene.js';
 import { getTrackBeautyLayerConfig } from '../tracks/trackBeautyLayers.js';
 
-const ATLANTICO_PBR_TRACK = 'track01';
+const ATLANTICO_PBR_TRACK = 'circuito-atlantico';
 const ATLANTICO_PBR_KEY = 'tdr_atlantico_asphalt_lit';
 
 function trackIdFrom(data, scene) {

@@ -36,8 +36,9 @@ export function metersToPx(meters) {
 // drivetrain + drag can never reach.
 export function attainableTopSpeedPxps(params, seconds = 30) {
   const maxFwd = Math.max(0, Number(params?.maxFwd) || 0);
-  const accel = Math.max(0, Number(params?.accel) || 0);
-  const linearDrag = Math.max(0, Number(params?.linearDrag) || 0);
+  const response = Math.max(0.05, Math.min(1, Number(params?.longitudinalResponse ?? 1)));
+  const accel = Math.max(0, Number(params?.accel) || 0) * response;
+  const linearDrag = Math.max(0, Number(params?.linearDrag) || 0) * response;
   if (maxFwd <= 0 || accel <= 0) return 0;
 
   const hz = 60;

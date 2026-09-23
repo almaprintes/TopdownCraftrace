@@ -13,14 +13,21 @@ export class RaceScene extends CurrentRaceScene {
     this._showTTPanel=()=>{};
     this._hideTTPanel=()=>{};
 
+    // Build every right-side driving control before applying the saved layout.
+    // Previously _buildPedalRow() scheduled its own double-rAF hitbox sync while
+    // the handbrake did not exist yet. On Android that allowed the saved layout
+    // and hitbox geometry to observe a partially-built control row.
     this._buildPedalRow();
     this._buildHandbrakeControl();
-
     const applyLayout=()=>{
       try{applyDomControlLayout();}catch{}
       try{this._syncPedalHitboxes?.();}catch{}
     };
-    this.time?.delayedCall?.(0,applyLayout);
+    // Apply once synchronously now that GAS/FRENO/HANDBRAKE all exist, then
+    // once on the next frame for final viewport metrics. No element is restored
+    // or forced visible: this only establishes geometry from the source layout.
+    applyLayout();
+    requestAnimationFrame(applyLayout);
     window.addEventListener('resize',applyLayout,{passive:true});
     this.events.once('shutdown',()=>window.removeEventListener('resize',applyLayout));
     return result;
@@ -337,25 +344,29 @@ export class RaceScene extends CurrentRaceScene {
         width:clamp(78px,8vw,102px);aspect-ratio:859/1024;
         touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;
         pointer-events:auto;filter:drop-shadow(0 7px 15px rgba(0,0,0,.42));
+        background:center/100% 100% no-repeat url("assets/ui/tdr_handbrake_idle.webp?v=3");
       }
-      #tdr-handbrake img{
-        position:absolute;left:0;top:0;width:100%;height:100%;
-        object-fit:fill;object-position:0 0;pointer-events:none;
-        transform:none!important;transition:none!important;
+      #tdr-handbrake.active{
+        background-image:url("assets/ui/tdr_handbrake_pulled.webp?v=3");
       }
-      #tdr-handbrake .idle{opacity:1;}
-      #tdr-handbrake .pulled{opacity:0;}
-      #tdr-handbrake.active .idle{opacity:0;}
-      #tdr-handbrake.active .pulled{opacity:1;}
     `;
     document.head.appendChild(style);
 
+    // Force both visual states into the browser cache/decoder immediately.
+    // CSS only requested the active image on first press, which is why Android
+    // could show idle instantly but spend many seconds decoding "pulled".
+    for(const src of ['assets/ui/tdr_handbrake_idle.webp?v=3','assets/ui/tdr_handbrake_pulled.webp?v=3']){
+      try{
+        const img=new Image();
+        img.src=src;
+        img.decode?.().catch(()=>{});
+      }catch{}
+    }
+
     const root=document.createElement('div');
     root.id='tdr-handbrake';
-    root.innerHTML=`
-      <img class="idle" src="assets/ui/tdr_handbrake_idle.webp?v=3" width="859" height="1024" alt="Freno de mano">
-      <img class="pulled" src="assets/ui/tdr_handbrake_pulled.webp?v=3" width="859" height="1024" alt="Freno de mano accionado">
-    `;
+    root.setAttribute('role','button');
+    root.setAttribute('aria-label','Freno de mano');
     document.body.appendChild(root);
     this._tdrHandbrakeVisual=root;
 

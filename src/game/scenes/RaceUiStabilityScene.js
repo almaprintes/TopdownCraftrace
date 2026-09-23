@@ -92,43 +92,9 @@ export class RaceScene extends CurrentRaceScene {
       }
     };
     this._hideResidualGamepadSteeringVisual = () => {
-      if (!gamepadModeSelected()) return;
-      const w = Number(this.scale?.width) || 0, h = Number(this.scale?.height) || 0;
-      if (!w || !h) return;
-
-      try {
-        const seen = new Set();
-        const visit = (obj) => {
-          if (!obj || seen.has(obj)) return;
-          seen.add(obj);
-          if (obj !== this.touchUI) {
-            const sx = Number(obj.scrollFactorX), sy = Number(obj.scrollFactorY);
-            const x = Number(obj.x), y = Number(obj.y);
-            const type = String(obj.type || obj.constructor?.name || '').toLowerCase();
-            if (sx === 0 && sy === 0 && Number.isFinite(x) && Number.isFinite(y) && x < w * .38 && y > h * .45 && /(graphics|image|sprite|ellipse|circle|arc|rectangle|container)/.test(type)) {
-              try { obj.setVisible?.(false); obj.disableInteractive?.(); } catch (_) {}
-            }
-          }
-          if (Array.isArray(obj.list)) for (const child of obj.list) visit(child);
-        };
-        for (const obj of this.children?.list || []) visit(obj);
-      } catch (_) {}
-
-      try {
-        const vw = window.innerWidth || 0, vh = window.innerHeight || 0;
-        for (const el of document.body.querySelectorAll('*')) {
-          if (el === this.game?.canvas || el.id === 'app' || el.id === 'tdr-race-controls') continue;
-          const sig = `${el.id || ''} ${el.className || ''} ${el.dataset?.role || ''} ${el.dataset?.control || ''}`.toLowerCase();
-          if (/delta|pause|pausa|gamepad-pedals|ignition|startup|rotate/.test(sig)) continue;
-          const r = el.getBoundingClientRect?.();
-          if (!r || r.width < 18 || r.height < 18 || r.width > vw * .38 || r.height > vh * .48) continue;
-          const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-          if (cx < vw * .38 && cy > vh * .45) {
-            el.style.setProperty('display', 'none', 'important');
-            el.style.setProperty('pointer-events', 'none', 'important');
-          }
-        }
-      } catch (_) {}
+      // Residual gamepad cleanup must never scan/hide arbitrary Phaser or DOM
+      // controls. RaceGamepadScene owns gamepad-only teardown at source.
+      return;
     };
     this._hideLegacyPedalVisuals();
     this._hideResidualGamepadSteeringVisual();
@@ -136,6 +102,11 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   update(time, delta) {
+    // DEV 1.1.33 A/B: Android touch mode uses the Beta-1 behaviour of this layer:
+    // no gamepad polling/wrapping in the race frame loop.
+    if (/Android/i.test(String(navigator?.userAgent || '')) && !gamepadModeSelected()) {
+      return super.update(time, delta);
+    }
     if (!gamepadModeSelected()) {
       super.update(time, delta);
       return;

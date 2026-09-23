@@ -1,15 +1,15 @@
 import { GarageScene as CurrentGarageScene } from './GarageUiStabilityScene.js';
 import { t } from '../i18n/index.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 
 export class GarageScene extends CurrentGarageScene {
   create(){
     super.create();
-    let probe=false;
-    try{probe=sessionStorage.getItem('tdr2:adminInputProbe')==='1'&&this._mode==='admin';}catch{}
-    if(probe)this._installAdminInputProbe();
+    if(!IS_PROD_BUILD){let probe=false;try{probe=sessionStorage.getItem('tdr2:adminInputProbe')==='1'&&this._mode==='admin';}catch{}if(probe)this._installAdminInputProbe();}
   }
 
   _installAdminInputProbe(){
+    if(__TDR_PROD_BUILD__)return;
     const canvas=this.game?.canvas;
     const host=canvas?.parentElement||document.body;
     if(!canvas||!host)return;

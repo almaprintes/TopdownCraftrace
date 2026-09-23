@@ -8,9 +8,14 @@ function readPackageName() {
   return pkg.name || 'app';
 }
 
-export default defineConfig(({ command }) => {
+export default defineConfig(({ command, mode }) => {
+  const isTdrProd = mode === 'tdr-prod';
+  const define = {
+    __TDR_PROD_BUILD__: JSON.stringify(isTdrProd)
+  };
+
   // Local dev always serves from root.
-  if (command === 'serve') return { base: '/' };
+  if (command === 'serve') return { base: '/', define };
 
   const repo = readPackageName();
 
@@ -23,6 +28,13 @@ export default defineConfig(({ command }) => {
 
   return {
     base,
+    define,
+    plugins: isTdrProd ? [{
+      name: 'tdr-production-boundary',
+      closeBundle() {
+        fs.rmSync(path.resolve(process.cwd(), 'dist/tool'), { recursive: true, force: true });
+      }
+    }] : [],
     build: {
       target: 'es2020'
     }

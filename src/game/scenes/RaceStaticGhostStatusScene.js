@@ -34,7 +34,21 @@ function isGhostLabel(obj) {
 function isRecordLoadedLabel(obj) {
   if (typeof obj?.text !== 'string') return false;
   const text = normalized(obj.text);
-  return (text.includes('RÉCORD') || text.includes('RECORD')) && (text.includes('CARGADO') || text.includes('LOADED'));
+  // The second Ghost HUD row is stateful. Historically this finder only matched
+  // "RÉCORD CARGADO", so ONLINE and "CREA TU PRIMERA VUELTA" never activated the
+  // static DOM replacement; the moving Phaser rectangles remained visible.
+  return (
+    ((text.includes('RÉCORD') || text.includes('RECORD')) && (text.includes('CARGADO') || text.includes('LOADED'))) ||
+    text.includes('CREA TU PRIMERA VUELTA') ||
+    text.includes('CREATE YOUR FIRST LAP') ||
+    text.includes('ONLINE') ||
+    text.includes('DATOS NO VÁLIDOS') ||
+    text.includes('INVALID DATA') ||
+    text.includes('SIGUIENTE VUELTA') ||
+    text.includes('NEXT LAP') ||
+    text.includes('RÉCORD MEJORADO') ||
+    text.includes('RECORD IMPROVED')
+  );
 }
 
 function objectPoint(obj) {
@@ -95,11 +109,15 @@ export class RaceScene extends CurrentRaceScene {
     this._tdrCurrentGhostCarId = this._ghostCarId || this.carId || data?.carId || 'car';
     this._tdrPbGhostStorageKey = pbGhostKey(this._ghostTrackKey || this.trackKey);
     this._ghostStorageKey = this._tdrPbGhostStorageKey;
-    this._ghostData = readPbGhost(this._tdrPbGhostStorageKey);
+    // RaceGhostModeScene may already have injected an online leaderboard rival.
+    // Never replace that live rival with the circuit PB in this later presentation layer.
+    const onlineGhost = this._onlineGhostChallenge && this._ghostData?.samples?.length ? this._ghostData : null;
+    this._ghostData = onlineGhost || readPbGhost(this._tdrPbGhostStorageKey);
     this._tdrGhostKnownBestMs = Number.isFinite(Number(this.ttBest?.lapMs)) ? Number(this.ttBest.lapMs) : null;
 
-    // Only expose a replay as PERSONAL BEST when its stored official lap equals ttBest.
-    if (this._ghostData && !this._isGhostCurrentPersonalBest()) this._ghostData = null;
+    // PB validation applies only to local ghosts. Online rivals are intentionally
+    // independent from ttBest and remain read-only for this race.
+    if (!onlineGhost && this._ghostData && !this._isGhostCurrentPersonalBest()) this._ghostData = null;
 
     const ghostCarId = this._ghostData?.carId;
     if (ghostCarId && CAR_SPECS?.[ghostCarId]) {
@@ -154,6 +172,7 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _completedLapCheck(now) {
+    if (this._onlineGhostChallenge) return super._completedLapCheck?.(now);
     if (this._replayActive) return;
     const hist = Array.isArray(this.ttHistory) ? this.ttHistory : [];
     if (hist.length <= this._ghostHistoryLen) return;
@@ -343,7 +362,7 @@ export class RaceScene extends CurrentRaceScene {
       }
     });
     this._wireGhostPanelRow(rows[1], () => {
-      if (!this._isGhostCurrentPersonalBest() || this._replayActive || typeof this._enterReplay !== 'function') return;
+      if ((!this._onlineGhostChallenge && !this._isGhostCurrentPersonalBest()) || this._replayActive || typeof this._enterReplay !== 'function') return;
       this._enterReplay();
     });
     this._wireGhostPanelRow(rows[2], () => {
@@ -384,18 +403,21 @@ export class RaceScene extends CurrentRaceScene {
     if (!labels) return;
     const level = GHOST_VISIBILITY_LEVELS[Number(this._tdrGhostVisibilityIndex || 0)] ?? 1;
     const hasPbReplay = this._isGhostCurrentPersonalBest();
+    const onlineReplay = !!this._onlineGhostChallenge && !!this._ghostData?.samples?.length;
+    const hasReplay = onlineReplay || hasPbReplay;
     const bestMs = Number(this.ttBest?.lapMs);
 
     if (labels.ghostText) labels.ghostText.textContent = `👻 FANTASMA · ${this._tdrGhostVisibleEnabled ? 'ON' : 'OFF'}`;
     if (labels.recordText) {
-      if (hasPbReplay) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · ▶`;
+      if (onlineReplay) labels.recordText.textContent = `🌐 ONLINE ${fmtPb(this._ghostData?.lapMs)} · ▶`;
+      else if (hasPbReplay) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · ▶`;
       else if (Number.isFinite(bestMs)) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · SIN REPLAY`;
       else labels.recordText.textContent = 'RÉCORD NO DISPONIBLE';
     }
     if (labels.visibilityText) labels.visibilityText.textContent = `◐ VISIBILIDAD · ${Math.round(level * 100)}%`;
     if (this._tdrGhostPanelRows?.[1]) {
-      this._tdrGhostPanelRows[1].style.opacity = hasPbReplay ? '1' : '.58';
-      this._tdrGhostPanelRows[1].style.cursor = hasPbReplay ? 'pointer' : 'default';
+      this._tdrGhostPanelRows[1].style.opacity = hasReplay ? '1' : '.58';
+      this._tdrGhostPanelRows[1].style.cursor = hasReplay ? 'pointer' : 'default';
     }
   }
 
@@ -414,8 +436,12 @@ export class RaceScene extends CurrentRaceScene {
     let found = null;
     if (!this._tdrGhostPanelAnchor || performance.now() < Number(this._tdrGhostPanelProbeUntil || 0)) {
       found = this._findGhostPanelObjects();
-      if (found && !this._tdrGhostPanelAnchor) {
-        this._tdrGhostPanelAnchor = { left: found.centerX - PANEL_W * 0.5, top: found.topY };
+      if (found) {
+        // The legacy Phaser panel is camera-sensitive: dynamic race zoom moves its
+        // rectangles while fixed HUD text stays put. Use it only once to discover
+        // which objects belong to the panel, but anchor the DOM panel to viewport
+        // coordinates so zoom can never move the clickable rows.
+        if (!this._tdrGhostPanelAnchor) this._tdrGhostPanelAnchor = { left: found.centerX - PANEL_W * 0.5, top: found.topY };
         for (const obj of found.owned) this._tdrGhostPanelObjects.add(obj);
         this._ensureStaticGhostPanel(found);
         this._layoutStaticGhostPanel();
@@ -432,5 +458,17 @@ export class RaceScene extends CurrentRaceScene {
     const hiddenByReport = !!this._sessionReportOpen;
     const hiddenByReplay = !!this._replayActive;
     root.style.display = active && !hiddenByReport && !hiddenByReplay ? 'block' : 'none';
-  }
+    }
 }
+
+// DEV 1.1.145 validation trigger: active static Ghost layer preserves online rival and its stable DOM controls.
+
+// DEV 1.1.146 validation trigger: Ghost DOM rows are viewport-fixed and independent from dynamic camera zoom.
+
+// DEV 1.1.147 validation trigger: normal and online Ghost DOM rows follow their fixed HUD labels through dynamic zoom.
+
+// DEV 1.1.148 validation trigger: Ghost DOM panel is fixed HUD geometry and never follows camera zoom.
+
+// DEV 1.1.149 validation trigger: Ghost HUD panel is mounted on document.body for true fixed positioning.
+
+// DEV 1.1.150 validation trigger: restore proven static Ghost DOM replacement for ONLINE/empty/PB states.

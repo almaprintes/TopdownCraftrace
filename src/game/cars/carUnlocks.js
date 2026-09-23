@@ -1,4 +1,5 @@
 import { evaluationAccessEnabled } from '../shipaton/ShipatonJudgeMode.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 
 const KEY='tdr2:carUnlocks:v1';
 const DEV_FULL_ACCESS_KEY='tdr2:devFullCarAccess:v1';
@@ -28,6 +29,7 @@ export function saveCarUnlocks(state){
 export function unlockCar(carId){
   const id=String(carId||'').trim();
   if(!id)return false;
+  if(evaluationAccessEnabled())return true;
   const state=loadCarUnlocks();
   const had=state.unlocked.includes(id);
   if(!had)state.unlocked.push(id);
@@ -63,6 +65,7 @@ export function unlockedCarIds(){
 }
 
 export function devFullCarAccessEnabled(){
+  if(IS_PROD_BUILD)return false;
   if(evaluationAccessEnabled())return true;
   try{return localStorage.getItem(DEV_FULL_ACCESS_KEY)==='1';}catch{return false;}
 }

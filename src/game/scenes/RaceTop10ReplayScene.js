@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceStaticGhostStatusScene.js';
 import { encodeOnlineGhost, onlineGhostJsonBytes, measureOnlineGhostError } from '../online/onlineGhostCodec.js';
+import { t } from '../i18n/index.js';
 
 const TOP_REPLAY_PREFIX='tdr2:topReplay:';
 const SESSION_KEY='tdr2:statsNativeReplay';
@@ -67,22 +68,22 @@ export class RaceScene extends CurrentRaceScene{
     const button='height:38px;min-width:44px;border:1px solid #4feaff;background:rgba(5,29,40,.94);color:#fff;font-weight:1000;font-size:14px;padding:0 10px;touch-action:manipulation';
     root.innerHTML=`
       <div style="position:absolute;left:max(12px,env(safe-area-inset-left));top:max(10px,env(safe-area-inset-top));padding:8px 11px;background:rgba(3,14,22,.86);border:1px solid rgba(82,232,255,.45);box-shadow:0 8px 24px rgba(0,0,0,.25)">
-        <div style="font-size:8px;font-weight:1000;letter-spacing:.18em;color:#63edff">RACE CONTROL // REPLAY REAL</div>
-        <div style="margin-top:2px;font-size:17px;font-weight:1000;letter-spacing:.03em">${String(payload.trackId||this.trackKey||'CIRCUITO').toUpperCase()}</div>
-        <div style="font-size:9px;font-weight:850;color:#90a9b7">${String(payload.carId||this.carId||'COCHE').toUpperCase()} · ${fmt(payload.lapMs)}</div>
+        <div style="font-size:8px;font-weight:1000;letter-spacing:.18em;color:#63edff">RACE CONTROL // ${t('replay.realReplay')}</div>
+        <div style="margin-top:2px;font-size:17px;font-weight:1000;letter-spacing:.03em">${String(payload.trackId||this.trackKey||t('replay.track')).toUpperCase()}</div>
+        <div style="font-size:9px;font-weight:850;color:#90a9b7">${String(payload.carId||this.carId||t('raceControl.car')).toUpperCase()} · ${fmt(payload.lapMs)}</div>
       </div>
       <div style="position:absolute;right:max(12px,env(safe-area-inset-right));top:max(10px,env(safe-area-inset-top));display:flex;gap:7px;pointer-events:auto">
         <button data-back style="${button};padding:0 14px;letter-spacing:.06em">← RACE CONTROL</button>
       </div>
       <div style="position:absolute;left:50%;bottom:max(13px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(590px,calc(100vw - 24px));box-sizing:border-box;padding:8px 12px 9px;background:rgba(3,14,22,.88);border:1px solid rgba(82,232,255,.32);text-align:center;pointer-events:auto">
         <div style="display:flex;align-items:baseline;justify-content:center;gap:9px"><div data-time style="font-size:22px;font-weight:1000;font-variant-numeric:tabular-nums">0:00.000</div><div data-total style="font-size:10px;font-weight:850;color:#8fa9b7">/ ${fmt(state?.duration||payload.lapMs)}</div></div>
-        <input data-seek aria-label="Posición del replay" type="range" min="0" max="${Math.max(1,Math.round(state?.duration||payload.lapMs||1))}" step="1" value="0" style="display:block;width:100%;height:22px;margin:1px 0 3px;accent-color:#58efff;touch-action:none">
+        <input data-seek aria-label="${t('replay.position')}" type="range" min="0" max="${Math.max(1,Math.round(state?.duration||payload.lapMs||1))}" step="1" value="0" style="display:block;width:100%;height:22px;margin:1px 0 3px;accent-color:#58efff;touch-action:none">
         <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap">
-          <button data-start title="Volver al inicio" aria-label="Volver al inicio" style="${button}">↶ 0</button>
-          <button data-prev title="Muestra anterior" aria-label="Muestra anterior" style="${button}">◀│</button>
-          <button data-pause title="Reproducir o pausar" aria-label="Reproducir o pausar" style="${button};min-width:54px;font-size:17px">Ⅱ</button>
-          <button data-next title="Muestra siguiente" aria-label="Muestra siguiente" style="${button}">│▶</button>
-          <button data-speed title="Velocidad de reproducción" aria-label="Velocidad de reproducción" style="${button};min-width:58px">1×</button>
+          <button data-start title="${t('replay.backToStart')}" aria-label="${t('replay.backToStart')}" style="${button}">↶ 0</button>
+          <button data-prev title="${t('replay.previousSample')}" aria-label="${t('replay.previousSample')}" style="${button}">◀│</button>
+          <button data-pause title="${t('replay.playPause')}" aria-label="${t('replay.playPause')}" style="${button};min-width:54px;font-size:17px">Ⅱ</button>
+          <button data-next title="${t('replay.nextSample')}" aria-label="${t('replay.nextSample')}" style="${button}">│▶</button>
+          <button data-speed title="${t('replay.playbackSpeed')}" aria-label="${t('replay.playbackSpeed')}" style="${button};min-width:58px">1×</button>
         </div>
       </div>`;
     document.body.appendChild(root);this._tdrStatsReplayOverlay=root;

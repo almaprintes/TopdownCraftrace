@@ -1,5 +1,6 @@
 // src/game/cars/carSpecs.js
 // Unidades internas: px/s, px/s^2, rad/s, coeficientes adimensionales
+import { LONGITUDINAL_PROFILES } from './longitudinalProfiles.js';
 
 export const CAR_SPECS = {
 stock: {
@@ -134,6 +135,9 @@ power: {
     engineBrake: 260,
     linearDrag: 0.031,
 
+    // Conserva la punta publicada, con la respuesta viva de un coche de carreras.
+    ...LONGITUDINAL_PROFILES.RACE_STARTER,
+
     // Dirección
     turnRate: 3.8,
     turnMin: 0.27,
@@ -228,6 +232,7 @@ steeringProfile: 'DIRECT',
     category: 'All-Rounder',
     role: 'Crossover ágil',
     steeringProfile: 'DIRECT',
+    engineAudioProfile: 'JEEP',
 
     // UI / Colección
     collectionNo: 16,
@@ -385,6 +390,7 @@ handlingProfile: 'F1_DOWNFORCE',
     cardAssetVersion: 4,
     skin: 'skin_avenir_gripline.webp',
     visualScale: 1.02,
+    engineAudioProfile: 'AVENIR_GRIPLINE',
 
     // Stats diseño (01–99): VEL/ACC/GIR/EST/FRN
     designStats: { VEL: 57, ACC: 55, GIR: 82, EST: 64, FRN: 71 },

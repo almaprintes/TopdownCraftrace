@@ -72,7 +72,8 @@ jobs:
           set -euo pipefail
           test -f public/assets/tracks/track01/beauty/manifest.json
           grep -q 'atlantico-polyhaven-v10-clean-asphalt' public/assets/tracks/track01/beauty/manifest.json
-          grep -q '"track01"' src/game/tracks/trackBeautyLayers.generated.js
+          grep -q '"circuito-atlantico"' src/game/tracks/trackBeautyLayers.generated.js
+          if grep -q '"track01": Object.freeze' src/game/tracks/trackBeautyLayers.generated.js; then exit 1; fi
           grep -q '"karting-tenerife"' src/game/tracks/trackBeautyLayers.generated.js
 
       - name: Commit generated Karting Tenerife assets
