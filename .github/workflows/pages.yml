@@ -1,4 +1,5 @@
 name: Deploy Top Down Race
+# DEV 1.1.174: production bundle must retain public Race Control configuration.
 
 on:
   push:
