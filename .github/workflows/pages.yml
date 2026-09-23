@@ -224,8 +224,8 @@ jobs:
         run: |
           test -e /dev/kvm
           sudo chmod 666 /dev/kvm
-          adb kill-server || true
-          adb start-server
+          "${ANDROID_HOME}/platform-tools/adb" kill-server || true
+          "${ANDROID_HOME}/platform-tools/adb" start-server
       - name: Exercise bridge inside release WebView
         uses: reactivecircus/android-emulator-runner@v2
         with:
