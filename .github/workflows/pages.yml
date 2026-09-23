@@ -133,6 +133,8 @@ jobs:
           test -n "${VITE_TDR_ONLINE_PUBLIC}"
           npm ci --no-audit --no-fund
           npm run build:prod
+          grep -Rqs "juukbnkjboiazqggqcyv.supabase.co" dist || { echo "Production bundle lost Supabase URL"; exit 1; }
+          grep -Rqs "sb_publishable_" dist || { echo "Production bundle lost Supabase publishable key"; exit 1; }
       - name: Build development
         working-directory: dev-src
         shell: bash
@@ -150,7 +152,7 @@ jobs:
       - name: Assemble public beta plus DEV
         shell: bash
         run: |
-          printf 'DEV_SOURCE_SHA=%s\nDEV_VERSION=1.1.173\n' "${GITHUB_SHA}" > dev-src/dist/dev-build.txt
+          printf 'DEV_SOURCE_SHA=%s\nDEV_VERSION=1.1.174\n' "${GITHUB_SHA}" > dev-src/dist/dev-build.txt
           rm -rf beta/dist/dev beta/dist/dev-live
           mkdir -p beta/dist/dev beta/dist/dev-live
           cp -R dev-src/dist/. beta/dist/dev/
@@ -162,8 +164,8 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV_VERSION=1.1.173' beta/dist/dev/dev-build.txt
-          grep -q 'DEV_VERSION=1.1.173' beta/dist/dev-live/dev-build.txt
+          grep -q 'DEV_VERSION=1.1.174' beta/dist/dev/dev-build.txt
+          grep -q 'DEV_VERSION=1.1.174' beta/dist/dev-live/dev-build.txt
           grep -q 'DEV 1\.1\.173 visible development version' beta/dist/dev/index.html
           grep -q 'DEV 1\.1\.173 visible development version' beta/dist/dev-live/index.html
           test "$(grep -o '<span>DEV 1\.1\.</span><span>173</span>' beta/dist/dev/index.html | wc -l | tr -d ' ')" = "2"
