@@ -1,5 +1,5 @@
 import { RaceScene as EmbeddedReplayRaceScene } from './RaceEmbeddedReplayScene.js';
-import { CarEngineSampleRuntime } from '../audio/CarEngineSampleRuntime.js';
+import { CarEngineSampleRuntime, IGNITION_TO_LIGHTS_MS } from '../audio/CarEngineSampleRuntime.js';
 
 const clamp01=n=>Math.max(0,Math.min(1,Number(n)||0));
 const STATS_REPLAY_KEY='tdr2:statsNativeReplay';
@@ -69,7 +69,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     if(!embeddedRequested&&!this._tdrEmbeddedReplay){
       try{
         this._tdrEngineSample?.destroy?.();this._tdrEngineSample=new CarEngineSampleRuntime(this);this._tdrInstallIgnitionStart(blockedAutoStart);
-        this.events.once('shutdown',()=>{this._tdrRemoveIgnitionButton();this._tdrEngineSample?.destroy?.();this._tdrEngineSample=null;});
+        this.events.once('shutdown',()=>{this._tdrCleanupIgnitionStart();this._tdrEngineSample?.destroy?.();this._tdrEngineSample=null;});
       }catch(e){console.warn('[TDR2 ignition] init failed',e);}
     }else this._tdrRemoveIgnitionButton();
     this.events.once('shutdown',()=>{this._tdrCleanupGamepadUi();try{document.querySelectorAll('#tdr-replay-controls,[data-tdr-stats-native-replay="1"],[data-tdr-embedded-replay="1"],[data-tdr-ghost-diagnostic],[data-online-ghost-diagnostic]').forEach(n=>n.remove());}catch{}try{document.body.classList.remove('tdr-native-replay-clean');}catch{}});
@@ -146,10 +146,11 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     const host=this.game?.canvas?.parentElement||document.body,btn=document.createElement('button');
     btn.id='tdr-ignition-start';btn.type='button';btn.textContent='◉  ARRANCAR MOTOR';
     Object.assign(btn.style,{position:'fixed',left:'50%',top:'58%',transform:'translate(-50%,-50%)',zIndex:'2147483000',minWidth:'230px',padding:'16px 24px',borderRadius:'14px',border:'1px solid rgba(255,255,255,.34)',background:'rgba(5,12,22,.94)',color:'#fff',font:'800 16px Orbitron,system-ui,sans-serif',letterSpacing:'.08em',boxShadow:'0 10px 36px rgba(0,0,0,.48)',touchAction:'manipulation'});
-    const start=(ev)=>{ev?.preventDefault?.();ev?.stopPropagation?.();if(this._startState!=='WAIT_ENGINE')return;try{navigator.vibrate?.(35);}catch{}this._tdrEngineSample?.startEngine?.();this._startState='READY';if(this._startHint)this._startHint.setText('Motor encendido · puedes acelerar');if(this._startStatus){this._startStatus.setText('ENGINE ON');this._startStatus.setColor('#2bff88');}btn.textContent='MOTOR ENCENDIDO ✓';btn.disabled=true;setTimeout(()=>{this._tdrRemoveIgnitionButton();this._tdrBeginLights();},650);};
+    const start=(ev)=>{ev?.preventDefault?.();ev?.stopPropagation?.();if(this._startState!=='WAIT_ENGINE')return;btn.disabled=true;this._startState='IGNITING';try{navigator.vibrate?.(35);}catch{}this._tdrEngineSample?.startEngine?.();this._startState='READY';if(this._startHint)this._startHint.setText('Motor encendido · puedes acelerar');if(this._startStatus){this._startStatus.setText('ENGINE ON');this._startStatus.setColor('#2bff88');}btn.textContent='MOTOR ENCENDIDO ✓';this._tdrIgnitionLightsCall?.remove?.();this._tdrIgnitionLightsCall=this.time.delayedCall(IGNITION_TO_LIGHTS_MS,()=>{this._tdrIgnitionLightsCall=null;this._tdrRemoveIgnitionButton();this._tdrBeginLights();});};
     btn.addEventListener('pointerup',start,{once:true});host.appendChild(btn);this._tdrIgnitionButton=btn;
   }
   _tdrRemoveIgnitionButton(){try{this._tdrIgnitionButton?.remove?.();}catch{}this._tdrIgnitionButton=null;}
+  _tdrCleanupIgnitionStart(){try{this._tdrIgnitionLightsCall?.remove?.();}catch{}this._tdrIgnitionLightsCall=null;this._tdrRemoveIgnitionButton();}
   _tdrBeginLights(){
     if(this._startState!=='READY')return;this._startState='COUNTDOWN';
     if(this._startHint)this._startHint.setText('Mantente listo...');if(this._startStatus){this._startStatus.setText('RED LIGHTS');this._startStatus.setColor('#ffffff');}
