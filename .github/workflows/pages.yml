@@ -203,11 +203,13 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: gradle
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
       - name: Install Android SDK packages
         shell: bash
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+        run: |
+          test -n "${ANDROID_HOME}"
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
+            'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
       - name: Build production web payload and sync Capacitor
         shell: bash
         run: |
