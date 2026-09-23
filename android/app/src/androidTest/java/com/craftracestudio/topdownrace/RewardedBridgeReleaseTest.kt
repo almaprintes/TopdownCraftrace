@@ -1,6 +1,8 @@
 package com.craftracestudio.topdownrace
 
 import android.webkit.WebView
+import android.view.View
+import android.view.ViewGroup
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
@@ -16,7 +18,11 @@ class RewardedBridgeReleaseTest {
     fun releaseWebViewExposesBridgeAndCallsNativePlugin() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             lateinit var webView: WebView
-            scenario.onActivity { activity -> webView = activity.bridge.webView }
+            scenario.onActivity { activity ->
+                webView = requireNotNull(findWebView(activity.window.decorView)) {
+                    "Capacitor WebView not found in the release Activity"
+                }
+            }
 
             val bridgeTypes = eventually(webView) {
                 "typeof window.__tdrRewardedAds+'|'+typeof window.__tdrRewardedAds?.show"
@@ -43,6 +49,15 @@ class RewardedBridgeReleaseTest {
             assertTrue(nativeResult.contains("\"verified\":false"))
             assertTrue(nativeResult.contains("\"completed\":false"))
         }
+    }
+
+    private fun findWebView(view: View): WebView? {
+        if (view is WebView) return view
+        if (view !is ViewGroup) return null
+        for (index in 0 until view.childCount) {
+            findWebView(view.getChildAt(index))?.let { return it }
+        }
+        return null
     }
 
     private fun eventually(webView: WebView, expression: () -> String): String {
