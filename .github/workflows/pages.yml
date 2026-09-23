@@ -219,6 +219,13 @@ jobs:
       - name: Compile minified release and run native unit tests
         working-directory: android
         run: ./gradlew :app:testBridgeTestReleaseUnitTest :app:assembleBridgeTestRelease --stacktrace
+      - name: Prepare accelerated Android emulator
+        shell: bash
+        run: |
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
+          adb kill-server || true
+          adb start-server
       - name: Exercise bridge inside release WebView
         uses: reactivecircus/android-emulator-runner@v2
         with:
