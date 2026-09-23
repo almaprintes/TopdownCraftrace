@@ -18,17 +18,21 @@
     "check:ignition-audio": "node scripts/ignition-audio-smoke.mjs",
     "check:spark-longitudinal": "node scripts/spark-longitudinal-smoke.mjs",
     "check:rewarded-access": "node scripts/rewarded-access-smoke.mjs",
+    "check:android-rewarded-bridge": "node scripts/android-rewarded-bridge-smoke.mjs",
     "check:track-beauty-identity": "node scripts/track-beauty-identity-smoke.mjs",
     "check:prod-bundle": "node scripts/prod-bundle-smoke.mjs",
     "gen:icons": "node scripts/generate-icons.mjs",
     "gen:orientation": "node scripts/generate-orientation-runtime.mjs",
     "bake:track": "node scripts/bake-track-visual.mjs",
-    "prebuild": "npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:ignition-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:track-beauty-identity && npm run gen:icons && npm run gen:orientation"
+    "prebuild": "npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:ignition-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:android-rewarded-bridge && npm run check:track-beauty-identity && npm run gen:icons && npm run gen:orientation"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.2",
     "sharp": "^0.34.3",
     "vite": "^6.0.0"
   }

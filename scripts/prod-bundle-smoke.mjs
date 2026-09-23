@@ -28,6 +28,8 @@ const required=[
   'recycler_exchange_2',
   'recycler_exchange_3',
   'store_coins_100_4h',
+  'TdrRewardedAds',
+  '__tdrRewardedAds',
   'tdr-x2-button',
   'car_engine_start.wav'
 ];

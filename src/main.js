@@ -1,5 +1,6 @@
 import './style.css';
 import { createGame } from './game/game.js';
+import { installNativeRewardedBridge } from './game/monetization/installNativeRewardedBridge.js';
 
 function showFatal(msg) {
   const el = document.getElementById('app');
@@ -381,6 +382,12 @@ function __tickOrientation() {
   }
 }
 
-__tickOrientation();
-window.addEventListener('resize', __tickOrientation, {passive:true});
-window.addEventListener('orientationchange', __tickOrientation, {passive:true});
+// On Android, wait for the registered Capacitor plugin to answer before the
+// first scene is created. This makes the bridge deterministic in minified
+// release builds and on Activity/WebView recreation instead of racing a late
+// evaluateJavascript injection against the post-race UI.
+installNativeRewardedBridge().finally(()=>{
+  __tickOrientation();
+  window.addEventListener('resize', __tickOrientation, {passive:true});
+  window.addEventListener('orientationchange', __tickOrientation, {passive:true});
+});
