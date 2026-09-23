@@ -42,6 +42,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Build public beta when cache is empty
+        if: steps.beta-cache.outputs.cache-hit != 'true'
+        working-directory: beta
+        shell: bash
+        env:
+          VITE_TDR_ONLINE_URL: ${{ vars.VITE_TDR_ONLINE_URL }}
+          VITE_TDR_ONLINE_PUBLIC: ${{ vars.VITE_TDR_ONLINE_PUBLIC }}
+          BASE: /TopdownCraftrace/
+        run: |
+          test -n "${VITE_TDR_ONLINE_URL}"
+          test -n "${VITE_TDR_ONLINE_PUBLIC}"
+          npm ci --no-audit --no-fund
+          npm run build:prod
+          grep -q "BETA 1\.1\.171 closed-test release candidate" dist/index.html
+          test "$(grep -o '<span>BETA 1\.1\.</span><span>171</span>' dist/index.html | wc -l | tr -d ' ')" = "2"
+          if grep -q "DEV 1\.1\.171" dist/index.html; then echo "DEV identity leaked into beta"; exit 1; fi
+          mkdir -p dist/assets/tutorials/dropping
+          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Checkout development
         uses: actions/checkout@v4
         with:

@@ -15,9 +15,9 @@ Estas reglas prevalecen sobre cualquier costumbre anterior del repositorio.
 9. Antes de cualquier cambio de despliegue, verificar este archivo y `.github/workflows/pages.yml`.
 10. Si una tarea parece requerir una rama nueva, detenerse y buscar una solución dentro de `main` salvo autorización explícita del propietario.
 
-Estado de versiones desde 2026-09-09:
-- Beta pública/final: `1.0` en rama `beta-1.0`.
-- Desarrollo activo: `DEV 1.0.1` en `main`.
+Estado de versiones desde 2026-09-23:
+- Beta cerrada candidata a publicación: `BETA 1.1.171` en rama `beta-1.0`.
+- Desarrollo activo: `DEV 1.1.171` en `main` hasta el siguiente incremento.
 - La antigua `beta-0.0.3` queda como histórico y no debe reutilizarse para despliegues actuales.
 
 Objetivo operativo: una beta estable para testers y una única línea de desarrollo independiente, simple y predecible.
