@@ -17,7 +17,7 @@ Estas reglas prevalecen sobre cualquier costumbre anterior del repositorio.
 
 Estado de versiones desde 2026-09-23:
 - Beta cerrada candidata a publicación: `BETA 1.1.171` en rama `beta-1.0`.
-- Desarrollo activo: `DEV 1.1.171` en `main` hasta el siguiente incremento.
+- Desarrollo activo: `DEV 1.1.172` en `main` (recuperación del acceso x2 postcarrera).
 - La antigua `beta-0.0.3` queda como histórico y no debe reutilizarse para despliegues actuales.
 
 Objetivo operativo: una beta estable para testers y una única línea de desarrollo independiente, simple y predecible.
