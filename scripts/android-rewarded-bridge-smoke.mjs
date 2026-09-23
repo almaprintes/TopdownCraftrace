@@ -52,6 +52,9 @@ assert.match(installer,/showPrivacyOptions/);
 assert.match(instrumentation,/typeof window\.__tdrRewardedAds/);
 assert.match(instrumentation,/native_rewarded_not_configured/);
 assert.match(instrumentation,/scenario\.recreate\(\)/);
+assert.match(instrumentation,/physicalDeviceCompletesAndVerifiesEveryPlacement/);
+assert.match(instrumentation,/result\.contains\("\\\"completed\\\":true"\)/);
+assert.match(instrumentation,/result\.contains\("\\\"verified\\\":true"\)/);
 assert.doesNotMatch(`${activity}\n${plugin}`,/addJavascriptInterface|evaluateJavascript/,'rewarded bridge must use Capacitor lifecycle registration, not late WebView injection');
 
 console.log('android rewarded bridge smoke: verified');

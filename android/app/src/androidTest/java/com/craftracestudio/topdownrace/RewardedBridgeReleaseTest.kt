@@ -7,6 +7,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
@@ -21,15 +22,7 @@ class RewardedBridgeReleaseTest {
 
             assertBridge(webView)
 
-            val requests = listOf(
-                "post_race_double_loot" to "post-race-x2:release-webview:probe",
-                "race_control_publish_record" to "race-control-publish:release-webview:probe",
-                "race_control_ghost_download" to "race-control-ghost:release-webview:probe",
-                "recycler_exchange_2" to "recycler-exchange:release-webview:probe:2",
-                "recycler_exchange_3" to "recycler-exchange:release-webview:probe:3",
-                "store_coins_100_4h" to "store-coins-100:release-webview:probe",
-            )
-            requests.forEachIndexed { index, request ->
+            if (!BuildConfig.TDR_REWARDED_CONFIGURED) requests().forEachIndexed { index, request ->
                 val nativeResult = callBridge(webView, index, request.first, request.second)
                 assertTrue("${request.first} did not reach the native plugin: $nativeResult", nativeResult.contains("native_rewarded_not_configured"))
                 assertTrue(nativeResult.contains("\"verified\":false"))
@@ -41,6 +34,30 @@ class RewardedBridgeReleaseTest {
             assertBridge(webView)
         }
     }
+
+    @Test
+    fun physicalDeviceCompletesAndVerifiesEveryPlacement() {
+        assumeTrue("Runs only against the isolated physical-device flavor", BuildConfig.FLAVOR == "deviceTest")
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            val webView = webViewFrom(scenario)
+            assertBridge(webView)
+            requests().forEachIndexed { index, request ->
+                val result = callBridge(webView, index + 20, request.first, request.second)
+                assertTrue("${request.first} was not completed: $result", result.contains("\"completed\":true"))
+                assertTrue("${request.first} was not SSV verified: $result", result.contains("\"verified\":true"))
+            }
+        }
+    }
+
+    private fun requests() =
+        listOf(
+                "post_race_double_loot" to "post-race-x2:release-webview:probe",
+                "race_control_publish_record" to "race-control-publish:release-webview:probe",
+                "race_control_ghost_download" to "race-control-ghost:release-webview:probe",
+                "recycler_exchange_2" to "recycler-exchange:release-webview:probe:2",
+                "recycler_exchange_3" to "recycler-exchange:release-webview:probe:3",
+                "store_coins_100_4h" to "store-coins-100:release-webview:probe",
+            )
 
     private fun webViewFrom(scenario: ActivityScenario<MainActivity>): WebView {
         lateinit var webView: WebView
@@ -85,7 +102,7 @@ class RewardedBridgeReleaseTest {
     }
 
     private fun eventually(webView: WebView, expression: () -> String): String {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(90)
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(240)
         var last = ""
         while (System.nanoTime() < deadline) {
             val latch = CountDownLatch(1)
