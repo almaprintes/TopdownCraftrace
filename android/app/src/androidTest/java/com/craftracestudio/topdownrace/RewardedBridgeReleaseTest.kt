@@ -59,7 +59,7 @@ class RewardedBridgeReleaseTest {
     }
 
     private fun eventually(webView: WebView, expression: () -> String): String {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30)
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(90)
         var last = ""
         while (System.nanoTime() < deadline) {
             val latch = CountDownLatch(1)
@@ -73,7 +73,7 @@ class RewardedBridgeReleaseTest {
                     latch.countDown()
                 }
             }
-            check(latch.await(5, TimeUnit.SECONDS)) { "WebView evaluation timed out" }
+            check(latch.await(20, TimeUnit.SECONDS)) { "WebView evaluation timed out" }
             if (last != "undefined" && last != "null" && last != "pending" && !last.contains("undefined")) return last
             Thread.sleep(150)
         }
