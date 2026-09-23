@@ -17,37 +17,63 @@ class RewardedBridgeReleaseTest {
     @Test
     fun releaseWebViewExposesBridgeAndCallsNativePlugin() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            lateinit var webView: WebView
-            scenario.onActivity { activity ->
-                webView = requireNotNull(findWebView(activity.window.decorView)) {
-                    "Capacitor WebView not found in the release Activity"
-                }
+            var webView = webViewFrom(scenario)
+
+            assertBridge(webView)
+
+            val requests = listOf(
+                "post_race_double_loot" to "post-race-x2:release-webview:probe",
+                "race_control_publish_record" to "race-control-publish:release-webview:probe",
+                "race_control_ghost_download" to "race-control-ghost:release-webview:probe",
+                "recycler_exchange_2" to "recycler-exchange:release-webview:probe:2",
+                "recycler_exchange_3" to "recycler-exchange:release-webview:probe:3",
+                "store_coins_100_4h" to "store-coins-100:release-webview:probe",
+            )
+            requests.forEachIndexed { index, request ->
+                val nativeResult = callBridge(webView, index, request.first, request.second)
+                assertTrue("${request.first} did not reach the native plugin: $nativeResult", nativeResult.contains("native_rewarded_not_configured"))
+                assertTrue(nativeResult.contains("\"verified\":false"))
+                assertTrue(nativeResult.contains("\"completed\":false"))
             }
 
-            val bridgeTypes = eventually(webView) {
-                "typeof window.__tdrRewardedAds+'|'+typeof window.__tdrRewardedAds?.show"
-            }
-            assertEquals("object|function", bridgeTypes)
-
-            val nativeResult = eventually(webView) {
-                """(()=>{
-                  const key='tdrRewardedNativeProbe';
-                  if(!document.documentElement.dataset[key]){
-                    document.documentElement.dataset[key]='pending';
-                    window.__tdrRewardedAds.show({
-                      placement:'post_race_double_loot',
-                      claimId:'post-race-x2:release-webview:probe'
-                    }).then(result=>document.documentElement.dataset[key]=JSON.stringify(result))
-                      .catch(error=>document.documentElement.dataset[key]=JSON.stringify({reason:String(error?.message||error)}));
-                  }
-                  return document.documentElement.dataset[key];
-                })()"""
-            }
-            assertTrue(nativeResult.contains("native_rewarded_not_configured"))
-            assertTrue(nativeResult.contains("\"verified\":false"))
-            assertTrue(nativeResult.contains("\"completed\":false"))
+            scenario.recreate()
+            webView = webViewFrom(scenario)
+            assertBridge(webView)
         }
     }
+
+    private fun webViewFrom(scenario: ActivityScenario<MainActivity>): WebView {
+        lateinit var webView: WebView
+        scenario.onActivity { activity ->
+            webView = requireNotNull(findWebView(activity.window.decorView)) {
+                "Capacitor WebView not found in the release Activity"
+            }
+        }
+        return webView
+    }
+
+    private fun assertBridge(webView: WebView) {
+        val bridgeTypes = eventually(webView) {
+            "typeof window.__tdrRewardedAds+'|'+typeof window.__tdrRewardedAds?.show"
+        }
+        assertEquals("object|function", bridgeTypes)
+    }
+
+    private fun callBridge(webView: WebView, index: Int, placement: String, claimId: String): String =
+        eventually(webView) {
+            """(()=>{
+              const key='tdrRewardedNativeProbe$index';
+              if(!document.documentElement.dataset[key]){
+                document.documentElement.dataset[key]='pending';
+                window.__tdrRewardedAds.show({
+                  placement:'$placement',
+                  claimId:'$claimId'
+                }).then(result=>document.documentElement.dataset[key]=JSON.stringify(result))
+                  .catch(error=>document.documentElement.dataset[key]=JSON.stringify({reason:String(error?.message||error)}));
+              }
+              return document.documentElement.dataset[key];
+            })()"""
+        }
 
     private fun findWebView(view: View): WebView? {
         if (view is WebView) return view

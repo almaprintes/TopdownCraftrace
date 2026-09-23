@@ -8,5 +8,6 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(TdrRewardedAdsPlugin.class);
         super.onCreate(savedInstanceState);
+        TdrAdsConsentManager.get(getApplication()).prepare(this, snapshot -> kotlin.Unit.INSTANCE);
     }
 }

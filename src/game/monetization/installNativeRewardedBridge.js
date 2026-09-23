@@ -29,6 +29,7 @@ export async function installNativeRewardedBridge(){
           claimId:String(options?.claimId||'')
         });
       },
+      showPrivacyOptions(){return RewardedAdsPlugin.showPrivacyOptions();},
       diagnostics(){return RewardedAdsPlugin.getStatus();}
     });
     Object.defineProperty(window,'__tdrRewardedAds',{
@@ -37,7 +38,7 @@ export async function installNativeRewardedBridge(){
       writable:false,
       value:bridge
     });
-    const detail={installed:true,configured:status?.configured===true,releaseBuild:status?.releaseBuild===true,placementCount:Number(status?.placementCount)||0};
+    const detail={installed:true,configured:status?.configured===true,releaseBuild:status?.releaseBuild===true,placementCount:Number(status?.placementCount)||0,consentUpdateCompleted:status?.consentUpdateCompleted===true,consentCanRequestAds:status?.consentCanRequestAds===true,adsInitialized:status?.adsInitialized===true};
     console.info('[TDR rewarded bridge]',detail);
     emitStatus(detail);
     return detail;

@@ -17,7 +17,7 @@ Estas reglas prevalecen sobre cualquier costumbre anterior del repositorio.
 
 Estado de versiones desde 2026-09-23:
 - Beta cerrada candidata a publicación: `BETA 1.1.173` en rama `beta-1.0`.
-- Desarrollo activo: `DEV 1.1.175` en `main` (wrapper Android versionado y bridge rewarded Capacitor registrado antes de crear el WebView; validación física de anuncios/SSV aún obligatoria).
+- Desarrollo activo: `DEV 1.1.176` en `main` (bridge rewarded Capacitor registrado antes del WebView y anuncios bloqueados por Google UMP hasta `canRequestAds`; validación física de anuncios/SSV aún obligatoria).
 - La antigua `beta-0.0.3` queda como histórico y no debe reutilizarse para despliegues actuales.
 
 Objetivo operativo: una beta estable para testers y una única línea de desarrollo independiente, simple y predecible.

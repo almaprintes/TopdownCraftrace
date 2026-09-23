@@ -1,4 +1,4 @@
-# DEV 1.1.175 — rewarded Android release bridge
+# DEV 1.1.176 — rewarded Android release bridge and consent gate
 
 ## Incident
 
@@ -8,7 +8,9 @@ The Android wrapper used to build that AAB was not present in `main`, `beta-1.0`
 
 ## Source-controlled replacement
 
-DEV 1.1.175 versions the complete Capacitor Android wrapper. `MainActivity` registers `TdrRewardedAdsPlugin` before `super.onCreate`, so Capacitor knows the plugin before creating/loading the WebView. `src/main.js` awaits `installNativeRewardedBridge()` before constructing the first Phaser scene. The installer calls the native `getStatus` method and defines `window.__tdrRewardedAds` only after the native plugin answers. Every Activity/WebView recreation repeats both registration and installation.
+DEV 1.1.176 versions the complete Capacitor Android wrapper. `MainActivity` registers `TdrRewardedAdsPlugin` before `super.onCreate`, so Capacitor knows the plugin before creating/loading the WebView. `src/main.js` awaits `installNativeRewardedBridge()` before constructing the first Phaser scene. The installer calls the native `getStatus` method and defines `window.__tdrRewardedAds` only after the native plugin answers. Every Activity/WebView recreation repeats both registration and installation.
+
+`TdrAdsConsentManager` now owns Google UMP and Mobile Ads startup. The bridge remains available while consent is being resolved, but the native `show` route waits for UMP and cannot load an ad unless `canRequestAds()` is true and Mobile Ads initialization has completed. The in-game privacy action calls the native UMP privacy options form.
 
 The native `show({ placement, claimId })` implementation:
 
@@ -34,4 +36,4 @@ The test does **not** prove a real production ad impression or SSV. Those requir
 
 ## Publication boundary
 
-Do not promote DEV 1.1.175 or upload an AAB based only on the bridge test. Before a Play upload, provide the three production public values, build the signed `productionRelease`, install it on a registered test device, confirm the bridge diagnostics, and exercise every placement through a real completed ad and RevenueCat verification. Preserve the existing web claim idempotency checks.
+Do not promote DEV 1.1.176 or upload an AAB based only on the bridge test. Before a Play upload, provide the three production public values, build the signed `productionRelease`, install it on a registered test device, confirm the bridge diagnostics, and exercise every placement through a real completed ad and RevenueCat verification. Preserve the existing web claim idempotency checks.

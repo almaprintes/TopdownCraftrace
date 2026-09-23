@@ -2,7 +2,7 @@
 
 ## ACTUALIZACIÓN 23/09/2026 — BRIDGE REWARDED ANDROID VERSIONADO
 
-DEV 1.1.175 incorpora por primera vez al repositorio el wrapper Capacitor Android completo y registra `TdrRewardedAdsPlugin` antes de crear el WebView. El bootstrap web espera la respuesta nativa antes de crear escenas y solo entonces publica `window.__tdrRewardedAds`; cierres, errores o SSV sin recompensa verificada continúan fallando sin concesión.
+DEV 1.1.176 conserva el wrapper Capacitor Android versionado y registra `TdrRewardedAdsPlugin` antes de crear el WebView. El bootstrap web espera la respuesta nativa antes de crear escenas y solo entonces publica `window.__tdrRewardedAds`. Google UMP se resuelve antes de inicializar/cargar AdMob y `show()` falla cerrado si `canRequestAds()` no autoriza anuncios; cierres, errores o SSV sin recompensa verificada continúan sin concesión.
 
 La CI compila y ejecuta una variante release minificada específica que comprueba dentro del WebView los tipos del global y realiza un viaje JS → plugin nativo → JS sin recompensa simulada. La configuración production ahora es obligatoria al generar su release. El AAB versionCode 4 y su wrapper local anterior no estaban disponibles, por lo que no existe verificación binaria retrospectiva ni prueba real AdMob/SSV en este entorno. Alcance, archivos y frontera de publicación: `docs/continuity/2026-09-23-android-rewarded-release-bridge.md`.
 

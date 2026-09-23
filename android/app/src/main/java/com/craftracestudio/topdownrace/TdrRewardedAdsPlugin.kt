@@ -36,13 +36,38 @@ class TdrRewardedAdsPlugin : Plugin() {
 
     @PluginMethod
     fun getStatus(call: PluginCall) {
+        val consent = consentManager().snapshot()
         val result = JSObject()
         result.put("bridgeReady", true)
         result.put("configured", BuildConfig.TDR_REWARDED_CONFIGURED)
         result.put("releaseBuild", BuildConfig.BUILD_TYPE == "release")
         result.put("placementCount", RewardedRequestPolicy.placements().size)
         result.put("versionName", BuildConfig.VERSION_NAME)
+        result.put("consentUpdateCompleted", consent.updateCompleted)
+        result.put("consentCanRequestAds", consent.canRequestAds)
+        result.put("privacyOptionsRequired", consent.privacyOptionsRequired)
+        result.put("adsInitialized", consent.adsInitialized)
+        if (consent.reason != null) result.put("consentReason", consent.reason)
+        Log.i(
+            TAG,
+            "bridge_status ready=true configured=${BuildConfig.TDR_REWARDED_CONFIGURED} " +
+                "release=${BuildConfig.BUILD_TYPE == "release"} placements=${RewardedRequestPolicy.placements().size} " +
+                "consent_complete=${consent.updateCompleted} can_request_ads=${consent.canRequestAds} " +
+                "ads_initialized=${consent.adsInitialized}",
+        )
         call.resolve(result)
+    }
+
+    @PluginMethod
+    fun showPrivacyOptions(call: PluginCall) {
+        consentManager().showPrivacyOptions(activity) { consent ->
+            val result = JSObject()
+            result.put("shown", consent.reason == null)
+            result.put("canRequestAds", consent.canRequestAds)
+            result.put("privacyOptionsRequired", consent.privacyOptionsRequired)
+            if (consent.reason != null) result.put("reason", consent.reason)
+            call.resolve(result)
+        }
     }
 
     @PluginMethod
@@ -76,8 +101,18 @@ class TdrRewardedAdsPlugin : Plugin() {
         val attempt = activeAttempt ?: return
         Log.i(TAG, "attempt=${attempt.id.take(8)} placement=${attempt.placement} claim=${attempt.claimHash} load")
         mainHandler.postDelayed({ finish(attempt, false, false, "native_watchdog_timeout") }, WATCHDOG_MS)
-        activity.runOnUiThread { loadAndShow(attempt) }
+        consentManager().prepare(activity) { consent ->
+            if (!isActive(attempt)) return@prepare
+            if (!consent.canRequestAds || !consent.adsInitialized) {
+                finish(attempt, false, false, consent.reason ?: "ads_consent_unavailable")
+                return@prepare
+            }
+            activity.runOnUiThread { loadAndShow(attempt) }
+        }
     }
+
+    private fun consentManager(): TdrAdsConsentManager =
+        TdrAdsConsentManager.get(activity.application)
 
     private fun loadAndShow(attempt: Attempt) {
         try {
