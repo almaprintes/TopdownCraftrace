@@ -10,6 +10,8 @@ walk(root);
 
 const relative=files.map(file=>path.relative(root,file).replaceAll('\\','/'));
 if(relative.some(file=>file==='tool'||file.startsWith('tool/')))throw new Error('Production bundle contains public/tool');
+const ignitionAsset='assets/audio/engine/ignition/car_engine_start.wav';
+if(!relative.includes(ignitionAsset))throw new Error(`Production bundle is missing local ignition audio: ${ignitionAsset}`);
 
 const text=files.filter(file=>/\.(?:js|html|css|json|webmanifest)$/i.test(file)).map(file=>fs.readFileSync(file,'utf8')).join('\n');
 const forbidden=[
@@ -18,7 +20,17 @@ const forbidden=[
 ];
 for(const token of forbidden)if(text.includes(token))throw new Error(`Production bundle contains forbidden DEV token: ${token}`);
 
-const required=['activate_shipaton_judge_access','post_race_double_loot','store_coins_100_4h'];
+const required=[
+  'activate_shipaton_judge_access',
+  'post_race_double_loot',
+  'race_control_publish_record',
+  'race_control_ghost_download',
+  'recycler_exchange_2',
+  'recycler_exchange_3',
+  'store_coins_100_4h',
+  'tdr-x2-button',
+  'car_engine_start.wav'
+];
 for(const token of required)if(!text.includes(token))throw new Error(`Production bundle is missing required public feature: ${token}`);
 
 console.log(`PROD BUNDLE SMOKE OK · ${relative.length} files · Admin/tools excluded · Judge/rewarded retained`);

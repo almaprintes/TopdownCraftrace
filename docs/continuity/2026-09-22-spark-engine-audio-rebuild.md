@@ -1,5 +1,9 @@
 # HÉLIX Spark — auditoría y reconstrucción del audio de motor
 
+> Nota de continuidad: el evento común de ignición CC0 añadido en DEV 1.1.173 se
+> documenta en `2026-09-23-real-ignition-audio.md`. Es un sample de arranque previo
+> al motor del coche y no sustituye ni modifica este banco RPM del Spark.
+
 Fecha: 22/09/2026
 Versión: DEV 1.1.166
 

@@ -15,6 +15,10 @@ import {
 
 const SETTINGS_KEY = 'tdr2:settings';
 const UPDATE_MS = 40;
+export const IGNITION_TO_LIGHTS_MS = 930;
+const IGNITION_ENGINE_FADE_START_MS = 520;
+const IGNITION_ENGINE_FADE_END_MS = 900;
+const IGNITION_ASSET = 'assets/audio/engine/ignition/car_engine_start.wav';
 const SPARK_ASSETS = [
   'assets/audio/engine/spark/loop_0.wav',
   'assets/audio/engine/spark/loop_1_0.wav',
@@ -26,6 +30,7 @@ const SPARK_ASSETS = [
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 let sparkBytesPromise = null;
+let ignitionBytesPromise = null;
 
 function preferences() {
   try {
@@ -61,6 +66,17 @@ function preloadSparkBytes() {
       });
   }
   return sparkBytesPromise;
+}
+
+function preloadIgnitionBytes() {
+  if (!ignitionBytesPromise) {
+    ignitionBytesPromise = fetchArrayBuffer(publicAssetUrl(IGNITION_ASSET))
+      .catch(error => {
+        ignitionBytesPromise = null;
+        throw error;
+      });
+  }
+  return ignitionBytesPromise;
 }
 
 function decodeAudioData(context, bytes) {
@@ -127,11 +143,18 @@ export class CarEngineSampleRuntime {
     this._graphPromise = null;
     this._sparkBufferPromise = null;
     this._sparkBufferContext = null;
+    this._ignitionBufferPromise = null;
+    this._ignitionBufferContext = null;
+    this._ignitionSource = null;
+    this._ignitionGain = null;
+    this._engineFadeStartAt = 0;
+    this._engineFadeEndAt = 0;
     this._sparkTopKmh = Math.max(30, attainableTopSpeedKmh(scene?.carParams || {}, 40) || 60);
     this._contextRecovery = () => this._resumeContext('lifecycle');
 
     // Fetch and decode before the ignition gesture whenever the platform permits
     // it. The context remains silent/suspended until ARRANCAR MOTOR resumes it.
+    this._prepareIgnitionSample();
     if (this._usesRpmBank()) this._prepareSparkBank();
   }
 
@@ -212,6 +235,29 @@ export class CarEngineSampleRuntime {
       return pending;
     } catch (error) {
       console.warn('[TDR2 engine] RPM bank preload unavailable', error);
+      return null;
+    }
+  }
+
+  _prepareIgnitionSample() {
+    try {
+      const context = this._ensureContext();
+      if (this._ignitionBufferPromise && this._ignitionBufferContext === context) return this._ignitionBufferPromise;
+      this._ignitionBufferContext = context;
+      const pending = preloadIgnitionBytes()
+        .then(bytes => decodeAudioData(context, bytes))
+        .then(buffer => {
+          console.info('[TDR2 ignition] Local CC0 starter decoded', buffer.duration.toFixed(3));
+          return buffer;
+        });
+      this._ignitionBufferPromise = pending;
+      pending.catch(error => {
+        if (this._ignitionBufferPromise === pending) this._ignitionBufferPromise = null;
+        console.warn('[TDR2 ignition] Local starter unavailable; race will continue', error);
+      });
+      return pending;
+    } catch (error) {
+      console.warn('[TDR2 ignition] Starter preload unavailable; race will continue', error);
       return null;
     }
   }
@@ -326,48 +372,43 @@ export class CarEngineSampleRuntime {
     };
   }
 
-  _playStarter() {
+  _playIgnitionSample() {
     const context = this._ctx;
-    if (!context) return;
-    const audio = preferences();
-    const now = context.currentTime;
-    try {
-      const bus = context.createGain();
-      bus.gain.value = audio.mute ? 0 : audio.master * audio.engine;
-      const filter = context.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.value = 420;
-      filter.Q.value = 0.70;
-      const oscillator = context.createOscillator();
-      oscillator.type = 'triangle';
-      const oscillatorGain = context.createGain();
-      const noise = context.createBufferSource();
-      noise.buffer = makeNoiseBuffer(context, 0.55);
-      const noiseFilter = context.createBiquadFilter();
-      noiseFilter.type = 'highpass';
-      noiseFilter.frequency.value = 900;
-      const noiseGain = context.createGain();
-      bus.connect(filter).connect(context.destination);
-      oscillator.connect(oscillatorGain).connect(bus);
-      noise.connect(noiseFilter).connect(noiseGain).connect(bus);
-      oscillator.frequency.setValueAtTime(72, now);
-      oscillator.frequency.exponentialRampToValueAtTime(118, now + 0.34);
-      oscillatorGain.gain.setValueAtTime(0.0001, now);
-      oscillatorGain.gain.exponentialRampToValueAtTime(0.12, now + 0.025);
-      oscillatorGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.44);
-      noiseGain.gain.setValueAtTime(0.0001, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.035, now + 0.018);
-      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.31);
-      oscillator.start(now);
-      noise.start(now);
-      oscillator.stop(now + 0.46);
-      noise.stop(now + 0.48);
-    } catch (error) {
-      console.warn('[TDR2 engine] starter failed', error);
-    }
+    const requestedAt = performance.now();
+    const pending = this._ignitionBufferPromise || this._prepareIgnitionSample();
+    if (!context || !pending) return;
+    pending.then(buffer => {
+      if (!this.scene || !this.engineStarted || this._ctx !== context) return;
+      if (performance.now() - requestedAt > 320) {
+        console.warn('[TDR2 ignition] Starter decode missed the ignition window; skipping sample');
+        return;
+      }
+      const audio = preferences();
+      const now = context.currentTime;
+      const level = audio.mute ? 0 : audio.master * audio.engine * 0.90;
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      source.buffer = buffer;
+      source.connect(gain).connect(context.destination);
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(level, now + 0.025);
+      gain.gain.setValueAtTime(level, now + 0.62);
+      gain.gain.linearRampToValueAtTime(0, now + 0.98);
+      source.onended = () => {
+        try { source.disconnect(); } catch {}
+        try { gain.disconnect(); } catch {}
+        if (this._ignitionSource === source) this._ignitionSource = null;
+        if (this._ignitionGain === gain) this._ignitionGain = null;
+      };
+      this._ignitionSource = source;
+      this._ignitionGain = gain;
+      source.start(now);
+      source.stop(now + Math.min(buffer.duration, 1.0));
+    }).catch(error => console.warn('[TDR2 ignition] Starter playback failed; race will continue', error));
   }
 
   startEngine() {
+    if (this.engineStarted) return;
     this.engineStarted = true;
     this.unlocked = true;
     try {
@@ -377,7 +418,9 @@ export class CarEngineSampleRuntime {
       }
       this._rpm = this._sampleProfile()?.idleRpm || SPARK_IDLE_RPM;
       this._lastUpdate = performance.now();
-      this._playStarter();
+      this._engineFadeStartAt = this._lastUpdate + IGNITION_ENGINE_FADE_START_MS;
+      this._engineFadeEndAt = this._lastUpdate + IGNITION_ENGINE_FADE_END_MS;
+      this._playIgnitionSample();
       if (!this._nodes && !this._graphPromise) {
         this._graphPromise = this._buildGraph()
           .then(() => {
@@ -501,7 +544,10 @@ export class CarEngineSampleRuntime {
     nodes.windFilter.frequency.setTargetAtTime(1120 + speed01 * 2450, now, 0.14);
     nodes.windGain.gain.setTargetAtTime(Math.pow(speed01, 1.8) * 0.010 * audio.effects, now, 0.12);
     const preGrid = this.scene._startState === 'WAIT_ENGINE' || this.scene._startState === 'READY';
-    const engineLevel = (0.64 + rpm01 * 0.18 + load * 0.10) * (preGrid ? 0.72 : 1) * audio.engine;
+    const ignitionFade = this._engineFadeEndAt > this._engineFadeStartAt
+      ? clamp((perfNow - this._engineFadeStartAt) / (this._engineFadeEndAt - this._engineFadeStartAt), 0, 1)
+      : 1;
+    const engineLevel = (0.64 + rpm01 * 0.18 + load * 0.10) * (preGrid ? 0.72 : 1) * audio.engine * ignitionFade;
     nodes.engineBus.gain.setTargetAtTime(engineLevel, now, 0.06);
     nodes.master.gain.setTargetAtTime(audio.mute ? 0 : audio.master * 0.82, now, 0.055);
   }
@@ -511,6 +557,9 @@ export class CarEngineSampleRuntime {
     window.removeEventListener('pageshow', this._contextRecovery);
     window.removeEventListener('focus', this._contextRecovery);
     try { this._nodes?.windNoise?.stop?.(); } catch {}
+    try { this._ignitionSource?.stop?.(); } catch {}
+    try { this._ignitionSource?.disconnect?.(); } catch {}
+    try { this._ignitionGain?.disconnect?.(); } catch {}
     for (const source of this._nodes?.sampleSources || []) {
       try { source.stop?.(); } catch {}
     }
@@ -520,6 +569,10 @@ export class CarEngineSampleRuntime {
     this._graphPromise = null;
     this._sparkBufferPromise = null;
     this._sparkBufferContext = null;
+    this._ignitionBufferPromise = null;
+    this._ignitionBufferContext = null;
+    this._ignitionSource = null;
+    this._ignitionGain = null;
     this._ctx = null;
     this.scene = null;
   }

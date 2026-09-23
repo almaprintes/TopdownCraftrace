@@ -1,7 +1,7 @@
 {
   "name": "top-down-race-2",
   "private": true,
-  "version": "1.1.171",
+  "version": "1.1.173",
   "type": "module",
   "scripts": {
     "predev": "npm run gen:orientation",
@@ -15,6 +15,7 @@
     "check:session-reward-assets": "node scripts/session-reward-assets-smoke.mjs",
     "check:dom-text-selection": "node scripts/dom-text-selection-smoke.mjs",
     "check:spark-engine-audio": "node scripts/spark-engine-audio-smoke.mjs",
+    "check:ignition-audio": "node scripts/ignition-audio-smoke.mjs",
     "check:spark-longitudinal": "node scripts/spark-longitudinal-smoke.mjs",
     "check:rewarded-access": "node scripts/rewarded-access-smoke.mjs",
     "check:track-beauty-identity": "node scripts/track-beauty-identity-smoke.mjs",
@@ -22,7 +23,7 @@
     "gen:icons": "node scripts/generate-icons.mjs",
     "gen:orientation": "node scripts/generate-orientation-runtime.mjs",
     "bake:track": "node scripts/bake-track-visual.mjs",
-    "prebuild": "npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:track-beauty-identity && npm run gen:icons && npm run gen:orientation"
+    "prebuild": "npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:ignition-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:track-beauty-identity && npm run gen:icons && npm run gen:orientation"
   },
   "dependencies": {
     "phaser": "^3.90.0"

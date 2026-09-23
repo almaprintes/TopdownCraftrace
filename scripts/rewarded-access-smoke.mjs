@@ -40,6 +40,15 @@ const accepted=await provider.showRewardedAd(null,{placement:'test',claimId:'cla
 assert.equal(accepted.completed,true);
 assert.equal(accepted.verified,true);
 
+const sessionRewardsSource=await readFile(new URL('../src/game/scenes/RaceSessionRewardsScene.js',import.meta.url),'utf8');
+assert.match(sessionRewardsSource,/mountRaceSessionRewards/,'shipping session rewards must use the canonical x2-capable UI');
+assert.match(sessionRewardsSource,/REWARDED_PLACEMENTS\.POST_RACE_DOUBLE_LOOT/,'shipping post-race screen must expose the x2 placement');
+assert.match(sessionRewardsSource,/claimPostRaceDoubleLoot/,'shipping post-race screen must grant the protected x2 claim');
+assert.match(sessionRewardsSource,/verifiedReward\(ad\)/,'shipping post-race x2 must require verified rewarded completion');
+const sessionUiSource=await readFile(new URL('../src/game/ui/raceSessionUi.js',import.meta.url),'utf8');
+assert.match(sessionUiSource,/data-a="double"/,'canonical session UI must render the x2 button');
+assert.match(sessionUiSource,/tdr-x2-button/,'canonical cinematic x2 button styling hook must remain present');
+
 const publishSource=await readFile(new URL('../src/game/scenes/StatsBroadcastScene.js',import.meta.url),'utf8');
 assert.match(publishSource,/RACE_CONTROL_PUBLISH/);
 assert.match(publishSource,/getRaceControlSnapshot\(selected\.trackId\)/,'publishing must refresh the selected leaderboard');
