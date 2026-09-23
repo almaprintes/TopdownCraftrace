@@ -5,6 +5,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.rewarded.RewardedAd
+import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -15,6 +19,37 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class RewardedBridgeReleaseTest {
+    @Test
+    fun physicalDeviceLoadsWithoutShowingForRegistration() {
+        assumeTrue("Runs only against the isolated physical-device flavor", BuildConfig.FLAVOR == "deviceTest")
+        val callback = CountDownLatch(1)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                TdrAdsConsentManager.get(activity.application).prepare(activity) { consent ->
+                    if (!consent.canRequestAds || !consent.adsInitialized) {
+                        callback.countDown()
+                        return@prepare
+                    }
+                    RewardedAd.load(
+                        activity,
+                        BuildConfig.TDR_REWARDED_AD_UNIT_ID,
+                        AdRequest.Builder().build(),
+                        object : RewardedAdLoadCallback() {
+                            override fun onAdLoaded(ad: RewardedAd) {
+                                callback.countDown()
+                            }
+
+                            override fun onAdFailedToLoad(error: LoadAdError) {
+                                callback.countDown()
+                            }
+                        },
+                    )
+                }
+            }
+            assertTrue("AdMob registration probe timed out", callback.await(120, TimeUnit.SECONDS))
+        }
+    }
+
     @Test
     fun releaseWebViewExposesBridgeAndCallsNativePlugin() {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->

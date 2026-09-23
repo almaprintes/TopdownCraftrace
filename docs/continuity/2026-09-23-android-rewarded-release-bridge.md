@@ -14,6 +14,7 @@ DEV 1.1.176 versions the complete Capacitor Android wrapper. `MainActivity` regi
 
 The `deviceTestRelease` flavor uses the production public AdMob/RevenueCat configuration with an isolated `.rewardedtest` application id. It can therefore coexist with the Google Play installation. `TDR_ADMOB_TEST_DEVICE_IDS` is accepted only by that flavor so a physical handset can be registered as a test device without shipping its identifier in `productionRelease`.
 Its instrumented physical-device test calls all six production placement names sequentially and requires each native result to contain both `completed=true` and `verified=true`. It does not execute the web claim functions, so the diagnostic run cannot grant coins, materials, records, ghosts, or doubled loot.
+The separate registration probe loads but never shows the production rewarded unit. Its only purpose is to let Google Mobile Ads print the handset's test-device identifier before the six-ad run; no impression or reward is produced by that probe.
 
 The native `show({ placement, claimId })` implementation:
 
