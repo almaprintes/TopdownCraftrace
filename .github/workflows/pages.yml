@@ -56,7 +56,7 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build:prod
           grep -q "BETA 1\.1\.171 closed-test release candidate" dist/index.html
-          test "$(grep -o '<span>BETA 1\.1\.</span><span>172</span>' dist/index.html | wc -l | tr -d ' ')" = "2"
+          test "$(grep -o '<span>BETA 1\.1\.</span><span>171</span>' dist/index.html | wc -l | tr -d ' ')" = "2"
           if grep -q "DEV 1\.1\.172" dist/index.html; then echo "DEV identity leaked into beta"; exit 1; fi
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
