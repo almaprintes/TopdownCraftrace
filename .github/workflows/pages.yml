@@ -56,8 +56,8 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build:prod
           grep -q "BETA 1\.1\.171 closed-test release candidate" dist/index.html
-          test "$(grep -o '<span>BETA 1\.1\.</span><span>171</span>' dist/index.html | wc -l | tr -d ' ')" = "2"
-          if grep -q "DEV 1\.1\.171" dist/index.html; then echo "DEV identity leaked into beta"; exit 1; fi
+          test "$(grep -o '<span>BETA 1\.1\.</span><span>172</span>' dist/index.html | wc -l | tr -d ' ')" = "2"
+          if grep -q "DEV 1\.1\.172" dist/index.html; then echo "DEV identity leaked into beta"; exit 1; fi
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Checkout development
@@ -104,7 +104,7 @@ jobs:
           node scripts/spark-longitudinal-smoke.mjs
           node scripts/rewarded-access-smoke.mjs
           node scripts/track-beauty-identity-smoke.mjs
-          grep -q "DEV 1\.1\.171 visible development version" index.html
+          grep -q "DEV 1\.1\.172 visible development version" index.html
           grep -q "start_red.webp" src/game/scenes/RaceCleanStartLightsScene.js
           grep -q "Surface physics only" src/game/scenes/RaceSurfaceProfileScene.js
           if grep -q "setTexture?.('off')" src/game/scenes/RaceSurfaceProfileScene.js; then exit 1; fi
@@ -115,8 +115,8 @@ jobs:
         shell: bash
         run: |
           echo "Deploying commit: $(git rev-parse HEAD)"
-          grep -n "DEV 1\.1\.171 visible development version" index.html
-          test "$(grep -o '<span>DEV 1\.1\.</span><span>171</span>' index.html | wc -l | tr -d ' ')" = "2"
+          grep -n "DEV 1\.1\.172 visible development version" index.html
+          test "$(grep -o '<span>DEV 1\.1\.</span><span>172</span>' index.html | wc -l | tr -d ' ')" = "2"
       - name: Audit hardcoded interface text
         working-directory: dev-src
         run: node scripts/audit-i18n-hardcoded.mjs
@@ -149,7 +149,7 @@ jobs:
       - name: Assemble public beta plus DEV
         shell: bash
         run: |
-          printf 'DEV_SOURCE_SHA=%s\nDEV_VERSION=1.1.171\n' "${GITHUB_SHA}" > dev-src/dist/dev-build.txt
+          printf 'DEV_SOURCE_SHA=%s\nDEV_VERSION=1.1.172\n' "${GITHUB_SHA}" > dev-src/dist/dev-build.txt
           rm -rf beta/dist/dev beta/dist/dev-live
           mkdir -p beta/dist/dev beta/dist/dev-live
           cp -R dev-src/dist/. beta/dist/dev/
@@ -161,12 +161,12 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          grep -q 'DEV_VERSION=1.1.171' beta/dist/dev/dev-build.txt
-          grep -q 'DEV_VERSION=1.1.171' beta/dist/dev-live/dev-build.txt
-          grep -q 'DEV 1\.1\.171 visible development version' beta/dist/dev/index.html
-          grep -q 'DEV 1\.1\.171 visible development version' beta/dist/dev-live/index.html
-          test "$(grep -o '<span>DEV 1\.1\.</span><span>171</span>' beta/dist/dev/index.html | wc -l | tr -d ' ')" = "2"
-          test "$(grep -o '<span>DEV 1\.1\.</span><span>171</span>' beta/dist/dev-live/index.html | wc -l | tr -d ' ')" = "2"
+          grep -q 'DEV_VERSION=1.1.172' beta/dist/dev/dev-build.txt
+          grep -q 'DEV_VERSION=1.1.172' beta/dist/dev-live/dev-build.txt
+          grep -q 'DEV 1\.1\.172 visible development version' beta/dist/dev/index.html
+          grep -q 'DEV 1\.1\.172 visible development version' beta/dist/dev-live/index.html
+          test "$(grep -o '<span>DEV 1\.1\.</span><span>172</span>' beta/dist/dev/index.html | wc -l | tr -d ' ')" = "2"
+          test "$(grep -o '<span>DEV 1\.1\.</span><span>172</span>' beta/dist/dev-live/index.html | wc -l | tr -d ' ')" = "2"
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
