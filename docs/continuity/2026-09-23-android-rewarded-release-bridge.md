@@ -12,6 +12,8 @@ DEV 1.1.176 versions the complete Capacitor Android wrapper. `MainActivity` regi
 
 `TdrAdsConsentManager` now owns Google UMP and Mobile Ads startup. The bridge remains available while consent is being resolved, but the native `show` route waits for UMP and cannot load an ad unless `canRequestAds()` is true and Mobile Ads initialization has completed. The in-game privacy action calls the native UMP privacy options form.
 
+The `deviceTestRelease` flavor uses the production public AdMob/RevenueCat configuration with an isolated `.rewardedtest` application id. It can therefore coexist with the Google Play installation. `TDR_ADMOB_TEST_DEVICE_IDS` is accepted only by that flavor so a physical handset can be registered as a test device without shipping its identifier in `productionRelease`.
+
 The native `show({ placement, claimId })` implementation:
 
 - accepts only the six known placements and their claim-id forms;

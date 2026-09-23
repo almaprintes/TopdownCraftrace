@@ -11,6 +11,7 @@ def quoted = { String value -> '"' + value.replace('\\', '\\\\').replace('"', '\
 def admobAppId = configuredValue('TDR_ADMOB_APP_ID')
 def rewardedAdUnitId = configuredValue('TDR_ADMOB_REWARDED_UNIT_ID')
 def revenueCatPublicKey = configuredValue('TDR_REVENUECAT_PUBLIC_SDK_KEY')
+def admobTestDeviceIds = configuredValue('TDR_ADMOB_TEST_DEVICE_IDS')
 def productionConfigured = admobAppId.startsWith('ca-app-pub-') &&
         rewardedAdUnitId.startsWith('ca-app-pub-') &&
         revenueCatPublicKey.length() > 8
@@ -63,6 +64,7 @@ android {
             buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted(rewardedAdUnitId)
             buildConfigField 'String', 'TDR_REVENUECAT_PUBLIC_SDK_KEY', quoted(revenueCatPublicKey)
             buildConfigField 'boolean', 'TDR_REWARDED_CONFIGURED', String.valueOf(productionConfigured)
+            buildConfigField 'String', 'TDR_ADMOB_TEST_DEVICE_IDS', quoted('')
         }
         bridgeTest {
             dimension 'environment'
@@ -72,6 +74,17 @@ android {
             buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted('ca-app-pub-3940256099942544/5224354917')
             buildConfigField 'String', 'TDR_REVENUECAT_PUBLIC_SDK_KEY', quoted('')
             buildConfigField 'boolean', 'TDR_REWARDED_CONFIGURED', 'false'
+            buildConfigField 'String', 'TDR_ADMOB_TEST_DEVICE_IDS', quoted('')
+        }
+        deviceTest {
+            dimension 'environment'
+            applicationIdSuffix '.rewardedtest'
+            versionNameSuffix '-rewarded-test'
+            manifestPlaceholders = [ADMOB_APP_ID: admobAppId ?: 'missing-production-admob-app-id']
+            buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted(rewardedAdUnitId)
+            buildConfigField 'String', 'TDR_REVENUECAT_PUBLIC_SDK_KEY', quoted(revenueCatPublicKey)
+            buildConfigField 'boolean', 'TDR_REWARDED_CONFIGURED', String.valueOf(productionConfigured)
+            buildConfigField 'String', 'TDR_ADMOB_TEST_DEVICE_IDS', quoted(admobTestDeviceIds)
         }
     }
     buildFeatures {

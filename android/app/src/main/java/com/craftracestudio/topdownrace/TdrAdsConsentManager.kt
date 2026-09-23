@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Application
 import android.util.Log
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
@@ -132,6 +133,18 @@ class TdrAdsConsentManager private constructor(application: Application) {
             return
         }
         if (!shouldInitialize) return
+        val testDeviceIds = BuildConfig.TDR_ADMOB_TEST_DEVICE_IDS
+            .split(',')
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        if (testDeviceIds.isNotEmpty()) {
+            MobileAds.setRequestConfiguration(
+                RequestConfiguration.Builder()
+                    .setTestDeviceIds(testDeviceIds)
+                    .build(),
+            )
+            Log.i(TAG, "admob_test_devices=${testDeviceIds.size}")
+        }
         MobileAds.initialize(app) { status ->
             synchronized(this) { adsInitialized = true }
             Log.i(TAG, "admob_initialized adapters=${status.adapterStatusMap.size}")
