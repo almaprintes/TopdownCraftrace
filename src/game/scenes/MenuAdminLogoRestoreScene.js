@@ -1,6 +1,7 @@
 import { MenuScene as CurrentMenuScene } from './MenuTrackNameFitScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage, getEquippedForCar } from '../garage/garageStore.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 
 const EVENT_MATERIAL_ASSETS={
   scrap:'chatarra.webp',
@@ -38,7 +39,7 @@ export class MenuScene extends CurrentMenuScene {
 
   renderUI(){
     super.renderUI();
-    this._restoreAdminLogoAccess();
+    if(!IS_PROD_BUILD)this._restoreAdminLogoAccess();
   }
 
   _openLobbyInventoryModal(tab='materials',page=0){
@@ -178,6 +179,7 @@ export class MenuScene extends CurrentMenuScene {
   }
 
   _restoreAdminLogoAccess(){
+    if(IS_PROD_BUILD)return;
     const ui=this._ui;
     if(!ui)return;
 

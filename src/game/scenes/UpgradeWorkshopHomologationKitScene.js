@@ -1,18 +1,20 @@
 import { UpgradeShopScene as PreviousWorkshop } from './UpgradeWorkshopInventorySizingScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { qty, saveGarage } from '../garage/garageStore.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 const PART_IDS=Object.keys(GARAGE_ITEMS).filter(id=>GARAGE_ITEMS[id]?.kind==='part');
 
 function isAdminMode(){
+  if(IS_PROD_BUILD)return false;
   try{return localStorage.getItem('tdr2:admin')==='1';}catch{return false;}
 }
 
 export class UpgradeShopScene extends PreviousWorkshop {
   _header(A,w,compact){
     super._header(A,w,compact);
-    if(!isAdminMode())return;
+    if(IS_PROD_BUILD||!isAdminMode())return;
 
     const bw=compact?128:176;
     const bh=compact?28:34;

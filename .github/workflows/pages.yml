@@ -102,6 +102,18 @@ jobs:
       - name: Audit hardcoded interface text
         working-directory: dev-src
         run: node scripts/audit-i18n-hardcoded.mjs
+      - name: Verify production candidate boundary
+        working-directory: dev-src
+        shell: bash
+        env:
+          VITE_TDR_ONLINE_URL: ${{ vars.VITE_TDR_ONLINE_URL }}
+          VITE_TDR_ONLINE_PUBLIC: ${{ vars.VITE_TDR_ONLINE_PUBLIC }}
+          BASE: ./
+        run: |
+          test -n "${VITE_TDR_ONLINE_URL}"
+          test -n "${VITE_TDR_ONLINE_PUBLIC}"
+          npm ci --no-audit --no-fund
+          npm run build:prod
       - name: Build development
         working-directory: dev-src
         shell: bash
