@@ -4,7 +4,11 @@ const ROOT_ID='tdr-native-text-layer';
 const STYLE_ID='tdr-native-text-style';
 const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
 
-const PHASER_SCROLL_SCENES=new Set(['GarageScene','TrackGarageScene']);
+// Menu overlays combine text, backgrounds and hit areas in the same Phaser
+// layout. Android WebView can scale the separate HTML text layer differently,
+// which moves labels below their buttons. Keep the complete menu in Phaser so
+// every element shares one transform.
+const PHASER_SCROLL_SCENES=new Set(['GarageScene','TrackGarageScene','menu','MenuScene']);
 function sceneKey(text){try{return String(text?.scene?.sys?.settings?.key||text?.scene?.scene?.key||'');}catch{return '';}}
 function shouldUseHtml(text){return !PHASER_SCROLL_SCENES.has(sceneKey(text));}
 function isRacePreloadOverlay(text){return sceneKey(text)==='race' && finite(text?.depth)>=100000;}

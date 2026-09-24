@@ -17,7 +17,7 @@ Estas reglas prevalecen sobre cualquier costumbre anterior del repositorio.
 
 Estado de versiones desde 2026-09-23:
 - Beta cerrada candidata a publicación: `BETA 1.1.173` en rama `beta-1.0`.
-- Desarrollo activo: `DEV 1.1.177` en `main` (arranque Android independiente de anuncios, rutas locales verificadas y watchdog de bootstrap; validación real de anuncios/SSV aún obligatoria).
+- Desarrollo activo: `DEV 1.1.178` en `main` (arranque Android independiente de anuncios, rutas locales verificadas y watchdog de bootstrap; validación real de anuncios/SSV aún obligatoria).
 - La antigua `beta-0.0.3` queda como histórico y no debe reutilizarse para despliegues actuales.
 
 Objetivo operativo: una beta estable para testers y una única línea de desarrollo independiente, simple y predecible.

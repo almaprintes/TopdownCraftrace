@@ -1,4 +1,5 @@
 import './raceSessionUi.css';
+import { installFreshGestureGuard } from './freshGestureGuard.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 
@@ -19,6 +20,7 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
   const root=document.createElement('div');
   root.className='tdr-session-rewards';
   root.dataset.tdrRaceUi='1';
+  installFreshGestureGuard(root);
   root.dataset.rewardCount=String(entries.length||0);
   root.style.setProperty('--reward-visible',hasChest?'0':'1');
   root.style.setProperty('--reward-transform',hasChest?'translateY(8px)':'none');
