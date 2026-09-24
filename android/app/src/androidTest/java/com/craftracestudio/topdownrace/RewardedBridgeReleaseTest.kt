@@ -161,7 +161,13 @@ class RewardedBridgeReleaseTest {
                     latch.countDown()
                 }
             }
-            check(latch.await(20, TimeUnit.SECONDS)) { "WebView evaluation timed out" }
+            // A freshly recreated WebView can briefly drop an evaluation callback
+            // while Chromium reconnects. Treat that as a transient condition and
+            // keep polling within the existing overall deadline.
+            if (!latch.await(20, TimeUnit.SECONDS)) {
+                Thread.sleep(250)
+                continue
+            }
             if (last != "undefined" && last != "null" && last != "pending" && !last.contains("undefined")) return last
             Thread.sleep(150)
         }

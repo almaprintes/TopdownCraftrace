@@ -40,7 +40,7 @@ assert(plugin.indexOf('consentManager().prepare(activity)')<plugin.indexOf('load
 assert.match(manifest,/com\.google\.android\.gms\.ads\.APPLICATION_ID/);
 assert.match(gradle,/minifyEnabled true/);
 assert.match(gradle,/versionCode 8/);
-assert.match(gradle,/versionName "1\.1\.178"/);
+assert.match(gradle,/versionName "1\.1\.179"/);
 assert.match(gradle,/Production Android build requires TDR_ADMOB_APP_ID/);
 assert.match(gradle,/applicationIdSuffix '\.rewardedtest'/);
 assert.match(gradle,/TDR_ADMOB_TEST_DEVICE_IDS/);
