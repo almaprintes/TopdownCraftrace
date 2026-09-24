@@ -1,6 +1,6 @@
 import './style.css';
 import { createGame } from './game/game.js';
-import { installNativeRewardedBridge } from './game/monetization/installNativeRewardedBridge.js';
+window.__tdrStartupMark?.('main-js');
 
 function showFatal(msg) {
   const el = document.getElementById('app');
@@ -371,7 +371,9 @@ function __tickOrientation() {
   __setOverlayVisible(!landscape);
 
   if (landscape && !__game) {
+    window.__tdrStartupMark?.('phaser-start');
     __game = createGame('app');
+    window.__tdrStartupMark?.('phaser-created');
     __installRaceControlVisuals();
     return;
   }
@@ -382,12 +384,10 @@ function __tickOrientation() {
   }
 }
 
-// On Android, wait for the registered Capacitor plugin to answer before the
-// first scene is created. This makes the bridge deterministic in minified
-// release builds and on Activity/WebView recreation instead of racing a late
-// evaluateJavascript injection against the post-race UI.
-installNativeRewardedBridge().finally(()=>{
-  __tickOrientation();
-  window.addEventListener('resize', __tickOrientation, {passive:true});
-  window.addEventListener('orientationchange', __tickOrientation, {passive:true});
-});
+// Advertising is optional: neither module loading nor a native response gates Phaser.
+__tickOrientation();
+window.addEventListener('resize', __tickOrientation, {passive:true});
+window.addEventListener('orientationchange', __tickOrientation, {passive:true});
+import('./game/monetization/installNativeRewardedBridge.js')
+  .then(({installNativeRewardedBridge})=>installNativeRewardedBridge())
+  .catch(()=>window.__tdrStartupMark?.('bridge-unavailable'));

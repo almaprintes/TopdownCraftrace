@@ -16,6 +16,7 @@ if(!relative.includes(ignitionAsset))throw new Error(`Production bundle is missi
 const text=files.filter(file=>/\.(?:js|html|css|json|webmanifest)$/i.test(file)).map(file=>fs.readFileSync(file,'utf8')).join('\n');
 const forbidden=[
   'AdminHubScene','CarEditorScene','TrackEditorScene','TrackStudioScene','EnvironmentBuilderScene',
+  'tdr2:forceRewardedAdMock','dev-video',
   'tdr2:admin','tdr2:devFullCarAccess','tdr2:devFullTrackAccess','KIT HOMOLOGACIÓN'
 ];
 for(const token of forbidden)if(text.includes(token))throw new Error(`Production bundle contains forbidden DEV token: ${token}`);

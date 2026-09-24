@@ -40,6 +40,20 @@ const accepted=await provider.showRewardedAd(null,{placement:'test',claimId:'cla
 assert.equal(accepted.completed,true);
 assert.equal(accepted.verified,true);
 
+// A persisted DEV toggle and /dev URL must never enable mock rewards in release.
+globalThis.__TDR_PROD_BUILD__=true;
+const savedBridge=window.__tdrRewardedAds;
+delete window.__tdrRewardedAds;
+localStorage.setItem('tdr2:forceRewardedAdMock','1');
+window.location.pathname='/dev/';
+assert.equal(provider.isRewardedAdAvailable(),false);
+assert.equal((await provider.showRewardedAd(null)).verified,false);
+window.__tdrRewardedAds=savedBridge;
+assert.equal(provider.isRewardedAdAvailable(),true);
+localStorage.removeItem('tdr2:forceRewardedAdMock');
+window.location.pathname='/';
+delete globalThis.__TDR_PROD_BUILD__;
+
 const sessionRewardsSource=await readFile(new URL('../src/game/scenes/RaceSessionRewardsScene.js',import.meta.url),'utf8');
 assert.match(sessionRewardsSource,/mountRaceSessionRewards/,'shipping session rewards must use the canonical x2-capable UI');
 assert.match(sessionRewardsSource,/REWARDED_PLACEMENTS\.POST_RACE_DOUBLE_LOOT/,'shipping post-race screen must expose the x2 placement');

@@ -116,6 +116,10 @@ class TdrRewardedAdsPlugin : Plugin() {
 
     private fun loadAndShow(attempt: Attempt) {
         try {
+            if (!(activity.application as TdrApplication).ensureRewardedSdk()) {
+                finish(attempt, false, false, "revenuecat_unavailable")
+                return
+            }
             val lifecycleCallback = object : FullScreenContentCallback() {
                 override fun onAdShowedFullScreenContent() {
                     Log.i(TAG, "attempt=${attempt.id.take(8)} shown")

@@ -45,7 +45,7 @@ export async function installNativeRewardedBridge(){
   }catch(error){
     try{delete window.__tdrRewardedAds;}catch{}
     const detail={installed:false,reason:error?.message||'native_bridge_status_failed'};
-    console.error('[TDR rewarded bridge]',detail);
+    console.warn('[TDR rewarded bridge] unavailable');
     emitStatus(detail);
     return detail;
   }

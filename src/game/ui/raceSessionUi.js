@@ -143,6 +143,10 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
   close?.addEventListener('click',finish);
   document.body.appendChild(root);
   if(!hasChest)requestAnimationFrame(()=>revealDouble());
+  requestAnimationFrame(()=>{
+    const button=doubleBtn?.getBoundingClientRect(),frame=card?.getBoundingClientRect();
+    console.info('[TDR_BOOT] x2_layout='+(!button?'absent':button.bottom>frame.bottom?'clipped':hasChest?'chest-closed':'visible'));
+  });
   return root;
 }
 

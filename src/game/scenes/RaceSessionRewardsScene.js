@@ -39,6 +39,7 @@ export class RaceScene extends CurrentRaceScene {
     if(resultRoot)resultRoot.style.display='none';
     const claimId=this._tdrPostRaceClaimId||(this._tdrPostRaceClaimId=createPostRaceClaimId(summary.trackKey||this.trackKey||'race'));
     const canDouble=entries.length>0&&!this._tdrRaceLootDoubled&&!hasClaimedPostRaceDouble(claimId)&&isRewardedAdAvailable();
+    console.info('[TDR_BOOT] x2_available='+Number(canDouble)+' loot_count='+entries.length+' claimed='+Number(!!this._tdrRaceLootDoubled||hasClaimedPostRaceDouble(claimId))+' bridge='+Number(isRewardedAdAvailable()));
     const root=mountRaceSessionRewards({
       baseUrl:BASE,laps:rewardedLaps,bonusLaps:Number(summary?.bonusLaps)||0,entries,
       resultLabel:resultRoot?t('session.viewResults'):t('session.viewReport'),

@@ -24,7 +24,8 @@
     "gen:icons": "node scripts/generate-icons.mjs",
     "gen:orientation": "node scripts/generate-orientation-runtime.mjs",
     "bake:track": "node scripts/bake-track-visual.mjs",
-    "prebuild": "npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:ignition-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:android-rewarded-bridge && npm run check:track-beauty-identity && npm run gen:icons && npm run gen:orientation"
+    "prebuild": "npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:ignition-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:android-rewarded-bridge && npm run check:track-beauty-identity && npm run gen:icons && npm run gen:orientation",
+    "build:android": "node scripts/build-android.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",

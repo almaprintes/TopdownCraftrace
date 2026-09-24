@@ -58,6 +58,8 @@ this.selectedTrackKey = localStorage.getItem('tdr2:trackKey') || 'track01';
       this.selectedCarId = getFirstPlayableCarId();
     }
 
+    window.__tdrStartupMark?.('local-data-loaded');
+
     // Re-render al cambiar tamaño/orientación
     this.scale.on('resize', () => this.renderUI());
 

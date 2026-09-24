@@ -55,6 +55,7 @@ class RewardedBridgeReleaseTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             var webView = webViewFrom(scenario)
 
+            assertGameReady(webView)
             assertBridge(webView)
 
             if (!BuildConfig.TDR_REWARDED_CONFIGURED) requests().forEachIndexed { index, request ->
@@ -66,6 +67,7 @@ class RewardedBridgeReleaseTest {
 
             scenario.recreate()
             webView = webViewFrom(scenario)
+            assertGameReady(webView)
             assertBridge(webView)
         }
     }
@@ -75,6 +77,7 @@ class RewardedBridgeReleaseTest {
         assumeTrue("Runs only against the isolated physical-device flavor", BuildConfig.FLAVOR == "deviceTest")
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val webView = webViewFrom(scenario)
+            assertGameReady(webView)
             assertBridge(webView)
             requests().forEachIndexed { index, request ->
                 val result = callBridge(webView, index + 20, request.first, request.second)
@@ -102,6 +105,13 @@ class RewardedBridgeReleaseTest {
             }
         }
         return webView
+    }
+
+    private fun assertGameReady(webView: WebView) {
+        val result = eventually(webView) {
+            "window.__tdrStartupState?.ready === true && document.querySelector('#app canvas') && !document.getElementById('tdrStartup') ? 'lobby-ready' : 'pending'"
+        }
+        assertEquals("lobby-ready", result)
     }
 
     private fun assertBridge(webView: WebView) {

@@ -15,9 +15,11 @@ def admobTestDeviceIds = configuredValue('TDR_ADMOB_TEST_DEVICE_IDS')
 def productionConfigured = admobAppId.startsWith('ca-app-pub-') &&
         rewardedAdUnitId.startsWith('ca-app-pub-') &&
         revenueCatPublicKey.length() > 8
-def requestedTasks = gradle.startParameter.taskNames.join(' ').toLowerCase()
-def productionRequested = requestedTasks.contains('production') ||
-        (requestedTasks.contains('release') && !requestedTasks.contains('bridgetest'))
+def productionRequested = gradle.startParameter.taskNames.any { task ->
+    def name = task.toLowerCase()
+    name.contains('production') || name.contains('devicetest') ||
+        (name.contains('release') && !name.contains('bridgetest'))
+}
 
 if (productionRequested && !productionConfigured) {
     throw new GradleException('Production Android build requires TDR_ADMOB_APP_ID, TDR_ADMOB_REWARDED_UNIT_ID and TDR_REVENUECAT_PUBLIC_SDK_KEY.')
@@ -36,8 +38,8 @@ android {
         applicationId "com.craftracestudio.topdownrace"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 6
-        versionName "1.1.176"
+        versionCode 7
+        versionName "1.1.177"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -139,3 +141,22 @@ try {
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
+
+// Fail before packaging if a Pages build was accidentally copied into Capacitor.
+tasks.register('verifyAndroidAssetPaths') {
+    doLast {
+        def webRoot = file('src/main/assets/public')
+        def html = new File(webRoot, 'index.html')
+        if (!html.exists()) throw new GradleException('Run npm run build:android first.')
+        def refs = html.text =~ /<(?:script|link|img)\b[^>]*\b(?:src|href)=["']([^"']+)["']/
+        refs.each { match ->
+            def url = match[1]
+            if (!(url.startsWith('data:') || url.startsWith('https:') || url.startsWith('http:'))) {
+                if (!url.startsWith('./') || !new File(webRoot, url.split('[?#]')[0]).isFile()) {
+                    throw new GradleException('Invalid Android asset URL: ' + url + '. Run npm run build:android.')
+                }
+            }
+        }
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifyAndroidAssetPaths' }

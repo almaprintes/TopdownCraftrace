@@ -8,6 +8,7 @@ const VIDEO_SRC='assets/intro/intro.mp4';
 const NATIVE_TIMEOUT_MS=180000;
 
 function isDevPreview(){
+  if(typeof __TDR_PROD_BUILD__!=='undefined'&&__TDR_PROD_BUILD__)return false;
   try{
     if(localStorage.getItem('tdr2:forceRewardedAdMock')==='1')return true;
     return /(?:^|\/)dev(?:\/|$)/i.test(String(window?.location?.pathname||''));
@@ -99,6 +100,8 @@ function resolvedPlacement(placement,title){
 export async function showRewardedAd(scene,{title='RECOMPENSA PATROCINADA',placement='generic_reward',claimId=null}={}){
   const routedPlacement=resolvedPlacement(placement,title);
   if(nativeBridge())return nativeRewardedAd({placement:routedPlacement,claimId});
-  if(isDevPreview())return devVideoRewardedAd(scene,{title});
+  if(typeof __TDR_PROD_BUILD__==='undefined'||!__TDR_PROD_BUILD__){
+    if(isDevPreview())return devVideoRewardedAd(scene,{title});
+  }
   return{completed:false,verified:false,source:'none',reason:'rewarded_ad_unavailable'};
 }

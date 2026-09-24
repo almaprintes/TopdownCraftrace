@@ -299,6 +299,7 @@ export class RaceScene extends CurrentRaceScene {
 
     const claimId=this._tdrPostRaceClaimId||(this._tdrPostRaceClaimId=createPostRaceClaimId(summary.trackKey||this.trackKey||'race'));
     const canDouble=entries.length>0&&!this._tdrRaceLootDoubled&&!hasClaimedPostRaceDouble(claimId)&&isRewardedAdAvailable();
+    console.info('[TDR_BOOT] x2_available='+Number(canDouble)+' loot_count='+entries.length+' claimed='+Number(!!this._tdrRaceLootDoubled||hasClaimedPostRaceDouble(claimId))+' bridge='+Number(isRewardedAdAvailable()));
     const root=mountRaceSessionRewards({
       baseUrl:BASE,laps,bonusLaps:Number(summary.bonusLaps)||0,entries,
       resultLabel:resultRoot?'VER RESULTADOS':'VER INFORME',

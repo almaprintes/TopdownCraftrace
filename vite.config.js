@@ -24,7 +24,7 @@ export default defineConfig(({ command, mode }) => {
   // 2) Vercel / Netlify: app is served from domain root.
   // 3) GitHub Pages: app is served from /<repo>/.
   const isRootHost = Boolean(process.env.VERCEL || process.env.NETLIFY);
-  const base = process.env.BASE ?? (isRootHost ? '/' : `/${repo}/`);
+  const base = process.env.BASE ?? (isTdrProd ? './' : isRootHost ? '/' : `/${repo}/`);
 
   return {
     base,

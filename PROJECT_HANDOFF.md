@@ -1,5 +1,13 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## ACTUALIZACIÓN 23/09/2026 — DEV 1.1.177: ARRANQUE ANDROID
+
+La APK de pruebas 1.1.176 instalada pedía `/top-down-race-2/assets/`, pero empaquetaba los recursos bajo `assets/public/assets/`. Se reprodujo en el teléfono y un cambio exclusivo de rutas permitió cargar JS y responder al bridge nativo. La release 1.1.177 llegó al lobby físico con anuncios no configurados (`game-ready` a 3.871 ms). Se restituye `sensorLandscape`, se elimina la espera del bridge antes de Phaser y los SDK de publicidad pasan a inicializarse bajo demanda.
+
+Generar el payload con `npm run build:android`; Gradle rechaza rutas de Pages o archivos inexistentes. Los marcadores `TDR_BOOT` funcionan en release y el watchdog HTML detecta ausencia del módulo principal. No hay premio sin `completed && verified`, no se cambia la configuración pública de Race Control ni se publica en Play. Informe y límites de validación: `docs/continuity/2026-09-23-android-bootstrap-regression.md`.
+
+La descripción histórica siguiente de 1.1.176 (esperar al bridge antes de las escenas) queda sustituida por el arranque independiente de 1.1.177.
+
 ## ACTUALIZACIÓN 23/09/2026 — BRIDGE REWARDED ANDROID VERSIONADO
 
 DEV 1.1.176 conserva el wrapper Capacitor Android versionado y registra `TdrRewardedAdsPlugin` antes de crear el WebView. El bootstrap web espera la respuesta nativa antes de crear escenas y solo entonces publica `window.__tdrRewardedAds`. Google UMP se resuelve antes de inicializar/cargar AdMob y `show()` falla cerrado si `canRequestAds()` no autoriza anuncios; cierres, errores o SSV sin recompensa verificada continúan sin concesión.

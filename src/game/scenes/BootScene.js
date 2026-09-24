@@ -11,13 +11,6 @@ function bootMark(phase, extra={}) {
   } catch {}
 }
 
-function finishStartupOverlay() {
-  try {
-    bootMark('menu-ready');
-    window.dispatchEvent(new CustomEvent('tdr:bootready'));
-  } catch {}
-}
-
 export class BootScene extends Phaser.Scene {
   constructor() {
     super('boot');
@@ -68,17 +61,6 @@ export class BootScene extends Phaser.Scene {
     bootMark('menu-start');
     this.scene.start('menu');
 
-    // Failsafe only. The final MenuScene normally emits tdr:bootready after its
-    // create() has painted. Never leave the HTML startup cover stuck forever if
-    // a future menu override forgets that signal.
-    setTimeout(() => {
-      try {
-        const startup=document.getElementById('tdrStartup');
-        if (startup && document.querySelector('#app canvas')) {
-          bootMark('menu-ready-failsafe');
-          finishStartupOverlay();
-        }
-      } catch {}
-    }, 5000);
+    // The HTML watchdog reports failures; only the painted lobby signals readiness.
   }
 }
