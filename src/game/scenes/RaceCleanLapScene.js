@@ -129,14 +129,16 @@ export class RaceScene extends CurrentRaceScene {
             const clean=this._currentLapClean===true;
             try{row.tdrCleanLap=clean;}catch{}
             recordCompletedLapClean(this._cleanLapTrackId,clean);
-            // DEV diagnostic: expose the exact clean-lap verdict used by season telemetry.
-            showRaceFeedback(this,{
-              type:clean?'fast':'warning',
-              eyebrow:clean?'✓ VUELTA LIMPIA':'✕ VUELTA NO LIMPIA',
-              title:fmtLap(row?.lapMs),
-              detail:clean?'SIN SALIR DE PISTA':'SALIDA DE PISTA DETECTADA',
-              holdMs:2200
-            });
+            // Celebrate a genuinely clean lap without surfacing dirty-lap diagnostics.
+            if(clean){
+              showRaceFeedback(this,{
+                type:'clean',
+                eyebrow:'',
+                title:'CLEAN!',
+                detail:'',
+                holdMs:1350
+              });
+            }
             this._showLapMilestone(row);
           }
           this._currentLapClean=true;
