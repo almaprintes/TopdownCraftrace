@@ -1,6 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceSteeringSensitivityScene.js';
 import { recordCompletedLapClean } from '../seasons/cleanLapTelemetry.js';
-import { showRaceFeedback } from '../ui/raceFeedbackUi.js';
+import { showRaceFeedback, showCleanLapFeedback } from '../ui/raceFeedbackUi.js';
 
 const CLEAN_SAMPLE_MS=100;
 const FEEDBACK_HOLD_MS=4800;
@@ -131,13 +131,7 @@ export class RaceScene extends CurrentRaceScene {
             recordCompletedLapClean(this._cleanLapTrackId,clean);
             // Celebrate a genuinely clean lap without surfacing dirty-lap diagnostics.
             if(clean){
-              showRaceFeedback(this,{
-                type:'clean',
-                eyebrow:'',
-                title:'CLEAN!',
-                detail:'',
-                holdMs:1350
-              });
+              showCleanLapFeedback(this,{holdMs:1350});
             }
             this._showLapMilestone(row);
           }
