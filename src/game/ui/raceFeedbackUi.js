@@ -12,6 +12,31 @@ function hostFor(scene){
   return canvas?.parentElement||document.getElementById('app')||document.body;
 }
 
+export function showCleanLapFeedback(scene,{holdMs=1350}={}){
+  if(typeof document==='undefined'||!scene)return null;
+  const host=hostFor(scene);if(!host)return null;
+  try{if(getComputedStyle(host).position==='static')host.style.position='relative';}catch{}
+  try{scene._cleanLapFeedbackRoot?.remove?.();}catch{}
+  if(scene._cleanLapFeedbackHideTimer)clearTimeout(scene._cleanLapFeedbackHideTimer);
+  if(scene._cleanLapFeedbackRemoveTimer)clearTimeout(scene._cleanLapFeedbackRemoveTimer);
+  const root=document.createElement('div');
+  root.className='tdr-clean-lap-feedback';
+  root.dataset.tdrRaceUi='1';
+  root.setAttribute('aria-live','polite');
+  root.innerHTML='<span>CLEAN!</span>';
+  host.appendChild(root);
+  scene._cleanLapFeedbackRoot=root;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>root.classList.add('is-visible')));
+  scene._cleanLapFeedbackHideTimer=setTimeout(()=>{
+    root.classList.remove('is-visible');
+    scene._cleanLapFeedbackRemoveTimer=setTimeout(()=>{
+      try{root.remove();}catch{}
+      if(scene._cleanLapFeedbackRoot===root)scene._cleanLapFeedbackRoot=null;
+    },EXIT_MS+40);
+  },Math.max(450,Number(holdMs)||1350));
+  return root;
+}
+
 export function destroyRaceFeedback(scene){
   const state=scene?._raceFeedbackState;
   if(state?.hideTimer)clearTimeout(state.hideTimer);
