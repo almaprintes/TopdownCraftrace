@@ -110,8 +110,14 @@ export class RaceScene extends CurrentRaceScene {
     try{
       const body=this.carBody;
       const x=Number(body?.x),y=Number(body?.y);
-      if(this._currentLapClean&&Number.isFinite(x)&&Number.isFinite(y)&&typeof this._isOnTrack==='function'){
-        if(!this._isOnTrack(x,y))this._currentLapClean=false;
+      if(this._currentLapClean&&Number.isFinite(x)&&Number.isFinite(y)){
+        // Surface profiles can temporarily replace _isOnTrack with ()=>true while
+        // their physics update runs. Clean-lap telemetry must use the preserved
+        // geometric detector instead, otherwise an off-track lap can count clean.
+        const rawOnTrack=typeof this._tdrOriginalIsOnTrack==='function'
+          ? this._tdrOriginalIsOnTrack
+          : this._isOnTrack;
+        if(typeof rawOnTrack==='function'&&!rawOnTrack.call(this,x,y))this._currentLapClean=false;
       }
       const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
       const seen=Math.max(0,Number(this._cleanLapSeenHistory)||0);
