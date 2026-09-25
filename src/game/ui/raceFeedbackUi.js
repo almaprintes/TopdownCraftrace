@@ -12,7 +12,7 @@ function hostFor(scene){
   return canvas?.parentElement||document.getElementById('app')||document.body;
 }
 
-export function showCleanLapFeedback(scene,{holdMs=1350}={}){
+export function showCleanLapFeedback(scene,{holdMs=1350,combo=1}={}){
   if(typeof document==='undefined'||!scene)return null;
   const host=hostFor(scene);if(!host)return null;
   try{if(getComputedStyle(host).position==='static')host.style.position='relative';}catch{}
@@ -23,7 +23,8 @@ export function showCleanLapFeedback(scene,{holdMs=1350}={}){
   root.className='tdr-clean-lap-feedback';
   root.dataset.tdrRaceUi='1';
   root.setAttribute('aria-live','polite');
-  root.innerHTML='<span>CLEAN!</span>';
+  const n=Math.max(1,Math.floor(Number(combo)||1));
+  root.innerHTML=`<span>CLEAN!${n>1?` ×${n}`:''}</span>`;
   host.appendChild(root);
   scene._cleanLapFeedbackRoot=root;
   requestAnimationFrame(()=>requestAnimationFrame(()=>root.classList.add('is-visible')));
