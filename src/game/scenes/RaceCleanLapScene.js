@@ -4,6 +4,7 @@ import { showRaceFeedback, showCleanLapFeedback } from '../ui/raceFeedbackUi.js'
 
 const CLEAN_SAMPLE_MS=100;
 const FEEDBACK_HOLD_MS=4800;
+const SESSION_LAP_CAP=20;
 
 function fmtLap(ms){
   ms=Number(ms);if(!Number.isFinite(ms)||ms<=0)return'--:--.--';
@@ -21,6 +22,9 @@ export class RaceScene extends CurrentRaceScene {
     this._liveHudClosedForSessionEnd=false;
     this._feedbackBestLapMs=Number.isFinite(Number(this.ttBest?.lapMs))?Number(this.ttBest.lapMs):null;
     this._feedbackSessionBestMs=null;
+    this._cleanLapCombo=0;
+    this._cleanLapBestCombo=0;
+    this._sessionLapCap=SESSION_LAP_CAP;
     this._retireLegacyDeltaHud();
     return result;
   }
@@ -131,7 +135,11 @@ export class RaceScene extends CurrentRaceScene {
             recordCompletedLapClean(this._cleanLapTrackId,clean);
             // Celebrate a genuinely clean lap without surfacing dirty-lap diagnostics.
             if(clean){
-              showCleanLapFeedback(this,{holdMs:1350});
+              this._cleanLapCombo=Math.max(0,Number(this._cleanLapCombo)||0)+1;
+              this._cleanLapBestCombo=Math.max(Number(this._cleanLapBestCombo)||0,this._cleanLapCombo);
+              showCleanLapFeedback(this,{holdMs:1350,combo:this._cleanLapCombo});
+            }else{
+              this._cleanLapCombo=0;
             }
             this._showLapMilestone(row);
           }
