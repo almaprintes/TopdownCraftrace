@@ -28,6 +28,7 @@ export class RaceScene extends CurrentRaceScene {
     this._cleanLapBestCombo=0;
     this._sessionLapCap=SESSION_LAP_CAP;
     this._cleanComboCoinsGranted=false;
+    this._cleanComboRewardSettled=false;
     this._cleanComboCoinReward=0;
     this._sessionLapCapTriggered=false;
     this._retireLegacyDeltaHud();
@@ -46,8 +47,31 @@ export class RaceScene extends CurrentRaceScene {
 
   _finishSessionWithRewards(){
     if(this._sessionFinalizing)return;
-    this._grantCleanComboCoins();
     return super._finishSessionWithRewards?.();
+  }
+
+  _showSessionRewards(resultRoot=null,onDone=null){
+    if(this._cleanComboRewardSettled)return super._showSessionRewards?.(resultRoot,onDone);
+    this._cleanComboRewardSettled=true;
+    const coins=this._grantCleanComboCoins();
+    const combo=Math.max(0,Number(this._cleanLapBestCombo)||0);
+    const wrappedDone=()=>{onDone?.();};
+    const result=super._showSessionRewards?.(resultRoot,wrappedDone);
+    const root=this._sessionRewardsDom;
+    if(root&&combo>=2&&coins>0){
+      try{
+        const card=root.querySelector?.('.tdrfp-card')||root.querySelector?.('.tdrsr-card')||root.firstElementChild?.firstElementChild||root;
+        const reward=document.createElement('div');
+        reward.className='tdr-clean-combo-reward';
+        reward.innerHTML=`<small>MEJOR CLEAN COMBO ×${combo}</small><b>+${coins} 🪙</b>`;
+        reward.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;margin:5px 0;padding:7px 10px;border:1px solid rgba(255,211,110,.48);background:rgba(255,184,46,.09);font-family:system-ui,-apple-system,Segoe UI,sans-serif';
+        reward.querySelector('small').style.cssText='font-size:8px;font-weight:950;letter-spacing:.08em;color:#ffd36e';
+        reward.querySelector('b').style.cssText='font-size:16px;color:#ffd36e';
+        const summary=card.querySelector?.('.tdrfp-summary');
+        if(summary)card.insertBefore(reward,summary);else card.appendChild(reward);
+      }catch{}
+    }
+    return result;
   }
 
   _reportInnerHtml(r){
