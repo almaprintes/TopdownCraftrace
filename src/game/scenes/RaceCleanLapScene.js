@@ -1,10 +1,12 @@
 import { RaceScene as CurrentRaceScene } from './RaceSteeringSensitivityScene.js';
 import { recordCompletedLapClean } from '../seasons/cleanLapTelemetry.js';
 import { showRaceFeedback, showCleanLapFeedback } from '../ui/raceFeedbackUi.js';
+import { loadGarage, saveGarage } from '../garage/garageStore.js';
 
 const CLEAN_SAMPLE_MS=100;
 const FEEDBACK_HOLD_MS=4800;
 const SESSION_LAP_CAP=20;
+const cleanComboCoins=combo=>{const n=Math.max(0,Math.min(SESSION_LAP_CAP,Math.floor(Number(combo)||0)));if(n<2)return 0;if(n>=20)return 100;return Math.min(90,(n-1)*5);};
 
 function fmtLap(ms){
   ms=Number(ms);if(!Number.isFinite(ms)||ms<=0)return'--:--.--';
@@ -25,8 +27,36 @@ export class RaceScene extends CurrentRaceScene {
     this._cleanLapCombo=0;
     this._cleanLapBestCombo=0;
     this._sessionLapCap=SESSION_LAP_CAP;
+    this._cleanComboCoinsGranted=false;
+    this._cleanComboCoinReward=0;
+    this._sessionLapCapTriggered=false;
     this._retireLegacyDeltaHud();
     return result;
+  }
+
+  _grantCleanComboCoins(){
+    if(this._cleanComboCoinsGranted)return Number(this._cleanComboCoinReward)||0;
+    this._cleanComboCoinsGranted=true;
+    const amount=cleanComboCoins(this._cleanLapBestCombo);
+    this._cleanComboCoinReward=amount;
+    if(amount<=0)return 0;
+    try{const s=loadGarage();s.coins=Math.max(0,Number(s.coins)||0)+amount;saveGarage(s);}catch{return 0;}
+    return amount;
+  }
+
+  _finishSessionWithRewards(){
+    if(this._sessionFinalizing)return;
+    this._grantCleanComboCoins();
+    return super._finishSessionWithRewards?.();
+  }
+
+  _reportInnerHtml(r){
+    let html=super._reportInnerHtml?.(r)||'';
+    const combo=Math.max(0,Number(this._cleanLapBestCombo)||0),coins=Math.max(0,Number(this._cleanComboCoinReward)||0);
+    if(combo<2||coins<=0)return html;
+    const reward=`<div class="insight"><b>MEJOR CLEAN COMBO ×${combo}</b><span>+${coins} 🪙</span></div>`;
+    const at=html.indexOf('<div class="insight">');
+    return at>=0?`${html.slice(0,at)}${reward}${html.slice(at)}`:`${html}${reward}`;
   }
 
   _retireLegacyDeltaHud(){
@@ -146,6 +176,12 @@ export class RaceScene extends CurrentRaceScene {
           this._currentLapClean=true;
         }
         this._cleanLapSeenHistory=hist.length;
+        const sessionBase=Math.max(0,Number(this._sessionLapBaseline)||0);
+        const completed=Math.max(0,hist.length-sessionBase);
+        if(!this._survivalMode&&!this._sessionLapCapTriggered&&completed>=this._sessionLapCap){
+          this._sessionLapCapTriggered=true;
+          this.time?.delayedCall?.(180,()=>this._finishSessionWithRewards());
+        }
       }
     }catch{}
   }
