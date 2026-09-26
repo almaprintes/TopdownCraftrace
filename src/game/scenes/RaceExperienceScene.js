@@ -1,5 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceHandbrakePhysicsScene.js';
-import { grantRaceLoot, getRaceLootSessionSummary } from '../garage/garageStore.js';
+import { grantRaceLoot, getRaceLootSessionSummary, loadGarage, saveGarage } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { isRewardedAdAvailable, showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 import { claimPostRaceDoubleLoot, createPostRaceClaimId, hasClaimedPostRaceDouble } from '../monetization/postRaceDoubleLoot.js';
@@ -8,6 +8,16 @@ import { mountRacePauseUi } from '../ui/racePauseUi.js';
 import { hideRaceUi, restoreRaceUi } from '../ui/raceUiVisibility.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
+const CLEAN_COMBO_CAP=20;
+function cleanComboCoins(combo){const n=Math.max(0,Math.min(CLEAN_COMBO_CAP,Math.floor(Number(combo)||0)));if(n<2)return 0;if(n>=20)return 100;return Math.min(90,(n-1)*5);}
+function settleCleanComboReward(scene){
+  if(scene._cleanComboCoinsGranted)return Math.max(0,Number(scene._cleanComboCoinReward)||0);
+  scene._cleanComboCoinsGranted=true;
+  const amount=cleanComboCoins(scene._cleanLapBestCombo);
+  scene._cleanComboCoinReward=amount;
+  if(amount<=0)return 0;
+  try{const garage=loadGarage();garage.coins=Math.max(0,Number(garage.coins)||0)+amount;saveGarage(garage);return amount;}catch(err){console.error('[clean-combo] coin grant failed',err);scene._cleanComboCoinsGranted=false;scene._cleanComboCoinReward=0;return 0;}
+}
 
 function fmtEngineerLap(ms){
   const value=Number(ms);
@@ -290,11 +300,13 @@ export class RaceScene extends CurrentRaceScene {
     if(typeof document==='undefined'||this._sessionRewardsDom?.isConnected)return;
     const summary=getRaceLootSessionSummary?.()||{};
     const laps=Math.max(0,Number(summary.laps)||0);
+    const combo=Math.max(0,Number(this._cleanLapBestCombo)||0);
+    const comboCoins=settleCleanComboReward(this);
     const entries=Object.entries(summary.totals||{})
       .filter(([id,n])=>GARAGE_ITEMS[id]&&Number(n)>0)
       .sort((a,b)=>Number(b[1])-Number(a[1]))
       .map(([id,qty])=>({id,qty:Number(qty)||0,name:GARAGE_ITEMS[id]?.name||id,icon:GARAGE_ITEMS[id]?.icon||'◆',asset:GARAGE_ITEMS[id]?.asset||null}));
-    if(!entries.length&&laps<5){if(resultRoot)resultRoot.style.display='';onDone?.();return;}
+    if(!entries.length&&laps<5&&comboCoins<=0){if(resultRoot)resultRoot.style.display='';onDone?.();return;}
     if(resultRoot)resultRoot.style.display='none';
 
     const claimId=this._tdrPostRaceClaimId||(this._tdrPostRaceClaimId=createPostRaceClaimId(summary.trackKey||this.trackKey||'race'));
@@ -321,6 +333,18 @@ export class RaceScene extends CurrentRaceScene {
       }
     });
     this._sessionRewardsDom=root;
+    if(root&&combo>=2&&comboCoins>0){
+      try{
+        const body=root.querySelector('.tdr-session-reward-body');
+        const reward=document.createElement('div');
+        reward.className='tdr-clean-combo-reward';
+        reward.innerHTML=`<small>MEJOR CLEAN COMBO ×${combo}</small><strong>+${comboCoins} 🪙</strong>`;
+        reward.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 10px;padding:9px 11px;border:1px solid rgba(255,211,110,.48);background:rgba(255,184,46,.10);font-family:system-ui,-apple-system,Segoe UI,sans-serif';
+        reward.querySelector('small').style.cssText='font-size:9px;font-weight:950;letter-spacing:.07em;color:#ffd36e';
+        reward.querySelector('strong').style.cssText='font-size:17px;color:#ffd36e';
+        body?.prepend(reward);
+      }catch(err){console.warn('[clean-combo] reward row failed',err);}
+    }
     if(root)try{this._lockSessionRewardsInput?.(root);}catch{}
   }
 
