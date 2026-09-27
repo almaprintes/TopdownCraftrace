@@ -235,3 +235,39 @@ No migrar masivamente sistemas estables: corregir de forma aislada y validar en 
 ## Estado histórico anterior
 
 Las decisiones previas de fabricación, inventario, tienda, economía, IA de Supervivencia, assets, garaje, pistas y demás trabajo anterior a la beta siguen disponibles en el historial Git y en `docs/`. Este handoff prioriza el estado operativo posterior a la publicación de beta 1.0 para evitar que un chat nuevo parta de información obsoleta.
+
+
+## Backlog visual futuro — profundidad 2D mediante sombras proyectadas
+
+> Idea documentada el 27/09/2026 para una actualización posterior. **No implementar en la versión de lanzamiento actual.**
+
+### Objetivo
+
+Aumentar la sensación de volumen y profundidad de los circuitos manteniendo el juego y sus assets en 2D cenital. La referencia visual surgió al observar sombras largas de palmeras proyectadas sobre el asfalto: aunque la geometría siga siendo plana, una sombra coherente hace que el cerebro interprete altura y separación respecto al suelo.
+
+### Enfoque preferido
+
+- Usar **fake projected shadows / sombras 2D proyectadas**, no iluminación 3D real.
+- Definir una única dirección de luz/“sol” coherente por circuito o por escena.
+- Elementos altos (palmeras, árboles, postes, gradas/estructuras): sombra desplazada y alargada según una altura visual estimada.
+- Elementos bajos (arbustos, neumáticos y pequeños props): sombra corta o contact shadow próxima al asset.
+- Mantener la sombra propia del coche como sistema independiente si ya existe; no mezclar esta mejora con la física ni con el comportamiento del vehículo.
+- Sombras con opacidad contenida, borde ligeramente suavizado y sin negros puros para evitar aspecto artificial.
+
+### Rendimiento / Android
+
+La prioridad es **no degradar FPS en Android**. Para decoración estática, preferir sombras precalculadas/bakeadas en la construcción del circuito o en una capa estática antes que deformar, difuminar o recalcular sprites cada frame. Evitar filtros/blur dinámicos costosos en carrera.
+
+Si se estudian sombras dinámicas para objetos móviles en el futuro, deben implementarse aparte y medirse en dispositivo Android real antes de generalizarlas.
+
+### Plan de prueba recomendado
+
+1. Prototipar en **un solo circuito** y en una rama/DEV futura.
+2. Empezar únicamente con palmeras/árboles altos, donde el efecto visual es más evidente.
+3. Comparar capturas antes/después y medir FPS, frame time y estabilidad en Android.
+4. Si el coste es despreciable, extender gradualmente a postes, estructuras y objetos bajos.
+5. No modificar todos los circuitos hasta aprobar visualmente y validar rendimiento del prototipo.
+
+### Principio de diseño
+
+La meta no es convertir CraftRace en un juego 3D ni cambiar su identidad cenital. Es añadir una capa de profundidad visual sutil: que los decorados dejen de sentirse “pegados al suelo” sin perder legibilidad de pista, trazada ni rendimiento.
