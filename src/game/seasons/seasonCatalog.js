@@ -1,3 +1,5 @@
+import { SPEED_CAMPAIGN } from './speedCampaign.js';
+
 export const SEASON_CYCLE=['speed','precision','progression'];
 
 export const INDUCTION_SEASON={
@@ -23,6 +25,9 @@ export const INDUCTION_SEASON={
     {id:'induction-final',es:'Piloto completo',en:'Complete Driver',kind:'final'}
   ]
 };
+
+export const PERMANENT_CAMPAIGNS=[INDUCTION_SEASON,SPEED_CAMPAIGN];
+export const AVAILABLE_PERMANENT_CAMPAIGNS=PERMANENT_CAMPAIGNS.filter(campaign=>campaign.enabled!==false);
 
 export const SEASON_FAMILIES={
   speed:{es:'Velocidad',en:'Speed'},
