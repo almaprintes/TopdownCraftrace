@@ -1,6 +1,8 @@
 package com.craftracestudio.topdownrace;
 
 import android.os.Bundle;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.util.Log;
 import android.view.View;
 import android.webkit.ConsoleMessage;
@@ -14,6 +16,7 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         Log.i("TDR_BOOT", "native_on_create");
+        applyPhoneOrientationPolicy();
         registerPlugin(TdrRewardedAdsPlugin.class);
         super.onCreate(savedInstanceState);
         applyImmersiveMode();
@@ -43,6 +46,17 @@ public class MainActivity extends BridgeActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) applyImmersiveMode();
+    }
+
+    private void applyPhoneOrientationPolicy() {
+        Configuration configuration = getResources().getConfiguration();
+        // Phones keep the intended racing experience in landscape. Large-screen
+        // devices stay resizable/orientation-flexible as required by Android.
+        if (configuration.smallestScreenWidthDp < 600) {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        } else {
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        }
     }
 
     private void applyImmersiveMode() {
