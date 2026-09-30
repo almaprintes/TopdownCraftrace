@@ -568,7 +568,7 @@ localStorage.setItem('tdr2:trackKey', this.trackKey);
   try {
     const raw = localStorage.getItem(this.ttKey);
     const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && Number.isFinite(parsed.lapMs)) {
+    if (parsed && Number.isFinite(parsed.lapMs) && parsed.lapMs > 1000) {
       this.ttBest = {
         lapMs: parsed.lapMs,
         lapTick: parsed.lapTick ?? null,
@@ -4174,7 +4174,8 @@ if (this.ttHistory && this.ttHistKey) {
   }
 
   // Si mejora el total: actualizar best lap + splits (regla estricta)
-  const improves = (this.ttBest == null) || (lapTime < this.ttBest.lapMs);
+  const validBest = Number.isFinite(this.ttBest?.lapMs) && this.ttBest.lapMs > 1000;
+  const improves = !validBest || (lapTime < this.ttBest.lapMs);
   if (improves) {
     this.ttBest = {
       lapMs: lapTime,
