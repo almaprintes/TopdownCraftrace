@@ -622,7 +622,7 @@ steeringProfile: 'DIRECT',
     visualScale: 0.97,
 
     // Tope de la familia VELOCE: un escalón por encima del Photon.
-    designStats: { VEL: 95, ACC: 86, GIR: 43, EST: 45, FRN: 63 },
+    designStats: { VEL: 92, ACC: 85, GIR: 43, EST: 45, FRN: 63 },
 
     // Punta y empuje superiores al Photon, manteniendo su carácter de alta velocidad.
     maxFwd: 645.0,
