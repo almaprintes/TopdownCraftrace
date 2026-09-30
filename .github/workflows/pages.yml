@@ -109,7 +109,7 @@ jobs:
           node scripts/fresh-gesture-smoke.mjs
           node scripts/bootstrap-regression-smoke.mjs
           node scripts/track-beauty-identity-smoke.mjs
-          grep -q "DEV 1\.2\.18 visible development version" index.html
+          grep -q "DEV 1\.2\.19 visible development version" index.html
           grep -q "SYSTEM_UI_FLAG_IMMERSIVE_STICKY" android/app/src/main/java/com/craftracestudio/topdownrace/MainActivity.java
           grep -q "WindowInsetsCompat.Type.navigationBars()" android/app/src/main/java/com/craftracestudio/topdownrace/MainActivity.java
           if grep -q 'android:screenOrientation=' android/app/src/main/AndroidManifest.xml; then echo "Fixed Android orientation restriction returned"; exit 1; fi
@@ -123,7 +123,7 @@ jobs:
         shell: bash
         run: |
           echo "Deploying commit: $(git rev-parse HEAD)"
-          grep -n "DEV 1\.2\.18 visible development version" index.html
+          grep -n "DEV 1\.2\.19 visible development version" index.html
           test "$(grep -o '<span>DEV 1\.2\.</span><span>18</span>' index.html | wc -l | tr -d ' ')" = "1"
       - name: Audit hardcoded interface text
         working-directory: dev-src
@@ -173,8 +173,8 @@ jobs:
           test -f beta/dist/dev-live/sw.js
           grep -q 'DEV_VERSION=1.2.19' beta/dist/dev/dev-build.txt
           grep -q 'DEV_VERSION=1.2.19' beta/dist/dev-live/dev-build.txt
-          grep -q 'DEV 1\.2\.18 visible development version' beta/dist/dev/index.html
-          grep -q 'DEV 1\.2\.18 visible development version' beta/dist/dev-live/index.html
+          grep -q 'DEV 1\.2\.19 visible development version' beta/dist/dev/index.html
+          grep -q 'DEV 1\.2\.19 visible development version' beta/dist/dev-live/index.html
           test "$(grep -o '<span>DEV 1\.2\.</span><span>18</span>' beta/dist/dev/index.html | wc -l | tr -d ' ')" = "1"
           test "$(grep -o '<span>DEV 1\.2\.</span><span>18</span>' beta/dist/dev-live/index.html | wc -l | tr -d ' ')" = "1"
       - name: Configure GitHub Pages
