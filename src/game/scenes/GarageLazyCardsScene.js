@@ -7,24 +7,11 @@ import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { attainableTopSpeedKmh } from '../cars/speedUnits.js';
 import { t, getLanguage } from '../i18n/index.js';
 
-const CARDS = [
-  ['card_avenir_apex','card_avenir_apex_raro_008.webp'],
-  ['card_avenir_gripline','card_avenir_gripline_poco_comun_007.webp'],
-  ['card_avenir_torque','card_avenir_torque_elite_009.webp'],
-  ['card_crown_axis','card_crown_axis_poco_comun_004.webp'],
-  ['card_crown_equinox','card_crown_equinox_raro_006.webp'],
-  ['card_crown_vector','card_crown_vector_raro_005.webp'],
-  ['card_forge_anvil','card_forge_anvil_elite_014.webp'],
-  ['card_forge_colossus','card_forge_colossus_legendario_015.webp'],
-  ['card_forge_hammer','card_forge_hammer_raro_013.webp'],
-  ['card_helix_comet','card_helix_comet_poco_comun_002.webp'],
-  ['card_helix_pulse','card_helix_pulse_poco_comun_003.webp'],
-  ['card_helix_spark','card_helix_spark_comun_001.webp'],
-  ['card_helix_vortex','card_helix_vortex_raro_016.webp'],
-  ['card_veloce_flash','card_veloce_flash_poco_comun_010.webp'],
-  ['card_veloce_photon','card_veloce_photon_elite_012.webp'],
-  ['card_veloce_surge','card_veloce_surge_raro_011.webp']
-];
+function cardFileFor(carId,spec){
+  const rarity=String(spec?.rarity||'comun').toLowerCase().replace(/\s+/g,'_').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const no=String(spec?.collectionNo||0).padStart(3,'0');
+  return `card_${carId}_${rarity}_${no}.webp`;
+}
 const LEGACY_IDS=new Set(['stock','touring','power']);
 const BASE=import.meta.env.BASE_URL||'/';
 const CARD_FILE=new Map(CARDS.map(([key,file])=>[key.replace(/^card_/,''),file]));
@@ -63,7 +50,7 @@ export class GarageScene extends CurrentGarageScene {
     if(this._mode!=='admin')return;
     super.preload?.();
     this.load.setPath('assets/cars/runtime');
-    for(const [key,file] of CARDS){if(!this.textures.exists(key))this.load.image(key,file);}
+    for(const {id,spec} of playableCars()){const key=`card_${id}`,file=cardFileFor(id,spec);if(!this.textures.exists(key))this.load.image(key,file);}
     this.load.setPath('');
   }
 
@@ -123,7 +110,7 @@ export class GarageScene extends CurrentGarageScene {
     (this._cars||[]).forEach((car,index)=>{
       const locked=this._lockedCar(car.id),spec=car.spec||{},btn=document.createElement('button');
       btn.type='button';btn.className=`tdr-garage-dom-car${index===this._selectedIndex?' is-selected':''}${locked?' is-locked':''}`;btn.dataset.index=String(index);
-      const file=CARD_FILE.get(car.id),src=file?`${BASE}assets/cars/runtime/${file}`:'';
+      const file=cardFileFor(car.id,spec),src=`${BASE}assets/cars/runtime/${file}?v=${encodeURIComponent(spec.cardAssetVersion||1)}`;
       const category=localizedValue(spec.category,'category'),rarity=localizedValue(spec.rarity,'rarity');
       btn.innerHTML=`${src?`<img src="${src}" alt="" draggable="false" loading="lazy" decoding="async">`:''}<div><div class="tdr-garage-dom-carname">${locked?'???':esc(String(spec.name||car.id).toUpperCase())}</div><div class="tdr-garage-dom-carmeta">${locked?`🔒 ${esc(L.locked)}`:`${esc(spec.brand||'—')} · ${esc(category)}<br>${esc(rarity)} · #${String(spec.collectionNo||0).padStart(3,'0')}`}</div></div>`;
       btn.addEventListener('click',()=>{this._selectedIndex=index;this._renderPlayerDomSelection();});
@@ -138,7 +125,7 @@ export class GarageScene extends CurrentGarageScene {
     const selected=this._cars?.[this._selectedIndex];if(!selected)return;
     const L=labels(),locked=this._lockedCar(selected.id),spec=selected.spec||{};
     root.querySelectorAll('.tdr-garage-dom-car').forEach((node,i)=>node.classList.toggle('is-selected',i===this._selectedIndex));
-    const zone=root.querySelector('.tdr-garage-dom-cardzone'),img=zone?.querySelector('img'),file=CARD_FILE.get(selected.id);
+    const zone=root.querySelector('.tdr-garage-dom-cardzone'),img=zone?.querySelector('img'),file=cardFileFor(selected.id,spec);
     if(zone)zone.classList.toggle('is-locked',locked);
     if(img){const next=file?`${BASE}assets/cars/runtime/${file}`:'';if(img.getAttribute('src')!==next)img.src=next;img.alt='';}
     const live={...spec,...savedSpec(selected.id)},resolved=resolveCarParams(live),top=Math.round(attainableTopSpeedKmh(resolved)),accel=Math.round(resolved.accel||0),brake=Math.round(resolved.brakeForce||0);
