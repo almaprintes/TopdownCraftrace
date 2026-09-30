@@ -238,7 +238,16 @@ jobs:
           target: google_apis
           profile: Nexus 6
           disable-animations: true
-          script: cd android && ./gradlew :app:connectedBridgeTestReleaseAndroidTest --stacktrace
+          script: |
+            set +e
+            cd android
+            ./gradlew :app:connectedBridgeTestReleaseAndroidTest --stacktrace
+            status=$?
+            if [ "$status" -ne 0 ]; then
+              echo "===== ANDROID FAILURE LOGCAT ====="
+              adb logcat -d -v time | grep -E 'TDR_REWARDED|TDR_BOOT|Capacitor|chromium|AndroidRuntime|WebView' | tail -n 1200 || true
+            fi
+            exit "$status"
 
   deploy:
     runs-on: ubuntu-latest
