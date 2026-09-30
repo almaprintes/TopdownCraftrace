@@ -14,7 +14,6 @@ function cardFileFor(carId,spec){
 }
 const LEGACY_IDS=new Set(['stock','touring','power']);
 const BASE=import.meta.env.BASE_URL||'/';
-const CARD_FILE=new Map(CARDS.map(([key,file])=>[key.replace(/^card_/,''),file]));
 const DOM_ID='tdr-garage-player-dom';
 const STYLE_ID='tdr-garage-player-dom-style';
 
