@@ -1,6 +1,6 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
-const STATUS_TIMEOUT_MS=5000;
+const STATUS_TIMEOUT_MS=15000;
 const RewardedAdsPlugin=registerPlugin('TdrRewardedAds');
 
 function withTimeout(promise,ms){
