@@ -617,9 +617,9 @@ steeringProfile: 'DIRECT',
     // UI / Colección
     collectionNo: 17,
     rarity: 'Legendario',
-    cardAssetVersion: 1,
-    skin: 'skin_veloce_juanicar_c220.webp',
-    visualScale: 0.97,
+    cardAssetVersion: 2,
+    skin: 'skin_veloce_juanicar_c220_hq.webp',
+    visualScale: 1.08,
 
     // Tope de la familia VELOCE: un escalón por encima del Photon.
     designStats: { VEL: 92, ACC: 85, GIR: 43, EST: 45, FRN: 63 },
