@@ -1,0 +1,12 @@
+{
+  "id": "default",
+  "name": "TDR Default",
+  "version": 1,
+  "assets": {
+    "BILLBOARD": "billboard.webp",
+    "FLAG": "flag.webp",
+    "BARRIER": "barrier.webp",
+    "GANTRY": "gantry.webp",
+    "TRACKSIDE": "trackside.webp"
+  }
+}
