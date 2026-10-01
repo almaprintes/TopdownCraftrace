@@ -3,10 +3,10 @@
   "name": "TDR Default",
   "version": 1,
   "assets": {
-    "BILLBOARD": "billboard.webp",
-    "FLAG": "flag.webp",
-    "BARRIER": "barrier.webp",
-    "GANTRY": "gantry.webp",
-    "TRACKSIDE": "trackside.webp"
+    "BILLBOARD": "billboard.svg",
+    "FLAG": "flag.svg",
+    "BARRIER": "barrier.svg",
+    "GANTRY": "gantry.svg",
+    "TRACKSIDE": "trackside.svg"
   }
 }
