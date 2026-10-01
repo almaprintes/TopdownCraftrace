@@ -180,3 +180,27 @@ Una implementación TAS se considera válida únicamente si:
 > **El circuito posee los espacios; la campaña posee las imágenes. Nunca al revés.**
 
 Esta separación es obligatoria para cualquier nuevo soporte publicitario de Top Down RACE.
+
+
+## 12. Reglas de emplazamiento y valor comercial
+
+Los soportes TAS no se colocan donde simplemente quede hueco. Deben optimizar **visibilidad durante la conducción sin competir con la atención necesaria para pilotar**.
+
+### Prioridad de ubicación
+1. Rectas y zonas de aceleración estable.
+2. Próximos a la pista y dentro del campo visual natural del jugador.
+3. Orientados para permanecer visibles durante varios instantes de aproximación/paso.
+4. Fuera de frenadas fuertes, horquillas, chicanes, curvas técnicas y puntos donde el jugador necesite máxima concentración.
+5. Nunca deben ocultar referencias de frenada, límites, señales de dirección, rivales ni elementos de seguridad/gameplay.
+
+### Clases comerciales
+- **PREMIUM** — soporte protagonista junto a una recta o zona de exposición prolongada. Preferencia para BILLBOARD y GANTRY.
+- **STANDARD** — soporte complementario/repetitivo. Preferencia para FLAG, BARRIER y TRACKSIDE.
+
+Cada slot deberá poder declarar `tier: 'PREMIUM' | 'STANDARD'`. Esta clasificación describe el emplazamiento; no debe codificar precios en el circuito.
+
+### Regla de homologación visual
+Un slot no se considera homologado solo porque sea visible en el editor. Debe comprobarse **conduciendo el circuito a velocidad real**, verificando que se percibe con claridad sin obligar a apartar la atención de la trazada.
+
+### Piloto Karting Tenerife
+La primera implantación deberá localizar primero una recta adecuada mediante la geometría y una prueba real de conducción. No se fijarán coordenadas arbitrarias desde el archivo de environment. El piloto previsto sigue siendo 1 BILLBOARD PREMIUM + 2 FLAG STANDARD + 1 TRACKSIDE/BARRIER STANDARD, concentrando el soporte principal en la recta de mayor exposición útil.
