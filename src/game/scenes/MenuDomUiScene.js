@@ -76,6 +76,7 @@ export class MenuScene extends PreviousMenuScene {
     this._syncLobbyTrackPreview();
     const modalOpen = Boolean(
       this._storeModal?.scene ||
+      this._storeDomRoot?.isConnected ||
       this._lobbyInventoryModal?.scene ||
       this._gameModeModal?.scene ||
       this._eventRewardModal?.scene
