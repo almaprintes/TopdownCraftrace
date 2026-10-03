@@ -1,1 +1,2 @@
-force preview build 2026-08-31T18:54Z
+DEV 1.2.26 publish trigger
+source: dev-first-update@7ed2a7f
