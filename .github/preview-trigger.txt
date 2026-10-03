@@ -2,3 +2,4 @@ DEV 1.2.30 deployment trigger
 source: dev-first-update@7d129a2
 
 DEV 1.2.31 rating reform retry
+retry automatic DEV deploy
