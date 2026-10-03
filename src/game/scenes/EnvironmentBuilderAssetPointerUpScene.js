@@ -2,14 +2,31 @@ import { EnvironmentBuilderScene as Current } from './EnvironmentBuilderExportPa
 import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
 
 const TAP_PX=9;
+const PROTECTED_REPO_ASSET_PREFIXES=['santacruz_'];
 const EDITABLES={guardrail:{label:'GUARDARRAÍL',type:'guardrail',asset:'guardrail_straight_01',path:'environment/barriers/guardrail_straight_01.webp',spacing:105},plastic:{label:'BARRERA PLÁSTICA',type:'plastic',asset:'plastic_barrier_redwhite_01',path:'environment/barriers/plastic_barrier_redwhite_01.webp',spacing:92},concrete:{label:'HORMIGÓN',type:'concrete',asset:'concrete_barrier_straight_01',path:'environment/barriers/concrete_barrier_straight_01.webp',spacing:108},fence:{label:'VALLA',type:'fence',asset:'fence_chainlink_straight_01',path:'environment/props/fence_chainlink_straight_01.webp',spacing:112},tires:{label:'NEUMÁTICOS',type:'tires',asset:'tire_barrier_straight_short_01',path:'environment/barriers/tire_barrier_straight_short_01.webp',spacing:82}};
 const nice=id=>String(id||'').replace(/_01$/,'').replaceAll('_',' ').toUpperCase();
 
 export class EnvironmentBuilderScene extends Current{
   create(){this._assetTapCandidate=null;this._emptyTapCandidate=null;super.create();this._rewireExistingAssets();this._mountDomShell();requestAnimationFrame(()=>this._disableLegacyPhaserUi());this.time.delayedCall(80,()=>this._disableLegacyPhaserUi());this.time.delayedCall(260,()=>this._disableLegacyPhaserUi());this.events.once('shutdown',()=>this._unmountDomShell());}
 
+  _mergeProtectedRepoAssets(project){
+    const repoProject=createTrackEnvironment(this._trackId);
+    if(!repoProject||!project)return project;
+    const q=JSON.parse(JSON.stringify(project));
+    q.environment=Array.isArray(q.environment)?q.environment:[];
+    const present=new Set(q.environment.map(d=>String(d?.asset||'')));
+    const recovered=[];
+    for(const d of repoProject.environment||[]){
+      const id=String(d?.asset||'');
+      if(!PROTECTED_REPO_ASSET_PREFIXES.some(prefix=>id.startsWith(prefix))||present.has(id))continue;
+      q.environment.push(JSON.parse(JSON.stringify(d)));present.add(id);recovered.push(id);
+    }
+    if(recovered.length)console.warn('[TDR2] recovered protected repo assets from stale local draft',recovered);
+    return q;
+  }
+
   _load(){
-    try{const raw=localStorage.getItem(this._storageKey?.()||'');if(raw){this._applyProject(JSON.parse(raw));this._flash?.('CARGADO · BORRADOR LOCAL');return true;}}catch(_){this._flash?.('ERROR CARGANDO BORRADOR');return false;}
+    try{const raw=localStorage.getItem(this._storageKey?.()||'');if(raw){const localProject=JSON.parse(raw);const safeProject=this._mergeProtectedRepoAssets(localProject);const recovered=Math.max(0,(safeProject?.environment?.length||0)-(localProject?.environment?.length||0));this._applyProject(safeProject);this._flash?.(recovered?`CARGADO · ${recovered} ASSET(S) OFICIALES RECUPERADOS`:'CARGADO · BORRADOR LOCAL');return true;}}catch(_){this._flash?.('ERROR CARGANDO BORRADOR');return false;}
     try{const repoProject=createTrackEnvironment(this._trackId);if(repoProject){this._applyProject(repoProject);this._flash?.('CARGADO · VERSIÓN DEL REPO');return true;}}catch(_){this._flash?.('ERROR CARGANDO REPO');return false;}
     this._flash?.('SIN PROYECTO');return false;
   }
