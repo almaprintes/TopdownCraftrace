@@ -58,13 +58,13 @@ function previewPart(scene){const recipe=findStripRecipe(scene.slots||[]);return
 
 function renderStats(scene,spec){
  const wrap=el('div','stats');wrap.append(el('div','statsTitle','RENDIMIENTO'));
- const baseValues=baseStats(spec),equipped={...(getEquippedForCar(scene.state,scene.car)||{})},preview=previewPart(scene),active={...equipped};
+ const baseValues=getBaseInternalStats(scene.car||spec),equipped={...(getEquippedForCar(scene.state,scene.car)||{})},preview=previewPart(scene),active={...equipped};
  if(preview?.kind==='part'&&preview.family)active[preview.family]=preview.id;
  STATS.forEach(([key,label])=>{
   const row=el('div','stat');let total=baseValues[key];const parts=[];
   for(const family of FAMILY_ORDER){const id=active[family],item=GARAGE_ITEMS[id];if(item?.kind!=='part')continue;const raw=Math.max(0,Number(statDeltaForPart(item)?.[key]||0)),room=Math.max(0,200-total),value=Math.min(raw,room);if(value>0){parts.push({item,value,preview:preview?.id===id&&equipped[family]!==id});total+=value;}}
   const head=el('div','statHead'),value=el('b',parts.some(p=>p.preview)?'preview':'',String(displayStat(clamp200(total))));head.append(el('span',null,label),value);row.append(head);
-  const bar=el('div','statBar'),baseSeg=el('i','seg base');baseSeg.style.width=`${displayStat(baseValues[key])}%`;bar.append(baseSeg);
+  const bar=el('div','statBar'),baseSeg=el('i','seg base');baseSeg.style.width=`${Math.max(0,Math.min(100,displayStat(baseValues[key])))}%`;bar.append(baseSeg);
   parts.forEach(seg=>{const n=el('i',`seg t${Number(seg.item.tier)||1} ${seg.preview?'preview':''}`);n.style.width=`${Math.max(0,seg.value/2)}%`;bar.append(n);});
   row.append(bar);wrap.append(row);
  });
