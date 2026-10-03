@@ -2,7 +2,6 @@ import { UpgradeShopScene as PreviousWorkshop } from './UpgradeWorkshopCoinAsset
 import { GARAGE_ITEMS, findStripRecipe, statDeltaForPart } from '../garage/partsCatalog.js';
 import { getEquippedForCar } from '../garage/garageStore.js';
 import { getBaseInternalStats, displayStat } from '../cars/performanceRating.js';
-import { getBaseInternalStats, displayStat } from '../cars/performanceRating.js';
 
 const STATS=[['speed','VELOCIDAD'],['accel','ACELERACIÓN'],['grip','AGARRE'],['control','CONTROL']];
 const FAMILY_ORDER=['engine','transmission','tires','suspension','brakes'];
@@ -14,8 +13,7 @@ function baseStats(spec){return getBaseInternalStats(spec);}
 
 export class UpgradeShopScene extends PreviousWorkshop {
   _miniStats(A,spec,r,compact){
-    const rawBase=getBaseInternalStats(spec);
-    const base={speed:displayStat(rawBase.speed),accel:displayStat(rawBase.accel),grip:displayStat(rawBase.grip),control:displayStat(rawBase.control)};
+    const base=getBaseInternalStats(spec);
     const equipped={...(getEquippedForCar(this.state,this.car)||{})};
     const recipe=findStripRecipe(this.slots);
     const preview=recipe?GARAGE_ITEMS[recipe.out]:null;
@@ -46,7 +44,7 @@ export class UpgradeShopScene extends PreviousWorkshop {
         const item=GARAGE_ITEMS[id];
         if(!item?.kind||item.kind!=='part')continue;
         // Part deltas are internal 0..200 points; Factory bars show half on 0..100.
-        const raw=Math.max(0,Number(statDeltaForPart(item)?.[key]||0)/2);
+        const raw=Math.max(0,Number(statDeltaForPart(item)?.[key]||0));
         const room=Math.max(0,200-total);
         const value=Math.min(raw,room);
         if(value>0){
