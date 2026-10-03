@@ -109,7 +109,7 @@ jobs:
           node scripts/fresh-gesture-smoke.mjs
           node scripts/bootstrap-regression-smoke.mjs
           node scripts/track-beauty-identity-smoke.mjs
-          grep -q "DEV 1\.2\.31 visible development version" index.html
+          grep -Fq "DEV 1.2.31 visible development version" index.html
           grep -q "start_red.webp" src/game/scenes/RaceCleanStartLightsScene.js
           grep -q "Surface physics only" src/game/scenes/RaceSurfaceProfileScene.js
           if grep -q "setTexture?.('off')" src/game/scenes/RaceSurfaceProfileScene.js; then exit 1; fi
