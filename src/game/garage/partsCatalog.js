@@ -52,19 +52,18 @@ const sorted=ids=>[...ids].sort().join('|');
 export function findStripRecipe(ids){if(!Array.isArray(ids)||ids.length!==3)return null;const key=sorted(ids);return CRAFT_STRIP_RECIPES.find(r=>sorted(r.in)===key)||null;}
 export function stripRecipeCanAccept(selected,id){const want=[...(selected||[]),id];if(want.length>3)return false;return CRAFT_STRIP_RECIPES.some(r=>{const bag=[...r.in];for(const token of want){const i=bag.indexOf(token);if(i<0)return false;bag.splice(i,1);}return true;});}
 
-// Display balance 2.0: Prototype parts must feel genuinely legendary.
-// Stock display stats are rescaled separately to leave room for progression.
-// Each T4 has a primary gain of at least +16 while the five-part package preserves car identity.
-// All five T4 together add: +28 SPEED, +26 ACCEL, +25 GRIP, +37 CONTROL.
+// Rating 2.0 deltas are INTERNAL 0..200 points. The Factory renders them /2 on its 0..100 bars.
+// Driving effects remain exclusively in tuningForPart() below, so this reform does not change car physics.
+// A complete T4 set adds +18 SPEED, +17 ACCEL, +16 GRIP and +23 CONTROL internally.
 export function statDeltaForPart(item){
   if(!item||item.kind!=='part')return{speed:0,accel:0,grip:0,control:0};
   const t=Math.max(1,Math.min(4,item.tier||1));
   const byTier={
-    engine:[null,{speed:5,accel:3,grip:0,control:0},{speed:10,accel:5,grip:0,control:0},{speed:15,accel:8,grip:0,control:0},{speed:20,accel:10,grip:0,control:0}],
-    transmission:[null,{speed:2,accel:4,grip:0,control:0},{speed:4,accel:8,grip:0,control:0},{speed:6,accel:12,grip:0,control:0},{speed:8,accel:16,grip:0,control:0}],
-    tires:[null,{speed:0,accel:0,grip:4,control:1},{speed:0,accel:0,grip:8,control:2},{speed:0,accel:0,grip:12,control:3},{speed:0,accel:0,grip:16,control:5}],
-    suspension:[null,{speed:0,accel:0,grip:1,control:4},{speed:0,accel:0,grip:2,control:8},{speed:0,accel:0,grip:3,control:12},{speed:0,accel:0,grip:5,control:16}],
-    brakes:[null,{speed:0,accel:0,grip:1,control:4},{speed:0,accel:0,grip:2,control:8},{speed:0,accel:0,grip:3,control:12},{speed:0,accel:0,grip:4,control:16}]
+    engine:[null,{speed:3,accel:2,grip:0,control:0},{speed:6,accel:3,grip:0,control:0},{speed:10,accel:5,grip:0,control:0},{speed:13,accel:7,grip:0,control:0}],
+    transmission:[null,{speed:1,accel:3,grip:0,control:0},{speed:3,accel:5,grip:0,control:0},{speed:4,accel:8,grip:0,control:0},{speed:5,accel:10,grip:0,control:0}],
+    tires:[null,{speed:0,accel:0,grip:3,control:1},{speed:0,accel:0,grip:5,control:1},{speed:0,accel:0,grip:8,control:2},{speed:0,accel:0,grip:10,control:3}],
+    suspension:[null,{speed:0,accel:0,grip:1,control:3},{speed:0,accel:0,grip:1,control:5},{speed:0,accel:0,grip:2,control:8},{speed:0,accel:0,grip:3,control:10}],
+    brakes:[null,{speed:0,accel:0,grip:1,control:3},{speed:0,accel:0,grip:1,control:5},{speed:0,accel:0,grip:2,control:8},{speed:0,accel:0,grip:3,control:10}]
   };
   return byTier[item.family]?.[t]||{speed:0,accel:0,grip:0,control:0};
 }
