@@ -1,6 +1,7 @@
 import { UpgradeShopScene as PreviousWorkshop } from './UpgradeWorkshopCoinAssetScene.js';
 import { GARAGE_ITEMS, findStripRecipe, statDeltaForPart } from '../garage/partsCatalog.js';
-import { getEquippedForCar, garageDisplayStats } from '../garage/garageStore.js';
+import { getEquippedForCar } from '../garage/garageStore.js';
+import { getBaseInternalStats, displayStat } from '../cars/performanceRating.js';
 import { getBaseInternalStats, displayStat } from '../cars/performanceRating.js';
 
 const STATS=[['speed','VELOCIDAD'],['accel','ACELERACIÓN'],['grip','AGARRE'],['control','CONTROL']];
@@ -13,7 +14,8 @@ function baseStats(spec){return getBaseInternalStats(spec);}
 
 export class UpgradeShopScene extends PreviousWorkshop {
   _miniStats(A,spec,r,compact){
-    const base=garageDisplayStats(spec,{...this.state,equipped:{},equippedByCar:{...this.state?.equippedByCar,[this.car]:{}}},this.car);
+    const rawBase=getBaseInternalStats(spec);
+    const base={speed:displayStat(rawBase.speed),accel:displayStat(rawBase.accel),grip:displayStat(rawBase.grip),control:displayStat(rawBase.control)};
     const equipped={...(getEquippedForCar(this.state,this.car)||{})};
     const recipe=findStripRecipe(this.slots);
     const preview=recipe?GARAGE_ITEMS[recipe.out]:null;
