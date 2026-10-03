@@ -247,3 +247,5 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+# DEV 1.2.31 rating reform deployment trigger
