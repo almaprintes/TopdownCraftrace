@@ -45,7 +45,8 @@ export class UpgradeShopScene extends PreviousWorkshop {
         const id=active[family];
         const item=GARAGE_ITEMS[id];
         if(!item?.kind||item.kind!=='part')continue;
-        const raw=Math.max(0,Number(statDeltaForPart(item)?.[key]||0));
+        // Part deltas are internal 0..200 points; Factory bars show half on 0..100.
+        const raw=Math.max(0,Number(statDeltaForPart(item)?.[key]||0)/2);
         const room=Math.max(0,200-total);
         const value=Math.min(raw,room);
         if(value>0){
