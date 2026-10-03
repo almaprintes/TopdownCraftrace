@@ -1,6 +1,7 @@
 import { EnvironmentBuilderScene as CurrentEnvironmentBuilderScene } from './EnvironmentBuilderTrackVisiblePickerScrollScene.js';
 import { createTrack } from '../tracks/trackRegistry.js';
 import { getTrackBeautyLayerConfig } from '../tracks/trackBeautyLayers.js';
+import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
 
@@ -80,8 +81,12 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     this._editorWorldH=h;
     this._editCam?.setBounds?.(0,0,w,h);
 
-    // IMPORTANT: opening a real circuit must NOT restore a local Builder
-    // project automatically. CARGAR is the explicit action for that.
+    // Always start from the official repository environment. CARGAR remains
+    // explicit and is reserved for restoring the user's local draft.
+    try{
+      const official=createTrackEnvironment(trackId);
+      if(official)this._applyProject?.(official);
+    }catch(err){console.warn('[TDR2] official Environment Studio project could not be loaded',trackId,err);}
     this._drawRealTrack?.();
     this._fitRealTrack?.();
     this._refreshTrackButton?.();
