@@ -13,7 +13,7 @@ function baseStats(spec){return getBaseInternalStats(spec);}
 
 export class UpgradeShopScene extends PreviousWorkshop {
   _miniStats(A,spec,r,compact){
-    const base=garageDisplayStats(spec,this.state,this.car);
+    const base=garageDisplayStats(spec,{...this.state,equipped:{},equippedByCar:{...this.state?.equippedByCar,[this.car]:{}}},this.car);
     const equipped={...(getEquippedForCar(this.state,this.car)||{})};
     const recipe=findStripRecipe(this.slots);
     const preview=recipe?GARAGE_ITEMS[recipe.out]:null;
