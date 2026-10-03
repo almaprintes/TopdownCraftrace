@@ -1,5 +1,8 @@
 import { EnvironmentBuilderScene as CurrentEnvironmentBuilderScene } from './EnvironmentBuilderTrackVisiblePickerScrollScene.js';
 import { createTrack } from '../tracks/trackRegistry.js';
+import { getTrackBeautyLayerConfig } from '../tracks/trackBeautyLayers.js';
+
+const BASE=import.meta.env.BASE_URL||'/';
 
 export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
   create(){
@@ -16,6 +19,41 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
 
     this._drawRealTrack?.();
     this._fitRealTrack?.();
+    this._syncBeautyReference?.();
+  }
+
+  _clearBeautyReference(){
+    for(const o of this._beautyReference||[])try{o?.destroy?.();}catch{}
+    this._beautyReference=[];
+  }
+
+  _syncBeautyReference(){
+    this._clearBeautyReference();
+    const cfg=getTrackBeautyLayerConfig(this._trackId);
+    if(!cfg?.useBeautyLayer||!cfg?.assetsAvailable||!cfg?.tiles?.length)return;
+    const pending=[];
+    for(const [i,t] of cfg.tiles.entries()){
+      const key=`env-builder-beauty:${this._trackId}:${i}:${cfg.assetRevision||'1'}`;
+      if(!this.textures.exists(key)){
+        this.load.image(key,`${BASE}${String(t.path||'').replace(/^\//,'')}`);
+        pending.push(key);
+      }
+    }
+    const render=()=>{
+      if(this._trackId!==String(this._trackId||''))return;
+      this._clearBeautyReference();
+      for(const [i,t] of cfg.tiles.entries()){
+        const key=`env-builder-beauty:${this._trackId}:${i}:${cfg.assetRevision||'1'}`;
+        if(!this.textures.exists(key))continue;
+        const img=this.add.image(Number(t.x)||0,Number(t.y)||0,key).setOrigin(0).setDepth(2.05).setDisplaySize(Number(t.w)||1,Number(t.h)||1);
+        this.cameras.main.ignore(img);
+        this._beautyReference.push(img);
+      }
+      this._drawRealTrack?.();
+    };
+    if(!pending.length){render();return;}
+    this.load.once('complete',render);
+    if(!this.load.isLoading())this.load.start();
   }
 
   _openRealTrack(trackId,resetProject=true){
@@ -47,6 +85,7 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     this._drawRealTrack?.();
     this._fitRealTrack?.();
     this._refreshTrackButton?.();
+    this._syncBeautyReference?.();
 
     this.time?.delayedCall?.(0,()=>{
       this._drawRealTrack?.();
