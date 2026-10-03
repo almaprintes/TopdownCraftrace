@@ -249,3 +249,5 @@ jobs:
         uses: actions/deploy-pages@v4
 
 # DEV 1.2.32 rating reform deployment trigger
+
+# retry DEV 1.2.32 after stale performance identity fix
