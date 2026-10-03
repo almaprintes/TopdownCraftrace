@@ -109,7 +109,7 @@ jobs:
           node scripts/fresh-gesture-smoke.mjs
           node scripts/bootstrap-regression-smoke.mjs
           node scripts/track-beauty-identity-smoke.mjs
-          DEV_VERSION="$(sed -n 's/.*DEV \\([0-9][0-9.]*\\) visible development version.*/\\1/p' index.html | head -1)"
+          DEV_VERSION="$(grep -oE 'DEV [0-9]+\.[0-9]+\.[0-9]+ visible development version' index.html | head -1 | awk '{print $2}')"
           test -n "$DEV_VERSION"
           grep -Fq "DEV $DEV_VERSION visible development version" index.html
           grep -q "start_red.webp" src/game/scenes/RaceCleanStartLightsScene.js
@@ -122,7 +122,7 @@ jobs:
         shell: bash
         run: |
           echo "Deploying commit: $(git rev-parse HEAD)"
-          DEV_VERSION="$(sed -n 's/.*DEV \\([0-9][0-9.]*\\) visible development version.*/\\1/p' index.html | head -1)"
+          DEV_VERSION="$(grep -oE 'DEV [0-9]+\.[0-9]+\.[0-9]+ visible development version' index.html | head -1 | awk '{print $2}')"
           test -n "$DEV_VERSION"
           echo "DEV source version: $DEV_VERSION"
           test "$(grep -Fo "<span>DEV ${DEV_VERSION%.*}.</span><span>${DEV_VERSION##*.}</span>" index.html | wc -l | tr -d ' ')" = "2"
@@ -160,7 +160,7 @@ jobs:
       - name: Assemble public beta plus DEV
         shell: bash
         run: |
-          DEV_VERSION="$(sed -n 's/.*DEV \\([0-9][0-9.]*\\) visible development version.*/\\1/p' dev-src/index.html | head -1)"
+          DEV_VERSION="$(grep -oE 'DEV [0-9]+\.[0-9]+\.[0-9]+ visible development version' dev-src/index.html | head -1 | awk '{print $2}')"
           test -n "$DEV_VERSION"
           printf 'DEV_SOURCE_SHA=%s\nDEV_VERSION=%s\n' "$(git -C dev-src rev-parse HEAD)" "$DEV_VERSION" > dev-src/dist/dev-build.txt
           rm -rf beta/dist/dev beta/dist/dev-live
@@ -174,7 +174,7 @@ jobs:
           cmp dev-src/dist/index.html beta/dist/dev-live/index.html
           test -f beta/dist/dev/sw.js
           test -f beta/dist/dev-live/sw.js
-          DEV_VERSION="$(sed -n 's/.*DEV \\([0-9][0-9.]*\\) visible development version.*/\\1/p' dev-src/index.html | head -1)"
+          DEV_VERSION="$(grep -oE 'DEV [0-9]+\.[0-9]+\.[0-9]+ visible development version' dev-src/index.html | head -1 | awk '{print $2}')"
           test -n "$DEV_VERSION"
           grep -Fq "DEV_VERSION=$DEV_VERSION" beta/dist/dev/dev-build.txt
           grep -Fq "DEV_VERSION=$DEV_VERSION" beta/dist/dev-live/dev-build.txt
