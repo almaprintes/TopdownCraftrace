@@ -170,6 +170,14 @@ export class RaceScene extends CurrentRaceScene{
     this._audioPrevSpeed=speed;
   }
 
+  _stopRaceAudioNow(){
+    try{const now=this._audioCtx?.currentTime||0;this._audio?.engineBus?.gain?.cancelScheduledValues?.(now);this._audio?.engineBus?.gain?.setValueAtTime?.(0,now);this._audio?.windGain?.gain?.cancelScheduledValues?.(now);this._audio?.windGain?.gain?.setValueAtTime?.(0,now);this._audio?.master?.gain?.cancelScheduledValues?.(now);this._audio?.master?.gain?.setValueAtTime?.(0,now);}catch{}
+    try{this._engineAudio?.destroy?.();}catch{}
+    try{this._carEngineAudio?.destroy?.();}catch{}
+    try{this.engineAudio?.destroy?.();}catch{}
+    this._destroyProceduralAudio();
+  }
+
   _destroyProceduralAudio(){
     if(this._audioUnlock){
       window.removeEventListener('pointerdown',this._audioUnlock);
