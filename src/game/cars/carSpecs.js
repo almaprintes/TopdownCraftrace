@@ -754,7 +754,6 @@ steeringProfile: 'DIRECT',
     gripBrake: 0.19
   }
 };
-applyPerformanceIdentity(CAR_SPECS);
 
 // =========================
 // Community tuning overrides (Opción 2 PRO)
