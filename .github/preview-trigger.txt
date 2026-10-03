@@ -1,2 +1,2 @@
-DEV 1.2.26 publish trigger
-source: dev-first-update@7ed2a7f
+DEV 1.2.28 deployment trigger
+source: dev-first-update@c75fc07
