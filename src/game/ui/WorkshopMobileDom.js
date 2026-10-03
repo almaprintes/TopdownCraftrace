@@ -27,6 +27,7 @@ const carAsset=id=>`${base()}assets/cars/workshop/${id}.webp`;
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=String(text);return n;};
 const button=(label,cls,onClick)=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',onClick);return b;};
 const clamp99=n=>Math.max(1,Math.min(99,Math.round(Number(n)||0)));
+const clamp200=n=>Math.max(0,Math.min(200,Math.round(Number(n)||0)));
 
 function baseStats(spec){
  if(spec?.designStats){const d=spec.designStats;return{speed:clamp99(d.VEL??55),accel:clamp99(d.ACC??55),grip:clamp99(((d.EST??55)+(d.GIR??55))/2),control:clamp99(((d.GIR??55)+(d.FRN??55))/2)};}
