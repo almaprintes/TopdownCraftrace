@@ -1,5 +1,6 @@
 import { GARAGE_ITEMS, EVOLUTION_CHAIN, EVOLUTION_COST, findRecipe, findStripRecipe, statDeltaForPart, tuningForPart } from './partsCatalog.js';
 import { evaluationAccessEnabled } from '../shipaton/ShipatonJudgeMode.js';
+import { getBaseInternalStats, displayStat } from '../cars/performanceRating.js';
 const KEY='tdr2:garageFusion:v1';
 const STARTER={};
 const EMPTY_LOOT_COUNTS={scrap:0,alloy:0,rubber:0,disc:0,spring:0,gear:0,compound:0,ecu:0};
@@ -33,11 +34,20 @@ export function evolve(s,id){const next=EVOLUTION_CHAIN[id];if(!next)return{ok:f
 export function getEquippedForCar(s,carId=selectedCarId()){const own=s?.equippedByCar?.[carId];if(own&&typeof own==='object')return own;return s?.equipped||{};}
 export function equip(s,id,carId=selectedCarId()){const item=GARAGE_ITEMS[id];if(!item?.family||qty(s,id)<1)return false;if(!s.equippedByCar||typeof s.equippedByCar!=='object')s.equippedByCar={};if(!s.equippedByCar[carId])s.equippedByCar[carId]={...getEquippedForCar(s,carId)};s.equippedByCar[carId][item.family]=id;saveGarage(s);return true;}
 export function garageTuning(s,carId=selectedCarId()){const out={accelMult:1,brakeMult:1,dragMult:1,turnRateMult:1,maxFwdAdd:0,maxRevAdd:0,turnMinAdd:0,gripCoastAdd:0,gripDriveAdd:0,gripBrakeAdd:0};for(const id of Object.values(getEquippedForCar(s,carId)||{})){const t=tuningForPart(GARAGE_ITEMS[id]);for(const[k,v]of Object.entries(t)){if(k.endsWith('Mult'))out[k]*=v;else out[k]+=v;}}return out;}
-const clamp99=n=>Math.max(1,Math.min(99,Math.round(n)));
-const STOCK_DISPLAY_SCALE=.75;
-const stockDisplay=n=>clamp99(Number(n||0)*STOCK_DISPLAY_SCALE);
-function baseDisplayStats(spec){if(spec?.designStats){const d=spec.designStats;return{speed:stockDisplay(d.VEL??55),accel:stockDisplay(d.ACC??55),grip:stockDisplay(((d.EST??55)+(d.GIR??55))/2),control:stockDisplay(((d.GIR??55)+(d.FRN??55))/2)};}return{speed:stockDisplay(((Number(spec?.maxFwd)||520)-400)/3.2+45),accel:stockDisplay(((Number(spec?.accel)||650)-500)/5+45),grip:stockDisplay(((Number(spec?.gripCoast)||.23)-.16)*260+50),control:stockDisplay(((Number(spec?.turnRate)||3.4)-2.7)*28+50)};}
-export function garageDisplayStats(spec,s,carId=selectedCarId(),replacementPartId=null){const out=baseDisplayStats(spec),eq={...(getEquippedForCar(s,carId)||{})},replacement=GARAGE_ITEMS[replacementPartId];if(replacement?.kind==='part'&&replacement.family)eq[replacement.family]=replacement.id;for(const id of Object.values(eq)){const d=statDeltaForPart(GARAGE_ITEMS[id]);out.speed+=d.speed;out.accel+=d.accel;out.grip+=d.grip;out.control+=d.control;}return{speed:clamp99(out.speed),accel:clamp99(out.accel),grip:clamp99(out.grip),control:clamp99(out.control)};}
+const clamp200=n=>Math.max(0,Math.min(200,Math.round(Number(n)||0)));
+export function garageInternalStats(spec,s,carId=selectedCarId(),replacementPartId=null){
+  const out={...getBaseInternalStats(spec)},eq={...(getEquippedForCar(s,carId)||{})},replacement=GARAGE_ITEMS[replacementPartId];
+  if(replacement?.kind==='part'&&replacement.family)eq[replacement.family]=replacement.id;
+  for(const id of Object.values(eq)){
+    const d=statDeltaForPart(GARAGE_ITEMS[id]);
+    out.speed+=d.speed;out.accel+=d.accel;out.grip+=d.grip;out.control+=d.control;
+  }
+  return{speed:clamp200(out.speed),accel:clamp200(out.accel),grip:clamp200(out.grip),control:clamp200(out.control)};
+}
+export function garageDisplayStats(spec,s,carId=selectedCarId(),replacementPartId=null){
+  const x=garageInternalStats(spec,s,carId,replacementPartId);
+  return{speed:displayStat(x.speed),accel:displayStat(x.accel),grip:displayStat(x.grip),control:displayStat(x.control)};
+}
 
 export const MATERIAL_DROP_TARGETS={scrap:.38,alloy:.10,rubber:.10,disc:.10,spring:.10,gear:.10,compound:.08,ecu:.04};
 const MATERIAL_IDS=Object.keys(MATERIAL_DROP_TARGETS);
