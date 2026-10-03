@@ -4,23 +4,22 @@ Estas reglas prevalecen sobre cualquier costumbre anterior del repositorio.
 
 1. NO crear ramas nuevas para trabajo normal.
 2. Trabajar SIEMPRE en `main` para el desarrollo actual.
-3. `beta-1.0` es la beta pública estable/final y NO se modifica sin autorización explícita del propietario del proyecto.
-4. GitHub Pages debe publicar:
-   - `/` desde `beta-1.0`
-   - `/dev` desde `main`
+3. `beta-1.0` es una rama histórica de la primera beta. Ya NO representa la versión pública actual ni tiene protección operativa especial.
+4. `main` es la única línea de desarrollo actual. No asumir que una rama histórica representa Google Play; comprobar siempre el versionado Android y el estado real de publicación antes de preparar una release.
 5. NO mezclar código, assets ni builds desde ramas auxiliares, antiguas, recovery, lab, preview, feat, fix, tmp, backup o similares.
 6. NO cambiar el origen de `/dev` fuera de `main`.
-7. NO actualizar la beta pública automáticamente al hacer cambios en `main`.
-8. Una nueva beta solo se publica cuando el propietario diga explícitamente que una mejora sustancial está lista para promoción.
+7. NO publicar automáticamente en Google Play al hacer cambios en `main`.
+8. Una nueva versión de Google Play solo se prepara/publica cuando el propietario lo indique explícitamente y tras las validaciones correspondientes.
 9. Antes de cualquier cambio de despliegue, verificar este archivo y `.github/workflows/pages.yml`.
 10. Si una tarea parece requerir una rama nueva, detenerse y buscar una solución dentro de `main` salvo autorización explícita del propietario.
 
-Estado de versiones desde 2026-09-23:
-- Beta cerrada candidata a publicación: `BETA 1.1.173` en rama `beta-1.0`.
-- Desarrollo activo: `DEV 1.1.179` en `main` (arranque Android independiente de anuncios, rutas locales verificadas y watchdog de bootstrap; validación real de anuncios/SSV aún obligatoria).
-- La antigua `beta-0.0.3` queda como histórico y no debe reutilizarse para despliegues actuales.
+Estado de versiones actualizado 2026-10-03:
+- `main` contiene actualmente Android `versionCode 8`, `versionName 1.1.188` (fuente de verdad: `android/app/build.gradle`).
+- `beta-1.0` y `beta-0.0.3` son históricas y no deben usarse como referencia del estado actual de Google Play.
+- El número de versión del `package.json` no sustituye al versionado Android para releases de Google Play.
+- Antes de incrementar `versionCode`/`versionName`, confirmar la siguiente release y validar el AAB en el Mac/dispositivo cuando corresponda.
 
-Objetivo operativo: una beta estable para testers y una única línea de desarrollo independiente, simple y predecible.
+Objetivo operativo: una única línea de desarrollo en `main`, simple y predecible, con releases Android verificadas antes de publicar.
 
 ## PROTOCOLO OBLIGATORIO DE ENTREGA DEV — 22/09/2026
 
