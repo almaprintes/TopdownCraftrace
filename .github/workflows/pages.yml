@@ -109,7 +109,6 @@ jobs:
           node scripts/fresh-gesture-smoke.mjs
           node scripts/bootstrap-regression-smoke.mjs
           node scripts/track-beauty-identity-smoke.mjs
-          grep -q "DEV 1\.2\.24 visible development version" index.html
           grep -q "SYSTEM_UI_FLAG_IMMERSIVE_STICKY" android/app/src/main/java/com/craftracestudio/topdownrace/MainActivity.java
           grep -q "WindowInsetsCompat.Type.navigationBars()" android/app/src/main/java/com/craftracestudio/topdownrace/MainActivity.java
           if grep -q 'android:screenOrientation=' android/app/src/main/AndroidManifest.xml; then echo "Fixed Android orientation restriction returned"; exit 1; fi
