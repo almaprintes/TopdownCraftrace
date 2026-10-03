@@ -4,6 +4,7 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 import { recordGarageVisit } from '../seasons/seasonTelemetry.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
 import { resolveCarParamsWithTuning } from '../cars/resolveCarParams.js';
+import { getEffectiveCarSpec } from '../cars/getEffectiveCarSpec.js';
 import { attainableTopSpeedKmh, zeroToKmhSeconds } from '../cars/speedUnits.js';
 import { getVehicleClass, internalPr } from '../cars/performanceRating.js';
 import { loadGarage, garageInternalStats, garageTuning } from '../garage/garageStore.js';
@@ -129,7 +130,7 @@ export class GarageScene extends CurrentGarageScene {
     const zone=root.querySelector('.tdr-garage-dom-cardzone'),img=zone?.querySelector('img'),file=cardFileFor(selected.id,spec);
     if(zone)zone.classList.toggle('is-locked',locked);
     if(img){const next=file?`${BASE}assets/cars/runtime/${file}`:'';if(img.getAttribute('src')!==next)img.src=next;img.alt='';}
-    const live={...spec,...savedSpec(selected.id)},garage=loadGarage(),tuning=garageTuning(garage,selected.id),resolved=resolveCarParamsWithTuning(live,tuning),top=Math.round(attainableTopSpeedKmh(resolved)),accel=Math.round(resolved.accel||0),brake=Math.round(resolved.brakeForce||0),zero100=zeroToKmhSeconds(resolved,100),zero100Text=zero100==null?'—':`${zero100.toFixed(2)} s`,pr=internalPr(garageInternalStats(spec,garage,selected.id));
+    const live=getEffectiveCarSpec(selected.id),garage=loadGarage(),tuning=garageTuning(garage,selected.id),resolved=resolveCarParamsWithTuning(live,tuning),top=Math.round(attainableTopSpeedKmh(resolved)),accel=Math.round(resolved.accel||0),brake=Math.round(resolved.brakeForce||0),zero100=zeroToKmhSeconds(resolved,100),zero100Text=zero100==null?'—':`${zero100.toFixed(2)} s`,pr=internalPr(garageInternalStats(spec,garage,selected.id));
     let personality='';try{personality=t(`garage.personality.${selected.id}`)||'';}catch{}
     const info=root.querySelector('.tdr-garage-dom-content'),footer=root.querySelector('.tdr-garage-dom-footer');if(!info)return;
     if(locked){
