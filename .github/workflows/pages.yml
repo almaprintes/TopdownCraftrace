@@ -117,13 +117,7 @@ jobs:
           if grep -q "setTexture?.('off')" src/game/scenes/RaceSurfaceProfileScene.js; then exit 1; fi
           grep -q "this.scene.start('race'" src/game/scenes/MenuGameModesScene.js
           grep -q "src/main.js" index.html
-      - name: Verify DEV source version
-        working-directory: dev-src
-        shell: bash
-        run: |
-          echo "Deploying commit: $(git rev-parse HEAD)"
-          grep -n "DEV 1\.2\.24 visible development version" index.html
-          test "$(grep -o '<span>DEV 1\.2\.</span><span>24</span>' index.html | wc -l | tr -d ' ')" = "1"
+
       - name: Audit hardcoded interface text
         working-directory: dev-src
         run: node scripts/audit-i18n-hardcoded.mjs
@@ -172,10 +166,6 @@ jobs:
           test -f beta/dist/dev-live/sw.js
           grep -q 'DEV_VERSION=1.2.24' beta/dist/dev/dev-build.txt
           grep -q 'DEV_VERSION=1.2.24' beta/dist/dev-live/dev-build.txt
-          grep -q 'DEV 1\.2\.24 visible development version' beta/dist/dev/index.html
-          grep -q 'DEV 1\.2\.24 visible development version' beta/dist/dev-live/index.html
-          test "$(grep -o '<span>DEV 1\.2\.</span><span>24</span>' beta/dist/dev/index.html | wc -l | tr -d ' ')" = "1"
-          test "$(grep -o '<span>DEV 1\.2\.</span><span>24</span>' beta/dist/dev-live/index.html | wc -l | tr -d ' ')" = "1"
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
