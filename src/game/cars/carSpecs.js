@@ -1,7 +1,6 @@
 // src/game/cars/carSpecs.js
 // Unidades internas: px/s, px/s^2, rad/s, coeficientes adimensionales
 import { LONGITUDINAL_PROFILES } from './longitudinalProfiles.js';
-import { applyPerformanceIdentity } from './performanceRating.js';
 
 export const CAR_SPECS = {
 stock: {
