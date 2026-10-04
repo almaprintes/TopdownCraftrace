@@ -1488,7 +1488,7 @@ const drawShoulderBand = (outerPts, innerPts, color, alpha) => {
   return g;
 };
 
-const drawStripedBand = (innerPts, outerPts, colorA, colorB, segmentLen = 14) => {
+const drawStripedBand = (innerPts, outerPts, colorA, colorB, segmentLen = 14, closed = true) => {
   const g = this.add.graphics();
   g.setDepth(11.5); // por encima del asfalto / arcén, por debajo de la línea blanca
   g.setScrollFactor(1);
@@ -1505,8 +1505,9 @@ const drawStripedBand = (innerPts, outerPts, colorA, colorB, segmentLen = 14) =>
 
   let accumLen = 0;
 
-  for (let i = 0; i < innerPts.length; i++) {
-    const ni = (i + 1) % innerPts.length;
+  const segmentCount = closed ? innerPts.length : innerPts.length - 1;
+  for (let i = 0; i < segmentCount; i++) {
+    const ni = closed ? (i + 1) % innerPts.length : i + 1;
 
     const a0 = getXY(innerPts[i]);
     const a1 = getXY(innerPts[ni]);
@@ -1614,7 +1615,8 @@ if (
       exportedGeom.curbOuter,
       0xd92f2f,
       0xf2f2f2,
-      14
+      14,
+      this.track?.closed !== false
     );
   }
 
@@ -1624,7 +1626,8 @@ if (
       exportedGeom.curbInner,
       0xd92f2f,
       0xf2f2f2,
-      14
+      14,
+      this.track?.closed !== false
     );
   }
 }
