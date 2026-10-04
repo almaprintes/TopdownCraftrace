@@ -531,7 +531,8 @@ const isImport = (k) => (
   k.slice('import:'.length).trim().length > 0
 );
 
-const pick = (k) => (isBuiltIn(k) || isImport(k)) ? k : null;
+const isLibraryTrack = (k) => typeof k === 'string' && k.trim().length > 0 && !k.includes('..') && !k.includes('/');
+const pick = (k) => (isBuiltIn(k) || isImport(k) || isLibraryTrack(k)) ? k : null;
 
 this.trackKey =
   pick(incomingTrack) ||
