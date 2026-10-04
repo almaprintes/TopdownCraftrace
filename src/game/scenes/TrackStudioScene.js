@@ -283,33 +283,8 @@ this._padCenter.on('pointerup', () => {
     }, '22px');
 
     this._leftGuideBtn = this._makeIconButton(leftCX, this._topBarH + 226, 'IMG', () => {
-      this._openGuidePicker();
-      this._flashMessage('IMG · cargar referencia');
+      this._toggleReferencePanel();
     }, '12px');
-
-    this._guideLockBtn = this._makeIconButton(leftCX, this._topBarH + 276, '🔒', () => {
-      if (!this._guideImage) return this._flashMessage('Carga primero una imagen');
-      this._guideLocked = !this._guideLocked;
-      this._guideLockBtn.txt.setText(this._guideLocked ? '🔒' : '✥');
-      this._flashMessage(this._guideLocked ? 'Imagen bloqueada' : 'Imagen editable · arrastra para mover');
-      this._autosaveRecovery();
-    }, '14px');
-
-    this._guideScaleDownBtn = this._makeIconButton(leftCX, this._topBarH + 326, 'I−', () => {
-      this._changeGuideScale(1 / 1.08);
-    }, '12px');
-
-    this._guideScaleUpBtn = this._makeIconButton(leftCX, this._topBarH + 376, 'I+', () => {
-      this._changeGuideScale(1.08);
-    }, '12px');
-
-    this._guideAlphaDownBtn = this._makeIconButton(leftCX, this._topBarH + 426, 'A−', () => {
-      this._changeGuideAlpha(-0.08); this._autosaveRecovery();
-    }, '11px');
-
-    this._guideAlphaUpBtn = this._makeIconButton(leftCX, this._topBarH + 476, 'A+', () => {
-      this._changeGuideAlpha(0.08); this._autosaveRecovery();
-    }, '11px');
 
     // =================================================
     // Barra superior
@@ -478,6 +453,7 @@ topX += 52;
       if (!this._isPointerInModeMenu(pointer)) this._closeModeMenu();
       if (!this._isPointerInTrackMenu(pointer)) this._closeTrackMenu();
       if (!this._isPointerInGuideMenu(pointer)) this._closeGuideMenu();
+      if (!this._isPointerInReferencePanel(pointer)) this._closeReferencePanel();
 
       if (!this._isPointerInViewport(pointer)) return;
 
@@ -1291,6 +1267,68 @@ _toggleModeMenu() {
       pointer.y >= this._trackMenu._y &&
       pointer.y <= this._trackMenu._y + this._trackMenu._h
     );
+  }
+
+  _toggleReferencePanel() {
+    if (this._referencePanel) return this._closeReferencePanel();
+
+    const x = this._leftBarW + 18;
+    const y = this._topBarH + 20;
+    const w = Math.min(360, Math.max(300, this._viewW - 30));
+    const h = 112;
+    const panel = this.add.container(0, 0).setDepth(120);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x101626, 0.98);
+    bg.lineStyle(2, 0x526a9d, 1);
+    bg.fillRoundedRect(x, y, w, h, 12);
+    bg.strokeRoundedRect(x, y, w, h, 12);
+    panel.add(bg);
+
+    panel.add(this.add.text(x + 14, y + 10, 'IMAGEN DE REFERENCIA', {
+      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
+      fontSize: '13px', color: '#c7d2ff', fontStyle: 'bold'
+    }));
+
+    const specs = [
+      ['Cargar', () => this._openGuidePicker(), 44],
+      [this._guideLocked ? '🔒' : '✥', () => {
+        if (!this._guideImage) return this._flashMessage('Carga primero una imagen');
+        this._guideLocked = !this._guideLocked;
+        this._autosaveRecovery();
+        this._closeReferencePanel(); this._toggleReferencePanel();
+      }, 38],
+      ['I−', () => this._changeGuideScale(1 / 1.08), 38],
+      ['I+', () => this._changeGuideScale(1.08), 38],
+      ['A−', () => { this._changeGuideAlpha(-0.08); this._autosaveRecovery(); }, 38],
+      ['A+', () => { this._changeGuideAlpha(0.08); this._autosaveRecovery(); }, 38],
+      [this._guideVisible ? '👁' : '◌', () => {
+        this._toggleGuideVisibility(); this._autosaveRecovery();
+        this._closeReferencePanel(); this._toggleReferencePanel();
+      }, 38]
+    ];
+    let bx = x + 18;
+    const by = y + 70;
+    specs.forEach(([label, fn, step]) => {
+      const b = this._makeIconButton(bx, by, label, fn, label === 'Cargar' ? '10px' : '12px');
+      panel.add(b.bg); panel.add(b.txt); bx += step + 6;
+    });
+
+    panel._x = x; panel._y = y; panel._w = w; panel._h = h;
+    this._editCam.ignore(panel.list);
+    this._referencePanel = panel;
+  }
+
+  _closeReferencePanel() {
+    if (!this._referencePanel) return;
+    this._referencePanel.destroy(true);
+    this._referencePanel = null;
+  }
+
+  _isPointerInReferencePanel(pointer) {
+    const p = this._referencePanel;
+    return !!p && pointer.x >= p._x && pointer.x <= p._x + p._w &&
+      pointer.y >= p._y && pointer.y <= p._y + p._h;
   }
 
   // =================================================
@@ -2755,7 +2793,6 @@ this._applyProjectData(data.editor || data);
     this._guideX = null;
     this._guideY = null;
     this._guideLocked = true;
-    if (this._guideLockBtn?.txt) this._guideLockBtn.txt.setText('🔒');
     this._raceType = 'stage';
     this._importedTrackMeta = null;
 
