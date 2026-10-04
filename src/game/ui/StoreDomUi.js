@@ -15,6 +15,13 @@ const assetUrl=id=>{const raw=GARAGE_ITEMS[id]?.asset||'';if(!raw)return'';if(/^
 const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!=null)node.textContent=String(text);return node;};
 
 export function closeStoreDom(scene){
+  // Store owns the recycler flow: closing the store must also destroy any recycler overlay.
+  try{scene?._materialExchangeDom?.remove();}catch{}
+  if(scene)scene._materialExchangeDom=null;
+  try{document.getElementById('tdr-material-exchange-dom')?.remove();}catch{}
+  try{scene?._partDismantleDom?.remove();}catch{}
+  if(scene)scene._partDismantleDom=null;
+  try{document.getElementById('tdr-part-dismantle-dom')?.remove();}catch{}
   const root=document.getElementById(ROOT_ID);
   if(root)root.remove();
   if(scene){scene._storeDomRoot=null;try{scene._lobbyDomRoot?.classList?.remove('tdr-lobby-dom--modal-open');}catch{}}
