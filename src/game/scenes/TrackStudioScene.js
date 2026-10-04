@@ -44,7 +44,6 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._panLast = null;
     this._pinchLastDist = 0;
       this._mapGesture = null;
-    this._mapGesture = null;
 
     this._editZoomMin = 0.12;
     this._editZoomMax = 2.5;
@@ -67,6 +66,12 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._guideTextureKey = null;
     this._guideVisible = true;
     this._guideAlpha = 0.32;
+    this._guideScale = 1;
+    this._guideX = null;
+    this._guideY = null;
+    this._guideLocked = true;
+    this._guideDragging = false;
+    this._guideDragLast = null;
     this._guideInput = null;
     this._projectInput = null;
     this._raceType = 'circuit';
@@ -278,8 +283,33 @@ this._padCenter.on('pointerup', () => {
     }, '22px');
 
     this._leftGuideBtn = this._makeIconButton(leftCX, this._topBarH + 226, 'IMG', () => {
-      this._runActiveGuideTool();
+      this._openGuidePicker();
+      this._flashMessage('IMG · cargar referencia');
     }, '12px');
+
+    this._guideLockBtn = this._makeIconButton(leftCX, this._topBarH + 276, '🔒', () => {
+      if (!this._guideImage) return this._flashMessage('Carga primero una imagen');
+      this._guideLocked = !this._guideLocked;
+      this._guideLockBtn.txt.setText(this._guideLocked ? '🔒' : '✥');
+      this._flashMessage(this._guideLocked ? 'Imagen bloqueada' : 'Imagen editable · arrastra para mover');
+      this._autosaveRecovery();
+    }, '14px');
+
+    this._guideScaleDownBtn = this._makeIconButton(leftCX, this._topBarH + 326, 'I−', () => {
+      this._changeGuideScale(1 / 1.08);
+    }, '12px');
+
+    this._guideScaleUpBtn = this._makeIconButton(leftCX, this._topBarH + 376, 'I+', () => {
+      this._changeGuideScale(1.08);
+    }, '12px');
+
+    this._guideAlphaDownBtn = this._makeIconButton(leftCX, this._topBarH + 426, 'A−', () => {
+      this._changeGuideAlpha(-0.08); this._autosaveRecovery();
+    }, '11px');
+
+    this._guideAlphaUpBtn = this._makeIconButton(leftCX, this._topBarH + 476, 'A+', () => {
+      this._changeGuideAlpha(0.08); this._autosaveRecovery();
+    }, '11px');
 
     // =================================================
     // Barra superior
@@ -310,8 +340,12 @@ topX += 48;
 // Nuevo
 this._btnNew = this._makeIconButton(topX, topToolsY, 'NEW', () => {
   console.log('CLICK NEW');
-  this._flashMessage('🆕 Nuevo...');
+  const ok = window.confirm('¿Crear un proyecto nuevo?\n\nEl proyecto actual se sustituirá. Guarda una copia antes si quieres conservarlo.');
+  if (!ok) return;
+  this._pushHistory();
   this._newProject?.();
+  this._autosaveRecovery();
+  this._flashMessage('🆕 Proyecto nuevo');
 }, '14px');
 topX += 60;
     // modo directo
@@ -462,6 +496,14 @@ topX += 52;
       const world = this._screenToWorld(pointer.x, pointer.y);
       const hit = this._findControlAt(world.x, world.y);
 
+      if (!hit && this._guideImage && !this._guideLocked && this._tool === 'edit') {
+        this._guideDragging = true;
+        this._guideDragLast = { x: world.x, y: world.y };
+        this._tapCandidate = false;
+        this._panLast = null;
+        return;
+      }
+
       if (hit) {
         this._selectedPart = hit;
         this._draggingPart = true;
@@ -564,6 +606,20 @@ if (
 }
       }
 
+      if (down.length === 1 && this._guideDragging && this._guideImage && !this._guideLocked) {
+        const p = down[0];
+        const world = this._screenToWorld(p.x, p.y);
+        if (this._guideDragLast) {
+          this._guideImage.x += world.x - this._guideDragLast.x;
+          this._guideImage.y += world.y - this._guideDragLast.y;
+          this._guideX = this._guideImage.x;
+          this._guideY = this._guideImage.y;
+        }
+        this._guideDragLast = world;
+        this._updatePanel();
+        return;
+      }
+
       if (down.length === 1) {
         const p = down[0];
 
@@ -636,6 +692,11 @@ if (
     });
 
     this.input.on('pointerup', (pointer) => {
+  if (this._guideDragging) {
+    this._guideDragging = false;
+    this._guideDragLast = null;
+    this._autosaveRecovery();
+  }
   const stillDown = this.input.manager.pointers.filter((p) => p.isDown).length;
 
   if (this._draggingPart) {
@@ -774,6 +835,9 @@ if (
   }
 });
     this.input.on('pointerupoutside', () => {
+      if (this._guideDragging) this._autosaveRecovery();
+      this._guideDragging = false;
+      this._guideDragLast = null;
       this._draggingPart = false;
       this._dragStartScreen = null;
       this._dragStartWorld = null;
@@ -859,15 +923,17 @@ if (
         1
       );
 
-      this._guideImage = this.add.image(
-        this._editorWorldW / 2,
-        this._editorWorldH / 2,
-        key
-      )
+      const gx = Number.isFinite(this._guideX) ? this._guideX : this._editorWorldW / 2;
+      const gy = Number.isFinite(this._guideY) ? this._guideY : this._editorWorldH / 2;
+      const savedScale = Number.isFinite(this._guideScale) && this._guideScale > 0 ? this._guideScale : 1;
+      this._guideImage = this.add.image(gx, gy, key)
         .setDepth(4)
         .setAlpha(this._guideAlpha)
         .setVisible(this._guideVisible)
-        .setScale(fitScale);
+        .setScale(fitScale * savedScale);
+      this._guideX = gx;
+      this._guideY = gy;
+      this._guideBaseScale = fitScale;
 
       this.cameras.main.ignore(this._guideImage);
       this._updatePanel();
@@ -882,6 +948,16 @@ if (
       this._guideImage.setVisible(this._guideVisible);
     }
     this._updateToolButtons();
+    this._updatePanel();
+  }
+
+  _changeGuideScale(factor) {
+    if (!this._guideImage) return this._flashMessage('Carga primero una imagen');
+    if (this._guideLocked) return this._flashMessage('Desbloquea la imagen primero');
+    this._pushHistory();
+    this._guideScale = Phaser.Math.Clamp((this._guideScale || 1) * factor, 0.05, 20);
+    this._guideImage.setScale((this._guideBaseScale || 1) * this._guideScale);
+    this._autosaveRecovery();
     this._updatePanel();
   }
 
@@ -2275,6 +2351,10 @@ _updatePanel() {
       checkpoints: this._checkpoints,
       guideAlpha: this._guideAlpha,
       guideVisible: this._guideVisible,
+      guideScale: this._guideScale,
+      guideX: this._guideImage?.x ?? this._guideX,
+      guideY: this._guideImage?.y ?? this._guideY,
+      guideLocked: this._guideLocked,
       nudgeStepIndex: this._nudgeStepIndex,
       viewTool: this._viewTool,
       saveTool: this._saveTool,
@@ -2462,6 +2542,10 @@ _loadTrack() {
     this._checkpoints = data.checkpoints || [];
     this._guideAlpha = data.guideAlpha ?? 0.32;
     this._guideVisible = data.guideVisible ?? true;
+    this._guideScale = data.guideScale ?? 1;
+    this._guideX = Number.isFinite(data.guideX) ? data.guideX : this._guideX;
+    this._guideY = Number.isFinite(data.guideY) ? data.guideY : this._guideY;
+    this._guideLocked = data.guideLocked ?? true;
     this._nudgeStepIndex = data.nudgeStepIndex ?? 2;
     this._viewTool = data.viewTool || 'zoomIn';
     this._saveTool = data.saveTool || 'save';
@@ -2474,6 +2558,9 @@ _loadTrack() {
     if (this._guideImage) {
       this._guideImage.setAlpha(this._guideAlpha);
       this._guideImage.setVisible(this._guideVisible);
+      if (Number.isFinite(this._guideX)) this._guideImage.x = this._guideX;
+      if (Number.isFinite(this._guideY)) this._guideImage.y = this._guideY;
+      this._guideImage.setScale((this._guideBaseScale || 1) * this._guideScale);
     }
 
     this._selectedNode = -1;
@@ -2664,6 +2751,11 @@ this._applyProjectData(data.editor || data);
     this._modeTool = 'edit';
     this._trackTool = 'widthUp';
     this._guideTool = 'load';
+    this._guideScale = 1;
+    this._guideX = null;
+    this._guideY = null;
+    this._guideLocked = true;
+    if (this._guideLockBtn?.txt) this._guideLockBtn.txt.setText('🔒');
     this._raceType = 'stage';
     this._importedTrackMeta = null;
 
