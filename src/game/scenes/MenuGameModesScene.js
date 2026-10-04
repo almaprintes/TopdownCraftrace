@@ -4,8 +4,7 @@ import { t } from '../i18n/index.js';
 
 const MODE_KEY='tdr2:gameMode';
 const PRACTICE_TRACK_KEY='practice-area';
-const RELEASE_MODES=new Set(['timeattack','ghost','duel','practice','rally']);
-const RALLY_DEMO_TRACK_KEY='rally-arafo-los-loros';
+const RELEASE_MODES=new Set(['timeattack','ghost','duel','practice']);
 
 function walk(node,fn){
   if(!node)return;
@@ -56,7 +55,7 @@ export class MenuScene extends CurrentMenuScene{
       if(mode!=='practice')localStorage.setItem('tdr2:trackKey',trackKey);
     }catch{}
     recordModeStart(mode);
-    const launchTrack=mode==='practice'?PRACTICE_TRACK_KEY:(mode==='rally'?RALLY_DEMO_TRACK_KEY:trackKey);
+    const launchTrack=mode==='practice'?PRACTICE_TRACK_KEY:trackKey;
     this._closeGameModeModal();
     this.scene.start('race',{carId:this.selectedCarId,trackKey:launchTrack,gameMode:mode});
   }
@@ -112,8 +111,7 @@ export class MenuScene extends CurrentMenuScene{
     const modes=[
       {key:'timeattack',icon:'🏁',title:t('modes.timeAttack'),sub:t('modes.timeAttackSub'),detail:t('modes.timeAttackDetail'),accent:0x55bfff},
       {key:'ghost',icon:'👻',title:t('modes.ghost'),sub:t('modes.ghostSub'),detail:t('modes.ghostDetail'),accent:0x8f7dff},
-      {key:'practice',icon:'🧪',title:t('modes.practice'),sub:t('modes.practiceSub'),detail:t('modes.practiceDetail'),accent:0xffc857},
-      {key:'rally',icon:'⛰️',title:'RALLY DEMO',sub:'ARAFO → LOS LOROS',detail:'Tramo abierto · salida a meta',accent:0xff8f4a}
+      {key:'practice',icon:'🧪',title:t('modes.practice'),sub:t('modes.practiceSub'),detail:t('modes.practiceDetail'),accent:0xffc857}
     ];
     const gap=14,cols=modes.length;
     const cardW=Math.floor((panelW-64-gap*(cols-1))/cols);
