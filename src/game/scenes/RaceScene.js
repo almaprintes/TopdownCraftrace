@@ -3358,8 +3358,9 @@ if (this.ttHud) {
   const txt = `${m}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
 
   this.ttHud.timeText.setText(txt);
-const lapInProgress = (this.lapCount || 0) + 1; // lapCount = vueltas completadas
-this.ttHud.lapText.setText(`VUELTA ${lapInProgress}`);
+const isOpenStage=this.track?.closed===false;
+const lapInProgress=(this.lapCount||0)+1;
+this.ttHud.lapText.setText(isOpenStage?'TRAMO':`VUELTA ${lapInProgress}`);
 
   // Progreso REAL (0..1) por centerline (solo si hay coche)
 if (this.car) {
@@ -4196,11 +4197,21 @@ if (this.ttHistory && this.ttHistKey) {
     } catch (e) {}
   }
 
+  const isOpenStage=this.track?.closed===false;
+  if(isOpenStage){
+    this.timing.started=false;
+    this.timing.lapStart=null;
+    this._raceStarted=false;
+    this._openStageFinished=true;
+    try{this.car?.body?.setVelocity?.(0,0);}catch{}
+    this.time.delayedCall(250,()=>{try{this.scene.start('menu');}catch{}});
+  }else{
   // Reset de vuelta: arranca nueva vuelta desde ahora
   this.timing.lapStart = now;
 this.lapStartTick = this.simTick;
   this.timing.s1 = null;
   this.timing.s2 = null;
+  }
 
   // En salida (nuevo lap): volvemos a blanco hasta CP1 (sin parpadeo)
   this._setTTHudColor('#F2F2F2');
@@ -4261,11 +4272,11 @@ if (shouldShow) {
 }
 }
 }
-    this.lapCount = (this.lapCount || 0) + 1;
+    if(this.track?.closed!==false)this.lapCount = (this.lapCount || 0) + 1;
 
     // Garage Fusion: cada vuelta válida alimenta el taller.
     // Recompensa pequeña, persistente y compatible con futuras carreras/eventos.
-    if (!this._useFactorySpec && !this._testMode) {
+    if (this.track?.closed!==false && !this._useFactorySpec && !this._testMode) {
       try {
         const reward = grantRaceReward(1);
         this._showGarageRewardToast?.(reward);
