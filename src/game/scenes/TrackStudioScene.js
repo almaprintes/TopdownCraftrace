@@ -14,10 +14,11 @@ export class TrackStudioScene extends BaseScene {
     // =================================================
     // Layout base
     // =================================================
-    this._topBarH = 72;
-    this._leftBarW = 76;
-    this._rightPanelW = 280;
-    this._bottomPad = 14;
+    const compactH = height < 720;
+    this._topBarH = compactH ? 64 : 72;
+    this._leftBarW = compactH ? 70 : 76;
+    this._rightPanelW = width < 1200 ? 250 : 280;
+    this._bottomPad = 8;
 
 this._viewX = this._leftBarW + 8;
 this._viewY = this._topBarH + 8;
@@ -121,7 +122,7 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
 
     this._rightTitle = this.add.text(width - this._rightPanelW + 20, this._topBarH + 18, 'PROPIEDADES', {
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-      fontSize: '18px',
+      fontSize: compactH ? '16px' : '18px',
       color: '#c7d2ff',
       fontStyle: 'bold'
     });
@@ -137,7 +138,11 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
 
 this._panelContentY = this._topBarH + 62;
 
-this._panelActionsY = this._topBarH + 250;
+// Responsive: actions remain reachable even when browser chrome reduces viewport.
+this._panelActionsY = Math.min(
+  this._topBarH + 238,
+  Math.max(this._topBarH + 190, height - 150)
+);
 
 this.add.text(
   width - this._rightPanelW + 20,
@@ -145,7 +150,7 @@ this.add.text(
   'ACCIONES',
   {
     fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-    fontSize: '15px',
+    fontSize: compactH ? '13px' : '15px',
     color: '#c7d2ff',
     fontStyle: 'bold'
   }
@@ -180,18 +185,16 @@ this._panelDeleteBtn.on('pointerup', () => {
     // =========================
 // 🎮 CRUCETA (D-PAD)
 // =========================
-const padZoneRight = this.scale.width - 12;
-const padZoneBottom = this.scale.height - 20;
-
-const cx = padZoneRight - 72;
-const cy = padZoneBottom - 86;
-const size = 28;
+const rightPanelX = width - this._rightPanelW;
+const cx = width - 68;
+const cy = this._topBarH + (compactH ? 150 : 170);
+const size = compactH ? 24 : 28;
 
 const makePadBtn = (dx, dy, label, onClick) => {
   const x = cx + dx * size;
   const y = cy + dy * size;
 
-  const bg = this.add.circle(x, y, 18, 0x1c2540, 1)
+  const bg = this.add.circle(x, y, compactH ? 15 : 18, 0x1c2540, 1)
     .setStrokeStyle(2, 0x3c4e7a, 0.95)
     .setInteractive({ useHandCursor: true });
 
