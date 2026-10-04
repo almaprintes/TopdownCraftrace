@@ -44,15 +44,31 @@ function buildRegistry(){
     const widthMultiplier=slug==='karting-tenerife'?2:1;
     const normalized=normalizeCenterline(json.centerline,fallbackWidth).map(p=>({...p,width:(Number(p.width)||fallbackWidth)*widthMultiplier}));
     const authored=scaleTrackAuthoring(slug,json,normalized,fallbackWidth*widthMultiplier),scaledFallbackWidth=authored.trackWidth,centerline=ensureClosedCenterline(authored.centerline,isClosed,scaledFallbackWidth);
-    const geom=buildTrackRibbon({centerline,trackWidth:scaledFallbackWidth,grassMargin:authored.grassMargin,sampleStepPx:authored.sampleStepPx,cellSize:authored.cellSize});
+    const geom=buildTrackRibbon({centerline,trackWidth:scaledFallbackWidth,grassMargin:authored.grassMargin,sampleStepPx:authored.sampleStepPx,cellSize:authored.cellSize,closed:isClosed});
     const smooth=(geom?.center||[]).map(p=>({x:Number(p.x),y:Number(p.y),width:Number(p.width)||scaledFallbackWidth}));
     let explicit=normalizeExplicitFinishAnchor(json.finishAnchor);if(explicit&&authored.authorScale!==1)explicit={x:explicit.x*authored.authorScale,y:explicit.y*authored.authorScale,r:explicit.r};
     let finishAnchor=null,finishProjection=null;
     if(explicit){finishAnchor={...explicit,r:wrapPi(explicit.r+(directionSign<0?Math.PI:0))};finishProjection=projectToSmoothCenter(explicit,smooth);}else{const hint=Number.isFinite(Number(json.finishSegment))?deriveSegmentHint(centerline,Number(json.finishSegment),json.finishT):null;finishProjection=hint?projectToSmoothCenter(hint,smooth):deriveLongestStraightAnchor(smooth);if(!finishProjection){const startHint=json.start?{x:Number(json.start.x)*authored.authorScale,y:Number(json.start.y)*authored.authorScale}:centerline[0];finishProjection=projectToSmoothCenter(startHint,smooth);}if(finishProjection)finishAnchor={x:finishProjection.x,y:finishProjection.y,r:wrapPi(finishProjection.r+(directionSign<0?Math.PI:0))};}
+    if(!isClosed&&smooth.length>1){
+      const first=direction==='reverse'?smooth[smooth.length-1]:smooth[0], second=direction==='reverse'?smooth[smooth.length-2]:smooth[1];
+      const last=direction==='reverse'?smooth[0]:smooth[smooth.length-1], beforeLast=direction==='reverse'?smooth[1]:smooth[smooth.length-2];
+      const startR=Math.atan2(second.y-first.y,second.x-first.x), finishR=Math.atan2(last.y-beforeLast.y,last.x-beforeLast.x);
+      finishAnchor={x:last.x,y:last.y,r:finishR};
+      finishProjection=null;
+    }
     if(!finishAnchor)finishAnchor={x:400,y:400,r:directionSign<0?Math.PI:0};
-    const raceStart=makeSpawnBehindFinish(finishAnchor,authored.startOffset),metrics=loopMetrics(smooth),anchorProjection=finishProjection||projectToSmoothCenter(finishAnchor,smooth),finishDist=anchorProjection?distanceAtProjection(anchorProjection,metrics,smooth):0,checkpointFractions=normalizeCheckpointFractions(json.checkpointFractions);
+    const openStart=(!isClosed&&smooth.length>1)?(()=>{const first=direction==='reverse'?smooth[smooth.length-1]:smooth[0],second=direction==='reverse'?smooth[smooth.length-2]:smooth[1];return{x:first.x,y:first.y,r:Math.atan2(second.y-first.y,second.x-first.x)};})():null;
+    const raceStart=openStart||makeSpawnBehindFinish(finishAnchor,authored.startOffset),metrics=loopMetrics(smooth),anchorProjection=finishProjection||projectToSmoothCenter(finishAnchor,smooth),finishDist=isClosed&&anchorProjection?distanceAtProjection(anchorProjection,metrics,smooth):0,checkpointFractions=normalizeCheckpointFractions(json.checkpointFractions);
     let checkpoints=null;if(String(json.checkpointMode||'').toLowerCase()==='authored'){checkpoints=normalizeAuthoredCheckpoints(json.checkpoints,direction);if(checkpoints&&authored.authorScale!==1)checkpoints=checkpoints.map(g=>({...g,a:{x:Number(g.a.x)*authored.authorScale,y:Number(g.a.y)*authored.authorScale},b:{x:Number(g.b.x)*authored.authorScale,y:Number(g.b.y)*authored.authorScale}}));}
-    if(!checkpoints&&smooth.length>3)checkpoints=checkpointFractions.map(frac=>{const p=pointAtLoopDistance(smooth,metrics,finishDist+directionSign*metrics.total*frac);return makeGateAt(p,Number(p?.width)||scaledFallbackWidth,directionSign,.10);}).filter(Boolean);
+    if(!checkpoints&&smooth.length>3){
+      if(isClosed)checkpoints=checkpointFractions.map(frac=>{const p=pointAtLoopDistance(smooth,metrics,finishDist+directionSign*metrics.total*frac);return makeGateAt(p,Number(p?.width)||scaledFallbackWidth,directionSign,.10);}).filter(Boolean);
+      else {
+        const racePath=direction==='reverse'?smooth.slice().reverse():smooth;
+        const cumulative=[0];for(let i=1;i<racePath.length;i++)cumulative[i]=cumulative[i-1]+Math.hypot(racePath[i].x-racePath[i-1].x,racePath[i].y-racePath[i-1].y);
+        const total=cumulative[cumulative.length-1]||1;
+        checkpoints=checkpointFractions.map(frac=>{const target=total*frac;let i=1;while(i<cumulative.length&&cumulative[i]<target)i++;i=Math.min(i,racePath.length-1);const a=racePath[i-1],b=racePath[i],seg=Math.max(1e-6,cumulative[i]-cumulative[i-1]),t=(target-cumulative[i-1])/seg,p={x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,r:Math.atan2(b.y-a.y,b.x-a.x),width:Number(a.width)||scaledFallbackWidth};return makeGateAt(p,p.width,1,.10);}).filter(Boolean);
+      }
+    }
     const raceCenterline=direction==='reverse'?smooth.slice().reverse():smooth.slice();
     out[slug]={id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:authored.targetLengthMeters?'Corta':(json.lengthLabel||'Media'),worldW:authored.worldW,worldH:authored.worldH,trackWidth:scaledFallbackWidth,grassMargin:authored.grassMargin,sampleStepPx:authored.sampleStepPx,cellSize:authored.cellSize,shoulderPx:authored.shoulderPx,start:raceStart,centerline,closed:isClosed,raceDirection:direction,raceCenterline,finishAnchor,finishLine:makeFinishLineFromAnchor(finishAnchor,scaledFallbackWidth),finish:null,checkpoints,checkpointFractions,checkpointMode:'proportional',grid:null,meta:{...(json.meta||{}),authorScale:authored.authorScale,targetLengthMeters:authored.targetLengthMeters,targetWidthMeters:authored.targetWidthMeters}};
   }
