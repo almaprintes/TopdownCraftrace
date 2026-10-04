@@ -388,6 +388,8 @@ function __tickOrientation() {
           const race = __game?.scene?.getScene?.('race');
           if (!race) return setTimeout(launchRally, 120);
           const carId = (()=>{try{return localStorage.getItem('tdr2:carId')||'1';}catch{return'1';}})();
+          // Stop menu before race so MenuMusic observes a clean scene transition.
+          try { __game.scene.stop('menu'); __game.scene.stop('MenuScene'); } catch {}
           __game.scene.start('race',{carId,trackKey:'rally-arafo-los-loros',gameMode:'rally'});
         } catch { setTimeout(launchRally, 180); }
       };
