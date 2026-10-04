@@ -4,6 +4,7 @@ import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { t, getLanguage } from '../i18n/index.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 import { REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
+import { openMaterialExchangeDom } from './MaterialExchangeFlexibleDom.js';
 import './store-dom.css';
 
 const ROOT_ID='tdr-store-dom';
@@ -88,7 +89,8 @@ export function openStoreDom(scene){
   header.append(el('h1','',t('store.title')));
   const balance=el('div','tdr-store-balance');balance.innerHTML=`<span class="tdr-store-coin">●</span><strong data-store-balance>${fmt(loadGarage().coins||0)}</strong><span>${t('store.coins')}</span>`;
   const close=el('button','tdr-store-close','×');close.type='button';close.setAttribute('aria-label',t('common.close'));close.addEventListener('click',()=>closeStoreDom(scene));
-  header.append(balance,close);shell.append(header);
+  const recycler=el('button','tdr-store-recycler','♻  '+(getLanguage()==='en'?'RECYCLER':'RECICLADORA'));recycler.type='button';recycler.addEventListener('click',()=>openMaterialExchangeDom(scene,scene?._exchangeFrom||'scrap',scene?._exchangeTo||'compound',scene?._exchangeAmount||100));
+  header.append(recycler,balance,close);shell.append(header);
   const scroller=el('main','tdr-store-scroller');
   for(const pack of MATERIAL_PACKS)scroller.append(materialCard(scene,root,pack));
   const video=rewardCard(scene,root,'video'),daily=rewardCard(scene,root,'daily');scroller.append(video.card,daily.card);shell.append(scroller);root.append(shell);
