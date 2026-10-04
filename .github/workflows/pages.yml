@@ -3,7 +3,7 @@ name: Deploy Top Down Race
 
 on:
   push:
-    branches: [dev-first-update]
+    branches: [dev-first-update, experiment/rally-demo-arafo-los-loros]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
@@ -146,26 +146,42 @@ jobs:
           test -n "${VITE_TDR_ONLINE_PUBLIC}"
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
-          npx vite build --base=/TopdownCraftrace/dev/
+          if [ "${GITHUB_REF_NAME}" = "experiment/rally-demo-arafo-los-loros" ]; then
+            npx vite build --base=/TopdownCraftrace/rally-demo/
+          else
+            npx vite build --base=/TopdownCraftrace/dev/
+          fi
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble public beta plus DEV
         shell: bash
         run: |
           printf 'DEV_SOURCE_SHA=%s\n' "${GITHUB_SHA}" > dev-src/dist/dev-build.txt
-          rm -rf beta/dist/dev beta/dist/dev-live
-          mkdir -p beta/dist/dev beta/dist/dev-live
-          cp -R dev-src/dist/. beta/dist/dev/
-          cp -R dev-src/dist/. beta/dist/dev-live/
+          if [ "${GITHUB_REF_NAME}" = "experiment/rally-demo-arafo-los-loros" ]; then
+            rm -rf beta/dist/rally-demo
+            mkdir -p beta/dist/rally-demo
+            cp -R dev-src/dist/. beta/dist/rally-demo/
+          else
+            rm -rf beta/dist/dev beta/dist/dev-live
+            mkdir -p beta/dist/dev beta/dist/dev-live
+            cp -R dev-src/dist/. beta/dist/dev/
+            cp -R dev-src/dist/. beta/dist/dev-live/
+          fi
       - name: Verify DEV artifact
         shell: bash
         run: |
-          cmp dev-src/dist/index.html beta/dist/dev/index.html
-          cmp dev-src/dist/index.html beta/dist/dev-live/index.html
-          test -f beta/dist/dev/sw.js
-          test -f beta/dist/dev-live/sw.js
-          grep -Fxq "DEV_SOURCE_SHA=${GITHUB_SHA}" beta/dist/dev/dev-build.txt
-          grep -Fxq "DEV_SOURCE_SHA=${GITHUB_SHA}" beta/dist/dev-live/dev-build.txt
+          if [ "${GITHUB_REF_NAME}" = "experiment/rally-demo-arafo-los-loros" ]; then
+            cmp dev-src/dist/index.html beta/dist/rally-demo/index.html
+            test -f beta/dist/rally-demo/sw.js
+            grep -Fxq "DEV_SOURCE_SHA=${GITHUB_SHA}" beta/dist/rally-demo/dev-build.txt
+          else
+            cmp dev-src/dist/index.html beta/dist/dev/index.html
+            cmp dev-src/dist/index.html beta/dist/dev-live/index.html
+            test -f beta/dist/dev/sw.js
+            test -f beta/dist/dev-live/sw.js
+            grep -Fxq "DEV_SOURCE_SHA=${GITHUB_SHA}" beta/dist/dev/dev-build.txt
+            grep -Fxq "DEV_SOURCE_SHA=${GITHUB_SHA}" beta/dist/dev-live/dev-build.txt
+          fi
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
