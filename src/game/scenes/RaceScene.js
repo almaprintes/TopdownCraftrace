@@ -1038,7 +1038,8 @@ const geom = buildTrackRibbon({
   trackWidth: t01.trackWidth,
   grassMargin: t01.grassMargin ?? 0,
   sampleStepPx: t01.sampleStepPx ?? 12,
-  cellSize: t01.cellSize ?? 400
+  cellSize: t01.cellSize ?? 400,
+  closed: t01.closed !== false
 });
 this.track = {
   meta: t01,
