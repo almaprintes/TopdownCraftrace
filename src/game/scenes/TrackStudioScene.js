@@ -69,6 +69,9 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._projectInput = null;
     this._raceType = 'circuit';
     this._importedTrackMeta = null;
+    this._undoStack = [];
+    this._redoStack = [];
+    this._historyLimit = 80;
 
     // nudge
     this._nudgeSteps = [1, 5, 10];
@@ -354,6 +357,10 @@ topX += 52;
       this._updateToolButtons();
     }, '12px');
     topX += 56;
+    this._undoBtn = this._makeIconButton(topX, topToolsY, '↶', () => this._undo(), '20px');
+    topX += 44;
+    this._redoBtn = this._makeIconButton(topX, topToolsY, '↷', () => this._redo(), '20px');
+    topX += 44;
 
     // =================================================
     // Mundo de edición
@@ -438,6 +445,7 @@ topX += 52;
 
       if (!this._isPointerInViewport(pointer)) return;
 
+      this._pushHistory();
       this._tapCandidate = true;
       this._gestureWasMultiTouch = false;
 
@@ -747,6 +755,7 @@ if (
 
     this._updatePanel();
     this._redrawEditor();
+    this._autosaveRecovery();
   }
 
   if (stillDown === 0) {
@@ -1853,6 +1862,7 @@ if (Phaser.Math.Distance.Between(x, y, p.b.x, p.b.y) < R_HANDLE) {
     this._redrawEditor();
   }
   _getVisualGridSlots() {
+    if (!this._isClosed || this._raceType === 'stage') return [];
     if (!this._finishLine?.a || !this._finishLine?.b) return [];
 
     const pts = this._getBezierPoints();
@@ -2321,7 +2331,7 @@ _exportToGameTrack() {
 
   let grid = null;
 
-  if (finishLine?.a && finishLine?.b) {
+  if (this._isClosed && this._raceType !== 'stage' && finishLine?.a && finishLine?.b) {
     const visualSlots = this._getVisualGridSlots();
 
     const slots = visualSlots.map((s, idx) => ({
@@ -2468,6 +2478,53 @@ _loadTrack() {
     this._redrawEditor();
   }
 
+  _captureHistoryState() {
+    return JSON.stringify(this._getProjectData());
+  }
+
+  _pushHistory() {
+    const snap = this._captureHistoryState();
+    if (this._undoStack[this._undoStack.length - 1] === snap) return;
+    this._undoStack.push(snap);
+    if (this._undoStack.length > this._historyLimit) this._undoStack.shift();
+    this._redoStack = [];
+  }
+
+  _restoreHistoryState(snap) {
+    if (!snap) return;
+    this._applyProjectData(JSON.parse(snap));
+    this._autosaveRecovery();
+  }
+
+  _undo() {
+    if (!this._undoStack.length) return this._flashMessage('Nada que deshacer');
+    const current = this._captureHistoryState();
+    const previous = this._undoStack.pop();
+    if (previous === current && this._undoStack.length) {
+      this._redoStack.push(current);
+      return this._restoreHistoryState(this._undoStack.pop());
+    }
+    this._redoStack.push(current);
+    this._restoreHistoryState(previous);
+    this._flashMessage('↶ Deshecho');
+  }
+
+  _redo() {
+    if (!this._redoStack.length) return this._flashMessage('Nada que rehacer');
+    this._undoStack.push(this._captureHistoryState());
+    this._restoreHistoryState(this._redoStack.pop());
+    this._flashMessage('↷ Rehecho');
+  }
+
+  _autosaveRecovery() {
+    try {
+      const data = { editor: this._getProjectData(), gameTrack: this._exportToGameTrack() };
+      localStorage.setItem('trackstudio_recovery', JSON.stringify(data));
+    } catch (e) {
+      console.warn('No se pudo crear recuperación automática', e);
+    }
+  }
+
   _saveProject() {
     try {
 const data = {
@@ -2475,7 +2532,16 @@ const data = {
   gameTrack: this._exportToGameTrack()
 };
       localStorage.setItem('trackstudio_project', JSON.stringify(data));
-      console.log('✅ Proyecto guardado');
+      localStorage.setItem('trackstudio_recovery', JSON.stringify(data));
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `trackstudio-${(data.gameTrack?.name || 'project').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this._flashMessage('💾 Guardado + copia JSON');
+      console.log('✅ Proyecto guardado + backup JSON');
     } catch (e) {
       console.error('❌ Error guardando proyecto', e);
     }
