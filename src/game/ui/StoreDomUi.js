@@ -17,7 +17,7 @@ const el=(tag,className,text)=>{const node=document.createElement(tag);if(classN
 export function closeStoreDom(scene){
   const root=document.getElementById(ROOT_ID);
   if(root)root.remove();
-  if(scene)scene._storeDomRoot=null;
+  if(scene){scene._storeDomRoot=null;try{scene._lobbyDomRoot?.classList?.remove('tdr-lobby-dom--modal-open');}catch{}}
 }
 
 function toast(root,message,ok=true){
