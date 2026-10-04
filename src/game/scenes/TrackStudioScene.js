@@ -43,6 +43,8 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._gestureWasMultiTouch = false;
     this._panLast = null;
     this._pinchLastDist = 0;
+      this._mapGesture = null;
+    this._mapGesture = null;
 
     this._editZoomMin = 0.12;
     this._editZoomMax = 2.5;
@@ -575,6 +577,7 @@ if (
 
         this._panLast = { x: p.x, y: p.y };
         this._pinchLastDist = 0;
+      this._mapGesture = null;
         return;
       }
 
@@ -592,36 +595,35 @@ if (
         const dy = p2.y - p1.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (!this._pinchLastDist) {
+        if (!this._mapGesture) {
+          const startZoom = this._editCam.zoom;
+          this._mapGesture = {
+            startDist: Math.max(1, dist),
+            startZoom,
+            anchorWorldX: this._editCam.scrollX + (midX - this._editCam.x) / startZoom,
+            anchorWorldY: this._editCam.scrollY + (midY - this._editCam.y) / startZoom
+          };
           this._pinchLastDist = dist;
           this._panLast = null;
           this._draggingPart = false;
           return;
         }
 
-        const ratio = dist / this._pinchLastDist;
-
+        const g = this._mapGesture;
         const newZoom = Phaser.Math.Clamp(
-          this._editCam.zoom * ratio,
+          g.startZoom * (dist / g.startDist),
           this._editZoomMin,
           this._editZoomMax
         );
 
-        const worldX =
-          this._editCam.scrollX +
-          (midX - this._editCam.x) / this._editCam.zoom;
-
-        const worldY =
-          this._editCam.scrollY +
-          (midY - this._editCam.y) / this._editCam.zoom;
-
+        // Map-style pinch: the world point grabbed at gesture start remains
+        // exactly beneath the CURRENT midpoint of both fingers. Moving both
+        // fingers therefore pans while their separation controls zoom.
         this._editCam.setZoom(newZoom);
-
         this._editCam.scrollX =
-          worldX - (midX - this._editCam.x) / newZoom;
-
+          g.anchorWorldX - (midX - this._editCam.x) / newZoom;
         this._editCam.scrollY =
-          worldY - (midY - this._editCam.y) / newZoom;
+          g.anchorWorldY - (midY - this._editCam.y) / newZoom;
 
         this._pinchLastDist = dist;
         this._updatePanel();
@@ -630,6 +632,7 @@ if (
 
       this._panLast = null;
       this._pinchLastDist = 0;
+      this._mapGesture = null;
     });
 
     this.input.on('pointerup', (pointer) => {
@@ -644,6 +647,7 @@ if (
       this._gestureWasMultiTouch = false;
       this._panLast = null;
       this._pinchLastDist = 0;
+      this._mapGesture = null;
     }
     return;
   }
@@ -656,6 +660,7 @@ if (
       this._gestureWasMultiTouch = false;
       this._panLast = null;
       this._pinchLastDist = 0;
+      this._mapGesture = null;
     }
     return;
   }
@@ -765,6 +770,7 @@ if (
     this._gestureWasMultiTouch = false;
     this._panLast = null;
     this._pinchLastDist = 0;
+      this._mapGesture = null;
   }
 });
     this.input.on('pointerupoutside', () => {
@@ -775,6 +781,7 @@ if (
       this._gestureWasMultiTouch = false;
       this._panLast = null;
       this._pinchLastDist = 0;
+      this._mapGesture = null;
     });
 
     this._createGuideInput();
