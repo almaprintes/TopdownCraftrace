@@ -374,6 +374,25 @@ function __tickOrientation() {
     window.__tdrStartupMark?.('phaser-start');
     __game = createGame('app');
     window.__tdrStartupMark?.('phaser-created');
+    // Rally demo has its own URL. Enter the isolated stage directly after boot,
+    // bypassing cached menu/carousel state from the normal game.
+    if (location.pathname.includes('/rally-demo/')) {
+      try {
+        localStorage.setItem('tdr2:gameMode','rally');
+        localStorage.setItem('tdr2:trackKey','rally-arafo-los-loros');
+      } catch {}
+      const launchRally = async () => {
+        try {
+          const ok = await window.__tdrEnsureScene?.('race');
+          if (!ok) return setTimeout(launchRally, 120);
+          const race = __game?.scene?.getScene?.('race');
+          if (!race) return setTimeout(launchRally, 120);
+          const carId = (()=>{try{return localStorage.getItem('tdr2:carId')||'1';}catch{return'1';}})();
+          __game.scene.start('race',{carId,trackKey:'rally-arafo-los-loros',gameMode:'rally'});
+        } catch { setTimeout(launchRally, 180); }
+      };
+      setTimeout(launchRally, 250);
+    }
     __installRaceControlVisuals();
     return;
   }
