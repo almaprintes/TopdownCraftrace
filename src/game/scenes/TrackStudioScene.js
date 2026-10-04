@@ -66,6 +66,9 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._guideVisible = true;
     this._guideAlpha = 0.32;
     this._guideInput = null;
+    this._projectInput = null;
+    this._raceType = 'circuit';
+    this._importedTrackMeta = null;
 
     // nudge
     this._nudgeSteps = [1, 5, 10];
@@ -239,6 +242,7 @@ this._padCenter.on('pointerup', () => {
 
     back.on('pointerup', () => {
       this._destroyGuideInput();
+      this._destroyProjectInput();
       this.scene.start('admin-hub');
     });
 
@@ -294,7 +298,7 @@ topX += 48;
 this._btnLoad = this._makeIconButton(topX, topToolsY, '📂', () => {
   console.log('CLICK LOAD');
   this._flashMessage('📂 Cargando...');
-  this._loadProject?.();
+  this._openProjectPicker?.();
 }, '18px');
 topX += 48;
 
@@ -765,6 +769,7 @@ if (
     });
 
     this._createGuideInput();
+    this._createProjectInput();
     this._updateLoopButton();
     this._updateToolButtons();
     this._updatePanel();
@@ -2258,7 +2263,9 @@ _updatePanel() {
       saveTool: this._saveTool,
       modeTool: this._modeTool,
       trackTool: this._trackTool,
-      guideTool: this._guideTool
+      guideTool: this._guideTool,
+      raceType: this._raceType,
+      importedTrackMeta: this._importedTrackMeta
     };
   }
 _exportToGameTrack() {
@@ -2351,6 +2358,8 @@ _exportToGameTrack() {
     cellSize: 400,
     shoulderPx: 10,
     closed: this._isClosed !== false,
+    raceType: this._raceType || (this._isClosed ? 'circuit' : 'stage'),
+    ...(this._importedTrackMeta || {}),
 
     start,
 
@@ -2442,6 +2451,8 @@ _loadTrack() {
     this._modeTool = data.modeTool || 'edit';
     this._trackTool = data.trackTool || 'widthUp';
     this._guideTool = data.guideTool || 'load';
+    this._raceType = data.raceType || (this._isClosed ? 'circuit' : 'stage');
+    this._importedTrackMeta = data.importedTrackMeta || null;
 
     if (this._guideImage) {
       this._guideImage.setAlpha(this._guideAlpha);
@@ -2468,6 +2479,86 @@ const data = {
     } catch (e) {
       console.error('❌ Error guardando proyecto', e);
     }
+  }
+
+  _createProjectInput() {
+    this._destroyProjectInput();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    input.addEventListener('change', async (ev) => {
+      const file = ev.target.files?.[0];
+      if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        this._importProjectOrTrack(data);
+        this._flashMessage('📂 JSON cargado');
+      } catch (e) {
+        console.error('❌ JSON no válido', e);
+        this._flashMessage('❌ JSON no válido');
+      }
+      input.value = '';
+    });
+    document.body.appendChild(input);
+    this._projectInput = input;
+  }
+
+  _destroyProjectInput() {
+    if (this._projectInput?.parentNode) this._projectInput.parentNode.removeChild(this._projectInput);
+    this._projectInput = null;
+  }
+
+  _openProjectPicker() {
+    if (!this._projectInput) this._createProjectInput();
+    this._projectInput?.click();
+  }
+
+  _nodesFromCenterline(points) {
+    const src = Array.isArray(points) ? points : [];
+    return src.map((p, i) => {
+      const prev = src[Math.max(0, i - 1)] || p;
+      const next = src[Math.min(src.length - 1, i + 1)] || p;
+      let dx = Number(next.x) - Number(prev.x);
+      let dy = Number(next.y) - Number(prev.y);
+      const len = Math.hypot(dx, dy) || 1;
+      dx /= len; dy /= len;
+      const h = Math.min(60, Math.max(18, len * 0.22));
+      return {
+        x: Number(p.x), y: Number(p.y),
+        handleIn: { x: Number(p.x) - dx * h, y: Number(p.y) - dy * h },
+        handleOut: { x: Number(p.x) + dx * h, y: Number(p.y) + dy * h }
+      };
+    });
+  }
+
+  _importProjectOrTrack(data) {
+    if (data?.editor || Array.isArray(data?.nodes)) {
+      this._applyProjectData(data.editor || data);
+      return;
+    }
+    if (!Array.isArray(data?.centerline) || data.centerline.length < 2) {
+      throw new Error('El JSON no contiene nodes ni centerline');
+    }
+    this._nodes = this._nodesFromCenterline(data.centerline);
+    this._trackWidth = Number(data.trackWidth) || Number(data.centerline[0]?.width) || 140;
+    this._isClosed = data.closed !== false;
+    this._raceType = data.raceType || (this._isClosed ? 'circuit' : 'stage');
+    this._editorWorldW = Number(data.worldW) || this._editorWorldW;
+    this._editorWorldH = Number(data.worldH) || this._editorWorldH;
+    this._finishLine = data.finishLine || null;
+    this._checkpoints = Array.isArray(data.checkpoints) ? data.checkpoints : [];
+    const { centerline, closed, raceType, trackWidth, worldW, worldH, start, finishLine, checkpoints, grid, ...rest } = data;
+    this._importedTrackMeta = rest;
+    this._selectedNode = -1;
+    this._selectedPart = null;
+    this._tool = 'edit';
+    this._editCam?.setBounds(0, 0, this._editorWorldW, this._editorWorldH);
+    this._editCam?.centerOn(this._editorWorldW / 2, this._editorWorldH / 2);
+    this._updateToolButtons();
+    this._updatePanel();
+    this._redrawEditor();
   }
 
   _loadProject() {
@@ -2500,6 +2591,8 @@ this._applyProjectData(data.editor || data);
     this._modeTool = 'edit';
     this._trackTool = 'widthUp';
     this._guideTool = 'load';
+    this._raceType = 'stage';
+    this._importedTrackMeta = null;
 
     this._updateToolButtons();
     this._updatePanel();
