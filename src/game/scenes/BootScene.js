@@ -58,23 +58,7 @@ export class BootScene extends Phaser.Scene {
     // Startup rule: optional media never sits on the critical path.
     // The intro asset remains in the project for a future one-time/on-demand use,
     // but every normal launch goes directly from Boot to the lobby.
-    const rallyDemo=location.pathname.includes('/rally-demo/');
-    const launchMenu=async()=>{
-      if(rallyDemo){
-        bootMark('rally-demo-start');
-        try{
-          localStorage.setItem('tdr2:gameMode','rally');
-          localStorage.setItem('tdr2:trackKey','rally-arafo-los-loros');
-        }catch{}
-        const carId=(()=>{try{return localStorage.getItem('tdr2:carId')||'helix_spark';}catch{return'helix_spark';}})();
-        const ensure=window.__tdrEnsureScene;
-        if(typeof ensure==='function'&&await ensure('race')){
-          this.scene.start('race',{carId,trackKey:'rally-arafo-los-loros',gameMode:'rally'});
-          return;
-        }
-        console.error('[rally-demo] race scene unavailable');
-        return;
-      }
+    const launchMenu=()=>{
       bootMark('menu-start');
       this.scene.start('menu');
     };
