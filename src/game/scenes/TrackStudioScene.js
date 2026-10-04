@@ -54,7 +54,8 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._trackWidthMax = 260;
 
     this._isClosed = false;
-    this._tool = 'edit'; // 'edit' | 'finish' | 'checkpoint' | 'piano'
+    this._tool = 'edit'; // 'edit' | 'start' | 'finish' | 'checkpoint' | 'piano'
+    this._startLine = null;
     this._finishLine = null;
     this._checkpoints = [];
 
@@ -333,6 +334,12 @@ topX += 60;
     }, '12px');
     topX += 44;
 
+    this._startTopBtn = this._makeIconButton(topX, topToolsY, 'SAL', () => {
+      this._modeTool = 'start';
+      this._setTool('start');
+    }, '11px');
+    topX += 44;
+
     this._finishTopBtn = this._makeIconButton(topX, topToolsY, '🏁', () => {
       this._modeTool = 'finish';
       this._setTool('finish');
@@ -464,7 +471,7 @@ topX += 52;
       this._tapCandidate = true;
       this._gestureWasMultiTouch = false;
 
-      if (this._tool === 'finish' || this._tool === 'checkpoint') {
+      if (this._tool === 'start' || this._tool === 'finish' || this._tool === 'checkpoint') {
         this._draggingPart = false;
         this._dragMoved = false;
         this._dragStartScreen = { x: pointer.x, y: pointer.y };
@@ -723,7 +730,10 @@ if (
   ) {
     const world = this._screenToWorld(pointer.x, pointer.y);
 
-    if (this._tool === 'finish') {
+    if (this._tool === 'start') {
+      this._placeStartLineAt(world.x, world.y);
+
+    } else if (this._tool === 'finish') {
       this._placeFinishLineAt(world.x, world.y);
 
     } else if (this._tool === 'checkpoint') {
@@ -1396,6 +1406,7 @@ _toggleModeMenu() {
 
   _setTool(tool) {
     this._tool = tool;
+    if (tool === 'start') this._modeTool = 'start';
     if (tool === 'finish') this._modeTool = 'finish';
     if (tool === 'checkpoint') this._modeTool = 'checkpoint';
     if (tool === 'edit' && this._modeTool !== 'edit') this._modeTool = 'edit';
@@ -1430,6 +1441,7 @@ _updateToolButtons() {
 
   // modo directo
   paintCircle(this._editBtn, this._tool === 'edit', 0x2a4277, 0x8eb8ff);
+  paintCircle(this._startTopBtn, this._tool === 'start', 0x1f4f2d, 0x8df0a8);
   paintCircle(this._finishTopBtn, this._tool === 'finish', 0x2a4277, 0x8eb8ff);
   paintCircle(this._checkpointTopBtn, this._tool === 'checkpoint', 0x2a4277, 0x8eb8ff);
   paintCircle(this._pianoTopBtn, this._tool === 'piano', 0x2a4277, 0x8eb8ff);
@@ -1936,6 +1948,19 @@ if (Phaser.Math.Distance.Between(x, y, p.b.x, p.b.y) < R_HANDLE) {
     };
   }
 
+  _placeStartLineAt(worldX, worldY) {
+    const hit = this._findNearestCurvePoint(worldX, worldY);
+    if (!hit) return;
+    const half = this._trackWidth * 0.5;
+    this._startLine = {
+      a: { x: hit.point.x - hit.normal.x * half, y: hit.point.y - hit.normal.y * half },
+      b: { x: hit.point.x + hit.normal.x * half, y: hit.point.y + hit.normal.y * half },
+      normal: { x: hit.tangent.x, y: hit.tangent.y }
+    };
+    this._updatePanel();
+    this._redrawEditor();
+  }
+
   _placeFinishLineAt(worldX, worldY) {
     const hit = this._findNearestCurvePoint(worldX, worldY);
     if (!hit) return;
@@ -2203,6 +2228,17 @@ const targetS = finishS - correctedOffset;
       }
     }
 
+    if (this._startLine?.a && this._startLine?.b) {
+      this._finishGfx.lineStyle(10, 0x2bff88, 0.95);
+      this._finishGfx.beginPath();
+      this._finishGfx.moveTo(this._startLine.a.x, this._startLine.a.y);
+      this._finishGfx.lineTo(this._startLine.b.x, this._startLine.b.y);
+      this._finishGfx.strokePath();
+      this._finishGfx.fillStyle(0x2bff88, 1);
+      this._finishGfx.fillCircle(this._startLine.a.x, this._startLine.a.y, 5);
+      this._finishGfx.fillCircle(this._startLine.b.x, this._startLine.b.y, 5);
+    }
+
     if (this._finishLine?.a && this._finishLine?.b) {
       this._finishGfx.lineStyle(10, 0xffffff, 0.95);
       this._finishGfx.beginPath();
@@ -2375,6 +2411,7 @@ _updatePanel() {
       `Sin selección\n` +
       `Nodos: ${this._nodes.length}\n` +
       `Pianos: ${this._pianos.length}\n` +
+      `Salida: ${this._startLine ? 'sí' : 'no'}\n` +
       `Meta: ${this._finishLine ? 'sí' : 'no'}\n` +
       `Checkpoints: ${this._checkpoints.length}\n` +
       `Guía: ${guideLoaded ? (this._guideVisible ? 'visible' : 'oculta') : 'no cargada'}`
@@ -2388,6 +2425,7 @@ _updatePanel() {
       nodes: this._nodes,
       trackWidth: this._trackWidth,
       isClosed: this._isClosed,
+      startLine: this._startLine,
       finishLine: this._finishLine,
       checkpoints: this._checkpoints,
       guideAlpha: this._guideAlpha,
@@ -2449,13 +2487,30 @@ _exportToGameTrack() {
       }))
     : [];
 
-  let start = this._nodes[0]
+  const startLine = this._startLine
     ? {
-        x: Math.round(this._nodes[0].x),
-        y: Math.round(this._nodes[0].y),
-        r: 0
+        a: { x: Math.round(this._startLine.a.x), y: Math.round(this._startLine.a.y) },
+        b: { x: Math.round(this._startLine.b.x), y: Math.round(this._startLine.b.y) },
+        normal: this._startLine.normal ? { x: Number(this._startLine.normal.x), y: Number(this._startLine.normal.y) } : undefined
       }
+    : null;
+
+  let start = this._nodes[0]
+    ? { x: Math.round(this._nodes[0].x), y: Math.round(this._nodes[0].y), r: 0 }
     : { x: 400, y: 400, r: 0 };
+
+  // Open stages use an explicit start line. Spawn is derived behind it,
+  // never from the first road node, so the road may extend before SALIDA.
+  if (!this._isClosed && this._raceType === 'stage' && startLine?.a && startLine?.b) {
+    const mx = (startLine.a.x + startLine.b.x) * 0.5;
+    const my = (startLine.a.y + startLine.b.y) * 0.5;
+    let tx = Number(startLine.normal?.x) || 0;
+    let ty = Number(startLine.normal?.y) || 0;
+    const len = Math.hypot(tx, ty) || 1;
+    tx /= len; ty /= len;
+    const spawnBack = Math.max(70, Math.min(140, this._trackWidth * 0.9));
+    start = { x: Math.round(mx - tx * spawnBack), y: Math.round(my - ty * spawnBack), r: Math.atan2(ty, tx) };
+  }
 
   let grid = null;
 
@@ -2507,6 +2562,7 @@ _exportToGameTrack() {
       width: this._trackWidth
     })),
 
+    startLine,
     finishLine,
     checkpoints,
     grid
@@ -2579,6 +2635,7 @@ _loadTrack() {
     this._nodes = data.nodes || [];
     this._trackWidth = data.trackWidth ?? 140;
     this._isClosed = data.isClosed ?? false;
+    this._startLine = data.startLine || null;
     this._finishLine = data.finishLine || null;
     this._checkpoints = data.checkpoints || [];
     this._guideAlpha = data.guideAlpha ?? 0.32;
@@ -2748,9 +2805,10 @@ const data = {
     this._raceType = data.raceType || (this._isClosed ? 'circuit' : 'stage');
     this._editorWorldW = Number(data.worldW) || this._editorWorldW;
     this._editorWorldH = Number(data.worldH) || this._editorWorldH;
+    this._startLine = data.startLine || null;
     this._finishLine = data.finishLine || null;
     this._checkpoints = Array.isArray(data.checkpoints) ? data.checkpoints : [];
-    const { centerline, closed, raceType, trackWidth, worldW, worldH, start, finishLine, checkpoints, grid, ...rest } = data;
+    const { centerline, closed, raceType, trackWidth, worldW, worldH, start, startLine, finishLine, checkpoints, grid, ...rest } = data;
     this._importedTrackMeta = rest;
     this._selectedNode = -1;
     this._selectedPart = null;
@@ -2780,6 +2838,7 @@ this._applyProjectData(data.editor || data);
 
   _newProject() {
     this._nodes = [];
+    this._startLine = null;
     this._finishLine = null;
     this._checkpoints = [];
     this._isClosed = false;
