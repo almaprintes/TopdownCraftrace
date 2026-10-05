@@ -1689,6 +1689,20 @@ this._trackDiag2 = '';
 this.finishLine = t01.finishLine || t01.finish;
 this.startLine = t01.startLine || null;
 this._stageWaitingForStart = (t01.closed === false && !!(this.startLine?.a && this.startLine?.b));
+
+// SALIDA visible del tramo abierto. Es una puerta real independiente del semáforo:
+// el coche aparece antes, el semáforo lo libera y el crono arranca al cruzarla.
+if (this._stageWaitingForStart) {
+  const g = this.add.graphics();
+  g.setDepth(21);
+  g.lineStyle(8, 0x2bff88, 1);
+  g.beginPath();
+  g.moveTo(this.startLine.a.x, this.startLine.a.y);
+  g.lineTo(this.startLine.b.x, this.startLine.b.y);
+  g.strokePath();
+  this.startLineDebug = g;
+  this.uiCam?.ignore?.(g);
+}
 // Fallback: si el track no trae normal en la meta, la calculamos desde la centerline
 if (this.finishLine?.a && this.finishLine?.b && !this.finishLine.normal) {
   const a = this.finishLine.a;
@@ -3486,11 +3500,14 @@ if (!this._startAutoFired && this._startState === 'COUNTDOWN') {
     }
 
     if (this.timing) {
-      this.timing.lapStart = performance.now();
-      this.timing.started = true;
+      const stageUsesStartGate = this.track?.meta?.closed === false &&
+        !!(this.startLine?.a && this.startLine?.b);
+      this.timing.lapStart = stageUsesStartGate ? null : performance.now();
+      this.timing.started = !stageUsesStartGate;
       this.timing.s1 = null;
       this.timing.s2 = null;
       this.timing.s3 = null;
+      if (!stageUsesStartGate) this.lapStartTick = this.simTick;
     }
 
     this.time.delayedCall(350, () => {
