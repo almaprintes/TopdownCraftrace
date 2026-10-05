@@ -3715,6 +3715,11 @@ const engineBrakeCoef = 0.04; // ajustable
   if (down) {
     body.velocity.x -= dirX * brakeForce * dt;
     body.velocity.y -= dirY * brakeForce * dt;
+    // Rally: el freno actúa además como freno de mano para ayudar a rotar la trasera
+    // en horquillas, sin alterar el comportamiento de los circuitos normales.
+    if ((t01?.closed === false || t01?.raceType === 'stage') && Math.abs(t.stickX || 0) > 0.12 && speed > 20) {
+      this.car.rotation += Math.sign(t.stickX) * 2.4 * dt;
+    }
   }
 
 // Freno motor (solo cuando NO hay gas NI freno)
@@ -3793,6 +3798,8 @@ if (absFwdSpeed < S.yawSpeedMin) {
   turnFactor *= absFwdSpeed / S.yawSpeedMin;
 }
 
+const rallyHandling = (t01?.closed === false || t01?.raceType === 'stage');
+if (rallyHandling) turnFactor *= 1.55;
 const maxTurn = turnRate * turnFactor; // rad/s
 
 // --------------------------------
