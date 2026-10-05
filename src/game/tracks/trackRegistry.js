@@ -58,7 +58,19 @@ function buildRegistry(){
     }
     if(!finishAnchor)finishAnchor={x:400,y:400,r:directionSign<0?Math.PI:0};
     const openStart=(!isClosed&&smooth.length>1)?(()=>{const first=direction==='reverse'?smooth[smooth.length-1]:smooth[0],second=direction==='reverse'?smooth[smooth.length-2]:smooth[1];return{x:first.x,y:first.y,r:Math.atan2(second.y-first.y,second.x-first.x)};})():null;
-    const raceStart=openStart||makeSpawnBehindFinish(finishAnchor,authored.startOffset),metrics=loopMetrics(smooth),anchorProjection=finishProjection||projectToSmoothCenter(finishAnchor,smooth),finishDist=isClosed&&anchorProjection?distanceAtProjection(anchorProjection,metrics,smooth):0,checkpointFractions=normalizeCheckpointFractions(json.checkpointFractions);
+    let authoredStartLine=json.startLine?clone(json.startLine):null;
+    let authoredFinishLine=json.finishLine?clone(json.finishLine):null;
+    let authoredStart=json.start?clone(json.start):null;
+    if(authored.authorScale!==1){
+      const scaleGate=(g)=>g?.a&&g?.b?({...g,a:{x:Number(g.a.x)*authored.authorScale,y:Number(g.a.y)*authored.authorScale},b:{x:Number(g.b.x)*authored.authorScale,y:Number(g.b.y)*authored.authorScale}}):g;
+      authoredStartLine=scaleGate(authoredStartLine);authoredFinishLine=scaleGate(authoredFinishLine);
+      if(authoredStart)authoredStart={...authoredStart,x:Number(authoredStart.x)*authored.authorScale,y:Number(authoredStart.y)*authored.authorScale};
+    }
+    if(!isClosed&&authoredFinishLine?.a&&authoredFinishLine?.b){
+      const mx=(Number(authoredFinishLine.a.x)+Number(authoredFinishLine.b.x))*.5,my=(Number(authoredFinishLine.a.y)+Number(authoredFinishLine.b.y))*.5;
+      const n=authoredFinishLine.normal;finishAnchor={x:mx,y:my,r:n?Math.atan2(Number(n.y),Number(n.x)):finishAnchor.r};
+    }
+    const raceStart=(!isClosed&&authoredStart&&[authoredStart.x,authoredStart.y,authoredStart.r].every(Number.isFinite))?authoredStart:(openStart||makeSpawnBehindFinish(finishAnchor,authored.startOffset)),metrics=loopMetrics(smooth),anchorProjection=finishProjection||projectToSmoothCenter(finishAnchor,smooth),finishDist=isClosed&&anchorProjection?distanceAtProjection(anchorProjection,metrics,smooth):0,checkpointFractions=normalizeCheckpointFractions(json.checkpointFractions);
     let checkpoints=null;if(String(json.checkpointMode||'').toLowerCase()==='authored'){checkpoints=normalizeAuthoredCheckpoints(json.checkpoints,direction);if(checkpoints&&authored.authorScale!==1)checkpoints=checkpoints.map(g=>({...g,a:{x:Number(g.a.x)*authored.authorScale,y:Number(g.a.y)*authored.authorScale},b:{x:Number(g.b.x)*authored.authorScale,y:Number(g.b.y)*authored.authorScale}}));}
     if(!checkpoints&&smooth.length>3){
       if(isClosed)checkpoints=checkpointFractions.map(frac=>{const p=pointAtLoopDistance(smooth,metrics,finishDist+directionSign*metrics.total*frac);return makeGateAt(p,Number(p?.width)||scaledFallbackWidth,directionSign,.10);}).filter(Boolean);
@@ -70,7 +82,7 @@ function buildRegistry(){
       }
     }
     const raceCenterline=direction==='reverse'?smooth.slice().reverse():smooth.slice();
-    out[slug]={id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:authored.targetLengthMeters?'Corta':(json.lengthLabel||'Media'),worldW:authored.worldW,worldH:authored.worldH,trackWidth:scaledFallbackWidth,grassMargin:authored.grassMargin,sampleStepPx:authored.sampleStepPx,cellSize:authored.cellSize,shoulderPx:authored.shoulderPx,start:raceStart,centerline,closed:isClosed,raceDirection:direction,raceCenterline,finishAnchor,finishLine:makeFinishLineFromAnchor(finishAnchor,scaledFallbackWidth),finish:null,checkpoints,checkpointFractions,checkpointMode:'proportional',grid:null,meta:{...(json.meta||{}),authorScale:authored.authorScale,targetLengthMeters:authored.targetLengthMeters,targetWidthMeters:authored.targetWidthMeters}};
+    out[slug]={id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:authored.targetLengthMeters?'Corta':(json.lengthLabel||'Media'),worldW:authored.worldW,worldH:authored.worldH,trackWidth:scaledFallbackWidth,grassMargin:authored.grassMargin,sampleStepPx:authored.sampleStepPx,cellSize:authored.cellSize,shoulderPx:authored.shoulderPx,start:raceStart,centerline,closed:isClosed,raceDirection:direction,raceCenterline,finishAnchor,finishLine:(!isClosed&&authoredFinishLine?.a&&authoredFinishLine?.b)?authoredFinishLine:makeFinishLineFromAnchor(finishAnchor,scaledFallbackWidth),startLine:(!isClosed&&authoredStartLine?.a&&authoredStartLine?.b)?authoredStartLine:null,finish:null,checkpoints,checkpointFractions,checkpointMode:'proportional',grid:null,meta:{...(json.meta||{}),authorScale:authored.authorScale,targetLengthMeters:authored.targetLengthMeters,targetWidthMeters:authored.targetWidthMeters}};
   }
   return out;
 }
