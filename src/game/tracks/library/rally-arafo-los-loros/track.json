@@ -12416,5 +12416,6 @@
     "elevationDifferenceM": 934,
     "adaptation": "Craftrace manually authored stage",
     "geometryStatus": "manual Track Studio trace from route reference; not survey-grade GPS geometry"
-  }
+  },
+  "carScale": 0.65
 }
