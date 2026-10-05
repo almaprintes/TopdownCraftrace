@@ -1682,6 +1682,8 @@ this._trackDiag2 = '';
 
 // 6) Meta, checkpoints y vueltas (datos)
 this.finishLine = t01.finishLine || t01.finish;
+this.startLine = t01.startLine || null;
+this._stageWaitingForStart = (t01.closed === false && !!(this.startLine?.a && this.startLine?.b));
 // Fallback: si el track no trae normal en la meta, la calculamos desde la centerline
 if (this.finishLine?.a && this.finishLine?.b && !this.finishLine.normal) {
   const a = this.finishLine.a;
@@ -3103,11 +3105,16 @@ this._startAutoFired = true; // ✅ ya está programado en create(), no lo repit
 
     // Iniciar cronómetro EXACTAMENTE en lights out
     if (this.timing) {
-      this.timing.lapStart = performance.now();
-      this.timing.started = true;
+      // Circuit: timing starts at lights out. Open stage with an authored
+      // SALIDA: lights only release the car; timing starts when SALIDA is crossed.
+      const stageUsesStartGate = this.track?.meta?.closed === false &&
+        !!(this.startLine?.a && this.startLine?.b);
+      this.timing.lapStart = stageUsesStartGate ? null : performance.now();
+      this.timing.started = !stageUsesStartGate;
       this.timing.s1 = null;
       this.timing.s2 = null;
       this.timing.s3 = null;
+      if (!stageUsesStartGate) this.lapStartTick = this.simTick;
     }
 
     this.time.delayedCall(350, () => {
@@ -4080,11 +4087,28 @@ const _crossGate = (gate) => {
 
   return forwardGate;
 };
+// --- SALIDA de tramo abierto ---
+// El coche aparece antes de esta línea. El semáforo solo lo libera; el crono
+// empieza al cruzar SALIDA en sentido correcto.
+if (this._stageWaitingForStart && this._raceStarted && _crossGate(this.startLine)) {
+  this._stageWaitingForStart = false;
+  this._cpState = 0;
+  if (this.timing) {
+    this.timing.lapStart = performance.now();
+    this.timing.started = true;
+    this.timing.s1 = null;
+    this.timing.s2 = null;
+    this.timing.s3 = null;
+  }
+  this.lapStartTick = this.simTick;
+  this._setTTHudColor('#F2F2F2');
+}
+
 // --- 1) checkpoints (en orden) ---
 const cp1 = this.checkpoints?.cp1;
 const cp2 = this.checkpoints?.cp2;
 
-if (cp1 && this._cpCooldown1Ms === 0 && _crossGate(cp1)) {
+if (!this._stageWaitingForStart && cp1 && this._cpCooldown1Ms === 0 && _crossGate(cp1)) {
   if ((this._cpState || 0) === 0) {
     this._cpState = 1;
 
@@ -4107,7 +4131,7 @@ this.timing.s1Tick = (this.lapStartTick != null) ? (this.simTick - this.lapStart
   this._cpCooldown1Ms = 500;
 }
 
-if (cp2 && this._cpCooldown2Ms === 0 && _crossGate(cp2)) {
+if (!this._stageWaitingForStart && cp2 && this._cpCooldown2Ms === 0 && _crossGate(cp2)) {
   if ((this._cpState || 0) === 1) {
     this._cpState = 2;
 
@@ -4130,7 +4154,7 @@ this.timing.s2Tick = (this.lapStartTick != null) ? (this.simTick - this.lapStart
 }
 
 // --- 2) meta: SOLO cuenta si cpState==2 ---
-if (within && crossed && forward && this._lapCooldownMs === 0) {
+if (!this._stageWaitingForStart && within && crossed && forward && this._lapCooldownMs === 0) {
   if ((this._cpState || 0) === 2) {
 if (this.timing) {
   const now = performance.now();
