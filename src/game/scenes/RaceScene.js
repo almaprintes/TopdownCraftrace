@@ -1032,6 +1032,9 @@ if (!meta) {
 }
 
 const t01 = meta;
+// Defensa de runtime: un stage abierto nunca puede cerrarse por datos heredados
+// o por una exportación antigua. Evita cualquier segmento META → SALIDA.
+if (t01?.raceType === 'stage') t01.closed = false;
 this.centerlinePoints = Array.isArray(t01?.centerline) ? t01.centerline : [];
 // Reconstrucción mínima del track runtime a partir del JSON/meta
 const geom = buildTrackRibbon({
