@@ -37,6 +37,20 @@ class MenuMusic {
     this.unlocked=false;
     this.fadeTimer=null;
     this.pauseTimer=null;
+    this.appHidden=!!document.hidden;
+    this.onVisibility=()=>{
+      this.appHidden=!!document.hidden;
+      if(this.appHidden){
+        clearInterval(this.fadeTimer);this.fadeTimer=null;
+        clearTimeout(this.pauseTimer);this.pauseTimer=null;
+        this.targetVolume=0;
+        try{this.audio.volume=0;this.audio.pause();}catch{}
+      }else{
+        this._sync(true);
+      }
+    };
+    this.onPageHide=()=>{this.appHidden=true;try{this.audio.volume=0;this.audio.pause();}catch{}};
+    this.onPageShow=()=>{this.appHidden=!!document.hidden;if(!this.appHidden)this._sync(true);};
 
     this.unlock=()=>{
       if(this.unlocked && !this.audio.paused){ this._sync(true); return; }
@@ -72,6 +86,9 @@ class MenuMusic {
     window.addEventListener('click',this.unlock,opts);
     window.addEventListener('keydown',this.unlock,opts);
     window.addEventListener(AUDIO_EVENT,this.onAudioSettings);
+    document.addEventListener('visibilitychange',this.onVisibility);
+    window.addEventListener('pagehide',this.onPageHide);
+    window.addEventListener('pageshow',this.onPageShow);
 
     try{this.audio.load();}catch{}
     this.watch=setInterval(()=>this._sync(false),160);
@@ -87,7 +104,7 @@ class MenuMusic {
   }
 
   _play(){
-    if(!this.unlocked||!this.audio.paused)return;
+    if(this.appHidden||document.hidden||!this.unlocked||!this.audio.paused)return;
     clearTimeout(this.pauseTimer);this.pauseTimer=null;
     try{const p=this.audio.play();if(p?.catch)p.catch(()=>{});}catch{}
   }
@@ -110,7 +127,8 @@ class MenuMusic {
   _sync(force=false){
     const p=prefs();
     const menu=this._isMenu();
-    const desired=menu&&!p.mute?p.master*p.music*.32:0;
+    const hidden=this.appHidden||document.hidden;
+    const desired=!hidden&&menu&&!p.mute?p.master*p.music*.32:0;
     if(menu&&!p.mute&&desired>0){
       clearTimeout(this.pauseTimer);this.pauseTimer=null;
       this._play();
@@ -132,6 +150,9 @@ class MenuMusic {
     window.removeEventListener('click',this.unlock,opts);
     window.removeEventListener('keydown',this.unlock,opts);
     window.removeEventListener(AUDIO_EVENT,this.onAudioSettings);
+    document.removeEventListener('visibilitychange',this.onVisibility);
+    window.removeEventListener('pagehide',this.onPageHide);
+    window.removeEventListener('pageshow',this.onPageShow);
     try{this.audio.pause();this.audio.src='';this.audio.load();}catch{}
   }
 }

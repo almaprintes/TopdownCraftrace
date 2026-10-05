@@ -59,7 +59,14 @@ export class RaceScene extends CurrentRaceScene{
     this._audioUpdateAccum=0;
     this._iosAudioDisabled=isIOSDevice();
     if(this._iosAudioDisabled)return result;
-    this._audioUnlock=()=>this._ensureProceduralAudio();
+    this._audioUnlock=()=>{if(!document.hidden)this._ensureProceduralAudio();};
+    this._audioVisibility=()=>{
+      try{
+        if(document.hidden)this._audioCtx?.suspend?.();
+        else if(this._audioReady)this._audioCtx?.resume?.();
+      }catch{}
+    };
+    document.addEventListener('visibilitychange',this._audioVisibility);
     window.addEventListener('pointerdown',this._audioUnlock,{passive:true});
     window.addEventListener('touchstart',this._audioUnlock,{passive:true});
     window.addEventListener('keydown',this._audioUnlock,{passive:true});
@@ -69,7 +76,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _ensureProceduralAudio(){
-    if(this._iosAudioDisabled)return;
+    if(this._iosAudioDisabled||document.hidden)return;
     if(this._audioReady){
       try{if(this._audioCtx?.state==='suspended')this._audioCtx.resume();}catch{}
       return;
@@ -179,6 +186,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _destroyProceduralAudio(){
+    if(this._audioVisibility){document.removeEventListener('visibilitychange',this._audioVisibility);this._audioVisibility=null;}
     if(this._audioUnlock){
       window.removeEventListener('pointerdown',this._audioUnlock);
       window.removeEventListener('touchstart',this._audioUnlock);
