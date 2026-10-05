@@ -37,6 +37,8 @@ class MenuMusic {
     this.unlocked=false;
     this.fadeTimer=null;
     this.pauseTimer=null;
+    this.onPageHide=()=>this._stopImmediately();
+    this.onVisibilityChange=()=>{ if(document.hidden) this._stopImmediately(); else this._sync(true); };
 
     this.unlock=()=>{
       if(this.unlocked && !this.audio.paused){ this._sync(true); return; }
@@ -72,6 +74,8 @@ class MenuMusic {
     window.addEventListener('click',this.unlock,opts);
     window.addEventListener('keydown',this.unlock,opts);
     window.addEventListener(AUDIO_EVENT,this.onAudioSettings);
+    window.addEventListener('pagehide',this.onPageHide);
+    document.addEventListener('visibilitychange',this.onVisibilityChange);
 
     try{this.audio.load();}catch{}
     this.watch=setInterval(()=>this._sync(false),160);
@@ -124,6 +128,13 @@ class MenuMusic {
     }
   }
 
+  _stopImmediately(){
+    clearInterval(this.fadeTimer);this.fadeTimer=null;
+    clearTimeout(this.pauseTimer);this.pauseTimer=null;
+    this.targetVolume=0;
+    try{this.audio.volume=0;this.audio.pause();this.audio.currentTime=0;}catch{}
+  }
+
   destroy(){
     clearInterval(this.watch);clearInterval(this.fadeTimer);clearTimeout(this.pauseTimer);
     const opts={capture:true};
@@ -132,7 +143,10 @@ class MenuMusic {
     window.removeEventListener('click',this.unlock,opts);
     window.removeEventListener('keydown',this.unlock,opts);
     window.removeEventListener(AUDIO_EVENT,this.onAudioSettings);
-    try{this.audio.pause();this.audio.src='';this.audio.load();}catch{}
+    window.removeEventListener('pagehide',this.onPageHide);
+    document.removeEventListener('visibilitychange',this.onVisibilityChange);
+    this._stopImmediately();
+    try{this.audio.src='';this.audio.load();}catch{}
   }
 }
 
