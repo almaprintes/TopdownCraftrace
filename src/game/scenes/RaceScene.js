@@ -1130,7 +1130,7 @@ const specFinal = this.baseSpec || spec || CAR_SPECS.stock;
 this.ensureCarSkinTexture(specFinal).catch(() => {});
 const vScale = Number(specFinal?.visualScale ?? 1.0);
 // Escala opcional por circuito: permite rallies visualmente más estrechos sin alterar los coches base.
-const trackCarScale = Math.max(0.35, Math.min(1.5, Number(t01?.carScale ?? 1.0) || 1.0));
+const trackCarScale = Math.max(0.35, Math.min(1.5, Number(t01?.carScale ?? this.track?.meta?.carScale ?? 1.0) || 1.0));
 
 // Colisión: si quieres que el camión “ocupe pista”, esto es CLAVE
 const baseRadius = 14;
@@ -3126,7 +3126,7 @@ this._startAutoFired = true; // ✅ ya está programado en create(), no lo repit
     if (this.timing) {
       // Circuit: timing starts at lights out. Open stage with an authored
       // SALIDA: lights only release the car; timing starts when SALIDA is crossed.
-      const stageUsesStartGate = this.track?.meta?.closed === false &&
+      const stageUsesStartGate = t01?.closed === false &&
         !!(this.startLine?.a && this.startLine?.b);
       this.timing.lapStart = stageUsesStartGate ? null : performance.now();
       this.timing.started = !stageUsesStartGate;
