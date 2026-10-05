@@ -1126,10 +1126,12 @@ body.setVisible(false);
 const specFinal = this.baseSpec || spec || CAR_SPECS.stock;
 this.ensureCarSkinTexture(specFinal).catch(() => {});
 const vScale = Number(specFinal?.visualScale ?? 1.0);
+// Escala opcional por circuito: permite rallies visualmente más estrechos sin alterar los coches base.
+const trackCarScale = Math.max(0.35, Math.min(1.5, Number(t01?.carScale ?? 1.0) || 1.0));
 
 // Colisión: si quieres que el camión “ocupe pista”, esto es CLAVE
 const baseRadius = 14;
-body.setCircle(Math.round(baseRadius * vScale));
+body.setCircle(Math.round(baseRadius * vScale * trackCarScale));
 // Aumento SOLO visual del coche (no afecta a físicas)
 const VISUAL_SCALE_MULT = 1.35;
 body.setCollideWorldBounds(true);
@@ -1154,8 +1156,8 @@ carSprite.y = 0;
 this._carVisualRotOffset = Math.PI / 2;
 
 // Tamaño objetivo “caja” en pista (NO fuerza proporción, solo limita)
-const TARGET_W = 96 * vScale * VISUAL_SCALE_MULT;
-const TARGET_H = 48 * vScale * VISUAL_SCALE_MULT;
+const TARGET_W = 96 * vScale * VISUAL_SCALE_MULT * trackCarScale;
+const TARGET_H = 48 * vScale * VISUAL_SCALE_MULT * trackCarScale;
 
 // Escala uniforme para que NO se deforme (fit inside box)
 const fitSpriteToBox = () => {
@@ -1228,7 +1230,7 @@ for (let i = 1; i < MAX_GRID_CARS; i++) {
 
   const aiBody = this.physics.add.sprite(aiSpawn.x, aiSpawn.y, '__BODY__');
   aiBody.setVisible(false);
-  aiBody.setCircle(Math.round(baseRadius * vScale));
+  aiBody.setCircle(Math.round(baseRadius * vScale * trackCarScale));
   aiBody.setCollideWorldBounds(true);
   aiBody.setBounce(0);
   aiBody.setDrag(0, 0);
