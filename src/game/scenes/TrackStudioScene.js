@@ -2551,7 +2551,7 @@ _exportToGameTrack() {
     cellSize: 400,
     shoulderPx: 10,
     closed: this._isClosed !== false,
-    raceType: this._raceType || (this._isClosed ? 'circuit' : 'stage'),
+    raceType: this._isClosed ? (this._raceType || 'circuit') : 'stage',
     ...(this._importedTrackMeta || {}),
 
     start,
@@ -2650,7 +2650,7 @@ _loadTrack() {
     this._modeTool = data.modeTool || 'edit';
     this._trackTool = data.trackTool || 'widthUp';
     this._guideTool = data.guideTool || 'load';
-    this._raceType = data.raceType || (this._isClosed ? 'circuit' : 'stage');
+    this._raceType = this._isClosed ? (data.raceType || 'circuit') : 'stage';
     this._importedTrackMeta = data.importedTrackMeta || null;
 
     if (this._guideImage) {
@@ -2723,9 +2723,17 @@ const data = {
   editor: this._getProjectData(),
   gameTrack: this._exportToGameTrack()
 };
-      localStorage.setItem('trackstudio_project', JSON.stringify(data));
-      localStorage.setItem('trackstudio_recovery', JSON.stringify(data));
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const serialized = JSON.stringify(data, null, 2);
+      const roundTrip = JSON.parse(serialized);
+      if (this._startLine && (!roundTrip.editor?.startLine || !roundTrip.gameTrack?.startLine)) {
+        throw new Error('La SALIDA no sobrevivió a la serialización del proyecto');
+      }
+      if (!this._isClosed && roundTrip.gameTrack?.raceType !== 'stage') {
+        throw new Error('Un tramo abierto debe exportarse como stage');
+      }
+      localStorage.setItem('trackstudio_project', serialized);
+      localStorage.setItem('trackstudio_recovery', serialized);
+      const blob = new Blob([serialized], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -2802,7 +2810,7 @@ const data = {
     this._nodes = this._nodesFromCenterline(data.centerline);
     this._trackWidth = Number(data.trackWidth) || Number(data.centerline[0]?.width) || 140;
     this._isClosed = data.closed !== false;
-    this._raceType = data.raceType || (this._isClosed ? 'circuit' : 'stage');
+    this._raceType = this._isClosed ? (data.raceType || 'circuit') : 'stage';
     this._editorWorldW = Number(data.worldW) || this._editorWorldW;
     this._editorWorldH = Number(data.worldH) || this._editorWorldH;
     this._startLine = data.startLine || null;
