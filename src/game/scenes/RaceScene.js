@@ -3798,8 +3798,7 @@ if (absFwdSpeed < S.yawSpeedMin) {
   turnFactor *= absFwdSpeed / S.yawSpeedMin;
 }
 
-const rallyHandling = (t01?.closed === false || t01?.raceType === 'stage');
-if (rallyHandling) turnFactor *= 1.55;
+if (t01?.closed === false || t01?.raceType === 'stage') turnFactor *= 1.55;
 const maxTurn = turnRate * turnFactor; // rad/s
 
 // --------------------------------
