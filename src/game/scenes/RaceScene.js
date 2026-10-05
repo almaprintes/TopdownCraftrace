@@ -3126,7 +3126,7 @@ this._startAutoFired = true; // ✅ ya está programado en create(), no lo repit
     if (this.timing) {
       // Circuit: timing starts at lights out. Open stage with an authored
       // SALIDA: lights only release the car; timing starts when SALIDA is crossed.
-      const stageUsesStartGate = t01?.closed === false &&
+      const stageUsesStartGate = this.track?.meta?.closed === false &&
         !!(this.startLine?.a && this.startLine?.b);
       this.timing.lapStart = stageUsesStartGate ? null : performance.now();
       this.timing.started = !stageUsesStartGate;
@@ -3717,7 +3717,7 @@ const engineBrakeCoef = 0.04; // ajustable
     body.velocity.y -= dirY * brakeForce * dt;
     // Rally: el freno actúa además como freno de mano para ayudar a rotar la trasera
     // en horquillas, sin alterar el comportamiento de los circuitos normales.
-    if ((t01?.closed === false || t01?.raceType === 'stage') && Math.abs(t.stickX || 0) > 0.12 && speed > 20) {
+    if ((this.track?.meta?.closed === false || this.track?.meta?.raceType === 'stage') && Math.abs(t.stickX || 0) > 0.12 && speed > 20) {
       this.car.rotation += Math.sign(t.stickX) * 2.4 * dt;
     }
   }
@@ -3798,7 +3798,7 @@ if (absFwdSpeed < S.yawSpeedMin) {
   turnFactor *= absFwdSpeed / S.yawSpeedMin;
 }
 
-if (t01?.closed === false || t01?.raceType === 'stage') turnFactor *= 1.55;
+if (this.track?.meta?.closed === false || this.track?.meta?.raceType === 'stage') turnFactor *= 1.55;
 const maxTurn = turnRate * turnFactor; // rad/s
 
 // --------------------------------
