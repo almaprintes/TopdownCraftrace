@@ -40,7 +40,6 @@ class MenuMusic {
     this.suspended=false;
     this.onPageHide=()=>{ this.suspended=true; this._stopImmediately(); };
     this.onVisibilityChange=()=>{ if(document.hidden){ this.suspended=true; this._stopImmediately(); } else { this.suspended=false; this._sync(true); } };
-    this.onNativePause=()=>{ if(!this.audio.paused) return; this.suspended=true; this.targetVolume=0; };
 
     this.unlock=()=>{
       if(this.unlocked && !this.audio.paused){ this._sync(true); return; }
@@ -78,7 +77,6 @@ class MenuMusic {
     window.addEventListener(AUDIO_EVENT,this.onAudioSettings);
     window.addEventListener('pagehide',this.onPageHide);
     document.addEventListener('visibilitychange',this.onVisibilityChange);
-    this.audio.addEventListener('pause',this.onNativePause);
 
     try{this.audio.load();}catch{}
     this.watch=setInterval(()=>this._sync(false),160);
@@ -149,7 +147,6 @@ class MenuMusic {
     window.removeEventListener(AUDIO_EVENT,this.onAudioSettings);
     window.removeEventListener('pagehide',this.onPageHide);
     document.removeEventListener('visibilitychange',this.onVisibilityChange);
-    this.audio.removeEventListener('pause',this.onNativePause);
     this._stopImmediately();
     try{this.audio.src='';this.audio.load();}catch{}
   }
