@@ -1684,8 +1684,6 @@ this._isInBand = (band, x, y) => {
     this._cullEnabled = !isIOSRaceDevice();
     this._iosStaticTrackRender = !this._cullEnabled;
     this._iosStaticTrackPrepared = false;
-    this._iosStaticTrackQueue = null;
-    this._iosStaticTrackCursor = 0;
     this._iosStaticTrackInitialReady = !this._iosStaticTrackRender;
 this._hudLog(`[track geom] cells=${this.track.geom?.cells?.size ?? 'null'} cull=${this._cullEnabled?'ON':'OFF'}`);
  this._trackCells = this.track.geom?.cells?.size ?? null;
@@ -3104,68 +3102,8 @@ this.scale.on('resize', this._reflowStartModal);
 this._reflowStartModal();
 this.time.delayedCall(0, () => this._reflowStartModal());
 this.time.delayedCall(120, () => this._reflowStartModal());    
-    // Arranque automático: en iOS esperamos a que la zona de SALIDA tenga asfalto.
-const _fireStartLights = () => {
-  if (this._startState !== 'COUNTDOWN') this._startState = 'COUNTDOWN';
-this._startAutoFired = true; // ✅ ya está programado en create(), no lo repitas en update()
-  if (this._startHint) this._startHint.setText('Mantente listo...');
-  if (this._startStatus) {
-    this._startStatus.setText('RED LIGHTS');
-    this._startStatus.setColor('#ffffff');
-  }
-
-  if (this._startAsset) this._startAsset.setTexture('start_base');
-
-  const stepMs = 600;
-
-  for (let i = 1; i <= 6; i++) {
-    this.time.delayedCall(stepMs * i, () => {
-      if (this._startAsset) this._startAsset.setTexture(`start_l${i}`);
-    });
-  }
-
-  const randMs = 800 + Math.floor(Math.random() * 700);
-
-  this.time.delayedCall(stepMs * 6 + randMs, () => {
-    this._startState = 'GO';
-
-    if (this._startAsset) this._startAsset.setTexture('start_base');
-
-    if (this._startStatus) {
-      this._startStatus.setText('GO!');
-      this._startStatus.setColor('#2bff88');
-    }
-
-    // Iniciar cronómetro EXACTAMENTE en lights out
-    if (this.timing) {
-      // Circuit: timing starts at lights out. Open stage with an authored
-      // SALIDA: lights only release the car; timing starts when SALIDA is crossed.
-      const stageUsesStartGate = this.track?.meta?.closed === false &&
-        !!(this.startLine?.a && this.startLine?.b);
-      this.timing.lapStart = stageUsesStartGate ? null : performance.now();
-      this.timing.started = !stageUsesStartGate;
-      this.timing.s1 = null;
-      this.timing.s2 = null;
-      this.timing.s3 = null;
-      if (!stageUsesStartGate) this.lapStartTick = this.simTick;
-    }
-
-    this.time.delayedCall(350, () => {
-      this._startState = 'RACING';
-      this._raceStarted = true;
-      if (this._startModal) this._startModal.setVisible(false);
-    });
-  });
-
-};
-const _scheduleStartLights = () => {
-  if (this._iosStaticTrackRender && !this._iosStaticTrackInitialReady) {
-    this.time.delayedCall(50, _scheduleStartLights);
-    return;
-  }
-  this.time.delayedCall(150, _fireStartLights);
-};
-_scheduleStartLights();
+    // El semáforo se dispara desde update() cuando la ventana iOS de salida ya está lista.
+this._startAutoFired = false;
 // 12) Volver (si testMode => editor, si no => menú)
 if (this.keys?.back) {
   this.keys.back.on('down', () => {
@@ -3921,29 +3859,17 @@ try {
     let want;
 
 if (this._cullEnabled === false) {
-  // iOS/WebKit: sin culling dinámico, pero NO materializar todo Arafo en un único frame.
-  // El primer intento podía disparar cientos de imágenes+GeometryMask a la vez y WebKit
-  // terminaba recargando la página (pantallazo blanco). Preparamos la pista por lotes.
   if (this._iosStaticTrackRender) {
-    if (!this._iosStaticTrackQueue) {
-      const all = [...cells.keys()];
-      all.sort((ka, kb) => {
-        const [ax, ay] = ka.split(',').map(Number);
-        const [bx, by] = kb.split(',').map(Number);
-        return ((ax-cx)**2 + (ay-cy)**2) - ((bx-cx)**2 + (by-cy)**2);
-      });
-      this._iosStaticTrackQueue = all;
-      this._iosStaticTrackCursor = 0;
-    }
-    // Primera tanda más amplia para que el área visible alrededor de SALIDA esté completa
-    // antes de permitir el semáforo; después seguimos suave para evitar el pico de WebKit.
-    const BATCH = this._iosStaticTrackInitialReady ? 10 : 36;
-    const end = Math.min(this._iosStaticTrackCursor + BATCH, this._iosStaticTrackQueue.length);
+    // iOS/WebKit: NO culling dinámico. Materializamos una ventana fija alrededor
+    // de la salida una sola vez. No intentamos construir Arafo completo: eso era
+    // lo que provocaba el pico de memoria/recarga y el bloqueo del arranque.
     want = new Set(this.track.activeCells || []);
-    for (let i=this._iosStaticTrackCursor; i<end; i++) want.add(this._iosStaticTrackQueue[i]);
-    this._iosStaticTrackCursor = end;
-    this._iosStaticTrackInitialReady = this._iosStaticTrackCursor >= Math.min(36, this._iosStaticTrackQueue.length);
-    this._iosStaticTrackPrepared = end >= this._iosStaticTrackQueue.length;
+    const R = 3;
+    for (let yy = cy - R; yy <= cy + R; yy++) {
+      for (let xx = cx - R; xx <= cx + R; xx++) want.add(`${xx},${yy}`);
+    }
+    this._iosStaticTrackInitialReady = true;
+    this._iosStaticTrackPrepared = true;
   } else {
     want = new Set(cells.keys());
   }
