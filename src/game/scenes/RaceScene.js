@@ -1684,6 +1684,8 @@ this._isInBand = (band, x, y) => {
     this._cullEnabled = !isIOSRaceDevice();
     this._iosStaticTrackRender = !this._cullEnabled;
     this._iosStaticTrackPrepared = false;
+    this._iosStaticTrackQueue = null;
+    this._iosStaticTrackCursor = 0;
 this._hudLog(`[track geom] cells=${this.track.geom?.cells?.size ?? 'null'} cull=${this._cullEnabled?'ON':'OFF'}`);
  this._trackCells = this.track.geom?.cells?.size ?? null;
 this._trackDiag = `cells=${this._trackCells}`;
@@ -3873,7 +3875,6 @@ try {
   const cells = geom?.cells;
 
   if (cells && this.car && (!this._iosStaticTrackRender || !this._iosStaticTrackPrepared)) {
-    if (this._iosStaticTrackRender) this._iosStaticTrackPrepared = true;
     const cellSize = geom.cellSize;
     const cx = Math.floor(this.car.x / cellSize);
     const cy = Math.floor(this.car.y / cellSize);
@@ -3904,8 +3905,29 @@ try {
     let want;
 
 if (this._cullEnabled === false) {
-  // OFF = pintar todas las celdas reales (sin loops enormes)
-  want = new Set(cells.keys());
+  // iOS/WebKit: sin culling dinámico, pero NO materializar todo Arafo en un único frame.
+  // El primer intento podía disparar cientos de imágenes+GeometryMask a la vez y WebKit
+  // terminaba recargando la página (pantallazo blanco). Preparamos la pista por lotes.
+  if (this._iosStaticTrackRender) {
+    if (!this._iosStaticTrackQueue) {
+      const all = [...cells.keys()];
+      all.sort((ka, kb) => {
+        const [ax, ay] = ka.split(',').map(Number);
+        const [bx, by] = kb.split(',').map(Number);
+        return ((ax-cx)**2 + (ay-cy)**2) - ((bx-cx)**2 + (by-cy)**2);
+      });
+      this._iosStaticTrackQueue = all;
+      this._iosStaticTrackCursor = 0;
+    }
+    const BATCH = 10;
+    const end = Math.min(this._iosStaticTrackCursor + BATCH, this._iosStaticTrackQueue.length);
+    want = new Set(this.track.activeCells || []);
+    for (let i=this._iosStaticTrackCursor; i<end; i++) want.add(this._iosStaticTrackQueue[i]);
+    this._iosStaticTrackCursor = end;
+    this._iosStaticTrackPrepared = end >= this._iosStaticTrackQueue.length;
+  } else {
+    want = new Set(cells.keys());
+  }
 } else {
   want = new Set();
   const R = this.track.cullRadiusCells ?? 2;
