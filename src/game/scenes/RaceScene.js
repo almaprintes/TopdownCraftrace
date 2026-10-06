@@ -1016,7 +1016,8 @@ if (typeof this.trackKey === 'string' && this.trackKey.startsWith('import:')) {
 let meta = null;
 
 try {
-  const raw = localStorage.getItem('trackstudio_project');
+  const allowStudioOverride = !this.trackKey || this.trackKey === 'trackstudio' || this.trackKey === 'studio';
+  const raw = allowStudioOverride ? localStorage.getItem('trackstudio_project') : null;
   if (raw) {
     const saved = JSON.parse(raw);
     if (saved?.gameTrack?.centerline?.length > 2) {
@@ -1036,6 +1037,8 @@ const t01 = meta;
 // Defensa de runtime: un stage abierto nunca puede cerrarse por datos heredados
 // o por una exportación antigua. Evita cualquier segmento META → SALIDA.
 if (t01?.raceType === 'stage') t01.closed = false;
+const isStage = t01?.raceType === 'stage' || t01?.closed === false;
+this._isStage = isStage;
 this.centerlinePoints = Array.isArray(t01?.centerline) ? t01.centerline : [];
 // Reconstrucción mínima del track runtime a partir del JSON/meta
 const geom = buildTrackRibbon({
@@ -1048,6 +1051,8 @@ const geom = buildTrackRibbon({
 });
 this.track = {
   meta: t01,
+  closed: !isStage,
+  raceType: isStage ? 'stage' : (t01?.raceType || 'circuit'),
   geom,
   gfxByCell: new Map(),
   activeCells: new Set(),
@@ -1679,11 +1684,30 @@ this._isInBand = (band, x, y) => {
   }
   return false;
 };
+    // iOS/WebKit stage: render estático barato. Evita cientos de Image+GeometryMask
+    // y evita culling dinámico. El asfalto completo se dibuja una sola vez.
+    if (isIOSRaceDevice() && isStage) {
+      const asphaltG = this.add.graphics().setDepth(10);
+      asphaltG.fillStyle(0x2a2f3a, 1);
+      for (const cd of (this.track?.geom?.cells?.values?.() || [])) {
+        for (const poly of (cd?.polys || [])) {
+          if (!poly || poly.length < 3) continue;
+          const xy = (p) => Array.isArray(p) ? {x:Number(p[0]),y:Number(p[1])} : {x:Number(p?.x),y:Number(p?.y)};
+          const p0=xy(poly[0]); if(!Number.isFinite(p0.x)||!Number.isFinite(p0.y)) continue;
+          asphaltG.beginPath(); asphaltG.moveTo(p0.x,p0.y);
+          for(let i=1;i<poly.length;i++){const p=xy(poly[i]);if(Number.isFinite(p.x)&&Number.isFinite(p.y))asphaltG.lineTo(p.x,p.y);}
+          asphaltG.closePath(); asphaltG.fillPath();
+        }
+      }
+      this._iosStageAsphalt = asphaltG;
+      this.uiCam?.ignore?.(asphaltG);
+    }
     // iOS/WebKit: el culling por chunks provoca stutter al crear/activar máscaras durante la carrera.
     // En iPhone/iPad precargamos las celdas una sola vez y después no ejecutamos culling por frame.
     this._cullEnabled = !isIOSRaceDevice();
     this._iosStaticTrackRender = !this._cullEnabled;
-    this._iosStaticTrackPrepared = false;
+    if (isStage && isIOSRaceDevice()) this._iosStaticTrackPrepared = true;
+    this._iosStaticTrackPrepared = !!(isStage && isIOSRaceDevice());
     this._iosStaticTrackInitialReady = !this._iosStaticTrackRender;
 this._hudLog(`[track geom] cells=${this.track.geom?.cells?.size ?? 'null'} cull=${this._cullEnabled?'ON':'OFF'}`);
  this._trackCells = this.track.geom?.cells?.size ?? null;
@@ -1750,9 +1774,9 @@ if (this.finishLine?.a && this.finishLine?.b && !this.finishLine.normal) {
     }
 
     // Tangente local (suavizada)
-    const p0 = pts[(bestI - 1 + pts.length) % pts.length];
+    const p0 = pts[Math.max(0, bestI - 1)];
     const p1 = pts[bestI];
-    const p2 = pts[(bestI + 1) % pts.length];
+    const p2 = pts[Math.min(pts.length - 1, bestI + 1)];
 
     const tx = (p2.x - p0.x);
     const ty = (p2.y - p0.y);
@@ -3348,7 +3372,7 @@ if (this.ttHud) {
   const txt = `${m}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
 
   this.ttHud.timeText.setText(txt);
-const isOpenStage=this.track?.closed===false;
+const isOpenStage=!!this._isStage;
 const lapInProgress=(this.lapCount||0)+1;
 this.ttHud.lapText.setText(isOpenStage?'TRAMO':`VUELTA ${lapInProgress}`);
 
