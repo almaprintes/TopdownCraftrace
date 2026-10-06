@@ -59,13 +59,13 @@ function resample(points, stepPx, fallbackWidth = 80) {
   return out;
 }
 
-function adaptiveResample(points, baseStep, fallbackWidth = 80) {
+function adaptiveResample(points, baseStep, fallbackWidth = 80, closed = true) {
   const fineStep = Math.max(4, Math.min(6, baseStep * 0.45));
   const fine = resample(points, fineStep, fallbackWidth), n = fine.length;
   if (n < 12) return fine;
   const out = [], straightStride = Math.max(2, Math.round(baseStep / fineStep));
   for (let i = 0; i < n; i++) {
-    const p0 = fine[(i - 2 + n) % n], p = fine[i], p1 = fine[(i + 2) % n];
+    const p0 = fine[closed ? (i - 2 + n) % n : Math.max(0, i - 2)], p = fine[i], p1 = fine[closed ? (i + 2) % n : Math.min(n - 1, i + 2)];
     const turn = Math.abs(wrapPi(Math.atan2(p1.y - p.y, p1.x - p.x) - Math.atan2(p.y - p0.y, p.x - p0.x)));
     let stride = straightStride;
     if (turn > 0.13) stride = 1;
@@ -82,7 +82,7 @@ function boundsOfPoly(poly) {
 }
 function cellKey(cx, cy) { return `${cx},${cy}`; }
 
-export function buildTrackRibbon({ centerline, trackWidth, grassMargin = 0, sampleStepPx = 12, cellSize = 400 }) {
+export function buildTrackRibbon({ centerline, trackWidth, grassMargin = 0, sampleStepPx = 12, cellSize = 400, closed = true }) {
   const fallbackWidth = Number(trackWidth) || 80;
   const src = (centerline || []).map((p) => Array.isArray(p)
     ? makePt(Number(p[0]), Number(p[1]), fallbackWidth)
@@ -90,20 +90,22 @@ export function buildTrackRibbon({ centerline, trackWidth, grassMargin = 0, samp
   const n = src.length;
   if (n < 2) return { center: [], left: [], right: [], cells: new Map(), cellSize };
 
-  const dense = [], get = (idx) => src[(idx + n) % n], SUB = 14;
-  for (let i = 0; i < n; i++) {
+  const dense = [], get = (idx) => closed ? src[(idx + n) % n] : src[Math.max(0, Math.min(n - 1, idx))], SUB = 14;
+  const segmentCount = closed ? n : n - 1;
+  for (let i = 0; i < segmentCount; i++) {
     const p0 = get(i - 1), p1 = get(i), p2 = get(i + 1), p3 = get(i + 2);
     for (let s = 0; s < SUB; s++) dense.push(catmullRom(p0, p1, p2, p3, s / SUB, fallbackWidth));
   }
-  dense.push(makePt(dense[0].x, dense[0].y, dense[0].width));
-  const cl = adaptiveResample(dense, sampleStepPx, fallbackWidth);
+  if (closed) dense.push(makePt(dense[0].x, dense[0].y, dense[0].width));
+  else dense.push(makePt(src[n - 1].x, src[n - 1].y, src[n - 1].width));
+  const cl = adaptiveResample(dense, sampleStepPx, fallbackWidth, closed);
   if (cl.length > 8 && dist(cl[0], cl[cl.length - 1]) < Math.max(2, sampleStepPx * 0.55)) cl.pop();
   if (cl.length < 8) return { center: cl, left: [], right: [], cells: new Map(), cellSize };
 
   const count = cl.length, margin = Math.max(0, grassMargin);
   const left = [], right = [], grassLeft = [], grassRight = [];
   for (let i = 0; i < count; i++) {
-    const p = cl[i], prev = cl[(i - 1 + count) % count], next = cl[(i + 1) % count];
+    const p = cl[i], prev = cl[closed ? (i - 1 + count) % count : Math.max(0, i - 1)], next = cl[closed ? (i + 1) % count : Math.min(count - 1, i + 1)];
     let tx = next.x - prev.x, ty = next.y - prev.y;
     const td = Math.hypot(tx, ty) || 1; tx /= td; ty /= td;
     const nx = -ty, ny = tx, half = ptWidth(p, fallbackWidth) * 0.5;
@@ -130,8 +132,8 @@ export function buildTrackRibbon({ centerline, trackWidth, grassMargin = 0, samp
   // spatial grid. That multiplied the per-frame point-in-polygon workload and caused progressive
   // mobile Safari stalls as the car entered cells containing many overlapping joins.
   // Visual asphalt is rendered independently from the dense centerline, so robust appearance is kept.
-  for (let i = 0; i < count; i++) {
-    const j = (i + 1) % count;
+  for (let i = 0; i < (closed ? count : count - 1); i++) {
+    const j = closed ? (i + 1) % count : i + 1;
     const l0 = left[i], r0 = right[i], l1 = left[j], r1 = right[j];
     addPolyToCells(cells, [
       { x: l0[0], y: l0[1] }, { x: r0[0], y: r0[1] }, { x: r1[0], y: r1[1] }, { x: l1[0], y: l1[1] }

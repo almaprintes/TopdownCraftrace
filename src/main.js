@@ -374,6 +374,7 @@ function __tickOrientation() {
     window.__tdrStartupMark?.('phaser-start');
     __game = createGame('app');
     window.__tdrStartupMark?.('phaser-created');
+
     __installRaceControlVisuals();
     return;
   }
