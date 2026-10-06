@@ -4256,7 +4256,16 @@ if (this.ttHistory && this.ttHistKey) {
     this._raceStarted=false;
     this._openStageFinished=true;
     try{this.car?.body?.setVelocity?.(0,0);}catch{}
-    this.time.delayedCall(250,()=>{try{this.scene.start('menu');}catch{}});
+    try{if(this.carBody?.body?.velocity){this.carBody.body.velocity.x=0;this.carBody.body.velocity.y=0;}}catch{}
+    // Un stage termina la sesión, no vuelve directamente al lobby.
+    // La clase final de RaceScene aporta _finishSessionWithRewards(): botín -> informe -> salir.
+    this.time.delayedCall(250,()=>{
+      try{
+        if(typeof this._finishSessionWithRewards==='function') this._finishSessionWithRewards();
+        else if(typeof this._openSessionReport==='function') this._openSessionReport();
+        else this.scene.start('menu');
+      }catch(e){console.error('[stage finish] session flow failed',e);}
+    });
   }else{
   // Reset de vuelta: arranca nueva vuelta desde ahora
   this.timing.lapStart = now;
