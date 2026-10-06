@@ -3104,8 +3104,8 @@ this.scale.on('resize', this._reflowStartModal);
 this._reflowStartModal();
 this.time.delayedCall(0, () => this._reflowStartModal());
 this.time.delayedCall(120, () => this._reflowStartModal());    
-    // Arranque automático del semáforo al cargar (sin GAS)
-this.time.delayedCall(150, () => {
+    // Arranque automático: en iOS esperamos a que la zona de SALIDA tenga asfalto.
+const _fireStartLights = () => {
   if (this._startState !== 'COUNTDOWN') this._startState = 'COUNTDOWN';
 this._startAutoFired = true; // ✅ ya está programado en create(), no lo repitas en update()
   if (this._startHint) this._startHint.setText('Mantente listo...');
@@ -3156,7 +3156,16 @@ this._startAutoFired = true; // ✅ ya está programado en create(), no lo repit
       if (this._startModal) this._startModal.setVisible(false);
     });
   });
-}); 
+
+};
+const _scheduleStartLights = () => {
+  if (this._iosStaticTrackRender && !this._iosStaticTrackInitialReady) {
+    this.time.delayedCall(50, _scheduleStartLights);
+    return;
+  }
+  this.time.delayedCall(150, _fireStartLights);
+};
+_scheduleStartLights();
 // 12) Volver (si testMode => editor, si no => menú)
 if (this.keys?.back) {
   this.keys.back.on('down', () => {
@@ -3482,7 +3491,7 @@ this._prevThrottleDown = throttleDown;
 //-------------------//
 //-------------------//
     // START LIGHTS: arrancar automáticamente 1 vez
-if (!this._startAutoFired && this._startState === 'COUNTDOWN') {
+if (!this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
   this._startAutoFired = true;
 
   if (this._startHint) this._startHint.setText('Mantente listo...');
