@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
+import rallyArafoLosLoros from '../tracks/library/rally-arafo-los-loros/track.json';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -311,8 +312,7 @@ topX += 48;
 // Cargar
 this._btnLoad = this._makeIconButton(topX, topToolsY, '📂', () => {
   console.log('CLICK LOAD');
-  this._flashMessage('📂 Cargando...');
-  this._openProjectPicker?.();
+  this._openProjectSourceMenu?.();
 }, '18px');
 topX += 48;
 
@@ -2745,6 +2745,33 @@ const data = {
     } catch (e) {
       console.error('❌ Error guardando proyecto', e);
     }
+  }
+
+  _openProjectSourceMenu() {
+    const choice = window.prompt('CARGAR TRACK STUDIO\n\n1 · Arafo → Los Loros (integrado)\n2 · Proyecto guardado en este dispositivo\n3 · Importar JSON\n\nEscribe 1, 2 o 3:', '1');
+    if (choice === null) return;
+    if (choice === '1') {
+      try {
+        this._pushHistory();
+        this._importProjectOrTrack(JSON.parse(JSON.stringify(rallyArafoLosLoros)));
+        this._autosaveRecovery();
+        this._flashMessage('📍 Arafo → Los Loros cargado');
+      } catch (e) {
+        console.error('❌ No se pudo cargar Arafo → Los Loros', e);
+        this._flashMessage('❌ Error cargando Arafo → Los Loros');
+      }
+      return;
+    }
+    if (choice === '2') {
+      this._loadProject();
+      this._flashMessage('📂 Proyecto local cargado');
+      return;
+    }
+    if (choice === '3') {
+      this._openProjectPicker();
+      return;
+    }
+    this._flashMessage('Elige 1, 2 o 3');
   }
 
   _createProjectInput() {
