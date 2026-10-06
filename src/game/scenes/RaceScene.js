@@ -21,6 +21,7 @@ function fmtTime(ms) {
   return `${m}:${String(s).padStart(2, '0')}.${String(ms3).padStart(3, '0')}`;
 }
 const DEV_TOOLS = true; // ponlo en false para ocultar botones de zoom/cull
+function isIOSRaceDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
 const ASPHALT_OVERLAY_ALPHA = 0.16; // rango sano: 0.08 – 0.12
 
 // Base path de skins (carpeta en /public)
@@ -1678,8 +1679,12 @@ this._isInBand = (band, x, y) => {
   }
   return false;
 };
-    this._cullEnabled = true;
-this._hudLog(`[track geom] cells=${this.track.geom?.cells?.size ?? 'null'}`);
+    // iOS/WebKit: el culling por chunks provoca stutter al crear/activar máscaras durante la carrera.
+    // En iPhone/iPad precargamos las celdas una sola vez y después no ejecutamos culling por frame.
+    this._cullEnabled = !isIOSRaceDevice();
+    this._iosStaticTrackRender = !this._cullEnabled;
+    this._iosStaticTrackPrepared = false;
+this._hudLog(`[track geom] cells=${this.track.geom?.cells?.size ?? 'null'} cull=${this._cullEnabled?'ON':'OFF'}`);
  this._trackCells = this.track.geom?.cells?.size ?? null;
 this._trackDiag = `cells=${this._trackCells}`;
 this._trackDiag2 = '';
@@ -3867,7 +3872,8 @@ try {
   const geom = this.track?.geom;
   const cells = geom?.cells;
 
-  if (cells && this.car) {
+  if (cells && this.car && (!this._iosStaticTrackRender || !this._iosStaticTrackPrepared)) {
+    if (this._iosStaticTrackRender) this._iosStaticTrackPrepared = true;
     const cellSize = geom.cellSize;
     const cx = Math.floor(this.car.x / cellSize);
     const cy = Math.floor(this.car.y / cellSize);
