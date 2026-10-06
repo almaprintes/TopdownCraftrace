@@ -1394,58 +1394,79 @@ this.bgOff = this.add.tileSprite(
   .setScrollFactor(1)
   .setDepth(-100);
 
-// GRASS: se verá SOLO donde exista la banda GRASS
-this.bgGrass = this.add.tileSprite(
-  0, 0,
-  this.worldW,
-  this.worldH,
-  'grass'
-)
-  .setOrigin(0, 0)
-  .setScrollFactor(1)
-  .setDepth(-90);
+// iOS + stage: no crear un TileSprite de 8000x5000 ni una GeometryMask global
+// en el primer frame. Ese par fuerza a WebKit a reservar/renderizar una superficie
+// enorme justo al entrar a Arafo y es coherente con el reload del primer intento.
+// El stage ya pinta su asfalto estático y las consultas de superficie usan geom,
+// así que aquí basta un fondo sólido barato. Android conserva el camino original.
+const iosStageLightBackground = isStage && isIOSRaceDevice();
+if (iosStageLightBackground) {
+  this.bgGrass = this.add.rectangle(
+    this.worldW * 0.5,
+    this.worldH * 0.5,
+    this.worldW,
+    this.worldH,
+    0x35513a,
+    1
+  )
+    .setScrollFactor(1)
+    .setDepth(-90);
+  this._grassMaskGfx = null;
+  this._grassMask = null;
+} else {
+  // GRASS: se verá SOLO donde exista la banda GRASS
+  this.bgGrass = this.add.tileSprite(
+    0, 0,
+    this.worldW,
+    this.worldH,
+    'grass'
+  )
+    .setOrigin(0, 0)
+    .setScrollFactor(1)
+    .setDepth(-90);
 
-// ===============================
-// GRASS MASK (solo afecta a bgGrass)
-// ===============================
-const gMaskGfx = this.make.graphics({ x: 0, y: 0, add: false });
-gMaskGfx.fillStyle(0xffffff, 1);
+  // ===============================
+  // GRASS MASK (solo afecta a bgGrass)
+  // ===============================
+  const gMaskGfx = this.make.graphics({ x: 0, y: 0, add: false });
+  gMaskGfx.fillStyle(0xffffff, 1);
 
-const grassCells = this.track?.geom?.grass?.cells;
+  const grassCells = this.track?.geom?.grass?.cells;
 
-if (grassCells) {
-  for (const cell of grassCells.values()) {
-    for (const poly of cell.polys) {
-      if (!poly || poly.length < 3) continue;
+  if (grassCells) {
+    for (const cell of grassCells.values()) {
+      for (const poly of cell.polys) {
+        if (!poly || poly.length < 3) continue;
 
-      gMaskGfx.beginPath();
-      gMaskGfx.moveTo(poly[0].x, poly[0].y);
-      for (let i = 1; i < poly.length; i++) {
-        gMaskGfx.lineTo(poly[i].x, poly[i].y);
+        gMaskGfx.beginPath();
+        gMaskGfx.moveTo(poly[0].x, poly[0].y);
+        for (let i = 1; i < poly.length; i++) {
+          gMaskGfx.lineTo(poly[i].x, poly[i].y);
+        }
+        gMaskGfx.closePath();
+        gMaskGfx.fillPath();
+        // Engordar máscara 2px para tapar “hairline seams” entre celdas
+        gMaskGfx.lineStyle(3, 0xffffff, 1);
+        gMaskGfx.strokePath();
+        gMaskGfx.lineStyle(); // reset
       }
-      gMaskGfx.closePath();
-      gMaskGfx.fillPath();
-      // Engordar máscara 2px para tapar “hairline seams” entre celdas
-gMaskGfx.lineStyle(3, 0xffffff, 1);
-gMaskGfx.strokePath();
-gMaskGfx.lineStyle(); // reset
     }
   }
+
+  const grassMask = gMaskGfx.createGeometryMask();
+
+  // ⚠️ CRÍTICO: la UI camera NO debe ver esta máscara
+  this.uiCam?.ignore?.(gMaskGfx);
+
+  // Aplicar SOLO al grass
+  if (this.bgGrass) {
+    this.bgGrass.setMask(grassMask);
+  }
+
+  // Guardamos referencias por si en el futuro queremos limpiar / rehacer
+  this._grassMaskGfx = gMaskGfx;
+  this._grassMask = grassMask;
 }
-
-const grassMask = gMaskGfx.createGeometryMask();
-
-// ⚠️ CRÍTICO: la UI camera NO debe ver esta máscara
-this.uiCam?.ignore?.(gMaskGfx);
-
-// Aplicar SOLO al grass
-if (this.bgGrass) {
-  this.bgGrass.setMask(grassMask);
-}
-
-// Guardamos referencias por si en el futuro queremos limpiar / rehacer
-this._grassMaskGfx = gMaskGfx;
-this._grassMask = grassMask;
 
 // ================================
 // Bordes de pista (GLOBAL, sin culling)
