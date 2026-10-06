@@ -1686,6 +1686,7 @@ this._isInBand = (band, x, y) => {
     this._iosStaticTrackPrepared = false;
     this._iosStaticTrackQueue = null;
     this._iosStaticTrackCursor = 0;
+    this._iosStaticTrackInitialReady = !this._iosStaticTrackRender;
 this._hudLog(`[track geom] cells=${this.track.geom?.cells?.size ?? 'null'} cull=${this._cullEnabled?'ON':'OFF'}`);
  this._trackCells = this.track.geom?.cells?.size ?? null;
 this._trackDiag = `cells=${this._trackCells}`;
@@ -2968,6 +2969,12 @@ this.scale.on('resize', this._onResizeUiCam);
 // =================================================
 this._raceStarted = false;
 
+// iOS: no mostrar/iniciar el semáforo hasta que la zona inicial de pista tenga textura.
+// Evita entrar en "modo save" con mundo sin materializar mientras el render está por lotes.
+if (this._iosStaticTrackRender && !this._iosStaticTrackInitialReady) {
+  this._iosHoldStartUntilTrackReady = true;
+}
+
 // Ya no esperamos GAS: arrancamos automáticamente
 this._startState = 'COUNTDOWN'; // COUNTDOWN -> GO -> RACING
 this._prevThrottleDown = false;
@@ -3919,11 +3926,14 @@ if (this._cullEnabled === false) {
       this._iosStaticTrackQueue = all;
       this._iosStaticTrackCursor = 0;
     }
-    const BATCH = 10;
+    // Primera tanda más amplia para que el área visible alrededor de SALIDA esté completa
+    // antes de permitir el semáforo; después seguimos suave para evitar el pico de WebKit.
+    const BATCH = this._iosStaticTrackInitialReady ? 10 : 36;
     const end = Math.min(this._iosStaticTrackCursor + BATCH, this._iosStaticTrackQueue.length);
     want = new Set(this.track.activeCells || []);
     for (let i=this._iosStaticTrackCursor; i<end; i++) want.add(this._iosStaticTrackQueue[i]);
     this._iosStaticTrackCursor = end;
+    this._iosStaticTrackInitialReady = this._iosStaticTrackCursor >= Math.min(36, this._iosStaticTrackQueue.length);
     this._iosStaticTrackPrepared = end >= this._iosStaticTrackQueue.length;
   } else {
     want = new Set(cells.keys());
