@@ -79,10 +79,15 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     const t=this._realTrack,g=this._realTrackG,m=this._realTrackMarkG;if(!t||!g||!m)return;
     g.clear();m.clear();
     const geom=buildTrackRibbon({centerline:t.centerline,trackWidth:t.trackWidth,grassMargin:0,sampleStepPx:Math.max(8,Number(t.sampleStepPx)||12),cellSize:Number(t.cellSize)||400,closed:t.closed!==false&&t.raceType!=='stage'});
-    const poly=polygonPoints(geom.left,geom.right);
-    drawFilledPolygon(g,poly,0x2c2b2b,1);
+    // Do not triangulate the whole ribbon as one huge concave polygon: Phaser
+    // can bridge distant bends with a false finish-to-start triangle. Paint the
+    // authored ribbon as local quads, exactly like the runtime track surface.
+    const left=geom.left||[],right=geom.right||[],closed=t.closed!==false&&t.raceType!=='stage';
+    const segCount=closed?left.length:Math.max(0,left.length-1);
+    g.fillStyle(0x2c2b2b,1);
+    for(let i=0;i<segCount;i++){const j=closed?(i+1)%left.length:i+1;if(!left[i]||!right[i]||!left[j]||!right[j])continue;g.beginPath();g.moveTo(left[i][0],left[i][1]);g.lineTo(left[j][0],left[j][1]);g.lineTo(right[j][0],right[j][1]);g.lineTo(right[i][0],right[i][1]);g.closePath();g.fillPath();}
     g.lineStyle(Math.max(2,Number(t.trackWidth||100)*.015),0xe8edf0,.9);
-    const edge=(arr)=>{if(!arr?.length)return;g.beginPath();g.moveTo(arr[0][0],arr[0][1]);for(let i=1;i<arr.length;i++)g.lineTo(arr[i][0],arr[i][1]);if(t.closed!==false&&t.raceType!=='stage')g.closePath();g.strokePath();};
+    const edge=(arr)=>{if(!arr?.length)return;g.beginPath();g.moveTo(arr[0][0],arr[0][1]);for(let i=1;i<arr.length;i++)g.lineTo(arr[i][0],arr[i][1]);if(closed)g.closePath();g.strokePath();};
     edge(geom.left);edge(geom.right);
     const f=t.finishLine;
     if(f?.a&&f?.b){m.lineStyle(Math.max(7,Number(t.trackWidth||100)*.06),0xffffff,1);m.lineBetween(f.a.x,f.a.y,f.b.x,f.b.y);}
