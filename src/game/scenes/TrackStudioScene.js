@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
-import rallyArafoLosLoros from '../tracks/library/rally-arafo-los-loros/track.json';
+import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -2748,30 +2748,28 @@ const data = {
   }
 
   _openProjectSourceMenu() {
-    const choice = window.prompt('CARGAR TRACK STUDIO\n\n1 · Arafo → Los Loros (integrado)\n2 · Proyecto guardado en este dispositivo\n3 · Importar JSON\n\nEscribe 1, 2 o 3:', '1');
+    const choice = window.prompt('CARGAR TRACK STUDIO\n\n1 · Circuito del juego\n2 · Proyecto guardado en este dispositivo\n3 · Importar JSON\n\nEscribe 1, 2 o 3:', '1');
     if (choice === null) return;
-    if (choice === '1') {
-      try {
-        this._pushHistory();
-        this._importProjectOrTrack(JSON.parse(JSON.stringify(rallyArafoLosLoros)));
-        this._autosaveRecovery();
-        this._flashMessage('📍 Arafo → Los Loros cargado');
-      } catch (e) {
-        console.error('❌ No se pudo cargar Arafo → Los Loros', e);
-        this._flashMessage('❌ Error cargando Arafo → Los Loros');
-      }
-      return;
-    }
-    if (choice === '2') {
-      this._loadProject();
-      this._flashMessage('📂 Proyecto local cargado');
-      return;
-    }
-    if (choice === '3') {
-      this._openProjectPicker();
-      return;
-    }
+    if (choice === '1') { this._openGameTrackSourceMenu(); return; }
+    if (choice === '2') { this._loadProject(); this._flashMessage('📂 Proyecto local cargado'); return; }
+    if (choice === '3') { this._openProjectPicker(); return; }
     this._flashMessage('Elige 1, 2 o 3');
+  }
+
+  _openGameTrackSourceMenu() {
+    const keys=getTrackKeys();
+    if(!keys.length){this._flashMessage('❌ No hay circuitos registrados');return;}
+    const rows=keys.map((key,i)=>{let name=key;try{name=createTrack(key)?.name||key;}catch{}return `${i+1} · ${name}`;});
+    const raw=window.prompt(`CIRCUITOS DEL JUEGO\n\n${rows.join('\n')}\n\nEscribe el número:`,'1');
+    if(raw===null)return;
+    const n=Number.parseInt(String(raw).trim(),10),key=keys[n-1];
+    if(!key){this._flashMessage('❌ Circuito no válido');return;}
+    try{
+      this._pushHistory();
+      this._importProjectOrTrack(createTrack(key));
+      this._autosaveRecovery();
+      this._flashMessage(`📍 ${createTrack(key)?.name||key} cargado`);
+    }catch(e){console.error('❌ No se pudo cargar circuito del juego',key,e);this._flashMessage('❌ Error cargando circuito');}
   }
 
   _createProjectInput() {
