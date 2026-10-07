@@ -229,6 +229,56 @@ jobs:
           disable-animations: true
           script: sh -c 'cd android; ./gradlew :app:connectedBridgeTestReleaseAndroidTest --stacktrace; status=$?; if [ "$status" -ne 0 ]; then echo "===== ANDROID FAILURE LOGCAT ====="; adb logcat -d -v time | grep -E "TDR_REWARDED|TDR_BOOT|Capacitor|chromium|AndroidRuntime|WebView" | tail -n 1200 || true; fi; exit "$status"'
 
+
+  rewarded_device_test_apk:
+    name: Rewarded real-ad diagnostic APK
+    runs-on: ubuntu-latest
+    env:
+      BASE: ./
+      TDR_ADMOB_APP_ID: ${{ secrets.TDR_ADMOB_APP_ID }}
+      TDR_ADMOB_REWARDED_UNIT_ID: ${{ secrets.TDR_ADMOB_REWARDED_UNIT_ID }}
+      TDR_REVENUECAT_PUBLIC_SDK_KEY: ${{ secrets.TDR_REVENUECAT_PUBLIC_SDK_KEY }}
+      TDR_ADMOB_TEST_DEVICE_IDS: ''
+    steps:
+      - name: Checkout exact development HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Build Android web payload
+        shell: bash
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build:android
+      - name: Assemble separate real-ad diagnostic APK
+        working-directory: android
+        run: ./gradlew :app:assembleDeviceTestDebug --stacktrace
+      - name: Stage diagnostic APK
+        shell: bash
+        run: |
+          APK="$(find android/app/build/outputs/apk/deviceTest/debug -name '*.apk' -type f | head -n 1)"
+          test -n "$APK"
+          cp "$APK" TDR-Rewarded-Test-1.2.70.apk
+      - name: Upload diagnostic APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDR-Rewarded-Test-1.2.70
+          path: TDR-Rewarded-Test-1.2.70.apk
+          if-no-files-found: error
+          retention-days: 14
+
+
   deploy:
     runs-on: ubuntu-latest
     needs: build
