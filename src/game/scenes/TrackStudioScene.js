@@ -2810,9 +2810,18 @@ const data = {
 
   _nodesFromCenterline(points) {
     const src = Array.isArray(points) ? points : [];
-    return src.map((p, i) => {
-      const prev = src[Math.max(0, i - 1)] || p;
-      const next = src[Math.min(src.length - 1, i + 1)] || p;
+    // Los tracks del juego ya vienen densamente muestreados (Arafo tiene miles
+    // de puntos). Convertir cada muestra en un nodo Bézier crea miles de objetos
+    // interactivos y bloquea Track Studio al elegir "1". Reducimos únicamente
+    // la representación editable; el JSON integrado no se modifica.
+    const maxEditableNodes = 320;
+    const step = src.length > maxEditableNodes ? Math.ceil(src.length / maxEditableNodes) : 1;
+    const sampled = step > 1
+      ? src.filter((_, i) => i === 0 || i === src.length - 1 || i % step === 0)
+      : src;
+    return sampled.map((p, i) => {
+      const prev = sampled[Math.max(0, i - 1)] || p;
+      const next = sampled[Math.min(sampled.length - 1, i + 1)] || p;
       let dx = Number(next.x) - Number(prev.x);
       let dy = Number(next.y) - Number(prev.y);
       const len = Math.hypot(dx, dy) || 1;
