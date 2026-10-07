@@ -1755,9 +1755,15 @@ this._isInBand = (band, x, y) => {
     if (isIOSRaceDevice() && isStage) {
       const asphaltG = this.add.graphics().setDepth(10);
       asphaltG.fillStyle(0x2a2f3a, 1);
+      // Cada quad está indexado en TODAS las celdas que toca. Iterar values()
+      // directamente lo pintaba varias veces y hacía imposible razonar qué segmento
+      // estaba produciendo una banda. Dedupe por identidad: un quad del ribbon se
+      // rasteriza exactamente una vez.
+      const drawnStagePolys = new Set();
       for (const cd of (this.track?.geom?.cells?.values?.() || [])) {
         for (const poly of (cd?.polys || [])) {
-          if (!poly || poly.length < 3) continue;
+          if (!poly || poly.length < 3 || drawnStagePolys.has(poly)) continue;
+          drawnStagePolys.add(poly);
           const xy = (p) => Array.isArray(p) ? {x:Number(p[0]),y:Number(p[1])} : {x:Number(p?.x),y:Number(p?.y)};
           const p0=xy(poly[0]); if(!Number.isFinite(p0.x)||!Number.isFinite(p0.y)) continue;
           asphaltG.beginPath(); asphaltG.moveTo(p0.x,p0.y);
