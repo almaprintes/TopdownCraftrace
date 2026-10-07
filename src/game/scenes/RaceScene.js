@@ -1021,6 +1021,10 @@ try {
   if (raw) {
     const saved = JSON.parse(raw);
     if (saved?.gameTrack?.centerline?.length > 2) {
+      // TrackStudio solo puede sustituir al circuito cuando RaceScene se abrió
+      // explícitamente como studio. Nunca debe contaminar un track real importado
+      // (p. ej. Arafo), porque ese proyecto persistido puede ser un circuito cerrado
+      // y volver a fabricar un ribbon META -> SALIDA.
       meta = saved.gameTrack;
       console.log('[RaceScene] usando track exportado desde TrackStudio');
     }
@@ -1034,9 +1038,18 @@ if (!meta) {
 }
 
 const t01 = meta;
-// Defensa de runtime: un stage abierto nunca puede cerrarse por datos heredados
-// o por una exportación antigua. Evita cualquier segmento META → SALIDA.
-if (t01?.raceType === 'stage') t01.closed = false;
+// Topología canónica: los tracks importados que declaran una puerta de SALIDA
+// distinta de META son tramos abiertos. No dependemos únicamente de raceType:
+// así una exportación antigua/incompleta tampoco puede reconstruir el ribbon
+// cerrando el último punto contra el primero.
+const hasIndependentStageStart = !!(
+  t01?.startLine?.a && t01?.startLine?.b &&
+  t01?.finishLine?.a && t01?.finishLine?.b
+);
+if (t01?.raceType === 'stage' || t01?.closed === false || hasIndependentStageStart) {
+  t01.raceType = 'stage';
+  t01.closed = false;
+}
 const isStage = t01?.raceType === 'stage' || t01?.closed === false;
 this._isStage = isStage;
 this.centerlinePoints = Array.isArray(t01?.centerline) ? t01.centerline : [];
