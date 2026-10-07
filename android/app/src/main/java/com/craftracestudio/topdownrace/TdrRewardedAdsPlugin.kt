@@ -26,6 +26,7 @@ import java.util.UUID
 class TdrRewardedAdsPlugin : Plugin() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var activeAttempt: Attempt? = null
+    private var lastDiagnostic: JSObject? = null
 
     private data class Attempt(
         val id: String,
@@ -50,6 +51,8 @@ class TdrRewardedAdsPlugin : Plugin() {
         result.put("releaseBuild", BuildConfig.BUILD_TYPE == "release")
         result.put("placementCount", RewardedRequestPolicy.placements().size)
         result.put("versionName", BuildConfig.VERSION_NAME)
+        result.put("diagnosticBuild", BuildConfig.FLAVOR == "deviceTest")
+        lastDiagnostic?.let { result.put("lastRewardedDiagnostic", it) }
         result.put("consentUpdateCompleted", consent.updateCompleted)
         result.put("consentCanRequestAds", consent.canRequestAds)
         result.put("privacyOptionsRequired", consent.privacyOptionsRequired)
@@ -212,7 +215,21 @@ class TdrRewardedAdsPlugin : Plugin() {
         result.put("source", "native")
         result.put("rewardId", "native-${attempt.id}")
         if (reason != null) result.put("reason", reason)
-        Log.i(TAG, "attempt=${attempt.id.take(8)} final completed=${completed && verified} verified=$verified reason=${reason ?: "none"} response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} total_ms=${elapsed(attempt.startedAtMs)}")
+        val totalMs = elapsed(attempt.startedAtMs)
+        val diagnostic = JSObject()
+        diagnostic.put("attempt", attempt.id.take(8))
+        diagnostic.put("placement", attempt.placement)
+        diagnostic.put("completed", completed && verified)
+        diagnostic.put("verified", verified)
+        diagnostic.put("reason", reason ?: "none")
+        diagnostic.put("responseId", attempt.responseId ?: "none")
+        diagnostic.put("adapterClass", attempt.adapterClass ?: "none")
+        diagnostic.put("adSourceName", attempt.adSourceName ?: "none")
+        diagnostic.put("loadMs", elapsed(attempt.startedAtMs, attempt.loadedAtMs))
+        diagnostic.put("visibleMs", elapsed(attempt.shownAtMs))
+        diagnostic.put("totalMs", totalMs)
+        lastDiagnostic = diagnostic
+        Log.i(TAG, "attempt=${attempt.id.take(8)} final completed=${completed && verified} verified=$verified reason=${reason ?: "none"} response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} total_ms=$totalMs")
         attempt.call.setKeepAlive(false)
         attempt.call.resolve(result)
     }
