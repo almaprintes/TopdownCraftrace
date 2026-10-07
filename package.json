@@ -10,6 +10,7 @@
     "prebuild:prod": "npm run prebuild",
     "build:prod": "vite build --mode tdr-prod && node scripts/prod-bundle-smoke.mjs",
     "preview": "vite preview",
+    "check:stage-surface": "node scripts/stage-surface-topology-smoke.mjs",
     "check:stability": "node scripts/stability-smoke.mjs",
     "check:survival": "node scripts/survival-smoke.mjs",
     "check:session-reward-assets": "node scripts/session-reward-assets-smoke.mjs",
@@ -25,7 +26,7 @@
     "gen:icons": "node scripts/generate-icons.mjs",
     "gen:orientation": "node scripts/generate-orientation-runtime.mjs",
     "bake:track": "node scripts/bake-track-visual.mjs",
-    "prebuild": "npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:ignition-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:android-rewarded-bridge && npm run check:fresh-gesture && npm run check:track-beauty-identity && npm run gen:icons && npm run gen:orientation",
+    "prebuild": "npm run check:stage-surface && npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:ignition-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:android-rewarded-bridge && npm run check:fresh-gesture && npm run check:track-beauty-identity && npm run gen:icons && npm run gen:orientation",
     "build:android": "node scripts/build-android.mjs"
   },
   "dependencies": {

@@ -1051,11 +1051,7 @@ if (t01?.raceType === 'stage' || t01?.closed === false || hasIndependentStageSta
 const isStage = t01?.raceType === 'stage' || t01?.closed === false;
 this._isStage = isStage;
 
-// Un stage autorado puede conservar puntos de aproximación antes de SALIDA y
-// puntos de escape después de META. Para carrera/render esos tails NO forman
-// parte del tramo: recortamos el centerline exactamente entre ambas puertas.
-// Esto elimina el asfalto real que se veía cruzando el mapa sin tocar la ruta
-// válida SALIDA -> CP1 -> CP2 -> META ni la física del coche.
+// Preserve the authored route, including approach and run-off at stage gates.
 this.centerlinePoints = Array.isArray(t01?.centerline) ? t01.centerline : [];
 // Reconstrucción mínima del track runtime a partir del JSON/meta
 const geom = buildTrackRibbon({
