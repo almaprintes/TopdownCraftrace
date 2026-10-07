@@ -235,9 +235,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BASE: ./
-      TDR_ADMOB_APP_ID: ${{ vars.TDR_ADMOB_APP_ID }}
-      TDR_ADMOB_REWARDED_UNIT_ID: ${{ vars.TDR_ADMOB_REWARDED_UNIT_ID }}
-      TDR_REVENUECAT_PUBLIC_SDK_KEY: ${{ vars.TDR_REVENUECAT_PUBLIC_SDK_KEY }}
+      TDR_ADMOB_APP_ID: 'ca-app-pub-1520547848869532~9780989345'
+      TDR_ADMOB_REWARDED_UNIT_ID: 'ca-app-pub-1520547848869532/2605472830'
+      TDR_REVENUECAT_PUBLIC_SDK_KEY: 'goog_dkfPGMwMaCAVUhyeibbGQOZMAiC'
       TDR_ADMOB_TEST_DEVICE_IDS: ''
     steps:
       - name: Checkout exact development HEAD
@@ -269,12 +269,12 @@ jobs:
         run: |
           APK="$(find android/app/build/outputs/apk/deviceTest/debug -name '*.apk' -type f | head -n 1)"
           test -n "$APK"
-          cp "$APK" TDR-Rewarded-Test-1.2.72.apk
+          cp "$APK" TDR-Rewarded-Test-1.2.73.apk
       - name: Upload diagnostic APK
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-Rewarded-Test-1.2.72
-          path: TDR-Rewarded-Test-1.2.72.apk
+          name: TDR-Rewarded-Test-1.2.73
+          path: TDR-Rewarded-Test-1.2.73.apk
           if-no-files-found: error
           retention-days: 14
 
