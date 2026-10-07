@@ -69,10 +69,14 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
       for(const o of this._objects||[])o?.destroy?.();
       this._objects=[];
       this._surfaces=[];
+      this._rails=[];
       this._selected=null;
       this._selectedSurface=null;
+      this._selRail=null;
       this._selectionG?.clear?.();
       this._redrawSurfaces?.();
+      this._railRoot?.removeAll?.(true);
+      this._drawRails?.();
     }
 
     const w=Math.max(1200,Number(track.worldW)||8000);
