@@ -5252,6 +5252,22 @@ const fl = j.finishLine || j.finish || j.__autoFinishLine || null;
         : undefined
     } : undefined;
 
+    // Semántica topológica del JSON importado.
+    // IMPORTANTE: antes se descartaban raceType/closed al convertir el JSON a meta.
+    // Eso hacía que cualquier stage importado llegase a create() como circuito y
+    // buildTrackRibbon() usase closed=true, generando físicamente el segmento
+    // último punto (META) -> primer punto (SALIDA). No era un problema de dibujo:
+    // el cierre nacía aquí, al perder la topología durante la importación.
+    const raceType = j.raceType === 'stage' ? 'stage' : (j.raceType || 'circuit');
+    const closed = raceType === 'stage' ? false : (j.closed !== false);
+    const startLine = (j.startLine?.a && j.startLine?.b) ? {
+      a: { x: Number(j.startLine.a.x), y: Number(j.startLine.a.y) },
+      b: { x: Number(j.startLine.b.x), y: Number(j.startLine.b.y) },
+      normal: (j.startLine.normal && Number.isFinite(Number(j.startLine.normal.x)) && Number.isFinite(Number(j.startLine.normal.y)))
+        ? { x: Number(j.startLine.normal.x), y: Number(j.startLine.normal.y) }
+        : undefined
+    } : undefined;
+
     return {
       key: `import:${slug}`,
       name: j.name || slug,
@@ -5266,13 +5282,17 @@ const fl = j.finishLine || j.finish || j.__autoFinishLine || null;
       shoulderPx,
 
       start,
+      startLine,
       centerline,
       checkpoints,
+      raceType,
+      closed,
 
       // datos exportados por TrackEditor que RaceScene debe conservar
       geometry: (j.geometry && typeof j.geometry === 'object') ? j.geometry : null,
       curbs: (j.curbs && typeof j.curbs === 'object') ? j.curbs : null,
       runoff: (j.runoff && typeof j.runoff === 'object') ? j.runoff : null,
+      grid: (j.grid && typeof j.grid === 'object') ? j.grid : null,
 
       // compat con tu código: finishLine o finish
       finishLine,
