@@ -1038,10 +1038,8 @@ if (!meta) {
 }
 
 const t01 = meta;
-// Topología canónica: los tracks importados que declaran una puerta de SALIDA
-// distinta de META son tramos abiertos. No dependemos únicamente de raceType:
-// así una exportación antigua/incompleta tampoco puede reconstruir el ribbon
-// cerrando el último punto contra el primero.
+// Topología canónica: los tracks que declaran una puerta de SALIDA
+// distinta de META son tramos abiertos. No dependemos únicamente de raceType.
 const hasIndependentStageStart = !!(
   t01?.startLine?.a && t01?.startLine?.b &&
   t01?.finishLine?.a && t01?.finishLine?.b
@@ -1052,10 +1050,44 @@ if (t01?.raceType === 'stage' || t01?.closed === false || hasIndependentStageSta
 }
 const isStage = t01?.raceType === 'stage' || t01?.closed === false;
 this._isStage = isStage;
-this.centerlinePoints = Array.isArray(t01?.centerline) ? t01.centerline : [];
+
+// Un stage autorado puede conservar puntos de aproximación antes de SALIDA y
+// puntos de escape después de META. Para carrera/render esos tails NO forman
+// parte del tramo: recortamos el centerline exactamente entre ambas puertas.
+// Esto elimina el asfalto real que se veía cruzando el mapa sin tocar la ruta
+// válida SALIDA -> CP1 -> CP2 -> META ni la física del coche.
+const pointXY = (p) => Array.isArray(p)
+  ? { x: Number(p[0]), y: Number(p[1]) }
+  : { x: Number(p?.x), y: Number(p?.y) };
+const gateMid = (g) => g?.a && g?.b
+  ? { x: (Number(g.a.x) + Number(g.b.x)) * 0.5, y: (Number(g.a.y) + Number(g.b.y)) * 0.5 }
+  : null;
+const nearestCenterIndex = (pts, q) => {
+  if (!Array.isArray(pts) || !q) return -1;
+  let best = -1, bestD2 = Infinity;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pointXY(pts[i]);
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+    const d2 = (p.x - q.x) ** 2 + (p.y - q.y) ** 2;
+    if (d2 < bestD2) { bestD2 = d2; best = i; }
+  }
+  return best;
+};
+let runtimeCenterline = Array.isArray(t01?.centerline) ? t01.centerline : [];
+if (isStage && runtimeCenterline.length > 2 && t01?.startLine && t01?.finishLine) {
+  const startI = nearestCenterIndex(runtimeCenterline, gateMid(t01.startLine));
+  const finishI = nearestCenterIndex(runtimeCenterline, gateMid(t01.finishLine));
+  if (startI >= 0 && finishI >= 0 && startI !== finishI) {
+    runtimeCenterline = startI < finishI
+      ? runtimeCenterline.slice(startI, finishI + 1)
+      : runtimeCenterline.slice(finishI, startI + 1).reverse();
+  }
+}
+this.centerlinePoints = runtimeCenterline;
+t01.centerline = runtimeCenterline;
 // Reconstrucción mínima del track runtime a partir del JSON/meta
 const geom = buildTrackRibbon({
-  centerline: t01.centerline || [],
+  centerline: runtimeCenterline,
   trackWidth: t01.trackWidth,
   grassMargin: t01.grassMargin ?? 0,
   sampleStepPx: t01.sampleStepPx ?? 12,
