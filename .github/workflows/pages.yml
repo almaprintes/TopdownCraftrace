@@ -16,7 +16,7 @@ permissions:
 
 concurrency:
   group: tdr-dev-pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -269,12 +269,12 @@ jobs:
         run: |
           APK="$(find android/app/build/outputs/apk/deviceTest/debug -name '*.apk' -type f | head -n 1)"
           test -n "$APK"
-          cp "$APK" TDR-Rewarded-Test-1.2.70.apk
+          cp "$APK" TDR-Rewarded-Test-1.2.71.apk
       - name: Upload diagnostic APK
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-Rewarded-Test-1.2.70
-          path: TDR-Rewarded-Test-1.2.70.apk
+          name: TDR-Rewarded-Test-1.2.71
+          path: TDR-Rewarded-Test-1.2.71.apk
           if-no-files-found: error
           retention-days: 14
 
