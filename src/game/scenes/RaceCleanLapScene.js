@@ -32,6 +32,9 @@ export class RaceScene extends CurrentRaceScene {
     this._cleanComboCoinReward=0;
     this._sessionLapCapTriggered=false;
     this._retireLegacyDeltaHud();
+    try{window.__tdrPerfRaceActive=true;}catch{}
+    this.events?.once?.('shutdown',()=>{try{window.__tdrPerfRaceActive=false;}catch{}});
+    this.events?.once?.('destroy',()=>{try{window.__tdrPerfRaceActive=false;}catch{}});
     return result;
   }
 
@@ -115,6 +118,7 @@ export class RaceScene extends CurrentRaceScene {
     const rewardsOpen=!!this._sessionRewardsDom?.isConnected;
     const sessionEnding=this._sessionFinalizing===true||reportOpen||survivalResultsOpen||rewardsOpen;
     if(!sessionEnding)return;
+    try{window.__tdrPerfRaceActive=false;}catch{}
     this._liveHudClosedForSessionEnd=true;
     try{this._raceHudDom?.remove?.();}catch{}
     this._raceHudDom=null;
