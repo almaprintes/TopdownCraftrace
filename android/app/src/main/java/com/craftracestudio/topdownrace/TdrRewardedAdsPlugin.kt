@@ -2,6 +2,7 @@ package com.craftracestudio.topdownrace
 
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
@@ -32,6 +33,7 @@ class TdrRewardedAdsPlugin : Plugin() {
         val claimHash: String,
         val call: PluginCall,
         var verificationStarted: Boolean = false,
+        val startedAt: Long = SystemClock.elapsedRealtime(),
     )
 
     @PluginMethod
@@ -114,6 +116,8 @@ class TdrRewardedAdsPlugin : Plugin() {
     private fun consentManager(): TdrAdsConsentManager =
         TdrAdsConsentManager.get(activity.application)
 
+    private fun elapsed(attempt: Attempt): Long = SystemClock.elapsedRealtime() - attempt.startedAt
+
     private fun loadAndShow(attempt: Attempt) {
         try {
             if (!(activity.application as TdrApplication).ensureRewardedSdk()) {
@@ -122,7 +126,15 @@ class TdrRewardedAdsPlugin : Plugin() {
             }
             val lifecycleCallback = object : FullScreenContentCallback() {
                 override fun onAdShowedFullScreenContent() {
-                    Log.i(TAG, "attempt=${attempt.id.take(8)} shown")
+                    Log.i(TAG, "attempt=${attempt.id.take(8)} shown elapsed_ms=${elapsed(attempt)}")
+                }
+
+                override fun onAdImpression() {
+                    Log.i(TAG, "attempt=${attempt.id.take(8)} impression elapsed_ms=${elapsed(attempt)}")
+                }
+
+                override fun onAdClicked() {
+                    Log.i(TAG, "attempt=${attempt.id.take(8)} clicked elapsed_ms=${elapsed(attempt)}")
                 }
 
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
@@ -131,7 +143,7 @@ class TdrRewardedAdsPlugin : Plugin() {
                 }
 
                 override fun onAdDismissedFullScreenContent() {
-                    Log.i(TAG, "attempt=${attempt.id.take(8)} dismissed verification_started=${attempt.verificationStarted}")
+                    Log.i(TAG, "attempt=${attempt.id.take(8)} dismissed elapsed_ms=${elapsed(attempt)} verification_started=${attempt.verificationStarted}")
                     if (!attempt.verificationStarted) {
                         finish(attempt, false, false, "ad_incomplete")
                     }
@@ -146,17 +158,17 @@ class TdrRewardedAdsPlugin : Plugin() {
                 loadCallback = object : RewardedAdLoadCallback() {
                     override fun onAdLoaded(ad: RewardedAd) {
                         if (!isActive(attempt)) return
-                        Log.i(TAG, "attempt=${attempt.id.take(8)} loaded")
+                        Log.i(TAG, "attempt=${attempt.id.take(8)} loaded elapsed_ms=${elapsed(attempt)}")
                         ad.enableRewardVerification()
                         ad.show(
                             activity = activity,
                             rewardVerificationStarted = {
                                 attempt.verificationStarted = true
-                                Log.i(TAG, "attempt=${attempt.id.take(8)} ssv_started")
+                                Log.i(TAG, "attempt=${attempt.id.take(8)} ssv_started elapsed_ms=${elapsed(attempt)}")
                             },
                             rewardVerificationCompleted = { verification ->
                                 val verified = verification.verifiedReward != null
-                                Log.i(TAG, "attempt=${attempt.id.take(8)} ssv_completed verified=$verified additional=${verification.moreRewards.size}")
+                                Log.i(TAG, "attempt=${attempt.id.take(8)} ssv_completed elapsed_ms=${elapsed(attempt)} verified=$verified additional=${verification.moreRewards.size}")
                                 finish(
                                     attempt,
                                     completed = verified,
@@ -198,7 +210,7 @@ class TdrRewardedAdsPlugin : Plugin() {
         result.put("source", "native")
         result.put("rewardId", "native-${attempt.id}")
         if (reason != null) result.put("reason", reason)
-        Log.i(TAG, "attempt=${attempt.id.take(8)} final completed=${completed && verified} verified=$verified reason=${reason ?: "none"}")
+        Log.i(TAG, "attempt=${attempt.id.take(8)} final elapsed_ms=${elapsed(attempt)} completed=${completed && verified} verified=$verified reason=${reason ?: "none"}")
         attempt.call.setKeepAlive(false)
         attempt.call.resolve(result)
     }
