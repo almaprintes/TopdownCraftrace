@@ -1,0 +1,29 @@
+name: Capture approved Google Play launcher icon
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/tdr-official-icon-fetch.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  retrieve_icon:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download official app icon from published Google Play listing
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --max-time 45 \
+            'https://play-lh.googleusercontent.com/ypypot-ZWhLUIJPnkPyYboJT_YaAFIEFNnXk79VKllE-jQgPA9SsWAAEktDP1iZmM4k-_h50sKfmFpUOE0TVtA=w512-h512' \
+            --output tdr-approved-icon
+          test "$(wc -c < tdr-approved-icon)" -gt 10000
+          file tdr-approved-icon
+      - name: Make the official icon available for permanent source-control inclusion
+        uses: actions/upload-artifact@v4
+        with:
+          name: tdr-approved-play-icon
+          path: tdr-approved-icon
+          retention-days: 7
+          if-no-files-found: error
