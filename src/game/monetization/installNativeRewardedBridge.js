@@ -113,6 +113,7 @@ export async function installNativeRewardedBridge(){
   }
 
   try{
+    document.documentElement.classList.add('tdr-android-native');
     const status=await withTimeout(RewardedAdsPlugin.getStatus(),STATUS_TIMEOUT_MS);
     if(status?.bridgeReady!==true)throw new Error('native_bridge_not_ready');
     const bridge=Object.freeze({
