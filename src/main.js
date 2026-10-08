@@ -25,17 +25,28 @@ window.addEventListener('unhandledrejection', (e) => {
 
 let __game = null;
 let __tdrPausedForRewarded = false;
-window.addEventListener('tdr:rewardedfullscreen',event=>{
+let __tdrAdRequested = false;
+let __tdrAdFullscreen = false;
+function __syncPhaserRewardedAudio(){
   const sound=__game?.sound;
   if(!sound)return;
-  if(event?.detail?.visible===true){
-    if(!__tdrPausedForRewarded){
-      try{sound.pauseAll();__tdrPausedForRewarded=true;}catch{}
-    }
-  }else if(__tdrPausedForRewarded){
+  // Keep Phaser paused until BOTH the JS rewarded request has settled and
+  // the native fullscreen has actually closed. SSV can finish before dismiss.
+  const blocked=__tdrAdRequested||__tdrAdFullscreen;
+  if(blocked && !__tdrPausedForRewarded){
+    try{sound.pauseAll();__tdrPausedForRewarded=true;}catch{}
+  }else if(!blocked && __tdrPausedForRewarded){
     try{sound.resumeAll();}catch{}
     __tdrPausedForRewarded=false;
   }
+}
+window.addEventListener('tdr:rewarded-ad-state',event=>{
+  __tdrAdRequested=event?.detail?.active===true;
+  __syncPhaserRewardedAudio();
+});
+window.addEventListener('tdr:rewardedfullscreen',event=>{
+  __tdrAdFullscreen=event?.detail?.visible===true;
+  __syncPhaserRewardedAudio();
 });
 
 function __isLandscape() {
