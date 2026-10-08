@@ -1,0 +1,71 @@
+name: Android SDK sample-ad diagnostic APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-sdk-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sdk_diagnostic_apk:
+    name: Compile installable Redmi SDK test
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      BASE: ./
+    steps:
+      - name: Checkout exact main revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          test -n "${ANDROID_HOME}"
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
+            'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+      - name: Build Android game payload
+        shell: bash
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build:android
+      - name: Compile signed debug diagnostic APK
+        working-directory: android
+        run: ./gradlew :app:assembleBridgeTestDebug --stacktrace
+      - name: Verify separate package and prepare APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          src='android/app/build/outputs/apk/bridgeTest/debug/app-bridgeTest-debug.apk'
+          test -s "$src"
+          unzip -t "$src" | tail -1
+          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.bridgetest'"
+          mkdir -p sdk-download
+          cp "$src" sdk-download/TDR-SDK-TEST-DEV-1.2.76.apk
+          sha256sum sdk-download/TDR-SDK-TEST-DEV-1.2.76.apk
+          ls -lh sdk-download/*.apk
+      - name: Publish installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDR-SDK-TEST-DEV-1.2.76
+          path: sdk-download/TDR-SDK-TEST-DEV-1.2.76.apk
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
