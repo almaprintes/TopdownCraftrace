@@ -53,6 +53,17 @@ class TdrRewardedAdsPlugin : Plugin() {
         result.put("versionName", BuildConfig.VERSION_NAME)
         result.put("diagnosticBuild", BuildConfig.FLAVOR == "deviceTest")
         lastDiagnostic?.let { result.put("lastRewardedDiagnostic", it) }
+        activeAttempt?.let { attempt ->
+            val live = JSObject()
+            live.put("attempt", attempt.id.take(8))
+            live.put("placement", attempt.placement)
+            live.put("state", if (attempt.shownAtMs != null) "showing" else if (attempt.loadedAtMs != null) "loaded" else "loading")
+            live.put("responseId", attempt.responseId ?: "none")
+            live.put("adapterClass", attempt.adapterClass ?: "none")
+            live.put("adSourceName", attempt.adSourceName ?: "none")
+            live.put("elapsedMs", elapsed(attempt.startedAtMs))
+            result.put("activeRewardedDiagnostic", live)
+        }
         result.put("consentUpdateCompleted", consent.updateCompleted)
         result.put("consentCanRequestAds", consent.canRequestAds)
         result.put("privacyOptionsRequired", consent.privacyOptionsRequired)
