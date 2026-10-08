@@ -32,17 +32,19 @@ function mountRewardedDiagnosticPanel(bridge){
   let history=[];
   try{history=JSON.parse(localStorage.getItem(storageKey)||'[]');if(!Array.isArray(history))history=[];}catch{}
   let last='';
-  const render=()=>{output.textContent=JSON.stringify(history.slice(-30),null,2);};
+  const render=()=>{output.textContent=JSON.stringify(history.slice(-100),null,2);};
   const sample=async()=>{
     try{
       const s=await bridge.diagnostics();
       const entry=s?.activeRewardedDiagnostic||s?.lastRewardedDiagnostic;
       if(!entry)return;
-      const signature=JSON.stringify(entry);
+      // Record state transitions and terminal results, not a new line every 2.5s.
+      const {elapsedMs,...stableEntry}=entry;
+      const signature=JSON.stringify(stableEntry);
       if(signature===last)return;
       last=signature;
       history.push({at:new Date().toISOString(),...entry});
-      history=history.slice(-30);
+      history=history.slice(-100);
       try{localStorage.setItem(storageKey,JSON.stringify(history));}catch{}
       if(panel.style.display!=='none')render();
     }catch{}
@@ -82,6 +84,9 @@ export async function installNativeRewardedBridge(){
       writable:false,
       value:bridge
     });
+    RewardedAdsPlugin.addListener('rewardedFullscreen',event=>{
+      try{window.dispatchEvent(new CustomEvent('tdr:rewardedfullscreen',{detail:{visible:event?.visible===true}}));}catch{}
+    }).catch(()=>{});
     const detail={installed:true,configured:status?.configured===true,releaseBuild:status?.releaseBuild===true,diagnosticBuild:status?.diagnosticBuild===true,placementCount:Number(status?.placementCount)||0,consentUpdateCompleted:status?.consentUpdateCompleted===true,consentCanRequestAds:status?.consentCanRequestAds===true,adsInitialized:status?.adsInitialized===true};
     console.info('[TDR rewarded bridge]',detail);
     emitStatus(detail);
