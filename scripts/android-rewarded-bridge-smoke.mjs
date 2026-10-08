@@ -46,7 +46,7 @@ assert.match(gradle,/applicationIdSuffix '\.rewardedtest'/);
 assert.match(gradle,/TDR_ADMOB_TEST_DEVICE_IDS/);
 assert.match(gradle,/com\.revenuecat\.purchases:purchases:10\.19\.0/);
 assert.match(gradle,/com\.revenuecat\.purchases:purchases-admob:10\.19\.0/);
-assert.match(gradle,/com\.google\.android\.gms:play-services-ads:23\.6\.0/);
+assert.match(gradle,/com\.google\.android\.gms:play-services-ads:25\.4\.0/);
 assert.match(gradle,/com\.google\.android\.ump:user-messaging-platform:3\.2\.0/);
 assert.match(installer,/Object\.defineProperty\(window,'__tdrRewardedAds'/);
 assert.match(installer,/show\(options=\{\}\)/);
