@@ -38,6 +38,14 @@ class MenuMusic {
     this.fadeTimer=null;
     this.pauseTimer=null;
     this.suspended=false;
+    this.rewardedAdActive=false;
+    this.onRewardedAdState=(event)=>{
+      this.rewardedAdActive=event?.detail?.active===true;
+      if(this.rewardedAdActive){
+        clearInterval(this.fadeTimer);this.fadeTimer=null;
+        try{this.audio.pause();}catch{}
+      }else this._sync(true);
+    };
     this.onVisibility=()=>{
       this.suspended=document.hidden;
       if(this.suspended){clearInterval(this.fadeTimer);this.fadeTimer=null;try{this.audio.pause();}catch{}}
@@ -51,7 +59,7 @@ class MenuMusic {
       this.unlocked=true;
       clearTimeout(this.pauseTimer);this.pauseTimer=null;
       const p=prefs();
-      if(this.suspended||document.hidden||!this._isMenu()||p.mute||p.master<=0||p.music<=0){ this._sync(true); return; }
+      if(this.suspended||this.rewardedAdActive||document.hidden||!this._isMenu()||p.mute||p.master<=0||p.music<=0){ this._sync(true); return; }
       try{
         this.audio.volume=Math.max(.01,Math.min(.03,p.master*p.music*.03));
         const playPromise=this.audio.play();
@@ -66,7 +74,7 @@ class MenuMusic {
       const master=clamp(Number.isFinite(Number(d.master))?Number(d.master):stored.master,0,1);
       const music=clamp(Number.isFinite(Number(d.music))?Number(d.music):stored.music,0,1);
       const mute=typeof d.mute==='boolean'?d.mute:stored.mute;
-      const desired=!this.suspended&&!document.hidden&&this._isMenu()&&!mute?master*music*.32:0;
+      const desired=!this.suspended&&!this.rewardedAdActive&&!document.hidden&&this._isMenu()&&!mute?master*music*.32:0;
       clearInterval(this.fadeTimer);this.fadeTimer=null;
       this.targetVolume=desired;
       this.audio.volume=desired;
@@ -80,6 +88,7 @@ class MenuMusic {
     window.addEventListener('click',this.unlock,opts);
     window.addEventListener('keydown',this.unlock,opts);
     window.addEventListener(AUDIO_EVENT,this.onAudioSettings);
+    window.addEventListener('tdr:rewarded-ad-state',this.onRewardedAdState);
     document.addEventListener('visibilitychange',this.onVisibility);
     window.addEventListener('blur',this.onWindowBlur);
     window.addEventListener('focus',this.onWindowFocus);
@@ -98,7 +107,7 @@ class MenuMusic {
   }
 
   _play(){
-    if(this.suspended||document.hidden||!this.unlocked||!this.audio.paused)return;
+    if(this.suspended||this.rewardedAdActive||document.hidden||!this.unlocked||!this.audio.paused)return;
     clearTimeout(this.pauseTimer);this.pauseTimer=null;
     try{const p=this.audio.play();if(p?.catch)p.catch(()=>{});}catch{}
   }
@@ -121,7 +130,7 @@ class MenuMusic {
   _sync(force=false){
     const p=prefs();
     const menu=this._isMenu();
-    const desired=!this.suspended&&!document.hidden&&menu&&!p.mute?p.master*p.music*.32:0;
+    const desired=!this.suspended&&!this.rewardedAdActive&&!document.hidden&&menu&&!p.mute?p.master*p.music*.32:0;
     if(menu&&!p.mute&&desired>0){
       clearTimeout(this.pauseTimer);this.pauseTimer=null;
       this._play();
@@ -143,6 +152,7 @@ class MenuMusic {
     window.removeEventListener('click',this.unlock,opts);
     window.removeEventListener('keydown',this.unlock,opts);
     window.removeEventListener(AUDIO_EVENT,this.onAudioSettings);
+    window.removeEventListener('tdr:rewarded-ad-state',this.onRewardedAdState);
     document.removeEventListener('visibilitychange',this.onVisibility);
     window.removeEventListener('blur',this.onWindowBlur);
     window.removeEventListener('focus',this.onWindowFocus);
