@@ -231,7 +231,7 @@ jobs:
 
 
   rewarded_device_test_apk:
-    name: Rewarded real-ad diagnostic APK
+    name: Rewarded gameplay diagnostic APK
     runs-on: ubuntu-latest
     env:
       BASE: ./
@@ -269,12 +269,12 @@ jobs:
         run: |
           APK="$(find android/app/build/outputs/apk/deviceTest/debug -name '*.apk' -type f | head -n 1)"
           test -n "$APK"
-          cp "$APK" TDR-Rewarded-Test-1.2.73.apk
+          cp "$APK" TDR-Rewarded-Playtest-1.2.74.apk
       - name: Upload diagnostic APK
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-Rewarded-Test-1.2.73
-          path: TDR-Rewarded-Test-1.2.73.apk
+          name: TDR-Rewarded-Playtest-1.2.74
+          path: TDR-Rewarded-Playtest-1.2.74.apk
           if-no-files-found: error
           retention-days: 14
 
