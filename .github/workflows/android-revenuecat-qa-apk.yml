@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/android-revenuecat-qa-apk.yml'
+      - 'assets/branding/tdr-play-store-icon.png'
+      - 'scripts/generate-android-launcher-icons.mjs'
+      - 'scripts/verify-android-launcher.mjs'
   workflow_dispatch:
 
 permissions:
