@@ -6,6 +6,7 @@ import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { getPilotProfile } from '../social/pilotProfile.js';
+import { cloudIdentity, cloudBackupStatus, createFirstCloudBackup, shortPlayerId } from '../social/cloudProgress.js';
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import './lobby-dom.css';
 
@@ -52,7 +53,7 @@ export function installLobbyDom(scene) {
   hideLegacyLobbyControls(scene); let root = scene._lobbyDomRoot;
   if (!root?.isConnected) {
     const host = scene.game?.canvas?.parentElement || document.getElementById('app') || document.body; host.classList.add('tdr-lobby-host'); root = document.createElement('div'); root.className = 'tdr-lobby-dom';
-    root.innerHTML = `<header class="tdr-lobby-header"><button type="button" class="tdr-lobby-brand" aria-label="Top Down Race"><img src="${BASE}assets/logo.webp" alt="Top Down Race" draggable="false"></button><div class="tdr-lobby-wallet"><img src="${BASE}assets/ui/moneda-tdr.webp" alt="" draggable="false"><span><small>${tr('lobby.coins')}</small><strong data-coins>0</strong></span></div><div data-pilot-header style="min-width:96px;max-width:180px;display:grid;gap:4px;padding:5px 10px;border-left:1px solid rgba(70,221,255,.18);border-right:1px solid rgba(70,221,255,.18);line-height:1;overflow:hidden"><small style="color:#7f94a6;font-size:8px;font-weight:900;letter-spacing:.16em">${tr('lobby.driver')}</small><strong data-pilot-header-name style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#65eaff;font-size:clamp(11px,1.05vw,16px);font-weight:950;letter-spacing:.05em">—</strong></div><nav class="tdr-lobby-top-actions"></nav></header><img class="tdr-lobby-car-preview" data-lobby-car alt="" draggable="false"><main class="tdr-lobby-cards"><section class="tdr-lobby-card tdr-event-card" data-event-card></section><section class="tdr-lobby-card tdr-car-card" data-car-card></section><section class="tdr-lobby-card tdr-track-card" data-track-card></section></main><div class="tdr-lobby-play-slot"></div><nav class="tdr-lobby-bottom-actions"></nav>`;
+    root.innerHTML = `<header class="tdr-lobby-header"><button type="button" class="tdr-lobby-brand" aria-label="Top Down Race"><img src="${BASE}assets/logo.webp" alt="Top Down Race" draggable="false"></button><div class="tdr-lobby-wallet"><img src="${BASE}assets/ui/moneda-tdr.webp" alt="" draggable="false"><span><small>${tr('lobby.coins')}</small><strong data-coins>0</strong></span></div><div data-pilot-header style="min-width:96px;max-width:180px;display:grid;gap:4px;padding:5px 10px;border-left:1px solid rgba(70,221,255,.18);border-right:1px solid rgba(70,221,255,.18);line-height:1;overflow:hidden"><small style="color:#7f94a6;font-size:8px;font-weight:900;letter-spacing:.16em">${tr('lobby.driver')}</small><strong data-pilot-header-name style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#65eaff;font-size:clamp(11px,1.05vw,16px);font-weight:950;letter-spacing:.05em">—</strong><button type="button" data-cloud-account style="padding:0;border:0;background:none;text-align:left;color:#8eabb9;font:700 9px system-ui;cursor:pointer;touch-action:manipulation" title="Cuenta y copia de seguridad">ID · … ☁</button></div><nav class="tdr-lobby-top-actions"></nav></header><img class="tdr-lobby-car-preview" data-lobby-car alt="" draggable="false"><main class="tdr-lobby-cards"><section class="tdr-lobby-card tdr-event-card" data-event-card></section><section class="tdr-lobby-card tdr-car-card" data-car-card></section><section class="tdr-lobby-card tdr-track-card" data-track-card></section></main><div class="tdr-lobby-play-slot"></div><nav class="tdr-lobby-bottom-actions"></nav>`;
     host.appendChild(root); scene._lobbyDomRoot = root;
     const top = root.querySelector('.tdr-lobby-top-actions'); top.append(makeButton({ cls:'tdr-lobby-button--gold', icon:'icon_inventory.webp', label:tr('lobby.inventory'), action:()=>scene._openLobbyInventoryModal?.('materials') }), makeButton({ cls:'tdr-lobby-button--purple', icon:'icon_store.webp', label:tr('lobby.store'), action:()=>scene._openStoreModal?.('materials') }), makeButton({ icon:'icon_settings.webp', label:tr('lobby.settings'), action:()=>scene.scene.start('SettingsScene') }));
     const play = document.createElement('button'); play.type='button'; play.className='tdr-lobby-play'; play.innerHTML=`<span class="tdr-lobby-play-triangle">▶</span><span>${tr('lobby.play')}</span>`; play.addEventListener('click',()=>startRaceFlow(scene)); root.querySelector('.tdr-lobby-play-slot').appendChild(play);
@@ -60,6 +61,23 @@ export function installLobbyDom(scene) {
     if(!IS_PROD_BUILD){const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));}
     const syncPilot=()=>{const name=String(getPilotProfile()?.name||'').trim();const node=root.querySelector('[data-pilot-header-name]');if(node)node.textContent=name||'—';};
     window.addEventListener('tdr:pilotprofile',syncPilot);
+    const accountButton=root.querySelector('[data-cloud-account]');
+    const updateCloudId=async()=>{try{const {id}=await cloudIdentity();if(!root.isConnected)return;accountButton.textContent='ID · '+shortPlayerId(id)+' ☁';accountButton.title='ID: '+id+' · Cuenta y copia de seguridad';}catch{if(root.isConnected)accountButton.textContent='☁ SIN CONEXIÓN';}};
+    accountButton?.addEventListener('click',async()=>{
+      if(accountButton.disabled)return;
+      accountButton.disabled=true;
+      try{
+        const status=await cloudBackupStatus();
+        const label='ID: '+status.id+'\\n'+(status.existing?'Copia en la nube: '+status.updatedAt:'Todavía no hay copia en la nube.');
+        if(status.existing){window.alert(label+'\\nTu progreso local no se ha modificado. La recuperación y vinculación social llegarán en una fase posterior.');return;}
+        if(!window.confirm(label+'\\n\\n¿Crear una primera copia de seguridad de este dispositivo?'))return;
+        await createFirstCloudBackup();
+        window.alert('Copia de seguridad creada correctamente.\\n'+status.id);
+      }catch(error){window.alert('No se ha modificado tu progreso. '+String(error?.message||error));}
+      finally{accountButton.disabled=false;updateCloudId();}
+    });
+    updateCloudId();
+
     scene.events.once('shutdown',()=>{try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
   }
   const syncLobbyHeader=()=>{const coins=Math.max(0,Math.floor(Number(loadGarage()?.coins)||0));const coinNode=root.querySelector('[data-coins]');if(coinNode)coinNode.textContent=coins.toLocaleString(getLanguage()==='es'?'es-ES':'en-US');const pilotNode=root.querySelector('[data-pilot-header-name]');if(pilotNode)pilotNode.textContent=String(getPilotProfile()?.name||'').trim()||'—';const countdown=root.querySelector('[data-season-countdown]');if(countdown)countdown.textContent=seasonCountdownLabel();};
