@@ -171,6 +171,17 @@ class RewardedBridgeReleaseTest {
             if (last != "undefined" && last != "null" && last != "pending" && !last.contains("undefined")) return last
             Thread.sleep(150)
         }
-        error("WebView condition was not met; last=$last")
+        var diagnostic = "evaluation-unavailable"
+        val diagnosticLatch = CountDownLatch(1)
+        webView.post {
+            webView.evaluateJavascript(
+                """JSON.stringify({ready:window.__tdrStartupState?.ready||false,phase:window.__tdrStartupState?.phase||'missing',failure:window.__tdrStartupState?.failure||'',width:innerWidth,height:innerHeight,canvas:!!document.querySelector('#app canvas'),overlay:!!document.getElementById('tdrStartup'),bridge:typeof window.__tdrRewardedAds,boot:window.__tdrBootLast?.phase||'missing'})"""
+            ) { value ->
+                diagnostic = value
+                diagnosticLatch.countDown()
+            }
+        }
+        diagnosticLatch.await(5, TimeUnit.SECONDS)
+        error("WebView condition was not met; last=$last diagnostic=$diagnostic")
     }
 }
