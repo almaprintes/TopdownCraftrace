@@ -1,5 +1,6 @@
 import {spawnSync} from 'node:child_process';
 import {verifyAndroidAssets} from './android-assets-smoke.mjs';
+import './generate-android-launcher-icons.mjs';
 const run=(command,args)=>{
   const result=spawnSync(command,args,{stdio:'inherit',env:{...process.env,BASE:'./'},shell:process.platform==='win32'});
   if(result.error)throw result.error;
