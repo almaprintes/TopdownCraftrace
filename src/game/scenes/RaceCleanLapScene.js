@@ -32,6 +32,15 @@ export class RaceScene extends CurrentRaceScene {
     this._cleanComboCoinReward=0;
     this._sessionLapCapTriggered=false;
     this._retireLegacyDeltaHud();
+    // The base scene still slides in a 240x160 legacy lap-time panel after
+    // every improved lap. Modern DOM feedback replaces that presentation.
+    // Retire its visuals, not the timing calculations or record persistence.
+    try{
+      this._hideTTPanel=()=>{};
+      this._showTTPanel=()=>{};
+      this.ttPanel?.c?.destroy?.(true);
+      this.ttPanel=null;
+    }catch{}
     try{window.__tdrPerfRaceActive=true;}catch{}
     this.events?.once?.('shutdown',()=>{try{window.__tdrPerfRaceActive=false;}catch{}});
     this.events?.once?.('destroy',()=>{try{window.__tdrPerfRaceActive=false;}catch{}});
