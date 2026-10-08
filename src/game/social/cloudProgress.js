@@ -3,7 +3,8 @@
 import { activateRaceControlOnline } from '../online/raceControlOnline.js';
 const URL=String(import.meta.env.VITE_TDR_ONLINE_URL||'https://juukbnkjboiazqggqcyv.supabase.co').trim();
 const KEY=String(import.meta.env.VITE_TDR_ONLINE_PUBLIC||'sb_publishable_l5cHUHrGHoFzGqmUyfQKSA_d3VjWksB').trim();
-const STORAGE_KEYS=['tdr2:pilotProfile:v1','tdr2:playerStats:v1','tdr2:carUnlocks:v1','tdr2:garageFusion:v1'];
+const STORAGE_KEYS=['tdr2:playerStats:v1','tdr2:carUnlocks:v1','tdr2:garageFusion:v1'];
+// Pilot profile and authentication tokens are intentionally not part of a save.
 const allowedKey=key=>STORAGE_KEYS.includes(key)||key.startsWith('tdr2:ttHist:');
 export function localProgressSnapshot(){
   const data={};try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(!key||!allowedKey(key))continue;const raw=localStorage.getItem(key);if(raw!==null){try{data[key]=JSON.parse(raw);}catch{}}}}catch{}
@@ -30,6 +31,26 @@ export async function createFirstCloudBackup(){
  const result=await api('/rest/v1/rpc/save_my_player_progress',token,{method:'POST',body:JSON.stringify({p_progress:snapshot,p_expected_revision:0})});
  const row=Array.isArray(result)?result[0]:result;
  if(!row?.saved)throw new Error('Ya existe una copia en la nube. No se ha sobrescrito.');
+ return {id,revision:row.current_revision};
+}
+export async function readCloudBackup(){
+ const {id,token}=await cloudIdentity();
+ const rows=await api('/rest/v1/player_progress?select=revision,updated_at,progress&user_id=eq.'+encodeURIComponent(id),token);
+ const row=Array.isArray(rows)?rows[0]:null;
+ if(!row)return null;
+ if(row.progress?.format!==1||!row.progress?.data||typeof row.progress.data!=='object')throw new Error('Formato de copia no compatible.');
+ return {id,revision:row.revision,updatedAt:row.updated_at,snapshot:row.progress};
+}
+// Manual updates use optimistic concurrency; an out-of-date device cannot replace a newer save.
+export async function updateCloudBackup(expectedRevision){
+ const {id,token}=await cloudIdentity();
+ const revision=Number(expectedRevision);
+ if(!Number.isSafeInteger(revision)||revision<1)throw new Error('Revisión de copia inválida.');
+ const snapshot=localProgressSnapshot();
+ if(new TextEncoder().encode(JSON.stringify(snapshot)).length>120000)throw new Error('Partida demasiado grande para sincronizar.');
+ const result=await api('/rest/v1/rpc/save_my_player_progress',token,{method:'POST',body:JSON.stringify({p_progress:snapshot,p_expected_revision:revision})});
+ const row=Array.isArray(result)?result[0]:result;
+ if(!row?.saved)throw new Error('La copia cambió en otro dispositivo. No se ha sobrescrito.');
  return {id,revision:row.current_revision};
 }
 export function shortPlayerId(id){return String(id||'').slice(0,8).toUpperCase();}
