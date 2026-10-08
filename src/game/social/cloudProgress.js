@@ -7,7 +7,21 @@ const STORAGE_KEYS=['tdr2:playerStats:v1','tdr2:carUnlocks:v1','tdr2:garageFusio
 // Pilot profile and authentication tokens are intentionally not part of a save.
 const allowedKey=key=>STORAGE_KEYS.includes(key)||key.startsWith('tdr2:ttHist:');
 export function localProgressSnapshot(){
-  const data={};try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i);if(!key||!allowedKey(key))continue;const raw=localStorage.getItem(key);if(raw!==null){try{data[key]=JSON.parse(raw);}catch{}}}}catch{}
+  // A failed localStorage read or broken save must never replace a good cloud backup.
+  const data={};
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const key=localStorage.key(i);
+      if(!key||!allowedKey(key))continue;
+      const raw=localStorage.getItem(key);
+      if(raw!==null)data[key]=JSON.parse(raw);
+    }
+  }catch{
+    throw new Error('No se puede leer la partida local. No se ha modificado la copia en la nube.');
+  }
+  if(Object.keys(data).length===0){
+    throw new Error('No hay datos de partida local para guardar. No se ha modificado la nube.');
+  }
   return {format:1,createdAt:new Date().toISOString(),data};
 }
 export async function cloudIdentity(){const online=await activateRaceControlOnline();return {id:online.session.user.id,token:online.session.access_token};}
