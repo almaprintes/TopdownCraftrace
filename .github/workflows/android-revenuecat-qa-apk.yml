@@ -1,0 +1,80 @@
+name: TDR real AdMob RevenueCat QA APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-revenuecat-qa-apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real_ads_qa:
+    name: Build separate physical Redmi QA app
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      BASE: ./
+      # These three identifiers are PUBLIC Android app/SDK identifiers by design.
+      # They are bundled into the distributable app, not secret/private API keys.
+      TDR_ADMOB_APP_ID: ca-app-pub-1520547848869532~9780989345
+      TDR_ADMOB_REWARDED_UNIT_ID: ca-app-pub-1520547848869532/2605472830
+      TDR_REVENUECAT_PUBLIC_SDK_KEY: goog_dkfPGMwMaCAVUhyeibbGQOZMAiC
+      # This build exercises LIVE ad inventory. Do not use it for repeated
+      # artificial impression generation. Use bridgeTest for frequent testing.
+      TDR_ADMOB_TEST_DEVICE_IDS: ''
+    steps:
+      - name: Checkout merged DEV from exact main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Install Android SDK
+        shell: bash
+        run: |
+          test -n "${ANDROID_HOME}"
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
+            'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+      - name: Build Android web payload with approved launcher
+        shell: bash
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build:android
+          node scripts/verify-android-launcher.mjs
+      - name: Compile APK with real AdMob and RevenueCat integrations
+        working-directory: android
+        run: ./gradlew :app:assembleDeviceTestDebug --stacktrace
+      - name: Validate separate package and APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          src='android/app/build/outputs/apk/deviceTest/debug/app-deviceTest-debug.apk'
+          test -s "$src"
+          unzip -t "$src" | tail -1
+          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'"
+          mkdir -p sdk-download
+          cp "$src" sdk-download/TDR-QA-REAL-ADS-DEV-1.2.76.apk
+          sha256sum sdk-download/TDR-QA-REAL-ADS-DEV-1.2.76.apk
+          ls -lh sdk-download/*.apk
+      - name: Make installable Redmi APK available
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDR-QA-REAL-ADS-DEV-1.2.76
+          path: sdk-download/TDR-QA-REAL-ADS-DEV-1.2.76.apk
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
