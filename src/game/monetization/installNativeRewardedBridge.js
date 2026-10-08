@@ -66,39 +66,45 @@ function mountAndroidPerformancePanel(){
   const btn=document.createElement('button');
   btn.id='tdr-perf-toggle';btn.textContent='PERF';
   btn.style.cssText='position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 54px);z-index:60000;border:1px solid #fbbf24;background:#211a08;color:#fff;border-radius:9px;padding:8px;font:700 12px system-ui';
-  const box=document.createElement('pre');box.id='tdr-perf-panel';
-  box.style.cssText='display:none;position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 96px);z-index:60000;background:#07111df0;color:#e5e7eb;border:1px solid #fbbf24;padding:10px;border-radius:8px;font:12px/1.5 monospace;pointer-events:none;white-space:pre';
-  document.body.append(btn,box);
-  let running=false,raf=0,last=0,frames=0,total=0,spikes=0,max=0,over33=0,over50=0;
-  let samples=[],start=0,lastPaint=0;
-  const tick=(now)=>{
-    if(!running)return;
+  const panel=document.createElement('div');
+  panel.id='tdr-perf-summary';
+  panel.style.cssText='display:none;position:fixed;inset:0;z-index:60002;background:#07111df7;color:#fff;padding:20px;overflow:auto;font:14px system-ui';
+  panel.innerHTML='<h2>PERF · Resumen Android</h2><p>La medición se realiza automáticamente mientras juegas. No necesitas activar nada.</p><pre id="tdr-perf-summary-text" style="white-space:pre-wrap;word-break:break-word;background:#0009;padding:12px"></pre><button id="tdr-perf-copy" style="padding:12px">COPIAR INFORME</button> <button id="tdr-perf-reset" style="padding:12px">REINICIAR MEDICIÓN</button> <button id="tdr-perf-close" style="padding:12px">VOLVER</button>';
+  document.body.append(btn,panel);
+  const output=panel.querySelector('#tdr-perf-summary-text');
+  let last=0,start=performance.now(),frameCount=0,over33=0,over50=0,max=0,sum=0,spikes=[],pausedMs=0;
+  let previousVisible=!document.hidden;
+  const tick=now=>{
+    if(document.hidden){last=0;requestAnimationFrame(tick);return;}
+    if(!previousVisible){last=0;previousVisible=true;}
     if(last){
       const dt=now-last;
-      if(dt>0&&dt<2000){frames++;total+=dt;max=Math.max(max,dt);if(dt>33.4)over33++;if(dt>50)over50++;if(dt>33.4){spikes++;samples.push(Math.round(dt));if(samples.length>12)samples.shift();}}
+      if(dt>0&&dt<2000){
+        frameCount++;sum+=dt;max=Math.max(max,dt);
+        if(dt>33.4){over33++;spikes.push({second:Math.round((now-start)/1000),ms:Math.round(dt)});if(spikes.length>40)spikes.shift();}
+        if(dt>50)over50++;
+      }
     }
-    last=now;
-    if(now-lastPaint>=1000){
-      const seconds=Math.max(.001,(now-start)/1000);
-      const mem=performance?.memory?.usedJSHeapSize;
-      box.textContent='FPS (último s): '+(total>0?(1000*frames/total).toFixed(1):'—')+
-        '\\nFotogramas >33ms: '+over33+'  >50ms: '+over50+
-        '\\nPico: '+max.toFixed(0)+'ms'+
-        '\\nTirones/min: '+(spikes*60/seconds).toFixed(1)+
-        '\\nÚltimos tirones: '+(samples.join(', ')||'—')+' ms'+
-        '\\nHeap JS: '+(Number.isFinite(mem)?(mem/1048576).toFixed(0)+' MB':'no disponible')+
-        '\\nAD LOG: muestreo cada 2,5 s';
-      frames=0;total=0;lastPaint=now;
-    }
-    raf=requestAnimationFrame(tick);
+    last=now;requestAnimationFrame(tick);
   };
-  btn.addEventListener('click',()=>{
-    running=!running;box.style.display=running?'block':'none';
-    btn.textContent=running?'PERF ●':'PERF';
-    if(running){last=0;frames=0;total=0;spikes=0;max=0;over33=0;over50=0;samples=[];start=performance.now();lastPaint=start;raf=requestAnimationFrame(tick);}
-    else cancelAnimationFrame(raf);
-  });
-  window.addEventListener('pagehide',()=>{running=false;cancelAnimationFrame(raf);},{once:true});
+  document.addEventListener('visibilitychange',()=>{previousVisible=!document.hidden;last=0;});
+  requestAnimationFrame(tick);
+  const report=()=>{
+    const elapsed=Math.max(1,(performance.now()-start-pausedMs)/1000);
+    const mem=performance?.memory?.usedJSHeapSize;
+    return 'Duración aproximada: '+Math.round(elapsed)+' s'+
+      '\\nFPS promedio (RAF): '+(sum?((1000*frameCount)/sum).toFixed(1):'—')+
+      '\\nFotogramas >33 ms: '+over33+'; >50 ms: '+over50+
+      '\\nMayor intervalo: '+Math.round(max)+' ms'+
+      '\\nTirones >33 ms/min: '+(over33*60/elapsed).toFixed(1)+
+      '\\nMemoria JS actual: '+(Number.isFinite(mem)?(mem/1048576).toFixed(1)+' MB':'no disponible')+
+      '\\nÚltimos tirones (segundo/ms): '+JSON.stringify(spikes)+
+      '\\nNota: RAF mide cadencia de presentación, no FPS internos de Phaser.';
+  };
+  btn.addEventListener('click',()=>{output.textContent=report();panel.style.display='block';});
+  panel.querySelector('#tdr-perf-close').addEventListener('click',()=>panel.style.display='none');
+  panel.querySelector('#tdr-perf-reset').addEventListener('click',()=>{start=performance.now();last=0;frameCount=0;over33=0;over50=0;max=0;sum=0;spikes=[];pausedMs=0;output.textContent=report();});
+  panel.querySelector('#tdr-perf-copy').addEventListener('click',async()=>{output.textContent=report();try{await navigator.clipboard.writeText(output.textContent);panel.querySelector('#tdr-perf-copy').textContent='COPIADO';}catch{}});
 }
 
 export async function installNativeRewardedBridge(){
