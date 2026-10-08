@@ -53,7 +53,8 @@ class TdrRewardedAdsPlugin : Plugin() {
         result.put("releaseBuild", BuildConfig.BUILD_TYPE == "release")
         result.put("placementCount", RewardedRequestPolicy.placements().size)
         result.put("versionName", BuildConfig.VERSION_NAME)
-        result.put("diagnosticBuild", BuildConfig.FLAVOR == "deviceTest")
+        result.put("diagnosticBuild", BuildConfig.FLAVOR == "deviceTest" || (BuildConfig.FLAVOR == "bridgeTest" && BuildConfig.DEBUG))
+        result.put("googleSampleAdMode", BuildConfig.FLAVOR == "bridgeTest" && BuildConfig.DEBUG)
         lastDiagnostic?.let { result.put("lastRewardedDiagnostic", it) }
         activeAttempt?.let { attempt ->
             val live = JSObject()
@@ -104,6 +105,13 @@ class TdrRewardedAdsPlugin : Plugin() {
             resolveFailure(call, validation.reason ?: "invalid_request")
             return
         }
+        // Google sample ads are only available in the separately installed debug
+        // .bridgetest package. Production and bridgeTestRelease keep their original
+        // RevenueCat verification / fail-closed behavior.
+        if (BuildConfig.FLAVOR == "bridgeTest" && BuildConfig.DEBUG) {
+            showGoogleSampleAd(call, placement!!, claimId!!)
+            return
+        }
         if (!BuildConfig.TDR_REWARDED_CONFIGURED) {
             resolveFailure(call, "native_rewarded_not_configured")
             return
@@ -142,6 +150,90 @@ class TdrRewardedAdsPlugin : Plugin() {
 
     private fun consentManager(): TdrAdsConsentManager =
         TdrAdsConsentManager.get(activity.application)
+
+    // Physical device playback diagnostics using Google's official sample rewarded
+    // ad unit. Never simulates RevenueCat SSV or grants an in-game reward.
+    private fun showGoogleSampleAd(call: PluginCall, placement: String, claimId: String) {
+        val attempt = synchronized(this) {
+            if (activeAttempt != null) {
+                resolveFailure(call, "rewarded_already_active")
+                return
+            }
+            call.setKeepAlive(true)
+            Attempt(
+                id = UUID.randomUUID().toString(),
+                placement = placement,
+                claimHash = shortHash(claimId),
+                call = call,
+            ).also { activeAttempt = it }
+        }
+        Log.i(TAG, "attempt=${attempt.id.take(8)} sample_mode=true placement=${attempt.placement} preparing")
+        consentManager().prepare(activity) { consent ->
+            if (!isActive(attempt)) return@prepare
+            if (!consent.canRequestAds || !consent.adsInitialized) {
+                finish(attempt, false, false, consent.reason ?: "ads_consent_unavailable")
+                return@prepare
+            }
+            activity.runOnUiThread {
+                if (!isActive(attempt)) return@runOnUiThread
+                val watchdog = Runnable { finish(attempt, false, false, "sample_ad_watchdog_timeout") }
+                attempt.watchdog = watchdog
+                mainHandler.postDelayed(watchdog, WATCHDOG_MS)
+                try {
+                    RewardedAd.load(
+                        activity,
+                        BuildConfig.TDR_REWARDED_AD_UNIT_ID,
+                        AdRequest.Builder().build(),
+                        object : RewardedAdLoadCallback() {
+                            override fun onAdLoaded(ad: RewardedAd) {
+                                if (!isActive(attempt)) return
+                                attempt.loadedAtMs = SystemClock.elapsedRealtime()
+                                val info = ad.responseInfo
+                                attempt.responseId = info.responseId
+                                attempt.adapterClass = info.loadedAdapterResponseInfo?.adapterClassName
+                                attempt.adSourceName = info.loadedAdapterResponseInfo?.adSourceName
+                                Log.i(TAG, "attempt=${attempt.id.take(8)} sample_loaded latency_ms=${elapsed(attempt.startedAtMs, attempt.loadedAtMs)}")
+                                ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                                    override fun onAdShowedFullScreenContent() {
+                                        attempt.shownAtMs = SystemClock.elapsedRealtime()
+                                        notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", true) })
+                                        Log.i(TAG, "attempt=${attempt.id.take(8)} sample_shown elapsed_ms=${elapsed(attempt.startedAtMs)}")
+                                    }
+                                    override fun onAdImpression() {
+                                        Log.i(TAG, "attempt=${attempt.id.take(8)} sample_impression elapsed_ms=${elapsed(attempt.startedAtMs)}")
+                                    }
+                                    override fun onAdClicked() {
+                                        Log.i(TAG, "attempt=${attempt.id.take(8)} sample_clicked elapsed_ms=${elapsed(attempt.startedAtMs)}")
+                                    }
+                                    override fun onAdFailedToShowFullScreenContent(error: AdError) {
+                                        notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", false) })
+                                        finish(attempt, false, false, "sample_show_failed_${error.code}")
+                                    }
+                                    override fun onAdDismissedFullScreenContent() {
+                                        attempt.dismissed = true
+                                        notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", false) })
+                                        Log.i(TAG, "attempt=${attempt.id.take(8)} sample_dismissed visible_ms=${elapsed(attempt.shownAtMs)}")
+                                        finish(attempt, false, false, "google_sample_ad_no_revenuecat_verification")
+                                    }
+                                }
+                                ad.show(activity) { rewardItem ->
+                                    // Callback is logged but NEVER translated into completed=true.
+                                    Log.i(TAG, "attempt=${attempt.id.take(8)} sample_reward_callback amount=${rewardItem.amount}")
+                                }
+                            }
+                            override fun onAdFailedToLoad(error: LoadAdError) {
+                                Log.w(TAG, "attempt=${attempt.id.take(8)} sample_load_failed code=${error.code} domain=${error.domain}")
+                                finish(attempt, false, false, "sample_load_failed_${error.code}")
+                            }
+                        },
+                    )
+                } catch (error: Throwable) {
+                    Log.e(TAG, "attempt=${attempt.id.take(8)} sample_error=${error.javaClass.simpleName}")
+                    finish(attempt, false, false, "sample_native_error")
+                }
+            }
+        }
+    }
 
     private fun loadAndShow(attempt: Attempt) {
         try {
