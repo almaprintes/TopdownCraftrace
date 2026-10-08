@@ -34,6 +34,8 @@ class TdrRewardedAdsPlugin : Plugin() {
         val claimHash: String,
         val call: PluginCall,
         var verificationStarted: Boolean = false,
+        var dismissed: Boolean = false,
+        var watchdog: Runnable? = null,
         val startedAtMs: Long = SystemClock.elapsedRealtime(),
         var loadedAtMs: Long? = null,
         var shownAtMs: Long? = null,
@@ -62,6 +64,8 @@ class TdrRewardedAdsPlugin : Plugin() {
             live.put("adapterClass", attempt.adapterClass ?: "none")
             live.put("adSourceName", attempt.adSourceName ?: "none")
             live.put("elapsedMs", elapsed(attempt.startedAtMs))
+            live.put("verificationStarted", attempt.verificationStarted)
+            live.put("dismissed", attempt.dismissed)
             result.put("activeRewardedDiagnostic", live)
         }
         result.put("consentUpdateCompleted", consent.updateCompleted)
@@ -121,14 +125,18 @@ class TdrRewardedAdsPlugin : Plugin() {
 
         val attempt = activeAttempt ?: return
         Log.i(TAG, "attempt=${attempt.id.take(8)} placement=${attempt.placement} claim=${attempt.claimHash} load")
-        mainHandler.postDelayed({ finish(attempt, false, false, "native_watchdog_timeout") }, WATCHDOG_MS)
         consentManager().prepare(activity) { consent ->
             if (!isActive(attempt)) return@prepare
             if (!consent.canRequestAds || !consent.adsInitialized) {
                 finish(attempt, false, false, consent.reason ?: "ads_consent_unavailable")
                 return@prepare
             }
-            activity.runOnUiThread { loadAndShow(attempt) }
+            activity.runOnUiThread {
+                val watchdog = Runnable { finish(attempt, false, false, "native_watchdog_timeout") }
+                attempt.watchdog = watchdog
+                mainHandler.postDelayed(watchdog, WATCHDOG_MS)
+                loadAndShow(attempt)
+            }
         }
     }
 
@@ -144,15 +152,19 @@ class TdrRewardedAdsPlugin : Plugin() {
             val lifecycleCallback = object : FullScreenContentCallback() {
                 override fun onAdShowedFullScreenContent() {
                     attempt.shownAtMs = SystemClock.elapsedRealtime()
+                    notifyListeners("rewardedFullscreen", JSObject().put("visible", true))
                     Log.i(TAG, "attempt=${attempt.id.take(8)} shown response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} load_ms=${elapsed(attempt.startedAtMs, attempt.loadedAtMs)}")
                 }
 
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
+                    notifyListeners("rewardedFullscreen", JSObject().put("visible", false))
                     Log.w(TAG, "attempt=${attempt.id.take(8)} show_failed code=${error.code} domain=${error.domain}")
                     finish(attempt, false, false, "show_failed_${error.code}")
                 }
 
                 override fun onAdDismissedFullScreenContent() {
+                    attempt.dismissed = true
+                    notifyListeners("rewardedFullscreen", JSObject().put("visible", false))
                     Log.i(TAG, "attempt=${attempt.id.take(8)} dismissed verification_started=${attempt.verificationStarted} response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} visible_ms=${elapsed(attempt.shownAtMs)} total_ms=${elapsed(attempt.startedAtMs)}")
                     if (!attempt.verificationStarted) {
                         finish(attempt, false, false, "ad_incomplete")
@@ -180,6 +192,7 @@ class TdrRewardedAdsPlugin : Plugin() {
                             activity = activity,
                             rewardVerificationStarted = {
                                 attempt.verificationStarted = true
+                                Log.i(TAG, "attempt=${attempt.id.take(8)} reward_callback_received")
                                 Log.i(TAG, "attempt=${attempt.id.take(8)} ssv_started response=${attempt.responseId ?: "none"} source=${attempt.adSourceName ?: "none"} visible_ms=${elapsed(attempt.shownAtMs)}")
                             },
                             rewardVerificationCompleted = { verification ->
@@ -219,7 +232,8 @@ class TdrRewardedAdsPlugin : Plugin() {
     ) {
         if (activeAttempt !== attempt) return
         activeAttempt = null
-        mainHandler.removeCallbacksAndMessages(null)
+        attempt.watchdog?.let { mainHandler.removeCallbacks(it) }
+        notifyListeners("rewardedFullscreen", JSObject().put("visible", false))
         val result = JSObject()
         result.put("completed", completed && verified)
         result.put("verified", verified)
@@ -236,6 +250,8 @@ class TdrRewardedAdsPlugin : Plugin() {
         diagnostic.put("responseId", attempt.responseId ?: "none")
         diagnostic.put("adapterClass", attempt.adapterClass ?: "none")
         diagnostic.put("adSourceName", attempt.adSourceName ?: "none")
+        diagnostic.put("verificationStarted", attempt.verificationStarted)
+        diagnostic.put("dismissed", attempt.dismissed)
         diagnostic.put("loadMs", elapsed(attempt.startedAtMs, attempt.loadedAtMs))
         diagnostic.put("visibleMs", elapsed(attempt.shownAtMs))
         diagnostic.put("totalMs", totalMs)
