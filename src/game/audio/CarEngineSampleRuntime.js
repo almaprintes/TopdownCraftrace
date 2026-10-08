@@ -151,7 +151,10 @@ export class CarEngineSampleRuntime {
     this._engineFadeEndAt = 0;
     this._sparkTopKmh = Math.max(30, attainableTopSpeedKmh(scene?.carParams || {}, 40) || 60);
     this._rewardedAdActive = false;
+    this._nativeRewardedFullscreen = false;
+    this._nativeAppPaused = false;
     this._audioFocusLost = false;
+    this._focusTransition = Promise.resolve();
     this._contextRecovery = () => this._syncLifecycleAudio();
     this._onBlur = () => { this._audioFocusLost = true; this._syncLifecycleAudio(); };
     this._onFocus = () => { this._audioFocusLost = false; this._syncLifecycleAudio(); };
@@ -159,6 +162,12 @@ export class CarEngineSampleRuntime {
       this._rewardedAdActive = event?.detail?.active === true;
       this._syncLifecycleAudio();
     };
+    this._onRewardedFullscreen = event => {
+      this._nativeRewardedFullscreen = event?.detail?.visible === true;
+      this._syncLifecycleAudio();
+    };
+    this._onNativePause = () => { this._nativeAppPaused = true; this._syncLifecycleAudio(); };
+    this._onNativeResume = () => { this._nativeAppPaused = false; this._syncLifecycleAudio(); };
 
     // Fetch and decode before the ignition gesture whenever the platform permits
     // it. The context remains silent/suspended until ARRANCAR MOTOR resumes it.
@@ -213,22 +222,45 @@ export class CarEngineSampleRuntime {
     window.addEventListener('blur', this._onBlur, { passive: true });
     window.addEventListener('focus', this._onFocus, { passive: true });
     window.addEventListener('tdr:rewarded-ad-state', this._onRewardedState);
+    window.addEventListener('tdr:rewardedfullscreen', this._onRewardedFullscreen);
+    window.addEventListener('pause', this._onNativePause);
+    window.addEventListener('resume', this._onNativeResume);
     return this._ctx;
+  }
+
+  _audioBlocked() {
+    return document.hidden || this._audioFocusLost || this._rewardedAdActive ||
+      this._nativeRewardedFullscreen || this._nativeAppPaused;
   }
 
   _syncLifecycleAudio() {
     const context = this._ctx;
     if (!context || context.state === 'closed') return;
-    if (document.hidden || this._audioFocusLost || this._rewardedAdActive) {
-      if (context.state === 'running') context.suspend().catch(() => {});
-      return;
+    if (this._audioBlocked()) {
+      // Muting the bus immediately prevents an async suspend() delay from
+      // leaking engine audio over a native rewarded fullscreen.
+      try {
+        const now=context.currentTime;
+        this._nodes?.master?.gain?.cancelScheduledValues(now);
+        this._nodes?.master?.gain?.setValueAtTime(0,now);
+      } catch {}
     }
-    this._resumeContext('lifecycle');
+    this._focusTransition=this._focusTransition
+      .catch(()=>{})
+      .then(async()=>{
+        if(context!==this._ctx || context.state==='closed')return;
+        if(this._audioBlocked()){
+          if(context.state==='running')await context.suspend();
+        }else if(this.engineStarted && context.state==='suspended'){
+          await context.resume();
+        }
+      })
+      .catch(error=>console.warn('[TDR2 engine] focus transition failed',error));
   }
 
   _resumeContext(reason) {
     const context = this._ctx;
-    if (!this.engineStarted || !context || context.state !== 'suspended' || document.hidden || this._audioFocusLost || this._rewardedAdActive) return;
+    if (!this.engineStarted || !context || context.state !== 'suspended' || this._audioBlocked()) return;
     const now = performance.now();
     if (reason === 'update' && now - this._lastResumeAttempt < 1000) return;
     this._lastResumeAttempt = now;
@@ -433,7 +465,7 @@ export class CarEngineSampleRuntime {
     this.unlocked = true;
     try {
       const context = this._ensureContext();
-      if (context.state === 'suspended' && !document.hidden && !this._audioFocusLost && !this._rewardedAdActive) {
+      if (context.state === 'suspended' && !this._audioBlocked()) {
         context.resume().catch(error => console.warn('[TDR2 engine] ignition resume failed', error));
       }
       this._rpm = this._sampleProfile()?.idleRpm || SPARK_IDLE_RPM;
@@ -488,7 +520,7 @@ export class CarEngineSampleRuntime {
   update(force = false) {
     if (!this.scene || this.scene._tdrEmbeddedReplay || !this.engineStarted) return;
     const perfNow = performance.now();
-    if (document.hidden || this._audioFocusLost || this._rewardedAdActive) return;
+    if (this._audioBlocked()) return;
     if (!force && perfNow - this._lastUpdate < UPDATE_MS) return;
     const elapsedSeconds = clamp((perfNow - this._lastUpdate || UPDATE_MS) / 1000, 0.001, 0.12);
     this._lastUpdate = perfNow;
@@ -579,6 +611,9 @@ export class CarEngineSampleRuntime {
     window.removeEventListener('blur', this._onBlur);
     window.removeEventListener('focus', this._onFocus);
     window.removeEventListener('tdr:rewarded-ad-state', this._onRewardedState);
+    window.removeEventListener('tdr:rewardedfullscreen', this._onRewardedFullscreen);
+    window.removeEventListener('pause', this._onNativePause);
+    window.removeEventListener('resume', this._onNativeResume);
     try { this._nodes?.windNoise?.stop?.(); } catch {}
     try { this._ignitionSource?.stop?.(); } catch {}
     try { this._ignitionSource?.disconnect?.(); } catch {}
