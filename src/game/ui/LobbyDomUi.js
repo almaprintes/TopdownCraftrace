@@ -6,7 +6,7 @@ import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { getPilotProfile } from '../social/pilotProfile.js';
-import { cloudIdentity, cloudBackupStatus, createFirstCloudBackup, shortPlayerId } from '../social/cloudProgress.js';
+import { cloudIdentity, cloudBackupStatus, createFirstCloudBackup, readCloudBackup, updateCloudBackup, shortPlayerId } from '../social/cloudProgress.js';
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import './lobby-dom.css';
 
@@ -69,7 +69,15 @@ export function installLobbyDom(scene) {
       try{
         const status=await cloudBackupStatus();
         const label='ID: '+status.id+'\\n'+(status.existing?'Copia en la nube: '+status.updatedAt:'Todavía no hay copia en la nube.');
-        if(status.existing){window.alert(label+'\\nTu progreso local no se ha modificado. La recuperación y vinculación social llegarán en una fase posterior.');return;}
+        if(status.existing){
+          const backup=await readCloudBackup();
+          const cloudKeys=Object.keys(backup?.snapshot?.data||{}).length;
+          const message=label+'\\nDatos guardados: '+cloudKeys+' bloques.\\n\\nLa restauración está deshabilitada hasta implementar la vinculación de cuentas.\\n\\n¿Actualizar manualmente esta copia con el progreso ACTUAL de este dispositivo? Esta acción sustituye la copia anterior.';
+          if(!window.confirm(message))return;
+          await updateCloudBackup(backup.revision);
+          window.alert('Copia actualizada. El progreso local permanece intacto.');
+          return;
+        }
         if(!window.confirm(label+'\\n\\n¿Crear una primera copia de seguridad de este dispositivo?'))return;
         await createFirstCloudBackup();
         window.alert('Copia de seguridad creada correctamente.\\n'+status.id);
