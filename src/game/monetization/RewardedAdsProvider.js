@@ -6,6 +6,12 @@ const VIDEO_SRC='assets/intro/intro.mp4';
 // Covers consent, inventory/load, playback and RevenueCat SSV polling. Android's
 // native watchdog resolves first at 170 s with a concrete failure reason.
 const NATIVE_TIMEOUT_MS=180000;
+let nativeRewardedActive=false;
+let rewardedOverlayCount=0;
+function setRewardedOverlay(active){
+  rewardedOverlayCount=Math.max(0,rewardedOverlayCount+(active?1:-1));
+  try{window.dispatchEvent(new CustomEvent('tdr:rewarded-ad-state',{detail:{active:rewardedOverlayCount>0}}));}catch{}
+}
 
 function isDevPreview(){
   if(typeof __TDR_PROD_BUILD__!=='undefined'&&__TDR_PROD_BUILD__)return false;
@@ -27,9 +33,21 @@ export function isRewardedAdAvailable(){
 function nativeRewardedAd({placement,claimId}){
   const bridge=nativeBridge();
   if(!bridge)return Promise.resolve({completed:false,verified:false,reason:'native_bridge_unavailable'});
+  if(nativeRewardedActive)return Promise.resolve({completed:false,verified:false,reason:'rewarded_already_active'});
+  nativeRewardedActive=true;
+  setRewardedOverlay(true);
+  const started=Date.now();
   return new Promise(resolve=>{
     let settled=false;
-    const finish=result=>{if(settled)return;settled=true;clearTimeout(timer);resolve(result);};
+    const finish=result=>{
+      if(settled)return;
+      settled=true;
+      clearTimeout(timer);
+      nativeRewardedActive=false;
+      setRewardedOverlay(false);
+      console.info('[TDR rewarded] result',{placement,reason:result?.reason||'verified',completed:result?.completed===true,elapsedMs:Date.now()-started});
+      resolve(result);
+    };
     const timer=setTimeout(()=>finish({completed:false,verified:false,source:'native',reason:'timeout'}),NATIVE_TIMEOUT_MS);
     Promise.resolve().then(()=>bridge.show({placement,claimId})).then(result=>{
       const completed=result?.completed===true;
@@ -51,6 +69,7 @@ function devVideoRewardedAd(scene,{title='RECOMPENSA PATROCINADA'}={}){
       resolve({completed:false,verified:false,source:'dev-video',reason:'document_unavailable'});
       return;
     }
+    setRewardedOverlay(true);
     const wasPaused=scene?.scene?.isPaused?.()===true;
     try{scene?.scene?.pause?.();}catch{}
     const root=document.createElement('div');
@@ -78,6 +97,7 @@ function devVideoRewardedAd(scene,{title='RECOMPENSA PATROCINADA'}={}){
       try{video.pause();}catch{}
       try{root.remove();}catch{}
       if(!wasPaused)try{scene?.scene?.resume?.();}catch{}
+      setRewardedOverlay(false);
       resolve(result);
     };
     video.onended=()=>finish({completed:true,verified:true,source:'dev-video',transactionId:`dev-${Date.now()}`});
