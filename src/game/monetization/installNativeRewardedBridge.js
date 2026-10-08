@@ -74,15 +74,20 @@ function mountAndroidPerformancePanel(){
   const output=panel.querySelector('#tdr-perf-summary-text');
   let last=0,start=performance.now(),frameCount=0,over33=0,over50=0,max=0,sum=0,spikes=[],pausedMs=0;
   let previousVisible=!document.hidden;
+  const race={frames:0,sum:0,over33:0,over50:0,max:0,spikes:[],duration:0};
+  let lastRace=false;
   const tick=now=>{
     if(document.hidden){last=0;requestAnimationFrame(tick);return;}
     if(!previousVisible){last=0;previousVisible=true;}
+    const racing=window.__tdrPerfRaceActive===true;
+    if(racing!==lastRace){last=0;lastRace=racing;}
     if(last){
       const dt=now-last;
       if(dt>0&&dt<2000){
         frameCount++;sum+=dt;max=Math.max(max,dt);
         if(dt>33.4){over33++;spikes.push({second:Math.round((now-start)/1000),ms:Math.round(dt)});if(spikes.length>40)spikes.shift();}
         if(dt>50)over50++;
+        if(racing){race.frames++;race.sum+=dt;race.duration+=dt;race.max=Math.max(race.max,dt);if(dt>33.4){race.over33++;race.spikes.push(Math.round(dt));if(race.spikes.length>25)race.spikes.shift();}if(dt>50)race.over50++;}
       }
     }
     last=now;requestAnimationFrame(tick);
@@ -99,11 +104,14 @@ function mountAndroidPerformancePanel(){
       '\\nTirones >33 ms/min: '+(over33*60/elapsed).toFixed(1)+
       '\\nMemoria JS actual: '+(Number.isFinite(mem)?(mem/1048576).toFixed(1)+' MB':'no disponible')+
       '\\nÚltimos tirones (segundo/ms): '+JSON.stringify(spikes)+
+      '\\n🏁 SOLO CARRERA: '+Math.round(race.duration/1000)+' s · '+(race.sum?(1000*race.frames/race.sum).toFixed(1):'—')+' FPS RAF'+
+      '\\n🏁 Tirones >33 ms: '+race.over33+'; >50 ms: '+race.over50+'; máximo: '+Math.round(race.max)+' ms'+
+      '\\n🏁 Últimos tirones carrera (ms): '+JSON.stringify(race.spikes)+
       '\\nNota: RAF mide cadencia de presentación, no FPS internos de Phaser.';
   };
   btn.addEventListener('click',()=>{output.textContent=report();panel.style.display='block';});
   panel.querySelector('#tdr-perf-close').addEventListener('click',()=>panel.style.display='none');
-  panel.querySelector('#tdr-perf-reset').addEventListener('click',()=>{start=performance.now();last=0;frameCount=0;over33=0;over50=0;max=0;sum=0;spikes=[];pausedMs=0;output.textContent=report();});
+  panel.querySelector('#tdr-perf-reset').addEventListener('click',()=>{start=performance.now();last=0;frameCount=0;over33=0;over50=0;max=0;sum=0;spikes=[];pausedMs=0;Object.assign(race,{frames:0,sum:0,over33:0,over50:0,max:0,spikes:[],duration:0});output.textContent=report();});
   panel.querySelector('#tdr-perf-copy').addEventListener('click',async()=>{output.textContent=report();try{await navigator.clipboard.writeText(output.textContent);panel.querySelector('#tdr-perf-copy').textContent='COPIADO';}catch{}});
 }
 
