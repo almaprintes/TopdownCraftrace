@@ -59,6 +59,33 @@ export class RaceScene extends CurrentRaceScene{
     this._audioUpdateAccum=0;
     this._iosAudioDisabled=isIOSDevice();
     if(this._iosAudioDisabled)return result;
+    // Procedural oscillators use their OWN AudioContext, separate from both
+    // Phaser and CarEngineSampleRuntime. They must stop before native ads open.
+    this._tdrAdRequested=false;
+    this._tdrAdFullscreen=false;
+    this._tdrAppPaused=false;
+    this._tdrWindowBlurred=false;
+    this._tdrFocusWork=Promise.resolve();
+    this._tdrOnAdRequested=event=>{
+      this._tdrAdRequested=event?.detail?.active===true;
+      this._syncProceduralAudioFocus();
+    };
+    this._tdrOnAdFullscreen=event=>{
+      this._tdrAdFullscreen=event?.detail?.visible===true;
+      this._syncProceduralAudioFocus();
+    };
+    this._tdrOnVisibility=()=>this._syncProceduralAudioFocus();
+    this._tdrOnBlur=()=>{this._tdrWindowBlurred=true;this._syncProceduralAudioFocus();};
+    this._tdrOnFocus=()=>{this._tdrWindowBlurred=false;this._syncProceduralAudioFocus();};
+    this._tdrOnAppPause=()=>{this._tdrAppPaused=true;this._syncProceduralAudioFocus();};
+    this._tdrOnAppResume=()=>{this._tdrAppPaused=false;this._syncProceduralAudioFocus();};
+    window.addEventListener('tdr:rewarded-ad-state',this._tdrOnAdRequested);
+    window.addEventListener('tdr:rewardedfullscreen',this._tdrOnAdFullscreen);
+    document.addEventListener('visibilitychange',this._tdrOnVisibility);
+    window.addEventListener('blur',this._tdrOnBlur);
+    window.addEventListener('focus',this._tdrOnFocus);
+    window.addEventListener('pause',this._tdrOnAppPause);
+    window.addEventListener('resume',this._tdrOnAppResume);
     this._audioUnlock=()=>this._ensureProceduralAudio();
     window.addEventListener('pointerdown',this._audioUnlock,{passive:true});
     window.addEventListener('touchstart',this._audioUnlock,{passive:true});
@@ -68,10 +95,40 @@ export class RaceScene extends CurrentRaceScene{
     return result;
   }
 
+  _proceduralAudioBlocked(){
+    return document.hidden||this._tdrAdRequested||this._tdrAdFullscreen||
+      this._tdrAppPaused||this._tdrWindowBlurred;
+  }
+
+  _syncProceduralAudioFocus(){
+    const ctx=this._audioCtx,a=this._audio;
+    if(!ctx||ctx.state==='closed')return;
+    // A gain cutoff acts immediately, even while suspend() is asynchronous.
+    if(this._proceduralAudioBlocked()){
+      try{
+        const now=ctx.currentTime;
+        a?.master?.gain?.cancelScheduledValues(now);
+        a?.master?.gain?.setValueAtTime(0,now);
+      }catch{}
+    }
+    // Serialize transitions: a delayed suspend() must not win after ad close.
+    this._tdrFocusWork=this._tdrFocusWork
+      .catch(()=>{})
+      .then(async()=>{
+        if(ctx!==this._audioCtx||ctx.state==='closed')return;
+        if(this._proceduralAudioBlocked()){
+          if(ctx.state==='running')await ctx.suspend();
+        }else if(ctx.state==='suspended'){
+          await ctx.resume();
+        }
+      })
+      .catch(error=>console.warn('[TDR2 audio] focus transition',error?.message||error));
+  }
+
   _ensureProceduralAudio(){
-    if(this._iosAudioDisabled)return;
+    if(this._iosAudioDisabled||this._proceduralAudioBlocked())return;
     if(this._audioReady){
-      try{if(this._audioCtx?.state==='suspended')this._audioCtx.resume();}catch{}
+      try{if(this._audioCtx?.state==='suspended')this._syncProceduralAudioFocus();}catch{}
       return;
     }
     const AC=window.AudioContext||window.webkitAudioContext;
@@ -111,7 +168,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _impactSound(strength,impactVolume=1){
-    if(this._iosAudioDisabled)return;
+    if(this._iosAudioDisabled||this._proceduralAudioBlocked())return;
     const ctx=this._audioCtx,a=this._audio;
     if(!ctx||!a||ctx.state!=='running'||impactVolume<=.001)return;
     const now=ctx.currentTime;
@@ -123,7 +180,7 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _updateProceduralAudio(delta){
-    if(this._iosAudioDisabled)return;
+    if(this._iosAudioDisabled||this._proceduralAudioBlocked())return;
     if(!this._audioReady){this._ensureProceduralAudio();return;}
     const ctx=this._audioCtx,a=this._audio;if(!ctx||!a)return;
     const prefs=this._audioPrefs||{master:1,engine:1,effects:.45,impacts:.8,mute:false};
@@ -179,6 +236,16 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _destroyProceduralAudio(){
+    if(this._tdrOnAdRequested){
+      window.removeEventListener('tdr:rewarded-ad-state',this._tdrOnAdRequested);
+      window.removeEventListener('tdr:rewardedfullscreen',this._tdrOnAdFullscreen);
+      document.removeEventListener('visibilitychange',this._tdrOnVisibility);
+      window.removeEventListener('blur',this._tdrOnBlur);
+      window.removeEventListener('focus',this._tdrOnFocus);
+      window.removeEventListener('pause',this._tdrOnAppPause);
+      window.removeEventListener('resume',this._tdrOnAppResume);
+      this._tdrOnAdRequested=null;
+    }
     if(this._audioUnlock){
       window.removeEventListener('pointerdown',this._audioUnlock);
       window.removeEventListener('touchstart',this._audioUnlock);
