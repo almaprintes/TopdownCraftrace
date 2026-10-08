@@ -109,7 +109,16 @@ class RewardedBridgeReleaseTest {
 
     private fun assertGameReady(webView: WebView) {
         val result = eventually(webView) {
-            "window.__tdrStartupState?.ready === true && document.querySelector('#app canvas') && !document.getElementById('tdrStartup') ? 'lobby-ready' : 'pending'"
+            """(()=>{
+              // The DEV entry notice intentionally requires a user click.
+              // Accept it explicitly in the instrumentation test, then wait
+              // for the real lobby rather than bypassing the production gate.
+              const notice=document.getElementById('tdr-dev-entry-notice');
+              notice?.querySelector('button')?.click();
+              return window.__tdrStartupState?.ready === true &&
+                document.querySelector('#app canvas') &&
+                !document.getElementById('tdrStartup') ? 'lobby-ready' : 'pending';
+            })()"""
         }
         assertEquals("lobby-ready", result)
     }
