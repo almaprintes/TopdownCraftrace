@@ -269,12 +269,12 @@ jobs:
         run: |
           APK="$(find android/app/build/outputs/apk/deviceTest/debug -name '*.apk' -type f | head -n 1)"
           test -n "$APK"
-          cp "$APK" TDR-Rewarded-Playtest-1.2.74.apk
+          cp "$APK" TDR-Rewarded-Playtest-1.2.75.apk
       - name: Upload diagnostic APK
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-Rewarded-Playtest-1.2.74
-          path: TDR-Rewarded-Playtest-1.2.74.apk
+          name: TDR-Rewarded-Playtest-1.2.75
+          path: TDR-Rewarded-Playtest-1.2.75.apk
           if-no-files-found: error
           retention-days: 14
 
