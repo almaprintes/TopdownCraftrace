@@ -16,31 +16,46 @@ function emitStatus(detail){
 
 
 function mountRewardedDiagnosticPanel(bridge){
-  if(document.getElementById('tdr-rewarded-diagnostic'))return;
-  const root=document.createElement('div');
-  root.id='tdr-rewarded-diagnostic';
-  root.style.cssText='position:fixed;inset:0;z-index:60000;background:#07111d;color:#fff;font:700 15px system-ui;padding:calc(env(safe-area-inset-top) + 18px) 20px 20px;overflow:auto';
-  root.innerHTML='<div style="max-width:720px;margin:auto"><h1 style="font-size:24px;margin:0 0 8px">TDR · REWARDED TEST</h1><p style="opacity:.75;margin:0 0 18px">Anuncios reales · diagnóstico Android · la recompensa no modifica la partida.</p><button id="tdr-rw-next" style="font:900 18px system-ui;padding:14px 22px;border:0;border-radius:12px">MOSTRAR ANUNCIO 1/20</button><div id="tdr-rw-state" style="margin-top:16px">Preparado.</div><pre id="tdr-rw-log" style="white-space:pre-wrap;word-break:break-word;background:#0008;padding:14px;border-radius:10px;min-height:120px"></pre></div>';
-  document.body.appendChild(root);
-  const button=root.querySelector('#tdr-rw-next'),state=root.querySelector('#tdr-rw-state'),log=root.querySelector('#tdr-rw-log');
-  let count=0,busy=false;
-  button.addEventListener('click',async()=>{
-    if(busy||count>=20)return;
-    busy=true;button.disabled=true;state.textContent='Cargando anuncio real…';
-    const number=count+1;
+  if(document.getElementById('tdr-ad-diagnostic-button'))return;
+  const button=document.createElement('button');
+  button.id='tdr-ad-diagnostic-button';
+  button.textContent='AD LOG';
+  button.setAttribute('aria-label','Abrir diagnóstico de anuncios');
+  button.style.cssText='position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 8px);z-index:60000;border:1px solid #67e8f9;background:#091c29;color:#fff;border-radius:9px;padding:8px;font:700 12px system-ui';
+  const panel=document.createElement('div');
+  panel.id='tdr-ad-diagnostic-panel';
+  panel.style.cssText='display:none;position:fixed;inset:0;z-index:60001;background:#07111df5;color:white;padding:calc(env(safe-area-inset-top) + 18px) 16px 18px;overflow:auto;font:14px system-ui';
+  panel.innerHTML='<h2>Registro de anuncios · TDR</h2><p>Juega normalmente. Abre este registro después de un anuncio congelado. No borres los datos de la aplicación.</p><button id="tdr-ad-log-close" style="padding:10px">VOLVER AL JUEGO</button> <button id="tdr-ad-log-copy" style="padding:10px">COPIAR REGISTRO</button><pre id="tdr-ad-log-text" style="white-space:pre-wrap;word-break:break-word;background:#0009;padding:12px"></pre>';
+  document.body.append(button,panel);
+  const output=panel.querySelector('#tdr-ad-log-text');
+  const storageKey='tdr_rewarded_diagnostic_history_v1';
+  let history=[];
+  try{history=JSON.parse(localStorage.getItem(storageKey)||'[]');if(!Array.isArray(history))history=[];}catch{}
+  let last='';
+  const render=()=>{output.textContent=JSON.stringify(history.slice(-30),null,2);};
+  const sample=async()=>{
     try{
-      const result=await bridge.show({placement:'post_race_double_loot',claimId:`diag-${Date.now()}-${number}`});
-      count=number;
-      const status=await bridge.diagnostics();
-      state.textContent=`Anuncio ${count}/20 · ${result?.completed?'verificado':'sin verificar'}`;
-      log.textContent=JSON.stringify(status?.lastRewardedDiagnostic||result,null,2);
-    }catch(error){
-      state.textContent=`Anuncio ${number}/20 · error`;
-      log.textContent=String(error?.message||error);
-    }finally{
-      busy=false;button.disabled=count>=20;button.textContent=count>=20?'PRUEBA 20/20 COMPLETADA':`MOSTRAR ANUNCIO ${count+1}/20`;
-    }
+      const s=await bridge.diagnostics();
+      const entry=s?.activeRewardedDiagnostic||s?.lastRewardedDiagnostic;
+      if(!entry)return;
+      const signature=JSON.stringify(entry);
+      if(signature===last)return;
+      last=signature;
+      history.push({at:new Date().toISOString(),...entry});
+      history=history.slice(-30);
+      try{localStorage.setItem(storageKey,JSON.stringify(history));}catch{}
+      if(panel.style.display!=='none')render();
+    }catch{}
+  };
+  button.addEventListener('click',()=>{panel.style.display='block';sample().then(render);});
+  panel.querySelector('#tdr-ad-log-close').addEventListener('click',()=>panel.style.display='none');
+  panel.querySelector('#tdr-ad-log-copy').addEventListener('click',async()=>{
+    render();
+    try{await navigator.clipboard.writeText(output.textContent);panel.querySelector('#tdr-ad-log-copy').textContent='COPIADO';}catch{output.select?.();}
   });
+  setInterval(sample,2500);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)sample();});
+  sample();
 }
 
 export async function installNativeRewardedBridge(){
