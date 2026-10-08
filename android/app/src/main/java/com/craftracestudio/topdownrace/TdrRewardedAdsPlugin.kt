@@ -152,19 +152,19 @@ class TdrRewardedAdsPlugin : Plugin() {
             val lifecycleCallback = object : FullScreenContentCallback() {
                 override fun onAdShowedFullScreenContent() {
                     attempt.shownAtMs = SystemClock.elapsedRealtime()
-                    notifyListeners("rewardedFullscreen", JSObject().put("visible", true))
+                    notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", true) })
                     Log.i(TAG, "attempt=${attempt.id.take(8)} shown response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} load_ms=${elapsed(attempt.startedAtMs, attempt.loadedAtMs)}")
                 }
 
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
-                    notifyListeners("rewardedFullscreen", JSObject().put("visible", false))
+                    notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", false) })
                     Log.w(TAG, "attempt=${attempt.id.take(8)} show_failed code=${error.code} domain=${error.domain}")
                     finish(attempt, false, false, "show_failed_${error.code}")
                 }
 
                 override fun onAdDismissedFullScreenContent() {
                     attempt.dismissed = true
-                    notifyListeners("rewardedFullscreen", JSObject().put("visible", false))
+                    notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", false) })
                     Log.i(TAG, "attempt=${attempt.id.take(8)} dismissed verification_started=${attempt.verificationStarted} response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} visible_ms=${elapsed(attempt.shownAtMs)} total_ms=${elapsed(attempt.startedAtMs)}")
                     if (!attempt.verificationStarted) {
                         finish(attempt, false, false, "ad_incomplete")
@@ -233,7 +233,7 @@ class TdrRewardedAdsPlugin : Plugin() {
         if (activeAttempt !== attempt) return
         activeAttempt = null
         attempt.watchdog?.let { mainHandler.removeCallbacks(it) }
-        notifyListeners("rewardedFullscreen", JSObject().put("visible", false))
+        notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", false) })
         val result = JSObject()
         result.put("completed", completed && verified)
         result.put("verified", verified)
