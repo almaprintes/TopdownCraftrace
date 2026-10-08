@@ -6,11 +6,13 @@ on:
       - '.github/workflows/tdr-official-icon-fetch.yml'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   retrieve_icon:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
       - name: Download official app icon from published Google Play listing
         shell: bash
         run: |
@@ -20,6 +22,18 @@ jobs:
             --output tdr-approved-icon
           test "$(wc -c < tdr-approved-icon)" -gt 10000
           file tdr-approved-icon
+      - name: Store approved icon in main so all future builds remain reproducible
+        shell: bash
+        run: |
+          mkdir -p assets/branding
+          cp tdr-approved-icon assets/branding/tdr-play-store-icon.png
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/branding/tdr-play-store-icon.png
+          if ! git diff --cached --quiet; then
+            git commit -m "assets(android): add approved Google Play launcher icon"
+            git push origin HEAD:main
+          fi
       - name: Make the official icon available for permanent source-control inclusion
         uses: actions/upload-artifact@v4
         with:
