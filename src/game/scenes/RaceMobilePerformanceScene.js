@@ -15,6 +15,8 @@ export class RaceScene extends CurrentRaceScene {
     this._perfFrameAccum=0;
     this._perfFrameCount=0;
     this._perfSlowWindows=0;
+    this._perfSevereWindows=0;
+    this._perfLowEndMode=false;
     return result;
   }
 
@@ -93,6 +95,7 @@ export class RaceScene extends CurrentRaceScene {
     if(this._perfFrameAccum>=1200){
       const avg=this._perfFrameAccum/Math.max(1,this._perfFrameCount);
       this._perfSlowWindows=avg>42?this._perfSlowWindows+1:0;
+      this._perfSevereWindows=avg>55?this._perfSevereWindows+1:0;
       if(this._perfSlowWindows>=2&&!this._perfEmergencyTrimmed){
         this._perfEmergencyTrimmed=true;
         for(const o of this.children?.list||[]){
@@ -102,6 +105,28 @@ export class RaceScene extends CurrentRaceScene {
             try{o.setVisible?.(false);}catch{}
           }
         }
+      }
+      // Runtime fallback for genuinely slow Android-class devices. It is based on
+      // measured frame time, not a model blacklist, so fast Android phones keep
+      // their selected quality. Physics/timing/AI are untouched.
+      if(this._perfSevereWindows>=2&&!this._perfLowEndMode){
+        this._perfLowEndMode=true;
+        this._tdrEnvironmentDensity=Math.min(Number(this._tdrEnvironmentDensity)||1,.35);
+        this._tdrAllowDriftEffects=false;
+        this._tdrAllowBrakeLights=false;
+        this._forceNoParticles=true;
+        this._forceNoOverlay=true;
+        if(this.track)this.track.cullRadiusCells=Math.min(Number(this.track.cullRadiusCells)||1,1);
+        try{
+          if(this.track?.gfxByCell instanceof Map)for(const cell of this.track.gfxByCell.values()){
+            if(cell?.overlay){cell.overlay.setVisible?.(false);cell.overlay.active=false;}
+          }
+          for(const o of this.children?.list||[]){
+            const type=String(o?.type||o?.constructor?.name||'').toLowerCase();
+            if(type.includes('particle')||type.includes('emitter')){o.stop?.();o.setVisible?.(false);o.active=false;}
+          }
+        }catch{}
+        console.info('[TDR_PERF] adaptive-low-end enabled avgFrameMs='+avg.toFixed(1));
       }
       this._perfFrameAccum=0;
       this._perfFrameCount=0;

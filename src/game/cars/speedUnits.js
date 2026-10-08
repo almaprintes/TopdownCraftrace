@@ -62,6 +62,32 @@ export function attainableTopSpeedKmh(params, seconds = 30) {
   return pxpsToKmh(attainableTopSpeedPxps(params, seconds));
 }
 
+
+// Ideal 0-100 km/h launch on level asphalt at full throttle.
+// Uses the exact same 60 Hz longitudinal model as attainableTopSpeedPxps.
+export function zeroToKmhSeconds(params, targetKmh = 100, maxSeconds = 60) {
+  const target = Math.max(0, kmhToPxps(targetKmh));
+  const maxFwd = Math.max(0, Number(params?.maxFwd) || 0);
+  const response = Math.max(0.05, Math.min(1, Number(params?.longitudinalResponse ?? 1)));
+  const accel = Math.max(0, Number(params?.accel) || 0) * response;
+  const linearDrag = Math.max(0, Number(params?.linearDrag) || 0) * response;
+  if (target <= 0) return 0;
+  if (maxFwd <= 0 || accel <= 0) return null;
+
+  const hz = 60, dt = 1 / hz, drag = Math.exp(-linearDrag * dt * 60);
+  const frames = Math.max(1, Math.round(Math.max(1, Number(maxSeconds) || 60) * hz));
+  let v = 0;
+  for (let i = 1; i <= frames; i++) {
+    const v01 = Math.max(0, Math.min(1, v / Math.max(1, maxFwd)));
+    const accelCurve = 1 - Math.pow(v01, 1.8);
+    v += accel * accelCurve * dt;
+    v *= drag;
+    if (v > maxFwd) v = maxFwd;
+    if (v >= target) return i * dt;
+  }
+  return null;
+}
+
 export function formatKmhFromPxps(pxps, digits = 0) {
   return `${pxpsToKmh(pxps).toFixed(digits)} km/h`;
 }

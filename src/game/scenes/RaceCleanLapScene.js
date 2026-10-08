@@ -32,6 +32,20 @@ export class RaceScene extends CurrentRaceScene {
     this._cleanComboCoinReward=0;
     this._sessionLapCapTriggered=false;
     this._retireLegacyDeltaHud();
+    // The base scene still slides in a 240x160 legacy lap-time panel after
+    // every improved lap. Modern DOM feedback replaces that presentation.
+    // Retire its visuals, not the timing calculations or record persistence.
+    try{
+      this._hideTTPanel=()=>{};
+      this._showTTPanel=()=>{};
+      // Preserve Phaser Text instances: base lap code still calls setText
+      // on them. Hide the container instead of destroying its children.
+      this.ttPanel?.c?.setVisible?.(false);
+      if(this.ttPanel){this.ttPanel.shown=false;this.ttPanel.busy=false;}
+    }catch{}
+    try{window.__tdrPerfRaceActive=true;}catch{}
+    this.events?.once?.('shutdown',()=>{try{window.__tdrPerfRaceActive=false;}catch{}});
+    this.events?.once?.('destroy',()=>{try{window.__tdrPerfRaceActive=false;}catch{}});
     return result;
   }
 
@@ -115,6 +129,7 @@ export class RaceScene extends CurrentRaceScene {
     const rewardsOpen=!!this._sessionRewardsDom?.isConnected;
     const sessionEnding=this._sessionFinalizing===true||reportOpen||survivalResultsOpen||rewardsOpen;
     if(!sessionEnding)return;
+    try{window.__tdrPerfRaceActive=false;}catch{}
     this._liveHudClosedForSessionEnd=true;
     try{this._raceHudDom?.remove?.();}catch{}
     this._raceHudDom=null;

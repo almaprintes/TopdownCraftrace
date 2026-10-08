@@ -15,7 +15,7 @@ function centerSelectedTrack(root,behavior='smooth'){
   const target=Math.max(0,Math.min(max,top));
   try{list.scrollTo({top:target,behavior});}catch{list.scrollTop=target;}
 }
-function canonicalLengthM(track){const p=(track?.raceCenterline?.length?track.raceCenterline:track?.centerline)||[];let d=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];const ax=Number(a?.x??a?.[0]),ay=Number(a?.y??a?.[1]),bx=Number(b?.x??b?.[0]),by=Number(b?.y??b?.[1]);if([ax,ay,bx,by].every(Number.isFinite))d+=Math.hypot(bx-ax,by-ay);}return Math.max(0,Math.round(pxToMeters(d)));}
+function canonicalLengthM(track){const p=(track?.raceCenterline?.length?track.raceCenterline:track?.centerline)||[];let d=0;const end=track?.closed===false?p.length-1:p.length;for(let i=0;i<end;i++){const a=p[i],b=p[(i+1)%p.length];const ax=Number(a?.x??a?.[0]),ay=Number(a?.y??a?.[1]),bx=Number(b?.x??b?.[0]),by=Number(b?.y??b?.[1]);if([ax,ay,bx,by].every(Number.isFinite))d+=Math.hypot(bx-ax,by-ay);}return Math.max(0,Math.round(pxToMeters(d)));}
 function syncCanonicalLengths(root,tracks,index){if(!root)return;root.querySelectorAll('.tdr-ts-card').forEach((card,i)=>{const meta=card.querySelector('.tdr-ts-card-meta'),track=tracks?.[i];if(!meta||!track||card.classList.contains('locked'))return;meta.innerHTML=meta.innerHTML.replace(/\d+\s*m\s*·/,`${canonicalLengthM(track)} m ·`);});const firstStat=root.querySelector('.tdr-ts-stat strong'),selected=tracks?.[index];if(firstStat&&selected&&!root.querySelector('.tdr-ts-locked-hero'))firstStat.textContent=`${canonicalLengthM(selected)} m`;}
 
 export class TrackGarageScene extends CurrentTrackGarageScene {

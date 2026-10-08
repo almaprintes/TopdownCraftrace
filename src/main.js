@@ -24,6 +24,19 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 let __game = null;
+let __tdrPausedForRewarded = false;
+window.addEventListener('tdr:rewardedfullscreen',event=>{
+  const sound=__game?.sound;
+  if(!sound)return;
+  if(event?.detail?.visible===true){
+    if(!__tdrPausedForRewarded){
+      try{sound.pauseAll();__tdrPausedForRewarded=true;}catch{}
+    }
+  }else if(__tdrPausedForRewarded){
+    try{sound.resumeAll();}catch{}
+    __tdrPausedForRewarded=false;
+  }
+});
 
 function __isLandscape() {
   return window.innerWidth >= window.innerHeight;
@@ -374,6 +387,7 @@ function __tickOrientation() {
     window.__tdrStartupMark?.('phaser-start');
     __game = createGame('app');
     window.__tdrStartupMark?.('phaser-created');
+
     __installRaceControlVisuals();
     return;
   }

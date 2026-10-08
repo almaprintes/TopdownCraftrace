@@ -61,10 +61,10 @@ jobs:
           if grep -q "DEV 1\.1\.173" dist/index.html; then echo "DEV identity leaked into beta"; exit 1; fi
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
-      - name: Checkout current DEV 1.2.75 source
+      - name: Checkout exact integrated DEV main HEAD
         uses: actions/checkout@v4
         with:
-          ref: dev-first-update
+          ref: ${{ github.sha }}
           path: dev-src
           fetch-depth: 1
       - name: Verify recovered race baseline and focused fixes
@@ -140,7 +140,7 @@ jobs:
         run: |
           test -n "${VITE_TDR_ONLINE_URL}"
           test -n "${VITE_TDR_ONLINE_PUBLIC}"
-          test "$(git rev-parse HEAD)" = "$(git rev-parse origin/dev-first-update)"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
           npx vite build --base=/TopdownCraftrace/dev/
           mkdir -p dist/assets/tutorials/dropping
@@ -180,7 +180,7 @@ jobs:
       - name: Checkout exact development HEAD
         uses: actions/checkout@v4
         with:
-          ref: dev-first-update
+          ref: ${{ github.sha }}
           fetch-depth: 1
       - name: Setup Node
         uses: actions/setup-node@v4

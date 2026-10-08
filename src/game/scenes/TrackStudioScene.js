@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
+import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -14,10 +15,11 @@ export class TrackStudioScene extends BaseScene {
     // =================================================
     // Layout base
     // =================================================
-    this._topBarH = 72;
-    this._leftBarW = 76;
-    this._rightPanelW = 280;
-    this._bottomPad = 14;
+    const compactH = height < 720;
+    this._topBarH = compactH ? 64 : 72;
+    this._leftBarW = compactH ? 70 : 76;
+    this._rightPanelW = width < 1200 ? 250 : 280;
+    this._bottomPad = 8;
 
 this._viewX = this._leftBarW + 8;
 this._viewY = this._topBarH + 8;
@@ -43,6 +45,7 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._gestureWasMultiTouch = false;
     this._panLast = null;
     this._pinchLastDist = 0;
+      this._mapGesture = null;
 
     this._editZoomMin = 0.12;
     this._editZoomMax = 2.5;
@@ -52,7 +55,8 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._trackWidthMax = 260;
 
     this._isClosed = false;
-    this._tool = 'edit'; // 'edit' | 'finish' | 'checkpoint' | 'piano'
+    this._tool = 'edit'; // 'edit' | 'start' | 'finish' | 'checkpoint' | 'piano'
+    this._startLine = null;
     this._finishLine = null;
     this._checkpoints = [];
 
@@ -65,7 +69,19 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._guideTextureKey = null;
     this._guideVisible = true;
     this._guideAlpha = 0.32;
+    this._guideScale = 1;
+    this._guideX = null;
+    this._guideY = null;
+    this._guideLocked = true;
+    this._guideDragging = false;
+    this._guideDragLast = null;
     this._guideInput = null;
+    this._projectInput = null;
+    this._raceType = 'circuit';
+    this._importedTrackMeta = null;
+    this._undoStack = [];
+    this._redoStack = [];
+    this._historyLimit = 80;
 
     // nudge
     this._nudgeSteps = [1, 5, 10];
@@ -108,7 +124,7 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
 
     this._rightTitle = this.add.text(width - this._rightPanelW + 20, this._topBarH + 18, 'PROPIEDADES', {
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-      fontSize: '18px',
+      fontSize: compactH ? '16px' : '18px',
       color: '#c7d2ff',
       fontStyle: 'bold'
     });
@@ -124,7 +140,11 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
 
 this._panelContentY = this._topBarH + 62;
 
-this._panelActionsY = this._topBarH + 250;
+// Responsive: actions remain reachable even when browser chrome reduces viewport.
+this._panelActionsY = Math.min(
+  this._topBarH + 238,
+  Math.max(this._topBarH + 190, height - 150)
+);
 
 this.add.text(
   width - this._rightPanelW + 20,
@@ -132,7 +152,7 @@ this.add.text(
   'ACCIONES',
   {
     fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-    fontSize: '15px',
+    fontSize: compactH ? '13px' : '15px',
     color: '#c7d2ff',
     fontStyle: 'bold'
   }
@@ -167,18 +187,16 @@ this._panelDeleteBtn.on('pointerup', () => {
     // =========================
 // 🎮 CRUCETA (D-PAD)
 // =========================
-const padZoneRight = this.scale.width - 12;
-const padZoneBottom = this.scale.height - 20;
-
-const cx = padZoneRight - 72;
-const cy = padZoneBottom - 86;
-const size = 28;
+const rightPanelX = width - this._rightPanelW;
+const cx = width - 68;
+const cy = this._topBarH + (compactH ? 150 : 170);
+const size = compactH ? 24 : 28;
 
 const makePadBtn = (dx, dy, label, onClick) => {
   const x = cx + dx * size;
   const y = cy + dy * size;
 
-  const bg = this.add.circle(x, y, 18, 0x1c2540, 1)
+  const bg = this.add.circle(x, y, compactH ? 15 : 18, 0x1c2540, 1)
     .setStrokeStyle(2, 0x3c4e7a, 0.95)
     .setInteractive({ useHandCursor: true });
 
@@ -239,6 +257,7 @@ this._padCenter.on('pointerup', () => {
 
     back.on('pointerup', () => {
       this._destroyGuideInput();
+      this._destroyProjectInput();
       this.scene.start('admin-hub');
     });
 
@@ -269,7 +288,7 @@ this._padCenter.on('pointerup', () => {
     }, '22px');
 
     this._leftGuideBtn = this._makeIconButton(leftCX, this._topBarH + 226, 'IMG', () => {
-      this._runActiveGuideTool();
+      this._toggleReferencePanel();
     }, '12px');
 
     // =================================================
@@ -293,16 +312,19 @@ topX += 48;
 // Cargar
 this._btnLoad = this._makeIconButton(topX, topToolsY, '📂', () => {
   console.log('CLICK LOAD');
-  this._flashMessage('📂 Cargando...');
-  this._loadProject?.();
+  this._openProjectSourceMenu?.();
 }, '18px');
 topX += 48;
 
 // Nuevo
 this._btnNew = this._makeIconButton(topX, topToolsY, 'NEW', () => {
   console.log('CLICK NEW');
-  this._flashMessage('🆕 Nuevo...');
+  const ok = window.confirm('¿Crear un proyecto nuevo?\n\nEl proyecto actual se sustituirá. Guarda una copia antes si quieres conservarlo.');
+  if (!ok) return;
+  this._pushHistory();
   this._newProject?.();
+  this._autosaveRecovery();
+  this._flashMessage('🆕 Proyecto nuevo');
 }, '14px');
 topX += 60;
     // modo directo
@@ -310,6 +332,12 @@ topX += 60;
       this._modeTool = 'edit';
       this._setTool('edit');
     }, '12px');
+    topX += 44;
+
+    this._startTopBtn = this._makeIconButton(topX, topToolsY, 'SAL', () => {
+      this._modeTool = 'start';
+      this._setTool('start');
+    }, '11px');
     topX += 44;
 
     this._finishTopBtn = this._makeIconButton(topX, topToolsY, '🏁', () => {
@@ -350,6 +378,10 @@ topX += 52;
       this._updateToolButtons();
     }, '12px');
     topX += 56;
+    this._undoBtn = this._makeIconButton(topX, topToolsY, '↶', () => this._undo(), '20px');
+    topX += 44;
+    this._redoBtn = this._makeIconButton(topX, topToolsY, '↷', () => this._redo(), '20px');
+    topX += 44;
 
     // =================================================
     // Mundo de edición
@@ -431,13 +463,15 @@ topX += 52;
       if (!this._isPointerInModeMenu(pointer)) this._closeModeMenu();
       if (!this._isPointerInTrackMenu(pointer)) this._closeTrackMenu();
       if (!this._isPointerInGuideMenu(pointer)) this._closeGuideMenu();
+      if (!this._isPointerInReferencePanel(pointer)) this._closeReferencePanel();
 
       if (!this._isPointerInViewport(pointer)) return;
 
+      this._pushHistory();
       this._tapCandidate = true;
       this._gestureWasMultiTouch = false;
 
-      if (this._tool === 'finish' || this._tool === 'checkpoint') {
+      if (this._tool === 'start' || this._tool === 'finish' || this._tool === 'checkpoint') {
         this._draggingPart = false;
         this._dragMoved = false;
         this._dragStartScreen = { x: pointer.x, y: pointer.y };
@@ -447,6 +481,14 @@ topX += 52;
 
       const world = this._screenToWorld(pointer.x, pointer.y);
       const hit = this._findControlAt(world.x, world.y);
+
+      if (!hit && this._guideImage && !this._guideLocked && this._tool === 'edit') {
+        this._guideDragging = true;
+        this._guideDragLast = { x: world.x, y: world.y };
+        this._tapCandidate = false;
+        this._panLast = null;
+        return;
+      }
 
       if (hit) {
         this._selectedPart = hit;
@@ -550,6 +592,20 @@ if (
 }
       }
 
+      if (down.length === 1 && this._guideDragging && this._guideImage && !this._guideLocked) {
+        const p = down[0];
+        const world = this._screenToWorld(p.x, p.y);
+        if (this._guideDragLast) {
+          this._guideImage.x += world.x - this._guideDragLast.x;
+          this._guideImage.y += world.y - this._guideDragLast.y;
+          this._guideX = this._guideImage.x;
+          this._guideY = this._guideImage.y;
+        }
+        this._guideDragLast = world;
+        this._updatePanel();
+        return;
+      }
+
       if (down.length === 1) {
         const p = down[0];
 
@@ -563,6 +619,7 @@ if (
 
         this._panLast = { x: p.x, y: p.y };
         this._pinchLastDist = 0;
+      this._mapGesture = null;
         return;
       }
 
@@ -580,36 +637,35 @@ if (
         const dy = p2.y - p1.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (!this._pinchLastDist) {
+        if (!this._mapGesture) {
+          const startZoom = this._editCam.zoom;
+          this._mapGesture = {
+            startDist: Math.max(1, dist),
+            startZoom,
+            anchorWorldX: this._editCam.scrollX + (midX - this._editCam.x) / startZoom,
+            anchorWorldY: this._editCam.scrollY + (midY - this._editCam.y) / startZoom
+          };
           this._pinchLastDist = dist;
           this._panLast = null;
           this._draggingPart = false;
           return;
         }
 
-        const ratio = dist / this._pinchLastDist;
-
+        const g = this._mapGesture;
         const newZoom = Phaser.Math.Clamp(
-          this._editCam.zoom * ratio,
+          g.startZoom * (dist / g.startDist),
           this._editZoomMin,
           this._editZoomMax
         );
 
-        const worldX =
-          this._editCam.scrollX +
-          (midX - this._editCam.x) / this._editCam.zoom;
-
-        const worldY =
-          this._editCam.scrollY +
-          (midY - this._editCam.y) / this._editCam.zoom;
-
+        // Map-style pinch: the world point grabbed at gesture start remains
+        // exactly beneath the CURRENT midpoint of both fingers. Moving both
+        // fingers therefore pans while their separation controls zoom.
         this._editCam.setZoom(newZoom);
-
         this._editCam.scrollX =
-          worldX - (midX - this._editCam.x) / newZoom;
-
+          g.anchorWorldX - (midX - this._editCam.x) / newZoom;
         this._editCam.scrollY =
-          worldY - (midY - this._editCam.y) / newZoom;
+          g.anchorWorldY - (midY - this._editCam.y) / newZoom;
 
         this._pinchLastDist = dist;
         this._updatePanel();
@@ -618,9 +674,15 @@ if (
 
       this._panLast = null;
       this._pinchLastDist = 0;
+      this._mapGesture = null;
     });
 
     this.input.on('pointerup', (pointer) => {
+  if (this._guideDragging) {
+    this._guideDragging = false;
+    this._guideDragLast = null;
+    this._autosaveRecovery();
+  }
   const stillDown = this.input.manager.pointers.filter((p) => p.isDown).length;
 
   if (this._draggingPart) {
@@ -632,6 +694,7 @@ if (
       this._gestureWasMultiTouch = false;
       this._panLast = null;
       this._pinchLastDist = 0;
+      this._mapGesture = null;
     }
     return;
   }
@@ -644,6 +707,7 @@ if (
       this._gestureWasMultiTouch = false;
       this._panLast = null;
       this._pinchLastDist = 0;
+      this._mapGesture = null;
     }
     return;
   }
@@ -666,7 +730,10 @@ if (
   ) {
     const world = this._screenToWorld(pointer.x, pointer.y);
 
-    if (this._tool === 'finish') {
+    if (this._tool === 'start') {
+      this._placeStartLineAt(world.x, world.y);
+
+    } else if (this._tool === 'finish') {
       this._placeFinishLineAt(world.x, world.y);
 
     } else if (this._tool === 'checkpoint') {
@@ -743,6 +810,7 @@ if (
 
     this._updatePanel();
     this._redrawEditor();
+    this._autosaveRecovery();
   }
 
   if (stillDown === 0) {
@@ -752,9 +820,13 @@ if (
     this._gestureWasMultiTouch = false;
     this._panLast = null;
     this._pinchLastDist = 0;
+      this._mapGesture = null;
   }
 });
     this.input.on('pointerupoutside', () => {
+      if (this._guideDragging) this._autosaveRecovery();
+      this._guideDragging = false;
+      this._guideDragLast = null;
       this._draggingPart = false;
       this._dragStartScreen = null;
       this._dragStartWorld = null;
@@ -762,9 +834,11 @@ if (
       this._gestureWasMultiTouch = false;
       this._panLast = null;
       this._pinchLastDist = 0;
+      this._mapGesture = null;
     });
 
     this._createGuideInput();
+    this._createProjectInput();
     this._updateLoopButton();
     this._updateToolButtons();
     this._updatePanel();
@@ -838,15 +912,17 @@ if (
         1
       );
 
-      this._guideImage = this.add.image(
-        this._editorWorldW / 2,
-        this._editorWorldH / 2,
-        key
-      )
+      const gx = Number.isFinite(this._guideX) ? this._guideX : this._editorWorldW / 2;
+      const gy = Number.isFinite(this._guideY) ? this._guideY : this._editorWorldH / 2;
+      const savedScale = Number.isFinite(this._guideScale) && this._guideScale > 0 ? this._guideScale : 1;
+      this._guideImage = this.add.image(gx, gy, key)
         .setDepth(4)
         .setAlpha(this._guideAlpha)
         .setVisible(this._guideVisible)
-        .setScale(fitScale);
+        .setScale(fitScale * savedScale);
+      this._guideX = gx;
+      this._guideY = gy;
+      this._guideBaseScale = fitScale;
 
       this.cameras.main.ignore(this._guideImage);
       this._updatePanel();
@@ -861,6 +937,16 @@ if (
       this._guideImage.setVisible(this._guideVisible);
     }
     this._updateToolButtons();
+    this._updatePanel();
+  }
+
+  _changeGuideScale(factor) {
+    if (!this._guideImage) return this._flashMessage('Carga primero una imagen');
+    if (this._guideLocked) return this._flashMessage('Desbloquea la imagen primero');
+    this._pushHistory();
+    this._guideScale = Phaser.Math.Clamp((this._guideScale || 1) * factor, 0.05, 20);
+    this._guideImage.setScale((this._guideBaseScale || 1) * this._guideScale);
+    this._autosaveRecovery();
     this._updatePanel();
   }
 
@@ -1196,6 +1282,68 @@ _toggleModeMenu() {
     );
   }
 
+  _toggleReferencePanel() {
+    if (this._referencePanel) return this._closeReferencePanel();
+
+    const x = this._leftBarW + 18;
+    const y = this._topBarH + 20;
+    const w = Math.min(360, Math.max(300, this._viewW - 30));
+    const h = 112;
+    const panel = this.add.container(0, 0).setDepth(120);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(0x101626, 0.98);
+    bg.lineStyle(2, 0x526a9d, 1);
+    bg.fillRoundedRect(x, y, w, h, 12);
+    bg.strokeRoundedRect(x, y, w, h, 12);
+    panel.add(bg);
+
+    panel.add(this.add.text(x + 14, y + 10, 'IMAGEN DE REFERENCIA', {
+      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
+      fontSize: '13px', color: '#c7d2ff', fontStyle: 'bold'
+    }));
+
+    const specs = [
+      ['Cargar', () => this._openGuidePicker(), 44],
+      [this._guideLocked ? '🔒' : '✥', () => {
+        if (!this._guideImage) return this._flashMessage('Carga primero una imagen');
+        this._guideLocked = !this._guideLocked;
+        this._autosaveRecovery();
+        this._closeReferencePanel(); this._toggleReferencePanel();
+      }, 38],
+      ['I−', () => this._changeGuideScale(1 / 1.08), 38],
+      ['I+', () => this._changeGuideScale(1.08), 38],
+      ['A−', () => { this._changeGuideAlpha(-0.08); this._autosaveRecovery(); }, 38],
+      ['A+', () => { this._changeGuideAlpha(0.08); this._autosaveRecovery(); }, 38],
+      [this._guideVisible ? '👁' : '◌', () => {
+        this._toggleGuideVisibility(); this._autosaveRecovery();
+        this._closeReferencePanel(); this._toggleReferencePanel();
+      }, 38]
+    ];
+    let bx = x + 18;
+    const by = y + 70;
+    specs.forEach(([label, fn, step]) => {
+      const b = this._makeIconButton(bx, by, label, fn, label === 'Cargar' ? '10px' : '12px');
+      panel.add(b.bg); panel.add(b.txt); bx += step + 6;
+    });
+
+    panel._x = x; panel._y = y; panel._w = w; panel._h = h;
+    this._editCam.ignore(panel.list);
+    this._referencePanel = panel;
+  }
+
+  _closeReferencePanel() {
+    if (!this._referencePanel) return;
+    this._referencePanel.destroy(true);
+    this._referencePanel = null;
+  }
+
+  _isPointerInReferencePanel(pointer) {
+    const p = this._referencePanel;
+    return !!p && pointer.x >= p._x && pointer.x <= p._x + p._w &&
+      pointer.y >= p._y && pointer.y <= p._y + p._h;
+  }
+
   // =================================================
   // Grupo guide
   // =================================================
@@ -1258,6 +1406,7 @@ _toggleModeMenu() {
 
   _setTool(tool) {
     this._tool = tool;
+    if (tool === 'start') this._modeTool = 'start';
     if (tool === 'finish') this._modeTool = 'finish';
     if (tool === 'checkpoint') this._modeTool = 'checkpoint';
     if (tool === 'edit' && this._modeTool !== 'edit') this._modeTool = 'edit';
@@ -1292,6 +1441,7 @@ _updateToolButtons() {
 
   // modo directo
   paintCircle(this._editBtn, this._tool === 'edit', 0x2a4277, 0x8eb8ff);
+  paintCircle(this._startTopBtn, this._tool === 'start', 0x1f4f2d, 0x8df0a8);
   paintCircle(this._finishTopBtn, this._tool === 'finish', 0x2a4277, 0x8eb8ff);
   paintCircle(this._checkpointTopBtn, this._tool === 'checkpoint', 0x2a4277, 0x8eb8ff);
   paintCircle(this._pianoTopBtn, this._tool === 'piano', 0x2a4277, 0x8eb8ff);
@@ -1798,6 +1948,19 @@ if (Phaser.Math.Distance.Between(x, y, p.b.x, p.b.y) < R_HANDLE) {
     };
   }
 
+  _placeStartLineAt(worldX, worldY) {
+    const hit = this._findNearestCurvePoint(worldX, worldY);
+    if (!hit) return;
+    const half = this._trackWidth * 0.5;
+    this._startLine = {
+      a: { x: hit.point.x - hit.normal.x * half, y: hit.point.y - hit.normal.y * half },
+      b: { x: hit.point.x + hit.normal.x * half, y: hit.point.y + hit.normal.y * half },
+      normal: { x: hit.tangent.x, y: hit.tangent.y }
+    };
+    this._updatePanel();
+    this._redrawEditor();
+  }
+
   _placeFinishLineAt(worldX, worldY) {
     const hit = this._findNearestCurvePoint(worldX, worldY);
     if (!hit) return;
@@ -1848,6 +2011,7 @@ if (Phaser.Math.Distance.Between(x, y, p.b.x, p.b.y) < R_HANDLE) {
     this._redrawEditor();
   }
   _getVisualGridSlots() {
+    if (!this._isClosed || this._raceType === 'stage') return [];
     if (!this._finishLine?.a || !this._finishLine?.b) return [];
 
     const pts = this._getBezierPoints();
@@ -2064,6 +2228,17 @@ const targetS = finishS - correctedOffset;
       }
     }
 
+    if (this._startLine?.a && this._startLine?.b) {
+      this._finishGfx.lineStyle(10, 0x2bff88, 0.95);
+      this._finishGfx.beginPath();
+      this._finishGfx.moveTo(this._startLine.a.x, this._startLine.a.y);
+      this._finishGfx.lineTo(this._startLine.b.x, this._startLine.b.y);
+      this._finishGfx.strokePath();
+      this._finishGfx.fillStyle(0x2bff88, 1);
+      this._finishGfx.fillCircle(this._startLine.a.x, this._startLine.a.y, 5);
+      this._finishGfx.fillCircle(this._startLine.b.x, this._startLine.b.y, 5);
+    }
+
     if (this._finishLine?.a && this._finishLine?.b) {
       this._finishGfx.lineStyle(10, 0xffffff, 0.95);
       this._finishGfx.beginPath();
@@ -2236,6 +2411,7 @@ _updatePanel() {
       `Sin selección\n` +
       `Nodos: ${this._nodes.length}\n` +
       `Pianos: ${this._pianos.length}\n` +
+      `Salida: ${this._startLine ? 'sí' : 'no'}\n` +
       `Meta: ${this._finishLine ? 'sí' : 'no'}\n` +
       `Checkpoints: ${this._checkpoints.length}\n` +
       `Guía: ${guideLoaded ? (this._guideVisible ? 'visible' : 'oculta') : 'no cargada'}`
@@ -2249,16 +2425,23 @@ _updatePanel() {
       nodes: this._nodes,
       trackWidth: this._trackWidth,
       isClosed: this._isClosed,
+      startLine: this._startLine,
       finishLine: this._finishLine,
       checkpoints: this._checkpoints,
       guideAlpha: this._guideAlpha,
       guideVisible: this._guideVisible,
+      guideScale: this._guideScale,
+      guideX: this._guideImage?.x ?? this._guideX,
+      guideY: this._guideImage?.y ?? this._guideY,
+      guideLocked: this._guideLocked,
       nudgeStepIndex: this._nudgeStepIndex,
       viewTool: this._viewTool,
       saveTool: this._saveTool,
       modeTool: this._modeTool,
       trackTool: this._trackTool,
-      guideTool: this._guideTool
+      guideTool: this._guideTool,
+      raceType: this._raceType,
+      importedTrackMeta: this._importedTrackMeta
     };
   }
 _exportToGameTrack() {
@@ -2304,17 +2487,34 @@ _exportToGameTrack() {
       }))
     : [];
 
-  let start = this._nodes[0]
+  const startLine = this._startLine
     ? {
-        x: Math.round(this._nodes[0].x),
-        y: Math.round(this._nodes[0].y),
-        r: 0
+        a: { x: Math.round(this._startLine.a.x), y: Math.round(this._startLine.a.y) },
+        b: { x: Math.round(this._startLine.b.x), y: Math.round(this._startLine.b.y) },
+        normal: this._startLine.normal ? { x: Number(this._startLine.normal.x), y: Number(this._startLine.normal.y) } : undefined
       }
+    : null;
+
+  let start = this._nodes[0]
+    ? { x: Math.round(this._nodes[0].x), y: Math.round(this._nodes[0].y), r: 0 }
     : { x: 400, y: 400, r: 0 };
+
+  // Open stages use an explicit start line. Spawn is derived behind it,
+  // never from the first road node, so the road may extend before SALIDA.
+  if (!this._isClosed && this._raceType === 'stage' && startLine?.a && startLine?.b) {
+    const mx = (startLine.a.x + startLine.b.x) * 0.5;
+    const my = (startLine.a.y + startLine.b.y) * 0.5;
+    let tx = Number(startLine.normal?.x) || 0;
+    let ty = Number(startLine.normal?.y) || 0;
+    const len = Math.hypot(tx, ty) || 1;
+    tx /= len; ty /= len;
+    const spawnBack = Math.max(70, Math.min(140, this._trackWidth * 0.9));
+    start = { x: Math.round(mx - tx * spawnBack), y: Math.round(my - ty * spawnBack), r: Math.atan2(ty, tx) };
+  }
 
   let grid = null;
 
-  if (finishLine?.a && finishLine?.b) {
+  if (this._isClosed && this._raceType !== 'stage' && finishLine?.a && finishLine?.b) {
     const visualSlots = this._getVisualGridSlots();
 
     const slots = visualSlots.map((s, idx) => ({
@@ -2351,6 +2551,8 @@ _exportToGameTrack() {
     cellSize: 400,
     shoulderPx: 10,
     closed: this._isClosed !== false,
+    raceType: this._isClosed ? (this._raceType || 'circuit') : 'stage',
+    ...(this._importedTrackMeta || {}),
 
     start,
 
@@ -2360,6 +2562,7 @@ _exportToGameTrack() {
       width: this._trackWidth
     })),
 
+    startLine,
     finishLine,
     checkpoints,
     grid
@@ -2432,20 +2635,30 @@ _loadTrack() {
     this._nodes = data.nodes || [];
     this._trackWidth = data.trackWidth ?? 140;
     this._isClosed = data.isClosed ?? false;
+    this._startLine = data.startLine || null;
     this._finishLine = data.finishLine || null;
     this._checkpoints = data.checkpoints || [];
     this._guideAlpha = data.guideAlpha ?? 0.32;
     this._guideVisible = data.guideVisible ?? true;
+    this._guideScale = data.guideScale ?? 1;
+    this._guideX = Number.isFinite(data.guideX) ? data.guideX : this._guideX;
+    this._guideY = Number.isFinite(data.guideY) ? data.guideY : this._guideY;
+    this._guideLocked = data.guideLocked ?? true;
     this._nudgeStepIndex = data.nudgeStepIndex ?? 2;
     this._viewTool = data.viewTool || 'zoomIn';
     this._saveTool = data.saveTool || 'save';
     this._modeTool = data.modeTool || 'edit';
     this._trackTool = data.trackTool || 'widthUp';
     this._guideTool = data.guideTool || 'load';
+    this._raceType = this._isClosed ? (data.raceType || 'circuit') : 'stage';
+    this._importedTrackMeta = data.importedTrackMeta || null;
 
     if (this._guideImage) {
       this._guideImage.setAlpha(this._guideAlpha);
       this._guideImage.setVisible(this._guideVisible);
+      if (Number.isFinite(this._guideX)) this._guideImage.x = this._guideX;
+      if (Number.isFinite(this._guideY)) this._guideImage.y = this._guideY;
+      this._guideImage.setScale((this._guideBaseScale || 1) * this._guideScale);
     }
 
     this._selectedNode = -1;
@@ -2457,17 +2670,196 @@ _loadTrack() {
     this._redrawEditor();
   }
 
+  _captureHistoryState() {
+    return JSON.stringify(this._getProjectData());
+  }
+
+  _pushHistory() {
+    const snap = this._captureHistoryState();
+    if (this._undoStack[this._undoStack.length - 1] === snap) return;
+    this._undoStack.push(snap);
+    if (this._undoStack.length > this._historyLimit) this._undoStack.shift();
+    this._redoStack = [];
+  }
+
+  _restoreHistoryState(snap) {
+    if (!snap) return;
+    this._applyProjectData(JSON.parse(snap));
+    this._autosaveRecovery();
+  }
+
+  _undo() {
+    if (!this._undoStack.length) return this._flashMessage('Nada que deshacer');
+    const current = this._captureHistoryState();
+    const previous = this._undoStack.pop();
+    if (previous === current && this._undoStack.length) {
+      this._redoStack.push(current);
+      return this._restoreHistoryState(this._undoStack.pop());
+    }
+    this._redoStack.push(current);
+    this._restoreHistoryState(previous);
+    this._flashMessage('↶ Deshecho');
+  }
+
+  _redo() {
+    if (!this._redoStack.length) return this._flashMessage('Nada que rehacer');
+    this._undoStack.push(this._captureHistoryState());
+    this._restoreHistoryState(this._redoStack.pop());
+    this._flashMessage('↷ Rehecho');
+  }
+
+  _autosaveRecovery() {
+    try {
+      const data = { editor: this._getProjectData(), gameTrack: this._exportToGameTrack() };
+      localStorage.setItem('trackstudio_recovery', JSON.stringify(data));
+    } catch (e) {
+      console.warn('No se pudo crear recuperación automática', e);
+    }
+  }
+
   _saveProject() {
     try {
 const data = {
   editor: this._getProjectData(),
   gameTrack: this._exportToGameTrack()
 };
-      localStorage.setItem('trackstudio_project', JSON.stringify(data));
-      console.log('✅ Proyecto guardado');
+      const serialized = JSON.stringify(data, null, 2);
+      const roundTrip = JSON.parse(serialized);
+      if (this._startLine && (!roundTrip.editor?.startLine || !roundTrip.gameTrack?.startLine)) {
+        throw new Error('La SALIDA no sobrevivió a la serialización del proyecto');
+      }
+      if (!this._isClosed && roundTrip.gameTrack?.raceType !== 'stage') {
+        throw new Error('Un tramo abierto debe exportarse como stage');
+      }
+      localStorage.setItem('trackstudio_project', serialized);
+      localStorage.setItem('trackstudio_recovery', serialized);
+      const blob = new Blob([serialized], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `trackstudio-${(data.gameTrack?.name || 'project').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this._flashMessage('💾 Guardado + copia JSON');
+      console.log('✅ Proyecto guardado + backup JSON');
     } catch (e) {
       console.error('❌ Error guardando proyecto', e);
     }
+  }
+
+  _openProjectSourceMenu() {
+    const choice = window.prompt('CARGAR TRACK STUDIO\n\n1 · Circuito del juego\n2 · Proyecto guardado en este dispositivo\n3 · Importar JSON\n\nEscribe 1, 2 o 3:', '1');
+    if (choice === null) return;
+    if (choice === '1') { this._openGameTrackSourceMenu(); return; }
+    if (choice === '2') { this._loadProject(); this._flashMessage('📂 Proyecto local cargado'); return; }
+    if (choice === '3') { this._openProjectPicker(); return; }
+    this._flashMessage('Elige 1, 2 o 3');
+  }
+
+  _openGameTrackSourceMenu() {
+    const keys=getTrackKeys();
+    if(!keys.length){this._flashMessage('❌ No hay circuitos registrados');return;}
+    const rows=keys.map((key,i)=>{let name=key;try{name=createTrack(key)?.name||key;}catch{}return `${i+1} · ${name}`;});
+    const raw=window.prompt(`CIRCUITOS DEL JUEGO\n\n${rows.join('\n')}\n\nEscribe el número:`,'1');
+    if(raw===null)return;
+    const n=Number.parseInt(String(raw).trim(),10),key=keys[n-1];
+    if(!key){this._flashMessage('❌ Circuito no válido');return;}
+    try{
+      this._pushHistory();
+      this._importProjectOrTrack(createTrack(key));
+      this._autosaveRecovery();
+      this._flashMessage(`📍 ${createTrack(key)?.name||key} cargado`);
+    }catch(e){console.error('❌ No se pudo cargar circuito del juego',key,e);this._flashMessage('❌ Error cargando circuito');}
+  }
+
+  _createProjectInput() {
+    this._destroyProjectInput();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json,.json';
+    input.style.position = 'fixed';
+    input.style.left = '-9999px';
+    input.addEventListener('change', async (ev) => {
+      const file = ev.target.files?.[0];
+      if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        this._importProjectOrTrack(data);
+        this._flashMessage('📂 JSON cargado');
+      } catch (e) {
+        console.error('❌ JSON no válido', e);
+        this._flashMessage('❌ JSON no válido');
+      }
+      input.value = '';
+    });
+    document.body.appendChild(input);
+    this._projectInput = input;
+  }
+
+  _destroyProjectInput() {
+    if (this._projectInput?.parentNode) this._projectInput.parentNode.removeChild(this._projectInput);
+    this._projectInput = null;
+  }
+
+  _openProjectPicker() {
+    if (!this._projectInput) this._createProjectInput();
+    this._projectInput?.click();
+  }
+
+  _nodesFromCenterline(points) {
+    const src = Array.isArray(points) ? points : [];
+    // Los tracks del juego ya vienen densamente muestreados (Arafo tiene miles
+    // de puntos). Convertir cada muestra en un nodo Bézier crea miles de objetos
+    // interactivos y bloquea Track Studio al elegir "1". Reducimos únicamente
+    // la representación editable; el JSON integrado no se modifica.
+    const maxEditableNodes = 320;
+    const step = src.length > maxEditableNodes ? Math.ceil(src.length / maxEditableNodes) : 1;
+    const sampled = step > 1
+      ? src.filter((_, i) => i === 0 || i === src.length - 1 || i % step === 0)
+      : src;
+    return sampled.map((p, i) => {
+      const prev = sampled[Math.max(0, i - 1)] || p;
+      const next = sampled[Math.min(sampled.length - 1, i + 1)] || p;
+      let dx = Number(next.x) - Number(prev.x);
+      let dy = Number(next.y) - Number(prev.y);
+      const len = Math.hypot(dx, dy) || 1;
+      dx /= len; dy /= len;
+      const h = Math.min(60, Math.max(18, len * 0.22));
+      return {
+        x: Number(p.x), y: Number(p.y),
+        handleIn: { x: Number(p.x) - dx * h, y: Number(p.y) - dy * h },
+        handleOut: { x: Number(p.x) + dx * h, y: Number(p.y) + dy * h }
+      };
+    });
+  }
+
+  _importProjectOrTrack(data) {
+    if (data?.editor || Array.isArray(data?.nodes)) {
+      this._applyProjectData(data.editor || data);
+      return;
+    }
+    if (!Array.isArray(data?.centerline) || data.centerline.length < 2) {
+      throw new Error('El JSON no contiene nodes ni centerline');
+    }
+    this._nodes = this._nodesFromCenterline(data.centerline);
+    this._trackWidth = Number(data.trackWidth) || Number(data.centerline[0]?.width) || 140;
+    this._isClosed = data.closed !== false;
+    this._raceType = this._isClosed ? (data.raceType || 'circuit') : 'stage';
+    this._editorWorldW = Number(data.worldW) || this._editorWorldW;
+    this._editorWorldH = Number(data.worldH) || this._editorWorldH;
+    this._startLine = data.startLine || null;
+    this._finishLine = data.finishLine || null;
+    this._checkpoints = Array.isArray(data.checkpoints) ? data.checkpoints : [];
+    const { centerline, closed, raceType, trackWidth, worldW, worldH, start, startLine, finishLine, checkpoints, grid, ...rest } = data;
+    this._importedTrackMeta = rest;
+    this._selectedNode = -1;
+    this._selectedPart = null;
+    this._tool = 'edit';
+    this._editCam?.setBounds(0, 0, this._editorWorldW, this._editorWorldH);
+    this._editCam?.centerOn(this._editorWorldW / 2, this._editorWorldH / 2);
+    this._updateToolButtons();
+    this._updatePanel();
+    this._redrawEditor();
   }
 
   _loadProject() {
@@ -2488,6 +2880,7 @@ this._applyProjectData(data.editor || data);
 
   _newProject() {
     this._nodes = [];
+    this._startLine = null;
     this._finishLine = null;
     this._checkpoints = [];
     this._isClosed = false;
@@ -2500,6 +2893,12 @@ this._applyProjectData(data.editor || data);
     this._modeTool = 'edit';
     this._trackTool = 'widthUp';
     this._guideTool = 'load';
+    this._guideScale = 1;
+    this._guideX = null;
+    this._guideY = null;
+    this._guideLocked = true;
+    this._raceType = 'stage';
+    this._importedTrackMeta = null;
 
     this._updateToolButtons();
     this._updatePanel();

@@ -1,0 +1,12 @@
+{
+  "id": "default",
+  "name": "TDR Default",
+  "version": 1,
+  "assets": {
+    "BILLBOARD": "billboard.svg",
+    "FLAG": "flag.svg",
+    "BARRIER": "barrier.svg",
+    "GANTRY": "gantry.svg",
+    "TRACKSIDE": "trackside.svg"
+  }
+}

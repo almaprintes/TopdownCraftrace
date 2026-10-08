@@ -45,6 +45,7 @@
     },
     "veloce_surge": {"massKg":900,"handlingProfile":"VELOCE_SURGE","maxFwd":762.5,"accel":511.5,"brakeForce":1080.0,"engineBrake":245.0,"linearDrag":0.00884,"turnRate":3.55,"turnMin":0.30,"gripCoast":0.22,"gripDrive":0.05,"gripBrake":0.16},
     "veloce_photon": {"massKg":860,"handlingProfile":"VELOCE_PHOTON","maxFwd":800.0,"accel":530.1,"brakeForce":1110.0,"engineBrake":235.0,"linearDrag":0.00816,"turnRate":3.42,"turnMin":0.32,"gripCoast":0.21,"gripDrive":0.045,"gripBrake":0.16},
+    "veloce_juanicar_c220": {"maxFwd":819.6,"accel":537.7,"linearDrag":0.00785},
 
     "forge_hammer": {"massKg":2100,"handlingProfile":"FORGE_HAMMER","maxFwd":618.8,"accel":558.0,"brakeForce":1085.0,"engineBrake":315.0,"linearDrag":0.0136,"turnRate":2.92,"turnMin":0.32,"gripCoast":0.31,"gripDrive":0.07,"gripBrake":0.20,"terrainSetup":{"tireAsphalt":0.84,"tireDirt":0.98,"tireGrass":0.86,"suspensionCompliance":0.94,"groundClearance":0.96,"tractionSystem":0.94,"looseSurfaceStability":0.90}},
     "forge_anvil": {"massKg":2600,"handlingProfile":"FORGE_ANVIL","maxFwd":631.3,"accel":585.9,"brakeForce":1120.0,"engineBrake":335.0,"linearDrag":0.01428,"turnRate":2.84,"turnMin":0.34,"gripCoast":0.32,"gripDrive":0.075,"gripBrake":0.21,"terrainSetup":{"tireAsphalt":0.82,"tireDirt":1.02,"tireGrass":0.90,"suspensionCompliance":0.97,"groundClearance":0.99,"tractionSystem":0.98,"looseSurfaceStability":0.95}},

@@ -4,7 +4,7 @@ import { IS_PROD_BUILD } from '../buildTarget.js';
 const KEY='tdr2:trackUnlocks:v1';
 const DEV_KEY='tdr2:devFullTrackAccess:v1';
 
-export const PUBLISHED_TRACK_IDS=Object.freeze(['circuito-atlantico','santa-cruz','karting-tenerife','karting-canarias']);
+export const PUBLISHED_TRACK_IDS=Object.freeze(['circuito-atlantico','santa-cruz','karting-tenerife','karting-canarias','rally-arafo-los-loros']);
 export const STARTER_TRACK_IDS=PUBLISHED_TRACK_IDS;
 const normalizedTrackId=id=>String(id||'').trim();
 const isJudgeExcludedTrack=id=>normalizedTrackId(id)==='practice-area';

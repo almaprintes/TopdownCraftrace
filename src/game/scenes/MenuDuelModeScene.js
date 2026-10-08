@@ -2,6 +2,7 @@ import { MenuScene as CurrentMenuScene } from './MenuDomUiScene.js';
 import { t, getLanguage } from '../i18n/index.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { buyMaterialPack, rewardedStatus, dailyStatus } from '../store/storeEconomy.js';
+import { openStoreDom } from '../ui/StoreDomUi.js';
 
 const DUEL_LAPS_KEY='tdr2:duelLaps';
 const MODE_KEY='tdr2:gameMode';
@@ -10,32 +11,10 @@ const FONT='system-ui,-apple-system,Segoe UI,Arial';
 const STORE_TIME_LABEL=ms=>{const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;};
 
 export class MenuScene extends CurrentMenuScene {
-  _openStoreModal(section='materials'){
+  _openStoreModal(){
     this._storeCountdownEvent?.remove?.(false);
     this._storeCountdownEvent=null;
-    super._openStoreModal(section);
-    const root=this._storeModal;
-    if(!root?.scene)return;
-
-    const tabs=['materials','rewards'];
-    const tabY=68,tabW=170,tabH=38;
-    tabs.forEach((id,i)=>{
-      const x=24+i*(tabW+10);
-      const hit=this.add.rectangle(x,tabY,tabW,tabH,0xffffff,.001)
-        .setOrigin(0)
-        .setInteractive({useHandCursor:true});
-      root.add(hit);
-      let fired=false;
-      const activate=()=>{
-        if(fired)return;
-        fired=true;
-        this._openStoreModal(id);
-      };
-      hit.on('pointerdown',activate);
-    });
-
-    this._installStoreInertia(root);
-    this._installStoreCountdownTicker(root);
+    return openStoreDom(this);
   }
 
   _installStoreCountdownTicker(root){

@@ -26,6 +26,7 @@ import java.util.UUID
 class TdrRewardedAdsPlugin : Plugin() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var activeAttempt: Attempt? = null
+    private var lastDiagnostic: JSObject? = null
 
     private data class Attempt(
         val id: String,
@@ -33,7 +34,14 @@ class TdrRewardedAdsPlugin : Plugin() {
         val claimHash: String,
         val call: PluginCall,
         var verificationStarted: Boolean = false,
-        val startedAt: Long = SystemClock.elapsedRealtime(),
+        var dismissed: Boolean = false,
+        var watchdog: Runnable? = null,
+        val startedAtMs: Long = SystemClock.elapsedRealtime(),
+        var loadedAtMs: Long? = null,
+        var shownAtMs: Long? = null,
+        var responseId: String? = null,
+        var adapterClass: String? = null,
+        var adSourceName: String? = null,
     )
 
     @PluginMethod
@@ -45,6 +53,21 @@ class TdrRewardedAdsPlugin : Plugin() {
         result.put("releaseBuild", BuildConfig.BUILD_TYPE == "release")
         result.put("placementCount", RewardedRequestPolicy.placements().size)
         result.put("versionName", BuildConfig.VERSION_NAME)
+        result.put("diagnosticBuild", BuildConfig.FLAVOR == "deviceTest")
+        lastDiagnostic?.let { result.put("lastRewardedDiagnostic", it) }
+        activeAttempt?.let { attempt ->
+            val live = JSObject()
+            live.put("attempt", attempt.id.take(8))
+            live.put("placement", attempt.placement)
+            live.put("state", if (attempt.shownAtMs != null) "showing" else if (attempt.loadedAtMs != null) "loaded" else "loading")
+            live.put("responseId", attempt.responseId ?: "none")
+            live.put("adapterClass", attempt.adapterClass ?: "none")
+            live.put("adSourceName", attempt.adSourceName ?: "none")
+            live.put("elapsedMs", elapsed(attempt.startedAtMs))
+            live.put("verificationStarted", attempt.verificationStarted)
+            live.put("dismissed", attempt.dismissed)
+            result.put("activeRewardedDiagnostic", live)
+        }
         result.put("consentUpdateCompleted", consent.updateCompleted)
         result.put("consentCanRequestAds", consent.canRequestAds)
         result.put("privacyOptionsRequired", consent.privacyOptionsRequired)
@@ -102,21 +125,23 @@ class TdrRewardedAdsPlugin : Plugin() {
 
         val attempt = activeAttempt ?: return
         Log.i(TAG, "attempt=${attempt.id.take(8)} placement=${attempt.placement} claim=${attempt.claimHash} load")
-        mainHandler.postDelayed({ finish(attempt, false, false, "native_watchdog_timeout") }, WATCHDOG_MS)
         consentManager().prepare(activity) { consent ->
             if (!isActive(attempt)) return@prepare
             if (!consent.canRequestAds || !consent.adsInitialized) {
                 finish(attempt, false, false, consent.reason ?: "ads_consent_unavailable")
                 return@prepare
             }
-            activity.runOnUiThread { loadAndShow(attempt) }
+            activity.runOnUiThread {
+                val watchdog = Runnable { finish(attempt, false, false, "native_watchdog_timeout") }
+                attempt.watchdog = watchdog
+                mainHandler.postDelayed(watchdog, WATCHDOG_MS)
+                loadAndShow(attempt)
+            }
         }
     }
 
     private fun consentManager(): TdrAdsConsentManager =
         TdrAdsConsentManager.get(activity.application)
-
-    private fun elapsed(attempt: Attempt): Long = SystemClock.elapsedRealtime() - attempt.startedAt
 
     private fun loadAndShow(attempt: Attempt) {
         try {
@@ -126,24 +151,21 @@ class TdrRewardedAdsPlugin : Plugin() {
             }
             val lifecycleCallback = object : FullScreenContentCallback() {
                 override fun onAdShowedFullScreenContent() {
-                    Log.i(TAG, "attempt=${attempt.id.take(8)} shown elapsed_ms=${elapsed(attempt)}")
-                }
-
-                override fun onAdImpression() {
-                    Log.i(TAG, "attempt=${attempt.id.take(8)} impression elapsed_ms=${elapsed(attempt)}")
-                }
-
-                override fun onAdClicked() {
-                    Log.i(TAG, "attempt=${attempt.id.take(8)} clicked elapsed_ms=${elapsed(attempt)}")
+                    attempt.shownAtMs = SystemClock.elapsedRealtime()
+                    notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", true) })
+                    Log.i(TAG, "attempt=${attempt.id.take(8)} shown response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} load_ms=${elapsed(attempt.startedAtMs, attempt.loadedAtMs)}")
                 }
 
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
+                    notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", false) })
                     Log.w(TAG, "attempt=${attempt.id.take(8)} show_failed code=${error.code} domain=${error.domain}")
                     finish(attempt, false, false, "show_failed_${error.code}")
                 }
 
                 override fun onAdDismissedFullScreenContent() {
-                    Log.i(TAG, "attempt=${attempt.id.take(8)} dismissed elapsed_ms=${elapsed(attempt)} verification_started=${attempt.verificationStarted}")
+                    attempt.dismissed = true
+                    notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", false) })
+                    Log.i(TAG, "attempt=${attempt.id.take(8)} dismissed verification_started=${attempt.verificationStarted} response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} visible_ms=${elapsed(attempt.shownAtMs)} total_ms=${elapsed(attempt.startedAtMs)}")
                     if (!attempt.verificationStarted) {
                         finish(attempt, false, false, "ad_incomplete")
                     }
@@ -158,17 +180,24 @@ class TdrRewardedAdsPlugin : Plugin() {
                 loadCallback = object : RewardedAdLoadCallback() {
                     override fun onAdLoaded(ad: RewardedAd) {
                         if (!isActive(attempt)) return
-                        Log.i(TAG, "attempt=${attempt.id.take(8)} loaded elapsed_ms=${elapsed(attempt)}")
+                        attempt.loadedAtMs = SystemClock.elapsedRealtime()
+                        val responseInfo = ad.responseInfo
+                        attempt.responseId = responseInfo.responseId
+                        val adapterInfo = responseInfo.loadedAdapterResponseInfo
+                        attempt.adapterClass = adapterInfo?.adapterClassName
+                        attempt.adSourceName = adapterInfo?.adSourceName
+                        Log.i(TAG, "attempt=${attempt.id.take(8)} loaded response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} latency_ms=${elapsed(attempt.startedAtMs, attempt.loadedAtMs)}")
                         ad.enableRewardVerification()
                         ad.show(
                             activity = activity,
                             rewardVerificationStarted = {
                                 attempt.verificationStarted = true
-                                Log.i(TAG, "attempt=${attempt.id.take(8)} ssv_started elapsed_ms=${elapsed(attempt)}")
+                                Log.i(TAG, "attempt=${attempt.id.take(8)} reward_callback_received")
+                                Log.i(TAG, "attempt=${attempt.id.take(8)} ssv_started response=${attempt.responseId ?: "none"} source=${attempt.adSourceName ?: "none"} visible_ms=${elapsed(attempt.shownAtMs)}")
                             },
                             rewardVerificationCompleted = { verification ->
                                 val verified = verification.verifiedReward != null
-                                Log.i(TAG, "attempt=${attempt.id.take(8)} ssv_completed elapsed_ms=${elapsed(attempt)} verified=$verified additional=${verification.moreRewards.size}")
+                                Log.i(TAG, "attempt=${attempt.id.take(8)} ssv_completed verified=$verified additional=${verification.moreRewards.size} response=${attempt.responseId ?: "none"} source=${attempt.adSourceName ?: "none"} visible_ms=${elapsed(attempt.shownAtMs)} total_ms=${elapsed(attempt.startedAtMs)}")
                                 finish(
                                     attempt,
                                     completed = verified,
@@ -203,14 +232,31 @@ class TdrRewardedAdsPlugin : Plugin() {
     ) {
         if (activeAttempt !== attempt) return
         activeAttempt = null
-        mainHandler.removeCallbacksAndMessages(null)
+        attempt.watchdog?.let { mainHandler.removeCallbacks(it) }
+        notifyListeners("rewardedFullscreen", JSObject().apply { put("visible", false) })
         val result = JSObject()
         result.put("completed", completed && verified)
         result.put("verified", verified)
         result.put("source", "native")
         result.put("rewardId", "native-${attempt.id}")
         if (reason != null) result.put("reason", reason)
-        Log.i(TAG, "attempt=${attempt.id.take(8)} final elapsed_ms=${elapsed(attempt)} completed=${completed && verified} verified=$verified reason=${reason ?: "none"}")
+        val totalMs = elapsed(attempt.startedAtMs)
+        val diagnostic = JSObject()
+        diagnostic.put("attempt", attempt.id.take(8))
+        diagnostic.put("placement", attempt.placement)
+        diagnostic.put("completed", completed && verified)
+        diagnostic.put("verified", verified)
+        diagnostic.put("reason", reason ?: "none")
+        diagnostic.put("responseId", attempt.responseId ?: "none")
+        diagnostic.put("adapterClass", attempt.adapterClass ?: "none")
+        diagnostic.put("adSourceName", attempt.adSourceName ?: "none")
+        diagnostic.put("verificationStarted", attempt.verificationStarted)
+        diagnostic.put("dismissed", attempt.dismissed)
+        diagnostic.put("loadMs", elapsed(attempt.startedAtMs, attempt.loadedAtMs))
+        diagnostic.put("visibleMs", elapsed(attempt.shownAtMs))
+        diagnostic.put("totalMs", totalMs)
+        lastDiagnostic = diagnostic
+        Log.i(TAG, "attempt=${attempt.id.take(8)} final completed=${completed && verified} verified=$verified reason=${reason ?: "none"} response=${attempt.responseId ?: "none"} adapter=${attempt.adapterClass ?: "none"} source=${attempt.adSourceName ?: "none"} total_ms=$totalMs")
         attempt.call.setKeepAlive(false)
         attempt.call.resolve(result)
     }
@@ -228,6 +274,12 @@ class TdrRewardedAdsPlugin : Plugin() {
         activeAttempt?.let { finish(it, false, false, "activity_destroyed") }
         super.handleOnDestroy()
     }
+
+    private fun elapsed(startMs: Long?, endMs: Long = SystemClock.elapsedRealtime()): Long =
+        if (startMs == null) -1L else (endMs - startMs).coerceAtLeast(0L)
+
+    private fun elapsed(startMs: Long, endMs: Long?): Long =
+        if (endMs == null) -1L else (endMs - startMs).coerceAtLeast(0L)
 
     private fun shortHash(value: String): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))

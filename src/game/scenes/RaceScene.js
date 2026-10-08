@@ -21,6 +21,7 @@ function fmtTime(ms) {
   return `${m}:${String(s).padStart(2, '0')}.${String(ms3).padStart(3, '0')}`;
 }
 const DEV_TOOLS = true; // ponlo en false para ocultar botones de zoom/cull
+function isIOSRaceDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
 const ASPHALT_OVERLAY_ALPHA = 0.16; // rango sano: 0.08 – 0.12
 
 // Base path de skins (carpeta en /public)
@@ -531,7 +532,8 @@ const isImport = (k) => (
   k.slice('import:'.length).trim().length > 0
 );
 
-const pick = (k) => (isBuiltIn(k) || isImport(k)) ? k : null;
+const isLibraryTrack = (k) => typeof k === 'string' && k.trim().length > 0 && !k.includes('..') && !k.includes('/');
+const pick = (k) => (isBuiltIn(k) || isImport(k) || isLibraryTrack(k)) ? k : null;
 
 this.trackKey =
   pick(incomingTrack) ||
@@ -568,7 +570,7 @@ localStorage.setItem('tdr2:trackKey', this.trackKey);
   try {
     const raw = localStorage.getItem(this.ttKey);
     const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && Number.isFinite(parsed.lapMs)) {
+    if (parsed && Number.isFinite(parsed.lapMs) && parsed.lapMs > 1000) {
       this.ttBest = {
         lapMs: parsed.lapMs,
         lapTick: parsed.lapTick ?? null,
@@ -1014,10 +1016,15 @@ if (typeof this.trackKey === 'string' && this.trackKey.startsWith('import:')) {
 let meta = null;
 
 try {
-  const raw = localStorage.getItem('trackstudio_project');
+  const allowStudioOverride = !this.trackKey || this.trackKey === 'trackstudio' || this.trackKey === 'studio';
+  const raw = allowStudioOverride ? localStorage.getItem('trackstudio_project') : null;
   if (raw) {
     const saved = JSON.parse(raw);
     if (saved?.gameTrack?.centerline?.length > 2) {
+      // TrackStudio solo puede sustituir al circuito cuando RaceScene se abrió
+      // explícitamente como studio. Nunca debe contaminar un track real importado
+      // (p. ej. Arafo), porque ese proyecto persistido puede ser un circuito cerrado
+      // y volver a fabricar un ribbon META -> SALIDA.
       meta = saved.gameTrack;
       console.log('[RaceScene] usando track exportado desde TrackStudio');
     }
@@ -1031,6 +1038,20 @@ if (!meta) {
 }
 
 const t01 = meta;
+// Topología canónica: los tracks que declaran una puerta de SALIDA
+// distinta de META son tramos abiertos. No dependemos únicamente de raceType.
+const hasIndependentStageStart = !!(
+  t01?.startLine?.a && t01?.startLine?.b &&
+  t01?.finishLine?.a && t01?.finishLine?.b
+);
+if (t01?.raceType === 'stage' || t01?.closed === false || hasIndependentStageStart) {
+  t01.raceType = 'stage';
+  t01.closed = false;
+}
+const isStage = t01?.raceType === 'stage' || t01?.closed === false;
+this._isStage = isStage;
+
+// Preserve the authored route, including approach and run-off at stage gates.
 this.centerlinePoints = Array.isArray(t01?.centerline) ? t01.centerline : [];
 // Reconstrucción mínima del track runtime a partir del JSON/meta
 const geom = buildTrackRibbon({
@@ -1038,10 +1059,13 @@ const geom = buildTrackRibbon({
   trackWidth: t01.trackWidth,
   grassMargin: t01.grassMargin ?? 0,
   sampleStepPx: t01.sampleStepPx ?? 12,
-  cellSize: t01.cellSize ?? 400
+  cellSize: t01.cellSize ?? 400,
+  closed: t01.closed !== false
 });
 this.track = {
   meta: t01,
+  closed: !isStage,
+  raceType: isStage ? 'stage' : (t01?.raceType || 'circuit'),
   geom,
   gfxByCell: new Map(),
   activeCells: new Set(),
@@ -1124,10 +1148,12 @@ body.setVisible(false);
 const specFinal = this.baseSpec || spec || CAR_SPECS.stock;
 this.ensureCarSkinTexture(specFinal).catch(() => {});
 const vScale = Number(specFinal?.visualScale ?? 1.0);
+// Escala opcional por circuito: permite rallies visualmente más estrechos sin alterar los coches base.
+const trackCarScale = Math.max(0.35, Math.min(1.5, Number(t01?.carScale ?? this.track?.meta?.carScale ?? 1.0) || 1.0));
 
 // Colisión: si quieres que el camión “ocupe pista”, esto es CLAVE
 const baseRadius = 14;
-body.setCircle(Math.round(baseRadius * vScale));
+body.setCircle(Math.round(baseRadius * vScale * trackCarScale));
 // Aumento SOLO visual del coche (no afecta a físicas)
 const VISUAL_SCALE_MULT = 1.35;
 body.setCollideWorldBounds(true);
@@ -1152,8 +1178,8 @@ carSprite.y = 0;
 this._carVisualRotOffset = Math.PI / 2;
 
 // Tamaño objetivo “caja” en pista (NO fuerza proporción, solo limita)
-const TARGET_W = 96 * vScale * VISUAL_SCALE_MULT;
-const TARGET_H = 48 * vScale * VISUAL_SCALE_MULT;
+const TARGET_W = 96 * vScale * VISUAL_SCALE_MULT * trackCarScale;
+const TARGET_H = 48 * vScale * VISUAL_SCALE_MULT * trackCarScale;
 
 // Escala uniforme para que NO se deforme (fit inside box)
 const fitSpriteToBox = () => {
@@ -1226,7 +1252,7 @@ for (let i = 1; i < MAX_GRID_CARS; i++) {
 
   const aiBody = this.physics.add.sprite(aiSpawn.x, aiSpawn.y, '__BODY__');
   aiBody.setVisible(false);
-  aiBody.setCircle(Math.round(baseRadius * vScale));
+  aiBody.setCircle(Math.round(baseRadius * vScale * trackCarScale));
   aiBody.setCollideWorldBounds(true);
   aiBody.setBounce(0);
   aiBody.setDrag(0, 0);
@@ -1381,58 +1407,79 @@ this.bgOff = this.add.tileSprite(
   .setScrollFactor(1)
   .setDepth(-100);
 
-// GRASS: se verá SOLO donde exista la banda GRASS
-this.bgGrass = this.add.tileSprite(
-  0, 0,
-  this.worldW,
-  this.worldH,
-  'grass'
-)
-  .setOrigin(0, 0)
-  .setScrollFactor(1)
-  .setDepth(-90);
+// iOS + stage: no crear un TileSprite de 8000x5000 ni una GeometryMask global
+// en el primer frame. Ese par fuerza a WebKit a reservar/renderizar una superficie
+// enorme justo al entrar a Arafo y es coherente con el reload del primer intento.
+// El stage ya pinta su asfalto estático y las consultas de superficie usan geom,
+// así que aquí basta un fondo sólido barato. Android conserva el camino original.
+const iosStageLightBackground = isStage && isIOSRaceDevice();
+if (iosStageLightBackground) {
+  this.bgGrass = this.add.rectangle(
+    this.worldW * 0.5,
+    this.worldH * 0.5,
+    this.worldW,
+    this.worldH,
+    0x35513a,
+    1
+  )
+    .setScrollFactor(1)
+    .setDepth(-90);
+  this._grassMaskGfx = null;
+  this._grassMask = null;
+} else {
+  // GRASS: se verá SOLO donde exista la banda GRASS
+  this.bgGrass = this.add.tileSprite(
+    0, 0,
+    this.worldW,
+    this.worldH,
+    'grass'
+  )
+    .setOrigin(0, 0)
+    .setScrollFactor(1)
+    .setDepth(-90);
 
-// ===============================
-// GRASS MASK (solo afecta a bgGrass)
-// ===============================
-const gMaskGfx = this.make.graphics({ x: 0, y: 0, add: false });
-gMaskGfx.fillStyle(0xffffff, 1);
+  // ===============================
+  // GRASS MASK (solo afecta a bgGrass)
+  // ===============================
+  const gMaskGfx = this.make.graphics({ x: 0, y: 0, add: false });
+  gMaskGfx.fillStyle(0xffffff, 1);
 
-const grassCells = this.track?.geom?.grass?.cells;
+  const grassCells = this.track?.geom?.grass?.cells;
 
-if (grassCells) {
-  for (const cell of grassCells.values()) {
-    for (const poly of cell.polys) {
-      if (!poly || poly.length < 3) continue;
+  if (grassCells) {
+    for (const cell of grassCells.values()) {
+      for (const poly of cell.polys) {
+        if (!poly || poly.length < 3) continue;
 
-      gMaskGfx.beginPath();
-      gMaskGfx.moveTo(poly[0].x, poly[0].y);
-      for (let i = 1; i < poly.length; i++) {
-        gMaskGfx.lineTo(poly[i].x, poly[i].y);
+        gMaskGfx.beginPath();
+        gMaskGfx.moveTo(poly[0].x, poly[0].y);
+        for (let i = 1; i < poly.length; i++) {
+          gMaskGfx.lineTo(poly[i].x, poly[i].y);
+        }
+        gMaskGfx.closePath();
+        gMaskGfx.fillPath();
+        // Engordar máscara 2px para tapar “hairline seams” entre celdas
+        gMaskGfx.lineStyle(3, 0xffffff, 1);
+        gMaskGfx.strokePath();
+        gMaskGfx.lineStyle(); // reset
       }
-      gMaskGfx.closePath();
-      gMaskGfx.fillPath();
-      // Engordar máscara 2px para tapar “hairline seams” entre celdas
-gMaskGfx.lineStyle(3, 0xffffff, 1);
-gMaskGfx.strokePath();
-gMaskGfx.lineStyle(); // reset
     }
   }
+
+  const grassMask = gMaskGfx.createGeometryMask();
+
+  // ⚠️ CRÍTICO: la UI camera NO debe ver esta máscara
+  this.uiCam?.ignore?.(gMaskGfx);
+
+  // Aplicar SOLO al grass
+  if (this.bgGrass) {
+    this.bgGrass.setMask(grassMask);
+  }
+
+  // Guardamos referencias por si en el futuro queremos limpiar / rehacer
+  this._grassMaskGfx = gMaskGfx;
+  this._grassMask = grassMask;
 }
-
-const grassMask = gMaskGfx.createGeometryMask();
-
-// ⚠️ CRÍTICO: la UI camera NO debe ver esta máscara
-this.uiCam?.ignore?.(gMaskGfx);
-
-// Aplicar SOLO al grass
-if (this.bgGrass) {
-  this.bgGrass.setMask(grassMask);
-}
-
-// Guardamos referencias por si en el futuro queremos limpiar / rehacer
-this._grassMaskGfx = gMaskGfx;
-this._grassMask = grassMask;
 
 // ================================
 // Bordes de pista (GLOBAL, sin culling)
@@ -1486,7 +1533,7 @@ const drawShoulderBand = (outerPts, innerPts, color, alpha) => {
   return g;
 };
 
-const drawStripedBand = (innerPts, outerPts, colorA, colorB, segmentLen = 14) => {
+const drawStripedBand = (innerPts, outerPts, colorA, colorB, segmentLen = 14, closed = true) => {
   const g = this.add.graphics();
   g.setDepth(11.5); // por encima del asfalto / arcén, por debajo de la línea blanca
   g.setScrollFactor(1);
@@ -1503,8 +1550,9 @@ const drawStripedBand = (innerPts, outerPts, colorA, colorB, segmentLen = 14) =>
 
   let accumLen = 0;
 
-  for (let i = 0; i < innerPts.length; i++) {
-    const ni = (i + 1) % innerPts.length;
+  const segmentCount = closed ? innerPts.length : innerPts.length - 1;
+  for (let i = 0; i < segmentCount; i++) {
+    const ni = closed ? (i + 1) % innerPts.length : i + 1;
 
     const a0 = getXY(innerPts[i]);
     const a1 = getXY(innerPts[ni]);
@@ -1612,7 +1660,8 @@ if (
       exportedGeom.curbOuter,
       0xd92f2f,
       0xf2f2f2,
-      14
+      14,
+      this.track?.closed !== false
     );
   }
 
@@ -1622,7 +1671,8 @@ if (
       exportedGeom.curbInner,
       0xd92f2f,
       0xf2f2f2,
-      14
+      14,
+      this.track?.closed !== false
     );
   }
 }
@@ -1668,8 +1718,38 @@ this._isInBand = (band, x, y) => {
   }
   return false;
 };
-    this._cullEnabled = true;
-this._hudLog(`[track geom] cells=${this.track.geom?.cells?.size ?? 'null'}`);
+    // iOS/WebKit stage: render estático barato. Evita cientos de Image+GeometryMask
+    // y evita culling dinámico. El asfalto completo se dibuja una sola vez.
+    if (isIOSRaceDevice() && isStage) {
+      const asphaltG = this.add.graphics().setDepth(10);
+      asphaltG.fillStyle(0x2a2f3a, 1);
+      // Cada quad está indexado en TODAS las celdas que toca. Iterar values()
+      // directamente lo pintaba varias veces y hacía imposible razonar qué segmento
+      // estaba produciendo una banda. Dedupe por identidad: un quad del ribbon se
+      // rasteriza exactamente una vez.
+      const drawnStagePolys = new Set();
+      for (const cd of (this.track?.geom?.cells?.values?.() || [])) {
+        for (const poly of (cd?.polys || [])) {
+          if (!poly || poly.length < 3 || drawnStagePolys.has(poly)) continue;
+          drawnStagePolys.add(poly);
+          const xy = (p) => Array.isArray(p) ? {x:Number(p[0]),y:Number(p[1])} : {x:Number(p?.x),y:Number(p?.y)};
+          const p0=xy(poly[0]); if(!Number.isFinite(p0.x)||!Number.isFinite(p0.y)) continue;
+          asphaltG.beginPath(); asphaltG.moveTo(p0.x,p0.y);
+          for(let i=1;i<poly.length;i++){const p=xy(poly[i]);if(Number.isFinite(p.x)&&Number.isFinite(p.y))asphaltG.lineTo(p.x,p.y);}
+          asphaltG.closePath(); asphaltG.fillPath();
+        }
+      }
+      this._iosStageAsphalt = asphaltG;
+      this.uiCam?.ignore?.(asphaltG);
+    }
+    // iOS/WebKit: el culling por chunks provoca stutter al crear/activar máscaras durante la carrera.
+    // En iPhone/iPad precargamos las celdas una sola vez y después no ejecutamos culling por frame.
+    this._cullEnabled = !isIOSRaceDevice();
+    this._iosStaticTrackRender = !this._cullEnabled;
+    if (isStage && isIOSRaceDevice()) this._iosStaticTrackPrepared = true;
+    this._iosStaticTrackPrepared = !!(isStage && isIOSRaceDevice());
+    this._iosStaticTrackInitialReady = !this._iosStaticTrackRender;
+this._hudLog(`[track geom] cells=${this.track.geom?.cells?.size ?? 'null'} cull=${this._cullEnabled?'ON':'OFF'}`);
  this._trackCells = this.track.geom?.cells?.size ?? null;
 this._trackDiag = `cells=${this._trackCells}`;
 this._trackDiag2 = '';
@@ -1677,6 +1757,22 @@ this._trackDiag2 = '';
 
 // 6) Meta, checkpoints y vueltas (datos)
 this.finishLine = t01.finishLine || t01.finish;
+this.startLine = t01.startLine || null;
+this._stageWaitingForStart = (t01.closed === false && !!(this.startLine?.a && this.startLine?.b));
+
+// SALIDA visible del tramo abierto. Es una puerta real independiente del semáforo:
+// el coche aparece antes, el semáforo lo libera y el crono arranca al cruzarla.
+if (this._stageWaitingForStart) {
+  const g = this.add.graphics();
+  g.setDepth(21);
+  g.lineStyle(8, 0x2bff88, 1);
+  g.beginPath();
+  g.moveTo(this.startLine.a.x, this.startLine.a.y);
+  g.lineTo(this.startLine.b.x, this.startLine.b.y);
+  g.strokePath();
+  this.startLineDebug = g;
+  this.uiCam?.ignore?.(g);
+}
 // Fallback: si el track no trae normal en la meta, la calculamos desde la centerline
 if (this.finishLine?.a && this.finishLine?.b && !this.finishLine.normal) {
   const a = this.finishLine.a;
@@ -1718,9 +1814,9 @@ if (this.finishLine?.a && this.finishLine?.b && !this.finishLine.normal) {
     }
 
     // Tangente local (suavizada)
-    const p0 = pts[(bestI - 1 + pts.length) % pts.length];
+    const p0 = pts[Math.max(0, bestI - 1)];
     const p1 = pts[bestI];
-    const p2 = pts[(bestI + 1) % pts.length];
+    const p2 = pts[Math.min(pts.length - 1, bestI + 1)];
 
     const tx = (p2.x - p0.x);
     const ty = (p2.y - p0.y);
@@ -2935,6 +3031,12 @@ this.scale.on('resize', this._onResizeUiCam);
 // =================================================
 this._raceStarted = false;
 
+// iOS: no mostrar/iniciar el semáforo hasta que la zona inicial de pista tenga textura.
+// Evita entrar en "modo save" con mundo sin materializar mientras el render está por lotes.
+if (this._iosStaticTrackRender && !this._iosStaticTrackInitialReady) {
+  this._iosHoldStartUntilTrackReady = true;
+}
+
 // Ya no esperamos GAS: arrancamos automáticamente
 this._startState = 'COUNTDOWN'; // COUNTDOWN -> GO -> RACING
 this._prevThrottleDown = false;
@@ -3064,54 +3166,8 @@ this.scale.on('resize', this._reflowStartModal);
 this._reflowStartModal();
 this.time.delayedCall(0, () => this._reflowStartModal());
 this.time.delayedCall(120, () => this._reflowStartModal());    
-    // Arranque automático del semáforo al cargar (sin GAS)
-this.time.delayedCall(150, () => {
-  if (this._startState !== 'COUNTDOWN') this._startState = 'COUNTDOWN';
-this._startAutoFired = true; // ✅ ya está programado en create(), no lo repitas en update()
-  if (this._startHint) this._startHint.setText('Mantente listo...');
-  if (this._startStatus) {
-    this._startStatus.setText('RED LIGHTS');
-    this._startStatus.setColor('#ffffff');
-  }
-
-  if (this._startAsset) this._startAsset.setTexture('start_base');
-
-  const stepMs = 600;
-
-  for (let i = 1; i <= 6; i++) {
-    this.time.delayedCall(stepMs * i, () => {
-      if (this._startAsset) this._startAsset.setTexture(`start_l${i}`);
-    });
-  }
-
-  const randMs = 800 + Math.floor(Math.random() * 700);
-
-  this.time.delayedCall(stepMs * 6 + randMs, () => {
-    this._startState = 'GO';
-
-    if (this._startAsset) this._startAsset.setTexture('start_base');
-
-    if (this._startStatus) {
-      this._startStatus.setText('GO!');
-      this._startStatus.setColor('#2bff88');
-    }
-
-    // Iniciar cronómetro EXACTAMENTE en lights out
-    if (this.timing) {
-      this.timing.lapStart = performance.now();
-      this.timing.started = true;
-      this.timing.s1 = null;
-      this.timing.s2 = null;
-      this.timing.s3 = null;
-    }
-
-    this.time.delayedCall(350, () => {
-      this._startState = 'RACING';
-      this._raceStarted = true;
-      if (this._startModal) this._startModal.setVisible(false);
-    });
-  });
-}); 
+    // El semáforo se dispara desde update() cuando la ventana iOS de salida ya está lista.
+this._startAutoFired = false;
 // 12) Volver (si testMode => editor, si no => menú)
 if (this.keys?.back) {
   this.keys.back.on('down', () => {
@@ -3356,8 +3412,9 @@ if (this.ttHud) {
   const txt = `${m}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}`;
 
   this.ttHud.timeText.setText(txt);
-const lapInProgress = (this.lapCount || 0) + 1; // lapCount = vueltas completadas
-this.ttHud.lapText.setText(`VUELTA ${lapInProgress}`);
+const isOpenStage=!!this._isStage;
+const lapInProgress=(this.lapCount||0)+1;
+this.ttHud.lapText.setText(isOpenStage?'TRAMO':`VUELTA ${lapInProgress}`);
 
   // Progreso REAL (0..1) por centerline (solo si hay coche)
 if (this.car) {
@@ -3436,7 +3493,7 @@ this._prevThrottleDown = throttleDown;
 //-------------------//
 //-------------------//
     // START LIGHTS: arrancar automáticamente 1 vez
-if (!this._startAutoFired && this._startState === 'COUNTDOWN') {
+if (!this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
   this._startAutoFired = true;
 
   if (this._startHint) this._startHint.setText('Mantente listo...');
@@ -3468,11 +3525,14 @@ if (!this._startAutoFired && this._startState === 'COUNTDOWN') {
     }
 
     if (this.timing) {
-      this.timing.lapStart = performance.now();
-      this.timing.started = true;
+      const stageUsesStartGate = this.track?.meta?.closed === false &&
+        !!(this.startLine?.a && this.startLine?.b);
+      this.timing.lapStart = stageUsesStartGate ? null : performance.now();
+      this.timing.started = !stageUsesStartGate;
       this.timing.s1 = null;
       this.timing.s2 = null;
       this.timing.s3 = null;
+      if (!stageUsesStartGate) this.lapStartTick = this.simTick;
     }
 
     this.time.delayedCall(350, () => {
@@ -3680,6 +3740,11 @@ const engineBrakeCoef = 0.04; // ajustable
   if (down) {
     body.velocity.x -= dirX * brakeForce * dt;
     body.velocity.y -= dirY * brakeForce * dt;
+    // Rally: el freno actúa además como freno de mano para ayudar a rotar la trasera
+    // en horquillas, sin alterar el comportamiento de los circuitos normales.
+    if ((this.track?.meta?.closed === false || this.track?.meta?.raceType === 'stage') && Math.abs(t.stickX || 0) > 0.12 && speed > 20) {
+      this.car.rotation += Math.sign(t.stickX) * 2.4 * dt;
+    }
   }
 
 // Freno motor (solo cuando NO hay gas NI freno)
@@ -3758,6 +3823,7 @@ if (absFwdSpeed < S.yawSpeedMin) {
   turnFactor *= absFwdSpeed / S.yawSpeedMin;
 }
 
+if (this.track?.meta?.closed === false || this.track?.meta?.raceType === 'stage') turnFactor *= 1.55;
 const maxTurn = turnRate * turnFactor; // rad/s
 
 // --------------------------------
@@ -3826,7 +3892,7 @@ try {
   const geom = this.track?.geom;
   const cells = geom?.cells;
 
-  if (cells && this.car) {
+  if (cells && this.car && (!this._iosStaticTrackRender || !this._iosStaticTrackPrepared)) {
     const cellSize = geom.cellSize;
     const cx = Math.floor(this.car.x / cellSize);
     const cy = Math.floor(this.car.y / cellSize);
@@ -3857,8 +3923,20 @@ try {
     let want;
 
 if (this._cullEnabled === false) {
-  // OFF = pintar todas las celdas reales (sin loops enormes)
-  want = new Set(cells.keys());
+  if (this._iosStaticTrackRender) {
+    // iOS/WebKit: NO culling dinámico. Materializamos una ventana fija alrededor
+    // de la salida una sola vez. No intentamos construir Arafo completo: eso era
+    // lo que provocaba el pico de memoria/recarga y el bloqueo del arranque.
+    want = new Set(this.track.activeCells || []);
+    const R = 3;
+    for (let yy = cy - R; yy <= cy + R; yy++) {
+      for (let xx = cx - R; xx <= cx + R; xx++) want.add(`${xx},${yy}`);
+    }
+    this._iosStaticTrackInitialReady = true;
+    this._iosStaticTrackPrepared = true;
+  } else {
+    want = new Set(cells.keys());
+  }
 } else {
   want = new Set();
   const R = this.track.cullRadiusCells ?? 2;
@@ -4074,11 +4152,28 @@ const _crossGate = (gate) => {
 
   return forwardGate;
 };
+// --- SALIDA de tramo abierto ---
+// El coche aparece antes de esta línea. El semáforo solo lo libera; el crono
+// empieza al cruzar SALIDA en sentido correcto.
+if (this._stageWaitingForStart && this._raceStarted && _crossGate(this.startLine)) {
+  this._stageWaitingForStart = false;
+  this._cpState = 0;
+  if (this.timing) {
+    this.timing.lapStart = performance.now();
+    this.timing.started = true;
+    this.timing.s1 = null;
+    this.timing.s2 = null;
+    this.timing.s3 = null;
+  }
+  this.lapStartTick = this.simTick;
+  this._setTTHudColor('#F2F2F2');
+}
+
 // --- 1) checkpoints (en orden) ---
 const cp1 = this.checkpoints?.cp1;
 const cp2 = this.checkpoints?.cp2;
 
-if (cp1 && this._cpCooldown1Ms === 0 && _crossGate(cp1)) {
+if (!this._stageWaitingForStart && cp1 && this._cpCooldown1Ms === 0 && _crossGate(cp1)) {
   if ((this._cpState || 0) === 0) {
     this._cpState = 1;
 
@@ -4101,7 +4196,7 @@ this.timing.s1Tick = (this.lapStartTick != null) ? (this.simTick - this.lapStart
   this._cpCooldown1Ms = 500;
 }
 
-if (cp2 && this._cpCooldown2Ms === 0 && _crossGate(cp2)) {
+if (!this._stageWaitingForStart && cp2 && this._cpCooldown2Ms === 0 && _crossGate(cp2)) {
   if ((this._cpState || 0) === 1) {
     this._cpState = 2;
 
@@ -4124,7 +4219,7 @@ this.timing.s2Tick = (this.lapStartTick != null) ? (this.simTick - this.lapStart
 }
 
 // --- 2) meta: SOLO cuenta si cpState==2 ---
-if (within && crossed && forward && this._lapCooldownMs === 0) {
+if (!this._stageWaitingForStart && within && crossed && forward && this._lapCooldownMs === 0) {
   if ((this._cpState || 0) === 2) {
 if (this.timing) {
   const now = performance.now();
@@ -4174,7 +4269,8 @@ if (this.ttHistory && this.ttHistKey) {
   }
 
   // Si mejora el total: actualizar best lap + splits (regla estricta)
-  const improves = (this.ttBest == null) || (lapTime < this.ttBest.lapMs);
+  const validBest = Number.isFinite(this.ttBest?.lapMs) && this.ttBest.lapMs > 1000;
+  const improves = !validBest || (lapTime < this.ttBest.lapMs);
   if (improves) {
     this.ttBest = {
       lapMs: lapTime,
@@ -4193,11 +4289,30 @@ if (this.ttHistory && this.ttHistKey) {
     } catch (e) {}
   }
 
+  const isOpenStage=this.track?.closed===false;
+  if(isOpenStage){
+    this.timing.started=false;
+    this.timing.lapStart=null;
+    this._raceStarted=false;
+    this._openStageFinished=true;
+    try{this.car?.body?.setVelocity?.(0,0);}catch{}
+    try{if(this.carBody?.body?.velocity){this.carBody.body.velocity.x=0;this.carBody.body.velocity.y=0;}}catch{}
+    // Un stage termina la sesión, no vuelve directamente al lobby.
+    // La clase final de RaceScene aporta _finishSessionWithRewards(): botín -> informe -> salir.
+    this.time.delayedCall(250,()=>{
+      try{
+        if(typeof this._finishSessionWithRewards==='function') this._finishSessionWithRewards();
+        else if(typeof this._openSessionReport==='function') this._openSessionReport();
+        else this.scene.start('menu');
+      }catch(e){console.error('[stage finish] session flow failed',e);}
+    });
+  }else{
   // Reset de vuelta: arranca nueva vuelta desde ahora
   this.timing.lapStart = now;
 this.lapStartTick = this.simTick;
   this.timing.s1 = null;
   this.timing.s2 = null;
+  }
 
   // En salida (nuevo lap): volvemos a blanco hasta CP1 (sin parpadeo)
   this._setTTHudColor('#F2F2F2');
@@ -4258,11 +4373,11 @@ if (shouldShow) {
 }
 }
 }
-    this.lapCount = (this.lapCount || 0) + 1;
+    if(this.track?.closed!==false)this.lapCount = (this.lapCount || 0) + 1;
 
     // Garage Fusion: cada vuelta válida alimenta el taller.
     // Recompensa pequeña, persistente y compatible con futuras carreras/eventos.
-    if (!this._useFactorySpec && !this._testMode) {
+    if (this.track?.closed!==false && !this._useFactorySpec && !this._testMode) {
       try {
         const reward = grantRaceReward(1);
         this._showGarageRewardToast?.(reward);
@@ -5156,6 +5271,22 @@ const fl = j.finishLine || j.finish || j.__autoFinishLine || null;
         : undefined
     } : undefined;
 
+    // Semántica topológica del JSON importado.
+    // IMPORTANTE: antes se descartaban raceType/closed al convertir el JSON a meta.
+    // Eso hacía que cualquier stage importado llegase a create() como circuito y
+    // buildTrackRibbon() usase closed=true, generando físicamente el segmento
+    // último punto (META) -> primer punto (SALIDA). No era un problema de dibujo:
+    // el cierre nacía aquí, al perder la topología durante la importación.
+    const raceType = j.raceType === 'stage' ? 'stage' : (j.raceType || 'circuit');
+    const closed = raceType === 'stage' ? false : (j.closed !== false);
+    const startLine = (j.startLine?.a && j.startLine?.b) ? {
+      a: { x: Number(j.startLine.a.x), y: Number(j.startLine.a.y) },
+      b: { x: Number(j.startLine.b.x), y: Number(j.startLine.b.y) },
+      normal: (j.startLine.normal && Number.isFinite(Number(j.startLine.normal.x)) && Number.isFinite(Number(j.startLine.normal.y)))
+        ? { x: Number(j.startLine.normal.x), y: Number(j.startLine.normal.y) }
+        : undefined
+    } : undefined;
+
     return {
       key: `import:${slug}`,
       name: j.name || slug,
@@ -5170,13 +5301,17 @@ const fl = j.finishLine || j.finish || j.__autoFinishLine || null;
       shoulderPx,
 
       start,
+      startLine,
       centerline,
       checkpoints,
+      raceType,
+      closed,
 
       // datos exportados por TrackEditor que RaceScene debe conservar
       geometry: (j.geometry && typeof j.geometry === 'object') ? j.geometry : null,
       curbs: (j.curbs && typeof j.curbs === 'object') ? j.curbs : null,
       runoff: (j.runoff && typeof j.runoff === 'object') ? j.runoff : null,
+      grid: (j.grid && typeof j.grid === 'object') ? j.grid : null,
 
       // compat con tu código: finishLine o finish
       finishLine,

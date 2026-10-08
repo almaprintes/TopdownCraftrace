@@ -89,14 +89,19 @@ export class RaceScene extends MaterialRaceScene {
       this._cornerCurbs = curbs;
 
       const count = center.length;
+      // Surface decoration must share the ribbon's topology. A stage has no
+      // finish -> start segment, including for tangent and overlap queries.
+      const closed = this.track?.closed !== false;
+      const segmentCount = closed ? count : count - 1;
+      const idx = (i) => closed ? (i + count) % count : Math.max(0, Math.min(count - 1, i));
       const tangentAt = (i) => {
-        const p0 = center[(i - 2 + count) % count], p1 = center[(i + 2) % count];
+        const p0 = center[idx(i - 2)], p1 = center[idx(i + 2)];
         const dx = p1.x - p0.x, dy = p1.y - p0.y, d = Math.hypot(dx, dy) || 1;
         return { tx: dx / d, ty: dy / d };
       };
       const normAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
       const turnAt = (i) => {
-        const a = center[(i - 5 + count) % count], b = center[i], c = center[(i + 5) % count];
+        const a = center[idx(i - 5)], b = center[i], c = center[idx(i + 5)];
         return normAngle(Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(b.y - a.y, b.x - a.x));
       };
 
@@ -114,7 +119,8 @@ export class RaceScene extends MaterialRaceScene {
       const drawCenterStroke = (g, width, color, alpha) => {
         g.lineStyle(width, color, alpha); g.beginPath(); g.moveTo(center[0].x, center[0].y);
         for (let i = 1; i < count; i++) g.lineTo(center[i].x, center[i].y);
-        g.lineTo(center[0].x, center[0].y); g.strokePath();
+        if (closed) g.lineTo(center[0].x, center[0].y);
+        g.strokePath();
       };
       drawCenterStroke(shoulder, defaultTrackW + 18, 0x67513a, 0.14);
 
@@ -126,7 +132,9 @@ export class RaceScene extends MaterialRaceScene {
         right[i] = { x: p.x - nx * half, y: p.y - ny * half };
       }
 
-      const circularIndexDistance = (a, b) => Math.min(Math.abs(a - b), count - Math.abs(a - b));
+      const indexDistance = (a, b) => closed
+        ? Math.min(Math.abs(a - b), count - Math.abs(a - b))
+        : Math.abs(a - b);
       const pointToSegmentDistance = (q, a, b) => {
         const vx = b.x - a.x, vy = b.y - a.y, wx = q.x - a.x, wy = q.y - a.y;
         const vv = vx * vx + vy * vy;
@@ -135,9 +143,9 @@ export class RaceScene extends MaterialRaceScene {
         return { d: Math.hypot(q.x - px, q.y - py), t };
       };
       const isBuriedByOtherRoad = (q, ownIndex) => {
-        for (let j = 0; j < count; j++) {
-          if (circularIndexDistance(j, ownIndex) <= 5 || circularIndexDistance((j + 1) % count, ownIndex) <= 5) continue;
-          const a = center[j], b = center[(j + 1) % count], hit = pointToSegmentDistance(q, a, b);
+        for (let j = 0; j < segmentCount; j++) {
+          if (indexDistance(j, ownIndex) <= 5 || indexDistance(idx(j + 1), ownIndex) <= 5) continue;
+          const a = center[j], b = center[idx(j + 1)], hit = pointToSegmentDistance(q, a, b);
           const radius = Number(a.width || defaultTrackW) * 0.5 + (Number(b.width || defaultTrackW) - Number(a.width || defaultTrackW)) * 0.5 * hit.t;
           if (hit.d < radius - 1.25) return true;
         }
@@ -158,8 +166,8 @@ export class RaceScene extends MaterialRaceScene {
       const drawTrimmedEdge = (pts) => {
         edgeLine.lineStyle(2.6, 0xf3efe5, 0.98);
         let drawing = false;
-        for (let i = 0; i < count; i++) {
-          const j = (i + 1) % count, a = pts[i], b = pts[j];
+        for (let i = 0; i < segmentCount; i++) {
+          const j = idx(i + 1), a = pts[i], b = pts[j];
           const aVisible = !isBuriedByOtherRoad(a, i), bVisible = !isBuriedByOtherRoad(b, j);
           if (aVisible && bVisible) {
             if (!drawing) { edgeLine.beginPath(); edgeLine.moveTo(a.x, a.y); drawing = true; }
@@ -201,7 +209,7 @@ export class RaceScene extends MaterialRaceScene {
         }
       }
 
-      if (groups.length > 1) {
+      if (closed && groups.length > 1) {
         const first = groups[0], last = groups[groups.length - 1];
         if (first.start === 0 && last.end === count - 1 && first.sign === last.sign) {
           groups[0] = { start: last.start, end: first.end + count, sign: first.sign };
@@ -209,7 +217,6 @@ export class RaceScene extends MaterialRaceScene {
         }
       }
 
-      const idx = (i) => (i + count) % count;
       const edgeAlignmentOK = (edge, i) => {
         const j = idx(i + 1);
         const ex = edge[j].x - edge[idx(i)].x, ey = edge[j].y - edge[idx(i)].y;

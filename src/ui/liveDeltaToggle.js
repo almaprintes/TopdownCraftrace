@@ -139,7 +139,11 @@ function positionControl(root){
   const base=pauseRect;
   const h=Math.max(48,Math.min(62,Number(base?.height)||56));
   const w=Math.max(132,Math.min(160,h*2.45));
-  const right=base?Math.max(8,vw-Number(base.right)):18;
+  const android=/Android/i.test(navigator.userAgent||'');
+  const inheritedRight=base?Math.max(8,vw-Number(base.right)):18;
+  // Android three-button/edge-to-edge layouts leave the legacy pause anchor too far left,
+  // overlapping LAST/BEST. Move only the combined DELTA+pause control toward the right edge.
+  const right=android?Math.max(8,inheritedRight-72):inheritedRight;
   const top=base?Math.max(8,Number(base.top)):18;
   root.style.width=`${Math.round(w)}px`;
   root.style.height=`${Math.round(h)}px`;

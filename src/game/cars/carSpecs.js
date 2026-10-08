@@ -605,6 +605,41 @@ steeringProfile: 'DIRECT',
     gripBrake: 0.17
   },
 
+  veloce_juanicar_c220: {
+    id: 'veloce_juanicar_c220',
+    name: 'VELOCE Juanicar C2.20',
+    brand: 'VELOCE',
+    country: 'Italia',
+    category: 'Velocidad',
+    role: 'Máxima velocidad',
+    steeringProfile: 'DIRECT',
+
+    // UI / Colección
+    collectionNo: 17,
+    rarity: 'Legendario',
+    cardAssetVersion: 2,
+    skin: 'skin_veloce_juanicar_c220_hq.webp',
+    visualScale: 1.08,
+
+    // Tope de la familia VELOCE: un escalón por encima del Photon.
+    designStats: { VEL: 92, ACC: 85, GIR: 43, EST: 45, FRN: 63 },
+
+    // Punta y empuje superiores al Photon, manteniendo su carácter de alta velocidad.
+    maxFwd: 645.0,
+    maxRev: 260,
+    accel: 832.0,
+    brakeForce: 1092.0,
+    engineBrake: 260,
+    linearDrag: 0.025,
+
+    turnRate: 3.49,
+    turnMin: 0.30,
+
+    gripCoast: 0.22,
+    gripDrive: 0.05,
+    gripBrake: 0.17
+  },
+
   forge_hammer: {
     id: 'forge_hammer',
     name: 'FORGE Hammer',
@@ -719,6 +754,7 @@ steeringProfile: 'DIRECT',
     gripBrake: 0.19
   }
 };
+
 // =========================
 // Community tuning overrides (Opción 2 PRO)
 //

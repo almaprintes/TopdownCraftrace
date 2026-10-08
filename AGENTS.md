@@ -29,3 +29,9 @@ Objetivo operativo: una única línea de desarrollo en `main`, simple y predecib
 14. Solo comunicar que una versión está lista cuando el HEAD final tenga Build + Deploy en estado completed/success.
 15. Una respuesta del tipo «pendiente», «en cola», «compilando» o «todavía no» no constituye entrega y debe evitarse cuando el propietario haya pedido esperar hasta que esté lista.
 16. El objetivo operativo es que el propietario pueda despreocuparse del pipeline: cuando el asistente responda que está lista, debe significar que el despliegue completo ha sido comprobado.
+
+## DEV consolidada — 08/10/2026
+- Main integra el progreso de DEV 1.2.75 con las correcciones y la copia en la nube, nueva versión DEV 1.2.76.
+- dev-first-update queda como historial de DEV 1.2.75. No desarrollar ni desplegar desde esa rama.
+- GitHub Pages y las pruebas Android deben usar el mismo commit exacto de main.
+- Google Play sigue en Android 1.1.188/versionCode 8; no publicar otra release sin autorización expresa.

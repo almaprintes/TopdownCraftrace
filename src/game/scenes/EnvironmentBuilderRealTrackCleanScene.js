@@ -1,5 +1,9 @@
 import { EnvironmentBuilderScene as CurrentEnvironmentBuilderScene } from './EnvironmentBuilderTrackVisiblePickerScrollScene.js';
 import { createTrack } from '../tracks/trackRegistry.js';
+import { getTrackBeautyLayerConfig } from '../tracks/trackBeautyLayers.js';
+import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
+
+const BASE=import.meta.env.BASE_URL||'/';
 
 export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
   create(){
@@ -16,6 +20,41 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
 
     this._drawRealTrack?.();
     this._fitRealTrack?.();
+    this._syncBeautyReference?.();
+  }
+
+  _clearBeautyReference(){
+    for(const o of this._beautyReference||[])try{o?.destroy?.();}catch{}
+    this._beautyReference=[];
+  }
+
+  _syncBeautyReference(){
+    this._clearBeautyReference();
+    const cfg=getTrackBeautyLayerConfig(this._trackId);
+    if(!cfg?.useBeautyLayer||!cfg?.assetsAvailable||!cfg?.tiles?.length)return;
+    const pending=[];
+    for(const [i,t] of cfg.tiles.entries()){
+      const key=`env-builder-beauty:${this._trackId}:${i}:${cfg.assetRevision||'1'}`;
+      if(!this.textures.exists(key)){
+        this.load.image(key,`${BASE}${String(t.path||'').replace(/^\//,'')}`);
+        pending.push(key);
+      }
+    }
+    const render=()=>{
+      if(this._trackId!==String(this._trackId||''))return;
+      this._clearBeautyReference();
+      for(const [i,t] of cfg.tiles.entries()){
+        const key=`env-builder-beauty:${this._trackId}:${i}:${cfg.assetRevision||'1'}`;
+        if(!this.textures.exists(key))continue;
+        const img=this.add.image(Number(t.x)||0,Number(t.y)||0,key).setOrigin(0).setDepth(2.05).setDisplaySize(Number(t.w)||1,Number(t.h)||1);
+        this.cameras.main.ignore(img);
+        this._beautyReference.push(img);
+      }
+      this._drawRealTrack?.();
+    };
+    if(!pending.length){render();return;}
+    this.load.once('complete',render);
+    if(!this.load.isLoading())this.load.start();
   }
 
   _openRealTrack(trackId,resetProject=true){
@@ -30,10 +69,14 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
       for(const o of this._objects||[])o?.destroy?.();
       this._objects=[];
       this._surfaces=[];
+      this._rails=[];
       this._selected=null;
       this._selectedSurface=null;
+      this._selRail=null;
       this._selectionG?.clear?.();
       this._redrawSurfaces?.();
+      this._railRoot?.removeAll?.(true);
+      this._drawRails?.();
     }
 
     const w=Math.max(1200,Number(track.worldW)||8000);
@@ -42,11 +85,16 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     this._editorWorldH=h;
     this._editCam?.setBounds?.(0,0,w,h);
 
-    // IMPORTANT: opening a real circuit must NOT restore a local Builder
-    // project automatically. CARGAR is the explicit action for that.
+    // Always start from the official repository environment. CARGAR remains
+    // explicit and is reserved for restoring the user's local draft.
+    try{
+      const official=createTrackEnvironment(trackId);
+      if(official)this._applyProject?.(official);
+    }catch(err){console.warn('[TDR2] official Environment Studio project could not be loaded',trackId,err);}
     this._drawRealTrack?.();
     this._fitRealTrack?.();
     this._refreshTrackButton?.();
+    this._syncBeautyReference?.();
 
     this.time?.delayedCall?.(0,()=>{
       this._drawRealTrack?.();

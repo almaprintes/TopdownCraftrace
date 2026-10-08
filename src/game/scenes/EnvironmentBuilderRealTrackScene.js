@@ -78,14 +78,31 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
   _drawRealTrack(){
     const t=this._realTrack,g=this._realTrackG,m=this._realTrackMarkG;if(!t||!g||!m)return;
     g.clear();m.clear();
-    const geom=buildTrackRibbon({centerline:t.centerline,trackWidth:t.trackWidth,grassMargin:0,sampleStepPx:Math.max(8,Number(t.sampleStepPx)||12),cellSize:Number(t.cellSize)||400});
-    const poly=polygonPoints(geom.left,geom.right);
-    drawFilledPolygon(g,poly,0x2c2b2b,1);
-    g.lineStyle(Math.max(2,Number(t.trackWidth||100)*.015),0xe8edf0,.9);
-    const edge=(arr)=>{if(!arr?.length)return;g.beginPath();g.moveTo(arr[0][0],arr[0][1]);for(let i=1;i<arr.length;i++)g.lineTo(arr[i][0],arr[i][1]);g.closePath();g.strokePath();};
-    edge(geom.left);edge(geom.right);
-    const f=t.finishLine;
-    if(f?.a&&f?.b){m.lineStyle(Math.max(7,Number(t.trackWidth||100)*.06),0xffffff,1);m.lineBetween(f.a.x,f.a.y,f.b.x,f.b.y);}
+    const isOpen=t.closed===false||t.raceType==='stage';
+    if(isOpen){
+      // Environment Studio must show the authored stage literally. Do not feed
+      // an open rally stage through any closed-polygon/ribbon renderer: draw
+      // only consecutive authored points, so META can never connect to SALIDA.
+      const center=(t.centerline||[]).map(p=>({x:Number(p?.x??p?.[0]),y:Number(p?.y??p?.[1]),width:Number(p?.width)||Number(t.trackWidth)||100})).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
+      const left=[],right=[];
+      for(let i=0;i<center.length;i++){
+        const p=center[i],prev=center[Math.max(0,i-1)],next=center[Math.min(center.length-1,i+1)];
+        let tx=next.x-prev.x,ty=next.y-prev.y,d=Math.hypot(tx,ty)||1;tx/=d;ty/=d;
+        const nx=-ty,ny=tx,half=p.width*.5;left.push({x:p.x+nx*half,y:p.y+ny*half});right.push({x:p.x-nx*half,y:p.y-ny*half});
+      }
+      g.fillStyle(0x2c2b2b,1);
+      for(let i=0;i<center.length-1;i++){g.beginPath();g.moveTo(left[i].x,left[i].y);g.lineTo(left[i+1].x,left[i+1].y);g.lineTo(right[i+1].x,right[i+1].y);g.lineTo(right[i].x,right[i].y);g.closePath();g.fillPath();}
+      g.lineStyle(Math.max(2,Number(t.trackWidth||100)*.015),0xe8edf0,.9);
+      const edge=arr=>{if(!arr.length)return;g.beginPath();g.moveTo(arr[0].x,arr[0].y);for(let i=1;i<arr.length;i++)g.lineTo(arr[i].x,arr[i].y);g.strokePath();};edge(left);edge(right);
+    }else{
+      const geom=buildTrackRibbon({centerline:t.centerline,trackWidth:t.trackWidth,grassMargin:0,sampleStepPx:Math.max(8,Number(t.sampleStepPx)||12),cellSize:Number(t.cellSize)||400,closed:true});
+      const left=geom.left||[],right=geom.right||[];
+      g.fillStyle(0x2c2b2b,1);
+      for(let i=0;i<left.length;i++){const j=(i+1)%left.length;if(!left[i]||!right[i]||!left[j]||!right[j])continue;g.beginPath();g.moveTo(left[i][0],left[i][1]);g.lineTo(left[j][0],left[j][1]);g.lineTo(right[j][0],right[j][1]);g.lineTo(right[i][0],right[i][1]);g.closePath();g.fillPath();}
+      g.lineStyle(Math.max(2,Number(t.trackWidth||100)*.015),0xe8edf0,.9);
+      const edge=arr=>{if(!arr?.length)return;g.beginPath();g.moveTo(arr[0][0],arr[0][1]);for(let i=1;i<arr.length;i++)g.lineTo(arr[i][0],arr[i][1]);g.closePath();g.strokePath();};edge(left);edge(right);
+    }
+    const finish=t.finishLine;if(finish?.a&&finish?.b){m.lineStyle(Math.max(7,Number(t.trackWidth||100)*.06),0xffffff,1);m.lineBetween(finish.a.x,finish.a.y,finish.b.x,finish.b.y);}
   }
 
   _fitRealTrack(){
