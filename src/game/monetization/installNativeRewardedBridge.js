@@ -60,6 +60,47 @@ function mountRewardedDiagnosticPanel(bridge){
   sample();
 }
 
+
+function mountAndroidPerformancePanel(){
+  if(document.getElementById('tdr-perf-toggle'))return;
+  const btn=document.createElement('button');
+  btn.id='tdr-perf-toggle';btn.textContent='PERF';
+  btn.style.cssText='position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 54px);z-index:60000;border:1px solid #fbbf24;background:#211a08;color:#fff;border-radius:9px;padding:8px;font:700 12px system-ui';
+  const box=document.createElement('pre');box.id='tdr-perf-panel';
+  box.style.cssText='display:none;position:fixed;right:12px;top:calc(env(safe-area-inset-top) + 96px);z-index:60000;background:#07111df0;color:#e5e7eb;border:1px solid #fbbf24;padding:10px;border-radius:8px;font:12px/1.5 monospace;pointer-events:none;white-space:pre';
+  document.body.append(btn,box);
+  let running=false,raf=0,last=0,frames=0,total=0,spikes=0,max=0,over33=0,over50=0;
+  let samples=[],start=0,lastPaint=0;
+  const tick=(now)=>{
+    if(!running)return;
+    if(last){
+      const dt=now-last;
+      if(dt>0&&dt<2000){frames++;total+=dt;max=Math.max(max,dt);if(dt>33.4)over33++;if(dt>50)over50++;if(dt>33.4){spikes++;samples.push(Math.round(dt));if(samples.length>12)samples.shift();}}
+    }
+    last=now;
+    if(now-lastPaint>=1000){
+      const seconds=Math.max(.001,(now-start)/1000);
+      const mem=performance?.memory?.usedJSHeapSize;
+      box.textContent='FPS (último s): '+(total>0?(1000*frames/total).toFixed(1):'—')+
+        '\\nFotogramas >33ms: '+over33+'  >50ms: '+over50+
+        '\\nPico: '+max.toFixed(0)+'ms'+
+        '\\nTirones/min: '+(spikes*60/seconds).toFixed(1)+
+        '\\nÚltimos tirones: '+(samples.join(', ')||'—')+' ms'+
+        '\\nHeap JS: '+(Number.isFinite(mem)?(mem/1048576).toFixed(0)+' MB':'no disponible')+
+        '\\nAD LOG: muestreo cada 2,5 s';
+      frames=0;total=0;lastPaint=now;
+    }
+    raf=requestAnimationFrame(tick);
+  };
+  btn.addEventListener('click',()=>{
+    running=!running;box.style.display=running?'block':'none';
+    btn.textContent=running?'PERF ●':'PERF';
+    if(running){last=0;frames=0;total=0;spikes=0;max=0;over33=0;over50=0;samples=[];start=performance.now();lastPaint=start;raf=requestAnimationFrame(tick);}
+    else cancelAnimationFrame(raf);
+  });
+  window.addEventListener('pagehide',()=>{running=false;cancelAnimationFrame(raf);},{once:true});
+}
+
 export async function installNativeRewardedBridge(){
   if(typeof window==='undefined'||Capacitor.getPlatform()!=='android'||!Capacitor.isNativePlatform()){
     return{installed:false,reason:'not_native_android'};
@@ -93,6 +134,8 @@ export async function installNativeRewardedBridge(){
     if(status?.diagnosticBuild===true){
       if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>mountRewardedDiagnosticPanel(bridge),{once:true});
       else mountRewardedDiagnosticPanel(bridge);
+      if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mountAndroidPerformancePanel,{once:true});
+      else mountAndroidPerformancePanel();
     }
     return detail;
   }catch(error){
