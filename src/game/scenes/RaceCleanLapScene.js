@@ -38,10 +38,9 @@ export class RaceScene extends CurrentRaceScene {
     try{
       this._hideTTPanel=()=>{};
       this._showTTPanel=()=>{};
-      this.ttPanel?.c?.destroy?.(true);
-      // Keep the data-only TT fields alive: base lap code updates their
-      // texts before deciding whether to display the retired panel.
-      // A null panel would skip that harmless bookkeeping entirely.
+      // Preserve Phaser Text instances: base lap code still calls setText
+      // on them. Hide the container instead of destroying its children.
+      this.ttPanel?.c?.setVisible?.(false);
       if(this.ttPanel){this.ttPanel.shown=false;this.ttPanel.busy=false;}
     }catch{}
     try{window.__tdrPerfRaceActive=true;}catch{}
