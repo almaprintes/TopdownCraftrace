@@ -39,7 +39,10 @@ export class RaceScene extends CurrentRaceScene {
       this._hideTTPanel=()=>{};
       this._showTTPanel=()=>{};
       this.ttPanel?.c?.destroy?.(true);
-      this.ttPanel=null;
+      // Keep the data-only TT fields alive: base lap code updates their
+      // texts before deciding whether to display the retired panel.
+      // A null panel would skip that harmless bookkeeping entirely.
+      if(this.ttPanel){this.ttPanel.shown=false;this.ttPanel.busy=false;}
     }catch{}
     try{window.__tdrPerfRaceActive=true;}catch{}
     this.events?.once?.('shutdown',()=>{try{window.__tdrPerfRaceActive=false;}catch{}});
