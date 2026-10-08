@@ -8,6 +8,13 @@ on:
       - 'assets/branding/tdr-play-store-icon.png'
       - 'scripts/generate-android-launcher-icons.mjs'
       - 'scripts/verify-android-launcher.mjs'
+      - 'src/game/scenes/RaceProceduralAudioScene.js'
+      - 'src/game/audio/CarEngineSampleRuntime.js'
+      - 'src/main.js'
+      - 'src/game/monetization/RewardedAdsProvider.js'
+      - 'src/game/monetization/installNativeRewardedBridge.js'
+      - 'src/game/audio/MenuMusic.js'
+      - 'scripts/rewarded-audio-focus-smoke.mjs'
   workflow_dispatch:
 
 permissions:
@@ -56,6 +63,7 @@ jobs:
         shell: bash
         run: |
           npm ci --no-audit --no-fund
+          node scripts/rewarded-audio-focus-smoke.mjs
           npm run build:android
           node scripts/verify-android-launcher.mjs
       - name: Compile APK with real AdMob and RevenueCat integrations
@@ -70,14 +78,14 @@ jobs:
           unzip -t "$src" | tail -1
           "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'"
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-REAL-ADS-DEV-1.2.76.apk
-          sha256sum sdk-download/TDR-QA-REAL-ADS-DEV-1.2.76.apk
+          cp "$src" sdk-download/TDR-QA-REAL-ADS-DEV-1.2.77.apk
+          sha256sum sdk-download/TDR-QA-REAL-ADS-DEV-1.2.77.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-REAL-ADS-DEV-1.2.76
-          path: sdk-download/TDR-QA-REAL-ADS-DEV-1.2.76.apk
+          name: TDR-QA-REAL-ADS-DEV-1.2.77
+          path: sdk-download/TDR-QA-REAL-ADS-DEV-1.2.77.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
