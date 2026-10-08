@@ -3,14 +3,14 @@
 
 /* Android compact lap milestones: preserve iOS layout and keep the car visible. */
 @media (max-width:760px) and (pointer:coarse){
-  .tdr-race-feedback{top:max(46px,calc(env(safe-area-inset-top) + 28px));width:min(37vw,180px);min-width:0;max-width:calc(100% - 20px);grid-template-columns:3px 1fr;backdrop-filter:none;-webkit-backdrop-filter:none}
-  .tdr-race-feedback-copy{padding:5px 9px 6px 8px}
-  .tdr-race-feedback-copy small{font-size:7px;letter-spacing:.07em}
-  .tdr-race-feedback-copy strong{font-size:15px}
-  .tdr-race-feedback-copy span{font-size:8px;letter-spacing:0}
-  .tdr-race-feedback.is-record{width:min(43vw,205px);min-width:0;grid-template-columns:4px 1fr;box-shadow:none}
-  .tdr-race-feedback.is-record .tdr-race-feedback-copy{padding:6px 10px 7px 8px}
-  .tdr-race-feedback.is-record .tdr-race-feedback-copy small{font-size:7px;letter-spacing:.07em}
-  .tdr-race-feedback.is-record .tdr-race-feedback-copy strong{font-size:17px}
-  .tdr-race-feedback.is-record .tdr-race-feedback-copy span{font-size:8px;letter-spacing:0}
+  html.tdr-android-native .tdr-race-feedback{top:max(46px,calc(env(safe-area-inset-top) + 28px));width:min(37vw,180px);min-width:0;max-width:calc(100% - 20px);grid-template-columns:3px 1fr;backdrop-filter:none;-webkit-backdrop-filter:none}
+  html.tdr-android-native .tdr-race-feedback-copy{padding:5px 9px 6px 8px}
+  html.tdr-android-native .tdr-race-feedback-copy small{font-size:7px;letter-spacing:.07em}
+  html.tdr-android-native .tdr-race-feedback-copy strong{font-size:15px}
+  html.tdr-android-native .tdr-race-feedback-copy span{font-size:8px;letter-spacing:0}
+  html.tdr-android-native .tdr-race-feedback.is-record{width:min(43vw,205px);min-width:0;grid-template-columns:4px 1fr;box-shadow:none}
+  html.tdr-android-native .tdr-race-feedback.is-record .tdr-race-feedback-copy{padding:6px 10px 7px 8px}
+  html.tdr-android-native .tdr-race-feedback.is-record .tdr-race-feedback-copy small{font-size:7px;letter-spacing:.07em}
+  html.tdr-android-native .tdr-race-feedback.is-record .tdr-race-feedback-copy strong{font-size:17px}
+  html.tdr-android-native .tdr-race-feedback.is-record .tdr-race-feedback-copy span{font-size:8px;letter-spacing:0}
 }
