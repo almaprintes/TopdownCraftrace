@@ -122,7 +122,8 @@ dependencies {
     // references both public APIs directly, so keep the matching versions explicit.
     implementation 'com.revenuecat.purchases:purchases:10.19.0'
     implementation 'com.revenuecat.purchases:purchases-admob:10.19.0'
-    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+    // Keep the legacy AdMob SDK supported while evaluating a separate Next-Gen migration.
+    implementation 'com.google.android.gms:play-services-ads:25.4.0'
     implementation 'com.google.android.ump:user-messaging-platform:3.2.0'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
