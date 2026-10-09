@@ -18,7 +18,7 @@ const html=`<div class="tdr-cloud-panel" role="dialog" aria-modal="true" aria-la
     <h3>1. COPIA DE SEGURIDAD</h3>
     <p>Guarda monedas, piezas, coches desbloqueados, kilómetros, progresión, récords y nombre de piloto. Los vídeos de vueltas almacenados en el móvil no se incluyen.</p>
     <div class="tdr-cloud-actions">
-      <button data-action="backup" type="button" class="tdr-cloud-primary">GUARDAR PARTIDA EN SUPABASE</button>
+      <button data-action="backup" type="button" class="tdr-cloud-primary">GUARDAR PARTIDA EN LA NUBE</button>
       <button data-action="restore" type="button">RECUPERAR PARTIDA DE LA NUBE</button>
     </div>
     <p class="tdr-cloud-warning">⚠️ Recuperar sustituye tu progreso LOCAL, nunca la copia del servidor. Antes de desinstalar comprueba la copia y vincula una cuenta recuperable.</p>
