@@ -60,16 +60,41 @@ const dateText=value=>{
   const date=new Date(value);
   return Number.isFinite(date.valueOf())?date.toLocaleString('es-ES'):String(value);
 };
-export function openCloudAccountUi(){
+// The existing Settings → Cuenta tab owns the normal account UI.
+// First-run onboarding may still open the same UI as a temporary modal before
+// the player has a nickname or access to the Settings menu.
+export function unmountCloudAccountSettings(){
+  const current=document.getElementById(ID);
+  if(current?.dataset.inline==='1'){
+    current.remove();
+    document.getElementById(ID+'-styles')?.remove();
+  }
+}
+export function openCloudAccountUi({host=null}={}){
   if(document.getElementById(ID))return;
   const root=document.createElement('div');
   root.id=ID;
+  root.dataset.inline=host?'1':'0';
   root.innerHTML=html;
   const style=document.createElement('style');
   style.id=ID+'-styles';
-  style.textContent=css;
+  style.textContent=css+`
+    /* Embedded in the existing Settings > Account card: no new screen. */
+    #${ID}[data-inline="1"]{position:static;inset:auto;z-index:auto;display:block;width:100%;
+      padding:0;background:transparent;color:inherit;box-sizing:border-box;}
+    #${ID}[data-inline="1"] .tdr-cloud-panel{width:100%;max-height:none;overflow:visible;
+      padding:0;border:0;background:transparent;box-shadow:none;}
+    #${ID}[data-inline="1"] .tdr-cloud-head [data-action="close"]{display:none;}
+    #${ID}[data-inline="1"] .tdr-cloud-head small{color:#6effbb;}
+    #${ID}[data-inline="1"] .tdr-cloud-section{border-color:rgba(180,205,255,.15);}
+    #${ID}[data-inline="1"] .tdr-cloud-summary{border-color:rgba(90,240,170,.25);}
+    @media(max-width:760px){#${ID}[data-inline="1"] form{display:grid;gap:8px;}
+      #${ID}[data-inline="1"] label{min-width:0;flex:auto;}
+      #${ID}[data-inline="1"] .tdr-cloud-actions{display:grid;}
+      #${ID}[data-inline="1"] button{width:100%;}}
+  `;
   document.head.appendChild(style);
-  document.body.appendChild(root);
+  (host||document.body).appendChild(root);
   const summary=root.querySelector('[data-cloud-summary]');
   const notice=root.querySelector('[data-cloud-message]');
   const setNotice=(message,good=true)=>{notice.textContent=String(message||'');notice.style.color=good?'#adffcc':'#ffaaa9';};
