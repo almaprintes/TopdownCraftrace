@@ -88,6 +88,18 @@ android {
             buildConfigField 'boolean', 'TDR_REWARDED_CONFIGURED', String.valueOf(productionConfigured)
             buildConfigField 'String', 'TDR_ADMOB_TEST_DEVICE_IDS', quoted(admobTestDeviceIds)
         }
+        // Isolated account-recovery rehearsal. This test flavor is disposable;
+        // it can be uninstalled without touching the real game or ad QA app.
+        cloudTest {
+            dimension 'environment'
+            applicationIdSuffix '.cloudtest'
+            versionNameSuffix '-cloud-test'
+            manifestPlaceholders = [ADMOB_APP_ID: 'ca-app-pub-3940256099942544~3347511713']
+            buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted('ca-app-pub-3940256099942544/5224354917')
+            buildConfigField 'String', 'TDR_REVENUECAT_PUBLIC_SDK_KEY', quoted('')
+            buildConfigField 'boolean', 'TDR_REWARDED_CONFIGURED', 'false'
+            buildConfigField 'String', 'TDR_ADMOB_TEST_DEVICE_IDS', quoted('')
+        }
     }
     buildFeatures {
         buildConfig = true
