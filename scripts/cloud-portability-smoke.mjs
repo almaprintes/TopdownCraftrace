@@ -56,7 +56,8 @@ for(const path of [
   'src/game/online/raceControlOnline.js',
   'src/game/social/cloudProgress.js',
   'src/game/social/cloudAccountUi.js',
-  'src/game/ui/LobbyDomUi.js'
+  'src/game/ui/LobbyDomUi.js',
+  'src/game/scenes/SettingsGraphicsQualityScene.js'
 ]){
   execFileSync(process.execPath,['--check',path],{stdio:'pipe'});
 }
@@ -64,6 +65,7 @@ const source=await readFile(new URL('../src/game/social/cloudProgress.js',import
 const auth=await readFile(new URL('../src/game/online/raceControlOnline.js',import.meta.url),'utf8');
 const ui=await readFile(new URL('../src/game/social/cloudAccountUi.js',import.meta.url),'utf8');
 const lobby=await readFile(new URL('../src/game/ui/LobbyDomUi.js',import.meta.url),'utf8');
+const settings=await readFile(new URL('../src/game/scenes/SettingsGraphicsQualityScene.js',import.meta.url),'utf8');
 const db=await readFile(new URL('../supabase/migrations/20261009_012_player_progress_size_v2.sql',import.meta.url),'utf8');
 for(const key of ['tdr2:garageFusion:v1','tdr2:playerStats:v1','tdr2:pilotProfile:v1',
   'tdr2:seasonInduction:v1','tdr2:carUnlocks:v1','tdr2:seasonTelemetry:v1','tdr2:cleanLapTelemetry:v1']){
@@ -82,7 +84,14 @@ assert.match(auth,/switchRaceControlAccount/);
 assert.match(ui,/RECUPERAR PARTIDA DE LA NUBE/);
 assert.match(ui,/ENTRAR CON MI CUENTA/);
 assert.match(ui,/EXPORTAR PARTIDA LOCAL/);
-assert.match(lobby,/openCloudAccountUi\(\)/);
+assert.match(lobby,/__tdrSettingsAccountRequested=true/,'lobby must route to Settings Cuenta');
+assert.doesNotMatch(lobby,/openCloudAccountUi\(\)/,'no duplicate lobby account modal');
+assert.match(settings,/data-cloud-account-section/,'existing account tab must own cloud account');
+assert.match(settings,/openCloudAccountUi\(\{host:body\.querySelector\(/,'cloud recovery must be embedded in Settings tab');
+assert.match(settings,/unmountCloudAccountSettings\(\)/,'tab switching must clean up account section');
+assert.match(settings,/tdr2:onlineSession:v1/,'local progress reset must preserve server identity');
+assert.match(settings,/BORRAR DATOS DEL DISPOSITIVO/,'account deletion must not mislead players about remote accounts');
+assert.match(ui,/root\.dataset\.inline=host\?'1':'0'/,'account UI must support embedded Settings layout');
 assert.match(db,/524288/);
 assert.match(db,/security invoker/);
 assert.match(db,/auth\.uid\(\)/);
