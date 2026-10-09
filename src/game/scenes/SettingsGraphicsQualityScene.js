@@ -2,10 +2,14 @@ import { SettingsScene as CurrentSettingsScene } from './SettingsAudioMusicScene
 import { getLanguage } from '../i18n/index.js';
 import { resetFirstVisitTutorials, showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 import { IS_PROD_BUILD } from '../buildTarget.js';
+import { openCloudAccountUi, unmountCloudAccountSettings } from '../social/cloudAccountUi.js';
 
 const STORAGE_KEY='tdr2:settings';
-const RESET_KEEP_EXACT=new Set(IS_PROD_BUILD?[STORAGE_KEY]:[
-  STORAGE_KEY,'tdr2:admin','tdr2:devFullCarAccess:v1','tdr2:devFullTrackAccess:v1',
+// A progress reset must not sign a linked player out or destroy the account
+// transition guard. Reset affects device progression, not the online identity.
+const RESET_KEEP_EXACT=new Set(IS_PROD_BUILD?[STORAGE_KEY,'tdr2:onlineSession:v1','tdr2:cloudLoginPendingRestore:v1']:[
+  STORAGE_KEY,'tdr2:onlineSession:v1','tdr2:cloudLoginPendingRestore:v1',
+  'tdr2:admin','tdr2:devFullCarAccess:v1','tdr2:devFullTrackAccess:v1',
   'tdr2:survivalAiMode','tdr2:survivalAiDebug','tdr2_dev_tuning_v1'
 ]);
 const RESET_KEEP_PREFIX=IS_PROD_BUILD?[]:['tdr2:dev','tdr2_dev_'];
@@ -43,9 +47,14 @@ export class SettingsScene extends CurrentSettingsScene {
     if(tabs&&!tabs.querySelector('[data-tab="account"]')){
       const b=document.createElement('button');b.className='s2tab';b.dataset.tab='account';b.textContent=getLanguage()==='en'?'ACCOUNT':'CUENTA';b.onclick=()=>this._renderTab('account');tabs.appendChild(b);
     }
+    if(window.__tdrSettingsAccountRequested){
+      window.__tdrSettingsAccountRequested=false;
+      this._renderTab('account');
+    }
     showFirstVisitTutorial('settings',{delay:260});
   }
   _unmount(){
+    unmountCloudAccountSettings();
     super._unmount();document.getElementById('tdr-account-settings-style')?.remove?.();document.querySelector('.tdr-account-confirm')?.remove?.();
   }
   _installAccountStyles(){
@@ -67,7 +76,7 @@ export class SettingsScene extends CurrentSettingsScene {
     document.querySelector('.tdr-account-confirm')?.remove?.();
     const en=getLanguage()==='en',isDelete=kind==='delete';
     const root=document.createElement('div');root.className='tdr-account-confirm';
-    root.innerHTML=`<div class="panel" role="dialog" aria-modal="true"><div class="eyebrow">${en?'IRREVERSIBLE ACTION':'ACCIÓN IRREVERSIBLE'}</div><h2>${isDelete?(en?'DELETE ACCOUNT':'ELIMINAR CUENTA'):(en?'RESET PROGRESS':'RESETEAR PROGRESO')}</h2><p>${isDelete?(en?'This will permanently delete all local data associated with this game profile on this device. This action cannot be undone and the data cannot be recovered.':'Se eliminarán permanentemente todos los datos locales asociados a este perfil del juego en este dispositivo. Esta acción no se puede deshacer y los datos no se podrán recuperar.'):(en?'All game progress will be permanently deleted: cars, parts, inventory, coins, statistics, records, mastery, unlocks and season progress. Your settings will be kept. This action cannot be undone and the progress cannot be recovered.':'Se eliminará permanentemente todo el progreso del juego: coches, piezas, inventario, monedas, estadísticas, récords, maestría, desbloqueos y temporadas. Tus ajustes se conservarán. Esta acción no se puede deshacer y el progreso no se podrá recuperar.')}</p><div class="actions"><button class="cancel" type="button">${en?'CANCEL':'CANCELAR'}</button><button class="confirm" type="button">${isDelete?(en?'DELETE PERMANENTLY':'ELIMINAR DEFINITIVAMENTE'):(en?'RESET PERMANENTLY':'RESETEAR DEFINITIVAMENTE')}</button></div></div>`;
+    root.innerHTML=`<div class="panel" role="dialog" aria-modal="true"><div class="eyebrow">${en?'IRREVERSIBLE ACTION':'ACCIÓN IRREVERSIBLE'}</div><h2>${isDelete?(en?'DELETE LOCAL DATA':'BORRAR DATOS LOCALES'):(en?'RESET PROGRESS':'RESETEAR PROGRESO')}</h2><p>${isDelete?(en?'This permanently removes all LOCAL data and the session from this device, not your cloud backup or server account. Without a verified email and password you might lose access to that account.':'Borrará los datos LOCALES y la sesión de este dispositivo, pero NO la cuenta ni la copia en la nube. Sin correo y contraseña verificados podrías perder el acceso a la cuenta.'):(en?'Local game progress will be reset, but your cloud backup and signed-in account remain intact. Restoring the cloud backup can recover your saved progress.':'Se reseteará el progreso local, pero se conservarán la cuenta conectada y la copia en la nube. Podrás recuperar la partida desde tu copia guardada.')}</p><div class="actions"><button class="cancel" type="button">${en?'CANCEL':'CANCELAR'}</button><button class="confirm" type="button">${isDelete?(en?'DELETE PERMANENTLY':'ELIMINAR DEFINITIVAMENTE'):(en?'RESET PERMANENTLY':'RESETEAR DEFINITIVAMENTE')}</button></div></div>`;
     document.body.appendChild(root);
     root.querySelector('.cancel')?.addEventListener('click',()=>root.remove());
     root.addEventListener('click',e=>{if(e.target===root)root.remove();});
@@ -79,14 +88,17 @@ export class SettingsScene extends CurrentSettingsScene {
   }
   _renderAccountTab(){
     if(!this.root)return;const en=getLanguage()==='en';
+    unmountCloudAccountSettings();
     this.root.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab==='account'));
     const body=this.root.querySelector('.s2body');if(!body)return;
     body.innerHTML=`<div class="s2grid">
-      <section class="s2card wide"><div class="s2label">${en?'ACCOUNT & DATA':'CUENTA Y DATOS'}</div><div class="s2desc">${en?'Manage your saved progress on this device. Destructive actions always require confirmation.':'Gestiona el progreso guardado en este dispositivo. Las acciones destructivas siempre requieren confirmación.'}</div></section>
+      <section class="s2card wide"><div class="s2label">${en?'ACCOUNT & DATA':'CUENTA Y DATOS'}</div><div class="s2desc">${en?'Manage your driver profile, recoverable login and cloud backups in one place.':'Gestiona aquí tu perfil de piloto, acceso recuperable y copias en la nube.'}</div></section>
+      <section class="s2card wide" data-cloud-account-section></section>
       <section class="s2card wide"><div class="s2label">${en?'MINI TUTORIALS':'MINI TUTORIALES'}</div><div class="s2desc">${en?'Each main section explains itself once on your first visit. Reset only those introductions without changing any game progress.':'Cada sección principal se explica una sola vez en tu primera visita. Puedes reiniciar únicamente esas introducciones sin alterar ningún progreso del juego.'}</div><div class="s2row"><button type="button" class="s2tutorial-btn" data-reset-tutorial>${en?'RESET TUTORIAL':'REINICIAR TUTORIAL'}</button><span class="s2tutorial-note" data-tutorial-note></span></div></section>
       <section class="s2card s2danger"><div class="s2label">${en?'RESET PROGRESS':'RESETEAR PROGRESO'}</div><div class="s2desc">${en?'Starts the game again from zero while keeping your controls, language, audio and graphics preferences.':'Empieza el juego de nuevo desde cero conservando tus controles, idioma, audio y preferencias gráficas.'}</div><div class="s2row"><button type="button" class="s2danger-btn soft" data-reset-progress>${en?'RESET PROGRESS':'RESETEAR PROGRESO'}</button></div></section>
-      <section class="s2card s2danger"><div class="s2label">${en?'DELETE ACCOUNT':'ELIMINAR CUENTA'}</div><div class="s2desc">${en?'Deletes all local data associated with this game profile on this device, including settings. There is no recovery.':'Elimina todos los datos locales asociados a este perfil del juego en este dispositivo, incluidos los ajustes. No existe recuperación.'}</div><div class="s2row"><button type="button" class="s2danger-btn" data-delete-account>${en?'DELETE ACCOUNT':'ELIMINAR CUENTA'}</button></div></section>
+      <section class="s2card s2danger"><div class="s2label">${en?'DELETE DEVICE DATA':'BORRAR DATOS DEL DISPOSITIVO'}</div><div class="s2desc">${en?'Removes local game data and settings from this device; it does NOT delete your cloud account or backups. If you never linked a recoverable login, you could lose access to your online account.':'Borra los datos y ajustes locales de este dispositivo; NO elimina la cuenta ni las copias en la nube. Sin un acceso recuperable vinculado, podrías perder el acceso a la cuenta online.'}</div><div class="s2row"><button type="button" class="s2danger-btn" data-delete-account>${en?'DELETE LOCAL DATA':'BORRAR DATOS LOCALES'}</button></div></section>
     </div>`;
+    openCloudAccountUi({host:body.querySelector('[data-cloud-account-section]')});
     body.querySelector('[data-reset-tutorial]')?.addEventListener('click',()=>{
       resetFirstVisitTutorials();
       const note=body.querySelector('[data-tutorial-note]');if(note)note.textContent=en?'READY · VISIT EACH SECTION AGAIN':'LISTO · VUELVE A VISITAR CADA SECCIÓN';
@@ -96,6 +108,7 @@ export class SettingsScene extends CurrentSettingsScene {
   }
   _renderTab(tab){
     if(tab==='account'){this._renderAccountTab();return;}
+    unmountCloudAccountSettings();
     super._renderTab(tab);if(tab!=='video'||!this.root)return;
     const body=this.root.querySelector('.s2body');if(!body)return;
     const v=this.settings.video||(this.settings.video={});const en=getLanguage()==='en';
