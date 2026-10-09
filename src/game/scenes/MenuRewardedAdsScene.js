@@ -76,6 +76,49 @@ export class MenuScene extends CurrentMenuScene {
     apply();
   }
 
+  // Only the already-rendered store header animates. Economy was persisted
+  // before this method runs; a hidden page or reduced-motion device stays correct.
+  _animateStoreCoinBalance(previous,next){
+    const root=this._storeModal;
+    const from=Math.max(0,Math.floor(Number(previous)||0));
+    const to=Math.max(0,Math.floor(Number(next)||0));
+    if(!root?.scene||!this.tweens||to<=from||
+      (typeof document!=='undefined'&&document.hidden)||
+      (typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches))return;
+
+    // Existing Phaser wallet objects, not a second DOM counter.
+    const label=root.list?.find(child=>child?.type==='Text'&&
+      Math.abs(Number(child.x)-(this.scale.width-150))<2&&Math.abs(Number(child.y)-29)<2);
+    if(!label?.scene)return;
+    const icon=root.list?.find(child=>child?.type==='Image'&&
+      Math.abs(Number(child.x)-(this.scale.width-176))<2&&Math.abs(Number(child.y)-29)<2);
+    const format=value=>Math.floor(Math.max(0,value)).toLocaleString(getLanguage()==='en'?'en-US':'es-ES');
+    const labelScaleX=label.scaleX,labelScaleY=label.scaleY;
+    const originalColor=label.style?.color||'#ffd85a';
+    label.setText(format(from));
+    label.setColor('#fff4be');
+
+    const count=this.tweens.addCounter({
+      from,to,duration:480,ease:'Cubic.easeOut',
+      onUpdate:tween=>{
+        if(root.scene&&this._storeModal===root)label.setText(format(tween.getValue()));
+      },
+      onComplete:()=>{
+        if(root.scene&&this._storeModal===root){label.setText(format(to));label.setColor(originalColor);}
+      }
+    });
+    const glow=this.tweens.add({
+      targets:label,scaleX:labelScaleX*1.09,scaleY:labelScaleY*1.09,
+      duration:185,yoyo:true,ease:'Sine.easeOut',
+      onComplete:()=>{if(label.scene){label.setScale(labelScaleX,labelScaleY);label.setColor(originalColor);}}
+    });
+    const coinPulse=icon?.scene?this.tweens.add({
+      targets:icon,scaleX:icon.scaleX*1.14,scaleY:icon.scaleY*1.14,
+      duration:185,yoyo:true,ease:'Sine.easeOut'
+    }):null;
+    root.once('destroy',()=>{count?.stop();glow?.stop();coinPulse?.stop();});
+  }
+
   _storeCard(parent,p,x,y,w,h){
     super._storeCard(parent,p,x,y,w,h);
     if(p?.type!=='reward'&&p?.type!=='daily')return;
@@ -114,6 +157,7 @@ export class MenuScene extends CurrentMenuScene {
         // A suspended app, cancelled animation or lost WebAudio cannot lose coins.
         const result=isVideo?claimRewardedCoins(100):claimDailyCoins(250);
         if(!result.ok){this._toastStore?.(result.reason,false);return;}
+        const rewardModal=this._storeModal;
         try{
           await playCoinRewardFlight(this,{
             amount:result.amount,card,width:w,height:h,english:getLanguage()==='en'
@@ -121,10 +165,11 @@ export class MenuScene extends CurrentMenuScene {
         }catch(error){
           console.warn('[TDR reward] coin flight unavailable',error);
         }
-        // The store's header still displays the previous balance until this
-        // refresh. Fly into its coin icon first, then update the amount.
-        if(this.scene?.isActive?.()&&this._storeModal?.scene){
+        // Coins are already persisted. Update only the same visible modal,
+        // never bring a dismissed/switched store screen back unexpectedly.
+        if(this.scene?.isActive?.()&&rewardModal===this._storeModal&&rewardModal?.scene){
           this._openStoreModal?.('rewards');
+          this._animateStoreCoinBalance(Number(result.state?.coins)-result.amount,Number(result.state?.coins));
           this._toastStore?.('+'+result.amount+' '+(getLanguage()==='en'?'COINS':'MONEDAS'),true);
         }
       }finally{

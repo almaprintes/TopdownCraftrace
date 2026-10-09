@@ -27,6 +27,13 @@ assert.match(store,/hit\.removeAllListeners\('pointerdown'\)/,'remove duplicate 
 assert.match(store,/if\(busy\)return/,'ignore repeated taps');
 assert.match(store,/if\(!result\.ok\)/,'do not animate a refused claim');
 assert.match(store,/finally\{\s*busy=false/,'reset state even after failure');
+assert.match(store,/rewardModal===this\._storeModal/,'do not reopen a modal after screen switch');
+assert.match(store,/_animateStoreCoinBalance\(Number\(result\.state\?\.coins\)-result\.amount/,'animate from pre-grant total');
+assert.match(store,/this\.tweens\.addCounter/,'animate existing Phaser header number');
+assert.match(store,/targets:icon/,'pulse existing store coin');
+assert.match(store,/document\.hidden/,'hidden page skips optional visual count-up');
+assert.match(store,/root\.once\('destroy'/,'stop tweens on store close');
+
 const fx=read('src/game/ui/coinRewardFlight.js');
 assert.match(fx,/assets\/ui\/moneda-tdr\.webp/);
 assert.match(fx,/a\.mute/,'honor mute');
