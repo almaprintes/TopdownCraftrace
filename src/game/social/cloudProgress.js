@@ -95,6 +95,11 @@ export async function cloudBackupStatus(){
 }
 async function saveBackup(expectedRevision){
   const identity=await cloudIdentity();
+  // Never accidentally upload the previous phone's locally cached save into a
+  // different account just because authentication changed successfully.
+  let pending=null;
+  try{pending=localStorage.getItem('tdr2:cloudLoginPendingRestore:v1');}catch{}
+  if(pending)throw new Error('Primero recupera la partida de esta cuenta; no se ha sobrescrito la nube.');
   const snapshot=localProgressSnapshot();
   const row=await store.save(identity,snapshot,expectedRevision);
   if(!row?.saved)throw new Error('La copia cambió en otro dispositivo. No se ha sobrescrito. Recarga su estado.');
@@ -159,6 +164,38 @@ export function restoreLocalProgress(snapshot){
 export async function restoreCloudBackup(){
   const cloud=await readCloudBackup();
   if(!cloud)throw new Error('Esta cuenta aún no tiene una partida guardada.');
-  return {...cloud,...restoreLocalProgress(cloud.snapshot)};
+  const local=restoreLocalProgress(cloud.snapshot);
+  // Clear the inter-account guard only after a successful fully verified
+  // restoration. Never clear auth tokens or overwrite other players' saves.
+  try{localStorage.removeItem('tdr2:cloudLoginPendingRestore:v1');}catch{}
+  return {...cloud,...local};
+}
+// Portable exports contain ONLY the schema-versioned save, never tokens,
+// credentials, external OAuth identities or Supabase PostgREST metadata.
+export function exportLocalProgressJson(){
+  const snapshot=localProgressSnapshot();
+  return JSON.stringify(snapshot,null,2);
+}
+export async function exportCloudProgressJson(){
+  const backup=await readCloudBackup();
+  if(!backup)throw new Error('Esta cuenta aún no tiene ninguna copia que exportar.');
+  return JSON.stringify(backup.snapshot,null,2);
+}
+export function downloadPortableSave(json,filename='top-down-race-partida.json'){
+  const snapshot=JSON.parse(json);
+  validatedSnapshot(snapshot);
+  const blob=new Blob([json],{type:'application/json'});
+  const link=document.createElement('a');
+  const objectUrl=URL.createObjectURL(blob);
+  try{
+    link.href=objectUrl;
+    link.download=filename;
+    link.style.display='none';
+    document.body.appendChild(link);
+    link.click();
+  }finally{
+    link.remove();
+    setTimeout(()=>URL.revokeObjectURL(objectUrl),30000);
+  }
 }
 export function shortPlayerId(id){return String(id||'').slice(0,8).toUpperCase();}
