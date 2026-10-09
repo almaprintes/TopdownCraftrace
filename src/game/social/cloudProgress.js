@@ -29,6 +29,13 @@ function progressIsMeaningful(data){
     data['tdr2:carUnlocks:v1']||data['tdr2:seasonInduction:v1']||
     Object.keys(data).some(key=>key.startsWith('tdr2:ttHist:')));
 }
+function canonicalJson(value){
+  if(value===null||typeof value!=='object')return JSON.stringify(value);
+  if(Array.isArray(value))return '['+value.map(canonicalJson).join(',')+']';
+  return '{'+Object.keys(value).sort().map(key=>
+    JSON.stringify(key)+':'+canonicalJson(value[key])
+  ).join(',')+'}';
+}
 function snapshotData(){
   const data=Object.create(null);
   try{
@@ -108,8 +115,8 @@ async function saveBackup(expectedRevision){
   if(persisted?.revision!==row.revision||!persisted?.snapshot)
     throw new Error('La copia se guardó pero no se ha podido verificar su lectura; no desinstales.');
   const actualData=validatedSnapshot(persisted.snapshot);
-  if(Object.keys(actualData).length!==Object.keys(snapshot.data).length)
-    throw new Error('La copia en el servidor difiere de la partida; no desinstales.');
+  if(canonicalJson(actualData)!==canonicalJson(snapshot.data))
+    throw new Error('La copia leída del servidor difiere de la partida. No desinstales.');
   return {id:identity.id,revision:row.revision,keys:Object.keys(snapshot.data).length,
     bytes:new TextEncoder().encode(JSON.stringify(snapshot)).length,verified:true};
 }
