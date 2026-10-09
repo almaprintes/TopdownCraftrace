@@ -13,12 +13,15 @@ function contextHeaders(config,token){return {
   ...(config.key?{apikey:config.key}:{}),
   'Content-Type':'application/json'
 };}
+// Window.fetch requires Window as its receiver in Safari/WebKit. Passing the
+// bare function as a class property turns this.transport() into an illegal call.
+const defaultTransport=(url,options)=>globalThis.fetch(url,options);
 function ownPlayer(identity){
   if(!identity?.id||!identity?.token)throw new Error('El jugador debe iniciar sesión.');
 }
 
 export class SupabaseProgressRepository {
-  constructor(config=playerBackendConfig(),transport=fetch){
+  constructor(config=playerBackendConfig(),transport=defaultTransport){
     this.config=config;
     this.transport=transport;
   }
@@ -56,7 +59,7 @@ export class SupabaseProgressRepository {
 //     200 {saved,revision}; 409 {saved:false,revision}.
 // Backends MUST verify JWT and perform an atomic expectedRevision compare/swap.
 export class HttpV1ProgressRepository {
-  constructor(config=playerBackendConfig(),transport=fetch){
+  constructor(config=playerBackendConfig(),transport=defaultTransport){
     this.config=config;
     this.transport=transport;
   }
@@ -86,7 +89,7 @@ export class HttpV1ProgressRepository {
     return row;
   }
 }
-export function createPlayerProgressRepository(config=playerBackendConfig(),transport=fetch){
+export function createPlayerProgressRepository(config=playerBackendConfig(),transport=defaultTransport){
   return config.storageProvider==='http-v1'
     ?new HttpV1ProgressRepository(config,transport)
     :new SupabaseProgressRepository(config,transport);

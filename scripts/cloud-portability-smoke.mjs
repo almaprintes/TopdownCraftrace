@@ -50,6 +50,26 @@ const empty=new HttpV1ProgressRepository({progressApiUrl:'https://self-host.exam
 assert.equal(await empty.read(identity),null);
 await assert.rejects(http.read({id:'',token}),/iniciar sesión/);
 
+// Safari/WebKit regression: native Window.fetch must receive its Window
+// receiver. Calling it via this.transport() throws "Can only call Window.fetch
+// on instances of Window" in the iPhone PWA.
+const savedFetch=globalThis.fetch;
+try{
+  let nativeCalls=0;
+  globalThis.fetch=function(url){
+    assert.equal(this,globalThis,'fetch called with incorrect receiver');
+    nativeCalls++;
+    return Promise.resolve(ok([{revision:3,updated_at:'2026-10-09T13:00:00Z',progress:snapshot}]));
+  };
+  const nativeRepository=new SupabaseProgressRepository({
+    url:'https://supabase.example',key:'sb_publishable_test'
+  });
+  const fromNative=await nativeRepository.read(identity);
+  assert.equal(fromNative.revision,3);
+  assert.equal(nativeCalls,1);
+}finally{globalThis.fetch=savedFetch;}
+
+
 for(const path of [
   'src/game/online/playerProgressRepository.js',
   'src/game/online/backendConfig.js',
@@ -61,6 +81,8 @@ for(const path of [
 ]){
   execFileSync(process.execPath,['--check',path],{stdio:'pipe'});
 }
+const transportSource=await readFile(new URL('../src/game/online/playerProgressRepository.js',import.meta.url),'utf8');
+assert.match(transportSource,/globalThis\.fetch\(url,options\)/,'WebKit-safe transport');
 const source=await readFile(new URL('../src/game/social/cloudProgress.js',import.meta.url),'utf8');
 const auth=await readFile(new URL('../src/game/online/raceControlOnline.js',import.meta.url),'utf8');
 const ui=await readFile(new URL('../src/game/social/cloudAccountUi.js',import.meta.url),'utf8');
@@ -87,6 +109,9 @@ for(const stage of ['link','verify','password','login']){
   assert.ok(ui.includes('data-stage=\\\"'+stage+'\\\"'),'account step available: '+stage);
 }
 assert.match(ui,/data-advanced/,'advanced controls behind disclosure');
+assert.match(ui,/data-action=\\\"retry\\\"/,'retry action exists when cloud fails');
+assert.match(ui,/showConnectionError/,'cloud failure must not strand account loading');
+assert.doesNotMatch(ui,/Promise\.all\(\[currentRaceControlAccount\(\),cloudBackupStatus\(\)\]\)/,'no concurrent anonymous auth creation');
 assert.match(ui,/data-action=\\\"edit-pilot\\\"/,'pilot name can be edited from primary account');
 assert.match(pilot,/advanced.insertBefore\(card/,'profile editor stays in More settings');
 assert.match(ui,/cloudRecoveryChecked:/,'only verified accounts show protected state');
