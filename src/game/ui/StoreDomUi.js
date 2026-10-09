@@ -5,6 +5,7 @@ import { t, getLanguage } from '../i18n/index.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 import { REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
 import { openMaterialExchangeDom } from './MaterialExchangeFlexibleDom.js';
+import {playDomCoinRewardFlight,animateDomCoinBalance,primeCoinRewardSound} from './coinRewardFlight.js';
 import './store-dom.css';
 
 const ROOT_ID='tdr-store-dom';
@@ -23,7 +24,7 @@ export function closeStoreDom(scene){
   if(scene)scene._partDismantleDom=null;
   try{document.getElementById('tdr-part-dismantle-dom')?.remove();}catch{}
   const root=document.getElementById(ROOT_ID);
-  if(root)root.remove();
+  if(root){root.dispatchEvent(new Event('tdr:store-closed'));root.remove();}
   if(scene){scene._storeDomRoot=null;try{scene._lobbyDomRoot?.classList?.remove('tdr-lobby-dom--modal-open');}catch{}}
 }
 
@@ -67,23 +68,51 @@ function rewardCard(scene,root,kind){
   const img=el('img','tdr-store-reward-art');img.src=`${BASE()}assets/store/${isVideo?'rewarded_video':'daily_gift'}.webp`;img.alt='';card.append(img);
   card.append(el('div','tdr-store-reward-value',`+${isVideo?'100':'250'} ${t('store.coins')}`));
   const button=el('button','tdr-store-action');button.type='button';card.append(button);
+  let busy=false;
   const update=()=>{
     const status=isVideo?rewardedStatus():dailyStatus();
-    button.disabled=!status.available;
+    button.disabled=busy||!status.available;
     button.textContent=status.available?(isVideo?t('store.rewardedVideo'):t('store.dailyGift')):`${t('store.availableIn')} ${timeLabel(status.remaining)}`;
   };
   button.addEventListener('click',async()=>{
-    if(isVideo){
-      const status=rewardedStatus();if(!status.available)return;
-      button.disabled=true;
-      const ad=await showRewardedAd(scene,{title:t('store.rewardedVideo'),placement:REWARDED_PLACEMENTS.STORE_COINS_100,claimId:status.claimId});
-      if(!verifiedReward(ad)){update();return;}
-      const result=claimRewardedCoins(100);toast(root,result.ok?`+100 ${t('store.coins')}`:result.reason,result.ok);
-    }else{
-      const status=dailyStatus();if(!status.available)return;
-      const result=claimDailyCoins(250);toast(root,result.ok?`+250 ${t('store.coins')}`:result.reason,result.ok);
+    if(busy||!root.isConnected)return;
+    const status=isVideo?rewardedStatus():dailyStatus();
+    if(!status.available){update();return;}
+    busy=true;
+    button.disabled=true;
+    primeCoinRewardSound(scene); // Must run from the real user gesture.
+    try{
+      if(isVideo){
+        const ad=await showRewardedAd(scene,{
+          title:t('store.rewardedVideo'),
+          placement:REWARDED_PLACEMENTS.STORE_COINS_100,
+          claimId:status.claimId
+        });
+        if(!verifiedReward(ad)){
+          if(root.isConnected)toast(root,getLanguage()==='en'?'VIDEO NOT COMPLETED':'VÍDEO NO COMPLETADO',false);
+          return; // No ad verification => no currency.
+        }
+      }
+      // Durable wallet write happens synchronously BEFORE ANY visual effect.
+      const result=isVideo?claimRewardedCoins(100):claimDailyCoins(250);
+      if(!result.ok){if(root.isConnected)toast(root,result.reason,false);return;}
+      if(!root.isConnected)return; // No UI to animate, but currency is already saved.
+      try{
+        await playDomCoinRewardFlight(scene,{amount:result.amount,root,card,english:getLanguage()==='en'});
+        await animateDomCoinBalance(root,{
+          from:Number(result.state?.coins)-result.amount,to:Number(result.state?.coins),
+          english:getLanguage()==='en'
+        });
+      }catch(error){console.warn('[TDR reward] optional coin animation failed',error);}
+      if(root.isConnected)toast(root,`+${result.amount} ${t('store.coins')}`,true);
+    }catch(error){
+      // An ad/network exception must NEVER be interpreted as verified.
+      console.warn('[TDR reward] claim unavailable',error);
+      if(root.isConnected)toast(root,getLanguage()==='en'?'REWARD UNAVAILABLE':'RECOMPENSA NO DISPONIBLE',false);
+    }finally{
+      busy=false;
+      if(root.isConnected){refreshBalance(root);update();}
     }
-    refreshBalance(root);update();
   });
   update();return {card,update};
 }
@@ -94,7 +123,10 @@ export function openStoreDom(scene){
   const shell=el('section','tdr-store-shell');
   const header=el('header','tdr-store-header');
   header.append(el('h1','',t('store.title')));
-  const balance=el('div','tdr-store-balance');balance.innerHTML=`<span class="tdr-store-coin">●</span><strong data-store-balance>${fmt(loadGarage().coins||0)}</strong><span>${t('store.coins')}</span>`;
+  const balance=el('div','tdr-store-balance');
+  const coin=el('img','tdr-store-coin');coin.src=`${BASE()}assets/ui/moneda-tdr.webp`;coin.alt='';
+  const total=el('strong','',fmt(loadGarage().coins||0));total.dataset.storeBalance='';
+  balance.append(coin,total,el('span','',t('store.coins')));
   const close=el('button','tdr-store-close','×');close.type='button';close.setAttribute('aria-label',t('common.close'));close.addEventListener('click',()=>closeStoreDom(scene));
   const recycler=el('button','tdr-store-recycler','♻  '+(getLanguage()==='en'?'RECYCLER':'RECICLADORA'));recycler.type='button';recycler.addEventListener('click',()=>openMaterialExchangeDom(scene,scene?._exchangeFrom||'scrap',scene?._exchangeTo||'compound',scene?._exchangeAmount||100));
   header.append(recycler,balance,close);shell.append(header);

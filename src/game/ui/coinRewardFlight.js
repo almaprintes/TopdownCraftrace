@@ -153,3 +153,128 @@ export async function playCoinRewardFlight(scene,{amount,card,width=200,height=2
     layer.remove();
   }
 }
+
+const centerOf=node=>{
+  if(!node?.isConnected)return null;
+  const r=node.getBoundingClientRect?.();
+  if(!r||r.width<=0||r.height<=0)return null;
+  return {x:r.left+r.width/2,y:r.top+r.height/2};
+};
+
+// The shipping store is DOM (StoreDomUi), not the legacy Phaser store modal.
+// This animation NEVER grants currency and is always disposable.
+export async function playDomCoinRewardFlight(scene,{amount,root,card,english=false}={}){
+  if(typeof document==='undefined'||typeof window==='undefined'||!root?.isConnected||document.hidden||
+    window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return false;
+  const from=centerOf(card?.querySelector?.('.tdr-store-reward-art')||card);
+  const to=centerOf(root.querySelector('.tdr-store-coin'));
+  if(!from||!to)return false;
+  const layer=document.createElement('div');
+  layer.setAttribute('aria-hidden','true');
+  Object.assign(layer.style,{position:'fixed',inset:'0',zIndex:'2147481000',
+    overflow:'hidden',pointerEvents:'none'});
+  const label=document.createElement('div');
+  label.textContent=rewardAmountLabel(amount,english);
+  Object.assign(label.style,{position:'fixed',left:from.x+'px',top:(from.y-30)+'px',
+    color:'#ffdb6a',font:'900 20px system-ui,-apple-system,sans-serif',
+    textShadow:'0 2px 4px #000,0 0 12px #ffc240',whiteSpace:'nowrap',
+    willChange:'transform,opacity'});
+  layer.appendChild(label);
+  if(typeof label.animate!=='function')return false;
+  const anim=[];
+  let timer=null,interrupt;
+  const aborted=new Promise(resolve=>{interrupt=resolve;});
+  const onClose=()=>interrupt();
+  const onHidden=()=>{if(document.hidden)interrupt();};
+  root.addEventListener('tdr:store-closed',onClose,{once:true});
+  window.addEventListener('pagehide',onClose,{once:true});
+  document.addEventListener('visibilitychange',onHidden);
+  document.body.appendChild(layer);
+  try{
+    anim.push(label.animate([
+      {opacity:0,transform:'translate(-50%,-50%) scale(.5)'},
+      {opacity:1,transform:'translate(-50%,-80%) scale(1.08)',offset:.4},
+      {opacity:0,transform:'translate(-50%,-105%) scale(.8)'}
+    ],{duration:650,easing:'ease-out',fill:'forwards'}));
+    const count=Number(amount)>=250?10:7,size=clamp(window.innerHeight*.075,22,33);
+    for(let i=0;i<count;i++){
+      const coin=document.createElement('img');
+      coin.src=COIN_SRC;coin.alt='';
+      Object.assign(coin.style,{position:'fixed',left:(from.x-size/2)+'px',top:(from.y-size/2)+'px',
+        width:size+'px',height:size+'px',objectFit:'contain',
+        filter:'drop-shadow(0 2px 4px #0008)',willChange:'transform,opacity'});
+      layer.appendChild(coin);
+      anim.push(coin.animate(rewardFlightFrames(from,to,i,count),{
+        duration:760,delay:140+i*40,fill:'forwards',easing:'cubic-bezier(.17,.6,.27,1)'
+      }));
+    }
+    await Promise.race([
+      Promise.allSettled(anim.map(a=>a.finished)),
+      aborted,
+      new Promise(resolve=>{timer=setTimeout(resolve,1700);})
+    ]);
+    if(root.isConnected&&!document.hidden){
+      playCoinRewardSound(scene);
+      return true;
+    }
+    return false;
+  }finally{
+    clearTimeout(timer);
+    root.removeEventListener('tdr:store-closed',onClose);
+    window.removeEventListener('pagehide',onClose);
+    document.removeEventListener('visibilitychange',onHidden);
+    for(const a of anim)try{a.cancel();}catch{}
+    layer.remove();
+  }
+}
+
+// Animate the ACTUAL DOM wallet only after flight. All balances were saved
+// before the animation; closing the store or suspending the app cannot undo them.
+export async function animateDomCoinBalance(root,{from,to,english=false}={}){
+  if(typeof document==='undefined'||typeof window==='undefined'||!root?.isConnected)return false;
+  const number=root.querySelector('[data-store-balance]'),coin=root.querySelector('.tdr-store-coin');
+  if(!number)return false;
+  const fmt=n=>Math.floor(Math.max(0,n)).toLocaleString(english?'en-US':'es-ES');
+  const first=Math.max(0,Number(from)||0),last=Math.max(0,Number(to)||0);
+  if(document.hidden||window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches||last<=first){
+    number.textContent=fmt(last);return false;
+  }
+  number.textContent=fmt(first);
+  const pulses=[];
+  for(const node of [coin,number]){
+    if(typeof node?.animate==='function')pulses.push(node.animate([
+      {transform:'scale(1)',filter:'brightness(1)'},
+      {transform:'scale(1.16)',filter:'brightness(1.4)',offset:.4},
+      {transform:'scale(1)',filter:'brightness(1)'}
+    ],{duration:460,easing:'ease-out'}));
+  }
+  let raf=0,timer=0,resolveAbort;
+  const aborted=new Promise(resolve=>{resolveAbort=resolve;});
+  const onClose=()=>resolveAbort(false);
+  const onHidden=()=>{if(document.hidden)resolveAbort(false);};
+  root.addEventListener('tdr:store-closed',onClose,{once:true});
+  window.addEventListener('pagehide',onClose,{once:true});
+  document.addEventListener('visibilitychange',onHidden);
+  const started=performance.now();
+  const countUp=new Promise(resolve=>{
+    const tick=now=>{
+      if(!root.isConnected||document.hidden){resolve(false);return;}
+      const t=clamp((now-started)/480,0,1);
+      const eased=1-Math.pow(1-t,3);
+      number.textContent=fmt(first+(last-first)*eased);
+      if(t>=1)resolve(true);
+      else raf=requestAnimationFrame(tick);
+    };
+    raf=requestAnimationFrame(tick);
+  });
+  try{
+    return await Promise.race([countUp,aborted,new Promise(resolve=>{timer=setTimeout(()=>resolve(false),850);})]);
+  }finally{
+    cancelAnimationFrame(raf);clearTimeout(timer);
+    root.removeEventListener('tdr:store-closed',onClose);
+    window.removeEventListener('pagehide',onClose);
+    document.removeEventListener('visibilitychange',onHidden);
+    for(const a of pulses)try{a.cancel();}catch{}
+    if(root.isConnected)number.textContent=fmt(last);
+  }
+}

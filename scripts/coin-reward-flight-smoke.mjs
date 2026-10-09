@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {rewardAmountLabel,stageToClient,rewardFlightFrames,playCoinRewardFlight} from '../src/game/ui/coinRewardFlight.js';
+import {rewardAmountLabel,stageToClient,rewardFlightFrames,playCoinRewardFlight,playDomCoinRewardFlight,animateDomCoinBalance} from '../src/game/ui/coinRewardFlight.js';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 assert.equal(rewardAmountLabel(100),'+100 MONEDAS');
 assert.equal(rewardAmountLabel(250,true),'+250 COINS');
@@ -14,6 +14,8 @@ for(let i=0;i<10;i++){
   assert.ok(frames.every(f=>!f.transform.includes('NaN')));
 }
 assert.equal(await playCoinRewardFlight(null,{amount:100}),false,'No DOM is harmless');
+assert.equal(await playDomCoinRewardFlight(null,{amount:100}),false,'No DOM is harmless');
+assert.equal(await animateDomCoinBalance(null,{from:0,to:100}),false,'No DOM is harmless');
 const store=read('src/game/scenes/MenuRewardedAdsScene.js');
 assert.match(store,/const result=isVideo\?claimRewardedCoins\(100\):claimDailyCoins\(250\)/);
 const verify=store.indexOf('if(!verifiedReward(ad))');
@@ -34,6 +36,21 @@ assert.match(store,/targets:icon/,'pulse existing store coin');
 assert.match(store,/document\.hidden/,'hidden page skips optional visual count-up');
 assert.match(store,/root\.once\('destroy'/,'stop tweens on store close');
 
+// The shipping store is DOM: legacy Phaser-only checks cannot prove visibility.
+const currentMenu=read('src/game/scenes/MenuDuelModeScene.js');
+assert.match(currentMenu,/return openStoreDom\(this\)/,'real store uses DOM');
+const domStore=read('src/game/ui/StoreDomUi.js');
+const verified=domStore.indexOf('if(!verifiedReward(ad))');
+const awarded=domStore.indexOf('const result=isVideo?claimRewardedCoins(100):claimDailyCoins(250)');
+const flown=domStore.indexOf('await playDomCoinRewardFlight(scene');
+const counted=domStore.indexOf('await animateDomCoinBalance(root');
+assert.ok(verified>=0&&awarded>verified&&flown>awarded&&counted>flown,
+  'SHIPPING DOM: verified ad -> durable award -> flight -> animated wallet');
+assert.match(domStore,/if\(busy\|\|!root\.isConnected\)return/,'prevent duplicate taps in real store');
+assert.match(domStore,/button\.disabled=busy\|\|!status\.available/,'do not reenable while playing ad');
+assert.match(domStore,/root\.dispatchEvent\(new Event\('tdr:store-closed'\)\)/,'dismiss active flight');
+assert.match(domStore,/assets\/ui\/moneda-tdr\.webp/,'official coin visible in actual header');
+assert.match(domStore,/finally\{[\s\S]*?refreshBalance\(root\);update\(\)/,'always refresh wallet after interruptions');
 const fx=read('src/game/ui/coinRewardFlight.js');
 assert.match(fx,/assets\/ui\/moneda-tdr\.webp/);
 assert.match(fx,/a\.mute/,'honor mute');
