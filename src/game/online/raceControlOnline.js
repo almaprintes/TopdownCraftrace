@@ -81,9 +81,18 @@ export async function setRaceControlPassword(password){
   const s=await activeSession();
   const account=await currentRaceControlAccount();
   if(account.anonymous||!account.emailConfirmed)throw new Error('Verifica el correo antes de crear una contraseña.');
-  const result=await request('/auth/v1/user',{method:'PUT',token:s.access_token,body:{password:cleanPassword(password)}});
+  const safePassword=cleanPassword(password);
+  const result=await request('/auth/v1/user',{method:'PUT',token:s.access_token,body:{password:safePassword}});
   if(result?.id!==s.user.id)throw new Error('La cuenta no conserva el ID del piloto.');
-  return account;
+  // Before approving a destructive reinstall, prove the new credentials work
+  // and resolve to the SAME UUID. Merely receiving a password update OK isn't enough.
+  try{
+    const checked=await loginRaceControlEmail(account.email,safePassword,{sameUserOnly:true});
+    if(checked.user.id!==s.user.id)throw new Error('Cambio inesperado de identidad.');
+  }catch(error){
+    throw new Error('Se ha guardado la contraseña, pero NO se ha comprobado que puedas entrar de nuevo. No desinstales. '+String(error?.message||error));
+  }
+  return {...account,recoveryVerified:true};
 }
 export async function loginRaceControlEmail(email,password,{sameUserOnly=false}={}){
   const addr=cleanEmail(email);
