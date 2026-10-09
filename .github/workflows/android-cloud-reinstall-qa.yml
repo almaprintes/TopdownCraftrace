@@ -7,6 +7,7 @@ on:
       - 'src/game/social/**'
       - 'src/game/online/**'
       - 'src/game/ui/LobbyDomUi.js'
+      - 'src/game/scenes/SettingsGraphicsQualityScene.js'
       - 'android/app/build.gradle'
       - 'android/app/src/cloudTest/**'
       - 'scripts/cloud-portability-smoke.mjs'
@@ -65,14 +66,14 @@ jobs:
           unzip -t "$src" | tail -1
           "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.cloudtest'"
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-CLOUD-TEST-DEV-1.2.78.apk
-          sha256sum sdk-download/TDR-CLOUD-TEST-DEV-1.2.78.apk
+          cp "$src" sdk-download/TDR-CLOUD-TEST-DEV-1.2.79.apk
+          sha256sum sdk-download/TDR-CLOUD-TEST-DEV-1.2.79.apk
           ls -lh sdk-download/*.apk
       - name: Provide installable Redmi recovery test
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-CLOUD-TEST-DEV-1.2.78
-          path: sdk-download/TDR-CLOUD-TEST-DEV-1.2.78.apk
+          name: TDR-CLOUD-TEST-DEV-1.2.79
+          path: sdk-download/TDR-CLOUD-TEST-DEV-1.2.79.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
