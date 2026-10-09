@@ -6,7 +6,8 @@ import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { getPilotProfile } from '../social/pilotProfile.js';
-import { cloudIdentity, cloudBackupStatus, createFirstCloudBackup, readCloudBackup, updateCloudBackup, shortPlayerId } from '../social/cloudProgress.js';
+import { cloudIdentity, shortPlayerId } from '../social/cloudProgress.js';
+import { openCloudAccountUi } from '../social/cloudAccountUi.js';
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import './lobby-dom.css';
 
@@ -63,27 +64,7 @@ export function installLobbyDom(scene) {
     window.addEventListener('tdr:pilotprofile',syncPilot);
     const accountButton=root.querySelector('[data-cloud-account]');
     const updateCloudId=async()=>{try{const {id}=await cloudIdentity();if(!root.isConnected)return;accountButton.textContent='ID · '+shortPlayerId(id)+' ☁';accountButton.title='ID: '+id+' · Cuenta y copia de seguridad';}catch{if(root.isConnected)accountButton.textContent='☁ SIN CONEXIÓN';}};
-    accountButton?.addEventListener('click',async()=>{
-      if(accountButton.disabled)return;
-      accountButton.disabled=true;
-      try{
-        const status=await cloudBackupStatus();
-        const label='ID: '+status.id+'\\n'+(status.existing?'Copia en la nube: '+status.updatedAt:'Todavía no hay copia en la nube.');
-        if(status.existing){
-          const backup=await readCloudBackup();
-          const cloudKeys=Object.keys(backup?.snapshot?.data||{}).length;
-          const message=label+'\\nDatos guardados: '+cloudKeys+' bloques.\\n\\nLa restauración está deshabilitada hasta implementar la vinculación de cuentas.\\n\\n¿Actualizar manualmente esta copia con el progreso ACTUAL de este dispositivo? Esta acción sustituye la copia anterior.';
-          if(!window.confirm(message))return;
-          await updateCloudBackup(backup.revision);
-          window.alert('Copia actualizada. El progreso local permanece intacto.');
-          return;
-        }
-        if(!window.confirm(label+'\\n\\n¿Crear una primera copia de seguridad de este dispositivo?'))return;
-        await createFirstCloudBackup();
-        window.alert('Copia de seguridad creada correctamente.\\n'+status.id);
-      }catch(error){window.alert('No se ha modificado tu progreso. '+String(error?.message||error));}
-      finally{accountButton.disabled=false;updateCloudId();}
-    });
+    accountButton?.addEventListener('click',()=>openCloudAccountUi());
     updateCloudId();
 
     scene.events.once('shutdown',()=>{try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
