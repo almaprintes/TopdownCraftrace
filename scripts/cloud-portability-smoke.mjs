@@ -82,6 +82,13 @@ assert.match(auth,/verifyRaceControlEmailCode/);
 assert.match(auth,/setRaceControlPassword/);
 assert.match(auth,/switchRaceControlAccount/);
 assert.match(ui,/RECUPERAR PARTIDA DE LA NUBE/);
+for(const stage of ['link','verify','password','login']){
+  assert.ok(ui.includes('data-stage=\\\"'+stage+'\\\"'),'account step available: '+stage);
+}
+assert.match(ui,/data-advanced/,'advanced controls behind disclosure');
+assert.match(ui,/cloudRecoveryChecked:/,'only verified accounts show protected state');
+assert.match(ui,/progress.meaningful&&!remote.existing/,'first cloud save after recovery check');
+assert.match(ui,/tdr2:cloudLoginPendingRestore:v1/,'never upload before restore');
 assert.match(ui,/ENTRAR CON MI CUENTA/);
 assert.match(ui,/EXPORTAR PARTIDA LOCAL/);
 assert.match(lobby,/__tdrSettingsAccountRequested=true/,'lobby must route to Settings Cuenta');

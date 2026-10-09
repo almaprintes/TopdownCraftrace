@@ -92,11 +92,18 @@ export class SettingsScene extends CurrentSettingsScene {
     this.root.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab==='account'));
     const body=this.root.querySelector('.s2body');if(!body)return;
     body.innerHTML=`<div class="s2grid">
-      <section class="s2card wide"><div class="s2label">${en?'ACCOUNT & DATA':'CUENTA Y DATOS'}</div><div class="s2desc">${en?'Manage your driver profile, recoverable login and cloud backups in one place.':'Gestiona aquí tu perfil de piloto, acceso recuperable y copias en la nube.'}</div></section>
       <section class="s2card wide" data-cloud-account-section></section>
-      <section class="s2card wide"><div class="s2label">${en?'MINI TUTORIALS':'MINI TUTORIALES'}</div><div class="s2desc">${en?'Each main section explains itself once on your first visit. Reset only those introductions without changing any game progress.':'Cada sección principal se explica una sola vez en tu primera visita. Puedes reiniciar únicamente esas introducciones sin alterar ningún progreso del juego.'}</div><div class="s2row"><button type="button" class="s2tutorial-btn" data-reset-tutorial>${en?'RESET TUTORIAL':'REINICIAR TUTORIAL'}</button><span class="s2tutorial-note" data-tutorial-note></span></div></section>
-      <section class="s2card s2danger"><div class="s2label">${en?'RESET PROGRESS':'RESETEAR PROGRESO'}</div><div class="s2desc">${en?'Starts the game again from zero while keeping your controls, language, audio and graphics preferences.':'Empieza el juego de nuevo desde cero conservando tus controles, idioma, audio y preferencias gráficas.'}</div><div class="s2row"><button type="button" class="s2danger-btn soft" data-reset-progress>${en?'RESET PROGRESS':'RESETEAR PROGRESO'}</button></div></section>
-      <section class="s2card s2danger"><div class="s2label">${en?'DELETE DEVICE DATA':'BORRAR DATOS DEL DISPOSITIVO'}</div><div class="s2desc">${en?'Removes local game data and settings from this device; it does NOT delete your cloud account or backups. If you never linked a recoverable login, you could lose access to your online account.':'Borra los datos y ajustes locales de este dispositivo; NO elimina la cuenta ni las copias en la nube. Sin un acceso recuperable vinculado, podrías perder el acceso a la cuenta online.'}</div><div class="s2row"><button type="button" class="s2danger-btn" data-delete-account>${en?'DELETE LOCAL DATA':'BORRAR DATOS LOCALES'}</button></div></section>
+      <section class="s2card wide"><details class="tdr-account-extra">
+        <summary style="cursor:pointer;min-height:44px;display:flex;align-items:center;color:#b8cadc;font-weight:850;">${en?'MORE SETTINGS':'MÁS OPCIONES'}</summary>
+        <div class="s2label">${en?'MINI TUTORIALS':'MINI TUTORIALES'}</div>
+        <div class="s2desc">${en?'Reset the introductory guides without changing your game progress.':'Volver a ver las ayudas sin cambiar tu partida.'}</div>
+        <div class="s2row"><button type="button" class="s2tutorial-btn" data-reset-tutorial>${en?'RESET TUTORIAL':'REINICIAR TUTORIAL'}</button><span class="s2tutorial-note" data-tutorial-note></span></div>
+        <div class="s2label" style="margin-top:18px;color:#ffc48f">${en?'DANGER ZONE':'ZONA DELICADA'}</div>
+        <div class="s2desc">${en?'Reset local progress only, not your online account.':'Reiniciar solo el progreso del móvil, no tu cuenta online.'}</div>
+        <div class="s2row"><button type="button" class="s2danger-btn soft" data-reset-progress>${en?'RESET PROGRESS':'RESETEAR PROGRESO'}</button></div>
+        <div class="s2desc" style="margin-top:13px">${en?'Erase local data. Without a linked account you can lose your save.':'Borra los datos locales. Sin una cuenta protegida podrías perder tu partida.'}</div>
+        <div class="s2row"><button type="button" class="s2danger-btn" data-delete-account>${en?'DELETE DEVICE DATA':'BORRAR DATOS DEL DISPOSITIVO'}</button></div>
+      </details></section>
     </div>`;
     openCloudAccountUi({host:body.querySelector('[data-cloud-account-section]')});
     body.querySelector('[data-reset-tutorial]')?.addEventListener('click',()=>{

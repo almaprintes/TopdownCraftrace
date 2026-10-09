@@ -19,6 +19,8 @@ permissions:
 
 jobs:
   cloud_reinstall_apk:
+    # Browser/PWA-only commits do not generate Android binaries.
+    if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[pwa-only]') }}
     name: Compile isolated player cloud-recovery APK
     runs-on: ubuntu-latest
     timeout-minutes: 40
