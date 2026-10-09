@@ -74,7 +74,7 @@ assert.ok(source.includes('canonicalJson(actualData)!==canonicalJson(snapshot.da
   'backup must verify a full readback, not just an OK status');
 assert.ok(source.includes('restoreLocalProgress(cloud.snapshot)'));
 assert.ok(source.includes('tdr2:cloudLoginPendingRestore:v1'),'account switch protection');
-assert.ok(source.includes('try{localStorage.removeItem(key)'), 'restore must remove stale keys only inside rollback');
+assert.ok(source.includes('for(const [key] of before)')&&source.includes('localStorage.removeItem(key)'), 'restore must alter only whitelisted progress keys');
 assert.ok(!source.includes('localStorage.clear('),'must never wipe all local storage');
 assert.match(auth,/verifyRaceControlEmailCode/);
 assert.match(auth,/setRaceControlPassword/);
