@@ -1,7 +1,8 @@
 import { MenuScene as CurrentMenuScene } from './MenuStoreCloseFixScene.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 import { REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
-import { rewardedStatus, claimRewardedCoins } from '../store/storeEconomy.js';
+import { rewardedStatus, claimRewardedCoins, dailyStatus, claimDailyCoins } from '../store/storeEconomy.js';
+import { playCoinRewardFlight, primeCoinRewardSound } from '../ui/coinRewardFlight.js';
 import { getLanguage } from '../i18n/index.js';
 import { showStoreDomConfirm, closeStoreDomConfirm } from '../ui/storeDomConfirm.js';
 
@@ -77,41 +78,62 @@ export class MenuScene extends CurrentMenuScene {
 
   _storeCard(parent,p,x,y,w,h){
     super._storeCard(parent,p,x,y,w,h);
-    if(p?.type!=='reward')return;
+    if(p?.type!=='reward'&&p?.type!=='daily')return;
 
     const card=parent?.list?.[parent.list.length-1];
     if(!card?.list)return;
-    const hit=[...card.list].reverse().find(child=>child?.type==='Rectangle'&&child?.input&&Number(child.y)>h*.55);
+    const hit=[...card.list].reverse().find(child=>
+      child?.type==='Rectangle'&&child?.input&&Number(child.y)>h*.55);
     if(!hit)return;
 
-    try{hit.removeAllListeners('pointerdown');}catch{}
+    // The original card already has its own pointerup action. Remove BOTH
+    // handlers before attaching ours to avoid starting two ads or grants.
+    hit.removeAllListeners('pointerup');
+    hit.removeAllListeners('pointerdown');
+    const isVideo=p.type==='reward';
     let busy=false;
-    hit.on('pointerdown',async()=>{
+    const onClaim=async()=>{
       if(busy)return;
-      const status=rewardedStatus();
-      if(!status.available){
-        this._openStoreModal?.('rewards');
-        return;
-      }
+      const status=isVideo?rewardedStatus():dailyStatus();
+      if(!status.available){this._openStoreModal?.('rewards');return;}
       busy=true;
+      primeCoinRewardSound(this);
       try{
-        const ad=await showRewardedAd(this,{
-          title:getLanguage()==='en'?'REWARDED VIDEO':'VÍDEO RECOMPENSADO',
-          placement:REWARDED_PLACEMENTS.STORE_COINS_100,
-          claimId:status.claimId
-        });
-        if(!verifiedReward(ad)){
-          this._toastStore?.(getLanguage()==='en'?'VIDEO NOT COMPLETED':'VÍDEO NO COMPLETADO',false);
-          return;
+        if(isVideo){
+          const ad=await showRewardedAd(this,{
+            title:getLanguage()==='en'?'REWARDED VIDEO':'VÍDEO RECOMPENSADO',
+            placement:REWARDED_PLACEMENTS.STORE_COINS_100,
+            claimId:status.claimId
+          });
+          if(!verifiedReward(ad)){
+            this._toastStore?.(getLanguage()==='en'?'VIDEO NOT COMPLETED':'VÍDEO NO COMPLETADO',false);
+            return;
+          }
         }
-        const result=claimRewardedCoins(100);
-        const coins=getLanguage()==='en'?'COINS':'MONEDAS';
-        this._toastStore?.(result.ok?`+100 ${coins}`:result.reason,result.ok);
-        this._openStoreModal?.('rewards');
+        // Grant and persist immediately; ONLY the visible wallet is delayed.
+        // A suspended app, cancelled animation or lost WebAudio cannot lose coins.
+        const result=isVideo?claimRewardedCoins(100):claimDailyCoins(250);
+        if(!result.ok){this._toastStore?.(result.reason,false);return;}
+        try{
+          await playCoinRewardFlight(this,{
+            amount:result.amount,card,width:w,height:h,english:getLanguage()==='en'
+          });
+        }catch(error){
+          console.warn('[TDR reward] coin flight unavailable',error);
+        }
+        // The store's header still displays the previous balance until this
+        // refresh. Fly into its coin icon first, then update the amount.
+        if(this.scene?.isActive?.()&&this._storeModal?.scene){
+          this._openStoreModal?.('rewards');
+          this._toastStore?.('+'+result.amount+' '+(getLanguage()==='en'?'COINS':'MONEDAS'),true);
+        }
       }finally{
         busy=false;
       }
-    });
+    };
+    // Preserve the proven pointerdown ad gesture. The free daily gift uses
+    // pointerup so scrolling the reward carousel cannot claim it accidentally.
+    hit.on(isVideo?'pointerdown':'pointerup',onClaim);
   }
 }
 
