@@ -7,6 +7,14 @@ const cfg=()=>playerBackendConfig();
 const headers=(key,token)=>({'apikey':key,'Authorization':`Bearer ${token||key}`,'Content-Type':'application/json'});
 const readSession=()=>{try{return JSON.parse(localStorage.getItem('tdr2:onlineSession:v1')||'null');}catch{return null;}};
 const saveSession=s=>{try{localStorage.setItem('tdr2:onlineSession:v1',JSON.stringify(s));}catch{}};
+// GoTrue REST may omit expires_at; supabase-js normally adds it.
+const normalizeSession=s=>{
+  if(!s||!s.access_token||!s.user?.id)return s;
+  const expires_at=Number(s.expires_at)||(
+    Number.isFinite(Number(s.expires_in))?Math.floor(Date.now()/1000)+Number(s.expires_in):0
+  );
+  return {...s,expires_at};
+};
 const sessionUsable=s=>Boolean(s?.access_token&&s?.user?.id&&Number(s?.expires_at||0)*1000>Date.now()+30000);
 
 async function request(path,{method='GET',body,token}={}){
@@ -23,19 +31,27 @@ export async function activateRaceControlOnline(){
   if(sessionUsable(old)){api={session:old};return api;}
   if(old?.refresh_token){
     try{
-      const refreshed=await request('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:old.refresh_token}});
-      if(sessionUsable(refreshed)){saveSession(refreshed);api={session:refreshed};return api;}
-    }catch{}
+      const refreshed=normalizeSession(await request('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:{refresh_token:old.refresh_token}}));
+      if(sessionUsable(refreshed)&&(!old.user?.id||old.user.id===refreshed.user.id)){
+        saveSession(refreshed);api={session:refreshed};return api;
+      }
+    }catch(error){
+      // Never silently create an anonymous player when a permanent login expires.
+      if(old?.user?.email||old?.user?.is_anonymous===false)
+        throw new Error('La sesión de tu cuenta caducó. Entra de nuevo con tu correo; la copia de la nube sigue a salvo.');
+    }
+    if(old?.user?.email||old?.user?.is_anonymous===false)
+      throw new Error('No se pudo renovar tu cuenta. Inicia sesión con correo para recuperar tu ID.');
   }
-  const session=await request('/auth/v1/signup',{method:'POST',body:{}});
-  if(!session?.access_token||!session?.user?.id)throw new Error('Anonymous session unavailable');
+  const session=normalizeSession(await request('/auth/v1/signup',{method:'POST',body:{}}));
+  if(!sessionUsable(session))throw new Error('Anonymous session unavailable');
   saveSession(session);api={session};return api;
 }
 
 // All account operations reuse the existing Race Control Supabase user ID.
 const cleanEmail=email=>{
   const value=String(email||'').trim().toLowerCase();
-  if(value.length>254||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value))throw new Error('Introduce un correo electrónico válido.');
+  if(value.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))throw new Error('Introduce un correo electrónico válido.');
   return value;
 };
 const cleanPassword=value=>{
@@ -44,7 +60,8 @@ const cleanPassword=value=>{
   return pwd;
 };
 const activeSession=async()=> (await activateRaceControlOnline()).session;
-const persistAuthSession=(session,expectedId=null)=>{
+const persistAuthSession=(incoming,expectedId=null)=>{
+  const session=normalizeSession(incoming);
   if(!sessionUsable(session))throw new Error('No se ha recibido una sesión válida de Supabase.');
   if(expectedId&&session.user.id!==expectedId)throw new Error('La sesión recibida pertenece a otro piloto.');
   saveSession(session);
@@ -70,7 +87,7 @@ export async function verifyRaceControlEmailCode(email,code){
   const s=await activeSession();
   const addr=cleanEmail(email);
   const token=String(code||'').trim();
-  if(!/^\\d{6}$/.test(token))throw new Error('Introduce el código de 6 cifras enviado por correo.');
+  if(!/^\d{6}$/.test(token))throw new Error('Introduce el código de 6 cifras enviado por correo.');
   const result=await request('/auth/v1/verify',{method:'POST',body:{type:'email_change',email:addr,token}});
   // Some Auth configurations return a refreshed session after verification.
   if(result?.access_token)persistAuthSession(result,s.user.id);
