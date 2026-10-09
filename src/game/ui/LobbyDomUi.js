@@ -7,7 +7,7 @@ import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from
 import { getLanguage, t } from '../i18n/index.js';
 import { getPilotProfile } from '../social/pilotProfile.js';
 import { cloudIdentity, shortPlayerId } from '../social/cloudProgress.js';
-import { openCloudAccountUi } from '../social/cloudAccountUi.js';
+
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import './lobby-dom.css';
 
@@ -64,7 +64,12 @@ export function installLobbyDom(scene) {
     window.addEventListener('tdr:pilotprofile',syncPilot);
     const accountButton=root.querySelector('[data-cloud-account]');
     const updateCloudId=async()=>{try{const {id}=await cloudIdentity();if(!root.isConnected)return;accountButton.textContent='ID · '+shortPlayerId(id)+' ☁';accountButton.title='ID: '+id+' · Cuenta y copia de seguridad';}catch{if(root.isConnected)accountButton.textContent='☁ SIN CONEXIÓN';}};
-    accountButton?.addEventListener('click',()=>openCloudAccountUi());
+    // Keep the compact pilot ID in the lobby, but send account management to
+    // the existing Settings > Cuenta tab. No duplicate full-screen manager.
+    accountButton?.addEventListener('click',()=>{
+      window.__tdrSettingsAccountRequested=true;
+      scene.scene.start('SettingsScene');
+    });
     updateCloudId();
 
     scene.events.once('shutdown',()=>{try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
