@@ -39,6 +39,74 @@ export async function activateRaceControlOnline(){
   saveSession(session);api={session};return api;
 }
 
+// All account operations reuse the existing Race Control Supabase user ID.
+const cleanEmail=email=>{
+  const value=String(email||'').trim().toLowerCase();
+  if(value.length>254||!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(value))throw new Error('Introduce un correo electrónico válido.');
+  return value;
+};
+const cleanPassword=value=>{
+  const pwd=String(value||'');
+  if(pwd.length<10||pwd.length>128)throw new Error('La contraseña debe tener entre 10 y 128 caracteres.');
+  return pwd;
+};
+const activeSession=async()=> (await activateRaceControlOnline()).session;
+const persistAuthSession=(session,expectedId=null)=>{
+  if(!sessionUsable(session))throw new Error('No se ha recibido una sesión válida de Supabase.');
+  if(expectedId&&session.user.id!==expectedId)throw new Error('La sesión recibida pertenece a otro piloto.');
+  saveSession(session);
+  api={session};
+  return session;
+};
+export async function currentRaceControlAccount(){
+  const s=await activeSession();
+  const user=await request('/auth/v1/user',{token:s.access_token});
+  if(user?.id!==s.user.id)throw new Error('La identidad del jugador no coincide.');
+  return {id:user.id,email:user.email||null,emailConfirmed:!!user.email_confirmed_at,
+    anonymous:user.is_anonymous===true||!user.email,
+    pendingEmail:user.new_email||null};
+}
+export async function requestRaceControlEmailLink(email){
+  const s=await activeSession();
+  const addr=cleanEmail(email);
+  const result=await request('/auth/v1/user',{method:'PUT',token:s.access_token,body:{email:addr}});
+  if(result?.id!==s.user.id)throw new Error('No se pudo mantener el ID original del jugador.');
+  return {id:s.user.id,email:addr};
+}
+export async function verifyRaceControlEmailCode(email,code){
+  const s=await activeSession();
+  const addr=cleanEmail(email);
+  const token=String(code||'').trim();
+  if(!/^\\d{6}$/.test(token))throw new Error('Introduce el código de 6 cifras enviado por correo.');
+  const result=await request('/auth/v1/verify',{method:'POST',body:{type:'email_change',email:addr,token}});
+  // Some Auth configurations return a refreshed session after verification.
+  if(result?.access_token)persistAuthSession(result,s.user.id);
+  else if(result?.user?.id&&result.user.id!==s.user.id)throw new Error('El código pertenece a otra cuenta.');
+  return currentRaceControlAccount();
+}
+export async function setRaceControlPassword(password){
+  const s=await activeSession();
+  const account=await currentRaceControlAccount();
+  if(account.anonymous||!account.emailConfirmed)throw new Error('Verifica el correo antes de crear una contraseña.');
+  const result=await request('/auth/v1/user',{method:'PUT',token:s.access_token,body:{password:cleanPassword(password)}});
+  if(result?.id!==s.user.id)throw new Error('La cuenta no conserva el ID del piloto.');
+  return account;
+}
+export async function loginRaceControlEmail(email,password,{sameUserOnly=false}={}){
+  const addr=cleanEmail(email);
+  const pass=String(password||'');
+  if(!pass)throw new Error('Introduce tu contraseña.');
+  const old=readSession();
+  const result=await request('/auth/v1/token?grant_type=password',{method:'POST',body:{email:addr,password:pass}});
+  // For credential checks on the existing device, refuse an account switch.
+  return persistAuthSession(result,sameUserOnly?old?.user?.id:null);
+}
+export async function switchRaceControlAccount(email,password){
+  // Credentials are verified before changing local auth. Local game data is
+  // never modified here; explicit cloud restore is a separate user action.
+  return loginRaceControlEmail(email,password);
+}
+
 export async function syncRaceControlProfile({nick,continentCode,countryCode,regionCode}){
   const online=await activateRaceControlOnline();
   const token=online?.session?.access_token;
