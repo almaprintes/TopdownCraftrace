@@ -79,8 +79,16 @@ function mountSettingsProfile(){
   const profile=getPilotProfile();
   const card=document.createElement('section');card.className='s2card wide';card.dataset.tdrPilotProfileSettings='1';
   card.innerHTML=`<div class="s2label">${en?'DRIVER PROFILE':'PERFIL DE PILOTO'}</div><div class="s2desc">${en?'This is the name attached to laps and replays you share with other testers. Changing it keeps your internal driver identity.':'Este es el nombre que acompaña a las vueltas y repeticiones que compartes con otros testers. Cambiarlo conserva tu identidad interna de piloto.'}</div><div class="s2row"><input class="tdr-pilot-name" data-pilot-settings-name maxlength="16" autocomplete="nickname" autocapitalize="characters" spellcheck="false" aria-label="${en?'Driver name':'Nombre de piloto'}"><button type="button" class="tdr-pilot-save" data-pilot-settings-save>${en?'SAVE NAME':'GUARDAR NOMBRE'}</button></div><div class="tdr-pilot-status" data-pilot-settings-status>${profile.name?(en?`CURRENT: ${profile.name}`:`ACTUAL: ${profile.name}`):''}</div>`;
-  const firstCard=grid.querySelector('.s2card');
-  if(firstCard?.nextSibling)grid.insertBefore(card,firstCard.nextSibling);else grid.appendChild(card);
+  // Keep the editor accessible, but inside More settings rather than a
+  // competing account card. No duplicate profile on the main screen.
+  const advanced=grid.querySelector('.tdr-account-extra');
+  if(advanced){
+    card.className='tdr-pilot-edit-panel';
+    advanced.insertBefore(card,advanced.querySelector('.s2label'));
+  }else{
+    const firstCard=grid.querySelector('.s2card');
+    if(firstCard?.nextSibling)grid.insertBefore(card,firstCard.nextSibling);else grid.appendChild(card);
+  }
   const input=card.querySelector('[data-pilot-settings-name]'),button=card.querySelector('[data-pilot-settings-save]'),status=card.querySelector('[data-pilot-settings-status]');
   if(input)input.value=profile.name||'';
   let lastPointerAt=0;
@@ -88,6 +96,8 @@ function mountSettingsProfile(){
     try{
       const next=setPilotName(input?.value||'');
       if(input)input.value=next.name;
+      const heading=root.querySelector('#tdr-cloud-account-modal [data-cloud-pilot]');
+      if(heading)heading.textContent=next.name;
       if(status){status.style.color='#6ff0b4';status.textContent=en?`SAVED: ${next.name}`:`GUARDADO: ${next.name}`;}
     }catch(err){
       if(status){status.style.color='#ff8a93';status.textContent=en?'Driver name must contain 3–16 characters.':String(err?.message||'Nombre no válido');}

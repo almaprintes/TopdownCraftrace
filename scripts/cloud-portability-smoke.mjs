@@ -66,6 +66,7 @@ const auth=await readFile(new URL('../src/game/online/raceControlOnline.js',impo
 const ui=await readFile(new URL('../src/game/social/cloudAccountUi.js',import.meta.url),'utf8');
 const lobby=await readFile(new URL('../src/game/ui/LobbyDomUi.js',import.meta.url),'utf8');
 const settings=await readFile(new URL('../src/game/scenes/SettingsGraphicsQualityScene.js',import.meta.url),'utf8');
+const pilot=await readFile(new URL('../src/game/social/pilotProfile.js',import.meta.url),'utf8');
 const db=await readFile(new URL('../supabase/migrations/20261009_012_player_progress_size_v2.sql',import.meta.url),'utf8');
 for(const key of ['tdr2:garageFusion:v1','tdr2:playerStats:v1','tdr2:pilotProfile:v1',
   'tdr2:seasonInduction:v1','tdr2:carUnlocks:v1','tdr2:seasonTelemetry:v1','tdr2:cleanLapTelemetry:v1']){
@@ -86,6 +87,8 @@ for(const stage of ['link','verify','password','login']){
   assert.ok(ui.includes('data-stage=\\\"'+stage+'\\\"'),'account step available: '+stage);
 }
 assert.match(ui,/data-advanced/,'advanced controls behind disclosure');
+assert.match(ui,/data-action=\\\"edit-pilot\\\"/,'pilot name can be edited from primary account');
+assert.match(pilot,/advanced.insertBefore\(card/,'profile editor stays in More settings');
 assert.match(ui,/cloudRecoveryChecked:/,'only verified accounts show protected state');
 assert.match(ui,/progress.meaningful&&!remote.existing/,'first cloud save after recovery check');
 assert.match(ui,/tdr2:cloudLoginPendingRestore:v1/,'never upload before restore');
