@@ -1,16 +1,9 @@
 // RACE Control Online — no request is made until activateRaceControlOnline().
-// Uses the public browser endpoint/key supplied by the deployment build.
+// Auth uses the GoTrue protocol (open source, compatible with self-hosting).
+import { playerBackendConfig } from './backendConfig.js';
 let api=null;
-// Supabase's project URL and publishable key are intentionally public client
-// configuration. Keep env overrides for deployments, but ship a production-safe
-// fallback so Android cannot silently lose Race Control when a local build omits
-// Vite env injection. Security remains enforced by Auth + RLS/RPC policies.
-const PUBLIC_ONLINE_URL='https://juukbnkjboiazqggqcyv.supabase.co';
-const PUBLIC_ONLINE_KEY='sb_publishable_l5cHUHrGHoFzGqmUyfQKSA_d3VjWksB';
-const cfg=()=>({
-  url:String(import.meta.env.VITE_TDR_ONLINE_URL||PUBLIC_ONLINE_URL).trim(),
-  key:String(import.meta.env.VITE_TDR_ONLINE_PUBLIC||PUBLIC_ONLINE_KEY).trim()
-});
+// Single connection configuration allows switching to self-hosted GoTrue + Postgres.
+const cfg=()=>playerBackendConfig();
 const headers=(key,token)=>({'apikey':key,'Authorization':`Bearer ${token||key}`,'Content-Type':'application/json'});
 const readSession=()=>{try{return JSON.parse(localStorage.getItem('tdr2:onlineSession:v1')||'null');}catch{return null;}};
 const saveSession=s=>{try{localStorage.setItem('tdr2:onlineSession:v1',JSON.stringify(s));}catch{}};
@@ -104,7 +97,9 @@ export async function loginRaceControlEmail(email,password,{sameUserOnly=false}=
 export async function switchRaceControlAccount(email,password){
   // Credentials are verified before changing local auth. Local game data is
   // never modified here; explicit cloud restore is a separate user action.
-  return loginRaceControlEmail(email,password);
+  const session=await loginRaceControlEmail(email,password);
+  try{localStorage.setItem('tdr2:cloudLoginPendingRestore:v1',session.user.id);}catch{}
+  return session;
 }
 
 export async function syncRaceControlProfile({nick,continentCode,countryCode,regionCode}){
