@@ -75,7 +75,8 @@ export function openCloudAccountUi({host=null}={}){
   const root=document.createElement('div');
   root.id=ID;
   root.dataset.inline=host?'1':'0';
-  root.innerHTML=html;
+  // The Settings panel is a normal page region, not a second modal dialog.
+  root.innerHTML=host?html.replace('role="dialog" aria-modal="true"','role="region"'):html;
   const style=document.createElement('style');
   style.id=ID+'-styles';
   style.textContent=css+`
