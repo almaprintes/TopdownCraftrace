@@ -104,6 +104,7 @@ jobs:
           node scripts/spark-engine-audio-smoke.mjs
           node scripts/ignition-audio-smoke.mjs
           node scripts/rewarded-audio-focus-smoke.mjs
+          node scripts/cloud-portability-smoke.mjs
           node scripts/spark-longitudinal-smoke.mjs
           node scripts/rewarded-access-smoke.mjs
           node scripts/android-rewarded-bridge-smoke.mjs
