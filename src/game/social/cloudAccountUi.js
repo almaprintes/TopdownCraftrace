@@ -112,8 +112,10 @@ export function openCloudAccountUi(){
       setNotice(String(error?.message||error),false);
     }finally{
       busy=false;
-      if(root.isConnected)try{await refresh();}catch(error){setNotice('No se pudo comprobar la cuenta: '+String(error?.message||error),false);}
-      if(root.isConnected)root.querySelector('[data-action="close"]').disabled=false;
+      if(root.isConnected){
+        for(const b of root.querySelectorAll('button'))b.disabled=false;
+        try{await refresh();}catch(error){setNotice('No se pudo comprobar la cuenta: '+String(error?.message||error),false);}
+      }
     }
   };
   root.querySelector('[data-action="close"]').addEventListener('click',()=>{if(busy)return;root.remove();style.remove();});
