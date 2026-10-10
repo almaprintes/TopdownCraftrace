@@ -3,6 +3,7 @@ import { BaseScene } from './BaseScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 import { installTrackStudioImageMode, importImageProjectFile } from '../studio/installImageMode.js';
 import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
+import { installTrackStudioShapeEditor } from '../studio/installTrackShapeEditor.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -478,9 +479,11 @@ topX += 52;
       }
 
       const world = this._screenToWorld(pointer.x, pointer.y);
-      const hit = this._findControlAt(world.x, world.y);
+      const hit = this._shapeEditing && this._tool === 'edit'
+        ? this._findShapeControlAt(world.x, world.y)
+        : this._findControlAt(world.x, world.y);
 
-      if (!hit && this._guideImage && !this._guideLocked && this._tool === 'edit') {
+      if (!hit && this._guideImage && !this._guideLocked && this._tool === 'edit' && !this._shapeEditing) {
         this._guideDragging = true;
         this._guideDragLast = { x: world.x, y: world.y };
         this._tapCandidate = false;
@@ -495,7 +498,11 @@ topX += 52;
         this._dragStartScreen = { x: pointer.x, y: pointer.y };
         this._dragStartWorld = { x: world.x, y: world.y };
 
-        if (
+        if (hit.type === 'shape') {
+          this._shapeSelected = { ...hit };
+          this._selectedNode = -1;
+          this._selectedPiano = -1;
+        } else if (
           hit.type === 'piano' ||
           hit.type === 'pianoA' ||
           hit.type === 'pianoB'
@@ -540,6 +547,12 @@ topX += 52;
 
 const world = this._screenToWorld(p.x, p.y);
 const idx = this._selectedPart.index;
+
+// --- EDITABLE SHAPE BOUNDARY (centerline stays untouched) ---
+if (this._selectedPart.type === 'shape') {
+  this._moveShapeControl(this._selectedPart, world);
+  return;
+}
 
 // --- PIANOS ---
 if (
@@ -684,6 +697,7 @@ if (
   const stillDown = this.input.manager.pointers.filter((p) => p.isDown).length;
 
   if (this._draggingPart) {
+    if (this._dragMoved) this._autosaveRecovery();
     this._draggingPart = false;
     if (stillDown === 0) {
       this._dragStartScreen = null;
@@ -764,6 +778,13 @@ if (
         this._selectedPiano = this._pianos.length - 1;
       }
 
+  } else if (this._shapeEditing) {
+    // Empty taps in shape mode never create centerline nodes.
+    const hit = this._findShapeControlAt(world.x, world.y);
+    this._shapeSelected = hit ? { ...hit } : null;
+    this._selectedPart = hit;
+    this._selectedNode = -1;
+    this._selectedPiano = -1;
   } else {
 
   // 🔴 1. Primero detectar pianos
@@ -838,6 +859,7 @@ if (
     this._createGuideInput();
     this._createProjectInput();
     installTrackStudioImageMode(this);
+    installTrackStudioShapeEditor(this);
     installTrackStudioExitGuard(this);
     this._updateLoopButton();
     this._updateToolButtons();
