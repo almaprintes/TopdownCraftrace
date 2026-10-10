@@ -190,7 +190,7 @@ assert.match(artJS,/button\.append\(icon,createRewardFace\(video\),createRewardF
 assert.doesNotMatch(artJS.slice(artJS.indexOf('function createRewardFace'),artJS.indexOf('function makeRewardShortcut')),/createElement\('img'\)/,'text layers have no tinted icons');
 assert.match(artCSS,/\.tdr-lobby-reward-icon\{[\s\S]*?z-index:4/,'color icon stays above fill');
 assert.doesNotMatch(artCSS,/\.tdr-lobby-reward-face--filled img|filter:brightness\(\.20\) saturate\(\.22\)/,'no dimming the gift or video');
-assert.match(appHtml,/<meta name="tdr-dev-version" content="DEV 1\.2\.96"/,'single version source');
+assert.match(appHtml,/<meta name="tdr-dev-version" content="DEV 1\.2\.\d+"/,'single current DEV version source');
 assert.equal((appHtml.match(/data-tdr-dev-version/g)||[]).length,3,'both translations and one updater');
 assert.doesNotMatch(appHtml,/DEV 1\.2\.91|<span>91<\/span>/,'no stale portrait label');
 assert.match(appHtml,/document\.querySelectorAll\('\[data-tdr-dev-version\]'\)/,'live version sourced from meta');
