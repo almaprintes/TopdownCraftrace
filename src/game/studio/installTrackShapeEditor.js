@@ -1,4 +1,5 @@
 import {createTrackShape,shapeIsValid,sampleShapeEdge,splitShapeEdge,moveShapePart,copyTrackShape} from './trackShapeGeometry.js';
+import {pickShapeTarget} from './shapeTouchInteraction.js';
 
 function drawPolyline(g,points,closed){
   if(points.length<2)return;
@@ -21,9 +22,11 @@ function render(s){
   const zoom=Math.max(.04,s._editCam?.zoom||1),stroke=Math.max(1,2.2/zoom);
   g.lineStyle(stroke,0x2ff0ff,.98);drawPolyline(g,left,shape.closed);
   g.lineStyle(stroke,0xffce4b,.98);drawPolyline(g,right,shape.closed);
-  if(!s._shapeEditing)return;
-  const nodeR=Math.min(22,Math.max(5,6/zoom));
+  if(!s._shapeEditing || !s._shapeSelected)return;
+  // Reveal control points only on the selected edge; the other stays a clean outline.
+  const nodeR=7/zoom;
   for(const side of ['leftEdge','rightEdge']){
+    if(side!==s._shapeSelected.side)continue;
     for(let i=0;i<shape[side].length;i++){
       const n=shape[side][i],selected=s._shapeSelected?.side===side&&s._shapeSelected?.index===i;
       g.fillStyle(side==='leftEdge'?0x2ff0ff:0xffce4b,1);
@@ -59,25 +62,9 @@ function button(s,x,y,text,callback){
 }
 function findShapeControl(s,x,y){
   if(!s._shapeEditing||!shapeIsValid(s._trackShape))return null;
-  const shape=s._trackShape,zoom=Math.max(.04,s._editCam?.zoom||1),
-        radius=Math.min(40,Math.max(9,13/zoom));
-  let best=null,dist2=radius*radius;
-  const consider=(side,index,part,p)=>{
-    const dx=x-p.x,dy=y-p.y,d=dx*dx+dy*dy;
-    if(d<dist2){dist2=d;best={type:'shape',side,index,part};}
-  };
-  // Selected node's Bézier handles first to make precision adjustment usable.
-  const sel=s._shapeSelected;
-  if(sel&&shape[sel.side]?.[sel.index]){
-    const n=shape[sel.side][sel.index];
-    consider(sel.side,sel.index,'handleIn',n.handleIn);
-    consider(sel.side,sel.index,'handleOut',n.handleOut);
-  }
-  for(const side of ['leftEdge','rightEdge']){
-    shape[side].forEach((n,index)=>consider(side,index,'anchor',n));
-  }
-  return best;
+  return pickShapeTarget(s._trackShape,s._shapeSelected,{x,y},s._editCam?.zoom);
 }
+
 function createOrRebuild(s){
   if(s._nodes.length<(s._isClosed?3:2))return s._flashMessage('Traza primero la centerline completa');
   if(s._trackShape && !window.confirm('¿Regenerar ambos bordes?\n\nPerderás los ajustes de la forma actual. El eje central NO se modificará.'))return;
@@ -87,10 +74,10 @@ function createOrRebuild(s){
     s._trackShape=next;
     if(s._isClosed && s._raceType==='stage')s._raceType='circuit';
     s._shapeEditing=true;
-    s._shapeSelected={type:'shape',side:'leftEdge',index:0,part:'anchor'};
+    s._shapeSelected=null;
     s._selectedNode=-1;s._selectedPart=null;s._tool='edit';
     s._autosaveRecovery();s._redrawEditor();s._updatePanel();
-    s._flashMessage('Pista convertida: bordes turquesa y amarillo');
+    s._flashMessage('Pista lista: toca un borde para mostrar sus nodos');
   }catch(e){s._flashMessage(e.message||'No se pudo convertir en pista');}
 }
 function insertNode(s){
@@ -147,6 +134,10 @@ export function installTrackStudioShapeEditor(s){
   s._redrawEditor=()=>{
     originalRedraw();
     if(s._trackShape)s._trackGfx.clear(); // do not overlay an obsolete uniform-width ribbon.
+    if(s._shapeEditing){
+      // Centerline control dots formerly overlapped the two editable boundaries.
+      s._nodeGfx?.clear();s._guideGfx?.clear();
+    }
     render(s);
   };
   const originalPanel=s._updatePanel.bind(s);
@@ -161,11 +152,10 @@ export function installTrackStudioShapeEditor(s){
       ?('BORDE '+(sel.side==='leftEdge'?'IZQUIERDO':'DERECHO')+'\n'
        +'Nodo: '+(sel.index+1)+'/'+s._trackShape[sel.side].length+'\n'
        +'X: '+Math.round(node.x)+'\nY: '+Math.round(node.y)+'\n'
-       +'Mueve el punto o sus dos tiradores.\n'
-       +' +NODO subdivide el siguiente tramo.')
-      :'AJUSTAR BORDES\nPulsa un punto turquesa o amarillo.\n'
-       +'Arrastra el nodo o sus tiradores.\n'
-       +'La centerline está protegida en este modo.');
+       +'Primer toque: seleccionar.\n'
+       +'Segundo gesto: mover punto/tirador.\n'
+       +' +NODO divide la curva.')
+      :'AJUSTAR BORDES\nToca el borde o el asfalto para\nmostrar los nodos de ese lado.\nToca un nodo, luego arrástralo.\nUn dedo en la hierba: mover mapa.\nLa centerline está protegida.');
   };
   s._findShapeControlAt=(x,y)=>findShapeControl(s,x,y);
   s._moveShapeControl=(part,world)=>{
@@ -182,9 +172,10 @@ export function installTrackStudioShapeEditor(s){
     s._shapeEditing=!s._shapeEditing;s._shapeSelected=null;s._selectedNode=-1;
     s._selectedPart=null;s._tool='edit';
     s._redrawEditor();s._updatePanel();
-    s._flashMessage(s._shapeEditing?'Editando bordes independientes':'Modo centerline · bordes conservados');
+    editBtn.setText(s._shapeEditing?'AJUSTAR ✓':'AJUSTAR');
+    s._flashMessage(s._shapeEditing?'Toca pista para seleccionar; segundo gesto para mover':'Modo centerline · bordes conservados');
   });
-  const addBtn=button(s,x+205,y,'+ NODO',()=>insertNode(s));
+  const addBtn=button(s,x+225,y,'+ NODO',()=>insertNode(s));
   // Controls are screen-fixed and never get written into project coordinates.
   s.events.once('shutdown',()=>{[createBtn,editBtn,addBtn].forEach(b=>b.destroy());gfx.destroy();});
 }

@@ -466,6 +466,55 @@ topX += 52;
 
       if (!this._isPointerInViewport(pointer)) return;
 
+      // Mobile shape mode: first tap selects, second gesture moves.
+      // Empty-area drags pan the canvas; neither gesture creates centerline nodes.
+      if (this._shapeEditing && this._tool === 'edit') {
+        const active = this.input.manager.pointers.filter(p => p.isDown && this._isPointerInViewport(p));
+        if (active.length > 1) {
+          this._gestureWasMultiTouch = true;
+          this._tapCandidate = false;
+          this._shapeSelectionOnly = false;
+          this._draggingPart = false;
+          this._shapeDragOffset = null;
+          this._panLast = null;
+          return;
+        }
+        this._pushHistory();
+        this._tapCandidate = false;
+        this._gestureWasMultiTouch = false;
+        this._dragMoved = false;
+        const world = this._screenToWorld(pointer.x, pointer.y);
+        const hit = this._findShapeControlAt(world.x, world.y);
+        this._dragStartScreen = { x: pointer.x, y: pointer.y };
+        this._dragStartWorld = { x: world.x, y: world.y };
+        this._panLast = null;
+        this._shapeSelectionOnly = false;
+        this._shapeDragOffset = null;
+        if (hit) {
+          const previous = this._shapeSelected;
+          const sameNode = !!previous && previous.side === hit.side && previous.index === hit.index;
+          const canDrag = sameNode && (hit.kind === 'node' || hit.kind === 'handle');
+          this._shapeSelected = { ...hit };
+          this._selectedPart = hit;
+          this._selectedNode = -1;
+          this._selectedPiano = -1;
+          this._draggingPart = canDrag;
+          this._shapeSelectionOnly = !canDrag;
+          if (canDrag) {
+            const node = this._trackShape[hit.side][hit.index];
+            const control = hit.part === 'anchor' ? node : node[hit.part];
+            this._shapeDragOffset = { x: control.x - world.x, y: control.y - world.y };
+          }
+          this._updatePanel();
+          this._redrawEditor();
+          return;
+        }
+        this._selectedPart = null;
+        this._draggingPart = false;
+        this._panLast = { x: pointer.x, y: pointer.y };
+        return;
+      }
+
       this._pushHistory();
       this._tapCandidate = true;
       this._gestureWasMultiTouch = false;
@@ -531,6 +580,9 @@ topX += 52;
         (p) => p.isDown && this._isPointerInViewport(p)
       );
 
+      // A first-touch selection never morphs the curve, even if the finger slips.
+      if (this._shapeEditing && this._shapeSelectionOnly && down.length === 1) return;
+
       if (this._tool === 'edit' && this._draggingPart && down.length === 1 && this._selectedPart) {
         const p = down[0];
 
@@ -550,7 +602,10 @@ const idx = this._selectedPart.index;
 
 // --- EDITABLE SHAPE BOUNDARY (centerline stays untouched) ---
 if (this._selectedPart.type === 'shape') {
-  this._moveShapeControl(this._selectedPart, world);
+  this._moveShapeControl(this._selectedPart, {
+    x: world.x + (this._shapeDragOffset?.x || 0),
+    y: world.y + (this._shapeDragOffset?.y || 0)
+  });
   return;
 }
 
@@ -696,8 +751,21 @@ if (
   }
   const stillDown = this.input.manager.pointers.filter((p) => p.isDown).length;
 
+  if (this._shapeSelectionOnly) {
+    this._shapeSelectionOnly = false;
+    this._shapeDragOffset = null;
+    this._tapCandidate = false;
+    if (stillDown === 0) {
+      this._dragStartScreen = null;
+      this._dragStartWorld = null;
+      this._panLast = null;
+    }
+    return;
+  }
+
   if (this._draggingPart) {
     if (this._dragMoved) this._autosaveRecovery();
+    this._shapeDragOffset = null;
     this._draggingPart = false;
     if (stillDown === 0) {
       this._dragStartScreen = null;
@@ -846,6 +914,9 @@ if (
       if (this._guideDragging) this._autosaveRecovery();
       this._guideDragging = false;
       this._guideDragLast = null;
+      if (this._draggingPart && this._dragMoved) this._autosaveRecovery();
+      this._shapeSelectionOnly = false;
+      this._shapeDragOffset = null;
       this._draggingPart = false;
       this._dragStartScreen = null;
       this._dragStartWorld = null;
