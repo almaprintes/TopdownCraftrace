@@ -13,8 +13,10 @@ export const MATERIAL_PACKS=[
 ];
 
 
-const FOUR_HOURS=4*60*60*1000;
-const DAY=24*60*60*1000;
+export const REWARDED_COIN_COOLDOWN_MS=4*60*60*1000;
+export const DAILY_COIN_COOLDOWN_MS=24*60*60*1000;
+const FOUR_HOURS=REWARDED_COIN_COOLDOWN_MS;
+const DAY=DAILY_COIN_COOLDOWN_MS;
 
 export function buyMaterialPack(id){
   const pack=MATERIAL_PACKS.find(p=>p.id===id); if(!pack)return {ok:false,reason:'Pack no válido'};

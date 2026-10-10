@@ -141,7 +141,42 @@ assert.match(liveStore,/if\(section==='rewards'\)/,
   'same Store shows existing rewards cards on opening');
 assert.match(liveStore,/scroller\.scrollLeft=Math\.max\(0,left-gutter\)/,
   'rewards are brought into viewport without triggering rewards automatically');
-assert.match(lobbyCss,/width:min\(56vw,660px\)/,
-  'Play and two reward CTAs use a narrower centered lane');
+assert.match(lobbyCss,/width:min\(66vw,970px\)/,
+  'three actions form a shared, centered capsule');
 assert.doesNotMatch(lobby,/claimRewardedCoins|claimDailyCoins|showRewardedAd/,
   'lobby never duplicates reward claiming or advertising');
+
+/* Progressive fill + moving two-tone ink: no lobby clock and no washed-out text. */
+assert.match(lobby,/getLanguage\(\)==='en'\?'PLAY':'JUGAR'/,
+  'main action is compact JUGAR while retaining EN translation');
+assert.match(lobby,/lane\?\.classList\.add\('tdr-lobby-action-capsule'\)/,
+  'capsule is shared by all 3 independent actions');
+assert.match(lobby,/const progress=ready\?1:Math\.max\(0,Math\.min\(1,1-remaining\/duration\)\)/,
+  'fill reflects actual cooldown and is clamped to 0 to 100 percent');
+assert.match(lobby,/DAILY_COIN_COOLDOWN_MS:REWARDED_COIN_COOLDOWN_MS/,
+  'fill uses source-of-truth cooldown lengths from store economy');
+assert.match(lobby,/button\.style\.setProperty\('--tdr-reward-progress'/,
+  'real progress drives fill height');
+assert.match(lobby,/button\.style\.setProperty\('--tdr-reward-empty'/,
+  'same progress drives ink color clipping');
+assert.match(lobby,/face\.setAttribute\('aria-hidden','true'\)/,
+  'duplicated contrast layer is invisible to screen readers');
+assert.match(lobby,/createRewardFace\(video\),createRewardFace\(video,true\)/,
+  'text faces are aligned, one for filled region and one for empty');
+assert.match(lobby,/button\.querySelectorAll\('\[data-reward-status\]'\)\.forEach/,
+  'both contrast layers stay in sync when state changes');
+assert.doesNotMatch(lobby,/const caption=ready\?action:`\$\{en\?'IN'/,
+  'numeric cooldown removed from visible lobby text');
+assert.match(lobbyCss,/height:var\(--tdr-reward-progress\)/,
+  'reward fills from the bottom');
+assert.match(lobbyCss,/clip-path:inset\(var\(--tdr-reward-empty\) 0 0 0\)/,
+  'bright-fill dark-text boundary exactly tracks the fill line');
+assert.match(lobbyCss,/color:#152026/,
+  'dark ink is used over gold fill for contrast');
+assert.match(lobbyCss,/color:#082536/,
+  'dark ink is used over cyan fill for contrast');
+assert.doesNotMatch(lobbyCss,/\.tdr-lobby-reward-cta\.is-cooling\{opacity:\.68/,
+  'cooldown never fades text contrast');
+const economy=read('src/game/store/storeEconomy.js');
+assert.match(economy,/export const REWARDED_COIN_COOLDOWN_MS=4\*60\*60\*1000/);
+assert.match(economy,/export const DAILY_COIN_COOLDOWN_MS=24\*60\*60\*1000/);

@@ -10,7 +10,7 @@ import { cloudIdentity, shortPlayerId } from '../social/cloudProgress.js';
 
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import {createAppWallet,disposeAppWallets} from './TdrAppHeader.js';
-import {dailyStatus,rewardedStatus} from '../store/storeEconomy.js';
+import {dailyStatus,rewardedStatus,DAILY_COIN_COOLDOWN_MS,REWARDED_COIN_COOLDOWN_MS} from '../store/storeEconomy.js';
 import './lobby-dom.css';
 
 const BASE = import.meta.env.BASE_URL || '/';
@@ -51,17 +51,30 @@ function renderDomCards(scene, root) {
 }
 // Lobby cards are navigation shortcuts only. The Store remains the single
 // authority for ad verification, reward eligibility, claim and coin animation.
-function makeRewardShortcut(kind,scene){
-  const video=kind==='video',button=document.createElement('button');
-  button.type='button';button.className='tdr-lobby-reward-cta '+(video?'tdr-lobby-reward-cta--video':'tdr-lobby-reward-cta--daily');
-  button.dataset.lobbyRewardCta=kind;
-  const icon=document.createElement('img');icon.src=`${BASE}assets/store/${video?'rewarded_video':'daily_gift'}.webp`;
+// Each reward uses two perfectly aligned ink layers. The filled layer is
+// clipped to the same horizontal waterline as the colored fill so EVERY glyph
+// stays high contrast, even when the fill crosses the middle of a number.
+function createRewardFace(video,filled=false){
+  const face=document.createElement('span');
+  face.className='tdr-lobby-reward-face'+(filled?' tdr-lobby-reward-face--filled':'');
+  if(filled)face.setAttribute('aria-hidden','true');
+  const icon=document.createElement('img');
+  icon.src=`${BASE}assets/store/${video?'rewarded_video':'daily_gift'}.webp`;
   icon.alt='';icon.draggable=false;icon.decoding='async';
   const copy=document.createElement('span');copy.className='tdr-lobby-reward-copy';
   const total=document.createElement('strong');total.textContent=video?'+100':'+250';
-  const state=document.createElement('small');state.dataset.rewardStatus='1';
-  copy.append(total,state);button.append(icon,copy);
-  // Same existing Rewards route used by the Store. No second claim handler.
+  const status=document.createElement('small');status.dataset.rewardStatus='1';
+  copy.append(total,status);face.append(icon,copy);return face;
+}
+function makeRewardShortcut(kind,scene){
+  const video=kind==='video',button=document.createElement('button');
+  button.type='button';
+  button.className='tdr-lobby-reward-cta '+(video?'tdr-lobby-reward-cta--video':'tdr-lobby-reward-cta--daily');
+  button.dataset.lobbyRewardCta=kind;
+  button.style.setProperty('--tdr-reward-progress','0%');
+  button.style.setProperty('--tdr-reward-empty','100%');
+  button.append(createRewardFace(video),createRewardFace(video,true));
+  // This remains navigation to the existing store rewards route.
   button.addEventListener('click',()=>scene._openStoreModal?.('rewards'));
   return button;
 }
@@ -77,15 +90,23 @@ function updateLobbyRewardShortcuts(root){
     const button=root.querySelector(`[data-lobby-reward-cta="${kind}"]`);
     if(!button)continue;
     const status=kind==='daily'?dailyStatus():rewardedStatus();
-    const ready=Boolean(status.available),total=kind==='daily'?250:100;
-    const action=kind==='daily'?(en?'CLAIM':'RECOGER'):(en?'WATCH AD':'VER ANUNCIO');
-    const caption=ready?action:`${en?'IN':'EN'} ${ctaCountdown(status.remaining)}`;
+    const ready=Boolean(status.available);
+    const duration=kind==='daily'?DAILY_COIN_COOLDOWN_MS:REWARDED_COIN_COOLDOWN_MS;
+    const remaining=Math.max(0,Number(status.remaining)||0);
+    const progress=ready?1:Math.max(0,Math.min(1,1-remaining/duration));
+    // CSS fill rises from the bottom; the second ink layer rises at the
+    // EXACT same boundary and changes the text to dark over bright fill.
+    button.style.setProperty('--tdr-reward-progress',`${(progress*100).toFixed(4)}%`);
+    button.style.setProperty('--tdr-reward-empty',`${((1-progress)*100).toFixed(4)}%`);
     const label=kind==='daily'?(en?'Daily gift':'Regalo diario'):(en?'Rewarded video':'Vídeo recompensado');
+    const caption=ready?(kind==='daily'?(en?'CLAIM':'RECOGER'):(en?'WATCH':'VER')):(kind==='daily'?(en?'GIFT':'REGALO'):(en?'VIDEO':'VÍDEO'));
     button.classList.toggle('is-ready',ready);
     button.classList.toggle('is-cooling',!ready);
-    const statusNode=button.querySelector('[data-reward-status]');
-    if(statusNode&&statusNode.textContent!==caption)statusNode.textContent=caption;
-    button.setAttribute('aria-label',`${label}: +${total} ${en?'coins':'monedas'}. ${ready?action:caption}`);
+    button.querySelectorAll('[data-reward-status]').forEach(node=>{
+      if(node.textContent!==caption)node.textContent=caption;
+    });
+    const exact=ready?caption:`${en?'Ready in':'Disponible en'} ${ctaCountdown(remaining)}`;
+    button.setAttribute('aria-label',`${label}: +${kind==='daily'?250:100} ${en?'coins':'monedas'}. ${exact}`);
     button.title=button.getAttribute('aria-label');
   }
 }
@@ -99,8 +120,9 @@ export function installLobbyDom(scene) {
     root.style.backgroundImage = `url("${BASE}assets/ui/menu_bg.webp")`; root.style.backgroundSize='cover'; root.style.backgroundPosition='center'; root.style.backgroundRepeat='no-repeat'; root.innerHTML = `<header class="tdr-lobby-header"><button type="button" class="tdr-lobby-brand" aria-label="Top Down Race"><img src="${BASE}assets/logo.webp" alt="Top Down Race" draggable="false"></button><div class="tdr-lobby-wallet"><img src="${BASE}assets/ui/moneda-tdr.webp" alt="" draggable="false"><span><small>${tr('lobby.coins')}</small><strong data-coins>0</strong></span></div><div data-pilot-header style="min-width:96px;max-width:180px;display:grid;gap:4px;padding:5px 10px;border-left:1px solid rgba(70,221,255,.18);border-right:1px solid rgba(70,221,255,.18);line-height:1;overflow:hidden"><small style="color:#7f94a6;font-size:8px;font-weight:900;letter-spacing:.16em">${tr('lobby.driver')}</small><strong data-pilot-header-name style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#65eaff;font-size:clamp(11px,1.05vw,16px);font-weight:950;letter-spacing:.05em">—</strong><button type="button" data-cloud-account style="padding:0;border:0;background:none;text-align:left;color:#8eabb9;font:700 9px system-ui;cursor:pointer;touch-action:manipulation" title="Cuenta y copia de seguridad">ID · … ☁</button></div><nav class="tdr-lobby-top-actions"></nav></header><img class="tdr-lobby-car-preview" data-lobby-car alt="" draggable="false"><main class="tdr-lobby-cards"><section class="tdr-lobby-card tdr-event-card" data-event-card></section><section class="tdr-lobby-card tdr-car-card" data-car-card></section><section class="tdr-lobby-card tdr-track-card" data-track-card></section></main><div class="tdr-lobby-play-slot"></div><nav class="tdr-lobby-bottom-actions"></nav>`;
     const header=root.querySelector('.tdr-lobby-header');header?.classList.add('tdr-app-header');if(header)header.dataset.tdrAppHeader='1';root.querySelector('.tdr-lobby-wallet')?.remove();header?.append(createAppWallet({className:'tdr-lobby-wallet',amountAttribute:'coins',label:tr('lobby.coins')}));host.appendChild(root); scene._lobbyDomRoot = root;
     const top = root.querySelector('.tdr-lobby-top-actions'); top.append(makeButton({ cls:'tdr-lobby-button--gold', icon:'icon_inventory.webp', label:tr('lobby.inventory'), action:()=>scene._openLobbyInventoryModal?.('materials') }), makeButton({ cls:'tdr-lobby-button--purple', icon:'icon_store.webp', label:tr('lobby.store'), action:()=>scene._openStoreModal?.('materials') }), makeButton({ icon:'icon_settings.webp', label:tr('lobby.settings'), action:()=>scene.scene.start('SettingsScene') }));
-    const play = document.createElement('button'); play.type='button'; play.className='tdr-lobby-play'; play.innerHTML=`<span class="tdr-lobby-play-triangle">▶</span><span>${tr('lobby.play')}</span>`; play.addEventListener('click',()=>startRaceFlow(scene));
+    const play = document.createElement('button'); play.type='button'; play.className='tdr-lobby-play'; play.innerHTML=`<span class="tdr-lobby-play-triangle">▶</span><span>${getLanguage()==='en'?'PLAY':'JUGAR'}</span>`; play.addEventListener('click',()=>startRaceFlow(scene));
     const lane=root.querySelector('.tdr-lobby-play-slot');
+    lane?.classList.add('tdr-lobby-action-capsule');
     lane?.append(makeRewardShortcut('daily',scene),play,makeRewardShortcut('video',scene));
     const bottom=root.querySelector('.tdr-lobby-bottom-actions'); bottom.append(makeButton({icon:'icon_garage.webp',label:tr('lobby.garage'),action:()=>scene.scene.start('GarageScene',{mode:'player'})}),makeButton({cls:'tdr-lobby-button--factory',icon:'icon_factory.webp',label:tr('lobby.factory'),action:()=>scene.scene.start('upgrade-shop')}),makeButton({cls:'tdr-lobby-button--gold',icon:'icon_tracks.webp',label:tr('lobby.tracks'),action:()=>scene.scene.start('TrackGarageScene',{mode:'player'})}));
     if(!IS_PROD_BUILD){const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));}

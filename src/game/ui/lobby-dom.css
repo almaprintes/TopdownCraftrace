@@ -277,101 +277,181 @@
   .tdr-lobby-car-preview { top: 27.5%; width: max(90px, 10.5vw); height: 46vh; }
 }
 
-/* Rewards flank a deliberately narrower PLAY button. This lane sits above
-   the existing bottom dock and keeps all three touch targets independent. */
-.tdr-lobby-play-slot{
-  width:min(56vw,660px);
+/* DEV triple action capsule: complementary beveled joints rather than
+   three detached cards. The play action remains the visual center. */
+.tdr-lobby-dom .tdr-lobby-action-capsule{
+  width:min(66vw,970px);
   display:grid;
-  grid-template-columns:minmax(0,1fr) minmax(0,1.58fr) minmax(0,1fr);
-  align-items:center;
-  gap:clamp(5px,.85vw,12px);
+  grid-template-columns:minmax(0,1.09fr) minmax(0,.93fr) minmax(0,1.09fr);
+  align-items:stretch;
+  gap:3px;
+  isolation:isolate;
+  filter:drop-shadow(0 6px 9px rgba(0,0,0,.65));
+  position:absolute;
 }
-.tdr-lobby-play-slot .tdr-lobby-play{
-  min-width:0;
-  height:clamp(46px,7.5vh,58px);
-}
-.tdr-lobby-reward-cta{
-  min-width:0;
-  width:100%;
-  height:clamp(43px,7.2vh,54px);
-  display:flex;
-  gap:clamp(3px,.6vw,8px);
-  justify-content:center;
-  align-items:center;
-  padding:3px clamp(4px,.55vw,9px);
-  border:1px solid #a78b3d;
-  border-radius:9px;
-  background:linear-gradient(155deg,rgba(66,49,14,.96),rgba(18,22,22,.97));
-  box-shadow:inset 0 1px rgba(255,225,145,.17),0 3px 14px #0008;
-  color:#ffe4a1;
-  box-sizing:border-box;
-  cursor:pointer;
-  pointer-events:auto;
-  touch-action:manipulation;
-  overflow:hidden;
-  -webkit-tap-highlight-color:transparent;
-}
-.tdr-lobby-reward-cta--video{
-  color:#c5f1ff;
-  border-color:#429bbd;
-  background:linear-gradient(155deg,rgba(16,58,81,.97),rgba(10,24,36,.97));
-}
-.tdr-lobby-reward-cta img{
-  display:block;
-  flex:0 0 auto;
-  width:clamp(28px,3.2vw,45px);
-  height:clamp(30px,4vw,48px);
-  object-fit:contain;
-  filter:drop-shadow(0 2px 5px rgba(0,0,0,.65));
+.tdr-lobby-action-capsule::before{
+  content:'';
+  position:absolute;inset:-5px -5px;
+  z-index:-1;
   pointer-events:none;
+  background:linear-gradient(90deg,rgba(248,182,45,.18),rgba(83,235,144,.13) 50%,rgba(50,183,255,.18));
+  clip-path:polygon(2% 0,98% 0,100% 50%,98% 100%,2% 100%,0 50%);
+}
+.tdr-lobby-dom .tdr-lobby-action-capsule > button{
+  position:relative;
+  width:100%;height:clamp(54px,9vh,72px);min-width:0;
+  margin:0;
+  padding:0;
+  border-radius:0;
+  box-sizing:border-box;
+  overflow:hidden;
+  cursor:pointer;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  pointer-events:auto;
+  transition:filter .2s ease;
+}
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta--daily{
+  clip-path:polygon(12px 0,calc(100% - 15px) 0,100% 50%,calc(100% - 15px) 100%,12px 100%,0 50%);
+}
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta--video{
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,15px 50%);
+}
+.tdr-lobby-action-capsule .tdr-lobby-play{
+  clip-path:polygon(0 0,calc(100% - 15px) 0,100% 50%,calc(100% - 15px) 100%,0 100%,15px 50%);
+  display:flex;align-items:center;justify-content:center;
+  gap:clamp(7px,1vw,14px);
+  border:2px solid #adffd5;
+  background:linear-gradient(180deg,#83ffbc 0%,#37e997 48%,#08a965 100%);
+  box-shadow:inset 0 2px rgba(255,255,255,.5),inset 0 -3px rgba(7,83,52,.42);
+  color:#061b15;
+  font-weight:950;
+}
+.tdr-lobby-action-capsule .tdr-lobby-play span:last-child{
+  font-size:clamp(19px,2.3vw,34px);
+  font-weight:1000;
+  letter-spacing:.035em;
+  white-space:nowrap;
+}
+.tdr-lobby-action-capsule .tdr-lobby-play-triangle{font-size:clamp(14px,1.8vw,23px)}
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta{
+  --tdr-reward-progress:0%;
+  --tdr-reward-empty:100%;
+  --tdr-reward-bright:#ffc854;
+  --tdr-reward-glow:rgba(255,180,46,.4);
+  background:linear-gradient(160deg,#423016 0%,#11191d 75%);
+  color:#fff7e1;
+  border:2px solid #c59634;
+}
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta--video{
+  --tdr-reward-bright:#73dffb;
+  --tdr-reward-glow:rgba(62,195,248,.40);
+  background:linear-gradient(160deg,#0e3650 0%,#081925 80%);
+  color:#e3faff;
+  border-color:#39a6d5;
+}
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta::before{
+  content:'';
+  position:absolute;
+  left:0;right:0;bottom:0;
+  height:var(--tdr-reward-progress);
+  background:linear-gradient(0deg,#e9981b 0%,#f6bd46 65%,#ffe08b 100%);
+  transition:height .65s linear;
+  z-index:0;
+  pointer-events:none;
+}
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta--video::before{
+  background:linear-gradient(0deg,#208bb9 0%,#54c8ec 65%,#a1f0ff 100%);
+}
+/* Face layers are absolutely aligned with button edges, matching the fill
+   boundary exactly. The filled face has navy glyphs over the bright fill;
+   the unfilled face has white glyphs over the dark empty surface.
+   Crossing the middle of a glyph creates two contrasting colored halves. */
+.tdr-lobby-reward-face{
+  position:absolute;inset:0;
+  z-index:2;
+  display:flex;
+  justify-content:center;align-items:center;
+  gap:clamp(4px,.6vw,11px);
+  padding:4px clamp(8px,1vw,18px);
+  color:#fff7e1;
+  box-sizing:border-box;
+  pointer-events:none;
+}
+.tdr-lobby-reward-cta--video .tdr-lobby-reward-face{color:#e8f9ff}
+.tdr-lobby-reward-face--filled{
+  color:#152026;
+  z-index:3;
+  clip-path:inset(var(--tdr-reward-empty) 0 0 0);
+  transition:clip-path .65s linear;
+}
+.tdr-lobby-reward-cta--video .tdr-lobby-reward-face--filled{color:#082536}
+.tdr-lobby-reward-face img{
+  width:clamp(33px,4.2vw,63px);
+  height:clamp(35px,5.5vw,66px);
+  display:block;
+  flex:none;
+  object-fit:contain;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));
+  pointer-events:none;
+}
+.tdr-lobby-reward-face--filled img{
+  filter:brightness(.20) saturate(.22);
 }
 .tdr-lobby-reward-copy{
   min-width:0;
   display:flex;
   flex-direction:column;
+  justify-content:center;
   align-items:center;
-  gap:2px;
+  gap:3px;
   line-height:1;
+  text-align:center;
 }
 .tdr-lobby-reward-copy strong{
-  font-size:clamp(13px,1.45vw,21px);
-  font-weight:950;
+  font-size:clamp(21px,2.5vw,36px);
+  font-weight:1000;
+  letter-spacing:.005em;
+  line-height:1;
   white-space:nowrap;
 }
 .tdr-lobby-reward-copy small{
-  display:block;
-  max-width:100%;
-  font-size:clamp(8px,.75vw,10px);
-  font-weight:900;
-  letter-spacing:0;
-  color:#fff;
+  font-size:clamp(9px,.97vw,13px);
+  font-weight:950;
+  letter-spacing:.045em;
   white-space:nowrap;
+  line-height:1;
 }
-.tdr-lobby-reward-cta.is-ready{
-  border-color:#f5ca69;
-  box-shadow:inset 0 1px rgba(255,238,174,.22),0 0 13px rgba(242,184,48,.24);
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta.is-ready{
+  border-color:#ffe39b;
+  filter:drop-shadow(0 0 9px var(--tdr-reward-glow));
 }
-.tdr-lobby-reward-cta--video.is-ready{
-  border-color:#70dcff;
-  box-shadow:inset 0 1px rgba(197,240,255,.22),0 0 13px rgba(37,189,255,.22);
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta--video.is-ready{
+  border-color:#c1f2ff;
 }
-.tdr-lobby-reward-cta.is-cooling{opacity:.68;box-shadow:none}
-.tdr-lobby-reward-cta:active{transform:scale(.97);filter:brightness(1.14)}
-.tdr-lobby-reward-cta:focus-visible,.tdr-lobby-play:focus-visible{
-  outline:2px solid #fff;
-  outline-offset:2px;
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta.is-cooling{
+  opacity:1; /* Never dim text; the fill level already conveys cooldown. */
 }
-@media(max-width:680px){
-  .tdr-lobby-play-slot{width:calc(100% - 30px);max-width:480px;gap:5px}
-  .tdr-lobby-reward-cta{padding-inline:2px;gap:2px}
-  .tdr-lobby-reward-cta img{width:25px;height:31px}
-  .tdr-lobby-reward-copy strong{font-size:12px}
-  .tdr-lobby-reward-copy small{font-size:8px}
+.tdr-lobby-action-capsule .tdr-lobby-reward-cta:focus-visible,
+.tdr-lobby-action-capsule .tdr-lobby-play:focus-visible{
+  outline:3px solid white;outline-offset:3px;
+}
+.tdr-lobby-action-capsule > button:active{filter:brightness(1.09)}
+@media(max-width:930px){
+ .tdr-lobby-dom .tdr-lobby-action-capsule{width:min(77vw,700px)}
+ .tdr-lobby-reward-face{padding-inline:7px}
+ .tdr-lobby-reward-face img{width:clamp(27px,3.5vw,43px);height:clamp(29px,4vw,45px)}
+ .tdr-lobby-reward-copy strong{font-size:clamp(16px,2.3vw,25px)}
+ .tdr-lobby-reward-copy small{font-size:clamp(8px,1vw,11px)}
 }
 @media(max-height:430px){
-  .tdr-lobby-play-slot .tdr-lobby-play{height:46px}
-  .tdr-lobby-reward-cta{height:42px}
-  .tdr-lobby-reward-cta img{height:35px}
-  .tdr-lobby-reward-copy strong{font-size:clamp(12px,1.4vw,16px)}
-  .tdr-lobby-reward-copy small{font-size:8px}
+ .tdr-lobby-dom .tdr-lobby-action-capsule > button{height:clamp(46px,12vh,54px)}
+ .tdr-lobby-reward-face img{height:clamp(27px,7vh,40px)}
+ .tdr-lobby-reward-copy strong{font-size:clamp(17px,2.25vw,27px)}
+ .tdr-lobby-reward-copy small{font-size:clamp(8px,.85vw,10px)}
+ .tdr-lobby-action-capsule .tdr-lobby-play span:last-child{font-size:clamp(19px,2.25vw,29px)}
+}
+@media(prefers-reduced-motion:reduce){
+ .tdr-lobby-action-capsule .tdr-lobby-reward-cta::before,
+ .tdr-lobby-reward-face--filled{transition:none}
 }
