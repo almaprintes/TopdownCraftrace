@@ -54,6 +54,7 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           node scripts/cloud-portability-smoke.mjs
+          grep -Fq 'content="DEV 1.2.97"' index.html
           npm run build:android
           node scripts/verify-android-launcher.mjs
       - name: Compile standalone cloud reinstall APK
@@ -68,14 +69,14 @@ jobs:
           unzip -t "$src" | tail -1
           "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.cloudtest'"
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-CLOUD-TEST-DEV-1.2.79.apk
-          sha256sum sdk-download/TDR-CLOUD-TEST-DEV-1.2.79.apk
+          cp "$src" sdk-download/TDR-CLOUD-TEST-DEV-1.2.97.apk
+          sha256sum sdk-download/TDR-CLOUD-TEST-DEV-1.2.97.apk
           ls -lh sdk-download/*.apk
       - name: Provide installable Redmi recovery test
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-CLOUD-TEST-DEV-1.2.79
-          path: sdk-download/TDR-CLOUD-TEST-DEV-1.2.79.apk
+          name: TDR-CLOUD-TEST-DEV-1.2.97
+          path: sdk-download/TDR-CLOUD-TEST-DEV-1.2.97.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
