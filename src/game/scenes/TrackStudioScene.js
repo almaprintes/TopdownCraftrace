@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 import { installTrackStudioImageMode, importImageProjectFile } from '../studio/installImageMode.js';
+import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -256,11 +257,7 @@ this._padCenter.on('pointerup', () => {
       .setOrigin(0.5, 0)
       .setInteractive({ useHandCursor: true });
 
-    back.on('pointerup', () => {
-      this._destroyGuideInput();
-      this._destroyProjectInput();
-      this.scene.start('admin-hub');
-    });
+    back.on('pointerup', () => this._requestExitTrackStudio?.());
 
     // =================================================
     // Barra izquierda
@@ -841,6 +838,7 @@ if (
     this._createGuideInput();
     this._createProjectInput();
     installTrackStudioImageMode(this);
+    installTrackStudioExitGuard(this);
     this._updateLoopButton();
     this._updateToolButtons();
     this._updatePanel();
@@ -2751,12 +2749,31 @@ const data = {
   }
 
   _openProjectSourceMenu() {
-    const choice = window.prompt('CARGAR TRACK STUDIO\n\n1 · Circuito del juego\n2 · Proyecto guardado en este dispositivo\n3 · Importar JSON\n\nEscribe 1, 2 o 3:', '1');
+    const choice = window.prompt('CARGAR TRACK STUDIO\n\n1 · Circuito del juego\n2 · Proyecto guardado en este dispositivo\n3 · Importar JSON o .tdrtrack\n4 · Recuperar último trabajo automático\n\nEscribe 1, 2, 3 o 4:', '1');
     if (choice === null) return;
     if (choice === '1') { this._openGameTrackSourceMenu(); return; }
     if (choice === '2') { this._loadProject(); this._flashMessage('📂 Proyecto local cargado'); return; }
     if (choice === '3') { this._openProjectPicker(); return; }
-    this._flashMessage('Elige 1, 2 o 3');
+    if (choice === '4') { this._restoreLastTrackStudioRecovery(); return; }
+    this._flashMessage('Elige 1, 2, 3 o 4');
+  }
+
+  _restoreLastTrackStudioRecovery() {
+    try {
+      const raw = localStorage.getItem('trackstudio_recovery');
+      if (!raw) return this._flashMessage('No hay trabajo automático que recuperar');
+      const data = JSON.parse(raw);
+      const editor = data.editor || data;
+      if (!Array.isArray(editor.nodes)) throw new Error('El respaldo no contiene nodos válidos');
+      if (!window.confirm('¿Recuperar el último trabajo automático?\n\nSustituirá lo que tienes abierto. Puedes cancelar.')) return;
+      this._pushHistory();
+      this._applyProjectData(editor);
+      this._autosaveRecovery();
+      this._flashMessage('Trabajo automático recuperado');
+    } catch (err) {
+      console.error('[TrackStudio] No se pudo recuperar el trabajo', err);
+      this._flashMessage('No se pudo recuperar el trabajo');
+    }
   }
 
   _openGameTrackSourceMenu() {

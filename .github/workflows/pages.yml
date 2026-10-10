@@ -79,6 +79,7 @@ jobs:
           node scripts/bootstrap-regression-smoke.mjs
           node scripts/track-beauty-identity-smoke.mjs
           node scripts/trackstudio-image-mode-smoke.mjs
+          node scripts/trackstudio-exit-guard-smoke.mjs
           grep -q "start_red.webp" src/game/scenes/RaceCleanStartLightsScene.js
           grep -q "Surface physics only" src/game/scenes/RaceSurfaceProfileScene.js
           if grep -q "setTexture?.('off')" src/game/scenes/RaceSurfaceProfileScene.js; then exit 1; fi
