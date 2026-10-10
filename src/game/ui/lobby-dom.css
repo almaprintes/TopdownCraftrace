@@ -276,3 +276,102 @@
   .tdr-track-map { height: 70px; margin-block: 5px; }
   .tdr-lobby-car-preview { top: 27.5%; width: max(90px, 10.5vw); height: 46vh; }
 }
+
+/* Rewards flank a deliberately narrower PLAY button. This lane sits above
+   the existing bottom dock and keeps all three touch targets independent. */
+.tdr-lobby-play-slot{
+  width:min(56vw,660px);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.58fr) minmax(0,1fr);
+  align-items:center;
+  gap:clamp(5px,.85vw,12px);
+}
+.tdr-lobby-play-slot .tdr-lobby-play{
+  min-width:0;
+  height:clamp(46px,7.5vh,58px);
+}
+.tdr-lobby-reward-cta{
+  min-width:0;
+  width:100%;
+  height:clamp(43px,7.2vh,54px);
+  display:flex;
+  gap:clamp(3px,.6vw,8px);
+  justify-content:center;
+  align-items:center;
+  padding:3px clamp(4px,.55vw,9px);
+  border:1px solid #a78b3d;
+  border-radius:9px;
+  background:linear-gradient(155deg,rgba(66,49,14,.96),rgba(18,22,22,.97));
+  box-shadow:inset 0 1px rgba(255,225,145,.17),0 3px 14px #0008;
+  color:#ffe4a1;
+  box-sizing:border-box;
+  cursor:pointer;
+  pointer-events:auto;
+  touch-action:manipulation;
+  overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+}
+.tdr-lobby-reward-cta--video{
+  color:#c5f1ff;
+  border-color:#429bbd;
+  background:linear-gradient(155deg,rgba(16,58,81,.97),rgba(10,24,36,.97));
+}
+.tdr-lobby-reward-cta img{
+  display:block;
+  flex:0 0 auto;
+  width:clamp(28px,3.2vw,45px);
+  height:clamp(30px,4vw,48px);
+  object-fit:contain;
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.65));
+  pointer-events:none;
+}
+.tdr-lobby-reward-copy{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+  line-height:1;
+}
+.tdr-lobby-reward-copy strong{
+  font-size:clamp(13px,1.45vw,21px);
+  font-weight:950;
+  white-space:nowrap;
+}
+.tdr-lobby-reward-copy small{
+  display:block;
+  max-width:100%;
+  font-size:clamp(8px,.75vw,10px);
+  font-weight:900;
+  letter-spacing:0;
+  color:#fff;
+  white-space:nowrap;
+}
+.tdr-lobby-reward-cta.is-ready{
+  border-color:#f5ca69;
+  box-shadow:inset 0 1px rgba(255,238,174,.22),0 0 13px rgba(242,184,48,.24);
+}
+.tdr-lobby-reward-cta--video.is-ready{
+  border-color:#70dcff;
+  box-shadow:inset 0 1px rgba(197,240,255,.22),0 0 13px rgba(37,189,255,.22);
+}
+.tdr-lobby-reward-cta.is-cooling{opacity:.68;box-shadow:none}
+.tdr-lobby-reward-cta:active{transform:scale(.97);filter:brightness(1.14)}
+.tdr-lobby-reward-cta:focus-visible,.tdr-lobby-play:focus-visible{
+  outline:2px solid #fff;
+  outline-offset:2px;
+}
+@media(max-width:680px){
+  .tdr-lobby-play-slot{width:calc(100% - 30px);max-width:480px;gap:5px}
+  .tdr-lobby-reward-cta{padding-inline:2px;gap:2px}
+  .tdr-lobby-reward-cta img{width:25px;height:31px}
+  .tdr-lobby-reward-copy strong{font-size:12px}
+  .tdr-lobby-reward-copy small{font-size:8px}
+}
+@media(max-height:430px){
+  .tdr-lobby-play-slot .tdr-lobby-play{height:46px}
+  .tdr-lobby-reward-cta{height:42px}
+  .tdr-lobby-reward-cta img{height:35px}
+  .tdr-lobby-reward-copy strong{font-size:clamp(12px,1.4vw,16px)}
+  .tdr-lobby-reward-copy small{font-size:8px}
+}

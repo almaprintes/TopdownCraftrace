@@ -119,3 +119,29 @@ assert.match(season,/dispatchEvent\(new Event\('tdr:season-closed'\)\)/,'close c
 assert.match(season,/finally\{[\s\S]*?delete root\.dataset\.tdrWalletPending;[\s\S]*?refreshAppWallets\(root\);/,'restore persisted wallet even when interrupted');
 assert.match(fx,/closeEvent='tdr:store-closed'/,'store close remains default');
 assert.match(fx,/root\.addEventListener\(closeEvent,onClose/,'screens use own close event');
+
+/* The lobby adds entry points only. Store reward verification stays unique. */
+const lobby=read('src/game/ui/LobbyDomUi.js');
+const storeRoute=read('src/game/scenes/MenuDuelModeScene.js');
+const liveStore=read('src/game/ui/StoreDomUi.js');
+const lobbyCss=read('src/game/ui/lobby-dom.css');
+assert.match(lobby,/makeRewardShortcut\('daily',scene\),play,makeRewardShortcut\('video',scene\)/,
+  'daily and rewarded video flank the real Play button');
+assert.match(lobby,/scene\._openStoreModal\?\.\('rewards'\)/,
+  'reward CTA reuses existing store route rather than claiming directly');
+assert.match(lobby,/const status=kind==='daily'\?dailyStatus\(\):rewardedStatus\(\)/,
+  'both CTA statuses use canonical cooldown functions');
+assert.match(lobby,/updateLobbyRewardShortcuts\(root\);/,
+  'rewards update in the existing lobby countdown ticker');
+assert.match(storeRoute,/_openStoreModal\(section='materials'\)/,
+  'existing store navigation forwards requested section');
+assert.match(storeRoute,/return openStoreDom\(this,section\)/,
+  'do not create a new store implementation');
+assert.match(liveStore,/if\(section==='rewards'\)/,
+  'same Store shows existing rewards cards on opening');
+assert.match(liveStore,/scroller\.scrollLeft=Math\.max\(0,left-gutter\)/,
+  'rewards are brought into viewport without triggering rewards automatically');
+assert.match(lobbyCss,/width:min\(56vw,660px\)/,
+  'Play and two reward CTAs use a narrower centered lane');
+assert.doesNotMatch(lobby,/claimRewardedCoins|claimDailyCoins|showRewardedAd/,
+  'lobby never duplicates reward claiming or advertising');

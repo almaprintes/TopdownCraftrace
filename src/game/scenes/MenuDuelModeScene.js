@@ -11,10 +11,10 @@ const FONT='system-ui,-apple-system,Segoe UI,Arial';
 const STORE_TIME_LABEL=ms=>{const s=Math.max(0,Math.ceil(ms/1000)),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;};
 
 export class MenuScene extends CurrentMenuScene {
-  _openStoreModal(){
+  _openStoreModal(section='materials'){
     this._storeCountdownEvent?.remove?.(false);
     this._storeCountdownEvent=null;
-    return openStoreDom(this);
+    return openStoreDom(this,section);
   }
 
   _installStoreCountdownTicker(root){

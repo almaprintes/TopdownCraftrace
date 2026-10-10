@@ -120,7 +120,7 @@ function rewardCard(scene,root,kind){
   update();return {card,update};
 }
 
-export function openStoreDom(scene){
+export function openStoreDom(scene,section='materials'){
   closeStoreDom(scene);
   const root=el('div','tdr-store-dom');root.id=ROOT_ID;root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');
   const shell=el('section','tdr-store-shell');
@@ -131,6 +131,16 @@ export function openStoreDom(scene){
   const video=rewardCard(scene,root,'video'),daily=rewardCard(scene,root,'daily');scroller.append(video.card,daily.card);shell.append(scroller);root.append(shell);
   root.addEventListener('pointerdown',e=>e.stopPropagation());root.addEventListener('pointerup',e=>e.stopPropagation());root.addEventListener('touchmove',e=>e.stopPropagation(),{passive:true});
   document.body.append(root);scene._storeDomRoot=root;
+  // Existing _openStoreModal('rewards') opens the same Store, but with
+  // its original +100 / +250 cards in view instead of four material packs.
+  if(section==='rewards'){
+    requestAnimationFrame(()=>{
+      if(!root.isConnected)return;
+      const left=video.card.getBoundingClientRect().left-scroller.getBoundingClientRect().left+scroller.scrollLeft;
+      const gutter=parseFloat(getComputedStyle(scroller).paddingLeft)||0;
+      scroller.scrollLeft=Math.max(0,left-gutter);
+    });
+  }
   const timer=setInterval(()=>{if(!root.isConnected){clearInterval(timer);return;}video.update();daily.update();},1000);
   const cleanup=()=>{clearInterval(timer);closeStoreDom(scene);};
   scene.events?.once?.('shutdown',cleanup);scene.events?.once?.('destroy',cleanup);

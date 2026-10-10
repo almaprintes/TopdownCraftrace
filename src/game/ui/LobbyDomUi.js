@@ -10,6 +10,7 @@ import { cloudIdentity, shortPlayerId } from '../social/cloudProgress.js';
 
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import {createAppWallet,disposeAppWallets} from './TdrAppHeader.js';
+import {dailyStatus,rewardedStatus} from '../store/storeEconomy.js';
 import './lobby-dom.css';
 
 const BASE = import.meta.env.BASE_URL || '/';
@@ -48,6 +49,46 @@ function renderDomCards(scene, root) {
   const trackKey = scene.selectedTrackKey || 'track01'; const track = TRACK_REGISTRY?.[trackKey]; const center = Array.isArray(track?.raceCenterline) && track.raceCenterline.length ? track.raceCenterline : track?.centerline;
   if (trackSlot && track) { const id = String(track.id || track.key || '').toLowerCase(); const category = String(track.category || '').toLowerCase(); const surface = id.includes('offroad') || category.includes('dirt') || category.includes('tierra') ? tr('lobby.dirt') : tr('lobby.asphalt'); const direction = String(track.raceDirection || 'forward').toLowerCase() === 'reverse' ? tr('lobby.counterclockwise') : tr('lobby.clockwise'); const length = Math.round(loopLength(center) * METERS_PER_PX); const sectors = Math.max(1, (track.checkpoints?.length || 2) + 1); trackSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.selectedTrack')}</div><h2>${escapeHtml(track.name || trackKey)}</h2><div class="tdr-track-map">${trackSvg(center)}</div><div class="tdr-track-stats"><span><small>${tr('lobby.length')}</small><strong>${length} m</strong></span><span><small>${tr('lobby.sectors')}</small><strong>${sectors}</strong></span><span><small>${tr('lobby.surface')}</small><strong>${surface}</strong></span><span><small>${tr('lobby.direction')}</small><strong>${direction}</strong></span></div>`; }
 }
+// Lobby cards are navigation shortcuts only. The Store remains the single
+// authority for ad verification, reward eligibility, claim and coin animation.
+function makeRewardShortcut(kind,scene){
+  const video=kind==='video',button=document.createElement('button');
+  button.type='button';button.className='tdr-lobby-reward-cta '+(video?'tdr-lobby-reward-cta--video':'tdr-lobby-reward-cta--daily');
+  button.dataset.lobbyRewardCta=kind;
+  const icon=document.createElement('img');icon.src=`${BASE}assets/store/${video?'rewarded_video':'daily_gift'}.webp`;
+  icon.alt='';icon.draggable=false;icon.decoding='async';
+  const copy=document.createElement('span');copy.className='tdr-lobby-reward-copy';
+  const total=document.createElement('strong');total.textContent=video?'+100':'+250';
+  const state=document.createElement('small');state.dataset.rewardStatus='1';
+  copy.append(total,state);button.append(icon,copy);
+  // Same existing Rewards route used by the Store. No second claim handler.
+  button.addEventListener('click',()=>scene._openStoreModal?.('rewards'));
+  return button;
+}
+const ctaCountdown=ms=>{
+  const secs=Math.max(0,Math.ceil(Number(ms)||0)/1000);
+  const hours=Math.floor(secs/3600),mins=Math.floor((secs%3600)/60);
+  return `${pad2(hours)}:${pad2(mins)}`;
+};
+function updateLobbyRewardShortcuts(root){
+  if(!root?.isConnected)return;
+  const en=getLanguage()==='en';
+  for(const kind of ['daily','video']){
+    const button=root.querySelector(`[data-lobby-reward-cta="${kind}"]`);
+    if(!button)continue;
+    const status=kind==='daily'?dailyStatus():rewardedStatus();
+    const ready=Boolean(status.available),total=kind==='daily'?250:100;
+    const action=kind==='daily'?(en?'CLAIM':'RECOGER'):(en?'WATCH AD':'VER ANUNCIO');
+    const caption=ready?action:`${en?'IN':'EN'} ${ctaCountdown(status.remaining)}`;
+    const label=kind==='daily'?(en?'Daily gift':'Regalo diario'):(en?'Rewarded video':'Vídeo recompensado');
+    button.classList.toggle('is-ready',ready);
+    button.classList.toggle('is-cooling',!ready);
+    const statusNode=button.querySelector('[data-reward-status]');
+    if(statusNode&&statusNode.textContent!==caption)statusNode.textContent=caption;
+    button.setAttribute('aria-label',`${label}: +${total} ${en?'coins':'monedas'}. ${ready?action:caption}`);
+    button.title=button.getAttribute('aria-label');
+  }
+}
 function makeButton({ cls = '', icon, label, action }) { const button = document.createElement('button'); button.type = 'button'; button.className = `tdr-lobby-button ${cls}`.trim(); button.innerHTML = `<img src="${asset(icon)}" alt="" draggable="false"><span>${label}</span>`; button.addEventListener('click', action); return button; }
 function startRaceFlow(scene) { if (typeof scene._openGameModeModal === 'function') { scene._openGameModeModal(); return; } const carId = scene.selectedCarId; const trackKey = scene.selectedTrackKey || 'track01'; try { localStorage.setItem('tdr2:carId', carId); localStorage.setItem('tdr2:trackKey', trackKey); } catch {} scene.scene.start('race', { carId, trackKey }); }
 
@@ -58,7 +99,9 @@ export function installLobbyDom(scene) {
     root.style.backgroundImage = `url("${BASE}assets/ui/menu_bg.webp")`; root.style.backgroundSize='cover'; root.style.backgroundPosition='center'; root.style.backgroundRepeat='no-repeat'; root.innerHTML = `<header class="tdr-lobby-header"><button type="button" class="tdr-lobby-brand" aria-label="Top Down Race"><img src="${BASE}assets/logo.webp" alt="Top Down Race" draggable="false"></button><div class="tdr-lobby-wallet"><img src="${BASE}assets/ui/moneda-tdr.webp" alt="" draggable="false"><span><small>${tr('lobby.coins')}</small><strong data-coins>0</strong></span></div><div data-pilot-header style="min-width:96px;max-width:180px;display:grid;gap:4px;padding:5px 10px;border-left:1px solid rgba(70,221,255,.18);border-right:1px solid rgba(70,221,255,.18);line-height:1;overflow:hidden"><small style="color:#7f94a6;font-size:8px;font-weight:900;letter-spacing:.16em">${tr('lobby.driver')}</small><strong data-pilot-header-name style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#65eaff;font-size:clamp(11px,1.05vw,16px);font-weight:950;letter-spacing:.05em">—</strong><button type="button" data-cloud-account style="padding:0;border:0;background:none;text-align:left;color:#8eabb9;font:700 9px system-ui;cursor:pointer;touch-action:manipulation" title="Cuenta y copia de seguridad">ID · … ☁</button></div><nav class="tdr-lobby-top-actions"></nav></header><img class="tdr-lobby-car-preview" data-lobby-car alt="" draggable="false"><main class="tdr-lobby-cards"><section class="tdr-lobby-card tdr-event-card" data-event-card></section><section class="tdr-lobby-card tdr-car-card" data-car-card></section><section class="tdr-lobby-card tdr-track-card" data-track-card></section></main><div class="tdr-lobby-play-slot"></div><nav class="tdr-lobby-bottom-actions"></nav>`;
     const header=root.querySelector('.tdr-lobby-header');header?.classList.add('tdr-app-header');if(header)header.dataset.tdrAppHeader='1';root.querySelector('.tdr-lobby-wallet')?.remove();header?.append(createAppWallet({className:'tdr-lobby-wallet',amountAttribute:'coins',label:tr('lobby.coins')}));host.appendChild(root); scene._lobbyDomRoot = root;
     const top = root.querySelector('.tdr-lobby-top-actions'); top.append(makeButton({ cls:'tdr-lobby-button--gold', icon:'icon_inventory.webp', label:tr('lobby.inventory'), action:()=>scene._openLobbyInventoryModal?.('materials') }), makeButton({ cls:'tdr-lobby-button--purple', icon:'icon_store.webp', label:tr('lobby.store'), action:()=>scene._openStoreModal?.('materials') }), makeButton({ icon:'icon_settings.webp', label:tr('lobby.settings'), action:()=>scene.scene.start('SettingsScene') }));
-    const play = document.createElement('button'); play.type='button'; play.className='tdr-lobby-play'; play.innerHTML=`<span class="tdr-lobby-play-triangle">▶</span><span>${tr('lobby.play')}</span>`; play.addEventListener('click',()=>startRaceFlow(scene)); root.querySelector('.tdr-lobby-play-slot').appendChild(play);
+    const play = document.createElement('button'); play.type='button'; play.className='tdr-lobby-play'; play.innerHTML=`<span class="tdr-lobby-play-triangle">▶</span><span>${tr('lobby.play')}</span>`; play.addEventListener('click',()=>startRaceFlow(scene));
+    const lane=root.querySelector('.tdr-lobby-play-slot');
+    lane?.append(makeRewardShortcut('daily',scene),play,makeRewardShortcut('video',scene));
     const bottom=root.querySelector('.tdr-lobby-bottom-actions'); bottom.append(makeButton({icon:'icon_garage.webp',label:tr('lobby.garage'),action:()=>scene.scene.start('GarageScene',{mode:'player'})}),makeButton({cls:'tdr-lobby-button--factory',icon:'icon_factory.webp',label:tr('lobby.factory'),action:()=>scene.scene.start('upgrade-shop')}),makeButton({cls:'tdr-lobby-button--gold',icon:'icon_tracks.webp',label:tr('lobby.tracks'),action:()=>scene.scene.start('TrackGarageScene',{mode:'player'})}));
     if(!IS_PROD_BUILD){const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));}
     const syncPilot=()=>{const name=String(getPilotProfile()?.name||'').trim();const node=root.querySelector('[data-pilot-header-name]');if(node)node.textContent=name||'—';};
@@ -75,7 +118,7 @@ export function installLobbyDom(scene) {
 
     scene.events.once('shutdown',()=>{disposeAppWallets(root);try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
   }
-  const syncLobbyHeader=()=>{const pilotNode=root.querySelector('[data-pilot-header-name]');if(pilotNode)pilotNode.textContent=String(getPilotProfile()?.name||'').trim()||'—';const countdown=root.querySelector('[data-season-countdown]');if(countdown)countdown.textContent=seasonCountdownLabel();};
+  const syncLobbyHeader=()=>{const pilotNode=root.querySelector('[data-pilot-header-name]');if(pilotNode)pilotNode.textContent=String(getPilotProfile()?.name||'').trim()||'—';const countdown=root.querySelector('[data-season-countdown]');if(countdown)countdown.textContent=seasonCountdownLabel();updateLobbyRewardShortcuts(root);};
   syncLobbyHeader();
   if(!scene._lobbyCoinSyncTimer){scene._lobbyCoinSyncTimer=window.setInterval(syncLobbyHeader,1000);scene.events.once('shutdown',()=>{try{window.clearInterval(scene._lobbyCoinSyncTimer);}catch{}scene._lobbyCoinSyncTimer=null;});}
   renderDomCards(scene,root); return root;
