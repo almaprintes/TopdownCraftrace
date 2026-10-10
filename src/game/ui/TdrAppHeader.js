@@ -28,3 +28,40 @@ export function createAppHeader({title='',onBack=null,backLabel='×',actions=[]}
   const tools=document.createElement('div');tools.className='tdr-app-header-actions';for(const action of actions)if(action)tools.append(action);
   header.append(back,label,tools,createAppWallet({className:'tdr-store-balance'}));return header;
 }
+
+/* Observes screens which replace the header with innerHTML on every tab.
+   Disconnect the old wallet before attaching its replacement. */
+export function observeAppHeader(root,selector){
+  let previous=null;
+  const sync=()=>{
+    const header=root.querySelector(selector);
+    if(header===previous&&header?.querySelector('[data-tdr-wallet]'))return;
+    if(previous)disposeAppWallets(previous);
+    previous=header;
+    if(!header)return;
+    header.classList.add('tdr-app-header');header.dataset.tdrAppHeader='1';
+    header.querySelector('button')?.classList.add('tdr-app-back');
+    header.append(createAppWallet());
+  };
+  const observer=new MutationObserver(sync);
+  observer.observe(root,{childList:true});
+  sync();
+  return ()=>{observer.disconnect();if(previous)disposeAppWallets(previous);};
+}
+/* Fixed DOM bar for Phaser-rendered player screens. Phaser content stays intact.
+   The header is not in the zoomable camera and survives canvas redraws. */
+export function mountSceneAppHeader(scene,{title='',onBack=null}={}){
+  if(scene._tdrAppHeader?.isConnected)return scene._tdrAppHeader;
+  const host=scene.game?.canvas?.parentElement||document.getElementById('app')||document.body;
+  if(getComputedStyle(host).position==='static')host.style.position='relative';
+  const header=createAppHeader({title,onBack,backLabel:'←'});
+  header.classList.remove('tdr-store-header');
+  header.classList.add('tdr-phaser-header');
+  host.appendChild(header);
+  scene._tdrAppHeader=header;
+  scene.events?.once?.('shutdown',()=>{
+    disposeAppWallets(header);header.remove();
+    if(scene._tdrAppHeader===header)scene._tdrAppHeader=null;
+  });
+  return header;
+}

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {observeAppHeader} from '../ui/TdrAppHeader.js';
 import { defaultControlLayout, saveControlLayout, resetControlLayout, sanitizeLayoutPoint } from '../controls/controlLayout.js';
 import { t } from '../i18n/index.js';
 
@@ -57,11 +58,12 @@ export class SettingsScene extends Phaser.Scene{
     const root=document.createElement('div');root.id='tdr-settings2';this.root=root;
     root.innerHTML=`<div class="s2top"><button class="s2back">${t('settings.back')}</button><div class="s2title">${t('settings.title')}</div><div class="s2save">${t('settings.saved')}</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">${t('settings.controls')}</button><button class="s2tab" data-tab="video">${t('settings.video')}</button><button class="s2tab" data-tab="audio">${t('settings.audio')}</button><button class="s2tab" data-tab="legal">${t('settings.legal')}</button></div><div class="s2body"></div>`;
     document.body.appendChild(root);
+    this._appHeaderDispose=observeAppHeader(root,'.s2top');
     root.querySelector('.s2back').onclick=()=>this.scene.start('menu');
     root.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>this._renderTab(b.dataset.tab));
     this._renderTab('controls');
   }
-  _unmount(){this._closeCalibration();try{this.root?.remove();}catch{}this.root=null;try{document.getElementById('tdr-settings2-style')?.remove();}catch{}}
+  _unmount(){this._appHeaderDispose?.();this._appHeaderDispose=null;this._closeCalibration();try{this.root?.remove();}catch{}this.root=null;try{document.getElementById('tdr-settings2-style')?.remove();}catch{}}
   _set(path,val,rerender=false){const [a,b]=path;this.settings[a][b]=val;save(this.settings);if(rerender)this._renderTab(a==='audio'?'audio':a==='video'?'video':'controls');}
   _toggleEl(el,val){el.classList.toggle('on',!!val);}
   _switch(card,path){const sw=card.querySelector('.s2switch');sw.onclick=()=>{const [a,b]=path;this._set(path,!this.settings[a][b]);this._toggleEl(sw,this.settings[a][b]);};}

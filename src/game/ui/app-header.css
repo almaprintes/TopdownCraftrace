@@ -12,3 +12,21 @@
 .tdr-lobby-header.tdr-app-header .tdr-app-wallet{margin-left:0;order:9}
 .tdr-lobby-header.tdr-app-header .tdr-lobby-top-actions{margin-left:auto}
 @media(max-height:430px){.tdr-app-header{--tdr-app-header-height:46px}.tdr-store-header.tdr-app-header{margin-top:max(5px,var(--tdr-safe-top,5px));margin-bottom:6px}.tdr-app-wallet-icon{width:26px;height:26px}.tdr-app-wallet-copy strong{font-size:16px}.tdr-app-back{width:36px;height:36px}}
+
+/* Screen-specific geometry is shared, while existing content remains independent. */
+.tdr-phaser-header.tdr-app-header{position:absolute;top:max(8px,var(--tdr-safe-top,8px));left:max(10px,var(--tdr-safe-left,10px));right:max(10px,var(--tdr-safe-right,10px));height:clamp(48px,8.8vh,62px);padding:0 clamp(10px,1.5vw,22px);z-index:23000;pointer-events:auto}
+.tdr-phaser-header .tdr-app-title{flex:1;text-align:center}
+.tdr-stats-hub .sh-head.tdr-app-header,.tdr-stats-hub .sh-head.tdr-app-header{gap:clamp(8px,1.4vw,18px)!important}
+.tdr-stats-hub .sh-head.tdr-app-header .sh-title{flex:1;min-width:0}
+.tdr-stats-hub .sh-head.tdr-app-header .sh-back{min-width:0;width:auto;padding:0 10px}
+#tdr-settings2 .s2top.tdr-app-header{gap:clamp(8px,1.4vw,18px)!important;padding-inline:clamp(10px,1.5vw,22px)!important}
+#tdr-settings2 .s2top.tdr-app-header .s2title{flex:1;min-width:0}
+#tdr-settings2 .s2top.tdr-app-header .s2save{margin-left:0}
+#tdr-season-dom .s-head.tdr-app-header{display:flex!important;grid-template-columns:none!important;gap:clamp(8px,1.4vw,18px)!important}
+#tdr-season-dom .s-head.tdr-app-header>div:nth-child(2){flex:1;min-width:0}
+#tdr-season-dom .s-head.tdr-app-header .s-back{flex:none;padding:0 10px}
+#tdr-season-dom .s-head.tdr-app-header .s-total{flex:0 1 170px;min-width:72px;max-width:180px}
+#tdr-workshop-mobile-dom .hdr.tdr-app-header{display:flex;grid-template-columns:none;gap:clamp(8px,1.4vw,18px);padding:4px max(10px,var(--tdr-safe-left,10px));height:48px}
+#tdr-workshop-mobile-dom .hdr.tdr-app-header .title{flex:1;min-width:0;text-align:center}
+#tdr-workshop-mobile-dom .hdr.tdr-app-header .back.tdr-app-back{width:36px;min-width:36px;padding:0}
+@media(max-height:430px){.tdr-phaser-header.tdr-app-header{height:46px}.tdr-app-header .tdr-app-wallet{min-width:88px;gap:5px}.tdr-app-header .tdr-app-wallet-copy small{font-size:7px}#tdr-season-dom .s-head.tdr-app-header .s-total{max-width:115px}}

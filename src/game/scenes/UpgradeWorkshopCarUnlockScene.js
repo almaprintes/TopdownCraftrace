@@ -1,5 +1,6 @@
 import { UpgradeShopScene as CurrentWorkshop } from './UpgradeWorkshopLowHeightRecipeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import {mountSceneAppHeader} from '../ui/TdrAppHeader.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
 import { loadGarage } from '../garage/garageStore.js';
 import { openMaterialExchangeDom, closeMaterialExchangeDom } from '../ui/MaterialExchangeFlexibleDom.js';
@@ -98,20 +99,10 @@ export class UpgradeShopScene extends CurrentWorkshop {
   }
 
   _header(A,w,compact){
-    const h=compact?50:62;
-    const top=6;
-    const side=Math.max(10,Math.min(24,w*.014));
-    const g=A(this.add.graphics());
-    g.fillStyle(0x071226,.95);g.fillRoundedRect(side,top,w-side*2,h-8,12);
-    g.lineStyle(1,0x46ddff,.32);g.strokeRoundedRect(side,top,w-side*2,h-8,12);
-    g.lineStyle(2,0xe6b84e,.82);g.lineBetween(side+15,top+1,side+Math.min(260,w*.22),top+1);
-    const cy=top+(h-8)/2;
-
-    const back=A(this.add.text(side+15,cy,'←',{fontFamily:UI_FONT,fontSize:compact?'23px':'28px',fontStyle:'700',color:'#ffffff'}).setOrigin(0,.5).setInteractive({useHandCursor:true}));
-    back.on('pointerdown',()=>{if(!this.busy)this.scene.start('menu');});
-    A(this.add.text(side+(compact?50:58),cy,'GARAJE',{fontFamily:UI_FONT,fontSize:compact?'15px':'19px',fontStyle:'700',color:'#ffffff'}).setOrigin(0,.5));
-    A(this.add.text(w*.57,cy,'FABRICACIÓN',{fontFamily:UI_FONT,fontSize:compact?'20px':'26px',fontStyle:'700',color:'#ffffff'}).setOrigin(.5));
-    A(this.add.text(w-side-14,cy,`●  ${Number(this.state?.coins||0).toLocaleString('es-ES')}`,{fontFamily:UI_FONT,fontSize:compact?'13px':'17px',fontStyle:'700',color:'#ffd45a'}).setOrigin(1,.5));
+    // Mobile compact mode already uses the same shared wallet in WorkshopMobileDom.
+    if(!this.__nativeWorkshopDom)mountSceneAppHeader(this,{
+      title:'FABRICACIÓN',onBack:()=>{if(!this.busy)this.scene.start('menu');}
+    });
   }
 
   _browseWorkshopCar(delta){

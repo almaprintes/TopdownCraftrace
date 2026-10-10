@@ -49,6 +49,7 @@ assert.ok(verified>=0&&awarded>verified&&flown>awarded&&counted>flown,
 assert.match(domStore,/if\(busy\|\|!root\.isConnected\)return/,'prevent duplicate taps in real store');
 assert.match(domStore,/button\.disabled=busy\|\|!status\.available/,'do not reenable while playing ad');
 assert.match(domStore,/root\.dispatchEvent\(new Event\('tdr:store-closed'\)\)/,'dismiss active flight');
+const fx=read('src/game/ui/coinRewardFlight.js');
 const shared=read('src/game/ui/TdrAppHeader.js');
 assert.match(shared,/assets\/ui\/moneda-tdr\.webp/,'coin asset shared');
 assert.match(shared,/export function createAppHeader/,'header factory');
@@ -61,7 +62,6 @@ assert.match(fx,/zIndex:'70'/,'flight above shell');
 assert.match(domStore,/root\.dataset\.tdrWalletPending='1'/,'freeze count during flight');
 
 assert.match(domStore,/finally\{[\s\S]*?refreshBalance\(root\);update\(\)/,'always refresh wallet after interruptions');
-const fx=read('src/game/ui/coinRewardFlight.js');
 assert.match(fx,/assets\/ui\/moneda-tdr\.webp/);
 assert.match(fx,/a\.mute/,'honor mute');
 assert.match(fx,/a\.effects/,'honor effect volume');
@@ -70,3 +70,10 @@ assert.match(fx,/Promise\.race/,'WebKit cancellation must not hang award');
 assert.match(fx,/layer\.remove\(\)/,'dispose effect');
 assert.doesNotMatch(fx,/localStorage\.setItem/,'visual effect must not grant currency');
 console.log('Coin reward flight smoke: verified 100, daily 250, safe grants and header timing');
+
+const header=read('src/game/ui/TdrAppHeader.js');
+assert.match(header,/export function observeAppHeader/,'screens replace their DOM header safely');
+assert.match(header,/export function mountSceneAppHeader/,'Phaser screens own a stable DOM header');
+for(const p of ['src/game/scenes/StatsScene.js','src/game/scenes/SettingsDomScene.js','src/game/scenes/SeasonScene.js'])assert.match(read(p),/observeAppHeader\(/,'shared header on '+p);
+for(const p of ['src/game/scenes/GarageScene.js','src/game/scenes/TrackGarageScene.js','src/game/scenes/UpgradeWorkshopCarUnlockScene.js'])assert.match(read(p),/mountSceneAppHeader\(/,'Phaser header on '+p);
+assert.match(read('src/game/ui/WorkshopMobileDom.js'),/createAppWallet\(/,'factory mobile uses official coin');

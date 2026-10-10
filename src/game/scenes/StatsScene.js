@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {observeAppHeader} from '../ui/TdrAppHeader.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { unlockedCarIds } from '../cars/carUnlocks.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
@@ -19,8 +20,9 @@ export class StatsScene extends Phaser.Scene{
   create(){
     const host=this.game?.canvas?.parentElement||document.getElementById('app')||document.body;
     const root=document.createElement('div');root.className='tdr-stats-hub';host.appendChild(root);this._root=root;
+    this._appHeaderDispose=observeAppHeader(root,'.sh-head');
     reconcileTimeTrialHistory();this._renderCars();
-    this.events.once('shutdown',()=>{try{root.remove();}catch{}this._root=null;});
+    this.events.once('shutdown',()=>{this._appHeaderDispose?.();this._appHeaderDispose=null;try{root.remove();}catch{}this._root=null;});
   }
   _data(){
     const stats=loadPlayerStats();

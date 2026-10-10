@@ -1,4 +1,5 @@
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import {createAppWallet,disposeAppWallets} from './TdrAppHeader.js';
 import { GARAGE_ITEMS, DIRECT_CRAFT_RECIPES, findStripRecipe, statDeltaForPart } from '../garage/partsCatalog.js';
 import { qty, getEquippedForCar } from '../garage/garageStore.js';
 import { getBaseInternalStats, displayStat } from '../cars/performanceRating.js';
@@ -101,13 +102,15 @@ function renderDock(scene){
  return dock;
 }
 
-export function closeWorkshopMobileDom(scene){closeQuickModal();document.getElementById(ROOT_ID)?.remove();if(scene)scene.__workshopDomRoot=null;}
+export function closeWorkshopMobileDom(scene){closeQuickModal();const root=document.getElementById(ROOT_ID);disposeAppWallets(root);root?.remove();if(scene)scene.__workshopDomRoot=null;}
 
 export function renderWorkshopMobileDom(scene){
  if(typeof document==='undefined'||!scene)return false;ensureStyle();closeWorkshopMobileDom(scene);
  const host=scene.game?.canvas?.parentElement||document.getElementById('app')||document.body;if(getComputedStyle(host).position==='static')host.style.position='relative';
  const root=el('div');root.id=ROOT_ID;scene.__workshopDomRoot=root;host.appendChild(root);
- const hdr=el('div','hdr');hdr.append(button('← GARAJE','back',()=>{if(!scene.busy)scene.scene.start('menu');}),el('div','title','FABRICACIÓN'),el('div','coins',`● ${Number(scene.state?.coins||0).toLocaleString('es-ES')}`));root.append(hdr);
+ const hdr=el('header','hdr tdr-app-header');hdr.dataset.tdrAppHeader='1';
+ const back=button('←','back tdr-app-back',()=>{if(!scene.busy)scene.scene.start('menu');});back.setAttribute('aria-label','Volver al garaje');
+ hdr.append(back,el('div','title','FABRICACIÓN'),createAppWallet());root.append(hdr);
  const body=el('div','body');root.append(body);
  const left=el('section','panel carPanel');body.append(left);const spec=CAR_SPECS[scene.car]||{};const head=el('div');head.append(el('div','eyebrow','COCHE ACTUAL'));const ch=el('div','carHead');ch.append(el('div','carName',String(spec.name||scene.car||'').toUpperCase()),el('div','rarity',String(spec.rarity||'COMÚN').toUpperCase()));head.append(ch);left.append(head);
  const stage=el('div','carStage');const ci=el('img');ci.src=carAsset(scene.car);ci.alt='';stage.append(ci);left.append(stage);left.append(renderStats(scene,spec));
