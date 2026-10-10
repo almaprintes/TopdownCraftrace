@@ -125,7 +125,7 @@ function mountSettingsProfile(){
       if(heading)heading.textContent=next.name;
       if(status){status.style.color='#6ff0b4';status.textContent=en?`SAVED: ${next.name}`:`GUARDADO: ${next.name}`;}
     }catch(err){
-      if(status){status.style.color='#ff8a93';status.textContent=en?'Driver name must contain 3–16 characters.':String(err?.message||'Nombre no válido');}
+      if(status){status.style.color='#ff8a93';status.textContent=String(err?.message||'No se pudo verificar el nombre de piloto');}
       input?.focus?.();
     }finally{
       saving=false;

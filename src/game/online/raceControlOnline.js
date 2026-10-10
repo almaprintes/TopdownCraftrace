@@ -131,7 +131,7 @@ export async function switchRaceControlAccount(email,password){
 // Exact case-sensitive nickname reservation happens on the server, atomically.
 // No local nickname is committed until Supabase confirms the reservation.
 export async function claimRaceControlPilotNick(value){
-  const nick=String(value??'').replace(/\\s+/g,' ').trim();
+  const nick=String(value??'').replace(/\s+/g,' ').trim();
   if(nick.length<3||nick.length>16)
     throw new Error('El nombre de piloto debe tener entre 3 y 16 caracteres.');
   const s=await activeSession();
