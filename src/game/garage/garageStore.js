@@ -24,7 +24,7 @@ export function loadGarage(){
   if(!JUDGE_GARAGE)JUDGE_GARAGE=judgeGarage(stored);
   return structuredClone(JUDGE_GARAGE);
 }
-export function saveGarage(s){if(evaluationAccessEnabled()){JUDGE_GARAGE=structuredClone(s);return s;}localStorage.setItem(KEY,JSON.stringify(s));return s;}
+export function saveGarage(s){if(evaluationAccessEnabled())JUDGE_GARAGE=structuredClone(s);else localStorage.setItem(KEY,JSON.stringify(s));try{if(typeof window!=='undefined')window.dispatchEvent(new CustomEvent('tdr:garage-saved',{detail:{coins:s.coins}}));}catch{}return s;}
 export function qty(s,id){return Number(s.inventory?.[id]||0);}
 export function addItem(s,id,n=1){s.inventory[id]=(s.inventory[id]||0)+n;return s;}
 export function consume(s,id,n=1){if(qty(s,id)<n)return false;s.inventory[id]-=n;return true;}

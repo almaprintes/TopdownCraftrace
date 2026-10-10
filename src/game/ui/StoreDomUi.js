@@ -6,6 +6,7 @@ import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 import { REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
 import { openMaterialExchangeDom } from './MaterialExchangeFlexibleDom.js';
 import {playDomCoinRewardFlight,animateDomCoinBalance,primeCoinRewardSound} from './coinRewardFlight.js';
+import {createAppHeader,disposeAppWallets,refreshAppWallets} from './TdrAppHeader.js';
 import './store-dom.css';
 
 const ROOT_ID='tdr-store-dom';
@@ -24,7 +25,7 @@ export function closeStoreDom(scene){
   if(scene)scene._partDismantleDom=null;
   try{document.getElementById('tdr-part-dismantle-dom')?.remove();}catch{}
   const root=document.getElementById(ROOT_ID);
-  if(root){root.dispatchEvent(new Event('tdr:store-closed'));root.remove();}
+  if(root){root.dispatchEvent(new Event('tdr:store-closed'));disposeAppWallets(root);root.remove();}
   if(scene){scene._storeDomRoot=null;try{scene._lobbyDomRoot?.classList?.remove('tdr-lobby-dom--modal-open');}catch{}}
 }
 
@@ -59,6 +60,7 @@ function materialCard(scene,root,pack){
 function refreshBalance(root){
   const balance=root.querySelector('[data-store-balance]');
   if(balance)balance.textContent=fmt(loadGarage().coins||0);
+  refreshAppWallets(root);
 }
 
 function rewardCard(scene,root,kind){
@@ -94,6 +96,7 @@ function rewardCard(scene,root,kind){
         }
       }
       // Durable wallet write happens synchronously BEFORE ANY visual effect.
+      root.dataset.tdrWalletPending='1';
       const result=isVideo?claimRewardedCoins(100):claimDailyCoins(250);
       if(!result.ok){if(root.isConnected)toast(root,result.reason,false);return;}
       if(!root.isConnected)return; // No UI to animate, but currency is already saved.
@@ -110,7 +113,7 @@ function rewardCard(scene,root,kind){
       console.warn('[TDR reward] claim unavailable',error);
       if(root.isConnected)toast(root,getLanguage()==='en'?'REWARD UNAVAILABLE':'RECOMPENSA NO DISPONIBLE',false);
     }finally{
-      busy=false;
+      busy=false;delete root.dataset.tdrWalletPending;
       if(root.isConnected){refreshBalance(root);update();}
     }
   });
@@ -121,15 +124,8 @@ export function openStoreDom(scene){
   closeStoreDom(scene);
   const root=el('div','tdr-store-dom');root.id=ROOT_ID;root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');
   const shell=el('section','tdr-store-shell');
-  const header=el('header','tdr-store-header');
-  header.append(el('h1','',t('store.title')));
-  const balance=el('div','tdr-store-balance');
-  const coin=el('img','tdr-store-coin');coin.src=`${BASE()}assets/ui/moneda-tdr.webp`;coin.alt='';
-  const total=el('strong','',fmt(loadGarage().coins||0));total.dataset.storeBalance='';
-  balance.append(coin,total,el('span','',t('store.coins')));
-  const close=el('button','tdr-store-close','×');close.type='button';close.setAttribute('aria-label',t('common.close'));close.addEventListener('click',()=>closeStoreDom(scene));
   const recycler=el('button','tdr-store-recycler','♻  '+(getLanguage()==='en'?'RECYCLER':'RECICLADORA'));recycler.type='button';recycler.addEventListener('click',()=>openMaterialExchangeDom(scene,scene?._exchangeFrom||'scrap',scene?._exchangeTo||'compound',scene?._exchangeAmount||100));
-  header.append(recycler,balance,close);shell.append(header);
+  const header=createAppHeader({title:t('store.title'),onBack:()=>closeStoreDom(scene),actions:[recycler]});shell.append(header);
   const scroller=el('main','tdr-store-scroller');
   for(const pack of MATERIAL_PACKS)scroller.append(materialCard(scene,root,pack));
   const video=rewardCard(scene,root,'video'),daily=rewardCard(scene,root,'daily');scroller.append(video.card,daily.card);shell.append(scroller);root.append(shell);

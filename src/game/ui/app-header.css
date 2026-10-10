@@ -1,0 +1,14 @@
+/* One visual language for player-facing headers and coin counters. */
+.tdr-app-header{--tdr-app-header-height:clamp(52px,9vh,68px);display:flex;align-items:center;gap:clamp(8px,1.4vw,18px);border:1px solid rgba(70,221,255,.42);clip-path:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px);background:linear-gradient(180deg,rgba(6,15,27,.97),rgba(5,13,22,.92));box-shadow:0 12px 30px rgba(0,0,0,.40),inset 0 1px rgba(255,255,255,.045);color:#fff;box-sizing:border-box}
+.tdr-app-wallet{display:flex;align-items:center;gap:8px;flex:none;min-width:96px;color:#ffdc79;font-variant-numeric:tabular-nums}
+.tdr-app-wallet-icon{display:block;width:clamp(27px,3vw,39px);height:clamp(27px,3vw,39px);object-fit:contain;flex:none;filter:drop-shadow(0 0 6px rgba(255,216,90,.3))}
+.tdr-app-wallet-copy{display:grid;gap:4px;line-height:1;min-width:0}
+.tdr-app-wallet-copy small{font-size:clamp(7px,.72vw,10px);font-weight:850;letter-spacing:.14em;color:#93a7ba}
+.tdr-app-wallet-copy strong{font-size:clamp(16px,1.65vw,24px);font-weight:900;color:#fff;white-space:nowrap}
+.tdr-app-back{flex:none;display:grid;place-items:center;width:clamp(36px,5.8vh,46px);height:clamp(36px,5.8vh,46px);border:1px solid #36506c;border-radius:8px;background:#102337;color:#fff;font-size:23px;cursor:pointer;touch-action:manipulation}
+.tdr-app-title{margin:0;min-width:0;font-size:clamp(17px,2vw,28px);font-weight:950;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tdr-app-header-actions{margin-left:auto;display:flex;align-items:center;min-width:0;gap:8px}
+.tdr-store-header.tdr-app-header{flex:0 0 var(--tdr-app-header-height);height:var(--tdr-app-header-height);margin:max(8px,var(--tdr-safe-top,8px)) max(10px,var(--tdr-safe-right,10px)) 8px max(10px,var(--tdr-safe-left,10px));padding:0 clamp(10px,1.5vw,22px)}
+.tdr-lobby-header.tdr-app-header .tdr-app-wallet{margin-left:0;order:9}
+.tdr-lobby-header.tdr-app-header .tdr-lobby-top-actions{margin-left:auto}
+@media(max-height:430px){.tdr-app-header{--tdr-app-header-height:46px}.tdr-store-header.tdr-app-header{margin-top:max(5px,var(--tdr-safe-top,5px));margin-bottom:6px}.tdr-app-wallet-icon{width:26px;height:26px}.tdr-app-wallet-copy strong{font-size:16px}.tdr-app-back{width:36px;height:36px}}

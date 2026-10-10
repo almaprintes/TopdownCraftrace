@@ -49,7 +49,17 @@ assert.ok(verified>=0&&awarded>verified&&flown>awarded&&counted>flown,
 assert.match(domStore,/if\(busy\|\|!root\.isConnected\)return/,'prevent duplicate taps in real store');
 assert.match(domStore,/button\.disabled=busy\|\|!status\.available/,'do not reenable while playing ad');
 assert.match(domStore,/root\.dispatchEvent\(new Event\('tdr:store-closed'\)\)/,'dismiss active flight');
-assert.match(domStore,/assets\/ui\/moneda-tdr\.webp/,'official coin visible in actual header');
+const shared=read('src/game/ui/TdrAppHeader.js');
+assert.match(shared,/assets\/ui\/moneda-tdr\.webp/,'coin asset shared');
+assert.match(shared,/export function createAppHeader/,'header factory');
+assert.match(shared,/export function createAppWallet/,'wallet factory');
+assert.match(domStore,/createAppHeader\(\{title:/,'store mounts shared header');
+assert.match(read('src/game/ui/LobbyDomUi.js'),/createAppWallet\(\{className:'tdr-lobby-wallet'/,'lobby mounts shared wallet');
+assert.match(read('src/game/garage/garageStore.js'),/tdr:garage-saved/,'broadcast on persisted grant');
+assert.match(fx,/root\.appendChild\(layer\)/,'flight must stack within fullscreen store');
+assert.match(fx,/zIndex:'70'/,'flight above shell');
+assert.match(domStore,/root\.dataset\.tdrWalletPending='1'/,'freeze count during flight');
+
 assert.match(domStore,/finally\{[\s\S]*?refreshBalance\(root\);update\(\)/,'always refresh wallet after interruptions');
 const fx=read('src/game/ui/coinRewardFlight.js');
 assert.match(fx,/assets\/ui\/moneda-tdr\.webp/);

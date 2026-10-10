@@ -167,11 +167,11 @@ export async function playDomCoinRewardFlight(scene,{amount,root,card,english=fa
   if(typeof document==='undefined'||typeof window==='undefined'||!root?.isConnected||document.hidden||
     window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return false;
   const from=centerOf(card?.querySelector?.('.tdr-store-reward-art')||card);
-  const to=centerOf(root.querySelector('.tdr-store-coin'));
+  const to=centerOf(root.querySelector('.tdr-app-wallet-icon'));
   if(!from||!to)return false;
   const layer=document.createElement('div');
   layer.setAttribute('aria-hidden','true');
-  Object.assign(layer.style,{position:'fixed',inset:'0',zIndex:'2147481000',
+  Object.assign(layer.style,{position:'fixed',inset:'0',zIndex:'70',
     overflow:'hidden',pointerEvents:'none'});
   const label=document.createElement('div');
   label.textContent=rewardAmountLabel(amount,english);
@@ -189,7 +189,8 @@ export async function playDomCoinRewardFlight(scene,{amount,root,card,english=fa
   root.addEventListener('tdr:store-closed',onClose,{once:true});
   window.addEventListener('pagehide',onClose,{once:true});
   document.addEventListener('visibilitychange',onHidden);
-  document.body.appendChild(layer);
+  // Compose ABOVE the actual store shell, within the same stacking context.
+  root.appendChild(layer);
   try{
     anim.push(label.animate([
       {opacity:0,transform:'translate(-50%,-50%) scale(.5)'},
