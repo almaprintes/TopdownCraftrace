@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import {mountSceneAppHeader} from '../ui/TdrAppHeader.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 
 const SKIN_BASE = 'assets/skins/';
@@ -148,26 +149,8 @@ export class GarageDetailScene extends Phaser.Scene {
     // ✅ spec EFECTIVO (incluye edits guardados)
     const spec = this._carId ? getEffectiveCarSpec(this._carId) : null;
 
-    // Header
-    this.add.text(width / 2, 18, 'FICHA', {
-      fontFamily: 'Orbitron, system-ui',
-      fontSize: '24px',
-      fontStyle: '900',
-      color: '#fff',
-      stroke: '#0a2a6a',
-      strokeThickness: 6
-    }).setOrigin(0.5, 0);
-
-    // Back
-    const back = this.add.text(16, 18, '⬅', {
-      fontFamily: 'system-ui',
-      fontSize: '26px',
-      color: '#fff',
-      stroke: '#0a2a6a',
-      strokeThickness: 6
-    }).setOrigin(0, 0).setInteractive({ useHandCursor: true });
-
-back.on('pointerdown', () => this.scene.start('GarageScene', { mode: this._mode }));
+    // Ficha uses the same non-zooming wallet/header as the Garage itself.
+    mountSceneAppHeader(this,{title:'FICHA',onBack:()=>this.scene.start('GarageScene',{mode:this._mode})});
 
     if (!spec) {
       this.add.text(width / 2, height / 2, 'Coche no encontrado', {
@@ -181,7 +164,7 @@ back.on('pointerdown', () => this.scene.start('GarageScene', { mode: this._mode 
     }
 
     // Nombre grande
-    const nameText = this.add.text(width / 2, 62, (spec.name || this._carId).toUpperCase(), {
+    const nameText = this.add.text(width / 2, Math.max(76,Math.min(90,height*.21)), (spec.name || this._carId).toUpperCase(), {
       fontFamily: 'Orbitron, system-ui',
       fontSize: '22px',
       fontStyle: '900',

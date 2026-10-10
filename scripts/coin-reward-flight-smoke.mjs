@@ -77,3 +77,10 @@ assert.match(header,/export function mountSceneAppHeader/,'Phaser screens own a 
 for(const p of ['src/game/scenes/StatsScene.js','src/game/scenes/SettingsDomScene.js','src/game/scenes/SeasonScene.js'])assert.match(read(p),/observeAppHeader\(/,'shared header on '+p);
 for(const p of ['src/game/scenes/GarageScene.js','src/game/scenes/TrackGarageScene.js','src/game/scenes/UpgradeWorkshopCarUnlockScene.js'])assert.match(read(p),/mountSceneAppHeader\(/,'Phaser header on '+p);
 assert.match(read('src/game/ui/WorkshopMobileDom.js'),/createAppWallet\(/,'factory mobile uses official coin');
+
+assert.match(read('src/game/scenes/GarageDetailScene.js'),/mountSceneAppHeader\(/,'car details reuse the common header');
+assert.match(read('src/game/ui/app-header.css'),/\.tdr-phaser-header\.tdr-app-header/,'Phaser header stays DOM fixed');
+assert.match(read('src/game/ui/store-dom.css'),/z-index:2147482500/,'store stacking context is explicit');
+const flightSegment=fx.slice(fx.indexOf('export async function playDomCoinRewardFlight'),fx.indexOf('export async function animateDomCoinBalance'));
+assert.ok(flightSegment.indexOf('root.appendChild(layer)')>flightSegment.indexOf("zIndex:'70'"),'render overlay inside top store layer');
+assert.doesNotMatch(flightSegment,/document\.body\.appendChild\(layer\)/,'never hide coins behind fullscreen store');
