@@ -363,17 +363,28 @@
 .tdr-lobby-action-capsule .tdr-lobby-reward-cta--video::before{
   background:linear-gradient(0deg,#208bb9 0%,#54c8ec 65%,#a1f0ff 100%);
 }
-/* Face layers are absolutely aligned with button edges, matching the fill
-   boundary exactly. The filled face has navy glyphs over the bright fill;
-   the unfilled face has white glyphs over the dark empty surface.
-   Crossing the middle of a glyph creates two contrasting colored halves. */
+/* One fully illuminated asset remains on top of the fill and both ink layers. */
+.tdr-lobby-reward-icon{
+  position:absolute;
+  z-index:4;
+  top:50%;
+  left:clamp(8px,2vw,30px);
+  transform:translateY(-50%);
+  display:block;
+  width:clamp(33px,4.2vw,63px);
+  height:clamp(35px,5.5vw,66px);
+  object-fit:contain;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.64));
+  pointer-events:none;
+}
+/* Only ink duplicates: white above the empty dark section, dark above the
+   rising bright fill; both share exactly the same text geometry. */
 .tdr-lobby-reward-face{
   position:absolute;inset:0;
   z-index:2;
   display:flex;
   justify-content:center;align-items:center;
-  gap:clamp(4px,.6vw,11px);
-  padding:4px clamp(8px,1vw,18px);
+  padding:4px clamp(6px,1vw,18px) 4px clamp(55px,7vw,100px);
   color:#fff7e1;
   box-sizing:border-box;
   pointer-events:none;
@@ -386,18 +397,6 @@
   transition:clip-path .65s linear;
 }
 .tdr-lobby-reward-cta--video .tdr-lobby-reward-face--filled{color:#082536}
-.tdr-lobby-reward-face img{
-  width:clamp(33px,4.2vw,63px);
-  height:clamp(35px,5.5vw,66px);
-  display:block;
-  flex:none;
-  object-fit:contain;
-  filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));
-  pointer-events:none;
-}
-.tdr-lobby-reward-face--filled img{
-  filter:brightness(.20) saturate(.22);
-}
 .tdr-lobby-reward-copy{
   min-width:0;
   display:flex;
@@ -439,14 +438,14 @@
 .tdr-lobby-action-capsule > button:active{filter:brightness(1.09)}
 @media(max-width:930px){
  .tdr-lobby-dom .tdr-lobby-action-capsule{width:min(77vw,700px)}
- .tdr-lobby-reward-face{padding-inline:7px}
- .tdr-lobby-reward-face img{width:clamp(27px,3.5vw,43px);height:clamp(29px,4vw,45px)}
+ .tdr-lobby-reward-face{padding:4px 7px 4px clamp(46px,7vw,76px)}
+ .tdr-lobby-reward-icon{left:clamp(6px,1.1vw,12px);width:clamp(27px,3.5vw,43px);height:clamp(29px,4vw,45px)}
  .tdr-lobby-reward-copy strong{font-size:clamp(16px,2.3vw,25px)}
  .tdr-lobby-reward-copy small{font-size:clamp(8px,1vw,11px)}
 }
 @media(max-height:430px){
  .tdr-lobby-dom .tdr-lobby-action-capsule > button{height:clamp(46px,12vh,54px)}
- .tdr-lobby-reward-face img{height:clamp(27px,7vh,40px)}
+ .tdr-lobby-reward-icon{height:clamp(27px,7vh,40px)}
  .tdr-lobby-reward-copy strong{font-size:clamp(17px,2.25vw,27px)}
  .tdr-lobby-reward-copy small{font-size:clamp(8px,.85vw,10px)}
  .tdr-lobby-action-capsule .tdr-lobby-play span:last-child{font-size:clamp(19px,2.25vw,29px)}

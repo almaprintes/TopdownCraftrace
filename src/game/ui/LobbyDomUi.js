@@ -58,13 +58,10 @@ function createRewardFace(video,filled=false){
   const face=document.createElement('span');
   face.className='tdr-lobby-reward-face'+(filled?' tdr-lobby-reward-face--filled':'');
   if(filled)face.setAttribute('aria-hidden','true');
-  const icon=document.createElement('img');
-  icon.src=`${BASE}assets/store/${video?'rewarded_video':'daily_gift'}.webp`;
-  icon.alt='';icon.draggable=false;icon.decoding='async';
   const copy=document.createElement('span');copy.className='tdr-lobby-reward-copy';
   const total=document.createElement('strong');total.textContent=video?'+100':'+250';
   const status=document.createElement('small');status.dataset.rewardStatus='1';
-  copy.append(total,status);face.append(icon,copy);return face;
+  copy.append(total,status);face.append(copy);return face;
 }
 function makeRewardShortcut(kind,scene){
   const video=kind==='video',button=document.createElement('button');
@@ -73,7 +70,12 @@ function makeRewardShortcut(kind,scene){
   button.dataset.lobbyRewardCta=kind;
   button.style.setProperty('--tdr-reward-progress','0%');
   button.style.setProperty('--tdr-reward-empty','100%');
-  button.append(createRewardFace(video),createRewardFace(video,true));
+  // One original, full-color icon never enters the clipped ink layers.
+  const icon=document.createElement('img');
+  icon.className='tdr-lobby-reward-icon';
+  icon.src=`${BASE}assets/store/${video?'rewarded_video':'daily_gift'}.webp`;
+  icon.alt='';icon.draggable=false;icon.decoding='async';
+  button.append(icon,createRewardFace(video),createRewardFace(video,true));
   // This remains navigation to the existing store rewards route.
   button.addEventListener('click',()=>scene._openStoreModal?.('rewards'));
   return button;
