@@ -1,5 +1,6 @@
 import { GarageScene as CurrentGarageScene } from './GarageResponsiveHeroScene.js';
 import { BaseScene } from './BaseScene.js';
+import {createAppHeader,disposeAppWallets} from '../ui/TdrAppHeader.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { recordGarageVisit } from '../seasons/seasonTelemetry.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
@@ -106,8 +107,10 @@ export class GarageScene extends CurrentGarageScene {
     if(getComputedStyle(host).position==='static')host.style.position='relative';
     const root=document.createElement('div');root.id=DOM_ID;host.appendChild(root);this._playerGarageDom=root;
     const L=labels();
-    root.innerHTML=`<header class="tdr-garage-dom-head"><button type="button" class="tdr-garage-dom-back" aria-label="${esc(L.back)}">⬅</button><h1>${esc(L.garage)}</h1><span></span></header><main class="tdr-garage-dom-layout"><section class="tdr-garage-dom-listpanel"><div class="tdr-garage-dom-kicker">${esc(L.collection)}</div><div class="tdr-garage-dom-list"></div></section><section class="tdr-garage-dom-hero"><div class="tdr-garage-dom-cardzone"><img alt="" draggable="false" decoding="async"></div><div class="tdr-garage-dom-info"><div class="tdr-garage-dom-content"></div><div class="tdr-garage-dom-footer"></div></div></section></main>`;
-    root.querySelector('.tdr-garage-dom-back')?.addEventListener('click',()=>this.scene.start('menu'));
+    root.innerHTML=`<main class="tdr-garage-dom-layout"><section class="tdr-garage-dom-listpanel"><div class="tdr-garage-dom-kicker">${esc(L.collection)}</div><div class="tdr-garage-dom-list"></div></section><section class="tdr-garage-dom-hero"><div class="tdr-garage-dom-cardzone"><img alt="" draggable="false" decoding="async"></div><div class="tdr-garage-dom-info"><div class="tdr-garage-dom-content"></div><div class="tdr-garage-dom-footer"></div></div></section></main>`;
+    // Player Garage skips legacy _rebuild; mount header in the actual visible DOM.
+    const header=createAppHeader({title:L.garage,onBack:()=>this.scene.start('menu')});
+    header.classList.remove('tdr-store-header');header.classList.add('tdr-player-garage-head');root.prepend(header);
     const list=root.querySelector('.tdr-garage-dom-list');
     (this._cars||[]).forEach((car,index)=>{
       const locked=this._lockedCar(car.id),spec=car.spec||{},btn=document.createElement('button');
@@ -143,5 +146,5 @@ export class GarageScene extends CurrentGarageScene {
     footer.querySelector('[data-back]')?.addEventListener('click',()=>this.scene.start('menu'));
   }
 
-  _removePlayerDomGarage(){try{this._playerGarageDom?.remove();}catch{}this._playerGarageDom=null;}
+  _removePlayerDomGarage(){disposeAppWallets(this._playerGarageDom);try{this._playerGarageDom?.remove();}catch{}this._playerGarageDom=null;}
 }

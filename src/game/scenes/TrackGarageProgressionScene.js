@@ -2,6 +2,7 @@ import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGarageHideSp
 import { isTrackUnlocked, devFullTrackAccessEnabled } from '../tracks/trackUnlocks.js';
 import { getLanguage } from '../i18n/index.js';
 import { getTrackPublicName } from '../tracks/trackPublicNames.js';
+import {createAppHeader,disposeAppWallets} from '../ui/TdrAppHeader.js';
 
 const FONT='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
 const ROOT_ID='tdr-track-selector-dom';
@@ -51,20 +52,24 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     try{this._commercial?.setVisible?.(false);}catch{}
     const host=this.game?.canvas?.parentElement||document.getElementById('app')||document.body;if(!host)return;
     if(getComputedStyle(host).position==='static')host.style.position='relative';
-    host.querySelector(`#${ROOT_ID}`)?.remove();
+    const oldRoot=host.querySelector(`#${ROOT_ID}`);disposeAppWallets(oldRoot);oldRoot?.remove();
     const root=document.createElement('div');root.id=ROOT_ID;host.appendChild(root);this._trackSelectorDom=root;
 
     const render=()=>{
       const lang=getLanguage()==='en'?'en':'es',track=this._tracks?.[this._index],locked=this._lockedTrack(track);
       const list=this._tracks.map((t,i)=>{const l=this._lockedTrack(t),name=l?'???':publicName(t);return `<button class="tdr-ts-card ${i===this._index?'active':''} ${l?'locked':''}" data-index="${i}" type="button"><div class="tdr-ts-thumb">${trackSvg(t,l)}</div><div><div class="tdr-ts-card-title">${name}</div><div class="tdr-ts-card-meta">${String(i+1).padStart(2,'0')} · ${l?(lang==='en'?'LOCKED':'BLOQUEADO'):surface(t)}<br>${l?'—':`${lengthM(t)} m · ${sectors(t)} ${lang==='en'?'sectors':'sectores'}`}</div></div></button>`}).join('');
       const hero=locked?`<div class="tdr-ts-locked-hero">🔒<strong>???</strong><span>${lang==='en'?'TRACK LOCKED · DISCOVER IT BY PLAYING':'CIRCUITO BLOQUEADO · DESCÚBRELO JUGANDO'}</span></div>`:trackSvg(track,false);
-      root.innerHTML=`<div class="tdr-ts-top"><h1>${lang==='en'?'TRACK SELECTOR':'SELECTOR DE CIRCUITOS'}</h1><button class="tdr-ts-back" type="button">← ${lang==='en'?'BACK':'VOLVER'}</button></div><div class="tdr-ts-body"><div class="tdr-ts-list">${list}</div><section class="tdr-ts-hero"><div class="tdr-ts-hero-head"><div class="tdr-ts-hero-kicker">${lang==='en'?'SELECTED TRACK':'CIRCUITO SELECCIONADO'}</div><div class="tdr-ts-hero-name">${locked?'???':publicName(track)}</div></div><div class="tdr-ts-preview">${hero}</div><div class="tdr-ts-footer"><div class="tdr-ts-stats"><div class="tdr-ts-stat"><small>${lang==='en'?'LENGTH':'LONGITUD'}</small><strong>${locked?'—':`${lengthM(track)} m`}</strong></div><div class="tdr-ts-stat"><small>${lang==='en'?'SECTORS':'SECTORES'}</small><strong>${locked?'—':sectors(track)}</strong></div><div class="tdr-ts-stat"><small>${lang==='en'?'SURFACE':'SUPERFICIE'}</small><strong>${locked?'—':surface(track)}</strong></div></div><button class="tdr-ts-select" type="button" ${locked?'disabled':''}>${locked?(lang==='en'?'LOCKED':'BLOQUEADO'):(lang==='en'?'SELECT TRACK':'SELECCIONAR')}</button></div></section></div>`;
+      disposeAppWallets(root);
+      root.innerHTML=`<div class="tdr-ts-body"><div class="tdr-ts-list">${list}</div><section class="tdr-ts-hero"><div class="tdr-ts-hero-head"><div class="tdr-ts-hero-kicker">${lang==='en'?'SELECTED TRACK':'CIRCUITO SELECCIONADO'}</div><div class="tdr-ts-hero-name">${locked?'???':publicName(track)}</div></div><div class="tdr-ts-preview">${hero}</div><div class="tdr-ts-footer"><div class="tdr-ts-stats"><div class="tdr-ts-stat"><small>${lang==='en'?'LENGTH':'LONGITUD'}</small><strong>${locked?'—':`${lengthM(track)} m`}</strong></div><div class="tdr-ts-stat"><small>${lang==='en'?'SECTORS':'SECTORES'}</small><strong>${locked?'—':sectors(track)}</strong></div><div class="tdr-ts-stat"><small>${lang==='en'?'SURFACE':'SUPERFICIE'}</small><strong>${locked?'—':surface(track)}</strong></div></div><button class="tdr-ts-select" type="button" ${locked?'disabled':''}>${locked?(lang==='en'?'LOCKED':'BLOQUEADO'):(lang==='en'?'SELECT TRACK':'SELECCIONAR')}</button></div></section></div>`;
+      const header=createAppHeader({title:lang==='en'?'TRACK SELECTOR':'SELECTOR DE CIRCUITOS',onBack:()=>this.scene.start('menu')});
+      header.classList.remove('tdr-store-header');header.classList.add('tdr-ts-top');
+      header.querySelector('.tdr-app-back')?.classList.add('tdr-ts-back');
+      root.prepend(header);
       root.querySelectorAll('[data-index]').forEach(btn=>btn.addEventListener('click',()=>{this._index=clamp(Number(btn.dataset.index)||0,0,this._tracks.length-1);render();requestAnimationFrame(()=>root.querySelector(`[data-index="${this._index}"]`)?.scrollIntoView?.({block:'nearest'}));}));
       root.querySelector('.tdr-ts-select')?.addEventListener('click',()=>this._launchSelected());
-      root.querySelector('.tdr-ts-back')?.addEventListener('click',()=>this.scene.start('menu'));
     };
     render();
-    this.events.once('shutdown',()=>{try{root.remove();}catch{}this._trackSelectorDom=null;});
+    this.events.once('shutdown',()=>{disposeAppWallets(root);try{root.remove();}catch{}this._trackSelectorDom=null;});
   }
 
   _trackItem(x,y,w,h,track,i){

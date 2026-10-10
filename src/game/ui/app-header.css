@@ -30,3 +30,38 @@
 #tdr-workshop-mobile-dom .hdr.tdr-app-header .title{flex:1;min-width:0;text-align:center}
 #tdr-workshop-mobile-dom .hdr.tdr-app-header .back.tdr-app-back{width:36px;min-width:36px;padding:0}
 @media(max-height:430px){.tdr-phaser-header.tdr-app-header{height:46px}.tdr-app-header .tdr-app-wallet{min-width:88px;gap:5px}.tdr-app-header .tdr-app-wallet-copy small{font-size:7px}#tdr-season-dom .s-head.tdr-app-header .s-total{max-width:115px}}
+
+/* The sole compact Back treatment, including dynamic screen CSS overrides. */
+.tdr-app-header button.tdr-app-back{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ flex:0 0 clamp(64px,8.3vw,78px)!important;width:clamp(64px,8.3vw,78px)!important;
+ min-width:0!important;max-width:78px!important;height:clamp(30px,5.7vh,36px)!important;
+ max-height:calc(100% - 4px)!important;padding:0 6px!important;margin:0!important;
+ font:900 clamp(9px,1.08vw,11px)/1 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+ letter-spacing:.035em!important;text-align:center!important;white-space:nowrap!important;
+ text-overflow:clip!important;overflow:hidden!important;color:#fff!important;
+ border:1px solid rgba(113,165,194,.42)!important;border-radius:8px!important;
+ background:#102337!important;box-sizing:border-box!important;
+ -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+/* The active player Garage/Track Selector are DOM, bypassing legacy Phaser UI. */
+#tdr-garage-player-dom .tdr-player-garage-head.tdr-app-header{
+ min-width:0;width:100%;height:100%;padding:0 clamp(9px,1.4vw,18px);
+ gap:clamp(6px,1.2vw,15px);border-radius:0;
+}
+#tdr-garage-player-dom .tdr-player-garage-head .tdr-app-title{flex:1;text-align:center}
+#tdr-track-selector-dom .tdr-ts-top.tdr-app-header{
+ min-width:0;padding-inline:clamp(9px,1.4vw,18px);border-radius:0;
+ gap:clamp(6px,1.2vw,15px);
+}
+#tdr-track-selector-dom .tdr-ts-top .tdr-app-title{flex:1;text-align:center}
+#tdr-track-selector-dom .tdr-ts-top .tdr-app-wallet,
+#tdr-garage-player-dom .tdr-player-garage-head .tdr-app-wallet{margin-left:auto}
+#tdr-workshop-mobile-dom .hdr.tdr-app-header button.tdr-app-back{
+ flex-basis:clamp(64px,8.3vw,78px)!important;width:clamp(64px,8.3vw,78px)!important;
+}
+@media(max-height:430px){
+ #tdr-garage-player-dom .tdr-player-garage-head.tdr-app-header{height:100%}
+ #tdr-track-selector-dom .tdr-ts-top.tdr-app-header{height:46px}
+ .tdr-app-header button.tdr-app-back{font-size:9px!important}
+}

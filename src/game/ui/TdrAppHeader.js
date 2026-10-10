@@ -3,6 +3,7 @@ import {getLanguage,t} from '../i18n/index.js';
 import './app-header.css';
 const BASE=import.meta.env.BASE_URL||'/';
 export const APP_WALLET_UPDATED='tdr:garage-saved';
+export const appBackLabel=()=>getLanguage()==='en'?'BACK':'VOLVER';
 const fmt=coins=>Math.max(0,Math.floor(Number(coins)||0)).toLocaleString(getLanguage()==='en'?'en-US':'es-ES');
 export function createAppWallet({className='',amountAttribute='storeBalance',label}={}){
   const wallet=document.createElement('div');wallet.className=('tdr-app-wallet '+className).trim();wallet.dataset.tdrWallet='1';
@@ -20,9 +21,9 @@ export function createAppWallet({className='',amountAttribute='storeBalance',lab
 }
 export function disposeAppWallets(root){for(const wallet of root?.querySelectorAll?.('[data-tdr-wallet]')||[])wallet.tdrWalletDestroy?.();}
 export function refreshAppWallets(root){for(const wallet of root?.querySelectorAll?.('[data-tdr-wallet]')||[])wallet.tdrWalletRefresh?.();}
-export function createAppHeader({title='',onBack=null,backLabel='×',actions=[]}={}){
+export function createAppHeader({title='',onBack=null,backLabel=appBackLabel(),actions=[]}={}){
   const header=document.createElement('header');header.className='tdr-app-header tdr-store-header';header.dataset.tdrAppHeader='1';
-  const back=document.createElement('button');back.className='tdr-app-back tdr-store-close';back.type='button';back.setAttribute('aria-label',t('common.close'));back.textContent=backLabel;
+  const back=document.createElement('button');back.className='tdr-app-back tdr-store-close';back.type='button';back.setAttribute('aria-label',appBackLabel());back.textContent=backLabel;
   if(onBack)back.addEventListener('click',onBack);
   const label=document.createElement('h1');label.className='tdr-app-title';label.textContent=title;
   const tools=document.createElement('div');tools.className='tdr-app-header-actions';for(const action of actions)if(action)tools.append(action);
@@ -40,7 +41,7 @@ export function observeAppHeader(root,selector){
     previous=header;
     if(!header)return;
     header.classList.add('tdr-app-header');header.dataset.tdrAppHeader='1';
-    header.querySelector('button')?.classList.add('tdr-app-back');
+    const back=header.querySelector('button');if(back){back.classList.add('tdr-app-back');back.textContent=appBackLabel();back.setAttribute('aria-label',appBackLabel());}
     header.append(createAppWallet());
   };
   const observer=new MutationObserver(sync);
@@ -54,7 +55,7 @@ export function mountSceneAppHeader(scene,{title='',onBack=null}={}){
   if(scene._tdrAppHeader?.isConnected)return scene._tdrAppHeader;
   const host=scene.game?.canvas?.parentElement||document.getElementById('app')||document.body;
   if(getComputedStyle(host).position==='static')host.style.position='relative';
-  const header=createAppHeader({title,onBack,backLabel:'←'});
+  const header=createAppHeader({title,onBack});
   header.classList.remove('tdr-store-header');
   header.classList.add('tdr-phaser-header');
   host.appendChild(header);

@@ -84,3 +84,20 @@ assert.match(read('src/game/ui/store-dom.css'),/z-index:2147482500/,'store stack
 const flightSegment=fx.slice(fx.indexOf('export async function playDomCoinRewardFlight'),fx.indexOf('export async function animateDomCoinBalance'));
 assert.ok(flightSegment.indexOf('root.appendChild(layer)')>flightSegment.indexOf("zIndex:'70'"),'render overlay inside top store layer');
 assert.doesNotMatch(flightSegment,/document\.body\.appendChild\(layer\)/,'never hide coins behind fullscreen store');
+
+/* Verify player DOM paths, not just old Phaser scene headers. */
+const playerGarage=read('src/game/scenes/GarageLazyCardsScene.js');
+const playerSelector=read('src/game/scenes/TrackGarageProgressionScene.js');
+assert.match(playerGarage,/const header=createAppHeader\(/,'live Garage DOM header');
+assert.match(playerGarage,/root\.prepend\(header\)/,'Garage header inserted inside overlay');
+assert.match(playerGarage,/disposeAppWallets\(this\._playerGarageDom\)/,'Garage wallet cleanup');
+assert.match(playerSelector,/const header=createAppHeader\(/,'live Tracks DOM header');
+assert.match(playerSelector,/classList\.add\('tdr-ts-back'\)/,'Android back target retained');
+assert.match(playerSelector,/disposeAppWallets\(root\)/,'selector refresh cleans wallet');
+assert.match(read('src/game/scenes/TrackGarageAndroidTouchScene.js'),/action\.matches\('\.tdr-ts-back'\)/,'Android pointer handler retained');
+assert.match(shared,/export const appBackLabel/,'localized back text');
+assert.match(shared,/back\.textContent=backLabel/,'word label in new header');
+assert.match(shared,/back\.textContent=appBackLabel\(\)/,'word label in existing headers');
+assert.doesNotMatch(shared,/backLabel:'←'/,'avoid oversized arrow only labels');
+assert.match(read('src/game/ui/app-header.css'),/font:900 clamp\(9px,1\.08vw,11px\)/,'compact back font');
+assert.match(read('src/game/ui/WorkshopMobileDom.js'),/button\(appBackLabel\(\)/,'factory back text');
