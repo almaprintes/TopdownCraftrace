@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
+import { installTrackStudioImageMode, importImageProjectFile } from '../studio/installImageMode.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -839,6 +840,7 @@ if (
 
     this._createGuideInput();
     this._createProjectInput();
+    installTrackStudioImageMode(this);
     this._updateLoopButton();
     this._updateToolButtons();
     this._updatePanel();
@@ -2142,7 +2144,7 @@ const targetS = finishS - correctedOffset;
       const strip = this._buildTrackStrip(bezier, this._trackWidth);
 
       if (strip.left.length >= 2 && strip.right.length >= 2) {
-        this._trackGfx.fillStyle(0x2f343a, 0.95);
+        this._trackGfx.fillStyle(0x2f343a, this._imageCanvas ? 0.16 : 0.95);
         this._trackGfx.beginPath();
         this._trackGfx.moveTo(strip.left[0].x, strip.left[0].y);
 
@@ -2414,7 +2416,8 @@ _updatePanel() {
       `Salida: ${this._startLine ? 'sí' : 'no'}\n` +
       `Meta: ${this._finishLine ? 'sí' : 'no'}\n` +
       `Checkpoints: ${this._checkpoints.length}\n` +
-      `Guía: ${guideLoaded ? (this._guideVisible ? 'visible' : 'oculta') : 'no cargada'}`
+      `Guía: ${guideLoaded ? (this._guideVisible ? 'visible' : 'oculta') : 'no cargada'}` +
+      (this._imageCanvas ? `\nLienzo: ${this._imageCanvas.width}×${this._imageCanvas.height}` : '')
     );
   }
 }
@@ -2776,16 +2779,21 @@ const data = {
     this._destroyProjectInput();
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'application/json,.json';
+    input.accept = 'application/json,.json,.tdrtrack,application/octet-stream';
     input.style.position = 'fixed';
     input.style.left = '-9999px';
     input.addEventListener('change', async (ev) => {
       const file = ev.target.files?.[0];
       if (!file) return;
       try {
-        const data = JSON.parse(await file.text());
-        this._importProjectOrTrack(data);
-        this._flashMessage('📂 JSON cargado');
+        if (file.name.toLowerCase().endsWith('.tdrtrack')) {
+          await importImageProjectFile(this, file);
+          this._flashMessage('📂 Imagen y geometría restauradas');
+        } else {
+          const data = JSON.parse(await file.text());
+          this._importProjectOrTrack(data);
+          this._flashMessage('📂 JSON cargado');
+        }
       } catch (e) {
         console.error('❌ JSON no válido', e);
         this._flashMessage('❌ JSON no válido');

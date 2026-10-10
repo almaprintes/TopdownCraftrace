@@ -1,5 +1,5 @@
 name: Deploy Top Down Race
-# DEV version is derived from dev-first-update/index.html; no hardcoded DEV number in this workflow.
+# Single source of DEV deployment is main. Public Google Play 1.1.188 is independent.
 
 on:
   push:
@@ -22,45 +22,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout public beta
-        uses: actions/checkout@v4
-        with:
-          ref: beta-1.0
-          path: beta
-          fetch-depth: 1
-      - name: Read beta revision
-        id: beta-rev
-        working-directory: beta
-        shell: bash
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      - name: Restore frozen beta build
-        id: beta-cache
-        uses: actions/cache@v4
-        with:
-          path: beta/dist
-          key: tdr-public-beta-${{ steps.beta-rev.outputs.sha }}
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Build public beta when cache is empty
-        if: steps.beta-cache.outputs.cache-hit != 'true'
-        working-directory: beta
-        shell: bash
-        env:
-          VITE_TDR_ONLINE_URL: ${{ vars.VITE_TDR_ONLINE_URL }}
-          VITE_TDR_ONLINE_PUBLIC: ${{ vars.VITE_TDR_ONLINE_PUBLIC }}
-          BASE: /TopdownCraftrace/
-        run: |
-          test -n "${VITE_TDR_ONLINE_URL}"
-          test -n "${VITE_TDR_ONLINE_PUBLIC}"
-          npm ci --no-audit --no-fund
-          npm run build:prod
-          grep -q "BETA 1\.1\.173 closed-test release candidate" dist/index.html
-          test "$(grep -o '<span>BETA 1\.1\.</span><span>173</span>' dist/index.html | wc -l | tr -d ' ')" = "2"
-          if grep -q "DEV 1\.1\.173" dist/index.html; then echo "DEV identity leaked into beta"; exit 1; fi
-          mkdir -p dist/assets/tutorials/dropping
-          cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Checkout exact integrated DEV main HEAD
         uses: actions/checkout@v4
         with:
@@ -113,6 +78,7 @@ jobs:
           node scripts/fresh-gesture-smoke.mjs
           node scripts/bootstrap-regression-smoke.mjs
           node scripts/track-beauty-identity-smoke.mjs
+          node scripts/trackstudio-image-mode-smoke.mjs
           grep -q "start_red.webp" src/game/scenes/RaceCleanStartLightsScene.js
           grep -q "Surface physics only" src/game/scenes/RaceSurfaceProfileScene.js
           if grep -q "setTexture?.('off')" src/game/scenes/RaceSurfaceProfileScene.js; then exit 1; fi
@@ -149,29 +115,38 @@ jobs:
           npx vite build --base=/TopdownCraftrace/dev/
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
-      - name: Assemble public beta plus DEV
+      - name: Assemble main-only Pages (public entry + DEV)
         shell: bash
         run: |
+          mkdir -p site/dev site/dev-live
           printf 'DEV_SOURCE_SHA=%s\n' "$(git -C dev-src rev-parse HEAD)" > dev-src/dist/dev-build.txt
-          rm -rf beta/dist/dev beta/dist/dev-live
-          mkdir -p beta/dist/dev beta/dist/dev-live
-          cp -R dev-src/dist/. beta/dist/dev/
-          cp -R dev-src/dist/. beta/dist/dev-live/
+          cp -R dev-src/dist/. site/dev/
+          cp -R dev-src/dist/. site/dev-live/
+          cat > site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="es">
+          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Top Down RACE</title>
+          <style>body{min-height:100vh;display:grid;place-items:center;margin:0;background:#09101d;color:#fff;font:16px system-ui}main{max-width:600px;padding:32px;text-align:center}a{display:inline-block;margin:8px;padding:14px 20px;background:#19477a;color:white;border-radius:10px;text-decoration:none}small{color:#b2c5d9}</style></head>
+          <body><main><h1>TOP DOWN RACE</h1><p>La versión pública 1.1.188 está disponible en Google Play.</p>
+          <a href="https://play.google.com/store/apps/details?id=com.craftracestudio.topdownrace">Abrir Google Play</a>
+          <a href="./dev/">Versión DEV (pruebas)</a><p><small>Google Play se actualiza por separado. Desarrollo desde main.</small></p>
+          </main></body></html>
+          HTML
       - name: Verify DEV artifact
         shell: bash
         run: |
-          cmp dev-src/dist/index.html beta/dist/dev/index.html
-          cmp dev-src/dist/index.html beta/dist/dev-live/index.html
-          test -f beta/dist/dev/sw.js
-          test -f beta/dist/dev-live/sw.js
-          grep -Fq "DEV_SOURCE_SHA=$(git -C dev-src rev-parse HEAD)" beta/dist/dev/dev-build.txt
-          grep -Fq "DEV_SOURCE_SHA=$(git -C dev-src rev-parse HEAD)" beta/dist/dev-live/dev-build.txt
+          cmp dev-src/dist/index.html site/dev/index.html
+          cmp dev-src/dist/index.html site/dev-live/index.html
+          test -f site/dev/sw.js
+          test -f site/dev-live/sw.js
+          grep -Fq "DEV_SOURCE_SHA=$(git -C dev-src rev-parse HEAD)" site/dev/dev-build.txt
+          grep -Fq "DEV_SOURCE_SHA=$(git -C dev-src rev-parse HEAD)" site/dev-live/dev-build.txt
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: beta/dist
+          path: site
 
   android_release_bridge:
     # Browser/PWA-only commits do not generate Android binaries.

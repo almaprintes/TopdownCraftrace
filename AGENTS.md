@@ -4,7 +4,7 @@ Estas reglas prevalecen sobre cualquier costumbre anterior del repositorio.
 
 1. NO crear ramas nuevas para trabajo normal.
 2. Trabajar SIEMPRE en `main` para el desarrollo actual.
-3. `beta-1.0` es una rama histórica de la primera beta. Ya NO representa la versión pública actual ni tiene protección operativa especial.
+3. La versión pública de Google Play es 1.1.188 (versionCode 8). `beta-1.0` es histórica y obsoleta; no usarla para compilar o publicar.
 4. `main` es la única línea de desarrollo actual. No asumir que una rama histórica representa Google Play; comprobar siempre el versionado Android y el estado real de publicación antes de preparar una release.
 5. NO mezclar código, assets ni builds desde ramas auxiliares, antiguas, recovery, lab, preview, feat, fix, tmp, backup o similares.
 6. NO cambiar el origen de `/dev` fuera de `main`.
@@ -29,6 +29,14 @@ Objetivo operativo: una única línea de desarrollo en `main`, simple y predecib
 14. Solo comunicar que una versión está lista cuando el HEAD final tenga Build + Deploy en estado completed/success.
 15. Una respuesta del tipo «pendiente», «en cola», «compilando» o «todavía no» no constituye entrega y debe evitarse cuando el propietario haya pedido esperar hasta que esté lista.
 16. El objetivo operativo es que el propietario pueda despreocuparse del pipeline: cuando el asistente responda que está lista, debe significar que el despliegue completo ha sido comprobado.
+
+## Fuente única de publicación — 10/10/2026
+- Única rama activa de desarrollo y despliegue: `main`.
+- GitHub Pages publica la página informativa de Google Play desde main, y `/dev` y `/dev-live` exclusivamente del mismo SHA de main.
+- `dev-first-update` y `beta-1.0` dejan de ser fuentes válidas de desarrollo o despliegue. Pueden eliminarse al verificar el despliegue de main.
+- La versión Android pública 1.1.188 sigue gestionada por Google Play y no se modifica con commits web.
+- Última versión DEV anterior a Image Mode: 1.2.97. Siguiente versión 1.2.98.
+- No generar un APK por cambios exclusivos de TrackStudio hasta autorización expresa.
 
 ## DEV consolidada — 08/10/2026
 - Main integra el progreso de DEV 1.2.75 con las correcciones y la copia en la nube, nueva versión DEV 1.2.76.
