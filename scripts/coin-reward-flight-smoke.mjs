@@ -38,7 +38,7 @@ assert.match(store,/root\.once\('destroy'/,'stop tweens on store close');
 
 // The shipping store is DOM: legacy Phaser-only checks cannot prove visibility.
 const currentMenu=read('src/game/scenes/MenuDuelModeScene.js');
-assert.match(currentMenu,/return openStoreDom\(this\)/,'real store uses DOM');
+assert.match(currentMenu,/return openStoreDom\(this,section\)/,'real store reuses DOM and forwards rewards section');
 const domStore=read('src/game/ui/StoreDomUi.js');
 const verified=domStore.indexOf('if(!verifiedReward(ad))');
 const awarded=domStore.indexOf('const result=isVideo?claimRewardedCoins(100):claimDailyCoins(250)');
