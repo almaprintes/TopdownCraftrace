@@ -284,7 +284,7 @@
   display:grid;
   grid-template-columns:minmax(0,1.09fr) minmax(0,.93fr) minmax(0,1.09fr);
   align-items:stretch;
-  gap:3px;
+  gap:1.5px;
   isolation:isolate;
   filter:drop-shadow(0 6px 9px rgba(0,0,0,.65));
   position:absolute;
@@ -312,13 +312,13 @@
   transition:filter .2s ease;
 }
 .tdr-lobby-action-capsule .tdr-lobby-reward-cta--daily{
-  clip-path:polygon(12px 0,calc(100% - 15px) 0,100% 50%,calc(100% - 15px) 100%,12px 100%,0 50%);
+  clip-path:polygon(12px 0,calc(100% - 7.5px) 0,100% 50%,calc(100% - 7.5px) 100%,12px 100%,0 50%);
 }
 .tdr-lobby-action-capsule .tdr-lobby-reward-cta--video{
-  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,15px 50%);
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,7.5px 50%);
 }
 .tdr-lobby-action-capsule .tdr-lobby-play{
-  clip-path:polygon(0 0,calc(100% - 15px) 0,100% 50%,calc(100% - 15px) 100%,0 100%,15px 50%);
+  clip-path:polygon(0 0,calc(100% - 7.5px) 0,100% 50%,calc(100% - 7.5px) 100%,0 100%,7.5px 50%);
   display:flex;align-items:center;justify-content:center;
   gap:clamp(7px,1vw,14px);
   border:2px solid #adffd5;
@@ -368,11 +368,11 @@
   position:absolute;
   z-index:4;
   top:50%;
-  left:clamp(8px,2vw,30px);
+  left:clamp(24px,5.8vw,86px);
   transform:translateY(-50%);
   display:block;
-  width:clamp(33px,4.2vw,63px);
-  height:clamp(35px,5.5vw,66px);
+  width:clamp(37px,4.5vw,69px);
+  height:clamp(39px,5.8vw,72px);
   object-fit:contain;
   filter:drop-shadow(0 2px 4px rgba(0,0,0,.64));
   pointer-events:none;
@@ -439,13 +439,13 @@
 @media(max-width:930px){
  .tdr-lobby-dom .tdr-lobby-action-capsule{width:min(77vw,700px)}
  .tdr-lobby-reward-face{padding:4px 7px 4px clamp(46px,7vw,76px)}
- .tdr-lobby-reward-icon{left:clamp(6px,1.1vw,12px);width:clamp(27px,3.5vw,43px);height:clamp(29px,4vw,45px)}
+ .tdr-lobby-reward-icon{left:clamp(28px,6.1vw,60px);width:clamp(31px,4vw,47px);height:clamp(33px,4.6vw,49px)}
  .tdr-lobby-reward-copy strong{font-size:clamp(16px,2.3vw,25px)}
  .tdr-lobby-reward-copy small{font-size:clamp(8px,1vw,11px)}
 }
 @media(max-height:430px){
  .tdr-lobby-dom .tdr-lobby-action-capsule > button{height:clamp(46px,12vh,54px)}
- .tdr-lobby-reward-icon{height:clamp(27px,7vh,40px)}
+ .tdr-lobby-reward-icon{height:clamp(31px,8vh,44px)}
  .tdr-lobby-reward-copy strong{font-size:clamp(17px,2.25vw,27px)}
  .tdr-lobby-reward-copy small{font-size:clamp(8px,.85vw,10px)}
  .tdr-lobby-action-capsule .tdr-lobby-play span:last-child{font-size:clamp(19px,2.25vw,29px)}

@@ -190,7 +190,29 @@ assert.match(artJS,/button\.append\(icon,createRewardFace\(video\),createRewardF
 assert.doesNotMatch(artJS.slice(artJS.indexOf('function createRewardFace'),artJS.indexOf('function makeRewardShortcut')),/createElement\('img'\)/,'text layers have no tinted icons');
 assert.match(artCSS,/\.tdr-lobby-reward-icon\{[\s\S]*?z-index:4/,'color icon stays above fill');
 assert.doesNotMatch(artCSS,/\.tdr-lobby-reward-face--filled img|filter:brightness\(\.20\) saturate\(\.22\)/,'no dimming the gift or video');
-assert.match(appHtml,/<meta name="tdr-dev-version" content="DEV 1\.2\.95"/,'single version source');
+assert.match(appHtml,/<meta name="tdr-dev-version" content="DEV 1\.2\.96"/,'single version source');
 assert.equal((appHtml.match(/data-tdr-dev-version/g)||[]).length,3,'both translations and one updater');
 assert.doesNotMatch(appHtml,/DEV 1\.2\.91|<span>91<\/span>/,'no stale portrait label');
 assert.match(appHtml,/document\.querySelectorAll\('\[data-tdr-dev-version\]'\)/,'live version sourced from meta');
+
+/* Micro-joints and improved original icon alignment. No reward/color behavior changes. */
+assert.match(artCSS,/\.tdr-lobby-dom \.tdr-lobby-action-capsule\{[\s\S]*?gap:1\.5px;/,
+  'capsule joint space is halved, from 3px to 1.5px');
+assert.match(artCSS,/\.tdr-lobby-reward-cta--daily\{[\s\S]*?calc\(100% - 7\.5px\)/,
+  'left join notch is half depth');
+assert.match(artCSS,/\.tdr-lobby-play\{[\s\S]*?calc\(100% - 7\.5px\)/,
+  'center join notch is half depth');
+assert.match(artCSS,/\.tdr-lobby-reward-cta--video\{[\s\S]*?7\.5px 50%/,
+  'right join notch is half depth');
+assert.match(artCSS,/left:clamp\(24px,5\.8vw,86px\)/,
+  'gift and video icons move closer to their numbers on wide screens');
+assert.match(artCSS,/left:clamp\(28px,6\.1vw,60px\)/,
+  'mobile gift and video icons move closer to their numbers');
+assert.match(artCSS,/width:clamp\(31px,4vw,47px\)/,
+  'mobile reward icons are enlarged slightly');
+assert.match(artCSS,/height:clamp\(31px,8vh,44px\)/,
+  'short landscape devices also receive larger icons');
+assert.match(artCSS,/clip-path:inset\(var\(--tdr-reward-empty\) 0 0 0\)/,
+  'existing text contrast boundary still follows the fill');
+assert.match(artJS,/scene\._openStoreModal\?\.\('rewards'\)/,
+  'existing rewards navigation unchanged');
