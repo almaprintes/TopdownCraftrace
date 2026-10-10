@@ -163,7 +163,7 @@ const centerOf=node=>{
 
 // The shipping store is DOM (StoreDomUi), not the legacy Phaser store modal.
 // This animation NEVER grants currency and is always disposable.
-export async function playDomCoinRewardFlight(scene,{amount,root,card,english=false}={}){
+export async function playDomCoinRewardFlight(scene,{amount,root,card,english=false,closeEvent='tdr:store-closed'}={}){
   if(typeof document==='undefined'||typeof window==='undefined'||!root?.isConnected||document.hidden||
     window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)return false;
   const from=centerOf(card?.querySelector?.('.tdr-store-reward-art')||card);
@@ -186,7 +186,7 @@ export async function playDomCoinRewardFlight(scene,{amount,root,card,english=fa
   const aborted=new Promise(resolve=>{interrupt=resolve;});
   const onClose=()=>interrupt();
   const onHidden=()=>{if(document.hidden)interrupt();};
-  root.addEventListener('tdr:store-closed',onClose,{once:true});
+  root.addEventListener(closeEvent,onClose,{once:true});
   window.addEventListener('pagehide',onClose,{once:true});
   document.addEventListener('visibilitychange',onHidden);
   // Compose ABOVE the actual store shell, within the same stacking context.
@@ -221,7 +221,7 @@ export async function playDomCoinRewardFlight(scene,{amount,root,card,english=fa
     return false;
   }finally{
     clearTimeout(timer);
-    root.removeEventListener('tdr:store-closed',onClose);
+    root.removeEventListener(closeEvent,onClose);
     window.removeEventListener('pagehide',onClose);
     document.removeEventListener('visibilitychange',onHidden);
     for(const a of anim)try{a.cancel();}catch{}
@@ -231,7 +231,7 @@ export async function playDomCoinRewardFlight(scene,{amount,root,card,english=fa
 
 // Animate the ACTUAL DOM wallet only after flight. All balances were saved
 // before the animation; closing the store or suspending the app cannot undo them.
-export async function animateDomCoinBalance(root,{from,to,english=false}={}){
+export async function animateDomCoinBalance(root,{from,to,english=false,closeEvent='tdr:store-closed'}={}){
   if(typeof document==='undefined'||typeof window==='undefined'||!root?.isConnected)return false;
   const number=root.querySelector('[data-store-balance]'),coin=root.querySelector('.tdr-store-coin');
   if(!number)return false;
@@ -253,7 +253,7 @@ export async function animateDomCoinBalance(root,{from,to,english=false}={}){
   const aborted=new Promise(resolve=>{resolveAbort=resolve;});
   const onClose=()=>resolveAbort(false);
   const onHidden=()=>{if(document.hidden)resolveAbort(false);};
-  root.addEventListener('tdr:store-closed',onClose,{once:true});
+  root.addEventListener(closeEvent,onClose,{once:true});
   window.addEventListener('pagehide',onClose,{once:true});
   document.addEventListener('visibilitychange',onHidden);
   const started=performance.now();
@@ -272,7 +272,7 @@ export async function animateDomCoinBalance(root,{from,to,english=false}={}){
     return await Promise.race([countUp,aborted,new Promise(resolve=>{timer=setTimeout(()=>resolve(false),850);})]);
   }finally{
     cancelAnimationFrame(raf);clearTimeout(timer);
-    root.removeEventListener('tdr:store-closed',onClose);
+    root.removeEventListener(closeEvent,onClose);
     window.removeEventListener('pagehide',onClose);
     document.removeEventListener('visibilitychange',onHidden);
     for(const a of pulses)try{a.cancel();}catch{}

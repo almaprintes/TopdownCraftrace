@@ -101,3 +101,21 @@ assert.match(shared,/back\.textContent=appBackLabel\(\)/,'word label in existing
 assert.doesNotMatch(shared,/backLabel:'←'/,'avoid oversized arrow only labels');
 assert.match(read('src/game/ui/app-header.css'),/font:900 clamp\(9px,1\.08vw,11px\)/,'compact back font');
 assert.match(read('src/game/ui/WorkshopMobileDom.js'),/button\(appBackLabel\(\)/,'factory back text');
+
+/* Season rewards: the existing grant remains canonical and synchronous. */
+const season=read('src/game/scenes/SeasonScene.js');
+const seasonEconomy=read('src/game/events/raceEvents.js');
+assert.match(seasonEconomy,/garage\.coins=Math\.max\(0,Number\(garage\.coins\)\|\|0\)\+Math\.max\(0,Number\(event\.reward\?\.coins\)\|\|0\)/,'canonical season coins grant unchanged');
+assert.match(season,/const result=claimCurrentRaceEvent\(\)/,'season persists reward normally');
+assert.match(season,/if\(this\._claimInFlight\|\|!root\?\.isConnected\|\|!button\|\|button\.disabled\)return/,'season repeat taps ignored');
+assert.ok(season.indexOf('const result=claimCurrentRaceEvent()')<season.indexOf('await playDomCoinRewardFlight(this'),'grant precedes flight');
+assert.ok(season.indexOf('await playDomCoinRewardFlight(this')<season.indexOf('await animateDomCoinBalance(root'),'arrival precedes count');
+assert.match(season,/const amount=Math\.max\(0,Math\.floor\(Number\(result\.event\?\.reward\?\.coins\)\|\|0\)\)/,'reward amount comes from claim result');
+assert.match(season,/if\(amount>0\)/,'materials and cars do not cause coin flight');
+assert.match(season,/root\.querySelector\('\.detail-reward \.loot\.coin img'\)/,'flight starts from reward art');
+assert.match(season,/root\.dataset\.tdrWalletPending='1'/,'freeze number before canonical claim');
+assert.match(season,/if\(this\._claimInFlight\)return;this\._selectedStage/,'no stages switch during flight');
+assert.match(season,/dispatchEvent\(new Event\('tdr:season-closed'\)\)/,'close cancels optional visual');
+assert.match(season,/finally\{[\s\S]*?delete root\.dataset\.tdrWalletPending;[\s\S]*?refreshAppWallets\(root\);/,'restore persisted wallet even when interrupted');
+assert.match(fx,/closeEvent='tdr:store-closed'/,'store close remains default');
+assert.match(fx,/root\.addEventListener\(closeEvent,onClose/,'screens use own close event');
