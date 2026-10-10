@@ -131,3 +131,22 @@ assert.match(db,/524288/);
 assert.match(db,/security invoker/);
 assert.match(db,/auth\.uid\(\)/);
 console.log('Cloud portability + account smoke: OK (2 backends, conflicts, protected restore, UI, schema)');
+
+
+/* Online nick uniqueness is server-claimed before local save on first launch. */
+const nickMigration=await readFile(new URL('../supabase/migrations/20261010_014_unique_case_sensitive_pilot_nicks.sql',import.meta.url),'utf8');
+const nickClaim=auth.slice(auth.indexOf('export async function claimRaceControlPilotNick'));
+const setName=pilot.slice(pilot.indexOf('export async function setPilotName'));
+assert.match(nickMigration,/before insert or update of nick on public\.profiles/,'server guard rejects direct writes too');
+assert.match(nickMigration,/pg_catalog\.pg_advisory_xact_lock/,'concurrent name claims serialized');
+assert.match(nickMigration,/p\.nick collate "C" = new\.nick collate "C"/,'case-sensitive exact comparison');
+assert.match(nickMigration,/new\.nick is not distinct from old\.nick/,'legacy unchanged nick remains valid');
+assert.match(nickMigration,/create or replace function public\.claim_my_pilot_nick/,'atomic name claim RPC');
+assert.match(nickMigration,/grant execute on function public\.claim_my_pilot_nick\(text\) to authenticated/,'anonymous Supabase Auth users may claim names');
+assert.match(nickClaim,/\/rest\/v1\/rpc\/claim_my_pilot_nick/,'claim uses same Supabase Race Control Auth');
+assert.ok(setName.indexOf('await claimRaceControlPilotNick(name)') < setName.indexOf('localStorage.setItem(KEY'), 'reserve first, local save second');
+assert.match(pilot,/await setPilotName\(input\?\.value\|\|''\)/,'first-launch UI awaits server confirmation');
+assert.match(pilot,/const next=await setPilotName\(input\?\.value\|\|''\)/,'settings rename awaits server confirmation');
+assert.match(pilot,/if\(submitting\)return/,'double pointer/click cannot submit twice');
+assert.match(pilot,/if\(saving\)return/,'settings rename double tap ignored');
+assert.match(pilot,/COMPROBANDO EN SUPABASE/,'initial UI communicates server verification');

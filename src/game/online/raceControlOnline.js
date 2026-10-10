@@ -128,6 +128,28 @@ export async function switchRaceControlAccount(email,password){
   return session;
 }
 
+// Exact case-sensitive nickname reservation happens on the server, atomically.
+// No local nickname is committed until Supabase confirms the reservation.
+export async function claimRaceControlPilotNick(value){
+  const nick=String(value??'').replace(/\\s+/g,' ').trim();
+  if(nick.length<3||nick.length>16)
+    throw new Error('El nombre de piloto debe tener entre 3 y 16 caracteres.');
+  const s=await activeSession();
+  let claimed;
+  try{
+    claimed=await request('/rest/v1/rpc/claim_my_pilot_nick',{
+      method:'POST',token:s.access_token,body:{p_nick:nick}
+    });
+  }catch(error){
+    const message=String(error?.message||error);
+    if(/failed to fetch|networkerror|network request failed|online backend not configured/i.test(message))
+      throw new Error('No se pudo comprobar el nick en Supabase. Comprueba Internet y vuelve a intentarlo.');
+    throw error;
+  }
+  if(claimed!==nick)throw new Error('Supabase no ha confirmado el nombre de piloto.');
+  return claimed;
+}
+
 export async function syncRaceControlProfile({nick,continentCode,countryCode,regionCode}){
   const online=await activateRaceControlOnline();
   const token=online?.session?.access_token;

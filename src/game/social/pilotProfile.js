@@ -1,4 +1,5 @@
 import { openCloudAccountUi } from './cloudAccountUi.js';
+import { claimRaceControlPilotNick } from '../online/raceControlOnline.js';
 const KEY='tdr2:pilotProfile:v1';
 
 const cleanName=value=>String(value??'').replace(/\s+/g,' ').trim().slice(0,16);
@@ -18,9 +19,13 @@ export function getPilotProfile(){
   return profile;
 }
 
-export function setPilotName(value){
+export async function setPilotName(value){
   const name=cleanName(value);
   if(name.length<3)throw new Error('El nombre de piloto debe tener entre 3 y 16 caracteres.');
+  // Supabase owns the unique identity claim. Never leave an unverified local
+  // name visible in rankings or cloud snapshots if the server rejects it.
+  const confirmed=await claimRaceControlPilotNick(name);
+  if(confirmed!==name)throw new Error('La reserva de nombre no coincide.');
   const current=getPilotProfile();
   const next={...current,name,updatedAt:Date.now()};
   localStorage.setItem(KEY,JSON.stringify(next));
@@ -47,10 +52,26 @@ function mountPrompt(){
   </div>`;
   document.body.appendChild(root);
   const input=root.querySelector('[data-pilot-name]'),error=root.querySelector('[data-pilot-error]'),save=root.querySelector('[data-pilot-save]');
-  const submit=()=>{try{setPilotName(input?.value||'');root.remove();}catch(err){if(error)error.textContent=String(err?.message||'Nombre no válido');input?.focus?.();}};
+  let submitting=false,lastPointerAt=0;
+  const submit=async()=>{
+    if(submitting)return;
+    submitting=true;
+    if(save){save.disabled=true;save.textContent='COMPROBANDO EN SUPABASE…';}
+    if(error)error.textContent='';
+    try{
+      await setPilotName(input?.value||'');
+      root.remove();
+    }catch(err){
+      if(error)error.textContent=String(err?.message||'No se pudo reservar el nombre');
+      input?.focus?.();
+    }finally{
+      submitting=false;
+      if(save){save.disabled=false;save.textContent='GUARDAR NOMBRE DE PILOTO';}
+    }
+  };
   root.querySelector('[data-pilot-existing]')?.addEventListener('click',()=>openCloudAccountUi());
-  save?.addEventListener('pointerup',e=>{e.preventDefault();submit();});
-  save?.addEventListener('click',submit);
+  save?.addEventListener('pointerup',e=>{e.preventDefault();lastPointerAt=Date.now();void submit();});
+  save?.addEventListener('click',()=>{if(Date.now()-lastPointerAt<500)return;void submit();});
   input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();submit();}});
   setTimeout(()=>input?.focus?.(),180);
 }
@@ -92,9 +113,13 @@ function mountSettingsProfile(){
   const input=card.querySelector('[data-pilot-settings-name]'),button=card.querySelector('[data-pilot-settings-save]'),status=card.querySelector('[data-pilot-settings-status]');
   if(input)input.value=profile.name||'';
   let lastPointerAt=0;
-  const saveName=()=>{
+  let saving=false;
+  const saveName=async()=>{
+    if(saving)return;
+    saving=true;
+    if(button){button.disabled=true;button.textContent=en?'CHECKING…':'COMPROBANDO…';}
     try{
-      const next=setPilotName(input?.value||'');
+      const next=await setPilotName(input?.value||'');
       if(input)input.value=next.name;
       const heading=root.querySelector('#tdr-cloud-account-modal [data-cloud-pilot]');
       if(heading)heading.textContent=next.name;
@@ -102,11 +127,14 @@ function mountSettingsProfile(){
     }catch(err){
       if(status){status.style.color='#ff8a93';status.textContent=en?'Driver name must contain 3–16 characters.':String(err?.message||'Nombre no válido');}
       input?.focus?.();
+    }finally{
+      saving=false;
+      if(button){button.disabled=false;button.textContent=en?'SAVE NAME':'GUARDAR NOMBRE';}
     }
   };
-  button?.addEventListener('pointerup',e=>{e.preventDefault();lastPointerAt=Date.now();saveName();});
-  button?.addEventListener('click',()=>{if(Date.now()-lastPointerAt<500)return;saveName();});
-  input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();saveName();}});
+  button?.addEventListener('pointerup',e=>{e.preventDefault();lastPointerAt=Date.now();void saveName();});
+  button?.addEventListener('click',()=>{if(Date.now()-lastPointerAt<500)return;void saveName();});
+  input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void saveName();}});
 }
 
 function installSettingsProfileBridge(){
