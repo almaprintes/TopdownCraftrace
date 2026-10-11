@@ -126,3 +126,13 @@ La aceptación visual de la escena completa y de las proporciones sigue pendient
 6. **Próxima fase — aportará una imagen nueva el usuario:** preparar foto aproximadamente **3200×1800** y convertirla a WebP de calidad inicial **86**, respetando el trazado, diseñar y reimportar el proyecto con sus coordenadas nativas. La reducción de tamaño en WebP afecta la descarga y almacenamiento, **no la RAM/GPU decodificada**; medir fluidez en móviles antes de darla por óptima.
 
 Este rollback **no revierte las mejoras previas de eliminación de estructuras, líneas/pianos duplicados, meta/checkpoints lógicos, visor de fotografía y acercamiento de spawn**. Play Store 1.1.188 intacta; ningún APK.
+
+## 13. Inicio de la migración general — contrato imagen nativa DEV 1.2.114
+
+**Alcance exacto:** se introduce `src/game/tracks/imageNativeTrackContract.js` y TrackStudio etiqueta las exportaciones que parten de fotografía con `meta.renderMode='image-native'` y `meta.imageNative={schema:1,imageId,width,height,availability:'local'}`. El contrato rechaza diferencias entre las dimensiones de la fotografía y el mundo del circuito. No altera coordenadas, bordes, salida, meta, checkpoints ni parámetros del coche. El binario `.tdrtrack` conserva su envoltorio y lectura anteriores.
+
+**Importante:** la etiqueta de metadatos *no instala* la fotografía en GitHub ni la hace disponible a otros jugadores. La fotografía sigue siendo local hasta publicar un asset versionado y cambiar explícitamente su disponibilidad. No se cambian en esta iteración el cargador de carrera, el sistema procedural heredado, los IDs de las pruebas ni Environment Studio. La incidencia de terreno gris y la activación fail-closed siguen pendientes y no deben declararse corregidas.
+
+**Arquitectura acordada:** (1) fotografía PNG/WebP como única superficie visible, (2) `trackShape`/centerline/puertas para lógica y penalización por superficie, (3) colisiones invisibles autoradas en Environment Studio, (4) registro con identidad estable y assets publicados, (5) integración independiente en DEV y promoción por circuito tras prueba. No modificar las físicas de los coches ni reemplazar circuitos existentes en bloque. La futura capa de colisiones reutilizará el resolvedor actual de barreras pero separará obstáculos lógicos de sprites decorativos.
+
+**Regresión:** `node scripts/trackstudio-image-contract-smoke.mjs` verifica dimensiones, no mutación, compatibilidad de tramos A→B, preservación del resto de metadatos y distinción local/publicado. Pendiente de validar manualmente exportación y carrera en iPhone antes de aceptar el siguiente paso.

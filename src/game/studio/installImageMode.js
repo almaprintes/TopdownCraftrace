@@ -1,4 +1,5 @@
 import { saveCanvasImage, readCanvasImage, packImageProject, unpackImageProject, normalizeCanvasImageBlob } from './imageCanvasProject.js';
+import { attachImageNativeTrackContract } from '../tracks/imageNativeTrackContract.js';
 
 const TILE = 2048;
 const limit = (w,h) => w > 0 && h > 0 && w <= 8192 && h <= 8192 && w*h <= 32000000;
@@ -77,6 +78,13 @@ export async function importImageProjectFile(s,file){
 }
 export function installTrackStudioImageMode(s){
   s._imageCanvas=null;s._imageCanvasTiles=[];s._imageCanvasToken=0;
+  // A single authoritative authored-image contract, shared by all future
+  // circuits. The binary .tdrtrack envelope and its payload stay unchanged.
+  const originalGameExport=s._exportToGameTrack.bind(s);
+  s._exportToGameTrack=()=>{
+    const track=originalGameExport();
+    return s._imageCanvas ? attachImageNativeTrackContract(track,s._imageCanvas) : track;
+  };
   const originalProject=s._getProjectData.bind(s);
   s._getProjectData=()=>({...originalProject(),version:2,imageCanvas:s._imageCanvas?{...s._imageCanvas}:null});
   const originalApply=s._applyProjectData.bind(s);
