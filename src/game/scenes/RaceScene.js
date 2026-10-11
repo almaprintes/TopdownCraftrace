@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
 import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
+import { imageNativeDrivingProfile } from '../tracks/imageNativeDriving.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { loadGarage, garageTuning, grantRaceReward } from '../garage/garageStore.js';
@@ -720,7 +721,12 @@ if (!this._useFactorySpec) {
   this.applyCarParams = () => {
     // Recalcular tuning final en cada apply (por si cambió devTuning)
     this.tuning = { ...this.tuningBase, ...this._devTuning };
-    this.carParams = resolveCarParams(this.baseSpec, this.tuning);
+    const factoryParams = resolveCarParams(this.baseSpec, this.tuning);
+    // Do not enlarge/shift TrackStudio's 1:1 image world. Only normalize
+    // driving units in the isolated, local image-native test circuit.
+    this.carParams = this.trackKey === LOCAL_KARTING_PREVIEW_KEY
+      ? imageNativeDrivingProfile(factoryParams,getLocalKartingPreview(this.trackKey)?.track)
+      : factoryParams;
 
     this.accel = this.carParams.accel;
     this.maxFwd = this.carParams.maxFwd;

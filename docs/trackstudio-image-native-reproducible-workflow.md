@@ -71,3 +71,15 @@ El botón **▶ PROBAR JUEGO** no hace que otros usuarios descarguen la imagen. 
 Guardar junto al circuito: archivo maestro, `.tdrtrack` de origen y de cada hito, versión DEV, SHA del commit, URL de Actions y capturas de las pruebas. Ante fallo visual, comparar foto maestra contra escena, verificar qué *GameObjects* se añaden en cada wrapper, revertir solo el código de capas y **no volver a dibujar la pista**.
 
 **Pendiente de cerrar después de la validación del usuario:** fecha de aceptación, versión exacta aprobada, capturas de las horquillas sin doble línea y decisión sobre promoción del preview a recurso universal.
+
+## 9. Ajustar spawn y dinámica al tamaño nativo (DEV 1.2.110)
+
+**Situación detectada tras la aprobación visual:** la imagen de Karting Tenerife mide 1672×941 px, mientras que el motor heredado se diseñó con mundo base de 8000×5000 px. No se cambia `worldW/worldH`: la imagen, los bordes y la centerline deben permanecer alineados 1:1.
+
+- **Spawn inicial:** `spawnUpstreamOfFinish()` en `src/game/tracks/imageNativeDriving.js` proyecta el punto medio de la puerta de meta sobre la centerline y recorre el eje **hacia atrás ~65 píxeles** siguiendo la trayectoria, respetando su orientación. En este Karting el primer nodo original está ~209 px antes de meta; la posición nueva prevista es ~x1354, y521, todavía antes de la puerta. Se trata de un cálculo temporal para conducir: ni el primer nodo Bézier ni la meta se alteran en el `.tdrtrack`. Existe fallback al spawn anterior si la puerta es inválida o está alejada del recorrido.
+- **Conducción normalizada:** `imageNativeDrivingProfile()` adapta velocidades y aceleración en unidades de píxeles **solo** si `trackKey === 'karting-tenerife-studio'`. Para 1672×941 usa un factor suave cercano a **0,72** sobre velocidad, aceleración y fuerza de freno, y eleva el giro a aproximadamente **1,55×**. Reduce también el umbral de giro a baja velocidad. La escala es intencionadamente moderada para mantener carreras jugables; NO es una conversión literal 0,20× del mundo antiguo.
+- **Aislamiento:** los coches, los ajustes del garaje y los circuitos oficiales usan la misma dinámica anterior. Cada recálculo parte de los parámetros originales para que los multiplicadores no se acumulen.
+- **Prueba manual requerida:** abrir de nuevo TrackStudio con el mismo archivo, pulsar `▶ PROBAR JUEGO` para actualizar la copia local, comprobar que el coche sale a pocos metros visuales de meta **por el lado correcto**, cruza en sentido válido y supera las horquillas sin giro imposible. Ajustar el factor en una DEV posterior según las impresiones, sin redibujar ni cambiar el tamaño de la fotografía.
+- **Regresión automatizada:** `node scripts/trackstudio-image-native-drive-scale-smoke.mjs`, añadido al pipeline de GitHub Pages, cubre las coordenadas de ejemplo de Karting Tenerife, orientación de meta, no-mutación de centerline, relación de escalas y preservación del resto de circuitos.
+
+**Estado:** revisión visual del entorno aprobada por el usuario; nueva calibración de spawn y dirección pendiente de prueba táctil real en iPhone.

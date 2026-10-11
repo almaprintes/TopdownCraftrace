@@ -2,6 +2,7 @@
 // Never replace the public track or send its new geometry to public leaderboards.
 import { readCanvasImage, normalizeCanvasImageBlob } from '../studio/imageCanvasProject.js';
 import { shapeIsValid, sampleShapeEdge } from '../studio/trackShapeGeometry.js';
+import { spawnUpstreamOfFinish } from './imageNativeDriving.js';
 
 export const LOCAL_KARTING_PREVIEW_KEY='karting-tenerife-studio';
 const STORAGE_KEY='tdr:trackstudio:karting-tenerife-preview-v1';
@@ -33,9 +34,14 @@ export function makeKartingPreviewRecord(editor,gameTrack){
     throw Error('La centerline no está completa');
   if(!gameTrack.finishLine?.a||!gameTrack.finishLine?.b)
     throw Error('Configura la meta antes de probar el circuito');
-  const start=gameTrack.centerline[0],next=gameTrack.centerline[1],
-        theta=Math.atan2(next.y-start.y,next.x-start.x);
+  // The editor's first centerline node is not necessarily near the finish
+  // (this Karting project starts ~209px before the gate). Keep the original
+  // centerline untouched and calculate a temporary race spawn ~65px upstream.
+  const first=gameTrack.centerline[0],next=gameTrack.centerline[1],
+        theta=Math.atan2(next.y-first.y,next.x-first.x);
   if(!Number.isFinite(theta))throw Error('El punto inicial de la pista es inválido');
+  const beforeFinish=spawnUpstreamOfFinish(gameTrack.centerline,gameTrack.finishLine,65);
+  const start=beforeFinish||{x:first.x,y:first.y,r:theta};
   const imageId=editor.imageCanvas.imageId;
   const track={
     ...jsonCopy(gameTrack),
@@ -44,7 +50,7 @@ export function makeKartingPreviewRecord(editor,gameTrack){
     name:'KARTING TENERIFE · TRACKSTUDIO DEV',
     category:'Karting / DEV local',
     carScale:.65,
-    start:{x:start.x,y:start.y,r:theta},
+    start:{x:start.x,y:start.y,r:start.r},
     closed:true,raceType:'circuit',raceDirection:'forward',
     grid:null,
     checkpointMode:'authored',
