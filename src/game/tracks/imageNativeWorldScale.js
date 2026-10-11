@@ -50,11 +50,13 @@ export function scaleImageNativeTrackForRace(source,scale=IMAGE_NATIVE_WORLD_SCA
       width:Number.isFinite(p.width)?p.width*scale:p.width};
   });
   track.trackShape=scaleShape(source.trackShape,scale);
-  track.start=scalePoint(source.start,scale);
-  track.startLine=scaleGate(source.startLine,scale);
-  track.finishLine=scaleGate(source.finishLine,scale);
-  track.finish=scaleGate(source.finish,scale);
-  track.checkpoints=Array.isArray(source.checkpoints)
+  // Keep the exact shape of the authored object; undefined optional fields
+  // should not appear just because a runtime copy was scaled.
+  if('start' in source)track.start=scalePoint(source.start,scale);
+  if('startLine' in source)track.startLine=scaleGate(source.startLine,scale);
+  if('finishLine' in source)track.finishLine=scaleGate(source.finishLine,scale);
+  if('finish' in source)track.finish=scaleGate(source.finish,scale);
+  if('checkpoints' in source)track.checkpoints=Array.isArray(source.checkpoints)
     ?source.checkpoints.map(cp=>scaleGate(cp,scale))
     :source.checkpoints;
   if(track.grid){
