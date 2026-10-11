@@ -2419,99 +2419,12 @@ const targetS = finishS - correctedOffset;
     this._nodeGfx.strokeCircle(x, y, selected ? 10 : 8);
   }
 
-_updatePanel() {
-  const guideLoaded = !!this._guideImage;
-
-  if (this._panelEmptyText) {
-    this._panelEmptyText.setVisible(false);
+  // The display logic is installed as an HTML inspector by
+  // installTrackStudioShapeEditor() at the end of create().
+  // DO NOT restore Phaser Text.setText here: iPhone WebGL crashes in Frame.updateUVs.
+  _updatePanel() {
+    // Safe during initialization, before the DOM inspector is installed.
   }
-  if (this._panelDeleteBtn) {
-    this._panelDeleteBtn.setVisible(false);
-  }
-    const setPadVisible = (visible) => {
-    this._padUp?.bg?.setVisible(visible);
-    this._padUp?.txt?.setVisible(visible);
-    this._padDown?.bg?.setVisible(visible);
-    this._padDown?.txt?.setVisible(visible);
-    this._padLeft?.bg?.setVisible(visible);
-    this._padLeft?.txt?.setVisible(visible);
-    this._padRight?.bg?.setVisible(visible);
-    this._padRight?.txt?.setVisible(visible);
-    this._padCenter?.setVisible(visible);
-    this._padCenterTxt?.setVisible(visible);
-  };
-
-  setPadVisible(false);
-  if (!this._panelInfoText) {
-    this._panelInfoText = this.add.text(
-      this.scale.width - this._rightPanelW + 20,
-      this._panelContentY,
-      '',
-      {
-        fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-        fontSize: '13px',
-        color: '#ffffff',
-        lineSpacing: 4,
-        wordWrap: { width: this._rightPanelW - 40 }
-      }
-    );
-  }
-
-  if (this._selectedPiano >= 0 && this._selectedPiano < this._pianos.length) {
-    const p = this._pianos[this._selectedPiano];
-    if (this._panelDeleteBtn) {
-      this._panelDeleteBtn.setVisible(true);
-    }
-        setPadVisible(true);
-    this._panelInfoText.setVisible(true);
-    this._panelInfoText.setText(
-      `Piano #${this._selectedPiano}\n` +
-      `Centro: ${Math.round(p.point.x)}, ${Math.round(p.point.y)}\n` +
-      `A: ${Math.round(p.a.x)}, ${Math.round(p.a.y)}\n` +
-      `B: ${Math.round(p.b.x)}, ${Math.round(p.b.y)}\n` +
-      `Loop: ${this._isClosed ? 'cerrado' : 'abierto'}\n` +
-      `Zoom: ${this._editCam ? this._editCam.zoom.toFixed(2) : '0.00'}`
-    );
-    return;
-  }
-
-  if (this._selectedNode >= 0 && this._selectedNode < this._nodes.length) {
-    const n = this._nodes[this._selectedNode];
-    const part = this._selectedPart?.type || 'node';
-    if (this._panelDeleteBtn) {
-      this._panelDeleteBtn.setVisible(true);
-    }
-        setPadVisible(true);
-    this._panelInfoText.setVisible(true);
-    this._panelInfoText.setText(
-      `Nodo #${this._selectedNode}\n` +
-      `Modo: ${part}\n` +
-      `X: ${Math.round(n.x)}\n` +
-      `Y: ${Math.round(n.y)}\n` +
-      `In: ${Math.round(n.handleIn.x)}, ${Math.round(n.handleIn.y)}\n` +
-      `Out: ${Math.round(n.handleOut.x)}, ${Math.round(n.handleOut.y)}\n` +
-      `Zoom: ${this._editCam ? this._editCam.zoom.toFixed(2) : '0.00'}\n` +
-      `Ancho: ${this._trackWidth}px`
-    );
-    return;
-  }
-
-  this._panelInfoText.setVisible(false);
-
-  if (this._panelEmptyText) {
-    this._panelEmptyText.setVisible(true);
-    this._panelEmptyText.setText(
-      `Sin selección\n` +
-      `Nodos: ${this._nodes.length}\n` +
-      `Pianos: ${this._pianos.length}\n` +
-      `Salida: ${this._startLine ? 'sí' : 'no'}\n` +
-      `Meta: ${this._finishLine ? 'sí' : 'no'}\n` +
-      `Checkpoints: ${this._checkpoints.length}\n` +
-      `Guía: ${guideLoaded ? (this._guideVisible ? 'visible' : 'oculta') : 'no cargada'}` +
-      (this._imageCanvas ? `\nLienzo: ${this._imageCanvas.width}×${this._imageCanvas.height}` : '')
-    );
-  }
-}
 
   _getProjectData() {
     return {

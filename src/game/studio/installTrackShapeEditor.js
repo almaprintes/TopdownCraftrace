@@ -1,6 +1,6 @@
 import {createTrackShape,shapeIsValid,sampleShapeEdge,splitShapeEdge,moveShapePart,copyTrackShape} from './trackShapeGeometry.js';
 import {pickShapeTarget} from './shapeTouchInteraction.js';
-import {createShapeDomInspector,shapeInspectorCopy} from './shapeDomInspector.js';
+import {createShapeDomInspector,shapeInspectorCopy,studioInspectorCopy} from './shapeDomInspector.js';
 
 function drawPolyline(g,points,closed){
   if(points.length<2)return;
@@ -142,23 +142,27 @@ export function installTrackStudioShapeEditor(s){
     render(s);
   };
   const inspector=createShapeDomInspector(s);
-  const originalPanel=s._updatePanel.bind(s);
+  // Important: NEVER call legacy _updatePanel after installing the editor.
+  // It invokes Phaser Text.setText on every pointerup, causing iPhone crashes
+  // even when shape editing is disabled (confirmed by DEV 1.2.102 stack).
   s._updatePanel=()=>{
-    if(!s._shapeEditing||!shapeIsValid(s._trackShape)){
-      inspector.hide();
-      return originalPanel();
-    }
-    // iOS fix: don't invoke Text.setText even once from active edge selection.
-    // Phaser's canvas-backed Text can throw in Frame.updateUVs -> Frame.setSize.
+    const edgeMode=!!(s._shapeEditing && shapeIsValid(s._trackShape));
     s._panelInfoText?.setVisible(false);
     s._panelEmptyText?.setVisible(false);
-    s._panelDeleteBtn?.setVisible(false);
+    const showControls=!edgeMode&&(
+      (s._selectedPiano>=0&&s._selectedPiano<(s._pianos?.length||0))||
+      (s._selectedNode>=0&&s._selectedNode<(s._nodes?.length||0))
+    );
+    s._panelDeleteBtn?.setVisible(showControls);
     for(const part of [s._padUp,s._padDown,s._padLeft,s._padRight]){
-      part?.bg?.setVisible(false);part?.txt?.setVisible(false);
+      part?.bg?.setVisible(showControls);
+      part?.txt?.setVisible(showControls);
     }
-    s._padCenter?.setVisible(false);
-    s._padCenterTxt?.setVisible(false);
-    inspector.show(shapeInspectorCopy(s._trackShape,s._shapeSelected));
+    s._padCenter?.setVisible(showControls);
+    s._padCenterTxt?.setVisible(showControls);
+    inspector.show(edgeMode
+      ? shapeInspectorCopy(s._trackShape,s._shapeSelected)
+      : studioInspectorCopy(s));
   };
   s._findShapeControlAt=(x,y)=>findShapeControl(s,x,y);
   s._moveShapeControl=(part,world)=>{

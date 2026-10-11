@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { shapeInspectorCopy, createShapeDomInspector } from '../src/game/studio/shapeDomInspector.js';
+import { shapeInspectorCopy, createShapeDomInspector, studioInspectorCopy } from '../src/game/studio/shapeDomInspector.js';
 let node=null,removed=0,added=0;
 const listeners=new Map();
 globalThis.document={
@@ -43,10 +43,30 @@ assert.equal(node.style.display,'none');
 inspector.destroy();
 assert.equal(listeners.size,0);
 assert.equal(removed,1);
-const mod=readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
-const section=mod.slice(mod.indexOf('const originalPanel=s._updatePanel.bind(s)'),mod.indexOf('s._findShapeControlAt='));
-assert.ok(section.includes('return originalPanel();'),'Standard centerline editor must retain legacy inspector');
-assert.ok(section.includes('inspector.show(shapeInspectorCopy('),'Shape editing must use HTML inspector');
-assert.ok(!section.includes('.setText('),'Shape inspector must NEVER use Phaser Text.setText');
-assert.ok(!mod.includes('editBtn.setText('),'AJUSTAR must never resize a Phaser text texture');
-console.log('TrackStudio iOS crash regression: DOM inspector, no Phaser setText on selection, resize + cleanup: OK');
+const editor=readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
+const studio=readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
+const region=editor.slice(editor.indexOf('const inspector=createShapeDomInspector(s)'),editor.indexOf('s._findShapeControlAt='));
+const corePanel=studio.slice(studio.indexOf('\n  _updatePanel() {'),studio.indexOf('\n  _getProjectData() {'));
+assert.ok(region.includes('inspector.show(edgeMode'),'All inspector branches must use HTML');
+assert.ok(region.includes('studioInspectorCopy(s)'),'Centerline, piano and empty selection must use HTML');
+assert.ok(region.includes('shapeInspectorCopy(s._trackShape,s._shapeSelected)'),'Shape edit must use HTML');
+assert.ok(!region.includes('originalPanel()'),'Core Phaser text panel must never be called');
+assert.ok(!region.includes('.setText('),'Inspector must not call Phaser Text.setText');
+assert.ok(!corePanel.includes('.setText('),'Original editor method must no longer generate Text UVs');
+assert.ok(!editor.includes('editBtn.setText('),'Toggle must avoid updating Phaser Text');
+const data={
+  _nodes:[{x:12,y:18,handleIn:{x:10,y:18},handleOut:{x:15,y:19}}],
+  _pianos:[],_checkpoints:[{a:{x:1,y:2},b:{x:3,y:4}}],
+  _editCam:{zoom:.65},_trackWidth:70,_guideVisible:true,
+  _selectedNode:0,_selectedPiano:-1,_selectedPart:{type:'node'},
+  _imageCanvas:{width:1672,height:941},_startLine:null,_finishLine:null,
+  _isClosed:true
+};
+assert.ok(studioInspectorCopy(data).includes('Nodo #0'),'Legacy node inspection must remain visible');
+data._selectedNode=-1;
+assert.ok(studioInspectorCopy(data).includes('Lienzo: 1672×941'),'Empty inspector must show image and world');
+assert.ok(studioInspectorCopy(data).includes('Checkpoints: 1'));
+data._pianos=[{a:{x:1,y:2},b:{x:3,y:4},point:{x:2,y:3}}];
+data._selectedPiano=0;
+assert.ok(studioInspectorCopy(data).includes('Piano #0'),'Legacy piano info must remain visible');
+console.log('TrackStudio iOS crash regression: no Phaser Text updates on ANY panel path; all modes DOM + cleanup OK');

@@ -64,3 +64,37 @@ export function createShapeDomInspector(scene) {
     }
   };
 }
+
+
+// All TrackStudio properties use one HTML inspector. The original Phaser
+// Text.setText() on pointerup triggered Frame.updateUVs on iPhone.
+export function studioInspectorCopy(scene) {
+  const nodes=Array.isArray(scene?._nodes)?scene._nodes:[];
+  const pianos=Array.isArray(scene?._pianos)?scene._pianos:[];
+  const cps=Array.isArray(scene?._checkpoints)?scene._checkpoints:[];
+  const loop=scene?._isClosed?'cerrado':'abierto';
+  const zoom=Number(scene?._editCam?.zoom);
+  const zoomStr=Number.isFinite(zoom)?zoom.toFixed(2):'0.00';
+  const safe=p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y)
+    ? Math.round(p.x)+', '+Math.round(p.y):'—';
+  if(Number.isInteger(scene?._selectedPiano) && scene._selectedPiano>=0 && scene._selectedPiano<pianos.length) {
+    const p=pianos[scene._selectedPiano];
+    return ['Piano #'+scene._selectedPiano,
+      'Centro: '+safe(p?.point),'A: '+safe(p?.a),'B: '+safe(p?.b),
+      'Loop: '+loop,'Zoom: '+zoomStr].join('\n');
+  }
+  if(Number.isInteger(scene?._selectedNode) && scene._selectedNode>=0 && scene._selectedNode<nodes.length) {
+    const n=nodes[scene._selectedNode];
+    if(n&&Number.isFinite(n.x)&&Number.isFinite(n.y)) {
+      return ['Nodo #'+scene._selectedNode,'Modo: '+(scene._selectedPart?.type||'node'),
+        'X: '+Math.round(n.x),'Y: '+Math.round(n.y),
+        'In: '+safe(n.handleIn),'Out: '+safe(n.handleOut),
+        'Zoom: '+zoomStr,'Ancho: '+scene._trackWidth+'px'].join('\n');
+    }
+  }
+  const guide=scene?._guideImage?(scene._guideVisible?'visible':'oculta'):'no cargada';
+  const canvas=scene?._imageCanvas?'\nLienzo: '+scene._imageCanvas.width+'×'+scene._imageCanvas.height:'';
+  return ['Sin selección','Nodos: '+nodes.length,'Pianos: '+pianos.length,
+    'Salida: '+(scene?._startLine?'sí':'no'),'Meta: '+(scene?._finishLine?'sí':'no'),
+    'Checkpoints: '+cps.length,'Guía: '+guide].join('\n')+canvas;
+}
