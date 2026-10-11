@@ -39,6 +39,9 @@ assert.equal(recycled._imageNativePrepared,null,'Native flag must reset for clas
 assert.equal(recycled._imageNativeLoading,false);
 assert.equal(recycled._imageNativeLoadError,null);
 assert.equal(isImageNativeTrackScene(recycled),false,'Classic art must return after a native race');
+assert.equal(isImageNativeTrackScene({trackKey:'karting-tenerife',track:{
+  id:LOCAL_KARTING_PREVIEW_KEY,meta:{id:LOCAL_KARTING_PREVIEW_KEY,localPreview:true,source:'trackstudio-image-native'}
+}}),false,'Stale preview metadata must not suppress classic preload rendering');
 const base=readFileSync('src/game/scenes/RaceScene.js','utf8');
 const env=readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
 const world=readFileSync('src/game/scenes/RaceWorldAlignedMaterialsScene.js','utf8');
