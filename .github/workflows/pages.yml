@@ -83,6 +83,7 @@ jobs:
           node scripts/trackstudio-shape-smoke.mjs
           node scripts/trackstudio-shape-touch-smoke.mjs
           node scripts/trackstudio-text-crash-smoke.mjs
+          node scripts/trackstudio-start-grid-toggle-smoke.mjs
           grep -q "start_red.webp" src/game/scenes/RaceCleanStartLightsScene.js
           grep -q "Surface physics only" src/game/scenes/RaceSurfaceProfileScene.js
           if grep -q "setTexture?.('off')" src/game/scenes/RaceSurfaceProfileScene.js; then exit 1; fi

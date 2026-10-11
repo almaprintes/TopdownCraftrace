@@ -61,6 +61,7 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._tool = 'edit'; // 'edit' | 'start' | 'finish' | 'checkpoint' | 'piano'
     this._startLine = null;
     this._finishLine = null;
+    this._showStartingGrid = true;
     this._checkpoints = [];
 
     // pianos manuales
@@ -2104,6 +2105,7 @@ if (Phaser.Math.Distance.Between(x, y, p.b.x, p.b.y) < R_HANDLE) {
     this._redrawEditor();
   }
   _getVisualGridSlots() {
+    if (this._showStartingGrid === false) return [];
     if (!this._isClosed || this._raceType === 'stage') return [];
     if (!this._finishLine?.a || !this._finishLine?.b) return [];
 
@@ -2434,6 +2436,7 @@ const targetS = finishS - correctedOffset;
       isClosed: this._isClosed,
       startLine: this._startLine,
       finishLine: this._finishLine,
+      showStartingGrid: this._showStartingGrid !== false,
       checkpoints: this._checkpoints,
       guideAlpha: this._guideAlpha,
       guideVisible: this._guideVisible,
@@ -2521,7 +2524,7 @@ _exportToGameTrack() {
 
   let grid = null;
 
-  if (this._isClosed && this._raceType !== 'stage' && finishLine?.a && finishLine?.b) {
+  if (this._showStartingGrid !== false && this._isClosed && this._raceType !== 'stage' && finishLine?.a && finishLine?.b) {
     const visualSlots = this._getVisualGridSlots();
 
     const slots = visualSlots.map((s, idx) => ({
@@ -2644,6 +2647,7 @@ _loadTrack() {
     this._isClosed = data.isClosed ?? false;
     this._startLine = data.startLine || null;
     this._finishLine = data.finishLine || null;
+    this._showStartingGrid = data.showStartingGrid !== false;
     this._checkpoints = data.checkpoints || [];
     this._guideAlpha = data.guideAlpha ?? 0.32;
     this._guideVisible = data.guideVisible ?? true;
@@ -2880,6 +2884,7 @@ const data = {
     this._editorWorldH = Number(data.worldH) || this._editorWorldH;
     this._startLine = data.startLine || null;
     this._finishLine = data.finishLine || null;
+    this._showStartingGrid = typeof data.showStartingGrid === 'boolean' ? data.showStartingGrid : !!(data.grid?.slots?.length);
     this._checkpoints = Array.isArray(data.checkpoints) ? data.checkpoints : [];
     const { centerline, closed, raceType, trackWidth, worldW, worldH, start, startLine, finishLine, checkpoints, grid, ...rest } = data;
     this._importedTrackMeta = rest;
@@ -2913,6 +2918,7 @@ this._applyProjectData(data.editor || data);
     this._nodes = [];
     this._startLine = null;
     this._finishLine = null;
+    this._showStartingGrid = true;
     this._checkpoints = [];
     this._isClosed = false;
     this._trackWidth = 140;

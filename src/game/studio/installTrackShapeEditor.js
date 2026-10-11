@@ -98,6 +98,19 @@ function insertNode(s){
 }
 export function installTrackStudioShapeEditor(s){
   s._trackShape=null;s._shapeEditing=false;s._shapeSelected=null;
+  let gridOn=null,gridOff=null;
+  const refreshGridToggle=()=>{
+    gridOn?.setVisible(s._showStartingGrid !== false);
+    gridOff?.setVisible(s._showStartingGrid === false);
+  };
+  const toggleGrid=()=>{
+    s._pushHistory();
+    s._showStartingGrid = s._showStartingGrid === false;
+    s._autosaveRecovery();
+    s._redrawEditor();
+    s._updatePanel();
+    s._flashMessage(s._showStartingGrid ? 'Parrilla activada' : 'Parrilla oculta · meta conservada');
+  };
   const gfx=s.add.graphics().setDepth(13);
   s._shapeGfx=gfx;s.cameras.main.ignore(gfx);
   const originalProject=s._getProjectData.bind(s);
@@ -140,6 +153,7 @@ export function installTrackStudioShapeEditor(s){
       s._nodeGfx?.clear();s._guideGfx?.clear();
     }
     render(s);
+    refreshGridToggle();
   };
   const inspector=createShapeDomInspector(s);
   // Important: NEVER call legacy _updatePanel after installing the editor.
@@ -184,6 +198,10 @@ export function installTrackStudioShapeEditor(s){
     s._flashMessage(s._shapeEditing?'Toca pista para seleccionar; segundo gesto para mover':'Modo centerline · bordes conservados');
   });
   const addBtn=button(s,x+225,y,'+ NODO',()=>insertNode(s));
+  // Two immutable Phaser labels avoid the iPhone Text.setText / UV crash.
+  gridOn=button(s,x+310,y,'PARRILLA: SÍ',toggleGrid);
+  gridOff=button(s,x+310,y,'PARRILLA: NO',toggleGrid);
+  refreshGridToggle();
   // Controls are screen-fixed and never get written into project coordinates.
-  s.events.once('shutdown',()=>{inspector.destroy();[createBtn,editBtn,addBtn].forEach(b=>b.destroy());gfx.destroy();});
+  s.events.once('shutdown',()=>{inspector.destroy();[createBtn,editBtn,addBtn,gridOn,gridOff].forEach(b=>b?.destroy());gfx.destroy();});
 }
