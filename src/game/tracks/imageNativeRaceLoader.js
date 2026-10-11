@@ -142,7 +142,14 @@ function createGate(scene,key){
 export function installImageNativeRaceLoader(RaceSceneClass,resolveTrack=()=>null){
   const proto=RaceSceneClass?.prototype;
   if(!proto||proto.__tdrImageNativeLoaderInstalled)return;
-  const create=proto.create,update=proto.update;
+  const init=proto.init,create=proto.create,update=proto.update;
+  // Every Phaser scene entry must reset photo-only state; instances are reused.
+  proto.init=function nativeRaceInit(...args){
+    this._imageNativePrepared=null;
+    this._imageNativeLoading=false;
+    this._imageNativeLoadError=null;
+    return init?.apply(this,args);
+  };
   proto.create=function nativeRaceCreate(data){
     let desc;
     try{desc=describeImageNativeRace(this.trackKey,resolveTrack)}

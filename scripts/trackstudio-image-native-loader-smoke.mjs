@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {describeImageNativeRace,validateImageNativeRaceDescriptor} from '../src/game/tracks/imageNativeRaceLoader.js';
+import {describeImageNativeRace,validateImageNativeRaceDescriptor,installImageNativeRaceLoader} from '../src/game/tracks/imageNativeRaceLoader.js';
 import {isImageNativeTrackScene} from '../src/game/tracks/imageNativeTrackIdentity.js';
 import {makeKartingPreviewRecord,LOCAL_KARTING_PREVIEW_KEY} from '../src/game/tracks/localKartingPreview.js';
 const ring=(x1,y1,x2,y2)=>[[x1,y1],[x2,y1],[x2,y2],[x1,y2]].map(([x,y])=>({x,y,handleIn:{x:x-3,y:y-3},handleOut:{x:x+3,y:y+3}}));
@@ -28,6 +28,17 @@ assert.throws(()=>validateImageNativeRaceDescriptor({...desc,width:1200}),/1:1/)
 assert.throws(()=>validateImageNativeRaceDescriptor({...desc,track:{...desc.track,trackShape:null}}),/Bézier/);
 store.clear();
 assert.throws(()=>describeImageNativeRace(LOCAL_KARTING_PREVIEW_KEY),/Falta la prueba local/);
+class MockRace {init(data){this.trackKey=data.trackKey;}}
+installImageNativeRaceLoader(MockRace);
+const recycled=new MockRace();
+recycled._imageNativePrepared={trackKey:'preview'};
+recycled._imageNativeLoading=true;
+recycled._imageNativeLoadError=new Error('previous');
+recycled.init({trackKey:'karting-tenerife'});
+assert.equal(recycled._imageNativePrepared,null,'Native flag must reset for classic circuit');
+assert.equal(recycled._imageNativeLoading,false);
+assert.equal(recycled._imageNativeLoadError,null);
+assert.equal(isImageNativeTrackScene(recycled),false,'Classic art must return after a native race');
 const base=readFileSync('src/game/scenes/RaceScene.js','utf8');
 const env=readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
 const world=readFileSync('src/game/scenes/RaceWorldAlignedMaterialsScene.js','utf8');
