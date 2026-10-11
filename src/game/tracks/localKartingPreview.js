@@ -8,6 +8,26 @@ export const LOCAL_KARTING_PREVIEW_KEY='karting-tenerife-studio';
 const STORAGE_KEY='tdr:trackstudio:karting-tenerife-preview-v1';
 const bounded=(n,max)=>Number.isFinite(Number(n))&&Number(n)>0&&Number(n)<=max;
 const jsonCopy=value=>JSON.parse(JSON.stringify(value));
+// Local TrackStudio test races use the car's factory visual and collision size.
+const STOCK_PREVIEW_CAR_SCALE=1;
+
+// DEV <=1.2.119 wrote 0.65 into both preview fields. Phaser uses that value
+// for the sprite AND hitbox. Recover saved previews in memory only: never
+// rewrite localStorage, IndexedDB, image pixels, author geometry or .tdrtrack.
+function restoreStockPreviewCarScale(record){
+  const track=record?.track;
+  if(!track) return record;
+  if(track.carScale===STOCK_PREVIEW_CAR_SCALE &&
+     track.meta?.carScale===STOCK_PREVIEW_CAR_SCALE)return record;
+  return {
+    ...record,
+    track:{
+      ...track,
+      carScale:STOCK_PREVIEW_CAR_SCALE,
+      meta:{...(track.meta||{}),carScale:STOCK_PREVIEW_CAR_SCALE}
+    }
+  };
+}
 /**
  * DEV 1.2.111–1.2.112 temporarily stored a THREE-times larger runtime world.
  * Roll those ephemeral previews back to the original image pixel coordinates
@@ -58,7 +78,7 @@ export function getLocalKartingPreview(trackKey=LOCAL_KARTING_PREVIEW_KEY){
     const raw=localStorage.getItem(STORAGE_KEY);
     if(!raw)return null;
     const stored=JSON.parse(raw);
-    const p=restoreNativePixels(stored),track=p?.track;
+    const p=restoreStockPreviewCarScale(restoreNativePixels(stored)),track=p?.track;
     if(!track||!Array.isArray(track.centerline)||track.centerline.length<20||
        !shapeIsValid(track.trackShape)||!bounded(track.worldW,8192)||
        !bounded(track.worldH,8192)||!p?.imageId||
@@ -94,12 +114,12 @@ export function makeKartingPreviewRecord(editor,gameTrack){
     key:LOCAL_KARTING_PREVIEW_KEY,
     name:'KARTING TENERIFE · TRACKSTUDIO DEV',
     category:'Karting / DEV local',
-    carScale:.65,
+    carScale:STOCK_PREVIEW_CAR_SCALE,
     start:{x:start.x,y:start.y,r:start.r},
     closed:true,raceType:'circuit',raceDirection:'forward',
     grid:null,
     checkpointMode:'authored',
-    meta:{...(gameTrack.meta||{}),localPreview:true,carScale:.65,source:'trackstudio-image-native'}
+    meta:{...(gameTrack.meta||{}),localPreview:true,carScale:STOCK_PREVIEW_CAR_SCALE,source:'trackstudio-image-native'}
   };
   return {version:1,imageId,imageMeta:jsonCopy(editor.imageCanvas),track};
 }

@@ -28,7 +28,8 @@ const track={name:'TrackStudio Export',worldW:1000,worldH:900,trackWidth:70,cent
 const record=makeKartingPreviewRecord(editor,track);
 assert.equal(record.track.key,LOCAL_KARTING_PREVIEW_KEY);
 assert.equal(record.track.meta.localPreview,true);
-assert.equal(record.track.carScale,.65);
+assert.equal(record.track.carScale,1,'Preview must keep factory-size car');
+assert.equal(record.track.meta.carScale,1,'Nested metadata must not shrink the car');
 assert.equal(record.track.grid,null);
 assert.equal(record.track.start.x,p[0].x);
 assert.equal(record.track.start.y,p[0].y);
@@ -38,6 +39,16 @@ globalThis.localStorage={getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(
 assert.equal(getLocalKartingPreview(LOCAL_KARTING_PREVIEW_KEY),null);
 store.set('tdr:trackstudio:karting-tenerife-preview-v1',JSON.stringify(record));
 assert.deepEqual(getLocalKartingPreview(LOCAL_KARTING_PREVIEW_KEY),record);
+const oldRecord=structuredClone(record);
+oldRecord.track.carScale=.65;
+oldRecord.track.meta.carScale=.65;
+store.set('tdr:trackstudio:karting-tenerife-preview-v1',JSON.stringify(oldRecord));
+const cachedBefore=store.get('tdr:trackstudio:karting-tenerife-preview-v1');
+const restored=getLocalKartingPreview(LOCAL_KARTING_PREVIEW_KEY);
+assert.deepEqual(restored,record,'Existing 0.65 preview must restore stock scale in memory');
+assert.equal(store.get('tdr:trackstudio:karting-tenerife-preview-v1'),cachedBefore,
+ 'Never overwrite a saved preview while fixing the size');
+store.set('tdr:trackstudio:karting-tenerife-preview-v1',JSON.stringify(record));
 assert.equal(getLocalKartingPreview('karting-tenerife'),null,'Official Karting Tenerife must never be overridden');
 assert.throws(()=>makeKartingPreviewRecord({...editor,imageCanvas:null},track),/imagen/);
 assert.throws(()=>makeKartingPreviewRecord(editor,{...track,finishLine:null}),/meta/);

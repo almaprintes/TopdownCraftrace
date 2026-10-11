@@ -28,12 +28,15 @@ assert.equal(record.track.worldH,900);
 assert.equal(record.track.trackWidth,70);
 assert.equal(record.imageMeta.width,1000);
 assert.equal(record.imageMeta.height,900);
-assert.equal(record.track.carScale,.65,'Return to original pre-x3 visual car size');
+assert.equal(record.track.carScale,1,'Native preview must use original factory visual scale');
+assert.equal(record.track.meta.carScale,1,'Native preview must use original factory hitbox scale');
 assert.equal(JSON.stringify(editor),editorBefore,'Never edit source project');
 assert.equal(JSON.stringify(gameTrack),gameBefore,'Never mutate track centerline');
 
 const oldRecord=JSON.parse(JSON.stringify(record));
 oldRecord.version=2;oldRecord.worldScale=3;
+oldRecord.track.carScale=.65;
+oldRecord.track.meta.carScale=.65;
 const t=oldRecord.track,three=n=>Number.isFinite(n)?n*3:n;
 const scaledPoint=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)
  ?{...p,x:three(p.x),y:three(p.y)}:p;
@@ -60,6 +63,8 @@ assert.ok(Math.abs(recovered.track.start.x-record.track.start.x)<1e-7 &&
 const normalized={...recovered,track:{...recovered.track,start:record.track.start}};
 assert.deepEqual(normalized,record,
   'Recover all source project coordinates and properties from old x3 cache');
+assert.equal(JSON.parse(store.get('tdr:trackstudio:karting-tenerife-preview-v1')).track.carScale,.65,
+  'Legacy stored car scale must remain untouched');
 assert.equal(JSON.parse(store.get('tdr:trackstudio:karting-tenerife-preview-v1')).version,2,
   'Read-only migration never overwrites the user browser storage');
 assert.equal(getLocalKartingPreview('karting-tenerife'),null,'Published circuit never overridden');

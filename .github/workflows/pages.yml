@@ -83,6 +83,7 @@ jobs:
           node scripts/trackstudio-image-native-loader-smoke.mjs
           node scripts/trackstudio-source-menu-smoke.mjs
           node scripts/trackstudio-karting-preview-smoke.mjs
+          node scripts/trackstudio-factory-car-scale-smoke.mjs
           node scripts/trackstudio-image-native-rollback-smoke.mjs
           node scripts/karting-image-native-no-legacy-decor-smoke.mjs
           node scripts/trackstudio-image-native-clean-visuals-smoke.mjs
