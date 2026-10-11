@@ -128,7 +128,7 @@ function createGate(scene,key){
   const detail=document.createElement('div');detail.style.cssText='margin-top:12px;font-size:13px;font-weight:400';
   const back=document.createElement('button');back.textContent='VOLVER SIN CAMBIAR EL CIRCUITO';
   back.style.cssText='display:none;margin:24px auto 0;padding:13px 18px;background:#19477a;color:#fff;border:1px solid #6bbcff;border-radius:8px';
-  back.onclick=()=>scene.scene.start(key===LOCAL_KARTING_PREVIEW_KEY?'TrackStudioScene':'menu');
+  back.onclick=()=>scene.scene.start('menu');
   panel.append(title,detail,back);root.append(panel);document.body.append(root);
   return {close(){root.remove()},error(e){
     title.textContent='NO SE PUEDE INICIAR ESTE CIRCUITO';
