@@ -1,11 +1,12 @@
 import { saveCanvasImage, readCanvasImage, packImageProject, unpackImageProject, normalizeCanvasImageBlob } from './imageCanvasProject.js';
 import { attachImageNativeTrackContract } from '../tracks/imageNativeTrackContract.js';
+import { trackStudioWidthMaximum, CLASSIC_TRACK_WIDTH_MAX } from './trackStudioWidthRange.js';
 
 const TILE = 2048;
 const limit = (w,h) => w > 0 && h > 0 && w <= 8192 && h <= 8192 && w*h <= 32000000;
 const makeId = () => typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'img-'+Date.now()+'-'+Math.random().toString(36).slice(2);
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-function resetTiles(s){s._imageCanvasToken=(s._imageCanvasToken||0)+1;for(const t of s._imageCanvasTiles||[]){try{t.sprite.destroy()}catch{}try{s.textures.remove(t.key)}catch{}}s._imageCanvasTiles=[];s._imageCanvas=null;s._gridGfx?.setVisible(true);s._centerMark?.setVisible(true)}
+function resetTiles(s){s._imageCanvasToken=(s._imageCanvasToken||0)+1;for(const t of s._imageCanvasTiles||[]){try{t.sprite.destroy()}catch{}try{s.textures.remove(t.key)}catch{}}s._imageCanvasTiles=[];s._imageCanvas=null;s._trackWidthMax=CLASSIC_TRACK_WIDTH_MAX;s._gridGfx?.setVisible(true);s._centerMark?.setVisible(true)}
 async function mount(s,blob,meta){
   const token=++s._imageCanvasToken,url=URL.createObjectURL(blob),img=new Image();
   try{
@@ -31,6 +32,7 @@ async function mount(s,blob,meta){
     }catch(err){resetTiles(s);throw err}
     s._guideImage?.setVisible(false);
     s._imageCanvas={...meta,width:w,height:h,mode:'image'};
+    s._trackWidthMax=trackStudioWidthMaximum(s._imageCanvas,s._trackWidth);
     s._editorWorldW=w;s._editorWorldH=h;
     s._editCam.setBounds(0,0,w,h);
     const fit=Math.min(s._editCam.width/w,s._editCam.height/h);
@@ -95,6 +97,7 @@ export function installTrackStudioImageMode(s){
       s._editCam.setBounds(0,0,s._editorWorldW,s._editorWorldH);
     }
     originalApply(data);
+    s._trackWidthMax=trackStudioWidthMaximum(data?.imageCanvas,s._trackWidth);
     restore(s,data?.imageCanvas||null);
   };
   const originalNew=s._newProject.bind(s);

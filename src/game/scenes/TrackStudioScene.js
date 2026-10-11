@@ -5,6 +5,7 @@ import { installTrackStudioImageMode, importImageProjectFile } from '../studio/i
 import { looksLikeImageProject } from '../studio/imageCanvasProject.js';
 import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
 import { installTrackStudioShapeEditor } from '../studio/installTrackShapeEditor.js';
+import { trackStudioWidthStep } from '../studio/trackStudioWidthRange.js';
 import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
 
 export class TrackStudioScene extends BaseScene {
@@ -369,14 +370,14 @@ topX += 52;
     // track directo
     this._trackMinusBtn = this._makeIconButton(topX, topToolsY, 'W-', () => {
       this._trackTool = 'widthDown';
-      this._changeTrackWidth(-10);
+      this._changeTrackWidth(-this._trackWidthStep());
       this._updateToolButtons();
     }, '12px');
     topX += 44;
 
     this._trackPlusBtn = this._makeIconButton(topX, topToolsY, 'W+', () => {
       this._trackTool = 'widthUp';
-      this._changeTrackWidth(10);
+      this._changeTrackWidth(this._trackWidthStep());
       this._updateToolButtons();
     }, '12px');
     topX += 56;
@@ -1338,8 +1339,8 @@ _toggleModeMenu() {
   }
 
   _runActiveTrackTool() {
-    if (this._trackTool === 'widthDown') return this._changeTrackWidth(-10);
-    return this._changeTrackWidth(10);
+    if (this._trackTool === 'widthDown') return this._changeTrackWidth(-this._trackWidthStep());
+    return this._changeTrackWidth(this._trackWidthStep());
   }
 
   _toggleTrackMenu() {
@@ -1762,13 +1763,15 @@ _applyZoomAtViewportCenter(multiplier) {
 
   this._updatePanel();
 }
+  _trackWidthStep() {
+    return trackStudioWidthStep(this._imageCanvas, this._trackWidthMax);
+  }
   _changeTrackWidth(delta) {
-    this._trackWidth = Phaser.Math.Clamp(
-      this._trackWidth + delta,
-      this._trackWidthMin,
-      this._trackWidthMax
-    );
-
+    const next=Phaser.Math.Clamp(this._trackWidth+delta,this._trackWidthMin,this._trackWidthMax);
+    if(next===this._trackWidth)return;
+    this._pushHistory();
+    this._trackWidth=next;
+    this._autosaveRecovery();
     this._updatePanel();
     this._redrawEditor();
   }
