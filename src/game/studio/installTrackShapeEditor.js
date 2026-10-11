@@ -1,5 +1,6 @@
 import {createTrackShape,shapeIsValid,sampleShapeEdge,splitShapeEdge,moveShapePart,copyTrackShape} from './trackShapeGeometry.js';
 import {pickShapeTarget} from './shapeTouchInteraction.js';
+import {createShapeDomInspector,shapeInspectorCopy} from './shapeDomInspector.js';
 
 function drawPolyline(g,points,closed){
   if(points.length<2)return;
@@ -140,22 +141,24 @@ export function installTrackStudioShapeEditor(s){
     }
     render(s);
   };
+  const inspector=createShapeDomInspector(s);
   const originalPanel=s._updatePanel.bind(s);
   s._updatePanel=()=>{
-    originalPanel();
-    if(!s._shapeEditing||!shapeIsValid(s._trackShape))return;
-    const sel=s._shapeSelected,node=sel&&s._trackShape[sel.side]?.[sel.index];
-    s._panelDeleteBtn?.setVisible(false);
+    if(!s._shapeEditing||!shapeIsValid(s._trackShape)){
+      inspector.hide();
+      return originalPanel();
+    }
+    // iOS fix: don't invoke Text.setText even once from active edge selection.
+    // Phaser's canvas-backed Text can throw in Frame.updateUVs -> Frame.setSize.
+    s._panelInfoText?.setVisible(false);
     s._panelEmptyText?.setVisible(false);
-    s._panelInfoText?.setVisible(true);
-    s._panelInfoText?.setText(node
-      ?('BORDE '+(sel.side==='leftEdge'?'IZQUIERDO':'DERECHO')+'\n'
-       +'Nodo: '+(sel.index+1)+'/'+s._trackShape[sel.side].length+'\n'
-       +'X: '+Math.round(node.x)+'\nY: '+Math.round(node.y)+'\n'
-       +'Primer toque: seleccionar.\n'
-       +'Segundo gesto: mover punto/tirador.\n'
-       +' +NODO divide la curva.')
-      :'AJUSTAR BORDES\nToca el borde o el asfalto para\nmostrar los nodos de ese lado.\nToca un nodo, luego arrástralo.\nUn dedo en la hierba: mover mapa.\nLa centerline está protegida.');
+    s._panelDeleteBtn?.setVisible(false);
+    for(const part of [s._padUp,s._padDown,s._padLeft,s._padRight]){
+      part?.bg?.setVisible(false);part?.txt?.setVisible(false);
+    }
+    s._padCenter?.setVisible(false);
+    s._padCenterTxt?.setVisible(false);
+    inspector.show(shapeInspectorCopy(s._trackShape,s._shapeSelected));
   };
   s._findShapeControlAt=(x,y)=>findShapeControl(s,x,y);
   s._moveShapeControl=(part,world)=>{
@@ -172,10 +175,11 @@ export function installTrackStudioShapeEditor(s){
     s._shapeEditing=!s._shapeEditing;s._shapeSelected=null;s._selectedNode=-1;
     s._selectedPart=null;s._tool='edit';
     s._redrawEditor();s._updatePanel();
-    editBtn.setText(s._shapeEditing?'AJUSTAR ✓':'AJUSTAR');
+    // Keep the button's Phaser Text immutable to avoid a second iOS canvas-UV crash.
+    editBtn.setTint?.(s._shapeEditing?0x83f6d7:0xffffff);
     s._flashMessage(s._shapeEditing?'Toca pista para seleccionar; segundo gesto para mover':'Modo centerline · bordes conservados');
   });
   const addBtn=button(s,x+225,y,'+ NODO',()=>insertNode(s));
   // Controls are screen-fixed and never get written into project coordinates.
-  s.events.once('shutdown',()=>{[createBtn,editBtn,addBtn].forEach(b=>b.destroy());gfx.destroy();});
+  s.events.once('shutdown',()=>{inspector.destroy();[createBtn,editBtn,addBtn].forEach(b=>b.destroy());gfx.destroy();});
 }
