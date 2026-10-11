@@ -89,6 +89,7 @@ jobs:
           node scripts/trackstudio-exit-guard-smoke.mjs
           node scripts/trackstudio-shape-smoke.mjs
           node scripts/trackstudio-shape-touch-smoke.mjs
+          node scripts/trackstudio-touch-targets-v2-smoke.mjs
           node scripts/trackstudio-image-width-smoke.mjs
           node scripts/trackstudio-text-crash-smoke.mjs
           node scripts/trackstudio-start-grid-toggle-smoke.mjs

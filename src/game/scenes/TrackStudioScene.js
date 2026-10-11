@@ -6,6 +6,7 @@ import { looksLikeImageProject } from '../studio/imageCanvasProject.js';
 import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
 import { installTrackStudioShapeEditor } from '../studio/installTrackShapeEditor.js';
 import { trackStudioWidthStep } from '../studio/trackStudioWidthRange.js';
+import { EDITOR_CONTROL_PIXELS, worldControlRadius, pickCenterlineControl } from '../studio/trackStudioControlGeometry.js';
 import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
 
 export class TrackStudioScene extends BaseScene {
@@ -546,6 +547,14 @@ topX += 52;
 
       if (hit) {
         this._selectedPart = hit;
+        // Keep the touch offset. Moving a node must not jump it underneath
+        // the finger when a 25px screen-space target is tapped off-center.
+        this._centerlineDragOffset = null;
+        if (['node','handleIn','handleOut'].includes(hit.type)) {
+          const node=this._nodes[hit.index];
+          const control=hit.type==='node'?node:node?.[hit.type];
+          if(control)this._centerlineDragOffset={x:control.x-world.x,y:control.y-world.y};
+        }
         this._draggingPart = true;
         this._dragMoved = false;
         this._dragStartScreen = { x: pointer.x, y: pointer.y };
@@ -601,7 +610,10 @@ topX += 52;
           this._dragMoved = true;
         }
 
-const world = this._screenToWorld(p.x, p.y);
+const rawWorld = this._screenToWorld(p.x, p.y);
+const offset=this._centerlineDragOffset;
+const world=offset && ['node','handleIn','handleOut'].includes(this._selectedPart.type)
+  ?{x:rawWorld.x+offset.x,y:rawWorld.y+offset.y}:rawWorld;
 const idx = this._selectedPart.index;
 
 // --- EDITABLE SHAPE BOUNDARY (centerline stays untouched) ---
@@ -738,6 +750,13 @@ if (
           g.anchorWorldY - (midY - this._editCam.y) / newZoom;
 
         this._pinchLastDist = dist;
+        // The image tiles remain untouched; redraw only control graphics at
+        // a throttled rate while pinching, then exactly once at gesture end.
+        const now=performance.now();
+        if(now-(this._lastControlZoomRedraw||0)>90){
+          this._lastControlZoomRedraw=now;
+          this._redrawEditor();
+        }
         this._updatePanel();
         return;
       }
@@ -769,6 +788,7 @@ if (
 
   if (this._draggingPart) {
     if (this._dragMoved) this._autosaveRecovery();
+    this._centerlineDragOffset = null;
     this._shapeDragOffset = null;
     this._draggingPart = false;
     if (stillDown === 0) {
@@ -785,6 +805,7 @@ if (
 
   if (this._gestureWasMultiTouch) {
     if (stillDown === 0) {
+      this._redrawEditor();
       this._dragStartScreen = null;
       this._dragStartWorld = null;
       this._tapCandidate = false;
@@ -921,6 +942,7 @@ if (
       if (this._draggingPart && this._dragMoved) this._autosaveRecovery();
       this._shapeSelectionOnly = false;
       this._shapeDragOffset = null;
+      this._centerlineDragOffset = null;
       this._draggingPart = false;
       this._dragStartScreen = null;
       this._dragStartWorld = null;
@@ -1761,6 +1783,7 @@ _applyZoomAtViewportCenter(multiplier) {
   cam.scrollX = Phaser.Math.Clamp(cam.scrollX, 0, Math.max(0, maxScrollX));
   cam.scrollY = Phaser.Math.Clamp(cam.scrollY, 0, Math.max(0, maxScrollY));
 
+  this._redrawEditor();
   this._updatePanel();
 }
   _trackWidthStep() {
@@ -1832,23 +1855,10 @@ _deleteSelectedNode() {
 _findControlAt(x, y) {
 const R_NODE = 18;
 const R_HANDLE = 28;
-
-  // --- NODOS ---
-  for (let i = this._nodes.length - 1; i >= 0; i--) {
-    const n = this._nodes[i];
-
-if (Phaser.Math.Distance.Between(x, y, n.x, n.y) < R_NODE) {
-  return { type: 'node', index: i };
-}
-
-if (Phaser.Math.Distance.Between(x, y, n.handleIn.x, n.handleIn.y) < R_HANDLE) {
-  return { type: 'handleIn', index: i };
-}
-
-if (Phaser.Math.Distance.Between(x, y, n.handleOut.x, n.handleOut.y) < R_HANDLE) {
-  return { type: 'handleOut', index: i };
-}
-  }
+  // Anchors and visible selected handles use screen-space finger targets.
+  // Geometry coordinates remain unchanged regardless of zoom.
+  const nodeHit=pickCenterlineControl(this._nodes,this._selectedNode,{x,y},this._editCam?.zoom);
+  if(nodeHit)return nodeHit;
 
   // --- PIANOS (modelo actual: a / b / point) ---
   for (let i = this._pianos.length - 1; i >= 0; i--) {
@@ -2384,46 +2394,40 @@ const targetS = finishS - correctedOffset;
         this._finishGfx.fillCircle(s.cx, s.cy, 2);
       }
     }
-    for (let i = 0; i < this._nodes.length; i++) {
-      const n = this._nodes[i];
-      const selected = i === this._selectedNode;
-
-      this._guideGfx.lineStyle(2, selected ? 0x5fb2ff : 0x4c5a7a, 0.75);
-      this._guideGfx.beginPath();
-      this._guideGfx.moveTo(n.x, n.y);
-      this._guideGfx.lineTo(n.handleIn.x, n.handleIn.y);
-      this._guideGfx.moveTo(n.x, n.y);
-      this._guideGfx.lineTo(n.handleOut.x, n.handleOut.y);
-      this._guideGfx.strokePath();
-
-      this._drawHandleDot(
-        n.handleIn.x,
-        n.handleIn.y,
-        selected && this._selectedPart?.type === 'handleIn' && this._selectedPart?.index === i
-      );
-
-      this._drawHandleDot(
-        n.handleOut.x,
-        n.handleOut.y,
-        selected && this._selectedPart?.type === 'handleOut' && this._selectedPart?.index === i
-      );
-
-      this._nodeGfx.fillStyle(selected ? 0x2bff88 : 0xffffff, 1);
-      this._nodeGfx.fillCircle(n.x, n.y, selected ? 16 : 14);
-
-      this._nodeGfx.lineStyle(3, 0x0b1020, 0.9);
-      this._nodeGfx.strokeCircle(n.x, n.y, selected ? 16 : 14);
-
-      this._nodeGfx.fillStyle(0x0b1020, 1);
-      this._nodeGfx.fillCircle(n.x, n.y, 5);
+    // Stable-size markers like a vector editor; they do not shrink when the
+    // full 6688px photograph is fitted to a small phone display.
+    const zoom=Math.max(.02,this._editCam?.zoom||1);
+    const radius=px=>worldControlRadius(px,zoom);
+    const px=EDITOR_CONTROL_PIXELS;
+    for(let i=0;i<this._nodes.length;i++){
+      const n=this._nodes[i],selected=i===this._selectedNode;
+      if(selected){
+        this._guideGfx.lineStyle(radius(1.6),0xf2f7ff,.95);
+        this._guideGfx.lineBetween(n.x,n.y,n.handleIn.x,n.handleIn.y);
+        this._guideGfx.lineBetween(n.x,n.y,n.handleOut.x,n.handleOut.y);
+        this._drawHandleDot(n.handleIn.x,n.handleIn.y,this._selectedPart?.type==='handleIn');
+        this._drawHandleDot(n.handleOut.x,n.handleOut.y,this._selectedPart?.type==='handleOut');
+      }
+      const r=radius(selected?px.selectedNode:px.node);
+      this._nodeGfx.fillStyle(0x071626,.93);
+      this._nodeGfx.fillCircle(n.x,n.y,r+radius(px.halo));
+      this._nodeGfx.fillStyle(selected?0x58ffae:0xffffff,1);
+      this._nodeGfx.fillCircle(n.x,n.y,r);
+      this._nodeGfx.lineStyle(radius(1.6),selected?0x0b765b:0x314a60,1);
+      this._nodeGfx.strokeCircle(n.x,n.y,r);
+      this._nodeGfx.fillStyle(0x061a26,1);
+      this._nodeGfx.fillCircle(n.x,n.y,radius(selected?3:2));
     }
   }
-  _drawHandleDot(x, y, selected = false) {
-    this._nodeGfx.fillStyle(selected ? 0xffd166 : 0xb7c0ff, 1);
-    this._nodeGfx.fillCircle(x, y, selected ? 10 : 8);
-
-    this._nodeGfx.lineStyle(2, 0x0b1020, 0.9);
-    this._nodeGfx.strokeCircle(x, y, selected ? 10 : 8);
+  _drawHandleDot(x,y,selected=false){
+    const zoom=Math.max(.02,this._editCam?.zoom||1),radius=px=>worldControlRadius(px,zoom),px=EDITOR_CONTROL_PIXELS;
+    const r=radius(selected?px.selectedHandle:px.handle);
+    this._nodeGfx.fillStyle(0x071626,.95);
+    this._nodeGfx.fillCircle(x,y,r+radius(px.halo));
+    this._nodeGfx.fillStyle(selected?0xffcf54:0xc3e8ff,1);
+    this._nodeGfx.fillCircle(x,y,r);
+    this._nodeGfx.lineStyle(radius(1.3),0x23394e,1);
+    this._nodeGfx.strokeCircle(x,y,r);
   }
 
   // The display logic is installed as an HTML inspector by

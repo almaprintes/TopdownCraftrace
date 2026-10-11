@@ -1,5 +1,6 @@
 import {createTrackShape,shapeIsValid,sampleShapeEdge,splitShapeEdge,moveShapePart,copyTrackShape} from './trackShapeGeometry.js';
 import {pickShapeTarget} from './shapeTouchInteraction.js';
+import {EDITOR_CONTROL_PIXELS,worldControlRadius} from './trackStudioControlGeometry.js';
 import {createShapeDomInspector,shapeInspectorCopy,studioInspectorCopy} from './shapeDomInspector.js';
 import { installKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 
@@ -21,27 +22,35 @@ function render(s){
   if(left.length<2||right.length<2)return;
   g.fillStyle(0x00d5fa,.13);
   g.fillPoints([...left,...right.slice().reverse()],true);
-  const zoom=Math.max(.04,s._editCam?.zoom||1),stroke=Math.max(1,2.2/zoom);
+  const zoom=Math.max(.02,s._editCam?.zoom||1),stroke=Math.max(1,2.2/zoom);
   g.lineStyle(stroke,0x2ff0ff,.98);drawPolyline(g,left,shape.closed);
   g.lineStyle(stroke,0xffce4b,.98);drawPolyline(g,right,shape.closed);
   if(!s._shapeEditing || !s._shapeSelected)return;
   // Reveal control points only on the selected edge; the other stays a clean outline.
-  const nodeR=7/zoom;
+  const radius=px=>worldControlRadius(px,zoom);
+  const px=EDITOR_CONTROL_PIXELS;
   for(const side of ['leftEdge','rightEdge']){
     if(side!==s._shapeSelected.side)continue;
     for(let i=0;i<shape[side].length;i++){
       const n=shape[side][i],selected=s._shapeSelected?.side===side&&s._shapeSelected?.index===i;
-      g.fillStyle(side==='leftEdge'?0x2ff0ff:0xffce4b,1);
-      g.fillCircle(n.x,n.y,selected?nodeR*1.5:nodeR);
-      g.lineStyle(Math.max(.8,1.6/zoom),0x071827,1);
-      g.strokeCircle(n.x,n.y,selected?nodeR*1.5:nodeR);
+      const r=radius(selected?px.selectedNode:px.node);
+      g.fillStyle(0x061522,.96);
+      g.fillCircle(n.x,n.y,r+radius(px.halo));
+      g.fillStyle(side==='leftEdge'?0x38f0ff:0xffd05b,1);
+      g.fillCircle(n.x,n.y,r);
+      g.lineStyle(radius(1.5),selected?0xffffff:0x142b35,1);
+      g.strokeCircle(n.x,n.y,r);
       if(!selected)continue;
-      g.lineStyle(stroke,0xffffff,.9);
+      g.lineStyle(radius(1.6),0xffffff,.95);
       g.lineBetween(n.x,n.y,n.handleIn.x,n.handleIn.y);
       g.lineBetween(n.x,n.y,n.handleOut.x,n.handleOut.y);
-      g.fillStyle(0xffffff,1);
-      g.fillCircle(n.handleIn.x,n.handleIn.y,nodeR*.87);
-      g.fillCircle(n.handleOut.x,n.handleOut.y,nodeR*.87);
+      const handleR=radius(px.handle);
+      for(const p of [n.handleIn,n.handleOut]){
+        g.fillStyle(0x091724,.98);
+        g.fillCircle(p.x,p.y,handleR+radius(px.halo));
+        g.fillStyle(0xffffff,1);
+        g.fillCircle(p.x,p.y,handleR);
+      }
     }
   }
 }

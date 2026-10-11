@@ -162,3 +162,16 @@ El nuevo Karting Tenerife utilizará una imagen maestra 6688 × 3764 px (aprox. 
 `trackStudioWidthRange.js` mantiene el máximo clásico de 260 px sin fotografía, y adapta el máximo del editor al tamaño de la imagen, acotado a 1600 px para nuevas imágenes. En la nueva fotografía se permiten hasta 1600 px con W+/W- de 100 px por toque; para resoluciones menores se usan incrementos de 10/20/50 px. El valor de anchura editado se conserva en guardado e importación y nunca se reduce automáticamente si un proyecto guardado tenía un valor superior. Los cambios de W+/W- entran en el historial y guardado de recuperación. La forma Bézier no se regenera automáticamente: los dos bordes existentes siguen siendo independientes, y CREAR PISTA mantiene la confirmación antes de volver a construirlos.
 
 Este cambio no instala un circuito ni transforma su imagen. Si el propietario aporta el PNG original, se convertirá a WebP sin redimensionar (calidad inicial 86) y se verificará la resolución exacta antes de importar. WebP reduce almacenamiento/transferencia pero no la memoria de decodificación y no garantiza fluidez en el iPhone: es obligatorio probar.
+
+## 17. DEV 1.2.118 — controles editoriales táctiles visibles a cualquier zoom [pwa-only]
+
+Tras importar la fotografía Karting Tenerife (6688 × 3764), se observó que a zoom 0,23 los nodos de centerline y los tiradores Bézier eran diminutos y difíciles de tocar. La causa: el radio de los controles se dibujaba en píxeles del mundo, mientras que el selector usaba tolerancias fijas del mundo. El nuevo contrato `trackStudioControlGeometry.js` define tamaños visuales **en píxeles de pantalla** y objetivos táctiles separados de la representación, sin tocar coordenadas, curvas, anchos, física ni escala de imagen.
+
+- Anclas visibles: 9 px de radio en pantalla; seleccionada: 12 px, con halo de contraste.
+- Tiradores: 7 px (9 px activo) y solo visibles en el nodo seleccionado para evitar saturar la fotografía. El lado de borde Bézier seleccionado continúa siendo el único lado cuyos nodos se muestran, según lo aprobado.
+- Selección táctil centroline: radio 25 px en pantalla, elige la ancla más cercana y permite tocar solo tiradores visibles del nodo seleccionado, con radio 23 px. El selector ignora tiradores ocultos y no muta geometría.
+- Desplazamiento de dedo: el control conserva su desplazamiento inicial para que no salte al centro del dedo al arrastrarlo. La edición existente de bordes continúa siendo «primera pulsación selecciona; siguiente gesto mueve».
+- El zoom con botones refresca la representación, y la pinza la refresca de manera limitada durante el gesto y al soltar. La fotografía de alta resolución no se reprocesa en cada repintado de nodos.
+- La inspección sigue siendo DOM, sin reintroducir `Phaser.Text.setText` en el bucle de eventos móviles por la regresión WebGL de iPhone.
+
+**Regresión**: `scripts/trackstudio-touch-targets-v2-smoke.mjs` cubre zooms 0,05–2,5, selección del nodo más cercano, tiradores ocultos, mutabilidad cero y señales de redibujado. Sigue pendiente la validación de comodidad táctil por el propietario en iPhone. El .tdrtrack, Karting antiguo, los renders de carrera y Android no cambian.
