@@ -5,6 +5,7 @@ import { installTrackStudioImageMode, importImageProjectFile } from '../studio/i
 import { looksLikeImageProject } from '../studio/imageCanvasProject.js';
 import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
 import { installTrackStudioShapeEditor } from '../studio/installTrackShapeEditor.js';
+import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -2760,13 +2761,7 @@ const data = {
   }
 
   _openProjectSourceMenu() {
-    const choice = window.prompt('CARGAR TRACK STUDIO\n\n1 · Circuito del juego\n2 · Proyecto guardado en este dispositivo\n3 · Importar JSON o .tdrtrack\n4 · Recuperar último trabajo automático\n\nEscribe 1, 2, 3 o 4:', '1');
-    if (choice === null) return;
-    if (choice === '1') { this._openGameTrackSourceMenu(); return; }
-    if (choice === '2') { this._loadProject(); this._flashMessage('📂 Proyecto local cargado'); return; }
-    if (choice === '3') { this._openProjectPicker(); return; }
-    if (choice === '4') { this._restoreLastTrackStudioRecovery(); return; }
-    this._flashMessage('Elige 1, 2, 3 o 4');
+    openTrackStudioSourceMenu(this);
   }
 
   _restoreLastTrackStudioRecovery() {

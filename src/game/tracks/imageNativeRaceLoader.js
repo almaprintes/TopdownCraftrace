@@ -57,7 +57,15 @@ async function decodePhoto(desc){
     }
     const img=new Image();
     img.decoding='async';
-    await new Promise((ok,fail)=>{img.onload=ok;img.onerror=()=>fail(Error('No se pudo decodificar la fotografía'));img.src=url;});
+    // An interrupted iOS image decode must never leave the race indefinitely
+    // waiting on the resource loader at 60 percent.
+    let timeoutId;
+    try {
+      await Promise.race([
+        new Promise((ok,fail)=>{img.onload=ok;img.onerror=()=>fail(Error('No se pudo decodificar la fotografía'));img.src=url;}),
+        new Promise((_,fail)=>{timeoutId=setTimeout(()=>fail(Error('La fotografía tarda demasiado en cargarse. Vuelve a importarla o usa una WebP más ligera')),25000);})
+      ]);
+    } finally { clearTimeout(timeoutId); }
     if(img.naturalWidth!==desc.width||img.naturalHeight!==desc.height)
       throw Error('La fotografía no coincide con el tamaño del circuito');
     return img;
@@ -122,7 +130,7 @@ function createGate(scene,key){
   if(typeof document==='undefined')return {close(){},error(e){console.error(e)}};
   document.getElementById('tdr-native-gate')?.remove();
   const root=document.createElement('div');root.id='tdr-native-gate';
-  root.style.cssText='position:fixed;inset:0;z-index:9999999;display:flex;align-items:center;justify-content:center;background:#07101b;color:#fff;padding:20px;text-align:center;font:700 16px system-ui,-apple-system,sans-serif';
+  root.style.cssText='position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#07101b;color:#fff;padding:20px;text-align:center;font:700 16px system-ui,-apple-system,sans-serif';
   const panel=document.createElement('div');panel.style.cssText='max-width:470px;line-height:1.6';
   const title=document.createElement('div');title.textContent='CARGANDO FOTOGRAFÍA';
   const detail=document.createElement('div');detail.style.cssText='margin-top:12px;font-size:13px;font-weight:400';
@@ -174,6 +182,10 @@ export function installImageNativeRaceLoader(RaceSceneClass,resolveTrack=()=>nul
       if(!alive)return;
       console.error('[image-native] required photo failed; refusing fallback',error);
       this._imageNativeLoadError=error;
+      // Remove the legacy loading progress overlay, which otherwise masks
+      // the actual photo failure at 60 percent.
+      try { document.getElementById('tdr-race-loading-experience')?.remove(); } catch {}
+      try { this._destroyRaceLoadingUi?.(); } catch {}
       gate.error(error);
     });
   };
