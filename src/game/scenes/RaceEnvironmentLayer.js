@@ -1,4 +1,5 @@
 // src/game/scenes/RaceEnvironmentLayer.js
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 // Curated static environment. Visual only: no collision, no random scatter, no per-frame work.
 
 const BASE = import.meta.env.BASE_URL || '/';
@@ -199,6 +200,7 @@ function isKartingCanarias(scene) {
 }
 
 function isKartingTenerife(scene) {
+  if (isImageNativeTrackScene(scene)) return false;
   const key = String(scene?.trackKey || '').toLowerCase();
   const name = String(scene?.track?.meta?.name || '').toLowerCase();
   return key.includes('karting-tenerife') || key.includes('karting_tenerife') || name.includes('karting tenerife');
@@ -413,6 +415,7 @@ function placeLegacyVegetation(scene, placed, center, defaultTrackW) {
 }
 
 function placeCuratedEnvironment(scene, center, defaultTrackW) {
+  if (isImageNativeTrackScene(scene)) return []; // Covers delayed asset loading too.
   if (Array.isArray(scene._circuitEnvironment)) {
     for (const obj of scene._circuitEnvironment) obj?.destroy?.();
   }
@@ -425,6 +428,7 @@ function placeCuratedEnvironment(scene, center, defaultTrackW) {
 }
 
 export function addCircuitEnvironment(scene, center, defaultTrackW = 160) {
+  if (isImageNativeTrackScene(scene)) return []; // The user photo already contains the environment.
   if (!scene || !Array.isArray(center) || center.length < 24) return [];
   const missing = [];
   for (const spec of Object.values(ASSETS)) {

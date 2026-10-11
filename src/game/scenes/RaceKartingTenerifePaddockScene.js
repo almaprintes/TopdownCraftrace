@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceKartingTenerifeStructuresScene.js';
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 
 const BASE = import.meta.env.BASE_URL || '/';
 const ASSETS = {
@@ -10,6 +11,7 @@ const ASSETS = {
 };
 
 function isKT(scene){
+  if (isImageNativeTrackScene(scene)) return false; // Full baked photo: never place old procedural props.
   const id=String(scene?.trackKey||scene?.track?.id||scene?.track?.key||'').toLowerCase();
   const name=String(scene?.track?.name||scene?.track?.meta?.name||'').toLowerCase();
   return id.includes('karting-tenerife')||id.includes('karting_tenerife')||name.includes('karting tenerife');

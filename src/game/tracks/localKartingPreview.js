@@ -139,6 +139,19 @@ export async function activateKartingPreviewImage(scene){
     scene.uiCam?.ignore?.(sprite);
     // Only destroy legacy graphics after the new texture has been decoded.
     scene._destroyLegacyGroundRender?.();
+    // Defensive cleanup: old Karting-specific layers could already have
+    // placed sprites during a prior async load. The user PNG is the full scene.
+    for (const layer of [
+      '_ktPaddock', '_ktStructures', '_ktDenseVegetation',
+      '_circuitEnvironment', '_authoredEnvironmentObjects'
+    ]) {
+      const objects=scene[layer];
+      if (Array.isArray(objects)) for (const obj of objects) {
+        try { obj?.destroy?.(); } catch {}
+      }
+      scene[layer]=[];
+    }
+    scene._authoredSurfaceZones=[];
     for(const name of ['_shoulderLeft','_shoulderRight','_curbOuter','_curbInner',
                         '_borderLeft','_borderRight','_iosStageAsphalt']){
       try{scene[name]?.destroy?.()}catch{}

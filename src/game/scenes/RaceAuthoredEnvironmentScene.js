@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceKartingTenerifePaddockScene.js';
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { createTrackEnvironment, hasTrackEnvironment } from '../tracks/environmentRegistry.js';
 import { pathPoint, pathTangent, pathLength } from '../environment/EditableSpline.js';
 
@@ -90,6 +91,6 @@ function cullAuthored(scene,now){
 }
 function ensure(scene,data){const missing=[],queued=new Set();const add=(key,path)=>{if(!key||!path||scene.textures.exists(key)||queued.has(key))return;scene.load.image(key,`${BASE}assets/${String(path).replace(/^assets\//,'')}`);queued.add(key);missing.push(key);};for(const d of data.environment||[])if(d?.asset&&d?.path)add(`auth-env:${d.asset}`,assetPath(d.asset,d.path));for(const d of data.linearBarriers||[])if(d?.asset&&d?.path)add(`auth-linear:${d.asset}`,d.path);const apply=()=>scene.time?.delayedCall?.(40,()=>render(scene,data));if(!missing.length){apply();return;}scene.load.once('complete',apply);if(!scene.load.isLoading())scene.load.start();}
 export class RaceScene extends CurrentRaceScene{
-  create(){super.create();const id=trackId(this);if(!id||!hasTrackEnvironment(id))return;const data=createTrackEnvironment(id);clearLegacyEnvironment(this);ensure(this,data);}
+  create(){super.create();if(isImageNativeTrackScene(this))return;const id=trackId(this);if(!id||!hasTrackEnvironment(id))return;const data=createTrackEnvironment(id);clearLegacyEnvironment(this);ensure(this,data);}
   update(time,delta){super.update(time,delta);cullAuthored(this,time);}
 }

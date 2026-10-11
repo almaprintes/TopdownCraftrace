@@ -80,6 +80,7 @@ jobs:
           node scripts/track-beauty-identity-smoke.mjs
           node scripts/trackstudio-image-mode-smoke.mjs
           node scripts/trackstudio-karting-preview-smoke.mjs
+          node scripts/karting-image-native-no-legacy-decor-smoke.mjs
           node scripts/trackstudio-exit-guard-smoke.mjs
           node scripts/trackstudio-shape-smoke.mjs
           node scripts/trackstudio-shape-touch-smoke.mjs
