@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 import { installTrackStudioImageMode, importImageProjectFile } from '../studio/installImageMode.js';
+import { looksLikeImageProject } from '../studio/imageCanvasProject.js';
 import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
 import { installTrackStudioShapeEditor } from '../studio/installTrackShapeEditor.js';
 
@@ -2813,17 +2814,24 @@ const data = {
       const file = ev.target.files?.[0];
       if (!file) return;
       try {
-        if (file.name.toLowerCase().endsWith('.tdrtrack')) {
-          await importImageProjectFile(this, file);
-          this._flashMessage('📂 Imagen y geometría restauradas');
+        const isBundle = await looksLikeImageProject(file);
+        if (isBundle) {
+          const result = await importImageProjectFile(this, file);
+          this._flashMessage(result.repairedNested
+            ? 'Proyecto reparado: imagen y trazado recuperados'
+            : 'Imagen y geometría restauradas');
+        } else if (file.name.toLowerCase().endsWith('.tdrtrack')) {
+          throw new Error('Paquete .tdrtrack incompleto o incorrecto');
         } else {
-          const data = JSON.parse(await file.text());
+          let data;
+          try { data = JSON.parse((await file.text()).replace(/^\uFEFF/, '')); }
+          catch { throw new Error('No es JSON. Usa el archivo .tdrtrack de TrackStudio'); }
           this._importProjectOrTrack(data);
-          this._flashMessage('📂 JSON cargado');
+          this._flashMessage('JSON cargado');
         }
       } catch (e) {
-        console.error('❌ JSON no válido', e);
-        this._flashMessage('❌ JSON no válido');
+        console.error('[TrackStudio] Error al importar archivo', file.name, e);
+        this._flashMessage('Error al abrir: ' + String(e?.message || 'archivo no válido').slice(0, 150));
       }
       input.value = '';
     });

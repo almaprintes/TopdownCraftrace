@@ -1,9 +1,65 @@
-// TrackStudio image-native projects: binary image in IndexedDB, portable .tdrtrack bundle.
+// TrackStudio: native-image projects, IndexedDB persistence and portable .tdrtrack.
+// Header sniffing also recovers legacy files that accidentally embedded another bundle.
 const DB='tdr-trackstudio-image-v1', STORE='images', MAGIC='TDR-IMAGE-PROJECT-V1\n';
-const enc=new TextEncoder(),dec=new TextDecoder();
+const enc=new TextEncoder(), dec=new TextDecoder();
 function openDb(){return new Promise((ok,no)=>{if(typeof indexedDB==='undefined')return no(new Error('IndexedDB no disponible'));const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error||new Error('Error abriendo IndexedDB'))})}
 async function act(mode,id,value){const db=await openDb();return new Promise((ok,no)=>{const tx=db.transaction(STORE,mode),s=tx.objectStore(STORE),r=mode==='readonly'?s.get(id):s.put(value,id);let result;r.onsuccess=()=>result=r.result;tx.oncomplete=()=>{db.close();ok(result)};tx.onerror=()=>{db.close();no(tx.error||new Error('Error almacenando imagen'))};tx.onabort=()=>{db.close();no(tx.error||new Error('Transacción cancelada'))}})}
 export async function saveCanvasImage(id,blob,meta){if(!id||!(blob instanceof Blob)||!blob.size)throw Error('Imagen inválida');await act('readwrite',id,{blob,meta:{...meta,imageId:id}})}
 export async function readCanvasImage(id){return id?act('readonly',id):null}
 export function packImageProject(project,blob,meta){if(!(blob instanceof Blob)||!blob.size)throw Error('Falta la imagen maestra');const desc={...meta,size:blob.size,type:blob.type||meta?.type||'image/png'},json=enc.encode(JSON.stringify({...project,imageAsset:desc})),prefix=enc.encode(MAGIC+json.byteLength+'\n');return new Blob([prefix,json,blob],{type:'application/octet-stream'})}
-export async function unpackImageProject(file){if(!(file instanceof Blob)||!file.size)throw Error('Archivo vacío');const lead=dec.decode(await file.slice(0,160).arrayBuffer());if(!lead.startsWith(MAGIC))throw Error('No es un proyecto TrackStudio Image');const match=lead.slice(MAGIC.length).match(/^(\d+)\n/);if(!match)throw Error('Cabecera incorrecta');const len=Number(match[1]),offset=enc.encode(MAGIC+match[1]+'\n').byteLength;if(!Number.isSafeInteger(len)||len<2||len>20_000_000||offset+len>=file.size)throw Error('Longitud incorrecta');const data=JSON.parse(dec.decode(await file.slice(offset,offset+len).arrayBuffer())),image=file.slice(offset+len,file.size,data.imageAsset?.type||'image/png');if(!data.editor?.imageCanvas||data.imageAsset?.size!==image.size)throw Error('Imagen ausente o incompleta');return{project:data,image}}
+export async function looksLikeImageProject(blob){
+  if(!(blob instanceof Blob)||!blob.size)return false;
+  const bytes=await blob.slice(0,enc.encode(MAGIC).length).arrayBuffer();
+  return dec.decode(bytes)===MAGIC;
+}
+async function parseBundle(blob){
+  if(!(blob instanceof Blob)||!blob.size)throw Error('Archivo vacío');
+  const lead=dec.decode(await blob.slice(0,160).arrayBuffer());
+  if(!lead.startsWith(MAGIC))throw Error('No es un paquete .tdrtrack');
+  const match=lead.slice(MAGIC.length).match(/^(\d+)\n/);
+  if(!match)throw Error('Cabecera .tdrtrack incorrecta');
+  const len=Number(match[1]),offset=enc.encode(MAGIC+match[1]+'\n').byteLength;
+  if(!Number.isSafeInteger(len)||len<2||len>20_000_000||offset+len>=blob.size)
+    throw Error('Paquete .tdrtrack incompleto');
+  let project;
+  try {project=JSON.parse(dec.decode(await blob.slice(offset,offset+len).arrayBuffer()));}
+  catch {throw Error('Datos JSON internos del proyecto dañados');}
+  if(!project || typeof project!=='object')throw Error('Proyecto .tdrtrack sin datos');
+  return {project,image:blob.slice(offset+len)};
+}
+function imageFormat(bytes) {
+  const b=new Uint8Array(bytes);
+  if(b.length>=8&&[137,80,78,71,13,10,26,10].every((v,i)=>b[i]===v))return 'image/png';
+  if(b.length>=3&&b[0]===255&&b[1]===216&&b[2]===255)return 'image/jpeg';
+  if(b.length>=12&&[82,73,70,70].every((v,i)=>b[i]===v)&&[87,69,66,80].every((v,i)=>b[i+8]===v))return 'image/webp';
+  return null;
+}
+async function extractImage(blob,expectedSize) {
+  let image=blob,nested=0;
+  while(await looksLikeImageProject(image)){
+    if(++nested>5)throw Error('Demasiados paquetes .tdrtrack anidados');
+    const inner=await parseBundle(image);
+    if(!inner.project?.editor?.imageCanvas)throw Error('Paquete interno sin imagen');
+    image=inner.image;
+  }
+  if(!image.size)throw Error('La imagen maestra está vacía');
+  if(Number.isFinite(expectedSize)&&expectedSize>0&&image.size!==expectedSize)
+    throw Error('La imagen maestra no coincide con el tamaño guardado');
+  const format=imageFormat(await image.slice(0,16).arrayBuffer());
+  if(!format)throw Error('El archivo no contiene una imagen PNG, JPEG o WebP válida');
+  return {blob:image.slice(0,image.size,format),format,nested};
+}
+export async function normalizeCanvasImageBlob(blob,meta){
+  const result=await extractImage(blob,Number(meta?.size));
+  if(meta?.type && result.format!==meta.type && !(meta.type==='image/jpg'&&result.format==='image/jpeg'))
+    throw Error('El formato de la imagen no coincide con el proyecto');
+  return result;
+}
+export async function unpackImageProject(blob){
+  const {project,image}=await parseBundle(blob);
+  if(!project.editor?.imageCanvas)throw Error('El proyecto no contiene un lienzo de imagen');
+  const {blob:decoded,format,nested}=await extractImage(image,Number(project.imageAsset?.size));
+  if(project.imageAsset?.type&&project.imageAsset.type!==format &&
+    !(project.imageAsset.type==='image/jpg'&&format==='image/jpeg'))throw Error('Formato de imagen distinto al esperado');
+  return {project,image:decoded,repairedNested:nested>0};
+}

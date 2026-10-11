@@ -1,4 +1,4 @@
-import { saveCanvasImage, readCanvasImage, packImageProject, unpackImageProject } from './imageCanvasProject.js';
+import { saveCanvasImage, readCanvasImage, packImageProject, unpackImageProject, normalizeCanvasImageBlob } from './imageCanvasProject.js';
 
 const TILE = 2048;
 const limit = (w,h) => w > 0 && h > 0 && w <= 8192 && h <= 8192 && w*h <= 32000000;
@@ -66,12 +66,14 @@ async function createFromFile(s,file){
   s._flashMessage('Imagen como lienzo · píxeles y coordenadas 1:1');
 }
 export async function importImageProjectFile(s,file){
-  const {project,image}=await unpackImageProject(file);
+  const {project,image,repairedNested}=await unpackImageProject(file);
   const meta=project.editor.imageCanvas;
   if(!limit(meta.width,meta.height)||!meta.imageId)throw Error('Dimensiones/identificador inválidos');
+  // Always store the real PNG/JPEG/WebP, never an accidentally nested .tdrtrack.
   await saveCanvasImage(meta.imageId,image,meta);
   s._importProjectOrTrack(project);
   s._autosaveRecovery();
+  return {repairedNested};
 }
 export function installTrackStudioImageMode(s){
   s._imageCanvas=null;s._imageCanvasTiles=[];s._imageCanvasToken=0;
@@ -104,10 +106,14 @@ export function installTrackStudioImageMode(s){
     try{
       const data={editor:s._getProjectData(),gameTrack:s._exportToGameTrack()},row=await readCanvasImage(s._imageCanvas.imageId);
       if(!row?.blob)throw Error('No se encuentra la imagen maestra');
+      // Older saves may have placed a whole .tdrtrack where an image belonged.
+      // Normalize before packaging and repair the IndexedDB copy if necessary.
+      const image=await normalizeCanvasImageBlob(row.blob,s._imageCanvas);
+      if(image.nested) await saveCanvasImage(s._imageCanvas.imageId,image.blob,s._imageCanvas);
       const json=JSON.stringify(data);
       localStorage.setItem('trackstudio_project',json);
       localStorage.setItem('trackstudio_recovery',json);
-      const blob=packImageProject(data,row.blob,s._imageCanvas);
+      const blob=packImageProject(data,image.blob,s._imageCanvas);
       download(blob,'trackstudio-image-'+Date.now()+'.tdrtrack');
       s._flashMessage('Guardado: proyecto + imagen en .tdrtrack');
     }catch(e){console.error('[TrackStudio] save failed',e);s._flashMessage('Error al guardar: '+(e.message||'desconocido'))}
