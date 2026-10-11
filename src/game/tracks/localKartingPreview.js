@@ -206,34 +206,3 @@ export function clearImageNativeTrackOverlays(scene) {
   scene._flashSectorMarker=()=>{};
 }
 
-export async function activateKartingPreviewImage(scene){
-  const saved=getLocalKartingPreview(scene.trackKey);
-  if(!saved)return false;
-  const row=await readCanvasImage(saved.imageId);
-  if(!row?.blob)throw Error('La imagen no está en este navegador: impórtala otra vez');
-  const normalized=await normalizeCanvasImageBlob(row.blob,saved.imageMeta);
-  const url=URL.createObjectURL(normalized.blob),img=new Image();
-  try{
-    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('No se pudo abrir imagen Karting'));img.src=url;});
-    if(img.naturalWidth!==saved.track.worldW||img.naturalHeight!==saved.track.worldH)
-      throw Error('Desajuste de píxeles y geometría del circuito');
-    if(!scene.sys?.isActive?.())return false;
-    const key='tdr-karting-studio-image';
-    if(scene.textures.exists(key))scene.textures.remove(key);
-    scene.textures.addImage(key,img);
-    const sprite=scene.add.image(0,0,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);
-    scene.uiCam?.ignore?.(sprite);
-    // Only destroy legacy graphics after the new texture has been decoded.
-    scene._destroyLegacyGroundRender?.();
-    clearImageNativeTrackOverlays(scene);
-    scene._trackBeautyTiles=[sprite];
-    scene._beautyLayerActive=true;
-    scene._bakedAsphaltPilot=false;
-    scene._bakedAsphaltDone=true;
-    scene.events.once('shutdown',()=>{
-      try{sprite.destroy()}catch{}
-      try{scene.textures.remove(key)}catch{}
-    });
-    return true;
-  }finally{img.onload=null;img.onerror=null;img.src='';URL.revokeObjectURL(url);}
-}

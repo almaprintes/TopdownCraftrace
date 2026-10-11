@@ -81,9 +81,10 @@ assert.ok(!bike.includes('unscaledCarVisualLength'),'Kinematic physics restored'
 assert.ok(bike.includes('const w=Number(sprite?.displayWidth || sprite?.width || 0);'));
 assert.ok(image.includes('return {version:1,imageId,imageMeta:jsonCopy(editor.imageCanvas),track};'),
  'New preview stays at authored image coordinates');
-assert.ok(image.includes("const sprite=scene.add.image(0,0,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);"),
- 'Show 1:1 image; remove ×3 transform entirely');
-assert.ok(image.includes('img.naturalWidth!==saved.track.worldW||img.naturalHeight!==saved.track.worldH'),
- 'Picture pixel size must equal native world size');
+const loader=readFileSync('src/game/tracks/imageNativeRaceLoader.js','utf8');
+assert.ok(loader.includes('.setOrigin(0,0).setDepth(9).setScrollFactor(1)'),
+ 'The photo remains native 1:1 without any runtime world scale');
+assert.ok(loader.includes('img.naturalWidth!==desc.width||img.naturalHeight!==desc.height'),
+ 'Decoded photo must match the track dimensions');
 assert.ok(!image.includes('scaleImageNativeTrackForRace'));
 console.log('DEV pre-x3 rollback: image/world 1:1, car sprite stock, physics stock, old browser preview safely restored: OK');

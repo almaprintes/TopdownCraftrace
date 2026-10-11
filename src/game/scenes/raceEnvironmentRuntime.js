@@ -1,4 +1,5 @@
 import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { pathPoint, pathLength } from '../environment/EditableSpline.js';
 import { installRaceCaptureRuntime } from './raceCaptureRuntime.js';
 import { campaignAssetUrl, TAS_DEFAULT_CAMPAIGN } from '../advertising/trackAdvertising.js';
@@ -9,6 +10,9 @@ const MATERIAL_DIR={asphalt:'materials/asphalt-pbr',grass:'materials/grass',offr
 
 function normalizeTrackKey(value){return String(value||'').trim().toLowerCase().replace(/_/g,'-');}
 function envFor(scene){
+  // Photographic scenes contain their own visual environment. Invisible,
+  // independent barriers will be attached through the future authored format.
+  if(isImageNativeTrackScene(scene))return null;
   const candidates=[scene?.trackKey,scene?.track?.meta?.id,scene?.track?.id,scene?.track?.trackId,scene?.track?.meta?.trackId].map(normalizeTrackKey).filter(Boolean);
   for(const key of candidates){const env=createTrackEnvironment(key);if(env)return env;}
   return null;

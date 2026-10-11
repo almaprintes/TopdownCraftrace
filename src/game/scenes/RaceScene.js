@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
 import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { loadGarage, garageTuning, grantRaceReward } from '../garage/garageStore.js';
@@ -1090,6 +1091,7 @@ if (this.physics.world.debugGraphic) {
   this.physics.world.debugGraphic.destroy();
   this.physics.world.debugGraphic = null;
 }
+const imageNativeVisual = isImageNativeTrackScene(this);
 // 2) Texturas procedurales (no deben romper la escena)
 try { this.ensureBgTexture(); } catch (e) {}
 try { this.ensureOffTexture(); } catch (e) {}   // ← NUEVO (OFF visual)
@@ -1399,6 +1401,7 @@ this.time.delayedCall(500, () => {
 // 3) Fondo del mundo: OFF + GRASS BAND
 // =========================
 
+if (!imageNativeVisual) {
 // // OFF: cubre todo el mundo (arena / tierra)
 this.bgOff = this.add.tileSprite(
   0, 0,
@@ -1485,6 +1488,9 @@ if (iosStageLightBackground) {
 }
 
 // ================================
+} else {
+  this.bgOff=null;this.bgGrass=null;this._grassMaskGfx=null;this._grassMask=null;
+}
 // Bordes de pista (GLOBAL, sin culling)
 // ================================
 const drawPolylineClosed = (pts, lineW, color, alpha) => {
@@ -1650,7 +1656,7 @@ this._curbOuter = null;
 this._curbInner = null;
 
 if (
-  curbsEnabled &&
+  !imageNativeVisual && curbsEnabled &&
   exportedGeom &&
   Array.isArray(exportedGeom.trackOuter) &&
   Array.isArray(exportedGeom.curbOuter) &&
@@ -1723,7 +1729,7 @@ this._isInBand = (band, x, y) => {
 };
     // iOS/WebKit stage: render estático barato. Evita cientos de Image+GeometryMask
     // y evita culling dinámico. El asfalto completo se dibuja una sola vez.
-    if (isIOSRaceDevice() && isStage) {
+    if (!imageNativeVisual && isIOSRaceDevice() && isStage) {
       const asphaltG = this.add.graphics().setDepth(10);
       asphaltG.fillStyle(0x2a2f3a, 1);
       // Cada quad está indexado en TODAS las celdas que toca. Iterar values()
@@ -3895,7 +3901,7 @@ try {
   const geom = this.track?.geom;
   const cells = geom?.cells;
 
-  if (cells && this.car && (!this._iosStaticTrackRender || !this._iosStaticTrackPrepared)) {
+  if (!isImageNativeTrackScene(this) && cells && this.car && (!this._iosStaticTrackRender || !this._iosStaticTrackPrepared)) {
     const cellSize = geom.cellSize;
     const cx = Math.floor(this.car.x / cellSize);
     const cy = Math.floor(this.car.y / cellSize);
