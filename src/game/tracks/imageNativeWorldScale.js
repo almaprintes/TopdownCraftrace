@@ -45,9 +45,10 @@ export function scaleImageNativeTrackForRace(source,scale=IMAGE_NATIVE_WORLD_SCA
     if(Number.isFinite(source[key]))track[key]=source[key]*scale;
   }
   track.centerline=source.centerline.map(p=>{
-    if(Array.isArray(p))return [p[0]*scale,p[1]*scale,...p.slice(2)];
-    return {...scalePoint(p,scale),
-      width:Number.isFinite(p.width)?p.width*scale:p.width};
+    if(Array.isArray(p))return p.map((v,i)=>i<=2&&Number.isFinite(v)?v*scale:v);
+    const point=scalePoint(p,scale);
+    if(Number.isFinite(p.width))point.width=p.width*scale;
+    return point;
   });
   track.trackShape=scaleShape(source.trackShape,scale);
   // Keep the exact shape of the authored object; undefined optional fields
