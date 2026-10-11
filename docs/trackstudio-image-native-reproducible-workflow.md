@@ -1,12 +1,12 @@
 # Procedimiento reproducible: circuito de imagen nativa → TrackStudio → carrera DEV
 
 **Estado:** borrador técnico verificable. Pendiente de aceptación visual final en iPhone para cerrar este procedimiento como validado.  
-**Referencia inicial:** Karting Tenerife, TrackStudio DEV 1.2.111 (11/10/2026).  
+**Versión de referencia actual:** Karting Tenerife, TrackStudio DEV 1.2.113 (11/10/2026): restitución de escena 1:1 y físicas de fábrica.  
 **Rama única de publicación web:** `main`. **Versión de Google Play:** 1.1.188, gestionada por separado; no se generan APK/SDK salvo orden explícita.
 
 ## 0. Principios que NO se deben romper
 
-1. **La imagen es el lienzo**: los píxeles de la fotografía coinciden con las coordenadas del **editor** 1:1. No alterar esa fuente tras dibujar las líneas. En la **carrera** se admite una escala uniforme de mundo que transforme simultáneamente imagen, centerline, bordes y puertas; el archivo maestro y las coordenadas de edición permanecen intactos.
+1. **La imagen es el lienzo**: los píxeles de la fotografía coinciden con las coordenadas del **editor y de la carrera** 1:1. Mantener la fuente y la geometría alineadas. **La prueba de mundo ×3 quedó descartada; no escalar imágenes/curvas en runtime ni las físicas de los vehículos.**
 2. Separar siempre **apariencia** (imagen PNG/WebP), **geometría lógica** (centerline y bordes Bézier), **reglas** (asfalto/hierba, puertas, sectores) y **decoración dinámica** (coche, HUD). Nunca generar un segundo asfalto o pianos encima de la foto.
 3. Preservar un `.tdrtrack` de cada hito; no sobrescribir el archivo original con un experimento. No borrar datos de IndexedDB/localStorage del navegador.
 4. Probar primero en **PWA DEV**, con identificador aislado `karting-tenerife-studio`; no reutilizar el slug `karting-tenerife` ni contaminar clasificaciones públicas.
@@ -84,7 +84,7 @@ Guardar junto al circuito: archivo maestro, `.tdrtrack` de origen y de cada hito
 
 **Estado:** revisión visual del entorno aprobada por el usuario; nueva calibración de spawn y dirección pendiente de prueba táctil real en iPhone.
 
-## 10. MÉTODO ACTUAL — mundo ×3 sin tocar las físicas (DEV 1.2.111)
+## 10. HISTÓRICO, DESCARTADO — mundo ×3 sin tocar las físicas (DEV 1.2.111)
 
 El propietario confirma la fotografía y el rendimiento de Karting Tenerife, pero exige preservar íntegramente las características originales de cada coche. **Solución aprobada para probar: ampliar exclusivamente la geometría del mundo de carrera, sin aumentar la resolución de la imagen ni retocar aceleración/dirección/grip.**
 
@@ -99,7 +99,7 @@ El propietario confirma la fotografía y el rendimiento de Karting Tenerife, per
 
 **Importante:** la prueba x3 es un experimento visual y de conducción; no se declara definitivamente aceptada hasta recibir confirmación del iPhone. La rama única es `main`. Android público 1.1.188 intacto.
 
-## 11. Escala visual del coche en una imagen ×3 — DEV 1.2.112
+## 11. HISTÓRICO, DESCARTADO — escala visual del coche ×3 (DEV 1.2.112)
 
 **Incidencia al conducir DEV 1.2.111:** el coche parecía un juguete muy pequeño porque la carretera y el fondo se multiplicaban por 3 en el mundo, pero el coche seguía con su tamaño visible anterior (`carScale: 0.65`). La imagen ampliada pierde un poco de nitidez por interpolación; es esperable y NO debe solventarse creando de inmediato una textura 5K que perjudique la fluidez móvil.
 
@@ -113,3 +113,16 @@ El propietario confirma la fotografía y el rendimiento de Karting Tenerife, per
 - **Validación pendiente en iPhone**: tamaño aparente real del coche, curva lenta/rápida, superposición con asfalto y suavidad. Si la foto queda borrosa a zoom habitual, plantear después textura 2× o tiles WebP bajo prueba de memoria, nunca 5K monolítica por defecto.
 
 La aceptación visual de la escena completa y de las proporciones sigue pendiente del propietario.
+
+## 12. ESTADO ACTUAL — rollback a la fotografía 1:1 con coches de fábrica (DEV 1.2.113)
+
+**Decisión del propietario (11/10/2026): no más pruebas con escala de mundo.** Restaurar exactamente el aspecto anterior a DEV 1.2.111 y conservar las físicas **sin la normalización** que se había ensayado en 1.2.110.
+
+1. Restaurado `makeKartingPreviewRecord()` para que `worldW/H`, centerline, bordes y puertas se mantengan **iguales a los píxeles de la imagen**, sin `imageWorldScale` en la carrera. La imagen se renderiza a `setOrigin(0,0)`, **sin `setScale(3)`**; no se toca el master en IndexedDB ni el `.tdrtrack`.
+2. El coche recupera el tamaño visual anterior (`carScale: 0.65`, las mismas `TARGET_W/H`), la batalla de dirección original y el radio de colisión sin cambios. `RaceScene.applyCarParams()` emplea siempre `resolveCarParams(this.baseSpec, this.tuning)`; queda explícitamente prohibido volver a `imageNativeDrivingProfile()`.
+3. El spawn cercano a meta, el aislamiento de edificios/pianos, el render fotográfico, los checkpoints invisibles, el cronómetro y demás mejoras ya aprobadas permanecen.
+4. **Compatibilidad hacia atrás:** para evitar que una copia efímera de prueba de DEV 1.2.111 o 1.2.112 mantenga el mundo ×3 al volver, `getLocalKartingPreview()` restaura a escala nativa **en memoria**, sin sobrescribir datos del usuario. La próxima vez que se pulse **▶ PROBAR JUEGO**, guardará directamente el formato original de preview (versión 1).
+5. **Pruebas regresión:** `node scripts/trackstudio-karting-preview-smoke.mjs` y `node scripts/trackstudio-image-native-rollback-smoke.mjs`. Los tests exclusivos de escala de mundo/coche ×3 se retiran del pipeline. Build + Deploy de la misma SHA verde antes de entregar.
+6. **Próxima fase — aportará una imagen nueva el usuario:** preparar foto aproximadamente **3200×1800** y convertirla a WebP de calidad inicial **86**, respetando el trazado, diseñar y reimportar el proyecto con sus coordenadas nativas. La reducción de tamaño en WebP afecta la descarga y almacenamiento, **no la RAM/GPU decodificada**; medir fluidez en móviles antes de darla por óptima.
+
+Este rollback **no revierte las mejoras previas de eliminación de estructuras, líneas/pianos duplicados, meta/checkpoints lógicos, visor de fotografía y acercamiento de spawn**. Play Store 1.1.188 intacta; ningún APK.

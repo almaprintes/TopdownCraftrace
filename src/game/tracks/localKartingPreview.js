@@ -3,29 +3,66 @@
 import { readCanvasImage, normalizeCanvasImageBlob } from '../studio/imageCanvasProject.js';
 import { shapeIsValid, sampleShapeEdge } from '../studio/trackShapeGeometry.js';
 import { spawnUpstreamOfFinish } from './imageNativeDriving.js';
-import { IMAGE_NATIVE_WORLD_SCALE, scaleImageNativeTrackForRace } from './imageNativeWorldScale.js';
 
 export const LOCAL_KARTING_PREVIEW_KEY='karting-tenerife-studio';
 const STORAGE_KEY='tdr:trackstudio:karting-tenerife-preview-v1';
 const bounded=(n,max)=>Number.isFinite(Number(n))&&Number(n)>0&&Number(n)<=max;
 const jsonCopy=value=>JSON.parse(JSON.stringify(value));
+/**
+ * DEV 1.2.111–1.2.112 temporarily stored a THREE-times larger runtime world.
+ * Roll those ephemeral previews back to the original image pixel coordinates
+ * in memory, preserving the user's saved .tdrtrack and IndexedDB photograph.
+ * The next ▶ PROBAR JUEGO save writes native (v1) coordinates again.
+ */
+function restoreNativePixels(record){
+  if(record?.version!==2)return record;
+  const track=record.track,scale=Number(record.worldScale||track?.imageWorldScale);
+  const master=record.imageMeta;
+  if(scale!==3||!master||track?.worldW!==master.width*scale||
+     track?.worldH!==master.height*scale)return null;
+  const t=jsonCopy(track),div=v=>Number.isFinite(v)?v/scale:v;
+  const point=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)
+    ? {...p,x:div(p.x),y:div(p.y)}:p;
+  const gate=g=>g?{...g,a:point(g.a),b:point(g.b)}:g;
+  t.worldW=master.width;t.worldH=master.height;
+  for(const key of ['trackWidth','grassMargin','sampleStepPx','cellSize','shoulderPx']){
+    if(Number.isFinite(t[key]))t[key]=div(t[key]);
+  }
+  t.centerline=t.centerline.map(p=>Array.isArray(p)
+    ?p.map((v,i)=>i<=2&&Number.isFinite(v)?div(v):v)
+    :{...point(p),...(Number.isFinite(p.width)?{width:div(p.width)}:{})});
+  for(const side of ['leftEdge','rightEdge']){
+    t.trackShape[side]=t.trackShape[side].map(p=>({
+      ...point(p),handleIn:point(p.handleIn),handleOut:point(p.handleOut)
+    }));
+  }
+  t.start=point(t.start);
+  if(t.startLine)t.startLine=gate(t.startLine);
+  if(t.finishLine)t.finishLine=gate(t.finishLine);
+  if(t.finish)t.finish=gate(t.finish);
+  if(Array.isArray(t.checkpoints))t.checkpoints=t.checkpoints.map(gate);
+  if(t.grid){
+    for(const key of ['rowSpacing','colOffset','backOffset'])
+      if(Number.isFinite(t.grid[key]))t.grid[key]=div(t.grid[key]);
+    if(Array.isArray(t.grid.slots))t.grid.slots=t.grid.slots.map(point);
+  }
+  delete t.imageWorldScale;
+  if(t.meta)delete t.meta.imageWorldScale;
+  return {version:1,imageId:record.imageId,imageMeta:jsonCopy(master),track:t};
+}
+
 
 export function getLocalKartingPreview(trackKey=LOCAL_KARTING_PREVIEW_KEY){
   if(trackKey!==LOCAL_KARTING_PREVIEW_KEY)return null;
   try{
     const raw=localStorage.getItem(STORAGE_KEY);
     if(!raw)return null;
-    const p=JSON.parse(raw),track=p?.track;
+    const stored=JSON.parse(raw);
+    const p=restoreNativePixels(stored),track=p?.track;
     if(!track||!Array.isArray(track.centerline)||track.centerline.length<20||
-       !shapeIsValid(track.trackShape)||!bounded(track.worldW,32768)||
-       !bounded(track.worldH,32768)||!p?.imageId)return null;
-    // Existing locally cached DEV 1.2.110 previews were saved in image pixels.
-    // Convert once in memory; do not mutate IndexedDB, originals or storage.
-    if(p.version===1 &&
-       track.worldW===p.imageMeta?.width && track.worldH===p.imageMeta?.height){
-      return {...p,version:2,worldScale:IMAGE_NATIVE_WORLD_SCALE,
-        track:scaleImageNativeTrackForRace(track,IMAGE_NATIVE_WORLD_SCALE)};
-    }
+       !shapeIsValid(track.trackShape)||!bounded(track.worldW,8192)||
+       !bounded(track.worldH,8192)||!p?.imageId||
+       track.worldW!==p.imageMeta?.width||track.worldH!==p.imageMeta?.height)return null;
     return p;
   }catch{return null;}
 }
@@ -64,9 +101,7 @@ export function makeKartingPreviewRecord(editor,gameTrack){
     checkpointMode:'authored',
     meta:{...(gameTrack.meta||{}),localPreview:true,carScale:.65,source:'trackstudio-image-native'}
   };
-  const raceTrack=scaleImageNativeTrackForRace(track,IMAGE_NATIVE_WORLD_SCALE);
-  return {version:2,imageId,imageMeta:jsonCopy(editor.imageCanvas),
-    worldScale:IMAGE_NATIVE_WORLD_SCALE,track:raceTrack};
+  return {version:1,imageId,imageMeta:jsonCopy(editor.imageCanvas),track};
 }
 
 export async function installKartingPreview(scene){
@@ -180,19 +215,13 @@ export async function activateKartingPreviewImage(scene){
   const url=URL.createObjectURL(normalized.blob),img=new Image();
   try{
     await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('No se pudo abrir imagen Karting'));img.src=url;});
-    const scale=saved.worldScale||saved.track.imageWorldScale||1;
-    if(img.naturalWidth!==saved.imageMeta.width||img.naturalHeight!==saved.imageMeta.height ||
-       img.naturalWidth*scale!==saved.track.worldW ||
-       img.naturalHeight*scale!==saved.track.worldH)
-      throw Error('Desajuste entre imagen y escala del mundo');
+    if(img.naturalWidth!==saved.track.worldW||img.naturalHeight!==saved.track.worldH)
+      throw Error('Desajuste de píxeles y geometría del circuito');
     if(!scene.sys?.isActive?.())return false;
     const key='tdr-karting-studio-image';
     if(scene.textures.exists(key))scene.textures.remove(key);
     scene.textures.addImage(key,img);
-    // GPU uploads only the original 1672x941 texture; world scaling uses the
-    // sprite transform, never a CPU/GPU enlarged raster.
-    const sprite=scene.add.image(0,0,key).setOrigin(0,0)
-      .setScale(scale).setDepth(9).setScrollFactor(1);
+    const sprite=scene.add.image(0,0,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);
     scene.uiCam?.ignore?.(sprite);
     // Only destroy legacy graphics after the new texture has been decoded.
     scene._destroyLegacyGroundRender?.();
