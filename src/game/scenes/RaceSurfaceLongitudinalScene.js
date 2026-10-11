@@ -1,5 +1,6 @@
 import { RaceScene as MaterialRaceScene } from './RaceMaterialScene.js';
 import { addCircuitEnvironment } from './RaceEnvironmentLayer.js';
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 
 // Mobile-safe premium surface pass.
 // Matte materials + robust shoulder/edge geometry + curbs built from clipped edge strips.
@@ -66,6 +67,10 @@ export class RaceScene extends MaterialRaceScene {
 
   create() {
     super.create();
+    // The complete TrackStudio photo already contains precise edge lines and
+    // painted kerbs. Do not regenerate either from the centerline width.
+    // Keep the rest of the race scene (geometry, timing, physics) untouched.
+    if (isImageNativeTrackScene(this)) return;
     this._materialEdgeWear?.destroy?.();
     this._materialEdgeWear = null;
 

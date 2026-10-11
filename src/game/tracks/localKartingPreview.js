@@ -142,6 +142,9 @@ export function clearImageNativeTrackOverlays(scene) {
   for (const name of [
     '_shoulderLeft','_shoulderRight','_curbOuter','_curbInner',
     '_borderLeft','_borderRight','_iosStageAsphalt',
+    // Premium longitudinal paint is a separate pass, unrelated to RaceScene's
+    // legacy border/piano objects. Without these, kerbs stay doubled on iPhone.
+    '_longitudinalAsphaltWear','_premiumShoulder','_edgeProbe','_cornerCurbs',
     'finishGfx','cpGfx','finishLineDebug','startLineDebug','gridDebug',
     'finishIntegratedGfx','cp1IntegratedGfx','cp2IntegratedGfx'
   ]) {

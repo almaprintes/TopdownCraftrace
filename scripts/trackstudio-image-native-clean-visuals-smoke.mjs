@@ -15,7 +15,10 @@ const scene={
   _authoredEnvironmentObjects:[fake()],_authoredSurfaceZones:[{x:1}],
   _shoulderLeft:fake(),_shoulderRight:fake(),_curbOuter:fake(),
   _curbInner:fake(),_borderLeft:fake(),_borderRight:fake(),
-  _iosStageAsphalt:fake(),finishGfx:fake(),cpGfx:fake(),
+  _iosStageAsphalt:fake(),
+  _longitudinalAsphaltWear:fake(),_premiumShoulder:fake(),
+  _edgeProbe:fake(),_cornerCurbs:fake(),
+  finishGfx:fake(),cpGfx:fake(),
   finishLineDebug:fake(),startLineDebug:fake(),gridDebug:fake(),
   finishIntegratedGfx:fake(),cp1IntegratedGfx:fake(),cp2IntegratedGfx:fake(),
   _flashSectorMarker(){markerCalled++;},
@@ -28,7 +31,7 @@ assert.equal(isImageNativeTrackScene(scene),true);
 const originalGate=scene.finishLine,originalCheckpoints=scene.checkpoints;
 const originalSurface=scene._isOnTrack,originalGhost=scene._ghostSamples;
 clearImageNativeTrackOverlays(scene);
-assert.equal(cleaned,21,'Remove 6 legacy sprites and 15 procedural graphics');
+assert.equal(cleaned,25,'Remove 6 legacy sprites and 19 procedural graphics, including longitudinal curbs');
 for(const name of [
   '_ktPaddock','_ktStructures','_ktDenseVegetation',
   '_circuitEnvironment','_authoredEnvironmentObjects','_authoredSurfaceZones'
@@ -36,6 +39,7 @@ for(const name of [
 for(const name of [
   '_shoulderLeft','_shoulderRight','_curbOuter','_curbInner',
   '_borderLeft','_borderRight','_iosStageAsphalt',
+  '_longitudinalAsphaltWear','_premiumShoulder','_edgeProbe','_cornerCurbs',
   'finishGfx','cpGfx','finishLineDebug','startLineDebug','gridDebug',
   'finishIntegratedGfx','cp1IntegratedGfx','cp2IntegratedGfx'
 ])assert.equal(scene[name],null,'Old painted track mark still alive: '+name);
@@ -46,6 +50,20 @@ assert.equal(scene.checkpoints,originalCheckpoints,'Sector timing gates must rem
 assert.equal(scene._isOnTrack,originalSurface,'Track/grass physics must remain intact');
 assert.equal(scene._ghostSamples,originalGhost,'Ghost data must remain intact');
 
+// Root cause regression: RaceSurfaceLongitudinalScene draws additional
+// bright-white edge strokes and red/white kerbs with DISTINCT object refs.
+const longitudinal=readFileSync('src/game/scenes/RaceSurfaceLongitudinalScene.js','utf8');
+assert.ok(longitudinal.includes("import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js'"));
+assert.ok(longitudinal.includes('if (isImageNativeTrackScene(this)) return;'),
+  'Image-native photo must bypass the premium line and curb pass at creation');
+assert.ok(longitudinal.includes('this._edgeProbe = edgeLine') &&
+          longitudinal.includes('this._cornerCurbs = curbs'),
+  'Confirm both newly guarded objects are the actual duplicated paint owners');
+assert.ok(longitudinal.includes('drawTrimmedEdge(left)') &&
+          longitudinal.includes('drawTrimmedEdge(right)'),
+  'Other tracks must retain premium edge painting');
+assert.ok(longitudinal.includes('const curbs = this.add.graphics()'),
+  'Other tracks must retain premium kerb painting');
 const styled=readFileSync('src/game/scenes/RaceStyledHudScene.js','utf8');
 for(const required of [
   "const authoredImage = isImageNativeTrackScene(this)",
@@ -67,4 +85,4 @@ assert.ok(ghost.includes('this._ghostSamples.push('),'Ghost samples must still b
 const feedback=readFileSync('src/game/scenes/RaceCleanLapScene.js','utf8');
 assert.ok(feedback.includes("eyebrow:'🏆 NUEVO RÉCORD'"),
  'New personal-best feedback must remain functional');
-console.log('Image-native clean visuals + replay prompt removal: 21 graphics removed, timing/physics preserved, record and ghost workflows unaffected.');
+console.log('Image-native visuals clean: 25 legacy graphics removed incl. true premium kerb/edge layer; timing, physics, other circuits, replay and ghosts intact.');
