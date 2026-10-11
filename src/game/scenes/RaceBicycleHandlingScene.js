@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceTimingCelebrationVisibleScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import { unscaledCarVisualLength } from '../tracks/imageNativeCarVisualScale.js';
 
 function clamp(n,a,b){ return Math.max(a,Math.min(b,n)); }
 function wrapPi(a){
@@ -66,7 +67,12 @@ export class RaceScene extends CurrentRaceScene {
 
   _bikeVisualLength(){
     const sprite=this.carRig?.list?.find?.(o=>o?.texture) || this.carRig?.list?.[0];
-    const w=Number(sprite?.displayWidth || sprite?.width || 0);
+    // Do not let the x3 image-world SPRITE scale alter the tuned kinematic
+    // wheelbase; steering physics must remain identical to every other track.
+    const w=unscaledCarVisualLength(
+      sprite?.displayWidth || sprite?.width || 0,
+      this._imageNativeCarVisualScale || 1
+    );
     if(Number.isFinite(w) && w>20) return clamp(w,58,150);
     const spec=CAR_SPECS[this.carId] || CAR_SPECS.stock;
     return clamp(92*(Number(spec?.visualScale)||1),58,150);

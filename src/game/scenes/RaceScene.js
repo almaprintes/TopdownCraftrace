@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
 import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
+import { raceImageCarVisualScale } from '../tracks/imageNativeCarVisualScale.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { loadGarage, garageTuning, grantRaceReward } from '../garage/garageStore.js';
@@ -1153,6 +1154,10 @@ this.ensureCarSkinTexture(specFinal).catch(() => {});
 const vScale = Number(specFinal?.visualScale ?? 1.0);
 // Escala opcional por circuito: permite rallies visualmente más estrechos sin alterar los coches base.
 const trackCarScale = Math.max(0.35, Math.min(1.5, Number(t01?.carScale ?? this.track?.meta?.carScale ?? 1.0) || 1.0));
+// Image-native world x3 expands roads, but the sprite remained at its original
+// .65 visual scale and looked like a miniature. Match image world units ONLY
+// for the drawn sprite, never for the Arcade collider or car tuning.
+this._imageNativeCarVisualScale = raceImageCarVisualScale(this.trackKey,t01?.imageWorldScale);
 
 // Colisión: si quieres que el camión “ocupe pista”, esto es CLAVE
 const baseRadius = 14;
@@ -1181,8 +1186,8 @@ carSprite.y = 0;
 this._carVisualRotOffset = Math.PI / 2;
 
 // Tamaño objetivo “caja” en pista (NO fuerza proporción, solo limita)
-const TARGET_W = 96 * vScale * VISUAL_SCALE_MULT * trackCarScale;
-const TARGET_H = 48 * vScale * VISUAL_SCALE_MULT * trackCarScale;
+const TARGET_W = 96 * vScale * VISUAL_SCALE_MULT * trackCarScale * this._imageNativeCarVisualScale;
+const TARGET_H = 48 * vScale * VISUAL_SCALE_MULT * trackCarScale * this._imageNativeCarVisualScale;
 
 // Escala uniforme para que NO se deforme (fit inside box)
 const fitSpriteToBox = () => {

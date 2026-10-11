@@ -98,3 +98,18 @@ El propietario confirma la fotografía y el rendimiento de Karting Tenerife, per
 8. **Regresión automática**: `node scripts/trackstudio-image-native-drive-scale-smoke.mjs` valida escala x3 de las coordenadas, mundo 5016×2823, tamaño original de imagen, equivalencia de máscara de pista y hierba, recuperación local v1→v2 sin escritura y ausencia de ajuste de físicas.
 
 **Importante:** la prueba x3 es un experimento visual y de conducción; no se declara definitivamente aceptada hasta recibir confirmación del iPhone. La rama única es `main`. Android público 1.1.188 intacto.
+
+## 11. Escala visual del coche en una imagen ×3 — DEV 1.2.112
+
+**Incidencia al conducir DEV 1.2.111:** el coche parecía un juguete muy pequeño porque la carretera y el fondo se multiplicaban por 3 en el mundo, pero el coche seguía con su tamaño visible anterior (`carScale: 0.65`). La imagen ampliada pierde un poco de nitidez por interpolación; es esperable y NO debe solventarse creando de inmediato una textura 5K que perjudique la fluidez móvil.
+
+**Solución:** mantener la escala de mundo ×3 y la textura original 1672×941, pero multiplicar **solo la caja objetivo del sprite visual del coche** por la misma escala de mundo. Esto devuelve la proporción coche/carretera de la versión ×1 sin incrementar memoria de fondo ni alterar tamaño/tuning de los coches en otros circuitos.
+
+- `RaceScene.js`: conservar `body.setCircle(Math.round(baseRadius * vScale * trackCarScale))` y `resolveCarParams(this.baseSpec, this.tuning)` **exactamente como estaban**. El factor `raceImageCarVisualScale()` sólo multiplica `TARGET_W`/`TARGET_H` del sprite y se aplica tanto antes como después de la carga asíncrona de la skin. Escala ×1 para circuitos normales y ×3 únicamente para `karting-tenerife-studio`.
+- `RaceBicycleHandlingScene.js`: `_bikeVisualLength` calcula el parámetro de física con la anchura visible **dividida por el multiplicador de imagen**, evitando que el nuevo tamaño dibujado cambie accidentalmente la batalla efectiva y la dirección del modelo cinemático.
+- El collider físico conserva el tamaño anterior deliberadamente para cumplir la condición «no tocar las físicas»; en esta prueba puede ser más pequeño que la silueta dibujada. No afirmar que se validó contacto con obstáculos físicos: en la escena con imagen nativa las zonas TRACK/GRASS consultan la posición del coche.
+- No modificar `carScale` guardado en el `.tdrtrack`, la imagen, centerline, bordes, puertas, escala de mundo ×3, cámara ni récords públicos.
+- **Test**: `node scripts/trackstudio-image-native-car-visual-smoke.mjs`, cubre proporción ×3, dinámica/colisión conservadas, batalla equivalente y aislamiento de otras pistas.
+- **Validación pendiente en iPhone**: tamaño aparente real del coche, curva lenta/rápida, superposición con asfalto y suavidad. Si la foto queda borrosa a zoom habitual, plantear después textura 2× o tiles WebP bajo prueba de memoria, nunca 5K monolítica por defecto.
+
+La aceptación visual de la escena completa y de las proporciones sigue pendiente del propietario.
