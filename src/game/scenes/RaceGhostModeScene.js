@@ -113,6 +113,9 @@ export class RaceScene extends CurrentRaceScene{
       try{this._ghostSubHud?.destroy?.();}catch{}
       try{this._ghostTopBg?.destroy?.();}catch{}
       try{this._ghostSubBg?.destroy?.();}catch{}
+      // Destroy any pre-update UI reference when re-entering a race.
+      try{this._replayEntryBtn?.destroy?.(true);}catch{}
+      this._replayEntryBtn=null;
       try{this._replayUi?.destroy?.(true);}catch{}
       try{this._replayStyle?.remove?.();}catch{}
       try{this.scale.off('resize',this._onGhostResize);}catch{}
@@ -202,12 +205,7 @@ export class RaceScene extends CurrentRaceScene{
     if(this._ghostSubBg?.scene)this._ghostSubBg.setPosition(p.x,p.secondY+p.row2H/2).setDisplaySize(p.controlWidth,p.row2H);
     if(this._ghostHud?.scene)this._ghostHud.setPosition(p.x,p.topY).setFixedSize(p.controlWidth,p.row1H);
     if(this._ghostSubHud?.scene)this._ghostSubHud.setPosition(p.x,p.secondY).setFixedSize(p.controlWidth,p.row2H);
-    if(this._replayEntryBtn?.scene){
-      this._replayEntryBtn.setPosition(p.x,p.buttonY);
-      const bg=this._replayEntryBtn.list?.[0];
-      if(bg?.setSize)bg.setSize(p.controlWidth,p.buttonH);
-      if(bg?.setDisplaySize)bg.setDisplaySize(p.controlWidth,p.buttonH);
-    }
+
   }
 
   _setGhostHudLabels(top,bottom){
@@ -228,13 +226,6 @@ export class RaceScene extends CurrentRaceScene{
       .setOrigin(.5,0).setScrollFactor(0).setDepth(5005);
     this._ghostSubHud=this.add.text(p.x,p.secondY,bottom,{...base,fontSize:'8px',color:'#d8f8ff',fixedHeight:p.row2H})
       .setOrigin(.5,0).setScrollFactor(0).setDepth(5005);
-    if(this._ghostData)this._ensureReplayEntryButton();
-  }
-
-  _ensureReplayEntryButton(){
-    if(!this._ghostData||this._replayEntryBtn?.scene)return;
-    const p=this._ghostControlsLayout();
-    this._replayEntryBtn=this._makeReplayButton(p.x,p.buttonY,p.controlWidth,p.buttonH,'▶  VER REPETICIÓN',()=>this._enterReplay());
   }
 
   _recordGhostSample(now){
@@ -272,7 +263,6 @@ export class RaceScene extends CurrentRaceScene{
             this._createGhostSprite();
             this._syncGhostVisual();
             this._setGhostHudLabels(previous?'👻 NUEVO FANTASMA':'👻 FANTASMA CREADO',previous?'RÉCORD MEJORADO':'SIGUIENTE VUELTA');
-            this._ensureReplayEntryButton();
           }
         }
       }
@@ -316,7 +306,7 @@ export class RaceScene extends CurrentRaceScene{
     this._syncGhostVisual();
     if(this._ghostSprite?.scene)this._ghostSprite.setVisible(true).setAlpha(1).clearTint?.().setBlendMode('NORMAL');
 
-    for(const obj of [this.carRig,this.touchUI,this.hud,this.competitionHud,this.minimapSportFrame,this._ghostTopBg,this._ghostSubBg,this._ghostHud,this._ghostSubHud,this._replayEntryBtn,this._tdrFpsText])this._hideForReplay(obj);
+    for(const obj of [this.carRig,this.touchUI,this.hud,this.competitionHud,this.minimapSportFrame,this._ghostTopBg,this._ghostSubBg,this._ghostHud,this._ghostSubHud,this._tdrFpsText])this._hideForReplay(obj);
     try{this._audio?.master?.gain?.setTargetAtTime?.(0,this._audioCtx?.currentTime||0,.02);}catch{}
     try{this.carBody?.setVelocity?.(0,0);this.carBody?.setAngularVelocity?.(0);}catch{}
 

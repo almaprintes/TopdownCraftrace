@@ -120,6 +120,38 @@ export function applyKartingPreviewPhysics(scene){
     :typeof original==='function'&&original.call(scene,band,x,y);
   return true;
 }
+// The master image is the entire visual environment. The only retained
+// race objects are logical gates, physics and the player's car/HUD.
+export function clearImageNativeTrackOverlays(scene) {
+  // Defensive cleanup: old Karting-specific layers could already have
+  // placed sprites during a prior async load. The user PNG is the full scene.
+  for (const layer of [
+    '_ktPaddock', '_ktStructures', '_ktDenseVegetation',
+    '_circuitEnvironment', '_authoredEnvironmentObjects'
+  ]) {
+    const objects=scene[layer];
+    if (Array.isArray(objects)) for (const obj of objects) {
+      try { obj?.destroy?.(); } catch {}
+    }
+    scene[layer]=[];
+  }
+  scene._authoredSurfaceZones=[];
+  // No procedural track graphics may survive above the baked photo.
+  // Their geometry is used by race timing/physics, not by these GameObjects.
+  // The authored image already includes kerbs, finish paint and road edges.
+  for (const name of [
+    '_shoulderLeft','_shoulderRight','_curbOuter','_curbInner',
+    '_borderLeft','_borderRight','_iosStageAsphalt',
+    'finishGfx','cpGfx','finishLineDebug','startLineDebug','gridDebug',
+    'finishIntegratedGfx','cp1IntegratedGfx','cp2IntegratedGfx'
+  ]) {
+    try { scene[name]?.destroy?.(); } catch {}
+    scene[name]=null;
+  }
+  // Sector UI remains active; its older paint-flash hook becomes a no-op.
+  scene._flashSectorMarker=()=>{};
+}
+
 export async function activateKartingPreviewImage(scene){
   const saved=getLocalKartingPreview(scene.trackKey);
   if(!saved)return false;
@@ -139,24 +171,7 @@ export async function activateKartingPreviewImage(scene){
     scene.uiCam?.ignore?.(sprite);
     // Only destroy legacy graphics after the new texture has been decoded.
     scene._destroyLegacyGroundRender?.();
-    // Defensive cleanup: old Karting-specific layers could already have
-    // placed sprites during a prior async load. The user PNG is the full scene.
-    for (const layer of [
-      '_ktPaddock', '_ktStructures', '_ktDenseVegetation',
-      '_circuitEnvironment', '_authoredEnvironmentObjects'
-    ]) {
-      const objects=scene[layer];
-      if (Array.isArray(objects)) for (const obj of objects) {
-        try { obj?.destroy?.(); } catch {}
-      }
-      scene[layer]=[];
-    }
-    scene._authoredSurfaceZones=[];
-    for(const name of ['_shoulderLeft','_shoulderRight','_curbOuter','_curbInner',
-                        '_borderLeft','_borderRight','_iosStageAsphalt']){
-      try{scene[name]?.destroy?.()}catch{}
-      scene[name]=null;
-    }
+    clearImageNativeTrackOverlays(scene);
     scene._trackBeautyTiles=[sprite];
     scene._beautyLayerActive=true;
     scene._bakedAsphaltPilot=false;

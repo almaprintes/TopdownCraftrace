@@ -1,4 +1,5 @@
 import { RaceScene as StableRaceScene } from './RaceFixedScene.js';
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 
 // Capa visual v2 del HUD inferior.
 // Mantiene intacta toda la lógica estable de RaceFixedScene y solo sustituye
@@ -172,9 +173,12 @@ export class RaceScene extends StableRaceScene {
       this.cp1IntegratedGfx?.destroy?.();
       this.cp2IntegratedGfx?.destroy?.();
 
-      this.finishIntegratedGfx = drawFinish();
-      this.cp1IntegratedGfx = drawSector(this.checkpoints?.cp1, 0xffd86a);
-      this.cp2IntegratedGfx = drawSector(this.checkpoints?.cp2, 0x67e6ff);
+      // Image-native tracks already have painted markings inside their photo.
+      // Keep logical finish/checkpoints, but do not add duplicate visuals.
+      const authoredImage = isImageNativeTrackScene(this);
+      this.finishIntegratedGfx = authoredImage ? null : drawFinish();
+      this.cp1IntegratedGfx = authoredImage ? null : drawSector(this.checkpoints?.cp1, 0xffd86a);
+      this.cp2IntegratedGfx = authoredImage ? null : drawSector(this.checkpoints?.cp2, 0x67e6ff);
       this._styledPrevCpState = Number(this._cpState || 0);
 
       this._flashSectorMarker = (idx) => {
