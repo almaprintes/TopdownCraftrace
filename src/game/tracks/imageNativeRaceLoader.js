@@ -2,7 +2,7 @@
 // An authored photograph replaces ground art; metadata/physics stay at image pixels 1:1.
 import {isImageNativeTrackMeta} from './imageNativeTrackContract.js';
 import {getLocalKartingPreview,LOCAL_KARTING_PREVIEW_KEY,makeKartingShapeMask,clearImageNativeTrackOverlays} from './localKartingPreview.js';
-import {readCanvasImage,normalizeCanvasImageBlob} from '../studio/imageCanvasProject.js';
+import {readCanvasImage,saveCanvasImage,normalizeCanvasImageBlob,looksLikeImageProject,unpackImageProject} from '../studio/imageCanvasProject.js';
 import {shapeIsValid} from '../studio/trackShapeGeometry.js';
 
 const TILE_MAX=2048;
@@ -74,6 +74,36 @@ async function decodePhoto(desc){
   }
 }
 
+// Repair only the IMAGE stored under the same imageId. Never import the
+// selected package's geometry into the running TrackStudio project.
+export async function repairImageNativePhoto(desc,file){
+  if(desc?.type!=='local'||!file?.size)throw Error('Selecciona la fotografía original o su .tdrtrack');
+  const image=(await looksLikeImageProject(file))?(await unpackImageProject(file)).image:file;
+  const normalized=await normalizeCanvasImageBlob(image,desc.imageMeta);
+  const blob=normalized.blob;
+  const url=URL.createObjectURL(blob),img=new Image();
+  try{
+    await new Promise((resolve,reject)=>{
+      img.onload=resolve;
+      img.onerror=()=>reject(Error('No se puede abrir la imagen seleccionada'));
+      img.src=url;
+    });
+    if(img.naturalWidth!==desc.width||img.naturalHeight!==desc.height)
+      throw Error('La imagen no coincide con el trazado: selecciona la fotografía original de este circuito');
+  }finally{
+    URL.revokeObjectURL(url);
+    img.onload=null;
+    img.onerror=null;
+  }
+  // Writing is the LAST operation, after validating format, size and pixels.
+  // Browser keeps geometry, gates, selected car and .tdrtrack unchanged.
+  await saveCanvasImage(desc.imageId,blob,desc.imageMeta);
+  const restored=await readCanvasImage(desc.imageId);
+  if(!restored?.blob||restored.blob.size!==blob.size)
+    throw Error('No se pudo verificar la fotografía recuperada en este dispositivo');
+  return true;
+}
+
 export function applyImageNativeTrackPhysics(scene,desc){
   const {track}=validateImageNativeRaceDescriptor(desc);
   const mask=makeKartingShapeMask(track.trackShape,track.worldW,track.worldH);
@@ -126,7 +156,7 @@ function mountPhoto(scene,desc,img){
   }
 }
 
-function createGate(scene,key){
+function createGate(scene,key,desc){
   if(typeof document==='undefined')return {close(){},error(e){console.error(e)}};
   document.getElementById('tdr-native-gate')?.remove();
   const root=document.createElement('div');root.id='tdr-native-gate';
@@ -137,10 +167,36 @@ function createGate(scene,key){
   const back=document.createElement('button');back.textContent='VOLVER SIN CAMBIAR EL CIRCUITO';
   back.style.cssText='display:none;margin:24px auto 0;padding:13px 18px;background:#19477a;color:#fff;border:1px solid #6bbcff;border-radius:8px';
   back.onclick=()=>scene.scene.start('menu');
-  panel.append(title,detail,back);root.append(panel);document.body.append(root);
+  const repair=document.createElement('button');
+  repair.type='button';repair.textContent='RECUPERAR FOTOGRAFÍA';
+  repair.style.cssText='display:none;margin:22px auto 0;padding:13px 18px;background:#175c4d;color:#fff;border:1px solid #61e8bd;border-radius:8px';
+  const picker=document.createElement('input');
+  picker.type='file';picker.accept='.tdrtrack,image/webp,image/png,image/jpeg';
+  picker.style.cssText='position:absolute;width:1px;height:1px;opacity:0;pointer-events:none';
+  repair.onclick=()=>picker.click();
+  picker.onchange=async()=>{
+    const file=picker.files?.[0];picker.value='';
+    if(!file)return;
+    repair.disabled=true;
+    detail.textContent='Verificando la fotografía original. El trazado no se modificará…';
+    try{
+      await repairImageNativePhoto(desc,file);
+      root.remove();
+      scene.scene.restart({trackKey:key});
+    }catch(error){
+      console.error('[image-native] Photo repair failed',error);
+      repair.disabled=false;
+      detail.textContent=String(error?.message||error);
+    }
+  };
+  panel.append(title,detail,repair,back,picker);root.append(panel);document.body.append(root);
   return {close(){root.remove()},error(e){
     title.textContent='NO SE PUEDE INICIAR ESTE CIRCUITO';
     detail.textContent=String(e?.message||e||'Falta la fotografía');
+    if(desc?.type==='local'){
+      detail.textContent+=' Selecciona el WebP/PNG original o el .tdrtrack para recuperar SOLO la foto, sin borrar el trazado.';
+      repair.style.display='block';
+    }
     back.style.display='block';
   }};
 }
@@ -164,7 +220,7 @@ export function installImageNativeRaceLoader(RaceSceneClass,resolveTrack=()=>nul
     catch(error){desc={error}}
     if(!desc)return create?.call(this,data);
     this._imageNativeLoading=true;
-    const gate=createGate(this,this.trackKey);
+    const gate=createGate(this,this.trackKey,desc);
     let alive=true;
     this.events.once('shutdown',()=>{alive=false;gate.close()});
     void Promise.resolve().then(async()=>{

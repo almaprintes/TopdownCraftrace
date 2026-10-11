@@ -79,6 +79,7 @@ jobs:
           node scripts/bootstrap-regression-smoke.mjs
           node scripts/track-beauty-identity-smoke.mjs
           node scripts/trackstudio-image-mode-smoke.mjs
+          node scripts/trackstudio-ios-image-storage-smoke.mjs
           node scripts/trackstudio-image-contract-smoke.mjs
           node scripts/trackstudio-image-native-loader-smoke.mjs
           node scripts/trackstudio-source-menu-smoke.mjs

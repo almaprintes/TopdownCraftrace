@@ -4,8 +4,52 @@ const DB='tdr-trackstudio-image-v1', STORE='images', MAGIC='TDR-IMAGE-PROJECT-V1
 const enc=new TextEncoder(), dec=new TextDecoder();
 function openDb(){return new Promise((ok,no)=>{if(typeof indexedDB==='undefined')return no(new Error('IndexedDB no disponible'));const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error||new Error('Error abriendo IndexedDB'))})}
 async function act(mode,id,value){const db=await openDb();return new Promise((ok,no)=>{const tx=db.transaction(STORE,mode),s=tx.objectStore(STORE),r=mode==='readonly'?s.get(id):s.put(value,id);let result;r.onsuccess=()=>result=r.result;tx.oncomplete=()=>{db.close();ok(result)};tx.onerror=()=>{db.close();no(tx.error||new Error('Error almacenando imagen'))};tx.onabort=()=>{db.close();no(tx.error||new Error('Transacción cancelada'))}})}
-export async function saveCanvasImage(id,blob,meta){if(!id||!(blob instanceof Blob)||!blob.size)throw Error('Imagen inválida');await act('readwrite',id,{blob,meta:{...meta,imageId:id}})}
-export async function readCanvasImage(id){return id?act('readonly',id):null}
+// WebKit can lose the file backing of a Blob stored directly in IndexedDB
+// (NotFoundError / "The object can not be found here") after PWA navigation.
+// Persist self-contained bytes instead of an opaque OS-backed Blob reference.
+export async function encodeCanvasImageRecord(id,blob,meta){
+  if(!id||!(blob instanceof Blob)||!blob.size)throw Error('Imagen inválida');
+  let buffer;
+  try{buffer=await blob.arrayBuffer();}
+  catch(error){throw new Error('No se pueden leer los bytes de esta fotografía. Vuelve a seleccionarla desde Archivos.',{cause:error});}
+  if(!buffer.byteLength||buffer.byteLength!==blob.size)
+    throw Error('Lectura incompleta de la fotografía');
+  return {bytes:new Uint8Array(buffer),mimeType:blob.type||meta?.type||'image/png',
+    meta:{...meta,imageId:id}};
+}
+export async function decodeCanvasImageRecord(row){
+  if(!row)return null;
+  let bytes,legacy=false;
+  if(row.bytes instanceof Uint8Array)bytes=row.bytes;
+  else if(row.bytes instanceof ArrayBuffer)bytes=new Uint8Array(row.bytes);
+  else if(row.blob instanceof Blob){
+    legacy=true;
+    try{bytes=new Uint8Array(await row.blob.arrayBuffer());}
+    catch(error){
+      throw new Error('La fotografía guardada en este iPhone ya no se puede leer. Recupera la imagen WebP/PNG o el .tdrtrack original.',{cause:error});
+    }
+  }else throw Error('La fotografía guardada no contiene datos de imagen');
+  if(!bytes.byteLength)throw Error('La fotografía guardada está vacía');
+  return {blob:new Blob([bytes],{type:row.mimeType||row.blob?.type||row.meta?.type||'image/png'}),
+    bytes,meta:row.meta,legacy};
+}
+export async function saveCanvasImage(id,blob,meta){
+  const row=await encodeCanvasImageRecord(id,blob,meta);
+  await act('readwrite',id,row);
+}
+export async function readCanvasImage(id){
+  if(!id)return null;
+  const stored=await act('readonly',id);
+  const value=await decodeCanvasImageRecord(stored);
+  if(!value)return null;
+  // Migrate old valid Blob rows when possible. No deletion or mutation of
+  // user geometry; a quota error must not discard a readable image in memory.
+  if(value.legacy){
+    try{await act('readwrite',id,{bytes:value.bytes,mimeType:value.blob.type,meta:value.meta});}
+    catch(error){console.warn('[TrackStudio] Legacy image migration deferred',error);}
+  }
+  return {blob:value.blob,meta:value.meta};
+}
 export function packImageProject(project,blob,meta){if(!(blob instanceof Blob)||!blob.size)throw Error('Falta la imagen maestra');const desc={...meta,size:blob.size,type:blob.type||meta?.type||'image/png'},json=enc.encode(JSON.stringify({...project,imageAsset:desc})),prefix=enc.encode(MAGIC+json.byteLength+'\n');return new Blob([prefix,json,blob],{type:'application/octet-stream'})}
 export async function looksLikeImageProject(blob){
   if(!(blob instanceof Blob)||!blob.size)return false;
