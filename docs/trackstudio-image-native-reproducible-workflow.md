@@ -1,12 +1,12 @@
 # Procedimiento reproducible: circuito de imagen nativa → TrackStudio → carrera DEV
 
 **Estado:** borrador técnico verificable. Pendiente de aceptación visual final en iPhone para cerrar este procedimiento como validado.  
-**Referencia inicial:** Karting Tenerife, TrackStudio DEV 1.2.109 (11/10/2026).  
+**Referencia inicial:** Karting Tenerife, TrackStudio DEV 1.2.111 (11/10/2026).  
 **Rama única de publicación web:** `main`. **Versión de Google Play:** 1.1.188, gestionada por separado; no se generan APK/SDK salvo orden explícita.
 
 ## 0. Principios que NO se deben romper
 
-1. **La imagen es el lienzo**: tamaño en píxeles de la fotografía = dimensiones del mundo en el editor y el motor. No escalar, recortar, mover ni rotar la imagen después de dibujar las líneas; el editor puede hacer zoom/pan sin alterar coordenadas.
+1. **La imagen es el lienzo**: los píxeles de la fotografía coinciden con las coordenadas del **editor** 1:1. No alterar esa fuente tras dibujar las líneas. En la **carrera** se admite una escala uniforme de mundo que transforme simultáneamente imagen, centerline, bordes y puertas; el archivo maestro y las coordenadas de edición permanecen intactos.
 2. Separar siempre **apariencia** (imagen PNG/WebP), **geometría lógica** (centerline y bordes Bézier), **reglas** (asfalto/hierba, puertas, sectores) y **decoración dinámica** (coche, HUD). Nunca generar un segundo asfalto o pianos encima de la foto.
 3. Preservar un `.tdrtrack` de cada hito; no sobrescribir el archivo original con un experimento. No borrar datos de IndexedDB/localStorage del navegador.
 4. Probar primero en **PWA DEV**, con identificador aislado `karting-tenerife-studio`; no reutilizar el slug `karting-tenerife` ni contaminar clasificaciones públicas.
@@ -72,9 +72,9 @@ Guardar junto al circuito: archivo maestro, `.tdrtrack` de origen y de cada hito
 
 **Pendiente de cerrar después de la validación del usuario:** fecha de aceptación, versión exacta aprobada, capturas de las horquillas sin doble línea y decisión sobre promoción del preview a recurso universal.
 
-## 9. Ajustar spawn y dinámica al tamaño nativo (DEV 1.2.110)
+## 9. HISTÓRICO — ajuste temporal de físicas en DEV 1.2.110 (REVOCADO)
 
-**Situación detectada tras la aprobación visual:** la imagen de Karting Tenerife mide 1672×941 px, mientras que el motor heredado se diseñó con mundo base de 8000×5000 px. No se cambia `worldW/worldH`: la imagen, los bordes y la centerline deben permanecer alineados 1:1.
+**Este apartado es histórico y está REVOCADO por DEV 1.2.111.** La imagen de Karting Tenerife mide 1672×941 px, mientras que el motor heredado usa circuitos mayores. Se probó un ajuste específico de conducción en 1.2.110, pero el propietario rechazó modificar las físicas calibradas de sus coches. **No reproducir esa solución.**
 
 - **Spawn inicial:** `spawnUpstreamOfFinish()` en `src/game/tracks/imageNativeDriving.js` proyecta el punto medio de la puerta de meta sobre la centerline y recorre el eje **hacia atrás ~65 píxeles** siguiendo la trayectoria, respetando su orientación. En este Karting el primer nodo original está ~209 px antes de meta; la posición nueva prevista es ~x1354, y521, todavía antes de la puerta. Se trata de un cálculo temporal para conducir: ni el primer nodo Bézier ni la meta se alteran en el `.tdrtrack`. Existe fallback al spawn anterior si la puerta es inválida o está alejada del recorrido.
 - **Conducción normalizada:** `imageNativeDrivingProfile()` adapta velocidades y aceleración en unidades de píxeles **solo** si `trackKey === 'karting-tenerife-studio'`. Para 1672×941 usa un factor suave cercano a **0,72** sobre velocidad, aceleración y fuerza de freno, y eleva el giro a aproximadamente **1,55×**. Reduce también el umbral de giro a baja velocidad. La escala es intencionadamente moderada para mantener carreras jugables; NO es una conversión literal 0,20× del mundo antiguo.
@@ -83,3 +83,18 @@ Guardar junto al circuito: archivo maestro, `.tdrtrack` de origen y de cada hito
 - **Regresión automatizada:** `node scripts/trackstudio-image-native-drive-scale-smoke.mjs`, añadido al pipeline de GitHub Pages, cubre las coordenadas de ejemplo de Karting Tenerife, orientación de meta, no-mutación de centerline, relación de escalas y preservación del resto de circuitos.
 
 **Estado:** revisión visual del entorno aprobada por el usuario; nueva calibración de spawn y dirección pendiente de prueba táctil real en iPhone.
+
+## 10. MÉTODO ACTUAL — mundo ×3 sin tocar las físicas (DEV 1.2.111)
+
+El propietario confirma la fotografía y el rendimiento de Karting Tenerife, pero exige preservar íntegramente las características originales de cada coche. **Solución aprobada para probar: ampliar exclusivamente la geometría del mundo de carrera, sin aumentar la resolución de la imagen ni retocar aceleración/dirección/grip.**
+
+1. Conservar la foto 1672×941, el `.tdrtrack` y la edición original **1:1**. No volver a trazar ni generar imágenes.
+2. `src/game/tracks/imageNativeWorldScale.js` transforma **solo una copia de metadatos de carrera** con factor 3: `worldW/H`=**5016×2823**, centerline (incluidas anchuras), bordes Bézier independientes (nodos y tiradores), meta, checkpoints, spawn, offsets y distancias de render/culling. Las normales unitarias y ángulos NO se escalan. `sampleStepPx` y `cellSize` también se multiplican por 3 para que la densidad de poligonización y el recuento de celdas no se disparen innecesariamente.
+3. `src/game/tracks/localKartingPreview.js` conserva el **PNG/JPEG/WebP original** en IndexedDB con sus píxeles originales; en carrera crea un `Phaser.Image` con `.setScale(3)`. No procesa una textura 5016×2823 ni la sube a la GPU; el uso de memoria de la textura se mantiene próximo al del original. Es posible algo de suavizado visual al ampliar, pero sin aumento del coste de decodificación.
+4. `RaceScene.applyCarParams()` vuelve a usar exactamente `resolveCarParams(this.baseSpec, this.tuning)` en **todas** las carreras. Eliminar la solución `imageNativeDrivingProfile` (velocidad, giro, dirección y freno). Ni los archivos de coche ni los upgrades cambian.
+5. Mantener el **spawn relativo a meta** a ~65 px de la fotografía (**195 unidades del nuevo mundo**), calculado antes de ampliar el mundo. No se mueve la centerline ni se adelanta el coche después de la meta.
+6. La copia de prueba se almacena como versión 2. Al leer una copia local antigua (versión 1, sin escala), se transforma **en memoria** sin sobrescribir el proyecto ni tocar IndexedDB. Recomendación de uso: abrir TrackStudio y pulsar nuevamente **▶ PROBAR JUEGO**.
+7. **Prueba en iPhone**: conducción sin parches de coches, spawn correcto, paso por meta, sectores, asfalto/hierba, fotografía alineada a los bordes, zoom de cámara y suavidad de fotogramas. Revisar también proporción aparente del coche y nitidez; solo afinar la visualización si hace falta, nunca físicas.
+8. **Regresión automática**: `node scripts/trackstudio-image-native-drive-scale-smoke.mjs` valida escala x3 de las coordenadas, mundo 5016×2823, tamaño original de imagen, equivalencia de máscara de pista y hierba, recuperación local v1→v2 sin escritura y ausencia de ajuste de físicas.
+
+**Importante:** la prueba x3 es un experimento visual y de conducción; no se declara definitivamente aceptada hasta recibir confirmación del iPhone. La rama única es `main`. Android público 1.1.188 intacto.

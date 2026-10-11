@@ -30,8 +30,18 @@ assert.equal(record.track.key,LOCAL_KARTING_PREVIEW_KEY);
 assert.equal(record.track.meta.localPreview,true);
 assert.equal(record.track.carScale,.65);
 assert.equal(record.track.grid,null);
-assert.equal(record.track.start.x,p[0].x);
-assert.equal(record.track.start.y,p[0].y);
+assert.equal(record.version,2);
+assert.equal(record.worldScale,3);
+assert.equal(record.track.worldW,3000);
+assert.equal(record.track.worldH,2700);
+assert.equal(record.imageMeta.width,1000); // Never enlarge PNG file
+assert.equal(record.imageMeta.height,900);
+assert.equal(record.track.trackWidth,210);
+assert.equal(record.track.start.x,p[0].x*3);
+assert.equal(record.track.start.y,p[0].y*3);
+assert.equal(record.track.finishLine.a.x,1500);
+assert.equal(record.track.finishLine.normal.y,1); // Unit normal unchanged
+assert.equal(record.track.trackShape.leftEdge[0].x,shape.leftEdge[0].x*3);
 assert.notEqual(record.track.start.r,0,'Start heading must follow the actual centerline tangent');
 const store=new Map();
 globalThis.localStorage={getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)};

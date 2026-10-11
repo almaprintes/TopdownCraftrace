@@ -50,32 +50,3 @@ export function spawnUpstreamOfFinish(centerline,gate,distance=65) {
   }
   return null;
 }
-
-/** Mild and reversible driving normalization for small authored maps only. */
-export function imageNativeDrivingProfile(params,track){
-  if(!track||!finite(Number(track.worldW))||!finite(Number(track.worldH))||!params)return params;
-  const w=Number(track.worldW),h=Number(track.worldH);
-  if(w<=0||h<=0)return params;
-  // Physical pixels on a 1672x941 photo represent more real distance than
-  // pixels in the legacy 8000x5000 game world. A fifth-power curve avoids an
-  // unusably low literal 0.20x speed and still eases tight corners.
-  const relative=Math.sqrt((w*h)/(8000*5000));
-  const velocityScale=clamp(Math.pow(relative,.20),.55,1);
-  const yawBoost=clamp(1.12/velocityScale,1,1.65);
-  const steering=params.steering||{};
-  return {
-    ...params,
-    accel:params.accel*velocityScale,
-    maxFwd:params.maxFwd*velocityScale,
-    maxRev:params.maxRev*velocityScale,
-    brakeForce:params.brakeForce*velocityScale,
-    engineBrake:params.engineBrake*velocityScale,
-    turnRate:params.turnRate*yawBoost,
-    steering:{
-      ...steering,
-      yawSpeedMin:Math.max(4,(steering.yawSpeedMin??12)*velocityScale),
-      lowSpeedSteer:Math.max(.43,steering.lowSpeedSteer??.35)
-    },
-    imageNativeDriving:{velocityScale,yawBoost}
-  };
-}

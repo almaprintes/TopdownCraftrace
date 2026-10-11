@@ -3,6 +3,7 @@
 import { readCanvasImage, normalizeCanvasImageBlob } from '../studio/imageCanvasProject.js';
 import { shapeIsValid, sampleShapeEdge } from '../studio/trackShapeGeometry.js';
 import { spawnUpstreamOfFinish } from './imageNativeDriving.js';
+import { IMAGE_NATIVE_WORLD_SCALE, scaleImageNativeTrackForRace } from './imageNativeWorldScale.js';
 
 export const LOCAL_KARTING_PREVIEW_KEY='karting-tenerife-studio';
 const STORAGE_KEY='tdr:trackstudio:karting-tenerife-preview-v1';
@@ -16,8 +17,15 @@ export function getLocalKartingPreview(trackKey=LOCAL_KARTING_PREVIEW_KEY){
     if(!raw)return null;
     const p=JSON.parse(raw),track=p?.track;
     if(!track||!Array.isArray(track.centerline)||track.centerline.length<20||
-       !shapeIsValid(track.trackShape)||!bounded(track.worldW,8192)||
-       !bounded(track.worldH,8192)||!p?.imageId)return null;
+       !shapeIsValid(track.trackShape)||!bounded(track.worldW,32768)||
+       !bounded(track.worldH,32768)||!p?.imageId)return null;
+    // Existing locally cached DEV 1.2.110 previews were saved in image pixels.
+    // Convert once in memory; do not mutate IndexedDB, originals or storage.
+    if(p.version===1 &&
+       track.worldW===p.imageMeta?.width && track.worldH===p.imageMeta?.height){
+      return {...p,version:2,worldScale:IMAGE_NATIVE_WORLD_SCALE,
+        track:scaleImageNativeTrackForRace(track,IMAGE_NATIVE_WORLD_SCALE)};
+    }
     return p;
   }catch{return null;}
 }
@@ -56,7 +64,9 @@ export function makeKartingPreviewRecord(editor,gameTrack){
     checkpointMode:'authored',
     meta:{...(gameTrack.meta||{}),localPreview:true,carScale:.65,source:'trackstudio-image-native'}
   };
-  return {version:1,imageId,imageMeta:jsonCopy(editor.imageCanvas),track};
+  const raceTrack=scaleImageNativeTrackForRace(track,IMAGE_NATIVE_WORLD_SCALE);
+  return {version:2,imageId,imageMeta:jsonCopy(editor.imageCanvas),
+    worldScale:IMAGE_NATIVE_WORLD_SCALE,track:raceTrack};
 }
 
 export async function installKartingPreview(scene){
@@ -170,13 +180,19 @@ export async function activateKartingPreviewImage(scene){
   const url=URL.createObjectURL(normalized.blob),img=new Image();
   try{
     await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('No se pudo abrir imagen Karting'));img.src=url;});
-    if(img.naturalWidth!==saved.track.worldW||img.naturalHeight!==saved.track.worldH)
-      throw Error('Desajuste de píxeles y geometría del circuito');
+    const scale=saved.worldScale||saved.track.imageWorldScale||1;
+    if(img.naturalWidth!==saved.imageMeta.width||img.naturalHeight!==saved.imageMeta.height ||
+       img.naturalWidth*scale!==saved.track.worldW ||
+       img.naturalHeight*scale!==saved.track.worldH)
+      throw Error('Desajuste entre imagen y escala del mundo');
     if(!scene.sys?.isActive?.())return false;
     const key='tdr-karting-studio-image';
     if(scene.textures.exists(key))scene.textures.remove(key);
     scene.textures.addImage(key,img);
-    const sprite=scene.add.image(0,0,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);
+    // GPU uploads only the original 1672x941 texture; world scaling uses the
+    // sprite transform, never a CPU/GPU enlarged raster.
+    const sprite=scene.add.image(0,0,key).setOrigin(0,0)
+      .setScale(scale).setDepth(9).setScrollFactor(1);
     scene.uiCam?.ignore?.(sprite);
     // Only destroy legacy graphics after the new texture has been decoded.
     scene._destroyLegacyGroundRender?.();
