@@ -1,5 +1,6 @@
 import { RaceScene as RealSurfaceRaceScene } from './RaceRealSurfaceAssetsScene.js';
 import { getTrackBeautyLayerConfig } from '../tracks/trackBeautyLayers.js';
+import { LOCAL_KARTING_PREVIEW_KEY, applyKartingPreviewPhysics, activateKartingPreviewImage } from '../tracks/localKartingPreview.js';
 
 const ATLANTICO_PBR_TRACK = 'circuito-atlantico';
 const ATLANTICO_PBR_KEY = 'tdr_atlantico_asphalt_lit';
@@ -49,7 +50,7 @@ export class RaceScene extends RealSurfaceRaceScene {
   preload() {
     super.preload?.();
     const trackId = trackIdFrom(this._beautyInitData, this);
-    const cfg = getTrackBeautyLayerConfig(trackId);
+    const cfg = trackId === LOCAL_KARTING_PREVIEW_KEY ? null : getTrackBeautyLayerConfig(trackId);
     this._beautyPreloadConfig = cfg;
     if (cfg?.useBeautyLayer && cfg?.assetsAvailable) {
       for (const tile of cfg.tiles || []) {
@@ -72,8 +73,21 @@ export class RaceScene extends RealSurfaceRaceScene {
   create(data) {
     const result = super.create(data);
     const trackId = trackIdFrom(data, this);
-    const cfg = getTrackBeautyLayerConfig(trackId);
+    const cfg = trackId === LOCAL_KARTING_PREVIEW_KEY ? null : getTrackBeautyLayerConfig(trackId);
     this._beautyConfig = cfg;
+    if (trackId === LOCAL_KARTING_PREVIEW_KEY) {
+      // Keep the original race renderer as a fallback until the user-owned
+      // IndexedDB photo is decoded; physics uses the true independent edges.
+      try {
+        applyKartingPreviewPhysics(this);
+        void activateKartingPreviewImage(this).catch(err => {
+          console.error('[TrackStudio DEV] Could not load the local Karting image', err);
+        });
+      } catch (err) {
+        console.error('[TrackStudio DEV] Invalid local Karting preview', err);
+      }
+      return result;
+    }
 
     if (cfg?.useBeautyLayer && cfg?.assetsAvailable) {
       try {

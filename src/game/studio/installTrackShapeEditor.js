@@ -1,6 +1,7 @@
 import {createTrackShape,shapeIsValid,sampleShapeEdge,splitShapeEdge,moveShapePart,copyTrackShape} from './trackShapeGeometry.js';
 import {pickShapeTarget} from './shapeTouchInteraction.js';
 import {createShapeDomInspector,shapeInspectorCopy,studioInspectorCopy} from './shapeDomInspector.js';
+import { installKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 
 function drawPolyline(g,points,closed){
   if(points.length<2)return;
@@ -202,6 +203,22 @@ export function installTrackStudioShapeEditor(s){
   gridOn=button(s,x+310,y,'PARRILLA: SÍ',toggleGrid);
   gridOff=button(s,x+310,y,'PARRILLA: NO',toggleGrid);
   refreshGridToggle();
+  // DEV preview is stored in this browser only. Race times use a separate
+  // key, so existing Karting Tenerife rankings are not contaminated.
+  let installing=false;
+  const previewBtn=button(s,x+447,y,'▶ PROBAR JUEGO',async()=>{
+    if(installing)return;
+    if(!window.confirm('¿Probar este Karting Tenerife en el juego DEV?\\n\\nSe guardará una copia local con un identificador de pruebas. La versión pública y sus récords no cambian.'))return;
+    installing=true;
+    try{
+      await installKartingPreview(s);
+      s._flashMessage('Circuito listo. Abriendo carrera DEV…');
+      s.scene.start('race',{trackKey:LOCAL_KARTING_PREVIEW_KEY});
+    }catch(err){
+      console.error('[TrackStudio] No se pudo preparar la carrera',err);
+      s._flashMessage('No se puede probar: '+(err?.message||'error'));
+    }finally{installing=false}
+  });
   // Controls are screen-fixed and never get written into project coordinates.
-  s.events.once('shutdown',()=>{inspector.destroy();[createBtn,editBtn,addBtn,gridOn,gridOff].forEach(b=>b?.destroy());gfx.destroy();});
+  s.events.once('shutdown',()=>{inspector.destroy();[createBtn,editBtn,addBtn,gridOn,gridOff,previewBtn].forEach(b=>b?.destroy());gfx.destroy();});
 }

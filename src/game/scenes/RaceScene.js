@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
+import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { loadGarage, garageTuning, grantRaceReward } from '../garage/garageStore.js';
@@ -5083,6 +5084,12 @@ if (state.stickX === 0 && state.stickY === 0) {
 
     return state;
   }  _resolveTrackMeta(trackKey) {
+    // DEV local preview has its own track key: never overwrite public records.
+    if (trackKey === LOCAL_KARTING_PREVIEW_KEY) {
+      const authored = getLocalKartingPreview(trackKey)?.track;
+      if (authored) return authored;
+      console.warn('[TrackStudio] Local Karting preview is missing; keep default track fallback');
+    }
     // 1) Tracks importados explícitos: "import:<slug>"
     if (typeof trackKey === 'string' && trackKey.startsWith('import:')) {
       const slug = trackKey.slice('import:'.length).trim();
