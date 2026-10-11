@@ -47,7 +47,7 @@ assert.equal(repairedCanvas.blob.size,pixels.size);
 await assert.rejects(unpackImageProject(new Blob(['bad file'])),/no es un paquete/i);
 const truncated=new Blob(['TDR-IMAGE-PROJECT-V1\n30\nx']);
 await assert.rejects(unpackImageProject(truncated),/incompleto/i);
-await assert.rejects(normalizeCanvasImageBlob(new Blob(['not an image']),meta),/no contiene una imagen/i);
+await assert.rejects(normalizeCanvasImageBlob(new Blob(['not an image']),{...meta,size:12}),/no contiene una imagen/i);
 await assert.rejects(normalizeCanvasImageBlob(pixels,{...meta,size:5}),/tamaño guardado/i);
 
 const scene=readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
