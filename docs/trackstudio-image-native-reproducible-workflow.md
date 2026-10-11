@@ -175,3 +175,11 @@ Tras importar la fotografía Karting Tenerife (6688 × 3764), se observó que a 
 - La inspección sigue siendo DOM, sin reintroducir `Phaser.Text.setText` en el bucle de eventos móviles por la regresión WebGL de iPhone.
 
 **Regresión**: `scripts/trackstudio-touch-targets-v2-smoke.mjs` cubre zooms 0,05–2,5, selección del nodo más cercano, tiradores ocultos, mutabilidad cero y señales de redibujado. Sigue pendiente la validación de comodidad táctil por el propietario en iPhone. El .tdrtrack, Karting antiguo, los renders de carrera y Android no cambian.
+
+## 18. DEV 1.2.119 — pluma táctil estilo Photoshop [pwa-only]
+
+TrackStudio incorpora el modo **PL** en la barra superior, junto a **ED**. Funciona al trazar la centerline: **toque/soltar = nodo esquina** con tiradores retraídos en el propio ancla (el tramo entre dos nodos esquina es recto); **toque y, sin soltar, arrastrar más de 10 píxeles de pantalla = nodo suave** con tiradores Bézier simétricos, tangentes a la dirección de arrastre. Se previsualiza el nuevo segmento y sus tiradores mientras se mueve el dedo; solo se agrega el nodo cuando se suelta, de modo que dos dedos cancelan el candidato y dejan libre el gesto de zoom. Los puntos ya existentes no cambian de posición ni de control; tocarlos en PL solo los selecciona, y **ED** sigue siendo el modo de ajuste fino de los nodos originales.
+
+La creación por gesto guarda una entrada de deshacer y un autosave por nodo confirmado. Si el dedo sale de la zona de edición o llega otro dedo no se agrega geometría. El módulo puro `trackStudioPenTool.js` genera los mismos objetos `{x,y,handleIn,handleOut}` que ya utiliza TrackStudio: **el contrato .tdrtrack, el Shape Editor, la salida, la meta y las físicas no cambian**. La barra superior compacta un poco sus espaciados para dar cabida a PL sin invadir el botón volver del iPhone. Este primer modo no suaviza automáticamente nodos anteriores ni recalcula los bordes; tras terminar centerline se utiliza **CREAR PISTA** y luego **AJUSTAR** como antes.
+
+Pruebas: `scripts/trackstudio-pen-tool-smoke.mjs` para curvas, esquinas, umbral táctil, tangentes simétricas, no mutación, entrada única en historial y compatibilidad con pan/pinch, más suites TrackStudio existentes. Validar manualmente en iPhone antes de considerar aprobado el gesto.

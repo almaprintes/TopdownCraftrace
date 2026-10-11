@@ -8,6 +8,7 @@ import { installTrackStudioShapeEditor } from '../studio/installTrackShapeEditor
 import { trackStudioWidthStep } from '../studio/trackStudioWidthRange.js';
 import { EDITOR_CONTROL_PIXELS, worldControlRadius, pickCenterlineControl } from '../studio/trackStudioControlGeometry.js';
 import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
+import { createPenAnchor, penGestureIsCurve, updatePenAnchorFromDrag } from '../studio/trackStudioPenTool.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -47,6 +48,7 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._dragMoved = false;
     this._dragStartScreen = null;
     this._dragStartWorld = null;
+    this._penGesture = null; // Temporary preview, committed only on pointerup.
 
     this._tapCandidate = false;
     this._gestureWasMultiTouch = false;
@@ -311,14 +313,14 @@ this._btnSave = this._makeIconButton(topX, topToolsY, '💾', () => {
   this._flashMessage('💾 Guardando...');
   this._saveProject?.();
 }, '18px');
-topX += 48;
+topX += 44;
 
 // Cargar
 this._btnLoad = this._makeIconButton(topX, topToolsY, '📂', () => {
   console.log('CLICK LOAD');
   this._openProjectSourceMenu?.();
 }, '18px');
-topX += 48;
+topX += 44;
 
 // Nuevo
 this._btnNew = this._makeIconButton(topX, topToolsY, 'NEW', () => {
@@ -330,62 +332,68 @@ this._btnNew = this._makeIconButton(topX, topToolsY, 'NEW', () => {
   this._autosaveRecovery();
   this._flashMessage('🆕 Proyecto nuevo');
 }, '14px');
-topX += 60;
+topX += 56;
     // modo directo
     this._editBtn = this._makeIconButton(topX, topToolsY, 'ED', () => {
       this._modeTool = 'edit';
       this._setTool('edit');
     }, '12px');
-    topX += 44;
+    topX += 40;
+    // Pluma: toque = vértice; toque + arrastre = curva Bézier.
+    this._penBtn = this._makeIconButton(topX, topToolsY, 'PL', () => {
+      this._setTool('pen');
+      this._flashMessage('PLUMA · toque: recta · toca y arrastra: curva · ED: ajustar');
+    }, '12px');
+    topX += 40;
 
     this._startTopBtn = this._makeIconButton(topX, topToolsY, 'SAL', () => {
       this._modeTool = 'start';
       this._setTool('start');
     }, '11px');
-    topX += 44;
+    topX += 40;
 
     this._finishTopBtn = this._makeIconButton(topX, topToolsY, '🏁', () => {
       this._modeTool = 'finish';
       this._setTool('finish');
     }, '14px');
-    topX += 44;
+    topX += 40;
 
     this._checkpointTopBtn = this._makeIconButton(topX, topToolsY, 'CP', () => {
       this._modeTool = 'checkpoint';
       this._setTool('checkpoint');
     }, '12px');
-    topX += 44;
+    topX += 40;
 
     this._pianoTopBtn = this._makeIconButton(topX, topToolsY, 'PI', () => {
       this._modeTool = 'piano';
       this._setTool('piano');
     }, '12px');
-    topX += 52;
+    topX += 48;
 this._loopBtn = this._makeIconButton(topX, topToolsY, this._isClosed ? '🔒' : '🔓', () => {
   this._toggleClosed();
   if (this._loopBtn?.txt) {
     this._loopBtn.txt.setText(this._isClosed ? '🔒' : '🔓');
   }
 }, '16px');
-topX += 52;
+topX += 48;
     // track directo
     this._trackMinusBtn = this._makeIconButton(topX, topToolsY, 'W-', () => {
       this._trackTool = 'widthDown';
       this._changeTrackWidth(-this._trackWidthStep());
       this._updateToolButtons();
     }, '12px');
-    topX += 44;
+    topX += 40;
 
     this._trackPlusBtn = this._makeIconButton(topX, topToolsY, 'W+', () => {
       this._trackTool = 'widthUp';
       this._changeTrackWidth(this._trackWidthStep());
       this._updateToolButtons();
     }, '12px');
-    topX += 56;
+    topX += 52;
     this._undoBtn = this._makeIconButton(topX, topToolsY, '↶', () => this._undo(), '20px');
-    topX += 44;
+    topX += 40;
     this._redoBtn = this._makeIconButton(topX, topToolsY, '↷', () => this._redo(), '20px');
-    topX += 44;
+    topX += 40;
 
     // =================================================
     // Mundo de edición
@@ -398,6 +406,7 @@ topX += 52;
     this._checkpointGfx = this.add.graphics().setDepth(10);
     this._finishGfx = this.add.graphics().setDepth(11);
     this._nodeGfx = this.add.graphics().setDepth(12);
+    this._penPreviewGfx = this.add.graphics().setDepth(13);
 
     this._drawGrid();
 
@@ -440,7 +449,8 @@ topX += 52;
       this._pianoGfx,
       this._checkpointGfx,
       this._finishGfx,
-      this._nodeGfx
+      this._nodeGfx,
+      this._penPreviewGfx
     ]);
 
     const worldObjs = [
@@ -452,7 +462,8 @@ topX += 52;
       this._pianoGfx,
       this._checkpointGfx,
       this._finishGfx,
-      this._nodeGfx
+      this._nodeGfx,
+      this._penPreviewGfx
     ];
     const uiObjs = this.children.list.filter((o) => !worldObjs.includes(o));
     this._editCam.ignore(uiObjs);
@@ -470,6 +481,39 @@ topX += 52;
       if (!this._isPointerInReferencePanel(pointer)) this._closeReferencePanel();
 
       if (!this._isPointerInViewport(pointer)) return;
+
+      // Pluma owns only NEW anchors, never the editing of existing ones.
+      // Keeping this separate from ED protects current edit/shape gestures.
+      if(this._tool==='pen' && !this._shapeEditing){
+        const active=this.input.manager.pointers.filter(p=>p.isDown);
+        if(active.length!==1){
+          this._cancelPenGesture();
+          this._gestureWasMultiTouch=true;
+          return;
+        }
+        const world=this._screenToWorld(pointer.x,pointer.y);
+        const hit=pickCenterlineControl(this._nodes,this._selectedNode,world,this._editCam?.zoom);
+        this._tapCandidate=false;
+        this._draggingPart=false;
+        this._panLast=null;
+        if(hit){
+          this._selectedNode=hit.index;
+          this._selectedPart=hit;
+          this._redrawEditor();
+          this._updatePanel();
+          return;
+        }
+        this._gestureWasMultiTouch=false;
+        this._penGesture={
+          id:pointer.id,
+          anchor:{x:world.x,y:world.y},
+          startScreen:{x:pointer.x,y:pointer.y},
+          currentWorld:{x:world.x,y:world.y},
+          curved:false
+        };
+        this._drawPenPreview();
+        return;
+      }
 
       // Mobile shape mode: first tap selects, second gesture moves.
       // Empty-area drags pan the canvas; neither gesture creates centerline nodes.
@@ -592,6 +636,24 @@ topX += 52;
       const down = this.input.manager.pointers.filter(
         (p) => p.isDown && this._isPointerInViewport(p)
       );
+
+      // Pluma previews a new anchor/curve without mutating the real project.
+      // Two fingers cancel that candidate, then pass through to pinch-to-zoom.
+      if(this._penGesture){
+        const active=this.input.manager.pointers.filter(p=>p.isDown);
+        if(active.length!==1 || down.length!==1){
+          this._cancelPenGesture();
+          this._gestureWasMultiTouch=true;
+        }else{
+          const p=down[0],g=this._penGesture;
+          if(p.id===g.id){
+            g.currentWorld=this._screenToWorld(p.x,p.y);
+            g.curved=penGestureIsCurve(g.startScreen,{x:p.x,y:p.y});
+            this._drawPenPreview();
+          }
+          return;
+        }
+      }
 
       // A first-touch selection never morphs the curve, even if the finger slips.
       if (this._shapeEditing && this._shapeSelectionOnly && down.length === 1) return;
@@ -774,6 +836,30 @@ if (
   }
   const stillDown = this.input.manager.pointers.filter((p) => p.isDown).length;
 
+  if(this._penGesture && pointer.id===this._penGesture.id){
+    const g=this._penGesture;
+    this._cancelPenGesture();
+    if(!this._gestureWasMultiTouch && this._tool==='pen' && this._isPointerInViewport(pointer)){
+      const endWorld=this._screenToWorld(pointer.x,pointer.y);
+      const curved=penGestureIsCurve(g.startScreen,{x:pointer.x,y:pointer.y});
+      const node=updatePenAnchorFromDrag(createPenAnchor(g.anchor.x,g.anchor.y),g.anchor,endWorld,curved);
+      this._pushHistory();
+      this._nodes.push(node);
+      this._selectedNode=this._nodes.length-1;
+      this._selectedPart={type:'node',index:this._selectedNode};
+      this._selectedPiano=-1;
+      this._redrawEditor();
+      this._updatePanel();
+      this._autosaveRecovery();
+    }
+    this._tapCandidate=false;
+    this._panLast=null;
+    this._dragStartScreen=null;
+    this._dragStartWorld=null;
+    this._gestureWasMultiTouch=false;
+    return;
+  }
+
   if (this._shapeSelectionOnly) {
     this._shapeSelectionOnly = false;
     this._shapeDragOffset = null;
@@ -936,6 +1022,7 @@ if (
   }
 });
     this.input.on('pointerupoutside', () => {
+      this._cancelPenGesture();
       if (this._guideDragging) this._autosaveRecovery();
       this._guideDragging = false;
       this._guideDragLast = null;
@@ -1523,13 +1610,55 @@ _toggleModeMenu() {
     this._updatePanel();
   }
 
+  _cancelPenGesture() {
+    this._penGesture=null;
+    this._penPreviewGfx?.clear();
+  }
+
+  _drawPenPreview(){
+    const g=this._penGesture,layer=this._penPreviewGfx;
+    layer?.clear();
+    if(!g||!layer)return;
+    const candidate=updatePenAnchorFromDrag(createPenAnchor(g.anchor.x,g.anchor.y),
+      g.anchor,g.currentWorld,g.curved);
+    const zoom=Math.max(.02,this._editCam?.zoom||1);
+    if(this._nodes.length){
+      const prev=this._nodes[this._nodes.length-1];
+      const sampled=this._sampleCubicBezier(prev,prev.handleOut,candidate.handleIn,candidate,24);
+      layer.lineStyle(3/zoom,0x78ecff,.95);
+      layer.beginPath();
+      layer.moveTo(sampled[0].x,sampled[0].y);
+      for(let i=1;i<sampled.length;i++)layer.lineTo(sampled[i].x,sampled[i].y);
+      layer.strokePath();
+    }
+    layer.fillStyle(0x091724,.96);
+    layer.fillCircle(candidate.x,candidate.y,13/zoom);
+    layer.fillStyle(g.curved?0x54ffb2:0xffffff,1);
+    layer.fillCircle(candidate.x,candidate.y,10/zoom);
+    if(g.curved){
+      layer.lineStyle(1.7/zoom,0xffffff,.95);
+      layer.lineBetween(candidate.handleIn.x,candidate.handleIn.y,
+        candidate.handleOut.x,candidate.handleOut.y);
+      layer.fillStyle(0xffcc59,1);
+      layer.fillCircle(candidate.handleIn.x,candidate.handleIn.y,7/zoom);
+      layer.fillCircle(candidate.handleOut.x,candidate.handleOut.y,7/zoom);
+    }
+  }
+
   _setTool(tool) {
+    this._cancelPenGesture();
+    if(tool==='pen' && this._shapeEditing){
+      this._shapeEditing=false;
+      this._shapeSelected=null;
+    }
     this._tool = tool;
     if (tool === 'start') this._modeTool = 'start';
     if (tool === 'finish') this._modeTool = 'finish';
     if (tool === 'checkpoint') this._modeTool = 'checkpoint';
     if (tool === 'edit' && this._modeTool !== 'edit') this._modeTool = 'edit';
+    if (tool === 'pen') this._modeTool = 'pen';
     this._updateToolButtons();
+    this._redrawEditor();
     this._updatePanel();
   }
 
@@ -1560,6 +1689,7 @@ _updateToolButtons() {
 
   // modo directo
   paintCircle(this._editBtn, this._tool === 'edit', 0x2a4277, 0x8eb8ff);
+  paintCircle(this._penBtn, this._tool === 'pen', 0x1b5b48, 0x70ffc3);
   paintCircle(this._startTopBtn, this._tool === 'start', 0x1f4f2d, 0x8df0a8);
   paintCircle(this._finishTopBtn, this._tool === 'finish', 0x2a4277, 0x8eb8ff);
   paintCircle(this._checkpointTopBtn, this._tool === 'checkpoint', 0x2a4277, 0x8eb8ff);
