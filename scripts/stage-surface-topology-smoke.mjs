@@ -1,19 +1,22 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { buildTrackRibbon } from '../src/game/tracks/TrackBuilder.js';
+import { isImageNativeTrackScene } from '../src/game/tracks/imageNativeTrackIdentity.js';
 
 // Execute the real decorative pass with a recording Graphics sink. No copied
 // geometry algorithm: a finish-to-start line emitted by create() fails this test.
 const sourcePath = process.env.TDR_SURFACE_SOURCE || 'src/game/scenes/RaceSurfaceLongitudinalScene.js';
 const source = fs.readFileSync(sourcePath, 'utf8').replace(/^import .*;\n/gm, '')
   .replace('export class RaceScene', 'class RaceScene');
-const Scene = new Function('MaterialRaceScene', 'addCircuitEnvironment', 'console', `${source}\nreturn RaceScene;`)(
+const Scene = new Function('MaterialRaceScene', 'addCircuitEnvironment', 'isImageNativeTrackScene', 'console', `${source}\nreturn RaceScene;`)(
   class { create() {} }, () => {},
+  isImageNativeTrackScene,
   { warn(...args) { throw new Error(args.join(' ')); } }
 );
 function render(meta, Renderer = Scene) {
   const scene = new Renderer();
   scene.track = { meta, closed: meta.closed !== false, geom: buildTrackRibbon(meta) };
+  scene.trackKey = meta?.trackKey || null;
   const before = JSON.stringify(scene.track, (_, value) => value instanceof Map ? [...value] : value);
   scene._rng = () => () => 0.5;
   scene.add = { graphics() {
@@ -39,6 +42,11 @@ function render(meta, Renderer = Scene) {
 }
 const arafo = JSON.parse(fs.readFileSync('src/game/tracks/library/rally-arafo-los-loros/track.json', 'utf8'));
 const scene = render(arafo);
+// Image-native guard: never generate additional longitudinal kerbs/white borders.
+const photo = render({ ...arafo, trackKey:'karting-tenerife-studio' });
+for (const key of ['_premiumShoulder','_edgeProbe','_cornerCurbs','_longitudinalAsphaltWear']) {
+  assert.equal(photo[key],undefined, key+' must not be generated over the source photograph');
+}
 for (const key of ['_premiumShoulder', '_edgeProbe', '_cornerCurbs']) {
   const segments = scene[key].segments;
   assert(segments.length > 0, `${key} must still render`);
