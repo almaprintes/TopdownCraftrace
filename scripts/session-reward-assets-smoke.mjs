@@ -23,10 +23,11 @@ if(!ui.includes('tdr-session-footer'))fail('session reward states must share one
 if(!css.includes('width:max-content;max-width:92vw'))fail('session result card must use intrinsic content width with a viewport cap');
 if(!css.includes('.tdr-session-card.is-closed .tdr-session-reward-body{display:none}'))fail('closed chest must remove hidden rewards from layout flow');
 if(!css.includes('.tdr-session-card.is-open .tdr-session-chest-stage{display:none}'))fail('opened chest must remove the chest stage from layout flow');
-const cardRule=css.match(/\\.tdr-session-card\\{([^}]+)\\}/)?.[1]||'';
-const mainRule=css.match(/\\.tdr-session-main\\{([^}]+)\\}/)?.[1]||'';
-const footerRule=css.match(/\\.tdr-session-footer\\{([^}]+)\\}/)?.[1]||'';
-const headerRule=css.match(/\\.tdr-session-header\\{([^}]+)\\}/)?.[1]||'';
+const cssRule=name=>css.split('.'+name+'{')[1]?.split('}')[0]||'';
+const cardRule=cssRule('tdr-session-card');
+const mainRule=cssRule('tdr-session-main');
+const footerRule=cssRule('tdr-session-footer');
+const headerRule=cssRule('tdr-session-header');
 if(!cardRule.includes('display:flex;flex-direction:column;min-height:0')||!cardRule.includes('overflow:hidden'))
   fail('modal must use a height-capped flex column and must not scroll or clip its footer');
 if(!mainRule.includes('flex:1 1 auto')||!mainRule.includes('min-height:0')||!mainRule.includes('overflow-y:auto'))
