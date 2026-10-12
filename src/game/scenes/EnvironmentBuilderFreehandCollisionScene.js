@@ -12,6 +12,7 @@ export class EnvironmentBuilderScene extends Current {
     this._zoneSelected=null;
     this._zoneDraft=null;
     this._zoneGesture=null;
+    this._zoneStrokeStarts=[];
     super.create();
     this._collisionZoneInk=this.add.graphics().setDepth(23.5);
     this.cameras.main.ignore(this._collisionZoneInk);
@@ -30,9 +31,11 @@ export class EnvironmentBuilderScene extends Current {
     section.className='es-freehand-collision-zones';
     section.innerHTML=`<h3>ZONAS · COLISIÓN</h3>
       <p style="font-size:10px;font-weight:500;line-height:1.45;color:#9bb1cd;margin:4px 0 8px">
-      Rodea con el dedo una arboleda, edificio u obstáculo. Al soltar, se cierra la zona. No aparecerá en carrera.</p>
+      Dibuja el contorno en varios trazos. Puedes mover el mapa y continuar; cierra solo cuando pulses TERMINAR ZONA.</p>
       <div class="es-grid two" style="grid-template-columns:repeat(2,minmax(0,1fr));gap:7px">
         <button data-zone="draw">✎ MANO ALZADA</button>
+        <button data-zone="finish">✓ TERMINAR ZONA</button>
+        <button data-zone="undo">↶ DESHACER TRAZO</button>
         <button data-zone="edit">EDITAR ZONAS</button>
         <button data-zone="cancel">CANCELAR TRAZO</button>
         <button data-zone="delete" class="danger">BORRAR ZONA</button>
@@ -43,6 +46,8 @@ export class EnvironmentBuilderScene extends Current {
       e.preventDefault();e.stopPropagation();fn();this._syncDomStatus();
     });
     wire('draw',()=>this._startFreehandZones());
+    wire('finish',()=>this._finishFreehandZone());
+    wire('undo',()=>this._undoFreehandStroke());
     wire('edit',()=>this._editFreehandZones());
     wire('cancel',()=>this._cancelFreehandZone());
     wire('delete',()=>this._deleteFreehandZone());
@@ -62,25 +67,49 @@ export class EnvironmentBuilderScene extends Current {
     this._penDraft=null;this._penGesture=null;this._collisionSelected=null;
     this._selected=this._selectedSurface=this._selRail=null;
     this._selectionG?.clear?.();
-    this._zoneDraft=null;this._zoneGesture=null;this._zoneSelected=null;
+    this._zoneDraft=[];this._zoneStrokeStarts=[];this._zoneGesture=null;this._zoneSelected=null;
     this._mode='collision-zone-draw';this._drawCollisionPen?.();
     this._drawCollisionZones();this._syncDomStatus();
     this._flash?.('MANO ALZADA · RODEA LA ZONA Y SUELTA PARA CERRAR');
   }
+  _finishFreehandZone(){
+    if(this._zoneGesture){this._flash?.('SUELTA EL DEDO ANTES DE TERMINAR');return;}
+    const points=this._zoneDraft||[];
+    const zoom=Math.max(.1,this._editCam?.zoom||1);
+    const zone=simplifyFreehandZone(points,{tolerance:Math.min(14,Math.max(2,3/zoom)),maxPoints:180});
+    if(!zone){this._flash?.('ZONA NO VÁLIDA · REVISA QUE EL CONTORNO NO SE CRUCE');return;}
+    zone.id=`solid-zone-${Date.now()}-${this._collisionZones.length}`;
+    this._collisionZones.push(zone);this._zoneDraft=[];this._zoneStrokeStarts=[];
+    this._zoneSelected=null;this._mode='collision-zone-draw';
+    this._drawCollisionZones();this._syncDomStatus();
+    this._builderToast?.('ZONA CERRADA · PULSA GUARDAR PARA CONSERVARLA');
+  }
+  _undoFreehandStroke(){
+    if(this._zoneGesture){this._flash?.('SUELTA EL DEDO PARA DESHACER');return;}
+    if(this._zoneDraft?.length&&this._zoneStrokeStarts?.length){
+      const start=this._zoneStrokeStarts.pop();
+      this._zoneDraft.length=start;
+      this._drawCollisionZones();this._syncDomStatus();
+      this._flash?.('ÚLTIMO TRAZO DESHECHO');
+      return;
+    }
+    this._undoLast?.();
+  }
   _editFreehandZones(){
-    this._zoneDraft=null;this._zoneGesture=null;
+    // Preserve an unfinished drawing when temporarily switching to selection.
+    this._zoneGesture=null;
     this._mode=this._zoneSelected?'collision-zone-edit':'select';
     this._drawCollisionZones();this._syncDomStatus();
   }
   _cancelFreehandZone(){
-    this._zoneDraft=null;this._zoneGesture=null;
+    this._zoneDraft=null;this._zoneStrokeStarts=[];this._zoneGesture=null;
     if(this._mode==='collision-zone-draw')this._mode='select';
     this._drawCollisionZones();this._syncDomStatus();
   }
   _deleteFreehandZone(){
     if(!this._zoneSelected){this._flash?.('SELECCIONA UNA ZONA');return;}
     this._collisionZones=this._collisionZones.filter(z=>z!==this._zoneSelected);
-    this._zoneSelected=null;this._zoneDraft=null;this._zoneGesture=null;
+    this._zoneSelected=null;this._zoneDraft=null;this._zoneStrokeStarts=[];this._zoneGesture=null;
     this._mode='select';this._drawCollisionZones();this._syncDomStatus();
     this._flash?.('ZONA DE COLISIÓN BORRADA');
   }
@@ -118,8 +147,10 @@ export class EnvironmentBuilderScene extends Current {
       const w=world(p);
       const zoom=Math.max(.1,this._editCam?.zoom||1);
       if(this._mode==='collision-zone-draw'){
-        this._zoneDraft=[{x:w.x,y:w.y}];
-        this._zoneGesture={pointerId:p.id,kind:'draw'};
+        // A short tap does not add geometry. Only a deliberate stroke does.
+        const start=this._zoneDraft?.length||0;
+        this._zoneDraft=this._zoneDraft||[];
+        this._zoneGesture={pointerId:p.id,kind:'draw',start,startScreen:{x:p.x,y:p.y},origin:w,moved:false};
         this._freePan=this._panStart=null;this._drawCollisionZones();return;
       }
       if(this._mode!=='select'&&this._mode!=='collision-zone-edit')return;
@@ -150,6 +181,12 @@ export class EnvironmentBuilderScene extends Current {
       if(gesture.kind==='draw'){
         const z=Math.max(.1,this._editCam?.zoom||1),minStep=Math.max(2,3/z);
         const points=this._zoneDraft;
+        if(!gesture.moved){
+          if(Math.hypot(p.x-gesture.startScreen.x,p.y-gesture.startScreen.y)<9)return;
+          gesture.moved=true;
+          this._zoneStrokeStarts.push(gesture.start);
+          points.push({x:gesture.origin.x,y:gesture.origin.y});
+        }
         if(points?.length&&dist(points.at(-1),w)>=minStep&&points.length<1800){
           points.push({x:w.x,y:w.y});this._drawCollisionZones();
         }
@@ -168,18 +205,17 @@ export class EnvironmentBuilderScene extends Current {
       if(!gesture||p?.id!==gesture.pointerId)return;
       this._zoneGesture=null;
       if(gesture.kind==='draw'){
-        if(!outside&&this._inside?.(p)){
-          const w=world(p);
-          if(dist(this._zoneDraft.at(-1),w)>2)this._zoneDraft.push({x:w.x,y:w.y});
+        if(!gesture.moved){
+          // Taps while locating the next sector must not leave accidental points.
+          this._flash?.('TRAZO NO INICIADO · ARRASTRA PARA DIBUJAR');
+        }else{
+          if(!outside&&this._inside?.(p)){
+            const w=world(p);
+            if(this._zoneDraft.length&&dist(this._zoneDraft.at(-1),w)>2)
+              this._zoneDraft.push({x:w.x,y:w.y});
+          }
+          this._flash?.('TRAZO AÑADIDO · PUEDES MOVER EL MAPA O SEGUIR DIBUJANDO');
         }
-        const zoom=Math.max(.1,this._editCam?.zoom||1);
-        const zone=simplifyFreehandZone(this._zoneDraft,{tolerance:Math.min(14,Math.max(2,3/zoom)),maxPoints:180});
-        if(zone){
-          zone.id=`solid-zone-${Date.now()}-${this._collisionZones.length}`;
-          this._collisionZones.push(zone);
-          this._builderToast?.('ZONA CERRADA · PULSA GUARDAR PARA CONSERVARLA');
-        }else this._flash?.('ZONA NO VÁLIDA · RODEA UNA SUPERFICIE SIN CRUZAR EL TRAZO');
-        this._zoneDraft=null;
       }else if(this._zoneSelected&&!validCollisionZone(this._zoneSelected)){
         this._zoneSelected.points=gesture.original;
         this._flash?.('CAMBIO CANCELADO · POLÍGONO NO VÁLIDO');
@@ -226,7 +262,7 @@ export class EnvironmentBuilderScene extends Current {
       root.querySelectorAll('.es-left button').forEach(b=>b.classList.toggle('on',b.dataset.act===active));
     }
     const count=this._zoneUi?.querySelector('[data-zone-count]');
-    if(count)count.textContent=`${this._collisionZones?.length||0} zonas cerradas · ${this._zoneSelected?'1 seleccionada':'arrastra para dibujar'}`;
+    if(count)count.textContent=`${this._collisionZones?.length||0} zonas cerradas · ${this._zoneDraft?.length||0} puntos en curso · ${this._zoneSelected?'1 seleccionada':'TERMINAR ZONA para cerrar'}`;
   }
 
   _project(){
@@ -236,13 +272,13 @@ export class EnvironmentBuilderScene extends Current {
     return p;
   }
   _applyProject(p){
-    this._zoneSelected=null;this._zoneGesture=null;this._zoneDraft=null;
+    this._zoneSelected=null;this._zoneGesture=null;this._zoneDraft=null;this._zoneStrokeStarts=[];
     super._applyProject?.(p);
     this._collisionZones=(p?.collisionZones||[]).filter(validCollisionZone).map(copy);
     this._drawCollisionZones();this._syncDomStatus();
   }
   _openRealTrack(trackId,resetProject=true){
-    this._collisionZones=[];this._zoneSelected=null;this._zoneDraft=null;this._zoneGesture=null;
+    this._collisionZones=[];this._zoneSelected=null;this._zoneDraft=null;this._zoneStrokeStarts=[];this._zoneGesture=null;
     super._openRealTrack?.(trackId,resetProject);
     this._drawCollisionZones();this._syncDomStatus();
   }
