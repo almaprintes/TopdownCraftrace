@@ -42,6 +42,7 @@ jobs:
           node scripts/environment-studio-native-photo-smoke.mjs
           node scripts/environment-collision-pen-smoke.mjs
           node scripts/environment-freehand-zone-smoke.mjs
+          node scripts/environment-collision-workflow-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
           test -f src/game/scenes/RaceGamepadScene.js
