@@ -47,6 +47,7 @@ jobs:
           node scripts/environment-collision-workflow-smoke.mjs
           node scripts/environment-completed-pen-recovery-smoke.mjs
           node scripts/environment-safe-exit-smoke.mjs
+          node scripts/session-report-navigation-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
           test -f src/game/scenes/RaceGamepadScene.js
