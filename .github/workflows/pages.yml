@@ -40,6 +40,7 @@ jobs:
           node scripts/install-karting-tenerife-source.mjs
           node scripts/karting-official-source-smoke.mjs
           node scripts/environment-studio-native-photo-smoke.mjs
+          node scripts/environment-collision-pen-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
           test -f src/game/scenes/RaceGamepadScene.js
