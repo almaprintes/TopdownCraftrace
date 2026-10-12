@@ -7,6 +7,9 @@ import {sampleCollisionLine} from '../src/game/environment/CollisionPenGeometry.
 const ios={ua:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',screenMin:390,dpr:3};
 assert.equal(compactIphoneRenderBudget({...ios,preset:'high'}).resolution,1);
 assert.equal(compactIphoneRenderBudget({...ios,preset:'medium'}).resolution,1);
+assert.equal(compactIphoneRenderBudget({...ios,preset:'medium'}).fpsLimit,30);
+assert.equal(compactIphoneRenderBudget({...ios,preset:'performance'}).fpsLimit,30);
+assert.equal(compactIphoneRenderBudget({...ios,preset:'high'}).fpsLimit,0,'High mode retains full frame cadence');
 assert.equal(compactIphoneRenderBudget({...ios,preset:'ultra'}).resolution,1.5,'user-controlled ultra retains sharpness');
 assert.equal(compactIphoneRenderBudget({...ios,preset:'performance'}).resolution,1);
 assert.equal(compactIphoneRenderBudget({...ios,screenMin:440,preset:'high'}),null,'large phones unchanged');
@@ -56,6 +59,7 @@ assert.ok(checks>=200,'Contact detection test sample count');
 assert.ok(candidates<original*.75,'Index must prune >25% of broad-phase candidates');
 const game=readFileSync('src/game/game.js','utf8');
 assert.ok(game.includes('compactIphoneRenderBudget({ua:'));
+assert.ok(game.includes('iosDevice?Number(vp.iosFpsLimit||0):0'),'iOS performance preset must enforce fps.limit');
 assert.ok(game.includes("video?.showFPS===true"),'DEV measurement overlay must be opt-in');
 assert.ok(!game.includes("if(!IS_PROD_BUILD&&!/Android/i.test(String(navigator?.userAgent||'')))installRacePerformanceProbe"),
   'The always-on secondary iOS requestAnimationFrame loop must be removed');
