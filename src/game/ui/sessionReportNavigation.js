@@ -2,8 +2,8 @@
 // Do not remove or recalculate stats: move the existing DOM sections into
 // three explicit pages, preserving F1 sector tables, verdicts and exports.
 const TABS=[
-  {id:'resumen',name:'RESUMEN',next:'VER CONDUCCIÓN →'},
-  {id:'conduccion',name:'CONDUCCIÓN',next:'VER VUELTAS →'},
+  {id:'resumen',name:'RESUMEN',next:'SIGUIENTE →'},
+  {id:'conduccion',name:'CONDUCCIÓN',next:'SIGUIENTE →'},
   {id:'vueltas',name:'VUELTAS',next:null}
 ];
 
@@ -30,6 +30,7 @@ export function installSessionReportNavigation(root){
     const page=doc.createElement('section');
     page.className='tdr-report-page';
     page.dataset.reportPage=tab.id;
+    page.id=`tdr-report-page-${tab.id}`;
     page.setAttribute('role','tabpanel');
     page.setAttribute('aria-label',tab.name);
     page.hidden=i!==0;
@@ -73,7 +74,7 @@ export function installSessionReportNavigation(root){
       min-height:0!important;padding:0!important;box-sizing:border-box!important
     }
     .tdr-report-paged .tdr-report-tabs{
-      flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+      flex:0 0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) minmax(96px,auto);
       gap:6px;padding:9px 12px 8px;background:#0b1423;
       border-bottom:1px solid #22364d
     }
@@ -93,6 +94,11 @@ export function installSessionReportNavigation(root){
     }
     .tdr-report-paged .tdr-report-tab[aria-selected="true"] .step{
       background:#5ddcf2;border-color:#5ddcf2;color:#07101b
+    }
+    .tdr-report-paged .tdr-report-export{
+      min-width:96px;min-height:46px;padding:8px 10px;border:1px solid #385673;
+      border-radius:10px;background:#15263a;color:#cce7f4;
+      font:800 11px system-ui;letter-spacing:.02em;cursor:pointer;touch-action:manipulation
     }
     .tdr-report-paged .scroll{
       flex:1 1 auto!important;min-height:0!important;
@@ -121,9 +127,9 @@ export function installSessionReportNavigation(root){
       font:800 11px system-ui;cursor:pointer;touch-action:manipulation
     }
     .tdr-report-paged .tdr-report-scroll-hint{
-      flex:0 0 auto;min-height:20px;padding:2px 12px;
-      background:#101f30;color:#91bad4;text-align:center;
-      font:800 10px system-ui;letter-spacing:.07em;border-top:1px solid #264761
+      flex:0 0 auto;min-height:25px;padding:5px 12px;
+      background:#10263a;color:#c1edff;text-align:center;
+      font:850 10px system-ui;letter-spacing:.07em;border-top:1px solid #335c7b
     }
     .tdr-report-paged .tdr-report-scroll-hint[hidden]{display:none!important}
     .tdr-report-paged .actions{
@@ -139,8 +145,8 @@ export function installSessionReportNavigation(root){
       font-size:12px!important;font-weight:900!important;cursor:pointer
     }
 
-    .tdr-report-paged .actions [data-a="export"],
     .tdr-report-paged .actions [data-a="report-back"]{grid-column:1!important;grid-row:1!important}
+    .tdr-report-paged .actions [data-a="report-back"]:disabled{opacity:.4;cursor:default}
     .tdr-report-paged .actions [data-a="report-next"],
     .tdr-report-paged .actions [data-a="exit"]{grid-column:2!important;grid-row:1!important}
     .tdr-report-paged .actions .tdr-report-next{
@@ -150,7 +156,8 @@ export function installSessionReportNavigation(root){
     .tdr-report-paged .actions [hidden]{display:none!important}
     @media (orientation:landscape) and (max-height:550px){
       .tdr-report-paged .tdr-report-tabs{padding:5px 10px;gap:5px}
-      .tdr-report-paged .tdr-report-tab{min-height:38px;font-size:11px;gap:5px}
+      .tdr-report-paged .tdr-report-tab{min-height:40px;font-size:11px;gap:5px}
+      .tdr-report-paged .tdr-report-export{min-height:40px}
       .tdr-report-paged .actions{padding:6px 10px!important}
       .tdr-report-paged .actions button{min-height:40px!important}
 
@@ -158,11 +165,12 @@ export function installSessionReportNavigation(root){
       .tdr-report-paged .tdr-report-page>.hero{min-height:66px;margin-bottom:9px!important}
       .tdr-report-paged .tdr-report-section-hero{padding-bottom:8px}
       .tdr-report-paged .tdr-report-section-hero h2{font-size:20px}
-      .tdr-report-paged .tdr-report-scroll-hint{min-height:17px;padding:1px 10px;font-size:9px}
+      .tdr-report-paged .tdr-report-scroll-hint{min-height:21px;padding:3px 10px;font-size:9px}
     }
     @media(max-width:460px){
       .tdr-report-paged .tdr-report-tabs{padding:8px 6px;gap:4px}
       .tdr-report-paged .tdr-report-tab{font-size:9px;gap:4px;min-height:43px}
+      .tdr-report-paged .tdr-report-export{min-width:70px;padding:5px;font-size:9px}
     }
   `;
   root.appendChild(style);
@@ -170,12 +178,16 @@ export function installSessionReportNavigation(root){
   const tabs=doc.createElement('nav');
   tabs.className='tdr-report-tabs';
   tabs.setAttribute('aria-label','Secciones del informe de sesión');
+  tabs.setAttribute('role','tablist');
   const tabButtons=TABS.map((tab,i)=>{
     const button=doc.createElement('button');
     button.type='button';button.className='tdr-report-tab';
     button.dataset.reportTab=tab.id;
+    button.id=`tdr-report-tab-${tab.id}`;
+    button.setAttribute('role','tab');
+    pages[i].setAttribute('aria-labelledby',button.id);
     button.innerHTML=`<span class="step">${i+1}</span><span>${tab.name}</span>`;
-    button.setAttribute('aria-controls',tab.id);
+    button.setAttribute('aria-controls',pages[i].id);
     tabs.appendChild(button);
     return button;
   });
@@ -185,9 +197,15 @@ export function installSessionReportNavigation(root){
   next.type='button';next.dataset.a='report-next';next.className='tdr-report-next';
   const back=doc.createElement('button');
   back.type='button';back.dataset.a='report-back';back.textContent='← ANTERIOR';
-  actions.appendChild(next);actions.appendChild(back);
   const exportBtn=actions.querySelector('[data-a="export"]');
   const exitBtn=actions.querySelector('[data-a="exit"]');
+  if(exportBtn){
+    exportBtn.classList.add('tdr-report-export');
+    exportBtn.setAttribute('aria-label','Exportar informe de sesión');
+    tabs.appendChild(exportBtn);
+  }
+  actions.appendChild(back);actions.appendChild(next);
+  if(exitBtn)actions.appendChild(exitBtn);
   const continueBtn=actions.querySelector('[data-a="continue"]');
   // This button resumes an unfinished/manual session and is intentionally
   // outside the two-column footer, which must never change shape.
@@ -217,8 +235,7 @@ export function installSessionReportNavigation(root){
     const last=page===2;
     if(next){next.hidden=last;next.textContent=TABS[page].next||'';}
 
-    if(back)back.hidden=page!==1;
-    if(exportBtn)exportBtn.hidden=page===1;
+    if(back){back.hidden=false;back.disabled=page===0;}
     if(exitBtn)exitBtn.hidden=!last;
     // Final-session caller may explicitly hide resume with style.display.
     if(continueBtn)continueBtn.hidden=!last;
