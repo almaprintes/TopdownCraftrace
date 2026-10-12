@@ -135,6 +135,29 @@ export class EnvironmentBuilderScene extends Current {
     this._collisionPausedMode=null;
     super._cancelFreehandZone?.();
   }
+  _hasUnfinishedCollisionDraft(){
+    const n=Number(this._penDraft?.nodes?.length)||0;
+    const z=Number(this._zoneDraft?.length)||0;
+    if(n){
+      this._flash?.(`PLUMA SIN TERMINAR (${n} NODOS) · PULSA TERMINAR ANTES DE GUARDAR O EXPORTAR`);
+      return true;
+    }
+    if(z){
+      this._flash?.('ZONA SIN TERMINAR · PULSA TERMINAR ANTES DE GUARDAR O EXPORTAR');
+      return true;
+    }
+    return false;
+  }
+  _save(){
+    if(this._hasUnfinishedCollisionDraft())return;
+    return super._save?.();
+  }
+  _export(){
+    // Prevent an incomplete pen/zone from silently disappearing from the
+    // downloadable JSON. Only finished authored geometry is serialized.
+    if(this._hasUnfinishedCollisionDraft())return;
+    return super._export?.();
+  }
   _applyProject(p){
     this._collisionPausedMode=null;
     super._applyProject?.(p);
