@@ -46,7 +46,8 @@ export function installSessionReportNavigation(root){
   // Keep the same visual hierarchy on every tab. A changing title position
   // and a modal that shrink-wraps its content made all three feel unrelated.
   const baseHero=pages[0].querySelector('.hero');
-  const trackLabel=baseHero?.querySelector('h2')?.textContent?.trim()||'INFORME DE CARRERA';
+  // The circuit name belongs to RESUMEN; repeated track labels on other
+  // tabs waste space and make the report look like three separate reports.
   const carLabel=baseHero?.querySelector('p')?.textContent?.trim()||'';
   const lapsLabel=baseHero?.querySelector('.badge')?.textContent?.trim()||'';
   for(const [i,heading] of [[1,'CONDUCCIÓN'],[2,'VUELTAS Y SECTORES']]){
@@ -54,7 +55,7 @@ export function installSessionReportNavigation(root){
     const copy=doc.createElement('div');
     const kicker=doc.createElement('small');kicker.textContent='INFORME DE SESIÓN';
     const title=doc.createElement('h2');title.textContent=heading;
-    const subtitle=doc.createElement('p');subtitle.textContent=[trackLabel,carLabel].filter(Boolean).join(' · ');
+    const subtitle=doc.createElement('p');subtitle.textContent=carLabel;
     copy.append(kicker,title,subtitle);hero.appendChild(copy);
     if(lapsLabel){const pill=doc.createElement('div');pill.className='badge';pill.textContent=lapsLabel;hero.appendChild(pill);}
     pages[i].insertBefore(hero,pages[i].children[0]);

@@ -22,7 +22,8 @@ function element(tag='div',label=''){
     querySelector(selector){
       const check=n=>selector.startsWith('[data-a=')?n.dataset?.a===selector.match(/"(.+?)"/)?.[1]:
         selector.startsWith('.')?n.className.split(' ').includes(selector.slice(1)):
-        selector.startsWith('[data-report-')?!!n.dataset.reportPage:false;
+        selector.startsWith('[data-report-')?!!n.dataset.reportPage:
+        n.tagName===selector.toUpperCase();
       const visit=n=>{for(const child of n.children){if(check(child))return child;const found=visit(child);if(found)return found;}return null;};
       return visit(this);
     }
@@ -41,6 +42,11 @@ const exitBtn=element('button');exitBtn.dataset.a='exit';
 const continueBtn=element('button');continueBtn.dataset.a='continue';
 actions.append(continueBtn,exportBtn,exitBtn);
 const hero=element('div');hero.className='hero';
+const heroCopy=element('div');
+const originalTrack=element('h2','CIRCUITO ATLÁNTICO');
+const originalCar=element('p','HÉLIX Spark · 45 s');
+const heroBadge=element('div','1 VUELTAS');heroBadge.className='badge';
+heroCopy.append(originalTrack,originalCar);hero.append(heroCopy,heroBadge);
 const headline=element('div');headline.className='headline';
 const stats=element('div');stats.className='grid';
 const usage=element('h3','Uso de controles');
@@ -65,6 +71,18 @@ assert.equal(pages.length,3);
 assert.deepEqual(pages[0].children,[hero,headline,stats],'Summary must retain key session statistics');
 assert.equal(pages[1].children[0].className,'hero tdr-report-section-hero');
 assert.deepEqual(pages[1].children.slice(1),[usage,bars,braking],'Driving must retain all control statistics');
+for(const [i,heading] of [[1,'CONDUCCIÓN'],[2,'VUELTAS Y SECTORES']]){
+  const sectionHero=pages[i].children[0];
+  assert.equal(sectionHero.querySelector('h2')?.textContent,heading,'Section title must identify its content');
+  assert.equal(sectionHero.querySelector('p')?.textContent,'HÉLIX Spark · 45 s',
+    'Subsections keep only car and duration, not the circuit name');
+  assert.ok(!sectionHero.querySelector('p').textContent.includes('CIRCUITO ATLÁNTICO'),
+    'Circuit name must appear in summary, not be repeated on every tab');
+  assert.equal(sectionHero.querySelector('.badge')?.textContent,'1 VUELTAS',
+    'Existing lap count pill is preserved');
+}
+assert.equal(pages[0].querySelector('h2')?.textContent,'CIRCUITO ATLÁNTICO',
+  'Summary keeps the real track name');
 assert.equal(pages[2].children[0].className,'hero tdr-report-section-hero');
 assert.deepEqual(pages[2].children.slice(1),[continueBtn,laps,sectors,legend,insight],'Laps must retain complete sector report and manual resume');
 const next=actions.querySelector('[data-a="report-next"]');
