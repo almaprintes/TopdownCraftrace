@@ -9,5 +9,5 @@ export function compactIphoneRenderBudget({ua='',screenMin=Infinity,preset='high
   const caps={performance:1,medium:1,high:1.0,ultra:1.5};
   const selected=Object.prototype.hasOwnProperty.call(caps,preset)?preset:'high';
   const resolution=Math.min(originalDpr,caps[selected]);
-  return {resolution,preset:selected,reason:'compact-ios-thermal-budget'};
+  return {resolution,preset:selected,fpsLimit:selected==='performance'||selected==='medium'?30:0,reason:'compact-ios-thermal-budget'};
 }
