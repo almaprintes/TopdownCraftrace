@@ -40,6 +40,7 @@ jobs:
           node scripts/install-karting-tenerife-source.mjs
           node scripts/karting-official-source-smoke.mjs
           node scripts/karting-native-photo-visual-smoke.mjs
+          node scripts/ios-photo-thermal-budget-smoke.mjs
           node scripts/karting-final-environment-smoke.mjs
           node scripts/environment-studio-native-photo-smoke.mjs
           node scripts/environment-collision-pen-smoke.mjs
