@@ -53,8 +53,8 @@ for(const symbol of ['compileCollisionZone','resolveCollisionZone','solidZones',
   'resolveBodyAgainstSolidZones(scene,player)','resolveBodyAgainstSolidZones(scene,ai?.body)'])
   assert.ok(runtime.includes(symbol),'missing zone race physics '+symbol);
 const game=readFileSync('src/game/game.js','utf8');
-assert.ok(game.includes("import('./scenes/EnvironmentBuilderCollisionWorkflowScene.js')"),
-  'DEV lazy scene must load resumable collision editor');
+assert.ok(game.includes("import('./scenes/EnvironmentBuilderSafeWorkflowScene.js')"),
+  'DEV lazy scene must load protected collision editor');
 const pen=readFileSync('src/game/scenes/EnvironmentBuilderCollisionPenScene.js','utf8');
 assert.ok(pen.includes('this._collisionZones=[];'),'clear-all must erase collision areas');
 assert.ok(pen.includes('(this._collisionZones?.length||0)'),'zone-only project must be clearable');
