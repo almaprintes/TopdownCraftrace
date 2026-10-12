@@ -13,7 +13,10 @@ for(const preset of ['performance','medium','high','ultra']){
 const game=readFileSync(new URL('../src/game/game.js',import.meta.url),'utf8');
 assert.match(game,/androidFrameBudget\(preset,android\)\.targetFps/);
 assert.match(game,/limit:frameLimit/);
-assert.match(game,/frameLimit=androidDevice\?targetFps:0/);
+// Android keeps its exact 30/45/60 limits. Compact iPhone users may now
+// voluntarily choose Performance/Medium (30) to reduce heat; High stays at 60.
+assert.match(game,/frameLimit=androidDevice\?targetFps:\(iosDevice\?Number\(vp\.iosFpsLimit\|\|0\):0\)/);
+assert.match(game,/iosFpsLimit:compactBudget\?\.fpsLimit\|\|0/);
 assert.match(game,/powerPreference:'high-performance'/,
   'GPU renderer policy stays unchanged for A/B profiling');
-console.log('Android battery frame-limit smoke: OK (30/45/60 FPS; iOS unchanged)');
+console.log('Android battery frame-limit smoke: OK (30/45/60 FPS; iOS opt-in lower-FPS presets)');
