@@ -194,6 +194,17 @@ export function applyKartingPreviewPhysics(scene){
 // The master image is the entire visual environment. The only retained
 // race objects are logical gates, physics and the player's car/HUD.
 export function clearImageNativeTrackOverlays(scene) {
+  // Clean up a runtime beauty pass that may have been created before the
+  // photograph finished decoding. Its geometry-mask road sits at depth 10.35
+  // and otherwise paints over the hand-edited photographic asphalt.
+  const pass=scene._exactRuntimeBeautyPass;
+  if(pass){
+    for(const obj of pass.masked||[])try{obj?.clearMask?.(false);}catch{}
+    for(const obj of pass.objects||[])try{obj?.destroy?.();}catch{}
+    try{pass.mask?.destroy?.();}catch{}
+    try{pass.gfx?.destroy?.();}catch{}
+    scene._exactRuntimeBeautyPass=null;
+  }
   // Defensive cleanup: old Karting-specific layers could already have
   // placed sprites during a prior async load. The user PNG is the full scene.
   for (const layer of [
