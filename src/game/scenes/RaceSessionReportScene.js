@@ -1,6 +1,7 @@
 import { RaceScene as CurrentRaceScene } from './RaceProgressiveBrakeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { pxpsToKmh } from '../cars/speedUnits.js';
+import { installSessionReportNavigation } from '../ui/sessionReportNavigation.js';
 
 function clamp(n,a,b){ return Math.max(a,Math.min(b,n)); }
 function fmtTime(ms){
@@ -247,6 +248,7 @@ export class RaceScene extends CurrentRaceScene {
     root.innerHTML=`<style>${this._reportCss()} .veil{position:fixed;inset:0;z-index:10000;background:rgba(2,5,10,.78);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 10px) 10px calc(env(safe-area-inset-bottom,0px) + 10px)}.modal{width:min(94vw,520px);max-height:90vh;background:#080d16;border:1px solid #25354a;border-radius:22px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.55);display:flex;flex-direction:column}.scroll{overflow:auto;-webkit-overflow-scrolling:touch}.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;padding:10px;border-top:1px solid #1c2939;background:#0a101b}.actions button{border:1px solid #26364b;border-radius:12px;padding:11px 6px;background:#121c2a;color:white;font:800 10px system-ui;letter-spacing:.04em}.actions .primary{background:#e9f2ff;color:#07111e;border-color:#e9f2ff}</style><div class="veil"><div class="modal"><div class="scroll"><div class="report">${this._reportInnerHtml(r)}</div></div><div class="actions"><button data-a="continue">CONTINUAR</button><button data-a="export">EXPORTAR</button><button class="primary" data-a="exit">SALIR</button></div></div></div>`;
     document.body.appendChild(root);
     this._sessionReportModal=root;
+    installSessionReportNavigation(root);
     root.querySelector('[data-a="continue"]')?.addEventListener('click',()=>this._closeSessionReport(true));
     root.querySelector('[data-a="export"]')?.addEventListener('click',()=>this._exportSessionReport(r));
     root.querySelector('[data-a="exit"]')?.addEventListener('click',()=>{
