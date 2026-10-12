@@ -36,7 +36,8 @@ jobs:
         working-directory: dev-src
         shell: bash
         run: |
-          node scripts/install-karting-tenerife-source.mjs --metadata-only
+          npm ci --no-audit --no-fund
+          node scripts/install-karting-tenerife-source.mjs
           node scripts/karting-official-source-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
