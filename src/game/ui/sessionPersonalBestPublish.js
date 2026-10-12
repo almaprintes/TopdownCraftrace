@@ -4,7 +4,7 @@
 export function sessionPersonalBest(report,previousMs){
   const lapMs=Math.round(Number(report?.bestMs));
   if(!Number.isFinite(lapMs)||lapMs<=1000)return null;
-  if(!Array.isArray(report?.laps)||!report.laps.some(l=>Math.abs(Number(l?.lapMs)-lapMs)<2))return null;
+  if(!Array.isArray(report?.laps)||!report.laps.some(l=>l?.valid!==false&&l?.invalid!==true&&Math.abs(Number(l?.lapMs)-lapMs)<2))return null;
   const previous=Number(previousMs);
   const hasPrevious=Number.isFinite(previous)&&previous>1000;
   if(hasPrevious&&lapMs>=previous-0.5)return null;
