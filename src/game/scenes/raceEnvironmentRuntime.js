@@ -2,6 +2,7 @@ import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { pathPoint, pathLength } from '../environment/EditableSpline.js';
 import { sampleCollisionLine } from '../environment/CollisionPenGeometry.js';
+import {compileCollisionZone,resolveCollisionZone} from '../environment/FreehandCollisionZones.js';
 import { installRaceCaptureRuntime } from './raceCaptureRuntime.js';
 import { campaignAssetUrl, TAS_DEFAULT_CAMPAIGN } from '../advertising/trackAdvertising.js';
 
@@ -44,12 +45,35 @@ function spawnEnvironment(scene,env){if(!env)return;const objects=[],colliders=[
     const points=sampleCollisionLine(line,18),half=Math.max(4,Math.min(36,Number(line.halfThickness)||9));
     for(let i=1;i<points.length;i++)addSegmentCollider(colliders,points[i-1],points[i],half,'collision');
   }
-  scene._tdrRaceEnvironment={objects,colliders,slowZones};scene.events.once('shutdown',()=>{const runtime=scene._tdrRaceEnvironment;for(const obj of runtime?.objects||[])try{obj?.destroy?.();}catch{}scene._tdrRaceEnvironment=null;removeLoadingOverlay(scene);});}
+  const solidZones=(env.collisionZones||[]).map(compileCollisionZone).filter(Boolean);
+  scene._tdrRaceEnvironment={objects,colliders,slowZones,solidZones};scene.events.once('shutdown',()=>{const runtime=scene._tdrRaceEnvironment;for(const obj of runtime?.objects||[])try{obj?.destroy?.();}catch{}scene._tdrRaceEnvironment=null;removeLoadingOverlay(scene);});}
 function resolveBodyAgainstColliders(scene,body,rig=null){if(!body?.body)return;const list=scene?._tdrRaceEnvironment?.colliders||[];if(!list.length)return;const physicsRadius=Math.max(8,Number(body.body.radius)||14);let px=Number(body.x),py=Number(body.y),vx=Number(body.body.velocity?.x)||0,vy=Number(body.body.velocity?.y)||0;for(let pass=0;pass<2;pass++)for(const c of list){if(Number.isFinite(c.radius)){const dx=px-c.cx,dy=py-c.cy,d=Math.hypot(dx,dy),min=physicsRadius+c.radius;if(d>=min)continue;const nx=d>1e-6?dx/d:1,ny=d>1e-6?dy/d:0,push=min-d+.75;px+=nx*push;py+=ny*push;const vn=vx*nx+vy*ny;if(vn<0){vx-=vn*1.18*nx;vy-=vn*1.18*ny;}continue;}// Broad-phase reject for potentially long traced spline walls on mobiles.
   const reach=physicsRadius+c.halfThickness+6;
   if(px<Math.min(c.ax,c.bx)-reach||px>Math.max(c.ax,c.bx)+reach||
      py<Math.min(c.ay,c.by)-reach||py>Math.max(c.ay,c.by)+reach)continue;
   const abx=c.bx-c.ax,aby=c.by-c.ay,len2=abx*abx+aby*aby;if(len2<1)continue;let t=((px-c.ax)*abx+(py-c.ay)*aby)/len2;t=Math.max(0,Math.min(1,t));const qx=c.ax+abx*t,qy=c.ay+aby*t,dx=px-qx,dy=py-qy,d=Math.hypot(dx,dy);let nx,ny;if(d>1e-6){nx=dx/d;ny=dy/d;}else{const inv=1/Math.sqrt(len2);nx=-aby*inv;ny=abx*inv;if(vx*nx+vy*ny>0){nx=-nx;ny=-ny;}}const vehicleRadius=c.kind==='concrete'?visualSupportRadius(rig,nx,ny,physicsRadius):physicsRadius;const min=vehicleRadius+c.halfThickness;if(d>=min)continue;const push=min-d+.75;px+=nx*push;py+=ny*push;const vn=vx*nx+vy*ny;if(vn<0){vx-=vn*1.18*nx;vy-=vn*1.18*ny;}}body.setPosition?.(px,py);if(body.body.velocity){body.body.velocity.x=vx;body.body.velocity.y=vy;}}
+function resolveBodyAgainstSolidZones(scene,body){
+  if(!body?.body)return;
+  const zones=scene?._tdrRaceEnvironment?.solidZones||[];
+  if(!zones.length)return;
+  const radius=Math.max(8,Number(body.body.radius)||14);
+  let x=Number(body.x),y=Number(body.y),vx=Number(body.body.velocity?.x)||0,vy=Number(body.body.velocity?.y)||0;
+  let changed=false;
+  for(let pass=0;pass<2;pass++){
+    let didPush=false;
+    for(const zone of zones){
+      const hit=resolveCollisionZone(zone,{x,y},radius);
+      if(!hit)continue;
+      x=hit.x;y=hit.y;changed=didPush=true;
+      const vn=vx*hit.nx+vy*hit.ny;
+      if(vn<0){vx-=vn*1.18*hit.nx;vy-=vn*1.18*hit.ny;}
+    }
+    if(!didPush)break;
+  }
+  if(!changed)return;
+  body.setPosition?.(x,y);
+  if(body.body.velocity){body.body.velocity.x=vx;body.body.velocity.y=vy;}
+}
 function applySlowZones(scene,body,delta){if(!body?.body?.velocity)return;const zones=scene?._tdrRaceEnvironment?.slowZones||[];if(!zones.length)return;const px=Number(body.x),py=Number(body.y),physicsRadius=Math.max(8,Number(body.body.radius)||14);for(const zone of zones){const d=Math.hypot(px-zone.cx,py-zone.cy);if(d>zone.radius+physicsRadius)continue;const frame=Math.max(.25,Math.min(4,(Number(delta)||16.667)/16.667));const drag=Math.pow(.84,frame);body.body.velocity.x*=drag;body.body.velocity.y*=drag;}}
-function applyBarrierCollisions(scene,delta){if(!scene?._tdrEnvironmentReady)return;const player=scene.carBody||scene.car;resolveBodyAgainstColliders(scene,player,scene.carRig);applySlowZones(scene,player,delta);if(scene.carRig&&scene.carBody){scene.carRig.x=scene.carBody.x;scene.carRig.y=scene.carBody.y;}for(const ai of scene.gridCars||[]){resolveBodyAgainstColliders(scene,ai?.body,ai?.rig);applySlowZones(scene,ai?.body,delta);if(ai?.rig&&ai?.body){ai.rig.x=ai.body.x;ai.rig.y=ai.body.y;}}}
+function applyBarrierCollisions(scene,delta){if(!scene?._tdrEnvironmentReady)return;const player=scene.carBody||scene.car;resolveBodyAgainstColliders(scene,player,scene.carRig);resolveBodyAgainstSolidZones(scene,player);applySlowZones(scene,player,delta);if(scene.carRig&&scene.carBody){scene.carRig.x=scene.carBody.x;scene.carRig.y=scene.carBody.y;}for(const ai of scene.gridCars||[]){resolveBodyAgainstColliders(scene,ai?.body,ai?.rig);resolveBodyAgainstSolidZones(scene,ai?.body);applySlowZones(scene,ai?.body,delta);if(ai?.rig&&ai?.body){ai.rig.x=ai.body.x;ai.rig.y=ai.body.y;}}}
 export function installRaceEnvironmentRuntime(RaceSceneClass){installRaceCaptureRuntime(RaceSceneClass);const proto=RaceSceneClass?.prototype;if(!proto||proto.__tdrRaceEnvironmentInstalled)return;const originalPreload=proto.preload;proto.preload=function(...args){const result=originalPreload?.apply(this,args);try{preloadEnvironment(this,envFor(this));}catch(err){console.warn('[race-environment] preload failed',err);}return result;};const originalCreate=proto.create;proto.create=function(data){const env=envFor(this);if(!env)return originalCreate?.call(this,data);const result=originalCreate?.call(this,data);this._tdrEnvironmentReady=false;this.time.paused=true;try{const missing=missingEnvironmentTextures(this);if(missing.length){showLoadingFailure(this,missing);console.error('[race-environment] missing textures',missing);return result;}if(!isImageNativeTrackScene(this)&&!/Android/i.test(String(navigator?.userAgent||'')))spawnStudioMaterials(this,env);spawnEnvironment(this,env);spawnAdvertising(this,env);this._tdrEnvironmentReady=true;removeLoadingOverlay(this);this.time.paused=false;}catch(err){this._tdrEnvironmentReady=false;showLoadingFailure(this);console.error('[race-environment] create failed',err);}return result;};const originalUpdate=proto.update;proto.update=function(time,delta){const result=originalUpdate?.call(this,time,delta);try{applyBarrierCollisions(this,delta);}catch(err){if(!this._tdrBarrierCollisionWarned){this._tdrBarrierCollisionWarned=true;console.warn('[race-environment] collision failed',err);}}return result;};proto.__tdrRaceEnvironmentInstalled=true;}
