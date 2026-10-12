@@ -23,7 +23,7 @@ assert.ok(workflow.includes('_hasUnfinishedCollisionDraft(){') &&
   workflow.includes('if(this._hasUnfinishedCollisionDraft())return;'),
   'Editor should warn when the exported JSON would silently omit uncommitted pen/zone geometry');
 const environment=JSON.parse(content('src/game/tracks/library/karting-tenerife/karting-tenerife.environment.json'));
-assert.equal(environment.collisionZones.length,7);
-assert.equal(environment.collisionLines.length,0,
-  'Never hallucinate authored pen lines missing from the supplied final Environment export');
-console.log('Karting DEV photo: no centerline asphalt overpaint, correct spawn orientation, seven zones preserved, unfinished-pen export guarded');
+assert.equal(environment.collisionZones.length,17);
+assert.equal(environment.collisionLines.length,5,
+  'Latest finished Environment Studio export must retain all five authored pen walls');
+console.log('Karting DEV photo: no centerline asphalt overpaint, correct spawn orientation, seventeen zones and five pen walls preserved, unfinished-pen export guarded');
