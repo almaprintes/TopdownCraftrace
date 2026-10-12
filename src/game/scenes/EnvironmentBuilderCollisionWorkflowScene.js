@@ -1,4 +1,5 @@
 import {EnvironmentBuilderScene as Current} from './EnvironmentBuilderFreehandCollisionScene.js';
+import {validCollisionLine} from '../environment/CollisionPenGeometry.js';
 
 // Explicit editing/navigation workflow. Panning never commits points and never
 // discards the in-progress Bézier line or freehand outline.
@@ -22,6 +23,7 @@ export class EnvironmentBuilderScene extends Current {
         <button data-workflow="undo">↶ DESHACER</button>
         <button data-workflow="finish">✓ TERMINAR</button>
       </div>
+      <button data-workflow="restore-pen" style="margin-top:7px;width:100%;min-height:40px">↶ RECUPERAR PLUMA GUARDADA</button>
       <p data-workflow-state style="font-size:10px;font-weight:500;line-height:1.45;color:#a9d7d0;margin:8px 0 0"></p>`;
     aside.prepend(section);
     this._workflowUi=section;
@@ -29,7 +31,8 @@ export class EnvironmentBuilderScene extends Current {
       move:()=>this._pauseCollisionForPan(),
       resume:()=>this._resumeCollisionDrawing(),
       undo:()=>this._undoCollisionAction(),
-      finish:()=>this._finishCollisionDrawing()
+      finish:()=>this._finishCollisionDrawing(),
+      'restore-pen':()=>this._restoreMissingCollisionLines()
     })){
       const button=section.querySelector(`[data-workflow="${name}"]`);
       button.style.minHeight='44px';
@@ -49,6 +52,72 @@ export class EnvironmentBuilderScene extends Current {
     this._syncDomStatus();
   }
 
+  // Dedicated persistent checkpoint: unlike recovery autosaves it survives
+  // a later switch of tool, load, or partial project overwrite.
+  _penCheckpointKey(){
+    return `tdr2:environment-pen-checkpoint:${this._trackId||'unknown'}`;
+  }
+  _checkpointCompletedPen(){
+    const lines=(this._collisionLines||[]).filter(validCollisionLine);
+    if(!lines.length)return;
+    try{
+      const existing=JSON.parse(localStorage.getItem(this._penCheckpointKey())||'null');
+      const merged=new Map();
+      for(const line of [...(existing?.lines||[]),...lines]){
+        if(validCollisionLine(line))merged.set(String(line.id||JSON.stringify(line.nodes)),line);
+      }
+      localStorage.setItem(this._penCheckpointKey(),JSON.stringify({
+        version:1,trackId:this._trackId,createdAt:Date.now(),lines:[...merged.values()]
+      }));
+    }catch(err){
+      console.warn('[Environment Studio] no se pudo proteger la pluma terminada',err);
+      this._flash?.('AVISO · COPIA DE SEGURIDAD DE PLUMA NO DISPONIBLE');
+    }
+  }
+  _finishCollisionPen(){
+    const before=this._collisionLines?.length||0;
+    super._finishCollisionPen?.();
+    if((this._collisionLines?.length||0)>before){
+      this._checkpointCompletedPen();
+      // Save the complete project immediately, before switching to zones.
+      // Existing assets and finalized zones are included unchanged.
+      super._save?.();
+      this._syncDomStatus();
+    }
+  }
+  _possibleCollisionLines(){
+    const candidates=[...(this._collisionLines||[])];
+    const read=key=>{try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}};
+    const checkpoint=read(this._penCheckpointKey());
+    if(checkpoint?.trackId===this._trackId)candidates.push(...(checkpoint.lines||[]));
+    const saved=read(this._storageKey?.()||'');
+    if(saved?.trackId===this._trackId)candidates.push(...(saved.collisionLines||[]));
+    const recovery=read(this._recoveryKey?.()||'');
+    if(recovery?.trackId===this._trackId)candidates.push(...(recovery.project?.collisionLines||[]));
+    for(const history of this._undoStack||[]){
+      if(history?.trackId===this._trackId)candidates.push(...(history.collisionLines||[]));
+    }
+    const uniq=new Map();
+    for(const line of candidates){
+      if(validCollisionLine(line))uniq.set(String(line.id||JSON.stringify(line.nodes)),line);
+    }
+    return [...uniq.values()];
+  }
+  _restoreMissingCollisionLines(){
+    const saved=this._possibleCollisionLines();
+    const present=new Set((this._collisionLines||[]).map(l=>String(l.id||JSON.stringify(l.nodes))));
+    const missing=saved.filter(l=>!present.has(String(l.id||JSON.stringify(l.nodes))));
+    if(!missing.length){
+      this._builderToast?.('NO HAY PLUMAS ADICIONALES EN LAS COPIAS LOCALES');
+      return;
+    }
+    const allow=window.confirm?.(`Se han encontrado ${missing.length} líneas de pluma recuperables. ¿Añadirlas sin modificar las zonas sólidas ni la fotografía?`);
+    if(allow===false)return;
+    this._collisionLines=[...(this._collisionLines||[]),...missing.map(l=>JSON.parse(JSON.stringify(l)))];
+    this._checkpointCompletedPen();
+    this._drawCollisionPen?.();this._syncDomStatus();
+    this._builderToast?.(`${missing.length} LÍNEAS RECUPERADAS · PULSA GUARDAR Y EXPORTAR`);
+  }
   _isCollisionDrawing(){
     return this._mode==='collision-pen'||this._mode==='collision-zone-draw';
   }
@@ -150,12 +219,28 @@ export class EnvironmentBuilderScene extends Current {
   }
   _save(){
     if(this._hasUnfinishedCollisionDraft())return;
-    return super._save?.();
+    const out=super._save?.();
+    try{
+      const saved=JSON.parse(localStorage.getItem(this._storageKey?.()||'')||'{}');
+      if((saved.collisionLines||[]).length!==(this._collisionLines||[]).filter(validCollisionLine).length)
+        this._flash?.('AVISO · LÍNEAS NO INCLUIDAS EN GUARDADO · RECUPERAR PLUMA');
+    }catch{this._flash?.('AVISO · NO SE PUDO VERIFICAR EL GUARDADO');}
+    return out;
   }
   _export(){
     // Prevent an incomplete pen/zone from silently disappearing from the
     // downloadable JSON. Only finished authored geometry is serialized.
     if(this._hasUnfinishedCollisionDraft())return;
+    const current=(this._collisionLines||[]).filter(validCollisionLine).length;
+    const archived=this._possibleCollisionLines().length;
+    if(archived>current){
+      this._flash?.(`AVISO · FALTAN ${archived-current} LÍNEAS DE PLUMA · PULSA RECUPERAR PLUMA`);
+      return;
+    }
+    const exported=this._project?.();
+    if((exported?.collisionLines||[]).length!==current){
+      this._flash?.('ERROR · EXPORTACIÓN SIN LAS LÍNEAS DE PLUMA');return;
+    }
     return super._export?.();
   }
   _applyProject(p){
