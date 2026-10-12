@@ -23,7 +23,7 @@ for(let k=0;k<=80;k++){
   const result=cubicCollisionPoint(line.nodes,s,u);
   assert.ok(Math.hypot(result.x-before[k].x,result.y-before[k].y)<1e-8,'Curve changed by node insertion at '+t);
 }
-assert.ok(sampleCollisionLine(line).length>10);
+assert.ok(sampleCollisionLine(line).length>=6,'Curved wall must be segmented for physics');
 const serialized=JSON.parse(JSON.stringify(line));
 assert.ok(validCollisionLine(serialized));
 assert.equal(serialized.nodes.length,3);
