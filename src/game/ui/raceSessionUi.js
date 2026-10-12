@@ -64,7 +64,7 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
       <h2>${doubleEnabled?'¡BUEN TRABAJO!':'BOTÍN DE LA SESIÓN'}</h2>
       <div class="tdr-session-sub">Todo lo conseguido durante la tanda se entrega junto.</div>
     </header>
-    <main class="tdr-session-main">
+    <main class="tdr-session-main" tabindex="0" aria-label="Materiales y recompensas de la sesión">
       ${chestHero}
       <div class="tdr-session-reward-body">
         <div class="tdr-session-head"><small>RECOMPENSAS TOTALES</small><strong data-a="total">${total} ${total===1?'PIEZA':'PIEZAS'}</strong></div>
