@@ -319,7 +319,7 @@
   isolation:isolate;--tdr-halo-color:#ffd45b;
 }
 .tdr-lobby-dom .tdr-lobby-reward-slot--video{--tdr-halo-color:#70dcff}
-.tdr-lobby-dom .tdr-lobby-reward-slot > button{height:100%;z-index:1}
+.tdr-lobby-dom .tdr-lobby-action-capsule > .tdr-lobby-reward-slot > button{height:100%;z-index:1}
 .tdr-lobby-reward-slot::before,.tdr-lobby-reward-slot::after{
   content:'';position:absolute;z-index:0;pointer-events:none;
   background:var(--tdr-halo-color);opacity:0;will-change:opacity;

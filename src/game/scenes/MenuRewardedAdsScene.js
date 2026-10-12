@@ -170,7 +170,7 @@ export class MenuScene extends CurrentMenuScene {
         if(this.scene?.isActive?.()&&rewardModal===this._storeModal&&rewardModal?.scene){
           this._openStoreModal?.('rewards');
           this._animateStoreCoinBalance(Number(result.state?.coins)-result.amount,Number(result.state?.coins));
-          this._toastStore?.('+'+result.amount+' '+(getLanguage()==='en'?'COINS':'MONEDAS'),true);
+          // Do not duplicate the flight and animated wallet with a green toast.
         }
       }finally{
         busy=false;

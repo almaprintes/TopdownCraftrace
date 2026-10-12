@@ -12,6 +12,8 @@ assert.match(ui,/slot\.append\(button\)/);
 assert.match(ui,/return slot;\n}\nconst ctaCountdown/);
 assert.match(ui,/button\.addEventListener\('click',\(\)=>scene\._openStoreModal\?\.\('rewards'\)\)/);
 assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-reward-slot\{/);
+assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-action-capsule > \.tdr-lobby-reward-slot > button\{height:100%;z-index:1\}/,
+  'Wrapper must preserve the exact button height at landscape phone sizes');
 assert.match(css,/\.tdr-lobby-reward-slot--video\{--tdr-halo-color:#70dcff\}/);
 assert.match(css,/--tdr-halo-color:#ffd45b/);
 assert.match(css,/\.tdr-lobby-reward-slot\.is-ready::before\{/);

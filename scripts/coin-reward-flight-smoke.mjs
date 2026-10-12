@@ -46,6 +46,16 @@ const flown=domStore.indexOf('await playDomCoinRewardFlight(scene');
 const counted=domStore.indexOf('await animateDomCoinBalance(root');
 assert.ok(verified>=0&&awarded>verified&&flown>awarded&&counted>flown,
   'SHIPPING DOM: verified ad -> durable award -> flight -> animated wallet');
+assert.doesNotMatch(domStore,/toast\(root,\x60\+\$\{result\.amount\}/,
+  'After the reward flight, DOM store must not add a green +100/+250 success banner');
+assert.match(domStore,/toast\(root,getLanguage\(\)==='en'\?'VIDEO NOT COMPLETED'/,
+  'Failed ad verification must still show its error message');
+assert.match(domStore,/if\(!result\.ok\)\{if\(root\.isConnected\)toast\(root,result\.reason,false\)/,
+  'Refused rewards must still show an error');
+assert.doesNotMatch(store,/this\._toastStore\?\.\('\+'\+result\.amount/,
+  'Legacy Phaser path must not show a duplicate green success toast');
+assert.match(store,/this\._toastStore\?\.\(result\.reason,false\)/,
+  'Legacy path retains failure notices');
 assert.match(domStore,/if\(busy\|\|!root\.isConnected\)return/,'prevent duplicate taps in real store');
 assert.match(domStore,/button\.disabled=busy\|\|!status\.available/,'do not reenable while playing ad');
 assert.match(domStore,/root\.dispatchEvent\(new Event\('tdr:store-closed'\)\)/,'dismiss active flight');

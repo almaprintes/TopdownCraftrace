@@ -107,7 +107,8 @@ function rewardCard(scene,root,kind){
           english:getLanguage()==='en'
         });
       }catch(error){console.warn('[TDR reward] optional coin animation failed',error);}
-      if(root.isConnected)toast(root,`+${result.amount} ${t('store.coins')}`,true);
+      // The flying coins and wallet count-up ARE the success confirmation.
+      // A second green +100/+250 toast is redundant; keep errors intact.
     }catch(error){
       // An ad/network exception must NEVER be interpreted as verified.
       console.warn('[TDR reward] claim unavailable',error);
