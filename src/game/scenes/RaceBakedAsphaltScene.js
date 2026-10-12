@@ -1,4 +1,5 @@
 import { RaceScene as DirectionalRaceScene } from './RaceDirectionalCullScene.js';
+import {isImageNativeTrackScene} from '../tracks/imageNativeTrackIdentity.js';
 
 // Piloto de terreno horneado para Karting Tenerife.
 // Durante la preparación se fuerza la creación de todos los chunks de asfalto,
@@ -10,7 +11,9 @@ export class RaceScene extends DirectionalRaceScene {
     const result = super.create(data);
 
     const trackId = String(this.trackKey || this.track?.meta?.id || '').toLowerCase();
-    this._bakedAsphaltPilot = trackId === 'karting-tenerife';
+    // Image-native Karting uses its own full-world photograph. The old
+    // centerline asphalt baking pilot must never start on photo circuits.
+    this._bakedAsphaltPilot = trackId === 'karting-tenerife' && !isImageNativeTrackScene(this);
     this._bakedAsphaltDone = false;
     this._bakedAsphaltTiles = [];
     this._bakedAsphaltStartedAt = performance.now();
