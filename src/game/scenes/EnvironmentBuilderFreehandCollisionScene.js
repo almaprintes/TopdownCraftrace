@@ -47,7 +47,7 @@ export class EnvironmentBuilderScene extends Current {
     });
     wire('draw',()=>this._startFreehandZones());
     wire('finish',()=>this._finishFreehandZone());
-    wire('undo',()=>this._undoCollisionAction?.()||this._undoFreehandStroke());
+    wire('undo',()=>this._undoCollisionAction?this._undoCollisionAction():this._undoFreehandStroke());
     wire('edit',()=>this._editFreehandZones());
     wire('cancel',()=>this._cancelFreehandZone());
     wire('delete',()=>this._deleteFreehandZone());
