@@ -8,6 +8,8 @@
 // duplicate the road render and add a large geometry-mask workload (especially
 // costly on iOS). In that case we return immediately.
 
+import {isImageNativeTrackScene} from '../tracks/imageNativeTrackIdentity.js';
+
 function trackId(scene, data) {
   const direct = data?.trackKey || scene?.trackKey || scene?.track?.meta?.id;
   if (direct) return String(direct).trim().toLowerCase();
@@ -61,6 +63,13 @@ function installPass(scene, data) {
     return;
   }
   if (trackId(scene, data) !== 'karting-tenerife') return;
+
+  // CRITICAL: Track Studio's official photo already contains the finalized
+  // asphalt and adjusted Bézier borders. The old exact-road mask is derived
+  // from the pre-border centerline and would paint opaque asphalt OVER it.
+  // This guard must run before the async photograph is mounted: a late check
+  // of _beautyLayerActive is not sufficient while RaceScene.create runs.
+  if (isImageNativeTrackScene(scene)) return;
 
   // The baked Beauty Layer already contains asphalt + grass + outer terrain.
   // Never stack the old full-world masked asphalt on top of those four tiles.
