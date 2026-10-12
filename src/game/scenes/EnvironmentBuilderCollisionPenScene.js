@@ -98,7 +98,10 @@ export class EnvironmentBuilderScene extends Current {
     this._drawCollisionPen();this._syncDomStatus();
   }
   _enterCollisionSelection(){
-    this._penGesture=null;this._penDraft=null;this._mode=this._collisionSelected?'collision-edit':'select';
+    this._penGesture=null;
+    // Enter selection without throwing away an unfinished Bézier route.
+    if(this._penDraft?.nodes?.length)this._collisionPausedMode='collision-pen';
+    this._mode=this._collisionSelected?'collision-edit':'select';
     this._drawCollisionPen();this._syncDomStatus();
   }
   _selectCollisionLine(line){
