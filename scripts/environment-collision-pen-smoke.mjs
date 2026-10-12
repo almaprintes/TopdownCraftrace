@@ -41,5 +41,6 @@ assert.ok(runtime.includes('sampleCollisionLine(line,18)'));
 assert.ok(runtime.includes("half,'collision'"));
 assert.ok(runtime.includes('if(px<Math.min(c.ax,c.bx)-reach'));
 const game=readFileSync('src/game/game.js','utf8');
-assert.ok(game.includes("import('./scenes/EnvironmentBuilderCollisionPenScene.js')"));
+assert.ok(game.includes("import('./scenes/EnvironmentBuilderFreehandCollisionScene.js')"));
+assert.ok(readFileSync('src/game/scenes/EnvironmentBuilderFreehandCollisionScene.js','utf8').includes("from './EnvironmentBuilderCollisionPenScene.js'"));
 console.log('Environment Studio collision pen: Bézier creation, exact split, hit testing, saves, invisible race collision and mobile broad phase OK');
