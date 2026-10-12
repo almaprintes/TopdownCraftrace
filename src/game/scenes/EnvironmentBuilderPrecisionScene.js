@@ -147,6 +147,16 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     if(!t||!g||!m)return;
     g.clear();m.clear();
 
+    // En una pista fotográfica el asfalto, pianos, bordes y meta YA están
+    // pintados en la imagen maestra. Esta clase heredada es la que vuelve a
+    // generarlos: detenerla aquí, no solo en la clase anterior.
+    // Mantener la geometría para superficies, colisiones y herramientas.
+    const photoNative=t.meta?.renderMode==='image-native' &&
+      t.meta?.imageNative?.availability==='published';
+    g.setVisible(!photoNative);
+    m.setVisible(!photoNative);
+    if(photoNative)return;
+
     const shoulderPx=Math.max(8,Number(t.shoulderPx)||18);
     const geom=buildTrackRibbon({
       centerline:t.centerline,
