@@ -5,6 +5,11 @@ import {getPilotProfile} from '../social/pilotProfile.js';
 import {isRewardedAdAvailable,showRewardedAd} from '../monetization/RewardedAdsProvider.js';
 import {REWARDED_PLACEMENTS,raceControlPublishClaimId,verifiedReward} from '../monetization/rewardedActions.js';
 
+// Preserve verified ad credits and successful publications while the player
+// remains in this app session. Reopening the session report must not charge
+// another voluntary ad for a transient network failure.
+const verifiedPublishClaims=new Map();
+
 export function mountNewPersonalBestOffer(scene,root,report){
   const best=sessionPersonalBest(report,scene?._sessionPreviousPersonalBestMs);
   if(!best)return null;
@@ -41,8 +46,17 @@ export function mountNewPersonalBestOffer(scene,root,report){
     status.textContent=message;status.style.color=isError?'#ffb1af':'#9bf1cb';
   };
   let inFlight=false;
-  let adVerified=false;
-  let published=false;
+  const claimId=raceControlPublishClaimId(trackId,best.lapMs);
+  const existing=verifiedPublishClaims.get(claimId)||null;
+  let adVerified=existing?.adVerified===true;
+  let published=existing?.published===true;
+  if(adVerified&&!published)publish.textContent='REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO';
+  if(published){
+    actions.hidden=true;
+    card.querySelector('[data-pb-question]').textContent='✅ Tu récord está en la clasificación online';
+    card.querySelector('[data-pb-disclosure]').hidden=true;
+    setStatus('Este tiempo ya se publicó. No necesitas otro anuncio.');
+  }
   const skipOffer=()=>{
     if(inFlight)return;
     actions.hidden=true;
@@ -76,10 +90,11 @@ export function mountNewPersonalBestOffer(scene,root,report){
         const result=await showRewardedAd(scene,{
           title:'PUBLICAR RÉCORD · ANUNCIO RECOMPENSADO',
           placement:REWARDED_PLACEMENTS.RACE_CONTROL_PUBLISH,
-          claimId:raceControlPublishClaimId(trackId,best.lapMs)
+          claimId
         });
         if(!verifiedReward(result))throw new Error('Anuncio cancelado o sin verificar. El récord no se ha publicado.');
         adVerified=true;
+        verifiedPublishClaims.set(claimId,{adVerified:true,published:false});
       }
       // Retrying a transient network failure in this report must NEVER
       // require the player to watch a second ad for the same record.
@@ -91,6 +106,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
       const row=Array.isArray(response)?response[0]:response;
       if(!row||!row.record_ref)throw new Error('El servidor no confirmó la publicación. Puedes reintentar sin otro anuncio.');
       published=true;
+      verifiedPublishClaims.set(claimId,{adVerified:true,published:true});
       actions.hidden=true;
       card.querySelector('[data-pb-question]').textContent='✅ Tu récord está en la clasificación online';
       card.querySelector('[data-pb-disclosure]').hidden=true;
