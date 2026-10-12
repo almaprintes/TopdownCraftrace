@@ -2,6 +2,7 @@ import { RaceScene as CurrentRaceScene } from './RaceProgressiveBrakeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { pxpsToKmh } from '../cars/speedUnits.js';
 import { installSessionReportNavigation } from '../ui/sessionReportNavigation.js';
+import { mountNewPersonalBestOffer } from '../ui/sessionRecordPublishOffer.js';
 
 function clamp(n,a,b){ return Math.max(a,Math.min(b,n)); }
 function fmtTime(ms){
@@ -46,6 +47,9 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     super.create(data);
     this._sessionLapBaseline=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
+    // Capture the existing PB at the start: RaceScene updates ttBest on each new lap.
+    const initialPb=Number(this.ttBest?.lapMs);
+    this._sessionPreviousPersonalBestMs=Number.isFinite(initialPb)&&initialPb>1000?initialPb:null;
     this._sessionStats={
       startedAt:null, elapsed:0, movingTime:0,
       maxKmh:0, speedIntegral:0, distanceKm:0,
@@ -249,6 +253,7 @@ export class RaceScene extends CurrentRaceScene {
     document.body.appendChild(root);
     this._sessionReportModal=root;
     installSessionReportNavigation(root);
+    mountNewPersonalBestOffer(this,root,r);
     root.querySelector('[data-a="continue"]')?.addEventListener('click',()=>this._closeSessionReport(true));
     root.querySelector('[data-a="export"]')?.addEventListener('click',()=>this._exportSessionReport(r));
     root.querySelector('[data-a="exit"]')?.addEventListener('click',()=>{
