@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import fs from 'node:fs';
 import path from 'node:path';
+import {installKartingTenerife} from './scripts/install-karting-tenerife-source.mjs';
 
 function readPackageName() {
   const p = path.resolve(process.cwd(), 'package.json');
@@ -8,7 +9,9 @@ function readPackageName() {
   return pkg.name || 'app';
 }
 
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(async ({ command, mode }) => {
+  // Canonical .tdrtrack -> precise runtime JSON + original WebP + four GPU-safe tiles.
+  await installKartingTenerife({withAssets:true});
   const isTdrProd = mode === 'tdr-prod';
   const define = {
     __TDR_PROD_BUILD__: JSON.stringify(isTdrProd)
