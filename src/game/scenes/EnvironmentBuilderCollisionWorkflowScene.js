@@ -62,12 +62,14 @@ export class EnvironmentBuilderScene extends Current {
     if(!lines.length)return;
     try{
       const existing=JSON.parse(localStorage.getItem(this._penCheckpointKey())||'null');
+      const deletedIds=new Set(existing?.deletedIds||[]);
       const merged=new Map();
       for(const line of [...(existing?.lines||[]),...lines]){
-        if(validCollisionLine(line))merged.set(String(line.id||JSON.stringify(line.nodes)),line);
+        const id=String(line?.id||JSON.stringify(line?.nodes));
+        if(!deletedIds.has(id)&&validCollisionLine(line))merged.set(id,line);
       }
       localStorage.setItem(this._penCheckpointKey(),JSON.stringify({
-        version:1,trackId:this._trackId,createdAt:Date.now(),lines:[...merged.values()]
+        version:1,trackId:this._trackId,createdAt:Date.now(),deletedIds:[...deletedIds],lines:[...merged.values()]
       }));
     }catch(err){
       console.warn('[Environment Studio] no se pudo proteger la pluma terminada',err);
@@ -89,6 +91,7 @@ export class EnvironmentBuilderScene extends Current {
     const candidates=[...(this._collisionLines||[])];
     const read=key=>{try{return JSON.parse(localStorage.getItem(key)||'null');}catch{return null;}};
     const checkpoint=read(this._penCheckpointKey());
+    const deletedIds=new Set(checkpoint?.deletedIds||[]);
     if(checkpoint?.trackId===this._trackId)candidates.push(...(checkpoint.lines||[]));
     const saved=read(this._storageKey?.()||'');
     if(saved?.trackId===this._trackId)candidates.push(...(saved.collisionLines||[]));
@@ -99,7 +102,8 @@ export class EnvironmentBuilderScene extends Current {
     }
     const uniq=new Map();
     for(const line of candidates){
-      if(validCollisionLine(line))uniq.set(String(line.id||JSON.stringify(line.nodes)),line);
+      const id=String(line?.id||JSON.stringify(line?.nodes));
+      if(!deletedIds.has(id)&&validCollisionLine(line))uniq.set(id,line);
     }
     return [...uniq.values()];
   }
@@ -117,6 +121,30 @@ export class EnvironmentBuilderScene extends Current {
     this._checkpointCompletedPen();
     this._drawCollisionPen?.();this._syncDomStatus();
     this._builderToast?.(`${missing.length} LÍNEAS RECUPERADAS · PULSA GUARDAR Y EXPORTAR`);
+  }
+  _deleteCollisionLine(){
+    const id=this._collisionSelected?.id;
+    const count=this._collisionLines?.length||0;
+    super._deleteCollisionLine?.();
+    if(!id||(this._collisionLines?.length||0)>=count)return;
+    try{
+      const key=this._penCheckpointKey();
+      const previous=JSON.parse(localStorage.getItem(key)||'null')||{};
+      const deletedIds=[...new Set([...(previous.deletedIds||[]),id])];
+      const lines=(previous.lines||[]).filter(line=>line.id!==id);
+      localStorage.setItem(key,JSON.stringify({version:1,trackId:this._trackId,createdAt:Date.now(),deletedIds,lines}));
+    }catch{}
+  }
+  _clearCurrentDecoration(){
+    const before=(this._collisionLines||[]).map(line=>line.id).filter(Boolean);
+    super._clearCurrentDecoration?.();
+    if(!before.length||(this._collisionLines||[]).length)return;
+    try{
+      const key=this._penCheckpointKey();
+      const previous=JSON.parse(localStorage.getItem(key)||'null')||{};
+      const deletedIds=[...new Set([...(previous.deletedIds||[]),...before])];
+      localStorage.setItem(key,JSON.stringify({version:1,trackId:this._trackId,createdAt:Date.now(),deletedIds,lines:[]}));
+    }catch{}
   }
   _isCollisionDrawing(){
     return this._mode==='collision-pen'||this._mode==='collision-zone-draw';
