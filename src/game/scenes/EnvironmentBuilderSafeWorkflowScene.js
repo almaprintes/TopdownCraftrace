@@ -159,7 +159,7 @@ export class EnvironmentBuilderScene extends Current {
   }
   _save(){
     const result=super._save?.();
-    if(!this._hasUnfinishedCollisionDraft?.())this._exitGuard?.backup('manual-save');
+    if(!this._penDraft?.nodes?.length&&!this._zoneDraft?.length)this._exitGuard?.backup('manual-save');
     return result;
   }
 }
