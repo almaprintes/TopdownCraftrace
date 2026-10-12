@@ -6,6 +6,16 @@ import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
 const BASE=import.meta.env.BASE_URL||'/';
 
 export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
+  // La imagen de Karting Tenerife ya contiene el trazado y la meta: no dibujar
+  // el asfalto procedural por encima, pero mantener las capas editables.
+  _drawRealTrack(){
+    super._drawRealTrack?.();
+    const cfg=getTrackBeautyLayerConfig(this._trackId);
+    const photo=this._trackId==='karting-tenerife'&&!!cfg?.useBeautyLayer&&!!cfg?.assetsAvailable;
+    this._realTrackG?.setVisible(!photo);
+    this._realTrackMarkG?.setVisible(!photo);
+  }
+
   create(){
     super.create();
 
