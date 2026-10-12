@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {installSessionReportNavigation,sessionReportSection} from '../src/game/ui/sessionReportNavigation.js';
+import {resolveSessionReportTrackName} from '../src/game/ui/sessionReportTrackIdentity.js';
 
 function element(tag='div',label=''){
   const node={
@@ -30,6 +31,21 @@ function element(tag='div',label=''){
   };
   return node;
 }
+// Track metadata may retain another circuit name after a scene transition;
+// the active key must win for the visible report and exported filename/title.
+const publicNames={
+  'karting-tenerife':'KARTING TENERIFE',
+  'circuito-atlantico':'CIRCUITO ATLÁNTICO'
+};
+const publicName=key=>publicNames[key]||key;
+assert.equal(resolveSessionReportTrackName({trackKey:'karting-tenerife',track:{meta:{name:'CIRCUITO ATLÁNTICO'}}},publicName),'KARTING TENERIFE',
+  'Real Karting Tenerife session must never inherit the Atlantic label');
+assert.equal(resolveSessionReportTrackName({trackKey:'circuito-atlantico',track:{meta:{name:'KARTING TENERIFE'}}},publicName),'CIRCUITO ATLÁNTICO',
+  'Atlantic reports must likewise follow the active key');
+assert.equal(resolveSessionReportTrackName({trackKey:'karting-tenerife-studio',track:{meta:{name:'PRUEBA LOCAL'}}},publicName),'PRUEBA LOCAL',
+  'Non-public TrackStudio previews keep their own authored name');
+assert.equal(resolveSessionReportTrackName({track:{meta:{name:'CIRCUITO MANUAL'}}},publicName),'CIRCUITO MANUAL',
+  'Unnamed manual reports retain a readable fallback');
 const doc={createElement:tag=>element(tag)};
 const root=element('div');root.ownerDocument=doc;
 const modal=element('div');modal.className='modal';
@@ -144,6 +160,8 @@ nav.show(0);scroll.scrollHeight=120;scroll.clientHeight=120;scroll.events.scroll
 assert.ok(hint.hidden,'No hint when the page fits');
 const scene=readFileSync('src/game/scenes/RaceSessionReportScene.js','utf8');
 assert.ok(scene.includes('installSessionReportNavigation(root);'));
+assert.ok(scene.includes('resolveSessionReportTrackName(this,getTrackPublicName)'),
+  'Both in-app report and HTML export must use the same active-track identity');
 assert.ok(scene.includes('this._exportSessionReport(r)'),'Export action remains intact');
 assert.ok(scene.includes("this.scene.start('menu')"),'Exit action stays available on final page');
 const pit=readFileSync('src/game/scenes/RaceKartingTenerifePitReportScene.js','utf8');

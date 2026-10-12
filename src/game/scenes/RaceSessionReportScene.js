@@ -3,6 +3,8 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 import { pxpsToKmh } from '../cars/speedUnits.js';
 import { installSessionReportNavigation } from '../ui/sessionReportNavigation.js';
 import { mountNewPersonalBestOffer } from '../ui/sessionRecordPublishOffer.js';
+import { getTrackPublicName } from '../tracks/trackPublicNames.js';
+import { resolveSessionReportTrackName } from '../ui/sessionReportTrackIdentity.js';
 
 function clamp(n,a,b){ return Math.max(a,Math.min(b,n)); }
 function fmtTime(ms){
@@ -156,7 +158,9 @@ export class RaceScene extends CurrentRaceScene {
     const consistency=times.length>1?stddev(times):0;
     const active=Math.max(.001,(s.throttleTime||0)+(s.brakeTime||0)+(s.coastTime||0));
     const car=CAR_SPECS[this.carId]||CAR_SPECS.stock||{};
-    const trackName=this.track?.meta?.name||this.track?.name||this.trackId||'Circuito';
+    // Active trackKey owns the report identity. Imported/stale track.meta.name
+    // must never label a Karting Tenerife session as Circuito Atlántico.
+    const trackName=resolveSessionReportTrackName(this,getTrackPublicName);
     const avgKmh=(s.elapsed||0)>0?(s.speedIntegral||0)/s.elapsed:0;
     const pct=v=>100*(v||0)/active;
     let verdict=pickVerdict([
