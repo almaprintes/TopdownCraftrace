@@ -27,7 +27,12 @@ for(const text of [
 ]){
   assert.ok(nav.includes(text),'missing navigation/undo/touch protection: '+text);
 }
+const penSource=readFileSync('src/game/scenes/EnvironmentBuilderCollisionPenScene.js','utf8');
+assert.ok(penSource.includes("this._undoCollisionAction?this._undoCollisionAction():this._removeLastCollisionNode()"),
+  'pluma undo must fire exactly once');
 const zones=readFileSync('src/game/scenes/EnvironmentBuilderFreehandCollisionScene.js','utf8');
+assert.ok(zones.includes("this._undoCollisionAction?this._undoCollisionAction():this._undoFreehandStroke()"),
+  'zone undo must fire exactly once');
 assert.ok(zones.includes('this._zoneStrokeStarts.push(gesture.start)'));
 assert.ok(zones.includes('Math.hypot(p.x-gesture.startScreen.x,p.y-gesture.startScreen.y)<9'),
   'short tap must not create an accidental freehand point');
