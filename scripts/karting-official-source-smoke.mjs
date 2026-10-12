@@ -19,7 +19,11 @@ for(let i=0;i<2;i++){
   const end=(gate.b.x-center.x)*unit.x+(gate.b.y-center.y)*unit.y;
   assert.ok(start<=negative.t-3 && end>=positive.t+3,`CP${i+1} must span both Bézier boundaries with safety margin`);
   assert.equal(gate.normal.x,track.checkpoints[i].normal.x,'Checkpoint travel direction remains unchanged');
-  assert.deepEqual(expandCheckpointToEdges(gate,track.trackShape),gate,'Already-widened gates are stable and need no further modification');
+  const stable=expandCheckpointToEdges(gate,track.trackShape);
+  for(const side of ['a','b'])for(const axis of ['x','y'])
+    assert.ok(Math.abs(stable[side][axis]-gate[side][axis])<1e-7,
+      `Already-widened CP${i+1} ${side}.${axis} is stable within floating-point precision`);
+  assert.deepEqual(stable.normal,gate.normal,'Widening never changes gate travel direction');
 }
 assert.ok(result.checkpointSpans.some((span,i)=>span>result.originalCheckpointSpans[i]+8),
   'Wider approved strip must require extending at least one short authored CP');
