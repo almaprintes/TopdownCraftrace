@@ -12,6 +12,11 @@ assert.equal(track.checkpoints.length,2);
 assert.equal(track.meta?.renderMode,'image-native');
 assert.equal(track.meta?.imageNative?.availability,'published');
 assert.deepEqual([track.start.x,track.start.y],[2685,1211]);
+const a0=track.centerline[0],a5=track.centerline[5];
+const expectedR=Math.atan2(a5.y-a0.y,a5.x-a0.x);
+assert.ok(Math.abs(track.start.r-expectedR)<1e-10,'Karting race start must follow the authored centerline tangent');
+assert.ok(track.start.r<-1.1&&track.start.r>-1.8,'Karting race start must head toward the TOP of the photo, not right');
+
 assert.ok(track.trackShape?.leftEdge?.length>10);
 assert.ok(track.trackShape?.rightEdge?.length>10);
 const beauty=readFileSync('src/game/tracks/trackBeautyLayers.generated.js','utf8');
