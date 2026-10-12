@@ -297,7 +297,8 @@
   background:linear-gradient(90deg,rgba(248,182,45,.18),rgba(83,235,144,.13) 50%,rgba(50,183,255,.18));
   clip-path:polygon(2% 0,98% 0,100% 50%,98% 100%,2% 100%,0 50%);
 }
-.tdr-lobby-dom .tdr-lobby-action-capsule > button{
+.tdr-lobby-dom .tdr-lobby-action-capsule > button,
+.tdr-lobby-dom .tdr-lobby-action-capsule > .tdr-lobby-reward-slot > button{
   position:relative;
   width:100%;height:clamp(54px,9vh,72px);min-width:0;
   margin:0;
@@ -311,6 +312,34 @@
   pointer-events:auto;
   transition:filter .2s ease;
 }
+/* A separate slot lets the luminous outline escape the button clip-path.
+   This does not change the coupon shape, action or touch target. */
+.tdr-lobby-dom .tdr-lobby-reward-slot{
+  position:relative;display:block;min-width:0;width:100%;height:100%;
+  isolation:isolate;--tdr-halo-color:#ffd45b;
+}
+.tdr-lobby-dom .tdr-lobby-reward-slot--video{--tdr-halo-color:#70dcff}
+.tdr-lobby-dom .tdr-lobby-reward-slot > button{height:100%;z-index:1}
+.tdr-lobby-reward-slot::before,.tdr-lobby-reward-slot::after{
+  content:'';position:absolute;z-index:0;pointer-events:none;
+  background:var(--tdr-halo-color);opacity:0;will-change:opacity;
+}
+.tdr-lobby-reward-slot--daily::before,.tdr-lobby-reward-slot--daily::after{
+  clip-path:polygon(12px 0,calc(100% - 7.5px) 0,100% 50%,calc(100% - 7.5px) 100%,12px 100%,0 50%);
+}
+.tdr-lobby-reward-slot--video::before,.tdr-lobby-reward-slot--video::after{
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,7.5px 50%);
+}
+.tdr-lobby-reward-slot::before{inset:-7px;filter:blur(8px)}
+.tdr-lobby-reward-slot::after{inset:-3px}
+.tdr-lobby-reward-slot.is-ready::before{
+  animation:tdr-lobby-ready-aura 2.1s ease-in-out infinite;
+}
+.tdr-lobby-reward-slot.is-ready::after{
+  animation:tdr-lobby-ready-edge 2.1s ease-in-out infinite;
+}
+@keyframes tdr-lobby-ready-aura{0%,100%{opacity:.36}50%{opacity:.87}}
+@keyframes tdr-lobby-ready-edge{0%,100%{opacity:.70}50%{opacity:1}}
 .tdr-lobby-action-capsule .tdr-lobby-reward-cta--daily{
   clip-path:polygon(12px 0,calc(100% - 7.5px) 0,100% 50%,calc(100% - 7.5px) 100%,12px 100%,0 50%);
 }
@@ -445,6 +474,7 @@
 }
 @media(max-height:430px){
  .tdr-lobby-dom .tdr-lobby-action-capsule > button{height:clamp(46px,12vh,54px)}
+ .tdr-lobby-dom .tdr-lobby-reward-slot > button{height:100%}
  .tdr-lobby-reward-icon{height:clamp(31px,8vh,44px)}
  .tdr-lobby-reward-copy strong{font-size:clamp(17px,2.25vw,27px)}
  .tdr-lobby-reward-copy small{font-size:clamp(8px,.85vw,10px)}
@@ -453,4 +483,7 @@
 @media(prefers-reduced-motion:reduce){
  .tdr-lobby-action-capsule .tdr-lobby-reward-cta::before,
  .tdr-lobby-reward-face--filled{transition:none}
+ .tdr-lobby-reward-slot.is-ready::before{animation:none;opacity:.58}
+ .tdr-lobby-reward-slot.is-ready::after{animation:none;opacity:1}
+ .tdr-lobby-reward-slot::before,.tdr-lobby-reward-slot::after{will-change:auto}
 }

@@ -76,9 +76,13 @@ function makeRewardShortcut(kind,scene){
   icon.src=`${BASE}assets/store/${video?'rewarded_video':'daily_gift'}.webp`;
   icon.alt='';icon.draggable=false;icon.decoding='async';
   button.append(icon,createRewardFace(video),createRewardFace(video,true));
+  // Render the glow OUTSIDE the clipped bevel; preserve the original button and hit area.
+  const slot=document.createElement('span');
+  slot.className='tdr-lobby-reward-slot '+(video?'tdr-lobby-reward-slot--video':'tdr-lobby-reward-slot--daily');
+  slot.append(button);
   // This remains navigation to the existing store rewards route.
   button.addEventListener('click',()=>scene._openStoreModal?.('rewards'));
-  return button;
+  return slot;
 }
 const ctaCountdown=ms=>{
   const secs=Math.max(0,Math.ceil(Number(ms)||0)/1000);
@@ -104,6 +108,9 @@ function updateLobbyRewardShortcuts(root){
     const caption=ready?(kind==='daily'?(en?'CLAIM':'RECOGER'):(en?'WATCH':'VER')):(kind==='daily'?(en?'GIFT':'REGALO'):(en?'VIDEO':'VÍDEO'));
     button.classList.toggle('is-ready',ready);
     button.classList.toggle('is-cooling',!ready);
+    // The persisted economy eligibility also controls the external outline.
+    button.parentElement?.classList.toggle('is-ready',ready);
+    button.parentElement?.classList.toggle('is-cooling',!ready);
     button.querySelectorAll('[data-reward-status]').forEach(node=>{
       if(node.textContent!==caption)node.textContent=caption;
     });

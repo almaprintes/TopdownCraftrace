@@ -89,6 +89,7 @@ jobs:
           node scripts/spark-longitudinal-smoke.mjs
           node scripts/rewarded-access-smoke.mjs
           node scripts/coin-reward-flight-smoke.mjs
+          node scripts/lobby-reward-ready-glow-smoke.mjs
           node scripts/android-rewarded-bridge-smoke.mjs
           node scripts/fresh-gesture-smoke.mjs
           node scripts/bootstrap-regression-smoke.mjs
