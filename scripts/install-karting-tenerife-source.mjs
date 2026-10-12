@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { expandCheckpointToEdges } from '../src/game/tracks/imageNativeCheckpointWidth.js';
 import {fileURLToPath} from 'node:url';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source=path.join(root,'src/game/tracks/library/karting-tenerife/source/Karting Tenerife.tdrtrack');
@@ -33,6 +34,12 @@ export async function installKartingTenerife({withAssets=false}={}){
     throw Error('Karting Tenerife: orientación de salida indeterminada');
   const spawnHeading=Math.atan2(dy,dx);
   const authoredSpawn={...t.start,r:spawnHeading};
+  // The TrackStudio gates predate the approved wider Bézier strip. Extend
+  // both authored CPs up to its actual borders, without touching other data.
+  const widenedCheckpoints=t.checkpoints.map((gate,i)=>{
+    try{return expandCheckpointToEdges(gate,t.trackShape);}
+    catch(error){throw Error(`Karting Tenerife CP${i+1}: ${error.message}`);}
+  });
   const result={
     name:'KARTING TENERIFE',brand:'TDR',category:'Karting / Técnico',difficulty:'Alta',
     lengthLabel:'Corta',surface:'Asfalto',worldW:t.worldW,worldH:t.worldH,
@@ -40,7 +47,7 @@ export async function installKartingTenerife({withAssets=false}={}){
     cellSize:t.cellSize,shoulderPx:t.shoulderPx,closed:true,raceType:'circuit',
     raceDirection:'forward',carScale:1,start:authoredSpawn,grid:t.grid||null,
     startLine:t.startLine||null,finishLine:f,finishAnchor,
-    checkpointMode:'authored',checkpoints:t.checkpoints,
+    checkpointMode:'authored',checkpoints:widenedCheckpoints,
     centerline:t.centerline,trackShape:t.trackShape,
     meta:{...(t.meta||{}),renderMode:'image-native',
       imageNative:{schema:1,availability:'published',width:3344,height:1882,
@@ -61,7 +68,9 @@ export async function installKartingTenerife({withAssets=false}={}){
       await sharp(image).extract({left:col*1672,top:row*941,width:1672,height:941}).webp({quality:86,effort:5}).toFile(filename);
     }
   }
-  return {worldW:t.worldW,worldH:t.worldH,points:t.centerline.length,nodes,withAssets};
+  return {worldW:t.worldW,worldH:t.worldH,points:t.centerline.length,nodes,withAssets,
+    checkpointSpans:widenedCheckpoints.map(g=>Math.hypot(g.b.x-g.a.x,g.b.y-g.a.y)),
+    originalCheckpointSpans:t.checkpoints.map(g=>Math.hypot(g.b.x-g.a.x,g.b.y-g.a.y))};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   console.log('[karting-tenerife] source installed',await installKartingTenerife({withAssets:!process.argv.includes('--metadata-only')}));
