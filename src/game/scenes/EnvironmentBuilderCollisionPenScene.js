@@ -47,7 +47,7 @@ export class EnvironmentBuilderScene extends Current {
     });
     on('new',()=>this._activateCollisionPen());
     on('finish',()=>this._finishCollisionPen());
-    on('undo',()=>this._removeLastCollisionNode());
+    on('undo',()=>this._undoCollisionAction?.()||this._removeLastCollisionNode());
     on('cancel',()=>this._cancelCollisionPen());
     on('select',()=>this._enterCollisionSelection());
     on('delete',()=>this._deleteCollisionLine());
