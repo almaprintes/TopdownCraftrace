@@ -33,8 +33,10 @@ assert.ok(penSource.includes('this._collisionLines.push(clone(line));'),
 assert.ok(freeSource.includes('this._penDraft=null;this._penGesture=null;this._collisionSelected=null;') &&
   !freeSource.slice(freeSource.indexOf('_startFreehandZones(){'),freeSource.indexOf('_finishFreehandZone(){')).includes('this._collisionLines=[]'),
   'Switching from finished pen to freehand must retain committed lines');
-assert.ok(env.collisionZones.length===7&&env.collisionLines.length===0,
-  'Do not fabricate a line that was absent from the original export');
+assert.equal(env.collisionZones.length,17,'New finalized export includes seventeen authored zones');
+assert.equal(env.collisionLines.length,5,'New finalized export includes five authentic authored Bézier lines');
+assert.ok(env.collisionLines.every(validCollisionLine),'All published pen lines are valid and complete');
+assert.equal(new Set(env.collisionLines.map(l=>l.id)).size,5,'Published pen lines must retain unique editor IDs');
 const a=penNode(10,20),b=penNode(160,80);
 const line={id:'pen-saved',nodes:[a,b]};
 assert.ok(validCollisionLine(line)&&sampleCollisionLine(line).length>2);
