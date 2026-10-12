@@ -141,7 +141,8 @@ export class RaceScene extends CurrentRaceScene {
     return slice.map((e,i)=>({
       n:i+1,
       lapMs:Number(e?.lapMs??e?.ms??e?.time),
-      carId:e?.carId||this.carId
+      carId:e?.carId||this.carId,
+      valid:e?.valid!==false&&e?.invalid!==true
     })).filter(x=>Number.isFinite(x.lapMs)&&x.lapMs>0);
   }
 
