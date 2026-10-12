@@ -36,6 +36,8 @@ jobs:
         working-directory: dev-src
         shell: bash
         run: |
+          node scripts/install-karting-tenerife-source.mjs --metadata-only
+          node scripts/karting-official-source-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
           test -f src/game/scenes/RaceGamepadScene.js
@@ -155,6 +157,9 @@ jobs:
           cmp dev-src/dist/index.html site/dev/index.html
           cmp dev-src/dist/index.html site/dev-live/index.html
           test -f site/dev/sw.js
+          test -f site/dev/assets/tracks/karting-tenerife/karting-tenerife-official.webp
+          test -f site/dev/assets/tracks/karting-tenerife/beauty/karting-tenerife-trackstudio-0.webp
+          test -f site/dev/assets/tracks/karting-tenerife/beauty/karting-tenerife-trackstudio-3.webp
           test -f site/dev-live/sw.js
           grep -Fq "DEV_SOURCE_SHA=$(git -C dev-src rev-parse HEAD)" site/dev/dev-build.txt
           grep -Fq "DEV_SOURCE_SHA=$(git -C dev-src rev-parse HEAD)" site/dev-live/dev-build.txt
