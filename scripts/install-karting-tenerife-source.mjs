@@ -23,12 +23,22 @@ function unpack(){
 export async function installKartingTenerife({withAssets=false}={}){
   const {t,m,image,nodes}=unpack(),f=t.finishLine,n=f.normal;
   const finishAnchor={x:(f.a.x+f.b.x)/2,y:(f.a.y+f.b.y)/2,r:Math.atan2(n.y,n.x)};
+  // The final .tdrtrack ships an uncalibrated start.r=0 even though the
+  // authored race centerline leaves the starting position heading north.
+  // Derive ONLY the initial heading from the first path segment. Neither
+  // source .tdrtrack, spawn coordinates nor the car's physics are changed.
+  const first=t.centerline[0],ahead=t.centerline[Math.min(5,t.centerline.length-1)];
+  const sx=Number(first?.x),sy=Number(first?.y),dx=Number(ahead?.x)-sx,dy=Number(ahead?.y)-sy;
+  if(![sx,sy,dx,dy].every(Number.isFinite)||Math.hypot(dx,dy)<8)
+    throw Error('Karting Tenerife: orientación de salida indeterminada');
+  const spawnHeading=Math.atan2(dy,dx);
+  const authoredSpawn={...t.start,r:spawnHeading};
   const result={
     name:'KARTING TENERIFE',brand:'TDR',category:'Karting / Técnico',difficulty:'Alta',
     lengthLabel:'Corta',surface:'Asfalto',worldW:t.worldW,worldH:t.worldH,
     trackWidth:t.trackWidth,grassMargin:t.grassMargin,sampleStepPx:t.sampleStepPx,
     cellSize:t.cellSize,shoulderPx:t.shoulderPx,closed:true,raceType:'circuit',
-    raceDirection:'forward',carScale:1,start:t.start,grid:t.grid||null,
+    raceDirection:'forward',carScale:1,start:authoredSpawn,grid:t.grid||null,
     startLine:t.startLine||null,finishLine:f,finishAnchor,
     checkpointMode:'authored',checkpoints:t.checkpoints,
     centerline:t.centerline,trackShape:t.trackShape,
