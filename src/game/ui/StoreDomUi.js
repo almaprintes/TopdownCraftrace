@@ -98,6 +98,9 @@ function rewardCard(scene,root,kind){
     if(!status.available){update();return;}
     busy=true;
     button.disabled=true;
+    // Immediately acknowledge tap, before optional sound or verified ad.
+    card.classList.remove('is-ready');
+    card.classList.add('is-claiming');
     primeCoinRewardSound(scene); // Must run from the real user gesture.
     try{
       if(isVideo){
@@ -117,10 +120,10 @@ function rewardCard(scene,root,kind){
       if(!result.ok){if(root.isConnected)toast(root,result.reason,false);return;}
       if(!root.isConnected)return; // No UI to animate, but currency is already saved.
       try{
-        await playDomCoinRewardFlight(scene,{amount:result.amount,root,card,english:getLanguage()==='en'});
+        await playDomCoinRewardFlight(scene,{amount:result.amount,root,card,english:getLanguage()==='en',quick:true});
         await animateDomCoinBalance(root,{
           from:Number(result.state?.coins)-result.amount,to:Number(result.state?.coins),
-          english:getLanguage()==='en'
+          english:getLanguage()==='en',quick:true
         });
       }catch(error){console.warn('[TDR reward] optional coin animation failed',error);}
       // The flying coins and wallet count-up ARE the success confirmation.
@@ -131,6 +134,7 @@ function rewardCard(scene,root,kind){
       if(root.isConnected)toast(root,getLanguage()==='en'?'REWARD UNAVAILABLE':'RECOMPENSA NO DISPONIBLE',false);
     }finally{
       busy=false;delete root.dataset.tdrWalletPending;
+      card.classList.remove('is-claiming');
       if(root.isConnected){refreshBalance(root);update();}
     }
   });

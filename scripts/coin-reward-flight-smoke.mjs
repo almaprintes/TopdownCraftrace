@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {rewardAmountLabel,stageToClient,rewardFlightFrames,playCoinRewardFlight,playDomCoinRewardFlight,animateDomCoinBalance} from '../src/game/ui/coinRewardFlight.js';
+import {rewardAmountLabel,stageToClient,rewardFlightFrames,playCoinRewardFlight,playDomCoinRewardFlight,animateDomCoinBalance,QUICK_STORE_REWARD_TIMING} from '../src/game/ui/coinRewardFlight.js';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 assert.equal(rewardAmountLabel(100),'+100 MONEDAS');
 assert.equal(rewardAmountLabel(250,true),'+250 COINS');
@@ -16,6 +16,12 @@ for(let i=0;i<10;i++){
 assert.equal(await playCoinRewardFlight(null,{amount:100}),false,'No DOM is harmless');
 assert.equal(await playDomCoinRewardFlight(null,{amount:100}),false,'No DOM is harmless');
 assert.equal(await animateDomCoinBalance(null,{from:0,to:100}),false,'No DOM is harmless');
+assert.ok(QUICK_STORE_REWARD_TIMING.coinDurationMs+9*QUICK_STORE_REWARD_TIMING.coinStaggerMs<900);
+assert.ok(QUICK_STORE_REWARD_TIMING.flightSafetyMs+QUICK_STORE_REWARD_TIMING.walletSafetyMs<=1500);
+assert.ok(QUICK_STORE_REWARD_TIMING.labelDurationMs<450);
+assert.match(read('src/game/ui/coinRewardFlight.js'),
+  /delay:quick\?i\*QUICK_STORE_REWARD_TIMING.coinStaggerMs:140\+i\*40/,
+  'Quick flight schedules its first coin without a delay');
 const store=read('src/game/scenes/MenuRewardedAdsScene.js');
 assert.match(store,/const result=isVideo\?claimRewardedCoins\(100\):claimDailyCoins\(250\)/);
 const verify=store.indexOf('if(!verifiedReward(ad))');
@@ -58,6 +64,12 @@ assert.match(store,/this\._toastStore\?\.\(result\.reason,false\)/,
   'Legacy path retains failure notices');
 assert.match(domStore,/if\(busy\|\|!root\.isConnected\)return/,'prevent duplicate taps in real store');
 assert.match(domStore,/button\.disabled=busy\|\|!status\.available/,'do not reenable while playing ad');
+assert.match(domStore,/card\.classList\.add\('is-claiming'\)/,'Tap acknowledgement is immediate');
+assert.match(domStore,/card\.classList\.remove\('is-claiming'\)/,'Tap feedback always clears');
+assert.match(domStore,/await playDomCoinRewardFlight\(scene,\{amount:result\.amount,root,card,english:getLanguage\(\)==='en',quick:true\}\)/,
+  'Store flight uses short timing after verified grant');
+assert.match(domStore,/english:getLanguage\(\)==='en',quick:true/,
+  'Store wallet count-up also uses short timing');
 assert.match(domStore,/root\.dispatchEvent\(new Event\('tdr:store-closed'\)\)/,'dismiss active flight');
 const fx=read('src/game/ui/coinRewardFlight.js');
 const shared=read('src/game/ui/TdrAppHeader.js');
