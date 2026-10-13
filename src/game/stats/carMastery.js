@@ -38,30 +38,44 @@ export function masteryMaterialLabel(material,lang='es'){
   return MATERIAL_LABELS[material]?.[lang==='en'?'en':'es']||'';
 }
 
-// A single 9-level metal emblem (bronze / silver / gold, 5 / 8 / 12 rays)
-// reused by the lobby, Statistics and the unlock celebration. A compact
-// dark enamel centre makes the badge legible on both light and dark liveries.
+// Nine-level championship CREST: bronze / silver / gold finish, with
+// 5 / 8 / 12 engraved laureate rays and 1 / 2 / 3 merit chevrons per
+// material. The old circular spokes/centre hub resembled an alloy wheel;
+// this angular shield is meant to cover most of the car roof.
 export function masteryWheelSvg(level,{size=128,blackBackground=true}={}){
   const v=masteryVisualSpec(level),lv=v.level;
   const safeSize=Math.max(8,Math.min(512,Number(size)||128));
-  const bg=blackBackground
-    ?'<circle cx="64" cy="64" r="55" fill="#06141f" opacity=".98"/>'
-    :'<circle cx="64" cy="64" r="49" fill="#06141f" opacity=".82"/>';
   const metal=v.rim,highlight=v.light,shadow=v.dark;
-  let spokes='';
+  const shield='M64 6 L112 25 L108 72 C103 91 82 109 64 119 C46 109 25 91 20 72 L16 25 Z';
+  const inset='M64 16 L103 32 L99 70 Q95 86 64 107 Q33 86 29 70 L25 32 Z';
+  const enamel='M64 26 L94 38 L91 68 Q87 82 64 97 Q41 82 37 68 L34 38 Z';
+  // Above the central star, honor rays form a crown rather than a tyre hub.
+  let rays='';
   for(let i=0;i<v.spokes;i++){
-    const a=Math.PI*2*i/v.spokes-Math.PI/2;
-    const x1=64+Math.cos(a)*15,y1=64+Math.sin(a)*15;
-    const x2=64+Math.cos(a)*36,y2=64+Math.sin(a)*36;
-    spokes+=`<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${highlight}" stroke-width="${v.spokes>=12?5.4:v.spokes>=8?6.9:8.7}" stroke-linecap="round"/>`;
+    const a=Math.PI*(1.13+(.74*i/Math.max(1,v.spokes-1)));
+    const x1=64+Math.cos(a)*31,y1=64+Math.sin(a)*31;
+    const x2=64+Math.cos(a)*39,y2=64+Math.sin(a)*39;
+    rays+=`<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${highlight}" stroke-width="2.1" stroke-linecap="round" opacity=".86"/>`;
   }
-  let studs='';
-  for(let i=0;i<8;i++){
-    const a=Math.PI*2*i/8-Math.PI/2;
-    studs+=`<circle cx="${(64+Math.cos(a)*44.8).toFixed(2)}" cy="${(64+Math.sin(a)*44.8).toFixed(2)}" r="1.6" fill="${highlight}" opacity=".82"/>`;
+  const starPoints=[];
+  for(let i=0;i<10;i++){
+    const a=-Math.PI/2+(Math.PI*i/5);
+    const r=i%2?10:24;
+    starPoints.push(`${(64+Math.cos(a)*r).toFixed(2)},${(61+Math.sin(a)*r).toFixed(2)}`);
   }
-  const champion=lv===9?'<circle cx="64" cy="64" r="52" fill="none" stroke="#ffe39b" stroke-width="2" stroke-opacity=".9"/>':'';
-  return `<svg viewBox="0 0 128 128" width="${safeSize}" height="${safeSize}" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="mastery-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${highlight}"/><stop offset="47%" stop-color="${metal}"/><stop offset="100%" stop-color="${shadow}"/></linearGradient><radialGradient id="mastery-enamel"><stop offset="0%" stop-color="#203943"/><stop offset="100%" stop-color="#051016"/></radialGradient></defs>${bg}<circle cx="64" cy="64" r="49" fill="${shadow}" stroke="${highlight}" stroke-width="2" stroke-opacity=".86"/><circle cx="64" cy="64" r="44" fill="url(#mastery-metal)" stroke="${shadow}" stroke-width="2"/><circle cx="64" cy="64" r="39" fill="url(#mastery-enamel)" stroke="${highlight}" stroke-width="1.7" stroke-opacity=".68"/>${lv?spokes:''}${studs}<circle cx="64" cy="64" r="12.8" fill="url(#mastery-metal)" stroke="${highlight}" stroke-width="1.5"/><circle cx="64" cy="64" r="6.8" fill="#07151e" stroke="${shadow}" stroke-width="2"/><circle cx="64" cy="64" r="2.7" fill="${highlight}"/>${champion}</svg>`;
+  const rank=lv?((lv-1)%3+1):0;
+  let bars='';
+  for(let i=0;i<rank;i++){
+    const y=91+i*5;
+    bars+=`<path d="M54 ${y} L64 ${y+3} L74 ${y}" fill="none" stroke="${highlight}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+  const backing=blackBackground
+    ?'<path d="M64 1 L119 23 L115 76 Q108 101 64 125 Q20 101 13 76 L9 23 Z" fill="#04131b" opacity=".94"/>'
+    :'';
+  const champion=lv===9
+    ?'<path d="M64 3 L115 24 L112 73 Q104 96 64 123 Q24 96 16 73 L13 24 Z" fill="none" stroke="#ffe69c" stroke-width="2" opacity=".93"/>'
+    :'';
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${safeSize}" height="${safeSize}" viewBox="0 0 128 128"><defs><linearGradient id="mastery-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${highlight}"/><stop offset="51%" stop-color="${metal}"/><stop offset="100%" stop-color="${shadow}"/></linearGradient><radialGradient id="mastery-enamel"><stop offset="0%" stop-color="#203943"/><stop offset="100%" stop-color="#051016"/></radialGradient></defs>${backing}<path d="${shield}" fill="${shadow}" stroke="${highlight}" stroke-width="2.4"/><path d="${inset}" fill="url(#mastery-metal)" stroke="${shadow}" stroke-width="2"/><path d="${enamel}" fill="url(#mastery-enamel)" stroke="${highlight}" stroke-width="1.2" stroke-opacity=".66"/>${lv?rays:''}<polygon points="${starPoints.join(' ')}" fill="url(#mastery-metal)" stroke="${highlight}" stroke-width="2" stroke-linejoin="round"/><path d="M64 46 L68 57 L79 57" fill="none" stroke="#fff" stroke-width="1.3" stroke-opacity=".35"/>${bars}<path d="M27 32 L32 70 Q38 86 52 96" fill="none" stroke="${highlight}" stroke-width="1.1" opacity=".4"/>${champion}</svg>`;
 }
 
 export function masteryWheelDataUri(level,opts={}){

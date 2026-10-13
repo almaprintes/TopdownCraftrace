@@ -34,28 +34,48 @@ export class RaceScene extends CurrentRaceScene{
     const rim=hexToInt(visual.rim,0xc9ced3);
     const light=hexToInt(visual.light,0xffffff);
     const dark=hexToInt(visual.dark,0x53616c);
-    // This is a small inset roof DECAL, not an opaque tyre sitting over
-    // the windows. Each element is drawn once and rotates with carRig.
-    g.fillStyle(0x06141f,.90);g.fillCircle(0,0,r*1.24);
-    g.lineStyle(Math.max(.9,r*.22),light,.90);g.strokeCircle(0,0,r*1.14);
-    g.fillStyle(dark,1);g.fillCircle(0,0,r*1.02);
-    g.lineStyle(Math.max(.9,r*.29),rim,1);g.strokeCircle(0,0,r*.90);
-    g.fillStyle(0x0c1f28,1);g.fillCircle(0,0,r*.70);
-    const spokes=Math.max(3,Number(visual.spokes)||5);
-    const spokeWidth=Math.max(.65,r*(spokes>=12?.115:spokes>=8?.15:.19));
-    g.lineStyle(spokeWidth,light,1);
-    for(let i=0;i<spokes;i++){
-      const a=Math.PI*2*i/spokes-Math.PI/2;
-      g.beginPath();
-      g.moveTo(Math.cos(a)*r*.25,Math.sin(a)*r*.25);
-      g.lineTo(Math.cos(a)*r*.65,Math.sin(a)*r*.65);
-      g.strokePath();
+    // Full-roof championship SHIELD, painted in the rig's local space so it
+    // scales/rotates with the chassis. No tyre hub, disc or circular spokes.
+    const shell=[
+      {x:0,y:-r*1.17},{x:r*.98,y:-r*.73},{x:r*.89,y:r*.47},
+      {x:0,y:r*1.17},{x:-r*.89,y:r*.47},{x:-r*.98,y:-r*.73}
+    ];
+    const inner=[
+      {x:0,y:-r*.94},{x:r*.76,y:-r*.55},{x:r*.67,y:r*.36},
+      {x:0,y:r*.91},{x:-r*.67,y:r*.36},{x:-r*.76,y:-r*.55}
+    ];
+    g.fillStyle(0x06141f,.96);g.fillPoints(shell,true);
+    g.lineStyle(Math.max(.65,r*.16),light,.95);g.strokePoints(shell,true);
+    g.fillStyle(rim,.97);g.fillPoints(inner,true);
+    g.lineStyle(Math.max(.6,r*.12),dark,.95);g.strokePoints(inner,true);
+    // Contrasting enamel insert with a legible competition STAR.
+    const enamel=inner.map(p=>({x:p.x*.82,y:p.y*.77}));
+    g.fillStyle(0x102a35,.96);g.fillPoints(enamel,true);
+    const star=[];
+    for(let i=0;i<10;i++){
+      const a=-Math.PI/2+Math.PI*i/5;
+      const rad=i%2?r*.205:r*.44;
+      star.push({x:Math.cos(a)*rad,y:Math.sin(a)*rad-r*.045});
     }
-    g.fillStyle(rim,1);g.fillCircle(0,0,r*.25);
-    g.fillStyle(0x06121b,1);g.fillCircle(0,0,r*.12);
-    g.fillStyle(light,1);g.fillCircle(0,0,Math.max(.5,r*.045));
+    g.fillStyle(light,1);g.fillPoints(star,true);
+    g.lineStyle(Math.max(.5,r*.075),dark,.95);g.strokePoints(star,true);
+    // Canonical five/eight/twelve small honor strokes, no rotating spokes.
+    const marks=Math.max(3,Number(visual.spokes)||5);
+    g.lineStyle(Math.max(.45,r*.05),light,.9);
+    for(let i=0;i<marks;i++){
+      const xx=-r*.51+(i+.5)*r*1.02/marks;
+      g.lineBetween(xx,-r*.52,xx,-r*.64);
+    }
+    // Three rank grades inside each material tier.
+    const rank=(mastery.level-1)%3+1;
+    g.lineStyle(Math.max(.55,r*.085),light,1);
+    for(let i=0;i<rank;i++){
+      const yy=r*(.56+i*.105);
+      g.lineBetween(-r*.23,yy,0,yy+r*.07);
+      g.lineBetween(0,yy+r*.07,r*.23,yy);
+    }
     if(mastery.level===9){
-      g.lineStyle(.8,0xffe39b,.95);g.strokeCircle(0,0,r*1.28);
+      g.lineStyle(Math.max(.7,r*.075),0xffe39b,.95);g.strokePoints(shell,true);
     }
     g.setPosition(x,y);
     g.setDepth?.(999);rig.add(g);this._masteryRoofWheel=g;

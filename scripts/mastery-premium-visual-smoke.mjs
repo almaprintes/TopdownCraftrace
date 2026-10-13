@@ -1,5 +1,5 @@
-// DEV 1.2.162 — nine canonical mastery levels, a unified metal medal,
-// true painted-car roof alignment and nonintrusive race decal.
+// DEV 1.2.163 — nine canonical mastery levels on large championship shields,
+// centred over the painted roof in both lobby and race, optional visibility.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
@@ -23,6 +23,12 @@ for(let i=1;i<=9;i++){
   assert.match(svg,/viewBox="0 0 128 128"/);
   assert.match(svg,/linearGradient id="mastery-metal"/);
   assert.match(svg,/radialGradient id="mastery-enamel"/);
+  assert.match(svg,/M64 6 L112 25 L108 72/,
+    'Each mastery design must be a shield, not a wheel');
+  assert.match(svg,/<polygon points="/,
+    'Large central championship star must be visible');
+  assert.doesNotMatch(svg,/<circle /,
+    'No circular hub/disc/tyre motif remains');
   assert.equal((svg.match(/<line /g)||[]).length,spec.spokes);
   assert.ok(svg.includes(spec.rim));
   assert.ok(masteryWheelDataUri(i,{size:128,blackBackground:false}).startsWith('data:image/svg+xml'));
@@ -37,19 +43,25 @@ const tall=lobbyMasteryPlacement(sourceBounds,400,1000);
 assert.equal(tall.paintWidth,120);
 assert.equal(tall.paintHeight,300);
 assert.equal(tall.x,200,'Badge stays at true painted centre, not container edge');
-assert.equal(tall.y,60+300*.57,'Badge moves toward the roof/rear rather than windscreen');
-assert.ok(tall.size<=31&&tall.size>=15,'Emblem must never dominate the car');
+assert.equal(tall.y,60+300*.51,'Crest belongs at the centre of the cabin');
+assert.ok(tall.size>=tall.paintWidth*.7&&tall.size<=tall.paintWidth*.9,
+  'Emblem should fill most of the painted roof width');
 const letterbox=lobbyMasteryPlacement({left:0,top:0,width:200,height:400},1000,500);
 assert.equal(letterbox.paintWidth,200);
 assert.equal(letterbox.paintHeight,100);
-assert.equal(letterbox.y,(400-100)/2+100*.57);
+assert.equal(letterbox.y,(400-100)/2+100*.51);
+assert.ok(letterbox.size>=70&&letterbox.size<=85,'Wide roof crests scale with the painted short axis');
 assert.equal(lobbyMasteryPlacement({width:0,height:200},400,1000),null);
 const vertical=raceMasteryPlacement(46,96);
-assert.equal(vertical.x,0);assert.ok(vertical.y>0);
-assert.ok(vertical.radius<7);
+assert.equal(vertical.x,0);assert.equal(vertical.y,0);
+assert.ok(vertical.radius>=46*.38,
+  'Race emblem should cover most of the narrow roof axis');
 const horizontal=raceMasteryPlacement(96,46);
-assert.ok(horizontal.x<0);assert.equal(horizontal.y,0);
-assert.ok(horizontal.radius<7);
+assert.equal(horizontal.x,0);assert.equal(horizontal.y,0);
+assert.equal(horizontal.radius,vertical.radius,
+  'Car orientation must not change the centred full-roof crest');
+assert.ok(raceMasteryPlacement(20,80).radius>=5.3,
+  'Badge remains legible on smaller cars');
 globalThis.localStorage={getItem:()=>JSON.stringify({video:{showMasteryBadge:false}})};
 assert.equal(masteryRoofVisible(),false,'Hide on car must remain available');
 globalThis.localStorage={getItem:()=>JSON.stringify({video:{showMasteryBadge:true}})};
@@ -66,6 +78,12 @@ assert.match(lobby,/car\.addEventListener\('load',position\)/);
 assert.match(lobby,/window\.addEventListener\('resize',position\)/);
 assert.match(race,/raceMasteryPlacement\(w,h\)/);
 assert.match(race,/g\.setPosition\(x,y\)/);
+assert.match(race,/g\.fillPoints\(shell,true\)/,
+  'Race uses a fully filled championship shield');
+assert.match(race,/g\.fillPoints\(star,true\)/,
+  'Race displays the central championship star');
+assert.doesNotMatch(race,/g\.fillCircle\(/,
+  'No wheel-shaped circles in race crest');
 assert.match(race,/rig\.add\(g\);this\._masteryRoofWheel=g/);
 assert.match(race,/this\.time\?\.delayedCall\?\.\(900/,
   'Re-align once after asynchronously loaded car textures');
@@ -76,5 +94,5 @@ assert.match(unlock,/premiumSkin\.textContent=masteryPremiumCss/);
 assert.match(css,/\.sh-mastery-panel\{/);
 assert.match(css,/\.tdr-mastery-unlock \.mu-card\{/);
 const html=read('index.html');
-assert.match(html,/content="DEV 1\.2\.162"/);
-console.log('Mastery nine levels, metal rims, car-painted alignment, race decal, visibility and premium statistics OK');
+assert.match(html,/content="DEV 1\.2\.163"/);
+console.log('Mastery nine levels, full-roof championship shields, exact painted placement, visibility and premium statistics OK');
