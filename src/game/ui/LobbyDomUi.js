@@ -79,7 +79,14 @@ function makeRewardShortcut(kind,scene){
   // Render the glow OUTSIDE the clipped bevel; preserve the original button and hit area.
   const slot=document.createElement('span');
   slot.className='tdr-lobby-reward-slot '+(video?'tdr-lobby-reward-slot--video':'tdr-lobby-reward-slot--daily');
-  slot.append(button);
+  const halo=document.createElement('span');
+  halo.className='tdr-lobby-reward-halo';
+  halo.setAttribute('aria-hidden','true');
+  const shape=document.createElement('span');
+  shape.className='tdr-lobby-reward-halo-shape';
+  halo.append(shape);
+  // Blur on the parent of the clipped shape so the light is not clipped.
+  slot.append(halo,button);
   // This remains navigation to the existing store rewards route.
   button.addEventListener('click',()=>scene._openStoreModal?.('rewards'));
   return slot;

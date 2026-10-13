@@ -1,5 +1,5 @@
-// A ready gift/video is indicated by an external beveled glow; only the
-// existing storeEconomy cooldown status is allowed to switch that glow on.
+// The exact economy state switches on a real, blurred ON/OFF outline.
+// Tests focus on structure because visual appearance still needs phone QA.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const ui=readFileSync('src/game/ui/LobbyDomUi.js','utf8');
@@ -8,24 +8,29 @@ assert.match(ui,/const status=kind==='daily'\?dailyStatus\(\):rewardedStatus\(\)
 assert.match(ui,/button\.classList\.toggle\('is-ready',ready\)/);
 assert.match(ui,/button\.parentElement\?\.classList\.toggle\('is-ready',ready\)/);
 assert.match(ui,/button\.parentElement\?\.classList\.toggle\('is-cooling',!ready\)/);
-assert.match(ui,/slot\.append\(button\)/);
-assert.match(ui,/return slot;\n}\nconst ctaCountdown/);
+assert.match(ui,/halo\.className='tdr-lobby-reward-halo'/);
+assert.match(ui,/shape\.className='tdr-lobby-reward-halo-shape'/);
+assert.match(ui,/halo\.setAttribute\('aria-hidden','true'\)/);
+assert.match(ui,/halo\.append\(shape\)/);
+assert.match(ui,/slot\.append\(halo,button\)/);
 assert.match(ui,/button\.addEventListener\('click',\(\)=>scene\._openStoreModal\?\.\('rewards'\)\)/);
 assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-reward-slot\{/);
-assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-action-capsule > \.tdr-lobby-reward-slot > button\{height:100%;z-index:1\}/,
-  'Wrapper must preserve the exact button height at landscape phone sizes');
-assert.match(css,/\.tdr-lobby-reward-slot--video\{--tdr-halo-color:#70dcff\}/);
+assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-action-capsule > \.tdr-lobby-reward-slot > button\{height:100%;z-index:2\}/);
 assert.match(css,/--tdr-halo-color:#ffd45b/);
-assert.match(css,/\.tdr-lobby-reward-slot\.is-ready::before\{/);
-assert.match(css,/\.tdr-lobby-reward-slot\.is-ready::after\{/);
-assert.match(css,/@keyframes tdr-lobby-ready-aura/);
-assert.match(css,/@keyframes tdr-lobby-ready-edge/);
-assert.match(css,/\.tdr-lobby-reward-slot::before,.tdr-lobby-reward-slot::after\{[\s\S]*?pointer-events:none/);
-assert.match(css,/\.tdr-lobby-reward-slot--daily::before,.tdr-lobby-reward-slot--daily::after/);
-assert.match(css,/\.tdr-lobby-reward-slot--video::before,.tdr-lobby-reward-slot--video::after/);
+assert.match(css,/--tdr-halo-color:#70dcff/);
+assert.match(css,/\.tdr-lobby-reward-halo\{[^}]*filter:blur\(11px\)/);
+assert.match(css,/\.tdr-lobby-reward-halo-shape\{/);
+assert.match(css,/\.tdr-lobby-reward-slot--daily \.tdr-lobby-reward-halo-shape/);
+assert.match(css,/\.tdr-lobby-reward-slot--video \.tdr-lobby-reward-halo-shape/);
+assert.match(css,/\.tdr-lobby-reward-slot\.is-ready \.tdr-lobby-reward-halo\{[^}]*1\.55s/);
+assert.match(css,/\.tdr-lobby-reward-slot\.is-ready::before\{[^}]*1\.55s/);
+assert.match(css,/@keyframes tdr-lobby-ready-aura\{\s*0%,100%\{opacity:\.02\}\s*32%,48%\{opacity:1\}/);
+assert.match(css,/@keyframes tdr-lobby-ready-edge\{\s*0%,100%\{opacity:\.06\}\s*32%,48%\{opacity:1\}/);
+assert.doesNotMatch(css,/\.tdr-lobby-reward-halo-shape\{[^}]*filter:blur/);
+assert.doesNotMatch(css,/filter:drop-shadow\(0 0 9px var\(--tdr-reward-glow\)\)/);
+assert.doesNotMatch(css,/@keyframes tdr-lobby-ready-(?:aura|edge)[\s\S]*?scale\(/);
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
-assert.match(css,/\.tdr-lobby-reward-slot\.is-ready::before\{animation:none;opacity:.58\}/);
-assert.match(css,/\.tdr-lobby-reward-slot\.is-ready::after\{animation:none;opacity:1\}/);
-assert.match(ui,/button\.classList\.toggle\('is-cooling',!ready\)/);
+assert.match(css,/\.tdr-lobby-reward-slot\.is-ready \.tdr-lobby-reward-halo\{animation:none;opacity:\.48/);
+assert.match(css,/\.tdr-lobby-reward-slot\.is-ready::before\{animation:none;opacity:\.85/);
 assert.ok(!css.includes('.tdr-lobby-reward-slot.is-cooling::before'));
-console.log('Lobby reward buttons: independent gold/blue ready-only contour, reduced-motion fallback and existing store actions verified.');
+console.log('Lobby ready rewards: independent fixed-size gold/cyan 11px blurred ON/OFF halo every 1.55s, touch action and reduced motion preserved.');

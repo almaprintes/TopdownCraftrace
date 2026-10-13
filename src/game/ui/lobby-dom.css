@@ -312,34 +312,51 @@
   pointer-events:auto;
   transition:filter .2s ease;
 }
-/* A separate slot lets the luminous outline escape the button clip-path.
-   This does not change the coupon shape, action or touch target. */
+/* Ready rewards: true blurred neon, no scaling of button or hit target.
+   The polygon clips an INNER shape; the OUTER halo owns the blur. */
 .tdr-lobby-dom .tdr-lobby-reward-slot{
   position:relative;display:block;min-width:0;width:100%;height:100%;
-  isolation:isolate;--tdr-halo-color:#ffd45b;
+  isolation:isolate;overflow:visible;--tdr-halo-color:#ffd45b;
 }
 .tdr-lobby-dom .tdr-lobby-reward-slot--video{--tdr-halo-color:#70dcff}
-.tdr-lobby-dom .tdr-lobby-action-capsule > .tdr-lobby-reward-slot > button{height:100%;z-index:1}
-.tdr-lobby-reward-slot::before,.tdr-lobby-reward-slot::after{
-  content:'';position:absolute;z-index:0;pointer-events:none;
-  background:var(--tdr-halo-color);opacity:0;will-change:opacity;
+.tdr-lobby-dom .tdr-lobby-action-capsule > .tdr-lobby-reward-slot > button{height:100%;z-index:2}
+.tdr-lobby-reward-halo{
+  position:absolute;inset:-3px;z-index:0;pointer-events:none;
+  opacity:0;filter:blur(11px);
 }
-.tdr-lobby-reward-slot--daily::before,.tdr-lobby-reward-slot--daily::after{
+.tdr-lobby-reward-halo-shape{
+  position:absolute;inset:0;display:block;pointer-events:none;
+  background:var(--tdr-halo-color);
+}
+/* A crisp 1px lit edge adds definition; the bloom lives behind it. */
+.tdr-lobby-reward-slot::before{
+  content:'';position:absolute;inset:-1px;z-index:1;
+  pointer-events:none;background:var(--tdr-halo-color);opacity:0;
+}
+.tdr-lobby-reward-slot--daily::before,
+.tdr-lobby-reward-slot--daily .tdr-lobby-reward-halo-shape{
   clip-path:polygon(12px 0,calc(100% - 7.5px) 0,100% 50%,calc(100% - 7.5px) 100%,12px 100%,0 50%);
 }
-.tdr-lobby-reward-slot--video::before,.tdr-lobby-reward-slot--video::after{
+.tdr-lobby-reward-slot--video::before,
+.tdr-lobby-reward-slot--video .tdr-lobby-reward-halo-shape{
   clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%,7.5px 50%);
 }
-.tdr-lobby-reward-slot::before{inset:-7px;filter:blur(8px)}
-.tdr-lobby-reward-slot::after{inset:-3px}
+.tdr-lobby-reward-slot.is-ready .tdr-lobby-reward-halo{
+  will-change:opacity;animation:tdr-lobby-ready-aura 1.55s ease-in-out infinite;
+}
 .tdr-lobby-reward-slot.is-ready::before{
-  animation:tdr-lobby-ready-aura 2.1s ease-in-out infinite;
+  will-change:opacity;animation:tdr-lobby-ready-edge 1.55s ease-in-out infinite;
 }
-.tdr-lobby-reward-slot.is-ready::after{
-  animation:tdr-lobby-ready-edge 2.1s ease-in-out infinite;
+@keyframes tdr-lobby-ready-aura{
+  0%,100%{opacity:.02}
+  32%,48%{opacity:1}
+  82%{opacity:.02}
 }
-@keyframes tdr-lobby-ready-aura{0%,100%{opacity:.36}50%{opacity:.87}}
-@keyframes tdr-lobby-ready-edge{0%,100%{opacity:.70}50%{opacity:1}}
+@keyframes tdr-lobby-ready-edge{
+  0%,100%{opacity:.06}
+  32%,48%{opacity:1}
+  82%{opacity:.06}
+}
 .tdr-lobby-action-capsule .tdr-lobby-reward-cta--daily{
   clip-path:polygon(12px 0,calc(100% - 7.5px) 0,100% 50%,calc(100% - 7.5px) 100%,12px 100%,0 50%);
 }
@@ -452,7 +469,7 @@
 }
 .tdr-lobby-action-capsule .tdr-lobby-reward-cta.is-ready{
   border-color:#ffe39b;
-  filter:drop-shadow(0 0 9px var(--tdr-reward-glow));
+  /* Pulsing glow is on the separate blurred halo, never a static button shadow. */
 }
 .tdr-lobby-action-capsule .tdr-lobby-reward-cta--video.is-ready{
   border-color:#c1f2ff;
@@ -483,7 +500,6 @@
 @media(prefers-reduced-motion:reduce){
  .tdr-lobby-action-capsule .tdr-lobby-reward-cta::before,
  .tdr-lobby-reward-face--filled{transition:none}
- .tdr-lobby-reward-slot.is-ready::before{animation:none;opacity:.58}
- .tdr-lobby-reward-slot.is-ready::after{animation:none;opacity:1}
- .tdr-lobby-reward-slot::before,.tdr-lobby-reward-slot::after{will-change:auto}
+ .tdr-lobby-reward-slot.is-ready .tdr-lobby-reward-halo{animation:none;opacity:.48;will-change:auto}
+ .tdr-lobby-reward-slot.is-ready::before{animation:none;opacity:.85;will-change:auto}
 }
