@@ -23,6 +23,7 @@ export class RaceScene extends CurrentRaceScene {
     this._bikeYawFiltered=0;
     this._racePhysicsWakeDone=false;
     this._juanicarSlipYaw=0;
+    this._juanicarHandbrakeYaw=0;
   }
 
   create(data){
@@ -207,21 +208,35 @@ export class RaceScene extends CurrentRaceScene {
       experimentalYaw*=1-0.53*clamp(excess,0,1);
       // Weight transfer: brake while turning provokes strong, progressive rear breakaway.
       const lift=clamp((0.28-throttle)/0.28,0,1);
-      const transfer=turnDemand*smoothstep01((speed-110)/210)*(braking*2.3+lift*0.55);
-      const slipTarget=Math.sign(steer)*(transfer+excess*turnDemand*0.55);
+      const transfer=turnDemand*smoothstep01((speed-110)/210)*(braking*2.65+lift*0.72);
+      const handbrake=this._tdrHandbrake===true;
+      const slipTarget=Math.sign(steer)*(transfer+excess*turnDemand*0.66);
       this._juanicarSlipYaw+=(slipTarget-this._juanicarSlipYaw)*(1-Math.exp(-dt*3.5));
       const recovery=1-Math.exp(-dt*(2.0+throttle*3.3));
       if(transfer<0.12)this._juanicarSlipYaw*=1-recovery;
       this._juanicarSlipYaw=clamp(this._juanicarSlipYaw,-1.75,1.75);
       experimentalYaw+=this._juanicarSlipYaw*dt;
+      // Handbrake locks the REAR axle. Preserve forward momentum while reducing
+      // rear traction and rotating around the front axle; never add a sudden
+      // position teleport or a second independent yaw impulse.
+      const hbSpeed=smoothstep01((speed-45)/155);
+      const hbTarget=handbrake?Math.sign(steer)*turnDemand*hbSpeed*2.45:0;
+      this._juanicarHandbrakeYaw+=(hbTarget-this._juanicarHandbrakeYaw)*(1-Math.exp(-dt*(handbrake?5.8:4.1)));
+      this._juanicarHandbrakeYaw=clamp(this._juanicarHandbrakeYaw,-2.45,2.45);
+      experimentalYaw+=this._juanicarHandbrakeYaw*dt;
       // Preserve momentum during the slide; only slowly re-align velocity to nose.
       const vel=body.body.velocity;
       const heading=prevRot+experimentalYaw;
       const lateral=-Math.sin(heading)*vel.x+Math.cos(heading)*vel.y;
-      const traction=clamp(1-0.73*Math.abs(this._juanicarSlipYaw)-0.42*excess,0.12,1);
+      const traction=clamp(1-0.78*Math.abs(this._juanicarSlipYaw)-0.42*excess-(handbrake?0.52:0),0.08,1);
       const lateralDamp=(1-Math.exp(-dt*(2.1+throttle*1.7)*traction));
       vel.x+=Math.sin(heading)*lateral*lateralDamp;
       vel.y-=Math.cos(heading)*lateral*lateralDamp;
+      if(handbrake){
+        const brakeFactor=Math.exp(-dt*(0.95+0.65*hbSpeed));
+        vel.x*=brakeFactor;
+        vel.y*=brakeFactor;
+      }
     }
     const newRot=wrapPi(prevRot+experimentalYaw);
 
