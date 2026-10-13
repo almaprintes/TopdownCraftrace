@@ -26,6 +26,13 @@ storage.set('tdr2:ghost:karting-tenerife:helix_spark',JSON.stringify(ghost));
 assert.equal(localRecordGhost('karting-tenerife','helix_spark',39917)?.samples.length,10);
 assert.equal(localRecordGhost('karting-tenerife','helix_spark',38700),null,'No obsolete ghost with a new record');
 assert.equal(localRecordGhost('karting-tenerife','different-car',39917),null,'Car ID must match');
+const oldKey='tdr2:ghost:karting-tenerife:helix_spark';
+storage.delete(oldKey);
+const officialKey='tdr2:topReplay:'+encodeURIComponent('karting-tenerife')+':verified-39917';
+storage.set('tdr2:ttBest:karting-tenerife',JSON.stringify({lapMs:39917,carId:'helix_spark',ghostKey:officialKey}));
+storage.set(officialKey,JSON.stringify(ghost));
+assert.equal(localRecordGhost('karting-tenerife','helix_spark',39917)?.samples.length,10,
+  'Report publishing must resolve the exact saved Records replay without an ad');
 const view=readFileSync('src/game/ui/sessionRecordPublishOffer.js','utf8');
 const source=readFileSync('src/game/scenes/RaceSessionReportScene.js','utf8');
 for(const x of [

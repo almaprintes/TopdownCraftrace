@@ -16,8 +16,11 @@ assert.equal(sessionPersonalBest({bestMs:44900,laps:[{lapMs:47700}]},45000),null
 
 const storage=new Map();
 globalThis.localStorage={
+  get length(){return storage.size;},
+  key(index){return [...storage.keys()][index]??null;},
   getItem(key){return storage.get(key)||null;},
-  setItem(key,value){storage.set(key,value);}
+  setItem(key,value){storage.set(key,value);},
+  removeItem(key){storage.delete(key);}
 };
 const track='karting-tenerife',car='spark',lapMs=44700;
 storage.set('tdr2:ghost:'+track+':'+car,JSON.stringify({
@@ -27,6 +30,31 @@ assert.equal(localRecordGhost(track,car,lapMs)?.samples.length,6);
 assert.equal(localRecordGhost(track,'other-car',lapMs),null,'Wrong car ghost must not publish');
 assert.equal(localRecordGhost(track,car,lapMs-100),null,'Stale ghost time must not publish as faster PB');
 assert.equal(localRecordGhost('wrong-track',car,lapMs),null,'Wrong circuit ghost must not publish');
+
+// Real Android QA regression: the newer Records section knows a persisted
+// topReplay/ttBest ghost while the original 'tdr2:ghost' key is absent.
+const legacyKey='tdr2:ghost:'+track+':'+car;
+const savedLegacy=storage.get(legacyKey);
+storage.delete(legacyKey);
+const replayKey='tdr2:topReplay:'+encodeURIComponent(track)+':proof';
+const replay={trackKey:track,carId:car,lapMs,samples:Array.from({length:8},(_,i)=>({t:i*750,x:150+i*3,y:230+i*7,r:0}))};
+storage.set('tdr2:ttBest:'+track,JSON.stringify({lapMs,carId:car,ghostKey:replayKey}));
+storage.set(replayKey,JSON.stringify(replay));
+assert.equal(localRecordGhost(track,car,lapMs)?.samples.length,8,
+  'PB offer can use the same official saved replay that the Records view publishes');
+assert.equal(localRecordGhost(track,'other-car',lapMs),null,
+  'Official replay must never be attributed to another car');
+assert.equal(localRecordGhost(track,car,lapMs-100),null,
+  'Official replay must never be attributed to a faster, different lap');
+storage.set(replayKey,JSON.stringify({...replay,trackKey:'wrong-track'}));
+assert.equal(localRecordGhost(track,car,lapMs),null,'Tampered replay track is rejected');
+storage.set(replayKey,JSON.stringify({...replay,carId:'another-car'}));
+assert.equal(localRecordGhost(track,car,lapMs),null,'Tampered replay car is rejected');
+storage.set(replayKey,JSON.stringify({...replay,lapMs:lapMs+20}));
+assert.equal(localRecordGhost(track,car,lapMs),null,'Outdated replay time is rejected');
+storage.set(replayKey,JSON.stringify(replay));
+storage.set(legacyKey,savedLegacy);
+assert.equal(localRecordGhost(track,car,lapMs)?.samples.length,6,'Legacy recording remains preferred when valid');
 
 const offer=readFileSync('src/game/ui/sessionRecordPublishOffer.js','utf8');
 const report=readFileSync('src/game/scenes/RaceSessionReportScene.js','utf8');
