@@ -1,0 +1,56 @@
+/* Shared mastery presentation for Statistics and the nine-level unlock.
+   Metal colour / spoke count comes from carMastery.js, not from CSS. */
+.sh-car__badge{
+  position:relative;
+  border:1px solid rgba(118,225,241,.42)!important;
+  border-radius:0!important;
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+  background:linear-gradient(126deg,rgba(12,47,61,.97),rgba(4,19,29,.94))!important;
+  box-shadow:inset 0 1px rgba(222,252,255,.15);
+}
+.sh-car__badge img{
+  width:34px!important;height:34px!important;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.6));
+}
+.sh-car__badge-copy small{color:#87e9fa!important}
+.sh-car__badge-copy strong{font-weight:1000;letter-spacing:.06em}
+.sh-mastery-panel{
+  position:relative;isolation:isolate;
+  border:1px solid rgba(104,222,241,.44)!important;
+  border-radius:0!important;
+  clip-path:polygon(0 0,calc(100% - 17px) 0,100% 17px,100% 100%,17px 100%,0 calc(100% - 17px));
+  background:radial-gradient(ellipse 80% 140% at 0 0,rgba(47,119,134,.24),transparent 75%),linear-gradient(111deg,rgba(12,43,56,.95),rgba(4,19,30,.89) 78%)!important;
+}
+.sh-mastery-panel::before{
+  content:'';position:absolute;top:0;left:0;width:36%;height:2px;
+  background:linear-gradient(90deg,#85f1ff,rgba(104,227,247,.2),transparent);
+  pointer-events:none;
+}
+.sh-mastery-panel__badge{filter:drop-shadow(0 3px 5px rgba(0,0,0,.5))}
+.sh-mastery-panel__kicker{color:#86e5f5!important}
+.sh-mastery-progress{
+  height:8px!important;
+  border:1px solid rgba(111,217,237,.42)!important;
+  background:#071823!important;
+}
+.sh-mastery-progress>i{background:linear-gradient(90deg,#a16b38,#f0bc61,#72f6c3)!important}
+.tdr-mastery-unlock .mu-card{
+  border:1px solid rgba(118,226,244,.72)!important;
+  background:radial-gradient(ellipse 83% 128% at 0 0,rgba(34,116,134,.25),transparent 80%),linear-gradient(145deg,#102735,#06131f 80%)!important;
+  clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px))!important;
+  box-shadow:0 22px 70px rgba(0,0,0,.65),0 0 20px rgba(117,218,241,.10)!important;
+}
+.tdr-mastery-unlock .mu-kicker{color:#85eafa}
+.tdr-mastery-unlock .mu-badge{filter:drop-shadow(0 3px 9px rgba(0,0,0,.66))}
+.tdr-mastery-unlock .mu-continue{
+  border-radius:3px 13px 3px 13px;
+  background:linear-gradient(180deg,#299e75,#0d604b);
+}
+@media(max-height:430px){
+  .sh-mastery-panel{gap:9px!important;padding:8px 11px!important}
+  .sh-car__badge{padding:3px 6px!important;height:41px!important}
+  .sh-car__badge img{height:30px!important;width:30px!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .tdr-mastery-unlock .mu-badge{animation:none}
+}

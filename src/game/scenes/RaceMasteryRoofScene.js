@@ -9,7 +9,14 @@ function visibleCarSprite(scene){
 function hexToInt(value,fallback){const n=parseInt(String(value||'').replace('#',''),16);return Number.isFinite(n)?n:fallback;}
 
 export class RaceScene extends CurrentRaceScene{
-  create(data){const result=super.create(data);this.time?.delayedCall?.(80,()=>this._installMasteryRoofWheel());return result;}
+  create(data){
+    const result=super.create(data);
+    this.time?.delayedCall?.(80,()=>this._installMasteryRoofWheel());
+    // Car skins can finish loading AFTER create(). Refresh once after the
+    // async fit-to-box completes, rather than anchoring to fallback art.
+    this.time?.delayedCall?.(900,()=>{if(this.carRig?.scene)this._installMasteryRoofWheel();});
+    return result;
+  }
   _installMasteryRoofWheel(){
     try{this._masteryRoofWheel?.destroy?.();}catch{}this._masteryRoofWheel=null;
     if(!masteryRoofVisible())return;

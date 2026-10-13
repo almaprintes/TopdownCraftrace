@@ -17,7 +17,13 @@
 
 /* Mastery is anchored from the real DOM bounds of the car preview, never from
    fixed viewport percentages. That keeps the badge on the roof on every device. */
-.tdr-lobby-mastery-badge{position:absolute;z-index:4;width:var(--mastery-size,36px);height:var(--mastery-size,36px);object-fit:contain;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 2px 3px rgba(0,0,0,.62));}
+.tdr-lobby-mastery-badge{
+  position:absolute;z-index:4;
+  width:var(--mastery-size,25px);height:var(--mastery-size,25px);
+  object-fit:contain;transform:translate(-50%,-50%);
+  pointer-events:none;user-select:none;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.72));
+}
 .tdr-lobby-mastery-badge[hidden]{display:none!important}
 
 /* Bottom navigation is only defined in lobby-dom.css. */

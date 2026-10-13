@@ -2,6 +2,7 @@ import { StatsScene as CurrentStatsScene } from './StatsScene.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { masteryInfoForMeters, masteryMaterialLabel, masteryWheelDataUri } from '../stats/carMastery.js';
 import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
+import masteryPremiumCss from '../ui/mastery-premium.css?inline';
 
 const BASE=import.meta.env.BASE_URL||'/';
 function fmtKm(n,lang){return Math.max(0,Number(n)||0).toLocaleString(lang==='en'?'en-US':'es-ES',{minimumFractionDigits:1,maximumFractionDigits:1});}
@@ -21,6 +22,7 @@ export class StatsScene extends CurrentStatsScene{
 .sh-car__art{position:relative!important;padding:0!important;overflow:hidden!important;min-height:0!important}.sh-car__art img[data-stats-lobby-art]{position:absolute!important;left:50%!important;top:50%!important;width:calc(100% - 24px)!important;height:calc(100% - 20px)!important;max-width:none!important;max-height:none!important;object-fit:contain!important;object-position:center center!important;transform:translate(-50%,-50%)!important;margin:0!important}.sh-detail-title img.car[data-stats-lobby-art]{width:100%!important;height:118px!important;max-height:118px!important;object-fit:contain!important;object-position:center!important;transform:none!important}
 @media(max-height:430px){.sh-mastery-panel{padding:8px 12px;gap:12px}.sh-mastery-panel__badge{width:60px;height:60px}.sh-mastery-panel__desc{margin:4px 0 6px;font-size:8px}.sh-car__art img[data-stats-lobby-art]{width:calc(100% - 18px)!important;height:calc(100% - 14px)!important}.sh-detail-title img.car[data-stats-lobby-art]{height:88px!important}}
 `;
+    style.textContent += '\n' + masteryPremiumCss;
     this._root?.appendChild(style);
   }
   _replaceOverviewCarArt(){

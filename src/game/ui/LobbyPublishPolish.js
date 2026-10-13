@@ -4,6 +4,7 @@ import { getCurrentRaceEvent } from '../events/raceEvents.js';
 import { loadPlayerStatsPersisted } from '../stats/playerStats.js';
 import { acknowledgedMasteryLevel, masteryInfoForMeters, masteryRoofVisible, masteryWheelDataUri } from '../stats/carMastery.js';
 import { showMasteryUnlockModal } from './MasteryUnlockModal.js';
+import { lobbyMasteryPlacement } from '../stats/masteryBadgePlacement.js';
 import './lobby-publish-polish.css';
 
 const BASE=import.meta.env.BASE_URL||'/';
@@ -26,13 +27,18 @@ function installMasteryRoofBadge(scene,root){
   const car=root.querySelector('[data-lobby-car]');
   const position=()=>{
     if(!badge?.isConnected||!car?.isConnected)return;
-    const rr=root.getBoundingClientRect(),cr=car.getBoundingClientRect();if(!cr.width||!cr.height)return;
-    badge.style.left=`${cr.left-rr.left+cr.width*.5}px`;badge.style.top=`${cr.top-rr.top+cr.height*.49}px`;
-    const size=Math.max(24,Math.min(48,cr.width*.145));badge.style.setProperty('--mastery-size',`${size}px`);
+    const rr=root.getBoundingClientRect(),cr=car.getBoundingClientRect();
+    // The <img> can have large invisible letterboxes with object-fit:contain.
+    // Measure its ACTUAL painted car before mounting the roof decal.
+    const place=lobbyMasteryPlacement(cr,car.naturalWidth,car.naturalHeight);
+    if(!place)return;
+    badge.style.left=`${place.x-rr.left}px`;
+    badge.style.top=`${place.y-rr.top}px`;
+    badge.style.setProperty('--mastery-size',`${place.size}px`);
   };
   const visible=mastery.level&&masteryRoofVisible();
   if(!visible){badge.hidden=true;badge.removeAttribute('src');}
-  else{badge.hidden=false;badge.src=masteryWheelDataUri(mastery.level,{size:128,blackBackground:true});badge.dataset.level=String(mastery.level);requestAnimationFrame(position);if(!car.dataset.masteryPositionBound){car.dataset.masteryPositionBound='1';car.addEventListener('load',position);window.addEventListener('resize',position);scene.events.once('shutdown',()=>window.removeEventListener('resize',position));}}
+  else{badge.hidden=false;badge.src=masteryWheelDataUri(mastery.level,{size:128,blackBackground:false});badge.dataset.level=String(mastery.level);requestAnimationFrame(position);if(!car.dataset.masteryPositionBound){car.dataset.masteryPositionBound='1';car.addEventListener('load',position);window.addEventListener('resize',position);scene.events.once('shutdown',()=>window.removeEventListener('resize',position));}}
 
   if(mastery.level>acknowledgedMasteryLevel(carId)&&!root.dataset.masteryCelebrationShown){
     root.dataset.masteryCelebrationShown='1';
