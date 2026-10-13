@@ -1,6 +1,7 @@
 import { UpgradeShopScene as GuardedWorkshop } from './UpgradeWorkshopEvolutionGuardScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { qty, saveGarage, getEquippedForCar } from '../garage/garageStore.js';
+import { drawInventorySurface } from '../ui/inventoryPremiumDraw.js';
 
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 const MATERIAL_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
@@ -55,13 +56,14 @@ export class UpgradeShopScene extends GuardedWorkshop {
     const root=this.add.container(0,0).setDepth(35000);this._factoryInventoryModal=root;
     const A=o=>{root.add(o);return o;};
     const veil=A(this.add.rectangle(0,0,width,height,0x02070d,.92).setOrigin(0).setInteractive());
-    A(this.add.rectangle(cx,cy,panelW,panelH,0x08131d,.998).setStrokeStyle(2,0x45dfff,.95));
+    drawInventorySurface(this,A,{x:cx-panelW/2,y:cy-panelH/2,w:panelW,h:panelH,kind:'shell',accent:0x65e8ff});
     const titleY=cy-panelH/2+(compact?14:20);
     A(this.add.text(cx,titleY,'INVENTARIO',{fontFamily:UI,fontSize:compact?'24px':'31px',fontStyle:'800',color:'#fff'}).setOrigin(.5,0));
     const tabY=titleY+(compact?48:62),tabW=compact?150:190,tabH=compact?32:38,gap=10;
     const tabBtn=(x,label,key)=>{
       const active=tab===key;
-      const b=A(this.add.rectangle(x,tabY,tabW,tabH,active?0x17405a:0x0d1a24,.99).setStrokeStyle(active?3:1,active?0x45dfff:0x355064,.95).setInteractive({useHandCursor:true}));
+      drawInventorySurface(this,A,{x:x-tabW/2,y:tabY-tabH/2,w:tabW,h:tabH,kind:'tab',accent:key==='materials'?0x65e8ff:0xf0c566,active});
+      const b=A(this.add.rectangle(x,tabY,tabW,tabH,0x0d1a24,.01).setStrokeStyle(0,0x355064,0).setInteractive({useHandCursor:true}));
       A(this.add.text(x,tabY,label,{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'800',color:active?'#fff':'#9eb1c4'}).setOrigin(.5));
       b.on('pointerup',()=>this._openFactoryInventoryModal(key,0,0));
     };
@@ -73,7 +75,8 @@ export class UpgradeShopScene extends GuardedWorkshop {
       const start=cx+panelW/2-total-(compact?38:48);
       [1,2,3,4].forEach((tier,i)=>{
         const active=Number(tierFilter)===tier,x=start+i*(fw+fg)+fw/2;
-        const b=A(this.add.rectangle(x,tabY,fw,fh,active?TIER_COLOR[tier]:0x0d1a24,.99).setStrokeStyle(active?3:2,TIER_COLOR[tier],.95).setInteractive({useHandCursor:true}));
+        drawInventorySurface(this,A,{x:x-fw/2,y:tabY-fh/2,w:fw,h:fh,kind:'tab',accent:TIER_COLOR[tier],active});
+        const b=A(this.add.rectangle(x,tabY,fw,fh,0x0d1a24,.01).setStrokeStyle(0,TIER_COLOR[tier],0).setInteractive({useHandCursor:true}));
         A(this.add.text(x,tabY,TIER_ROMAN[tier],{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'800',color:active?'#07111f':'#fff'}).setOrigin(.5));
         b.on('pointerup',()=>this._openFactoryInventoryModal('parts',0,active?0:tier));
       });
@@ -93,11 +96,11 @@ export class UpgradeShopScene extends GuardedWorkshop {
     pageIds.forEach((id,i)=>{
       const item=GARAGE_ITEMS[id],q=qty(this.state,id),installed=Object.values(equipped).includes(id),tier=Number(item?.tier||0),accent=TIER_COLOR[tier]||0x355064;
       const col=i%4,row=Math.floor(i/4),x=cx-gridW/2+col*(cardW+cg),y=gridY+row*(cardH+cg);
-      const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.99).setOrigin(0).setStrokeStyle(tab==='parts'?4:2,accent,1));
-      if(tab==='parts'){
-        A(this.add.rectangle(x+3,y+3,cardW-6,compact?7:9,accent,installed?.45:.95).setOrigin(0));
-        A(this.add.rectangle(x+7,y+7,cardW-14,cardH-14,0x000000,0).setOrigin(0).setStrokeStyle(2,accent,installed?.28:.55));
-      }
+      // Same premium visual shell as the lobby inventory, with original
+      // install / uninstall handlers kept on the untouched hit rectangle.
+      drawInventorySurface(this,A,{x,y,w:cardW,h:cardH,kind:'card',
+        accent:tab==='parts'?accent:0x65e8ff,installed});
+      const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.01).setOrigin(0).setStrokeStyle(0,accent,0));
       const art={x:x+8,y:y+8,w:cardW-16,h:cardH*(tab==='parts'?.62:.60)};
       const before=root.length;
       const loaded=this._loadFullBleed(A,item,art,()=>this._openFactoryInventoryModal(tab,page,tierFilter));
@@ -121,8 +124,10 @@ export class UpgradeShopScene extends GuardedWorkshop {
     const footerY=cy+panelH/2-(compact?17:23);
     if(pages>1){
       A(this.add.text(cx,footerY,`${page+1}/${pages}`,{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'800',color:'#a9bbca'}).setOrigin(.5));
-      const prev=A(this.add.rectangle(cx-100,footerY,48,28,0x132a3b,.99).setStrokeStyle(2,0x45dfff,.7).setInteractive({useHandCursor:true}));
-      const next=A(this.add.rectangle(cx+100,footerY,48,28,0x132a3b,.99).setStrokeStyle(2,0x45dfff,.7).setInteractive({useHandCursor:true}));
+      drawInventorySurface(this,A,{x:cx-124,y:footerY-14,w:48,h:28,kind:'tab',accent:0x65e8ff});
+      drawInventorySurface(this,A,{x:cx+76,y:footerY-14,w:48,h:28,kind:'tab',accent:0x65e8ff});
+      const prev=A(this.add.rectangle(cx-100,footerY,48,28,0x132a3b,.01).setStrokeStyle(0,0x45dfff,0).setInteractive({useHandCursor:true}));
+      const next=A(this.add.rectangle(cx+100,footerY,48,28,0x132a3b,.01).setStrokeStyle(0,0x45dfff,0).setInteractive({useHandCursor:true}));
       A(this.add.text(cx-100,footerY,'‹',{fontFamily:UI,fontSize:'20px',fontStyle:'800',color:'#fff'}).setOrigin(.5));A(this.add.text(cx+100,footerY,'›',{fontFamily:UI,fontSize:'20px',fontStyle:'800',color:'#fff'}).setOrigin(.5));
       prev.on('pointerup',()=>this._openFactoryInventoryModal(tab,(page-1+pages)%pages,tierFilter));next.on('pointerup',()=>this._openFactoryInventoryModal(tab,(page+1)%pages,tierFilter));
     }

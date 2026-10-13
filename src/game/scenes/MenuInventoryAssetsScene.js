@@ -2,6 +2,7 @@ import { MenuScene as PreviousMenuScene } from './MenuAdminLogoRestoreScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage, saveGarage, getEquippedForCar } from '../garage/garageStore.js';
 import { getLanguage, t } from '../i18n/index.js';
+import { drawInventorySurface } from '../ui/inventoryPremiumDraw.js';
 
 const MATERIAL_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
 const PART_IDS=Object.keys(GARAGE_ITEMS).filter(id=>GARAGE_ITEMS[id]?.kind==='part');
@@ -58,19 +59,22 @@ export class MenuScene extends PreviousMenuScene {
     const A=o=>{root.add(o);return o;};
 
     const veil=A(this.add.rectangle(0,0,width,height,0x02070d,.90).setOrigin(0).setInteractive());
-    A(this.add.rectangle(cx,cy,panelW,panelH,0x08131d,.998).setStrokeStyle(2,0x45dfff,.92));
+    drawInventorySurface(this,A,{x:cx-panelW/2,y:cy-panelH/2,w:panelW,h:panelH,kind:'shell',accent:0x65e8ff});
 
     const titleY=cy-panelH/2+(compact?14:20);
     A(this.add.text(cx,titleY,t('inventory.title'),{fontFamily:UI,fontSize:compact?'25px':'31px',fontStyle:'bold',color:'#ffffff',resolution:2}).setOrigin(.5,0));
 
     const coinsY=titleY+(compact?34:42);
     const coinText=t('inventory.coins',{coins:Math.max(0,Math.floor(Number(garage.coins)||0)).toLocaleString(locale())});
-    A(this.add.text(cx,coinsY,coinText,{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'bold',color:'#f0c65a',resolution:2}).setOrigin(.5,0));
+    const badgeW=Math.min(panelW*.46,compact?255:360),badgeH=compact?22:28;
+    drawInventorySurface(this,A,{x:cx-badgeW/2,y:coinsY-3,w:badgeW,h:badgeH,kind:'tab',accent:0xf0c566});
+    A(this.add.text(cx,coinsY,coinText,{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'bold',color:'#ffe5a3',resolution:2}).setOrigin(.5,0));
 
     const tabY=coinsY+(compact?38:46),tabW=compact?170:205,tabH=compact?34:40,gap=12;
     const tabButton=(x,label,key)=>{
       const active=tab===key;
-      const b=A(this.add.rectangle(x,tabY,tabW,tabH,active?0x17405a:0x0d1a24,.99).setStrokeStyle(active?3:1,active?0x45dfff:0x355064,active?1:.78).setInteractive({useHandCursor:true}));
+      drawInventorySurface(this,A,{x:x-tabW/2,y:tabY-tabH/2,w:tabW,h:tabH,kind:'tab',accent:key==='materials'?0x65e8ff:0xf0c566,active});
+      const b=A(this.add.rectangle(x,tabY,tabW,tabH,0x0d1a24,.01).setStrokeStyle(0,0x355064,0).setInteractive({useHandCursor:true}));
       A(this.add.text(x,tabY,label,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'bold',color:active?'#fff':'#a6b7c8',resolution:2}).setOrigin(.5));
       b.on('pointerup',()=>this._openLobbyInventoryModal(key,0,0));
     };
@@ -84,7 +88,8 @@ export class MenuScene extends PreviousMenuScene {
       [1,2,3,4].forEach((tier,i)=>{
         const active=Number(tierFilter)===tier;
         const x=startX+i*(fw+fg)+fw/2;
-        const b=A(this.add.rectangle(x,tabY,fw,fh,active?TIER_COLOR[tier]:0x0d1a24,.99).setStrokeStyle(active?3:2,TIER_COLOR[tier],active?1:.85).setInteractive({useHandCursor:true}));
+        drawInventorySurface(this,A,{x:x-fw/2,y:tabY-fh/2,w:fw,h:fh,kind:'tab',accent:TIER_COLOR[tier],active});
+        const b=A(this.add.rectangle(x,tabY,fw,fh,0x0d1a24,.01).setStrokeStyle(0,TIER_COLOR[tier],0).setInteractive({useHandCursor:true}));
         A(this.add.text(x,tabY,TIER_SIGLA[tier],{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:active?'#07111f':'#ffffff',resolution:2}).setOrigin(.5));
         b.on('pointerup',()=>this._openLobbyInventoryModal('parts',0,active?0:tier));
       });
@@ -124,12 +129,12 @@ export class MenuScene extends PreviousMenuScene {
       const col=i%cols,row=Math.floor(i/cols),x=cx-gridW/2+col*(cardW+cardGap),y=gridY+row*(cardH+cardGap);
       const tier=Number(item.tier||0),accent=TIER_COLOR[tier]||0x355064;
 
-      const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.99).setOrigin(0));
-      card.setStrokeStyle(tab==='parts'?4:2,accent,1);
-      if(tab==='parts'){
-        A(this.add.rectangle(x+3,y+3,cardW-6,compact?7:9,accent,installed?.45:.95).setOrigin(0));
-        A(this.add.rectangle(x+7,y+7,cardW-14,cardH-14,0x000000,0).setOrigin(0).setStrokeStyle(2,accent,installed?.28:.55));
-      }
+      // Premium bevel is drawn behind the SAME interactive Phaser card.
+      // No inventory quantities, hit geometry or equip events are changed.
+      drawInventorySurface(this,A,{x,y,w:cardW,h:cardH,kind:'card',
+        accent:tab==='parts'?accent:0x65e8ff,installed});
+      const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.01).setOrigin(0));
+      card.setStrokeStyle(0,accent,0);
 
       // Horizontal card layout: large official asset on the left, readable data on the right.
       const visualW=cardW*.43;
@@ -153,7 +158,8 @@ export class MenuScene extends PreviousMenuScene {
 
         const actionY=y+cardH*.56;
         const buttonW=Math.max(68,contentW*.86),buttonH=compact?27:32;
-        const actionBg=A(this.add.rectangle(contentX,actionY,buttonW,buttonH,installed?0x18242d:0x123743,.99).setOrigin(0,.5).setStrokeStyle(2,installed?0x60717d:0x45dfff,installed?.65:.95));
+        drawInventorySurface(this,A,{x:contentX,y:actionY-buttonH/2,w:buttonW,h:buttonH,kind:'tab',accent:installed?0x8ca3af:0x55e6bd,active:!installed&&q>0});
+        const actionBg=A(this.add.rectangle(contentX,actionY,buttonW,buttonH,0x123743,.01).setOrigin(0,.5).setStrokeStyle(0,0x45dfff,0));
         A(this.add.text(contentX+buttonW/2,actionY,installed?t('inventory.uninstall'):t('inventory.install',{qty:''}).replace(/[×x]\s*$/i,'').trim(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#a6b1b9':'#9aeeff',resolution:2}).setOrigin(.5));
         A(this.add.text(contentX,y+cardH*.82,`×${q}`,{fontFamily:UI,fontSize:compact?'20px':'25px',fontStyle:'bold',color:installed?'#788994':'#ffffff',resolution:2}).setOrigin(0,.5));
 
@@ -176,8 +182,10 @@ export class MenuScene extends PreviousMenuScene {
     const footerY=cy+panelH/2-(compact?20:26);
     if(pages>1){
       A(this.add.text(cx,footerY,`${page+1}/${pages}`,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'bold',color:'#a9bbca',resolution:2}).setOrigin(.5));
-      const prev=A(this.add.rectangle(cx-110,footerY,54,30,0x132a3b,.99).setStrokeStyle(2,0x45dfff,.65).setInteractive({useHandCursor:true}));
-      const next=A(this.add.rectangle(cx+110,footerY,54,30,0x132a3b,.99).setStrokeStyle(2,0x45dfff,.65).setInteractive({useHandCursor:true}));
+      drawInventorySurface(this,A,{x:cx-137,y:footerY-15,w:54,h:30,kind:'tab',accent:0x65e8ff});
+      drawInventorySurface(this,A,{x:cx+83,y:footerY-15,w:54,h:30,kind:'tab',accent:0x65e8ff});
+      const prev=A(this.add.rectangle(cx-110,footerY,54,30,0x132a3b,.01).setStrokeStyle(0,0x45dfff,0).setInteractive({useHandCursor:true}));
+      const next=A(this.add.rectangle(cx+110,footerY,54,30,0x132a3b,.01).setStrokeStyle(0,0x45dfff,0).setInteractive({useHandCursor:true}));
       A(this.add.text(cx-110,footerY,'‹',{fontFamily:UI,fontSize:'22px',fontStyle:'bold',color:'#fff',resolution:2}).setOrigin(.5));
       A(this.add.text(cx+110,footerY,'›',{fontFamily:UI,fontSize:'22px',fontStyle:'bold',color:'#fff',resolution:2}).setOrigin(.5));
       prev.on('pointerup',()=>this._openLobbyInventoryModal(tab,(page-1+pages)%pages,tierFilter));

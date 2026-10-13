@@ -56,6 +56,7 @@ jobs:
           node scripts/lobby-bottom-directions-smoke.mjs
           node scripts/lobby-overview-platform-wings-smoke.mjs
           node scripts/lobby-car-header-settings-skin-smoke.mjs
+          node scripts/inventory-premium-ui-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
           test -f src/game/scenes/RaceGamepadScene.js
