@@ -11,7 +11,7 @@ const css=read('src/game/ui/lobby-dom.css');
 const polish=read('src/game/ui/LobbyPublishPolish.js');
 assert.equal(resolveStatsInitialTrack({statsView:'overview'},'karting-tenerife'),'',
   'Statistics should not reopen previously stored Race Control view');
-assert.equal(resolveStatsInitialTrack({statsView:'overview',raceControlTrackId:'karting-canarias'},''),
+assert.equal(resolveStatsInitialTrack({statsView:'overview',raceControlTrackId:'karting-canarias'},''),'',
   'Explicit personal statistics route always wins over stale Race Control params');
 assert.equal(resolveStatsInitialTrack({onlineFromLobby:true,raceControlTrackId:'karting-tenerife'},'old'),'karting-tenerife',
   'Online Records must go straight to the selected track');
