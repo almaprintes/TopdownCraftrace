@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceJuanicarArcadeHairpinScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceHandbrakePhysicsScene.js';
 import { grantRaceLoot, getRaceLootSessionSummary, loadGarage, saveGarage } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { isRewardedAdAvailable, showRewardedAd } from '../monetization/RewardedAdsProvider.js';
