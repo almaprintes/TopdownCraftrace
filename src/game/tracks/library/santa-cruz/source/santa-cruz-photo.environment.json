@@ -1,0 +1,17 @@
+{
+  "version": 5,
+  "trackId": "santa-cruz",
+  "environment": [],
+  "surfaces": [],
+  "linearBarriers": [],
+  "collisionLines": [],
+  "collisionZones": [],
+  "materials": {},
+  "baseTrack": {
+    "id": "santa-cruz",
+    "name": "SANTA CRUZ",
+    "source": "src/game/tracks/library/santa-cruz/track.json",
+    "locked": true
+  },
+  "repositoryPath": "src/game/tracks/library/santa-cruz/source/santa-cruz-photo.environment.json"
+}
