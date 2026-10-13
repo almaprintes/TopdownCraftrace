@@ -58,6 +58,7 @@ jobs:
           node scripts/lobby-bottom-directions-smoke.mjs
           node scripts/lobby-overview-platform-wings-smoke.mjs
           node scripts/lobby-car-header-settings-skin-smoke.mjs
+          node scripts/centered-selection-rail-smoke.mjs
           node scripts/garage-track-paddock-skin-smoke.mjs
           node scripts/inventory-premium-ui-smoke.mjs
           node scripts/mastery-premium-visual-smoke.mjs
