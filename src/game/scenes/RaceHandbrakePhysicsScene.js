@@ -8,7 +8,6 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     this._hbBicycleYawRate=0;
     this._juanicarExitSnap=null;
-    this._juanicarCornerSlip=0;
     return super.create(data);
   }
 
@@ -27,17 +26,6 @@ export class RaceScene extends CurrentRaceScene {
     const vel=car.body.velocity;
     const speed=Math.hypot(vel.x,vel.y);
     const steer=Number(this._steerForHandbrake?.()||0);
-    // Fast tight turns induce rear breakaway without the handbrake.
-    // Keep world velocity so the tail continues outward as the nose turns.
-    const tight=clamp((Math.abs(steer)-.38)/.42,0,1);
-    const fast=clamp((speed-125)/175,0,1);
-    const targetSlip=!this._tdrHandbrake?tight*fast:0;
-    const response=targetSlip>this._juanicarCornerSlip?5.5:3.2;
-    this._juanicarCornerSlip+=(targetSlip-this._juanicarCornerSlip)*(1-Math.exp(-dt*response));
-    if(this._juanicarCornerSlip>.015){
-      car.rotation+=steer*this._juanicarCornerSlip*1.8*dt;
-      if(this.carRig?.scene)this.carRig.rotation=car.rotation+(this._carVisualRotOffset||0);
-    }
     const t=this.touch||{};
     const gas=Number(t.throttle||0)>0.8||!!(this.keys?.up?.isDown||this.keys?.up2?.isDown);
     if(wasBraking&&speed>85&&Math.abs(yawBefore)>.28){
