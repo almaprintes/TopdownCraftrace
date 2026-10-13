@@ -58,7 +58,9 @@ forbid(racePhysics,'getRaceLootSessionSummary','physics scene must not own rewar
 forbid(racePhysics,'_openPauseMenu','physics scene must not own pause UI');
 
 // Experience owns pause, reward integrity and final-session orchestration.
-requireText(raceExperience,"from './RaceHandbrakePhysicsScene.js'",'race experience must sit directly above focused physics boundary');
+requireText(raceExperience,"from './RaceJuanicarArcadeHairpinScene.js'",'race experience must use active Juanicar arcade handbrake boundary');
+const raceJuanicar=read('src/game/scenes/RaceJuanicarArcadeHairpinScene.js');
+requireText(raceJuanicar,"from './RaceHandbrakePhysicsScene.js'",'Juanicar arcade boundary must preserve focused physics parent');
 forbid(raceExperience,'RaceLapHistoryBridgeScene','race experience must never synthesize timing history');
 requireText(raceExperience,'mountRacePauseUi','race experience must delegate pause presentation to DOM composition');
 requireText(raceExperience,'hideRaceUi','race experience must delegate HUD visibility to UI utility');
