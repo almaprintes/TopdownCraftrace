@@ -43,6 +43,7 @@ export class RaceScene extends CurrentRaceScene {
     }
     this._racePhysicsWakeDone=false;
     this._juanicarSlipYaw=0;
+    this._juanicarHandbrakeYaw=0;
 
     return result;
   }
@@ -120,6 +121,8 @@ export class RaceScene extends CurrentRaceScene {
   update(time,delta){
     const bodyBefore=this.carBody;
     const prevRot=Number(bodyBefore?.rotation);
+    const prevX=Number(bodyBefore?.x);
+    const prevY=Number(bodyBefore?.y);
 
     super.update(time,delta);
     this._ensureRacePhysicsLive();
@@ -219,10 +222,10 @@ export class RaceScene extends CurrentRaceScene {
       // Handbrake locks the REAR axle. Preserve forward momentum while reducing
       // rear traction and rotating around the front axle; never add a sudden
       // position teleport or a second independent yaw impulse.
-      const hbSpeed=smoothstep01((speed-45)/155);
-      const hbTarget=handbrake?Math.sign(steer)*turnDemand*hbSpeed*3.8:0;
+      const hbSpeed=smoothstep01((speed-20)/95);
+      const hbTarget=handbrake?Math.sign(steer)*Math.max(0.30,turnDemand)*Math.max(0.45,hbSpeed)*5.7:0;
       this._juanicarHandbrakeYaw+=(hbTarget-this._juanicarHandbrakeYaw)*(1-Math.exp(-dt*(handbrake?5.8:4.1)));
-      this._juanicarHandbrakeYaw=clamp(this._juanicarHandbrakeYaw,-3.8,3.8);
+      this._juanicarHandbrakeYaw=clamp(this._juanicarHandbrakeYaw,-5.7,5.7);
       experimentalYaw+=this._juanicarHandbrakeYaw*dt;
       // Preserve momentum during the slide; only slowly re-align velocity to nose.
       const vel=body.body.velocity;
@@ -242,12 +245,20 @@ export class RaceScene extends CurrentRaceScene {
 
     // Softer rear-axle pivot to avoid tiny lateral nudges while steering.
     const arcadePivot=this.carId==='veloce_juanicar_c220' && this._raceStarted && this._tdrHandbrake===true;
-    const rearOffset=arcadePivot?wheelbase*0.82:wheelbase*0.38;
+    const rearOffset=wheelbase*0.38;
     const pivotStrength=arcadePivot?1:smoothstep01(clamp((absForward-8)/82,0,1));
     const newFx=Math.cos(newRot), newFy=Math.sin(newRot);
     body.x += (newFx-prevFx)*rearOffset*pivotStrength;
     body.y += (newFy-prevFy)*rearOffset*pivotStrength;
-    if(arcadePivot){
+    if(arcadePivot && Number.isFinite(prevX) && Number.isFinite(prevY)){
+      // Anchor the FRONT axle at its pre-update world position. The base scene
+      // has already advanced the whole chassis in super.update(); undo that
+      // translation, otherwise momentum carries the car outside the hairpin.
+      const frontOffset=wheelbase*0.48;
+      const anchorX=prevX+prevFx*frontOffset;
+      const anchorY=prevY+prevFy*frontOffset;
+      body.x=anchorX-newFx*frontOffset;
+      body.y=anchorY-newFy*frontOffset;
       // Arcade hairpin: arrest forward translation while the rear rotates around
       // a near-stationary front axle. Prevent carrying entry speed to the outside.
       const vel=body.body.velocity;
