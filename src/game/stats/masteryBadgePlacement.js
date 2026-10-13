@@ -1,5 +1,5 @@
-// A mastery is an optional full-roof livery: large enough to become the
-// car's identity, not a tiny bolt/tyre. Values refer to the displayed artwork
+// A mastery is an optional centered roof livery, sized to stay within
+// the actual painted roof rather than cover the windscreen or bonnet. Values refer to the displayed artwork
 // after object-fit:contain and are proportional across phone/tablet sizes.
 export function lobbyMasteryPlacement(rect,naturalWidth,naturalHeight){
   const w=Number(rect?.width)||0,h=Number(rect?.height)||0;
@@ -12,21 +12,20 @@ export function lobbyMasteryPlacement(rect,naturalWidth,naturalHeight){
   // Central cabin, not the rearmost badge point used by the old tiny medal.
   const x=paintLeft+paintW*.5;
   const y=paintTop+paintH*.51;
-  // A shield occupies approximately the entire roof width; its visible
-  // silhouette is ~87% of this square art box (SVG viewBox has small margins).
-  // Keep it inside even the narrowest car and scale with the car, never screen.
+  // Reduce the roof crest by ~15% without changing its centre or the car's scale.
+  // Its visible SVG silhouette is slightly narrower than the artwork box.
   const cross=Math.min(paintW,paintH);
-  const size=Math.max(19,Math.min(112,cross*.78));
+  const size=Math.max(16,Math.min(95,cross*.66));
   return{x,y,size,paintWidth:paintW,paintHeight:paintH};
 }
-// Race graphics are scaled in game units and mounted INSIDE the rotating car
-// rig. A near full-roof shield (~75% of the car's narrow dimension) is used.
+// Race graphics remain mounted INSIDE the rotating car rig. Match the
+// smaller lobby shield and never change chassis dimensions or driving physics.
 export function raceMasteryPlacement(displayWidth,displayHeight){
   const w=Math.max(1,Number(displayWidth)||1),h=Math.max(1,Number(displayHeight)||1);
   const cross=Math.min(w,h);
   return{
     x:0,
     y:0,
-    radius:Math.max(5.3,Math.min(21,cross*.41))
+    radius:Math.max(4.5,Math.min(18,cross*.35))
   };
 }
