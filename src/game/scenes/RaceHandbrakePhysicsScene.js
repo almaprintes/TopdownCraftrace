@@ -8,6 +8,7 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     this._hbBicycleYawRate=0;
     this._juanicarExitSnap=null;
+    this._juanicarCornerSlip=0;
     return super.create(data);
   }
 
@@ -19,12 +20,24 @@ export class RaceScene extends CurrentRaceScene {
     super.update(time,delta);
     if(!juanicar||!this._raceStarted||!car?.body?.velocity){
       this._juanicarExitSnap=null;
+      this._juanicarCornerSlip=0;
       return;
     }
     const dt=clamp(Number(delta||16.67)/1000,.001,.05);
     const vel=car.body.velocity;
     const speed=Math.hypot(vel.x,vel.y);
     const steer=Number(this._steerForHandbrake?.()||0);
+    // Fast tight turns induce rear breakaway without the handbrake.
+    // Keep world velocity so the tail continues outward as the nose turns.
+    const tight=clamp((Math.abs(steer)-.38)/.42,0,1);
+    const fast=clamp((speed-125)/175,0,1);
+    const targetSlip=!this._tdrHandbrake?tight*fast:0;
+    const response=targetSlip>this._juanicarCornerSlip?5.5:3.2;
+    this._juanicarCornerSlip+=(targetSlip-this._juanicarCornerSlip)*(1-Math.exp(-dt*response));
+    if(this._juanicarCornerSlip>.015){
+      car.rotation+=steer*this._juanicarCornerSlip*1.8*dt;
+      if(this.carRig?.scene)this.carRig.rotation=car.rotation+(this._carVisualRotOffset||0);
+    }
     const t=this.touch||{};
     const gas=Number(t.throttle||0)>0.8||!!(this.keys?.up?.isDown||this.keys?.up2?.isDown);
     if(wasBraking&&speed>85&&Math.abs(yawBefore)>.28){
@@ -68,7 +81,7 @@ export class RaceScene extends CurrentRaceScene {
     // First incremental calibration: more rear breakaway and a modest front
     // braking bias, without locking position or replacing normal steering.
     const frontForce=clamp(-5.6*alphaF,-1.35,1.35);
-    const rearForce=juanicar?clamp(-.25*alphaR,-.12,.12):clamp(-.72*alphaR,-.34,.34);
+    const rearForce=juanicar?clamp(-.45*alphaR,-.22,.22):clamp(-.72*alphaR,-.34,.34);
     const maxFwd=Math.max(180,Number(this.maxFwd||this.carParams?.maxFwd||520));
     const speed01=clamp(speed/maxFwd,0,1);
     const lateralAccel=(frontForce+rearForce)*speed*(.78+.34*speed01);
@@ -76,7 +89,7 @@ export class RaceScene extends CurrentRaceScene {
 
     yawRate+=yawAccel*dt;
     yawRate*=Math.exp(-dt*.42);
-    yawRate=clamp(yawRate,juanicar?-3.25:-2.8,juanicar?3.25:2.8);
+    yawRate=clamp(yawRate,-2.8,2.8);
     this._hbBicycleYawRate=yawRate;
 
     vel.x+=rx*lateralAccel*dt;
