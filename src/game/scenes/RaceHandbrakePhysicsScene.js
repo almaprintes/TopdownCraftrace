@@ -8,6 +8,7 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     this._hbBicycleYawRate=0;
     this._juanicarExitSnap=null;
+    this._juanicarRearSlip=0;
     return super.create(data);
   }
 
@@ -19,13 +20,30 @@ export class RaceScene extends CurrentRaceScene {
     super.update(time,delta);
     if(!juanicar||!this._raceStarted||!car?.body?.velocity){
       this._juanicarExitSnap=null;
-      this._juanicarCornerSlip=0;
+      this._juanicarRearSlip=0;
       return;
     }
     const dt=clamp(Number(delta||16.67)/1000,.001,.05);
     const vel=car.body.velocity;
     const speed=Math.hypot(vel.x,vel.y);
     const steer=Number(this._steerForHandbrake?.()||0);
+    // Rear traction breakaway, not a steering override: at high speed and
+    // strong steering input the rear retains lateral momentum while the front
+    // follows the existing steering controller. No direct rotation changes.
+    const tight=clamp((Math.abs(steer)-.35)/.50,0,1);
+    const fast=clamp((speed-125)/190,0,1);
+    const target=(!this._tdrHandbrake?1:0)*tight*fast;
+    this._juanicarRearSlip+=(target-this._juanicarRearSlip)*(1-Math.exp(-dt*(target>this._juanicarRearSlip?5:4)));
+    if(this._juanicarRearSlip>.01){
+      const angle=Number(car.rotation||0),rightX=-Math.sin(angle),rightY=Math.cos(angle);
+      const lateral=vel.x*rightX+vel.y*rightY;
+      // A small outward impulse initiates the slide; reduced lateral damping
+      // preserves the natural inertia instead of rotating the nose artificially.
+      const outward=-Math.sign(steer)*speed*this._juanicarRearSlip*.34*dt;
+      const damping=-lateral*this._juanicarRearSlip*.14*dt;
+      vel.x+=rightX*(outward+damping);
+      vel.y+=rightY*(outward+damping);
+    }
     const t=this.touch||{};
     const gas=Number(t.throttle||0)>0.8||!!(this.keys?.up?.isDown||this.keys?.up2?.isDown);
     if(wasBraking&&speed>85&&Math.abs(yawBefore)>.28){
