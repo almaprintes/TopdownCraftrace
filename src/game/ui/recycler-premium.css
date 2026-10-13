@@ -1,0 +1,305 @@
+/* TOP DOWN RACE — Recycler/Part dismantle premium skin, DEV 1.2.151.
+   This file intentionally owns PRESENTATION ONLY. All existing behavior
+   remains in MaterialExchangeDom, PartDismantleDom and store economics. */
+
+#tdr-material-exchange-dom,
+#tdr-part-dismantle-dom{
+  background:radial-gradient(ellipse 75% 85% at 50% 54%,#112a31 0%,#04111d 58%,#02070d 100%);
+  -webkit-font-smoothing:antialiased;
+}
+#tdr-material-exchange-dom button,
+#tdr-part-dismantle-dom button{touch-action:manipulation}
+#tdr-material-exchange-dom button:focus-visible,
+#tdr-part-dismantle-dom button:focus-visible,
+#tdr-material-exchange-dom input:focus-visible,
+#tdr-part-dismantle-dom input:focus-visible{
+  outline:2px solid #fff;outline-offset:2px;
+}
+
+/* Two official shop sub-screens, not unrelated popup panels. */
+#tdr-material-exchange-dom .rx-panel,
+#tdr-part-dismantle-dom .pd-panel{
+  position:relative;
+  border:1.5px solid rgba(92,239,180,.93);
+  border-radius:11px 24px 11px 24px;
+  background:radial-gradient(ellipse 70% 70% at 53% 48%,rgba(28,97,111,.19),transparent 85%),
+             linear-gradient(157deg,#0d2532,#061624 53%,#04111d);
+  box-shadow:0 22px 68px rgba(0,0,0,.65),
+             0 0 21px rgba(63,215,174,.13),
+             inset 0 1px 0 rgba(191,255,232,.14);
+}
+#tdr-material-exchange-dom .rx-panel{
+  width:min(1140px,calc(100vw - 24px));
+  height:min(655px,calc(100dvh - 20px));
+  max-height:calc(100dvh - 20px);
+  overflow-y:auto;overflow-x:hidden;
+  padding:clamp(10px,1.5vw,19px) clamp(12px,2vw,24px) 0;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+}
+#tdr-part-dismantle-dom .pd-panel{
+  width:min(1140px,calc(100vw - 24px));
+  height:min(655px,calc(100dvh - 20px));
+  padding:clamp(10px,1.5vw,18px);
+}
+#tdr-material-exchange-dom .rx-head h2,
+#tdr-part-dismantle-dom .pd-head h2{
+  color:#f3fff9;
+  font-size:clamp(17px,2.2vw,28px);
+  font-weight:1000;letter-spacing:.025em;
+  text-shadow:0 2px 10px rgba(0,0,0,.65);
+}
+#tdr-material-exchange-dom .rx-head p,
+#tdr-part-dismantle-dom .pd-desc{
+  color:#acc5ce;line-height:1.25;
+}
+#tdr-material-exchange-dom .rx-head,
+#tdr-part-dismantle-dom .pd-head{
+  border-bottom:1px solid rgba(67,184,158,.25);
+  padding-bottom:clamp(5px,.8vw,10px);
+}
+#tdr-material-exchange-dom .rx-status{
+  padding:6px 12px;align-self:start;white-space:nowrap;
+  border-radius:4px 13px 4px 13px;
+  border:1px solid rgba(89,239,177,.65);
+  background:linear-gradient(145deg,rgba(47,152,109,.31),rgba(11,61,57,.42));
+  color:#75ffbf;text-shadow:0 0 9px rgba(89,239,177,.19);
+  font-size:clamp(11px,1.1vw,16px);
+}
+#tdr-material-exchange-dom .rx-close,
+#tdr-part-dismantle-dom .pd-close{
+  display:grid;place-items:center;
+  flex:none;width:clamp(32px,4vw,40px);height:clamp(32px,4vw,40px);
+  border:1px solid rgba(111,153,177,.51);
+  border-radius:50%;background:#0b2334;color:#f5fcff;
+  font-size:27px;font-weight:500;line-height:1;cursor:pointer;
+}
+#tdr-material-exchange-dom .rx-close:hover,
+#tdr-part-dismantle-dom .pd-close:hover{border-color:#80eccc;background:#184d48}
+
+/* Matching beveled tabs: bright selected module and understated secondary. */
+#tdr-material-exchange-dom .rx-mode,
+#tdr-part-dismantle-dom .pd-mode{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:clamp(6px,.9vw,12px);margin:clamp(6px,1vw,12px) 0 8px;
+}
+#tdr-material-exchange-dom .rx-mode button,
+#tdr-part-dismantle-dom .pd-mode button{
+  min-height:clamp(36px,5.6vw,52px);
+  border-radius:5px 14px 5px 14px;
+  padding:6px 9px;font-size:clamp(11px,1.45vw,17px);
+  font-weight:1000;letter-spacing:.055em;cursor:pointer;
+  border:1px solid rgba(77,125,153,.68);color:#aec9d8;
+  background:linear-gradient(175deg,#1b394b,#102638 56%,#09202c);
+  box-shadow:inset 0 1px rgba(203,235,249,.12);
+}
+#tdr-material-exchange-dom .rx-mode button.is-active,
+#tdr-part-dismantle-dom .pd-mode button.on{
+  border:1.5px solid #5df0b0;color:#f4fffb;
+  background:linear-gradient(180deg,#25946c,#176b56 55%,#0c473e);
+  box-shadow:inset 0 2px 0 rgba(207,255,235,.25),
+             inset 0 -3px 0 rgba(4,40,37,.3),
+             0 0 12px rgba(63,222,161,.22);
+}
+#tdr-material-exchange-dom .rx-mode button.is-active:disabled{
+  opacity:1;cursor:default;
+}
+
+/* Exchange vessels: amber source versus mint destination. */
+#tdr-material-exchange-dom .rx-hint{color:#94bac8;letter-spacing:.015em}
+#tdr-material-exchange-dom .rx-side-label{
+  font-size:clamp(10px,1.15vw,15px);
+  font-weight:1000;letter-spacing:.08em;
+}
+#tdr-material-exchange-dom .rx-give{--rc-cup-glow:244,171,76}
+#tdr-material-exchange-dom .rx-receive{--rc-cup-glow:88,242,178}
+#tdr-material-exchange-dom .rx-cup{
+  height:clamp(95px,22vh,174px);
+  border:1.5px solid rgba(var(--rc-cup-glow),.7);
+  border-radius:8px 19px 8px 19px;
+  background:radial-gradient(ellipse 85% 88% at 50% 56%,
+                rgba(var(--rc-cup-glow),.13),transparent 82%),
+             linear-gradient(180deg,#12344a,#0a2333 65%,#071623);
+  box-shadow:inset 0 1px rgba(255,255,255,.13),
+             inset 0 0 25px rgba(var(--rc-cup-glow),.04);
+}
+#tdr-material-exchange-dom .rx-cup:before{
+  inset:10px 12%;
+  border:1px solid rgba(var(--rc-cup-glow),.24);
+  border-radius:8px 12px 24px 24px;
+  background:linear-gradient(180deg,rgba(var(--rc-cup-glow),.04),rgba(var(--rc-cup-glow),.12));
+}
+#tdr-material-exchange-dom .rx-cup img{
+  max-height:clamp(54px,16vh,109px);
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.65));
+}
+#tdr-material-exchange-dom .rx-cup-name{
+  color:#f3fcff;text-shadow:0 2px 5px #000;font-size:clamp(11px,1.17vw,16px);
+}
+#tdr-material-exchange-dom .rx-have{color:#acc8d5}
+#tdr-material-exchange-dom .rx-swap{
+  width:clamp(42px,6.2vw,70px);height:clamp(42px,6.2vw,70px);
+  border:2px solid #5df0b0;border-radius:50%;
+  color:#f2fff9;font-size:clamp(22px,3vw,31px);
+  background:radial-gradient(circle at 34% 25%,#2b9671,#115044 65%,#062f37);
+  box-shadow:inset 0 2px rgba(255,255,255,.14),
+             0 0 0 4px rgba(78,225,166,.10),
+             0 0 15px rgba(78,225,166,.17);
+}
+#tdr-material-exchange-dom button.rx-swap:hover{filter:brightness(1.15)}
+#tdr-material-exchange-dom .rx-amount label{font-weight:1000}
+#tdr-material-exchange-dom .rx-exact,
+#tdr-material-exchange-dom .rx-slider-value{
+  border:1.5px solid #5df0b0;
+  border-radius:5px 13px 5px 13px;
+  background:linear-gradient(160deg,#153b48,#092332);
+  box-shadow:inset 0 1px rgba(240,255,249,.14);
+  color:#fff;font-variant-numeric:tabular-nums;
+}
+#tdr-material-exchange-dom .rx-slider{
+  width:100%;height:28px;accent-color:#5df0b0;
+  cursor:pointer;touch-action:pan-y;
+}
+#tdr-material-exchange-dom .rx-slider-wrap{min-width:0}
+#tdr-material-exchange-dom .rx-summary{
+  border:1px solid rgba(83,166,196,.58);
+  border-radius:5px 15px 5px 15px;
+  background:linear-gradient(165deg,#102a3a,#081b2a);
+  box-shadow:inset 0 1px rgba(189,235,246,.11);
+}
+#tdr-material-exchange-dom .rx-summary strong{
+  color:#f4fdff;font-size:clamp(14px,1.5vw,19px);
+}
+#tdr-material-exchange-dom .rx-foot{
+  position:sticky;bottom:0;z-index:4;
+  margin:8px clamp(-24px,-2vw,-12px) 0;
+  padding:9px clamp(12px,2vw,24px) 11px;
+  border-top:1px solid rgba(97,202,186,.41);
+  background:linear-gradient(180deg,#0a2030,#061626);
+  box-shadow:0 -12px 24px rgba(4,18,30,.96);
+}
+#tdr-material-exchange-dom .rx-note{font-size:clamp(9px,.89vw,11px);color:#a7c1ce}
+#tdr-material-exchange-dom .rx-submit,
+#tdr-part-dismantle-dom .pd-go{
+  border:1.5px solid #5df0b0;
+  border-radius:5px 15px 5px 15px;
+  background:linear-gradient(180deg,#3ac087,#168462 54%,#08564b);
+  box-shadow:inset 0 2px rgba(230,255,246,.32),
+             inset 0 -3px rgba(1,53,51,.36);
+  color:#f5fffb;font-weight:1000;
+  text-shadow:0 2px 3px rgba(0,0,0,.4);
+}
+#tdr-material-exchange-dom .rx-submit:hover:not(:disabled),
+#tdr-part-dismantle-dom .pd-go:hover:not(:disabled){filter:brightness(1.12)}
+#tdr-material-exchange-dom .rx-submit:disabled,
+#tdr-part-dismantle-dom .pd-go:disabled{
+  opacity:.58;border-color:#57778c;
+  background:linear-gradient(180deg,#283e4d,#142839);box-shadow:none;
+}
+#tdr-material-exchange-dom .rx-submit span{color:#dcfff2}
+#tdr-material-exchange-dom .rx-confirm{
+  border:1.5px solid #5df0b0;border-radius:8px 19px 8px 19px;
+  background:linear-gradient(150deg,#102b39,#071723);
+  box-shadow:0 18px 60px rgba(0,0,0,.75);
+}
+#tdr-material-exchange-dom .rx-confirm-ok{
+  border-radius:5px 12px 5px 12px;
+  background:linear-gradient(180deg,#32ac7a,#106145);
+}
+#tdr-material-exchange-dom .rx-confirm-cancel{
+  border-radius:5px 12px 5px 12px;
+  background:linear-gradient(180deg,#25465b,#102638);
+}
+
+/* Dismantling uses the SAME store machinery but retains its part selection,
+   selection count, recovery preview, efficiency notice and confirmation. */
+#tdr-part-dismantle-dom .pd-box,
+#tdr-part-dismantle-dom .pd-detail{
+  border:1px solid rgba(82,162,190,.54);
+  border-radius:8px 18px 8px 18px;
+  background:linear-gradient(165deg,#112b3a,#071927 80%);
+  box-shadow:inset 0 1px rgba(198,237,247,.1);
+}
+#tdr-part-dismantle-dom .pd-step{
+  background:linear-gradient(90deg,#17453e,#103046);
+  color:#90ffd0;letter-spacing:.08em;
+}
+#tdr-part-dismantle-dom .pd-item{
+  border-radius:5px 12px 5px 12px;
+}
+#tdr-part-dismantle-dom .pd-item.on{
+  border-color:#5df0b0;
+  background:linear-gradient(165deg,#1c5649,#112d37);
+  box-shadow:inset 0 1px rgba(205,255,239,.14);
+}
+#tdr-part-dismantle-dom .pd-icon,
+#tdr-part-dismantle-dom .pd-hero-icon{
+  border-color:rgba(79,190,173,.53);
+  border-radius:6px 13px 6px 13px;
+  background:linear-gradient(155deg,#154354,#0c2633);
+}
+#tdr-part-dismantle-dom .pd-hero{
+  border-color:rgba(88,218,185,.45);
+  border-radius:6px 14px 6px 14px;
+  background:linear-gradient(155deg,#173b4b,#0c222f);
+}
+#tdr-part-dismantle-dom .pd-qty-label,
+#tdr-part-dismantle-dom .pd-return-label{color:#90ffd0}
+#tdr-part-dismantle-dom .pd-controls button,
+#tdr-part-dismantle-dom .pd-controls input{
+  border-color:#6b9db0;border-radius:4px 11px 4px 11px;
+  background:linear-gradient(165deg,#183c4d,#0a2433);
+}
+#tdr-part-dismantle-dom .pd-controls input{border:1.5px solid #5df0b0}
+#tdr-part-dismantle-dom .pd-mat{
+  border-radius:5px 12px 5px 12px;
+  background:linear-gradient(150deg,#183847,#0c2333);
+}
+#tdr-part-dismantle-dom .pd-go{min-height:45px}
+
+/* Compact landscape: inputs stay tappable and submit buttons never scroll
+   under the phone's viewport. Content can scroll within its own screen. */
+@media(max-height:540px){
+  #tdr-material-exchange-dom .rx-panel{
+    height:calc(100dvh - 12px);max-height:calc(100dvh - 12px);
+    padding:8px 12px 0;
+  }
+  #tdr-material-exchange-dom .rx-head h2,
+  #tdr-part-dismantle-dom .pd-head h2{font-size:clamp(15px,2vw,19px)}
+  #tdr-material-exchange-dom .rx-head p{font-size:10px}
+  #tdr-material-exchange-dom .rx-head{padding-bottom:4px}
+  #tdr-material-exchange-dom .rx-mode,
+  #tdr-part-dismantle-dom .pd-mode{margin:5px 0}
+  #tdr-material-exchange-dom .rx-mode button,
+  #tdr-part-dismantle-dom .pd-mode button{min-height:34px;font-size:clamp(10px,1.3vw,14px)}
+  #tdr-material-exchange-dom .rx-cup{height:clamp(79px,24vh,111px)}
+  #tdr-material-exchange-dom .rx-cup img{max-height:clamp(43px,15vh,67px)}
+  #tdr-material-exchange-dom .rx-hint{margin:3px 0}
+  #tdr-material-exchange-dom .rx-flow{gap:clamp(5px,1vw,12px);grid-template-columns:minmax(0,1fr) 50px minmax(0,1fr)}
+  #tdr-material-exchange-dom .rx-amount{margin-top:6px}
+  #tdr-material-exchange-dom .rx-summary{margin-top:5px;padding:6px 8px}
+  #tdr-material-exchange-dom .rx-summary strong{font-size:14px}
+  #tdr-material-exchange-dom .rx-foot{
+    bottom:0;margin:6px -12px 0;padding:6px 12px 8px;
+  }
+  #tdr-material-exchange-dom .rx-submit{min-height:39px}
+  #tdr-part-dismantle-dom .pd-panel{
+    height:calc(100dvh - 12px);padding:8px 12px;
+  }
+  #tdr-part-dismantle-dom .pd-go{min-height:39px}
+}
+@media(max-width:620px){
+  #tdr-material-exchange-dom .rx-status{padding-inline:5px;font-size:10px}
+  #tdr-material-exchange-dom .rx-flow{grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);gap:5px}
+  #tdr-material-exchange-dom .rx-amount{grid-template-columns:auto 70px minmax(0,1fr);gap:4px}
+  #tdr-material-exchange-dom .rx-exact{width:70px}
+  #tdr-material-exchange-dom .rx-slider-wrap{gap:4px}
+  #tdr-material-exchange-dom .rx-slider-value{min-width:44px;padding:4px}
+  #tdr-material-exchange-dom .rx-foot{grid-template-columns:1fr minmax(150px,1.3fr);gap:6px}
+  #tdr-part-dismantle-dom .pd-body{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
+  #tdr-part-dismantle-dom .pd-controls{grid-template-columns:32px 57px 32px 1fr;gap:4px}
+}
+@media(prefers-reduced-motion:reduce){
+  #tdr-material-exchange-dom button,
+  #tdr-part-dismantle-dom button{transition:none;animation:none}
+}
