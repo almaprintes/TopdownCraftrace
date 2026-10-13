@@ -164,3 +164,120 @@
     animation:none;opacity:.76;will-change:auto;
   }
 }
+
+/* DEV 1.2.148 — categories are intentional views, not a single clipped strip. */
+.tdr-store-section-nav{
+  flex:0 0 auto;min-height:46px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:0 max(15px,var(--tdr-safe-right,15px)) 0 max(15px,var(--tdr-safe-left,15px));
+  padding:2px 10px 5px;
+  border-bottom:1px solid rgba(64,170,218,.38);
+}
+.tdr-store-section-tabs{display:flex;gap:8px;align-items:center;min-width:0}
+.tdr-store-section-tab{
+  padding:8px clamp(12px,1.4vw,20px);
+  min-height:36px;border:1px solid #294d63;color:#9eb9ce;
+  border-radius:5px 13px 5px 13px;
+  background:linear-gradient(165deg,#0e2336,#091622);
+  font-size:clamp(9px,.95vw,12px);font-weight:950;letter-spacing:.08em;
+  cursor:pointer;touch-action:manipulation;white-space:nowrap;
+}
+.tdr-store-section-tab.is-active{
+  border-color:#65d9f4;color:#e8faff;
+  background:linear-gradient(165deg,#174b65,#0b2b42);
+  box-shadow:inset 0 1px rgba(204,249,255,.2),0 0 9px rgba(56,191,241,.15);
+}
+.tdr-store-page-controls{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.tdr-store-page-counter{
+  min-width:68px;text-align:center;
+  font:950 clamp(10px,1vw,13px) system-ui;letter-spacing:.12em;color:#9bdcf5;
+  font-variant-numeric:tabular-nums;
+}
+.tdr-store-page-arrow{
+  min-width:38px;min-height:36px;border:1px solid #348aae;
+  border-radius:6px 13px 6px 13px;
+  background:linear-gradient(180deg,#143a54,#092238);
+  box-shadow:inset 0 1px rgba(200,241,255,.18);
+  color:#d8f5ff;font-size:25px;font-weight:800;line-height:1;
+  cursor:pointer;touch-action:manipulation;
+}
+.tdr-store-page-arrow:disabled{opacity:.32;cursor:default;box-shadow:none}
+.tdr-store-section-nav button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.tdr-store-scroller[data-section='rewards'] .tdr-store-reward--video{margin-left:auto}
+.tdr-store-scroller[data-section='rewards'] .tdr-store-reward--daily{margin-right:auto}
+.tdr-store-scroller .tdr-store-card[hidden]{display:none!important}
+.tdr-store-scroller{scroll-padding-inline:max(24px,env(safe-area-inset-left));scroll-snap-type:x proximity}
+/* Four visually distinct competition-grade material kits, still subordinate
+   to the gold/cyan reward duo. All pack contents and prices are unchanged. */
+.tdr-store-material{
+  --tdr-mat-accent:#52c8f1;--tdr-mat-rgb:82,200,241;
+  position:relative;isolation:isolate;
+  border:1.5px solid rgba(var(--tdr-mat-rgb),.66);
+  border-radius:8px 20px 8px 20px;
+  background:
+    radial-gradient(ellipse 110% 80% at 50% 55%,rgba(var(--tdr-mat-rgb),.11),transparent 85%),
+    linear-gradient(165deg,#11263a 0%,#091824 63%,#06131e);
+  box-shadow:0 12px 27px rgba(0,0,0,.36),inset 0 1px rgba(var(--tdr-mat-rgb),.20);
+}
+.tdr-store-material--chassis{--tdr-mat-accent:#69dbb0;--tdr-mat-rgb:105,219,176}
+.tdr-store-material--technology{--tdr-mat-accent:#bc9aff;--tdr-mat-rgb:188,154,255}
+.tdr-store-material--mixed{--tdr-mat-accent:#f9c36f;--tdr-mat-rgb:249,195,111}
+.tdr-store-material::before{
+  content:'';position:absolute;top:0;left:18px;width:64%;height:3px;
+  pointer-events:none;
+  background:linear-gradient(90deg,var(--tdr-mat-accent),transparent);
+  box-shadow:0 0 9px rgba(var(--tdr-mat-rgb),.5);
+}
+.tdr-store-material .tdr-store-card-head h2{
+  color:#f5fbff;letter-spacing:.035em;
+  text-shadow:0 2px 6px rgba(0,0,0,.45);
+}
+.tdr-store-material .tdr-store-total{
+  border-radius:5px 11px 5px 11px;
+  border-color:rgba(var(--tdr-mat-rgb),.85);
+  background:linear-gradient(160deg,rgba(var(--tdr-mat-rgb),.22),rgba(var(--tdr-mat-rgb),.035));
+  box-shadow:inset 0 1px rgba(255,255,255,.13);
+}
+.tdr-store-material .tdr-store-total strong{color:#fff}
+.tdr-store-material .tdr-store-section-label{color:var(--tdr-mat-accent)}
+.tdr-store-material .tdr-store-material-row{
+  border-color:rgba(var(--tdr-mat-rgb),.31);
+  border-radius:4px 11px 4px 11px;
+  background:linear-gradient(155deg,#122338,#091520);
+  box-shadow:inset 0 1px rgba(255,255,255,.035);
+}
+.tdr-store-material .tdr-store-material-count{color:#f4fcff;text-shadow:0 1px 3px #000}
+.tdr-store-material .tdr-store-action:not(:disabled){
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  min-height:40px;margin-top:8px;padding:4px 12px;
+  border:1.5px solid var(--tdr-mat-accent);
+  border-radius:0;
+  clip-path:polygon(10px 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,10px 100%,0 50%);
+  color:#edfaff;
+  background:linear-gradient(180deg,rgba(var(--tdr-mat-rgb),.33),rgba(var(--tdr-mat-rgb),.16) 42%,rgba(var(--tdr-mat-rgb),.055) 100%);
+  box-shadow:inset 0 2px rgba(255,255,255,.16),inset 0 -3px rgba(0,0,0,.25);
+  font-weight:1000;letter-spacing:.045em;
+}
+.tdr-store-action-coin{
+  width:clamp(21px,2.35vw,29px);height:clamp(21px,2.35vw,29px);
+  object-fit:contain;flex:none;pointer-events:none;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.5));
+}
+.tdr-store-action-price{white-space:nowrap}
+.tdr-store-material .tdr-store-action:active{filter:brightness(1.15)}
+.tdr-store-material .tdr-store-action:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media(max-height:430px){
+  .tdr-store-section-nav{min-height:40px;padding-block:0 3px}
+  .tdr-store-section-tab{min-height:34px;padding-block:6px}
+  .tdr-store-page-arrow{min-height:34px}
+  .tdr-store-material .tdr-store-action:not(:disabled){min-height:34px;margin-top:5px}
+  .tdr-store-action-coin{width:20px;height:20px}
+}
+@media(max-width:720px){
+  .tdr-store-section-nav{margin-inline:6px;padding-inline:4px;gap:5px}
+  .tdr-store-section-tabs{gap:4px}
+  .tdr-store-section-tab{padding-inline:8px;font-size:9px}
+  .tdr-store-page-controls{gap:3px}
+  .tdr-store-page-counter{min-width:47px;font-size:9px}
+  .tdr-store-page-arrow{min-width:32px}
+}

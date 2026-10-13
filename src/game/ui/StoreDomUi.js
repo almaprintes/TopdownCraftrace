@@ -36,7 +36,7 @@ function toast(root,message,ok=true){
 }
 
 function materialCard(scene,root,pack){
-  const card=el('article','tdr-store-card tdr-store-material');
+  const card=el('article',`tdr-store-card tdr-store-material tdr-store-material--${pack.id}`);
   const head=el('div','tdr-store-card-head');
   const title=el('h2','',t(`store.pack.${pack.id}.title`));
   const total=Object.values(pack.items||{}).reduce((sum,n)=>sum+Math.max(0,Number(n)||0),0);
@@ -52,7 +52,12 @@ function materialCard(scene,root,pack){
     row.append(el('strong','tdr-store-material-count',`×${count}`));grid.append(row);
   }
   card.append(grid);
-  const button=el('button','tdr-store-action',`${fmt(pack.price)} ${t('store.coins')}`);
+  // A prominent shop-price badge is presentation only. The canonical
+  // buyMaterialPack still decides affordability and applies the transaction.
+  const button=el('button','tdr-store-action');
+  const coin=el('img','tdr-store-action-coin');
+  coin.src=`${BASE()}assets/ui/moneda-tdr.webp`;coin.alt='';coin.draggable=false;
+  button.append(coin,el('span','tdr-store-action-price',`${fmt(pack.price)} ${t('store.coins')}`));
   button.type='button';button.addEventListener('click',()=>{const result=buyMaterialPack(pack.id);toast(root,result.ok?t('store.packAdded'):result.reason,result.ok);if(result.ok)refreshBalance(root);});
   card.append(button);return card;
 }
@@ -132,6 +137,69 @@ function rewardCard(scene,root,kind){
   update();return {card,update};
 }
 
+
+// The four packs and two rewards share one scrolling host but never appear
+// half-overlapped. Section tabs change visibility, not their handlers/data.
+function mountStoreNavigation(root,shell,scroller,packCards,rewardCards,initialSection){
+  const bar=el('nav','tdr-store-section-nav');
+  bar.setAttribute('aria-label',getLanguage()==='en'?'Store categories':'Secciones de tienda');
+  const tabGroup=el('div','tdr-store-section-tabs');
+  const tabs={};
+  for(const [key,es,en] of [['materials','PACKS','PACKS'],['rewards','RECOMPENSAS','REWARDS']]){
+    const button=el('button','tdr-store-section-tab',getLanguage()==='en'?en:es);
+    button.type='button';button.dataset.storeSection=key;
+    button.addEventListener('click',()=>setSection(key));
+    tabGroup.append(button);tabs[key]=button;
+  }
+  const controls=el('div','tdr-store-page-controls');
+  const previous=el('button','tdr-store-page-arrow','‹');
+  previous.type='button';previous.setAttribute('aria-label',getLanguage()==='en'?'Previous pack':'Anterior pack');
+  const counter=el('span','tdr-store-page-counter');
+  counter.setAttribute('aria-live','off');
+  const next=el('button','tdr-store-page-arrow','›');
+  next.type='button';next.setAttribute('aria-label',getLanguage()==='en'?'Next pack':'Siguiente pack');
+  controls.append(previous,counter,next);bar.append(tabGroup,controls);
+  shell.append(bar);
+  const grouped={materials:packCards,rewards:rewardCards};
+  const activeCards=()=>grouped[scroller.dataset.section]||packCards;
+  const updateControls=()=>{
+    if(!root.isConnected)return;
+    const cards=activeCards();
+    const max=Math.max(0,scroller.scrollWidth-scroller.clientWidth);
+    const gap=parseFloat(getComputedStyle(scroller).columnGap)||16;
+    const width=cards[0]?.getBoundingClientRect().width||1;
+    const index=Math.max(0,Math.min(cards.length-1,Math.round(scroller.scrollLeft/(width+gap))));
+    counter.textContent=`${String(index+1).padStart(2,'0')} / ${String(cards.length).padStart(2,'0')}`;
+    previous.disabled=scroller.scrollLeft<=2;
+    next.disabled=scroller.scrollLeft>=max-2;
+  };
+  function setSection(section){
+    const key=section==='rewards'?'rewards':'materials';
+    scroller.dataset.section=key;
+    for(const card of packCards)card.hidden=key!=='materials';
+    for(const card of rewardCards)card.hidden=key!=='rewards';
+    for(const [id,button] of Object.entries(tabs)){
+      const active=id===key;
+      button.classList.toggle('is-active',active);
+      button.setAttribute('aria-pressed',String(active));
+    }
+    scroller.scrollLeft=0;
+    requestAnimationFrame(updateControls);
+  }
+  const stepScroll=direction=>{
+    const cards=activeCards(),width=cards[0]?.getBoundingClientRect().width||0;
+    const gap=parseFloat(getComputedStyle(scroller).columnGap)||16;
+    scroller.scrollBy({left:direction*(width+gap),behavior:window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?'instant':'smooth'});
+  };
+  previous.addEventListener('click',()=>stepScroll(-1));
+  next.addEventListener('click',()=>stepScroll(1));
+  scroller.addEventListener('scroll',updateControls,{passive:true});
+  const syncSize=()=>requestAnimationFrame(updateControls);
+  window.addEventListener('resize',syncSize);
+  root.addEventListener('tdr:store-closed',()=>window.removeEventListener('resize',syncSize),{once:true});
+  setSection(initialSection);
+}
+
 export function openStoreDom(scene,section='materials'){
   closeStoreDom(scene);
   const root=el('div','tdr-store-dom');root.id=ROOT_ID;root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');
@@ -139,20 +207,16 @@ export function openStoreDom(scene,section='materials'){
   const recycler=el('button','tdr-store-recycler','♻  '+(getLanguage()==='en'?'RECYCLER':'RECICLADORA'));recycler.type='button';recycler.addEventListener('click',()=>openMaterialExchangeDom(scene,scene?._exchangeFrom||'scrap',scene?._exchangeTo||'compound',scene?._exchangeAmount||100));
   const header=createAppHeader({title:t('store.title'),onBack:()=>closeStoreDom(scene),actions:[recycler]});shell.append(header);
   const scroller=el('main','tdr-store-scroller');
-  for(const pack of MATERIAL_PACKS)scroller.append(materialCard(scene,root,pack));
-  const video=rewardCard(scene,root,'video'),daily=rewardCard(scene,root,'daily');scroller.append(video.card,daily.card);shell.append(scroller);root.append(shell);
+  const packCards=MATERIAL_PACKS.map(pack=>materialCard(scene,root,pack));
+  for(const card of packCards)scroller.append(card);
+  const video=rewardCard(scene,root,'video'),daily=rewardCard(scene,root,'daily');
+  scroller.append(video.card,daily.card);
+  mountStoreNavigation(root,shell,scroller,packCards,[video.card,daily.card],section);
+  shell.append(scroller);root.append(shell);
   root.addEventListener('pointerdown',e=>e.stopPropagation());root.addEventListener('pointerup',e=>e.stopPropagation());root.addEventListener('touchmove',e=>e.stopPropagation(),{passive:true});
   document.body.append(root);scene._storeDomRoot=root;
-  // Existing _openStoreModal('rewards') opens the same Store, but with
-  // its original +100 / +250 cards in view instead of four material packs.
-  if(section==='rewards'){
-    requestAnimationFrame(()=>{
-      if(!root.isConnected)return;
-      const left=video.card.getBoundingClientRect().left-scroller.getBoundingClientRect().left+scroller.scrollLeft;
-      const gutter=parseFloat(getComputedStyle(scroller).paddingLeft)||0;
-      scroller.scrollLeft=Math.max(0,left-gutter);
-    });
-  }
+  // The lobby's rewards shortcut now opens the focused RECOMPENSAS view.
+  // No adjacent material pack is cut off along its left edge.
   const timer=setInterval(()=>{if(!root.isConnected){clearInterval(timer);return;}video.update();daily.update();},1000);
   const cleanup=()=>{clearInterval(timer);closeStoreDom(scene);};
   scene.events?.once?.('shutdown',cleanup);scene.events?.once?.('destroy',cleanup);
