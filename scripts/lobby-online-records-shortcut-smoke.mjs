@@ -26,7 +26,8 @@ assert.match(css,/@media\(max-width:900px\)/);
 assert.match(locales,/'lobby\.onlineRecords':'RÉCORDS ONLINE'/);
 assert.match(locales,/'lobby\.onlineRecords':'ONLINE RECORDS'/);
 assert.match(stats,/this\._onlineFromLobby=args\[0\]\?\.onlineFromLobby===true/);
-assert.match(real,/data\?\.raceControlTrackId\|\|sessionStorage\.getItem\(RETURN_TRACK_KEY\)/);
+assert.match(real,/trackId=resolveStatsInitialTrack\(data,sessionStorage\.getItem\(RETURN_TRACK_KEY\)\)/,
+  'Online Records and Statistics have distinct initial route resolution');
 assert.match(real,/if\(trackId\)this\.time\?\.delayedCall\?\.\(0,\(\)=>this\._renderBroadcastRecords\(trackId\)\)/);
 assert.match(stats,/if\(this\._onlineFromLobby\)this\.scene\.start\('menu'\);\s*else this\._renderCars\(\)/,
   'Direct-lobby Race Control returns to lobby; the existing Statistics flow still returns to stats');
@@ -34,4 +35,4 @@ assert.match(mastery,/if\(!args\[0\]\?\.onlineFromLobby\)showFirstVisitTutorial\
 assert.match(stats,/_publishRaceControlRecord\(selected,button\)/);
 assert.match(stats,/submitRaceControlRecordWithGhost\(/);
 assert.match(stats,/verifiedReward\(ad\)/);
-console.log('Lobby one-tap online records route, responsive fourth CTA, back behavior and original stats/publish flow verified.');
+console.log('Lobby one-tap online records route, responsive five CTAs, back behavior and original stats/publish flow verified.');
