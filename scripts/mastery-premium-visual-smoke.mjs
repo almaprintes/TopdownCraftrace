@@ -1,5 +1,5 @@
-// DEV 1.2.163 — nine canonical mastery levels on large championship shields,
-// centred over the painted roof in both lobby and race, optional visibility.
+// Nine canonical mastery levels on centered roof shields,
+// ~15% smaller in both lobby and race so the car roof remains visible.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
@@ -44,23 +44,23 @@ assert.equal(tall.paintWidth,120);
 assert.equal(tall.paintHeight,300);
 assert.equal(tall.x,200,'Badge stays at true painted centre, not container edge');
 assert.equal(tall.y,60+300*.51,'Crest belongs at the centre of the cabin');
-assert.ok(tall.size>=tall.paintWidth*.7&&tall.size<=tall.paintWidth*.9,
-  'Emblem should fill most of the painted roof width');
+assert.ok(tall.size>=tall.paintWidth*.63&&tall.size<=tall.paintWidth*.69,
+  'Lobby shield stays within the painted roof without covering the windscreen');
 const letterbox=lobbyMasteryPlacement({left:0,top:0,width:200,height:400},1000,500);
 assert.equal(letterbox.paintWidth,200);
 assert.equal(letterbox.paintHeight,100);
 assert.equal(letterbox.y,(400-100)/2+100*.51);
-assert.ok(letterbox.size>=70&&letterbox.size<=85,'Wide roof crests scale with the painted short axis');
+assert.ok(letterbox.size>=63&&letterbox.size<=69,'Wide roof crests scale with the painted short axis');
 assert.equal(lobbyMasteryPlacement({width:0,height:200},400,1000),null);
 const vertical=raceMasteryPlacement(46,96);
 assert.equal(vertical.x,0);assert.equal(vertical.y,0);
-assert.ok(vertical.radius>=46*.38,
-  'Race emblem should cover most of the narrow roof axis');
+assert.ok(vertical.radius>=46*.34&&vertical.radius<=46*.36,
+  'Race emblem is centered and smaller than the full roof width');
 const horizontal=raceMasteryPlacement(96,46);
 assert.equal(horizontal.x,0);assert.equal(horizontal.y,0);
 assert.equal(horizontal.radius,vertical.radius,
   'Car orientation must not change the centred full-roof crest');
-assert.ok(raceMasteryPlacement(20,80).radius>=5.3,
+assert.ok(raceMasteryPlacement(20,80).radius>=6.5,
   'Badge remains legible on smaller cars');
 globalThis.localStorage={getItem:()=>JSON.stringify({video:{showMasteryBadge:false}})};
 assert.equal(masteryRoofVisible(),false,'Hide on car must remain available');
