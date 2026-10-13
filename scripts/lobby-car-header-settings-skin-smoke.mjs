@@ -53,5 +53,6 @@ assert.doesNotMatch(css,/\.cccontrol\{/,
 assert.match(css,/@media\(max-height:450px\)/);
 assert.match(css,/@media\(max-width:500px\)/);
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
-assert.match(html,/content="DEV 1\.2\.160"/);
+const devVersion=Number(html.match(/content="DEV 1\\.2\\.(\\d+)"/)?.[1]||0);
+assert.ok(devVersion>=160,'Settings premium skin must persist in later DEV versions');
 console.log('DEV 1.2.160 open car banner + premium settings skin with original settings behavior contract OK');
