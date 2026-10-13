@@ -1,0 +1,261 @@
+/* DEV 1.2.160 — SETTINGS / TOP DOWN RACE Paddock Edition.
+   Presentation only: never alter the stored settings, input values,
+   audio events, calibration geometry or click handlers. */
+#tdr-settings2{
+  --s2-cyan:#70e8ff;--s2-gold:#f0c46a;--s2-green:#70efb3;
+  --s2-ink:#061623;
+  padding:max(10px,2vh) max(12px,2vw);
+  gap:0;
+  background:
+    linear-gradient(150deg,rgba(65,170,190,.045),transparent 41%),
+    radial-gradient(ellipse 75% 74% at 52% 96%,rgba(37,122,144,.1),transparent 84%),
+    linear-gradient(160deg,#061621,#05111b 50%,#030c15);
+  -webkit-font-smoothing:antialiased;
+}
+#tdr-settings2 .s2top{
+  position:relative;
+  min-height:clamp(46px,8vh,68px);
+  height:clamp(46px,8vh,68px);
+  flex-shrink:0;
+  padding:0 clamp(10px,1.6vw,22px) 5px;
+  gap:clamp(8px,1.3vw,18px);
+  border-bottom:1px solid rgba(104,224,248,.43);
+  background:linear-gradient(90deg,rgba(30,95,110,.2),rgba(8,25,40,.38) 43%,transparent);
+}
+#tdr-settings2 .s2top::before{
+  content:'';position:absolute;top:0;left:0;width:min(30%,240px);height:3px;
+  background:linear-gradient(90deg,#70e8ff,rgba(113,235,255,.2),transparent);
+  pointer-events:none;
+}
+#tdr-settings2 .s2title{
+  color:#f5fdff;
+  font-size:clamp(17px,2.05vw,29px);
+  font-weight:1000;
+  letter-spacing:.095em;
+  text-shadow:0 2px 12px rgba(0,0,0,.55);
+}
+#tdr-settings2 .s2save{
+  display:flex;align-items:center;gap:8px;
+  padding:6px clamp(8px,1vw,14px);
+  font-size:clamp(9px,.83vw,12px);
+  letter-spacing:.06em;color:#a4f8ce;
+  border:1px solid rgba(100,237,177,.38);
+  clip-path:polygon(0 0,calc(100% - 9px) 0,100% 50%,calc(100% - 9px) 100%,0 100%);
+  background:linear-gradient(115deg,rgba(20,85,68,.42),rgba(5,32,32,.56));
+  white-space:nowrap;
+}
+#tdr-settings2 .s2save::before{
+  content:'✓';color:#82ffd0;font-size:12px;
+}
+#tdr-settings2 .s2back,
+#tdr-settings2 .s2tab,
+#tdr-settings2 .s2choice,
+#tdr-settings2 .s2cta,
+#tdr-settings2 .s2apply{
+  touch-action:manipulation;
+  border-radius:0;
+  transition:filter .14s ease,background .14s ease;
+}
+#tdr-settings2 .s2back{
+  color:#ecfcff;
+  padding:clamp(8px,1.1vh,13px) clamp(10px,1.2vw,18px);
+  min-height:38px;
+  border:1px solid rgba(100,212,238,.62);
+  clip-path:polygon(0 0,calc(100% - 11px) 0,100% 50%,calc(100% - 11px) 100%,0 100%);
+  background:linear-gradient(175deg,rgba(23,66,84,.85),rgba(7,30,44,.93));
+  box-shadow:inset 0 1px rgba(209,246,255,.1);
+}
+#tdr-settings2 .s2tabs{
+  flex:0 0 auto;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:clamp(5px,.85vw,12px);
+  margin:clamp(5px,.75vh,10px) 0 clamp(5px,.9vh,12px);
+}
+#tdr-settings2 .s2tab{
+  --tab-accent:var(--s2-cyan);
+  min-width:0;
+  min-height:clamp(39px,6.2vh,54px);
+  padding:clamp(7px,1.15vh,12px) clamp(5px,1vw,16px);
+  color:#acc7d4;
+  font-size:clamp(10px,1.12vw,15px);
+  font-weight:1000;letter-spacing:.08em;
+  border:1px solid rgba(108,165,193,.42);
+  clip-path:polygon(0 0,calc(100% - 13px) 0,100% 45%,calc(100% - 13px) 100%,0 100%,10px 50%);
+  background:linear-gradient(173deg,rgba(23,53,72,.9),rgba(8,25,38,.94));
+  box-shadow:inset 0 2px rgba(194,239,251,.08);
+  cursor:pointer;
+}
+#tdr-settings2 .s2tab[data-tab=video]{--tab-accent:var(--s2-gold)}
+#tdr-settings2 .s2tab[data-tab=audio]{--tab-accent:var(--s2-green)}
+#tdr-settings2 .s2tab[data-tab=legal]{--tab-accent:#d3a1fb}
+#tdr-settings2 .s2tab.on{
+  color:#f7feff;
+  border-color:var(--tab-accent);
+  background:linear-gradient(178deg,rgba(24,90,103,.95),rgba(9,41,58,.94));
+  box-shadow:inset 0 2px rgba(221,254,255,.14),inset 0 -3px var(--tab-accent);
+  text-shadow:0 1px 7px rgba(0,0,0,.5);
+}
+#tdr-settings2 .s2tab[data-tab=video].on{background:linear-gradient(175deg,rgba(85,65,29,.9),rgba(37,33,25,.96))}
+#tdr-settings2 .s2tab[data-tab=audio].on{background:linear-gradient(175deg,rgba(26,88,67,.91),rgba(12,47,39,.95))}
+#tdr-settings2 .s2tab[data-tab=legal].on{background:linear-gradient(175deg,rgba(62,46,94,.91),rgba(25,28,55,.96))}
+#tdr-settings2 .s2body{
+  flex:1 1 auto;
+  min-height:0;
+  overscroll-behavior:contain;
+  overflow:auto;
+  padding:clamp(2px,.6vw,8px) clamp(2px,.6vw,8px) max(15px,2vh);
+  scrollbar-width:thin;
+  scrollbar-color:rgba(93,223,239,.42) rgba(5,24,36,.35);
+}
+#tdr-settings2 .s2grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:stretch;
+  gap:clamp(7px,1.1vw,14px);
+}
+#tdr-settings2 .s2card{
+  position:relative;
+  isolation:isolate;
+  min-width:0;
+  min-height:clamp(85px,17vh,130px);
+  padding:clamp(11px,1.3vw,20px) clamp(14px,1.5vw,23px);
+  border:0;
+  border-left:1px solid rgba(93,208,232,.43);
+  border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 15px) 0,100% 17px,100% 100%,18px 100%,0 calc(100% - 17px));
+  background:
+    radial-gradient(ellipse 90% 88% at 1% 0%,rgba(46,131,151,.14),transparent),
+    linear-gradient(110deg,rgba(12,41,54,.89),rgba(5,25,38,.73) 73%,rgba(5,22,34,.35));
+  box-shadow:inset 0 1px rgba(171,236,251,.12);
+}
+#tdr-settings2 .s2card::before{
+  content:'';position:absolute;top:0;left:0;width:65%;height:2px;
+  background:linear-gradient(90deg,#71e9ff,rgba(88,207,237,.26),transparent);
+  pointer-events:none;
+}
+#tdr-settings2 .s2card::after{
+  content:'';position:absolute;bottom:0;right:0;width:40%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(102,210,236,.36));
+  pointer-events:none;
+}
+#tdr-settings2 .s2card.wide{
+  grid-column:1/-1;
+  min-height:clamp(84px,15vh,123px);
+}
+#tdr-settings2 .s2label{
+  font-size:clamp(11px,1.15vw,16px);
+  color:#f1fbff;
+  font-weight:1000;
+  letter-spacing:.075em;
+  text-shadow:0 2px 8px rgba(0,0,0,.42);
+}
+#tdr-settings2 .s2desc{
+  max-width:90ch;
+  color:#a9c5d1;
+  font-size:clamp(9px,.89vw,13px);
+  line-height:1.32;
+  margin-top:clamp(2px,.45vh,6px);
+}
+#tdr-settings2 .s2row{
+  margin-top:clamp(8px,1.5vh,15px);
+  gap:clamp(5px,.7vw,11px);
+  min-width:0;
+}
+#tdr-settings2 .s2choice{
+  min-height:clamp(33px,5.4vh,44px);
+  padding:clamp(6px,.9vh,10px) clamp(10px,1.2vw,19px);
+  border:1px solid rgba(106,170,196,.45);
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  background:linear-gradient(178deg,rgba(26,57,75,.9),rgba(9,27,41,.98));
+  color:#d1e5ec;
+  font-size:clamp(10px,1vw,13px);
+  font-weight:950;
+  cursor:pointer;
+}
+#tdr-settings2 .s2choice.on{
+  background:linear-gradient(175deg,rgba(38,126,110,.86),rgba(13,59,60,.95));
+  border-color:#70efb3;
+  color:#f0fffa;
+  box-shadow:inset 0 2px rgba(222,255,240,.15),inset 0 -3px rgba(92,244,181,.46);
+}
+#tdr-settings2 .s2cta,
+#tdr-settings2 .s2apply{
+  min-height:38px;
+  padding:8px clamp(10px,1.5vw,18px);
+  border:1px solid #70efb3;
+  clip-path:polygon(0 0,calc(100% - 11px) 0,100% 48%,calc(100% - 11px) 100%,0 100%,9px 52%);
+  background:linear-gradient(180deg,#277c65,#104637);
+  color:#f2fff9;
+  box-shadow:inset 0 2px rgba(217,255,237,.21),inset 0 -3px rgba(3,54,42,.36);
+  font-size:clamp(10px,1vw,13px);
+  font-weight:1000;
+  cursor:pointer;
+}
+#tdr-settings2 button:disabled{opacity:.5;cursor:not-allowed}
+#tdr-settings2 button:hover:not(:disabled){filter:brightness(1.13)}
+#tdr-settings2 button:active:not(:disabled){filter:brightness(1.24)}
+#tdr-settings2 button:focus-visible,
+#tdr-settings2 input:focus-visible{outline:2px solid #fff;outline-offset:3px}
+#tdr-settings2 .s2switch{border-color:rgba(113,191,211,.55);background:#0b2737}
+#tdr-settings2 .s2switch.on{border-color:#70efb3;background:#1f8562}
+#tdr-settings2 .s2range{accent-color:#70efb3;min-width:90px;max-width:100%;flex:1 1 150px;cursor:pointer}
+#tdr-settings2 .s2val{font-variant-numeric:tabular-nums;color:#a5ffe0}
+#tdr-settings2 .s2note{color:#b0c5d0;font-size:clamp(9px,.85vw,12px)}
+@media(max-height:450px){
+  #tdr-settings2{padding:6px 10px}
+  #tdr-settings2 .s2top{height:42px;min-height:42px}
+  #tdr-settings2 .s2tabs{margin:4px 0 6px;gap:5px}
+  #tdr-settings2 .s2tab{min-height:34px;padding:5px 7px}
+  #tdr-settings2 .s2grid{gap:7px}
+  #tdr-settings2 .s2card{min-height:75px;padding:9px 13px}
+  #tdr-settings2 .s2card.wide{min-height:75px}
+  #tdr-settings2 .s2row{margin-top:7px}
+  #tdr-settings2 .s2choice{min-height:30px;padding:6px 9px}
+}
+@media(max-width:760px){
+  #tdr-settings2 .s2tab{min-width:0;padding-inline:5px}
+  #tdr-settings2 .s2title{font-size:17px}
+  #tdr-settings2 .s2save{font-size:9px;padding-inline:7px}
+  #tdr-settings2 .s2grid{gap:6px}
+  #tdr-settings2 .s2card{padding:9px 11px}
+}
+@media(max-width:500px){
+  #tdr-settings2 .s2grid{grid-template-columns:minmax(0,1fr)}
+  #tdr-settings2 .s2tabs{gap:3px}
+  #tdr-settings2 .s2tab{font-size:9px;letter-spacing:.01em}
+  #tdr-settings2 .s2title{font-size:14px}
+  #tdr-settings2 .s2save{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  #tdr-settings2 .s2back,
+  #tdr-settings2 .s2tab,
+  #tdr-settings2 .s2choice,
+  #tdr-settings2 .s2cta,
+  #tdr-settings2 .s2apply{transition:none}
+}
+/* Control personalization stays spatially faithful to the race HUD. Only
+   its tool chrome changes; movable joystick geometry remains untouched. */
+#tdr-control-cal .cctop{
+  border-bottom:1px solid rgba(103,226,246,.36);
+  background:linear-gradient(180deg,rgba(4,24,38,.97),rgba(4,24,38,.85) 67%,transparent);
+}
+#tdr-control-cal .cctitle{color:#eaffff;letter-spacing:.095em}
+#tdr-control-cal .ccbtn{
+  border-radius:3px 11px 3px 11px;
+  border-color:rgba(104,225,247,.48);
+  background:linear-gradient(175deg,rgba(20,65,84,.9),rgba(6,28,41,.92));
+  color:#effcff;touch-action:manipulation;
+}
+#tdr-control-cal .ccbtn.good{border-color:#70efb3;background:linear-gradient(175deg,#287d5f,#0d493e);color:#eafff7}
+#tdr-control-cal .ccbtn.warn{border-color:#f0c46a;color:#ffe7ae}
+#tdr-control-cal .cchelp{
+  border-radius:4px 13px 4px 13px;
+  border-color:rgba(110,227,243,.38);
+  background:rgba(5,24,36,.95);
+  color:#d6eff5;
+}
+#tdr-control-cal .ccscale{
+  border-color:rgba(109,227,245,.45);
+  border-radius:4px 12px 4px 12px;
+  background:rgba(7,26,37,.94);
+}

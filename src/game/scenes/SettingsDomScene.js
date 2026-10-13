@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {observeAppHeader,appBackLabel} from '../ui/TdrAppHeader.js';
 import { defaultControlLayout, saveControlLayout, resetControlLayout, sanitizeLayoutPoint } from '../controls/controlLayout.js';
 import { t } from '../i18n/index.js';
+import settingsPremiumCss from '../ui/settings-premium.css?inline';
 
 const STORAGE_KEY='tdr2:settings';
 const AUDIO_EVENT='tdr2:audio-settings';
@@ -54,6 +55,9 @@ export class SettingsScene extends Phaser.Scene{
       .cccontrol{position:absolute;z-index:10;display:flex;align-items:center;justify-content:center;touch-action:none;transform:translate(-50%,-50%);filter:drop-shadow(0 6px 12px #0008)}.cccontrol.edit{outline:2px solid #6cffad;border-radius:16px}.cccontrol.selected{outline:3px solid #fff;box-shadow:0 0 0 5px #42f79555;border-radius:16px}.cccontrol.invalid{outline-color:#ff5570!important;background:#ff335522!important}.cccontrol .ccname{position:absolute;left:50%;bottom:calc(100% + 5px);transform:translateX(-50%);font:900 9px system-ui;color:#a9ffd0;white-space:nowrap;text-shadow:0 1px 4px #000}.ccstick,.ccwheel{width:145px;height:145px;border-radius:50%;border:5px solid #bfeaff66;background:radial-gradient(circle,#bfeaff 0 18%,#1c4255 19% 33%,#10232c 34% 63%,#66d8ff33 64% 100%)}.ccwheel{background:url('assets/ui/tdr_steering_wheel_nissan.webp?v=1') center/contain no-repeat;border:0}.ccpedal{width:90px;height:145px;clip-path:polygon(6% 0,94% 0,100% 100%,0 100%);background:linear-gradient(180deg,#183228dd,#08100ddd);border:2px solid #54ff9c;color:#fff;font-weight:1000;writing-mode:vertical-rl;text-orientation:upright;letter-spacing:.1em}.ccpedal.brake{border-color:#ff6478;background:linear-gradient(180deg,#3a1920dd,#10080add)}.cchand{width:78px;height:115px;background:url('assets/ui/tdr_handbrake_idle.webp?v=3') center/100% 100% no-repeat}.ccdir{width:110px;height:95px;border:2px solid #67cfff99;border-radius:16px;background:#07131ecf;color:#fff;font-size:38px;font-weight:1000}.ccscale{position:absolute;right:12px;bottom:62px;z-index:21;display:none;gap:6px;align-items:center;background:#071018e8;border:1px solid #ffffff28;border-radius:14px;padding:7px}.ccscale.on{display:flex}.ccscale span{font-size:10px;font-weight:950;color:#71ffb2;min-width:42px;text-align:center}
       @media(max-width:760px){#tdr-settings2{padding:10px 12px}.s2top{height:46px}.s2tabs{margin:7px 0 10px}.s2tab{min-width:110px;padding:9px 12px}.s2grid{gap:8px}.s2card{padding:11px 12px;min-height:78px}.s2row{margin-top:9px}.s2choice{padding:8px 10px}}
     `;
+    // Append the shared modern Paddock skin after the old per-scene
+    // rules. DOM, user preferences and calibration events remain unchanged.
+    style.textContent += '\n' + settingsPremiumCss;
     document.head.appendChild(style);
     const root=document.createElement('div');root.id='tdr-settings2';this.root=root;
     root.innerHTML=`<div class="s2top"><button class="s2back">${appBackLabel()}</button><div class="s2title">${t('settings.title')}</div><div class="s2save">${t('settings.saved')}</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">${t('settings.controls')}</button><button class="s2tab" data-tab="video">${t('settings.video')}</button><button class="s2tab" data-tab="audio">${t('settings.audio')}</button><button class="s2tab" data-tab="legal">${t('settings.legal')}</button></div><div class="s2body"></div>`;
