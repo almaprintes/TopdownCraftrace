@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-const src='src/game/tracks/library/santa-cruz/source/Santa Cruz x3 nitido.tdrtrack';
+const src='src/game/tracks/library/santa-cruz/source/Santa-Cruz-x3-nitido.tdrtrack';
 const track=JSON.parse(fs.readFileSync('src/game/tracks/library/santa-cruz/track.json','utf8'));
 if(!fs.existsSync(src)){
   assert.notEqual(track.meta?.renderMode,'image-native','Without source, legacy Santa Cruz must be unchanged');
