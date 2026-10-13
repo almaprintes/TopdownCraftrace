@@ -43,7 +43,7 @@ assert.match(exchange,/slider\.addEventListener\('input'/);
 assert.match(exchange,/slider\.addEventListener\('change'/);
 assert.match(exchange,/exact\?\.addEventListener\('change'/);
 assert.match(exchange,/confirmExchange\(root,C/);
-assert.match(exchange,/root\.querySelector\('\.rx-parts-tab'\)/);
+assert.match(exchange,/mode\.querySelector\('\.rx-parts-tab'\)/);
 assert.match(dismantle,/quotePartDismantle\(selectedId,count,garage\)/);
 assert.match(dismantle,/executePartDismantle\(selectedId,count\)/);
 assert.match(dismantle,/root\.querySelector\('\.pd-materials'\)/);
