@@ -22,6 +22,7 @@ export class RaceScene extends CurrentRaceScene {
     this._bikeSteerFiltered=0;
     this._bikeYawFiltered=0;
     this._racePhysicsWakeDone=false;
+    this._juanicarSlipYaw=0;
   }
 
   create(data){
@@ -40,6 +41,7 @@ export class RaceScene extends CurrentRaceScene {
       if('pushable' in b) b.pushable=true;
     }
     this._racePhysicsWakeDone=false;
+    this._juanicarSlipYaw=0;
 
     return result;
   }
@@ -191,7 +193,37 @@ export class RaceScene extends CurrentRaceScene {
     if(absForward<4 || (Math.abs(targetYaw)<0.00015 && Math.abs(this._bikeYawFiltered)<0.00015)) this._bikeYawFiltered=0;
     const correctedYaw=clamp(this._bikeYawFiltered,-maxYaw,maxYaw);
 
-    const newRot=wrapPi(prevRot+correctedYaw);
+    // Juanicar RWD prototype 01: speed-dependent cornering limit, lift/brake
+    // oversteer and a rear slip state. All other cars keep their exact path.
+    let experimentalYaw=correctedYaw;
+    if(this.carId==='veloce_juanicar_c220' && this._raceStarted){
+      const throttle=clamp(Number(this.touch?.throttle||0),0,1);
+      const braking=clamp(Number(this.touch?.brake||0),0,1);
+      const turnDemand=Math.abs(steer);
+      const lateralG=(speed*speed/Math.max(36,wheelbase))*Math.abs(Math.tan(steerAngle));
+      const cornerLimit=2100;
+      const excess=clamp((lateralG-cornerLimit)/cornerLimit,0,1.6);
+      // Excessive speed means understeer first, not magically tighter cornering.
+      experimentalYaw*=1-0.53*clamp(excess,0,1);
+      // Weight transfer: brake while turning provokes strong, progressive rear breakaway.
+      const lift=clamp((0.28-throttle)/0.28,0,1);
+      const transfer=turnDemand*smoothstep01((speed-110)/210)*(braking*2.3+lift*0.55);
+      const slipTarget=Math.sign(steer)*(transfer+excess*turnDemand*0.55);
+      this._juanicarSlipYaw+=(slipTarget-this._juanicarSlipYaw)*(1-Math.exp(-dt*3.5));
+      const recovery=1-Math.exp(-dt*(2.0+throttle*3.3));
+      if(transfer<0.12)this._juanicarSlipYaw*=1-recovery;
+      this._juanicarSlipYaw=clamp(this._juanicarSlipYaw,-1.75,1.75);
+      experimentalYaw+=this._juanicarSlipYaw*dt;
+      // Preserve momentum during the slide; only slowly re-align velocity to nose.
+      const vel=body.body.velocity;
+      const heading=prevRot+experimentalYaw;
+      const lateral=-Math.sin(heading)*vel.x+Math.cos(heading)*vel.y;
+      const traction=clamp(1-0.73*Math.abs(this._juanicarSlipYaw)-0.42*excess,0.12,1);
+      const lateralDamp=(1-Math.exp(-dt*(2.1+throttle*1.7)*traction));
+      vel.x+=Math.sin(heading)*lateral*lateralDamp;
+      vel.y-=Math.cos(heading)*lateral*lateralDamp;
+    }
+    const newRot=wrapPi(prevRot+experimentalYaw);
 
     // Softer rear-axle pivot to avoid tiny lateral nudges while steering.
     const rearOffset=wheelbase*0.38;
