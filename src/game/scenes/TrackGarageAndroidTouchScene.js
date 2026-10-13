@@ -1,5 +1,6 @@
 import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGaragePlayerLightScene.js';
 import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
+import { ensureSelectionPaddockSkin } from '../ui/selectionPaddockSkin.js';
 import { pxToMeters } from '../cars/speedUnits.js';
 
 const ROOT_ID='tdr-track-selector-dom';
@@ -28,6 +29,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     super._installDomSelector?.();
     const root=this._trackSelectorDom||document.getElementById(ROOT_ID);
     if(!root)return;
+    if(this._mode!=='admin')ensureSelectionPaddockSkin();
     syncCanonicalLengths(root,this._tracks,this._index);
 
     requestAnimationFrame(()=>centerSelectedTrack(root,'auto'));
