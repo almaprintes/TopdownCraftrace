@@ -170,6 +170,38 @@ export async function submitRaceControlRecordWithGhost({trackId,bestTimeMs,carId
   return request('/rest/v1/rpc/submit_track_record_with_ghost',{method:'POST',token,body:{p_track_id:String(trackId||''),p_best_time_ms:Math.round(Number(bestTimeMs)||0),p_car_id:String(carId||''),p_ghost_payload:payload,p_ghost_sample_count:Math.round(Number(ghostSampleCount)||0),p_ghost_format:1}});
 }
 
+// Return only the caller's OWN identity. This read-only RPC is SECURITY
+// DEFINER and does not expose another pilot's profile via PostgREST.
+export async function getMyRaceControlProfile(){
+  const session=await activeSession();
+  const rows=await request('/rest/v1/rpc/get_my_pilot_profile',{
+    method:'POST',token:session.access_token,body:{}
+  });
+  return Array.isArray(rows)?rows[0]||null:rows||null;
+}
+
+// Guest-safe global leaderboard if a device is signed into a different account.
+// Read-only; does not grant VS ghosts or publish permission.
+export async function getPublicRaceControlSnapshot(trackId){
+  const id=String(trackId||'');
+  const {url,key}=cfg();
+  if(!url||!key)throw new Error('Online backend not configured');
+  const res=await fetch(url+'/rest/v1/web_leaderboard_snapshot?select=payload&id=eq.true',{
+    headers:{apikey:key}
+  });
+  if(!res.ok)throw new Error('No se ha podido consultar la clasificación pública.');
+  const rows=await res.json();
+  const payload=rows?.[0]?.payload;
+  if(!payload||!Array.isArray(payload.tracks))throw new Error('Clasificación pública no disponible.');
+  const board=payload.tracks.find(t=>t?.id===id);
+  if(!board)throw new Error('Circuito aún no disponible en la clasificación pública.');
+  return (Array.isArray(board.entries)?board.entries:[]).map(r=>({
+    scope:'global',rank:Number(r.rank)||0,nick:String(r.nick||''),
+    best_time_ms:Number(r.best_time_ms)||0,car_id:String(r.car_id||''),
+    record_ref:null,ghost_available:false,is_me:false,section:'top'
+  })).filter(r=>r.rank>0&&r.best_time_ms>0);
+}
+
 export async function getRaceControlSnapshot(trackId){
   const online=await activateRaceControlOnline();
   const token=online?.session?.access_token;
