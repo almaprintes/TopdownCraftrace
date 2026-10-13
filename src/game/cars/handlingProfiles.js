@@ -55,6 +55,20 @@ export const HANDLING_PROFILES = {
     }
   },
 
+  // Vortex only: mild drift with prompt front-end steering and controllable recovery.
+  VORTEX_DRIFT: {
+    steering: {
+      yawSpeedMin: 16, steerSat: 0.38, lowSpeedSteer: 0.35, highSpeedLimit: 0.72, lateralGrip: 4.8,
+      inputRiseRate: 10.0, inputReturnRate: 14.0, inputReverseRate: 8.0
+    },
+    engine: { throttleGamma: 1.25, coastDrag: 0.016, brakeDrag: 0.055 },
+    tires: {
+      gripSpeedGain: 0.01,
+      slipStartDeg: 3.7, slipFullDeg: 10.5, cornerGripFloor: 0.45,
+      throttleGripLoss: 0.14, brakeGripLoss: 0.13
+    }
+  },
+
   DRIFT: {
     steering: {
       yawSpeedMin: 12, steerSat: 0.40, lowSpeedSteer: 0.45, highSpeedLimit: 0.85, lateralGrip: 1.8,
