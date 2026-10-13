@@ -226,17 +226,6 @@
 .tdr-store-material .tdr-store-action:active{filter:brightness(1.15)}
 .tdr-store-material .tdr-store-action:focus-visible{outline:3px solid #fff;outline-offset:3px}
 @media(max-height:430px){
-  .tdr-store-section-nav{min-height:40px;padding-block:0 3px}
-  .tdr-store-section-tab{min-height:34px;padding-block:6px}
-  .tdr-store-page-arrow{min-height:34px}
   .tdr-store-material .tdr-store-action:not(:disabled){min-height:34px;margin-top:5px}
   .tdr-store-action-coin{width:20px;height:20px}
-}
-@media(max-width:720px){
-  .tdr-store-section-nav{margin-inline:6px;padding-inline:4px;gap:5px}
-  .tdr-store-section-tabs{gap:4px}
-  .tdr-store-section-tab{padding-inline:8px;font-size:9px}
-  .tdr-store-page-controls{gap:3px}
-  .tdr-store-page-counter{min-width:47px;font-size:9px}
-  .tdr-store-page-arrow{min-width:32px}
 }
