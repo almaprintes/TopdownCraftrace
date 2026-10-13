@@ -65,7 +65,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
       header.classList.remove('tdr-store-header');header.classList.add('tdr-ts-top');
       header.querySelector('.tdr-app-back')?.classList.add('tdr-ts-back');
       root.prepend(header);
-      root.querySelectorAll('[data-index]').forEach(btn=>btn.addEventListener('click',()=>{this._index=clamp(Number(btn.dataset.index)||0,0,this._tracks.length-1);render();requestAnimationFrame(()=>root.querySelector(`[data-index="${this._index}"]`)?.scrollIntoView?.({block:'nearest'}));}));
+      root.querySelectorAll('[data-index]').forEach(btn=>btn.addEventListener('click',()=>{const index=clamp(Number(btn.dataset.index)||0,0,this._tracks.length-1);if(typeof this._selectTrackCard==='function'){this._selectTrackCard(index);return;}this._index=index;render();requestAnimationFrame(()=>root.querySelector(`[data-index="${this._index}"]`)?.scrollIntoView?.({block:'nearest'}));}));
       root.querySelector('.tdr-ts-select')?.addEventListener('click',()=>this._launchSelected());
     };
     render();
