@@ -40,23 +40,38 @@ assert.match(exchange,/if\(!verifiedReward\(ad\)\)/);
 assert.match(exchange,/recyclerRewardedPlacement\(ordinal\)/);
 assert.match(exchange,/requiresVideo=status\.used>=1/);
 assert.match(exchange,/status\.remaining\}\/3/);
-assert.match(exchange,/slider\\.addEventListener\\('input'/);
-assert.match(exchange,/<output class="rx-slider-value" aria-label="\\$\\{C\\.receive\\}">\\$\\{receive\\}<\\/output>/,
-  'Right-hand amount shows received materials, not the source slider count');
-assert.match(exchange,/const previewQuote=quoteMaterialExchange\\(fromId,toId,val\\)/,
-  'Touch preview must derive its value from the canonical exchange quote');
-assert.match(exchange,/sliderValue\\.textContent=String\\(previewReceive\\)/,
-  'Received quantity must refresh while sliding');
-assert.match(exchange,/exact\\.value=String\\(val\\)/,
-  'Exact source quantity remains synchronized while sliding');
-assert.match(exchange,/summaryValue\\.textContent=/,
-  'Summary must preview the same amount as the right-hand value');
-assert.match(exchange,/if\\(submit\\)submit\\.disabled=true/,
-  'Do not allow a stale saved amount to execute while the user is dragging');
+assert.match(exchange,/slider\.addEventListener\('input'/);
+assert.ok(exchange.includes('<output class="rx-slider-value" aria-label="${C.receive}">${receive}</output>'),
+  'Right-hand number must show received amount, not spent amount');
+assert.ok(exchange.includes('const previewQuote=quoteMaterialExchange(fromId,toId,val);'),
+  'Live preview uses canonical quote function');
+assert.ok(exchange.includes('sliderValue.textContent=String(previewReceive);'),
+  'Received quantity refreshes on slider drag');
+assert.ok(exchange.includes('exact.value=String(val);'),
+  'Source input stays synchronized');
+assert.ok(exchange.includes('summaryValue.textContent='),
+  'Summary uses the same live quote');
+assert.ok(exchange.includes('if(submit)submit.disabled=true;'),
+  'Stale amount cannot be confirmed mid-drag');
 assert.equal(quoteMaterialExchange('scrap','compound',112).receive,10,
-  '112 scrap converts to 10 compound after the existing 25% fee');
+  '112 scrap yields 10 compound after fee');
 assert.equal(quoteMaterialExchange('scrap','compound',8).receive,0,
-  'Too-small amounts must display zero rather than a false reward');
+  'Insufficient input gets zero received');
+assert.ok(exchange.includes('class="rx-fee-notice" role="note"'),
+  'Commission disclosure must be visible near the sticky confirmation area');
+assert.ok(exchange.includes('Math.round((1-MATERIAL_EXCHANGE_EFFICIENCY)*100)'),
+  'Fee shown is always computed from the real exchange efficiency');
+assert.ok(exchange.includes("t('recycler.feeDisclaimer',{percent:Math.round(MATERIAL_EXCHANGE_EFFICIENCY*100)})"),
+  'Notice must explain that the fee applies to exchange VALUE, not unit count');
+assert.ok(exchange.includes('class="rx-daily-rule"'),
+  'Daily rules remain visible alongside the restored fee notice');
+const themeCss=read('src/game/ui/recycler-premium.css');
+assert.match(themeCss,/#tdr-material-exchange-dom \.rx-fee-notice\{/);
+assert.match(themeCss,/#tdr-material-exchange-dom \.rx-fee-notice strong\{/);
+assert.match(themeCss,/#tdr-material-exchange-dom \.rx-note\{/);
+const locales=read('src/game/i18n/playerUiExtra.js');
+assert.ok(locales.includes("'recycler.feeDisclaimer':'Se aprovecha el {percent}% del valor entregado'"));
+assert.ok(locales.includes("'recycler.feeDisclaimer':'Conversion uses {percent}% of the material value you give'"));
 assert.match(exchange,/slider\.addEventListener\('change'/);
 assert.match(exchange,/exact\?\.addEventListener\('change'/);
 assert.match(exchange,/confirmExchange\(root,C/);

@@ -303,3 +303,32 @@
   #tdr-material-exchange-dom button,
   #tdr-part-dismantle-dom button{transition:none;animation:none}
 }
+
+/* DEV 1.2.153 — unavoidable 25% conversion fee notice, alongside the
+   exchange action even when the tall material preview scrolls out of view. */
+#tdr-material-exchange-dom .rx-note{
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+  min-width:0;gap:4px;
+}
+#tdr-material-exchange-dom .rx-fee-notice{
+  display:flex;align-items:baseline;flex-wrap:wrap;column-gap:10px;row-gap:2px;
+  font-size:clamp(10px,1.1vw,13px);
+  line-height:1.2;color:#ffc678;
+}
+#tdr-material-exchange-dom .rx-fee-notice strong{
+  color:#ffcb76;font-size:clamp(11px,1.25vw,15px);
+  font-weight:1000;white-space:nowrap;
+  text-shadow:0 0 7px rgba(241,175,72,.2);
+}
+#tdr-material-exchange-dom .rx-fee-notice small{
+  font-size:clamp(9px,.88vw,11px);color:#e0c69a;font-weight:750;
+}
+#tdr-material-exchange-dom .rx-daily-rule{
+  color:#9fb8c7;line-height:1.2;font-size:clamp(9px,.93vw,11px);
+}
+@media(max-height:540px){
+  #tdr-material-exchange-dom .rx-fee-notice{column-gap:6px;row-gap:1px}
+  #tdr-material-exchange-dom .rx-fee-notice strong{font-size:11px}
+  #tdr-material-exchange-dom .rx-fee-notice small{font-size:9px}
+  #tdr-material-exchange-dom .rx-daily-rule{font-size:9px}
+}
