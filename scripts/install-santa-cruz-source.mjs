@@ -8,7 +8,7 @@ import {expandCheckpointToEdges} from '../src/game/tracks/imageNativeCheckpointW
 import {shapeIsValid} from '../src/game/studio/trackShapeGeometry.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const source=path.join(root,'src/game/tracks/library/santa-cruz/source/Santa Cruz x3 nitido.tdrtrack');
+const source=path.join(root,'src/game/tracks/library/santa-cruz/source/Santa-Cruz-x3-nitido.tdrtrack');
 const target=path.join(root,'src/game/tracks/library/santa-cruz/track.json');
 const environmentSource=path.join(root,'src/game/tracks/library/santa-cruz/source/santa-cruz-photo.environment.json');
 const environmentTarget=path.join(root,'src/game/tracks/library/santa-cruz/santa-cruz.environment.json');
@@ -33,7 +33,7 @@ function parseSource(){
   return {t,image};
 }
 export async function installSantaCruzSource(){
-  if(!fs.existsSync(source))return {installed:false,reason:'Esperando paquete Santa Cruz x3 nitido.tdrtrack'};
+  if(!fs.existsSync(source))return {installed:false,reason:'Esperando paquete Santa-Cruz-x3-nitido.tdrtrack'};
   const {t,image}=parseSource();
   const first=t.centerline[0],ahead=t.centerline[Math.min(6,t.centerline.length-1)];
   const dx=Number(ahead.x)-Number(first.x),dy=Number(ahead.y)-Number(first.y);
@@ -63,7 +63,7 @@ export async function installSantaCruzSource(){
     checkpointMode:'authored',checkpoints,centerline:t.centerline,
     trackShape:t.trackShape,grid:t.grid||null,
     meta:{...(t.meta||{}),renderMode:'image-native',imageNative:photo,
-      source:'Track Studio .tdrtrack',sourceFile:'Santa Cruz x3 nitido.tdrtrack',
+      source:'Track Studio .tdrtrack',sourceFile:'Santa-Cruz-x3-nitido.tdrtrack',
       sourceImageSha256:crypto.createHash('sha256').update(image).digest('hex')}
   };
   fs.mkdirSync(assets,{recursive:true});
