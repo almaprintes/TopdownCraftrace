@@ -37,7 +37,7 @@ assert.match(exchange,/quoteMaterialExchange\(fromId,toId,amount\)/);
 assert.match(exchange,/executeMaterialExchange\(fromId,toId,amount\)/);
 assert.match(exchange,/if\(!verifiedReward\(ad\)\)/);
 assert.match(exchange,/recyclerRewardedPlacement\(ordinal\)/);
-assert.match(exchange,/const requiresVideo=status\.used>=1/);
+assert.match(exchange,/requiresVideo=status\.used>=1/);
 assert.match(exchange,/status\.remaining\}\/3/);
 assert.match(exchange,/slider\.addEventListener\('input'/);
 assert.match(exchange,/slider\.addEventListener\('change'/);
