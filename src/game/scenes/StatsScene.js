@@ -70,7 +70,8 @@ export class StatsScene extends Phaser.Scene{
     this._selectedCar=carId;
     const tracks=Object.entries(TRACK_REGISTRY||{}).map(([id,track])=>({id,track}));
     const available=tracks.filter(t=>rows.some(r=>{const s=r.car.tracks?.[t.id];return Number(s?.bestLapMs)>0||Number(s?.laps)>0||Number(s?.races)>0||Number(s?.meters)>0;}));
-    const list=available.length?available:tracks;
+    // Show every registered circuit, even before the player records a lap there.
+    const list=tracks;
     const fallback=row.bestTrack||list[0]?.id||tracks[0]?.id;
     const selected=(preferredTrack&&tracks.some(t=>t.id===preferredTrack))?preferredTrack:(this._selectedTrack&&tracks.some(t=>t.id===this._selectedTrack)?this._selectedTrack:fallback);
     this._selectedTrack=selected;
