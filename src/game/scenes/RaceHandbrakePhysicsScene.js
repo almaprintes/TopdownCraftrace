@@ -68,7 +68,7 @@ export class RaceScene extends CurrentRaceScene {
     // First incremental calibration: more rear breakaway and a modest front
     // braking bias, without locking position or replacing normal steering.
     const frontForce=clamp(-5.6*alphaF,-1.35,1.35);
-    const rearForce=juanicar?clamp(-.45*alphaR,-.22,.22):clamp(-.72*alphaR,-.34,.34);
+    const rearForce=juanicar?clamp(-.25*alphaR,-.12,.12):clamp(-.72*alphaR,-.34,.34);
     const maxFwd=Math.max(180,Number(this.maxFwd||this.carParams?.maxFwd||520));
     const speed01=clamp(speed/maxFwd,0,1);
     const lateralAccel=(frontForce+rearForce)*speed*(.78+.34*speed01);
@@ -76,7 +76,7 @@ export class RaceScene extends CurrentRaceScene {
 
     yawRate+=yawAccel*dt;
     yawRate*=Math.exp(-dt*.42);
-    yawRate=clamp(yawRate,-2.8,2.8);
+    yawRate=clamp(yawRate,juanicar?-3.25:-2.8,juanicar?3.25:2.8);
     this._hbBicycleYawRate=yawRate;
 
     vel.x+=rx*lateralAccel*dt;
