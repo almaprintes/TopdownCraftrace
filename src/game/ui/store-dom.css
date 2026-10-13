@@ -165,48 +165,7 @@
   }
 }
 
-/* DEV 1.2.148 — categories are intentional views, not a single clipped strip. */
-.tdr-store-section-nav{
-  flex:0 0 auto;min-height:46px;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;
-  margin:0 max(15px,var(--tdr-safe-right,15px)) 0 max(15px,var(--tdr-safe-left,15px));
-  padding:2px 10px 5px;
-  border-bottom:1px solid rgba(64,170,218,.38);
-}
-.tdr-store-section-tabs{display:flex;gap:8px;align-items:center;min-width:0}
-.tdr-store-section-tab{
-  padding:8px clamp(12px,1.4vw,20px);
-  min-height:36px;border:1px solid #294d63;color:#9eb9ce;
-  border-radius:5px 13px 5px 13px;
-  background:linear-gradient(165deg,#0e2336,#091622);
-  font-size:clamp(9px,.95vw,12px);font-weight:950;letter-spacing:.08em;
-  cursor:pointer;touch-action:manipulation;white-space:nowrap;
-}
-.tdr-store-section-tab.is-active{
-  border-color:#65d9f4;color:#e8faff;
-  background:linear-gradient(165deg,#174b65,#0b2b42);
-  box-shadow:inset 0 1px rgba(204,249,255,.2),0 0 9px rgba(56,191,241,.15);
-}
-.tdr-store-page-controls{display:flex;align-items:center;gap:8px;flex:0 0 auto}
-.tdr-store-page-counter{
-  min-width:68px;text-align:center;
-  font:950 clamp(10px,1vw,13px) system-ui;letter-spacing:.12em;color:#9bdcf5;
-  font-variant-numeric:tabular-nums;
-}
-.tdr-store-page-arrow{
-  min-width:38px;min-height:36px;border:1px solid #348aae;
-  border-radius:6px 13px 6px 13px;
-  background:linear-gradient(180deg,#143a54,#092238);
-  box-shadow:inset 0 1px rgba(200,241,255,.18);
-  color:#d8f5ff;font-size:25px;font-weight:800;line-height:1;
-  cursor:pointer;touch-action:manipulation;
-}
-.tdr-store-page-arrow:disabled{opacity:.32;cursor:default;box-shadow:none}
-.tdr-store-section-nav button:focus-visible{outline:2px solid #fff;outline-offset:2px}
-.tdr-store-scroller[data-section='rewards'] .tdr-store-reward--video{margin-left:auto}
-.tdr-store-scroller[data-section='rewards'] .tdr-store-reward--daily{margin-right:auto}
-.tdr-store-scroller .tdr-store-card[hidden]{display:none!important}
-.tdr-store-scroller{scroll-padding-inline:max(24px,env(safe-area-inset-left));scroll-snap-type:x proximity}
+/* DEV 1.2.149 — premium material packs, original horizontal shop strip preserved. */
 /* Four visually distinct competition-grade material kits, still subordinate
    to the gold/cyan reward duo. All pack contents and prices are unchanged. */
 .tdr-store-material{

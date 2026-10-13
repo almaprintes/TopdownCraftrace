@@ -178,38 +178,31 @@ assert.match(storeRoute,/_openStoreModal\(section='materials'\)/,
   'existing store navigation forwards requested section');
 assert.match(storeRoute,/return openStoreDom\(this,section\)/,
   'do not create a new store implementation');
-assert.match(liveStore,/const key=section==='rewards'\?'rewards':'materials'/,
-  'the original rewards entry now selects the dedicated rewards category');
-assert.match(liveStore,/mountStoreNavigation\(root,shell,scroller,packCards,\[video\.card,daily\.card\],section\)/,
-  'store sections must show rewards alone on entry, without an adjacent clipped pack');
-assert.match(liveStore,/for\(const card of packCards\)card\.hidden=key!=='materials'/,
-  'reward view hides packs rather than cutting their left edge');
-assert.match(liveStore,/for\(const card of rewardCards\)card\.hidden=key!=='rewards'/,
-  'pack view hides rewards');
-assert.match(liveStore,/scroller\.scrollLeft=0/,'each new category starts with a complete first card');
-assert.match(liveStore,/button\.setAttribute\('aria-pressed',String\(active\)\)/,
-  'section navigation exposes which view is active');
-assert.match(liveStore,/scroller\.scrollBy\(\{left:direction\*\(width\+gap\)/,
-  'previous and next move by the width of one card');
-assert.match(liveStore,/previous\.disabled=scroller\.scrollLeft<=2/);
-assert.match(liveStore,/next\.disabled=scroller\.scrollLeft>=max-2/);
-assert.match(liveStore,/window\.removeEventListener\('resize',syncSize\)/,
-  'store navigation must remove global resize listeners on close');
-assert.match(liveStore,/const packCards=MATERIAL_PACKS\.map\(pack=>materialCard\(scene,root,pack\)\)/,
-  'all four canonical material packs remain present');
+assert.match(liveStore,/if\(section==='rewards'\)/,
+  'lobby rewards shortcut navigates by native horizontal scroll, no extra category tabs');
+assert.match(liveStore,/scroller\.scrollLeft=Math\.max\(0,left-gutter\)/,
+  'reward-focused entry retains the same strip and existing scroll position behavior');
+assert.match(liveStore,/for\(const pack of MATERIAL_PACKS\)scroller\.append\(materialCard\(scene,root,pack\)\)/,
+  'all four real packs remain in their original order');
+assert.match(liveStore,/scroller\.append\(video\.card,daily\.card\)/,
+  'video and daily gifts remain after the packs in one swipeable row');
+assert.doesNotMatch(liveStore,/mountStoreNavigation|\.hidden=key|storeSection/,
+  'no replacement tab/filter navigation is introduced for an intended swipe');
 assert.match(liveStore,/const result=buyMaterialPack\(pack\.id\)/,
-  'original purchase authority remains unchanged');
+  'original purchase and price authority remains unchanged');
 assert.match(liveStore,/tdr-store-material--\$\{pack\.id\}/);
 assert.match(liveStore,/button\.append\(coin,el\('span','tdr-store-action-price'/);
-const shopNavCss=read('src/game/ui/store-dom.css');
-assert.match(shopNavCss,/\.tdr-store-section-tab\.is-active\{/);
-assert.match(shopNavCss,/\.tdr-store-scroller \.tdr-store-card\[hidden\]\{display:none!important\}/);
-assert.match(shopNavCss,/\.tdr-store-scroller\[data-section='rewards'\] \.tdr-store-reward--video\{margin-left:auto\}/);
-assert.match(shopNavCss,/\.tdr-store-scroller\[data-section='rewards'\] \.tdr-store-reward--daily\{margin-right:auto\}/);
-for(const name of ['chassis','technology','mixed'])assert.match(shopNavCss,new RegExp('\\.tdr-store-material--'+name+'\\{'));
-assert.match(shopNavCss,/\.tdr-store-material \.tdr-store-action:not\(:disabled\)\{/);
-assert.match(shopNavCss,/\.tdr-store-action-coin\{/);
-assert.match(shopNavCss,/@media\(max-height:430px\)/);
+const packCss=read('src/game/ui/store-dom.css');
+assert.match(packCss,/\.tdr-store-scroller\{[^}]*overflow-x:auto/,
+  'the original native horizontal swipe remains intact');
+assert.match(packCss,/\.tdr-store-scroller\{[^}]*scroll-snap-type:x proximity/,
+  'shop keeps original touch scroll and snapping');
+assert.doesNotMatch(packCss,/tdr-store-section-nav|tdr-store-section-tab|tdr-store-page-arrow/,
+  'unnecessary category tabs/arrows must not replace the original scrolling shop');
+for(const name of ['chassis','technology','mixed'])assert.match(packCss,new RegExp('\\.tdr-store-material--'+name+'\\{'));
+assert.match(packCss,/\.tdr-store-material \.tdr-store-action:not\(:disabled\)\{/);
+assert.match(packCss,/\.tdr-store-action-coin\{/);
+assert.match(packCss,/@media\(max-height:430px\)/);
 assert.match(lobbyCss,/width:min\(66vw,970px\)/,
   'three actions form a shared, centered capsule');
 assert.doesNotMatch(lobby,/claimRewardedCoins|claimDailyCoins|showRewardedAd/,
