@@ -70,7 +70,7 @@ assert.ok(offer.includes('PUBLICAR · VER ANUNCIO'));
 assert.ok(offer.includes('AHORA NO'));
 assert.ok(offer.includes("skip.addEventListener('click',skipOffer)"));
 assert.ok(offer.includes("publish.addEventListener('click',async()=>"),'Ad must need explicit user intent');
-assert.ok(offer.indexOf("await activateRaceControlOnline()")<offer.indexOf("await showRewardedAd(scene"),
+assert.ok(offer.indexOf("await ensureRaceControlPilotProfile()")<offer.indexOf("await showRewardedAd(scene"),
   'Check online connectivity BEFORE consuming the optional ad');
 assert.ok(offer.indexOf('const ghost=localRecordGhost')<offer.indexOf('await showRewardedAd(scene'),
   'Check matching ghost exists before watching ad');
