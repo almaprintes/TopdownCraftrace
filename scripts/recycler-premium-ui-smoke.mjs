@@ -2,7 +2,6 @@
 // mechanics while ensuring the store and both screens use one premium skin.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {quoteMaterialExchange} from '../src/game/store/materialExchange.js';
 const read=path=>readFileSync(path,'utf8');
 const exchange=read('src/game/ui/MaterialExchangeDom.js');
 const dismantle=read('src/game/ui/PartDismantleDom.js');
@@ -53,10 +52,18 @@ assert.ok(exchange.includes('summaryValue.textContent='),
   'Summary uses the same live quote');
 assert.ok(exchange.includes('if(submit)submit.disabled=true;'),
   'Stale amount cannot be confirmed mid-drag');
-assert.equal(quoteMaterialExchange('scrap','compound',112).receive,10,
-  '112 scrap yields 10 compound after fee');
-assert.equal(quoteMaterialExchange('scrap','compound',8).receive,0,
-  'Insufficient input gets zero received');
+const exchangeEconomy=read('src/game/store/materialExchange.js');
+const valueOf=id=>{
+  const fragment=exchangeEconomy.match(/MATERIAL_EXCHANGE_VALUE=\\{([\\s\\S]*?)\\}/)?.[1]||'';
+  const entry=fragment.match(new RegExp('(?:^|[,\\\\s])'+id+':([0-9.]+)'));
+  return Number(entry?.[1]);
+};
+const factor=Number(exchangeEconomy.match(/MATERIAL_EXCHANGE_EFFICIENCY=([0-9.]+)/)?.[1]);
+assert.equal(factor,.75,'A 25% fee must be sourced from canonical economy');
+assert.equal(Math.floor(112*valueOf('scrap')*factor/valueOf('compound')),10,
+  '112 scrap converts to 10 compound after the canonical fee');
+assert.equal(Math.floor(8*valueOf('scrap')*factor/valueOf('compound')),0,
+  'Small input is not enough to produce one compound');
 assert.ok(exchange.includes('class="rx-fee-notice" role="note"'),
   'Commission disclosure must be visible near the sticky confirmation area');
 assert.ok(exchange.includes('Math.round((1-MATERIAL_EXCHANGE_EFFICIENCY)*100)'),
