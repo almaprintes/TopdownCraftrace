@@ -230,8 +230,8 @@ steeringProfile: 'DIRECT',
     brand: 'HÉLIX',
     country: 'España',
     category: 'All-Rounder',
-    role: 'Crossover ágil',
-    steeringProfile: 'DIRECT',
+    role: 'Crossover drift',
+    handlingProfile: 'VORTEX_DRIFT',
     engineAudioProfile: 'JEEP',
 
     // UI / Colección
@@ -240,7 +240,7 @@ steeringProfile: 'DIRECT',
     cardEffect: 'holographic',
     cardAssetVersion: 2,
     skin: 'skin_helix_vortex.webp',
-    visualScale: 1.10,
+    visualScale: 1.18,
 
     // Stats diseño (01–99): VEL/ACC/GIR/EST/FRN
     designStats: { VEL: 61, ACC: 76, GIR: 68, EST: 78, FRN: 70 },
