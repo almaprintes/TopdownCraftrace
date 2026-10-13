@@ -122,7 +122,7 @@ export class GarageScene extends CurrentGarageScene {
       list?.appendChild(btn);
     });
     this._renderPlayerDomSelection();
-    requestAnimationFrame(()=>root.querySelector('.tdr-garage-dom-car.is-selected')?.scrollIntoView({block:'center'}));
+    // The shared centered rail owns initial positioning and native momentum.
   }
 
   _renderPlayerDomSelection(){
