@@ -15,9 +15,11 @@ assert.match(lobby,/tr\('lobby\.onlineRecords'\)/);
 assert.match(lobby,/button\.addEventListener\('click',\(\)=>scene\.scene\.start\('StatsScene',\{/);
 assert.match(lobby,/raceControlTrackId:scene\.selectedTrackKey\|\|'track01'/);
 assert.match(lobby,/onlineFromLobby:true/);
-assert.match(lobby,/makeOnlineRecordsShortcut\(scene\)\)\;/,
-  'Records is a visible FOURTH lobby bottom action next to Garage, Factory, Circuits');
-assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-bottom-actions\{\s*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+assert.match(lobby,/makeOnlineRecordsShortcut\(scene\)/,
+  'Online Records remains in the bottom nav');
+assert.match(lobby,/makeStatisticsShortcut\(scene\)/,
+  'Statistics remains available in addition to Online Records');
+assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-bottom-actions\{\s*grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
 assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-bottom-actions \.tdr-lobby-button\{\s*width:100%;min-width:0/);
 assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-button--records\{/);
 assert.match(css,/@media\(max-width:900px\)/);

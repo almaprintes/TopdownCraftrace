@@ -53,6 +53,7 @@ jobs:
           node scripts/session-record-publish-smoke.mjs
           node scripts/control-stick-default-smoke.mjs
           node scripts/lobby-online-records-shortcut-smoke.mjs
+          node scripts/lobby-bottom-directions-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
           test -f src/game/scenes/RaceGamepadScene.js

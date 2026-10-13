@@ -3,6 +3,7 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { attainableTopSpeedKmh, METERS_PER_PX } from '../cars/speedUnits.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
+import { trackDisplayDirection } from '../tracks/trackDisplayDirection.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { getPilotProfile } from '../social/pilotProfile.js';
@@ -47,7 +48,7 @@ function renderDomCards(scene, root) {
   if (carSlot) carSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.selectedCar')}</div><div class="tdr-car-card-row"><span class="tdr-car-brand tdr-car-brand--${escapeHtml(brandKey)}">${brandMark}</span><span><h2>${escapeHtml(params?.name || spec.name || carId)}</h2><strong>${topKmh} km/h</strong></span><em>${escapeHtml(spec.category || spec.role || 'RACING')}</em></div>`;
   const carPreview = root.querySelector('[data-lobby-car]'); if (carPreview) { const assetVersion = encodeURIComponent(spec.collectionNo || 1); carPreview.decoding = 'async'; carPreview.src = `${BASE}assets/cars/lobby/${encodeURIComponent(carId)}.webp?v=${assetVersion}`; carPreview.alt = params?.name || spec.name || carId; }
   const trackKey = scene.selectedTrackKey || 'track01'; const track = TRACK_REGISTRY?.[trackKey]; const center = Array.isArray(track?.raceCenterline) && track.raceCenterline.length ? track.raceCenterline : track?.centerline;
-  if (trackSlot && track) { const id = String(track.id || track.key || '').toLowerCase(); const category = String(track.category || '').toLowerCase(); const surface = id.includes('offroad') || category.includes('dirt') || category.includes('tierra') ? tr('lobby.dirt') : tr('lobby.asphalt'); const direction = String(track.raceDirection || 'forward').toLowerCase() === 'reverse' ? tr('lobby.counterclockwise') : tr('lobby.clockwise'); const length = Math.round(loopLength(center) * METERS_PER_PX); const sectors = Math.max(1, (track.checkpoints?.length || 2) + 1); trackSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.selectedTrack')}</div><h2>${escapeHtml(track.name || trackKey)}</h2><div class="tdr-track-map">${trackSvg(center)}</div><div class="tdr-track-stats"><span><small>${tr('lobby.length')}</small><strong>${length} m</strong></span><span><small>${tr('lobby.sectors')}</small><strong>${sectors}</strong></span><span><small>${tr('lobby.surface')}</small><strong>${surface}</strong></span><span><small>${tr('lobby.direction')}</small><strong>${direction}</strong></span></div>`; }
+  if (trackSlot && track) { const id = String(track.id || track.key || '').toLowerCase(); const category = String(track.category || '').toLowerCase(); const surface = id.includes('offroad') || category.includes('dirt') || category.includes('tierra') ? tr('lobby.dirt') : tr('lobby.asphalt'); const directionKey=trackDisplayDirection(track); const direction=directionKey==='stage'?tr('lobby.pointToPoint'):directionKey==='counterclockwise'?tr('lobby.counterclockwise'):directionKey==='clockwise'?tr('lobby.clockwise'):'—'; const length = Math.round(loopLength(center) * METERS_PER_PX); const sectors = Math.max(1, (track.checkpoints?.length || 2) + 1); trackSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.selectedTrack')}</div><h2>${escapeHtml(track.name || trackKey)}</h2><div class="tdr-track-map">${trackSvg(center)}</div><div class="tdr-track-stats"><span><small>${tr('lobby.length')}</small><strong>${length} m</strong></span><span><small>${tr('lobby.sectors')}</small><strong>${sectors}</strong></span><span><small>${tr('lobby.surface')}</small><strong>${surface}</strong></span><span><small>${tr('lobby.direction')}</small><strong>${direction}</strong></span></div>`; }
 }
 // Lobby cards are navigation shortcuts only. The Store remains the single
 // authority for ad verification, reward eligibility, claim and coin animation.
@@ -129,6 +130,14 @@ function updateLobbyRewardShortcuts(root){
 function makeButton({ cls = '', icon, label, action }) { const button = document.createElement('button'); button.type = 'button'; button.className = `tdr-lobby-button ${cls}`.trim(); button.innerHTML = `<img src="${asset(icon)}" alt="" draggable="false"><span>${label}</span>`; button.addEventListener('click', action); return button; }
 // Direct Race Control entry from the lobby: the existing StatsScene already
 // supports raceControlTrackId and opens the leaderboard without a nested tap.
+function makeStatisticsShortcut(scene){
+ const button=document.createElement('button');button.type='button';
+ button.className='tdr-lobby-button tdr-lobby-button--statistics';
+ button.dataset.lobbyStatistics='1';
+ button.innerHTML=`<span class="tdr-lobby-button-glyph" aria-hidden="true">▥</span><span>${tr('lobby.statistics')}</span>`;
+ button.addEventListener('click',()=>scene.scene.start('StatsScene'));
+ return button;
+}
 function makeOnlineRecordsShortcut(scene){
   const button=document.createElement('button');
   button.type='button';
@@ -154,7 +163,15 @@ export function installLobbyDom(scene) {
     const lane=root.querySelector('.tdr-lobby-play-slot');
     lane?.classList.add('tdr-lobby-action-capsule');
     lane?.append(makeRewardShortcut('daily',scene),play,makeRewardShortcut('video',scene));
-    const bottom=root.querySelector('.tdr-lobby-bottom-actions'); bottom.append(makeButton({icon:'icon_garage.webp',label:tr('lobby.garage'),action:()=>scene.scene.start('GarageScene',{mode:'player'})}),makeButton({cls:'tdr-lobby-button--factory',icon:'icon_factory.webp',label:tr('lobby.factory'),action:()=>scene.scene.start('upgrade-shop')}),makeButton({cls:'tdr-lobby-button--gold',icon:'icon_tracks.webp',label:tr('lobby.tracks'),action:()=>scene.scene.start('TrackGarageScene',{mode:'player'})}),makeOnlineRecordsShortcut(scene));
+    // Only LobbyDomUi owns the bottom navigation; polish must not replace it.
+    const bottom=root.querySelector('.tdr-lobby-bottom-actions');
+    bottom.append(
+      makeStatisticsShortcut(scene),
+      makeButton({icon:'icon_garage.webp',label:tr('lobby.garage'),action:()=>scene.scene.start('GarageScene',{mode:'player'})}),
+      makeButton({cls:'tdr-lobby-button--factory',icon:'icon_factory.webp',label:tr('lobby.factory'),action:()=>scene.scene.start('upgrade-shop')}),
+      makeButton({cls:'tdr-lobby-button--gold',icon:'icon_tracks.webp',label:tr('lobby.tracks'),action:()=>scene.scene.start('TrackGarageScene',{mode:'player'})}),
+      makeOnlineRecordsShortcut(scene)
+    );
     if(!IS_PROD_BUILD){const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));}
     const syncPilot=()=>{const name=String(getPilotProfile()?.name||'').trim();const node=root.querySelector('[data-pilot-header-name]');if(node)node.textContent=name||'—';};
     window.addEventListener('tdr:pilotprofile',syncPilot);

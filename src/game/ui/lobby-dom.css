@@ -504,10 +504,9 @@
  .tdr-lobby-reward-slot.is-ready::before{animation:none;opacity:.85;will-change:auto}
 }
 
-/* DEV 1.2.157 — RÉCORDS ONLINE is a first-class lobby destination.
-   Four fully visible actions instead of another submenu inside Statistics. */
+/* DEV 1.2.158 — All five real lobby navigation destinations. */
 .tdr-lobby-dom .tdr-lobby-bottom-actions{
-  grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-columns:repeat(5,minmax(0,1fr));
   gap:clamp(8px,2.1vw,28px);
   padding-inline:clamp(12px,2.7vw,42px);
 }
@@ -557,5 +556,37 @@
 @media(max-height:430px){
   .tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button{
     height:clamp(43px,7.4vh,56px);
+  }
+}
+
+/* The original Stats route stays visible after the two-button publish
+   override is removed. Touch targets scale safely on phone landscape. */
+.tdr-lobby-dom .tdr-lobby-button-glyph{
+  width:clamp(22px,2.3vw,31px);height:clamp(22px,2.3vw,31px);
+  display:grid;place-items:center;color:#66e8ff;
+  font-size:clamp(20px,2.2vw,30px);line-height:1;font-weight:900;
+  pointer-events:none;flex:0 0 auto;
+}
+.tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button{
+  z-index:1;position:relative;touch-action:manipulation;
+}
+@media(max-width:1000px){
+  .tdr-lobby-dom .tdr-lobby-bottom-actions{
+    gap:clamp(4px,.8vw,9px);padding-inline:clamp(5px,.95vw,12px);
+  }
+  .tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button{
+    gap:clamp(2px,.45vw,5px);padding-inline:3px;
+  }
+  .tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button span{
+    font-size:clamp(9px,1.25vw,12px);
+  }
+  .tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button img,
+  .tdr-lobby-dom .tdr-lobby-records-emblem{
+    width:clamp(22px,2.8vw,30px);height:clamp(22px,2.8vw,30px);
+  }
+}
+@media(max-height:430px){
+  .tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button span{
+    font-size:clamp(9px,1.2vw,13px);
   }
 }

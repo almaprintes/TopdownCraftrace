@@ -17,19 +17,8 @@ function makeCardButton(node, label, action) {
     node.addEventListener('keydown', event => {if (event.key !== 'Enter' && event.key !== ' ') return;event.preventDefault();action();});
   }
 }
-function makeLobbyAction({cls='',icon=null,glyph='',label,action}){
-  const button=document.createElement('button');button.type='button';button.className=`tdr-lobby-button ${cls}`.trim();
-  const mark=icon?`<img src="${BASE}assets/ui/lobby/${icon}" alt="" draggable="false">`:`<span class="tdr-lobby-button-glyph" aria-hidden="true">${glyph}</span>`;
-  button.innerHTML=`${mark}<span>${label}</span>`;button.addEventListener('click',action);return button;
-}
-function installBottomActions(scene,root){
-  const bottom=root.querySelector('.tdr-lobby-bottom-actions');if(!bottom||bottom.dataset.tdrPublishBottom==='1')return;
-  bottom.dataset.tdrPublishBottom='1';bottom.replaceChildren(
-    makeLobbyAction({glyph:'▥',label:t('lobby.statistics'),action:()=>scene.scene.start('StatsScene')}),
-    makeLobbyAction({cls:'tdr-lobby-button--factory',icon:'icon_factory.webp',label:t('lobby.factory'),action:()=>scene.scene.start('upgrade-shop')})
-  );bottom.classList.add('tdr-lobby-bottom-actions--two');
-}
-
+// Publish polish only enhances cards; LobbyDomUi owns the bottom buttons.
+// Replacing the row here previously erased Garage, Circuits and Online Records.
 function installMasteryRoofBadge(scene,root){
   const carId=String(scene.selectedCarId||''),stats=loadPlayerStatsPersisted(),meters=Number(stats?.cars?.[carId]?.meters)||0,mastery=masteryInfoForMeters(meters);
   let badge=root.querySelector('[data-lobby-mastery]');
@@ -71,7 +60,7 @@ export function polishLobbyForPublish(scene, root) {
   const season = root.querySelector('[data-event-card]');if (season) polishSeasonCard(scene,season);
   const track = root.querySelector('[data-track-card]');if (track) makeCardButton(track,t('lobby.openTrackSelector'),() => scene.scene.start('TrackGarageScene', { mode: 'player' }));
   const car=root.querySelector('[data-lobby-car]');if(car){car.classList.add('tdr-lobby-car-preview--interactive');makeCardButton(car,t('lobby.openGarage'),()=>scene.scene.start('GarageScene',{mode:'player'}));}
-  installGarageInductionCue(scene,root,season,car);installMasteryRoofBadge(scene,root);installBottomActions(scene,root);
+  installGarageInductionCue(scene,root,season,car);installMasteryRoofBadge(scene,root);
 }
 
 // DEV 1.1.109 validation trigger: publish lobby copy uses i18n keys.
