@@ -27,7 +27,7 @@ export function describeImageNativeRace(trackKey,resolveTrack=()=>null){
   const path=String(source.assetPath||'');
   if(!/^assets\/[a-z0-9_./-]+\.(?:png|webp|jpe?g)$/i.test(path)||path.includes('..'))
     throw Error('Ruta publicada de imagen inválida');
-  return {type:'published',trackKey,track,width:Number(source.width),height:Number(source.height),path};
+  return {type:'published',trackKey,track,width:Number(source.width),height:Number(source.height),path,tiles:Array.isArray(source.tiles)?source.tiles:null};
 }
 
 export function validateImageNativeRaceDescriptor(desc){
@@ -45,6 +45,31 @@ export function validateImageNativeRaceDescriptor(desc){
 }
 
 async function decodePhoto(desc){
+  // Published high-resolution photo tiles avoid decoding or uploading one
+  // 3072×4608 texture on mobile. Legacy/local photos retain their own path.
+  if(desc.type==='published'&&Array.isArray(desc.tiles)&&desc.tiles.length){
+    const result=[];
+    for(const tile of desc.tiles){
+      const path=String(tile?.assetPath||'');
+      const x=Number(tile?.x),y=Number(tile?.y),w=Number(tile?.width),h=Number(tile?.height);
+      if(!/^assets\/[a-z0-9_./-]+\.webp$/i.test(path)||path.includes('..')||
+         ![x,y,w,h].every(Number.isSafeInteger)||x<0||y<0||w<1||h<1||
+         w>2048||h>2048||x+w>desc.width||y+h>desc.height)
+        throw Error('Bloque de fotografía Santa Cruz inválido');
+      const img=new Image();
+      img.decoding='async';
+      let timer;
+      try{
+        await Promise.race([
+          new Promise((ok,fail)=>{img.onload=ok;img.onerror=()=>fail(Error('No se pudo abrir un bloque de la fotografía'));img.src=(import.meta.env?.BASE_URL||'/')+path;}),
+          new Promise((_,fail)=>{timer=setTimeout(()=>fail(Error('Tiempo agotado cargando el circuito')),25000);})
+        ]);
+      }finally{clearTimeout(timer);}
+      if(img.naturalWidth!==w||img.naturalHeight!==h)throw Error('Bloque de fotografía desalineado');
+      result.push({image:img,x,y});
+    }
+    return result;
+  }
   let url=null;
   try{
     if(desc.type==='local'){
@@ -127,7 +152,9 @@ function mountPhoto(scene,desc,img){
     sprites.push(sprite);
   };
   try{
-    if(desc.width<=TILE_MAX&&desc.height<=TILE_MAX){
+    if(Array.isArray(img)){
+      for(const tile of img)add('native:'+desc.trackKey+':'+tile.x+':'+tile.y,tile.image,tile.x,tile.y);
+    }else if(desc.width<=TILE_MAX&&desc.height<=TILE_MAX){
       add('native:'+desc.trackKey+':0:0',img,0,0);
     }else{
       for(let y=0;y<desc.height;y+=TILE_MAX)for(let x=0;x<desc.width;x+=TILE_MAX){
