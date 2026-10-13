@@ -58,5 +58,6 @@ assert.match(factory,/this\._installFromInventory\(id\)/);
 assert.match(factory,/this\._unequipFromInventory\(id\)/);
 assert.match(factory,/saveGarage\(this\.state\)/);
 assert.match(factory,/this\._openFactoryInventoryModal\(tab,\(page\+1\)%pages,tierFilter\)/);
-assert.match(html,/content="DEV 1\.2\.161"/);
+const devVersion=Number(html.match(/content="DEV 1\.2\.(\d+)"/)?.[1]||0);
+assert.ok(devVersion>=161,'Inventory premium style must remain in subsequent DEV versions');
 console.log('Inventory premium bevels and preserved touch/equipment operations: OK');
