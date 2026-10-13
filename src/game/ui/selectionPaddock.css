@@ -1,0 +1,449 @@
+/* DEV 1.2.179 — Collection & Circuit Paddock.
+   Presentation only. Player DOM controls, events, unlocks and selection remain owned
+   by GarageLazyCardsScene / TrackGarageProgressionScene.
+   The angled open wings follow the approved lobby, without closed cards. */
+
+#tdr-garage-player-dom,
+#tdr-track-selector-dom {
+  --paddock-cyan:#7deaff;
+  --paddock-gold:#efc96a;
+  --paddock-green:#66f6aa;
+  --paddock-muted:#90a9b9;
+  --paddock-ink:#050e19;
+  color:#f1f8ff;
+  background:
+    radial-gradient(ellipse 35% 60% at 65% 57%,rgba(19,102,134,.17),transparent 95%),
+    radial-gradient(ellipse 29% 62% at 5% 95%,rgba(9,98,105,.15),transparent 96%),
+    repeating-linear-gradient(90deg,rgba(111,204,228,.025) 0 1px,transparent 1px 84px),
+    linear-gradient(136deg,#07131e 0%,#06111b 43%,#091825 100%);
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+#tdr-garage-player-dom button,
+#tdr-track-selector-dom button{
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+#tdr-garage-player-dom button:focus-visible,
+#tdr-track-selector-dom button:focus-visible{
+  outline:2px solid var(--paddock-gold);
+  outline-offset:2px;
+}
+
+/* Both player headers use the exact same opened paddock silhouette. */
+#tdr-garage-player-dom .tdr-player-garage-head.tdr-app-header,
+#tdr-track-selector-dom .tdr-ts-top.tdr-app-header{
+  position:relative;
+  flex:none;
+  border:0;
+  border-bottom:1px solid rgba(110,211,234,.32);
+  clip-path:polygon(0 0,calc(100% - 22px) 0,100% 40%,100% 100%,20px 100%,0 66%);
+  border-radius:0;
+  background:linear-gradient(90deg,rgba(4,23,35,.96),rgba(9,35,47,.82) 53%,rgba(5,23,34,.96));
+  box-shadow:inset 0 1px rgba(180,242,255,.11);
+  overflow:hidden;
+}
+#tdr-garage-player-dom .tdr-player-garage-head.tdr-app-header:before,
+#tdr-track-selector-dom .tdr-ts-top.tdr-app-header:before{
+  content:"";position:absolute;top:0;left:10%;right:10%;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(124,233,255,.83),rgba(239,201,106,.85),transparent);
+  pointer-events:none;
+}
+#tdr-garage-player-dom .tdr-app-title,
+#tdr-track-selector-dom .tdr-app-title{
+  font-size:clamp(15px,2.05vw,24px);
+  font-weight:900;
+  letter-spacing:.16em;
+  text-shadow:0 0 22px rgba(83,206,232,.18);
+}
+#tdr-garage-player-dom .tdr-app-wallet,
+#tdr-track-selector-dom .tdr-app-wallet{min-width:88px}
+#tdr-garage-player-dom .tdr-app-wallet-copy strong,
+#tdr-track-selector-dom .tdr-app-wallet-copy strong{color:#fff}
+#tdr-garage-player-dom .tdr-app-header button.tdr-app-back,
+#tdr-track-selector-dom .tdr-app-header button.tdr-app-back{
+  background:rgba(10,44,56,.68)!important;
+  border-color:rgba(111,228,247,.38)!important;
+  border-radius:3px 12px 3px 12px!important;
+}
+
+/* GARAGE — vehicle collection on the left, card art floating above a luminous ring. */
+#tdr-garage-player-dom{
+  grid-template-rows:clamp(48px,8.8vh,64px) minmax(0,1fr);
+  padding:clamp(5px,.75vw,9px) clamp(8px,1.3vw,20px) clamp(7px,1.15vw,14px);
+}
+#tdr-garage-player-dom .tdr-garage-dom-layout{
+  grid-template-columns:minmax(215px,27%) minmax(0,1fr);
+  gap:clamp(8px,1.3vw,19px);
+  padding-top:clamp(7px,1.3vh,13px);
+}
+#tdr-garage-player-dom .tdr-garage-dom-listpanel{
+  border:0;border-left:2px solid rgba(114,234,250,.56);border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 22px) 0,100% 24px,100% 100%,0 100%);
+  background:linear-gradient(100deg,rgba(8,36,51,.91),rgba(5,23,35,.64) 68%,rgba(4,19,29,.18));
+  grid-template-rows:37px minmax(0,1fr);
+  overflow:hidden;
+}
+#tdr-garage-player-dom .tdr-garage-dom-kicker{
+  color:var(--paddock-cyan);font-size:10px;letter-spacing:.19em;
+  font-weight:900;text-transform:uppercase;
+  padding:13px 14px 3px;
+  background:linear-gradient(90deg,rgba(27,101,116,.13),transparent);
+}
+#tdr-garage-player-dom .tdr-garage-dom-list{
+  padding:3px clamp(7px,.9vw,13px) 14px;
+}
+#tdr-garage-player-dom .tdr-garage-dom-car{
+  position:relative;
+  min-height:clamp(68px,11.1vh,89px);
+  grid-template-columns:clamp(51px,5.5vw,70px) minmax(0,1fr);
+  gap:clamp(6px,.65vw,11px);
+  margin-bottom:6px;padding:5px 10px 5px 6px;
+  border:0;border-left:2px solid rgba(81,133,151,.5);border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 16px,100% 100%,0 100%);
+  background:linear-gradient(90deg,rgba(14,39,55,.80),rgba(7,29,44,.20));
+  color:#d5e4f3;
+  transition:background .16s ease,filter .16s ease;
+}
+#tdr-garage-player-dom .tdr-garage-dom-car.is-selected{
+  background:linear-gradient(90deg,rgba(29,102,116,.58),rgba(8,32,49,.42));
+  border-left-color:var(--paddock-green);
+  box-shadow:inset 0 1px rgba(134,248,217,.10);
+}
+#tdr-garage-player-dom .tdr-garage-dom-car.is-selected:after{
+  content:"";position:absolute;inset:0 11% auto 8%;height:1px;
+  background:linear-gradient(90deg,rgba(102,246,170,.65),transparent);
+  pointer-events:none;
+}
+#tdr-garage-player-dom .tdr-garage-dom-car.is-locked{
+  border-left-color:#5c6975;opacity:.68;
+}
+#tdr-garage-player-dom .tdr-garage-dom-car img{
+  width:100%;height:clamp(56px,9vh,76px);object-fit:contain;
+}
+#tdr-garage-player-dom .tdr-garage-dom-carname{
+  font-size:clamp(10px,1.12vw,14px);line-height:1.2;margin-bottom:4px;
+  color:#f4faff;overflow-wrap:anywhere;
+}
+#tdr-garage-player-dom .tdr-garage-dom-carmeta{
+  font-size:clamp(8px,.86vw,10px);line-height:1.35;
+  color:#9dbac6;font-weight:600;
+}
+#tdr-garage-player-dom .tdr-garage-dom-hero{
+  position:relative;
+  border:0;border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 32px) 0,100% 10%,100% 83%,calc(100% - 31px) 100%,21px 100%,0 86%,0 15%);
+  background:radial-gradient(ellipse 62% 70% at 31% 55%,rgba(16,92,105,.23),transparent 87%),
+             linear-gradient(100deg,rgba(6,24,36,.24),rgba(4,17,28,.78) 48%,rgba(5,28,39,.87));
+  border-left:2px solid rgba(100,225,244,.43);
+  box-shadow:inset 0 1px rgba(169,243,255,.16),inset 0 -1px rgba(98,200,219,.20);
+  gap:clamp(8px,1.2vw,18px);
+  padding:clamp(9px,1.4vw,20px);
+  grid-template-columns:minmax(155px,45%) minmax(0,1fr);
+}
+#tdr-garage-player-dom .tdr-garage-dom-hero:before{
+  content:"";position:absolute;top:0;left:8%;right:15%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--paddock-cyan) 26%,rgba(106,240,250,.42),transparent);
+  pointer-events:none;
+}
+#tdr-garage-player-dom .tdr-garage-dom-hero:after{
+  content:"";position:absolute;bottom:0;left:20%;right:16%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(116,228,243,.6),transparent);
+  pointer-events:none;
+}
+#tdr-garage-player-dom .tdr-garage-dom-cardzone{
+  position:relative;isolation:isolate;overflow:hidden;padding:5px 0;
+  background:radial-gradient(ellipse 60% 18% at 50% 78%,rgba(64,226,242,.12),transparent 95%);
+}
+#tdr-garage-player-dom .tdr-garage-dom-cardzone:before{
+  content:"";position:absolute;z-index:-1;
+  width:min(76%,310px);height:44%;left:50%;top:50%;
+  border:2px solid rgba(96,226,242,.26);
+  border-radius:50%;
+  background:radial-gradient(ellipse,rgba(36,139,160,.15),rgba(7,34,47,.12) 70%,transparent);
+  box-shadow:0 0 0 10px rgba(31,150,166,.045),0 0 40px rgba(28,181,204,.10),inset 0 0 30px rgba(60,213,233,.08);
+  transform:translate(-50%,-17%) rotateX(60deg);
+  pointer-events:none;
+}
+#tdr-garage-player-dom .tdr-garage-dom-cardzone img{
+  position:relative;z-index:1;max-height:96%;
+  filter:drop-shadow(0 13px 15px rgba(0,0,0,.42)) drop-shadow(0 0 9px rgba(74,196,222,.10));
+}
+#tdr-garage-player-dom .tdr-garage-dom-info{grid-template-rows:minmax(0,1fr) auto}
+#tdr-garage-player-dom .tdr-garage-dom-content{
+  overflow-y:auto;scrollbar-width:thin;padding:0 4px 0 0;
+}
+#tdr-garage-player-dom .tdr-garage-dom-selected{
+  color:var(--paddock-cyan);font-size:9px;letter-spacing:.19em;margin-top:6px;
+}
+#tdr-garage-player-dom .tdr-garage-dom-title{
+  font-size:clamp(19px,2.42vw,32px);font-weight:950;letter-spacing:.015em;
+  line-height:1.04;overflow-wrap:break-word;
+  text-shadow:0 5px 20px rgba(0,0,0,.48);
+}
+#tdr-garage-player-dom .tdr-garage-dom-brand{
+  color:var(--paddock-gold);letter-spacing:.13em;font-size:11px;
+  margin-top:6px;
+}
+#tdr-garage-player-dom .tdr-garage-dom-meta{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:7px 13px;margin-top:clamp(6px,1.3vh,15px);
+}
+#tdr-garage-player-dom .tdr-garage-dom-meta div{
+  border:0;border-left:1px solid rgba(116,232,246,.45);
+  border-radius:0;padding:3px 8px;
+  background:linear-gradient(90deg,rgba(10,57,71,.28),transparent);
+}
+#tdr-garage-player-dom .tdr-garage-dom-meta span{
+  color:#89acbc;font-size:8px;letter-spacing:.09em;
+}
+#tdr-garage-player-dom .tdr-garage-dom-meta strong{
+  color:#f7fbff;font-size:clamp(9px,1vw,12px);line-height:1.25;
+  overflow-wrap:anywhere;
+}
+#tdr-garage-player-dom .tdr-garage-dom-personality{
+  margin-top:9px;color:#b9d7e1;font-style:normal;
+  border-left:2px solid rgba(239,201,106,.55);
+  padding-left:9px;line-height:1.38;
+}
+#tdr-garage-player-dom .tdr-garage-dom-footer{
+  background:transparent;padding-top:4px;
+}
+#tdr-garage-player-dom .tdr-garage-dom-stats{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:0;padding-top:clamp(5px,1.2vh,13px);
+  overflow:visible;
+}
+#tdr-garage-player-dom .tdr-garage-dom-stat{
+  border:0;border-right:1px solid rgba(135,208,224,.25);border-radius:0;
+  background:transparent;padding:5px 3px 3px;
+}
+#tdr-garage-player-dom .tdr-garage-dom-stat:last-child{border-right:0}
+#tdr-garage-player-dom .tdr-garage-dom-stat span{
+  color:#91aebb;font-size:clamp(7px,.82vw,10px);letter-spacing:.045em;
+}
+#tdr-garage-player-dom .tdr-garage-dom-stat strong{
+  color:#f5faff;font-size:clamp(10px,1.15vw,15px);
+  margin-top:5px;white-space:nowrap;
+}
+#tdr-garage-player-dom .tdr-garage-dom-actions{gap:8px;margin-top:9px}
+#tdr-garage-player-dom .tdr-garage-dom-actions button{
+  height:clamp(35px,6.8vh,46px);
+  font-size:clamp(10px,1.05vw,13px);
+  letter-spacing:.10em;font-weight:900;
+  border:1px solid rgba(119,200,218,.35);
+  border-radius:2px 11px 2px 11px;
+  background:linear-gradient(140deg,rgba(11,40,55,.90),rgba(8,25,38,.90));
+  color:#d7f8ff;
+}
+#tdr-garage-player-dom .tdr-garage-dom-actions button.primary{
+  color:#061a20;border-color:#aaffd5;
+  background:linear-gradient(125deg,#51eab1,#86ffe0);
+  box-shadow:0 0 18px rgba(53,231,168,.18),inset 0 1px rgba(255,255,255,.35);
+}
+#tdr-garage-player-dom .tdr-garage-dom-actions button:disabled{
+  color:#8196a5;border-color:#52636f;background:rgba(30,47,60,.42);box-shadow:none;
+}
+
+/* CIRCUITS — open track map on a dark drafting stage; slim selection rail. */
+#tdr-track-selector-dom{grid-template-rows:clamp(48px,8.8vh,64px) minmax(0,1fr)}
+#tdr-track-selector-dom .tdr-ts-top.tdr-app-header{
+  height:100%;margin:7px clamp(8px,1.3vw,20px) 0;
+  padding:0 clamp(9px,1.4vw,18px);
+}
+#tdr-track-selector-dom .tdr-ts-body{
+  grid-template-columns:minmax(215px,27%) minmax(0,1fr);
+  gap:clamp(8px,1.3vw,19px);
+  padding:clamp(7px,1.3vh,13px) clamp(8px,1.3vw,20px) clamp(7px,1.15vw,14px);
+}
+#tdr-track-selector-dom .tdr-ts-list{
+  position:relative;
+  border-left:2px solid rgba(239,201,106,.52);
+  background:linear-gradient(90deg,rgba(20,41,48,.79),rgba(4,23,35,.12));
+  padding:9px clamp(7px,.9vw,13px) 10px;
+  scrollbar-width:thin;
+  clip-path:polygon(0 0,calc(100% - 22px) 0,100% 24px,100% 100%,0 100%);
+}
+#tdr-track-selector-dom .tdr-ts-card{
+  min-height:clamp(68px,11.1vh,89px);
+  width:100%;margin-bottom:6px;padding:5px 9px 5px 6px;
+  grid-template-columns:clamp(51px,6vw,77px) minmax(0,1fr);
+  gap:clamp(6px,.65vw,11px);
+  border:0;border-left:2px solid rgba(100,145,156,.49);
+  border-radius:0;
+  clip-path:polygon(0 0,calc(100% - 12px) 0,100% 16px,100% 100%,0 100%);
+  background:linear-gradient(90deg,rgba(20,43,55,.76),rgba(8,28,43,.12));
+  color:#d7e5f2;
+}
+#tdr-track-selector-dom .tdr-ts-card.active{
+  border:0;border-left:2px solid var(--paddock-gold);
+  background:linear-gradient(90deg,rgba(96,77,35,.40),rgba(21,45,55,.35) 75%,transparent);
+}
+#tdr-track-selector-dom .tdr-ts-card.locked{
+  background:linear-gradient(90deg,rgba(16,27,39,.45),transparent);
+  opacity:.65;border-left-color:#586674;
+}
+#tdr-track-selector-dom .tdr-ts-thumb{
+  height:clamp(53px,9vh,74px);
+  border:0;border-radius:0;
+  background:radial-gradient(circle,rgba(32,94,100,.18),transparent 85%);
+}
+#tdr-track-selector-dom .tdr-ts-thumb svg{width:100%;height:100%}
+#tdr-track-selector-dom .tdr-ts-track-shadow{
+  stroke:#051219;stroke-linejoin:round;stroke-linecap:round;
+}
+#tdr-track-selector-dom .tdr-ts-track-road{
+  stroke:#85b9c6;stroke-linecap:round;stroke-linejoin:round;
+}
+#tdr-track-selector-dom .tdr-ts-card.active .tdr-ts-track-road{stroke:#e9c779}
+#tdr-track-selector-dom .tdr-ts-card-title{
+  color:#f0f8fc;font-size:clamp(10px,1.12vw,14px);line-height:1.2;
+  overflow-wrap:anywhere;
+}
+#tdr-track-selector-dom .tdr-ts-card-meta{
+  color:#93b1bf;font-size:clamp(8px,.86vw,10px);margin-top:4px;
+}
+#tdr-track-selector-dom .tdr-ts-hero{
+  position:relative;min-width:0;
+  border:0;border-right:2px solid rgba(239,201,106,.44);
+  border-radius:0;
+  clip-path:polygon(27px 0,100% 0,100% 100%,27px 100%,0 85%,0 11%);
+  background:radial-gradient(ellipse 53% 70% at 57% 53%,rgba(31,91,103,.21),transparent 97%),
+             linear-gradient(265deg,rgba(5,32,40,.85),rgba(5,23,35,.38) 65%,rgba(6,29,41,.15));
+  box-shadow:inset 0 1px rgba(239,211,136,.15),inset 0 -1px rgba(226,188,94,.16);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  overflow:hidden;
+}
+#tdr-track-selector-dom .tdr-ts-hero:before{
+  content:"";position:absolute;left:13%;right:8%;top:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(239,201,106,.72),rgba(239,201,106,.92),transparent);
+  pointer-events:none;
+}
+#tdr-track-selector-dom .tdr-ts-hero:after{
+  content:"";position:absolute;left:15%;right:12%;bottom:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(239,201,106,.56),transparent);
+  pointer-events:none;
+}
+#tdr-track-selector-dom .tdr-ts-hero-head{text-align:left;padding:clamp(9px,1.5vh,17px) clamp(18px,2.2vw,36px) 0}
+#tdr-track-selector-dom .tdr-ts-hero-kicker{
+  color:#e6c981;letter-spacing:.20em;font-size:9px;font-weight:900;
+}
+#tdr-track-selector-dom .tdr-ts-hero-name{
+  color:#fff;font-size:clamp(18px,2.65vw,32px);line-height:1.05;
+  margin-top:5px;font-weight:950;
+  text-shadow:0 3px 17px rgba(0,0,0,.5);
+}
+#tdr-track-selector-dom .tdr-ts-preview{
+  position:relative;margin:3px clamp(15px,2.2vw,34px) 0;
+  min-height:0;overflow:hidden;border:0;border-radius:0;
+  background:radial-gradient(ellipse 37% 55% at 50% 54%,rgba(40,107,115,.19),transparent 88%),
+             linear-gradient(transparent 97%,rgba(99,169,186,.07) 100%),
+             linear-gradient(90deg,transparent 97%,rgba(99,169,186,.07) 100%);
+  background-size:auto,32px 32px,32px 32px;
+}
+#tdr-track-selector-dom .tdr-ts-preview:before{
+  content:"";position:absolute;inset:9% 16%;border:1px solid rgba(92,180,195,.12);
+  border-radius:50%;box-shadow:0 0 45px rgba(19,94,107,.12);
+  pointer-events:none;
+}
+#tdr-track-selector-dom .tdr-ts-preview svg{
+  position:relative;width:min(92%,750px);height:95%;
+  overflow:visible;filter:drop-shadow(0 8px 15px rgba(0,0,0,.5));
+}
+#tdr-track-selector-dom .tdr-ts-preview .tdr-ts-track-shadow{stroke-width:16}
+#tdr-track-selector-dom .tdr-ts-preview .tdr-ts-track-road{
+  stroke:#a9e8e8;stroke-width:9;
+  filter:drop-shadow(0 0 2px rgba(113,223,240,.25));
+}
+#tdr-track-selector-dom .tdr-ts-footer{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;
+  gap:clamp(8px,1.5vw,20px);
+  align-items:center;
+  padding:8px clamp(16px,2.3vw,34px) clamp(9px,2vh,21px);
+  background:linear-gradient(180deg,transparent,rgba(4,23,34,.44));
+}
+#tdr-track-selector-dom .tdr-ts-stats{
+  min-width:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:0;
+}
+#tdr-track-selector-dom .tdr-ts-stat{
+  min-width:0;padding:3px clamp(5px,1.1vw,17px);
+  border-right:1px solid rgba(129,211,226,.22);
+}
+#tdr-track-selector-dom .tdr-ts-stat:last-child{border:0}
+#tdr-track-selector-dom .tdr-ts-stat small{
+  color:#8fb1bf;font-size:clamp(7px,.82vw,10px);
+  letter-spacing:.09em;
+}
+#tdr-track-selector-dom .tdr-ts-stat strong{
+  color:#f6fcff;font-size:clamp(10px,1.4vw,16px);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#tdr-track-selector-dom .tdr-ts-select{
+  min-width:clamp(125px,18.8vw,238px);
+  height:clamp(35px,6.8vh,46px);
+  border:1px solid rgba(255,236,167,.95);
+  border-radius:3px 12px 3px 12px;
+  background:linear-gradient(115deg,#e0b55d,#ffe19a 50%,#cf9f48);
+  color:#182128;font-size:clamp(10px,1.13vw,14px);
+  letter-spacing:.09em;
+  font-weight:950;
+  box-shadow:0 0 20px rgba(242,192,88,.16),inset 0 1px rgba(255,255,255,.36);
+}
+#tdr-track-selector-dom .tdr-ts-select:disabled{
+  color:#8798a7;background:linear-gradient(115deg,#263a42,#1b2c38);
+  border-color:rgba(137,157,165,.3);box-shadow:none;
+}
+
+@media(max-width:780px){
+  #tdr-garage-player-dom .tdr-garage-dom-layout,
+  #tdr-track-selector-dom .tdr-ts-body{grid-template-columns:minmax(174px,32%) minmax(0,1fr);gap:7px}
+  #tdr-garage-player-dom .tdr-garage-dom-hero{grid-template-columns:minmax(124px,41%) minmax(0,1fr);gap:7px;padding:8px}
+  #tdr-garage-player-dom .tdr-garage-dom-car,
+  #tdr-track-selector-dom .tdr-ts-card{grid-template-columns:47px minmax(0,1fr);padding-right:6px}
+  #tdr-garage-player-dom .tdr-garage-dom-meta{gap:4px 7px}
+  #tdr-garage-player-dom .tdr-garage-dom-meta div{padding:2px 5px}
+  #tdr-track-selector-dom .tdr-ts-hero-name{font-size:clamp(15px,2.65vw,23px)}
+  #tdr-track-selector-dom .tdr-ts-footer{grid-template-columns:minmax(0,1fr) auto}
+  #tdr-track-selector-dom .tdr-ts-select{min-width:118px}
+  #tdr-track-selector-dom .tdr-ts-stat{padding:2px 5px}
+}
+@media(max-height:450px){
+  #tdr-garage-player-dom{grid-template-rows:48px minmax(0,1fr);padding:5px 8px 7px}
+  #tdr-track-selector-dom{grid-template-rows:48px minmax(0,1fr)}
+  #tdr-garage-player-dom .tdr-garage-dom-layout,
+  #tdr-track-selector-dom .tdr-ts-body{padding-top:6px}
+  #tdr-garage-player-dom .tdr-garage-dom-listpanel{grid-template-rows:29px minmax(0,1fr)}
+  #tdr-garage-player-dom .tdr-garage-dom-kicker{padding:8px 11px 2px}
+  #tdr-garage-player-dom .tdr-garage-dom-car,
+  #tdr-track-selector-dom .tdr-ts-card{min-height:66px;margin-bottom:4px}
+  #tdr-garage-player-dom .tdr-garage-dom-car img{height:52px}
+  #tdr-garage-player-dom .tdr-garage-dom-title{font-size:clamp(17px,2.3vw,25px)}
+  #tdr-garage-player-dom .tdr-garage-dom-brand{margin-top:3px}
+  #tdr-garage-player-dom .tdr-garage-dom-meta{margin-top:5px}
+  #tdr-garage-player-dom .tdr-garage-dom-personality{margin-top:5px;font-size:9px}
+  #tdr-garage-player-dom .tdr-garage-dom-stats{padding-top:4px}
+  #tdr-garage-player-dom .tdr-garage-dom-actions{margin-top:5px}
+  #tdr-garage-player-dom .tdr-garage-dom-actions button{height:34px}
+  #tdr-track-selector-dom .tdr-ts-top.tdr-app-header{height:46px;margin-top:4px}
+  #tdr-track-selector-dom .tdr-ts-body{padding:5px 8px 7px}
+  #tdr-track-selector-dom .tdr-ts-thumb{height:52px}
+  #tdr-track-selector-dom .tdr-ts-hero-head{padding-top:7px}
+  #tdr-track-selector-dom .tdr-ts-hero-name{margin-top:2px}
+  #tdr-track-selector-dom .tdr-ts-preview{margin-top:0}
+  #tdr-track-selector-dom .tdr-ts-footer{padding-top:5px;padding-bottom:7px}
+  #tdr-track-selector-dom .tdr-ts-select{height:34px}
+}
+@media(max-width:540px){
+  #tdr-garage-player-dom .tdr-garage-dom-layout,
+  #tdr-track-selector-dom .tdr-ts-body{grid-template-columns:41% minmax(0,1fr)}
+  #tdr-garage-player-dom .tdr-garage-dom-hero{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(75px,34%) minmax(0,1fr)}
+  #tdr-garage-player-dom .tdr-garage-dom-cardzone img{max-height:100%}
+  #tdr-garage-player-dom .tdr-garage-dom-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #tdr-track-selector-dom .tdr-ts-footer{grid-template-columns:minmax(0,1fr)}
+  #tdr-track-selector-dom .tdr-ts-select{width:100%;min-width:0}
+}
+@media(prefers-reduced-motion:reduce){
+  #tdr-garage-player-dom .tdr-garage-dom-car,
+  #tdr-track-selector-dom .tdr-ts-card{transition:none}
+}
