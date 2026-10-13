@@ -24,6 +24,7 @@ export class RaceScene extends CurrentRaceScene {
     this._racePhysicsWakeDone=false;
     this._juanicarSlipYaw=0;
     this._juanicarHandbrakeYaw=0;
+    this._juanicarArcadeAnchor=null;
   }
 
   create(data){
@@ -44,6 +45,7 @@ export class RaceScene extends CurrentRaceScene {
     this._racePhysicsWakeDone=false;
     this._juanicarSlipYaw=0;
     this._juanicarHandbrakeYaw=0;
+    this._juanicarArcadeAnchor=null;
 
     return result;
   }
@@ -123,6 +125,12 @@ export class RaceScene extends CurrentRaceScene {
     const prevRot=Number(bodyBefore?.rotation);
     const prevX=Number(bodyBefore?.x);
     const prevY=Number(bodyBefore?.y);
+    const arcadeRequested=this.carId==='veloce_juanicar_c220' && this._raceStarted && this._tdrHandbrake===true;
+    if(arcadeRequested && !this._juanicarArcadeAnchor && Number.isFinite(prevX) && Number.isFinite(prevY)){
+      const front=this._bikeVisualLength()*0.60*0.48;
+      this._juanicarArcadeAnchor={x:prevX+Math.cos(prevRot)*front,y:prevY+Math.sin(prevRot)*front,front};
+    }
+    if(!arcadeRequested)this._juanicarArcadeAnchor=null;
 
     super.update(time,delta);
     this._ensureRacePhysicsLive();
@@ -223,9 +231,9 @@ export class RaceScene extends CurrentRaceScene {
       // rear traction and rotating around the front axle; never add a sudden
       // position teleport or a second independent yaw impulse.
       const hbSpeed=smoothstep01((speed-20)/95);
-      const hbTarget=handbrake?Math.sign(steer)*Math.max(0.30,turnDemand)*Math.max(0.45,hbSpeed)*5.7:0;
+      const hbTarget=handbrake?Math.sign(steer)*Math.max(0.65,turnDemand)*7.8:0;
       this._juanicarHandbrakeYaw+=(hbTarget-this._juanicarHandbrakeYaw)*(1-Math.exp(-dt*(handbrake?5.8:4.1)));
-      this._juanicarHandbrakeYaw=clamp(this._juanicarHandbrakeYaw,-5.7,5.7);
+      this._juanicarHandbrakeYaw=clamp(this._juanicarHandbrakeYaw,-7.8,7.8);
       experimentalYaw+=this._juanicarHandbrakeYaw*dt;
       // Preserve momentum during the slide; only slowly re-align velocity to nose.
       const vel=body.body.velocity;
@@ -244,31 +252,22 @@ export class RaceScene extends CurrentRaceScene {
     const newRot=wrapPi(prevRot+experimentalYaw);
 
     // Softer rear-axle pivot to avoid tiny lateral nudges while steering.
-    const arcadePivot=this.carId==='veloce_juanicar_c220' && this._raceStarted && this._tdrHandbrake===true;
+    const arcadePivot=arcadeRequested;
     const rearOffset=wheelbase*0.38;
     const pivotStrength=arcadePivot?1:smoothstep01(clamp((absForward-8)/82,0,1));
     const newFx=Math.cos(newRot), newFy=Math.sin(newRot);
     body.x += (newFx-prevFx)*rearOffset*pivotStrength;
     body.y += (newFy-prevFy)*rearOffset*pivotStrength;
-    if(arcadePivot && Number.isFinite(prevX) && Number.isFinite(prevY)){
-      // Anchor the FRONT axle at its pre-update world position. The base scene
-      // has already advanced the whole chassis in super.update(); undo that
-      // translation, otherwise momentum carries the car outside the hairpin.
-      const frontOffset=wheelbase*0.48;
-      const anchorX=prevX+prevFx*frontOffset;
-      const anchorY=prevY+prevFy*frontOffset;
-      body.x=anchorX-newFx*frontOffset;
-      body.y=anchorY-newFy*frontOffset;
-      // Arcade hairpin: arrest forward translation while the rear rotates around
-      // a near-stationary front axle. Prevent carrying entry speed to the outside.
+    if(arcadePivot && this._juanicarArcadeAnchor){
+      // Exclusive arcade handbrake: lock the front axle to the point where the
+      // driver first pulled the lever, regardless of prior physics translation.
+      // The rear sweeps around it; speed and sideways drift are extinguished.
+      const anchor=this._juanicarArcadeAnchor;
+      body.x=anchor.x-newFx*anchor.front;
+      body.y=anchor.y-newFy*anchor.front;
       const vel=body.body.velocity;
-      const forward=vel.x*newFx+vel.y*newFy;
-      const side=-vel.x*newFy+vel.y*newFx;
-      const keep=Math.exp(-dt*12);
-      const slowForward=forward*keep;
-      const slowSide=side*Math.exp(-dt*15);
-      vel.x=newFx*slowForward-newFy*slowSide;
-      vel.y=newFy*slowForward+newFx*slowSide;
+      vel.x=0;
+      vel.y=0;
     }
     body.rotation=newRot;
 
