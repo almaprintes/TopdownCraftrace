@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {centeredRailTarget,closestCenteredIndex,attachCenteredSelectionRail} from '../src/game/ui/centeredSelectionRail.js';
 
 assert.equal(centeredRailTarget(0,300,115,70,550),0,'top card can sit dead center');
-assert.equal(centeredRailTarget(0,300,760,70,700),700,'last card clamps to bottom');
+assert.equal(centeredRailTarget(0,300,850,70,700),700,'last card clamps to bottom');
 assert.equal(centeredRailTarget(250,300,140,70,900),275,'scroll offset should be relative');
 assert.equal(closestCenteredIndex(150,[40,130,202,270]),1);
 assert.equal(closestCenteredIndex(150,[40,100,147,270]),2);
