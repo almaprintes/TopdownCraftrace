@@ -44,7 +44,7 @@ for(const x of [
  'PUBLICAR · VER ANUNCIO','AHORA NO',
  'getPilotProfile()','localRecordGhost(trackId,carId,best.lapMs)',
  'if(!isRewardedAdAvailable()&&!adVerified)',
- 'await activateRaceControlOnline()',
+ 'await ensureRaceControlPilotProfile()',
  'await showRewardedAd(scene,',
  'REWARDED_PLACEMENTS.RACE_CONTROL_PUBLISH',
  'if(!verifiedReward(result))',
