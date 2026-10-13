@@ -51,6 +51,7 @@ jobs:
           node scripts/session-report-navigation-smoke.mjs
           node scripts/session-pb-publish-offer-smoke.mjs
           node scripts/session-record-publish-smoke.mjs
+          node scripts/control-stick-default-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
           test -f src/game/scenes/RaceGamepadScene.js

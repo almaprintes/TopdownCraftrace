@@ -2,7 +2,10 @@ const SETTINGS_KEY='tdr2:settings';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 const STEERING_DEFAULTS={
-  stick:{steer:{x:.11,y:.77,scale:1}},
+  // 17% from the steering-side edge leaves ~6% more room for the
+  // thumb to travel toward the bezel without leaving the touchscreen.
+  // Shared by live racing and the controls calibration screen.
+  stick:{steer:{x:.17,y:.77,scale:1}},
   wheel:{steer:{x:.115,y:.76,scale:1}},
   buttons:{left:{x:.085,y:.78,scale:1},right:{x:.19,y:.78,scale:1}}
 };
