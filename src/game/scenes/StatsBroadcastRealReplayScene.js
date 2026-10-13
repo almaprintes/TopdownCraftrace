@@ -1,4 +1,5 @@
 import { StatsScene as ReplayStatsScene } from './StatsBroadcastReplayScene.js';
+import { resolveStatsInitialTrack } from './statsEntryRoute.js';
 import { getRaceControlGhost } from '../online/raceControlOnline.js';
 import { decodeOnlineGhostNativeBinary, decodeOnlineGhostNative } from '../online/onlineGhostCodec.js';
 import { pxpsToKmh } from '../cars/speedUnits.js';
@@ -25,7 +26,9 @@ export class StatsScene extends ReplayStatsScene{
     this.events?.once?.('shutdown',()=>this._stopRaceControlReplay());
     let trackId='';
     try{
-      trackId=String(data?.raceControlTrackId||sessionStorage.getItem(RETURN_TRACK_KEY)||'');
+      trackId=resolveStatsInitialTrack(data,sessionStorage.getItem(RETURN_TRACK_KEY));
+      // Consume an old replay-return destination even on explicit overview
+      // entry; otherwise the next visit would unexpectedly reopen Race Control.
       sessionStorage.removeItem(RETURN_TRACK_KEY);
     }catch{}
     if(trackId)this.time?.delayedCall?.(0,()=>this._renderBroadcastRecords(trackId));

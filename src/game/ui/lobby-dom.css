@@ -590,3 +590,131 @@
     font-size:clamp(9px,1.2vw,13px);
   }
 }
+
+/* DEV 1.2.159 — Single visible car stage. The old Phaser platform sat behind
+   this DOM lobby's opaque background; draw the SAME original WebP in front of
+   that background, but behind the selectable car and all clickable cards. */
+.tdr-lobby-dom .tdr-lobby-car-platform{
+  position:absolute;
+  left:50%;top:51%;
+  z-index:0;
+  width:clamp(240px,31vw,430px);
+  height:clamp(230px,58vh,430px);
+  transform:translate(-50%,-50%);
+  object-fit:contain;
+  opacity:.93;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+.tdr-lobby-dom .tdr-lobby-car-preview{
+  z-index:1;
+}
+
+/* New "open paddock wing" silhouette: asymmetric cuts facing the car,
+   translucent material rather than two opaque rectangular dialog boxes.
+   Keep ALL season/progress and circuit data and their real click targets. */
+.tdr-lobby-dom .tdr-event-card,
+.tdr-lobby-dom .tdr-track-card{
+  position:absolute;
+  isolation:isolate;
+  border:0;
+  border-radius:0;
+  box-shadow:inset 0 1px rgba(255,255,255,.11),
+             inset 0 -1px rgba(125,197,213,.16);
+  overflow:hidden;
+  transition:filter .14s ease;
+}
+.tdr-lobby-dom .tdr-event-card{
+  --tdr-wing:#65eaff;
+  left:clamp(8px,1.3vw,24px);
+  clip-path:polygon(0 0,calc(100% - 29px) 0,100% 10%,100% 74%,calc(100% - 32px) 100%,0 100%);
+  background:radial-gradient(ellipse 80% 54% at 6% 0%,rgba(39,147,173,.23),transparent 94%),
+             linear-gradient(112deg,rgba(4,22,34,.96) 0%,rgba(6,24,34,.79) 66%,rgba(4,27,34,.33) 100%);
+  padding-left:clamp(16px,1.9vw,27px);
+  padding-right:clamp(28px,2.45vw,38px);
+  border-left:2px solid rgba(100,227,246,.8);
+}
+.tdr-lobby-dom .tdr-track-card{
+  --tdr-wing:#f0c968;
+  right:clamp(8px,1.3vw,24px);
+  clip-path:polygon(29px 0,100% 0,100% 100%,32px 100%,0 74%,0 10%);
+  background:radial-gradient(ellipse 80% 54% at 96% 0%,rgba(188,147,62,.22),transparent 94%),
+             linear-gradient(250deg,rgba(4,22,34,.95) 0%,rgba(6,24,34,.76) 66%,rgba(4,27,34,.32) 100%);
+  padding-left:clamp(28px,2.45vw,38px);
+  padding-right:clamp(16px,1.9vw,27px);
+  border-right:2px solid rgba(239,193,92,.78);
+}
+.tdr-lobby-dom .tdr-event-card::before,
+.tdr-lobby-dom .tdr-track-card::before{
+  content:'';
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:3px;
+  opacity:1;
+  background:linear-gradient(90deg,transparent,var(--tdr-wing) 30%,var(--tdr-wing) 62%,transparent);
+  pointer-events:none;
+}
+.tdr-lobby-dom .tdr-event-card::after,
+.tdr-lobby-dom .tdr-track-card::after{
+  content:'';
+  position:absolute;
+  bottom:0;left:0;
+  width:100%;height:2px;
+  background:linear-gradient(90deg,transparent,var(--tdr-wing) 38%,transparent 96%);
+  opacity:.58;
+  pointer-events:none;
+}
+.tdr-lobby-dom .tdr-event-card .tdr-card-kicker,
+.tdr-lobby-dom .tdr-track-card .tdr-card-kicker{
+  letter-spacing:.16em;
+  color:var(--tdr-wing);
+  text-shadow:0 0 10px rgba(0,0,0,.6);
+}
+.tdr-lobby-dom .tdr-event-card h2,
+.tdr-lobby-dom .tdr-track-card h2{
+  text-shadow:0 2px 12px rgba(0,0,0,.64);
+}
+.tdr-lobby-dom .tdr-track-map{
+  background:transparent;
+  border:0;
+  box-shadow:none;
+}
+.tdr-lobby-dom .tdr-track-stats{
+  padding-top:6px;
+  border-top:1px solid rgba(239,193,92,.22);
+}
+.tdr-lobby-dom .tdr-event-progress{
+  border-color:rgba(104,222,243,.30);
+  background:rgba(3,14,25,.52);
+}
+.tdr-lobby-dom .tdr-event-card:active,
+.tdr-lobby-dom .tdr-track-card:active{
+  filter:brightness(1.17);
+}
+@media(pointer:coarse) and (orientation:landscape) and (min-height:600px) and (max-aspect-ratio:8/5){
+  .tdr-lobby-dom .tdr-lobby-car-platform{
+    width:min(43vw,490px);
+    height:min(68vh,490px);
+    top:52%;
+  }
+}
+@media(max-height:430px){
+  .tdr-lobby-dom .tdr-lobby-car-platform{
+    width:clamp(180px,27vw,320px);
+    height:clamp(170px,61vh,320px);
+    top:53%;
+  }
+  .tdr-lobby-dom .tdr-event-card{
+    padding-left:clamp(12px,1.5vw,20px);
+    padding-right:clamp(23px,2vw,30px);
+  }
+  .tdr-lobby-dom .tdr-track-card{
+    padding-left:clamp(23px,2vw,30px);
+    padding-right:clamp(12px,1.5vw,20px);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .tdr-lobby-dom .tdr-event-card,
+  .tdr-lobby-dom .tdr-track-card{transition:none}
+}

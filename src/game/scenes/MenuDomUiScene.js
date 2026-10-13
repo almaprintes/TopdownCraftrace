@@ -9,14 +9,6 @@ import '../ui/seasonPassBehavior.js';
 const canonicalLobbyTrackKey=value=>{const key=String(value||'').trim();return !key||key==='track01'||key==='track1'?CANONICAL_TRACK_IDS.ATLANTICO:key;};
 
 export class MenuScene extends PreviousMenuScene {
-  preload() {
-    super.preload?.();
-    const base = import.meta.env.BASE_URL || '/';
-    if (!this.textures.exists('lobby-platform')) {
-      this.load.image('lobby-platform', `${base}assets/ui/lobby/car_platform.webp`);
-    }
-  }
-
   _renderGlobalEventCard() {}
 
   _liveLobbyTrackKey() {
@@ -59,8 +51,6 @@ export class MenuScene extends PreviousMenuScene {
     bg.setPosition(width / 2, height / 2);
     this._ui.add(bg);
 
-    this._installCarPlatform();
-
     const liveTrackKey = this._liveLobbyTrackKey();
     if (liveTrackKey) {
       this.selectedTrackKey = liveTrackKey;
@@ -84,38 +74,4 @@ export class MenuScene extends PreviousMenuScene {
     this._lobbyDomRoot?.classList.toggle('tdr-lobby-dom--modal-open', modalOpen);
   }
 
-  _installCarPlatform() {
-    const ui = this._ui;
-    if (!ui?.addAt) return;
-
-    const { width, height } = this.scale;
-    const centerX = width * .5;
-    const centerY = height * .505;
-    const tabletLandscape = (() => {
-      try {
-        const coarse = window.matchMedia?.('(pointer: coarse)')?.matches;
-        const landscape = width >= height;
-        const ratio = width / Math.max(1, height);
-        return Boolean(coarse && landscape && width >= 820 && height >= 600 && ratio <= 1.6);
-      } catch { return false; }
-    })();
-    const diameter = tabletLandscape
-      ? Math.max(400, Math.min(480, width * .42, height * .60))
-      : Math.max(260, Math.min(380, width * .26, height * .48));
-
-    const glow = this.add.graphics();
-    glow.fillStyle(0x07131b, .58);
-    glow.fillCircle(centerX, centerY, diameter * .52);
-    glow.lineStyle(6, 0x39dfff, .92);
-    glow.strokeCircle(centerX, centerY, diameter * .5);
-    glow.lineStyle(3, 0xf0b84b, .72);
-    glow.strokeCircle(centerX, centerY, diameter * .46);
-    ui.addAt(glow, Math.min(1, ui.list.length));
-
-    if (this.textures.exists('lobby-platform')) {
-      const platform = this.add.image(centerX, centerY, 'lobby-platform').setOrigin(.5).setAlpha(1);
-      platform.setDisplaySize(diameter, diameter);
-      ui.addAt(platform, Math.min(2, ui.list.length));
-    }
-  }
 }
