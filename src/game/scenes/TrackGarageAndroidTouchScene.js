@@ -1,21 +1,13 @@
 import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGaragePlayerLightScene.js';
 import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 import { ensureSelectionPaddockSkin } from '../ui/selectionPaddockSkin.js';
+import { attachCenteredSelectionRail } from '../ui/centeredSelectionRail.js';
 import { pxToMeters } from '../cars/speedUnits.js';
 
 const ROOT_ID='tdr-track-selector-dom';
 const TAP_MOVE_PX=14;
 const TAP_TIME_MS=650;
 
-function centerSelectedTrack(root,behavior='smooth'){
-  const list=root?.querySelector?.('.tdr-ts-list');
-  const selected=list?.querySelector?.('.tdr-ts-card.active');
-  if(!list||!selected)return;
-  const top=selected.offsetTop-(list.clientHeight-selected.offsetHeight)/2;
-  const max=Math.max(0,list.scrollHeight-list.clientHeight);
-  const target=Math.max(0,Math.min(max,top));
-  try{list.scrollTo({top:target,behavior});}catch{list.scrollTop=target;}
-}
 function canonicalLengthM(track){const p=(track?.raceCenterline?.length?track.raceCenterline:track?.centerline)||[];let d=0;const end=track?.closed===false?p.length-1:p.length;for(let i=0;i<end;i++){const a=p[i],b=p[(i+1)%p.length];const ax=Number(a?.x??a?.[0]),ay=Number(a?.y??a?.[1]),bx=Number(b?.x??b?.[0]),by=Number(b?.y??b?.[1]);if([ax,ay,bx,by].every(Number.isFinite))d+=Math.hypot(bx-ax,by-ay);}return Math.max(0,Math.round(pxToMeters(d)));}
 function syncCanonicalLengths(root,tracks,index){if(!root)return;root.querySelectorAll('.tdr-ts-card').forEach((card,i)=>{const meta=card.querySelector('.tdr-ts-card-meta'),track=tracks?.[i];if(!meta||!track||card.classList.contains('locked'))return;meta.innerHTML=meta.innerHTML.replace(/\d+\s*m\s*·/,`${canonicalLengthM(track)} m ·`);});const firstStat=root.querySelector('.tdr-ts-stat strong'),selected=tracks?.[index];if(firstStat&&selected&&!root.querySelector('.tdr-ts-locked-hero'))firstStat.textContent=`${canonicalLengthM(selected)} m`;}
 
@@ -25,14 +17,45 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     showFirstVisitTutorial('tracks',{delay:260});
   }
 
+  _selectTrackCard(index){
+    const i=Math.max(0,Math.min(this._tracks.length-1,Number(index)||0));
+    if(i===this._index){
+      this._centeredTrackRail?.center(i,'smooth');
+      return;
+    }
+    this._index=i;
+    // Rebuild the authoritative hero/locked state, but restore the old rail
+    // position BEFORE smoothly centering the newly selected circuit.
+    this._nextRailBehavior='smooth';
+    this._installDomSelector();
+  }
+
   _installDomSelector(){
+    const previous=this._centeredTrackRail;
+    const oldTop=previous?.list?.scrollTop;
+    previous?.destroy();
+    this._centeredTrackRail=null;
+    const behavior=this._nextRailBehavior||'instant';
+    this._nextRailBehavior=null;
     super._installDomSelector?.();
     const root=this._trackSelectorDom||document.getElementById(ROOT_ID);
     if(!root)return;
     if(this._mode!=='admin')ensureSelectionPaddockSkin();
     syncCanonicalLengths(root,this._tracks,this._index);
 
-    requestAnimationFrame(()=>centerSelectedTrack(root,'auto'));
+    this._centeredTrackRail=attachCenteredSelectionRail(root,{
+      listSelector:'.tdr-ts-list',
+      itemSelector:'.tdr-ts-card',
+      onSettle:index=>{
+        if(index===this._index)return;
+        this._index=index;
+        this._nextRailBehavior='instant';
+        this._installDomSelector();
+      }
+    });
+    const rail=this._centeredTrackRail;
+    if(Number.isFinite(oldTop))rail?.restore(oldTop);
+    requestAnimationFrame(()=>{if(rail===this._centeredTrackRail)rail?.center(this._index,behavior);});
     if(root.__tdrPointerTapInstalled)return;
     root.__tdrPointerTapInstalled=true;
 
@@ -64,12 +87,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
       e.stopPropagation();
 
       if(action.matches('[data-index]')){
-        const i=Math.max(0,Math.min(this._tracks.length-1,Number(action.dataset.index)||0));
-        if(i!==this._index){
-          this._index=i;
-          this._installDomSelector();
-          requestAnimationFrame(()=>centerSelectedTrack(this._trackSelectorDom,'smooth'));
-        }
+        this._selectTrackCard(action.dataset.index);
         return;
       }
       if(action.matches('.tdr-ts-select')){
@@ -85,7 +103,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
         e.stopImmediatePropagation();
         return;
       }
-      if(e.target?.closest?.('[data-index]'))requestAnimationFrame(()=>centerSelectedTrack(root,'smooth'));
+      // Selection centering is handled by _selectTrackCard for both pointer and mouse.
     });
   }
 }
