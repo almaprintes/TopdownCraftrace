@@ -447,3 +447,24 @@
   #tdr-garage-player-dom .tdr-garage-dom-car,
   #tdr-track-selector-dom .tdr-ts-card{transition:none}
 }
+
+
+/* Native inertial rails shared by Garage and Circuits.
+   Center alignment includes first/last via dynamic viewport-sized padding;
+   never use scrollIntoView(nearest), which pins edge items to the top/bottom. */
+#tdr-garage-player-dom .tdr-garage-dom-list,
+#tdr-track-selector-dom .tdr-ts-list{
+  scroll-snap-type:y mandatory;
+  overscroll-behavior-y:contain;
+  -webkit-overflow-scrolling:touch;
+  touch-action:pan-y;
+  scroll-behavior:auto;
+}
+#tdr-garage-player-dom .tdr-garage-dom-car,
+#tdr-track-selector-dom .tdr-ts-card{
+  scroll-snap-align:center;
+  scroll-snap-stop:normal;
+  touch-action:pan-y;
+}
+#tdr-garage-player-dom .tdr-garage-dom-car:last-child,
+#tdr-track-selector-dom .tdr-ts-card:last-child{margin-bottom:0}
