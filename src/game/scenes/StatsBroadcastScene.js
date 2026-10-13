@@ -4,9 +4,10 @@ import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { getTrackPublicName } from '../tracks/trackPublicNames.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { getPersonalCircuitRecords, cloudSnapshotPolicy, saveCloudSnapshot } from '../stats/localRaceRecords.js';
-import { activateRaceControlOnline, syncRaceControlProfile, submitRaceControlRecordWithGhost, getRaceControlSnapshot } from '../online/raceControlOnline.js';
+import { submitRaceControlRecordWithGhost, getRaceControlSnapshot, getPublicRaceControlSnapshot } from '../online/raceControlOnline.js';
+import { ensureRaceControlPilotProfile, explainPilotIdentityFailure } from '../online/onlinePilotIdentity.js';
+import { verifiedRecordPublishClaims } from '../online/verifiedRecordPublishClaims.js';
 import { encodeOnlineGhostNative, encodeOnlineGhostNativeBinary } from '../online/onlineGhostCodec.js';
-import { getPilotProfile } from '../social/pilotProfile.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 import { REWARDED_PLACEMENTS, raceControlPublishClaimId, verifiedReward } from '../monetization/rewardedActions.js';
 
@@ -43,42 +44,120 @@ export class StatsScene extends MasteryStatsScene{
     const lang=getLanguage()==='en'?'en':'es';this._root.innerHTML=this._shell(t('raceControl.title'),t('common.back'));this._installBroadcastStyles();
     const recorded=getPersonalCircuitRecords();const records=Object.keys(TRACK_REGISTRY||{}).map(id=>recorded.find(r=>r.trackId===id)||{trackId:id,topLaps:[],progression:[],validLaps:0,bestLapMs:0});const selected=records.find(r=>r.trackId===trackId)||records.find(r=>r.validLaps>0)||records[0]||{trackId:'track01',topLaps:[],progression:[],validLaps:0};const policy=cloudSnapshotPolicy(selected.trackId);const snapshotRows=Array.isArray(policy.cached?.payload)?policy.cached.payload:[];const scope=this._raceControlScope||'global';const cloudRows=snapshotRows.filter(r=>r.scope===scope);const bestCar=selected.bestCarId;const brandLogo=brandLogoSrc(bestCar);const improvement=selected.progression?.length>1?(selected.progression[0].lapMs-selected.progression[selected.progression.length-1].lapMs):0;const body=this._root.querySelector('.sh-body');
     body.innerHTML=`<div class="br-shell"><div class="br-topline"><span class="br-live">● ${t('raceControl.localLive')}</span><h2>${t('raceControl.intelligenceSuite')}</h2><p>TOP DOWN RACE // ${t('raceControl.timingData')}</p></div><div class="br-grid br-grid-online"><section class="br-panel br-circuits"><div class="br-label">${t('raceControl.myCircuits')}</div>${records.length?records.map((r,i)=>`<button class="br-circuit ${r.trackId===selected.trackId?'active':''}" data-br-track="${esc(r.trackId)}"><span class="br-pos">${String(i+1).padStart(2,'0')}</span><span><strong>${esc(trackName(r.trackId,lang))}</strong><small>${r.validLaps} ${t('raceControl.validLaps')} · ${esc(carName(r.bestCarId))}</small></span><time>${fmtLap(r.bestLapMs)}</time></button>`).join(''):`<div class="br-empty-chart">${t('raceControl.completeTimedLap')}</div>`}</section><div class="br-main"><section class="br-panel br-hero"><img class="br-track-beauty" src="${trackBeauty(selected.trackId)}" alt="" onerror="this.style.display='none'"><div class="br-hero-head"><div><div class="br-label">${t('raceControl.circuitControl')}</div><h3>${esc(trackName(selected.trackId,lang))}</h3></div><div class="br-pb"><small>${t('raceControl.personalBest')}</small><strong>${fmtLap(selected.bestLapMs)}</strong><em>${selected.recordedAt?new Date(selected.recordedAt).toLocaleDateString(lang==='en'?'en-GB':'es-ES'):t('raceControl.localRecord')}</em></div></div><div class="br-car-strip br-record-brand-banner">${brandLogo?`<img class="br-brand-watermark" src="${brandLogo}" alt="" aria-hidden="true">`:''}<div class="br-record-car-stage">${bestCar?`<img class="br-record-car" src="${carSrc(bestCar)}" alt="">`:''}</div><div class="br-car-meta"><small>${t('raceControl.recordCar')}</small><strong>${esc(carName(bestCar))}</strong><small>${selected.ghostKey?t('raceControl.ghostReady'):t('raceControl.localTiming')}</small></div></div>${selected.ghostKey?`<button type="button" class="br-publish-hero" data-br-publish>${t('raceControl.publishPb',{time:fmtLap(selected.bestLapMs)})}</button>`:''}</section><section class="br-panel br-chart br-online-arena"><div class="br-board-toolbar"><div><div class="br-label">${t('raceControl.onlineChallenges')}</div><strong>${esc(trackName(selected.trackId,lang))}</strong></div><div class="br-cloud-tabs br-board-tabs"><button class="${scope==='global'?'active':''}" data-br-scope="global">${t('raceControl.global')}</button><button class="${scope==='continent'?'active':''}" data-br-scope="continent">${t('raceControl.continent')}</button><button class="${scope==='country'?'active':''}" data-br-scope="country">${t('raceControl.country')}</button><button class="${scope==='region'?'active':''}" data-br-scope="region">${t('raceControl.region')}</button></div><div class="br-board-net"><span>${Number.isFinite(policy.ageMs)?t('raceControl.cached',{age:ago(policy.ageMs)}):t('raceControl.noCache')}</span><button type="button" data-br-online>↻ ${t('raceControl.update')}</button></div></div><div class="br-online-head"><span>#</span><span>${t('raceControl.player')}</span><span>${t('raceControl.car')}</span><span>${t('raceControl.time')}</span><span>VS</span></div><div class="br-online-board">${cloudRows.length?cloudRows.map(r=>`<div class="br-online-row ${r.is_me?'me':''}"><b class="br-online-rank">${String(r.rank).padStart(2,'0')}</b><span class="br-online-pilot"><small>${r.is_me?t('raceControl.you'):t('raceControl.rival')}</small><strong>${esc(r.nick)}</strong></span><span class="br-online-car"><img src="${carSrc(r.car_id)}" alt=""><small>${esc(carName(r.car_id))}</small></span><time>${fmtLap(r.best_time_ms)}</time>${r.ghost_available?`<button class="br-vs" data-br-vs="${esc(r.record_ref)}"><i>VS</i><small>${t('raceControl.ghost')}</small></button>`:'<span class="br-vs-off">—</span>'}</div>`).join(''):`<div class="br-empty-chart">${t('raceControl.updateRanking')}</div>`}</div></section></div></div><div class="br-foot"><section class="br-panel br-kpi cyan"><small>${t('raceControl.validLaps')}</small><strong>${selected.validLaps||0}</strong></section><section class="br-panel br-kpi gold"><small>${t('raceControl.personalBest')}</small><strong>${fmtLap(selected.bestLapMs)}</strong></section><section class="br-panel br-kpi green"><small>${t('raceControl.pbImprovements')}</small><strong>${selected.progression?.length||0}</strong></section><section class="br-panel br-kpi"><small>${t('raceControl.status')}</small><strong>${t('raceControl.localVerified')}</strong></section></div></div>`;
-    this._root.querySelector('[data-br-online]')?.addEventListener('click',async e=>{const b=e.currentTarget;b.disabled=true;b.textContent=t('raceControl.connecting');try{const out=await activateRaceControlOnline();if(out?.session?.user){const pilot=getPilotProfile();if(pilot?.name){await syncRaceControlProfile({nick:pilot.name,continentCode:'EU',countryCode:'ES',regionCode:'ES-CN'});}const snap=await getRaceControlSnapshot(selected.trackId);saveCloudSnapshot(selected.trackId,snap);this._renderBroadcastRecords(selected.trackId);return;}else{b.textContent=t('raceControl.onlineUnavailable');}}catch(err){console.error('[race-control] online activation failed',err);b.textContent=t('raceControl.errorRetry');b.disabled=false;}});this._root.querySelector('[data-br-publish]')?.addEventListener('click',e=>this._publishRaceControlRecord(selected,e.currentTarget));this._root.querySelectorAll('[data-br-vs]').forEach(el=>el.addEventListener('click',()=>{const row=cloudRows.find(r=>String(r.record_ref)===String(el.dataset.brVs));if(!row)return;const unlocked=localStorage.getItem('tdr2:onlineGhostUnlocked:'+row.record_ref)==='1';const message=unlocked?t('raceControl.challengeGhost'):t('raceControl.unlockGhostRewarded');if(!window.confirm(message))return;el.dataset.brVsConfirmed='1';el.textContent=unlocked?'VS ✓':t('raceControl.rewardRequired');}));this._root.querySelectorAll('[data-br-scope]').forEach(el=>el.addEventListener('click',()=>{this._raceControlScope=el.dataset.brScope;this._renderBroadcastRecords(selected.trackId);}));this._root.querySelector('.sh-back')?.addEventListener('click',()=>{
+    const note=this._raceControlNotice;
+    if(note&&(!note.trackId||note.trackId===selected.trackId))
+      this._showRaceControlNotice(note.message);
+    const claimId=selected?.bestLapMs?raceControlPublishClaimId(selected.trackId,selected.bestLapMs):null;
+    const claim=claimId?verifiedRecordPublishClaims.get(claimId):null;
+    if(claim?.published){
+      const btn=this._root.querySelector('[data-br-publish]');
+      if(btn){btn.disabled=true;btn.textContent=t('raceControl.published');}
+    }
+    this._root.querySelector('[data-br-online]')?.addEventListener('click',async e=>{
+      const b=e.currentTarget;
+      b.disabled=true;b.textContent=t('raceControl.connecting');
+      try{
+        await ensureRaceControlPilotProfile();
+        const snap=await getRaceControlSnapshot(selected.trackId);
+        saveCloudSnapshot(selected.trackId,snap);
+        this._raceControlNotice=null;
+        this._raceControlPublicMode=false;
+        this._renderBroadcastRecords(selected.trackId);
+      }catch(err){
+        console.warn('[race-control] authenticated ranking unavailable',err);
+        const detail=explainPilotIdentityFailure(err);
+        // Even an account with an unresolved nickname can see GLOBAL records
+        // without misidentifying itself or getting private ghost references.
+        try{
+          const global=await getPublicRaceControlSnapshot(selected.trackId);
+          saveCloudSnapshot(selected.trackId,global);
+          this._raceControlScope='global';
+          this._raceControlPublicMode=true;
+          this._raceControlNotice={trackId:selected.trackId,
+            message:'Clasificación pública GLOBAL (sin VS). Para publicar o acceder a País/Región: '+detail};
+          this._renderBroadcastRecords(selected.trackId);
+        }catch(publicErr){
+          const message=detail+' · '+String(publicErr?.message||publicErr);
+          this._showRaceControlNotice(message);
+          b.textContent=t('raceControl.errorRetry');b.disabled=false;
+        }
+      }
+    });
+    this._root.querySelector('[data-br-publish]')?.addEventListener('click',e=>this._publishRaceControlRecord(selected,e.currentTarget));this._root.querySelectorAll('[data-br-vs]').forEach(el=>el.addEventListener('click',()=>{const row=cloudRows.find(r=>String(r.record_ref)===String(el.dataset.brVs));if(!row)return;const unlocked=localStorage.getItem('tdr2:onlineGhostUnlocked:'+row.record_ref)==='1';const message=unlocked?t('raceControl.challengeGhost'):t('raceControl.unlockGhostRewarded');if(!window.confirm(message))return;el.dataset.brVsConfirmed='1';el.textContent=unlocked?'VS ✓':t('raceControl.rewardRequired');}));this._root.querySelectorAll('[data-br-scope]').forEach(el=>el.addEventListener('click',()=>{if(this._raceControlPublicMode&&el.dataset.brScope!=='global'){this._showRaceControlNotice('Recupera o vincula tu perfil de piloto para consultar clasificaciones regionales.');return;}this._raceControlScope=el.dataset.brScope;this._renderBroadcastRecords(selected.trackId);}));this._root.querySelector('.sh-back')?.addEventListener('click',()=>{
       if(this._onlineFromLobby)this.scene.start('menu');
       else this._renderCars();
     });this._root.querySelectorAll('[data-br-track]').forEach(el=>el.addEventListener('click',()=>this._renderBroadcastRecords(el.dataset.brTrack)));
   }
+  _showRaceControlNotice(message){
+    const arena=this._root?.querySelector('.br-online-arena');
+    if(!arena)return;
+    let el=arena.querySelector('[data-br-auth-notice]');
+    if(!el){el=document.createElement('p');el.dataset.brAuthNotice='1';
+      el.setAttribute('role','status');
+      el.style.cssText='margin:8px 0 12px;padding:9px 12px;color:#ffe7b2;background:rgba(85,49,20,.45);border-left:3px solid #f5c66b;font:750 11px/1.4 system-ui;overflow-wrap:anywhere';
+      arena.insertBefore(el,arena.firstChild);
+    }
+    el.textContent=String(message||'');
+  }
+
   async _publishRaceControlRecord(selected,button){
     if(!selected?.ghostKey||!button||button.dataset.brPublishing==='1')return;
+    const claimId=raceControlPublishClaimId(selected.trackId,selected.bestLapMs);
+    let credit=verifiedRecordPublishClaims.get(claimId)||null;
+    if(credit?.published){button.textContent=t('raceControl.published');button.disabled=true;return;}
     if(!window.confirm(t('raceControl.publishRewardedConfirm')))return;
     button.dataset.brPublishing='1';
     button.disabled=true;
     button.textContent=t('raceControl.publishing');
+    let submitted=false;
     try{
       const raw=JSON.parse(localStorage.getItem(selected.ghostKey)||'null');
-      if(!raw?.samples?.length)throw new Error('Local ghost unavailable');
+      if(!raw?.samples?.length)throw new Error('La repetición local no está disponible. Tu tiempo se conserva.');
       const packet=encodeOnlineGhostNative(raw),bytes=encodeOnlineGhostNativeBinary(packet);
-      const online=await activateRaceControlOnline();
-      if(!online?.session?.user)throw new Error('Online session unavailable');
-      const pilot=getPilotProfile();
-      if(pilot?.name)await syncRaceControlProfile({nick:pilot.name,continentCode:'EU',countryCode:'ES',regionCode:'ES-CN'});
-      const ad=await showRewardedAd(this,{
-        title:t('raceControl.publishRewardedTitle'),
-        placement:REWARDED_PLACEMENTS.RACE_CONTROL_PUBLISH,
-        claimId:raceControlPublishClaimId(selected.trackId,selected.bestLapMs)
+      if(packet.p.length<2||packet.p.length>20000||bytes.byteLength>131072)
+        throw new Error('La repetición no tiene un formato válido para publicar.');
+      // An unresolved nickname must fail BEFORE requesting a rewarded ad.
+      await ensureRaceControlPilotProfile();
+      if(credit?.adVerified!==true){
+        const ad=await showRewardedAd(this,{
+          title:t('raceControl.publishRewardedTitle'),
+          placement:REWARDED_PLACEMENTS.RACE_CONTROL_PUBLISH,
+          claimId
+        });
+        if(!verifiedReward(ad))throw new Error('El anuncio no se completó. No se ha publicado el récord.');
+        credit={adVerified:true,published:false};
+        verifiedRecordPublishClaims.set(claimId,credit);
+      }
+      const out=await submitRaceControlRecordWithGhost({
+        trackId:selected.trackId,bestTimeMs:selected.bestLapMs,
+        carId:selected.bestCarId||raw.carId,ghostBytes:bytes,
+        ghostSampleCount:packet.p.length
       });
-      if(!verifiedReward(ad))throw new Error(ad?.reason||'rewarded_ad_not_completed');
-      const out=await submitRaceControlRecordWithGhost({trackId:selected.trackId,bestTimeMs:selected.bestLapMs,carId:selected.bestCarId||raw.carId,ghostBytes:bytes,ghostSampleCount:packet.p.length});
       const row=Array.isArray(out)?out[0]:out;
-      button.textContent=row?.record_ref?t('raceControl.published'):t('raceControl.noChange');
-      const snapshot=await getRaceControlSnapshot(selected.trackId);
-      saveCloudSnapshot(selected.trackId,snapshot);
-      this._renderBroadcastRecords(selected.trackId);
+      if(!row?.record_ref)throw new Error('Supabase no confirmó la publicación. Puedes reintentar sin otro anuncio.');
+      submitted=true;
+      verifiedRecordPublishClaims.set(claimId,{adVerified:true,published:true});
+      button.textContent=t('raceControl.published');
+      // A subsequent refresh failure cannot undo a server-confirmed upload
+      // or charge the player a second rewarded ad.
+      try{
+        const snapshot=await getRaceControlSnapshot(selected.trackId);
+        saveCloudSnapshot(selected.trackId,snapshot);
+        this._raceControlNotice=null;
+        this._raceControlPublicMode=false;
+        this._renderBroadcastRecords(selected.trackId);
+      }catch(refreshError){
+        this._showRaceControlNotice('Récord publicado en Supabase. La clasificación no se ha podido actualizar todavía: '+String(refreshError?.message||refreshError));
+      }
     }catch(err){
       console.error('[race-control] rewarded publish failed',err);
-      button.textContent=t('raceControl.publishErrorRetry');
+      const message=explainPilotIdentityFailure(err);
+      this._showRaceControlNotice(message);
+      button.textContent=credit?.adVerified===true?
+        'REINTENTAR · SIN OTRO ANUNCIO':t('raceControl.publishErrorRetry');
       button.disabled=false;
     }finally{
+      if(submitted)button.disabled=true;
       delete button.dataset.brPublishing;
     }
   }
