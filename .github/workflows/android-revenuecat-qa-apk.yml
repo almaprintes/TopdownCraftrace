@@ -77,6 +77,7 @@ jobs:
           node scripts/karting-official-source-smoke.mjs
           node scripts/rewarded-audio-focus-smoke.mjs
           node scripts/coin-reward-flight-smoke.mjs
+          node scripts/recycler-premium-ui-smoke.mjs
           node scripts/lobby-reward-ready-glow-smoke.mjs
           node scripts/cloud-portability-smoke.mjs
           npm run build:android
@@ -93,14 +94,14 @@ jobs:
           unzip -t "$src" | tail -1
           "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'"
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-REAL-ADS-DEV-1.2.145.apk
-          sha256sum sdk-download/TDR-QA-REAL-ADS-DEV-1.2.145.apk
+          cp "$src" sdk-download/TDR-QA-REAL-ADS-DEV-1.2.154.apk
+          sha256sum sdk-download/TDR-QA-REAL-ADS-DEV-1.2.154.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-REAL-ADS-DEV-1.2.145
-          path: sdk-download/TDR-QA-REAL-ADS-DEV-1.2.145.apk
+          name: TDR-QA-REAL-ADS-DEV-1.2.154
+          path: sdk-download/TDR-QA-REAL-ADS-DEV-1.2.154.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error

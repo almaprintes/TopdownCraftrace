@@ -16,7 +16,9 @@ export const MATERIAL_EXCHANGE_VALUE={
   ecu:20
 };
 
-export const MATERIAL_EXCHANGE_EFFICIENCY=.75;
+// 15% recycling commission: exchanges retain 85% of the INPUT VALUE.
+// Values, daily limit, rewarded ad gates and flooring are otherwise unchanged.
+export const MATERIAL_EXCHANGE_EFFICIENCY=.85;
 export const MATERIAL_EXCHANGES_PER_DAY=3;
 
 function dayKey(now=Date.now()){

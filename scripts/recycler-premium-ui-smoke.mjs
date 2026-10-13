@@ -59,11 +59,20 @@ const valueOf=id=>{
   return Number(entry?.trim().split(':')[1]);
 };
 const factor=Number(exchangeEconomy.match(/MATERIAL_EXCHANGE_EFFICIENCY=([0-9.]+)/)?.[1]);
-assert.equal(factor,.75,'A 25% fee must be sourced from canonical economy');
-assert.equal(Math.floor(112*valueOf('scrap')*factor/valueOf('compound')),10,
-  '112 scrap converts to 10 compound after the canonical fee');
+assert.equal(factor,.85,'The 15% fee must come from the canonical economy');
+assert.equal(Math.floor(112*valueOf('scrap')*factor/valueOf('compound')),11,
+  '112 scrap converts to 11 compound with 85% retained input value');
 assert.equal(Math.floor(8*valueOf('scrap')*factor/valueOf('compound')),0,
   'Small input is not enough to produce one compound');
+assert.equal(Math.floor(100*valueOf('scrap')*factor/valueOf('compound')),10,
+  '100 scrap yields 10 compound when input value retains 85%');
+assert.equal(Math.floor(20*valueOf('compound')*factor/valueOf('scrap')),136,
+  'Reverse exchange retains 85% and still applies integer flooring');
+assert.ok(exchange.includes('Math.round((1-MATERIAL_EXCHANGE_EFFICIENCY)*100)'),
+  'The UI commission remains dynamically tied to the actual 15% rate');
+const i18n=read('src/game/i18n/playerUiExtra.js');
+assert.ok(i18n.includes("'recycler.contextEfficiency':'EFICIENCIA DE RECICLAJE: 85% DEL VALOR ENTREGADO'"));
+assert.ok(i18n.includes("'recycler.contextEfficiency':'RECYCLING EFFICIENCY: 85% OF THE INPUT VALUE'"));
 assert.ok(exchange.includes('class="rx-fee-notice" role="note"'),
   'Commission disclosure must be visible near the sticky confirmation area');
 assert.ok(exchange.includes('Math.round((1-MATERIAL_EXCHANGE_EFFICIENCY)*100)'),

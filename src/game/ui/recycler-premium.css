@@ -304,7 +304,7 @@
   #tdr-part-dismantle-dom button{transition:none;animation:none}
 }
 
-/* DEV 1.2.153 — unavoidable 25% conversion fee notice, alongside the
+/* DEV 1.2.154 — clear 15% conversion fee notice, alongside the
    exchange action even when the tall material preview scrolls out of view. */
 #tdr-material-exchange-dom .rx-note{
   display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
