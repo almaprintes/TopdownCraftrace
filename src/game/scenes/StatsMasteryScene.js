@@ -10,7 +10,9 @@ function lobbyCarSrc(carId){return `${BASE}assets/cars/lobby/${encodeURIComponen
 export class StatsScene extends CurrentStatsScene{
   create(...args){
     super.create(...args);
-    showFirstVisitTutorial('stats',{delay:260});
+    // A direct trip to the online ranking is not a visit to Statistics.
+    // Do not cover Race Control with the unrelated first-visit stats modal.
+    if(!args[0]?.onlineFromLobby)showFirstVisitTutorial('stats',{delay:260});
   }
   _installMasteryStyles(){
     if(this._root?.querySelector('[data-mastery-stats-style]'))return;

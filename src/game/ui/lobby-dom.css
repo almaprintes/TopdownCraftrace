@@ -503,3 +503,59 @@
  .tdr-lobby-reward-slot.is-ready .tdr-lobby-reward-halo{animation:none;opacity:.48;will-change:auto}
  .tdr-lobby-reward-slot.is-ready::before{animation:none;opacity:.85;will-change:auto}
 }
+
+/* DEV 1.2.157 — RÉCORDS ONLINE is a first-class lobby destination.
+   Four fully visible actions instead of another submenu inside Statistics. */
+.tdr-lobby-dom .tdr-lobby-bottom-actions{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:clamp(8px,2.1vw,28px);
+  padding-inline:clamp(12px,2.7vw,42px);
+}
+.tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button{
+  width:100%;min-width:0;max-width:none;
+  padding-inline:clamp(6px,1.1vw,16px);
+  gap:clamp(4px,.65vw,10px);
+}
+.tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button--factory{
+  min-width:0;
+}
+.tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button span{
+  min-width:0;white-space:normal;line-height:1.1;
+  font-size:clamp(10px,1.25vw,18px);
+  text-align:center;
+}
+.tdr-lobby-dom .tdr-lobby-button--records{
+  --accent:#f0c75b;
+  background:linear-gradient(175deg,rgba(61,46,20,.98),rgba(18,25,33,.98) 60%,rgba(6,18,29,.99));
+  border-color:#e6bd52;
+  box-shadow:inset 0 2px rgba(255,241,187,.13),0 0 12px rgba(224,178,66,.10);
+}
+.tdr-lobby-dom .tdr-lobby-button--records:focus-visible{
+  outline:2px solid #fff;outline-offset:3px;
+}
+.tdr-lobby-dom .tdr-lobby-records-emblem{
+  display:block;flex:0 0 auto;
+  width:clamp(25px,3.2vw,42px);
+  height:clamp(25px,3.2vw,42px);
+  color:#f5ce64;
+  filter:drop-shadow(0 0 5px rgba(241,198,88,.22));
+  pointer-events:none;
+}
+@media(max-width:900px){
+  .tdr-lobby-dom .tdr-lobby-bottom-actions{
+    gap:clamp(5px,1.3vw,11px);
+    padding-inline:clamp(8px,1.7vw,17px);
+  }
+  .tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button{
+    padding-inline:5px;gap:4px;
+  }
+  .tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button span{
+    font-size:clamp(10px,1.6vw,13px);letter-spacing:.015em;
+  }
+  .tdr-lobby-dom .tdr-lobby-records-emblem{width:26px;height:26px}
+}
+@media(max-height:430px){
+  .tdr-lobby-dom .tdr-lobby-bottom-actions .tdr-lobby-button{
+    height:clamp(43px,7.4vh,56px);
+  }
+}

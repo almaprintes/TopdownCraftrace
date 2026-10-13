@@ -127,6 +127,20 @@ function updateLobbyRewardShortcuts(root){
   }
 }
 function makeButton({ cls = '', icon, label, action }) { const button = document.createElement('button'); button.type = 'button'; button.className = `tdr-lobby-button ${cls}`.trim(); button.innerHTML = `<img src="${asset(icon)}" alt="" draggable="false"><span>${label}</span>`; button.addEventListener('click', action); return button; }
+// Direct Race Control entry from the lobby: the existing StatsScene already
+// supports raceControlTrackId and opens the leaderboard without a nested tap.
+function makeOnlineRecordsShortcut(scene){
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='tdr-lobby-button tdr-lobby-button--records';
+  button.dataset.lobbyOnlineRecords='1';
+  button.innerHTML=`<svg class="tdr-lobby-records-emblem" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h14v9c0 6-3.2 9-7 9s-7-3-7-9V4z"/><path d="M9 7H5v4c0 5 3 7 7 7M23 7h4v4c0 5-3 7-7 7M16 22v5m-6 2h12m-10-2h8"/><path d="m16 8 1.4 2.8 3.1.5-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.5L16 8z" stroke-width="1.4"/></svg><span>${tr('lobby.onlineRecords')}</span>`;
+  button.addEventListener('click',()=>scene.scene.start('StatsScene',{
+    raceControlTrackId:scene.selectedTrackKey||'track01',
+    onlineFromLobby:true
+  }));
+  return button;
+}
 function startRaceFlow(scene) { if (typeof scene._openGameModeModal === 'function') { scene._openGameModeModal(); return; } const carId = scene.selectedCarId; const trackKey = scene.selectedTrackKey || 'track01'; try { localStorage.setItem('tdr2:carId', carId); localStorage.setItem('tdr2:trackKey', trackKey); } catch {} scene.scene.start('race', { carId, trackKey }); }
 
 export function installLobbyDom(scene) {
@@ -140,7 +154,7 @@ export function installLobbyDom(scene) {
     const lane=root.querySelector('.tdr-lobby-play-slot');
     lane?.classList.add('tdr-lobby-action-capsule');
     lane?.append(makeRewardShortcut('daily',scene),play,makeRewardShortcut('video',scene));
-    const bottom=root.querySelector('.tdr-lobby-bottom-actions'); bottom.append(makeButton({icon:'icon_garage.webp',label:tr('lobby.garage'),action:()=>scene.scene.start('GarageScene',{mode:'player'})}),makeButton({cls:'tdr-lobby-button--factory',icon:'icon_factory.webp',label:tr('lobby.factory'),action:()=>scene.scene.start('upgrade-shop')}),makeButton({cls:'tdr-lobby-button--gold',icon:'icon_tracks.webp',label:tr('lobby.tracks'),action:()=>scene.scene.start('TrackGarageScene',{mode:'player'})}));
+    const bottom=root.querySelector('.tdr-lobby-bottom-actions'); bottom.append(makeButton({icon:'icon_garage.webp',label:tr('lobby.garage'),action:()=>scene.scene.start('GarageScene',{mode:'player'})}),makeButton({cls:'tdr-lobby-button--factory',icon:'icon_factory.webp',label:tr('lobby.factory'),action:()=>scene.scene.start('upgrade-shop')}),makeButton({cls:'tdr-lobby-button--gold',icon:'icon_tracks.webp',label:tr('lobby.tracks'),action:()=>scene.scene.start('TrackGarageScene',{mode:'player'})}),makeOnlineRecordsShortcut(scene));
     if(!IS_PROD_BUILD){const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));}
     const syncPilot=()=>{const name=String(getPilotProfile()?.name||'').trim();const node=root.querySelector('[data-pilot-header-name]');if(node)node.textContent=name||'—';};
     window.addEventListener('tdr:pilotprofile',syncPilot);
