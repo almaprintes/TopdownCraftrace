@@ -1,6 +1,7 @@
 import { RaceScene as CurrentRaceScene } from './RaceMileageStatsScene.js';
 import { loadPlayerStatsPersisted } from '../stats/playerStats.js';
 import { masteryInfoForMeters, masteryRoofVisible, masteryVisualSpec } from '../stats/carMastery.js';
+import { raceMasteryPlacement } from '../stats/masteryBadgePlacement.js';
 
 function visibleCarSprite(scene){
   const list=scene?.carRig?.list;if(!Array.isArray(list))return null;
@@ -25,18 +26,38 @@ export class RaceScene extends CurrentRaceScene{
     const meters=Number(loadPlayerStatsPersisted()?.cars?.[carId]?.meters)||0;
     const mastery=masteryInfoForMeters(meters);if(!mastery.level)return;
     const visual=masteryVisualSpec(mastery.level);
-    const sprite=visibleCarSprite(this),carW=Math.max(18,Number(sprite?.displayWidth||sprite?.width||28));
-    const radius=Math.max(4.5,Math.min(8,carW*.19)),g=this.add.graphics();
-    const rim=hexToInt(visual.rim,0xc9ced3),light=hexToInt(visual.light,0xffffff);
-    g.fillStyle(0x020202,.98);g.fillCircle(0,0,radius+2.1);
-    g.lineStyle(Math.max(1.3,radius*.18),rim,1);g.strokeCircle(0,0,radius);
+    const sprite=visibleCarSprite(this);
+    const w=Math.max(18,Number(sprite?.displayWidth||sprite?.width||28));
+    const h=Math.max(18,Number(sprite?.displayHeight||sprite?.height||48));
+    const {x,y,radius:r}=raceMasteryPlacement(w,h);
+    const g=this.add.graphics();
+    const rim=hexToInt(visual.rim,0xc9ced3);
+    const light=hexToInt(visual.light,0xffffff);
+    const dark=hexToInt(visual.dark,0x53616c);
+    // This is a small inset roof DECAL, not an opaque tyre sitting over
+    // the windows. Each element is drawn once and rotates with carRig.
+    g.fillStyle(0x06141f,.90);g.fillCircle(0,0,r*1.24);
+    g.lineStyle(Math.max(.9,r*.22),light,.90);g.strokeCircle(0,0,r*1.14);
+    g.fillStyle(dark,1);g.fillCircle(0,0,r*1.02);
+    g.lineStyle(Math.max(.9,r*.29),rim,1);g.strokeCircle(0,0,r*.90);
+    g.fillStyle(0x0c1f28,1);g.fillCircle(0,0,r*.70);
     const spokes=Math.max(3,Number(visual.spokes)||5);
-    g.lineStyle(Math.max(1.15,radius*(spokes>=12?.12:spokes>=8?.15:.19)),light,1);
+    const spokeWidth=Math.max(.65,r*(spokes>=12?.115:spokes>=8?.15:.19));
+    g.lineStyle(spokeWidth,light,1);
     for(let i=0;i<spokes;i++){
-      const a=(Math.PI*2*i/spokes)-Math.PI/2;
-      g.beginPath();g.moveTo(Math.cos(a)*radius*.28,Math.sin(a)*radius*.28);g.lineTo(Math.cos(a)*radius*.82,Math.sin(a)*radius*.82);g.strokePath();
+      const a=Math.PI*2*i/spokes-Math.PI/2;
+      g.beginPath();
+      g.moveTo(Math.cos(a)*r*.25,Math.sin(a)*r*.25);
+      g.lineTo(Math.cos(a)*r*.65,Math.sin(a)*r*.65);
+      g.strokePath();
     }
-    g.fillStyle(0x050505,1);g.fillCircle(0,0,radius*.3);g.lineStyle(Math.max(1,radius*.12),rim,1);g.strokeCircle(0,0,radius*.3);g.fillStyle(light,1);g.fillCircle(0,0,Math.max(1,radius*.09));
+    g.fillStyle(rim,1);g.fillCircle(0,0,r*.25);
+    g.fillStyle(0x06121b,1);g.fillCircle(0,0,r*.12);
+    g.fillStyle(light,1);g.fillCircle(0,0,Math.max(.5,r*.045));
+    if(mastery.level===9){
+      g.lineStyle(.8,0xffe39b,.95);g.strokeCircle(0,0,r*1.28);
+    }
+    g.setPosition(x,y);
     g.setDepth?.(999);rig.add(g);this._masteryRoofWheel=g;
   }
 }
