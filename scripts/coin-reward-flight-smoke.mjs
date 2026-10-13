@@ -178,8 +178,8 @@ assert.match(storeRoute,/_openStoreModal\(section='materials'\)/,
   'existing store navigation forwards requested section');
 assert.match(storeRoute,/return openStoreDom\(this,section\)/,
   'do not create a new store implementation');
-assert.match(liveStore,/if\(section==='rewards'\)/,
-  'same Store shows existing rewards cards on opening');
+assert.match(liveStore,/const key=section==='rewards'\?'rewards':'materials'/,
+  'the original rewards entry now selects the dedicated rewards category');
 assert.match(liveStore,/mountStoreNavigation\(root,shell,scroller,packCards,\[video\.card,daily\.card\],section\)/,
   'store sections must show rewards alone on entry, without an adjacent clipped pack');
 assert.match(liveStore,/for\(const card of packCards\)card\.hidden=key!=='materials'/,
