@@ -24,5 +24,24 @@ if(!fs.existsSync(src)){
   assert.equal(env.trackId,'santa-cruz');
   assert.ok(Array.isArray(env.collisionLines));assert.ok(Array.isArray(env.collisionZones));
   assert.equal(env.environment.length,0,'Do not overlay old Santa Cruz props on photo');
+  // Colliders are exported in photo-pixel coordinates; no old 1900×2900
+  // geometry or visual assets may leak into the new Santa Cruz.
+  const authored=JSON.parse(fs.readFileSync('src/game/tracks/library/santa-cruz/source/santa-cruz-photo.environment.json','utf8'));
+  assert.deepEqual(env.collisionLines,authored.collisionLines,
+    'Every authored Bézier handle and position must survive installation unchanged');
+  assert.deepEqual(env.collisionZones,authored.collisionZones);
+  assert.equal(env.collisionLines.length,4,'Four authored wall boundaries expected');
+  assert.equal(env.collisionLines.reduce((n,l)=>n+l.nodes.length,0),54,'All 54 authored nodes preserved');
+  const {validCollisionLine,sampleCollisionLine}=await import('../src/game/environment/CollisionPenGeometry.js');
+  for(const line of env.collisionLines){
+    assert.ok(validCollisionLine(line),line.id);
+    assert.equal(line.halfThickness,9,'Authored wall thickness preserved');
+    const samples=sampleCollisionLine(line);
+    assert.ok(samples.length>line.nodes.length,'Bézier wall must be sampled to collision segments');
+    for(const p of samples){
+      assert.ok(Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.x<=3072&&p.y>=0&&p.y<=4608,
+        'Wall curve must remain within photographic world bounds');
+    }
+  }
   console.log('[santa-cruz] source, tiles, native metadata and collision project OK');
 }
