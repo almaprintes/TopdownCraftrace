@@ -11,9 +11,6 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _applyHandbrakePhysics(delta){
-    // Juanicar uses the exclusive RWD handbrake in RaceBicycleHandlingScene.
-    // Never stack the legacy bicycle handbrake impulse on top of it.
-    if(this.carId==='veloce_juanicar_c220') return;
     const body=this.carBody;
     const vel=body?.body?.velocity;
     if(!body?.scene||!vel)return;
