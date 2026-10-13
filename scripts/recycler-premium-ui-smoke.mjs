@@ -54,9 +54,9 @@ assert.ok(exchange.includes('if(submit)submit.disabled=true;'),
   'Stale amount cannot be confirmed mid-drag');
 const exchangeEconomy=read('src/game/store/materialExchange.js');
 const valueOf=id=>{
-  const fragment=exchangeEconomy.match(/MATERIAL_EXCHANGE_VALUE=\\{([\\s\\S]*?)\\}/)?.[1]||'';
-  const entry=fragment.match(new RegExp('(?:^|[,\\\\s])'+id+':([0-9.]+)'));
-  return Number(entry?.[1]);
+  const fragment=exchangeEconomy.split('MATERIAL_EXCHANGE_VALUE={')[1]?.split('}')[0]||'';
+  const entry=fragment.split(',').find(item=>item.trim().startsWith(id+':'));
+  return Number(entry?.trim().split(':')[1]);
 };
 const factor=Number(exchangeEconomy.match(/MATERIAL_EXCHANGE_EFFICIENCY=([0-9.]+)/)?.[1]);
 assert.equal(factor,.75,'A 25% fee must be sourced from canonical economy');
