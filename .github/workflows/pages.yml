@@ -17,7 +17,8 @@ permissions:
 concurrency:
   # Isolate fresh web deployments from an older cancelled Android bridge job
   # retaining the legacy github-pages concurrency lock.
-  group: tdr-main-pages
+  # PWA-only changes skip Android and have an independent serialization lock.
+  group: ${{ contains(github.event.head_commit.message, '[pwa-only]') && 'tdr-main-pages-pwa' || 'tdr-main-pages' }}
   cancel-in-progress: true
 
 jobs:
