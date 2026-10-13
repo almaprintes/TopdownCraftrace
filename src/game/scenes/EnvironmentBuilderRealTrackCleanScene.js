@@ -11,7 +11,9 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
   _drawRealTrack(){
     super._drawRealTrack?.();
     const cfg=getTrackBeautyLayerConfig(this._trackId);
-    const photo=this._trackId==='karting-tenerife'&&!!cfg?.useBeautyLayer&&!!cfg?.assetsAvailable;
+    const native=this._realTrack?.meta?.renderMode==='image-native'&&
+      this._realTrack?.meta?.imageNative?.availability==='published';
+    const photo=native||(this._trackId==='karting-tenerife'&&!!cfg?.useBeautyLayer&&!!cfg?.assetsAvailable);
     this._realTrackG?.setVisible(!photo);
     this._realTrackMarkG?.setVisible(!photo);
   }
@@ -40,7 +42,13 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
 
   _syncBeautyReference(){
     this._clearBeautyReference();
-    const cfg=getTrackBeautyLayerConfig(this._trackId);
+    const native=this._realTrack?.meta?.renderMode==='image-native'?
+      this._realTrack?.meta?.imageNative:null;
+    const tiles=native?.availability==='published'&&Array.isArray(native.tiles)?
+      native.tiles.map(t=>({path:t.assetPath,x:t.x,y:t.y,w:t.width,h:t.height})):[];
+    const cfg=tiles.length?{useBeautyLayer:true,assetsAvailable:true,tiles,
+      assetRevision:this._realTrack?.meta?.sourceImageSha256||'photo'}:
+      getTrackBeautyLayerConfig(this._trackId);
     if(!cfg?.useBeautyLayer||!cfg?.assetsAvailable||!cfg?.tiles?.length)return;
     const pending=[];
     for(const [i,t] of cfg.tiles.entries()){
