@@ -1,6 +1,8 @@
 import {sessionPersonalBest,localRecordGhost,fmtPersonalBest,RECORD_PUBLISH_DISCLOSURE} from './sessionPersonalBestPublish.js';
 import {encodeOnlineGhostNative,encodeOnlineGhostNativeBinary} from '../online/onlineGhostCodec.js';
-import {activateRaceControlOnline,submitRaceControlRecordWithGhost} from '../online/raceControlOnline.js';
+import {submitRaceControlRecordWithGhost} from '../online/raceControlOnline.js';
+import {ensureRaceControlPilotProfile} from '../online/onlinePilotIdentity.js';
+import {verifiedRecordPublishClaims as verifiedPublishClaims} from '../online/verifiedRecordPublishClaims.js';
 import {getPilotProfile} from '../social/pilotProfile.js';
 import {isRewardedAdAvailable,showRewardedAd} from '../monetization/RewardedAdsProvider.js';
 import {REWARDED_PLACEMENTS,raceControlPublishClaimId,verifiedReward} from '../monetization/rewardedActions.js';
@@ -8,7 +10,6 @@ import {REWARDED_PLACEMENTS,raceControlPublishClaimId,verifiedReward} from '../m
 // Preserve verified ad credits and successful publications while the player
 // remains in this app session. Reopening the session report must not charge
 // another voluntary ad for a transient network failure.
-const verifiedPublishClaims=new Map();
 
 export function mountNewPersonalBestOffer(scene,root,report){
   const best=sessionPersonalBest(report,scene?._sessionPreviousPersonalBestMs);
@@ -52,7 +53,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
   let published=existing?.published===true;
   if(adVerified&&!published)publish.textContent='REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO';
   if(published){
-    actions.hidden=true;
+    actions.hidden=true;actions.style.display='none';
     card.querySelector('[data-pb-question]').textContent='✅ Tu récord está en la clasificación online';
     card.querySelector('[data-pb-disclosure]').hidden=true;
     setStatus('Este tiempo ya se publicó. No necesitas otro anuncio.');
@@ -84,7 +85,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
         throw new Error('No hay un anuncio recompensado disponible ahora. Tu récord se conserva.');
       // Validate online readiness before attempting an optional rewarded ad.
       setStatus('Comprobando conexión y repetición…');
-      await activateRaceControlOnline();
+      await ensureRaceControlPilotProfile();
       if(!adVerified){
         setStatus('Preparando el anuncio opcional para publicar el récord…');
         const result=await showRewardedAd(scene,{
@@ -107,7 +108,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
       if(!row||!row.record_ref)throw new Error('El servidor no confirmó la publicación. Puedes reintentar sin otro anuncio.');
       published=true;
       verifiedPublishClaims.set(claimId,{adVerified:true,published:true});
-      actions.hidden=true;
+      actions.hidden=true;actions.style.display='none';
       card.querySelector('[data-pb-question]').textContent='✅ Tu récord está en la clasificación online';
       card.querySelector('[data-pb-disclosure]').hidden=true;
       setStatus(row.improved===false?'Ya tenías una marca online igual o mejor. Tu clasificación está conservada.':'Publicado correctamente. ¡Enhorabuena!');
