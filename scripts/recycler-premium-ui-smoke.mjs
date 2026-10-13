@@ -2,6 +2,7 @@
 // mechanics while ensuring the store and both screens use one premium skin.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {quoteMaterialExchange} from '../src/game/store/materialExchange.js';
 const read=path=>readFileSync(path,'utf8');
 const exchange=read('src/game/ui/MaterialExchangeDom.js');
 const dismantle=read('src/game/ui/PartDismantleDom.js');
@@ -39,7 +40,23 @@ assert.match(exchange,/if\(!verifiedReward\(ad\)\)/);
 assert.match(exchange,/recyclerRewardedPlacement\(ordinal\)/);
 assert.match(exchange,/requiresVideo=status\.used>=1/);
 assert.match(exchange,/status\.remaining\}\/3/);
-assert.match(exchange,/slider\.addEventListener\('input'/);
+assert.match(exchange,/slider\\.addEventListener\\('input'/);
+assert.match(exchange,/<output class="rx-slider-value" aria-label="\\$\\{C\\.receive\\}">\\$\\{receive\\}<\\/output>/,
+  'Right-hand amount shows received materials, not the source slider count');
+assert.match(exchange,/const previewQuote=quoteMaterialExchange\\(fromId,toId,val\\)/,
+  'Touch preview must derive its value from the canonical exchange quote');
+assert.match(exchange,/sliderValue\\.textContent=String\\(previewReceive\\)/,
+  'Received quantity must refresh while sliding');
+assert.match(exchange,/exact\\.value=String\\(val\\)/,
+  'Exact source quantity remains synchronized while sliding');
+assert.match(exchange,/summaryValue\\.textContent=/,
+  'Summary must preview the same amount as the right-hand value');
+assert.match(exchange,/if\\(submit\\)submit\\.disabled=true/,
+  'Do not allow a stale saved amount to execute while the user is dragging');
+assert.equal(quoteMaterialExchange('scrap','compound',112).receive,10,
+  '112 scrap converts to 10 compound after the existing 25% fee');
+assert.equal(quoteMaterialExchange('scrap','compound',8).receive,0,
+  'Too-small amounts must display zero rather than a false reward');
 assert.match(exchange,/slider\.addEventListener\('change'/);
 assert.match(exchange,/exact\?\.addEventListener\('change'/);
 assert.match(exchange,/confirmExchange\(root,C/);
