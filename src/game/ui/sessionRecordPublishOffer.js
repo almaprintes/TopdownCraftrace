@@ -60,7 +60,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
   }
   const skipOffer=()=>{
     if(inFlight)return;
-    actions.hidden=true;
+    actions.hidden=true;actions.style.display='none';
     card.querySelector('[data-pb-question]').textContent='Récord personal guardado en tu dispositivo.';
     card.querySelector('[data-pb-disclosure]').hidden=true;
     setStatus('No has elegido publicar. No se mostrará ningún anuncio.');
