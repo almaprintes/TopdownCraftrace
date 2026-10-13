@@ -94,5 +94,5 @@ assert.match(unlock,/premiumSkin\.textContent=masteryPremiumCss/);
 assert.match(css,/\.sh-mastery-panel\{/);
 assert.match(css,/\.tdr-mastery-unlock \.mu-card\{/);
 const html=read('index.html');
-assert.match(html,/content="DEV 1\.2\.169"/);
+assert.match(html,/content="DEV 1\.2\.170"/);
 console.log('Mastery nine levels, full-roof championship shields, exact painted placement, visibility and premium statistics OK');
