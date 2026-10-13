@@ -220,9 +220,9 @@ export class RaceScene extends CurrentRaceScene {
       // rear traction and rotating around the front axle; never add a sudden
       // position teleport or a second independent yaw impulse.
       const hbSpeed=smoothstep01((speed-45)/155);
-      const hbTarget=handbrake?Math.sign(steer)*turnDemand*hbSpeed*2.45:0;
+      const hbTarget=handbrake?Math.sign(steer)*turnDemand*hbSpeed*3.8:0;
       this._juanicarHandbrakeYaw+=(hbTarget-this._juanicarHandbrakeYaw)*(1-Math.exp(-dt*(handbrake?5.8:4.1)));
-      this._juanicarHandbrakeYaw=clamp(this._juanicarHandbrakeYaw,-2.45,2.45);
+      this._juanicarHandbrakeYaw=clamp(this._juanicarHandbrakeYaw,-3.8,3.8);
       experimentalYaw+=this._juanicarHandbrakeYaw*dt;
       // Preserve momentum during the slide; only slowly re-align velocity to nose.
       const vel=body.body.velocity;
@@ -233,7 +233,7 @@ export class RaceScene extends CurrentRaceScene {
       vel.x+=Math.sin(heading)*lateral*lateralDamp;
       vel.y-=Math.cos(heading)*lateral*lateralDamp;
       if(handbrake){
-        const brakeFactor=Math.exp(-dt*(0.95+0.65*hbSpeed));
+        const brakeFactor=Math.exp(-dt*(6.5+4.0*hbSpeed));
         vel.x*=brakeFactor;
         vel.y*=brakeFactor;
       }
@@ -241,11 +241,24 @@ export class RaceScene extends CurrentRaceScene {
     const newRot=wrapPi(prevRot+experimentalYaw);
 
     // Softer rear-axle pivot to avoid tiny lateral nudges while steering.
-    const rearOffset=wheelbase*0.38;
-    const pivotStrength=smoothstep01(clamp((absForward-8)/82,0,1));
+    const arcadePivot=this.carId==='veloce_juanicar_c220' && this._raceStarted && this._tdrHandbrake===true;
+    const rearOffset=arcadePivot?wheelbase*0.82:wheelbase*0.38;
+    const pivotStrength=arcadePivot?1:smoothstep01(clamp((absForward-8)/82,0,1));
     const newFx=Math.cos(newRot), newFy=Math.sin(newRot);
     body.x += (newFx-prevFx)*rearOffset*pivotStrength;
     body.y += (newFy-prevFy)*rearOffset*pivotStrength;
+    if(arcadePivot){
+      // Arcade hairpin: arrest forward translation while the rear rotates around
+      // a near-stationary front axle. Prevent carrying entry speed to the outside.
+      const vel=body.body.velocity;
+      const forward=vel.x*newFx+vel.y*newFy;
+      const side=-vel.x*newFy+vel.y*newFx;
+      const keep=Math.exp(-dt*12);
+      const slowForward=forward*keep;
+      const slowSide=side*Math.exp(-dt*15);
+      vel.x=newFx*slowForward-newFy*slowSide;
+      vel.y=newFy*slowForward+newFx*slowSide;
+    }
     body.rotation=newRot;
 
     if(this.carRig?.scene){
