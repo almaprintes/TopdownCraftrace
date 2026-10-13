@@ -18,8 +18,11 @@ assert.ok(RECORD_PUBLISH_DISCLOSURE.includes('voluntariamente')&&RECORD_PUBLISH_
 assert.ok(RECORD_PUBLISH_DISCLOSURE.includes('No aparecerá automáticamente'));
 const storage=new Map();
 globalThis.localStorage={
+  get length(){return storage.size;},
+  key:index=>[...storage.keys()][index]??null,
   getItem:key=>storage.get(key)||null,
-  setItem:(key,value)=>storage.set(key,value)
+  setItem:(key,value)=>storage.set(key,value),
+  removeItem:key=>storage.delete(key)
 };
 const ghost={trackKey:'karting-tenerife',carId:'helix_spark',lapMs:39917,samples:Array.from({length:10},(_,i)=>({t:i*100,x:20+i*3,y:100+i*5,r:.6}))};
 storage.set('tdr2:ghost:karting-tenerife:helix_spark',JSON.stringify(ghost));
