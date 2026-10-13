@@ -3,8 +3,7 @@
 ## Activación sin perder el Santa Cruz antiguo
 
 La fuente maestra preparada por el propietario es `Santa-Cruz-x3-nitido.tdrtrack`
-(3072 × 4608, WebP y geometría Bézier editables). **Todavía debe subirse
-como archivo binario a esta misma carpeta de `main`.**
+(3072 × 4608, WebP y geometría Bézier editables). **Subida a `main` el 13/10/2026.**
 
 La CI ejecuta `node scripts/install-santa-cruz-source.mjs` antes del build.
 Cuando detecta el paquete, comprueba la imagen/forma, extrae la fotografía,
@@ -34,6 +33,19 @@ Tras comprobar Build y Deploy verdes de la SHA que incluye el paquete:
 El instalador coloca siempre la versión de `santa-cruz-photo.environment.json`
 en el build, dejando la fuente histórica `../santa-cruz.environment.json`
 intacta en Git.
+
+## Colisiones oficialmente exportadas — 13/10/2026
+
+- El proyecto fuente `santa-cruz-photo.environment.json` contiene cuatro
+  líneas Bézier (`collisionLines`) con **54 nodos editables** y espesor 9.
+- Los cuatro trazos conservan sus puntos y manejadores sin simplificaciones;
+  este fichero **no contiene aún zonas sólidas** (`collisionZones: []`).
+- Las líneas se insertan mediante `install-santa-cruz-source.mjs` en el
+  entorno del circuito durante Build, nunca usando las coordenadas antiguas.
+- El smoke `scripts/santa-cruz-official-source-smoke.mjs` verifica el traslado
+  completo y el muestreo de todas las curvas para colisión.
+- Pendiente de confirmar físicamente jugando que no se pueda atravesar los muros
+  y no existan barreras atravesando el asfalto; después se podrá cerrar el circuito.
 
 ## Criterios de cierre
 
