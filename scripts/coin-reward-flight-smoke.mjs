@@ -79,7 +79,38 @@ assert.match(fx,/prefers-reduced-motion/);
 assert.match(fx,/Promise\.race/,'WebKit cancellation must not hang award');
 assert.match(fx,/layer\.remove\(\)/,'dispose effect');
 assert.doesNotMatch(fx,/localStorage\.setItem/,'visual effect must not grant currency');
-console.log('Coin reward flight smoke: verified 100, daily 250, safe grants and header timing');
+
+// Visual cohesion contract: the shipping DOM shop owns eligibility and receipt.
+const shopCss=read('src/game/ui/store-dom.css');
+assert.match(domStore,/tdr-store-reward--\$\{kind\}/,
+  'Reward-specific styling must distinguish gold gift from cyan video');
+assert.match(domStore,/const actionSlot=el\('div','tdr-store-reward-action-slot'\)/);
+assert.match(domStore,/halo\.setAttribute\('aria-hidden','true'\)/);
+assert.match(domStore,/actionSlot\.append\(halo,button\)/,
+  'Decorative glow must not become the clickable/rewarded action');
+assert.match(domStore,/card\.classList\.toggle\('is-ready',status\.available&&!busy\)/,
+  'Only genuinely available, not-being-claimed rewards may glow');
+assert.match(domStore,/card\.classList\.toggle\('is-cooling',!status\.available\)/);
+assert.match(shopCss,/--tdr-store-reward-accent:#70dfff/);
+assert.match(shopCss,/--tdr-store-reward-accent:#ffd45b/);
+assert.match(shopCss,/\.tdr-store-reward-action-halo\{[^}]*filter:blur\(11px\)/,
+  'Neon halo blur must be applied to a separate parent (not its clipped polygon)');
+assert.match(shopCss,/\.tdr-store-reward\.is-ready \.tdr-store-reward-action-halo\{/);
+assert.match(shopCss,/@keyframes tdr-store-reward-halo-pulse\{\s*0%,100%\{opacity:\.02\}\s*32%,48%\{opacity:1\}/);
+assert.match(shopCss,/\.tdr-store-reward\.is-ready \.tdr-store-reward-action-slot::before\{/);
+assert.match(shopCss,/\.tdr-store-reward \.tdr-store-reward-action-slot > \.tdr-store-action:disabled\{/,
+  'Cooldown rewards must look disabled without changing their eligibility');
+assert.match(shopCss,/@media\(prefers-reduced-motion:reduce\)/);
+assert.doesNotMatch(shopCss,/@keyframes tdr-store-reward-(?:halo|edge)-pulse[^}]*scale\(/,
+  'Pulse opacity only; buttons must never grow or change touch bounds');
+assert.match(domStore,/if\(!verifiedReward\(ad\)\)/,
+  'Do not bypass ad verification');
+assert.match(domStore,/if\(!result\.ok\)\{/,
+  'Do not bypass claim eligibility');
+assert.match(domStore,/await playDomCoinRewardFlight\(scene/,'Keep coin flight unchanged');
+assert.match(domStore,/await animateDomCoinBalance\(root/,'Keep wallet count unchanged');
+
+console.log('Coin reward flight smoke: verified 100, daily 250, store neon/claim states, safe grants and header timing');
 
 const header=read('src/game/ui/TdrAppHeader.js');
 assert.match(header,/export function observeAppHeader/,'screens replace their DOM header safely');

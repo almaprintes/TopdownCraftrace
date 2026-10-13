@@ -65,15 +65,26 @@ function refreshBalance(root){
 
 function rewardCard(scene,root,kind){
   const isVideo=kind==='video';
-  const card=el('article','tdr-store-card tdr-store-reward');
+  const card=el('article',`tdr-store-card tdr-store-reward tdr-store-reward--${kind}`);
   const title=el('h2','',isVideo?t('store.rewardedVideo'):t('store.dailyGift'));card.append(title);
   const img=el('img','tdr-store-reward-art');img.src=`${BASE()}assets/store/${isVideo?'rewarded_video':'daily_gift'}.webp`;img.alt='';card.append(img);
   card.append(el('div','tdr-store-reward-value',`+${isVideo?'100':'250'} ${t('store.coins')}`));
-  const button=el('button','tdr-store-action');button.type='button';card.append(button);
+  // Share the lobby's illuminated outline language without touching the
+  // actual reward button, advertising flow or wallet claim.
+  const actionSlot=el('div','tdr-store-reward-action-slot');
+  const halo=el('span','tdr-store-reward-action-halo');
+  halo.setAttribute('aria-hidden','true');
+  halo.append(el('span','tdr-store-reward-action-halo-shape'));
+  const button=el('button','tdr-store-action');
+  button.type='button';
+  actionSlot.append(halo,button);
+  card.append(actionSlot);
   let busy=false;
   const update=()=>{
     const status=isVideo?rewardedStatus():dailyStatus();
     button.disabled=busy||!status.available;
+    card.classList.toggle('is-ready',status.available&&!busy);
+    card.classList.toggle('is-cooling',!status.available);
     button.textContent=status.available?(isVideo?t('store.rewardedVideo'):t('store.dailyGift')):`${t('store.availableIn')} ${timeLabel(status.remaining)}`;
   };
   button.addEventListener('click',async()=>{

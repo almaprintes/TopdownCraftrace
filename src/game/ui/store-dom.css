@@ -14,3 +14,153 @@
 .tdr-store-reward{align-items:center;text-align:center}.tdr-store-reward h2{width:100%;text-align:left}.tdr-store-reward-art{flex:1;min-height:0;width:min(78%,260px);object-fit:contain;filter:drop-shadow(0 8px 15px rgba(0,0,0,.28))}.tdr-store-reward-value{margin:3px 0 1px;font-size:clamp(17px,2vw,23px);font-weight:950}
 .tdr-store-toast{position:fixed;left:50%;top:76px;z-index:2147482600;transform:translateX(-50%);padding:9px 15px;border-radius:9px;background:#07101d;color:#72ffad;font-size:13px;font-weight:900;box-shadow:0 8px 25px rgba(0,0,0,.38)}.tdr-store-toast.is-error{color:#ff7373}
 @media(max-height:430px){.tdr-store-recycler{height:32px;padding:0 10px;font-size:9px}.tdr-store-card{padding:10px}.tdr-store-copy{margin:4px 0 3px}.tdr-store-material-row{min-height:24px;padding:0 5px 15px 0}.tdr-store-material-icon{width:72px;height:72px}.tdr-store-material-name{left:5px;right:5px;bottom:3px;font-size:7px}.tdr-store-action{min-height:32px;margin-top:5px}.tdr-store-scroller{padding-top:9px;padding-bottom:8px}}
+
+/* DEV 1.2.147 — premium store reward pair, sharing the lobby CTA vocabulary.
+   Pure presentation: StoreDomUi remains the only authority for coins/ads. */
+.tdr-store-shell{
+  background:
+    radial-gradient(ellipse 40% 50% at 76% 65%,rgba(24,118,170,.13),transparent 80%),
+    radial-gradient(ellipse 36% 60% at 27% 50%,rgba(183,122,24,.07),transparent 85%),
+    linear-gradient(155deg,#071526 0%,#03101c 70%);
+}
+.tdr-store-reward{
+  --tdr-store-reward-accent:#70dfff;
+  --tdr-store-reward-ink:#072938;
+  --tdr-store-reward-mid:#2fa6d3;
+  position:relative;
+  isolation:isolate;
+  border:1.5px solid rgba(64,183,238,.85);
+  border-radius:10px 21px 10px 21px;
+  background:
+    radial-gradient(ellipse 85% 65% at 50% 49%,rgba(36,147,221,.17),transparent 82%),
+    linear-gradient(155deg,#0e2940 0%,#081b2c 46%,#05111e 100%);
+  box-shadow:0 12px 25px rgba(0,0,0,.36),inset 0 1px 0 rgba(206,242,255,.12),
+    inset 0 0 30px rgba(29,124,169,.06);
+}
+.tdr-store-reward--daily{
+  --tdr-store-reward-accent:#ffd45b;
+  --tdr-store-reward-ink:#2f1b05;
+  --tdr-store-reward-mid:#e4a42e;
+  border-color:rgba(240,177,57,.80);
+  background:
+    radial-gradient(ellipse 90% 68% at 50% 49%,rgba(222,141,25,.18),transparent 82%),
+    linear-gradient(155deg,#35260f 0%,#18201e 46%,#0b151c 100%);
+}
+.tdr-store-reward::before{
+  content:'';position:absolute;top:0;left:14px;width:62%;height:3px;
+  background:linear-gradient(90deg,var(--tdr-store-reward-accent),transparent);
+  box-shadow:0 0 9px var(--tdr-store-reward-accent);
+  pointer-events:none;
+}
+.tdr-store-reward h2{
+  position:relative;z-index:1;
+  color:#f2fbff;letter-spacing:.05em;
+  text-shadow:0 2px 8px rgba(0,0,0,.42);
+}
+.tdr-store-reward--daily h2{color:#fff4d5}
+.tdr-store-reward-art{
+  position:relative;z-index:1;
+  width:min(82%,280px);
+  filter:drop-shadow(0 12px 16px rgba(0,0,0,.45)) drop-shadow(0 0 12px rgba(52,180,253,.11));
+}
+.tdr-store-reward--daily .tdr-store-reward-art{
+  filter:drop-shadow(0 12px 16px rgba(0,0,0,.45)) drop-shadow(0 0 12px rgba(249,181,49,.16));
+}
+.tdr-store-reward-value{
+  position:relative;z-index:1;
+  color:#f9fcff;
+  text-shadow:0 1px 2px rgba(0,0,0,.65),0 0 13px rgba(88,178,239,.18);
+  letter-spacing:.03em;
+}
+/* Distinct permanent backing keeps the normal button geometry and hit area.
+   A second shaped child glows through a blurred NON-clipped parent. */
+.tdr-store-reward-action-slot{
+  position:relative;isolation:isolate;flex:0 0 auto;
+  width:100%;margin-top:8px;min-height:42px;
+}
+.tdr-store-reward-action-halo{
+  position:absolute;inset:-3px;z-index:0;pointer-events:none;
+  filter:blur(11px);opacity:0;
+}
+.tdr-store-reward-action-halo-shape{
+  position:absolute;inset:0;display:block;
+  background:var(--tdr-store-reward-accent);
+  clip-path:polygon(11px 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,11px 100%,0 50%);
+}
+.tdr-store-reward-action-slot::before{
+  content:'';position:absolute;inset:-2px;z-index:1;pointer-events:none;
+  background:var(--tdr-store-reward-accent);opacity:0;
+  clip-path:polygon(11px 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,11px 100%,0 50%);
+}
+.tdr-store-reward .tdr-store-reward-action-slot > .tdr-store-action{
+  position:relative;z-index:2;margin:0;width:100%;height:100%;min-height:42px;
+  padding:4px 12px 4px 16px;border-radius:0;
+  border:1.5px solid var(--tdr-store-reward-accent);
+  background:linear-gradient(180deg,#ddf8ff 0%,#72dfff 42%,#1894c6 100%);
+  color:var(--tdr-store-reward-ink);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.48),inset 0 -3px 0 rgba(9,55,76,.31);
+  clip-path:polygon(10px 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,10px 100%,0 50%);
+  font-weight:1000;letter-spacing:.06em;
+}
+.tdr-store-reward--daily .tdr-store-reward-action-slot > .tdr-store-action{
+  background:linear-gradient(180deg,#ffebaa 0%,#ffcf58 45%,#d78c14 100%);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.56),inset 0 -3px 0 rgba(100,56,4,.32);
+}
+.tdr-store-reward .tdr-store-reward-action-slot > .tdr-store-action:disabled{
+  background:linear-gradient(180deg,#24384a,#142432 95%);
+  color:#9badbd;border-color:#557082;
+  box-shadow:inset 0 1px rgba(255,255,255,.05);
+  opacity:1;
+}
+.tdr-store-reward.is-ready .tdr-store-reward-action-halo{
+  will-change:opacity;
+  animation:tdr-store-reward-halo-pulse 1.55s ease-in-out infinite;
+}
+.tdr-store-reward.is-ready .tdr-store-reward-action-slot::before{
+  will-change:opacity;
+  animation:tdr-store-reward-edge-pulse 1.55s ease-in-out infinite;
+}
+@keyframes tdr-store-reward-halo-pulse{
+  0%,100%{opacity:.02}
+  32%,48%{opacity:1}
+  82%{opacity:.02}
+}
+@keyframes tdr-store-reward-edge-pulse{
+  0%,100%{opacity:.06}
+  32%,48%{opacity:1}
+  82%{opacity:.06}
+}
+.tdr-store-reward.is-cooling{border-color:rgba(90,113,132,.65)}
+.tdr-store-reward.is-cooling::before{opacity:.35;box-shadow:none}
+.tdr-store-reward .tdr-store-action:focus-visible{
+  outline:3px solid #fff;outline-offset:3px;
+}
+.tdr-store-reward .tdr-store-action:active:not(:disabled){
+  filter:brightness(1.1);
+}
+/* Secondary material packs inherit the beveled premium control style
+   without competing with the two ready rewards. */
+.tdr-store-material{
+  border-radius:10px 19px 10px 19px;
+  background:linear-gradient(165deg,#102337,#071622 72%);
+}
+.tdr-store-material .tdr-store-action:not(:disabled){
+  border-radius:5px 12px 5px 12px;
+  border-color:#4fb6d7;
+  background:linear-gradient(180deg,#19506c,#0b344b 64%,#082639);
+  color:#e9f9ff;
+  box-shadow:inset 0 1px rgba(156,228,255,.26);
+}
+@media(max-height:430px){
+  .tdr-store-reward-action-slot{min-height:34px;margin-top:5px}
+  .tdr-store-reward .tdr-store-reward-action-slot > .tdr-store-action{min-height:34px}
+  .tdr-store-reward-art{width:min(74%,235px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .tdr-store-reward.is-ready .tdr-store-reward-action-halo{
+    animation:none;opacity:.44;will-change:auto;
+  }
+  .tdr-store-reward.is-ready .tdr-store-reward-action-slot::before{
+    animation:none;opacity:.76;will-change:auto;
+  }
+}
