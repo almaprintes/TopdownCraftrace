@@ -31,7 +31,8 @@ assert.doesNotMatch(polish,/installBottomActions/,
  'No secondary bottom nav owner is allowed');
 assert.doesNotMatch(polishCss,/tdr-lobby-bottom-actions--two/,
  'No stale two-column CSS');
-const pos=lobby.indexOf("const bottom=root.querySelector('.tdr-lobby-bottom-actions')");
+const pos=lobby.indexOf('bottom.append(\n');
+assert.ok(pos>=0,'Bottom row append must exist');
 const actionRow=lobby.slice(pos,lobby.indexOf(');',pos)+2);
 for(const part of ['makeStatisticsShortcut(scene)',"label:tr('lobby.garage')","label:tr('lobby.factory')","label:tr('lobby.tracks')",'makeOnlineRecordsShortcut(scene)']){
   assert.ok(actionRow.includes(part),'Missing button: '+part);
