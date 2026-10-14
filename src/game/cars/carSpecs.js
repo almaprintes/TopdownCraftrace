@@ -300,6 +300,34 @@ steeringProfile: 'DIRECT',
     gripBrake: 0.19
   },
 
+  // DEV: Crown Axis physics as provisional baseline (not a separate Gold car).
+  crown_cuper: {
+    id: 'crown_cuper',
+    name: 'CROWN Cuper',
+    brand: 'CROWN',
+    country: 'Reino Unido',
+    category: 'All-Rounder',
+    role: 'Compacto deportivo',
+    collectionNo: 18,
+    rarity: 'Raro',
+    cardAssetVersion: 1,
+    skin: 'skin_crown_cuper_original.webp',
+    cardPreviewAsset: 'assets/skins/skin_crown_cuper_original.webp',
+    visualScale: 1.03,
+    designStats: { VEL: 64, ACC: 61, GIR: 72, EST: 63, FRN: 66 },
+    maxFwd: 560.7,
+    maxRev: 260,
+    accel: 759.2,
+    brakeForce: 1099.0,
+    engineBrake: 260,
+    linearDrag: 0.032,
+    turnRate: 3.91,
+    turnMin: 0.27,
+    gripCoast: 0.26,
+    gripDrive: 0.08,
+    gripBrake: 0.19
+  },
+
   crown_vector: {
     id: 'crown_vector',
     name: 'CROWN Vector',
