@@ -39,9 +39,8 @@ export function masteryMaterialLabel(material,lang='es'){
 }
 
 // Nine-level championship CREST: bronze / silver / gold finish, with
-// 5 / 8 / 12 engraved laureate rays and 1 / 2 / 3 merit chevrons per
-// material. The old circular spokes/centre hub resembled an alloy wheel;
-// this angular shield is meant to cover most of the car roof.
+// 5 / 8 / 12 engraved laureate rays, 1 / 2 / 3 large central stars and
+// progressively richer side trims per material. No circular wheel hubs.
 export function masteryWheelSvg(level,{size=128,blackBackground=true}={}){
   const v=masteryVisualSpec(level),lv=v.level;
   const safeSize=Math.max(8,Math.min(512,Number(size)||128));
@@ -57,13 +56,32 @@ export function masteryWheelSvg(level,{size=128,blackBackground=true}={}){
     const x2=64+Math.cos(a)*39,y2=64+Math.sin(a)*39;
     rays+=`<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${highlight}" stroke-width="2.1" stroke-linecap="round" opacity=".86"/>`;
   }
-  const starPoints=[];
-  for(let i=0;i<10;i++){
-    const a=-Math.PI/2+(Math.PI*i/5);
-    const r=i%2?10:24;
-    starPoints.push(`${(64+Math.cos(a)*r).toFixed(2)},${(61+Math.sin(a)*r).toFixed(2)}`);
-  }
+  // Large, readable tier markers: ONE / TWO / THREE stars inside each
+  // bronze, silver and gold shield. Micro engravings alone were invisible
+  // on a car roof, so the central symbol changes at real game sizes.
   const rank=lv?((lv-1)%3+1):0;
+  const stars=rank===1?[{x:64,y:60,r:24}]:
+    rank===2?[{x:49,y:61,r:17},{x:79,y:61,r:17}]:
+    rank===3?[{x:64,y:45,r:15},{x:49,y:72,r:14},{x:79,y:72,r:14}]:[];
+  const starsMarkup=stars.map((star,index)=>{
+    const pts=[];
+    for(let i=0;i<10;i++){
+      const a=-Math.PI/2+(Math.PI*i/5);
+      const r=i%2?star.r*.42:star.r;
+      pts.push(`${(star.x+Math.cos(a)*r).toFixed(2)},${(star.y+Math.sin(a)*r).toFixed(2)}`);
+    }
+    return `<polygon data-mastery-star="${index+1}" points="${pts.join(' ')}" fill="url(#mastery-metal)" stroke="${highlight}" stroke-width="2" stroke-linejoin="round"/>`;
+  }).join('');
+  // The side chevrons / championship crown reinforce each star grade
+  // without changing the bronze / silver / gold family colours.
+  const gradeTrim=rank===2
+    ?`<path d="M31 47 L39 54 L39 68 L30 62 Z M97 47 L89 54 L89 68 L98 62 Z" fill="${metal}" stroke="${highlight}" stroke-width="1.5" opacity=".95"/>`
+    :rank===3
+      ?`<path d="M42 35 L45 23 L56 30 L64 18 L72 30 L83 23 L86 35 Z" fill="${metal}" stroke="${highlight}" stroke-width="1.7"/><path d="M29 48 L37 52 L37 70 L29 65 Z M99 48 L91 52 L91 70 L99 65 Z" fill="${metal}" stroke="${highlight}" stroke-width="1.5"/>`
+      :'';
+  const gradeBorder=rank===3
+    ?`<path d="M64 11 L108 29 L104 70 Q98 89 64 112 Q30 89 24 70 L20 29 Z" fill="none" stroke="${highlight}" stroke-width="2" opacity=".9"/>`
+    :'';
   let bars='';
   for(let i=0;i<rank;i++){
     const y=91+i*5;
@@ -75,7 +93,7 @@ export function masteryWheelSvg(level,{size=128,blackBackground=true}={}){
   const champion=lv===9
     ?'<path d="M64 3 L115 24 L112 73 Q104 96 64 123 Q24 96 16 73 L13 24 Z" fill="none" stroke="#ffe69c" stroke-width="2" opacity=".93"/>'
     :'';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${safeSize}" height="${safeSize}" viewBox="0 0 128 128"><defs><linearGradient id="mastery-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${highlight}"/><stop offset="51%" stop-color="${metal}"/><stop offset="100%" stop-color="${shadow}"/></linearGradient><radialGradient id="mastery-enamel"><stop offset="0%" stop-color="#203943"/><stop offset="100%" stop-color="#051016"/></radialGradient></defs>${backing}<path d="${shield}" fill="${shadow}" stroke="${highlight}" stroke-width="2.4"/><path d="${inset}" fill="url(#mastery-metal)" stroke="${shadow}" stroke-width="2"/><path d="${enamel}" fill="url(#mastery-enamel)" stroke="${highlight}" stroke-width="1.2" stroke-opacity=".66"/>${lv?rays:''}<polygon points="${starPoints.join(' ')}" fill="url(#mastery-metal)" stroke="${highlight}" stroke-width="2" stroke-linejoin="round"/><path d="M64 46 L68 57 L79 57" fill="none" stroke="#fff" stroke-width="1.3" stroke-opacity=".35"/>${bars}<path d="M27 32 L32 70 Q38 86 52 96" fill="none" stroke="${highlight}" stroke-width="1.1" opacity=".4"/>${champion}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${safeSize}" height="${safeSize}" viewBox="0 0 128 128"><defs><linearGradient id="mastery-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${highlight}"/><stop offset="51%" stop-color="${metal}"/><stop offset="100%" stop-color="${shadow}"/></linearGradient><radialGradient id="mastery-enamel"><stop offset="0%" stop-color="#203943"/><stop offset="100%" stop-color="#051016"/></radialGradient></defs>${backing}<path d="${shield}" fill="${shadow}" stroke="${highlight}" stroke-width="2.4"/><path d="${inset}" fill="url(#mastery-metal)" stroke="${shadow}" stroke-width="2"/><path d="${enamel}" fill="url(#mastery-enamel)" stroke="${highlight}" stroke-width="1.2" stroke-opacity=".66"/>${lv?rays:''}${gradeTrim}${starsMarkup}${gradeBorder}${bars}<path d="M27 32 L32 70 Q38 86 52 96" fill="none" stroke="${highlight}" stroke-width="1.1" opacity=".4"/>${champion}</svg>`;
 }
 
 export function masteryWheelDataUri(level,opts={}){
