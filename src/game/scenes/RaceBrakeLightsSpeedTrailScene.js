@@ -1,4 +1,8 @@
 import { RaceScene as CurrentRaceScene } from './RaceTransientTireMarksScene.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
+import {getEquippedCarSkin} from '../skins/carSkins.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
+import {vehicleLightsForCar,lightCoordinates} from '../skins/vehicleLightsCalibration.js';
 
 const TRAIL_MIN_SPEED = 520;
 const TRAIL_SAMPLE_MS = 85;
@@ -19,7 +23,10 @@ export class RaceScene extends CurrentRaceScene {
     this._vehicleLightsStateKey = '';
     this._speedTrailGhosts = [];
     this._nextSpeedTrailAt = 0;
-
+    const id=String(this.carId||data?.carId||'');
+    const equipped=getEquippedCarSkin(id,{spec:CAR_SPECS[id],dev:!IS_PROD_BUILD});
+    this._vehicleLightsSkinId=equipped.id;
+    this._vehicleLightCalibration=vehicleLightsForCar(id,equipped.id);
     if(window.__tdrIosSafeMode !== true) this._buildVehicleLights();
 
     this.events.once('shutdown',()=>{
@@ -82,13 +89,44 @@ export class RaceScene extends CurrentRaceScene {
     const braking=!frontFacing && this._brakePressed() && !!this._raceStarted;
 
     const layoutKey=`${Math.round(w*10)}:${Math.round(h*10)}:${frontFacing?1:0}`;
-    const stateKey=frontFacing?'front-none':(braking?'brake':'tail');
+    const cal=this._vehicleLightCalibration;
+    const stateKey=cal?(this._brakePressed()&&!!this._raceStarted?'custom-brake':'custom-tail'):(frontFacing?'front-none':(braking?'brake':'tail'));
+
     if(!force && layoutKey===this._vehicleLightsLayoutKey && stateKey===this._vehicleLightsStateKey)return;
     this._vehicleLightsLayoutKey=layoutKey;
     this._vehicleLightsStateKey=stateKey;
 
     gfx.clear();
+    if(cal){
+      const brakingNow=this._brakePressed()&&!!this._raceStarted;
+      const drawGroup=(group,name)=>{
+        if(!group?.enabled)return;
+        const color=Number.parseInt(String(group.color||'#ffffff').slice(1),16);
+        const alpha=name==='rear'?(brakingNow?group.intensity:group.tailIntensity):group.intensity;
+        for(const side of ['left','right']){
+          const p=lightCoordinates(group[side],w,h);
+          const size=Math.max(.5,p.size);
+          if(name==='front'){
+            // Two small bright cores with soft concentric halos: no full-screen light object.
+            gfx.fillStyle(color,alpha*group.halo*.10);gfx.fillCircle(p.x,p.y,size*2.8);
+            gfx.fillStyle(color,alpha*group.halo*.24);gfx.fillCircle(p.x,p.y,size*1.6);
+            gfx.fillStyle(color,alpha);gfx.fillCircle(p.x,p.y,size*.55);
+          }else{
+            gfx.fillStyle(color,alpha);
+            gfx.fillTriangle(p.x-size*.52,p.y-size*.42,p.x+size*.52,p.y-size*.42,p.x,p.y+size*.55);
+            if(brakingNow && group.halo>0){
+              gfx.fillStyle(color,alpha*group.halo*.25);
+              gfx.fillTriangle(p.x-size*.9,p.y-size*.63,p.x+size*.9,p.y-size*.63,p.x,p.y+size*.95);
+            }
+          }
+        }
+      };
+      drawGroup(cal.front,'front');
+      drawGroup(cal.rear,'rear');
+      return;
+    }
 
+    // Unconfigured cars use the previous approved lights exactly as before.
     // En las tres skins que muestran el frontal no dibujamos ninguna luz añadida.
     // Se conserva únicamente el arte propio del sprite.
     if(frontFacing) return;

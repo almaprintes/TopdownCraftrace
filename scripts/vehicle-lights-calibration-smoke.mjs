@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {CAR_SPECS} from '../src/game/cars/carSpecs.js';
+import {getEquippedCarSkin,equipCarSkin} from '../src/game/skins/carSkins.js';
+import {defaultVehicleLights,normalizeVehicleLights,vehicleLightsForCar,
+ mergeVehicleLights,lightCoordinates,VEHICLE_LIGHTS_EXPORT,FRONT_FACING_CARS
+} from '../src/game/skins/vehicleLightsCalibration.js';
+const read=p=>readFileSync(p,'utf8');
+const raw=JSON.parse(read('src/game/skins/vehicleLights.json'));
+assert.equal(raw.schema_version,1);
+assert.equal(VEHICLE_LIGHTS_EXPORT,'tdr-vehicle-lights.json');
+assert.equal(vehicleLightsForCar('crown_axis','original'),null,'legacy lighting untouched until calibrated');
+assert.equal(defaultVehicleLights('crown_cuper').rear.enabled,true);
+for(const id of FRONT_FACING_CARS)assert.equal(defaultVehicleLights(id).rear.enabled,false,'existing front-facing cars remain dark');
+const base=normalizeVehicleLights({},'crown_cuper');
+assert.equal(base.front.enabled,false);
+assert.equal(base.rear.left.x,-.285);
+assert.equal(base.rear.right.x,.285);
+assert.deepEqual(lightCoordinates({x:-.25,y:.385,size:.18},40,80),{x:-10,y:30.8,size:7.2});
+const custom=normalizeVehicleLights({front:{enabled:true,left:{x:-.2,y:-.4,size:.16},right:{x:.24,y:-.38,size:.14},color:'#abcdef',intensity:.9},
+ rear:{enabled:true,left:{x:-.21,y:.4,size:.19},right:{x:.23,y:.39,size:.17},tailIntensity:.35}},'crown_cuper');
+const merged=mergeVehicleLights(raw,{crown_cuper:{original:custom,gold:{rear:{enabled:false}}}});
+assert.equal(vehicleLightsForCar('crown_cuper','original',merged.cars).front.enabled,true);
+assert.equal(vehicleLightsForCar('crown_cuper','gold',merged.cars).rear.enabled,false);
+assert.equal(vehicleLightsForCar('crown_cuper','invalid',merged.cars).front.enabled,true,'fallback to original skin');
+assert.equal(vehicleLightsForCar('crown_axis','original',merged.cars),null,'uncalibrated cars do not change');
+const cap=normalizeVehicleLights({front:{left:{x:900,size:-10},color:'alert',intensity:32}},'crown_cuper');
+assert.equal(cap.front.left.x,.8);assert.equal(cap.front.left.size,.02);
+assert.equal(cap.front.color,'#fff8ed');assert.equal(cap.front.intensity,1);
+const storageData=new Map(),storage={getItem:k=>storageData.get(k)||null,setItem:(k,v)=>storageData.set(k,v)};
+assert.equal(getEquippedCarSkin('crown_cuper',{spec:CAR_SPECS.crown_cuper,storage,dev:true}).id,'original');
+assert.equal(equipCarSkin('crown_cuper','gold',{spec:CAR_SPECS.crown_cuper,storage,dev:true}).ok,true);
+assert.equal(getEquippedCarSkin('crown_cuper',{spec:CAR_SPECS.crown_cuper,storage,dev:true}).id,'gold');
+const editor=read('src/game/scenes/CarEditorScene.js');
+for(const key of ['data-act="vehicle-lights"','_openVehicleLightsCalibration','showAdminVehicleLightsCalibration'])assert.ok(editor.includes(key),key);
+const ui=read('src/game/ui/AdminVehicleLightsCalibration.js');
+for(const key of ['data-group="front"','data-group="rear"','data-braking','data-side="left"','data-side="right"','data-export','bindMasteryHoldRepeat','data-mirror','pointermove','data-color'])assert.ok(ui.includes(key),key);
+const race=read('src/game/scenes/RaceBrakeLightsSpeedTrailScene.js');
+for(const key of ['vehicleLightsForCar(id,equipped.id)','if(cal){','drawGroup(cal.front','drawGroup(cal.rear','window.__tdrIosSafeMode'])assert.ok(race.includes(key),key);
+assert.ok(read('index.html').includes('content="DEV 1.2.200"'));
+console.log('Vehicle light admin: front/rear L-R, per skin, draft export, legacy fallback, iOS guard and 1px controls OK');
