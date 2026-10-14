@@ -13,7 +13,6 @@ const BASE=import.meta.env.BASE_URL||'/';
 const STORAGE_KEY='tdr2:adminMasteryRoofDraft:1';
 const ids=Object.keys(CAR_SPECS).sort((a,b)=>
   (Number(CAR_SPECS[a]?.collectionNo)||0)-(Number(CAR_SPECS[b]?.collectionNo)||0));
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function readDraft(){
   try{
     const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
@@ -36,16 +35,16 @@ function styleButton(btn,{active=false,accent='#4edfff'}={}){
     '-webkit-tap-highlight-color:transparent;border-radius:8px;'+
     (active?'box-shadow:inset 0 0 15px rgba(255,212,112,.2);':'');
 }
-export function showAdminMasteryRoofCalibration(adminRoot){
+export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onClose=null}={}){
   if(!adminRoot)return null;
   adminRoot.querySelector('[data-mastery-roof-editor]')?.remove();
   const draft=readDraft();
-  let carId=ids[0],view='lobby',level=1,shortAxis=0,previewReady=false;
-  let lastJson='',blobUrl=null;
+  let carId=ids.includes(initialCarId)?initialCarId:ids[0],view='lobby',level=1,shortAxis=0,previewReady=false;
+  let blobUrl=null;
   const root=document.createElement('section');
   root.dataset.masteryRoofEditor='1';
   root.setAttribute('aria-label','Calibración global de maestrías');
-  root.style.cssText='position:absolute;inset:0;z-index:30;box-sizing:border-box;overflow:auto;'+
+  root.style.cssText='position:absolute;inset:0;z-index:30000;box-sizing:border-box;overflow:auto;'+
     '-webkit-overflow-scrolling:touch;background:radial-gradient(circle at 50% 0%,#162c3a,#06101b 75%);'+
     'color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'+
     'padding:clamp(9px,1.7vh,18px);pointer-events:auto;touch-action:pan-y;';
@@ -89,6 +88,11 @@ export function showAdminMasteryRoofCalibration(adminRoot){
           <strong data-size-label style="font-size:12px;color:#e9f4ff">Tamaño</strong>
           <button type="button" data-nudge="grow" aria-label="Aumentar insignia un píxel">+ 1 PX</button>
         </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button type="button" data-rotate="-90" aria-label="Rotar 90 grados a la izquierda">↶ 90°</button>
+          <strong data-angle style="font-size:12px;color:#e9f4ff">GIRO 0°</strong>
+          <button type="button" data-rotate="90" aria-label="Rotar 90 grados a la derecha">90° ↷</button>
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button type="button" data-reset-view>RESTABLECER ESTA VISTA</button>
           <button type="button" data-reset-car>RESTABLECER COCHE</button>
@@ -114,6 +118,7 @@ export function showAdminMasteryRoofCalibration(adminRoot){
   const viewRow=()=>normalizedMasteryCalibration(getEntry()[view]);
   const status=s=>{$('[data-status]').textContent=s;};
   function preview(){
+    if(!root.isConnected)return;
     const rect=carImage.getBoundingClientRect();
     const bounds=paintedCarBounds(rect,carImage.naturalWidth,carImage.naturalHeight);
     if(!bounds){previewReady=false;$('[data-wait]').textContent='Esperando imagen del coche';return;}
@@ -139,6 +144,8 @@ export function showAdminMasteryRoofCalibration(adminRoot){
     badge.style.left=(x-stageRect.left)+'px';
     badge.style.top=(y-stageRect.top)+'px';
     badge.style.width=size+'px';badge.style.height=size+'px';
+    badge.style.transform='translate(-50%,-50%) rotate('+row.rotation+'deg)';
+    $('[data-angle]').textContent='GIRO '+row.rotation+'°';
     $('[data-readout]').textContent='X '+(row.x*shortAxis).toFixed(1)+' px · Y '+(row.y*shortAxis).toFixed(1)+' px';
     $('[data-size-label]').textContent='ESCUDO '+size.toFixed(1)+' px';
     $('[data-wait]').textContent=view==='race'?'CARRERA · VISTA PROPORCIONAL':'LOBBY · PREVISUALIZACIÓN';
@@ -157,7 +164,6 @@ export function showAdminMasteryRoofCalibration(adminRoot){
   }
   function persist(){
     saveDraft(draft);
-    lastJson='';
     status('BORRADOR LOCAL GUARDADO · Falta exportar para publicar.');
     preview();
   }
@@ -180,15 +186,17 @@ export function showAdminMasteryRoofCalibration(adminRoot){
   for(const btn of root.querySelectorAll('[data-nudge]'))
     btn.onclick=()=>{const [axis,px]=increments[btn.dataset.nudge];
       edit(row=>nudgeMasteryCalibration(row,axis,px,shortAxis));};
+  for(const button of root.querySelectorAll('[data-rotate]'))
+    button.onclick=()=>edit(row=>({...row,rotation:(row.rotation+Number(button.dataset.rotate)+360)%360}));
   $('[data-reset-center]').onclick=()=>edit(row=>({...row,x:0,y:0}));
-  $('[data-reset-view]').onclick=()=>edit(()=>({x:0,y:0,size:0}));
+  $('[data-reset-view]').onclick=()=>edit(()=>({x:0,y:0,size:0,rotation:0}));
   $('[data-reset-car]').onclick=()=>{
-    draft[carId]={lobby:{x:0,y:0,size:0},race:{x:0,y:0,size:0}};persist();
+    draft[carId]={lobby:{x:0,y:0,size:0,rotation:0},race:{x:0,y:0,size:0,rotation:0}};persist();
   };
   const payload=()=>mergeMasteryCalibration(official,draft,ids);
   const json=()=>JSON.stringify(payload(),null,2)+'\n';
   $('[data-export]').onclick=()=>{
-    const text=json();lastJson=text;
+    const text=json();
     const blob=new Blob([text],{type:'application/json'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');
     a.href=url;a.download=CALIBRATION_EXPORT_FILENAME;
@@ -198,7 +206,7 @@ export function showAdminMasteryRoofCalibration(adminRoot){
     status('JSON EXPORTADO · Envíalo al chat para publicarlo en el repositorio.');
   };
   $('[data-copy]').onclick=async()=>{
-    const data=json();lastJson=data;
+    const data=json();
     try{await navigator.clipboard.writeText(data);status('JSON COPIADO AL PORTAPAPELES');}
     catch{status('No se pudo copiar: utiliza EXPORTAR JSON.');}
   };
@@ -206,6 +214,7 @@ export function showAdminMasteryRoofCalibration(adminRoot){
     observer?.disconnect();
     if(blobUrl)URL.revokeObjectURL(blobUrl);
     root.remove();
+    onClose?.();
   }
   $('[data-action="close"]').onclick=close;
   const observer=typeof ResizeObserver==='function'?new ResizeObserver(()=>requestAnimationFrame(()=>{if(root.isConnected)preview();})):null;
