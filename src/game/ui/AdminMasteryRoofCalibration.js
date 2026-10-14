@@ -48,7 +48,28 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
     '-webkit-overflow-scrolling:touch;background:radial-gradient(circle at 50% 0%,#162c3a,#06101b 75%);'+
     'color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'+
     'padding:clamp(9px,1.7vh,18px);pointer-events:auto;touch-action:pan-y;';
+  root.classList.add('tdr-admin-mastery-editor');
   root.innerHTML=`
+    <style>
+      .tdr-admin-mastery-editor .mcal-columns>div{
+        border:1px solid rgba(94,219,244,.24);
+        border-radius:16px;
+        padding:clamp(9px,1.5vw,16px);
+        background:linear-gradient(145deg,rgba(15,45,58,.65),rgba(5,18,30,.88));
+        box-shadow:inset 0 1px rgba(229,252,255,.08),0 15px 28px rgba(0,0,0,.18)
+      }
+      .tdr-admin-mastery-editor button:active{filter:brightness(1.27);transform:scale(.98)}
+      .tdr-admin-mastery-editor button:focus-visible{outline:2px solid #ffe082;outline-offset:2px}
+      .tdr-admin-mastery-editor [data-status]{display:block;padding:4px 0}
+      @media(max-width:760px){
+        .tdr-admin-mastery-editor .mcal-columns{grid-template-columns:minmax(0,1fr)!important}
+        .tdr-admin-mastery-editor [data-stage]{height:clamp(170px,38vh,250px)!important}
+        .tdr-admin-mastery-editor .mcal-toolbar{margin-bottom:3px!important}
+      }
+      @media(max-height:390px){
+        .tdr-admin-mastery-editor [data-stage]{height:clamp(155px,47vh,215px)!important}
+      }
+    </style>
     <div class="mcal-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
       <div><strong style="font-size:clamp(14px,2.8vh,24px)">CALIBRAR MAESTRÍAS</strong>
       <div style="font-size:10px;color:#97b3c8">GLOBAL · 2 PX MOVIMIENTO · 1 PX TAMAÑO</div></div>
