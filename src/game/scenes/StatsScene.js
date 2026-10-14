@@ -3,6 +3,8 @@ import {observeAppHeader,appBackLabel} from '../ui/TdrAppHeader.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { unlockedCarIds } from '../cars/carUnlocks.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import {carVisualCandidates} from '../skins/carDisplayArt.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { getTrackPublicName } from '../tracks/trackPublicNames.js';
 import { loadPlayerStats, reconcileTimeTrialHistory } from '../stats/playerStats.js';
@@ -50,7 +52,7 @@ export class StatsScene extends Phaser.Scene{
   _ranking(rows,trackId,selectedCarId,lang){
     const ranked=rows.map(r=>{const st=r.car.tracks?.[trackId]||{};const ms=Number(st.bestLapMs);return{...r,trackStats:st,trackBest:Number.isFinite(ms)&&ms>0?ms:null};}).sort((a,b)=>{if(a.trackBest&&b.trackBest)return a.trackBest-b.trackBest;if(a.trackBest)return-1;if(b.trackBest)return 1;return String(a.spec.brand||'').localeCompare(String(b.spec.brand||''))||String(a.spec.name||'').localeCompare(String(b.spec.name||''));});
     let rank=0;
-    const html=ranked.map(r=>{if(r.trackBest)rank++;const st=r.trackStats,hasMileage=Number(st.meters)>0||Number(st.races)>0||Number(st.laps)>0;return`<tr class="${r.id===selectedCarId?'sh-selected-row':''}"><td class="sh-rank">${r.trackBest?rank:'—'}</td><td><div class="sh-compare-car"><img src="${BASE}assets/skins/${encodeURIComponent(r.spec.skin||'')}" alt=""><span><strong>${esc(r.spec.name||r.id)}</strong><small>${esc(r.spec.brand||'')}</small></span></div></td><td class="${r.trackBest?'time':'unknown'}">${fmtLap(r.trackBest)}</td><td>${Number(st.laps)||0}</td><td class="${hasMileage?'km':'unknown'}">${hasMileage?`${fmtKm(st.meters,lang)} KM`:'—'}</td></tr>`;}).join('');
+    const html=ranked.map(r=>{if(r.trackBest)rank++;const st=r.trackStats,hasMileage=Number(st.meters)>0||Number(st.races)>0||Number(st.laps)>0;return`<tr class="${r.id===selectedCarId?'sh-selected-row':''}"><td class="sh-rank">${r.trackBest?rank:'—'}</td><td><div class="sh-compare-car"><img src="${carVisualCandidates(r.id,r.spec,{base:BASE,dev:!IS_PROD_BUILD})[0]||''}" alt=""><span><strong>${esc(r.spec.name||r.id)}</strong><small>${esc(r.spec.brand||'')}</small></span></div></td><td class="${r.trackBest?'time':'unknown'}">${fmtLap(r.trackBest)}</td><td>${Number(st.laps)||0}</td><td class="${hasMileage?'km':'unknown'}">${hasMileage?`${fmtKm(st.meters,lang)} KM`:'—'}</td></tr>`;}).join('');
     const leader=ranked.find(r=>r.trackBest)||null;
     return{html,leader};
   }

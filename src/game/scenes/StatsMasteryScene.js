@@ -1,4 +1,7 @@
 import { StatsScene as CurrentStatsScene } from './StatsScene.js';
+import {CAR_SPECS} from '../cars/carSpecs.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
+import {applyCarVisual} from '../skins/carDisplayArt.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { masteryInfoForMeters, masteryMaterialLabel, masteryWheelDataUri } from '../stats/carMastery.js';
 import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
@@ -6,7 +9,10 @@ import masteryPremiumCss from '../ui/mastery-premium.css?inline';
 
 const BASE=import.meta.env.BASE_URL||'/';
 function fmtKm(n,lang){return Math.max(0,Number(n)||0).toLocaleString(lang==='en'?'en-US':'es-ES',{minimumFractionDigits:1,maximumFractionDigits:1});}
-function lobbyCarSrc(carId){return `${BASE}assets/cars/lobby/${encodeURIComponent(String(carId||''))}.webp`;}
+function applyStatsCarArt(img,carId){
+ applyCarVisual(img,carId,CAR_SPECS[carId],{base:BASE,dev:!IS_PROD_BUILD});
+ img.dataset.statsLobbyArt='1';
+}
 
 export class StatsScene extends CurrentStatsScene{
   create(...args){
@@ -30,13 +36,13 @@ export class StatsScene extends CurrentStatsScene{
       const carId=String(card.dataset.car||'');
       const img=card.querySelector('.sh-car__art img');
       if(!carId||!img)return;
-      img.src=lobbyCarSrc(carId);img.dataset.statsLobbyArt='1';
+      applyStatsCarArt(img,carId);
     });
   }
   _replaceDetailCarArt(carId){
     const img=this._root?.querySelector('.sh-detail-title img.car');
     if(!img||!carId)return;
-    img.src=lobbyCarSrc(carId);img.dataset.statsLobbyArt='1';
+    applyStatsCarArt(img,carId);
   }
   _renderCars(){
     super._renderCars();this._installMasteryStyles();this._replaceOverviewCarArt();

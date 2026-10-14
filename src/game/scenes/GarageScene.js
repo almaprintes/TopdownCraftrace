@@ -1,4 +1,5 @@
-import {getEquippedCarSkin,hasAlternativeSkins,hasPublishedCarArt} from '../skins/carSkins.js';
+import {hasPublishedCarArt} from '../skins/carSkins.js';
+import {carCardFile,carCardUrl} from '../cars/carCardArt.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 import Phaser from 'phaser';
 import {mountSceneAppHeader} from '../ui/TdrAppHeader.js';
@@ -734,9 +735,9 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
       .replace(' ', '_')
       .normalize('NFD')
       .replace(/[\\u0300-\\u036f]/g, '');
-    const fileName = `card_${carId}_${raritySlug}_${String(spec.collectionNo || 0).padStart(3, '0')}.webp`;
+    const fileName = carCardFile(carId,spec);
     const assetVersion = encodeURIComponent(spec.cardAssetVersion || 1);
-    const src=hasAlternativeSkins(carId)?`assets/skins/${getEquippedCarSkin(carId,{spec,dev:!IS_PROD_BUILD}).file}`:`${CARD_BASE}${fileName}?v=${assetVersion}`;
+    const src=carCardUrl(carId,spec);
 
     // Reuse the exact URL already resolved and decoded by Phaser. This avoids
     // differences between Phaser's loader base URL and document.baseURI.
@@ -840,12 +841,11 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '');
 
-    const fileName =
-      `card_${carId}_${raritySlug}_${String(spec.collectionNo || 0).padStart(3, '0')}.webp`;
+    const fileName = carCardFile(carId,spec);
 
     const assetVersion = encodeURIComponent(spec.cardAssetVersion || 1);
     const texKey = `card_${carId}_v${assetVersion}`;
-    const url=hasAlternativeSkins(carId)?`assets/skins/${getEquippedCarSkin(carId,{spec,dev:!IS_PROD_BUILD}).file}`:`${CARD_BASE}${fileName}?v=${assetVersion}`;
+    const url=carCardUrl(carId,spec);
 
     if (this.textures.exists(texKey)) {
       onReady?.(texKey);
@@ -871,7 +871,8 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
     this.load.once(`filecomplete-image-${texKey}`, onFileOk);
     this.load.on(Phaser.Loader.Events.LOAD_ERROR, onFileErr);
 
-    this.load.image(texKey, url);
+    if(fileName.endsWith('.svg'))this.load.svg(texKey,url);
+    else this.load.image(texKey,url);
 
     if (!this.load.isLoading()) this.load.start();
   }

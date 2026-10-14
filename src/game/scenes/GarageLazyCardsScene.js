@@ -1,4 +1,5 @@
 import {availableCarSkins,hasAlternativeSkins,getEquippedCarSkin,equipCarSkin,skinIsUnlocked,hasPublishedCarArt} from '../skins/carSkins.js';
+import {carCardFile,carCardUrl} from '../cars/carCardArt.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 import { GarageScene as CurrentGarageScene } from './GarageResponsiveHeroScene.js';
 import { BaseScene } from './BaseScene.js';
@@ -13,22 +14,13 @@ import { getVehicleClass, internalPr } from '../cars/performanceRating.js';
 import { loadGarage, garageInternalStats, garageTuning } from '../garage/garageStore.js';
 import { t, getLanguage } from '../i18n/index.js';
 
-function cardFileFor(carId,spec){
-  const rarity=String(spec?.rarity||'comun').toLowerCase().replace(/\s+/g,'_').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  const no=String(spec?.collectionNo||0).padStart(3,'0');
-  return `card_${carId}_${rarity}_${no}.webp`;
-}
+const cardFileFor=carCardFile;
 const LEGACY_IDS=new Set(['stock','touring','power']);
 const BASE=import.meta.env.BASE_URL||'/';
 const DOM_ID='tdr-garage-player-dom';
 const STYLE_ID='tdr-garage-player-dom-style';
-const skinPreview=(id,spec)=>{
- if(spec?.cardPreviewAsset&&hasAlternativeSkins(id)){
-  const skin=getEquippedCarSkin(id,{spec,dev:!IS_PROD_BUILD});
-  return `${BASE}assets/skins/${encodeURIComponent(skin.file)}`;
- }
- return `${BASE}assets/cars/runtime/${cardFileFor(id,spec)}?v=${encodeURIComponent(spec?.cardAssetVersion||1)}`;
-};
+// Cards represent the stock car and never display player skins.
+const skinPreview=(id,spec)=>carCardUrl(id,spec,BASE);
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function savedSpec(carId){try{const raw=localStorage.getItem(`tdr2:carSpecs:${carId}`),obj=raw?JSON.parse(raw):null;return obj&&typeof obj==='object'?obj:{};}catch{return {};}}
@@ -62,7 +54,7 @@ export class GarageScene extends CurrentGarageScene {
     if(this._mode!=='admin')return;
     super.preload?.();
     this.load.setPath('assets/cars/runtime');
-    for(const {id,spec} of playableCars()){const key=`card_${id}`,file=cardFileFor(id,spec);if(!this.textures.exists(key))this.load.image(key,file);}
+    for(const {id,spec} of playableCars()){const key=`card_${id}`,file=cardFileFor(id,spec);if(!this.textures.exists(key)){if(file.endsWith('.svg'))this.load.svg(key,file);else this.load.image(key,file);}}
     this.load.setPath('');
   }
 
@@ -172,12 +164,7 @@ export class GarageScene extends CurrentGarageScene {
         skinTray.querySelectorAll('[data-skin]').forEach(button=>button.addEventListener('click',()=>{
           if(this._lockedCar(selected.id))return;
           const result=equipCarSkin(selected.id,button.dataset.skin,{spec,dev:!IS_PROD_BUILD});
-          if(result.ok){
-            this._renderPlayerDomSelection();
-            root.querySelectorAll('.tdr-garage-dom-car').forEach((node,i)=>{
-              if(this._cars?.[i]?.id===selected.id){const thumb=node.querySelector('img');if(thumb)thumb.src=skinPreview(selected.id,spec);}
-            });
-          }
+          if(result.ok)this._renderPlayerDomSelection(); // Fixed collection card remains unchanged.
         }));
       }
     }
