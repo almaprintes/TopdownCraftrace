@@ -48,17 +48,39 @@ export class RaceScene extends CurrentRaceScene{
     g.lineStyle(Math.max(.65,r*.16),light,.95);g.strokePoints(shell,true);
     g.fillStyle(rim,.97);g.fillPoints(inner,true);
     g.lineStyle(Math.max(.6,r*.12),dark,.95);g.strokePoints(inner,true);
-    // Contrasting enamel insert with a legible competition STAR.
+    // Contrasting enamel insert. One, two or three stars make the grades
+    // distinguishable even when the crest is only a few phone pixels wide.
     const enamel=inner.map(p=>({x:p.x*.82,y:p.y*.77}));
     g.fillStyle(0x102a35,.96);g.fillPoints(enamel,true);
-    const star=[];
-    for(let i=0;i<10;i++){
-      const a=-Math.PI/2+Math.PI*i/5;
-      const rad=i%2?r*.205:r*.44;
-      star.push({x:Math.cos(a)*rad,y:Math.sin(a)*rad-r*.045});
+    const rank=(mastery.level-1)%3+1;
+    if(rank>=2){
+      g.fillStyle(rim,.98);
+      for(const side of [-1,1])g.fillPoints([
+        {x:side*r*.68,y:-r*.24},{x:side*r*.84,y:-r*.13},
+        {x:side*r*.8,y:r*.25},{x:side*r*.65,y:r*.13}
+      ],true);
     }
-    g.fillStyle(light,1);g.fillPoints(star,true);
-    g.lineStyle(Math.max(.5,r*.075),dark,.95);g.strokePoints(star,true);
+    if(rank===3){
+      g.lineStyle(Math.max(.65,r*.11),light,1);
+      g.strokePoints([
+        {x:-r*.38,y:-r*.59},{x:-r*.30,y:-r*.79},{x:-r*.12,y:-r*.64},
+        {x:0,y:-r*.87},{x:r*.12,y:-r*.64},{x:r*.30,y:-r*.79},
+        {x:r*.38,y:-r*.59}
+      ],false);
+    }
+    const starLayout=rank===1?[{x:0,y:-r*.04,scale:.44}]:
+      rank===2?[{x:-r*.29,y:-r*.04,scale:.30},{x:r*.29,y:-r*.04,scale:.30}]:
+      [{x:0,y:-r*.36,scale:.255},{x:-r*.27,y:r*.27,scale:.25},{x:r*.27,y:r*.27,scale:.25}];
+    for(const item of starLayout){
+      const star=[];
+      for(let i=0;i<10;i++){
+        const a=-Math.PI/2+Math.PI*i/5;
+        const rad=i%2?r*item.scale*.42:r*item.scale;
+        star.push({x:item.x+Math.cos(a)*rad,y:item.y+Math.sin(a)*rad});
+      }
+      g.fillStyle(light,1);g.fillPoints(star,true);
+      g.lineStyle(Math.max(.5,r*.07),dark,.95);g.strokePoints(star,true);
+    }
     // Canonical five/eight/twelve small honor strokes, no rotating spokes.
     const marks=Math.max(3,Number(visual.spokes)||5);
     g.lineStyle(Math.max(.45,r*.05),light,.9);
@@ -66,8 +88,7 @@ export class RaceScene extends CurrentRaceScene{
       const xx=-r*.51+(i+.5)*r*1.02/marks;
       g.lineBetween(xx,-r*.52,xx,-r*.64);
     }
-    // Three rank grades inside each material tier.
-    const rank=(mastery.level-1)%3+1;
+    // Three rank-grade chevrons beneath the large star group.
     g.lineStyle(Math.max(.55,r*.085),light,1);
     for(let i=0;i<rank;i++){
       const yy=r*(.56+i*.105);
