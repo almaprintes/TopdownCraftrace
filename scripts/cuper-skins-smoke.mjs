@@ -1,3 +1,4 @@
+import assetStatus from '../src/game/skins/cuperAssetsStatus.json' with {type:'json'};
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {CAR_SPECS} from '../src/game/cars/carSpecs.js';
@@ -6,8 +7,8 @@ import {normalizeSkinGeometry,skinGeometryForSprite,mergeSkinGeometry} from '../
 const read=p=>readFileSync(p,'utf8');
 const car=CAR_SPECS.crown_cuper,axis=CAR_SPECS.crown_axis;
 assert.equal(car.id,'crown_cuper');
-assert.equal(CUPER_ASSETS_PUBLISHED,false,'Do not expose broken Cuper before image upload');
-assert.equal(hasPublishedCarArt('crown_cuper'),false);
+assert.equal(CUPER_ASSETS_PUBLISHED,assetStatus.published===true,'Runtime flag tracks verified GitHub binaries');
+assert.equal(hasPublishedCarArt('crown_cuper'),assetStatus.published===true,'Cuper only enters the garage with both valid sprites');
 assert.equal(hasPublishedCarArt('helix_spark'),true);
 assert.equal(car.collectionNo,18);
 for(const k of ['maxFwd','maxRev','accel','brakeForce','engineBrake','linearDrag','turnRate','turnMin','gripCoast','gripDrive','gripBrake'])assert.equal(car[k],axis[k],'provisional physics: '+k);

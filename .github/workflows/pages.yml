@@ -40,6 +40,7 @@ jobs:
         shell: bash
         run: |
           npm ci --no-audit --no-fund
+          node scripts/detect-cuper-assets.mjs
           node scripts/install-karting-tenerife-source.mjs
           node scripts/install-santa-cruz-source.mjs
           node scripts/santa-cruz-official-source-smoke.mjs

@@ -1,3 +1,4 @@
+import cuperStatus from './cuperAssetsStatus.json' with {type:'json'};
 // A cosmetic skin never creates a new car profile, stats, or record.
 export const CAR_SKIN_CATALOG=Object.freeze({
  crown_cuper:Object.freeze([
@@ -5,9 +6,8 @@ export const CAR_SKIN_CATALOG=Object.freeze({
   Object.freeze({id:'gold',name:'Gold Edition',file:'skin_crown_cuper_gold.webp',premium:true})
  ])
 });
-// The two WebP binary assets must be in GitHub before the new car appears.
-// Change only in the commit that adds the verified files.
-export const CUPER_ASSETS_PUBLISHED=false;
+// Generated from verified WebP binaries by GitHub Actions before each build.
+export const CUPER_ASSETS_PUBLISHED=cuperStatus.published===true;
 export function hasPublishedCarArt(carId){return carId!=='crown_cuper'||CUPER_ASSETS_PUBLISHED;}
 const KEY='tdr2:equippedSkins:v1';
 export function availableCarSkins(carId,spec=null){
