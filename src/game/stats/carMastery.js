@@ -6,6 +6,12 @@ const COLORS={
   silver:{rim:'#c6cbd0',light:'#f2f5f7',dark:'#6f7880'},
   gold:{rim:'#d8a52f',light:'#ffe082',dark:'#8d6413'}
 };
+// Bright stars against almost-black enamel: shield metal remains unchanged.
+const STAR_FINISH={
+  bronze:{starHighlight:'#ffedcd',starLight:'#ffc985',starShadow:'#d98942'},
+  silver:{starHighlight:'#ffffff',starLight:'#edf7ff',starShadow:'#9eafc2'},
+  gold:{starHighlight:'#fff8c7',starLight:'#ffe77e',starShadow:'#e5b53a'}
+};
 const MATERIAL_LABELS={
   bronze:{es:'BRONCE',en:'BRONZE'},silver:{es:'PLATA',en:'SILVER'},gold:{es:'ORO',en:'GOLD'}
 };
@@ -22,7 +28,7 @@ export function masteryVisualSpec(level){
   const lv=Math.max(0,Math.min(9,Number(level)||0));
   if(!lv)return{level:0,spokes:0,material:null,rim:'#252525',light:'#4a4a4a',dark:'#111111'};
   const material=MATERIALS[lv-1],c=COLORS[material];
-  return{level:lv,spokes:SPOKES[lv-1],material,...c};
+  return{level:lv,spokes:SPOKES[lv-1],material,...c,...STAR_FINISH[material]};
 }
 
 export function masteryInfoForMeters(meters){
@@ -56,13 +62,12 @@ export function masteryWheelSvg(level,{size=128,blackBackground=true}={}){
     const x2=64+Math.cos(a)*39,y2=64+Math.sin(a)*39;
     rays+=`<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${highlight}" stroke-width="2.1" stroke-linecap="round" opacity=".86"/>`;
   }
-  // Large, readable tier markers: ONE / TWO / THREE stars inside each
-  // bronze, silver and gold shield. Micro engravings alone were invisible
-  // on a car roof, so the central symbol changes at real game sizes.
+  // The stars have a brighter metal gradient and a dark separation outline.
+  // Smaller graded stars remain inside the near-black enamel field.
   const rank=lv?((lv-1)%3+1):0;
   const stars=rank===1?[{x:64,y:60,r:24}]:
-    rank===2?[{x:49,y:61,r:17},{x:79,y:61,r:17}]:
-    rank===3?[{x:64,y:45,r:15},{x:49,y:72,r:14},{x:79,y:72,r:14}]:[];
+    rank===2?[{x:50,y:61,r:15},{x:78,y:61,r:15}]:
+    rank===3?[{x:64,y:47,r:13},{x:51,y:73,r:12},{x:77,y:73,r:12}]:[];
   const starsMarkup=stars.map((star,index)=>{
     const pts=[];
     for(let i=0;i<10;i++){
@@ -70,7 +75,7 @@ export function masteryWheelSvg(level,{size=128,blackBackground=true}={}){
       const r=i%2?star.r*.42:star.r;
       pts.push(`${(star.x+Math.cos(a)*r).toFixed(2)},${(star.y+Math.sin(a)*r).toFixed(2)}`);
     }
-    return `<polygon data-mastery-star="${index+1}" points="${pts.join(' ')}" fill="url(#mastery-metal)" stroke="${highlight}" stroke-width="2" stroke-linejoin="round"/>`;
+    return `<polygon data-mastery-star="${index+1}" points="${pts.join(' ')}" fill="url(#mastery-star)" stroke="#020a11" stroke-width="5" paint-order="stroke fill" stroke-linejoin="round"/><polygon points="${pts.join(' ')}" fill="none" stroke="${v.starHighlight}" stroke-width=".65" stroke-opacity=".75" stroke-linejoin="round"/>`;
   }).join('');
   // The side chevrons / championship crown reinforce each star grade
   // without changing the bronze / silver / gold family colours.
@@ -93,7 +98,7 @@ export function masteryWheelSvg(level,{size=128,blackBackground=true}={}){
   const champion=lv===9
     ?'<path d="M64 3 L115 24 L112 73 Q104 96 64 123 Q24 96 16 73 L13 24 Z" fill="none" stroke="#ffe69c" stroke-width="2" opacity=".93"/>'
     :'';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${safeSize}" height="${safeSize}" viewBox="0 0 128 128"><defs><linearGradient id="mastery-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${highlight}"/><stop offset="51%" stop-color="${metal}"/><stop offset="100%" stop-color="${shadow}"/></linearGradient><radialGradient id="mastery-enamel"><stop offset="0%" stop-color="#203943"/><stop offset="100%" stop-color="#051016"/></radialGradient></defs>${backing}<path d="${shield}" fill="${shadow}" stroke="${highlight}" stroke-width="2.4"/><path d="${inset}" fill="url(#mastery-metal)" stroke="${shadow}" stroke-width="2"/><path d="${enamel}" fill="url(#mastery-enamel)" stroke="${highlight}" stroke-width="1.2" stroke-opacity=".66"/>${lv?rays:''}${gradeTrim}${starsMarkup}${gradeBorder}${bars}<path d="M27 32 L32 70 Q38 86 52 96" fill="none" stroke="${highlight}" stroke-width="1.1" opacity=".4"/>${champion}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${safeSize}" height="${safeSize}" viewBox="0 0 128 128"><defs><linearGradient id="mastery-metal" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="${highlight}"/><stop offset="51%" stop-color="${metal}"/><stop offset="100%" stop-color="${shadow}"/></linearGradient><radialGradient id="mastery-enamel"><stop offset="0%" stop-color="#0d2330"/><stop offset="100%" stop-color="#02070d"/></radialGradient><linearGradient id="mastery-star" x1="0%" y1="0%" x2="80%" y2="100%"><stop offset="0%" stop-color="${v.starHighlight}"/><stop offset="47%" stop-color="${v.starLight}"/><stop offset="100%" stop-color="${v.starShadow}"/></linearGradient></defs>${backing}<path d="${shield}" fill="${shadow}" stroke="${highlight}" stroke-width="2.4"/><path d="${inset}" fill="url(#mastery-metal)" stroke="${shadow}" stroke-width="2"/><path d="${enamel}" fill="url(#mastery-enamel)" stroke="${shadow}" stroke-width="1.7" stroke-opacity=".92"/>${lv?rays:''}${gradeTrim}${starsMarkup}${gradeBorder}${bars}<path d="M27 32 L32 70 Q38 86 52 96" fill="none" stroke="${highlight}" stroke-width="1.1" opacity=".4"/>${champion}</svg>`;
 }
 
 export function masteryWheelDataUri(level,opts={}){
