@@ -1,5 +1,6 @@
 import { UpgradeShopScene as CurrentWorkshop } from './UpgradeWorkshopLowHeightRecipeScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import {hasPublishedCarArt} from '../skins/carSkins.js';
 import {mountSceneAppHeader} from '../ui/TdrAppHeader.js';
 import { devFullCarAccessEnabled, isCarUnlocked, STARTER_CAR_ID } from '../cars/carUnlocks.js';
 import { loadGarage } from '../garage/garageStore.js';
@@ -9,7 +10,7 @@ import { openWorkshopQuickInstallDom, openWorkshopCraftedPartDom, closeWorkshopM
 import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 
 const LEGACY_CAR_IDS=new Set(['stock','touring','power']);
-const ALL_CAR_IDS=Object.keys(CAR_SPECS).filter(id=>!LEGACY_CAR_IDS.has(id)&&CAR_SPECS[id]);
+const ALL_CAR_IDS=Object.keys(CAR_SPECS).filter(id=>!LEGACY_CAR_IDS.has(id)&&CAR_SPECS[id]&&hasPublishedCarArt(id));
 const UI_FONT='system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 function touchMobile(){
