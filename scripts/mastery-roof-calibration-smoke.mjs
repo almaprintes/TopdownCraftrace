@@ -48,7 +48,7 @@ assert.equal(exported.cars.helix_spark.lobby.rotation,90);
 assert.equal(exported.cars.helix_spark.race.rotation,270);
 assert.equal(exported.cars.helix_spark.lobby.x,.02);
 assert.equal(exported.cars.helix_spark.race.x,-.01);
-assert.equal(exported.cars.helix_comet,undefined);
+assert.deepEqual(exported.cars.helix_comet,official.cars.helix_comet,'Export must preserve the committed Comet calibration');
 const editor=read('src/game/ui/AdminMasteryRoofCalibration.js');
 for(const marker of ['data-rotate','data-nudge="up"','data-nudge="shrink"',
   'data-view="lobby"','data-view="race"','data-export','data-reset-view',
