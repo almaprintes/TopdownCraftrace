@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { HANDLING_PROFILES } from '../cars/handlingProfiles.js';
 import {showAdminMasteryRoofCalibration} from '../ui/AdminMasteryRoofCalibration.js';
+import {showAdminSkinGeometryCalibration} from '../ui/AdminSkinGeometryCalibration.js';
 
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
@@ -184,10 +185,19 @@ this._downloadJson(fname, payload);
     this.add.existing(testBtn);
 
     // Limpieza al salir (si no, el DOM se queda pegado encima del juego)
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {this._masteryRoofEditor?.close();this._masteryRoofEditor=null;this._destroyDomPanel();});
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => {this._masteryRoofEditor?.close();this._masteryRoofEditor=null;this._destroyDomPanel();});
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {this._skinGeometryEditor?.close();this._skinGeometryEditor=null;this._masteryRoofEditor?.close();this._masteryRoofEditor=null;this._destroyDomPanel();});
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {this._skinGeometryEditor?.close();this._skinGeometryEditor=null;this._masteryRoofEditor?.close();this._masteryRoofEditor=null;this._destroyDomPanel();});
   }
 
+  _openSkinGeometryCalibration(){
+    const host=this.game?.canvas?.parentElement||document.getElementById('app')||document.body;
+    if(!host)return;
+    if(getComputedStyle(host).position==='static')host.style.position='relative';
+    this._skinGeometryEditor?.close();
+    this._skinGeometryEditor=showAdminSkinGeometryCalibration(host,{
+      initialCarId:this._carId,onClose:()=>{this._skinGeometryEditor=null;}
+    });
+  }
   _openMasteryRoofCalibration(){
     const host=this.game?.canvas?.parentElement||document.getElementById('app')||document.body;
     if(!host)return;
@@ -404,6 +414,7 @@ this._downloadJson(fname, payload);
           </select>
 
           <button class="mini masteryTab" data-act="mastery" type="button">★ MAESTRÍA / TECHO</button>
+          <button class="mini masteryTab" data-act="skin-geometry" type="button">◆ SKINS / APARIENCIA</button>
           <button class="mini" data-act="resetAll">RESET</button>
           <button class="mini" data-act="factory">FÁBRICA</button>
           <button class="mini" data-act="clear">CLEAR</button>
@@ -653,6 +664,7 @@ this._downloadJson(fname, payload);
       const act = t?.dataset?.act;
       if (!act) return;
 
+      if (act === 'skin-geometry') {this._openSkinGeometryCalibration();return;}
       if (act === 'mastery') {
         this._openMasteryRoofCalibration();
         return;

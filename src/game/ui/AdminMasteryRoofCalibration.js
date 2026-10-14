@@ -229,7 +229,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
   function loadImage(){
     previewReady=false;shortAxis=0;
     badge.src=masteryWheelDataUri(level,{size:160,blackBackground:false});
-    carImage.src=BASE+'assets/cars/lobby/'+encodeURIComponent(carId)+'.webp?v='+
+    carImage.src=carId==='crown_cuper'?BASE+'assets/skins/skin_crown_cuper_original.webp':BASE+'assets/cars/lobby/'+encodeURIComponent(carId)+'.webp?v='+
       encodeURIComponent(CAR_SPECS[carId]?.collectionNo||1);
     if(carImage.complete&&carImage.naturalWidth>0)requestAnimationFrame(preview);
   }

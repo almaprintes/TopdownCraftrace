@@ -21,7 +21,7 @@ export function showAdminSkinGeometryCalibration(host,{initialCarId='crown_cuper
  .tdr-admin-skin-geometry .sg-selectors{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
  .tdr-admin-skin-geometry .sg-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;min-height:0;flex:1}
  .tdr-admin-skin-geometry .sg-preview{position:relative;min-height:170px;border:1px solid #467d8e;border-radius:15px;background:radial-gradient(ellipse,#153748,#07131f);overflow:hidden;display:flex;align-items:center;justify-content:center}
- .tdr-admin-skin-geometry .sg-preview img{position:absolute;max-width:90%;max-height:91%;object-fit:contain;pointer-events:none;-webkit-user-drag:none}
+ .tdr-admin-skin-geometry .sg-preview img{position:absolute;left:50%;top:50%;max-width:90%;height:90%;width:auto;max-height:91%;object-fit:contain;pointer-events:none;-webkit-user-drag:none;transform:translate(-50%,-50%)}
  .tdr-admin-skin-geometry .sg-controls{min-height:0;overflow:auto;display:grid;align-content:start;gap:9px}
  .tdr-admin-skin-geometry .sg-pad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:280px;gap:5px}
  .tdr-admin-skin-geometry .sg-bar{display:flex;align-items:center;gap:8px;justify-content:space-between}
@@ -68,10 +68,11 @@ export function showAdminSkinGeometryCalibration(host,{initialCarId='crown_cuper
   const img=image.getBoundingClientRect();
   const nw=image.naturalWidth,nh=image.naturalHeight;
   const stage=root.querySelector('.sg-preview').getBoundingClientRect();
-  shortAxis=Math.min(stage.width*.9,stage.height*.91*Math.max(1,nw/nh));
-  shortAxis=Math.max(1,Math.min(img.width||stage.width*.9,(img.height||stage.height*.9)*nw/nh));ready=shortAxis>0;
+  const naturalPaintW=Math.min(stage.width*.9,stage.height*.9*(nw/nh));
+  const naturalPaintH=naturalPaintW*(nh/nw);
+  shortAxis=Math.max(1,Math.min(naturalPaintW,naturalPaintH));ready=shortAxis>0;
   const v=row(),pxX=v.x*shortAxis,pxY=v.y*shortAxis;
-  image.style.transform=`translate(${pxX}px,${pxY}px) rotate(${v.rotation}deg) scale(${1+v.scale})`;
+  image.style.transform=`translate(calc(-50% + ${pxX}px),calc(-50% + ${pxY}px)) rotate(${v.rotation}deg) scale(${1+v.scale})`;
   $('[data-position]').textContent=`POSICIÓN · X ${pxX.toFixed(1)} px · Y ${pxY.toFixed(1)} px`;
   $('[data-scale]').textContent=`TAMAÑO ${(v.scale*shortAxis).toFixed(1)} px`;
   $('[data-angle]').textContent=`GIRO ${v.rotation}°`;
