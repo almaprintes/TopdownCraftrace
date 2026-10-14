@@ -68,6 +68,7 @@ jobs:
           node scripts/mastery-premium-visual-smoke.mjs
           node scripts/mastery-roof-calibration-smoke.mjs
           node scripts/mastery-roof-hold-repeat-smoke.mjs
+          node scripts/cuper-skins-smoke.mjs
           node scripts/runtime-resizeobserver-recovery-smoke.mjs
           node scripts/admin-car-editor-route-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
