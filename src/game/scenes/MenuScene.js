@@ -1,3 +1,5 @@
+import {getEquippedCarSkin,selectedCarSkinFile,hasAlternativeSkins} from '../skins/carSkins.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
 import Phaser from 'phaser';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
@@ -857,7 +859,7 @@ _renderTracks(x, y, w, h) {
   }
 
   _skinKey(carId) {
-    return `skin:${carId}`;
+    return hasAlternativeSkins(carId)?`skin:${carId}:${getEquippedCarSkin(carId,{spec:CAR_SPECS[carId],dev:!IS_PROD_BUILD}).id}`:`skin:${carId}`;
   }
 
   _tryEnsureSkinTexture(carId) {
@@ -868,7 +870,7 @@ _renderTracks(x, y, w, h) {
     if (this.textures.exists(key)) return;
     if (this._skinFail?.has(carId)) return;
 
-    const url = `assets/skins/skin_${carId}.webp`;
+    const url = `assets/skins/${selectedCarSkinFile(carId,CAR_SPECS[carId],{dev:!IS_PROD_BUILD})}`;
 
     this.load.image(key, url);
 

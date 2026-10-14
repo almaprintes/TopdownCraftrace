@@ -1,3 +1,5 @@
+import {selectedCarSkinFile,hasAlternativeSkins,getEquippedCarSkin} from '../skins/carSkins.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
 import { MenuScene as CurrentMenuScene } from './MenuTrackPresentationScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
@@ -39,9 +41,9 @@ export class MenuScene extends CurrentMenuScene {
     try { carId = localStorage.getItem('tdr2:carId'); } catch {}
     const spec = CAR_SPECS?.[carId];
     if (!spec?.id || !spec?.skin) return;
-    const key = `skin:${spec.id}`;
+    const key=hasAlternativeSkins(spec.id)?`skin:${spec.id}:${getEquippedCarSkin(spec.id,{spec,dev:!IS_PROD_BUILD}).id}`:`skin:${spec.id}`;
     if (this.textures?.exists?.(key)) return;
-    this.load.image(key, `assets/skins/${spec.skin}`);
+    this.load.image(key, `assets/skins/${selectedCarSkinFile(spec.id,spec,{dev:!IS_PROD_BUILD})}`);
   }
 
   renderUI() {

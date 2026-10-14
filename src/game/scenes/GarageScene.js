@@ -1,3 +1,5 @@
+import {getEquippedCarSkin,hasAlternativeSkins} from '../skins/carSkins.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
 import Phaser from 'phaser';
 import {mountSceneAppHeader} from '../ui/TdrAppHeader.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
@@ -734,7 +736,7 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
       .replace(/[\\u0300-\\u036f]/g, '');
     const fileName = `card_${carId}_${raritySlug}_${String(spec.collectionNo || 0).padStart(3, '0')}.webp`;
     const assetVersion = encodeURIComponent(spec.cardAssetVersion || 1);
-    const src = `${CARD_BASE}${fileName}?v=${assetVersion}`;
+    const src=hasAlternativeSkins(carId)?`assets/skins/${getEquippedCarSkin(carId,{spec,dev:!IS_PROD_BUILD}).file}`:`${CARD_BASE}${fileName}?v=${assetVersion}`;
 
     // Reuse the exact URL already resolved and decoded by Phaser. This avoids
     // differences between Phaser's loader base URL and document.baseURI.
@@ -843,7 +845,7 @@ this._ensureCardTexture(selected.id, spec, (loadedKey) => {
 
     const assetVersion = encodeURIComponent(spec.cardAssetVersion || 1);
     const texKey = `card_${carId}_v${assetVersion}`;
-    const url = `${CARD_BASE}${fileName}?v=${assetVersion}`;
+    const url=hasAlternativeSkins(carId)?`assets/skins/${getEquippedCarSkin(carId,{spec,dev:!IS_PROD_BUILD}).file}`:`${CARD_BASE}${fileName}?v=${assetVersion}`;
 
     if (this.textures.exists(texKey)) {
       onReady?.(texKey);
