@@ -28,10 +28,23 @@ for(const filename of ['mini_cooper_black_white.webp','mini_cooper_black_gold.we
  const bytes=readFileSync(path);
  assert.equal(bytes.toString('ascii',0,4),'RIFF');
  assert.equal(bytes.toString('ascii',8,12),'WEBP');
- assert.equal(bytes.toString('ascii',12,16),'VP8X');
- assert.equal(1+bytes.readUIntLE(24,3),1448,'Factory source width');
- assert.equal(1+bytes.readUIntLE(27,3),1086,'Factory source height');
- assert.ok(bytes[20]&0x10,'Real transparent factory WebP required');
+ // Pillow lossless export uses VP8L, while extended WebP may use VP8X.
+ const kind=bytes.toString('ascii',12,16);
+ let width,height,hasAlpha;
+ if(kind==='VP8L'){
+  assert.equal(bytes[20],0x2f,'VP8L lossless bitstream signature');
+  const header=bytes.readUInt32LE(21);
+  width=(header&0x3fff)+1;
+  height=((header>>>14)&0x3fff)+1;
+  hasAlpha=!!((header>>>28)&1);
+ }else if(kind==='VP8X'){
+  width=1+bytes.readUIntLE(24,3);
+  height=1+bytes.readUIntLE(27,3);
+  hasAlpha=!!(bytes[20]&0x10);
+ }else assert.fail('Unsupported factory WebP format: '+kind);
+ assert.equal(width,1448,'Factory source width');
+ assert.equal(height,1086,'Factory source height');
+ assert.ok(hasAlpha,'Real transparent factory WebP required');
 }
 const reader=p=>readFileSync(p,'utf8');
 const dom=reader('src/game/ui/WorkshopMobileDom.js');
