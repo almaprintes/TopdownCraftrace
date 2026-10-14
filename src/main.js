@@ -1,10 +1,11 @@
 import './style.css';
 import { createGame } from './game/game.js';
+import {isBenignResizeObserverWarning,mayReplaceStartupScreen} from './game/dev/runtimeErrorPolicy.js';
 window.__tdrStartupMark?.('main-js');
 
 function showFatal(msg) {
   const el = document.getElementById('app');
-  if (!el) return;
+  if (!mayReplaceStartupScreen(el)) return;
   el.innerHTML = `
     <div style="padding:16px;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#fff;">
       <h2 style="margin:0 0 8px 0;">Pantalla en blanco: error detectado</h2>
@@ -15,11 +16,22 @@ function showFatal(msg) {
 }
 
 window.addEventListener('error', (e) => {
+  if(isBenignResizeObserverWarning(e?.message)){
+    e?.preventDefault?.();
+    return;
+  }
+  // Runtime errors are recorded by runtimeCrashDiagnostics. Do not destroy
+  // the race canvas, input controls or scene because of an unrelated error.
   const msg = e?.error?.stack || e?.message || String(e);
   showFatal(msg);
 });
 window.addEventListener('unhandledrejection', (e) => {
-  const msg = e?.reason?.stack || e?.reason?.message || String(e?.reason || e);
+  const reason=e?.reason;
+  if(isBenignResizeObserverWarning(reason?.message||reason)){
+    e?.preventDefault?.();
+    return;
+  }
+  const msg = reason?.stack || reason?.message || String(reason || e);
   showFatal(`UnhandledPromiseRejection:\n${msg}`);
 });
 

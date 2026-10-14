@@ -1,3 +1,4 @@
+import {isBenignResizeObserverWarning} from './runtimeErrorPolicy.js';
 const SESSION_KEY='tdr2:runtimeSession';
 const LAST_EVENT_KEY='tdr2:runtimeLastEvent';
 const FLIGHT_KEY='tdr2:runtimeFlightRecorder';
@@ -20,7 +21,19 @@ export function installRuntimeCrashDiagnostics(game){
  let lastScene=sceneName(game),lastTextures=metrics(game).textureCount;
  const beat=()=>{session.lastBeat=new Date().toISOString();session.scene=sceneName(game);const m=metrics(game);session.textureCount=m.textureCount;session.domNodes=m.domNodes;store(SESSION_KEY,session);if(session.scene!==lastScene){flight(game,'scene_change',{from:lastScene,to:session.scene,scenes:sceneState(game)});lastScene=session.scene;}if(Number.isFinite(m.textureCount)&&Number.isFinite(lastTextures)&&m.textureCount-lastTextures>=12){flight(game,'texture_growth',{from:lastTextures,to:m.textureCount});}if(Number.isFinite(m.textureCount))lastTextures=m.textureCount;};
  const timer=setInterval(beat,5000);const onVisibility=()=>flight(game,document.hidden?'hidden':'visible',{scenes:sceneState(game)});
- const onError=(event)=>{session.hadError=true;const info=snapshot(game,'js_error',{message:String(event?.message||'error'),source:String(event?.filename||''),line:Number(event?.lineno||0),column:Number(event?.colno||0)});showNotice(info);};const onRejection=(event)=>{session.hadError=true;const reason=event?.reason;const info=snapshot(game,'promise_rejection',{message:String(reason?.message||reason||'unhandled rejection')});showNotice(info);};const onContextLost=(event)=>{session.hadError=true;try{event?.preventDefault?.();}catch{}const info=snapshot(game,'webglcontextlost');armAutoSafeMode();showNotice(info);};
+ const onError=(event)=>{
+  if(isBenignResizeObserverWarning(event?.message)){event?.preventDefault?.();return;}
+  session.hadError=true;
+  const info=snapshot(game,'js_error',{message:String(event?.message||'error'),source:String(event?.filename||''),line:Number(event?.lineno||0),column:Number(event?.colno||0)});
+  showNotice(info);
+ };
+ const onRejection=(event)=>{
+  const reason=event?.reason;
+  if(isBenignResizeObserverWarning(reason?.message||reason)){event?.preventDefault?.();return;}
+  session.hadError=true;
+  const info=snapshot(game,'promise_rejection',{message:String(reason?.message||reason||'unhandled rejection')});
+  showNotice(info);
+ };const onContextLost=(event)=>{session.hadError=true;try{event?.preventDefault?.();}catch{}const info=snapshot(game,'webglcontextlost');armAutoSafeMode();showNotice(info);};
  const markClean=()=>{session.active=false;session.clean=true;session.endedAt=new Date().toISOString();session.scene=sceneName(game);store(SESSION_KEY,session);flight(game,'clean_exit');if(isIOSDevice()&&!session.hadError&&Date.now()-Number(session.startedMs||Date.now())>=60000){try{localStorage.removeItem(AUTO_SAFE_UNTIL_KEY);}catch{}}};
  window.__tdrGetFlightRecorder=()=>{try{return safeJson(localStorage.getItem(FLIGHT_KEY))||[];}catch{return[];}};window.__tdrClearFlightRecorder=()=>{try{localStorage.removeItem(FLIGHT_KEY);return true;}catch{return false;}};
  window.addEventListener('error',onError);window.addEventListener('unhandledrejection',onRejection);window.addEventListener('pagehide',markClean);window.addEventListener('beforeunload',markClean);document.addEventListener('visibilitychange',onVisibility);game.canvas?.addEventListener?.('webglcontextlost',onContextLost,false);
