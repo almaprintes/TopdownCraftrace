@@ -74,14 +74,14 @@ assert.ok(letterbox.size>=57&&letterbox.size<=61,'Wide roof crests scale with th
 assert.equal(lobbyMasteryPlacement({width:0,height:200},400,1000),null);
 const vertical=raceMasteryPlacement(46,96);
 assert.equal(vertical.x,0);assert.ok(vertical.y<0&&vertical.y>=-4,'Race crest sits toward front roof');
-assert.ok(vertical.radius>=46*.31&&vertical.radius<=46*.32,
-  'Race emblem is centered and smaller than the full roof width');
+assert.ok(vertical.radius>=46*.29&&vertical.radius<=46*.30,
+  'Race shield uses the same 59%-short-axis width as the lobby');
 const horizontal=raceMasteryPlacement(96,46);
 assert.equal(horizontal.x,0);assert.ok(horizontal.y<0,'Race crest stays forward of sprite midpoint');
 assert.equal(horizontal.radius,vertical.radius,
   'Car orientation must not change the centred full-roof crest');
-assert.ok(raceMasteryPlacement(20,80).radius>=6.2,
-  'Badge remains legible on smaller cars');
+assert.ok(raceMasteryPlacement(20,80).radius>=5.8,
+  'Badge scales with the same shared 59%-short-axis reference on smaller cars');
 globalThis.localStorage={getItem:()=>JSON.stringify({video:{showMasteryBadge:false}})};
 assert.equal(masteryRoofVisible(),false,'Hide on car must remain available');
 globalThis.localStorage={getItem:()=>JSON.stringify({video:{showMasteryBadge:true}})};
