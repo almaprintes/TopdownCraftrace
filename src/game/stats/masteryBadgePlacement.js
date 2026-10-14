@@ -9,7 +9,9 @@ export function normalizedMasteryCalibration(raw){
     const n=Number(value);
     return Number.isFinite(n)?Math.round(clamp(n,-bound,bound)*100000000)/100000000:0;
   };
-  return {x:safe(row.x,.65),y:safe(row.y,.65),size:safe(row.size,.42)};
+  const rawAngle=Number(row.rotation)||0;
+  const rotation=Number.isFinite(rawAngle)?((Math.round(rawAngle/90)%4+4)%4)*90:0;
+  return {x:safe(row.x,.65),y:safe(row.y,.65),size:safe(row.size,.42),rotation};
 }
 export function getMasteryRoofCalibration(carId,view){
   if(view!=='lobby'&&view!=='race')return normalizedMasteryCalibration();
@@ -32,7 +34,7 @@ export function lobbyMasteryPlacement(rect,naturalWidth,naturalHeight,carId=null
     x:paint.left+paint.width*.5+c.x*cross,
     y:paint.top+paint.height*.46+c.y*cross,
     size:clamp(Math.max(15,Math.min(86,cross*.59))+c.size*cross,10,cross*.95),
-    paintWidth:paint.width,paintHeight:paint.height
+    paintWidth:paint.width,paintHeight:paint.height,rotation:c.rotation
   };
 }
 export function raceMasteryPlacement(displayWidth,displayHeight,carId=null,override=null){
@@ -43,6 +45,6 @@ export function raceMasteryPlacement(displayWidth,displayHeight,carId=null,overr
   return{
     x:c.x*cross,
     y:-Math.min(4,h*.045)+c.y*cross,
-    radius:clamp(baseRadius+c.size*cross*.5,2,cross*.48)
+    radius:clamp(baseRadius+c.size*cross*.5,2,cross*.48),rotation:c.rotation
   };
 }
