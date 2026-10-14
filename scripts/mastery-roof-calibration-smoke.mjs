@@ -64,7 +64,7 @@ assert.match(lobbySrc,/rotate\(\$\{place\.rotation\}deg\)/);
 assert.match(raceSrc,/raceMasteryPlacement\(w,h,carId\)/);
 assert.match(raceSrc,/g\.setRotation\(rotation\*Math\.PI\/180\)/);
 assert.doesNotMatch(car,/carSpecs\.js\s*=|applyCarOverrides\(/,'Calibration never changes factory driving specs');
-assert.match(editor,/up:\\['y',-1\\],down:\\['y',1\\],left:\\['x',-1\\],right:\\['x',1\\]/);
+assert.ok(editor.includes("up:['y',-1],down:['y',1],left:['x',-1],right:['x',1]"),'Movement arrows must step by 1px');
 assert.match(editor,/data-nudge="up" aria-label="Subir 1 píxel"/);
 assert.match(editor,/class="mcal-controls"/);
 assert.match(editor,/data-export>EXPORTAR MAESTRÍAS JSON/);
