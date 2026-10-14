@@ -6,7 +6,7 @@ const BENIGN_RESIZE_WARNINGS=new Set([
 ]);
 export function isBenignResizeObserverWarning(message){
   const value=String(message??'').trim();
-  return BENIGN_RESIZE_WARNINGS.has(value)||BENIGN_RESIZE_WARNINGS.has(value.replace(/\\.$/,''));
+  return BENIGN_RESIZE_WARNINGS.has(value)||BENIGN_RESIZE_WARNINGS.has(value.endsWith('.')?value.slice(0,-1):value);
 }
 // Once Phaser has mounted its canvas, errors must never wipe out the live
 // game DOM. RuntimeCrashDiagnostics retains genuine errors separately.
