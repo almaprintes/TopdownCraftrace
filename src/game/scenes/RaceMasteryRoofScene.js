@@ -29,7 +29,7 @@ export class RaceScene extends CurrentRaceScene{
     const sprite=visibleCarSprite(this);
     const w=Math.max(18,Number(sprite?.displayWidth||sprite?.width||28));
     const h=Math.max(18,Number(sprite?.displayHeight||sprite?.height||48));
-    const {x,y,radius:r}=raceMasteryPlacement(w,h);
+    const {x,y,radius:r}=raceMasteryPlacement(w,h,carId);
     const g=this.add.graphics();
     const rim=hexToInt(visual.rim,0xc9ced3);
     const light=hexToInt(visual.light,0xffffff);
