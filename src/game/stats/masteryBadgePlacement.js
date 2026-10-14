@@ -11,11 +11,11 @@ export function lobbyMasteryPlacement(rect,naturalWidth,naturalHeight){
   const paintTop=(Number(rect?.top)||0)+(h-paintH)/2;
   // Central cabin, not the rearmost badge point used by the old tiny medal.
   const x=paintLeft+paintW*.5;
-  const y=paintTop+paintH*.51;
-  // Reduce the roof crest by ~15% without changing its centre or the car's scale.
+  const y=paintTop+paintH*.46;
+  // Small additional reduction; move the artwork upwards to the painted cabin centre.
   // Its visible SVG silhouette is slightly narrower than the artwork box.
   const cross=Math.min(paintW,paintH);
-  const size=Math.max(16,Math.min(95,cross*.66));
+  const size=Math.max(15,Math.min(86,cross*.59));
   return{x,y,size,paintWidth:paintW,paintHeight:paintH};
 }
 // Race graphics remain mounted INSIDE the rotating car rig. Match the
@@ -25,7 +25,7 @@ export function raceMasteryPlacement(displayWidth,displayHeight){
   const cross=Math.min(w,h);
   return{
     x:0,
-    y:0,
-    radius:Math.max(4.5,Math.min(18,cross*.35))
+    y:-Math.min(4,h*.045),
+    radius:Math.max(4.3,Math.min(16,cross*.315))
   };
 }
