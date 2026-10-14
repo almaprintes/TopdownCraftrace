@@ -80,7 +80,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
       }
       .tdr-admin-mastery-editor .mcal-preview p{margin:5px 0 0;font-size:10px;line-height:1.3;}
       .tdr-admin-mastery-editor .mcal-controls{
-        min-height:0;min-width:0;overflow:auto;
+        display:grid;min-height:0;min-width:0;overflow:auto;
         grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(6px,1vw,12px);
         align-content:start;-webkit-overflow-scrolling:touch;
       }
