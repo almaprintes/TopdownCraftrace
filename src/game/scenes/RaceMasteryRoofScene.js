@@ -34,6 +34,8 @@ export class RaceScene extends CurrentRaceScene{
     const rim=hexToInt(visual.rim,0xc9ced3);
     const light=hexToInt(visual.light,0xffffff);
     const dark=hexToInt(visual.dark,0x53616c);
+    const starBright=hexToInt(visual.starLight,0xf8e2ad);
+    const starEdge=hexToInt(visual.starHighlight,0xffffff);
     // Full-roof championship SHIELD, painted in the rig's local space so it
     // scales/rotates with the chassis. No tyre hub, disc or circular spokes.
     const shell=[
@@ -51,7 +53,10 @@ export class RaceScene extends CurrentRaceScene{
     // Contrasting enamel insert. One, two or three stars make the grades
     // distinguishable even when the crest is only a few phone pixels wide.
     const enamel=inner.map(p=>({x:p.x*.82,y:p.y*.77}));
-    g.fillStyle(0x102a35,.96);g.fillPoints(enamel,true);
+    // Same near-black enamel and bright metallic star treatment as the SVG
+    // used in lobby, medals QA and the unlock modal.
+    g.fillStyle(0x07151e,1);g.fillPoints(enamel,true);
+    g.lineStyle(Math.max(.65,r*.085),0x02080d,.95);g.strokePoints(enamel,true);
     const rank=(mastery.level-1)%3+1;
     if(rank>=2){
       g.fillStyle(rim,.98);
@@ -69,8 +74,8 @@ export class RaceScene extends CurrentRaceScene{
       ],false);
     }
     const starLayout=rank===1?[{x:0,y:-r*.04,scale:.44}]:
-      rank===2?[{x:-r*.29,y:-r*.04,scale:.30},{x:r*.29,y:-r*.04,scale:.30}]:
-      [{x:0,y:-r*.36,scale:.255},{x:-r*.27,y:r*.27,scale:.25},{x:r*.27,y:r*.27,scale:.25}];
+      rank===2?[{x:-r*.25,y:-r*.04,scale:.275},{x:r*.25,y:-r*.04,scale:.275}]:
+      [{x:0,y:-r*.32,scale:.24},{x:-r*.235,y:r*.25,scale:.225},{x:r*.235,y:r*.25,scale:.225}];
     for(const item of starLayout){
       const star=[];
       for(let i=0;i<10;i++){
@@ -78,8 +83,15 @@ export class RaceScene extends CurrentRaceScene{
         const rad=i%2?r*item.scale*.42:r*item.scale;
         star.push({x:item.x+Math.cos(a)*rad,y:item.y+Math.sin(a)*rad});
       }
-      g.fillStyle(light,1);g.fillPoints(star,true);
-      g.lineStyle(Math.max(.5,r*.07),dark,.95);g.strokePoints(star,true);
+      // Dark larger silhouette separates the points from metal frame/rays;
+      // the actual star is the bright, reflective foreground.
+      const outline=star.map(p=>({
+        x:item.x+(p.x-item.x)*1.13,
+        y:item.y+(p.y-item.y)*1.13
+      }));
+      g.fillStyle(0x02080d,1);g.fillPoints(outline,true);
+      g.fillStyle(starBright,1);g.fillPoints(star,true);
+      g.lineStyle(Math.max(.45,r*.065),starEdge,.95);g.strokePoints(star,true);
     }
     // Canonical five/eight/twelve small honor strokes, no rotating spokes.
     const marks=Math.max(3,Number(visual.spokes)||5);
