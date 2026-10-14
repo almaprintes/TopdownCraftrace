@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { HANDLING_PROFILES } from '../cars/handlingProfiles.js';
+import {showAdminMasteryRoofCalibration} from '../ui/AdminMasteryRoofCalibration.js';
 
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
@@ -34,22 +35,22 @@ export class CarEditorScene extends Phaser.Scene {
 
     // -------- Fondo estilo lobby (como Menu) --------
     const bg = this.add.graphics();
-    bg.fillStyle(0x071027, 1);
+    bg.fillStyle(0x06131d, 1);
     bg.fillRect(0, 0, width, height);
 
-    bg.fillStyle(0x7c4dff, 0.14);
+    bg.fillStyle(0x21bbda, 0.09);
     bg.fillEllipse(width * 0.20, height * 0.22, width * 0.75, height * 0.65);
 
-    bg.fillStyle(0x00d4ff, 0.10);
+    bg.fillStyle(0x00d4ff, 0.08);
     bg.fillEllipse(width * 0.70, height * 0.30, width * 0.90, height * 0.70);
 
-    bg.fillStyle(0xffc400, 0.07);
+    bg.fillStyle(0xffc400, 0.035);
     bg.fillEllipse(width * 0.55, height * 0.12, width * 0.70, height * 0.45);
 
-    bg.fillStyle(0x2bff88, 0.08);
+    bg.fillStyle(0x2bff88, 0.035);
     bg.fillEllipse(width * 0.55, height * 0.70, width * 0.85, height * 0.70);
 
-    bg.fillStyle(0x141b33, 0.18);
+    bg.fillStyle(0x0b1d2a, 0.20);
     bg.fillRect(0, 0, width, height);
 
     // rejilla ligera
@@ -181,8 +182,19 @@ this._downloadJson(fname, payload);
     this.add.existing(testBtn);
 
     // Limpieza al salir (si no, el DOM se queda pegado encima del juego)
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this._destroyDomPanel());
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => this._destroyDomPanel());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {this._masteryRoofEditor?.close();this._masteryRoofEditor=null;this._destroyDomPanel();});
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => {this._masteryRoofEditor?.close();this._masteryRoofEditor=null;this._destroyDomPanel();});
+  }
+
+  _openMasteryRoofCalibration(){
+    const host=this.game?.canvas?.parentElement||document.getElementById('app')||document.body;
+    if(!host)return;
+    if(getComputedStyle(host).position==='static')host.style.position='relative';
+    this._masteryRoofEditor?.close();
+    this._masteryRoofEditor=showAdminMasteryRoofCalibration(host,{
+      initialCarId:this._carId,
+      onClose:()=>{this._masteryRoofEditor=null;}
+    });
   }
 
   // -----------------------------
@@ -389,6 +401,7 @@ this._downloadJson(fname, payload);
             ${Object.keys(HANDLING_PROFILES).map(id => `<option value="${id}">${id}</option>`).join('')}
           </select>
 
+          <button class="mini masteryTab" data-act="mastery" type="button">★ MAESTRÍA / TECHO</button>
           <button class="mini" data-act="resetAll">RESET</button>
           <button class="mini" data-act="factory">FÁBRICA</button>
           <button class="mini" data-act="clear">CLEAR</button>
@@ -417,9 +430,10 @@ this._downloadJson(fname, payload);
         height:100%;
         box-sizing:border-box;
         padding-top:6px;
-        background:rgba(20,27,51,0.78);
-        border:1px solid rgba(183,192,255,0.18);
-        border-radius:14px;
+         background:linear-gradient(145deg,rgba(11,35,47,.96),rgba(4,17,28,.98));
+         display:grid;grid-template-rows:auto minmax(0,1fr);
+        border:1px solid rgba(84,216,241,0.32);
+         border-radius:14px;
         box-shadow:0 10px 40px rgba(0,0,0,0.35);
         overflow:hidden;
         font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
@@ -432,8 +446,9 @@ this._downloadJson(fname, payload);
         display:flex;
         gap:10px;
         padding:10px;
-        background:rgba(11,16,32,0.55);
-        border-bottom:1px solid rgba(183,192,255,0.14);
+        flex-wrap:wrap;
+         background:linear-gradient(110deg,rgba(20,59,71,.82),rgba(6,24,35,.91));
+         border-bottom:1px solid rgba(108,216,235,0.24);
         align-items:center;
       }
       .search{
@@ -466,8 +481,10 @@ this._downloadJson(fname, payload);
         font-weight:800;
         padding:0 10px;
       }
-      .list{
-        height:calc(100% - 56px);
+      .masteryTab{border-color:#e6c264;background:linear-gradient(145deg,#463922,#1b2830);color:#ffe6a5;white-space:nowrap;}
+       .list{
+         min-height:0;
+         height:auto;
         overflow:auto;
         padding:10px;
         -webkit-overflow-scrolling:touch;
@@ -583,6 +600,11 @@ this._downloadJson(fname, payload);
       const t = e.target;
       const act = t?.dataset?.act;
       if (!act) return;
+
+      if (act === 'mastery') {
+        this._openMasteryRoofCalibration();
+        return;
+      }
 
       if (act === 'help') {
         const key = t.dataset.key;
