@@ -91,13 +91,14 @@ const race=read('src/game/scenes/RaceMasteryRoofScene.js');
 const stats=read('src/game/scenes/StatsMasteryScene.js');
 const unlock=read('src/game/ui/MasteryUnlockModal.js');
 const css=read('src/game/ui/mastery-premium.css');
-assert.match(lobby,/lobbyMasteryPlacement\(cr,car\.naturalWidth,car\.naturalHeight\)/);
+assert.match(lobby,/lobbyMasteryPlacement\(cr,car\.naturalWidth,car\.naturalHeight,carId\)/);
 assert.match(lobby,/masteryWheelDataUri\(mastery\.level,\{size:128,blackBackground:false\}\)/);
 assert.match(lobby,/if\(!visible\)\{badge\.hidden=true;badge\.removeAttribute\('src'\);/);
 assert.match(lobby,/car\.addEventListener\('load',position\)/);
 assert.match(lobby,/window\.addEventListener\('resize',position\)/);
-assert.match(race,/raceMasteryPlacement\(w,h\)/);
+assert.match(race,/raceMasteryPlacement\(w,h,carId\)/);
 assert.match(race,/g\.setPosition\(x,y\)/);
+assert.match(race,/g\.setRotation\(rotation\*Math\.PI\/180\)/);
 assert.match(race,/g\.fillPoints\(shell,true\)/,
   'Race uses a fully filled championship shield');
 assert.match(race,/for\(const item of starLayout\)/);
