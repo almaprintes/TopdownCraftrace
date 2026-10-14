@@ -35,6 +35,7 @@ function installMasteryRoofBadge(scene,root){
     badge.style.left=`${place.x-rr.left}px`;
     badge.style.top=`${place.y-rr.top}px`;
     badge.style.setProperty('--mastery-size',`${place.size}px`);
+    badge.style.transform=`translate(-50%,-50%) rotate(${place.rotation}deg)`;
   };
   const visible=mastery.level&&masteryRoofVisible();
   if(!visible){badge.hidden=true;badge.removeAttribute('src');}
