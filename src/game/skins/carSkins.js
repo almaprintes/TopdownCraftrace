@@ -2,8 +2,8 @@ import cuperStatus from './cuperAssetsStatus.json' with {type:'json'};
 // A cosmetic skin never creates a new car profile, stats, or record.
 export const CAR_SKIN_CATALOG=Object.freeze({
  crown_cuper:Object.freeze([
-  Object.freeze({id:'original',name:'Original',file:'skin_crown_cuper_original.webp',premium:false}),
-  Object.freeze({id:'gold',name:'Gold Edition',file:'skin_crown_cuper_gold.webp',premium:true})
+  Object.freeze({id:'original',name:'Original',file:'skin_crown_cuper_original.webp',factory:'assets/cars/workshop/crown_cuper.webp',premium:false}),
+  Object.freeze({id:'gold',name:'Gold Edition',file:'skin_crown_cuper_gold.webp',factory:'assets/cars/workshop/crown_cuper_gold.webp',premium:true})
  ])
 });
 // Generated from verified WebP binaries by GitHub Actions before each build.

@@ -1,3 +1,5 @@
+import {workshopCarArtworkCandidates} from '../skins/workshopCarArt.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import {createAppWallet,disposeAppWallets,appBackLabel} from './TdrAppHeader.js';
 import { GARAGE_ITEMS, DIRECT_CRAFT_RECIPES, findStripRecipe, statDeltaForPart } from '../garage/partsCatalog.js';
@@ -24,7 +26,7 @@ const PART_FILES={
 };
 const base=()=>String(import.meta.env.BASE_URL||'./');
 const asset=(item)=>{if(!item)return'';if(item.kind==='material'){const f=MATERIAL_FILES[item.id];return f?`${base()}assets/crafting/materials/${f}`:'';}const f=PART_FILES[item.id];return f?`${base()}assets/crafting/parts/${f}`:'';};
-const carAsset=id=>`${base()}assets/cars/workshop/${id}.webp`;
+const carAssets=(id,spec)=>workshopCarArtworkCandidates(id,{spec,dev:!IS_PROD_BUILD}).map(path=>`${base()}${path}`);
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=String(text);return n;};
 const button=(label,cls,onClick)=>{const b=el('button',cls,label);b.type='button';b.addEventListener('click',onClick);return b;};
 const clamp99=n=>Math.max(1,Math.min(99,Math.round(Number(n)||0)));
@@ -113,7 +115,12 @@ export function renderWorkshopMobileDom(scene){
  hdr.append(back,el('div','title','FABRICACIÓN'),createAppWallet());root.append(hdr);
  const body=el('div','body');root.append(body);
  const left=el('section','panel carPanel');body.append(left);const spec=CAR_SPECS[scene.car]||{};const head=el('div');head.append(el('div','eyebrow','COCHE ACTUAL'));const ch=el('div','carHead');ch.append(el('div','carName',String(spec.name||scene.car||'').toUpperCase()),el('div','rarity',String(spec.rarity||'COMÚN').toUpperCase()));head.append(ch);left.append(head);
- const stage=el('div','carStage');const ci=el('img');ci.src=carAsset(scene.car);ci.alt='';stage.append(ci);left.append(stage);left.append(renderStats(scene,spec));
+ const stage=el('div','carStage');const ci=el('img');
+ const sources=carAssets(scene.car,spec);let index=0;
+ ci.alt='';ci.decoding='async';
+ ci.onerror=()=>{index++;if(index<sources.length)ci.src=sources[index];else ci.style.visibility='hidden';};
+ if(sources.length)ci.src=sources[0];
+ stage.append(ci);left.append(stage);left.append(renderStats(scene,spec));
  const cars=allowedCars(scene),idx=cars.indexOf(scene.car),nav=el('div','carNav'),prev=button('‹','navBtn',()=>scene._browseWorkshopCar?.(-1)),next=button('›','navBtn',()=>scene._browseWorkshopCar?.(1));prev.disabled=idx<=0;next.disabled=idx<0||idx>=cars.length-1;nav.append(prev,el('div','carHint',`${Math.max(1,idx+1)} / ${Math.max(1,cars.length)} · desliza por tus coches desbloqueados`),next);left.append(nav);
  const right=el('section','panel craftPanel');body.append(right);const ct=el('div','craftTitle');ct.append(el('strong',null,'FABRICACIÓN DIRECTA'),el('span',null,'ELIGE · REVISA · FABRICA'));right.append(ct);
  const selectors=el('div','selectors'),famRow=el('div','row families');FAMILIES.forEach(f=>famRow.append(button(FAMILY_LABEL[f],`sel ${scene.craftFamily===f?'on':''}`,()=>{if(scene.busy)return;scene.craftFamily=f;scene.craftTier='street';scene.render();})));selectors.append(famRow);const tierRow=el('div','row tiers');TIERS.forEach(t=>{const id=`${scene.craftFamily}_${t}`,owned=qty(scene.state,id);tierRow.append(button(`${TIER_LABEL[t]}${owned?` ×${owned}`:''}`,`sel tier ${t} ${scene.craftTier===t?'on':''}`,()=>{if(scene.busy)return;scene.craftTier=t;scene.render();}));});selectors.append(tierRow);right.append(selectors);
