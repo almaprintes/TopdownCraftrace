@@ -1,6 +1,4 @@
-import {normalizedMasteryCalibration} from './masteryBadgePlacement.js';
-
-const supportedViews=['lobby','race'];
+import {canonicalMasteryCalibration,normalizedMasteryCalibration} from './masteryBadgePlacement.js';
 export const CALIBRATION_EXPORT_FILENAME='tdr-mastery-roof-calibration.json';
 
 export function nudgeMasteryCalibration(row,axis,pixels,paintedShortAxis){
@@ -10,7 +8,6 @@ export function nudgeMasteryCalibration(row,axis,pixels,paintedShortAxis){
   if(!Number.isFinite(width)||width<=0||!Number.isFinite(step))return current;
   return normalizedMasteryCalibration({...current,[axis]:current[axis]+step/width});
 }
-
 export function mergeMasteryCalibration(official,draft,allowedCarIds){
   const cars={};
   const ids=Array.from(new Set(allowedCarIds||[])).sort();
@@ -18,9 +15,7 @@ export function mergeMasteryCalibration(official,draft,allowedCarIds){
     const source=(draft&&Object.prototype.hasOwnProperty.call(draft,id)?draft[id]:null)
       ||official?.cars?.[id]||null;
     if(!source)continue;
-    const row={};
-    for(const view of supportedViews)row[view]=normalizedMasteryCalibration(source[view]);
-    cars[id]=row;
+    cars[id]=canonicalMasteryCalibration(source);
   }
-  return {schema_version:1,units:'car_short_axis_ratio',cars};
+  return {schema_version:2,units:'car_short_axis_ratio',cars};
 }
