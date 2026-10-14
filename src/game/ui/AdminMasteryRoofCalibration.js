@@ -11,7 +11,8 @@ import {
 
 const BASE=import.meta.env.BASE_URL||'/';
 const STORAGE_KEY='tdr2:adminMasteryRoofDraft:1';
-const ids=Object.keys(CAR_SPECS).sort((a,b)=>
+const LEGACY_CAR_IDS=new Set(['stock','touring','power']);
+const ids=Object.keys(CAR_SPECS).filter(id=>!LEGACY_CAR_IDS.has(id)).sort((a,b)=>
   (Number(CAR_SPECS[a]?.collectionNo)||0)-(Number(CAR_SPECS[b]?.collectionNo)||0));
 function readDraft(){
   try{
@@ -41,6 +42,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
   const draft=readDraft();
   let carId=ids.includes(initialCarId)?initialCarId:ids[0],view='lobby',level=1,shortAxis=0,previewReady=false;
   let blobUrl=null;
+  const previewVisible={lobby:true,race:true};
   const root=document.createElement('section');
   root.dataset.masteryRoofEditor='1';
   root.setAttribute('aria-label','Calibración global de maestrías');
@@ -84,6 +86,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
       </label>
       <button type="button" data-view="lobby">LOBBY</button>
       <button type="button" data-view="race">CARRERA</button>
+      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#b1cad7;font-weight:800"><input type="checkbox" data-preview-visible checked aria-label="Mostrar insignia en la previsualización"> MOSTRAR INSIGNIA</label>
     </div>
     <div class="mcal-columns" style="display:grid;grid-template-columns:minmax(220px,1.3fr) minmax(220px,1fr);gap:clamp(10px,2vw,22px);align-items:start">
       <div style="min-width:0">
@@ -120,7 +123,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
         </div>
         <div style="height:1px;background:#31536b;margin:2px 0"></div>
         <strong style="font-size:12px;color:#ffe4a0">EXPORTACIÓN GLOBAL</strong>
-        <small style="line-height:1.5;color:#a4b9c8">Los cambios se guardan como borrador únicamente en este dispositivo. No afectan a los jugadores hasta que integremos el JSON exportado en GitHub.</small>
+        <small style="line-height:1.5;color:#a4b9c8">Los cambios se guardan como borrador únicamente en este dispositivo. Mostrar u ocultar en la vista previa no modifica la preferencia de los jugadores. Las posiciones solo se publican al integrar el JSON en GitHub.</small>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button type="button" data-export>EXPORTAR JSON</button>
           <button type="button" data-copy>COPIAR JSON</button>
@@ -147,6 +150,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
     if(shortAxis<1){previewReady=false;return;}
     previewReady=true;
     const row=viewRow();
+    badge.style.display=previewVisible[view]?'block':'none';
     let x,y,size;
     if(view==='lobby'){
       const p=lobbyMasteryPlacement(rect,carImage.naturalWidth,carImage.naturalHeight,carId,row);
@@ -174,6 +178,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
   function activateTab(){
     for(const btn of root.querySelectorAll('[data-view]'))styleButton(btn,{active:btn.dataset.view===view});
     $('[data-view-title]').textContent=(view==='lobby'?'LOBBY':'CARRERA')+' · POSICIÓN';
+    $('[data-preview-visible]').checked=previewVisible[view];
     preview();
   }
   function loadImage(){
@@ -196,6 +201,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
     draft[carId]=current;
     persist();
   }
+  $('[data-preview-visible]').onchange=event=>{previewVisible[view]=!!event.target.checked;preview();};
   carSelect.onchange=()=>{carId=carSelect.value;loadImage();status('');};
   levelSelect.onchange=()=>{level=Number(levelSelect.value)||1;badge.src=masteryWheelDataUri(level,{size:160,blackBackground:false});};
   carImage.onload=()=>requestAnimationFrame(preview);

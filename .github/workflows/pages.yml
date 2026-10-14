@@ -67,6 +67,7 @@ jobs:
           node scripts/inventory-premium-ui-smoke.mjs
           node scripts/mastery-premium-visual-smoke.mjs
           node scripts/mastery-roof-calibration-smoke.mjs
+          node scripts/admin-car-editor-route-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js
           test -f src/game/scenes/MenuGameModesScene.js
           test -f src/game/scenes/RaceGamepadScene.js

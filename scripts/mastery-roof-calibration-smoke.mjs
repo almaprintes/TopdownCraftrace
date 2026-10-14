@@ -49,7 +49,8 @@ assert.equal(exported.cars.helix_comet,undefined);
 const editor=read('src/game/ui/AdminMasteryRoofCalibration.js');
 for(const marker of ['data-rotate','data-nudge="up"','data-nudge="shrink"',
   'data-view="lobby"','data-view="race"','data-export','data-reset-view',
-  'data-car','initialCarId','badge.style.transform','saveDraft(draft)','mergeMasteryCalibration'])
+  'data-car','initialCarId','badge.style.transform','saveDraft(draft)','mergeMasteryCalibration',
+  'data-preview-visible','previewVisible[view]'])
   assert.ok(editor.includes(marker),'Mastery editor missing '+marker);
 const car=read('src/game/scenes/CarEditorScene.js');
 assert.match(car,/data-act="mastery"/);
