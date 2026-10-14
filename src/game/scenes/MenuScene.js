@@ -1,4 +1,4 @@
-import {getEquippedCarSkin,selectedCarSkinFile,hasAlternativeSkins} from '../skins/carSkins.js';
+import {getEquippedCarSkin,selectedCarSkinFile,hasAlternativeSkins,hasPublishedCarArt} from '../skins/carSkins.js';
 import Phaser from 'phaser';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
@@ -9,14 +9,14 @@ function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 const LEGACY_CAR_IDS = new Set(['stock', 'touring', 'power']);
 
 function getFirstPlayableCarId() {
-  const cars = Object.values(CAR_SPECS || {}).filter(c => c?.id && !LEGACY_CAR_IDS.has(c.id));
+  const cars = Object.values(CAR_SPECS || {}).filter(c => c?.id && !LEGACY_CAR_IDS.has(c.id) && hasPublishedCarArt(c.id));
   return cars[0]?.id || Object.values(CAR_SPECS || {})[0]?.id || 'stock';
 }
 
 function isPlayableCarId(id) {
   if (!id) return false;
   if (LEGACY_CAR_IDS.has(id)) return false;
-  return !!CAR_SPECS?.[id];
+  return !!CAR_SPECS?.[id] && hasPublishedCarArt(id);
 }
 export class MenuScene extends BaseScene {
   constructor() {
@@ -592,7 +592,7 @@ bigPlayBtn.on('pointerupoutside', () => {
     if (!ov) return;
 
     const pad = 16;
-    const cars = Object.values(CAR_SPECS || {}).filter(c => c?.id && !LEGACY_CAR_IDS.has(c.id));
+    const cars = Object.values(CAR_SPECS || {}).filter(c => c?.id && !LEGACY_CAR_IDS.has(c.id) && hasPublishedCarArt(c.id));
     const listY = y + pad;
 
     const info = this.add.text(x + pad, y + pad, 'Elige coche:', {

@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {CAR_SPECS} from '../src/game/cars/carSpecs.js';
-import {availableCarSkins,getEquippedCarSkin,equipCarSkin,selectedCarSkinFile,skinIsUnlocked} from '../src/game/skins/carSkins.js';
+import {availableCarSkins,getEquippedCarSkin,equipCarSkin,selectedCarSkinFile,skinIsUnlocked,hasPublishedCarArt,CUPER_ASSETS_PUBLISHED} from '../src/game/skins/carSkins.js';
 import {normalizeSkinGeometry,skinGeometryForSprite,mergeSkinGeometry} from '../src/game/skins/skinGeometry.js';
 const read=p=>readFileSync(p,'utf8');
 const car=CAR_SPECS.crown_cuper,axis=CAR_SPECS.crown_axis;
 assert.equal(car.id,'crown_cuper');
+assert.equal(CUPER_ASSETS_PUBLISHED,false,'Do not expose broken Cuper before image upload');
+assert.equal(hasPublishedCarArt('crown_cuper'),false);
+assert.equal(hasPublishedCarArt('helix_spark'),true);
 assert.equal(car.collectionNo,18);
 for(const k of ['maxFwd','maxRev','accel','brakeForce','engineBrake','linearDrag','turnRate','turnMin','gripCoast','gripDrive','gripBrake'])assert.equal(car[k],axis[k],'provisional physics: '+k);
 assert.equal(availableCarSkins(car.id,car).length,2);

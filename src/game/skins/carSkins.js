@@ -5,6 +5,10 @@ export const CAR_SKIN_CATALOG=Object.freeze({
   Object.freeze({id:'gold',name:'Gold Edition',file:'skin_crown_cuper_gold.webp',premium:true})
  ])
 });
+// The two WebP binary assets must be in GitHub before the new car appears.
+// Change only in the commit that adds the verified files.
+export const CUPER_ASSETS_PUBLISHED=false;
+export function hasPublishedCarArt(carId){return carId!=='crown_cuper'||CUPER_ASSETS_PUBLISHED;}
 const KEY='tdr2:equippedSkins:v1';
 export function availableCarSkins(carId,spec=null){
  const id=String(carId||'');

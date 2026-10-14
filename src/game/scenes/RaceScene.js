@@ -1,5 +1,5 @@
 import {skinGeometryForSprite} from '../skins/skinGeometry.js';
-import {selectedCarSkinFile,getEquippedCarSkin} from '../skins/carSkins.js';
+import {selectedCarSkinFile,getEquippedCarSkin,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
@@ -1249,7 +1249,7 @@ const aiSkinPool = Object.values(CAR_SPECS).filter((s) =>
   s &&
   s.id &&
   s.skin &&
-  s.id !== specFinal.id
+  s.id !== specFinal.id && hasPublishedCarArt(s.id)
 );
   this.gridCars = [];
 const MAX_GRID_CARS = gridSpawns.length;

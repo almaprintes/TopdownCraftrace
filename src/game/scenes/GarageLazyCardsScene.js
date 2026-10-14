@@ -1,4 +1,4 @@
-import {availableCarSkins,hasAlternativeSkins,getEquippedCarSkin,equipCarSkin,skinIsUnlocked} from '../skins/carSkins.js';
+import {availableCarSkins,hasAlternativeSkins,getEquippedCarSkin,equipCarSkin,skinIsUnlocked,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 import { GarageScene as CurrentGarageScene } from './GarageResponsiveHeroScene.js';
 import { BaseScene } from './BaseScene.js';
@@ -32,7 +32,7 @@ const skinPreview=(id,spec)=>{
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function savedSpec(carId){try{const raw=localStorage.getItem(`tdr2:carSpecs:${carId}`),obj=raw?JSON.parse(raw):null;return obj&&typeof obj==='object'?obj:{};}catch{return {};}}
-function playableCars(){return Object.keys(CAR_SPECS).filter(id=>!LEGACY_IDS.has(id)).map(id=>({id,spec:CAR_SPECS[id]})).filter(x=>x.spec);}
+function playableCars(){return Object.keys(CAR_SPECS).filter(id=>!LEGACY_IDS.has(id)&&hasPublishedCarArt(id)).map(id=>({id,spec:CAR_SPECS[id]})).filter(x=>x.spec);}
 function labels(){const en=getLanguage()==='en';return en?{garage:'GARAGE',collection:'COLLECTION',selected:'SELECTED CAR',mystery:'MYSTERY CAR',locked:'LOCKED',discover:'Unlock it through seasons, events or progression.',category:'CATEGORY',rarity:'RARITY',collectionNo:'COLLECTION',role:'ROLE',top:'TOP SPEED',accel:'ACCELERATION',brake:'BRAKING',zero100:'0–100 KM/H',pr:'PR',select:'SELECT',back:'BACK'}:{garage:'GARAJE',collection:'COLECCIÓN',selected:'COCHE SELECCIONADO',mystery:'COCHE MISTERIOSO',locked:'BLOQUEADO',discover:'Consíguelo mediante temporadas, eventos o progresión.',category:'CATEGORÍA',rarity:'RAREZA',collectionNo:'COLECCIÓN',role:'ROL',top:'VEL. PUNTA',accel:'ACELERACIÓN',brake:'FRENADA',zero100:'0–100 KM/H',pr:'PR',select:'SELECCIONAR',back:'VOLVER'};}
 function localizedValue(value,type){
   const raw=String(value??'—');

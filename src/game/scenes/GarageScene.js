@@ -1,4 +1,4 @@
-import {getEquippedCarSkin,hasAlternativeSkins} from '../skins/carSkins.js';
+import {getEquippedCarSkin,hasAlternativeSkins,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 import Phaser from 'phaser';
 import {mountSceneAppHeader} from '../ui/TdrAppHeader.js';
@@ -14,7 +14,7 @@ function clamp(n, a, b) {
 
 function getPlayableCars() {
   return Object.keys(CAR_SPECS)
-    .filter(id => !LEGACY_IDS.has(id))
+    .filter(id => !LEGACY_IDS.has(id)&&hasPublishedCarArt(id))
     .map(id => ({ id, spec: CAR_SPECS[id] }))
     .filter(x => x?.spec);
 }
