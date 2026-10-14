@@ -30,9 +30,9 @@ function saveDraft(cars){
   catch{return false;}
 }
 function styleButton(btn,{active=false,accent='#4edfff'}={}){
-  btn.style.cssText='min-height:40px;min-width:43px;border:1px solid '+(active?'#d9ad4b':accent)+
-    ';background:linear-gradient(180deg,#172b3c,#071522);color:#edfcff;font:900 12px system-ui;'+
-    'letter-spacing:.04em;padding:7px 11px;cursor:pointer;touch-action:manipulation;'+
+  btn.style.cssText='min-height:34px;min-width:32px;border:1px solid '+(active?'#d9ad4b':accent)+
+    ';background:linear-gradient(180deg,#172b3c,#071522);color:#edfcff;font:850 11px system-ui;'+
+    'letter-spacing:.025em;padding:5px 8px;cursor:pointer;touch-action:manipulation;'+
     '-webkit-tap-highlight-color:transparent;border-radius:8px;'+
     (active?'box-shadow:inset 0 0 15px rgba(255,212,112,.2);':'');
 }
@@ -49,37 +49,79 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
   root.style.cssText='position:absolute;inset:0;z-index:30000;box-sizing:border-box;overflow:auto;'+
     '-webkit-overflow-scrolling:touch;background:radial-gradient(circle at 50% 0%,#162c3a,#06101b 75%);'+
     'color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'+
-    'padding:clamp(9px,1.7vh,18px);pointer-events:auto;touch-action:pan-y;';
+    'padding:clamp(6px,1.1vh,12px);pointer-events:auto;touch-action:pan-y;display:flex;flex-direction:column;min-height:0;';
   root.classList.add('tdr-admin-mastery-editor');
   root.innerHTML=`
     <style>
-      .tdr-admin-mastery-editor .mcal-columns>div{
-        border:1px solid rgba(94,219,244,.24);
-        border-radius:16px;
-        padding:clamp(9px,1.5vw,16px);
-        background:linear-gradient(145deg,rgba(15,45,58,.65),rgba(5,18,30,.88));
-        box-shadow:inset 0 1px rgba(229,252,255,.08),0 15px 28px rgba(0,0,0,.18)
+      .tdr-admin-mastery-editor { --mc-stroke:rgba(111,226,248,.28); }
+      .tdr-admin-mastery-editor * {box-sizing:border-box;}
+      .tdr-admin-mastery-editor button {flex-shrink:0;}
+      .tdr-admin-mastery-editor button:active {filter:brightness(1.23);}
+      .tdr-admin-mastery-editor button:focus-visible {outline:2px solid #ffe082;outline-offset:2px;}
+      .tdr-admin-mastery-editor [data-status]{display:block;font-size:10px;line-height:1.25;}
+      .tdr-admin-mastery-editor .mcal-toolbar {flex:0 0 auto;min-height:0;}
+      .tdr-admin-mastery-editor .mcal-filters {flex:0 0 auto;min-width:0;}
+      .tdr-admin-mastery-editor .mcal-filters label{white-space:nowrap;}
+      .tdr-admin-mastery-editor .mcal-filters select{font-size:12px;max-width:28vw;}
+      .tdr-admin-mastery-editor .mcal-columns{
+        flex:1 1 auto;min-height:0;min-width:0;overflow:hidden;
+        grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);
+        align-items:stretch;
       }
-      .tdr-admin-mastery-editor button:active{filter:brightness(1.27);transform:scale(.98)}
-      .tdr-admin-mastery-editor button:focus-visible{outline:2px solid #ffe082;outline-offset:2px}
-      .tdr-admin-mastery-editor [data-status]{display:block;padding:4px 0}
-      @media(max-width:760px){
-        .tdr-admin-mastery-editor .mcal-columns{grid-template-columns:minmax(0,1fr)!important}
-        .tdr-admin-mastery-editor [data-stage]{height:clamp(170px,38vh,250px)!important}
-        .tdr-admin-mastery-editor .mcal-toolbar{margin-bottom:3px!important}
+      .tdr-admin-mastery-editor .mcal-columns>div {
+        border:1px solid var(--mc-stroke);border-radius:17px;
+        background:linear-gradient(155deg,rgba(12,42,57,.7),rgba(5,17,28,.64));
+        box-shadow:inset 0 1px rgba(226,250,255,.09);
+        padding:clamp(6px,1.1vw,12px);
       }
-      @media(max-height:390px){
-        .tdr-admin-mastery-editor [data-stage]{height:clamp(155px,47vh,215px)!important}
+      .tdr-admin-mastery-editor .mcal-preview{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;}
+      .tdr-admin-mastery-editor [data-stage]{
+        flex:1 1 auto;height:auto!important;min-height:100px;min-width:0;
+      }
+      .tdr-admin-mastery-editor .mcal-preview p{margin:5px 0 0;font-size:10px;line-height:1.3;}
+      .tdr-admin-mastery-editor .mcal-controls{
+        min-height:0;min-width:0;overflow:auto;
+        grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(6px,1vw,12px);
+        align-content:start;-webkit-overflow-scrolling:touch;
+      }
+      .tdr-admin-mastery-editor .mcal-motion,.tdr-admin-mastery-editor .mcal-settings{min-width:0;display:flex;flex-direction:column;gap:clamp(5px,.8vh,9px);}
+      .tdr-admin-mastery-editor .mcal-pad{
+        display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;width:100%;max-width:260px;
+      }
+      .tdr-admin-mastery-editor .mcal-pad button{min-width:0;min-height:36px;padding:4px;}
+      .tdr-admin-mastery-editor .mcal-inline{display:flex;align-items:center;justify-content:space-between;gap:5px;}
+      .tdr-admin-mastery-editor .mcal-inline strong{font-size:11px;white-space:nowrap;text-align:center;}
+      .tdr-admin-mastery-editor .mcal-inline button{min-width:0;min-height:34px;padding:4px 7px;}
+      .tdr-admin-mastery-editor .mcal-pair{display:flex;gap:5px;flex-wrap:wrap;}
+      .tdr-admin-mastery-editor .mcal-pair button{flex:1 1 auto;white-space:normal;font-size:10px;}
+      .tdr-admin-mastery-editor .mcal-divider{height:1px;background:rgba(119,218,233,.20);}
+      .tdr-admin-mastery-editor .mcal-export{color:#ffe1a1;font-weight:900;font-size:11px;}
+      .tdr-admin-mastery-editor .mcal-hint{color:#9bbbc8;font-size:10px;line-height:1.3;}
+      @media (max-height:560px) and (orientation:landscape){
+        .tdr-admin-mastery-editor .mcal-toolbar{margin-bottom:3px!important;}
+        .tdr-admin-mastery-editor .mcal-filters{padding:2px 0 5px!important;}
+        .tdr-admin-mastery-editor .mcal-controls{gap:5px;}
+        .tdr-admin-mastery-editor .mcal-motion,.tdr-admin-mastery-editor .mcal-settings{gap:4px;}
+        .tdr-admin-mastery-editor .mcal-pad button{min-height:31px;}
+        .tdr-admin-mastery-editor .mcal-inline button{min-height:31px;}
+        .tdr-admin-mastery-editor .mcal-preview p,.tdr-admin-mastery-editor .mcal-hint{display:none;}
+        .tdr-admin-mastery-editor [data-readout]{line-height:1.25!important;}
+      }
+      @media (max-width:700px) and (orientation:portrait){
+        .tdr-admin-mastery-editor{overflow:auto!important;}
+        .tdr-admin-mastery-editor .mcal-columns{flex:none;overflow:visible;grid-template-columns:minmax(0,1fr);}
+        .tdr-admin-mastery-editor [data-stage]{flex:none;height:32vh!important;min-height:185px;}
+        .tdr-admin-mastery-editor .mcal-controls{overflow:visible;}
       }
     </style>
-    <div class="mcal-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
-      <div><strong style="font-size:clamp(14px,2.8vh,24px)">CALIBRAR MAESTRÍAS</strong>
-      <div style="font-size:10px;color:#97b3c8">GLOBAL · 2 PX MOVIMIENTO · 1 PX TAMAÑO</div></div>
+    <div class="mcal-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+      <div><strong style="font-size:clamp(14px,2.6vh,21px)">CALIBRAR MAESTRÍAS</strong>
+      <div style="font-size:10px;color:#97b3c8">GLOBAL · MOVIMIENTO 1 PX · TAMAÑO 1 PX</div></div>
       <button type="button" data-action="close">CERRAR ✕</button>
     </div>
-    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:6px 0 10px">
+    <div class="mcal-filters" style="display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:3px 0 7px">
       <label style="font-size:11px;color:#b1c9d6;font-weight:800">COCHE
-        <select data-car aria-label="Elegir coche" style="display:block;min-width:185px;max-width:44vw;background:#102333;border:1px solid #55ddff;border-radius:8px;padding:9px;color:#fff;font:800 12px system-ui"></select>
+        <select data-car aria-label="Elegir coche" style="display:block;min-width:155px;max-width:32vw;background:#102333;border:1px solid #55ddff;border-radius:8px;padding:9px;color:#fff;font:800 12px system-ui"></select>
       </label>
       <label style="font-size:11px;color:#b1c9d6;font-weight:800">INSIGNIA
         <select data-level aria-label="Nivel de insignia" style="display:block;background:#102333;border:1px solid #55ddff;border-radius:8px;padding:9px;color:#fff;font:800 12px system-ui"></select>
@@ -88,8 +130,8 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
       <button type="button" data-view="race">CARRERA</button>
       <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#b1cad7;font-weight:800"><input type="checkbox" data-preview-visible checked aria-label="Mostrar insignia en la previsualización"> MOSTRAR INSIGNIA</label>
     </div>
-    <div class="mcal-columns" style="display:grid;grid-template-columns:minmax(220px,1.3fr) minmax(220px,1fr);gap:clamp(10px,2vw,22px);align-items:start">
-      <div style="min-width:0">
+    <div class="mcal-columns" style="display:grid;gap:clamp(7px,1vw,14px)">
+      <div class="mcal-preview">
         <div data-stage style="position:relative;width:100%;height:clamp(180px,50vh,420px);border:1px solid #346074;border-radius:13px;background:radial-gradient(ellipse at center,rgba(46,93,111,.32),rgba(8,18,29,.98) 75%);overflow:hidden">
           <img data-car-image alt="Vista cenital del coche" draggable="false" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:94%;max-width:58%;width:auto;object-fit:contain;filter:drop-shadow(0 7px 10px #000c)">
           <img data-badge alt="Insignia de maestría" draggable="false" style="position:absolute;width:42px;height:42px;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 2px 2px #000);object-fit:contain">
@@ -97,38 +139,43 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
         </div>
         <p style="color:#90adbd;font-size:10px;line-height:1.5;margin:7px 0">El ajuste se calcula sobre la imagen real del coche. La vista de carrera es proporcional al sprite y utiliza su propia calibración.</p>
       </div>
-      <div style="min-width:0;display:grid;gap:9px">
-        <strong data-view-title style="font-size:clamp(12px,2.1vh,17px);color:#76ebff">LOBBY · POSICIÓN</strong>
-        <div data-readout style="color:#d1e8f2;font:800 12px system-ui;line-height:1.7">X 0 px · Y 0 px · Tamaño base</div>
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(42px,1fr));gap:6px;max-width:250px">
-          <span></span><button type="button" data-nudge="up" aria-label="Subir 2 píxeles">▲ 2</button><span></span>
-          <button type="button" data-nudge="left" aria-label="Izquierda 2 píxeles">◀ 2</button>
-          <button type="button" data-reset-center aria-label="Centrar y restaurar desplazamiento">⌖</button>
-          <button type="button" data-nudge="right" aria-label="Derecha 2 píxeles">2 ▶</button>
-          <span></span><button type="button" data-nudge="down" aria-label="Bajar 2 píxeles">▼ 2</button><span></span>
+      <div class="mcal-controls">
+        <div class="mcal-motion">
+          <strong data-view-title style="font-size:clamp(12px,1.8vh,16px);color:#76ebff">LOBBY · POSICIÓN</strong>
+          <div data-readout style="color:#d1e8f2;font:800 11px system-ui;line-height:1.45">X 0 px · Y 0 px</div>
+          <div class="mcal-pad">
+            <span></span><button type="button" data-nudge="up" aria-label="Subir 1 píxel">▲ 1</button><span></span>
+            <button type="button" data-nudge="left" aria-label="Izquierda 1 píxel">◀ 1</button>
+            <button type="button" data-reset-center aria-label="Centrar y restaurar desplazamiento">⌖</button>
+            <button type="button" data-nudge="right" aria-label="Derecha 1 píxel">1 ▶</button>
+            <span></span><button type="button" data-nudge="down" aria-label="Bajar 1 píxel">▼ 1</button><span></span>
+          </div>
+          <small class="mcal-hint">Las flechas mueven el escudo 1 píxel sobre el coche previsualizado.</small>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <button type="button" data-nudge="shrink" aria-label="Reducir insignia un píxel">− 1 PX</button>
-          <strong data-size-label style="font-size:12px;color:#e9f4ff">Tamaño</strong>
-          <button type="button" data-nudge="grow" aria-label="Aumentar insignia un píxel">+ 1 PX</button>
+        <div class="mcal-settings">
+          <div class="mcal-inline">
+            <button type="button" data-nudge="shrink" aria-label="Reducir insignia un píxel">− 1</button>
+            <strong data-size-label>ESCUDO</strong>
+            <button type="button" data-nudge="grow" aria-label="Aumentar insignia un píxel">+ 1</button>
+          </div>
+          <div class="mcal-inline">
+            <button type="button" data-rotate="-90" aria-label="Rotar 90 grados a la izquierda">↶ 90°</button>
+            <strong data-angle>0°</strong>
+            <button type="button" data-rotate="90" aria-label="Rotar 90 grados a la derecha">90° ↷</button>
+          </div>
+          <div class="mcal-pair">
+            <button type="button" data-reset-view>REINICIAR VISTA</button>
+            <button type="button" data-reset-car>REINICIAR COCHE</button>
+          </div>
+          <div class="mcal-divider"></div>
+          <div class="mcal-export">EXPORTACIÓN · TODA LA FLOTA</div>
+          <div class="mcal-pair">
+            <button type="button" data-export>EXPORTAR MAESTRÍAS JSON</button>
+            <button type="button" data-copy>COPIAR JSON</button>
+          </div>
+          <small data-count class="mcal-hint">0 coches calibrados en este dispositivo.</small>
+          <small data-status role="status" aria-live="polite" style="color:#79eebb;min-height:14px"></small>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <button type="button" data-rotate="-90" aria-label="Rotar 90 grados a la izquierda">↶ 90°</button>
-          <strong data-angle style="font-size:12px;color:#e9f4ff">GIRO 0°</strong>
-          <button type="button" data-rotate="90" aria-label="Rotar 90 grados a la derecha">90° ↷</button>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" data-reset-view>RESTABLECER ESTA VISTA</button>
-          <button type="button" data-reset-car>RESTABLECER COCHE</button>
-        </div>
-        <div style="height:1px;background:#31536b;margin:2px 0"></div>
-        <strong style="font-size:12px;color:#ffe4a0">EXPORTACIÓN GLOBAL</strong>
-        <small style="line-height:1.5;color:#a4b9c8">Los cambios se guardan como borrador únicamente en este dispositivo. Mostrar u ocultar en la vista previa no modifica la preferencia de los jugadores. Las posiciones solo se publican al integrar el JSON en GitHub.</small>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" data-export>EXPORTAR JSON</button>
-          <button type="button" data-copy>COPIAR JSON</button>
-        </div>
-        <small data-status role="status" aria-live="polite" style="color:#79eebb;min-height:14px"></small>
       </div>
     </div>`;
   const $=selector=>root.querySelector(selector);
@@ -141,6 +188,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
   const getEntry=()=>draft[carId]||official?.cars?.[carId]||{};
   const viewRow=()=>normalizedMasteryCalibration(getEntry()[view]);
   const status=s=>{$('[data-status]').textContent=s;};
+  const updateCount=()=>{$('[data-count]').textContent=`${Object.keys(draft).length} coches con ajustes provisionales · se exportan juntos en un JSON.`;};
   function preview(){
     if(!root.isConnected)return;
     const rect=carImage.getBoundingClientRect();
@@ -190,6 +238,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
   }
   function persist(){
     saveDraft(draft);
+    updateCount();
     status('BORRADOR LOCAL GUARDADO · Falta exportar para publicar.');
     preview();
   }
@@ -208,7 +257,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
   carImage.onerror=()=>{previewReady=false;$('[data-wait]').textContent='Error cargando la imagen';status('No se ha podido abrir el coche.');};
   for(const tab of root.querySelectorAll('[data-view]'))
     tab.onclick=()=>{view=tab.dataset.view;activateTab();};
-  const increments={up:['y',-2],down:['y',2],left:['x',-2],right:['x',2],
+  const increments={up:['y',-1],down:['y',1],left:['x',-1],right:['x',1],
     shrink:['size',-1],grow:['size',1]};
   for(const btn of root.querySelectorAll('[data-nudge]'))
     btn.onclick=()=>{const [axis,px]=increments[btn.dataset.nudge];
@@ -247,6 +296,6 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
   const observer=typeof ResizeObserver==='function'?new ResizeObserver(()=>requestAnimationFrame(()=>{if(root.isConnected)preview();})):null;
   observer?.observe(stage);
   adminRoot.appendChild(root);
-  loadImage();activateTab();
+  loadImage();activateTab();updateCount();
   return {close,root};
 }

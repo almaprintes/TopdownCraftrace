@@ -47,14 +47,14 @@ export class CarEditorScene extends Phaser.Scene {
     bg.fillStyle(0xffc400, 0.035);
     bg.fillEllipse(width * 0.55, height * 0.12, width * 0.70, height * 0.45);
 
-    bg.fillStyle(0x2bff88, 0.035);
+    bg.fillStyle(0x4bdcf5, 0.035);
     bg.fillEllipse(width * 0.55, height * 0.70, width * 0.85, height * 0.70);
 
     bg.fillStyle(0x0b1d2a, 0.20);
     bg.fillRect(0, 0, width, height);
 
     // rejilla ligera
-    bg.lineStyle(1, 0xffffff, 0.02);
+    bg.lineStyle(1, 0xffffff, 0.01);
     const step = 56;
     for (let x = 0; x <= width; x += step) bg.lineBetween(x, 0, x, height);
     for (let y = 0; y <= height; y += step) bg.lineBetween(0, y, width, y);
@@ -67,20 +67,20 @@ export class CarEditorScene extends Phaser.Scene {
 
     // -------- Header --------
     this.add.text(width / 2, 18, `EDITOR · ${this._base.name || this._carId}`, {
-      fontFamily: 'Orbitron, system-ui',
-      fontSize: '22px',
+      fontFamily: 'system-ui',
+      fontSize: '21px',
       fontStyle: '900',
       color: '#ffffff',
-      stroke: '#0a2a6a',
-      strokeThickness: 7
+      stroke: '#041522',
+      strokeThickness: 1
     }).setOrigin(0.5, 0);
 
     this.add.text(width - 16, 22, 'ADMIN', {
       fontFamily: 'system-ui',
       fontSize: '14px',
-      color: '#ffffff',
-      stroke: '#0a2a6a',
-      strokeThickness: 4
+      color: '#71dcf3',
+      stroke: '#061522',
+      strokeThickness: 1
     }).setOrigin(1, 0);
 
     // Back (salir sin guardar = descarta draft)
@@ -108,12 +108,14 @@ export class CarEditorScene extends Phaser.Scene {
     this._refreshTechOverlay();
 
     // -------- Botones (Phaser) --------
-    const btnY = height - 92;
+    const btnY = height - 51;
 
         // 3 botones (mejor en móvil: no se salen de pantalla)
-    const BW = 120;
+    const BW = Math.max(78,Math.min(108,Math.round(width*.105)));
+    const editorPanelW = Math.min(850,Math.floor(width*.63),width-24);
+    const actionStart=12+Math.max(0,(editorPanelW-(BW*3+20))/2);
 
-    const saveBtn = this._button(width / 2 - 150, btnY, BW, 54, 'GUARDAR', () => {
+    const saveBtn = this._button(actionStart, btnY, BW, 40, 'GUARDAR', () => {
       // Guardar = convertir BASE+DRAFT en SAVED (differences vs FACTORY)
       const finalSpec = { ...(this._base || {}), ...(this._override || {}) };
       const factory = this._factory || {};
@@ -148,7 +150,7 @@ export class CarEditorScene extends Phaser.Scene {
       this._refreshDomValues(true);
     });
 
-    const exportBtn = this._button(width / 2 - 10, btnY, BW, 54, 'EXPORT', () => {
+    const exportBtn = this._button(actionStart+BW+10, btnY, BW, 40, 'FÍSICAS JSON', () => {
       try {
         const payload = this._buildExportPayload();
         const fname = 'car-overrides.json';
@@ -159,7 +161,7 @@ this._downloadJson(fname, payload);
       }
     });
 
-    const testBtn = this._button(width / 2 + 130, btnY, BW, 54, 'TEST', () => {
+    const testBtn = this._button(actionStart+(BW+10)*2, btnY, BW, 40, 'TEST', () => {
       // ✅ Mantener borrador para seguir testeando al volver
       this._writeDraft(this._carId, this._override);
 
@@ -334,10 +336,10 @@ this._downloadJson(fname, payload);
   _createDomPanel() {
     const { width, height } = this.scale;
 
-    const topY = 72;
-    const bottomSafe = 120;
-    const panelW = Math.min(560, width - 24);
-    const panelH = Math.max(220, height - topY - bottomSafe);
+    const topY = 64;
+    const bottomSafe = 66;
+    const panelW = Math.min(850, Math.floor(width*.63), width-24);
+    const panelH = Math.max(145, height - topY - bottomSafe);
 
     const keys = this._collectEditableNumberKeys();
 
@@ -393,7 +395,7 @@ this._downloadJson(fname, payload);
     }).join('');
 
     const html = `
-      <div class="panel">
+      <div class="panel tdr-car-editor">
         <div class="bar">
           <input class="search" placeholder="Buscar parámetro…" />
 
@@ -573,6 +575,56 @@ this._downloadJson(fname, payload);
       }
     `;
 
+    // Shared cyan/gold open language from the new lobby and garage.
+    style.textContent+=`
+      .tdr-car-editor{
+        background:linear-gradient(135deg,rgba(9,28,43,.88),rgba(5,17,31,.78));
+        border:1px solid rgba(95,219,241,.29);border-radius:19px;
+        padding-top:0;box-shadow:inset 0 1px rgba(255,255,255,.055);
+      }
+      .tdr-car-editor .bar{
+        gap:5px;padding:7px 8px;flex-wrap:wrap;
+        background:linear-gradient(90deg,rgba(11,47,61,.62),rgba(8,29,46,.48));
+        border-bottom:1px solid rgba(103,217,239,.20);
+      }
+      .tdr-car-editor .search{
+        flex:1 1 130px;min-width:100px;height:33px;font-size:13px;
+        border:1px solid rgba(113,207,225,.23);border-radius:9px;
+      }
+      .tdr-car-editor .selProfile{
+        height:33px;max-width:152px;min-width:114px;font-size:11px;
+        border-color:rgba(113,207,225,.24);
+      }
+      .tdr-car-editor .mini{
+        min-height:33px;height:33px;padding:0 7px;font-size:10px;
+        border-color:rgba(100,215,236,.25);border-radius:9px;
+        background:rgba(5,20,34,.65);color:#c5e2ec;cursor:pointer;
+      }
+      .tdr-car-editor .masteryTab{
+        border-color:rgba(241,201,105,.68);
+        background:linear-gradient(145deg,rgba(110,82,35,.38),rgba(21,33,40,.74));
+        color:#ffe5a7;font-size:11px;
+      }
+      .tdr-car-editor .list{padding:4px 9px;overscroll-behavior:contain;touch-action:pan-y;}
+      .tdr-car-editor .row{
+        border:0;border-bottom:1px solid rgba(124,208,227,.13);
+        background:linear-gradient(100deg,rgba(7,26,41,.32),rgba(9,35,49,.10));
+        border-radius:4px;padding:7px 9px;margin-bottom:3px;gap:6px;
+      }
+      .tdr-car-editor .kname{font-size:12px;color:#f2f7fc;}
+      .tdr-car-editor .meta{font-size:10px;color:#9ab7c7;gap:6px;}
+      .tdr-car-editor .right{gap:5px;}
+      .tdr-car-editor .btn{
+        width:32px;height:32px;font-size:17px;border-radius:9px;
+        border:1px solid rgba(92,218,240,.36);background:rgba(10,33,50,.7);
+      }
+      .tdr-car-editor .inp{
+        width:76px;height:33px;padding:0 6px;
+        border-color:rgba(109,211,232,.26);border-radius:9px;font-size:16px;
+      }
+      .tdr-car-editor .infoBtn{width:25px;height:25px;line-height:25px;border-radius:8px;}
+      .tdr-car-editor .tip{background:rgba(6,23,35,.95);border-color:rgba(103,217,239,.42);}
+    `;
     node.prepend(style);
     // Inicializar selector de perfil con valor actual (base+draft)
     const getLiveProfile = () => {
@@ -780,8 +832,8 @@ this._downloadJson(fname, payload);
   _button(x, y, w, h, label, onClick) {
     const c = this.add.container(x, y);
 
-    const bg = this.add.rectangle(0, 0, w, h, 0x141b33, 0.9).setOrigin(0);
-    bg.setStrokeStyle(2, 0x2bff88, 0.55);
+    const bg = this.add.rectangle(0, 0, w, h, 0x102537, 0.82).setOrigin(0);
+    bg.setStrokeStyle(1, label==='GUARDAR'?0xe7b859:0x62d9ee, 0.75);
 
     const txt = this.add.text(w / 2, h / 2, label, {
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
@@ -835,17 +887,17 @@ this._downloadJson(fname, payload);
 
     const { width } = this.scale;
 
-    const x = width - 16;
-    const y = 52;
+    const x = width - 14;
+    const y = 65;
 
     // Creamos el text vacío; lo rellenamos en _refreshTechOverlay()
     this._techOverlayText = this.add.text(x, y, '', {
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-      fontSize: '12px',
-      color: '#ffffff',
-      backgroundColor: 'rgba(11,16,32,0.70)',
-      padding: { left: 10, right: 10, top: 8, bottom: 8 },
-      lineSpacing: 2
+      fontSize: '11px',
+      color: '#b9dbe8',
+      backgroundColor: 'rgba(7,28,44,0.62)',
+      padding: { left: 9, right: 9, top: 8, bottom: 8 },
+      lineSpacing: 1
     })
       .setOrigin(1, 0)
       .setDepth(99999);

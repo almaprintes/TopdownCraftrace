@@ -19,6 +19,9 @@ assert.ok(editor.includes('initialCarId:this._carId'));
 assert.ok(calibrator.includes('data-preview-visible'));
 assert.ok(calibrator.includes('previewVisible[view]'));
 assert.ok(calibrator.includes('LEGACY_CAR_IDS'));
+assert.ok(editor.includes('panel tdr-car-editor'));
+assert.ok(editor.includes('FÍSICAS JSON'));
+assert.ok(calibrator.includes('mcal-controlpanel')||calibrator.includes('mcal-controls'));
 assert.ok(assets.size>=15,'Expected actual fleet visuals');
 for(const id of ['helix_spark','helix_vortex','veloce_juanicar_c220'])
   assert.ok(assets.has(id+'.webp'),'Missing calibration visual for '+id);
