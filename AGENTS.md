@@ -1,5 +1,7 @@
 # REGLAS OBLIGATORIAS DE TRABAJO — TOP DOWN RACE
 
+**Continuidad activa (14/10/2026):** Para cualquier tarea de CROWN Cuper, skins, calibración visual o Fábrica, leer primero [`docs/continuity/2026-10-14-cuper-factory-3-quarter.md`](docs/continuity/2026-10-14-cuper-factory-3-quarter.md). Es la referencia actualizada; documentación histórica puede contener nombres de imágenes de fábrica obsoletos. El jugador equipa la skin desde su garaje; Admin Hub únicamente configura recursos y geometría. Fábrica usa 3/4, NO lateral ortográfico.
+
 Estas reglas prevalecen sobre cualquier costumbre anterior del repositorio.
 
 1. NO crear ramas nuevas para trabajo normal.

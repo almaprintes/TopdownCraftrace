@@ -1,5 +1,15 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## CONTINUIDAD ACTUAL — 14/10/2026 — CROWN CUPER / SKINS / FÁBRICA (DEV 1.2.197)
+
+**Lectura prioritaria para chats nuevos:** [CROWN Cuper: decisiones, archivos, calibrador, estado de implementación y pendientes](docs/continuity/2026-10-14-cuper-factory-3-quarter.md).
+
+- Un solo coche `crown_cuper`, dos skins `original` y `gold`; el jugador viste el coche en su **garaje**, el Admin Hub **solo configura** los recursos/posiciones. Progreso y físicas compartidos.
+- La Fábrica usa imagen **tres cuartos**, **no perfil lateral duro**. Rutas vigentes: `public/assets/cars/workshop/mini_cooper_black_white.webp` y `mini_cooper_black_gold.webp`; cenitales `public/assets/skins/skin_crown_cuper_{original,gold}.webp`. Los cuatro WebP constan en el árbol de Git.
+- Los dos ajustes geométricos por skin se separan (cenital y fábrica 3/4) y exportan JSON; es el inicio de un sistema extensible a futuras skins de toda la flota.
+- DEV 1.2.197 es la implementación identificada al escribir este bloque. **Verificar siempre `main`, `index.html` y Actions del HEAD real**. No confundir el pipeline con aprobación visual en dispositivo. No tocar Google Play.
+- No reutilizar instrucciones históricas de recortar con fondos, inventar enlaces de descarga o generar una vista lateral estricta. Los archivos WebP deben tener alfa real; cuando el usuario solicita conversión, NO volver a generarlos.
+
 ## ACTUALIZACIÓN 23/09/2026 — DEV 1.1.177: ARRANQUE ANDROID
 
 La APK de pruebas 1.1.176 instalada pedía `/top-down-race-2/assets/`, pero empaquetaba los recursos bajo `assets/public/assets/`. Se reprodujo en el teléfono y un cambio exclusivo de rutas permitió cargar JS y responder al bridge nativo. La release 1.1.177 llegó al lobby físico con anuncios no configurados (`game-ready` a 3.871 ms). Se restituye `sensorLandscape`, se elimina la espera del bridge antes de Phaser y los SDK de publicidad pasan a inicializarse bajo demanda.
