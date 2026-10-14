@@ -16,7 +16,10 @@ const base=normalizeVehicleLights({},'crown_cuper');
 assert.equal(base.front.enabled,false);
 assert.equal(base.rear.left.x,-.285);
 assert.equal(base.rear.right.x,.285);
-assert.deepEqual(lightCoordinates({x:-.25,y:.385,size:.18},40,80),{x:-10,y:30.8,size:7.2});
+const coords=lightCoordinates({x:-.25,y:.385,size:.18},40,80);
+assert.equal(coords.x,-10);
+assert.ok(Math.abs(coords.y-30.8)<1e-9);
+assert.ok(Math.abs(coords.size-7.2)<1e-9);
 const custom=normalizeVehicleLights({front:{enabled:true,left:{x:-.2,y:-.4,size:.16},right:{x:.24,y:-.38,size:.14},color:'#abcdef',intensity:.9},
  rear:{enabled:true,left:{x:-.21,y:.4,size:.19},right:{x:.23,y:.39,size:.17},tailIntensity:.35}},'crown_cuper');
 const merged=mergeVehicleLights(raw,{crown_cuper:{original:custom,gold:{rear:{enabled:false}}}});
