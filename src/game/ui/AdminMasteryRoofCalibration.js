@@ -1,0 +1,216 @@
+import {CAR_SPECS} from '../cars/carSpecs.js';
+import {masteryWheelDataUri} from '../stats/carMastery.js';
+import official from '../stats/masteryRoofCalibration.json' with {type:'json'};
+import {
+  paintedCarBounds,lobbyMasteryPlacement,raceMasteryPlacement,
+  normalizedMasteryCalibration
+} from '../stats/masteryBadgePlacement.js';
+import {
+  nudgeMasteryCalibration,mergeMasteryCalibration,CALIBRATION_EXPORT_FILENAME
+} from '../stats/masteryRoofCalibrationTools.js';
+
+const BASE=import.meta.env.BASE_URL||'/';
+const STORAGE_KEY='tdr2:adminMasteryRoofDraft:1';
+const ids=Object.keys(CAR_SPECS).sort((a,b)=>
+  (Number(CAR_SPECS[a]?.collectionNo)||0)-(Number(CAR_SPECS[b]?.collectionNo)||0));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function readDraft(){
+  try{
+    const data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+    if(data?.schema_version!==1||!data?.cars||typeof data.cars!=='object')return {};
+    return Object.fromEntries(Object.entries(data.cars).filter(([id])=>ids.includes(id))
+      .map(([id,row])=>[id,{
+        lobby:normalizedMasteryCalibration(row?.lobby),
+        race:normalizedMasteryCalibration(row?.race)
+      }]));
+  }catch{return {};}
+}
+function saveDraft(cars){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({schema_version:1,cars}));return true;}
+  catch{return false;}
+}
+function styleButton(btn,{active=false,accent='#4edfff'}={}){
+  btn.style.cssText='min-height:40px;min-width:43px;border:1px solid '+(active?'#d9ad4b':accent)+
+    ';background:linear-gradient(180deg,#172b3c,#071522);color:#edfcff;font:900 12px system-ui;'+
+    'letter-spacing:.04em;padding:7px 11px;cursor:pointer;touch-action:manipulation;'+
+    '-webkit-tap-highlight-color:transparent;border-radius:8px;'+
+    (active?'box-shadow:inset 0 0 15px rgba(255,212,112,.2);':'');
+}
+export function showAdminMasteryRoofCalibration(adminRoot){
+  if(!adminRoot)return null;
+  adminRoot.querySelector('[data-mastery-roof-editor]')?.remove();
+  const draft=readDraft();
+  let carId=ids[0],view='lobby',level=1,shortAxis=0,previewReady=false;
+  let lastJson='',blobUrl=null;
+  const root=document.createElement('section');
+  root.dataset.masteryRoofEditor='1';
+  root.setAttribute('aria-label','Calibración global de maestrías');
+  root.style.cssText='position:absolute;inset:0;z-index:30;box-sizing:border-box;overflow:auto;'+
+    '-webkit-overflow-scrolling:touch;background:radial-gradient(circle at 50% 0%,#162c3a,#06101b 75%);'+
+    'color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'+
+    'padding:clamp(9px,1.7vh,18px);pointer-events:auto;touch-action:pan-y;';
+  root.innerHTML=`
+    <div class="mcal-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+      <div><strong style="font-size:clamp(14px,2.8vh,24px)">CALIBRAR MAESTRÍAS</strong>
+      <div style="font-size:10px;color:#97b3c8">GLOBAL · 2 PX MOVIMIENTO · 1 PX TAMAÑO</div></div>
+      <button type="button" data-action="close">CERRAR ✕</button>
+    </div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:6px 0 10px">
+      <label style="font-size:11px;color:#b1c9d6;font-weight:800">COCHE
+        <select data-car aria-label="Elegir coche" style="display:block;min-width:185px;max-width:44vw;background:#102333;border:1px solid #55ddff;border-radius:8px;padding:9px;color:#fff;font:800 12px system-ui"></select>
+      </label>
+      <label style="font-size:11px;color:#b1c9d6;font-weight:800">INSIGNIA
+        <select data-level aria-label="Nivel de insignia" style="display:block;background:#102333;border:1px solid #55ddff;border-radius:8px;padding:9px;color:#fff;font:800 12px system-ui"></select>
+      </label>
+      <button type="button" data-view="lobby">LOBBY</button>
+      <button type="button" data-view="race">CARRERA</button>
+    </div>
+    <div class="mcal-columns" style="display:grid;grid-template-columns:minmax(220px,1.3fr) minmax(220px,1fr);gap:clamp(10px,2vw,22px);align-items:start">
+      <div style="min-width:0">
+        <div data-stage style="position:relative;width:100%;height:clamp(180px,50vh,420px);border:1px solid #346074;border-radius:13px;background:radial-gradient(ellipse at center,rgba(46,93,111,.32),rgba(8,18,29,.98) 75%);overflow:hidden">
+          <img data-car-image alt="Vista cenital del coche" draggable="false" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:94%;max-width:58%;width:auto;object-fit:contain;filter:drop-shadow(0 7px 10px #000c)">
+          <img data-badge alt="Insignia de maestría" draggable="false" style="position:absolute;width:42px;height:42px;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 2px 2px #000);object-fit:contain">
+          <span data-wait style="position:absolute;bottom:8px;left:10px;color:#9cb5c3;font-size:10px">Cargando vista previa…</span>
+        </div>
+        <p style="color:#90adbd;font-size:10px;line-height:1.5;margin:7px 0">El ajuste se calcula sobre la imagen real del coche. La vista de carrera es proporcional al sprite y utiliza su propia calibración.</p>
+      </div>
+      <div style="min-width:0;display:grid;gap:9px">
+        <strong data-view-title style="font-size:clamp(12px,2.1vh,17px);color:#76ebff">LOBBY · POSICIÓN</strong>
+        <div data-readout style="color:#d1e8f2;font:800 12px system-ui;line-height:1.7">X 0 px · Y 0 px · Tamaño base</div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(42px,1fr));gap:6px;max-width:250px">
+          <span></span><button type="button" data-nudge="up" aria-label="Subir 2 píxeles">▲ 2</button><span></span>
+          <button type="button" data-nudge="left" aria-label="Izquierda 2 píxeles">◀ 2</button>
+          <button type="button" data-reset-center aria-label="Centrar y restaurar desplazamiento">⌖</button>
+          <button type="button" data-nudge="right" aria-label="Derecha 2 píxeles">2 ▶</button>
+          <span></span><button type="button" data-nudge="down" aria-label="Bajar 2 píxeles">▼ 2</button><span></span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button type="button" data-nudge="shrink" aria-label="Reducir insignia un píxel">− 1 PX</button>
+          <strong data-size-label style="font-size:12px;color:#e9f4ff">Tamaño</strong>
+          <button type="button" data-nudge="grow" aria-label="Aumentar insignia un píxel">+ 1 PX</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" data-reset-view>RESTABLECER ESTA VISTA</button>
+          <button type="button" data-reset-car>RESTABLECER COCHE</button>
+        </div>
+        <div style="height:1px;background:#31536b;margin:2px 0"></div>
+        <strong style="font-size:12px;color:#ffe4a0">EXPORTACIÓN GLOBAL</strong>
+        <small style="line-height:1.5;color:#a4b9c8">Los cambios se guardan como borrador únicamente en este dispositivo. No afectan a los jugadores hasta que integremos el JSON exportado en GitHub.</small>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" data-export>EXPORTAR JSON</button>
+          <button type="button" data-copy>COPIAR JSON</button>
+        </div>
+        <small data-status role="status" aria-live="polite" style="color:#79eebb;min-height:14px"></small>
+      </div>
+    </div>`;
+  const $=selector=>root.querySelector(selector);
+  for(const b of root.querySelectorAll('button'))styleButton(b);
+  for(const id of ids){const opt=document.createElement('option');opt.value=id;opt.textContent=CAR_SPECS[id]?.name||id;$('[data-car]').appendChild(opt);}
+  for(let i=1;i<=9;i++){const opt=document.createElement('option');opt.value=String(i);opt.textContent='NIVEL '+i;$('[data-level]').appendChild(opt);}
+  const carSelect=$('[data-car]'),levelSelect=$('[data-level]');
+  carSelect.value=carId;levelSelect.value=String(level);
+  const carImage=$('[data-car-image]'),badge=$('[data-badge]'),stage=$('[data-stage]');
+  const getEntry=()=>draft[carId]||official?.cars?.[carId]||{};
+  const viewRow=()=>normalizedMasteryCalibration(getEntry()[view]);
+  const status=s=>{$('[data-status]').textContent=s;};
+  function preview(){
+    const rect=carImage.getBoundingClientRect();
+    const bounds=paintedCarBounds(rect,carImage.naturalWidth,carImage.naturalHeight);
+    if(!bounds){previewReady=false;$('[data-wait]').textContent='Esperando imagen del coche';return;}
+    shortAxis=Math.min(bounds.width,bounds.height);
+    if(shortAxis<1){previewReady=false;return;}
+    previewReady=true;
+    const row=viewRow();
+    let x,y,size;
+    if(view==='lobby'){
+      const p=lobbyMasteryPlacement(rect,carImage.naturalWidth,carImage.naturalHeight,carId,row);
+      x=p.x;y=p.y;size=p.size;
+    }else{
+      // 46x96 local car-unit reference is scaled to actual preview image width.
+      // Production race uses the SAME ratio corrections on the live car rig.
+      const referenceWidth=46;
+      const scale=shortAxis/referenceWidth;
+      const p=raceMasteryPlacement(referenceWidth,96,carId,row);
+      x=bounds.left+bounds.width*.5+p.x*scale;
+      y=bounds.top+bounds.height*.5+p.y*scale;
+      size=p.radius*2*scale;
+    }
+    const stageRect=stage.getBoundingClientRect();
+    badge.style.left=(x-stageRect.left)+'px';
+    badge.style.top=(y-stageRect.top)+'px';
+    badge.style.width=size+'px';badge.style.height=size+'px';
+    $('[data-readout]').textContent='X '+(row.x*shortAxis).toFixed(1)+' px · Y '+(row.y*shortAxis).toFixed(1)+' px';
+    $('[data-size-label]').textContent='ESCUDO '+size.toFixed(1)+' px';
+    $('[data-wait]').textContent=view==='race'?'CARRERA · VISTA PROPORCIONAL':'LOBBY · PREVISUALIZACIÓN';
+  }
+  function activateTab(){
+    for(const btn of root.querySelectorAll('[data-view]'))styleButton(btn,{active:btn.dataset.view===view});
+    $('[data-view-title]').textContent=(view==='lobby'?'LOBBY':'CARRERA')+' · POSICIÓN';
+    preview();
+  }
+  function loadImage(){
+    previewReady=false;shortAxis=0;
+    badge.src=masteryWheelDataUri(level,{size:160,blackBackground:false});
+    carImage.src=BASE+'assets/cars/lobby/'+encodeURIComponent(carId)+'.webp?v='+
+      encodeURIComponent(CAR_SPECS[carId]?.collectionNo||1);
+    if(carImage.complete&&carImage.naturalWidth>0)requestAnimationFrame(preview);
+  }
+  function persist(){
+    saveDraft(draft);
+    lastJson='';
+    status('BORRADOR LOCAL GUARDADO · Falta exportar para publicar.');
+    preview();
+  }
+  function edit(fn){
+    if(!previewReady||shortAxis<=0){status('Espera a que se cargue el coche.');return;}
+    const previous=getEntry();
+    const current={lobby:normalizedMasteryCalibration(previous.lobby),race:normalizedMasteryCalibration(previous.race)};
+    current[view]=fn(current[view]);
+    draft[carId]=current;
+    persist();
+  }
+  carSelect.onchange=()=>{carId=carSelect.value;loadImage();status('');};
+  levelSelect.onchange=()=>{level=Number(levelSelect.value)||1;badge.src=masteryWheelDataUri(level,{size:160,blackBackground:false});};
+  carImage.onload=()=>requestAnimationFrame(preview);
+  carImage.onerror=()=>{previewReady=false;$('[data-wait]').textContent='Error cargando la imagen';status('No se ha podido abrir el coche.');};
+  for(const tab of root.querySelectorAll('[data-view]'))
+    tab.onclick=()=>{view=tab.dataset.view;activateTab();};
+  const increments={up:['y',-2],down:['y',2],left:['x',-2],right:['x',2],
+    shrink:['size',-1],grow:['size',1]};
+  for(const btn of root.querySelectorAll('[data-nudge]'))
+    btn.onclick=()=>{const [axis,px]=increments[btn.dataset.nudge];
+      edit(row=>nudgeMasteryCalibration(row,axis,px,shortAxis));};
+  $('[data-reset-center]').onclick=()=>edit(row=>({...row,x:0,y:0}));
+  $('[data-reset-view]').onclick=()=>edit(()=>({x:0,y:0,size:0}));
+  $('[data-reset-car]').onclick=()=>{
+    draft[carId]={lobby:{x:0,y:0,size:0},race:{x:0,y:0,size:0}};persist();
+  };
+  const payload=()=>mergeMasteryCalibration(official,draft,ids);
+  const json=()=>JSON.stringify(payload(),null,2)+'\n';
+  $('[data-export]').onclick=()=>{
+    const text=json();lastJson=text;
+    const blob=new Blob([text],{type:'application/json'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=CALIBRATION_EXPORT_FILENAME;
+    root.appendChild(a);a.click();a.remove();
+    if(blobUrl)URL.revokeObjectURL(blobUrl);
+    blobUrl=url;
+    status('JSON EXPORTADO · Envíalo al chat para publicarlo en el repositorio.');
+  };
+  $('[data-copy]').onclick=async()=>{
+    const data=json();lastJson=data;
+    try{await navigator.clipboard.writeText(data);status('JSON COPIADO AL PORTAPAPELES');}
+    catch{status('No se pudo copiar: utiliza EXPORTAR JSON.');}
+  };
+  function close(){
+    observer?.disconnect();
+    if(blobUrl)URL.revokeObjectURL(blobUrl);
+    root.remove();
+  }
+  $('[data-action="close"]').onclick=close;
+  const observer=typeof ResizeObserver==='function'?new ResizeObserver(()=>requestAnimationFrame(()=>{if(root.isConnected)preview();})):null;
+  observer?.observe(stage);
+  adminRoot.appendChild(root);
+  loadImage();activateTab();
+  return {close,root};
+}
