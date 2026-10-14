@@ -29,7 +29,7 @@ export class RaceScene extends CurrentRaceScene{
     const sprite=visibleCarSprite(this);
     const w=Math.max(18,Number(sprite?.displayWidth||sprite?.width||28));
     const h=Math.max(18,Number(sprite?.displayHeight||sprite?.height||48));
-    const {x,y,radius:r}=raceMasteryPlacement(w,h,carId);
+    const {x,y,radius:r,rotation}=raceMasteryPlacement(w,h,carId);
     const g=this.add.graphics();
     const rim=hexToInt(visual.rim,0xc9ced3);
     const light=hexToInt(visual.light,0xffffff);
@@ -111,6 +111,7 @@ export class RaceScene extends CurrentRaceScene{
       g.lineStyle(Math.max(.7,r*.075),0xffe39b,.95);g.strokePoints(shell,true);
     }
     g.setPosition(x,y);
+    g.setRotation(rotation*Math.PI/180);
     g.setDepth?.(999);rig.add(g);this._masteryRoofWheel=g;
   }
 }
