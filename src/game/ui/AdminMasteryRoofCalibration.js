@@ -1,4 +1,5 @@
 import {CAR_SPECS} from '../cars/carSpecs.js';
+import {bindMasteryHoldRepeat} from './masteryHoldRepeat.js';
 import {masteryWheelDataUri} from '../stats/carMastery.js';
 import official from '../stats/masteryRoofCalibration.json' with {type:'json'};
 import {
@@ -55,6 +56,23 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
     <style>
       .tdr-admin-mastery-editor { --mc-stroke:rgba(111,226,248,.28); }
       .tdr-admin-mastery-editor * {box-sizing:border-box;}
+      /* iPhone Safari: no text loupe, selection handles or long-press callout. */
+      .tdr-admin-mastery-editor,
+      .tdr-admin-mastery-editor *:not(select):not(option){
+        -webkit-user-select:none!important;user-select:none!important;
+        -webkit-touch-callout:none!important;
+      }
+      .tdr-admin-mastery-editor [data-nudge]{
+        touch-action:none!important;-webkit-user-select:none!important;
+        user-select:none!important;-webkit-touch-callout:none!important;
+        -webkit-tap-highlight-color:transparent;
+      }
+      .tdr-admin-mastery-editor [data-nudge].is-holding{
+        border-color:#ffe08a!important;background:linear-gradient(180deg,#31515b,#132b40)!important;
+      }
+      .tdr-admin-mastery-editor [data-stage] img{
+        -webkit-user-drag:none;user-select:none;-webkit-user-select:none;
+      }
       .tdr-admin-mastery-editor button {flex-shrink:0;}
       .tdr-admin-mastery-editor button:active {filter:brightness(1.23);}
       .tdr-admin-mastery-editor button:focus-visible {outline:2px solid #ffe082;outline-offset:2px;}
@@ -150,7 +168,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
             <button type="button" data-nudge="right" aria-label="Derecha 1 píxel">1 ▶</button>
             <span></span><button type="button" data-nudge="down" aria-label="Bajar 1 píxel">▼ 1</button><span></span>
           </div>
-          <small class="mcal-hint">Las flechas mueven el escudo 1 píxel sobre el coche previsualizado.</small>
+          <small class="mcal-hint">Toca para mover 1 px · Mantén pulsado para desplazar continuamente.</small>
         </div>
         <div class="mcal-settings">
           <div class="mcal-inline">
@@ -251,17 +269,21 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
     persist();
   }
   $('[data-preview-visible]').onchange=event=>{previewVisible[view]=!!event.target.checked;preview();};
-  carSelect.onchange=()=>{carId=carSelect.value;loadImage();status('');};
+  const cancelAllHolds=()=>{for(const hold of holdControls)hold.cancel();};
+  carSelect.onchange=()=>{cancelAllHolds();carId=carSelect.value;loadImage();status('');};
   levelSelect.onchange=()=>{level=Number(levelSelect.value)||1;badge.src=masteryWheelDataUri(level,{size:160,blackBackground:false});};
   carImage.onload=()=>requestAnimationFrame(preview);
   carImage.onerror=()=>{previewReady=false;$('[data-wait]').textContent='Error cargando la imagen';status('No se ha podido abrir el coche.');};
   for(const tab of root.querySelectorAll('[data-view]'))
-    tab.onclick=()=>{view=tab.dataset.view;activateTab();};
+    tab.onclick=()=>{cancelAllHolds();view=tab.dataset.view;activateTab();};
   const increments={up:['y',-1],down:['y',1],left:['x',-1],right:['x',1],
     shrink:['size',-1],grow:['size',1]};
-  for(const btn of root.querySelectorAll('[data-nudge]'))
-    btn.onclick=()=>{const [axis,px]=increments[btn.dataset.nudge];
-      edit(row=>nudgeMasteryCalibration(row,axis,px,shortAxis));};
+  const holdControls=[];
+  for(const btn of root.querySelectorAll('[data-nudge]')){
+    const [axis,px]=increments[btn.dataset.nudge];
+    holdControls.push(bindMasteryHoldRepeat(btn,()=>edit(row=>
+      nudgeMasteryCalibration(row,axis,px,shortAxis))));
+  }
   for(const button of root.querySelectorAll('[data-rotate]'))
     button.onclick=()=>edit(row=>({...row,rotation:(row.rotation+Number(button.dataset.rotate)+360)%360}));
   $('[data-reset-center]').onclick=()=>edit(row=>({...row,x:0,y:0}));
@@ -287,6 +309,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
     catch{status('No se pudo copiar: utiliza EXPORTAR JSON.');}
   };
   function close(){
+    for(const hold of holdControls)hold.dispose();
     observer?.disconnect();
     if(blobUrl)URL.revokeObjectURL(blobUrl);
     root.remove();

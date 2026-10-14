@@ -11,6 +11,9 @@ import {
 const read=p=>readFileSync(p,'utf8');
 assert.equal(official.schema_version,1);
 assert.equal(official.units,'car_short_axis_ratio');
+assert.deepEqual(Object.keys(official.cars).sort(),['helix_comet','helix_spark']);
+assert.equal(official.cars.helix_comet.lobby.rotation,180);
+assert.equal(official.cars.helix_spark.race.rotation,0);
 assert.equal(CALIBRATION_EXPORT_FILENAME,'tdr-mastery-roof-calibration.json');
 const zero=normalizedMasteryCalibration();
 assert.deepEqual(zero,{x:0,y:0,size:0,rotation:0});
@@ -68,4 +71,8 @@ assert.ok(editor.includes("up:['y',-1],down:['y',1],left:['x',-1],right:['x',1]"
 assert.match(editor,/data-nudge="up" aria-label="Subir 1 píxel"/);
 assert.match(editor,/class="mcal-controls"/);
 assert.match(editor,/data-export>EXPORTAR MAESTRÍAS JSON/);
-console.log('Global mastery calibration: two independent views per car; ±1 px movement, ±1 px size, 90° turns, compact layout and deterministic JSON export OK');
+assert.match(editor,/bindMasteryHoldRepeat\(btn,/);
+assert.match(editor,/hold\.dispose\(\)/);
+assert.match(editor,/touch-action:none!important/);
+assert.match(editor,/-webkit-touch-callout:none!important/);
+console.log('Global mastery calibration: independent views, 1px nudge and hold, iPhone no-select, deterministic JSON export OK');

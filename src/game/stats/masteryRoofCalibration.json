@@ -1,5 +1,14 @@
 {
   "schema_version": 1,
   "units": "car_short_axis_ratio",
-  "cars": {}
+  "cars": {
+    "helix_comet": {
+      "lobby": {"x": -0.02745896, "y": -0.28145434, "size": 0, "rotation": 180},
+      "race": {"x": -0.0343237, "y": -0.30204856, "size": -0.04805318, "rotation": 180}
+    },
+    "helix_spark": {
+      "lobby": {"x": -0.05116762, "y": 0.04555298, "size": -0.0967206, "rotation": 0},
+      "race": {"x": -0.05116762, "y": 0.04555298, "size": -0.13946626, "rotation": 0}
+    }
+  }
 }
