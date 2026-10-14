@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {CAR_SPECS} from '../src/game/cars/carSpecs.js';
 import official from '../src/game/stats/masteryRoofCalibration.json' with {type:'json'};
 import {
   normalizedMasteryCalibration,canonicalMasteryCalibration,carLocalMasteryPlacement,
@@ -13,9 +14,18 @@ const near=(a,b,message)=>assert.ok(Math.abs(a-b)<1e-7,message+': '+a+' vs '+b);
 assert.equal(official.schema_version,2);
 assert.equal(official.units,'car_short_axis_ratio');
 assert.equal(CALIBRATION_EXPORT_FILENAME,'tdr-mastery-roof-calibration.json');
-assert.deepEqual(Object.keys(official.cars).sort(),['helix_comet','helix_spark']);
-assert.deepEqual(official.cars.helix_comet,{x:-0.02745896,y:-0.28145434,size:0,rotation:180});
-assert.deepEqual(official.cars.helix_spark,{x:-0.05116762,y:0.04555298,size:-0.0967206,rotation:0});
+const allOfficialCarIds=Object.keys(CAR_SPECS).filter(id=>!['stock','touring','power'].includes(id)).sort();
+assert.equal(allOfficialCarIds.length,17,'17 actual player cars');
+assert.deepEqual(Object.keys(official.cars).sort(),allOfficialCarIds,'Complete 17-car mastery config');
+for(const [id,row] of Object.entries(official.cars)){
+  assert.deepEqual(Object.keys(row).sort(),['rotation','size','x','y'],'Single calibration row '+id);
+  assert.deepEqual(normalizedMasteryCalibration(row),row,'Valid canonical coordinates '+id);
+}
+assert.equal(official.cars.helix_vortex.rotation,180);
+assert.equal(official.cars.helix_pulse.rotation,180);
+assert.equal(official.cars.veloce_juanicar_c220.rotation,0);
+assert.deepEqual(official.cars.helix_comet,{x:-0.02745896,y:-0.35010174,size:0,rotation:180});
+assert.deepEqual(official.cars.helix_spark,{x:-0.04430288,y:0.04555298,size:-0.0967206,rotation:0});
 const zero=normalizedMasteryCalibration();
 assert.deepEqual(zero,{x:0,y:0,size:0,rotation:0});
 assert.equal(normalizedMasteryCalibration({rotation:450}).rotation,90);
@@ -32,7 +42,7 @@ const legacy={
  lobby:{x:-0.02745896,y:-0.28145434,size:0,rotation:180},
  race:{x:-0.0343237,y:-0.30204856,size:-0.04805318,rotation:180}
 };
-assert.deepEqual(canonicalMasteryCalibration(legacy),official.cars.helix_comet);
+assert.deepEqual(canonicalMasteryCalibration(legacy),{x:-0.02745896,y:-0.28145434,size:0,rotation:180},'Legacy v1 lobby calibration still migrates as authored');
 assert.deepEqual(canonicalMasteryCalibration({race:legacy.race}),legacy.race);
 assert.deepEqual(getMasteryRoofCalibration('helix_comet','race'),getMasteryRoofCalibration('helix_comet','lobby'));
 assert.deepEqual(getMasteryRoofCalibration('unknown'),zero);
@@ -60,7 +70,7 @@ const out=mergeMasteryCalibration({cars:{helix_comet:legacy}},{
 },['helix_comet','helix_spark','unknown']);
 assert.equal(out.schema_version,2);
 assert.equal(out.units,'car_short_axis_ratio');
-assert.deepEqual(out.cars.helix_comet,official.cars.helix_comet);
+assert.deepEqual(out.cars.helix_comet,canonicalMasteryCalibration(legacy),'Old per-view export still merges correctly');
 assert.deepEqual(out.cars.helix_spark,{x:.02,y:-.02,size:.01,rotation:90});
 assert.equal(out.cars.unknown,undefined);
 assert.deepEqual(mergeMasteryCalibration(official,{},['helix_spark','helix_comet']).cars,official.cars);

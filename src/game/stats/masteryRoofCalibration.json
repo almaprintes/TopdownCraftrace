@@ -2,16 +2,106 @@
   "schema_version": 2,
   "units": "car_short_axis_ratio",
   "cars": {
+    "avenir_apex": {
+      "x": -0.04805318,
+      "y": 0,
+      "size": -0.10983584,
+      "rotation": 0
+    },
+    "avenir_gripline": {
+      "x": -0.02745896,
+      "y": 0,
+      "size": -0.06178266,
+      "rotation": 0
+    },
+    "avenir_torque": {
+      "x": -0.04805318,
+      "y": 0,
+      "size": -0.08924162,
+      "rotation": 0
+    },
+    "crown_axis": {
+      "x": -0.04805318,
+      "y": 0.07551214,
+      "size": -0.08924162,
+      "rotation": 0
+    },
+    "crown_equinox": {
+      "x": -0.0343237,
+      "y": 0.02745896,
+      "size": -0.08924162,
+      "rotation": 0
+    },
+    "crown_vector": {
+      "x": -0.00686474,
+      "y": 0.05491792,
+      "size": -0.12356532,
+      "rotation": 0
+    },
+    "forge_anvil": {
+      "x": -0.04805318,
+      "y": 0.01372948,
+      "size": -0.2059422,
+      "rotation": 0
+    },
+    "forge_colossus": {
+      "x": -0.04118844,
+      "y": -0.0343237,
+      "size": -0.16475376,
+      "rotation": 0
+    },
+    "forge_hammer": {
+      "x": -0.02745896,
+      "y": 0.08924162,
+      "size": -0.00686474,
+      "rotation": 0
+    },
     "helix_comet": {
       "x": -0.02745896,
-      "y": -0.28145434,
+      "y": -0.35010174,
       "size": 0,
       "rotation": 180
     },
+    "helix_pulse": {
+      "x": -0.02745896,
+      "y": -0.15102428,
+      "size": -0.1716185,
+      "rotation": 180
+    },
     "helix_spark": {
-      "x": -0.05116762,
+      "x": -0.04430288,
       "y": 0.04555298,
       "size": -0.0967206,
+      "rotation": 0
+    },
+    "helix_vortex": {
+      "x": 0,
+      "y": -0.29518382,
+      "size": 0,
+      "rotation": 180
+    },
+    "veloce_flash": {
+      "x": -0.01372948,
+      "y": 0,
+      "size": -0.13043006,
+      "rotation": 0
+    },
+    "veloce_juanicar_c220": {
+      "x": -0.00514842,
+      "y": 0.18534312,
+      "size": -0.17504628,
+      "rotation": 0
+    },
+    "veloce_photon": {
+      "x": -0.04805318,
+      "y": 0.1372948,
+      "size": -0.10983584,
+      "rotation": 0
+    },
+    "veloce_surge": {
+      "x": -0.02059422,
+      "y": 0,
+      "size": -0.10983584,
       "rotation": 0
     }
   }
