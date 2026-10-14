@@ -1,7 +1,6 @@
 import {getEquippedCarSkin} from '../skins/carSkins.js';
 import {skinGeometry} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,hasAlternativeSkins} from '../skins/carSkins.js';
-import {IS_PROD_BUILD} from '../buildTarget.js';
 import { loadGarage } from '../garage/garageStore.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';

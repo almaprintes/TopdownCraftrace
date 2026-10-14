@@ -1,5 +1,4 @@
 import {getEquippedCarSkin,selectedCarSkinFile,hasAlternativeSkins} from '../skins/carSkins.js';
-import {IS_PROD_BUILD} from '../buildTarget.js';
 import Phaser from 'phaser';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
