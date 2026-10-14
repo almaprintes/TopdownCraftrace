@@ -1,3 +1,5 @@
+import {availableCarSkins,hasAlternativeSkins,getEquippedCarSkin,equipCarSkin,skinIsUnlocked} from '../skins/carSkins.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
 import { GarageScene as CurrentGarageScene } from './GarageResponsiveHeroScene.js';
 import { BaseScene } from './BaseScene.js';
 import {createAppHeader,disposeAppWallets} from '../ui/TdrAppHeader.js';
@@ -20,6 +22,13 @@ const LEGACY_IDS=new Set(['stock','touring','power']);
 const BASE=import.meta.env.BASE_URL||'/';
 const DOM_ID='tdr-garage-player-dom';
 const STYLE_ID='tdr-garage-player-dom-style';
+const skinPreview=(id,spec)=>{
+ if(spec?.cardPreviewAsset&&hasAlternativeSkins(id)){
+  const skin=getEquippedCarSkin(id,{spec,dev:!IS_PROD_BUILD});
+  return `${BASE}assets/skins/${encodeURIComponent(skin.file)}`;
+ }
+ return `${BASE}assets/cars/runtime/${cardFileFor(id,spec)}?v=${encodeURIComponent(spec?.cardAssetVersion||1)}`;
+};
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function savedSpec(carId){try{const raw=localStorage.getItem(`tdr2:carSpecs:${carId}`),obj=raw?JSON.parse(raw):null;return obj&&typeof obj==='object'?obj:{};}catch{return {};}}
@@ -97,6 +106,17 @@ export class GarageScene extends CurrentGarageScene {
 .tdr-garage-dom-hero{display:grid;grid-template-columns:minmax(230px,46%) minmax(0,1fr);gap:16px;padding:16px;position:relative}.tdr-garage-dom-cardzone{min-width:0;min-height:0;height:100%;display:flex;align-items:center;justify-content:center;padding:8px 2px;overflow:hidden}.tdr-garage-dom-cardzone img{display:block;max-width:100%;max-height:94%;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 10px 16px rgba(0,0,0,.32))}.tdr-garage-dom-cardzone.is-locked img{filter:brightness(0) drop-shadow(0 0 9px rgba(70,221,255,.35))}.tdr-garage-dom-info{min-width:0;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;overflow:hidden}.tdr-garage-dom-content{min-width:0;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-right:3px}.tdr-garage-dom-footer{position:relative;z-index:2;background:#09142d;padding-top:6px}.tdr-garage-dom-selected{font-size:10px;color:#7f94b8;font-weight:900;letter-spacing:.08em;margin:2px 0 5px}.tdr-garage-dom-title{font-size:clamp(22px,2.6vw,31px);font-weight:1000;line-height:1.05;margin:0}.tdr-garage-dom-brand{font-size:14px;font-weight:900;color:#2bff88;margin-top:7px}.tdr-garage-dom-meta{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px;margin-top:13px}.tdr-garage-dom-meta div{padding:7px 9px;background:#0d1830;border:1px solid rgba(183,192,255,.10);border-radius:6px}.tdr-garage-dom-meta span{display:block;color:#788aaf;font-size:8px;font-weight:900}.tdr-garage-dom-meta strong{display:block;font-size:11px;margin-top:2px}.tdr-garage-dom-personality{font-size:10px;line-height:1.4;color:#dce4ff;font-style:italic;margin:10px 2px 0}.tdr-garage-dom-stats{width:100%;min-width:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:auto;padding-top:10px;overflow:hidden}.tdr-garage-dom-stat{min-width:0;background:#111a33;border:1px solid rgba(255,255,255,.10);border-radius:7px;padding:6px 4px;text-align:center;overflow:hidden}.tdr-garage-dom-stat span{display:block;min-width:0;font-size:clamp(6px,.72vw,8px);line-height:1.15;color:#8fa1c7;font-weight:900;overflow-wrap:anywhere}.tdr-garage-dom-stat strong{display:block;min-width:0;font-size:clamp(10px,1.15vw,14px);line-height:1.15;margin-top:3px;overflow-wrap:anywhere}.tdr-garage-dom-actions{display:grid;grid-template-columns:minmax(130px,1.55fr) minmax(90px,1fr);gap:9px;margin-top:10px}.tdr-garage-dom-actions button{height:42px;border-radius:6px;font-weight:1000;border:1px solid rgba(183,192,255,.22);background:#141b33}.tdr-garage-dom-actions .primary{background:#2bff88;color:#07131b;border-color:#8dffc8}.tdr-garage-dom-actions button:disabled{background:#2b3445;color:#8e9caf;border-color:#556172}
 @media(max-height:430px){#${DOM_ID}{grid-template-rows:54px minmax(0,1fr);padding:6px 10px 10px}.tdr-garage-dom-layout{padding-top:7px;gap:9px}.tdr-garage-dom-listpanel{grid-template-rows:34px}.tdr-garage-dom-kicker{padding:9px 13px 5px;font-size:11px}.tdr-garage-dom-car{min-height:78px;grid-template-columns:60px 1fr;padding:5px 7px;margin-bottom:6px}.tdr-garage-dom-car img{width:55px;height:65px}.tdr-garage-dom-carname{font-size:12px;margin-bottom:4px}.tdr-garage-dom-carmeta{font-size:9px}.tdr-garage-dom-hero{padding:10px;gap:10px;grid-template-columns:minmax(190px,43%) minmax(0,1fr)}.tdr-garage-dom-cardzone{padding:6px 2px}.tdr-garage-dom-cardzone img{max-height:92%}.tdr-garage-dom-meta{margin-top:7px;gap:5px}.tdr-garage-dom-meta div{padding:4px 6px}.tdr-garage-dom-personality{margin-top:6px;font-size:9px}.tdr-garage-dom-stats{padding-top:6px;gap:5px}.tdr-garage-dom-stat{padding:5px}.tdr-garage-dom-actions{margin-top:6px}.tdr-garage-dom-actions button{height:34px;font-size:11px}}
 `;
+    s.textContent+=`
+      #tdr-garage-player-dom .tdr-garage-skin-tray{padding:9px 0 4px;display:grid;gap:7px;}
+      #tdr-garage-player-dom .tdr-garage-skin-title{font:900 11px system-ui;letter-spacing:.08em;color:#ffe1a1;}
+      #tdr-garage-player-dom .tdr-garage-skin-choices{display:flex;gap:8px;max-width:100%;overflow-x:auto;touch-action:pan-x;-webkit-overflow-scrolling:touch;}
+      #tdr-garage-player-dom .tdr-garage-skin-choices button{min-width:110px;max-width:140px;display:grid;justify-items:center;gap:3px;padding:5px;border:1px solid rgba(105,211,238,.32);border-radius:10px;background:rgba(5,22,35,.78);font:800 10px system-ui;cursor:pointer;touch-action:manipulation;}
+      #tdr-garage-player-dom .tdr-garage-skin-choices button.is-equipped{border-color:#efc56a;background:rgba(99,74,31,.25);}
+      #tdr-garage-player-dom .tdr-garage-skin-choices button:disabled{opacity:.52;cursor:default;}
+      #tdr-garage-player-dom .tdr-garage-skin-choices img{width:52px;height:78px;object-fit:contain;max-height:23vh;}
+      #tdr-garage-player-dom .tdr-garage-skin-choices small{font-size:9px;color:#92d8eb;text-align:center;}
+      @media(max-height:430px){#tdr-garage-player-dom .tdr-garage-skin-choices img{height:44px;}#tdr-garage-player-dom .tdr-garage-skin-choices button{min-width:87px;}}
+    `;
     document.head.appendChild(s);
   }
 
@@ -115,7 +135,7 @@ export class GarageScene extends CurrentGarageScene {
     (this._cars||[]).forEach((car,index)=>{
       const locked=this._lockedCar(car.id),spec=car.spec||{},btn=document.createElement('button');
       btn.type='button';btn.className=`tdr-garage-dom-car${index===this._selectedIndex?' is-selected':''}${locked?' is-locked':''}`;btn.dataset.index=String(index);
-      const file=cardFileFor(car.id,spec),src=`${BASE}assets/cars/runtime/${file}?v=${encodeURIComponent(spec.cardAssetVersion||1)}`;
+      const src=skinPreview(car.id,spec);
       const category=getVehicleClass(spec),rarity=localizedValue(spec.rarity,'rarity');
       btn.innerHTML=`${src?`<img src="${src}" alt="" draggable="false" loading="lazy" decoding="async">`:''}<div><div class="tdr-garage-dom-carname">${locked?'???':esc(String(spec.name||car.id).toUpperCase())}</div><div class="tdr-garage-dom-carmeta">${locked?`🔒 ${esc(L.locked)}`:`${esc(spec.brand||'—')} · ${esc(category)}<br>${esc(rarity)} · #${String(spec.collectionNo||0).padStart(3,'0')}`}</div></div>`;
       btn.addEventListener('click',()=>{this._selectedIndex=index;this._renderPlayerDomSelection();});
@@ -130,9 +150,9 @@ export class GarageScene extends CurrentGarageScene {
     const selected=this._cars?.[this._selectedIndex];if(!selected)return;
     const L=labels(),locked=this._lockedCar(selected.id),spec=selected.spec||{};
     root.querySelectorAll('.tdr-garage-dom-car').forEach((node,i)=>node.classList.toggle('is-selected',i===this._selectedIndex));
-    const zone=root.querySelector('.tdr-garage-dom-cardzone'),img=zone?.querySelector('img'),file=cardFileFor(selected.id,spec);
+    const zone=root.querySelector('.tdr-garage-dom-cardzone'),img=zone?.querySelector('img'),file=skinPreview(selected.id,spec);
     if(zone)zone.classList.toggle('is-locked',locked);
-    if(img){const next=file?`${BASE}assets/cars/runtime/${file}`:'';if(img.getAttribute('src')!==next)img.src=next;img.alt='';}
+    if(img){const next=file;if(img.getAttribute('src')!==next)img.src=next;img.alt='';}
     const live=getEffectiveCarSpec(selected.id),garage=loadGarage(),tuning=garageTuning(garage,selected.id),resolved=resolveCarParamsWithTuning(live,tuning),top=Math.round(attainableTopSpeedKmh(resolved)),accel=Math.round(resolved.accel||0),brake=Math.round(resolved.brakeForce||0),zero100=zeroToKmhSeconds(resolved,100),zero100Text=zero100==null?'—':`${zero100.toFixed(2)} s`,pr=internalPr(garageInternalStats(spec,garage,selected.id));
     let personality='';try{personality=t(`garage.personality.${selected.id}`)||'';}catch{}
     const info=root.querySelector('.tdr-garage-dom-content'),footer=root.querySelector('.tdr-garage-dom-footer');if(!info)return;
@@ -141,6 +161,25 @@ export class GarageScene extends CurrentGarageScene {
     }else{
       const category=getVehicleClass(spec),rarity=localizedValue(spec.rarity,'rarity');
       info.innerHTML=`<div class="tdr-garage-dom-selected">${esc(L.selected)}</div><h2 class="tdr-garage-dom-title">${esc(String(spec.name||selected.id).toUpperCase())}</h2><div class="tdr-garage-dom-brand">${esc(String(spec.brand||'—').toUpperCase())}</div><div class="tdr-garage-dom-meta"><div><span>${esc(L.category)}</span><strong>${esc(category)}</strong></div><div><span>${esc(L.rarity)}</span><strong>${esc(rarity)}</strong></div><div><span>${esc(L.collectionNo)}</span><strong>#${String(spec.collectionNo||0).padStart(3,'0')}</strong></div><div><span>${esc(L.role)}</span><strong>${esc(spec.role||'—')}</strong></div></div>${personality?`<p class="tdr-garage-dom-personality">${esc(personality)}</p>`:''}<div class="tdr-garage-dom-stats"><div class="tdr-garage-dom-stat"><span>${esc(L.top)}</span><strong>${top} km/h</strong></div><div class="tdr-garage-dom-stat"><span>${esc(L.accel)}</span><strong>${accel}</strong></div><div class="tdr-garage-dom-stat"><span>${esc(L.brake)}</span><strong>${brake}</strong></div><div class="tdr-garage-dom-stat"><span>${esc(L.zero100)}</span><strong>${esc(zero100Text)}</strong></div><div class="tdr-garage-dom-stat"><span>${esc(L.pr)}</span><strong>${pr}</strong></div></div>`;footer.innerHTML=`<div class="tdr-garage-dom-actions"><button type="button" class="primary" data-select>${esc(L.select)}</button><button type="button" data-back>${esc(L.back)}</button></div>`;
+      if(hasAlternativeSkins(selected.id)){
+        const equipped=getEquippedCarSkin(selected.id,{spec,dev:!IS_PROD_BUILD});
+        const skinTray=document.createElement('section');skinTray.className='tdr-garage-skin-tray';
+        skinTray.innerHTML=`<strong class="tdr-garage-skin-title">PERSONALIZAR · SKINS</strong><div class="tdr-garage-skin-choices">${availableCarSkins(selected.id,spec).map(s=>{
+          const unlocked=skinIsUnlocked(selected.id,s.id,{dev:!IS_PROD_BUILD});
+          return `<button type="button" data-skin="${s.id}" class="${equipped.id===s.id?'is-equipped':''}" ${unlocked?'':'disabled aria-disabled="true"'} title="${esc(s.name)}"><img src="${BASE}assets/skins/${s.file}" alt="" draggable="false"><span>${s.premium?'★ ':''}${esc(s.name)}</span><small>${equipped.id===s.id?'EQUIPADA':unlocked?'EQUIPAR':'PREMIUM · BLOQUEADA'}</small></button>`;
+        }).join('')}</div>`;
+        info.appendChild(skinTray);
+        skinTray.querySelectorAll('[data-skin]').forEach(button=>button.addEventListener('click',()=>{
+          if(this._lockedCar(selected.id))return;
+          const result=equipCarSkin(selected.id,button.dataset.skin,{spec,dev:!IS_PROD_BUILD});
+          if(result.ok){
+            this._renderPlayerDomSelection();
+            root.querySelectorAll('.tdr-garage-dom-car').forEach((node,i)=>{
+              if(this._cars?.[i]?.id===selected.id){const thumb=node.querySelector('img');if(thumb)thumb.src=skinPreview(selected.id,spec);}
+            });
+          }
+        }));
+      }
     }
     footer.querySelector('[data-select]')?.addEventListener('click',()=>{if(this._lockedCar(selected.id))return;try{localStorage.setItem('tdr2:carId',selected.id);}catch{}this.scene.start('menu');});
     footer.querySelector('[data-back]')?.addEventListener('click',()=>this.scene.start('menu'));
