@@ -23,6 +23,22 @@ for(let i=1;i<=9;i++){
   assert.match(svg,/viewBox="0 0 128 128"/);
   assert.match(svg,/linearGradient id="mastery-metal"/);
   assert.match(svg,/radialGradient id="mastery-enamel"/);
+  assert.match(svg,/linearGradient id="mastery-star"/);
+  assert.match(svg,/fill="url\(#mastery-star\)" stroke="#020a11" stroke-width="5"/,
+    'All rank stars need their own metallic gradient and a dark separation stroke');
+  assert.match(svg,/stop-color="#02070d"/,
+    'The shield enamel stays deep charcoal regardless of tier');
+  for(const key of ['starHighlight','starLight','starShadow'])
+    assert.match(spec[key]||'',/^#[0-9a-f]{6}$/i,'Star finish missing: '+key);
+  const channel=n=>n/255<=.04045?n/(255*12.92):((n/255+.055)/1.055)**2.4;
+  const luminance=hex=>{
+    const v=hex.slice(1);
+    return .2126*channel(parseInt(v.slice(0,2),16))+
+      .7152*channel(parseInt(v.slice(2,4),16))+
+      .0722*channel(parseInt(v.slice(4,6),16));
+  };
+  assert.ok((luminance(spec.starLight)+.05)/(luminance('#0d2330')+.05)>7,
+    'Stars must remain readable against dark enamel even in the bronze grade');
   assert.match(svg,/M64 6 L112 25 L108 72/,
     'Each mastery design must be a shield, not a wheel');
   assert.equal((svg.match(/data-mastery-star=/g)||[]).length,(i-1)%3+1,
@@ -86,7 +102,13 @@ assert.match(race,/g\.fillPoints\(shell,true\)/,
   'Race uses a fully filled championship shield');
 assert.match(race,/for\(const item of starLayout\)/);
 assert.match(race,/rank===1\?/);
-assert.match(race,/g\.fillPoints\(star,true\)/,
+assert.match(race,/g\\.fillStyle\\(0x07151e,1\\)/,
+  'In-race enamel is as dark as the lobby enamel');
+assert.match(race,/g\\.fillStyle\\(0x02080d,1\\);g\\.fillPoints\\(outline,true\\)/,
+  'In-race stars must have a dark silhouette halo');
+assert.match(race,/const starBright=hexToInt\\(visual\\.starLight/,
+  'Race stars use the same bright metallic palette as SVG');
+assert.match(race,/g\\.fillPoints\\(star,true\\)/,
   'Race paints 1, 2 or 3 distinct championship stars');
 assert.doesNotMatch(race,/g\.fillCircle\(/,
   'No wheel-shaped circles in race crest');
