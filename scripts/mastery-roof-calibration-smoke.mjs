@@ -73,7 +73,11 @@ assert.equal(out.units,'car_short_axis_ratio');
 assert.deepEqual(out.cars.helix_comet,canonicalMasteryCalibration(legacy),'Old per-view export still merges correctly');
 assert.deepEqual(out.cars.helix_spark,{x:.02,y:-.02,size:.01,rotation:90});
 assert.equal(out.cars.unknown,undefined);
-assert.deepEqual(mergeMasteryCalibration(official,{},['helix_spark','helix_comet']).cars,official.cars);
+const selectedExport=mergeMasteryCalibration(official,{},['helix_spark','helix_comet']).cars;
+assert.deepEqual(Object.keys(selectedExport).sort(),['helix_comet','helix_spark']);
+assert.deepEqual(selectedExport.helix_comet,official.cars.helix_comet);
+assert.deepEqual(selectedExport.helix_spark,official.cars.helix_spark);
+assert.deepEqual(mergeMasteryCalibration(official,{},allOfficialCarIds).cars,official.cars,'Full fleet export retains all published coordinates');
 const editor=read('src/game/ui/AdminMasteryRoofCalibration.js');
 for(const needle of [
  'data-rotate','data-nudge="up"','data-nudge="shrink"','data-reset-view',
