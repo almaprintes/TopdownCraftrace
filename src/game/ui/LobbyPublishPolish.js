@@ -30,7 +30,7 @@ function installMasteryRoofBadge(scene,root){
     const rr=root.getBoundingClientRect(),cr=car.getBoundingClientRect();
     // The <img> can have large invisible letterboxes with object-fit:contain.
     // Measure its ACTUAL painted car before mounting the roof decal.
-    const place=lobbyMasteryPlacement(cr,car.naturalWidth,car.naturalHeight);
+    const place=lobbyMasteryPlacement(cr,car.naturalWidth,car.naturalHeight,carId);
     if(!place)return;
     badge.style.left=`${place.x-rr.left}px`;
     badge.style.top=`${place.y-rr.top}px`;
