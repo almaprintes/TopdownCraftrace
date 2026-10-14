@@ -1,3 +1,4 @@
+import {skinGeometryForSprite} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,getEquippedCarSkin} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 import Phaser from 'phaser';
@@ -1223,6 +1224,12 @@ carSprite.setOrigin(0.50, 0.50);
 
   // Refit sin deformar (misma caja objetivo)
   fitSpriteToBox();
+  // Cosmetic normalization belongs to artwork only. Body and physics stay untouched.
+  const activeSkin=getEquippedCarSkin(specFinal.id,{spec:specFinal,dev:!IS_PROD_BUILD});
+  const skinFit=skinGeometryForSprite(specFinal.id,activeSkin.id,carSprite.displayWidth,carSprite.displayHeight);
+  carSprite.setPosition(skinFit.x,skinFit.y);
+  carSprite.setScale(carSprite.scaleX*skinFit.scale);
+  carSprite.rotation=skinFit.rotation*Math.PI/180;
 
   // Minimapa: actualizar también al skin real cuando termine de cargar
   if (this.minimap?.car?.scene) {
