@@ -1,4 +1,4 @@
-import {workshopCarArtworkCandidates} from '../skins/workshopCarArt.js';
+import {workshopCarArtworkCandidates,workshopCarPlacement} from '../skins/workshopCarArt.js';
 import {getEquippedCarSkin} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 import { UpgradeShopScene as PremiumWorkshopV2 } from './UpgradeWorkshopPremiumV2Scene.js';
@@ -132,12 +132,14 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
       url,key:`workshop_render_v6_${this.car}_${skin.id}_${i}`
     }));
     const layout=WORKSHOP_CAR_LAYOUT[this.car]||{x:0.49,y:0.53,scale:1.08};
-    const cx=r.x+r.w*layout.x,cy=r.y+r.h*layout.y,w=r.w*.92,hh=r.h*.94;
+    const g=workshopCarPlacement(this.car,skin.id,r.w,r.h);
+    const cx=r.x+r.w*layout.x+g.x,cy=r.y+r.h*layout.y+g.y,w=r.w*.92,hh=r.h*.94;
     for(const entry of entries){
       if(this.textures.exists(entry.key)){
         const img=A(this.add.image(cx,cy,entry.key));
         const s=Math.min(w/(img.width||1),hh/(img.height||1));
-        img.setScale(s*layout.scale);
+        img.setScale(s*layout.scale*g.scale);
+        img.setAngle(g.rotation);
         return;
       }
       if(this._workshopMissing?.has(entry.key))continue;

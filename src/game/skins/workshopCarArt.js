@@ -1,4 +1,5 @@
 import {availableCarSkins,getEquippedCarSkin,hasAlternativeSkins} from './carSkins.js';
+import {skinGeometryForSprite} from './skinGeometry.js';
 // Factory artwork is the original three-quarter showroom view (NOT an
 // orthographic hard side profile). Player equipment is read-only here.
 export function workshopCarArtworkCandidates(carId,{spec=null,storage=globalThis.localStorage,dev=false,entitlements=null}={}){
@@ -13,4 +14,10 @@ export function workshopCarArtworkCandidates(carId,{spec=null,storage=globalThis
   original.file?`assets/skins/${original.file}`:null
  ];
  return [...new Set(order.filter(Boolean))];
+}
+
+// Separate factory-view calibration per car and skin; does not affect the top-down racer.
+export const factorySkinGeometryId=skinId=>`factory_${String(skinId||'original')}`;
+export function workshopCarPlacement(carId,skinId,width,height,overrides=null){
+ return skinGeometryForSprite(carId,factorySkinGeometryId(skinId),width,height,overrides);
 }
