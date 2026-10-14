@@ -78,7 +78,7 @@ export class AdminHubScene extends BaseScene {
     root.appendChild(grid);
 
     const actions=[
-      {label:'EDITAR COCHES',sub:'Garage · fichas y datos',accent:'#2bff88',run:()=>this._navigate('GarageScene',{mode:'admin'})},
+      {label:'EDITAR COCHES',sub:'Físicas, fichas y maestrías',accent:'#2bff88',run:()=>this._navigate('GarageScene',{mode:'admin'})},
       {label:'EDITAR PISTAS',sub:'Editor Bézier',accent:'#2bff88',run:()=>this._navigate('TrackEditorScene')},
       {label:'TRACK STUDIO',sub:'Diseño avanzado de trazado',accent:'#2bff88',run:()=>this._navigate('TrackStudioScene')},
       {label:'ENVIRONMENT BUILDER',sub:'Decoración y entorno',accent:'#e1b33b',run:()=>this._navigate('EnvironmentBuilderScene')},
