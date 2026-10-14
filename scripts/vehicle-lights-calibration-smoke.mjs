@@ -8,6 +8,24 @@ import {defaultVehicleLights,normalizeVehicleLights,vehicleLightsForCar,
 const read=p=>readFileSync(p,'utf8');
 const raw=JSON.parse(read('src/game/skins/vehicleLights.json'));
 assert.equal(raw.schema_version,1);
+
+assert.equal(raw.units,'sprite_width_height_ratio');
+assert.deepEqual(Object.keys(raw.cars),['crown_cuper']);
+assert.deepEqual(Object.keys(raw.cars.crown_cuper),['original']);
+const published=vehicleLightsForCar('crown_cuper','original');
+assert.equal(published.front.enabled,true);
+assert.equal(published.rear.enabled,true);
+assert.equal(published.front.intensity,.69);
+assert.equal(published.front.halo,.32);
+assert.equal(published.rear.intensity,1);
+assert.equal(published.rear.tailIntensity,.45);
+assert.equal(published.rear.halo,.15);
+assert.deepEqual(published.front.left,{x:-.227604,y:-.385,size:.066944});
+assert.deepEqual(published.front.right,{x:.227604,y:-.385,size:.066944});
+assert.deepEqual(published.rear.left,{x:-.253038,y:.31204,size:.138906});
+assert.deepEqual(published.rear.right,{x:.253038,y:.31204,size:.138906});
+assert.deepEqual(vehicleLightsForCar('crown_cuper','gold'),published,'Gold uses original calibration unless separately authored');
+
 assert.equal(VEHICLE_LIGHTS_EXPORT,'tdr-vehicle-lights.json');
 assert.equal(vehicleLightsForCar('crown_axis','original'),null,'legacy lighting untouched until calibrated');
 assert.equal(defaultVehicleLights('crown_cuper').rear.enabled,true);

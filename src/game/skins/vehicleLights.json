@@ -1,1 +1,43 @@
-{"schema_version":1,"units":"sprite_width_height_ratio","cars":{}}
+{
+  "schema_version": 1,
+  "units": "sprite_width_height_ratio",
+  "cars": {
+    "crown_cuper": {
+      "original": {
+        "front": {
+          "enabled": true,
+          "color": "#fff8ed",
+          "intensity": 0.69,
+          "halo": 0.32,
+          "left": {
+            "x": -0.227604,
+            "y": -0.385,
+            "size": 0.066944
+          },
+          "right": {
+            "x": 0.227604,
+            "y": -0.385,
+            "size": 0.066944
+          }
+        },
+        "rear": {
+          "enabled": true,
+          "color": "#ff0000",
+          "intensity": 1,
+          "tailIntensity": 0.45,
+          "halo": 0.15,
+          "left": {
+            "x": -0.253038,
+            "y": 0.31204,
+            "size": 0.138906
+          },
+          "right": {
+            "x": 0.253038,
+            "y": 0.31204,
+            "size": 0.138906
+          }
+        }
+      }
+    }
+  }
+}
