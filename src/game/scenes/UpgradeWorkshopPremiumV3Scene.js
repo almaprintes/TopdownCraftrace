@@ -1,3 +1,6 @@
+import {workshopCarArtworkCandidates} from '../skins/workshopCarArt.js';
+import {getEquippedCarSkin} from '../skins/carSkins.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
 import { UpgradeShopScene as PremiumWorkshopV2 } from './UpgradeWorkshopPremiumV2Scene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { GARAGE_ITEMS, findStripRecipe, stripRecipeCanAccept } from '../garage/partsCatalog.js';
@@ -123,30 +126,42 @@ export class UpgradeShopScene extends PremiumWorkshopV2 {
   }
 
   _carImage(A,spec,r){
-    const cleanKey=`workshop_render_v5_${this.car}`;
+    const skin=getEquippedCarSkin(this.car,{spec,dev:!IS_PROD_BUILD});
+    const candidates=workshopCarArtworkCandidates(this.car,{spec,dev:!IS_PROD_BUILD});
+    const entries=candidates.map((url,i)=>({
+      url,key:`workshop_render_v6_${this.car}_${skin.id}_${i}`
+    }));
     const layout=WORKSHOP_CAR_LAYOUT[this.car]||{x:0.49,y:0.53,scale:1.08};
-    const cx=r.x+r.w*layout.x,cy=r.y+r.h*layout.y,w=r.w*.92,h=r.h*.94;
-
-    const showClean=()=>{
-      if(!this.textures.exists(cleanKey))return false;
-      const img=A(this.add.image(cx,cy,cleanKey));
-      const baseScale=Math.min(w/(img.width||1),h/(img.height||1));
-      img.setScale(baseScale*layout.scale);
-      return true;
-    };
-
-    if(showClean())return;
-    if(this._workshopMissing?.has(cleanKey))return super._carImage(A,spec,r);
-    if(this.loadingAssets.has(cleanKey))return;
-
-    this.loadingAssets.add(cleanKey);
-    const cleanup=()=>{this.loadingAssets.delete(cleanKey);this.load.off(`filecomplete-image-${cleanKey}`,ok);this.load.off('loaderror',err);};
-    const ok=()=>{cleanup();if(this.root?.scene)this.render();};
-    const err=f=>{if(f?.key!==cleanKey)return;cleanup();this._workshopMissing?.add(cleanKey);if(this.root?.scene)this.render();};
-    this.load.once(`filecomplete-image-${cleanKey}`,ok);
-    this.load.on('loaderror',err);
-    this.load.image(cleanKey,`${WORKSHOP_BASE}${this.car}.webp?v=20260811-5`);
-    if(!this.load.isLoading())this.load.start();
+    const cx=r.x+r.w*layout.x,cy=r.y+r.h*layout.y,w=r.w*.92,hh=r.h*.94;
+    for(const entry of entries){
+      if(this.textures.exists(entry.key)){
+        const img=A(this.add.image(cx,cy,entry.key));
+        const s=Math.min(w/(img.width||1),hh/(img.height||1));
+        img.setScale(s*layout.scale);
+        return;
+      }
+      if(this._workshopMissing?.has(entry.key))continue;
+      if(this.loadingAssets.has(entry.key))return;
+      this.loadingAssets.add(entry.key);
+      const cleanup=()=>{
+        this.loadingAssets.delete(entry.key);
+        this.load.off(`filecomplete-image-${entry.key}`,ok);
+        this.load.off('loaderror',err);
+      };
+      const ok=()=>{cleanup();if(this.root?.scene)this.render();};
+      const err=file=>{
+        if(file?.key!==entry.key)return;
+        cleanup();
+        this._workshopMissing?.add(entry.key);
+        if(this.root?.scene)this.render(); // Try next available view.
+      };
+      this.load.once(`filecomplete-image-${entry.key}`,ok);
+      this.load.on('loaderror',err);
+      this.load.image(entry.key,`${import.meta.env.BASE_URL||'./'}${entry.url}`);
+      if(!this.load.isLoading())this.load.start();
+      return;
+    }
+    return super._carImage(A,spec,r);
   }
 
   _forgePanel(A,r,compact){
