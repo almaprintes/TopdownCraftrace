@@ -30,7 +30,7 @@ export function showAdminVehicleLightsCalibration(host,{initialCarId='crown_cupe
  root.dataset.vehicleLightsEditor='1';
  root.setAttribute('aria-label','Editor de faros delanteros y luces de freno');
  root.style.cssText='position:absolute;inset:0;z-index:91000;box-sizing:border-box;background:linear-gradient(155deg,#06131e,#102e3d);color:#f0fbff;font:750 12px system-ui;display:flex;flex-direction:column;gap:7px;padding:clamp(7px,1.5vh,14px);overflow:auto;touch-action:pan-y;-webkit-user-select:none;user-select:none';
- root.innerHTML=\`
+ root.innerHTML=`
  <style>
  .tdr-lightcal *{box-sizing:border-box}
  .tdr-lightcal button,.tdr-lightcal select,.tdr-lightcal input{font:800 11px system-ui}
@@ -71,7 +71,7 @@ export function showAdminVehicleLightsCalibration(host,{initialCarId='crown_cupe
  <div class="lc-row"><button type="button" data-reset>RESTABLECER ESTE PAR</button><button type="button" data-export>EXPORTAR JSON GLOBAL</button></div>
  <div class="lc-hint">Los ajustes se guardan localmente hasta exportar. Sube el JSON a <strong>src/game/skins/vehicleLights.json</strong> para aplicarlos a todos los jugadores. Las físicas y las cartas no cambian.</div>
  <small data-status role="status" aria-live="polite" style="color:#83ecc3;min-height:13px"></small>
- </div></div>\`;
+ </div></div>`;
  root.classList.add('tdr-lightcal');host.appendChild(root);
  const $=selector=>root.querySelector(selector);
  const car=$('[data-car]'),skin=$('[data-skin]'),image=$('[data-image]'),svg=$('[data-overlay]');
