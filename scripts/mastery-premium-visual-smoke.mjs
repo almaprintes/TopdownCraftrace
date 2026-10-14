@@ -102,13 +102,13 @@ assert.match(race,/g\.fillPoints\(shell,true\)/,
   'Race uses a fully filled championship shield');
 assert.match(race,/for\(const item of starLayout\)/);
 assert.match(race,/rank===1\?/);
-assert.match(race,/g\\.fillStyle\\(0x07151e,1\\)/,
+assert.match(race,/g\.fillStyle\(0x07151e,1\)/,
   'In-race enamel is as dark as the lobby enamel');
-assert.match(race,/g\\.fillStyle\\(0x02080d,1\\);g\\.fillPoints\\(outline,true\\)/,
+assert.match(race,/g\.fillStyle\(0x02080d,1\);g\.fillPoints\(outline,true\)/,
   'In-race stars must have a dark silhouette halo');
-assert.match(race,/const starBright=hexToInt\\(visual\\.starLight/,
+assert.match(race,/const starBright=hexToInt\(visual\.starLight/,
   'Race stars use the same bright metallic palette as SVG');
-assert.match(race,/g\\.fillPoints\\(star,true\\)/,
+assert.match(race,/g\.fillPoints\(star,true\)/,
   'Race paints 1, 2 or 3 distinct championship stars');
 assert.doesNotMatch(race,/g\.fillCircle\(/,
   'No wheel-shaped circles in race crest');
