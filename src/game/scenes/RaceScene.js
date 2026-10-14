@@ -1,3 +1,5 @@
+import {selectedCarSkinFile,getEquippedCarSkin} from '../skins/carSkins.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
 import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
@@ -146,10 +148,10 @@ this.minimap = null;
   // Skins: carga dinámica por coche (runtime)
   // =========================================
   ensureCarSkinTexture(spec) {
-  const file = spec?.skin;
+  const skin=getEquippedCarSkin(spec?.id,{spec,dev:!IS_PROD_BUILD});
+  const file=selectedCarSkinFile(spec?.id,spec,{dev:!IS_PROD_BUILD});
   if (!file) return Promise.resolve(null);
-
-  const texKey = `car_${spec.id}`;
+  const texKey=skin.id==='original'?`car_${spec.id}`:`car_${spec.id}_${skin.id}`;
   if (this.textures.exists(texKey)) return Promise.resolve(texKey);
 
   return new Promise((resolve) => {
