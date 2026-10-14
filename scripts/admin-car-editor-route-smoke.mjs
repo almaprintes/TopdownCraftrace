@@ -17,7 +17,8 @@ assert.ok(wrapper.includes('export class CarEditorScene extends CurrentCarEditor
 assert.ok(editor.includes('showAdminMasteryRoofCalibration(host,'));
 assert.ok(editor.includes('initialCarId:this._carId'));
 assert.ok(calibrator.includes('data-preview-visible'));
-assert.ok(calibrator.includes('previewVisible[view]'));
+assert.ok(calibrator.includes('previewVisible=!!event.target.checked'),'Single preview visibility toggle remains operational');
+assert.ok(!calibrator.includes('data-view="race"'),'No separate race calibration tab');
 assert.ok(calibrator.includes('LEGACY_CAR_IDS'));
 assert.ok(editor.includes('panel tdr-car-editor'));
 assert.ok(editor.includes('FÍSICAS JSON'));
