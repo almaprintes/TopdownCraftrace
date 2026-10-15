@@ -53,6 +53,7 @@ assert.doesNotMatch(lobby,/assets\/ui\/menu_bg\.webp/,'old DOM background is gon
 assert.match(read('src/game/ui/lobby-dom.css'),/tdr-lobby-garage-well::before/,'inset shaft wall');
 assert.match(read('src/game/ui/lobby-dom.css'),/tdr-lobby-garage-well::after/,'deep floor');
 assert.match(read('src/game/ui/lobby-dom.css'),/tdr-lobby-garage-rim/,'orthographic metallic rim');
+assert.doesNotMatch(read('src/game/ui/lobby-dom.css'),/tdr-lobby-garage-lip/,'no old perspective lip overlay');
 assert.match(lobby,/label:tr\('lobby\.garage'\),action:\(\)=>goToPlayerGarageWithLift\(scene\)/);
 assert.match(polish,/makeCardButton\(car,t\('lobby\.openGarage'\),\(\)=>goToPlayerGarageWithLift\(scene\)\)/);
 const garage=read('src/game/scenes/GarageLazyCardsScene.js');
