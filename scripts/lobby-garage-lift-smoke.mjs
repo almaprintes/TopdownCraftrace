@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {garageLiftFootprint,garageLiftApertureFrames,garageLiftSoftRadius,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
+import {garageLiftFootprint,garageLiftApertureFrames,garageLiftSoftRadius,GARAGE_LIFT_DEPTH_STOPS,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
 const read=p=>readFileSync(p,'utf8');
 assert.deepEqual(GARAGE_LIFT_TIMING,{down:1850,up:1900});
 assert.deepEqual(GARAGE_LIFT_DEPTH,{platform:0,car:1,mastery:4});
@@ -39,6 +39,22 @@ for(let i=0;i<close.length;i++){
 assert.ok(garageLiftSoftRadius(.3,true)>garageLiftSoftRadius(.7,true));
 assert.equal(garageLiftSoftRadius(-1,true),145);
 assert.equal(garageLiftSoftRadius(2,true),-45);
+assert.deepEqual(GARAGE_LIFT_DEPTH_STOPS.map(frame=>frame.offset),[0,.16,.30,.48,.68,.84,1],
+ 'shared depth timing uses perceptible early recession');
+const early=GARAGE_LIFT_DEPTH_STOPS.find(frame=>frame.offset===.30);
+const first=GARAGE_LIFT_DEPTH_STOPS[0],last=GARAGE_LIFT_DEPTH_STOPS.at(-1);
+assert.ok(early.scale<.94,'the car and platform already recede in the first 30%');
+assert.ok(early.brightness>.98,'the light remains almost unchanged during initial descent');
+assert.ok((first.scale-early.scale)/(first.scale-last.scale)>.50,
+ 'more than half the size change precedes the strong shadow');
+assert.ok(last.scale>=.86&&last.scale<=.89,'depth reduction stays subtle, not a zoom-out');
+for(let i=1;i<GARAGE_LIFT_DEPTH_STOPS.length;i++){
+ const prev=GARAGE_LIFT_DEPTH_STOPS[i-1],next=GARAGE_LIFT_DEPTH_STOPS[i];
+ assert.ok(next.scale<=prev.scale,'stage cannot re-enlarge while descending');
+ assert.ok(next.brightness<=prev.brightness,'light cannot increase as the lift sinks');
+}
+assert.ok(garageLiftSoftRadius(.30,true)>100,'the broad Gaussian feather remains outside at early shrink');
+assert.ok(garageLiftSoftRadius(.48,true)<60,'the shadow starts covering after visible recession');
 const source=read('src/game/ui/LobbyGarageLiftTransition.js');
 for(const str of ['.tdr-lobby-car-platform',"[data-lobby-car]","[data-lobby-mastery]",
  'createFloorWell','copyAtPivot','anchoredPart','Promise.all(progress)',
@@ -54,7 +70,10 @@ assert.match(source,/animateWait\(rim,rimFrames/,'rim uses the same animation du
 assert.match(source,/rim\?\.remove\(\)/,'rim is always removed on cleanup');
 assert.doesNotMatch(source,/214748|zIndex:\s*['"]999/,'native z-index required');
 assert.doesNotMatch(source,/translate3d\(0,16px,0\)/,'no Y displacement in ortho view');
-assert.ok(source.includes('scale(.96)'), 'orthographic stage keeps most of its apparent size');
+assert.match(source,/platform:depthKeyframes,\\s*car:depthKeyframes,\\s*mastery:depthKeyframes/,
+ 'platform/car/mastery share EXACTLY the same transform and brightness timeline');
+assert.ok(source.includes("const easing='linear'"),
+ 'depth keyframes and the Gaussian radius run on the same normalized clock');
 assert.match(source,/tdr-lobby-garage-aperture/,'fixed round crop above the stage');
 assert.ok(source.includes('animateSoftApertures('),'three synchronized soft masks instead of sharp clips');
 assert.ok(source.includes('[platformLayer.mask,carLayer.mask,masteryLayer?.mask]'),'mask all car, platform and mastery layers together');
