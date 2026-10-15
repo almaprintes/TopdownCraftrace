@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {garageLiftFootprint,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
+import {garageLiftFootprint,garageLiftApertureFrames,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
 const read=p=>readFileSync(p,'utf8');
 assert.deepEqual(GARAGE_LIFT_TIMING,{down:1040,up:1120});
 assert.deepEqual(GARAGE_LIFT_DEPTH,{platform:0,car:1,mastery:4});
@@ -25,10 +25,21 @@ assert.equal(fallback.left,200+(430-430*.81)/2);
 assert.equal(fallback.top,100+(400-400*.68)/2);
 assert.equal(fallback.width,430*.81);
 assert.equal(fallback.height,400*.68);
+const close=garageLiftApertureFrames(true),open=garageLiftApertureFrames(false);
+assert.equal(close[0].clipPath,'ellipse(51% 51% at 50% 50%)');
+assert.equal(close.at(-1).clipPath,'ellipse(0% 0% at 50% 50%)');
+assert.equal(open[0].clipPath,'ellipse(0% 0% at 50% 50%)');
+assert.equal(open.at(-1).clipPath,'ellipse(51% 51% at 50% 50%)');
+assert.deepEqual(close.map(k=>k.offset),[0,.2,.5,.77,1]);
+for(let i=1;i<close.length;i++){
+ const prev=parseFloat(close[i-1].clipPath.slice(8));
+ const next=parseFloat(close[i].clipPath.slice(8));
+ assert.ok(next<=prev,'visible disc narrows from the rim toward the center');
+}
 const source=read('src/game/ui/LobbyGarageLiftTransition.js');
 for(const str of ['.tdr-lobby-car-platform',"[data-lobby-car]","[data-lobby-mastery]",
  'createFloorWell','copyAtPivot','anchoredPart','Promise.all(progress)',
- 'scene._garageLiftBusy','root.appendChild(node)',
+ 'scene._garageLiftBusy','root.appendChild(mask)',
  "visibility:'visible'","scene?.scene?.start?.('menu')",
  "scene?.scene?.start?.('GarageScene',{mode:'player'})",
  "root.classList.add('tdr-lobby-garage-lifting')"])assert.ok(source.includes(str),str);
@@ -40,7 +51,13 @@ assert.match(source,/animateWait\(rim,rimFrames/,'rim uses the same animation du
 assert.match(source,/rim\?\.remove\(\)/,'rim is always removed on cleanup');
 assert.doesNotMatch(source,/214748|zIndex:\s*['"]999/,'native z-index required');
 assert.doesNotMatch(source,/translate3d\(0,16px,0\)/,'no Y displacement in ortho view');
-assert.match(source,/scale\(\.88\)/,'orthographic platform depth');
+assert.match(source,/scale\\(\\.96\\)/,'orthographic near-full-size platform depth');
+assert.match(source,/tdr-lobby-garage-aperture/,'fixed round crop above the stage');
+assert.match(source,/animateWait\\(platformLayer\\.mask,apertureFrames/,'platform is progressively masked');
+assert.match(source,/animateWait\\(carLayer\\.mask,apertureFrames/,'car is progressively masked');
+assert.match(source,/animateWait\\(masteryLayer\\.mask,apertureFrames/,'roof badge is progressively masked');
+assert.match(source,/opacity:1,filter:'brightness/,'stage remains opaque behind a growing floor mask');
+assert.doesNotMatch(source,/opacity:\\.(?:03|34|25)/,'old flat fade is absent');
 assert.match(source,/liftFrames\(descendingFrames\.platform,goingDown\)/);
 assert.match(source,/liftFrames\(descendingFrames\.car,goingDown\)/);
 assert.match(source,/liftFrames\(descendingFrames\.mastery,goingDown\)/);
