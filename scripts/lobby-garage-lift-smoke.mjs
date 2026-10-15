@@ -84,7 +84,7 @@ assert.ok(source.includes('platform:depthKeyframes,') && source.includes('car:de
 assert.ok(source.includes("const easing='linear'"),
  'depth keyframes and the Gaussian radius run on the same normalized clock');
 assert.match(source,/tdr-lobby-garage-aperture/,'Gaussian mask exists above stage');
-assert.match(source,/garageLiftMaskBounds\\(footprint,\\[pr,car\\.getBoundingClientRect\\(\\)/,
+assert.ok(source.includes('garageLiftMaskBounds(footprint,[pr,car.getBoundingClientRect()'),
  'stage, car and mastery rectangles determine mask overscan');
 assert.ok(!source.includes("clipPath:'ellipse(51%"),'remove old hard 51% ellipse crop');
 assert.ok(source.includes('width:maskBounds.width') && source.includes('height:maskBounds.height'),
