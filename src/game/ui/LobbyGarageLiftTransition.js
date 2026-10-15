@@ -1,4 +1,4 @@
-// DEV 1.2.210 — Slow Gaussian-profile radial fade, without a sharp iris edge.
+// DEV 1.2.211 — Front-loaded, synchronized descent before Gaussian shadow.
 // These DOM clones stay at their ORIGINAL lobby z-index: stage 0, car 1,
 // roof mastery 4. No fullscreen overlay or extra Phaser renderer work.
 // Race departure (LobbyRaceDeparture.js) is entirely separate and untouched.
@@ -131,25 +131,30 @@ function createFloorWell(root,footprint){
  root.appendChild(well);root.appendChild(rim);
  return {well,rim};
 }
-// No fake uniform-opacity fade. Masking moves inward from the fixed floor
-// ring, while the car and deck darken in the shaft and remain opaque.
-const LEVEL={transform:'translate3d(0,0,0) scale(1)',opacity:1,filter:'brightness(1) saturate(1)'};
-const FALL={transform:'translate3d(0,0,0) scale(.96)',opacity:1,filter:'brightness(.37) saturate(.62)'};
-const CAR_FALL={transform:'translate3d(0,0,0) scale(.96)',opacity:1,filter:'brightness(.34) saturate(.62)'};
-const MASTERY_FALL={transform:'translate3d(0,0,0) scale(.96)',opacity:1,filter:'brightness(.32)'};
-const descendingFrames={
- platform:[{...LEVEL,offset:0},
-  {transform:'translate3d(0,0,0) scale(1)',opacity:1,filter:'brightness(.92) saturate(.96)',offset:.27},
-  {transform:'translate3d(0,0,0) scale(.98)',opacity:1,filter:'brightness(.63) saturate(.82)',offset:.68},
-  {...FALL,offset:1}],
- car:[{...LEVEL,offset:0},
-  {transform:'translate3d(0,0,0) scale(1)',opacity:1,filter:'brightness(.91) saturate(.96)',offset:.27},
-  {transform:'translate3d(0,0,0) scale(.98)',opacity:1,filter:'brightness(.65) saturate(.8)',offset:.68},
-  {...CAR_FALL,offset:1}],
- mastery:[{...LEVEL,offset:0},
-  {transform:'translate3d(0,0,0) scale(.98)',opacity:1,filter:'brightness(.69)',offset:.55},
-  {...MASTERY_FALL,offset:1}]
-};
+// One shared depth curve: stage, car AND roof mastery move together. The
+// first 30% creates visible distance while brightness stays almost untouched;
+// only after that does the fixed Gaussian shadow progressively cover the car.
+// The rounded descent remains orthographic (scale, never screen-Y travel).
+export const GARAGE_LIFT_DEPTH_STOPS=Object.freeze([
+ {offset:0,scale:1,brightness:1,saturation:1},
+ {offset:.16,scale:.961,brightness:1,saturation:1},
+ {offset:.30,scale:.932,brightness:.985,saturation:.99},
+ {offset:.48,scale:.897,brightness:.91,saturation:.94},
+ {offset:.68,scale:.878,brightness:.64,saturation:.81},
+ {offset:.84,scale:.871,brightness:.32,saturation:.67},
+ {offset:1,scale:.87,brightness:.12,saturation:.55}
+].map(step=>Object.freeze(step)));
+const depthKeyframes=GARAGE_LIFT_DEPTH_STOPS.map(({offset,scale,brightness,saturation})=>({
+ offset,
+ transform:'translate3d(0,0,0) scale('+scale+')',
+ opacity:1,
+ filter:'brightness('+brightness+') saturate('+saturation+')'
+}));
+const descendingFrames=Object.freeze({
+ platform:depthKeyframes,
+ car:depthKeyframes,
+ mastery:depthKeyframes
+});
 const liftFrames=(frames,goingDown)=>goingDown?frames:frames.map(f=>({...f,offset:1-f.offset})).reverse();
 // The mask stays exactly on the platform outline. Its alpha follows a
 // wide Gaussian CDF profile (CSS mask-image, not blur() on the car art).
@@ -266,9 +271,11 @@ function startLift(scene,root,direction,onComplete){
   scene?.events?.once?.('destroy',cleanup);
   const goingDown=direction==='down';
   const duration=goingDown?GARAGE_LIFT_TIMING.down:GARAGE_LIFT_TIMING.up;
-  const easing=goingDown?'cubic-bezier(.28,.02,.2,1)':'cubic-bezier(.2,.7,.18,1)';
-  // Gaussian-profile concentric dissolution; no hard iris or whole-image fade.
-  // The same soft radius is shared by platform, car and roof mastery.
+  // Linear elapsed time: our authored depth stops already supply the easing.
+  // The Gaussian radius is driven from this SAME duration/progress clock.
+  const easing='linear';
+  // Front-loaded scale at 0-30%; only then does the Gaussian shadow advance
+  // into the turntable. All three sprites use the same stops and timing.
   well.style.opacity=goingDown?'0':'1';
   rim.style.opacity=goingDown?'0':'1';
   const wellFrames=goingDown
