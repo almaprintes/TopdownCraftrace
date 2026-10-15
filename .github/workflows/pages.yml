@@ -250,6 +250,11 @@ jobs:
         shell: bash
         run: |
           npm ci --no-audit --no-fund
+          # Karting Tenerife image-native assets are generated from the
+          # authored source and ignored by Git; the Android runner must stage
+          # them just like the main Pages build and standalone QA workflow.
+          node scripts/install-karting-tenerife-source.mjs
+          node scripts/karting-official-source-smoke.mjs
           npm run build:android
       - name: Compile minified release and run native unit tests
         working-directory: android
