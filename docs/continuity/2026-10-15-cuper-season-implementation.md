@@ -1,0 +1,11 @@
+# Crown Cuper — implementación DEV 1.2.216 (15/10/2026)
+- Rama: main. Android 1.1.188 Google Play NO se publica automáticamente.
+- Campaña permanente Crown Cuper después de terminar las 14 misiones de inducción y llegar a 500 km de odómetro REAL `carMileageKm('avenir_gripline')`. Distancia acumulada desde primer movimiento; no se pone a cero.
+- 14 misiones concretas en `src/game/seasons/cuperCampaign.js`: 1 garaje; 2 vuelta limpia → desbloquea el coche `crown_cuper`; 3 primer km Cuper; 4 1 pieza Cuper; 5 botín; 6 conducir en 2 pistas; 7 modo fantasma; 8 limpias; 9 nueva pieza; 10 operación de recicladora; 11 2 km con Cuper en rally Arafo; 12 publicar online un tiempo Cuper confirmando servidor y anuncio; 13 2 piezas Cuper; 14 limpieza + dos pistas Cuper + botines → skin Gold.
+- Estado independiente `tdr2:seasonCuper:v1` y entitlement `tdr2:seasonSkinUnlocks:v1`, ambos incluidos en backup cloud. No reiniciar ni migrar indebidamente `tdr2:seasonInduction:v1`. Cuper `original` y `gold` son el mismo coche y comparten estadísticas.
+- Operaciones recicladora SOLO tras guardado exitoso en `materialExchange.js` o `partDismantle.js`; ambas variantes valen. Publicaciones SOLO tras RPC `submit_track_record_with_ghost` con `record_ref` retornado para `crown_cuper`.
+- El evento 12 no tiene alternativa sin publicidad, el jugador decide cuándo completarlo, y el anuncio se explica en ayuda.
+- `SeasonScene` reutiliza camino de 14 hitos y añade bloqueo con barra de km Gripline, campaña Cuper, explicación ¿CÓMO SE HACE? y regreso al lobby. El lobby sustituye cuenta atrás mensual por la campaña permanente y el estado del cuentakilómetros.
+- Siguiente campaña (vehículo todavía sin decidir): solo cuando Cuper Gold misión 14 + el contador real `crown_cuper` alcance 500km. Los kilómetros durante la temporada cuentan desde el primer centímetro.
+- APK Android prueba de dispositivo: `.github/workflows/android-revenuecat-qa-apk.yml` → `TDR-QA-CUPER-DEV-1.2.216`, paquete distinto `com.craftracestudio.topdownrace.rewardedtest`, con AdMob real. No interactuar repetidamente con anuncios reales por pruebas artificiales.
+- Script `scripts/cuper-season-smoke.mjs` en Pages y QA. Verificar build y deploy verdes y APK descargable desde el artifact del run antes de comunicar finalización.

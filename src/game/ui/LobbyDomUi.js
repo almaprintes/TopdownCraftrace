@@ -44,9 +44,24 @@ function renderDomCards(scene, root) {
   const eventSlot = root.querySelector('[data-event-card]'); const carSlot = root.querySelector('[data-car-card]'); const trackSlot = root.querySelector('[data-track-card]');
   const eventData = getCurrentRaceEvent();
   if (eventSlot) {
-    if (eventData.finished) {
-      eventSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.seasonComplete')}</div><h2>${tr('lobby.completeDriver')}</h2><p>${tr('lobby.inductionComplete')}</p><div class="tdr-season-next">${tr('lobby.nextSeasonIn')}</div><div class="tdr-event-finished" data-season-countdown>${seasonCountdownLabel()}</div>`;
-    } else { const { event, progress } = eventData; const ratio = Math.max(0, Math.min(100, (Number(progress.value) / Math.max(1, Number(progress.target))) * 100)); eventSlot.innerHTML = `<div class="tdr-card-kicker">${progress.complete ? tr('lobby.eventComplete') : tr('lobby.event',{current:eventData.index+1,total:eventData.total})}</div><h2>${escapeHtml(event.title)}</h2><p>${escapeHtml(event.description).toUpperCase()}</p><div class="tdr-event-reward">${tr('lobby.reward',{reward:escapeHtml(raceEventRewardLabel(event.reward))})}</div><div class="tdr-event-progress"><i style="width:${ratio.toFixed(2)}%"></i></div>${progress.complete ? `<button type="button" class="tdr-event-claim">${tr('lobby.claimReward')}</button>` : `<strong>${progress.value}/${progress.target} ${escapeHtml(progress.label)}</strong>`}`; eventSlot.querySelector('.tdr-event-claim')?.addEventListener('click', () => { const result = claimCurrentRaceEvent(); if (result?.ok) { scene._showEventRewardModal?.(result.event); renderDomCards(scene, root); } }); }
+    const en=getLanguage()==='en';
+    if(eventData.gated){
+      const km=Math.max(0,Number(eventData.mileageMeters)||0)/1000,goal=Math.max(1,Number(eventData.requiredMeters)||500000)/1000;
+      const ratio=Math.min(100,Math.max(0,km/goal*100));
+      eventSlot.innerHTML=`<div class="tdr-card-kicker">${en?'NEXT SEASON':'PRÓXIMA TEMPORADA'}</div><h2>CROWN CUPER 🔒</h2><p>${en?'Master your Avenir Gripline':'Domina tu Avenir Gripline'}</p><div class="tdr-event-progress"><i style="width:${ratio.toFixed(2)}%"></i></div><strong>${km.toFixed(1)} / ${goal} km</strong><div class="tdr-season-next">${en?'Odometer never resets':'El cuentakilómetros no se reinicia'}</div>`;
+    }else if(eventData.finished){
+      const km=Math.max(0,Number(eventData.mileageMeters)||0)/1000;
+      eventSlot.innerHTML=eventData.family==='cuper'
+        ?`<div class="tdr-card-kicker">${en?'CAMPAIGN COMPLETE':'TEMPORADA COMPLETADA'}</div><h2>CROWN CUPER · GOLD</h2><p>${en?'Gold Edition unlocked':'Edición dorada desbloqueada'}</p><div class="tdr-season-next">${en?'Cuper mastery':'Dominio del Cuper'}: ${km.toFixed(1)} / 500 km</div>`
+        :`<div class="tdr-card-kicker">${tr('lobby.seasonComplete')}</div><h2>${tr('lobby.completeDriver')}</h2><p>${tr('lobby.inductionComplete')}</p>`;
+    }else{
+      const {event,progress}=eventData,ratio=Math.max(0,Math.min(100,(Number(progress.value)/Math.max(1,Number(progress.target)))*100));
+      const seasonName=eventData.family==='cuper'?'CROWN CUPER':(en?'INDUCTION':'INDUCCIÓN');
+      eventSlot.innerHTML=`<div class="tdr-card-kicker">${seasonName} · ${eventData.index+1}/${eventData.total}</div><h2>${escapeHtml(event.title)}</h2><p>${escapeHtml(event.description).toUpperCase()}</p><div class="tdr-event-reward">${tr('lobby.reward',{reward:escapeHtml(raceEventRewardLabel(event.reward))})}</div><div class="tdr-event-progress"><i style="width:${ratio.toFixed(2)}%"></i></div>${progress.complete?`<button type="button" class="tdr-event-claim">${tr('lobby.claimReward')}</button>`:`<strong>${progress.value}/${progress.target} ${escapeHtml(progress.label)}</strong>`}`;
+      eventSlot.querySelector('.tdr-event-claim')?.addEventListener('click',()=>{
+        const result=claimCurrentRaceEvent();if(result?.ok){scene._showEventRewardModal?.(result.event);renderDomCards(scene,root);}
+      });
+    }
   }
   const carId = scene.selectedCarId; const spec = CAR_SPECS?.[carId] || {}; const params = resolveCarParams(spec, { accelMult:1, brakeMult:1, dragMult:1, turnRateMult:1, maxFwdAdd:0, maxRevAdd:0, turnMinAdd:0 }); const topKmh = Math.round(attainableTopSpeedKmh(params)); const brandKey = String(carId || '').split('_')[0].toLowerCase(); const brandLogoName = COMPACT_CAR_BRANDS.has(brandKey) ? `logo_${brandKey}_compact.webp` : `logo_${brandKey}.webp`; const brandMark = CAR_BRANDS.has(brandKey) ? `<img src="${BASE}assets/logos/${brandLogoName}" alt="${escapeHtml(spec.brand || brandKey)}" draggable="false">` : escapeHtml(spec.brand || 'TDR');
   if (carSlot) carSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.selectedCar')}</div><div class="tdr-car-card-row"><span class="tdr-car-brand tdr-car-brand--${escapeHtml(brandKey)}">${brandMark}</span><span><h2>${escapeHtml(params?.name || spec.name || carId)}</h2><strong>${topKmh} km/h</strong></span><em>${escapeHtml(spec.category || spec.role || 'RACING')}</em></div>`;
