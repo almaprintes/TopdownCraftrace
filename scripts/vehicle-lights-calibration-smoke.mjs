@@ -58,5 +58,5 @@ const ui=read('src/game/ui/AdminVehicleLightsCalibration.js');
 for(const key of ['data-group="front"','data-group="rear"','data-braking','data-side="left"','data-side="right"','data-export','bindMasteryHoldRepeat','data-mirror','pointermove','data-color'])assert.ok(ui.includes(key),key);
 const race=read('src/game/scenes/RaceBrakeLightsSpeedTrailScene.js');
 for(const key of ['vehicleLightsForCar(id,equipped.id)','if(cal){','drawGroup(cal.front','drawGroup(cal.rear','window.__tdrIosSafeMode'])assert.ok(race.includes(key),key);
-assert.ok(read('index.html').includes('content="DEV 1.2.206"'));
+assert.match(read('index.html'),/name="tdr-dev-version" content="DEV 1\.2\.\d+"/);
 console.log('Vehicle light admin: front/rear L-R, per skin, draft export, legacy fallback, iOS guard and 1px controls OK');
