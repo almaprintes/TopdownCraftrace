@@ -1,3 +1,4 @@
+import { recordOnlineCuperPublish } from '../seasons/seasonTelemetry.js';
 // RACE Control Online — no request is made until activateRaceControlOnline().
 // Auth uses the GoTrue protocol (open source, compatible with self-hosting).
 import { playerBackendConfig } from './backendConfig.js';
@@ -167,7 +168,10 @@ export async function submitRaceControlRecordWithGhost({trackId,bestTimeMs,carId
   const bytes=ghostBytes instanceof Uint8Array?ghostBytes:new Uint8Array(ghostBytes||[]);
   let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);
   const payload='\\x'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
-  return request('/rest/v1/rpc/submit_track_record_with_ghost',{method:'POST',token,body:{p_track_id:String(trackId||''),p_best_time_ms:Math.round(Number(bestTimeMs)||0),p_car_id:String(carId||''),p_ghost_payload:payload,p_ghost_sample_count:Math.round(Number(ghostSampleCount)||0),p_ghost_format:1}});
+  const response=await request('/rest/v1/rpc/submit_track_record_with_ghost',{method:'POST',token,body:{p_track_id:String(trackId||''),p_best_time_ms:Math.round(Number(bestTimeMs)||0),p_car_id:String(carId||''),p_ghost_payload:payload,p_ghost_sample_count:Math.round(Number(ghostSampleCount)||0),p_ghost_format:1}});
+  const record=Array.isArray(response)?response[0]:response;
+  if(record?.record_ref&&String(carId||'')==='crown_cuper')recordOnlineCuperPublish();
+  return response;
 }
 
 // Return only the caller's OWN identity. This read-only RPC is SECURITY

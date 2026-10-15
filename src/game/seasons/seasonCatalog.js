@@ -1,4 +1,5 @@
 import { SPEED_CAMPAIGN } from './speedCampaign.js';
+import { CUPER_SEASON } from './cuperCampaign.js';
 
 export const SEASON_CYCLE=['speed','precision','progression'];
 
@@ -26,7 +27,7 @@ export const INDUCTION_SEASON={
   ]
 };
 
-export const PERMANENT_CAMPAIGNS=[INDUCTION_SEASON,SPEED_CAMPAIGN];
+export const PERMANENT_CAMPAIGNS=[INDUCTION_SEASON,CUPER_SEASON,SPEED_CAMPAIGN];
 export const AVAILABLE_PERMANENT_CAMPAIGNS=PERMANENT_CAMPAIGNS.filter(campaign=>campaign.enabled!==false);
 
 export const SEASON_FAMILIES={

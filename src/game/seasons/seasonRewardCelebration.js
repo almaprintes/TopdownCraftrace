@@ -8,6 +8,7 @@ function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&
 function rewardInfo(event){
   const reward=event?.reward||{};const lang=getLanguage()==='en'?'en':'es';
   if(reward?.car?.id){const car=reward.car;return{kind:'car',name:car.name?.[lang]||car.name?.es||car.id,qty:'',image:`${BASE}${String(car.image||'').replace(/^\//,'')}`};}
+  if(reward?.skin){const skin=reward.skin;return{kind:'skin',name:skin.name?.[lang]||skin.name?.es||'GOLD EDITION',qty:'',image:`${BASE}${String(skin.image||'').replace(/^\//,'')}`};}
   const coins=Math.max(0,Number(reward.coins)||0);if(coins)return{kind:'coin',name:lang==='en'?'COINS':'MONEDAS',qty:String(coins),image:`${BASE}assets/store/coins_2500.webp`};
   const entry=Object.entries(reward.items||{}).find(([,n])=>Number(n)>0);if(entry){const[id,n]=entry;return{kind:'item',name:MATERIAL_NAMES[id]?.[lang]||id,qty:`×${Number(n)}`,image:`${BASE}assets/crafting/materials/${MATERIAL_ART[id]||''}`};}
   return{kind:'item',name:lang==='en'?'REWARD':'PREMIO',qty:'',image:''};
@@ -40,9 +41,9 @@ function particle(root,cls,i,total){
 export function showSeasonRewardCelebration(event){
   if(typeof document==='undefined'||!event)return;
   document.querySelector('.tdr-season-celebration')?.remove?.();ensureStyle();
-  const lang=getLanguage()==='en'?'en':'es';const info=rewardInfo(event);const car=info.kind==='car';
+  const lang=getLanguage()==='en'?'en':'es';const info=rewardInfo(event);const car=info.kind==='car'||info.kind==='skin';
   const root=document.createElement('div');root.className=`tdr-season-celebration ${car?'car':''}`;root.dataset.tdrRaceUi='1';
-  root.innerHTML=`<div class="burst"></div><div class="ring"></div><section class="stage"><div class="top"><div class="kicker">${car?(lang==='en'?'NEW CAR UNLOCKED':'NUEVO COCHE DESBLOQUEADO'):(lang==='en'?'REWARD CLAIMED':'PREMIO CONSEGUIDO')}</div><div class="title">${esc(event.title||'')}</div></div><div class="hero"><div class="art-wrap">${info.image?`<img class="art" src="${esc(info.image)}" alt="">`:''}</div>${info.qty?`<div class="qty">${esc(info.qty)}</div>`:''}<div class="name">${esc(info.name)}</div><div class="saved">${lang==='en'?'ADDED TO YOUR ACCOUNT':'AÑADIDO A TU CUENTA'}</div></div><div class="bottom"><button class="continue" type="button">${lang==='en'?'CONTINUE':'CONTINUAR'}</button></div></section>`;
+  root.innerHTML=`<div class="burst"></div><div class="ring"></div><section class="stage"><div class="top"><div class="kicker">${info.kind==='skin'?(lang==='en'?'GOLD SKIN UNLOCKED':'SKIN DORADA DESBLOQUEADA'):car?(lang==='en'?'NEW CAR UNLOCKED':'NUEVO COCHE DESBLOQUEADO'):(lang==='en'?'REWARD CLAIMED':'PREMIO CONSEGUIDO')}</div><div class="title">${esc(event.title||'')}</div></div><div class="hero"><div class="art-wrap">${info.image?`<img class="art" src="${esc(info.image)}" alt="">`:''}</div>${info.qty?`<div class="qty">${esc(info.qty)}</div>`:''}<div class="name">${esc(info.name)}</div><div class="saved">${lang==='en'?'ADDED TO YOUR ACCOUNT':'AÑADIDO A TU CUENTA'}</div></div><div class="bottom"><button class="continue" type="button">${lang==='en'?'CONTINUE':'CONTINUAR'}</button></div></section>`;
   for(let i=0;i<(car?78:52);i++)particle(root,'confetti',i,car?78:52);for(let i=0;i<(car?46:28);i++)particle(root,'spark',i,car?46:28);
   const close=()=>{root.animate([{opacity:1},{opacity:0}],{duration:180,easing:'ease-out'}).finished.catch(()=>{}).finally(()=>root.remove());};
   root.querySelector('.continue')?.addEventListener('click',close);document.body.appendChild(root);

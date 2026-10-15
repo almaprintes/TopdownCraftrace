@@ -1,4 +1,5 @@
 import { loadGarage, saveGarage, qty } from '../garage/garageStore.js';
+import { recordRecyclerOperation } from '../seasons/seasonTelemetry.js';
 
 export const EXCHANGE_MATERIALS=['scrap','alloy','rubber','disc','spring','gear','compound','ecu'];
 
@@ -56,5 +57,6 @@ export function executeMaterialExchange(fromId,toId,fromQty,now=Date.now()){
   s.materialExchangeDay=st.day;
   s.materialExchangeCount=st.used+1;
   saveGarage(s);
+  recordRecyclerOperation();
   return {ok:true,...q,state:s,status:materialExchangeStatus(now)};
 }
