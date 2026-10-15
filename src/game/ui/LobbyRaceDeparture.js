@@ -96,7 +96,7 @@ export function runLobbyRaceDeparture(scene,onFinished,{prod=false}={}){
   const previous=originals.map(node=>node.style.visibility);
   originals.forEach(node=>{node.style.visibility='hidden';});
   root.classList.add('tdr-lobby-departing');
-  let disposed=false,launched=false,warmTimer=0;
+  let disposed=false,launched=false,warmTimer=0,warmPromise=null,starting=false;
   const stop=()=>{
    if(disposed)return;
    disposed=true;
@@ -108,18 +108,45 @@ export function runLobbyRaceDeparture(scene,onFinished,{prod=false}={}){
    scene?.events?.off?.('destroy',stop);
    if(!launched)scene._raceDeparturePending=false;
   };
-  const next=()=>{
-   if(launched||disposed)return;
-   launched=true;stop();
-   if(scene?.sys?.isActive?.()!==false)launch();
+  // A slow/mobile connection can postpone the lazy race module for seconds.
+  // Keep the ORIGINAL car hidden while its exit clones remain off-screen.
+  // Only release the lobby when the destination scene is actually installed.
+  const prepareRace=()=>{
+   if(warmPromise)return warmPromise;
+   warmPromise=(async()=>{
+    const prewarm=globalThis.__tdrWarmRaceScene;
+    if(typeof prewarm!=='function')return true;
+    try{return (await prewarm())===true;}
+    catch(error){console.warn('[lobby-departure] race prewarm failed',error);return false;}
+   })();
+   return warmPromise;
+  };
+  const next=async()=>{
+   if(launched||disposed||starting)return;
+   starting=true;
+   const raceReady=await prepareRace();
+   if(disposed||launched)return;
+   if(!raceReady||scene?.sys?.isActive?.()===false){
+    console.warn('[lobby-departure] race module unavailable; restore lobby for retry');
+    stop();return;
+   }
+   launched=true;
+   try{
+    // DO NOT call stop() before scene.start(): that used to redraw the car
+    // in the middle of the lobby while the race chunk loaded over 3G.
+    // scene.start('race') synchronously shuts down this menu and calls stop.
+    launch();
+   }catch(error){
+    console.warn('[lobby-departure] race launch failed',error);
+    launched=false;
+    stop();
+   }
   };
   scene?.events?.once?.('shutdown',stop);
   scene?.events?.once?.('destroy',stop);
-  // Prewarm source modules only; circuit images still use normal race loading.
-  warmTimer=setTimeout(()=>{
-   if(disposed)return;
-   try{Promise.resolve(globalThis.__tdrWarmRaceScene?.()).catch(()=>{});}catch{}
-  },180);
+  // Kick off lazy imports while the exit is playing; await them AFTER the car
+  // leaves the screen instead of exposing the originals during network waits.
+  warmTimer=setTimeout(()=>{if(!disposed)void prepareRace();},180);
   (async()=>{
    try{
     // Rotate platform, selected car AND mastery around one shared pivot,
