@@ -53,9 +53,9 @@ assert.doesNotMatch(source,/214748|zIndex:\s*['"]999/,'native z-index required')
 assert.doesNotMatch(source,/translate3d\(0,16px,0\)/,'no Y displacement in ortho view');
 assert.match(source,/scale\\(\\.96\\)/,'orthographic near-full-size platform depth');
 assert.match(source,/tdr-lobby-garage-aperture/,'fixed round crop above the stage');
-assert.match(source,/animateWait\\(platformLayer\\.mask,apertureFrames/,'platform is progressively masked');
-assert.match(source,/animateWait\\(carLayer\\.mask,apertureFrames/,'car is progressively masked');
-assert.match(source,/animateWait\\(masteryLayer\\.mask,apertureFrames/,'roof badge is progressively masked');
+assert.ok(source.includes('animateWait(platformLayer.mask,apertureFrames'), 'platform is progressively masked');
+assert.ok(source.includes('animateWait(carLayer.mask,apertureFrames'), 'car is progressively masked');
+assert.ok(source.includes('animateWait(masteryLayer.mask,apertureFrames'), 'roof badge is progressively masked');
 assert.match(source,/opacity:1,filter:'brightness/,'stage remains opaque behind a growing floor mask');
 assert.doesNotMatch(source,/opacity:\\.(?:03|34|25)/,'old flat fade is absent');
 assert.match(source,/liftFrames\(descendingFrames\.platform,goingDown\)/);
