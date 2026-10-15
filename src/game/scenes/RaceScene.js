@@ -1,6 +1,7 @@
 import {skinGeometryForSprite} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,getEquippedCarSkin,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
+import {raceCarLookTexture} from '../visual/raceCarLook.js';
 import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
@@ -153,7 +154,7 @@ this.minimap = null;
   const file=selectedCarSkinFile(spec?.id,spec,{dev:!IS_PROD_BUILD});
   if (!file) return Promise.resolve(null);
   const texKey=skin.id==='original'?`car_${spec.id}`:`car_${spec.id}_${skin.id}`;
-  if (this.textures.exists(texKey)) return Promise.resolve(texKey);
+  if (this.textures.exists(texKey)) return Promise.resolve(raceCarLookTexture(this,texKey,{prod:IS_PROD_BUILD}));
 
   return new Promise((resolve) => {
     const assetVersion = encodeURIComponent(spec?.collectionNo || 1);
@@ -162,7 +163,7 @@ this.minimap = null;
     const onFileOk = (key) => {
       if (key !== texKey) return;
       cleanup();
-      resolve(texKey);
+      resolve(raceCarLookTexture(this,texKey,{prod:IS_PROD_BUILD}));
     };
 
     const onLoadError = (fileObj) => {

@@ -35,5 +35,5 @@ assert.match(script,/Promise\.all\(stages\.map/,'independent stage layers rotate
 assert.match(script,/const departures=\[carPart,\.\.\.\(masteryPart/);
 assert.match(script,/duration:LOBBY_DEPARTURE_TIMING\.drive,easing:'cubic-bezier\(\.6,\.05,\.94,\.45\)'/,'approved getaway unchanged');
 assert.match(read('src/game/ui/lobby-dom.css'),/\.tdr-lobby-dom\.tdr-lobby-departing/);
-assert.ok(read('index.html').includes('content="DEV 1.2.203"'));
+assert.ok(read('index.html').includes('content="DEV 1.2.204"'));
 console.log('Lobby departure: 1.6s turn; 0.52s original getaway; platform z0, car z1, mastery z4; UI depth untouched; rollback and fallback OK');
