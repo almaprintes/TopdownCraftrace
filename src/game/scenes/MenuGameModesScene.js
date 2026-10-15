@@ -1,6 +1,8 @@
 import { MenuScene as CurrentMenuScene } from './MenuUiStabilityScene.js';
 import { recordModeStart } from '../seasons/seasonTelemetry.js';
 import { t } from '../i18n/index.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
+import {runLobbyRaceDeparture} from '../ui/LobbyRaceDeparture.js';
 
 const MODE_KEY='tdr2:gameMode';
 const PRACTICE_TRACK_KEY='practice-area';
@@ -41,6 +43,7 @@ export class MenuScene extends CurrentMenuScene{
   }
 
   _startSelectedMode(mode){
+    if(this._raceDeparturePending)return;
     // Supervivencia queda preservada en código para una actualización futura,
     // pero no es un modo publicable en 1.0. Cualquier estado antiguo guardado
     // o llamada accidental cae de forma segura en Contrarreloj.
@@ -57,7 +60,18 @@ export class MenuScene extends CurrentMenuScene{
     recordModeStart(mode);
     const launchTrack=mode==='practice'?PRACTICE_TRACK_KEY:trackKey;
     this._closeGameModeModal();
-    this.scene.start('race',{carId:this.selectedCarId,trackKey:launchTrack,gameMode:mode});
+    // Start the launch animation only AFTER the player chooses a game mode.
+    // The established loading scene remains responsible for track assets.
+    const carId=this.selectedCarId;
+    this._raceDeparturePending=true;
+    const launch=()=>{
+      if(!this._raceDeparturePending)return;
+      this._raceDeparturePending=false;
+      this.scene.start('race',{carId,trackKey:launchTrack,gameMode:mode});
+    };
+    try{runLobbyRaceDeparture(this,launch,{prod:IS_PROD_BUILD});}
+    catch(error){console.warn('[lobby-departure] fallback to race',error);launch();}
+
   }
 
   _closeGameModeModal(){

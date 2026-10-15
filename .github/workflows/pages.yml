@@ -73,6 +73,7 @@ jobs:
           node scripts/cuper-workshop-skin-smoke.mjs
           node scripts/cuper-cards-and-views-smoke.mjs
           node scripts/vehicle-lights-calibration-smoke.mjs
+          node scripts/lobby-race-departure-smoke.mjs
           node scripts/runtime-resizeobserver-recovery-smoke.mjs
           node scripts/admin-car-editor-route-smoke.mjs
           test -f src/game/scenes/RaceEmbeddedReplaySceneV2.js

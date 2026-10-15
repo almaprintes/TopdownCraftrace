@@ -779,3 +779,8 @@
 @media(prefers-reduced-motion:reduce){
   .tdr-lobby-dom .tdr-car-card{transition:none}
 }
+
+/* DEV 1.2.202 — Outgoing lobby vehicle: block repeated taps while the
+   platform and player-selected car animate in one GPU-composited overlay. */
+.tdr-lobby-dom.tdr-lobby-departing,
+.tdr-lobby-dom.tdr-lobby-departing *{pointer-events:none!important}
