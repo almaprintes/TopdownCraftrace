@@ -16,3 +16,11 @@
 - Se mantienen los tiempos `down:1040`, `up:1120`, las rutas garaje↔lobby, el retorno tras selección y la transición aparte lobby→carrera.
 - Pruebas `scripts/lobby-garage-lift-smoke.mjs`: mapping con alfa, fallback de CSS, sin traslación Y, nueva máscara perimetral, cleanup, requisitos originales. Las demás pruebas visuales aceptan versiones DEV 1.2.x sin depender de un parche fijo.
 - No se publica Android ni se toca `dev-first-update`. Confirmación final requiere Build + Deploy verdes para el HEAD exacto de `main`.
+
+## DEV 1.2.208 — oclusión progresiva real (15/10/2026)
+- El propietario observó que DEV 1.2.207 seguía fundiendo el vehículo y la plataforma **uniformemente**, sin un descenso aparente.
+- Solución: `anchoredPart()` construye una capa de máscara circular (`.tdr-lobby-garage-aperture`) de tamaño y posición exactos según `garageLiftFootprint()`. Los nodos clonados de plataforma, coche y maestría se renderizan por separado DENTRO de sendas aperturas fijas de suelo, con z-index 0/1/4.
+- La máscara usa `clip-path: ellipse()` y se cierra de 51 % a 0 % **desde el perímetro hacia el centro**, con keyframes al 0/20/50/77/100 % del tiempo. La subida invierte la misma trayectoria geométrica; el aro metálico `tdr-lobby-garage-rim` sigue fijo en z-index 2.
+- Se eliminó el fade global de alpha en los tres objetos: las capas de movimiento conservan `opacity: 1`, con oscurecimiento moderado (`filter: brightness`) y mínimo cambio de escala (1 → 0,96) mientras quedan ocultas desde los bordes. Esto produce una desaparición físicamente legible por la boca del pozo, no una imagen entera que se transparenta.
+- Se respetan los tiempos exactos `GARAGE_LIFT_TIMING` 1040/1120 ms, la salida independiente a carrera y el comportamiento DEV-only. Las máscaras se liberan en `cleanup()` y en `shutdown`; no se introduce un canvas Phaser adicional.
+- `scripts/lobby-garage-lift-smoke.mjs` valida matemáticamente la reducción monótona de la apertura y la inversión de subida, y comprueba los tres recortes y ausencia del fade anterior. Validar de nuevo en dispositivo real, además de Build + Deploy de GitHub Actions.
