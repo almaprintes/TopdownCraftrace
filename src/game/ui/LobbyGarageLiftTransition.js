@@ -2,7 +2,7 @@
 // These DOM clones stay at their ORIGINAL lobby z-index: stage 0, car 1,
 // roof mastery 4. No fullscreen overlay or extra Phaser renderer work.
 // Race departure (LobbyRaceDeparture.js) is entirely separate and untouched.
-import { IS_PROD_BUILD } from '../buildTarget.js';
+const IS_PROD_BUILD = typeof __TDR_PROD_BUILD__ === 'boolean' ? __TDR_PROD_BUILD__ : false;
 
 export const GARAGE_LIFT_TIMING=Object.freeze({down:1040,up:1120});
 export const GARAGE_LIFT_DEPTH=Object.freeze({platform:0,car:1,mastery:4});
