@@ -10,6 +10,17 @@ export const CAR_SKIN_CATALOG=Object.freeze({
 export const CUPER_ASSETS_PUBLISHED=cuperStatus.published===true;
 export function hasPublishedCarArt(carId){return carId!=='crown_cuper'||CUPER_ASSETS_PUBLISHED;}
 const KEY='tdr2:equippedSkins:v1';
+export const SEASON_SKIN_UNLOCKS_KEY='tdr2:seasonSkinUnlocks:v1';
+export function seasonSkinUnlocks(storage=globalThis.localStorage){
+ try{const list=JSON.parse(storage?.getItem?.(SEASON_SKIN_UNLOCKS_KEY)||'[]');return Array.isArray(list)?list.filter(x=>typeof x==='string'):[];}catch{return [];}
+}
+export function grantSeasonSkin(carId,skinId,storage=globalThis.localStorage){
+ if(!availableCarSkins(carId).some(s=>s.id===skinId))return false;
+ const id=`${carId}:${skinId}`,previous=seasonSkinUnlocks(storage);
+ if(previous.includes(id))return true;
+ try{storage?.setItem(SEASON_SKIN_UNLOCKS_KEY,JSON.stringify([...previous,id]));return true;}catch{return false;}
+}
+
 export function availableCarSkins(carId,spec=null){
  const id=String(carId||'');
  return CAR_SKIN_CATALOG[id]||[{id:'original',name:'Original',file:String(spec?.skin||''),premium:false}];
@@ -17,7 +28,7 @@ export function availableCarSkins(carId,spec=null){
 export function skinIsUnlocked(carId,skinId,{dev=false,entitlements=null}={}){
  const skin=availableCarSkins(carId).find(s=>s.id===skinId);
  if(!skin)return false;
- return !skin.premium||dev||entitlements?.includes?.(`${carId}:${skinId}`)===true;
+ return !skin.premium||dev||entitlements?.includes?.(`${carId}:${skinId}`)===true||seasonSkinUnlocks().includes(`${carId}:${skinId}`);
 }
 function readSelection(storage){
  try{

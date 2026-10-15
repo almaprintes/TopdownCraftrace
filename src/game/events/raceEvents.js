@@ -3,6 +3,9 @@ import { t, getLanguage } from '../i18n/index.js';
 import { loadSeasonTelemetry } from '../seasons/seasonTelemetry.js';
 import { loadCleanLapTelemetry } from '../seasons/cleanLapTelemetry.js';
 import { unlockCar } from '../cars/carUnlocks.js';
+import { grantSeasonSkin } from '../skins/carSkins.js';
+import { carMileageKm,loadPlayerStatsPersisted } from '../stats/playerStats.js';
+import { CUPER_EVENT_DEFS,CUPER_MILEAGE_GATE_METERS,CUPER_STATE_KEY } from '../seasons/cuperCampaign.js';
 
 const STATE_KEY='tdr2:seasonInduction:v1';
 const HIST_PREFIX='tdr2:ttHist:';
@@ -24,13 +27,16 @@ const EVENT_DEFS=[
   {id:'induction-final',titleKey:'induction.final.title',descriptionKey:'induction.final.desc',objective:{type:'combined',target:3,labelKey:'induction.label.objectives',parts:[{type:'laps',target:5},{type:'clean',target:3},{type:'tracks',target:2,minPerTrack:1}]},reward:{car:{id:'avenir_gripline',nameKey:'induction.reward.avenirGripline',image:'assets/season/reward_cards/avenir_gripline_reward_top_down_race.webp'}}}
 ];
 
-function localizeEvent(def){return {...def,title:t(def.titleKey),description:t(def.descriptionKey),objective:{...def.objective,label:t(def.objective?.labelKey||'induction.label.progress')}};}
+function localizeEvent(def){const lang=getLanguage()==='en'?'en':'es';return {...def,
+ title:def.titleKey?t(def.titleKey):def.title?.[lang]||def.title?.es||def.id,
+ description:def.descriptionKey?t(def.descriptionKey):def.description?.[lang]||def.description?.es||'',
+ objective:{...def.objective,label:def.objective?.labelKey?t(def.objective.labelKey):def.objective?.label?.[lang]||def.objective?.label?.es||''}};}
 export const RACE_EVENTS=EVENT_DEFS;
 function readHistory(key){try{const parsed=JSON.parse(localStorage.getItem(key)||'null');return Array.isArray(parsed?.history)?parsed.history:[];}catch{return [];}}
 function equippedCount(garage){const ids=[];for(const id of Object.values(garage?.equipped||{}))if(id)ids.push(id);for(const set of Object.values(garage?.equippedByCar||{}))for(const id of Object.values(set||{}))if(id)ids.push(id);return ids.length;}
 
 export function snapshotRaceEventStats(){
-  const out={laps:0,clean:0,trackLaps:{},garageVisits:0,storeBuys:0,modeStarts:0,lootDraws:0,discoveries:0,equipped:0};
+  const out={laps:0,clean:0,trackLaps:{},garageVisits:0,storeBuys:0,modeStarts:0,lootDraws:0,discoveries:0,equipped:0,ghostStarts:0,recyclerOperations:0,onlinePublishedCuper:0,cuperMeters:0,cuperRallyMeters:0,cuperTrackMeters:{},cuperEquipped:0};
   try{
     for(let i=0;i<localStorage.length;i++){
       const key=localStorage.key(i);if(!key||!key.startsWith(HIST_PREFIX))continue;
@@ -40,19 +46,83 @@ export function snapshotRaceEventStats(){
     }
     out.clean=Math.max(0,Number(loadCleanLapTelemetry()?.total)||0);
     const telemetry=loadSeasonTelemetry();out.garageVisits=Math.max(0,Number(telemetry.garageVisits)||0);out.storeBuys=Math.max(0,Number(telemetry.storeBuys)||0);out.modeStarts=Math.max(0,Number(telemetry.modeStarts)||0);
+    out.ghostStarts=Math.max(0,Number(telemetry.modeCounts?.ghost)||0);
+    out.recyclerOperations=Math.max(0,Number(telemetry.recyclerOperations)||0);
+    out.onlinePublishedCuper=Math.max(0,Number(telemetry.onlinePublishedCuper)||0);
+    const cuper=loadPlayerStatsPersisted()?.cars?.crown_cuper||{};
+    out.cuperMeters=Math.max(0,Number(cuper.meters)||0);
+    out.cuperRallyMeters=Math.max(0,Number(cuper.tracks?.['rally-arafo-los-loros']?.meters)||0);
+    out.cuperTrackMeters=Object.fromEntries(Object.entries(cuper.tracks||{}).map(([id,row])=>[id,Math.max(0,Number(row.meters)||0)]));
     const garage=loadGarage();out.lootDraws=Math.max(0,Number(garage?.lootBalance?.draws)||0);out.discoveries=Array.isArray(garage?.discoveries)?garage.discoveries.length:0;out.equipped=equippedCount(garage);
+    out.cuperEquipped=Object.values(garage?.equippedByCar?.crown_cuper||{}).filter(Boolean).length;
   }catch{}
   return out;
 }
 
-function normalizedBaseline(s){return {laps:Number(s?.laps||0),clean:Number(s?.clean||0),trackLaps:{...(s?.trackLaps||{})},garageVisits:Number(s?.garageVisits||0),storeBuys:Number(s?.storeBuys||0),modeStarts:Number(s?.modeStarts||0),lootDraws:Number(s?.lootDraws||0),discoveries:Number(s?.discoveries||0),equipped:Number(s?.equipped||0)};}
-function loadState(){try{const raw=JSON.parse(localStorage.getItem(STATE_KEY)||'null');if(raw&&Number.isInteger(raw.index)&&raw.baseline)return raw;}catch{}const fresh={index:0,baseline:normalizedBaseline(snapshotRaceEventStats()),claimed:[]};try{localStorage.setItem(STATE_KEY,JSON.stringify(fresh));}catch{}return fresh;}
-function saveState(state){try{localStorage.setItem(STATE_KEY,JSON.stringify(state));}catch{}return state;}
-function deltaStats(now,base){const trackLaps={},keys=new Set([...Object.keys(now?.trackLaps||{}),...Object.keys(base?.trackLaps||{})]);for(const key of keys)trackLaps[key]=Math.max(0,Number(now?.trackLaps?.[key]||0)-Number(base?.trackLaps?.[key]||0));return {laps:Math.max(0,now.laps-base.laps),clean:Math.max(0,now.clean-base.clean),trackLaps,garageVisits:Math.max(0,now.garageVisits-base.garageVisits),storeBuys:Math.max(0,now.storeBuys-base.storeBuys),modeStarts:Math.max(0,now.modeStarts-base.modeStarts),lootDraws:Math.max(0,now.lootDraws-base.lootDraws),absolute:{discoveries:now.discoveries,equipped:now.equipped}};}
-function rawObjectiveValue(o,d){if(o.type==='clean')return d.clean;if(o.type==='tracks'){const min=Math.max(1,Number(o.minPerTrack)||1);return Object.values(d.trackLaps||{}).filter(n=>Number(n)>=min).length;}if(o.type==='discoveries'||o.type==='equipped')return Number(d.absolute?.[o.type]||0);if(o.type==='combined')return (o.parts||[]).filter(p=>rawObjectiveValue(p,d)>=Math.max(1,Number(p.target)||1)).length;if(Object.prototype.hasOwnProperty.call(d,o.type))return Number(d[o.type]||0);return d.laps;}
-function evaluateObjective(o,d){const target=Math.max(1,Number(o?.target)||1),value=Math.max(0,rawObjectiveValue(o,d));return {value:Math.min(target,value),rawValue:value,target,complete:value>=target,label:o?.label||''};}
-export function getCurrentRaceEvent(){const state=loadState();if(state.index>=EVENT_DEFS.length)return {finished:true,index:state.index,total:EVENT_DEFS.length};const event=localizeEvent(EVENT_DEFS[state.index]),now=snapshotRaceEventStats(),delta=deltaStats(now,state.baseline);return {finished:false,index:state.index,total:EVENT_DEFS.length,event,progress:evaluateObjective(event.objective,delta)};}
-export function claimCurrentRaceEvent(){const state=loadState();if(state.index>=EVENT_DEFS.length)return {ok:false,reason:'finished'};const event=localizeEvent(EVENT_DEFS[state.index]),now=snapshotRaceEventStats(),progress=evaluateObjective(event.objective,deltaStats(now,state.baseline));if(!progress.complete)return {ok:false,reason:'incomplete'};if((state.claimed||[]).includes(event.id))return {ok:false,reason:'claimed'};const garage=loadGarage();garage.coins=Math.max(0,Number(garage.coins)||0)+Math.max(0,Number(event.reward?.coins)||0);for(const [id,n] of Object.entries(event.reward?.items||{})){const amount=Math.max(0,Math.floor(Number(n)||0));if(amount)addItem(garage,id,amount);}if(event.reward?.car?.id)unlockCar(event.reward.car.id);saveGarage(garage);state.claimed=[...(state.claimed||[]),event.id];state.index+=1;state.baseline=normalizedBaseline(now);saveState(state);const result={ok:true,event,nextIndex:state.index};try{window.dispatchEvent(new CustomEvent('tdr:seasonRewardClaimed',{detail:{event,nextIndex:state.index}}));}catch{}return result;}
-export function raceEventRewardLabel(reward){if(reward?.car?.id)return String(reward.car?.nameKey?t(reward.car.nameKey):reward.car.id);const parts=[],coins=Math.max(0,Number(reward?.coins)||0);if(coins)parts.push(`${coins} ${t('events.coins')}`);const items=Object.entries(reward?.items||{}).filter(([,n])=>Number(n)>0);for(const [id,n] of items)parts.push(`${t(`items.${id}`)} ×${Number(n)}`);return parts.join(' · ');}
+
+function normalizedBaseline(s){return {laps:Number(s?.laps||0),clean:Number(s?.clean||0),trackLaps:{...(s?.trackLaps||{})},
+ garageVisits:Number(s?.garageVisits||0),storeBuys:Number(s?.storeBuys||0),modeStarts:Number(s?.modeStarts||0),
+ lootDraws:Number(s?.lootDraws||0),discoveries:Number(s?.discoveries||0),equipped:Number(s?.equipped||0),
+ ghostStarts:Number(s?.ghostStarts||0),recyclerOperations:Number(s?.recyclerOperations||0),
+ onlinePublishedCuper:Number(s?.onlinePublishedCuper||0),cuperMeters:Number(s?.cuperMeters||0),
+ cuperRallyMeters:Number(s?.cuperRallyMeters||0),cuperTrackMeters:{...(s?.cuperTrackMeters||{})},cuperEquipped:Number(s?.cuperEquipped||0)};}
+function loadState(key){try{const v=JSON.parse(localStorage.getItem(key)||'null');if(Number.isInteger(v?.index)&&v?.baseline)return v;}catch{}
+ const init={index:0,baseline:normalizedBaseline(snapshotRaceEventStats()),claimed:[]};try{localStorage.setItem(key,JSON.stringify(init));}catch{}return init;}
+function saveState(key,v){try{localStorage.setItem(key,JSON.stringify(v));}catch{}return v;}
+function deltaMap(n,b){const o={},ids=new Set([...Object.keys(n||{}),...Object.keys(b||{})]);for(const id of ids)o[id]=Math.max(0,Number(n?.[id]||0)-Number(b?.[id]||0));return o;}
+function deltaStats(now,base){return{
+ laps:Math.max(0,now.laps-base.laps),clean:Math.max(0,now.clean-base.clean),trackLaps:deltaMap(now.trackLaps,base.trackLaps),
+ garageVisits:Math.max(0,now.garageVisits-base.garageVisits),storeBuys:Math.max(0,now.storeBuys-base.storeBuys),
+ modeStarts:Math.max(0,now.modeStarts-base.modeStarts),lootDraws:Math.max(0,now.lootDraws-base.lootDraws),
+ newDiscoveries:Math.max(0,now.discoveries-(base.discoveries||0)),
+ ghostStarts:Math.max(0,now.ghostStarts-(base.ghostStarts||0)),
+ recyclerOperations:Math.max(0,now.recyclerOperations-(base.recyclerOperations||0)),
+ onlinePublishedCuper:Math.max(0,now.onlinePublishedCuper-(base.onlinePublishedCuper||0)),
+ cuperMeters:Math.max(0,now.cuperMeters),cuperRallyMeters:Math.max(0,now.cuperRallyMeters),
+ cuperTrackMeters:deltaMap(now.cuperTrackMeters,base.cuperTrackMeters),
+ cuperEquipped:Math.max(0,now.cuperEquipped),
+ absolute:{discoveries:now.discoveries,equipped:now.equipped}
+};}
+function rawObjectiveValue(o,d){
+ if(o.type==='clean')return d.clean;
+ if(o.type==='tracks')return Object.values(d.trackLaps||{}).filter(n=>n>=Math.max(1,Number(o.minPerTrack)||1)).length;
+ if(o.type==='cuperTracks')return Object.values(d.cuperTrackMeters||{}).filter(n=>n>0).length;
+ if(o.type==='discoveries'||o.type==='equipped')return Number(d.absolute?.[o.type]||0);
+ if(o.type==='combined')return (o.parts||[]).filter(p=>rawObjectiveValue(p,d)>=Number(p.target||1)).length;
+ return Number(d[o.type]||0);
+}
+function evaluateObjective(o,d){const target=Math.max(1,Number(o.target)||1),value=Math.max(0,rawObjectiveValue(o,d));return {value:Math.min(target,value),rawValue:value,target,complete:value>=target,label:o.label||''};}
+export function getCurrentRaceEvent(){
+ const induction=loadState(STATE_KEY);
+ if(induction.index<EVENT_DEFS.length){const event=localizeEvent(EVENT_DEFS[induction.index]);return {
+ family:'induction',finished:false,index:induction.index,total:EVENT_DEFS.length,event,definitions:EVENT_DEFS,
+ progress:evaluateObjective(event.objective,deltaStats(snapshotRaceEventStats(),induction.baseline))};}
+ const mileageMeters=carMileageKm('avenir_gripline')*1000;
+ if(mileageMeters<CUPER_MILEAGE_GATE_METERS)return {family:'cuper',gated:true,finished:false,index:0,total:CUPER_EVENT_DEFS.length,
+ definitions:CUPER_EVENT_DEFS,mileageMeters,requiredMeters:CUPER_MILEAGE_GATE_METERS};
+ const state=loadState(CUPER_STATE_KEY);
+ if(state.index>=CUPER_EVENT_DEFS.length)return {family:'cuper',finished:true,index:state.index,total:CUPER_EVENT_DEFS.length,
+ definitions:CUPER_EVENT_DEFS,mileageMeters:carMileageKm('crown_cuper')*1000,requiredMeters:CUPER_MILEAGE_GATE_METERS};
+ const event=localizeEvent(CUPER_EVENT_DEFS[state.index]);return {family:'cuper',finished:false,index:state.index,total:CUPER_EVENT_DEFS.length,
+ event,definitions:CUPER_EVENT_DEFS,progress:evaluateObjective(event.objective,deltaStats(snapshotRaceEventStats(),state.baseline))};
+}
+export function claimCurrentRaceEvent(){
+ const current=getCurrentRaceEvent();if(current.finished||current.gated)return {ok:false,reason:current.gated?'mileage-locked':'finished'};
+ const key=current.family==='cuper'?CUPER_STATE_KEY:STATE_KEY,defs=current.family==='cuper'?CUPER_EVENT_DEFS:EVENT_DEFS;
+ const state=loadState(key);if(state.index>=defs.length)return {ok:false,reason:'finished'};
+ const event=localizeEvent(defs[state.index]),now=snapshotRaceEventStats(),progress=evaluateObjective(event.objective,deltaStats(now,state.baseline));
+ if(!progress.complete)return {ok:false,reason:'incomplete'};
+ if((state.claimed||[]).includes(event.id))return {ok:false,reason:'claimed'};
+ const garage=loadGarage();garage.coins=Math.max(0,Number(garage.coins)||0)+Math.max(0,Number(event.reward?.coins)||0);
+ for(const [id,n] of Object.entries(event.reward?.items||{})){const count=Math.max(0,Math.floor(Number(n)||0));if(count)addItem(garage,id,count);}
+ if(event.reward?.car?.id)unlockCar(event.reward.car.id);
+ if(event.reward?.skin&&!grantSeasonSkin(event.reward.skin.carId,event.reward.skin.skinId))return {ok:false,reason:'skin-storage-unavailable'};
+ saveGarage(garage);state.claimed=[...(state.claimed||[]),event.id];state.index++;state.baseline=normalizedBaseline(now);saveState(key,state);
+ const result={ok:true,event,nextIndex:state.index,family:current.family};
+ try{window.dispatchEvent(new CustomEvent('tdr:seasonRewardClaimed',{detail:result}));}catch{}
+ return result;
+}
+export function raceEventRewardLabel(reward){if(reward?.car?.id)return String(reward.car?.nameKey?t(reward.car.nameKey):reward.car.name?.[getLanguage()==='en'?'en':'es']||reward.car.id);
+ if(reward?.skin)return reward.skin.name?.[getLanguage()==='en'?'en':'es']||'Gold skin';const parts=[],coins=Math.max(0,Number(reward?.coins)||0);if(coins)parts.push(`${coins} ${t('events.coins')}`);const items=Object.entries(reward?.items||{}).filter(([,n])=>Number(n)>0);for(const [id,n] of items)parts.push(`${t(`items.${id}`)} ×${Number(n)}`);return parts.join(' · ');}
 
 // DEV 1.1.107: induction copy is resolved exclusively through i18n keys.
