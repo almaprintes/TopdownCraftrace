@@ -832,3 +832,43 @@
 .tdr-lobby-dom .tdr-lobby-garage-rim,
 .tdr-lobby-dom .tdr-lobby-garage-well,
 .tdr-lobby-dom .tdr-lobby-garage-lift-part{backface-visibility:hidden}
+
+/* DEV 1.2.210 — Large Gaussian-profile feather, no shrinking hard iris.
+   The numerical opacity steps approximate a normal CDF (sigma ~ 16% of
+   ellipse radius); WebKit and standard alpha masks share identical stops.
+   Only --tdr-garage-soft-radius changes, not the visible sprite alpha. */
+.tdr-lobby-dom .tdr-lobby-garage-aperture{
+  --tdr-garage-soft-radius:145%;
+  -webkit-mask-image:radial-gradient(ellipse farthest-side at 50% 50%,
+    #000 calc(var(--tdr-garage-soft-radius) - 40%),
+    rgba(0,0,0,.994) calc(var(--tdr-garage-soft-radius) - 36%),
+    rgba(0,0,0,.977) calc(var(--tdr-garage-soft-radius) - 32%),
+    rgba(0,0,0,.933) calc(var(--tdr-garage-soft-radius) - 24%),
+    rgba(0,0,0,.841) calc(var(--tdr-garage-soft-radius) - 16%),
+    rgba(0,0,0,.691) calc(var(--tdr-garage-soft-radius) - 8%),
+    rgba(0,0,0,.500) var(--tdr-garage-soft-radius),
+    rgba(0,0,0,.309) calc(var(--tdr-garage-soft-radius) + 8%),
+    rgba(0,0,0,.159) calc(var(--tdr-garage-soft-radius) + 16%),
+    rgba(0,0,0,.067) calc(var(--tdr-garage-soft-radius) + 24%),
+    rgba(0,0,0,.023) calc(var(--tdr-garage-soft-radius) + 32%),
+    rgba(0,0,0,.006) calc(var(--tdr-garage-soft-radius) + 36%),
+    transparent calc(var(--tdr-garage-soft-radius) + 40%));
+  mask-image:radial-gradient(ellipse farthest-side at 50% 50%,
+    #000 calc(var(--tdr-garage-soft-radius) - 40%),
+    rgba(0,0,0,.994) calc(var(--tdr-garage-soft-radius) - 36%),
+    rgba(0,0,0,.977) calc(var(--tdr-garage-soft-radius) - 32%),
+    rgba(0,0,0,.933) calc(var(--tdr-garage-soft-radius) - 24%),
+    rgba(0,0,0,.841) calc(var(--tdr-garage-soft-radius) - 16%),
+    rgba(0,0,0,.691) calc(var(--tdr-garage-soft-radius) - 8%),
+    rgba(0,0,0,.500) var(--tdr-garage-soft-radius),
+    rgba(0,0,0,.309) calc(var(--tdr-garage-soft-radius) + 8%),
+    rgba(0,0,0,.159) calc(var(--tdr-garage-soft-radius) + 16%),
+    rgba(0,0,0,.067) calc(var(--tdr-garage-soft-radius) + 24%),
+    rgba(0,0,0,.023) calc(var(--tdr-garage-soft-radius) + 32%),
+    rgba(0,0,0,.006) calc(var(--tdr-garage-soft-radius) + 36%),
+    transparent calc(var(--tdr-garage-soft-radius) + 40%));
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-size:100% 100%;
+  mask-size:100% 100%;
+}
