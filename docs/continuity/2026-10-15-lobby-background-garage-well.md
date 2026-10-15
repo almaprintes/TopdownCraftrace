@@ -24,3 +24,12 @@
 - Se eliminó el fade global de alpha en los tres objetos: las capas de movimiento conservan `opacity: 1`, con oscurecimiento moderado (`filter: brightness`) y mínimo cambio de escala (1 → 0,96) mientras quedan ocultas desde los bordes. Esto produce una desaparición físicamente legible por la boca del pozo, no una imagen entera que se transparenta.
 - Se respetan los tiempos exactos `GARAGE_LIFT_TIMING` 1040/1120 ms, la salida independiente a carrera y el comportamiento DEV-only. Las máscaras se liberan en `cleanup()` y en `shutdown`; no se introduce un canvas Phaser adicional.
 - `scripts/lobby-garage-lift-smoke.mjs` valida matemáticamente la reducción monótona de la apertura y la inversión de subida, y comprueba los tres recortes y ausencia del fade anterior. Validar de nuevo en dispositivo real, además de Build + Deploy de GitHub Actions.
+
+## DEV 1.2.209 — handoff de lobby a carrera con carga lenta (15/10/2026)
+
+- Incidencia observada: en red móvil con poca cobertura, tras salir el coche del lobby hacia la derecha vuelve a aparecer en el centro antes de que entre la carrera.
+- Causa verificada en `src/game/ui/LobbyRaceDeparture.js`: `next()` hacía `launched=true;stop();launch()`, y `stop()` restauraba la visibilidad de los objetos DOM originales. El `scene.start('race')` podía esperar a importar el módulo de escena `race` de forma asíncrona en `src/game/game.js`. Por tanto, el lobby repintaba el coche durante la espera.
+- Reparación: prewarm del módulo `race` a partir de 180 ms de la animación y **espera de la promesa** tras completar el desplazamiento. No se llama a `stop()` antes de lanzar la carrera; solo el evento de cierre de la escena desencadena limpieza/restauración de los elementos del antiguo lobby (ya no visibles en pantalla).
+- Durante la espera, el coche real sigue oculto y los clones ya están fuera de pantalla. Si la importación falla, se ejecuta `stop()` y se recupera el lobby para poder reintentar, evitando un bloqueo indefinido con el coche invisible.
+- La carga de assets del circuito sigue estando a cargo de la escena de carrera; esta corrección cubre exclusivamente el intervalo entre fin de animación e inicio efectivo de la escena. No modifica la transición del ascensor, las físicas, las pantallas de carga ni Google Play.
+- Pruebas: `scripts/lobby-race-departure-smoke.mjs` valida la espera al recurso `__tdrWarmRaceScene`, la ausencia de `launched=true;stop()` y la recuperación de fallo. Versionar DEV y comprobar Build + Deploy del HEAD exacto en `main`.
