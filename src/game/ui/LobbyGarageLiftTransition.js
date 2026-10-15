@@ -1,4 +1,4 @@
-// DEV 1.2.211 — Front-loaded, synchronized descent before Gaussian shadow.
+// DEV 1.2.212 — Round overscan Gaussian masks: no hard top/bottom cuts.
 // These DOM clones stay at their ORIGINAL lobby z-index: stage 0, car 1,
 // roof mastery 4. No fullscreen overlay or extra Phaser renderer work.
 // Race departure (LobbyRaceDeparture.js) is entirely separate and untouched.
@@ -22,25 +22,40 @@ export function consumeGarageLiftReturn({prod=IS_PROD_BUILD,storage=globalThis.s
  return flag==='rise'&&garageLiftEnabled({prod});
 }
 const ready=image=>!!(image?.isConnected&&image?.complete&&image?.naturalWidth&&image.getBoundingClientRect()?.width>0);
-// Each moving layer lives behind a stationary, true circular aperture.
-// Animate the aperture's clip-path separately: the floor conceals the OUTER
-// edge first, while the center of the vehicle remains genuinely visible.
-function anchoredPart(root,cx,cy,zIndex,footprint){
+// The shaft uses the exact alpha footprint; the feather itself must NOT use
+// that tight box. A former ellipse(51%) hard-clipped top/bottom independently
+// of the Gaussian. Keep a square overscan centered on the existing shaft and
+// large enough to contain all full-size artwork (stage, car and roof shield).
+export function garageLiftMaskBounds(footprint,sourceRects=[]){
+ const cx=footprint.left+footprint.width/2,cy=footprint.top+footprint.height/2;
+ let extent=Math.max(footprint.width,footprint.height)/2;
+ for(const r of sourceRects){
+  if(!r||!Number.isFinite(r.left)||!Number.isFinite(r.top)||
+     !Number.isFinite(r.width)||!Number.isFinite(r.height))continue;
+  extent=Math.max(extent,Math.abs(r.left-cx),Math.abs(r.left+r.width-cx),
+    Math.abs(r.top-cy),Math.abs(r.top+r.height-cy));
+ }
+ // 12% safety margin keeps the Gaussian's fading tail away from the edge
+ // even on non-square lobby layouts and while the platform is full size.
+ const side=Math.ceil(2*extent*1.12);
+ return {left:cx-side/2,top:cy-side/2,width:side,height:side};
+}
+function anchoredPart(root,cx,cy,zIndex,maskBounds){
  const rr=root.getBoundingClientRect();
  const mask=document.createElement('div');
  mask.className='tdr-lobby-garage-aperture';
  Object.assign(mask.style,{
   position:'absolute',
-  left:(footprint.left-rr.left)+'px',top:(footprint.top-rr.top)+'px',
-  width:footprint.width+'px',height:footprint.height+'px',
+  left:(maskBounds.left-rr.left)+'px',top:(maskBounds.top-rr.top)+'px',
+  width:maskBounds.width+'px',height:maskBounds.height+'px',
   zIndex:String(zIndex),pointerEvents:'none',
-  clipPath:'ellipse(51% 51% at 50% 50%)',willChange:'-webkit-mask-image,mask-image',
+  willChange:'-webkit-mask-image,mask-image',
   '--tdr-garage-soft-radius':'145%'
  });
  const node=document.createElement('div');
  node.className='tdr-lobby-garage-lift-part';
  Object.assign(node.style,{
-  position:'absolute',left:(cx-footprint.left)+'px',top:(cy-footprint.top)+'px',
+  position:'absolute',left:(cx-maskBounds.left)+'px',top:(cy-maskBounds.top)+'px',
   width:'0',height:'0',overflow:'visible',pointerEvents:'none',
   transformOrigin:'0 0',willChange:'transform,filter'
  });
@@ -252,16 +267,18 @@ function startLift(scene,root,direction,onComplete){
  try{
   scene._garageLiftBusy=true;
   const footprint=garageLiftFootprint(pr,platform.naturalWidth,platform.naturalHeight,platformArtworkBounds(platform));
+  const maskBounds=garageLiftMaskBounds(footprint,[pr,car.getBoundingClientRect(),
+   ...(originals.includes(badge)?[badge.getBoundingClientRect()]:[])]);
   ({well,rim}=createFloorWell(root,footprint));
   // After a full garage swap, the previous car asset is never cloned.
-  platformLayer=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.platform,footprint);
+  platformLayer=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.platform,maskBounds);
   platformPart=platformLayer.node;
   wrappers.push(platformLayer.mask);platformPart.appendChild(copyAtPivot(platform,cx,cy));
-  carLayer=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.car,footprint);
+  carLayer=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.car,maskBounds);
   carPart=carLayer.node;
   wrappers.push(carLayer.mask);carPart.appendChild(copyAtPivot(car,cx,cy));
   if(originals.includes(badge)){
-   masteryLayer=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.mastery,footprint);
+   masteryLayer=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.mastery,maskBounds);
    masteryPart=masteryLayer.node;
    wrappers.push(masteryLayer.mask);masteryPart.appendChild(copyAtPivot(badge,cx,cy));
   }
