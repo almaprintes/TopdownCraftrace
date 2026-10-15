@@ -1,4 +1,4 @@
-// DEV 1.2.214 — Larger circular garage shaft with deep industrial wall.
+// DEV 1.2.215 — Slightly wider circular garage shaft, retaining the industrial inset wall.
 // These DOM clones stay at their ORIGINAL lobby z-index: stage 0, car 1,
 // roof mastery 4. No fullscreen overlay or extra Phaser renderer work.
 // Race departure (LobbyRaceDeparture.js) is entirely separate and untouched.
@@ -135,7 +135,7 @@ export function garageLiftFootprint(rect,sourceWidth,sourceHeight,alphaBounds=nu
 export function garageLiftShaftBounds(footprint){
  const cx=footprint.left+footprint.width/2;
  const cy=footprint.top+footprint.height/2;
- const diameter=Math.max(1,Math.min(footprint.width,footprint.height)*1.10);
+ const diameter=Math.max(1,Math.min(footprint.width,footprint.height)*1.15);
  return {left:cx-diameter/2,top:cy-diameter/2,
   width:diameter,height:diameter};
 }

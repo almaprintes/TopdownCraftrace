@@ -78,3 +78,10 @@
 - `LobbyRaceDeparture.js` calcula el giro a derecha según frente nativo y `style.rotate` de calibración de la vista previa. Con frente arriba gira +90°; frente abajo gira −90°. Una función geométrica transforma el movimiento local para que el vector de avance siempre sea **hacia la derecha de la pantalla** aun tras un giro opuesto. Plataforma, coche y maestría comparten dirección y tiempos (1600 ms giro, 180 ms pausa, 520 ms avance).
 - Se conserva la recuperación de carga lenta de carrera (DEV 1.2.209), los z-index de UI y la funcionalidad pública. Cambios solo `main`/DEV; Google Play sin modificar.
 - `scripts/lobby-garage-lift-smoke.mjs` comprueba radio circular mayor y pared. `scripts/lobby-race-departure-smoke.mjs` comprueba los tres vehículos invertidos, coches normales, rotaciones calibradas y vector de avance positivo a la derecha. Comprobar Build+Deploy verdes del SHA final.
+
+## DEV 1.2.215 — ajuste fino del diámetro (15/10/2026)
+- Petición explícita: ampliar **un poco más** el hueco respecto de DEV 1.2.214. El diámetro pasa de 1,10 a **1,15** veces el lado menor de la silueta, un aumento adicional del 4,55% sobre su tamaño inmediatamente anterior.
+- Sigue perfectamente circular y centrado: `garageLiftShaftBounds()` continúa devolviendo `width=height=diameter` y las dos capas `well` y `rim` comparten los mismos límites.
+- **Sin cambios** en sombreado de las paredes industriales, profundidad, máscara gaussiana, encogimiento, tiempo de ascensor, fondos ni salida de los coches hacia carrera.
+- Test de geometría actualizado en `scripts/lobby-garage-lift-smoke.mjs` para dimensiones 230 px (huellas de 200) y 287,5 px (huellas cuadradas de 250).
+- Solo `main`/DEV. No afecta al binario publicado en Google Play.
