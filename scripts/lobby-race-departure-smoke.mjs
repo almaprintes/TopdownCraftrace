@@ -32,6 +32,13 @@ assert.match(script,/LOBBY_DEPARTURE_DEPTH\.platform/);
 assert.match(script,/LOBBY_DEPARTURE_DEPTH\.car/);
 assert.match(script,/LOBBY_DEPARTURE_DEPTH\.mastery/);
 assert.match(script,/Promise\.all\(stages\.map/,'independent stage layers rotate together');
+assert.match(script,/const raceReady=await prepareRace\(\)/,'await slow network lazy scene');
+assert.match(script,/return \(await prewarm\(\)\)===true/,'do not launch when lazy scene unavailable');
+assert.match(script,/if\(!raceReady\|\|scene\?\.sys\?\.isActive/,'restore lobby when scene fails to load');
+assert.match(script,/launched=true;[\s\S]{0,240}launch\(\)/,'launch only after readiness');
+assert.doesNotMatch(script,/launched=true;stop\(\)/,'never restore center car before race launch');
+assert.match(script,/scene\?\.events\?\.once\?\.\('shutdown',stop\)/,'restore only on actual menu shutdown');
+
 assert.match(script,/const departures=\[carPart,\.\.\.\(masteryPart/);
 assert.match(script,/duration:LOBBY_DEPARTURE_TIMING\.drive,easing:'cubic-bezier\(\.6,\.05,\.94,\.45\)'/,'approved getaway unchanged');
 assert.match(read('src/game/ui/lobby-dom.css'),/\.tdr-lobby-dom\.tdr-lobby-departing/);
