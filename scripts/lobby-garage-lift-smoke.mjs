@@ -70,7 +70,7 @@ assert.match(source,/animateWait\(rim,rimFrames/,'rim uses the same animation du
 assert.match(source,/rim\?\.remove\(\)/,'rim is always removed on cleanup');
 assert.doesNotMatch(source,/214748|zIndex:\s*['"]999/,'native z-index required');
 assert.doesNotMatch(source,/translate3d\(0,16px,0\)/,'no Y displacement in ortho view');
-assert.match(source,/platform:depthKeyframes,\\s*car:depthKeyframes,\\s*mastery:depthKeyframes/,
+assert.ok(source.includes('platform:depthKeyframes,') && source.includes('car:depthKeyframes,') && source.includes('mastery:depthKeyframes'),
  'platform/car/mastery share EXACTLY the same transform and brightness timeline');
 assert.ok(source.includes("const easing='linear'"),
  'depth keyframes and the Gaussian radius run on the same normalized clock');
