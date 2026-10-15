@@ -1,10 +1,10 @@
-// DEV 1.2.208 — Fixed orthographic bore with progressive perimeter occlusion.
+// DEV 1.2.210 — Slow Gaussian-profile radial fade, without a sharp iris edge.
 // These DOM clones stay at their ORIGINAL lobby z-index: stage 0, car 1,
 // roof mastery 4. No fullscreen overlay or extra Phaser renderer work.
 // Race departure (LobbyRaceDeparture.js) is entirely separate and untouched.
 const IS_PROD_BUILD = typeof __TDR_PROD_BUILD__ === 'boolean' ? __TDR_PROD_BUILD__ : false;
 
-export const GARAGE_LIFT_TIMING=Object.freeze({down:1040,up:1120});
+export const GARAGE_LIFT_TIMING=Object.freeze({down:1850,up:1900});
 export const GARAGE_LIFT_DEPTH=Object.freeze({platform:0,car:1,mastery:4});
 export const GARAGE_LIFT_RETURN_KEY='tdr2:garageLiftReturn:v1';
 export const GARAGE_LIFT_SWITCH='tdr2:devGarageLift';
@@ -34,7 +34,8 @@ function anchoredPart(root,cx,cy,zIndex,footprint){
   left:(footprint.left-rr.left)+'px',top:(footprint.top-rr.top)+'px',
   width:footprint.width+'px',height:footprint.height+'px',
   zIndex:String(zIndex),pointerEvents:'none',
-  clipPath:'ellipse(51% 51% at 50% 50%)',willChange:'clip-path'
+  clipPath:'ellipse(51% 51% at 50% 50%)',willChange:'-webkit-mask-image,mask-image',
+  '--tdr-garage-soft-radius':'145%'
  });
  const node=document.createElement('div');
  node.className='tdr-lobby-garage-lift-part';
@@ -150,15 +151,60 @@ const descendingFrames={
   {...MASTERY_FALL,offset:1}]
 };
 const liftFrames=(frames,goingDown)=>goingDown?frames:frames.map(f=>({...f,offset:1-f.offset})).reverse();
+// The mask stays exactly on the platform outline. Its alpha follows a
+// wide Gaussian CDF profile (CSS mask-image, not blur() on the car art).
+// We vary only the radius so every visible region dissolves smoothly.
+export function garageLiftSoftRadius(progress,goingDown){
+ const t=Math.min(1,Math.max(0,Number(progress)||0));
+ const eased=t*t*(3-2*t);
+ return goingDown?145-190*eased:-45+190*eased;
+}
 export function garageLiftApertureFrames(goingDown){
- const closing=[
-  {clipPath:'ellipse(51% 51% at 50% 50%)',offset:0},
-  {clipPath:'ellipse(51% 51% at 50% 50%)',offset:.20},
-  {clipPath:'ellipse(38% 38% at 50% 50%)',offset:.50},
-  {clipPath:'ellipse(19% 19% at 50% 50%)',offset:.77},
-  {clipPath:'ellipse(0% 0% at 50% 50%)',offset:1}
- ];
- return liftFrames(closing,goingDown);
+ // Keep this small pure timeline for regression tests and reverse symmetry.
+ return [0,.2,.5,.8,1].map(offset=>({
+  offset, radius:garageLiftSoftRadius(offset,goingDown)
+ }));
+}
+function animateSoftApertures(masks,duration,goingDown,animations){
+ const layers=masks.filter(Boolean);
+ let raf=0,timer=0,finished=false,resolveDone=()=>{};
+ const complete=new Promise(resolve=>{resolveDone=resolve;});
+ const radiusAt=progress=>garageLiftSoftRadius(progress,goingDown).toFixed(2)+'%';
+ const setRadius=progress=>{
+  const value=radiusAt(progress);
+  for(const mask of layers)mask.style.setProperty('--tdr-garage-soft-radius',value);
+ };
+ const finish=()=>{
+  if(finished)return;
+  finished=true;
+  if(raf)cancelAnimationFrame(raf);
+  if(timer)clearTimeout(timer);
+  setRadius(1);
+  resolveDone();
+ };
+ const cancel=()=>{
+  if(finished)return;
+  finished=true;
+  if(raf)cancelAnimationFrame(raf);
+  if(timer)clearTimeout(timer);
+  resolveDone();
+ };
+ animations.push({cancel});
+ setRadius(0);
+ if(typeof requestAnimationFrame!=='function'){finish();return complete;}
+ let started=null;
+ const tick=time=>{
+  if(finished)return;
+  if(started===null)started=time;
+  const p=Math.min(1,Math.max(0,(time-started)/duration));
+  setRadius(p);
+  if(p<1)raf=requestAnimationFrame(tick);
+  else finish();
+ };
+ raf=requestAnimationFrame(tick);
+ // The browser can suspend rAF in background tabs: never strand navigation.
+ timer=setTimeout(finish,duration+220);
+ return complete;
 }
 function animateWait(node,frames,duration,easing,animations){
  if(typeof node?.animate!=='function')return Promise.resolve();
@@ -183,10 +229,11 @@ function startLift(scene,root,direction,onComplete){
  let platformPart=null,carPart=null,masteryPart=null;
  let platformLayer=null,carLayer=null,masteryLayer=null;
  const visibility=originals.map(node=>node.style.visibility);
- let well=null,rim=null,ended=false;
+ let well=null,rim=null,ended=false,recoveryTimer=0;
  const cleanup=()=>{
   if(ended)return;
   ended=true;
+  if(recoveryTimer)clearTimeout(recoveryTimer);
   for(const anim of animations){try{anim.cancel();}catch{}}
   for(const mask of wrappers)mask.remove();
   well?.remove();
@@ -220,8 +267,8 @@ function startLift(scene,root,direction,onComplete){
   const goingDown=direction==='down';
   const duration=goingDown?GARAGE_LIFT_TIMING.down:GARAGE_LIFT_TIMING.up;
   const easing=goingDown?'cubic-bezier(.28,.02,.2,1)':'cubic-bezier(.2,.7,.18,1)';
-  // A stationary aperture physically covers the visible rim first. This is
-  // not uniform opacity: the center is still drawn while the outside is hidden.
+  // Gaussian-profile concentric dissolution; no hard iris or whole-image fade.
+  // The same soft radius is shared by platform, car and roof mastery.
   well.style.opacity=goingDown?'0':'1';
   rim.style.opacity=goingDown?'0':'1';
   const wellFrames=goingDown
@@ -230,24 +277,33 @@ function startLift(scene,root,direction,onComplete){
   const rimFrames=goingDown
    ?[{opacity:0,offset:0},{opacity:.30,offset:.16},{opacity:1,offset:.54},{opacity:1,offset:1}]
    :[{opacity:1,offset:0},{opacity:1,offset:.48},{opacity:.4,offset:.82},{opacity:0,offset:1}];
-  const apertureFrames=garageLiftApertureFrames(goingDown);
   const progress=[
    animateWait(platformPart,liftFrames(descendingFrames.platform,goingDown),duration,easing,animations),
-   animateWait(platformLayer.mask,apertureFrames,duration,'linear',animations),
    animateWait(carPart,liftFrames(descendingFrames.car,goingDown),duration,easing,animations),
-   animateWait(carLayer.mask,apertureFrames,duration,'linear',animations),
-   ...(masteryPart?[
-    animateWait(masteryPart,liftFrames(descendingFrames.mastery,goingDown),duration,easing,animations),
-    animateWait(masteryLayer.mask,apertureFrames,duration,'linear',animations)
-   ]:[]),
+   ...(masteryPart?[animateWait(masteryPart,liftFrames(descendingFrames.mastery,goingDown),duration,easing,animations)]:[]),
+   animateSoftApertures(
+    [platformLayer.mask,carLayer.mask,masteryLayer?.mask],
+    duration,goingDown,animations
+   ),
    animateWait(well,wellFrames,duration,easing,animations),
    animateWait(rim,rimFrames,duration,easing,animations)
   ];
-  Promise.all(progress).then(()=>{
+  const finishTransition=()=>{
    if(ended)return;
-   cleanup();
-   if(scene?.sys?.isActive?.()!==false)onComplete?.();
-  }).catch(error=>{
+   if(goingDown){
+    // The original sprites MUST stay hidden after the descent. A lazy garage
+    // scene can take seconds to load: cleanup on shutdown, not before start().
+    try{if(scene?.sys?.isActive?.()!==false)onComplete?.();}
+    catch(error){console.warn('[garage-lift] navigation failed',error);cleanup();return;}
+    if(!ended)recoveryTimer=setTimeout(()=>{
+     if(!ended&&scene?.sys?.isActive?.())cleanup();
+    },20000);
+   }else{
+    cleanup();
+    if(scene?.sys?.isActive?.()!==false)onComplete?.();
+   }
+  };
+  Promise.all(progress).then(finishTransition).catch(error=>{
    console.warn('[garage-lift] animation fallback',error);
    if(ended)return;
    cleanup();
