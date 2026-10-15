@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {garageLiftFootprint,garageLiftApertureFrames,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
+import {garageLiftFootprint,garageLiftApertureFrames,garageLiftSoftRadius,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
 const read=p=>readFileSync(p,'utf8');
-assert.deepEqual(GARAGE_LIFT_TIMING,{down:1040,up:1120});
+assert.deepEqual(GARAGE_LIFT_TIMING,{down:1850,up:1900});
 assert.deepEqual(GARAGE_LIFT_DEPTH,{platform:0,car:1,mastery:4});
 assert.equal(GARAGE_LIFT_SWITCH,'tdr2:devGarageLift');
 const on={getItem:()=>null},off={getItem:()=> 'off'};
@@ -26,16 +26,19 @@ assert.equal(fallback.top,100+(400-400*.68)/2);
 assert.equal(fallback.width,430*.81);
 assert.equal(fallback.height,400*.68);
 const close=garageLiftApertureFrames(true),open=garageLiftApertureFrames(false);
-assert.equal(close[0].clipPath,'ellipse(51% 51% at 50% 50%)');
-assert.equal(close.at(-1).clipPath,'ellipse(0% 0% at 50% 50%)');
-assert.equal(open[0].clipPath,'ellipse(0% 0% at 50% 50%)');
-assert.equal(open.at(-1).clipPath,'ellipse(51% 51% at 50% 50%)');
-assert.deepEqual(close.map(k=>k.offset),[0,.2,.5,.77,1]);
-for(let i=1;i<close.length;i++){
- const prev=parseFloat(close[i-1].clipPath.slice(8));
- const next=parseFloat(close[i].clipPath.slice(8));
- assert.ok(next<=prev,'visible disc narrows from the rim toward the center');
+assert.deepEqual(close.map(p=>p.offset),[0,.2,.5,.8,1]);
+assert.deepEqual(open.map(p=>p.offset),[0,.2,.5,.8,1]);
+assert.equal(close[0].radius,145);
+assert.equal(close.at(-1).radius,-45);
+assert.equal(open[0].radius,-45);
+assert.equal(open.at(-1).radius,145);
+for(let i=0;i<close.length;i++){
+ assert.equal(close[i].radius,open.at(-1-i).radius,'soft radial falloff reverses exactly');
+ if(i)assert.ok(close[i].radius<close[i-1].radius,'radius closes smoothly from outside in');
 }
+assert.ok(garageLiftSoftRadius(.3,true)>garageLiftSoftRadius(.7,true));
+assert.equal(garageLiftSoftRadius(-1,true),145);
+assert.equal(garageLiftSoftRadius(2,true),-45);
 const source=read('src/game/ui/LobbyGarageLiftTransition.js');
 for(const str of ['.tdr-lobby-car-platform',"[data-lobby-car]","[data-lobby-mastery]",
  'createFloorWell','copyAtPivot','anchoredPart','Promise.all(progress)',
@@ -53,9 +56,20 @@ assert.doesNotMatch(source,/214748|zIndex:\s*['"]999/,'native z-index required')
 assert.doesNotMatch(source,/translate3d\(0,16px,0\)/,'no Y displacement in ortho view');
 assert.ok(source.includes('scale(.96)'), 'orthographic stage keeps most of its apparent size');
 assert.match(source,/tdr-lobby-garage-aperture/,'fixed round crop above the stage');
-assert.ok(source.includes('animateWait(platformLayer.mask,apertureFrames'), 'platform is progressively masked');
-assert.ok(source.includes('animateWait(carLayer.mask,apertureFrames'), 'car is progressively masked');
-assert.ok(source.includes('animateWait(masteryLayer.mask,apertureFrames'), 'roof badge is progressively masked');
+assert.ok(source.includes('animateSoftApertures('),'three synchronized soft masks instead of sharp clips');
+assert.ok(source.includes('[platformLayer.mask,carLayer.mask,masteryLayer?.mask]'),'mask all car, platform and mastery layers together');
+assert.ok(source.includes("setProperty('--tdr-garage-soft-radius'"),'per-frame radius interpolation even if CSS registered properties are unsupported');
+assert.doesNotMatch(source,/clipPath:'ellipse\\(38%/,'hard shrinking iris has been removed');
+assert.ok(source.includes('if(goingDown){'),'do not restore the garage platform before destination scene is ready');
+const css=read('src/game/ui/lobby-dom.css');
+assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-garage-aperture/);
+assert.match(css,/-webkit-mask-image:radial-gradient/,'iPhone / Safari WebKit soft mask');
+assert.match(css,/mask-image:radial-gradient/,'standard CSS soft mask');
+assert.match(css,/rgba\\(0,0,0,\\.500\\)/,'wide Gaussian CDF midpoint');
+assert.match(css,/transparent calc\\(var\\(--tdr-garage-soft-radius\\) \\+ 40%\\)/,'wide feathered transition, no hard edge');
+
+
+
 assert.match(source,/opacity:1,filter:'brightness/,'stage remains opaque behind a growing floor mask');
 for(const oldAlpha of ['opacity:.03','opacity:.34','opacity:.25'])assert.ok(!source.includes(oldAlpha),'old whole-stage opacity fade is absent');
 assert.match(source,/liftFrames\(descendingFrames\.platform,goingDown\)/);
