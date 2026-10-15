@@ -35,18 +35,18 @@ const narrow=garageLiftMaskBounds({left:100,top:100,width:200,height:240});
 assert.equal(narrow.width,narrow.height);
 assert.ok(narrow.width>=269,'mask includes margin around measured alpha footprint');
 const wideShaft=garageLiftShaftBounds({left:100,top:200,width:320,height:200});
-assert.equal(wideShaft.width,220,'shaft diameter grows 10% from the shorter platform axis');
+assert.ok(Math.abs(wideShaft.width-220)<1e-8,'shaft diameter grows 10% from the shorter platform axis');
 assert.equal(wideShaft.height,wideShaft.width,'shaft cannot render as an oval');
 assert.equal(wideShaft.left+wideShaft.width/2,260,'shaft keeps original horizontal center');
 assert.equal(wideShaft.top+wideShaft.height/2,300,'shaft keeps original vertical center');
 const tallShaft=garageLiftShaftBounds({left:100,top:200,width:200,height:320});
-assert.equal(tallShaft.width,220,'tall layout also produces the larger round opening');
+assert.ok(Math.abs(tallShaft.width-220)<1e-8,'tall layout also produces the larger round opening');
 assert.equal(tallShaft.height,tallShaft.width,'both orientations produce a circle');
 assert.equal(tallShaft.left+tallShaft.width/2,200);
 assert.equal(tallShaft.top+tallShaft.height/2,360);
 const squareShaft=garageLiftShaftBounds({left:0,top:0,width:250,height:250});
 assert.equal(squareShaft.width,squareShaft.height);
-assert.equal(squareShaft.width,275);
+assert.ok(Math.abs(squareShaft.width-275)<1e-8);
 assert.ok(wideShaft.width>200&&tallShaft.height>200,
  'shaft now surrounds the stage with a larger, circular wall');
 
