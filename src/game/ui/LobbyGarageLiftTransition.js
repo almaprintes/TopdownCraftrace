@@ -1,4 +1,4 @@
-// DEV 1.2.212 — Round overscan Gaussian masks: no hard top/bottom cuts.
+// DEV 1.2.213 — True circular garage shaft and rim; no oval bore.
 // These DOM clones stay at their ORIGINAL lobby z-index: stage 0, car 1,
 // roof mastery 4. No fullscreen overlay or extra Phaser renderer work.
 // Race departure (LobbyRaceDeparture.js) is entirely separate and untouched.
@@ -129,13 +129,24 @@ export function garageLiftFootprint(rect,sourceWidth,sourceHeight,alphaBounds=nu
   width:w*PLATFORM_FOOTPRINT_FALLBACK.width,
   height:h*PLATFORM_FOOTPRINT_FALLBACK.height};
 }
+// The visible platform sprite may be elliptical in the layout. The FLOOR
+// opening must never inherit its unequal axes: both shaft and fixed rim use
+// one orthographic diameter and the same existing alpha-footprint center.
+export function garageLiftShaftBounds(footprint){
+ const cx=footprint.left+footprint.width/2;
+ const cy=footprint.top+footprint.height/2;
+ const diameter=Math.max(1,Math.min(footprint.width,footprint.height)*.99);
+ return {left:cx-diameter/2,top:cy-diameter/2,
+  width:diameter,height:diameter};
+}
 function createFloorWell(root,footprint){
  const rr=root.getBoundingClientRect();
+ const shaft=garageLiftShaftBounds(footprint);
  const box={
   position:'absolute',
-  left:(footprint.left+footprint.width/2-rr.left)+'px',
-  top:(footprint.top+footprint.height/2-rr.top)+'px',
-  width:(footprint.width*.99)+'px',height:(footprint.height*.99)+'px',
+  left:(shaft.left+shaft.width/2-rr.left)+'px',
+  top:(shaft.top+shaft.height/2-rr.top)+'px',
+  width:shaft.width+'px',height:shaft.height+'px',
   transform:'translate(-50%,-50%)',borderRadius:'50%',
   pointerEvents:'none',opacity:'0',willChange:'opacity'
  };

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {garageLiftFootprint,garageLiftMaskBounds,garageLiftApertureFrames,garageLiftSoftRadius,GARAGE_LIFT_DEPTH_STOPS,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
+import {garageLiftFootprint,garageLiftShaftBounds,garageLiftMaskBounds,garageLiftApertureFrames,garageLiftSoftRadius,GARAGE_LIFT_DEPTH_STOPS,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
 const read=p=>readFileSync(p,'utf8');
 assert.deepEqual(GARAGE_LIFT_TIMING,{down:1850,up:1900});
 assert.deepEqual(GARAGE_LIFT_DEPTH,{platform:0,car:1,mastery:4});
@@ -34,6 +34,20 @@ assert.ok(maskBox.left+maskBox.width>320&&maskBox.top+maskBox.height>380,
 const narrow=garageLiftMaskBounds({left:100,top:100,width:200,height:240});
 assert.equal(narrow.width,narrow.height);
 assert.ok(narrow.width>=269,'mask includes margin around measured alpha footprint');
+const wideShaft=garageLiftShaftBounds({left:100,top:200,width:320,height:200});
+assert.equal(wideShaft.width,198,'shaft takes the shorter platform axis');
+assert.equal(wideShaft.height,wideShaft.width,'shaft cannot render as an oval');
+assert.equal(wideShaft.left+wideShaft.width/2,260,'shaft keeps original horizontal center');
+assert.equal(wideShaft.top+wideShaft.height/2,300,'shaft keeps original vertical center');
+const tallShaft=garageLiftShaftBounds({left:100,top:200,width:200,height:320});
+assert.equal(tallShaft.width,198,'tall layout also produces a round opening');
+assert.equal(tallShaft.height,tallShaft.width,'both orientations produce a circle');
+assert.equal(tallShaft.left+tallShaft.width/2,200);
+assert.equal(tallShaft.top+tallShaft.height/2,360);
+const squareShaft=garageLiftShaftBounds({left:0,top:0,width:250,height:250});
+assert.equal(squareShaft.width,squareShaft.height);
+assert.equal(squareShaft.width,247.5);
+
 const close=garageLiftApertureFrames(true),open=garageLiftApertureFrames(false);
 assert.deepEqual(close.map(p=>p.offset),[0,.2,.5,.8,1]);
 assert.deepEqual(open.map(p=>p.offset),[0,.2,.5,.8,1]);
@@ -73,6 +87,11 @@ for(const str of ['.tdr-lobby-car-platform',"[data-lobby-car]","[data-lobby-mast
  "root.classList.add('tdr-lobby-garage-lifting')"])assert.ok(source.includes(str),str);
 assert.doesNotMatch(source,/document\.body\.appendChild/,'no screen-covering overlay');
 assert.match(source,/tdr-lobby-garage-rim/,'rim occludes the edge of the descending turntable');
+assert.ok(source.includes('const shaft=garageLiftShaftBounds(footprint)'),
+ 'garage well and rim share the same circular bounds');
+assert.ok(source.includes("width:shaft.width+'px',height:shaft.height+'px'"),
+ 'hole width and height use the exact same diameter');
+
 assert.match(source,/platformArtworkBounds\(platform\)/,'measure visible silhouette');
 assert.match(source,/garageLiftFootprint\(pr,platform\.naturalWidth/,'use natural image metrics');
 assert.match(source,/animateWait\(rim,rimFrames/,'rim uses the same animation duration');
@@ -99,6 +118,12 @@ assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-garage-aperture/);
 assert.match(css,/-webkit-mask-image:radial-gradient/,'iPhone / Safari WebKit soft mask');
 assert.match(css,/mask-image:radial-gradient/,'standard CSS soft mask');
 assert.ok(css.includes('rgba(0,0,0,.500)'),'wide Gaussian CDF midpoint');
+assert.ok(css.includes('background:radial-gradient(circle at center,'),
+ 'well and rim gradients stay circular in ortho view');
+const shaftCss=css.slice(css.indexOf('/* DEV 1.2.207 —'),css.indexOf('/* DEV 1.2.210 —'));
+assert.ok(!shaftCss.includes('radial-gradient(ellipse at center'),
+ 'no elliptical gradient reappears inside the floor hole');
+
 assert.ok(css.includes('-webkit-mask-image:radial-gradient(circle farthest-side at 50% 50%'),
  'WebKit gradient must be circular');
 assert.ok(css.includes('mask-image:radial-gradient(circle farthest-side at 50% 50%'),

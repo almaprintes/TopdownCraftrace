@@ -61,3 +61,11 @@
 - El gradiente de opacidad cambia a `radial-gradient(circle farthest-side ...)` en WebKit y CSS estándar. Su función gaussiana aproximada, radios, curva de scale/brillo, duración y z-index **permanecen idénticos** a DEV 1.2.211.
 - El test de regresión garantiza ausencia del recorte antiguo, cobertura de los cuatro bordes, máscara cuadrada y gradientes circulares compatibles con iPhone.
 - Solo `main` y DEV web. No cambia la salida a carrera ni Google Play. Confirmar Build + Deploy del mismo HEAD antes de responder como entregado.
+
+## DEV 1.2.213 — abertura del suelo perfectamente circular (15/10/2026)
+
+- El propietario valida la corrección de bordes y la animación de DEV 1.2.212, pero observa en captura que el **pozo del suelo sigue siendo ovalado**. Pide cambiar **solamente el pozo** a un círculo ortográfico real, manteniendo lo demás.
+- Causa: `createFloorWell()` aplicaba por separado `width=footprint.width*.99` y `height=footprint.height*.99`, y la proporción recibida de la silueta no era cuadrada. `border-radius:50%` en una caja rectangular dibuja una elipse.
+- Solución: la nueva función pura `garageLiftShaftBounds(footprint)` conserva exactamente el centro, usa `diameter=.99*min(width,height)` y devuelve **width=height=diameter**. Tanto `.tdr-lobby-garage-well` como `.tdr-lobby-garage-rim` comparten esa misma caja. Sus degradados pasan de `radial-gradient(ellipse ...)` a `radial-gradient(circle ...)`.
+- No tocar `garageLiftMaskBounds`, la máscara gaussiana circular, z-index, centrado del coche, ni `GARAGE_LIFT_DEPTH_STOPS` y sus tiempos. El arte de la plataforma sigue idéntico y puede tener su propio aspecto sin deformar el pozo.
+- Test `scripts/lobby-garage-lift-smoke.mjs`: verificar relación 1:1 del diámetro en silueta horizontal, vertical y cuadrada, sus centros y uso de la misma geometría para suelo/aro. Confirmar Build + Deploy del HEAD en `main`; no modificar Google Play.
