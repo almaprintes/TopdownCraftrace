@@ -1,10 +1,25 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {shouldUseLobbyDeparture,runLobbyRaceDeparture,LOBBY_DEPARTURE_TIMING,LOBBY_DEPARTURE_DEPTH} from '../src/game/ui/LobbyRaceDeparture.js';
+import {shouldUseLobbyDeparture,runLobbyRaceDeparture,lobbyDepartureTurnForCar,lobbyDepartureLocalDrive,LOBBY_DOWN_FACING_CARS,LOBBY_DEPARTURE_TIMING,LOBBY_DEPARTURE_DEPTH} from '../src/game/ui/LobbyRaceDeparture.js';
 const read=p=>readFileSync(p,'utf8');
 assert.deepEqual(LOBBY_DEPARTURE_TIMING,{turn:1600,hold:180,drive:520});
 assert.equal(LOBBY_DEPARTURE_TIMING.turn+LOBBY_DEPARTURE_TIMING.hold+LOBBY_DEPARTURE_TIMING.drive,2300);
 assert.deepEqual(LOBBY_DEPARTURE_DEPTH,{platform:0,car:1,mastery:4});
+assert.deepEqual(LOBBY_DOWN_FACING_CARS,['helix_comet','helix_pulse','helix_vortex']);
+for(const id of LOBBY_DOWN_FACING_CARS){
+ assert.equal(lobbyDepartureTurnForCar(id),-90,id+' turns toward its nose');
+ assert.deepEqual(lobbyDepartureLocalDrive(-90,600),{x:0,y:600},
+  'down-facing cars drive viewport-right after negative turn');
+}
+for(const id of ['crown_axis','forge_hammer','helix_spark','veloce_photon']){
+ assert.equal(lobbyDepartureTurnForCar(id),90,id+' keeps default clockwise departure');
+ assert.deepEqual(lobbyDepartureLocalDrive(90,600),{x:0,y:-600});
+}
+assert.equal(lobbyDepartureTurnForCar('helix_comet','180deg'),90,
+ 'a preview flipped with skin calibration also flips departure direction');
+assert.deepEqual(lobbyDepartureLocalDrive(lobbyDepartureTurnForCar('helix_spark','90deg'),600),
+ {x:600,y:0},'a car already looking right departs with no turn');
+
 const storage={getItem:()=>null};
 assert.equal(shouldUseLobbyDeparture({prod:true,storage}),false,'public release remains unchanged');
 assert.equal(shouldUseLobbyDeparture({prod:false,storage}),true);
@@ -22,7 +37,7 @@ const warm=read('src/game/game.js');
 assert.match(warm,/window\.__tdrWarmRaceScene=\(\)=>ensureLazyScene\('race'\)/);
 const script=read('src/game/ui/LobbyRaceDeparture.js');
 for(const keyword of ['tdr-lobby-car-platform','[data-lobby-car]','[data-lobby-mastery]',
- 'rotate(90deg)','translate3d(0,','platformPart','carPart','masteryPart',
+ 'rotate(0deg)','translate3d(0,','platformPart','carPart','masteryPart',
  'prefers-reduced-motion',"once?.('shutdown',stop)",'stop();',
  '__tdrWarmRaceScene','root.appendChild(wrapper)'])assert.ok(script.includes(keyword),keyword);
 assert.ok(script.indexOf('if(!shouldUseLobbyDeparture')<script.indexOf('const platformPart=departureLayer'));
@@ -40,7 +55,13 @@ assert.doesNotMatch(script,/launched=true;stop\(\)/,'never restore center car be
 assert.match(script,/scene\?\.events\?\.once\?\.\('shutdown',stop\)/,'restore only on actual menu shutdown');
 
 assert.match(script,/const departures=\[carPart,\.\.\.\(masteryPart/);
+assert.ok(script.includes('const turnAngle=lobbyDepartureTurnForCar(scene?.selectedCarId'),
+ 'uses current native preview heading before turning');
+assert.ok(script.includes('const movement=lobbyDepartureLocalDrive(turnAngle,distance)'),
+ 'movement direction adjusts for clockwise/counter-clockwise turn');
+assert.ok(!script.includes('rotate(90deg) translate3d(0,'),
+ 'outbound direction must not be hardcoded for cars facing down');
 assert.match(script,/duration:LOBBY_DEPARTURE_TIMING\.drive,easing:'cubic-bezier\(\.6,\.05,\.94,\.45\)'/,'approved getaway unchanged');
 assert.match(read('src/game/ui/lobby-dom.css'),/\.tdr-lobby-dom\.tdr-lobby-departing/);
 assert.match(read('index.html'),/name="tdr-dev-version" content="DEV 1\.2\.\d+"/);
-console.log('Lobby departure: 1.6s turn; 0.52s original getaway; platform z0, car z1, mastery z4; UI depth untouched; rollback and fallback OK');
+console.log('Lobby departure: real car facing determines turn, all drive right in 520ms; platform and mastery aligned; slow network guard OK');

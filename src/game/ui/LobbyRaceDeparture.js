@@ -1,8 +1,24 @@
+// DEV 1.2.214 — Orient exit toward the true native front of each car.
 // DEV-only lobby departure. Platform, car and roof mastery occupy the SAME
 // DOM stacking levels as the original lobby objects. No viewport-high overlay.
 // Rollback: localStorage.setItem('tdr2:devLobbyRaceDeparture','off').
 export const LOBBY_DEPARTURE_TIMING=Object.freeze({turn:1600,hold:180,drive:520});
 export const LOBBY_DEPARTURE_DEPTH=Object.freeze({platform:0,car:1,mastery:4});
+// Verified from real WebPs. These native preview images point DOWN.
+export const LOBBY_DOWN_FACING_CARS=Object.freeze(['helix_comet','helix_pulse','helix_vortex']);
+const downFacing=new Set(LOBBY_DOWN_FACING_CARS);
+export function lobbyDepartureTurnForCar(carId,previewRotation=0){
+ const deg=Number.parseFloat(String(previewRotation))||0;
+ const heading=(downFacing.has(String(carId||''))?180:0)+deg;
+ // Shortest signed turn to 90deg = screen-right.
+ return ((90-heading+180)%360+360)%360-180;
+}
+export function lobbyDepartureLocalDrive(turnDegrees,distance){
+ const theta=Number(turnDegrees)*Math.PI/180,d=Math.max(0,Number(distance)||0);
+ const clean=n=>Math.abs(n)<1e-4?0:Math.round(n*1000)/1000;
+ // CSS transform: translate executes before rotate.
+ return {x:clean(d*Math.cos(theta)),y:clean(-d*Math.sin(theta))};
+}
 export function shouldUseLobbyDeparture({prod=false,storage=globalThis.localStorage}={}){
  if(prod)return false;
  try{return storage?.getItem?.('tdr2:devLobbyRaceDeparture')!=='off';}catch{return true;}
@@ -73,6 +89,8 @@ export function runLobbyRaceDeparture(scene,onFinished,{prod=false}={}){
   launch();return false;
  }
  const pr=platform.getBoundingClientRect(),cx=pr.left+pr.width/2,cy=pr.top+pr.height/2;
+ const turnAngle=lobbyDepartureTurnForCar(scene?.selectedCarId,
+   car.style.rotate||getComputedStyle(car).rotate||'0');
  const badge=root.querySelector('[data-lobby-mastery]');
  const originals=[platform,car];
  if(visibleImage(badge)&&!badge.hidden)originals.push(badge);
@@ -149,10 +167,10 @@ export function runLobbyRaceDeparture(scene,onFinished,{prod=false}={}){
   warmTimer=setTimeout(()=>{if(!disposed)void prepareRace();},180);
   (async()=>{
    try{
-    // Rotate platform, selected car AND mastery around one shared pivot,
-    // without ever promoting any of them above the original UI panels.
+    // The complete turntable pivots toward the nose of the selected car.
+    // Native down-facing previews take -90deg rather than backing out.
     await Promise.all(stages.map(part=>animateAndWait(part,
-     [{transform:'rotate(0deg)'},{transform:'rotate(90deg)'}],
+     [{transform:'rotate(0deg)'},{transform:'rotate('+turnAngle+'deg)'}],
      {duration:LOBBY_DEPARTURE_TIMING.turn,easing:'cubic-bezier(.35,.02,.18,1)'},
      LOBBY_DEPARTURE_TIMING.turn+250,animations)));
     if(disposed)return;
@@ -162,13 +180,14 @@ export function runLobbyRaceDeparture(scene,onFinished,{prod=false}={}){
      {duration:LOBBY_DEPARTURE_TIMING.hold,easing:'ease-in-out'},
      LOBBY_DEPARTURE_TIMING.hold+150,animations);
     if(disposed)return;
-    // The common stage has rotated 90deg: negative local Y moves screen RIGHT.
-    // Preserve the previously approved 520ms getaway curve and 1.1 end scale.
+    // Move RIGHT in viewport coordinates independently of turn direction.
+    // Keep the original getaway duration/easing and 1.1 end scale.
     const distance=window.innerWidth+pr.width;
+    const movement=lobbyDepartureLocalDrive(turnAngle,distance);
     const departures=[carPart,...(masteryPart?[masteryPart]:[])];
     await Promise.all(departures.map(part=>animateAndWait(part,
-     [{transform:'rotate(90deg) translate3d(0,0,0) scale(1)',opacity:1},
-      {transform:'rotate(90deg) translate3d(0,'+(-distance)+'px,0) scale(1.1)',opacity:1}],
+     [{transform:'rotate('+turnAngle+'deg) translate3d(0,0,0) scale(1)',opacity:1},
+      {transform:'rotate('+turnAngle+'deg) translate3d('+movement.x+'px,'+movement.y+'px,0) scale(1.1)',opacity:1}],
      {duration:LOBBY_DEPARTURE_TIMING.drive,easing:'cubic-bezier(.6,.05,.94,.45)'},
      LOBBY_DEPARTURE_TIMING.drive+250,animations)));
    }catch(err){console.warn('[lobby-departure] skipped:',err);}

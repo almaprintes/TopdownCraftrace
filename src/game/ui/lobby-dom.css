@@ -792,42 +792,54 @@
 .tdr-lobby-dom.tdr-lobby-garage-lifting *{pointer-events:none!important}
 .tdr-lobby-dom .tdr-lobby-garage-lift-part,.tdr-lobby-dom .tdr-lobby-garage-well{backface-visibility:hidden}
 
-/* DEV 1.2.207 — Orthographic underground garage lift shaft. Geometry
-   comes from the alpha silhouette of the actual round platform artwork. */
+/* DEV 1.2.214 — True circular bore with a visible metal inner wall.
+   All rim gradients are circular: depth is shading, not camera skew. */
 .tdr-lobby-dom .tdr-lobby-garage-well{
-  box-sizing:border-box;
-  overflow:hidden;
-  border:2px solid rgba(100,111,116,.86);
-  background:radial-gradient(circle at center,
-    #000102 0%,#010307 55%,#030910 77%,#111c23 92%,#293238 100%);
-  box-shadow:0 0 0 2px rgba(4,9,12,.75),
-    inset 0 0 0 3px rgba(20,28,32,.85),
-    inset 0 0 22px 12px rgba(0,0,0,.83),
-    0 0 10px rgba(0,0,0,.43);
-  isolation:isolate;
+ box-sizing:border-box;overflow:hidden;isolation:isolate;
+ border:2px solid rgba(47,56,63,.96);
+ background:radial-gradient(circle at center,#000102 0%,#010307 48%,
+   #071018 63%,#17232c 75%,#38434a 90%,#111920 100%);
+ box-shadow:0 0 0 3px rgba(6,10,14,.85),0 0 0 6px rgba(83,92,93,.29),
+   0 6px 22px rgba(0,0,0,.74),inset 0 0 26px 9px rgba(0,0,0,.94);
 }
 .tdr-lobby-dom .tdr-lobby-garage-well::before{
-  content:"";
-  position:absolute;inset:1.8%;border-radius:50%;
-  border:2px solid rgba(53,65,68,.8);
-  box-shadow:inset 0 0 0 2px rgba(3,7,10,.9),
-    inset 0 0 12px 4px rgba(0,0,0,.9);
+ content:"";position:absolute;inset:6%;border-radius:50%;
+ border:2px solid rgba(31,43,51,.8);
+ background:radial-gradient(circle at center,#000102 0%,#02050a 72%,
+    #0b131a 86%,#303b42 100%);
+ box-shadow:inset 0 17px 23px rgba(0,0,0,.98),
+    inset 0 -11px 17px rgba(16,28,34,.82);
 }
 .tdr-lobby-dom .tdr-lobby-garage-well::after{
-  content:"";
-  position:absolute;inset:7%;border-radius:50%;
-  background:radial-gradient(circle at center,#000101 0%,#010205 78%,#0a1219 100%);
-  box-shadow:inset 0 0 18px rgba(0,0,0,.94);
+ content:"";position:absolute;inset:14%;border-radius:50%;
+ background:radial-gradient(circle at center,#000101 0%,#010308 70%,
+   #061019 95%,#101b24 100%);
+ box-shadow:inset 0 0 24px 10px rgba(0,0,0,.96);
 }
 .tdr-lobby-dom .tdr-lobby-garage-rim{
-  box-sizing:border-box;
-  border:2px solid rgba(113,125,129,.90);
-  box-shadow:0 0 0 2px rgba(6,11,13,.83),inset 0 0 0 2px rgba(6,11,14,.68);
-  /* The middle stays transparent while the lip covers the edge of the deck. */
-  background:radial-gradient(circle at center,
-    transparent 0%,transparent 85%,
-    rgba(23,28,31,.70) 88%,rgba(95,104,105,.77) 92%,
-    rgba(21,27,30,.9) 96%,transparent 100%);
+ box-sizing:border-box;overflow:hidden;border-radius:50%;
+ border:2px solid rgba(139,151,150,.93);
+ box-shadow:0 0 0 3px rgba(8,13,16,.96),0 0 0 5px rgba(80,98,100,.34),
+   0 7px 18px rgba(0,0,0,.61),inset 0 0 0 2px rgba(14,20,26,.93);
+ /* Inner wall spans 59%-87% of the radius, rather than a thin hairline. */
+ background:radial-gradient(circle at center,
+  transparent 0%,transparent 55%,
+  rgba(1,4,8,.91) 59%,rgba(7,13,18,.98) 63%,
+  rgba(18,29,36,.98) 69%,rgba(44,56,64,.98) 74%,
+  rgba(67,81,86,.98) 79%,rgba(24,34,41,.99) 84%,
+  rgba(112,124,125,.99) 88%,rgba(33,43,47,.98) 92%,
+  rgba(137,144,134,.99) 96%,rgba(20,28,33,.98) 100%);
+}
+.tdr-lobby-dom .tdr-lobby-garage-rim::before{
+ content:"";position:absolute;inset:2%;border-radius:50%;
+ background:radial-gradient(circle at center,transparent 0 62%,
+   rgba(0,0,0,.22) 69%,rgba(0,0,0,.48) 80%,
+   rgba(176,193,196,.17) 88%,transparent 94%);
+}
+.tdr-lobby-dom .tdr-lobby-garage-rim::after{
+ content:"";position:absolute;inset:3%;border-radius:50%;
+ border:1px solid rgba(119,137,142,.46);
+ box-shadow:inset 0 0 0 2px rgba(10,17,23,.48),inset 0 0 11px rgba(0,0,0,.57);
 }
 .tdr-lobby-dom .tdr-lobby-garage-rim,
 .tdr-lobby-dom .tdr-lobby-garage-well,
