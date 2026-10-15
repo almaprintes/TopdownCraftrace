@@ -1,4 +1,4 @@
-// DEV 1.2.205 — Lobby ↔ Garage underground turntable.
+// DEV 1.2.206 — Underground garage lift: recessed shaft and foreground lip.
 // These DOM clones stay at their ORIGINAL lobby z-index: stage 0, car 1,
 // roof mastery 4. No fullscreen overlay or extra Phaser renderer work.
 // Race departure (LobbyRaceDeparture.js) is entirely separate and untouched.
@@ -53,18 +53,25 @@ function copyAtPivot(original,cx,cy){
  if(computed.scale&&computed.scale!=='none')node.style.scale=computed.scale;
  return node;
 }
+// A recessed shaft with a foreground lip: the moving deck goes UNDER the
+// near wall as it sinks. No change to the existing car/platform animation.
 function createFloorWell(root,cx,cy,platformRect){
- const rr=root.getBoundingClientRect(),well=document.createElement('div');
- well.className='tdr-lobby-garage-well';
- Object.assign(well.style,{
+ const rr=root.getBoundingClientRect();
+ const box={
   position:'absolute',left:(cx-rr.left)+'px',top:(cy-rr.top+platformRect.height*.1)+'px',
   width:(platformRect.width*.84)+'px',height:(platformRect.height*.62)+'px',
-  transform:'translate(-50%,-50%)',borderRadius:'50%',zIndex:'0',
-  pointerEvents:'none',opacity:'0',willChange:'opacity',
-  background:'radial-gradient(ellipse at 50% 53%,#000407 0%,#06111a 58%,#182f3a 76%,rgba(67,136,161,.34) 90%,transparent 100%)',
-  border:'2px solid rgba(85,174,200,.30)',
-  boxShadow:'inset 0 16px 35px rgba(0,0,0,.98),0 0 22px rgba(0,0,0,.4)'});
- root.appendChild(well);return well;
+  transform:'translate(-50%,-50%)',borderRadius:'50%',
+  pointerEvents:'none',opacity:'0',willChange:'opacity'
+ };
+ const well=document.createElement('div');
+ well.className='tdr-lobby-garage-well';
+ Object.assign(well.style,box,{zIndex:'0'});
+ const lip=document.createElement('div');
+ lip.className='tdr-lobby-garage-lip';
+ Object.assign(lip.style,box,{zIndex:'2'});
+ root.appendChild(well);
+ root.appendChild(lip);
+ return {well,lip};
 }
 const FALL={transform:'translate3d(0,16px,0) scale(.62)',opacity:.03,filter:'brightness(.10) saturate(.62)'};
 const LEVEL={transform:'translate3d(0,0,0) scale(1)',opacity:1,filter:'brightness(1) saturate(1)'};
@@ -89,13 +96,14 @@ function startLift(scene,root,direction,onComplete){
  if(ready(badge)&&!badge.hidden)originals.push(badge);
  const wrappers=[],animations=[];
  const visibility=originals.map(node=>node.style.visibility);
- let well=null,ended=false,leaving=false;
+ let well=null,lip=null,ended=false;
  const cleanup=()=>{
   if(ended)return;
   ended=true;
   for(const anim of animations){try{anim.cancel();}catch{}}
   for(const part of wrappers)part.remove();
   well?.remove();
+  lip?.remove();
   originals.forEach((node,i)=>{if(node.isConnected)node.style.visibility=visibility[i];});
   root.classList.remove('tdr-lobby-garage-lifting');
   scene._garageLiftBusy=false;
@@ -104,7 +112,7 @@ function startLift(scene,root,direction,onComplete){
  };
  try{
   scene._garageLiftBusy=true;
-  well=createFloorWell(root,cx,cy,pr);
+  ({well,lip}=createFloorWell(root,cx,cy,pr));
   // After a full garage swap, the previous car asset is never cloned.
   const platformPart=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.platform);
   wrappers.push(platformPart);platformPart.appendChild(copyAtPivot(platform,cx,cy));
@@ -122,14 +130,22 @@ function startLift(scene,root,direction,onComplete){
   const duration=goingDown?GARAGE_LIFT_TIMING.down:GARAGE_LIFT_TIMING.up;
   const easing=goingDown?'cubic-bezier(.28,.02,.2,1)':'cubic-bezier(.2,.7,.18,1)';
   const frames=goingDown?[LEVEL,FALL]:[FALL,LEVEL];
-  const wellFrames=goingDown?[{opacity:0},{opacity:1}]:[{opacity:1},{opacity:0}];
+  // The well opens as the stage sinks, then stays visible during its return.
+  well.style.opacity=goingDown?'0':'1';
+  lip.style.opacity=goingDown?'0':'1';
+  const wellFrames=goingDown
+   ?[{opacity:0,offset:0},{opacity:.15,offset:.20},{opacity:1,offset:.64},{opacity:1,offset:1}]
+   :[{opacity:1,offset:0},{opacity:1,offset:.42},{opacity:.38,offset:.78},{opacity:0,offset:1}];
+  const lipFrames=goingDown
+   ?[{opacity:0,offset:0},{opacity:0,offset:.20},{opacity:1,offset:.68},{opacity:1,offset:1}]
+   :[{opacity:1,offset:0},{opacity:1,offset:.25},{opacity:.30,offset:.73},{opacity:0,offset:1}];
   const progress=[
    ...wrappers.map(part=>animateWait(part,frames,duration,easing,animations)),
-   animateWait(well,wellFrames,duration,easing,animations)
+   animateWait(well,wellFrames,duration,easing,animations),
+   animateWait(lip,lipFrames,duration,easing,animations)
   ];
   Promise.all(progress).then(()=>{
    if(ended)return;
-   leaving=true;
    cleanup();
    if(scene?.sys?.isActive?.()!==false)onComplete?.();
   }).catch(error=>{

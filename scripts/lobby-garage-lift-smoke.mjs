@@ -25,11 +25,19 @@ for(const str of ['.tdr-lobby-car-platform',"[data-lobby-car]","[data-lobby-mast
  "scene?.scene?.start?.('GarageScene',{mode:'player'})",
  "root.classList.add('tdr-lobby-garage-lifting')"])assert.ok(source.includes(str),str);
 assert.doesNotMatch(source,/document\.body\.appendChild/,'no screen-covering overlay');
+assert.match(source,/tdr-lobby-garage-lip/,'front shaft lip masks descending car');
+assert.match(source,/animateWait\(lip,lipFrames/,'lip uses the same animation duration');
+assert.match(source,/lip\?\.remove\(\)/,'lip is always removed on cleanup');
 assert.doesNotMatch(source,/214748|zIndex:\s*['"]999/,'native z-index required');
 assert.match(source,/const frames=goingDown\?\[LEVEL,FALL\]:\[FALL,LEVEL\]/);
 assert.match(source,/scene\?\.events\?\.once\?\.\('shutdown',cleanup\)/);
 assert.match(source,/if\(attempts\+\+>35\)return restore\(\)/,'image failures must fall back');
 const lobby=read('src/game/ui/LobbyDomUi.js'),polish=read('src/game/ui/LobbyPublishPolish.js');
+assert.match(lobby,/lobby_background_topdown_garage\.webp/,'new cenital image is visible');
+assert.doesNotMatch(lobby,/assets\/ui\/menu_bg\.webp/,'old DOM background is gone');
+assert.match(read('src/game/ui/lobby-dom.css'),/tdr-lobby-garage-well::before/,'inset shaft wall');
+assert.match(read('src/game/ui/lobby-dom.css'),/tdr-lobby-garage-well::after/,'deep floor');
+assert.match(read('src/game/ui/lobby-dom.css'),/tdr-lobby-garage-lip/,'foreground shaft rim');
 assert.match(lobby,/label:tr\('lobby\.garage'\),action:\(\)=>goToPlayerGarageWithLift\(scene\)/);
 assert.match(polish,/makeCardButton\(car,t\('lobby\.openGarage'\),\(\)=>goToPlayerGarageWithLift\(scene\)\)/);
 const garage=read('src/game/scenes/GarageLazyCardsScene.js');
@@ -42,5 +50,5 @@ const menu=read('src/game/scenes/MenuDomUiScene.js');
 assert.match(menu,/polishLobbyForPublish\(this, lobbyRoot\);[\s\S]{0,240}beginGarageLiftRise\(this,lobbyRoot\)/);
 assert.match(read('src/game/ui/LobbyRaceDeparture.js'),/turn:1600,hold:180,drive:520/,'approved departure unchanged');
 assert.match(read('src/game/ui/lobby-dom.css'),/\.tdr-lobby-dom\.tdr-lobby-garage-lifting/);
-assert.match(read('index.html'),/content="DEV 1\.2\.205"/);
+assert.match(read('index.html'),/content="DEV 1\.2\.206"/);
 console.log('Garage lift: stage+car down/up in native lobby layers; all player garage navigation; one-shot return; rollback; no public change; race departure untouched');
