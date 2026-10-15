@@ -792,37 +792,43 @@
 .tdr-lobby-dom.tdr-lobby-garage-lifting *{pointer-events:none!important}
 .tdr-lobby-dom .tdr-lobby-garage-lift-part,.tdr-lobby-dom .tdr-lobby-garage-well{backface-visibility:hidden}
 
-/* DEV 1.2.206 — Metallic inset shaft behind the existing garage platform.
-   Open only during garage transit; compositor-friendly opacity changes. */
+/* DEV 1.2.207 — Orthographic underground garage lift shaft. Geometry
+   comes from the alpha silhouette of the actual round platform artwork. */
 .tdr-lobby-dom .tdr-lobby-garage-well{
-  background:conic-gradient(from 90deg,#25282b 0deg,#505154 32deg,
-    #191f22 67deg,#72613e 115deg,#282d30 168deg,#131b21 225deg,
-    #4c5658 282deg,#25282b 360deg);
-  border:2px solid rgba(137,145,148,.74);
-  box-shadow:0 0 0 3px rgba(3,6,8,.75),0 0 0 5px rgba(96,93,75,.21),
-    0 7px 23px rgba(0,0,0,.77),inset 0 0 0 2px rgba(9,14,17,.9);
+  box-sizing:border-box;
   overflow:hidden;
+  border:2px solid rgba(100,111,116,.86);
+  background:radial-gradient(ellipse at center,
+    #000102 0%,#010307 55%,#030910 77%,#111c23 92%,#293238 100%);
+  box-shadow:0 0 0 2px rgba(4,9,12,.75),
+    inset 0 0 0 3px rgba(20,28,32,.85),
+    inset 0 0 22px 12px rgba(0,0,0,.83),
+    0 0 10px rgba(0,0,0,.43);
   isolation:isolate;
 }
 .tdr-lobby-dom .tdr-lobby-garage-well::before{
-  content:"";position:absolute;inset:5% 5.5%;border-radius:50%;
-  background:linear-gradient(180deg,#101820 0%,#070d12 27%,#020508 71%,#1a242a 100%);
-  border:2px solid rgba(7,10,12,.94);
-  box-shadow:inset 0 17px 23px rgba(0,0,0,.95),
-    inset 0 -13px 14px rgba(77,115,123,.32),0 0 0 2px rgba(113,116,112,.35);
+  content:"";
+  position:absolute;inset:1.8%;border-radius:50%;
+  border:2px solid rgba(53,65,68,.8);
+  box-shadow:inset 0 0 0 2px rgba(3,7,10,.9),
+    inset 0 0 12px 4px rgba(0,0,0,.9);
 }
 .tdr-lobby-dom .tdr-lobby-garage-well::after{
-  content:"";position:absolute;inset:12% 9.5% 10%;border-radius:50%;
-  background:radial-gradient(ellipse at 49% 45%,#000102 0%,#010408 64%,
-    #071119 87%,#12212a 100%);
-  box-shadow:inset 0 12px 18px rgba(0,0,0,.97),
-    inset 0 -8px 15px rgba(0,0,0,.84),0 -2px 9px rgba(0,0,0,.75);
+  content:"";
+  position:absolute;inset:7%;border-radius:50%;
+  background:radial-gradient(ellipse at center,#000101 0%,#010205 78%,#0a1219 100%);
+  box-shadow:inset 0 0 18px rgba(0,0,0,.94);
 }
-.tdr-lobby-dom .tdr-lobby-garage-lip{
-  /* The near-side edge visually hides the descending stage and car. */
-  clip-path:ellipse(47% 46% at 50% 50%);
-  background:linear-gradient(180deg,transparent 0%,transparent 54%,
-    rgba(2,5,8,.12) 65%,rgba(2,6,9,.55) 82%,rgba(3,8,12,.88) 100%);
+.tdr-lobby-dom .tdr-lobby-garage-rim{
+  box-sizing:border-box;
+  border:2px solid rgba(113,125,129,.90);
+  box-shadow:0 0 0 2px rgba(6,11,13,.83),inset 0 0 0 2px rgba(6,11,14,.68);
+  /* The middle stays transparent while the lip covers the edge of the deck. */
+  background:radial-gradient(ellipse at center,
+    transparent 0%,transparent 85%,
+    rgba(23,28,31,.70) 88%,rgba(95,104,105,.77) 92%,
+    rgba(21,27,30,.9) 96%,transparent 100%);
 }
-.tdr-lobby-dom .tdr-lobby-garage-lip,
-.tdr-lobby-dom .tdr-lobby-garage-well{backface-visibility:hidden}
+.tdr-lobby-dom .tdr-lobby-garage-rim,
+.tdr-lobby-dom .tdr-lobby-garage-well,
+.tdr-lobby-dom .tdr-lobby-garage-lift-part{backface-visibility:hidden}
