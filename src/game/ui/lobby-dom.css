@@ -839,7 +839,7 @@
    Only --tdr-garage-soft-radius changes, not the visible sprite alpha. */
 .tdr-lobby-dom .tdr-lobby-garage-aperture{
   --tdr-garage-soft-radius:145%;
-  -webkit-mask-image:radial-gradient(ellipse farthest-side at 50% 50%,
+  -webkit-mask-image:radial-gradient(circle farthest-side at 50% 50%,
     #000 calc(var(--tdr-garage-soft-radius) - 40%),
     rgba(0,0,0,.994) calc(var(--tdr-garage-soft-radius) - 36%),
     rgba(0,0,0,.977) calc(var(--tdr-garage-soft-radius) - 32%),
@@ -853,7 +853,7 @@
     rgba(0,0,0,.023) calc(var(--tdr-garage-soft-radius) + 32%),
     rgba(0,0,0,.006) calc(var(--tdr-garage-soft-radius) + 36%),
     transparent calc(var(--tdr-garage-soft-radius) + 40%));
-  mask-image:radial-gradient(ellipse farthest-side at 50% 50%,
+  mask-image:radial-gradient(circle farthest-side at 50% 50%,
     #000 calc(var(--tdr-garage-soft-radius) - 40%),
     rgba(0,0,0,.994) calc(var(--tdr-garage-soft-radius) - 36%),
     rgba(0,0,0,.977) calc(var(--tdr-garage-soft-radius) - 32%),
@@ -872,3 +872,7 @@
   -webkit-mask-size:100% 100%;
   mask-size:100% 100%;
 }
+
+/* DEV 1.2.212 — The Gaussian aperture is an overscanned square, centered on
+   the real platform footprint. No extra CSS clip-path or edge box cropping;
+   the WebKit and standard circular gradients do the entire dissolution. */

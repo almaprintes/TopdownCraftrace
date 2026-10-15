@@ -52,3 +52,12 @@
 - No se toca geometría, duración (1850ms bajada / 1900ms subida), z-index, fondo ni HTML de la plataforma; cámara ortográfica 90°. La aparición desde el garaje usa el **mismo perfil invertido**, con oscurecimiento previo y aumento progresivo hasta tamaño 1.
 - `scripts/lobby-garage-lift-smoke.mjs`: verifica que más de la mitad de la reducción de escala ocurra en el primer 30% con brillo casi intacto; que los tres elementos compartan exactamente la curva y que no se reactive una segunda interpolación global de easing. Continúan las pruebas del gradiente gaussiano y de limpieza de recursos.
 - Rama única `main`, solo DEV web. Comprobar Build/Deploy del SHA final antes de anunciar publicación. Validación visual final en dispositivo.
+
+## DEV 1.2.212 — corrección de bordes superior/inferior (15/10/2026)
+
+- El propietario aprueba la sincronización de profundidad de DEV 1.2.211, pero observa anomalías en el borde superior e inferior de la plataforma durante el descenso.
+- Causa localizada: `anchoredPart()` arrastraba `clipPath:'ellipse(51% 51% at 50% 50%)'` de la antigua animación, un **recorte duro** superpuesto a la máscara gaussiana. Además, la caja en torno al alfa visible era excesivamente ajustada y rectangular; podía recortar físicamente elementos en los extremos.
+- Se elimina completamente el `clipPath` duro. `garageLiftMaskBounds(footprint,sourceRects)` crea una máscara **cuadrada** con centro en la huella del ascensor y margen extra del 12% alrededor del rectángulo completo de plataforma, coche y maestría. No modifica el hueco metálico, que sigue usando la huella original exacta.
+- El gradiente de opacidad cambia a `radial-gradient(circle farthest-side ...)` en WebKit y CSS estándar. Su función gaussiana aproximada, radios, curva de scale/brillo, duración y z-index **permanecen idénticos** a DEV 1.2.211.
+- El test de regresión garantiza ausencia del recorte antiguo, cobertura de los cuatro bordes, máscara cuadrada y gradientes circulares compatibles con iPhone.
+- Solo `main` y DEV web. No cambia la salida a carrera ni Google Play. Confirmar Build + Deploy del mismo HEAD antes de responder como entregado.

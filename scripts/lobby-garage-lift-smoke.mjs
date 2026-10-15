@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {garageLiftFootprint,garageLiftApertureFrames,garageLiftSoftRadius,GARAGE_LIFT_DEPTH_STOPS,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
+import {garageLiftFootprint,garageLiftMaskBounds,garageLiftApertureFrames,garageLiftSoftRadius,GARAGE_LIFT_DEPTH_STOPS,GARAGE_LIFT_TIMING,GARAGE_LIFT_DEPTH,GARAGE_LIFT_SWITCH,GARAGE_LIFT_RETURN_KEY,garageLiftEnabled,markGarageLiftReturn,consumeGarageLiftReturn} from '../src/game/ui/LobbyGarageLiftTransition.js';
 const read=p=>readFileSync(p,'utf8');
 assert.deepEqual(GARAGE_LIFT_TIMING,{down:1850,up:1900});
 assert.deepEqual(GARAGE_LIFT_DEPTH,{platform:0,car:1,mastery:4});
@@ -25,6 +25,15 @@ assert.equal(fallback.left,200+(430-430*.81)/2);
 assert.equal(fallback.top,100+(400-400*.68)/2);
 assert.equal(fallback.width,430*.81);
 assert.equal(fallback.height,400*.68);
+const maskBox=garageLiftMaskBounds({left:100,top:100,width:200,height:240},
+ [{left:80,top:60,width:240,height:320},{left:170,top:110,width:60,height:280}]);
+assert.equal(maskBox.width,maskBox.height,'radial Gaussian feather must use a square/circle');
+assert.ok(maskBox.left<80&&maskBox.top<60,'mask overscans TOP/LEFT of the artwork');
+assert.ok(maskBox.left+maskBox.width>320&&maskBox.top+maskBox.height>380,
+ 'mask overscans BOTTOM/RIGHT even with a non-square platform');
+const narrow=garageLiftMaskBounds({left:100,top:100,width:200,height:240});
+assert.equal(narrow.width,narrow.height);
+assert.ok(narrow.width>=269,'mask includes margin around measured alpha footprint');
 const close=garageLiftApertureFrames(true),open=garageLiftApertureFrames(false);
 assert.deepEqual(close.map(p=>p.offset),[0,.2,.5,.8,1]);
 assert.deepEqual(open.map(p=>p.offset),[0,.2,.5,.8,1]);
@@ -74,7 +83,12 @@ assert.ok(source.includes('platform:depthKeyframes,') && source.includes('car:de
  'platform/car/mastery share EXACTLY the same transform and brightness timeline');
 assert.ok(source.includes("const easing='linear'"),
  'depth keyframes and the Gaussian radius run on the same normalized clock');
-assert.match(source,/tdr-lobby-garage-aperture/,'fixed round crop above the stage');
+assert.match(source,/tdr-lobby-garage-aperture/,'Gaussian mask exists above stage');
+assert.match(source,/garageLiftMaskBounds\\(footprint,\\[pr,car\\.getBoundingClientRect\\(\\)/,
+ 'stage, car and mastery rectangles determine mask overscan');
+assert.ok(!source.includes("clipPath:'ellipse(51%"),'remove old hard 51% ellipse crop');
+assert.ok(source.includes('width:maskBounds.width') && source.includes('height:maskBounds.height'),
+ 'mask and Gaussian circle use same square bounds');
 assert.ok(source.includes('animateSoftApertures('),'three synchronized soft masks instead of sharp clips');
 assert.ok(source.includes('[platformLayer.mask,carLayer.mask,masteryLayer?.mask]'),'mask all car, platform and mastery layers together');
 assert.ok(source.includes("setProperty('--tdr-garage-soft-radius'"),'per-frame radius interpolation even if CSS registered properties are unsupported');
@@ -85,6 +99,12 @@ assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-garage-aperture/);
 assert.match(css,/-webkit-mask-image:radial-gradient/,'iPhone / Safari WebKit soft mask');
 assert.match(css,/mask-image:radial-gradient/,'standard CSS soft mask');
 assert.ok(css.includes('rgba(0,0,0,.500)'),'wide Gaussian CDF midpoint');
+assert.ok(css.includes('-webkit-mask-image:radial-gradient(circle farthest-side at 50% 50%'),
+ 'WebKit gradient must be circular');
+assert.ok(css.includes('mask-image:radial-gradient(circle farthest-side at 50% 50%'),
+ 'standard gradient must be circular');
+assert.ok(!css.slice(css.indexOf('/* DEV 1.2.210 —')).includes('ellipse farthest-side'),
+ 'do not stretch mask into oval on short/wide viewports');
 assert.ok(css.includes('transparent calc(var(--tdr-garage-soft-radius) + 40%)'),'wide feathered transition, no hard edge');
 
 
