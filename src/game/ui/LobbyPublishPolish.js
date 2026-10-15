@@ -1,4 +1,5 @@
 import { t } from '../i18n/index.js';
+import {goToPlayerGarageWithLift} from './LobbyGarageLiftTransition.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { getCurrentRaceEvent } from '../events/raceEvents.js';
 import { loadPlayerStatsPersisted } from '../stats/playerStats.js';
@@ -66,7 +67,7 @@ export function polishLobbyForPublish(scene, root) {
   if (!root?.isConnected) return;
   const season = root.querySelector('[data-event-card]');if (season) polishSeasonCard(scene,season);
   const track = root.querySelector('[data-track-card]');if (track) makeCardButton(track,t('lobby.openTrackSelector'),() => scene.scene.start('TrackGarageScene', { mode: 'player' }));
-  const car=root.querySelector('[data-lobby-car]');if(car){car.classList.add('tdr-lobby-car-preview--interactive');makeCardButton(car,t('lobby.openGarage'),()=>scene.scene.start('GarageScene',{mode:'player'}));}
+  const car=root.querySelector('[data-lobby-car]');if(car){car.classList.add('tdr-lobby-car-preview--interactive');makeCardButton(car,t('lobby.openGarage'),()=>goToPlayerGarageWithLift(scene));}
   installGarageInductionCue(scene,root,season,car);installMasteryRoofBadge(scene,root);
 }
 

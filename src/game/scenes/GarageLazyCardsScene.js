@@ -1,6 +1,7 @@
 import {availableCarSkins,hasAlternativeSkins,getEquippedCarSkin,equipCarSkin,skinIsUnlocked,hasPublishedCarArt} from '../skins/carSkins.js';
 import {carCardFile,carCardUrl} from '../cars/carCardArt.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
+import {returnToLobbyFromGarage} from '../ui/LobbyGarageLiftTransition.js';
 import { GarageScene as CurrentGarageScene } from './GarageResponsiveHeroScene.js';
 import { BaseScene } from './BaseScene.js';
 import {createAppHeader,disposeAppWallets} from '../ui/TdrAppHeader.js';
@@ -62,6 +63,8 @@ export class GarageScene extends CurrentGarageScene {
   _lockedCar(carId){return !this._fullAccess()&&!isCarUnlocked(carId);}
 
   create(){
+    // Reset whenever the reused player-garage scene is entered.
+    this._garageReturnPending=false;
     if(this._mode==='admin'){
       super.create();
       recordGarageVisit();
@@ -121,7 +124,7 @@ export class GarageScene extends CurrentGarageScene {
     const L=labels();
     root.innerHTML=`<main class="tdr-garage-dom-layout"><section class="tdr-garage-dom-listpanel"><div class="tdr-garage-dom-kicker">${esc(L.collection)}</div><div class="tdr-garage-dom-list"></div></section><section class="tdr-garage-dom-hero"><div class="tdr-garage-dom-cardzone"><img alt="" draggable="false" decoding="async"></div><div class="tdr-garage-dom-info"><div class="tdr-garage-dom-content"></div><div class="tdr-garage-dom-footer"></div></div></section></main>`;
     // Player Garage skips legacy _rebuild; mount header in the actual visible DOM.
-    const header=createAppHeader({title:L.garage,onBack:()=>this.scene.start('menu')});
+    const header=createAppHeader({title:L.garage,onBack:()=>returnToLobbyFromGarage(this)});
     header.classList.remove('tdr-store-header');header.classList.add('tdr-player-garage-head');root.prepend(header);
     const list=root.querySelector('.tdr-garage-dom-list');
     (this._cars||[]).forEach((car,index)=>{
@@ -168,8 +171,8 @@ export class GarageScene extends CurrentGarageScene {
         }));
       }
     }
-    footer.querySelector('[data-select]')?.addEventListener('click',()=>{if(this._lockedCar(selected.id))return;try{localStorage.setItem('tdr2:carId',selected.id);}catch{}this.scene.start('menu');});
-    footer.querySelector('[data-back]')?.addEventListener('click',()=>this.scene.start('menu'));
+    footer.querySelector('[data-select]')?.addEventListener('click',()=>{if(this._lockedCar(selected.id))return;try{localStorage.setItem('tdr2:carId',selected.id);}catch{}returnToLobbyFromGarage(this);});
+    footer.querySelector('[data-back]')?.addEventListener('click',()=>returnToLobbyFromGarage(this));
   }
 
   _removePlayerDomGarage(){disposeAppWallets(this._playerGarageDom);try{this._playerGarageDom?.remove();}catch{}this._playerGarageDom=null;}

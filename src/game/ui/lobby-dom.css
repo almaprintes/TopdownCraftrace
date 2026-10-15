@@ -785,3 +785,9 @@
    season/track panels and action buttons retain their original depth. */
 .tdr-lobby-dom.tdr-lobby-departing,
 .tdr-lobby-dom.tdr-lobby-departing *{pointer-events:none!important}
+
+/* DEV 1.2.205 — Underground garage elevator: native stage/car/mastery depths,
+   independent of the approved lobby-to-race departure. */
+.tdr-lobby-dom.tdr-lobby-garage-lifting,
+.tdr-lobby-dom.tdr-lobby-garage-lifting *{pointer-events:none!important}
+.tdr-lobby-dom .tdr-lobby-garage-lift-part,.tdr-lobby-dom .tdr-lobby-garage-well{backface-visibility:hidden}

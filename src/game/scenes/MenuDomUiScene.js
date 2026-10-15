@@ -1,5 +1,6 @@
 import { MenuScene as PreviousMenuScene } from './MenuStoreScene.js';
 import { installLobbyDom } from '../ui/LobbyDomUi.js';
+import {beginGarageLiftRise} from '../ui/LobbyGarageLiftTransition.js';
 import { polishLobbyForPublish } from '../ui/LobbyPublishPolish.js';
 import { CANONICAL_TRACK_IDS } from '../tracks/trackIdentity.js';
 import '../ui/floating-chrome.css';
@@ -58,6 +59,8 @@ export class MenuScene extends PreviousMenuScene {
     }
     const lobbyRoot = installLobbyDom(this);
     polishLobbyForPublish(this, lobbyRoot);
+    // Use the newly selected car and mastery before starting the ascent.
+    beginGarageLiftRise(this,lobbyRoot);
     this._lobbyRenderedTrackKey = this.selectedTrackKey;
   }
 

@@ -52,5 +52,5 @@ assert.match(game,/render:\{pixelArt:false,antialias/,'do not change global rend
 assert.match(read('src/game/ui/LobbyRaceDeparture.js'),/turn:1600,hold:180,drive:520/);
 assert.match(read('src/game/ui/LobbyDomUi.js'),/data-lobby-car/);
 assert.doesNotMatch(read('src/game/ui/LobbyDomUi.js'),/raceCarLookTexture/,'the lobby never uses softened race art');
-assert.ok(read('index.html').includes('content="DEV 1.2.204"'));
+assert.ok(read('index.html').includes('content="DEV 1.2.205"'));
 console.log('Race visual look: linear-filtered one-time 320px high-quality prefilter; DEV-only; zero per-frame FX; lobby, original files, physics, iOS framebuffer and 1.2.203 departure untouched');

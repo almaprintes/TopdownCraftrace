@@ -1,4 +1,5 @@
 import {getEquippedCarSkin} from '../skins/carSkins.js';
+import {goToPlayerGarageWithLift} from './LobbyGarageLiftTransition.js';
 import {skinGeometry} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,hasAlternativeSkins} from '../skins/carSkins.js';
 import { loadGarage } from '../garage/garageStore.js';
@@ -180,7 +181,7 @@ export function installLobbyDom(scene) {
     const bottom=root.querySelector('.tdr-lobby-bottom-actions');
     bottom.append(
       makeStatisticsShortcut(scene),
-      makeButton({icon:'icon_garage.webp',label:tr('lobby.garage'),action:()=>scene.scene.start('GarageScene',{mode:'player'})}),
+      makeButton({icon:'icon_garage.webp',label:tr('lobby.garage'),action:()=>goToPlayerGarageWithLift(scene)}),
       makeButton({cls:'tdr-lobby-button--factory',icon:'icon_factory.webp',label:tr('lobby.factory'),action:()=>scene.scene.start('upgrade-shop')}),
       makeButton({cls:'tdr-lobby-button--gold',icon:'icon_tracks.webp',label:tr('lobby.tracks'),action:()=>scene.scene.start('TrackGarageScene',{mode:'player'})}),
       makeOnlineRecordsShortcut(scene)
