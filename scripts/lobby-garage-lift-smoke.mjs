@@ -89,7 +89,7 @@ assert.ok(css.includes('transparent calc(var(--tdr-garage-soft-radius) + 40%)'),
 
 
 
-assert.match(source,/opacity:1,filter:'brightness/,'stage remains opaque behind a growing floor mask');
+assert.ok(source.includes('opacity:1,') && source.includes("filter:'brightness('+brightness"), 'shared stage/car/magenta mastery stay opaque while Gaussian shadow takes over');
 for(const oldAlpha of ['opacity:.03','opacity:.34','opacity:.25'])assert.ok(!source.includes(oldAlpha),'old whole-stage opacity fade is absent');
 assert.match(source,/liftFrames\(descendingFrames\.platform,goingDown\)/);
 assert.match(source,/liftFrames\(descendingFrames\.car,goingDown\)/);
