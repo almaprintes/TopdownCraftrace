@@ -59,14 +59,14 @@ assert.match(source,/tdr-lobby-garage-aperture/,'fixed round crop above the stag
 assert.ok(source.includes('animateSoftApertures('),'three synchronized soft masks instead of sharp clips');
 assert.ok(source.includes('[platformLayer.mask,carLayer.mask,masteryLayer?.mask]'),'mask all car, platform and mastery layers together');
 assert.ok(source.includes("setProperty('--tdr-garage-soft-radius'"),'per-frame radius interpolation even if CSS registered properties are unsupported');
-assert.doesNotMatch(source,/clipPath:'ellipse\\(38%/,'hard shrinking iris has been removed');
+assert.ok(!source.includes("clipPath:'ellipse(38%"),'hard shrinking iris has been removed');
 assert.ok(source.includes('if(goingDown){'),'do not restore the garage platform before destination scene is ready');
 const css=read('src/game/ui/lobby-dom.css');
 assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-garage-aperture/);
 assert.match(css,/-webkit-mask-image:radial-gradient/,'iPhone / Safari WebKit soft mask');
 assert.match(css,/mask-image:radial-gradient/,'standard CSS soft mask');
-assert.match(css,/rgba\\(0,0,0,\\.500\\)/,'wide Gaussian CDF midpoint');
-assert.match(css,/transparent calc\\(var\\(--tdr-garage-soft-radius\\) \\+ 40%\\)/,'wide feathered transition, no hard edge');
+assert.ok(css.includes('rgba(0,0,0,.500)'),'wide Gaussian CDF midpoint');
+assert.ok(css.includes('transparent calc(var(--tdr-garage-soft-radius) + 40%)'),'wide feathered transition, no hard edge');
 
 
 
