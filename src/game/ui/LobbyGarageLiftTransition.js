@@ -1,4 +1,4 @@
-// DEV 1.2.207 — Orthographic garage shaft: match the actual platform artwork.
+// DEV 1.2.208 — Fixed orthographic bore with progressive perimeter occlusion.
 // These DOM clones stay at their ORIGINAL lobby z-index: stage 0, car 1,
 // roof mastery 4. No fullscreen overlay or extra Phaser renderer work.
 // Race departure (LobbyRaceDeparture.js) is entirely separate and untouched.
@@ -22,15 +22,30 @@ export function consumeGarageLiftReturn({prod=IS_PROD_BUILD,storage=globalThis.s
  return flag==='rise'&&garageLiftEnabled({prod});
 }
 const ready=image=>!!(image?.isConnected&&image?.complete&&image?.naturalWidth&&image.getBoundingClientRect()?.width>0);
-function anchoredPart(root,cx,cy,zIndex){
+// Each moving layer lives behind a stationary, true circular aperture.
+// Animate the aperture's clip-path separately: the floor conceals the OUTER
+// edge first, while the center of the vehicle remains genuinely visible.
+function anchoredPart(root,cx,cy,zIndex,footprint){
  const rr=root.getBoundingClientRect();
+ const mask=document.createElement('div');
+ mask.className='tdr-lobby-garage-aperture';
+ Object.assign(mask.style,{
+  position:'absolute',
+  left:(footprint.left-rr.left)+'px',top:(footprint.top-rr.top)+'px',
+  width:footprint.width+'px',height:footprint.height+'px',
+  zIndex:String(zIndex),pointerEvents:'none',
+  clipPath:'ellipse(51% 51% at 50% 50%)',willChange:'clip-path'
+ });
  const node=document.createElement('div');
  node.className='tdr-lobby-garage-lift-part';
- Object.assign(node.style,{position:'absolute',left:(cx-rr.left)+'px',top:(cy-rr.top)+'px',
-  width:'0',height:'0',zIndex:String(zIndex),overflow:'visible',pointerEvents:'none',
-  transformOrigin:'0 0',willChange:'transform,opacity,filter'});
- root.appendChild(node);
- return node;
+ Object.assign(node.style,{
+  position:'absolute',left:(cx-footprint.left)+'px',top:(cy-footprint.top)+'px',
+  width:'0',height:'0',overflow:'visible',pointerEvents:'none',
+  transformOrigin:'0 0',willChange:'transform,filter'
+ });
+ mask.appendChild(node);
+ root.appendChild(mask);
+ return {node,mask};
 }
 function copyAtPivot(original,cx,cy){
  const rect=original.getBoundingClientRect();
@@ -115,25 +130,36 @@ function createFloorWell(root,footprint){
  root.appendChild(well);root.appendChild(rim);
  return {well,rim};
 }
-// No translateY or perspective skew: the camera is fully orthographic.
+// No fake uniform-opacity fade. Masking moves inward from the fixed floor
+// ring, while the car and deck darken in the shaft and remain opaque.
 const LEVEL={transform:'translate3d(0,0,0) scale(1)',opacity:1,filter:'brightness(1) saturate(1)'};
-const FALL={transform:'translate3d(0,0,0) scale(.88)',opacity:0,filter:'brightness(.09) saturate(.55)'};
-const CAR_FALL={transform:'translate3d(0,0,0) scale(.86)',opacity:0,filter:'brightness(.07) saturate(.50)'};
-const MASTERY_FALL={transform:'translate3d(0,0,0) scale(.88)',opacity:0,filter:'brightness(.1)'};
+const FALL={transform:'translate3d(0,0,0) scale(.96)',opacity:1,filter:'brightness(.37) saturate(.62)'};
+const CAR_FALL={transform:'translate3d(0,0,0) scale(.96)',opacity:1,filter:'brightness(.34) saturate(.62)'};
+const MASTERY_FALL={transform:'translate3d(0,0,0) scale(.96)',opacity:1,filter:'brightness(.32)'};
 const descendingFrames={
  platform:[{...LEVEL,offset:0},
-  {transform:'translate3d(0,0,0) scale(.975)',opacity:.92,filter:'brightness(.75) saturate(.85)',offset:.32},
-  {transform:'translate3d(0,0,0) scale(.91)',opacity:.34,filter:'brightness(.20) saturate(.60)',offset:.73},
+  {transform:'translate3d(0,0,0) scale(1)',opacity:1,filter:'brightness(.92) saturate(.96)',offset:.27},
+  {transform:'translate3d(0,0,0) scale(.98)',opacity:1,filter:'brightness(.63) saturate(.82)',offset:.68},
   {...FALL,offset:1}],
  car:[{...LEVEL,offset:0},
-  {transform:'translate3d(0,0,0) scale(.97)',opacity:.95,filter:'brightness(.7) saturate(.8)',offset:.30},
-  {transform:'translate3d(0,0,0) scale(.89)',opacity:.26,filter:'brightness(.12) saturate(.55)',offset:.73},
+  {transform:'translate3d(0,0,0) scale(1)',opacity:1,filter:'brightness(.91) saturate(.96)',offset:.27},
+  {transform:'translate3d(0,0,0) scale(.98)',opacity:1,filter:'brightness(.65) saturate(.8)',offset:.68},
   {...CAR_FALL,offset:1}],
  mastery:[{...LEVEL,offset:0},
-  {transform:'translate3d(0,0,0) scale(.95)',opacity:.30,filter:'brightness(.25)',offset:.52},
+  {transform:'translate3d(0,0,0) scale(.98)',opacity:1,filter:'brightness(.69)',offset:.55},
   {...MASTERY_FALL,offset:1}]
 };
 const liftFrames=(frames,goingDown)=>goingDown?frames:frames.map(f=>({...f,offset:1-f.offset})).reverse();
+export function garageLiftApertureFrames(goingDown){
+ const closing=[
+  {clipPath:'ellipse(51% 51% at 50% 50%)',offset:0},
+  {clipPath:'ellipse(51% 51% at 50% 50%)',offset:.20},
+  {clipPath:'ellipse(38% 38% at 50% 50%)',offset:.50},
+  {clipPath:'ellipse(19% 19% at 50% 50%)',offset:.77},
+  {clipPath:'ellipse(0% 0% at 50% 50%)',offset:1}
+ ];
+ return liftFrames(closing,goingDown);
+}
 function animateWait(node,frames,duration,easing,animations){
  if(typeof node?.animate!=='function')return Promise.resolve();
  try{
@@ -155,13 +181,14 @@ function startLift(scene,root,direction,onComplete){
  if(ready(badge)&&!badge.hidden)originals.push(badge);
  const wrappers=[],animations=[];
  let platformPart=null,carPart=null,masteryPart=null;
+ let platformLayer=null,carLayer=null,masteryLayer=null;
  const visibility=originals.map(node=>node.style.visibility);
  let well=null,rim=null,ended=false;
  const cleanup=()=>{
   if(ended)return;
   ended=true;
   for(const anim of animations){try{anim.cancel();}catch{}}
-  for(const part of wrappers)part.remove();
+  for(const mask of wrappers)mask.remove();
   well?.remove();
   rim?.remove();
   originals.forEach((node,i)=>{if(node.isConnected)node.style.visibility=visibility[i];});
@@ -175,13 +202,16 @@ function startLift(scene,root,direction,onComplete){
   const footprint=garageLiftFootprint(pr,platform.naturalWidth,platform.naturalHeight,platformArtworkBounds(platform));
   ({well,rim}=createFloorWell(root,footprint));
   // After a full garage swap, the previous car asset is never cloned.
-  platformPart=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.platform);
-  wrappers.push(platformPart);platformPart.appendChild(copyAtPivot(platform,cx,cy));
-  carPart=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.car);
-  wrappers.push(carPart);carPart.appendChild(copyAtPivot(car,cx,cy));
+  platformLayer=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.platform,footprint);
+  platformPart=platformLayer.node;
+  wrappers.push(platformLayer.mask);platformPart.appendChild(copyAtPivot(platform,cx,cy));
+  carLayer=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.car,footprint);
+  carPart=carLayer.node;
+  wrappers.push(carLayer.mask);carPart.appendChild(copyAtPivot(car,cx,cy));
   if(originals.includes(badge)){
-   masteryPart=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.mastery);
-   wrappers.push(masteryPart);masteryPart.appendChild(copyAtPivot(badge,cx,cy));
+   masteryLayer=anchoredPart(root,cx,cy,GARAGE_LIFT_DEPTH.mastery,footprint);
+   masteryPart=masteryLayer.node;
+   wrappers.push(masteryLayer.mask);masteryPart.appendChild(copyAtPivot(badge,cx,cy));
   }
   originals.forEach(node=>{node.style.visibility='hidden';});
   root.classList.add('tdr-lobby-garage-lifting');
@@ -190,8 +220,8 @@ function startLift(scene,root,direction,onComplete){
   const goingDown=direction==='down';
   const duration=goingDown?GARAGE_LIFT_TIMING.down:GARAGE_LIFT_TIMING.up;
   const easing=goingDown?'cubic-bezier(.28,.02,.2,1)':'cubic-bezier(.2,.7,.18,1)';
-  // The shaft remains centered while stage/car darken and recede. The thin
-  // fixed rim covers their outer edge progressively without moving on screen.
+  // A stationary aperture physically covers the visible rim first. This is
+  // not uniform opacity: the center is still drawn while the outside is hidden.
   well.style.opacity=goingDown?'0':'1';
   rim.style.opacity=goingDown?'0':'1';
   const wellFrames=goingDown
@@ -200,10 +230,16 @@ function startLift(scene,root,direction,onComplete){
   const rimFrames=goingDown
    ?[{opacity:0,offset:0},{opacity:.30,offset:.16},{opacity:1,offset:.54},{opacity:1,offset:1}]
    :[{opacity:1,offset:0},{opacity:1,offset:.48},{opacity:.4,offset:.82},{opacity:0,offset:1}];
+  const apertureFrames=garageLiftApertureFrames(goingDown);
   const progress=[
    animateWait(platformPart,liftFrames(descendingFrames.platform,goingDown),duration,easing,animations),
+   animateWait(platformLayer.mask,apertureFrames,duration,'linear',animations),
    animateWait(carPart,liftFrames(descendingFrames.car,goingDown),duration,easing,animations),
-   ...(masteryPart?[animateWait(masteryPart,liftFrames(descendingFrames.mastery,goingDown),duration,easing,animations)]:[]),
+   animateWait(carLayer.mask,apertureFrames,duration,'linear',animations),
+   ...(masteryPart?[
+    animateWait(masteryPart,liftFrames(descendingFrames.mastery,goingDown),duration,easing,animations),
+    animateWait(masteryLayer.mask,apertureFrames,duration,'linear',animations)
+   ]:[]),
    animateWait(well,wellFrames,duration,easing,animations),
    animateWait(rim,rimFrames,duration,easing,animations)
   ];
