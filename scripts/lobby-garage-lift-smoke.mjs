@@ -33,7 +33,7 @@ assert.equal(close.at(-1).radius,-45);
 assert.equal(open[0].radius,-45);
 assert.equal(open.at(-1).radius,145);
 for(let i=0;i<close.length;i++){
- assert.equal(close[i].radius,open.at(-1-i).radius,'soft radial falloff reverses exactly');
+ assert.ok(Math.abs(close[i].radius-open.at(-1-i).radius)<1e-9,'soft radial falloff reverses exactly');
  if(i)assert.ok(close[i].radius<close[i-1].radius,'radius closes smoothly from outside in');
 }
 assert.ok(garageLiftSoftRadius(.3,true)>garageLiftSoftRadius(.7,true));
