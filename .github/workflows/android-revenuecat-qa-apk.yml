@@ -1,5 +1,5 @@
 name: TDR real AdMob RevenueCat QA APK
-# DEV 1.2.216: Crown season + verified online mission on independent installable QA package.
+# DEV 1.2.216: include corrected Karting staging in all main Android checks.
 
 on:
   push:

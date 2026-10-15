@@ -55,6 +55,8 @@ jobs:
           npm ci --no-audit --no-fund
           node scripts/cloud-portability-smoke.mjs
           grep -Fq 'content="DEV 1.2.216"' index.html
+          node scripts/install-karting-tenerife-source.mjs
+          node scripts/karting-official-source-smoke.mjs
           npm run build:android
           node scripts/verify-android-launcher.mjs
       - name: Compile standalone cloud reinstall APK
