@@ -10,8 +10,8 @@ assert.equal(draft.status,'staged-not-active');
 assert.equal(draft.trackId,'karting-canarias');
 assert.deepEqual([draft.imageWidth,draft.imageHeight],[2048,3072]);
 assert.equal(draft.tiles.length,4);
-assert.equal(live.meta?.renderMode,'undefined' === typeof live.meta?.renderMode ? undefined : live.meta.renderMode,
-  'Do not mutate runtime photo mode from this staging metadata');
+assert.notEqual(live.meta?.renderMode,'image-native',
+  'Do not activate photo-native until Karting Canarias physics and borders match the new photo');
 assert.equal(live.worldW,2000,'Do not replace playable geometry before its photo-native QA');
 assert.equal(live.worldH,4300,'Do not replace playable geometry before its photo-native QA');
 const digest=p=>createHash('sha256').update(readFileSync('public/'+p)).digest('hex');
