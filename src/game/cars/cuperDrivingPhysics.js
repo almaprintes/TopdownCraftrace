@@ -12,7 +12,7 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const smooth=x=>{const u=clamp(x,0,1);return u*u*(3-2*u);};
 const relax=(value,target,rate,dt)=>value+(target-value)*(1-Math.exp(-rate*dt));
 
-export const CUPER_PHYSICS_VERSION='cuper-dev-1';
+export const CUPER_PHYSICS_VERSION='cuper-dev-2';
 
 export function makeCuperPhysicsState(){
   return {yaw:0,lift:0,previousThrottle:0,slipAngle:0,
@@ -66,16 +66,26 @@ export function stepCuperDrivingPhysics(state,frame,dt){
   const maxSide=Math.max(18,speed*.36);
   side=clamp(side,-maxSide,maxSide);
 
-  // Scrub: sideways tyres and large steering angle bleed speed, never add it.
+  // The DEV 1.2.230 model applied corner scrub on EVERY frame, including
+  // full throttle, and lost additional speed by shortening the lateral vector.
+  // At a tight karting corner that stacked with the original Arcade tyre drag
+  // and made the car too slow to evaluate its handling.
+  // Keep Arcade's speed as the authority when the driver is accelerating.
+  // Only lifting or braking introduces a small, deliberately bounded scrub.
   const slipRatio=clamp(Math.abs(side)/Math.max(35,speed),0,1);
-  const cornerScrub=(.045*load+.20*slipRatio)*accel*dt;
-  const reducedForward=Math.sign(forward)*Math.max(0,Math.abs(forward)-cornerScrub);
+  const coastFactor=(1-throttle)*(1-throttle);
+  const scrubRatio=clamp((.018*load+.025*slipRatio)*coastFactor,0,.045);
+  const reducedForward=forward;
   let outVx=fx*reducedForward+rx*side;
   let outVy=fy*reducedForward+ry*side;
   const outSpeed=Math.hypot(outVx,outVy);
-  // Never increase momentum beyond what the authoritative Arcade step produced.
-  if(outSpeed>speed && outSpeed>1e-6){
-    const k=speed/outSpeed;outVx*=k;outVy*=k;
+  if(outSpeed>1e-6){
+    // Exactly preserve the base motor's speed on full gas; otherwise bleed at
+    // most 4.5% while heavily sliding without throttle. Never accelerate past
+    // the speed produced by the existing engine, collisions or surface system.
+    const desiredSpeed=speed*(1-scrubRatio);
+    const k=desiredSpeed/outSpeed;
+    outVx*=k;outVy*=k;
   }
 
   // Light chassis response. The bicycle controller handles primary steering;
