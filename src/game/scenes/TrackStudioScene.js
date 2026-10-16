@@ -154,10 +154,9 @@ this._panelContentY = this._topBarH + 62;
 // Responsive: actions remain reachable even when browser chrome reduces viewport.
 // Leave room for the inspector, but reserve the bottom of the sidebar
 // for the complete, scrollable tool palette (never cover the canvas).
-this._panelActionsY = Math.min(
-  this._topBarH + 198,
-  Math.max(this._topBarH + 123, height - 195)
-);
+this._panelActionsY = height >= 420
+  ? this._topBarH + 216
+  : Math.max(this._topBarH + 140, height - 170);
 
 this.add.text(
   width - this._rightPanelW + 20,
@@ -358,7 +357,7 @@ topX += 48;
     }).setOrigin(0.5, 0);
     [
       [285, 'Guardar'], [329, 'Abrir'], [373, 'Nuevo'],
-      [429, 'Circuito'], [477, 'Ancho −'], [517, 'Ancho +'],
+      [429, 'Cierre'], [477, 'Ancho −'], [517, 'Ancho +'],
       [569, 'Deshacer'], [609, 'Rehacer']
     ].forEach(([x, label]) => caption(x, label));
 
