@@ -79,6 +79,25 @@ export function gateOnLoop(metrics,gate){
 // across the lane and adjacent paddock without drawing extra road markings.
 // It still requires normal race direction + CP1 and CP2 to credit a lap.
 // Intentionally never touches the original finishLine for visuals or spawn.
+// Swept car-segment intersection (not just end-position projection).
+// Allows diagonal or high-speed paddock passes, but never wrong-way passes.
+export function crossesDirectedFinishGate(gate,previous,current,velocity){
+  if(!valid(gate?.a)||!valid(gate?.b)||!valid(gate?.normal)||
+     !valid(previous)||!valid(current))return false;
+  const a=point(gate.a),b=point(gate.b),p=point(previous),q=point(current);
+  const r={x:q.x-p.x,y:q.y-p.y},s={x:b.x-a.x,y:b.y-a.y};
+  const det=cross(r,s);
+  if(Math.abs(det)<1e-8)return false;
+  const dx=a.x-p.x,dy=a.y-p.y;
+  const t=(dx*s.y-dy*s.x)/det,u=(dx*r.y-dy*r.x)/det;
+  if(t<0||t>1||u<0||u>1)return false;
+  const vx=Number(velocity?.x),vy=Number(velocity?.y);
+  const moving=Number.isFinite(vx)&&Number.isFinite(vy)&&Math.hypot(vx,vy)>.01
+    ?{x:vx,y:vy}:r;
+  const nx=Number(gate.normal.x),ny=Number(gate.normal.y);
+  return moving.x*nx+moving.y*ny>0;
+}
+
 export function alignedPaddockFinishGate(finish,trackWidth,{halfWidthMult=1.7}={}){
   if(!valid(finish?.a)||!valid(finish?.b)||!valid(finish?.normal))return null;
   const a=point(finish.a),b=point(finish.b),dx=b.x-a.x,dy=b.y-a.y;
