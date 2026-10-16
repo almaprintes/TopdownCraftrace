@@ -51,6 +51,7 @@ jobs:
           node scripts/karting-canarias-photo-staging-smoke.mjs
           node scripts/karting-canarias-owner-project-smoke.mjs
           node scripts/karting-canarias-camera-zoom-smoke.mjs
+          node scripts/karting-canarias-owner-environment-smoke.mjs
           node scripts/ios-photo-thermal-budget-smoke.mjs
           node scripts/karting-final-environment-smoke.mjs
           node scripts/environment-studio-native-photo-smoke.mjs
