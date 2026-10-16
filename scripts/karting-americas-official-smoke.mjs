@@ -43,7 +43,7 @@ const pitVec=seg(pit),mainVec=seg(track.finishLine);
 assert.ok(Math.hypot(pitVec.x,pitVec.y)>Math.hypot(mainVec.x,mainVec.y)+track.trackWidth*.5,
  'Paddock logical finish must reach outside the main racing lane');
 const length=Math.hypot(pitVec.x,pitVec.y),ux=pitVec.x/length,uy=pitVec.y/length;
-const offset=Math.hypot(mainVec.x,mainVec.y)*.5+track.trackWidth*.35;
+const offset=(Math.hypot(mainVec.x,mainVec.y)+Math.hypot(pitVec.x,pitVec.y))*.25;
 const mid={x:(pit.a.x+pit.b.x)/2,y:(pit.a.y+pit.b.y)/2};
 const n=pit.normal;
 const padPoint={x:mid.x+ux*offset,y:mid.y+uy*offset};
