@@ -33,7 +33,7 @@ assert.equal(track.startLine,null,'A closed lap must not activate the open rally
 assert.deepEqual([track.closed,track.raceType,track.checkpointMode],[true,'circuit','authored']);
 assert.deepEqual([track.worldW,track.worldH],[2048,3072]);
 assert.deepEqual([track.finishLine.a,track.finishLine.b],[owner.startLine.a,owner.startLine.b],
-  'The owner's start line doubles as the one and only logical lap finish');
+  "The owner's start line doubles as the one and only logical lap finish");
 assert.equal(track.checkpoints.length,2);
 function crosses(a,b,c,d){
  const side=(p,q,r)=>(q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x);
