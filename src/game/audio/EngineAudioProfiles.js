@@ -1,6 +1,40 @@
 // Reusable sample profiles. Keep these values declarative so a proven engine
 // sound can be assigned to another car without reconstructing its mix by hand.
+import { CAR_SPECS } from '../cars/carSpecs.js';
+
 export const ENGINE_AUDIO_PROFILES = Object.freeze({
+  // DEV-wide engine trial: a single, proven CC0 racing engine bank on
+  // every playable vehicle. The legacy named presets remain available in
+  // production and can be restored after the driver's listening test.
+  TDR_RACE_UNIVERSAL: Object.freeze({
+    id: 'TDR_RACE_UNIVERSAL',
+    kind: 'rpm-bank',
+    sampleBank: 'SPARK_SIX',
+    idleRpm: 1000,
+    redlineRpm: 7500,
+    sampleRpmAnchors: Object.freeze([1000, 1950, 2950, 4120, 5450, 7100]),
+    roadExponent: 0.79,
+    roadRpmSpan: 5400,
+    throttleExponent: 0.68,
+    standingLoadRpmSpan: 3700,
+    roadLoadReduction: 2300,
+    riseRateBase: 5050,
+    riseRateLoad: 2350,
+    fallRate: 4200,
+    pitchScale: 0.98,
+    sampleGainBase: 0.63,
+    sampleLoadGain: 0.23,
+    cabinFrequencyBase: 480,
+    cabinFrequencyRange: 610,
+    cabinGainBase: 1.35,
+    cabinGainRpmReduction: 0.35,
+    cabinLoadGain: 0.35,
+    lowBodyGainBase: 2.8,
+    lowBodyRpmReduction: 0.55,
+    roofFrequencyBase: 4600,
+    roofFrequencyRange: 3100,
+    roofLoadRange: 520
+  }),
   AVENIR_GRIPLINE: Object.freeze({
     id: 'AVENIR_GRIPLINE',
     kind: 'rpm-bank',
@@ -47,3 +81,14 @@ export const ENGINE_AUDIO_PROFILES = Object.freeze({
     gainSmoothing: 0.055
   })
 });
+
+// Central DEV-only routing, pure and testable without a browser/WebAudio.
+// Never change the car specs: engine sounds must NOT change handling or stats.
+export function selectEngineAudioProfile(carId, requested, {dev = false} = {}) {
+  const id = String(carId || '').trim();
+  if (dev && Object.prototype.hasOwnProperty.call(CAR_SPECS, id)) {
+    return ENGINE_AUDIO_PROFILES.TDR_RACE_UNIVERSAL;
+  }
+  const key = String(requested || '').trim();
+  return ENGINE_AUDIO_PROFILES[key] || null;
+}
