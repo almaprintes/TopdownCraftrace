@@ -98,14 +98,14 @@ jobs:
           unzip -t "$src" | tail -1
           "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'"
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-CUPER-DEV-1.2.216.apk
-          sha256sum sdk-download/TDR-QA-CUPER-DEV-1.2.216.apk
+          cp "$src" sdk-download/TDR-QA-DEV-1.2.220.apk
+          sha256sum sdk-download/TDR-QA-DEV-1.2.220.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-CUPER-DEV-1.2.216
-          path: sdk-download/TDR-QA-CUPER-DEV-1.2.216.apk
+          name: TDR-QA-DEV-1.2.220
+          path: sdk-download/TDR-QA-DEV-1.2.220.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error

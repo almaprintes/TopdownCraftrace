@@ -1,6 +1,6 @@
 # Top Down RACE — pendientes para la próxima actualización
 
-**Fecha:** 16/10/2026. **Estado:** implementados en código DEV 1.2.220. Pendiente de validar la ejecución real en un teléfono Android. **Rama de trabajo cuando se autorice:** `main`. **DEV de referencia:** 1.2.219. **Ámbito:** juego y Android; Google Play no se publica sin autorización expresa.
+**Fecha:** 16/10/2026. **Estado:** implementados en código DEV 1.2.220. Pendiente de validar la ejecución real en un teléfono Android. **Rama de trabajo cuando se autorice:** `main`. **DEV de referencia:** 1.2.220. **Ámbito:** juego y Android; Google Play no se publica sin autorización expresa.
 
 Estas tres peticiones fueron formuladas por el propietario después de incorporar Karting Américas como circuito permanente.
 
