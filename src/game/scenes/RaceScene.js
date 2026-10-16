@@ -1158,12 +1158,14 @@ body.setVisible(false);
 const specFinal = this.baseSpec || spec || CAR_SPECS.stock;
 this.ensureCarSkinTexture(specFinal).catch(() => {});
 const vScale = Number(specFinal?.visualScale ?? 1.0);
+// Admin visual-only calibration must never enlarge collision radii.
+const collisionScale = Number(specFinal?.collisionScale ?? vScale);
 // Escala opcional por circuito: permite rallies visualmente más estrechos sin alterar los coches base.
 const trackCarScale = Math.max(0.35, Math.min(1.5, Number(t01?.carScale ?? this.track?.meta?.carScale ?? 1.0) || 1.0));
 
 // Colisión: si quieres que el camión “ocupe pista”, esto es CLAVE
 const baseRadius = 14;
-body.setCircle(Math.round(baseRadius * vScale * trackCarScale));
+body.setCircle(Math.round(baseRadius * collisionScale * trackCarScale));
 // Aumento SOLO visual del coche (no afecta a físicas)
 const VISUAL_SCALE_MULT = 1.35;
 body.setCollideWorldBounds(true);
@@ -1268,7 +1270,7 @@ for (let i = 1; i < MAX_GRID_CARS; i++) {
 
   const aiBody = this.physics.add.sprite(aiSpawn.x, aiSpawn.y, '__BODY__');
   aiBody.setVisible(false);
-  aiBody.setCircle(Math.round(baseRadius * vScale * trackCarScale));
+  aiBody.setCircle(Math.round(baseRadius * collisionScale * trackCarScale));
   aiBody.setCollideWorldBounds(true);
   aiBody.setBounce(0);
   aiBody.setDrag(0, 0);
