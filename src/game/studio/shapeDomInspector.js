@@ -96,7 +96,7 @@ export function studioInspectorCopy(scene) {
   const canvas=scene?._imageCanvas?'\nLienzo: '+scene._imageCanvas.width+'×'+scene._imageCanvas.height:'';
   // On very short landscape screens reserve the lower inspector for tools.
   // Keep essential track status visible without letting properties overlap buttons.
-  if((scene?.scale?.height||0)<420){
+  if(Number.isFinite(scene?.scale?.height) && scene.scale.height<420){
     return [
       'Sin selección',
       'Nodos: '+nodes.length+' · Pianos: '+pianos.length,
