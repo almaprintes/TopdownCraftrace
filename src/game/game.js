@@ -17,6 +17,7 @@ import { installHtmlTextRuntime } from './ui/htmlTextRuntime.js';
 import './tracks/trackPublicNames.js';
 import { installRacePerformanceProbe } from './dev/racePerformanceProbe.js';
 import { IS_PROD_BUILD } from './buildTarget.js';
+import { installCuperDrivingPhysics } from './cars/cuperDrivingPhysics.js';
 class MenuAliasScene extends Phaser.Scene { constructor(){super('MenuScene');} create(){this.scene.start('menu');} }
 const PLAYER_LAZY_SCENES={GarageScene:{load:()=>import('./scenes/GarageSelectionCenterScene.js'),exportName:'GarageScene',warm:10},'upgrade-shop':{load:()=>import('./scenes/UpgradeWorkshopCarUnlockScene.js'),exportName:'UpgradeShopScene',warm:20},StatsScene:{load:()=>import('./scenes/StatsTesterExchangeScene.js'),exportName:'StatsScene',warm:40},season:{load:()=>import('./scenes/SeasonSafeDockScene.js'),exportName:'SeasonScene',warm:50},TrackGarageScene:{load:()=>import('./scenes/TrackGarageAndroidTouchScene.js'),exportName:'TrackGarageScene',warm:60},race:{load:async()=>{const [{RaceScene},{installExactRuntimeBeautyPass},{installRaceEnvironmentRuntime},{installRaceGraphicsBudgetRuntime},{installRaceLoadingExperience},{installLiveDeltaReferenceRuntime},{installImageNativeRaceLoader},{createTrack,hasTrack}]=await Promise.all([import('./scenes/RaceEmbeddedReplaySceneV2.js'),import('./scenes/raceExactRuntimeBeautyPass.js'),import('./scenes/raceEnvironmentRuntime.js'),import('./scenes/raceGraphicsBudgetRuntime.js'),import('./ui/raceLoadingExperience.js'),import('./ui/liveDeltaReferenceRuntime.js'),import('./tracks/imageNativeRaceLoader.js'),import('./tracks/trackRegistry.js')]);installRaceEnvironmentRuntime(RaceScene);installRaceGraphicsBudgetRuntime(RaceScene);installExactRuntimeBeautyPass(RaceScene);installRaceLoadingExperience(RaceScene);installLiveDeltaReferenceRuntime(RaceScene);
 // DEV 1.1.28 regression A/B: Android races run without the diagnostic profiler.
@@ -29,6 +30,9 @@ if(!IS_PROD_BUILD&&!/Android/i.test(String(navigator?.userAgent||''))&&
   (()=>{try{return JSON.parse(localStorage.getItem('tdr2:settings')||'{}')?.video?.showFPS===true;}catch{return false;}})())
   installRacePerformanceProbe(RaceScene);
 installImageNativeRaceLoader(RaceScene,key=>hasTrack(key)?createTrack(key):null);
+// DEV-only experimental vehicle handling. The Google Play production build
+// never installs this; other cars remain fully on Physics Base 1.0.
+if(!IS_PROD_BUILD)installCuperDrivingPhysics(RaceScene);
 return {RaceScene};},exportName:'RaceScene',warm:70},GarageDetailScene:{load:()=>import('./scenes/GarageDetailSpeedConsistencyScene.js'),exportName:'GarageDetailScene',warm:80}};
 const DEV_LAZY_SCENES=IS_PROD_BUILD?{}:{'admin-hub':{load:()=>import('./scenes/AdminHubScene.js'),exportName:'AdminHubScene',admin:true},'car-editor':{load:()=>import('./scenes/CarEditorSpeedConsistencyScene.js'),exportName:'CarEditorScene',admin:true},TrackEditorScene:{load:()=>import('./scenes/TrackEditorScene.js'),exportName:'TrackEditorScene',admin:true},TrackStudioScene:{load:()=>import('./scenes/TrackStudioScene.js'),exportName:'TrackStudioScene',admin:true},EnvironmentBuilderScene:{load:()=>import('./scenes/EnvironmentBuilderAmericasImportScene.js'),exportName:'EnvironmentBuilderScene',admin:true}};
 const LAZY_SCENES={...PLAYER_LAZY_SCENES,...DEV_LAZY_SCENES};
