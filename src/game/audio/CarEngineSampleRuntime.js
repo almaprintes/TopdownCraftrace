@@ -246,6 +246,10 @@ export class CarEngineSampleRuntime {
         const now=context.currentTime;
         this._nodes?.master?.gain?.cancelScheduledValues(now);
         this._nodes?.master?.gain?.setValueAtTime(0,now);
+        // Ignition is a short independent one-shot routed to destination.
+        // Silence it synchronously too, before a fullscreen ad or app pause.
+        this._ignitionGain?.gain?.cancelScheduledValues(now);
+        this._ignitionGain?.gain?.setValueAtTime(0,now);
       } catch {}
     }
     this._focusTransition=this._focusTransition
@@ -433,7 +437,7 @@ export class CarEngineSampleRuntime {
     const pending = this._ignitionBufferPromise || this._prepareIgnitionSample();
     if (!context || !pending) return;
     pending.then(buffer => {
-      if (!this.scene || !this.engineStarted || this._ctx !== context) return;
+      if (!this.scene || !this.engineStarted || this._ctx !== context || this._audioBlocked()) return;
       if (performance.now() - requestedAt > 320) {
         console.warn('[TDR2 ignition] Starter decode missed the ignition window; skipping sample');
         return;
