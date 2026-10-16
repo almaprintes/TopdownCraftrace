@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import sharp from 'sharp';
 import {execFileSync} from 'node:child_process';
-import {loopPathMetrics,gateOnLoop,orderClosedCircuitGates} from '../src/game/tracks/closedCircuitGateOrder.js';
+import {loopPathMetrics,gateOnLoop,orderClosedCircuitGates,
+  alignedPaddockFinishGate,crossesDirectedFinishGate
+} from '../src/game/tracks/closedCircuitGateOrder.js';
 const track=JSON.parse(fs.readFileSync('src/game/tracks/library/karting-americas/track.json','utf8'));
 const environment=JSON.parse(fs.readFileSync('src/game/tracks/library/karting-americas/karting-americas.environment.json','utf8'));
 assert.equal(track.name,'KARTING AMÉRICAS');
@@ -29,6 +31,40 @@ assert.ok(progress[0]+metrics.total*.10<progress[1],'CP1 must be crossed before 
 const forwardAtFinish=finishMetric.tangent.x*track.finishLine.normal.x+
  finishMetric.tangent.y*track.finishLine.normal.y;
 assert.ok(forwardAtFinish>.98,'Finish direction must permit crossing in the actual race direction');
+// Paddock has a painted stripe collinear with META, but physically outside
+// the short original racing-lane gate. It must count as the same lap finish,
+// without modifying the painted line, CP1/CP2 or the original track image.
+const pit=track.meta.paddockFinishLine;
+assert.ok(pit?.a&&pit?.b&&pit?.normal,'Paddock logical finish gate must exist');
+const expectedPaddock=alignedPaddockFinishGate(track.finishLine,track.trackWidth);
+assert.deepEqual(pit,expectedPaddock,'Paddock gate must align with original finish axis');
+const seg=v=>({x:v.b.x-v.a.x,y:v.b.y-v.a.y});
+const pitVec=seg(pit),mainVec=seg(track.finishLine);
+assert.ok(Math.hypot(pitVec.x,pitVec.y)>Math.hypot(mainVec.x,mainVec.y)+track.trackWidth*.5,
+ 'Paddock logical finish must reach outside the main racing lane');
+const length=Math.hypot(pitVec.x,pitVec.y),ux=pitVec.x/length,uy=pitVec.y/length;
+const offset=Math.hypot(mainVec.x,mainVec.y)*.5+track.trackWidth*.35;
+const mid={x:(pit.a.x+pit.b.x)/2,y:(pit.a.y+pit.b.y)/2};
+const n=pit.normal;
+const padPoint={x:mid.x+ux*offset,y:mid.y+uy*offset};
+const before={x:padPoint.x-n.x*30,y:padPoint.y-n.y*30};
+const after={x:padPoint.x+n.x*30,y:padPoint.y+n.y*30};
+const forward={x:n.x*200,y:n.y*200};
+assert.ok(crossesDirectedFinishGate(pit,before,after,forward),
+ 'Forward crossing at paddock stripe must count');
+assert.ok(!crossesDirectedFinishGate(track.finishLine,before,after,forward),
+ 'The original narrow meta did not cover the painted paddock lane');
+assert.ok(!crossesDirectedFinishGate(pit,after,before,{x:-forward.x,y:-forward.y}),
+ 'Wrong-way paddock crossings must be ignored');
+assert.ok(!crossesDirectedFinishGate(pit,before,before,forward),
+ 'Stopping on the line must not add phantom laps');
+const raceSource=fs.readFileSync('src/game/scenes/RaceScene.js','utf8');
+assert.ok(raceSource.includes('crossesDirectedFinishGate('));
+assert.ok(raceSource.includes("this.track?.meta?.meta?.trackId === 'karting-americas'"),
+ 'Paddock gate must be exclusive to Americas');
+assert.ok(raceSource.includes("if ((this._cpState || 0) === 2)"),
+ 'Paddock crossing must remain gated by both ordered checkpoints');
+
 const startForward={x:Math.cos(track.start.r),y:Math.sin(track.start.r)};
 assert.ok(startForward.x*track.finishLine.normal.x+startForward.y*track.finishLine.normal.y>.2);
 // Regression: authored CP numbering can be reversed compared with race order;
