@@ -42,3 +42,14 @@ Al revisar `RaceWideCameraPreviewScene.create()` se confirmó que el código aú
 `scripts/karting-canarias-camera-zoom-smoke.mjs` verifica que el factor solo afecta a Canarias a velocidades mínima, intermedia y máxima; comprueba el código de interpolación dinámica, que el circuito conserva su geometría de origen y que los divisores legacy no se instalan en la fotografía. Incluido en `npm run prebuild` y GitHub Pages.
 
 **Limitación óptica conocida:** alejar la cámara reduce en pantalla tanto el coche como la carretera en la misma proporción. Si se requiere aumentar realmente el ancho relativo del asfalto frente al coche, hay que transformar en una iteración independiente el lienzo, la geometría y todas las puertas/colisiones a un mundo mayor, manteniendo la escala del vehículo. No se hace en esta versión porque se pidió explícitamente la alternativa de zoom 0,84 y no tocar el trazado.
+
+
+## DEV 1.2.245 — colisiones nuevas de Environment Studio
+
+Archivo del propietario: `karting-canarias.environment(3).json` (export esquema 7, mundo de la nueva foto 2048×3072). Se ha sustituido **íntegro y sin alterar sus vértices** en `src/game/tracks/library/karting-canarias/karting-canarias.environment.json`. SHA-256 original del JSON: `8ee5ca3f1b6e71baa3f87fd6d420e1d9c3c95e92101831c89c1455a535d59654`.
+
+Contenido: 5 barreras invisibles de pluma Bézier (19 nodos; `halfThickness=9`) y 1 zona sólida cerrada (17 vértices). Sin nuevas texturas de entorno, pianos visuales ni materiales. Se comprobó que el polígono es simple y no cubre la trayectoria central, la salida ni los checkpoints; todos los trazos están dentro de la imagen y sus distancias a la centerline son mayores de 35 px. Estos cálculos no sustituyen a un ensayo de conducción real en los estrechamientos.
+
+**Activación fundamental:** `src/game/scenes/raceEnvironmentRuntime.js` excluía de forma intencionada a Karting Canarias de la lista de entornos oficiales `image-native` para protegerlo de las viejas colisiones 2000×4300. Con el nuevo export, esa excepción ya no corresponde: se permite **solo** `karting-canarias` como circuito fotográfico oficial, manteniendo las previews locales excluidas. El código existente convierte las cinco plumas mediante `sampleCollisionLine`, compila el área con `compileCollisionZone` y resuelve choques del jugador y de las IA. La barrera histórica de `KartingCanariasDividerLayer` sigue desactivada en pistas `image-native`, evitando doble colisión.
+
+`scripts/karting-canarias-owner-environment-smoke.mjs` protege los bytes exactos, dimensiones, identidades, número de líneas/nodos/vértices, geometría válida, ausencia de obstáculos en línea central, carga de entorno y separación de barreras antiguas. Ejecutado en prebuild y GitHub Pages. No tocar ni la fotografía, ni los 506 puntos de trazado/forma, ni el factor de cámara 0.84 de la DEV 1.2.244, ni ningún parámetro de coche.
