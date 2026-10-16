@@ -9,7 +9,7 @@ import {
   sparkSampleMix,
   targetSparkRpm
 } from '../src/game/audio/SparkEngineModel.js';
-import { ENGINE_AUDIO_PROFILES } from '../src/game/audio/EngineAudioProfiles.js';
+import { ENGINE_AUDIO_PROFILES, selectEngineAudioProfile } from '../src/game/audio/EngineAudioProfiles.js';
 import {
   advanceProfiledRpm,
   profiledSampleMix,
@@ -71,7 +71,8 @@ assert.equal(jeep.baseGain, 0.62);
 assert.equal(jeep.loadGain, 0.25);
 assert.equal(jeep.coastGainReduction, 0.10);
 assert.equal(jeep.gainSmoothing, 0.055);
-assert.ok(runtime.includes("ENGINE_AUDIO_PROFILES[requested]"), 'sample cars must resolve their named audio profile');
+assert.ok(runtime.includes("selectEngineAudioProfile(this._carId(), requested, {dev: !IS_PROD_BUILD})"),
+  'All DEV cars route through one safe source of truth without changing public production audio');
 assert.ok(!runtime.includes('const VORTEX_URL'), 'Vortex sample settings must not remain as loose constants');
 
 const jeepPath = `${root}public/${jeep.sourceUrl}`;
@@ -103,4 +104,42 @@ assert.ok(Math.abs(griplinePower - 1) < 1e-9, 'Gripline crossfade must preserve 
 assert.ok(griplineMix.rates.some(rate => rate > 1), 'Gripline pitch calibration must be applied');
 assert.ok(runtime.includes("mode === 'rpm-bank'"), 'runtime must build and update profiled RPM banks');
 
-console.log('Spark + Gripline engine audio smoke: OK');
+// Universal CC0 engine is a DEV listening trial, not a Google Play change.
+const universal = ENGINE_AUDIO_PROFILES.TDR_RACE_UNIVERSAL;
+assert.equal(universal.kind,'rpm-bank');
+assert.equal(universal.sampleBank,'SPARK_SIX');
+assert.equal(universal.sampleRpmAnchors.length,6);
+const playable = Object.keys(CAR_SPECS);
+assert.ok(playable.length >= 18,'Use one engine for the entire currently configured car roster');
+for(const carId of playable){
+  const configured = CAR_SPECS[carId].engineAudioProfile;
+  assert.strictEqual(selectEngineAudioProfile(carId,configured,{dev:true}),universal,
+    carId+' must use the common real-sample racing engine in DEV');
+}
+// Do not silently rewrite the public versions' previously calibrated engines.
+assert.strictEqual(selectEngineAudioProfile('helix_vortex','JEEP',{dev:false}),ENGINE_AUDIO_PROFILES.JEEP);
+assert.strictEqual(selectEngineAudioProfile('avenir_gripline','AVENIR_GRIPLINE',{dev:false}),gripline);
+assert.equal(selectEngineAudioProfile('helix_spark','',{dev:false}),null);
+assert.equal(selectEngineAudioProfile('unknown-car','',{dev:true}),null);
+assert.ok(runtime.indexOf("if (profile?.kind === 'rpm-bank')") <
+  runtime.indexOf("if (id === 'helix_spark')"),
+  'Spark must also use the universal profile in DEV, never the fallback Spark-only mode');
+assert.equal(targetProfiledRpm(universal,0,0,95),universal.idleRpm,'Universal engine idles without throttle');
+assert.ok(targetProfiledRpm(universal,0,1,95)>4400,'The engine revs up at the grid with throttle');
+assert.equal(targetProfiledRpm(universal,95,1,95),universal.redlineRpm,
+  'Higher top speed cars must be able to reach redline');
+assert.ok(targetProfiledRpm(universal,45,0,95)<targetProfiledRpm(universal,45,1,95),
+  'Lifting off the throttle should produce a coherent audible RPM drop');
+assert.ok(advanceProfiledRpm(universal,1200,6500,1,0.05)>1200);
+assert.ok(advanceProfiledRpm(universal,6500,1800,0,0.05)<6500);
+for(let rpm=1000;rpm<=7500;rpm+=125){
+  const mix=profiledSampleMix(universal,rpm);
+  assert.ok(mix.levels.filter(v=>v>1e-12).length<=2,'No multiple simultaneous engine voices at any RPM');
+  const power=mix.levels.reduce((sum,v)=>sum+v*v,0);
+  assert.ok(Math.abs(power-1)<1e-9,'The audio crossfade must have constant power');
+  assert.ok(mix.rates.every(v=>v>0.8&&v<1.2),'No excessive pitch warping');
+}
+assert.ok(!runtime.includes('new Audio('));
+assert.ok(runtime.includes('document.removeEventListener(\'visibilitychange\''));
+assert.ok(runtime.includes('source.stop?.()'),'Audio loops must be cleaned up after a race');
+console.log('Spark + Gripline + universal DEV engine routing for '+playable.length+' cars: OK');
