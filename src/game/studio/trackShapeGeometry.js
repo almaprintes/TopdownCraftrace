@@ -12,6 +12,17 @@ export function shapeIsValid(shape){
       side.every(p=>numeric(p.x)&&numeric(p.y)&&numeric(p.handleIn?.x)&&numeric(p.handleIn?.y)&&numeric(p.handleOut?.x)&&numeric(p.handleOut?.y));
   });
 }
+// Width is stored only on nodes that override the track's global width.
+// Smoothstep makes the adjacent segments meet without a sudden taper.
+export function nodeRoadWidth(node,baseWidth){
+  return Number.isFinite(node?.width)&&node.width>0?node.width:baseWidth;
+}
+export function interpolateRoadWidth(a,b,t,baseWidth){
+  const u=Math.max(0,Math.min(1,Number(t)||0));
+  const smooth=u*u*(3-2*u);
+  const from=nodeRoadWidth(a,baseWidth),to=nodeRoadWidth(b,baseWidth);
+  return from+(to-from)*smooth;
+}
 function outwardNormal(nodes,i,closed){
   const p=nodes[i],count=nodes.length;
   const prev=nodes[closed?(i-1+count)%count:Math.max(i-1,0)];
@@ -28,7 +39,7 @@ export function createTrackShape(nodes,width,closed){
   if(!Number.isFinite(width)||width<=0)throw Error('Ancho de pista no válido');
   const edges=[[],[]];
   for(let i=0;i<nodes.length;i++){
-    const n=nodes[i],normal=outwardNormal(nodes,i,closed),half=width*.5;
+    const n=nodes[i],normal=outwardNormal(nodes,i,closed),half=nodeRoadWidth(n,width)*.5;
     if(![n.x,n.y,n.handleIn?.x,n.handleIn?.y,n.handleOut?.x,n.handleOut?.y].every(Number.isFinite))throw Error('Nodo Bézier inválido');
     for(let side=0;side<2;side++){
       // Same ordering as the existing _buildTrackStrip: left = -normal, right = +normal.
@@ -36,7 +47,8 @@ export function createTrackShape(nodes,width,closed){
       edges[side].push({
         x:n.x+offset.x,y:n.y+offset.y,
         handleIn:{x:n.handleIn.x+offset.x,y:n.handleIn.y+offset.y},
-        handleOut:{x:n.handleOut.x+offset.x,y:n.handleOut.y+offset.y}
+        handleOut:{x:n.handleOut.x+offset.x,y:n.handleOut.y+offset.y},
+        sourceNodeIndex:i
       });
     }
   }
@@ -44,6 +56,38 @@ export function createTrackShape(nodes,width,closed){
   if(!shapeIsValid(shape))throw Error('No se pudieron generar los dos bordes');
   return shape;
 }
+// Adjusts only the corresponding left/right anchors and their tangent
+// handles. Existing manual offsets remain intact; no outline regeneration.
+// A legacy manually subdivided edge may not have source indices: in that
+// case pick the closest existing control to the selected centerline anchor.
+export function adjustShapeWidthAtNode(shape,nodes,index,delta){
+  if(!shapeIsValid(shape)||!Array.isArray(nodes)||!nodes[index]||
+     !Number.isFinite(delta)||delta===0)return false;
+  const normal=outwardNormal(nodes,index,shape.closed);
+  const center=nodes[index];
+  const moves=[];
+  for(const [side,sign] of [['leftEdge',-1],['rightEdge',1]]){
+    const edge=shape[side];
+    let at=edge.findIndex(p=>p.sourceNodeIndex===index);
+    if(at<0&&edge.length===nodes.length)at=index;
+    if(at<0){
+      let nearest=Infinity;
+      for(let i=0;i<edge.length;i++){
+        const distance=Math.hypot(edge[i].x-center.x,edge[i].y-center.y);
+        if(distance<nearest){nearest=distance;at=i;}
+      }
+    }
+    if(at<0)return false;
+    moves.push({point:edge[at],dx:normal.x*sign*delta*.5,dy:normal.y*sign*delta*.5});
+  }
+  for(const {point,dx,dy} of moves){
+    point.x+=dx;point.y+=dy;
+    point.handleIn.x+=dx;point.handleIn.y+=dy;
+    point.handleOut.x+=dx;point.handleOut.y+=dy;
+  }
+  return true;
+}
+
 function cubic(a,b,c,d,t){
   const q=1-t,q2=q*q,t2=t*t;
   return {x:q2*q*a.x+3*q2*t*b.x+3*q*t2*c.x+t2*t*d.x,
