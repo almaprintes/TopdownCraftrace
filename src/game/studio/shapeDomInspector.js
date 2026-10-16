@@ -94,6 +94,16 @@ export function studioInspectorCopy(scene) {
   }
   const guide=scene?._guideImage?(scene._guideVisible?'visible':'oculta'):'no cargada';
   const canvas=scene?._imageCanvas?'\nLienzo: '+scene._imageCanvas.width+'×'+scene._imageCanvas.height:'';
+  // On very short landscape screens reserve the lower inspector for tools.
+  // Keep essential track status visible without letting properties overlap buttons.
+  if((scene?.scale?.height||0)<420){
+    return [
+      'Sin selección',
+      'Nodos: '+nodes.length+' · Pianos: '+pianos.length,
+      'Salida: '+(scene?._startLine?'sí':'no')+' · Meta: '+(scene?._finishLine?'sí':'no'),
+      'Controles: '+cps.length+(canvas?' · '+canvas.trim():'')
+    ].join('\n');
+  }
   return ['Sin selección','Nodos: '+nodes.length,'Pianos: '+pianos.length,
     'Salida: '+(scene?._startLine?'sí':'no'),'Meta: '+(scene?._finishLine?'sí':'no'),
     'Checkpoints: '+cps.length,'Guía: '+guide].join('\n')+canvas;
