@@ -34,4 +34,16 @@ assert.match(runtime, /IGNITION_ENGINE_FADE_END_MS/);
 assert.match(runtime, /_ignitionSource\?\.stop/, 'ignition audio must be cleaned up with the race runtime');
 assert.doesNotMatch(runtime, /new Audio\s*\(/, 'ignition must use the shared WebAudio runtime, not a fixed-volume HTML audio element');
 
+// The ignition one-shot deliberately bypasses the regular engine bus during
+// engine fade-in, so its gain must also be muted *synchronously* on ad focus
+// loss, backgrounding, and native pause. Suspending WebAudio alone is async.
+const lifecycle = runtime.slice(runtime.indexOf('  _syncLifecycleAudio() {'), runtime.indexOf('  _resumeContext(reason) {'));
+assert.match(lifecycle, /this\\._ignitionGain\\?\\.gain\\?\\.cancelScheduledValues\\(now\\)/,
+  'ads/background must cancel an already scheduled ignition ramp');
+assert.match(lifecycle, /this\\._ignitionGain\\?\\.gain\\?\\.setValueAtTime\\(0,now\\)/,
+  'ads/background must immediately silence the ignition one-shot');
+const ignition = runtime.slice(runtime.indexOf('  _playIgnitionSample() {'), runtime.indexOf('  startEngine() {'));
+assert.match(ignition, /this\\._ctx !== context \\|\\| this\\._audioBlocked\\(\\)/,
+  'late decoding must never start ignition during an ad or background pause');
+
 console.log(`ignition audio smoke: verified · ${assetStat.size} bytes`);
