@@ -1,6 +1,8 @@
 // Track Studio — labelled drawing palette docked inside PROPIEDADES / ACCIONES.
 // Do not place controls over the viewport: precision editing needs the full map.
 // Keep 44px touch targets; original tool handlers / .tdrtrack data are unchanged.
+import {nextTrackStudioWidthStep,trackStudioWidthStep} from './trackStudioWidthRange.js';
+
 export function installTrackStudioGateControls(scene){
   if(typeof document==='undefined')return null;
   const root=document.createElement('div');
@@ -13,6 +15,26 @@ export function installTrackStudioGateControls(scene){
     'overflow-y:auto','overflow-x:hidden','overscroll-behavior:contain',
     'touch-action:pan-y','scrollbar-width:thin'
   ].join(';');
+  // Width precision is explicitly visible next to the editing tools.
+  // The W−/W+ buttons stay in the top toolbar; this setting controls their step.
+  const widthRow=document.createElement('div');
+  widthRow.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:4px;padding:1px 0 7px;';
+  const widthValue=document.createElement('span');
+  widthValue.style.cssText='color:#e8f1ff;font:800 12px system-ui,-apple-system,Segoe UI,sans-serif;white-space:nowrap;';
+  widthRow.appendChild(widthValue);
+  const stepButton=document.createElement('button');
+  stepButton.type='button';
+  stepButton.setAttribute('aria-label','Cambiar paso de anchura: 1, 5, 10, 25, 50 o 100 píxeles');
+  stepButton.style.cssText='min-height:44px;min-width:94px;padding:5px 6px;border:2px solid #638fc0;border-radius:8px;background:#203852;color:#fff;font:800 12px system-ui,-apple-system,Segoe UI,sans-serif;cursor:pointer;touch-action:manipulation;';
+  stepButton.addEventListener('pointerdown',e=>e.stopPropagation());
+  stepButton.addEventListener('pointerup',e=>e.stopPropagation());
+  stepButton.addEventListener('click',e=>{
+    e.preventDefault();e.stopPropagation();
+    scene._widthStep=nextTrackStudioWidthStep(scene._widthStep);
+    refresh();
+  });
+  widthRow.appendChild(stepButton);
+  root.appendChild(widthRow);
   const grid=document.createElement('div');
   grid.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;align-items:stretch;';
   root.appendChild(grid);
@@ -80,6 +102,9 @@ export function installTrackStudioGateControls(scene){
   document.body.appendChild(root);
 
   function refresh(){
+    const currentWidth=Number(scene._trackWidth);
+    widthValue.textContent='ANCHO '+(Number.isFinite(currentWidth)?currentWidth:'—')+' px';
+    stepButton.textContent='PASO '+trackStudioWidthStep(null,null,scene._widthStep)+' px';
     const active=scene._tool;
     for(const [type,btn] of Object.entries(buttons)){
       const chosen=active===type;
@@ -142,5 +167,5 @@ export function installTrackStudioGateControls(scene){
     root.remove();
   });
   refresh();position();
-  return {root,start,finish,status,buttons,remove,refresh,position};
+  return {root,start,finish,status,buttons,remove,widthValue,stepButton,refresh,position};
 }
