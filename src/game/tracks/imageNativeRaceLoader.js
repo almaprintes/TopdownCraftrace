@@ -1,10 +1,12 @@
 // Authoritative native-photo loading boundary for TrackStudio and installed tracks.
-// An authored photograph replaces ground art; metadata/physics stay at image pixels 1:1.
+// An authored photograph replaces ground art; the published Canarias world
+// may enlarge geometry and tiled sprites together without upscaling source files.
 import {isImageNativeTrackMeta} from './imageNativeTrackContract.js';
 import {getLocalKartingPreview,LOCAL_KARTING_PREVIEW_KEY,makeKartingShapeMask,clearImageNativeTrackOverlays} from './localKartingPreview.js';
 import {readCanvasImage,saveCanvasImage,normalizeCanvasImageBlob,looksLikeImageProject,unpackImageProject} from '../studio/imageCanvasProject.js';
 import {shapeIsValid} from '../studio/trackShapeGeometry.js';
 import {makeOpenStagePhotoMask} from './openStagePhotoMask.js';
+import {KARTING_CANARIAS_WORLD_SCALE} from './kartingCanariasWorldScale.js';
 
 const TILE_MAX=2048;
 const dimension=n=>Number.isSafeInteger(Number(n))&&Number(n)>0&&Number(n)<=8192;
@@ -28,14 +30,23 @@ export function describeImageNativeRace(trackKey,resolveTrack=()=>null){
   const path=String(source.assetPath||'');
   if(!/^assets\/[a-z0-9_./-]+\.(?:png|webp|jpe?g)$/i.test(path)||path.includes('..'))
     throw Error('Ruta publicada de imagen inválida');
-  return {type:'published',trackKey,track,width:Number(source.width),height:Number(source.height),path,tiles:Array.isArray(source.tiles)?source.tiles:null};
+  return {type:'published',trackKey,track,width:Number(source.width),height:Number(source.height),path,tiles:Array.isArray(source.tiles)?source.tiles:null,worldScale:Number(source.worldScale)||1};
 }
 
 export function validateImageNativeRaceDescriptor(desc){
   const {track,width,height}=desc||{};
+  const scale=Number(desc?.worldScale??1);
+  // This published circuit intentionally uses a larger *world*, not larger
+  // textures: the four source WebP tiles stay at their original resolutions.
+  const scaledCanarias=desc?.type==='published'&&desc.trackKey==='karting-canarias'&&
+    Array.isArray(desc.tiles)&&desc.tiles.length===4&&
+    scale===KARTING_CANARIAS_WORLD_SCALE;
   if(!dimension(width)||!dimension(height)||width*height>32000000||
-    Number(track?.worldW)!==Number(width)||Number(track?.worldH)!==Number(height))
-    throw Error('Imagen y geometría deben tener exactamente la misma resolución 1:1');
+    !(scale===1||scaledCanarias)||
+    Number(track?.worldW)!==Number(width)*scale||
+    Number(track?.worldH)!==Number(height)*scale||
+    !dimension(Number(track?.worldW))||!dimension(Number(track?.worldH)))
+    throw Error('La escala del mundo y la fotografía no coinciden');
   if(!shapeIsValid(track?.trackShape))throw Error('Faltan bordes Bézier válidos');
   // Accept both topology types, but never turn an open rally into a ring:
   // its road mask is assembled from adjacent Bézier strips only.
@@ -147,12 +158,14 @@ export function applyImageNativeTrackPhysics(scene,desc){
 
 function mountPhoto(scene,desc,img){
   const sprites=[],keys=[];
+  const worldScale=desc.type==='published'?(Number(desc.worldScale)||1):1;
   const add=(key,source,x,y)=>{
     if(scene.textures.exists(key))scene.textures.remove(key);
     if(source instanceof HTMLCanvasElement)scene.textures.addCanvas(key,source);
     else scene.textures.addImage(key,source);
     keys.push(key);
-    const sprite=scene.add.image(x,y,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);
+    const sprite=scene.add.image(x*worldScale,y*worldScale,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);
+    if(worldScale!==1)sprite.setScale(worldScale);
     scene.uiCam?.ignore?.(sprite);
     sprites.push(sprite);
   };
