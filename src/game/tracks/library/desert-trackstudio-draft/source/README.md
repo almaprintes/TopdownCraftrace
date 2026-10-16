@@ -6,7 +6,7 @@ Esta carpeta es el destino del circuito nuevo trazado por el propietario en Trac
 
 ## Subir este archivo
 
-`Desert-Circuit-x2.5.tdrtrack`
+`trackstudio-image-1792095082437_x2.5.tdrtrack`
 
 El paquete ya se entregó en ChatGPT. Debe subirse **íntegro, sin convertirlo a JSON ni extraer la imagen**, directamente a esta misma carpeta de GitHub.
 
