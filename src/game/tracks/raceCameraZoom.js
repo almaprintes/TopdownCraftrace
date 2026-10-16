@@ -1,13 +1,11 @@
-// Race-camera framing only. Never multiply track coordinates, collision
-// geometry or vehicle scale: those must remain in the photo's original pixels.
-export const KARTING_CANARIAS_ZOOM_FACTOR = 0.84;
+// The previous camera-only workaround did not correct Karting Canarias'
+// physical road-to-car ratio or lap length. The 2.5x world geometry is
+// now authoritative, so normal gameplay camera zoom applies everywhere.
+export const KARTING_CANARIAS_ZOOM_FACTOR = 1;
 
-// This factor applies to the full speed-dependent zoom target. A one-time
-// camera.setZoom() would be overwritten on the next RaceScene.update() tick.
-export function raceCameraZoomFactor(trackKey) {
-  return trackKey === 'karting-canarias' ? KARTING_CANARIAS_ZOOM_FACTOR : 1;
+export function raceCameraZoomFactor(_trackKey) {
+  return KARTING_CANARIAS_ZOOM_FACTOR;
 }
-
 export function raceCameraZoomTarget(trackKey, baseTargetZoom) {
   return baseTargetZoom * raceCameraZoomFactor(trackKey);
 }
