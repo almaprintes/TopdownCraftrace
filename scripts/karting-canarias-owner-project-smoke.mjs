@@ -7,6 +7,7 @@ import {makeKartingShapeMask} from '../src/game/tracks/localKartingPreview.js';
 import {loopPathMetrics,gateOnLoop} from '../src/game/tracks/closedCircuitGateOrder.js';
 import {describeImageNativeRace,validateImageNativeRaceDescriptor} from '../src/game/tracks/imageNativeRaceLoader.js';
 import {buildOwnerKartingCanarias} from './install-karting-canarias-source.mjs';
+import {KARTING_CANARIAS_WORLD_SCALE,scaleKartingCanariasRaceTrack} from '../src/game/tracks/kartingCanariasWorldScale.js';
 
 const bytes=readFileSync('src/game/tracks/library/karting-canarias/source/trackstudio-image-1792189935586.project.json');
 const project=JSON.parse(bytes.toString('utf8')),owner=project.gameTrack;
@@ -27,12 +28,15 @@ assert.equal(sha(rebuilt),'4327ff06e677431e4b7343f7d5b5e8bd08ea1d0645da75782a1f4
   'Source metadata + staged image must reconstruct the exact uploaded .tdrtrack');
 assert.equal(sha(webp),track.meta.sourceImageSha256);
 assert.deepEqual(track,buildOwnerKartingCanarias(),'Installed track is reproducible from owner source; no hand-adjusted geometry');
-assert.deepEqual(track.centerline,owner.centerline,'Preserve 506 owner-authored racing points');
-assert.deepEqual(track.trackShape,owner.trackShape,'Preserve independent Bézier borders exactly');
+assert.deepEqual(track.centerline,owner.centerline.map(p=>({...p,x:p.x*2.5,y:p.y*2.5,width:p.width*2.5})),'Preserve 506 owner-authored racing points enlarged 2.5x');
+assert.deepEqual(track.trackShape.leftEdge[0].x,owner.trackShape.leftEdge[0].x*2.5);
+assert.equal(track.trackShape.leftEdge.length,owner.trackShape.leftEdge.length);
+assert.equal(track.trackShape.rightEdge.length,owner.trackShape.rightEdge.length);
 assert.equal(track.startLine,null,'A closed lap must not activate the open rally A->B start gate');
 assert.deepEqual([track.closed,track.raceType,track.checkpointMode],[true,'circuit','authored']);
-assert.deepEqual([track.worldW,track.worldH],[2048,3072]);
-assert.deepEqual([track.finishLine.a,track.finishLine.b],[owner.startLine.a,owner.startLine.b],
+assert.deepEqual([track.worldW,track.worldH],[5120,7680]);
+assert.equal(track.meta.imageNative.worldScale,KARTING_CANARIAS_WORLD_SCALE);
+assert.deepEqual([track.finishLine.a,track.finishLine.b],[{x:owner.startLine.a.x*2.5,y:owner.startLine.a.y*2.5},{x:owner.startLine.b.x*2.5,y:owner.startLine.b.y*2.5}],
   "The owner's start line doubles as the one and only logical lap finish");
 assert.equal(track.checkpoints.length,2);
 function crosses(a,b,c,d){
@@ -65,6 +69,8 @@ assert.ok(fractions[0]>.1&&fractions[1]<.95&&fractions[0]+.10<fractions[1],
 const descriptor=describeImageNativeRace('karting-canarias',key=>key==='karting-canarias'?track:null);
 assert.equal(descriptor.type,'published');
 assert.equal(descriptor.tiles.length,4);
+assert.equal(descriptor.worldScale,2.5);
+assert.deepEqual([descriptor.width,descriptor.height],[2048,3072]);
 assert.equal(validateImageNativeRaceDescriptor(descriptor),descriptor);
 const runtime=readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
 assert.match(runtime, /\['karting-tenerife','santa-cruz','karting-americas','karting-canarias','rally-arafo-los-loros'\]\.includes\(normalizeTrackKey\(scene\?\.trackKey\)\)/,
