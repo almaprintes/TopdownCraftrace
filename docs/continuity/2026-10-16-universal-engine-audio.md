@@ -22,3 +22,14 @@ Se examinaron alternativas públicas GitHub: `buntine/CarEngines` tiene el **mis
 `npm run check:spark-engine-audio` valida la integridad de WAV, todos los coches en DEV, modo producción sin cambios, ralentí, aceleración parado, subida de RPM por velocidad, caída al levantar gas, mezcla de dos capas, potencia constante, límite de pitch y limpieza del audio al cerrar.
 
 **Pendiente de prueba auditiva humana**: iPhone 12, Redmi 2201117TY y uno o dos coches distintos, probar aceleración antes del semáforo, gas a fondo, soltar gas, resultado final y cambio de app. Una prueba de código y CI no demuestran por sí solas que al propietario le guste el timbre.
+
+
+## DEV 1.2.238 — cierre de fuga del sonido de arranque
+
+Inspección de continuidad tras la interrupción anterior: la versión 1.2.237 ya contenía perfil universal, selección para todos los coches y smoke del banco CC0. Se conserva esa implementación sin alterar conducción, Android público, mezclas ni muestras.
+
+Se corrige una ruta de audio independiente: el WAV de arranque se conecta directamente a la salida para no sufrir el fundido inicial del bus del motor. Por eso silenciar solo `master` durante `tdr:rewarded-ad-state`, `tdr:rewardedfullscreen`, pérdida de foco, `visibilitychange` o pausa nativa no garantizaba silenciar el arranque durante el tiempo que tardase `AudioContext.suspend()`.
+
+En `CarEngineSampleRuntime._syncLifecycleAudio()` se cancelan inmediatamente las automatizaciones de `_ignitionGain` y se fija su volumen a cero cuando el audio está bloqueado. En `_playIgnitionSample()`, si termina de decodificarse el WAV después de entrar en anuncios/segundo plano, ya no se inicia un arranque tardío. El fundido normal de arranque y las fuentes del motor permanecen intactos. La prueba `scripts/ignition-audio-smoke.mjs` protege estas dos condiciones en CI.
+
+Para modificar en el futuro: ajustar el perfil común `TDR_RACE_UNIVERSAL` en `src/game/audio/EngineAudioProfiles.js`, el comportamiento de mezcla en `CarEngineSampleRuntime.js` y la dinámica RPM en `ProfiledRpmEngineModel.js`. Los WAV están en `public/assets/audio/engine/spark/`, y su procedencia/integridad está verificada por `scripts/spark-engine-audio-smoke.mjs`. Nunca añadir una nueva ruta directa a `context.destination` sin contemplar silenciamiento inmediato durante interrupciones.
