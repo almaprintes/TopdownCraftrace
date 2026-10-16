@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   createTrackShape, shapeIsValid, sampleShapeEdge,
-  splitShapeEdge, moveShapePart, copyTrackShape
+  splitShapeEdge, moveShapePart, copyTrackShape,
+  nodeRoadWidth,interpolateRoadWidth,adjustShapeWidthAtNode
 } from '../src/game/studio/trackShapeGeometry.js';
 
 const count=30,cx=836,cy=470,rx=530,ry=330,closed=true;
@@ -41,6 +42,49 @@ assert.equal(before.length,after.length);
 before.forEach((pt,i)=>{assert.ok(Math.hypot(pt.x-after[i].x,pt.y-after[i].y)<1e-8,'Subdivision must preserve curve');});
 assert.equal(edge.length,3);
 assert.equal(createTrackShape(nodes,70,false).closed,false,'Stage support');
+// Local widths affect both road edges without moving the centerline.
+const authored=nodes.map(n=>JSON.parse(JSON.stringify(n)));
+authored[4].width=120;
+const tapered=createTrackShape(authored,70,true);
+const sep=(shape,i)=>Math.hypot(
+  shape.rightEdge[i].x-shape.leftEdge[i].x,
+  shape.rightEdge[i].y-shape.leftEdge[i].y
+);
+assert.ok(Math.abs(sep(tapered,4)-120)<1e-6,'Selected node gets requested physical road width');
+assert.ok(Math.abs(sep(tapered,3)-70)<1e-6,'Other nodes retain their widths');
+assert.equal(nodeRoadWidth(authored[3],70),70);
+assert.equal(nodeRoadWidth(authored[4],70),120);
+assert.equal(interpolateRoadWidth(authored[3],authored[4],0,70),70);
+assert.equal(interpolateRoadWidth(authored[3],authored[4],0.5,70),95);
+assert.equal(interpolateRoadWidth(authored[3],authored[4],1,70),120);
+assert.ok(interpolateRoadWidth(authored[3],authored[4],.2,70)<interpolateRoadWidth(authored[3],authored[4],.4,70));
+assert.equal(JSON.stringify(nodes),originalNodes,'Local width changes never mutate original centerline');
+// Manual edge changes are preserved: each delta translates ONLY one anchor
+// and its handles on each side; the rest of the customized outline stays put.
+const manual=createTrackShape(nodes,70,true);
+moveShapePart(manual,'leftEdge',4,'handleOut',{
+  x:manual.leftEdge[4].handleOut.x-7,y:manual.leftEdge[4].handleOut.y+8
+});
+const beforeShape=copyTrackShape(manual);
+assert.equal(adjustShapeWidthAtNode(manual,nodes,4,15),true);
+assert.ok(Math.abs(sep(manual,4)-85)<1e-6);
+assert.deepEqual(manual.leftEdge[3],beforeShape.leftEdge[3]);
+assert.deepEqual(manual.rightEdge[5],beforeShape.rightEdge[5]);
+const movedHandle=manual.leftEdge[4].handleOut;
+const priorHandle=beforeShape.leftEdge[4].handleOut;
+assert.ok(Math.hypot(movedHandle.x-priorHandle.x,movedHandle.y-priorHandle.y)>7,
+  'Customized handle moves by the width delta, it is not rebuilt');
+assert.equal(adjustShapeWidthAtNode(manual,nodes,4,-15),true);
+assert.ok(Math.hypot(manual.leftEdge[4].handleOut.x-priorHandle.x,manual.leftEdge[4].handleOut.y-priorHandle.y)<1e-6,
+  'Reset exactly restores previously customized border geometry');
+// Subdivision retains original node identity, even when sides have different lengths.
+const split=createTrackShape(nodes,70,true);
+splitShapeEdge(split.leftEdge,2,true);
+assert.equal(adjustShapeWidthAtNode(split,nodes,4,10),true);
+assert.ok(Math.abs(sep(split,0)-70)<1e-6,'Unaffected anchors stay fixed after a split');
+assert.equal(split.leftEdge.find(p=>p.sourceNodeIndex===4).sourceNodeIndex,4);
+assert.ok(shapeIsValid(split));
+
 assert.throws(()=>createTrackShape(nodes.slice(0,1),70,true),/nodos/);
 const studio=readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
 const editor=readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
@@ -51,4 +95,9 @@ assert.ok(studio.includes('if (this._dragMoved) this._autosaveRecovery()'));
 assert.ok(editor.includes('trackShape:copyTrackShape(s._trackShape)'));
 assert.ok(editor.includes('exported.trackShape=copyTrackShape(s._trackShape)'));
 assert.ok(editor.includes("s._pushHistory()"));
+assert.ok(editor.includes("s._setLocalNodeWidth=(value)=>"),'Local width action must exist');
+assert.ok(editor.includes("adjustShapeWidthAtNode(s._trackShape,s._nodes,index,next-original)"),'Existing shape must be updated without regeneration');
+assert.ok(editor.includes("s._autosaveRecovery()"),'Local edits must survive reload');
+assert.ok(studio.includes("interpolateRoadWidth(a,b,k/28,this._trackWidth)"),'Rendered road and export must interpolate local width');
+assert.ok(studio.includes("width: Number.isFinite(p.width)&&p.width>0?p.width:this._trackWidth"),'Export must include actual local widths');
 console.log('TrackStudio Phase B: 30 nodes, independent Bezier edges, handles, exact subdivision, snapshot/save/undo wiring: OK');
