@@ -12,7 +12,7 @@ export function defaultVehicleLights(carId){
  return {
   front:{enabled:false,color:'#fff8ed',intensity:.86,halo:.3,
    left:{x:-.255,y:-.385,size:.14},right:{x:.255,y:-.385,size:.14}},
-  rear:{enabled:!frontFacing,color:'#ff0000',intensity:1,tailIntensity:.52,halo:.18,
+  rear:{enabled:!frontFacing,color:'#ff0000',tailColor:'#8e2925',intensity:1,tailIntensity:.52,halo:.18,
    left:{x:-.285,y:.385,size:.18},right:{x:.285,y:.385,size:.18}}
  };
 }
@@ -27,7 +27,10 @@ export function normalizeVehicleLights(value,carId=''){
   };
   return{enabled:typeof row.enabled==='boolean'?row.enabled:original.enabled,
     color:hex(row.color,original.color),intensity:sane(row.intensity,original.intensity,0,1),
-    ...(name==='rear'?{tailIntensity:sane(row.tailIntensity,original.tailIntensity,0,1)}:{}),
+    ...(name==='rear'?{
+      tailIntensity:sane(row.tailIntensity,original.tailIntensity,0,1),
+      tailColor:hex(row.tailColor,original.tailColor)
+    }:{}),
     halo:sane(row.halo,original.halo,0,1),left:point('left'),right:point('right')};
  };
  return{front:pair('front'),rear:pair('rear')};
