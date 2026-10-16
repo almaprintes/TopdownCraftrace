@@ -4,6 +4,7 @@ import {isImageNativeTrackMeta} from './imageNativeTrackContract.js';
 import {getLocalKartingPreview,LOCAL_KARTING_PREVIEW_KEY,makeKartingShapeMask,clearImageNativeTrackOverlays} from './localKartingPreview.js';
 import {readCanvasImage,saveCanvasImage,normalizeCanvasImageBlob,looksLikeImageProject,unpackImageProject} from '../studio/imageCanvasProject.js';
 import {shapeIsValid} from '../studio/trackShapeGeometry.js';
+import {makeOpenStagePhotoMask} from './openStagePhotoMask.js';
 
 const TILE_MAX=2048;
 const dimension=n=>Number.isSafeInteger(Number(n))&&Number(n)>0&&Number(n)<=8192;
@@ -36,8 +37,10 @@ export function validateImageNativeRaceDescriptor(desc){
     Number(track?.worldW)!==Number(width)||Number(track?.worldH)!==Number(height))
     throw Error('Imagen y geometría deben tener exactamente la misma resolución 1:1');
   if(!shapeIsValid(track?.trackShape))throw Error('Faltan bordes Bézier válidos');
-  if(track.closed===false||track.trackShape.closed!==true)
-    throw Error('Rally A→B con máscara abierta pendiente de una fase posterior');
+  // Accept both topology types, but never turn an open rally into a ring:
+  // its road mask is assembled from adjacent Bézier strips only.
+  if((track.closed===false)!==(track.trackShape.closed===false))
+    throw Error('La topología de carretera no coincide con la modalidad A→B/circuito');
   if(!Array.isArray(track.centerline)||track.centerline.length<3)
     throw Error('Centerline incompleta');
   if(!track.finishLine?.a||!track.finishLine?.b)throw Error('Falta la meta');
@@ -131,7 +134,9 @@ export async function repairImageNativePhoto(desc,file){
 
 export function applyImageNativeTrackPhysics(scene,desc){
   const {track}=validateImageNativeRaceDescriptor(desc);
-  const mask=makeKartingShapeMask(track.trackShape,track.worldW,track.worldH);
+  const mask=track.closed===false
+    ?makeOpenStagePhotoMask(track.trackShape,track.worldW,track.worldH)
+    :makeKartingShapeMask(track.trackShape,track.worldW,track.worldH);
   scene._tdrStudioMask=mask;
   scene._isOnTrack=(x,y)=>mask.isOnTrack(x,y);
   const original=scene._isInBand;
