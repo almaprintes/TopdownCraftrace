@@ -67,6 +67,6 @@ assert.equal(descriptor.type,'published');
 assert.equal(descriptor.tiles.length,4);
 assert.equal(validateImageNativeRaceDescriptor(descriptor),descriptor);
 const runtime=readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
-assert.ok(!runtime.match(/'karting-canarias'.*?\.includes\(normalizeTrackKey\(scene\?\.trackKey\)\)/),
-  'Old Karting Canarias decoration and colliders must stay disabled on photo-native race');
+assert.match(runtime, /\['karting-tenerife','santa-cruz','karting-americas','karting-canarias','rally-arafo-los-loros'\]\.includes\(normalizeTrackKey\(scene\?\.trackKey\)\)/,
+  'Official Canarias must load NEW authored collisions while excluding local photo previews');
 console.log('Karting Canarias native-photo: owner bundle intact, 506 points, both Bézier borders nonintersecting, photo physics aligned, CP1/CP2 and one lap finish valid.');
