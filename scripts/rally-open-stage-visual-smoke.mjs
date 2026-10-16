@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {trackPreviewSvgPath} from '../src/game/tracks/trackPreviewPath.js';
+import {drawOpenStageRoad} from '../src/game/tracks/openStageRoadRenderer.js';
 const read=p=>fs.readFileSync(p,'utf8');
 const stage=JSON.parse(read('src/game/tracks/library/rally-arafo-los-loros/track.json'));
 const pts=stage.centerline.map(p=>({x:Number(p.x),y:Number(p.y)}));
@@ -26,9 +27,32 @@ const code=read('src/game/scenes/EnvironmentBuilderRealTrackScene.js');
 const a=code.indexOf('    if(isOpen){'),b=code.indexOf('    }else{',a);
 assert.ok(a>=0&&b>a);
 const branch=code.slice(a,b);
-assert.ok(branch.includes('g.strokePath()'),'Open polyline not drawn');
+assert.ok(branch.includes('drawOpenStageRoad(g,t.centerline,t.trackWidth)'),'A→B editor must use explicit segments');
+assert.ok(!branch.includes('g.strokePath()'),'The old unbounded WebGL stroke must not return');
 assert.ok(!branch.includes('g.closePath()'),'Editor connected stage end to start');
 assert.ok(!branch.includes('g.fillPath()'),'Editor filled stage as a closed ring');
 assert.ok(branch.includes('m.fillCircle('),'Editor does not mark START');
 assert.ok(code.slice(b).includes('closed:true'),'Closed ribbon renderer changed');
-console.log('RALLY OPEN A->B OK: '+pts.length+' nodes, '+gap.toFixed(1)+'px between endpoints, no SVG closure in 4 loading views, open editor with START marker.');
+
+// Simulate the exact 2465-node official stage in the editor's graphics
+// interface, and assert each emitted segment joins ONLY adjacent vertices.
+// The 3955px META-to-SALIDA shortcut must be impossible by construction.
+const commands=[],g={
+  width:0,lineStyle(w){this.width=w;return this;},
+  lineBetween(x1,y1,x2,y2){commands.push({x1,y1,x2,y2,w:this.width});return this;},
+  closePath(){throw Error('Open stage may not call graphics.closePath');},
+  strokePath(){throw Error('Open stage may not call a massive strokePath');}
+};
+const result=drawOpenStageRoad(g,stage.centerline,stage.trackWidth);
+assert.equal(result.count,pts.length);
+assert.equal(result.segments,pts.length-1);
+assert.ok(result.maxSegment<50,'Official points must have short links');
+assert.equal(commands.length,(pts.length-1)*3,'Separate road and both edges');
+for(let i=0;i<pts.length-1;i++){
+ const c=commands[i],a=pts[i],b=pts[i+1];
+ assert.deepEqual([c.x1,c.y1,c.x2,c.y2],[a.x,a.y,b.x,b.y],
+   'Segment '+i+' must connect consecutive points ONLY');
+}
+assert.ok(commands.every(c=>Math.hypot(c.x2-c.x1,c.y2-c.y1)<200),
+ 'An unintended giant shortcut appeared in the stage editor');
+console.log('RALLY OPEN A->B OK: '+pts.length+' nodes, '+gap.toFixed(1)+'px between endpoints, no SVG closure in 4 loading views, editor draws 7392 bounded segments with START marker.');

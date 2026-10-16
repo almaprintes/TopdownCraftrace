@@ -1,6 +1,7 @@
 import { EnvironmentBuilderScene as CurrentEnvironmentBuilderScene } from './EnvironmentBuilderContinuousSurfaceScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
+import { drawOpenStageRoad } from '../tracks/openStageRoadRenderer.js';
 
 function polygonPoints(left,right){
   const out=[];
@@ -80,30 +81,12 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     g.clear();m.clear();
     const isOpen=t.closed===false||t.raceType==='stage';
     if(isOpen){
-      // This is a true A→B stage. Stroke ONE open polyline; never fill a
-      // polygon or connect its final node to its first. Phaser's many quad
-      // fills used to overload the editor renderer on this 2465-node rally.
-      const center=(t.centerline||[]).map(p=>({
-        x:Number(p?.x??p?.[0]),y:Number(p?.y??p?.[1]),
-        width:Number(p?.width)||Number(t.trackWidth)||100
-      })).filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
-      if(center.length>=2){
+      // Only real consecutive A→B points. No giant end-to-start stroke,
+      // even on graphics backends that mishandle a 2465-node strokePath.
+      const report=drawOpenStageRoad(g,t.centerline,t.trackWidth);
+      if(report.segments>0){
         const width=Math.max(10,Number(t.trackWidth)||90);
-        const path=(pts)=>{g.beginPath();g.moveTo(pts[0].x,pts[0].y);
-          for(let i=1;i<pts.length;i++)g.lineTo(pts[i].x,pts[i].y);
-          g.strokePath();};
-        g.lineStyle(width,0x2c2b2b,1);
-        path(center);
-        const left=[],right=[];
-        for(let i=0;i<center.length;i++){
-          const p=center[i],prev=center[Math.max(0,i-1)],next=center[Math.min(center.length-1,i+1)];
-          const dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1;
-          const nx=-dy/len,ny=dx/len,half=width*.5;
-          left.push({x:p.x+nx*half,y:p.y+ny*half});
-          right.push({x:p.x-nx*half,y:p.y-ny*half});
-        }
-        g.lineStyle(Math.max(2,width*.015),0xe8edf0,.92);
-        path(left);path(right);
+        const center=t.centerline;
         // Two distinct endpoints must be visible while editing collisions.
         const start=t.startLine,spawn=t.start||center[0];
         m.lineStyle(Math.max(5,width*.065),0x49ffb1,1);

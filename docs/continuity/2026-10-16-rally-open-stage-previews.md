@@ -11,3 +11,9 @@ El SVG del loader de carrera en `raceLoadingExperienceV2.js`, `V3.js`, `V5.js` y
 Environment Studio usaba miles de polígonos independientes para dibujar el asfalto del rally. Ahora la rama `isOpen` pinta la ruta como **polilínea abierta única**, con bordes abiertos y marca verde de salida, manteniendo la meta blanca. Nunca llama a `closePath()` en la rama rally. Los circuitos cerrados mantienen su renderer habitual.
 
 Las salidas, metas, cronometraje, colisiones y archivo JSON del rally **no se modifican**. El test `scripts/rally-open-stage-visual-smoke.mjs` protege ambos renderizados y las cuatro versiones del loader.
+
+## DEV 1.2.223 — corrección del renderizador largo de Environment Studio
+
+Tras la DEV 1.2.222, una captura real confirmó que el cierre de la pantalla de carga estaba corregido, pero **Environment Studio seguía dibujando una diagonal entre salida y meta**. El editor aún usaba `Graphics.strokePath()` con los 2465 nodos en un trazo único; aunque no había `closePath()` explícito, el resultado en pantalla no respetaba el recorrido abierto.
+
+Se sustituye la carretera y ambos bordes por `drawOpenStageRoad()` en `src/game/tracks/openStageRoadRenderer.js`. El renderizador emite `lineBetween` **exclusivamente entre puntos consecutivos**, sin iteración circular ni cerrar la geometría. Se valida el tramo original completo con un Graphics falso: 2464 segmentos por cada una de las 3 franjas (carretera y bordes), todos cortos y ninguno entre la última y la primera coordenada. Se mantiene la marca verde de salida y meta blanca. No se alteran geometría oficial, colisiones, carrera, checkpoints ni imágenes.
