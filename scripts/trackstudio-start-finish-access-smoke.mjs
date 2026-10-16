@@ -29,7 +29,9 @@ try{
   const exits={};
   const scene={
     _viewX:76,_viewY:80,_viewW:564,_viewH:530,_tool:'edit',
-    _startLine:null,_finishLine:null,_autosaves:0,
+    _startLine:null,_finishLine:null,_autosaves:0,_trackWidth:40,_widthStep:5,
+    _trackWidthStep(){return this._widthStep;},
+    _changeTrackWidth(delta){this._trackWidth+=delta;this._updatePanel();},
     game:{canvas:{getBoundingClientRect:()=>({left:50,top:100,width:950,height:700})}},
     scale:{width:950,height:700},
     events:{once:(type,fn)=>exits[type]=fn},
@@ -65,6 +67,20 @@ try{
   assert.ok(Object.values(gate.buttons).every(b=>b.style.cssText.includes('min-height:44px')),'All six modes need usable touch targets');
   assert.equal(gate.buttons.pen.textContent,'PLUMA');
   assert.equal(gate.buttons.checkpoint.textContent,'CONTROL');
+  assert.equal(gate.widthValue.textContent,'ANCHO 40 px');
+  assert.equal(gate.stepButton.textContent,'PASO 5 px','Default precision is 5px, not 50px');
+  scene._changeTrackWidth(scene._trackWidthStep());
+  assert.equal(scene._trackWidth,45,'Fine increment must go from 40 to 45, never 90');
+  assert.equal(gate.widthValue.textContent,'ANCHO 45 px','Width status follows W+ / W− changes');
+  scene._changeTrackWidth(-scene._trackWidthStep());
+  assert.equal(scene._trackWidth,40);
+  gate.stepButton.fire('click');
+  assert.equal(scene._widthStep,10);
+  assert.equal(gate.stepButton.textContent,'PASO 10 px');
+  assert.equal(scene._trackWidth,40,'Changing precision must never mutate road geometry');
+  gate.stepButton.fire('click');
+  assert.equal(scene._widthStep,25);
+  assert.equal(gate.stepButton.textContent,'PASO 25 px');
   gate.buttons.pen.fire('click');
   assert.equal(scene._tool,'pen');
   assert.equal(gate.buttons.pen.attrs['aria-pressed'],'true','Active mode is visible');
