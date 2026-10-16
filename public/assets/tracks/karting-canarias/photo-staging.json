@@ -1,7 +1,7 @@
 {
   "version": 1,
   "trackId": "karting-canarias",
-  "status": "staged-not-active",
+  "status": "published-native",
   "imageWidth": 2048,
   "imageHeight": 3072,
   "source": "Owner-uploaded upscaled Karting Canarias image 2026-10-16",
@@ -40,5 +40,7 @@
       "height": 1536,
       "sha256": "8f8680b1ab3db8b1b41ad9592677bb2f405e6acc072eb37049105f5b0ecdeeb7"
     }
-  ]
+  ],
+  "ownerTrackStudioSource": "src/game/tracks/library/karting-canarias/source/trackstudio-image-1792189935586.project.json",
+  "ownerBundleSha256": "4327ff06e677431e4b7343f7d5b5e8bd08ea1d0645da75782a1f4afaafed5dc6"
 }
