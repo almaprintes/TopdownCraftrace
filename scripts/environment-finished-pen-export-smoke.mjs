@@ -6,7 +6,7 @@ const env=JSON.parse(readFileSync('src/game/tracks/library/karting-americas/kart
 assert.equal(env.trackId,'karting-americas');
 assert.equal(env.collisionLines.length,8,'user authored all eight finished collision curves');
 assert.equal(new Set(env.collisionLines.map(l=>l.id)).size,8);
-assert.equal(env.collisionLines.reduce((n,l)=>n+l.nodes.length,0),60);
+assert.equal(env.collisionLines.reduce((n,l)=>n+l.nodes.length,0),72,'Latest author export contains 72 Bézier nodes');
 assert.ok(env.collisionLines.every(validCollisionLine));
 assert.ok(env.collisionLines.every(l=>sampleCollisionLine(l).length>2),'all eight walls can be sampled');
 const src=readFileSync('src/game/scenes/EnvironmentBuilderCollisionWorkflowScene.js','utf8');
