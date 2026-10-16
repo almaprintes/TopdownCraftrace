@@ -79,6 +79,7 @@ jobs:
           node scripts/environment-stage-runtime-diagnostic-smoke.mjs
           node scripts/environment-stage-canvas-smoke.mjs
           node scripts/cuper-season-smoke.mjs
+          node scripts/cuper-driving-physics-smoke.mjs
           node scripts/cuper-skins-smoke.mjs
           node scripts/cuper-workshop-skin-smoke.mjs
           node scripts/cuper-cards-and-views-smoke.mjs
