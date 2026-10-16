@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "awaiting-binary-upload",
+  "status": "source-binary-awaiting-upload-local-import-enabled",
   "trackId": "karting-americas",
   "filename": "trackstudio-image-1792095082437_x2.5.tdrtrack",
   "format": "TDR-IMAGE-PROJECT-V1",
@@ -14,6 +14,7 @@
   "checkpoints": 2,
   "closed": true,
   "isPublic": false,
-  "collisionEditing": "pending-source",
-  "trackName": "Karting Américas"
+  "collisionEditing": "locally available after importing .tdrtrack",
+  "trackName": "Karting Américas",
+  "editorImport": "DEV 1.2.217 via .tdrtrack from Files"
 }

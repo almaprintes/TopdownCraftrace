@@ -21,3 +21,12 @@ El paquete ya se entregó en ChatGPT. Debe subirse **íntegro, sin convertirlo a
 Tras subir el paquete y verificar su SHA, el siguiente paso es registrar una pista **solo DEV / privada**, instalar la imagen 1:1 y preparar el fichero `karting-americas.environment.json` con colisiones inicialmente vacías para editarlas. No se deben generar barreras automáticamente: el propietario colocará cada colisión en Environment Studio.
 
 **IMPORTANTE:** esta carpeta por sí sola no significa que el circuito esté ya cargado ni disponible para editar colisiones. Las pistas activas en `src/game/tracks/library/*/track.json` permanecen intactas.
+
+## Edición de colisiones desde DEV 1.2.217
+1. Descarga el archivo íntegro `trackstudio-image-1792095082437_x2.5.tdrtrack` al dispositivo.
+2. Abre **Environment Studio** en la DEV web y pulsa **📂 IMPORTAR KARTING AMÉRICAS .TDRTRACK**, debajo del panel DIBUJAR Y NAVEGAR.
+3. Selecciona el archivo: la imagen 2862×3435 se carga en mosaicos de 1024px para ahorrar memoria y se guarda en IndexedDB junto a la geometría original. La foto no es un simple mapa de referencia: queda alineada 1:1 en el lienzo y el trazado procedural se oculta.
+4. Coloca líneas de colisión y zonas en su propio proyecto, usando **GUARDAR**; con **EXPORTAR** se descarga `karting-americas.environment.json`.
+5. El circuito aparece en el selector de **ese navegador/dispositivo** después de importarlo; la importación no crea una pista pública, no toca registros online, ni habilita el juego automáticamente.
+
+El archivo .tdrtrack binario original todavía NO está en GitHub. La importación directa no sustituye la futura subida de su fuente definitiva al repositorio.
