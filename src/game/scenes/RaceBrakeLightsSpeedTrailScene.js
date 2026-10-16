@@ -101,7 +101,10 @@ export class RaceScene extends CurrentRaceScene {
       const brakingNow=this._brakePressed()&&!!this._raceStarted;
       const drawGroup=(group,name)=>{
         if(!group?.enabled)return;
-        const color=Number.parseInt(String(group.color||'#ffffff').slice(1),16);
+        // Position and brake LEDs have different real-world brightness/hues.
+        // Previously the same #ff0000 was drawn at all times on Crown Cuper.
+        const litColor=name==='rear'&&!brakingNow?(group.tailColor||group.color):group.color;
+        const color=Number.parseInt(String(litColor||'#ffffff').slice(1),16);
         const alpha=name==='rear'?(brakingNow?group.intensity:group.tailIntensity):group.intensity;
         for(const side of ['left','right']){
           const p=lightCoordinates(group[side],w,h);
