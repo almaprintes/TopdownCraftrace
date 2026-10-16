@@ -7,6 +7,7 @@ import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
 import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
+import { crossesDirectedFinishGate } from '../tracks/closedCircuitGateOrder.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { loadGarage, garageTuning, grantRaceReward } from '../garage/garageStore.js';
@@ -4245,7 +4246,11 @@ this.timing.s2Tick = (this.lapStartTick != null) ? (this.simTick - this.lapStart
 const paddockFinish = this.track?.meta?.meta?.paddockFinishLine;
 const paddockFinishCrossed = this.track?.meta?.meta?.trackId === 'karting-americas' &&
   this.track?.closed !== false && this._raceStarted === true &&
-  !!paddockFinish && _crossGate(paddockFinish);
+  !!paddockFinish && crossesDirectedFinishGate(
+    paddockFinish,
+    {x:this.prevCarX ?? this.car.x,y:this.prevCarY ?? this.car.y},
+    {x:this.car.x,y:this.car.y},body.velocity
+  );
 const validFinishCrossing = (within && crossed && forward) || paddockFinishCrossed;
 if (!this._stageWaitingForStart && validFinishCrossing && this._lapCooldownMs === 0) {
   if ((this._cpState || 0) === 2) {
