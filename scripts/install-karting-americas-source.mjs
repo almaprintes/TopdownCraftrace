@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {shapeIsValid} from '../src/game/studio/trackShapeGeometry.js';
 import {expandCheckpointToEdges} from '../src/game/tracks/imageNativeCheckpointWidth.js';
 import {spawnUpstreamOfFinish} from '../src/game/tracks/imageNativeDriving.js';
-import {orderClosedCircuitGates} from '../src/game/tracks/closedCircuitGateOrder.js';
+import {orderClosedCircuitGates,alignedPaddockFinishGate} from '../src/game/tracks/closedCircuitGateOrder.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const SOURCE='src/game/tracks/library/karting-americas/source/trackstudio-image-1792095082437.tdrtrack';
 const TARGET='src/game/tracks/library/karting-americas/track.json';
@@ -57,6 +57,10 @@ export async function installKartingAmericas({withAssets=true}={}){
    shape:t.trackShape,expandGate:expandCheckpointToEdges,baseWidth:Number(t.trackWidth)||100
  });
  const {finish,checkpoints}=ordered;
+ // The short authored META spans the racing lane, while a second painted
+ // stripe crosses the paddock alongside it. It belongs to the same lap.
+ const paddockFinishLine=alignedPaddockFinishGate(finish,t.trackWidth);
+ if(!paddockFinishLine)throw Error('Karting Américas: paddock META inválida');
  const distance=Math.max(32,Math.min(100,Number(t.trackWidth)*.60));
  const start=spawnUpstreamOfFinish(centerline,finish,distance);
  if(!start)throw Error('Karting Américas: no se puede colocar la salida junto a meta siguiendo el trazado');
@@ -75,6 +79,7 @@ export async function installKartingAmericas({withAssets=true}={}){
    finishLine:finish,finishAnchor,checkpointMode:'authored',checkpoints,
    centerline,trackShape:t.trackShape,
    meta:{...(t.meta||{}),id:'karting-americas',trackId:'karting-americas',
+     paddockFinishLine,
      renderMode:'image-native',raceTravelDirection:'clockwise',sourceReversedForClockwise:reversedForClockwise,imageNative:{schema:1,availability:'published',width:W,height:H,
        assetPath:PHOTO,tiles},
      source:'Track Studio .tdrtrack',sourceFile:path.basename(SOURCE),
