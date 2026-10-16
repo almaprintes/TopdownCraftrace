@@ -68,6 +68,8 @@ try{
   gate.buttons.pen.fire('click');
   assert.equal(scene._tool,'pen');
   assert.equal(gate.buttons.pen.attrs['aria-pressed'],'true','Active mode is visible');
+  assert.equal(gate.status.textContent,'Toca o arrastra para dibujar');
+  gate.buttons.edit.fire('click');
   assert.equal(gate.status.textContent,'Salida —  ·  Meta —');
 
   assert.equal(gate.start.fire('click'),true);
