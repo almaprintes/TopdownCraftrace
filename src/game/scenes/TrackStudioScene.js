@@ -25,7 +25,7 @@ export class TrackStudioScene extends BaseScene {
     // Layout base
     // =================================================
     const compactH = height < 720;
-    this._topBarH = compactH ? 64 : 72;
+    this._topBarH = compactH ? 72 : 82;
     this._leftBarW = compactH ? 70 : 76;
     this._rightPanelW = width < 1200 ? 250 : 280;
     this._bottomPad = 8;
@@ -152,9 +152,11 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
 this._panelContentY = this._topBarH + 62;
 
 // Responsive: actions remain reachable even when browser chrome reduces viewport.
+// Leave room for the inspector, but reserve the bottom of the sidebar
+// for the complete, scrollable tool palette (never cover the canvas).
 this._panelActionsY = Math.min(
-  this._topBarH + 238,
-  Math.max(this._topBarH + 190, height - 150)
+  this._topBarH + 198,
+  Math.max(this._topBarH + 123, height - 195)
 );
 
 this.add.text(
@@ -177,24 +179,9 @@ this.add.rectangle(
   0x26324a,
   0.85
 ).setOrigin(0, 0.5);
-    this._panelDeleteBtn = this.add.text(
-  width - this._rightPanelW + 20,
-  this._panelActionsY + 44,
-  'Borrar selección',
-  {
-    fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-    fontSize: '14px',
-    color: '#ffffff',
-    backgroundColor: '#243454',
-    padding: { x: 12, y: 8 }
-  }
-)
-  .setVisible(false)
-  .setInteractive({ useHandCursor: true });
-
-this._panelDeleteBtn.on('pointerup', () => {
-  this._deleteSelectedNode();
-});
+    // Selection deletion now lives in the same accessible sidebar palette.
+    // Keep the legacy reference null for the shape inspector's optional check.
+    this._panelDeleteBtn = null;
     // =========================
 // 🎮 CRUCETA (D-PAD)
 // =========================
@@ -301,7 +288,7 @@ this._padCenter.on('pointerup', () => {
     // =================================================
     // Barra superior
     // =================================================
-    const topToolsY = 36;
+    const topToolsY = 29;
     let topX = 285;
 
 // =================================================
@@ -334,43 +321,10 @@ this._btnNew = this._makeIconButton(topX, topToolsY, 'NEW', () => {
   this._flashMessage('🆕 Proyecto nuevo');
 }, '14px');
 topX += 56;
-    // modo directo
-    this._editBtn = this._makeIconButton(topX, topToolsY, 'ED', () => {
-      this._modeTool = 'edit';
-      this._setTool('edit');
-    }, '12px');
-    topX += 40;
-    // Pluma: toque = vértice; toque + arrastre = curva Bézier.
-    this._penBtn = this._makeIconButton(topX, topToolsY, 'PL', () => {
-      this._setTool('pen');
-      this._flashMessage('PLUMA · toque: recta · toca y arrastra: curva · ED: ajustar');
-    }, '12px');
-    topX += 40;
-
-    this._startTopBtn = this._makeIconButton(topX, topToolsY, 'SAL', () => {
-      this._modeTool = 'start';
-      this._setTool('start');
-    }, '11px');
-    topX += 40;
-
-    this._finishTopBtn = this._makeIconButton(topX, topToolsY, '🏁', () => {
-      this._modeTool = 'finish';
-      this._setTool('finish');
-    }, '14px');
-    topX += 40;
-
-    this._checkpointTopBtn = this._makeIconButton(topX, topToolsY, 'CP', () => {
-      this._modeTool = 'checkpoint';
-      this._setTool('checkpoint');
-    }, '12px');
-    topX += 40;
-
-    this._pianoTopBtn = this._makeIconButton(topX, topToolsY, 'PI', () => {
-      this._modeTool = 'piano';
-      this._setTool('piano');
-    }, '12px');
-    topX += 48;
-this._loopBtn = this._makeIconButton(topX, topToolsY, this._isClosed ? '🔒' : '🔓', () => {
+    // Drawing modes moved to the labelled right-hand tool palette.
+    // There is deliberately no second row of cryptic ED/PL/SAL/CP/PI icons.
+    // The existing _setTool() state machine and export format are preserved.
+    this._loopBtn = this._makeIconButton(topX, topToolsY, this._isClosed ? '🔒' : '🔓', () => {
   this._toggleClosed();
   if (this._loopBtn?.txt) {
     this._loopBtn.txt.setText(this._isClosed ? '🔒' : '🔓');
@@ -395,6 +349,18 @@ topX += 48;
     topX += 40;
     this._redoBtn = this._makeIconButton(topX, topToolsY, '↷', () => this._redo(), '20px');
     topX += 40;
+
+    // Short permanent captions are usable with touch (unlike hover tooltips).
+    // Compact top bar: project operations / track settings / history only.
+    const caption = (x, label) => this.add.text(x, 52, label, {
+      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
+      fontSize: '9px', color: '#b9cae5', fontStyle: 'bold'
+    }).setOrigin(0.5, 0);
+    [
+      [285, 'Guardar'], [329, 'Abrir'], [373, 'Nuevo'],
+      [429, 'Circuito'], [477, 'Ancho −'], [517, 'Ancho +'],
+      [569, 'Deshacer'], [609, 'Rehacer']
+    ].forEach(([x, label]) => caption(x, label));
 
     // =================================================
     // Mundo de edición
