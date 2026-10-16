@@ -41,11 +41,19 @@ function render(meta, Renderer = Scene) {
   return scene;
 }
 const arafo = JSON.parse(fs.readFileSync('src/game/tracks/library/rally-arafo-los-loros/track.json', 'utf8'));
-const scene = render(arafo);
-// Image-native guard: never generate additional longitudinal kerbs/white borders.
+// The published owner image now owns ALL visible road/kerbs. Painting
+// additional procedural stripes is a regression, not an expected scene.
+const nativeArafo=render({...arafo,trackKey:'rally-arafo-los-loros'});
+// Run the old open-road renderer in an isolated *classic* fixture so its
+// no-shortcut geometry contract remains protected for non-native rallies.
+const classicArafo={...arafo,meta:{...arafo.meta},trackKey:'rally-classic-test'};
+delete classicArafo.meta.renderMode;delete classicArafo.meta.imageNative;
+const scene=render(classicArafo);
+// Local image-native races still must suppress procedural art.
 const photo = render({ ...arafo, trackKey:'karting-tenerife-studio' });
 for (const key of ['_premiumShoulder','_edgeProbe','_cornerCurbs','_longitudinalAsphaltWear']) {
   assert.equal(photo[key],undefined, key+' must not be generated over the source photograph');
+  assert.equal(nativeArafo[key],undefined,key+' may not cover the owner's rally photograph');
 }
 for (const key of ['_premiumShoulder', '_edgeProbe', '_cornerCurbs']) {
   const segments = scene[key].segments;
