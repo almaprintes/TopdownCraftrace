@@ -89,7 +89,7 @@ export function studioInspectorCopy(scene) {
       return ['Nodo #'+scene._selectedNode,'Modo: '+(scene._selectedPart?.type||'node'),
         'X: '+Math.round(n.x),'Y: '+Math.round(n.y),
         'In: '+safe(n.handleIn),'Out: '+safe(n.handleOut),
-        'Zoom: '+zoomStr,'Ancho: '+scene._trackWidth+'px'].join('\n');
+        'Zoom: '+zoomStr,'Ancho local: '+(Number.isFinite(n.width)?n.width:scene._trackWidth)+'px'].join('\n');
     }
   }
   const guide=scene?._guideImage?(scene._guideVisible?'visible':'oculta'):'no cargada';
