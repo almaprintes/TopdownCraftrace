@@ -42,7 +42,7 @@ const up=zones.slice(zones.indexOf('const release=(p,outside=false)=>'),zones.in
 assert.ok(!up.includes('this._collisionZones.push(zone)'),
   'finger up MUST NOT auto-close an area');
 const game=readFileSync('src/game/game.js','utf8');
-assert.ok(game.includes("import('./scenes/EnvironmentBuilderSafeWorkflowScene.js')"));
+assert.ok((game.includes("import('./scenes/EnvironmentBuilderAmericasImportScene.js')") && readFileSync('src/game/scenes/EnvironmentBuilderAmericasImportScene.js','utf8').includes("from './EnvironmentBuilderSafeWorkflowScene.js'")));
 assert.ok(readFileSync('src/game/scenes/EnvironmentBuilderSafeWorkflowScene.js','utf8').includes("from './EnvironmentBuilderCollisionWorkflowScene.js'"));
 const pipeline=readFileSync('.github/workflows/pages.yml','utf8');
 assert.ok(pipeline.includes('node scripts/environment-collision-workflow-smoke.mjs'));
