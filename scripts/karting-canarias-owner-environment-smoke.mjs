@@ -1,13 +1,15 @@
-// Karting Canarias: latest owner-exported invisible barriers on the 2048x3072 native photo.
+// Karting Canarias: preserve the original 2048x3072 export, collide at 5120x7680.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {validCollisionLine,sampleCollisionLine} from '../src/game/environment/CollisionPenGeometry.js';
 import {validCollisionZone,compileCollisionZone,pointInsidePolygon} from '../src/game/environment/FreehandCollisionZones.js';
+import {KARTING_CANARIAS_WORLD_SCALE,scaleKartingCanariasEnvironment} from '../src/game/tracks/kartingCanariasWorldScale.js';
 
 const path='src/game/tracks/library/karting-canarias/karting-canarias.environment.json';
 const bytes=readFileSync(path);
-const env=JSON.parse(bytes);
+const original=JSON.parse(bytes);
+const env=scaleKartingCanariasEnvironment(original);
 const track=JSON.parse(readFileSync('src/game/tracks/library/karting-canarias/track.json','utf8'));
 const digest=createHash('sha256').update(bytes).digest('hex');
 assert.equal(digest,'8ee5ca3f1b6e71baa3f87fd6d420e1d9c3c95e92101831c89c1455a535d59654',
@@ -21,7 +23,10 @@ for(const key of ['environment','surfaces','linearBarriers'])assert.deepEqual(en
 assert.deepEqual(env.materials,{});
 assert.equal(track.meta?.renderMode,'image-native');
 assert.equal(track.meta?.imageNative?.availability,'published');
-assert.deepEqual([track.worldW,track.worldH],[2048,3072]);
+assert.deepEqual([track.worldW,track.worldH],[5120,7680]);
+assert.equal(KARTING_CANARIAS_WORLD_SCALE,2.5);
+assert.equal(env.collisionLines[0].nodes[0].x,original.collisionLines[0].nodes[0].x*2.5);
+assert.equal(env.collisionZones[0].points[0].y,original.collisionZones[0].points[0].y*2.5);
 
 assert.equal(env.collisionLines.length,5,'Owner exported five pen barriers');
 assert.equal(env.collisionZones.length,1,'Owner exported one solid zone');
@@ -37,24 +42,24 @@ function distanceToSegment(p,a,b){
 const route=track.centerline;
 for(const l of env.collisionLines){
   assert.equal(l.type,'collision');
-  assert.equal(l.halfThickness,9);
+  assert.equal(l.halfThickness,22.5);
   assert.ok(validCollisionLine(l),'Invalid authored pen: '+l.id);
   const points=sampleCollisionLine(l,18);
   assert.ok(points.length>l.nodes.length,'Spline must compile to physics segments');
-  assert.ok(points.every(p=>p.x>=0&&p.x<2048&&p.y>=0&&p.y<3072),
+  assert.ok(points.every(p=>p.x>=0&&p.x<5120&&p.y>=0&&p.y<7680),
     'Pen nodes must remain in native image pixel space');
   let nearest=Infinity;
   for(const p of route){
     for(let i=1;i<points.length;i++)
       nearest=Math.min(nearest,distanceToSegment(p,points[i-1],points[i]));
   }
-  assert.ok(nearest>35,'Pen blocks the racing centerline, nearest '+nearest+': '+l.id);
+  assert.ok(nearest>87.5,'Pen blocks the racing centerline, nearest '+nearest+': '+l.id);
 }
 const zone=env.collisionZones[0];
 assert.equal(zone.solid,true);
 assert.ok(validCollisionZone(zone),'Owner solid zone must be a simple polygon');
 assert.ok(compileCollisionZone(zone),'Solid collision zone must compile');
-assert.ok(zone.points.every(p=>p.x>=0&&p.x<2048&&p.y>=0&&p.y<3072));
+assert.ok(zone.points.every(p=>p.x>=0&&p.x<5120&&p.y>=0&&p.y<7680));
 for(const [i,p] of route.entries())
   assert.ok(!pointInsidePolygon(zone.points,p),'Solid zone blocks route at point '+i);
 const gateMid=g=>({x:(g.a.x+g.b.x)/2,y:(g.a.y+g.b.y)/2});
@@ -62,6 +67,8 @@ for(const p of [track.start,gateMid(track.finishLine),...track.checkpoints.map(g
   assert.ok(!pointInsidePolygon(zone.points,p),'Solid zone must not block the start or race gates');
 
 const race=readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
+assert.match(race,/scaleKartingCanariasEnvironment\(env\)/,
+  'Runtime must project authored barriers into the enlarged race-world');
 assert.match(race,/isImageNativeTrackScene\(scene\)[\s\S]*?'karting-canarias'[\s\S]*?\.includes\(normalizeTrackKey\(scene\?\.trackKey\)\)/,
   'Only official photo-native Karting Canarias may install authored collisions');
 assert.match(race,/for\(const line of env\.collisionLines\|\|\[\]\)/);
@@ -72,4 +79,4 @@ assert.match(race,/resolveBodyAgainstSolidZones\(scene,ai\?\.body\)/);
 const wide=readFileSync('src/game/scenes/RaceWideCameraPreviewScene.js','utf8');
 assert.match(wide,/if \(this\.track\?\.meta\?\.renderMode !== 'image-native'\) \{[\s\S]*?installKartingCanariasDividers\(this\)/,
   'Legacy 2000x4300 dividers must stay disabled over the new collision environment');
-console.log('Karting Canarias owner environment OK: 5 pens, 19 nodes, 1 valid 17-vertex solid zone, no racing-line obstruction, native-photo runtime collisions enabled.');
+console.log('Karting Canarias owner environment: 5 pens + 1 solid zone projected 2.5x, all centerline/gates clear, source export unchanged.');
