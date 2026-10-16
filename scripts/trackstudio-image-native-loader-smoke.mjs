@@ -49,7 +49,7 @@ const game=readFileSync('src/game/game.js','utf8');
 const loader=readFileSync('src/game/tracks/imageNativeRaceLoader.js','utf8');
 assert.ok(base.includes('if (!imageNativeVisual) {'),'No old grass/offroad');
 assert.ok(base.includes('if (!isImageNativeTrackScene(this) && cells && this.car'),'No procedural asphalt culling');
-assert.ok(env.includes("isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz'].includes(normalizeTrackKey(scene?.trackKey))"),'Local photo preview must remain isolated from legacy environment');
+assert.ok(env.includes("isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas'].includes(normalizeTrackKey(scene?.trackKey))"),'Local photo preview must remain isolated from legacy environment');
 assert.ok(world.includes('if (isImageNativeTrackScene(this))'),'Native identity not tied to Karting');
 assert.ok(game.includes('installImageNativeRaceLoader(RaceScene,key=>hasTrack(key)?createTrack(key):null);'),'Registry-aware preflight installed before race creation');
 assert.ok(loader.includes('if(!desc)return create?.call(this,data)'),'Classic tracks untouched');
