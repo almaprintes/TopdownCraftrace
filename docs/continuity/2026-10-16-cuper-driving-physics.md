@@ -50,3 +50,13 @@ Remove/disable the installer in `src/game/game.js`; the original Cuper factory s
 - Karting Américas paints a second paddock stripe on the same physical finish axis. The importer now exports an *invisible*, collinear logical extension at `track.meta.paddockFinishLine`, with the original graphical finish untouched. Runtime uses a direction-aware, swept segment intersection on this extra gate only for Karting Américas, within the existing CP1→CP2→finish and cooldown logic. No change to .tdrtrack, centerline, photo, collision barriers or other tracks.
 - Automated tests: `scripts/cuper-driving-physics-smoke.mjs` (power, isolation, reset, 30/60 FPS); `scripts/karting-americas-official-smoke.mjs` (paddock crossing on the aligned paint, no backwards/stationary crossing, ordered checkpoint requirement).
 - Manual test requested: accelerate Cuper on asphalt vs Crown Axis; then drive Karting Américas past the paddock-aligned stripe after CP1/CP2 and check lap counter.
+
+## DEV 1.2.233 — 16 October visual calibrations from owner exports
+
+Two original owner JSON exports were read in full and applied as **global source defaults**, without overwriting the unrelated legacy public community override dataset:
+- `car-overrides.json` (updated_at 2026-10-16T16:35:46.243Z) specifies `crown_cuper.visualScale=1.10` and `veloce_juanicar_c220.visualScale=1.20`. Both were updated in `src/game/cars/carSpecs.js`; saved per-user editor overrides can still supersede them.
+- The old Cuper/Juanicar collision radii were decoupled from their new sizes with `collisionScale=1.03` and `collisionScale=1.08`. Only the player's and debug grid cars' sprite sizes grow, **no physical hitbox change**.
+- `tdr-vehicle-lights.json` calibrates Cuper Original: front pair (X ±.227604, Y -.385, size .066944), rear left (X -.253038, Y .31204, size .152604), rear right (X +.253038, Y .31204, size .148038), front intensity 1, halo .32, rear intensity 1, halo .18. All positions/sizes from the owner export remain exact.
+- The one subjective correction explicitly requested by the owner: *rear parking lamps are too red*. Full braking stays `#ff0000`, intensity 1. **Position** uses muted `#8e2925` with 28% opacity instead of the exported 52% bright red. Added `rear.tailColor` normalization, real-race renderer support, and color selector in Admin Hub preview, so future exports preserve it.
+- The Gold skin intentionally inherits Original calibration unless separately authored. The physical paint assets, braking behavior, other vehicles and image sprites remain untouched.
+- Tests: `scripts/vehicle-lights-calibration-smoke.mjs`. No APK/Google Play release.
