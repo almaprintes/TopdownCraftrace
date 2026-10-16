@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {validCollisionLine,sampleCollisionLine} from '../src/game/environment/CollisionPenGeometry.js';
+
+const env=JSON.parse(readFileSync('src/game/tracks/library/karting-americas/karting-americas.environment.json','utf8'));
+assert.equal(env.trackId,'karting-americas');
+assert.equal(env.collisionLines.length,8,'user authored all eight finished collision curves');
+assert.equal(new Set(env.collisionLines.map(l=>l.id)).size,8);
+assert.equal(env.collisionLines.reduce((n,l)=>n+l.nodes.length,0),60);
+assert.ok(env.collisionLines.every(validCollisionLine));
+assert.ok(env.collisionLines.every(l=>sampleCollisionLine(l).length>2),'all eight walls can be sampled');
+const src=readFileSync('src/game/scenes/EnvironmentBuilderCollisionWorkflowScene.js','utf8');
+assert.ok(src.includes('✓ TERMINAR')&&src.includes('✕ DESCARTAR BORRADOR'));
+assert.ok(src.includes('_discardCollisionDraft(){'));
+assert.ok(src.includes("this._penDraft?.nodes?.length?'collision-pen'"),'TERMINAR works after selecting or moving');
+const methods=src.slice(src.indexOf('  _save(){'),src.indexOf('  _applyProject(p){'));
+assert.ok(!methods.includes('if(this._hasUnfinishedCollisionDraft())return;'),'cannot hard block save/export');
+assert.ok(methods.includes("this._exitGuard?.backup?.('before-export-with-draft')"));
+assert.ok(methods.includes("this._exitGuard?.backup?.('save-with-draft')"));
+assert.ok(methods.includes('¿EXPORTAR LAS '),'ask instead of dead-end');
+assert.ok(methods.includes('return super._export?.()'),'confirmed export proceeds');
+assert.ok(methods.includes('const out=super._save?.()'),'completed lines always saved');
+assert.ok(methods.includes('if(window.confirm?.(question)!==true)return;'),'user consent respected');
+console.log('Karting Américas: all 8 original collision lines intact, no unfinished-pen export deadlock, recoverable drafts and explicit discard OK');

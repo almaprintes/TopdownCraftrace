@@ -22,6 +22,7 @@ export class EnvironmentBuilderScene extends Current {
         <button data-workflow="resume">✎ CONTINUAR</button>
         <button data-workflow="undo">↶ DESHACER</button>
         <button data-workflow="finish">✓ TERMINAR</button>
+        <button data-workflow="discard">✕ DESCARTAR BORRADOR</button>
       </div>
       <button data-workflow="restore-pen" style="margin-top:7px;width:100%;min-height:40px">↶ RECUPERAR PLUMA GUARDADA</button>
       <p data-workflow-state style="font-size:10px;font-weight:500;line-height:1.45;color:#a9d7d0;margin:8px 0 0"></p>`;
@@ -32,6 +33,7 @@ export class EnvironmentBuilderScene extends Current {
       resume:()=>this._resumeCollisionDrawing(),
       undo:()=>this._undoCollisionAction(),
       finish:()=>this._finishCollisionDrawing(),
+      discard:()=>this._discardCollisionDraft(),
       'restore-pen':()=>this._restoreMissingCollisionLines()
     })){
       const button=section.querySelector(`[data-workflow="${name}"]`);
@@ -196,7 +198,11 @@ export class EnvironmentBuilderScene extends Current {
     this._undoLast?.();
   }
   _finishCollisionDrawing(){
-    const tool=this._mode==='pan'?this._collisionPausedMode:this._mode;
+    // A provisional pen may survive SELECT, EDIT or MOVE. TERMINAR must
+    // discover it regardless of the mode the user happened to leave active.
+    const tool=this._penDraft?.nodes?.length?'collision-pen':
+      this._zoneDraft?.length?'collision-zone-draw':
+      this._mode==='pan'?this._collisionPausedMode:this._mode;
     if(tool==='collision-pen'){
       this._mode='collision-pen';
       this._finishCollisionPen?.();
@@ -206,6 +212,22 @@ export class EnvironmentBuilderScene extends Current {
     }else this._flash?.('NO HAY UN TRAZADO EN CURSO');
     this._collisionPausedMode=null;
     this._syncDomStatus();
+  }
+
+  _discardCollisionDraft(){
+    const pen=Number(this._penDraft?.nodes?.length)||0;
+    const zone=Number(this._zoneDraft?.length)||0;
+    if(!pen&&!zone){this._builderToast?.('NO HAY BORRADORES SIN TERMINAR');return;}
+    if(window.confirm?.('¿Descartar solamente el trazo provisional ('+pen+' nodos de pluma, '+zone+' puntos de zona)? Las líneas de colisión TERMINADAS no se borrarán.')!==true)return;
+    // Preserve an explicit recovery snapshot even if the draft is discarded.
+    if(this._exitGuard?.backup?.('before-discard')===false){
+      this._flash?.('NO SE PUDO GUARDAR COPIA · BORRADOR CONSERVADO');return;
+    }
+    this._penDraft=null;this._penGesture=null;
+    this._zoneDraft=[];this._zoneGesture=null;this._zoneStrokeStarts=[];
+    this._collisionPausedMode=null;this._mode='select';
+    this._drawCollisionPen?.();this._drawCollisionZones?.();this._syncDomStatus?.();
+    this._builderToast?.('BORRADOR DESCARTADO · COLISIONES TERMINADAS INTACTAS');
   }
 
   _activateCollisionPen(){
@@ -246,28 +268,47 @@ export class EnvironmentBuilderScene extends Current {
     return false;
   }
   _save(){
-    if(this._hasUnfinishedCollisionDraft())return;
+    // A one-node pen or half-drawn freehand zone is NOT a reason to lose or
+    // block saving eight or more independent, already completed collision lines.
+    const incomplete=Boolean(this._penDraft?.nodes?.length||this._zoneDraft?.length);
+    if(incomplete&&this._exitGuard?.backup?.('save-with-draft')===false)
+      this._flash?.('AVISO · NO SE PUDO GUARDAR COPIA DEL TRAZO PROVISIONAL');
     const out=super._save?.();
     try{
       const saved=JSON.parse(localStorage.getItem(this._storageKey?.()||'')||'{}');
       if((saved.collisionLines||[]).length!==(this._collisionLines||[]).filter(validCollisionLine).length)
         this._flash?.('AVISO · LÍNEAS NO INCLUIDAS EN GUARDADO · RECUPERAR PLUMA');
+      else if(incomplete)
+        this._builderToast?.('COLISIONES TERMINADAS GUARDADAS · TRAZO PROVISIONAL CONSERVADO EN RECUPERACIÓN');
     }catch{this._flash?.('AVISO · NO SE PUDO VERIFICAR EL GUARDADO');}
     return out;
   }
   _export(){
-    // Prevent an incomplete pen/zone from silently disappearing from the
-    // downloadable JSON. Only finished authored geometry is serialized.
-    if(this._hasUnfinishedCollisionDraft())return;
     const current=(this._collisionLines||[]).filter(validCollisionLine).length;
-    const archived=this._possibleCollisionLines().length;
-    if(archived>current){
-      this._flash?.(`AVISO · FALTAN ${archived-current} LÍNEAS DE PLUMA · PULSA RECUPERAR PLUMA`);
-      return;
-    }
     const exported=this._project?.();
     if((exported?.collisionLines||[]).length!==current){
       this._flash?.('ERROR · EXPORTACIÓN SIN LAS LÍNEAS DE PLUMA');return;
+    }
+    const archived=this._possibleCollisionLines().length;
+    const pen=Number(this._penDraft?.nodes?.length)||0;
+    const zone=Number(this._zoneDraft?.length)||0;
+    const pending=archived>current||pen>0||zone>0;
+    if(pending){
+      // All currently finished geometry is safe in the export. Preserve a
+      // separate *recoverable* snapshot of unfinished work and previously
+      // completed lines before asking the user what to do.
+      if(this._exitGuard?.backup?.('before-export-with-draft')===false){
+        this._flash?.('NO SE PUDO GUARDAR COPIA DE SEGURIDAD · EXPORTACIÓN CANCELADA');return;
+      }
+      const notes=[
+        pen>0?'PLUMA SIN TERMINAR ('+pen+' NODOS)':null,
+        zone>0?'ZONA SIN TERMINAR ('+zone+' PUNTOS)':null,
+        archived>current?'FALTAN '+(archived-current)+' LÍNEAS DE PLUMA EN EL EDITOR; SE PUEDEN RECUPERAR':null
+      ].filter(Boolean).join('\n');
+      const question=notes+'\n\n¿EXPORTAR LAS '+current+' LÍNEAS TERMINADAS AHORA?\n'+
+        'Los trazos provisionales NO se borrarán del editor y hay una copia de recuperación.\n'+
+        'Cancelar = seguir editando o usar RECUPERAR PLUMA.';
+      if(window.confirm?.(question)!==true)return;
     }
     return super._export?.();
   }

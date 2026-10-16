@@ -25,7 +25,9 @@ const required=[
   'deletedIds,lines:[]',
   'PLUMA SIN TERMINAR',
   'FALTAN',
-  'if((exported?.collisionLines||[]).length!==current)'
+  'if((exported?.collisionLines||[]).length!==current)',
+  '¿EXPORTAR LAS ',
+  "this._exitGuard?.backup?.('before-export-with-draft')"
 ];
 for(const v of required)assert.ok(source.includes(v),'Missing finished pen recovery safeguard: '+v);
 assert.ok(penSource.includes('this._collisionLines.push(clone(line));'),
