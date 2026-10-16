@@ -7,7 +7,7 @@
         "front": {
           "enabled": true,
           "color": "#fff8ed",
-          "intensity": 0.69,
+          "intensity": 1,
           "halo": 0.32,
           "left": {
             "x": -0.227604,
@@ -23,18 +23,19 @@
         "rear": {
           "enabled": true,
           "color": "#ff0000",
+          "tailColor": "#8e2925",
           "intensity": 1,
-          "tailIntensity": 0.45,
-          "halo": 0.15,
+          "tailIntensity": 0.28,
+          "halo": 0.18,
           "left": {
             "x": -0.253038,
             "y": 0.31204,
-            "size": 0.138906
+            "size": 0.152604
           },
           "right": {
             "x": 0.253038,
             "y": 0.31204,
-            "size": 0.138906
+            "size": 0.148038
           }
         }
       }
