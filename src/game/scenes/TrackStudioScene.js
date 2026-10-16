@@ -8,6 +8,7 @@ import { installTrackStudioShapeEditor } from '../studio/installTrackShapeEditor
 import { trackStudioWidthStep } from '../studio/trackStudioWidthRange.js';
 import { EDITOR_CONTROL_PIXELS, worldControlRadius, pickCenterlineControl } from '../studio/trackStudioControlGeometry.js';
 import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
+import { installTrackStudioGateControls } from '../studio/trackStudioGateControls.js';
 import { createPenAnchor, penGestureIsCurve, updatePenAnchorFromDrag } from '../studio/trackStudioPenTool.js';
 
 export class TrackStudioScene extends BaseScene {
@@ -1045,6 +1046,7 @@ if (
     installTrackStudioImageMode(this);
     installTrackStudioShapeEditor(this);
     installTrackStudioExitGuard(this);
+    installTrackStudioGateControls(this);
     this._updateLoopButton();
     this._updateToolButtons();
     this._updatePanel();
@@ -1378,6 +1380,7 @@ _flashMessage(txt) {
   // Grupo mode
   // =================================================
 _getModeToolLabel() {
+  if (this._modeTool === 'start') return 'SAL';
   if (this._modeTool === 'finish') return '🏁';
   if (this._modeTool === 'checkpoint') return 'CP';
   if (this._modeTool === 'piano') return 'PI';
@@ -1385,6 +1388,7 @@ _getModeToolLabel() {
 }
 
 _runActiveModeTool() {
+  if (this._modeTool === 'start') return this._setTool('start');
   if (this._modeTool === 'finish') return this._setTool('finish');
   if (this._modeTool === 'checkpoint') return this._setTool('checkpoint');
   if (this._modeTool === 'piano') return this._setTool('piano');
@@ -1396,6 +1400,7 @@ _toggleModeMenu() {
 
   const allItems = [
     { key: 'edit', label: this._isClosed ? '🔒' : '🔓' },
+    { key: 'start', label: 'SAL' },
     { key: 'finish', label: '🏁' },
     { key: 'checkpoint', label: 'CP' },
     { key: 'piano', label: 'PI' }
