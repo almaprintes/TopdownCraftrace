@@ -80,8 +80,9 @@ assert.ok(!race.includes('imageNativeDrivingProfile'),'No rejected car dynamics 
 assert.ok(!race.includes('imageNativeCarVisualScale'),'No x3 tiny-car correction patch');
 assert.ok(race.includes('const TARGET_W = 96 * vScale * VISUAL_SCALE_MULT * trackCarScale;'));
 assert.ok(race.includes('const TARGET_H = 48 * vScale * VISUAL_SCALE_MULT * trackCarScale;'));
-assert.ok(race.includes('body.setCircle(Math.round(baseRadius * vScale * trackCarScale));'),
- 'Return original car hitbox and geometry');
+assert.ok(race.includes('body.setCircle(Math.round(baseRadius * collisionScale * trackCarScale));') &&
+ race.includes('const collisionScale = Number(specFinal?.collisionScale ?? vScale);'),
+ 'Preserve original collision geometry despite visual-only calibrations');
 assert.ok(!bike.includes('unscaledCarVisualLength'),'Kinematic physics restored');
 assert.ok(bike.includes('const w=Number(sprite?.displayWidth || sprite?.width || 0);'));
 assert.ok(image.includes('return {version:1,imageId,imageMeta:jsonCopy(editor.imageCanvas),track};'),
