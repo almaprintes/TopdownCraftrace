@@ -15,10 +15,17 @@ export function trackStudioWidthMaximum(imageCanvas, currentWidth=0) {
     Math.min(NATIVE_IMAGE_TRACK_WIDTH_MAX,adapted));
 }
 
-export function trackStudioWidthStep(imageCanvas, widthMaximum) {
-  if(!imageCanvas)return 10;
-  if(widthMaximum>=1000)return 100;
-  if(widthMaximum>=800)return 50;
-  if(widthMaximum>=400)return 20;
-  return 10;
+// Precision is an editor preference, never inferred from photo resolution.
+// Previous logic forced 20/50/100px jumps on photo-based roads.
+export const TRACK_STUDIO_WIDTH_STEPS=Object.freeze([1,5,10,25,50,100]);
+
+// Keep the two original parameters for callers already passing photo and max.
+export function trackStudioWidthStep(_imageCanvas, _widthMaximum, selectedStep=5) {
+  const step=Number(selectedStep);
+  return TRACK_STUDIO_WIDTH_STEPS.includes(step)?step:5;
+}
+
+export function nextTrackStudioWidthStep(currentStep=5) {
+  const index=TRACK_STUDIO_WIDTH_STEPS.indexOf(Number(currentStep));
+  return TRACK_STUDIO_WIDTH_STEPS[(index+1)%TRACK_STUDIO_WIDTH_STEPS.length];
 }
