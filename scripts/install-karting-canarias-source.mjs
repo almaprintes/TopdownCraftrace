@@ -7,6 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {shapeIsValid} from '../src/game/studio/trackShapeGeometry.js';
 import {orderClosedCircuitGates} from '../src/game/tracks/closedCircuitGateOrder.js';
 import {spawnUpstreamOfFinish} from '../src/game/tracks/imageNativeDriving.js';
+import {KARTING_CANARIAS_WORLD_SCALE,scaleKartingCanariasRaceTrack} from '../src/game/tracks/kartingCanariasWorldScale.js';
 
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const SOURCE='src/game/tracks/library/karting-canarias/source/trackstudio-image-1792189935586.project.json';
@@ -50,7 +51,9 @@ export function buildOwnerKartingCanarias(){
   const start=spawnUpstreamOfFinish(t.centerline,finish,Math.max(35,Math.min(85,t.trackWidth*.6)));
   if(!start)throw Error('Karting Canarias: salida orientada contra el recorrido');
   const m=mid(finish);
-  return {
+  // All published world coordinates are enlarged together. Source JSON/WebP
+  // remain untouched and the car's physics and visual scale stay unchanged.
+  return scaleKartingCanariasRaceTrack({
     ...t,name:'KARTING CANARIAS',brand:'TDR',category:'Karting / Técnico',
     difficulty:'Alta',lengthLabel:'Corta',raceDirection:'forward',
     carScale:1,closed:true,raceType:'circuit',startLine:null,
@@ -66,7 +69,7 @@ export function buildOwnerKartingCanarias(){
       source:'Owner TrackStudio .tdrtrack',sourceFile:'trackstudio-image-1792189935586(1).tdrtrack',
       sourceBundleSha256:BUNDLE_SHA,sourceImageSha256:IMAGE_SHA,
       authoredStartLineRole:'closed-circuit-finish'}
-  };
+  },KARTING_CANARIAS_WORLD_SCALE);
 }
 export function installKartingCanariasSource(){
   const track=buildOwnerKartingCanarias();
