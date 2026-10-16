@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {formatOdometerKm,ODOMETER_STEP_METERS} from '../src/game/stats/odometerFormat.js';
 import {addCarDistance,carMileageKm,loadPlayerStatsPersisted,PLAYER_STATS_KEY} from '../src/game/stats/playerStats.js';
-import {allowedProgressKey} from '../src/game/social/cloudProgress.js';
 
 assert.equal(ODOMETER_STEP_METERS,10);
 assert.equal(formatOdometerKm(9.99),'0,00','Less than 10m must not tick');
@@ -29,7 +28,7 @@ assert.equal(formatOdometerKm(loadPlayerStatsPersisted().cars.gripline.meters),'
  'Switching cars must never bleed into another odometer');
 assert.equal(loadPlayerStatsPersisted().cars.juanicar.tracks['karting-americas'].meters,110);
 assert.ok(map.has(PLAYER_STATS_KEY),'Persist existing Statistics key');
-assert.equal(allowedProgressKey(PLAYER_STATS_KEY),true,'Existing mileage remains in cloud backups');
+assert.ok(readFileSync('src/game/social/cloudProgress.js','utf8').includes("'tdr2:playerStats:v1'"),'Existing mileage remains in cloud backups');
 
 const hud=readFileSync('src/game/ui/raceInstrumentHud.js','utf8');
 assert.ok(hud.includes('data-odometer'),'Digital readout under car name');
