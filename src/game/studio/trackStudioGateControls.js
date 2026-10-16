@@ -35,6 +35,45 @@ export function installTrackStudioGateControls(scene){
   });
   widthRow.appendChild(stepButton);
   root.appendChild(widthRow);
+
+  const localWidth=document.createElement('div');
+  localWidth.className='tdr-trackstudio-local-width';
+  localWidth.setAttribute('role','group');
+  localWidth.setAttribute('aria-label','Ancho local del nodo seleccionado');
+  localWidth.style.cssText='display:none;box-sizing:border-box;padding:7px 0;margin:0 0 6px;border-top:1px solid #344866;border-bottom:1px solid #344866;';
+  const localLabel=document.createElement('div');
+  localLabel.style.cssText='color:#c6f7ec;font:800 12px/1.3 system-ui,-apple-system,Segoe UI,sans-serif;padding-bottom:5px;';
+  localWidth.appendChild(localLabel);
+  const localRow=document.createElement('div');
+  localRow.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:5px;';
+  const makeLocal=(name,aria,onClick)=>{
+    const btn=document.createElement('button');btn.type='button';btn.textContent=name;
+    btn.setAttribute('aria-label',aria);
+    btn.style.cssText='min-width:0;min-height:44px;border:2px solid #638fc0;border-radius:8px;background:#254766;color:#fff;font:800 13px system-ui,-apple-system,Segoe UI,sans-serif;cursor:pointer;touch-action:manipulation;';
+    btn.addEventListener('pointerdown',e=>e.stopPropagation());
+    btn.addEventListener('pointerup',e=>e.stopPropagation());
+    btn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();onClick();refresh();});
+    return btn;
+  };
+  const localMinus=makeLocal('− ANCHO','Estrechar el tramo del nodo seleccionado',()=>{
+    const i=scene._selectedWidthNodeIndex?.();
+    if(i<0)return;
+    scene._setLocalNodeWidth?.((scene._nodes[i].width??scene._trackWidth)-trackStudioWidthStep(null,null,scene._widthStep));
+  });
+  const localPlus=makeLocal('+ ANCHO','Ensanchar el tramo del nodo seleccionado',()=>{
+    const i=scene._selectedWidthNodeIndex?.();
+    if(i<0)return;
+    scene._setLocalNodeWidth?.((scene._nodes[i].width??scene._trackWidth)+trackStudioWidthStep(null,null,scene._widthStep));
+  });
+  localRow.appendChild(localMinus);localRow.appendChild(localPlus);
+  localWidth.appendChild(localRow);
+  const localReset=makeLocal('RESTABLECER AL ANCHO GENERAL','Quitar el ancho individual de este nodo',()=>{
+    scene._setLocalNodeWidth?.(null);
+  });
+  localReset.style.cssText+='width:100%;margin-top:5px;';
+  localWidth.appendChild(localReset);
+  root.appendChild(localWidth);
+
   const grid=document.createElement('div');
   grid.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;align-items:stretch;';
   root.appendChild(grid);
@@ -105,6 +144,15 @@ export function installTrackStudioGateControls(scene){
     const currentWidth=Number(scene._trackWidth);
     widthValue.textContent='ANCHO '+(Number.isFinite(currentWidth)?currentWidth:'—')+' px';
     stepButton.textContent='PASO '+trackStudioWidthStep(null,null,scene._widthStep)+' px';
+    const selectedWidthNode=scene._selectedWidthNodeIndex?.()??-1;
+    const widthNode=scene._nodes?.[selectedWidthNode];
+    const hasWidthNode=selectedWidthNode>=0&&!!widthNode;
+    localWidth.style.display=hasWidthNode?'block':'none';
+    if(hasWidthNode){
+      const local=Number.isFinite(widthNode.width)?widthNode.width:scene._trackWidth;
+      localLabel.textContent='NODO '+(selectedWidthNode+1)+' · ANCHO LOCAL: '+local+' px';
+      localReset.style.display=Number.isFinite(widthNode.width)?'block':'none';
+    }
     const active=scene._tool;
     for(const [type,btn] of Object.entries(buttons)){
       const chosen=active===type;
@@ -167,5 +215,5 @@ export function installTrackStudioGateControls(scene){
     root.remove();
   });
   refresh();position();
-  return {root,start,finish,status,buttons,remove,widthValue,stepButton,refresh,position};
+  return {root,start,finish,status,buttons,remove,widthValue,stepButton,localWidth,localLabel,localMinus,localPlus,localReset,refresh,position};
 }
