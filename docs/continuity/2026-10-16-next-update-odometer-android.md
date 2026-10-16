@@ -1,6 +1,6 @@
 # Top Down RACE — pendientes para la próxima actualización
 
-**Fecha:** 16/10/2026. **Estado:** pendientes, sin implementar. **Rama de trabajo cuando se autorice:** `main`. **DEV de referencia:** 1.2.219. **Ámbito:** juego y Android; Google Play no se publica sin autorización expresa.
+**Fecha:** 16/10/2026. **Estado:** implementados en código DEV 1.2.220. Pendiente de validar la ejecución real en un teléfono Android. **Rama de trabajo cuando se autorice:** `main`. **DEV de referencia:** 1.2.219. **Ámbito:** juego y Android; Google Play no se publica sin autorización expresa.
 
 Estas tres peticiones fueron formuladas por el propietario después de incorporar Karting Américas como circuito permanente.
 
@@ -26,6 +26,14 @@ Estas tres peticiones fueron formuladas por el propietario después de incorpora
 - Revisar la ejecución real en Android (temporización, transformaciones, composición de capas y visibilidad) sin romper las transiciones de entrada a carrera ni la fluidez en iOS.
 - Verificación en APK Android: varios intercambios consecutivos desde garaje, animación de bajada y subida visible, coche correcto, controles utilizables al terminar, sin parpadeos ni bloqueos.
 
-## Entrega cuando se autorice la actualización
+## Entrega y verificación
 
 Implementar los tres cambios juntos o en iteraciones coordinadas en `main`, incrementar versión DEV y comprobar Build y Deploy de GitHub Actions en verde para el HEAD final. **No dar estos cambios por completados por el mero hecho de estar documentados.** Si se solicita APK de pruebas, generarlo y verificarlo; no publicar en Google Play sin orden explícita.
+
+### Cambios DEV 1.2.220 (16/10/2026)
+
+- Cuentakilómetros del HUD directamente debajo del nombre del coche: incrementos visuales de **0,01 km = 10 m**, con los metros compartidos y guardados por `tdr2:playerStats:v1` (misma fuente que Estadísticas), sumando además los metros pendientes de escritura de la carrera activa.
+- Estadísticas también presenta kilometraje con dos decimales sin redondear décimas de kilómetro, para que las lecturas correspondan al odómetro.
+- Eliminación de los dos paneles/botones Android `AD LOG` y `PERF` del puente de anuncios, sin retirar el puente ni el diagnóstico nativo mediante API.
+- Ascensor del lobby habilitado en APK nativos de Android aunque la compilación use el indicador `prod`; la web pública mantiene su configuración anterior. Se preserva el interruptor de reversión local.
+- Añadida prueba de regresión `scripts/odometer-android-next-update-smoke.mjs` y generación de APK de prueba Android firmada con clave de pruebas en Actions. No se sube a Google Play.

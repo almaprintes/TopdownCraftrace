@@ -4,11 +4,12 @@ import {IS_PROD_BUILD} from '../buildTarget.js';
 import {applyCarVisual} from '../skins/carDisplayArt.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { masteryInfoForMeters, masteryMaterialLabel, masteryWheelDataUri } from '../stats/carMastery.js';
+import {formatOdometerKm} from '../stats/odometerFormat.js';
 import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 import masteryPremiumCss from '../ui/mastery-premium.css?inline';
 
 const BASE=import.meta.env.BASE_URL||'/';
-function fmtKm(n,lang){return Math.max(0,Number(n)||0).toLocaleString(lang==='en'?'en-US':'es-ES',{minimumFractionDigits:1,maximumFractionDigits:1});}
+function fmtKm(n,lang){return formatOdometerKm(Math.max(0,Number(n)||0)*1000,lang);}
 function applyStatsCarArt(img,carId){
  applyCarVisual(img,carId,CAR_SPECS[carId],{base:BASE,dev:!IS_PROD_BUILD});
  img.dataset.statsLobbyArt='1';

@@ -2,14 +2,18 @@
 // These DOM clones stay at their ORIGINAL lobby z-index: stage 0, car 1,
 // roof mastery 4. No fullscreen overlay or extra Phaser renderer work.
 // Race departure (LobbyRaceDeparture.js) is entirely separate and untouched.
+import { Capacitor } from '@capacitor/core';
 const IS_PROD_BUILD = typeof __TDR_PROD_BUILD__ === 'boolean' ? __TDR_PROD_BUILD__ : false;
+// Native Android APKs are compiled with the production flag. That must not
+// disable their lobby garage elevator; only the public browser build opts out.
+const nativeAndroidLift=()=>{try{return Capacitor.isNativePlatform()&&Capacitor.getPlatform()==='android';}catch{return false;}};
 
 export const GARAGE_LIFT_TIMING=Object.freeze({down:1850,up:1900});
 export const GARAGE_LIFT_DEPTH=Object.freeze({platform:0,car:1,mastery:4});
 export const GARAGE_LIFT_RETURN_KEY='tdr2:garageLiftReturn:v1';
 export const GARAGE_LIFT_SWITCH='tdr2:devGarageLift';
-export function garageLiftEnabled({prod=IS_PROD_BUILD,storage=globalThis.localStorage}={}){
- if(prod)return false;
+export function garageLiftEnabled({prod=IS_PROD_BUILD,storage=globalThis.localStorage,nativeAndroid=nativeAndroidLift()}={}){
+ if(prod&&!nativeAndroid)return false;
  try{return storage?.getItem?.(GARAGE_LIFT_SWITCH)!=='off';}catch{return true;}
 }
 export function markGarageLiftReturn({prod=IS_PROD_BUILD,storage=globalThis.sessionStorage}={}){

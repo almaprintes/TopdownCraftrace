@@ -1,3 +1,4 @@
+import { formatOdometerKm } from '../stats/odometerFormat.js';
 import Phaser from 'phaser';
 import {observeAppHeader,appBackLabel} from '../ui/TdrAppHeader.js';
 import { getLanguage, t } from '../i18n/index.js';
@@ -12,7 +13,7 @@ import { masteryInfoForMeters, masteryWheelDataUri } from '../stats/carMastery.j
 
 const BASE=import.meta.env.BASE_URL||'/';
 const fmtLap=(ms)=>{ms=Number(ms);if(!Number.isFinite(ms)||ms<=0)return'—';const m=Math.floor(ms/60000),s=(ms-m*60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;};
-const fmtKm=(meters,lang)=>{const km=Math.max(0,Number(meters)||0)/1000;return km.toLocaleString(lang==='en'?'en-US':'es-ES',{minimumFractionDigits:km<10?2:1,maximumFractionDigits:km<10?2:1});};
+const fmtKm=(meters,lang)=>formatOdometerKm(meters,lang);
 const esc=value=>String(value??'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
 const trackName=(id,lang)=>getTrackPublicName(TRACK_REGISTRY?.[id]||id,lang);
 function bestForCar(car){let best=null,bestTrack=null;for(const [trackId,row] of Object.entries(car?.tracks||{})){const ms=Number(row?.bestLapMs);if(Number.isFinite(ms)&&ms>0&&(best==null||ms<best)){best=ms;bestTrack=trackId;}}return{best,bestTrack};}

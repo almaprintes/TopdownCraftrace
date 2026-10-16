@@ -1,3 +1,7 @@
+import { loadPlayerStatsPersisted } from '../stats/playerStats.js';
+import { formatOdometerKm } from '../stats/odometerFormat.js';
+import { getLanguage } from '../i18n/index.js';
+import { CAR_SPECS } from '../cars/carSpecs.js';
 import './raceInstrumentHud.css';
 
 const BASE=import.meta.env.BASE_URL||'/';
@@ -29,17 +33,29 @@ function readRacePosition(scene){
 }
 
 function carBadge(scene){
-  const id=String(scene?.carId||scene?.selectedCarId||'').toLowerCase();
-  const parts=id.split('_');
-  const brand=parts.shift();
-  if(!CAR_BRANDS[brand])return'';
-  const model=parts.join(' ').toUpperCase();
-  return `<div class="tdr-race-car-id"><img class="tdr-race-car-logo" src="${BASE}assets/logos/logo_${brand}_negativo.webp" alt=""><span class="tdr-race-car-model">${model}</span></div>`;
+  const carId=String(scene?.carId||scene?.selectedCarId||'stock').trim();
+  const id=carId.toLowerCase(),parts=id.split('_'),brand=parts.shift(),model=parts.join(' ').toUpperCase();
+  const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const graphic=CAR_BRANDS[brand]
+    ?`<img class="tdr-race-car-logo" src="${BASE}assets/logos/logo_${brand}_negativo.webp" alt=""><span class="tdr-race-car-model">${escape(model||CAR_SPECS[carId]?.name||carId)}</span>`
+    :`<span class="tdr-race-car-model">${escape(CAR_SPECS[carId]?.name||carId)}</span>`;
+  return `<div class="tdr-race-car-id">${graphic}<span class="tdr-race-odometer" aria-label="Kilometraje total del coche"><span class="tdr-race-odometer-label">ODO</span><b data-odometer>0,00</b><span class="tdr-race-odometer-unit">KM</span></span></div>`;
+}
+function mileageReading(scene){
+ const id=String(scene?._mileageCarId||scene?.carId||scene?.selectedCarId||'').trim();
+ if(!id)return 0;
+ const pending=Math.max(0,Number(scene?._mileagePendingMeters)||0);
+ if(scene._hudOdometerCarId!==id||pending+0.00001<(scene._hudOdometerPending||0)){
+   scene._hudOdometerCarId=id;
+   scene._hudOdometerSaved=Number(loadPlayerStatsPersisted().cars?.[id]?.meters)||0;
+ }
+ scene._hudOdometerPending=pending;
+ return Math.max(0,scene._hudOdometerSaved||0)+pending;
 }
 
 export function destroyRaceInstrumentHud(scene){
   try{scene?._raceHudDom?.remove?.();}catch{}
-  if(scene){scene._raceHudDom=null;scene._raceHudRefs=null;}
+  if(scene){scene._raceHudDom=null;scene._raceHudRefs=null;scene._hudOdometerCarId=null;scene._hudOdometerPending=0;}
 }
 
 export function mountRaceInstrumentHud(scene){
@@ -69,7 +85,7 @@ export function mountRaceInstrumentHud(scene){
   scene._raceHudDom=root;
   scene._raceHudRefs={
     lap:root.querySelector('[data-lap]'),sector:root.querySelector('[data-sector]'),last:root.querySelector('[data-last]'),best:root.querySelector('[data-best]'),
-    delta:root.querySelector('[data-delta]'),speed:root.querySelector('[data-speed]'),clock:root.querySelector('[data-clock]'),pos:root.querySelector('[data-pos]'),
+    delta:root.querySelector('[data-delta]'),speed:root.querySelector('[data-speed]'),odometer:root.querySelector('[data-odometer]'),clock:root.querySelector('[data-clock]'),pos:root.querySelector('[data-pos]'),
     sectorBars:Array.from(root.querySelectorAll('.tdr-race-sector-bars i')),speedBars:Array.from(root.querySelectorAll('.tdr-race-speedbar i'))
   };
   scene._raceHudAccum=100;
@@ -111,6 +127,7 @@ export function updateRaceInstrumentHud(scene,delta=0){
   refs.delta.parentElement?.classList.toggle('good',Number.isFinite(deltaMs)&&deltaMs<0);
   refs.delta.parentElement?.classList.toggle('bad',Number.isFinite(deltaMs)&&deltaMs>0);
   refs.speed.textContent=String(Math.round(kmh)).padStart(3,'0');
+  if(refs.odometer)refs.odometer.textContent=formatOdometerKm(mileageReading(scene),getLanguage());
   refs.clock.textContent=fmtLap(elapsed);
   refs.pos.innerHTML=pos&&pos.total>1?`POS <b>${pos.pos}/${pos.total}</b>`:'';
   for(let i=0;i<refs.sectorBars.length;i++)refs.sectorBars[i].classList.toggle('on',i<sector);

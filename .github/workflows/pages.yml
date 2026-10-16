@@ -81,6 +81,7 @@ jobs:
           node scripts/vehicle-lights-calibration-smoke.mjs
           node scripts/lobby-race-departure-smoke.mjs
           node scripts/lobby-garage-lift-smoke.mjs
+          node scripts/odometer-android-next-update-smoke.mjs
           node scripts/race-car-look-smoke.mjs
           node scripts/runtime-resizeobserver-recovery-smoke.mjs
           node scripts/admin-car-editor-route-smoke.mjs
@@ -267,6 +268,13 @@ jobs:
       - name: Compile minified release and run native unit tests
         working-directory: android
         run: ./gradlew :app:testBridgeTestReleaseUnitTest :app:assembleBridgeTestRelease --stacktrace
+      - name: Attach installable Android DEV test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDR-DEV-1.2.220-Android-bridge-test
+          path: android/app/build/outputs/apk/bridgeTest/release/*.apk
+          if-no-files-found: error
+          retention-days: 14
       - name: Prepare accelerated Android emulator
         shell: bash
         run: |
