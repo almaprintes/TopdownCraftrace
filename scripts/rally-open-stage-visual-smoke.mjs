@@ -8,14 +8,27 @@ assert.equal(stage.worldW,1882);
 assert.equal(stage.worldH,3344);
 assert.equal(stage.trackWidth,40);
 assert.equal(stage.meta.sourceFile,'trackstudio-image-1792152097432.tdrtrack');
-assert.equal(stage.meta.nativeImage.availability,'not-published','Do not falsely claim local ChatGPT image exists on GitHub Pages');
+assert.equal(stage.meta.renderMode,'image-native');
+assert.equal(stage.meta.imageNative.availability,'published');
+assert.equal(stage.meta.imageNative.width,1882);
+assert.equal(stage.meta.imageNative.height,3344);
+assert.equal(stage.meta.imageNative.tiles.length,4);
+assert.equal(stage.trackShape?.closed,false,'Open-stage Bezier boundary must never close');
+assert.equal(stage.trackShape?.leftEdge?.length,82);
+assert.equal(stage.trackShape?.rightEdge?.length,82);
 assert.equal(stage.checkpointMode,'authored');
 assert.equal(stage.checkpoints.length,2);
 assert.ok(stage.startLine?.a&&stage.finishLine?.a,'Retain separate rally START and META');
 const pts=stage.centerline.map(p=>({x:Number(p.x),y:Number(p.y)}));
 assert.equal(stage.closed,false);
 assert.equal(stage.raceType,'stage');
-assert.ok(pts.length>2400);
+assert.equal(pts.length,2241,'Source exact 2241 points, no approximate intermediary');
+const original=JSON.parse(read('src/game/tracks/library/rally-arafo-los-loros/trackstudio-gameTrack-exact.json'));
+assert.deepEqual(stage.centerline,original.centerline,'Original user centerline must match precisely');
+assert.deepEqual(stage.trackShape,original.trackShape,'Both original Bezier edges and handles must match precisely');
+assert.deepEqual(stage.startLine,original.startLine);
+assert.deepEqual(stage.finishLine,original.finishLine);
+assert.deepEqual(stage.checkpoints,original.checkpoints);
 const gap=Math.hypot(pts[0].x-pts.at(-1).x,pts[0].y-pts.at(-1).y);
 assert.ok(gap>2500,'The owner-authored rally must have separate start and finish ends');
 assert.ok(pts.slice(1).every((p,i)=>Math.hypot(p.x-pts[i].x,p.y-pts[i].y)<50),'Centerline internal jump');
@@ -69,7 +82,7 @@ assert.ok(!branch.includes('g.fillPath()'),'Editor filled stage as a closed ring
 assert.ok(branch.includes('m.fillCircle('),'Editor does not mark START');
 assert.ok(code.slice(b).includes('closed:true'),'Closed ribbon renderer changed');
 
-// Simulate the exact 2465-node official stage in the editor's graphics
+// Simulate the exact 2241-node official stage in the editor's graphics
 // interface, and assert each emitted segment joins ONLY adjacent vertices.
 // The 3955px META-to-SALIDA shortcut must be impossible by construction.
 const commands=[],g={
@@ -90,4 +103,4 @@ for(let i=0;i<pts.length-1;i++){
 }
 assert.ok(commands.every(c=>Math.hypot(c.x2-c.x1,c.y2-c.y1)<200),
  'An unintended giant shortcut appeared in the stage editor');
-console.log('RALLY OPEN A->B OK: '+pts.length+' nodes, '+gap.toFixed(1)+'px between endpoints, no SVG closure in 4 loading views, editor draws 7392 bounded segments with START marker.');
+console.log('RALLY OPEN A->B OK: '+pts.length+' nodes, '+gap.toFixed(1)+'px between endpoints, no SVG closure in 4 loading views, editor draws bounded segments with START marker.');
