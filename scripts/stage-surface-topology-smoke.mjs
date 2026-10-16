@@ -67,9 +67,18 @@ const first = scene.track.geom.center[0], last = scene.track.geom.center.at(-1);
 assert.deepEqual(scene._premiumShoulder.paths[0][0], [first.x, first.y]);
 assert.deepEqual(scene._premiumShoulder.paths[0].at(-1), [last.x, last.y]);
 
-// A closed circuit must retain its closing edge and all its surface decoration.
+// A published image-native circuit must NOT have legacy asphalt/kerb art.
 const circuit = JSON.parse(fs.readFileSync('src/game/tracks/library/karting-canarias/track.json', 'utf8'));
-const closedScene = render(circuit);
+const nativeCanarias = render(circuit);
+for(const key of ['_premiumShoulder','_edgeProbe','_cornerCurbs','_longitudinalAsphaltWear'])
+  assert.equal(nativeCanarias[key],undefined,
+    'Photo-native Karting Canarias cannot paint generated road art above the photo: '+key);
+// Preserve the original closed-ring regression using an isolated classic fixture.
+// This verifies that other classic closed circuits still render a complete edge.
+const classicCanarias={...circuit,meta:{...circuit.meta},trackKey:'karting-canarias-classic-test'};
+delete classicCanarias.meta.renderMode;
+delete classicCanarias.meta.imageNative;
+const closedScene = render(classicCanarias);
 const shoulder = closedScene._premiumShoulder;
 assert.deepEqual(shoulder.paths[0][0], shoulder.paths[0].at(-1));
 assert.equal(shoulder.segments.length, closedScene.track.geom.center.length);
