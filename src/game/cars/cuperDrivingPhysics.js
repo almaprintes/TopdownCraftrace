@@ -12,7 +12,38 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const smooth=x=>{const u=clamp(x,0,1);return u*u*(3-2*u);};
 const relax=(value,target,rate,dt)=>value+(target-value)*(1-Math.exp(-rate*dt));
 
-export const CUPER_PHYSICS_VERSION='cuper-dev-2';
+export const CUPER_PHYSICS_VERSION='cuper-dev-3';
+ 
+// DEV-only power tune. The racing baseline used the CROWN Axis values,
+// which are not adequate for evaluating Cuper's revised cornering on the
+// authored full-size kart tracks. Keep all yaw/lateral response coefficients.
+export const CUPER_DEV_POWER=Object.freeze({
+  accelMult:1.50,
+  topSpeedMult:1.20,
+  dragMult:0.65
+});
+export function applyCuperDevPower(scene){
+  if(!scene||scene.carId!=='crown_cuper'||!scene.carParams)return false;
+  if(scene._cuperPowerApplied===true)return false;
+  const p=scene.carParams;
+  const accel=Number(p.accel),maxFwd=Number(p.maxFwd),drag=Number(p.linearDrag);
+  if(![accel,maxFwd,drag].every(Number.isFinite))return false;
+  p.accel=accel*CUPER_DEV_POWER.accelMult;
+  p.maxFwd=maxFwd*CUPER_DEV_POWER.topSpeedMult;
+  p.linearDrag=drag*CUPER_DEV_POWER.dragMult;
+  scene.accel=p.accel;
+  scene.maxFwd=p.maxFwd;
+  scene.linearDrag=p.linearDrag;
+  // The dirt/asphalt surface layer caches the baseline during create(). Rebase
+  // that cache as well so it can't silently restore the Cuper's old power.
+  if(scene._tdrSurfaceBase){
+    scene._tdrSurfaceBase.accel=p.accel;
+    scene._tdrSurfaceBase.maxFwd=p.maxFwd;
+    scene._tdrSurfaceBase.linearDrag=p.linearDrag;
+  }
+  scene._cuperPowerApplied=true;
+  return true;
+}
 
 export function makeCuperPhysicsState(){
   return {yaw:0,lift:0,previousThrottle:0,slipAngle:0,
@@ -134,10 +165,18 @@ export function installCuperDrivingPhysics(RaceScene){
   if(typeof create!=='function'||typeof update!=='function')return false;
   proto.create=function(...args){
     this._cuperPhysics=makeCuperPhysicsState();
-    return create.apply(this,args);
+    this._cuperPowerApplied=false;
+    const result=create.apply(this,args);
+    // Refresh once after the real scene has resolved its garage upgrades.
+    // The road-specific speed penalties remain applied by the old controller.
+    applyCuperDevPower(this);
+    return result;
   };
   proto.update=function(time,delta){
     const shouldProcess=eligible(this);
+    // Image-native races defer create() until the photo is decoded. The power
+    // tune belongs to the completed car init, never to a loading placeholder.
+    if(shouldProcess)applyCuperDevPower(this);
     const body=shouldProcess?this.carBody:null;
     const vel=body?.body?.velocity;
     const valid=vel&&Number.isFinite(vel.x)&&Number.isFinite(vel.y);
