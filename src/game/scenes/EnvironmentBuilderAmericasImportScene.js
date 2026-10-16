@@ -124,6 +124,16 @@ export class EnvironmentBuilderScene extends Current{
   const t=this._realTrack;
   const open=t?.closed===false||t?.raceType==='stage';
   if(open){
+   // A published native photograph is already the complete road. Never
+   // rasterize the old centreline over it or draw duplicate finish stripes.
+   const native=t?.meta?.renderMode==='image-native'&&
+     t?.meta?.imageNative?.availability==='published';
+   if(native){
+     this._clearStageRaster();
+     this._realTrackG?.clear?.();this._realTrackG?.setVisible?.(false);
+     this._realTrackMarkG?.clear?.();this._realTrackMarkG?.setVisible?.(false);
+     return;
+   }
    // The old Phaser Graphics road rendered a fake closing diagonal on some
    // devices despite 2465 consecutive points. Do not call its renderer at all.
    this._realTrackG?.clear?.();this._realTrackG?.setVisible?.(false);
