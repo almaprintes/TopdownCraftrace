@@ -20,8 +20,10 @@ assert.ok(installer.includes('const spawnHeading=Math.atan2(dy,dx)') &&
   installer.includes('start:authoredSpawn'), 'Game spawn orientation must follow the centerline, not the zero-angle source placeholder');
 assert.ok(workflow.includes('_hasUnfinishedCollisionDraft(){') &&
   workflow.includes('PLUMA SIN TERMINAR') &&
-  workflow.includes('if(this._hasUnfinishedCollisionDraft())return;'),
-  'Editor should warn when the exported JSON would silently omit uncommitted pen/zone geometry');
+  workflow.includes("this._exitGuard?.backup?.('before-export-with-draft')") &&
+  workflow.includes('if(window.confirm?.(question)!==true)return;') &&
+  !workflow.includes('if(this._hasUnfinishedCollisionDraft())return;'),
+  'Editor must protect unfinished drafts, disclose omitted geometry, and allow confirmed export of valid completed walls');
 const environment=JSON.parse(content('src/game/tracks/library/karting-tenerife/karting-tenerife.environment.json'));
 assert.equal(environment.collisionZones.length,17);
 assert.equal(environment.collisionLines.length,5,
