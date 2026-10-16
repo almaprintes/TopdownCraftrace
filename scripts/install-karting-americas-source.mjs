@@ -6,6 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {shapeIsValid} from '../src/game/studio/trackShapeGeometry.js';
 import {expandCheckpointToEdges} from '../src/game/tracks/imageNativeCheckpointWidth.js';
 import {spawnUpstreamOfFinish} from '../src/game/tracks/imageNativeDriving.js';
+import {orderClosedCircuitGates} from '../src/game/tracks/closedCircuitGateOrder.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const SOURCE='src/game/tracks/library/karting-americas/source/trackstudio-image-1792095082437.tdrtrack';
 const TARGET='src/game/tracks/library/karting-americas/track.json';
@@ -40,9 +41,6 @@ function unpack(){
 function signedLoopArea(pts){
  return pts.reduce((sum,a,i)=>{const b=pts[(i+1)%pts.length];return sum+Number(a.x)*Number(b.y)-Number(b.x)*Number(a.y);},0)/2;
 }
-function flipGateNormal(g){
- return {...g,normal:g?.normal?{x:-Number(g.normal.x),y:-Number(g.normal.y)}:g?.normal};
-}
 export async function installKartingAmericas({withAssets=true}={}){
  const {t,image}=unpack();
  const area=signedLoopArea(t.centerline);
@@ -51,28 +49,29 @@ export async function installKartingAmericas({withAssets=true}={}){
  // Flip authored traversal only when necessary. Do not alter the source photo,
  // Bézier borders or user-authored Environment Studio collision lines.
  const centerline=reversedForClockwise?t.centerline.slice().reverse():t.centerline;
- const orientedFinish=reversedForClockwise?flipGateNormal(t.finishLine):t.finishLine;
+ // The editor authored a startLine, but a closed lap circuit MUST NOT publish
+ // that independent stage gate: RaceScene treats any startLine+finishLine pair
+ // as an A→B rally and never increments the lap counter.
+ // CP labels may also follow source-node order rather than finish-relative order.
+ const ordered=orderClosedCircuitGates(centerline,t.finishLine,t.checkpoints,{
+   shape:t.trackShape,expandGate:expandCheckpointToEdges,baseWidth:Number(t.trackWidth)||100
+ });
+ const {finish,checkpoints}=ordered;
  const distance=Math.max(32,Math.min(100,Number(t.trackWidth)*.60));
- const start=spawnUpstreamOfFinish(centerline,{...orientedFinish,normal:null},distance);
+ const start=spawnUpstreamOfFinish(centerline,finish,distance);
  if(!start)throw Error('Karting Américas: no se puede colocar la salida junto a meta siguiendo el trazado');
- const dot=Number(orientedFinish.normal.x)*Math.cos(start.r)+Number(orientedFinish.normal.y)*Math.sin(start.r);
- const finish=dot>=0?orientedFinish:flipGateNormal(orientedFinish);
+ const dot=Number(finish.normal.x)*Math.cos(start.r)+Number(finish.normal.y)*Math.sin(start.r);
+ if(dot<=.2)throw Error('Karting Américas: SALIDA mirando en sentido contrario');
  const normal=finish.normal;
  const finishAnchor={x:(finish.a.x+finish.b.x)/2,y:(finish.a.y+finish.b.y)/2,r:Math.atan2(normal.y,normal.x)};
- const checkpoints=(reversedForClockwise?t.checkpoints.slice().reverse():t.checkpoints).map((gate,i)=>{
-   if(!gate?.a||!gate?.b)throw Error('Karting Américas: checkpoint '+i+' inválido');
-   let widened;
-   try{widened=expandCheckpointToEdges(gate,t.trackShape);}
-   catch(error){console.warn('[karting-americas] checkpoint original conservado:',error.message);widened=gate;}
-   return reversedForClockwise?flipGateNormal(widened):widened;
- });
+ console.log('[karting-americas] ORDERED LAP GATES',JSON.stringify(ordered.diagnostics));
  const track={
    name:'KARTING AMÉRICAS',brand:'TDR',category:'Karting / Técnico',
    difficulty:'Alta',lengthLabel:'Media',surface:'Asfalto',
    worldW:W,worldH:H,trackWidth:t.trackWidth,grassMargin:t.grassMargin,
    sampleStepPx:t.sampleStepPx,cellSize:t.cellSize,shoulderPx:t.shoulderPx,
    closed:true,raceType:'circuit',raceDirection:'forward',carScale:1,
-   start:{x:start.x,y:start.y,r:start.r},grid:t.grid||null,startLine:t.startLine||null,
+   start:{x:start.x,y:start.y,r:start.r},grid:t.grid||null,startLine:null,
    finishLine:finish,finishAnchor,checkpointMode:'authored',checkpoints,
    centerline,trackShape:t.trackShape,
    meta:{...(t.meta||{}),id:'karting-americas',trackId:'karting-americas',
@@ -98,7 +97,7 @@ export async function installKartingAmericas({withAssets=true}={}){
    }
  }
  return {trackId:'karting-americas',world:[W,H],points:t.centerline.length,
-   checkpoints:checkpoints.length,tiles:tiles.length,clockwise:true,sourceReversedForClockwise:reversedForClockwise,spawnOffsetPx:start.distanceBeforeFinish,withAssets};
+   checkpoints:checkpoints.length,tiles:tiles.length,clockwise:true,sourceReversedForClockwise:reversedForClockwise,spawnOffsetPx:start.distanceBeforeFinish,gateOrder:ordered.diagnostics,withAssets};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))
  console.log('[karting-americas] OFFICIAL INSTALLED',await installKartingAmericas());
