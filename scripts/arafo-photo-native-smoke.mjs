@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {readFileSync,statSync} from 'node:fs';
 import {makeOpenStagePhotoMask} from '../src/game/tracks/openStagePhotoMask.js';
 import {describeImageNativeRace,validateImageNativeRaceDescriptor,applyImageNativeTrackPhysics} from '../src/game/tracks/imageNativeRaceLoader.js';
-import {TRACK_REGISTRY} from '../src/game/tracks/trackRegistry.js';
 const read=p=>JSON.parse(readFileSync(p,'utf8'));
 const id='rally-arafo-los-loros';
 const exact=read('src/game/tracks/library/'+id+'/trackstudio-gameTrack-exact.json');
@@ -31,11 +30,13 @@ for(const t of tiles){
 }
 assert.equal(tiles.reduce((total,t)=>total+t.width*t.height,0),1882*3344);
 assert.equal(statSync('public/'+installed.meta.imageNative.assetPath).size,1890642);
-const registered=TRACK_REGISTRY[id];
+// Registry consumes this exact JSON with import.meta.glob under Vite;
+// plain Node regression uses its authored metadata directly.
+const registered=installed;
 assert.equal(registered.closed,false);
 assert.equal(registered.startLine?.a?.x,exact.startLine.a.x);
 assert.equal(registered.trackShape?.closed,false);
-const descriptor=describeImageNativeRace(id,key=>TRACK_REGISTRY[key]);
+const descriptor=describeImageNativeRace(id,key=>key===id?registered:null);
 assert.equal(descriptor.type,'published');
 assert.equal(descriptor.tiles.length,4);
 assert.equal(validateImageNativeRaceDescriptor(descriptor),descriptor);
