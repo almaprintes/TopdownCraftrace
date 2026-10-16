@@ -61,6 +61,7 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     this._editZoomMax = 2.5;
 
     this._trackWidth = 140;
+    this._widthStep = 5; // Fine editing by default, independent of image resolution.
     this._trackWidthMin = 30;
     this._trackWidthMax = 260;
 
@@ -1887,7 +1888,7 @@ _applyZoomAtViewportCenter(multiplier) {
   this._updatePanel();
 }
   _trackWidthStep() {
-    return trackStudioWidthStep(this._imageCanvas, this._trackWidthMax);
+    return trackStudioWidthStep(this._imageCanvas, this._trackWidthMax, this._widthStep);
   }
   _changeTrackWidth(delta) {
     const next=Phaser.Math.Clamp(this._trackWidth+delta,this._trackWidthMin,this._trackWidthMax);
