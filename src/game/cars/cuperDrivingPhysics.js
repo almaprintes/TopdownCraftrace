@@ -74,14 +74,17 @@ export function stepCuperDrivingPhysics(state,frame,dt){
   // Only lifting or braking introduces a small, deliberately bounded scrub.
   const slipRatio=clamp(Math.abs(side)/Math.max(35,speed),0,1);
   const coastFactor=(1-throttle)*(1-throttle);
-  const scrubRatio=clamp((.018*load+.025*slipRatio)*coastFactor,0,.045);
+  // Exponential, time-normalized scrub: the previous per-frame percentage
+  // multiplied at 60 Hz and 30 Hz differently, making low-FPS driving slower.
+  const scrubRate=(.08*load+.12*slipRatio)*coastFactor;
+  const scrubRatio=1-Math.exp(-scrubRate*dt);
   const reducedForward=forward;
   let outVx=fx*reducedForward+rx*side;
   let outVy=fy*reducedForward+ry*side;
   const outSpeed=Math.hypot(outVx,outVy);
   if(outSpeed>1e-6){
-    // Exactly preserve the base motor's speed on full gas; otherwise bleed at
-    // most 4.5% while heavily sliding without throttle. Never accelerate past
+    // Exactly preserve the base motor's speed on full gas; otherwise allow a
+    // mild time-normalized scrub while sliding without throttle. Never exceed
     // the speed produced by the existing engine, collisions or surface system.
     const desiredSpeed=speed*(1-scrubRatio);
     const k=desiredSpeed/outSpeed;
