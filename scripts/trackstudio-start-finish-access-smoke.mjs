@@ -42,13 +42,32 @@ try{
     _toggleClosed(){this._isClosed=!this._isClosed;},
     _autosaveRecovery(){this._autosaves++;}
   };
+  scene._rightPanelW=280;
+  scene._panelActionsY=302;
+  scene._nodes=[{x:100,y:200}];
+  scene._selectedNode=-1;
+  scene._selectedPiano=-1;
+  scene._shapeEditing=false;
+  scene._deleteSelectedNode=()=>{scene._nodes=[];scene._selectedNode=-1;scene._deleted=true;};
+  scene._updatePanel=()=>{};
   const gate=installTrackStudioGateControls(scene);
   assert.ok(gate);
   assert.equal(gate.start.textContent,'SALIDA');
   assert.equal(gate.finish.textContent,'META');
   assert.ok(gate.start.style.cssText.includes('min-height:44px'),'Both gate buttons must have >=44px touch targets');
   assert.ok(body.children.includes(gate.root),'Gate controls need to be visible in actual DOM');
-  assert.ok(Number.parseFloat(gate.root.style.top)>Number.parseFloat(gate.root.style.left)*0.6,'Gate strip should anchor inside viewport');
+  const canvasLeft=50;
+  const viewportRight=canvasLeft+scene._viewX+scene._viewW;
+  assert.ok(Number.parseFloat(gate.root.style.left)>=viewportRight,'All drawing tools must be docked outside the map viewport');
+  assert.equal(Number.parseFloat(gate.root.style.top),100+scene._panelActionsY+34,'Dock must anchor to ACCIONES in the inspector');
+  assert.ok(gate.root.style.cssText.includes('overflow-y:auto'),'Short landscape screens must be able to scroll tools');
+  assert.deepEqual(Object.keys(gate.buttons),['edit','pen','start','finish','checkpoint','piano']);
+  assert.ok(Object.values(gate.buttons).every(b=>b.style.cssText.includes('min-height:44px')),'All six modes need usable touch targets');
+  assert.equal(gate.buttons.pen.textContent,'PLUMA');
+  assert.equal(gate.buttons.checkpoint.textContent,'CONTROL');
+  gate.buttons.pen.fire('click');
+  assert.equal(scene._tool,'pen');
+  assert.equal(gate.buttons.pen.attrs['aria-pressed'],'true','Active mode is visible');
   assert.equal(gate.status.textContent,'Salida —  ·  Meta —');
 
   assert.equal(gate.start.fire('click'),true);
@@ -68,6 +87,12 @@ try{
   assert.equal(scene._finishLine.a.x,700);
   scene._setTool('edit');
   assert.equal(gate.status.textContent,'Salida ✓  ·  Meta ✓');
+  scene._selectedNode=0;
+  scene._updatePanel();
+  assert.equal(gate.remove.style.display,'block','Delete is contextual, not floating over the road');
+  gate.remove.fire('click');
+  assert.equal(scene._deleted,true);
+  assert.equal(gate.remove.style.display,'none');
   scene._newProject();
   assert.equal(gate.status.textContent,'Salida —  ·  Meta —');
 
@@ -80,4 +105,4 @@ try{
  if(oldDoc===undefined)delete globalThis.document;else globalThis.document=oldDoc;
  if(oldWindow===undefined)delete globalThis.window;else globalThis.window=oldWindow;
 }
-console.log('TRACK STUDIO SALIDA/META OK: visible >=44px touch buttons, stage and normal tool menu, independent authored lines, recovery, round-trip, cleanup.');
+console.log('TRACK STUDIO PANEL OK: six labelled 44px tools docked outside map, responsive scrolling, gates, contextual delete, recovery, cleanup.');
