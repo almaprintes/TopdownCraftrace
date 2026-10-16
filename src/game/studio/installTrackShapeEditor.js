@@ -1,4 +1,4 @@
-import {createTrackShape,shapeIsValid,sampleShapeEdge,splitShapeEdge,moveShapePart,copyTrackShape} from './trackShapeGeometry.js';
+import {createTrackShape,shapeIsValid,sampleShapeEdge,splitShapeEdge,moveShapePart,copyTrackShape,nodeRoadWidth,adjustShapeWidthAtNode} from './trackShapeGeometry.js';
 import {pickShapeTarget} from './shapeTouchInteraction.js';
 import {EDITOR_CONTROL_PIXELS,worldControlRadius} from './trackStudioControlGeometry.js';
 import {createShapeDomInspector,shapeInspectorCopy,studioInspectorCopy} from './shapeDomInspector.js';
@@ -108,6 +108,48 @@ function insertNode(s){
 }
 export function installTrackStudioShapeEditor(s){
   s._trackShape=null;s._shapeEditing=false;s._shapeSelected=null;
+  // A selected centerline node (or a corresponding border control) may
+  // override the base road width. This applies to editor and exported shape.
+  s._selectedWidthNodeIndex=()=>{
+    if(s._selectedNode>=0&&s._selectedNode<s._nodes.length)return s._selectedNode;
+    if(!s._shapeEditing||!s._shapeSelected||!shapeIsValid(s._trackShape))return -1;
+    const edge=s._trackShape[s._shapeSelected.side];
+    const anchor=edge?.[s._shapeSelected.index];
+    if(!anchor)return -1;
+    if(Number.isInteger(anchor.sourceNodeIndex)&&anchor.sourceNodeIndex>=0&&anchor.sourceNodeIndex<s._nodes.length)return anchor.sourceNodeIndex;
+    if(edge.length===s._nodes.length)return s._shapeSelected.index;
+    // Historic subdivided outlines contain no source IDs: map by the
+    // closest actual centerline anchor rather than reordering the edges.
+    let idx=-1,dist=Infinity;
+    for(let i=0;i<s._nodes.length;i++){
+      const n=s._nodes[i],d=Math.hypot(anchor.x-n.x,anchor.y-n.y);
+      if(d<dist){dist=d;idx=i;}
+    }
+    return idx;
+  };
+  s._setLocalNodeWidth=(value)=>{
+    const index=s._selectedWidthNodeIndex(),n=s._nodes[index];
+    if(!n)return false;
+    const original=nodeRoadWidth(n,s._trackWidth);
+    const next=value===null?s._trackWidth:Math.max(s._trackWidthMin||30,
+      Math.min(s._trackWidthMax||1600,Math.round(Number(value))));
+    if(!Number.isFinite(next)||Math.abs(next-original)<1e-8)return false;
+    // Prevent a local change from replacing manually edited outlines.
+    if(s._trackShape&&!shapeIsValid(s._trackShape)){
+      s._flashMessage?.('Contorno inválido: corrige los bordes antes de ajustar ancho');
+      return false;
+    }
+    s._pushHistory();
+    if(s._trackShape && !adjustShapeWidthAtNode(s._trackShape,s._nodes,index,next-original)){
+      s._flashMessage?.('No se pudo actualizar el contorno');
+      return false;
+    }
+    if(value===null||next===s._trackWidth)delete n.width;
+    else n.width=next;
+    s._autosaveRecovery();
+    s._redrawEditor();s._updatePanel();
+    return true;
+  };
   let gridOn=null,gridOff=null;
   const refreshGridToggle=()=>{
     gridOn?.setVisible(s._showStartingGrid !== false);
