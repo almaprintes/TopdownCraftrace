@@ -53,7 +53,7 @@ const scene=render(classicArafo);
 const photo = render({ ...arafo, trackKey:'karting-tenerife-studio' });
 for (const key of ['_premiumShoulder','_edgeProbe','_cornerCurbs','_longitudinalAsphaltWear']) {
   assert.equal(photo[key],undefined, key+' must not be generated over the source photograph');
-  assert.equal(nativeArafo[key],undefined,key+' may not cover the owner's rally photograph');
+  assert.equal(nativeArafo[key],undefined,key+" may not cover the owner's rally photograph");
 }
 for (const key of ['_premiumShoulder', '_edgeProbe', '_cornerCurbs']) {
   const segments = scene[key].segments;
