@@ -9,7 +9,7 @@ assert.ok(file.subarray(0,magic.length).equals(magic),'No es un paquete TDR-IMAG
 const end=file.indexOf(10,magic.length);
 assert.ok(end>magic.length&&end<100,'Longitud JSON de cabecera ausente');
 const lengthText=file.subarray(magic.length,end).toString('ascii');
-assert.match(lengthText,/^\\d+$/,'Longitud JSON de cabecera inválida');
+assert.match(lengthText,/^[0-9]+$/,'Longitud JSON de cabecera inválida');
 const jsonSize=Number(lengthText);
 assert.ok(jsonSize>0&&jsonSize<20_000_000&&end+1+jsonSize<file.length,'JSON interno fuera del paquete');
 const project=JSON.parse(file.subarray(end+1,end+1+jsonSize).toString('utf8'));
