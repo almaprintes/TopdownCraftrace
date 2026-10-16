@@ -6,14 +6,16 @@ import sharp from 'sharp';
 const read=p=>JSON.parse(readFileSync(p,'utf8'));
 const draft=read('public/assets/tracks/karting-canarias/photo-staging.json');
 const live=read('src/game/tracks/library/karting-canarias/track.json');
-assert.equal(draft.status,'staged-not-active');
+assert.equal(draft.status,'published-native','Approved 2048x3072 photo is active only with the owner road geometry');
 assert.equal(draft.trackId,'karting-canarias');
 assert.deepEqual([draft.imageWidth,draft.imageHeight],[2048,3072]);
 assert.equal(draft.tiles.length,4);
-assert.notEqual(live.meta?.renderMode,'image-native',
-  'Do not activate photo-native until Karting Canarias physics and borders match the new photo');
-assert.equal(live.worldW,2000,'Do not replace playable geometry before its photo-native QA');
-assert.equal(live.worldH,4300,'Do not replace playable geometry before its photo-native QA');
+assert.equal(live.meta?.renderMode,'image-native','New Karting Canarias must use exactly the authored photo');
+assert.deepEqual([live.worldW,live.worldH],[2048,3072]);
+assert.equal(live.meta.imageNative.assetPath,draft.assetPath);
+assert.equal(live.meta.imageNative.tiles.length,draft.tiles.length);
+for(const [i,t] of draft.tiles.entries()) assert.deepEqual(live.meta.imageNative.tiles[i],
+ {x:t.x,y:t.y,width:t.width,height:t.height,assetPath:t.assetPath});
 const digest=p=>createHash('sha256').update(readFileSync('public/'+p)).digest('hex');
 assert.equal(digest(draft.assetPath),draft.sourceSha256);
 const master=await sharp('public/'+draft.assetPath).metadata();
@@ -31,4 +33,4 @@ for(const [i,t] of draft.tiles.entries()){
   let diff=0;for(let j=0;j<a.length;j++)diff+=Math.abs(a[j]-b[j]);
   assert.ok(diff/a.length<6,'Photo tile differs from master beyond WebP compression tolerance: '+t.assetPath);
 }
-console.log('Karting Canarias staged photo: 2048x3072, 4 quadrants and SHA256+pixel comparison verified; playable legacy geometry retained');
+console.log('Karting Canarias published photo: 2048x3072, 4 exact WebP quadrants, SHA256 + pixel seams and owner-native geometry verified');
