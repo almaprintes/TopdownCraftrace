@@ -7,6 +7,7 @@ import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
 import { installTrackStudioShapeEditor } from '../studio/installTrackShapeEditor.js';
 import { trackStudioWidthStep } from '../studio/trackStudioWidthRange.js';
 import { EDITOR_CONTROL_PIXELS, worldControlRadius, pickCenterlineControl } from '../studio/trackStudioControlGeometry.js';
+import { interpolateRoadWidth } from '../studio/trackShapeGeometry.js';
 import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
 import { installTrackStudioGateControls } from '../studio/trackStudioGateControls.js';
 import { createPenAnchor, penGestureIsCurve, updatePenAnchorFromDrag } from '../studio/trackStudioPenTool.js';
@@ -2035,7 +2036,7 @@ if (Phaser.Math.Distance.Between(x, y, p.b.x, p.b.y) < R_HANDLE) {
 
     const pts = [];
     const segCount = this._isClosed ? count : count - 1;
-
+    const variableWidth = this._nodes.some(n=>Number.isFinite(n.width) && n.width>0);
     for (let i = 0; i < segCount; i++) {
       const a = this._nodes[i];
       const b = this._nodes[(i + 1) % count];
@@ -2047,7 +2048,10 @@ if (Phaser.Math.Distance.Between(x, y, p.b.x, p.b.y) < R_HANDLE) {
         { x: b.x, y: b.y },
         28
       );
-
+      if(variableWidth){
+        // Width interpolation uses the same Bezier t samples as the editor road.
+        seg.forEach((p,k)=>{p.width=interpolateRoadWidth(a,b,k/28,this._trackWidth);});
+      }
       if (i > 0 && !(this._isClosed && i === segCount - 1)) {
         seg.shift();
       }
@@ -2060,7 +2064,7 @@ if (Phaser.Math.Distance.Between(x, y, p.b.x, p.b.y) < R_HANDLE) {
       const last = pts[pts.length - 1];
 
       if (first.x !== last.x || first.y !== last.y) {
-        pts.push({ x: first.x, y: first.y });
+        pts.push(first.width===undefined?{ x:first.x,y:first.y }:{ x:first.x,y:first.y,width:first.width });
       }
     }
 
@@ -2097,7 +2101,7 @@ if (Phaser.Math.Distance.Between(x, y, p.b.x, p.b.y) < R_HANDLE) {
 
       const nx = -ty;
       const ny = tx;
-      const half = width * 0.5;
+      const half = (Number.isFinite(pCurr.width)&&pCurr.width>0?pCurr.width:width) * 0.5;
 
       left.push({
         x: pCurr.x - nx * half,
@@ -2679,7 +2683,7 @@ _exportToGameTrack() {
     centerline: points.map((p) => ({
       x: Math.round(p.x),
       y: Math.round(p.y),
-      width: this._trackWidth
+      width: Number.isFinite(p.width)&&p.width>0?p.width:this._trackWidth
     })),
 
     startLine,
@@ -2974,7 +2978,8 @@ const data = {
       return {
         x: Number(p.x), y: Number(p.y),
         handleIn: { x: Number(p.x) - dx * h, y: Number(p.y) - dy * h },
-        handleOut: { x: Number(p.x) + dx * h, y: Number(p.y) + dy * h }
+        handleOut: { x: Number(p.x) + dx * h, y: Number(p.y) + dy * h },
+        ...(Number.isFinite(p.width)&&p.width>0?{width:Number(p.width)}:{})
       };
     });
   }
