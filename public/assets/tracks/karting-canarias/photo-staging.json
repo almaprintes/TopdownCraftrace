@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "trackId": "karting-canarias",
+  "status": "staged-not-active",
+  "imageWidth": 2048,
+  "imageHeight": 3072,
+  "source": "Owner-uploaded upscaled Karting Canarias image 2026-10-16",
+  "assetPath": "assets/tracks/karting-canarias/karting-canarias-new.webp",
+  "sourceSha256": "4472ddf772300318555aad8814ff47da70a759879cca68e66a9f0ca72cac72d2",
+  "tiles": [
+    {
+      "assetPath": "assets/tracks/karting-canarias/photo-0-0.webp",
+      "x": 0,
+      "y": 0,
+      "width": 1024,
+      "height": 1536,
+      "sha256": "a8b2be56dcb59ad41a3e000b87596e9e4914e23abc3219fadaf9ae1e99625cdb"
+    },
+    {
+      "assetPath": "assets/tracks/karting-canarias/photo-0-1.webp",
+      "x": 1024,
+      "y": 0,
+      "width": 1024,
+      "height": 1536,
+      "sha256": "a6fa4803a616935188c1d776129b27916b73f5827ac182c13030a7af6ae9a7eb"
+    },
+    {
+      "assetPath": "assets/tracks/karting-canarias/photo-1-0.webp",
+      "x": 0,
+      "y": 1536,
+      "width": 1024,
+      "height": 1536,
+      "sha256": "7251dcb67cf72ed745ca7dc287190100f12e547f6861d383aee6ecff67909c81"
+    },
+    {
+      "assetPath": "assets/tracks/karting-canarias/photo-1-1.webp",
+      "x": 1024,
+      "y": 1536,
+      "width": 1024,
+      "height": 1536,
+      "sha256": "8f8680b1ab3db8b1b41ad9592677bb2f405e6acc072eb37049105f5b0ecdeeb7"
+    }
+  ]
+}

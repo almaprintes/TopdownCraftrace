@@ -47,6 +47,7 @@ jobs:
           node scripts/santa-cruz-official-source-smoke.mjs
           node scripts/karting-official-source-smoke.mjs
           node scripts/karting-native-photo-visual-smoke.mjs
+          node scripts/karting-canarias-photo-staging-smoke.mjs
           node scripts/ios-photo-thermal-budget-smoke.mjs
           node scripts/karting-final-environment-smoke.mjs
           node scripts/environment-studio-native-photo-smoke.mjs
