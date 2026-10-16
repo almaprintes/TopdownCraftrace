@@ -21,7 +21,7 @@ assert.equal(image.length,project.imageAsset.size);
 const sha256=x=>createHash('sha256').update(x).digest('hex');
 assert.equal(sha256(image),'4472ddf772300318555aad8814ff47da70a759879cca68e66a9f0ca72cac72d2',
   'Game image must match the exact WebP embedded in the owner source');
-const original=Buffer.concat([Buffer.from('TDR-IMAGE-PROJECT-V1\\n'+raw.length+'\\n'),raw,image]);
+const original=Buffer.concat([Buffer.from('TDR-IMAGE-PROJECT-V1\n'+raw.length+'\n'),raw,image]);
 assert.equal(sha256(original),'b7635ba709e8af0f4634ad5b54374ba064bd620c585cf0499a4223381878d297',
   'Archive metadata and published image must reconstruct the exact uploaded .tdrtrack');
 const mask=makeKartingShapeMask(t.trackShape,t.worldW,t.worldH);
