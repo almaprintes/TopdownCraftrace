@@ -71,6 +71,7 @@ jobs:
           node scripts/mastery-roof-calibration-smoke.mjs
           node scripts/mastery-roof-hold-repeat-smoke.mjs
           node scripts/environment-karting-americas-import-smoke.mjs
+          node scripts/karting-americas-source-inspect.mjs
           node scripts/cuper-season-smoke.mjs
           node scripts/cuper-skins-smoke.mjs
           node scripts/cuper-workshop-skin-smoke.mjs
