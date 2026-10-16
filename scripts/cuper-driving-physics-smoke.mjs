@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
-  CUPER_PHYSICS_VERSION,makeCuperPhysicsState,
+  CUPER_PHYSICS_VERSION,CUPER_DEV_POWER,applyCuperDevPower,makeCuperPhysicsState,
   stepCuperDrivingPhysics,installCuperDrivingPhysics
 } from '../src/game/cars/cuperDrivingPhysics.js';
 
-assert.equal(CUPER_PHYSICS_VERSION,'cuper-dev-2');
+assert.equal(CUPER_PHYSICS_VERSION,'cuper-dev-3');
+assert.equal(CUPER_DEV_POWER.accelMult,1.50);
+assert.equal(CUPER_DEV_POWER.topSpeedMult,1.20);
+assert.equal(CUPER_DEV_POWER.dragMult,0.65);
 const direct=makeCuperPhysicsState();
 const basic={vx:280,vy:0,preVx:280,preVy:0,angle:0,
   steer:0,throttle:1,brake:0,maxSpeed:780,accel:760,surfaceGrip:1};
@@ -64,7 +67,7 @@ class FakeRace {
     this._surface='TRACK';
     this.touch={steer:.95,throttle:.9,brake:0};
     this.keys={};
-    this.carParams={maxFwd:780,accel:760};
+    this.carParams={maxFwd:780,accel:760,linearDrag:.032};
     this.carBody={scene:true,rotation:0,body:{velocity:{x:290,y:0}}};
     this.carRig={scene:true,rotation:0};
     return 'created';
@@ -90,8 +93,15 @@ for(const carId of ['crown_axis','crown_vector','helix_spark']){
   assert.equal(car.carBody.body.velocity.y,old.vy);
   assert.equal(car.carBody.rotation,old.rotation);
   assert.equal(car._cuperPhysics?.active,false);
+  assert.deepEqual(car.carParams,{maxFwd:780,accel:760,linearDrag:.032},
+    'Other cars never receive Cuper experimental engine tuning');
 }
 const cuper=new FakeRace();assert.equal(cuper.create({carId:'crown_cuper'}),'created');
+assert.ok(Math.abs(cuper.carParams.accel-1140)<.001,'Launch acceleration must be substantially stronger');
+assert.ok(Math.abs(cuper.carParams.maxFwd-936)<.001,'Top speed ceiling must exceed original');
+assert.ok(Math.abs(cuper.carParams.linearDrag-.0208)<1e-8,'The extra power should not be eaten by legacy passive drag');
+assert.equal(applyCuperDevPower(cuper),false,'The tuning must not stack on repeat calls');
+assert.equal(cuper.carParams.accel,1140);
 assert.equal(cuper.update(0,16.667),'base-update');
 assert.ok(cuper._cuperPhysics.active,'Cuper must receive the experimental solver');
 assert.ok(Math.hypot(cuper.carBody.body.velocity.x,cuper.carBody.body.velocity.y)<=290+1e-8);
@@ -99,6 +109,13 @@ assert.notEqual(cuper.carBody.body.velocity.y,old.vy,'Cuper gets different later
 assert.equal(cuper.carRig.rotation,cuper.carBody.rotation,'Visual rig follows corrected heading');
 cuper.create({carId:'crown_cuper'});
 assert.equal(cuper._cuperPhysics.active,false,'New session resets accumulated slip');
+assert.equal(cuper.carParams.accel,1140,'Re-entering a race must NOT compound engine multipliers');
+const withSurface={carId:'crown_cuper',carParams:{accel:800,maxFwd:600,linearDrag:.03},
+ _tdrSurfaceBase:{accel:800,maxFwd:600,linearDrag:.03}};
+assert.equal(applyCuperDevPower(withSurface),true);
+assert.equal(withSurface._tdrSurfaceBase.accel,1200,'Surface physics must inherit the correct Cuper baseline');
+assert.equal(withSurface._tdrSurfaceBase.maxFwd,720);
+assert.equal(withSurface._tdrSurfaceBase.linearDrag,.03*.65);
 for(const flag of [{_raceStarted:false},{_tdrEmbeddedReplay:true},
   {_tdrHandbrake:true},{_tdrStatsReplay:{playing:true}},{_sessionFinalizing:true}]){
   const car=new FakeRace();car.create({carId:'crown_cuper'});
