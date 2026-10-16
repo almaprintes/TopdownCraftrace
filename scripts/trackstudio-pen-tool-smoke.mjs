@@ -27,9 +27,10 @@ assert.deepEqual(tap,second,'Tapping preserves corner geometry');
 assert.equal(JSON.stringify(second),original,'Pure model never mutates the original point');
 assert.throws(()=>createPenAnchor(Infinity,2));
 const scene=readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
+const palette=readFileSync('src/game/studio/trackStudioGateControls.js','utf8');
 for(const requirement of [
-  "this._penBtn = this._makeIconButton",
-  "this._setTool('pen')",
+  "installTrackStudioGateControls(this)",
+  "_setTool(tool) {",
   "if(this._tool==='pen' && !this._shapeEditing)",
   "this._penGesture={",
   "const curved=penGestureIsCurve(g.startScreen",
@@ -41,7 +42,7 @@ for(const requirement of [
   "this._sampleCubicBezier(prev,prev.handleOut,candidate.handleIn,candidate,24)",
   "this._cancelPenGesture();\n    if(tool==='pen' && this._shapeEditing)"
 ])assert.ok(scene.includes(requirement),'Missing pen workflow: '+requirement);
-assert.ok(scene.includes("paintCircle(this._penBtn, this._tool === 'pen'"),'Pen selection must be visible');
+assert.ok(palette.includes("make('pen','PLUMA')") && palette.includes("btn.setAttribute('aria-pressed',String(chosen))"),'Pen selection must be visible in the dock');
 assert.ok(scene.includes("this._penPreviewGfx"),'Interactive curve preview must be rendered separately');
 assert.ok(scene.includes("this._gestureWasMultiTouch=true;"),'Multitouch cancels pen and retains pinch');
 console.log('TrackStudio PL: straight corners, drag-to-curve symmetry, preview, undo/autosave, pinch cancel, editable original geometry: OK');
