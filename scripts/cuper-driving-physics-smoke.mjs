@@ -5,7 +5,7 @@ import {
   stepCuperDrivingPhysics,installCuperDrivingPhysics
 } from '../src/game/cars/cuperDrivingPhysics.js';
 
-assert.equal(CUPER_PHYSICS_VERSION,'cuper-dev-1');
+assert.equal(CUPER_PHYSICS_VERSION,'cuper-dev-2');
 const direct=makeCuperPhysicsState();
 const basic={vx:280,vy:0,preVx:280,preVy:0,angle:0,
   steer:0,throttle:1,brake:0,maxSpeed:780,accel:760,surfaceGrip:1};
@@ -23,6 +23,7 @@ const corner={vx:speed*Math.cos(theta),vy:speed*Math.sin(theta),
 stepCuperDrivingPhysics(turn,corner,1/60);
 assert.ok(turn.vx>0&&turn.vy>=0,'Forward motion remains finite and correctly oriented');
 assert.ok(Math.hypot(turn.vx,turn.vy)<=speed+1e-8,'Tyre dynamics must not add kinetic energy');
+assert.ok(Math.hypot(turn.vx,turn.vy)>speed*.999,'Strong throttle must retain base speed through corners');
 assert.ok(turn.slipAngle>.005,'Cornering must retain some lateral inertia');
 assert.ok(Number.isFinite(turn.angle));
 
@@ -32,6 +33,8 @@ assert.ok(turn.lift>0,'Throttle lift builds forward load transfer');
 assert.ok(turn.yaw>0,'Right steering + loaded rear produces progressive yaw');
 assert.ok(Math.abs(turn.angle-braking.angle)<.011,'Supplemental yaw stays bounded');
 assert.ok(turn.slipAngle>=0&&turn.slipAngle<Math.PI/2);
+const liftingSpeed=Math.hypot(turn.vx,turn.vy);
+assert.ok(liftingSpeed>speed*.94,'Lift-off scrub must never cause artificial heavy braking');
 
 function coastAt(hz){
   const s=makeCuperPhysicsState();
