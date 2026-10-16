@@ -1,8 +1,8 @@
-# Circuito desértico — fuente Track Studio x2.5 (borrador)
+# Karting Américas — fuente Track Studio x2.5 (borrador)
 
 **Estado: esperando el paquete binario original para habilitar la edición de colisiones.**
 
-Esta carpeta es el destino del circuito nuevo trazado por el propietario en Track Studio. No sustituye ningún circuito del juego, no activa rankings y no debe aparecer como pista pública mientras se trabaja con Environment Studio.
+Esta carpeta guarda el proyecto fuente del **Karting Américas**, trazado por el propietario en Track Studio. No sustituye ningún circuito del juego, no activa rankings y no debe aparecer como pista pública mientras se trabaja con Environment Studio.
 
 ## Subir este archivo
 
@@ -18,6 +18,6 @@ El paquete ya se entregó en ChatGPT. Debe subirse **íntegro, sin convertirlo a
 - Imagen integrada PNG: 14.286.730 bytes
 - SHA-256 del paquete esperado: `dbd1f8841af860ece78be3ffa847502c03dac974c7c63190672b0bc590aa0fef`
 
-Tras subir el paquete y verificar su SHA, el siguiente paso es registrar una pista **solo DEV / privada**, instalar la imagen 1:1 y preparar el fichero `desert-trackstudio-draft.environment.json` con colisiones inicialmente vacías para editarlas. No se deben generar barreras automáticamente: el propietario colocará cada colisión en Environment Studio.
+Tras subir el paquete y verificar su SHA, el siguiente paso es registrar una pista **solo DEV / privada**, instalar la imagen 1:1 y preparar el fichero `karting-americas.environment.json` con colisiones inicialmente vacías para editarlas. No se deben generar barreras automáticamente: el propietario colocará cada colisión en Environment Studio.
 
 **IMPORTANTE:** esta carpeta por sí sola no significa que el circuito esté ya cargado ni disponible para editar colisiones. Las pistas activas en `src/game/tracks/library/*/track.json` permanecen intactas.

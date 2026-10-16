@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "status": "awaiting-binary-upload",
-  "trackId": "desert-trackstudio-draft",
+  "trackId": "karting-americas",
   "filename": "trackstudio-image-1792095082437_x2.5.tdrtrack",
   "format": "TDR-IMAGE-PROJECT-V1",
   "expectedSha256": "dbd1f8841af860ece78be3ffa847502c03dac974c7c63190672b0bc590aa0fef",
@@ -14,5 +14,6 @@
   "checkpoints": 2,
   "closed": true,
   "isPublic": false,
-  "collisionEditing": "pending-source"
+  "collisionEditing": "pending-source",
+  "trackName": "Karting Américas"
 }
