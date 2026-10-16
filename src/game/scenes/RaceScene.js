@@ -7,6 +7,7 @@ import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
 import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
+import { raceCameraZoomTarget } from '../tracks/raceCameraZoom.js';
 import { crossesDirectedFinishGate } from '../tracks/closedCircuitGateOrder.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
@@ -4442,9 +4443,13 @@ const kmh = speed * KMH_PER_PXSEC;
 {
   const speed01 = Phaser.Math.Clamp(kmh / this._zoomKmhRef, 0, 1);
 
-  const targetZoom =
+  // Track-only framing: keep the entire existing speed-dependent camera curve.
+  // Do not scale vehicles, roads, collision geometry or the photographic canvas.
+  const targetZoom = raceCameraZoomTarget(
+    this.trackKey,
     this._zoomGameplayMax -
-    (this._zoomGameplayMax - this._zoomGameplayMin) * speed01;
+      (this._zoomGameplayMax - this._zoomGameplayMin) * speed01
+  );
 
   this._zoomCurrent = Phaser.Math.Linear(
     this._zoomCurrent ?? this.zoom,
