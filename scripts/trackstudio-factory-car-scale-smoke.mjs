@@ -53,7 +53,13 @@ const baseRadius=14,visualMultiplier=1.35,v=helix.visualScale;
 assert.equal(Math.round(baseRadius*v*record.track.carScale),14,'Factory hitbox is restored');
 assert.ok(Math.abs(96*v*visualMultiplier*record.track.carScale-129.6)<1e-9,'Factory sprite width target is restored');
 const race=readFileSync('src/game/scenes/RaceScene.js','utf8');
-assert.ok(race.includes('body.setCircle(Math.round(baseRadius * vScale * trackCarScale));'));
+assert.ok(race.includes('body.setCircle(Math.round(baseRadius * collisionScale * trackCarScale));'));
+assert.ok(race.includes('const collisionScale = Number(specFinal?.collisionScale ?? vScale);'),
+  'Purely cosmetic exported resizing cannot modify the physical hitbox');
+assert.equal(CAR_SPECS.crown_cuper.visualScale,1.1);
+assert.equal(CAR_SPECS.crown_cuper.collisionScale,1.03);
+assert.equal(CAR_SPECS.veloce_juanicar_c220.visualScale,1.2);
+assert.equal(CAR_SPECS.veloce_juanicar_c220.collisionScale,1.08);
 assert.ok(race.includes('const TARGET_W = 96 * vScale * VISUAL_SCALE_MULT * trackCarScale;'));
 assert.ok(race.includes('this.carParams = resolveCarParams(this.baseSpec, this.tuning);'));
 assert.ok(!race.includes('imageNativeDrivingProfile'),'No tuning overrides allowed');
