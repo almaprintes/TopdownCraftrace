@@ -46,7 +46,7 @@ export function validateImageNativeRaceDescriptor(desc){
     Number(track?.worldW)!==Number(width)*scale||
     Number(track?.worldH)!==Number(height)*scale||
     !dimension(Number(track?.worldW))||!dimension(Number(track?.worldH)))
-    throw Error('La escala del mundo y la fotografía no coinciden');
+    throw Error('La escala del mundo y la fotografía no coinciden: se requiere 1:1 salvo la ampliación publicada de Karting Canarias');
   if(!shapeIsValid(track?.trackShape))throw Error('Faltan bordes Bézier válidos');
   // Accept both topology types, but never turn an open rally into a ring:
   // its road mask is assembled from adjacent Bézier strips only.
