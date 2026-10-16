@@ -42,3 +42,15 @@ No existe archivo `rally-arafo-los-loros.environment.json` ni otra decoración/c
 - Solo se integran los datos y la fotografía aportados por el propietario. No hay barreras ni decoraciones adicionales versionadas para Arafo y no se han fabricado colisiones físicas nuevas.
 - Pruebas: `scripts/arafo-photo-native-smoke.mjs` y `scripts/rally-open-stage-visual-smoke.mjs`, ejecutadas en CI antes de publicar. Prueba manual en dispositivo pendiente de confirmación por el propietario.
 - Google Play Android sin modificación. Solo web DEV.
+
+## DEV 1.2.239 — corrección de cuadrantes de la fotografía (16 Oct 2026)
+
+El propietario mostró en carrera una costura vertical incompatible entre parcelas y asfalto. Inspección de los cuatro WebP originales publicados confirmó que la nomenclatura del ZIP es `photo-FILA-COLUMNA.webp`, mientras que el metadata de `track.json` interpretaba erróneamente el segundo índice como la FILA.
+
+Se corrigieron **solo** las coordenadas de publicación del segundo y tercer cuadrante:
+- `photo-0-0.webp`: (0, 0)
+- `photo-0-1.webp`: (941, 0), **antes (0, 1672)**
+- `photo-1-0.webp`: (0, 1672), **antes (941, 0)**
+- `photo-1-1.webp`: (941, 1672)
+
+No se rotaron, recortaron ni renombraron los WebP, ni se alteraron los 2241 puntos, salidas/metas, colisiones, comportamientos o coordenadas de físicas. El renderizador foto-nativo posiciona cada mosaico usando `tile.x` y `tile.y` mediante `setOrigin(0,0)`. `scripts/arafo-photo-native-smoke.mjs` incluye ahora un mapa de coordenadas por nombre y una verificación del contenido de las cuatro costuras mediante píxeles decodificados con Sharp. No volver a confiar solo en tamaño y nombre para cuadrantes.
