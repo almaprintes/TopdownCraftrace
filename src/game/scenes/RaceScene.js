@@ -8,6 +8,7 @@ import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
 import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { raceCameraZoomTarget } from '../tracks/raceCameraZoom.js';
+import {nextArafoThrottleHeld,arafoRallyDrivePace} from '../tracks/arafoRallyDrivePace.js';
 import { crossesDirectedFinishGate } from '../tracks/closedCircuitGateOrder.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
@@ -3688,7 +3689,7 @@ this._onTrack = onTrack;
 this._surface = surface;
 // Params (por si init no llegó a setearlos aún)
 let accel = this.accel ?? 0;
-const brakeForce = this.brakeForce ?? 0;
+let brakeForce = this.brakeForce ?? 0;
 const longitudinalResponse = clamp(Number(this.carParams?.longitudinalResponse ?? 1), 0.05, 1);
 const linearDrag = (this.linearDrag ?? 0) * (down ? 1 : longitudinalResponse);
 const engineBrake = this.engineBrake ?? 0; // <- IMPORTANTE (evita "engineBrake is not defined")
@@ -3699,6 +3700,20 @@ let maxRev = this.maxRev ?? 1;
 
 let turnRate = this.turnRate ?? 0;
 const turnMin = this.turnMin ?? 0.1;
+
+// Gentle mountain-road pace applies only to the Arafo stage. Keep the actual
+// vehicle spec, upgrades and all other tracks unchanged. Touch gas is digital:
+// held duration ramps in acceleration, not an invented analog pressure input.
+this._arafoThrottleHeldSeconds = nextArafoThrottleHeld(
+  this.trackKey, this._arafoThrottleHeldSeconds, up && !down, dt
+);
+const arafoDrive = arafoRallyDrivePace(
+  this.trackKey, {accel,maxFwd,maxRev,brakeForce}, this._arafoThrottleHeldSeconds
+);
+accel=arafoDrive.accel;
+maxFwd=arafoDrive.maxFwd;
+maxRev=arafoDrive.maxRev;
+brakeForce=arafoDrive.brakeForce;
 
 // =========================
 // SURFACE PHYSICS
