@@ -8,6 +8,15 @@ import {hasTrack,createTrack} from '../tracks/trackRegistry.js';
 export class EnvironmentBuilderScene extends Current{
  create(){
   super.create();this._installAmericasImport();
+  for(const scene of this.game?.scene?.getScenes?.(true)||[]){
+   if(scene===this)continue;
+   const key=scene?.sys?.settings?.key;
+   if(['RaceScene','TrackEditorScene','TrackStudioScene'].includes(key)){
+    console.warn('[Environment Studio] stopped overlapping background scene:',key);
+    this.game.scene.stop(key);
+   }
+  }
+
   this.events.once('shutdown',()=>{this._filePicker?.remove();this._photoToken=(this._photoToken||0)+1;});
  }
  _installAmericasImport(){
@@ -44,6 +53,30 @@ export class EnvironmentBuilderScene extends Current{
     this._builderToast?.('NO SE IMPORTÓ: '+(error?.message||'Archivo no válido'));
    }finally{button.disabled=false;button.textContent='📂 IMPORTAR KARTING AMÉRICAS .TDRTRACK';}
   });
+ }
+ _openRealTrack(trackId,resetProject=true){
+  super._openRealTrack?.(trackId,resetProject);
+  this._syncDomStatus?.();
+ }
+ _syncDomStatus(){
+  super._syncDomStatus?.();
+  const root=this._environmentDom;
+  if(!root)return;
+  let node=root.querySelector('[data-stage-render-state]');
+  const open=this._realTrack?.closed===false||this._realTrack?.raceType==='stage';
+  if(!open){node?.remove?.();return;}
+  if(!node){
+   node=document.createElement('div');
+   node.dataset.stageRenderState='1';
+   node.style.cssText='position:absolute;left:78px;top:104px;z-index:2;padding:5px 9px;border:1px solid #4ae8b1;background:rgba(4,23,20,.88);color:#b7ffdf;font:800 10px/1.2 monospace;pointer-events:none;max-width:65vw';
+   root.appendChild(node);
+  }
+  const route=this._realTrack?.centerline||[];
+  let maxEdge=0;
+  for(let i=1;i<route.length;i++)maxEdge=Math.max(maxEdge,Math.hypot(Number(route[i].x)-Number(route[i-1].x),Number(route[i].y)-Number(route[i-1].y)));
+  const layers=(this.game?.scene?.getScenes?.(true)||[]).map(scene=>scene?.sys?.settings?.key||'?').join(',');
+  node.textContent='DEV 1.2.224 · A→B ABIERTO · '+route.length+
+   ' puntos · salto máximo '+maxEdge.toFixed(1)+'px · superficies '+(this._surfaces?.length||0)+' · escenas: '+layers;
  }
  _drawRealTrack(){
   super._drawRealTrack?.();

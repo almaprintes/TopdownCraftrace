@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+const source=fs.readFileSync('src/game/scenes/EnvironmentBuilderAmericasImportScene.js','utf8');
+assert.ok(source.includes("DEV 1.2.224 · A→B ABIERTO"),'Missing runtime-version witness');
+assert.ok(source.includes('maxEdge.toFixed(1)'),'Missing live longest segment metric');
+assert.ok(source.includes('this._surfaces?.length||0'),'Missing editable surface count');
+assert.ok(source.includes('this.game?.scene?.getScenes?.(true)'),'Missing actual active-scenes report');
+assert.ok(source.includes('this.game.scene.stop(key)'),'Other racing scenes must not paint over editor');
+assert.ok(source.includes('_openRealTrack(trackId,resetProject=true)'),'Diagnostic must update when switching tracks');
+assert.ok(source.includes('if(!open){node?.remove?.();return;}'),'Do not clutter closed circuits');
+const stage=JSON.parse(fs.readFileSync('src/game/tracks/library/rally-arafo-los-loros/track.json','utf8'));
+const center=stage.centerline;
+const max=center.slice(1).reduce((d,p,i)=>Math.max(d,Math.hypot(p.x-center[i].x,p.y-center[i].y)),0);
+assert.ok(max<50,'Official authored A→B nodes are connected, so a diagonal must come from another layer');
+console.log('ENV STAGE RUNTIME DIAGNOSTIC OK, longest authored edge='+max.toFixed(2)+' px; supports identifying cached build or extra graphics, no track data changed');
