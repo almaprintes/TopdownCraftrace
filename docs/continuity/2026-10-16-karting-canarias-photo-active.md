@@ -29,3 +29,16 @@ El entorno antiguo `src/game/tracks/library/karting-canarias/karting-canarias.en
 En cada build se ejecuta `scripts/install-karting-canarias-source.mjs` desde `package.json/prebuild`, antes de compilar. Los tests `scripts/karting-canarias-owner-project-smoke.mjs` y `scripts/karting-canarias-photo-staging-smoke.mjs` comprueban geometría, topología, línea de meta, checkpoints, origen del paquete, hashes, cuadrantes WebP y que las colisiones de la foto no utilizan el entorno antiguo.
 
 Para posteriores cambios del propietario: exportar otro `.tdrtrack`; comparar hashes, actualizar JSON original y regenerar el `track.json` con el instalador. **Nunca retocar el `track.json` generado directamente**, ni mezclar archivos Environment Studio dibujados sobre la foto antigua. Aceptación final de sensación de colisión/limpieza visual requiere probar una vuelta real en iPhone/Android.
+
+
+## DEV 1.2.244 — cámara de carrera más abierta, solo Karting Canarias
+
+El propietario solicita que la nueva pista se vea con más entorno y que el coche ocupe menos pantalla, **sin tocar vehículo, potencia, físicas, colisiones, ancho ni coordenadas 1:1**. Se incorpora `src/game/tracks/raceCameraZoom.js`: para el identificador exacto `karting-canarias`, la cámara usa `0.84 × zoom dinámico normal`; para cualquier otro circuito, `1.00 ×` sin cambios.
+
+IMPORTANTE: el motor de carrera recalcula el zoom en `RaceScene.update()` según velocidad, entre los límites definidos por `RaceWideCameraPreviewScene`. Por eso se adapta **el objetivo dinámico de cada frame** antes de su interpolación y no se añade un `setZoom(0.84)` aislado que el update sobrescribiría. El efecto en pantalla es un encuadre un 16 % más abierto respecto al zoom que corresponda a cada velocidad; ni el sprite del coche ni el mundo físico cambian.
+
+Al revisar `RaceWideCameraPreviewScene.create()` se confirmó que el código aún intentaba instalar `installKartingCanariasDividers(this)` sobre la foto nativa, a pesar de que su geometría histórica no corresponde al mundo 2048×3072. Se rodea la instalación con `this.track?.meta?.renderMode !== 'image-native'`. Los circuitos clásicos y sus barreras antiguas conservan el mismo comportamiento.
+
+`scripts/karting-canarias-camera-zoom-smoke.mjs` verifica que el factor solo afecta a Canarias a velocidades mínima, intermedia y máxima; comprueba el código de interpolación dinámica, que el circuito conserva su geometría de origen y que los divisores legacy no se instalan en la fotografía. Incluido en `npm run prebuild` y GitHub Pages.
+
+**Limitación óptica conocida:** alejar la cámara reduce en pantalla tanto el coche como la carretera en la misma proporción. Si se requiere aumentar realmente el ancho relativo del asfalto frente al coche, hay que transformar en una iteración independiente el lienzo, la geometría y todas las puertas/colisiones a un mundo mayor, manteniendo la escala del vehículo. No se hace en esta versión porque se pidió explícitamente la alternativa de zoom 0,84 y no tocar el trazado.
