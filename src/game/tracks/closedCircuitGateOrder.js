@@ -74,6 +74,25 @@ export function gateOnLoop(metrics,gate){
   return bestHit||bestProjection;
 }
 
+// The karting paddock paints another stripe on the very same finish axis,
+// outside the short authored racing-lane segment. Extend the *logical* gate
+// across the lane and adjacent paddock without drawing extra road markings.
+// It still requires normal race direction + CP1 and CP2 to credit a lap.
+// Intentionally never touches the original finishLine for visuals or spawn.
+export function alignedPaddockFinishGate(finish,trackWidth,{halfWidthMult=1.7}={}){
+  if(!valid(finish?.a)||!valid(finish?.b)||!valid(finish?.normal))return null;
+  const a=point(finish.a),b=point(finish.b),dx=b.x-a.x,dy=b.y-a.y;
+  const len=Math.hypot(dx,dy),w=Number(trackWidth);
+  if(!Number.isFinite(w)||w<=0||len<1)return null;
+  const center=midpoint(finish),ux=dx/len,uy=dy/len;
+  const half=Math.max(len*.5,Math.min(w*2.1,w*Math.max(1,halfWidthMult)));
+  return {
+    a:{x:center.x-ux*half,y:center.y-uy*half},
+    b:{x:center.x+ux*half,y:center.y+uy*half},
+    normal:{x:Number(finish.normal.x),y:Number(finish.normal.y)}
+  };
+}
+
 export function orderClosedCircuitGates(centerline,finishLine,checkpoints,{
   shape=null,expandGate=null,baseWidth=100
 }={}){
