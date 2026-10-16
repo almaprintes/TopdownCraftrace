@@ -19,6 +19,33 @@ assert.ok(pts.length>2400);
 const gap=Math.hypot(pts[0].x-pts.at(-1).x,pts[0].y-pts.at(-1).y);
 assert.ok(gap>2500,'The owner-authored rally must have separate start and finish ends');
 assert.ok(pts.slice(1).every((p,i)=>Math.hypot(p.x-pts[i].x,p.y-pts[i].y)<50),'Centerline internal jump');
+// Exported stage order is START -> CP1 -> CP2 -> META, physically
+// intersecting the *open* polyline in the forward direction.
+const cross=(a,b)=>a.x*b.y-a.y*b.x;
+const gateAt=gate=>{
+  let walked=0;
+  for(let i=0;i<pts.length-1;i++){
+    const a=pts[i],b=pts[i+1];
+    const d={x:b.x-a.x,y:b.y-a.y},g={x:gate.b.x-gate.a.x,y:gate.b.y-gate.a.y};
+    const len=Math.hypot(d.x,d.y),den=cross(d,g);
+    if(Math.abs(den)>1e-7){
+      const w={x:gate.a.x-a.x,y:gate.a.y-a.y};
+      const t=cross(w,g)/den,u=cross(w,d)/den;
+      if(t>=0&&t<=1&&u>=0&&u<=1){
+        const forward=(d.x*gate.normal.x+d.y*gate.normal.y)/Math.max(1,len);
+        return {distance:walked+t*len,forward};
+      }
+    }
+    walked+=len;
+  }
+  return null;
+};
+const order=[stage.startLine,...stage.checkpoints,stage.finishLine].map(gateAt);
+assert.ok(order.every(Boolean),'START, CP1, CP2 and META must physically intersect the user route');
+assert.ok(order.every(g=>g.forward>.90),'All rally gates must face the driving direction');
+assert.ok(order.every((g,i)=>i===0||order[i-1].distance<g.distance),
+  'Rally gates must occur in the expected START → CP1 → CP2 → META order');
+assert.ok(stage.carScale>=.35&&stage.carScale<=.4,'Narrow photo road needs correctly scaled visuals and collider');
 const open=trackPreviewSvgPath(pts,{closed:stage.closed,scale:.08});
 assert.ok(open.startsWith('M '));
 assert.ok(!open.endsWith(' Z'),'The rally SVG may not connect finish to start');
