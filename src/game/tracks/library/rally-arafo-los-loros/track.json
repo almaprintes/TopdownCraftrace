@@ -11295,7 +11295,7 @@
     "elevationHighM": 1588,
     "elevationDifferenceM": 934,
     "adaptation": "Craftrace manually authored stage",
-    "geometryStatus": "exact 2241 points and both original open Bezier edges",
+    "geometryStatus": "Exact owner TrackStudio geometry: 2241 original nodes, 82+82 open Bézier edge controls",
     "source": "Track Studio owner-uploaded .tdrtrack",
     "sourceFile": "trackstudio-image-1792152097432.tdrtrack",
     "sourceSHA256": "b3a4ec6e6ba74a5303ab515f79144e397d9596729a8b1b4cbaf3d16452814eb7",
@@ -11303,40 +11303,46 @@
     "renderMode": "image-native",
     "imageNative": {
       "schema": 1,
-      "availability": "published",
       "width": 1882,
       "height": 3344,
+      "availability": "published",
       "assetPath": "assets/tracks/rally-arafo-los-loros/arafo-los-loros-photo.webp",
       "tiles": [
         {
+          "assetPath": "assets/tracks/rally-arafo-los-loros/photo-0-0.webp",
           "x": 0,
           "y": 0,
           "width": 941,
-          "height": 1672,
-          "assetPath": "assets/tracks/rally-arafo-los-loros/photo-0-0.webp"
+          "height": 1672
         },
         {
-          "x": 941,
-          "y": 0,
-          "width": 941,
-          "height": 1672,
-          "assetPath": "assets/tracks/rally-arafo-los-loros/photo-0-1.webp"
-        },
-        {
+          "assetPath": "assets/tracks/rally-arafo-los-loros/photo-0-1.webp",
           "x": 0,
           "y": 1672,
           "width": 941,
-          "height": 1672,
-          "assetPath": "assets/tracks/rally-arafo-los-loros/photo-1-0.webp"
+          "height": 1672
         },
         {
+          "assetPath": "assets/tracks/rally-arafo-los-loros/photo-1-0.webp",
+          "x": 941,
+          "y": 0,
+          "width": 941,
+          "height": 1672
+        },
+        {
+          "assetPath": "assets/tracks/rally-arafo-los-loros/photo-1-1.webp",
           "x": 941,
           "y": 1672,
           "width": 941,
-          "height": 1672,
-          "assetPath": "assets/tracks/rally-arafo-los-loros/photo-1-1.webp"
+          "height": 1672
         }
       ]
+    },
+    "sourceGeometryPath": "src/game/tracks/library/rally-arafo-los-loros/trackstudio-gameTrack-exact.json",
+    "nativeImage": {
+      "width": 1882,
+      "height": 3344,
+      "availability": "published"
     }
   },
   "carScale": 0.35,
