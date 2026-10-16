@@ -1,5 +1,6 @@
 import { buildTrackRibbon } from './TrackBuilder.js';
 import { METERS_PER_PX } from '../cars/speedUnits.js';
+import {spawnUpstreamOfFinish} from './imageNativeDriving.js';
 
 const trackModules = import.meta.glob('./library/*/track.json', { eager: true });
 const CANONICAL_SLUGS=Object.freeze({track01:'circuito-atlantico'});
@@ -70,7 +71,7 @@ function buildRegistry(){
       const mx=(Number(authoredFinishLine.a.x)+Number(authoredFinishLine.b.x))*.5,my=(Number(authoredFinishLine.a.y)+Number(authoredFinishLine.b.y))*.5;
       const n=authoredFinishLine.normal;finishAnchor={x:mx,y:my,r:n?Math.atan2(Number(n.y),Number(n.x)):finishAnchor.r};
     }
-    const raceStart=((!isClosed||json.meta?.renderMode==='image-native')&&authoredStart&&[authoredStart.x,authoredStart.y,authoredStart.r].every(Number.isFinite))?authoredStart:(openStart||makeSpawnBehindFinish(finishAnchor,authored.startOffset)),metrics=loopMetrics(smooth),anchorProjection=finishProjection||projectToSmoothCenter(finishAnchor,smooth),finishDist=isClosed&&anchorProjection?distanceAtProjection(anchorProjection,metrics,smooth):0,checkpointFractions=normalizeCheckpointFractions(json.checkpointFractions);
+    const metrics=loopMetrics(smooth),anchorProjection=finishProjection||projectToSmoothCenter(finishAnchor,smooth),finishDist=isClosed&&anchorProjection?distanceAtProjection(anchorProjection,metrics,smooth):0,checkpointFractions=normalizeCheckpointFractions(json.checkpointFractions);
     let checkpoints=null;if(String(json.checkpointMode||'').toLowerCase()==='authored'){checkpoints=normalizeAuthoredCheckpoints(json.checkpoints,direction);if(checkpoints&&authored.authorScale!==1)checkpoints=checkpoints.map(g=>({...g,a:{x:Number(g.a.x)*authored.authorScale,y:Number(g.a.y)*authored.authorScale},b:{x:Number(g.b.x)*authored.authorScale,y:Number(g.b.y)*authored.authorScale}}));}
     if(!checkpoints&&smooth.length>3){
       if(isClosed)checkpoints=checkpointFractions.map(frac=>{const p=pointAtLoopDistance(smooth,metrics,finishDist+directionSign*metrics.total*frac);return makeGateAt(p,Number(p?.width)||scaledFallbackWidth,directionSign,.10);}).filter(Boolean);
@@ -82,7 +83,14 @@ function buildRegistry(){
       }
     }
     const raceCenterline=direction==='reverse'?smooth.slice().reverse():smooth.slice();
-    out[slug]={id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:authored.targetLengthMeters?'Corta':(json.lengthLabel||'Media'),worldW:authored.worldW,worldH:authored.worldH,trackWidth:scaledFallbackWidth,grassMargin:authored.grassMargin,sampleStepPx:authored.sampleStepPx,cellSize:authored.cellSize,shoulderPx:authored.shoulderPx,carScale:Number.isFinite(Number(json.carScale))?Number(json.carScale):1,start:raceStart,centerline,trackShape:json.trackShape?clone(json.trackShape):null,closed:isClosed,raceType:json.raceType||(isClosed?'circuit':'stage'),raceDirection:direction,raceCenterline,finishAnchor,finishLine:((!isClosed||json.meta?.renderMode==='image-native')&&authoredFinishLine?.a&&authoredFinishLine?.b)?authoredFinishLine:makeFinishLineFromAnchor(finishAnchor,scaledFallbackWidth),startLine:(!isClosed&&authoredStartLine?.a&&authoredStartLine?.b)?authoredStartLine:null,finish:null,checkpoints,checkpointFractions,checkpointMode:json.checkpointMode==='authored'?'authored':'proportional',grid:null,meta:{...(json.meta||{}),closed:isClosed,raceType:json.raceType||(isClosed?'circuit':'stage'),carScale:Number.isFinite(Number(json.carScale))?Number(json.carScale):1,trackWidth:scaledFallbackWidth,shoulderPx:authored.shoulderPx,authorScale:authored.authorScale,targetLengthMeters:authored.targetLengthMeters,targetWidthMeters:authored.targetWidthMeters}};
+    const finishGate=((!isClosed||json.meta?.renderMode==='image-native')&&authoredFinishLine?.a&&authoredFinishLine?.b)?authoredFinishLine:makeFinishLineFromAnchor(finishAnchor,scaledFallbackWidth);
+    const nearFinishPx=Math.max(32,Math.min(100,scaledFallbackWidth*.60));
+    const near=isClosed?spawnUpstreamOfFinish(raceCenterline,finishGate,nearFinishPx):null;
+    const back=isClosed&&anchorProjection?pointAtLoopDistance(smooth,metrics,finishDist-directionSign*nearFinishPx):null;
+    const raceStart=isClosed
+      ?(near?{x:near.x,y:near.y,r:near.r}:back?{x:back.x,y:back.y,r:wrapPi(back.r+(directionSign<0?Math.PI:0))}:makeSpawnBehindFinish(finishAnchor,nearFinishPx))
+      :(authoredStart&&[authoredStart.x,authoredStart.y,authoredStart.r].every(Number.isFinite)?authoredStart:(openStart||makeSpawnBehindFinish(finishAnchor,authored.startOffset)));
+    out[slug]={id:slug,key:slug,name:json.name||slug.toUpperCase(),brand:json.brand||'CUSTOM',category:json.category||'Nuevo',difficulty:json.difficulty||'Media',lengthLabel:authored.targetLengthMeters?'Corta':(json.lengthLabel||'Media'),worldW:authored.worldW,worldH:authored.worldH,trackWidth:scaledFallbackWidth,grassMargin:authored.grassMargin,sampleStepPx:authored.sampleStepPx,cellSize:authored.cellSize,shoulderPx:authored.shoulderPx,carScale:Number.isFinite(Number(json.carScale))?Number(json.carScale):1,start:raceStart,centerline,trackShape:json.trackShape?clone(json.trackShape):null,closed:isClosed,raceType:json.raceType||(isClosed?'circuit':'stage'),raceDirection:direction,raceCenterline,finishAnchor,finishLine:finishGate,startLine:(!isClosed&&authoredStartLine?.a&&authoredStartLine?.b)?authoredStartLine:null,finish:null,checkpoints,checkpointFractions,checkpointMode:json.checkpointMode==='authored'?'authored':'proportional',grid:null,meta:{...(json.meta||{}),closed:isClosed,raceType:json.raceType||(isClosed?'circuit':'stage'),carScale:Number.isFinite(Number(json.carScale))?Number(json.carScale):1,trackWidth:scaledFallbackWidth,shoulderPx:authored.shoulderPx,authorScale:authored.authorScale,targetLengthMeters:authored.targetLengthMeters,targetWidthMeters:authored.targetWidthMeters}};
   }
   return out;
 }
