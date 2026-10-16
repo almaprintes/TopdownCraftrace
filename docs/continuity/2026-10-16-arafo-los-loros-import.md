@@ -29,3 +29,16 @@ No existe archivo `rally-arafo-los-loros.environment.json` ni otra decoración/c
 ## Validación
 
 `scripts/rally-open-stage-visual-smoke.mjs` y `scripts/environment-stage-canvas-smoke.mjs` verifican que el tramo permanece abierto y no introduce una unión META-SALIDA; CI Build y Deploy deben terminar en verde antes de declarar publicada esta DEV. No publicar en Google Play.
+
+## DEV 1.2.236 — fotografía instalada y geometría exacta (16 Oct 2026)
+
+**Esta sección reemplaza las advertencias anteriores de fotografía pendiente.** El propietario subió a `main` los cinco WebP; sus tamaños y SHA de objeto Git se cotejaron con el ZIP original, coincidencia byte por byte.
+
+- Original exacto archivado como `src/game/tracks/library/rally-arafo-los-loros/trackstudio-gameTrack-exact.json`: **2241 puntos originales**, `trackShape.closed:false`, **82 controles por cada uno de los dos bordes** (con posiciones y manejadores Bézier completos). No se usa la polilínea RDP aproximada de DEV 1.2.235.
+- `track.json` copia fielmente todos los puntos originales, los dos bordes, START, CP1, CP2 y META, con la identidad y ajustes de presentación anteriores. Se mantiene `closed:false`, `raceType:'stage'` y `carScale:0.35`.
+- Foto original 1882×3344 WebP en `public/assets/tracks/rally-arafo-los-loros/arafo-los-loros-photo.webp`; carga móvil con **cuatro mosaicos WebP** de 941×1672 y posiciones autoradas. `meta.renderMode:'image-native'`, `meta.imageNative.availability:'published'`. Las fotos nunca se renombran ni cambian de escala durante la carrera.
+- `openStagePhotoMask.js` implementa máscara espacial de cuadriláteros a lo largo de los dos bordes Bézier ABIERTOS. No conecta el último nodo con el primero; conserva límites de carretera, asfalto/hierba y evita falso atajo físico.
+- `imageNativeRaceLoader.js` admite la topología abierta con máscara propia, conservando el comportamiento cerrado de Karting y Santa Cruz. `EnvironmentBuilderAmericasImportScene.js` omite el asfalto raster del rally cuando existe fotografía publicada; el editor muestra solo la fotografía.
+- Solo se integran los datos y la fotografía aportados por el propietario. No hay barreras ni decoraciones adicionales versionadas para Arafo y no se han fabricado colisiones físicas nuevas.
+- Pruebas: `scripts/arafo-photo-native-smoke.mjs` y `scripts/rally-open-stage-visual-smoke.mjs`, ejecutadas en CI antes de publicar. Prueba manual en dispositivo pendiente de confirmación por el propietario.
+- Google Play Android sin modificación. Solo web DEV.
