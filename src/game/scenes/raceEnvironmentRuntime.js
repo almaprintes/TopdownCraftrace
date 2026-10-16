@@ -16,7 +16,9 @@ function envFor(scene){
   // Las previsualizaciones locales siguen aisladas. El Karting Tenerife
   // fotográfico OFICIAL sí admite nuevas decoraciones/guardarraíles desde
   // Environment Studio, en coordenadas exactas del fondo, sin tocar la foto.
-  if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas'].includes(normalizeTrackKey(scene?.trackKey)))return null;
+  // Official photo-native stages also load their authored world-space collision zones.
+  // Keep local TrackStudio previews isolated from the published environment registry.
+  if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey)))return null;
   const candidates=[scene?.trackKey,scene?.track?.meta?.id,scene?.track?.id,scene?.track?.trackId,scene?.track?.meta?.trackId].map(normalizeTrackKey).filter(Boolean);
   for(const key of candidates){const env=createTrackEnvironment(key);if(env)return env;}
   return null;
