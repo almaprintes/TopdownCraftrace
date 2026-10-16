@@ -21,3 +21,11 @@ Se sustituye la carretera y ambos bordes por `drawOpenStageRoad()` en `src/game/
 ## DEV 1.2.224 · Diagnóstico de la persistencia de la diagonal
 
 El usuario confirmó que seguía igual tras las correcciones estáticas. Se incorpora una etiqueta de diagnóstico SOLO al editar tramos abiertos; muestra DEV real cargada, tipo A→B, puntos, salto máximo de su centro de pista, número de superficies de editor y escenas activas. Esto permite comprobar en el propio dispositivo si se está ejecutando código nuevo y si hay superposición o superficies heredadas. Environment Studio además detiene otras escenas de carrera/Track Studio que permanezcan activas detrás del editor (no borra archivos ni borradores). **No afirmar que la diagonal ha quedado resuelta sin prueba visual; solicitar captura con la etiqueta.**
+
+## DEV 1.2.225 — aislamiento total del renderizador de Environment Studio
+
+Captura DEV 1.2.224 confirma versión real, una sola escena EnvironmentBuilderScene, 0 superficies y 2465 puntos con distancia máxima entre puntos consecutivos 18.2 px. Se descartan ruta incorrecta, caché, superficies y escenas superpuestas. La diagonal continuaba incluso tras usar Graphics.lineBetween para conexiones consecutivas.
+
+En lugar de seguir utilizando Phaser Graphics para la carretera del tramo, la escena final `EnvironmentBuilderAmericasImportScene.js` **evita por completo llamar al dibujado heredado de Phaser en los tramos abiertos** y oculta la instancia `_realTrackG`. `stageRasterRoad.js` pinta los 2465 puntos como un trazo Canvas 2D abierto (sin `closePath`) con bordes abiertos en dos mosaicos ajustados a las coordenadas del circuito, seguros para texturas móviles. El renderizado de decoraciones y colisiones se conserva. El HUD de diagnóstico muestra la versión, número de mosaicos y escenas activas. El test `scripts/environment-stage-canvas-smoke.mjs` asegura dos mosaicos, exactamente 2464 segmentos por trazo y que no existe operación de cierre.
+
+**La confirmación visual del usuario sigue pendiente**: no asumir que las pruebas de unidad prueban la representación final en ese navegador. Google Play no modificado.

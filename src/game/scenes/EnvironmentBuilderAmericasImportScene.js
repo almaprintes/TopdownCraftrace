@@ -5,6 +5,7 @@ import {EnvironmentBuilderScene as Current} from './EnvironmentBuilderSafeWorkfl
 import {unpackImageProject,saveCanvasImage,readCanvasImage} from '../studio/imageCanvasProject.js';
 import {AMERICAS,readDraft,writeDraft} from '../tracks/environmentDraftTrack.js';
 import {hasTrack,createTrack} from '../tracks/trackRegistry.js';
+import {paintOpenStageRoad,stageRasterTilePlan} from '../tracks/stageRasterRoad.js';
 export class EnvironmentBuilderScene extends Current{
  create(){
   super.create();this._installAmericasImport();
@@ -17,7 +18,7 @@ export class EnvironmentBuilderScene extends Current{
    }
   }
 
-  this.events.once('shutdown',()=>{this._filePicker?.remove();this._photoToken=(this._photoToken||0)+1;});
+  this.events.once('shutdown',()=>{this._clearStageRaster?.();this._filePicker?.remove();this._photoToken=(this._photoToken||0)+1;});
  }
  _installAmericasImport(){
   // Official published track always takes priority over browser-local imports.
@@ -75,10 +76,79 @@ export class EnvironmentBuilderScene extends Current{
   let maxEdge=0;
   for(let i=1;i<route.length;i++)maxEdge=Math.max(maxEdge,Math.hypot(Number(route[i].x)-Number(route[i-1].x),Number(route[i].y)-Number(route[i-1].y)));
   const layers=(this.game?.scene?.getScenes?.(true)||[]).map(scene=>scene?.sys?.settings?.key||'?').join(',');
-  node.textContent='DEV 1.2.224 · A→B ABIERTO · '+route.length+
-   ' puntos · salto máximo '+maxEdge.toFixed(1)+'px · superficies '+(this._surfaces?.length||0)+' · escenas: '+layers;
+  node.textContent='DEV 1.2.225 · A→B CANVAS 2D · '+route.length+
+   ' puntos · salto máximo '+maxEdge.toFixed(1)+'px · mosaicos '+(this._stageRaster?.sprites?.length||0)+' · superficies '+(this._surfaces?.length||0)+' · escenas: '+layers;
+ }
+ _clearStageRaster(){
+  const render=this._stageRaster;
+  this._stageRaster=null;
+  if(!render)return;
+  for(const image of render.sprites||[])try{image.destroy();}catch{}
+  for(const key of render.keys||[])try{this.textures.remove(key);}catch{}
+ }
+ _renderStageRaster(){
+  const t=this._realTrack;
+  if(!t||!(t.closed===false||t.raceType==='stage'))return;
+  if(this._stageRaster?.track===t)return;
+  this._clearStageRaster();
+  const tiles=stageRasterTilePlan(t.centerline,t.trackWidth);
+  if(!tiles.length)return;
+  const sprites=[],keys=[];
+  try{
+   for(const [i,tile] of tiles.entries()){
+    const canvas=document.createElement('canvas');
+    canvas.width=tile.width;canvas.height=tile.height;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw Error('Canvas 2D no disponible');
+    ctx.setTransform(1,0,0,1,-tile.x,-tile.y);
+    paintOpenStageRoad(ctx,t.centerline,t.trackWidth);
+    const key='env-stage-open:'+this.sys.settings.key+':'+i;
+    if(this.textures.exists(key))this.textures.remove(key);
+    this.textures.addCanvas(key,canvas);
+    keys.push(key);
+    const sprite=this.add.image(tile.x,tile.y,key).setOrigin(0).setDepth(2.35);
+    this.cameras.main.ignore(sprite);
+    sprites.push(sprite);
+   }
+   this._stageRaster={track:t,sprites,keys};
+  }catch(error){
+   for(const img of sprites)try{img.destroy();}catch{}
+   for(const key of keys)try{this.textures.remove(key);}catch{}
+   console.error('[Environment Studio] no se pudo pintar el rally abierto en Canvas 2D',error);
+   // If rasterization fails, never resurrect the false endpoint shortcut:
+   // leave editor collision objects editable with empty green background.
+   this._stageRaster=null;
+  }
  }
  _drawRealTrack(){
+  const t=this._realTrack;
+  const open=t?.closed===false||t?.raceType==='stage';
+  if(open){
+   // The old Phaser Graphics road rendered a fake closing diagonal on some
+   // devices despite 2465 consecutive points. Do not call its renderer at all.
+   this._realTrackG?.clear?.();this._realTrackG?.setVisible?.(false);
+   this._realTrackMarkG?.clear?.();
+   const m=this._realTrackMarkG,width=Math.max(10,Number(t?.trackWidth)||90);
+   if(m){
+    m.setVisible?.(true);
+    const finish=t.finishLine;
+    if(finish?.a&&finish?.b){
+     m.lineStyle(Math.max(7,width*.06),0xffffff,1);
+     m.lineBetween(finish.a.x,finish.a.y,finish.b.x,finish.b.y);
+    }
+    const start=t.startLine,spawn=t.start||t.centerline?.[0];
+    m.lineStyle(Math.max(5,width*.065),0x49ffb1,1);
+    if(start?.a&&start?.b)m.lineBetween(start.a.x,start.a.y,start.b.x,start.b.y);
+    if(Number.isFinite(Number(spawn?.x))&&Number.isFinite(Number(spawn?.y))){
+     m.fillStyle(0x49ffb1,1);
+     m.fillCircle(Number(spawn.x),Number(spawn.y),Math.max(10,width*.14));
+    }
+   }
+   this._renderStageRaster();
+   return;
+  }
+  this._clearStageRaster();
+  this._realTrackG?.setVisible?.(true);
   super._drawRealTrack?.();
   if(this._trackId===AMERICAS&&this._photoLoaded){
    this._realTrackG?.setVisible(false);this._realTrackMarkG?.setVisible(false);

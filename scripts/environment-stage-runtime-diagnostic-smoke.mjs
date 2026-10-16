@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const source=fs.readFileSync('src/game/scenes/EnvironmentBuilderAmericasImportScene.js','utf8');
-assert.ok(source.includes("DEV 1.2.224 · A→B ABIERTO"),'Missing runtime-version witness');
+assert.ok(source.includes("DEV 1.2.225 · A→B CANVAS 2D"),'Missing runtime-version witness');
 assert.ok(source.includes('maxEdge.toFixed(1)'),'Missing live longest segment metric');
 assert.ok(source.includes('this._surfaces?.length||0'),'Missing editable surface count');
 assert.ok(source.includes('this.game?.scene?.getScenes?.(true)'),'Missing actual active-scenes report');
