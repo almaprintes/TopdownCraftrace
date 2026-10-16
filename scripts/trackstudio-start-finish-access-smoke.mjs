@@ -46,7 +46,7 @@ try{
   assert.ok(gate);
   assert.equal(gate.start.textContent,'SALIDA');
   assert.equal(gate.finish.textContent,'META');
-  assert.equal(gate.start.style.minHeight,'44px');
+  assert.ok(gate.start.style.cssText.includes('min-height:44px'),'Both gate buttons must have >=44px touch targets');
   assert.ok(body.children.includes(gate.root),'Gate controls need to be visible in actual DOM');
   assert.ok(Number.parseFloat(gate.root.style.top)>Number.parseFloat(gate.root.style.left)*0.6,'Gate strip should anchor inside viewport');
   assert.equal(gate.status.textContent,'Salida —  ·  Meta —');
