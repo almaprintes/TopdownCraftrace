@@ -313,7 +313,9 @@ steeringProfile: 'DIRECT',
     cardAssetVersion: 1,
     skin: 'skin_crown_cuper_original.webp',
     cardPreviewAsset: 'assets/skins/skin_crown_cuper_original.webp',
-    visualScale: 1.03,
+    // Global visual calibration exported from Car Editor (16/10/2026).
+    visualScale: 1.1,
+    collisionScale: 1.03, // Keep the original physical radius unchanged.
     designStats: { VEL: 64, ACC: 61, GIR: 72, EST: 63, FRN: 66 },
     maxFwd: 560.7,
     maxRev: 260,
@@ -647,7 +649,8 @@ steeringProfile: 'DIRECT',
     rarity: 'Legendario',
     cardAssetVersion: 2,
     skin: 'skin_veloce_juanicar_c220_hq.webp',
-    visualScale: 1.08,
+    visualScale: 1.2,
+    collisionScale: 1.08, // Visual resize must not change hitbox/physics.
 
     // Tope de la familia VELOCE: un escalón por encima del Photon.
     designStats: { VEL: 92, ACC: 85, GIR: 43, EST: 45, FRN: 63 },
