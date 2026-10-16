@@ -52,6 +52,12 @@ try{
   scene._shapeEditing=false;
   scene._deleteSelectedNode=()=>{scene._nodes=[];scene._selectedNode=-1;scene._deleted=true;};
   scene._updatePanel=()=>{};
+  scene._selectedWidthNodeIndex=()=>scene._selectedNode;
+  scene._setLocalNodeWidth=(v)=>{
+    const n=scene._nodes[scene._selectedNode];if(!n)return false;
+    if(v===null)delete n.width;else n.width=v;
+    scene._updatePanel();return true;
+  };
   const gate=installTrackStudioGateControls(scene);
   assert.ok(gate);
   assert.equal(gate.start.textContent,'SALIDA');
@@ -107,6 +113,18 @@ try{
   assert.equal(gate.status.textContent,'Salida ✓  ·  Meta ✓');
   scene._selectedNode=0;
   scene._updatePanel();
+  assert.equal(gate.localWidth.style.display,'block','Local width tools appear only when a node is selected');
+  assert.equal(gate.localLabel.textContent,'NODO 1 · ANCHO LOCAL: 40 px');
+  assert.equal(gate.localReset.style.display,'none');
+  gate.localPlus.fire('click');
+  assert.equal(scene._nodes[0].width,65,'Selected step of 25 px must change only local width');
+  assert.equal(scene._trackWidth,40,'Global width remains untouched');
+  assert.equal(gate.localLabel.textContent,'NODO 1 · ANCHO LOCAL: 65 px');
+  assert.equal(gate.localReset.style.display,'block');
+  gate.localMinus.fire('click');
+  assert.equal(scene._nodes[0].width,40);
+  gate.localReset.fire('click');
+  assert.equal(scene._nodes[0].width,undefined,'Reset deletes override, not the road');
   assert.equal(gate.remove.style.display,'block','Delete is contextual, not floating over the road');
   gate.remove.fire('click');
   assert.equal(scene._deleted,true);
