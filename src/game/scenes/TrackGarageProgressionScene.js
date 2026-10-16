@@ -3,6 +3,8 @@ import { isTrackUnlocked, devFullTrackAccessEnabled } from '../tracks/trackUnloc
 import { getLanguage } from '../i18n/index.js';
 import { getTrackPublicName } from '../tracks/trackPublicNames.js';
 import {createAppHeader,disposeAppWallets} from '../ui/TdrAppHeader.js';
+import {selectorPhotoUrl,selectorTrackKind} from '../tracks/trackSelectorPhotos.js';
+import selectorPhotoCss from '../ui/trackSelectorPhoto.css?inline';
 
 const FONT='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
 const ROOT_ID='tdr-track-selector-dom';
@@ -16,12 +18,33 @@ function lengthM(track){return Math.max(0,Math.round(lengthWorld(track)*.18));}
 function sectors(track){const n=Number(track?.sectors);if(Number.isFinite(n)&&n>0)return Math.round(n);return Array.isArray(track?.checkpointFractions)?Math.max(1,track.checkpointFractions.length+1):3;}
 function publicName(track){return getTrackPublicName(track,getLanguage()).toUpperCase();}
 
+function selectorKindLabel(track,locked,lang) {
+  const kind=selectorTrackKind(track,locked);
+  return kind==='RALLY'?'RALLY':kind==='LOCKED'?(lang==='en'?'LOCKED':'BLOQUEADO'):(lang==='en'?'CIRCUIT':'CIRCUITO');
+}
+function selectorPhoto(track,locked,large=false) {
+  const src=selectorPhotoUrl(track,locked,import.meta.env.BASE_URL||'/');
+  return src?`<img class="tdr-ts-photo" src="${src}" alt="" draggable="false" loading="${large?'eager':'lazy'}" decoding="async">`:'';
+}
+
 function trackSvg(track,locked=false){
   if(locked)return '<div class="tdr-ts-lock">🔒</div>';
-  const p=pts(track);if(p.length<3)return '<div class="tdr-ts-no-preview">—</div>';
+  const all=pts(track);if(all.length<3)return '<div class="tdr-ts-no-preview">—</div>';
+  // The Arafo rally has 2241 points. Its little outline should not create
+  // thousands of DOM SVG segments when the player taps through photos.
+  const step=Math.max(1,Math.ceil(all.length/160));
+  const p=all.filter((_,i)=>i%step===0);
+  if(track?.closed===false && p.at(-1)!==all.at(-1))p.push(all.at(-1));
   const xs=p.map(q=>q.x),ys=p.map(q=>q.y),minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys),bw=Math.max(1,maxX-minX),bh=Math.max(1,maxY-minY),pad=12,scale=Math.min((240-pad*2)/bw,(130-pad*2)/bh),ox=(240-bw*scale)/2-minX*scale,oy=(130-bh*scale)/2-minY*scale;
   const d=p.map((q,i)=>`${i?'L':'M'} ${(q.x*scale+ox).toFixed(1)} ${(q.y*scale+oy).toFixed(1)}`).join(' ')+(track?.closed===false?'':' Z');
   return `<svg viewBox="0 0 240 130" aria-hidden="true"><path d="${d}" class="tdr-ts-track-shadow"/><path d="${d}" class="tdr-ts-track-road"/></svg>`;
+}
+function ensurePhotoStyle(){
+  const ID='tdr-track-selector-photo-style';
+  let style=document.getElementById(ID);
+  if(!style){style=document.createElement('style');style.id=ID;style.textContent=selectorPhotoCss;}
+  // Always last: overrides the original selector and paddock skins.
+  document.head.appendChild(style);
 }
 function ensureStyle(){
   if(document.getElementById(STYLE_ID))return;
@@ -49,6 +72,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
   _installDomSelector(){
     ensureStyle();
+    ensurePhotoStyle();
     try{this._commercial?.setVisible?.(false);}catch{}
     const host=this.game?.canvas?.parentElement||document.getElementById('app')||document.body;if(!host)return;
     if(getComputedStyle(host).position==='static')host.style.position='relative';
@@ -57,10 +81,29 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
     const render=()=>{
       const lang=getLanguage()==='en'?'en':'es',track=this._tracks?.[this._index],locked=this._lockedTrack(track);
-      const list=this._tracks.map((t,i)=>{const l=this._lockedTrack(t),name=l?'???':publicName(t);return `<button class="tdr-ts-card ${i===this._index?'active':''} ${l?'locked':''}" data-index="${i}" type="button"><div class="tdr-ts-thumb">${trackSvg(t,l)}</div><div><div class="tdr-ts-card-title">${name}</div><div class="tdr-ts-card-meta">${String(i+1).padStart(2,'0')} · ${l?(lang==='en'?'LOCKED':'BLOQUEADO'):surface(t)}<br>${l?'—':`${lengthM(t)} m · ${sectors(t)} ${lang==='en'?'sectors':'sectores'}`}</div></div></button>`}).join('');
-      const hero=locked?`<div class="tdr-ts-locked-hero">🔒<strong>???</strong><span>${lang==='en'?'TRACK LOCKED · DISCOVER IT BY PLAYING':'CIRCUITO BLOQUEADO · DESCÚBRELO JUGANDO'}</span></div>`:trackSvg(track,false);
+      const scrollY=root.querySelector('.tdr-ts-list')?.scrollTop||0;
+      const list=this._tracks.map((t,i)=>{
+        const l=this._lockedTrack(t),kind=selectorTrackKind(t,l),name=l?'???':publicName(t);
+        const tag=selectorKindLabel(t,l,lang);
+        return `<button class="tdr-ts-card ${i===this._index?'active':''} ${l?'locked':''} ${kind==='RALLY'?'is-rally':''}" data-index="${i}" type="button" aria-pressed="${i===this._index}">
+          <div class="tdr-ts-thumb">${trackSvg(t,l)}${selectorPhoto(t,l)}<span class="tdr-ts-thumb-tag">${kind==='RALLY'?'⛰ ':'🏁 '}${tag}</span></div>
+          <div class="tdr-ts-card-copy"><div class="tdr-ts-card-title">${name}</div>
+          <div class="tdr-ts-card-meta">${String(i+1).padStart(2,'0')} · ${l?(lang==='en'?'LOCKED':'BLOQUEADO'):surface(t)}<br>${l?'—':`${lengthM(t)} m · ${sectors(t)} ${lang==='en'?'sectors':'sectores'}`}</div></div></button>`;
+      }).join('');
+      const heroPhoto=selectorPhoto(track,locked,true);
+      const hero=locked
+        ?`<div class="tdr-ts-locked-hero">🔒<strong>???</strong><span>${lang==='en'?'TRACK LOCKED · DISCOVER IT BY PLAYING':'CIRCUITO BLOQUEADO · DESCÚBRELO JUGANDO'}</span></div>`
+        :`${trackSvg(track,false)}${heroPhoto}<span class="tdr-ts-hero-badge">${selectorTrackKind(track)==='RALLY'?'⛰ ':'🏁 '}${selectorKindLabel(track,false,lang)}</span>
+          <span class="tdr-ts-hero-caption">${publicName(track)}</span><span class="tdr-ts-route-mark">${trackSvg(track,false)}</span>`;
       disposeAppWallets(root);
-      root.innerHTML=`<div class="tdr-ts-body"><div class="tdr-ts-list">${list}</div><section class="tdr-ts-hero"><div class="tdr-ts-hero-head"><div class="tdr-ts-hero-kicker">${lang==='en'?'SELECTED TRACK':'CIRCUITO SELECCIONADO'}</div><div class="tdr-ts-hero-name">${locked?'???':publicName(track)}</div></div><div class="tdr-ts-preview">${hero}</div><div class="tdr-ts-footer"><div class="tdr-ts-stats"><div class="tdr-ts-stat"><small>${lang==='en'?'LENGTH':'LONGITUD'}</small><strong>${locked?'—':`${lengthM(track)} m`}</strong></div><div class="tdr-ts-stat"><small>${lang==='en'?'SECTORS':'SECTORES'}</small><strong>${locked?'—':sectors(track)}</strong></div><div class="tdr-ts-stat"><small>${lang==='en'?'SURFACE':'SUPERFICIE'}</small><strong>${locked?'—':surface(track)}</strong></div></div><button class="tdr-ts-select" type="button" ${locked?'disabled':''}>${locked?(lang==='en'?'LOCKED':'BLOQUEADO'):(lang==='en'?'SELECT TRACK':'SELECCIONAR')}</button></div></section></div>`;
+      root.innerHTML=`<div class="tdr-ts-body"><div class="tdr-ts-list">${list}</div><section class="tdr-ts-hero ${selectorTrackKind(track,locked)==='RALLY'?'is-rally':''}"><div class="tdr-ts-hero-head"><div class="tdr-ts-hero-kicker">${lang==='en'?'SELECTED TRACK':'CIRCUITO SELECCIONADO'}</div><div class="tdr-ts-hero-name">${locked?'???':publicName(track)}</div></div><div class="tdr-ts-preview ${heroPhoto?'has-photo':''}">${hero}</div><div class="tdr-ts-footer"><div class="tdr-ts-stats"><div class="tdr-ts-stat"><small>${lang==='en'?'LENGTH':'LONGITUD'}</small><strong>${locked?'—':`${lengthM(track)} m`}</strong></div><div class="tdr-ts-stat"><small>${lang==='en'?'SECTORS':'SECTORES'}</small><strong>${locked?'—':sectors(track)}</strong></div><div class="tdr-ts-stat"><small>${lang==='en'?'SURFACE':'SUPERFICIE'}</small><strong>${locked?'—':surface(track)}</strong></div></div><button class="tdr-ts-select" type="button" ${locked?'disabled':''}>${locked?(lang==='en'?'LOCKED':'BLOQUEADO'):(lang==='en'?'SELECT TRACK':'SELECCIONAR')}</button></div></section></div>`;
+      const rail=root.querySelector('.tdr-ts-list');
+      if(rail)rail.scrollTop=scrollY;
+      root.querySelectorAll('img.tdr-ts-photo').forEach(img=>img.addEventListener('error',()=>{
+        const holder=img.parentElement;
+        img.remove();
+        holder?.classList.remove('has-photo');
+      }));
       const header=createAppHeader({title:lang==='en'?'TRACK SELECTOR':'SELECTOR DE CIRCUITOS',onBack:()=>this.scene.start('menu')});
       header.classList.remove('tdr-store-header');header.classList.add('tdr-ts-top');
       header.querySelector('.tdr-app-back')?.classList.add('tdr-ts-back');
