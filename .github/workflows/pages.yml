@@ -84,6 +84,7 @@ jobs:
           node scripts/all-circuit-starts-smoke.mjs
           node scripts/arafo-photo-native-smoke.mjs
           node scripts/rally-open-stage-visual-smoke.mjs
+          node scripts/arafo-rally-drive-pace-smoke.mjs
           node scripts/environment-stage-runtime-diagnostic-smoke.mjs
           node scripts/environment-stage-canvas-smoke.mjs
           node scripts/cuper-season-smoke.mjs
