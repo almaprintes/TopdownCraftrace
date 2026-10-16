@@ -1,7 +1,6 @@
 import { EnvironmentBuilderScene as CurrentEnvironmentBuilderScene } from './EnvironmentBuilderContinuousSurfaceScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
-import {readDraft,AMERICAS} from '../tracks/environmentDraftTrack.js';
 
 function polygonPoints(left,right){
   const out=[];
@@ -20,7 +19,7 @@ function drawFilledPolygon(g,pts,color,alpha=1){
 export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
   constructor(){
     super();
-    this._trackKeys=[...getTrackKeys(),...(readDraft()?[AMERICAS]:[])];
+    this._trackKeys=[...getTrackKeys()];
     if(!this._trackKeys.includes(this._trackId))this._trackId=this._trackKeys[0]||'karting-tenerife';
     this._realTrack=null;
   }

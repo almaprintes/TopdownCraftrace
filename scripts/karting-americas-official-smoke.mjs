@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import sharp from 'sharp';
+import {execFileSync} from 'node:child_process';
+const track=JSON.parse(fs.readFileSync('src/game/tracks/library/karting-americas/track.json','utf8'));
+const environment=JSON.parse(fs.readFileSync('src/game/tracks/library/karting-americas/karting-americas.environment.json','utf8'));
+assert.equal(track.name,'KARTING AMÉRICAS');
+assert.equal(track.worldW,2862);assert.equal(track.worldH,3435);
+assert.equal(track.centerline.length,730);
+assert.equal(track.trackShape.leftEdge.length,27);
+assert.equal(track.trackShape.rightEdge.length,27);
+assert.equal(track.checkpoints.length,2);
+assert.equal(track.checkpointMode,'authored');
+assert.ok(track.start&&track.finishLine?.a&&track.finishLine?.b);
+assert.equal(track.meta.imageNative.availability,'published');
+assert.equal(track.meta.imageNative.tiles.length,6);
+assert.equal(environment.trackId,'karting-americas');
+assert.equal(environment.collisionLines.length,8);
+assert.equal(environment.collisionLines.reduce((n,l)=>n+l.nodes.length,0),60);
+const unlocks=fs.readFileSync('src/game/tracks/trackUnlocks.js','utf8');
+assert.ok(unlocks.includes("'karting-americas'"),'New track must be published and unlocked');
+const selector=fs.readFileSync('src/game/scenes/TrackGarageFixedScene.js','utf8');
+assert.ok(selector.includes('getTrackKeys().map(k=>createTrack(k))'),'New track must appear normally');
+const registry=fs.readFileSync('src/game/tracks/trackRegistry.js','utf8');
+assert.ok(registry.includes("import.meta.glob('./library/*/track.json'"));
+assert.ok(!registry.includes('if(trackId===AMERICAS)'),'Old device drafts must not override official track');
+const race=fs.readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
+assert.ok(race.includes("'karting-americas'].includes(normalizeTrackKey(scene?.trackKey))"),'8 barriers must be active in races');
+const editor=fs.readFileSync('src/game/scenes/EnvironmentBuilderRealTrackCleanScene.js','utf8');
+assert.ok(editor.includes("native?.availability==='published'&&Array.isArray(native.tiles)"));
+for(const tile of track.meta.imageNative.tiles){
+ const file='public/'+tile.assetPath;
+ assert.ok(fs.existsSync(file),'Missing photo tile '+file);
+ const m=await sharp(file).metadata();
+ assert.equal(m.format,'webp');
+ assert.equal(m.width,tile.width);assert.equal(m.height,tile.height);
+ assert.ok(tile.width<=2048&&tile.height<=2048);
+}
+const master=await sharp('public/'+track.meta.imageNative.assetPath).metadata();
+assert.equal(master.format,'webp');assert.equal(master.width,2862);assert.equal(master.height,3435);
+for(const file of ['scripts/install-karting-americas-source.mjs','src/game/tracks/trackRegistry.js','src/game/scenes/raceEnvironmentRuntime.js'])
+ execFileSync(process.execPath,['--check',file],{stdio:'pipe'});
+console.log('KARTING AMÉRICAS OFFICIAL: track selection, unlock, 1:1 photo, six WebP tiles, original 730 nodes, 2 checkpoints, 8 barriers OK');

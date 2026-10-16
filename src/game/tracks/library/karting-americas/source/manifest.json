@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "source-binary-awaiting-upload-local-import-enabled",
+  "status": "installed-official-source-on-build",
   "trackId": "karting-americas",
   "filename": "trackstudio-image-1792095082437_x2.5.tdrtrack",
   "format": "TDR-IMAGE-PROJECT-V1",
@@ -13,8 +13,8 @@
   "centerlinePoints": 730,
   "checkpoints": 2,
   "closed": true,
-  "isPublic": false,
-  "collisionEditing": "locally available after importing .tdrtrack",
+  "isPublic": true,
+  "collisionEditing": "official: 8 collision lines, 60 nodes",
   "trackName": "Karting Américas",
-  "editorImport": "DEV 1.2.217 via .tdrtrack from Files"
+  "editorImport": "official circuit in Environment Studio"
 }

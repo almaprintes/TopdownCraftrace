@@ -4,12 +4,15 @@
 import {EnvironmentBuilderScene as Current} from './EnvironmentBuilderSafeWorkflowScene.js';
 import {unpackImageProject,saveCanvasImage,readCanvasImage} from '../studio/imageCanvasProject.js';
 import {AMERICAS,readDraft,writeDraft} from '../tracks/environmentDraftTrack.js';
+import {hasTrack,createTrack} from '../tracks/trackRegistry.js';
 export class EnvironmentBuilderScene extends Current{
  create(){
   super.create();this._installAmericasImport();
   this.events.once('shutdown',()=>{this._filePicker?.remove();this._photoToken=(this._photoToken||0)+1;});
  }
  _installAmericasImport(){
+  // Official published track always takes priority over browser-local imports.
+  if(hasTrack(AMERICAS)&&createTrack(AMERICAS).meta?.imageNative?.availability==='published')return;
   const parent=this._workflowUi;if(!parent)return;
   const button=document.createElement('button');
   button.textContent='📂 IMPORTAR KARTING AMÉRICAS .TDRTRACK';

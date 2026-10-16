@@ -6,6 +6,7 @@ const run=(command,args)=>{
   if(result.error)throw result.error;
   if(result.status!==0)process.exit(result.status||1);
 };
+run('node',['scripts/install-karting-americas-source.mjs']);
 run('npm',['run','build:prod']);
 verifyAndroidAssets('dist');
 run('npx',['cap','sync','android']);

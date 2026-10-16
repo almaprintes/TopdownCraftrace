@@ -1,6 +1,5 @@
 import { buildTrackRibbon } from './TrackBuilder.js';
 import { METERS_PER_PX } from '../cars/speedUnits.js';
-import {AMERICAS,readDraft} from './environmentDraftTrack.js';
 
 const trackModules = import.meta.glob('./library/*/track.json', { eager: true });
 const CANONICAL_SLUGS=Object.freeze({track01:'circuito-atlantico'});
@@ -88,6 +87,6 @@ function buildRegistry(){
   return out;
 }
 export const TRACK_REGISTRY=buildRegistry();
-export function createTrack(trackId){if(trackId===AMERICAS){const draft=readDraft();if(draft)return clone(draft);}const track=TRACK_REGISTRY[trackId];if(!track)throw new Error(`Track no encontrado: ${trackId}`);return clone(track);}
+export function createTrack(trackId){const track=TRACK_REGISTRY[trackId];if(!track)throw new Error(`Track no encontrado: ${trackId}`);return clone(track);}
 export function getTrackKeys(){return Object.keys(TRACK_REGISTRY);}
 export function hasTrack(trackId){return !!TRACK_REGISTRY[trackId];}

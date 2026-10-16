@@ -8,6 +8,7 @@ const PUBLIC_TRACK_NAMES=Object.freeze({
   'santa-cruz':'SANTA CRUZ',
   'karting-tenerife':'KARTING TENERIFE',
   'karting-canarias':'KARTING CANARIAS',
+  'karting-americas':'KARTING AMÉRICAS',
   'rally-arafo-los-loros':'ARAFO → LOS LOROS'
 });
 

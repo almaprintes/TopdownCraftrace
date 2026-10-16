@@ -13,8 +13,8 @@ const code=readFileSync('src/game/scenes/EnvironmentBuilderAmericasImportScene.j
 for(const marker of ['unpackImageProject(file)','saveCanvasImage(a.imageId,image,a)','writeDraft(project)','this._openRealTrack(AMERICAS,true)','readCanvasImage(info.imageId)','const tiles=[],keys=[],tile=1024','this.cameras.main.ignore(sprite)'])
  assert.ok(code.includes(marker),'missing '+marker);
 const registry=readFileSync('src/game/tracks/trackRegistry.js','utf8');
-assert.match(registry,/if\(trackId===AMERICAS\)/);
-assert.match(registry,/export function getTrackKeys\(\)\{return Object.keys\(TRACK_REGISTRY\);\}/,'Unpublished: not in player circuit list');
+assert.ok(!registry.includes('if(trackId===AMERICAS)'), 'Published circuit must not read local draft');
+assert.match(registry,/export function getTrackKeys\(\)\{return Object.keys\(TRACK_REGISTRY\);\}/,'Normal player circuit registry');
 assert.ok(readFileSync('src/game/game.js','utf8').includes("EnvironmentBuilderAmericasImportScene.js"));
 for(const file of ['src/game/tracks/environmentDraftTrack.js','src/game/tracks/trackRegistry.js','src/game/scenes/EnvironmentBuilderAmericasImportScene.js'])
  execFileSync(process.execPath,['--check',file],{stdio:'pipe'});

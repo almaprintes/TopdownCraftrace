@@ -1,32 +1,9 @@
-# Karting Américas — fuente Track Studio x2.5 (borrador)
+# Karting Américas — circuito oficial permanente
 
-**Estado: esperando el paquete binario original para habilitar la edición de colisiones.**
+Fuente: `trackstudio-image-1792095082437.tdrtrack` (SHA-256 `dbd1f8841af860ece78be3ffa847502c03dac974c7c63190672b0bc590aa0fef`).
 
-Esta carpeta guarda el proyecto fuente del **Karting Américas**, trazado por el propietario en Track Studio. No sustituye ningún circuito del juego, no activa rankings y no debe aparecer como pista pública mientras se trabaja con Environment Studio.
+Karting Américas se instala desde su paquete original al compilar con `node scripts/install-karting-americas-source.mjs`. Se genera `../track.json`, WebP optimizado `public/assets/tracks/karting-americas/karting-americas-official.webp` y seis mosaicos WebP de 1431 × 1145 para teléfonos. La geometría y la imagen son 1:1 en 2862 × 3435: 730 puntos, 27 nodos Bézier por borde, 2 checkpoints, salida y meta.
 
-## Subir este archivo
+Las ocho colisiones oficiales (60 nodos) viven en `../karting-americas.environment.json`. El circuito se registra con ID `karting-americas`, es seleccionable y desbloqueado, tiene sus propias carreras y claves de tiempos/rankings. No depende de la importación local en el navegador. Environment Studio carga la versión oficial directamente.
 
-`trackstudio-image-1792095082437_x2.5.tdrtrack`
-
-El paquete ya se entregó en ChatGPT. Debe subirse **íntegro, sin convertirlo a JSON ni extraer la imagen**, directamente a esta misma carpeta de GitHub.
-
-- Formato: `TDR-IMAGE-PROJECT-V1` (cabecera, JSON editable e imagen PNG)
-- Resolución x2.5: **2862 × 3435 píxeles**
-- 26 nodos Bézier, 730 puntos de centerline, circuito cerrado
-- 2 checkpoints, meta, borde izquierdo/derecho editables
-- Anchura de pista aproximada: 200 unidades
-- Imagen integrada PNG: 14.286.730 bytes
-- SHA-256 del paquete esperado: `dbd1f8841af860ece78be3ffa847502c03dac974c7c63190672b0bc590aa0fef`
-
-Tras subir el paquete y verificar su SHA, el siguiente paso es registrar una pista **solo DEV / privada**, instalar la imagen 1:1 y preparar el fichero `karting-americas.environment.json` con colisiones inicialmente vacías para editarlas. No se deben generar barreras automáticamente: el propietario colocará cada colisión en Environment Studio.
-
-**IMPORTANTE:** esta carpeta por sí sola no significa que el circuito esté ya cargado ni disponible para editar colisiones. Las pistas activas en `src/game/tracks/library/*/track.json` permanecen intactas.
-
-## Edición de colisiones desde DEV 1.2.217
-1. Descarga el archivo íntegro `trackstudio-image-1792095082437_x2.5.tdrtrack` al dispositivo.
-2. Abre **Environment Studio** en la DEV web y pulsa **📂 IMPORTAR KARTING AMÉRICAS .TDRTRACK**, debajo del panel DIBUJAR Y NAVEGAR.
-3. Selecciona el archivo: la imagen 2862×3435 se carga en mosaicos de 1024px para ahorrar memoria y se guarda en IndexedDB junto a la geometría original. La foto no es un simple mapa de referencia: queda alineada 1:1 en el lienzo y el trazado procedural se oculta.
-4. Coloca líneas de colisión y zonas en su propio proyecto, usando **GUARDAR**; con **EXPORTAR** se descarga `karting-americas.environment.json`.
-5. El circuito aparece en el selector de **ese navegador/dispositivo** después de importarlo; la importación no crea una pista pública, no toca registros online, ni habilita el juego automáticamente.
-
-El archivo .tdrtrack binario original todavía NO está en GitHub. La importación directa no sustituye la futura subida de su fuente definitiva al repositorio.
+Google Play se actualiza por separado y no se publica sin permiso expreso.
