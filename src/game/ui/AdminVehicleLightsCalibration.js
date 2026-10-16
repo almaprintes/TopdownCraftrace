@@ -67,7 +67,7 @@ export function showAdminVehicleLightsCalibration(host,{initialCarId='crown_cupe
  <div class="lc-row"><button type="button" data-nudge="smaller">− 1px</button><strong>TAMAÑO</strong><button type="button" data-nudge="larger">+ 1px</button><button type="button" data-mirror>ESPEJAR L → R</button></div>
  <div class="lc-meter"><label>COLOR <input type="color" data-color value="#ff0000"></label><label>INTENSIDAD <output data-intensity-value></output></label><input type="range" data-intensity min="0" max="100" step="1"></div>
  <div class="lc-meter"><label>HALO <output data-halo-value></output></label><input type="range" data-halo min="0" max="100" step="1"></div>
- <div class="lc-meter" data-tail-row><label>LUZ DE POSICIÓN <output data-tail-value></output></label><input type="range" data-tail min="0" max="100" step="1"></div>
+ <div class="lc-meter" data-tail-row><label>LUZ DE POSICIÓN <output data-tail-value></output></label><input type="range" data-tail min="0" max="100" step="1"><label>COLOR POSICIÓN <input type="color" data-tail-color value="#8e2925"></label></div>
  <div class="lc-row"><button type="button" data-reset>RESTABLECER ESTE PAR</button><button type="button" data-export>EXPORTAR JSON GLOBAL</button></div>
  <div class="lc-hint">Los ajustes se guardan localmente hasta exportar. Sube el JSON a <strong>src/game/skins/vehicleLights.json</strong> para aplicarlos a todos los jugadores. Las físicas y las cartas no cambian.</div>
  <small data-status role="status" aria-live="polite" style="color:#83ecc3;min-height:13px"></small>
@@ -127,7 +127,7 @@ export function showAdminVehicleLightsCalibration(host,{initialCarId='crown_cupe
    for(const which of ['left','right']){
     const p=lightCoordinates(pair[which],w,h);
     const px=p.x+w/2,py=p.y+h/2,chosen=group===kind&&side===which;
-    const fill=pair.color;
+    const fill=kind==='rear'&&!braking?(pair.tailColor||pair.color):pair.color;
     const intensity=kind==='rear'?(braking?pair.intensity:pair.tailIntensity):pair.intensity;
     const visible=pair.enabled,opacity=visible?Math.max(.12,intensity):.24;
     const radius=Math.max(3,p.size);
@@ -154,6 +154,7 @@ export function showAdminVehicleLightsCalibration(host,{initialCarId='crown_cupe
   $('[data-halo]').value=String(Math.round(pair.halo*100));
   $('[data-halo-value]').textContent=Math.round(pair.halo*100)+'%';
   $('[data-tail-row]').style.display=group==='rear'?'flex':'none';
+  $('[data-tail-color]').value=pair.tailColor||pair.color;
   $('[data-tail]').value=String(Math.round((pair.tailIntensity??0)*100));
   $('[data-tail-value]').textContent=Math.round((pair.tailIntensity??0)*100)+'%';
  }
@@ -171,6 +172,7 @@ export function showAdminVehicleLightsCalibration(host,{initialCarId='crown_cupe
  $('[data-mirror]').onclick=()=>updatePair(pair=>{pair.right={x:-pair.left.x,y:pair.left.y,size:pair.left.size};});
  $('[data-enabled]').onchange=e=>updatePair(p=>{p.enabled=!!e.target.checked;});
  $('[data-color]').oninput=e=>updatePair(p=>{p.color=e.target.value;});
+ $('[data-tail-color]').oninput=e=>updatePair(p=>{p.tailColor=e.target.value;});
  for(const [key,field] of [['intensity','intensity'],['halo','halo'],['tail','tailIntensity']]){
   $('[data-'+key+']').oninput=e=>updatePair(p=>{p[field]=Number(e.target.value)/100;});
  }
