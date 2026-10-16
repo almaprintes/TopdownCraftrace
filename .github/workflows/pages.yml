@@ -75,6 +75,7 @@ jobs:
           node scripts/karting-americas-source-inspect.mjs
           node scripts/karting-americas-official-smoke.mjs
           node scripts/all-circuit-starts-smoke.mjs
+          node scripts/rally-open-stage-visual-smoke.mjs
           node scripts/cuper-season-smoke.mjs
           node scripts/cuper-skins-smoke.mjs
           node scripts/cuper-workshop-skin-smoke.mjs

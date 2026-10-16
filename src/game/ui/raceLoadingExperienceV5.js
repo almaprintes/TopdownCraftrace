@@ -1,3 +1,4 @@
+import {trackPreviewSvgPath} from '../tracks/trackPreviewPath.js';
 import { installRaceLoadingExperience as installV4 } from './raceLoadingExperienceV4.js';
 import { getLanguage } from '../i18n/index.js';
 import { getTrackPublicName } from '../tracks/trackPublicNames.js';
@@ -39,13 +40,13 @@ function points(track){
     .filter(p=>Number.isFinite(p.x)&&Number.isFinite(p.y));
 }
 
-function svg(list){
+function svg(list,closed=true){
   if(list.length<2)return '<div class="tdr-rload-map-empty">TDR</div>';
   const xs=list.map(p=>p.x),ys=list.map(p=>p.y);
   const minX=Math.min(...xs),maxX=Math.max(...xs),minY=Math.min(...ys),maxY=Math.max(...ys);
   const bw=Math.max(1,maxX-minX),bh=Math.max(1,maxY-minY),sw=420,sh=250,pad=20;
   const s=Math.min((sw-pad*2)/bw,(sh-pad*2)/bh),ox=(sw-bw*s)/2-minX*s,oy=(sh-bh*s)/2-minY*s;
-  const d=list.map((p,i)=>`${i?'L':'M'} ${(p.x*s+ox).toFixed(1)} ${(p.y*s+oy).toFixed(1)}`).join(' ')+' Z';
+  const d=trackPreviewSvgPath(list,{closed,scale:s,offsetX:ox,offsetY:oy});
   return `<svg viewBox="0 0 ${sw} ${sh}" aria-hidden="true"><path class="tdr-rload-track-glow" d="${d}"/><path class="tdr-rload-track-road" d="${d}"/><path class="tdr-rload-track-line" d="${d}"/></svg>`;
 }
 
@@ -62,7 +63,7 @@ function reconcileSelectedTrackPreview(scene){
   const map=root.querySelector('[data-map]');
   if(title)title.textContent=getTrackPublicName(track,l)||String(key).replace(/[-_]+/g,' ').toUpperCase();
   if(surface)surface.textContent=surfaceName(track,l);
-  if(map)map.innerHTML=svg(points(track));
+  if(map)map.innerHTML=svg(points(track),track.closed!==false);
   root.dataset.trackKey=key;
 }
 
