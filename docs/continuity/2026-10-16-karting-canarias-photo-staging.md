@@ -13,3 +13,16 @@ Próximo paso antes de activar:
 - Instalar como `image-native` con las cuatro texturas publicadas y verificar las pruebas visuales, rendimiento iPhone/Android, cronómetro, y CI Build + Deploy del HEAD exacto en main.
 
 El proceso de staging no cambia físicas, circuito jugable actual, assets beauty, ni versión Google Play. `scripts/karting-canarias-photo-staging-smoke.mjs` verifica bytes/píxeles de la fotografía y deja claro que las dimensiones del circuito todavía no han cambiado.
+
+
+## 16/10/2026 — nuevo .tdrtrack del propietario (DEV 1.2.242)
+
+Archivo recibido: `trackstudio-image-1792189935586.tdrtrack`; cabecera estándar `TDR-IMAGE-PROJECT-V1`. SHA-256 original: `b7635ba709e8af0f4634ad5b54374ba064bd620c585cf0499a4223381878d297`.
+
+En `src/game/tracks/library/karting-canarias/source/trackstudio-image-1792189935586.project.json` se han conservado **los bytes JSON originales del paquete**, sin alterar el dibujo. El componente de imagen de ese mismo paquete corresponde byte a byte con `public/assets/tracks/karting-canarias/karting-canarias-new.webp` (SHA-256 `4472ddf772300318555aad8814ff47da70a759879cca68e66a9f0ca72cac72d2`); por tanto el paquete completo puede regenerarse sin almacenar dos veces el WebP. El smoke `scripts/karting-canarias-owner-project-smoke.mjs` reconstruye cabecera + JSON + imagen y verifica el SHA-256 exacto de la exportación original.
+
+Datos del nuevo dibujo: **2048×3072**, `trackWidth=105`, **506 puntos centerline**, **18 nodos Bézier por borde**, modalidad cerrada `raceType=circuit`. Su línea central pasa por la banda física del borrador en todas las muestras verificadas, y coincide visualmente con la carretera de la imagen.
+
+**Incompleto:** `gameTrack.finishLine=null`, `startLine=null`, `checkpoints=[]` y el borde Bézier `leftEdge` presenta autointersecciones en los tramos de control 10 y 13, alrededor de X≈995/Y≈1669. No atribuirle una meta autorada ni sectores inexistentes, y no corregir esos controles a ojo. El archivo está **archivado como fuente de Track Studio, no publicado como pista jugable**. La pista 2000×4300 existente continúa activa y su geometría no cambia.
+
+Siguiente acción del propietario en Track Studio: importar su mismo `.tdrtrack`, situar la **META** y dos **checkpoints CP1/CP2** de acuerdo con el sentido de giro, corregir el pequeño solapamiento del borde interior en la horquilla/zona central y exportar la versión completa. Con ese fichero se reemplaza el borrador, se valida la topología, se instala imagen nativa, y se retiran/aislan las decoraciones y colisiones antiguas de 2000×4300. **No sustituir únicamente `track.json` ni heredar `karting-canarias.environment.json`**.
