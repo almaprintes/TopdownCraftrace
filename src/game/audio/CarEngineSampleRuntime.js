@@ -6,7 +6,8 @@ import {
   sparkSampleMix,
   targetSparkRpm
 } from './SparkEngineModel.js';
-import { ENGINE_AUDIO_PROFILES } from './EngineAudioProfiles.js';
+import { selectEngineAudioProfile } from './EngineAudioProfiles.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 import {
   advanceProfiledRpm,
   profiledSampleMix,
@@ -191,9 +192,11 @@ export class CarEngineSampleRuntime {
 
   _mode() {
     const id = this._carId();
-    if (id === 'helix_spark') return 'spark-samples';
     const profile = this._sampleProfile();
+    // One shared CC0 multi-RPM engine for all 18 cars in DEV only.
+    // The original Spark/Gripline/Jeep/procedural routing stays in PROD.
     if (profile?.kind === 'rpm-bank') return 'rpm-bank';
+    if (id === 'helix_spark') return 'spark-samples';
     if (profile) return 'profile-sample';
     return 'procedural';
   }
@@ -209,7 +212,7 @@ export class CarEngineSampleRuntime {
       this.scene?.baseSpec?.engineAudioProfile ||
       (this._carId() === 'helix_vortex' ? 'JEEP' : '')
     ).trim();
-    return ENGINE_AUDIO_PROFILES[requested] || null;
+    return selectEngineAudioProfile(this._carId(), requested, {dev: !IS_PROD_BUILD});
   }
 
   _ensureContext() {
