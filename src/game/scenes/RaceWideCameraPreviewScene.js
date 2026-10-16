@@ -232,13 +232,15 @@ export class RaceScene extends CurrentRaceScene {
     this.time.delayedCall(260, makeSafe);
     this.time.delayedCall(850, makeSafe);
 
-    // Karting Canarias has several very close parallel lanes. Install physical median
-    // dividers after the car and track geometry exist. They are real Arcade Physics
-    // static bodies, not decorative sprites, so shortcuts between nearby lanes are blocked.
-    try {
-      installKartingCanariasDividers(this);
-    } catch (e) {
-      console.warn('[TDR2] Karting Canarias divider install failed', e);
+    // The 2000x4300 legacy dividers were authored for the old circuit.
+    // They cannot be installed over the new 2048x3072 image-native road:
+    // collisions are provided by the owner's precise Bezier road boundaries.
+    if (this.track?.meta?.renderMode !== 'image-native') {
+      try {
+        installKartingCanariasDividers(this);
+      } catch (e) {
+        console.warn('[TDR2] Karting Canarias divider install failed', e);
+      }
     }
   }
 
