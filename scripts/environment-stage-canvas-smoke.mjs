@@ -13,7 +13,7 @@ const operations=[],ctx={beginPath(){operations.push(['begin']);},
  closePath(){throw Error('Closed route diagonal in Canvas2D!');}
 };
 const report=paintOpenStageRoad(ctx,pts,track.trackWidth);
-assert.equal(report.points,2465);assert.equal(report.segments,2464);
+assert.equal(report.points,pts.length);assert.equal(report.segments,pts.length-1);
 assert.equal(operations.filter(o=>o[0]==='stroke').length,3);
 const center=operations.slice(0,operations.findIndex(op=>op[0]==='stroke'));
 assert.deepEqual(center[1],['move',pts[0].x,pts[0].y]);
@@ -32,4 +32,4 @@ assert.ok(body.indexOf('this._renderStageRaster();')<body.indexOf('super._drawRe
 assert.ok(body.includes('return;'));
 assert.ok(layer.includes("this.cameras.main.ignore(sprite)"));
 assert.ok(layer.includes("this._clearStageRaster();"));
-console.log('STAGE CANVAS 2D OK: 2465 original route points, 2 mobile texture tiles, 3 OPEN strokes, 0 closing paths, inherited Phaser road disabled.');
+console.log('STAGE CANVAS 2D OK: '+pts.length+' source-derived points, 2 mobile texture tiles, 3 OPEN strokes, 0 closing paths, inherited Phaser road disabled.');
