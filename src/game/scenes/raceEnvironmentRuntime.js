@@ -1,5 +1,6 @@
 import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
+import {scaleKartingCanariasEnvironment} from '../tracks/kartingCanariasWorldScale.js';
 import { pathPoint, pathLength } from '../environment/EditableSpline.js';
 import { sampleCollisionLine } from '../environment/CollisionPenGeometry.js';
 import { buildColliderSpatialIndex, nearbyColliders } from '../performance/colliderSpatialIndex.js';
@@ -20,7 +21,15 @@ function envFor(scene){
   // Keep local TrackStudio previews isolated from the published environment registry.
   if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey)))return null;
   const candidates=[scene?.trackKey,scene?.track?.meta?.id,scene?.track?.id,scene?.track?.trackId,scene?.track?.meta?.trackId].map(normalizeTrackKey).filter(Boolean);
-  for(const key of candidates){const env=createTrackEnvironment(key);if(env)return env;}
+  for(const key of candidates){
+    const env=createTrackEnvironment(key);
+    if(!env)continue;
+    // Environment Studio exports are kept in original 2048x3072 photo pixels.
+    // Project the new Canarias barriers into the same x2.5 world as its race
+    // track and tiled background. Each registry fetch is a fresh clone.
+    return key==='karting-canarias'&&normalizeTrackKey(scene?.trackKey)==='karting-canarias'
+      ?scaleKartingCanariasEnvironment(env):env;
+  }
   return null;
 }
 function textureKey(asset){return `race-env:${asset}`;}
