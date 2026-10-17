@@ -1,0 +1,11 @@
+# DEV — Nuevo Karting Canarias 4096, preparado para instalar
+
+El propietario sustituyó la fotografía fuente y trazó directamente sobre **4096×6144 px**, con **590 muestras**, 21 nodos Bézier, carretera base 180, y 3 checkpoints. La nueva fuente es un archivo .tdrtrack con WebP embebido, SHA256 `1c3e92545c12e0b9941f10e81f8ca6c58e233c909e59005c465507d3b90bc086`. No reemplazarlo por el .tdrtrack previo cuyo orden de checkpoints estaba incorrecto.
+
+**Acción manual necesaria antes de activar:** subir ese único fichero binario por GitHub web a `src/game/tracks/library/karting-canarias-4096/source/karting-canarias-4096.tdrtrack`. El asistente no puede trasladar directamente los bytes de ese adjunto a GitHub; no fingir que el circuito está instalado. El script `scripts/install-karting-canarias-4096-source.mjs` valida checksum, recupera geometría y foto de un solo bundle y, sin cambiar la fotografía maestra, genera JSON con la nueva identidad y 8 teselas 2048×1536 para carga **estática previa a la carrera**. No subir WebP separado.
+
+**En el próximo commit de activación, tras verificar el fichero subido:** llamar instalador desde prebuild/Actions, cambiar la lista de seis circuitos publicados reemplazando `karting-canarias` por `karting-canarias-4096`, retirar de selector `karting-canarias-narrow70`, y descartar los registros/colisiones obsoletas sin mezclarlos con la identidad nueva. Instalar meta `paintedCheckeredFinish` para banda ajedrezada estática en la coordenada real de startLine, sin retocar la imagen ni redibujar su trazado. Adaptar smoke tests e inventario al nuevo ID.
+
+**CP:** RaceScene solo verifica CP1 y CP2, por ello el instalador escoge las posiciones de 1/3 y 2/3 (primer y último CP) conservando los tres originales en metadata; NO afirmar que el intermedio cuenta vueltas. Otra iteración podrá generalizar los checkpoints, pero no introducir esa regresión junto con el nuevo circuito.
+
+**No eliminar aún fuentes originales del repositorio:** sirven de respaldo mientras la imagen nueva no esté efectivamente subida y verificada. En la DEV final solo debe aparecer un Canarias, el nuevo. No reintroducir culling ni reinstalar multiplicador ×2.5, y conservar los demás cinco circuitos. Android público sin cambios.
