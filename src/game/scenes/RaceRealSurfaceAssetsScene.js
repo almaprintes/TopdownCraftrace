@@ -31,7 +31,9 @@ export class RaceScene extends BakedRaceScene {
     const photoNative=!!registered&&isImageNativeTrackMeta(registered);
     if(photoNative){
       this._tdrPhotoNativeMaterialsSkipped=true;
-      try{window.__tdrLowSurfaceMode=true;}catch{}
+      // No extra quality downgrade: the authored photograph is already the
+      // finished surface, regardless of the user's video preset.
+      try{window.__tdrLowSurfaceMode=false;}catch{}
       return;
     }
     if(window.__tdrIosSafeMode===true||lowSurfaceMode){try{window.__tdrLowSurfaceMode=true;}catch{}return;}try{window.__tdrLowSurfaceMode=false;}catch{}if(trackKey===ATLANTICO_TRACK_KEY){const plan=surfacePlan(prefs),grassDiff=polyhaven('sparse_grass','diff','jpg',plan.diff),dirtDiff=polyhaven('rocky_trail_02','diff','jpg',plan.diff),grassNormal=polyhaven('sparse_grass','nor_gl','png',plan.normal),dirtNormal=polyhaven('rocky_trail_02','nor_gl','png',plan.normal);this.load.image('grass',prefs.lighting?[grassDiff,grassNormal]:grassDiff);this.load.image('off',prefs.lighting?[dirtDiff,dirtNormal]:dirtDiff);this.load.image('asphalt',polyhaven('asphalt_02','diff','jpg',plan.asphalt));return;}this.load.image('grass','assets/materials/grass/rocky_terrain_02_diff_2k.jpg?v=20260824-grass-rocky2k-v1');const offPath=trackKey==='offroad-raven-hollow'?'assets/materials/dirt-road/road_damaged_2_diff_2k.jpg?v=20260824-raven-dirt-v1':'assets/materials/offroad/rocky_terrain_diff_2k.jpg?v=20260824-rocky-offroad-2k-v1';this.load.image('off',offPath);this.load.image('asphalt','assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg?v=20260824-polyhaven-clean-v1');}
