@@ -38,8 +38,8 @@ async function renderAtlantico(){
   const point=p=>[+(ox+p.x*zoom).toFixed(2),+(oy+p.y*zoom).toFixed(2)];
   const d=pts.map((p,i)=>`${i?'L':'M'}${point(p).join(' ')}`).join(' ')+' Z';
   const roadW=(track.trackWidth||160)*zoom;
-  const grass=fromPublic('assets/materials/grass-real.webp');
-  const asphalt=fromPublic('assets/materials/asphalt-real.webp');
+  const grass=fromPublic('assets/materials/grass/rocky_terrain_02_diff_2k.jpg');
+  const asphalt=fromPublic('assets/materials/asphalt-pbr/aerial_asphalt_01_diff_1k.jpg');
   if(!fs.existsSync(grass)||!fs.existsSync(asphalt))
     throw Error('Selector Atlántico: missing active game materials');
   const bg=await sharp(grass).resize(W,H,{fit:'fill'}).modulate({saturation:1.35,brightness:.67}).png().toBuffer();
