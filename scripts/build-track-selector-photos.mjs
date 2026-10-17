@@ -6,6 +6,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import {fileURLToPath} from 'node:url';
 import {TRACK_SELECTOR_PHOTO_PATHS} from '../src/game/tracks/trackSelectorPhotos.js';
+import {ATLANTICO_PHOTO} from './install-circuito-atlantico-source.mjs';
 
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const DEST_WIDTH=900,DEST_HEIGHT=600;
@@ -43,10 +44,13 @@ export async function buildTrackSelectorPhotos(){
   for(const [id,destRel] of entries){
     const dest=fromPublic(destRel);
     fs.mkdirSync(path.dirname(dest),{recursive:true});
-    const source=sources[id];
+    const photoAvailable=id==='circuito-atlantico'&&fs.existsSync(fromPublic(ATLANTICO_PHOTO));
+    const source=photoAvailable?ATLANTICO_PHOTO:sources[id];
     if(!source)throw Error('Selector: image source missing for '+id);
-    // Atlántico remains unchanged: its replacement image is coming from owner.
-    const buffer=await photoThumbnail(fromPublic(source),{legacyAtlantico:id==='circuito-atlantico'});
+    // Only use the replacement photo AFTER the owner's exact source archive
+    // is installed. Otherwise preserve the previous Atlántico thumbnail.
+    const buffer=await photoThumbnail(fromPublic(source),
+      {legacyAtlantico:id==='circuito-atlantico'&&!photoAvailable});
     fs.writeFileSync(dest,buffer);
     const md=await sharp(buffer).metadata();
     if(md.format!=='webp'||md.width!==DEST_WIDTH||md.height!==DEST_HEIGHT)
