@@ -1099,15 +1099,20 @@ if (this.physics.world.debugGraphic) {
   this.physics.world.debugGraphic = null;
 }
 const imageNativeVisual = isImageNativeTrackScene(this);
-// 2) Texturas procedurales (no deben romper la escena)
-try { this.ensureBgTexture(); } catch (e) {}
-try { this.ensureOffTexture(); } catch (e) {}   // ← NUEVO (OFF visual)
-try {
-  this.ensureAsphaltTexture();
-  this.ensureAsphaltOverlayTexture();
-  this._dbg('asphalt OK');
-} catch (e) {
-  this._dbg('asphalt ERROR');
+// A published/photo-authored road is already rendered by GPU WebP tiles.
+// Procedural grass/off/asphalt and its wear overlays are invisible here.
+// Building them anyway allocates extra canvases/textures and warms WebKit up
+// for no visual benefit. Classic circuits keep their exact previous path.
+if (!imageNativeVisual) {
+  try { this.ensureBgTexture(); } catch (e) {}
+  try { this.ensureOffTexture(); } catch (e) {}
+  try {
+    this.ensureAsphaltTexture();
+    this.ensureAsphaltOverlayTexture();
+    this._dbg('asphalt OK');
+  } catch (e) {
+    this._dbg('asphalt ERROR');
+  }
 }
 try { this.ensureCarTexture(); } catch (e) {}
 
