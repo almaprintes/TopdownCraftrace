@@ -2,7 +2,10 @@ const DELTA_PANEL_ID='tdr-live-delta-panel';
 const CONTROL_ID='tdr-race-hud-control';
 
 let enabled=false;
-let raf=0;
+let pendingApply=0;
+let lastPanel=null;
+let originalPause=null;
+let lastStructuralPoll=0;
 let lastRace=false;
 let pauseRect=null;
 let preserveEnabledThroughPause=false;
@@ -35,11 +38,21 @@ function isPauseButton(button){
 }
 
 function findPauseButton(){
-  return [...document.querySelectorAll('button')].find(isPauseButton)||null;
+  // The original pause button is stable for a race. Reacquire after a scene
+  // replaces it, not every rendered frame or every panel refresh.
+  if(originalPause?.isConnected)return originalPause;
+  const replacement=[...document.querySelectorAll('button')].find(isPauseButton)||null;
+  if(replacement!==originalPause)pauseRect=null;
+  originalPause=replacement;
+  return replacement;
 }
 
-function retireLegacyDomDelta(){
-  for(const el of [...document.querySelectorAll('body *')]){
+function retireLegacyDomDelta(scope=document.body){
+  // Full-body scan is only needed at boot. After that inspect ONLY newly
+  // attached subtrees or a text node that has changed into DELTA.
+  if(!scope||scope.nodeType!==1)return;
+  const elements=scope===document.body?scope.querySelectorAll('*'):[scope,...scope.querySelectorAll('*')];
+  for(const el of elements){
     if(el.id===CONTROL_ID||el.closest?.(`#${CONTROL_ID}`)||el.closest?.(`#${DELTA_PANEL_ID}`))continue;
     if(el.children?.length)continue;
     const text=String(el.textContent||'').replace(/\s+/g,' ').trim().toUpperCase();
@@ -50,19 +63,22 @@ function retireLegacyDomDelta(){
       const ptext=String(parent.textContent||'').replace(/\s+/g,' ').trim().toUpperCase();
       if(ptext.length<=24&&!/\bLAST\b|\bBEST\b/.test(ptext))target=parent;
     }
-    target.style.setProperty('display','none','important');
+    if(target.style.getPropertyValue('display')!=='none'||target.style.getPropertyPriority('display')!=='important')
+      target.style.setProperty('display','none','important');
   }
 }
 
 function rememberAndHideOriginalPause(){
   const pause=findPauseButton();
   if(!pause)return null;
-  pause.dataset.tdrOriginalPause='1';
-  const rect=pause.getBoundingClientRect?.();
-  if(rect&&rect.width>20&&rect.height>20)pauseRect={left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height};
-  pause.style.setProperty('opacity','0','important');
-  pause.style.setProperty('pointer-events','none','important');
-  pause.style.setProperty('visibility','hidden','important');
+  if(!pauseRect){
+    const rect=pause.getBoundingClientRect?.();
+    if(rect&&rect.width>20&&rect.height>20)pauseRect={left:rect.left,top:rect.top,right:rect.right,bottom:rect.bottom,width:rect.width,height:rect.height};
+  }
+  if(pause.dataset.tdrOriginalPause!=='1')pause.dataset.tdrOriginalPause='1';
+  if(pause.style.getPropertyValue('opacity')!=='0'||pause.style.getPropertyPriority('opacity')!=='important')pause.style.setProperty('opacity','0','important');
+  if(pause.style.getPropertyValue('pointer-events')!=='none'||pause.style.getPropertyPriority('pointer-events')!=='important')pause.style.setProperty('pointer-events','none','important');
+  if(pause.style.getPropertyValue('visibility')!=='hidden'||pause.style.getPropertyPriority('visibility')!=='important')pause.style.setProperty('visibility','hidden','important');
   return pause;
 }
 
@@ -233,8 +249,9 @@ function apply(){
   const controls=raceControlsRoot();
   const hud=document.querySelector('.tdr-race-hud');
 
-  retireLegacyDomDelta();
-  if(race)positionControl(root);
+  const panelChanged=panel!==lastPanel;
+  if(race&&(panelChanged||race!==lastRace||root.style.display!=='flex'||!pauseRect))positionControl(root);
+  lastPanel=panel;
 
   if(race&&preserveEnabledThroughPause){
     preserveEnabledThroughPause=false;
@@ -246,46 +263,99 @@ function apply(){
   }
 
   lastRace=race;
-  root.style.display=race?'flex':'none';
+  const display=race?'flex':'none';
+  if(root.style.display!==display)root.style.display=display;
 
   const delta=root.querySelector('[data-tdr-delta-segment]');
   if(delta){
-    delta.setAttribute('aria-pressed',enabled?'true':'false');
-    delta.style.color=enabled?'#58e8ff':'rgba(255,255,255,.78)';
-    delta.style.background=enabled?'rgba(88,232,255,.10)':'transparent';
+    const aria=enabled?'true':'false',color=enabled?'#58e8ff':'rgba(255,255,255,.78)',bg=enabled?'rgba(88,232,255,.10)':'transparent';
+    if(delta.getAttribute('aria-pressed')!==aria)delta.setAttribute('aria-pressed',aria);
+    if(delta.style.color!==color)delta.style.color=color;
+    if(delta.style.background!==bg)delta.style.background=bg;
   }
 
   if(panel){
-    panel.dataset.tdrUserDeltaEnabled=enabled?'1':'0';
+    const flag=enabled?'1':'0';
+    if(panel.dataset.tdrUserDeltaEnabled!==flag)panel.dataset.tdrUserDeltaEnabled=flag;
     polishPanel(panel);
     positionPanel(panel,root,race);
   }
 }
 
-function frame(){
-  const panel=document.getElementById(DELTA_PANEL_ID);
-  const root=document.getElementById(CONTROL_ID);
-  const race=isRaceVisible();
-  retireLegacyDomDelta();
-  if(root){
-    if(race)positionControl(root);
-    else root.style.display='none';
+// DOM observer is intentionally childList-only. The previous full-body
+// style/class observer reacted to the styles written by apply() itself and
+// to unrelated race telemetry on almost every animation frame.
+const STRUCTURAL_SELECTORS=[
+  '#tdr-race-controls','.tdr-race-hud',`#${DELTA_PANEL_ID}`,
+  '#tdrStartup','.session-report','.race-report','[data-session-report]',
+  '#session-report','[data-tdr-session-rewards]','#tdr-session-rewards',
+  '.veil','.modal','button'
+].join(',');
+function matchesStructural(node){
+  if(!node||node.nodeType!==1)return false;
+  if(node.id===CONTROL_ID||node.closest?.(`#${CONTROL_ID}`))return false;
+  if(node.matches?.(STRUCTURAL_SELECTORS))return true;
+  return !!node.querySelector?.(STRUCTURAL_SELECTORS);
+}
+function scheduleApply(){
+  if(pendingApply)return;
+  pendingApply=setTimeout(()=>{pendingApply=0;apply();},0);
+}
+function onMutations(records){
+  let needsApply=false;
+  for(const mutation of records){
+    // A delta label changes live during a lap: polish its typography only
+    // if the content mode switched. Do not re-layout its panel per digit.
+    const target=mutation.target;
+    if(target?.closest?.(`#${DELTA_PANEL_ID}`)){
+      const panel=document.getElementById(DELTA_PANEL_ID);
+      if(panel)polishPanel(panel);
+      continue;
+    }
+    // Ignore text churn from Ghost, timers, game diagnostics, native HTML
+    // text bridges and every other subtree unrelated to these controls.
+    for(const node of mutation.addedNodes){
+      if(node.nodeType===3){
+        if(String(node.textContent||'').trim().toUpperCase()==='DELTA')
+          retireLegacyDomDelta(node.parentElement);
+        continue;
+      }
+      if(node.nodeType!==1)continue;
+      if(!node.closest?.(`#${CONTROL_ID}`)){
+        if(String(node.textContent||'').includes('DELTA'))retireLegacyDomDelta(node);
+        if(matchesStructural(node))needsApply=true;
+      }
+    }
+    for(const node of mutation.removedNodes){
+      if(matchesStructural(node)){needsApply=true;break;}
+    }
   }
-  if(panel&&root){polishPanel(panel);positionPanel(panel,root,race);}
-  raf=requestAnimationFrame(frame);
+  if(needsApply)scheduleApply();
 }
 
 function boot(){
   enabled=false;
   preserveEnabledThroughPause=false;
   makeControl();
-  const observer=new MutationObserver(()=>apply());
-  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
-  window.addEventListener('resize',apply,{passive:true});
-  window.addEventListener('orientationchange',apply,{passive:true});
-  window.addEventListener('tdr:viewportchange',apply,{passive:true});
+  retireLegacyDomDelta();
+  const observer=new MutationObserver(onMutations);
+  observer.observe(document.body,{childList:true,subtree:true});
+  const relayout=()=>{pauseRect=null;apply();};
+  window.addEventListener('resize',relayout,{passive:true});
+  window.addEventListener('orientationchange',relayout,{passive:true});
+  window.addEventListener('tdr:viewportchange',relayout,{passive:true});
+  window.addEventListener('pageshow',relayout,{passive:true});
   apply();
-  if(!raf)raf=requestAnimationFrame(frame);
+  // Fallback for ancestor display changes that do not attach/remove nodes.
+  // Poll for state transitions ONLY; never walk body or write layout each tick.
+  setInterval(()=>{
+    if(document.hidden)return;
+    const race=isRaceVisible(),panel=document.getElementById(DELTA_PANEL_ID);
+    if(race!==lastRace||panel!==lastPanel||(!originalPause&&race&&Date.now()-lastStructuralPoll>2000)){
+      lastStructuralPoll=Date.now();
+      apply();
+    }
+  },450);
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});

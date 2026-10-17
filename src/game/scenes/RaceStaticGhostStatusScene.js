@@ -407,17 +407,18 @@ export class RaceScene extends CurrentRaceScene {
     const hasReplay = onlineReplay || hasPbReplay;
     const bestMs = Number(this.ttBest?.lapMs);
 
-    if (labels.ghostText) labels.ghostText.textContent = `👻 FANTASMA · ${this._tdrGhostVisibleEnabled ? 'ON' : 'OFF'}`;
-    if (labels.recordText) {
-      if (onlineReplay) labels.recordText.textContent = `🌐 ONLINE ${fmtPb(this._ghostData?.lapMs)} · ▶`;
-      else if (hasPbReplay) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · ▶`;
-      else if (Number.isFinite(bestMs)) labels.recordText.textContent = `🏆 PB ${fmtPb(bestMs)} · SIN REPLAY`;
-      else labels.recordText.textContent = 'RÉCORD NO DISPONIBLE';
-    }
-    if (labels.visibilityText) labels.visibilityText.textContent = `◐ VISIBILIDAD · ${Math.round(level * 100)}%`;
-    if (this._tdrGhostPanelRows?.[1]) {
-      this._tdrGhostPanelRows[1].style.opacity = hasReplay ? '1' : '.58';
-      this._tdrGhostPanelRows[1].style.cursor = hasReplay ? 'pointer' : 'default';
+    const setText=(node,value)=>{if(node&&node.textContent!==value)node.textContent=value;};
+    setText(labels.ghostText,`👻 FANTASMA · ${this._tdrGhostVisibleEnabled ? 'ON' : 'OFF'}`);
+    const recordText=onlineReplay?`🌐 ONLINE ${fmtPb(this._ghostData?.lapMs)} · ▶`:
+      hasPbReplay?`🏆 PB ${fmtPb(bestMs)} · ▶`:
+      Number.isFinite(bestMs)?`🏆 PB ${fmtPb(bestMs)} · SIN REPLAY`:'RÉCORD NO DISPONIBLE';
+    setText(labels.recordText,recordText);
+    setText(labels.visibilityText,`◐ VISIBILIDAD · ${Math.round(level * 100)}%`);
+    const recordRow=this._tdrGhostPanelRows?.[1];
+    if(recordRow){
+      const opacity=hasReplay?'1':'.58',cursor=hasReplay?'pointer':'default';
+      if(recordRow.style.opacity!==opacity)recordRow.style.opacity=opacity;
+      if(recordRow.style.cursor!==cursor)recordRow.style.cursor=cursor;
     }
   }
 
@@ -433,6 +434,12 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _syncStaticGhostPanel() {
+    // POST_UPDATE is dispatched every frame; status text and anchor probes
+    // do not need that rate. Manual Ghost taps still refresh immediately.
+    const now=performance.now();
+    const next=Number(this._tdrGhostPanelNextRefresh||0);
+    if(now<next)return;
+    this._tdrGhostPanelNextRefresh=now+(this._tdrGhostPanelAnchor?120:350);
     let found = null;
     if (!this._tdrGhostPanelAnchor || performance.now() < Number(this._tdrGhostPanelProbeUntil || 0)) {
       found = this._findGhostPanelObjects();
@@ -448,7 +455,9 @@ export class RaceScene extends CurrentRaceScene {
       }
     }
 
-    for (const obj of this._tdrGhostPanelObjects || []) hidePhaserObject(obj);
+    for (const obj of this._tdrGhostPanelObjects || []) {
+      if(obj?.visible!==false||Number(obj?.alpha||0)!==0)hidePhaserObject(obj);
+    }
     this._applyGhostPanelPreference();
     this._refreshStaticGhostPanelLabels();
 
