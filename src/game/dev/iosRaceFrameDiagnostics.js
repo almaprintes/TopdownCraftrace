@@ -63,21 +63,27 @@ export function installFinalRaceFrameDiagnosticUpdate(RaceClass){
 export function mountRaceDevFrameDiagnostics(scene){
   if(IS_PROD_BUILD||!isIos()||typeof document==='undefined'||!scene?.game?.events)return null;
   const host=document.body;
-  const root=style(document.createElement('div'),'position:fixed;top:calc(env(safe-area-inset-top) + 48px);left:7px;z-index:2147483000;font:700 11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;color:#fff;pointer-events:none;max-width:min(300px,94vw)');
+  // This overlay must never cover the lower-left touch steering area in landscape.
+  // Keep actions in a tiny top toolbar, cap the details, and measure while folded.
+  const root=style(document.createElement('div'),'position:fixed;top:calc(env(safe-area-inset-top) + 8px);left:7px;z-index:2147483000;font:700 11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;color:#fff;pointer-events:none;width:min(300px,90vw);max-width:90vw');
   root.id='tdr-race-perf-diagnostic';
   const trigger=style(document.createElement('button'),'pointer-events:auto;padding:7px 11px;background:#101d29e8;color:#fff;border:1px solid #88b9cb;border-radius:8px;font:800 12px system-ui;min-height:35px');
-  trigger.type='button';trigger.textContent='MEDIR';root.appendChild(trigger);
-  const panel=style(document.createElement('div'),'display:none;margin-top:4px;padding:8px;border:1px solid #94aabb;border-radius:8px;background:rgba(3,12,22,.93);pointer-events:auto;box-shadow:0 6px 16px #0009');
-  const pre=style(document.createElement('pre'),'margin:0 0 8px;font:700 10px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;color:#e7f7ff;user-select:text;-webkit-user-select:text');
-  pre.textContent='Abre y conduce 20 s para medir. Los valores son tiempos de CPU, no de GPU.';
-  panel.appendChild(pre);
-  const row=style(document.createElement('div'),'display:flex;gap:5px;flex-wrap:wrap');
-  panel.appendChild(row);root.appendChild(panel);
-  const control=(label,callback)=>{
-    const b=style(document.createElement('button'),'padding:6px 8px;min-height:32px;background:#1b3241;color:#fff;border:1px solid #648194;border-radius:6px;font:800 10px system-ui');
-    b.type='button';b.textContent=label;b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();callback(b);});row.appendChild(b);return b;
+  trigger.type='button';trigger.textContent='MEDIR';
+  const toolbar=style(document.createElement('div'),'display:flex;align-items:center;gap:5px;flex-wrap:nowrap;pointer-events:auto');
+  toolbar.appendChild(trigger);root.appendChild(toolbar);
+  // Restrict BOTH the full panel and its scrollable contents. The touch stick
+  // remains usable even on a compact iPhone held sideways.
+  const panel=style(document.createElement('div'),'display:none;margin-top:4px;padding:7px;border:1px solid #94aabb;border-radius:8px;background:rgba(3,12,22,.93);pointer-events:auto;box-shadow:0 6px 16px #0009;max-height:min(39vh,250px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch');
+  const row=style(document.createElement('div'),'display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px');
+  panel.appendChild(row);
+  const pre=style(document.createElement('pre'),'margin:0;font:700 9px/1.22 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;color:#e7f7ff;user-select:text;-webkit-user-select:text');
+  pre.textContent='Pulsa MEDIR, oculta el panel y conduce; la medición continuará.';
+  panel.appendChild(pre);root.appendChild(panel);
+  const control=(label,callback,target=row)=>{
+    const b=style(document.createElement('button'),'padding:5px 7px;min-height:30px;background:#1b3241;color:#fff;border:1px solid #648194;border-radius:6px;font:800 10px system-ui;touch-action:manipulation');
+    b.type='button';b.textContent=label;b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();callback(b);});target.appendChild(b);return b;
   };
-  const state={active:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,lastUpdateMs:0,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now()};
+  const state={active:false,expanded:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,lastUpdateMs:0,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now()};
   const mode=()=>[state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON',scene._tdrEngineSample?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON'].join(' · ');
   const reset=()=>{
     state.window=freshWindow();
@@ -107,11 +113,12 @@ export function mountRaceDevFrameDiagnostics(scene){
     }
     if(now-state.lastReportAt>=1500){
       state.lastReport=metrics(w,scene,mode());
-      pre.textContent=state.lastReport;
+      // Hidden reports should not trigger DOM paint/layout while the player drives.
+      if(state.expanded)pre.textContent=state.lastReport;
       state.lastReportAt=now;
     }
   };
-  control('MOTOR ON',async b=>{
+  const motorButton=control('MOTOR ON',async b=>{
     if(state.audioBusy)return;
     const engine=scene._tdrEngineSample;
     const current=engine?.getDevEngineAudioStatus?.();
@@ -143,7 +150,9 @@ export function mountRaceDevFrameDiagnostics(scene){
       state.audioBusy=false;
       b.disabled=false;
     }
-  });
+  },toolbar);
+  // MOTOR is reachable with details collapsed; before MEDIR it stays hidden.
+  motorButton.style.display='none';
   const hudButton=control('HUD ON',b=>{
     state.hudOff=!state.hudOff;
     scene._tdrDiagnosticHudOff=state.hudOff;
@@ -166,16 +175,32 @@ export function mountRaceDevFrameDiagnostics(scene){
     reset();
   });
   control('REINICIAR',()=>reset());
-  control('COPIAR',async b=>{
+  const copyButton=control('COPIAR',async b=>{
     const output=state.lastReport||pre.textContent;
     try{await navigator.clipboard.writeText(output);b.textContent='COPIADO';}
-    catch{pre.textContent=output+'\nMantén pulsado este informe para copiarlo, o envía una captura.';}
-  });
+    catch{
+      state.expanded=true;
+      panel.style.display='block';
+      trigger.textContent='MINIMIZAR';
+      pre.textContent=output+'\nMantén pulsado este informe para copiarlo, o envía una captura.';
+    }
+  },toolbar);
+  copyButton.style.display='none';
   const open=()=>{
-    state.active=!state.active;
-    panel.style.display=state.active?'block':'none';
-    trigger.textContent=state.active?'CERRAR':'MEDIR';
-    if(state.active)reset();
+    // Starting and folding are different operations. Folding MUST NOT change
+    // the sampling state or reset elapsed frames: this is the whole iPhone fix.
+    if(!state.active){
+      state.active=true;
+      state.expanded=true;
+      motorButton.style.display='';
+      copyButton.style.display='';
+      reset();
+    }else{
+      state.expanded=!state.expanded;
+    }
+    panel.style.display=state.expanded?'block':'none';
+    trigger.textContent=state.expanded?'MINIMIZAR':'VER DATOS';
+    if(state.expanded&&state.lastReport)pre.textContent=state.lastReport;
   };
   trigger.addEventListener('click',open);
   host.appendChild(root);
@@ -183,7 +208,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   events.on(Phaser.Core.Events.PRE_RENDER,state.pre);
   events.on(Phaser.Core.Events.POST_RENDER,state.post);
   const cleanup=()=>{
-    if(state.disposed)return;state.disposed=true;state.active=false;
+    if(state.disposed)return;state.disposed=true;state.active=false;state.expanded=false;
     events.off(Phaser.Core.Events.PRE_RENDER,state.pre);
     events.off(Phaser.Core.Events.POST_RENDER,state.post);
     scene._tdrDiagnosticHudOff=false;
