@@ -49,11 +49,11 @@ for(const id of ['karting-tenerife','santa-cruz']){
 }
 const geometry=JSON.parse(readFileSync('src/game/tracks/library/track01/track.json','utf8'));
 assert.ok(geometry.centerline.length>=80);
-assert.match(builder,/src\/game\/tracks\/library\/track01\/track\\.json/,
-  'Atlántico's thumbnail must read current playable route, not obsolete /beauty/');
+assert.match(builder,/src\/game\/tracks\/library\/track01\/track\.json/,
+  "Atlántico thumbnail must read current playable route, not obsolete /beauty/");
 assert.ok(!builder.includes("'circuito-atlantico':'assets/tracks/track01/beauty/"),
   'Do not restore the retired Atlántico beauty preview');
-assert.match(builder,/assets\/materials\/asphalt-real\\.webp/,
+assert.match(builder,/assets\/materials\/asphalt-real\.webp/,
   'Atlántico should use a real current game asphalt material');
 assert.equal(selectorTrackKind({id:'rally-arafo-los-loros'}),'RALLY');
 assert.equal(selectorTrackKind({id:'karting-americas'}),'CIRCUIT');
