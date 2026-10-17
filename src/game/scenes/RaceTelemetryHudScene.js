@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceMobilePerformanceScene.js';
 import { mountRaceInstrumentHud, updateRaceInstrumentHud, destroyRaceInstrumentHud } from '../ui/raceInstrumentHud.js';
+import { mountRaceDevFrameDiagnostics } from '../dev/iosRaceFrameDiagnostics.js';
 
 function safeDestroy(obj){if(!obj)return;try{obj.destroy?.(true);}catch{}}
 function isIOSDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
@@ -45,14 +46,19 @@ export class RaceScene extends CurrentRaceScene {
     retireLegacyRaceUi(this);
     mountRaceInstrumentHud(this);
     updateRaceInstrumentHud(this,100);
+    mountRaceDevFrameDiagnostics(this);
     this.events?.once?.('shutdown',()=>destroyRaceInstrumentHud(this));
     this.events?.once?.('destroy',()=>destroyRaceInstrumentHud(this));
     return result;
   }
 
   update(time,delta){
+    // Instrument the *actual* final race update path, not retired Phaser HUDs.
+    const diag=this._tdrFrameDiagnostic;
+    const started=diag?.active?performance.now():0;
     const result=super.update(time,delta);
-    updateRaceInstrumentHud(this,delta);
+    if(!this._tdrDiagnosticHudOff)updateRaceInstrumentHud(this,delta);
+    if(started)diag.recordUpdate(performance.now()-started);
     return result;
   }
 }
