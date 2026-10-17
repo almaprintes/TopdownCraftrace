@@ -102,7 +102,8 @@ export function carGeometry(spec,trackCarScale=1,source={width:2,height:1}){
 function listedTracks(){
   // Read the real selection source, without importing browser globals or changing it.
   const s=fs.readFileSync(path.join(ROOT,'src/game/tracks/trackUnlocks.js'),'utf8');
-  const match=s.match(/PUBLISHED_TRACK_IDS\s*=\s*Object\.freeze\(\[([^\]]+)\]\)/);
+  const match=s.match(/PUBLISHED_TRACK_IDS\\s*=\\s*Object\\.freeze\\(\\[([^\\]]+)\\]\\)/)||
+    s.match(/\\['circuito-atlantico'[^\\]]+\\]/);
   if(!match)throw Error('PUBLISHED_TRACK_IDS selection changed; update inventory parser');
   return [...match[1].matchAll(/'([^']+)'/g)].map(x=>x[1]);
 }

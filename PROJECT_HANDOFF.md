@@ -1,5 +1,9 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## CANARIAS REHECHO 4096 — FUENTE BINARIA PENDIENTE
+
+[Preparación para el Track Studio corregido y una única pista activa](docs/continuity/2026-10-17-karting-canarias-4096-staged.md). `scripts/install-karting-canarias-4096-source.mjs` espera un ÚNICO archivo binario de 4,1MB bajo `src/game/tracks/library/karting-canarias-4096/source/karting-canarias-4096.tdrtrack`. Al subirlo, prebuild separa foto+geometría y genera 8 teselas fotográficas; en la PWA DEV cambia el único Canarias visible de `karting-canarias` a `karting-canarias-4096`, separando récords. Narrow70 está oculto. Los archivos antiguos permanecen como respaldo, no se borran del repositorio antes de validar la sustitución. **NO AFIRMAR QUE EL CIRCUITO ESTÁ INSTALADO HASTA QUE EL BINARIO EXISTA Y ACTIONS SEA VERDE.** Meta visible ajedrezada ya preparada en `imageNativeRaceLoader.js`, sin edición de foto ni RAF.
+
 ## DEV 1.2.264 — CANARIAS NARROW-70
 
 Separate PWA DEV experimental track karting-canarias-narrow70, canonical Canarias unchanged. Same centerline (16,328px), photo/world x2.5, nominal width 70 source instead of 105; preserves 18 hand-authored Bezier edge handles and per-sector widths (scaled inward 70/105). The alternate WebP photo is re-warped OFFLINE at build into four tile assets; no runtime extra frame-loop or culling. Original Environment Studio barriers reused. Separate ID and record keys, dev selector only, not published. Read docs/continuity/2026-10-17-karting-canarias-narrow70-264.md.

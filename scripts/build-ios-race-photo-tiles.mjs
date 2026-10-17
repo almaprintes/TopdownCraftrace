@@ -16,6 +16,7 @@ const patterns=Object.freeze({
   'karting-americas':/^photo-[0-9]+-[0-9]+\.webp$/,
   'karting-canarias':/^photo-[0-9]+-[0-9]+\.webp$/,
   'karting-canarias-narrow70':/^photo-[0-9]+-[0-9]+\.webp$/,
+  'karting-canarias-4096':/^photo-[0-9]+-[0-9]+\.webp$/,
   'rally-arafo-los-loros':/^photo-[0-9]+-[0-9]+\.webp$/,
   'circuito-atlantico':/^photo-[0-9]+-[0-9]+\.webp$/
 });

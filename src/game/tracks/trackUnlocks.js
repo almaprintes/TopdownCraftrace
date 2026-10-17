@@ -4,7 +4,15 @@ import { IS_PROD_BUILD } from '../buildTarget.js';
 const KEY='tdr2:trackUnlocks:v1';
 const DEV_KEY='tdr2:devFullTrackAccess:v1';
 
-export const PUBLISHED_TRACK_IDS=Object.freeze(['circuito-atlantico','santa-cruz','karting-tenerife','karting-canarias','karting-americas','rally-arafo-los-loros']);
+// Vite sees the generated rebuilt track ONLY after the verified owner binary
+// has been installed during prebuild. Before upload, retain the old circuit.
+// Android/release builds keep the public historic track, unchanged.
+const REBUILT_CANARIAS_PRESENT=!IS_PROD_BUILD&&
+  typeof import.meta.glob==='function'&&
+  Object.keys(import.meta.glob('./library/karting-canarias-4096/track.json')).length>0;
+export const PUBLISHED_TRACK_IDS=Object.freeze(
+  ['circuito-atlantico','santa-cruz','karting-tenerife','karting-canarias','karting-americas','rally-arafo-los-loros']
+    .map(id=>id==='karting-canarias'&&REBUILT_CANARIAS_PRESENT?'karting-canarias-4096':id));
 export const STARTER_TRACK_IDS=PUBLISHED_TRACK_IDS;
 const normalizedTrackId=id=>String(id||'').trim();
 const isJudgeExcludedTrack=id=>normalizedTrackId(id)==='practice-area';
@@ -30,7 +38,6 @@ export function unlockTrack(trackId){const id=normalizedTrackId(trackId);if(!id|
 // circuit for judges without changing that circuit's canonical published status.
 export function isTrackUnlocked(trackId){
   const id=normalizedTrackId(trackId);
-  if(!IS_PROD_BUILD&&id==='karting-canarias-narrow70')return true;
   if(evaluationAccessEnabled())return !!id&&!isJudgeExcludedTrack(id);
   return PUBLISHED_TRACK_IDS.includes(id)&&loadTrackUnlocks().unlocked.includes(id);
 }
