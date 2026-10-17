@@ -148,17 +148,26 @@ export class RaceScene extends StyledRaceScene {
       this._setCompetitionDelta = (ms) => {
         const hud = this.competitionHud;
         if (!hud?._delta?.scene) return;
-        if (!Number.isFinite(ms)) {
-          hud._delta.setText('Δ --.--').setColor('#DCE7EF');
-          return;
+        const known = Number.isFinite(ms);
+        const sign = known && ms > 0 ? '+' : '−';
+        const label = known ? `Δ ${sign}${(Math.abs(ms) / 1000).toFixed(2)}` : 'Δ --.--';
+        const color = !known ? '#DCE7EF' : ms <= 0 ? '#68F0A4' : '#FF7272';
+        // Text styling re-rasterizes the CanvasTexture on iOS/WebKit.
+        // Only alter text/color when the visual value actually changes.
+        if (hud._delta.text !== label) hud._delta.setText(label);
+        if (hud._delta._tdrPaintColor !== color) {
+          hud._delta.setColor(color);
+          hud._delta._tdrPaintColor = color;
         }
-        const sign = ms > 0 ? '+' : '−';
-        const sec = Math.abs(ms) / 1000;
-        hud._delta.setText(`Δ ${sign}${sec.toFixed(2)}`).setColor(ms <= 0 ? '#68F0A4' : '#FF7272');
       };
 
       const setSectorState = (obj, done, active) => {
         if (!obj?.scene) return;
+        // Avoid setShadow/setColor on every tick: these force Phaser.Text
+        // to regenerate and upload its texture even if nothing changed.
+        const state = done ? 'done' : active ? 'active' : 'idle';
+        if (obj._tdrSectorVisualState === state) return;
+        obj._tdrSectorVisualState = state;
         const key = obj.text.slice(0, 2);
         if (done) {
           obj.setText(`${key} ✓`);

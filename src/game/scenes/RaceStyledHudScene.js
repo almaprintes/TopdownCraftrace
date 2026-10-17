@@ -314,9 +314,13 @@ export class RaceScene extends StableRaceScene {
 
         const surf = src._surfaceText?.text || 'PISTA';
         dst._surfaceText?.setText(surf);
-        if (surf === 'CÉSPED') dst._surfaceText?.setColor('#FFD56A');
-        else if (surf === 'FUERA') dst._surfaceText?.setColor('#FF7373');
-        else dst._surfaceText?.setColor('#70FFB0');
+        const color = surf === 'CÉSPED' ? '#FFD56A' : surf === 'FUERA' ? '#FF7373' : '#70FFB0';
+        const label = dst._surfaceText;
+        // Updating an unchanged color invalidates a canvas text texture.
+        if (label?.scene && label._tdrPaintColor !== color) {
+          label.setColor(color);
+          label._tdrPaintColor = color;
+        }
       };
 
       this._layoutRaceInfoHudV2();
