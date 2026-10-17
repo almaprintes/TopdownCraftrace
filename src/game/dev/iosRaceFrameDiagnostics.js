@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import { IOS_WEBGL_SYNC_KEY } from '../performance/iosWebglPresentationMode.js';
+import { getDevRaceTextRenderMode, setDevRaceTextRenderMode } from '../ui/htmlTextRuntime.js';
 
 // On-device DEV diagnostic, OFF until opened. Real Phaser game events rather
 // than a second requestAnimationFrame loop or a fake "FPS" approximation.
@@ -35,7 +36,8 @@ const metrics=(w,scene,mode)=>[
   '>33ms '+w.over33+' · >50ms '+w.over50+' · último '+ms(w.lastSpike)+'ms',
   'TILES '+(scene._trackBeautyTiles?.length||0)+' · NO mide GPU directamente',
   frameInfo(scene),
-  engineStatus(scene)
+  engineStatus(scene),
+  (()=>{const t=getDevRaceTextRenderMode();return 'TEXTOS '+t.mode+' · RAF '+(t.rafActive?'ON':'OFF')+' · nodos '+(t.registered??'?');})()
 ].join('\n');
 
 // This installer wraps the outermost in-use race class (the concrete scene
@@ -84,7 +86,7 @@ export function mountRaceDevFrameDiagnostics(scene){
     b.type='button';b.textContent=label;b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();callback(b);});target.appendChild(b);return b;
   };
   const state={active:false,expanded:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,lastUpdateMs:0,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now()};
-  const mode=()=>[state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON',scene._tdrEngineSample?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON'].join(' · ');
+  const mode=()=>[state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON',scene._tdrEngineSample?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON','TEXTO '+getDevRaceTextRenderMode().mode].join(' · ');
   const reset=()=>{
     state.window=freshWindow();
     state.lastReportAt=performance.now();
@@ -153,6 +155,19 @@ export function mountRaceDevFrameDiagnostics(scene){
   },toolbar);
   // MOTOR is reachable with details collapsed; before MEDIR it stays hidden.
   motorButton.style.display='none';
+  const textButton=control('TEXTO HTML',b=>{
+    const previous=getDevRaceTextRenderMode();
+    const toPhaser=previous.mode!=='PHASER';
+    const result=setDevRaceTextRenderMode(scene,toPhaser);
+    if(!result.ok){
+      pre.textContent='No se pudo cambiar el motor de textos: '+(result.reason||'desconocido');
+      return;
+    }
+    b.textContent='TEXTO '+result.mode;
+    reset();
+  });
+  // Keep the A/B action accessible without scrolling through the other tools.
+  row.insertBefore(textButton,row.firstChild);
   const hudButton=control('HUD ON',b=>{
     state.hudOff=!state.hudOff;
     scene._tdrDiagnosticHudOff=state.hudOff;
@@ -212,6 +227,8 @@ export function mountRaceDevFrameDiagnostics(scene){
     events.off(Phaser.Core.Events.PRE_RENDER,state.pre);
     events.off(Phaser.Core.Events.POST_RENDER,state.post);
     scene._tdrDiagnosticHudOff=false;
+    // Restore the original HTML renderer and bridge RAF on leaving the race.
+    setDevRaceTextRenderMode(scene,false);
     // AudioContext belongs to the race scene and is closed by its shutdown.
     // Never resume on teardown: another focus/ad event may still require silence.
     if(scene._raceHudDom)scene._raceHudDom.style.display='';

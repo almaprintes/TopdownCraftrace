@@ -1,8 +1,26 @@
 import Phaser from 'phaser';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 
 const ROOT_ID='tdr-native-text-layer';
 const STYLE_ID='tdr-native-text-style';
 const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
+const isIosDevice=()=>{try{return /iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);}catch{return false;}};
+let activeBridge=null;
+
+// The diagnostic is limited to DEV iOS and to the race scene.
+// Production, Android, garages and menus keep their existing text renderer.
+export function getDevRaceTextRenderMode(){
+  if(IS_PROD_BUILD||!isIosDevice()||!activeBridge)return {available:false,mode:'HTML'};
+  const bridge=activeBridge;
+  return {available:true,mode:bridge.racePhaserMode?'PHASER':'HTML',registered:bridge.entries.size,rafActive:bridge.rafActive()};
+}
+export function setDevRaceTextRenderMode(scene,phaser){
+  const bridge=activeBridge;
+  if(IS_PROD_BUILD||!isIosDevice()||!bridge||scene?.sys?.settings?.key!=='race')
+    return {ok:false,reason:'Solo disponible durante una carrera DEV en iPhone'};
+  return bridge.switchRace(scene,phaser===true);
+}
+
 
 // Menu overlays combine text, backgrounds and hit areas in the same Phaser
 // layout. Android WebView can scale the separate HTML text layer differently,
@@ -10,7 +28,7 @@ const finite=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
 // every element shares one transform.
 const PHASER_SCROLL_SCENES=new Set(['GarageScene','TrackGarageScene','menu','MenuScene']);
 function sceneKey(text){try{return String(text?.scene?.sys?.settings?.key||text?.scene?.scene?.key||'');}catch{return '';}}
-function shouldUseHtml(text){return !PHASER_SCROLL_SCENES.has(sceneKey(text));}
+function shouldUseHtml(text){return !PHASER_SCROLL_SCENES.has(sceneKey(text))&&!(activeBridge?.racePhaserMode&&sceneKey(text)==='race');}
 function isRacePreloadOverlay(text){return sceneKey(text)==='race' && finite(text?.depth)>=100000;}
 function isMobileDevice(){try{return /Android|iPhone|iPad|iPod/i.test(String(navigator?.userAgent||''))||(Number(navigator?.maxTouchPoints||0)>1&&Math.min(Number(screen?.width||0),Number(screen?.height||0))<1100);}catch{return false;}}
 
@@ -96,17 +114,63 @@ export function installHtmlTextRuntime(game){
   if(!game||globalThis.__tdrHtmlTextRuntimeInstalled)return;globalThis.__tdrHtmlTextRuntimeInstalled=true;
   const root=ensureRoot(game);if(!root){globalThis.__tdrHtmlTextRuntimeInstalled=false;return;}
   const entries=new Map(),proto=Phaser.GameObjects.Text.prototype,originalDestroy=proto.destroy,originalWebGL=proto.renderWebGL,originalCanvas=proto.renderCanvas;
+  let racePhaserMode=false,raf=0,lastSync=-Infinity,attachedScene=null;
+  const restoreRace=()=>{
+    if(attachedScene){
+      attachedScene.events?.off?.('shutdown',restoreRace);
+      attachedScene.events?.off?.('destroy',restoreRace);
+      attachedScene=null;
+    }
+    racePhaserMode=false;
+    root.style.display='';
+    lastSync=-Infinity;
+    requestSync();
+  };
+  const switchRace=(scene,enabled)=>{
+    if(!scene?.sys?.isActive?.()&&enabled)return {ok:false,reason:'La carrera no está activa'};
+    if(enabled===racePhaserMode)return {ok:true,...getDevRaceTextRenderMode()};
+    if(enabled){
+      racePhaserMode=true;
+      attachedScene=scene;
+      scene.events?.once?.('shutdown',restoreRace);
+      scene.events?.once?.('destroy',restoreRace);
+      // Hiding a DOM layer is insufficient: Text.renderWebGL must also be
+      // restored (via shouldUseHtml) and the bridge RAF must be cancelled.
+      cancelAnimationFrame(raf);
+      raf=0;
+      root.style.display='none';
+    }else restoreRace();
+    return {ok:true,...getDevRaceTextRenderMode()};
+  };
+  activeBridge={entries,switchRace,get racePhaserMode(){return racePhaserMode;},rafActive:()=>raf!==0};
+
   proto.renderWebGL=function(...args){if(!shouldUseHtml(this))return originalWebGL?.apply(this,args);};proto.renderCanvas=function(...args){if(!shouldUseHtml(this))return originalCanvas?.apply(this,args);};
   const register=text=>{if(!text||entries.has(text)||!shouldUseHtml(text))return;const clip=document.createElement('div');clip.className='tdr-native-clip';const node=document.createElement('div');node.className='tdr-native-text';clip.appendChild(node);root.appendChild(clip);entries.set(text,{clip,node,styleSig:null});};
   const factory=Phaser.GameObjects.GameObjectFactory.prototype,originalFactoryText=factory.text;
   if(!factory.__tdrNativeHtmlTextFactory){factory.text=function(...args){const text=originalFactoryText.apply(this,args);register(text);return text;};factory.__tdrNativeHtmlTextFactory=true;}
   for(const scene of Object.values(game.scene?.keys||{}))for(const child of scene?.children?.list||[])if(child instanceof Phaser.GameObjects.Text)register(child);
   proto.destroy=function(...args){const entry=entries.get(this);if(entry){entry.clip.remove();entries.delete(this);}return originalDestroy?.apply(this,args);};
-  const intervalMs=isMobileDevice()?33:16;let raf=0,lastSync=-Infinity;
-  const frame=(ts=0)=>{if(game?.pendingDestroy)return;if(!document.hidden&&ts-lastSync>=intervalMs){lastSync=ts;const metrics=frameMetrics(game);for(const [text,entry] of entries)if(!sync(game,text,entry,metrics))entries.delete(text);}raf=requestAnimationFrame(frame);};
-  raf=requestAnimationFrame(frame);
+  const intervalMs=isMobileDevice()?33:16;
+  const frame=(ts=0)=>{
+    raf=0;
+    if(game?.pendingDestroy||racePhaserMode)return;
+    if(!document.hidden&&ts-lastSync>=intervalMs){
+      lastSync=ts;
+      const metrics=frameMetrics(game);
+      for(const [text,entry] of entries)if(!sync(game,text,entry,metrics))entries.delete(text);
+    }
+    requestSync();
+  };
+  // Runtime already runs a single RAF in HTML mode. In the Phaser A/B phase
+  // it performs ZERO DOM sync callbacks or RAF scheduling.
+  function requestSync(){if(!raf&&!racePhaserMode)raf=requestAnimationFrame(frame);}
+  requestSync();
   game.events?.once?.('destroy',()=>{
-    cancelAnimationFrame(raf);for(const entry of entries.values())entry.clip.remove();entries.clear();root.remove();proto.destroy=originalDestroy;proto.renderWebGL=originalWebGL;proto.renderCanvas=originalCanvas;
+    racePhaserMode=false;
+    if(attachedScene){attachedScene.events?.off?.('shutdown',restoreRace);attachedScene.events?.off?.('destroy',restoreRace);attachedScene=null;}
+    cancelAnimationFrame(raf);raf=0;
+    if(activeBridge?.entries===entries)activeBridge=null;
+    for(const entry of entries.values())entry.clip.remove();entries.clear();root.remove();proto.destroy=originalDestroy;proto.renderWebGL=originalWebGL;proto.renderCanvas=originalCanvas;
     if(factory.__tdrNativeHtmlTextFactory){factory.text=originalFactoryText;delete factory.__tdrNativeHtmlTextFactory;}globalThis.__tdrHtmlTextRuntimeInstalled=false;
   });
 }
