@@ -24,3 +24,6 @@ Pruebas de regresión: `scripts/ios-dom-runtime-smoke.mjs` integrado en `prebuil
 
 ## Interpretación y continuación
 Probar misma calidad, mismo circuito/coche, HUD y fotografía **ON**, con motor ON, durante 30–60 s sin medir (sensación), luego medir y comparar FPS / frames >33.4 / >50ms con 1.2.260. Una mejora medible y reproducible respalda reducción de sobrecarga DOM; no garantiza que elimine todos los tirones. Si no basta, próximo candidato aislado es el `htmlTextRuntime.js` RAF y la composición WebGL iOS; no reducir imágenes por defecto.
+
+## Ajuste de precisión de la iteración
+El observador childList sigue viendo los cambios de dígitos dentro de DELTA. Se añadió caché de estado tipográfico en `polishPanel` para que no escriba estilos salvo cambio de texto `SIN REFERENCIA` o sustitución de nodos. Sin esta caché habría reducido escaneos pero conservado escrituras por vuelta de delta.

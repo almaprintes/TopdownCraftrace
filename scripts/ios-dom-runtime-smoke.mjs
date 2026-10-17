@@ -7,6 +7,7 @@ assert.match(delta,/const elements=scope===document\.body\?scope\.querySelectorA
 assert.match(delta,/if\(originalPause\?\.isConnected\)return originalPause/);
 assert.match(delta,/if\(!pauseRect\)\{/);
 assert.match(delta,/const observer=new MutationObserver\(onMutations\)/);
+assert.match(delta,/if\(previous&&previous.noReference===noReference&&previous.label===label/,'panel typography should not be rewritten per delta tick');
 assert.match(delta,/observer\.observe\(document\.body,\{childList:true,subtree:true\}\)/);
 assert.doesNotMatch(delta,/attributes:true|attributeFilter:/,'no global style/class observer');
 assert.doesNotMatch(delta,/requestAnimationFrame\(frame\)|raf=requestAnimationFrame\(frame\)/,'no independent RAF loop');

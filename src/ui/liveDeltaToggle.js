@@ -172,6 +172,12 @@ function polishPanel(panel){
   if(!panel)return;
   const kids=[...panel.children];
   const label=kids[0],value=kids[1],state=kids[2],rail=kids[3];
+  const noReference=String(value?.textContent||'').toUpperCase().includes('SIN REFERENCIA');
+  // Delta values update frequently; only a transition to/from "SIN REFERENCIA"
+  // or replacement of a child needs typography writes.
+  const previous=panel._tdrPolishState;
+  if(previous&&previous.noReference===noReference&&previous.label===label&&previous.value===value&&previous.state===state&&previous.rail===rail)return;
+  panel._tdrPolishState={noReference,label,value,state,rail};
   if(label){
     label.style.fontSize='7px';
     label.style.lineHeight='1.05';
@@ -185,7 +191,6 @@ function polishPanel(panel){
     state.style.whiteSpace='normal';
   }
   if(value){
-    const noReference=String(value.textContent||'').toUpperCase().includes('SIN REFERENCIA');
     value.style.fontSize=noReference?'15px':'20px';
     value.style.lineHeight='1.0';
     value.style.letterSpacing=noReference?'.01em':'.025em';
