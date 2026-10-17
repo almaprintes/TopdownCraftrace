@@ -1,3 +1,4 @@
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { RaceScene as SemiSimRaceScene } from './RaceSemiSimScene.js';
 
 // Segunda pasada de superficies semi-sim.
@@ -116,6 +117,9 @@ export class RaceScene extends SemiSimRaceScene {
 
   create() {
     super.create();
+    // The authored WebP already contains this static surface artwork.
+    // Keep inherited race initialization, skip only this decorative pass.
+    if (isImageNativeTrackScene(this)) return;
 
     try {
       // Sustituimos las huellas de la pasada anterior por unas con vía creíble.

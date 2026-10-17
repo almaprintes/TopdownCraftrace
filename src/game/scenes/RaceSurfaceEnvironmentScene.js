@@ -1,3 +1,4 @@
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { RaceScene as TextureRaceScene } from './RaceSurfaceTextureScene.js';
 
 // Quinta pasada visual: desgaste del entorno claramente legible en móvil.
@@ -100,6 +101,9 @@ export class RaceScene extends TextureRaceScene {
 
   create() {
     super.create();
+    // The authored WebP already contains this static surface artwork.
+    // Keep inherited race initialization, skip only this decorative pass.
+    if (isImageNativeTrackScene(this)) return;
 
     try {
       const centerRaw = this.track?.geom?.center || [];

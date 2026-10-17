@@ -1,3 +1,4 @@
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { RaceScene as BaseRaceScene } from './RaceSurfaceRefineScene.js';
 import { GRASS_MATERIAL, ASPHALT_MATERIAL } from '../data/surfaceMaterials.js';
 
@@ -168,6 +169,9 @@ export class RaceScene extends BaseRaceScene {
 
   create() {
     super.create();
+    // The authored WebP already contains this static surface artwork.
+    // Keep inherited race initialization, skip only this decorative pass.
+    if (isImageNativeTrackScene(this)) return;
 
     try {
       const centerRaw = this.track?.geom?.center || [];

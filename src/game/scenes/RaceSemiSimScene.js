@@ -1,3 +1,4 @@
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { RaceScene as CurrentRaceScene } from './RaceMinimapCenteredScene.js';
 
 // Capa visual semi-sim. Solo sustituye superficies y decoración visual.
@@ -176,6 +177,9 @@ export class RaceScene extends CurrentRaceScene {
 
   create() {
     super.create();
+    // The authored WebP already contains this static surface artwork.
+    // Keep inherited race initialization, skip only this decorative pass.
+    if (isImageNativeTrackScene(this)) return;
 
     try {
       // =========================================================

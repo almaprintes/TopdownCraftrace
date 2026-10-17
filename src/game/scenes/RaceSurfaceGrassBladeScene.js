@@ -1,3 +1,4 @@
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { RaceScene as EnvironmentRaceScene } from './RaceSurfaceEnvironmentScene.js';
 
 // Sexta pasada visual: césped con briznas legibles y borde orgánico de pista.
@@ -94,6 +95,9 @@ export class RaceScene extends EnvironmentRaceScene {
 
   create() {
     super.create();
+    // The authored WebP already contains this static surface artwork.
+    // Keep inherited race initialization, skip only this decorative pass.
+    if (isImageNativeTrackScene(this)) return;
 
     // Sustituimos la anterior transición de círculos por microfragmentos.
     try {

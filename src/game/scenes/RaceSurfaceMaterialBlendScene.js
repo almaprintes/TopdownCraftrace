@@ -1,3 +1,4 @@
+import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { RaceScene as GrassBladeRaceScene } from './RaceSurfaceGrassBladeScene.js';
 
 // Reconstrucción del material del suelo: base de césped de alta frecuencia
@@ -70,6 +71,9 @@ export class RaceScene extends GrassBladeRaceScene {
 
   create() {
     super.create();
+    // The authored WebP already contains this static surface artwork.
+    // Keep inherited race initialization, skip only this decorative pass.
+    if (isImageNativeTrackScene(this)) return;
 
     try {
       // Quitamos la anterior decoración de borde para no acumular parches.
