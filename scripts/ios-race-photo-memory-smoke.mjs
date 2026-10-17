@@ -45,7 +45,7 @@ for(const [dir,pattern] of Object.entries(patterns)){
     assert.ok(small/px<.46,'iPhone texture should save at least 54% RGBA memory');
   }
 }
-assert.ok(number>=20,'Must cover all photo-native circuits incl. user's new Atlántico');
+assert.ok(number>=20,"Must cover all photo-native circuits including the new Atlántico");
 assert.ok(compactPixels/originals<.46);
 const loader=fs.readFileSync('src/game/tracks/imageNativeRaceLoader.js','utf8');
 const base=fs.readFileSync('src/game/scenes/RaceScene.js','utf8');
