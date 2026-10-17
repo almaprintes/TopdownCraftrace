@@ -1,5 +1,9 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## ESCALA FÍSICA ORIGINAL — LOS TRES KARTINGS (17/10)
+
+[Estudio de foto/Bezier/mundo/metraje externo](docs/continuity/2026-10-17-kartings-physical-scale-study.md). Canarias ×2,5 NO es bug: se eligió en DEV 1.2.246 para reproducir la duración/escala del circuito histórico y que el coche se viera menos grande. La conversión global da Tenerife 754 m, Américas 742 m, Canarias 839 m; los operadores publican Tenerife 1200 m y Américas 857 m, mientras que OnPole no oficial atribuye 440 m a Canarias. La foto de Canarias es recreación IA, no georreferenciada. No aplicar factores métricos nuevos, ni reactivar culling, ni cambiar físicas/rankings sin aprobación.
+
 ## RESULTADO REAL DE SILUETAS ALFA — 17/10/2026 — CORRECCIÓN
 
 [Informe verificado](docs/continuity/2026-10-17-actual-alpha-kartings-results.md): las cifras nominales anteriores incluían espacios transparentes. Cuper original y Gold **34,71 px** visibles, Spark **31,13 px**, Colossus **45,51 px**. **Cuper NO es tan ancho como Colossus y NO requiere redimensionado automático.** Con el mismo Spark, proporción estimada: Tenerife **18,54 %**, Américas **14,82 %**, Canarias **10,22 %**. Antes de modificar Canarias ×2,5, validar origen físico/geometría y preservar datos de carrera. Sin nuevo culling.
