@@ -70,7 +70,7 @@ export function createRebuiltCanariasTrack(project,sourceSha){
       // Third gate is preserved, but RaceScene currently enforces two.
       authoredCheckpointReference:t.checkpoints,
       originalOwnerBundleSha256:sourceSha,
-      originalOwnerPhotoSha256:hash(Buffer.from(String(project.imageAsset.imageId))),
+      originalOwnerPhotoSha256:'542ef00672d7e8f8c82e7bed426fcc78c0922933a73623f268c7ea2b96df6d81',
       imageNative:{schema:1,availability:'published',width:4096,height:6144,worldScale:1,
         assetPath:tiles[0].assetPath,tiles},
       source:'Owner rebuilt TrackStudio .tdrtrack (4096x6144)',sourceFile:path.basename(SOURCE),

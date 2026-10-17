@@ -210,6 +210,28 @@ function mountPhoto(scene,desc,img){
     }
     scene._destroyLegacyGroundRender?.();
     clearImageNativeTrackOverlays(scene);
+    // Exactly one static chequered marking anchored on the imported lap gate.
+    // It is a scene GameObject, not a redraw of the source WebP or a frame loop.
+    if(desc.track?.meta?.paintedCheckeredFinish===true){
+      const gate=desc.track.finishLine;
+      if(gate?.a&&gate?.b){
+        const dx=gate.b.x-gate.a.x,dy=gate.b.y-gate.a.y;
+        const length=Math.hypot(dx,dy),nx=Number(gate.normal?.x)||0,ny=Number(gate.normal?.y)||0;
+        if(length>50&&Math.hypot(nx,ny)>.5){
+          const nlen=Math.hypot(nx,ny),ux=nx/nlen,uy=ny/nlen;
+          const mark=scene.add.graphics().setDepth(10).setScrollFactor(1);
+          const cols=14,rows=2,depth=22;
+          for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
+            const p=(u,v)=>({x:gate.a.x+dx*u+ux*v,y:gate.a.y+dy*u+uy*v});
+            const u0=col/cols,u1=(col+1)/cols,v0=-depth/2+row*depth/rows,v1=v0+depth/rows;
+            mark.fillStyle((row+col)%2===0?0xf8f8f8:0x111111,.94);
+            mark.fillPoints([p(u0,v0),p(u1,v0),p(u1,v1),p(u0,v1)],true);
+          }
+          scene.uiCam?.ignore?.(mark);
+          scene.events.once('shutdown',()=>mark.destroy());
+        }
+      }
+    }
     scene._trackBeautyTiles=sprites;
     scene._beautyLayerActive=true;
     scene._bakedAsphaltPilot=false;
