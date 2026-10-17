@@ -25,3 +25,16 @@ La preparación sucede al ejecutar `npm run predev` y `npm run prebuild` y no cr
 ## Restricciones y pruebas
 
 No modificar carriles, colisiones, escala del coche, audio, monetización ni los parámetros de carrera. No publicar Android: 1.1.188/vc8 sigue en Play Store. Validar **Build y Deploy del HEAD exacto**. Tras desplegar, revisar visualmente en iPhone la legibilidad del nombre, escala de foto y desplazamiento de la lista; la compilación no equivale a revisión visual de dispositivo.
+
+
+## DEV 1.2.249 — tres imágenes obsoletas corregidas (17/10/2026)
+
+Tras probar el selector, el propietario detectó que **Karting Tenerife, Santa Cruz y Circuito Atlántico** mostraban imágenes anteriores al aspecto jugable vigente. El origen del error estaba en `scripts/build-track-selector-photos.mjs`: referenciaba los `beauty-preview.webp` históricos aun cuando los instaladores actuales ya contienen fotografías más recientes.
+
+- **Karting Tenerife**: ahora usa `public/assets/tracks/karting-tenerife/karting-tenerife-official.webp`, extraído por `scripts/install-karting-tenerife-source.mjs` de `source/Karting Tenerife.tdrtrack` (foto de 3344×1882). Su integridad se comprueba frente a los bytes embebidos del archivo fuente y el SHA publicado en track.json.
+- **Santa Cruz**: ahora usa `public/assets/tracks/santa-cruz/santa-cruz-official.webp`, extraído por `scripts/install-santa-cruz-source.mjs` de `source/Santa-Cruz-x3-nitido.tdrtrack` (3072×4608). Se verifica el mismo vínculo exacto fuente/foto/track.json.
+- **Circuito Atlántico**: no existe una foto oficial nativa en su track actual; es un circuito generado. El selector deja de depender de `track01-beauty-preview.webp` y crea la miniatura desde `src/game/tracks/library/track01/track.json` (trazado actual de 106 nodos en 2430×2000), con `public/assets/materials/asphalt-real.webp` y `grass-real.webp`, respetando la relación de escala y el ancho real de carretera. Se trata de una composición técnica del juego, **no una imagen de IA ni una foto inventada**.
+
+`predev` y `prebuild` ejecutan primero instaladores de Tenerife y Santa Cruz, además de Américas y Canarias, y después producen las seis miniaturas 900×600 sin referencias legacy. `scripts/track-selector-photos-smoke.mjs` comprueba formatos, pesos, identidades y, específicamente para Tenerife/Santa Cruz, que la foto oficial coincide bit a bit con el segmento WebP original del .tdrtrack. Para Atlántico asegura que se usa su geometría actual en vez del recurso histórico.
+
+No modificar ningún asset del juego de carreras, pista, escala, colisiones, mecánicas, cámara ni Android. La corrección afecta **exclusivamente a las imágenes del selector**. Mantener Build + Deploy verde de HEAD antes de comunicar al propietario que está disponible.
