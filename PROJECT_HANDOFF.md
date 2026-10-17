@@ -1,5 +1,9 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## RESULTADO DE LAS 108 COMBINACIONES — 17/10/2026 — SOLO ANÁLISIS
+
+[Clasificación completa de escalas de 18 coches × 6 circuitos](docs/continuity/2026-10-17-108-track-car-combinations-classified.md): Karting Canarias mundo ×2,5 reduce la proporción Spark/carretera a 10,6 % frente al 19,3 % de Tenerife; Arafo coche ×0,35 mantiene 18,1 % y **no debe agrandarse a ciegas**; Cuper tiene WebP de relación 2:3 y ancho nominal 47,52 px, mayor que el de muchos camiones, aunque no se ha medido alfa visible. La matriz completa, las excepciones y las prioridades P0–P3 están documentadas. **No cambiar físicas ni reactivar culling.**
+
 ## INVENTARIO AUTOMÁTICO DE ESCALA — 17/10/2026 — DEV 1.2.263
 
 Desde el build, ejecutar `node scripts/audit-track-car-scale.mjs --out-dir reports/track-car-scale`. El workflow en `main` lo ejecuta DESPUÉS de los instaladores oficiales y adjunta `INFORME.md` + `inventory.json` como artifact `TDR-track-car-scale-audit`; no altera la PWA ni originales. El informe cuantifica secciones normales de carretera Bézier, coches+overrides+skins por defecto, hitboxes, escalas mundo, texeles y estimación GPU; leer advertencias de curvas próximas y validación manual. Ver [documentación previa](docs/continuity/2026-10-17-track-car-scale-culling-decisions.md). **No activar culling dinámico**.
