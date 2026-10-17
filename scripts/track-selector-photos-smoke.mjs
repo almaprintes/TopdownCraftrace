@@ -31,7 +31,7 @@ for(const id of ['karting-tenerife','santa-cruz']){
     :'src/game/tracks/library/santa-cruz/source/Santa-Cruz-x3-nitido.tdrtrack';
   const master='public/assets/tracks/'+id+'/'+id+'-official.webp';
   const archive=readFileSync(source);
-  const magic=Buffer.from('TDR-IMAGE-PROJECT-V1\\n');
+  const magic=Buffer.from('TDR-IMAGE-PROJECT-V1\n');
   assert.ok(archive.subarray(0,magic.length).equals(magic),'Invalid latest .tdrtrack source: '+id);
   const index=archive.indexOf(10,magic.length),size=Number(archive.toString('ascii',magic.length,index));
   assert.ok(index>0&&size>100);
