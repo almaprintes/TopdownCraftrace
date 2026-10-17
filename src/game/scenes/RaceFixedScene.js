@@ -199,7 +199,7 @@ export class RaceScene extends OriginalRaceScene {
         const cam = this.cameras?.main;
         const c = this.raceInfoHud;
         const state = this._raceInfoHudState;
-        if (!cam || !c?.scene || !state) return;
+        if (!cam || !c?.scene || !state || c.visible === false) return;
 
         const zoom = Math.max(0.001, Number(cam.zoom || 1));
         const world = cam.getWorldPoint(state.screenX, state.screenY);
@@ -217,7 +217,7 @@ export class RaceScene extends OriginalRaceScene {
         const pxPerSec = Math.hypot(vx, vy);
         const kmh = Math.max(0, pxPerSec * 0.185);
 
-        c._speedText?.setText(String(Math.round(kmh)).padStart(3, '0'));
+        const speedText = String(Math.round(kmh)).padStart(3, '0');
 
         const rot = Number(body.rotation || 0);
         const forwardSpeed = vx * Math.cos(rot) + vy * Math.sin(rot);
@@ -229,15 +229,22 @@ export class RaceScene extends OriginalRaceScene {
         else if (kmh < 95) gear = '3';
         else if (kmh < 125) gear = '4';
         else gear = '5';
-        c._gearText?.setText(gear);
-
         const surf = this._surface || 'TRACK';
-        if (surf === 'GRASS') {
-          c._surfaceText?.setText('CÉSPED').setColor('#FFD56A');
-        } else if (surf === 'OFF') {
-          c._surfaceText?.setText('FUERA').setColor('#FF7373');
-        } else {
-          c._surfaceText?.setText('PISTA').setColor('#70FFB0');
+        const surfaceText = surf === 'GRASS' ? 'CÉSPED' : surf === 'OFF' ? 'FUERA' : 'PISTA';
+        const surfaceColor = surf === 'GRASS' ? '#FFD56A' : surf === 'OFF' ? '#FF7373' : '#70FFB0';
+
+        // The v2 HUD consumes these cheap values directly. The old v1 panel
+        // stays hidden, so do not upload THREE redundant Phaser.Text textures.
+        this._raceHudTelemetry = { speedText, gearText: gear, surfaceText };
+        if (c.visible === false) return;
+        c._speedText?.setText(speedText);
+        c._gearText?.setText(gear);
+        if (c._surfaceText?.scene) {
+          c._surfaceText.setText(surfaceText);
+          if (c._surfaceText._tdrSurfaceColor !== surfaceColor) {
+            c._surfaceText.setColor(surfaceColor);
+            c._surfaceText._tdrSurfaceColor = surfaceColor;
+          }
         }
       };
 
@@ -388,7 +395,13 @@ export class RaceScene extends OriginalRaceScene {
         main.centerOn(body.x, body.y);
       }
 
-      this._discoverFixedHud?.();
+      // Scanning the entire display list on every rendered frame costs CPU
+      // in photographic circuits with many static objects. Camera/HUD pinning
+      // still runs every frame; only discovery of *new* UI roots is throttled.
+      if (!Number.isFinite(this._fixedHudNextDiscoveryAt) || time >= this._fixedHudNextDiscoveryAt) {
+        this._discoverFixedHud?.();
+        this._fixedHudNextDiscoveryAt = time + 400;
+      }
       this._pinHudToScreen?.();
       this._pinMinimapMarker?.();
       this._pinRaceInfoHud?.();

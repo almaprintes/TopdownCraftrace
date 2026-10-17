@@ -309,10 +309,13 @@ export class RaceScene extends StableRaceScene {
         const dst = this.raceInfoHudV2;
         if (!src || !dst?.scene) return;
 
-        dst._speedText?.setText(src._speedText?.text || '000');
-        dst._gearText?.setText(src._gearText?.text || 'N');
+        // The invisible v1 HUD exposes plain values instead of rasterizing
+        // three hidden Phaser.Text textures every frame.
+        const data = this._raceHudTelemetry;
+        dst._speedText?.setText(data?.speedText ?? src._speedText?.text ?? '000');
+        dst._gearText?.setText(data?.gearText ?? src._gearText?.text ?? 'N');
 
-        const surf = src._surfaceText?.text || 'PISTA';
+        const surf = data?.surfaceText ?? src._surfaceText?.text ?? 'PISTA';
         dst._surfaceText?.setText(surf);
         const color = surf === 'CÉSPED' ? '#FFD56A' : surf === 'FUERA' ? '#FF7373' : '#70FFB0';
         const label = dst._surfaceText;

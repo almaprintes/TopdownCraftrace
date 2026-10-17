@@ -26,7 +26,7 @@
     "gen:icons": "node scripts/generate-icons.mjs",
     "gen:orientation": "node scripts/generate-orientation-runtime.mjs",
     "bake:track": "node scripts/bake-track-visual.mjs",
-    "prebuild": "node scripts/install-karting-tenerife-source.mjs && node scripts/install-santa-cruz-source.mjs && node scripts/install-karting-americas-source.mjs && node scripts/install-karting-canarias-source.mjs && node scripts/install-circuito-atlantico-source.mjs && node scripts/build-ios-race-photo-tiles.mjs && node scripts/build-track-selector-photos.mjs && npm run check:track-selector-photos && npm run check:ios-race-memory && npm run check:ios-photo-overhead && npm run check:ios-hud-text-budget && npm run check:atlantico-official && npm run check:stage-surface && npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:ignition-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:android-rewarded-bridge && npm run check:fresh-gesture && npm run check:track-beauty-identity && npm run check:owner-environments && npm run check:arafo-pace && npm run check:karting-canarias-source && npm run check:karting-canarias-zoom && npm run check:karting-canarias-environment && npm run check:karting-canarias-world-scale && npm run gen:icons && npm run gen:orientation",
+    "prebuild": "node scripts/install-karting-tenerife-source.mjs && node scripts/install-santa-cruz-source.mjs && node scripts/install-karting-americas-source.mjs && node scripts/install-karting-canarias-source.mjs && node scripts/install-circuito-atlantico-source.mjs && node scripts/build-ios-race-photo-tiles.mjs && node scripts/build-track-selector-photos.mjs && npm run check:track-selector-photos && npm run check:ios-race-memory && npm run check:ios-photo-overhead && npm run check:ios-hud-text-budget && npm run check:ios-hud-discovery && npm run check:atlantico-official && npm run check:stage-surface && npm run check:stability && npm run check:survival && npm run check:session-reward-assets && npm run check:dom-text-selection && npm run check:spark-engine-audio && npm run check:ignition-audio && npm run check:spark-longitudinal && npm run check:rewarded-access && npm run check:android-rewarded-bridge && npm run check:fresh-gesture && npm run check:track-beauty-identity && npm run check:owner-environments && npm run check:arafo-pace && npm run check:karting-canarias-source && npm run check:karting-canarias-zoom && npm run check:karting-canarias-environment && npm run check:karting-canarias-world-scale && npm run gen:icons && npm run gen:orientation",
     "build:android": "node scripts/build-android.mjs",
     "check:owner-environments": "node scripts/owner-environment-import-smoke.mjs",
     "check:karting-canarias-source": "node scripts/karting-canarias-owner-project-smoke.mjs",
@@ -38,7 +38,8 @@
     "check:atlantico-official": "node scripts/circuito-atlantico-official-smoke.mjs",
     "check:ios-race-memory": "node scripts/ios-race-photo-memory-smoke.mjs",
     "check:ios-photo-overhead": "node scripts/ios-photo-procedural-overhead-smoke.mjs",
-    "check:ios-hud-text-budget": "node scripts/ios-hud-text-raster-budget-smoke.mjs"
+    "check:ios-hud-text-budget": "node scripts/ios-hud-text-raster-budget-smoke.mjs",
+    "check:ios-hud-discovery": "node scripts/ios-hud-discovery-budget-smoke.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",
