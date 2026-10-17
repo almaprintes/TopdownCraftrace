@@ -1,4 +1,4 @@
-name: Android SDK sample-ad diagnostic APK
+name: Android release QA APK without MEDIR
 
 on:
   push:
@@ -11,12 +11,14 @@ permissions:
   contents: read
 
 jobs:
-  sdk_diagnostic_apk:
-    name: Compile installable Redmi SDK test
+  android_release_candidate:
+    name: Compile installable minified Android QA
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
       BASE: ./
+      TDR_CI_BRIDGE_TEST: '1'
+      TDR_ANDROID_TEST_BUILD_TYPE: release
     steps:
       - name: Checkout exact main revision
         uses: actions/checkout@v4
@@ -46,26 +48,28 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run build:android
-      - name: Compile signed debug diagnostic APK
+          node scripts/android-release-candidate-smoke.mjs
+          node scripts/verify-android-launcher.mjs
+      - name: Compile signed minified QA release and run unit tests
         working-directory: android
-        run: ./gradlew :app:assembleBridgeTestDebug --stacktrace
+        run: ./gradlew :app:testBridgeTestReleaseUnitTest :app:assembleBridgeTestRelease --stacktrace
       - name: Verify separate package and prepare APK
         shell: bash
         run: |
           set -euo pipefail
-          src='android/app/build/outputs/apk/bridgeTest/debug/app-bridgeTest-debug.apk'
+          src='android/app/build/outputs/apk/bridgeTest/release/app-bridgeTest-release.apk'
           test -s "$src"
           unzip -t "$src" | tail -1
           "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.bridgetest'"
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-SDK-TEST-DEV-1.2.76.apk
-          sha256sum sdk-download/TDR-SDK-TEST-DEV-1.2.76.apk
+          cp "$src" sdk-download/TDR-ANDROID-QA-DEV-1.2.265-SIN-MEDIR.apk
+          sha256sum sdk-download/TDR-ANDROID-QA-DEV-1.2.265-SIN-MEDIR.apk
           ls -lh sdk-download/*.apk
       - name: Publish installable APK
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-SDK-TEST-DEV-1.2.76
-          path: sdk-download/TDR-SDK-TEST-DEV-1.2.76.apk
+          name: TDR-ANDROID-QA-DEV-1.2.265-SIN-MEDIR
+          path: sdk-download/TDR-ANDROID-QA-DEV-1.2.265-SIN-MEDIR.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error

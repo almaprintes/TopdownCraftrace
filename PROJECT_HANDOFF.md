@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## ANDROID RELEASE QA — DEV 1.2.265 (SIN MEDIR)
+
+[Alcance y pasos](docs/continuity/2026-10-17-android-release-qa-no-medir.md). APK release minificada de sabor `bridgeTest` aislado, usa `tdr-prod` sin panel MEDIR ni diagnóstico iOS. Test AdMob, sin RevenueCat ni AAB, no sustituye Google Play y NO verifica congelaciones de anuncios reales. Canarias 4096 requiere subir bundle binario antes de considerar publicación. Workflow `.github/workflows/android-sdk-apk.yml`, artifact `TDR-ANDROID-QA-DEV-1.2.265-SIN-MEDIR`.
+
+
 ## CANARIAS REHECHO 4096 — FUENTE BINARIA PENDIENTE
 
 [Preparación para el Track Studio corregido y una única pista activa](docs/continuity/2026-10-17-karting-canarias-4096-staged.md). `scripts/install-karting-canarias-4096-source.mjs` espera un ÚNICO archivo binario de 4,1MB bajo `src/game/tracks/library/karting-canarias-4096/source/karting-canarias-4096.tdrtrack`. Al subirlo, prebuild separa foto+geometría y genera 8 teselas fotográficas; en la PWA DEV cambia el único Canarias visible de `karting-canarias` a `karting-canarias-4096`, separando récords. Narrow70 está oculto. Los archivos antiguos permanecen como respaldo, no se borran del repositorio antes de validar la sustitución. **NO AFIRMAR QUE EL CIRCUITO ESTÁ INSTALADO HASTA QUE EL BINARIO EXISTA Y ACTIONS SEA VERDE.** Meta visible ajedrezada ya preparada en `imageNativeRaceLoader.js`, sin edición de foto ni RAF.
