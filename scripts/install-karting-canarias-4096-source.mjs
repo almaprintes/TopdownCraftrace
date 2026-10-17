@@ -97,6 +97,11 @@ export async function installRebuiltCanarias(){
   }
   fs.mkdirSync(path.dirname(abs(TRACK)),{recursive:true});
   fs.writeFileSync(abs(TRACK),JSON.stringify(track,null,2)+'\n');
+  // One low-cost selector image from the SAME owner's source photograph.
+  const thumb=abs('public/assets/tracks/selector/karting-canarias-4096.webp');
+  fs.mkdirSync(path.dirname(thumb),{recursive:true});
+  await sharp(photo).resize(900,600,{fit:'contain',background:'#07131d'})
+    .modulate({saturation:1.15,brightness:.99}).webp({quality:78,effort:4}).toFile(thumb);
   const originalImageHash=hash(photo);
   console.info('[Canarias 4096] INSTALLED 590 nodes / 8 full-res photo tiles, sha='+originalImageHash);
   return {id:'karting-canarias-4096',world:[4096,6144],tiles:8,
