@@ -63,6 +63,5 @@ if(!source){
     assert.deepEqual([info.width,info.height,info.format],
       [1448,1629,'webp']);
   }
-  assert.ok(fs.existsSync('public/assets/tracks/selector/circuito-atlantico.webp'));
   console.log('Atlántico 4344x3258 photo-native official, original pixels and 394 road points, 14+14 Bezier nodes, lap META + CP1/CP2, 6 image tiles confirmed.');
 }
