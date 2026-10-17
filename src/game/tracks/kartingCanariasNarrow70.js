@@ -41,5 +41,5 @@ export function narrowCanariasTrack(canonical,editor){
       imageNative:{...canonical.meta.imageNative,
         assetPath:dir+'narrow70-master.webp',
         tiles:oldTiles.map(tile=>({...tile,assetPath:dir+'photo-'+
-          Math.round(tile.y/1536)+'-'+Math.round(tile.x/1024)+'.webp'}))}};
+          Math.round(tile.y/1536)+'-'+Math.round(tile.x/1024)+'.webp'}))}}};
 }
