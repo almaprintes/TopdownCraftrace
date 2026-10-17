@@ -53,7 +53,7 @@ assert.match(builder,/src\/game\/tracks\/library\/track01\/track\.json/,
   "Atlántico thumbnail must read current playable route, not obsolete /beauty/");
 assert.ok(!builder.includes("'circuito-atlantico':'assets/tracks/track01/beauty/"),
   'Do not restore the retired Atlántico beauty preview');
-assert.match(builder,/assets\/materials\/asphalt-real\.webp/,
+assert.match(builder,/assets\/materials\/asphalt-pbr\/aerial_asphalt_01_diff_1k\.jpg/,
   'Atlántico should use a real current game asphalt material');
 assert.equal(selectorTrackKind({id:'rally-arafo-los-loros'}),'RALLY');
 assert.equal(selectorTrackKind({id:'karting-americas'}),'CIRCUIT');
