@@ -28,7 +28,7 @@ export class RaceScene extends BakedRaceScene {
     // the even larger remote Atlántico PBR pack) every time an iPhone races.
     // Check registry metadata at PRELOAD time: this.track is not built yet.
     const registered=TRACK_REGISTRY[trackKey];
-    const photoNative=!!registered&&isImageNativeTrackMeta(registered.meta);
+    const photoNative=!!registered&&isImageNativeTrackMeta(registered);
     if(photoNative){
       this._tdrPhotoNativeMaterialsSkipped=true;
       try{window.__tdrLowSurfaceMode=true;}catch{}
