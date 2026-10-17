@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { IS_PROD_BUILD } from '../buildTarget.js';
+import { IOS_WEBGL_SYNC_KEY } from '../performance/iosWebglPresentationMode.js';
 
 // On-device DEV diagnostic, OFF until opened. Real Phaser game events rather
 // than a second requestAnimationFrame loop or a fake "FPS" approximation.
@@ -8,6 +9,8 @@ const style=(node,css)=>{node.style.cssText=css;return node;};
 const freshWindow=()=>({started:performance.now(),count:0,frameSum:0,frameMax:0,updateSum:0,updateMax:0,renderSum:0,renderMax:0,otherSum:0,otherMax:0,over33:0,over50:0,lastSpike:0});
 const avg=(sum,count)=>count?sum/count:0;
 const ms=n=>n.toFixed(1);
+const videoProbeEnabled=()=>{try{return JSON.parse(localStorage.getItem('tdr2:settings')||'{}')?.video?.showFPS===true;}catch{return false;}};
+const frameInfo=scene=>{const conf=window.__tdrIosFrameConfig||{};const context=scene.game?.renderer?.gl?.getContextAttributes?.();const actual=typeof context?.desynchronized==='boolean'?(context.desynchronized?'DESYNC':'SYNC'):'NO DISPONIBLE';return `MODO ${conf.preset||'?'}  RES ${conf.renderResolution||'?'}  FPS limit ${conf.frameLimit??'?'}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;};
 const metrics=(w,scene,mode)=>[
   'PERF iPhone · '+mode,
   'FOTOGRAMAS  '+w.count+'  '+(avg(w.frameSum,w.count)>0?ms(1000/avg(w.frameSum,w.count)):'--')+' FPS',
@@ -16,7 +19,8 @@ const metrics=(w,scene,mode)=>[
   'RENDER CPU '+ms(avg(w.renderSum,w.count))+' / '+ms(w.renderMax)+' ms',
   'OTROS      '+ms(avg(w.otherSum,w.count))+' / '+ms(w.otherMax)+' ms',
   '>33ms '+w.over33+' · >50ms '+w.over50+' · último '+ms(w.lastSpike)+'ms',
-  'TILES '+(scene._trackBeautyTiles?.length||0)+' · NO mide GPU directamente'
+  'TILES '+(scene._trackBeautyTiles?.length||0)+' · NO mide GPU directamente',
+  frameInfo(scene)
 ].join('\n');
 
 // This installer wraps the outermost in-use race class (the concrete scene
@@ -97,6 +101,11 @@ export function mountRaceDevFrameDiagnostics(scene){
     if(!state.hudOff)scene._raceHudAccum=100;
     b.textContent=state.hudOff?'HUD OFF':'HUD ON';
     reset();
+  });
+  control(window.__tdrIosFrameConfig?.webglDesyncRequested?'PROBAR WEBGL SYNC (REINICIA)':'VOLVER WEBGL DESYNC (REINICIA)',()=>{
+    const requested=!!window.__tdrIosFrameConfig?.webglDesyncRequested;
+    try{localStorage.setItem(IOS_WEBGL_SYNC_KEY,requested?'1':'0');window.location.reload();}
+    catch{pre.textContent='No se pudo guardar el modo WebGL. No se ha cambiado el juego.';}
   });
   const photoButton=control('FOTO ON',b=>{
     const tiles=scene._trackBeautyTiles;
