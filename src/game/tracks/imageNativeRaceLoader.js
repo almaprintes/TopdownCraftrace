@@ -101,7 +101,8 @@ async function decodePhoto(desc){
       const compactSize=compact&&!fallback&&
         img.naturalWidth===expectedCompact[0]&&img.naturalHeight===expectedCompact[1];
       if(!fullSize&&!compactSize)throw Error('Bloque de fotografía desalineado');
-      result.push({image:img,x,y,tileWorldScale:photoTileWorldScale(w,img.naturalWidth)});
+      result.push({image:img,x,y,tileScaleX:photoTileWorldScale(w,img.naturalWidth),
+        tileScaleY:photoTileWorldScale(h,img.naturalHeight)});
     }
     return result;
   }
@@ -180,21 +181,21 @@ export function applyImageNativeTrackPhysics(scene,desc){
 function mountPhoto(scene,desc,img){
   const sprites=[],keys=[];
   const worldScale=desc.type==='published'?(Number(desc.worldScale)||1):1;
-  const add=(key,source,x,y,tileScale=1)=>{
+  const add=(key,source,x,y,tileScaleX=1,tileScaleY=tileScaleX)=>{
     if(scene.textures.exists(key))scene.textures.remove(key);
     if(source instanceof HTMLCanvasElement)scene.textures.addCanvas(key,source);
     else scene.textures.addImage(key,source);
     keys.push(key);
     const sprite=scene.add.image(x*worldScale,y*worldScale,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);
-    const displayScale=worldScale*tileScale;
-    if(displayScale!==1)sprite.setScale(displayScale);
+    const displayScaleX=worldScale*tileScaleX,displayScaleY=worldScale*tileScaleY;
+    if(displayScaleX!==1||displayScaleY!==1)sprite.setScale(displayScaleX,displayScaleY);
     scene.uiCam?.ignore?.(sprite);
     sprites.push(sprite);
   };
   try{
     if(Array.isArray(img)){
       for(const tile of img)add('native:'+desc.trackKey+':'+tile.x+':'+tile.y,
-        tile.image,tile.x,tile.y,tile.tileWorldScale||1);
+        tile.image,tile.x,tile.y,tile.tileScaleX||1,tile.tileScaleY||1);
     }else if(desc.width<=TILE_MAX&&desc.height<=TILE_MAX){
       add('native:'+desc.trackKey+':0:0',img,0,0);
     }else{
