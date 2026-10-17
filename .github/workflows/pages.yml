@@ -186,6 +186,19 @@ jobs:
           npm run build:prod
           grep -Rqs "juukbnkjboiazqggqcyv.supabase.co" dist || { echo "Production bundle lost Supabase URL"; exit 1; }
           grep -Rqs "sb_publishable_" dist || { echo "Production bundle lost Supabase publishable key"; exit 1; }
+      - name: Inventariar escalas de circuitos y coches (POST-INSTALL, solo lectura)
+        working-directory: dev-src
+        shell: bash
+        run: |
+          node scripts/audit-track-car-scale-smoke.mjs
+          node scripts/audit-track-car-scale.mjs --out-dir "$RUNNER_TEMP/tdr-scale-inventory" --summary "$GITHUB_STEP_SUMMARY"
+      - name: Adjuntar inventario de escala reproducible
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDR-track-car-scale-audit
+          path: ${{ runner.temp }}/tdr-scale-inventory/
+          if-no-files-found: error
+          retention-days: 30
       - name: Build development
         working-directory: dev-src
         shell: bash

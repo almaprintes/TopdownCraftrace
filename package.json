@@ -46,7 +46,9 @@
     "check:ios-audio-ab": "node scripts/ios-audio-ab-smoke.mjs",
     "check:ios-compact-diagnostic": "node scripts/ios-compact-diagnostic-smoke.mjs",
     "check:ios-dom-runtime": "node scripts/ios-dom-runtime-smoke.mjs",
-    "check:ios-text-bridge-ab": "node scripts/ios-text-bridge-ab-smoke.mjs"
+    "check:ios-text-bridge-ab": "node scripts/ios-text-bridge-ab-smoke.mjs",
+    "check:scale-inventory": "node scripts/audit-track-car-scale.mjs",
+    "check:scale-inventory-smoke": "node scripts/audit-track-car-scale-smoke.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",
