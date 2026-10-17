@@ -1,5 +1,9 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## CONTINUIDAD CRÍTICA — 17/10/2026 — CIRCUITOS, COCHES, CULLING YA PROBADO Y CALIDAD iPHONE
+
+**Lectura prioritaria antes de modificar circuito, escala de coches, cámara, fotografía o rendimiento:** [Arquitectura real, experimentos fallidos y plan de homogeneización](docs/continuity/2026-10-17-track-car-scale-culling-decisions.md). Verifica expresamente la desactivación histórica del culling por fotograma en iOS (DEV 1.2.52) y que la ruta fotográfica actual ya omite el viejo culling de asfalto. No recomendar streaming/culling dinámico sin nueva evidencia; no confundir zoom común con proporción coche/carretera. Los `track.json` post-build pueden diferir de los versionados. **Este cambio es solo documentación:** DEV runtime sigue 1.2.262, sin desplegar nada ni modificar Google Play.
+
 ## CONTINUIDAD ACTUAL — 14/10/2026 — CROWN CUPER / SKINS / FÁBRICA (DEV 1.2.197)
 
 **Lectura prioritaria para chats nuevos:** [CROWN Cuper: decisiones, archivos, calibrador, estado de implementación y pendientes](docs/continuity/2026-10-14-cuper-factory-3-quarter.md).
