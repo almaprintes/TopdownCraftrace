@@ -199,6 +199,19 @@ jobs:
           path: ${{ runner.temp }}/tdr-scale-inventory/
           if-no-files-found: error
           retention-days: 30
+      - name: Medir siluetas alfa y contrastar los tres kartings (solo lectura)
+        working-directory: dev-src
+        shell: bash
+        run: |
+          node scripts/audit-car-alpha-kartings-smoke.mjs
+          node scripts/audit-car-alpha-kartings.mjs --out-dir "$RUNNER_TEMP/tdr-car-alpha-kartings" --summary "$GITHUB_STEP_SUMMARY"
+      - name: Adjuntar informe de carrocerías y tres kartings
+        uses: actions/upload-artifact@v4
+        with:
+          name: TDR-car-alpha-kartings-audit
+          path: ${{ runner.temp }}/tdr-car-alpha-kartings/
+          if-no-files-found: error
+          retention-days: 30
       - name: Build development
         working-directory: dev-src
         shell: bash

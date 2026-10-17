@@ -1,5 +1,9 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## AUDITORÍA ALFA DE COCHES Y KARTINGS — 17/10/2026
+
+Ver [auditoría de carrocerías y kartings](docs/continuity/2026-10-17-car-alpha-kartings-audit.md): el script `scripts/audit-car-alpha-kartings.mjs` mide el contorno alfa visible en los 18 coches y Gold de Cuper y compara Tenerife / Américas / Canarias después de instalar el trazado. Genera artefacto TDR-car-alpha-kartings-audit desde Pages. Es solo un análisis; no cambia la escala del coche, fotografía, colisiones ni versión DEV.
+
 ## RESULTADO DE LAS 108 COMBINACIONES — 17/10/2026 — SOLO ANÁLISIS
 
 [Clasificación completa de escalas de 18 coches × 6 circuitos](docs/continuity/2026-10-17-108-track-car-combinations-classified.md): Karting Canarias mundo ×2,5 reduce la proporción Spark/carretera a 10,6 % frente al 19,3 % de Tenerife; Arafo coche ×0,35 mantiene 18,1 % y **no debe agrandarse a ciegas**; Cuper tiene WebP de relación 2:3 y ancho nominal 47,52 px, mayor que el de muchos camiones, aunque no se ha medido alfa visible. La matriz completa, las excepciones y las prioridades P0–P3 están documentadas. **No cambiar físicas ni reactivar culling.**

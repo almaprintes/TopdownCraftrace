@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import sharp from 'sharp';
+import {alphaBoundingBox,inspectAlpha} from './audit-car-alpha-kartings.mjs';
+const b=new Uint8Array(4*5*4);
+for(let y=1;y<=3;y++)for(let x=1;x<=2;x++)b[(y*4+x)*4+3]=255;
+assert.deepEqual(alphaBoundingBox(b,4,5),{x:1,y:1,width:2,height:3,visiblePixels:6,fillPercent:30});
+assert.equal(alphaBoundingBox(new Uint8Array(4*5*4),4,5),null);
+b[3]=8;
+assert.equal(alphaBoundingBox(b,4,5).x,1);
+assert.equal(alphaBoundingBox(b,4,5,4,1).x,0);
+const packed=await sharp(b,{raw:{width:4,height:5,channels:4}}).png().toBuffer();
+const unpacked=await sharp(packed).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+assert.equal(alphaBoundingBox(unpacked.data,4,5).visiblePixels,6);
+console.log('PASS: alpha bbox excludes transparent padding and tolerates low-alpha antialias');

@@ -48,7 +48,9 @@
     "check:ios-dom-runtime": "node scripts/ios-dom-runtime-smoke.mjs",
     "check:ios-text-bridge-ab": "node scripts/ios-text-bridge-ab-smoke.mjs",
     "check:scale-inventory": "node scripts/audit-track-car-scale.mjs",
-    "check:scale-inventory-smoke": "node scripts/audit-track-car-scale-smoke.mjs"
+    "check:scale-inventory-smoke": "node scripts/audit-track-car-scale-smoke.mjs",
+    "audit:car-alpha-kartings": "node scripts/audit-car-alpha-kartings.mjs",
+    "check:car-alpha-kartings": "node scripts/audit-car-alpha-kartings-smoke.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.5.2",
