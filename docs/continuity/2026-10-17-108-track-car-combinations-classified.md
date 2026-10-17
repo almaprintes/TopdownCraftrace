@@ -1,7 +1,9 @@
 
-# TDR — Clasificación de escala: 108 combinaciones (DEV 1.2.263)
+# TDR — Clasificación nominal histórica: 108 combinaciones (DEV 1.2.263)
 
 **Fecha:** 17/10/2026. **Base INALTERADA del juego:** main `f31a5a7e51f1a5c38c66436bd19300cc52180cca`, DEV 1.2.263. **Origen real:** informe `INFORME.md` + `inventory.json` creado DESPUÉS de los instaladores en [Actions run 39059517055](https://github.com/almaprintes/TopdownCraftrace/actions/runs/39059517055), artefacto `TDR-track-car-scale-audit`. 6 circuitos × 18 coches. En el informe generado: seis perfiles de pista y dieciocho skins originales comprobados, sin faltantes; dos advertencias estructurales automáticas (Canarias mundo ×2,5 y Arafo carScale ×0,35). Este archivo es una **clasificación técnica, no un commit de calibración**.
+
+> **CORRECCIÓN POSTERIOR:** la matriz inicial incluye transparencia de las imágenes. El informe alfa de 19 imágenes confirma Cuper **34,71 px**, Spark **31,13 px**, Colossus **45,51 px**; NO son anchos equivalentes. [Leer resultados revisados](2026-10-17-actual-alpha-kartings-results.md). Las prioridades de Cuper que aparecen abajo son históricas y no deben aplicarse sin nueva justificación.
 
 ## Resultado central
 

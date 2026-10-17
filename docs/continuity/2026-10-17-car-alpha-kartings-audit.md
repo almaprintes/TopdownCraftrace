@@ -5,3 +5,7 @@ Nueva etapa de análisis sin cambios de runtime, siguiendo a `DEV 1.2.263` y mat
 GitHub Actions: paso `Medir siluetas alfa y contrastar los tres kartings` y artefacto `TDR-car-alpha-kartings-audit` con `INFORME.md` y `alpha-kartings.json`. Comprobación RGBA reproducible con `scripts/audit-car-alpha-kartings-smoke.mjs`. Se advierte que una bounding box alfa no es la anchura real de la carrocería en metros, ni mide la piel 3D del coche, colisiones ni la opción seleccionada por cada jugador.
 
 NO modificar tamaño de mundo ×2,5 de Canarias, carScale 0,35 de Arafo, colisiones, cámara, fotos originales, culling ni Google Play en esta fase. El objetivo es fundamentar qué cambiar en el futuro.
+
+## Resultado comprobado
+
+El workflow [39062892786](https://github.com/almaprintes/TopdownCraftrace/actions/runs/39062892786) ejecutó el detector de alfa en 19 skins, 0 advertencias, con Build + Deploy verdes. Las dos skins de Cuper presentan ancho alfa 374/512, convertido a **34,71 px** en carrera; son solo **11,5 % más anchas que Spark** (31,13 px). El informe persistente y la corrección del primer inventario están en [resultados alfa](2026-10-17-actual-alpha-kartings-results.md).
