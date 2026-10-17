@@ -19,6 +19,26 @@ const metrics=(w,scene,mode)=>[
   'TILES '+(scene._trackBeautyTiles?.length||0)+' · NO mide GPU directamente'
 ].join('\n');
 
+// This installer wraps the outermost in-use race class (the concrete scene
+// registered in Phaser), so UPDATE CPU includes later subclasses, engine
+// sound, steering UI, gameplay and the actual DOM HUD update. Measuring only
+// RaceTelemetryHudScene.update would miss all the subclasses above it.
+export function installFinalRaceFrameDiagnosticUpdate(RaceClass){
+  if(IS_PROD_BUILD||!RaceClass?.prototype)return;
+  const proto=RaceClass.prototype;
+  if(Object.prototype.hasOwnProperty.call(proto,'__tdrFinalFrameDiagnosticInstalled'))return;
+  const original=proto.update;
+  if(typeof original!=='function')return;
+  proto.update=function(...args){
+    const diag=this._tdrFrameDiagnostic;
+    if(!diag?.active)return original.apply(this,args);
+    const started=performance.now();
+    try{return original.apply(this,args);}
+    finally{diag.recordUpdate(performance.now()-started);}
+  };
+  Object.defineProperty(proto,'__tdrFinalFrameDiagnosticInstalled',{value:true});
+}
+
 // Testing with photo OFF is intentionally brief: it hides only photo sprites,
 // not authored geometry/collision, so the road will be invisible.
 export function mountRaceDevFrameDiagnostics(scene){
