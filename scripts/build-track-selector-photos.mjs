@@ -18,10 +18,18 @@ const sources=Object.freeze({
   'karting-americas':'assets/tracks/karting-americas/karting-americas-official.webp',
   'rally-arafo-los-loros':'assets/tracks/rally-arafo-los-loros/arafo-los-loros-photo.webp'
 });
-async function photoThumbnail(input){
+async function photoThumbnail(input,{legacyAtlantico=false}={}){
   const md=await sharp(input).metadata();
   if(!md.width||!md.height||md.width<300||md.height<250)
     throw Error('Selector: source photo invalid: '+input);
+  if(legacyAtlantico){
+    // Preserve the exact selector processing used before this correction.
+    return sharp(input).rotate()
+      .resize(DEST_WIDTH,DEST_HEIGHT,{fit:'cover',position:sharp.strategy.attention})
+      .modulate({saturation:1.14,brightness:.99})
+      .sharpen({sigma:.6})
+      .webp({quality:77,effort:4}).toBuffer();
+  }
   return sharp(input).rotate()
     .resize(DEST_WIDTH,DEST_HEIGHT,{fit:'contain',background:'#07131d'})
     .modulate({saturation:1.15,brightness:.99})
@@ -38,7 +46,7 @@ export async function buildTrackSelectorPhotos(){
     const source=sources[id];
     if(!source)throw Error('Selector: image source missing for '+id);
     // Atlántico remains unchanged: its replacement image is coming from owner.
-    const buffer=await photoThumbnail(fromPublic(source));
+    const buffer=await photoThumbnail(fromPublic(source),{legacyAtlantico:id==='circuito-atlantico'});
     fs.writeFileSync(dest,buffer);
     const md=await sharp(buffer).metadata();
     if(md.format!=='webp'||md.width!==DEST_WIDTH||md.height!==DEST_HEIGHT)
