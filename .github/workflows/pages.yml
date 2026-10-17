@@ -45,6 +45,8 @@ jobs:
           node scripts/install-santa-cruz-source.mjs
           node scripts/install-karting-americas-source.mjs
           node scripts/install-karting-canarias-source.mjs
+          node scripts/install-circuito-atlantico-source.mjs
+          node scripts/circuito-atlantico-official-smoke.mjs
           node scripts/santa-cruz-official-source-smoke.mjs
           node scripts/karting-official-source-smoke.mjs
           node scripts/karting-native-photo-visual-smoke.mjs
