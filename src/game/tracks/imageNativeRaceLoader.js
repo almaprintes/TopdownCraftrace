@@ -7,6 +7,7 @@ import {readCanvasImage,saveCanvasImage,normalizeCanvasImageBlob,looksLikeImageP
 import {shapeIsValid} from '../studio/trackShapeGeometry.js';
 import {makeOpenStagePhotoMask} from './openStagePhotoMask.js';
 import {KARTING_CANARIAS_WORLD_SCALE} from './kartingCanariasWorldScale.js';
+import {useCompactIosPhotoTiles,compactIosPhotoTilePath,expectedCompactTileSize,photoTileWorldScale} from '../performance/iosPhotoTileBudget.js';
 
 const TILE_MAX=2048;
 const dimension=n=>Number.isSafeInteger(Number(n))&&Number(n)>0&&Number(n)<=8192;
@@ -72,15 +73,35 @@ async function decodePhoto(desc){
         throw Error('Bloque de fotografía Santa Cruz inválido');
       const img=new Image();
       img.decoding='async';
+      const root=import.meta.env?.BASE_URL||'/';
+      const compact=useCompactIosPhotoTiles(navigator?.userAgent||'');
+      const compactPath=compact?compactIosPhotoTilePath(path):null;
+      // If a tile was not generated in a local preview, use the exact
+      // original file rather than failing the race or downscaling canvas
+      // dynamically. Never decode both variants at the same time.
+      let fallback=!compactPath;
       let timer;
       try{
         await Promise.race([
-          new Promise((ok,fail)=>{img.onload=ok;img.onerror=()=>fail(Error('No se pudo abrir un bloque de la fotografía'));img.src=(import.meta.env?.BASE_URL||'/')+path;}),
+          new Promise((ok,fail)=>{
+            img.onload=ok;
+            img.onerror=()=>{
+              if(!fallback){
+                fallback=true;
+                img.src=root+path;
+              }else fail(Error('No se pudo abrir un bloque de la fotografía'));
+            };
+            img.src=root+(compactPath||path);
+          }),
           new Promise((_,fail)=>{timer=setTimeout(()=>fail(Error('Tiempo agotado cargando el circuito')),25000);})
         ]);
-      }finally{clearTimeout(timer);}
-      if(img.naturalWidth!==w||img.naturalHeight!==h)throw Error('Bloque de fotografía desalineado');
-      result.push({image:img,x,y});
+      }finally{clearTimeout(timer);img.onload=null;img.onerror=null;}
+      const expectedCompact=expectedCompactTileSize(w,h);
+      const fullSize=img.naturalWidth===w&&img.naturalHeight===h;
+      const compactSize=compact&&!fallback&&
+        img.naturalWidth===expectedCompact[0]&&img.naturalHeight===expectedCompact[1];
+      if(!fullSize&&!compactSize)throw Error('Bloque de fotografía desalineado');
+      result.push({image:img,x,y,tileWorldScale:photoTileWorldScale(w,img.naturalWidth)});
     }
     return result;
   }
@@ -159,19 +180,21 @@ export function applyImageNativeTrackPhysics(scene,desc){
 function mountPhoto(scene,desc,img){
   const sprites=[],keys=[];
   const worldScale=desc.type==='published'?(Number(desc.worldScale)||1):1;
-  const add=(key,source,x,y)=>{
+  const add=(key,source,x,y,tileScale=1)=>{
     if(scene.textures.exists(key))scene.textures.remove(key);
     if(source instanceof HTMLCanvasElement)scene.textures.addCanvas(key,source);
     else scene.textures.addImage(key,source);
     keys.push(key);
     const sprite=scene.add.image(x*worldScale,y*worldScale,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);
-    if(worldScale!==1)sprite.setScale(worldScale);
+    const displayScale=worldScale*tileScale;
+    if(displayScale!==1)sprite.setScale(displayScale);
     scene.uiCam?.ignore?.(sprite);
     sprites.push(sprite);
   };
   try{
     if(Array.isArray(img)){
-      for(const tile of img)add('native:'+desc.trackKey+':'+tile.x+':'+tile.y,tile.image,tile.x,tile.y);
+      for(const tile of img)add('native:'+desc.trackKey+':'+tile.x+':'+tile.y,
+        tile.image,tile.x,tile.y,tile.tileWorldScale||1);
     }else if(desc.width<=TILE_MAX&&desc.height<=TILE_MAX){
       add('native:'+desc.trackKey+':0:0',img,0,0);
     }else{
