@@ -3,10 +3,11 @@ import { BaseScene } from './BaseScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 import { isPublishedTrackId } from '../tracks/trackUnlocks.js';
 import { evaluationAccessEnabled } from '../shipaton/ShipatonJudgeMode.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
 
 function trackKey(track){return String(track?.key||track?.id||'');}
 function judgeVisibleKey(key){return evaluationAccessEnabled()&&!!key&&key!=='practice-area';}
-function selectableKey(key){return isPublishedTrackId(key)||judgeVisibleKey(key);}
+function selectableKey(key){return isPublishedTrackId(key)||judgeVisibleKey(key)||(!IS_PROD_BUILD&&key==='karting-canarias-narrow70');}
 function playerVisible(track){
   const key=trackKey(track);
   return !!key && selectableKey(key) && track?.meta?.hiddenFromTrackSelect!==true;

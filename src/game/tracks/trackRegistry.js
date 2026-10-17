@@ -1,5 +1,6 @@
 import { buildTrackRibbon } from './TrackBuilder.js';
 import { METERS_PER_PX } from '../cars/speedUnits.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 import {spawnUpstreamOfFinish} from './imageNativeDriving.js';
 
 const trackModules = import.meta.glob('./library/*/track.json', { eager: true });
@@ -40,7 +41,9 @@ function buildRegistry(){
   for(const [path,mod] of Object.entries(trackModules)){
     const json=mod?.default??mod;if(!json||typeof json!=='object')continue;
     const m=path.match(/\/library\/([^/]+)\/track\.json$/);if(!m)continue;
-    const sourceSlug=m[1],slug=CANONICAL_SLUGS[sourceSlug]||sourceSlug,fallbackWidth=Number(json.trackWidth)||80,isClosed=json.closed!==false;
+    const sourceSlug=m[1],slug=CANONICAL_SLUGS[sourceSlug]||sourceSlug;
+    if(IS_PROD_BUILD && slug==='karting-canarias-narrow70')continue;
+    const fallbackWidth=Number(json.trackWidth)||80,isClosed=json.closed!==false;
     const direction=normalizeDirection(json.raceDirection),directionSign=direction==='reverse'?-1:1;
     const widthMultiplier=1; // Los proyectos .tdrtrack exportan su anchura definitiva.
     const normalized=normalizeCenterline(json.centerline,fallbackWidth).map(p=>({...p,width:(Number(p.width)||fallbackWidth)*widthMultiplier}));

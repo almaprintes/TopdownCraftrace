@@ -39,7 +39,7 @@ export function validateImageNativeRaceDescriptor(desc){
   const scale=Number(desc?.worldScale??1);
   // This published circuit intentionally uses a larger *world*, not larger
   // textures: the four source WebP tiles stay at their original resolutions.
-  const scaledCanarias=desc?.type==='published'&&desc.trackKey==='karting-canarias'&&
+  const scaledCanarias=desc?.type==='published'&&(desc.trackKey==='karting-canarias'||desc.trackKey==='karting-canarias-narrow70')&&
     Array.isArray(desc.tiles)&&desc.tiles.length===4&&
     scale===KARTING_CANARIAS_WORLD_SCALE;
   if(!dimension(width)||!dimension(height)||width*height>32000000||

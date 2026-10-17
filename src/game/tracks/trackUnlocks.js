@@ -30,6 +30,7 @@ export function unlockTrack(trackId){const id=normalizedTrackId(trackId);if(!id|
 // circuit for judges without changing that circuit's canonical published status.
 export function isTrackUnlocked(trackId){
   const id=normalizedTrackId(trackId);
+  if(!IS_PROD_BUILD&&id==='karting-canarias-narrow70')return true;
   if(evaluationAccessEnabled())return !!id&&!isJudgeExcludedTrack(id);
   return PUBLISHED_TRACK_IDS.includes(id)&&loadTrackUnlocks().unlocked.includes(id);
 }

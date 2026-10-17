@@ -19,15 +19,16 @@ function envFor(scene){
   // Environment Studio, en coordenadas exactas del fondo, sin tocar la foto.
   // Official photo-native circuits and stages load only their own authored world-space collision data.
   // Keep local TrackStudio previews isolated from the published environment registry.
-  if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey)))return null;
-  const candidates=[scene?.trackKey,scene?.track?.meta?.id,scene?.track?.id,scene?.track?.trackId,scene?.track?.meta?.trackId].map(normalizeTrackKey).filter(Boolean);
+  if(isImageNativeTrackScene(scene)&&normalizeTrackKey(scene?.trackKey)!=='karting-canarias-narrow70'&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey)))return null;
+  const narrow=normalizeTrackKey(scene?.trackKey)==='karting-canarias-narrow70';
+  const candidates=[...(narrow?['karting-canarias']:[]),scene?.trackKey,scene?.track?.meta?.id,scene?.track?.id,scene?.track?.trackId,scene?.track?.meta?.trackId].map(normalizeTrackKey).filter(Boolean);
   for(const key of candidates){
     const env=createTrackEnvironment(key);
     if(!env)continue;
     // Environment Studio exports are kept in original 2048x3072 photo pixels.
     // Project the new Canarias barriers into the same x2.5 world as its race
     // track and tiled background. Each registry fetch is a fresh clone.
-    return key==='karting-canarias'&&normalizeTrackKey(scene?.trackKey)==='karting-canarias'
+    return key==='karting-canarias'&&(normalizeTrackKey(scene?.trackKey)==='karting-canarias'||narrow)
       ?scaleKartingCanariasEnvironment(env):env;
   }
   return null;

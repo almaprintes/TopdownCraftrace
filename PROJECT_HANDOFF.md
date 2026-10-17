@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.264 — CANARIAS NARROW-70
+
+Separate PWA DEV experimental track karting-canarias-narrow70, canonical Canarias unchanged. Same centerline (16,328px), photo/world x2.5, nominal width 70 source instead of 105; preserves 18 hand-authored Bezier edge handles and per-sector widths (scaled inward 70/105). The alternate WebP photo is re-warped OFFLINE at build into four tile assets; no runtime extra frame-loop or culling. Original Environment Studio barriers reused. Separate ID and record keys, dev selector only, not published. Read docs/continuity/2026-10-17-karting-canarias-narrow70-264.md.
+
+
 ## REFERENCIA VISUAL DE RECTAS EN LOS TRES KARTINGS — 17/10/2026
 
 [Rectas candidatas, porcentaje del mismo Spark y coordenadas FOTO](docs/continuity/2026-10-17-karting-straight-visual-reference.md) + [JSON de datos](docs/continuity/data/2026-10-17-karting-straights-candidates.json). Análisis 36 estaciones/track (NO culling): Tenerife 2 rectas 18,4–20,7 %; Américas 4 rectas 14,8–21,2 %; Canarias 3 rectas 9,9–12,4 %. **Margen simétrico es cálculo teórico, no margen medido a cada borde**. Confirmar puntos en foto original antes de cambiar escala. Mantener ×2,5 de Canarias hasta decisión, no reintroducir culling ni tocar físicas.
