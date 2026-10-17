@@ -39,7 +39,7 @@ for(const [dir,pattern] of Object.entries(patterns)){
     assert.equal(b.format,'webp');
     const scale=photoTileWorldScale(a.width,b.width);
     assert.ok(Math.abs(b.width*scale-a.width)<1e-10,'X world-space width must be preserved');
-    assert.ok(Math.abs(b.height*(a.height/b.height)-a.height)<1e-10);
+    assert.ok(Math.abs(b.height*photoTileWorldScale(a.height,b.height)-a.height)<1e-10);
     const px=a.width*a.height,small=b.width*b.height;
     originals+=px;compactPixels+=small;number++;
     assert.ok(small/px<.46,'iPhone texture should save at least 54% RGBA memory');
@@ -54,8 +54,9 @@ const installer=fs.readFileSync('scripts/install-karting-tenerife-source.mjs','u
 assert.match(loader,/useCompactIosPhotoTiles\(navigator\?\.userAgent/);
 assert.match(loader,/compactIosPhotoTilePath\(path\)/);
 assert.match(loader,/img\.src=root\+path/,'Always fall back to original photo tile if optional iOS variant is unavailable');
-assert.match(loader,/tileWorldScale:photoTileWorldScale\(w,img\.naturalWidth\)/);
-assert.match(loader,/const displayScale=worldScale\*tileScale/,'Keep photo alignment and Canarias x2.5 world scale');
+assert.match(loader,/tileScaleX:photoTileWorldScale\(w,img\.naturalWidth\)/);
+assert.match(loader,/tileScaleY:photoTileWorldScale\(h,img\.naturalHeight\)/);
+assert.match(loader,/const displayScaleX=worldScale\*tileScaleX,displayScaleY=worldScale\*tileScaleY/,'Keep X/Y alignment and Canarias x2.5 world scale');
 assert.match(loader,/scene\.uiCam\?\.ignore\?\.\(sprite\)/);
 assert.match(base,/if \(!imageNativeVisual\) \{[\s\S]*?this\.ensureBgTexture\(\)/,'Skip invisible procedural background generation');
 assert.match(surfaces,/isImageNativeTrackMeta\(registered\)/);
