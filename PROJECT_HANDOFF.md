@@ -1,5 +1,9 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## REFERENCIA VISUAL DE RECTAS EN LOS TRES KARTINGS — 17/10/2026
+
+[Rectas candidatas, porcentaje del mismo Spark y coordenadas FOTO](docs/continuity/2026-10-17-karting-straight-visual-reference.md) + [JSON de datos](docs/continuity/data/2026-10-17-karting-straights-candidates.json). Análisis 36 estaciones/track (NO culling): Tenerife 2 rectas 18,4–20,7 %; Américas 4 rectas 14,8–21,2 %; Canarias 3 rectas 9,9–12,4 %. **Margen simétrico es cálculo teórico, no margen medido a cada borde**. Confirmar puntos en foto original antes de cambiar escala. Mantener ×2,5 de Canarias hasta decisión, no reintroducir culling ni tocar físicas.
+
 ## ESCALA FÍSICA ORIGINAL — LOS TRES KARTINGS (17/10)
 
 [Estudio de foto/Bezier/mundo/metraje externo](docs/continuity/2026-10-17-kartings-physical-scale-study.md). Canarias ×2,5 NO es bug: se eligió en DEV 1.2.246 para reproducir la duración/escala del circuito histórico y que el coche se viera menos grande. La conversión global da Tenerife 754 m, Américas 742 m, Canarias 839 m; los operadores publican Tenerife 1200 m y Américas 857 m, mientras que OnPole no oficial atribuye 440 m a Canarias. La foto de Canarias es recreación IA, no georreferenciada. No aplicar factores métricos nuevos, ni reactivar culling, ni cambiar físicas/rankings sin aprobación.
