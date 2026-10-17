@@ -1,3 +1,5 @@
+import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
+import { isImageNativeTrackMeta } from '../tracks/imageNativeTrackContract.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { RaceScene as BaseRaceScene } from './RaceSurfaceRefineScene.js';
 import { GRASS_MATERIAL, ASPHALT_MATERIAL } from '../data/surfaceMaterials.js';
@@ -7,6 +9,9 @@ import { GRASS_MATERIAL, ASPHALT_MATERIAL } from '../data/surfaceMaterials.js';
 export class RaceScene extends BaseRaceScene {
   preload() {
     super.preload?.();
+    // Check registry before race create: previous scene metadata may be stale.
+    const key=String(this.trackKey||'').trim().toLowerCase();
+    if (isImageNativeTrackScene(this) || isImageNativeTrackMeta(TRACK_REGISTRY[key])) return;
     if (!this.textures.exists('grassMaterialRef')) this.load.image('grassMaterialRef', GRASS_MATERIAL);
     if (!this.textures.exists('asphaltMaterialRef')) this.load.image('asphaltMaterialRef', ASPHALT_MATERIAL);
   }

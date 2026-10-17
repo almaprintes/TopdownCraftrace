@@ -224,6 +224,8 @@ export function clearImageNativeTrackOverlays(scene) {
   for (const name of [
     '_shoulderLeft','_shoulderRight','_curbOuter','_curbInner',
     '_borderLeft','_borderRight','_iosStageAsphalt',
+    // Any procedural passes that may have survived an interrupted load.
+    '_semiSimBrakeMarks','_environmentEdgeWear','_materialEdgeWear',
     // Premium longitudinal paint is a separate pass, unrelated to RaceScene's
     // legacy border/piano objects. Without these, kerbs stay doubled on iPhone.
     '_longitudinalAsphaltWear','_premiumShoulder','_edgeProbe','_cornerCurbs',

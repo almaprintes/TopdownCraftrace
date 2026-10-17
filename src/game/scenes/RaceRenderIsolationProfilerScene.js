@@ -4,17 +4,19 @@ import { RaceScene as CurrentRaceScene } from './RaceRenderProfilerScene.js';
 function videoPrefs(){
   try{
     const s=JSON.parse(localStorage.getItem('tdr2:settings')||'{}');
-    return {showFPS:!!s?.video?.showFPS};
-  }catch{return {showFPS:false};}
+    // Never run layer-hiding A/B tests with just the ordinary FPS readout.
+    return {renderIsolation:!!s?.video?.showFPS && localStorage.getItem('tdr2:renderIsolation')==='1'};
+  }catch{return {renderIsolation:false};}
 }
 
-// Diagnostic-only A/B render isolation. Enabled only when "show FPS" is on.
+// Experimental render isolation needs explicit localStorage opt-in plus showFPS.
+// Normal FPS monitoring keeps all visuals and does not run these extra tasks.
 // It cycles short render tests so we can see which visual layer is expensive
 // on a real device without changing physics or timing.
 export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
-    if(!videoPrefs().showFPS)return result;
+    if(!videoPrefs().renderIsolation)return result;
 
     this._isoModes=['ALL','NO UI CAM','NO OVERLAY','NO TRACK CHUNKS'];
     this._isoIndex=0;
@@ -22,6 +24,7 @@ export class RaceScene extends CurrentRaceScene {
     this._isoWindowMs=1500;
     this._isoStats=new Map();
     this._isoRenderStart=0;
+    this._isoNextReport=0;
     this._isoSavedUiVisible=null;
 
     this._isoPre=()=>{this._isoRenderStart=performance.now();};
@@ -117,7 +120,11 @@ export class RaceScene extends CurrentRaceScene {
       if(this._isoIndex===0)this._isoStats.clear();
       this._isoAt=now;
     }
-    this._renderIsolationReport();
+    // Text canvas refresh is expensive; 750ms is enough for diagnostics.
+    if(now>=this._isoNextReport){
+      this._renderIsolationReport();
+      this._isoNextReport=now+750;
+    }
     return result;
   }
 }
