@@ -5,6 +5,7 @@ const ghost=readFileSync('src/game/scenes/RaceStaticGhostStatusScene.js','utf8')
 assert.match(delta,/function retireLegacyDomDelta\(scope=document\.body\)/);
 assert.match(delta,/const elements=scope===document\.body\?scope\.querySelectorAll\('\*'\):\[scope,\.\.\.scope\.querySelectorAll\('\*'\)\]/);
 assert.match(delta,/if\(originalPause\?\.isConnected\)return originalPause/);
+assert.match(delta,/\|\|!originalPause\?\.isConnected\)\)positionControl\(root\)/,'replaced original pause anchor must be re-acquired');
 assert.match(delta,/if\(!pauseRect\)\{/);
 assert.match(delta,/const observer=new MutationObserver\(onMutations\)/);
 assert.match(delta,/if\(previous&&previous.noReference===noReference&&previous.label===label/,'panel typography should not be rewritten per delta tick');

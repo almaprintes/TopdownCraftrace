@@ -255,7 +255,7 @@ function apply(){
   const hud=document.querySelector('.tdr-race-hud');
 
   const panelChanged=panel!==lastPanel;
-  if(race&&(panelChanged||race!==lastRace||root.style.display!=='flex'||!pauseRect))positionControl(root);
+  if(race&&(panelChanged||race!==lastRace||root.style.display!=='flex'||!pauseRect||!originalPause?.isConnected))positionControl(root);
   lastPanel=panel;
 
   if(race&&preserveEnabledThroughPause){
