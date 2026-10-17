@@ -2,6 +2,7 @@ import { loadPlayerStatsPersisted } from '../stats/playerStats.js';
 import { formatOdometerKm } from '../stats/odometerFormat.js';
 import { getLanguage } from '../i18n/index.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
 import './raceInstrumentHud.css';
 
 const BASE=import.meta.env.BASE_URL||'/';
@@ -55,7 +56,7 @@ function mileageReading(scene){
 
 export function destroyRaceInstrumentHud(scene){
   try{scene?._raceHudDom?.remove?.();}catch{}
-  if(scene){scene._raceHudDom=null;scene._raceHudRefs=null;scene._hudOdometerCarId=null;scene._hudOdometerPending=0;}
+  if(scene){scene._raceHudDom=null;scene._raceHudRefs=null;scene._hudOdometerCarId=null;scene._hudOdometerPending=0;scene._tdrOdometerAbOff=false;}
 }
 
 export function mountRaceInstrumentHud(scene){
@@ -89,6 +90,37 @@ export function mountRaceInstrumentHud(scene){
     sectorBars:Array.from(root.querySelectorAll('.tdr-race-sector-bars i')),speedBars:Array.from(root.querySelectorAll('.tdr-race-speedbar i'))
   };
   scene._raceHudAccum=100;
+  // DEV-only A/B: tap the odometer to suspend its UI calculation and writes.
+  // Distance accumulation, periodic persistence, and car stats remain active.
+  // Deliberately leave ON identical to DEV 1.2.255 for an honest comparison.
+  if (!IS_PROD_BUILD && scene._raceHudRefs.odometer) {
+    const badge=root.querySelector('.tdr-race-odometer');
+    if(badge){
+      badge.dataset.odoAb='1';
+      badge.setAttribute('role','button');
+      badge.setAttribute('tabindex','0');
+      badge.setAttribute('aria-pressed','false');
+      badge.setAttribute('aria-label','Prueba DEV: activar o pausar la actualización visual del cuentakilómetros');
+      const toggle=event=>{
+        event?.preventDefault?.();
+        event?.stopPropagation?.();
+        scene._tdrOdometerAbOff=!scene._tdrOdometerAbOff;
+        badge.dataset.odoOff=scene._tdrOdometerAbOff?'1':'0';
+        badge.setAttribute('aria-pressed',String(scene._tdrOdometerAbOff));
+        if(scene._tdrOdometerAbOff){
+          scene._raceHudRefs.odometer.textContent='PAUSA';
+        }else{
+          // Reset the cached storage snapshot; the normal refresh will pick
+          // up the current value, including any 12-second mileage flush.
+          scene._hudOdometerCarId=null;
+          scene._raceHudAccum=100;
+          updateRaceInstrumentHud(scene,0);
+        }
+      };
+      badge.addEventListener('pointerup',toggle);
+      badge.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){toggle(e);}});
+    }
+  }
   return root;
 }
 
@@ -127,7 +159,10 @@ export function updateRaceInstrumentHud(scene,delta=0){
   refs.delta.parentElement?.classList.toggle('good',Number.isFinite(deltaMs)&&deltaMs<0);
   refs.delta.parentElement?.classList.toggle('bad',Number.isFinite(deltaMs)&&deltaMs>0);
   refs.speed.textContent=String(Math.round(kmh)).padStart(3,'0');
-  if(refs.odometer)refs.odometer.textContent=formatOdometerKm(mileageReading(scene),getLanguage());
+  // In DEV A/B OFF, do not execute formatting, stats reads or DOM writes.
+  if(!scene._tdrOdometerAbOff){
+    if(refs.odometer)refs.odometer.textContent=formatOdometerKm(mileageReading(scene),getLanguage());
+  }
   refs.clock.textContent=fmtLap(elapsed);
   refs.pos.innerHTML=pos&&pos.total>1?`POS <b>${pos.pos}/${pos.total}</b>`:'';
   for(let i=0;i<refs.sectorBars.length;i++)refs.sectorBars[i].classList.toggle('on',i<sector);

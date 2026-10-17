@@ -16,3 +16,7 @@
 .tdr-race-odometer [data-odometer]{font-weight:950;font-variant-numeric:tabular-nums;letter-spacing:.1em;color:#e7ffff;text-shadow:0 0 8px rgba(103,230,255,.24)}
 .tdr-race-odometer-unit{font:800 7px/1 system-ui,sans-serif;color:#84d2dc;letter-spacing:.05em}
 @media(max-width:760px){.tdr-race-car-id .tdr-race-odometer{margin-top:2px;min-width:99px;padding:2px 6px;font-size:9px;gap:4px}.tdr-race-car-id .tdr-race-car-model{max-width:240px;overflow:hidden;text-overflow:ellipsis}}
+
+/* DEV-only odometer A/B. No additional HUD layout or animation. */
+.tdr-race-hud .tdr-race-odometer[data-odo-ab="1"]{pointer-events:auto;touch-action:manipulation;cursor:pointer}
+.tdr-race-hud .tdr-race-odometer[data-odo-off="1"]{border-color:rgba(255,200,87,.8);background:rgba(28,22,8,.92);color:#ffd789}

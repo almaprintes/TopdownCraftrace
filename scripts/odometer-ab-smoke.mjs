@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const ui=readFileSync('src/game/ui/raceInstrumentHud.js','utf8');
+const css=readFileSync('src/game/ui/raceInstrumentHud.css','utf8');
+const mileage=readFileSync('src/game/scenes/RaceMileageStatsScene.js','utf8');
+assert.match(ui,/if \(!IS_PROD_BUILD && scene\._raceHudRefs\.odometer\)/);
+assert.match(ui,/badge\.addEventListener\('pointerup',toggle\)/);
+assert.match(ui,/scene\._tdrOdometerAbOff=!scene\._tdrOdometerAbOff/);
+assert.match(ui,/if\(!scene\._tdrOdometerAbOff\)\s*\{\s*if\(refs\.odometer\)refs\.odometer\.textContent=formatOdometerKm\(mileageReading\(scene\),getLanguage\(\)\)/);
+assert.match(ui,/scene\._raceHudRefs\.odometer\.textContent='PAUSA'/);
+assert.match(ui,/scene\._hudOdometerCarId=null;/);
+assert.match(css,/\[data-odo-ab="1"\]\{pointer-events:auto/);
+assert.match(css,/\[data-odo-off="1"\]/);
+assert.match(mileage,/this\._sampleMileage\(delta\);/);
+assert.match(mileage,/this\.events\.once\('shutdown',\(\)=>this\._flushMileage\(true\)\)/);
+assert.match(mileage,/const FLUSH_EVERY_MS=12000/);
+console.log('PASS: DEV odometer A/B suspends only UI, keeps mileage and persistence');
