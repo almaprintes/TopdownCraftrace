@@ -1,0 +1,18 @@
+# iPhone: tirones globales tras sustituir pistas fotográficas — DEV 1.2.252
+
+El propietario reporta 17/10/2026 que todos los circuitos van a trompicones en iPhone, aunque las primeras versiones fotográficas eran más fluidas. **Es un informe de reproducción en dispositivo, no una medición propia de FPS.** El Build en GitHub no mide el rendimiento sostenido de Safari/WebKit ni la temperatura.
+
+## Riesgos encontrados en el código
+1. `src/game/scenes/RaceRealSurfaceAssetsScene.js.preload()` seguía cargando materiales originales `grass`, `off`, `asphalt` (en High, texturas de 2048px). Para Atlántico además pedía varias texturas PBR por red de PolyHaven. Las carreras `image-native` ya incluyen esos elementos en sus WebP y **no usan** esos archivos. Descargas y texturas extra consumían CPU, red y memoria de vídeo; se cambia el preload para consultar `TRACK_REGISTRY` antes de crear la carrera y omitir solo los materiales de `image-native`. Circuitos clásicos mantienen su material.
+2. `src/game/scenes/RaceScene.js.create()` generaba lienzos de fondo, tierra, asfalto y overlay pese a que posteriormente `mountPhoto` instalaba la fotografía y descartaba los gráficos viejos. En `image-native` se evita ese trabajo inicial; se mantiene `ensureCarTexture` y toda la inicialización de coches, físicas y cronometraje.
+3. Karting Tenerife decodificaba el master WebP 3344×1882 **y luego** lo troceaba vía canvas en el navegador. Se usa el cuarteto WebP 1672×941 ya generado por su instalador (metadatos `imageNative.tiles`) para no duplicar un gran buffer RGBA en iOS.
+4. El peso comprimido de los WebP nuevos no equivale a su coste GPU: un mosaico original 1536×1536 ocupa unos 9 MiB en RGBA8. El script `scripts/build-ios-race-photo-tiles.mjs` genera una variante `*-ios.webp` al 65 % de ancho y alto (42 % de píxeles/RGBA, un 58 % menos). Solo la plataforma `iPhone/iPod` intenta cargarla. Las coordenadas, las puertas, los objetos, el coche y las colisiones nunca cambian. En `imageNativeRaceLoader.js` cada mosaico conserva 100 % de su ancho y alto **en coordenadas del mundo**, aplicando `tileScaleX` y `tileScaleY` independientes para que el redondeo de píxeles no genere costuras. Karting Canarias conserva el factor de mundo ×2,5. Si falta variante compacta, usar automáticamente mosaico original (sin bloquear la carrera).
+5. Las variantes se generan desde las fotografías existentes para Tenerife, Santa Cruz, Américas, Canarias, Arafo y Atlántico. No se reeditan ni regeneran imágenes con IA; no se toca el selector ni el archivo maestro.
+
+## Verificaciones
+
+`scripts/ios-race-photo-memory-smoke.mjs` valida las variantes reales y su menor presupuesto RGBA, la selección por UA, la restitución exacta de coordenadas X/Y, la ruta fallback, la omisión de texturas inútiles y la carga de Tenerife por mosaicos. Forma parte de `prebuild`; la generación también se ejecuta en `predev`.
+
+**Límite de evidencia:** las optimizaciones reducen carga redundante y memoria decodificada según análisis estático y de assets; aún se debe comprobar durante una sesión real de iPhone (dos circuitos consecutivos y después de 10 minutos) que desaparecen los tirones. No reducir FPS artificialmente ni modificar aceleración/escala de coches, ni pistas/colisiones, ni Android/Play Store por esta corrección. Si persiste, solicitar modelo iPhone, ajuste de vídeo, secuencia de circuitos y si sucede desde arranque limpio o solo tras varias carreras; comparar temperaturas y duración de frame real.
+
+En ausencia de acceso a un iPhone conectado no afirmar que ya hay 60 FPS ni diagnosticar thermal throttling como certeza.
