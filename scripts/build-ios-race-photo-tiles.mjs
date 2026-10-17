@@ -8,8 +8,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
-
-export const IOS_PHOTO_TILE_SCALE=0.65;
+import {IOS_PHOTO_TILE_SCALE} from '../src/game/performance/iosPhotoTileBudget.js';
 const root=path.resolve(import.meta.dirname,'..','public','assets','tracks');
 const patterns=Object.freeze({
   'karting-tenerife/beauty':/^karting-tenerife-trackstudio-[0-3]\.webp$/,
