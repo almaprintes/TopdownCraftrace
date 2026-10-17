@@ -10,7 +10,21 @@ const freshWindow=()=>({started:performance.now(),count:0,frameSum:0,frameMax:0,
 const avg=(sum,count)=>count?sum/count:0;
 const ms=n=>n.toFixed(1);
 const videoProbeEnabled=()=>{try{return JSON.parse(localStorage.getItem('tdr2:settings')||'{}')?.video?.showFPS===true;}catch{return false;}};
-const frameInfo=scene=>{const conf=window.__tdrIosFrameConfig||{};const context=scene.game?.renderer?.gl?.getContextAttributes?.();const actual=typeof context?.desynchronized==='boolean'?(context.desynchronized?'DESYNC':'SYNC'):'NO DISPONIBLE';return `MODO ${conf.preset||'?'}  RES ${conf.renderResolution||'?'}  FPS limit ${conf.frameLimit??'?'}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;};
+const safeModeDetails=()=>{
+  try{
+    const manual=localStorage.getItem('tdr2:forceIosSafeMode')==='1';
+    const until=Number(localStorage.getItem('tdr2:autoIosSafeModeUntil')||0);
+    const auto=Number.isFinite(until)&&until>Date.now();
+    return manual?'MANUAL (forzado)':auto?'AUTO hasta '+new Date(until).toLocaleTimeString():'INACTIVO';
+  }catch{return 'DESCONOCIDO';}
+};
+const engineStatus=scene=>{
+  const data=scene._tdrEngineSample?.getDevEngineAudioStatus?.();
+  if(!data)return 'AUDIO MOTOR: NO DISPONIBLE';
+  const sourceCount=data.ready?data.sources:'cargando';
+  return 'AUDIO MOTOR '+(data.diagnosticSuspended?'OFF':'ON')+' · CONTEXTO '+data.state+' · FUENTES '+sourceCount+' · '+data.mode;
+};
+const frameInfo=scene=>{const conf=window.__tdrIosFrameConfig||{};const context=scene.game?.renderer?.gl?.getContextAttributes?.();const actual=typeof context?.desynchronized==='boolean'?(context.desynchronized?'DESYNC':'SYNC'):'NO DISPONIBLE';return `MODO ${conf.preset||'?'}  RES ${conf.renderResolution||'?'}  FPS limit ${conf.frameLimit??'?'}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;};
 const metrics=(w,scene,mode)=>[
   'PERF iPhone · '+mode,
   'FOTOGRAMAS  '+w.count+'  '+(avg(w.frameSum,w.count)>0?ms(1000/avg(w.frameSum,w.count)):'--')+' FPS',
@@ -20,7 +34,8 @@ const metrics=(w,scene,mode)=>[
   'OTROS      '+ms(avg(w.otherSum,w.count))+' / '+ms(w.otherMax)+' ms',
   '>33ms '+w.over33+' · >50ms '+w.over50+' · último '+ms(w.lastSpike)+'ms',
   'TILES '+(scene._trackBeautyTiles?.length||0)+' · NO mide GPU directamente',
-  frameInfo(scene)
+  frameInfo(scene),
+  engineStatus(scene)
 ].join('\n');
 
 // This installer wraps the outermost in-use race class (the concrete scene
@@ -62,10 +77,12 @@ export function mountRaceDevFrameDiagnostics(scene){
     const b=style(document.createElement('button'),'padding:6px 8px;min-height:32px;background:#1b3241;color:#fff;border:1px solid #648194;border-radius:6px;font:800 10px system-ui');
     b.type='button';b.textContent=label;b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();callback(b);});row.appendChild(b);return b;
   };
-  const state={active:false,disposed:false,hudOff:false,photoOff:false,lastUpdateMs:0,renderStart:0,lastPost:0,window:freshWindow(),lastReport:''};
-  const mode=()=>['BASE',state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON'].join(' · ');
+  const state={active:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,lastUpdateMs:0,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now()};
+  const mode=()=>[state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON',scene._tdrEngineSample?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON'].join(' · ');
   const reset=()=>{
     state.window=freshWindow();
+    state.lastReportAt=performance.now();
+    state.lastReport='';
     state.lastPost=0;
     state.lastUpdateMs=0;
     pre.textContent='Midiendo '+mode()+'\nConduce aproximadamente 20 s y haz una captura.';
@@ -88,12 +105,45 @@ export function mountRaceDevFrameDiagnostics(scene){
       if(frame>33.4){w.over33++;w.lastSpike=frame;}
       if(frame>50)w.over50++;
     }
-    if(now-w.started>=1400){
+    if(now-state.lastReportAt>=1500){
       state.lastReport=metrics(w,scene,mode());
       pre.textContent=state.lastReport;
-      state.window=freshWindow();
+      state.lastReportAt=now;
     }
   };
+  control('MOTOR ON',async b=>{
+    if(state.audioBusy)return;
+    const engine=scene._tdrEngineSample;
+    const current=engine?.getDevEngineAudioStatus?.();
+    if(!engine?.setDevEngineAudioSuspended||!current?.started||!current?.ready){
+      pre.textContent='Primero arranca el motor y espera a que se cargue el audio. La carrera no cambia.';
+      return;
+    }
+    state.audioBusy=true;
+    b.disabled=true;
+    b.textContent='CAMBIANDO AUDIO…';
+    try{
+      const requested=!current.diagnosticSuspended;
+      const result=await engine.setDevEngineAudioSuspended(requested);
+      if(state.disposed)return;
+      const next=engine.getDevEngineAudioStatus?.();
+      b.textContent=next?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON';
+      if(!result?.ok){
+        pre.textContent='PRUEBA NO VÁLIDA: '+(result?.reason||'No se pudo confirmar el AudioContext')+
+          '\\nESTADO '+(result?.state||next?.state||'desconocido')+'. No interpretes FPS todavía.';
+        return;
+      }
+      reset();
+      pre.textContent='AUDIO MOTOR '+(requested?'REALMENTE SUSPENDIDO':'REANUDADO')+
+        ' · AudioContext '+result.state+'\\nMide 20 segundos en esta fase y pulsa COPIAR.';
+    }catch(error){
+      b.textContent=engine?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON';
+      pre.textContent='Error al cambiar motor: '+String(error?.message||error);
+    }finally{
+      state.audioBusy=false;
+      b.disabled=false;
+    }
+  });
   const hudButton=control('HUD ON',b=>{
     state.hudOff=!state.hudOff;
     scene._tdrDiagnosticHudOff=state.hudOff;
@@ -137,6 +187,8 @@ export function mountRaceDevFrameDiagnostics(scene){
     events.off(Phaser.Core.Events.PRE_RENDER,state.pre);
     events.off(Phaser.Core.Events.POST_RENDER,state.post);
     scene._tdrDiagnosticHudOff=false;
+    // AudioContext belongs to the race scene and is closed by its shutdown.
+    // Never resume on teardown: another focus/ad event may still require silence.
     if(scene._raceHudDom)scene._raceHudDom.style.display='';
     for(const tile of scene._trackBeautyTiles||[])if(tile?.scene)tile.setVisible(true);
     root.remove();scene._tdrFrameDiagnostic=null;

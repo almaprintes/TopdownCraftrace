@@ -156,6 +156,7 @@ export class CarEngineSampleRuntime {
     this._nativeAppPaused = false;
     this._audioFocusLost = false;
     this._focusTransition = Promise.resolve();
+    this._tdrDiagnosticEngineSuspended = false;
     this._contextRecovery = () => this._syncLifecycleAudio();
     this._onBlur = () => { this._audioFocusLost = true; this._syncLifecycleAudio(); };
     this._onFocus = () => { this._audioFocusLost = false; this._syncLifecycleAudio(); };
@@ -233,7 +234,8 @@ export class CarEngineSampleRuntime {
 
   _audioBlocked() {
     return document.hidden || this._audioFocusLost || this._rewardedAdActive ||
-      this._nativeRewardedFullscreen || this._nativeAppPaused;
+      this._nativeRewardedFullscreen || this._nativeAppPaused ||
+      (!IS_PROD_BUILD && this._tdrDiagnosticEngineSuspended);
   }
 
   _syncLifecycleAudio() {
@@ -263,6 +265,37 @@ export class CarEngineSampleRuntime {
         }
       })
       .catch(error=>console.warn('[TDR2 engine] focus transition failed',error));
+    return this._focusTransition;
+  }
+
+  // DEV diagnostic only: actually pause WebAudio processing. Muting gain is
+  // insufficient: six looping BufferSources and the DSP graph keep running.
+  // Queue through the same lifecycle transition used by ad/focus recovery so
+  // they cannot automatically resume the context while this probe is active.
+  async setDevEngineAudioSuspended(disabled){
+    if(IS_PROD_BUILD)return {ok:false,reason:'No disponible en producción'};
+    const ctx=this._ctx;
+    if(!this.scene||!this.engineStarted||!ctx||!this._nodes||ctx.state==='closed'){
+      return {ok:false,reason:'Arranca el motor y espera a que se carguen las muestras'};
+    }
+    this._tdrDiagnosticEngineSuspended=disabled===true;
+    try{
+      await this._syncLifecycleAudio();
+      if(this._ctx!==ctx||ctx.state==='closed')return {ok:false,reason:'El motor cambió o se cerró'};
+      const expected=this._audioBlocked()?'suspended':'running';
+      if(ctx.state!==expected)return {ok:false,state:ctx.state,reason:'WebAudio no confirmó '+expected};
+      if(!this._tdrDiagnosticEngineSuspended)this.update(true);
+      return {ok:true,suspended:this._tdrDiagnosticEngineSuspended,state:ctx.state,mode:this._mode(),sources:this._nodes?.sampleSources?.length||0};
+    }catch(error){
+      return {ok:false,state:ctx?.state||'unknown',reason:String(error?.message||error)};
+    }
+  }
+
+  getDevEngineAudioStatus(){
+    if(IS_PROD_BUILD)return null;
+    return {started:!!this.engineStarted,diagnosticSuspended:!!this._tdrDiagnosticEngineSuspended,
+      state:this._ctx?.state||'sin contexto',mode:this._mode(),
+      sources:this._nodes?.sampleSources?.length||0,ready:!!this._nodes};
   }
 
   _resumeContext(reason) {
@@ -613,6 +646,7 @@ export class CarEngineSampleRuntime {
   }
 
   destroy() {
+    this._tdrDiagnosticEngineSuspended=false;
     document.removeEventListener('visibilitychange', this._contextRecovery);
     window.removeEventListener('pageshow', this._contextRecovery);
     window.removeEventListener('blur', this._onBlur);
