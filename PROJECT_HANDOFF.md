@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.281 — Auditoría y ajuste de anchura de metas/checkpoints de todos los circuitos
+
+Petición del propietario: un checkpoint de Atlántico no cubría todo el asfalto fotográfico. Se incorpora `src/game/tracks/raceGateWidth.js`: en `trackRegistry.js`, al publicar cada pista, la meta y los checkpoints (y salida A→B si existe) amplían sus extremos hasta los bordes **auténticos de la calzada**. En circuitos fotográficos se muestrean las dos curvas Bézier del `trackShape`; en clásicos se usa el ribbon real de `TrackBuilder`. No se modifican centerline, anchos de carretera, fotografías, origen fuente `.tdrtrack`, orden de CP, normal de conducción, física ni spawn. Solo se extienden las puertas lógicas y líneas de HUD sobre la misma recta; never shorten. Protección: se rechazan intersecciones de un mismo borde o demasiado lejanas (que podrían conectar con otra curva), preservando la puerta si la geometría no es fiable. `scripts/all-circuit-gate-width-smoke.mjs` audita la cobertura de todos los circuitos después de los instaladores, con exigencia especial para META+CP1+CP2 de Atlántico; conectado a Actions. Sin APK/AAB ni Play.
+
+
 ## DEV 1.2.280 — Protegido aislamiento de previews locales y Canarias 4096
 
 La verificación antigua de `scripts/trackstudio-image-native-loader-smoke.mjs` comparaba literalmente la allowlist nativa anterior. Se actualiza para admitir `karting-canarias-4096`, manteniendo expresamente prohibida la carga de los entornos de las vistas locales y sin cambiar la lógica física o las colisiones. Confirmado anteriormente: `OWNER FIVE ENVIRONMENTS OK` para 5 metas decorativas, 23 líneas y 20 zonas; compilación de despliegue pendiente.
