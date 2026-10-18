@@ -5,17 +5,18 @@ import {readFileSync} from 'node:fs';
 const read=p=>readFileSync(p,'utf8');
 const lobby=read('src/game/ui/lobby-dom.css');
 const lobbyDom=read('src/game/ui/LobbyDomUi.js');
-// Only the painted logo grows by exactly 20%. Keeping the button's layout
+// The painted logo is now 150% of its original size (+25% over the earlier 120%). Keeping the button's layout
 // dimensions untouched preserves the header anchor and long-press admin zone.
 assert.match(lobbyDom, /class="tdr-lobby-brand"[^>]*><img src="\$\{BASE\}assets\/logo\.webp"/);
 const logoRule=lobby.match(/\.tdr-lobby-brand img\s*\{([^}]*)\}/)?.[1]||'';
-assert.match(logoRule,/transform:\s*scale\(1\.2\);/);
+assert.match(logoRule,/transform:\s*scale\(1\.5\);/);
 assert.match(logoRule,/transform-origin:\s*center center;/);
 assert.match(logoRule,/width:\s*100%;/);
 assert.match(logoRule,/height:\s*100%;/);
 const buttonRule=lobby.match(/\.tdr-lobby-brand\s*\{([^}]*)\}/)?.[1]||'';
 assert.match(buttonRule,/width:\s*clamp\(96px, 10vw, 150px\);/,
   'Lobby logo button width remains unchanged so the other header elements never move');
+assert.match(buttonRule,/overflow:\s*visible;/,'Logo can exceed header slot');
 assert.doesNotMatch(buttonRule,/transform:/,
   'Only the image scales; the clickable wrapper remains fixed in place');
 const settings=read('src/game/scenes/SettingsDomScene.js');

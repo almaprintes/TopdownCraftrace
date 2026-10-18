@@ -73,8 +73,10 @@
   -webkit-touch-callout: none;
 }
 
-/* DEV: +20% SOLO a la imagen; el botón conserva tamaño y posición en la cabecera. */
-.tdr-lobby-brand img { width: 100%; height: 100%; object-fit: contain; transform: scale(1.2); transform-origin: center center; pointer-events: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+/* DEV 1.2.267: logo al 150% original (+25% respecto al 120% anterior). */
+/* Solo escala la imagen: su botón, hitbox y pulsación larga admin se conservan. */
+.tdr-lobby-brand { position: relative; z-index: 2; overflow: visible; }
+.tdr-lobby-brand img { width: 100%; height: 100%; object-fit: contain; transform: scale(1.5); transform-origin: center center; pointer-events: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
 .tdr-lobby-wallet {
   display: flex;

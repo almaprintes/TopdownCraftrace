@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.267 — lobby logo 150% y garaje misterioso
+
+Logo lobby: la imagen escala 1.5 (25% adicional sobre 1.2) sin mover su botón/hitbox/admin. Garaje jugador: tarjetas de coches bloqueados muestran solo ?, jamás solicitan foto/carta real ni procesan ni exhiben rendimiento; el hero elimina la URL anterior y la oculta. Tras desbloquear regresan foto, skins y datos. Admin Hub y físicas intactos. Pruebas: `scripts/lobby-car-header-settings-skin-smoke.mjs` y `scripts/garage-track-paddock-skin-smoke.mjs`. Solo DEV web en main; NO APK ni AAB ni Play. Canarias 4096 conserva colisiones pendientes del propietario.
+
+
 ## DEV 1.2.266 — CANARIAS 4096 / CUPER / ANDROID REAL ADS QA
 
 Corregido source Canarias 4096 confirmado en main, SHA256 1c3e92545c12e0b9941f10e81f8ca6c58e233c909e59005c465507d3b90bc086. El prebuild instala las ocho teselas 2048x1536 y la geometría. DEV y Android usan un solo Canarias visible; originales antiguos quedan en Git como respaldo. Los récords viejos NO se renombran.
