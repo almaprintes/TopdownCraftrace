@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {shouldUseLobbyDeparture,runLobbyRaceDeparture,lobbyDepartureTurnForCar,lobbyDepartureLocalDrive,LOBBY_DOWN_FACING_CARS,LOBBY_DEPARTURE_TIMING,LOBBY_DEPARTURE_DEPTH} from '../src/game/ui/LobbyRaceDeparture.js';
+import {shouldUseLobbyDeparture,runLobbyRaceDeparture,lobbyDepartureTurnForCar,lobbyDepartureLocalDrive,lobbyDepartureWheelTracks,LOBBY_DOWN_FACING_CARS,LOBBY_DEPARTURE_TIMING,LOBBY_DEPARTURE_DEPTH} from '../src/game/ui/LobbyRaceDeparture.js';
 const read=p=>readFileSync(p,'utf8');
 assert.deepEqual(LOBBY_DEPARTURE_TIMING,{turn:1600,hold:180,drive:520});
 assert.equal(LOBBY_DEPARTURE_TIMING.turn+LOBBY_DEPARTURE_TIMING.hold+LOBBY_DEPARTURE_TIMING.drive,2300);
@@ -19,6 +19,21 @@ assert.equal(lobbyDepartureTurnForCar('helix_comet','180deg'),90,
  'a preview flipped with skin calibration also flips departure direction');
 assert.deepEqual(lobbyDepartureLocalDrive(lobbyDepartureTurnForCar('helix_spark','90deg'),600),
  {x:600,y:0},'a car already looking right departs with no turn');
+
+
+// Two rear tire contacts for either rotation direction, including Helix.
+const rect={left:150,top:110,width:100,height:200};
+const platformRect={left:0,top:0,width:400,height:400};
+const clockwise=lobbyDepartureWheelTracks(rect,platformRect,90);
+const counterclockwise=lobbyDepartureWheelTracks(rect,platformRect,-90);
+assert.equal(clockwise.length,2);
+assert.equal(counterclockwise.length,2);
+assert.ok(clockwise.every(t=>t.dy===-1&&t.y>rect.top+rect.height/2-platformRect.height/2),
+ 'clockwise wheels start behind the upward-facing car');
+assert.ok(counterclockwise.every(t=>t.dy===1&&t.y<rect.top+rect.height/2-platformRect.height/2),
+ 'counter-clockwise wheels start behind the downward-facing car');
+assert.ok(clockwise[0].x!==clockwise[1].x,'two separated rear tire marks');
+assert.ok(clockwise.every(t=>t.length>30&&t.length<=110&&t.width>=2));
 
 const storage={getItem:()=>null};
 assert.equal(shouldUseLobbyDeparture({prod:true,storage,nativeAndroid:false}),false,'Public web release remains unchanged');
@@ -56,6 +71,16 @@ assert.doesNotMatch(script,/2147481900|zIndex:'214748/,'no high z-index layer');
 assert.match(script,/LOBBY_DEPARTURE_DEPTH\.platform/);
 assert.match(script,/LOBBY_DEPARTURE_DEPTH\.car/);
 assert.match(script,/LOBBY_DEPARTURE_DEPTH\.mastery/);
+assert.match(script,/function playLobbyTireEffects\(platformPart,carRect,platformRect,turnAngle,animations\)/);
+assert.match(script,/playLobbyTireEffects\(platformPart,car\.getBoundingClientRect\(\),pr,turnAngle,animations\)/);
+assert.match(script,/tdr-lobby-tire-streak/);
+assert.match(script,/tdr-lobby-tire-smoke/);
+assert.match(script,/for\(let i=0;i<3;i\+\+\)/,'three smoke puffs per rear tire');
+assert.match(script,/LOBBY_DEPARTURE_TIMING\.drive-delay/,'smoke ends inside approved drive window');
+assert.match(script,/void animateAndWait\(streak/,'tire marks never hold up race launch');
+assert.match(script,/void animateAndWait\(smoke/,'smoke never holds up race launch');
+assert.match(script,/for\(const part of stages\)part\.remove\(\)/,'effects clean up with platform');
+
 assert.match(script,/Promise\.all\(stages\.map/,'independent stage layers rotate together');
 assert.match(script,/const raceReady=await prepareRace\(\)/,'await slow network lazy scene');
 assert.match(script,/return \(await prewarm\(\)\)===true/,'do not launch when lazy scene unavailable');
@@ -74,4 +99,4 @@ assert.ok(!script.includes('rotate(90deg) translate3d(0,'),
 assert.match(script,/duration:LOBBY_DEPARTURE_TIMING\.drive,easing:'cubic-bezier\(\.6,\.05,\.94,\.45\)'/,'approved getaway unchanged');
 assert.match(read('src/game/ui/lobby-dom.css'),/\.tdr-lobby-dom\.tdr-lobby-departing/);
 assert.match(read('index.html'),/name="tdr-dev-version" content="DEV 1\.2\.\d+"/);
-console.log('Lobby departure: native Android release enabled, web prod unchanged, downward-facing reverse turn preserved; all depart right in 520ms with platform/mastery and slow network guard OK');
+console.log('Lobby departure: native Android enabled; two temporary tire marks and six smoke puffs fade during existing 520ms exit; race launch and cleanup unchanged');

@@ -86,6 +86,81 @@ function animateAndWait(element,keyframes,options,timeoutMs,animations){
   }catch{clearTimeout(timer);resolve();}
  });
 }
+
+/**
+ * Rear wheel contact points in the platform's unrotated DOM coordinates.
+ * The established platform and car wrappers rotate together, so these traces
+ * stay fixed on the platform while the car departs screen-right.
+ */
+export function lobbyDepartureWheelTracks(carRect,platformRect,turnAngle){
+ const vector=lobbyDepartureLocalDrive(turnAngle,1);
+ const magnitude=Math.hypot(vector.x,vector.y)||1;
+ const forward={x:vector.x/magnitude,y:vector.y/magnitude};
+ const lateral={x:-forward.y,y:forward.x};
+ const x=carRect.left+carRect.width/2-platformRect.left-platformRect.width/2;
+ const y=carRect.top+carRect.height/2-platformRect.top-platformRect.height/2;
+ const axle=Math.max(carRect.width,carRect.height)*.285;
+ const halfTread=Math.min(carRect.width,carRect.height)*.255;
+ const trailLength=Math.min(platformRect.width*.33,platformRect.height*.34,110);
+ const treadWidth=Math.max(2,Math.min(4,Math.min(carRect.width,carRect.height)*.028));
+ return [-1,1].map(side=>({
+  x:x-forward.x*axle+lateral.x*halfTread*side,
+  y:y-forward.y*axle+lateral.y*halfTread*side,
+  dx:forward.x,dy:forward.y,length:trailLength,width:treadWidth
+ }));
+}
+// Finite, non-interactive DOM effects. No RAF, canvas or new assets.
+// Both tracks and smoke fade inside the existing 520ms departure.
+function playLobbyTireEffects(platformPart,carRect,platformRect,turnAngle,animations){
+ const contacts=lobbyDepartureWheelTracks(carRect,platformRect,turnAngle);
+ for(const contact of contacts){
+  const streak=document.createElement('div');
+  streak.className='tdr-lobby-tire-streak';
+  const angle=Math.atan2(contact.dy,contact.dx)*180/Math.PI;
+  Object.assign(streak.style,{
+   position:'absolute',left:contact.x+'px',top:contact.y+'px',
+   width:contact.length+'px',height:contact.width+'px',
+   transformOrigin:'0 50%',transform:'rotate('+angle+'deg) scaleX(.02)',
+   background:'linear-gradient(90deg,rgba(8,13,19,.84),rgba(8,13,19,.6) 70%,rgba(8,13,19,0))',
+   borderRadius:'5px',opacity:'0',pointerEvents:'none',willChange:'transform,opacity'
+  });
+  platformPart.appendChild(streak);
+  void animateAndWait(streak,[
+   {transform:'rotate('+angle+'deg) scaleX(.02)',opacity:0},
+   {transform:'rotate('+angle+'deg) scaleX(.72)',opacity:.61,offset:.58},
+   {transform:'rotate('+angle+'deg) scaleX(1)',opacity:0}
+  ],{duration:LOBBY_DEPARTURE_TIMING.drive,easing:'ease-out'},
+  LOBBY_DEPARTURE_TIMING.drive+100,animations);
+  // Three small, staggered smoke puffs behind each rear wheel.
+  // These live on the platform, not in the moving car wrapper.
+  for(let i=0;i<3;i++){
+   const smoke=document.createElement('div');
+   smoke.className='tdr-lobby-tire-smoke';
+   const radius=Math.max(12,Math.min(23,Math.min(carRect.width,carRect.height)*.18));
+   const offset=i*contact.length*.17;
+   const sx=contact.x+contact.dx*offset-radius/2;
+   const sy=contact.y+contact.dy*offset-radius/2;
+   Object.assign(smoke.style,{
+    position:'absolute',left:sx+'px',top:sy+'px',
+    width:radius+'px',height:radius+'px',
+    background:'radial-gradient(circle at 40% 45%,rgba(238,246,250,.86),rgba(168,188,198,.47) 44%,rgba(126,151,162,0) 74%)',
+    borderRadius:'50%',opacity:'0',pointerEvents:'none',
+    transform:'translate3d(0,0,0) scale(.5)',willChange:'transform,opacity'
+   });
+   platformPart.appendChild(smoke);
+   const delay=i*55;
+   const driftX=-contact.dx*(14+i*5)+(i-1)*contact.dy*6;
+   const driftY=-contact.dy*(14+i*5)-(i-1)*contact.dx*6;
+   void animateAndWait(smoke,[
+    {opacity:0,transform:'translate3d(0,0,0) scale(.5)'},
+    {opacity:.69,transform:'translate3d('+(driftX*.4)+'px,'+(driftY*.4)+'px,0) scale(1.3)',offset:.32},
+    {opacity:0,transform:'translate3d('+driftX+'px,'+driftY+'px,0) scale(2.25)'}
+   ],{duration:LOBBY_DEPARTURE_TIMING.drive-delay,delay,easing:'ease-out'},
+   LOBBY_DEPARTURE_TIMING.drive+100,animations);
+  }
+ }
+}
+
 export function runLobbyRaceDeparture(scene,onFinished,{prod=false,nativeAndroid=nativeAndroidDeparture()}={}){
  const launch=typeof onFinished==='function'?onFinished:()=>{};
  const root=scene?._lobbyDomRoot;
@@ -193,6 +268,10 @@ export function runLobbyRaceDeparture(scene,onFinished,{prod=false,nativeAndroid
     const distance=window.innerWidth+pr.width;
     const movement=lobbyDepartureLocalDrive(turnAngle,distance);
     const departures=[carPart,...(masteryPart?[masteryPart]:[])];
+    // Temporary burn marks and smoke remain on the platform as the car leaves.
+    // Optional visuals must never postpone a race or change the drive duration.
+    try{playLobbyTireEffects(platformPart,car.getBoundingClientRect(),pr,turnAngle,animations);}
+    catch(error){console.warn('[lobby-departure] tire effects skipped',error);}
     await Promise.all(departures.map(part=>animateAndWait(part,
      [{transform:'rotate('+turnAngle+'deg) translate3d(0,0,0) scale(1)',opacity:1},
       {transform:'rotate('+turnAngle+'deg) translate3d('+movement.x+'px,'+movement.y+'px,0) scale(1.1)',opacity:1}],
