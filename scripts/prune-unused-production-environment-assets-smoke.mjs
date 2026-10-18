@@ -9,7 +9,7 @@ const file=(p,body)=>{fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFil
 const asset=name=>path.join(dist,'assets/environment',name);
 try{
   file(path.join(dist,'index.html'),'<html><body>Top Down RACE</body></html>');
-  file(path.join(dist,'assets/index-bundle.js'),\"const active='assets/environment/props/used.webp'; const dynamicName='special-filename.webp';\");
+  file(path.join(dist,'assets/index-bundle.js'),"const active='assets/environment/props/used.webp'; const dynamicName='special-filename.webp';");
   file(path.join(library,'test','test.environment.json'),JSON.stringify({
     environment:[{asset:'authored',path:'environment/structures/authored.webp'}],
     linearBarriers:[{asset:'barrier',path:'environment/barriers/authored-barrier.webp'}]
