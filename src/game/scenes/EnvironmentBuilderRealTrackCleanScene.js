@@ -60,11 +60,16 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     }
     const render=()=>{
       if(this._trackId!==String(this._trackId||''))return;
+      // Atlántico's authored photo is 4344x3258; the *published* race world
+      // is 70%. Show the exact same photo transform in the editor so placed
+      // markings and pen collisions use true race-world coordinates.
+      const tileWorldScale=this._trackId==='circuito-atlantico'
+        ?(Number(native?.worldScale)||1):1;
       this._clearBeautyReference();
       for(const [i,t] of cfg.tiles.entries()){
         const key=`env-builder-beauty:${this._trackId}:${i}:${cfg.assetRevision||'1'}`;
         if(!this.textures.exists(key))continue;
-        const img=this.add.image(Number(t.x)||0,Number(t.y)||0,key).setOrigin(0).setDepth(2.05).setDisplaySize(Number(t.w)||1,Number(t.h)||1);
+        const img=this.add.image((Number(t.x)||0)*tileWorldScale,(Number(t.y)||0)*tileWorldScale,key).setOrigin(0).setDepth(2.05).setDisplaySize((Number(t.w)||1)*tileWorldScale,(Number(t.h)||1)*tileWorldScale);
         this.cameras.main.ignore(img);
         this._beautyReference.push(img);
       }

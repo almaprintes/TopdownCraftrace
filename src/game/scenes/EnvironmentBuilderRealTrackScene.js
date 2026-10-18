@@ -129,6 +129,9 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     p.trackId=this._trackId;
     p.baseTrack={id:this._trackId,name:this._realTrack?.name||this._trackId,source:`src/game/tracks/library/${this._trackId}/track.json`,locked:true};
     p.repositoryPath=`src/game/tracks/library/${this._trackId}/${this._trackId}.environment.json`;
+    // Explicit coordinates avoid a second 70% reduction when the decal and
+    // collision lines are loaded back into the race from this editor.
+    if(this._trackId==='circuito-atlantico')p.coordinateSpace='race-world';
     return p;
   }
 

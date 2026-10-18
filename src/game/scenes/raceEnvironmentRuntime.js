@@ -34,7 +34,9 @@ function envFor(scene){
       // original environment must not queue images, textures or material work.
       if(!(env.collisionLines?.length||env.collisionZones?.length||
            env.environment?.length||env.linearBarriers?.length))return null;
-      return scaleAtlanticoEnvironment(env);
+      // New Studio exports already match the 70%-scaled photo in its canvas.
+      // Preserve compatibility with external original-source-photo projects.
+      return env.coordinateSpace==='race-world'?env:scaleAtlanticoEnvironment(env);
     }
     return key==='karting-canarias'&&(normalizeTrackKey(scene?.trackKey)==='karting-canarias'||narrow)
       ?scaleKartingCanariasEnvironment(env):env;
