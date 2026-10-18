@@ -16,7 +16,7 @@ assert.match(logoRule,/height:\s*100%;/);
 const buttonRule=lobby.match(/\.tdr-lobby-brand\s*\{([^}]*)\}/)?.[1]||'';
 assert.match(buttonRule,/width:\s*clamp\(96px, 10vw, 150px\);/,
   'Lobby logo button width remains unchanged so the other header elements never move');
-assert.match(buttonRule,/overflow:\s*visible;/,'Logo can exceed header slot');
+assert.match(lobby,/\.tdr-lobby-brand\s*\{\s*position:\s*relative;\s*z-index:\s*2;\s*overflow:\s*visible;\s*\}/,'Logo can exceed header slot without moving its button');
 assert.doesNotMatch(buttonRule,/transform:/,
   'Only the image scales; the clickable wrapper remains fixed in place');
 const settings=read('src/game/scenes/SettingsDomScene.js');
