@@ -142,6 +142,7 @@ jobs:
           node scripts/battery-frame-budget-smoke.mjs
           node scripts/spark-longitudinal-smoke.mjs
           node scripts/rewarded-access-smoke.mjs
+          node scripts/shipaton-retirement-smoke.mjs
           node scripts/coin-reward-flight-smoke.mjs
           node scripts/recycler-premium-ui-smoke.mjs
           node scripts/lobby-reward-ready-glow-smoke.mjs

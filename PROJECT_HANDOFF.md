@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.269 — Retirada del acceso Ship-a-ton
+
+Se elimina el menú y panel de jueces, códigos, insignia, observador del DOM, RPC cliente y bypass de coches/circuitos/garaje, eliminando por completo `ShipatonJudgeMode.js`. Se borra solo la preferencia local obsoleta al iniciar el juego, sin alterar otros datos. Admin Hub, recompensas AdMob/RevenueCat, temporadas y economía normal permanecen. Se retiran textos ES/EN del concurso. En Supabase, `supabase/migrations/20261018_016_retire_shipaton_judge_access.sql` elimina únicamente sus dos funciones y dos tablas privadas; las migraciones iniciales 009/010 permanecen en historial de auditoría (no reaplicarlas). Prueba `scripts/shipaton-retirement-smoke.mjs` en Pages CI. Solo DEV, sin APK/AAB ni Google Play.
+
+
 ## DEV 1.2.268 — Estadísticas / Race Control: solo circuitos jugables y desbloqueados
 
 El módulo puro `src/game/stats/playableStatisticsTracks.js` cruza exclusivamente `PUBLISHED_TRACK_IDS` con `TRACK_REGISTRY`, el indicador `meta.hiddenFromTrackSelect` y `isTrackUnlocked`. Tanto las fichas de coche en Estadísticas como la lista de «Mis circuitos» de Race Control consultan la misma regla, sin mostrar prototipos, variantes retiradas, ni circuitos bloqueados. Selecciones históricas/URL/replay de circuitos ya no visibles retroceden al primer circuito permitido. Los récords y fantasmas viejos permanecen almacenados intactos; no se migran ni borran. También se omiten los récords mejores de circuitos ocultos en la ficha resumen de cada coche. Ver `scripts/stats-unlocked-circuits-smoke.mjs`, ejecutado en Pages CI. No APK/AAB/Play; esperar Actions verdes para DEV 1.2.268.

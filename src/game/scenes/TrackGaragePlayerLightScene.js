@@ -2,12 +2,10 @@ import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGarageProgre
 import { BaseScene } from './BaseScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 import { isPublishedTrackId } from '../tracks/trackUnlocks.js';
-import { evaluationAccessEnabled } from '../shipaton/ShipatonJudgeMode.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 
 function trackKey(track){return String(track?.key||track?.id||'');}
-function judgeVisibleKey(key){return evaluationAccessEnabled()&&!!key&&key!=='practice-area';}
-function selectableKey(key){return key!=='karting-canarias-narrow70'&&(isPublishedTrackId(key)||judgeVisibleKey(key));}
+function selectableKey(key){return key!=='karting-canarias-narrow70'&&isPublishedTrackId(key);}
 function playerVisible(track){
   const key=trackKey(track);
   return !!key && selectableKey(key) && track?.meta?.hiddenFromTrackSelect!==true;
@@ -29,9 +27,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
     const tracks=[];
     for(const key of getTrackKeys()){
-      // Normal players only see canonical published circuits. Ship-a-ton Judge Mode
-      // may additionally expose registry circuits for evaluation, but this visibility
-      // never changes their canonical published identity or normal progression state.
+      // Only canonical published circuits enter the player selector.
       if(!selectableKey(key))continue;
       try{
         const track=createTrack(key);
@@ -42,8 +38,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
 
     let saved='';
     try{saved=String(localStorage.getItem('tdr2:trackKey')||'');}catch{}
-    // Reject stale prototype/legacy selections for normal play. Judge Mode may keep
-    // an evaluation-only selection while the mode is active.
+    // Reject old prototype/legacy selections and use an official circuit instead.
     if(saved&&!selectableKey(saved)){
       try{localStorage.removeItem('tdr2:trackKey');}catch{}
       try{this.registry.remove?.('selectedTrackKey');this.registry.remove?.('selectedTrack');}catch{}

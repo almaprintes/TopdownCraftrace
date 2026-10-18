@@ -81,7 +81,6 @@ for(const file of ['UpgradeShopScene.js','UpgradeWorkshopPerformanceScene.js','U
   assert.match(source,/REWARDED_PLACEMENTS\.POST_RACE_DOUBLE_LOOT/);
   assert.match(source,/verifiedReward\(ad\)/,'legacy x2 entry points must never treat a failed result object as success');
 }
-const judgeSource=await readFile(new URL('../src/game/shipaton/ShipatonJudgeMode.js',import.meta.url),'utf8');
-assert.match(judgeSource,/entitlementVerified&&enabledPreference\(\)/,'local storage alone must not authorize Judge Mode');
+// Contest-only judge mode is tested as removed by shipaton-retirement-smoke.mjs.
 
 console.log('rewarded access smoke: verified');

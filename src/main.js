@@ -2,6 +2,8 @@ import './style.css';
 import { createGame } from './game/game.js';
 import {isBenignResizeObserverWarning,mayReplaceStartupScreen} from './game/dev/runtimeErrorPolicy.js';
 window.__tdrStartupMark?.('main-js');
+// The retired contest preference cannot grant access; other player saves remain intact.
+try{localStorage.removeItem('tdr2:shipatonJudgeMode:v2');}catch{}
 
 function showFatal(msg) {
   const el = document.getElementById('app');
