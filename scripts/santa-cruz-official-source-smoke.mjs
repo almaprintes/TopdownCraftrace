@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import {loopPathMetrics,gateOnLoop,sampleLoopAt,crossesDirectedFinishGate} from '../src/game/tracks/closedCircuitGateOrder.js';
 const src='src/game/tracks/library/santa-cruz/source/Santa-Cruz-x3-nitido.tdrtrack';
 const track=JSON.parse(fs.readFileSync('src/game/tracks/library/santa-cruz/track.json','utf8'));
 if(!fs.existsSync(src)){
@@ -14,6 +15,44 @@ if(!fs.existsSync(src)){
   assert.equal(track.meta.imageNative.tiles.length,6);
   assert.equal(track.checkpointMode,'authored');
   assert.equal(track.checkpoints.length,2);
+  assert.equal(track.startLine,null,'Closed circuit must not activate a separate rally start gate');
+  const metrics=loopPathMetrics(track.centerline);
+  const f=gateOnLoop(metrics,track.finishLine);
+  assert.ok(f?.hit,'META has to cross the actual centerline');
+  const distances=[];
+  for(let i=0;i<2;i++){
+    const gate=track.checkpoints[i],m=gateOnLoop(metrics,gate);
+    assert.ok(m?.hit,'CP'+(i+1)+' must cross the centerline');
+    const forward=m.tangent.x*gate.normal.x+m.tangent.y*gate.normal.y;
+    assert.ok(forward>.95,'CP'+(i+1)+' facing backwards: '+forward);
+    const relative=((m.routeDistance-f.routeDistance+metrics.total)%metrics.total)/metrics.total;
+    distances.push(relative);
+  }
+  assert.ok(distances[0]>.055&&distances[1]<.945&&distances[1]-distances[0]>.10,
+    'CP1 -> CP2 -> META must occur in driving order: '+JSON.stringify(distances));
+  const finishDot=f.tangent.x*track.finishLine.normal.x+f.tangent.y*track.finishLine.normal.y;
+  assert.ok(finishDot>.95,'META normal must agree with the actual route');
+  // Drive two synthetic complete laps using the SAME directed swept gate
+  // intersection as the race engine, including CP1/CP2 and finish order.
+  const pass=(gate)=>{
+    const m=gateOnLoop(metrics,gate);
+    const a=sampleLoopAt(metrics,m.routeDistance-10);
+    const b=sampleLoopAt(metrics,m.routeDistance+10);
+    return crossesDirectedFinishGate(gate,a,b,{x:b.x-a.x,y:b.y-a.y});
+  };
+  let lapCount=0;
+  for(let lap=0;lap<2;lap++){
+    let cpState=0;
+    if(pass(track.checkpoints[0]))cpState=1;
+    if(cpState===1&&pass(track.checkpoints[1]))cpState=2;
+    if(cpState===2&&pass(track.finishLine)){lapCount++;cpState=0;}
+  }
+  assert.equal(lapCount,2,'Two clean simulated laps must count at Santa Cruz');
+  assert.equal(track.meta.gateOrder.crossed.length,2,'Gate-order diagnostics archived');
+  console.log('SANTA CRUZ LAP ORDER OK',JSON.stringify({
+    fractions:distances.map(x=>+x.toFixed(4)),finishDirection:+finishDot.toFixed(3),cleanLaps:lapCount,
+    authoredPreserved:track.meta.gateOrder.authoredPreserved
+  }));
   assert.equal(track.start.r,Math.atan2(track.centerline[6].y-track.centerline[0].y,
                                         track.centerline[6].x-track.centerline[0].x));
   for(const tile of track.meta.imageNative.tiles){

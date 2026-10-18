@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.283 — Santa Cruz: vueltas limpias, orden y sentido de CP
+
+Tras reportarse que dos vueltas limpias en Santa Cruz no se registraron, se detectó que el instalador `scripts/install-santa-cruz-source.mjs` **publicaba los dos checkpoints de Track Studio en su orden/normal originales** sin validar orden ni sentido para el juego. `RaceScene.js` exige CP1 → CP2 → META y vector velocidad alineado con cada normal; si un checkpoint está invertido o fuera de orden, jamás concede la vuelta. Santa Cruz pasa por `orderClosedCircuitGates` (igual que Atlántico y Américas), preservando foto, trazado, spline, colisiones y física, pero recalculando **solo las puertas lógicas** para orden y dirección de conducción. El CP sigue ensanchándose sobre los bordes Bézier. La única META lógica se mantiene, `startLine:null` para circuito cerrado. Guardar `meta.gateOrder` de diagnóstico; regresión `scripts/santa-cruz-official-source-smoke.mjs` comprueba intersección real, orden, vector normal y simula **dos vueltas limpias consecutivas** con cruces dirigidos. Versión 1.2.282 anterior tuvo todos los tests verdes, incluyendo corrección de ancho para Atlántico. No APK/AAB ni Play. Pendiente probar dos vueltas conduciendo con esta DEV, porque las pruebas geométricas no sustituyen una sesión real.
+
+
 ## DEV 1.2.282 — Corrección de aserción en auditoría de ancho de meta
 
 La primera ejecución del nuevo `all-circuit-gate-width-smoke.mjs` diagnosticó una desigualdad con signo invertido en el extremo negativo de la puerta: la distancia entre el borde negativo y el extremo A debe ser **positiva**, mientras que el extremo B debe superar el borde positivo (distancia residual negativa). El código de ensanche es correcto; solo se corrige el test para exigir márgenes >=2.5 px en ambos extremos. Los 22 circuitos aparecieron con detección de bordes en la primera auditoría; el CP2 de Tenerife había sido ampliado previamente por su instalador especial y la nueva herramienta conservadora no interpreta ese cruce por sus múltiples curvas. No se modifican fotografías, físicas ni fuentes.

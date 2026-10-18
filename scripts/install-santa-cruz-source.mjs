@@ -6,6 +6,7 @@ import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {expandCheckpointToEdges} from '../src/game/tracks/imageNativeCheckpointWidth.js';
 import {shapeIsValid} from '../src/game/studio/trackShapeGeometry.js';
+import {orderClosedCircuitGates} from '../src/game/tracks/closedCircuitGateOrder.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source=path.join(root,'src/game/tracks/library/santa-cruz/source/Santa-Cruz-x3-nitido.tdrtrack');
@@ -38,13 +39,21 @@ export async function installSantaCruzSource(){
   const first=t.centerline[0],ahead=t.centerline[Math.min(6,t.centerline.length-1)];
   const dx=Number(ahead.x)-Number(first.x),dy=Number(ahead.y)-Number(first.y);
   if(Math.hypot(dx,dy)<5)throw Error('Santa Cruz: rumbo de salida inválido');
-  const f=t.finishLine,n=f.normal,finishAnchor={
+  // Track Studio CP numbers / normal vectors are not guaranteed to follow
+  // the actual route. RaceScene only credits laps after CP1 -> CP2 -> META,
+  // each in the driving direction. Americas and Atlántico normalize too.
+  // Keep all user-authored centerline, Bézier borders, photo and environment.
+  const ordered=orderClosedCircuitGates(t.centerline,t.finishLine,t.checkpoints,{
+    shape:t.trackShape,expandGate:expandCheckpointToEdges,
+    baseWidth:Number(t.trackWidth)||100
+  });
+  if(ordered.diagnostics.crossed.some(hit=>!hit))
+    throw Error('Santa Cruz: checkpoints normalizados no cruzan la calzada');
+  const f=ordered.finish,checkpoints=ordered.checkpoints,n=f.normal;
+  const finishAnchor={
     x:(f.a.x+f.b.x)/2,y:(f.a.y+f.b.y)/2,r:Math.atan2(n.y,n.x)
   };
-  const checkpoints=t.checkpoints.map((g,i)=>{
-    try{return expandCheckpointToEdges(g,t.trackShape);}
-    catch(error){throw Error('Santa Cruz CP'+(i+1)+': '+error.message);}
-  });
+  console.info('[santa-cruz] ORDERED GATES',JSON.stringify(ordered.diagnostics));
   const tiles=[];
   for(let y=0;y<HEIGHT;y+=TILE)for(let x=0;x<WIDTH;x+=TILE){
     const col=x/TILE,row=y/TILE;
@@ -59,10 +68,12 @@ export async function installSantaCruzSource(){
     cellSize:t.cellSize,shoulderPx:t.shoulderPx,closed:true,raceType:'circuit',
     raceDirection:'forward',carScale:1,
     start:{...t.start,r:Math.atan2(dy,dx)},
-    startLine:t.startLine||null,finishLine:f,finishAnchor,
+    // A closed lap has ONE logical finish; no separate A→B stage start gate.
+    startLine:null,finishLine:f,finishAnchor,
     checkpointMode:'authored',checkpoints,centerline:t.centerline,
     trackShape:t.trackShape,grid:t.grid||null,
     meta:{...(t.meta||{}),renderMode:'image-native',imageNative:photo,
+      gateOrder:ordered.diagnostics,
       source:'Track Studio .tdrtrack',sourceFile:'Santa-Cruz-x3-nitido.tdrtrack',
       sourceImageSha256:crypto.createHash('sha256').update(image).digest('hex')}
   };
