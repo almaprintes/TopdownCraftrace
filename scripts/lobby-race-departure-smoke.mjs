@@ -28,12 +28,15 @@ const clockwise=lobbyDepartureWheelTracks(rect,platformRect,90);
 const counterclockwise=lobbyDepartureWheelTracks(rect,platformRect,-90);
 assert.equal(clockwise.length,2);
 assert.equal(counterclockwise.length,2);
-assert.ok(clockwise.every(t=>t.dy===-1&&t.y>rect.top+rect.height/2-platformRect.height/2),
- 'clockwise wheels start behind the upward-facing car');
-assert.ok(counterclockwise.every(t=>t.dy===1&&t.y<rect.top+rect.height/2-platformRect.height/2),
- 'counter-clockwise wheels start behind the downward-facing car');
+assert.ok(clockwise.every(t=>t.dy===1&&t.y>rect.top+rect.height/2-platformRect.height/2),
+ 'clockwise marks start at rear wheels and extend BEHIND the car');
+assert.ok(counterclockwise.every(t=>t.dy===-1&&t.y<rect.top+rect.height/2-platformRect.height/2),
+ 'counter-clockwise Helix marks also extend behind the car');
 assert.ok(clockwise[0].x!==clockwise[1].x,'two separated rear tire marks');
-assert.ok(clockwise.every(t=>t.length>30&&t.length<=110&&t.width>=2));
+assert.ok(clockwise.every(t=>t.length>30&&t.length<=150&&t.width>=5),'longer and thicker tracks remain visible on small devices');
+assert.ok(clockwise.every(t=>t.dy===-lobbyDepartureLocalDrive(90,1).y),'rubber stays behind travel direction');
+assert.ok(counterclockwise.every(t=>t.dy===-lobbyDepartureLocalDrive(-90,1).y));
+
 
 const storage={getItem:()=>null};
 assert.equal(shouldUseLobbyDeparture({prod:true,storage,nativeAndroid:false}),false,'Public web release remains unchanged');
@@ -75,8 +78,15 @@ assert.match(script,/function playLobbyTireEffects\(platformPart,carRect,platfor
 assert.match(script,/playLobbyTireEffects\(platformPart,car\.getBoundingClientRect\(\),pr,turnAngle,animations\)/);
 assert.match(script,/tdr-lobby-tire-streak/);
 assert.match(script,/tdr-lobby-tire-smoke/);
-assert.match(script,/for\(let i=0;i<3;i\+\+\)/,'three smoke puffs per rear tire');
-assert.match(script,/LOBBY_DEPARTURE_TIMING\.drive-delay/,'smoke ends inside approved drive window');
+assert.doesNotMatch(script,/for\(let i=0;i<3;i\+\+\)/,'no separated smoke balls');
+assert.equal((script.match(/const smoke=document\.createElement\('div'\)/g)||[]).length,1,
+ 'one shared smoke cloud across both rear wheels');
+assert.match(script,/const midX=\(contacts\[0\]\.x\+contacts\[1\]\.x\)\/2/,'smoke is centered on rear axle');
+assert.match(script,/const width=Math\.max\(100,Math\.min\(210,carRect\.width\*1\.65\)\)/,'single larger smoke cloud');
+assert.match(script,/zIndex:'2',borderRadius:'5px',opacity:'0'/,'skid marks above smoke and platform');
+assert.match(script,/opacity:1,offset:\.67/,'marks maintain full contrast while driving');
+assert.match(script,/rgba\(5,8,12,\.98\)/,'dark rubber center with bright scuff edges');
+
 assert.match(script,/void animateAndWait\(streak/,'tire marks never hold up race launch');
 assert.match(script,/void animateAndWait\(smoke/,'smoke never holds up race launch');
 assert.match(script,/for\(const part of stages\)part\.remove\(\)/,'effects clean up with platform');
@@ -99,4 +109,4 @@ assert.ok(!script.includes('rotate(90deg) translate3d(0,'),
 assert.match(script,/duration:LOBBY_DEPARTURE_TIMING\.drive,easing:'cubic-bezier\(\.6,\.05,\.94,\.45\)'/,'approved getaway unchanged');
 assert.match(read('src/game/ui/lobby-dom.css'),/\.tdr-lobby-dom\.tdr-lobby-departing/);
 assert.match(read('index.html'),/name="tdr-dev-version" content="DEV 1\.2\.\d+"/);
-console.log('Lobby departure: native Android enabled; two temporary tire marks and six smoke puffs fade during existing 520ms exit; race launch and cleanup unchanged');
+console.log('Lobby departure: thick two-wheel skid marks extend behind tires, one large soft smoke cloud, fade within 520ms; Android and race navigation unchanged');

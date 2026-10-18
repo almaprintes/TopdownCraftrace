@@ -101,16 +101,19 @@ export function lobbyDepartureWheelTracks(carRect,platformRect,turnAngle){
  const y=carRect.top+carRect.height/2-platformRect.top-platformRect.height/2;
  const axle=Math.max(carRect.width,carRect.height)*.285;
  const halfTread=Math.min(carRect.width,carRect.height)*.255;
- const trailLength=Math.min(platformRect.width*.33,platformRect.height*.34,110);
- const treadWidth=Math.max(2,Math.min(4,Math.min(carRect.width,carRect.height)*.028));
+ // Tires leave a trace BEHIND the departing car, not under its nose.
+ // Scale up width/length on small Android WebViews where 2px vanished.
+ const trailLength=Math.min(platformRect.width*.40,platformRect.height*.42,150);
+ const treadWidth=Math.max(5,Math.min(10,Math.min(carRect.width,carRect.height)*.075));
  return [-1,1].map(side=>({
   x:x-forward.x*axle+lateral.x*halfTread*side,
   y:y-forward.y*axle+lateral.y*halfTread*side,
-  dx:forward.x,dy:forward.y,length:trailLength,width:treadWidth
+  dx:-forward.x,dy:-forward.y,length:trailLength,width:treadWidth
  }));
 }
 // Finite, non-interactive DOM effects. No RAF, canvas or new assets.
-// Both tracks and smoke fade inside the existing 520ms departure.
+// Both contrasting skid marks and ONE diffused smoke cloud fade during
+// the approved drive; they never delay race navigation.
 function playLobbyTireEffects(platformPart,carRect,platformRect,turnAngle,animations){
  const contacts=lobbyDepartureWheelTracks(carRect,platformRect,turnAngle);
  for(const contact of contacts){
@@ -118,47 +121,54 @@ function playLobbyTireEffects(platformPart,carRect,platformRect,turnAngle,animat
   streak.className='tdr-lobby-tire-streak';
   const angle=Math.atan2(contact.dy,contact.dx)*180/Math.PI;
   Object.assign(streak.style,{
-   position:'absolute',left:contact.x+'px',top:contact.y+'px',
+   position:'absolute',left:contact.x+'px',top:(contact.y-contact.width/2)+'px',
    width:contact.length+'px',height:contact.width+'px',
    transformOrigin:'0 50%',transform:'rotate('+angle+'deg) scaleX(.02)',
-   background:'linear-gradient(90deg,rgba(8,13,19,.84),rgba(8,13,19,.6) 70%,rgba(8,13,19,0))',
-   borderRadius:'5px',opacity:'0',pointerEvents:'none',willChange:'transform,opacity'
+   // Asphalt-colored rubber with scuffed edges for visibility on dark metal.
+   background:'linear-gradient(180deg,rgba(196,207,212,.50),rgba(5,8,12,.98) 23%,rgba(3,5,9,.99) 76%,rgba(171,184,193,.42))',
+   boxShadow:'0 0 2px rgba(202,216,222,.52),0 1px 3px rgba(0,0,0,.65)',
+   zIndex:'2',borderRadius:'5px',opacity:'0',
+   pointerEvents:'none',willChange:'transform,opacity'
   });
   platformPart.appendChild(streak);
   void animateAndWait(streak,[
-   {transform:'rotate('+angle+'deg) scaleX(.02)',opacity:0},
-   {transform:'rotate('+angle+'deg) scaleX(.72)',opacity:.61,offset:.58},
-   {transform:'rotate('+angle+'deg) scaleX(1)',opacity:0}
-  ],{duration:LOBBY_DEPARTURE_TIMING.drive,easing:'ease-out'},
+   {transform:'rotate('+angle+'deg) scaleX(.04)',opacity:0,offset:0},
+   {transform:'rotate('+angle+'deg) scaleX(.55)',opacity:.98,offset:.19},
+   {transform:'rotate('+angle+'deg) scaleX(1)',opacity:1,offset:.67},
+   {transform:'rotate('+angle+'deg) scaleX(1)',opacity:.93,offset:.83},
+   {transform:'rotate('+angle+'deg) scaleX(1)',opacity:0,offset:1}
+  ],{duration:LOBBY_DEPARTURE_TIMING.drive,easing:'linear'},
   LOBBY_DEPARTURE_TIMING.drive+100,animations);
-  // Three small, staggered smoke puffs behind each rear wheel.
-  // These live on the platform, not in the moving car wrapper.
-  for(let i=0;i<3;i++){
-   const smoke=document.createElement('div');
-   smoke.className='tdr-lobby-tire-smoke';
-   const radius=Math.max(12,Math.min(23,Math.min(carRect.width,carRect.height)*.18));
-   const offset=i*contact.length*.17;
-   const sx=contact.x+contact.dx*offset-radius/2;
-   const sy=contact.y+contact.dy*offset-radius/2;
-   Object.assign(smoke.style,{
-    position:'absolute',left:sx+'px',top:sy+'px',
-    width:radius+'px',height:radius+'px',
-    background:'radial-gradient(circle at 40% 45%,rgba(238,246,250,.86),rgba(168,188,198,.47) 44%,rgba(126,151,162,0) 74%)',
-    borderRadius:'50%',opacity:'0',pointerEvents:'none',
-    transform:'translate3d(0,0,0) scale(.5)',willChange:'transform,opacity'
-   });
-   platformPart.appendChild(smoke);
-   const delay=i*55;
-   const driftX=-contact.dx*(14+i*5)+(i-1)*contact.dy*6;
-   const driftY=-contact.dy*(14+i*5)-(i-1)*contact.dx*6;
-   void animateAndWait(smoke,[
-    {opacity:0,transform:'translate3d(0,0,0) scale(.5)'},
-    {opacity:.69,transform:'translate3d('+(driftX*.4)+'px,'+(driftY*.4)+'px,0) scale(1.3)',offset:.32},
-    {opacity:0,transform:'translate3d('+driftX+'px,'+driftY+'px,0) scale(2.25)'}
-   ],{duration:LOBBY_DEPARTURE_TIMING.drive-delay,delay,easing:'ease-out'},
-   LOBBY_DEPARTURE_TIMING.drive+100,animations);
-  }
  }
+ // A SINGLE broad, organic-looking exhaust of tire smoke behind the axle.
+ // No repeated circles: one elliptical translucent cloud shared by both wheels.
+ const midX=(contacts[0].x+contacts[1].x)/2;
+ const midY=(contacts[0].y+contacts[1].y)/2;
+ const behind=contacts[0];
+ const width=Math.max(100,Math.min(210,carRect.width*1.65));
+ const height=Math.max(76,Math.min(160,carRect.width*1.22));
+ const smoke=document.createElement('div');
+ smoke.className='tdr-lobby-tire-smoke';
+ const offset=Math.min(32,behind.length*.22);
+ Object.assign(smoke.style,{
+  position:'absolute',
+  left:(midX+behind.dx*offset-width/2)+'px',
+  top:(midY+behind.dy*offset-height/2)+'px',
+  width:width+'px',height:height+'px',
+  zIndex:'1',borderRadius:'47% 53% 56% 44% / 52% 46% 54% 48%',
+  background:'radial-gradient(ellipse at 48% 51%,rgba(236,242,246,.84) 0%,rgba(197,212,222,.71) 30%,rgba(155,178,194,.42) 57%,rgba(119,142,159,0) 76%)',
+  pointerEvents:'none',opacity:'0',
+  transform:'translate3d(0,0,0) scale(.64)',willChange:'transform,opacity'
+ });
+ platformPart.appendChild(smoke);
+ const driftX=behind.dx*24,driftY=behind.dy*24;
+ void animateAndWait(smoke,[
+  {opacity:0,transform:'translate3d(0,0,0) scale(.64)',offset:0},
+  {opacity:.88,transform:'translate3d('+(driftX*.28)+'px,'+(driftY*.28)+'px,0) scale(1.05)',offset:.24},
+  {opacity:.73,transform:'translate3d('+(driftX*.65)+'px,'+(driftY*.65)+'px,0) scale(1.35)',offset:.65},
+  {opacity:0,transform:'translate3d('+driftX+'px,'+driftY+'px,0) scale(1.7)',offset:1}
+ ],{duration:LOBBY_DEPARTURE_TIMING.drive,easing:'ease-out'},
+ LOBBY_DEPARTURE_TIMING.drive+100,animations);
 }
 
 export function runLobbyRaceDeparture(scene,onFinished,{prod=false,nativeAndroid=nativeAndroidDeparture()}={}){
