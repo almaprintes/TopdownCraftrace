@@ -52,7 +52,8 @@ const beauty=readFileSync('src/game/tracks/trackBeautyLayers.generated.js','utf8
 assert.ok(beauty.includes('karting-tenerife-trackstudio-0.webp'));
 assert.ok(beauty.includes('worldW: 3344, worldH: 1882'));
 const env=JSON.parse(readFileSync('src/game/tracks/library/karting-tenerife/karting-tenerife.environment.json','utf8'));
-assert.deepEqual(env.environment,[]);
+assert.equal(env.environment.length,1,'The only visual overlay should be the new checkered finish');
+assert.equal(env.environment[0].asset,'finish_line_checkered');
 assert.deepEqual(env.surfaces,[]);
 assert.deepEqual(env.linearBarriers,[]);
 console.log('Karting Tenerife oficial: 2 CP anchored and extended to actual Bézier edges, untouched source/meta and native photo 1:1 OK',result.originalCheckpointSpans,result.checkpointSpans);

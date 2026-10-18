@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.277 — Actualizar prueba de Tenerife al nuevo decorado de meta
+
+La primera compilación tras importar los cinco proyectos se detuvo en `scripts/karting-official-source-smoke.mjs`, un smoke anterior que exigía `environment:[]` para Tenerife. Se adapta para exigir **únicamente el asset `finish_line_checkered`** sobre la fotografía, sin restaurar texturas viejas, ni modificar geometría. Los cinco entornos y su ruta, escalas, colliders y publicidad permanecen intactos. CI nuevo obligatorio antes de declarar DEV lista.
+
+
 ## DEV 1.2.276 — Cinco entornos definitivos exportados por el propietario
 
 El propietario entregó cinco `.environment.json` (Karting Tenerife, Karting Canarias 4096, Circuito Atlántico, Karting Américas, Santa Cruz). Contienen **cinco tiras de meta visual** (`finish_line_checkered`) y en conjunto **23 líneas Bézier de colisión + 20 zonas sólidas**:
