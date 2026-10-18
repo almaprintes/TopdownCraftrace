@@ -50,6 +50,7 @@ jobs:
           node scripts/install-circuito-atlantico-source.mjs
           node scripts/circuito-atlantico-official-smoke.mjs
           node scripts/santa-cruz-official-source-smoke.mjs
+          node scripts/santa-cruz-clean-lap-photo-smoke.mjs
           node scripts/karting-official-source-smoke.mjs
           node scripts/karting-native-photo-visual-smoke.mjs
           node scripts/karting-canarias-photo-staging-smoke.mjs

@@ -1,5 +1,7 @@
 import { RaceScene as CurrentRaceScene } from './RaceSteeringSensitivityScene.js';
 import { recordCompletedLapClean } from '../seasons/cleanLapTelemetry.js';
+import { makeKartingShapeMask } from '../tracks/localKartingPreview.js';
+import { shapeIsValid } from '../studio/trackShapeGeometry.js';
 import { showRaceFeedback, showCleanLapFeedback } from '../ui/raceFeedbackUi.js';
 import { loadGarage, saveGarage } from '../garage/garageStore.js';
 
@@ -18,6 +20,23 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
     this._cleanLapTrackId=String(this.trackKey||data?.trackKey||this.track?.id||this.track?.key||'').trim();
+    // Santa Cruz's photographed road is bounded by owner-authored Bézier edges.
+    // The legacy, Catmull-Rom reconstructed runtime cells can report OFF on
+    // visually legal asphalt; one false sample dirties the WHOLE lap.
+    // Use the already supported authored-road mask for CLEAN LAP ONLY.
+    // Leave physics/surface handling, collisions and lap gate timing untouched.
+    this._cleanLapPhotoMask=null;
+    if(this._cleanLapTrackId==='santa-cruz' &&
+       this.track?.meta?.meta?.renderMode==='image-native' &&
+       shapeIsValid(this.track?.meta?.trackShape)){
+      const published=this.track.meta;
+      try{
+        this._cleanLapPhotoMask=makeKartingShapeMask(
+          published.trackShape,Number(published.worldW),Number(published.worldH));
+      }catch(err){
+        console.warn('[clean-lap] Santa Cruz authored track mask unavailable',err);
+      }
+    }
     this._cleanLapSeenHistory=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
     this._currentLapClean=true;
     this._cleanLapAccum=CLEAN_SAMPLE_MS;
@@ -190,7 +209,10 @@ export class RaceScene extends CurrentRaceScene {
         const rawOnTrack=typeof this._tdrOriginalIsOnTrack==='function'
           ? this._tdrOriginalIsOnTrack
           : this._isOnTrack;
-        if(typeof rawOnTrack==='function'&&!rawOnTrack.call(this,x,y))this._currentLapClean=false;
+        const insidePhotoRoad=this._cleanLapPhotoMask
+          ?this._cleanLapPhotoMask.isOnTrack(x,y)
+          :typeof rawOnTrack==='function'?rawOnTrack.call(this,x,y):true;
+        if(!insidePhotoRoad)this._currentLapClean=false;
       }
       const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
       const seen=Math.max(0,Number(this._cleanLapSeenHistory)||0);
