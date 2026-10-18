@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "prebuild:prod": "npm run prebuild",
-    "build:prod": "vite build --mode tdr-prod && node scripts/prod-bundle-smoke.mjs",
+    "build:prod": "vite build --mode tdr-prod && node scripts/prune-unused-production-environment-assets-smoke.mjs && node scripts/prune-unused-production-environment-assets.mjs && node scripts/prod-bundle-smoke.mjs",
     "preview": "vite preview",
     "check:stage-surface": "node scripts/stage-surface-topology-smoke.mjs",
     "check:stability": "node scripts/stability-smoke.mjs",

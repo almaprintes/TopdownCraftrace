@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.270 — Excluir assets Environment sin uso en builds de producción
+
+Inventario sobre main 1.2.269: 59 recursos gráficos en public/assets/environment, 27.35 MiB; solo 19 recursos (14.21 MiB) directamente referenciados por los JSON de entorno existentes, pero algunas referencias han sido reemplazadas por las fotografías oficiales al prebuild. No comprimir fotos, no recortar iconos/objetos, no borrar fuentes. El script `scripts/prune-unused-production-environment-assets.mjs` se ejecuta exclusivamente **después** de Vite `--mode tdr-prod` en `build:prod`, nunca en el build editor. Examina código final y todas las configuraciones `.environment.json` del proyecto; protege rutas y nombres de assets que puedan utilizarse dinámicamente, elimina del **dist** solamente recursos sin referencias. Conserva íntegra la carpeta `public/assets/environment` y los archivos de los circuitos `public/assets/tracks`. Android ejecuta `build:prod` y aprovecha el mismo ahorro. Test de regresión: `scripts/prune-unused-production-environment-assets-smoke.mjs`. La cifra exacta de ahorro de cada build se muestra en su log. No APK/AAB ni Play; comprobar Actions verdes y mantener fuentes editor completas.
+
+
 ## DEV 1.2.269 — Retirada del acceso Ship-a-ton
 
 Se elimina el menú y panel de jueces, códigos, insignia, observador del DOM, RPC cliente y bypass de coches/circuitos/garaje, eliminando por completo `ShipatonJudgeMode.js`. Se borra solo la preferencia local obsoleta al iniciar el juego, sin alterar otros datos. Admin Hub, recompensas AdMob/RevenueCat, temporadas y economía normal permanecen. Se retiran textos ES/EN del concurso. En Supabase, `supabase/migrations/20261018_016_retire_shipaton_judge_access.sql` elimina únicamente sus dos funciones y dos tablas privadas; las migraciones iniciales 009/010 permanecen en historial de auditoría (no reaplicarlas). Prueba `scripts/shipaton-retirement-smoke.mjs` en Pages CI. Solo DEV, sin APK/AAB ni Google Play.
