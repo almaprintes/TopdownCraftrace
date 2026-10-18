@@ -6,9 +6,11 @@ const DEV_KEY='tdr2:devFullTrackAccess:v1';
 // Vite sees the generated rebuilt track ONLY after the verified owner binary
 // has been installed during prebuild. Before upload, retain the old circuit.
 // Android QA also selects the rebuilt track when its verified owner source is installed.
-const REBUILT_CANARIAS_PRESENT=
-  typeof import.meta.glob==='function'&&
-  Object.keys(import.meta.glob('./library/karting-canarias-4096/track.json')).length>0;
+// Vite's import.meta.glob is compiled away: it does not exist as a
+// runtime function. Call the macro directly so the built published IDs
+// follow the generated 4096 circuit included during prebuild.
+const REBUILT_CANARIAS_MODULES=import.meta.glob('./library/karting-canarias-4096/track.json');
+const REBUILT_CANARIAS_PRESENT=Object.keys(REBUILT_CANARIAS_MODULES).length>0;
 export const PUBLISHED_TRACK_IDS=Object.freeze(
   ['circuito-atlantico','santa-cruz','karting-tenerife','karting-canarias','karting-americas','rally-arafo-los-loros']
     .map(id=>id==='karting-canarias'&&REBUILT_CANARIAS_PRESENT?'karting-canarias-4096':id));

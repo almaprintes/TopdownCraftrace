@@ -33,6 +33,12 @@ assert.equal(env.environment[0].asset,'finish_line_checkered');
 const selection=readFileSync('src/game/tracks/trackUnlocks.js','utf8');
 assert.ok(selection.includes("id==='karting-canarias'&&REBUILT_CANARIAS_PRESENT?'karting-canarias-4096':id"));
 assert.ok(!selection.includes('REBUILT_CANARIAS_PRESENT=!IS_PROD_BUILD'));
+assert.match(selection,/REBUILT_CANARIAS_MODULES=import\.meta\.glob\('\.\/library\/karting-canarias-4096\/track\.json'\)/,
+ 'direct Vite macro must detect installed Canarias 4096 JSON');
+assert.match(selection,/REBUILT_CANARIAS_PRESENT=Object\.keys\(REBUILT_CANARIAS_MODULES\)\.length>0/,
+ 'published selection must derive from the compile-time module set');
+assert.doesNotMatch(selection,/typeof\s+import\.meta\.glob/,
+ 'the typeof runtime guard caused Canarias to vanish');
 const registry=readFileSync('src/game/tracks/trackRegistry.js','utf8');
 assert.ok(registry.includes("slug==='karting-canarias'||slug==='karting-canarias-narrow70'"));
 console.log('CANARIAS 4096: source, 8 photo tiles, finish, checkpoints, one Android/DEV selection OK');

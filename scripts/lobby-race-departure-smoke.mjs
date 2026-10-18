@@ -36,6 +36,13 @@ paintLobbySmoke(smokeCtx,320,100);
 assert.equal(smokeOps.wisps,96,'continuous, overlapping wisps on ONE texture');
 assert.equal(smokeOps.rects,smokeOps.wisps);
 assert.equal(smokeOps.stops,smokeOps.wisps*3);
+const sampledAlpha=[];
+paintLobbySmoke({
+ createRadialGradient(){return {addColorStop(_,rgba){const match=String(rgba).match(/^rgba\(226,234,238,([\d.]+)\)$/);if(match)sampledAlpha.push(+match[1]);}};},
+ fillRect(){}
+},320,100);
+assert.ok(Math.min(...sampledAlpha)>.035&&Math.max(...sampledAlpha)<.13,
+ 'wisps remain transparent but moderately denser');
 
 const storage={getItem:()=>null};
 assert.equal(shouldUseLobbyDeparture({prod:true,storage,nativeAndroid:false}),false,'Public web release remains unchanged');
@@ -80,6 +87,10 @@ assert.match(script,/playLobbyDepartureSmoke\(platformPart,car\.getBoundingClien
 assert.match(script,/const smoke=makeLobbySmokeCanvas\(width,height\)/);
 assert.equal((script.match(/document\.createElement\('canvas'\)/g)||[]).length,1,'one smoke element, no particles');
 assert.match(script,/ctx\.createRadialGradient\(/,'smoke built from many translucent overlapping wisps');
+assert.match(script,/const angle=Math\.atan2\(-forward\.y,-forward\.x\)\*180\/Math\.PI/,
+ 'smoke must extend BEHIND the car');
+assert.match(script,/filter:'blur\(2\.7px\)'/,'haze more legible without hard edges');
+assert.match(script,/opacity:\.76,clipPath:'inset\(0 38% 0 0\)'/,'modest density increase');
 assert.match(script,/clipPath:'inset\(0 100% 0 0\)'/,'plume initially hidden, not a static blob');
 assert.match(script,/clipPath:'inset\(0 38% 0 0\)'/,'continuous smoke revealed during drive');
 assert.match(script,/duration:LOBBY_DEPARTURE_TIMING\.hold\+LOBBY_DEPARTURE_TIMING\.drive/,'one plume covers hold and drive');

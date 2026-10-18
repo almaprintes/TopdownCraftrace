@@ -111,7 +111,7 @@ export function paintLobbySmoke(ctx,width,height){
   const cy=height*.5+Math.sin(t*7.3)*height*.057+(random()-.5)*spread;
   const radius=(10+t*height*.27)*(.65+random()*.8);
   const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,radius);
-  const ink=(.050+random()*.052)*(1-t*.38);
+  const ink=(.060+random()*.060)*(1-t*.38);
   grad.addColorStop(0,'rgba(226,234,238,'+ink.toFixed(3)+')');
   grad.addColorStop(.4,'rgba(201,215,224,'+(ink*.60).toFixed(3)+')');
   grad.addColorStop(1,'rgba(175,193,203,0)');
@@ -149,21 +149,22 @@ function playLobbyDepartureSmoke(platformPart,carRect,platformRect,turnAngle,ani
  const axle=Math.max(carRect.width,carRect.height)*.285;
  const rearX=centerX-forward.x*axle;
  const rearY=centerY-forward.y*axle;
- const angle=Math.atan2(forward.y,forward.x)*180/Math.PI;
+ // Draw the plume AWAY from the car's nose, not beneath the sprite.
+ const angle=Math.atan2(-forward.y,-forward.x)*180/Math.PI;
  Object.assign(smoke.style,{
   left:rearX+'px',top:(rearY-height/2)+'px',transformOrigin:'0 50%',
   transform:'rotate('+angle+'deg)',opacity:'0',
-  filter:'blur(3.3px)',clipPath:'inset(0 100% 0 0)'
+  filter:'blur(2.7px)',clipPath:'inset(0 100% 0 0)'
  });
  platformPart.appendChild(smoke);
  // Hold (180ms) + drive (520ms) is exactly the original 700ms window.
  // Keep producing one connected wisp trail throughout most of the drive.
  void animateAndWait(smoke,[
   {opacity:0,clipPath:'inset(0 100% 0 0)',offset:0},
-  {opacity:.46,clipPath:'inset(0 91% 0 0)',offset:.10},
-  {opacity:.67,clipPath:'inset(0 78% 0 0)',offset:.26},
-  {opacity:.70,clipPath:'inset(0 38% 0 0)',offset:.61},
-  {opacity:.43,clipPath:'inset(0 8% 0 0)',offset:.82},
+  {opacity:.51,clipPath:'inset(0 91% 0 0)',offset:.10},
+  {opacity:.72,clipPath:'inset(0 78% 0 0)',offset:.26},
+  {opacity:.76,clipPath:'inset(0 38% 0 0)',offset:.61},
+  {opacity:.47,clipPath:'inset(0 8% 0 0)',offset:.82},
   {opacity:0,clipPath:'inset(0 0% 0 0)',offset:1}
  ],{duration:LOBBY_DEPARTURE_TIMING.hold+LOBBY_DEPARTURE_TIMING.drive,easing:'linear'},
  LOBBY_DEPARTURE_TIMING.hold+LOBBY_DEPARTURE_TIMING.drive+120,animations);
