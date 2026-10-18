@@ -50,7 +50,6 @@ const loader=readFileSync('src/game/tracks/imageNativeRaceLoader.js','utf8');
 assert.ok(base.includes('if (!imageNativeVisual) {'),'No old grass/offroad');
 assert.ok(base.includes('if (!isImageNativeTrackScene(this) && cells && this.car'),'No procedural asphalt culling');
 assert.ok(env.includes("isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey))"),'Only published native circuits and stages may load their authored environments; local previews remain isolated');
-assert.ok(env.includes("'karting-canarias-4096'"),'Published 4096 must have access to its own author-painted environment');
 assert.ok(!env.includes("'karting-tenerife-studio'].includes(normalizeTrackKey(scene?.trackKey))"),'A local preview must not be whitelisted as a published environment');
 assert.ok(world.includes('if (isImageNativeTrackScene(this))'),'Native identity not tied to Karting');
 assert.ok(game.includes('installImageNativeRaceLoader(RaceScene,key=>hasTrack(key)?createTrack(key):null);'),'Registry-aware preflight installed before race creation');

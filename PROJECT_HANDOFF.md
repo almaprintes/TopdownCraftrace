@@ -1,8 +1,8 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
-## DEV 1.2.280 — Mantener aislamiento de vistas locales con Canarias 4096
+## DEV 1.2.280 — Protegido aislamiento de previews locales y Canarias 4096
 
-La última prueba `scripts/trackstudio-image-native-loader-smoke.mjs` comparaba el allowlist antiguo de circuitos fotográficos y falló tras integrar los entornos definitivos. Se actualiza para exigir `karting-canarias-4096` junto a las opciones publicadas, y seguir rechazando `karting-tenerife-studio` (vista local) en las carreras. No se modifica ningún recurso, colisión, fotografía, física o puerta de meta. Debe pasar Pages Actions; no generar APK ni modificar Play.
+La verificación antigua de `scripts/trackstudio-image-native-loader-smoke.mjs` comparaba literalmente la allowlist nativa anterior. Se actualiza para admitir `karting-canarias-4096`, manteniendo expresamente prohibida la carga de los entornos de las vistas locales y sin cambiar la lógica física o las colisiones. Confirmado anteriormente: `OWNER FIVE ENVIRONMENTS OK` para 5 metas decorativas, 23 líneas y 20 zonas; compilación de despliegue pendiente.
 
 
 ## DEV 1.2.279 — Prueba actualizada para Américas y Canarias 4096
