@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.278 — Test de enrutamiento Canarias reconstruido
+
+Se actualiza `scripts/karting-canarias-owner-project-smoke.mjs` para reflejar que la lista segura de entornos fotográficos ahora incluye `karting-canarias-4096` además de `karting-canarias`. Se añade aserción que exige preferir el nuevo entorno 4096 sobre el de ×2,5, manteniendo aisladas las vistas locales. La DEV anterior paró por aserción obsoleta del listado antiguo; sin cambios a la geometría de usuario. Mantener versión 70% Atlántico y cinco proyectos oficiales.
+
+
 ## DEV 1.2.277 — Actualizar prueba de Tenerife al nuevo decorado de meta
 
 La primera compilación tras importar los cinco proyectos se detuvo en `scripts/karting-official-source-smoke.mjs`, un smoke anterior que exigía `environment:[]` para Tenerife. Se adapta para exigir **únicamente el asset `finish_line_checkered`** sobre la fotografía, sin restaurar texturas viejas, ni modificar geometría. Los cinco entornos y su ruta, escalas, colliders y publicidad permanecen intactos. CI nuevo obligatorio antes de declarar DEV lista.
