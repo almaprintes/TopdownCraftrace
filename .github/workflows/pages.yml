@@ -61,6 +61,7 @@ jobs:
           node scripts/ios-photo-thermal-budget-smoke.mjs
           node scripts/karting-final-environment-smoke.mjs
           node scripts/environment-studio-native-photo-smoke.mjs
+          node scripts/environment-finish-line-asset-smoke.mjs
           node scripts/environment-collision-pen-smoke.mjs
           node scripts/environment-freehand-zone-smoke.mjs
           node scripts/owner-environment-import-smoke.mjs

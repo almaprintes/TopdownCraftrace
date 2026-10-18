@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.274 — Línea de meta decorativa en Environment Studio
+
+El propietario subió a `main` el WebP transparente optimizado `public/assets/environment/finish-line-checkered-optimized.webp` (1024×177, 78.878 bytes). Se registra como `finish_line_checkered`, nombre visible «LÍNEA DE META», categoría PROPS, ancho inicial 300 px. Aparece en el panel DOM, la biblioteca táctil y el catálogo Phaser; está incluido en el preload activo (`EnvironmentBuilderVegetationToolStateScene.js`), en `EnvironmentBuilderScene.js` y en el catálogo desplazable `EnvironmentBuilderScrollScene.js`. Los controles existentes permiten mover, rotar, escalar y duplicar; exportación y carga conservan su ruta y posición. Es una imagen decorativa que no añade barreras ni colisiones y no altera las puertas de meta/checkpoints. No se coloca automáticamente en ningún circuito: el propietario deberá posicionarla, guardar y exportar el `.environment.json` y subirlo al proyecto. Para Atlántico, el motor aplica la escala mundo aprobada 0,70 al objeto cuando el JSON está instalado. Regresión `scripts/environment-finish-line-asset-smoke.mjs` añadida a Pages CI. No APK/AAB ni Google Play.
+
+
 ## DEV 1.2.273 — Corrección porcentual Atlántico: escala 70% del original
 
 El propietario precisó que desde DEV 1.2.271 (escala 94%) quería bajar a **70% del tamaño original**, o sea **24 puntos porcentuales menos**, NO reducir un 70% para dejarlo a 30%. Se corrige el ajuste provisional erróneo de DEV 1.2.272 a `ATLANTICO_WORLD_SCALE=0.70` y se añaden regresiones para exigir anchura de mundo 3040.8 y altura 2280.6 (fuente 4344×3258). Se mantiene la limpieza de assets antiguos, los 394 puntos, los bordes Bézier, CP1/CP2, META y posición del coche a escala proporcional de la foto. Foto maestra, seis teselas y sus bytes, coche, físicas y cámara sin alterar. Las futuras colisiones dibujadas sobre foto fuente se convierten también a escala 0.70. No generar APK/AAB ni publicar Play sin indicación explícita.

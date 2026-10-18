@@ -80,7 +80,7 @@ export class EnvironmentBuilderScene extends Current{
       const bg=this.add.rectangle(x,y,cw,ch,0x151f31,1).setOrigin(0).setStrokeStyle(1,0x344563,.95);
       const img=this.add.image(x+cw/2,y+47,`env:${a.id}`);
       img.setScale(Math.min((cw-28)/(img.width||1),68/(img.height||1)));
-      const lab=this.add.text(x+cw/2,y+89,a.id.replace(/_01$/,'').replaceAll('_',' '),{fontFamily:'system-ui',fontSize:'9px',color:'#fff',align:'center',wordWrap:{width:cw-12}}).setOrigin(.5,0);
+      const lab=this.add.text(x+cw/2,y+89,a.label||a.id.replace(/_01$/,'').replaceAll('_',' '),{fontFamily:'system-ui',fontSize:'9px',color:'#fff',align:'center',wordWrap:{width:cw-12}}).setOrigin(.5,0);
       list.add([bg,img,lab]);
     });
 

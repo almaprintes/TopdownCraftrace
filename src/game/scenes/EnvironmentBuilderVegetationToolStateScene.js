@@ -28,6 +28,7 @@ const ASSETS=[
   ['tire_barrier_curve_l_01','environment/barriers/tire_barrier_curve_l_01.webp'],
   ['tire_barrier_straight_short_01','environment/barriers/tire_barrier_straight_short_01.webp'],
   ['tire_stack_compact_01','environment/barriers/tire_stack_compact_01.webp'],
+  ['finish_line_checkered','environment/finish-line-checkered-optimized.webp'],
   ['bollard_metal_short_01','environment/props/bollard_metal_short_01.webp'],
   ['cone_orange_01','environment/props/cone_orange_01.webp'],
   ['direction_sign_01','environment/props/direction_sign_01.webp'],

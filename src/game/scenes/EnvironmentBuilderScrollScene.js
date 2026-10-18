@@ -107,7 +107,7 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
       const img = this.add.image(x + cardW / 2, y + 34, `env:${a.id}`);
       const s = Math.min(58 / (img.width || 1), 48 / (img.height || 1));
       img.setScale(s);
-      const tx = this.add.text(x + cardW / 2, y + 64, a.id.replace(/_01$/, '').replaceAll('_', ' '), {
+      const tx = this.add.text(x + cardW / 2, y + 64, a.label || a.id.replace(/_01$/, '').replaceAll('_', ' '), {
         fontFamily: 'system-ui', fontSize: '8px', color: '#fff', align: 'center',
         wordWrap: { width: cardW - 8 }
       }).setOrigin(.5, 0);
@@ -138,6 +138,7 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
       ['BARRERAS','tire_barrier_curve_l_01','environment/barriers/tire_barrier_curve_l_01.webp',220],
       ['BARRERAS','tire_barrier_straight_short_01','environment/barriers/tire_barrier_straight_short_01.webp',220],
       ['BARRERAS','tire_stack_compact_01','environment/barriers/tire_stack_compact_01.webp',125],
+      ['PROPS','finish_line_checkered','environment/finish-line-checkered-optimized.webp',300],
       ['PROPS','bollard_metal_short_01','environment/props/bollard_metal_short_01.webp',72],
       ['PROPS','cone_orange_01','environment/props/cone_orange_01.webp',68],
       ['PROPS','direction_sign_01','environment/props/direction_sign_01.webp',115],
@@ -157,6 +158,6 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
       ['ESTRUCTURAS','paddock_box_small_01','environment/structures/paddock_box_small_01.webp',235],
       ['ESTRUCTURAS','pit_garage_small_01','environment/structures/pit_garage_small_01.webp',315]
     ];
-    return items.filter(x => x[0] === category).map(([cat,id,path,w]) => ({cat,id,path,w}));
+    return items.filter(x => x[0] === category).map(([cat,id,path,w]) => ({cat,id,path,w, ...(id==='finish_line_checkered'?{label:'LÍNEA DE META'}:{})}));
   }
 }
