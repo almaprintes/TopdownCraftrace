@@ -17,12 +17,12 @@ const text=files.filter(file=>/\.(?:js|html|css|json|webmanifest)$/i.test(file))
 const forbidden=[
   'AdminHubScene','CarEditorScene','TrackEditorScene','TrackStudioScene','EnvironmentBuilderScene',
   'tdr2:forceRewardedAdMock','dev-video',
-  'tdr2:admin','tdr2:devFullCarAccess','tdr2:devFullTrackAccess','KIT HOMOLOGACIÓN'
+  'tdr2:admin','tdr2:devFullCarAccess','tdr2:devFullTrackAccess','KIT HOMOLOGACIÓN',
+  'activate_shipaton_judge_access','get_my_shipaton_judge_access','tdr-judge-modal','data-shipaton-judge'
 ];
 for(const token of forbidden)if(text.includes(token))throw new Error(`Production bundle contains forbidden DEV token: ${token}`);
 
 const required=[
-  'activate_shipaton_judge_access',
   'post_race_double_loot',
   'race_control_publish_record',
   'race_control_ghost_download',
@@ -36,4 +36,4 @@ const required=[
 ];
 for(const token of required)if(!text.includes(token))throw new Error(`Production bundle is missing required public feature: ${token}`);
 
-console.log(`PROD BUNDLE SMOKE OK · ${relative.length} files · Admin/tools excluded · Judge/rewarded retained`);
+console.log(`PROD BUNDLE SMOKE OK · ${relative.length} files · Admin/tools/obsolete Judge access excluded · rewarded retained`);
