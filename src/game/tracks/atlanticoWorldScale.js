@@ -1,6 +1,6 @@
 // Only the *published world-space* size changes. The 4344x3258 owner WebP,
 // exact binary source and racing car models/physics remain byte-identical.
-export const ATLANTICO_WORLD_SCALE=0.94;
+export const ATLANTICO_WORLD_SCALE=0.30;
 export const ATLANTICO_WORLD_TRACK_ID='circuito-atlantico';
 const point=(p,s)=>p?{...p,x:Number(p.x)*s,y:Number(p.y)*s}:p;
 const gate=(g,s)=>g?.a&&g?.b?{...g,a:point(g.a,s),b:point(g.b,s)}:g;

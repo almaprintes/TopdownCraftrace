@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.272 — Circuito Atlántico escala al 30% del original
+
+A petición del propietario, reducir **un 70%** el espacio fotográfico y la geometría del circuito (conservar 30%, no 70%). Constante `ATLANTICO_WORLD_SCALE=0.30` en `src/game/tracks/atlanticoWorldScale.js`, compartida por trazado, 14+14 Bézier, salida/meta, 2 checkpoint gates y las futuras colisiones exportadas desde Environment Studio sobre imagen fuente de 4344×3258. La foto original, sus seis teselas (y variantes iOS), carScale y físicas/cámaras de los coches son inmutables. Dimensión del mundo publicado: 1303.2 × 977.4 unidades. Atlántico sigue sin colisiones físicas definidas por el propietario (el entorno de legacy ya se retiró en 1.2.271). Pruebas de geometría y autenticidad en `scripts/circuito-atlantico-official-smoke.mjs`. No APK/AAB ni Play. Si el trazado se siente demasiado estrecho o recorrido demasiado corto a 30%, decidir con el propietario antes de cambios adicionales.
+
+
 ## DEV 1.2.271 — Circuito Atlántico foto 94%, sin entorno antiguo
 
 El owner confirmó que Atlántico ya es fotográfico pero el coche parecía pequeño. Se ajusta *solo Atlántico* a factor mundo 0.94 en `src/game/tracks/atlanticoWorldScale.js`: `install-circuito-atlantico-source.mjs` instala geometría escalada (centerline, forma Bézier, meta, spawn, checkpoint y dimensiones mundo) y `imageNativeRaceLoader.js` muestra los seis mosaicos originales con `imageNative.worldScale=0.94`. El WebP maestro 4344×3258, hash SHA-256 original y los mosaicos fuente NO cambian. Coche, físicas y cámaras intactos. Retirados 36 objetos, 8 barreras y texturas PBR de `track01.environment.json`; el archivo queda versión 7 vacío (sin colisiones todavía). Las futuras colisiones creadas en coordenadas de la foto original del Environment Studio se convertirán 0.94 al cargarse en carrera. Test extendido `scripts/circuito-atlantico-official-smoke.mjs`. No APK ni Google Play. Siguiente acción del owner: probar Atlántico y dibujar/enviar `.environment.json` nuevo en base a su foto fuente.
