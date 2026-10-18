@@ -29,10 +29,10 @@ try{
    if(!match){audit.unresolved.push(name);continue;}
    const missLeft=match.negative.t+span*.5;
    const missRight=match.positive.t-span*.5;
-   const sufficient=missLeft<=-2.5&&missRight<=-2.5;
+   const sufficient=missLeft>=2.5&&missRight<=-2.5;
    audit.checks.push({name,span:+span.toFixed(2),
     road:+(match.positive.t-match.negative.t).toFixed(2),
-    padNeg:+(-missLeft).toFixed(2),padPos:+(-missRight).toFixed(2),covered:sufficient});
+    padNeg:+missLeft.toFixed(2),padPos:+(-missRight).toFixed(2),covered:sufficient});
    if(!sufficient)failures.push(id+': '+name+' too short for '+road.source+' road ('+
      missLeft.toFixed(2)+' left, '+missRight.toFixed(2)+' right)');
    // Widening the same gate again must not alter its endpoints or normal.

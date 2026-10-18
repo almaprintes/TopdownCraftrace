@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.282 — Corrección de aserción en auditoría de ancho de meta
+
+La primera ejecución del nuevo `all-circuit-gate-width-smoke.mjs` diagnosticó una desigualdad con signo invertido en el extremo negativo de la puerta: la distancia entre el borde negativo y el extremo A debe ser **positiva**, mientras que el extremo B debe superar el borde positivo (distancia residual negativa). El código de ensanche es correcto; solo se corrige el test para exigir márgenes >=2.5 px en ambos extremos. Los 22 circuitos aparecieron con detección de bordes en la primera auditoría; el CP2 de Tenerife había sido ampliado previamente por su instalador especial y la nueva herramienta conservadora no interpreta ese cruce por sus múltiples curvas. No se modifican fotografías, físicas ni fuentes.
+
+
 ## DEV 1.2.281 — Auditoría y ajuste de anchura de metas/checkpoints de todos los circuitos
 
 Petición del propietario: un checkpoint de Atlántico no cubría todo el asfalto fotográfico. Se incorpora `src/game/tracks/raceGateWidth.js`: en `trackRegistry.js`, al publicar cada pista, la meta y los checkpoints (y salida A→B si existe) amplían sus extremos hasta los bordes **auténticos de la calzada**. En circuitos fotográficos se muestrean las dos curvas Bézier del `trackShape`; en clásicos se usa el ribbon real de `TrackBuilder`. No se modifican centerline, anchos de carretera, fotografías, origen fuente `.tdrtrack`, orden de CP, normal de conducción, física ni spawn. Solo se extienden las puertas lógicas y líneas de HUD sobre la misma recta; never shorten. Protección: se rechazan intersecciones de un mismo borde o demasiado lejanas (que podrían conectar con otra curva), preservando la puerta si la geometría no es fiable. `scripts/all-circuit-gate-width-smoke.mjs` audita la cobertura de todos los circuitos después de los instaladores, con exigencia especial para META+CP1+CP2 de Atlántico; conectado a Actions. Sin APK/AAB ni Play.
