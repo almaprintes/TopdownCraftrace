@@ -2,7 +2,7 @@
 // The 4.0 MB .tdrtrack binary MUST be uploaded by the owner to the path below.
 // Until then, the old Atlántico remains completely untouched.
 // On source arrival, install its exact image-native geometry and six GPU tiles.
-// Never reconstruct or rescale the author's photograph/Bezier road.
+// Keep source photo and original geometry archived; scale only published world-space geometry.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -10,6 +10,7 @@ import {fileURLToPath} from 'node:url';
 import {shapeIsValid} from '../src/game/studio/trackShapeGeometry.js';
 import {orderClosedCircuitGates} from '../src/game/tracks/closedCircuitGateOrder.js';
 import {spawnUpstreamOfFinish} from '../src/game/tracks/imageNativeDriving.js';
+import {scaleAtlanticoRaceTrack} from '../src/game/tracks/atlanticoWorldScale.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 export const ATLANTICO_SOURCE='src/game/tracks/library/track01/source/trackstudio-image-1792228071935.tdrtrack';
@@ -95,7 +96,7 @@ export function buildAtlanticoTrack(t){
       sourceSha256:ATLANTICO_SHA256,sourceImageSha256:ATLANTICO_IMAGE_SHA256,
       sourceGateRole:'startLine-as-closed-lap-finish'}
   };
-  return {track:output,diagnostics:gates.diagnostics};
+  return {track:scaleAtlanticoRaceTrack(output),diagnostics:gates.diagnostics};
 }
 
 export async function installCircuitoAtlanticoSource({withAssets=true}={}){

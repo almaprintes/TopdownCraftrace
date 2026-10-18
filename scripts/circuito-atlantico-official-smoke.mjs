@@ -5,6 +5,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import sharp from 'sharp';
+import {ATLANTICO_WORLD_SCALE,scaleAtlanticoEnvironment} from '../src/game/tracks/atlanticoWorldScale.js';
+import {describeImageNativeRace,validateImageNativeRaceDescriptor} from '../src/game/tracks/imageNativeRaceLoader.js';
 import {
   ATLANTICO_SOURCE,ATLANTICO_TARGET,ATLANTICO_PHOTO,
   ATLANTICO_IMAGE_SHA256,ATLANTICO_SHA256,ATLANTICO_W,ATLANTICO_H,
@@ -36,24 +38,52 @@ if(!source){
   assert.equal(published.meta.renderMode,'image-native');
   assert.equal(published.meta.imageNative.availability,'published');
   assert.equal(published.meta.id,'circuito-atlantico');
-  assert.deepEqual([published.worldW,published.worldH],[4344,3258]);
+  assert.deepEqual([published.worldW,published.worldH],
+    [4344*ATLANTICO_WORLD_SCALE,3258*ATLANTICO_WORLD_SCALE]);
+  assert.equal(published.meta.imageNative.worldScale,ATLANTICO_WORLD_SCALE);
+  const desc=describeImageNativeRace('circuito-atlantico',()=>published);
+  assert.equal(validateImageNativeRaceDescriptor(desc),desc);
+  assert.throws(()=>validateImageNativeRaceDescriptor({...desc,worldScale:.95}),/escala/);
+  assert.throws(()=>validateImageNativeRaceDescriptor({...desc,track:{...published,worldW:published.worldW+10}}),/escala/);
   assert.equal(published.closed,true);
   assert.equal(published.raceType,'circuit');
   assert.equal(published.startLine,null,
     'A separate start line would make RaceScene classify a circuit as an A->B rally');
   assert.equal(published.carScale,1,'Keep all original car sizes');
   assert.equal(published.centerline.length,394);
-  assert.deepEqual(published.centerline,t.centerline,
-    'Preserve owner centerline 1:1 with the photo');
-  assert.deepEqual(published.trackShape,t.trackShape,
-    'Preserve 14+14 Bezier nodes/handles with no distortion');
-  assert.deepEqual(published.finishLine.a,t.startLine.a);
-  assert.deepEqual(published.finishLine.b,t.startLine.b);
-  for(let i=0;i<2;i++){
-    assert.deepEqual(published.checkpoints[i].a,t.checkpoints[i].a);
-    assert.deepEqual(published.checkpoints[i].b,t.checkpoints[i].b);
+  for(let i=0;i<t.centerline.length;i++){
+    assert.equal(published.centerline[i].x,t.centerline[i].x*ATLANTICO_WORLD_SCALE);
+    assert.equal(published.centerline[i].y,t.centerline[i].y*ATLANTICO_WORLD_SCALE);
+    if(Number.isFinite(t.centerline[i].width))
+      assert.equal(published.centerline[i].width,t.centerline[i].width*ATLANTICO_WORLD_SCALE);
+  }
+  for(const side of ['leftEdge','rightEdge'])for(let i=0;i<t.trackShape[side].length;i++){
+    for(const k of ['x','y'])assert.equal(published.trackShape[side][i][k],
+      t.trackShape[side][i][k]*ATLANTICO_WORLD_SCALE);
+    for(const handle of ['handleIn','handleOut'])for(const k of ['x','y'])
+      assert.equal(published.trackShape[side][i][handle][k],
+        t.trackShape[side][i][handle][k]*ATLANTICO_WORLD_SCALE);
+  }
+  for(const end of ['a','b'])for(const k of ['x','y']){
+    assert.equal(published.finishLine[end][k],t.startLine[end][k]*ATLANTICO_WORLD_SCALE);
+    for(let i=0;i<2;i++)assert.equal(published.checkpoints[i][end][k],
+      t.checkpoints[i][end][k]*ATLANTICO_WORLD_SCALE);
   }
   assert.equal(published.checkpoints.length,2);
+  const mockEnv={trackId:'circuito-atlantico',collisionLines:[{halfThickness:9,
+    nodes:[{x:100,y:300,in:{x:90,y:300},out:{x:110,y:300}}]}],
+    collisionZones:[{points:[{x:500,y:400},{x:600,y:400},{x:600,y:600}]}]};
+  const scaleEnv=scaleAtlanticoEnvironment(mockEnv);
+  assert.equal(scaleEnv.collisionLines[0].halfThickness,9*ATLANTICO_WORLD_SCALE);
+  assert.equal(scaleEnv.collisionLines[0].nodes[0].x,100*ATLANTICO_WORLD_SCALE);
+  assert.equal(scaleEnv.collisionLines[0].nodes[0].in.x,90*ATLANTICO_WORLD_SCALE);
+  assert.equal(scaleEnv.collisionZones[0].points[0].y,400*ATLANTICO_WORLD_SCALE);
+  assert.equal(mockEnv.collisionLines[0].nodes[0].x,100,'Never change owner original');
+  const retired=read('src/game/tracks/library/track01/track01.environment.json');
+  assert.equal(retired.trackId,'circuito-atlantico');
+  for(const key of ['environment','surfaces','linearBarriers','collisionLines','collisionZones'])
+    assert.deepEqual(retired[key],[],key+' must have no old assets/colliders');
+  assert.deepEqual(retired.materials,{},'No obsolete terrain material may load');
   assert.equal(hash(fs.readFileSync('public/'+ATLANTICO_PHOTO)),ATLANTICO_IMAGE_SHA256,
     'Master must be the exact original source photo');
   for(const tile of atlanticPhotoTiles){
@@ -63,5 +93,5 @@ if(!source){
     assert.deepEqual([info.width,info.height,info.format],
       [1448,1629,'webp']);
   }
-  console.log('Atlántico 4344x3258 photo-native official, original pixels and 394 road points, 14+14 Bezier nodes, lap META + CP1/CP2, 6 image tiles confirmed.');
+  console.log('Atlántico photo-original 4344x3258, published world 94%, 394 geometry points, 14+14 Bezier nodes, META + CP1/CP2, 6 unchanged photo tiles, no legacy environment.');
 }

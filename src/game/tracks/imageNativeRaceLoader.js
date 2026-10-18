@@ -7,6 +7,7 @@ import {readCanvasImage,saveCanvasImage,normalizeCanvasImageBlob,looksLikeImageP
 import {shapeIsValid} from '../studio/trackShapeGeometry.js';
 import {makeOpenStagePhotoMask} from './openStagePhotoMask.js';
 import {KARTING_CANARIAS_WORLD_SCALE} from './kartingCanariasWorldScale.js';
+import {ATLANTICO_WORLD_SCALE} from './atlanticoWorldScale.js';
 import {useCompactIosPhotoTiles,compactIosPhotoTilePath,expectedCompactTileSize,photoTileWorldScale} from '../performance/iosPhotoTileBudget.js';
 
 const TILE_MAX=2048;
@@ -42,12 +43,18 @@ export function validateImageNativeRaceDescriptor(desc){
   const scaledCanarias=desc?.type==='published'&&(desc.trackKey==='karting-canarias'||desc.trackKey==='karting-canarias-narrow70')&&
     Array.isArray(desc.tiles)&&desc.tiles.length===4&&
     scale===KARTING_CANARIAS_WORLD_SCALE;
+  // Only official Atlántico is allowed to shrink its world footprint.
+  // The master photo and 6 tiled textures keep their exact original pixels.
+  const scaledAtlantico=desc?.type==='published'&&desc.trackKey==='circuito-atlantico'&&
+    Array.isArray(desc.tiles)&&desc.tiles.length===6&&
+    width===4344&&height===3258&&scale===ATLANTICO_WORLD_SCALE;
+  const finiteWorld=n=>Number.isFinite(Number(n))&&Number(n)>0&&Number(n)<=8192;
   if(!dimension(width)||!dimension(height)||width*height>32000000||
-    !(scale===1||scaledCanarias)||
-    Number(track?.worldW)!==Number(width)*scale||
-    Number(track?.worldH)!==Number(height)*scale||
-    !dimension(Number(track?.worldW))||!dimension(Number(track?.worldH)))
-    throw Error('La escala del mundo y la fotografía no coinciden: se requiere 1:1 salvo la ampliación publicada de Karting Canarias');
+    !(scale===1||scaledCanarias||scaledAtlantico)||
+    Math.abs(Number(track?.worldW)-Number(width)*scale)>1e-6||
+    Math.abs(Number(track?.worldH)-Number(height)*scale)>1e-6||
+    !finiteWorld(track?.worldW)||!finiteWorld(track?.worldH))
+    throw Error('La escala del mundo y la fotografía no coinciden: se requiere 1:1 salvo las escalas oficiales de Canarias y Atlántico');
   if(!shapeIsValid(track?.trackShape))throw Error('Faltan bordes Bézier válidos');
   // Accept both topology types, but never turn an open rally into a ring:
   // its road mask is assembled from adjacent Bézier strips only.
