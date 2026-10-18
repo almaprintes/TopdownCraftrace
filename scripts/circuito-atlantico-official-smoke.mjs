@@ -40,10 +40,10 @@ if(!source){
   assert.equal(published.meta.id,'circuito-atlantico');
   assert.deepEqual([published.worldW,published.worldH],
     [4344*ATLANTICO_WORLD_SCALE,3258*ATLANTICO_WORLD_SCALE]);
-  assert.equal(ATLANTICO_WORLD_SCALE,.30,'Requested 70% world-footprint reduction');
+  assert.equal(ATLANTICO_WORLD_SCALE,.70,'Requested world scale is 70% of source, i.e. 30% reduction');
   assert.equal(published.meta.imageNative.worldScale,ATLANTICO_WORLD_SCALE);
-  assert.ok(published.worldW<1400&&published.worldH<1000,
-    'Atlántico must be substantially smaller than the source photo');
+  assert.ok(published.worldW>3000&&published.worldW<3100&&published.worldH>2200&&published.worldH<2300,
+    'Atlántico must be at 70% of the original source photo');
   const desc=describeImageNativeRace('circuito-atlantico',()=>published);
   assert.equal(validateImageNativeRaceDescriptor(desc),desc);
   assert.throws(()=>validateImageNativeRaceDescriptor({...desc,worldScale:.95}),/escala/);
@@ -96,5 +96,5 @@ if(!source){
     assert.deepEqual([info.width,info.height,info.format],
       [1448,1629,'webp']);
   }
-  console.log('Atlántico photo-original 4344x3258, published world 30%, 394 geometry points, 14+14 Bezier nodes, META + CP1/CP2, 6 unchanged photo tiles, no legacy environment.');
+  console.log('Atlántico photo-original 4344x3258, published world 70%, 394 geometry points, 14+14 Bezier nodes, META + CP1/CP2, 6 unchanged photo tiles, no legacy environment.');
 }

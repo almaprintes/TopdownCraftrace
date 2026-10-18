@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.273 — Corrección porcentual Atlántico: escala 70% del original
+
+El propietario precisó que desde DEV 1.2.271 (escala 94%) quería bajar a **70% del tamaño original**, o sea **24 puntos porcentuales menos**, NO reducir un 70% para dejarlo a 30%. Se corrige el ajuste provisional erróneo de DEV 1.2.272 a `ATLANTICO_WORLD_SCALE=0.70` y se añaden regresiones para exigir anchura de mundo 3040.8 y altura 2280.6 (fuente 4344×3258). Se mantiene la limpieza de assets antiguos, los 394 puntos, los bordes Bézier, CP1/CP2, META y posición del coche a escala proporcional de la foto. Foto maestra, seis teselas y sus bytes, coche, físicas y cámara sin alterar. Las futuras colisiones dibujadas sobre foto fuente se convierten también a escala 0.70. No generar APK/AAB ni publicar Play sin indicación explícita.
+
+
 ## DEV 1.2.272 — Circuito Atlántico escala al 30% del original
 
 A petición del propietario, reducir **un 70%** el espacio fotográfico y la geometría del circuito (conservar 30%, no 70%). Constante `ATLANTICO_WORLD_SCALE=0.30` en `src/game/tracks/atlanticoWorldScale.js`, compartida por trazado, 14+14 Bézier, salida/meta, 2 checkpoint gates y las futuras colisiones exportadas desde Environment Studio sobre imagen fuente de 4344×3258. La foto original, sus seis teselas (y variantes iOS), carScale y físicas/cámaras de los coches son inmutables. Dimensión del mundo publicado: 1303.2 × 977.4 unidades. Atlántico sigue sin colisiones físicas definidas por el propietario (el entorno de legacy ya se retiró en 1.2.271). Pruebas de geometría y autenticidad en `scripts/circuito-atlantico-official-smoke.mjs`. No APK/AAB ni Play. Si el trazado se siente demasiado estrecho o recorrido demasiado corto a 30%, decidir con el propietario antes de cambios adicionales.
