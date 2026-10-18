@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.268 — Estadísticas / Race Control: solo circuitos jugables y desbloqueados
+
+El módulo puro `src/game/stats/playableStatisticsTracks.js` cruza exclusivamente `PUBLISHED_TRACK_IDS` con `TRACK_REGISTRY`, el indicador `meta.hiddenFromTrackSelect` y `isTrackUnlocked`. Tanto las fichas de coche en Estadísticas como la lista de «Mis circuitos» de Race Control consultan la misma regla, sin mostrar prototipos, variantes retiradas, ni circuitos bloqueados. Selecciones históricas/URL/replay de circuitos ya no visibles retroceden al primer circuito permitido. Los récords y fantasmas viejos permanecen almacenados intactos; no se migran ni borran. También se omiten los récords mejores de circuitos ocultos en la ficha resumen de cada coche. Ver `scripts/stats-unlocked-circuits-smoke.mjs`, ejecutado en Pages CI. No APK/AAB/Play; esperar Actions verdes para DEV 1.2.268.
+
+
 ## DEV 1.2.267 — lobby logo 150% y garaje misterioso
 
 Logo lobby: la imagen escala 1.5 (25% adicional sobre 1.2) sin mover su botón/hitbox/admin. Garaje jugador: tarjetas de coches bloqueados muestran solo ?, jamás solicitan foto/carta real ni procesan ni exhiben rendimiento; el hero elimina la URL anterior y la oculta. Tras desbloquear regresan foto, skins y datos. Admin Hub y físicas intactos. Pruebas: `scripts/lobby-car-header-settings-skin-smoke.mjs` y `scripts/garage-track-paddock-skin-smoke.mjs`. Solo DEV web en main; NO APK ni AAB ni Play. Canarias 4096 conserva colisiones pendientes del propietario.

@@ -7,6 +7,8 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 import {carVisualCandidates} from '../skins/carDisplayArt.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
+import { PUBLISHED_TRACK_IDS, isTrackUnlocked } from '../tracks/trackUnlocks.js';
+import { playableStatisticsTrackIds } from '../stats/playableStatisticsTracks.js';
 import { getTrackPublicName } from '../tracks/trackPublicNames.js';
 import { loadPlayerStats, reconcileTimeTrialHistory } from '../stats/playerStats.js';
 import { masteryInfoForMeters, masteryWheelDataUri } from '../stats/carMastery.js';
@@ -16,7 +18,7 @@ const fmtLap=(ms)=>{ms=Number(ms);if(!Number.isFinite(ms)||ms<=0)return'—';con
 const fmtKm=(meters,lang)=>formatOdometerKm(meters,lang);
 const esc=value=>String(value??'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
 const trackName=(id,lang)=>getTrackPublicName(TRACK_REGISTRY?.[id]||id,lang);
-function bestForCar(car){let best=null,bestTrack=null;for(const [trackId,row] of Object.entries(car?.tracks||{})){const ms=Number(row?.bestLapMs);if(Number.isFinite(ms)&&ms>0&&(best==null||ms<best)){best=ms;bestTrack=trackId;}}return{best,bestTrack};}
+function bestForCar(car,playable){let best=null,bestTrack=null;for(const [trackId,row] of Object.entries(car?.tracks||{})){if(!playable.has(trackId))continue;const ms=Number(row?.bestLapMs);if(Number.isFinite(ms)&&ms>0&&(best==null||ms<best)){best=ms;bestTrack=trackId;}}return{best,bestTrack};}
 
 export class StatsScene extends Phaser.Scene{
   constructor(){super('StatsScene');this._root=null;this._selectedCar=null;this._selectedTrack=null;}
@@ -27,10 +29,12 @@ export class StatsScene extends Phaser.Scene{
     reconcileTimeTrialHistory();this._renderCars();
     this.events.once('shutdown',()=>{this._appHeaderDispose?.();this._appHeaderDispose=null;try{root.remove();}catch{}this._root=null;});
   }
+  _playableTracks(){return playableStatisticsTrackIds(TRACK_REGISTRY,PUBLISHED_TRACK_IDS,isTrackUnlocked);}
   _data(){
     const stats=loadPlayerStats();
     const ids=unlockedCarIds().filter(id=>CAR_SPECS?.[id]);
-    return ids.map(id=>{const spec=CAR_SPECS[id]||{};const car=stats.cars?.[id]||{meters:0,races:0,laps:0,tracks:{}};const mastery=masteryInfoForMeters(car.meters||0);return{id,spec,car,mastery,...bestForCar(car)};});
+    const playable=new Set(this._playableTracks());
+    return ids.map(id=>{const spec=CAR_SPECS[id]||{};const car=stats.cars?.[id]||{meters:0,races:0,laps:0,tracks:{}};const mastery=masteryInfoForMeters(car.meters||0);return{id,spec,car,mastery,...bestForCar(car,playable)};});
   }
   _shell(title,backLabel){return `<style>
 .tdr-stats-hub{position:absolute;inset:0;z-index:12000;background:radial-gradient(circle at 50% 0%,rgba(36,86,115,.25),transparent 40%),linear-gradient(180deg,#07131f,#020a11);color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;box-sizing:border-box;padding:max(8px,var(--tdr-safe-top,8px)) max(10px,var(--tdr-safe-right,10px)) max(8px,var(--tdr-safe-bottom,8px)) max(10px,var(--tdr-safe-left,10px));display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}.tdr-stats-hub *{box-sizing:border-box}.sh-head{display:flex;align-items:center;gap:clamp(12px,2vw,24px);min-height:clamp(48px,9vh,72px);border-bottom:1px solid rgba(70,221,255,.28);padding:0 clamp(6px,1vw,14px)}.sh-back{min-width:clamp(92px,12vw,155px);height:clamp(36px,6.5vh,50px);border:1px solid #4e6d82;background:#0b1d2b;color:#fff;font-weight:900;letter-spacing:.08em}.sh-title{margin:0;font-size:clamp(22px,3.5vw,42px);line-height:1;font-weight:950}.sh-body{min-height:0;overflow:auto;padding:clamp(10px,1.8vh,18px) clamp(6px,1vw,14px) 10px}.sh-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}.sh-sum{border:1px solid rgba(255,255,255,.09);background:#081722;padding:10px 13px;min-height:68px}.sh-sum small{display:block;color:#8297a8;font-size:clamp(7px,.75vw,10px);font-weight:900;letter-spacing:.13em}.sh-sum strong{display:block;margin-top:4px;font-size:clamp(18px,2.3vw,30px);white-space:nowrap}.sh-sum.gold strong{color:#f4c554}.sh-sum.cyan strong{color:#6feaff}.sh-sum.green strong{color:#63f3a5}
@@ -59,7 +63,7 @@ export class StatsScene extends Phaser.Scene{
   }
   _updateTrackComparison(carId,trackId){
     const lang=getLanguage()==='en'?'en':'es',rows=this._data();
-    if(!TRACK_REGISTRY?.[trackId])return;
+    if(!this._playableTracks().includes(trackId))return;
     this._selectedTrack=trackId;
     const {html,leader}=this._ranking(rows,trackId,carId,lang);
     const focus=this._root?.querySelector('[data-track-focus]');
@@ -71,21 +75,22 @@ export class StatsScene extends Phaser.Scene{
   _renderCarDetail(carId,preferredTrack=null){
     const lang=getLanguage()==='en'?'en':'es',rows=this._data(),row=rows.find(r=>r.id===carId);if(!row){this._renderCars();return;}
     this._selectedCar=carId;
-    const tracks=Object.entries(TRACK_REGISTRY||{}).map(([id,track])=>({id,track}));
-    const available=tracks.filter(t=>rows.some(r=>{const s=r.car.tracks?.[t.id];return Number(s?.bestLapMs)>0||Number(s?.laps)>0||Number(s?.races)>0||Number(s?.meters)>0;}));
-    // Show every registered circuit, even before the player records a lap there.
-    const list=tracks;
-    const fallback=row.bestTrack||list[0]?.id||tracks[0]?.id;
-    const selected=(preferredTrack&&tracks.some(t=>t.id===preferredTrack))?preferredTrack:(this._selectedTrack&&tracks.some(t=>t.id===this._selectedTrack)?this._selectedTrack:fallback);
+    // Statistics use exactly the unlocked published circuits, never the full
+    // internal registry of drafts, withdrawn circuits and editor test tracks.
+    const list=this._playableTracks().map(id=>({id,track:TRACK_REGISTRY[id]}));
+    const playable=new Set(list.map(t=>t.id));
+    const fallback=playable.has(row.bestTrack)?row.bestTrack:(list[0]?.id||null);
+    const selected=playable.has(preferredTrack)?preferredTrack:(playable.has(this._selectedTrack)?this._selectedTrack:fallback);
     this._selectedTrack=selected;
     this._root.innerHTML=this._shell(esc(row.spec.name||carId),t('stats.cars'));
     const body=this._root.querySelector('.sh-body');
     const pills=list.map(t=>`<button class="sh-track-pill ${t.id===selected?'active':''}" type="button" data-track="${esc(t.id)}">${esc(trackName(t.id,lang))}</button>`).join('');
-    const {html:rankingRows}=this._ranking(rows,selected,carId,lang);
+    const {html:rankingRows}=selected?this._ranking(rows,selected,carId,lang):{html:''};
     body.innerHTML=`<section class="sh-detail-hero"><article class="sh-detail-card"><div class="sh-detail-title"><img class="car" src="${BASE}assets/skins/${encodeURIComponent(row.spec.skin||'')}" alt=""><div><h2>${esc(row.spec.name||carId)}</h2><p>${esc(row.spec.brand||'')} · ${esc(row.spec.category||'')}</p></div></div></article><section class="sh-detail-metrics"><article class="sh-metric"><small>${t('stats.distance')}</small><strong>${fmtKm(row.car.meters,lang)} KM</strong></article><article class="sh-metric"><small>${t('stats.bestLap')}</small><strong>${fmtLap(row.best)}</strong></article><article class="sh-metric"><small>${t('stats.laps')}</small><strong>${Number(row.car.laps)||0}</strong></article><article class="sh-metric"><small>${t('stats.mastery')}</small><strong>${row.mastery.level}/9</strong></article></section></section><section class="sh-track-compare"><div class="sh-track-compare__head"><div><h3>${t('stats.compareCarsByCircuit')}</h3><small>${t('stats.tapCircuitHint')}</small></div></div><div class="sh-track-picker">${pills}</div><div class="sh-track-focus" data-track-focus></div><div class="sh-table-wrap"><table class="sh-table"><thead><tr><th>#</th><th>${t('raceControl.car')}</th><th>${t('stats.bestLap')}</th><th>${t('stats.laps')}</th><th>${t('stats.distance')}</th></tr></thead><tbody data-ranking-body>${rankingRows}</tbody></table></div></section>`;
     this._root.querySelector('.sh-back')?.addEventListener('click',()=>{this._selectedTrack=null;this._selectedCar=null;this._renderCars();});
     this._root.querySelectorAll('[data-track]').forEach(el=>el.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();this._updateTrackComparison(carId,el.dataset.track);}));
-    this._updateTrackComparison(carId,selected);
+    if(selected)this._updateTrackComparison(carId,selected);
+    else {const focus=this._root?.querySelector('[data-track-focus]');if(focus)focus.textContent=t('stats.noTimesYetLong');}
   }
 }
 
