@@ -1,7 +1,15 @@
 // DEV 1.2.214 — Orient exit toward the true native front of each car.
-// DEV-only lobby departure. Platform, car and roof mastery occupy the SAME
+// DEV browser + native Android race departure. Public web remains unchanged.
+// Platform, car and roof mastery occupy the SAME
 // DOM stacking levels as the original lobby objects. No viewport-high overlay.
 // Rollback: localStorage.setItem('tdr2:devLobbyRaceDeparture','off').
+import {Capacitor} from '@capacitor/core';
+// The Android APK is built with __TDR_PROD_BUILD__=true, just like the
+// garage elevator; enable this only in a real native Android WebView.
+const nativeAndroidDeparture=()=>{
+ try{return Capacitor.isNativePlatform()&&Capacitor.getPlatform()==='android';}
+ catch{return false;}
+};
 export const LOBBY_DEPARTURE_TIMING=Object.freeze({turn:1600,hold:180,drive:520});
 export const LOBBY_DEPARTURE_DEPTH=Object.freeze({platform:0,car:1,mastery:4});
 // Verified from real WebPs. These native preview images point DOWN.
@@ -19,8 +27,8 @@ export function lobbyDepartureLocalDrive(turnDegrees,distance){
  // CSS transform: translate executes before rotate.
  return {x:clean(d*Math.cos(theta)),y:clean(-d*Math.sin(theta))};
 }
-export function shouldUseLobbyDeparture({prod=false,storage=globalThis.localStorage}={}){
- if(prod)return false;
+export function shouldUseLobbyDeparture({prod=false,storage=globalThis.localStorage,nativeAndroid=nativeAndroidDeparture()}={}){
+ if(prod&&!nativeAndroid)return false;
  try{return storage?.getItem?.('tdr2:devLobbyRaceDeparture')!=='off';}catch{return true;}
 }
 function visibleImage(node){
@@ -78,12 +86,12 @@ function animateAndWait(element,keyframes,options,timeoutMs,animations){
   }catch{clearTimeout(timer);resolve();}
  });
 }
-export function runLobbyRaceDeparture(scene,onFinished,{prod=false}={}){
+export function runLobbyRaceDeparture(scene,onFinished,{prod=false,nativeAndroid=nativeAndroidDeparture()}={}){
  const launch=typeof onFinished==='function'?onFinished:()=>{};
  const root=scene?._lobbyDomRoot;
  const platform=root?.querySelector('.tdr-lobby-car-platform');
  const car=root?.querySelector('[data-lobby-car]');
- if(!shouldUseLobbyDeparture({prod})||!visibleImage(platform)||!visibleImage(car)||
+ if(!shouldUseLobbyDeparture({prod,nativeAndroid})||!visibleImage(platform)||!visibleImage(car)||
     typeof document==='undefined'||typeof platform.animate!=='function'||
     globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches){
   launch();return false;

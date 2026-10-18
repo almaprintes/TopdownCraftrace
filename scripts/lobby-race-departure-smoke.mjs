@@ -21,12 +21,16 @@ assert.deepEqual(lobbyDepartureLocalDrive(lobbyDepartureTurnForCar('helix_spark'
  {x:600,y:0},'a car already looking right departs with no turn');
 
 const storage={getItem:()=>null};
-assert.equal(shouldUseLobbyDeparture({prod:true,storage}),false,'public release remains unchanged');
-assert.equal(shouldUseLobbyDeparture({prod:false,storage}),true);
-assert.equal(shouldUseLobbyDeparture({prod:false,storage:{getItem:()=> 'off'}}),false,'DEV rollback switch');
+assert.equal(shouldUseLobbyDeparture({prod:true,storage,nativeAndroid:false}),false,'Public web release remains unchanged');
+assert.equal(shouldUseLobbyDeparture({prod:true,storage,nativeAndroid:true}),true,'Android release WebView must animate lobby departure');
+assert.equal(shouldUseLobbyDeparture({prod:true,storage:{getItem:()=> 'off'},nativeAndroid:true}),false,'Android release rollback switch');
+assert.equal(shouldUseLobbyDeparture({prod:false,storage,nativeAndroid:false}),true,'DEV web retains transition');
+assert.equal(shouldUseLobbyDeparture({prod:false,storage:{getItem:()=> 'off'},nativeAndroid:true}),false,'DEV rollback switch');
 let called=0;
-assert.equal(runLobbyRaceDeparture({},()=>called++,{prod:true}),false);
-assert.equal(called,1,'production fallback launches without delay');
+assert.equal(runLobbyRaceDeparture({},()=>called++,{prod:true,nativeAndroid:false}),false);
+assert.equal(called,1,'Public production fallback launches without delay');
+assert.equal(runLobbyRaceDeparture({},()=>called++,{prod:true,nativeAndroid:true}),false);
+assert.equal(called,2,'Android still launches if lobby imagery is not ready, never hangs');
 const scene=read('src/game/scenes/MenuGameModesScene.js');
 assert.match(scene,/if\(this\._raceDeparturePending\)return/);
 assert.match(scene,/runLobbyRaceDeparture\(this,launch,\{prod:IS_PROD_BUILD\}\)/);
@@ -36,6 +40,12 @@ assert.match(read('src/game/scenes/MenuGameModeSnapScene.js'),/this\._startSelec
 const warm=read('src/game/game.js');
 assert.match(warm,/window\.__tdrWarmRaceScene=\(\)=>ensureLazyScene\('race'\)/);
 const script=read('src/game/ui/LobbyRaceDeparture.js');
+assert.match(script,/Capacitor\.isNativePlatform\(\)\&\&Capacitor\.getPlatform\(\)==='android'/,
+ 'Native Android should be detected like the existing working lift');
+assert.ok(script.includes('if(prod&&!nativeAndroid)return false;'),
+ 'Only public web should be disabled by production mode');
+assert.ok(script.includes('shouldUseLobbyDeparture({prod,nativeAndroid})'),
+ 'The race launch must pass Android native detection into the animation gate');
 for(const keyword of ['tdr-lobby-car-platform','[data-lobby-car]','[data-lobby-mastery]',
  'rotate(0deg)','translate3d(0,','platformPart','carPart','masteryPart',
  'prefers-reduced-motion',"once?.('shutdown',stop)",'stop();',
@@ -64,4 +74,4 @@ assert.ok(!script.includes('rotate(90deg) translate3d(0,'),
 assert.match(script,/duration:LOBBY_DEPARTURE_TIMING\.drive,easing:'cubic-bezier\(\.6,\.05,\.94,\.45\)'/,'approved getaway unchanged');
 assert.match(read('src/game/ui/lobby-dom.css'),/\.tdr-lobby-dom\.tdr-lobby-departing/);
 assert.match(read('index.html'),/name="tdr-dev-version" content="DEV 1\.2\.\d+"/);
-console.log('Lobby departure: real car facing determines turn, all drive right in 520ms; platform and mastery aligned; slow network guard OK');
+console.log('Lobby departure: native Android release enabled, web prod unchanged, downward-facing reverse turn preserved; all depart right in 520ms with platform/mastery and slow network guard OK');
