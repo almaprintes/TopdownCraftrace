@@ -87,157 +87,86 @@ function animateAndWait(element,keyframes,options,timeoutMs,animations){
  });
 }
 
-/**
- * Rear tire contacts in the UNROTATED lobby platform's coordinates. The
- * platform and car share the same rotation, so these remain aligned on +90,
- * -90 and custom preview headings. Track direction is opposite car travel.
- */
-export function lobbyDepartureWheelTracks(carRect,platformRect,turnAngle){
- const vector=lobbyDepartureLocalDrive(turnAngle,1);
- const magnitude=Math.hypot(vector.x,vector.y)||1;
- const forward={x:vector.x/magnitude,y:vector.y/magnitude};
- const lateral={x:-forward.y,y:forward.x};
- const x=carRect.left+carRect.width/2-platformRect.left-platformRect.width/2;
- const y=carRect.top+carRect.height/2-platformRect.top-platformRect.height/2;
- const axle=Math.max(carRect.width,carRect.height)*.285;
- const halfTread=Math.min(carRect.width,carRect.height)*.255;
- const trailLength=Math.max(55,Math.min(85,Math.min(platformRect.width,platformRect.height)*.23));
- const treadWidth=Math.max(4,Math.min(7,Math.min(carRect.width,carRect.height)*.052));
- return [-1,1].map((side,i)=>({
-  x:x-forward.x*axle+lateral.x*halfTread*side,
-  y:y-forward.y*axle+lateral.y*halfTread*side,
-  dx:-forward.x,dy:-forward.y,
-  length:trailLength*(i===0?.90:1),width:treadWidth*(i===0?.88:1)
- }));
+// Brief rear-end kick during the EXISTING 180ms hold; pivot the front axle,
+// not the platform, so the rear wiggles and settles before the sprint.
+export const LOBBY_DEPARTURE_TAIL_KICK=Object.freeze([0,4.5,-5,2.5,0]);
+export function lobbyDepartureFrontPivot(carId){
+ return downFacing.has(String(carId||''))?'50% 77%':'50% 23%';
 }
 function lobbyFxRandom(seed){
  let n=seed>>>0;
  return ()=>((n=(Math.imul(n,1664525)+1013904223)>>>0)/4294967296);
 }
 /**
- * Procedural broken rubber, NOT solid lines. Tiny variable-width deposits,
- * feathered ends and very faint scuffs: painted ONCE to a small transparent
- * canvas, never redrawn during frames. Color/contrast matches worn metal.
- * Exported to permit deterministic non-DOM regression tests in CI.
- */
-export function paintLobbyRubber(ctx,contacts){
- const random=lobbyFxRandom(0x713b9d);
- for(const [wheel,track] of contacts.entries()){
-  for(let n=0;n<86;n++){
-   const t=random();
-   const dist=t*track.length;
-   const strength=Math.sin(Math.PI*Math.pow(t,.68))*.8+.18;
-   if(random()>.55+strength*.35)continue; // irregular broken deposition
-   const jitter=(random()-.5)*track.width*.92+
-     Math.sin(t*8+wheel*1.3)*track.width*.14;
-   const x=track.x+track.dx*dist-track.dy*jitter;
-   const y=track.y+track.dy*dist+track.dx*jitter;
-   const stroke=1.5+random()*(4.2+strength*3);
-   const width=track.width*(.12+random()*.26);
-   ctx.beginPath();
-   ctx.moveTo(x,y);
-   ctx.quadraticCurveTo(
-    x+track.dx*stroke*.5-track.dy*(random()-.5)*1.2,
-    y+track.dy*stroke*.5+track.dx*(random()-.5)*1.2,
-    x+track.dx*stroke,y+track.dy*stroke
-   );
-   const alpha=(.12+random()*.30)*strength;
-   ctx.strokeStyle='rgba(8,12,16,'+alpha.toFixed(3)+')';
-   ctx.lineWidth=width;ctx.lineCap='round';ctx.stroke();
-  }
-  // Sparse silver-gray scuffs break up dark rubber without bright outlines.
-  for(let n=0;n<13;n++){
-   const t=random(),dist=t*track.length;
-   const jitter=(random()-.5)*track.width*.75;
-   const x=track.x+track.dx*dist-track.dy*jitter;
-   const y=track.y+track.dy*dist+track.dx*jitter;
-   ctx.beginPath();ctx.moveTo(x,y);
-   ctx.lineTo(x+track.dx*(2+random()*4),y+track.dy*(2+random()*4));
-   ctx.strokeStyle='rgba(157,164,167,'+(.055+random()*.075).toFixed(3)+')';
-   ctx.lineWidth=.45+random()*.8;ctx.stroke();
-  }
- }
-}
-/**
- * One connected smoke TRAIL, rendered as many overlapping translucent wisps
- * INSIDE ONE raster plume. This avoids discrete circles and elliptical pills.
- * The plume grows behind the axle and dissolves; no sprite/textures/RAF.
+ * One continuous atmospheric exhaust wake. Fine wisps overlap into an
+ * elongated, ragged trail rather than circles; painted ONCE on a single canvas.
+ * Web Animations reveal that SAME trail progressively as the rear wheels move.
  */
 export function paintLobbySmoke(ctx,width,height){
  const random=lobbyFxRandom(0x94ac1);
- for(let i=0;i<58;i++){
-  const t=(i+random()*.8)/58;
-  const cx=12+t*(width-33)+(random()-.5)*18;
-  const spread=(12+t*height*.32);
-  const cy=height*.5+Math.sin(t*6.5)*height*.048+(random()-.5)*spread;
-  const radius=(14+t*height*.31)*(0.75+random()*.65);
+ for(let i=0;i<96;i++){
+  const t=(i+random()*.65)/96;
+  const cx=3+t*(width-14)+(random()-.5)*12;
+  const spread=8+t*height*.34;
+  const cy=height*.5+Math.sin(t*7.3)*height*.057+(random()-.5)*spread;
+  const radius=(10+t*height*.27)*(.65+random()*.8);
   const grad=ctx.createRadialGradient(cx,cy,0,cx,cy,radius);
-  const ink=(.042+random()*.045)*(1-t*.35);
-  grad.addColorStop(0,'rgba(225,231,236,'+ink.toFixed(3)+')');
-  grad.addColorStop(.48,'rgba(190,204,212,'+(ink*.55).toFixed(3)+')');
-  grad.addColorStop(1,'rgba(168,187,197,0)');
+  const ink=(.050+random()*.052)*(1-t*.38);
+  grad.addColorStop(0,'rgba(226,234,238,'+ink.toFixed(3)+')');
+  grad.addColorStop(.4,'rgba(201,215,224,'+(ink*.60).toFixed(3)+')');
+  grad.addColorStop(1,'rgba(175,193,203,0)');
   ctx.fillStyle=grad;ctx.fillRect(cx-radius,cy-radius,radius*2,radius*2);
  }
 }
-// Make two lightweight, one-shot textures at device-friendly resolution.
-// Canvas failure is cosmetic and must never prevent the race scene.
-function makeLobbyDepartureCanvas(width,height,className){
+function makeLobbySmokeCanvas(width,height){
  const canvas=document.createElement('canvas');
  const ratio=Math.max(1,Math.min(1.5,Number(globalThis.devicePixelRatio)||1));
  canvas.width=Math.ceil(width*ratio);canvas.height=Math.ceil(height*ratio);
- canvas.className=className;
+ canvas.className='tdr-lobby-tire-smoke';
  Object.assign(canvas.style,{
   position:'absolute',width:width+'px',height:height+'px',
-  pointerEvents:'none',willChange:'opacity,transform'
+  pointerEvents:'none',willChange:'opacity,transform,clip-path'
  });
  const ctx=canvas.getContext('2d',{alpha:true});
  if(!ctx)return null;
  ctx.scale(ratio,ratio);
- return {canvas,ctx};
+ paintLobbySmoke(ctx,width,height);
+ return canvas;
 }
-function playLobbyTireEffects(platformPart,carRect,platformRect,turnAngle,animations){
- const contacts=lobbyDepartureWheelTracks(carRect,platformRect,turnAngle);
- const rubber=makeLobbyDepartureCanvas(platformRect.width,platformRect.height,
-  'tdr-lobby-tire-streaks');
- const smoke=makeLobbyDepartureCanvas(175,100,'tdr-lobby-tire-smoke');
- if(!rubber||!smoke)return;
- const angle=Math.atan2(contacts[0].dy,contacts[0].dx)*180/Math.PI;
- const x=(contacts[0].x+contacts[1].x)/2;
- const y=(contacts[0].y+contacts[1].y)/2;
- // Canvas starts at the platform's top-left, but the contact geometry
- // is centered on the stage pivot: translate once before painting.
- rubber.ctx.translate(platformRect.width/2,platformRect.height/2);
- paintLobbyRubber(rubber.ctx,contacts);
- paintLobbySmoke(smoke.ctx,175,100);
- Object.assign(smoke.canvas.style,{
-  left:x+'px',top:(y-50)+'px',transformOrigin:'0 50%',
-  transform:'rotate('+angle+'deg) scale(.78)',
-  filter:'blur(3px)',opacity:'0'
+/**
+ * A single soft trail begins during the tail kick and keeps feeding while the
+ * car accelerates. Clip-reveal follows the outward path continuously, rather
+ * than popping standalone clouds. No RAF and no additional transition time.
+ */
+function playLobbyDepartureSmoke(platformPart,carRect,platformRect,turnAngle,animations){
+ const width=Math.max(200,Math.min(365,platformRect.width*.9));
+ const height=Math.max(72,Math.min(115,carRect.width*.95));
+ const smoke=makeLobbySmokeCanvas(width,height);
+ if(!smoke)return;
+ const forward=lobbyDepartureLocalDrive(turnAngle,1);
+ const centerX=carRect.left+carRect.width/2-platformRect.left-platformRect.width/2;
+ const centerY=carRect.top+carRect.height/2-platformRect.top-platformRect.height/2;
+ const axle=Math.max(carRect.width,carRect.height)*.285;
+ const rearX=centerX-forward.x*axle;
+ const rearY=centerY-forward.y*axle;
+ const angle=Math.atan2(forward.y,forward.x)*180/Math.PI;
+ Object.assign(smoke.style,{
+  left:rearX+'px',top:(rearY-height/2)+'px',transformOrigin:'0 50%',
+  transform:'rotate('+angle+'deg)',opacity:'0',
+  filter:'blur(3.3px)',clipPath:'inset(0 100% 0 0)'
  });
- // Platform painting remains behind the car; rubber stays visible over smoke.
- platformPart.appendChild(smoke.canvas);
- Object.assign(rubber.canvas.style,{
-  left:(-platformRect.width/2)+'px',top:(-platformRect.height/2)+'px',
-  filter:'blur(.45px)',opacity:'0'
- });
- platformPart.appendChild(rubber.canvas);
- const drift=18;
- // Neither effect is awaited: the approved 520ms getaway is the only clock.
- void animateAndWait(rubber.canvas,[
-  {opacity:0,offset:0},
-  {opacity:.64,offset:.24},
-  {opacity:.82,offset:.58},
-  {opacity:.48,offset:.83},
-  {opacity:0,offset:1}
- ],{duration:LOBBY_DEPARTURE_TIMING.drive,easing:'linear'},
- LOBBY_DEPARTURE_TIMING.drive+100,animations);
- void animateAndWait(smoke.canvas,[
-  {opacity:0,transform:'rotate('+angle+'deg) translate3d(0,0,0) scale(.72)',offset:0},
-  {opacity:.66,transform:'rotate('+angle+'deg) translate3d(5px,0,0) scale(.98)',offset:.28},
-  {opacity:.46,transform:'rotate('+angle+'deg) translate3d(12px,0,0) scale(1.18)',offset:.64},
-  {opacity:0,transform:'rotate('+angle+'deg) translate3d('+drift+'px,0,0) scale(1.38)',offset:1}
- ],{duration:LOBBY_DEPARTURE_TIMING.drive,easing:'ease-out'},
- LOBBY_DEPARTURE_TIMING.drive+100,animations);
+ platformPart.appendChild(smoke);
+ // Hold (180ms) + drive (520ms) is exactly the original 700ms window.
+ // Keep producing one connected wisp trail throughout most of the drive.
+ void animateAndWait(smoke,[
+  {opacity:0,clipPath:'inset(0 100% 0 0)',offset:0},
+  {opacity:.46,clipPath:'inset(0 91% 0 0)',offset:.10},
+  {opacity:.67,clipPath:'inset(0 78% 0 0)',offset:.26},
+  {opacity:.70,clipPath:'inset(0 38% 0 0)',offset:.61},
+  {opacity:.43,clipPath:'inset(0 8% 0 0)',offset:.82},
+  {opacity:0,clipPath:'inset(0 0% 0 0)',offset:1}
+ ],{duration:LOBBY_DEPARTURE_TIMING.hold+LOBBY_DEPARTURE_TIMING.drive,easing:'linear'},
+ LOBBY_DEPARTURE_TIMING.hold+LOBBY_DEPARTURE_TIMING.drive+120,animations);
 }
 
 export function runLobbyRaceDeparture(scene,onFinished,{prod=false,nativeAndroid=nativeAndroidDeparture()}={}){
@@ -336,21 +265,32 @@ export function runLobbyRaceDeparture(scene,onFinished,{prod=false,nativeAndroid
      {duration:LOBBY_DEPARTURE_TIMING.turn,easing:'cubic-bezier(.35,.02,.18,1)'},
      LOBBY_DEPARTURE_TIMING.turn+250,animations)));
     if(disposed)return;
-    await animateAndWait(platformPart.firstElementChild,
-     [{filter:'brightness(1)'},{filter:'brightness(1.25) drop-shadow(0 0 14px rgba(94,214,255,.48))'},
-      {filter:'brightness(1)'}],
-     {duration:LOBBY_DEPARTURE_TIMING.hold,easing:'ease-in-out'},
-     LOBBY_DEPARTURE_TIMING.hold+150,animations);
+    // Smoke begins BEFORE the launch, during the approved hold window.
+    try{playLobbyDepartureSmoke(platformPart,car.getBoundingClientRect(),pr,turnAngle,animations);}
+    catch(error){console.warn('[lobby-departure] smoke skipped',error);}
+    // Kick only the selected car about its front axle: the TAIL sways.
+    // Keep the existing platform highlight in parallel, never extending hold.
+    const previewCar=carPart.firstElementChild;
+    previewCar.style.transformOrigin=lobbyDepartureFrontPivot(scene?.selectedCarId);
+    await Promise.all([
+     animateAndWait(platformPart.firstElementChild,
+      [{filter:'brightness(1)'},{filter:'brightness(1.25) drop-shadow(0 0 14px rgba(94,214,255,.48))'},
+       {filter:'brightness(1)'}],
+      {duration:LOBBY_DEPARTURE_TIMING.hold,easing:'ease-in-out'},
+      LOBBY_DEPARTURE_TIMING.hold+150,animations),
+     animateAndWait(previewCar,
+      LOBBY_DEPARTURE_TAIL_KICK.map((degrees,i)=>({
+       transform:'rotate('+degrees+'deg)',offset:i/(LOBBY_DEPARTURE_TAIL_KICK.length-1)
+      })),
+      {duration:LOBBY_DEPARTURE_TIMING.hold,easing:'cubic-bezier(.42,.02,.2,1)'},
+      LOBBY_DEPARTURE_TIMING.hold+150,animations)
+    ]);
     if(disposed)return;
     // Move RIGHT in viewport coordinates independently of turn direction.
     // Keep the original getaway duration/easing and 1.1 end scale.
     const distance=window.innerWidth+pr.width;
     const movement=lobbyDepartureLocalDrive(turnAngle,distance);
     const departures=[carPart,...(masteryPart?[masteryPart]:[])];
-    // Temporary burn marks and smoke remain on the platform as the car leaves.
-    // Optional visuals must never postpone a race or change the drive duration.
-    try{playLobbyTireEffects(platformPart,car.getBoundingClientRect(),pr,turnAngle,animations);}
-    catch(error){console.warn('[lobby-departure] tire effects skipped',error);}
     await Promise.all(departures.map(part=>animateAndWait(part,
      [{transform:'rotate('+turnAngle+'deg) translate3d(0,0,0) scale(1)',opacity:1},
       {transform:'rotate('+turnAngle+'deg) translate3d('+movement.x+'px,'+movement.y+'px,0) scale(1.1)',opacity:1}],
