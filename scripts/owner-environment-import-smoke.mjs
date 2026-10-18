@@ -15,7 +15,11 @@ for(const [env,id] of [[americas,'karting-americas'],[arafo,'rally-arafo-los-lor
   assert.equal(env.baseTrack?.id,id);
   assert.equal(env.baseTrack?.locked,true);
   assert.equal(env.repositoryPath,folder+id+'/'+id+'.environment.json');
-  assert.deepEqual(env.environment,[]);
+  if(id==='karting-americas'){
+    assert.equal(env.environment.length,1);
+    assert.equal(env.environment[0].asset,'finish_line_checkered');
+    assert.equal(env.environment[0].path,'environment/finish-line-checkered-optimized.webp');
+  }else assert.deepEqual(env.environment,[]);
   assert.deepEqual(env.surfaces,[]);
   assert.deepEqual(env.linearBarriers,[]);
   assert.deepEqual(env.materials,{});

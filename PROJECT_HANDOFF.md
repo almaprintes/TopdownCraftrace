@@ -1,5 +1,17 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.276 — Cinco entornos definitivos exportados por el propietario
+
+El propietario entregó cinco `.environment.json` (Karting Tenerife, Karting Canarias 4096, Circuito Atlántico, Karting Américas, Santa Cruz). Contienen **cinco tiras de meta visual** (`finish_line_checkered`) y en conjunto **23 líneas Bézier de colisión + 20 zonas sólidas**:
+- `karting-tenerife/karting-tenerife.environment.json`: 5 líneas + 17 zonas. Geometría idéntica a la oficial anterior y `advertising` mantenido (`campaign:default`), aunque la exportación nueva no llevaba esa configuración.
+- `karting-canarias-4096/karting-canarias-4096.environment.json`: 5 líneas + 1 zona. Archivo nuevo en carpeta oficial del circuito reconstruido **4096×6144**; allowlist en `raceEnvironmentRuntime.js` y prioridad explícita al circuito 4096 si el selector conserva el alias viejo. NO usar el factor ×2,5 del Canarias obsoleto; entorno legacy conservado solo por compatibilidad.
+- `track01/track01.environment.json` (identidad `circuito-atlantico`): 1 línea + 2 zonas; el archivo recibido estaba en coordenadas de la foto original 4344×3258, **sin coordinateSpace** (exportación anterior a la corrección de editor). Se archiva sin escalar en `track01/source/circuito-atlantico-owner-original.environment.json` y se publica derivado al **70 % aprobado** con `coordinateSpace:'race-world'`, ajustando nodos, asas, zonas, posición y ancho de meta, evitando doble escalado en juego.
+- `karting-americas/karting-americas.environment.json`: 8 líneas intactas + meta; cero zonas.
+- `santa-cruz/santa-cruz.environment.json`: 4 líneas (55 nodos) + meta; retira 17 props y barreras de la foto anterior. **Crítico:** `install-santa-cruz-source.mjs` sobreescribe entorno desde `santa-cruz/source/santa-cruz-photo.environment.json`, por lo que también se actualizó esa fuente con la exportación del propietario, preservando así las colisiones y la meta en cada build.
+
+No se modificaron fotografías, cuerpos de coches, físicas, trazados ni puertas lógicas de cronometraje. La tira WebP decorativa no genera colisiones. `scripts/owner-five-environments-smoke.mjs` valida los 5 proyectos, las colisiones, la independencia de la meta lógica y la conversión única de Atlántico; enlazado en `.github/workflows/pages.yml`. No APK/AAB ni Google Play. Revisar en DEV conduciendo los cinco circuitos antes de publicar Android.
+
+
 ## DEV 1.2.275 — Atlántico: paridad de coordenadas de la fotografía en Environment Studio
 
 Se corrige una desalineación preexistente: Environment Studio cargaba los mosaicos de la fotografía de Atlántico a escala fuente 100%, aunque el circuito aprobado es al 70%. Ahora las teselas del editor se dibujan también a `worldScale=0.70`, tanto posición como tamaño, alineadas con `createTrack('circuito-atlantico')`. Los elementos gráficos, META decorativa y futuras colisiones se colocan visualmente en coordenadas **race-world** aprobadas; al exportar un proyecto de Atlántico se añade `coordinateSpace:'race-world'` y el runtime NO vuelve a escalar esos datos. JSON heredado que no lleve ese campo se interpreta como coordenadas de la fotografía original y mantiene la conversión previa con `scaleAtlanticoEnvironment` por compatibilidad. No cambia la escala aprobada, la foto, los coches, sus físicas, las puertas de tiempo ni otros circuitos. Test ampliado `scripts/environment-finish-line-asset-smoke.mjs`. Sin APK/AAB ni Play.

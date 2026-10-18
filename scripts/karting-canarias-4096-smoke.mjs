@@ -24,6 +24,12 @@ for(const tile of track.meta.imageNative.tiles){
  const m=await sharp(file).metadata();
  assert.deepEqual([m.width,m.height,m.format],[2048,1536,'webp']);
 }
+const env=JSON.parse(readFileSync('src/game/tracks/library/karting-canarias-4096/karting-canarias-4096.environment.json','utf8'));
+assert.equal(env.trackId,'karting-canarias-4096');
+assert.equal(env.collisionLines.length,5);
+assert.equal(env.collisionZones.length,1);
+assert.equal(env.environment.length,1);
+assert.equal(env.environment[0].asset,'finish_line_checkered');
 const selection=readFileSync('src/game/tracks/trackUnlocks.js','utf8');
 assert.ok(selection.includes("id==='karting-canarias'&&REBUILT_CANARIAS_PRESENT?'karting-canarias-4096':id"));
 assert.ok(!selection.includes('REBUILT_CANARIAS_PRESENT=!IS_PROD_BUILD'));

@@ -1,7 +1,19 @@
 {
   "version": 7,
   "trackId": "karting-tenerife",
-  "environment": [],
+  "environment": [
+    {
+      "asset": "finish_line_checkered",
+      "path": "environment/finish-line-checkered-optimized.webp",
+      "x": 2718.32,
+      "y": 925.73,
+      "rotation": 0.05476,
+      "displayWidth": 177.04,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    }
+  ],
   "surfaces": [],
   "baseTrack": {
     "id": "karting-tenerife",

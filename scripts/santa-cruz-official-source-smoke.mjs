@@ -23,7 +23,8 @@ if(!fs.existsSync(src)){
   const env=JSON.parse(fs.readFileSync('src/game/tracks/library/santa-cruz/santa-cruz.environment.json','utf8'));
   assert.equal(env.trackId,'santa-cruz');
   assert.ok(Array.isArray(env.collisionLines));assert.ok(Array.isArray(env.collisionZones));
-  assert.equal(env.environment.length,0,'Do not overlay old Santa Cruz props on photo');
+  assert.equal(env.environment.length,1,'Only the new checkered finish line may overlay the photograph');
+  assert.equal(env.environment[0].asset,'finish_line_checkered');
   // Colliders are exported in photo-pixel coordinates; no old 1900×2900
   // geometry or visual assets may leak into the new Santa Cruz.
   const authored=JSON.parse(fs.readFileSync('src/game/tracks/library/santa-cruz/source/santa-cruz-photo.environment.json','utf8'));
@@ -31,7 +32,7 @@ if(!fs.existsSync(src)){
     'Every authored Bézier handle and position must survive installation unchanged');
   assert.deepEqual(env.collisionZones,authored.collisionZones);
   assert.equal(env.collisionLines.length,4,'Four authored wall boundaries expected');
-  assert.equal(env.collisionLines.reduce((n,l)=>n+l.nodes.length,0),54,'All 54 authored nodes preserved');
+  assert.equal(env.collisionLines.reduce((n,l)=>n+l.nodes.length,0),55,'All 55 newly exported owner nodes preserved');
   const {validCollisionLine,sampleCollisionLine}=await import('../src/game/environment/CollisionPenGeometry.js');
   for(const line of env.collisionLines){
     assert.ok(validCollisionLine(line),line.id);

@@ -20,9 +20,16 @@ function envFor(scene){
   // Environment Studio, en coordenadas exactas del fondo, sin tocar la foto.
   // Official photo-native circuits and stages load only their own authored world-space collision data.
   // Keep local TrackStudio previews isolated from the published environment registry.
-  if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey))&&normalizeTrackKey(scene?.trackKey)!=='karting-canarias-narrow70'&&normalizeTrackKey(scene?.trackKey)!=='circuito-atlantico')return null;
+  if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey))&&normalizeTrackKey(scene?.trackKey)!=='karting-canarias-narrow70'&&normalizeTrackKey(scene?.trackKey)!=='circuito-atlantico')return null;
   const narrow=normalizeTrackKey(scene?.trackKey)==='karting-canarias-narrow70';
-  const candidates=[...(narrow?['karting-canarias']:[]),scene?.trackKey,scene?.track?.meta?.id,scene?.track?.id,scene?.track?.trackId,scene?.track?.meta?.trackId].map(normalizeTrackKey).filter(Boolean);
+  // New Canarias is the user-selected published 4096x6144 layout. Prefer
+  // its OWN collisions even when the selector still calls it "karting-canarias".
+  // Never scale its geometry by the retired legacy Canarias factor 2.5.
+  const rebuiltCanarias=[scene?.track?.id,scene?.track?.meta?.id,
+    scene?.track?.trackId].some(id=>normalizeTrackKey(id)==='karting-canarias-4096');
+  const candidates=[...(rebuiltCanarias?['karting-canarias-4096']:[]),
+    ...(narrow?['karting-canarias']:[]),scene?.trackKey,scene?.track?.meta?.id,
+    scene?.track?.id,scene?.track?.trackId,scene?.track?.meta?.trackId].map(normalizeTrackKey).filter(Boolean);
   for(const key of candidates){
     const env=createTrackEnvironment(key);
     if(!env)continue;

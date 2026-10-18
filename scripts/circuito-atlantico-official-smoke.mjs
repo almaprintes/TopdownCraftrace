@@ -84,9 +84,17 @@ if(!source){
   assert.equal(mockEnv.collisionLines[0].nodes[0].x,100,'Never change owner original');
   const retired=read('src/game/tracks/library/track01/track01.environment.json');
   assert.equal(retired.trackId,'circuito-atlantico');
-  for(const key of ['environment','surfaces','linearBarriers','collisionLines','collisionZones'])
-    assert.deepEqual(retired[key],[],key+' must have no old assets/colliders');
+  assert.equal(retired.coordinateSpace,'race-world','Editor and race must share approved 70% world');
+  assert.equal(retired.environment.length,1,'Finish marking added without old props');
+  assert.equal(retired.environment[0].asset,'finish_line_checkered');
+  assert.equal(retired.collisionLines.length,1,'Atlántico owner pen collision added');
+  assert.equal(retired.collisionZones.length,2,'Atlántico owner solid zones added');
+  for(const key of ['surfaces','linearBarriers'])assert.deepEqual(retired[key],[]);
   assert.deepEqual(retired.materials,{},'No obsolete terrain material may load');
+  const originalEnvironment=read('src/game/tracks/library/track01/source/circuito-atlantico-owner-original.environment.json');
+  const expectedEnvironment=scaleAtlanticoEnvironment(originalEnvironment);
+  for(const key of ['environment','collisionLines','collisionZones'])
+    assert.deepEqual(retired[key],expectedEnvironment[key],key+' must be scaled exactly once from original owner photo');
   assert.equal(hash(fs.readFileSync('public/'+ATLANTICO_PHOTO)),ATLANTICO_IMAGE_SHA256,
     'Master must be the exact original source photo');
   for(const tile of atlanticPhotoTiles){
@@ -96,5 +104,5 @@ if(!source){
     assert.deepEqual([info.width,info.height,info.format],
       [1448,1629,'webp']);
   }
-  console.log('Atlántico photo-original 4344x3258, published world 70%, 394 geometry points, 14+14 Bezier nodes, META + CP1/CP2, 6 unchanged photo tiles, no legacy environment.');
+  console.log('Atlántico photo-original 4344x3258, published world 70%, 394 geometry points, 14+14 Bezier nodes, META + CP1/CP2, 6 unchanged photo tiles, no legacy props; finish decal + 1 pen + 2 solid zones.');
 }

@@ -1,7 +1,19 @@
 {
   "version": 7,
   "trackId": "karting-americas",
-  "environment": [],
+  "environment": [
+    {
+      "asset": "finish_line_checkered",
+      "path": "environment/finish-line-checkered-optimized.webp",
+      "x": 753.33,
+      "y": 1613.83,
+      "rotation": -0.45449,
+      "displayWidth": 219.74,
+      "flipX": false,
+      "flipY": false,
+      "z": 12
+    }
+  ],
   "surfaces": [],
   "baseTrack": {
     "id": "karting-americas",
