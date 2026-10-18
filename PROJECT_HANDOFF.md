@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.279 — Prueba actualizada para Américas y Canarias 4096
+
+La prueba `scripts/karting-americas-official-smoke.mjs` asumía literalmente el allowlist anterior del entorno fotográfico y fallaba al añadir correctamente el circuito `karting-canarias-4096`. Se actualiza la aserción para verificar el nuevo allowlist que mantiene a Américas y añade Canarias 4096. Sin cambios de colisiones, decoraciones, fotos, coche, físicas ni gate de meta. Mantener íntegramente los cinco proyectos de DEV 1.2.276 y aprobar todas las pruebas y Pages antes de mostrar la actualización. No APK ni Play.
+
+
 ## DEV 1.2.278 — Test de enrutamiento Canarias reconstruido
 
 Se actualiza `scripts/karting-canarias-owner-project-smoke.mjs` para reflejar que la lista segura de entornos fotográficos ahora incluye `karting-canarias-4096` además de `karting-canarias`. Se añade aserción que exige preferir el nuevo entorno 4096 sobre el de ×2,5, manteniendo aisladas las vistas locales. La DEV anterior paró por aserción obsoleta del listado antiguo; sin cambios a la geometría de usuario. Mantener versión 70% Atlántico y cinco proyectos oficiales.

@@ -96,7 +96,7 @@ const registry=fs.readFileSync('src/game/tracks/trackRegistry.js','utf8');
 assert.ok(registry.includes("import.meta.glob('./library/*/track.json'"));
 assert.ok(!registry.includes('if(trackId===AMERICAS)'),'Old device drafts must not override official track');
 const race=fs.readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
-assert.ok(race.includes("'karting-americas','karting-canarias','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey))"),'Published photo-native environments must be active in races');
+assert.ok(race.includes("'karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey))"),'Published photo-native environments must include the rebuilt Canarias 4096 and Américas');
 const editor=fs.readFileSync('src/game/scenes/EnvironmentBuilderRealTrackCleanScene.js','utf8');
 assert.ok(editor.includes("native?.availability==='published'&&Array.isArray(native.tiles)"));
 for(const tile of track.meta.imageNative.tiles){
