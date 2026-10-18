@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import {readFileSync,existsSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import sharp from 'sharp';
+const src='src/game/tracks/library/karting-canarias-4096/source/karting-canarias-4096.tdrtrack';
+const sha=b=>createHash('sha256').update(b).digest('hex');
+assert.ok(existsSync(src),'Corrected owner .tdrtrack must exist');
+assert.equal(sha(readFileSync(src)),'1c3e92545c12e0b9941f10e81f8ca6c58e233c909e59005c465507d3b90bc086');
+const path='src/game/tracks/library/karting-canarias-4096/track.json';
+assert.ok(existsSync(path),'prebuild must install rebuilt Canarias');
+const track=JSON.parse(readFileSync(path,'utf8'));
+assert.deepEqual([track.worldW,track.worldH],[4096,6144]);
+assert.equal(track.centerline.length,590);
+assert.equal(track.trackWidth,180);
+assert.equal(track.checkpoints.length,2,'game enforces two selected gates');
+assert.equal(track.meta.authoredCheckpointsSourceCount,3,'all three original gates retained in metadata');
+assert.equal(track.meta.paintedCheckeredFinish,true);
+assert.equal(track.meta.imageNative.worldScale,1);
+assert.equal(track.meta.imageNative.tiles.length,8);
+assert.ok(track.finishLine?.a&&track.finishLine?.b&&track.start);
+for(const tile of track.meta.imageNative.tiles){
+ const file='public/'+tile.assetPath;
+ assert.ok(existsSync(file),'Missing full-res tile: '+file);
+ const m=await sharp(file).metadata();
+ assert.deepEqual([m.width,m.height,m.format],[2048,1536,'webp']);
+}
+const selection=readFileSync('src/game/tracks/trackUnlocks.js','utf8');
+assert.ok(selection.includes("id==='karting-canarias'&&REBUILT_CANARIAS_PRESENT?'karting-canarias-4096':id"));
+assert.ok(!selection.includes('REBUILT_CANARIAS_PRESENT=!IS_PROD_BUILD'));
+const registry=readFileSync('src/game/tracks/trackRegistry.js','utf8');
+assert.ok(registry.includes("slug==='karting-canarias'||slug==='karting-canarias-narrow70'"));
+console.log('CANARIAS 4096: source, 8 photo tiles, finish, checkpoints, one Android/DEV selection OK');

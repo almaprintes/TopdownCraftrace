@@ -1,4 +1,4 @@
-name: TDR real AdMob RevenueCat QA APK
+name: TDR real AdMob RevenueCat minified QA APK
 # DEV 1.2.216: include corrected Karting staging in all main Android checks.
 
 on:
@@ -38,6 +38,10 @@ jobs:
     timeout-minutes: 40
     env:
       BASE: ./
+      TDR_CI_BRIDGE_TEST: '1' # QA debug-key signing for isolated release; not Play
+      TDR_ANDROID_TEST_BUILD_TYPE: release
+      VITE_TDR_ONLINE_URL: ${{ vars.VITE_TDR_ONLINE_URL }}
+      VITE_TDR_ONLINE_PUBLIC: ${{ vars.VITE_TDR_ONLINE_PUBLIC }}
       # These three identifiers are PUBLIC Android app/SDK identifiers by design.
       # They are bundled into the distributable app, not secret/private API keys.
       TDR_ADMOB_APP_ID: ca-app-pub-1520547848869532~9780989345
@@ -85,27 +89,29 @@ jobs:
           node scripts/lobby-reward-ready-glow-smoke.mjs
           node scripts/cloud-portability-smoke.mjs
           npm run build:android
+          node scripts/karting-canarias-4096-smoke.mjs
+          node scripts/android-release-candidate-smoke.mjs
           node scripts/verify-android-launcher.mjs
       - name: Compile APK with real AdMob and RevenueCat integrations
         working-directory: android
-        run: ./gradlew :app:assembleDeviceTestDebug --stacktrace
+        run: ./gradlew :app:testDeviceTestReleaseUnitTest :app:assembleDeviceTestRelease --stacktrace
       - name: Validate separate package and APK
         shell: bash
         run: |
           set -euo pipefail
-          src='android/app/build/outputs/apk/deviceTest/debug/app-deviceTest-debug.apk'
+          src='android/app/build/outputs/apk/deviceTest/release/app-deviceTest-release.apk'
           test -s "$src"
           unzip -t "$src" | tail -1
           "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'"
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-DEV-1.2.220.apk
-          sha256sum sdk-download/TDR-QA-DEV-1.2.220.apk
+          cp "$src" sdk-download/TDR-QA-DEV-1.2.266-REAL-ADS-SIN-MEDIR.apk
+          sha256sum sdk-download/TDR-QA-DEV-1.2.266-REAL-ADS-SIN-MEDIR.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-DEV-1.2.220
-          path: sdk-download/TDR-QA-DEV-1.2.220.apk
+          name: TDR-QA-DEV-1.2.266-REAL-ADS-SIN-MEDIR
+          path: sdk-download/TDR-QA-DEV-1.2.266-REAL-ADS-SIN-MEDIR.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error

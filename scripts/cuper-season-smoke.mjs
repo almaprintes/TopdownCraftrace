@@ -34,6 +34,10 @@ assert.ok(skin.includes('seasonSkinUnlocks().includes'), 'Gold cannot be equippe
 const ui=file('src/game/scenes/SeasonScene.js');
 assert.ok(ui.includes('data.gated')&&ui.includes('CUPER_SEASON'), 'Cuper road and 500km gate');
 assert.ok(ui.includes('s-help-overlay'), 'each stage has how-to help');
+const lobby=file('src/game/ui/LobbyDomUi.js'),lobbyCss=file('src/game/ui/lobby-dom.css');
+assert.ok(lobby.includes('tdr-cuper-mileage-value')&&lobby.includes('tdr-cuper-mileage-remaining'), '500km counter must be prominent in lobby');
+assert.ok(lobby.includes('aria-valuenow')&&lobby.includes('goal-km'), 'counter and remaining are based on real Gripline mileage');
+assert.ok(lobbyCss.includes('.tdr-cuper-mileage-value'), 'counter has responsive styles');
 assert.ok(file('src/game/social/cloudProgress.js').includes('tdr2:seasonSkinUnlocks:v1'));
 for(const path of ['src/game/events/raceEvents.js','src/game/scenes/SeasonScene.js','src/game/ui/LobbyDomUi.js',
 'src/game/online/raceControlOnline.js','src/game/seasons/cuperCampaign.js','src/game/skins/carSkins.js']){

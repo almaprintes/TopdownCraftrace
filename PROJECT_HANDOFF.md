@@ -1,5 +1,12 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.266 — CANARIAS 4096 / CUPER / ANDROID REAL ADS QA
+
+Corregido source Canarias 4096 confirmado en main, SHA256 1c3e92545c12e0b9941f10e81f8ca6c58e233c909e59005c465507d3b90bc086. El prebuild instala las ocho teselas 2048x1536 y la geometría. DEV y Android usan un solo Canarias visible; originales antiguos quedan en Git como respaldo. Los récords viejos NO se renombran.
+
+Cuper mantiene 14 misiones: coche #2, Gold #14, acceso tras inducción y 500 km reales de Avenir Gripline. Lobby muestra odómetro grande, 500km, progreso y distancia restante. Misión #12 exige anuncio verificado y confirmación online. APK QA usa deviceTestRelease con SDK real AdMob/RevenueCat, firmado QA y sin MEDIR. NO publicar Google Play ni generar AAB sin aprobación. Documento: docs/continuity/2026-10-18-canarias-cuper-android-qa.md.
+
+
 ## ANDROID RELEASE QA — DEV 1.2.265 (SIN MEDIR)
 
 [Alcance y pasos](docs/continuity/2026-10-17-android-release-qa-no-medir.md). APK release minificada de sabor `bridgeTest` aislado, usa `tdr-prod` sin panel MEDIR ni diagnóstico iOS. Test AdMob, sin RevenueCat ni AAB, no sustituye Google Play y NO verifica congelaciones de anuncios reales. Canarias 4096 requiere subir bundle binario antes de considerar publicación. Workflow `.github/workflows/android-sdk-apk.yml`, artifact `TDR-ANDROID-QA-DEV-1.2.265-SIN-MEDIR`.

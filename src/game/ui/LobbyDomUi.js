@@ -44,11 +44,12 @@ function renderDomCards(scene, root) {
   const eventSlot = root.querySelector('[data-event-card]'); const carSlot = root.querySelector('[data-car-card]'); const trackSlot = root.querySelector('[data-track-card]');
   const eventData = getCurrentRaceEvent();
   if (eventSlot) {
+    eventSlot.classList.toggle('tdr-cuper-mileage-active',eventData.gated===true);
     const en=getLanguage()==='en';
     if(eventData.gated){
       const km=Math.max(0,Number(eventData.mileageMeters)||0)/1000,goal=Math.max(1,Number(eventData.requiredMeters)||500000)/1000;
-      const ratio=Math.min(100,Math.max(0,km/goal*100));
-      eventSlot.innerHTML=`<div class="tdr-card-kicker">${en?'NEXT SEASON':'PRÓXIMA TEMPORADA'}</div><h2>CROWN CUPER 🔒</h2><p>${en?'Master your Avenir Gripline':'Domina tu Avenir Gripline'}</p><div class="tdr-event-progress"><i style="width:${ratio.toFixed(2)}%"></i></div><strong>${km.toFixed(1)} / ${goal} km</strong><div class="tdr-season-next">${en?'Odometer never resets':'El cuentakilómetros no se reinicia'}</div>`;
+      const ratio=Math.min(100,Math.max(0,km/goal*100)),remaining=Math.max(0,goal-km);
+      eventSlot.innerHTML=`<div class="tdr-card-kicker">${en?'NEXT SEASON · 500 KM':'PRÓXIMA TEMPORADA · 500 KM'}</div><h2>CROWN CUPER 🔒</h2><p>${en?'Drive your AVENIR GRIPLINE to unlock':'Conduce tu AVENIR GRIPLINE para desbloquearla'}</p><strong class="tdr-cuper-mileage-value">${km.toFixed(1)}<span> / ${goal.toFixed(0)} km</span></strong><div class="tdr-event-progress tdr-cuper-mileage-progress" role="progressbar" aria-label="${en?'Gripline kilometers toward Cuper':'Kilómetros del Gripline para desbloquear Cuper'}" aria-valuemin="0" aria-valuemax="${goal.toFixed(0)}" aria-valuenow="${Math.min(km,goal).toFixed(1)}"><i style="width:${ratio.toFixed(2)}%"></i></div><strong class="tdr-cuper-mileage-remaining">${en?'ONLY '+remaining.toFixed(1)+' KM TO GO':'FALTAN '+remaining.toFixed(1)+' KM'}</strong><div class="tdr-season-next">${en?'Real lifetime mileage · never resets':'Kilometraje real acumulado · no se reinicia'}</div>`;
     }else if(eventData.finished){
       const km=Math.max(0,Number(eventData.mileageMeters)||0)/1000;
       eventSlot.innerHTML=eventData.family==='cuper'
