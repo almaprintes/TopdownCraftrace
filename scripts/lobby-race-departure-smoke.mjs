@@ -89,6 +89,8 @@ assert.match(script,/LOBBY_DEPARTURE_DEPTH\.car/);
 assert.match(script,/LOBBY_DEPARTURE_DEPTH\.mastery/);
 assert.match(script,/function playLobbyTireEffects\(platformPart,carRect,platformRect,turnAngle,animations\)/);
 assert.match(script,/playLobbyTireEffects\(platformPart,car\.getBoundingClientRect\(\),pr,turnAngle,animations\)/);
+assert.match(script,/rubber\.ctx\.translate\(platformRect\.width\/2,platformRect\.height\/2\)/,
+ 'centered tire contact coordinates must map into canvas pixel space');
 assert.match(script,/paintLobbyRubber\(rubber\.ctx,contacts\)/);
 assert.match(script,/paintLobbySmoke\(smoke\.ctx,175,100\)/);
 assert.match(script,/makeLobbyDepartureCanvas\(175,100,'tdr-lobby-tire-smoke'\)/);

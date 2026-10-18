@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.289 — Corregida la referencia de coordenadas del lienzo de derrapes
+
+Al revisar la integración de los dos nuevos lienzos de DEV 1.2.288 se detectó que la geometría de los contactos de las ruedas está referida al **centro** de la plataforma, mientras que un canvas dibuja desde su **esquina superior izquierda**. Se añade `rubber.ctx.translate(platformRect.width/2,platformRect.height/2)` antes de pintar los depósitos, para que las dos huellas aparezcan **realmente detrás de las ruedas** y no desplazadas media plataforma. Se protege en `lobby-race-departure-smoke.mjs`. No cambian la textura orgánica, el humo, el ascensor, las físicas ni los tiempos. No APK/AAB ni Play; validación visual pendiente en dispositivo.
+
+
 ## DEV 1.2.288 — Efectos de arrancada orgánicos, sin palos ni bolas
 
 El propietario aportó capturas de DEV 1.2.287 y rechazó los **dos palos negros rectangulares** y el **humo como un círculo de bordes definidos**. Se eliminan completamente los gradientes de bloque y el rectángulo/óvalo animado. Se reemplazan por dos pequeños lienzos transparentes `canvas` de una sola renderización (sin RAF, sin textura remota): **huellas** compuestas por más de 100 microlíneas curvas, fragmentadas, con ancho, opacidad, dispersión y longitud variables (aprox. 50–85 px, 4–7 px de ancho máximo), y **una sola estela de humo** formada por ~58 veladuras radiales solapadas, sin círculos separados ni borde uniforme; la expansión y la deriva tienen lugar detrás del eje trasero. Los pinceles son deterministas para que la estética sea estable y testeable. Dos `canvas` temporales se anclan a `platformPart`, por encima de la plataforma, por debajo de la imagen del coche, y se eliminan/cancelan al cerrar la escena. `scripts/lobby-race-departure-smoke.mjs` comprueba numéricamente el sentido ±90°, trazos curvos de textura, diferencias entre ruedas, número de veladuras y no bloqueo. Sin cambios en ascensor, UI, vehículos, físicas, dimensiones, dirección de salida, precarga ni transición 1600+180+520 ms. DEV web desde `main`, sin APK/AAB ni Play. **Validación visual en dispositivo sigue pendiente**.

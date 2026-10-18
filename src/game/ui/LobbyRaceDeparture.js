@@ -204,6 +204,9 @@ function playLobbyTireEffects(platformPart,carRect,platformRect,turnAngle,animat
  const angle=Math.atan2(contacts[0].dy,contacts[0].dx)*180/Math.PI;
  const x=(contacts[0].x+contacts[1].x)/2;
  const y=(contacts[0].y+contacts[1].y)/2;
+ // Canvas starts at the platform's top-left, but the contact geometry
+ // is centered on the stage pivot: translate once before painting.
+ rubber.ctx.translate(platformRect.width/2,platformRect.height/2);
  paintLobbyRubber(rubber.ctx,contacts);
  paintLobbySmoke(smoke.ctx,175,100);
  Object.assign(smoke.canvas.style,{
