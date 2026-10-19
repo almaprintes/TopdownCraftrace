@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   real_ads_qa:
@@ -86,6 +86,7 @@ jobs:
           node scripts/coin-reward-flight-smoke.mjs
           node scripts/recycler-premium-ui-smoke.mjs
           node scripts/cuper-season-smoke.mjs
+          node scripts/release-language-audit.mjs
           node scripts/lobby-reward-ready-glow-smoke.mjs
           node scripts/cloud-portability-smoke.mjs
           npm run build:android
@@ -104,14 +105,30 @@ jobs:
           unzip -t "$src" | tail -1
           "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'"
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-DEV-1.2.266-REAL-ADS-SIN-MEDIR.apk
-          sha256sum sdk-download/TDR-QA-DEV-1.2.266-REAL-ADS-SIN-MEDIR.apk
+          cp "$src" sdk-download/TDR-QA-DEV-1.2.299-REAL-ADS-SIN-MEDIR.apk
+          sha256sum sdk-download/TDR-QA-DEV-1.2.299-REAL-ADS-SIN-MEDIR.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-DEV-1.2.266-REAL-ADS-SIN-MEDIR
-          path: sdk-download/TDR-QA-DEV-1.2.266-REAL-ADS-SIN-MEDIR.apk
+          name: TDR-QA-DEV-1.2.299-REAL-ADS-SIN-MEDIR
+          path: sdk-download/TDR-QA-DEV-1.2.299-REAL-ADS-SIN-MEDIR.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
+
+      - name: Make direct-download GitHub prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk='sdk-download/TDR-QA-DEV-1.2.299-REAL-ADS-SIN-MEDIR.apk'
+          tag='tdr-qa-1.2.299'
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$apk" --clobber
+          else
+            gh release create "$tag" "$apk" --target "$GITHUB_SHA" --prerelease \
+              --title 'Top Down Race · APK de pruebas DEV 1.2.299' \
+              --notes 'APK Android independiente para pruebas, sin MEDIR y con integración real de AdMob y RevenueCat. No publicado en Google Play. No usar para generar impresiones publicitarias artificiales.'
+          fi

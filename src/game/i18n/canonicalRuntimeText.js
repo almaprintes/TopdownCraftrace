@@ -1,4 +1,5 @@
 import { getLanguage } from './index.js';
+import {translateAccountRuntimeText} from './accountUiTranslation.js';
 
 const PROPER_NAMES=new Set(['CIRCUITO ATLÁNTICO','KARTING TENERIFE','KARTING CANARIAS','RAVEN HOLLOW','SANTA CRUZ','SWITCHBACK PARK','TECHNICAL RIDGE','CHICANE VALE','BAKU','IMOLA','MONTE CARLO','MIAMI','HÉLIX SPARK']);
 
@@ -39,6 +40,8 @@ export function canonicalRuntimeText(value){
  if(Array.isArray(value))return value.map(canonicalRuntimeText);
  let s=String(value),trimmed=s.trim();
  if(PROPER_NAMES.has(trimmed))return s;
+ const account=translateAccountRuntimeText(trimmed);
+ if(account!==null){const i=s.indexOf(trimmed);return s.slice(0,i)+account+s.slice(i+trimmed.length);}
  if(EXACT.has(trimmed)){const at=s.indexOf(trimmed);return s.slice(0,at)+EXACT.get(trimmed)+s.slice(at+trimmed.length);}
  s=dynamicPatterns(s);
  for(const [re,to] of REPLACEMENTS)s=s.replace(re,to);

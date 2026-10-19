@@ -147,6 +147,7 @@ jobs:
           node scripts/rewarded-audio-focus-smoke.mjs
           node scripts/cloud-portability-smoke.mjs
           node scripts/account-creator-badge-smoke.mjs
+          node scripts/release-language-audit.mjs
           node scripts/race-control-creator-badges-smoke.mjs
           node scripts/battery-frame-budget-smoke.mjs
           node scripts/spark-longitudinal-smoke.mjs

@@ -1,3 +1,5 @@
+import {canonicalRuntimeText,localizeDomTree} from '../i18n/canonicalRuntimeText.js';
+import {getLanguage} from '../i18n/index.js';
 import {
   currentRaceControlAccount,requestRaceControlEmailLink,
   verifyRaceControlEmailCode,setRaceControlPassword,
@@ -17,7 +19,7 @@ const extract=(form,key)=>String(new FormData(form).get(key)||'').trim();
 const dateText=value=>{
   if(!value)return '—';
   const date=new Date(value);
-  return Number.isFinite(date.valueOf())?date.toLocaleString('es-ES'):String(value);
+  return Number.isFinite(date.valueOf())?date.toLocaleString(getLanguage()==='en'?'en-GB':'es-ES'):String(value);
 };
 // The existing Settings → Cuenta tab owns the normal account UI.
 // First-run onboarding may still open the same UI as a temporary modal before
@@ -76,9 +78,12 @@ export function openCloudAccountUi({host=null}={}){
   style.textContent+="\n  #tdr-cloud-account-modal .tdr-cloud-panel{max-width:760px;margin-inline:auto;}\n  #tdr-cloud-account-modal[data-inline=\"1\"] .tdr-cloud-panel{max-width:760px;margin-inline:auto;}\n  #tdr-cloud-account-modal .tdr-cloud-driver>div{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;}\n  #tdr-cloud-account-modal .tdr-cloud-driver strong{width:100%;}\n  #tdr-cloud-account-modal [data-cloud-creator-badge]{display:inline-flex;padding:3px 10px;\n    border:1px solid #ac843c;border-radius:14px;color:#ffd17b;background:rgba(100,56,5,.3);\n    font:900 11px system-ui;letter-spacing:.075em;}\n  #tdr-cloud-account-modal [data-cloud-creator-badge][hidden]{display:none;}\n  #tdr-cloud-account-modal [data-cloud-player-id]{color:#b0c9d8;font:700 10px system-ui;}\n  #tdr-cloud-account-modal .tdr-cloud-main-actions{display:flex;flex-wrap:wrap;gap:10px;}\n  #tdr-cloud-account-modal .tdr-cloud-main-actions button{min-width:200px;max-width:350px;flex:1 1 220px;}\n  #tdr-cloud-account-modal button.tdr-cloud-secondary{border:1px solid #50748d;color:#d6e9f4;background:#11283e;box-shadow:none;font-size:12px;}\n  #tdr-cloud-account-modal .tdr-cloud-state[data-state=\"saved\"]{border-color:#2f9577;background:#0e2a2b;}\n  #tdr-cloud-account-modal .tdr-cloud-tip{text-align:left;color:#dcc091;font-size:12px;line-height:1.5;}\n  @media(max-width:520px){#tdr-cloud-account-modal .tdr-cloud-main-actions button{max-width:none;min-width:100%;}}\n";
   document.head.appendChild(style);
   (host||document.body).appendChild(root);
+  localizeDomTree(root);
   const state=root.querySelector('[data-cloud-state]');
   const notice=root.querySelector('[data-cloud-message]');
-  const setNotice=(message,good=true)=>{notice.textContent=String(message||'');notice.style.color=good?'#adffcc':'#ffaaa9';};
+  const localText=value=>getLanguage()==='en'?canonicalRuntimeText(value):value;
+  const accountConfirm=value=>window.confirm(localText(value));
+  const setNotice=(message,good=true)=>{notice.textContent=localText(String(message||''));notice.style.color=good?'#adffcc':'#ffaaa9';};
   let busy=false,account=null,backup=null;
   const setView=stage=>{
     for(const section of root.querySelectorAll('[data-stage]'))section.hidden=section.dataset.stage!==stage;
@@ -104,6 +109,7 @@ export function openCloudAccountUi({host=null}={}){
       'No se ha cambiado ni borrado tu progreso.';
     for(const key of ['backup-manual','restore-manual','export-cloud'])
       root.querySelector('[data-action="'+key+'"]').disabled=true;
+    localizeDomTree(root);
   };
   const refresh=async()=>{
     // Auth first, then the cloud lookup: cold starts must never register two
@@ -159,6 +165,7 @@ export function openCloudAccountUi({host=null}={}){
     root.querySelector('[data-action="export-cloud"]').disabled=!backup.existing;
     const verifyEmail=root.querySelector('[data-form="verify"] input[name="email"]');
     if(verifyEmail&&!verifyEmail.value)verifyEmail.value=account.pendingEmail||account.email||'';
+    localizeDomTree(root);
   };
   const run=async(task,{reload=false}={})=>{
     if(busy)return;
@@ -210,7 +217,7 @@ export function openCloudAccountUi({host=null}={}){
     const local=inspectLocalProgress();
     if(!local.meaningful)throw new Error('No hay progreso local suficiente para guardar.');
     const action=status.existing?'ACTUALIZAR':'CREAR';
-    if(!window.confirm(action+' COPIA EN LA NUBE\n\n'+
+    if(!accountConfirm(action+' COPIA EN LA NUBE\n\n'+
       local.keys+' bloques · '+(local.pilotName||'Piloto sin nombre')+
       '\nJugador: '+status.id+
       (status.existing?'\nÚltima copia: '+dateText(status.updatedAt):'')+
@@ -230,9 +237,9 @@ export function openCloudAccountUi({host=null}={}){
       '\nLocal actual: '+local.keys+' bloques · '+(local.pilotName||'Sin nombre')+
       '\n\nESTO SUSTITUIRÁ LA PARTIDA GUARDADA EN ESTE DISPOSITIVO. '+
       'No modifica la copia de la nube ni la cuenta. ¿Continuar?';
-    if(!window.confirm(warning))return 'Restauración cancelada. No se cambió nada.';
+    if(!accountConfirm(warning))return 'Restauración cancelada. No se cambió nada.';
     const result=await restoreCloudBackup();
-    if(!window.confirm('✅ Recuperación completada: '+result.restoredKeys+
+    if(!accountConfirm('✅ Recuperación completada: '+result.restoredKeys+
       ' bloques. Reiniciar el juego para cargar la partida recuperada.'))return
       'Copia restaurada. Reinicia manualmente la aplicación para cargarla.';
     window.location.reload();
@@ -291,7 +298,7 @@ export function openCloudAccountUi({host=null}={}){
     const email=extract(event.currentTarget,'email');
     const password=String(new FormData(event.currentTarget).get('password')||'');
     run(async()=>{
-      if(!window.confirm('ENTRAR CON '+email+'\n\nSe cambiará la identidad online. La partida LOCAL NO se borrará ni fusionará. Después tendrás que pulsar RECUPERAR PARTIDA. ¿Continuar?'))
+      if(!accountConfirm('ENTRAR CON '+email+'\n\nSe cambiará la identidad online. La partida LOCAL NO se borrará ni fusionará. Después tendrás que pulsar RECUPERAR PARTIDA. ¿Continuar?'))
         return 'Inicio de sesión cancelado.';
       const session=await switchRaceControlAccount(email,password);
       try{localStorage.setItem('tdr2:cloudRecoveryChecked:'+session.user.id,'1');}catch{}
