@@ -1,5 +1,15 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.304 — Optimización iPhone de la línea Bézier de Arafo (sin modificar colisiones)
+
+Feedback del propietario, 19/10: «En iPhone va peor. No se como irá en android» tras reemplazar 27 zonas por 1 línea Bézier de 190 nodos. Se descarta asumir que «1 línea» implica menos CPU: `sampleCollisionLine(line,18)` genera ~1222 segmentos físicos. Auditoría de `raceEnvironmentRuntime.js` identifica dos fuentes plausibles de sobrecoste:
+1. `resolveBodyAgainstColliders` escribía `body.setPosition` y las velocidades **dos veces por fotograma** (según capas/cuerpos) incluso si no había contacto, a diferencia de los 27 polígonos, cuyo resolvedor solo escribe tras una colisión real. Corrección: indicador `hadContact` para círculos y segmentos; si no hay impacto, salida temprana sin setters. Se mantiene idéntica la respuesta a choques reales.
+2. Índice espacial por defecto con celdas de 256 px y margen de 96 px entrega demasiados segmentos por vecindad en tramo montañoso. Se aplica **únicamente a Arafo con una línea densa** índice compacto 128 px/margen 40 px. Otros circuitos siguen 256/96. El fallback de radio excepcional conserva exhaustividad.
+
+Comparación geométrica offline de la barrera **sin datos reales de FPS:** >1.200 segmentos, alrededor de 100 candidatos medios por consulta anterior frente a ~35 candidatos en el nuevo índice (reducción aproximada 65 % de candidatos, **no de tiempo de fotograma ni de CPU**). Nuevo test `scripts/arafo-collision-index-optimization-smoke.mjs` verifica reducción, alcance seguro de la búsqueda alrededor de cada barrera, aislamiento entre circuitos, preservación del dataset (190 nodos, 0 zonas) y ausencia de `setPosition` sin choque. Ejecutado en Pages CI y prebuild.
+
+**Nada de volver a 27 zonas:** conservar la única línea Bézier exactamente como la exportó el propietario. Congeladas todas las físicas RALLY 1.0 aprobadas en DEV 1.2.301; sin cambios en `rallyDrivingProfile.js`, conducción, fotografía, meta, pistas ni economía. **Pendiente test A/B en el iPhone** con mismas opciones, después recopilar impresiones Android. No atribuir la regresión de forma definitiva hasta medir en dispositivo. DEV PWA únicamente; sin APK/AAB ni Google Play.
+
 ## DEV 1.2.303 — Arafo: 27 zonas antiguas eliminadas, nueva colisión Bézier del propietario
 
 **Autorización (19/10):** el propietario exportó `rally-arafo-los-loros.environment(1).json` desde Environment Studio y confirmó literalmente «Fuera zonas». Se sustituye por completo el fichero publicado `src/game/tracks/library/rally-arafo-los-loros/rally-arafo-los-loros.environment.json` (no se mezclan obstáculos antiguos): **1 única `collisionLine`**, 190 anclajes Bézier exactos del export, tipo `collision`, `halfThickness: 9`; **`collisionZones: []`**, 0 barreras lineales y sin decoraciones/superficies añadidas. Los 27 polígonos (484 vértices) anteriores quedan eliminados del ambiente activo del repositorio; la versión anterior sigue recuperable por historia de Git.
