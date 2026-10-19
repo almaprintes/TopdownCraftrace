@@ -2,6 +2,7 @@ import { UpgradeShopScene as GuardedWorkshop } from './UpgradeWorkshopEvolutionG
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { qty, saveGarage, getEquippedForCar } from '../garage/garageStore.js';
 import { drawInventorySurface } from '../ui/inventoryPremiumDraw.js';
+import {t,getLanguage} from '../i18n/index.js';
 
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 const MATERIAL_IDS=['scrap','alloy','rubber','compound','disc','spring','gear','ecu'];
@@ -15,7 +16,7 @@ export class UpgradeShopScene extends GuardedWorkshop {
     const bw=compact?104:132,bh=compact?28:34;
     const bx=w-(compact?210:270),by=(compact?50:62)/2;
     const b=A(this.add.rectangle(bx,by,bw,bh,0x173b52,.98).setStrokeStyle(2,0x45dfff,.9).setInteractive({useHandCursor:true}));
-    A(this.add.text(bx,by,'INVENTARIO',{fontFamily:UI,fontSize:compact?'8px':'11px',fontStyle:'800',color:'#ffffff'}).setOrigin(.5));
+    A(this.add.text(bx,by,t('inventory.title'),{fontFamily:UI,fontSize:compact?'8px':'11px',fontStyle:'800',color:'#ffffff'}).setOrigin(.5));
     b.on('pointerup',()=>{if(!this.busy)this._openFactoryInventoryModal('parts',0,0);});
   }
 
@@ -56,18 +57,20 @@ export class UpgradeShopScene extends GuardedWorkshop {
     const root=this.add.container(0,0).setDepth(35000);this._factoryInventoryModal=root;
     const A=o=>{root.add(o);return o;};
     const veil=A(this.add.rectangle(0,0,width,height,0x02070d,.92).setOrigin(0).setInteractive());
-    drawInventorySurface(this,A,{x:cx-panelW/2,y:cy-panelH/2,w:panelW,h:panelH,kind:'shell',accent:0x65e8ff});
+    const sharedInventoryGraphics=A(this.add.graphics());
+    const drawSurface=options=>drawInventorySurface(this,A,options,sharedInventoryGraphics);
+    drawSurface({x:cx-panelW/2,y:cy-panelH/2,w:panelW,h:panelH,kind:'shell',accent:0x65e8ff});
     const titleY=cy-panelH/2+(compact?14:20);
-    A(this.add.text(cx,titleY,'INVENTARIO',{fontFamily:UI,fontSize:compact?'24px':'31px',fontStyle:'800',color:'#fff'}).setOrigin(.5,0));
+    A(this.add.text(cx,titleY,t('inventory.title'),{fontFamily:UI,fontSize:compact?'24px':'31px',fontStyle:'800',color:'#fff'}).setOrigin(.5,0));
     const tabY=titleY+(compact?48:62),tabW=compact?150:190,tabH=compact?32:38,gap=10;
     const tabBtn=(x,label,key)=>{
       const active=tab===key;
-      drawInventorySurface(this,A,{x:x-tabW/2,y:tabY-tabH/2,w:tabW,h:tabH,kind:'tab',accent:key==='materials'?0x65e8ff:0xf0c566,active});
+      drawSurface({x:x-tabW/2,y:tabY-tabH/2,w:tabW,h:tabH,kind:'tab',accent:key==='materials'?0x65e8ff:0xf0c566,active});
       const b=A(this.add.rectangle(x,tabY,tabW,tabH,0x0d1a24,.01).setStrokeStyle(0,0x355064,0).setInteractive({useHandCursor:true}));
       A(this.add.text(x,tabY,label,{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'800',color:active?'#fff':'#9eb1c4'}).setOrigin(.5));
       b.on('pointerup',()=>this._openFactoryInventoryModal(key,0,0));
     };
-    tabBtn(cx-tabW/2-gap/2,'MATERIALES','materials');tabBtn(cx+tabW/2+gap/2,'PIEZAS','parts');
+    tabBtn(cx-tabW/2-gap/2,t('inventory.materials'),'materials');tabBtn(cx+tabW/2+gap/2,t('inventory.parts'),'parts');
 
     const equipped=getEquippedForCar(this.state,this.car)||{};
     if(tab==='parts'){
@@ -75,7 +78,7 @@ export class UpgradeShopScene extends GuardedWorkshop {
       const start=cx+panelW/2-total-(compact?38:48);
       [1,2,3,4].forEach((tier,i)=>{
         const active=Number(tierFilter)===tier,x=start+i*(fw+fg)+fw/2;
-        drawInventorySurface(this,A,{x:x-fw/2,y:tabY-fh/2,w:fw,h:fh,kind:'tab',accent:TIER_COLOR[tier],active});
+        drawSurface({x:x-fw/2,y:tabY-fh/2,w:fw,h:fh,kind:'tab',accent:TIER_COLOR[tier],active});
         const b=A(this.add.rectangle(x,tabY,fw,fh,0x0d1a24,.01).setStrokeStyle(0,TIER_COLOR[tier],0).setInteractive({useHandCursor:true}));
         A(this.add.text(x,tabY,TIER_ROMAN[tier],{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'800',color:active?'#07111f':'#fff'}).setOrigin(.5));
         b.on('pointerup',()=>this._openFactoryInventoryModal('parts',0,active?0:tier));
@@ -85,7 +88,7 @@ export class UpgradeShopScene extends GuardedWorkshop {
     const ids=(tab==='materials'?MATERIAL_IDS:PART_IDS
       .filter(id=>qty(this.state,id)>0||Object.values(equipped).includes(id))
       .filter(id=>!tierFilter||Number(GARAGE_ITEMS[id]?.tier||0)===Number(tierFilter))
-      .sort((a,b)=>Number(GARAGE_ITEMS[a]?.tier||0)-Number(GARAGE_ITEMS[b]?.tier||0)||String(GARAGE_ITEMS[a]?.family||'').localeCompare(String(GARAGE_ITEMS[b]?.family||''),'es')||String(GARAGE_ITEMS[a]?.name||a).localeCompare(String(GARAGE_ITEMS[b]?.name||b),'es')));
+      .sort((a,b)=>Number(GARAGE_ITEMS[a]?.tier||0)-Number(GARAGE_ITEMS[b]?.tier||0)||String(GARAGE_ITEMS[a]?.family||'').localeCompare(String(GARAGE_ITEMS[b]?.family||''),getLanguage())||String(GARAGE_ITEMS[a]?.name||a).localeCompare(String(GARAGE_ITEMS[b]?.name||b),getLanguage())));
 
     const cols=4,rows=2,perPage=8,pad=22,cg=compact?8:11;
     const gridW=panelW-pad*2,cardW=(gridW-cg*3)/4,gridY=tabY+tabH/2+(compact?16:22),bottom=compact?34:46;
@@ -98,7 +101,7 @@ export class UpgradeShopScene extends GuardedWorkshop {
       const col=i%4,row=Math.floor(i/4),x=cx-gridW/2+col*(cardW+cg),y=gridY+row*(cardH+cg);
       // Same premium visual shell as the lobby inventory, with original
       // install / uninstall handlers kept on the untouched hit rectangle.
-      drawInventorySurface(this,A,{x,y,w:cardW,h:cardH,kind:'card',
+      drawSurface({x,y,w:cardW,h:cardH,kind:'card',
         accent:tab==='parts'?accent:0x65e8ff,installed});
       const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.01).setOrigin(0).setStrokeStyle(0,accent,0));
       const art={x:x+8,y:y+8,w:cardW-16,h:cardH*(tab==='parts'?.62:.60)};
@@ -112,7 +115,7 @@ export class UpgradeShopScene extends GuardedWorkshop {
       if(tab==='materials'){
         A(this.add.text(x+cardW/2,y+cardH*.88,`×${q}`,{fontFamily:UI,fontSize:compact?'15px':'18px',fontStyle:'800',color:'#7ddcff'}).setOrigin(.5));
       }else{
-        const action=installed?'DESINSTALAR':`INSTALAR · ×${q}`;
+        const action=installed?t('inventory.uninstall'):`${t('inventory.install',{qty:''}).replace(/[×x]\s*$/i,'').trim()} · ×${q}`;
         A(this.add.text(x+cardW/2,y+cardH-(compact?8:11),action,{fontFamily:UI,fontSize:compact?'8px':'10px',fontStyle:'800',color:installed?'#87939d':'#7ddcff'}).setOrigin(.5,1));
         card.setInteractive({useHandCursor:true});
         if(installed){card.on('pointerup',()=>{if(this._unequipFromInventory(id)){this.render();this._openFactoryInventoryModal('parts',page,tierFilter);}});}
@@ -120,12 +123,12 @@ export class UpgradeShopScene extends GuardedWorkshop {
       }
     });
 
-    if(tab==='parts'&&ids.length===0)A(this.add.text(cx,gridY+availableH/2,'NO HAY PIEZAS EN ESTA CATEGORÍA',{fontFamily:UI,fontSize:compact?'14px':'17px',fontStyle:'800',color:'#71879b'}).setOrigin(.5));
+    if(tab==='parts'&&ids.length===0)A(this.add.text(cx,gridY+availableH/2,t('inventory.noTierParts',{tier:TIER_ROMAN[tierFilter]||''}),{fontFamily:UI,fontSize:compact?'14px':'17px',fontStyle:'800',color:'#71879b'}).setOrigin(.5));
     const footerY=cy+panelH/2-(compact?17:23);
     if(pages>1){
       A(this.add.text(cx,footerY,`${page+1}/${pages}`,{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'800',color:'#a9bbca'}).setOrigin(.5));
-      drawInventorySurface(this,A,{x:cx-124,y:footerY-14,w:48,h:28,kind:'tab',accent:0x65e8ff});
-      drawInventorySurface(this,A,{x:cx+76,y:footerY-14,w:48,h:28,kind:'tab',accent:0x65e8ff});
+      drawSurface({x:cx-124,y:footerY-14,w:48,h:28,kind:'tab',accent:0x65e8ff});
+      drawSurface({x:cx+76,y:footerY-14,w:48,h:28,kind:'tab',accent:0x65e8ff});
       const prev=A(this.add.rectangle(cx-100,footerY,48,28,0x132a3b,.01).setStrokeStyle(0,0x45dfff,0).setInteractive({useHandCursor:true}));
       const next=A(this.add.rectangle(cx+100,footerY,48,28,0x132a3b,.01).setStrokeStyle(0,0x45dfff,0).setInteractive({useHandCursor:true}));
       A(this.add.text(cx-100,footerY,'‹',{fontFamily:UI,fontSize:'20px',fontStyle:'800',color:'#fff'}).setOrigin(.5));A(this.add.text(cx+100,footerY,'›',{fontFamily:UI,fontSize:'20px',fontStyle:'800',color:'#fff'}).setOrigin(.5));

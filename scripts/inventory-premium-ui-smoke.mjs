@@ -26,6 +26,9 @@ for(const kind of ['shell','card','tab']){
   const shape=drawInventorySurface(fakeScene,mount,{x:0,y:0,w:200,h:120,kind,accent:0x6ae8ff,active:true});
   assert.equal(shape,ctx);
 }
+const pooled=drawInventorySurface(fakeScene,mount,{x:2,y:2,w:160,h:70,kind:'card'},ctx);
+assert.equal(pooled,ctx,'the same Graphics may draw further cards');
+assert.equal(created.length,3,'a shared decorative batch allocates no new Graphics');
 assert.equal(created.length,3,'Each premium shape is one graphics object, no bitmap texture');
 assert.ok(calls.filter(c=>c[0]==='fillPoints').length>=3);
 assert.ok(calls.some(c=>c[0]==='lineBetween'),'Shell retains a thin technical divider');
@@ -37,6 +40,12 @@ for(const [name,src] of [['lobby',lobby],['factory',factory]]){
   for(const kind of ["kind:'shell'","kind:'tab'","kind:'card'"]){
     assert.ok(src.includes(kind),name+' uses styled '+kind+' surfaces');
   }
+  assert.match(src,/const sharedInventoryGraphics=A\(this\.add\.graphics\(\)\)/,
+    name+' must allocate exactly one shared decoration graphics');
+  assert.match(src,/drawInventorySurface\(this,A,options,sharedInventoryGraphics\)/,
+    name+' must send all bevel geometry to shared graphics');
+  assert.doesNotMatch(src,/\bdrawInventorySurface\(this,A,\{/,
+    name+' cannot allocate per-card graphics');
   assert.match(src,/\.setInteractive\(\{useHandCursor:true\}\)/,
     name+' must retain original Phaser touch targets');
   assert.match(src,/page=\s*Math\.max\(0,Math\.min\(page,pages-1\)\)/,
@@ -49,6 +58,13 @@ for(const [name,src] of [['lobby',lobby],['factory',factory]]){
     name+' must no longer draw the old heavy opaque rectangle');
 }
 assert.match(lobby,/getEquippedForCar\(garage,carId\)/);
+assert.match(lobby,/inventoryTextResolution=isIOS\(\)\?1\.5:2/);
+assert.match(lobby,/inventoryOpenMark\('drawn',tab,language\)/);
+assert.match(lobby,/inventoryOpenMark\('frame',tab,language\)/);
+assert.ok(lobby.includes("inventory.title"),'Spanish/English header retains i18n');
+assert.ok(factory.includes("t('inventory.title')"),'factory title is bilingual');
+assert.ok(factory.includes("t('inventory.materials')"),'factory tabs are bilingual');
+assert.ok(factory.includes("t('inventory.parts')"),'factory tabs are bilingual');
 assert.match(lobby,/this\._installInventoryPart\(garage,carId,id\)/);
 assert.match(lobby,/this\._unequipInventoryPart\(garage,carId,id\)/);
 assert.match(lobby,/saveGarage\(garage\)/);

@@ -11,6 +11,14 @@ const TIER_SIGLA={1:'I',2:'II',3:'III',4:'IV'};
 const UI='system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
 const locale=()=>getLanguage()==='es'?'es-ES':'en-US';
 const itemName=item=>t(`items.${item?.id}`)!==`items.${item?.id}`?t(`items.${item?.id}`):String(item?.name||item?.id||'');
+const isIOS=()=>/iPhone|iPad|iPod/i.test(String(globalThis.navigator?.userAgent||''));
+function inventoryOpenMark(stage,tab,language){
+  if(!isIOS())return;
+  try{
+    localStorage.setItem('tdr2:inventoryOpenTrace:v1',
+      JSON.stringify({stage,tab,language,at:Date.now()}));
+  }catch{}
+}
 
 export class MenuScene extends PreviousMenuScene {
   _installInventoryPart(garage,carId,id){
@@ -47,11 +55,15 @@ export class MenuScene extends PreviousMenuScene {
     try{this._lobbyInventoryModal?.destroy?.(true);}catch{}
     this._lobbyInventoryModal=null;
 
+    const language=getLanguage();
+    inventoryOpenMark('begin',tab,language);
     const {width,height}=this.scale;
     const garage=loadGarage();
     const carId=(()=>{try{return localStorage.getItem('tdr2:carId')||'stock';}catch{return 'stock';}})();
     const equipped=getEquippedForCar(garage,carId)||{};
     const compact=height<520;
+    // Modest temporary Text texture budget on iPhone; preserve font geometry.
+    const inventoryTextResolution=isIOS()?1.5:2;
     const panelW=Math.min(width-20,1120),panelH=Math.min(height-14,compact?468:560),cx=width/2,cy=height/2;
     const root=this.add.container(0,0).setDepth(16000);
     this._ui?.add(root);
@@ -59,23 +71,31 @@ export class MenuScene extends PreviousMenuScene {
     const A=o=>{root.add(o);return o;};
 
     const veil=A(this.add.rectangle(0,0,width,height,0x02070d,.90).setOrigin(0).setInteractive());
-    drawInventorySurface(this,A,{x:cx-panelW/2,y:cy-panelH/2,w:panelW,h:panelH,kind:'shell',accent:0x65e8ff});
+    // Shared decoration stays below original text, material art and hit targets.
+    const sharedInventoryGraphics=A(this.add.graphics());
+    const drawSurface=options=>drawInventorySurface(this,A,options,sharedInventoryGraphics);
+    drawSurface({x:cx-panelW/2,y:cy-panelH/2,w:panelW,h:panelH,kind:'shell',accent:0x65e8ff});
 
-    const titleY=cy-panelH/2+(compact?14:20);
-    A(this.add.text(cx,titleY,t('inventory.title'),{fontFamily:UI,fontSize:compact?'25px':'31px',fontStyle:'bold',color:'#ffffff',resolution:2}).setOrigin(.5,0));
+    const titleY=cy-panelH/2+(compact?11:16);
+    // Small cyan leader echoes the current lobby and Race Control headers.
+    const heading=A(this.add.text(cx,titleY,t('inventory.title'),{
+      fontFamily:UI,fontSize:compact?'23px':'29px',fontStyle:'bold',
+      color:'#f6fbff',resolution:inventoryTextResolution
+    }).setOrigin(.5,0));
+    if(typeof heading.setLetterSpacing==='function')heading.setLetterSpacing(1.2);
 
     const coinsY=titleY+(compact?34:42);
     const coinText=t('inventory.coins',{coins:Math.max(0,Math.floor(Number(garage.coins)||0)).toLocaleString(locale())});
     const badgeW=Math.min(panelW*.46,compact?255:360),badgeH=compact?22:28;
-    drawInventorySurface(this,A,{x:cx-badgeW/2,y:coinsY-3,w:badgeW,h:badgeH,kind:'tab',accent:0xf0c566});
-    A(this.add.text(cx,coinsY,coinText,{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'bold',color:'#ffe5a3',resolution:2}).setOrigin(.5,0));
+    drawSurface({x:cx-badgeW/2,y:coinsY-3,w:badgeW,h:badgeH,kind:'tab',accent:0xf0c566});
+    A(this.add.text(cx,coinsY,coinText,{fontFamily:UI,fontSize:compact?'13px':'16px',fontStyle:'bold',color:'#ffe5a3',resolution:inventoryTextResolution}).setOrigin(.5,0));
 
     const tabY=coinsY+(compact?38:46),tabW=compact?170:205,tabH=compact?34:40,gap=12;
     const tabButton=(x,label,key)=>{
       const active=tab===key;
-      drawInventorySurface(this,A,{x:x-tabW/2,y:tabY-tabH/2,w:tabW,h:tabH,kind:'tab',accent:key==='materials'?0x65e8ff:0xf0c566,active});
+      drawSurface({x:x-tabW/2,y:tabY-tabH/2,w:tabW,h:tabH,kind:'tab',accent:key==='materials'?0x65e8ff:0xf0c566,active});
       const b=A(this.add.rectangle(x,tabY,tabW,tabH,0x0d1a24,.01).setStrokeStyle(0,0x355064,0).setInteractive({useHandCursor:true}));
-      A(this.add.text(x,tabY,label,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'bold',color:active?'#fff':'#a6b7c8',resolution:2}).setOrigin(.5));
+      A(this.add.text(x,tabY,label,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'bold',color:active?'#fff':'#a6b7c8',resolution:inventoryTextResolution}).setOrigin(.5));
       b.on('pointerup',()=>this._openLobbyInventoryModal(key,0,0));
     };
     tabButton(cx-tabW/2-gap/2,t('inventory.materials'),'materials');
@@ -88,9 +108,9 @@ export class MenuScene extends PreviousMenuScene {
       [1,2,3,4].forEach((tier,i)=>{
         const active=Number(tierFilter)===tier;
         const x=startX+i*(fw+fg)+fw/2;
-        drawInventorySurface(this,A,{x:x-fw/2,y:tabY-fh/2,w:fw,h:fh,kind:'tab',accent:TIER_COLOR[tier],active});
+        drawSurface({x:x-fw/2,y:tabY-fh/2,w:fw,h:fh,kind:'tab',accent:TIER_COLOR[tier],active});
         const b=A(this.add.rectangle(x,tabY,fw,fh,0x0d1a24,.01).setStrokeStyle(0,TIER_COLOR[tier],0).setInteractive({useHandCursor:true}));
-        A(this.add.text(x,tabY,TIER_SIGLA[tier],{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:active?'#07111f':'#ffffff',resolution:2}).setOrigin(.5));
+        A(this.add.text(x,tabY,TIER_SIGLA[tier],{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:active?'#07111f':'#ffffff',resolution:inventoryTextResolution}).setOrigin(.5));
         b.on('pointerup',()=>this._openLobbyInventoryModal('parts',0,active?0:tier));
       });
     }
@@ -119,7 +139,7 @@ export class MenuScene extends PreviousMenuScene {
 
     if(tab==='parts'&&ids.length===0){
       const msg=tierFilter?t('inventory.noTierParts',{tier:TIER_SIGLA[tierFilter]}):t('inventory.noParts');
-      A(this.add.text(cx,gridY+availableH/2,msg,{fontFamily:UI,fontSize:compact?'15px':'18px',fontStyle:'bold',color:'#71879b',align:'center',lineSpacing:8,resolution:2}).setOrigin(.5));
+      A(this.add.text(cx,gridY+availableH/2,msg,{fontFamily:UI,fontSize:compact?'15px':'18px',fontStyle:'bold',color:'#71879b',align:'center',lineSpacing:8,resolution:inventoryTextResolution}).setOrigin(.5));
     }
 
     pageIds.forEach((id,i)=>{
@@ -131,7 +151,7 @@ export class MenuScene extends PreviousMenuScene {
 
       // Premium bevel is drawn behind the SAME interactive Phaser card.
       // No inventory quantities, hit geometry or equip events are changed.
-      drawInventorySurface(this,A,{x,y,w:cardW,h:cardH,kind:'card',
+      drawSurface({x,y,w:cardW,h:cardH,kind:'card',
         accent:tab==='parts'?accent:0x65e8ff,installed});
       const card=A(this.add.rectangle(x,y,cardW,cardH,0x0d1a24,.01).setOrigin(0));
       card.setStrokeStyle(0,accent,0);
@@ -151,17 +171,17 @@ export class MenuScene extends PreviousMenuScene {
 
       const name=itemName({...item,id}).toUpperCase();
       if(tab==='materials'){
-        A(this.add.text(contentX,y+cardH*.27,name,{fontFamily:UI,fontSize:compact?'12px':'15px',fontStyle:'bold',color:'#e5eef5',align:'left',wordWrap:{width:contentW},resolution:2}).setOrigin(0,.5));
-        A(this.add.text(contentX,y+cardH*.67,`×${q}`,{fontFamily:UI,fontSize:compact?'23px':'29px',fontStyle:'bold',color:'#7ddcff',resolution:2}).setOrigin(0,.5));
+        A(this.add.text(contentX,y+cardH*.27,name,{fontFamily:UI,fontSize:compact?'12px':'15px',fontStyle:'bold',color:'#e5eef5',align:'left',wordWrap:{width:contentW},resolution:inventoryTextResolution}).setOrigin(0,.5));
+        A(this.add.text(contentX,y+cardH*.67,`×${q}`,{fontFamily:UI,fontSize:compact?'23px':'29px',fontStyle:'bold',color:'#7ddcff',resolution:inventoryTextResolution}).setOrigin(0,.5));
       }else{
-        A(this.add.text(contentX,y+cardH*.23,name,{fontFamily:UI,fontSize:compact?'11px':'14px',fontStyle:'bold',color:installed?'#87939d':'#e0e9f1',align:'left',wordWrap:{width:contentW},resolution:2}).setOrigin(0,.5));
+        A(this.add.text(contentX,y+cardH*.23,name,{fontFamily:UI,fontSize:compact?'11px':'14px',fontStyle:'bold',color:installed?'#87939d':'#e0e9f1',align:'left',wordWrap:{width:contentW},resolution:inventoryTextResolution}).setOrigin(0,.5));
 
         const actionY=y+cardH*.56;
         const buttonW=Math.max(68,contentW*.86),buttonH=compact?27:32;
-        drawInventorySurface(this,A,{x:contentX,y:actionY-buttonH/2,w:buttonW,h:buttonH,kind:'tab',accent:installed?0x8ca3af:0x55e6bd,active:!installed&&q>0});
+        drawSurface({x:contentX,y:actionY-buttonH/2,w:buttonW,h:buttonH,kind:'tab',accent:installed?0x8ca3af:0x55e6bd,active:!installed&&q>0});
         const actionBg=A(this.add.rectangle(contentX,actionY,buttonW,buttonH,0x123743,.01).setOrigin(0,.5).setStrokeStyle(0,0x45dfff,0));
-        A(this.add.text(contentX+buttonW/2,actionY,installed?t('inventory.uninstall'):t('inventory.install',{qty:''}).replace(/[×x]\s*$/i,'').trim(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#a6b1b9':'#9aeeff',resolution:2}).setOrigin(.5));
-        A(this.add.text(contentX,y+cardH*.82,`×${q}`,{fontFamily:UI,fontSize:compact?'20px':'25px',fontStyle:'bold',color:installed?'#788994':'#ffffff',resolution:2}).setOrigin(0,.5));
+        A(this.add.text(contentX+buttonW/2,actionY,installed?t('inventory.uninstall'):t('inventory.install',{qty:''}).replace(/[×x]\s*$/i,'').trim(),{fontFamily:UI,fontSize:compact?'9px':'11px',fontStyle:'bold',color:installed?'#a6b1b9':'#9aeeff',resolution:inventoryTextResolution}).setOrigin(.5));
+        A(this.add.text(contentX,y+cardH*.82,`×${q}`,{fontFamily:UI,fontSize:compact?'20px':'25px',fontStyle:'bold',color:installed?'#788994':'#ffffff',resolution:inventoryTextResolution}).setOrigin(0,.5));
 
         const trigger=()=>{
           if(installed){
@@ -181,22 +201,33 @@ export class MenuScene extends PreviousMenuScene {
 
     const footerY=cy+panelH/2-(compact?20:26);
     if(pages>1){
-      A(this.add.text(cx,footerY,`${page+1}/${pages}`,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'bold',color:'#a9bbca',resolution:2}).setOrigin(.5));
-      drawInventorySurface(this,A,{x:cx-137,y:footerY-15,w:54,h:30,kind:'tab',accent:0x65e8ff});
-      drawInventorySurface(this,A,{x:cx+83,y:footerY-15,w:54,h:30,kind:'tab',accent:0x65e8ff});
+      A(this.add.text(cx,footerY,`${page+1}/${pages}`,{fontFamily:UI,fontSize:compact?'11px':'13px',fontStyle:'bold',color:'#a9bbca',resolution:inventoryTextResolution}).setOrigin(.5));
+      drawSurface({x:cx-137,y:footerY-15,w:54,h:30,kind:'tab',accent:0x65e8ff});
+      drawSurface({x:cx+83,y:footerY-15,w:54,h:30,kind:'tab',accent:0x65e8ff});
       const prev=A(this.add.rectangle(cx-110,footerY,54,30,0x132a3b,.01).setStrokeStyle(0,0x45dfff,0).setInteractive({useHandCursor:true}));
       const next=A(this.add.rectangle(cx+110,footerY,54,30,0x132a3b,.01).setStrokeStyle(0,0x45dfff,0).setInteractive({useHandCursor:true}));
-      A(this.add.text(cx-110,footerY,'‹',{fontFamily:UI,fontSize:'22px',fontStyle:'bold',color:'#fff',resolution:2}).setOrigin(.5));
-      A(this.add.text(cx+110,footerY,'›',{fontFamily:UI,fontSize:'22px',fontStyle:'bold',color:'#fff',resolution:2}).setOrigin(.5));
+      A(this.add.text(cx-110,footerY,'‹',{fontFamily:UI,fontSize:'22px',fontStyle:'bold',color:'#fff',resolution:inventoryTextResolution}).setOrigin(.5));
+      A(this.add.text(cx+110,footerY,'›',{fontFamily:UI,fontSize:'22px',fontStyle:'bold',color:'#fff',resolution:inventoryTextResolution}).setOrigin(.5));
       prev.on('pointerup',()=>this._openLobbyInventoryModal(tab,(page-1+pages)%pages,tierFilter));
       next.on('pointerup',()=>this._openLobbyInventoryModal(tab,(page+1)%pages,tierFilter));
     }
 
     const closeX=cx+panelW/2-(compact?24:30),closeY=cy-panelH/2+(compact?22:28);
     const closeBg=A(this.add.circle(closeX,closeY,compact?18:22,0x132a3b,.99).setStrokeStyle(2,0x45dfff,.75).setInteractive({useHandCursor:true}));
-    A(this.add.text(closeX,closeY,'×',{fontFamily:UI,fontSize:compact?'20px':'24px',fontStyle:'bold',color:'#fff',resolution:2}).setOrigin(.5));
-    const close=()=>{try{root.destroy(true);}catch{}if(this._lobbyInventoryModal===root)this._lobbyInventoryModal=null;};
+    A(this.add.text(closeX,closeY,'×',{fontFamily:UI,fontSize:compact?'20px':'24px',fontStyle:'bold',color:'#fff',resolution:inventoryTextResolution}).setOrigin(.5));
+    const close=()=>{
+      inventoryOpenMark('closed',tab,language);
+      try{root.destroy(true);}catch{}
+      if(this._lobbyInventoryModal===root)this._lobbyInventoryModal=null;
+    };
     closeBg.on('pointerup',close);
     veil.on('pointerup',()=>{});
+    inventoryOpenMark('drawn',tab,language);
+    // Single RAF breadcrumb (not a recurring loop) to diagnose frame stalls.
+    if(isIOS()&&typeof requestAnimationFrame==='function')
+      requestAnimationFrame(()=>{
+        if(root.active&&this._lobbyInventoryModal===root)
+          inventoryOpenMark('frame',tab,language);
+      });
   }
 }

@@ -1,5 +1,14 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.300 — Inventario renovado (estética + iPhone)
+
+El usuario reporta que Inventario en la **PWA iPhone**, en inglés, quedó congelado sin responder y con texto poco definido. Además considera que su estética es antigua respecto al lobby y Race Control y autoriza un rediseño ligero. No hay reproducción ni captura de traza WebGL: la carga de Graphics y Text es una **hipótesis**, no causa confirmada. La APK QA Android 1.2.299 queda bloqueada como candidata a Play hasta verificar.
+
+Cambios de bajo riesgo: `inventoryPremiumDraw.js` actualiza shell / pestañas / tarjetas con navy + trazos de cian y oro, bahía para imagen, área de cantidad, perfil biselado y pequeños marcadores de estado; todo son gráficos estáticos sin filtros, shaders, bucles ni assets nuevos. Ahora ambos inventarios (lobby y Fábrica) pintan sus fondos con **un solo Phaser.Graphics por modal**, en vez de uno por borde y tarjeta; mismo `setInteractive`, posiciones de controles, economía, filtros, paginación y eventos. La densidad temporal de Text en Inventario del lobby para iPhone baja de `resolution:2` a `1.5` para reducir carga inicial; tamaño de fuente no cambia salvo la cabecera. Se añaden breadcrumbs iOS `tdr2:inventoryOpenTrace:v1` con estados begin / drawn / frame / closed, que sobreviven a reinicio si hay nuevo cuelgue. Fábrica usa claves i18n en el modal de inventario para ES/EN. Prueba antirregresión ampliada en `scripts/inventory-premium-ui-smoke.mjs`.
+
+Solo DEV PWA 1.2.300. No APK/AAB, no Play. Prueba manual aconsejada: abrir/cerrar Inventario varias veces en inglés y español en iPhone; cambiar Materiales/Piezas y filtros; verificar que sigue respondiendo y que el texto se lee bien. Si vuelve a congelarse, inspeccionar breadcrumb antes de introducir cambios nuevos.
+
+
 ## DEV 1.2.299 — Auditoría de idiomas, decisión de avatares aplazada, APK QA Android
 
 **Petición:** antes de actualizar Android, auditar ES/EN en el juego, documentar la decisión de avatares, construir la última APK de prueba. Avatares opción 1 (24 prediseñados, WebP 256x256, Cuenta/lobby/Race Control, sólo guardar `avatarId`): documentado en `docs/continuity/2026-10-19-avatar-option-one-future.md` y EXPLÍCITAMENTE POSPUESTO, no implementar ni tocar datos de usuario hoy.
