@@ -25,10 +25,11 @@ const mock={style:{visibility:'hidden'},src:'',onerror:null};
 applyCarVisual(mock,id,spec,{base,storage,dev:true});
 assert.equal(mock.src,base+'assets/skins/skin_crown_cuper_gold.webp');
 mock.onerror();
-assert.equal(mock.src,base+'assets/cars/lobby/crown_cuper.webp','candidate fallback is attempted');
-mock.onerror();
-assert.equal(mock.src,base+'assets/skins/skin_crown_cuper_original.webp','final fallback keeps Original visible');
+assert.equal(mock.src,base+'assets/skins/skin_crown_cuper_original.webp',
+ 'fallback jumps directly to existing Original, skipping nonexistent lobby WebP');
 assert.equal(mock.style.visibility,'');
+mock.onerror();
+assert.equal(mock.style.visibility,'hidden','last fallback hides a broken icon');
 assert.equal(carVisualCandidates('helix_spark',CAR_SPECS.helix_spark,{base,storage,dev:true})[0],base+'assets/cars/lobby/helix_spark.webp');
 const scene=readFileSync('src/game/scenes/StatsBroadcastScene.js','utf8');
 assert.match(scene,/import \{ carVisualCandidates,applyCarVisual \} from '\.\.\/skins\/carDisplayArt\.js'/);
