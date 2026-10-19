@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceSteeringSensitivityScene.js';
 import { recordCompletedLapClean } from '../seasons/cleanLapTelemetry.js';
+import {beginCleanLapMissionSession,endCleanLapMissionSession,recordCleanLapMissionLap} from '../seasons/cleanLapMissionTelemetry.js';
 import { makeKartingShapeMask } from '../tracks/localKartingPreview.js';
 import { shapeIsValid } from '../studio/trackShapeGeometry.js';
 import { showRaceFeedback, showCleanLapFeedback } from '../ui/raceFeedbackUi.js';
@@ -41,6 +42,10 @@ export class RaceScene extends CurrentRaceScene {
       }
     }
     this._cleanLapSeenHistory=Array.isArray(this.ttHistory)?this.ttHistory.length:0;
+    this._cleanMissionSessionId=globalThis.crypto?.randomUUID?.()||
+      Date.now().toString(36)+'-'+Math.random().toString(36).slice(2);
+    this._cleanMissionRejectedSeen=Number(this._tdrRejectedLapCount)||0;
+    beginCleanLapMissionSession(this._cleanMissionSessionId);
     this._currentLapClean=true;
     this._cleanLapAccum=CLEAN_SAMPLE_MS;
     this._liveHudClosedForSessionEnd=false;
@@ -66,7 +71,10 @@ export class RaceScene extends CurrentRaceScene {
       if(this.ttPanel){this.ttPanel.shown=false;this.ttPanel.busy=false;}
     }catch{}
     try{window.__tdrPerfRaceActive=true;}catch{}
-    this.events?.once?.('shutdown',()=>{try{window.__tdrPerfRaceActive=false;}catch{}});
+    this.events?.once?.('shutdown',()=>{
+      endCleanLapMissionSession(this._cleanMissionSessionId);
+      try{window.__tdrPerfRaceActive=false;}catch{}
+    });
     this.events?.once?.('destroy',()=>{try{window.__tdrPerfRaceActive=false;}catch{}});
     return result;
   }
@@ -197,6 +205,16 @@ export class RaceScene extends CurrentRaceScene {
 
   update(time,delta){
     super.update?.(time,delta);
+    // Invalid meta crossings are NOT in ttHistory, but break a clean streak.
+    const rejected=Number(this._tdrRejectedLapCount)||0;
+    if(rejected>this._cleanMissionRejectedSeen){
+      for(let n=this._cleanMissionRejectedSeen+1;n<=rejected;n++)
+        recordCleanLapMissionLap({trackId:this._cleanLapTrackId,
+         carId:this.carId,sessionId:this._cleanMissionSessionId,
+         eventId:'rejected:'+n,valid:false,clean:false});
+      this._cleanMissionRejectedSeen=rejected;
+      this._cleanLapCombo=0;this._currentLapClean=true;
+    }
     this._retireLegacyDeltaHud();
     this._closeLiveHudForSessionEnd();
     this._cleanLapAccum+=Math.max(0,Number(delta)||0);
@@ -223,8 +241,11 @@ export class RaceScene extends CurrentRaceScene {
         for(let i=seen;i<hist.length;i++){
           const row=hist[i]||{};
           const valid=row.valid!==false&&row.invalid!==true;
+          const clean=valid&&this._currentLapClean===true;
+          recordCleanLapMissionLap({trackId:this._cleanLapTrackId,
+            carId:String(row.carId||this.carId||''),
+            sessionId:this._cleanMissionSessionId,eventId:'lap:'+i,valid,clean});
           if(valid){
-            const clean=this._currentLapClean===true;
             try{row.tdrCleanLap=clean;}catch{}
             recordCompletedLapClean(this._cleanLapTrackId,clean);
             // Celebrate a genuinely clean lap without surfacing dirty-lap diagnostics.
@@ -236,7 +257,7 @@ export class RaceScene extends CurrentRaceScene {
               this._cleanLapCombo=0;
             }
             this._showLapMilestone(row);
-          }
+          }else this._cleanLapCombo=0;
           this._currentLapClean=true;
         }
         this._cleanLapSeenHistory=hist.length;

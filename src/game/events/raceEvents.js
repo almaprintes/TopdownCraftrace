@@ -2,6 +2,7 @@ import { loadGarage, saveGarage, addItem } from '../garage/garageStore.js';
 import { t, getLanguage } from '../i18n/index.js';
 import { loadSeasonTelemetry } from '../seasons/seasonTelemetry.js';
 import { loadCleanLapTelemetry } from '../seasons/cleanLapTelemetry.js';
+import {syncCleanLapMissionObjectives,getCleanLapMissionProgress} from '../seasons/cleanLapMissionTelemetry.js';
 import { unlockCar } from '../cars/carUnlocks.js';
 import { grantSeasonSkin } from '../skins/carSkins.js';
 import { carMileageKm,loadPlayerStatsPersisted } from '../stats/playerStats.js';
@@ -83,34 +84,44 @@ function deltaStats(now,base){return{
  cuperEquipped:Math.max(0,now.cuperEquipped),
  absolute:{discoveries:now.discoveries,equipped:now.equipped}
 };}
-function rawObjectiveValue(o,d){
+function rawObjectiveValue(o,d,missionId='',path='root'){
+ if(o.type==='cleanLaps')return getCleanLapMissionProgress(missionId,path).value;
  if(o.type==='clean')return d.clean;
  if(o.type==='tracks')return Object.values(d.trackLaps||{}).filter(n=>n>=Math.max(1,Number(o.minPerTrack)||1)).length;
  if(o.type==='cuperTracks')return Object.values(d.cuperTrackMeters||{}).filter(n=>n>0).length;
  if(o.type==='discoveries'||o.type==='equipped')return Number(d.absolute?.[o.type]||0);
- if(o.type==='combined')return (o.parts||[]).filter(p=>rawObjectiveValue(p,d)>=Number(p.target||1)).length;
+ if(o.type==='combined')return (o.parts||[]).filter((p,i)=>rawObjectiveValue(p,d,missionId,path+'.'+i)>=Number(p.target||1)).length;
  return Number(d[o.type]||0);
 }
-function evaluateObjective(o,d){const target=Math.max(1,Number(o.target)||1),value=Math.max(0,rawObjectiveValue(o,d));return {value:Math.min(target,value),rawValue:value,target,complete:value>=target,label:o.label||''};}
+function evaluateObjective(o,d,missionId=''){const target=Math.max(1,Number(o.target)||1),value=Math.max(0,rawObjectiveValue(o,d,missionId));return {value:Math.min(target,value),rawValue:value,target,complete:value>=target,label:o.label||''};}
 export function getCurrentRaceEvent(){
  const induction=loadState(STATE_KEY);
- if(induction.index<EVENT_DEFS.length){const event=localizeEvent(EVENT_DEFS[induction.index]);return {
- family:'induction',finished:false,index:induction.index,total:EVENT_DEFS.length,event,definitions:EVENT_DEFS,
- progress:evaluateObjective(event.objective,deltaStats(snapshotRaceEventStats(),induction.baseline))};}
+ if(induction.index<EVENT_DEFS.length){
+ const event=localizeEvent(EVENT_DEFS[induction.index]),missionId='induction:'+event.id;
+ syncCleanLapMissionObjectives(missionId,event.objective);
+ return {family:'induction',finished:false,index:induction.index,total:EVENT_DEFS.length,event,definitions:EVENT_DEFS,
+  progress:evaluateObjective(event.objective,deltaStats(snapshotRaceEventStats(),induction.baseline),missionId)};
+}
  const mileageMeters=carMileageKm('avenir_gripline')*1000;
- if(mileageMeters<CUPER_MILEAGE_GATE_METERS)return {family:'cuper',gated:true,finished:false,index:0,total:CUPER_EVENT_DEFS.length,
- definitions:CUPER_EVENT_DEFS,mileageMeters,requiredMeters:CUPER_MILEAGE_GATE_METERS};
+ if(mileageMeters<CUPER_MILEAGE_GATE_METERS){syncCleanLapMissionObjectives(null,null);
+ return {family:'cuper',gated:true,finished:false,index:0,total:CUPER_EVENT_DEFS.length,
+ definitions:CUPER_EVENT_DEFS,mileageMeters,requiredMeters:CUPER_MILEAGE_GATE_METERS};}
  const state=loadState(CUPER_STATE_KEY);
- if(state.index>=CUPER_EVENT_DEFS.length)return {family:'cuper',finished:true,index:state.index,total:CUPER_EVENT_DEFS.length,
- definitions:CUPER_EVENT_DEFS,mileageMeters:carMileageKm('crown_cuper')*1000,requiredMeters:CUPER_MILEAGE_GATE_METERS};
- const event=localizeEvent(CUPER_EVENT_DEFS[state.index]);return {family:'cuper',finished:false,index:state.index,total:CUPER_EVENT_DEFS.length,
- event,definitions:CUPER_EVENT_DEFS,progress:evaluateObjective(event.objective,deltaStats(snapshotRaceEventStats(),state.baseline))};
+ if(state.index>=CUPER_EVENT_DEFS.length){syncCleanLapMissionObjectives(null,null);
+ return {family:'cuper',finished:true,index:state.index,total:CUPER_EVENT_DEFS.length,
+ definitions:CUPER_EVENT_DEFS,mileageMeters:carMileageKm('crown_cuper')*1000,requiredMeters:CUPER_MILEAGE_GATE_METERS};}
+ const event=localizeEvent(CUPER_EVENT_DEFS[state.index]),missionId='cuper:'+event.id;
+ syncCleanLapMissionObjectives(missionId,event.objective);
+ return {family:'cuper',finished:false,index:state.index,total:CUPER_EVENT_DEFS.length,
+ event,definitions:CUPER_EVENT_DEFS,
+ progress:evaluateObjective(event.objective,deltaStats(snapshotRaceEventStats(),state.baseline),missionId)};
 }
 export function claimCurrentRaceEvent(){
  const current=getCurrentRaceEvent();if(current.finished||current.gated)return {ok:false,reason:current.gated?'mileage-locked':'finished'};
  const key=current.family==='cuper'?CUPER_STATE_KEY:STATE_KEY,defs=current.family==='cuper'?CUPER_EVENT_DEFS:EVENT_DEFS;
  const state=loadState(key);if(state.index>=defs.length)return {ok:false,reason:'finished'};
- const event=localizeEvent(defs[state.index]),now=snapshotRaceEventStats(),progress=evaluateObjective(event.objective,deltaStats(now,state.baseline));
+ const event=localizeEvent(defs[state.index]),now=snapshotRaceEventStats(),
+ progress=evaluateObjective(event.objective,deltaStats(now,state.baseline),current.family+':'+event.id);
  if(!progress.complete)return {ok:false,reason:'incomplete'};
  if((state.claimed||[]).includes(event.id))return {ok:false,reason:'claimed'};
  const garage=loadGarage();garage.coins=Math.max(0,Number(garage.coins)||0)+Math.max(0,Number(event.reward?.coins)||0);
@@ -118,6 +129,9 @@ export function claimCurrentRaceEvent(){
  if(event.reward?.car?.id)unlockCar(event.reward.car.id);
  if(event.reward?.skin&&!grantSeasonSkin(event.reward.skin.carId,event.reward.skin.skinId))return {ok:false,reason:'skin-storage-unavailable'};
  saveGarage(garage);state.claimed=[...(state.claimed||[]),event.id];state.index++;state.baseline=normalizedBaseline(now);saveState(key,state);
+ // Immediately activate the next stage before the player races again.
+ const next=defs[state.index];
+ syncCleanLapMissionObjectives(next?current.family+':'+next.id:null,next?.objective);
  const result={ok:true,event,nextIndex:state.index,family:current.family};
  try{window.dispatchEvent(new CustomEvent('tdr:seasonRewardClaimed',{detail:result}));}catch{}
  return result;

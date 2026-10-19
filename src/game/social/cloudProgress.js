@@ -11,7 +11,8 @@ const JSON_KEYS=new Set([
   'tdr2:playerStats:v1','tdr2:carUnlocks:v1','tdr2:garageFusion:v1',
   'tdr2:pilotProfile:v1','tdr2:raceRecords:v1',
   'tdr2:seasonInduction:v1','tdr2:seasonCuper:v1','tdr2:seasonSkinUnlocks:v1',
-  'tdr2:seasonTelemetry:v1','tdr2:cleanLapTelemetry:v1'
+  'tdr2:seasonTelemetry:v1','tdr2:cleanLapTelemetry:v1',
+  'tdr2:cleanLapMissions:v1'
 ]);
 const RAW_KEYS=new Set(['tdr2:carId']);
 const JSON_PREFIXES=['tdr2:ttHist:','tdr2:ttBest:'];

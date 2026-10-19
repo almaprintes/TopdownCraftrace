@@ -4446,6 +4446,8 @@ if (shouldShow) {
     // cruzó meta sin checkpoints correctos: no cuenta
     this._lapCooldownMs = 300; // pequeño “anti rebote”
     this._cpState = 0;
+    // Signal a REJECTED, non-recorded crossing to the clean streak system.
+    this._tdrRejectedLapCount=(this._tdrRejectedLapCount||0)+1;
   }
 }
       }
