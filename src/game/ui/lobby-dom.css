@@ -900,3 +900,25 @@
 /* DEV 1.2.212 — The Gaussian aperture is an overscanned square, centered on
    the real platform footprint. No extra CSS clip-path or edge box cropping;
    the WebKit and standard circular gradients do the entire dissolution. */
+
+/* DEV 1.2.296 — Creator badge shares the third PILOT row with the compact
+   cloud ID. Never increase the height of the clipped landscape header. */
+.tdr-lobby-dom .tdr-lobby-identity-row{
+  display:flex;align-items:center;gap:5px;min-width:0;width:100%;
+  max-width:100%;overflow:hidden;white-space:nowrap;
+}
+.tdr-lobby-dom .tdr-lobby-identity-row [data-cloud-account]{
+  flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;line-height:1.3;
+  font-size:clamp(8px,.78vw,10px)!important;
+}
+.tdr-lobby-dom .tdr-lobby-identity-row [data-lobby-creator-badge]{
+  flex:0 0 auto;max-width:76px;box-sizing:border-box;
+  line-height:1.2;
+}
+@media(max-height:430px){
+  .tdr-lobby-dom .tdr-lobby-identity-row{gap:4px;}
+  .tdr-lobby-dom .tdr-lobby-identity-row [data-lobby-creator-badge]{
+    font-size:7px!important;padding:1px 4px!important;
+  }
+}

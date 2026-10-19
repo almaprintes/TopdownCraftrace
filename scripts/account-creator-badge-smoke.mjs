@@ -18,6 +18,17 @@ assert.match(online,/\/rest\/v1\/rpc\/get_my_pilot_badge/);
 assert.match(online,/badge==='CREADOR'\?'CREADOR':null/,'only valid creator badges');
 assert.match(account,/creatorBadge\.hidden=\(await getMyRaceControlBadge\(\)\)!=='CREADOR'/);
 assert.match(lobby,/creatorBadge\.hidden=\(await getMyRaceControlBadge\(\)\)!=='CREADOR'/);
+const lobbyCss=read('src/game/ui/lobby-dom.css');
+assert.match(lobby,/identityRow\.append\(accountButton,creatorBadge\)/,
+ 'badge must share the ID row instead of creating a fourth header row');
+assert.doesNotMatch(lobby,/accountButton\?\.after\(creatorBadge\)/,
+ 'regression: fourth row clips the badge on iPhone');
+assert.match(lobbyCss,/\.tdr-lobby-identity-row\{\s*display:flex;align-items:center/,
+ 'ID and creator badge share one flex row');
+assert.match(lobbyCss,/\.tdr-lobby-identity-row \[data-cloud-account\]\{[\s\S]*?text-overflow:ellipsis/,
+ 'long ID stays bounded without pushing the badge outside the header');
+assert.match(lobby,/display:grid;gap:2px;padding:3px 8px/,
+ 'three rows still fit the short landscape header');
 assert.match(account,/Partida guardada en la nube/);
 assert.match(account,/GUARDAR COPIA/);
 assert.match(account,/ACTUALIZAR COPIA/);

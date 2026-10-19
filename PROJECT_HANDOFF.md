@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.296 — El distintivo CREADOR completo dentro de la cabecera de lobby iPhone
+
+El usuario envió captura de que la insignia dorada añadida en DEV 1.2.295 aparecía **cortada por el borde inferior** del encabezado (iPhone PWA horizontal). Causa: la cabecera tiene altura fija, el bloque de piloto estaba organizado en 3 filas (PILOTO/nick/ID) y la insignia se añadía con `accountButton.after(creatorBadge)` creando una **cuarta fila** que desbordaba. En `LobbyDomUi.js` se mueve ID y badge a una sola `.tdr-lobby-identity-row` flexible, con `gap` y padding vertical más compactos; el ID trunca si falta sitio y el badge queda siempre visible dentro de los 180 px de ancho del piloto. CSS responsive especial para alturas <=430px. El distintivo sigue viniendo del RPC autenticado `get_my_pilot_badge`, no depende del nick editable. No se aumenta la altura de la cabecera ni se cambia la posición del logotipo, botones, wallet, coche, pista o interfaz de Cuenta. Se añadió comprobación antirregresión al smoke de Cuenta. Solo PWA DEV y continuidad; no APK/AAB ni Play.
+
+
 ## DEV 1.2.295 — Cuenta simplificada + distintivo CREADOR autentificado
 
 Las capturas del propietario muestran tres grandes botones redundantes, información sobre correo y copia en nube mezcladas y ausencia de insignia de creador. Esta iteración **solo** ajusta la pantalla de Cuenta y el lobby; NO implementa el futuro sistema de avatares prediseñados elegido por el propietario, que se hará después.
