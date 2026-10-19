@@ -13,7 +13,11 @@ const supplemental=read('src/game/i18n/playerUiExtra.js');
 const split=supplemental.indexOf('  en:Object.freeze({');
 assert.ok(split>0);
 const es=new Set(keyList(supplemental.slice(0,split)));
-const en=new Set(keyList(supplemental.slice(split)));
+// Stop before the helper function: it contains the literal 'es':'en'
+ // which is NOT a dictionary key and must never enter the parity audit.
+const end=supplemental.indexOf('\n});',split);
+assert.ok(end>split,'English catalog termination exists');
+const en=new Set(keyList(supplemental.slice(split,end)));
 const base=read('src/game/i18n/index.js');
 const enStart=base.indexOf('  en:Object.freeze({');
 const baseEs=new Set(keyList(base.slice(base.indexOf('  es:Object.freeze({'),enStart)));
