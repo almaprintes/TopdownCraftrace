@@ -1,5 +1,15 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.302 — Environment Studio: sin cartel de diagnóstico, navegación a dos dedos y margen en bordes
+
+Petición 19/10: al colocar/refinar colisiones de Arafo–Los Loros, eliminar etiqueta rectangular verde «DEV 1.2.225 · A→B CANVAS 2D…» y facilitar el desplazamiento hasta los límites de la fotografía con dos dedos en iPhone. No alterar físicas RALLY 1.0 aprobadas, ni geometry ni zonas guardadas.
+
+`EnvironmentBuilderAmericasImportScene._syncDomStatus` ya no crea el testigo visual A→B; borra incluso el nodo legado `[data-stage-render-state]` si quedase presente. El trazado abierto y la rasterización siguen intactos, y continúa la protección contra escenas de carrera superpuestas.
+
+`environmentMapNavigation.js` centraliza el pan/zoom matemático y el margen editorial de **112 px de pantalla** alrededor de la fotografía. `EnvironmentBuilderPinchAnchorScene` instala bounds **Phaser reales ampliados** (no solo límites JS), conserva el scroll al soltar, aplica el primer movimiento intencionado sin perder distancia y permite seguir desplazándose si un dedo sale un poco del viewport después de comenzar dentro. Dos dedos en herramientas de colisión navegan (no transforman assets), respetando las cancelaciones existentes de trazos provisionales. En SELECT la transformación de assets seleccionados con dos dedos se mantiene. El pan libre con un dedo comparte bounds ampliados.
+
+Pruebas antirregresión: smoke `environment-stage-runtime-diagnostic-smoke.mjs` ahora verifica ausencia del cartel, márgenes en bordes, traslación pura con dos dedos, zoom anclado a punto común, respeto de gestos de colisión y escenario de rally sin diagonal. `environment-stage-canvas-smoke.mjs` conserva las comprobaciones del raster. No hay modificaciones a archivos `.environment.json` ni a fotos, checkpoints, camera de carrera, física RALLY, piezas ni economía. Sólo PWA DEV 1.2.302; sin APK/AAB ni Play.
+
 ## 19/10/2026 — RALLY 1.0 APROBADO por el propietario (congelar conducción DEV 1.2.301)
 
 Tras probar el HÉLIX Spark en Arafo–Los Loros, el propietario confirmó que el manejo hacia delante le resulta excelente y ordenó **mantenerlo tal cual**. Destaca como especialmente buena la progresión natural: primero aprender el tramo a velocidad controlable y después ganar velocidad al instalar piezas. **Decisión de diseño confirmada, no pendiente de validar.**

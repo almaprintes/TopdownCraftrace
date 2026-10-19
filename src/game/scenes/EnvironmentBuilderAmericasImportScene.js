@@ -61,23 +61,9 @@ export class EnvironmentBuilderScene extends Current{
  }
  _syncDomStatus(){
   super._syncDomStatus?.();
-  const root=this._environmentDom;
-  if(!root)return;
-  let node=root.querySelector('[data-stage-render-state]');
-  const open=this._realTrack?.closed===false||this._realTrack?.raceType==='stage';
-  if(!open){node?.remove?.();return;}
-  if(!node){
-   node=document.createElement('div');
-   node.dataset.stageRenderState='1';
-   node.style.cssText='position:absolute;left:78px;top:104px;z-index:2;padding:5px 9px;border:1px solid #4ae8b1;background:rgba(4,23,20,.88);color:#b7ffdf;font:800 10px/1.2 monospace;pointer-events:none;max-width:65vw';
-   root.appendChild(node);
-  }
-  const route=this._realTrack?.centerline||[];
-  let maxEdge=0;
-  for(let i=1;i<route.length;i++)maxEdge=Math.max(maxEdge,Math.hypot(Number(route[i].x)-Number(route[i-1].x),Number(route[i].y)-Number(route[i-1].y)));
-  const layers=(this.game?.scene?.getScenes?.(true)||[]).map(scene=>scene?.sys?.settings?.key||'?').join(',');
-  node.textContent='DEV 1.2.225 · A→B CANVAS 2D · '+route.length+
-   ' puntos · salto máximo '+maxEdge.toFixed(1)+'px · mosaicos '+(this._stageRaster?.sprites?.length||0)+' · superficies '+(this._surfaces?.length||0)+' · escenas: '+layers;
+  // DEV 1.2.225 raster diagnostics were for debugging an old A→B seam.
+  // They obstruct real collision editing and must never appear again.
+  this._environmentDom?.querySelector('[data-stage-render-state]')?.remove?.();
  }
  _clearStageRaster(){
   const render=this._stageRaster;
