@@ -21,12 +21,17 @@ assert.match(bridge,/scene\.events\?\.once\?\.\('destroy',restoreRace\)/);
 assert.match(bridge,/attachedScene\.events\?\.off\?\.\('shutdown',restoreRace\)/);
 assert.match(bridge,/if\(activeBridge\?\.entries===entries\)activeBridge=null/);
 assert.match(diag,/import \{ getDevRaceTextRenderMode, setDevRaceTextRenderMode \} from '\.\.\/ui\/htmlTextRuntime\.js'/);
-assert.match(diag,/const textButton=control\('TEXTO HTML',b=>/);
+assert.match(diag,/const textButton=control\('TEXTO '\+getDevRaceTextRenderMode\(\)\.mode,b=>/);
 assert.match(diag,/const result=setDevRaceTextRenderMode\(scene,toPhaser\)/);
 assert.match(diag,/row\.insertBefore\(textButton,row\.firstChild\)/);
 assert.match(diag,/setDevRaceTextRenderMode\(scene,false\)/);
 assert.match(diag,/TEXTOS '\+t\.mode\+' · RAF '/);
 assert.match(diag,/TEXTO '\+getDevRaceTextRenderMode\(\)\.mode/);
+assert.match(scene,/if\(isIOSDevice\(\)&&!this\._tdrEmbeddedReplay&&!this\.statsEmbeddedReplay\)/);
+assert.match(scene,/setDevRaceTextRenderMode\(this,true\)/);
+assert.ok(scene.indexOf('setDevRaceTextRenderMode(this,true)')<
+  scene.indexOf('mountRaceDevFrameDiagnostics(this)'));
+assert.match(bridge,/if\(text instanceof Phaser\.GameObjects\.Text\)register\(text\)/);
 assert.match(scene,/mountRaceDevFrameDiagnostics\(this\)/);
 assert.match(game,/installHtmlTextRuntime\(game\)/);
 console.log('PASS: only DEV iOS race can A/B native Phaser text rendering vs HTML bridge; no extra RAF; restores on shutdown');

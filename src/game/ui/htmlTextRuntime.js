@@ -122,6 +122,10 @@ export function installHtmlTextRuntime(game){
       attachedScene=null;
     }
     racePhaserMode=false;
+    // Recover texts created while the HTML bridge was suspended.
+    for(const live of Object.values(game.scene?.keys||{}))
+      for(const text of live?.children?.list||[])
+        if(text instanceof Phaser.GameObjects.Text)register(text);
     root.style.display='';
     lastSync=-Infinity;
     requestSync();

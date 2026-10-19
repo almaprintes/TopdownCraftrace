@@ -1,6 +1,7 @@
 import { RaceScene as CurrentRaceScene } from './RaceMobilePerformanceScene.js';
 import { mountRaceInstrumentHud, updateRaceInstrumentHud, destroyRaceInstrumentHud } from '../ui/raceInstrumentHud.js';
 import { mountRaceDevFrameDiagnostics, installFinalRaceFrameDiagnosticUpdate } from '../dev/iosRaceFrameDiagnostics.js';
+import { setDevRaceTextRenderMode } from '../ui/htmlTextRuntime.js';
 
 function safeDestroy(obj){if(!obj)return;try{obj.destroy?.(true);}catch{}}
 function isIOSDevice(){try{return /iPad|iPhone|iPod/.test(navigator.userAgent)||((navigator.platform==='MacIntel')&&navigator.maxTouchPoints>1);}catch{return false;}}
@@ -46,6 +47,10 @@ export class RaceScene extends CurrentRaceScene {
     retireLegacyRaceUi(this);
     mountRaceInstrumentHud(this);
     updateRaceInstrumentHud(this,100);
+    // DEV iPhone: run live-race Phaser text without the independent HTML RAF.
+    // This is a reversible A/B mode; all non-race scenes remain unchanged.
+    if(isIOSDevice()&&!this._tdrEmbeddedReplay&&!this.statsEmbeddedReplay)
+      setDevRaceTextRenderMode(this,true);
     if(mountRaceDevFrameDiagnostics(this))installFinalRaceFrameDiagnosticUpdate(this.constructor);
     this.events?.once?.('shutdown',()=>destroyRaceInstrumentHud(this));
     this.events?.once?.('destroy',()=>destroyRaceInstrumentHud(this));

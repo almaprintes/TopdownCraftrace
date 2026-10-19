@@ -155,7 +155,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   },toolbar);
   // MOTOR is reachable with details collapsed; before MEDIR it stays hidden.
   motorButton.style.display='none';
-  const textButton=control('TEXTO HTML',b=>{
+  const textButton=control('TEXTO '+getDevRaceTextRenderMode().mode,b=>{
     const previous=getDevRaceTextRenderMode();
     const toPhaser=previous.mode!=='PHASER';
     const result=setDevRaceTextRenderMode(scene,toPhaser);
