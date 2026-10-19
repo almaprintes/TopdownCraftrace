@@ -1,5 +1,13 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## 19/10/2026 — RALLY 1.0 APROBADO por el propietario (congelar conducción DEV 1.2.301)
+
+Tras probar el HÉLIX Spark en Arafo–Los Loros, el propietario confirmó que el manejo hacia delante le resulta excelente y ordenó **mantenerlo tal cual**. Destaca como especialmente buena la progresión natural: primero aprender el tramo a velocidad controlable y después ganar velocidad al instalar piezas. **Decisión de diseño confirmada, no pendiente de validar.**
+
+**Invariante:** preservar exactamente la conducción RALLY 1.0 de DEV 1.2.301 (commit `e4e5252c64e14583f622e6e9bad014223f6f7a4a`): aceleración ×1,00, máxima hacia delante ×0,22, marcha atrás ×0,60, freno ×1,15, rampa de 0,22 s con respuesta inicial al 75 %, dirección ×1,35, sin giro artificial al frenar. Conservar las diferencias entre coches y el efecto de sus mejoras. **No reequilibrar, reajustar ni corregir la «sensación» sin autorización expresa**, tampoco como consecuencia de cambios a física común. Futuros tramos rally usan opt-in; circuitos normales aislados.
+
+Fuente normativa detallada: [`docs/continuity/2026-10-19-rally-1-0-approved.md`](docs/continuity/2026-10-19-rally-1-0-approved.md). Esta iteración es **solo documentación**, sin cambio de código, versión, APK, despliegue web ni Google Play.
+
 ## DEV 1.2.301 — Perfil RALLY reutilizable para Arafo–Los Loros
 
 Autorización fase 2 (19/10): convertir la comodidad del Spark marcha atrás en referencia para acelerar hacia delante. Nuevo módulo rallyDrivingProfile.js con perfil RALLY y activación por ID Arafo, o explícita en futuros tramos abiertos mediante meta.drivingProfile=RALLY. Jamás se activa por ser un circuito ordinario; no se cambian CAR_SPECS ni mejoras.
