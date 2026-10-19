@@ -64,7 +64,10 @@ assert.ok(game.includes("video?.showFPS===true"),'DEV measurement overlay must b
 assert.ok(!game.includes("if(!IS_PROD_BUILD&&!/Android/i.test(String(navigator?.userAgent||'')))installRacePerformanceProbe"),
   'The always-on secondary iOS requestAnimationFrame loop must be removed');
 const physics=readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
-assert.ok(physics.includes('colliderIndex:buildColliderSpatialIndex(colliders)'));
+assert.ok(physics.includes('const colliderIndex=rallyDenseWall') &&
+  physics.includes('buildColliderSpatialIndex(colliders,128,40)') &&
+  physics.includes(':buildColliderSpatialIndex(colliders)'),
+  'Dense Arafo barrier must use compact index; other circuits retain original index');
 assert.ok(physics.includes('nearbyColliders(scene?._tdrRaceEnvironment?.colliderIndex,px,py,list,physicsRadius)'));
 assert.ok(physics.includes('for(let pass=0;pass<2;pass++)'));
 assert.ok(physics.includes('resolveBodyAgainstSolidZones(scene,player)'),
