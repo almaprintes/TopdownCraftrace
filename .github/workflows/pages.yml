@@ -195,6 +195,7 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build:prod
           node scripts/karting-canarias-4096-smoke.mjs
+          node scripts/karting-canarias-clean-lap-photo-smoke.mjs
           grep -Rqs "juukbnkjboiazqggqcyv.supabase.co" dist || { echo "Production bundle lost Supabase URL"; exit 1; }
           grep -Rqs "sb_publishable_" dist || { echo "Production bundle lost Supabase publishable key"; exit 1; }
       - name: Inventariar escalas de circuitos y coches (POST-INSTALL, solo lectura)

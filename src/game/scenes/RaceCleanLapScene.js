@@ -20,13 +20,15 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
     this._cleanLapTrackId=String(this.trackKey||data?.trackKey||this.track?.id||this.track?.key||'').trim();
-    // Santa Cruz and Karting Américas have owner-authored photo roads whose
-    // actual Bézier boundaries differ from the Catmull-Rom physics ribbon.
+    // Santa Cruz, Karting Américas and rebuilt Canarias 4096 have owner-authored
+    // photo roads whose Bézier edges differ from the Catmull-Rom physics ribbon.
     // A single false OFF from those reconstructed cells dirties the whole lap.
     // Use the PHOTO road only for clean-lap validation, not movement, surface,
     // authored checkpoints, finish timing or collisions.
     this._cleanLapPhotoMask=null;
-    if((this._cleanLapTrackId==='santa-cruz'||this._cleanLapTrackId==='karting-americas') &&
+    if((this._cleanLapTrackId==='santa-cruz'||
+        this._cleanLapTrackId==='karting-americas'||
+        this._cleanLapTrackId==='karting-canarias-4096') &&
        this.track?.meta?.meta?.renderMode==='image-native' &&
        shapeIsValid(this.track?.meta?.trackShape) &&
        this.track.meta.trackShape.closed===true){
