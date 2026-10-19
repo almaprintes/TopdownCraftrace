@@ -32,11 +32,20 @@ assert.ok(pan.includes('scrollForTwoFingerMapGesture('),
   'Pinch + pan use the same continuous midpoint transform');
 assert.ok(pan.includes('this._clampEditorPan();'),
   'Camera retains padded boundaries on touch release and on button zoom');
+assert.ok(pan.includes('_fitRealTrack(){') &&
+  pan.includes('super._fitRealTrack();'),
+  'Every track refit must resynchronize camera padding with its zoom');
 assert.ok(freePan.includes('const b=cam?._bounds'),
   'Single finger select-mode free pan respects the same widened real camera bounds');
 assert.ok(collisions.includes('this._penDraft.nodes.pop()') &&
   collisions.includes('this._zoneDraft.length=z.start'),
   'Joining with a second finger rolls back a provisional pen/zone stroke');
+const pen=fs.readFileSync('src/game/scenes/EnvironmentBuilderCollisionPenScene.js','utf8');
+assert.ok(pen.includes('const originalNodes=JSON.parse(JSON.stringify(hit.line.nodes))') &&
+  collisions.includes('g.line.nodes=g.originalNodes'),
+  'Second finger must restore existing Bézier anchors, handles and inserted nodes');
+assert.ok(collisions.includes('this._zoneSelected.points=z.original'),
+  'Second finger must restore already-dragged collision-zone vertices');
 
 assert.equal(EDITOR_EDGE_PAN_PX,112);
 const bounds=editorCameraPanBounds(1882,3344,900,550,2);

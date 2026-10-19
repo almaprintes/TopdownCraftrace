@@ -331,11 +331,19 @@ export class EnvironmentBuilderScene extends Current {
       if(g?.kind==='new'&&this._penDraft?.nodes?.at(-1)===g.node){
         this._penDraft.nodes.pop();
       }
+      // Restores moved handles/anchors AND an inserted Bézier node if a
+      // second finger joins an in-progress collision-edit touch.
+      if(g?.line&&Array.isArray(g.originalNodes)){
+        g.line.nodes=g.originalNodes;
+      }
       this._penGesture=null;
       const z=this._zoneGesture;
       if(z?.kind==='draw'&&Array.isArray(this._zoneDraft)){
         this._zoneDraft.length=z.start;
         if(z.moved&&this._zoneStrokeStarts?.at(-1)===z.start)this._zoneStrokeStarts.pop();
+      }
+      if(z&&z.kind!=='draw'&&Array.isArray(z.original)&&this._zoneSelected){
+        this._zoneSelected.points=z.original;
       }
       this._zoneGesture=null;
       this._drawCollisionPen?.();this._drawCollisionZones?.();

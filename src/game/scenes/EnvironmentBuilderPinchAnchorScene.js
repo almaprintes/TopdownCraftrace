@@ -25,6 +25,12 @@ export class EnvironmentBuilderScene extends Current {
     const scroll=clampEditorScroll(cam.scrollX,cam.scrollY,b);
     cam.scrollX=scroll.x;cam.scrollY=scroll.y;
   }
+  _fitRealTrack(){
+    super._fitRealTrack();
+    // Track selection and delayed refits also change zoom. Keep the margin
+    // in SCREEN pixels after every fit, not just after pinch/button zoom.
+    this._clampEditorPan();
+  }
   _openRealTrack(trackId,resetProject=true){
     super._openRealTrack(trackId,resetProject);
     this._clampEditorPan();

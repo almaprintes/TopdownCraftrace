@@ -161,17 +161,20 @@ export class EnvironmentBuilderScene extends Current {
         this._collisionSelected=null;this._mode='select';this._drawCollisionPen();this._syncDomStatus();
       }return;}
       this._emptyTapCandidate=null;this._assetTapCandidate=null;
+      // Preserve edit geometry until pointer release: a second finger turns
+      // this first touch into navigation, not an accidental anchor edit.
+      const originalNodes=JSON.parse(JSON.stringify(hit.line.nodes));
       this._selectCollisionLine(hit.line);
       if(hit.key==='curve'){
         // A first tap selects a wall; another tap inserts a Bézier node.
         if(hit.line===this._penLastSelected && hit.line.nodes.length<250){
           const node=insertCollisionNode(hit.line.nodes,hit.segment,Math.max(.001,Math.min(.999,hit.t)));
           const index=hit.line.nodes.indexOf(node);
-          this._penGesture={pointerId:p.id,kind:'anchor',line:hit.line,index,start:w};
+          this._penGesture={pointerId:p.id,kind:'anchor',line:hit.line,index,start:w,originalNodes};
         }
         this._penLastSelected=hit.line;
       }else{
-        this._penGesture={pointerId:p.id,kind:hit.key,line:hit.line,index:hit.index,start:w};
+        this._penGesture={pointerId:p.id,kind:hit.key,line:hit.line,index:hit.index,start:w,originalNodes};
         this._penLastSelected=hit.line;
       }
       this._panStart=null;this._freePan=null;this._drawCollisionPen();
