@@ -20,21 +20,22 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     const result=super.create(data);
     this._cleanLapTrackId=String(this.trackKey||data?.trackKey||this.track?.id||this.track?.key||'').trim();
-    // Santa Cruz's photographed road is bounded by owner-authored Bézier edges.
-    // The legacy, Catmull-Rom reconstructed runtime cells can report OFF on
-    // visually legal asphalt; one false sample dirties the WHOLE lap.
-    // Use the already supported authored-road mask for CLEAN LAP ONLY.
-    // Leave physics/surface handling, collisions and lap gate timing untouched.
+    // Santa Cruz and Karting Américas have owner-authored photo roads whose
+    // actual Bézier boundaries differ from the Catmull-Rom physics ribbon.
+    // A single false OFF from those reconstructed cells dirties the whole lap.
+    // Use the PHOTO road only for clean-lap validation, not movement, surface,
+    // authored checkpoints, finish timing or collisions.
     this._cleanLapPhotoMask=null;
-    if(this._cleanLapTrackId==='santa-cruz' &&
+    if((this._cleanLapTrackId==='santa-cruz'||this._cleanLapTrackId==='karting-americas') &&
        this.track?.meta?.meta?.renderMode==='image-native' &&
-       shapeIsValid(this.track?.meta?.trackShape)){
+       shapeIsValid(this.track?.meta?.trackShape) &&
+       this.track.meta.trackShape.closed===true){
       const published=this.track.meta;
       try{
         this._cleanLapPhotoMask=makeKartingShapeMask(
           published.trackShape,Number(published.worldW),Number(published.worldH));
       }catch(err){
-        console.warn('[clean-lap] Santa Cruz authored track mask unavailable',err);
+        console.warn('[clean-lap] authored photo-road mask unavailable for '+this._cleanLapTrackId,err);
       }
     }
     this._cleanLapSeenHistory=Array.isArray(this.ttHistory)?this.ttHistory.length:0;

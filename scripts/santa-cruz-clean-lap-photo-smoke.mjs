@@ -10,7 +10,7 @@ const track=JSON.parse(readFileSync('src/game/tracks/library/santa-cruz/track.js
 assert.equal(track.meta?.renderMode,'image-native','Official Santa Cruz photo must be installed before testing clean laps');
 assert.ok(shapeIsValid(track.trackShape)&&track.trackShape.closed,'Clean laps need real Bézier road bounds');
 assert.ok(source.includes("this._cleanLapTrackId==='santa-cruz'"),
- 'Only the reported Santa Cruz clean-lap rule should change');
+ 'Santa Cruz authored-road handling must remain enabled');
 assert.ok(source.includes('this._cleanLapPhotoMask.isOnTrack(x,y)'),
  'Clean detection must use real photo-road mask, not procedural generated cells');
 assert.ok(source.includes('recordCompletedLapClean(this._cleanLapTrackId,clean)'),

@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.292 — Karting Américas: vueltas limpias según asfalto fotográfico real
+
+Incidencia del propietario: en **Karting Américas** se reconocen las vueltas pero no se conceden **vueltas limpias**. Se revisaron el instalador reproducible, sentido horario, meta, CP1/CP2 y lógica de `RaceCleanLapScene.js`. Los checkpoints/meta ya poseen pruebas dirigidas y NO se tocan. Se identificó la diferencia entre la fotografía/contornos Bézier creados por el propietario y las celdas de la cinta Catmull-Rom reconstruida: la muestra de limpieza cada 100 ms consultaba esas celdas, por lo que un solo falso «fuera» anulaba toda la vuelta. Igual que la corrección acotada previamente a Santa Cruz, **Karting Américas ahora construye una máscara de la pista Bézier real para evaluar solo la limpieza**. Se exige modo `image-native`, shape válido y cerrado; fuera de ese contexto sigue el detector antiguo. Salirse del asfalto real sigue ensuciando la vuelta. Se conserva el conteo de vueltas, CP, final, progreso, físicas, superficie, colisiones, registros y recompensas. Smoke dedicado `scripts/karting-americas-clean-lap-photo-smoke.mjs` verifica geometría real del instalador, cobertura del centro, puntos fuera de pista y que la validación no eluda la validez de una vuelta. Integrado en `.github/workflows/pages.yml`. Pruebas CI y DEV web, sin APK/AAB ni Play; falta confirmación de pilotaje en el dispositivo.
+
+
 ## DEV 1.2.291 — Humo moderadamente más denso y Karting Canarias 4096 visible
 
 **Humo:** el usuario informa que no se aprecia. Había también un problema geométrico: el lienzo se proyectaba hacia el morro del coche en vez de detrás de él. Se invierte su dirección, conservando la posición trasera; se incrementa suavemente la tinta de cada veladura (≈20%), baja el blur 3.3→2.7px y la opacidad máxima aumenta de 0.70 a 0.76, sin aumentar tamaño. Se mantiene una sola estela progresiva, el coletazo, duración 1600+180+520ms y ausencia de marcas.
