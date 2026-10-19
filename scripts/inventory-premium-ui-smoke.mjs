@@ -65,6 +65,7 @@ assert.ok(lobby.includes("inventory.title"),'Spanish/English header retains i18n
 assert.ok(factory.includes("t('inventory.title')"),'factory title is bilingual');
 assert.ok(factory.includes("t('inventory.materials')"),'factory tabs are bilingual');
 assert.ok(factory.includes("t('inventory.parts')"),'factory tabs are bilingual');
+assert.match(factory,/tierFilter\?t\('inventory.noTierParts'/,'tier-specific no-parts message only with a filter');
 assert.match(lobby,/this\._installInventoryPart\(garage,carId,id\)/);
 assert.match(lobby,/this\._unequipInventoryPart\(garage,carId,id\)/);
 assert.match(lobby,/saveGarage\(garage\)/);

@@ -123,7 +123,7 @@ export class UpgradeShopScene extends GuardedWorkshop {
       }
     });
 
-    if(tab==='parts'&&ids.length===0)A(this.add.text(cx,gridY+availableH/2,t('inventory.noTierParts',{tier:TIER_ROMAN[tierFilter]||''}),{fontFamily:UI,fontSize:compact?'14px':'17px',fontStyle:'800',color:'#71879b'}).setOrigin(.5));
+    if(tab==='parts'&&ids.length===0)A(this.add.text(cx,gridY+availableH/2,tierFilter?t('inventory.noTierParts',{tier:TIER_ROMAN[tierFilter]}):t('inventory.noParts'),{fontFamily:UI,fontSize:compact?'14px':'17px',fontStyle:'800',color:'#71879b'}).setOrigin(.5));
     const footerY=cy+panelH/2-(compact?17:23);
     if(pages>1){
       A(this.add.text(cx,footerY,`${page+1}/${pages}`,{fontFamily:UI,fontSize:compact?'10px':'12px',fontStyle:'800',color:'#a9bbca'}).setOrigin(.5));
