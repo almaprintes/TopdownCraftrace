@@ -1,5 +1,10 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## 19/10/2026 — QA tester Android de DEV 1.2.300
+
+El propietario solicita APK para compartir con un tester. Se utiliza el HEAD de main que contiene **DEV 1.2.300**, Inventario renovado y optimizaciones de iPhone, sin modificar la versión pública Google Play 1.1.188 (vc8). Actualizar `.github/workflows/android-revenuecat-qa-apk.yml` al nombre/tag `TDR-QA-DEV-1.2.300-REAL-ADS-SIN-MEDIR.apk` / `tdr-qa-1.2.300` y compilar el paquete separado `com.craftracestudio.topdownrace.rewardedtest` con monetización real AdMob+RevenueCat, sin MEDIR. Incluye la smoke de Inventario en el pipeline Android. Se crea prerelease de GitHub con enlace directo al APK. No AAB, sin Play, no cambia versionCode/name público. Tester debe probar instalación y arranque, Inventario en ES/EN y anuncios sin clicks/impresiones artificiales. Si CI falla, corregir antes de facilitar el enlace.
+
+
 ## DEV 1.2.300 — Inventario renovado (estética + iPhone)
 
 El usuario reporta que Inventario en la **PWA iPhone**, en inglés, quedó congelado sin responder y con texto poco definido. Además considera que su estética es antigua respecto al lobby y Race Control y autoriza un rediseño ligero. No hay reproducción ni captura de traza WebGL: la carga de Graphics y Text es una **hipótesis**, no causa confirmada. La APK QA Android 1.2.299 queda bloqueada como candidata a Play hasta verificar.
