@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceCoastInertiaScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import { getRallyDrivingProfile } from '../tracks/rallyDrivingProfile.js';
 
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 function smoothstep01(t) {
@@ -89,7 +90,9 @@ export class RaceScene extends CurrentRaceScene {
     // 1) Progressive forward braking, TOTAL decel controlled
     // ---------------------------------------------------------
     if (brakePressed && fwdBefore > 2) {
-      const brakeForce = Math.max(0, Number(this.brakeForce || 0));
+      // Match the frame-local brake multiplier consumed by base RaceScene.
+      const rallyProfile = getRallyDrivingProfile(this.trackKey, this.track?.meta);
+      const brakeForce = Math.max(0, Number(this.brakeForce || 0)) * (rallyProfile?.brakeForce ?? 1);
       if (brakeForce > 0) {
         // Preserve the same pedal build-up, but with a 2x global brake baseline.
         const build = smoothstep01(this._brakeHoldSec / 2.2);

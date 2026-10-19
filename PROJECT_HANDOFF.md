@@ -1,5 +1,13 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.301 — Perfil RALLY reutilizable para Arafo–Los Loros
+
+Autorización fase 2 (19/10): convertir la comodidad del Spark marcha atrás en referencia para acelerar hacia delante. Nuevo módulo rallyDrivingProfile.js con perfil RALLY y activación por ID Arafo, o explícita en futuros tramos abiertos mediante meta.drivingProfile=RALLY. Jamás se activa por ser un circuito ordinario; no se cambian CAR_SPECS ni mejoras.
+
+Configuración inicial de prueba, **pendiente de validar en dispositivo**: velocidad de avance ×0,22 (Spark máximo teórico ≈164 px/s frente a marcha atrás ≈156), aceleración ×1,00 con rampa 0,22 s e inicio al 75%, marcha atrás ×0,60, freno ×1,15 también en el postprocesado progresivo, dirección ×1,35. Rotación artificial al frenar desactivada solo para el perfil RALLY; transferencia de pesos y neumáticos existentes siguen actuando. Las demás etapas mantienen la dirección y el giro previo.
+
+Sin cambios en geometría, foto, escala .35, 27 zonas ambientales, 2 checkpoints, salida, meta, cámara, progresión ni economía. Smoke existente ampliada comprueba opt-in estricto, jerarquía de coches, 30/40/60/120 fps, relación Spark adelante/atrás e integración física. PWA DEV únicamente, sin APK/AAB/Google Play. Tras probar sensaciones, ajustar solo multiplicadores del perfil.
+
 ## 19/10/2026 — QA tester Android de DEV 1.2.300
 
 El propietario solicita APK para compartir con un tester. Se utiliza el HEAD de main que contiene **DEV 1.2.300**, Inventario renovado y optimizaciones de iPhone, sin modificar la versión pública Google Play 1.1.188 (vc8). Actualizar `.github/workflows/android-revenuecat-qa-apk.yml` al nombre/tag `TDR-QA-DEV-1.2.300-REAL-ADS-SIN-MEDIR.apk` / `tdr-qa-1.2.300` y compilar el paquete separado `com.craftracestudio.topdownrace.rewardedtest` con monetización real AdMob+RevenueCat, sin MEDIR. Incluye la smoke de Inventario en el pipeline Android. Se crea prerelease de GitHub con enlace directo al APK. No AAB, sin Play, no cambia versionCode/name público. Tester debe probar instalación y arranque, Inventario en ES/EN y anuncios sin clicks/impresiones artificiales. Si CI falla, corregir antes de facilitar el enlace.

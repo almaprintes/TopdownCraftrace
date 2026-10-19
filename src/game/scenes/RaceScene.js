@@ -8,7 +8,7 @@ import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
 import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { raceCameraZoomTarget } from '../tracks/raceCameraZoom.js';
-import {nextArafoThrottleHeld,arafoRallyDrivePace} from '../tracks/arafoRallyDrivePace.js';
+import {getRallyDrivingProfile,nextRallyThrottleHeld,applyRallyDriveProfile} from '../tracks/rallyDrivingProfile.js';
 import { crossesDirectedFinishGate } from '../tracks/closedCircuitGateOrder.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
@@ -3706,19 +3706,19 @@ let maxRev = this.maxRev ?? 1;
 let turnRate = this.turnRate ?? 0;
 const turnMin = this.turnMin ?? 0.1;
 
-// Gentle mountain-road pace applies only to the Arafo stage. Keep the actual
-// vehicle spec, upgrades and all other tracks unchanged. Touch gas is digital:
-// held duration ramps in acceleration, not an invented analog pressure input.
-this._arafoThrottleHeldSeconds = nextArafoThrottleHeld(
-  this.trackKey, this._arafoThrottleHeldSeconds, up && !down, dt
+// Reusable RALLY profile: only Arafo or future opted-in open stages.
+// Per-car specs and upgrades stay untouched; only this frame is transformed.
+const rallyProfile = getRallyDrivingProfile(this.trackKey, this.track?.meta);
+this._rallyThrottleHeldSeconds = nextRallyThrottleHeld(
+  rallyProfile, this._rallyThrottleHeldSeconds, up && !down, dt
 );
-const arafoDrive = arafoRallyDrivePace(
-  this.trackKey, {accel,maxFwd,maxRev,brakeForce}, this._arafoThrottleHeldSeconds
+const rallyDrive = applyRallyDriveProfile(
+  rallyProfile, {accel,maxFwd,maxRev,brakeForce}, this._rallyThrottleHeldSeconds
 );
-accel=arafoDrive.accel;
-maxFwd=arafoDrive.maxFwd;
-maxRev=arafoDrive.maxRev;
-brakeForce=arafoDrive.brakeForce;
+accel=rallyDrive.accel;
+maxFwd=rallyDrive.maxFwd;
+maxRev=rallyDrive.maxRev;
+brakeForce=rallyDrive.brakeForce;
 
 // =========================
 // SURFACE PHYSICS
@@ -3783,9 +3783,10 @@ const engineBrakeCoef = 0.04; // ajustable
   if (down) {
     body.velocity.x -= dirX * brakeForce * dt;
     body.velocity.y -= dirY * brakeForce * dt;
-    // Rally: el freno actúa además como freno de mano para ayudar a rotar la trasera
-    // en horquillas, sin alterar el comportamiento de los circuitos normales.
-    if ((this.track?.meta?.closed === false || this.track?.meta?.raceType === 'stage') && Math.abs(t.stickX || 0) > 0.12 && speed > 20) {
+    // RALLY rotates through existing chassis and tyres, not a fake brake yaw.
+    // Preserve the old behaviour in unrelated non-rally open stages.
+    if (!rallyProfile && (this.track?.meta?.closed === false || this.track?.meta?.raceType === 'stage') &&
+        Math.abs(t.stickX || 0) > 0.12 && speed > 20) {
       this.car.rotation += Math.sign(t.stickX) * 2.4 * dt;
     }
   }
@@ -3866,7 +3867,8 @@ if (absFwdSpeed < S.yawSpeedMin) {
   turnFactor *= absFwdSpeed / S.yawSpeedMin;
 }
 
-if (this.track?.meta?.closed === false || this.track?.meta?.raceType === 'stage') turnFactor *= 1.55;
+if (rallyProfile) turnFactor *= rallyProfile.steering;
+else if (this.track?.meta?.closed === false || this.track?.meta?.raceType === 'stage') turnFactor *= 1.55;
 const maxTurn = turnRate * turnFactor; // rad/s
 
 // --------------------------------
