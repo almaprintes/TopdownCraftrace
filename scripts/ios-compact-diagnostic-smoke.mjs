@@ -17,6 +17,7 @@ assert.match(s,/if\(state\.expanded\)pre\.textContent=state\.lastReport/,'when f
 assert.match(s,/trigger\.textContent=state\.expanded\?'MINIMIZAR':'VER DATOS'/);
 assert.match(s,/if\(state\.expanded&&state\.lastReport\)pre\.textContent=state\.lastReport/);
 assert.match(s,/state\.active=false;state\.expanded=false/,'cleanup clears measurement');
-assert.match(s,/return original\.apply\(this,args\)/,'scene instrumentation must remain in use');
+assert.match(s,/state\.preStep=\(\)=>/,'measure engine step without monkey-patching Phaser updates');
+assert.match(s,/state\.scenePre=\(\)=>/,'measure scene update without wrappers');
 assert.match(p,/check:ios-compact-diagnostic/);
 console.log('PASS: iPhone non-blocking mini toolbar, height-capped details, persistent measurement while folded');

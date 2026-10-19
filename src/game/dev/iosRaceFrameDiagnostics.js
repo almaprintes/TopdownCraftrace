@@ -7,9 +7,10 @@ import { getDevRaceTextRenderMode, setDevRaceTextRenderMode } from '../ui/htmlTe
 // than a second requestAnimationFrame loop or a fake "FPS" approximation.
 const isIos=()=>{try{return /iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;}catch{return false;}};
 const style=(node,css)=>{node.style.cssText=css;return node;};
-const freshWindow=()=>({started:performance.now(),count:0,frameSum:0,frameMax:0,updateSum:0,updateMax:0,renderSum:0,renderMax:0,otherSum:0,otherMax:0,over33:0,over50:0,lastSpike:0});
+const freshWindow=()=>({started:performance.now(),count:0,frameSum:0,frameMax:0,sceneSum:0,sceneMax:0,sceneSamples:0,stepSum:0,stepMax:0,stepSamples:0,renderSum:0,renderMax:0,otherSum:0,otherMax:0,otherSamples:0,over33:0,over50:0,lastSpike:0});
 const avg=(sum,count)=>count?sum/count:0;
 const ms=n=>n.toFixed(1);
+const sampled=(sum,max,count)=>count?ms(avg(sum,count))+' / '+ms(max)+' ms':'SIN MUESTRAS';
 const videoProbeEnabled=()=>{try{return JSON.parse(localStorage.getItem('tdr2:settings')||'{}')?.video?.showFPS===true;}catch{return false;}};
 const safeModeDetails=()=>{
   try{
@@ -30,9 +31,10 @@ const metrics=(w,scene,mode)=>[
   'PERF iPhone · '+mode,
   'FOTOGRAMAS  '+w.count+'  '+(avg(w.frameSum,w.count)>0?ms(1000/avg(w.frameSum,w.count)):'--')+' FPS',
   'FRAME      '+ms(avg(w.frameSum,w.count))+' / '+ms(w.frameMax)+' ms',
-  'UPDATE CPU '+ms(avg(w.updateSum,w.count))+' / '+ms(w.updateMax)+' ms',
+  'ESCENA CPU '+sampled(w.sceneSum,w.sceneMax,w.sceneSamples),
+  'PASO CPU   '+sampled(w.stepSum,w.stepMax,w.stepSamples),
   'RENDER CPU '+ms(avg(w.renderSum,w.count))+' / '+ms(w.renderMax)+' ms',
-  'OTROS      '+ms(avg(w.otherSum,w.count))+' / '+ms(w.otherMax)+' ms',
+  'OTROS      '+sampled(w.otherSum,w.otherMax,w.otherSamples),
   '>33ms '+w.over33+' · >50ms '+w.over50+' · último '+ms(w.lastSpike)+'ms',
   'TILES '+(scene._trackBeautyTiles?.length||0)+' · NO mide GPU directamente',
   frameInfo(scene),
@@ -40,25 +42,14 @@ const metrics=(w,scene,mode)=>[
   (()=>{const t=getDevRaceTextRenderMode();return 'TEXTOS '+t.mode+' · RAF '+(t.rafActive?'ON':'OFF')+' · nodos '+(t.registered??'?');})()
 ].join('\n');
 
-// This installer wraps the outermost in-use race class (the concrete scene
-// registered in Phaser), so UPDATE CPU includes later subclasses, engine
-// sound, steering UI, gameplay and the actual DOM HUD update. Measuring only
-// RaceTelemetryHudScene.update would miss all the subclasses above it.
-export function installFinalRaceFrameDiagnosticUpdate(RaceClass){
-  if(IS_PROD_BUILD||!RaceClass?.prototype)return;
-  const proto=RaceClass.prototype;
-  if(Object.prototype.hasOwnProperty.call(proto,'__tdrFinalFrameDiagnosticInstalled'))return;
-  const original=proto.update;
-  if(typeof original!=='function')return;
-  proto.update=function(...args){
-    const diag=this._tdrFrameDiagnostic;
-    if(!diag?.active)return original.apply(this,args);
-    const started=performance.now();
-    try{return original.apply(this,args);}
-    finally{diag.recordUpdate(performance.now()-started);}
-  };
-  Object.defineProperty(proto,'__tdrFinalFrameDiagnosticInstalled',{value:true});
-}
+// Game PRE_STEP/POST_STEP and scene PRE_UPDATE/POST_UPDATE events are
+// reliable measurements even when Phaser cached the update callback before
+// a late prototype patch. No Scene.update monkey-patching is needed.
+//
+// PASO CPU measures the global Phaser game step (all active scenes/systems).
+// ESCENA CPU covers this race scene's PRE_UPDATE through POST_UPDATE,
+// including its physics, Scene.update and post-update event listeners.
+// These are synchronous JS intervals, not direct GPU measurements.
 
 // Testing with photo OFF is intentionally brief: it hides only photo sprites,
 // not authored geometry/collision, so the road will be invisible.
@@ -85,31 +76,54 @@ export function mountRaceDevFrameDiagnostics(scene){
     const b=style(document.createElement('button'),'padding:5px 7px;min-height:30px;background:#1b3241;color:#fff;border:1px solid #648194;border-radius:6px;font:800 10px system-ui;touch-action:manipulation');
     b.type='button';b.textContent=label;b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();callback(b);});target.appendChild(b);return b;
   };
-  const state={active:false,expanded:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,lastUpdateMs:0,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now()};
+  const state={active:false,expanded:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,stepStart:0,sceneStart:0,lastStepMs:0,lastSceneMs:0,stepMeasured:false,sceneMeasured:false,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now()};
   const mode=()=>[state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON',scene._tdrEngineSample?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON','TEXTO '+getDevRaceTextRenderMode().mode].join(' · ');
   const reset=()=>{
     state.window=freshWindow();
     state.lastReportAt=performance.now();
     state.lastReport='';
     state.lastPost=0;
-    state.lastUpdateMs=0;
+    state.stepStart=0;state.sceneStart=0;
+    state.lastStepMs=0;state.lastSceneMs=0;
+    state.stepMeasured=false;state.sceneMeasured=false;
     pre.textContent='Midiendo '+mode()+'\nConduce aproximadamente 20 s y haz una captura.';
   };
-  state.recordUpdate=msSpent=>{if(state.active)state.lastUpdateMs=Math.max(0,msSpent);};
+  state.preStep=()=>{if(state.active)state.stepStart=performance.now();};
+  state.postStep=()=>{
+    if(!state.active||!state.stepStart)return;
+    state.lastStepMs=Math.max(0,performance.now()-state.stepStart);
+    state.stepStart=0;state.stepMeasured=true;
+  };
+  state.scenePre=()=>{if(state.active)state.sceneStart=performance.now();};
+  state.scenePost=()=>{
+    if(!state.active||!state.sceneStart)return;
+    state.lastSceneMs=Math.max(0,performance.now()-state.sceneStart);
+    state.sceneStart=0;state.sceneMeasured=true;
+  };
   state.pre=()=>{if(state.active)state.renderStart=performance.now();};
   state.post=()=>{
     if(!state.active)return;
     const now=performance.now(),w=state.window;
     const render=Math.max(0,now-(state.renderStart||now));
     const frame=state.lastPost>0?now-state.lastPost:0;
+    const stepMeasured=state.stepMeasured,sceneMeasured=state.sceneMeasured;
     state.lastPost=now;
+    // Never reuse stale CPU samples if Phaser omitted a step this frame.
+    state.stepMeasured=false;state.sceneMeasured=false;
     if(frame>0&&frame<1500){
-      const update=state.lastUpdateMs;
-      const other=Math.max(0,frame-update-render);
       w.count++;w.frameSum+=frame;w.frameMax=Math.max(w.frameMax,frame);
-      w.updateSum+=update;w.updateMax=Math.max(w.updateMax,update);
       w.renderSum+=render;w.renderMax=Math.max(w.renderMax,render);
-      w.otherSum+=other;w.otherMax=Math.max(w.otherMax,other);
+      if(sceneMeasured){
+        w.sceneSamples++;w.sceneSum+=state.lastSceneMs;
+        w.sceneMax=Math.max(w.sceneMax,state.lastSceneMs);
+      }
+      if(stepMeasured){
+        w.stepSamples++;w.stepSum+=state.lastStepMs;
+        w.stepMax=Math.max(w.stepMax,state.lastStepMs);
+        const other=Math.max(0,frame-state.lastStepMs-render);
+        w.otherSamples++;w.otherSum+=other;
+        w.otherMax=Math.max(w.otherMax,other);
+      }
       if(frame>33.4){w.over33++;w.lastSpike=frame;}
       if(frame>50)w.over50++;
     }
@@ -220,10 +234,18 @@ export function mountRaceDevFrameDiagnostics(scene){
   trigger.addEventListener('click',open);
   host.appendChild(root);
   const events=scene.game.events;
+  events.on(Phaser.Core.Events.PRE_STEP,state.preStep);
+  events.on(Phaser.Core.Events.POST_STEP,state.postStep);
+  scene.events.on(Phaser.Scenes.Events.PRE_UPDATE,state.scenePre);
+  scene.events.on(Phaser.Scenes.Events.POST_UPDATE,state.scenePost);
   events.on(Phaser.Core.Events.PRE_RENDER,state.pre);
   events.on(Phaser.Core.Events.POST_RENDER,state.post);
   const cleanup=()=>{
     if(state.disposed)return;state.disposed=true;state.active=false;state.expanded=false;
+    events.off(Phaser.Core.Events.PRE_STEP,state.preStep);
+    events.off(Phaser.Core.Events.POST_STEP,state.postStep);
+    scene.events.off(Phaser.Scenes.Events.PRE_UPDATE,state.scenePre);
+    scene.events.off(Phaser.Scenes.Events.POST_UPDATE,state.scenePost);
     events.off(Phaser.Core.Events.PRE_RENDER,state.pre);
     events.off(Phaser.Core.Events.POST_RENDER,state.post);
     scene._tdrDiagnosticHudOff=false;

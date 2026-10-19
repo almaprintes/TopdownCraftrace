@@ -1,6 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceMobilePerformanceScene.js';
 import { mountRaceInstrumentHud, updateRaceInstrumentHud, destroyRaceInstrumentHud } from '../ui/raceInstrumentHud.js';
-import { mountRaceDevFrameDiagnostics, installFinalRaceFrameDiagnosticUpdate } from '../dev/iosRaceFrameDiagnostics.js';
+import { mountRaceDevFrameDiagnostics } from '../dev/iosRaceFrameDiagnostics.js';
 import { setDevRaceTextRenderMode } from '../ui/htmlTextRuntime.js';
 
 function safeDestroy(obj){if(!obj)return;try{obj.destroy?.(true);}catch{}}
@@ -51,7 +51,7 @@ export class RaceScene extends CurrentRaceScene {
     // This is a reversible A/B mode; all non-race scenes remain unchanged.
     if(isIOSDevice()&&!this._tdrEmbeddedReplay&&!this.statsEmbeddedReplay)
       setDevRaceTextRenderMode(this,true);
-    if(mountRaceDevFrameDiagnostics(this))installFinalRaceFrameDiagnosticUpdate(this.constructor);
+    mountRaceDevFrameDiagnostics(this);
     this.events?.once?.('shutdown',()=>destroyRaceInstrumentHud(this));
     this.events?.once?.('destroy',()=>destroyRaceInstrumentHud(this));
     return result;

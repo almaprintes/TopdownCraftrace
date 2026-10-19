@@ -1,5 +1,13 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.306 — Medición iPhone fiable: ESCENA CPU + PASO CPU (sin modificar jugabilidad)
+
+El propietario midió 2152 fotogramas con PHASER y RAF de texto OFF: **38,2 FPS**, 530/2152 (24,6 %) >33,4 ms y 218/2152 (10,1 %) >50 ms, pico 116 ms, MODO high, RES 1.5, SAFE NO, TIMER NO y seis fuentes de motor. Esto es prácticamente idéntico al primer test HTML+audio ON (37,8 FPS, 10,3 % >50 ms), por lo que la mejora puntual PHASER 45,5 FPS **no se replicó**; no proclamar victoria del cambio de textos.
+
+Hallazgo: `UPDATE CPU 0.0 / 0.0 ms` se repite en todos los informes; se instrumentaba mediante modificación del `RaceClass.prototype.update` efectuada tras construir y crear la escena. Phaser puede utilizar una referencia de actualización ya capturada, por lo que ese wrapper tardío no es una fuente fiable. Se elimina ese monkey patch y se sustituyen sus mediciones por eventos nativos Phaser: `Phaser.Scenes.Events.PRE_UPDATE/POST_UPDATE` = **ESCENA CPU** (carrera incl. callbacks), `Phaser.Core.Events.PRE_STEP/POST_STEP` = **PASO CPU** (global), `PRE_RENDER/POST_RENDER` = render JS existente. `OTROS` ahora resta el tiempo del paso medido, no el wrapper ausente. Si no se observa una muestra real, se indica «SIN MUESTRAS» en lugar de 0.0 ms engañoso. Contadores solo activos al pulsar MEDIR, se limpian los cuatro hooks tras salir. Los tests de diagnóstico se actualizaron para verificar todos los hooks, conteo sin muestras y cleanup.
+
+**Solo diagnóstico y versión DEV:** no tocar gráficos, limitadores, WebGL, audio, DOM, colisiones, línea Bézier, físicas RALLY 1.0 ni Google Play. Mantener PHASER por defecto en iPhone DEV durante esta iteración para comparar exactamente la misma configuración. Tras verificar la medición real con un nuevo informe, evaluar A/B del WebGL SYNC desde el propio panel.
+
 ## DEV 1.2.304 — Optimización iPhone de la línea Bézier de Arafo (sin modificar colisiones)
 
 Feedback del propietario, 19/10: «En iPhone va peor. No se como irá en android» tras reemplazar 27 zonas por 1 línea Bézier de 190 nodos. Se descarta asumir que «1 línea» implica menos CPU: `sampleCollisionLine(line,18)` genera ~1222 segmentos físicos. Auditoría de `raceEnvironmentRuntime.js` identifica dos fuentes plausibles de sobrecoste:
