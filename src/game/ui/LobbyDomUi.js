@@ -12,6 +12,7 @@ import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from
 import { getLanguage, t } from '../i18n/index.js';
 import { getPilotProfile } from '../social/pilotProfile.js';
 import { cloudIdentity, shortPlayerId } from '../social/cloudProgress.js';
+import {getMyRaceControlBadge} from '../online/raceControlOnline.js';
 
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import {createAppWallet,disposeAppWallets} from './TdrAppHeader.js';
@@ -206,7 +207,29 @@ export function installLobbyDom(scene) {
     const syncPilot=()=>{const name=String(getPilotProfile()?.name||'').trim();const node=root.querySelector('[data-pilot-header-name]');if(node)node.textContent=name||'—';};
     window.addEventListener('tdr:pilotprofile',syncPilot);
     const accountButton=root.querySelector('[data-cloud-account]');
-    const updateCloudId=async()=>{try{const {id}=await cloudIdentity();if(!root.isConnected)return;accountButton.textContent='ID · '+shortPlayerId(id)+' ☁';accountButton.title='ID: '+id+' · Cuenta y copia de seguridad';}catch{if(root.isConnected)accountButton.textContent='☁ SIN CONEXIÓN';}};
+    const creatorBadge=document.createElement('span');
+    creatorBadge.dataset.lobbyCreatorBadge='1';
+    creatorBadge.textContent='✓ CREADOR';
+    creatorBadge.title='Distintivo de creador confirmado por el servidor';
+    creatorBadge.hidden=true;
+    creatorBadge.style.cssText='display:none;width:max-content;margin-top:3px;'+
+      'padding:2px 7px;border:1px solid #a88338;border-radius:12px;'+
+      'background:rgba(70,39,7,.85);color:#ffd478;font:900 9px system-ui;letter-spacing:.08em';
+    accountButton?.after(creatorBadge);
+    const updateCloudId=async()=>{
+      try{
+        const {id}=await cloudIdentity();
+        if(!root.isConnected)return;
+        accountButton.textContent='ID · '+shortPlayerId(id)+' ☁';
+        accountButton.title='ID: '+id+' · Cuenta y copia de seguridad';
+        try{creatorBadge.hidden=(await getMyRaceControlBadge())!=='CREADOR';}
+        catch{creatorBadge.hidden=true;}
+        creatorBadge.style.display=creatorBadge.hidden?'none':'inline-flex';
+      }catch{
+        creatorBadge.hidden=true;creatorBadge.style.display='none';
+        if(root.isConnected)accountButton.textContent='☁ SIN CONEXIÓN';
+      }
+    };
     // Keep the compact pilot ID in the lobby, but send account management to
     // the existing Settings > Cuenta tab. No duplicate full-screen manager.
     accountButton?.addEventListener('click',()=>{

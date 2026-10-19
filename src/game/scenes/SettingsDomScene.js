@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {observeAppHeader,appBackLabel} from '../ui/TdrAppHeader.js';
 import { defaultControlLayout, saveControlLayout, resetControlLayout, sanitizeLayoutPoint } from '../controls/controlLayout.js';
-import { t } from '../i18n/index.js';
+import { t, getLanguage } from '../i18n/index.js';
 import settingsPremiumCss from '../ui/settings-premium.css?inline';
 
 const STORAGE_KEY='tdr2:settings';
@@ -60,7 +60,7 @@ export class SettingsScene extends Phaser.Scene{
     style.textContent += '\n' + settingsPremiumCss;
     document.head.appendChild(style);
     const root=document.createElement('div');root.id='tdr-settings2';this.root=root;
-    root.innerHTML=`<div class="s2top"><button class="s2back">${appBackLabel()}</button><div class="s2title">${t('settings.title')}</div><div class="s2save">${t('settings.saved')}</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">${t('settings.controls')}</button><button class="s2tab" data-tab="video">${t('settings.video')}</button><button class="s2tab" data-tab="audio">${t('settings.audio')}</button><button class="s2tab" data-tab="legal">${t('settings.legal')}</button></div><div class="s2body"></div>`;
+    root.innerHTML=`<div class="s2top"><button class="s2back">${appBackLabel()}</button><div class="s2title">${t('settings.title')}</div><div class="s2save">${getLanguage()==='en'?'SETTINGS SAVED':'AJUSTES GUARDADOS'}</div></div><div class="s2tabs"><button class="s2tab on" data-tab="controls">${t('settings.controls')}</button><button class="s2tab" data-tab="video">${t('settings.video')}</button><button class="s2tab" data-tab="audio">${t('settings.audio')}</button><button class="s2tab" data-tab="legal">${t('settings.legal')}</button></div><div class="s2body"></div>`;
     document.body.appendChild(root);
     this._appHeaderDispose=observeAppHeader(root,'.s2top');
     root.querySelector('.s2back').onclick=()=>this.scene.start('menu');

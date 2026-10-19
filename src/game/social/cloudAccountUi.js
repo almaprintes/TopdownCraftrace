@@ -1,7 +1,7 @@
 import {
   currentRaceControlAccount,requestRaceControlEmailLink,
   verifyRaceControlEmailCode,setRaceControlPassword,
-  switchRaceControlAccount
+  switchRaceControlAccount,getMyRaceControlBadge
 } from '../online/raceControlOnline.js';
 import {
   cloudBackupStatus,createFirstCloudBackup,updateCloudBackup,readCloudBackup,
@@ -36,6 +36,26 @@ export function openCloudAccountUi({host=null}={}){
   root.dataset.inline=host?'1':'0';
   // The Settings panel is a normal page region, not a second modal dialog.
   root.innerHTML=host?html.replace('role="dialog" aria-modal="true"','role="region"'):html;
+  // Show the authenticated creator status separately from cloud backup status.
+  const creatorBadge=document.createElement('span');
+  creatorBadge.dataset.cloudCreatorBadge='1';
+  creatorBadge.textContent='✓ CREADOR';creatorBadge.hidden=true;
+  creatorBadge.title='Creador reconocido por Top Down Race';
+  root.querySelector('[data-cloud-pilot]')?.after(creatorBadge);
+  const idLine=document.createElement('small');
+  idLine.dataset.cloudPlayerId='1';
+  idLine.textContent='Comprobando ID…';
+  creatorBadge.after(idLine);
+  const quickExport=document.createElement('button');
+  quickExport.type='button';quickExport.dataset.action='quick-export';
+  quickExport.className='tdr-cloud-secondary';
+  quickExport.textContent='DESCARGAR COPIA';
+  root.querySelector('.tdr-cloud-main-actions')?.appendChild(quickExport);
+  const legacyAccess=document.createElement('button');
+  legacyAccess.type='button';legacyAccess.dataset.action='legacy-access';
+  legacyAccess.textContent='ACCESO ANTIGUO (CORREO)';
+  root.querySelector('.tdr-cloud-advanced-buttons')?.appendChild(legacyAccess);
+  root.querySelector('[data-action="backup-manual"]').hidden=true;
   const style=document.createElement('style');
   style.id=ID+'-styles';
   style.textContent=css+`
@@ -53,6 +73,7 @@ export function openCloudAccountUi({host=null}={}){
       #${ID}[data-inline="1"] .tdr-cloud-actions{display:grid;}
       #${ID}[data-inline="1"] button{width:100%;}}
   `;
+  style.textContent+="\n  #tdr-cloud-account-modal .tdr-cloud-panel{max-width:760px;margin-inline:auto;}\n  #tdr-cloud-account-modal[data-inline=\"1\"] .tdr-cloud-panel{max-width:760px;margin-inline:auto;}\n  #tdr-cloud-account-modal .tdr-cloud-driver>div{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;}\n  #tdr-cloud-account-modal .tdr-cloud-driver strong{width:100%;}\n  #tdr-cloud-account-modal [data-cloud-creator-badge]{display:inline-flex;padding:3px 10px;\n    border:1px solid #ac843c;border-radius:14px;color:#ffd17b;background:rgba(100,56,5,.3);\n    font:900 11px system-ui;letter-spacing:.075em;}\n  #tdr-cloud-account-modal [data-cloud-creator-badge][hidden]{display:none;}\n  #tdr-cloud-account-modal [data-cloud-player-id]{color:#b0c9d8;font:700 10px system-ui;}\n  #tdr-cloud-account-modal .tdr-cloud-main-actions{display:flex;flex-wrap:wrap;gap:10px;}\n  #tdr-cloud-account-modal .tdr-cloud-main-actions button{min-width:200px;max-width:350px;flex:1 1 220px;}\n  #tdr-cloud-account-modal button.tdr-cloud-secondary{border:1px solid #50748d;color:#d6e9f4;background:#11283e;box-shadow:none;font-size:12px;}\n  #tdr-cloud-account-modal .tdr-cloud-state[data-state=\"saved\"]{border-color:#2f9577;background:#0e2a2b;}\n  #tdr-cloud-account-modal .tdr-cloud-tip{text-align:left;color:#dcc091;font-size:12px;line-height:1.5;}\n  @media(max-width:520px){#tdr-cloud-account-modal .tdr-cloud-main-actions button{max-width:none;min-width:100%;}}\n";
   document.head.appendChild(style);
   (host||document.body).appendChild(root);
   const state=root.querySelector('[data-cloud-state]');
@@ -66,6 +87,7 @@ export function openCloudAccountUi({host=null}={}){
     setNotice('');
   };
   const showConnectionError=()=>{
+    creatorBadge.hidden=true;idLine.textContent='Identidad sin comprobar';
     // Keep local progress visible even when Auth or cloud storage is offline.
     let local=null;
     try{local=inspectLocalProgress();}catch{}
@@ -93,33 +115,42 @@ export function openCloudAccountUi({host=null}={}){
     root.querySelector('[data-action="retry"]').hidden=true;
     let pending=null;try{pending=localStorage.getItem('tdr2:cloudLoginPendingRestore:v1');}catch{}
     let checked=false;try{checked=localStorage.getItem('tdr2:cloudRecoveryChecked:'+account.id)==='1';}catch{}
-    const linked=!account.anonymous&&account.emailConfirmed;
-    const title=root.querySelector('[data-cloud-title]'),desc=root.querySelector('[data-cloud-description]'),tip=root.querySelector('[data-cloud-tip]'),icon=root.querySelector('[data-cloud-icon]');
+    const accountAccessChecked=!account.anonymous&&account.emailConfirmed&&checked;
+    const title=root.querySelector('[data-cloud-title]');
+    const desc=root.querySelector('[data-cloud-description]');
+    const tip=root.querySelector('[data-cloud-tip]');
+    const icon=root.querySelector('[data-cloud-icon]');
     root.querySelector('[data-cloud-pilot]').textContent=local.pilotName||'MI PILOTO';
-    for(const key of ['protect','backup','restore','login-open'])root.querySelector('[data-action="'+key+'"]').hidden=true;
-    const show=(key,label)=>{const b=root.querySelector('[data-action="'+key+'"]');b.hidden=false;if(label)b.textContent=label;};
+    idLine.textContent='ID · '+shortPlayerId(account.id);
+    creatorBadge.hidden=true;
+    try{creatorBadge.hidden=(await getMyRaceControlBadge())!=='CREADOR';}catch{}
+    for(const key of ['protect','backup','restore','login-open'])
+      root.querySelector('[data-action="'+key+'"]').hidden=true;
+    const show=(key,label)=>{
+      const b=root.querySelector('[data-action="'+key+'"]');
+      b.hidden=false;if(label)b.textContent=label;
+    };
+    quickExport.hidden=false;
     if(pending){
       state.dataset.state='pending';icon.textContent='↪';
-      title.textContent=backup.existing?'¡Encontramos tu partida!':'Cuenta conectada';
-      desc.textContent=backup.existing?'Recupérala para tener tus coches y avances aquí.':'No encontramos una copia en esta cuenta. Tus datos locales siguen intactos.';
-      if(backup.existing)show('restore','RECUPERAR MI PARTIDA');
-      tip.textContent='No sobrescribiremos la nube sin tu permiso.';
-    }else if(!linked){
-      state.dataset.state='local';icon.textContent='☁';
-      title.textContent='Tu partida está en este móvil';
-      desc.textContent=backup.existing?'Hay una copia en la nube, pero debes proteger tu cuenta para recuperarla al cambiar de dispositivo.':'Puedes jugar sin registrarte. Protege la partida para poder recuperarla en otro móvil.';
-      show('protect',account.pendingEmail?'TERMINAR VERIFICACIÓN':'PROTEGER MI PARTIDA');
-      show('login-open','YA TENÍA UNA PARTIDA');
-      tip.textContent='Puedes seguir jugando sin registrarte.';
+      title.textContent=backup.existing?'Copia encontrada':'Cuenta conectada';
+      desc.textContent=backup.existing?
+        'Hay una partida anterior. Confirma su restauración antes de guardar otra copia.':
+        'Esta identidad no tiene copia en la nube. Tu partida local no ha cambiado.';
+      if(backup.existing)show('restore','RECUPERAR PARTIDA');
+      tip.textContent='No sobrescribiremos tu partida sin confirmarlo.';
     }else{
-      state.dataset.state=checked&&backup.existing?'protected':'pending';
-      icon.textContent=checked&&backup.existing?'✅':'☁';
-      title.textContent=checked&&backup.existing?'Tu partida tiene una copia protegida':backup.existing?'Tu partida está en la nube':'Tu correo está verificado';
-      desc.textContent=backup.existing?'Última copia: '+dateText(backup.updatedAt)+'. El guardado automático está en preparación.':'Todavía falta guardar tu partida en la nube.';
-      show('backup',backup.existing?'ACTUALIZAR MI COPIA':'GUARDAR MI PARTIDA');
-      if(backup.existing)show('restore','RECUPERAR UNA COPIA');
-      if(!checked)show('protect','TERMINAR DE PROTEGER');
-      tip.textContent='Antes de cambiar de móvil, comprueba la contraseña y tu copia.';
+      state.dataset.state=backup.existing?'saved':'local';
+      icon.textContent=backup.existing?'✅':'☁';
+      title.textContent=backup.existing?'Partida guardada en la nube':'Partida guardada en este dispositivo';
+      desc.textContent=backup.existing?
+        'Última copia: '+dateText(backup.updatedAt)+' · Revisión '+backup.revision+'. Actualízala después de jugar.':
+        'Todavía no existe una copia online de este piloto.';
+      if(local.meaningful)show('backup',backup.existing?'ACTUALIZAR COPIA':'GUARDAR COPIA');
+      if(!local.pilotName||!local.meaningful)show('login-open','YA TENÍA UNA PARTIDA');
+      tip.textContent=accountAccessChecked?
+        'La recuperación antigua se comprobó en este dispositivo. Conserva sus credenciales.':
+        'Una copia en la nube NO basta para entrar tras cambiar de dispositivo. Descarga también tu partida y no desinstales hasta contar con un acceso probado. El sistema sin correo TDR ID todavía no está listo.';
     }
     root.querySelector('[data-action="backup"]').disabled=!!pending||!local.meaningful;
     root.querySelector('[data-action="restore"]').disabled=!backup.existing;
@@ -169,6 +200,9 @@ export function openCloudAccountUi({host=null}={}){
     return 'Conexión comprobada.';
   }));
   root.querySelector('[data-action="change-account"]').addEventListener('click',()=>setView('login'));
+  root.querySelector('[data-action="legacy-access"]').addEventListener('click',()=>
+    setView(account?.emailConfirmed?'password':account?.pendingEmail?'verify':'link'));
+  quickExport.addEventListener('click',()=>root.querySelector('[data-action="export-local"]').click());
   root.querySelector('[data-action="backup-manual"]').addEventListener('click',()=>root.querySelector('[data-action="backup"]').click());
   root.querySelector('[data-action="restore-manual"]').addEventListener('click',()=>root.querySelector('[data-action="restore"]').click());
   root.querySelector('[data-action="backup"]').addEventListener('click',()=>run(async()=>{
@@ -184,8 +218,8 @@ export function openCloudAccountUi({host=null}={}){
     const result=status.existing
       ?await updateCloudBackup(status.revision)
       :await createFirstCloudBackup();
-    return '✅ COPIA VERIFICADA · REV '+result.revision+' · '+result.keys+
-      ' bloques. Vincula tu correo antes de desinstalar.';
+    return '✅ COPIA GUARDADA · REV '+result.revision+' · '+result.keys+
+      ' bloques. Descarga también tu partida: guardar la copia no garantiza recuperar el acceso.';
   }));
   root.querySelector('[data-action="restore"]').addEventListener('click',()=>run(async()=>{
     const cloud=await readCloudBackup();

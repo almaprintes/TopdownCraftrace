@@ -176,6 +176,14 @@ export async function submitRaceControlRecordWithGhost({trackId,bestTimeMs,carId
 
 // Return only the caller's OWN identity. This read-only RPC is SECURITY
 // DEFINER and does not expose another pilot's profile via PostgREST.
+// Only the authenticated Supabase UUID can obtain a creator badge.
+export async function getMyRaceControlBadge(){
+  const s=await activeSession();
+  const badge=await request('/rest/v1/rpc/get_my_pilot_badge',{
+    method:'POST',token:s.access_token,body:{}
+  });
+  return badge==='CREADOR'?'CREADOR':null;
+}
 export async function getMyRaceControlProfile(){
   const session=await activeSession();
   const rows=await request('/rest/v1/rpc/get_my_pilot_profile',{
