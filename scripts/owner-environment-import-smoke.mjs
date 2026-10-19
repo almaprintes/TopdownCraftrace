@@ -2,7 +2,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {validCollisionLine,sampleCollisionLine} from '../src/game/environment/CollisionPenGeometry.js';
-import {validCollisionZone,compileCollisionZone,pointInsidePolygon} from '../src/game/environment/FreehandCollisionZones.js';
 
 const read=path=>JSON.parse(readFileSync(path,'utf8'));
 const folder='src/game/tracks/library/';
@@ -35,29 +34,45 @@ for(const line of americas.collisionLines){
   const samples=sampleCollisionLine(line,18);
   assert.ok(samples.length>line.nodes.length,'Pen collision must compile into physics segments');
 }
-assert.equal(arafo.collisionLines.length,0);
-assert.equal(arafo.collisionZones.length,27,'Preserve all 27 owner-authored Arafo solid areas');
-assert.equal(arafo.collisionZones.reduce((n,zone)=>n+zone.points.length,0),484);
-assert.equal(new Set(arafo.collisionZones.map(zone=>zone.id)).size,27);
-const compiled=arafo.collisionZones.map(zone=>{
-  assert.equal(zone.solid,true);
-  assert.ok(validCollisionZone(zone),'Solid collision polygon cannot self-intersect or have invalid geometry: '+zone.id);
-  const shape=compileCollisionZone(zone);
-  assert.ok(shape,'Every authored area must be compilable for the game runtime');
-  return shape;
-});
-// The open rally's centerline and its start/finish must remain drivable.
-// No automatic clipping or rescaling of hand-authored obstacles.
-assert.equal(rally.closed,false);
-assert.equal(rally.raceType,'stage');
-for(const [i,p] of rally.centerline.entries()){
-  if(i%10!==0 && i!==rally.centerline.length-1)continue;
-  assert.ok(!compiled.some(zone=>pointInsidePolygon(zone.points,p)),
-    'Authored zone covers the rally racing line at point '+i);
-}
-for(const p of [rally.start,rally.centerline[0],rally.centerline.at(-1)]){
-  assert.ok(!compiled.some(zone=>pointInsidePolygon(zone.points,p)),
-    'Rally start or end is inside a solid zone');
+// 19/10 owner instruction: DELETE all 27 historical zones and install the
+// single owner-authored Bézier barrier. Keep the export data lossless.
+assert.equal(arafo.collisionLines.length,1,'Arafo must use exactly one owner-authored Bézier boundary');
+assert.deepEqual(arafo.collisionZones,[],'No old collision zones may reappear');
+assert.equal(arafo.collisionLines[0].id,'pen-collision-1792442865652-0');
+const line=arafo.collisionLines[0];
+assert.equal(line.type,'collision');
+assert.equal(line.halfThickness,9);
+assert.equal(line.nodes.length,190,'Keep every Bézier control from the owner export');
+assert.ok(validCollisionLine(line),'Every point and both control handles must be finite');
+const points=sampleCollisionLine(line,18);
+assert.ok(points.length>1100,'The full mountain stage barrier must reach the race runtime');
+const maxGap=points.slice(1).reduce((best,p,i)=>Math.max(best,Math.hypot(
+  p.x-points[i].x,p.y-points[i].y)),0);
+assert.ok(maxGap<40,'Bézier sampling must not create a shortcut across hairpins');
+const ends=Math.hypot(points[0].x-points.at(-1).x,points[0].y-points.at(-1).y);
+assert.ok(ends<20,'Authored line returns to its starting neighborhood');
+const within=p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&
+  p.x>=0&&p.x<=rally.worldW&&p.y>=0&&p.y<=rally.worldH;
+assert.ok(line.nodes.every(within),'The authored 190 anchors belong to the rally world');
+// Authoring precision matters: do not move a wall automatically for clearance.
+// The actual spawn and checkpoint gate centers, not first track polyline node,
+// must have comfortable space for the car radius + wall half-thickness.
+const closest=(p)=>{
+  let best=Infinity;
+  for(let i=1;i<points.length;i++){
+    const a=points[i-1],b=points[i],dx=b.x-a.x,dy=b.y-a.y;
+    const dd=dx*dx+dy*dy;
+    const t=dd?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/dd)):0;
+    best=Math.min(best,Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy));
+  }
+  return best;
+};
+assert.equal(rally.closed,false);assert.equal(rally.raceType,'stage');
+assert.ok(closest(rally.start)>30,'Rally spawn must be clear of the new barrier');
+assert.equal(rally.checkpoints.length,2);
+for(const [i,gate] of rally.checkpoints.entries()){
+  const midpoint={x:(gate.a.x+gate.b.x)/2,y:(gate.a.y+gate.b.y)/2};
+  assert.ok(closest(midpoint)>30,'Rally checkpoint '+(i+1)+' must be clear');
 }
 const registry=readFileSync('src/game/tracks/environmentRegistry.js','utf8');
 assert.match(registry,/import\.meta\.glob\('\.\/library\/\*\/\*\.environment\.json'/,
@@ -69,4 +84,4 @@ assert.match(runtime,/for\(const line of env\.collisionLines\|\|\[\]\)/);
 assert.match(runtime,/const solidZones=\(env\.collisionZones\|\|\[\]\)\.map\(compileCollisionZone\)/);
 assert.match(runtime,/resolveBodyAgainstSolidZones\(scene,player\)/);
 assert.match(runtime,/resolveBodyAgainstSolidZones\(scene,ai\?\.body\)/);
-console.log('Owner environment imports OK: 8 Karting Americas pen lines, 27 Arafo solid zones, 484 vertices, both runtime collision paths, open rally centerline clear.');
+console.log('Owner environment imports OK: 8 Americas lines; Arafo 1 owner-authored 190-node Bézier, 0 zones, spawn/2 CP clear, both runtime collision paths.');

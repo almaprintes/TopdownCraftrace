@@ -1,5 +1,13 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.303 — Arafo: 27 zonas antiguas eliminadas, nueva colisión Bézier del propietario
+
+**Autorización (19/10):** el propietario exportó `rally-arafo-los-loros.environment(1).json` desde Environment Studio y confirmó literalmente «Fuera zonas». Se sustituye por completo el fichero publicado `src/game/tracks/library/rally-arafo-los-loros/rally-arafo-los-loros.environment.json` (no se mezclan obstáculos antiguos): **1 única `collisionLine`**, 190 anclajes Bézier exactos del export, tipo `collision`, `halfThickness: 9`; **`collisionZones: []`**, 0 barreras lineales y sin decoraciones/superficies añadidas. Los 27 polígonos (484 vértices) anteriores quedan eliminados del ambiente activo del repositorio; la versión anterior sigue recuperable por historia de Git.
+
+Validación: esquema de export v7, ID y `repositoryPath` correctos, nodos y handles finitos, línea muestreable por `sampleCollisionLine(line,18)` (aprox. 1223 puntos), sin saltos grandes entre muestras; spawn real y los dos checkpoints permanecen a más de 30px del nuevo muro. Cerca del primer punto de la polilínea de centro existe menor holgura que en el spawn real: no mover automáticamente las colisiones dibujadas; verificar en pruebas de conducción si necesita ajuste por el propietario. Se actualiza el `owner-environment-import-smoke.mjs` integrado en CI: impide reintroducir 27 zonas, verifica 190 nodos, resolución en runtime, coherencia y continuidad.
+
+**Importante:** la RALLY 1.0 aprobada se conserva intacta (sin cambios en `rallyDrivingProfile.js`, `CAR_SPECS`, `RaceScene.js` ni frenos). Sin modificar geometría de pista, gates ni cámaras; solo el ambiente/collision dataset, smoke, continuidad y marcador DEV. **PWA DEV 1.2.303 únicamente. No APK, AAB ni Google Play.** Revisar manualmente el comportamiento del coche al golpear muros, especialmente en horquillas y en los extremos del tramo.
+
 ## DEV 1.2.302 — Environment Studio: sin cartel de diagnóstico, navegación a dos dedos y margen en bordes
 
 Petición 19/10: al colocar/refinar colisiones de Arafo–Los Loros, eliminar etiqueta rectangular verde «DEV 1.2.225 · A→B CANVAS 2D…» y facilitar el desplazamiento hasta los límites de la fotografía con dos dedos en iPhone. No alterar físicas RALLY 1.0 aprobadas, ni geometry ni zonas guardadas.
