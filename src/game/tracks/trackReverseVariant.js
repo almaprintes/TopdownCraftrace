@@ -116,7 +116,8 @@ export function makeInvertedClosedTrack(base,id){
   const finishLine=invertRaceGate(base.finishLine);
   const checkpoints=base.checkpoints.slice().reverse().map(invertRaceGate);
   const start=spawnUpstreamOfFinish(raceCenterline,finishLine,
-    Math.max(32,Math.min(100,Number(base.trackWidth)*.6)));
+    base.key==='santa-cruz'?65:Math.max(32,Math.min(100,Number(base.trackWidth)*.6)),
+    base.key==='santa-cruz'?{minDistancePx:30}:undefined);
   if(!start||!Number.isFinite(start.r))throw Error('Inverso sin salida orientada: '+id);
   const name=String(base.name||base.key).replace(/\s+INVERSO$/i,'')+' INVERSO';
   return {...base,id,key:id,name,
