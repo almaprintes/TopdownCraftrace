@@ -108,7 +108,11 @@ function listedTracks(){
   const from=s.indexOf("['circuito-atlantico'");
   const end=from>=0?s.indexOf(']',from):-1;
   if(from<0||end<0)throw Error('Published tracks source array missing');
-  return [...s.slice(from,end).matchAll(/'([^']+)'/g)].map(m=>m[1]);
+  const published=[...s.slice(from,end).matchAll(/'([^']+)'/g)].map(m=>m[1]);
+  // Driving-direction variants share the exact same photo, Bezier road
+  // width and car scale: inventory the six PHYSICAL circuits only.
+  // Their independent records and ranking IDs are audited elsewhere.
+  return published.filter(id=>id!=='karting-tenerife-horario');
 }
 const trackFile=id=>id==='circuito-atlantico'?'track01':id;
 async function imageSize(file){
