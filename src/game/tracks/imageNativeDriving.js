@@ -10,7 +10,7 @@ const length=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  * centerline (travel direction). For a closed loop this also handles a finish
  * close to node 0 without changing or reordering the original points.
  */
-export function spawnUpstreamOfFinish(centerline,gate,distance=65) {
+export function spawnUpstreamOfFinish(centerline,gate,distance=65,options={}) {
   const pts=(Array.isArray(centerline)?centerline:[])
     .map(vec).filter(p=>finite(p.x)&&finite(p.y));
   if(pts.length<3||!gate?.a||!gate?.b)return null;
@@ -34,7 +34,12 @@ export function spawnUpstreamOfFinish(centerline,gate,distance=65) {
   const span=Math.hypot(Number(gate.b.x)-Number(gate.a.x),
                         Number(gate.b.y)-Number(gate.a.y));
   if(!best||total<=0||best.d2>Math.max(25,span*.75)**2)return null;
-  const desired=clamp(Number(distance)||65,Math.max(10,span*.55),Math.min(160,total*.18));
+  // Inverted races may use an explicitly shorter staging distance when the
+  // authored painted stripe is wider than the actual road's center section.
+  // Calls without options keep their original spawn calculation unchanged.
+  const minDistancePx=Number(options?.minDistancePx);
+  const minimum=Number.isFinite(minDistancePx)&&minDistancePx>0?Math.max(10,minDistancePx):Math.max(10,span*.55);
+  const desired=clamp(Number(distance)||65,minimum,Math.min(160,total*.18));
   let s=((best.along-desired)%total+total)%total;
   for(const edge of segments){
     if(s>edge.to+1e-6)continue;
