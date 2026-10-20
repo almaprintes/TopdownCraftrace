@@ -39,6 +39,7 @@ for(const part of ['makeStatisticsShortcut(scene)',"label:tr('lobby.garage')","l
 }
 assert.match(css,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
 assert.match(css,/\.tdr-lobby-dom \.tdr-lobby-bottom-actions \.tdr-lobby-button\{\s*width:100%;min-width:0/);
-assert.match(lobby,/raceControlTrackId:scene\.selectedTrackKey\|\|'track01'/);
+assert.match(lobby,/raceControlTrackId:selectedCircuitRaceId\(scene\.selectedTrackKey\|\|'track01',localStorage\)/,
+  'Race Control uses the actual selected circuit direction without altering the one-tap navigation');
 assert.match(lobby,/onlineFromLobby:true/);
 console.log('Lobby single nav owner and Karting clockwise labels verified.');
