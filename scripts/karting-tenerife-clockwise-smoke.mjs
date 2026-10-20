@@ -54,6 +54,9 @@ try{
   saveTenerifeDirection(storage,'clockwise');
   assert.equal(readTenerifeDirection(storage),'clockwise');
   assert.ok(readFileSync('src/game/scenes/MenuScene.js','utf8').includes('selectedTenerifeRaceId(selectedTrackKey,readTenerifeDirection(localStorage))'));
+  const actualDomLobby=readFileSync('src/game/ui/LobbyDomUi.js','utf8');
+  assert.match(actualDomLobby,/selectedTenerifeRaceId\(baseTrackKey,readTenerifeDirection\(localStorage\)\)/,
+    'the visible DOM lobby must show the same normal/reverse geometry as the selected launch');
   const actualGameMode=readFileSync('src/game/scenes/MenuGameModesScene.js','utf8');
   const shippingScene=readFileSync('src/game/game.js','utf8');
   assert.match(shippingScene,/MenuRewardedAdsScene\.js/,'the shipping menu still uses its game-mode inheritance chain');
