@@ -2,6 +2,7 @@ import { SettingsScene as CurrentSettingsScene } from './SettingsAudioMusicScene
 import { getLanguage } from '../i18n/index.js';
 import { resetFirstVisitTutorials, showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 import { IS_PROD_BUILD } from '../buildTarget.js';
+import { supportDiagnosticsEnabled, setSupportDiagnosticsEnabled, advanceSupportUnlockTap } from '../support/supportRaceDiagnostics.js';
 import { openCloudAccountUi, unmountCloudAccountSettings } from '../social/cloudAccountUi.js';
 
 const STORAGE_KEY='tdr2:settings';
@@ -120,14 +121,28 @@ export class SettingsScene extends CurrentSettingsScene {
     const body=this.root.querySelector('.s2body');if(!body)return;
     const v=this.settings.video||(this.settings.video={});const en=getLanguage()==='en';
     let selected=inferPreset(v),showFPS=!!v.showFPS,showMasteryBadge=typeof v.showMasteryBadge==='boolean'?v.showMasteryBadge:true;
+    let supportTapState={count:0,lastAt:0};
     const labels={performance:en?'PERFORMANCE':'RENDIMIENTO',medium:en?'MEDIUM':'MEDIO',high:en?'HIGH QUALITY':'ALTA CALIDAD',ultra:'ULTRA'};
     const render=()=>{const cfg=PRESETS[selected];body.innerHTML=`<div class="s2grid">
-      <section class="s2card wide"><div class="s2label">${en?'GRAPHICS QUALITY':'CALIDAD GRÁFICA'}</div><div class="s2desc">${en?'Choose one mode. The game handles all technical graphics settings automatically.':'Elige un modo. El juego se encarga automáticamente de todos los ajustes técnicos.'}</div><div class="s2row" data-preset-row>${Object.keys(PRESETS).map(key=>`<button type="button" class="s2choice ${selected===key?'on':''}" data-preset="${key}">${labels[key]}</button>`).join('')}</div></section>
+      <section class="s2card wide"><div class="s2label" data-support-unlock style="touch-action:manipulation;user-select:none">${en?'GRAPHICS QUALITY':'CALIDAD GRÁFICA'}</div><div class="s2desc">${en?'Choose one mode. The game handles all technical graphics settings automatically.':'Elige un modo. El juego se encarga automáticamente de todos los ajustes técnicos.'}</div><div class="s2row" data-preset-row>${Object.keys(PRESETS).map(key=>`<button type="button" class="s2choice ${selected===key?'on':''}" data-preset="${key}">${labels[key]}</button>`).join('')}</div></section>
       <section class="s2card wide"><div class="s2label">${labels[selected]}</div><div class="s2desc">${en?cfg.en:cfg.es}</div></section>
       <section class="s2card"><div class="s2label">${en?'PERFORMANCE HUD':'HUD DE RENDIMIENTO'}</div><div class="s2desc">${en?'Diagnostic FPS and timings. It does not change graphics quality.':'FPS y tiempos de diagnóstico. No cambia la calidad gráfica.'}</div><div class="s2row"><button type="button" class="s2choice ${showFPS?'on':''}" data-fps-hud>${showFPS?'ON':'OFF'}</button></div></section>
       <section class="s2card"><div class="s2label">${en?'CAR MASTERY BADGE':'INSIGNIA DE MAESTRÍA'}</div><div class="s2desc">${en?'Shows the mastery badge on the car roof. Hiding it never removes your progress.':'Muestra la insignia de maestría sobre el techo del coche. Ocultarla nunca borra tu progreso.'}</div><div class="s2row"><button type="button" class="s2choice ${showMasteryBadge?'on':''}" data-mastery-badge>${showMasteryBadge?'ON':'OFF'}</button></div></section>
+      ${supportDiagnosticsEnabled(sessionStorage)?`<section class="s2card wide" data-support-panel><div class="s2label">${en?'SUPPORT DIAGNOSTICS ACTIVE':'DIAGNÓSTICO DE ASISTENCIA ACTIVO'}</div><div class="s2desc">${en?'During the next race, press MEASURE to start. No data is collected before that. Enabled temporarily on this device.':'En la próxima carrera, pulsa MEDIR para comenzar. No se recogen datos antes de pulsarlo. Activado temporalmente en este dispositivo.'}</div><div class="s2row"><button type="button" class="s2choice" data-support-disable>${en?'DISABLE SUPPORT MODE':'DESACTIVAR ASISTENCIA'}</button></div></section>`:'')}
       <section class="s2card wide"><div class="s2row" style="justify-content:flex-end"><button type="button" class="s2apply" data-apply-video>${en?'APPLY':'APLICAR'}</button></div><div class="s2desc">${en?'The game reloads once so these settings are applied everywhere.':'El juego se reinicia una sola vez para aplicar estos ajustes en todas las pantallas.'}</div></section>
     </div>`;
+      body.querySelector('[data-support-unlock]')?.addEventListener('click',()=>{
+        supportTapState=advanceSupportUnlockTap(supportTapState);
+        if(!supportTapState.unlocked)return;
+        const enabled=!supportDiagnosticsEnabled(sessionStorage);
+        setSupportDiagnosticsEnabled(sessionStorage,enabled);
+        render();
+      });
+      body.querySelector('[data-support-disable]')?.addEventListener('click',()=>{
+        setSupportDiagnosticsEnabled(sessionStorage,false);
+        supportTapState={count:0,lastAt:0};
+        render();
+      });
       body.querySelectorAll('button[data-preset]').forEach(btn=>btn.onclick=e=>{e.stopPropagation();selected=String(btn.dataset.preset);render();});
       body.querySelector('[data-fps-hud]')?.addEventListener('click',e=>{e.stopPropagation();showFPS=!showFPS;render();});
       body.querySelector('[data-mastery-badge]')?.addEventListener('click',e=>{e.stopPropagation();showMasteryBadge=!showMasteryBadge;render();});

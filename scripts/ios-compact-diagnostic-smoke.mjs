@@ -5,7 +5,7 @@ const p=readFileSync('package.json','utf8');
 assert.match(s,/max-height:min\(39vh,250px\)/,'panel height must be limited in landscape');
 assert.match(s,/top:calc\(env\(safe-area-inset-top\) \+ 8px\)/,'panel must be anchored at top');
 assert.match(s,/const toolbar=style\(document.createElement\('div'\)/);
-assert.match(s,/const motorButton=control\('MOTOR ON',async b=>/);
+assert.match(s,/motorButton=control\('MOTOR ON',async b=>/);
 assert.match(s,/\},toolbar\);\s*\/\/ MOTOR is reachable/,'engine must live in persistent toolbar');
 assert.match(s,/const copyButton=control\('COPIAR',async b=>/);
 assert.match(s,/\},toolbar\);\s*copyButton\.style\.display='none'/);

@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { IS_PROD_BUILD } from '../buildTarget.js';
+import { supportDiagnosticsEnabled } from '../support/supportRaceDiagnostics.js';
 import { IOS_WEBGL_SYNC_KEY } from '../performance/iosWebglPresentationMode.js';
 import { IOS_DEV_RESOLUTION_KEY } from '../performance/iosDevResolutionTrial.js';
 import { createFramePacingStats, recordFramePacing, percentileFramePacing } from '../performance/iosFramePacingStats.js';
@@ -23,14 +24,25 @@ const safeModeDetails=()=>{
   }catch{return 'DESCONOCIDO';}
 };
 const engineStatus=scene=>{
-  const data=scene._tdrEngineSample?.getDevEngineAudioStatus?.();
-  if(!data)return 'AUDIO MOTOR: NO DISPONIBLE';
+  const engine=scene._tdrEngineSample;
+  const data=engine?.getDevEngineAudioStatus?.();
+  if(!data)return 'AUDIO MOTOR '+(engine?.engineStarted?'ON':'OFF')+' · CONTEXTO '+(engine?._ctx?.state||'sin contexto');
   const sourceCount=data.ready?data.sources:'cargando';
   return 'AUDIO MOTOR '+(data.diagnosticSuspended?'OFF':'ON')+' · CONTEXTO '+data.state+' · FUENTES '+sourceCount+' · '+data.mode;
 };
-const frameInfo=scene=>{const conf=window.__tdrIosFrameConfig||{};const context=scene.game?.renderer?.gl?.getContextAttributes?.();const actual=typeof context?.desynchronized==='boolean'?(context.desynchronized?'DESYNC':'SYNC'):'NO DISPONIBLE';return `MODO ${conf.preset||'?'}  RES ${conf.renderResolution||'?'}  FPS limit ${conf.frameLimit??'?'} · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;};
+const frameInfo=scene=>{
+  const conf=window.__tdrIosFrameConfig||{},devIos=!IS_PROD_BUILD&&isIos();
+  const context=scene.game?.renderer?.gl?.getContextAttributes?.();
+  const actual=typeof context?.desynchronized==='boolean'?(context.desynchronized?'DESYNC':'SYNC'):'NO DISPONIBLE';
+  const preset=devIos?conf.preset:window.__tdrVideoPreset;
+  const resolution=devIos?conf.renderResolution:window.__tdrRenderResolution;
+  const limit=devIos?conf.frameLimit:scene.game?.config?.fps?.limit;
+  const line=`MODO ${preset||'?'}  RES ${resolution||'?'}  FPS limit ${limit??'?'}`;
+  if(!devIos)return line+'\\nWEBGL '+actual+' real · FPS HUD '+(videoProbeEnabled()?'ON':'OFF');
+  return line+` · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;
+};
 const metrics=(w,scene,mode)=>[
-  'PERF iPhone · '+mode,
+  'PERF '+(isIos()?'iOS':/Android/i.test(String(navigator?.userAgent||''))?'Android':'dispositivo')+' · '+mode,
   'FOTOGRAMAS  '+w.count+'  '+(avg(w.frameSum,w.count)>0?ms(1000/avg(w.frameSum,w.count)):'--')+' FPS',
   'FRAME      '+ms(avg(w.frameSum,w.count))+' / '+ms(w.frameMax)+' ms',
   'ESCENA CPU '+sampled(w.sceneSum,w.sceneMax,w.sceneSamples),
@@ -58,7 +70,7 @@ const metrics=(w,scene,mode)=>[
 // Testing with photo OFF is intentionally brief: it hides only photo sprites,
 // not authored geometry/collision, so the road will be invisible.
 export function mountRaceDevFrameDiagnostics(scene){
-  if(IS_PROD_BUILD||!isIos()||typeof document==='undefined'||!scene?.game?.events)return null;
+  if(typeof document==='undefined'||!scene?.game?.events||!supportDiagnosticsEnabled(sessionStorage))return null;
   const host=document.body;
   // This overlay must never cover the lower-left touch steering area in landscape.
   // Keep actions in a tiny top toolbar, cap the details, and measure while folded.
@@ -139,7 +151,9 @@ export function mountRaceDevFrameDiagnostics(scene){
       state.lastReportAt=now;
     }
   };
-  const motorButton=control('MOTOR ON',async b=>{
+  let motorButton=null;
+  if(!IS_PROD_BUILD&&isIos()){
+  motorButton=control('MOTOR ON',async b=>{
     if(state.audioBusy)return;
     const engine=scene._tdrEngineSample;
     const current=engine?.getDevEngineAudioStatus?.();
@@ -222,6 +236,7 @@ export function mountRaceDevFrameDiagnostics(scene){
     b.textContent=state.photoOff?'FOTO OFF':'FOTO ON';
     reset();
   });
+  }
   control('REINICIAR',()=>reset());
   const copyButton=control('COPIAR',async b=>{
     const output=state.lastReport||pre.textContent;
@@ -240,7 +255,7 @@ export function mountRaceDevFrameDiagnostics(scene){
     if(!state.active){
       state.active=true;
       state.expanded=true;
-      motorButton.style.display='';
+      if(!IS_PROD_BUILD&&isIos())motorButton.style.display='';
       copyButton.style.display='';
       reset();
     }else{
@@ -280,5 +295,6 @@ export function mountRaceDevFrameDiagnostics(scene){
   scene.events.once('destroy',cleanup);
   scene._tdrFrameDiagnostic=state;
   // No instrumentation callbacks perform any timing work before MEDIR is opened.
+  // Assist-mode unlock alone never starts frame sampling.
   return state;
 }

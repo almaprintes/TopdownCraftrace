@@ -1,5 +1,17 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.308 — Diagnóstico oculto de asistencia
+
+Solicitud del propietario, 20/10: el botón MEDIR **no debe verse en el juego normal**, pero debe poder activarse en un móvil de un tester para asistir problemas de rendimiento sin reeditar ni recompilar.
+
+Implementado un desbloqueo no anunciado en **Ajustes → Gráficos: tocar 7 veces seguidas el título CALIDAD GRÁFICA en 5 segundos**. La opción de asistencia aparece únicamente tras el gesto y ofrece DESACTIVAR ASISTENCIA. Caduca después de 30 min y usa exclusivamente `sessionStorage` (no cuenta, preferencias, progreso, nube ni servidor). Es un ocultamiento UX, **no una medida de seguridad**.
+
+Al iniciar una carrera, `mountRaceDevFrameDiagnostics` comprueba el permiso temporal. En modo normal no monta el DOM ni suscribe escuchas PRE_STEP, POST_STEP, PRE_RENDER, POST_RENDER, PRE_UPDATE o POST_UPDATE. Con permiso activado, muestra MEDIR, pero **no mide nada hasta tocar MEDIR**, y MINIMIZAR mantiene una medida activa. Al abandonar carrera elimina todas las escuchas y nodos. Lectura de FPS, tiempos de frame y CPU, P95/P99 y ráfagas; salida COPIAR. Funciona en iOS y Android (y otros navegadores); no envía datos automáticamente.
+
+Compilación de producción: solo herramientas **de lectura** (MEDIR, REINICIAR, COPIAR) y sin toggles de audio, textos, HUD, imagen, WebGL o resolución. DEV iPhone sigue conservando su banco de pruebas A/B al activar asistencia. El hecho de que el modo de soporte exista en el código de producción NO implica publicar un nuevo Android: versión Play 1.1.188 vc8 permanece intacta.
+
+Validar gestos y mediciones en hardware iPhone/Android; confirmar que en producción la superficie está oculta por defecto y que, tras 30 min, el permiso expira. Se añade smoke `scripts/support-race-diagnostics-smoke.mjs`, integrado en `prebuild`.
+
 ## DEV 1.2.307 — A/B de resolución y cadencia de fotogramas en iPhone
 
 Los resultados de 20/10 con DEV 1.2.306 muestran DESYNC 47,1 FPS, >50 ms 91/2570 (3,5 %) y SYNC 48,0 FPS, >50 ms 60/2099 (2,9 %). El propietario afirma que **SYNC tiene tirones perceptiblemente peores** pese a la media ligeramente superior. La bandera WebGL real sigue siendo `NO DISPONIBLE`; el modo solicitado no confirma si WebKit lo respetó. **DESYNC es la referencia subjetiva preferida**. El selector anterior permanece reversible; la web no puede modificar la preferencia local del propietario por sí sola, así que debe volver a DESYNC antes de la prueba.
