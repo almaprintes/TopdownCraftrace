@@ -1,5 +1,13 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.314 — APK Android QA consolidada solicitada por el propietario (20/10/2026)
+
+Se prepara la **APK deviceTest release QA firmada con clave de pruebas**, con paquete independiente `com.craftracestudio.topdownrace.rewardedtest`, minificada, AdMob y RevenueCat reales como la anterior .300, para comprobar integraciones reales sin publicar en Google Play. El instalable debe salir **exclusivamente del HEAD main** y del workflow `.github/workflows/android-revenuecat-qa-apk.yml`, con tag de GitHub prerelease `tdr-qa-1.2.314`, artefacto y archivo `TDR-QA-DEV-1.2.314-REAL-ADS-SIN-MEDIR.apk`. No mover versionCode/versionName públicos ni AAB.
+
+Incluye los cambios posteriores a .300: geometría/correcciones de Arafo–Los Loros, Inducción misión 7 (`1.2.311`), recuperación de caché de rankings/tiempos de Atlántico (`1.2.312`) y formularios de ubicación autodeclarada Global/Continente/País/Región al crear nick y en Ajustes → Cuenta (`1.2.313`). El paquete prueba no modifica los registros Supabase históricos ni asigna ubicación falsa; el modo oculto MEDIR no aparece durante uso normal. Probar circuitos y Arafo sin alterar físicas RALLY 1.0, rango de rankings de pilotos con y sin región, persistencia de misión 7, y anuncios auténticos sin pruebas repetidas de impresiones.
+
+**Puerta de calidad:** no afirmar que existe ni ofrecer enlace de descarga hasta que GitHub Actions confirme job de APK `completed/success`, exista el asset del release público y se verifique el SHA del workflow. No publicar Play.
+
 ## DEV 1.2.313 — Alta de piloto con ubicación declarada y rankings geográficos corregibles
 
 Investigación READ ONLY de Supabase 20/10: 21 perfiles, de los cuales siete tienen `continent_code='XX',country_code='XX',region_code='XX'` porque `claim_my_pilot_nick` crea un perfil reservando el nick con ubicación provisional 'XX' (migración 014). Esto hace que GLOBAL incluya sus récords, mientras los rankings EU/ES/ES-CN correctamente no los incluyan; jamás asumir que 'XX' significa España. Distribución real: Atlántico 11/10, Américas 2/0, Canarias 3/3, Canarias 4096 1/0, Tenerife 3/2, Arafo 1/1, Santa Cruz 7/5; Santa Cruz tiene además un registro sin perfil y por diseño no puede aparecer en la clasificación firmada.
