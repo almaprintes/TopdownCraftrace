@@ -57,6 +57,8 @@ try{
   const actualDomLobby=readFileSync('src/game/ui/LobbyDomUi.js','utf8');
   assert.match(actualDomLobby,/selectedTenerifeRaceId\(baseTrackKey,readTenerifeDirection\(localStorage\)\)/,
     'the visible DOM lobby must show the same normal/reverse geometry as the selected launch');
+  assert.match(actualDomLobby,/const launchTrack=selectedTenerifeRaceId\(trackKey,readTenerifeDirection\(localStorage\)\);/,
+    'even the DOM PLAY fallback must use the selected direction');
   const actualGameMode=readFileSync('src/game/scenes/MenuGameModesScene.js','utf8');
   const shippingScene=readFileSync('src/game/game.js','utf8');
   assert.match(shippingScene,/MenuRewardedAdsScene\.js/,'the shipping menu still uses its game-mode inheritance chain');
