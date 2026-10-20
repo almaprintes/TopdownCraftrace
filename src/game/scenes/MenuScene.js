@@ -5,7 +5,7 @@ import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { DEV_FACTORY } from '../dev/devFlags.js';
 import { BaseScene } from './BaseScene.js';
 import { IS_PROD_BUILD } from '../buildTarget.js';
-import {selectedTenerifeRaceId,readTenerifeDirection} from '../tracks/trackReverseVariant.js';
+import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 const LEGACY_CAR_IDS = new Set(['stock', 'touring', 'power']);
 
@@ -512,7 +512,7 @@ bigPlayBtn.on('pointerup', () => {
 
   // Player selection remains the historical, published base card. Only this
   // new race session changes its route identity (and hence PB/ghost/ranking ID).
-  const raceTrackKey=selectedTenerifeRaceId(selectedTrackKey,readTenerifeDirection(localStorage));
+  const raceTrackKey=selectedCircuitRaceId(selectedTrackKey,localStorage);
   this.scene.start('race', {
     carId: this.selectedCarId,
     trackKey: raceTrackKey
