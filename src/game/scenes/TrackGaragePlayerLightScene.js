@@ -5,7 +5,7 @@ import { isPublishedTrackId } from '../tracks/trackUnlocks.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 
 function trackKey(track){return String(track?.key||track?.id||'');}
-function selectableKey(key){return key!=='karting-canarias-narrow70'&&isPublishedTrackId(key);}
+function selectableKey(key){return key!=='karting-canarias-narrow70'&&key!=='karting-tenerife-horario'&&isPublishedTrackId(key);}
 function playerVisible(track){
   const key=trackKey(track);
   return !!key && selectableKey(key) && track?.meta?.hiddenFromTrackSelect!==true;
