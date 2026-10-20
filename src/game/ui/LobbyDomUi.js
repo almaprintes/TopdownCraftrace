@@ -184,7 +184,7 @@ function makeOnlineRecordsShortcut(scene){
   button.dataset.lobbyOnlineRecords='1';
   button.innerHTML=`<svg class="tdr-lobby-records-emblem" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h14v9c0 6-3.2 9-7 9s-7-3-7-9V4z"/><path d="M9 7H5v4c0 5 3 7 7 7M23 7h4v4c0 5-3 7-7 7M16 22v5m-6 2h12m-10-2h8"/><path d="m16 8 1.4 2.8 3.1.5-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.5L16 8z" stroke-width="1.4"/></svg><span>${tr('lobby.onlineRecords')}</span>`;
   button.addEventListener('click',()=>scene.scene.start('StatsScene',{
-    raceControlTrackId:scene.selectedTrackKey||'track01',
+    raceControlTrackId:selectedCircuitRaceId(scene.selectedTrackKey||'track01',localStorage),
     onlineFromLobby:true
   }));
   return button;
