@@ -69,8 +69,8 @@ for(const p of [track.start,gateMid(track.finishLine),...track.checkpoints.map(g
 const race=readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
 assert.match(race,/scaleKartingCanariasEnvironment\(env\)/,
   'Runtime must project authored barriers into the enlarged race-world');
-assert.match(race,/isImageNativeTrackScene\(scene\)[\s\S]*?'karting-canarias'[\s\S]*?\.includes\(normalizeTrackKey\(scene\?\.trackKey\)\)/,
-  'Only official photo-native Karting Canarias may install authored collisions');
+assert.match(race,/isImageNativeTrackScene\(scene\)[\s\S]*?'karting-canarias'[\s\S]*?\.includes\(physicalKey\)/,
+  'Only official photo-native Karting Canarias and its reverse may install authored collisions');
 assert.match(race,/for\(const line of env\.collisionLines\|\|\[\]\)/);
 assert.match(race,/const solidZones=\(env\.collisionZones\|\|\[\]\)\.map\(compileCollisionZone\)/);
 assert.match(race,/resolveBodyAgainstColliders\(scene,player,scene\.carRig\)/);
