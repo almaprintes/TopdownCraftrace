@@ -1,4 +1,5 @@
 import { createTrackEnvironment } from '../tracks/environmentRegistry.js';
+import {physicalCircuitId} from '../tracks/trackReverseVariant.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import {scaleKartingCanariasEnvironment} from '../tracks/kartingCanariasWorldScale.js';
 import {scaleAtlanticoEnvironment} from '../tracks/atlanticoWorldScale.js';
@@ -14,21 +15,23 @@ const MATERIAL_TYPES=['asphalt','grass','offroad'];
 const MATERIAL_DIR={asphalt:'materials/asphalt-pbr',grass:'materials/grass',offroad:'materials/offroad'};
 
 function normalizeTrackKey(value){return String(value||'').trim().toLowerCase().replace(/_/g,'-');}
-function envFor(scene){
+export function envFor(scene){
+  const raceKey=normalizeTrackKey(scene?.trackKey);
+  const physicalKey=normalizeTrackKey(physicalCircuitId(raceKey));
   // Las previsualizaciones locales siguen aisladas. El Karting Tenerife
   // fotográfico OFICIAL sí admite nuevas decoraciones/guardarraíles desde
   // Environment Studio, en coordenadas exactas del fondo, sin tocar la foto.
   // Official photo-native circuits and stages load only their own authored world-space collision data.
   // Keep local TrackStudio previews isolated from the published environment registry.
-  if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros'].includes(normalizeTrackKey(scene?.trackKey))&&normalizeTrackKey(scene?.trackKey)!=='karting-canarias-narrow70'&&normalizeTrackKey(scene?.trackKey)!=='circuito-atlantico')return null;
-  const narrow=normalizeTrackKey(scene?.trackKey)==='karting-canarias-narrow70';
+  if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros'].includes(physicalKey)&&physicalKey!=='karting-canarias-narrow70'&&physicalKey!=='circuito-atlantico')return null;
+  const narrow=physicalKey==='karting-canarias-narrow70';
   // New Canarias is the user-selected published 4096x6144 layout. Prefer
   // its OWN collisions even when the selector still calls it "karting-canarias".
   // Never scale its geometry by the retired legacy Canarias factor 2.5.
-  const rebuiltCanarias=[scene?.track?.id,scene?.track?.meta?.id,
-    scene?.track?.trackId].some(id=>normalizeTrackKey(id)==='karting-canarias-4096');
+  const rebuiltCanarias=[physicalKey,scene?.track?.id,scene?.track?.meta?.id,
+    scene?.track?.trackId].some(id=>normalizeTrackKey(physicalCircuitId(id))==='karting-canarias-4096');
   const candidates=[...(rebuiltCanarias?['karting-canarias-4096']:[]),
-    ...(narrow?['karting-canarias']:[]),scene?.trackKey,scene?.track?.meta?.id,
+    ...(narrow?['karting-canarias']:[]),physicalKey,scene?.trackKey,scene?.track?.meta?.id,
     scene?.track?.id,scene?.track?.trackId,scene?.track?.meta?.trackId].map(normalizeTrackKey).filter(Boolean);
   for(const key of candidates){
     const env=createTrackEnvironment(key);
@@ -45,7 +48,7 @@ function envFor(scene){
       // Preserve compatibility with external original-source-photo projects.
       return env.coordinateSpace==='race-world'?env:scaleAtlanticoEnvironment(env);
     }
-    return key==='karting-canarias'&&(normalizeTrackKey(scene?.trackKey)==='karting-canarias'||narrow)
+    return key==='karting-canarias'&&(physicalKey==='karting-canarias'||narrow)
       ?scaleKartingCanariasEnvironment(env):env;
   }
   return null;
