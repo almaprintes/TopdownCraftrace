@@ -3,6 +3,7 @@ import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 import { ensureSelectionPaddockSkin } from '../ui/selectionPaddockSkin.js';
 import { attachCenteredSelectionRail } from '../ui/centeredSelectionRail.js';
 import { pxToMeters } from '../cars/speedUnits.js';
+import {TENERIFE_LEGACY_ID,readTenerifeDirection,saveTenerifeDirection} from '../tracks/trackReverseVariant.js';
 
 const ROOT_ID='tdr-track-selector-dom';
 const TAP_MOVE_PX=14;
@@ -42,6 +43,40 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     if(!root)return;
     if(this._mode!=='admin')ensureSelectionPaddockSkin();
     syncCanonicalLengths(root,this._tracks,this._index);
+    // One track card, two real timing variants. The historical anti-clockwise
+    // lap identity stays on karting-tenerife; clockwise receives its own ID.
+    const selected=this._tracks?.[this._index];
+    const isTenerife=selected?.key===TENERIFE_LEGACY_ID;
+    if(isTenerife&&!root.querySelector('.tdr-ts-locked-hero')){
+      const header=root.querySelector('.tdr-ts-hero-head');
+      if(header){
+        const cssId='tdr-terrace-direction-selector-style';
+        if(!document.getElementById(cssId)){
+          const sheet=document.createElement('style');sheet.id=cssId;
+          sheet.textContent='#tdr-track-selector-dom .tdr-ts-route-modes{display:flex;gap:7px;justify-content:center;align-items:center;margin:8px auto 0;max-width:min(490px,100%)}#tdr-track-selector-dom .tdr-ts-route-modes button{flex:1;min-width:0;min-height:34px;border:1px solid #36566d;border-radius:8px;background:#132337;color:#b9d6e7;font:800 10px system-ui,-apple-system,sans-serif;letter-spacing:.02em;padding:4px 7px;touch-action:manipulation}#tdr-track-selector-dom .tdr-ts-route-modes button[aria-pressed="true"]{border-color:#2bff88;background:#163d35;color:#d6ffe8}#tdr-track-selector-dom .tdr-ts-hero-head:has(.tdr-ts-route-modes){padding-top:6px;padding-bottom:4px}@media(max-height:520px){#tdr-track-selector-dom .tdr-ts-route-modes{margin-top:3px}#tdr-track-selector-dom .tdr-ts-route-modes button{min-height:28px;font-size:9px}}';
+          document.head.appendChild(sheet);
+        }
+        const row=document.createElement('div');row.className='tdr-ts-route-modes';
+        row.setAttribute('role','group');
+        const lang=document.documentElement.lang==='en'?'en':'es';
+        row.setAttribute('aria-label',lang==='en'?'Race direction':'Sentido de circulación');
+        for(const [value,label] of [
+          ['clockwise',lang==='en'?'↻ CLOCKWISE · NORMAL':'↻ HORARIO · NORMAL'],
+          ['counterclockwise',lang==='en'?'↺ COUNTERCLOCKWISE · REVERSE':'↺ ANTIHORARIO · INVERSO']
+        ]){
+          const btn=document.createElement('button');btn.type='button';btn.dataset.raceDirection=value;
+          btn.textContent=label;row.appendChild(btn);
+          btn.addEventListener('click',event=>{
+            event.preventDefault();event.stopPropagation();
+            saveTenerifeDirection(localStorage,value);
+            for(const b of row.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.raceDirection===value));
+          });
+        }
+        const active=readTenerifeDirection(localStorage);
+        for(const b of row.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.raceDirection===active));
+        header.appendChild(row);
+      }
+    }
 
     this._centeredTrackRail=attachCenteredSelectionRail(root,{
       listSelector:'.tdr-ts-list',
