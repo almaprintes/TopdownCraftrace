@@ -1,5 +1,15 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.309 — Contexto temporal y térmico del diagnóstico de rendimiento
+
+Petición del propietario 20/10: contextualizar la intermitencia de fluidez de iPhone por fecha/hora, tiempo entre pruebas, temperatura y otros factores sin activar observación permanente.
+
+El panel MEDIR oculto desde DEV 1.2.308 ahora añade fecha/hora local **inicio** y **actual**, duración de toma, tiempo transcurrido desde apertura de la PWA y desde entrada a carrera, último informe guardado y minutos/horas/días desde su cierre, variación de FPS frente al anterior, circuito (si se identifica), DPR, RAM aproximada cuando navigator.deviceMemory está disponible, número/duración de salidas de segundo plano mientras MEDIR estaba activo y estado de batería si `navigator.getBattery()` está disponible (Safari iOS suele no ofrecerlo). Nada se envía a servidor: al pulsar **COPIAR** se guarda localmente un resumen mínimo de la prueba (hora final, FPS, P95 y porcentaje >50ms) para comparar con la siguiente incluso tras reiniciar el juego; retención máxima 90 días.
+
+**Importante:** la PWA no dispone de sensor público de temperatura interna de iPhone. Botón `CALOR: SIN INDICAR → FRÍO → TEMPLADO → CALIENTE → MUY CALIENTE` en el panel, a seleccionar por el tester. Informe rotulado **CALOR AL TACTO (MANUAL)** con estado de inicio y actual, **SIN SENSOR TÉRMICO**. Para una nueva prueba con estado inicial seleccionado, pulsar REINICIAR tras elegirlo. No se inventan grados Celsius ni temperatura del chipset.
+
+No iniciar ninguna medición si MEDIR no está activo; ningún muestreo periódico adicional, ninguna intervención en físicas RALLY 1.0, colisiones, audio, texturas, resolución ni WebGL. En builds públicas el modo de asistencia sigue oculto tras siete toques en Ajustes → Gráficos, sin opciones de mutación DEV. Verificación mediante `check:performance-context`.
+
 ## DEV 1.2.308 — Diagnóstico oculto de asistencia
 
 Solicitud del propietario, 20/10: el botón MEDIR **no debe verse en el juego normal**, pero debe poder activarse en un móvil de un tester para asistir problemas de rendimiento sin reeditar ni recompilar.

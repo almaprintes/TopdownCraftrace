@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import { supportDiagnosticsEnabled } from '../support/supportRaceDiagnostics.js';
+import { THERMAL_TOUCH_LEVELS, loadPreviousRaceMeasurement, savePreviousRaceMeasurement, localMeasurementTime, formatMeasurementDuration, previousMeasurementContext } from '../support/raceMeasurementContext.js';
 import { IOS_WEBGL_SYNC_KEY } from '../performance/iosWebglPresentationMode.js';
 import { IOS_DEV_RESOLUTION_KEY } from '../performance/iosDevResolutionTrial.js';
 import { createFramePacingStats, recordFramePacing, percentileFramePacing } from '../performance/iosFramePacingStats.js';
@@ -38,10 +39,37 @@ const frameInfo=scene=>{
   const resolution=devIos?conf.renderResolution:window.__tdrRenderResolution;
   const limit=devIos?conf.frameLimit:scene.game?.config?.fps?.limit;
   const line=`MODO ${preset||'?'}  RES ${resolution||'?'}  FPS limit ${limit??'?'}`;
-  if(!devIos)return line+'\\nWEBGL '+actual+' real · FPS HUD '+(videoProbeEnabled()?'ON':'OFF');
-  return line+` · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;
+  if(!devIos)return line+'\nWEBGL '+actual+' real · FPS HUD '+(videoProbeEnabled()?'ON':'OFF');
+  return line+` · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;
 };
-const metrics=(w,scene,mode)=>[
+// Extra information is sampled on demand, never on every animation frame.
+const contextLines=(w,scene,state,nowWall)=> {
+  const pageAge=Math.max(0,performance.now());
+  const raceAge=Math.max(0,performance.now()-state.raceMountedAt);
+  const prev=state.previous;
+  const thermalNow=THERMAL_TOUCH_LEVELS[state.thermalIndex]||THERMAL_TOUCH_LEVELS[0];
+  const label=s=>s==null?'NO DISPONIBLE':s;
+  const fps=w.count&&w.frameSum>0?1000/avg(w.frameSum,w.count):null;
+  const prevDelta=prev&&Number.isFinite(prev.fps)&&fps!=null
+    ?' · FPS '+(fps-prev.fps>=0?'+':'')+(fps-prev.fps).toFixed(1)+' vs anterior'
+    :'';
+  const duration=Math.max(0,nowWall-state.measurementStartedAt);
+  const hiddenTotal=state.hiddenTotalMs+(state.hiddenSince>0?Math.max(0,performance.now()-state.hiddenSince):0);
+  const track=scene.track||{};
+  const trackName=[track?.meta?.name,track?.name,track?.id,scene?.trackId].find(v=>typeof v==='string'&&v.trim());
+  const deviceMemory=Number(navigator?.deviceMemory);
+  return [
+    'FECHA INICIO '+localMeasurementTime(state.measurementStartedAt),
+    'FECHA ACTUAL '+localMeasurementTime(nowWall),
+    'DURACIÓN '+formatMeasurementDuration(duration)+' · sesión app '+formatMeasurementDuration(pageAge)+' · carrera '+formatMeasurementDuration(raceAge),
+    previousMeasurementContext(prev,state.measurementStartedAt)+prevDelta,
+    'CALOR AL TACTO (MANUAL): inicio '+state.thermalAtStart+' · ahora '+thermalNow+' · SIN SENSOR TÉRMICO',
+    'CIRCUITO '+(trackName||'NO DISPONIBLE')+' · DPR '+label(window.devicePixelRatio)+' · RAM estimada '+(Number.isFinite(deviceMemory)&&deviceMemory>0?deviceMemory+' GB':'NO DISPONIBLE'),
+    'SEGUNDO PLANO '+state.hiddenCount+' salidas · '+formatMeasurementDuration(hiddenTotal)+' acumulados',
+    'BATERÍA '+(state.batteryReading||'NO DISPONIBLE EN ESTE NAVEGADOR')
+  ];
+};
+const metrics=(w,scene,mode,state,nowWall=Date.now())=>[
   'PERF '+(isIos()?'iOS':/Android/i.test(String(navigator?.userAgent||''))?'Android':'dispositivo')+' · '+mode,
   'FOTOGRAMAS  '+w.count+'  '+(avg(w.frameSum,w.count)>0?ms(1000/avg(w.frameSum,w.count)):'--')+' FPS',
   'FRAME      '+ms(avg(w.frameSum,w.count))+' / '+ms(w.frameMax)+' ms',
@@ -55,7 +83,8 @@ const metrics=(w,scene,mode)=>[
   'TILES '+(scene._trackBeautyTiles?.length||0)+' · NO mide GPU directamente',
   frameInfo(scene),
   engineStatus(scene),
-  (()=>{const t=getDevRaceTextRenderMode();return 'TEXTOS '+t.mode+' · RAF '+(t.rafActive?'ON':'OFF')+' · nodos '+(t.registered??'?');})()
+  (()=>{const t=getDevRaceTextRenderMode();return 'TEXTOS '+t.mode+' · RAF '+(t.rafActive?'ON':'OFF')+' · nodos '+(t.registered??'?');})(),
+  ...contextLines(w,scene,state,nowWall)
 ].join('\n');
 
 // Game PRE_STEP/POST_STEP and scene PRE_UPDATE/POST_UPDATE events are
@@ -92,10 +121,16 @@ export function mountRaceDevFrameDiagnostics(scene){
     const b=style(document.createElement('button'),'padding:5px 7px;min-height:30px;background:#1b3241;color:#fff;border:1px solid #648194;border-radius:6px;font:800 10px system-ui;touch-action:manipulation');
     b.type='button';b.textContent=label;b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();callback(b);});target.appendChild(b);return b;
   };
-  const state={active:false,expanded:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,stepStart:0,sceneStart:0,lastStepMs:0,lastSceneMs:0,stepMeasured:false,sceneMeasured:false,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now()};
+  const state={active:false,expanded:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,stepStart:0,sceneStart:0,lastStepMs:0,lastSceneMs:0,stepMeasured:false,sceneMeasured:false,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now(),
+    raceMountedAt:performance.now(),measurementStartedAt:0,previous:null,thermalIndex:0,thermalAtStart:THERMAL_TOUCH_LEVELS[0],
+    hiddenCount:0,hiddenSince:0,hiddenTotalMs:0,batteryReading:null,batteryRequested:false};
   const mode=()=>[state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON',scene._tdrEngineSample?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON','TEXTO '+getDevRaceTextRenderMode().mode].join(' · ');
   const reset=()=>{
     state.window=freshWindow();
+    state.measurementStartedAt=Date.now();
+    state.previous=loadPreviousRaceMeasurement(localStorage,state.measurementStartedAt);
+    state.thermalAtStart=THERMAL_TOUCH_LEVELS[state.thermalIndex];
+    state.hiddenCount=0;state.hiddenSince=document.hidden?performance.now():0;state.hiddenTotalMs=0;
     state.lastReportAt=performance.now();
     state.lastReport='';
     state.lastPost=0;
@@ -103,6 +138,23 @@ export function mountRaceDevFrameDiagnostics(scene){
     state.lastStepMs=0;state.lastSceneMs=0;
     state.stepMeasured=false;state.sceneMeasured=false;
     pre.textContent='Midiendo '+mode()+'\nConduce aproximadamente 20 s y haz una captura.';
+  };
+  const onVisibilityChange=()=>{
+    if(!state.active)return;
+    if(document.hidden){
+      if(!state.hiddenSince)state.hiddenSince=performance.now();
+    }else if(state.hiddenSince>0){
+      state.hiddenTotalMs+=Math.max(0,performance.now()-state.hiddenSince);
+      state.hiddenSince=0;state.hiddenCount++;
+    }
+  };
+  const readBatteryOnce=()=>{
+    if(state.batteryRequested||typeof navigator?.getBattery!=='function')return;
+    state.batteryRequested=true;
+    Promise.resolve().then(()=>navigator.getBattery()).then(battery=>{
+      if(state.disposed)return;
+      state.batteryReading=Math.round(Number(battery.level)*100)+' % · '+(battery.charging?'CARGANDO':'SIN CARGAR');
+    }).catch(()=>{state.batteryReading='NO DISPONIBLE';});
   };
   state.preStep=()=>{if(state.active)state.stepStart=performance.now();};
   state.postStep=()=>{
@@ -145,7 +197,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       if(frame>50)w.over50++;
     }
     if(now-state.lastReportAt>=1500){
-      state.lastReport=metrics(w,scene,mode());
+      state.lastReport=metrics(w,scene,mode(),state);
       // Hidden reports should not trigger DOM paint/layout while the player drives.
       if(state.expanded)pre.textContent=state.lastReport;
       state.lastReportAt=now;
@@ -237,9 +289,26 @@ export function mountRaceDevFrameDiagnostics(scene){
     reset();
   });
   }
+  const thermalButton=control('CALOR: '+THERMAL_TOUCH_LEVELS[state.thermalIndex],b=>{
+    state.thermalIndex=(state.thermalIndex+1)%THERMAL_TOUCH_LEVELS.length;
+    b.textContent='CALOR: '+THERMAL_TOUCH_LEVELS[state.thermalIndex];
+    if(state.active){
+      state.lastReport=metrics(state.window,scene,mode(),state);
+      if(state.expanded)pre.textContent=state.lastReport;
+    }
+  });
   control('REINICIAR',()=>reset());
   const copyButton=control('COPIAR',async b=>{
-    const output=state.lastReport||pre.textContent;
+    const finishedAt=Date.now(),w=state.window;
+    const output=state.active?metrics(w,scene,mode(),state,finishedAt):pre.textContent;
+    if(state.active&&w.count>0&&w.frameSum>0){
+      savePreviousRaceMeasurement(localStorage,{
+        finishedAt,fps:1000/avg(w.frameSum,w.count),
+        over50Percent:100*w.over50/w.count,
+        p95:percentileFramePacing(w.pacing,.95)
+      });
+    }
+    state.lastReport=output;
     try{await navigator.clipboard.writeText(output);b.textContent='COPIADO';}
     catch{
       state.expanded=true;
@@ -258,6 +327,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       if(!IS_PROD_BUILD&&isIos())motorButton.style.display='';
       copyButton.style.display='';
       reset();
+      readBatteryOnce();
     }else{
       state.expanded=!state.expanded;
     }
@@ -268,6 +338,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   trigger.addEventListener('click',open);
   host.appendChild(root);
   const events=scene.game.events;
+  document.addEventListener('visibilitychange',onVisibilityChange,{passive:true});
   events.on(Phaser.Core.Events.PRE_STEP,state.preStep);
   events.on(Phaser.Core.Events.POST_STEP,state.postStep);
   scene.events.on(Phaser.Scenes.Events.PRE_UPDATE,state.scenePre);
@@ -276,6 +347,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   events.on(Phaser.Core.Events.POST_RENDER,state.post);
   const cleanup=()=>{
     if(state.disposed)return;state.disposed=true;state.active=false;state.expanded=false;
+    document.removeEventListener('visibilitychange',onVisibilityChange);
     events.off(Phaser.Core.Events.PRE_STEP,state.preStep);
     events.off(Phaser.Core.Events.POST_STEP,state.postStep);
     scene.events.off(Phaser.Scenes.Events.PRE_UPDATE,state.scenePre);
