@@ -12,7 +12,7 @@ const DEV_KEY='tdr2:devFullTrackAccess:v1';
 const REBUILT_CANARIAS_MODULES=import.meta.glob('./library/karting-canarias-4096/track.json');
 const REBUILT_CANARIAS_PRESENT=Object.keys(REBUILT_CANARIAS_MODULES).length>0;
 export const PUBLISHED_TRACK_IDS=Object.freeze(
-  ['circuito-atlantico','santa-cruz','karting-tenerife','karting-canarias','karting-americas','rally-arafo-los-loros']
+  ['circuito-atlantico','santa-cruz','karting-tenerife','karting-tenerife-horario','karting-canarias','karting-americas','rally-arafo-los-loros']
     .map(id=>id==='karting-canarias'&&REBUILT_CANARIAS_PRESENT?'karting-canarias-4096':id));
 export const STARTER_TRACK_IDS=PUBLISHED_TRACK_IDS;
 // Migrate only active selected track, never historical laps, times or ghosts.
