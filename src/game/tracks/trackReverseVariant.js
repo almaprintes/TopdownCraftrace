@@ -4,6 +4,17 @@ import {spawnUpstreamOfFinish} from './imageNativeDriving.js';
 // masks and photo tiles. The published legacy ID always keeps historical times.
 export const TENERIFE_CLOCKWISE_ID='karting-tenerife-horario';
 export const TENERIFE_LEGACY_ID='karting-tenerife';
+export const TENERIFE_DIRECTION_PREF='tdr2:karting-tenerife:direction:v1';
+export function readTenerifeDirection(storage){
+  try{return storage?.getItem(TENERIFE_DIRECTION_PREF)==='clockwise'?'clockwise':'counterclockwise';}
+  catch{return'counterclockwise';}
+}
+export function saveTenerifeDirection(storage,direction){
+  const next=direction==='clockwise'?'clockwise':'counterclockwise';
+  try{storage?.setItem(TENERIFE_DIRECTION_PREF,next);}catch{}
+  return next;
+}
+
 
 export function selectedTenerifeRaceId(baseId,choice){
   return baseId===TENERIFE_LEGACY_ID&&choice==='clockwise'
