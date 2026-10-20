@@ -5,6 +5,7 @@ import { isRewardedAdAvailable, showRewardedAd } from '../monetization/RewardedA
 import { claimPostRaceDoubleLoot, createPostRaceClaimId, hasClaimedPostRaceDouble } from '../monetization/postRaceDoubleLoot.js';
 import { mountRaceSessionRewards } from '../ui/raceSessionUi.js';
 import { mountRacePauseUi } from '../ui/racePauseUi.js';
+import { beginRacePauseClock, resumeRacePauseClock } from '../ui/racePauseTiming.js';
 import { hideRaceUi, restoreRaceUi } from '../ui/raceUiVisibility.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
@@ -119,6 +120,7 @@ export class RaceScene extends CurrentRaceScene {
       }
     }
     this._tdrPauseMenuOpen=false;
+    this._tdrPauseTimingStartedAt=NaN;
     this._sessionFinalizing=false;
     this._experiencePauseUi=null;
     this._experienceHiddenUi=null;
@@ -146,6 +148,7 @@ export class RaceScene extends CurrentRaceScene {
     try{this._experiencePauseUi?.destroy?.();}catch{}
     this._experiencePauseUi=null;
     this._pauseModal=null;
+    this._tdrPauseTimingStartedAt=NaN;
     // Never restore a paused race snapshot while the scene is shutting down.
     // The shared DOM control root is app-owned and must survive, but remain
     // hidden in the lobby until the next race explicitly reveals it.
@@ -158,6 +161,8 @@ export class RaceScene extends CurrentRaceScene {
   _openPauseMenu(){
     if(this._experiencePauseUi?.root?.isConnected)return this._experiencePauseUi.root;
     this._tdrPauseMenuOpen=true;
+    // Start only once, even when capture temporarily rebuilds the pause menu.
+    beginRacePauseClock(this);
     try{this.physics?.world?.pause?.();}catch{}
     if(!this._experienceHiddenUi)this._experienceHiddenUi=hideRaceUi(this);
     const ui=mountRacePauseUi({
@@ -177,6 +182,8 @@ export class RaceScene extends CurrentRaceScene {
     this._experiencePauseUi=null;
     this._pauseModal=null;
     if(resume!==false){
+      // Exclude the entire paused interval from lap, live DELTA and ghost clocks.
+      resumeRacePauseClock(this);
       // Resume simulation first. UI restoration must never hold the car frozen.
       this._tdrPauseMenuOpen=false;
       try{this.physics?.world?.resume?.();}catch{}
