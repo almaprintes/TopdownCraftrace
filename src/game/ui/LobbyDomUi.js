@@ -8,7 +8,7 @@ import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { attainableTopSpeedKmh, METERS_PER_PX } from '../cars/speedUnits.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { trackDisplayDirection } from '../tracks/trackDisplayDirection.js';
-import {selectedTenerifeRaceId,readTenerifeDirection} from '../tracks/trackReverseVariant.js';
+import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
 import { polishSeasonCard } from './LobbyPublishPolish.js';
 import { getLanguage, t } from '../i18n/index.js';
@@ -84,7 +84,7 @@ function renderDomCards(scene, root, seasonOnly=false) {
   // The shipping DOM lobby must show the same traversal selected for the race.
   // Keep the base card selection unchanged so historical records remain intact.
   const baseTrackKey = scene.selectedTrackKey || 'track01';
-  const trackKey = selectedTenerifeRaceId(baseTrackKey,readTenerifeDirection(localStorage));
+  const trackKey = selectedCircuitRaceId(baseTrackKey,localStorage);
   const track = TRACK_REGISTRY?.[trackKey];
   const center = Array.isArray(track?.raceCenterline) && track.raceCenterline.length ? track.raceCenterline : track?.centerline;
   if (trackSlot && track) { const id = String(track.id || track.key || '').toLowerCase(); const category = String(track.category || '').toLowerCase(); const surface = id.includes('offroad') || category.includes('dirt') || category.includes('tierra') ? tr('lobby.dirt') : tr('lobby.asphalt'); const directionKey=trackDisplayDirection(track); const direction=directionKey==='stage'?tr('lobby.pointToPoint'):directionKey==='counterclockwise'?tr('lobby.counterclockwise'):directionKey==='clockwise'?tr('lobby.clockwise'):'—'; const length = Math.round(loopLength(center) * METERS_PER_PX); const sectors = Math.max(1, (track.checkpoints?.length || 2) + 1); trackSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.selectedTrack')}</div><h2>${escapeHtml(track.name || trackKey)}</h2><div class="tdr-track-map">${trackSvg(center)}</div><div class="tdr-track-stats"><span><small>${tr('lobby.length')}</small><strong>${length} m</strong></span><span><small>${tr('lobby.sectors')}</small><strong>${sectors}</strong></span><span><small>${tr('lobby.surface')}</small><strong>${surface}</strong></span><span><small>${tr('lobby.direction')}</small><strong>${direction}</strong></span></div>`; }
@@ -189,7 +189,7 @@ function makeOnlineRecordsShortcut(scene){
   }));
   return button;
 }
-function startRaceFlow(scene) { if (typeof scene._openGameModeModal === 'function') { scene._openGameModeModal(); return; } const carId = scene.selectedCarId; const trackKey = scene.selectedTrackKey || 'track01'; try { localStorage.setItem('tdr2:carId', carId); localStorage.setItem('tdr2:trackKey', trackKey); } catch {} const launchTrack=selectedTenerifeRaceId(trackKey,readTenerifeDirection(localStorage)); scene.scene.start('race', { carId, trackKey:launchTrack }); }
+function startRaceFlow(scene) { if (typeof scene._openGameModeModal === 'function') { scene._openGameModeModal(); return; } const carId = scene.selectedCarId; const trackKey = scene.selectedTrackKey || 'track01'; try { localStorage.setItem('tdr2:carId', carId); localStorage.setItem('tdr2:trackKey', trackKey); } catch {} const launchTrack=selectedCircuitRaceId(trackKey,localStorage); scene.scene.start('race', { carId, trackKey:launchTrack }); }
 
 export function installLobbyDom(scene) {
   hideLegacyLobbyControls(scene); let root = scene._lobbyDomRoot;
