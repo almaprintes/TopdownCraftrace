@@ -13,7 +13,8 @@ assert.match(lobby,/function makeOnlineRecordsShortcut\(scene\)/);
 assert.match(lobby,/dataset\.lobbyOnlineRecords='1'/);
 assert.match(lobby,/tr\('lobby\.onlineRecords'\)/);
 assert.match(lobby,/button\.addEventListener\('click',\(\)=>scene\.scene\.start\('StatsScene',\{/);
-assert.match(lobby,/raceControlTrackId:scene\.selectedTrackKey\|\|'track01'/);
+assert.match(lobby,/raceControlTrackId:selectedCircuitRaceId\(scene\.selectedTrackKey\|\|'track01',localStorage\)/,
+  'Race Control opens the selected NORMAL/INVERSO variant without changing historic times');
 assert.match(lobby,/onlineFromLobby:true/);
 assert.match(lobby,/makeOnlineRecordsShortcut\(scene\)/,
   'Online Records remains in the bottom nav');
