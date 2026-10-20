@@ -3,7 +3,7 @@ import { recordModeStart } from '../seasons/seasonTelemetry.js';
 import { t } from '../i18n/index.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
 import {runLobbyRaceDeparture} from '../ui/LobbyRaceDeparture.js';
-import {selectedTenerifeRaceId,readTenerifeDirection} from '../tracks/trackReverseVariant.js';
+import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 
 const MODE_KEY='tdr2:gameMode';
 const PRACTICE_TRACK_KEY='practice-area';
@@ -63,7 +63,7 @@ export class MenuScene extends CurrentMenuScene{
     // by renderUI). Apply the selected direction here, AFTER saving the base
     // card to storage and BEFORE the departure animation captures launchTrack.
     const launchTrack=mode==='practice'?PRACTICE_TRACK_KEY:
-      selectedTenerifeRaceId(trackKey,readTenerifeDirection(localStorage));
+      selectedCircuitRaceId(trackKey,localStorage);
     this._closeGameModeModal();
     // Start the launch animation only AFTER the player chooses a game mode.
     // The established loading scene remains responsible for track assets.
