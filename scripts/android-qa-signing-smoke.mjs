@@ -29,6 +29,6 @@ assert.match(wf,/apksigner" verify --verbose --print-certs/,'APK signer verifica
 assert.match(wf,/versionCode='1000318'/,'validate installed version, not just source');
 assert.match(wf,/tdr-qa-1\.2\.318/,'deliver fresh tag, never clobber prior APK');
 assert.match(wf,/TDR-QA-DEV-1\.2\.318-REAL-ADS-SIN-MEDIR\.apk/);
-const currentDev=code.match(/content="DEV 1\\.2\\.(\\d+)"/);
+const currentDev=code.match(/content="DEV 1\.2\.(\d+)"/);
 assert.ok(currentDev&&Number(currentDev[1])>=317,'Android QA must package consolidated DEV 1.2.317 or later; web DEV may advance independently of QA versionCode');
 console.log('PASS: public version unchanged, QA signer pinned and used explicitly, actual APK cert verified against key, fail-closed delivery.');
