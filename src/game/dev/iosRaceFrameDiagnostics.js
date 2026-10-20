@@ -1,13 +1,15 @@
 import Phaser from 'phaser';
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import { IOS_WEBGL_SYNC_KEY } from '../performance/iosWebglPresentationMode.js';
+import { IOS_DEV_RESOLUTION_KEY } from '../performance/iosDevResolutionTrial.js';
+import { createFramePacingStats, recordFramePacing, percentileFramePacing } from '../performance/iosFramePacingStats.js';
 import { getDevRaceTextRenderMode, setDevRaceTextRenderMode } from '../ui/htmlTextRuntime.js';
 
 // On-device DEV diagnostic, OFF until opened. Real Phaser game events rather
 // than a second requestAnimationFrame loop or a fake "FPS" approximation.
 const isIos=()=>{try{return /iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;}catch{return false;}};
 const style=(node,css)=>{node.style.cssText=css;return node;};
-const freshWindow=()=>({started:performance.now(),count:0,frameSum:0,frameMax:0,sceneSum:0,sceneMax:0,sceneSamples:0,stepSum:0,stepMax:0,stepSamples:0,renderSum:0,renderMax:0,otherSum:0,otherMax:0,otherSamples:0,over33:0,over50:0,lastSpike:0});
+const freshWindow=()=>({started:performance.now(),count:0,frameSum:0,frameMax:0,sceneSum:0,sceneMax:0,sceneSamples:0,stepSum:0,stepMax:0,stepSamples:0,renderSum:0,renderMax:0,otherSum:0,otherMax:0,otherSamples:0,over33:0,over50:0,lastSpike:0,pacing:createFramePacingStats()});
 const avg=(sum,count)=>count?sum/count:0;
 const ms=n=>n.toFixed(1);
 const sampled=(sum,max,count)=>count?ms(avg(sum,count))+' / '+ms(max)+' ms':'SIN MUESTRAS';
@@ -26,7 +28,7 @@ const engineStatus=scene=>{
   const sourceCount=data.ready?data.sources:'cargando';
   return 'AUDIO MOTOR '+(data.diagnosticSuspended?'OFF':'ON')+' · CONTEXTO '+data.state+' · FUENTES '+sourceCount+' · '+data.mode;
 };
-const frameInfo=scene=>{const conf=window.__tdrIosFrameConfig||{};const context=scene.game?.renderer?.gl?.getContextAttributes?.();const actual=typeof context?.desynchronized==='boolean'?(context.desynchronized?'DESYNC':'SYNC'):'NO DISPONIBLE';return `MODO ${conf.preset||'?'}  RES ${conf.renderResolution||'?'}  FPS limit ${conf.frameLimit??'?'}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;};
+const frameInfo=scene=>{const conf=window.__tdrIosFrameConfig||{};const context=scene.game?.renderer?.gl?.getContextAttributes?.();const actual=typeof context?.desynchronized==='boolean'?(context.desynchronized?'DESYNC':'SYNC'):'NO DISPONIBLE';return `MODO ${conf.preset||'?'}  RES ${conf.renderResolution||'?'}  FPS limit ${conf.frameLimit??'?'} · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;};
 const metrics=(w,scene,mode)=>[
   'PERF iPhone · '+mode,
   'FOTOGRAMAS  '+w.count+'  '+(avg(w.frameSum,w.count)>0?ms(1000/avg(w.frameSum,w.count)):'--')+' FPS',
@@ -36,6 +38,8 @@ const metrics=(w,scene,mode)=>[
   'RENDER CPU '+ms(avg(w.renderSum,w.count))+' / '+ms(w.renderMax)+' ms',
   'OTROS      '+sampled(w.otherSum,w.otherMax,w.otherSamples),
   '>33ms '+w.over33+' · >50ms '+w.over50+' · último '+ms(w.lastSpike)+'ms',
+  'P95/P99   '+(w.pacing.samples?percentileFramePacing(w.pacing,.95)+' / '+percentileFramePacing(w.pacing,.99)+' ms (aprox.)':'SIN MUESTRAS'),
+  'RÁFAGAS >50ms '+w.pacing.over50Runs+' · máx '+w.pacing.longestOver50+' seguidos · >33 máx '+w.pacing.longestOver33,
   'TILES '+(scene._trackBeautyTiles?.length||0)+' · NO mide GPU directamente',
   frameInfo(scene),
   engineStatus(scene),
@@ -124,6 +128,7 @@ export function mountRaceDevFrameDiagnostics(scene){
         w.otherSamples++;w.otherSum+=other;
         w.otherMax=Math.max(w.otherMax,other);
       }
+      recordFramePacing(w.pacing,frame);
       if(frame>33.4){w.over33++;w.lastSpike=frame;}
       if(frame>50)w.over50++;
     }
@@ -195,6 +200,20 @@ export function mountRaceDevFrameDiagnostics(scene){
     try{localStorage.setItem(IOS_WEBGL_SYNC_KEY,requested?'1':'0');window.location.reload();}
     catch{pre.textContent='No se pudo guardar el modo WebGL. No se ha cambiado el juego.';}
   });
+  // Only a lower framebuffer resolution is tested. Return to the original
+  // preset-derived resolution after the second run; both changes restart Phaser.
+  const resolutionConfig=window.__tdrIosFrameConfig||{};
+  const resolutionBase=Number(resolutionConfig.baseRenderResolution)||1;
+  const lowResolutionActive=resolutionConfig.resolutionTrialMode==='LOW';
+  const resolutionButton=control(lowResolutionActive?'RES BASE (REINICIA)':'RES 1.0 (REINICIA)',()=>{
+    if(resolutionBase<=1){pre.textContent='La resolución base ya es 1.0; no hay comparación que realizar.';return;}
+    try{
+      if(lowResolutionActive)localStorage.removeItem(IOS_DEV_RESOLUTION_KEY);
+      else localStorage.setItem(IOS_DEV_RESOLUTION_KEY,'1.0');
+      window.location.reload();
+    }catch{pre.textContent='No se pudo cambiar la resolución de prueba.';}
+  });
+  if(resolutionBase<=1){resolutionButton.disabled=true;resolutionButton.textContent='RES BASE 1.0';}
   const photoButton=control('FOTO ON',b=>{
     const tiles=scene._trackBeautyTiles;
     if(!Array.isArray(tiles)||tiles.length===0){pre.textContent='No hay fotografía montada; el test FOTO no está disponible en este circuito.';return;}

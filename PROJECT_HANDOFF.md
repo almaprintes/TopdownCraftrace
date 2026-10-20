@@ -1,5 +1,15 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.307 — A/B de resolución y cadencia de fotogramas en iPhone
+
+Los resultados de 20/10 con DEV 1.2.306 muestran DESYNC 47,1 FPS, >50 ms 91/2570 (3,5 %) y SYNC 48,0 FPS, >50 ms 60/2099 (2,9 %). El propietario afirma que **SYNC tiene tirones perceptiblemente peores** pese a la media ligeramente superior. La bandera WebGL real sigue siendo `NO DISPONIBLE`; el modo solicitado no confirma si WebKit lo respetó. **DESYNC es la referencia subjetiva preferida**. El selector anterior permanece reversible; la web no puede modificar la preferencia local del propietario por sí sola, así que debe volver a DESYNC antes de la prueba.
+
+DEV añade control del framebuffer **RES BASE / RES 1.0 (REINICIA)** solo en la consola de medición de iPhone: usa localStorage de diagnóstico, no modifica el ajuste gráfico general. Un `baseResolution` de 1.5 pasa temporalmente a 1.0 y vuelve al valor de origen; si el presupuesto original es 1.0, deshabilita la comparación. En producción y en dispositivos no iPhone no se aplica el ajuste, aunque haya quedado la clave local. No reescala fotos, circuitos, colisiones, cuerpos, mundo, HUD, física RALLY 1.0, audio ni WebGL.
+
+El diagnóstico MEDIR incorpora histograma fijo de intervalos de frame (bins 1 ms, cap 250 ms), **P95/P99 aproximados**, número de **ráfagas consecutivas de >50 ms** y máximas rachas de >50 y >33,4 ms, sin ordenar arrays ni crear un segundo RAF mientras se juega. Esto captura saltos molestos que las medias pueden ocultar.
+
+**Prueba recomendada:** confirmar WEBGL DESYNC solicitado, MODO high, TEXTO PHASER y MOTOR ON. Capturar 30 s en RES BASE 1.5; seleccionar RES 1.0 para reiniciar, repetir en mismo circuito con trayectoria comparable, luego restablecer RES BASE. Priorizar sensación y P95/P99, rachas y máximos; la CPU de PASO (0,7–0,8 ms previos) no implica que GPU no pueda ser cuello de botella. No hay APK/AAB ni publicación en Google Play.
+
 ## DEV 1.2.306 — Medición iPhone fiable: ESCENA CPU + PASO CPU (sin modificar jugabilidad)
 
 El propietario midió 2152 fotogramas con PHASER y RAF de texto OFF: **38,2 FPS**, 530/2152 (24,6 %) >33,4 ms y 218/2152 (10,1 %) >50 ms, pico 116 ms, MODO high, RES 1.5, SAFE NO, TIMER NO y seis fuentes de motor. Esto es prácticamente idéntico al primer test HTML+audio ON (37,8 FPS, 10,3 % >50 ms), por lo que la mejora puntual PHASER 45,5 FPS **no se replicó**; no proclamar victoria del cambio de textos.

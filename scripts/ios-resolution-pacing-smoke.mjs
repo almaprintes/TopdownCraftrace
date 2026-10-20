@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {resolveIosDevResolution,IOS_DEV_RESOLUTION_KEY} from '../src/game/performance/iosDevResolutionTrial.js';
+import {createFramePacingStats,recordFramePacing,percentileFramePacing} from '../src/game/performance/iosFramePacingStats.js';
+
+const baseline={getItem:()=>null},low={getItem:key=>key===IOS_DEV_RESOLUTION_KEY?'1.0':null};
+assert.deepEqual(resolveIosDevResolution({baseResolution:1.5,isIphone:true,isProd:false,storage:baseline}),{resolution:1.5,baseResolution:1.5,mode:'BASE'});
+assert.deepEqual(resolveIosDevResolution({baseResolution:1.5,isIphone:true,isProd:false,storage:low}),{resolution:1,baseResolution:1.5,mode:'LOW'});
+assert.equal(resolveIosDevResolution({baseResolution:1,isIphone:true,isProd:false,storage:low}).mode,'BASE','No unnecessary comparison when baseline is 1.0');
+assert.equal(resolveIosDevResolution({baseResolution:1.5,isIphone:false,isProd:false,storage:low}).resolution,1.5,'Android/iPad unchanged');
+assert.equal(resolveIosDevResolution({baseResolution:1.5,isIphone:true,isProd:true,storage:low}).resolution,1.5,'Production unchanged');
+assert.equal(resolveIosDevResolution({baseResolution:1.5,isIphone:true,isProd:false,storage:{getItem:()=>{throw Error('denied');}}}).resolution,1.5,'Storage errors fall back to baseline');
+
+const pacing=createFramePacingStats();
+for(const value of [16,17,16,51,60,52,16,34,54,16])recordFramePacing(pacing,value);
+assert.equal(pacing.samples,10);
+assert.equal(percentileFramePacing(pacing,.95),60);
+assert.equal(percentileFramePacing(pacing,.99),60);
+assert.equal(pacing.over50Runs,2);
+assert.equal(pacing.longestOver50,3);
+assert.equal(pacing.longestOver33,3);
+recordFramePacing(pacing,-1);
+assert.equal(pacing.samples,10,'Invalid frame does not pollute percentiles');
+assert.equal(percentileFramePacing(createFramePacingStats(),.95),null);
+
+const game=readFileSync('src/game/game.js','utf8');
+const diag=readFileSync('src/game/dev/iosRaceFrameDiagnostics.js','utf8');
+const packageJson=readFileSync('package.json','utf8');
+assert.match(game,/resolveIosDevResolution\(\{baseResolution:renderResolution/);
+assert.match(game,/renderResolution:trial\.resolution/);
+assert.match(game,/resolution:vp\.renderResolution/);
+assert.match(diag,/localStorage\.setItem\(IOS_DEV_RESOLUTION_KEY,'1\.0'\)/);
+assert.match(diag,/localStorage\.removeItem\(IOS_DEV_RESOLUTION_KEY\)/);
+assert.match(diag,/RES BASE \(REINICIA\)/);
+assert.match(diag,/RES 1\.0 \(REINICIA\)/);
+assert.match(diag,/recordFramePacing\(w\.pacing,frame\)/);
+assert.match(diag,/percentileFramePacing\(w\.pacing,\.95\)/);
+assert.match(diag,/percentileFramePacing\(w\.pacing,\.99\)/);
+assert.match(diag,/RÁFAGAS >50ms/);
+assert.match(packageJson,/check:ios-resolution-pacing/);
+console.log('PASS: DEV iPhone-only resolution A/B and constant-memory frame pacing metrics');
