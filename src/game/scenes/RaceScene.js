@@ -4271,7 +4271,8 @@ this.timing.s2Tick = (this.lapStartTick != null) ? (this.simTick - this.lapStart
 // timing gate. CP1+CP2, forward direction and lap cooldown still apply.
 // All other circuits and open rally stages keep the original finish rules.
 const paddockFinish = this.track?.meta?.meta?.paddockFinishLine;
-const paddockFinishCrossed = this.track?.meta?.meta?.trackId === 'karting-americas' &&
+const paddockFinishCrossed = this.trackKey === 'karting-americas' &&
+  this.track?.meta?.meta?.trackId === 'karting-americas' &&
   this.track?.closed !== false && this._raceStarted === true &&
   !!paddockFinish && crossesDirectedFinishGate(
     paddockFinish,
