@@ -7,6 +7,7 @@ const PUBLIC_TRACK_NAMES=Object.freeze({
   [CANONICAL_TRACK_IDS.ATLANTICO]:'CIRCUITO ATLÁNTICO',
   'santa-cruz':'SANTA CRUZ',
   'karting-tenerife':'KARTING TENERIFE',
+  'karting-tenerife-horario':'KARTING TENERIFE · HORARIO',
   'karting-canarias':'KARTING CANARIAS',
   'karting-canarias-4096':'KARTING CANARIAS',
   'karting-americas':'KARTING AMÉRICAS',
