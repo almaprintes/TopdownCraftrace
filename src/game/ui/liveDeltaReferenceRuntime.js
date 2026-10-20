@@ -95,7 +95,6 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
 
   const originalCreate=proto.create;
   const originalUpdate=proto.update;
-  const originalClosePauseMenu=proto._closePauseMenu;
 
   proto.create=function(...args){
     this._tdrSessionDeltaReference=null;
@@ -122,18 +121,8 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
   // Historical PB persistence is deliberately disabled for live DELTA.
   proto._tdrSaveBestDeltaTrace=function(){return false;};
 
-  // Keep the DELTA clock on the exact same time base as the lap clock. The
-  // existing pause menu already removes paused time from timing.lapStart; this
-  // only mirrors that compensation into DELTA's private session clock.
-  if(typeof originalClosePauseMenu==='function'){
-    proto._closePauseMenu=function(resume=true,...args){
-      const startedAt=Number(this._tdrPauseTimingStartedAt);
-      const pausedMs=resume!==false&&Number.isFinite(startedAt)?Math.max(0,performance.now()-startedAt):0;
-      const result=originalClosePauseMenu.call(this,resume,...args);
-      if(pausedMs>0&&Number.isFinite(this._tdrSessionLapClockStart))this._tdrSessionLapClockStart+=pausedMs;
-      return result;
-    };
-  }
+  // The shipping pause menu excludes wall time from all race clocks together
+  // in racePauseTiming.js; do not compensate DELTA a second time here.
 
   proto._tdrRenderLiveDelta=function(now){
     const ui=this._tdrEnsureLiveDeltaUi?.();
@@ -181,6 +170,9 @@ export function installLiveDeltaReferenceRuntime(RaceScene){
 
   if(typeof originalUpdate==='function'){
     proto.update=function(time,delta){
+      // The enclosing scene intentionally skips physics/timing while paused.
+      // Do not sample distance or render a running DELTA from an idle car.
+      if(this._tdrPauseMenuOpen||this._pauseMenuOpen)return originalUpdate.call(this,time,delta);
       const nowBefore=performance.now();
       sampleCurrentLap(this,nowBefore);
       const completedTrace=Array.isArray(this._tdrSessionCurrentTrace)?this._tdrSessionCurrentTrace.slice():[];
