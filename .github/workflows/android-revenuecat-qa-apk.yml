@@ -45,7 +45,11 @@ jobs:
     timeout-minutes: 40
     env:
       BASE: ./
-      TDR_CI_BRIDGE_TEST: '1' # QA debug-key signing for isolated release; not Play
+      TDR_CI_BRIDGE_TEST: '1' # isolated QA release only; never Play
+      TDR_CI_QA_STABLE_SIGNING: '1' # use the explicitly restored keystore, not the implicit Gradle debug signer
+      # Pinned public fingerprint of the first persistent QA identity. Never
+      # silently regenerate another signer after Actions cache expiration.
+      TDR_QA_EXPECTED_SIGNER_SHA256: cd626199aa6234d9bdc3c07ca0c8686e7fb994eb8c4d5d02ade2fff1dcbeca6f
       TDR_ANDROID_TEST_BUILD_TYPE: release
       VITE_TDR_ONLINE_URL: ${{ vars.VITE_TDR_ONLINE_URL }}
       VITE_TDR_ONLINE_PUBLIC: ${{ vars.VITE_TDR_ONLINE_PUBLIC }}
@@ -99,6 +103,12 @@ jobs:
           chmod 600 "$HOME/.android/debug.keystore"
           keytool -list -v -keystore "$HOME/.android/debug.keystore" \
             -storepass android -alias androiddebugkey | grep 'SHA256:' | head -1
+          expected="$TDR_QA_EXPECTED_SIGNER_SHA256"
+          actual="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p' | tr -d ':' | tr '[:upper:]' '[:lower:]' | head -1)"
+          if test -z "$actual" || test "$expected" != "$actual"; then
+            echo "::error::QA signing keystore is missing or changed. STOP: existing installs cannot be upgraded with a new key."
+            exit 1
+          fi
       - name: Install Android SDK
         shell: bash
         run: |
@@ -138,7 +148,13 @@ jobs:
           test -s "$src"
           unzip -t "$src" | tail -1
           "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000317'"
-          "${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$src" | grep -E 'Verified using|Signer #1 certificate SHA-256'
+          apk_sign_report="$("${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$src")"
+          printf '%s\n' "$apk_sign_report" | grep -E 'Verified using|Signer #1 certificate SHA-256'
+          apk_cert="$(printf '%s\n' "$apk_sign_report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1 | tr '[:upper:]' '[:lower:]')"
+          if test -z "$apk_cert" || test "$apk_cert" != "$TDR_QA_EXPECTED_SIGNER_SHA256"; then
+            echo "::error::APK certificate does not match the persisted QA keystore. Refusing to distribute an incompatible APK."
+            exit 1
+          fi
           mkdir -p sdk-download
           cp "$src" sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk
           sha256sum sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk

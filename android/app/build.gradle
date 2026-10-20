@@ -49,6 +49,17 @@ android {
     }
     testBuildType System.getenv('TDR_ANDROID_TEST_BUILD_TYPE') ?: 'debug'
     signingConfigs {
+        // Explicit isolated QA signer. Android Gradle Plugin's implicit debug
+        // signer may resolve a DIFFERENT keystore from the one restored in CI.
+        // Use this only for the deviceTest release in the approved QA workflow.
+        if (System.getenv('TDR_CI_QA_STABLE_SIGNING') == '1') {
+            qaStable {
+                storeFile file(System.getenv('HOME') + '/.android/debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
         if (keystorePropertiesFile.exists()) {
             release {
                 storeFile file(keystoreProperties['storeFile'])
@@ -112,7 +123,9 @@ android {
         release {
             minifyEnabled true
             shrinkResources true
-            if (keystorePropertiesFile.exists()) {
+            if (System.getenv('TDR_CI_QA_STABLE_SIGNING') == '1') {
+                signingConfig signingConfigs.qaStable
+            } else if (keystorePropertiesFile.exists()) {
                 signingConfig signingConfigs.release
             } else if (System.getenv('TDR_CI_BRIDGE_TEST') == '1') {
                 signingConfig signingConfigs.debug
