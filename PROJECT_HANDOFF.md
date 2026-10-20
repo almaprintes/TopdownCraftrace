@@ -1,5 +1,13 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.315 — Avenir Gripline animado al cargar las fotografías (20/10/2026)
+
+La etiqueta técnica «CARGANDO FOTOGRAFÍA» pertenecía exclusivamente a createGate() en src/game/tracks/imageNativeRaceLoader.js, una compuerta necesaria para decodificar fotos de circuitos image-native antes de activar RaceScene. No se cambia la pantalla premium de preparación de carrera ni sus consejos, mapa o progreso.
+
+En esa compuerta se muestra **CARGANDO CIRCUITO…** (LOADING TRACK… en inglés) bajo el **Avenir Gripline lateral mirando a la derecha**, centrado y quieto, con las dos ruedas girando y líneas del suelo deslizándose hacia la izquierda. Los dos pequeños WebP con transparencia provienen de la vista lateral derecha suministrada por el propietario: carrocería separada y rueda reutilizada en ambos ejes, logotipo no espejado. Animación únicamente CSS, sin bucles de juego, consultas de fotogramas, física ni WebGL; respeta prefers-reduced-motion y se retira al cerrar la compuerta.
+
+La ruta de ERROR conserva íntegros los controles de recuperación de foto (incluido archivo .tdrtrack) y «Volver sin cambiar circuito». No se modifica la lógica de decodificación, tiempos de espera, trazados, colisiones ni el perfil aprobado RALLY 1.0. Nuevo verificador scripts/gripline-native-loader-smoke.mjs integrado en prebuild. Solo DEV 1.2.315; no generar APK/AAB ni publicar Play Store.
+
 ## DEV 1.2.314 — APK Android QA consolidada solicitada por el propietario (20/10/2026)
 
 Se prepara la **APK deviceTest release QA firmada con clave de pruebas**, con paquete independiente `com.craftracestudio.topdownrace.rewardedtest`, minificada, AdMob y RevenueCat reales como la anterior .300, para comprobar integraciones reales sin publicar en Google Play. El instalable debe salir **exclusivamente del HEAD main** y del workflow `.github/workflows/android-revenuecat-qa-apk.yml`, con tag de GitHub prerelease `tdr-qa-1.2.314`, artefacto y archivo `TDR-QA-DEV-1.2.314-REAL-ADS-SIN-MEDIR.apk`. No mover versionCode/versionName públicos ni AAB.

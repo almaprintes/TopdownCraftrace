@@ -1,3 +1,5 @@
+import { mountGriplineNativeLoading } from '../ui/griplineNativeLoading.js';
+import { getLanguage } from '../i18n/index.js';
 // Authoritative native-photo loading boundary for TrackStudio and installed tracks.
 // An authored photograph replaces ground art; the published Canarias world
 // may enlarge geometry and tiled sprites together without upscaling source files.
@@ -259,8 +261,8 @@ function createGate(scene,key,desc){
   document.getElementById('tdr-native-gate')?.remove();
   const root=document.createElement('div');root.id='tdr-native-gate';
   root.style.cssText='position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;background:#07101b;color:#fff;padding:20px;text-align:center;font:700 16px system-ui,-apple-system,sans-serif';
-  const panel=document.createElement('div');panel.style.cssText='max-width:470px;line-height:1.6';
-  const title=document.createElement('div');title.textContent='CARGANDO FOTOGRAFÍA';
+  const panel=document.createElement('div');panel.style.cssText='width:min(680px,94vw);line-height:1.6';
+  const title=document.createElement('div');title.textContent=getLanguage()==='en'?'LOADING TRACK…':'CARGANDO CIRCUITO…';
   const detail=document.createElement('div');detail.style.cssText='margin-top:12px;font-size:13px;font-weight:400';
   const back=document.createElement('button');back.textContent='VOLVER SIN CAMBIAR EL CIRCUITO';
   back.style.cssText='display:none;margin:24px auto 0;padding:13px 18px;background:#19477a;color:#fff;border:1px solid #6bbcff;border-radius:8px';
@@ -287,8 +289,10 @@ function createGate(scene,key,desc){
       detail.textContent=String(error?.message||error);
     }
   };
+  mountGriplineNativeLoading(panel);
   panel.append(title,detail,repair,back,picker);root.append(panel);document.body.append(root);
   return {close(){root.remove()},error(e){
+    root.classList.add('tdr-native-gate-error');
     title.textContent='NO SE PUEDE INICIAR ESTE CIRCUITO';
     detail.textContent=String(e?.message||e||'Falta la fotografía');
     if(desc?.type==='local'){
