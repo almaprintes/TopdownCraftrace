@@ -1,5 +1,9 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.316 — Más sensación de velocidad en carga de circuito (20/10/2026)
+
+Petición del propietario al ver el Gripline lateral DEV 1.2.315: «Está muy guapo, pero quiero más sensación de velocidad». Solo se aumenta el dinamismo visual de la compuerta de carga `src/game/ui/griplineNativeLoading.js` para fotografía nativa, sin modificar la velocidad real de los coches ni los tiempos de carga. Las ruedas pasan de vuelta cada **0,8 s** a cada **0,26 s** (aprox. x3,1), las líneas bajo el coche se mueven hacia la izquierda cada **0,24 s** en vez de 0,65 s (aprox. x2,7). Se añaden **dos carriles de estelas de aire** detrás de la carrocería, que se desplazan a la izquierda con velocidades ligeramente distintas y son tapados por el coche para reforzar la sensación de movimiento de derecha a izquierda del paisaje; carrocería y coche permanecen quietos y centrados, de perfil mirando a la derecha. Solo CSS transform/opacity y pseudo-elementos, sin `requestAnimationFrame`, `setTimeout`, nuevas texturas, motores, WebGL ni físicas. `prefers-reduced-motion` desactiva también estas estelas. Verificaciones en `scripts/gripline-native-loader-smoke.mjs`. No afectar Android público, circuitos ni RALLY 1.0. Solo PWA DEV en este commit; la APK QA .314 conserva la animación anterior/no incluye esta nueva mejora hasta reconstrucción solicitada.
+
 ## DEV 1.2.315 — Avenir Gripline animado al cargar las fotografías (20/10/2026)
 
 La etiqueta técnica «CARGANDO FOTOGRAFÍA» pertenecía exclusivamente a createGate() en src/game/tracks/imageNativeRaceLoader.js, una compuerta necesaria para decodificar fotos de circuitos image-native antes de activar RaceScene. No se cambia la pantalla premium de preparación de carrera ni sus consejos, mapa o progreso.
