@@ -6,7 +6,7 @@ Se prepara la **APK deviceTest release QA firmada con clave de pruebas**, con pa
 
 Incluye los cambios posteriores a .300: geometría/correcciones de Arafo–Los Loros, Inducción misión 7 (`1.2.311`), recuperación de caché de rankings/tiempos de Atlántico (`1.2.312`) y formularios de ubicación autodeclarada Global/Continente/País/Región al crear nick y en Ajustes → Cuenta (`1.2.313`). El paquete prueba no modifica los registros Supabase históricos ni asigna ubicación falsa; el modo oculto MEDIR no aparece durante uso normal. Probar circuitos y Arafo sin alterar físicas RALLY 1.0, rango de rankings de pilotos con y sin región, persistencia de misión 7, y anuncios auténticos sin pruebas repetidas de impresiones.
 
-**Puerta de calidad:** no afirmar que existe ni ofrecer enlace de descarga hasta que GitHub Actions confirme job de APK `completed/success`, exista el asset del release público y se verifique el SHA del workflow. No publicar Play.
+**Puerta de calidad:** el verificador de Android se actualiza para permitir únicamente el MEDIR de asistencia oculto tras siete toques (introducido en DEV 1.2.308), sin permitir los controles experimentales DEV; no confundir la cadena de ayuda incluida en el paquete con una pantalla visible. No afirmar que existe ni ofrecer enlace de descarga hasta que GitHub Actions confirme job de APK `completed/success`, exista el asset del release público y se verifique el SHA del workflow. No publicar Play.
 
 ## DEV 1.2.313 — Alta de piloto con ubicación declarada y rankings geográficos corregibles
 
