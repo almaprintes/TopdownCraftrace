@@ -1,7 +1,7 @@
 import { MenuScene as CurrentMenuScene } from './MenuCleanTypographyScene.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { trackDisplayDirection } from '../tracks/trackDisplayDirection.js';
-import {selectedTenerifeRaceId,readTenerifeDirection} from '../tracks/trackReverseVariant.js';
+import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import { METERS_PER_PX, attainableTopSpeedKmh } from '../cars/speedUnits.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
@@ -22,7 +22,7 @@ export class MenuScene extends CurrentMenuScene{
   _renderWelcomeCards(){
     const {width,height}=this.scale;if(width<760)return;
     const selected=this.selectedTrackKey||localStorage.getItem('tdr2:trackKey')||'track01';
-    const key=selectedTenerifeRaceId(selected,readTenerifeDirection(localStorage));
+    const key=selectedCircuitRaceId(selected,localStorage);
     const track=TRACK_REGISTRY?.[key],spec=CAR_SPECS?.[this.selectedCarId];if(!track||!spec)return;
     const carW=clamp(Math.floor(width*.18),290,330),carH=clamp(Math.floor(height*.085),64,72);
     const sideW=clamp(Math.floor(width*.13),220,242),sideH=clamp(Math.floor(height*.22),162,178);
