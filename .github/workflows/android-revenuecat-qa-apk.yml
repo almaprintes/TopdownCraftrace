@@ -11,6 +11,7 @@ on:
       - 'scripts/generate-android-launcher-icons.mjs'
       - 'scripts/verify-android-launcher.mjs'
       - 'scripts/android-release-candidate-smoke.mjs'
+      - 'scripts/android-qa-signing-smoke.mjs'
       - 'src/game/scenes/RaceProceduralAudioScene.js'
       - 'src/game/audio/CarEngineSampleRuntime.js'
       - 'src/main.js'
