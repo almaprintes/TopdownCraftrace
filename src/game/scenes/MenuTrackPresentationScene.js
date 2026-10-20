@@ -1,5 +1,6 @@
 import { MenuScene as CurrentMenuScene } from './MenuCleanTypographyScene.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
+import { trackDisplayDirection } from '../tracks/trackDisplayDirection.js';
 import { METERS_PER_PX, attainableTopSpeedKmh } from '../cars/speedUnits.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
@@ -49,7 +50,7 @@ export class MenuScene extends CurrentMenuScene{
     c.add(this.add.rectangle(0,previewY,previewW,previewH,0x050b10,.58).setStrokeStyle(1,0xd8a73a,.22));
     let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;for(const p of center){const px=Number(p?.x),py=Number(p?.y);if(!Number.isFinite(px)||!Number.isFinite(py))continue;minX=Math.min(minX,px);maxX=Math.max(maxX,px);minY=Math.min(minY,py);maxY=Math.max(maxY,py);}if(Number.isFinite(minX)&&maxX>minX&&maxY>minY){const g=this.add.graphics(),s=Math.min((previewW-12)/(maxX-minX),(previewH-10)/(maxY-minY)),ox=-(maxX-minX)*s/2,oy=previewY-(maxY-minY)*s/2;g.lineStyle(3,0x000000,.45);g.beginPath();center.forEach((p,i)=>{const px=ox+(Number(p.x)-minX)*s,py=oy+(Number(p.y)-minY)*s;i?g.lineTo(px,py):g.moveTo(px,py);});g.closePath();g.strokePath();g.lineStyle(2,0xffffff,.98);g.beginPath();center.forEach((p,i)=>{const px=ox+(Number(p.x)-minX)*s,py=oy+(Number(p.y)-minY)*s;i?g.lineTo(px,py):g.moveTo(px,py);});g.closePath();g.strokePath();c.add(g);}
 
-    const lengthM=Math.round(loopLength(center)*METERS_PER_PX),sectors=Math.max(1,(track.checkpoints?.length||2)+1),surface=t(`menuPresentation.surface.${surfaceKey(track)}`),direction=t(String(track.raceDirection||'forward').toLowerCase()==='reverse'?'menuPresentation.direction.counterclockwise':'menuPresentation.direction.clockwise');
+    const lengthM=Math.round(loopLength(center)*METERS_PER_PX),sectors=Math.max(1,(track.checkpoints?.length||2)+1),surface=t(`menuPresentation.surface.${surfaceKey(track)}`),direction=t(trackDisplayDirection(track)==='counterclockwise'?'menuPresentation.direction.counterclockwise':'menuPresentation.direction.clockwise');
     const stats=[[t('menuPresentation.length'),`${lengthM} m`],[t('menuPresentation.sectors'),String(sectors)],[t('menuPresentation.surface'),surface],[t('menuPresentation.direction'),direction]];
     const colX=[-w*.24,w*.24],rowY=[bottom-56,bottom-27];
     for(let i=0;i<stats.length;i++){
