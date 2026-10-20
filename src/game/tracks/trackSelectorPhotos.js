@@ -14,6 +14,7 @@ export function selectorPhotoPath(track,locked=false){
   if(locked)return null;
   const id=typeof track==='string'?track:String(track?.key||track?.id||'');
   if(id==='karting-canarias-4096')return 'assets/tracks/selector/karting-canarias-4096.webp';
+  if(id==='karting-tenerife-horario')return TRACK_SELECTOR_PHOTO_PATHS['karting-tenerife'];
   return Object.hasOwn(TRACK_SELECTOR_PHOTO_PATHS,id)?TRACK_SELECTOR_PHOTO_PATHS[id]:null;
 }
 
