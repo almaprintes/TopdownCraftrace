@@ -59,7 +59,8 @@ export function makeTenerifeClockwiseTrack(base){
     start:{x:start.x,y:start.y,r:start.r},
     // Never apply the base game's grid, which is oriented the other way.
     grid:null,startLine:null,
-    meta:{...base.meta,reverseOf:TENERIFE_LEGACY_ID,variant:'clockwise',
+    meta:{...base.meta,id:TENERIFE_CLOCKWISE_ID,key:TENERIFE_CLOCKWISE_ID,trackId:TENERIFE_CLOCKWISE_ID,
+      reverseOf:TENERIFE_LEGACY_ID,variant:'clockwise',
       imageNative:base.meta?.imageNative,
       publicName:'KARTING TENERIFE · HORARIO'}};
 }
