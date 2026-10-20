@@ -93,6 +93,7 @@ jobs:
           node scripts/karting-americas-official-smoke.mjs
           node scripts/karting-americas-clean-lap-photo-smoke.mjs
           node scripts/karting-tenerife-clockwise-smoke.mjs
+          node scripts/all-circuit-directions-smoke.mjs
           node scripts/all-circuit-starts-smoke.mjs
           node scripts/all-circuit-gate-width-smoke.mjs
           node scripts/arafo-photo-native-smoke.mjs
