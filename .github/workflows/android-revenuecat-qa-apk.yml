@@ -10,6 +10,7 @@ on:
       - 'assets/branding/tdr-play-store-icon.png'
       - 'scripts/generate-android-launcher-icons.mjs'
       - 'scripts/verify-android-launcher.mjs'
+      - 'scripts/android-release-candidate-smoke.mjs'
       - 'src/game/scenes/RaceProceduralAudioScene.js'
       - 'src/game/audio/CarEngineSampleRuntime.js'
       - 'src/main.js'
