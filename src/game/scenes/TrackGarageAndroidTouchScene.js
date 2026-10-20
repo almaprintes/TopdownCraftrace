@@ -3,7 +3,8 @@ import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 import { ensureSelectionPaddockSkin } from '../ui/selectionPaddockSkin.js';
 import { attachCenteredSelectionRail } from '../ui/centeredSelectionRail.js';
 import { pxToMeters } from '../cars/speedUnits.js';
-import {TENERIFE_LEGACY_ID,readTenerifeDirection,saveTenerifeDirection} from '../tracks/trackReverseVariant.js';
+import {TENERIFE_LEGACY_ID,circuitVariantFor,selectedCircuitRaceId,readCircuitDirection,saveCircuitDirection} from '../tracks/trackReverseVariant.js';
+import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 
 const ROOT_ID='tdr-track-selector-dom';
 const TAP_MOVE_PX=14;
@@ -43,11 +44,20 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     if(!root)return;
     if(this._mode!=='admin')ensureSelectionPaddockSkin();
     syncCanonicalLengths(root,this._tracks,this._index);
-    // One track card, two real timing variants. The historical anti-clockwise
-    // lap identity stays on karting-tenerife; clockwise receives its own ID.
+    // Each physical circuit occupies ONE selector card. Choose the racing
+    // direction inside the hero, and keep historical IDs untouched.
+    root.querySelectorAll('.tdr-ts-card').forEach((card,i)=>{
+      const id=this._tracks?.[i]?.key;
+      if(!circuitVariantFor(id))return;
+      const normalId=id===TENERIFE_LEGACY_ID?'karting-tenerife-horario':id;
+      const label=card.querySelector('.tdr-ts-card-title');
+      if(label&&!card.classList.contains('locked'))
+        label.textContent=getTrackPublicName(normalId);
+    });
     const selected=this._tracks?.[this._index];
-    const isTenerife=selected?.key===TENERIFE_LEGACY_ID;
-    if(isTenerife&&!root.querySelector('.tdr-ts-locked-hero')){
+    const base=selected?.key;
+    const spec=circuitVariantFor(base);
+    if(spec&&!root.querySelector('.tdr-ts-locked-hero')){
       const header=root.querySelector('.tdr-ts-hero-head');
       if(header){
         const cssId='tdr-terrace-direction-selector-style';
@@ -60,20 +70,33 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
         row.setAttribute('role','group');
         const lang=document.documentElement.lang==='en'?'en':'es';
         row.setAttribute('aria-label',lang==='en'?'Race direction':'Sentido de circulación');
-        for(const [value,label] of [
-          ['clockwise',lang==='en'?'↻ CLOCKWISE · NORMAL':'↻ HORARIO · NORMAL'],
-          ['counterclockwise',lang==='en'?'↺ COUNTERCLOCKWISE · REVERSE':'↺ ANTIHORARIO · INVERSO']
-        ]){
+        const normal=spec.base===TENERIFE_LEGACY_ID?'clockwise':spec.legacy;
+        const glyph=normal==='clockwise'?'↻':'↺',opposite=normal==='clockwise'?'↺':'↻';
+        const choices=[
+          ['normal',glyph+' '+(lang==='en'?'NORMAL':'NORMAL')],
+          ['inverse',opposite+' '+(lang==='en'?'REVERSE':'INVERSO')]
+        ];
+        const update=()=>{
+          const current=readCircuitDirection(localStorage,base);
+          const selectedId=selectedCircuitRaceId(base,localStorage);
+          const publicName=getTrackPublicName(selectedId);
+          for(const button of row.querySelectorAll('button'))
+            button.setAttribute('aria-pressed',String(button.dataset.raceDirection===current));
+          const title=root.querySelector('.tdr-ts-hero-name');
+          const caption=root.querySelector('.tdr-ts-hero-caption');
+          if(title)title.textContent=publicName;
+          if(caption)caption.textContent=publicName;
+        };
+        for(const [value,label] of choices){
           const btn=document.createElement('button');btn.type='button';btn.dataset.raceDirection=value;
           btn.textContent=label;row.appendChild(btn);
           btn.addEventListener('click',event=>{
             event.preventDefault();event.stopPropagation();
-            saveTenerifeDirection(localStorage,value);
-            for(const b of row.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.raceDirection===value));
+            saveCircuitDirection(localStorage,base,value);
+            update();
           });
         }
-        const active=readTenerifeDirection(localStorage);
-        for(const b of row.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.raceDirection===active));
+        update();
         header.appendChild(row);
       }
     }
