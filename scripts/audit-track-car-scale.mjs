@@ -112,7 +112,7 @@ function listedTracks(){
   // Driving-direction variants share the exact same photo, Bezier road
   // width and car scale: inventory the six PHYSICAL circuits only.
   // Their independent records and ranking IDs are audited elsewhere.
-  return published.filter(id=>id!=='karting-tenerife-horario');
+  return published.filter(id=>id!=='karting-tenerife-horario'&&!id.endsWith('-inverso'));
 }
 const trackFile=id=>id==='circuito-atlantico'?'track01':id;
 async function imageSize(file){
