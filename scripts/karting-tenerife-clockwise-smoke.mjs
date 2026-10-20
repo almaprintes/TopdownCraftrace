@@ -54,6 +54,23 @@ try{
   saveTenerifeDirection(storage,'clockwise');
   assert.equal(readTenerifeDirection(storage),'clockwise');
   assert.ok(readFileSync('src/game/scenes/MenuScene.js','utf8').includes('selectedTenerifeRaceId(selectedTrackKey,readTenerifeDirection(localStorage))'));
+  const actualGameMode=readFileSync('src/game/scenes/MenuGameModesScene.js','utf8');
+  const shippingScene=readFileSync('src/game/game.js','utf8');
+  assert.match(shippingScene,/MenuRewardedAdsScene\.js/,'the shipping menu still uses its game-mode inheritance chain');
+  assert.match(actualGameMode,/play\.removeAllListeners\(\)/,'game-mode menu intercepts the old direct PLAY action');
+  assert.match(actualGameMode,/selectedTenerifeRaceId\(trackKey,readTenerifeDirection\(localStorage\)\)/,
+    'the LIVE game-mode launch, not just the replaced base PLAY button, must honor the direction');
+  assert.match(actualGameMode,/this\.scene\.start\('race',\{carId,trackKey:launchTrack,gameMode:mode\}\)/,
+    'the direction-specific key must reach the actual race navigation callback');
+  assert.match(actualGameMode,/const launchTrack=mode==='practice'\?PRACTICE_TRACK_KEY:/,
+    'practice remains a distinct, unaffected mode');
+  assert.equal(selectedTenerifeRaceId(TENERIFE_LEGACY_ID,readTenerifeDirection(storage)),TENERIFE_CLOCKWISE_ID,
+    'game-mode entry while clockwise selected launches the new independent identity');
+  saveTenerifeDirection(storage,'counterclockwise');
+  assert.equal(selectedTenerifeRaceId(TENERIFE_LEGACY_ID,readTenerifeDirection(storage)),TENERIFE_LEGACY_ID,
+    'game-mode entry while counterclockwise selected launches the historical circuit');
+  assert.equal(selectedTenerifeRaceId('karting-americas',readTenerifeDirection(storage)),'karting-americas',
+    'other tracks do not change direction accidentally');
   assert.ok(readFileSync('src/game/scenes/TrackGarageAndroidTouchScene.js','utf8').includes('tdr-ts-route-modes'));
   assert.ok(readFileSync('src/game/scenes/RaceScene.js','utf8').includes('baseCircuitId(this.trackKey)'));
   assert.ok(readFileSync('src/game/tracks/trackUnlocks.js','utf8').includes(TENERIFE_CLOCKWISE_ID));
