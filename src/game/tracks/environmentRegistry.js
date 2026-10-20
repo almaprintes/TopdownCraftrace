@@ -1,3 +1,5 @@
+import {physicalCircuitId} from './trackReverseVariant.js';
+
 const envModules={
   ...import.meta.glob('./library/*/environment.json',{eager:true}),
   ...import.meta.glob('./library/*/*.environment.json',{eager:true})
@@ -26,7 +28,14 @@ for(const [path,mod] of Object.entries(envModules)){
   }
 }
 
-export function resolveTrackEnvironmentId(trackId){const id=normalize(trackId);return ALIASES[id]||canonical(id);}
+// A direction variant has its own timing/leaderboard ID, NOT a second
+// Environment Studio project. Map only registered inverse IDs to the same
+// physical environment so barriers, zones, ads and decals stay identical.
+export function resolveTrackEnvironmentId(trackId){
+  const id=normalize(trackId);
+  const physical=normalize(physicalCircuitId(id));
+  return ALIASES[physical]||canonical(physical);
+}
 export function hasTrackEnvironment(trackId){return !!REGISTRY[resolveTrackEnvironmentId(trackId)];}
 export function createTrackEnvironment(trackId){return clone(REGISTRY[resolveTrackEnvironmentId(trackId)]||null);}
 export function getTrackEnvironmentKeys(){return Object.keys(REGISTRY);}
