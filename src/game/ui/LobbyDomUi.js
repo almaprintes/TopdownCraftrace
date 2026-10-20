@@ -189,7 +189,7 @@ function makeOnlineRecordsShortcut(scene){
   }));
   return button;
 }
-function startRaceFlow(scene) { if (typeof scene._openGameModeModal === 'function') { scene._openGameModeModal(); return; } const carId = scene.selectedCarId; const trackKey = scene.selectedTrackKey || 'track01'; try { localStorage.setItem('tdr2:carId', carId); localStorage.setItem('tdr2:trackKey', trackKey); } catch {} scene.scene.start('race', { carId, trackKey }); }
+function startRaceFlow(scene) { if (typeof scene._openGameModeModal === 'function') { scene._openGameModeModal(); return; } const carId = scene.selectedCarId; const trackKey = scene.selectedTrackKey || 'track01'; try { localStorage.setItem('tdr2:carId', carId); localStorage.setItem('tdr2:trackKey', trackKey); } catch {} const launchTrack=selectedTenerifeRaceId(trackKey,readTenerifeDirection(localStorage)); scene.scene.start('race', { carId, trackKey:launchTrack }); }
 
 export function installLobbyDom(scene) {
   hideLegacyLobbyControls(scene); let root = scene._lobbyDomRoot;
