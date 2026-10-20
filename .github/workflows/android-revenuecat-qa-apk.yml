@@ -1,5 +1,5 @@
 name: TDR real AdMob RevenueCat minified QA APK
-# DEV 1.2.314: owner-requested consolidated Android test after induction, Arafo, online ranking and pilot-geography fixes.
+# DEV 1.2.317: final Android QA candidate incl. Gripline loading, signed-upgrade trial and retained data; never Play.
 # DEV 1.2.216: include corrected Karting staging in all main Android checks.
 
 on:
@@ -29,6 +29,11 @@ on:
 
 permissions:
   contents: write
+
+# Prevent simultaneous QA builds from racing to create a replacement signing key.
+concurrency:
+  group: tdr-device-qa-signing
+  cancel-in-progress: false
 
 jobs:
   real_ads_qa:
@@ -69,6 +74,31 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: gradle
+      # GitHub-hosted runners normally regenerate the Android debug signer,
+      # making a later APK impossible to install over the previous QA build.
+      # Cache ONLY the isolated .rewardedtest QA signing identity. Play's
+      # production keystore is neither present nor accessible here.
+      # NOTE: GitHub caches expire; for long-term QA upgrades configure a
+      # repository-secret-backed signer rather than treating this as permanent.
+      - name: Reuse QA Android signer across runs
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: tdr-rewardedtest-debug-signing-v1
+      - name: Generate QA signer only on first run
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.android"
+          if test ! -s "$HOME/.android/debug.keystore"; then
+            keytool -genkeypair -noprompt -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -alias androiddebugkey -keypass android \
+              -keyalg RSA -keysize 2048 -validity 36500 \
+              -dname 'CN=TDR Isolated QA,O=AlmaPrint,C=ES'
+          fi
+          chmod 600 "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" \
+            -storepass android -alias androiddebugkey | grep 'SHA256:' | head -1
       - name: Install Android SDK
         shell: bash
         run: |
@@ -95,6 +125,7 @@ jobs:
           npm run build:android
           node scripts/karting-canarias-4096-smoke.mjs
           node scripts/android-release-candidate-smoke.mjs
+          node scripts/android-qa-signing-smoke.mjs
           node scripts/verify-android-launcher.mjs
       - name: Compile APK with real AdMob and RevenueCat integrations
         working-directory: android
@@ -106,16 +137,17 @@ jobs:
           src='android/app/build/outputs/apk/deviceTest/release/app-deviceTest-release.apk'
           test -s "$src"
           unzip -t "$src" | tail -1
-          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'"
+          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000317'"
+          "${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$src" | grep -E 'Verified using|Signer #1 certificate SHA-256'
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-DEV-1.2.314-REAL-ADS-SIN-MEDIR.apk
-          sha256sum sdk-download/TDR-QA-DEV-1.2.314-REAL-ADS-SIN-MEDIR.apk
+          cp "$src" sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk
+          sha256sum sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-DEV-1.2.314-REAL-ADS-SIN-MEDIR
-          path: sdk-download/TDR-QA-DEV-1.2.314-REAL-ADS-SIN-MEDIR.apk
+          name: TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR
+          path: sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
@@ -126,12 +158,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apk='sdk-download/TDR-QA-DEV-1.2.314-REAL-ADS-SIN-MEDIR.apk'
-          tag='tdr-qa-1.2.314'
+          apk='sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk'
+          tag='tdr-qa-1.2.317'
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$apk" --clobber
           else
             gh release create "$tag" "$apk" --target "$GITHUB_SHA" --prerelease \
-              --title 'Top Down Race · APK de pruebas DEV 1.2.314' \
-              --notes 'APK Android QA DEV 1.2.314 para pruebas en dispositivos reales. Incluye actualizaciones de Arafo-Los Loros, sincronización de misión 7 de Inducción, recuperación de récords online de Atlántico y formulario voluntario de continente/país/región para rankings. App independiente del juego de Google Play; AdMob y RevenueCat reales; herramienta MEDIR oculta, solo disponible mediante acceso de asistencia. Probar inducción, clasificación por zonas, anuncios y fluidez Android sin generar impresiones publicitarias artificiales. No es una actualización pública.'
+              --title 'Top Down Race · APK candidata final DEV 1.2.317' \
+              --notes 'APK Android QA DEV 1.2.317 desde main, con Arafo-Los Loros, misión 7, tablas online de Atlántico, región del piloto y animación de carga Avenir Gripline. Paquete aislado rewardedtest, AdMob/RevenueCat reales, sin controles MEDIR visibles. versionCode QA 1000317, firma QA reutilizable mediante caché Actions. IMPORTANTE: las APK .300/.314 firmadas con claves de CI anteriores NO se pueden actualizar in situ si la firma difiere. Antes de desinstalar: Ajustes > Cuenta > DESCARGAR COPIA; comprobar copia nube y acceso. Después de la primera instalación .317, las QA futuras pueden actualizar manteniendo perfil SI siguen usando esta misma firma y versionCode creciente. No firmado con clave de Play y no apto para Play Console. No generar impresiones de anuncios repetitivas.'
           fi

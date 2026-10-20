@@ -81,6 +81,10 @@ android {
         deviceTest {
             dimension 'environment'
             applicationIdSuffix '.rewardedtest'
+            // Dedicated QA-only install number; production remains 8.
+            // Increase this monotonically for each QA install/update.
+            versionCode 1000317
+            versionName '1.2.317-qa'
             versionNameSuffix '-rewarded-test'
             manifestPlaceholders = [ADMOB_APP_ID: admobAppId ?: 'missing-production-admob-app-id']
             buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted(rewardedAdUnitId)
