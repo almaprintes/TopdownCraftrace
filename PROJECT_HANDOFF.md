@@ -1,5 +1,15 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.313 — Alta de piloto con ubicación declarada y rankings geográficos corregibles
+
+Investigación READ ONLY de Supabase 20/10: 21 perfiles, de los cuales siete tienen `continent_code='XX',country_code='XX',region_code='XX'` porque `claim_my_pilot_nick` crea un perfil reservando el nick con ubicación provisional 'XX' (migración 014). Esto hace que GLOBAL incluya sus récords, mientras los rankings EU/ES/ES-CN correctamente no los incluyan; jamás asumir que 'XX' significa España. Distribución real: Atlántico 11/10, Américas 2/0, Canarias 3/3, Canarias 4096 1/0, Tenerife 3/2, Arafo 1/1, Santa Cruz 7/5; Santa Cruz tiene además un registro sin perfil y por diseño no puede aparecer en la clasificación firmada.
+
+Petición: el formulario de creación de nick explica los rankings **Global, Continente, País y Región** e incorpora continente declarado, país (lista ISO con etiquetas localizadas) y región opcional. **No se usa geolocalización, permisos, IP ni idioma del dispositivo para elegir ubicación.** España usa una lista normalizada de comunidades autónomas; Canarias se guarda como `ES-CN`, coincidente con las clasificaciones existentes. Fuera de España se admite nombre/código de región con normalización reproducible (se recomienda código de estado/provincia cuando lo conozcan). Sin región se guarda `XX`: participa en Global/Continente/País pero no Región, explicado al jugador. El alta primero reserva el nick atómicamente con la RPC existente, luego persiste ubicación **en ese mismo user_id** mediante `upsert_my_profile`, y **solo entonces** guarda el nick en el dispositivo. Si falla la red, se puede reintentar; no se da por completada el alta.
+
+Los jugadores anteriores disponen de formulario bajo Ajustes → Cuenta, con lectura del perfil existente y botón `GUARDAR REGIÓN DE RANKING`. Solo actualiza la cuenta cuya identidad coincide exactamente con el nick local (sin transferir perfiles ni récords entre UUID), no asigna códigos a perfiles 'XX' sin interacción explícita. Tras guardado confirmado, invalida exclusivamente las **cachés locales de clasificación**, no tiempos, fantasmas, perfiles, monedas ni anuncios.
+
+El diálogo inicial se hace desplazable también en móviles apaisados. No hay consultas por fotograma ni reescrituras SQL, ni nuevas tablas. No generar APK/AAB ni publicar Play sin orden explícita; APK .300 todavía no incorpora este formulario. Smoke `scripts/pilot-ranking-region-smoke.mjs` forma parte de prebuild.
+
 ## DEV 1.2.312 — Recuperación de récords online vacíos en Atlántico / Race Control
 
 QA del propietario en APK Android .300: Atlántico aparece sin tabla online pese a haber publicado un tiempo, mientras que otros circuitos muestran datos. Consulta READ ONLY a Supabase real (20/10/2026): `public.track_records` contiene **11 récords** de `circuito-atlantico` (11 perfiles asociados), mejor 8759 ms; `web_leaderboard_snapshot` contiene 10 entradas públicas con identificador `circuito-atlantico`. **NO hay pérdida de los tiempos en la nube ni se necesita migración SQL.**

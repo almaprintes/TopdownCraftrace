@@ -1,5 +1,6 @@
 import { openCloudAccountUi } from './cloudAccountUi.js';
-import { claimRaceControlPilotNick } from '../online/raceControlOnline.js';
+import { claimRaceControlPilotNick, syncRaceControlProfile, getMyRaceControlProfile } from '../online/raceControlOnline.js';
+import { raceRankingFieldsHtml, bindRaceRankingFields, invalidateLocalRaceRankingCaches } from './pilotRankingGeography.js';
 const KEY='tdr2:pilotProfile:v1';
 
 const cleanName=value=>String(value??'').replace(/\s+/g,' ').trim().slice(0,16);
@@ -19,13 +20,19 @@ export function getPilotProfile(){
   return profile;
 }
 
-export async function setPilotName(value){
+export async function setPilotName(value,{rankingLocation=null}={}){
   const name=cleanName(value);
   if(name.length<3)throw new Error('El nombre de piloto debe tener entre 3 y 16 caracteres.');
   // Supabase owns the unique identity claim. Never leave an unverified local
   // name visible in rankings or cloud snapshots if the server rejects it.
   const confirmed=await claimRaceControlPilotNick(name);
   if(confirmed!==name)throw new Error('La reserva de nombre no coincide.');
+  if(rankingLocation){
+    // Nick is atomically reserved first; completing geography is an explicit
+    // follow-up on the SAME authenticated UUID, before local UI commits.
+    await syncRaceControlProfile({nick:name,...rankingLocation});
+    invalidateLocalRaceRankingCaches(localStorage);
+  }
   const current=getPilotProfile();
   const next={...current,name,updatedAt:Date.now()};
   localStorage.setItem(KEY,JSON.stringify(next));
@@ -33,18 +40,32 @@ export async function setPilotName(value){
   return next;
 }
 
+export async function updatePilotRankingLocation(rankingLocation){
+  const name=getPilotProfile().name;
+  if(name.length<3)throw new Error('Primero configura tu nombre de piloto.');
+  // Do not silently overwrite another device/account with a different nick.
+  const existing=await getMyRaceControlProfile();
+  if(existing&&existing.nick!==name)
+    throw new Error('La cuenta online pertenece a otro piloto. Revisa Ajustes → Cuenta antes de guardar la región.');
+  if(!existing)await claimRaceControlPilotNick(name);
+  const rows=await syncRaceControlProfile({nick:name,...rankingLocation});
+  invalidateLocalRaceRankingCaches(localStorage);
+  return rows;
+}
 function mountPrompt(){
   if(typeof document==='undefined'||document.querySelector('[data-tdr-pilot-prompt]'))return;
   const profile=getPilotProfile();
   if(profile.name)return;
+  const en=String(document.documentElement?.lang||'').toLowerCase().startsWith('en');
   const root=document.createElement('div');
   root.dataset.tdrPilotPrompt='1';
   root.style.cssText='position:fixed;inset:0;z-index:2147483646;display:grid;place-items:center;padding:max(14px,env(safe-area-inset-top)) max(18px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));box-sizing:border-box;background:rgba(2,8,14,.94);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff';
-  root.innerHTML=`<div style="width:min(520px,92vw);box-sizing:border-box;padding:24px;border:1px solid rgba(85,234,255,.42);background:linear-gradient(145deg,#081b27,#030b12);box-shadow:0 24px 70px rgba(0,0,0,.55)">
+  root.innerHTML=`<div style="width:min(520px,92vw);box-sizing:border-box;padding:18px;border:1px solid rgba(85,234,255,.42);background:linear-gradient(145deg,#081b27,#030b12);box-shadow:0 24px 70px rgba(0,0,0,.55);max-height:calc(100dvh - 22px);overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="font-size:9px;font-weight:1000;letter-spacing:.18em;color:#62eaff">PERFIL DE PILOTO</div>
     <div style="margin-top:7px;font-size:clamp(24px,5vw,38px);line-height:1;font-weight:1000">¿CÓMO TE LLAMAMOS EN PISTA?</div>
     <div style="margin-top:11px;color:#9ab3c0;font-size:12px;line-height:1.45">Tu nombre de piloto viajará con los tiempos y repeticiones que compartas con otros testers.</div>
-    <input data-pilot-name maxlength="16" autocomplete="nickname" autocapitalize="characters" spellcheck="false" placeholder="NOMBRE DE PILOTO" style="display:block;width:100%;height:48px;margin-top:18px;box-sizing:border-box;border:1px solid #3e7184;background:#06131d;color:#fff;padding:0 14px;font-size:18px;font-weight:900;letter-spacing:.05em;outline:none" />
+    <input data-pilot-name maxlength="16" autocomplete="nickname" autocapitalize="characters" spellcheck="false" placeholder="${en?'PILOT NICK':'NOMBRE DE PILOTO'}" style="display:block;width:100%;height:44px;margin-top:12px;box-sizing:border-box;border:1px solid #3e7184;background:#06131d;color:#fff;padding:0 14px;font-size:18px;font-weight:900;letter-spacing:.05em;outline:none" />
+    ${raceRankingFieldsHtml(en)}
     <div data-pilot-error style="min-height:18px;margin-top:7px;color:#ff8a93;font-size:10px;font-weight:800"></div>
     <button data-pilot-save type="button" style="width:100%;height:46px;border:1px solid #59eaff;background:#0d5265;color:#fff;font-size:13px;font-weight:1000;letter-spacing:.08em;touch-action:manipulation">GUARDAR NOMBRE DE PILOTO</button>
     <button data-pilot-existing type="button" style="width:100%;height:40px;margin-top:10px;border:1px solid #658fa1;background:#0b2331;color:#c8f2ff;font-size:11px;font-weight:900;touch-action:manipulation">YA TENGO CUENTA · RECUPERAR PARTIDA</button>
@@ -52,6 +73,7 @@ function mountPrompt(){
   </div>`;
   document.body.appendChild(root);
   const input=root.querySelector('[data-pilot-name]'),error=root.querySelector('[data-pilot-error]'),save=root.querySelector('[data-pilot-save]');
+  const geoFields=bindRaceRankingFields(root);
   let submitting=false,lastPointerAt=0;
   const submit=async()=>{
     if(submitting)return;
@@ -59,7 +81,8 @@ function mountPrompt(){
     if(save){save.disabled=true;save.textContent='COMPROBANDO EN SUPABASE…';}
     if(error)error.textContent='';
     try{
-      await setPilotName(input?.value||'');
+      const rankingLocation=geoFields.read();
+      await setPilotName(input?.value||'',{rankingLocation});
       root.remove();
     }catch(err){
       if(error)error.textContent=String(err?.message||'No se pudo reservar el nombre');
@@ -99,7 +122,7 @@ function mountSettingsProfile(){
   const en=String(document.documentElement?.lang||'').toLowerCase().startsWith('en');
   const profile=getPilotProfile();
   const card=document.createElement('section');card.className='s2card wide';card.dataset.tdrPilotProfileSettings='1';
-  card.innerHTML=`<div class="s2label">${en?'DRIVER PROFILE':'PERFIL DE PILOTO'}</div><div class="s2desc">${en?'This is the name attached to laps and replays you share with other testers. Changing it keeps your internal driver identity.':'Este es el nombre que acompaña a las vueltas y repeticiones que compartes con otros testers. Cambiarlo conserva tu identidad interna de piloto.'}</div><div class="s2row"><input class="tdr-pilot-name" data-pilot-settings-name maxlength="16" autocomplete="nickname" autocapitalize="characters" spellcheck="false" aria-label="${en?'Driver name':'Nombre de piloto'}"><button type="button" class="tdr-pilot-save" data-pilot-settings-save>${en?'SAVE NAME':'GUARDAR NOMBRE'}</button></div><div class="tdr-pilot-status" data-pilot-settings-status>${profile.name?(en?`CURRENT: ${profile.name}`:`ACTUAL: ${profile.name}`):''}</div>`;
+  card.innerHTML=`<div class="s2label">${en?'DRIVER PROFILE':'PERFIL DE PILOTO'}</div><div class="s2desc">${en?'This is the name attached to laps and replays you share with other testers. Changing it keeps your internal driver identity.':'Este es el nombre que acompaña a las vueltas y repeticiones que compartes con otros testers. Cambiarlo conserva tu identidad interna de piloto.'}</div><div class="s2row"><input class="tdr-pilot-name" data-pilot-settings-name maxlength="16" autocomplete="nickname" autocapitalize="characters" spellcheck="false" aria-label="${en?'Driver name':'Nombre de piloto'}"><button type="button" class="tdr-pilot-save" data-pilot-settings-save>${en?'SAVE NAME':'GUARDAR NOMBRE'}</button></div><div class="tdr-pilot-status" data-pilot-settings-status>${profile.name?(en?`CURRENT: ${profile.name}`:`ACTUAL: ${profile.name}`):''}</div>${raceRankingFieldsHtml(en)}<div class="s2row"><button type="button" class="tdr-pilot-save" data-pilot-ranking-save>${en?'SAVE RANKING REGION':'GUARDAR REGIÓN DE RANKING'}</button></div><div class="tdr-pilot-status" data-pilot-ranking-status role="status">${en?'Checking existing ranking region…':'Comprobando región de ranking…'}</div>`;
   // Keep the editor accessible, but inside More settings rather than a
   // competing account card. No duplicate profile on the main screen.
   const advanced=grid.querySelector('.tdr-account-extra');
@@ -111,7 +134,20 @@ function mountSettingsProfile(){
     if(firstCard?.nextSibling)grid.insertBefore(card,firstCard.nextSibling);else grid.appendChild(card);
   }
   const input=card.querySelector('[data-pilot-settings-name]'),button=card.querySelector('[data-pilot-settings-save]'),status=card.querySelector('[data-pilot-settings-status]');
+  const geoFields=bindRaceRankingFields(card);
+  const geoButton=card.querySelector('[data-pilot-ranking-save]'),geoStatus=card.querySelector('[data-pilot-ranking-status]');
   if(input)input.value=profile.name||'';
+  // Only read the already-owned profile. Never infer geography from iOS,
+  // GPS or the current network, and never mutate on account-tab entry.
+  void getMyRaceControlProfile().then(current=>{
+    geoFields.prefill(current);
+    if(!geoStatus?.isConnected)return;
+    geoStatus.textContent=current?.country_code==='XX'
+      ?(en?'Region incomplete · choose it to join geographic rankings.':'Región incompleta · elígela para aparecer en los rankings geográficos.')
+      :(en?'Current ranking region loaded.':'Región actual cargada.');
+  }).catch(()=>{
+    if(geoStatus?.isConnected)geoStatus.textContent=en?'Unable to read current region. You may retry.':'No se pudo consultar la región. Puedes volver a intentarlo.';
+  });
   let lastPointerAt=0;
   let saving=false;
   const saveName=async()=>{
@@ -132,6 +168,23 @@ function mountSettingsProfile(){
       if(button){button.disabled=false;button.textContent=en?'SAVE NAME':'GUARDAR NOMBRE';}
     }
   };
+  let geoSaving=false;
+  const saveGeo=async()=>{
+    if(geoSaving)return;
+    geoSaving=true;
+    if(geoButton){geoButton.disabled=true;geoButton.textContent=en?'SAVING…':'GUARDANDO…';}
+    try{
+      const location=geoFields.read();
+      await updatePilotRankingLocation(location);
+      if(geoStatus){geoStatus.style.color='#6ff0b4';geoStatus.textContent=en?'Region saved. Rankings will reflect your choice after refresh.':'Región guardada. Las clasificaciones reflejarán tu elección al actualizar.';}
+    }catch(err){
+      if(geoStatus){geoStatus.style.color='#ff8a93';geoStatus.textContent=String(err?.message||'No se pudo guardar la región.');}
+    }finally{
+      geoSaving=false;
+      if(geoButton){geoButton.disabled=false;geoButton.textContent=en?'SAVE RANKING REGION':'GUARDAR REGIÓN DE RANKING';}
+    }
+  };
+  geoButton?.addEventListener('click',()=>{void saveGeo();});
   button?.addEventListener('pointerup',e=>{e.preventDefault();lastPointerAt=Date.now();void saveName();});
   button?.addEventListener('click',()=>{if(Date.now()-lastPointerAt<500)return;void saveName();});
   input?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void saveName();}});
