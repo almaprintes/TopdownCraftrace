@@ -1,3 +1,9 @@
+# AVISO DE CONTINUIDAD — 20/10/2026
+
+> El texto inferior refleja estados históricos (enero–septiembre de 2026). **No es el estado operativo vigente.** Para continuar desde la última fuente, leer [continuity/2026-10-20-handoff-general.md](continuity/2026-10-20-handoff-general.md), `AGENTS.md` y `PROJECT_HANDOFF.md` en raíz. Rama actual: `main`; Play 1.1.188 (vc8); DEV código 1.2.317 al corte, con advertencia de firma QA. Conservar este archivo como referencia de evolución, no reanudar desde sus rutas/ramas antiguas.
+
+---
+
 Top-Down Race 2 — STATE (Fuente de verdad)
 
 ## ACTUALIZACIÓN PRIORITARIA — 2026-09-08

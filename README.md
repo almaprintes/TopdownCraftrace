@@ -1,5 +1,7 @@
 # Top Down RACE / TopdownCraftrace
 
+> **DOCUMENTO DE CONTINUIDAD VIGENTE (20/10/2026):** [docs/continuity/2026-10-20-handoff-general.md](docs/continuity/2026-10-20-handoff-general.md). Para reanudar en otro chat, leer esa síntesis **junto con AGENTS.md y PROJECT_HANDOFF.md**, consultar HEAD de main y comprobar GitHub Actions. Las secciones históricas de este archivo reflejan su propia fecha y no sustituyen el estado más reciente.
+
 Estado real del proyecto a **17 de agosto de 2026**.
 
 Este README se mantiene como documento de seguridad y continuidad: debe reflejar el estado funcional real del juego, las decisiones ya tomadas, los sistemas implantados, los problemas conocidos y los siguientes pasos. No debe describir funciones como terminadas si todavía están pendientes de probar o pulir.

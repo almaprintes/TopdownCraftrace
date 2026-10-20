@@ -1,3 +1,9 @@
+# AVISO — FLUJO HISTÓRICO
+
+> La descripción inferior es histórica. Para reglas vigentes 20/10/2026 y fuente actual de Pages/Android, consultar [continuity/2026-10-20-handoff-general.md](continuity/2026-10-20-handoff-general.md), `AGENTS.md`, `.github/workflows/pages.yml` y `.github/workflows/android-revenuecat-qa-apk.yml`. No usar `beta-0.0.3` como línea pública actual.
+
+---
+
 # Flujo de trabajo del repositorio — Top Down Race
 
 ## Regla de producto

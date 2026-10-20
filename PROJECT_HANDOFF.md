@@ -1,5 +1,7 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+> **RESUMEN CANÓNICO A 20/10/2026 PARA NUEVO CHAT:** leer **[docs/continuity/2026-10-20-handoff-general.md](docs/continuity/2026-10-20-handoff-general.md)** junto con este historial. A continuación se conserva la cronología detallada por DEV; las notas más antiguas son históricas. **Última APK QA .317 NO quedó cubierta por el parche posterior de firma.**
+
 ## Android QA — Firma verificada y protección anti-APK incompatible (20/10/2026)
 
 Auditoría complementaria de la APK 1.2.317, motivada por las instalaciones que exigen desinstalar. Encontrada **regresión real de firma en CI**: en el job GitHub Actions 39478142886 el `keytool` creó/restauró `$HOME/.android/debug.keystore` (alias `androiddebugkey`) con certificado SHA-256 `cd626199aa6234d9bdc3c07ca0c8686e7fb994eb8c4d5d02ade2fff1dcbeca6f`; sin embargo el `apksigner verify` del APK efectivamente entregado 1.2.317 da **otro certificado** `63c30fb33ef62289ffce961a8dadc2efe85480ce121b1043996370a6949d4358`. Por tanto **NO se ha demostrado que el instalable .317 reutilice la clave cacheada** y no debemos prometer que se actualizará con futuras APK. La firma final de .314 tampoco estaba registrada en su job: no afirmar que .317 se instala encima de .314.
