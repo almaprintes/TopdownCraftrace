@@ -3,7 +3,7 @@ import { METERS_PER_PX } from '../cars/speedUnits.js';
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import {spawnUpstreamOfFinish} from './imageNativeDriving.js';
 import {widenAllRaceGates} from './raceGateWidth.js';
-import {makeTenerifeClockwiseTrack,TENERIFE_LEGACY_ID,TENERIFE_CLOCKWISE_ID} from './trackReverseVariant.js';
+import {makeTenerifeClockwiseTrack,TENERIFE_LEGACY_ID,TENERIFE_CLOCKWISE_ID,CLOSED_CIRCUIT_VARIANTS,makeInvertedClosedTrack} from './trackReverseVariant.js';
 
 const trackModules = import.meta.glob('./library/*/track.json', { eager: true });
 const HAS_REBUILT_CANARIAS=Object.hasOwn(trackModules,'./library/karting-canarias-4096/track.json');
@@ -104,6 +104,10 @@ function buildRegistry(){
   // Pilot: a distinct official lap/ghost/leaderboard identity without cloning
   // Tenerife's photo assets, surface/collision masks or source .tdrtrack.
   if(out[TENERIFE_LEGACY_ID])out[TENERIFE_CLOCKWISE_ID]=makeTenerifeClockwiseTrack(out[TENERIFE_LEGACY_ID]);
+  for(const spec of CLOSED_CIRCUIT_VARIANTS){
+    if(spec.base===TENERIFE_LEGACY_ID||!out[spec.base])continue;
+    out[spec.alternate]=makeInvertedClosedTrack(out[spec.base],spec.alternate);
+  }
   return out;
 }
 export const TRACK_REGISTRY=buildRegistry();
