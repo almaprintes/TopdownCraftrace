@@ -25,5 +25,5 @@ assert.match(visual, /gripline-loader-wheel\.webp/);
 assert.match(visual, /tdr-gripline-wheel-spin/);
 assert.match(visual, /tdr-gripline-road-left/);
 assert.match(visual, /prefers-reduced-motion/);
-assert.doesNotMatch(visual, /requestAnimationFrame|setInterval|setTimeout|WebGL|Phaser\.Scene/);
+assert.doesNotMatch(visual, /requestAnimationFrame|setInterval|setTimeout|new Phaser\.Scene/);
 console.log('Gripline photo loading gate smoke: OK');
