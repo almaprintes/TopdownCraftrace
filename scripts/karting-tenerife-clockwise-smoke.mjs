@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createServer} from 'vite';
 import {trackDisplayDirection} from '../src/game/tracks/trackDisplayDirection.js';
-import {TENERIFE_CLOCKWISE_ID,TENERIFE_LEGACY_ID,selectedTenerifeRaceId,baseCircuitId,readTenerifeDirection,saveTenerifeDirection} from '../src/game/tracks/trackReverseVariant.js';
+import {TENERIFE_CLOCKWISE_ID,TENERIFE_LEGACY_ID,selectedTenerifeRaceId,baseCircuitId,readTenerifeDirection,saveTenerifeDirection,selectedCircuitRaceId,readCircuitDirection} from '../src/game/tracks/trackReverseVariant.js';
 
 const norm=n=>Math.hypot(n.x,n.y);
 const dot=(a,b)=>(a.x*b.x+a.y*b.y)/(norm(a)*norm(b));
@@ -53,17 +53,17 @@ try{
   assert.equal(readTenerifeDirection(storage),'counterclockwise','existing players stay on original route by default');
   saveTenerifeDirection(storage,'clockwise');
   assert.equal(readTenerifeDirection(storage),'clockwise');
-  assert.ok(readFileSync('src/game/scenes/MenuScene.js','utf8').includes('selectedTenerifeRaceId(selectedTrackKey,readTenerifeDirection(localStorage))'));
+  assert.ok(readFileSync('src/game/scenes/MenuScene.js','utf8').includes('selectedCircuitRaceId(selectedTrackKey,localStorage)'));
   const actualDomLobby=readFileSync('src/game/ui/LobbyDomUi.js','utf8');
-  assert.match(actualDomLobby,/selectedTenerifeRaceId\(baseTrackKey,readTenerifeDirection\(localStorage\)\)/,
+  assert.match(actualDomLobby,/selectedCircuitRaceId\(baseTrackKey,localStorage\)/,
     'the visible DOM lobby must show the same normal/reverse geometry as the selected launch');
-  assert.match(actualDomLobby,/const launchTrack=selectedTenerifeRaceId\(trackKey,readTenerifeDirection\(localStorage\)\);/,
+  assert.match(actualDomLobby,/const launchTrack=selectedCircuitRaceId\(trackKey,localStorage\);/,
     'even the DOM PLAY fallback must use the selected direction');
   const actualGameMode=readFileSync('src/game/scenes/MenuGameModesScene.js','utf8');
   const shippingScene=readFileSync('src/game/game.js','utf8');
   assert.match(shippingScene,/MenuRewardedAdsScene\.js/,'the shipping menu still uses its game-mode inheritance chain');
   assert.match(actualGameMode,/play\.removeAllListeners\(\)/,'game-mode menu intercepts the old direct PLAY action');
-  assert.match(actualGameMode,/selectedTenerifeRaceId\(trackKey,readTenerifeDirection\(localStorage\)\)/,
+  assert.match(actualGameMode,/selectedCircuitRaceId\(trackKey,localStorage\)/,
     'the LIVE game-mode launch, not just the replaced base PLAY button, must honor the direction');
   assert.match(actualGameMode,/this\.scene\.start\('race',\{carId,trackKey:launchTrack,gameMode:mode\}\)/,
     'the direction-specific key must reach the actual race navigation callback');
@@ -76,8 +76,16 @@ try{
     'game-mode entry while counterclockwise selected launches the historical circuit');
   assert.equal(selectedTenerifeRaceId('karting-americas',readTenerifeDirection(storage)),'karting-americas',
     'other tracks do not change direction accidentally');
+  assert.equal(readCircuitDirection(storage,TENERIFE_LEGACY_ID),'inverse','historic anti-clockwise labelled Inverso');
+  assert.equal(selectedCircuitRaceId(TENERIFE_LEGACY_ID,storage),TENERIFE_LEGACY_ID);
+  saveTenerifeDirection(storage,'clockwise');
+  assert.equal(readCircuitDirection(storage,TENERIFE_LEGACY_ID),'normal');
+  assert.equal(selectedCircuitRaceId(TENERIFE_LEGACY_ID,storage),TENERIFE_CLOCKWISE_ID);
+  const names=readFileSync('src/game/tracks/trackPublicNames.js','utf8');
+  assert.match(names,/'karting-tenerife':'KARTING TENERIFE INVERSO'/);
+  assert.match(names,/'karting-tenerife-horario':'KARTING TENERIFE'/);
   assert.ok(readFileSync('src/game/scenes/TrackGarageAndroidTouchScene.js','utf8').includes('tdr-ts-route-modes'));
-  assert.ok(readFileSync('src/game/scenes/RaceScene.js','utf8').includes('baseCircuitId(this.trackKey)'));
+  assert.ok(readFileSync('src/game/scenes/RaceScene.js','utf8').includes('physicalCircuitId(this.trackKey)'));
   assert.ok(readFileSync('src/game/tracks/trackUnlocks.js','utf8').includes(TENERIFE_CLOCKWISE_ID));
   // A new trackKey means new independent records, ghosts and Supabase ranking IDs.
   assert.notEqual('tdr2:ttHist:'+legacy.key,'tdr2:ttHist:'+clockwise.key);
