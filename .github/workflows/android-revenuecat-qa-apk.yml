@@ -1,5 +1,5 @@
 name: TDR real AdMob RevenueCat minified QA APK
-# DEV 1.2.317: final Android QA candidate incl. Gripline loading, signed-upgrade trial and retained data; never Play.
+# DEV 1.2.318: final-cert audit for .300/.317 and fail-closed stable QA signer; never Play.
 # DEV 1.2.216: include corrected Karting staging in all main Android checks.
 
 on:
@@ -116,6 +116,47 @@ jobs:
           yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
           "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" \
             'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+      - name: Audit certificates of published .300 and .317 APKs before replacement
+        id: legacy_signers
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p prior-apks
+          echo '### Certificados APK QA existentes vs nueva cadena' >> "$GITHUB_STEP_SUMMARY"
+          for version in 300 317; do
+            apk="TDR-QA-DEV-1.2.${version}-REAL-ADS-SIN-MEDIR.apk"
+            gh release download "tdr-qa-1.2.${version}" --repo "$GITHUB_REPOSITORY" --pattern "$apk" --dir prior-apks
+            path="prior-apks/$apk"
+            test -s "$path"
+            badging="$("${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$path")"
+            printf '%s\n' "$badging" | grep -Fq "name='com.craftracestudio.topdownrace.rewardedtest'"
+            report="$("${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$path")"
+            cert="$(printf '%s\n' "$report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr '[:upper:]' '[:lower:]' | head -1)"
+            test -n "$cert"
+            echo "cert_${version}=$cert" >> "$GITHUB_OUTPUT"
+            echo "- **.${version}**: \u0060$cert\u0060" >> "$GITHUB_STEP_SUMMARY"
+            printf '%s\n' "$badging" | grep '^package:'
+            printf '%s\n' "$report" | grep -E 'Verified using|Signer #1 certificate SHA-256'
+            if test "$version" = "317"; then
+              if test "$cert" != "63c30fb33ef62289ffce961a8dadc2efe85480ce121b1043996370a6949d4358"; then
+                echo "::error::Published .317 signer differs from previously audited certificate; investigate before distribution."
+                exit 1
+              fi
+            fi
+            if test "$version" = "300"; then
+              if test "$cert" = "$TDR_QA_EXPECTED_SIGNER_SHA256"; then
+                echo 'can_upgrade_300=true' >> "$GITHUB_OUTPUT"
+                echo '- APK nueva y .300 tienen la misma firma: actualización posible si los demás requisitos Android se cumplen.' >> "$GITHUB_STEP_SUMMARY"
+              else
+                echo 'can_upgrade_300=false' >> "$GITHUB_OUTPUT"
+                echo '::warning::APK .300 certificate differs from this QA signer. NEVER uninstall .300 without verified backup/recovery; Android will reject in-place update.'
+                echo '- **INCOMPATIBLE con instalación in situ sobre .300**: conservar .300 hasta restauración de datos comprobada.' >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          done
+          echo "- **Nuevo firmante .318 esperado**: \u0060$TDR_QA_EXPECTED_SIGNER_SHA256\u0060" >> "$GITHUB_STEP_SUMMARY"
       - name: Build Android web payload with approved launcher
         shell: bash
         run: |
@@ -147,7 +188,7 @@ jobs:
           src='android/app/build/outputs/apk/deviceTest/release/app-deviceTest-release.apk'
           test -s "$src"
           unzip -t "$src" | tail -1
-          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000317'"
+          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000318'"
           apk_sign_report="$("${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$src")"
           printf '%s\n' "$apk_sign_report" | grep -E 'Verified using|Signer #1 certificate SHA-256'
           apk_cert="$(printf '%s\n' "$apk_sign_report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1 | tr '[:upper:]' '[:lower:]')"
@@ -156,14 +197,14 @@ jobs:
             exit 1
           fi
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk
-          sha256sum sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk
+          cp "$src" sdk-download/TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR.apk
+          sha256sum sdk-download/TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR
-          path: sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk
+          name: TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR
+          path: sdk-download/TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
@@ -174,12 +215,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apk='sdk-download/TDR-QA-DEV-1.2.317-REAL-ADS-SIN-MEDIR.apk'
-          tag='tdr-qa-1.2.317'
+          apk='sdk-download/TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR.apk'
+          tag='tdr-qa-1.2.318'
+          cat > qa-release-notes.md <<EOF
+          APK Android QA DEV 1.2.318 (main), AdMob y RevenueCat reales. Incluye Arafo-Los Loros, misión 7 de inducción, recuperación de rankings de Atlántico, geografía del piloto, diagnóstico oculto y carga animada del Avenir Gripline. No hay cambios en RALLY 1.0 ni en físicas iPhone. Paquete com.craftracestudio.topdownrace.rewardedtest; versionCode 1000318. NO publicada en Google Play.
+
+          CERTIFICADOS REALES AUDITADOS:
+          - .300: ${{ steps.legacy_signers.outputs.cert_300 }}
+          - .317: ${{ steps.legacy_signers.outputs.cert_317 }}
+          - .318: $TDR_QA_EXPECTED_SIGNER_SHA256
+          - ¿Puede actualizar .300 con esta firma?: ${{ steps.legacy_signers.outputs.can_upgrade_300 }}
+
+          AVISO SOBRE DATOS: si los certificados son distintos, Android no permite actualizar sobre la .300. NO desinstalar la .300, NO borrar datos y NO forzar sustitución. En Ajustes > Cuenta descargar copia local y confirmar la recuperación desde nube antes de cualquier desinstalación. Esta APK inaugura una cadena futura de firma QA explícita y verificada, sujeta a conservar la clave; la caché CI no es respaldo permanente. Una build satisfactoria no sustituye una prueba física de actualización.
+          EOF
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$apk" --clobber
           else
             gh release create "$tag" "$apk" --target "$GITHUB_SHA" --prerelease \
-              --title 'Top Down Race · APK candidata final DEV 1.2.317' \
-              --notes 'APK Android QA DEV 1.2.317 desde main, con Arafo-Los Loros, misión 7, tablas online de Atlántico, región del piloto y animación de carga Avenir Gripline. Paquete aislado rewardedtest, AdMob/RevenueCat reales, sin controles MEDIR visibles. versionCode QA 1000317, firma QA reutilizable mediante caché Actions. IMPORTANTE: las APK .300/.314 firmadas con claves de CI anteriores NO se pueden actualizar in situ si la firma difiere. Antes de desinstalar: Ajustes > Cuenta > DESCARGAR COPIA; comprobar copia nube y acceso. Después de la primera instalación .317, las QA futuras pueden actualizar manteniendo perfil SI siguen usando esta misma firma y versionCode creciente. No firmado con clave de Play y no apto para Play Console. No generar impresiones de anuncios repetitivas.'
+              --title 'Top Down Race · APK candidata final DEV 1.2.318' \
+              --notes-file qa-release-notes.md
           fi
