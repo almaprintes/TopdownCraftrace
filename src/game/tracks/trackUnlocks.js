@@ -12,8 +12,8 @@ const DEV_KEY='tdr2:devFullTrackAccess:v1';
 const REBUILT_CANARIAS_MODULES=import.meta.glob('./library/karting-canarias-4096/track.json');
 const REBUILT_CANARIAS_PRESENT=Object.keys(REBUILT_CANARIAS_MODULES).length>0;
 export const PUBLISHED_TRACK_IDS=Object.freeze(
-  ['circuito-atlantico','santa-cruz','karting-tenerife','karting-tenerife-horario','karting-canarias','karting-americas','rally-arafo-los-loros']
-    .map(id=>id==='karting-canarias'&&REBUILT_CANARIAS_PRESENT?'karting-canarias-4096':id));
+  ['circuito-atlantico','santa-cruz','karting-tenerife','karting-tenerife-horario','karting-canarias','karting-canarias-inverso','karting-americas','karting-americas-inverso','santa-cruz-inverso','circuito-atlantico-inverso','rally-arafo-los-loros']
+    .map(id=>REBUILT_CANARIAS_PRESENT?(id==='karting-canarias'?'karting-canarias-4096':id==='karting-canarias-inverso'?'karting-canarias-4096-inverso':id):id));
 export const STARTER_TRACK_IDS=PUBLISHED_TRACK_IDS;
 // Migrate only active selected track, never historical laps, times or ghosts.
 if(REBUILT_CANARIAS_PRESENT){try{if(localStorage.getItem('tdr2:trackKey')==='karting-canarias')localStorage.setItem('tdr2:trackKey','karting-canarias-4096');}catch{}}
