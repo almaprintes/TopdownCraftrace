@@ -5,12 +5,17 @@ import '../scenes/statsTesterExchangePatch.js';
 
 const PUBLIC_TRACK_NAMES=Object.freeze({
   [CANONICAL_TRACK_IDS.ATLANTICO]:'CIRCUITO ATLÁNTICO',
+  'circuito-atlantico-inverso':'CIRCUITO ATLÁNTICO INVERSO',
   'santa-cruz':'SANTA CRUZ',
-  'karting-tenerife':'KARTING TENERIFE',
-  'karting-tenerife-horario':'KARTING TENERIFE · HORARIO',
+  'santa-cruz-inverso':'SANTA CRUZ INVERSO',
+  'karting-tenerife':'KARTING TENERIFE INVERSO',
+  'karting-tenerife-horario':'KARTING TENERIFE',
   'karting-canarias':'KARTING CANARIAS',
+  'karting-canarias-inverso':'KARTING CANARIAS INVERSO',
   'karting-canarias-4096':'KARTING CANARIAS',
+  'karting-canarias-4096-inverso':'KARTING CANARIAS INVERSO',
   'karting-americas':'KARTING AMÉRICAS',
+  'karting-americas-inverso':'KARTING AMÉRICAS INVERSO',
   'rally-arafo-los-loros':'ARAFO → LOS LOROS'
 });
 
