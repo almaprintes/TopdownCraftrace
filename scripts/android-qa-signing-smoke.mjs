@@ -29,5 +29,5 @@ assert.match(wf,/apksigner" verify --verbose --print-certs/,'APK signer verifica
 assert.match(wf,/versionCode='1000318'/,'validate installed version, not just source');
 assert.match(wf,/tdr-qa-1\.2\.318/,'deliver fresh tag, never clobber prior APK');
 assert.match(wf,/TDR-QA-DEV-1\.2\.318-REAL-ADS-SIN-MEDIR\.apk/);
-assert.match(code,/content="DEV 1\.2\.318"/);
+assert.match(code,/content="DEV 1\.2\.317"/, "Android QA 1.2.318 must package the currently approved web DEV 1.2.317, without changing iPhone/web version");
 console.log('PASS: public version unchanged, QA signer pinned and used explicitly, actual APK cert verified against key, fail-closed delivery.');
