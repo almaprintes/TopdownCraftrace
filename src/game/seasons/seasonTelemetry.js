@@ -22,7 +22,11 @@ export function recordGarageVisit(){
 export function recordStoreBuy(){
   const s=loadSeasonTelemetry();
   s.storeBuys=Math.max(0,Number(s.storeBuys)||0)+1;
-  return save(s);
+  const saved=save(s);
+  // The store is a lobby overlay: notify the lobby immediately instead of
+  // waiting for another scene entrance or polling persistent stats every frame.
+  try{window.dispatchEvent(new CustomEvent('tdr:seasonProgressChanged',{detail:{kind:'storeBuys'}}));}catch{}
+  return saved;
 }
 
 export function recordModeStart(mode){

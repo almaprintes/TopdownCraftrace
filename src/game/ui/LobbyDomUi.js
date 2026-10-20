@@ -9,6 +9,7 @@ import { attainableTopSpeedKmh, METERS_PER_PX } from '../cars/speedUnits.js';
 import { TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { trackDisplayDirection } from '../tracks/trackDisplayDirection.js';
 import { getCurrentRaceEvent, claimCurrentRaceEvent, raceEventRewardLabel } from '../events/raceEvents.js';
+import { polishSeasonCard } from './LobbyPublishPolish.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { getPilotProfile } from '../social/pilotProfile.js';
 import { cloudIdentity, shortPlayerId } from '../social/cloudProgress.js';
@@ -41,7 +42,7 @@ const escapeHtml = value => String(value ?? '').replace(/[&<>\"]/g, ch => ({ '&'
 function loopLength(center) { if (!Array.isArray(center) || center.length < 2) return 0; let total = 0; for (let i = 0; i < center.length; i++) { const a = center[i], b = center[(i + 1) % center.length]; total += Math.hypot(Number(b?.x || 0) - Number(a?.x || 0), Number(b?.y || 0) - Number(a?.y || 0)); } return total; }
 function trackSvg(center) { if (!Array.isArray(center) || center.length < 2) return ''; const xs = center.map(p => Number(p?.x)).filter(Number.isFinite); const ys = center.map(p => Number(p?.y)).filter(Number.isFinite); if (!xs.length || !ys.length) return ''; const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys); const spanX = Math.max(1, maxX - minX), spanY = Math.max(1, maxY - minY); const scale = Math.min(150 / spanX, 82 / spanY); const ox = 90 - spanX * scale / 2, oy = 48 - spanY * scale / 2; const points = center.map(p => `${(ox + (Number(p.x) - minX) * scale).toFixed(1)},${(oy + (Number(p.y) - minY) * scale).toFixed(1)}`).join(' '); return `<svg viewBox="0 0 180 96"><polyline class="tdr-track-shadow" points="${points}"/><polyline class="tdr-track-line" points="${points}"/></svg>`; }
 
-function renderDomCards(scene, root) {
+function renderDomCards(scene, root, seasonOnly=false) {
   const eventSlot = root.querySelector('[data-event-card]'); const carSlot = root.querySelector('[data-car-card]'); const trackSlot = root.querySelector('[data-track-card]');
   const eventData = getCurrentRaceEvent();
   if (eventSlot) {
@@ -65,6 +66,7 @@ function renderDomCards(scene, root) {
       });
     }
   }
+  if(seasonOnly)return;
   const carId = scene.selectedCarId; const spec = CAR_SPECS?.[carId] || {}; const params = resolveCarParams(spec, { accelMult:1, brakeMult:1, dragMult:1, turnRateMult:1, maxFwdAdd:0, maxRevAdd:0, turnMinAdd:0 }); const topKmh = Math.round(attainableTopSpeedKmh(params)); const brandKey = String(carId || '').split('_')[0].toLowerCase(); const brandLogoName = COMPACT_CAR_BRANDS.has(brandKey) ? `logo_${brandKey}_compact.webp` : `logo_${brandKey}.webp`; const brandMark = CAR_BRANDS.has(brandKey) ? `<img src="${BASE}assets/logos/${brandLogoName}" alt="${escapeHtml(spec.brand || brandKey)}" draggable="false">` : escapeHtml(spec.brand || 'TDR');
   if (carSlot) carSlot.innerHTML = `<div class="tdr-card-kicker">${tr('lobby.selectedCar')}</div><div class="tdr-car-card-row"><span class="tdr-car-brand tdr-car-brand--${escapeHtml(brandKey)}">${brandMark}</span><span><h2>${escapeHtml(params?.name || spec.name || carId)}</h2><strong>${topKmh} km/h</strong></span><em>${escapeHtml(spec.category || spec.role || 'RACING')}</em></div>`;
   const carPreview = root.querySelector('[data-lobby-car]'); if (carPreview) { const assetVersion = encodeURIComponent(spec.collectionNo || 1); carPreview.decoding = 'async'; carPreview.src = hasAlternativeSkins(carId) ? `${BASE}assets/skins/${encodeURIComponent(selectedCarSkinFile(carId,spec,{dev:!IS_PROD_BUILD}))}?v=${assetVersion}` : `${BASE}assets/cars/lobby/${encodeURIComponent(carId)}.webp?v=${assetVersion}`; carPreview.alt = params?.name || spec.name || carId;
@@ -243,8 +245,17 @@ export function installLobbyDom(scene) {
       scene.scene.start('SettingsScene');
     });
     updateCloudId();
+    // A material-pack purchase completes induction mission 7 while the store
+    // remains over this same lobby scene. Update ONLY the season card (and its
+    // existing polished navigation) when that persisted progress changes.
+    const syncSeasonCard=()=>{
+      if(!root.isConnected)return;
+      renderDomCards(scene,root,true);
+      polishSeasonCard(scene,root.querySelector('[data-event-card]'));
+    };
+    window.addEventListener('tdr:seasonProgressChanged',syncSeasonCard);
 
-    scene.events.once('shutdown',()=>{disposeAppWallets(root);try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
+    scene.events.once('shutdown',()=>{window.removeEventListener('tdr:seasonProgressChanged',syncSeasonCard);disposeAppWallets(root);try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
   }
   const syncLobbyHeader=()=>{const pilotNode=root.querySelector('[data-pilot-header-name]');if(pilotNode)pilotNode.textContent=String(getPilotProfile()?.name||'').trim()||'—';const countdown=root.querySelector('[data-season-countdown]');if(countdown)countdown.textContent=seasonCountdownLabel();updateLobbyRewardShortcuts(root);};
   syncLobbyHeader();

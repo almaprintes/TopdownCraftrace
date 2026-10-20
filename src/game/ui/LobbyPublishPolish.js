@@ -48,7 +48,7 @@ function installMasteryRoofBadge(scene,root){
     window.setTimeout(()=>{if(root.isConnected)showMasteryUnlockModal({scene,carId,carName,meters,level:mastery.level});},220);
   }
 }
-function polishSeasonCard(scene,season){
+export function polishSeasonCard(scene,season){
   const kicker=season.querySelector('.tdr-card-kicker');if(kicker)kicker.textContent=t('lobby.seasonPass');
   const claim=season.querySelector('.tdr-event-claim');if(claim){claim.type='button';claim.classList.add('tdr-event-claim--notice');claim.innerHTML=`<span class="tdr-event-claim-dot" aria-hidden="true"></span><span>${t('lobby.rewardAvailable')}</span><span class="tdr-event-claim-chevron" aria-hidden="true">›</span>`;claim.setAttribute('aria-label',t('lobby.rewardAvailableOpenSeason'));claim.tabIndex=-1;claim.style.pointerEvents='none';}
   makeCardButton(season,t('lobby.openSeasonPass'),()=>scene.scene.start('season'));

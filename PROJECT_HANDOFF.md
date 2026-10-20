@@ -1,5 +1,15 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.311 — Inducción, misión 7 «De compras»: actualizar el lobby tras comprar
+
+Reportado el 20/10 por el propietario probando APK Android «.300» antes de publicación: tras cumplir la misión 7 el panel del lobby sigue sin mostrarla terminada, mientras que el pase de temporada permite reclamarla.
+
+**Causa en main:** la misión `store-buy` usa `storeBuys` de `seasonTelemetry`. Una compra de pack ejecuta `buyMaterialPack() → recordStoreBuy()` desde la Tienda superpuesta sobre la misma escena de lobby; esa compra se guarda correctamente y `SeasonScene` consulta datos frescos al abrirse. Sin embargo, el lobby solo recalculaba `renderDomCards` al montarse o al reclamar en su propia tarjeta: quedaba una fotografía antigua del progreso.
+
+**Arreglo, sin polling:** `recordStoreBuy()` emite `tdr:seasonProgressChanged` *después* de persistir el incremento. El lobby escucha el evento, recalcula solo el panel de temporada mediante `renderDomCards(...,true)`, y reaplica `polishSeasonCard` (aviso RECOMPENSA DISPONIBLE y acceso al pase). La suscripción se limpia al cerrar la escena; no redibuja coche/circuito ni vuelve a cargar sus imágenes. La transacción, economía, misión y reclamación mantienen una única autoridad, sin dar recompensas extra.
+
+**Validación requerida en Android:** reproducir desde un perfil con misión 7 activa: entrar a Tienda desde lobby, adquirir un pack con monedas, cerrar Tienda y comprobar que el panel muestra recompensa disponible, entrar al pase y reclamar exactamente una vez; después debe avanzar a misión 8. Reiniciar y comprobar persistencia. Las compras fallidas no cuentan. El script `scripts/induction-store-lobby-smoke.mjs` valida los enlaces y guardas estáticos. Este cambio en DEV NO actualiza la APK .300 instalada; requiere nueva APK tras autorizar el usuario. No generar APK/AAB ni publicar Google Play por esta iteración.
+
 ## DEV 1.2.310 — A/B del bucle Phaser (solo iPhone DEV; RAF frente a setTimeout)
 
 El propietario pidió recuperar la pista histórica del 28–30/08/2026 sin arriesgar Android, cuyos perfiles de rendimiento han sido distintos. En aquel momento iPhone probó `forceSetTimeOut: true` con WebGL `desynchronized: true`; el cambio a `forceSetTimeOut=safeMode&&!forceRafLoop()` se produjo en DEV 1.0.133 (16/09/2026). La coincidencia histórica no demuestra que sea el culpable del rendimiento variable actual.
