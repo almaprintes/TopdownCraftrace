@@ -18,3 +18,12 @@
 
 ## Validación en dispositivo pendiente
 Tres vueltas limpias en cada sentido con salida/reinicio, pausa, CP1+CP2, meta y Race Control. Comprobar que histórico, ranking y fantasmas apuntan a su variante, que las fotos siguen intactas y que la original conserva todos sus tiempos. No extender a otras pistas hasta aprobar esto.
+
+## Nomenclatura aprobada y ampliación DEV 1.2.322
+- Norma visible: **Nombre del circuito** para su sentido NORMAL y **Nombre del circuito INVERSO** para su sentido contrario. No añadir «Horario» ni «Antihorario» al nombre, aunque la dirección geométrica determine icono/flecha.
+- Karting Tenerife: el horario confirmado es **KARTING TENERIFE** (identificador técnico heredado `karting-tenerife-horario`) y el antihorario histórico es **KARTING TENERIFE INVERSO** (ID técnico `karting-tenerife`); no cambiar las claves para conservar rankings y fantasmas históricos.
+- Karting Américas, Karting Canarias (variante 4096 cuando existe), Santa Cruz y Circuito Atlántico: conserva cada uno su recorrido publicado bajo su nombre original; el nuevo ID `*-inverso` invierte orden y normales de los CP y de meta, y tiene salida orientada y clasificaciones propias.
+- Una sola tarjeta y una sola foto/colisiones por circuito; selector interno NORMAL / INVERSO. El lobby y el PLAY real deben usar la opción guardada por circuito.
+- La vía adicional de la meta del paddock de Américas solo aplica al recorrido original, nunca al inverso.
+- Mantener intacto RALLY 1.0. Futura fase: **Los Loros → Arafo**.
+- CI exige `scripts/karting-tenerife-clockwise-smoke.mjs` y `scripts/all-circuit-directions-smoke.mjs`. Sin APK ni modificación de Play. Pendiente prueba física de todas las nuevas variantes y comprobación de vueltas limpias.
