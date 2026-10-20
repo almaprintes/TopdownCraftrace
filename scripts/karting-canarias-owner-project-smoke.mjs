@@ -73,8 +73,8 @@ assert.equal(descriptor.worldScale,2.5);
 assert.deepEqual([descriptor.width,descriptor.height],[2048,3072]);
 assert.equal(validateImageNativeRaceDescriptor(descriptor),descriptor);
 const runtime=readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
-assert.match(runtime, /\['karting-tenerife','santa-cruz','karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros'\]\.includes\(normalizeTrackKey\(scene\?\.trackKey\)\)/,
-  'Official Canarias must load NEW authored collisions while excluding local photo previews');
+assert.match(runtime, /\['karting-tenerife','santa-cruz','karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros'\]\.includes\(physicalKey\)/,
+  'Official Canarias and its inverse must load NEW authored collisions while excluding local photo previews');
 assert.ok(runtime.includes("rebuiltCanarias?['karting-canarias-4096']"),
   'Rebuilt 4096 owner collisions must take priority over the retired 2.5x version');
 console.log('Karting Canarias native-photo: owner bundle intact, 506 points, both Bézier borders nonintersecting, photo physics aligned, CP1/CP2 and one lap finish valid.');
