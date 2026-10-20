@@ -1,5 +1,15 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.310 — A/B del bucle Phaser (solo iPhone DEV; RAF frente a setTimeout)
+
+El propietario pidió recuperar la pista histórica del 28–30/08/2026 sin arriesgar Android, cuyos perfiles de rendimiento han sido distintos. En aquel momento iPhone probó `forceSetTimeOut: true` con WebGL `desynchronized: true`; el cambio a `forceSetTimeOut=safeMode&&!forceRafLoop()` se produjo en DEV 1.0.133 (16/09/2026). La coincidencia histórica no demuestra que sea el culpable del rendimiento variable actual.
+
+Se incorpora **exclusivamente en iPhone DEV** un selector reversible dentro del menú de asistencia MEDIR (requiere el acceso oculto habitual: 7 toques en CALIDAD GRÁFICA): `PROBAR LOOP TIMEOUT (REINICIA)` / `VOLVER LOOP RAF (REINICIA)`. El campo `LOOP RAF/TIMEOUT` se incorpora al informe junto con `TIMER NO/SI`. La clave local `tdr2:devIosTimeoutLoop:v1` solo se consulta al crear el juego en una DEV iPhone; el modo por defecto sigue siendo RAF. El cambio exige reiniciar el proceso Phaser. **Producción, Android, iPad y demás navegadores no cambian**, aunque posean la clave en almacenamiento. Si SAFE está activo no se habilita la prueba y se respeta el camino de recuperación original `safeMode&&!forceRafLoop()`.
+
+No se toca ni audio, texto PHASER, resolución, WebGL DESYNC, pistas, cámara, colisiones ni físicas RALLY 1.0. Se incorpora un smoke dedicado a modo por defecto, A/B, regresión Android/producción, modo seguro y estado del botón, y se actualiza el test de estabilidad para verificar la ruta sin imponer un driver global.
+
+**Protocolo en iPhone:** calidad Alta, RES BASE 1.5, WebGL DESYNC solicitado, TEXTO PHASER, MOTOR ON y mismo circuito/coche. Medir RAF 30–60 s, COPIAR; activar TIMEOUT y reiniciar, conducir primero sin MEDIR, repetir medición y COPIAR con observación manual de calor; volver RAF y repetir para un A/B/A. Controlar P95/P99, >50ms, ráfagas, sensación real, tiempo desde apertura y temperatura al tacto. Se mantienen Android y Play Store 1.1.188/vc8; no generar APK.
+
 ## DEV 1.2.309 — Contexto temporal y térmico del diagnóstico de rendimiento
 
 Petición del propietario 20/10: contextualizar la intermitencia de fluidez de iPhone por fecha/hora, tiempo entre pruebas, temperatura y otros factores sin activar observación permanente.

@@ -4,6 +4,7 @@ import { supportDiagnosticsEnabled } from '../support/supportRaceDiagnostics.js'
 import { THERMAL_TOUCH_LEVELS, loadPreviousRaceMeasurement, savePreviousRaceMeasurement, localMeasurementTime, formatMeasurementDuration, previousMeasurementContext } from '../support/raceMeasurementContext.js';
 import { IOS_WEBGL_SYNC_KEY } from '../performance/iosWebglPresentationMode.js';
 import { IOS_DEV_RESOLUTION_KEY } from '../performance/iosDevResolutionTrial.js';
+import { IOS_DEV_TIMEOUT_KEY } from '../performance/iosDevLoopDriver.js';
 import { createFramePacingStats, recordFramePacing, percentileFramePacing } from '../performance/iosFramePacingStats.js';
 import { getDevRaceTextRenderMode, setDevRaceTextRenderMode } from '../ui/htmlTextRuntime.js';
 
@@ -40,7 +41,7 @@ const frameInfo=scene=>{
   const limit=devIos?conf.frameLimit:scene.game?.config?.fps?.limit;
   const line=`MODO ${preset||'?'}  RES ${resolution||'?'}  FPS limit ${limit??'?'}`;
   if(!devIos)return line+'\nWEBGL '+actual+' real · FPS HUD '+(videoProbeEnabled()?'ON':'OFF');
-  return line+` · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;
+  return line+` · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\nLOOP ${conf.loopTrialMode||'DESCONOCIDO'}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;
 };
 // Extra information is sampled on demand, never on every animation frame.
 const contextLines=(w,scene,state,nowWall)=> {
@@ -266,6 +267,18 @@ export function mountRaceDevFrameDiagnostics(scene){
     try{localStorage.setItem(IOS_WEBGL_SYNC_KEY,requested?'1':'0');window.location.reload();}
     catch{pre.textContent='No se pudo guardar el modo WebGL. No se ha cambiado el juego.';}
   });
+  // Compare the historic iPhone-only Phaser setTimeout loop without
+  // changing the Android, production or safe-mode loop policies.
+  if(/iPhone/i.test(String(navigator?.userAgent||''))&&!window.__tdrIosFrameConfig?.safeMode){
+    const usingTimeout=window.__tdrIosFrameConfig?.forceSetTimeOut===true;
+    control(usingTimeout?'VOLVER LOOP RAF (REINICIA)':'PROBAR LOOP TIMEOUT (REINICIA)',()=>{
+      try{
+        if(usingTimeout)localStorage.removeItem(IOS_DEV_TIMEOUT_KEY);
+        else localStorage.setItem(IOS_DEV_TIMEOUT_KEY,'1');
+        window.location.reload();
+      }catch{pre.textContent='No se pudo cambiar el bucle de prueba. El juego no se ha modificado.';}
+    });
+  }
   // Only a lower framebuffer resolution is tested. Return to the original
   // preset-derived resolution after the second run; both changes restart Phaser.
   const resolutionConfig=window.__tdrIosFrameConfig||{};

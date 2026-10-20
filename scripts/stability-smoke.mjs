@@ -38,7 +38,8 @@ forbid(gfx,'this._recordGhostSample=()=>{}','iOS graphics layer must not disable
 requireText(gfx,"from './RaceTelemetryHudScene.js'",'graphics presets must route through the semantic telemetry HUD scene');
 forbid(gfx,'RaceLapBreakdownProfilerScene','obsolete profiler scene must not return to shipping chain');
 
-requireText(game,'const forceSetTimeOut=safeMode&&!forceRafLoop();','iOS safe-mode timeout scheduling baseline is missing');
+requireText(game,"const loopTrial=resolveIosDevLoopDriver({isIphone:",'DEV iPhone scheduling trial must remain explicitly gated');
+requireText(game,'const forceSetTimeOut=loopTrial.forceSetTimeOut;','Phaser scheduling must read the device-gated trial result');
 requireText(game,"tdr2:forceRafLoop",'iOS rAF diagnostic override is missing');
 requireText(game,'if(isMobileDevice())return;','mobile automatic scene warmup must stay disabled');
 requireText(game,"def.exportName!=='RaceScene'",'desktop warmup must exclude the race bundle');
