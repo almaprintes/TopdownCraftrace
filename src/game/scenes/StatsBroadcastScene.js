@@ -6,6 +6,7 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 import { carVisualCandidates,applyCarVisual } from '../skins/carDisplayArt.js';
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import { getPersonalCircuitRecords, cloudSnapshotPolicy, saveCloudSnapshot } from '../stats/localRaceRecords.js';
+import { needsRaceControlCacheRecovery } from '../online/raceControlSnapshotRecovery.js';
 import { submitRaceControlRecordWithGhost, getRaceControlSnapshot, getPublicRaceControlSnapshot, getRaceControlTrackCreatorBadges, withRaceControlCreatorBadges } from '../online/raceControlOnline.js';
 import { ensureRaceControlPilotProfile, explainPilotIdentityFailure } from '../online/onlinePilotIdentity.js';
 import { verifiedRecordPublishClaims } from '../online/verifiedRecordPublishClaims.js';
@@ -53,6 +54,9 @@ export class StatsScene extends MasteryStatsScene{
     const records=playable.map(id=>recorded.find(r=>r.trackId===id)||{trackId:id,topLaps:[],progression:[],validLaps:0,bestLapMs:0});
     if(!records.length){const body=this._root.querySelector('.sh-body');body.innerHTML=`<div class="br-empty-chart">${t('raceControl.completeTimedLap')}</div>`;this._root.querySelector('.sh-back')?.addEventListener('click',()=>this._onlineFromLobby?this.scene.start('menu'):this._renderCars());return;}
     const selected=records.find(r=>r.trackId===trackId)||records.find(r=>r.validLaps>0)||records[0];const policy=cloudSnapshotPolicy(selected.trackId);const snapshotRows=Array.isArray(policy.cached?.payload)?policy.cached.payload:[];const scope=this._raceControlScope||'global';const cloudRows=snapshotRows.filter(r=>r.scope===scope);
+    // Without a local snapshot the ranking used to stay blank until ACTUALIZAR
+    // even when Supabase already held records. Fetch once per visible circuit.
+    if(needsRaceControlCacheRecovery(policy))void this._recoverRaceControlSnapshot(selected.trackId);
     this._raceControlRenderedTrack=selected.trackId;
     // Users returning with a pre-1.2.297 cached leaderboard should see the
     // server-verified badge automatically, without pressing ACTUALIZAR.
@@ -119,6 +123,38 @@ export class StatsScene extends MasteryStatsScene{
       if(this._onlineFromLobby)this.scene.start('menu');
       else this._renderCars();
     });this._root.querySelectorAll('[data-br-track]').forEach(el=>el.addEventListener('click',()=>this._renderBroadcastRecords(el.dataset.brTrack)));
+  }
+  async _recoverRaceControlSnapshot(trackId){
+    const id=String(trackId||'');
+    if(!id)return;
+    const attempted=this._raceControlRecoveryAttempted||(this._raceControlRecoveryAttempted=new Set());
+    if(attempted.has(id))return; // one attempt per circuit and scene, no polling
+    attempted.add(id);
+    try{
+      await ensureRaceControlPilotProfile();
+      const rows=await getRaceControlSnapshot(id);
+      if(!Array.isArray(rows))throw new Error('La clasificación no devolvió una lista válida.');
+      saveCloudSnapshot(id,rows);
+      this._raceControlPublicMode=false;
+    }catch(authError){
+      // Guest-safe fallback: a public GLOBAL ranking is better than a blank
+      // board. Do not expose ghost refs or pretend to be the player's account.
+      try{
+        const rows=await getPublicRaceControlSnapshot(id);
+        if(!Array.isArray(rows))throw new Error('Clasificación pública no disponible.');
+        saveCloudSnapshot(id,rows);
+        this._raceControlScope='global';
+        this._raceControlPublicMode=true;
+        this._raceControlNotice={trackId:id,message:'Clasificación pública GLOBAL (sin VS). Vincula tu perfil para ver clasificaciones regionales.'};
+      }catch(publicError){
+        if(this._raceControlRenderedTrack===id&&this._root?.querySelector('.br-online-board'))
+          this._showRaceControlNotice('No se pudo cargar la clasificación online. Pulsa ACTUALIZAR para reintentar.');
+        console.warn('[race-control] uncached ranking recovery failed',authError,publicError);
+        return;
+      }
+    }
+    if(this._raceControlRenderedTrack===id&&this._root?.querySelector('.br-online-board'))
+      this._renderBroadcastRecords(id);
   }
   _showRaceControlNotice(message){
     const arena=this._root?.querySelector('.br-online-arena');

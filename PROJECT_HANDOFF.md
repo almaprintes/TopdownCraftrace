@@ -1,5 +1,15 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+## DEV 1.2.312 — Recuperación de récords online vacíos en Atlántico / Race Control
+
+QA del propietario en APK Android .300: Atlántico aparece sin tabla online pese a haber publicado un tiempo, mientras que otros circuitos muestran datos. Consulta READ ONLY a Supabase real (20/10/2026): `public.track_records` contiene **11 récords** de `circuito-atlantico` (11 perfiles asociados), mejor 8759 ms; `web_leaderboard_snapshot` contiene 10 entradas públicas con identificador `circuito-atlantico`. **NO hay pérdida de los tiempos en la nube ni se necesita migración SQL.**
+
+Causa de la tabla vacía desde el cliente: `StatsBroadcastScene._renderBroadcastRecords()` mostraba exclusivamente `cloudSnapshotPolicy(trackId).cached.payload`, aun cuando la caché por circuito no existía o contenía `[]`; solo `ACTUALIZAR` hacía consulta. Publicar desde `sessionRecordPublishOffer` confirmaba la subida pero **no guardaba una copia nueva de la clasificación** para la próxima apertura.
+
+Corrección mínima y persistente: al entrar a Race Control, cuando un circuito carezca de clasificación cacheada o ésta esté vacía, intentar **una sola recuperación por circuito y estancia de escena**, primero con `ensureRaceControlPilotProfile → getRaceControlSnapshot` (clasificaciones, VS con autorización), y ante fallo utilizar `getPublicRaceControlSnapshot` solo para GLOBAL sin ghost/VS ni suplantar identidad; guardar bajo `tdr2:leaderboardSnapshot:<trackId>`. Renderizar solo si el mismo circuito sigue seleccionado y la tabla existe. Si no hay red, dejar botón manual ACTUALIZAR y explicar que no pudo cargarse. Sin polling ni llamadas por fotograma. Después de una publicación **confirmada** desde informe de carrera, actualizar la misma caché en lectura no bloqueante; cualquier fallo de lectura **jamás anula el récord publicado ni exige otro anuncio**. En ambos flujos permanece el ID `circuito-atlantico`, no migrar `track01` ni mezclar pistas o cuentas.
+
+Se añade smoke `scripts/online-snapshot-recovery-smoke.mjs` en `prebuild`. No se modifica Supabase, Base de Física, pistas, economía de anuncios ni versión de Play; `[pwa-only]`, sin generar APK. **Importante:** la APK .300 instalada no incluye esta corrección hasta una nueva compilación Android autorizada. Comprobar en la próxima candidata Atlántico GLOBAL con el tiempo ya existente, salir/reabrir Race Control, alternar circuitos y probar reconexión sin crear nuevos tiempos.
+
 ## DEV 1.2.311 — Inducción, misión 7 «De compras»: actualizar el lobby tras comprar
 
 Reportado el 20/10 por el propietario probando APK Android «.300» antes de publicación: tras cumplir la misión 7 el panel del lobby sigue sin mostrarla terminada, mientras que el pase de temporada permite reclamarla.

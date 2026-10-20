@@ -1,6 +1,7 @@
 import {sessionPersonalBest,localRecordGhost,fmtPersonalBest,RECORD_PUBLISH_DISCLOSURE} from './sessionPersonalBestPublish.js';
 import {encodeOnlineGhostNative,encodeOnlineGhostNativeBinary} from '../online/onlineGhostCodec.js';
-import {submitRaceControlRecordWithGhost} from '../online/raceControlOnline.js';
+import {submitRaceControlRecordWithGhost,getRaceControlSnapshot} from '../online/raceControlOnline.js';
+import {saveCloudSnapshot} from '../stats/localRaceRecords.js';
 import {ensureRaceControlPilotProfile} from '../online/onlinePilotIdentity.js';
 import {verifiedRecordPublishClaims as verifiedPublishClaims} from '../online/verifiedRecordPublishClaims.js';
 import {getPilotProfile} from '../social/pilotProfile.js';
@@ -108,6 +109,12 @@ export function mountNewPersonalBestOffer(scene,root,report){
       if(!row||!row.record_ref)throw new Error('El servidor no confirmó la publicación. Puedes reintentar sin otro anuncio.');
       published=true;
       verifiedPublishClaims.set(claimId,{adVerified:true,published:true});
+      // A successful publication must also make its online leaderboard
+      // available on the next Race Control visit. Failure to refresh the
+      // read-only cache never undoes a verified server write or its ad credit.
+      void getRaceControlSnapshot(trackId).then(snapshot=>{
+        if(Array.isArray(snapshot))saveCloudSnapshot(trackId,snapshot);
+      }).catch(err=>console.warn('[race-control] post-publish ranking refresh unavailable',err));
       actions.hidden=true;actions.style.display='none';
       card.querySelector('[data-pb-question]').textContent='✅ Tu récord está en la clasificación online';
       card.querySelector('[data-pb-disclosure]').hidden=true;
