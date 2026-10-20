@@ -7,7 +7,7 @@ import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
 import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
-import {baseCircuitId} from '../tracks/trackReverseVariant.js';
+import {physicalCircuitId} from '../tracks/trackReverseVariant.js';
 import { raceCameraZoomTarget } from '../tracks/raceCameraZoom.js';
 import {getRallyDrivingProfile,nextRallyThrottleHeld,applyRallyDriveProfile} from '../tracks/rallyDrivingProfile.js';
 import { crossesDirectedFinishGate } from '../tracks/closedCircuitGateOrder.js';
@@ -552,7 +552,7 @@ this.trackKey =
 
 // Preserve the existing player-facing circuit card after a variant race;
 // the variant's own trackKey still keys all lap, ghost and leaderboard data.
-localStorage.setItem('tdr2:trackKey', baseCircuitId(this.trackKey));
+localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // ========================================
   // Time Trial: histórico de vueltas (por pista) — máx 500
   // ========================================
