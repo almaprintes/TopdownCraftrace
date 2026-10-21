@@ -59,6 +59,13 @@ const persisted=storage();
 let old=new Set();
 for(let i=0;i<24;i++)old.add(buildSessionInsight(make([]),{storage:persisted,rng:()=>0}));
 assert.equal(old.size,24,'Persistent anti-repeat survives repeated calls');
+const nextAfterCycle=buildSessionInsight(make([]),{storage:persisted,rng:()=>0});
+assert.ok(old.has(nextAfterCycle),'After the 24-item category is exhausted the pool may be reused');
+assert.notEqual(nextAfterCycle,[...old].at(-1),'First phrase of next cycle must not immediately repeat the preceding run');
+const englishStore=storage();
+const englishBatch=Array.from({length:24},()=>buildSessionInsight(make([]),{storage:englishStore,rng:()=>0,language:'en'}));
+assert.equal(new Set(englishBatch).size,24,'English has the same anti-repeat guarantees');
+
 const script=readFileSync('src/game/scenes/RaceSessionReportScene.js','utf8');
 assert.match(script,/buildSessionInsight\(\{/,'Race report must call bank selector with telemetry');
 assert.match(script,/previousBestMs:this\._sessionPreviousPersonalBestMs/,'Previous PB must be passed for honest feedback');
