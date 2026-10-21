@@ -98,10 +98,18 @@ export function buildSessionInsight(report,{language='es',previousBestMs=null,st
   const trend=earlier-later;
   const trendThreshold=Math.max(700,earlier*0.012);
   const improvement=best!=null&&Number.isFinite(previousBestMs)?Number(previousBestMs)-best:0;
+  const firstValid=valid[0]||null;
+  const bestIndex=best==null?-1:valid.indexOf(best);
+  const progressPct=firstValid>0?(firstValid-best)/firstValid*100:0;
+  const hasCleanComparison=invalid===0&&valid.length>=2;
+  const bestAtEnd=hasCleanComparison&&bestIndex===valid.length-1&&best<Math.min(...valid.slice(0,-1))-50;
+  const bestAtStart=hasCleanComparison&&bestIndex===0&&best<Math.min(...valid.slice(1))-50;
   const params={
     lapCount:laps.length,firstLap:fmtLap(laps[0]?.lapMs||0),
     offTrackEvents:off,offTrackSeconds:offSecs.toFixed(1),
     invalidLaps:invalid,gain:roundSec(improvement),
+    bestLap:best==null?'—':fmtLap(best),
+    improvementPct:(lang==='es'?progressPct.toFixed(1).replace('.',','):progressPct.toFixed(1)),
     spread:roundSec(spread),trend:roundSec(Math.abs(trend)),
     brakePct:Math.round(brake),coastPct:Math.round(coast),
     throttlePct:Math.round(throttle)
@@ -117,6 +125,10 @@ export function buildSessionInsight(report,{language='es',previousBestMs=null,st
     add('invalid',106,invalid>0);
     add('pb',108,improvement>=10&&best!=null);
     add('steady',84,valid.length>=3&&spread<=Math.max(1500,best*0.018));
+    add('bestAfterFirst',85,hasCleanComparison&&bestIndex>0&&progressPct>=2.5);
+    add('lateBest',84,bestAtEnd);
+    add('earlyBest',84,bestAtStart);
+    add('manyLaps',65,valid.length>=5&&invalid===0);
     add('improving',88,valid.length>=4&&trend>trendThreshold);
     add('fading',87,valid.length>=4&&trend< -trendThreshold);
     add('uneven',92,valid.length>=3&&spread>=Math.max(3000,best*0.05));

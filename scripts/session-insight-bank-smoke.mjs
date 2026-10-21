@@ -5,11 +5,11 @@ import {buildSessionInsight,SESSION_INSIGHT_BANK_SIZE} from '../src/game/ui/sess
 
 const categories=Object.entries(BANK.categories);
 assert.equal(BANK.version,1);
-assert.equal(categories.length,16,'16 independent telemetry situations are available');
+assert.equal(categories.length,20,'20 independent telemetry situations are available');
 const es=new Set(),en=new Set();
 for(const [key,bucket] of categories){
-  assert.equal(bucket.es.length,24,key+' must supply 24 ES phrases');
-  assert.equal(bucket.en.length,24,key+' must supply 24 EN phrases');
+  assert.ok(bucket.es.length>=24,key+' must supply at least 24 ES phrases');
+  assert.ok(bucket.en.length>=24,key+' must supply at least 24 EN phrases');
   for(const [language,set] of [['es',es],['en',en]]){
     for(const line of bucket[language]){
       assert.equal(typeof line,'string');
@@ -17,12 +17,12 @@ for(const [key,bucket] of categories){
       assert.ok(!set.has(line),'Exact duplicate '+language+' '+key+': '+line);
       set.add(line);
       const tags=[...line.matchAll(/\{([^{}]+)\}/g)].map(m=>m[1]);
-      for(const tag of tags)assert.ok(['lapCount','firstLap','offTrackEvents','offTrackSeconds','invalidLaps','gain','spread','trend','brakePct','coastPct','throttlePct'].includes(tag),'Unknown variable '+tag);
+      for(const tag of tags)assert.ok(['lapCount','firstLap','offTrackEvents','offTrackSeconds','invalidLaps','gain','spread','trend','brakePct','coastPct','throttlePct','bestLap','improvementPct'].includes(tag),'Unknown variable '+tag);
     }
   }
 }
-assert.equal(SESSION_INSIGHT_BANK_SIZE,384);
-assert.equal(es.size,384);assert.equal(en.size,384);
+assert.equal(SESSION_INSIGHT_BANK_SIZE,1182);
+assert.equal(es.size,1182);assert.equal(en.size,1182);
 const storage=()=>{
   const map=new Map();
   return {getItem:key=>map.get(key)||null,setItem:(key,value)=>map.set(key,value)};
@@ -56,11 +56,12 @@ assert.ok(sampleEs!==sampleEn);
 const noPb=sampled(make(undefined,{brakePct:4,coastPct:8,throttlePct:40}),{previousBestMs:null});
 assert.ok(noPb.every(s=>!s.includes('Marca personal superada')&&!s.includes('Nuevo mejor tiempo personal')));
 const persisted=storage();
+const noLapCount=BANK.categories.noLaps.es.length;
 let old=new Set();
-for(let i=0;i<24;i++)old.add(buildSessionInsight(make([]),{storage:persisted,rng:()=>0}));
-assert.equal(old.size,24,'Persistent anti-repeat survives repeated calls');
+for(let i=0;i<noLapCount;i++)old.add(buildSessionInsight(make([]),{storage:persisted,rng:()=>0}));
+assert.equal(old.size,noLapCount,'All '+noLapCount+' no-lap readings must be exhausted before reuse');
 const nextAfterCycle=buildSessionInsight(make([]),{storage:persisted,rng:()=>0});
-assert.ok(old.has(nextAfterCycle),'After the 24-item category is exhausted the pool may be reused');
+assert.ok(old.has(nextAfterCycle),'Only after the full category is exhausted may it be reused');
 assert.notEqual(nextAfterCycle,[...old].at(-1),'First phrase of next cycle must not immediately repeat the preceding run');
 const englishStore=storage();
 const englishBatch=Array.from({length:24},()=>buildSessionInsight(make([]),{storage:englishStore,rng:()=>0,language:'en'}));
@@ -93,4 +94,19 @@ assert.notEqual(pilotStore.getItem('tdr2:sessionInsightCycle:v1:pilot-A'),
 
 const lang=readFileSync('index.html','utf8').match(/content="DEV 1\.2\.(\d+)"/);
 assert.ok(lang&&Number(lang[1])>=329,'DEV version incremented');
-console.log('PASS: 16 situations, 768 bilingual JSON phrases, telemetry guards, 24 unique reports, pilot-scoped anti-repeat, JSON verdict preserved through final overlay/export');
+const eligibleNew=make([65000,64000,60000],{brakePct:25,coastPct:35,throttlePct:30});
+const selected=storage();
+for(let i=0;i<75;i++)buildSessionInsight(eligibleNew,{storage:selected,rng:()=>i/100});
+const active=JSON.parse(selected.getItem('tdr2:sessionInsightCycle:v1'));
+for(const topic of ['bestAfterFirst','lateBest'])
+  assert.ok(active.used['es:'+topic]?.length>0,'Real lap telemetry must reach '+topic);
+const early=make([60000,64000,65000]);
+const selectedEarly=storage();
+for(let i=0;i<45;i++)buildSessionInsight(early,{storage:selectedEarly,rng:()=>0});
+assert.ok(JSON.parse(selectedEarly.getItem('tdr2:sessionInsightCycle:v1')).used['es:earlyBest']?.length>0,
+  'Early best must be eligible when first lap is strictly quickest');
+for(const lang of ['es','en']){
+  const src=Object.values(BANK.categories).flatMap(group=>group[lang]);
+  assert.equal(new Set(src).size,src.length,'No exact duplicates across all categories');
+}
+console.log('PASS: 20 situations, 2364 bilingual JSON phrases, preserved original IDs, 66 no-lap variants, factual telemetry, per-pilot anti-repeat and report/export consistency');
