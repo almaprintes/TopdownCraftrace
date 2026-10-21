@@ -69,6 +69,7 @@ jobs:
           node scripts/arafo-collision-index-optimization-smoke.mjs
           node scripts/owner-five-environments-smoke.mjs
           node scripts/inverse-environment-collisions-smoke.mjs
+          node scripts/environment-first-entry-isolation-smoke.mjs
           node scripts/environment-collision-workflow-smoke.mjs
           node scripts/environment-completed-pen-recovery-smoke.mjs
           node scripts/environment-finished-pen-export-smoke.mjs

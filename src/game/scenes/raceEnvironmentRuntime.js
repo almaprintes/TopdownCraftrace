@@ -25,14 +25,16 @@ export function envFor(scene){
   // Keep local TrackStudio previews isolated from the published environment registry.
   if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros'].includes(physicalKey)&&physicalKey!=='karting-canarias-narrow70'&&physicalKey!=='circuito-atlantico')return null;
   const narrow=physicalKey==='karting-canarias-narrow70';
-  // New Canarias is the user-selected published 4096x6144 layout. Prefer
-  // its OWN collisions even when the selector still calls it "karting-canarias".
-  // Never scale its geometry by the retired legacy Canarias factor 2.5.
-  const rebuiltCanarias=[physicalKey,scene?.track?.id,scene?.track?.meta?.id,
-    scene?.track?.trackId].some(id=>normalizeTrackKey(physicalCircuitId(id))==='karting-canarias-4096');
-  const candidates=[...(rebuiltCanarias?['karting-canarias-4096']:[]),
-    ...(narrow?['karting-canarias']:[]),physicalKey,scene?.trackKey,scene?.track?.meta?.id,
-    scene?.track?.id,scene?.track?.trackId,scene?.track?.meta?.trackId].map(normalizeTrackKey).filter(Boolean);
+  // Phaser reuses the same RaceScene instance. Before its base create()
+  // replaces scene.track, that object can still describe the PREVIOUS circuit.
+  // Never infer an environment from scene.track or its meta here: otherwise
+  // playing Canarias 4096 then switching to Tenerife/Americas can install
+  // Canarias walls for one race, and a restart appears to fix the collisions.
+  // The freshly resolved scene.trackKey (set in init) is authoritative for
+  // preload AND create. The selected 4096 circuit has its own race key.
+  // Legacy narrow70 explicitly reuses the old Canarias authored environment.
+  const candidates=(narrow?['karting-canarias']:[physicalKey])
+    .map(normalizeTrackKey).filter(Boolean);
   for(const key of candidates){
     const env=createTrackEnvironment(key);
     if(!env)continue;
