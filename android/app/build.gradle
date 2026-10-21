@@ -73,6 +73,9 @@ android {
     productFlavors {
         production {
             dimension 'environment'
+            // Google Play update of original application, not QA.
+            versionCode 9
+            versionName '1.2.334'
             manifestPlaceholders = [ADMOB_APP_ID: admobAppId ?: 'missing-production-admob-app-id']
             buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted(rewardedAdUnitId)
             buildConfigField 'String', 'TDR_REVENUECAT_PUBLIC_SDK_KEY', quoted(revenueCatPublicKey)
@@ -94,8 +97,8 @@ android {
             applicationIdSuffix '.rewardedtest'
             // Dedicated QA-only install number; production remains 8.
             // Increase this monotonically for each QA install/update.
-            versionCode 1000328
-            versionName '1.2.328-qa'
+            versionCode 1000334
+            versionName '1.2.334-qa'
             versionNameSuffix '-rewarded-test'
             manifestPlaceholders = [ADMOB_APP_ID: admobAppId ?: 'missing-production-admob-app-id']
             buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted(rewardedAdUnitId)
@@ -135,6 +138,16 @@ android {
     }
 }
 
+// Fail closed: Google's release must never be QA debug-signed.
+if (System.getenv('TDR_CI_QA_STABLE_SIGNING') == '1') {
+    tasks.configureEach { task ->
+        if (task.name in ['bundleProductionRelease','assembleProductionRelease']) {
+            task.doFirst {
+                throw new GradleException('STOP: production must never use the QA signer. Use the original Play upload keystore.')
+            }
+        }
+    }
+}
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
