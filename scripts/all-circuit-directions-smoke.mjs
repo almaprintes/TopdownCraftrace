@@ -13,6 +13,7 @@ const storage=()=>{const mem=new Map();return{getItem:k=>mem.get(k)||null,setIte
 const server=await createServer({server:{middlewareMode:true},appType:'custom',logLevel:'error'});
 try{
   const {TRACK_REGISTRY,createTrack}=await server.ssrLoadModule('/src/game/tracks/trackRegistry.js');
+  const {describeImageNativeRace,validateImageNativeRaceDescriptor}=await server.ssrLoadModule('/src/game/tracks/imageNativeRaceLoader.js');
   const publicNames=readFileSync('src/game/tracks/trackPublicNames.js','utf8');
   const published=readFileSync('src/game/tracks/trackUnlocks.js','utf8');
   const selector=readFileSync('src/game/scenes/TrackGarageAndroidTouchScene.js','utf8');
@@ -60,6 +61,28 @@ try{
       assert.equal(selectedCircuitRaceId(baseId,local),spec.alternate);
       assert.ok(publicNames.includes("'"+spec.alternate+"':"),'public name for alternate');
       assert.ok(published.includes("'"+spec.alternate.replace('-4096','')+"'")||published.includes("'"+spec.alternate+"'"),'published ID for inverse');
+    }
+    if(baseId==='circuito-atlantico'){
+      // Android reported that 70%-world Atlántico Inverso was rejected by the
+      // real photo loader. Exercise the ACTUAL reverse track from the registry.
+      const normalPhoto=describeImageNativeRace(baseId,createTrack);
+      const reversePhoto=describeImageNativeRace(spec.alternate,createTrack);
+      assert.equal(normalPhoto.worldScale,.70,'official Atlántico world-scale');
+      assert.equal(reversePhoto.worldScale,normalPhoto.worldScale,
+        'inverse must inherit the original photo/world scale');
+      assert.deepEqual(reversePhoto.tiles,normalPhoto.tiles,
+        'inverse shares the same six original WebP photo tiles');
+      assert.equal(validateImageNativeRaceDescriptor(normalPhoto),normalPhoto);
+      assert.equal(validateImageNativeRaceDescriptor(reversePhoto),reversePhoto,
+        'Atlántico Inverso must pass the shipping photo-loader scale guard');
+      assert.throws(()=>validateImageNativeRaceDescriptor({...reversePhoto,worldScale:.95}),/escala/,
+        'do not accept an arbitrary inverse photo scale');
+      assert.throws(()=>validateImageNativeRaceDescriptor({...reversePhoto,
+        track:{...reversePhoto.track,worldW:reversePhoto.track.worldW+12}}),/escala/,
+        'do not accept mismatched inverse world dimensions');
+      assert.throws(()=>validateImageNativeRaceDescriptor({...reversePhoto,
+        trackKey:'circuito-atlantico-falso'}),/escala/,
+        'the exception must not extend to unrelated circuit IDs');
     }
     assert.notEqual('tdr2:ttBest:'+original.id,'tdr2:ttBest:'+inverse.id,'PB isolation');
     assert.notEqual('tdr2:ttHist:'+original.id,'tdr2:ttHist:'+inverse.id,'lap isolation');
