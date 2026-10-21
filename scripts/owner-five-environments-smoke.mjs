@@ -71,7 +71,8 @@ const scSource=read(root+'santa-cruz/source/santa-cruz-photo.environment.json');
 assert.deepEqual(sc,scSource,'Santa Cruz installer source must not overwrite the uploaded finish line');
 const runtime=readFileSync('src/game/scenes/raceEnvironmentRuntime.js','utf8');
 assert.ok(runtime.includes("'karting-canarias-4096','rally-arafo-los-loros'"));
-assert.ok(runtime.includes("rebuiltCanarias?['karting-canarias-4096']"),'Native 4096 must win over 2.5x legacy project');
+assert.ok(runtime.includes("const candidates=(narrow?['karting-canarias']:[physicalKey])"),
+  'Native 4096 collisions must follow the selected race key, never a stale scene.track');
 assert.ok(runtime.includes("env.coordinateSpace==='race-world'?env:scaleAtlanticoEnvironment(env)"),
  'Runtime must not scale original Atlántico export twice');
 assert.ok(runtime.includes("if(!String(item?.path||'').includes('environment/barriers/'))return"),
