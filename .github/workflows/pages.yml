@@ -74,6 +74,7 @@ jobs:
           node scripts/environment-finished-pen-export-smoke.mjs
           node scripts/environment-safe-exit-smoke.mjs
           node scripts/session-report-navigation-smoke.mjs
+          node scripts/session-insight-bank-smoke.mjs
           node scripts/session-pb-publish-offer-smoke.mjs
           node scripts/session-record-publish-smoke.mjs
           node scripts/race-control-identity-recovery-smoke.mjs
