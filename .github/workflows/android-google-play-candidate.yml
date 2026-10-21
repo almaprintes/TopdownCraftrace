@@ -1,7 +1,7 @@
 name: Build Google Play update versionCode 9 AAB (do not publish)
 # Rerun: corrected independent version parsing in cold-entry test.
 # DEV 1.2.334: version-independent circuit initialization regression.
-# Production AAB: stage authored tracks before validating normal/inverse barriers.
+# Play: require a real signature block; verify separately from jarsigner exit.
 # No Play publishing action. Original upload keystore required for an uploadable AAB.
 on:
   push:
@@ -84,8 +84,8 @@ jobs:
           # Build runs prebuild installers for every authored circuit; integration
           # tests require the generated registries in production mode.
           npm run build:android
-          node scripts/inverse-environment-collisions-smoke.mjs
           node scripts/environment-first-entry-isolation-smoke.mjs
+          node scripts/inverse-environment-collisions-smoke.mjs
           node scripts/ghost-static-panel-zoom-smoke.mjs
           node scripts/session-insight-bank-smoke.mjs
           node scripts/android-portable-save-smoke.mjs
@@ -105,101 +105,12 @@ jobs:
           unzip -t "$src" | tail -1
           unzip -l "$src" | grep -F 'base/manifest/AndroidManifest.xml'
           mkdir -p bundle-output
-          # jarsigner -verify -strict may return exit 0 even for unsigned JARs.
-          # Require a real cryptographic signature block in META-INF.
-          signature_blocks="$(unzip -Z1 "$src" | grep -E '^META-INF/[^/]+[.](RSA|DSA|EC)
-            echo 'Signed original upload key candidate. Compare signer fingerprint in Play Console before upload.' >> "$GITHUB_STEP_SUMMARY"
-          else
-            if test -n "$signature_blocks"; then
-              echo '::error::Unexpected cryptographic signature block on unsigned candidate'
-              exit 1
-            fi
-            dest=bundle-output/TDR-PLAY-1.2.334-vc9-NO_PUBLICAR_SIN_FIRMA.aab
-            echo 'NO PUBLICABLE: requires the original topdownrace-upload.jks signing on the owner Mac.' >> "$GITHUB_STEP_SUMMARY"
-          fi
-          cp "$src" "$dest"
-          sha256sum "$dest"
-          ls -lh "$dest"
-          echo 'No Play publishing action performed.' >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: TDR-PLAY-1.2.334-vc9-${{ steps.key.outputs.signed }}
-          path: bundle-output/*.aab
-          compression-level: 0
-          retention-days: 30
-          if-no-files-found: error
-      - name: Offer direct AAB candidate download, without uploading to Play
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag=tdr-play-candidate-1.2.334-vc9
-          candidate="$(find bundle-output -maxdepth 1 -name '*.aab' -print -quit)"
-          test -s "$candidate"
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::error::A candidate with this immutable version already exists. Refuse to overwrite."
-            exit 1
-          fi
-          printf '%s\n' 'AAB for the actual Google Play application com.craftracestudio.topdownrace, versionCode 9, versionName 1.2.334.'             'NOT published in Google Play; owner must test QA first.'             'If the file is named NO_PUBLICAR_SIN_FIRMA, it is UNSIGNED: sign it with the original upload certificate before uploading.'             "Source commit: $GITHUB_SHA" > play-candidate-notes.txt
-          gh release create "$tag" "$candidate" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title 'Top Down RACE 1.2.334 · Google Play AAB v9 candidate' --notes-file play-candidate-notes.txt
-      - name: Remove temporary upload signer
-        if: always()
-        run: |
-          rm -f android/keystore.properties
-          rm -f "$RUNNER_TEMP/original-play-upload.jks"
- || true)"
           if test '${{ steps.key.outputs.signed }}' = true; then
-            if test -z "$signature_blocks"; then
-              echo "::error::Original upload key was supplied but the AAB has no signature block."
-              exit 1
-            fi
-            jarsigner -verify -strict "$src"
-            if ! unzip -Z1 "$src" | grep -Eiq '^META-INF/[^/]+\\.(RSA|DSA|EC)
+            unzip -Z1 "$src" | grep -qE '^META-INF/[^/]+[.](RSA|DSA|EC)
             echo 'Signed original upload key candidate. Compare signer fingerprint in Play Console before upload.' >> "$GITHUB_STEP_SUMMARY"
           else
-            # JDK jarsigner may exit 0 even when printing "jar is unsigned".
-            # The original Play AAB must have a JAR-signature block (.RSA/.DSA/.EC).
-            # Check the actual archive rather than trusting exit status alone.
-            if unzip -Z1 "$src" | grep -Eiq '^META-INF/[^/]+\\.(RSA|DSA|EC)
-            dest=bundle-output/TDR-PLAY-1.2.334-vc9-NO_PUBLICAR_SIN_FIRMA.aab
-            echo 'NO PUBLICABLE: requires the original topdownrace-upload.jks signing on the owner Mac.' >> "$GITHUB_STEP_SUMMARY"
-          fi
-          cp "$src" "$dest"
-          sha256sum "$dest"
-          ls -lh "$dest"
-          echo 'No Play publishing action performed.' >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: TDR-PLAY-1.2.334-vc9-${{ steps.key.outputs.signed }}
-          path: bundle-output/*.aab
-          compression-level: 0
-          retention-days: 30
-          if-no-files-found: error
-      - name: Offer direct AAB candidate download, without uploading to Play
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag=tdr-play-candidate-1.2.334-vc9
-          candidate="$(find bundle-output -maxdepth 1 -name '*.aab' -print -quit)"
-          test -s "$candidate"
-          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "::error::A candidate with this immutable version already exists. Refuse to overwrite."
-            exit 1
-          fi
-          printf '%s\n' 'AAB for the actual Google Play application com.craftracestudio.topdownrace, versionCode 9, versionName 1.2.334.'             'NOT published in Google Play; owner must test QA first.'             'If the file is named NO_PUBLICAR_SIN_FIRMA, it is UNSIGNED: sign it with the original upload certificate before uploading.'             "Source commit: $GITHUB_SHA" > play-candidate-notes.txt
-          gh release create "$tag" "$candidate" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title 'Top Down RACE 1.2.334 · Google Play AAB v9 candidate' --notes-file play-candidate-notes.txt
-      - name: Remove temporary upload signer
-        if: always()
-        run: |
-          rm -f android/keystore.properties
-          rm -f "$RUNNER_TEMP/original-play-upload.jks"
-; then
-              echo '::error::Unexpected cryptographic signature inside a candidate without the original Play key.'
+            # jarsigner -verify -strict may return success for an unsigned bundle.
+            if unzip -Z1 "$src" | grep -qE '^META-INF/[^/]+[.](RSA|DSA|EC)
               exit 1
             fi
             dest=bundle-output/TDR-PLAY-1.2.334-vc9-NO_PUBLICAR_SIN_FIRMA.aab
@@ -238,16 +149,53 @@ jobs:
           rm -f android/keystore.properties
           rm -f "$RUNNER_TEMP/original-play-upload.jks"
 ; then
-              echo '::error::Missing original upload signature block in expected signed AAB.'
+              echo '::error::Unexpected signature block on unsigned candidate'
               exit 1
             fi
+            dest=bundle-output/TDR-PLAY-1.2.334-vc9-NO_PUBLICAR_SIN_FIRMA.aab
+            echo 'NO PUBLICABLE: requires the original topdownrace-upload.jks signing on the owner Mac.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          cp "$src" "$dest"
+          sha256sum "$dest"
+          ls -lh "$dest"
+          echo 'No Play publishing action performed.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TDR-PLAY-1.2.334-vc9-${{ steps.key.outputs.signed }}
+          path: bundle-output/*.aab
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
+      - name: Offer direct AAB candidate download, without uploading to Play
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=tdr-play-candidate-1.2.334-vc9
+          candidate="$(find bundle-output -maxdepth 1 -name '*.aab' -print -quit)"
+          test -s "$candidate"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::A candidate with this immutable version already exists. Refuse to overwrite."
+            exit 1
+          fi
+          printf '%s\n' 'AAB for the actual Google Play application com.craftracestudio.topdownrace, versionCode 9, versionName 1.2.334.'             'NOT published in Google Play; owner must test QA first.'             'If the file is named NO_PUBLICAR_SIN_FIRMA, it is UNSIGNED: sign it with the original upload certificate before uploading.'             "Source commit: $GITHUB_SHA" > play-candidate-notes.txt
+          gh release create "$tag" "$candidate" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title 'Top Down RACE 1.2.334 · Google Play AAB v9 candidate' --notes-file play-candidate-notes.txt
+      - name: Remove temporary upload signer
+        if: always()
+        run: |
+          rm -f android/keystore.properties
+          rm -f "$RUNNER_TEMP/original-play-upload.jks"
+
+            jarsigner -verify -strict "$src"
             dest=bundle-output/TDR-PLAY-1.2.334-vc9-FIRMADO-CANDIDATO.aab
             echo 'Signed original upload key candidate. Compare signer fingerprint in Play Console before upload.' >> "$GITHUB_STEP_SUMMARY"
           else
-            # JDK jarsigner may exit 0 even when printing "jar is unsigned".
-            # The original Play AAB must have a JAR-signature block (.RSA/.DSA/.EC).
-            # Check the actual archive rather than trusting exit status alone.
-            if unzip -Z1 "$src" | grep -Eiq '^META-INF/[^/]+\\.(RSA|DSA|EC)
+            # jarsigner -verify -strict may return success for an unsigned bundle.
+            if unzip -Z1 "$src" | grep -qE '^META-INF/[^/]+[.](RSA|DSA|EC)
+              exit 1
+            fi
             dest=bundle-output/TDR-PLAY-1.2.334-vc9-NO_PUBLICAR_SIN_FIRMA.aab
             echo 'NO PUBLICABLE: requires the original topdownrace-upload.jks signing on the owner Mac.' >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -284,7 +232,7 @@ jobs:
           rm -f android/keystore.properties
           rm -f "$RUNNER_TEMP/original-play-upload.jks"
 ; then
-              echo '::error::Unexpected cryptographic signature inside a candidate without the original Play key.'
+              echo '::error::Unexpected signature block on unsigned candidate'
               exit 1
             fi
             dest=bundle-output/TDR-PLAY-1.2.334-vc9-NO_PUBLICAR_SIN_FIRMA.aab
