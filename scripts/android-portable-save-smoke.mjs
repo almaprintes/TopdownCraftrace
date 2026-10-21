@@ -59,8 +59,10 @@ assert.match(ui,/if\(result.status==='cancelled'\)/);
 assert.match(ui,/if\(result.status==='saved'\)/);
 assert.doesNotMatch(ui,/Exportación JSON iniciada\. Si Android no la descarga/,
   'no optimistic fake-download banner');
-assert.doesNotMatch(ui,/restoreCloudBackup\(\).*downloadPortableSave/s,
-  'export code must remain independent of restore actions');
+const quickHandler=ui.slice(ui.indexOf("quickExport.addEventListener('click'"),
+  ui.indexOf("root.querySelector('[data-action=\"backup-manual\"]')",ui.indexOf("quickExport.addEventListener('click'")));
+assert.doesNotMatch(quickHandler,/restoreCloudBackup|restoreLocalProgress|localStorage\.clear/,
+  'quick export must never restore or erase the player's data');
 assert.doesNotMatch(portable,/localStorage\.clear\(/,'download cannot erase progress');
 
 assert.match(qa,/TDR_CI_QA_STABLE_SIGNING/,'existing QA signer preserved');
