@@ -209,7 +209,19 @@ export function openCloudAccountUi({host=null}={}){
   root.querySelector('[data-action="change-account"]').addEventListener('click',()=>setView('login'));
   root.querySelector('[data-action="legacy-access"]').addEventListener('click',()=>
     setView(account?.emailConfirmed?'password':account?.pendingEmail?'verify':'link'));
-  quickExport.addEventListener('click',()=>root.querySelector('[data-action="export-local"]').click());
+  const downloadNotice=(result,label)=>{
+    if(result.status==='cancelled')return 'Descarga cancelada. Tu partida y la copia online siguen intactas.';
+    if(result.status==='saved')return '✅ ARCHIVO GUARDADO EN ANDROID · '+result.filename+' · '+label;
+    return 'Solicitud enviada al navegador: '+result.filename+'. Comprueba Descargas antes de borrar datos.';
+  };
+  // The primary button exports the ACTUAL cloud backup when it exists.
+  // Advanced options still offer separate LOCAL and CLOUD exports.
+  quickExport.addEventListener('click',()=>run(async()=>{
+    const remote=backup?.existing===true;
+    const json=remote?await exportCloudProgressJson():exportLocalProgressJson();
+    const result=await downloadPortableSave(json,remote?'top-down-race-nube.json':'top-down-race-partida.json');
+    return downloadNotice(result,remote?'copia de la nube':'partida local');
+  }));
   root.querySelector('[data-action="backup-manual"]').addEventListener('click',()=>root.querySelector('[data-action="backup"]').click());
   root.querySelector('[data-action="restore-manual"]').addEventListener('click',()=>root.querySelector('[data-action="restore"]').click());
   root.querySelector('[data-action="backup"]').addEventListener('click',()=>run(async()=>{
@@ -308,12 +320,12 @@ export function openCloudAccountUi({host=null}={}){
     });
   });
   root.querySelector('[data-action="export-local"]').addEventListener('click',()=>run(async()=>{
-    downloadPortableSave(exportLocalProgressJson());
-    return 'Exportación JSON iniciada. Si Android no la descarga, usa un navegador compatible.';
+    const result=await downloadPortableSave(exportLocalProgressJson());
+    return downloadNotice(result,'partida local');
   }));
   root.querySelector('[data-action="export-cloud"]').addEventListener('click',()=>run(async()=>{
-    downloadPortableSave(await exportCloudProgressJson(),'top-down-race-nube.json');
-    return 'Exportación portátil de Supabase iniciada.';
+    const result=await downloadPortableSave(await exportCloudProgressJson(),'top-down-race-nube.json');
+    return downloadNotice(result,'copia de la nube');
   }));
   run(()=>refresh().then(()=>'')); 
 }
