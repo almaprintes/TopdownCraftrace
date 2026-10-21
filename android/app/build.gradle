@@ -74,8 +74,8 @@ android {
         production {
             dimension 'environment'
             // Google Play update of original application, not QA.
-            versionCode 9
-            versionName '1.2.334'
+            versionCode 10
+            versionName '1.2.335'
             manifestPlaceholders = [ADMOB_APP_ID: admobAppId ?: 'missing-production-admob-app-id']
             buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted(rewardedAdUnitId)
             buildConfigField 'String', 'TDR_REVENUECAT_PUBLIC_SDK_KEY', quoted(revenueCatPublicKey)
@@ -97,8 +97,8 @@ android {
             applicationIdSuffix '.rewardedtest'
             // Dedicated QA-only install number; production remains 8.
             // Increase this monotonically for each QA install/update.
-            versionCode 1000334
-            versionName '1.2.334-qa'
+            versionCode 1000335
+            versionName '1.2.335-qa'
             versionNameSuffix '-rewarded-test'
             manifestPlaceholders = [ADMOB_APP_ID: admobAppId ?: 'missing-production-admob-app-id']
             buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted(rewardedAdUnitId)

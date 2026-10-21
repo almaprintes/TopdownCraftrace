@@ -1,6 +1,6 @@
-name: Build Google Play update versionCode 9 AAB (do not publish)
+name: Build Google Play update versionCode 10 AAB (do not publish)
 # Rerun: corrected independent version parsing in cold-entry test.
-# DEV 1.2.334: version-independent circuit initialization regression.
+# DEV 1.2.335: version-independent circuit initialization regression.
 # Play: require a real signature block; verify separately from jarsigner exit.
 # No Play publishing action. Original upload keystore required for an uploadable AAB.
 on:
@@ -14,7 +14,7 @@ permissions:
   contents: write
 jobs:
   play_aab:
-    name: Production package 1.2.334, original Play application
+    name: Production package 1.2.335, original Play application
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -97,7 +97,7 @@ jobs:
       - name: Compile original production Play AAB
         working-directory: android
         run: ./gradlew :app:testProductionReleaseUnitTest :app:bundleProductionRelease --stacktrace
-      - name: Audit AAB (real production package, v9, signed only with original key)
+      - name: Audit AAB (real production package, v10, signed only with original key)
         shell: bash
         run: |
           set -euo pipefail
@@ -114,14 +114,14 @@ jobs:
               exit 1
             fi
             jarsigner -verify -strict "$src"
-            dest=bundle-output/TDR-PLAY-1.2.334-vc9-FIRMADO-CANDIDATO.aab
+            dest=bundle-output/TDR-PLAY-1.2.335-vc10-FIRMADO-CANDIDATO.aab
             echo 'Signed original upload key candidate. Verify its certificate in Play Console.' >> "$GITHUB_STEP_SUMMARY"
           else
             if test -n "$signature_blocks"; then
               echo '::error::Unexpected cryptographic signer without the original upload key.'
               exit 1
             fi
-            dest=bundle-output/TDR-PLAY-1.2.334-vc9-NO_PUBLICAR_SIN_FIRMA.aab
+            dest=bundle-output/TDR-PLAY-1.2.335-vc10-NO_PUBLICAR_SIN_FIRMA.aab
             echo 'NO PUBLICABLE: original Play upload key must sign this AAB on owner Mac.' >> "$GITHUB_STEP_SUMMARY"
           fi
           cp "$src" "$dest"
@@ -130,7 +130,7 @@ jobs:
           echo 'No Play publishing action performed.' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
-          name: TDR-PLAY-1.2.334-vc9-${{ steps.key.outputs.signed }}
+          name: TDR-PLAY-1.2.335-vc10-${{ steps.key.outputs.signed }}
           path: bundle-output/*.aab
           compression-level: 0
           retention-days: 30
@@ -141,16 +141,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag=tdr-play-candidate-1.2.334-vc9
+          tag=tdr-play-candidate-1.2.335-vc10
           candidate="$(find bundle-output -maxdepth 1 -name '*.aab' -print -quit)"
           test -s "$candidate"
           if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "::error::A candidate with this immutable version already exists. Refuse to overwrite."
             exit 1
           fi
-          printf '%s\n' 'AAB for the actual Google Play application com.craftracestudio.topdownrace, versionCode 9, versionName 1.2.334.'             'NOT published in Google Play; owner must test QA first.'             'If the file is named NO_PUBLICAR_SIN_FIRMA, it is UNSIGNED: sign it with the original upload certificate before uploading.'             "Source commit: $GITHUB_SHA" > play-candidate-notes.txt
+          printf '%s\n' 'AAB for the actual Google Play application com.craftracestudio.topdownrace, versionCode 10, versionName 1.2.335.'             'NOT published in Google Play; owner must test QA first.'             'If the file is named NO_PUBLICAR_SIN_FIRMA, it is UNSIGNED: sign it with the original upload certificate before uploading.'             "Source commit: $GITHUB_SHA" > play-candidate-notes.txt
           gh release create "$tag" "$candidate" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title 'Top Down RACE 1.2.334 · Google Play AAB v9 candidate' --notes-file play-candidate-notes.txt
+            --title 'Top Down RACE 1.2.335 · Google Play AAB v10 candidate' --notes-file play-candidate-notes.txt
       - name: Remove temporary upload signer
         if: always()
         run: |

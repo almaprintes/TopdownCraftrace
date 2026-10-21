@@ -1,8 +1,8 @@
 name: TDR real AdMob RevenueCat minified QA APK
-# QA 1.2.334: rebuild on fixed original-signing checks; preserve existing install.
+# QA 1.2.335: rebuild on fixed original-signing checks; preserve existing install.
 # Rerun: first-entry version parser no longer escapes too many characters.
-# DEV 1.2.334: corrected first-entry test to accept subsequent versions.
-# QA DEV 1.2.334: Android native JSON export + Atlantico Inverso fix, full approved game; never Play.
+# DEV 1.2.335: corrected first-entry test to accept subsequent versions.
+# QA DEV 1.2.335: Android native JSON export + Atlantico Inverso fix, full approved game; never Play.
 # DEV 1.2.216: include corrected Karting staging in all main Android checks.
 
 on:
@@ -93,16 +93,14 @@ jobs:
         with:
           path: ~/.android/debug.keystore
           key: tdr-rewardedtest-debug-signing-v1
-      - name: Generate QA signer only on first run
+      - name: Require the original cached QA signer
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.android"
           if test ! -s "$HOME/.android/debug.keystore"; then
-            keytool -genkeypair -noprompt -keystore "$HOME/.android/debug.keystore" \
-              -storepass android -alias androiddebugkey -keypass android \
-              -keyalg RSA -keysize 2048 -validity 36500 \
-              -dname 'CN=TDR Isolated QA,O=AlmaPrint,C=ES'
+            echo "::error::Original QA signing key missing. Refusing to create a replacement."
+            exit 1
           fi
           chmod 600 "$HOME/.android/debug.keystore"
           keytool -list -v -keystore "$HOME/.android/debug.keystore" \
@@ -218,7 +216,7 @@ jobs:
           src='android/app/build/outputs/apk/deviceTest/release/app-deviceTest-release.apk'
           test -s "$src"
           unzip -t "$src" | tail -1
-          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000334'"
+          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000335'"
           apk_sign_report="$("${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$src")"
           printf '%s\n' "$apk_sign_report" | grep -E 'Verified using|Signer #1 certificate SHA-256'
           apk_cert="$(printf '%s\n' "$apk_sign_report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1 | tr '[:upper:]' '[:lower:]')"
@@ -227,14 +225,14 @@ jobs:
             exit 1
           fi
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR.apk
-          sha256sum sdk-download/TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR.apk
+          cp "$src" sdk-download/TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR.apk
+          sha256sum sdk-download/TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR
-          path: sdk-download/TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR.apk
+          name: TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR
+          path: sdk-download/TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
@@ -245,10 +243,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apk='sdk-download/TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR.apk'
-          tag='tdr-qa-1.2.334'
+          apk='sdk-download/TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR.apk'
+          tag='tdr-qa-1.2.335'
           cat > qa-release-notes.md <<EOF
-          APK Android QA DEV 1.2.334 compilada desde main. Incluye: corregida contaminación de colisiones de otro circuito en primera carga (DEV 1.2.333), controles del fantasma fijos con zoom (DEV 1.2.332), 2.364 frases de lectura de tanda ES/EN (DEV 1.2.331), exportación JSON Android, circuitos inversos, Race Control, RALLY, temporadas, Supabase y anuncios AdMob/RevenueCat reales. applicationId com.craftracestudio.topdownrace.rewardedtest, versionCode 1000334. No se publica en Play.
+          APK Android QA DEV 1.2.335 compilada desde main. Incluye: compatibilidad de fantasmas Atlántico 70 % y normalización de tamaño (DEV 1.2.335), corregida contaminación de colisiones de otro circuito en primera carga (DEV 1.2.333), controles del fantasma fijos con zoom (DEV 1.2.332), 2.364 frases de lectura de tanda ES/EN (DEV 1.2.331), exportación JSON Android, circuitos inversos, Race Control, RALLY, temporadas, Supabase y anuncios AdMob/RevenueCat reales. applicationId com.craftracestudio.topdownrace.rewardedtest, versionCode 1000335. No se publica en Play.
 
           CERTIFICADOS REALES AUDITADOS:
           - .300: ${{ steps.legacy_signers.outputs.cert_300 }}
@@ -259,9 +257,10 @@ jobs:
           AVISO SOBRE DATOS: la .325 y .328 deben tener mismo paquete, certificado real y versionCode creciente; instalación de actualización sin desinstalar. Si Android pide desinstalar o dice incompatible, CANCELAR e informar; nunca borrar datos. Copia online no equivale a archivo local: probar Descargas/JSON no vacío, cancelación y exportación local; NO restaurar sobre la partida vigente. No prometer conservación sin prueba física. La caché de firma CI no sustituye un backup permanente.
           EOF
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$apk" --clobber
+            echo "::error::Immutable QA candidate already exists; refusing overwrite."
+            exit 1
           else
             gh release create "$tag" "$apk" --target "$GITHUB_SHA" --prerelease \
-              --title 'Top Down Race · APK de prueba DEV 1.2.334' \
+              --title 'Top Down Race · APK de prueba DEV 1.2.335' \
               --notes-file qa-release-notes.md
           fi
