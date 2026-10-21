@@ -1,5 +1,5 @@
 name: TDR real AdMob RevenueCat minified QA APK
-# DEV 1.2.318: final-cert audit for .300/.317 and fail-closed stable QA signer; never Play.
+# QA DEV 1.2.325: all inverses + restored collisions + readable Race Control; keep QA signing; never Play.
 # DEV 1.2.216: include corrected Karting staging in all main Android checks.
 
 on:
@@ -175,6 +175,12 @@ jobs:
           node scripts/lobby-reward-ready-glow-smoke.mjs
           node scripts/cloud-portability-smoke.mjs
           npm run build:android
+          # The physical Android QA app MUST contain the latest inverse route,
+          # original Environment Studio colliders and complete Race Control UI.
+          node scripts/all-circuit-directions-smoke.mjs
+          node scripts/inverse-environment-collisions-smoke.mjs
+          node scripts/race-control-full-circuit-names-smoke.mjs
+          node scripts/race-pause-timing-smoke.mjs
           node scripts/karting-canarias-4096-smoke.mjs
           node scripts/android-release-candidate-smoke.mjs
           node scripts/android-qa-signing-smoke.mjs
@@ -189,7 +195,7 @@ jobs:
           src='android/app/build/outputs/apk/deviceTest/release/app-deviceTest-release.apk'
           test -s "$src"
           unzip -t "$src" | tail -1
-          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000318'"
+          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000325'"
           apk_sign_report="$("${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$src")"
           printf '%s\n' "$apk_sign_report" | grep -E 'Verified using|Signer #1 certificate SHA-256'
           apk_cert="$(printf '%s\n' "$apk_sign_report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1 | tr '[:upper:]' '[:lower:]')"
@@ -198,14 +204,14 @@ jobs:
             exit 1
           fi
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR.apk
-          sha256sum sdk-download/TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR.apk
+          cp "$src" sdk-download/TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR.apk
+          sha256sum sdk-download/TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR
-          path: sdk-download/TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR.apk
+          name: TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR
+          path: sdk-download/TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
@@ -216,10 +222,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apk='sdk-download/TDR-QA-DEV-1.2.318-REAL-ADS-SIN-MEDIR.apk'
-          tag='tdr-qa-1.2.318'
+          apk='sdk-download/TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR.apk'
+          tag='tdr-qa-1.2.325'
           cat > qa-release-notes.md <<EOF
-          APK Android QA DEV 1.2.318 (main), AdMob y RevenueCat reales. Incluye Arafo-Los Loros, misión 7 de inducción, recuperación de rankings de Atlántico, geografía del piloto, diagnóstico oculto y carga animada del Avenir Gripline. No hay cambios en RALLY 1.0 ni en físicas iPhone. Paquete com.craftracestudio.topdownrace.rewardedtest; versionCode 1000318. NO publicada en Google Play.
+          APK Android QA DEV 1.2.325 (main), versión web DEV 1.2.325, AdMob y RevenueCat reales. Incluye las últimas correcciones: circuitos Normal/Inverso con salidas/checkpoints propios, colisiones de Environment Studio compartidas con sus circuitos originales, rankings/identidades separados, pausa larga corregida y Race Control con nombres completos sin recortar el panel central. Conserva Arafo-Los Loros RALLY 1.0 y correcciones de inducción, Gripline y Supabase previas. Diagnóstico habitual oculto; no altera físicas iPhone. Paquete de pruebas com.craftracestudio.topdownrace.rewardedtest; versionCode 1000325. NO es APK Play ni se publica en Google Play.
 
           CERTIFICADOS REALES AUDITADOS:
           - .300: ${{ steps.legacy_signers.outputs.cert_300 }}
@@ -233,6 +239,6 @@ jobs:
             gh release upload "$tag" "$apk" --clobber
           else
             gh release create "$tag" "$apk" --target "$GITHUB_SHA" --prerelease \
-              --title 'Top Down Race · APK candidata final DEV 1.2.318' \
+              --title 'Top Down Race · APK de prueba DEV 1.2.325' \
               --notes-file qa-release-notes.md
           fi
