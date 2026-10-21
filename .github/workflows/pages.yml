@@ -152,6 +152,7 @@ jobs:
           node scripts/ignition-audio-smoke.mjs
           node scripts/rewarded-audio-focus-smoke.mjs
           node scripts/cloud-portability-smoke.mjs
+          node scripts/android-portable-save-smoke.mjs
           node scripts/account-creator-badge-smoke.mjs
           node scripts/release-language-audit.mjs
           node scripts/race-control-creator-badges-smoke.mjs
