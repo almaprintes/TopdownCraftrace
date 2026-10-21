@@ -18,6 +18,7 @@ public class MainActivity extends BridgeActivity {
         Log.i("TDR_BOOT", "native_on_create");
         applyPhoneOrientationPolicy();
         registerPlugin(TdrRewardedAdsPlugin.class);
+        registerPlugin(TdrPortableSavePlugin.class);
         super.onCreate(savedInstanceState);
         applyImmersiveMode();
         // Preserve Capacitor's Chrome client behavior. Only allow fixed diagnostic
