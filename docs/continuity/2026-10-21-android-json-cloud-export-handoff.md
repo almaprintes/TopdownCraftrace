@@ -80,3 +80,24 @@
 **Límites de lo probado:** compilación Java real y smoke estructural pasan; **NO** se ha comprobado todavía el selector SAF ni la escritura física del JSON en Android instalado. Una compilación satisfactoria no certifica descarga ni actualización de instalación. No prometer retención de datos hasta validar firma, packageName, versionCode y actualización sobre una APK anterior sin desinstalar.
 
 **Siguiente paso solo previa orden explícita del propietario:** preparar QA con `deviceTest`, `versionCode > 1000325`, paquete rewardedtest y el certificado estable esperado `cd626199aa6234d9bdc3c07ca0c8686e7fb994eb8c4d5d02ade2fff1dcbeca6f`. Probar en dispositivo descargar copia **online** mediante selector Android (archivo JSON legible y no vacío), cancelar otra descarga, exportar local, y verificar que Supabase, partidas, carreras y colisiones no cambian. No pulsar «Recuperar partida» durante la prueba de exportación. No publicar Google Play; preservar Atlántico Inverso .326 y RALLY 1.0.
+
+## 8. QA autorizada, compilada y publicada el 21/10/2026 — Android 1.2.328
+
+**Orden explícita del propietario:** «Haz la apk para probarla». Desde `main`, sin ramas, se incrementó **solo** `deviceTest` en `android/app/build.gradle` a `versionCode 1000328` y `versionName 1.2.328-qa`; producción Play sigue 1.1.188 / vc8. La DEV web sigue 1.2.328. Commit exacto empaquetado: `7b16b7726be80b50b22ba346217f6c8c7139f54d`.
+
+**Compilación y firma:**
+- Workflow APK QA `39577128788`: `completed/success`, se ejecutaron verificadores de copia portátil, circuitos Normal/Inverso, colisiones, Race Control, Gradle Release y validación de APK mediante `aapt` + `apksigner`.
+- Firma SHA-256 verificada **en APK .325 anterior y APK .328 actual**: `cd626199aa6234d9bdc3c07ca0c8686e7fb994eb8c4d5d02ade2fff1dcbeca6f`. Paquete idéntico `com.craftracestudio.topdownrace.rewardedtest`, versionCode anterior `1000325`, nuevo `1000328`. Compatibilidad por firma/versión verificada en binarios; retención de datos todavía necesita prueba instalando sobre .325 real.
+- SHA-256 del nuevo APK: `85f7e2d90a19cfa176e5128771047c00f0275efff569eb8cc6782e54a9b9af53`. Prerelease: https://github.com/almaprintes/TopdownCraftrace/releases/tag/tdr-qa-1.2.328
+- **Enlace directo del APK:** https://github.com/almaprintes/TopdownCraftrace/releases/download/tdr-qa-1.2.328/TDR-QA-DEV-1.2.328-REAL-ADS-SIN-MEDIR.apk
+- Workflow Pages `39577128675`: Build + Deploy `completed/success` mismo SHA. No Play Store, ni nuevo AAB.
+
+**Prueba pendiente en hardware del propietario (NO marcar resuelta la descarga):**
+1. Intentar instalar .328 **encima de .325 sin desinstalar ni borrar datos**. Si pide desinstalación, no continuar.
+2. Confirmar que sigue el piloto, progreso, monedas, circuitos y el estado online.
+3. Ajustes → Cuenta: comprobar revisión de copia ONLINE, pulsar DESCARGAR COPIA, seleccionar carpeta con el diálogo nativo Android, aceptar, localizar `top-down-race-nube.json` en Archivos/Descargas, tamaño no cero, abrir como JSON válido. No confundir con hacer copia remota.
+4. Repetir la operación y pulsar Cancelar: debe informar cancelación, sin falsos éxitos ni alterar progreso. Probar exportación LOCAL por separado desde opciones avanzadas (`top-down-race-partida.json`).
+5. Probar Atlántico Inverso (antes fallaba al cargar en .325), colisiones Normal/Inverso, Race Control y RALLY 1.0 sin modificar física.
+6. No usar RESTAURAR PARTIDA durante estas pruebas, no eliminar APK si los archivos no se han verificado. Anuncios reales: no generar impresiones artificiales.
+
+**Estado final a la entrega:** binario firmado y enlace público **comprobados**; descarga de JSON en Android real **no comprobada todavía**.
