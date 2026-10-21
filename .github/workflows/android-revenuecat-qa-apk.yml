@@ -1,4 +1,5 @@
 name: TDR real AdMob RevenueCat minified QA APK
+# DEV 1.2.334: corrected first-entry test to accept subsequent versions.
 # QA DEV 1.2.334: Android native JSON export + Atlantico Inverso fix, full approved game; never Play.
 # DEV 1.2.216: include corrected Karting staging in all main Android checks.
 

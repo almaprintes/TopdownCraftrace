@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createServer} from 'vite';
 
-const vite=await createServer({server:{middlewareMode:true},appType:'custom',logLevel:'error'});
+const vite=await createServer({server:{middlewareMode:true,preTransformRequests:false},optimizeDeps:{noDiscovery:true,include:[]},appType:'custom',logLevel:'error'});
 try{
   const [{envFor},{CLOSED_CIRCUIT_VARIANTS},{createTrackEnvironment}]=await Promise.all([
     vite.ssrLoadModule('/src/game/scenes/raceEnvironmentRuntime.js'),
@@ -56,6 +56,7 @@ try{
   assert.match(source,/proto\.create=function\(data\)\{const env=envFor\(this\)/,
     'Create must agree with preload without stale geometry');
   const html=readFileSync('index.html','utf8');
-  assert.match(html,/content="DEV 1\.2\.333"/);
+  const version=Number(html.match(/content="DEV 1\\.2\\.(\\d+)"/)?.[1]);
+  assert.ok(version>=333,'First-entry collision correction must remain included in all newer DEV versions');
   console.log('PASS: first-load/restart collision geometry identical for normal/inverse circuits, independent of previous scene track; no borrowed 4096 barriers');
 }finally{await vite.close();}
