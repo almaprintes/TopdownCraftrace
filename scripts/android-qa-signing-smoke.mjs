@@ -10,7 +10,7 @@ assert.match(baseline,/versionCode 8\b/,'public Play versionCode must not change
 assert.match(baseline,/versionName "1\.1\.188"/,'public Play versionName must not change');
 assert.match(qa,/applicationIdSuffix '\.rewardedtest'/,'same QA package identity');
 assert.match(qa,/versionCode 1000334/,'QA versionCode must increase from 8 without affecting Play');
-assert.match(qa,/versionName '1\.2\.328-qa'/);
+assert.match(qa,/versionName '1\.2\.334-qa'/);
 assert.match(wf,/actions\/cache@v4/,'CI signing key reuse, not per-run regeneration');
 assert.match(wf,/tdr-rewardedtest-debug-signing-v1/,'stable cache identity');
 assert.match(wf,/if test ! -s "\$HOME\/\.android\/debug\.keystore"/,'no signer overwrite if restored');
@@ -27,7 +27,7 @@ assert.match(wf,/test "\$apk_cert" != "\$TDR_QA_EXPECTED_SIGNER_SHA256"/,'verify
 assert.match(wf,/TDR_CI_BRIDGE_TEST: '1'/);
 assert.match(wf,/apksigner" verify --verbose --print-certs/,'APK signer verification');
 assert.match(wf,/versionCode='1000334'/,'validate installed version, not just source');
-assert.match(wf,/tdr-qa-1\.2\.328/,'deliver fresh tag, never clobber prior APK');
+assert.match(wf,/tdr-qa-1\.2\.334/,'deliver fresh tag, never clobber prior APK');
 assert.match(wf,/for version in 300 317 325 328;/,'compare published QA .325 actual certificate');
 assert.match(wf,/if test "\$version" = "325"; then[\s\S]*?versionCode='1000325'/,
   'published QA .325 must have expected previous versionCode');
@@ -39,7 +39,7 @@ assert.match(wf,/node scripts\/ghost-static-panel-zoom-smoke\.mjs/,'Ghost fixed 
 assert.match(wf,/node scripts\/session-insight-bank-smoke\.mjs/,'Tanda variety regression');
 assert.match(wf,/node scripts\/android-portable-save-smoke\.mjs/,
   'QA build must run dedicated JSON export source checks');
-assert.match(wf,/TDR-QA-DEV-1\.2\.328-REAL-ADS-SIN-MEDIR\.apk/);
+assert.match(wf,/TDR-QA-DEV-1\.2\.334-REAL-ADS-SIN-MEDIR\.apk/);
 const currentDev=code.match(/content="DEV 1\.2\.(\d+)"/);
 assert.ok(currentDev&&Number(currentDev[1])>=317,'Android QA must package consolidated DEV 1.2.317 or later; web DEV may advance independently of QA versionCode');
 console.log('PASS: public version unchanged, QA signer pinned and used explicitly, actual APK cert verified against key, fail-closed delivery.');
