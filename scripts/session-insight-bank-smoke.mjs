@@ -72,6 +72,25 @@ assert.match(script,/previousBestMs:this\._sessionPreviousPersonalBestMs/,'Previ
 assert.match(script,/language:getLanguage\(\)/,'Both languages work without DOM text replacement');
 assert.ok(!script.includes('pickVerdict('),'Old five-phrase selector must be removed');
 assert.match(script,/\$\{esc\(r\.verdict\)\}/,'Report rendering and export still use one chosen message');
+const finalReport=readFileSync('src/game/scenes/RaceExperienceExportReadingScene.js','utf8');
+assert.doesNotMatch(finalReport,/function sessionEngineerReading\(/,
+  'Later scene must not replace JSON insights with legacy fixed narrative');
+assert.match(finalReport,/const reading=String\(report\.verdict\|\|''\)\.trim\(\)/,
+  'Final report must preserve the exact catalog selection for UI and export');
+assert.match(script,/e\?\.tdrCleanLap!==false/,
+  'Unclean laps in canonical race history must not be reported as clean');
+const pilotStore=storage();
+pilotStore.setItem('tdr2:pilotProfile:v1',JSON.stringify({id:'pilot-A'}));
+buildSessionInsight(make([]),{storage:pilotStore,rng:()=>0});
+pilotStore.setItem('tdr2:pilotProfile:v1',JSON.stringify({id:'pilot-B'}));
+buildSessionInsight(make([]),{storage:pilotStore,rng:()=>0});
+assert.ok(pilotStore.getItem('tdr2:sessionInsightCycle:v1:pilot-A'));
+assert.ok(pilotStore.getItem('tdr2:sessionInsightCycle:v1:pilot-B'),
+  'Both pilots require independent persistent antirepeat cycles on one device');
+assert.notEqual(pilotStore.getItem('tdr2:sessionInsightCycle:v1:pilot-A'),
+  pilotStore.getItem('tdr2:sessionInsightCycle:v1:pilot-B')+'impossible',
+  'Pilot state is stored independently without cloud changes');
+
 const lang=readFileSync('index.html','utf8').match(/content="DEV 1\.2\.(\d+)"/);
 assert.ok(lang&&Number(lang[1])>=329,'DEV version incremented');
-console.log('PASS: 16 situations, 768 bilingual JSON phrases, telemetry guards, 24 unique repeated sessions, persisted anti-repeat, unchanged report contract');
+console.log('PASS: 16 situations, 768 bilingual JSON phrases, telemetry guards, 24 unique reports, pilot-scoped anti-repeat, JSON verdict preserved through final overlay/export');

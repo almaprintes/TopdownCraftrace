@@ -23,3 +23,7 @@ GitHub Actions Build + Deploy DEV [39589979514](https://github.com/almaprintes/T
 ## Próximos pasos
 
 Escuchar feedback real del propietario: si un tipo de comentario parece inexacto o demasiado genérico, ajustar la categoría en el JSON, sin modificar física de carrera. Se puede extender el catálogo sin cambiar la lógica de selección; si cambia el recuento por categoría, actualizar el smoke. Cualquier APK nueva requiere petición expresa del propietario.
+
+## Ajuste de integración final — DEV 1.2.330 (21/10/2026)
+
+La DEV 1.2.329 ya contenía las 768 frases del JSON y su selector, pero `RaceExperienceExportReadingScene.js`, situada más abajo en la cadena de herencia que `RaceSessionReportScene.js`, volvía a sustituir `report.verdict` mediante `sessionEngineerReading`. Esto anulaba en el juego **real** la variedad aunque las pruebas unitarias del catálogo estuvieran verdes. En DEV 1.2.330 se han retirado las viejas frases y se conserva sin alteración el veredicto construido con `buildSessionInsight` en la capa base, tanto en informe en pantalla como exportado. El smoke impide regresar a la sobrescritura, prueba el historial diferenciado por piloto y verifica que `tdrCleanLap === false` invalida una vuelta para efectos de comentarios. No se modificaron físicas, puntuaciones, premios, rankings, Supabase ni versión Android. El último APK sigue 1.2.328, sin esta corrección. Prueba física ES/EN y cambio de piloto pendiente hasta siguiente QA autorizada.

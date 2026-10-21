@@ -135,7 +135,7 @@ export class RaceScene extends CurrentRaceScene {
       n:i+1,
       lapMs:Number(e?.lapMs??e?.ms??e?.time),
       carId:e?.carId||this.carId,
-      valid:e?.valid!==false&&e?.invalid!==true
+      valid:e?.valid!==false&&e?.invalid!==true&&e?.tdrCleanLap!==false
     })).filter(x=>Number.isFinite(x.lapMs)&&x.lapMs>0);
   }
 

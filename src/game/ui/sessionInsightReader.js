@@ -2,7 +2,7 @@ import BANK from './sessionInsightBank.json' with {type:'json'};
 
 // Deliberately local to this installation; no cloud write and no new player data.
 const STORE_KEY='tdr2:sessionInsightCycle:v1';
-let ephemeral={version:1,used:{},recent:{es:[],en:[]}};
+const ephemeralByPilot=new Map();
 const num=v=>Number.isFinite(Number(v))?Number(v):0;
 const roundSec=ms=>(Math.max(0,ms)/1000).toFixed(2);
 const fmtLap=ms=>{
@@ -18,16 +18,25 @@ function getStorage(storage){
   if(storage!==undefined)return storage;
   try{return globalThis.localStorage;}catch{return null;}
 }
-function readState(storage){
+function insightStorageKey(storage){
+  // An account may change on the same phone. Keep the anti-repeat cycles
+  // separate without synchronizing user data or changing the save schema.
   try{
-    const parsed=JSON.parse(storage?.getItem(STORE_KEY)||'null');
+    const profile=JSON.parse(storage?.getItem('tdr2:pilotProfile:v1')||'null');
+    const pilotId=String(profile?.id||'').trim().slice(0,72);
+    return pilotId?STORE_KEY+':'+encodeURIComponent(pilotId):STORE_KEY;
+  }catch{return STORE_KEY;}
+}
+function readState(storage,key){
+  try{
+    const parsed=JSON.parse(storage?.getItem(key)||'null');
     if(parsed?.version===1&&parsed.used&&parsed.recent&&typeof parsed.used==='object')return parsed;
   }catch{}
-  return ephemeral;
+  return ephemeralByPilot.get(key)||createState();
 }
-function writeState(storage,state){
-  ephemeral=state;
-  try{storage?.setItem(STORE_KEY,JSON.stringify(state));}catch{}
+function writeState(storage,key,state){
+  ephemeralByPilot.set(key,state);
+  try{storage?.setItem(key,JSON.stringify(state));}catch{}
 }
 function chooseFocus(options,recent){
   const ranked=[...options].sort((a,b)=>b.weight-a.weight);
@@ -118,7 +127,8 @@ export function buildSessionInsight(report,{language='es',previousBestMs=null,st
     add('neutral',28,true);
   }
   const resolvedStore=getStorage(storage);
-  const state=readState(resolvedStore);
+  const storageKey=insightStorageKey(resolvedStore);
+  const state=readState(resolvedStore,storageKey);
   const recent=Array.isArray(state.recent?.[lang])?state.recent[lang]:[];
   const focus=chooseFocus(candidates,recent.map(x=>x.focus));
   const phrases=BANK.categories[focus]?.[lang]||BANK.categories.neutral[lang];
@@ -126,6 +136,6 @@ export function buildSessionInsight(report,{language='es',previousBestMs=null,st
   const index=chooseUnused(phrases,state,key,recent,rng);
   if(!state.recent||typeof state.recent!=='object')state.recent={es:[],en:[]};
   state.recent[lang]=[{focus,id:key,index},...recent].slice(0,6);
-  writeState(resolvedStore,state);
+  writeState(resolvedStore,storageKey,state);
   return textFor(phrases[index],params);
 }
