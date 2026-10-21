@@ -63,7 +63,7 @@ const quickHandlerStart=ui.indexOf("quickExport.addEventListener('click'");
 const quickHandler=ui.slice(quickHandlerStart,
   ui.indexOf("root.querySelector('[data-action=\"backup-manual\"]')",quickHandlerStart));
 assert.doesNotMatch(quickHandler,/restoreCloudBackup|restoreLocalProgress|localStorage\.clear/,
-  'quick export must never restore or erase the player's data');
+  "quick export must never restore or erase the player data");
 assert.doesNotMatch(portable,/localStorage\.clear\(/,'download cannot erase progress');
 
 assert.match(qa,/TDR_CI_QA_STABLE_SIGNING/,'existing QA signer preserved');
