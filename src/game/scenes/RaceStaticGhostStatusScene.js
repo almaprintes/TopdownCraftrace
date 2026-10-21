@@ -76,7 +76,7 @@ export class RaceScene extends CurrentRaceScene {
       this._ensureStaticGhostPanel();
       this._tdrGhostPanelPostUpdate = () => this._syncStaticGhostPanel();
       this.events?.on?.('postupdate', this._tdrGhostPanelPostUpdate, this);
-      this._syncStaticGhostPanel();
+      this._syncStaticGhostPanel(true);
       this.time?.delayedCall?.(0, () => this._syncStaticGhostPanel(true));
       this.time?.delayedCall?.(120, () => this._syncStaticGhostPanel(true));
       this.time?.delayedCall?.(500, () => this._syncStaticGhostPanel(true));
