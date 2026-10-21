@@ -1,5 +1,5 @@
 name: TDR real AdMob RevenueCat minified QA APK
-# QA DEV 1.2.325: all inverses + restored collisions + readable Race Control; keep QA signing; never Play.
+# QA DEV 1.2.328: Android native JSON export + Atlantico Inverso fix, full approved game; never Play.
 # DEV 1.2.216: include corrected Karting staging in all main Android checks.
 
 on:
@@ -126,7 +126,7 @@ jobs:
           set -euo pipefail
           mkdir -p prior-apks
           echo '### Certificados APK QA existentes vs nueva cadena' >> "$GITHUB_STEP_SUMMARY"
-          for version in 300 317; do
+          for version in 300 317 325; do
             apk="TDR-QA-DEV-1.2.${version}-REAL-ADS-SIN-MEDIR.apk"
             gh release download "tdr-qa-1.2.${version}" --repo "$GITHUB_REPOSITORY" --pattern "$apk" --dir prior-apks
             path="prior-apks/$apk"
@@ -146,6 +146,14 @@ jobs:
                 exit 1
               fi
             fi
+            if test "$version" = "325"; then
+              printf '%s\n' "$badging" | grep -Fq "versionCode='1000325'"
+              if test "$cert" != "$TDR_QA_EXPECTED_SIGNER_SHA256"; then
+                echo "::error::Installed QA .325 signer differs from new .328. Do NOT uninstall; refusing incompatible update."
+                exit 1
+              fi
+              echo '- La .325 y la nueva .328 comparten certificado: actualización in situ compatible por firma y versionCode.' >> "$GITHUB_STEP_SUMMARY"
+            fi
             if test "$version" = "300"; then
               if test "$cert" = "$TDR_QA_EXPECTED_SIGNER_SHA256"; then
                 echo 'can_upgrade_300=true' >> "$GITHUB_OUTPUT"
@@ -157,7 +165,7 @@ jobs:
               fi
             fi
           done
-          echo "- **Nuevo firmante .318 esperado**: \u0060$TDR_QA_EXPECTED_SIGNER_SHA256\u0060" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Nuevo firmante .328 esperado**: \u0060$TDR_QA_EXPECTED_SIGNER_SHA256\u0060" >> "$GITHUB_STEP_SUMMARY"
       - name: Build Android web payload with approved launcher
         shell: bash
         run: |
@@ -174,6 +182,7 @@ jobs:
           node scripts/release-language-audit.mjs
           node scripts/lobby-reward-ready-glow-smoke.mjs
           node scripts/cloud-portability-smoke.mjs
+          node scripts/android-portable-save-smoke.mjs
           npm run build:android
           # The physical Android QA app MUST contain the latest inverse route,
           # original Environment Studio colliders and complete Race Control UI.
@@ -195,7 +204,7 @@ jobs:
           src='android/app/build/outputs/apk/deviceTest/release/app-deviceTest-release.apk'
           test -s "$src"
           unzip -t "$src" | tail -1
-          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000325'"
+          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000328'"
           apk_sign_report="$("${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$src")"
           printf '%s\n' "$apk_sign_report" | grep -E 'Verified using|Signer #1 certificate SHA-256'
           apk_cert="$(printf '%s\n' "$apk_sign_report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1 | tr '[:upper:]' '[:lower:]')"
@@ -204,14 +213,14 @@ jobs:
             exit 1
           fi
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR.apk
-          sha256sum sdk-download/TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR.apk
+          cp "$src" sdk-download/TDR-QA-DEV-1.2.328-REAL-ADS-SIN-MEDIR.apk
+          sha256sum sdk-download/TDR-QA-DEV-1.2.328-REAL-ADS-SIN-MEDIR.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR
-          path: sdk-download/TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR.apk
+          name: TDR-QA-DEV-1.2.328-REAL-ADS-SIN-MEDIR
+          path: sdk-download/TDR-QA-DEV-1.2.328-REAL-ADS-SIN-MEDIR.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
@@ -222,23 +231,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apk='sdk-download/TDR-QA-DEV-1.2.325-REAL-ADS-SIN-MEDIR.apk'
-          tag='tdr-qa-1.2.325'
+          apk='sdk-download/TDR-QA-DEV-1.2.328-REAL-ADS-SIN-MEDIR.apk'
+          tag='tdr-qa-1.2.328'
           cat > qa-release-notes.md <<EOF
-          APK Android QA DEV 1.2.325 (main), versión web DEV 1.2.325, AdMob y RevenueCat reales. Incluye las últimas correcciones: circuitos Normal/Inverso con salidas/checkpoints propios, colisiones de Environment Studio compartidas con sus circuitos originales, rankings/identidades separados, pausa larga corregida y Race Control con nombres completos sin recortar el panel central. Conserva Arafo-Los Loros RALLY 1.0 y correcciones de inducción, Gripline y Supabase previas. Diagnóstico habitual oculto; no altera físicas iPhone. Paquete de pruebas com.craftracestudio.topdownrace.rewardedtest; versionCode 1000325. NO es APK Play ni se publica en Google Play.
+          APK Android QA DEV 1.2.328 (main), web DEV 1.2.328, AdMob y RevenueCat reales. Para probar DESCARGAR COPIA JSON de Supabase por selector nativo Android (TdrPortableSavePlugin) y cancelación sin modificar partida. Incluye corrección Atlántico Inverso .326 (escala física 0.70), circuitos Normal/Inverso con colisiones originales, Race Control legible y rankings/identidad diferenciados. Preserva Arafo-Los Loros RALLY 1.0, inducción, Cuper y resto de juego. Sin herramientas DEV experimentales; MEDIR de soporte sigue oculto. Paquete com.craftracestudio.topdownrace.rewardedtest, versionCode 1000328. NO es APK Play ni se publica en Google Play.
 
           CERTIFICADOS REALES AUDITADOS:
           - .300: ${{ steps.legacy_signers.outputs.cert_300 }}
           - .317: ${{ steps.legacy_signers.outputs.cert_317 }}
-          - .318: $TDR_QA_EXPECTED_SIGNER_SHA256
+          - .325: ${{ steps.legacy_signers.outputs.cert_325 }}\n          - .328: $TDR_QA_EXPECTED_SIGNER_SHA256
           - ¿Puede actualizar .300 con esta firma?: ${{ steps.legacy_signers.outputs.can_upgrade_300 }}
 
-          AVISO SOBRE DATOS: si los certificados son distintos, Android no permite actualizar sobre la .300. NO desinstalar la .300, NO borrar datos y NO forzar sustitución. En Ajustes > Cuenta descargar copia local y confirmar la recuperación desde nube antes de cualquier desinstalación. Esta APK inaugura una cadena futura de firma QA explícita y verificada, sujeta a conservar la clave; la caché CI no es respaldo permanente. Una build satisfactoria no sustituye una prueba física de actualización.
+          AVISO SOBRE DATOS: la .325 y .328 deben tener mismo paquete, certificado real y versionCode creciente; instalación de actualización sin desinstalar. Si Android pide desinstalar o dice incompatible, CANCELAR e informar; nunca borrar datos. Copia online no equivale a archivo local: probar Descargas/JSON no vacío, cancelación y exportación local; NO restaurar sobre la partida vigente. No prometer conservación sin prueba física. La caché de firma CI no sustituye un backup permanente.
           EOF
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$apk" --clobber
           else
             gh release create "$tag" "$apk" --target "$GITHUB_SHA" --prerelease \
-              --title 'Top Down Race · APK de prueba DEV 1.2.325' \
+              --title 'Top Down Race · APK de prueba DEV 1.2.328' \
               --notes-file qa-release-notes.md
           fi
