@@ -67,7 +67,10 @@ export class RaceScene extends CurrentRaceScene {
     const pbCompatibility=oldPb?ghostReplayCompatibility(oldPb,key,this.track):null;
     const replayCompatibility=currentReplay?ghostReplayCompatibility(currentReplay,key,this.track):null;
     const onlineCompatibility=onlineGhost?ghostReplayCompatibility(onlineGhost,key,this.track):null;
-    this._tdrGhostGeometryIncompatible=Boolean(oldPb&&!pbCompatibility?.compatible);
+    this._tdrGhostGeometryIncompatible=Boolean(oldPb&&!pbCompatibility?.compatible)||
+      (!oldPb&&key.startsWith('circuito-atlantico')&&
+        Math.abs(Number(this.track?.meta?.imageNative?.worldScale)-.70)<.0001&&
+        Number(this.ttBest?.lapMs)>1000);
     // Do not substitute local PB samples when an online rival was requested.
     if(onlineChallenge){
       this._ghostData=onlineCompatibility?.compatible?onlineGhost:null;
@@ -167,7 +170,7 @@ export class RaceScene extends CurrentRaceScene {
     const isOfficialNewPb = valid
       && Number.isFinite(officialBestMs)
       && Math.abs(lapMs - officialBestMs) <= 1
-      && (!Number.isFinite(previousBestMs) || officialBestMs < previousBestMs - 0.5);
+      && (!(previousBestMs > 1000) || officialBestMs < previousBestMs - 0.5);
 
     // If the retired road held the official PB, a new-format ghost must be
     // recordable without having to BEAT the historical time. Keep it under a
