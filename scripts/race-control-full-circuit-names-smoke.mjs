@@ -17,12 +17,20 @@ assert.match(ui,/aria-pressed="\$\{r\.trackId===selected\.trackId\?'true':'false
 assert.match(ui,/data-br-track="\$\{esc\(r\.trackId\)\}"/,
   'record selection must preserve its exact normal/inverse identity');
 
-assert.match(compact,/grid-template-areas:'number name name' 'number metadata best'/,
-  'the name must span the entire right-hand width of the list row');
+assert.match(compact,/grid-template-areas:'number name' 'number metadata' 'number best'/,
+  'name, metadata and PB must have their own ROWS, never compete horizontally');
 assert.match(compact,/\.br-grid\.br-grid-online \.br-circuit \.br-circuit-name\{[^}]*white-space:normal!important;overflow:visible!important;text-overflow:clip!important/,
   'compact CSS must override its old ellipsis rule for real circuit names');
-assert.match(compact,/grid-template-columns:clamp\(246px,29vw,345px\) minmax\(0,1fr\)!important/,
-  'wider navigation should keep the right-side board responsive');
+assert.match(compact,/\.br-grid\.br-grid-online\{grid-template-columns:210px minmax\(0,1fr\)!important/,
+  'restore the original 210px sidebar and preserve the central main panel');
+assert.match(compact,/@media\(max-width:1100px\)\{\.br-grid\.br-grid-online\{grid-template-columns:190px minmax\(0,1fr\)!important/,
+  'preserve even MORE central width on narrow landscape displays');
+assert.doesNotMatch(compact,/grid-template-columns:clamp\(246px,29vw,345px\)/,
+  'never expand navigation to 29vw and crop the central ranking/record');
+assert.match(compact,/\.br-grid\.br-grid-online \.br-hero-head>div:first-child\{flex:1 1 0;min-width:0\}/,
+  'central heading wraps instead of forcing the PB off-screen');
+assert.match(compact,/\.br-grid\.br-grid-online \.br-pb\{flex:0 0 auto;max-width:48%;padding-right:0\}/,
+  'central personal best has reserved visible width');
 assert.match(compact,/@media\(max-width:950px\)/,'small landscape layouts need a fallback');
 assert.match(compact,/\.br-circuit\.active \.br-circuit-name/,'selected row stays visibly highlighted');
 assert.ok(!ui.includes('trackName(r.trackId,lang).slice('),
