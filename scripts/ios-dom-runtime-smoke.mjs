@@ -24,6 +24,11 @@ assert.match(delta,/fireOriginalPause\(\)/);
 assert.match(delta,/if\(panel\.dataset\.tdrUserDeltaEnabled!==flag\)/);
 assert.match(ghost,/const setText=\(node,value\)=>\{if\(node&&node\.textContent!==value\)node\.textContent=value;\}/);
 assert.match(ghost,/const now=performance\.now\(\)/);
-assert.match(ghost,/this\._tdrGhostPanelNextRefresh=now\+\(this\._tdrGhostPanelAnchor\?120:350\)/);
+assert.match(ghost,/this\\._tdrGhostPanelNextRefresh=now\\+120/,
+  'Ghost status updates no more often than every 120 ms without scanning Phaser labels');
+assert.ok(!ghost.includes('_tdrGhostPanelAnchor')&&!ghost.includes('flattenScene('),
+  'The Ghost DOM panel must be anchored independently of camera-sensitive Phaser objects');
+assert.match(ghost,/this\\._syncStaticGhostPanel\\(true\\)/,
+  'Position the fixed Ghost panel on first frame and viewport changes');
 assert.match(ghost,/if\(recordRow\.style\.opacity!==opacity\)/);
 console.log('PASS: DELTA/PAUSA has no perpetual DOM rAF or style-feedback observer; Ghost avoids repeated writes');
