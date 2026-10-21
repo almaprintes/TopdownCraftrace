@@ -1,4 +1,5 @@
 name: Build Google Play update versionCode 9 AAB (do not publish)
+# Rerun: corrected independent version parsing in cold-entry test.
 # DEV 1.2.334: version-independent circuit initialization regression.
 # No Play publishing action. Original upload keystore required for an uploadable AAB.
 on:
