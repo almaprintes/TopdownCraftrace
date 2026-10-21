@@ -1,4 +1,5 @@
 import {sessionPersonalBest,localRecordGhost,fmtPersonalBest,RECORD_PUBLISH_DISCLOSURE} from './sessionPersonalBestPublish.js';
+import {ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
 import {encodeOnlineGhostNative,encodeOnlineGhostNativeBinary} from '../online/onlineGhostCodec.js';
 import {submitRaceControlRecordWithGhost,getRaceControlSnapshot} from '../online/raceControlOnline.js';
 import {saveCloudSnapshot} from '../stats/localRaceRecords.js';
@@ -78,6 +79,8 @@ export function mountNewPersonalBestOffer(scene,root,report){
       // watching an ad. No stale ghost is ever sent with a newer lap.
       const ghost=localRecordGhost(trackId,carId,best.lapMs);
       if(!ghost)throw new Error('No se ha podido recuperar la repetición exacta de esta vuelta. No se ha mostrado publicidad.');
+      if(!ghostReplayCompatibility(ghost,trackId,scene?.track).compatible)
+        throw new Error('El fantasma pertenece a un trazado anterior. Tu récord se conserva y no se ha mostrado publicidad.');
       const packet=encodeOnlineGhostNative(ghost);
       const bytes=encodeOnlineGhostNativeBinary(packet);
       if(packet.p.length<2||packet.p.length>20000||bytes.byteLength>131072)

@@ -147,7 +147,12 @@ export class RaceScene extends CurrentRaceScene{
       .setTint(0x79eaff)
       .setBlendMode('ADD');
 
-    g.setScale(Number(visual.scaleX||1),Number(visual.scaleY||1));
+    // Raw texture sizes differ per vehicle. Copy the player car's WORLD
+    // footprint, not its raw scale factors, or another car's ghost looks huge.
+    const footprintW=Number(visual.displayWidth)||Number(visual.width||0)*Math.abs(Number(visual.scaleX||1));
+    const footprintH=Number(visual.displayHeight)||Number(visual.height||0)*Math.abs(Number(visual.scaleY||1));
+    if(footprintW>0&&footprintH>0)g.setDisplaySize(footprintW,footprintH);
+    else g.setScale(Number(visual.scaleX||1),Number(visual.scaleY||1));
     g.setDepth(Math.max(31,Number(this.carRig?.depth||30)+1));
     this._ghostSprite=g;
     this._ghostTextureKey=tex;
@@ -164,7 +169,12 @@ export class RaceScene extends CurrentRaceScene{
     const visual=visualCarSprite(this);
     if(visual){
       try{this._ghostSprite.setOrigin(visual.originX??.5,visual.originY??.5);}catch{}
-      try{this._ghostSprite.setScale(Number(visual.scaleX||1),Number(visual.scaleY||1));}catch{}
+      // The ghost may have a different source texture resolution; enforce
+      // identical in-world footprint in both the initial and refreshed frame.
+      try{
+        const w=Number(visual.displayWidth),h=Number(visual.displayHeight);
+        if(w>0&&h>0)this._ghostSprite.setDisplaySize(w,h);
+      }catch{}
     }
     if(this._replayActive){
       this._ghostSprite.clearTint?.();
