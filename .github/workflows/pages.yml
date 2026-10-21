@@ -110,6 +110,7 @@ jobs:
           node scripts/cuper-workshop-skin-smoke.mjs
           node scripts/cuper-cards-and-views-smoke.mjs
           node scripts/race-control-cuper-art-smoke.mjs
+          node scripts/race-control-full-circuit-names-smoke.mjs
           node scripts/vehicle-lights-calibration-smoke.mjs
           node scripts/lobby-race-departure-smoke.mjs
           node scripts/lobby-garage-lift-smoke.mjs
