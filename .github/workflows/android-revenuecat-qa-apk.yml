@@ -195,6 +195,7 @@ jobs:
           node scripts/android-portable-save-smoke.mjs
           node scripts/environment-first-entry-isolation-smoke.mjs
           node scripts/ghost-static-panel-zoom-smoke.mjs
+          node scripts/ghost-atlantico-world-version-smoke.mjs
           node scripts/session-insight-bank-smoke.mjs
           npm run build:android
           # The physical Android QA app MUST contain the latest inverse route,
