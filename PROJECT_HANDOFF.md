@@ -1,5 +1,7 @@
 # TopdownCraftrace — PROJECT HANDOFF
 
+> **CONTINUIDAD MÁS RECIENTE (21/10/2026):** antes de continuar, leer **[docs/continuity/2026-10-21-android-json-cloud-export-handoff.md](docs/continuity/2026-10-21-android-json-cloud-export-handoff.md)**. DEV web **1.2.327** publicada (Actions 39561387185 verde). Copia remota creada, pero la descarga JSON **no funcionaba en Android .325**: la corrección del guardado nativo está **solo en fuente .327 y todavía NO compilada/probada en APK**. La última APK QA verificada sigue siendo **1.2.325**. No desinstalar sin copia local/online y recuperación verificadas; no publicar Play.
+
 > **RESUMEN CANÓNICO A 20/10/2026 PARA NUEVO CHAT:** leer **[docs/continuity/2026-10-20-handoff-general.md](docs/continuity/2026-10-20-handoff-general.md)** junto con este historial. A continuación se conserva la cronología detallada por DEV; las notas más antiguas son históricas. **Última APK QA .317 NO quedó cubierta por el parche posterior de firma.**
 
 ## Android QA — Firma verificada y protección anti-APK incompatible (20/10/2026)
