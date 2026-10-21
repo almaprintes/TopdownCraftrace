@@ -51,6 +51,9 @@ jobs:
           npm ci --no-audit --no-fund
           node scripts/android-portable-save-smoke.mjs
           test -d node_modules/@capacitor/android
+          # The repo intentionally does not version Capacitor's generated
+          # cordova.variables.gradle / plugin registry. Regenerate them first.
+          npx cap update android
           # Native Java compilation only needs Capacitor dependencies and a
           # minimal local index for verifyAndroidAssetPaths; no game build.
           mkdir -p android/app/src/main/assets/public
