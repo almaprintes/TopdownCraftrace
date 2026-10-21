@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceStaticMinimapScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import { ghostPanelViewportRect } from '../ui/ghostPanelViewport.js';
 
 const PANEL_W = 282;
 const ROW_H = 30;
@@ -7,66 +8,6 @@ const PANEL_H = ROW_H * 3;
 const GHOST_BASE_ALPHA = 0.48;
 const GHOST_VISIBILITY_LEVELS = [1, 0.75, 0.5, 0.25];
 const PB_GHOST_PREFIX = 'tdr2:ghostPb:';
-
-function normalized(value) {
-  return String(value || '').replace(/\s+/g, ' ').trim().toUpperCase();
-}
-
-function flattenScene(scene) {
-  const out = [];
-  const seen = new Set();
-  const visit = (obj) => {
-    if (!obj || seen.has(obj)) return;
-    seen.add(obj);
-    out.push(obj);
-    if (Array.isArray(obj.list)) for (const child of obj.list) visit(child);
-  };
-  for (const child of scene.children?.list || []) visit(child);
-  return out;
-}
-
-function isGhostLabel(obj) {
-  if (typeof obj?.text !== 'string') return false;
-  const text = normalized(obj.text);
-  return text.includes('FANTASMA') || text.includes('GHOST');
-}
-
-function isRecordLoadedLabel(obj) {
-  if (typeof obj?.text !== 'string') return false;
-  const text = normalized(obj.text);
-  // The second Ghost HUD row is stateful. Historically this finder only matched
-  // "RÉCORD CARGADO", so ONLINE and "CREA TU PRIMERA VUELTA" never activated the
-  // static DOM replacement; the moving Phaser rectangles remained visible.
-  return (
-    ((text.includes('RÉCORD') || text.includes('RECORD')) && (text.includes('CARGADO') || text.includes('LOADED'))) ||
-    text.includes('CREA TU PRIMERA VUELTA') ||
-    text.includes('CREATE YOUR FIRST LAP') ||
-    text.includes('ONLINE') ||
-    text.includes('DATOS NO VÁLIDOS') ||
-    text.includes('INVALID DATA') ||
-    text.includes('SIGUIENTE VUELTA') ||
-    text.includes('NEXT LAP') ||
-    text.includes('RÉCORD MEJORADO') ||
-    text.includes('RECORD IMPROVED')
-  );
-}
-
-function objectPoint(obj) {
-  try {
-    const matrix = obj?.getWorldTransformMatrix?.();
-    if (matrix?.transformPoint) {
-      const p = matrix.transformPoint(0, 0, {});
-      if (Number.isFinite(p?.x) && Number.isFinite(p?.y)) return { x: Number(p.x), y: Number(p.y) };
-    }
-  } catch (_) {}
-  const x = Number(obj?.x), y = Number(obj?.y);
-  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null;
-}
-
-function hidePhaserObject(obj) {
-  try { obj?.setVisible?.(false); } catch (_) {}
-  try { obj?.setAlpha?.(0); } catch (_) {}
-}
 
 function fmtPb(ms) {
   const value = Number(ms);
@@ -124,19 +65,22 @@ export class RaceScene extends CurrentRaceScene {
       try { this.ensureCarSkinTexture?.(CAR_SPECS[ghostCarId]); } catch (_) {}
     }
 
-    this._tdrGhostPanelAnchor = null;
-    this._tdrGhostPanelObjects = new Set();
     this._tdrGhostPanelLabels = null;
     this._tdrGhostPanelRows = null;
-    this._tdrGhostPanelProbeUntil = performance.now() + 5000;
     this._tdrGhostVisibleEnabled = true;
     this._tdrGhostVisibilityIndex = 0;
 
-    this._tdrGhostPanelPostUpdate = () => this._syncStaticGhostPanel();
-    this.events?.on?.('postupdate', this._tdrGhostPanelPostUpdate, this);
-    this.time?.delayedCall?.(0, () => this._syncStaticGhostPanel());
-    this.time?.delayedCall?.(120, () => this._syncStaticGhostPanel());
-    this.time?.delayedCall?.(500, () => this._syncStaticGhostPanel());
+    // The DOM panel exists from the start, including after the first/new PB,
+    // when legacy Phaser labels change text. Its layout never samples camera zoom.
+    if(this._tdrGameMode==='ghost'){
+      this._ensureStaticGhostPanel();
+      this._tdrGhostPanelPostUpdate = () => this._syncStaticGhostPanel();
+      this.events?.on?.('postupdate', this._tdrGhostPanelPostUpdate, this);
+      this._syncStaticGhostPanel();
+      this.time?.delayedCall?.(0, () => this._syncStaticGhostPanel(true));
+      this.time?.delayedCall?.(120, () => this._syncStaticGhostPanel(true));
+      this.time?.delayedCall?.(500, () => this._syncStaticGhostPanel(true));
+    }
 
     this.events?.once?.('shutdown', () => {
       try { this.events?.off?.('postupdate', this._tdrGhostPanelPostUpdate, this); } catch (_) {}
@@ -147,7 +91,7 @@ export class RaceScene extends CurrentRaceScene {
       this._tdrGhostPanelPostUpdate = null;
       this._tdrGhostPanelResize = null;
       this._tdrGhostPanelRows = null;
-      this._tdrGhostPanelObjects?.clear?.();
+      this._tdrGhostPanelNextRefresh = 0;
     });
 
     return result;
@@ -251,39 +195,20 @@ export class RaceScene extends CurrentRaceScene {
     this._ghostLastSamplePerf = 0;
   }
 
-  _findGhostPanelObjects() {
-    const flat = flattenScene(this);
-    const ghost = flat.find(isGhostLabel);
-    const record = flat.find(isRecordLoadedLabel);
-    if (!ghost || !record) return null;
+  _createGhostHud() {
+    // Keep base Ghost state/record hooks, but never render camera-sensitive
+    // Phaser controls. This runs exactly when the base scene creates them.
+    super._createGhostHud();
+    this._hideLegacyGhostHud();
+    this._layoutStaticGhostPanel();
+  }
 
-    const gp = objectPoint(ghost), rp = objectPoint(record);
-    if (!gp || !rp) return null;
-    const centerX = Number.isFinite(rp.x) ? rp.x : gp.x;
-    const topY = Math.min(gp.y, rp.y) - ROW_H * 0.55;
-    const panel = { left: centerX - PANEL_W * 0.5, top: topY, right: centerX + PANEL_W * 0.5, bottom: topY + PANEL_H };
-
-    const owned = [];
-    for (const obj of flat) {
-      if (!obj?.scene) continue;
-      const isText = typeof obj.text === 'string';
-      let bounds = null;
-      try { bounds = obj.getBounds?.(); } catch (_) {}
-      const p = objectPoint(obj);
-      const cx = Number(bounds?.centerX ?? p?.x), cy = Number(bounds?.centerY ?? p?.y);
-      if (!Number.isFinite(cx) || !Number.isFinite(cy)) continue;
-      if (cx < panel.left - 12 || cx > panel.right + 12 || cy < panel.top - 10 || cy > panel.bottom + 10) continue;
-      const type = String(obj.type || obj.constructor?.name || '').toLowerCase();
-      const panelShape = type.includes('rectangle') || type.includes('graphics') || type.includes('text') || type.includes('container');
-      if (!panelShape) continue;
-      if (isText && obj !== ghost && obj !== record) {
-        const t = normalized(obj.text);
-        if (t && !t.includes('FANTASMA') && !t.includes('GHOST') && !t.includes('RÉCORD') && !t.includes('RECORD') && !t.includes('REPETICIÓN') && !t.includes('REPLAY')) continue;
-      }
-      owned.push(obj);
-    }
-
-    return { ghost, record, gp, rp, centerX, topY, owned };
+  _hideLegacyGhostHud() {
+    const old=[this._ghostTopBg,this._ghostSubBg,this._ghostHud,this._ghostSubHud].filter(Boolean);
+    for(const obj of old)try{obj.setVisible(false);}catch{}
+    // Do not let the zooming WORLD camera draw any of these elements,
+    // even if a later label refresh or plugin toggles visibility.
+    if(old.length)try{this.cameras?.main?.ignore?.(old);}catch{}
   }
 
   _makeGhostPanelText(topPercent, value, color = '#f7fbff') {
@@ -313,7 +238,7 @@ export class RaceScene extends CurrentRaceScene {
     row.addEventListener('pointerdown', activate);
   }
 
-  _ensureStaticGhostPanel(found) {
+  _ensureStaticGhostPanel() {
     if (typeof document === 'undefined') return null;
     if (this._tdrStaticGhostPanel?.isConnected) return this._tdrStaticGhostPanel;
 
@@ -350,7 +275,9 @@ export class RaceScene extends CurrentRaceScene {
     visibilityText.dataset.visibility = '1';
 
     root.append(ghostText, recordText, visibilityText);
-    (this.game?.canvas?.parentElement || document.body).appendChild(root);
+    // Canvas parents can be transformed by mobile viewport/layout code;
+    // fixed positioning under such parents drifts with the canvas.
+    document.body.appendChild(root);
     this._tdrStaticGhostPanel = root;
     this._tdrGhostPanelLabels = { ghostText, recordText, visibilityText };
     this._tdrGhostPanelRows = rows;
@@ -364,6 +291,7 @@ export class RaceScene extends CurrentRaceScene {
     this._wireGhostPanelRow(rows[1], () => {
       if ((!this._onlineGhostChallenge && !this._isGhostCurrentPersonalBest()) || this._replayActive || typeof this._enterReplay !== 'function') return;
       this._enterReplay();
+      if(this._tdrStaticGhostPanel)this._tdrStaticGhostPanel.style.display='none';
     });
     this._wireGhostPanelRow(rows[2], () => {
       this._tdrGhostVisibilityIndex = (Number(this._tdrGhostVisibilityIndex || 0) + 1) % GHOST_VISIBILITY_LEVELS.length;
@@ -378,23 +306,26 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _layoutStaticGhostPanel() {
-    const root = this._tdrStaticGhostPanel;
-    const anchor = this._tdrGhostPanelAnchor;
-    const canvas = this.game?.canvas;
-    if (!root?.isConnected || !anchor || !canvas) return;
-    const rect = canvas.getBoundingClientRect?.();
-    const vw = Math.max(1, Number(this.scale?.width || 1));
-    const vh = Math.max(1, Number(this.scale?.height || 1));
-    if (!rect || rect.width <= 0 || rect.height <= 0) return;
-
-    root.style.left = `${rect.left + (anchor.left / vw) * rect.width}px`;
-    root.style.top = `${rect.top + (anchor.top / vh) * rect.height}px`;
-    root.style.width = `${(PANEL_W / vw) * rect.width}px`;
-    root.style.height = `${(PANEL_H / vh) * rect.height}px`;
-    const scale = rect.width / vw;
-    const fontPx = Math.max(9, Math.min(15, 12 * scale));
-    for (const label of Object.values(this._tdrGhostPanelLabels || {})) {
-      if (label) label.style.fontSize = `${fontPx}px`;
+    const root=this._tdrStaticGhostPanel;
+    const canvas=this.game?.canvas;
+    if(!root?.isConnected||!canvas)return;
+    const rect=canvas.getBoundingClientRect?.();
+    const layout=this._ghostControlsLayout?.();
+    const next=ghostPanelViewportRect({
+      canvasRect:rect,
+      viewportWidth:this.scale?.width,
+      viewportHeight:this.scale?.height,
+      ghostLayout:layout,
+      panelWidth:PANEL_W,
+      panelHeight:PANEL_H
+    });
+    if(!next)return;
+    for(const property of ['left','top','width','height']){
+      const value=`${next[property]}px`;
+      if(root.style[property]!==value)root.style[property]=value;
+    }
+    for(const label of Object.values(this._tdrGhostPanelLabels||{})){
+      if(label&&label.style.fontSize!==`${next.fontPx}px`)label.style.fontSize=`${next.fontPx}px`;
     }
   }
 
@@ -433,41 +364,21 @@ export class RaceScene extends CurrentRaceScene {
     }
   }
 
-  _syncStaticGhostPanel() {
-    // POST_UPDATE is dispatched every frame; status text and anchor probes
-    // do not need that rate. Manual Ghost taps still refresh immediately.
+  _syncStaticGhostPanel(forceLayout=false) {
+    if(this._tdrGameMode!=='ghost')return;
     const now=performance.now();
-    const next=Number(this._tdrGhostPanelNextRefresh||0);
-    if(now<next)return;
-    this._tdrGhostPanelNextRefresh=now+(this._tdrGhostPanelAnchor?120:350);
-    let found = null;
-    if (!this._tdrGhostPanelAnchor || performance.now() < Number(this._tdrGhostPanelProbeUntil || 0)) {
-      found = this._findGhostPanelObjects();
-      if (found) {
-        // The legacy Phaser panel is camera-sensitive: dynamic race zoom moves its
-        // rectangles while fixed HUD text stays put. Use it only once to discover
-        // which objects belong to the panel, but anchor the DOM panel to viewport
-        // coordinates so zoom can never move the clickable rows.
-        if (!this._tdrGhostPanelAnchor) this._tdrGhostPanelAnchor = { left: found.centerX - PANEL_W * 0.5, top: found.topY };
-        for (const obj of found.owned) this._tdrGhostPanelObjects.add(obj);
-        this._ensureStaticGhostPanel(found);
-        this._layoutStaticGhostPanel();
-      }
-    }
-
-    for (const obj of this._tdrGhostPanelObjects || []) {
-      if(obj?.visible!==false||Number(obj?.alpha||0)!==0)hidePhaserObject(obj);
-    }
+    if(!forceLayout&&now<Number(this._tdrGhostPanelNextRefresh||0))return;
+    this._tdrGhostPanelNextRefresh=now+120;
+    this._hideLegacyGhostHud();
     this._applyGhostPanelPreference();
     this._refreshStaticGhostPanelLabels();
+    if(forceLayout)this._layoutStaticGhostPanel();
+    const root=this._tdrStaticGhostPanel;
+    if(!root?.isConnected)return;
+    const active=!!this.sys?.isActive?.();
+    root.style.display=active&&!this._sessionReportOpen&&!this._replayActive?'block':'none';
+  }
 
-    const root = this._tdrStaticGhostPanel;
-    if (!root?.isConnected) return;
-    const active = !!this.sys?.isActive?.();
-    const hiddenByReport = !!this._sessionReportOpen;
-    const hiddenByReplay = !!this._replayActive;
-    root.style.display = active && !hiddenByReport && !hiddenByReplay ? 'block' : 'none';
-    }
 }
 
 // DEV 1.1.145 validation trigger: active static Ghost layer preserves online rival and its stable DOM controls.
