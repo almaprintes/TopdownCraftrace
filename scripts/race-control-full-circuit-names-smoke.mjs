@@ -31,7 +31,7 @@ assert.match(compact,/\.br-grid\.br-grid-online \.br-hero-head>div:first-child\{
   'central heading wraps instead of forcing the PB off-screen');
 assert.match(compact,/\.br-grid\.br-grid-online \.br-pb\{flex:0 0 auto;max-width:48%;padding-right:0\}/,
   'central personal best has reserved visible width');
-assert.match(compact,/@media\(max-width:950px\)/,'small landscape layouts need a fallback');
+assert.match(compact,/@media\(max-width:620px\)/,'small landscape layouts need a fallback');
 assert.match(compact,/\.br-circuit\.active \.br-circuit-name/,'selected row stays visibly highlighted');
 assert.ok(!ui.includes('trackName(r.trackId,lang).slice('),
   'names must never be cut in JavaScript');
@@ -45,4 +45,4 @@ for(const [id,name] of [
 ]) assert.ok(names.includes("'"+id+"':'"+name+"'"),'public label must remain complete: '+id);
 assert.match(gameModes,/selectedCircuitRaceId\(trackKey,localStorage\)/,
   'navigation only changes layout, not timing or race direction');
-console.log('PASS: Race Control circuit list exposes full Normal/Inverso names, independent metadata and best laps, accessible selected row and narrow-screen styling.');
+console.log('PASS: Race Control restores narrow navigation, full Normal/Inverso names and readable CENTRAL panel/PB without clipping.');
