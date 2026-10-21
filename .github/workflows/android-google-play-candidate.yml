@@ -105,16 +105,23 @@ jobs:
           unzip -t "$src" | tail -1
           unzip -l "$src" | grep -F 'base/manifest/AndroidManifest.xml'
           mkdir -p bundle-output
+          # jarsigner can return zero for an unsigned JAR; inspect the archive's certificate blocks.
+          signature_blocks="$(unzip -Z1 "$src" | grep -Ei '^META-INF/[^/]+[.](RSA|DSA|EC)$' || true)"
           if test '${{ steps.key.outputs.signed }}' = true; then
-            unzip -Z1 "$src" | grep -qE '^META-INF/[^/]+[.](RSA|DSA|EC)
-            echo 'Signed original upload key candidate. Compare signer fingerprint in Play Console before upload.' >> "$GITHUB_STEP_SUMMARY"
+            if test -z "$signature_blocks"; then
+              echo '::error::Original upload key signature block missing in expected signed AAB.'
+              exit 1
+            fi
+            jarsigner -verify -strict "$src"
+            dest=bundle-output/TDR-PLAY-1.2.334-vc9-FIRMADO-CANDIDATO.aab
+            echo 'Signed original upload key candidate. Verify its certificate in Play Console.' >> "$GITHUB_STEP_SUMMARY"
           else
-            # jarsigner -verify -strict may return success for an unsigned bundle.
-            if unzip -Z1 "$src" | grep -qE '^META-INF/[^/]+[.](RSA|DSA|EC)
+            if test -n "$signature_blocks"; then
+              echo '::error::Unexpected cryptographic signer without the original upload key.'
               exit 1
             fi
             dest=bundle-output/TDR-PLAY-1.2.334-vc9-NO_PUBLICAR_SIN_FIRMA.aab
-            echo 'NO PUBLICABLE: requires the original topdownrace-upload.jks signing on the owner Mac.' >> "$GITHUB_STEP_SUMMARY"
+            echo 'NO PUBLICABLE: original Play upload key must sign this AAB on owner Mac.' >> "$GITHUB_STEP_SUMMARY"
           fi
           cp "$src" "$dest"
           sha256sum "$dest"
