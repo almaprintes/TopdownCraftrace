@@ -1,0 +1,130 @@
+name: Build Google Play update versionCode 9 AAB (do not publish)
+# No Play publishing action. Original upload keystore required for an uploadable AAB.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/android-google-play-candidate.yml'
+      - 'scripts/play-production-candidate-smoke.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  play_aab:
+    name: Production package 1.2.334, original Play application
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASE: ./
+      TDR_ANDROID_TEST_BUILD_TYPE: release
+      VITE_TDR_ONLINE_URL: ${{ vars.VITE_TDR_ONLINE_URL }}
+      VITE_TDR_ONLINE_PUBLIC: ${{ vars.VITE_TDR_ONLINE_PUBLIC }}
+      TDR_ADMOB_APP_ID: ca-app-pub-1520547848869532~9780989345
+      TDR_ADMOB_REWARDED_UNIT_ID: ca-app-pub-1520547848869532/2605472830
+      TDR_REVENUECAT_PUBLIC_SDK_KEY: goog_dkfPGMwMaCAVUhyeibbGQOZMAiC
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Android SDK
+        shell: bash
+        run: |
+          test -n "$ANDROID_HOME"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+      - name: Original Play upload signing key check
+        id: key
+        env:
+          JKS_B64: ${{ secrets.TDR_PLAY_UPLOAD_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.TDR_PLAY_UPLOAD_STORE_PASSWORD }}
+          KEY_PASS: ${{ secrets.TDR_PLAY_UPLOAD_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TDR_PLAY_UPLOAD_KEY_ALIAS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test -z "$JKS_B64" && test -z "$STORE_PASS" && test -z "$KEY_PASS" && test -z "$KEY_ALIAS"; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Play upload keystore not available on GitHub Actions. Building an unsigned AAB (NOT uploadable). Original key must sign it on the owner's Mac."
+            exit 0
+          fi
+          if test -z "$JKS_B64" || test -z "$STORE_PASS" || test -z "$KEY_PASS" || test -z "$KEY_ALIAS" || test "$KEY_ALIAS" != "topdownrace-upload"; then
+            echo "::error::Incomplete Play signing credentials or wrong original alias. Refusing wrong key."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import os,base64,pathlib
+          data=base64.b64decode(os.environ['JKS_B64'],validate=True)
+          if len(data)<500: raise RuntimeError('Unexpected JKS size')
+          key=pathlib.Path(os.environ['RUNNER_TEMP'])/'original-play-upload.jks'
+          key.write_bytes(data)
+          key.chmod(0o600)
+          def esc(value):
+            if '\n' in value or '\r' in value: raise ValueError('Newline in keystore credentials')
+            return value.replace('\\','\\\\')
+          prop=pathlib.Path('android/keystore.properties')
+          prop.write_text('storeFile='+str(key)+'\n'+'storePassword='+esc(os.environ['STORE_PASS'])+'\n'+'keyAlias='+esc(os.environ['KEY_ALIAS'])+'\n'+'keyPassword='+esc(os.environ['KEY_PASS'])+'\n')
+          prop.chmod(0o600)
+          PY
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+      - name: Build real Android production assets and smoke test
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/environment-first-entry-isolation-smoke.mjs
+          node scripts/inverse-environment-collisions-smoke.mjs
+          node scripts/ghost-static-panel-zoom-smoke.mjs
+          node scripts/session-insight-bank-smoke.mjs
+          node scripts/android-portable-save-smoke.mjs
+          node scripts/release-language-audit.mjs
+          npm run build:android
+          node scripts/android-release-candidate-smoke.mjs
+          node scripts/play-production-candidate-smoke.mjs
+          node scripts/verify-android-launcher.mjs
+      - name: Compile original production Play AAB
+        working-directory: android
+        run: ./gradlew :app:testProductionReleaseUnitTest :app:bundleProductionRelease --stacktrace
+      - name: Audit AAB (real production package, v9, signed only with original key)
+        shell: bash
+        run: |
+          set -euo pipefail
+          src=android/app/build/outputs/bundle/productionRelease/app-production-release.aab
+          test -s "$src"
+          unzip -t "$src" | tail -1
+          unzip -l "$src" | grep -F 'base/manifest/AndroidManifest.xml'
+          mkdir -p bundle-output
+          if test '${{ steps.key.outputs.signed }}' = true; then
+            jarsigner -verify -strict "$src"
+            dest=bundle-output/TDR-PLAY-1.2.334-vc9-FIRMADO-CANDIDATO.aab
+            echo 'Signed original upload key candidate. Compare signer fingerprint in Play Console before upload.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            if jarsigner -verify -strict "$src" >/dev/null 2>&1; then
+              echo '::error::Unexpected signer on unsigned candidate'
+              exit 1
+            fi
+            dest=bundle-output/TDR-PLAY-1.2.334-vc9-NO_PUBLICAR_SIN_FIRMA.aab
+            echo 'NO PUBLICABLE: requires the original topdownrace-upload.jks signing on the owner Mac.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          cp "$src" "$dest"
+          sha256sum "$dest"
+          ls -lh "$dest"
+          echo 'No Play publishing action performed.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TDR-PLAY-1.2.334-vc9-${{ steps.key.outputs.signed }}
+          path: bundle-output/*.aab
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
+      - name: Remove temporary upload signer
+        if: always()
+        run: |
+          rm -f android/keystore.properties
+          rm -f "$RUNNER_TEMP/original-play-upload.jks"
