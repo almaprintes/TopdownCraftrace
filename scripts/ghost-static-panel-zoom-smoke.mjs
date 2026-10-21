@@ -10,7 +10,7 @@ const directions=readFileSync('scripts/all-circuit-directions-smoke.mjs','utf8')
 assert.match(status,/this\._tdrGameMode==='ghost'/,'Panel must be gated to ghost mode, not time attack');
 assert.match(status,/document\.body\.appendChild\(root\)/,
   'Ghost controls must live outside transformed canvas parents');
-assert.match(status,/this\._ghostControlsLayout\(\)/,'Use viewport UI geometry, never Phaser text coordinates');
+assert.match(status,/this\._ghostControlsLayout\?\.\(\)/,'Use viewport UI geometry, never Phaser text coordinates');
 assert.match(status,/ghostPanelViewportRect\(/,'DOM position is calculated from fixed viewport geometry');
 assert.match(status,/super\._createGhostHud\(\)/,'Hide legacy Phaser controls on their actual creation');
 assert.match(status,/this\._hideLegacyGhostHud\(\)/,'Do not leave the old zoom-sensitive Ghost buttons visible');
