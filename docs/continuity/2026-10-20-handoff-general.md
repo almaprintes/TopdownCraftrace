@@ -1,5 +1,7 @@
 # TOP DOWN RACE — Continuidad operativa y estado verificado — 20/10/2026
 
+> **ACTUALIZACIÓN DE CONTINUIDAD 21/10/2026:** este corte del día 20 es histórico. Leer primero **[2026-10-21-android-json-cloud-export-handoff.md](2026-10-21-android-json-cloud-export-handoff.md)**: DEV 1.2.327 en main, prueba de descarga JSON por selector nativo Android en fuente, **APK QA última 1.2.325** aún SIN corrección, Actions web en verde, validación real Android pendiente. No desinstalar ni publicar en Play.
+
 > **LEER PRIMERO EN EL PRÓXIMO CHAT.** Corte documental de 20/10/2026, después de la fuente DEV **1.2.317** y del commit que protege la firma de futuras APK QA. Repositorio: `almaprintes/TopdownCraftrace`, **única rama de desarrollo `main`**. Este documento no ordena compilar, instalar ni publicar nada. Ante cualquier diferencia, volver a consultar `main`, `AGENTS.md`, los workflows y los commits recientes: el repositorio puede haber avanzado después de este corte.
 
 ## 1. Cómo reanudar sin perder contexto
