@@ -1,5 +1,7 @@
 # Top Down RACE — Handoff operativo · 21/10/2026 · DEV 1.2.327
 
+> **NOTA DE ACTUALIZACIÓN · DEV 1.2.328 (21/10/2026):** la sección 7 documenta la auditoría nativa posterior a .327, la compilación Java real en Actions y el límite explícito de validación Android. El título original .327 permanece como corte histórico.
+
 **Repositorio**: `almaprintes/TopdownCraftrace` · **única rama**: `main` · **DEV web**: https://almaprintes.github.io/TopdownCraftrace/dev/
 
 > Esta nota complementa, NO sustituye, `AGENTS.md`, `PROJECT_HANDOFF.md` y `docs/continuity/2026-10-20-handoff-general.md`. La información siguiente es un corte verificado del 21/10/2026; al retomarla consultar la rama, los commits y los Actions **de nuevo**.
@@ -59,3 +61,22 @@
 - Nunca confundir `DEV 1.2.327` publicada en Pages con una `APK 1.2.327`: a esta fecha **NO existe APK .327 confirmada**.
 - El error del screenshot de Android era **«Exportación JSON iniciada» sin archivo**, aunque la **copia ONLINE revisión 1 sí aparecía guardada**.
 - Si el chat previo se corta o muestra «Streaming interrumpido», recuperar estado de GitHub y Actions, no reiniciar trabajo por conjeturas.
+
+## 7. Actualización 21/10 — auditoría Android nativa y DEV 1.2.328
+
+**Estado del código**: DEV **1.2.328**, `main`; primer SHA funcional auditado `592eeeb556256a0f2db4cf29ba170a2540fb7a18`. El commit siguiente puede cambiar documentación y verificadores sin modificar la lógica de exportación. La APK QA instalada/distribuida sigue siendo **1.2.325 / vc1000325** y no incorpora la solución nativa. No se ha autorizado ni creado un APK nuevo en esta iteración.
+
+**Auditoría técnica y cambios mínimos:**
+
+- `TdrPortableSavePlugin.java`: validación adicional en Android del campo numérico `format` (1 o 2) y del objeto `data` ANTES del selector del sistema. Se mantiene validación JS completa y límite de tamaño. Si falla `openOutputStream`, `write`, `flush` o `close`, el plugin informa de error, **sin eliminar automáticamente el URI elegido** (podría apuntar a un documento propio del usuario gestionado por un proveedor externo). El error advierte de revisar un posible archivo incompleto. Solo se responde `saved:true` tras cerrar el stream sin excepción. Cancelar produce `cancelled:true`; nunca restaura ni borra progreso.
+- `scripts/android-portable-save-smoke.mjs`: cobertura de esas invariantes y de que existe la ejecución nativa de compilación, además de las comprobaciones anteriores (registro del plugin, SAF, interfaz online/local, cancelación y ausencia de falso éxito).
+- `.github/workflows/android-portable-save-ci.yml`: workflow **compile-only**, disparado por cambios en Java/exportación/tests o manualmente; instala dependencias Capacitor 8, sincroniza con un HTML temporal mínimo (para generar los archivos Gradle/plugin no versionados), ejecuta el smoke y `./gradlew :app:compileBridgeTestDebugJavaWithJavac --stacktrace`. No ejecuta tareas `assemble`/`bundle`, no firma y no publica archivos instalables. Las primeras pruebas del nuevo CI fallaron por faltar ficheros generados de Capacitor; se corrigió la preparación del runner, **no se detectó error de compilación Java en el plugin**.
+
+**Evidencia CI, tras corregir el runner:**
+
+- [Compilación Capacitor/Java 39575649145](https://github.com/almaprintes/TopdownCraftrace/actions/runs/39575649145): `completed/success` para `592eeeb5`.
+- [Deploy Top Down Race 39575649155](https://github.com/almaprintes/TopdownCraftrace/actions/runs/39575649155): `build completed/success` + `deploy completed/success` para el mismo SHA; job opcional Android bridge `skipped` deliberadamente con `[pwa-only]`. Si el HEAD avanza, comprobar su ejecución de nuevo.
+
+**Límites de lo probado:** compilación Java real y smoke estructural pasan; **NO** se ha comprobado todavía el selector SAF ni la escritura física del JSON en Android instalado. Una compilación satisfactoria no certifica descarga ni actualización de instalación. No prometer retención de datos hasta validar firma, packageName, versionCode y actualización sobre una APK anterior sin desinstalar.
+
+**Siguiente paso solo previa orden explícita del propietario:** preparar QA con `deviceTest`, `versionCode > 1000325`, paquete rewardedtest y el certificado estable esperado `cd626199aa6234d9bdc3c07ca0c8686e7fb994eb8c4d5d02ade2fff1dcbeca6f`. Probar en dispositivo descargar copia **online** mediante selector Android (archivo JSON legible y no vacío), cancelar otra descarga, exportar local, y verificar que Supabase, partidas, carreras y colisiones no cambian. No pulsar «Recuperar partida» durante la prueba de exportación. No publicar Google Play; preservar Atlántico Inverso .326 y RALLY 1.0.

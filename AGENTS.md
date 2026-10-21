@@ -1,5 +1,7 @@
 # REGLAS OBLIGATORIAS DE TRABAJO — TOP DOWN RACE
 
+> **ESTADO MÁS RECIENTE 21/10/2026 · DEV 1.2.328:** Consultar primero [docs/continuity/2026-10-21-android-json-cloud-export-handoff.md](docs/continuity/2026-10-21-android-json-cloud-export-handoff.md), sección 7, y [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md). Prueba Gradle de compilación del plugin Android **verde**, sin APK; última QA 1.2.325. No afirmar descarga funcional en dispositivo hasta probar una APK autorizada. Única rama: `main`; no publicar Play.
+
 > **CONTINUIDAD 20/10/2026:** Leer primero [docs/continuity/2026-10-20-handoff-general.md](docs/continuity/2026-10-20-handoff-general.md) y [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) antes de reanudar. Advertencia especial: APK QA .317 y riesgo de firma distinta; no instalar/desinstalar ni generar otra APK por lectura de documentos. La fuente vigente sigue siendo `main`, no ramas beta históricas.
 
 **Continuidad activa (14/10/2026):** Para cualquier tarea de CROWN Cuper, skins, calibración visual o Fábrica, leer primero [`docs/continuity/2026-10-14-cuper-factory-3-quarter.md`](docs/continuity/2026-10-14-cuper-factory-3-quarter.md). Es la referencia actualizada; documentación histórica puede contener nombres de imágenes de fábrica obsoletos. El jugador equipa la skin desde su garaje; Admin Hub únicamente configura recursos y geometría. Fábrica usa 3/4, NO lateral ortográfico.

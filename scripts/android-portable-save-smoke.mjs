@@ -1,3 +1,4 @@
+// The source-contract smoke is paired with a real Capacitor Java compile-only workflow; it does not build an APK.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {execFileSync} from 'node:child_process';
