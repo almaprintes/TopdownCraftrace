@@ -10,7 +10,7 @@ on:
       - 'scripts/play-production-candidate-smoke.mjs'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   play_aab:
     name: Production package 1.2.334, original Play application
@@ -80,13 +80,15 @@ jobs:
       - name: Build real Android production assets and smoke test
         run: |
           npm ci --no-audit --no-fund
+          # Build runs prebuild installers for every authored circuit; integration
+          # tests require the generated registries in production mode.
+          npm run build:android
           node scripts/environment-first-entry-isolation-smoke.mjs
           node scripts/inverse-environment-collisions-smoke.mjs
           node scripts/ghost-static-panel-zoom-smoke.mjs
           node scripts/session-insight-bank-smoke.mjs
           node scripts/android-portable-save-smoke.mjs
           node scripts/release-language-audit.mjs
-          npm run build:android
           node scripts/android-release-candidate-smoke.mjs
           node scripts/play-production-candidate-smoke.mjs
           node scripts/verify-android-launcher.mjs
@@ -125,6 +127,22 @@ jobs:
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
+      - name: Offer direct AAB candidate download, without uploading to Play
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=tdr-play-candidate-1.2.334-vc9
+          candidate="$(find bundle-output -maxdepth 1 -name '*.aab' -print -quit)"
+          test -s "$candidate"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::A candidate with this immutable version already exists. Refuse to overwrite."
+            exit 1
+          fi
+          printf '%s\n' 'AAB for the actual Google Play application com.craftracestudio.topdownrace, versionCode 9, versionName 1.2.334.'             'NOT published in Google Play; owner must test QA first.'             'If the file is named NO_PUBLICAR_SIN_FIRMA, it is UNSIGNED: sign it with the original upload certificate before uploading.'             "Source commit: $GITHUB_SHA" > play-candidate-notes.txt
+          gh release create "$tag" "$candidate" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title 'Top Down RACE 1.2.334 · Google Play AAB v9 candidate' --notes-file play-candidate-notes.txt
       - name: Remove temporary upload signer
         if: always()
         run: |
