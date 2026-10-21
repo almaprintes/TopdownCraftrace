@@ -10,6 +10,7 @@ import {shapeIsValid} from '../studio/trackShapeGeometry.js';
 import {makeOpenStagePhotoMask} from './openStagePhotoMask.js';
 import {KARTING_CANARIAS_WORLD_SCALE} from './kartingCanariasWorldScale.js';
 import {ATLANTICO_WORLD_SCALE} from './atlanticoWorldScale.js';
+import {physicalCircuitId} from './trackReverseVariant.js';
 import {useCompactIosPhotoTiles,compactIosPhotoTilePath,expectedCompactTileSize,photoTileWorldScale} from '../performance/iosPhotoTileBudget.js';
 
 const TILE_MAX=2048;
@@ -47,7 +48,7 @@ export function validateImageNativeRaceDescriptor(desc){
     scale===KARTING_CANARIAS_WORLD_SCALE;
   // Only official Atlántico is allowed to shrink its world footprint.
   // The master photo and 6 tiled textures keep their exact original pixels.
-  const scaledAtlantico=desc?.type==='published'&&desc.trackKey==='circuito-atlantico'&&
+  const scaledAtlantico=desc?.type==='published'&&physicalCircuitId(desc.trackKey)==='circuito-atlantico'&&
     Array.isArray(desc.tiles)&&desc.tiles.length===6&&
     width===4344&&height===3258&&scale===ATLANTICO_WORLD_SCALE;
   const finiteWorld=n=>Number.isFinite(Number(n))&&Number(n)>0&&Number(n)<=8192;
