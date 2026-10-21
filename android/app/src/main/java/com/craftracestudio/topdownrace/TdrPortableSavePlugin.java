@@ -39,7 +39,8 @@ public class TdrPortableSavePlugin extends Plugin {
         }
         try {
             JSONObject parsed = new JSONObject(json);
-            if (!parsed.has("format") || !parsed.has("data")) {
+            final int format = parsed.optInt("format", -1);
+            if ((format != 1 && format != 2) || parsed.optJSONObject("data") == null) {
                 call.reject("No es una partida portátil válida.");
                 return;
             }
@@ -84,9 +85,10 @@ public class TdrPortableSavePlugin extends Plugin {
             output.flush();
             // Success is signalled only AFTER the stream has been closed.
         } catch (Exception error) {
-            try { getContext().getContentResolver().delete(uri, null, null); }
-            catch (Exception ignored) {}
-            call.reject("No se ha podido escribir el JSON en la ubicación elegida.");
+            // Do not delete a document on failure: a third-party provider may
+            // resolve this URI to an existing user-owned file. The user can
+            // inspect/remove an incomplete file through the system picker.
+            call.reject("No se ha podido completar la escritura del JSON. Comprueba si quedó un archivo incompleto.");
             return;
         }
 

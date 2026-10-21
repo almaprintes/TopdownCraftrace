@@ -31,8 +31,11 @@ assert.match(java,/response\.put\("saved", true\)/);
 assert.ok(java.indexOf('output.flush()')<java.indexOf('response.put("saved", true)'),
   'never show saved before writing to disk');
 assert.match(java,/call\.reject\("No se ha podido escribir el JSON/,'handle write errors');
-assert.match(java,/parsed\.has\("format"\)/);
-assert.match(java,/parsed\.has\("data"\)/);
+assert.match(java,/parsed\.optInt\("format", -1\)/);
+assert.match(java,/format != 1 && format != 2/);
+assert.match(java,/parsed\.optJSONObject\("data"\) == null/);
+assert.doesNotMatch(java,/getContentResolver\(\)\.delete\(/,
+  'an unsuccessful write must never delete a provider-owned document');
 assert.doesNotMatch(java,/WRITE_EXTERNAL_STORAGE|READ_EXTERNAL_STORAGE|requestPermissions|android\.permission/,
   'SAF requires no blanket storage permissions');
 assert.doesNotMatch(java,/Log\.|console\.|localStorage|delete\(uri.*success/s,
@@ -67,6 +70,11 @@ assert.doesNotMatch(quickHandler,/restoreCloudBackup|restoreLocalProgress|localS
 assert.doesNotMatch(portable,/localStorage\.clear\(/,'download cannot erase progress');
 
 assert.match(qa,/TDR_CI_QA_STABLE_SIGNING/,'existing QA signer preserved');
+const nativeCi=read('.github/workflows/android-portable-save-ci.yml');
+assert.match(nativeCi,/:app:compileBridgeTestDebugJavaWithJavac/,
+  'Java code must be compiled against the actual Capacitor Android dependency');
+assert.doesNotMatch(nativeCi,/\b:app:assemble|\b:app:bundle|gh release|upload-artifact/,
+  'native compile check must not generate or distribute any APK or AAB');
 execFileSync(process.execPath,['--check','src/game/social/cloudProgress.js']);
 execFileSync(process.execPath,['--check','src/game/social/cloudAccountUi.js']);
 console.log('PASS: portable JSON backup download invokes Android SAF save-as, waits for verified write, safely handles cancellation and exports remote/local separately.');
