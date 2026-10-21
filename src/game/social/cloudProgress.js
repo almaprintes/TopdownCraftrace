@@ -2,6 +2,7 @@
 // transient ad claims, developer/admin overrides or device-specific settings.
 import { activateRaceControlOnline } from '../online/raceControlOnline.js';
 import { createPlayerProgressRepository } from '../online/playerProgressRepository.js';
+import {Capacitor,registerPlugin} from '@capacitor/core';
 
 const store=createPlayerProgressRepository();
 export const CLOUD_SAVE_FORMAT=2;
@@ -190,9 +191,21 @@ export async function exportCloudProgressJson(){
   if(!backup)throw new Error('Esta cuenta aún no tiene ninguna copia que exportar.');
   return JSON.stringify(backup.snapshot,null,2);
 }
-export function downloadPortableSave(json,filename='top-down-race-partida.json'){
+const androidPortableSave=registerPlugin('TdrPortableSave');
+
+// Returns an explicit status. No longer claim a file was downloaded just because
+// an <a download> was clicked inside Android's WebView.
+export async function downloadPortableSave(json,filename='top-down-race-partida.json'){
   const snapshot=JSON.parse(json);
   validatedSnapshot(snapshot);
+  if(Capacitor.isNativePlatform()&&Capacitor.getPlatform()==='android'){
+    let result;
+    try{result=await androidPortableSave.saveJsonFile({json,filename});}
+    catch(error){throw new Error('Android no pudo guardar el archivo JSON: '+String(error?.message||'error del selector de archivos'));}
+    if(result?.cancelled===true)return {status:'cancelled'};
+    if(result?.saved!==true)throw new Error('Android no ha confirmado que se haya guardado la copia.');
+    return {status:'saved',filename:result.filename||filename};
+  }
   const blob=new Blob([json],{type:'application/json'});
   const link=document.createElement('a');
   const objectUrl=URL.createObjectURL(blob);
@@ -206,5 +219,7 @@ export function downloadPortableSave(json,filename='top-down-race-partida.json')
     link.remove();
     setTimeout(()=>URL.revokeObjectURL(objectUrl),30000);
   }
+  // The browser provides no reliable download-complete callback for blob links.
+  return {status:'requested',filename};
 }
 export function shortPlayerId(id){return String(id||'').slice(0,8).toUpperCase();}
