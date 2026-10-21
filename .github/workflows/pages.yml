@@ -1,4 +1,5 @@
 name: Deploy Top Down Race
+# DEV 1.2.333: guard first-entry collision selection against reused RaceScene.track
 # Single source of DEV deployment is main. Public Google Play 1.1.188 is independent.
 
 on:
