@@ -30,7 +30,7 @@ assert.match(java,/json\.getBytes\(StandardCharsets\.UTF_8\)/);
 assert.match(java,/response\.put\("saved", true\)/);
 assert.ok(java.indexOf('output.flush()')<java.indexOf('response.put("saved", true)'),
   'never show saved before writing to disk');
-assert.match(java,/call\.reject\("No se ha podido escribir el JSON/,'handle write errors');
+assert.match(java,/call\.reject\("No se ha podido completar la escritura del JSON/,'handle write errors');
 assert.match(java,/parsed\.optInt\("format", -1\)/);
 assert.match(java,/format != 1 && format != 2/);
 assert.match(java,/parsed\.optJSONObject\("data"\) == null/);
