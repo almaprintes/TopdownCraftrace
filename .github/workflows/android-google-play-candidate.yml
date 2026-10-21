@@ -1,6 +1,7 @@
 name: Build Google Play update versionCode 9 AAB (do not publish)
 # Rerun: corrected independent version parsing in cold-entry test.
 # DEV 1.2.334: version-independent circuit initialization regression.
+# Production AAB: stage authored tracks before validating normal/inverse barriers.
 # No Play publishing action. Original upload keystore required for an uploadable AAB.
 on:
   push:
@@ -83,8 +84,8 @@ jobs:
           # Build runs prebuild installers for every authored circuit; integration
           # tests require the generated registries in production mode.
           npm run build:android
-          node scripts/environment-first-entry-isolation-smoke.mjs
           node scripts/inverse-environment-collisions-smoke.mjs
+          node scripts/environment-first-entry-isolation-smoke.mjs
           node scripts/ghost-static-panel-zoom-smoke.mjs
           node scripts/session-insight-bank-smoke.mjs
           node scripts/android-portable-save-smoke.mjs
