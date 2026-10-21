@@ -1,0 +1,62 @@
+name: Publish previously verified QA 1.2.334 APK direct link
+# One-off release of the EXACT APK artifact from run 39630545275.
+# No Gradle, no APK rebuild, no Play Store actions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-verified-qa-334.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish_existing_qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download original signed APK artifact without rebuilding
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39630545275
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR
+          path: verified-qa
+      - name: Verify original artifact SHA-256 and package contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk='verified-qa/TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR.apk'
+          test -s "$apk"
+          echo '72737ac818507ebb1d04f3981dadb93533f7ecf2e1c7b2ec4fc2faa894b9ee5e  verified-qa/TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR.apk' | sha256sum --check -
+          unzip -t "$apk" | tail -1
+          test -n "$ANDROID_HOME"
+          test -x "$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk" > verified-certificate.txt
+          grep -Fq 'Signer #1 certificate SHA-256 digest: cd626199aa6234d9bdc3c07ca0c8686e7fb994eb8c4d5d02ade2fff1dcbeca6f' verified-certificate.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$apk" | grep -Fq "package: name='com.craftracestudio.topdownrace.rewardedtest' versionCode='1000334'"
+          echo 'Original QA 1.2.334 checksum, app ID, version and persistent .328 certificate verified.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Create GitHub release with the verified original APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag='tdr-qa-1.2.334'
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::QA tag already exists. Refusing to replace any APK."
+            exit 1
+          fi
+          cat > verified-release-notes.md <<'NOTES'
+          Top Down RACE Android QA 1.2.334, versionCode 1000334, original QA signer matching 1.2.328.
+          The APK was compiled in GitHub Actions run 39630545275 and independently verified against its SHA-256 72737ac818507ebb1d04f3981dadb93533f7ecf2e1c7b2ec4fc2faa894b9ee5e.
+          Fixes first-entry wrong collision walls, static ghost HUD with dynamic zoom, expanded session insights, native Android JSON export, and all inverse tracks.
+          It is a TEST app with package com.craftracestudio.topdownrace.rewardedtest, NOT the public Play Store application.
+          Install over QA .328 without uninstalling. If prompted to delete existing data, cancel.
+          NOTES
+          gh release create "$tag" 'verified-qa/TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR.apk' \
+            --repo "$GITHUB_REPOSITORY" --target '9223160b33db2ece76ab25a1b43b6e69e8be3235' --prerelease \
+            --title 'Top Down RACE · APK QA 1.2.334 verificada' --notes-file verified-release-notes.md
+          echo "Direct APK: https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/TDR-QA-DEV-1.2.334-REAL-ADS-SIN-MEDIR.apk" >> "$GITHUB_STEP_SUMMARY"
