@@ -60,8 +60,9 @@ assert.ok(!crossesDirectedFinishGate(pit,before,before,forward),
  'Stopping on the line must not add phantom laps');
 const raceSource=fs.readFileSync('src/game/scenes/RaceScene.js','utf8');
 assert.ok(raceSource.includes('crossesDirectedFinishGate('));
-assert.ok(raceSource.includes("this.track?.meta?.meta?.trackId === 'karting-americas'"),
- 'Paddock gate must be exclusive to Americas');
+assert.ok(raceSource.includes("physicalCircuitId(this.trackKey) === 'karting-americas'") &&
+ raceSource.includes("physicalCircuitId(this.track?.meta?.meta?.trackId) === 'karting-americas'"),
+ 'Paddock gate must be exclusive to Americas, in normal and inverse direction');
 assert.ok(raceSource.includes("if ((this._cpState || 0) === 2)"),
  'Paddock crossing must remain gated by both ordered checkpoints');
 
