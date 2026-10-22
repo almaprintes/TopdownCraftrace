@@ -4269,10 +4269,11 @@ this.timing.s2Tick = (this.lapStartTick != null) ? (this.simTick - this.lapStart
 // Karting Américas has a painted paddock stripe *collinear* with the main
 // chequered finish. Treat its crossing as the same finish, not as a second
 // timing gate. CP1+CP2, forward direction and lap cooldown still apply.
-// All other circuits and open rally stages keep the original finish rules.
+// The inverse route shares this physical line, with its gate normal inverted
+// by makeInvertedClosedTrack. Other circuits/rally stages keep their rules.
 const paddockFinish = this.track?.meta?.meta?.paddockFinishLine;
-const paddockFinishCrossed = this.trackKey === 'karting-americas' &&
-  this.track?.meta?.meta?.trackId === 'karting-americas' &&
+const paddockFinishCrossed = physicalCircuitId(this.trackKey) === 'karting-americas' &&
+  physicalCircuitId(this.track?.meta?.meta?.trackId) === 'karting-americas' &&
   this.track?.closed !== false && this._raceStarted === true &&
   !!paddockFinish && crossesDirectedFinishGate(
     paddockFinish,
