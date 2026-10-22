@@ -68,7 +68,7 @@ assert.doesNotMatch(css,/\.cccontrol\{/,
 assert.match(css,/@media\(max-height:450px\)/);
 assert.match(css,/@media\(max-width:500px\)/);
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
-const devVersion=html.match(/<meta name="tdr-dev-version" content="DEV (\\d+)\\.(\\d+)\\.(\\d+)"\\s*\\/>/);
+const devVersion=html.match(/<meta name="tdr-dev-version" content="DEV (\d+)\.(\d+)\.(\d+)"\s*\/>/);
 assert.ok(devVersion,'Settings skin requires a numbered DEV version');
 const [major,minor,patch]=devVersion.slice(1).map(Number);
 assert.ok(major>1||(major===1&&(minor>2||(minor===2&&patch>=160))),
