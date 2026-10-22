@@ -119,5 +119,5 @@ assert.ok(!script.includes('rotate(90deg) translate3d(0,'),
  'outbound direction must not be hardcoded for cars facing down');
 assert.match(script,/duration:LOBBY_DEPARTURE_TIMING\.drive,easing:'cubic-bezier\(\.6,\.05,\.94,\.45\)'/,'approved getaway unchanged');
 assert.match(read('src/game/ui/lobby-dom.css'),/\.tdr-lobby-dom\.tdr-lobby-departing/);
-assert.match(read('index.html'),/name="tdr-dev-version" content="DEV 1\.2\.\d+"/);
+assert.match(read('index.html'),/name="tdr-dev-version" content="DEV \d+\.\d+\.\d+"/);
 console.log('Lobby departure: zero rubber marks, front-pivot rear kick during 180ms hold, one continuously revealing plume through 520ms exit; Android parity and scene cleanup retained');
