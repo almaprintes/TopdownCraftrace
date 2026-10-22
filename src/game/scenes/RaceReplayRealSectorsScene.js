@@ -53,7 +53,7 @@ export class RaceScene extends ReplayTelemetryScene {
       const c2=clamp(Number(crossings[1]),c1,lap);
       const sectors=[c1,c2-c1,lap-c2].map(v=>Math.max(0,Math.round(v)));
       this._ghostData={...this._ghostData,version:7,sectorTimes:sectors,sectorCrossings:[c1,c2]};
-      try{localStorage.setItem(this._ghostStorageKey,JSON.stringify(this._ghostData));}catch{}
+      this._persistGhostSectorMetadata();
     }
 
     if(histAfter>histBefore){
@@ -99,13 +99,32 @@ export class RaceScene extends ReplayTelemetryScene {
     return Math.abs(vals.reduce((a,b)=>a+b,0)-lap)<Math.max(150,lap*.015);
   }
 
+  _persistGhostSectorMetadata(){
+    // Never write online rivals or Race Control top-ten payloads into
+    // the original PB key. Only enrich the SAME recording at its real key.
+    if(this._onlineGhostChallenge||!this._ghostData)return;
+    const ghost=this._ghostData;
+    const key=ghost.kind==='circuit-geometry-best'
+      ?this._tdrGeometryGhostStorageKey
+      :ghost.kind==='circuit-personal-best'?this._tdrPbGhostStorageKey:null;
+    if(!key)return;
+    try{
+      const stored=JSON.parse(localStorage.getItem(key)||'null');
+      if(!stored||Number(stored.lapMs)!==Number(ghost.lapMs)||
+        Number(stored.recordedAt)!==Number(ghost.recordedAt)||
+        stored.trackKey!==ghost.trackKey||
+        stored.kind!==ghost.kind)return;
+      localStorage.setItem(key,JSON.stringify(ghost));
+    }catch{}
+  }
+
   _ensureGhostSectorTimes(){
     if(!this._ghostData)return;
     if(this._validSectorTimes(this._ghostData.sectorTimes))return;
     const sectors=this._deriveSectorTimesFromSamples();
     if(!this._validSectorTimes(sectors))return;
     this._ghostData={...this._ghostData,version:7,sectorTimes:sectors};
-    try{localStorage.setItem(this._ghostStorageKey,JSON.stringify(this._ghostData));}catch{}
+    this._persistGhostSectorMetadata();
   }
 
   _replayBrake01(t){
