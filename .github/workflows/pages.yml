@@ -100,6 +100,7 @@ jobs:
           node scripts/all-circuit-directions-smoke.mjs
           node scripts/ghost-static-panel-zoom-smoke.mjs
           node scripts/ghost-atlantico-world-version-smoke.mjs
+          node scripts/ghost-local-pb-recovery-smoke.mjs
           node scripts/all-circuit-starts-smoke.mjs
           node scripts/all-circuit-gate-width-smoke.mjs
           node scripts/arafo-photo-native-smoke.mjs
