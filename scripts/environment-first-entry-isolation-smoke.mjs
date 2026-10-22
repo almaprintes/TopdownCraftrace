@@ -56,7 +56,7 @@ try{
   assert.match(source,/proto\.create=function\(data\)\{const env=envFor\(this\)/,
     'Create must agree with preload without stale geometry');
   const html=readFileSync('index.html','utf8');
-  const devVersion=html.match(/<meta name="tdr-dev-version" content="DEV (\\d+)\\.(\\d+)\\.(\\d+)"\\s*\\/>/);
+  const devVersion=html.match(/<meta name="tdr-dev-version" content="DEV (\d+)\.(\d+)\.(\d+)"\s*\/>/);
   assert.ok(devVersion,'DEV must have a numeric major.minor.patch version in the canonical meta tag');
   const [major,minor,patch]=devVersion.slice(1).map(Number);
   assert.ok(major>1||(major===1&&(minor>2||(minor===2&&patch>=333))),
