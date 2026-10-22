@@ -123,5 +123,5 @@ assert.match(unlock,/premiumSkin\.textContent=masteryPremiumCss/);
 assert.match(css,/\.sh-mastery-panel\{/);
 assert.match(css,/\.tdr-mastery-unlock \.mu-card\{/);
 const html=read('index.html');
-assert.match(html,/content="DEV 1\.2\.\d+"/);
+assert.match(html,/<meta name="tdr-dev-version" content="DEV \d+\.\d+\.\d+"\s*\/>/);
 console.log('Mastery nine levels: bronze/silver/gold 1–2–3 bold star ranks, crowned third grade, smaller aligned roof shields, physics untouched OK');
