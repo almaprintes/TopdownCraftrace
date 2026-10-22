@@ -69,8 +69,10 @@ assert.equal(persistOfficialPersonalBestReplay({
 assert.equal(persistOfficialPersonalBestReplay({
  trackKey:'santa-cruz-inverso',track,lapMs:2200,replay:recorded,ttKey,ttBest:best
 }),false,'Cannot store another circuit direction under this PB');
+// Simulate a separate legacy installation that has no locally saved PB ghost.
+store.delete('tdr2:ghostPb:'+id);
 store.set(replayKey,JSON.stringify({...recorded,samples:oldSamples}));
-assert.equal(findRaceControlGhost(id,track,2200)?.isOfficialPb,false,
+assert.equal(findRaceControlGhost(id,track,2200),null,
  'Stale top-ten geometry must never be selected as personal best');
 
 const source=readFileSync('src/game/scenes/RaceTop10ReplayScene.js','utf8');
