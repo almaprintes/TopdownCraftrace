@@ -46,5 +46,9 @@ assert.ok(publish.indexOf('ghostReplayCompatibility(ghost,trackId')<publish.inde
 assert.match(visual,/g\.setDisplaySize\(footprintW,footprintH\)/);
 assert.match(visual,/this\._ghostSprite\.setDisplaySize\(w,h\)/);
 assert.ok(!status.includes('localStorage.removeItem('),'Historic player records must not be deleted');
-assert.match(readFileSync('index.html','utf8'),/content="DEV 1\.2\.335"/);
+const dev=readFileSync('index.html','utf8').match(/content="DEV (\d+)\.(\d+)\.(\d+)"/);
+assert.ok(dev,'Canonical DEV version missing');
+const [major,minor,patch]=dev.slice(1).map(Number);
+assert.ok(major>1||(major===1&&(minor>2||(minor===2&&patch>=335))),
+  'Atlántico ghost geometry guard must remain included in all newer DEV versions');
 console.log('PASS: Atlantic legacy 100% ghosts blocked (normal + inverse); 70% accepted; separate current replay; PB preserved; no invalid online ads or giant sprites');
