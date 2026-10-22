@@ -128,5 +128,9 @@ export function makeInvertedClosedTrack(base,id){
     start:{x:start.x,y:start.y,r:start.r},
     grid:null,startLine:null,
     meta:{...base.meta,id,key:id,trackId:id,reverseOf:base.key,
+      // The paddock is an alternative crossing of the SAME finish axis.
+      // Reverse its timing normal too: leaving it forward breaks inverse laps.
+      ...(base.meta?.paddockFinishLine
+        ?{paddockFinishLine:invertRaceGate(base.meta.paddockFinishLine)}:{}),
       variant:'inverse',publicName:name}};
 }
