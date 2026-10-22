@@ -33,6 +33,16 @@ for(const id of ['santa-cruz','santa-cruz-inverso']){
  assert.equal(ghostReplayCompatibility({...current,geometryRevision:revision},id,track).compatible,true);
  assert.equal(ghostReplayCompatibility({...current,geometryRevision:'geo1:old'},id,track).compatible,false);
 }
+for(const id of ['circuito-atlantico','circuito-atlantico-inverso']){
+ const atlantic={...track,meta:{imageNative:{worldScale:.70}}};
+ const current={trackKey:id,carId:'spark',lapMs:2200,samples:currentSamples};
+ assert.equal(ghostReplayCompatibility(current,id,atlantic).compatible,true,
+   id+' current 70% road samples must play without download');
+ assert.equal(ghostReplayCompatibility({...current,samples:currentSamples.map(p=>({
+    ...p,x:p.x/.70,y:p.y/.70
+  }))},id,atlantic).compatible,false,
+   id+' stale 100% replay must not be used');
+}
 const id='santa-cruz',ttKey='tdr2:ttBest:'+id;
 const record={t:1720000000000,carId:'spark',lapMs:2200};
 const replayKey='tdr2:topReplay:'+encodeURIComponent(id)+':'+encodeURIComponent(
