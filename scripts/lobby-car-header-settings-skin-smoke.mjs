@@ -68,6 +68,9 @@ assert.doesNotMatch(css,/\.cccontrol\{/,
 assert.match(css,/@media\(max-height:450px\)/);
 assert.match(css,/@media\(max-width:500px\)/);
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
-const devVersion=Number(html.match(/content="DEV 1\.2\.(\d+)"/)?.[1]||0);
-assert.ok(devVersion>=160,'Settings premium skin must persist in later DEV versions');
+const devVersion=html.match(/<meta name="tdr-dev-version" content="DEV (\\d+)\\.(\\d+)\\.(\\d+)"\\s*\\/>/);
+assert.ok(devVersion,'Settings skin requires a numbered DEV version');
+const [major,minor,patch]=devVersion.slice(1).map(Number);
+assert.ok(major>1||(major===1&&(minor>2||(minor===2&&patch>=160))),
+  'Settings premium skin must persist in later DEV versions');
 console.log('DEV 1.2.160 open car banner + premium settings skin with original settings behavior contract OK');
