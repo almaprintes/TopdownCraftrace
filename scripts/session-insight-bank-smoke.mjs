@@ -92,8 +92,10 @@ assert.notEqual(pilotStore.getItem('tdr2:sessionInsightCycle:v1:pilot-A'),
   pilotStore.getItem('tdr2:sessionInsightCycle:v1:pilot-B')+'impossible',
   'Pilot state is stored independently without cloud changes');
 
-const lang=readFileSync('index.html','utf8').match(/content="DEV 1\.2\.(\d+)"/);
-assert.ok(lang&&Number(lang[1])>=329,'DEV version incremented');
+const lang=readFileSync('index.html','utf8').match(/content="DEV (\d+)\.(\d+)\.(\d+)"/);
+assert.ok(lang,'DEV version missing');
+const [major,minor,patch]=lang.slice(1).map(Number);
+assert.ok(major>1||(major===1&&(minor>2||(minor===2&&patch>=329))),'DEV version incremented');
 const eligibleNew=make([65000,64000,60000],{brakePct:25,coastPct:35,throttlePct:30});
 const selected=storage();
 for(let i=0;i<75;i++)buildSessionInsight(eligibleNew,{storage:selected,rng:()=>i/100});
