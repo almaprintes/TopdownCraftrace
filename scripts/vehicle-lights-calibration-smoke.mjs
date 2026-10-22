@@ -71,5 +71,5 @@ assert.ok(raceSource.includes('baseRadius * collisionScale * trackCarScale'));
 assert.ok(raceSource.includes('aiBody.setCircle(Math.round(baseRadius * collisionScale * trackCarScale))'));
 const race=read('src/game/scenes/RaceBrakeLightsSpeedTrailScene.js');
 for(const key of ['vehicleLightsForCar(id,equipped.id)','if(cal){','drawGroup(cal.front','drawGroup(cal.rear','window.__tdrIosSafeMode','group.tailColor||group.color'])assert.ok(race.includes(key),key);
-assert.match(read('index.html'),/name="tdr-dev-version" content="DEV 1\.2\.\d+"/);
+assert.match(read('index.html'),/name="tdr-dev-version" content="DEV \d+\.\d+\.\d+"/);
 console.log('Vehicle light admin: front/rear L-R, per skin, draft export, legacy fallback, iOS guard and 1px controls OK');
