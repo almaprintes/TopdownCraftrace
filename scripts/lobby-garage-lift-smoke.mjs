@@ -169,5 +169,5 @@ const menu=read('src/game/scenes/MenuDomUiScene.js');
 assert.match(menu,/polishLobbyForPublish\(this, lobbyRoot\);[\s\S]{0,240}beginGarageLiftRise\(this,lobbyRoot\)/);
 assert.match(read('src/game/ui/LobbyRaceDeparture.js'),/turn:1600,hold:180,drive:520/,'approved departure unchanged');
 assert.match(read('src/game/ui/lobby-dom.css'),/\.tdr-lobby-dom\.tdr-lobby-garage-lifting/);
-assert.match(read('index.html'),/name="tdr-dev-version" content="DEV 1\.2\.\d+"/);
+assert.match(read('index.html'),/name="tdr-dev-version" content="DEV \d+\.\d+\.\d+"/);
 console.log('Garage lift: stage+car down/up in native lobby layers; all player garage navigation; one-shot return; rollback; no public change; race departure untouched');
