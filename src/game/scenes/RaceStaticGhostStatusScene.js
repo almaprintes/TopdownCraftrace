@@ -2,6 +2,7 @@ import { RaceScene as CurrentRaceScene } from './RaceStaticMinimapScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { ghostPanelViewportRect } from '../ui/ghostPanelViewport.js';
 import {ghostGeometryRevision,ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
+import {findRaceControlGhost} from '../tracks/ghostReplayRecovery.js';
 
 const PANEL_W = 282;
 const ROW_H = 30;
@@ -67,22 +68,40 @@ export class RaceScene extends CurrentRaceScene {
     const pbCompatibility=oldPb?ghostReplayCompatibility(oldPb,key,this.track):null;
     const replayCompatibility=currentReplay?ghostReplayCompatibility(currentReplay,key,this.track):null;
     const onlineCompatibility=onlineGhost?ghostReplayCompatibility(onlineGhost,key,this.track):null;
+    // Race Control stores top-ten laps separately from the Ghost PB key.
+    // An already recorded local replay must not disappear from Ghost mode.
+    // Only recover samples that fit the currently loaded physical circuit.
+    const recovered=onlineChallenge?null:
+      findRaceControlGhost(key,this.track,this._tdrGhostKnownBestMs);
+    const pbTimeMatches=oldPb&&pbCompatibility?.compatible&&
+      Number.isFinite(this._tdrGhostKnownBestMs)&&
+      Math.abs(Number(oldPb.lapMs)-this._tdrGhostKnownBestMs)<=2;
     this._tdrGhostGeometryIncompatible=Boolean(oldPb&&!pbCompatibility?.compatible)||
-      (!oldPb&&key.startsWith('circuito-atlantico')&&
-        Math.abs(Number(this.track?.meta?.imageNative?.worldScale)-.70)<.0001&&
-        Number(this.ttBest?.lapMs)>1000);
-    // Do not substitute local PB samples when an online rival was requested.
+      (Number(this._tdrGhostKnownBestMs)>1000&&!pbTimeMatches&&!recovered?.isOfficialPb);
+    // Never substitute local data for an explicitly selected ONLINE opponent.
     if(onlineChallenge){
       this._ghostData=onlineCompatibility?.compatible?onlineGhost:null;
       if(onlineGhost&&!onlineCompatibility?.compatible)
         this._onlineGhostChallenge={...this._onlineGhostChallenge,invalid:true};
+    }else if(pbTimeMatches){
+      this._ghostData=oldPb;
+    }else if(recovered?.isOfficialPb){
+      // Race Control already has the exact official personal-best replay.
+      this._ghostData=recovered.ghost;
     }else{
-      const pbTimeMatches=oldPb&&pbCompatibility?.compatible&&
-        Number.isFinite(this._tdrGhostKnownBestMs)&&
-        Math.abs(Number(oldPb.lapMs)-this._tdrGhostKnownBestMs)<=1;
-      this._ghostData=pbTimeMatches?oldPb:
-        replayCompatibility?.compatible&&currentReplay?.kind==='circuit-geometry-best'
-          ?currentReplay:null;
+      const cached=replayCompatibility?.compatible&&
+        currentReplay?.kind==='circuit-geometry-best'?currentReplay:null;
+      const candidate=recovered?.ghost;
+      if(candidate&&this._tdrGhostGeometryRevision&&
+        (!cached||Number(candidate.lapMs)<Number(cached.lapMs))){
+        // Store only a separate versioned current-road copy; never overwrite
+        // old PB times, historic ghosts, top-ten replays or remote records.
+        const current={...candidate,version:8,kind:'circuit-geometry-best',
+          geometryRevision:this._tdrGhostGeometryRevision,trackKey:key};
+        if(writePbGhost(this._tdrGeometryGhostStorageKey,current)){
+          this._ghostData=current;
+        }else this._ghostData=cached||current;
+      }else this._ghostData=cached;
     }
 
     const ghostCarId = this._ghostData?.carId;
