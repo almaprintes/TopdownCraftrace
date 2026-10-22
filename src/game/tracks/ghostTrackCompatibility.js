@@ -2,6 +2,7 @@
 // recordings cannot safely be drawn on the published 70% circuit.
 import { ATLANTICO_WORLD_SCALE } from './atlanticoWorldScale.js';
 const ATLANTICO_IDS=new Set(['circuito-atlantico','circuito-atlantico-inverso']);
+const SANTA_CRUZ_IDS=new Set(['santa-cruz','santa-cruz-inverso']);
 const finite=n=>n!==null&&n!==undefined&&Number.isFinite(Number(n));
 const coord=n=>Math.round(Number(n)*10)/10;
 
@@ -43,12 +44,14 @@ export function ghostReplayCompatibility(ghost,trackKey,track){
   if(ghost.geometryRevision)return answer(Boolean(revision)&&ghost.geometryRevision===revision,
     ghost.geometryRevision===revision?'current':'geometry-changed');
 
-  // Legacy recordings on unchanged tracks remain usable. On 70%-scale
-  // Atlántico accept unversioned replays ONLY when their actual WORLD samples
-  // follow the current road. This applies to both LOCAL and ONLINE ghosts.
-  const scale=Number(track?.meta?.imageNative?.worldScale);
-  if(!ATLANTICO_IDS.has(key)||Math.abs(scale-ATLANTICO_WORLD_SCALE)>0.0001)
-    return answer(true,'legacy-unchanged');
+  // Santa Cruz was redrawn at different world coordinates, just like
+  // Atlántico was rescaled. Unversioned ghosts from either must fit today's
+  // photographed road, including online challenges and reverse layouts.
+  // Leave historical recordings from all OTHER tracks untouched.
+  const isAtlantic=ATLANTICO_IDS.has(key)&&
+    Math.abs(Number(track?.meta?.imageNative?.worldScale)-ATLANTICO_WORLD_SCALE)<.0001;
+  const isSantaCruz=SANTA_CRUZ_IDS.has(key);
+  if(!isAtlantic&&!isSantaCruz)return answer(true,'legacy-unchanged');
   const road=Array.isArray(track?.raceCenterline)&&track.raceCenterline.length>2
     ?track.raceCenterline:track?.centerline;
   if(!Array.isArray(road)||road.length<3||!finite(track.trackWidth)||Number(track.trackWidth)<=0)
@@ -62,7 +65,7 @@ export function ghostReplayCompatibility(ghost,trackKey,track){
     if(distanceSqToRoad(x*ATLANTICO_WORLD_SCALE,y*ATLANTICO_WORLD_SCALE,road)<=margin*margin)old++;
   }
   const fit=current/count,oldFit=old/count;
-  const compatible=fit>=.74&&!(oldFit>=.8&&fit<.82);
+  const compatible=fit>=.74&&(!isAtlantic||!(oldFit>=.8&&fit<.82));
   return answer(compatible,compatible?'legacy-current':
-    oldFit>=.8&&fit<.74?'legacy-100-percent':'off-current-road');
+    isAtlantic&&oldFit>=.8&&fit<.74?'legacy-100-percent':'off-current-road');
 }
