@@ -77,11 +77,11 @@ try{
           name+' paddock must never count without actual crossing');
       }
       const source=readFileSync('src/game/scenes/RaceScene.js','utf8');
-      assert.match(source,/physicalCircuitId\\(this\\.trackKey\\) === 'karting-americas'/,
+      assert.ok(source.includes("physicalCircuitId(this.trackKey) === 'karting-americas'"),
         'race must recognize both normal and inverse Karting Americas');
-      assert.match(source,/physicalCircuitId\\(this\\.track\\?\\.meta\\?\\.meta\\?\\.trackId\\) === 'karting-americas'/,
+      assert.ok(source.includes("physicalCircuitId(this.track?.meta?.meta?.trackId) === 'karting-americas'"),
         'race must check the active metadata physical circuit too');
-      assert.match(source,/if \\(\\(this\\._cpState \\|\\| 0\\) === 2\\)/,
+      assert.ok(source.includes('if ((this._cpState || 0) === 2)'),
         'paddock crossing must still require both checkpoints');
     }
     const local=storage();
