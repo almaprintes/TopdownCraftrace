@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createServer} from 'vite';
 import {trackDisplayDirection} from '../src/game/tracks/trackDisplayDirection.js';
+import {crossesDirectedFinishGate} from '../src/game/tracks/closedCircuitGateOrder.js';
 import {CLOSED_CIRCUIT_VARIANTS,selectedCircuitRaceId,saveCircuitDirection,readCircuitDirection,physicalCircuitId} from '../src/game/tracks/trackReverseVariant.js';
 
 const center=g=>({x:(g.a.x+g.b.x)/2,y:(g.a.y+g.b.y)/2});
@@ -46,6 +47,42 @@ try{
       const a=original.checkpoints[original.checkpoints.length-1-k],b=inverse.checkpoints[k];
       assert.ok(length(center(a),center(b))<.04,'inverted CP physical location');
       assert.ok(dot(a.normal,b.normal)<-.999,'inverted CP crossing direction');
+    }
+    if(baseId==='karting-americas'){
+      // Regression: the published paddock stripe is a second usable segment of
+      // the SAME finish axis in both directions. Its physical endpoints must
+      // remain fixed while the accepted crossing direction changes.
+      const normalPit=original.meta.paddockFinishLine;
+      const inversePit=inverse.meta.paddockFinishLine;
+      assert.ok(normalPit?.a&&normalPit?.b&&normalPit?.normal,'normal paddock gate missing');
+      assert.ok(inversePit?.a&&inversePit?.b&&inversePit?.normal,'inverse paddock gate missing');
+      assert.deepEqual(inversePit.a,normalPit.a,'inverse paddock start endpoint moved');
+      assert.deepEqual(inversePit.b,normalPit.b,'inverse paddock end endpoint moved');
+      assert.ok(dot(normalPit.normal,inversePit.normal)<-.999,'inverse paddock normal must reverse');
+      const mid=center(normalPit);
+      const sample={
+        x:mid.x+(normalPit.b.x-normalPit.a.x)*.35,
+        y:mid.y+(normalPit.b.y-normalPit.a.y)*.35
+      };
+      for(const [name,gate] of [['normal',normalPit],['inverso',inversePit]]){
+        const n=gate.normal;
+        const before={x:sample.x-n.x*32,y:sample.y-n.y*32};
+        const after={x:sample.x+n.x*32,y:sample.y+n.y*32};
+        const forward={x:n.x*180,y:n.y*180};
+        assert.ok(crossesDirectedFinishGate(gate,before,after,forward),
+          name+' paddock crossing in race direction must count');
+        assert.ok(!crossesDirectedFinishGate(gate,after,before,{x:-forward.x,y:-forward.y}),
+          name+' paddock wrong-way crossing must never count');
+        assert.ok(!crossesDirectedFinishGate(gate,before,before,forward),
+          name+' paddock must never count without actual crossing');
+      }
+      const source=readFileSync('src/game/scenes/RaceScene.js','utf8');
+      assert.match(source,/physicalCircuitId\\(this\\.trackKey\\) === 'karting-americas'/,
+        'race must recognize both normal and inverse Karting Americas');
+      assert.match(source,/physicalCircuitId\\(this\\.track\\?\\.meta\\?\\.meta\\?\\.trackId\\) === 'karting-americas'/,
+        'race must check the active metadata physical circuit too');
+      assert.match(source,/if \\(\\(this\\._cpState \\|\\| 0\\) === 2\\)/,
+        'paddock crossing must still require both checkpoints');
     }
     const local=storage();
     if(baseId==='karting-tenerife'){
