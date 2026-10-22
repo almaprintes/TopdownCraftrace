@@ -57,6 +57,9 @@ for(const p of layouts){
 }
 assert.equal(ghostPanelViewportRect({canvasRect:{width:0,height:5},viewportWidth:1,viewportHeight:1,
   ghostLayout:{x:1,controlWidth:1,topY:1},panelWidth:282,panelHeight:90}),null);
-const version=readFileSync('index.html','utf8').match(/content="DEV 1\.2\.(\d+)"/);
-assert.ok(Number(version?.[1])>=332,'Ghost zoom fix requires next DEV version');
+const version=readFileSync('index.html','utf8').match(/content="DEV (\d+)\.(\d+)\.(\d+)"/);
+assert.ok(version,'Canonical DEV version missing');
+const [major,minor,patch]=version.slice(1).map(Number);
+assert.ok(major>1||(major===1&&(minor>2||(minor===2&&patch>=332))),
+  'Ghost zoom fix must persist in newer DEV versions');
 console.log('PASS: Ghost static HUD is independent of camera zoom in five inverses, no legacy panel scan, fixed canvas-relative layout and cleanup');
