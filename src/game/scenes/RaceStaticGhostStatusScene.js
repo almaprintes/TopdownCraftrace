@@ -76,8 +76,8 @@ export class RaceScene extends CurrentRaceScene {
     const pbTimeMatches=oldPb&&pbCompatibility?.compatible&&
       Number.isFinite(this._tdrGhostKnownBestMs)&&
       Math.abs(Number(oldPb.lapMs)-this._tdrGhostKnownBestMs)<=2;
-    this._tdrGhostGeometryIncompatible=Boolean(oldPb&&!pbCompatibility?.compatible)||
-      (Number(this._tdrGhostKnownBestMs)>1000&&!pbTimeMatches&&!recovered?.isOfficialPb);
+    this._tdrGhostGeometryIncompatible=
+      Number(this._tdrGhostKnownBestMs)>1000&&!pbTimeMatches&&!recovered?.isOfficialPb;
     // Never substitute local data for an explicitly selected ONLINE opponent.
     if(onlineChallenge){
       this._ghostData=onlineCompatibility?.compatible?onlineGhost:null;
