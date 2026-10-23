@@ -65,6 +65,11 @@ export function scaleKartingCanariasEnvironment(env,scale=KARTING_CANARIAS_WORLD
     })),
     collisionZones:(env.collisionZones||[]).map(zone=>({
       ...zone,points:zone.points.map(p=>scaleNativeWorldPoint(p,scale))
+    })),
+    // Foreground photo masks use the same race world scale as the native tiles.
+    // Keep this visual data independent of physics/collision zones.
+    canopyZones:(env.canopyZones||[]).map(zone=>({
+      ...zone,points:zone.points.map(p=>scaleNativeWorldPoint(p,scale))
     }))
   };
 }
