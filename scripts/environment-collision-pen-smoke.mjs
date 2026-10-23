@@ -41,7 +41,9 @@ assert.ok(runtime.includes('sampleCollisionLine(line,18)'));
 assert.ok(runtime.includes("half,'collision'"));
 assert.ok(runtime.includes('if(px<Math.min(c.ax,c.bx)-reach'));
 const game=readFileSync('src/game/game.js','utf8');
-assert.ok((game.includes("import('./scenes/EnvironmentBuilderAmericasImportScene.js')") && readFileSync('src/game/scenes/EnvironmentBuilderAmericasImportScene.js','utf8').includes("from './EnvironmentBuilderSafeWorkflowScene.js'")));
+assert.ok((game.includes("import('./scenes/EnvironmentBuilderCanopyOcclusionScene.js')") &&
+ readFileSync('src/game/scenes/EnvironmentBuilderCanopyOcclusionScene.js','utf8').includes("from './EnvironmentBuilderAmericasImportScene.js'") &&
+ readFileSync('src/game/scenes/EnvironmentBuilderAmericasImportScene.js','utf8').includes("from './EnvironmentBuilderSafeWorkflowScene.js'")));
 assert.ok(readFileSync('src/game/scenes/EnvironmentBuilderSafeWorkflowScene.js','utf8').includes("from './EnvironmentBuilderCollisionWorkflowScene.js'"));
 assert.ok(readFileSync('src/game/scenes/EnvironmentBuilderCollisionWorkflowScene.js','utf8').includes("from './EnvironmentBuilderFreehandCollisionScene.js'"));
 assert.ok(readFileSync('src/game/scenes/EnvironmentBuilderFreehandCollisionScene.js','utf8').includes("from './EnvironmentBuilderCollisionPenScene.js'"));
