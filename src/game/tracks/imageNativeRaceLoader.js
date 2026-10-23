@@ -11,6 +11,7 @@ import {makeOpenStagePhotoMask} from './openStagePhotoMask.js';
 import {KARTING_CANARIAS_WORLD_SCALE} from './kartingCanariasWorldScale.js';
 import {ATLANTICO_WORLD_SCALE} from './atlanticoWorldScale.js';
 import {physicalCircuitId} from './trackReverseVariant.js';
+import {mountPhotoCanopyOcclusion} from './photoCanopyOcclusion.js';
 import {useCompactIosPhotoTiles,compactIosPhotoTilePath,expectedCompactTileSize,photoTileWorldScale} from '../performance/iosPhotoTileBudget.js';
 
 const TILE_MAX=2048;
@@ -243,6 +244,9 @@ function mountPhoto(scene,desc,img){
       }
     }
     scene._trackBeautyTiles=sprites;
+    // The environment runtime has already loaded occlusion polygons during
+    // race create; the native photo tiles exist only at THIS point.
+    mountPhotoCanopyOcclusion(scene);
     scene._beautyLayerActive=true;
     scene._bakedAsphaltPilot=false;
     scene._bakedAsphaltDone=true;
