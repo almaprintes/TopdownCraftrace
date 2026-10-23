@@ -32,9 +32,16 @@ assert.equal(enlarged.collisionLines.length,0);
 assert.equal(enlarged.collisionZones.length,0);
 assert.ok(createTrackEnvironment('karting-canarias-4096'));
 assert.ok(createTrackEnvironment('karting-canarias-4096-inverso'));
+const pilot=createTrackEnvironment('karting-canarias-4096');
+assert.equal(pilot.canopyZones?.length,3,'Pilot contains two left-straight crowns and one pre-finish');
+assert.equal(normalizedCanopyZones(pilot.canopyZones,4096,6144).length,3);
+assert.deepEqual(
+ createTrackEnvironment('karting-canarias-4096-inverso')?.canopyZones,
+ pilot.canopyZones,'Both race directions share the SAME physical photographed branches');
 
 function photoMock(x,y,key,scale=1){
  return {scene:true,x,y,originX:0,originY:0,scaleX:scale,scaleY:scale,
+  displayWidth:2048*scale,displayHeight:2048*scale,
   rotation:0,texture:{key},frame:{name:'__BASE'}};
 }
 function testRuntime(){
@@ -51,6 +58,7 @@ function testRuntime(){
     setOrigin(ax,ay){this.origin=[ax,ay];return this},
     setScale(sx,sy){this.scale=[sx,sy];return this},
     setRotation(angle){this.rotation=angle;return this},
+    setAlpha(alpha){this.alpha=alpha;return this},
     setDepth(depth){this.depth=depth;return this},
     setScrollFactor(){return this},
     setMask(m){this.mask=m;return this},
@@ -60,15 +68,16 @@ function testRuntime(){
  }};
  const scene={track:{worldW:4096,worldH:6144},_tdrCanopyZones:[good],
   _trackBeautyTiles:[photoMock(0,0,'native:canarias:0:0',1),
-    photoMock(2048,0,'native:canarias:2048:0',.75)],
+    photoMock(2048,0,'native:canarias:2048:0',.75),
+    photoMock(0,4096,'native:canarias:0:4096',1)],
   make:{graphics(){return graphic}},add,uiCam:{ignore(){}},
   events:{once(name,callback){assert.equal(name,'shutdown');registeredCleanup=callback}}
  };
  const layer=mountPhotoCanopyOcclusion(scene);
  assert.ok(layer);
- assert.equal(layer.overlay.length,2,'Re-use two existing tiles');
- assert.ok(overlay.every(o=>o.depth===CANOPY_DEPTH&&o.mask===mask));
- assert.deepEqual(overlay[1].scale,[.75,.75],'Compact iOS tile source uses photo transform');
+ assert.equal(layer.overlay.length,1,'Only native tiles crossing canopy are repeated');
+ assert.ok(overlay.every(o=>o.depth===CANOPY_DEPTH&&o.mask===mask&&o.alpha===.93));
+ assert.deepEqual(overlay[0].scale,[1,1],'Original tile source keeps exact transform');
  assert.equal(CANOPY_DEPTH>30&&CANOPY_DEPTH<1000,true,'Above race cars and below HUD');
  assert.ok(registeredCleanup);registeredCleanup();
  assert.equal(scene._tdrCanopyOcclusion,null);
