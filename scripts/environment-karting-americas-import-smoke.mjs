@@ -15,7 +15,8 @@ for(const marker of ['unpackImageProject(file)','saveCanvasImage(a.imageId,image
 const registry=readFileSync('src/game/tracks/trackRegistry.js','utf8');
 assert.ok(!registry.includes('if(trackId===AMERICAS)'), 'Published circuit must not read local draft');
 assert.match(registry,/export function getTrackKeys\(\)\{return Object.keys\(TRACK_REGISTRY\);\}/,'Normal player circuit registry');
-assert.ok(readFileSync('src/game/game.js','utf8').includes("EnvironmentBuilderAmericasImportScene.js"));
+assert.ok(readFileSync('src/game/game.js','utf8').includes("EnvironmentBuilderCanopyOcclusionScene.js"));
+assert.ok(readFileSync('src/game/scenes/EnvironmentBuilderCanopyOcclusionScene.js','utf8').includes("from './EnvironmentBuilderAmericasImportScene.js'"));
 for(const file of ['src/game/tracks/environmentDraftTrack.js','src/game/tracks/trackRegistry.js','src/game/scenes/EnvironmentBuilderAmericasImportScene.js'])
  execFileSync(process.execPath,['--check',file],{stdio:'pipe'});
 console.log('Environment Studio Karting Américas: isolated 2.5x project, file importer, IndexedDB, tiles, persisted collisions OK');
