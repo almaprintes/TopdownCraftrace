@@ -9,7 +9,18 @@ export function findRaceControlGhost(trackKey,track,officialBestMs){
   if(!key)return null;
   let record;
   try{record=getCircuitRecord(key);}catch{return null;}
+  // Historical indices can drift after invalid laps, trimmed history or
+  // a previous recorder revision. Race Control can still have the real
+  // topReplay payload, even when rebuilding localRaceRecords loses its key.
+  // Inspect the actual on-device keys; do not rely exclusively on the index.
   const keys=[record?.ghostKey,...(record?.topLaps||[]).map(lap=>lap?.replayKey)];
+  const prefix='tdr2:topReplay:'+encodeURIComponent(key)+':';
+  try{
+    for(let i=0;i<localStorage.length;i++){
+      const storageKey=localStorage.key(i);
+      if(typeof storageKey==='string'&&storageKey.startsWith(prefix))keys.push(storageKey);
+    }
+  }catch{}
   const seen=new Set(),found=[];
   for(const storageKey of keys){
     if(!storageKey||seen.has(storageKey))continue;
