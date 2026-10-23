@@ -114,6 +114,8 @@ assert.match(editor,/p\.canopyZones=|project\.canopyZones=|project\.canopyZones=
 assert.match(editor,/_applyProject\(p\)/);
 assert.match(editor,/_drawCanopies\(\)/);
 assert.match(editor,/data-canopy="finish"/);
+assert.match(editor,/CARGAR 8 COPAS CANARIAS/);
+assert.match(editor,/candidates\.length!==8/);
 assert.match(editor,/this\._exitGuard\?\.backup\?\.\('canopy-finished'\)/);
 assert.match(scale,/canopyZones:/);
 assert.ok(!/addSegmentCollider\([^\n]*canopy/.test(runtime));
