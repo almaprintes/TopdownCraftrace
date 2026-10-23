@@ -7,8 +7,11 @@ import {ghostReplayCompatibility,ghostGeometryRevision} from './ghostTrackCompat
 export function findRaceControlGhost(trackKey,track,officialBestMs){
   const key=String(trackKey||'');
   if(!key)return null;
-  let record;
-  try{record=getCircuitRecord(key);}catch{return null;}
+  let record=null;
+  try{record=getCircuitRecord(key);}catch{
+    // A corrupt/incomplete index does not invalidate existing replay files.
+    // Continue with a direct read-only scan of the current circuit's keys.
+  }
   // Historical indices can drift after invalid laps, trimmed history or
   // a previous recorder revision. Race Control can still have the real
   // topReplay payload, even when rebuilding localRaceRecords loses its key.
