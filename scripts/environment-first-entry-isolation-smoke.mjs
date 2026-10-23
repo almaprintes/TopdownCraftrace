@@ -53,7 +53,7 @@ try{
     'Selection cannot inspect stale scene.track while preload/create are racing');
   assert.match(source,/proto\.preload=function[\s\S]*?envFor\(this\)/,
     'Preload resolves environment from the selected active identity');
-  assert.match(source,/proto\.create=function\(data\)\{const env=envFor\(this\)/,
+  assert.match(source,/proto\.create=function\(data\)\{this\._tdrCanopyZones=\[\];const env=envFor\(this\)/,
     'Create must agree with preload without stale geometry');
   const html=readFileSync('index.html','utf8');
   const devVersion=html.match(/<meta name="tdr-dev-version" content="DEV (\d+)\.(\d+)\.(\d+)"\s*\/>/);
