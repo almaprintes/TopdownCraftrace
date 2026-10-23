@@ -90,5 +90,5 @@ assert.ok(materials.includes('_mountMaterialPanel(){return;}'),'Old texture pane
 assert.ok(materials.includes('async _restoreMaterialBlobs(){return;}'),'No legacy background texture reload');
 assert.ok(materials.includes('p.materials={}'),'Old material metadata should remain import/export compatible');
 const game=readFileSync('src/game/game.js','utf8');
-assert.ok((game.includes("import('./scenes/EnvironmentBuilderAmericasImportScene.js')") && readFileSync('src/game/scenes/EnvironmentBuilderAmericasImportScene.js','utf8').includes("from './EnvironmentBuilderSafeWorkflowScene.js'")));
+assert.ok((game.includes("import('./scenes/EnvironmentBuilderCanopyOcclusionScene.js')") && readFileSync('src/game/scenes/EnvironmentBuilderCanopyOcclusionScene.js','utf8').includes("from './EnvironmentBuilderAmericasImportScene.js'") && readFileSync('src/game/scenes/EnvironmentBuilderAmericasImportScene.js','utf8').includes("from './EnvironmentBuilderSafeWorkflowScene.js'")));
 console.log('Environment Studio exit: confirm/cancel, Back, beforeunload, draft+zones backup, cleanup, no ASF/texture tools, safe pen switching OK');
