@@ -18,7 +18,7 @@ export class SettingsScene extends CurrentSettingsScene {
       const btn=document.createElement('button');
       btn.className=`s2choice ${c.steeringMode==='wheel'?'on':''}`;
       btn.dataset.v='wheel';
-      btn.textContent='◉ VOLANTE';
+      btn.textContent='◉ TÁCTIL';
       row.appendChild(btn);
     }
     // Always own the active selector handler. SettingsDomScene already renders
@@ -124,7 +124,7 @@ export class SettingsScene extends CurrentSettingsScene {
       add('left','ccdir','IZQUIERDA','◀');
       add('right','ccdir','DERECHA','▶');
     }else{
-      add('steer',c.steeringMode==='wheel'?'ccwheel':'ccstick',c.steeringMode==='wheel'?'VOLANTE':'PALANCA');
+      add('steer',c.steeringMode==='wheel'?'ccwheel':'ccstick',c.steeringMode==='wheel'?'DIRECCIÓN TÁCTIL':'PALANCA');
     }
     add('gas','ccpedal','GAS','GAS');
     add('brake','ccpedal brake','FRENO','FRENO');
