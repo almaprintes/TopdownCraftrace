@@ -3,6 +3,7 @@
 import {EnvironmentBuilderScene as Current} from './EnvironmentBuilderAmericasImportScene.js';
 import {validCanopyZone,normalizedCanopyZones} from '../environment/canopyOcclusionGeometry.js';
 import {pointInsidePolygon} from '../environment/FreehandCollisionZones.js';
+import {createTrackEnvironment} from '../tracks/environmentRegistry.js';
 
 const clone=v=>JSON.parse(JSON.stringify(v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -43,6 +44,9 @@ export class EnvironmentBuilderScene extends Current{
       <button type="button" data-canopy="delete">✕ BORRAR SELECCIÓN</button>
       <button type="button" data-canopy="cancel">CANCELAR BORRADOR</button>
       </div>
+      <button type="button" data-canopy="import-canarias" style="width:100%;min-height:43px;margin-top:8px;border:1px solid #6cbdf2">
+        🌿 CARGAR 3 COPAS CANARIAS (PILOTO)
+      </button>
       <p data-canopy-status style="font-size:10px;color:#a6e5d2;margin:8px 0 0">Sin copas</p>`;
     aside.prepend(section);this._canopyUi=section;
     const actions={
@@ -56,7 +60,7 @@ export class EnvironmentBuilderScene extends Current{
       finish:()=>{
         const proposed={id:`canopy-${Date.now()}-${this._canopyZones.length}`,
           kind:'photo-canopy',opacity:.93,points:clone(this._canopyDraft||[])};
-        if(!validCanopyZone(proposed)){
+        if(!normalizedCanopyZones([proposed],this._realTrack?.worldW,this._realTrack?.worldH).length){
           this._flash?.('COPA INCOMPLETA: MÍNIMO 3 PUNTOS, SIN CRUCES');return;
         }
         this._canopyZones.push(proposed);
@@ -74,7 +78,23 @@ export class EnvironmentBuilderScene extends Current{
         this._canopyZones=this._canopyZones.filter(z=>z!==this._canopySelected);
         this._canopySelected=null;this._canopyGesture=null;this._mode='canopy-edit';
       },
-      cancel:()=>{this._canopyDraft=[];this._canopyGesture=null;this._mode='select';this._canopyPausedMode=null;}
+      cancel:()=>{this._canopyDraft=[];this._canopyGesture=null;this._mode='select';this._canopyPausedMode=null;},
+      'import-canarias':()=>{
+        if(this._trackId!=='karting-canarias-4096'){
+          this._flash?.('EL PILOTO ES SOLO PARA KARTING CANARIAS 4096');return;
+        }
+        const preset=createTrackEnvironment('karting-canarias-4096');
+        const candidates=normalizedCanopyZones(preset?.canopyZones,
+          this._realTrack?.worldW,this._realTrack?.worldH);
+        if(candidates.length!==3){
+          this._flash?.('COPAS PILOTO AUSENTES EN REPOSITORIO');return;
+        }
+        if(this._canopyZones.length&&window.confirm?.(
+          '¿Sustituir SOLO las copas visuales por las tres zonas piloto? Colisiones, foto y resto del proyecto no cambian.')===false)return;
+        this._canopyZones=clone(candidates);this._canopySelected=null;
+        this._canopyDraft=[];this._mode='canopy-edit';
+        this._flash?.('TRES COPAS PILOTO CARGADAS · AJUSTA SUS VÉRTICES');
+      }
     };
     for(const [name,fn] of Object.entries(actions)){
       const button=section.querySelector(`[data-canopy="${name}"]`);
@@ -132,7 +152,7 @@ export class EnvironmentBuilderScene extends Current{
       const g=this._canopyGesture;
       if(!g||g.id!==p?.id)return;
       const z=this._canopySelected;
-      if(z&&!validCanopyZone(z)){
+      if(z&&!normalizedCanopyZones([z],this._realTrack?.worldW,this._realTrack?.worldH).length){
         z.points=g.original;this._flash?.('COPA INVÁLIDA · CAMBIO CANCELADO');
       }
       this._canopyGesture=null;this._drawCanopies();this._syncDomStatus();
