@@ -36,6 +36,10 @@ assert.equal(physicalCircuitId('karting-canarias-4096-inverso'),'karting-canaria
 const pilot=JSON.parse(readFileSync(
  'src/game/tracks/library/karting-canarias-4096/karting-canarias-4096.environment.json','utf8'));
 assert.equal(pilot.canopyZones?.length,3,'Pilot contains two left-straight crowns and one pre-finish');
+assert.equal(pilot.canopyZones.find(z=>z.id==='canarias-left-straight-canopy-1')?.points.length,76,
+ 'The first canopy must preserve the owner-traced 76-point outline');
+assert.equal(pilot.canopyZones.find(z=>z.id==='canarias-left-straight-canopy-2')?.points.length,8);
+assert.equal(pilot.canopyZones.find(z=>z.id==='canarias-before-finish-canopy')?.points.length,7);
 assert.equal(normalizedCanopyZones(pilot.canopyZones,4096,6144).length,3);
 assert.ok(pilot.canopyZones.every(z=>z.kind==='photo-canopy'),
  'Both circuit directions reuse the same physical environment polygons');
@@ -105,5 +109,5 @@ assert.match(editor,/data-canopy="finish"/);
 assert.match(editor,/this\._exitGuard\?\.backup\?\.\('canopy-finished'\)/);
 assert.match(scale,/canopyZones:/);
 assert.ok(!/addSegmentCollider\([^\n]*canopy/.test(runtime));
-assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.5"/);
+assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.6"/);
 console.log('PASS: Environment Studio photo-canopy polygons persisted; no collisions; same native tiles masked above cars; iOS compact scale; cleanup; Canarias / inverso / x2.5');
