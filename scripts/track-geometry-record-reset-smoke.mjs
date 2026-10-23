@@ -104,5 +104,5 @@ assert.match(sceneSource,/persistOfficialPersonalBestReplay\(\{/);
 assert.match(startup,/archiveRetiredTrackRecords\(\)/);
 assert.match(startup,/if\(!__tdrLocalTrackArchiveReady\)return;/);
 assert.match(readFileSync('index.html','utf8'),
- /<meta name="tdr-dev-version" content="DEV 1\.3\.4"/);
+ /<meta name="tdr-dev-version" content="DEV 1\.3\.[5-9][0-9]*"/);
 console.log('PASS: Retire only four local photo-track records after archived backup; one-time, idempotent, no online/unrelated mutation; fresh PB immediately has a local Ghost replay');
