@@ -9,6 +9,7 @@ import { buildColliderSpatialIndex, nearbyColliders } from '../performance/colli
 import {compileCollisionZone,resolveCollisionZone} from '../environment/FreehandCollisionZones.js';
 import { installRaceCaptureRuntime } from './raceCaptureRuntime.js';
 import { campaignAssetUrl, TAS_DEFAULT_CAMPAIGN } from '../advertising/trackAdvertising.js';
+import {normalizedCanopyZones} from '../environment/canopyOcclusionGeometry.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
 const MATERIAL_TYPES=['asphalt','grass','offroad'];
@@ -45,7 +46,7 @@ export function envFor(scene){
       // Only future author-painted collisions are wanted. The now-empty
       // original environment must not queue images, textures or material work.
       if(!(env.collisionLines?.length||env.collisionZones?.length||
-           env.environment?.length||env.linearBarriers?.length))return null;
+           env.environment?.length||env.linearBarriers?.length||env.canopyZones?.length))return null;
       // New Studio exports already match the 70%-scaled photo in its canvas.
       // Preserve compatibility with external original-source-photo projects.
       return env.coordinateSpace==='race-world'?env:scaleAtlanticoEnvironment(env);
@@ -89,7 +90,7 @@ function spawnEnvironment(scene,env){if(!env)return;const objects=[],colliders=[
   const colliderIndex=rallyDenseWall
     ?buildColliderSpatialIndex(colliders,128,40)
     :buildColliderSpatialIndex(colliders);
-  scene._tdrRaceEnvironment={objects,colliders,colliderIndex,slowZones,solidZones};scene.events.once('shutdown',()=>{const runtime=scene._tdrRaceEnvironment;for(const obj of runtime?.objects||[])try{obj?.destroy?.();}catch{}scene._tdrRaceEnvironment=null;removeLoadingOverlay(scene);});}
+  scene._tdrCanopyZones=normalizedCanopyZones(env.canopyZones,scene.track?.worldW,scene.track?.worldH);scene._tdrRaceEnvironment={objects,colliders,colliderIndex,slowZones,solidZones};scene.events.once('shutdown',()=>{const runtime=scene._tdrRaceEnvironment;for(const obj of runtime?.objects||[])try{obj?.destroy?.();}catch{}scene._tdrRaceEnvironment=null;removeLoadingOverlay(scene);});}
 function resolveBodyAgainstColliders(scene,body,rig=null){if(!body?.body)return;const list=scene?._tdrRaceEnvironment?.colliders||[];if(!list.length)return;const physicsRadius=Math.max(8,Number(body.body.radius)||14);let px=Number(body.x),py=Number(body.y),vx=Number(body.body.velocity?.x)||0,vy=Number(body.body.velocity?.y)||0,hadContact=false;for(let pass=0;pass<2;pass++){for(const c of nearbyColliders(scene?._tdrRaceEnvironment?.colliderIndex,px,py,list,physicsRadius)){if(Number.isFinite(c.radius)){const dx=px-c.cx,dy=py-c.cy,d=Math.hypot(dx,dy),min=physicsRadius+c.radius;if(d>=min)continue;hadContact=true;const nx=d>1e-6?dx/d:1,ny=d>1e-6?dy/d:0,push=min-d+.75;px+=nx*push;py+=ny*push;const vn=vx*nx+vy*ny;if(vn<0){vx-=vn*1.18*nx;vy-=vn*1.18*ny;}continue;}// Broad-phase reject for potentially long traced spline walls on mobiles.
   const reach=physicsRadius+c.halfThickness+6;
   if(px<Math.min(c.ax,c.bx)-reach||px>Math.max(c.ax,c.bx)+reach||
