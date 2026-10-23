@@ -83,7 +83,7 @@ export class RaceScene extends CurrentRaceScene {
       #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(15px,1.8vw);bottom:max(10px,1.8vh);width:clamp(180px,28vw,320px);height:clamp(110px,22vh,160px);border:1px solid rgba(101,222,255,.45);border-radius:24px;background:linear-gradient(160deg,rgba(12,34,48,.84),rgba(5,12,22,.83));box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.28);pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overflow:hidden;box-sizing:border-box}
       #tdr-steering-wheel .track{position:absolute;left:12%;right:12%;top:53%;height:7px;border-radius:6px;background:rgba(128,177,199,.25);transform:translateY(-50%);pointer-events:none}
       #tdr-steering-wheel .center{position:absolute;left:50%;top:36%;height:38%;width:2px;background:rgba(255,255,255,.36);pointer-events:none}
-      #tdr-steering-wheel .thumb{position:absolute;left:calc(50% + var(--steer,0) * 38%);top:53%;width:26px;height:46px;border-radius:13px;transform:translate(-50%,-50%);background:#65deff;box-shadow:0 0 14px rgba(85,221,255,.48);pointer-events:none}
+      #tdr-steering-wheel .thumb{position:absolute;left:50%;top:53%;width:26px;height:46px;border-radius:13px;transform:translate(-50%,-50%);background:#65deff;box-shadow:0 0 14px rgba(85,221,255,.48);pointer-events:none}
       #tdr-steering-wheel .caption{position:absolute;left:0;right:0;top:10%;font:700 11px system-ui,sans-serif;color:rgba(214,244,255,.84);text-align:center;letter-spacing:.08em;pointer-events:none}
       #tdr-steering-wheel.active{border-color:rgba(101,222,255,.9)}
     `;
@@ -122,7 +122,7 @@ export class RaceScene extends CurrentRaceScene {
       // Low latency: no extra animation loop; race update consumes this value.
       filtered=target(e);
       this._applyWheelSteer(filtered);
-      zone.style.setProperty('--steer',String(filtered));
+      zone.querySelector('.thumb').style.left=`${50+filtered*38}%`;
       e.preventDefault();
     };
     const release=e=>{
@@ -131,7 +131,7 @@ export class RaceScene extends CurrentRaceScene {
       try{if(zone.hasPointerCapture?.(e.pointerId))zone.releasePointerCapture(e.pointerId);}catch{}
       zone.classList.remove('active');
       this._applyWheelSteer(0);
-      zone.style.setProperty('--steer','0');
+      zone.querySelector('.thumb').style.left='50%';
       e.preventDefault();
     };
     zone.addEventListener('pointerdown',down,{passive:false});
