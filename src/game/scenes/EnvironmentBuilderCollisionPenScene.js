@@ -272,14 +272,14 @@ export class EnvironmentBuilderScene extends Current {
   _clearCurrentDecoration(){
     // The editor's "clear all" includes these invisible lines, but does not
     // remove the immutable Track Studio image or physics geometry.
-    const count=(this._objects?.length||0)+(this._surfaces?.length||0)+(this._rails?.length||0)+(this._collisionLines?.length||0)+(this._collisionZones?.length||0);
+    const count=(this._objects?.length||0)+(this._surfaces?.length||0)+(this._rails?.length||0)+(this._collisionLines?.length||0)+(this._collisionZones?.length||0)+(this._canopyZones?.length||0);
     if(!count){this._flash?.('NO HAY DECORACIÓN QUE BORRAR');return;}
     if(window.confirm?.('¿Borrar decoración y colisiones editables? El trazado oficial no se modifica.')===false)return;
     for(const o of this._objects||[])try{o?.destroy?.();}catch{}
-    this._objects=[];this._surfaces=[];this._rails=[];this._collisionLines=[];this._collisionZones=[];
+    this._objects=[];this._surfaces=[];this._rails=[];this._collisionLines=[];this._collisionZones=[];this._canopyZones=[];this._canopyDraft=[];this._canopySelected=null;
     this._zoneSelected=null;this._zoneDraft=null;this._zoneGesture=null;
     this._collisionSelected=this._selected=this._selectedSurface=this._selRail=null;
     this._penDraft=null;this._penGesture=null;this._mode='select';
-    this._selectionG?.clear?.();this._redrawSurfaces?.();this._drawRails?.();this._drawCollisionPen();this._drawCollisionZones?.();this._syncDomStatus();
+    this._selectionG?.clear?.();this._redrawSurfaces?.();this._drawRails?.();this._drawCollisionPen();this._drawCollisionZones?.();this._drawCanopies?.();this._syncDomStatus();
   }
 }
