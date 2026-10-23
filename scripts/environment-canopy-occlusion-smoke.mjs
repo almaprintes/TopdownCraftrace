@@ -56,7 +56,8 @@ const tenerife=JSON.parse(readFileSync(
  'src/game/tracks/library/karting-tenerife/karting-tenerife.environment.json','utf8'));
 assert.equal(tenerife.trackId,'karting-tenerife');
 assert.equal(tenerife.version,7);
-assert.equal(physicalCircuitId('karting-tenerife-inverso'),'karting-tenerife');
+assert.equal(physicalCircuitId('karting-tenerife-horario'),'karting-tenerife',
+ 'Tenerife's published opposite direction uses legacy -horario ID, NOT -inverso');
 assert.equal(tenerife.canopyZones?.length,3,'All 3 owner-drawn Tenerife Copas are installed');
 assert.deepEqual(tenerife.canopyZones.map(z=>z.points.length),[78,94,36]);
 assert.equal(createHash('sha256').update(JSON.stringify(tenerife.canopyZones)).digest('hex'),
