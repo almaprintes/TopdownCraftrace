@@ -35,12 +35,20 @@ assert.match(registrySource,/physicalCircuitId\(id\)/);
 assert.equal(physicalCircuitId('karting-canarias-4096-inverso'),'karting-canarias-4096');
 const pilot=JSON.parse(readFileSync(
  'src/game/tracks/library/karting-canarias-4096/karting-canarias-4096.environment.json','utf8'));
-assert.equal(pilot.canopyZones?.length,3,'Pilot contains two left-straight crowns and one pre-finish');
-assert.equal(pilot.canopyZones.find(z=>z.id==='canarias-left-straight-canopy-1')?.points.length,76,
- 'The first canopy must preserve the owner-traced 76-point outline');
-assert.equal(pilot.canopyZones.find(z=>z.id==='canarias-left-straight-canopy-2')?.points.length,8);
-assert.equal(pilot.canopyZones.find(z=>z.id==='canarias-before-finish-canopy')?.points.length,7);
-assert.equal(normalizedCanopyZones(pilot.canopyZones,4096,6144).length,3);
+// The owner completed EIGHT individual foreground crowns in Environment
+// Studio, with detailed contours. Do not quietly restore any of the three
+// coarse pilots or simplify the exact traced coordinates.
+const expectedCanopyCounts=[76,56,47,33,16,118,38,21];
+assert.equal(pilot.canopyZones?.length,8,'All 8 owner-drawn canopies must be installed');
+assert.deepEqual(pilot.canopyZones.map(z=>z.points.length),expectedCanopyCounts);
+assert.equal(normalizedCanopyZones(pilot.canopyZones,4096,6144).length,8);
+assert.ok(pilot.canopyZones.every(z=>validCanopyZone(z)),'Every owner canopy must be geometrically valid');
+assert.equal(new Set(pilot.canopyZones.map(z=>z.id)).size,8,'Distinct contour IDs');
+assert.equal(pilot.version,7,'Keep owner production environment version 7');
+assert.equal(pilot.collisionLines?.length,5,'No collision barriers are removed');
+assert.equal(pilot.collisionZones?.length,1,'No solid collision zones are removed');
+assert.deepEqual(pilot.collisionLines.map(line=>line.nodes.length),[28,2,8,3,4],
+ 'Canopy-only import must not change the existing physical barrier nodes');
 assert.ok(pilot.canopyZones.every(z=>z.kind==='photo-canopy'),
  'Both circuit directions reuse the same physical environment polygons');
 
@@ -109,5 +117,5 @@ assert.match(editor,/data-canopy="finish"/);
 assert.match(editor,/this\._exitGuard\?\.backup\?\.\('canopy-finished'\)/);
 assert.match(scale,/canopyZones:/);
 assert.ok(!/addSegmentCollider\([^\n]*canopy/.test(runtime));
-assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.6"/);
+assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.7"/);
 console.log('PASS: Environment Studio photo-canopy polygons persisted; no collisions; same native tiles masked above cars; iOS compact scale; cleanup; Canarias / inverso / x2.5');
