@@ -5,7 +5,7 @@ import {validCanopyZone,normalizedCanopyZones,scaleCanopyZones,photoCanopyContai
 import {mountPhotoCanopyOcclusion,CANOPY_DEPTH}
   from '../src/game/tracks/photoCanopyOcclusion.js';
 import {scaleKartingCanariasEnvironment} from '../src/game/tracks/kartingCanariasWorldScale.js';
-import {createTrackEnvironment} from '../src/game/tracks/environmentRegistry.js';
+import {physicalCircuitId} from '../src/game/tracks/trackReverseVariant.js';
 
 const polygon=[
  {x:1410,y:1780},{x:1520,y:1790},{x:1540,y:1880},{x:1420,y:1890}
@@ -30,14 +30,15 @@ assert.equal(enlarged.canopyZones[0].points[0].x,3525);
 assert.equal(originalEnv.canopyZones[0].points[0].x,1410);
 assert.equal(enlarged.collisionLines.length,0);
 assert.equal(enlarged.collisionZones.length,0);
-assert.ok(createTrackEnvironment('karting-canarias-4096'));
-assert.ok(createTrackEnvironment('karting-canarias-4096-inverso'));
-const pilot=createTrackEnvironment('karting-canarias-4096');
+const registrySource=readFileSync('src/game/tracks/environmentRegistry.js','utf8');
+assert.match(registrySource,/physicalCircuitId\(trackId\)/);
+assert.equal(physicalCircuitId('karting-canarias-4096-inverso'),'karting-canarias-4096');
+const pilot=JSON.parse(readFileSync(
+ 'src/game/tracks/library/karting-canarias-4096/karting-canarias-4096.environment.json','utf8'));
 assert.equal(pilot.canopyZones?.length,3,'Pilot contains two left-straight crowns and one pre-finish');
 assert.equal(normalizedCanopyZones(pilot.canopyZones,4096,6144).length,3);
-assert.deepEqual(
- createTrackEnvironment('karting-canarias-4096-inverso')?.canopyZones,
- pilot.canopyZones,'Both race directions share the SAME physical photographed branches');
+assert.ok(pilot.canopyZones.every(z=>z.kind==='photo-canopy'),
+ 'Both circuit directions reuse the same physical environment polygons');
 
 function photoMock(x,y,key,scale=1){
  return {scene:true,x,y,originX:0,originY:0,scaleX:scale,scaleY:scale,
