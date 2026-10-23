@@ -71,78 +71,82 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _buildSteeringWheel(){
+    // The historical 'wheel' preference now means a relative horizontal touch
+    // steering strip. Keep its stored value so existing player preferences work.
     document.getElementById('tdr-steering-wheel')?.remove?.();
     document.getElementById('tdr-steering-wheel-style')?.remove?.();
-    const p=prefs();
-    const left=!!p.leftHanded;
+    const left=!!prefs().leftHanded;
     const style=document.createElement('style');
     style.id='tdr-steering-wheel-style';
     style.textContent=`
       #tdr-race-controls .tdr-stick{display:none!important}
-      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(18px,1.8vw);bottom:max(10px,1.8vh);width:clamp(136px,16vw,184px);aspect-ratio:1/1;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 7px 15px rgba(0,0,0,.38));}
-      #tdr-steering-wheel .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;opacity:.98;transform:rotate(var(--rot,0deg));transform-origin:50% 50%;transition:transform 38ms linear,filter 80ms linear;}
-      #tdr-steering-wheel.active .art{filter:brightness(1.05)}
+      #tdr-steering-wheel{position:fixed;z-index:80;${left?'right':'left'}:max(15px,1.8vw);bottom:max(10px,1.8vh);width:clamp(180px,28vw,320px);height:clamp(110px,22vh,160px);border:1px solid rgba(101,222,255,.45);border-radius:24px;background:linear-gradient(160deg,rgba(12,34,48,.84),rgba(5,12,22,.83));box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 8px 24px rgba(0,0,0,.28);pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overflow:hidden;box-sizing:border-box}
+      #tdr-steering-wheel .track{position:absolute;left:12%;right:12%;top:53%;height:7px;border-radius:6px;background:rgba(128,177,199,.25);transform:translateY(-50%);pointer-events:none}
+      #tdr-steering-wheel .center{position:absolute;left:50%;top:36%;height:38%;width:2px;background:rgba(255,255,255,.36);pointer-events:none}
+      #tdr-steering-wheel .thumb{position:absolute;left:calc(50% + var(--steer,0) * 38%);top:53%;width:26px;height:46px;border-radius:13px;transform:translate(-50%,-50%);background:#65deff;box-shadow:0 0 14px rgba(85,221,255,.48);pointer-events:none}
+      #tdr-steering-wheel .caption{position:absolute;left:0;right:0;top:10%;font:700 11px system-ui,sans-serif;color:rgba(214,244,255,.84);text-align:center;letter-spacing:.08em;pointer-events:none}
+      #tdr-steering-wheel.active{border-color:rgba(101,222,255,.9)}
     `;
     document.head.appendChild(style);
+    const zone=document.createElement('div');
+    zone.id='tdr-steering-wheel';
+    zone.setAttribute('role','group');
+    zone.setAttribute('aria-label','Dirección táctil de precisión');
+    zone.innerHTML='<div class="caption">DIRECCIÓN TÁCTIL</div><div class="track"></div><div class="center"></div><div class="thumb"></div>';
+    document.body.appendChild(zone);
 
-    const wheel=document.createElement('div');
-    wheel.id='tdr-steering-wheel';
-    wheel.innerHTML='<img class="art" src="assets/ui/tdr_steering_wheel_nissan.webp?v=1" alt="Volante">';
-    document.body.appendChild(wheel);
-
-    let activeId=null;
-    const setFromPointer=e=>{
-      const r=wheel.getBoundingClientRect();
-      const cx=r.left+r.width*.5;
-      const half=Math.max(46,r.width*.5);
-      let raw=(e.clientX-cx)/half;
-      raw=Math.max(-1,Math.min(1,raw));
-
-      const current=prefs();
-      const sens=Math.max(.4,Math.min(1.4,Number(current.sensitivity||1)));
-      const inv=current.invertSteer===true?-1:1;
-
-      const dead=.055;
-      const mag=Math.abs(raw)<=dead?0:(Math.abs(raw)-dead)/(1-dead);
-      const shaped=Math.sign(raw)*Math.pow(mag,1.55);
-      const steer=Math.max(-.66,Math.min(.66,shaped*.60*sens*inv));
-      this._applyWheelSteer(steer);
-      wheel.style.setProperty('--rot',`${raw*40}deg`);
+    let activeId=null,startX=0,raw=0,filtered=0;
+    const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
+    const target=e=>{
+      const config=prefs(),width=zone.getBoundingClientRect().width;
+      const sensitivity=clamp(Number(config.sensitivity)||1,.5,1.5);
+      const reverse=config.invertSteer===true?-1:1;
+      // Travel is tied to physical control width. Starting anywhere is neutral.
+      const travel=Math.max(48,width*.38);
+      raw=clamp((e.clientX-startX)/travel,-1,1);
+      const dead=.025;
+      const magnitude=Math.max(0,(Math.abs(raw)-dead)/(1-dead));
+      const shaped=Math.pow(magnitude,1.28);
+      return clamp(Math.sign(raw)*shaped*sensitivity*reverse,-1,1);
     };
-
     const down=e=>{
       if(activeId!==null)return;
-      activeId=e.pointerId;
-      wheel.setPointerCapture?.(e.pointerId);
-      wheel.classList.add('active');
-      setFromPointer(e);
+      activeId=e.pointerId;startX=e.clientX;raw=0;filtered=0;
+      try{zone.setPointerCapture(e.pointerId);}catch{}
+      zone.classList.add('active');
+      this._applyWheelSteer(0);
       e.preventDefault();
     };
-    const move=e=>{if(activeId===e.pointerId){setFromPointer(e);e.preventDefault();}};
+    const move=e=>{
+      if(activeId!==e.pointerId)return;
+      // Low latency: no extra animation loop; race update consumes this value.
+      filtered=target(e);
+      this._applyWheelSteer(filtered);
+      zone.style.setProperty('--steer',String(filtered));
+      e.preventDefault();
+    };
     const release=e=>{
       if(activeId!==e.pointerId)return;
-      try{wheel.releasePointerCapture?.(e.pointerId);}catch{}
-      activeId=null;
-      wheel.classList.remove('active');
+      activeId=null;raw=0;filtered=0;
+      try{if(zone.hasPointerCapture?.(e.pointerId))zone.releasePointerCapture(e.pointerId);}catch{}
+      zone.classList.remove('active');
       this._applyWheelSteer(0);
-      wheel.style.setProperty('--rot','0deg');
+      zone.style.setProperty('--steer','0');
       e.preventDefault();
     };
-
-    wheel.addEventListener('pointerdown',down,{passive:false});
-    wheel.addEventListener('pointermove',move,{passive:false});
-    wheel.addEventListener('pointerup',release,{passive:false});
-    wheel.addEventListener('pointercancel',release,{passive:false});
-    wheel.addEventListener('lostpointercapture',release,{passive:false});
-
+    zone.addEventListener('pointerdown',down,{passive:false});
+    zone.addEventListener('pointermove',move,{passive:false});
+    zone.addEventListener('pointerup',release,{passive:false});
+    zone.addEventListener('pointercancel',release,{passive:false});
+    zone.addEventListener('lostpointercapture',release,{passive:false});
     this.events.once('shutdown',()=>{
       this._applyWheelSteer(0);
-      wheel.removeEventListener('pointerdown',down);
-      wheel.removeEventListener('pointermove',move);
-      wheel.removeEventListener('pointerup',release);
-      wheel.removeEventListener('pointercancel',release);
-      wheel.removeEventListener('lostpointercapture',release);
-      wheel.remove();
+      zone.removeEventListener('pointerdown',down);
+      zone.removeEventListener('pointermove',move);
+      zone.removeEventListener('pointerup',release);
+      zone.removeEventListener('pointercancel',release);
+      zone.removeEventListener('lostpointercapture',release);
+      zone.remove();
       document.getElementById('tdr-steering-wheel-style')?.remove();
     });
   }
