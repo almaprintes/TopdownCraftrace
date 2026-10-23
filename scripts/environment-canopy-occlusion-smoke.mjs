@@ -3,6 +3,8 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {validCanopyZone,normalizedCanopyZones,scaleCanopyZones,photoCanopyContains}
   from '../src/game/environment/canopyOcclusionGeometry.js';
+import {validCollisionZone,compileCollisionZone,resolveCollisionZone}
+  from '../src/game/environment/FreehandCollisionZones.js';
 import {mountPhotoCanopyOcclusion,CANOPY_DEPTH}
   from '../src/game/tracks/photoCanopyOcclusion.js';
 import {scaleKartingCanariasEnvironment} from '../src/game/tracks/kartingCanariasWorldScale.js';
@@ -74,7 +76,7 @@ const santa=JSON.parse(readFileSync(
  'src/game/tracks/library/santa-cruz/source/santa-cruz-photo.environment.json','utf8'));
 const santaPublished=JSON.parse(readFileSync(
  'src/game/tracks/library/santa-cruz/santa-cruz.environment.json','utf8'));
-const santaCounts=[26,49,48,45,20,23,18,25,19,10,15];
+const santaCounts=[26,49,48,45,20,23,18,25,19,10,15,10,9];
 assert.equal(santa.trackId,'santa-cruz');
 assert.equal(santa.version,7);
 assert.equal(physicalCircuitId('santa-cruz-inverso'),'santa-cruz');
@@ -82,13 +84,33 @@ assert.deepEqual(santa.canopyZones.map(z=>z.points.length),santaCounts,
  'Every owner-created Santa Cruz Copa must survive the photo source installer');
 assert.deepEqual(santaPublished.canopyZones,santa.canopyZones,
  'Source AND installed environment must contain the exact same Copas');
-assert.equal(normalizedCanopyZones(santa.canopyZones,3072,4608).length,11);
+assert.equal(normalizedCanopyZones(santa.canopyZones,3072,4608).length,13);
 assert.equal(createHash('sha256').update(JSON.stringify(santa.canopyZones)).digest('hex'),
- '4fa889cbe9d142d8c7a608f02b9d3c57273ba5a3f0f02456c794ed32e9d74539',
- 'Preserve all 298 original Santa Cruz contour vertices with exact coordinates');
+ '861d24c68c83efbd29761ea099a86cc3d4ae8198db7f662e3fc88aeba2f1f448',
+ 'Preserve all 317 Santa Cruz contour vertices, including two new Copas');
 assert.equal(santa.collisionLines.length,4);
 assert.deepEqual(santa.collisionLines.map(z=>z.nodes.length),[24,8,11,12]);
-assert.equal(santa.collisionZones.length,0);
+assert.equal(santa.collisionZones.length,3,'Three newly authored solid polygons must be collidable');
+assert.deepEqual(santa.collisionZones.map(z=>z.points.length),[21,17,26]);
+assert.deepEqual(santaPublished.collisionZones,santa.collisionZones,
+ 'CI source installer must preserve all three solid polygons');
+assert.equal(createHash('sha256').update(JSON.stringify(santa.collisionZones)).digest('hex'),
+ 'b2b9185e3973a7019f702b5a2e83db5c501acc74bf4c092e9ca11185d8ab9a78',
+ 'Keep every owner-authored Santa Cruz solid-zone vertex unchanged');
+assert.equal(createHash('sha256').update(JSON.stringify(santa.collisionLines)).digest('hex'),
+ '16215b6783ec5fa49be0309018200cad67f1701df775fa6b3ecd9d7c607cebd0',
+ 'Owner pen barriers must remain identical to the previous published circuit');
+for(const zone of santa.collisionZones){
+ assert.equal(zone.solid,true);
+ assert.ok(validCollisionZone(zone),'Each authored Santa Cruz solid is geometrically valid');
+ assert.ok(zone.points.every(p=>p.x>=0&&p.y>=0&&p.x<=3072&&p.y<=4608),
+   'All solids are in the native Santa Cruz photo coordinate space');
+ const compiled=compileCollisionZone(zone);
+ assert.ok(compiled&&compiled.maxX>compiled.minX&&compiled.maxY>compiled.minY,
+   'All solid zones are accepted by the actual collision runtime');
+ assert.equal(resolveCollisionZone(compiled,{x:-999,y:-999},8),null,
+   'Distant cars are not blocked by an unrelated solid zone');
+}
 assert.ok(readFileSync('scripts/install-santa-cruz-source.mjs','utf8').includes(
  'fs.writeFileSync(environmentTarget,JSON.stringify(environment,null,2)'),
  'Installer always reads the Copas-equipped authoritative source project');
@@ -183,5 +205,5 @@ assert.match(editor,/if\(!candidates\.length\)/);
 assert.match(editor,/this\._exitGuard\?\.backup\?\.\('canopy-finished'\)/);
 assert.match(scale,/canopyZones:/);
 assert.ok(!/addSegmentCollider\([^\n]*canopy/.test(runtime));
-assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.9"/);
-console.log('PASS: Photo Copas preserved across Santa Cruz source installer (11), Americas (1), Tenerife and Canarias, reverse variants, no collision changes, native photo reuse');
+assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.10"/);
+console.log("PASS: Santa Cruz source: 13 Copas (317 vertices) and 3 valid solid collision zones (64 vertices), preserved 4 pen lines; Americas, Tenerife and Canarias stable");
