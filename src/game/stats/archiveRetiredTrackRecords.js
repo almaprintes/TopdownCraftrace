@@ -112,10 +112,21 @@ export async function archiveRetiredTrackRecords(){
       archive:(id,entries)=>archiveRowsInDb(db,id,entries)
     });
     if(outcome.reset.length){
+      // The shared Race Control index is only a derived cache. Remove the
+      // four retired entries without invoking unrelated legacy cleanup (such
+      // as track01 purging) or touching any other track's cached results.
       try{
-        const {rebuildLocalRaceRecords}=await import('./localRaceRecords.js');
-        rebuildLocalRaceRecords();
-      }catch(e){console.warn('[TDR] Local race index rebuild deferred',e);}
+        const indexKey='tdr2:raceRecords:v1';
+        const raw=localStorage.getItem(indexKey);
+        if(raw){
+          const index=JSON.parse(raw);
+          if(index?.tracks&&typeof index.tracks==='object'){
+            for(const id of outcome.reset)delete index.tracks[id];
+            index.updatedAt=Date.now();
+            localStorage.setItem(indexKey,JSON.stringify(index));
+          }
+        }
+      }catch(e){console.warn('[TDR] Race Control cache will refresh on open',e);}
     }
     return outcome;
   }finally{
