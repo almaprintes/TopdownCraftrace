@@ -205,5 +205,6 @@ assert.match(editor,/if\(!candidates\.length\)/);
 assert.match(editor,/this\._exitGuard\?\.backup\?\.\('canopy-finished'\)/);
 assert.match(scale,/canopyZones:/);
 assert.ok(!/addSegmentCollider\([^\n]*canopy/.test(runtime));
-assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.10"/);
+// The DEV marker must exist but this geometry test must not pin one release.
+assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV \\d+\\.\\d+\\.\\d+"/);
 console.log("PASS: Santa Cruz source: 13 Copas (317 vertices) and 3 valid solid collision zones (64 vertices), preserved 4 pen lines; Americas, Tenerife and Canarias stable");
