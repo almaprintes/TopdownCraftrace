@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {validCanopyZone,normalizedCanopyZones,scaleCanopyZones,photoCanopyContains}
   from '../src/game/environment/canopyOcclusionGeometry.js';
@@ -58,6 +59,9 @@ assert.equal(tenerife.version,7);
 assert.equal(physicalCircuitId('karting-tenerife-inverso'),'karting-tenerife');
 assert.equal(tenerife.canopyZones?.length,3,'All 3 owner-drawn Tenerife Copas are installed');
 assert.deepEqual(tenerife.canopyZones.map(z=>z.points.length),[78,94,36]);
+assert.equal(createHash('sha256').update(JSON.stringify(tenerife.canopyZones)).digest('hex'),
+ 'c885e69bbb936a5601471d202b524e93739032548622aeb64eb8b56ed1e12aa3',
+ 'The 208 Tenerife vertices, IDs and opacity must stay byte-for-byte equivalent to the owner export');
 assert.equal(new Set(tenerife.canopyZones.map(z=>z.id)).size,3,'Each Tenerife Copa is distinct');
 assert.equal(normalizedCanopyZones(tenerife.canopyZones,2813,2602).length,3);
 assert.ok(tenerife.canopyZones.every(z=>validCanopyZone(z)&&z.opacity===.93));
