@@ -51,6 +51,21 @@ assert.deepEqual(pilot.collisionLines.map(line=>line.nodes.length),[28,2,8,3,4],
  'Canopy-only import must not change the existing physical barrier nodes');
 assert.ok(pilot.canopyZones.every(z=>z.kind==='photo-canopy'),
  'Both circuit directions reuse the same physical environment polygons');
+const tenerife=JSON.parse(readFileSync(
+ 'src/game/tracks/library/karting-tenerife/karting-tenerife.environment.json','utf8'));
+assert.equal(tenerife.trackId,'karting-tenerife');
+assert.equal(tenerife.version,7);
+assert.equal(physicalCircuitId('karting-tenerife-inverso'),'karting-tenerife');
+assert.equal(tenerife.canopyZones?.length,3,'All 3 owner-drawn Tenerife Copas are installed');
+assert.deepEqual(tenerife.canopyZones.map(z=>z.points.length),[78,94,36]);
+assert.equal(new Set(tenerife.canopyZones.map(z=>z.id)).size,3,'Each Tenerife Copa is distinct');
+assert.equal(normalizedCanopyZones(tenerife.canopyZones,2813,2602).length,3);
+assert.ok(tenerife.canopyZones.every(z=>validCanopyZone(z)&&z.opacity===.93));
+assert.equal(tenerife.collisionLines?.length,5);
+assert.deepEqual(tenerife.collisionLines.map(z=>z.nodes.length),[2,2,4,5,3],
+ 'Original Tenerife pen barriers remain unchanged');
+assert.equal(tenerife.collisionZones?.length,17,'All original Tenerife solid zones remain');
+
 
 function photoMock(x,y,key,scale=1){
  return {scene:true,x,y,originX:0,originY:0,scaleX:scale,scaleY:scale,
@@ -114,10 +129,12 @@ assert.match(editor,/p\.canopyZones=|project\.canopyZones=|project\.canopyZones=
 assert.match(editor,/_applyProject\(p\)/);
 assert.match(editor,/_drawCanopies\(\)/);
 assert.match(editor,/data-canopy="finish"/);
-assert.match(editor,/CARGAR 8 COPAS CANARIAS/);
-assert.match(editor,/candidates\.length!==8/);
+assert.match(editor,/CARGAR COPAS DEL CIRCUITO/);
+assert.match(editor,/createTrackEnvironment\(trackId\)/);
+assert.match(editor,/data-canopy="import-copas"/);
+assert.match(editor,/if\(!candidates\.length\)/);
 assert.match(editor,/this\._exitGuard\?\.backup\?\.\('canopy-finished'\)/);
 assert.match(scale,/canopyZones:/);
 assert.ok(!/addSegmentCollider\([^\n]*canopy/.test(runtime));
-assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.7"/);
-console.log('PASS: Environment Studio photo-canopy polygons persisted; no collisions; same native tiles masked above cars; iOS compact scale; cleanup; Canarias / inverso / x2.5');
+assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.8"/);
+console.log('PASS: Environment Studio photo-canopy polygons persisted; no collisions; same native tiles masked above cars; iOS compact scale; cleanup; Canarias / Tenerife normal + inverso / x2.5');
