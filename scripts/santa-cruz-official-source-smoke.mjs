@@ -70,6 +70,16 @@ if(!fs.existsSync(src)){
   assert.deepEqual(env.collisionLines,authored.collisionLines,
     'Every authored Bézier handle and position must survive installation unchanged');
   assert.deepEqual(env.collisionZones,authored.collisionZones);
+  assert.deepEqual(env.canopyZones,authored.canopyZones,
+    'All foreground Copas survive the authoritative photo source installation');
+  assert.equal(env.canopyZones.length,13,'Keep all 13 authored Copas');
+  assert.equal(env.collisionZones.length,3,'Keep 3 new owner-drawn solid collision polygons');
+  assert.deepEqual(env.collisionZones.map(z=>z.points.length),[21,17,26]);
+  const {validCollisionZone,compileCollisionZone}=await import('../src/game/environment/FreehandCollisionZones.js');
+  for(const zone of env.collisionZones){
+    assert.ok(zone.solid&&validCollisionZone(zone)&&compileCollisionZone(zone),
+      'Solid polygon must compile to the actual race collision runtime: '+zone.id);
+  }
   assert.equal(env.collisionLines.length,4,'Four authored wall boundaries expected');
   assert.equal(env.collisionLines.reduce((n,l)=>n+l.nodes.length,0),55,'All 55 newly exported owner nodes preserved');
   const {validCollisionLine,sampleCollisionLine}=await import('../src/game/environment/CollisionPenGeometry.js');
