@@ -53,6 +53,12 @@ const recorded={version:5,kind:'local-top10-lap',trackKey:id,carId:'spark',
  lapMs:2200,recordedAt:record.t,samples:currentSamples};
 store.set(replayKey,JSON.stringify(recorded));
 store.set('tdr2:ghostPb:'+id,JSON.stringify({...recorded,lapMs:1800,samples:oldSamples}));
+// A malformed/stale Race Control index previously made the real replay invisible
+// to Ghost mode, despite its valid, directly readable topReplay key.
+store.set('tdr2:ttHist:'+id,JSON.stringify({v:1,history:[]}));
+assert.equal(findRaceControlGhost(id,track,1800)?.ghost?.lapMs,2200,
+  'Ghost mode must find actual topReplay even when Race Control index is empty');
+store.set('tdr2:ttHist:'+id,JSON.stringify({v:1,history:[record]}));
 let recovered=findRaceControlGhost(id,track,1800);
 assert.equal(recovered?.ghost?.lapMs,2200,'Recover local Race Control replay automatically');
 assert.equal(recovered?.isOfficialPb,false,'Do not rewrite the historic PB just to play a current lap');
@@ -97,5 +103,5 @@ assert.ok(!sectors.includes('localStorage.setItem(this._ghostStorageKey'),
  'Sector metadata must never overwrite some other ghost key');
 assert.match(sectors,/stored\.kind!==ghost\.kind/);
 assert.match(readFileSync('index.html','utf8'),
- /<meta name="tdr-dev-version" content="DEV 1\.3\.2"/);
+ /<meta name="tdr-dev-version" content="DEV 1\.3\.3"/);
 console.log('PASS: Santa Cruz Normal/Inverse old ghosts blocked; Race Control -> self ghost local recovery; on-device PB automatically saved; historic records and online rivals untouched');
