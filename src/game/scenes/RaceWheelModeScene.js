@@ -115,6 +115,7 @@ export class RaceScene extends CurrentRaceScene {
       try{zone.setPointerCapture(e.pointerId);}catch{}
       zone.classList.add('active');
       this._applyWheelSteer(0);
+      zone.querySelector('.thumb').style.left='50%';
       e.preventDefault();
     };
     const move=e=>{
