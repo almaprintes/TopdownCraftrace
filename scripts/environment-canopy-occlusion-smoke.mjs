@@ -31,7 +31,7 @@ assert.equal(originalEnv.canopyZones[0].points[0].x,1410);
 assert.equal(enlarged.collisionLines.length,0);
 assert.equal(enlarged.collisionZones.length,0);
 const registrySource=readFileSync('src/game/tracks/environmentRegistry.js','utf8');
-assert.match(registrySource,/physicalCircuitId\(trackId\)/);
+assert.match(registrySource,/physicalCircuitId\(id\)/);
 assert.equal(physicalCircuitId('karting-canarias-4096-inverso'),'karting-canarias-4096');
 const pilot=JSON.parse(readFileSync(
  'src/game/tracks/library/karting-canarias-4096/karting-canarias-4096.environment.json','utf8'));
