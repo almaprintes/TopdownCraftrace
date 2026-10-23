@@ -44,8 +44,8 @@ export class EnvironmentBuilderScene extends Current{
       <button type="button" data-canopy="delete">✕ BORRAR SELECCIÓN</button>
       <button type="button" data-canopy="cancel">CANCELAR BORRADOR</button>
       </div>
-      <button type="button" data-canopy="import-canarias" style="width:100%;min-height:43px;margin-top:8px;border:1px solid #6cbdf2">
-        🌿 CARGAR 8 COPAS CANARIAS
+      <button type="button" data-canopy="import-copas" style="width:100%;min-height:43px;margin-top:8px;border:1px solid #6cbdf2">
+        🌿 CARGAR COPAS DEL CIRCUITO
       </button>
       <p data-canopy-status style="font-size:10px;color:#a6e5d2;margin:8px 0 0">Sin copas</p>`;
     aside.prepend(section);this._canopyUi=section;
@@ -79,21 +79,19 @@ export class EnvironmentBuilderScene extends Current{
         this._canopySelected=null;this._canopyGesture=null;this._mode='canopy-edit';
       },
       cancel:()=>{this._canopyDraft=[];this._canopyGesture=null;this._mode='select';this._canopyPausedMode=null;},
-      'import-canarias':()=>{
-        if(this._trackId!=='karting-canarias-4096'){
-          this._flash?.('SOLO DISPONIBLE EN KARTING CANARIAS 4096');return;
-        }
-        const preset=createTrackEnvironment('karting-canarias-4096');
+      'import-copas':()=>{
+        const trackId=String(this._trackId||'');
+        const preset=createTrackEnvironment(trackId);
         const candidates=normalizedCanopyZones(preset?.canopyZones,
           this._realTrack?.worldW,this._realTrack?.worldH);
-        if(candidates.length!==8){
-          this._flash?.('FALTAN COPAS CANARIAS EN REPOSITORIO');return;
+        if(!candidates.length){
+          this._flash?.('ESTE CIRCUITO NO TIENE COPAS GUARDADAS');return;
         }
         if(this._canopyZones.length&&window.confirm?.(
-          '¿Sustituir SOLO las copas visuales por las ocho zonas terminadas? Colisiones, foto y resto del proyecto no cambian.')===false)return;
+          `¿Sustituir SOLO las copas visuales actuales por las ${candidates.length} copas guardadas de este circuito? Colisiones, foto y resto del proyecto no cambian.`)===false)return;
         this._canopyZones=clone(candidates);this._canopySelected=null;
         this._canopyDraft=[];this._mode='canopy-edit';
-        this._flash?.('OCHO COPAS CANARIAS CARGADAS · LISTAS PARA EDITAR');
+        this._flash?.(`${candidates.length} COPAS CARGADAS · LISTAS PARA EDITAR`);
       }
     };
     for(const [name,fn] of Object.entries(actions)){
