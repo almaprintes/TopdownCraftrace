@@ -1,5 +1,6 @@
 import './style.css';
 import { createGame } from './game/game.js';
+import {archiveRetiredTrackRecords} from './game/stats/archiveRetiredTrackRecords.js';
 import {isBenignResizeObserverWarning,mayReplaceStartupScreen} from './game/dev/runtimeErrorPolicy.js';
 window.__tdrStartupMark?.('main-js');
 // The retired contest preference cannot grant access; other player saves remain intact.
@@ -38,6 +39,7 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 let __game = null;
+let __tdrLocalTrackArchiveReady=false;
 let __tdrPausedForRewarded = false;
 let __tdrAdRequested = false;
 let __tdrAdFullscreen = false;
@@ -409,6 +411,10 @@ function __tickOrientation() {
   __setOverlayVisible(!landscape);
 
   if (landscape && !__game) {
+    // Never let a race scene read retired PB/replay keys before the one-time
+    // on-device archive transaction has committed. On archive failure we keep
+    // the original records and proceed without erasing anything.
+    if(!__tdrLocalTrackArchiveReady)return;
     window.__tdrStartupMark?.('phaser-start');
     __game = createGame('app');
     window.__tdrStartupMark?.('phaser-created');
@@ -423,6 +429,20 @@ function __tickOrientation() {
   }
 }
 
+// Archive only the four explicitly authorized old circuit timing identities.
+// Save all raw replay files to IndexedDB BEFORE any removal from localStorage.
+// The operation is local-only and never talks to Supabase.
+void archiveRetiredTrackRecords()
+  .then(result=>{
+    window.__tdrLocalTrackArchiveOutcome=result;
+    if(result.failed.length)
+      console.warn('[TDR] Retired track archive unavailable; existing records preserved',result.failed);
+  })
+  .catch(error=>console.warn('[TDR] Track archive failed; keep original records',error))
+  .finally(()=>{
+    __tdrLocalTrackArchiveReady=true;
+    __tickOrientation();
+  });
 // Advertising is optional: neither module loading nor a native response gates Phaser.
 __tickOrientation();
 window.addEventListener('resize', __tickOrientation, {passive:true});
