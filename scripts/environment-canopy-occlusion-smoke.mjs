@@ -70,6 +70,48 @@ assert.equal(tenerife.collisionLines?.length,5);
 assert.deepEqual(tenerife.collisionLines.map(z=>z.nodes.length),[2,2,4,5,3],
  'Original Tenerife pen barriers remain unchanged');
 assert.equal(tenerife.collisionZones?.length,17,'All original Tenerife solid zones remain');
+const santa=JSON.parse(readFileSync(
+ 'src/game/tracks/library/santa-cruz/source/santa-cruz-photo.environment.json','utf8'));
+const santaPublished=JSON.parse(readFileSync(
+ 'src/game/tracks/library/santa-cruz/santa-cruz.environment.json','utf8'));
+const santaCounts=[26,49,48,45,20,23,18,25,19,10,15];
+assert.equal(santa.trackId,'santa-cruz');
+assert.equal(santa.version,7);
+assert.equal(physicalCircuitId('santa-cruz-inverso'),'santa-cruz');
+assert.deepEqual(santa.canopyZones.map(z=>z.points.length),santaCounts,
+ 'Every owner-created Santa Cruz Copa must survive the photo source installer');
+assert.deepEqual(santaPublished.canopyZones,santa.canopyZones,
+ 'Source AND installed environment must contain the exact same Copas');
+assert.equal(normalizedCanopyZones(santa.canopyZones,3072,4608).length,11);
+assert.equal(createHash('sha256').update(JSON.stringify(santa.canopyZones)).digest('hex'),
+ '4fa889cbe9d142d8c7a608f02b9d3c57273ba5a3f0f02456c794ed32e9d74539',
+ 'Preserve all 298 original Santa Cruz contour vertices with exact coordinates');
+assert.equal(santa.collisionLines.length,4);
+assert.deepEqual(santa.collisionLines.map(z=>z.nodes.length),[24,8,11,12]);
+assert.equal(santa.collisionZones.length,0);
+assert.ok(readFileSync('scripts/install-santa-cruz-source.mjs','utf8').includes(
+ 'fs.writeFileSync(environmentTarget,JSON.stringify(environment,null,2)'),
+ 'Installer always reads the Copas-equipped authoritative source project');
+
+const americas=JSON.parse(readFileSync(
+ 'src/game/tracks/library/karting-americas/karting-americas.environment.json','utf8'));
+assert.equal(americas.trackId,'karting-americas');
+assert.equal(americas.version,7);
+assert.equal(physicalCircuitId('karting-americas-inverso'),'karting-americas');
+assert.deepEqual(americas.canopyZones.map(z=>z.points.length),[85],
+ 'Owner-drawn 85-point Americas Copa must remain complete');
+assert.equal(normalizedCanopyZones(americas.canopyZones,2862,3435).length,1);
+assert.equal(createHash('sha256').update(JSON.stringify(americas.canopyZones)).digest('hex'),
+ '0b2276d161b1a990e851de64a7b413c5bf147ede029c6c93bc7d2c92a8543fab');
+assert.equal(americas.collisionLines.length,8);
+assert.deepEqual(americas.collisionLines.map(z=>z.nodes.length),[16,3,4,4,4,5,9,27],
+ 'Unchanged eight Americas barriers');
+assert.equal(americas.collisionZones.length,0);
+for(const env of [santa,americas]){
+ assert.ok(env.canopyZones.every(z=>validCanopyZone(z)&&z.kind==='photo-canopy'&&z.opacity===.93));
+ assert.equal(new Set(env.canopyZones.map(z=>z.id)).size,env.canopyZones.length);
+}
+
 
 
 function photoMock(x,y,key,scale=1){
@@ -141,5 +183,5 @@ assert.match(editor,/if\(!candidates\.length\)/);
 assert.match(editor,/this\._exitGuard\?\.backup\?\.\('canopy-finished'\)/);
 assert.match(scale,/canopyZones:/);
 assert.ok(!/addSegmentCollider\([^\n]*canopy/.test(runtime));
-assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.8"/);
-console.log('PASS: Environment Studio photo-canopy polygons persisted; no collisions; same native tiles masked above cars; iOS compact scale; cleanup; Canarias / Tenerife normal + inverso / x2.5');
+assert.match(readFileSync('index.html','utf8'),/<meta name="tdr-dev-version" content="DEV 1\.3\.9"/);
+console.log('PASS: Photo Copas preserved across Santa Cruz source installer (11), Americas (1), Tenerife and Canarias, reverse variants, no collision changes, native photo reuse');
