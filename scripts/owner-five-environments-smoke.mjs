@@ -12,7 +12,7 @@ const entries=[
   ['karting-canarias-4096','karting-canarias-4096/karting-canarias-4096.environment.json',5,1,4096,6144],
   ['circuito-atlantico','track01/track01.environment.json',1,2,4344*.70,3258*.70],
   ['karting-americas','karting-americas/karting-americas.environment.json',8,0,2862,3435],
-  ['santa-cruz','santa-cruz/santa-cruz.environment.json',4,0,3072,4608]
+  ['santa-cruz','santa-cruz/santa-cruz.environment.json',4,3,3072,4608]
 ];
 let totalLines=0,totalZones=0;
 for(const [id,rel,lines,zones,w,h] of entries){
@@ -53,7 +53,7 @@ for(const [id,rel,lines,zones,w,h] of entries){
  }
  totalLines+=lines;totalZones+=zones;
 }
-assert.deepEqual([totalLines,totalZones],[23,20]);
+assert.deepEqual([totalLines,totalZones],[23,23]);
 // Original 4344x3258 Atlántico export was authored before DEV 1.2.275
 // coordinate-space tagging; convert only once to the approved 70%-world.
 const at=read(root+'track01/track01.environment.json');
@@ -77,4 +77,4 @@ assert.ok(runtime.includes("env.coordinateSpace==='race-world'?env:scaleAtlantic
  'Runtime must not scale original Atlántico export twice');
 assert.ok(runtime.includes("if(!String(item?.path||'').includes('environment/barriers/'))return"),
  'Finish decal must not become a collider');
-console.log('OWNER FIVE ENVIRONMENTS OK: 5 finish lines; 23 Bézier pen lines; 20 solid zones; Canarias native 4096; Atlántico 70% once; Santa Cruz installer; Tenerife ads.');
+console.log('OWNER FIVE ENVIRONMENTS OK: 5 finish lines; 23 Bézier pen lines; 23 solid zones (3 new in Santa Cruz); Canarias native 4096; Atlántico 70% once; Santa Cruz installer; Tenerife ads.');
