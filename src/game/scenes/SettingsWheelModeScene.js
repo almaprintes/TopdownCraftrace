@@ -22,7 +22,23 @@ export class SettingsScene extends CurrentSettingsScene {
       btn.textContent='◉ TÁCTIL';
       row.appendChild(btn);
     }
-    if(!row.querySelector('[data-v="rc_twin"]')){
+    if(!row.querySelector('[data-v="invisible"]')){
+      const btn=document.createElement('button');
+      btn.className=`s2choice ${c.steeringMode==='invisible'?'on':''}`;
+      btn.dataset.v='invisible';
+      btn.textContent=getLanguage()==='en'?'◌ INVISIBLE':'◌ INVISIBLE';
+      row.appendChild(btn);
+    }
+    if(c.steeringMode==='invisible'){
+      const note=document.createElement('div');
+      note.dataset.invisibleSteeringHint='1';
+      note.textContent=getLanguage()==='en'
+        ?'Left half: touch anywhere, slide sideways to steer, release to center. Standard pedals on right.'
+        :'Mitad izquierda: toca donde quieras y desliza para girar. Al soltar se centra; gas y freno habituales a la derecha.';
+      note.style.cssText='font:600 11px system-ui;color:#9dc9dd;margin:7px 0 3px;line-height:1.35';
+      row.insertAdjacentElement('afterend',note);
+    }
+        if(!row.querySelector('[data-v="rc_twin"]')){
       const btn=document.createElement('button');
       btn.className=`s2choice ${c.steeringMode==='rc_twin'?'on':''}`;
       btn.dataset.v='rc_twin';
@@ -120,6 +136,12 @@ export class SettingsScene extends CurrentSettingsScene {
       <div class="cchelp">Arrastra cada control · toca para ajustar tamaño · las zonas rojas están reservadas al HUD</div>
     `;
     document.body.appendChild(root);
+    if(c.steeringMode==='invisible'){
+      const hint=root.querySelector('.cchelp');
+      if(hint)hint.textContent=getLanguage()==='en'
+        ?'Steering area is invisible and fills the left half · Adjust the visible pedals here'
+        :'Dirección invisible en toda la mitad izquierda · Aquí ajustas solo los pedales';
+    }
 
     const controls=[];
     const add=(id,klass,label,html='')=>{
@@ -138,6 +160,9 @@ export class SettingsScene extends CurrentSettingsScene {
     }else if(c.steeringMode==='rc_twin'){
       add('steer','ccrcsteer','RC DIRECCIÓN','← · →');
       add('gas','ccrcdrive','RC GAS / FRENO','↑ GAS   ·   ↓ FRENO');
+    }else if(c.steeringMode==='invisible'){
+      // The steering surface always occupies one whole screen half; nothing
+      // should appear as a movable steering widget in the calibrator.
     }else{
       add('steer',c.steeringMode==='wheel'?'ccwheel':'ccstick',c.steeringMode==='wheel'?'DIRECCIÓN TÁCTIL':'PALANCA');
     }
