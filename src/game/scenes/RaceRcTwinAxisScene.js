@@ -62,8 +62,8 @@ export class RaceScene extends PreviousRaceScene{
       #tdr-rc-controls{position:fixed;inset:0;z-index:84;pointer-events:none;color:#d9f7ff;font-family:system-ui,-apple-system,sans-serif;user-select:none;-webkit-user-select:none}
       #tdr-rc-controls .rczone{position:fixed;box-sizing:border-box;border:1.5px solid rgba(105,215,246,.55);border-radius:23px;background:linear-gradient(160deg,rgba(14,38,55,.91),rgba(6,13,25,.87));box-shadow:0 8px 25px #0008,inset 0 1px #ffffff24;transform:translate(-50%,-50%);pointer-events:auto;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;overflow:hidden}
       #tdr-rc-controls .rczone.active{border-color:#72fbbd}
-      #tdr-rc-controls .rczone.rc-steer{width:clamp(166px,24vw,242px);height:clamp(105px,19vh,137px)}
-      #tdr-rc-controls .rczone.rc-drive{width:clamp(92px,12vw,115px);height:clamp(174px,50vh,217px)}
+      #tdr-rc-controls .rczone.rc-steer{width:clamp(215px,27vw,290px);height:clamp(145px,23vh,188px)}
+      #tdr-rc-controls .rczone.rc-drive{width:clamp(118px,14vw,150px);height:clamp(208px,54vh,260px)}
       #tdr-rc-controls .rclabel{position:absolute;top:8px;left:0;right:0;text-align:center;font:800 10px system-ui;letter-spacing:.075em;opacity:.84;pointer-events:none}
       #tdr-rc-controls .rcpath{position:absolute;background:#90cce150;border-radius:10px;pointer-events:none}
       #tdr-rc-controls .rc-steer .rcpath{height:5px;left:13%;right:13%;top:57%}
@@ -92,7 +92,8 @@ export class RaceScene extends PreviousRaceScene{
         if(!point)continue;
         el.style.left=`${point.x*100}vw`;
         el.style.top=`${point.y*100}vh`;
-        el.style.scale=String(clamp(Number(point.scale)||1,.65,1.55));
+        // Keep transform and hit-testing in the same coordinate system.
+        el.style.transform=`translate(-50%,-50%) scale(${clamp(Number(point.scale)||1,.65,1.55)})`;
       }
     };
     const setSteer=value=>{
