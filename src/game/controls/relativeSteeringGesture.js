@@ -1,10 +1,11 @@
 // Virtual horizontal steering position with a genuine stable neutral.
 // 1.3.12 unwound full lock in ~15px: impossible to settle on a straight.
-// 66px from neutral to full lock, 5px detent, 1.8 power curve.\n// Up to 22px keeps DEV 1.3.14 sensitivity; deeper turns become ~10-15% softer:
+// 70px from neutral to full lock, 5px detent, 1.8 power curve.
+// Up to 22px retains original 1.3.14 near-center feel; deeper turns are softer.
 // tiny thumb corrections have little impact; wide strokes can still turn fully.
 // Independent of framerate; a stationary finger keeps its requested steering.
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-const TRAVEL_PX=66; // 10% more thumb travel to full lock for bends
+const TRAVEL_PX=70; // Slight further reduction in medium/deep corners; small corrections unchanged
 const PREVIOUS_TRAVEL_PX=60;
 const FINE_CONTROL_END_PX=22; // Preserve the already-approved near-neutral feel
 const CENTER_DETENT_PX=5;
@@ -32,7 +33,7 @@ export function createRelativeSteeringGesture(){
       // Stable straight: 5 physical px around the virtual center always
       // yields exactly zero; tiny reversals don't wobble the car.
       // Keep the previously approved precision for small straight corrections.
-      // Above 22px, spread the rest of the turn over 44px instead of 38px.
+      // Above 22px, spread the rest of the turn over 48px instead of 44px (DEV 1.3.15).
       // This eases medium/strong corner input while keeping full lock reachable.
       const normalized=magnitude<=FINE_CONTROL_END_PX
         ? clamp((magnitude-CENTER_DETENT_PX)/(PREVIOUS_TRAVEL_PX-CENTER_DETENT_PX),0,1)
