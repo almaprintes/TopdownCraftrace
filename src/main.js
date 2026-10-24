@@ -212,8 +212,10 @@ function __installRaceControlVisuals() {
       position: absolute;
       left: max(22px, 2vw);
       bottom: max(22px, 3vh);
-      width: clamp(142px, 17vw, 190px);
+      width: clamp(190px, 21vw, 236px);
       aspect-ratio: 1;
+      /* The visible circular pad and its actual pointer target must agree. */
+      touch-action: none;
       opacity: .78;
       transition: opacity 90ms linear;
       filter: drop-shadow(0 7px 18px rgba(0,0,0,.20));
@@ -378,7 +380,12 @@ function __installRaceControlVisuals() {
         } catch { cachedButtonMode=false; }
       }
       buttonMode=buttonMode||cachedButtonMode;
-      if (stick) stick.style.display = buttonMode ? 'none' : 'block';
+      const rcMode=race?._tdrRcMode===true;
+      // A legacy visual may NEVER reappear on top of an RC two-axis layout.
+      if(stick)stick.style.setProperty('display',(buttonMode||rcMode)?'none':'block','important');
+      for(const pedal of [gas,brake]){
+        if(pedal)pedal.style.setProperty('display',rcMode?'none':'block','important');
+      }
 
       const throttle = Math.max(0, Math.min(1, Number(race?.touch?.throttle || 0)));
       const braking = Math.max(0, Math.min(1, Number(race?.touch?.brake || 0)));
