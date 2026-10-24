@@ -6,7 +6,7 @@ const STEERING_DEFAULTS={
   // thumb to travel toward the bezel without leaving the touchscreen.
   // Shared by live racing and the controls calibration screen.
   stick:{steer:{x:.17,y:.77,scale:1}},
-  wheel:{steer:{x:.115,y:.76,scale:1}},
+  wheel:{steer:{x:.20,y:.73,scale:1}},
   buttons:{left:{x:.085,y:.78,scale:1},right:{x:.19,y:.78,scale:1}}
 };
 
