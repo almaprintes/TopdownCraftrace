@@ -29,6 +29,12 @@ export class RaceScene extends CurrentRaceScene {
   _restoreSessionRewardsInput(){const state=this._sessionRewardsInputState;if(!state)return;try{if(this.input)this.input.enabled=state.inputEnabled!==false;}catch{}try{if(state.canvas?.style)state.canvas.style.pointerEvents=state.canvasPointerEvents;}catch{}try{for(const [el,display] of state.hiddenDom||[])if(el?.style)el.style.display=display;}catch{}this._sessionRewardsInputState=null;}
   _sessionChestCard(tier){const tone=tier>=20?'gold':tier>=15?'purple':tier>=10?'green':'blue';return `<div class="tdrsr-season-card ${tone}"><div class="tdrsr-card-kicker">${t('session.free')}</div><div class="tdrsr-chest-mark"><span class="lid"></span><span class="body"></span><span class="lock"></span></div><div class="tdrsr-tier">${t('session.chest')} ${tier}</div></div>`;}
   _showSessionRewards(resultRoot=null,onDone=null){
+    if(this._physicsABPractice){
+      // The B drive is a physics calibration run, not a reward/ad session.
+      if(resultRoot)resultRoot.style.display='';
+      onDone?.();
+      return;
+    }
     if(typeof document==='undefined'||this._sessionRewardsDom)return;
     const summary=getRaceLootSessionSummary?.()||{};
     const rawRewardedLaps=Math.max(0,Number(summary?.laps||0));
