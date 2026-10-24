@@ -1,6 +1,7 @@
 import {RaceScene as PreviousRaceScene} from './RaceWheelModeScene.js';
 import {readControlLayout} from '../controls/controlLayout.js';
 import {rcAxisValue,rcThrottleBrake} from '../controls/rcTwinAxis.js';
+import {getLanguage} from '../i18n/index.js';
 
 const SETTINGS_KEY='tdr2:settings';
 function settings(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')?.controls||{};}catch{return {};}}
@@ -49,6 +50,10 @@ export class RaceScene extends PreviousRaceScene{
     document.getElementById('tdr-rc-controls')?.remove();
     document.getElementById('tdr-rc-controls-style')?.remove();
     const config=settings();
+    const en=getLanguage()==='en';
+    const copy=en
+      ?{gas:'THROTTLE ↑',brake:'BRAKE ↓',neutral:'CENTER',steer:'STEERING ↔',dir:'LEFT ◀ · ▶ RIGHT',gasAria:'Vertical RC stick: throttle and brake',steerAria:'Horizontal RC stick: steering'}
+      :{gas:'GAS ↑',brake:'FRENO ↓',neutral:'CENTRO',steer:'DIRECCIÓN ↔',dir:'IZQ ◀ · ▶ DER',gasAria:'Palanca RC vertical: acelerar y frenar',steerAria:'Palanca RC horizontal: dirección'};
     const style=document.createElement('style');
     style.id='tdr-rc-controls-style';
     style.textContent=`
@@ -77,7 +82,7 @@ export class RaceScene extends PreviousRaceScene{
 
     const root=document.createElement('div');
     root.id='tdr-rc-controls';
-    root.innerHTML=`<div class="rczone rc-drive" data-rc="drive" role="group" aria-label="Palanca RC vertical: acelerar y frenar"><span class="rclabel">GAS ↑</span><span class="rcpath"></span><span class="rccenter"></span><span class="rcknob neutral"></span><span class="rcmarks">CENTRO</span><span class="rcbrake">FRENO ↓</span></div><div class="rczone rc-steer" data-rc="steer" role="group" aria-label="Palanca RC horizontal: dirección"><span class="rclabel">DIRECCIÓN ↔</span><span class="rcpath"></span><span class="rccenter"></span><span class="rcknob neutral"></span><span class="rcmarks">IZQ ◀ · ▶ DER</span></div>`;
+    root.innerHTML=`<div class="rczone rc-drive" data-rc="drive" role="group" aria-label="${copy.gasAria}"><span class="rclabel">${copy.gas}</span><span class="rcpath"></span><span class="rccenter"></span><span class="rcknob neutral"></span><span class="rcmarks">${copy.neutral}</span><span class="rcbrake">${copy.brake}</span></div><div class="rczone rc-steer" data-rc="steer" role="group" aria-label="${copy.steerAria}"><span class="rclabel">${copy.steer}</span><span class="rcpath"></span><span class="rccenter"></span><span class="rcknob neutral"></span><span class="rcmarks">${copy.dir}</span></div>`;
     document.body.appendChild(root);
     const drive=root.querySelector('[data-rc="drive"]');
     const steer=root.querySelector('[data-rc="steer"]');
