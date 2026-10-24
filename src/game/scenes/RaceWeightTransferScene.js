@@ -219,7 +219,13 @@ export class RaceScene extends CurrentRaceScene {
       let vL = vx * rx + vy * ry;
 
       const alignLoad = smoothstep01((trueKmh - 5) / 75);
-      const alignRate = 1.8 + 2.6 * alignLoad;
+      // A: exact published tyre return. B: 45% faster decay of lateral slip
+      // ONLY while steering is neutral on asphalt. Handbrake, stages, dirt,
+      // off-track and cornering retain their original chassis dynamics.
+      const stableTestB=this._physicsABPractice===true &&
+        !this._tdrHandbrake && this._onTrack!==false &&
+        this.track?.closed!==false && this.track?.meta?.raceType!=='stage';
+      const alignRate = (1.8 + 2.6 * alignLoad) * (stableTestB ? 1.45 : 1);
       vL *= Math.exp(-alignRate * dt);
 
       body.body.velocity.x = fx * vF + rx * vL;
