@@ -47,7 +47,7 @@ assert.equal(scaled.environment[0].path,rel);
 assert.equal(original.environment[0].x,1000,'Must keep original source coordinates unchanged');
 const editorSource=read('src/game/scenes/EnvironmentBuilderRealTrackCleanScene.js');
 const editorExport=read('src/game/scenes/EnvironmentBuilderRealTrackScene.js');
-assert.ok(editorSource.includes("this._trackId==='circuito-atlantico'"),'Only Atlántico receives world-scaled editor photo');
+assert.ok(editorSource.includes("['circuito-atlantico','siete-picos'].includes(this._trackId)"),'Only the authored Atlántico and 7 Picos photos receive world-scaled editor transforms');
 assert.ok(editorSource.includes("(Number(t.w)||1)*tileWorldScale"),'Photo width needs the same transform as racing geometry');
 assert.ok(editorSource.includes("(Number(t.x)||0)*tileWorldScale"),'Tile positions need the same transform as racing geometry');
 assert.ok(editorExport.includes("p.coordinateSpace='race-world'"),'Editor must label its coordinate system');
