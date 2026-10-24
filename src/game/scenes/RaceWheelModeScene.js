@@ -86,6 +86,7 @@ export class RaceScene extends CurrentRaceScene {
       #tdr-steering-wheel .track{position:absolute;left:12%;right:12%;top:53%;height:7px;border-radius:6px;background:rgba(128,177,199,.25);transform:translateY(-50%);pointer-events:none}
       #tdr-steering-wheel .center{position:absolute;left:50%;top:36%;height:38%;width:2px;background:rgba(255,255,255,.36);pointer-events:none}
       #tdr-steering-wheel .thumb{position:absolute;left:50%;top:53%;width:26px;height:46px;border-radius:13px;transform:translate(-50%,-50%);background:#65deff;box-shadow:0 0 14px rgba(85,221,255,.48);pointer-events:none}
+      #tdr-steering-wheel .thumb.neutral{background:#55ff9d;box-shadow:0 0 15px rgba(85,255,157,.48)}
       #tdr-steering-wheel .caption{position:absolute;left:0;right:0;top:10%;font:700 11px system-ui,sans-serif;color:rgba(214,244,255,.84);text-align:center;letter-spacing:.08em;pointer-events:none}
       #tdr-steering-wheel.active{border-color:rgba(101,222,255,.9)}
     `;
@@ -94,7 +95,7 @@ export class RaceScene extends CurrentRaceScene {
     zone.id='tdr-steering-wheel';
     zone.setAttribute('role','group');
     zone.setAttribute('aria-label','Dirección táctil de precisión');
-    zone.innerHTML='<div class="caption">DESLIZA PARA GIRAR</div><div class="track"></div><div class="center"></div><div class="thumb"></div>';
+    zone.innerHTML='<div class="caption">DESLIZA PARA GIRAR</div><div class="track"></div><div class="center"></div><div class="thumb neutral"></div>';
     document.body.appendChild(zone);
 
     let activeId=null;
@@ -104,6 +105,7 @@ export class RaceScene extends CurrentRaceScene {
       gesture.end();
       this._applyWheelSteer(0);
       thumb.style.left='50%';
+      thumb.classList.add('neutral');
       zone.classList.remove('active');
     };
     const down=e=>{
@@ -114,6 +116,7 @@ export class RaceScene extends CurrentRaceScene {
       zone.classList.add('active');
       this._applyWheelSteer(0);
       thumb.style.left='50%';
+      thumb.classList.add('neutral');
       e.preventDefault();
     };
     const move=e=>{
@@ -125,6 +128,7 @@ export class RaceScene extends CurrentRaceScene {
       });
       this._applyWheelSteer(value);
       thumb.style.left=`${50+value*38}%`;
+      thumb.classList.toggle('neutral',value===0);
       e.preventDefault();
     };
     const release=e=>{
