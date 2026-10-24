@@ -1,4 +1,4 @@
-import { RaceScene as CurrentRaceScene } from './RaceWheelModeScene.js';
+import { RaceScene as CurrentRaceScene } from './RaceRcTwinAxisScene.js';
 import { applyDomControlLayout } from '../controls/controlLayout.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -17,7 +17,7 @@ export class RaceScene extends CurrentRaceScene {
     // Previously _buildPedalRow() scheduled its own double-rAF hitbox sync while
     // the handbrake did not exist yet. On Android that allowed the saved layout
     // and hitbox geometry to observe a partially-built control row.
-    this._buildPedalRow();
+    if(!this._tdrRcMode)this._buildPedalRow();
     this._buildHandbrakeControl();
     const applyLayout=()=>{
       try{applyDomControlLayout();}catch{}
