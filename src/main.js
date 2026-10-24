@@ -381,8 +381,10 @@ function __installRaceControlVisuals() {
       }
       buttonMode=buttonMode||cachedButtonMode;
       const rcMode=race?._tdrRcMode===true;
-      // A legacy visual may NEVER reappear on top of an RC two-axis layout.
-      if(stick)stick.style.setProperty('display',(buttonMode||rcMode)?'none':'block','important');
+      const invisibleMode=race?._tdrInvisibleSteeringMode===true;
+      // The invisible left-half method keeps original gas/brake pedals but
+      // must never show (or hit-test) the old circular steering graphic.
+      if(stick)stick.style.setProperty('display',(buttonMode||rcMode||invisibleMode)?'none':'block','important');
       for(const pedal of [gas,brake]){
         if(pedal)pedal.style.setProperty('display',rcMode?'none':'block','important');
       }
