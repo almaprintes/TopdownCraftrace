@@ -58,12 +58,31 @@ export function defaultControlLayout(controls={}){
   return controls.leftHanded===true?mirror(base):base;
 }
 
+// DEV 1.3.19: If an earlier RC calibration saved the ORIGINAL factory
+// left/right coordinates, show the corrected handed layout automatically.
+// Deliberately preserve any genuinely moved/customized axis positions.
+export function migrateLegacyRcDefaultLayout(saved,controls={}){
+  if(!saved||controls.steeringMode!=='rc_twin')return saved;
+  const left=controls.leftHanded===true;
+  const oldSteer=left?.27:.73,oldGas=left?.82:.18;
+  const matches=(p,x,y)=>p&&
+    Math.abs(Number(p.x)-x)<.0001&&Math.abs(Number(p.y)-y)<.0001;
+  if(!matches(saved.steer,oldSteer,.72)||!matches(saved.gas,oldGas,.70))return saved;
+  const newSteer=left?.78:.22,newGas=left?.27:.73;
+  return {
+    ...saved,
+    steer:{...saved.steer,x:newSteer},
+    gas:{...saved.gas,x:newGas}
+  };
+}
+
 export function readControlLayout(controlsOverride=null){
   let settings={};
   try{settings=JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')||{};}catch{}
   const controls={...(settings.controls||{}),...(controlsOverride||{})};
   const key=controlLayoutKey(controls);
-  return {key,controls,layout:{...defaultControlLayout(controls),...((settings.controls?.layouts||{})[key]||{})}};
+  const saved=migrateLegacyRcDefaultLayout((settings.controls?.layouts||{})[key],controls);
+  return {key,controls,layout:{...defaultControlLayout(controls),...(saved||{})}};
 }
 
 export function saveControlLayout(layout,controlsOverride=null){
