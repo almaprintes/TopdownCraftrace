@@ -10,3 +10,6 @@ Captura del propietario: `IMG_7161.png`, el conversor de DEV 1.3.24 detecta que 
 - Revisión `scripts/admin-webp-converter-smoke.mjs`; probar físicamente en iPhone iOS 26. No APK/AAB ni cambios de Android público.
 
 Nota: WebAssembly no es el ejecutable Sharp Node: usa la librería libwebp y produce WebP genuino con parámetros similares, pero el peso puede variar.
+
+### Integración Vite
+Se requiere `worker.format='es'` tanto para build como para serve, porque libwebp usa imports de variantes SIMD/fallback. Vite por defecto usa IIFE y arroja `Invalid value iife for worker.format` al dividir los módulos. Sin efecto en las carreras (el worker es lazy ADMIN).

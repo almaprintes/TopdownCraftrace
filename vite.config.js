@@ -18,7 +18,7 @@ export default defineConfig(async ({ command, mode }) => {
   };
 
   // Local dev always serves from root.
-  if (command === 'serve') return { base: '/', define };
+  if (command === 'serve') return { base: '/', define, worker:{format:'es'} };
 
   const repo = readPackageName();
 
@@ -32,6 +32,8 @@ export default defineConfig(async ({ command, mode }) => {
   return {
     base,
     define,
+    // libwebp Web Worker code-splits into SIMD/fallback codecs; IIFE cannot.
+    worker:{format:'es'},
     plugins: isTdrProd ? [{
       name: 'tdr-production-boundary',
       closeBundle() {
