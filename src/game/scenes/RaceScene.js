@@ -568,10 +568,12 @@ localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // ========================================
   // B never writes to the official per-track history/best keys, keeping
   // the A baseline, personal records and online publication sources intact.
-  const ttTrackSuffix=this._physicsABPractice
-    ? `ab-practice-b:${this.trackKey}:${this.carId}`
-    : this.trackKey;
-  this.ttHistKey = `tdr2:ttHist:${ttTrackSuffix}`;
+  // Never nest B keys below the official ttHist/ttBest prefixes: some
+  // downstream rankings enumerate those namespaces rather than exact keys.
+  const abPracticePrefix=`tdr2:physicsAB:B:${this.trackKey}:${this.carId}`;
+  this.ttHistKey = this._physicsABPractice
+    ? `${abPracticePrefix}:laps`
+    : `tdr2:ttHist:${this.trackKey}`;
   this.ttHistory = [];
 
   try {
@@ -590,7 +592,9 @@ localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // ========================================
   // Time Trial: best lap + splits por pista
   // ========================================
-  this.ttKey = `tdr2:ttBest:${ttTrackSuffix}`; // B has isolated practice PB
+  this.ttKey = this._physicsABPractice
+    ? `${abPracticePrefix}:best`
+    : `tdr2:ttBest:${this.trackKey}`;
   this.ttBest = null;
 
   try {
