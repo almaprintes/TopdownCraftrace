@@ -18,7 +18,8 @@ const patterns=Object.freeze({
   'karting-canarias-narrow70':/^photo-[0-9]+-[0-9]+\.webp$/,
   'karting-canarias-4096':/^photo-[0-9]+-[0-9]+\.webp$/,
   'rally-arafo-los-loros':/^photo-[0-9]+-[0-9]+\.webp$/,
-  'circuito-atlantico':/^photo-[0-9]+-[0-9]+\.webp$/
+  'circuito-atlantico':/^photo-[0-9]+-[0-9]+\.webp$/,
+  'siete-picos':/^photo-[0-9]+-[0-9]+\.webp$/
 });
 
 export async function buildIosRacePhotoTiles(){

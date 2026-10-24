@@ -24,7 +24,8 @@ const patterns={
   'karting-americas':/^photo-[0-9]+-[0-9]+\.webp$/,
   'karting-canarias':/^photo-[0-9]+-[0-9]+\.webp$/,
   'rally-arafo-los-loros':/^photo-[0-9]+-[0-9]+\.webp$/,
-  'circuito-atlantico':/^photo-[0-9]+-[0-9]+\.webp$/
+  'circuito-atlantico':/^photo-[0-9]+-[0-9]+\.webp$/,
+  'siete-picos':/^photo-[0-9]+-[0-9]+\.webp$/
 };
 for(const [dir,pattern] of Object.entries(patterns)){
   const d='public/assets/tracks/'+dir;

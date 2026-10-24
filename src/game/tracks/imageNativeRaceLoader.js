@@ -52,14 +52,9 @@ export function validateImageNativeRaceDescriptor(desc){
   const scaledAtlantico=desc?.type==='published'&&physicalCircuitId(desc.trackKey)==='circuito-atlantico'&&
     Array.isArray(desc.tiles)&&desc.tiles.length===6&&
     width===4344&&height===3258&&scale===ATLANTICO_WORLD_SCALE;
-  // Exact 7 Picos 1448x1086 photo rendered over a 2.5x world (not a new GPU texture).
-  const scaledSietePicos=desc?.type==='published'&&
-    physicalCircuitId(desc.trackKey)==='siete-picos'&&
-    Array.isArray(desc.tiles)&&desc.tiles.length===1&&
-    width===1448&&height===1086&&scale===2.5;
   const finiteWorld=n=>Number.isFinite(Number(n))&&Number(n)>0&&Number(n)<=8192;
   if(!dimension(width)||!dimension(height)||width*height>32000000||
-    !(scale===1||scaledCanarias||scaledAtlantico||scaledSietePicos)||
+    !(scale===1||scaledCanarias||scaledAtlantico)||
     Math.abs(Number(track?.worldW)-Number(width)*scale)>1e-6||
     Math.abs(Number(track?.worldH)-Number(height)*scale)>1e-6||
     !finiteWorld(track?.worldW)||!finiteWorld(track?.worldH))
