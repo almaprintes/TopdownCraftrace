@@ -83,6 +83,7 @@ jobs:
           node scripts/race-control-identity-recovery-smoke.mjs
           node scripts/control-stick-default-smoke.mjs
           node scripts/touch-steering-relative-smoke.mjs
+          node scripts/touch-steering-straight-exit-smoke.mjs
           node scripts/lobby-online-records-shortcut-smoke.mjs
           node scripts/stats-unlocked-circuits-smoke.mjs
           node scripts/lobby-bottom-directions-smoke.mjs
