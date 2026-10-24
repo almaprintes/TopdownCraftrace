@@ -70,7 +70,7 @@ assert.ok(invisibleLayer.includes("from './RaceRcTwinAxisScene.js'"),'Invisible 
 assert.match(hb,/if\(!this\._tdrRcMode\)this\._buildPedalRow\(\)/);
 assert.match(settings,/dataset\.v='rc_twin'/);
 assert.match(settings,/c\.steeringMode==='rc_twin'/);
-assert.match(layout,/rc_twin:\\{steer:/);
+assert.ok(layout.includes('rc_twin:{steer:'),'RC default layout remains intact');
 assert.ok(layout.includes("['stick','buttons','wheel','rc_twin','invisible']"),'Saved control types must include invisible');
 assert.match(layout,/mode==='rc_twin'/);
 assert.match(wheel,/_tdrWheelMode=prefs\(\)\.steeringMode==='wheel'/);
