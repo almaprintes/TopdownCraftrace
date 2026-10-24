@@ -23,7 +23,7 @@ near(control.end(),0);
 near(control.move(190),0);
 near(control.start(42),0);
 near(control.move(44,{inverted:true}),0);
-assert.ok(control.move(22,{inverted:true})>.1,'Inversion remains available');
+assert.ok(control.move(20,{inverted:true})>.1,'Inversion remains available');
 control.end();
 control.start(100);
 const direct=control.move(130);
