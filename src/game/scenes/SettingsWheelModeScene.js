@@ -1,5 +1,5 @@
 import { SettingsScene as CurrentSettingsScene } from './SettingsDomScene.js';
-import { defaultControlLayout, sanitizeLayoutPoint } from '../controls/controlLayout.js';
+import { defaultControlLayout, sanitizeLayoutPoint, migrateLegacyRcDefaultLayout } from '../controls/controlLayout.js';
 import {getLanguage} from '../i18n/index.js';
 
 const STORAGE_KEY='tdr2:settings';
@@ -96,7 +96,7 @@ export class SettingsScene extends CurrentSettingsScene {
     document.head.appendChild(style);
 
     const key=`${c.steeringMode}:${c.leftHanded?'left':'right'}`;
-    const current=c.layouts?.[key];
+    const current=migrateLegacyRcDefaultLayout(c.layouts?.[key],c);
     this._calLayout=structuredClone(current||defaultControlLayout(c));
     this._calTesting=false;
 
