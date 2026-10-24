@@ -1,5 +1,8 @@
 # REGLAS OBLIGATORIAS DE TRABAJO — TOP DOWN RACE
 
+> **DEV 1.3.23 (24/10/2026) — 7 PICOS VISIBLE EN SELECTORES DEV:** el usuario no encuentra 7 Picos, aunque el instalador ×2,5 y JSON Environment funcionan. El selector de Environment Studio ahora muestra **7 PICOS como primera tarjeta** (sin cambiar el registro ni el orden de circuitos jugables). El selector de carreras de jugador DEV admite temporalmente `siete-picos` como prueba desbloqueada local, incluso si `hiddenFromTrackSelect:true` en la fuente. NO se añade a `PUBLISHED_TRACK_IDS` ni a datos de desbloqueos, tiempos online ni Google Play; producción sigue ocultándolo. DEV 1.3.23 en main; solo web/PWA, sin APK/AAB solicitadas. Smoke específico asegura la separación DEV/PROD. [Continuidad](docs/continuity/2026-10-24-dev-1-3-23-siete-picos-visibility.md).
+
+
 > **DEV 1.3.22 (24/10/2026) — 7 PICOS ×2,5, SIN RETRAZAR:** corregida escala del mundo 1448×1086 → 3620×2715 preservando fuente .tdrtrack/26 Bézier y WebP original. 730 puntos, 2 CP, META y todos los bordes se escalan únicamente en instalador. La textura continúa de 1448×1086 (sin aumento de RAM/GPU) con `imageNative.worldScale=2.5`; Environment Studio muestra esa misma proyección. Importadas las dos barreras del usuario (38+35 nodos), anchura y meta, ya escaladas ×2,5 a world, sin Copas/zonas. `raceEnvironmentRuntime` habilita colisiones. Fuente portátil intacta: la PREVISUALIZACIÓN LOCAL del viejo .tdrtrack todavía conserva su escala pequeña; probar el circuito oficial en DEV. Se mantiene oculto de selección pública hasta QA. CI prueba su integridad. Nada de APK/AAB ni Google Play. [Continuidad](docs/continuity/2026-10-24-dev-1-3-22-siete-picos-world-scale.md).
 
 

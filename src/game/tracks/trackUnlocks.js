@@ -19,7 +19,13 @@ export const STARTER_TRACK_IDS=PUBLISHED_TRACK_IDS;
 if(REBUILT_CANARIAS_PRESENT){try{if(localStorage.getItem('tdr2:trackKey')==='karting-canarias')localStorage.setItem('tdr2:trackKey','karting-canarias-4096');}catch{}}
 const normalizedTrackId=id=>String(id||'').trim();
 // Public circuit identity never depends on retired evaluation access.
-export const isPublishedTrackId=id=>PUBLISHED_TRACK_IDS.includes(normalizedTrackId(id));
+// The DEV-only owner test circuit is selectable without adding it to official
+// published IDs, unlocked storage, online rankings or the production build.
+const DEV_SEVEN_PEAKS_ID='siete-picos';
+export const isPublishedTrackId=id=>{
+  const key=normalizedTrackId(id);
+  return PUBLISHED_TRACK_IDS.includes(key)||(!IS_PROD_BUILD&&key===DEV_SEVEN_PEAKS_ID);
+};
 const normalize=ids=>[...new Set((Array.isArray(ids)?ids:[]).map(v=>String(v||'').trim()).filter(Boolean))];
 
 export function loadTrackUnlocks(){
@@ -35,6 +41,7 @@ export function unlockTrack(trackId){const id=normalizedTrackId(trackId);if(!id|
 
 export function isTrackUnlocked(trackId){
   const id=normalizedTrackId(trackId);
+  if(!IS_PROD_BUILD&&id===DEV_SEVEN_PEAKS_ID)return true;
   return PUBLISHED_TRACK_IDS.includes(id)&&loadTrackUnlocks().unlocked.includes(id);
 }
 export function unlockedTrackIds(){return [...loadTrackUnlocks().unlocked];}

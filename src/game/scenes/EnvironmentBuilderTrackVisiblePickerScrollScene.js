@@ -33,7 +33,11 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
     this._destroyModalCamera?.();
 
     const {width,height}=this.scale;
-    const keys=this._trackKeys||[];
+    // Keep the new in-progress 7 Picos circuit immediately visible on phones.
+    // This affects only the Environment Studio picker, never race ordering.
+    const available=this._trackKeys||[];
+    const keys=available.includes('siete-picos')
+      ?['siete-picos',...available.filter(key=>key!=='siete-picos')]:available;
     const root=this.add.container(0,0).setDepth(50000);
     const panelW=Math.min(650,width-90),panelH=Math.min(470,height-70);
     const px=(width-panelW)/2,py=(height-panelH)/2;
