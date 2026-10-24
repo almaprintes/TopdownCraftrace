@@ -32,9 +32,12 @@ assert.ok(Math.hypot(vxB,vyB)<Math.hypot(vxBefore,vyBefore),'Only lateral slip d
 assert.match(base,/this\._physicsABMode='A'/);
 assert.match(base,/if\(selected==='B'/);
 assert.match(base,/this\._physicsABPractice=this\._physicsABMode==='B'/);
-assert.match(base,/ab-practice-b:\$\{this\.trackKey\}:\$\{this\.carId\}/);
-assert.match(base,/this\.ttHistKey = `tdr2:ttHist:\$\{ttTrackSuffix\}`/);
-assert.match(base,/this\.ttKey = `tdr2:ttBest:\$\{ttTrackSuffix\}`/);
+assert.match(base,/const abPracticePrefix=\`tdr2:physicsAB:B:/);
+assert.match(base,/this\\.ttHistKey = this\\._physicsABPractice/);
+assert.match(base,/this\\.ttKey = this\\._physicsABPractice/);
+assert.match(base,/\\$\\{abPracticePrefix\\}:laps/);
+assert.match(base,/\\$\\{abPracticePrefix\\}:best/);
+assert.doesNotMatch(base,/ab-practice-b:/);
 assert.match(base,/!this\._testMode && !this\._physicsABPractice/);
 assert.match(settings,/data-physics-ab/);
 assert.match(settings,/c\.physicsAB=b\.dataset\.physics==='B'\?'B':'A'/);
