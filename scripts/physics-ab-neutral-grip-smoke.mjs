@@ -32,11 +32,11 @@ assert.ok(Math.hypot(vxB,vyB)<Math.hypot(vxBefore,vyBefore),'Only lateral slip d
 assert.match(base,/this\._physicsABMode='A'/);
 assert.match(base,/if\(selected==='B'/);
 assert.match(base,/this\._physicsABPractice=this\._physicsABMode==='B'/);
-assert.match(base,/const abPracticePrefix=\`tdr2:physicsAB:B:/);
-assert.match(base,/this\\.ttHistKey = this\\._physicsABPractice/);
-assert.match(base,/this\\.ttKey = this\\._physicsABPractice/);
-assert.match(base,/\\$\\{abPracticePrefix\\}:laps/);
-assert.match(base,/\\$\\{abPracticePrefix\\}:best/);
+assert.ok(base.includes('const abPracticePrefix=`tdr2:physicsAB:B:'),'Practice keys must use their own namespace');
+assert.ok(base.includes('this.ttHistKey = this._physicsABPractice'),'Official lap history preserved in A');
+assert.ok(base.includes('this.ttKey = this._physicsABPractice'),'Official PB key preserved in A');
+assert.ok(base.includes('${abPracticePrefix}:laps'),'B laps written only to practice');
+assert.ok(base.includes('${abPracticePrefix}:best'),'B best written only to practice');
 assert.doesNotMatch(base,/ab-practice-b:/);
 assert.match(base,/!this\._testMode && !this\._physicsABPractice/);
 assert.match(settings,/data-physics-ab/);
