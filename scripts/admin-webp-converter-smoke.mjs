@@ -1,7 +1,7 @@
 // Admin WebP must remain lazy, independent of races, safe for mobile and offline.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {targetWebpDimensions,makeWebpFilename,humanBytes,MAX_BATCH_COUNT,QUALITY_DEFAULT}
+import {targetWebpDimensions,makeWebpFilename,humanBytes,isWebpHeader,MAX_BATCH_COUNT,QUALITY_DEFAULT}
   from '../src/game/ui/adminImageWebpTool.js';
 
 assert.equal(MAX_BATCH_COUNT,8);
@@ -17,7 +17,20 @@ assert.equal(humanBytes(1048576),'1.00 MB');
 const tool=fs.readFileSync('src/game/ui/adminImageWebpTool.js','utf8');
 assert.match(tool,/canvas\.toBlob\(/);
 assert.match(tool,/'image\/webp',quality\/100/);
-assert.match(tool,/blob\.type!=='image\/webp'/);
+assert.ok(tool.includes("native?.type==='image/webp'"));
+assert.ok(isWebpHeader(new Uint8Array([82,73,70,70,0,0,0,0,87,69,66,80])));
+assert.equal(isWebpHeader(new Uint8Array([137,80,78,71,0,0,0,0,0,0,0,0])),false);
+assert.ok(tool.includes('encodeWithLocalWebpWorker(rgba,quality)'));
+assert.ok(tool.includes("new URL('./adminWebpEncoder.worker.js',import.meta.url)"));
+assert.ok(tool.includes('document.body.appendChild(overlay)'));
+const worker=fs.readFileSync('src/game/ui/adminWebpEncoder.worker.js','utf8');
+assert.ok(worker.includes("import encode from '@jsquash/webp/encode.js'"));
+assert.ok(worker.includes('await encode(imageData'));
+assert.ok(worker.includes('self.postMessage({buffer:bytes},[bytes])'));
+const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+assert.equal(pkg.dependencies['@jsquash/webp'],'1.5.0');
+const lock=JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+assert.equal(lock.packages['node_modules/@jsquash/webp'].version,'1.5.0');
 assert.match(tool,/URL\.revokeObjectURL\(url\)/);
 assert.match(tool,/canvas\.width=0;canvas\.height=0/);
 assert.match(tool,/navigator\.canShare/);
@@ -29,4 +42,4 @@ assert.match(admin,/import\('\.\.\/ui\/adminImageWebpTool\.js'\)/);
 assert.match(admin,/this\._webpToolDispose\?\.\(\)/);
 const game=fs.readFileSync('src/game/game.js','utf8');
 assert.ok(!game.includes('adminImageWebpTool'),'Converter cannot be eager-loaded in race bundle');
-console.log('Admin WebP OK: ×2.5 size, 86/100 quality, 16MP mobile guard, canvas encoder, alpha, local batches, lazy DEV-only overlay.');
+console.log('Admin WebP: local Canvas + libwebp/WASM fallback for Safari, RIFF validated, worker off-thread, no external upload, overlay fits iPhone.');

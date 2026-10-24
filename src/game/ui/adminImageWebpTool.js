@@ -28,9 +28,37 @@ export function humanBytes(size){
   const v=Math.max(0,Number(size)||0);
   return v>=1024*1024?(v/1024/1024).toFixed(2)+' MB':(v/1024).toFixed(0)+' KB';
 }
+// Browsers like iOS Safari may decode WebP but encode PNG when asked for WebP.
+// Verify the RIFF/WEBP signature, never trust a requested MIME alone.
+export function isWebpHeader(bytes){
+  const b=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes||[]);
+  if(b.length<12)return false;
+  return b[0]===82&&b[1]===73&&b[2]===70&&b[3]===70&&
+    b[8]===87&&b[9]===69&&b[10]===66&&b[11]===80;
+}
 export function webpEncoderSupported(){
   try{const c=document.createElement('canvas');c.width=c.height=2;return c.toDataURL('image/webp').startsWith('data:image/webp');}
   catch{return false;}
+}
+async function encodeWithLocalWebpWorker(imageData,quality){
+  if(typeof Worker!=='function'||typeof WebAssembly!=='object')
+    throw Error('Este dispositivo no dispone de WebAssembly para convertir WebP');
+  // Each job gets a disposable worker: no WebAssembly heap remains in memory.
+  const worker=new Worker(new URL('./adminWebpEncoder.worker.js',import.meta.url),{type:'module'});
+  try{
+    return await new Promise((resolve,reject)=>{
+      worker.onmessage=({data})=>{
+        if(data?.error)return reject(Error(data.error));
+        if(!data?.buffer||!isWebpHeader(data.buffer))
+          return reject(Error('El codificador no devolvió un archivo WebP válido'));
+        resolve(new Blob([data.buffer],{type:'image/webp'}));
+      };
+      worker.onerror=(error)=>{error?.preventDefault?.();reject(Error('El codificador WebP local no se pudo iniciar en este navegador'));};
+      worker.onmessageerror=()=>reject(Error('No se pudo transferir la fotografía al conversor'));
+      const rgba=imageData.data.buffer;
+      worker.postMessage({width:imageData.width,height:imageData.height,quality,rgba},[rgba]);
+    });
+  }finally{worker.terminate();}
 }
 
 export async function convertFileToWebp(file,{quality=QUALITY_DEFAULT,scale=1,mobile=false}={}){
@@ -38,8 +66,6 @@ export async function convertFileToWebp(file,{quality=QUALITY_DEFAULT,scale=1,mo
     throw Error('Imagen vacía o de más de 60 MB');
   if(!Number.isFinite(quality)||quality<50||quality>95)
     throw Error('Calidad fuera del intervalo 50–95');
-  if(!webpEncoderSupported())
-    throw Error('Este navegador no admite la exportación WebP');
   const url=URL.createObjectURL(file);
   const img=new Image();
   let canvas=null;
@@ -55,10 +81,24 @@ export async function convertFileToWebp(file,{quality=QUALITY_DEFAULT,scale=1,mo
     if(!ctx)throw Error('No hay memoria disponible para el lienzo');
     ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
     ctx.drawImage(img,0,0,dims.width,dims.height);
-    // toBlob releases the UI; do not produce base64 images of huge tracks.
-    const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error('La conversión WebP falló')),'image/webp',quality/100));
-    if(blob.type!=='image/webp')throw Error('El navegador devolvió otro formato; no se ha descargado un PNG renombrado');
-    return {blob,originalWidth:srcWidth,originalHeight:srcHeight,width:dims.width,height:dims.height,
+    let blob=null,encoder='LIBWEBP · COMPATIBILIDAD';
+    if(webpEncoderSupported()){
+      // Native conversion is faster when available. Safari frequently returns PNG
+      // instead, so check both type and actual RIFF bytes.
+      try{
+        const native=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality/100));
+        if(native?.type==='image/webp'&&isWebpHeader(await native.slice(0,12).arrayBuffer())){
+          blob=native;encoder='WEBP NATIVO';
+        }
+      }catch{}
+    }
+    if(!blob){
+      // Real libwebp WebAssembly, packaged with the app, executed in a worker.
+      // Transfer RGBA instead of copying it to minimise iPhone memory pressure.
+      const rgba=ctx.getImageData(0,0,dims.width,dims.height);
+      blob=await encodeWithLocalWebpWorker(rgba,quality);
+    }
+    return {blob,encoder,originalWidth:srcWidth,originalHeight:srcHeight,width:dims.width,height:dims.height,
       name:makeWebpFilename(file.name,scale),originalBytes:file.size};
   }finally{
     if(canvas){canvas.width=0;canvas.height=0;}
@@ -75,8 +115,9 @@ export function mountAdminWebpTool(adminRoot){
   if(!adminRoot?.isConnected)throw Error('Admin Hub cerrado');
   const issuedUrls=new Set();
   let disposed=false,busy=false;
+  // Outside the game's scaled parent: iPhone landscape must not crop the header.
   const overlay=css(document.createElement('section'),
-    'position:absolute;inset:0;z-index:25;background:#08111df8;color:#f2f7fc;box-sizing:border-box;overflow:auto;-webkit-overflow-scrolling:touch;padding:clamp(12px,2vw,24px);font:13px system-ui;touch-action:pan-y;');
+    'position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;z-index:100050;background:#08111d;color:#f2f7fc;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-right,0px) + 16px) calc(env(safe-area-inset-bottom,0px) + 18px) calc(env(safe-area-inset-left,0px) + 16px);font:13px system-ui;touch-action:pan-y;');
   overlay.setAttribute('role','dialog');overlay.setAttribute('aria-label','Convertir imágenes a WebP');
   const panel=elt('div',null,'max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:12px;');
   const head=elt('div',null,'display:flex;align-items:flex-start;justify-content:space-between;gap:12px;');
@@ -116,7 +157,7 @@ export function mountAdminWebpTool(adminRoot){
   const status=elt('div','Selecciona una o varias fotografías para empezar.','color:#b6cad9;font-size:12px;min-height:18px;');
   status.setAttribute('aria-live','polite');panel.appendChild(status);
   const results=elt('div',null,'display:flex;flex-direction:column;gap:8px;padding-bottom:18px;');panel.appendChild(results);
-  overlay.appendChild(panel);adminRoot.appendChild(overlay);
+  overlay.appendChild(panel);document.body.appendChild(overlay);
 
   const clearOutput=()=>{
     for(const url of issuedUrls)URL.revokeObjectURL(url);
@@ -140,7 +181,7 @@ export function mountAdminWebpTool(adminRoot){
     const row=elt('div',null,'display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px;border:1px solid #315167;border-radius:8px;background:#102135;');
     const left=elt('div',null,'min-width:130px;flex:1 1 250px;overflow-wrap:anywhere;');
     left.append(elt('strong',r.name,'font-size:12px;color:#dcffe9;display:block;'),
-      elt('small',r.originalWidth+'×'+r.originalHeight+' → '+r.width+'×'+r.height+' · '+humanBytes(r.originalBytes)+' → '+humanBytes(r.blob.size),
+      elt('small',r.encoder+' · '+r.originalWidth+'×'+r.originalHeight+' → '+r.width+'×'+r.height+' · '+humanBytes(r.originalBytes)+' → '+humanBytes(r.blob.size),
         'display:block;color:#a7bed2;margin-top:4px;font-size:10px;'));
     const actions=elt('div',null,'display:flex;gap:7px;flex-wrap:wrap;');
     const dl=elt('a','DESCARGAR WEBP',B+'text-decoration:none;font-size:11px;display:inline-block;padding:8px 10px;');
