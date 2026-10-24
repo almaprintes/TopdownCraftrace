@@ -64,11 +64,11 @@ export function defaultControlLayout(controls={}){
 export function migrateLegacyRcDefaultLayout(saved,controls={}){
   if(!saved||controls.steeringMode!=='rc_twin')return saved;
   const left=controls.leftHanded===true;
-  const oldSteer=left?.27:.73,oldGas=left?.82:.18;
+  const oldSteer=left ? 0.27 : 0.73,oldGas=left ? 0.82 : 0.18;
   const matches=(p,x,y)=>p&&
     Math.abs(Number(p.x)-x)<.0001&&Math.abs(Number(p.y)-y)<.0001;
   if(!matches(saved.steer,oldSteer,.72)||!matches(saved.gas,oldGas,.70))return saved;
-  const newSteer=left?.78:.22,newGas=left?.27:.73;
+  const newSteer=left ? 0.78 : 0.22,newGas=left ? 0.27 : 0.73;
   return {
     ...saved,
     steer:{...saved.steer,x:newSteer},
