@@ -21,6 +21,13 @@ export class SettingsScene extends CurrentSettingsScene {
       btn.textContent='◉ TÁCTIL';
       row.appendChild(btn);
     }
+    if(!row.querySelector('[data-v="rc_twin"]')){
+      const btn=document.createElement('button');
+      btn.className=`s2choice ${c.steeringMode==='rc_twin'?'on':''}`;
+      btn.dataset.v='rc_twin';
+      btn.textContent='↕ ↔ RC · 2 PALANCAS';
+      row.appendChild(btn);
+    }
     // Always own the active selector handler. SettingsDomScene already renders
     // VOLANTE, so returning early here used to skip the gamepad-guide hook entirely.
     row.onclick=e=>{
@@ -81,6 +88,10 @@ export class SettingsScene extends CurrentSettingsScene {
       #tdr-control-cal .ccscale{right:10px;bottom:52px}
       #tdr-control-cal .ccbtn[disabled]{opacity:.55;pointer-events:none}
     `;
+    style.textContent+=`
+      #tdr-control-cal .ccrcsteer{width:210px;height:110px;border:2px solid #65deff88;border-radius:22px;background:linear-gradient(145deg,#143548,#081420);color:#c4eefe;font:800 16px system-ui}
+      #tdr-control-cal .ccrcdrive{width:106px;height:194px;border:2px solid #65deff88;border-radius:23px;background:linear-gradient(145deg,#143548,#081420);color:#c4eefe;font:800 10px system-ui;text-align:center}
+    `;
     document.head.appendChild(style);
 
     const key=`${c.steeringMode}:${c.leftHanded?'left':'right'}`;
@@ -123,11 +134,16 @@ export class SettingsScene extends CurrentSettingsScene {
     if(c.steeringMode==='buttons'){
       add('left','ccdir','IZQUIERDA','◀');
       add('right','ccdir','DERECHA','▶');
+    }else if(c.steeringMode==='rc_twin'){
+      add('steer','ccrcsteer','RC DIRECCIÓN','← · →');
+      add('gas','ccrcdrive','RC GAS / FRENO','↑ GAS   ·   ↓ FRENO');
     }else{
       add('steer',c.steeringMode==='wheel'?'ccwheel':'ccstick',c.steeringMode==='wheel'?'DIRECCIÓN TÁCTIL':'PALANCA');
     }
-    add('gas','ccpedal','GAS','GAS');
-    add('brake','ccpedal brake','FRENO','FRENO');
+    if(c.steeringMode!=='rc_twin'){
+      add('gas','ccpedal','GAS','GAS');
+      add('brake','ccpedal brake','FRENO','FRENO');
+    }
     add('handbrake','cchand','FRENO DE MANO');
 
     const protectedRects=()=>[...root.querySelectorAll('.ccprotected')].map(e=>e.getBoundingClientRect());
