@@ -1,4 +1,5 @@
 import { RaceScene as CurrentRaceScene } from './RaceLeftHandedControlsScene.js';
+import {createRelativeSteeringGesture} from '../controls/relativeSteeringGesture.js';
 
 const SETTINGS_KEY='tdr2:settings';
 function prefs(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')?.controls||{};}catch{return {};}}
@@ -72,7 +73,8 @@ export class RaceScene extends CurrentRaceScene {
 
   _buildSteeringWheel(){
     // The historical 'wheel' preference now means a relative horizontal touch
-    // steering strip. Keep its stored value so existing player preferences work.
+    // steering strip. Signed finger movement alters lock from its CURRENT value,
+    // not from the initial finger position. Preserve existing saved preferences.
     document.getElementById('tdr-steering-wheel')?.remove?.();
     document.getElementById('tdr-steering-wheel-style')?.remove?.();
     const left=!!prefs().leftHanded;
@@ -92,47 +94,44 @@ export class RaceScene extends CurrentRaceScene {
     zone.id='tdr-steering-wheel';
     zone.setAttribute('role','group');
     zone.setAttribute('aria-label','Dirección táctil de precisión');
-    zone.innerHTML='<div class="caption">DIRECCIÓN TÁCTIL</div><div class="track"></div><div class="center"></div><div class="thumb"></div>';
+    zone.innerHTML='<div class="caption">DESLIZA PARA GIRAR</div><div class="track"></div><div class="center"></div><div class="thumb"></div>';
     document.body.appendChild(zone);
 
-    let activeId=null,startX=0,raw=0,filtered=0;
-    const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
-    const target=e=>{
-      const config=prefs(),width=zone.getBoundingClientRect().width;
-      const sensitivity=clamp(Number(config.sensitivity)||1,.5,1.5);
-      const reverse=config.invertSteer===true?-1:1;
-      // Travel is tied to physical control width. Starting anywhere is neutral.
-      const travel=Math.max(48,width*.38);
-      raw=clamp((e.clientX-startX)/travel,-1,1);
-      const dead=.025;
-      const magnitude=Math.max(0,(Math.abs(raw)-dead)/(1-dead));
-      const shaped=Math.pow(magnitude,1.28);
-      return clamp(Math.sign(raw)*shaped*sensitivity*reverse,-1,1);
+    let activeId=null;
+    const gesture=createRelativeSteeringGesture();
+    const thumb=zone.querySelector('.thumb');
+    const reset=()=>{
+      gesture.end();
+      this._applyWheelSteer(0);
+      thumb.style.left='50%';
+      zone.classList.remove('active');
     };
     const down=e=>{
       if(activeId!==null)return;
-      activeId=e.pointerId;startX=e.clientX;raw=0;filtered=0;
+      activeId=e.pointerId;
+      gesture.start(e.clientX);
       try{zone.setPointerCapture(e.pointerId);}catch{}
       zone.classList.add('active');
       this._applyWheelSteer(0);
-      zone.querySelector('.thumb').style.left='50%';
+      thumb.style.left='50%';
       e.preventDefault();
     };
     const move=e=>{
       if(activeId!==e.pointerId)return;
-      // Low latency: no extra animation loop; race update consumes this value.
-      filtered=target(e);
-      this._applyWheelSteer(filtered);
-      zone.querySelector('.thumb').style.left=`${50+filtered*38}%`;
+      const config=prefs();
+      const value=gesture.move(e.clientX,{
+        sensitivity:config.sensitivity,
+        inverted:config.invertSteer===true
+      });
+      this._applyWheelSteer(value);
+      thumb.style.left=`${50+value*38}%`;
       e.preventDefault();
     };
     const release=e=>{
       if(activeId!==e.pointerId)return;
-      activeId=null;raw=0;filtered=0;
+      activeId=null;
+      reset();
       try{if(zone.hasPointerCapture?.(e.pointerId))zone.releasePointerCapture(e.pointerId);}catch{}
-      zone.classList.remove('active');
-      this._applyWheelSteer(0);
-      zone.querySelector('.thumb').style.left='50%';
       e.preventDefault();
     };
     zone.addEventListener('pointerdown',down,{passive:false});
@@ -141,7 +140,7 @@ export class RaceScene extends CurrentRaceScene {
     zone.addEventListener('pointercancel',release,{passive:false});
     zone.addEventListener('lostpointercapture',release,{passive:false});
     this.events.once('shutdown',()=>{
-      this._applyWheelSteer(0);
+      reset();
       zone.removeEventListener('pointerdown',down);
       zone.removeEventListener('pointermove',move);
       zone.removeEventListener('pointerup',release);
