@@ -45,7 +45,32 @@ export class SettingsScene extends CurrentSettingsScene {
       btn.textContent=getLanguage()==='en'?'↕ ↔ RC · DUAL STICKS':'↕ ↔ RC · 2 PALANCAS';
       row.appendChild(btn);
     }
-    // Always own the active selector handler. SettingsDomScene already renders
+    // Separate the vehicle-feel experiment from every steering layout.
+    // Changing it takes effect on the NEXT race, never half-way through a lap.
+    const grid=this.root.querySelector('.s2grid');
+    if(grid){
+      const en=getLanguage()==='en';
+      const abCard=document.createElement('section');
+      abCard.className='s2card wide';
+      abCard.dataset.physicsAbCard='1';
+      abCard.innerHTML=`
+        <div class="s2label">${en?'DRIVING FEEL TEST A/B':'PRUEBA DE CONDUCCIÓN A/B'}</div>
+        <div class="s2desc">${en?'Same car and circuit. Only neutral lateral stability changes.':'Mismo coche y circuito. Solo cambia la estabilidad lateral al soltar la dirección.'}</div>
+        <div class="s2row" data-physics-ab>
+          <button class="s2choice ${c.physicsAB==='B'?'':'on'}" data-physics="A">${en?'A · ORIGINAL':'A · ACTUAL'}</button>
+          <button class="s2choice ${c.physicsAB==='B'?'on':''}" data-physics="B">${en?'B · SOFTER EXIT':'B · SALIDA ESTABLE'}</button>
+        </div>
+        <div class="s2desc" style="margin-top:7px;color:#f8c988">${en?'B is local practice: no official personal records. Applies in the next race.':'B es una prueba local: no guarda récords oficiales. Se aplica en la próxima carrera.'}</div>`;
+      grid.appendChild(abCard);
+      abCard.querySelector('[data-physics-ab]').onclick=e=>{
+        const b=e.target.closest('[data-physics]');
+        if(!b)return;
+        c.physicsAB=b.dataset.physics==='B'?'B':'A';
+        persist(this.settings);
+        this._renderTab('controls');
+      };
+    }
+        // Always own the active selector handler. SettingsDomScene already renders
     // VOLANTE, so returning early here used to skip the gamepad-guide hook entirely.
     row.onclick=e=>{
       const b=e.target.closest('[data-v]');
