@@ -1,5 +1,6 @@
 import { SettingsScene as CurrentSettingsScene } from './SettingsDomScene.js';
 import { defaultControlLayout, sanitizeLayoutPoint } from '../controls/controlLayout.js';
+import {getLanguage} from '../i18n/index.js';
 
 const STORAGE_KEY='tdr2:settings';
 
@@ -25,7 +26,7 @@ export class SettingsScene extends CurrentSettingsScene {
       const btn=document.createElement('button');
       btn.className=`s2choice ${c.steeringMode==='rc_twin'?'on':''}`;
       btn.dataset.v='rc_twin';
-      btn.textContent='↕ ↔ RC · 2 PALANCAS';
+      btn.textContent=getLanguage()==='en'?'↕ ↔ RC · DUAL STICKS':'↕ ↔ RC · 2 PALANCAS';
       row.appendChild(btn);
     }
     // Always own the active selector handler. SettingsDomScene already renders
