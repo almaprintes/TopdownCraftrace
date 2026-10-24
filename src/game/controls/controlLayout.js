@@ -7,6 +7,8 @@ const STEERING_DEFAULTS={
   // Shared by live racing and the controls calibration screen.
   stick:{steer:{x:.17,y:.77,scale:1}},
   wheel:{steer:{x:.20,y:.73,scale:1}},
+  // Radio-control layout: left vertical drive axis, right horizontal steering.
+  rc_twin:{steer:{x:.73,y:.72,scale:1},gas:{x:.18,y:.70,scale:1}},
   buttons:{left:{x:.085,y:.78,scale:1},right:{x:.19,y:.78,scale:1}}
 };
 
@@ -43,13 +45,15 @@ function mirror(layout){
 }
 
 export function controlLayoutKey(controls={}){
-  const mode=['stick','buttons','wheel'].includes(controls.steeringMode)?controls.steeringMode:'stick';
+  const mode=['stick','buttons','wheel','rc_twin'].includes(controls.steeringMode)?controls.steeringMode:'stick';
   return `${mode}:${controls.leftHanded===true?'left':'right'}`;
 }
 
 export function defaultControlLayout(controls={}){
-  const mode=['stick','buttons','wheel'].includes(controls.steeringMode)?controls.steeringMode:'stick';
-  const base={...structuredClone(STEERING_DEFAULTS[mode]||STEERING_DEFAULTS.stick),...factoryPedalLayout()};
+  const mode=['stick','buttons','wheel','rc_twin'].includes(controls.steeringMode)?controls.steeringMode:'stick';
+  const base=mode==='rc_twin'
+    ? {...factoryPedalLayout(),...structuredClone(STEERING_DEFAULTS.rc_twin)}
+    : {...structuredClone(STEERING_DEFAULTS[mode]||STEERING_DEFAULTS.stick),...factoryPedalLayout()};
   return controls.leftHanded===true?mirror(base):base;
 }
 
