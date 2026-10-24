@@ -20,7 +20,7 @@ concurrency:
   # concurrency group. Splitting them let an older full workflow publish
   # after a newer PWA-only deploy and overwrite the latest DEV version.
   # Cancel the superseded run before the next deployment.
-  group: tdr-main-pages
+  group: tdr-main-pages-v2
   cancel-in-progress: true
 
 jobs:
@@ -379,4 +379,23 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify the LIVE DEV serves this commit
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          # A green deployment step alone is insufficient: an older parallel
+          # workflow previously overwrote DEV 1.3.13 after a newer deploy.
+          for attempt in $(seq 1 24); do
+            url="https://almaprintes.github.io/TopdownCraftrace/dev/dev-build.txt?sha=${EXPECTED_SHA}&run=${GITHUB_RUN_ID}&attempt=${attempt}"
+            served="$(curl -fsSL --max-time 12 --retry 1 -H 'Cache-Control: no-cache' "$url" || true)"
+            if printf '%s\n' "$served" | grep -Fxq "DEV_SOURCE_SHA=${EXPECTED_SHA}"; then
+              echo "Verified LIVE DEV_SOURCE_SHA=${EXPECTED_SHA}"
+              exit 0
+            fi
+            echo "Attempt ${attempt}: LIVE DEV does not yet match the published SHA"
+            sleep 5
+          done
+          echo "::error::GitHub Pages live DEV does not serve SHA ${EXPECTED_SHA}"
+          exit 1
 
