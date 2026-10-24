@@ -205,6 +205,12 @@ export class RaceScene extends CurrentRaceScene {
 
   update(time,delta){
     super.update?.(time,delta);
+    // A/B physics practice must not advance clean-lap seasons or awards.
+    if(this._physicsABPractice){
+      this._retireLegacyDeltaHud();
+      this._closeLiveHudForSessionEnd();
+      return;
+    }
     // Invalid meta crossings are NOT in ttHistory, but break a clean streak.
     const rejected=Number(this._tdrRejectedLapCount)||0;
     if(rejected>this._cleanMissionRejectedSeen){
