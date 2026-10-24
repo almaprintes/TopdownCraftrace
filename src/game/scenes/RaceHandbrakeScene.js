@@ -28,6 +28,16 @@ export class RaceScene extends CurrentRaceScene {
     // once on the next frame for final viewport metrics. No element is restored
     // or forced visible: this only establishes geometry from the source layout.
     applyLayout();
+    if(this._physicsABPractice){
+      // Small persistent session label; never occupies a control hitbox,
+      // and never paints the expensive game canvas each frame.
+      const tag=document.createElement('div');
+      tag.id='tdr-physics-ab-practice-label';
+      tag.textContent='FÍSICA B · PRUEBA · SIN RÉCORDS';
+      tag.style.cssText='position:fixed;left:10px;top:116px;z-index:10020;pointer-events:none;user-select:none;padding:5px 9px;border:1px solid #ffca7b88;background:#08121de0;color:#ffe1a0;border-radius:9px;font:800 10px system-ui;letter-spacing:.03em';
+      document.body.appendChild(tag);
+      this.events.once('shutdown',()=>tag.remove());
+    }
     // Bind only the classic circular stick. Its former Phaser input radius
     // could disagree with the actual DOM pad after layout/custom scaling.
     // RC, wheel, buttons and physical gamepad keep their own input paths.
