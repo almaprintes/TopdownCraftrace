@@ -248,6 +248,8 @@ export class RaceScene extends CurrentRaceScene{
   }
 
   _completedLapCheck(now){
+    // Experimental B laps are private practice and cannot overwrite ghosts.
+    if(this._physicsABPractice){this._ghostHistoryLen=Array.isArray(this.ttHistory)?this.ttHistory.length:0;return;}
     if(this._replayActive)return;
     // An online rival is read-only competition. Never compare/save the player's
     // lap against it as if it were the local PB; that could overwrite a faster PB.
