@@ -70,7 +70,29 @@ export class AdminHubScene extends BaseScene {
     masteryPreview.textContent='VER 9 INSIGNIAS DE MAESTRÍA';
     masteryPreview.style.cssText='margin:clamp(7px,1.1vh,11px) auto 0;padding:clamp(7px,1.2vh,11px) clamp(14px,2.2vw,24px);border:1px solid #d8a52f;background:rgba(216,165,47,.08);color:#ffe082;font:900 clamp(9px,1.5vh,12px) system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.08em;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
     masteryPreview.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();this._showMasteryPreview();},{passive:false});
-    header.appendChild(masteryPreview);
+    // Compact top toolbar: no ninth grid tile squashing the eight Admin tools.
+    const topTools=document.createElement('div');
+    topTools.style.cssText='display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:clamp(6px,1.2vw,12px);margin-top:clamp(6px,1vh,10px);';
+    masteryPreview.style.margin='0';
+    const webpTool=document.createElement('button');
+    webpTool.type='button';
+    webpTool.textContent='IMÁGENES → WEBP';
+    webpTool.style.cssText='margin:0;padding:clamp(7px,1.2vh,11px) clamp(14px,2.2vw,24px);border:1px solid #2bff88;background:rgba(43,255,136,.08);color:#b8ffe1;font:900 clamp(9px,1.5vh,12px) system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.05em;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
+    webpTool.addEventListener('click',async event=>{
+      event.preventDefault();event.stopPropagation();
+      try{
+        // Lazy-load only on demand; not part of the race render loop.
+        const {mountAdminWebpTool}=await import('../ui/adminImageWebpTool.js');
+        if(!root.isConnected)return;
+        try{this._webpToolDispose?.();}catch{}
+        this._webpToolDispose=mountAdminWebpTool(root);
+      }catch(err){
+        console.warn('[admin-webp] Cannot open image converter',err);
+        this._showToast('CONVERSOR WEBP NO DISPONIBLE');
+      }
+    },{passive:false});
+    topTools.append(masteryPreview,webpTool);
+    header.appendChild(topTools);
     root.appendChild(header);
 
     const grid=document.createElement('div');
@@ -141,6 +163,9 @@ export class AdminHubScene extends BaseScene {
 
   _removeAdminDom(){
     clearTimeout(this._adminToastTimer);
+    // Revoke any generated object URLs on navigation/shutdown.
+    try{this._webpToolDispose?.();}catch{}
+    this._webpToolDispose=null;
     try{
       this._masteryPreview?.remove?.();
       if(this._adminDomRoot){
