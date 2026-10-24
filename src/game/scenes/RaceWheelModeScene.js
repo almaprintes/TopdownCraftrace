@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceLeftHandedControlsScene.js';
 import {createRelativeSteeringGesture} from '../controls/relativeSteeringGesture.js';
+import {straightExitCorrection} from '../controls/straightExitAssist.js';
 
 const SETTINGS_KEY='tdr2:settings';
 function prefs(){try{return JSON.parse(localStorage.getItem(SETTINGS_KEY)||'{}')?.controls||{};}catch{return {};}}
@@ -8,6 +9,8 @@ export class RaceScene extends CurrentRaceScene {
   create(data){
     this._tdrWheelMode=prefs().steeringMode==='wheel';
     this._tdrWheelSteer=0;
+    this._tdrWheelPressed=false;
+    this._tdrWheelReleaseAgeMs=Infinity;
     const result=super.create(data);
     if(this._tdrWheelMode)this._buildSteeringWheel();
     return result;
@@ -111,6 +114,8 @@ export class RaceScene extends CurrentRaceScene {
     const down=e=>{
       if(activeId!==null)return;
       activeId=e.pointerId;
+      this._tdrWheelPressed=true;
+      this._tdrWheelReleaseAgeMs=Infinity;
       gesture.start(e.clientX);
       try{zone.setPointerCapture(e.pointerId);}catch{}
       zone.classList.add('active');
@@ -134,6 +139,8 @@ export class RaceScene extends CurrentRaceScene {
     const release=e=>{
       if(activeId!==e.pointerId)return;
       activeId=null;
+      this._tdrWheelPressed=false;
+      this._tdrWheelReleaseAgeMs=0;
       reset();
       try{if(zone.hasPointerCapture?.(e.pointerId))zone.releasePointerCapture(e.pointerId);}catch{}
       e.preventDefault();
@@ -144,6 +151,8 @@ export class RaceScene extends CurrentRaceScene {
     zone.addEventListener('pointercancel',release,{passive:false});
     zone.addEventListener('lostpointercapture',release,{passive:false});
     this.events.once('shutdown',()=>{
+      this._tdrWheelPressed=false;
+      this._tdrWheelReleaseAgeMs=Infinity;
       reset();
       zone.removeEventListener('pointerdown',down);
       zone.removeEventListener('pointermove',move);
@@ -176,6 +185,34 @@ export class RaceScene extends CurrentRaceScene {
       if(rk)rk.isDown=oldR;
       if(Number.isFinite(oldTurn))this.turnRate=oldTurn;
       this._applyWheelSteer(steer);
+    }
+
+    // A neutral control is NOT necessarily a car aligned with the straight.
+    // Following an explicit finger release, gently align the VEHICLE heading
+    // with the authored road centerline only if that section is truly straight.
+    // Does not run while steering, on rally stages, off track or handbraking.
+    if(!this._tdrWheelPressed&&Number.isFinite(this._tdrWheelReleaseAgeMs)&&
+       this._tdrWheelReleaseAgeMs<=1150){
+      this._tdrWheelReleaseAgeMs+=Math.max(0,Number(delta)||0);
+      const car=this.carBody;
+      const vel=car?.body?.velocity;
+      if(car?.scene&&vel&&this._raceStarted){
+        const correction=straightExitCorrection({
+          centerline:this.track?.meta?.centerline,
+          x:car.x,y:car.y,heading:car.rotation,
+          speed:Math.hypot(Number(vel.x)||0,Number(vel.y)||0),
+          trackWidth:Number(this.track?.meta?.trackWidth),
+          onTrack:this._onTrack===true,
+          releaseAgeMs:this._tdrWheelReleaseAgeMs,
+          deltaMs:delta,
+          handbrake:this._tdrHandbrake===true,
+          isStage:this._isStage===true
+        });
+        if(correction!==0){
+          car.rotation+=correction;
+          if(this.carRig?.scene)this.carRig.rotation=car.rotation+(this._carVisualRotOffset||0);
+        }
+      }
     }
   }
 }
