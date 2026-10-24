@@ -1,0 +1,18 @@
+{
+  "version": 7,
+  "trackId": "siete-picos",
+  "environment": [],
+  "surfaces": [],
+  "baseTrack": {
+    "id": "siete-picos",
+    "name": "7 PICOS",
+    "source": "src/game/tracks/library/siete-picos/track.json",
+    "locked": true
+  },
+  "repositoryPath": "src/game/tracks/library/siete-picos/siete-picos.environment.json",
+  "linearBarriers": [],
+  "materials": {},
+  "collisionLines": [],
+  "collisionZones": [],
+  "canopyZones": []
+}
