@@ -42,7 +42,7 @@ assert.match(rc,/if\(!this\._tdrRcMode\)return super\.update\(time,delta\)/);
 assert.doesNotMatch(rc,/setInterval|requestAnimationFrame|centerline|track\.geom/);
 assert.match(hb,/from '.\/RaceRcTwinAxisScene\.js'/);
 assert.match(hb,/if\(!this\._tdrRcMode\)this\._buildPedalRow\(\)/);
-assert.match(settings,/data\.v='rc_twin'/);
+assert.match(settings,/dataset\.v='rc_twin'/);
 assert.match(settings,/c\.steeringMode==='rc_twin'/);
 assert.match(layout,/rc_twin:\{steer:/);
 assert.match(layout,/\['stick','buttons','wheel','rc_twin'\]/);
