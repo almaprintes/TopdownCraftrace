@@ -502,6 +502,16 @@ else this._ttProg.idx = startIdx;
     };
   }
 init(data) {
+    // DEV driving A/B: choose once at race start. B is a local practice mode;
+    // online/competitive variants never receive altered grip physics.
+    this._physicsABMode='A';
+    try{
+      const selected=JSON.parse(localStorage.getItem('tdr2:settings')||'{}')?.controls?.physicsAB;
+      const gameMode=data?.gameMode||localStorage.getItem('tdr2:gameMode')||'timeattack';
+      if(selected==='B'&& !['ghost','survival','duel','online'].includes(gameMode))
+        this._physicsABMode='B';
+    }catch{}
+    this._physicsABPractice=this._physicsABMode==='B';
     // Si venimos del editor, testMode = true
   this._testMode = !!data?.testMode;
 
@@ -556,7 +566,12 @@ localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // ========================================
   // Time Trial: histórico de vueltas (por pista) — máx 500
   // ========================================
-  this.ttHistKey = `tdr2:ttHist:${this.trackKey}`;
+  // B never writes to the official per-track history/best keys, keeping
+  // the A baseline, personal records and online publication sources intact.
+  const ttTrackSuffix=this._physicsABPractice
+    ? `ab-practice-b:${this.trackKey}:${this.carId}`
+    : this.trackKey;
+  this.ttHistKey = `tdr2:ttHist:${ttTrackSuffix}`;
   this.ttHistory = [];
 
   try {
@@ -575,7 +590,7 @@ localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // ========================================
   // Time Trial: best lap + splits por pista
   // ========================================
-  this.ttKey = `tdr2:ttBest:${this.trackKey}`; // por pista
+  this.ttKey = `tdr2:ttBest:${ttTrackSuffix}`; // B has isolated practice PB
   this.ttBest = null;
 
   try {
@@ -4439,7 +4454,7 @@ if (shouldShow) {
 
     // Garage Fusion: cada vuelta válida alimenta el taller.
     // Recompensa pequeña, persistente y compatible con futuras carreras/eventos.
-    if (this.track?.closed!==false && !this._useFactorySpec && !this._testMode) {
+    if (this.track?.closed!==false && !this._useFactorySpec && !this._testMode && !this._physicsABPractice) {
       try {
         const reward = grantRaceReward(1);
         this._showGarageRewardToast?.(reward);
