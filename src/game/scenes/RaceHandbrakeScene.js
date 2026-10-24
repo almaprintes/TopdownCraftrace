@@ -1,5 +1,6 @@
 import { RaceScene as CurrentRaceScene } from './RaceRcTwinAxisScene.js';
 import { applyDomControlLayout } from '../controls/controlLayout.js';
+import {bindVisibleStickPointer} from '../controls/domStickPointer.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
@@ -27,6 +28,14 @@ export class RaceScene extends CurrentRaceScene {
     // once on the next frame for final viewport metrics. No element is restored
     // or forced visible: this only establishes geometry from the source layout.
     applyLayout();
+    // Bind only the classic circular stick. Its former Phaser input radius
+    // could disagree with the actual DOM pad after layout/custom scaling.
+    // RC, wheel, buttons and physical gamepad keep their own input paths.
+    if(this._tdrSteeringMode==='stick'&&!this._tdrRcMode&&!this._tdrWheelMode&&!this._tdrGamepadMode){
+      const visible=document.querySelector('#tdr-race-controls [data-stick]');
+      const unbind=bindVisibleStickPointer(visible,this.touch);
+      this.events.once('shutdown',unbind);
+    }
     requestAnimationFrame(applyLayout);
     window.addEventListener('resize',applyLayout,{passive:true});
     this.events.once('shutdown',()=>window.removeEventListener('resize',applyLayout));
