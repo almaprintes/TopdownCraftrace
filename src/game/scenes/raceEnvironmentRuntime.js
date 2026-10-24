@@ -24,7 +24,7 @@ export function envFor(scene){
   // Environment Studio, en coordenadas exactas del fondo, sin tocar la foto.
   // Official photo-native circuits and stages load only their own authored world-space collision data.
   // Keep local TrackStudio previews isolated from the published environment registry.
-  if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros'].includes(physicalKey)&&physicalKey!=='karting-canarias-narrow70'&&physicalKey!=='circuito-atlantico')return null;
+  if(isImageNativeTrackScene(scene)&&!['karting-tenerife','santa-cruz','karting-americas','karting-canarias','karting-canarias-4096','rally-arafo-los-loros','siete-picos'].includes(physicalKey)&&physicalKey!=='karting-canarias-narrow70'&&physicalKey!=='circuito-atlantico')return null;
   const narrow=physicalKey==='karting-canarias-narrow70';
   // Phaser reuses the same RaceScene instance. Before its base create()
   // replaces scene.track, that object can still describe the PREVIOUS circuit.

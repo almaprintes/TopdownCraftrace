@@ -63,7 +63,7 @@ export class EnvironmentBuilderScene extends CurrentEnvironmentBuilderScene {
       // Atlántico's authored photo is 4344x3258; the *published* race world
       // is 70%. Show the exact same photo transform in the editor so placed
       // markings and pen collisions use true race-world coordinates.
-      const tileWorldScale=this._trackId==='circuito-atlantico'
+      const tileWorldScale=['circuito-atlantico','siete-picos'].includes(this._trackId)
         ?(Number(native?.worldScale)||1):1;
       this._clearBeautyReference();
       for(const [i,t] of cfg.tiles.entries()){

@@ -9,6 +9,7 @@ import {shapeIsValid} from '../src/game/studio/trackShapeGeometry.js';
 import {expandCheckpointToEdges} from '../src/game/tracks/imageNativeCheckpointWidth.js';
 import {spawnUpstreamOfFinish} from '../src/game/tracks/imageNativeDriving.js';
 import {orderClosedCircuitGates} from '../src/game/tracks/closedCircuitGateOrder.js';
+import {scaleSietePicosTrack,SIETE_PICOS_WORLD_SCALE} from '../src/game/tracks/sietePicosWorldScale.js';
 
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const SOURCE='src/game/tracks/library/siete-picos/source/7-picos.tdrtrack';
@@ -68,7 +69,7 @@ export async function installSietePicos({withAssets=true}={}){
     y:(finish.a.y+finish.b.y)*.5,
     r:Math.atan2(finish.normal.y,finish.normal.x)};
   const photoSha=crypto.createHash('sha256').update(photo).digest('hex');
-  const record={
+  const sourceRecord={
     name:'7 PICOS',brand:'TDR',category:'Montaña / Volcánico',
     difficulty:'Alta',lengthLabel:'Media',surface:'Asfalto',
     worldW:WIDTH,worldH:HEIGHT,trackWidth:Number(t.trackWidth)||65,
@@ -88,6 +89,7 @@ export async function installSietePicos({withAssets=true}={}){
       sourceBundleSha256:digest,sourceImageSha256:photoSha,
       gateOrderDiagnostics:ordered.diagnostics}
   };
+  const record=scaleSietePicosTrack(sourceRecord);
   const out=absolute(TRACK);
   fs.mkdirSync(path.dirname(out),{recursive:true});
   const json=JSON.stringify(record,null,2)+'\n';
@@ -103,9 +105,9 @@ export async function installSietePicos({withAssets=true}={}){
     fs.writeFileSync(destIOS,small);
   }
   console.log('[7-picos] Instalado para Environment Studio; editor-only:',
-    WIDTH+'x'+HEIGHT,t.centerline.length+' puntos',
+    record.worldW+'x'+record.worldH,t.centerline.length+' puntos',
     ordered.checkpoints.length+' CP',JSON.stringify(ordered.diagnostics));
-  return {installed:true,trackId:'siete-picos',world:[WIDTH,HEIGHT],
+  return {installed:true,trackId:'siete-picos',world:[record.worldW,record.worldH],worldScale:SIETE_PICOS_WORLD_SCALE,
     checkpoints:ordered.checkpoints.length,gateOrder:ordered.diagnostics};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))
