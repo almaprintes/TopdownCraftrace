@@ -7,8 +7,9 @@ const STEERING_DEFAULTS={
   // Shared by live racing and the controls calibration screen.
   stick:{steer:{x:.17,y:.77,scale:1}},
   wheel:{steer:{x:.20,y:.73,scale:1}},
-  // Radio-control layout: left vertical drive axis, right horizontal steering.
-  rc_twin:{steer:{x:.73,y:.72,scale:1},gas:{x:.18,y:.70,scale:1}},
+  // Right-handed RC: steering under left thumb; throttle/brake under right.
+  // leftHanded mirrors both positions without changing the axis functions.
+  rc_twin:{steer:{x:.22,y:.72,scale:1},gas:{x:.73,y:.70,scale:1}},
   buttons:{left:{x:.085,y:.78,scale:1},right:{x:.19,y:.78,scale:1}}
 };
 
