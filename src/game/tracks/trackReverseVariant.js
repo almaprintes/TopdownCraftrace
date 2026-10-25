@@ -74,7 +74,8 @@ export const CLOSED_CIRCUIT_VARIANTS=Object.freeze([
   {base:'karting-canarias-4096',alternate:'karting-canarias-4096-inverso',legacy:'counterclockwise'},
   {base:'karting-canarias',alternate:'karting-canarias-inverso',legacy:'counterclockwise'},
   {base:'santa-cruz',alternate:'santa-cruz-inverso',legacy:'clockwise'},
-  {base:'circuito-atlantico',alternate:'circuito-atlantico-inverso',legacy:'clockwise'}
+  {base:'circuito-atlantico',alternate:'circuito-atlantico-inverso',legacy:'clockwise'},
+  {base:'siete-picos',alternate:'siete-picos-inverso',legacy:'clockwise'}
 ]);
 export const circuitVariantFor=id=>CLOSED_CIRCUIT_VARIANTS.find(v=>v.base===id)||null;
 export const circuitVariantParent=id=>CLOSED_CIRCUIT_VARIANTS.find(v=>v.alternate===id)?.base||null;

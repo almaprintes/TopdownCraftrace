@@ -92,7 +92,7 @@ export async function installSietePicos({withAssets=true}={}){
     finishLine:finish,finishAnchor,checkpointMode:'authored',
     checkpoints:ordered.checkpoints,
     meta:{...t.meta,id:'siete-picos',trackId:'siete-picos',
-      hiddenFromTrackSelect:true, // DEV player and Environment Builder exceptions are separate.
+      hiddenFromTrackSelect:false, // Owner-approved circuit, eligible for local and online rankings.
       renderMode:'image-native',
       imageNative:{schema:1,availability:'published',
         width:SIETE_PICOS_W,height:SIETE_PICOS_H,

@@ -2,17 +2,14 @@ import { TrackGarageScene as CurrentTrackGarageScene } from './TrackGarageProgre
 import { BaseScene } from './BaseScene.js';
 import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
 import { isPublishedTrackId } from '../tracks/trackUnlocks.js';
-import {IS_PROD_BUILD} from '../buildTarget.js';
 import {isCircuitAlternate} from '../tracks/trackReverseVariant.js';
 
 function trackKey(track){return String(track?.key||track?.id||'');}
 function selectableKey(key){return key!=='karting-canarias-narrow70'&&isPublishedTrackId(key);}
 function playerVisible(track){
   const key=trackKey(track);
-  // The owner may test unfinished 7 Picos in DEV, but it stays hidden in production.
-  const devSevenPeaks=!IS_PROD_BUILD&&key==='siete-picos';
   return !!key && !isCircuitAlternate(key) && selectableKey(key) &&
-    (devSevenPeaks||track?.meta?.hiddenFromTrackSelect!==true);
+    track?.meta?.hiddenFromTrackSelect!==true;
 }
 
 export class TrackGarageScene extends CurrentTrackGarageScene {

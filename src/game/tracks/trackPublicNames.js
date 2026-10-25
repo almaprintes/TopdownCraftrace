@@ -16,7 +16,9 @@ const PUBLIC_TRACK_NAMES=Object.freeze({
   'karting-canarias-4096-inverso':'KARTING CANARIAS INVERSO',
   'karting-americas':'KARTING AMÉRICAS',
   'karting-americas-inverso':'KARTING AMÉRICAS INVERSO',
-  'rally-arafo-los-loros':'ARAFO → LOS LOROS'
+  'rally-arafo-los-loros':'ARAFO → LOS LOROS',
+  'siete-picos':'7 PICOS',
+  'siete-picos-inverso':'7 PICOS INVERSO'
 });
 
 export function getTrackPublicName(trackOrId,language='es'){

@@ -27,7 +27,7 @@ const track=JSON.parse(fs.readFileSync(root+'track.json','utf8'));
 const env=JSON.parse(fs.readFileSync(root+'siete-picos.environment.json','utf8'));
 assert.deepEqual([track.worldW,track.worldH],[4344,3258]);
 assert.equal(track.carScale,1);
-assert.equal(track.meta.hiddenFromTrackSelect,true);
+assert.equal(track.meta.hiddenFromTrackSelect,false);
 assert.equal(track.trackWidth,original.trackWidth);
 assert.deepEqual(track.centerline,original.centerline);
 assert.equal(track.trackShape.sourceNodeCount,32);
