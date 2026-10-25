@@ -1,5 +1,8 @@
 # REGLAS OBLIGATORIAS DE TRABAJO — TOP DOWN RACE
 
+> **DEV 1.3.32 (25/10/2026) — CÁMARA FOTOGRÁFICA MÁS ABIERTA:** usuarios ven las pistas demasiado aumentadas y pixeladas. Auditada cadena completa: el constructor base tiene límite 1,50×, PERO la subclase efectiva `RaceWideCameraPreviewScene` YA usa min 0,62× / max 1,06× y referencia 105 km/h. iPhone usa fotos WebP 65% lineal y framebuffer High DPR 1; amplificar la foto causa suavidad. En DEV exclusivamente, el zoom al conducir sobre circuitos `image-native` se limita a **0,86× máximo** y queda intacto el mínimo 0,62×; encuadre inicial también limitado. Producción Android, circuitos no fotográficos y fotogramas de carrera conservan zoom original; no se altera escala/colisiones/recorridos/coches, ni se eleva memoria GPU de iPhone por ahora. Prueba automática en prebuild y seguimiento visual antes de elevar calidad de texturas. **No afirmar que zoom anterior era 1,50× efectivo.** [Continuidad](docs/continuity/2026-10-25-dev-1-3-32-photo-camera-framing.md).
+
+
 > **DEV 1.3.31 (25/10/2026) — DIFERENCIA EN SELECTOR:** tercera línea «DIFERENCIA» debajo de RÉCORD ABSOLUTO y TU RÉCORD, con cálculo **mejor vuelta personal local menos récord absoluto online publicado**. Ejemplo del usuario: 0:27.096 vs 0:29.388 = **−2.292 s** (verde, ventaja). Si es más lento, **+s** (rojo, desventaja); empate neutro; sin ambos tiempos o sin red **—**. Al cambiar circuito o Normal/Inverso, se borra inmediatamente el valor anterior y se recalcula con la identidad correcta; sigue usando UNA llamada online cacheada por sesión, sin frame/timer extra. CSS responsive del mismo panel, pruebas smoke actualizadas. Solo DEV, sin APK/AAB. [Continuidad](docs/continuity/2026-10-25-dev-1-3-31-selector-time-gap.md).
 
 

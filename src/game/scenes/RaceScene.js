@@ -2094,6 +2094,12 @@ _drawGate(this.checkpoints.cp1, 0xffd400);
 _drawGate(this.checkpoints.cp2, 0x2dff6a);
 
 // 7) Cámara (FIX: 2ª entrada puede quedarse en (0,0))
+// Set wide framing immediately, rather than showing an enlarged photo for the
+// first frames before the speed-based camera interpolation catches up.
+if(!IS_PROD_BUILD&&this.track?.meta?.renderMode==='image-native'){
+  this.zoom=raceCameraZoomTarget(this.trackKey,this.zoom,true);
+  this._zoomCurrent=this.zoom;
+}
 this.cameras.main.stopFollow();
 this.cameras.main.setScroll(0, 0);
 
@@ -4490,12 +4496,14 @@ const kmh = speed * KMH_PER_PXSEC;
 {
   const speed01 = Phaser.Math.Clamp(kmh / this._zoomKmhRef, 0, 1);
 
-  // Track-only framing: keep the entire existing speed-dependent camera curve.
-  // Do not scale vehicles, roads, collision geometry or the photographic canvas.
+  // DEV/photo-native: cap close-up to 0.86× instead of 1.06× so the
+  // source asphalt is not enlarged unnecessarily. Non-photo and Play
+  // retain exactly the prior zoom curve. Never scale cars or road geometry.
   const targetZoom = raceCameraZoomTarget(
     this.trackKey,
     this._zoomGameplayMax -
-      (this._zoomGameplayMax - this._zoomGameplayMin) * speed01
+      (this._zoomGameplayMax - this._zoomGameplayMin) * speed01,
+    !IS_PROD_BUILD&&this.track?.meta?.renderMode==='image-native'
   );
 
   this._zoomCurrent = Phaser.Math.Linear(
