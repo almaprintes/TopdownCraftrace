@@ -2096,7 +2096,7 @@ _drawGate(this.checkpoints.cp2, 0x2dff6a);
 // 7) Cámara (FIX: 2ª entrada puede quedarse en (0,0))
 // Set wide framing immediately, rather than showing an enlarged photo for the
 // first frames before the speed-based camera interpolation catches up.
-if(!IS_PROD_BUILD&&this.track?.meta?.renderMode==='image-native'){
+if(!IS_PROD_BUILD&&isImageNativeTrackScene(this)){
   this.zoom=raceCameraZoomTarget(this.trackKey,this.zoom,true);
   this._zoomCurrent=this.zoom;
 }
@@ -4499,11 +4499,12 @@ const kmh = speed * KMH_PER_PXSEC;
   // DEV/photo-native: cap close-up to 0.86× instead of 1.06× so the
   // source asphalt is not enlarged unnecessarily. Non-photo and Play
   // retain exactly the prior zoom curve. Never scale cars or road geometry.
+  // Use isImageNativeTrackScene: nested t01.meta.renderMode is not at scene.track.meta.renderMode.
   const targetZoom = raceCameraZoomTarget(
     this.trackKey,
     this._zoomGameplayMax -
       (this._zoomGameplayMax - this._zoomGameplayMin) * speed01,
-    !IS_PROD_BUILD&&this.track?.meta?.renderMode==='image-native'
+    !IS_PROD_BUILD&&isImageNativeTrackScene(this)
   );
 
   this._zoomCurrent = Phaser.Math.Linear(
@@ -4520,7 +4521,8 @@ const kmh = speed * KMH_PER_PXSEC;
 if (DEV_TOOLS && this.devInfo && this._devVisible) {
   const cp = (this._cpState || 0);
   const surf = this._surface || '??';
-  const zoom = (this.zoom ?? 1).toFixed(2);
+  // Measure the actual Phaser camera, not the zoom target variable.
+  const zoom = (this.cameras?.main?.zoom ?? this.zoom ?? 1).toFixed(2);
 
   const cam = this.cameras?.main;
   const sx = cam ? Math.round(cam.scrollX) : 0;
