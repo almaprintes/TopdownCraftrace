@@ -18,7 +18,10 @@ assert.match(stats,/const rows=await getPublicRaceControlSnapshot\(id\)/,'safe g
 assert.match(stats,/this\._raceControlPublicMode=true/);
 assert.match(stats,/saveCloudSnapshot\(id,rows\)/);
 assert.match(stats,/this\._raceControlRenderedTrack===id&&this\._root\?\.querySelector\('\.br-online-board'\)/,'never redraw after leaving or switching track');
-assert.match(report,/if\(!row\|\|!row\.record_ref\)throw/,'server verification required');
+assert.match(report,/if\(!row\|\|\(replay\?!row\.record_ref:row\.track_id!==trackId\)\)/,
+ 'server must confirm either ghost record_ref OR time-only exact track identity');
+assert.match(report,/submitRaceControlRecordWithoutGhost\(\{/,
+ 'online ranking can accept personal best without replay');
 assert.ok(report.indexOf('published=true;')<report.indexOf('void getRaceControlSnapshot(trackId)'), 'verified publication precedes optional cache refresh');
 assert.match(report,/void getRaceControlSnapshot\(trackId\)\.then\(snapshot=>/);
 assert.match(report,/if\(Array\.isArray\(snapshot\)\)saveCloudSnapshot\(trackId,snapshot\)/);
