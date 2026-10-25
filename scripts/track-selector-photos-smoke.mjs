@@ -1,4 +1,4 @@
-// Integration check: six authentic circuit photos, selectable DOM cards,
+// Integration check: seven authentic circuit photos, selectable DOM cards,
 // hidden locked assets and lightweight image decoding on mobile.
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync,statSync} from 'node:fs';
@@ -7,7 +7,7 @@ import sharp from 'sharp';
 import {TRACK_SELECTOR_PHOTO_PATHS,selectorPhotoUrl,selectorPhotoPath,selectorTrackKind} from '../src/game/tracks/trackSelectorPhotos.js';
 const expected=[
   'circuito-atlantico','santa-cruz','karting-tenerife',
-  'karting-canarias','karting-americas','rally-arafo-los-loros'
+  'karting-canarias','karting-americas','rally-arafo-los-loros','siete-picos'
 ];
 assert.deepEqual(Object.keys(TRACK_SELECTOR_PHOTO_PATHS),expected);
 for(const id of expected){
@@ -22,6 +22,9 @@ for(const id of expected){
   assert.equal(selectorPhotoPath(id,true),null);
 }
 assert.equal(selectorPhotoPath('unpublished-track'),null);
+assert.equal(selectorPhotoPath('siete-picos-inverso'),TRACK_SELECTOR_PHOTO_PATHS['siete-picos']);
+assert.equal(selectorPhotoPath('siete-picos',true),null);
+assert.ok(readFileSync('scripts/build-track-selector-photos.mjs','utf8').includes("'siete-picos':'assets/tracks/siete-picos/7-picos.webp'"));
 // No retired /beauty/ images for these three. Both official photos must be
 // byte-exact to the photograph embedded in the latest TrackStudio source.
 const builder=readFileSync('scripts/build-track-selector-photos.mjs','utf8');
@@ -69,4 +72,4 @@ assert.match(skin,/#tdr-track-selector-dom \.tdr-ts-photo/);
 assert.match(skin,/\.tdr-ts-preview\.has-photo/);
 assert.match(skin,/@media\(max-width:760px\)/);
 assert.match(skin,/@media\(max-height:510px\)/);
-console.log('Selector photography OK: six matching 900x600 low-memory WebPs, locked concealed, rally styling, active preview, existing selection and responsive layouts.');
+console.log('Selector photography OK: seven matching 900x600 low-memory WebPs, locked concealed, rally styling, active preview, existing selection and responsive layouts.');

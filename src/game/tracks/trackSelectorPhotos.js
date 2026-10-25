@@ -7,7 +7,8 @@ export const TRACK_SELECTOR_PHOTO_PATHS=Object.freeze({
   'karting-tenerife':'assets/tracks/selector/karting-tenerife.webp',
   'karting-canarias':'assets/tracks/selector/karting-canarias.webp',
   'karting-americas':'assets/tracks/selector/karting-americas.webp',
-  'rally-arafo-los-loros':'assets/tracks/selector/rally-arafo-los-loros.webp'
+  'rally-arafo-los-loros':'assets/tracks/selector/rally-arafo-los-loros.webp',
+  'siete-picos':'assets/tracks/selector/siete-picos.webp'
 });
 
 export function selectorPhotoPath(track,locked=false){

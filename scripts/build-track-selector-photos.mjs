@@ -17,7 +17,8 @@ const sources=Object.freeze({
   'karting-tenerife':'assets/tracks/karting-tenerife/karting-tenerife-official.webp',
   'karting-canarias':'assets/tracks/karting-canarias/karting-canarias-new.webp',
   'karting-americas':'assets/tracks/karting-americas/karting-americas-official.webp',
-  'rally-arafo-los-loros':'assets/tracks/rally-arafo-los-loros/arafo-los-loros-photo.webp'
+  'rally-arafo-los-loros':'assets/tracks/rally-arafo-los-loros/arafo-los-loros-photo.webp',
+  'siete-picos':'assets/tracks/siete-picos/7-picos.webp'
 });
 async function photoThumbnail(input,{legacyAtlantico=false}={}){
   const md=await sharp(input).metadata();
@@ -40,7 +41,7 @@ async function photoThumbnail(input,{legacyAtlantico=false}={}){
 
 export async function buildTrackSelectorPhotos(){
   const entries=Object.entries(TRACK_SELECTOR_PHOTO_PATHS);
-  if(entries.length!==6)throw Error('Selector: unexpected published circuit count');
+  if(entries.length!==7)throw Error('Selector: unexpected published circuit count');
   for(const [id,destRel] of entries){
     const dest=fromPublic(destRel);
     fs.mkdirSync(path.dirname(dest),{recursive:true});

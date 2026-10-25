@@ -5,6 +5,7 @@ import { attachCenteredSelectionRail } from '../ui/centeredSelectionRail.js';
 import { pxToMeters } from '../cars/speedUnits.js';
 import {TENERIFE_LEGACY_ID,circuitVariantFor,selectedCircuitRaceId,readCircuitDirection,saveCircuitDirection} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
+import {attachSelectorRecordDisplay} from '../ui/selectorRaceRecords.js';
 
 const ROOT_ID='tdr-track-selector-dom';
 const TAP_MOVE_PX=14;
@@ -56,6 +57,9 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
     });
     const selected=this._tracks?.[this._index];
     const base=selected?.key;
+    // One compact record panel; different timing IDs per normal/reverse route.
+    const records=attachSelectorRecordDisplay(root,()=>selectedCircuitRaceId(base,localStorage),
+      document.documentElement.lang==='en'?'en':'es');
     const spec=circuitVariantFor(base);
     if(spec&&!root.querySelector('.tdr-ts-locked-hero')){
       const header=root.querySelector('.tdr-ts-hero-head');
@@ -86,6 +90,7 @@ export class TrackGarageScene extends CurrentTrackGarageScene {
           const caption=root.querySelector('.tdr-ts-hero-caption');
           if(title)title.textContent=publicName;
           if(caption)caption.textContent=publicName;
+          records?.update();
         };
         for(const [value,label] of choices){
           const btn=document.createElement('button');btn.type='button';btn.dataset.raceDirection=value;
