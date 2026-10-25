@@ -15,6 +15,19 @@ export function formatSelectorLap(ms){
   const mins=Math.floor(value/60000),secs=Math.floor(value%60000/1000),part=value%1000;
   return mins+':'+String(secs).padStart(2,'0')+'.'+String(part).padStart(3,'0');
 }
+// Signed offset: local PB minus the best published online lap.
+ // Negative = faster than the publicly published absolute record.
+ // Do not run the valid-lap (>1000ms) check on the difference itself:
+ // a margin can legitimately be only a few milliseconds.
+export function formatSelectorGap(personalMs,globalMs){
+  const own=goodMs(personalMs),world=goodMs(globalMs);
+  if(own===null||world===null)return {text:'—',tone:'unavailable'};
+  const gap=own-world;
+  if(gap===0)return {text:'0.000 s',tone:'equal'};
+  const sign=gap<0?'−':'+';
+  return {text:sign+(Math.abs(gap)/1000).toFixed(3)+' s',
+    tone:gap<0?'ahead':'behind'};
+}
 export function absoluteRecordsFromSnapshot(payload){
   if(!Array.isArray(payload?.tracks))throw Error('Invalid public leaderboard snapshot');
   const result=new Map();
@@ -64,23 +77,40 @@ export function attachSelectorRecordDisplay(root,currentTrackId,lang='es'){
   section.className='tdr-ts-records';
   section.setAttribute('aria-label',english?'Circuit lap records':'Récords del circuito');
   // All dynamic text is assigned through textContent (no remote HTML).
-  section.innerHTML='<div class="tdr-ts-record"><small></small><strong data-scope="global">—</strong></div><div class="tdr-ts-record"><small></small><strong data-scope="personal">—</strong></div>';
+  section.innerHTML='<div class="tdr-ts-record"><small></small><strong data-scope="global">—</strong></div><div class="tdr-ts-record"><small></small><strong data-scope="personal">—</strong></div><div class="tdr-ts-record tdr-ts-gap"><small></small><strong data-scope="difference" data-tone="unavailable">—</strong></div>';
   const labels=section.querySelectorAll('small');
   labels[0].textContent=english?'ABSOLUTE RECORD':'RÉCORD ABSOLUTO';
   labels[1].textContent=english?'YOUR RECORD':'TU RÉCORD';
+  labels[2].textContent=english?'DIFFERENCE':'DIFERENCIA';
   hero.appendChild(section);
   const global=section.querySelector('[data-scope="global"]'),personal=section.querySelector('[data-scope="personal"]');
+  const difference=section.querySelector('[data-scope="difference"]');
+  const setDifference=(own,world)=>{
+    const gap=formatSelectorGap(own,world);
+    difference.textContent=gap.text;
+    difference.dataset.tone=gap.tone;
+    difference.title=gap.tone==='ahead'
+      ?(english?'Faster than the published online record':'Más rápido que el récord online publicado')
+      :gap.tone==='behind'
+        ?(english?'Slower than the published online record':'Más lento que el récord online publicado')
+        :gap.tone==='equal'
+          ?(english?'Same time as the published online record':'Igual que el récord online publicado')
+          :(english?'Times unavailable for comparison':'No hay tiempos suficientes para comparar');
+  };
   const update=()=>{
     if(!root.isConnected)return;
     const id=String(currentTrackId()||'');
     if(!id)return;
     section.dataset.trackId=id;
-    personal.textContent=formatSelectorLap(getSelectorLocalBest(id));
+    const own=getSelectorLocalBest(id);
+    personal.textContent=formatSelectorLap(own);
     global.textContent='…';
+    setDifference(null,null);
     getSelectorGlobalRecords().then(records=>{
       if(!root.isConnected||section.dataset.trackId!==id)return;
       const hasBoard=records.has(id),value=records.get(id);
       global.textContent=hasBoard?formatSelectorLap(value):'—';
+      setDifference(own,hasBoard?value:null);
       global.title=hasBoard
         ?(value?(english?'Public online ranking':'Clasificación pública online')
           :(english?'No published record':'Sin récord publicado'))
@@ -88,6 +118,7 @@ export function attachSelectorRecordDisplay(root,currentTrackId,lang='es'){
     }).catch(()=>{
       if(!root.isConnected||section.dataset.trackId!==id)return;
       global.textContent=english?'OFFLINE':'SIN CONEXIÓN';
+      setDifference(null,null);
       global.title=english?'Online ranking unavailable':'No se pudo consultar el ranking online';
     });
   };

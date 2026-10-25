@@ -351,3 +351,18 @@
   #tdr-track-selector-dom .tdr-ts-record strong{font-size:11px}
   #tdr-track-selector-dom .tdr-ts-hero-head{padding-right:122px;align-items:flex-start}
 }
+
+/* Signed margin below the two official times. Red means slower, green faster. */
+#tdr-track-selector-dom .tdr-ts-gap{
+  padding-top:5px;margin-top:2px;border-top:1px solid rgba(126,205,225,.24);
+}
+#tdr-track-selector-dom .tdr-ts-record [data-scope="difference"]{
+  font-variant-numeric:tabular-nums;
+  color:#bbcbd5;
+}
+#tdr-track-selector-dom .tdr-ts-record [data-scope="difference"][data-tone="ahead"]{color:#5af0a5}
+#tdr-track-selector-dom .tdr-ts-record [data-scope="difference"][data-tone="behind"]{color:#ff8c83}
+#tdr-track-selector-dom .tdr-ts-record [data-scope="difference"][data-tone="equal"]{color:#ebc771}
+@media(max-width:950px){
+  #tdr-track-selector-dom .tdr-ts-gap{padding-top:3px;margin-top:1px}
+}
