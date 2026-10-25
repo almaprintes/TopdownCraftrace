@@ -73,7 +73,7 @@ assert.ok(offer.includes("publish.addEventListener('click',async()=>"),'Ad must 
 assert.ok(offer.indexOf("await ensureRaceControlPilotProfile()")<offer.indexOf("await showRewardedAd(scene"),
   'Check online connectivity BEFORE consuming the optional ad');
 assert.ok(offer.indexOf('const ghost=localRecordGhost')<offer.indexOf('await showRewardedAd(scene'),
-  'Check matching ghost exists before watching ad');
+  'Check for an exact ghost before offering either publication format');
 assert.ok(offer.indexOf('const bytes=encodeOnlineGhostNativeBinary')<offer.indexOf('await showRewardedAd(scene'),
   'Encode and size-check ghost before showing ad');
 assert.ok(offer.includes('if(!verifiedReward(result))throw'), 'Publication requires a verified finished ad');
@@ -84,7 +84,12 @@ assert.ok(offer.includes('verifiedPublishClaims.set(claimId,{adVerified:true,pub
 assert.ok(offer.includes('if(!adVerified){'),'Retry must not start another ad');
 assert.ok(offer.includes('REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO'));
 assert.ok(offer.includes("setStatus('No has elegido publicar. No se mostrará ningún anuncio.')"));
-assert.ok(offer.includes('if(!row||!row.record_ref)throw'), 'Backend must confirm the record');
+assert.ok(offer.includes('if(!row||(replay?!row.record_ref:row.track_id!==trackId))'),
+  'Both ghost and time-only publications must have server acknowledgement');
+assert.ok(offer.includes('submitRaceControlRecordWithoutGhost({'),
+  'No recorded replay still permits publishing the personal best after an ad');
+assert.ok(offer.includes('No existe una repetición exacta'),
+  'The player must agree explicitly to time-only publication');
 assert.ok(report.includes('this._sessionPreviousPersonalBestMs='),'Persist pre-session comparison baseline');
 assert.ok(report.includes('mountNewPersonalBestOffer(this,root,r)'),'Mount celebration within report');
 assert.ok(report.indexOf('installSessionReportNavigation(root);')<report.indexOf('mountNewPersonalBestOffer(this,root,r);'),

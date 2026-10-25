@@ -177,6 +177,28 @@ export async function submitRaceControlRecordWithGhost({trackId,bestTimeMs,carId
   return response;
 }
 
+// Time-only publication for genuine device PBs whose exact local recording
+// is missing. The server's pre-existing authenticated RPC leaves the ranking
+// entry without a ghost; replay/VS must stay disabled. Rewarded consent is
+// checked by the calling UI, exactly as in ghost-backed publishing.
+export async function submitRaceControlRecordWithoutGhost({trackId,bestTimeMs,carId}){
+  const id=String(trackId||'').trim(),car=String(carId||'').trim();
+  const ms=Math.round(Number(bestTimeMs)||0);
+  if(!id||id.length>80||!car||car.length>80||ms<=1000)
+    throw new Error('Datos incompletos para publicar el récord.');
+  const online=await activateRaceControlOnline();
+  const token=online?.session?.access_token;
+  if(!token)throw new Error('Online session unavailable');
+  const response=await request('/rest/v1/rpc/submit_track_record',{
+    method:'POST',token,body:{p_track_id:id,p_best_time_ms:ms,p_car_id:car}
+  });
+  const record=Array.isArray(response)?response[0]:response;
+  if(record?.track_id!==id||Number(record?.best_time_ms)<=0)
+    throw new Error('El servidor no confirmó el tiempo publicado.');
+  if(car==='crown_cuper')recordOnlineCuperPublish();
+  return response;
+}
+
 // Return only the caller's OWN identity. This read-only RPC is SECURITY
 // DEFINER and does not expose another pilot's profile via PostgREST.
 // Only the authenticated Supabase UUID can obtain a creator badge.

@@ -50,18 +50,20 @@ for(const x of [
  'if(!verifiedReward(result))',
  'adVerified=true',
  'await submitRaceControlRecordWithGhost({',
- 'if(!row||!row.record_ref)',
+ 'if(!row||(replay?!row.record_ref:row.track_id!==trackId))',
  'if(adVerified)publish.textContent=',
  'REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO',
  'actions.hidden=true'
 ])assert.ok(view.includes(x),'Missing explicitly optional consent flow or server verification: '+x);
 const earlyChecks=view.indexOf('const ghost=localRecordGhost');
 const adCall=view.indexOf('const result=await showRewardedAd');
-const submit=view.indexOf('const response=await submitRaceControlRecordWithGhost');
+const submit=view.indexOf('const response=replay');
 assert.ok(earlyChecks>=0&&adCall>earlyChecks&&submit>adCall,
   'Validate replay and online readiness BEFORE showing a rewarded ad');
 assert.ok(view.includes("raceControlPublishClaimId(trackId,best.lapMs)"));
-assert.ok(view.includes('ghostSampleCount:packet.p.length'));
+assert.ok(view.includes('ghostSampleCount:replay.count'));
+assert.ok(view.includes('submitRaceControlRecordWithoutGhost({'));
+assert.ok(view.includes('No existe una repetición exacta'));
 assert.ok(source.includes('mountNewPersonalBestOffer(this,root,r);'));
 assert.ok(source.includes('this._sessionPreviousPersonalBestMs='));
 assert.ok(source.includes('valid:e?.valid!==false&&e?.invalid!==true'));

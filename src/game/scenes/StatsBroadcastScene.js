@@ -7,7 +7,9 @@ import { carVisualCandidates,applyCarVisual } from '../skins/carDisplayArt.js';
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import { getPersonalCircuitRecords, cloudSnapshotPolicy, saveCloudSnapshot } from '../stats/localRaceRecords.js';
 import { needsRaceControlCacheRecovery } from '../online/raceControlSnapshotRecovery.js';
-import { submitRaceControlRecordWithGhost, getRaceControlSnapshot, getPublicRaceControlSnapshot, getRaceControlTrackCreatorBadges, withRaceControlCreatorBadges } from '../online/raceControlOnline.js';
+import { submitRaceControlRecordWithGhost, submitRaceControlRecordWithoutGhost, getRaceControlSnapshot, getPublicRaceControlSnapshot, getRaceControlTrackCreatorBadges, withRaceControlCreatorBadges } from '../online/raceControlOnline.js';
+import { findExactLocalPbReplay } from '../tracks/exactLocalReplay.js';
+import { ghostReplayCompatibility } from '../tracks/ghostTrackCompatibility.js';
 import { ensureRaceControlPilotProfile, explainPilotIdentityFailure } from '../online/onlinePilotIdentity.js';
 import { verifiedRecordPublishClaims } from '../online/verifiedRecordPublishClaims.js';
 import { encodeOnlineGhostNative, encodeOnlineGhostNativeBinary } from '../online/onlineGhostCodec.js';
@@ -72,8 +74,9 @@ export class StatsScene extends MasteryStatsScene{
           this._renderBroadcastRecords(selected.trackId);
       }).catch(err=>console.warn('[race-control] cached creator badge unavailable',err));
     }
+    const exactLocalReplay=findExactLocalPbReplay(selected);
     const bestCar=selected.bestCarId;const brandLogo=brandLogoSrc(bestCar);const improvement=selected.progression?.length>1?(selected.progression[0].lapMs-selected.progression[selected.progression.length-1].lapMs):0;const body=this._root.querySelector('.sh-body');
-    body.innerHTML=`<div class="br-shell"><div class="br-topline"><span class="br-live">● ${t('raceControl.localLive')}</span><h2>${t('raceControl.intelligenceSuite')}</h2><p>TOP DOWN RACE // ${t('raceControl.timingData')}</p></div><div class="br-grid br-grid-online"><section class="br-panel br-circuits"><div class="br-label">${t('raceControl.myCircuits')}</div>${records.length?records.map((r,i)=>`<button type="button" class="br-circuit ${r.trackId===selected.trackId?'active':''}" data-br-track="${esc(r.trackId)}" aria-pressed="${r.trackId===selected.trackId?'true':'false'}"><span class="br-pos">${String(i+1).padStart(2,'0')}</span><strong class="br-circuit-name">${esc(trackName(r.trackId,lang))}</strong><small class="br-circuit-meta">${r.validLaps} ${t('raceControl.validLaps')} · ${esc(carName(r.bestCarId))}</small><time class="br-circuit-best">${fmtLap(r.bestLapMs)}</time></button>`).join(''):`<div class="br-empty-chart">${t('raceControl.completeTimedLap')}</div>`}</section><div class="br-main"><section class="br-panel br-hero"><img class="br-track-beauty" src="${trackBeauty(selected.trackId)}" alt="" onerror="this.style.display='none'"><div class="br-hero-head"><div><div class="br-label">${t('raceControl.circuitControl')}</div><h3>${esc(trackName(selected.trackId,lang))}</h3></div><div class="br-pb"><small>${t('raceControl.personalBest')}</small><strong>${fmtLap(selected.bestLapMs)}</strong><em>${selected.recordedAt?new Date(selected.recordedAt).toLocaleDateString(lang==='en'?'en-GB':'es-ES'):t('raceControl.localRecord')}</em></div></div><div class="br-car-strip br-record-brand-banner">${brandLogo?`<img class="br-brand-watermark" src="${brandLogo}" alt="" aria-hidden="true">`:''}<div class="br-record-car-stage">${bestCar?`<img class="br-record-car" data-br-car-image="${esc(bestCar)}" src="${carSrc(bestCar)}" alt="">`:''}</div><div class="br-car-meta"><small>${t('raceControl.recordCar')}</small><strong>${esc(carName(bestCar))}</strong><small>${selected.ghostKey?t('raceControl.ghostReady'):t('raceControl.localTiming')}</small></div></div>${selected.ghostKey?`<button type="button" class="br-publish-hero" data-br-publish>${t('raceControl.publishPb',{time:fmtLap(selected.bestLapMs)})}</button>`:''}</section><section class="br-panel br-chart br-online-arena"><div class="br-board-toolbar"><div><div class="br-label">${t('raceControl.onlineChallenges')}</div><strong>${esc(trackName(selected.trackId,lang))}</strong></div><div class="br-cloud-tabs br-board-tabs"><button class="${scope==='global'?'active':''}" data-br-scope="global">${t('raceControl.global')}</button><button class="${scope==='continent'?'active':''}" data-br-scope="continent">${t('raceControl.continent')}</button><button class="${scope==='country'?'active':''}" data-br-scope="country">${t('raceControl.country')}</button><button class="${scope==='region'?'active':''}" data-br-scope="region">${t('raceControl.region')}</button></div><div class="br-board-net"><span>${Number.isFinite(policy.ageMs)?t('raceControl.cached',{age:ago(policy.ageMs)}):t('raceControl.noCache')}</span><button type="button" data-br-online>↻ ${t('raceControl.update')}</button></div></div><div class="br-online-head"><span>#</span><span>${t('raceControl.player')}</span><span>${t('raceControl.car')}</span><span>${t('raceControl.time')}</span><span>VS</span></div><div class="br-online-board">${cloudRows.length?cloudRows.map(r=>`<div class="br-online-row ${r.is_me?'me':''}"><b class="br-online-rank">${String(r.rank).padStart(2,'0')}</b><span class="br-online-pilot"><small>${r.is_me?t('raceControl.you'):t('raceControl.rival')}</small><strong>${esc(r.nick)}</strong>${r.creator_badge==='CREADOR'?'<span class="br-creator-badge" aria-label="Creador verificado">✓ CREADOR</span>':''}</span><span class="br-online-car"><img data-br-car-image="${esc(r.car_id)}" src="${carSrc(r.car_id)}" alt=""><small>${esc(carName(r.car_id))}</small></span><time>${fmtLap(r.best_time_ms)}</time>${r.ghost_available?`<button class="br-vs" data-br-vs="${esc(r.record_ref)}"><i>VS</i><small>${t('raceControl.ghost')}</small></button>`:'<span class="br-vs-off">—</span>'}</div>`).join(''):`<div class="br-empty-chart">${t('raceControl.updateRanking')}</div>`}</div></section></div></div><div class="br-foot"><section class="br-panel br-kpi cyan"><small>${t('raceControl.validLaps')}</small><strong>${selected.validLaps||0}</strong></section><section class="br-panel br-kpi gold"><small>${t('raceControl.personalBest')}</small><strong>${fmtLap(selected.bestLapMs)}</strong></section><section class="br-panel br-kpi green"><small>${t('raceControl.pbImprovements')}</small><strong>${selected.progression?.length||0}</strong></section><section class="br-panel br-kpi"><small>${t('raceControl.status')}</small><strong>${t('raceControl.localVerified')}</strong></section></div></div>`;
+    body.innerHTML=`<div class="br-shell"><div class="br-topline"><span class="br-live">● ${t('raceControl.localLive')}</span><h2>${t('raceControl.intelligenceSuite')}</h2><p>TOP DOWN RACE // ${t('raceControl.timingData')}</p></div><div class="br-grid br-grid-online"><section class="br-panel br-circuits"><div class="br-label">${t('raceControl.myCircuits')}</div>${records.length?records.map((r,i)=>`<button type="button" class="br-circuit ${r.trackId===selected.trackId?'active':''}" data-br-track="${esc(r.trackId)}" aria-pressed="${r.trackId===selected.trackId?'true':'false'}"><span class="br-pos">${String(i+1).padStart(2,'0')}</span><strong class="br-circuit-name">${esc(trackName(r.trackId,lang))}</strong><small class="br-circuit-meta">${r.validLaps} ${t('raceControl.validLaps')} · ${esc(carName(r.bestCarId))}</small><time class="br-circuit-best">${fmtLap(r.bestLapMs)}</time></button>`).join(''):`<div class="br-empty-chart">${t('raceControl.completeTimedLap')}</div>`}</section><div class="br-main"><section class="br-panel br-hero"><img class="br-track-beauty" src="${trackBeauty(selected.trackId)}" alt="" onerror="this.style.display='none'"><div class="br-hero-head"><div><div class="br-label">${t('raceControl.circuitControl')}</div><h3>${esc(trackName(selected.trackId,lang))}</h3></div><div class="br-pb"><small>${t('raceControl.personalBest')}</small><strong>${fmtLap(selected.bestLapMs)}</strong><em>${selected.recordedAt?new Date(selected.recordedAt).toLocaleDateString(lang==='en'?'en-GB':'es-ES'):t('raceControl.localRecord')}</em></div></div><div class="br-car-strip br-record-brand-banner">${brandLogo?`<img class="br-brand-watermark" src="${brandLogo}" alt="" aria-hidden="true">`:''}<div class="br-record-car-stage">${bestCar?`<img class="br-record-car" data-br-car-image="${esc(bestCar)}" src="${carSrc(bestCar)}" alt="">`:''}</div><div class="br-car-meta"><small>${t('raceControl.recordCar')}</small><strong>${esc(carName(bestCar))}</strong><small>${exactLocalReplay?t('raceControl.ghostReady'):'SIN REPLAY · TIEMPO LOCAL'}</small></div></div>${Number(selected.bestLapMs)>1000?`<button type="button" class="br-publish-hero" data-br-publish>${t('raceControl.publishPb',{time:fmtLap(selected.bestLapMs)})}</button>`:''}</section><section class="br-panel br-chart br-online-arena"><div class="br-board-toolbar"><div><div class="br-label">${t('raceControl.onlineChallenges')}</div><strong>${esc(trackName(selected.trackId,lang))}</strong></div><div class="br-cloud-tabs br-board-tabs"><button class="${scope==='global'?'active':''}" data-br-scope="global">${t('raceControl.global')}</button><button class="${scope==='continent'?'active':''}" data-br-scope="continent">${t('raceControl.continent')}</button><button class="${scope==='country'?'active':''}" data-br-scope="country">${t('raceControl.country')}</button><button class="${scope==='region'?'active':''}" data-br-scope="region">${t('raceControl.region')}</button></div><div class="br-board-net"><span>${Number.isFinite(policy.ageMs)?t('raceControl.cached',{age:ago(policy.ageMs)}):t('raceControl.noCache')}</span><button type="button" data-br-online>↻ ${t('raceControl.update')}</button></div></div><div class="br-online-head"><span>#</span><span>${t('raceControl.player')}</span><span>${t('raceControl.car')}</span><span>${t('raceControl.time')}</span><span>VS</span></div><div class="br-online-board">${cloudRows.length?cloudRows.map(r=>`<div class="br-online-row ${r.is_me?'me':''}"><b class="br-online-rank">${String(r.rank).padStart(2,'0')}</b><span class="br-online-pilot"><small>${r.is_me?t('raceControl.you'):t('raceControl.rival')}</small><strong>${esc(r.nick)}</strong>${r.creator_badge==='CREADOR'?'<span class="br-creator-badge" aria-label="Creador verificado">✓ CREADOR</span>':''}</span><span class="br-online-car"><img data-br-car-image="${esc(r.car_id)}" src="${carSrc(r.car_id)}" alt=""><small>${esc(carName(r.car_id))}</small></span><time>${fmtLap(r.best_time_ms)}</time>${r.ghost_available?`<button class="br-vs" data-br-vs="${esc(r.record_ref)}"><i>VS</i><small>${t('raceControl.ghost')}</small></button>`:'<span class="br-vs-off">—</span>'}</div>`).join(''):`<div class="br-empty-chart">${t('raceControl.updateRanking')}</div>`}</div></section></div></div><div class="br-foot"><section class="br-panel br-kpi cyan"><small>${t('raceControl.validLaps')}</small><strong>${selected.validLaps||0}</strong></section><section class="br-panel br-kpi gold"><small>${t('raceControl.personalBest')}</small><strong>${fmtLap(selected.bestLapMs)}</strong></section><section class="br-panel br-kpi green"><small>${t('raceControl.pbImprovements')}</small><strong>${selected.progression?.length||0}</strong></section><section class="br-panel br-kpi"><small>${t('raceControl.status')}</small><strong>${t('raceControl.localVerified')}</strong></section></div></div>`;
     // Applies the real equipped Cuper skin and installs fallback onerror.
     // Runs after every render (different track / scope / refreshed ranking).
     body.querySelectorAll('[data-br-car-image]').forEach(img=>{
@@ -169,7 +172,7 @@ export class StatsScene extends MasteryStatsScene{
   }
 
   async _publishRaceControlRecord(selected,button){
-    if(!selected?.ghostKey||!button||button.dataset.brPublishing==='1')return;
+    if(!selected?.trackId||!(Number(selected.bestLapMs)>1000)||!button||button.dataset.brPublishing==='1')return;
     const claimId=raceControlPublishClaimId(selected.trackId,selected.bestLapMs);
     let credit=verifiedRecordPublishClaims.get(claimId)||null;
     if(credit?.published){button.textContent=t('raceControl.published');button.disabled=true;return;}
@@ -179,11 +182,20 @@ export class StatsScene extends MasteryStatsScene{
     button.textContent=t('raceControl.publishing');
     let submitted=false;
     try{
-      const raw=JSON.parse(localStorage.getItem(selected.ghostKey)||'null');
-      if(!raw?.samples?.length)throw new Error('La repetición local no está disponible. Tu tiempo se conserva.');
-      const packet=encodeOnlineGhostNative(raw),bytes=encodeOnlineGhostNativeBinary(packet);
-      if(packet.p.length<2||packet.p.length>20000||bytes.byteLength>131072)
-        throw new Error('La repetición no tiene un formato válido para publicar.');
+      // Never send an obsolete replay for the PB shown in Race Control.
+      const exact=findExactLocalPbReplay(selected);
+      const raw=exact?.ghost;
+      let replay=null;
+      if(raw&&ghostReplayCompatibility(raw,selected.trackId,TRACK_REGISTRY[selected.trackId]).compatible){
+        try{
+          const packet=encodeOnlineGhostNative(raw);
+          const bytes=encodeOnlineGhostNativeBinary(packet);
+          if(packet.p.length>=2&&packet.p.length<=20000&&bytes.byteLength<=131072)
+            replay={bytes,count:packet.p.length};
+        }catch(error){console.warn('[race-control] exact PB replay unavailable; publishing time only',error);}
+      }
+      if(!replay&&!window.confirm('No hay repetición exacta de esta marca. ¿Quieres publicar SOLO EL TIEMPO? Figurará en el ranking sin REPLAY ni VS fantasma.'))
+        throw new Error('Publicación cancelada. Tu marca sigue guardada y puedes volver a intentarlo.');
       // An unresolved nickname must fail BEFORE requesting a rewarded ad.
       await ensureRaceControlPilotProfile();
       if(credit?.adVerified!==true){
@@ -196,16 +208,23 @@ export class StatsScene extends MasteryStatsScene{
         credit={adVerified:true,published:false};
         verifiedRecordPublishClaims.set(claimId,credit);
       }
-      const out=await submitRaceControlRecordWithGhost({
-        trackId:selected.trackId,bestTimeMs:selected.bestLapMs,
-        carId:selected.bestCarId||raw.carId,ghostBytes:bytes,
-        ghostSampleCount:packet.p.length
-      });
+      const out=replay
+        ?await submitRaceControlRecordWithGhost({
+          trackId:selected.trackId,bestTimeMs:selected.bestLapMs,
+          carId:selected.bestCarId||raw.carId,ghostBytes:replay.bytes,
+          ghostSampleCount:replay.count
+        })
+        :await submitRaceControlRecordWithoutGhost({
+          trackId:selected.trackId,bestTimeMs:selected.bestLapMs,
+          carId:selected.bestCarId
+        });
       const row=Array.isArray(out)?out[0]:out;
-      if(!row?.record_ref)throw new Error('Supabase no confirmó la publicación. Puedes reintentar sin otro anuncio.');
+      if(!row||(replay?!row.record_ref:row.track_id!==selected.trackId))
+        throw new Error('Supabase no confirmó la publicación. Puedes reintentar sin otro anuncio.');
       submitted=true;
       verifiedRecordPublishClaims.set(claimId,{adVerified:true,published:true});
       button.textContent=t('raceControl.published');
+      if(!replay)this._showRaceControlNotice('Tiempo publicado sin replay: aparece en el ranking, sin desafío VS.');
       // A subsequent refresh failure cannot undo a server-confirmed upload
       // or charge the player a second rewarded ad.
       try{

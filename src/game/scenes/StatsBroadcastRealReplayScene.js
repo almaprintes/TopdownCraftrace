@@ -7,6 +7,7 @@ import { t } from '../i18n/index.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 import { REWARDED_PLACEMENTS, raceControlGhostClaimId, verifiedReward } from '../monetization/rewardedActions.js';
 import { setOnlineGhostChallenge } from '../online/onlineGhostSession.js';
+import { findExactLocalPbReplay, matchesExactLocalReplay } from '../tracks/exactLocalReplay.js';
 
 const SESSION_KEY='tdr2:statsNativeReplay';
 const RETURN_TRACK_KEY='tdr2:statsReturnTrack';
@@ -68,13 +69,37 @@ export class StatsScene extends ReplayStatsScene{
 
   _installReplayModalActions(trackId){
     const selected=this._getSelectedRecord?.(trackId)||null;
-    if(selected?.ghostKey){
-      const ghost=readLocalGhost(selected.ghostKey);
-      const pb=this._root?.querySelector('.br-pb');
-      if(ghost&&pb&&!pb.querySelector('[data-br-watch-local]')){
+    const pb=this._root?.querySelector('.br-pb');
+    if(selected?.bestLapMs>1000&&pb&&!pb.querySelector('[data-br-watch-local]')){
+      const replay=findExactLocalPbReplay(selected);
+      if(replay){
         const b=document.createElement('button');b.type='button';b.className='br-watch';b.dataset.brWatchLocal='1';b.textContent='▶ '+t('replay.replay');
-        b.addEventListener('click',()=>this._showRaceControlReplayModal({trackId:selected.trackId,selectedLap:{carId:selected.bestCarId}},ghost,t('replay.localPb')));
+        // Recheck on click: an updated best or overwritten local key must not
+        // launch stale samples from the earlier render.
+        b.addEventListener('click',()=>{
+          const now=this._getSelectedRecord?.(selected.trackId);
+          const exact=findExactLocalPbReplay(now);
+          if(!exact||!matchesExactLocalReplay(exact.ghost,{
+            trackId:now?.trackId,lapMs:now?.bestLapMs,
+            carId:now?.bestCarId,recordedAt:now?.recordedAt
+          })){
+            this._showRaceControlNotice?.('No existe una repetición de esta vuelta exacta. Tu mejor tiempo se conserva.');
+            return;
+          }
+          this._showRaceControlReplayModal({
+            trackId:now.trackId,selectedLap:{carId:now.bestCarId,lapMs:now.bestLapMs},
+            expectedLocalReplay:{trackId:now.trackId,lapMs:now.bestLapMs,
+              carId:now.bestCarId,recordedAt:now.recordedAt}
+          },exact.ghost,t('replay.localPb'));
+        });
         pb.appendChild(b);
+      }else{
+        const note=document.createElement('small');
+        note.dataset.brReplayMissing='1';
+        note.textContent='REPLAY EXACTO NO DISPONIBLE';
+        note.title='La marca personal sigue guardada; no se sustituye por otra vuelta.';
+        note.style.cssText='display:block;margin-top:5px;color:#f1ae85;font:800 8px system-ui;letter-spacing:.04em;';
+        pb.appendChild(note);
       }
     }
     this._root?.querySelectorAll('.br-online-row').forEach(row=>{
@@ -133,6 +158,13 @@ export class StatsScene extends ReplayStatsScene{
     try{sessionStorage.removeItem(SESSION_KEY);}catch{}
     this._purgeReplayResidue();
     if(!ghost?.samples?.length||!this._root)return;
+    // Also guard the modal boundary. An unrelated recording passed from an
+    // older listener must never be shown under the selected personal best.
+    if(record?.expectedLocalReplay&&
+       !matchesExactLocalReplay(ghost,record.expectedLocalReplay)){
+      this._showRaceControlNotice?.('Esta repetición no corresponde al tiempo seleccionado.');
+      return;
+    }
     const trackId=String(ghost.trackKey||record?.trackId||'track01'),carId=String(ghost.carId||record?.selectedLap?.carId||'stock');
     const modal=document.createElement('div');modal.className='br-replay-modal';modal.dataset.brReplayModal='1';
     modal.innerHTML=`<section class="br-replay-modal__panel" role="dialog" aria-modal="true" aria-label="${t('replay.dialogLabel')}"><div class="br-replay-modal__head"><div><div class="br-label">RACE CONTROL // ${esc(label)}</div><strong>${esc(trackId).toUpperCase()}</strong><small>${esc(carId).toUpperCase()} · ${fmt(ghost.lapMs)}</small></div><button type="button" class="br-replay-modal__close" data-br-modal-close>${t('common.close')} ✕</button></div><div class="br-replay-modal__screen" data-br-native-replay-screen="1"><div class="br-native-loading" data-br-native-loading><span>${t('replay.preparing')}</span></div><div class="br-replay-telemetry" data-br-telemetry><aside class="br-tel-left"><div class="br-tel-card"><div class="br-tel-label">${t('replay.lapTiming')}</div><div class="br-tel-big" data-tel-time>0:00.000</div><div class="br-tel-row"><span>${t('replay.lapTime')}</span><b>${fmt(ghost.lapMs)}</b></div><div class="br-tel-row"><span>${t('replay.remaining')}</span><b data-tel-remaining>—</b></div><div class="br-tel-row"><span>${t('replay.progress')}</span><b data-tel-progress>0%</b></div><div class="br-tel-row"><span>${t('replay.sector')}</span><b data-tel-sector>S1</b></div></div><div class="br-tel-card"><div class="br-tel-label">${t('replay.driverMachine')}</div><div class="br-tel-car">${esc(carId).toUpperCase()}</div><div class="br-tel-row"><span>${t('replay.track')}</span><b>${esc(trackId).toUpperCase()}</b></div><div class="br-tel-row"><span>${t('replay.source')}</span><b>${esc(label)}</b></div><div class="br-tel-row"><span>${t('replay.samples')}</span><b>${ghost.samples.length}</b></div><div class="br-tel-row"><span>${t('replay.frequency')}</span><b data-tel-hz>—</b></div></div></aside><aside class="br-tel-right"><div class="br-tel-card"><div class="br-tel-label">${t('replay.dynamics')}</div><div class="br-tel-speed"><span data-tel-speed>0</span> <small>km/h</small></div><div class="br-tel-bar"><i data-tel-speedbar></i></div><div class="br-tel-row"><span>${t('replay.maxSpeed')}</span><b data-tel-vmax>0 km/h</b></div><div class="br-tel-row"><span>${t('replay.avgSpeed')}</span><b data-tel-vavg>0 km/h</b></div><div class="br-tel-row"><span>${t('replay.acceleration')}</span><b data-tel-accel>0 km/h/s</b></div><div class="br-tel-row"><span>${t('replay.turnRate')}</span><b data-tel-yaw>0°/s</b></div></div><div class="br-tel-card"><div class="br-tel-label">${t('replay.racingLine')}</div><div class="br-tel-row"><span>${t('replay.heading')}</span><b data-tel-heading>0°</b></div><div class="br-tel-row"><span>${t('replay.corner')}</span><b data-tel-turn>RECTA</b></div><div class="br-tel-row"><span>${t('replay.path')}</span><b data-tel-path>0%</b></div><div class="br-tel-row"><span>${t('replay.remaining')}</span><b data-tel-pathleft>100%</b></div><div class="br-tel-row"><span>${t('replay.sample')}</span><b data-tel-pos>0 / 0</b></div></div></aside></div><div class="br-playerbar" data-playerbar><div class="br-playerbar__timeline"><input class="br-playerbar__seek" data-player-seek type="range" min="0" max="${Math.max(1,Math.round(Number(ghost.lapMs)||1))}" step="1" value="0"><span class="br-playerbar__time" data-player-time>0:00.000</span></div><div class="br-playerbar__buttons"><button type="button" class="br-playerbar__btn" data-player-start title="${t('replay.start')}">↶</button><button type="button" class="br-playerbar__btn" data-player-prev title="${t('replay.stepBack')}">◀◀</button><button type="button" class="br-playerbar__btn br-playerbar__main" data-player-play title="${t('replay.play')}" aria-label="${t('replay.play')}" disabled><span class="br-playerbar__glyph br-playerbar__glyph--play" data-player-glyph>▷</span></button><button type="button" class="br-playerbar__btn" data-player-next title="${t('replay.stepForward')}">▶▶</button><button type="button" class="br-playerbar__btn br-playerbar__speed" data-player-speed title="${t('replay.speed')}">1×</button><button type="button" class="br-playerbar__btn br-playerbar__analysis" data-player-analysis title="${t('replay.racingLine')}">⌁</button></div></div></section>`;

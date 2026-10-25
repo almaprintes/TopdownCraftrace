@@ -1,7 +1,7 @@
 import {sessionPersonalBest,localRecordGhost,fmtPersonalBest,RECORD_PUBLISH_DISCLOSURE} from './sessionPersonalBestPublish.js';
 import {ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
 import {encodeOnlineGhostNative,encodeOnlineGhostNativeBinary} from '../online/onlineGhostCodec.js';
-import {submitRaceControlRecordWithGhost,getRaceControlSnapshot} from '../online/raceControlOnline.js';
+import {submitRaceControlRecordWithGhost,submitRaceControlRecordWithoutGhost,getRaceControlSnapshot} from '../online/raceControlOnline.js';
 import {saveCloudSnapshot} from '../stats/localRaceRecords.js';
 import {ensureRaceControlPilotProfile} from '../online/onlinePilotIdentity.js';
 import {verifiedRecordPublishClaims as verifiedPublishClaims} from '../online/verifiedRecordPublishClaims.js';
@@ -75,20 +75,27 @@ export function mountNewPersonalBestOffer(scene,root,report){
       if(!eligible)throw new Error('Este circuito de pruebas no admite publicación online.');
       const nick=getPilotProfile()?.name||'';
       if(nick.length<3)throw new Error('Primero configura tu nombre de piloto en Ajustes.');
-      // Prepare an authentic replay BEFORE asking the player to spend time
-      // watching an ad. No stale ghost is ever sent with a newer lap.
+      // Keep the player's official time separate from its optional recording.
+      // Only send a replay when samples belong to the EXACT same lap, car and
+      // geometry. When it is missing, Supabase supports a time-only record.
       const ghost=localRecordGhost(trackId,carId,best.lapMs);
-      if(!ghost)throw new Error('No se ha podido recuperar la repetición exacta de esta vuelta. No se ha mostrado publicidad.');
-      if(!ghostReplayCompatibility(ghost,trackId,scene?.track).compatible)
-        throw new Error('El fantasma pertenece a un trazado anterior. Tu récord se conserva y no se ha mostrado publicidad.');
-      const packet=encodeOnlineGhostNative(ghost);
-      const bytes=encodeOnlineGhostNativeBinary(packet);
-      if(packet.p.length<2||packet.p.length>20000||bytes.byteLength>131072)
-        throw new Error('La repetición supera el límite de publicación. No se ha mostrado publicidad.');
+      let replay=null;
+      if(ghost&&ghostReplayCompatibility(ghost,trackId,scene?.track).compatible){
+        try{
+          const packet=encodeOnlineGhostNative(ghost);
+          const bytes=encodeOnlineGhostNativeBinary(packet);
+          if(packet.p.length>=2&&packet.p.length<=20000&&bytes.byteLength<=131072)
+            replay={bytes,count:packet.p.length};
+        }catch(error){console.warn('[race-control] exact replay unavailable; time-only publication',error);}
+      }
+      if(!replay){
+        const approved=window.confirm('No existe una repetición exacta de esta vuelta. Puedes publicar el tiempo igualmente, pero NO tendrá replay ni desafío fantasma. ¿Quieres publicar solo tu tiempo?');
+        if(!approved)throw new Error('Publicación sin repetición cancelada. Tu marca personal sigue guardada.');
+      }
       if(!isRewardedAdAvailable()&&!adVerified)
         throw new Error('No hay un anuncio recompensado disponible ahora. Tu récord se conserva.');
       // Validate online readiness before attempting an optional rewarded ad.
-      setStatus('Comprobando conexión y repetición…');
+      setStatus(replay?'Comprobando conexión y repetición…':'Comprobando conexión para publicar solo el tiempo…');
       await ensureRaceControlPilotProfile();
       if(!adVerified){
         setStatus('Preparando el anuncio opcional para publicar el récord…');
@@ -104,12 +111,15 @@ export function mountNewPersonalBestOffer(scene,root,report){
       // Retrying a transient network failure in this report must NEVER
       // require the player to watch a second ad for the same record.
       setStatus('Anuncio completado. Publicando tu tiempo…');
-      const response=await submitRaceControlRecordWithGhost({
-        trackId,bestTimeMs:best.lapMs,carId,
-        ghostBytes:bytes,ghostSampleCount:packet.p.length
-      });
+      const response=replay
+        ?await submitRaceControlRecordWithGhost({
+          trackId,bestTimeMs:best.lapMs,carId,
+          ghostBytes:replay.bytes,ghostSampleCount:replay.count
+        })
+        :await submitRaceControlRecordWithoutGhost({trackId,bestTimeMs:best.lapMs,carId});
       const row=Array.isArray(response)?response[0]:response;
-      if(!row||!row.record_ref)throw new Error('El servidor no confirmó la publicación. Puedes reintentar sin otro anuncio.');
+      if(!row||(replay?!row.record_ref:row.track_id!==trackId))
+        throw new Error('El servidor no confirmó la publicación. Puedes reintentar sin otro anuncio.');
       published=true;
       verifiedPublishClaims.set(claimId,{adVerified:true,published:true});
       // A successful publication must also make its online leaderboard
@@ -121,7 +131,10 @@ export function mountNewPersonalBestOffer(scene,root,report){
       actions.hidden=true;actions.style.display='none';
       card.querySelector('[data-pb-question]').textContent='✅ Tu récord está en la clasificación online';
       card.querySelector('[data-pb-disclosure]').hidden=true;
-      setStatus(row.improved===false?'Ya tenías una marca online igual o mejor. Tu clasificación está conservada.':'Publicado correctamente. ¡Enhorabuena!');
+      setStatus(row.improved===false
+        ?'Ya tenías una marca online igual o mejor. Tu clasificación está conservada.'
+        :replay?'Publicado correctamente, con repetición. ¡Enhorabuena!'
+        :'Tiempo publicado sin repetición. Aparecerá en los rankings sin botón VS.');
     }catch(error){
       setStatus(String(error?.message||'No se pudo publicar el tiempo.'),true);
       if(adVerified)publish.textContent='REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO';
