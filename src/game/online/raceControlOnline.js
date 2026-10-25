@@ -43,6 +43,9 @@ export async function activateRaceControlOnline(){
     }
     if(old?.user?.email||old?.user?.is_anonymous===false)
       throw new Error('No se pudo renovar tu cuenta. Inicia sesión con correo para recuperar tu ID.');
+    // A failed anonymous refresh must never silently replace an existing UUID.
+    // Keep the stored session intact so the player can retry or recover it.
+    throw new Error('No se pudo recuperar tu sesión de piloto. Comprueba Internet y vuelve a intentarlo. Si persiste, usa YA TENGO CUENTA para recuperarla; no se ha creado otra cuenta.');
   }
   const session=normalizeSession(await request('/auth/v1/signup',{method:'POST',body:{}}));
   if(!sessionUsable(session))throw new Error('Anonymous session unavailable');
