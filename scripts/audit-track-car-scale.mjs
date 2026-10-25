@@ -182,7 +182,7 @@ async function auditCars(){
 }
 export async function generateAudit(){
   const ids=listedTracks();
-  if(ids.length!==6)throw Error('Expected six published tracks; update inventory expectations');
+  if(ids.length!==7||!ids.includes('siete-picos'))throw Error('Expected seven official physical tracks, including 7 Picos; update inventory expectations');
   const tracks=[];
   for(const id of ids)tracks.push(await auditTrack(id));
   const cars=await auditCars();
