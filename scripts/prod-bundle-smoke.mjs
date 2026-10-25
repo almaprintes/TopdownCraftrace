@@ -18,9 +18,13 @@ const forbidden=[
   'AdminHubScene','CarEditorScene','TrackEditorScene','TrackStudioScene','EnvironmentBuilderScene',
   'tdr2:forceRewardedAdMock','dev-video',
   'tdr2:admin','tdr2:devFullCarAccess','tdr2:devFullTrackAccess','KIT HOMOLOGACIÓN',
-  'activate_shipaton_judge_access','get_my_shipaton_judge_access','tdr-judge-modal','data-shipaton-judge'
+  'activate_shipaton_judge_access','get_my_shipaton_judge_access','tdr-judge-modal','data-shipaton-judge',
+  // The public game must never ask players to acknowledge a DEV modal.
+  'JUANFRIKAZO_DEV','VERSIÓN DE DESARROLLO','DEVELOPMENT VERSION','tdr-dev-entry-notice'
 ];
 for(const token of forbidden)if(text.includes(token))throw new Error(`Production bundle contains forbidden DEV token: ${token}`);
+const productionHtml=fs.readFileSync(path.join(root,'index.html'),'utf8');
+if(/<div class="rot-beta">/.test(productionHtml))throw new Error('Production HTML still contains the DEV orientation notice');
 
 const required=[
   'post_race_double_loot',
