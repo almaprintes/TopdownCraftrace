@@ -9,9 +9,7 @@ la foto original `public/assets/tracks/siete-picos/7-picos.webp`,
 seis mosaicos `photo-{fila}-{columna}.webp` de 1448×1629,
 y seis mosaicos iOS compactos en el prebuild.
 
-El proyecto oficial `../siete-picos.environment.json` **no contiene elementos
-del circuito anterior**: todas las barreras, decoraciones y Copas deben volver a
-dibujarse desde Environment Studio.
+El proyecto oficial `../siete-picos.environment.json` ahora contiene **el entorno nuevo exportado por el propietario**: dos barreras Bézier (45+42 = 87 nodos), grosor 9, una línea de meta decorativa y ninguna Copa. Coordenadas 1:1 sobre la fotografía 4344×3258. No utiliza ninguna barrera del circuito desechado.
 
 Abrir Admin Hub → Environment Builder → ABRIR → 7 PICOS.
 CARGAR recupera borradores locales: NO cargar JSON de colisiones antiguo.

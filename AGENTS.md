@@ -1,5 +1,8 @@
 # REGLAS OBLIGATORIAS DE TRABAJO — TOP DOWN RACE
 
+> **DEV 1.3.27 (25/10/2026) — 7 PICOS NUEVO ENTORNO:** integrado el export `siete-picos.environment(1).json` del propietario en `src/game/tracks/library/siete-picos/siete-picos.environment.json`: 2 líneas de colisión Bézier **45 + 42 = 87 nodos**, grosor `halfThickness=9`, una decoración de meta `finish_line_checkered` centrada en (2057.21,2892.54), cero Copas/zones. Coordenadas sin reescalar `race-world` sobre la nueva fotografía WebP **4344×3258**, trazado 32 Bézier / 898 puntos. Preservados nodos/handles/IDs y sin colisiones de la versión descartada. Actualizado el smoke en `prebuild`; circuitos restantes y selector público intactos. No APK/AAB. En Environment Studio usar **ABRIR** 7 PICOS, no **CARGAR** proyecto local viejo. [Continuidad](docs/continuity/2026-10-25-dev-1-3-27-siete-picos-environment.md).
+
+
 > **DEV 1.3.26 (25/10/2026) — 7 PICOS REEMPLAZADO:** nuevo .tdrtrack subido a `src/game/tracks/library/siete-picos/source/7-picos.tdrtrack` (SHA256 380fb298...). Única versión activa: imagen WebP 4344×3258 y mundo 1:1, 32 nodos Bézier, 898 muestras, META y 2 checkpoints. Instalador actualizado; seis mosaicos WebP de 1448×1629 y seis compactos para iPhone. Eliminado antiguo escalado ×2,5 y validación especial, viejo helper y pruebas antiguas. Environment oficial completamente VACÍO: no reutilizar barreras, decoraciones ni Copas antiguas; reconstruir colisiones nuevas desde Environment Studio. 7 Picos en primera tarjeta del editor, disponible solo para test DEV y oculto de Google Play. Nada de APK/AAB. [Continuidad](docs/continuity/2026-10-25-dev-1-3-26-siete-picos-replacement.md).
 
 
