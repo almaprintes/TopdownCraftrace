@@ -36,6 +36,14 @@ export default defineConfig(async ({ command, mode }) => {
     worker:{format:'es'},
     plugins: isTdrProd ? [{
       name: 'tdr-production-boundary',
+      transformIndexHtml(html) {
+        // Portrait overlay is served by HTML before Phaser starts. Remove both
+        // Spanish and English DEV notices at build time, not after first paint.
+        const devNotices=/<div class="rot-beta"><div class="rot-beta-title">[\s\S]*?<\/div><div class="rot-beta-text">[\s\S]*?<\/div><\/div>/g;
+        const count=[...html.matchAll(devNotices)].length;
+        if(count!==2)throw new Error(`Expected 2 DEV orientation warnings to remove, found ${count}`);
+        return html.replace(devNotices,'');
+      },
       closeBundle() {
         fs.rmSync(path.resolve(process.cwd(), 'dist/tool'), { recursive: true, force: true });
       }
