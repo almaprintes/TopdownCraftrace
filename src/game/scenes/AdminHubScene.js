@@ -91,7 +91,15 @@ export class AdminHubScene extends BaseScene {
         this._showToast('CONVERSOR WEBP NO DISPONIBLE');
       }
     },{passive:false});
-    topTools.append(masteryPreview,webpTool);
+    const lastErrorButton=document.createElement('button');
+    lastErrorButton.type='button';
+    lastErrorButton.textContent='ÚLTIMO ERROR';
+    lastErrorButton.style.cssText='margin:0;padding:clamp(7px,1.2vh,11px) clamp(11px,1.8vw,18px);border:1px solid #ff9f43;background:rgba(255,159,67,.08);color:#ffcf91;font:900 clamp(9px,1.5vh,12px) system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.05em;cursor:pointer;touch-action:manipulation;';
+    lastErrorButton.addEventListener('click',event=>{
+      event.preventDefault();event.stopPropagation();
+      this._showLastRuntimeError();
+    },{passive:false});
+    topTools.append(masteryPreview,webpTool,lastErrorButton);
     header.appendChild(topTools);
     root.appendChild(header);
 
@@ -133,6 +141,54 @@ export class AdminHubScene extends BaseScene {
     this._adminDomRoot=root;
   }
 
+  async _showLastRuntimeError(){
+    if(!this._adminDomRoot?.isConnected)return;
+    let report='';
+    try{
+      const {formatStoredRuntimeErrors}=await import('../dev/runtimeSupportReport.js');
+      report=formatStoredRuntimeErrors(localStorage);
+    }catch(err){
+      report='No se pudo leer el diagnóstico local: '+String(err?.message||err);
+    }
+    if(!this._adminDomRoot?.isConnected)return;
+    try{this._errorPreview?.remove?.();}catch{}
+    const overlay=document.createElement('div');
+    overlay.dataset.tdrErrorReport='1';
+    overlay.style.cssText='position:fixed;inset:0;z-index:250001;display:flex;flex-direction:column;box-sizing:border-box;padding:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-right,0px) + 15px) calc(env(safe-area-inset-bottom,0px) + 12px) calc(env(safe-area-inset-left,0px) + 15px);background:#08111d;color:#edf7ff;font:12px system-ui;touch-action:pan-y;';
+    const bar=document.createElement('div');
+    bar.style.cssText='display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;max-width:900px;width:100%;margin:0 auto 12px;';
+    const title=document.createElement('strong');
+    title.textContent='DIAGNÓSTICO LOCAL · ÚLTIMO ERROR';
+    title.style.cssText='font-size:clamp(12px,2.3vw,18px);color:#ffcf91;';
+    const controls=document.createElement('div');
+    controls.style.cssText='display:flex;gap:8px;';
+    const button=(label)=>{const el=document.createElement('button');el.type='button';el.textContent=label;el.style.cssText='padding:9px 12px;background:#12223a;color:#fff;border:1px solid #4a6680;border-radius:8px;font:900 11px system-ui;touch-action:manipulation;cursor:pointer;';return el;};
+    const copy=button('COPIAR INFORME'),close=button('CERRAR');
+    controls.append(copy,close);bar.append(title,controls);
+    const text=document.createElement('textarea');
+    text.readOnly=true;text.value=report;
+    text.setAttribute('aria-label','Contenido del diagnóstico local');
+    text.style.cssText='box-sizing:border-box;display:block;width:100%;max-width:900px;flex:1 1 auto;min-height:0;margin:0 auto;padding:12px;border-radius:9px;background:#0d1d30;color:#dfefff;border:1px solid #355273;font:12px/1.4 ui-monospace,monospace;white-space:pre-wrap;overflow:auto;resize:none;user-select:text;-webkit-user-select:text;';
+    copy.addEventListener('click',async()=>{
+      try{
+        if(!navigator.clipboard?.writeText)throw Error('Clipboard API no disponible');
+        await navigator.clipboard.writeText(text.value);
+        copy.textContent='COPIADO';
+      }catch{
+        text.focus();text.select();
+        try{if(document.execCommand?.('copy'))copy.textContent='COPIADO';
+        else copy.textContent='SELECCIONA Y COPIA';}
+        catch{copy.textContent='SELECCIONA Y COPIA';}
+      }
+    });
+    close.addEventListener('click',()=>{
+      overlay.remove();
+      if(this._errorPreview===overlay)this._errorPreview=null;
+    });
+    overlay.append(bar,text);document.body.appendChild(overlay);
+    this._errorPreview=overlay;
+  }
+
   _showMasteryPreview(){
     const root=this._adminDomRoot;if(!root)return;
     this._masteryPreview?.remove?.();
@@ -167,6 +223,8 @@ export class AdminHubScene extends BaseScene {
     try{this._webpToolDispose?.();}catch{}
     this._webpToolDispose=null;
     try{
+      this._errorPreview?.remove?.();
+      this._errorPreview=null;
       this._masteryPreview?.remove?.();
       if(this._adminDomRoot){
         this._adminDomRoot.style.pointerEvents='none';

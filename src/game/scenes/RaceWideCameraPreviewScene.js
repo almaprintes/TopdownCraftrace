@@ -4,6 +4,7 @@ import { grantRaceLoot } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { installKartingCanariasDividers } from './KartingCanariasDividerLayer.js';
+import { runRaceLapCompletionEffects } from './raceLapCompletionEffects.js';
 
 // Wider gameplay camera + current selected-library-track bridge.
 export class RaceScene extends CurrentRaceScene {
@@ -324,11 +325,23 @@ export class RaceScene extends CurrentRaceScene {
     this._garageRewardHistCount = hist.length;
     if (!newest || !Number.isFinite(newest.lapMs)) return;
 
-    const records = this._registerLapRecords(newest);
-    this._showTimingAchievement(records, newest.lapMs);
-
-    const reward = grantRaceLoot({ trackKey: this.trackKey, lapMs: newest.lapMs });
-    this._showRaceLoot(reward);
+    // Completing a lap must never crash the race because a HUD animation or
+    // garage/localStorage side effect fails. Each phase is reported separately.
+    // The lap history was already committed by the base RaceScene.
+    runRaceLapCompletionEffects({
+      scene:this,row:newest,grantLoot:grantRaceLoot,
+      reportFailure:(phase,error)=>{
+        console.error('[race lap] '+phase+' failed',error);
+        try {
+          localStorage.setItem('tdr2:raceLastLapError',JSON.stringify({
+            at:new Date().toISOString(),phase,
+            track:String(this.trackKey||''),car:String(this._recordCarId||''),
+            lapMs:newest.lapMs,message:String(error?.message||error),
+            stack:String(error?.stack||'').slice(0,1800)
+          }));
+        }catch{}
+      }
+    });
   }
 
   _showRaceLoot(reward) {

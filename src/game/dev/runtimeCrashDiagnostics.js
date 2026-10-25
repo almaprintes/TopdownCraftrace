@@ -1,6 +1,7 @@
 import {isBenignResizeObserverWarning} from './runtimeErrorPolicy.js';
 const SESSION_KEY='tdr2:runtimeSession';
 const LAST_EVENT_KEY='tdr2:runtimeLastEvent';
+const LAST_JS_ERROR_KEY='tdr2:runtimeLastJsError';
 const FLIGHT_KEY='tdr2:runtimeFlightRecorder';
 const AUTO_SAFE_UNTIL_KEY='tdr2:autoIosSafeModeUntil';
 const MAX_FLIGHT_EVENTS=36;
@@ -13,7 +14,7 @@ function sceneState(game){try{return Object.values(game?.scene?.keys||{}).map(s=
 function metrics(game){let textureCount=null,domNodes=null,heapUsed=null,heapLimit=null;try{textureCount=Object.keys(game?.textures?.list||{}).length;}catch{}try{domNodes=document.getElementsByTagName('*').length;}catch{}try{heapUsed=Number(performance?.memory?.usedJSHeapSize||0)||null;heapLimit=Number(performance?.memory?.jsHeapSizeLimit||0)||null;}catch{}return{textureCount,domNodes,heapUsed,heapLimit};}
 function flight(game,type,extra={}){const entry={at:new Date().toISOString(),ms:Date.now(),type,scene:sceneName(game),...metrics(game),...extra};try{const old=safeJson(localStorage.getItem(FLIGHT_KEY));const list=Array.isArray(old)?old:[];list.push(entry);if(list.length>MAX_FLIGHT_EVENTS)list.splice(0,list.length-MAX_FLIGHT_EVENTS);store(FLIGHT_KEY,list);}catch{}return entry;}
 function snapshot(game,type,extra={}){const canvas=game?.canvas,renderer=game?.renderer;const info={at:new Date().toISOString(),type,scene:sceneName(game),mode:(()=>{try{return localStorage.getItem('tdr2:gameMode')||null;}catch{return null;}})(),track:(()=>{try{return localStorage.getItem('tdr2:selectedTrack')||null;}catch{return null;}})(),dpr:Number(window.devicePixelRatio||1),canvasW:Number(canvas?.width||0),canvasH:Number(canvas?.height||0),cssW:Number(canvas?.clientWidth||0),cssH:Number(canvas?.clientHeight||0),renderer:String(renderer?.type??''),scenes:sceneState(game),...metrics(game),...extra};store(LAST_EVENT_KEY,info);flight(game,type,extra);return info;}
-function showNotice(info){if(typeof document==='undefined'||!info)return;const old=document.querySelector('[data-tdr-crash-notice]');old?.remove?.();const node=document.createElement('div');node.dataset.tdrCrashNotice='1';node.style.cssText='position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:25000;max-width:min(92vw,640px);padding:9px 12px;border:1px solid #ff9f43;background:rgba(7,15,24,.96);color:#fff;font:700 11px system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 4px 18px #0008;text-align:center;pointer-events:none';const label=info.type==='webglcontextlost'?'WEBGL PERDIÓ EL CONTEXTO':info.type==='js_error'?'ERROR JAVASCRIPT':info.type==='promise_rejection'?'ERROR ASÍNCRONO':'REINICIO INESPERADO';node.textContent=`DIAGNÓSTICO · ${label} · escena ${info.scene||'desconocida'}`;document.body.appendChild(node);setTimeout(()=>node.remove(),9000);}
+function showNotice(info){if(typeof document==='undefined'||!info)return;const old=document.querySelector('[data-tdr-crash-notice]');old?.remove?.();const node=document.createElement('div');node.dataset.tdrCrashNotice='1';node.style.cssText='position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:25000;max-width:min(92vw,640px);padding:9px 12px;border:1px solid #ff9f43;background:rgba(7,15,24,.96);color:#fff;font:700 11px system-ui,-apple-system,Segoe UI,sans-serif;box-shadow:0 4px 18px #0008;text-align:center;pointer-events:none';const label=info.type==='webglcontextlost'?'WEBGL PERDIÓ EL CONTEXTO':info.type==='js_error'?'ERROR JAVASCRIPT':info.type==='promise_rejection'?'ERROR ASÍNCRONO':'REINICIO INESPERADO';node.textContent=`DIAGNÓSTICO · ${label} · escena ${info.scene||'desconocida'}`+(info.message?' · '+String(info.message).slice(0,160):'');document.body.appendChild(node);setTimeout(()=>node.remove(),9000);}
 export function installRuntimeCrashDiagnostics(game){
  if(typeof window==='undefined'||!game||window.__tdrRuntimeCrashDiagnostics)return;window.__tdrRuntimeCrashDiagnostics=true;
  const previous=safeJson((()=>{try{return localStorage.getItem(SESSION_KEY);}catch{return null;}})());if(previous?.active===true&&previous?.clean!==true){const detected={...previous,type:'unexpected_reload',detectedAt:new Date().toISOString()};store(LAST_EVENT_KEY,detected);flight(game,'unexpected_reload',{previousScene:previous.scene||null,lastBeat:previous.lastBeat||null});armAutoSafeMode();setTimeout(()=>showNotice(detected),1200);}
@@ -25,6 +26,7 @@ export function installRuntimeCrashDiagnostics(game){
   if(isBenignResizeObserverWarning(event?.message)){event?.preventDefault?.();return;}
   session.hadError=true;
   const info=snapshot(game,'js_error',{message:String(event?.message||'error'),source:String(event?.filename||''),line:Number(event?.lineno||0),column:Number(event?.colno||0)});
+  store(LAST_JS_ERROR_KEY,info);
   showNotice(info);
  };
  const onRejection=(event)=>{
@@ -32,6 +34,7 @@ export function installRuntimeCrashDiagnostics(game){
   if(isBenignResizeObserverWarning(reason?.message||reason)){event?.preventDefault?.();return;}
   session.hadError=true;
   const info=snapshot(game,'promise_rejection',{message:String(reason?.message||reason||'unhandled rejection')});
+  store(LAST_JS_ERROR_KEY,info);
   showNotice(info);
  };const onContextLost=(event)=>{session.hadError=true;try{event?.preventDefault?.();}catch{}const info=snapshot(game,'webglcontextlost');armAutoSafeMode();showNotice(info);};
  const markClean=()=>{session.active=false;session.clean=true;session.endedAt=new Date().toISOString();session.scene=sceneName(game);store(SESSION_KEY,session);flight(game,'clean_exit');if(isIOSDevice()&&!session.hadError&&Date.now()-Number(session.startedMs||Date.now())>=60000){try{localStorage.removeItem(AUTO_SAFE_UNTIL_KEY);}catch{}}};
