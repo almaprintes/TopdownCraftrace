@@ -2,6 +2,7 @@ import { RaceScene as CurrentRaceScene } from './RaceStaticGhostStatusScene.js';
 import { encodeOnlineGhost, onlineGhostJsonBytes, measureOnlineGhostError } from '../online/onlineGhostCodec.js';
 import { t } from '../i18n/index.js';
 import {persistOfficialPersonalBestReplay} from '../tracks/ghostReplayRecovery.js';
+import {ghostGeometryRevision} from '../tracks/ghostTrackCompatibility.js';
 
 const TOP_REPLAY_PREFIX='tdr2:topReplay:';
 const SESSION_KEY='tdr2:statsNativeReplay';
@@ -29,6 +30,8 @@ export class RaceScene extends CurrentRaceScene{
     this._tdrReplayCameraLastT=-Infinity;
     this._tdrStatsReplay=null;
     this._tdrStatsReplayHiddenObjects=[];
+    // Keep this session's exact best lap independent of WebKit storage quota.
+    this._tdrSessionExactPbReplay=null;
     if(pending)this.time?.delayedCall?.(0,()=>this._startStatsNativeReplay(pending));
     this.events?.once?.('shutdown',()=>{this._tdrReplayCameraSamples=[];this._destroyStatsReplayOverlay();});
     return result;
@@ -209,10 +212,15 @@ export class RaceScene extends CurrentRaceScene{
     const hist=Array.isArray(this.ttHistory)?this.ttHistory:[];
     if(hist.length>this._ghostHistoryLen){
       const last=hist[hist.length-1]||{};const lapMs=positive(last.lapMs??this.timing?.lastLap);const trackId=String(this._ghostTrackKey||this.trackKey||'track01');const ranked=hist.filter(validLap).map((row,index)=>({row,index,ms:positive(row?.lapMs??row?.ms??row?.time)})).sort((a,b)=>a.ms-b.ms);const rankedIndex=ranked.findIndex(item=>item.row===last);const isPersonalBest=lapMs&&Number.isFinite(Number(this.ttBest?.lapMs))&&Math.abs(Number(this.ttBest.lapMs)-lapMs)<=2;const qualifies=lapMs&&(isPersonalBest||(rankedIndex>=0&&rankedIndex<10))&&Array.isArray(this._ghostSamples)&&this._ghostSamples.length>4;
-      if(qualifies){const samples=this._ghostSamples.filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),r:Number(s.r||0)}));if(this.carBody)samples.push({t:Math.round(lapMs),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});const cameraSamples=(this._tdrReplayCameraSamples||[]).filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<=lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),w:Number(s.w),h:Number(s.h),zoom:Number(s.zoom)}));const finalCam=cameraSample(this,lapMs);if(finalCam)cameraSamples.push(finalCam);const key=replayKey(trackId,last,hist.length-1);if(samples.length>4){const replay={version:5,kind:'local-top10-lap',trackKey:trackId,carId:text(last.carId)||this._tdrCurrentGhostCarId||this.carId||null,lapMs:Math.round(lapMs),recordedAt:Number(last.t||last.timestamp)||Date.now(),historyIndex:hist.length-1,samples,cameraSamples,viewport:{w:Number(this.scale?.width)||0,h:Number(this.scale?.height)||0}};// Store the ONE official PB independently of the optional top-ten archive.
+      if(qualifies){const samples=this._ghostSamples.filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),r:Number(s.r||0)}));if(this.carBody)samples.push({t:Math.round(lapMs),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});const cameraSamples=(this._tdrReplayCameraSamples||[]).filter(s=>Number.isFinite(Number(s?.t))&&Number(s.t)>=0&&Number(s.t)<=lapMs).map(s=>({t:Number(s.t),x:Number(s.x),y:Number(s.y),w:Number(s.w),h:Number(s.h),zoom:Number(s.zoom)}));const finalCam=cameraSample(this,lapMs);if(finalCam)cameraSamples.push(finalCam);const key=replayKey(trackId,last,hist.length-1);if(samples.length>4){const replay={version:5,kind:'local-top10-lap',trackKey:trackId,carId:text(last.carId)||this._tdrCurrentGhostCarId||this.carId||null,lapMs:Math.round(lapMs),recordedAt:Number(last.t||last.timestamp)||Date.now(),historyIndex:hist.length-1,
+            geometryRevision:ghostGeometryRevision(trackId,this.track),
+            samples,cameraSamples,viewport:{w:Number(this.scale?.width)||0,h:Number(this.scale?.height)||0}};// Store the ONE official PB independently of the optional top-ten archive.
           // A failed/stale top-ten write must never be allowed to orphan a PB.
           // localStorage.setItem replaces the previous PB atomically on success.
           if(isPersonalBest){
+            // Make the exact freshly completed lap available to the report
+            // before any localStorage write can fail.
+            this._tdrSessionExactPbReplay=replay;
             const wasStored=persistOfficialPersonalBestReplay({
               trackKey:trackId,track:this.track,lapMs,replay,
               ttKey:this.ttKey,ttBest:this.ttBest

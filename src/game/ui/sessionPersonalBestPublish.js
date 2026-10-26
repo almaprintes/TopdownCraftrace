@@ -18,18 +18,24 @@ export function sessionPersonalBest(report,previousMs){
 // tdr2:topReplay (via ttBest.ghostKey), not the older tdr2:ghost key.
 // Never fall back to a different lap: the rewarded ad may only start after
 // validating track, car, time and actual replay samples.
-export function localRecordGhost(trackId,carId,bestMs){
+export function localRecordGhost(trackId,carId,bestMs,liveReplay=null){
   const track=String(trackId||'').trim(),car=String(carId||'').trim(),ms=Math.round(Number(bestMs));
   if(!track||!car||!Number.isFinite(ms)||ms<=1000)return null;
+  const matching=raw=>{
+    if(!raw||String(raw.trackKey||raw.trackId||'')!==track||String(raw.carId||'')!==car)return null;
+    if(!Number.isFinite(Number(raw.lapMs))||Math.abs(Number(raw.lapMs)-ms)>2)return null;
+    if(!Array.isArray(raw.samples)||raw.samples.length<5||
+       !raw.samples.every(p=>Number.isFinite(Number(p?.t))&&
+         Number.isFinite(Number(p?.x))&&Number.isFinite(Number(p?.y))))return null;
+    return raw;
+  };
+  // The just-completed replay belongs to this live scene, not to a cache.
+  const live=matching(liveReplay);
+  if(live)return live;
   const readMatching=key=>{
     if(!key||typeof key!=='string')return null;
-    try{
-      const raw=JSON.parse(localStorage.getItem(key)||'null');
-      if(!raw||String(raw.trackKey||raw.trackId||'')!==track||String(raw.carId||'')!==car)return null;
-      if(!Number.isFinite(Number(raw.lapMs))||Math.abs(Number(raw.lapMs)-ms)>2)return null;
-      if(!Array.isArray(raw.samples)||raw.samples.length<5)return null;
-      return raw;
-    }catch{return null;}
+    try{return matching(JSON.parse(localStorage.getItem(key)||'null'));}
+    catch{return null;}
   };
   const legacy=readMatching(`tdr2:ghost:${track}:${car}`);
   if(legacy)return legacy;

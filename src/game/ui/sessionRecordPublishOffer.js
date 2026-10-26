@@ -78,7 +78,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
       // Keep the player's official time separate from its optional recording.
       // Only send a replay when samples belong to the EXACT same lap, car and
       // geometry. When it is missing, Supabase supports a time-only record.
-      const ghost=localRecordGhost(trackId,carId,best.lapMs);
+      const ghost=localRecordGhost(trackId,carId,best.lapMs,scene?._tdrSessionExactPbReplay);
       let replay=null;
       if(ghost&&ghostReplayCompatibility(ghost,trackId,scene?.track).compatible){
         try{
