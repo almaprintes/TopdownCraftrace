@@ -4,6 +4,8 @@ import {readFile} from 'node:fs/promises';
 const original=await readFile(new URL('../src/game/online/raceControlOnline.js',import.meta.url),'utf8');
 const source=original
   .replace(/^import \{ recordOnlineCuperPublish \} from .*;\s*$/m,'const recordOnlineCuperPublish=()=>{};')
+  .replace(/^import \{raceControlServerTrackId,decodeRaceControlServerTrackId\} from .*;\s*$/m,
+    'const raceControlServerTrackId=id=>id;const decodeRaceControlServerTrackId=id=>({trackId:id});')
   .replace(/^import \{ playerBackendConfig \} from .*;\s*$/m,"const playerBackendConfig=()=>({url:'https://mock.invalid',key:'test-public-key'});");
 assert.doesNotMatch(source,/^import /m,'all dependencies mocked');
 
