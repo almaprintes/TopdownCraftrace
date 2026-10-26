@@ -1,14 +1,6 @@
 import './style.css';
 import {completeGoogleWebSignIn} from './game/online/googleWebAuth.js';
 import {openCloudAccountUi} from './game/social/cloudAccountUi.js';
-let googleAuthReady=false;
-const googleCallback=window.__tdrGoogleCallback;
-delete window.__tdrGoogleCallback;
-void completeGoogleWebSignIn(googleCallback).then(result=>{
-  googleAuthReady=true;
-  __tickOrientation();
-  if(result)openCloudAccountUi({initialNotice:result.message});
-});
 import { createGame } from './game/game.js';
 import {archiveRetiredTrackRecords} from './game/stats/archiveRetiredTrackRecords.js';
 import {isBenignResizeObserverWarning,mayReplaceStartupScreen} from './game/dev/runtimeErrorPolicy.js';
@@ -49,6 +41,15 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 let __game = null;
+let googleAuthReady=false;
+const googleCallback=window.__tdrGoogleCallback;
+delete window.__tdrGoogleCallback;
+void completeGoogleWebSignIn(googleCallback).then(result=>{
+  googleAuthReady=true;
+  __tickOrientation();
+  if(result)openCloudAccountUi({initialNotice:result.message});
+});
+
 let __tdrLocalTrackArchiveReady=false;
 let __tdrPausedForRewarded = false;
 let __tdrAdRequested = false;
