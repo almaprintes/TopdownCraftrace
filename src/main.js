@@ -433,7 +433,8 @@ function __tickOrientation() {
     // Never let a race scene read retired PB/replay keys before the one-time
     // on-device archive transaction has committed. On archive failure we keep
     // the original records and proceed without erasing anything.
-    if(!__tdrLocalTrackArchiveReady||!googleAuthReady)return;
+    if(!__tdrLocalTrackArchiveReady)return;
+    if(!googleAuthReady)return;
     window.__tdrStartupMark?.('phaser-start');
     __game = createGame('app');
     window.__tdrStartupMark?.('phaser-created');
