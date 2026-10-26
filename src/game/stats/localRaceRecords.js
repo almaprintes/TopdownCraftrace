@@ -1,3 +1,4 @@
+import {raceControlServerTrackId} from '../online/raceControlTrackEdition.js';
 const KEY='tdr2:raceRecords:v1';
 const TT_HISTORY_PREFIX='tdr2:ttHist:';
 const PB_PREFIX='tdr2:ttBest:';
@@ -23,6 +24,6 @@ export function rebuildLocalRaceRecords(){purgeLegacyTrackRecords();const state=
 export function loadLocalRaceRecords({rebuild=true}={}){if(rebuild)return rebuildLocalRaceRecords();purgeLegacyTrackRecords();const raw=readJson(KEY,null);return raw&&raw.version===1?raw:rebuildLocalRaceRecords();}
 export function getCircuitRecord(trackId){return loadLocalRaceRecords().tracks?.[String(trackId||'')]||null;}
 export function getPersonalCircuitRecords(){return Object.values(loadLocalRaceRecords().tracks||{}).sort((a,b)=>(a.bestLapMs?0:1)-(b.bestLapMs?0:1)||(a.bestLapMs||Infinity)-(b.bestLapMs||Infinity));}
-export function cloudSnapshotPolicy(trackId){const state=loadLocalRaceRecords({rebuild:false});const cached=readJson(`tdr2:leaderboardSnapshot:${trackId}`,null);const ttl=Math.max(60000,Number(state.cloud?.snapshotTtlMs)||30*60*1000);const age=cached?.fetchedAt?Math.max(0,Date.now()-Number(cached.fetchedAt)):Infinity;return{trackId:String(trackId||''),ttlMs:ttl,ageMs:age,fresh:age<ttl,cached};}
-export function saveCloudSnapshot(trackId,payload){const snapshot={version:1,trackId:String(trackId||''),fetchedAt:Date.now(),payload};writeJson(`tdr2:leaderboardSnapshot:${trackId}`,snapshot);return snapshot;}
+export function cloudSnapshotPolicy(trackId){const state=loadLocalRaceRecords({rebuild:false});const cached=readJson(`tdr2:leaderboardSnapshot:${raceControlServerTrackId(trackId)}`,null);const ttl=Math.max(60000,Number(state.cloud?.snapshotTtlMs)||30*60*1000);const age=cached?.fetchedAt?Math.max(0,Date.now()-Number(cached.fetchedAt)):Infinity;return{trackId:String(trackId||''),ttlMs:ttl,ageMs:age,fresh:age<ttl,cached};}
+export function saveCloudSnapshot(trackId,payload){const snapshot={version:1,trackId:String(trackId||''),fetchedAt:Date.now(),payload};writeJson(`tdr2:leaderboardSnapshot:${raceControlServerTrackId(trackId)}`,snapshot);return snapshot;}
 export const LOCAL_RACE_RECORDS_KEY=KEY;

@@ -1,4 +1,5 @@
 import { recordOnlineCuperPublish } from '../seasons/seasonTelemetry.js';
+import {raceControlServerTrackId,decodeRaceControlServerTrackId} from './raceControlTrackEdition.js';
 // RACE Control Online — no request is made until activateRaceControlOnline().
 // Auth uses the GoTrue protocol (open source, compatible with self-hosting).
 import { playerBackendConfig } from './backendConfig.js';
@@ -171,10 +172,14 @@ export async function submitRaceControlRecordWithGhost({trackId,bestTimeMs,carId
   const bytes=ghostBytes instanceof Uint8Array?ghostBytes:new Uint8Array(ghostBytes||[]);
   let binary='';for(let i=0;i<bytes.length;i++)binary+=String.fromCharCode(bytes[i]);
   const payload='\\x'+Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
-  const response=await request('/rest/v1/rpc/submit_track_record_with_ghost',{method:'POST',token,body:{p_track_id:String(trackId||''),p_best_time_ms:Math.round(Number(bestTimeMs)||0),p_car_id:String(carId||''),p_ghost_payload:payload,p_ghost_sample_count:Math.round(Number(ghostSampleCount)||0),p_ghost_format:1}});
+  const response=await request('/rest/v1/rpc/submit_track_record_with_ghost',{method:'POST',token,body:{p_track_id:raceControlServerTrackId(trackId),p_best_time_ms:Math.round(Number(bestTimeMs)||0),p_car_id:String(carId||''),p_ghost_payload:payload,p_ghost_sample_count:Math.round(Number(ghostSampleCount)||0),p_ghost_format:1}});
   const record=Array.isArray(response)?response[0]:response;
+  const edition=decodeRaceControlServerTrackId(record?.track_id);
+  if(!edition||edition.trackId!==String(trackId||'').trim())
+    throw new Error('El servidor confirmó otra edición del circuito.');
   if(record?.improved===true&&record?.record_ref&&String(carId||'')==='crown_cuper')recordOnlineCuperPublish();
-  return response;
+  return Array.isArray(response)?response.map(row=>({...row,track_id:edition.trackId})):
+    {...record,track_id:edition.trackId};
 }
 
 // Time-only publication for genuine device PBs whose exact local recording
@@ -190,13 +195,14 @@ export async function submitRaceControlRecordWithoutGhost({trackId,bestTimeMs,ca
   const token=online?.session?.access_token;
   if(!token)throw new Error('Online session unavailable');
   const response=await request('/rest/v1/rpc/submit_track_record',{
-    method:'POST',token,body:{p_track_id:id,p_best_time_ms:ms,p_car_id:car}
+    method:'POST',token,body:{p_track_id:raceControlServerTrackId(id),p_best_time_ms:ms,p_car_id:car}
   });
   const record=Array.isArray(response)?response[0]:response;
-  if(record?.track_id!==id||Number(record?.best_time_ms)<=0)
-    throw new Error('El servidor no confirmó el tiempo publicado.');
+  if(record?.track_id!==raceControlServerTrackId(id)||Number(record?.best_time_ms)<=0)
+    throw new Error('El servidor no confirmó el tiempo del trazado actual.');
   if(record.improved===true&&car==='crown_cuper')recordOnlineCuperPublish();
-  return response;
+  return Array.isArray(response)?response.map(row=>({...row,track_id:id})):
+    {...record,track_id:id};
 }
 
 // Return only the caller's OWN identity. This read-only RPC is SECURITY
@@ -221,7 +227,7 @@ export async function getMyRaceControlProfile(){
 // expensive compact ghost payloads remain on the existing rewarded, on-demand
 // getRaceControlGhost(record_ref) endpoint. No account creation per row.
 export async function getRaceControlNearbyGhostRivals({trackId,referenceMs,minGapMs=1,maxGapMs=3000,limit=8}){
-  const id=String(trackId||'').trim();
+  const id=raceControlServerTrackId(trackId);
   const time=Math.round(Number(referenceMs)||0);
   const min=Math.round(Number(minGapMs)||0),max=Math.round(Number(maxGapMs)||0);
   const amount=Math.round(Number(limit)||0);
@@ -250,7 +256,7 @@ export async function getRaceControlNearbyGhostRivals({trackId,referenceMs,minGa
 export async function getRaceControlTrackCreatorBadges(trackId){
   const s=await activeSession();
   const rows=await request('/rest/v1/rpc/get_track_creator_badges',{
-    method:'POST',token:s.access_token,body:{p_track_id:String(trackId||'')}
+    method:'POST',token:s.access_token,body:{p_track_id:raceControlServerTrackId(trackId)}
   });
   return Array.isArray(rows)?rows:[];
 }
@@ -281,7 +287,7 @@ async function applyRaceControlCreatorBadges(trackId,rows){
 // Guest-safe global leaderboard if a device is signed into a different account.
 // Read-only; does not grant VS ghosts or publish permission.
 export async function getPublicRaceControlSnapshot(trackId){
-  const id=String(trackId||'');
+  const id=raceControlServerTrackId(trackId);
   const {url,key}=cfg();
   if(!url||!key)throw new Error('Online backend not configured');
   const res=await fetch(url+'/rest/v1/web_leaderboard_snapshot?select=payload&id=eq.true',{
@@ -292,6 +298,9 @@ export async function getPublicRaceControlSnapshot(trackId){
   const payload=rows?.[0]?.payload;
   if(!payload||!Array.isArray(payload.tracks))throw new Error('Clasificación pública no disponible.');
   const board=payload.tracks.find(t=>t?.id===id);
+  // A brand-new online edition has no guest snapshot until a first record
+  // and the scheduled refresh. Never borrow the historic leaderboard instead.
+  if(!board&&decodeRaceControlServerTrackId(id)?.currentLayout)return [];
   if(!board)throw new Error('Circuito aún no disponible en la clasificación pública.');
   const ranking=(Array.isArray(board.entries)?board.entries:[]).map(r=>({
     scope:'global',rank:Number(r.rank)||0,nick:String(r.nick||''),
@@ -305,7 +314,7 @@ export async function getRaceControlSnapshot(trackId){
   const online=await activateRaceControlOnline();
   const token=online?.session?.access_token;
   if(!token)throw new Error('Online session unavailable');
-  const id=String(trackId||'');
+  const id=raceControlServerTrackId(trackId);
   const ranking=await request('/rest/v1/rpc/get_race_control_snapshot',{
     method:'POST',token,body:{p_track_id:id}
   });
@@ -315,7 +324,7 @@ export async function getRaceControlSnapshot(trackId){
 // This snapshot marks the caller by authenticated UUID (is_me), never nickname.
 // Used as a no-ad preflight before attempting to submit a local best.
 export async function getMyRaceControlRecord(trackId){
-  const id=String(trackId||'').trim();
+  const id=raceControlServerTrackId(trackId);
   if(!id||id.length>80)throw new Error('Circuito no válido');
   const s=await activeSession();
   const rows=await request('/rest/v1/rpc/get_race_control_snapshot',{
@@ -330,5 +339,15 @@ export async function getRaceControlGhost(recordRef){
   const online=await activateRaceControlOnline();
   const token=online?.session?.access_token;
   if(!token)throw new Error('Online session unavailable');
-  return request('/rest/v1/rpc/get_track_record_ghost',{method:'POST',token,body:{p_record_ref:String(recordRef||'')}});
+  const rows=await request('/rest/v1/rpc/get_track_record_ghost',{
+    method:'POST',token,body:{p_record_ref:String(recordRef||'')}
+  });
+  const decode=row=>{
+    if(!row)return row;
+    const edition=decodeRaceControlServerTrackId(row.track_id);
+    if(!edition)throw new Error('El fantasma pertenece a otra edición del circuito.');
+    return {...row,track_id:edition.trackId,
+      online_geometry_current:edition.currentLayout};
+  };
+  return Array.isArray(rows)?rows.map(decode):decode(rows);
 }

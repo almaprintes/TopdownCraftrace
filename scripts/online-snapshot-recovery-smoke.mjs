@@ -26,6 +26,6 @@ assert.ok(report.indexOf('published=true;')<report.indexOf('void getRaceControlS
 assert.match(report,/void getRaceControlSnapshot\(trackId\)\.then\(snapshot=>/);
 assert.match(report,/if\(Array\.isArray\(snapshot\)\)saveCloudSnapshot\(trackId,snapshot\)/);
 assert.match(report,/\.catch\(err=>console\.warn\('\[race-control\] post-publish ranking refresh unavailable'/,'read errors cannot unpublish');
-assert.match(cache,/tdr2:leaderboardSnapshot:\$\{trackId\}/,'per-circuit persistent cache');
+assert.match(cache,/tdr2:leaderboardSnapshot:\$\{raceControlServerTrackId\(trackId\)\}/,'per-circuit, per-geometry cache');
 assert.match(online,/p_track_id:id/,'authenticated leaderboard keyed by exact track');
 console.log('PASS: unpersisted/empty ranking recovers once from Supabase and post-race publication caches the verified ranking without additional ads');

@@ -10,7 +10,7 @@ import { setOnlineGhostChallenge } from '../online/onlineGhostSession.js';
 import { findExactLocalPbReplay, matchesExactLocalReplay } from '../tracks/exactLocalReplay.js';
 import { installNearbyRivalsPanel } from '../ui/raceControlNearbyRivalsPanel.js';
 import {TRACK_REGISTRY} from '../tracks/trackRegistry.js';
-import {ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
+import {ghostReplayCompatibility,ghostGeometryRevision} from '../tracks/ghostTrackCompatibility.js';
 
 const SESSION_KEY='tdr2:statsNativeReplay';
 const RETURN_TRACK_KEY='tdr2:statsReturnTrack';
@@ -25,6 +25,13 @@ function byteaBytes(value){const raw=String(value||'');const hex=raw.startsWith(
 function onlineGhostFromRow(row){const bytes=byteaBytes(row?.ghost_payload);if(!bytes)return null;const packet=decodeOnlineGhostNativeBinary(bytes,{ms:row.best_time_ms,tr:row.track_id,car:row.car_id,at:0,q:[4,10000],n:row.ghost_sample_count});const ghost=decodeOnlineGhostNative(packet);
   // Old online records can belong to an obsolete track geometry; never play
   // their absolute world coordinates as if they were from the current circuit.
+  // Only the authenticated versioned server record_ref certifies a new
+  // geometry. Unversioned historical ghost bytes still use the legacy gate.
+  if(row?.online_geometry_current===true){
+    const revision=ghostGeometryRevision(row.track_id,TRACK_REGISTRY[row.track_id]);
+    if(!revision)return null;
+    ghost.geometryRevision=revision;
+  }
   return ghostReplayCompatibility(ghost,row.track_id,TRACK_REGISTRY[row.track_id]).compatible?ghost:null;}
 
 export class StatsScene extends ReplayStatsScene{
