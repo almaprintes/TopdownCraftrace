@@ -9,6 +9,8 @@ import { REWARDED_PLACEMENTS, raceControlGhostClaimId, verifiedReward } from '..
 import { setOnlineGhostChallenge } from '../online/onlineGhostSession.js';
 import { findExactLocalPbReplay, matchesExactLocalReplay } from '../tracks/exactLocalReplay.js';
 import { installNearbyRivalsPanel } from '../ui/raceControlNearbyRivalsPanel.js';
+import {TRACK_REGISTRY} from '../tracks/trackRegistry.js';
+import {ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
 
 const SESSION_KEY='tdr2:statsNativeReplay';
 const RETURN_TRACK_KEY='tdr2:statsReturnTrack';
@@ -20,7 +22,10 @@ const esc=v=>String(v??'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'
 const fmt=ms=>{ms=Math.max(0,Number(ms)||0);const m=Math.floor(ms/60000),s=(ms%60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;};
 const readLocalGhost=key=>{try{const g=JSON.parse(localStorage.getItem(key)||'null');return g&&Array.isArray(g.samples)&&g.samples.length>4?g:null;}catch{return null;}};
 function byteaBytes(value){const raw=String(value||'');const hex=raw.startsWith('\\x')?raw.slice(2):raw.startsWith('\\\\x')?raw.slice(3):'';if(!hex||hex.length%2)return null;const out=new Uint8Array(hex.length/2);for(let i=0;i<out.length;i++){const n=parseInt(hex.slice(i*2,i*2+2),16);if(!Number.isFinite(n))return null;out[i]=n;}return out;}
-function onlineGhostFromRow(row){const bytes=byteaBytes(row?.ghost_payload);if(!bytes)return null;const packet=decodeOnlineGhostNativeBinary(bytes,{ms:row.best_time_ms,tr:row.track_id,car:row.car_id,at:0,q:[4,10000],n:row.ghost_sample_count});return decodeOnlineGhostNative(packet);}
+function onlineGhostFromRow(row){const bytes=byteaBytes(row?.ghost_payload);if(!bytes)return null;const packet=decodeOnlineGhostNativeBinary(bytes,{ms:row.best_time_ms,tr:row.track_id,car:row.car_id,at:0,q:[4,10000],n:row.ghost_sample_count});const ghost=decodeOnlineGhostNative(packet);
+  // Old online records can belong to an obsolete track geometry; never play
+  // their absolute world coordinates as if they were from the current circuit.
+  return ghostReplayCompatibility(ghost,row.track_id,TRACK_REGISTRY[row.track_id]).compatible?ghost:null;}
 
 export class StatsScene extends ReplayStatsScene{
   create(data){
