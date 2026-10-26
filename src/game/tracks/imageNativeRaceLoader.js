@@ -13,6 +13,7 @@ import {ATLANTICO_WORLD_SCALE} from './atlanticoWorldScale.js';
 import {physicalCircuitId} from './trackReverseVariant.js';
 import {mountPhotoCanopyOcclusion} from './photoCanopyOcclusion.js';
 import {useCompactIosPhotoTiles,compactIosPhotoTilePath,expectedCompactTileSize,photoTileWorldScale} from '../performance/iosPhotoTileBudget.js';
+import {photoTileSeamlessBounds} from './nativePhotoTileSeams.js';
 
 const TILE_MAX=2048;
 const dimension=n=>Number.isSafeInteger(Number(n))&&Number(n)>0&&Number(n)<=8192;
@@ -197,9 +198,19 @@ function mountPhoto(scene,desc,img){
     if(source instanceof HTMLCanvasElement)scene.textures.addCanvas(key,source);
     else scene.textures.addImage(key,source);
     keys.push(key);
-    const sprite=scene.add.image(x*worldScale,y*worldScale,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);
     const displayScaleX=worldScale*tileScaleX,displayScaleY=worldScale*tileScaleY;
+    const bounds=photoTileSeamlessBounds({
+      x,y,
+      decodedWidth:source.naturalWidth||source.width,
+      decodedHeight:source.naturalHeight||source.height,
+      tileScaleX,tileScaleY,
+      photoWidth:desc.width,photoHeight:desc.height,worldScale
+    });
+    const sprite=scene.add.image(bounds.x,bounds.y,key).setOrigin(0,0).setDepth(9).setScrollFactor(1);
     if(displayScaleX!==1||displayScaleY!==1)sprite.setScale(displayScaleX,displayScaleY);
+    // Adjacent WebGL sprite quads may otherwise expose a subpixel gap while
+    // the camera moves. One-time, bounded overdraw seals internal tile joins.
+    sprite.setDisplaySize(bounds.width,bounds.height);
     scene.uiCam?.ignore?.(sprite);
     sprites.push(sprite);
   };
