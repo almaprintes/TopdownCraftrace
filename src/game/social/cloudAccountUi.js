@@ -194,7 +194,7 @@ export function openCloudAccountUi({host=null}={}){
     setNotice('Trabajando…');
     try{
       const message=await task();
-      setNotice(message||'Operación terminada.');
+      setNotice(message||(hasSavedRaceControlSession()?'Operación terminada.':''));
       if(reload){window.location.reload();return;}
     }catch(error){
       setNotice(String(error?.message||error),false);

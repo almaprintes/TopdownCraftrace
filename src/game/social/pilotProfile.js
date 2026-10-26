@@ -81,7 +81,7 @@ function mountPrompt(){
     <div style="margin-top:7px;font-size:clamp(24px,5vw,38px);line-height:1;font-weight:1000">¿CÓMO TE LLAMAMOS EN PISTA?</div>
     <div style="margin-top:11px;color:#9ab3c0;font-size:12px;line-height:1.45">Juega sin cuenta. Tu progreso se guarda en este dispositivo y podrás protegerlo más adelante.</div>
     <input data-pilot-name maxlength="16" autocomplete="nickname" autocapitalize="characters" spellcheck="false" placeholder="${en?'PILOT NICK':'NOMBRE DE PILOTO'}" style="display:block;width:100%;height:44px;margin-top:12px;box-sizing:border-box;border:1px solid #3e7184;background:#06131d;color:#fff;padding:0 14px;font-size:18px;font-weight:900;letter-spacing:.05em;outline:none" />
-    ${raceRankingFieldsHtml(en)}
+    ${raceRankingFieldsHtml(en,{localOnly:!hasSavedRaceControlSession()})}
     <div data-pilot-error style="min-height:18px;margin-top:7px;color:#ff8a93;font-size:10px;font-weight:800"></div>
     <button data-pilot-save type="button" style="width:100%;height:46px;border:1px solid #59eaff;background:#0d5265;color:#fff;font-size:13px;font-weight:1000;letter-spacing:.08em;touch-action:manipulation">JUGAR SIN CUENTA</button>
     <button data-pilot-existing type="button" style="width:100%;height:40px;margin-top:10px;border:1px solid #658fa1;background:#0b2331;color:#c8f2ff;font-size:11px;font-weight:900;touch-action:manipulation">YA TENGO CUENTA · RECUPERAR PARTIDA</button>

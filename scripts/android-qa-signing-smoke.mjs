@@ -40,6 +40,9 @@ assert.match(wf,/node scripts\/session-insight-bank-smoke\.mjs/,'Tanda variety r
 assert.match(wf,/node scripts\/android-portable-save-smoke\.mjs/,
   'QA build must run dedicated JSON export source checks');
 assert.match(wf,/TDR-QA-DEV-1\.2\.335-REAL-ADS-SIN-MEDIR\.apk/);
-const currentDev=code.match(/content="DEV 1\.2\.(\d+)"/);
-assert.ok(currentDev&&Number(currentDev[1])>=317,'Android QA must package consolidated DEV 1.2.317 or later; web DEV may advance independently of QA versionCode');
+const currentDev=code.match(/content="DEV (\d+)\.(\d+)\.(\d+)"/);
+assert.ok(currentDev,'Android QA requires a well-formed DEV semver');
+const [major,minor,patch]=currentDev.slice(1).map(Number);
+assert.ok(major>1||(major===1&&(minor>2||(minor===2&&patch>=317))),
+  'Android QA must package DEV 1.2.317 or later; web DEV may advance independently of QA versionCode');
 console.log('PASS: public version unchanged, QA signer pinned and used explicitly, actual APK cert verified against key, fail-closed delivery.');
