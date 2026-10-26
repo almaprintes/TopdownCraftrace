@@ -1,7 +1,7 @@
 import {sessionPersonalBest,localRecordGhost,fmtPersonalBest,RECORD_PUBLISH_DISCLOSURE} from './sessionPersonalBestPublish.js';
 import {ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
 import {encodeOnlineGhostNative,encodeOnlineGhostNativeBinary} from '../online/onlineGhostCodec.js';
-import {submitRaceControlRecordWithGhost,submitRaceControlRecordWithoutGhost,getRaceControlSnapshot} from '../online/raceControlOnline.js';
+import {submitRaceControlRecordWithGhost,submitRaceControlRecordWithoutGhost,getRaceControlSnapshot,getMyRaceControlRecord} from '../online/raceControlOnline.js';
 import {saveCloudSnapshot} from '../stats/localRaceRecords.js';
 import {ensureRaceControlPilotProfile} from '../online/onlinePilotIdentity.js';
 import {verifiedRecordPublishClaims as verifiedPublishClaims} from '../online/verifiedRecordPublishClaims.js';
@@ -48,7 +48,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
   const setStatus=(message,isError=false)=>{
     status.textContent=message;status.style.color=isError?'#ffb1af':'#9bf1cb';
   };
-  let inFlight=false;
+  let inFlight=false,settled=false;
   const claimId=raceControlPublishClaimId(trackId,best.lapMs);
   const existing=verifiedPublishClaims.get(claimId)||null;
   let adVerified=existing?.adVerified===true;
@@ -69,7 +69,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
   };
   skip.addEventListener('click',skipOffer);
   publish.addEventListener('click',async()=>{
-    if(inFlight||published)return;
+    if(inFlight||published||settled)return;
     inFlight=true;publish.disabled=true;skip.disabled=true;
     try{
       if(!eligible)throw new Error('Este circuito de pruebas no admite publicación online.');
@@ -92,11 +92,24 @@ export function mountNewPersonalBestOffer(scene,root,report){
         const approved=window.confirm('No existe una repetición exacta de esta vuelta. Puedes publicar el tiempo igualmente, pero NO tendrá replay ni desafío fantasma. ¿Quieres publicar solo tu tiempo?');
         if(!approved)throw new Error('Publicación sin repetición cancelada. Tu marca personal sigue guardada.');
       }
-      if(!isRewardedAdAvailable()&&!adVerified)
-        throw new Error('No hay un anuncio recompensado disponible ahora. Tu récord se conserva.');
       // Validate online readiness before attempting an optional rewarded ad.
       setStatus(replay?'Comprobando conexión y repetición…':'Comprobando conexión para publicar solo el tiempo…');
       await ensureRaceControlPilotProfile();
+      // A first local PB after an authorised geometry reset can be slower than
+      // an older ONLINE record. Check the authenticated UUID before any ad.
+      const ownOnline=await getMyRaceControlRecord(trackId);
+      if(ownOnline&&Number(ownOnline.best_time_ms)<=best.lapMs){
+        settled=true;
+        actions.hidden=true;actions.style.display='none';
+        card.querySelector('[data-pb-question]').textContent='Récord local guardado · marca online anterior conservada';
+        card.querySelector('[data-pb-disclosure]').hidden=true;
+        setStatus('Tu marca LOCAL '+fmtPersonalBest(best.lapMs)+
+          ' no supera tu marca ONLINE '+fmtPersonalBest(ownOnline.best_time_ms)+
+          '. No se ha publicado una nueva marca ni se ha mostrado ningún anuncio.');
+        return;
+      }
+      if(!isRewardedAdAvailable()&&!adVerified)
+        throw new Error('No hay un anuncio recompensado disponible ahora. Tu récord se conserva.');
       if(!adVerified){
         setStatus('Preparando el anuncio opcional para publicar el récord…');
         const result=await showRewardedAd(scene,{
@@ -120,6 +133,15 @@ export function mountNewPersonalBestOffer(scene,root,report){
       const row=Array.isArray(response)?response[0]:response;
       if(!row||(replay?!row.record_ref:row.track_id!==trackId))
         throw new Error('El servidor no confirmó la publicación. Puedes reintentar sin otro anuncio.');
+      if(row.improved!==true){
+        settled=true;
+        actions.hidden=true;actions.style.display='none';
+        card.querySelector('[data-pb-question]').textContent='La clasificación online conserva tu mejor marca';
+        card.querySelector('[data-pb-disclosure]').hidden=true;
+        setStatus('El servidor ya tenía una marca online igual o mejor ('+
+          fmtPersonalBest(row.best_time_ms)+'). Tu clasificación NO ha cambiado.');
+        return;
+      }
       published=true;
       verifiedPublishClaims.set(claimId,{adVerified:true,published:true});
       // A successful publication must also make its online leaderboard
@@ -131,16 +153,14 @@ export function mountNewPersonalBestOffer(scene,root,report){
       actions.hidden=true;actions.style.display='none';
       card.querySelector('[data-pb-question]').textContent='✅ Tu récord está en la clasificación online';
       card.querySelector('[data-pb-disclosure]').hidden=true;
-      setStatus(row.improved===false
-        ?'Ya tenías una marca online igual o mejor. Tu clasificación está conservada.'
-        :replay?'Publicado correctamente, con repetición. ¡Enhorabuena!'
-        :'Tiempo publicado sin repetición. Aparecerá en los rankings sin botón VS.');
+      setStatus(replay?'Nuevo récord ONLINE publicado, con repetición.'
+        :'Nuevo tiempo ONLINE publicado sin repetición. Aparecerá sin botón VS.');
     }catch(error){
       setStatus(String(error?.message||'No se pudo publicar el tiempo.'),true);
       if(adVerified)publish.textContent='REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO';
     }finally{
       inFlight=false;
-      publish.disabled=published;skip.disabled=published;
+      publish.disabled=published||settled;skip.disabled=published||settled;
     }
   });
   return {best,card,getState:()=>({inFlight,adVerified,published})};
