@@ -118,9 +118,12 @@ export async function currentRaceControlAccount(){
   const s=await activeSession();
   const user=await request('/auth/v1/user',{token:s.access_token});
   if(user?.id!==s.user.id)throw new Error('La identidad del jugador no coincide.');
+  const names=Array.isArray(user.app_metadata?.providers)
+    ?user.app_metadata.providers:[user.app_metadata?.provider];
+  const socialProviders=[...new Set(names.filter(name=>name==='google'||name==='apple'))];
   return {id:user.id,email:user.email||null,emailConfirmed:!!user.email_confirmed_at,
-    anonymous:user.is_anonymous===true||!user.email,
-    pendingEmail:user.new_email||null};
+    anonymous:typeof user.is_anonymous==='boolean'?user.is_anonymous:!user.email,
+    pendingEmail:user.new_email||null,socialProviders};
 }
 export async function requestRaceControlEmailLink(email){
   const s=await activeSession();
