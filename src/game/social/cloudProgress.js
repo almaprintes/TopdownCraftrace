@@ -103,13 +103,13 @@ export async function cloudBackupStatus(){
   return {id:identity.id,existing:!!row,revision:row?.revision||0,
     updatedAt:row?.updatedAt||null};
 }
-async function saveBackup(expectedRevision){
+async function saveBackup(expectedRevision,{socialAccountId=null}={}){
   const identity=await cloudIdentity();
   // Never accidentally upload the previous phone's locally cached save into a
   // different account just because authentication changed successfully.
   let pending=null;
   try{pending=localStorage.getItem('tdr2:cloudLoginPendingRestore:v1');}catch{}
-  if(pending)throw new Error('Primero recupera la partida de esta cuenta; no se ha sobrescrito la nube.');
+  if(pending&&!(expectedRevision===0&&socialAccountId===identity.id&&pending===identity.id&&localStorage.getItem('tdr2:socialSavePending:v1')===identity.id))throw new Error('Primero recupera la partida de esta cuenta; no se ha sobrescrito la nube.');
   const snapshot=localProgressSnapshot();
   const row=await store.save(identity,snapshot,expectedRevision);
   if(!row?.saved)throw new Error('La copia cambió en otro dispositivo. No se ha sobrescrito. Recarga su estado.');
@@ -124,7 +124,7 @@ async function saveBackup(expectedRevision){
     bytes:new TextEncoder().encode(JSON.stringify(snapshot)).length,verified:true};
 }
 // Revision 0 permits only the first backup, even under concurrent device writes.
-export async function createFirstCloudBackup(){return saveBackup(0);}
+export async function createFirstCloudBackup(options){return saveBackup(0,options);}
 export async function updateCloudBackup(expectedRevision){
   const revision=Number(expectedRevision);
   if(!Number.isSafeInteger(revision)||revision<1)throw new Error('Revisión de copia inválida.');
@@ -177,7 +177,7 @@ export async function restoreCloudBackup(){
   const local=restoreLocalProgress(cloud.snapshot);
   // Clear the inter-account guard only after a successful fully verified
   // restoration. Never clear auth tokens or overwrite other players' saves.
-  try{localStorage.removeItem('tdr2:cloudLoginPendingRestore:v1');}catch{}
+  try{localStorage.removeItem('tdr2:cloudLoginPendingRestore:v1');localStorage.removeItem('tdr2:socialSavePending:v1');}catch{}
   return {...cloud,...local};
 }
 // Portable exports contain ONLY the schema-versioned save, never tokens,

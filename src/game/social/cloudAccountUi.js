@@ -1,10 +1,12 @@
+import {googleWebAvailable,startGoogleWebSignIn} from '../online/googleWebAuth.js';
+import {protectLocalSaveAfterSocialSignIn} from './socialAccountLink.js';
 import {canonicalRuntimeText,localizeDomTree} from '../i18n/canonicalRuntimeText.js';
 import {getLanguage} from '../i18n/index.js';
 import {
   currentRaceControlAccount,requestRaceControlEmailLink,
   verifyRaceControlEmailCode,setRaceControlPassword,
   switchRaceControlAccount,getMyRaceControlBadge,
-  hasSavedRaceControlSession,continueRejectedAnonymousSessionLocally
+  hasSavedRaceControlSession,savedGoogleWebIdentity,continueRejectedAnonymousSessionLocally
 } from '../online/raceControlOnline.js';
 import {
   cloudBackupStatus,createFirstCloudBackup,updateCloudBackup,readCloudBackup,
@@ -32,7 +34,7 @@ export function unmountCloudAccountSettings(){
     document.getElementById(ID+'-styles')?.remove();
   }
 }
-export function openCloudAccountUi({host=null}={}){
+export function openCloudAccountUi({host=null,initialNotice=''}={}){
   if(document.getElementById(ID))return;
   const root=document.createElement('div');
   root.id=ID;
@@ -54,6 +56,14 @@ export function openCloudAccountUi({host=null}={}){
   quickExport.className='tdr-cloud-secondary';
   quickExport.textContent='DESCARGAR COPIA';
   root.querySelector('.tdr-cloud-main-actions')?.appendChild(quickExport);
+  const googleButton=document.createElement('button');
+  googleButton.type='button';googleButton.textContent='CONTINUAR CON GOOGLE';
+  googleButton.dataset.action='google';googleButton.hidden=!googleWebAvailable();
+  root.querySelector('.tdr-cloud-main-actions')?.prepend(googleButton);
+  const socialSave=document.createElement('button');
+  socialSave.type='button';socialSave.textContent='PROTEGER MI PARTIDA';
+  socialSave.className='tdr-cloud-primary';socialSave.hidden=true;
+  root.querySelector('.tdr-cloud-main-actions')?.append(socialSave);
   const localContinue=document.createElement('button');
   localContinue.type='button';localContinue.dataset.action='continue-local';
   localContinue.className='tdr-cloud-primary';
@@ -62,9 +72,10 @@ export function openCloudAccountUi({host=null}={}){
   root.querySelector('.tdr-cloud-main-actions')?.prepend(localContinue);
   const legacyAccess=document.createElement('button');
   legacyAccess.type='button';legacyAccess.dataset.action='legacy-access';
-  legacyAccess.textContent='ACCESO ANTIGUO (CORREO)';
+  legacyAccess.textContent='ACCESO ANTIGUO (CORREO)';legacyAccess.hidden=true;
   root.querySelector('.tdr-cloud-advanced-buttons')?.appendChild(legacyAccess);
   root.querySelector('[data-action="backup-manual"]').hidden=true;
+  root.querySelector('[data-action="change-account"]').hidden=true;
   const style=document.createElement('style');
   style.id=ID+'-styles';
   style.textContent=css+`
@@ -100,6 +111,7 @@ export function openCloudAccountUi({host=null}={}){
   };
   const showLocalAccount=()=>{
     account=null;backup=null;
+    googleButton.hidden=!googleWebAvailable();socialSave.hidden=true;
     const local=inspectLocalProgress();
     root.querySelector('[data-cloud-pilot]').textContent=local.pilotName||'MI PILOTO';
     idLine.textContent='PARTIDA LOCAL';creatorBadge.hidden=true;
@@ -111,13 +123,14 @@ export function openCloudAccountUi({host=null}={}){
     root.querySelector('[data-cloud-icon]').textContent='🏁';
     root.querySelector('[data-cloud-title]').textContent='Partida en este dispositivo';
     root.querySelector('[data-cloud-description]').textContent='Puedes jugar, mejorar tus coches y ganar recompensas sin registrarte.';
-    root.querySelector('[data-cloud-tip]').textContent='Para recuperar la partida en otro móvil necesitarás vincular Google o Apple. Esa conexión todavía no está habilitada; conserva una copia local.';
+    root.querySelector('[data-cloud-tip]').textContent='Conecta Google para poder recuperar tu cuenta. Después te pediremos confirmar la copia del progreso. Puedes seguir jugando sin cuenta. Apple y las apps nativas quedan para más adelante.';
     for(const key of ['backup-manual','restore-manual','export-cloud'])
       root.querySelector('[data-action="'+key+'"]').disabled=true;
     localizeDomTree(root);
   };
   const showConnectionError=(error)=>{
     creatorBadge.hidden=true;idLine.textContent='Identidad sin comprobar';
+    googleButton.hidden=!googleWebAvailable()||!savedGoogleWebIdentity();socialSave.hidden=true;
     // Keep local progress visible even when Auth or cloud storage is offline.
     let local=null;
     try{local=inspectLocalProgress();}catch{}
@@ -126,7 +139,7 @@ export function openCloudAccountUi({host=null}={}){
       root.querySelector('[data-action="'+key+'"]').hidden=true;
     root.querySelector('[data-action="retry"]').hidden=false;
     const recoverableLocal=error?.code==='TDR_AUTH_REFRESH_REJECTED'&&!!error?.userId;
-    localContinue.hidden=!recoverableLocal;
+    localContinue.hidden=true; // Preserve the old ID: no detach offered during Google migration.
     localContinue.dataset.userId=recoverableLocal?String(error.userId):'';
     const sessionLost=recoverableLocal||/No se pudo recuperar tu sesión|No se pudo renovar tu cuenta|La sesión de tu cuenta caducó/.test(String(error?.message||''));
     state.dataset.state='local';
@@ -135,7 +148,7 @@ export function openCloudAccountUi({host=null}={}){
     root.querySelector('[data-cloud-description]').textContent=
       recoverableLocal?'La sesión anterior ya no se puede renovar. Puedes seguir jugando con tus monedas, coches y progreso en este dispositivo.':sessionLost?'Supabase ha rechazado la renovación. Tu partida local sigue intacta y no se creará otra identidad automáticamente.':'Ahora no podemos conectar con la nube. Puedes seguir jugando y volver a intentarlo.';
     root.querySelector('[data-cloud-tip]').textContent=
-      recoverableLocal?'No se borrará tu partida. Se quitará únicamente la sesión online antigua si lo confirmas.':'No se ha cambiado ni borrado tu progreso.';
+      recoverableLocal?'Para conservar este ID hace falta recuperar una sesión válida en el dispositivo original. No se sustituirá por otra cuenta.':'No se ha cambiado ni borrado tu progreso.';
     for(const key of ['backup-manual','restore-manual','export-cloud'])
       root.querySelector('[data-action="'+key+'"]').disabled=true;
     localizeDomTree(root);
@@ -145,6 +158,9 @@ export function openCloudAccountUi({host=null}={}){
     // Auth first, then the cloud lookup: cold starts must never register two
     // competing anonymous users in parallel.
     account=await currentRaceControlAccount();
+    legacyAccess.hidden=!account.email||account.socialProviders?.includes('google');
+    googleButton.hidden=!googleWebAvailable()||account.socialProviders?.includes('google');
+    googleButton.textContent='VINCULAR GOOGLE · CONSERVAR MI ID';socialSave.hidden=true;
     backup=await cloudBackupStatus();
     if(account.id!==backup.id)throw new Error('La cuenta y la copia tienen identidades distintas.');
     const local=inspectLocalProgress();
@@ -175,7 +191,11 @@ export function openCloudAccountUi({host=null}={}){
         'Hay una partida anterior. Confirma su restauración antes de guardar otra copia.':
         'Esta identidad no tiene copia en la nube. Tu partida local no ha cambiado.';
       if(backup.existing)show('restore','RECUPERAR PARTIDA');
-      tip.textContent='No sobrescribiremos tu partida sin confirmarlo.';
+      tip.textContent='Tu partida local sigue intacta. Una copia existente solo se puede recuperar; no se reemplazará por estos datos.';
+      if(!local.pilotName||!local.meaningful)tip.textContent='Cierra Cuenta y elige tu nombre de piloto para empezar. Después vuelve a Ajustes → Cuenta para proteger el progreso.';
+      socialSave.hidden=backup.existing||!local.meaningful||
+        localStorage.getItem('tdr2:socialSavePending:v1')!==account.id;
+
     }else{
       state.dataset.state=backup.existing?'saved':'local';
       icon.textContent=backup.existing?'✅':'☁';
@@ -189,6 +209,7 @@ export function openCloudAccountUi({host=null}={}){
         'La recuperación antigua se comprobó en este dispositivo. Conserva sus credenciales.':
         'Una copia en la nube NO basta para entrar tras cambiar de dispositivo. Descarga también tu partida y no desinstales hasta contar con un acceso probado. El sistema sin correo TDR ID todavía no está listo.';
     }
+    if(account.socialProviders?.includes('google')&&!pending)tip.textContent='Acceso con Google. La copia se actualiza solo cuando lo confirmas. Las grabaciones locales no se incluyen.';
     root.querySelector('[data-action="backup"]').disabled=!!pending||!local.meaningful;
     root.querySelector('[data-action="restore"]').disabled=!backup.existing;
     root.querySelector('[data-action="backup-manual"]').disabled=!!pending||!local.meaningful;
@@ -236,16 +257,27 @@ export function openCloudAccountUi({host=null}={}){
   });
   root.querySelectorAll('[data-action="back"]').forEach(b=>b.addEventListener('click',()=>setView('home')));
   root.querySelector('[data-action="protect"]').addEventListener('click',()=>setView(account.emailConfirmed?'password':account.pendingEmail?'verify':'link'));
-  root.querySelector('[data-action="login-open"]').addEventListener('click',()=>setView('login'));
+  root.querySelector('[data-action="login-open"]').addEventListener('click',()=>googleButton.click());
   localContinue.addEventListener('click',()=>{
     const oldId=localContinue.dataset.userId;
     if(!oldId)return;
-    if(!accountConfirm('CONTINUAR SIN CUENTA\n\nSe quitará la sesión online anterior de este dispositivo. El nick, monedas, coches, tiempos y progreso local NO se borrarán.\n\nSi la cuenta anterior todavía existiera, ya no podrías acceder a ella desde esta sesión. La nueva vinculación con Google y Apple aún no está disponible.\n\n¿Quieres continuar con tu partida local?'))return;
+    if(!accountConfirm('CONTINUAR SIN CUENTA\n\nSe quitará la sesión online anterior de este dispositivo. El nick, monedas, coches, tiempos y progreso local NO se borrarán.\n\nSi la cuenta anterior todavía existiera, ya no podrías acceder a ella desde esta sesión. Google está disponible para la partida local en la DEV web. El acceso Apple y nativo se preparará después.\n\n¿Quieres continuar con tu partida local?'))return;
     run(async()=>{
       continueRejectedAnonymousSessionLocally(oldId);
       return '✅ Partida local conservada. Tu acceso online anterior ya no está vinculado a este móvil.';
     });
   });
+  googleButton.addEventListener('click',()=>run(async()=>{
+    if(!accountConfirm('CONTINUAR CON GOOGLE\n\nGoogle verificará tu cuenta. Si ya tienes identidad online, se vinculará manteniendo el mismo ID. Tu nick, monedas y coches permanecen en este dispositivo. No subiremos ni recuperaremos progreso sin otra confirmación. ¿Continuar?'))return 'Acceso cancelado.';
+    await startGoogleWebSignIn();
+    return 'Abriendo Google…';
+  }));
+  socialSave.addEventListener('click',()=>run(async()=>{
+    const local=inspectLocalProgress();
+    if(!accountConfirm('PROTEGER MI PARTIDA\n\nPiloto: '+local.pilotName+' · '+local.keys+' bloques.\nSe creará la primera copia en esta cuenta Google. Si ya existe una copia, no se sustituirá. Las grabaciones locales no se incluyen. ¿Confirmas la subida?'))return 'Subida cancelada. Tu partida sigue local.';
+    const result=await protectLocalSaveAfterSocialSignIn({playerConfirmed:true});
+    return result.status==='protected'?'✅ Primera copia verificada. Tu partida local se conserva.':result.message;
+  }));
   root.querySelector('[data-action="retry"]').addEventListener('click',()=>run(async()=>{
     await refresh();
     return 'Conexión comprobada.';
@@ -371,5 +403,5 @@ export function openCloudAccountUi({host=null}={}){
     const result=await downloadPortableSave(await exportCloudProgressJson(),'top-down-race-nube.json');
     return downloadNotice(result,'copia de la nube');
   }));
-  run(()=>refresh().then(()=>'')); 
+  run(()=>refresh().then(()=>initialNotice));
 }

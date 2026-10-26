@@ -10,7 +10,7 @@ let pilotName='JUANFRAN',snapshot={data:{'tdr2:garageFusion:v1':{coins:750}}};
 const state=new Map([['tdr2:pilotRankingLocalLocation:v1',JSON.stringify({
   continentCode:'EU',countryCode:'ES',regionCode:'ES-CN'
 })]]);
-globalThis.localStorage={getItem:k=>state.get(k)||null};
+globalThis.localStorage={getItem:k=>state.get(k)||null,removeItem:k=>state.delete(k)};
 globalThis.__tdrSocialMocks={
   readAccount:async()=>account,readProfile:async()=>existingProfile,
   claim:async n=>{events.push('claim:'+n);},

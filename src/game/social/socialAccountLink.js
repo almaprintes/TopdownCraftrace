@@ -51,7 +51,8 @@ export async function protectLocalSaveAfterSocialSignIn({playerConfirmed=false}=
   const onlineProfile=await getMyRaceControlProfile();
   const plan=assessSocialLink({account,backup,pilotName,onlineProfile});
   if(plan.status!=='ready')return plan;
-  if(localStorage.getItem('tdr2:cloudLoginPendingRestore:v1'))
+  if(localStorage.getItem('tdr2:cloudLoginPendingRestore:v1')&&
+    !(localStorage.getItem('tdr2:cloudLoginPendingRestore:v1')===account.id&&localStorage.getItem('tdr2:socialSavePending:v1')===account.id))
     return {status:'pending-restore',accountId:account.id,
       message:'Hay una recuperación pendiente. Elige qué partida conservar antes de guardarla en la nube.'};
   // No uploads if local progress changes during sign-in/account inspection.
@@ -61,8 +62,10 @@ export async function protectLocalSaveAfterSocialSignIn({playerConfirmed=false}=
   // already claimed by another user. Server side RLS/RPC own this decision.
   if(!onlineProfile)await claimRaceControlPilotNick(pilotName);
   if(location)await syncRaceControlProfile({nick:pilotName,...location});
-  const saved=await createFirstCloudBackup(); // revision 0 + server readback
+  const saved=await createFirstCloudBackup({socialAccountId:account.id}); // revision 0 + server readback
   if(saved.id!==account.id||saved.verified!==true)
     throw new Error('La copia no ha podido verificarse para esta identidad. Conserva tu dispositivo.');
+  localStorage.removeItem('tdr2:cloudLoginPendingRestore:v1');
+  localStorage.removeItem('tdr2:socialSavePending:v1');
   return {status:'protected',accountId:account.id,revision:saved.revision,keys:saved.keys};
 }

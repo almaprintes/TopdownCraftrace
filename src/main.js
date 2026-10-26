@@ -1,4 +1,14 @@
 import './style.css';
+import {completeGoogleWebSignIn} from './game/online/googleWebAuth.js';
+import {openCloudAccountUi} from './game/social/cloudAccountUi.js';
+let googleAuthReady=false;
+const googleCallback=window.__tdrGoogleCallback;
+delete window.__tdrGoogleCallback;
+void completeGoogleWebSignIn(googleCallback).then(result=>{
+  googleAuthReady=true;
+  __tickOrientation();
+  if(result)openCloudAccountUi({initialNotice:result.message});
+});
 import { createGame } from './game/game.js';
 import {archiveRetiredTrackRecords} from './game/stats/archiveRetiredTrackRecords.js';
 import {isBenignResizeObserverWarning,mayReplaceStartupScreen} from './game/dev/runtimeErrorPolicy.js';
@@ -423,7 +433,7 @@ function __tickOrientation() {
     // Never let a race scene read retired PB/replay keys before the one-time
     // on-device archive transaction has committed. On archive failure we keep
     // the original records and proceed without erasing anything.
-    if(!__tdrLocalTrackArchiveReady)return;
+    if(!__tdrLocalTrackArchiveReady||!googleAuthReady)return;
     window.__tdrStartupMark?.('phaser-start');
     __game = createGame('app');
     window.__tdrStartupMark?.('phaser-created');

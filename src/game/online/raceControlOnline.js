@@ -114,6 +114,34 @@ const persistAuthSession=(incoming,expectedId=null)=>{
   api={session};
   return session;
 };
+export function savedRaceControlIdentity(){return readSession()?.user?.id||null;}
+// Only the web PKCE adapter calls this. Verify server identity before persisting.
+export function savedGoogleWebIdentity(){
+  const user=readSession()?.user;
+  return user&&(user.app_metadata?.provider==='google'||user.app_metadata?.providers?.includes('google')||user.identities?.some(i=>i.provider==='google'))?user.id:null;
+}
+export async function acceptGoogleWebSession(incoming,expectedId=null,{linking=false}={}){
+  if((readSession()?.user?.id||null)!==expectedId)throw new Error('La identidad local ha cambiado.');
+  const session=normalizeSession(incoming);
+  if(!sessionUsable(session)||!session.refresh_token)throw new Error('Sesión inválida.');
+  const user=await request('/auth/v1/user',{token:session.access_token});
+  if(user?.id!==session.user.id||(expectedId&&user.id!==expectedId)||user.is_anonymous!==false||
+    !user.identities?.some(identity=>identity.provider==='google'))throw new Error('Google no verificado.');
+  if((readSession()?.user?.id||null)!==expectedId)throw new Error('La identidad local ha cambiado.');
+  // Fail closed before auth becomes visible to any game/cloud code.
+  if(!expectedId||linking){
+    localStorage.setItem('tdr2:cloudLoginPendingRestore:v1',user.id);
+    localStorage.setItem('tdr2:socialSavePending:v1',user.id);
+  }
+  // Google provider tokens are never retained, exported or logged.
+  const safe={access_token:session.access_token,refresh_token:session.refresh_token,
+    expires_at:session.expires_at,token_type:'bearer',user:{id:user.id,
+    email:user.email,is_anonymous:false,app_metadata:{provider:'google'}}};
+  localStorage.setItem('tdr2:onlineSession:v1',JSON.stringify(safe));
+  if(readSession()?.access_token!==safe.access_token)throw new Error('No se pudo guardar la sesión.');
+  api={session:safe};
+  return {id:user.id};
+}
 export async function currentRaceControlAccount(){
   const s=await activeSession();
   const user=await request('/auth/v1/user',{token:s.access_token});
