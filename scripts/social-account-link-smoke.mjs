@@ -11,14 +11,23 @@ const state=new Map([['tdr2:pilotRankingLocalLocation:v1',JSON.stringify({
   continentCode:'EU',countryCode:'ES',regionCode:'ES-CN'
 })]]);
 globalThis.localStorage={getItem:k=>state.get(k)||null};
+globalThis.__tdrSocialMocks={
+  readAccount:async()=>account,readProfile:async()=>existingProfile,
+  claim:async n=>{events.push('claim:'+n);},
+  sync:async p=>{events.push('geo:'+p.regionCode);},
+  readPilot:()=>({name:pilotName}),
+  readSnapshot:()=>snapshot,readBackup:async()=>backup,
+  writeBackup:async()=>{events.push('backup');return {id:account.id,verified:true,revision:1,keys:1};},
+  resolveGeo:x=>({continentCode:x.continentCode,countryCode:x.countryCode,regionCode:x.regionCode})
+};
 const source=raw
  .replace(/^import \{currentRaceControlAccount,[\s\S]*?from '\.\.\/online\/raceControlOnline\.js';/m,
-  'const currentRaceControlAccount=async()=>account;const getMyRaceControlProfile=async()=>existingProfile;const claimRaceControlPilotNick=async(n)=>{events.push("claim:"+n);};const syncRaceControlProfile=async(p)=>{events.push("geo:"+p.regionCode);};')
- .replace(/^import \{getPilotProfile\} from '\.\/pilotProfile\.js';/m,'const getPilotProfile=()=>({name:pilotName});')
+  'const currentRaceControlAccount=()=>globalThis.__tdrSocialMocks.readAccount();const getMyRaceControlProfile=()=>globalThis.__tdrSocialMocks.readProfile();const claimRaceControlPilotNick=n=>globalThis.__tdrSocialMocks.claim(n);const syncRaceControlProfile=p=>globalThis.__tdrSocialMocks.sync(p);')
+ .replace(/^import \{getPilotProfile\} from '\.\/pilotProfile\.js';/m,'const getPilotProfile=()=>globalThis.__tdrSocialMocks.readPilot();')
  .replace(/^import \{localProgressSnapshot,cloudBackupStatus,createFirstCloudBackup\} from '\.\/cloudProgress\.js';/m,
-  'const localProgressSnapshot=()=>snapshot;const cloudBackupStatus=async()=>backup;const createFirstCloudBackup=async()=>{events.push("backup");return {id:account.id,verified:true,revision:1,keys:1};};')
+  'const localProgressSnapshot=()=>globalThis.__tdrSocialMocks.readSnapshot();const cloudBackupStatus=()=>globalThis.__tdrSocialMocks.readBackup();const createFirstCloudBackup=()=>globalThis.__tdrSocialMocks.writeBackup();')
  .replace(/^import \{resolveRaceRankingLocation\} from '\.\/pilotRankingGeography\.js';/m,
-  'const resolveRaceRankingLocation=x=>({continentCode:x.continentCode,countryCode:x.countryCode,regionCode:x.regionCode});');
+  'const resolveRaceRankingLocation=x=>globalThis.__tdrSocialMocks.resolveGeo(x);');
 assert.doesNotMatch(source,/^import /m,'mocks must remove all dependencies');
 const {assessSocialLink,protectLocalSaveAfterSocialSignIn}=await import(
   'data:text/javascript;base64,'+Buffer.from(source).toString('base64')
