@@ -4,6 +4,7 @@ import {
   currentRaceControlAccount,requestRaceControlEmailLink,
   verifyRaceControlEmailCode,setRaceControlPassword,
   switchRaceControlAccount,getMyRaceControlBadge
+  ,hasSavedRaceControlSession
 } from '../online/raceControlOnline.js';
 import {
   cloudBackupStatus,createFirstCloudBackup,updateCloudBackup,readCloudBackup,
@@ -91,6 +92,23 @@ export function openCloudAccountUi({host=null}={}){
     if(stage==='home')root.querySelector('[data-advanced]').open=false;
     setNotice('');
   };
+  const showLocalAccount=()=>{
+    account=null;backup=null;
+    const local=inspectLocalProgress();
+    root.querySelector('[data-cloud-pilot]').textContent=local.pilotName||'MI PILOTO';
+    idLine.textContent='PARTIDA LOCAL';creatorBadge.hidden=true;
+    for(const key of ['protect','backup','restore','login-open','retry'])
+      root.querySelector('[data-action="'+key+'"]').hidden=true;
+    quickExport.hidden=false;
+    state.dataset.state='local';
+    root.querySelector('[data-cloud-icon]').textContent='🏁';
+    root.querySelector('[data-cloud-title]').textContent='Partida en este dispositivo';
+    root.querySelector('[data-cloud-description]').textContent='Puedes jugar, mejorar tus coches y ganar recompensas sin registrarte.';
+    root.querySelector('[data-cloud-tip]').textContent='Para recuperar la partida en otro móvil necesitarás vincular Google o Apple. Esa conexión todavía no está habilitada; conserva una copia local.';
+    for(const key of ['backup-manual','restore-manual','export-cloud'])
+      root.querySelector('[data-action="'+key+'"]').disabled=true;
+    localizeDomTree(root);
+  };
   const showConnectionError=(error)=>{
     creatorBadge.hidden=true;idLine.textContent='Identidad sin comprobar';
     // Keep local progress visible even when Auth or cloud storage is offline.
@@ -113,6 +131,7 @@ export function openCloudAccountUi({host=null}={}){
     localizeDomTree(root);
   };
   const refresh=async()=>{
+    if(!hasSavedRaceControlSession()){showLocalAccount();return;}
     // Auth first, then the cloud lookup: cold starts must never register two
     // competing anonymous users in parallel.
     account=await currentRaceControlAccount();

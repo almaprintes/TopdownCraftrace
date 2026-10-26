@@ -41,10 +41,12 @@ const nick=readFileSync('supabase/migrations/20261010_014_unique_case_sensitive_
 assert.match(nick,/values \(v_id,v_nick,'XX','XX','XX'\)/,'Root cause is XX on nickname reservation');
 assert.match(sql,/on conflict \(user_id\)/,'Region updates must target original user, not a new identity');
 assert.match(online,/export async function syncRaceControlProfile/);
-assert.match(pilot,/await syncRaceControlProfile\(\{nick:name,\.\.\.rankingLocation\}\)/,'New registration saves ranking location before local profile commits');
+assert.match(pilot,/await syncRaceControlProfile\(\{nick:name,\.\.\.rankingLocation\}\)/,'Legacy online profile keeps verified syncing');
+assert.match(pilot,/if\(hasSavedRaceControlSession\(\)\)/,'Existing accounts preserve online identity');
+assert.match(pilot,/saveLocalRankingLocation\(rankingLocation\)/,'Local players keep region without Supabase');
 assert.match(pilot,/const rankingLocation=geoFields.read\(\);\s*await setPilotName\(input\?\.value\|\|'',\{rankingLocation\}\)/);
 assert.match(pilot,/await updatePilotRankingLocation\(location\)/,'Existing users can correct location in Settings');
 assert.match(pilot,/existing&&existing.nick!==name/,'Never overwrite the wrong online identity');
 assert.match(pilot,/invalidateLocalRaceRankingCaches\(localStorage\)/,'Clear only stale rankings after server confirms');
 assert.match(pilot,/max-height:calc\(100dvh - 22px\)/,'Nick form stays scrollable in landscape');
-console.log('PASS: explicit opt-in pilot geography; first nick setup and retroactive Settings repair; exact ES-CN key; no inference, no record deletion');
+console.log('PASS: self-declared pilot geography and local-first onboarding; no auto account or record deletion');

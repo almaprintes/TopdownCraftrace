@@ -1,7 +1,19 @@
 import { openCloudAccountUi } from './cloudAccountUi.js';
-import { claimRaceControlPilotNick, syncRaceControlProfile, getMyRaceControlProfile } from '../online/raceControlOnline.js';
-import { raceRankingFieldsHtml, bindRaceRankingFields, invalidateLocalRaceRankingCaches } from './pilotRankingGeography.js';
+import { claimRaceControlPilotNick, syncRaceControlProfile, getMyRaceControlProfile, hasSavedRaceControlSession } from '../online/raceControlOnline.js';
+import { raceRankingFieldsHtml, bindRaceRankingFields, invalidateLocalRaceRankingCaches, resolveRaceRankingLocation } from './pilotRankingGeography.js';
 const KEY='tdr2:pilotProfile:v1';
+const LOCAL_GEO_KEY='tdr2:pilotRankingLocalLocation:v1';
+function saveLocalRankingLocation(location){
+  const value=resolveRaceRankingLocation(location);
+  localStorage.setItem(LOCAL_GEO_KEY,JSON.stringify({version:1,...value}));
+  return value;
+}
+function readLocalRankingLocation(){
+  try{
+    const value=JSON.parse(localStorage.getItem(LOCAL_GEO_KEY)||'null');
+    return value?{continent_code:value.continentCode,country_code:value.countryCode,region_code:value.regionCode}:null;
+  }catch{return null;}
+}
 
 const cleanName=value=>String(value??'').replace(/\s+/g,' ').trim().slice(0,16);
 
@@ -23,15 +35,18 @@ export function getPilotProfile(){
 export async function setPilotName(value,{rankingLocation=null}={}){
   const name=cleanName(value);
   if(name.length<3)throw new Error('El nombre de piloto debe tener entre 3 y 16 caracteres.');
-  // Supabase owns the unique identity claim. Never leave an unverified local
-  // name visible in rankings or cloud snapshots if the server rejects it.
-  const confirmed=await claimRaceControlPilotNick(name);
-  if(confirmed!==name)throw new Error('La reserva de nombre no coincide.');
-  if(rankingLocation){
-    // Nick is atomically reserved first; completing geography is an explicit
-    // follow-up on the SAME authenticated UUID, before local UI commits.
-    await syncRaceControlProfile({nick:name,...rankingLocation});
-    invalidateLocalRaceRankingCaches(localStorage);
+  if(hasSavedRaceControlSession()){
+    // Legacy online identities are never replaced, even if the token expired.
+    const confirmed=await claimRaceControlPilotNick(name);
+    if(confirmed!==name)throw new Error('La reserva de nombre no coincide.');
+    if(rankingLocation){
+      await syncRaceControlProfile({nick:name,...rankingLocation});
+      invalidateLocalRaceRankingCaches(localStorage);
+    }
+  }else if(rankingLocation){
+    // Guest nickname and region are local-only, not reserved in Supabase.
+    // A later social sign-in must confirm them before enabling online rankings.
+    saveLocalRankingLocation(rankingLocation);
   }
   const current=getPilotProfile();
   const next={...current,name,updatedAt:Date.now()};
@@ -43,6 +58,7 @@ export async function setPilotName(value,{rankingLocation=null}={}){
 export async function updatePilotRankingLocation(rankingLocation){
   const name=getPilotProfile().name;
   if(name.length<3)throw new Error('Primero configura tu nombre de piloto.');
+  if(!hasSavedRaceControlSession())return saveLocalRankingLocation(rankingLocation);
   // Do not silently overwrite another device/account with a different nick.
   const existing=await getMyRaceControlProfile();
   if(existing&&existing.nick!==name)
@@ -63,11 +79,11 @@ function mountPrompt(){
   root.innerHTML=`<div style="width:min(520px,92vw);box-sizing:border-box;padding:18px;border:1px solid rgba(85,234,255,.42);background:linear-gradient(145deg,#081b27,#030b12);box-shadow:0 24px 70px rgba(0,0,0,.55);max-height:calc(100dvh - 22px);overflow-y:auto;-webkit-overflow-scrolling:touch">
     <div style="font-size:9px;font-weight:1000;letter-spacing:.18em;color:#62eaff">PERFIL DE PILOTO</div>
     <div style="margin-top:7px;font-size:clamp(24px,5vw,38px);line-height:1;font-weight:1000">¿CÓMO TE LLAMAMOS EN PISTA?</div>
-    <div style="margin-top:11px;color:#9ab3c0;font-size:12px;line-height:1.45">Tu nombre de piloto viajará con los tiempos y repeticiones que compartas con otros testers.</div>
+    <div style="margin-top:11px;color:#9ab3c0;font-size:12px;line-height:1.45">Juega sin cuenta. Tu progreso se guarda en este dispositivo y podrás protegerlo más adelante.</div>
     <input data-pilot-name maxlength="16" autocomplete="nickname" autocapitalize="characters" spellcheck="false" placeholder="${en?'PILOT NICK':'NOMBRE DE PILOTO'}" style="display:block;width:100%;height:44px;margin-top:12px;box-sizing:border-box;border:1px solid #3e7184;background:#06131d;color:#fff;padding:0 14px;font-size:18px;font-weight:900;letter-spacing:.05em;outline:none" />
     ${raceRankingFieldsHtml(en)}
     <div data-pilot-error style="min-height:18px;margin-top:7px;color:#ff8a93;font-size:10px;font-weight:800"></div>
-    <button data-pilot-save type="button" style="width:100%;height:46px;border:1px solid #59eaff;background:#0d5265;color:#fff;font-size:13px;font-weight:1000;letter-spacing:.08em;touch-action:manipulation">GUARDAR NOMBRE DE PILOTO</button>
+    <button data-pilot-save type="button" style="width:100%;height:46px;border:1px solid #59eaff;background:#0d5265;color:#fff;font-size:13px;font-weight:1000;letter-spacing:.08em;touch-action:manipulation">JUGAR SIN CUENTA</button>
     <button data-pilot-existing type="button" style="width:100%;height:40px;margin-top:10px;border:1px solid #658fa1;background:#0b2331;color:#c8f2ff;font-size:11px;font-weight:900;touch-action:manipulation">YA TENGO CUENTA · RECUPERAR PARTIDA</button>
     <div style="margin-top:9px;text-align:center;color:#607b89;font-size:9px">3–16 caracteres · podrás cambiarlo más adelante</div>
   </div>`;
@@ -78,7 +94,7 @@ function mountPrompt(){
   const submit=async()=>{
     if(submitting)return;
     submitting=true;
-    if(save){save.disabled=true;save.textContent='COMPROBANDO EN SUPABASE…';}
+    if(save){save.disabled=true;save.textContent=hasSavedRaceControlSession()?'COMPROBANDO EN SUPABASE…':'GUARDANDO PARTIDA…';}
     if(error)error.textContent='';
     try{
       const rankingLocation=geoFields.read();
@@ -89,7 +105,7 @@ function mountPrompt(){
       input?.focus?.();
     }finally{
       submitting=false;
-      if(save){save.disabled=false;save.textContent='GUARDAR NOMBRE DE PILOTO';}
+      if(save){save.disabled=false;save.textContent='JUGAR SIN CUENTA';}
     }
   };
   root.querySelector('[data-pilot-existing]')?.addEventListener('click',()=>openCloudAccountUi());
@@ -139,10 +155,14 @@ function mountSettingsProfile(){
   if(input)input.value=profile.name||'';
   // Only read the already-owned profile. Never infer geography from iOS,
   // GPS or the current network, and never mutate on account-tab entry.
-  void getMyRaceControlProfile().then(current=>{
+  const rankingProfile=hasSavedRaceControlSession()
+    ?getMyRaceControlProfile():Promise.resolve(readLocalRankingLocation());
+  void rankingProfile.then(current=>{
     geoFields.prefill(current);
     if(!geoStatus?.isConnected)return;
-    geoStatus.textContent=current?.country_code==='XX'
+    geoStatus.textContent=!hasSavedRaceControlSession()
+      ?(en?'Saved on this device. Connect a verified account to join rankings.':'Guardada en este dispositivo. Protege tu partida para entrar en los rankings.')
+      :current?.country_code==='XX'
       ?(en?'Region incomplete · choose it to join geographic rankings.':'Región incompleta · elígela para aparecer en los rankings geográficos.')
       :(en?'Current ranking region loaded.':'Región actual cargada.');
   }).catch(()=>{
@@ -176,7 +196,7 @@ function mountSettingsProfile(){
     try{
       const location=geoFields.read();
       await updatePilotRankingLocation(location);
-      if(geoStatus){geoStatus.style.color='#6ff0b4';geoStatus.textContent=en?'Region saved. Rankings will reflect your choice after refresh.':'Región guardada. Las clasificaciones reflejarán tu elección al actualizar.';}
+      if(geoStatus){geoStatus.style.color='#6ff0b4';geoStatus.textContent=hasSavedRaceControlSession()?(en?'Region saved for online rankings.':'Región guardada para rankings online.'):(en?'Region saved on this device.':'Región guardada en este dispositivo.');}
     }catch(err){
       if(geoStatus){geoStatus.style.color='#ff8a93';geoStatus.textContent=String(err?.message||'No se pudo guardar la región.');}
     }finally{

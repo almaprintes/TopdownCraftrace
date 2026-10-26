@@ -61,9 +61,9 @@ const expired={access_token:'old',refresh_token:'refresh-player-a',user:{id:'pla
   assert.equal(s.calls.length,0);
 }
 {
-  const s=await scenario();
-  assert.equal((await s.activate()).session.user.id,'new-player');
-  assert.equal(s.calls.filter(x=>x.includes('/auth/v1/signup')).length,1);
+  const s=await scenario({signup:false});
+  await assert.rejects(s.activate(),/PARTIDA_LOCAL_SIN_CUENTA/);
+  assert.equal(s.calls.length,0,'opening Race Control cannot create an anonymous user');
 }
 {
   const s=await scenario({stored:expired,refresh:'wrong-id',signup:false});

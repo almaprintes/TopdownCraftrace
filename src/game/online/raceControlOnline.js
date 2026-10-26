@@ -10,6 +10,8 @@ const cfg=()=>playerBackendConfig();
 const headers=(key,token)=>({'apikey':key,'Authorization':`Bearer ${token||key}`,'Content-Type':'application/json'});
 const readSession=()=>{try{return JSON.parse(localStorage.getItem('tdr2:onlineSession:v1')||'null');}catch{return null;}};
 const saveSession=s=>{try{localStorage.setItem('tdr2:onlineSession:v1',JSON.stringify(s));}catch{}};
+// Presence check does not refresh a token or contact Supabase.
+export function hasSavedRaceControlSession(){return Boolean(readSession()?.user?.id);}
 // GoTrue REST may omit expires_at; supabase-js normally adds it.
 const normalizeSession=s=>{
   if(!s||!s.access_token||!s.user?.id)return s;
@@ -49,9 +51,9 @@ async function performRaceControlActivation(){
     // Keep the stored session intact so the player can retry or recover it.
     throw new Error('No se pudo recuperar tu sesión de piloto. Comprueba Internet y vuelve a intentarlo. Si persiste, usa YA TENGO CUENTA para recuperarla; no se ha creado otra cuenta.');
   }
-  const session=normalizeSession(await request('/auth/v1/signup',{method:'POST',body:{}}));
-  if(!sessionUsable(session))throw new Error('Anonymous session unavailable');
-  saveSession(session);api={session};return api;
+  // A new guest is LOCAL: simply opening a leaderboard must never create
+  // an anonymous Supabase user. Previously issued identities remain intact.
+  throw new Error('PARTIDA_LOCAL_SIN_CUENTA: Para publicar récords, protege tu partida desde Ajustes → Cuenta.');
 }
 
 // A refresh token must never be used by concurrent callers.

@@ -14,7 +14,7 @@ import { polishSeasonCard } from './LobbyPublishPolish.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { getPilotProfile } from '../social/pilotProfile.js';
 import { cloudIdentity, shortPlayerId } from '../social/cloudProgress.js';
-import {getMyRaceControlBadge} from '../online/raceControlOnline.js';
+import {getMyRaceControlBadge,hasSavedRaceControlSession} from '../online/raceControlOnline.js';
 
 import { IS_PROD_BUILD } from '../buildTarget.js';
 import {createAppWallet,disposeAppWallets} from './TdrAppHeader.js';
@@ -231,6 +231,12 @@ export function installLobbyDom(scene) {
     accountButton?.parentNode?.insertBefore(identityRow,accountButton);
     if(accountButton)identityRow.append(accountButton,creatorBadge);
     const updateCloudId=async()=>{
+      if(!hasSavedRaceControlSession()){
+        creatorBadge.hidden=true;creatorBadge.style.display='none';
+        accountButton.textContent='🏁 PARTIDA LOCAL';
+        accountButton.title='Partida solo en este dispositivo · Ajustes → Cuenta';
+        return;
+      }
       try{
         const {id}=await cloudIdentity();
         if(!root.isConnected)return;
