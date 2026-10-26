@@ -38,6 +38,10 @@ assert.match(replay,/_getSelectedRecord\(trackId\)\{return trackId\?getCircuitRe
 assert.match(online,/export async function getMyRaceControlRecord\(trackId\)/);
 assert.match(online,/row\?\.scope==='global'&&row\?\.is_me===true/,
   'Never infer the online owner by nickname');
+assert.match(online,/record\?\.improved===true&&record\?\.record_ref/,
+  'Cuper season cannot progress from a no-op ghost publication');
+assert.match(online,/record.improved===true&&car==='crown_cuper'/,
+  'Cuper season cannot progress from a no-op time-only publication');
 for(const source of [stats,report]){
   assert.match(source,/await getMyRaceControlRecord\(/);
   assert.ok(source.indexOf('await getMyRaceControlRecord(')<source.indexOf('await showRewardedAd('),
