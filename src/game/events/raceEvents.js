@@ -3,7 +3,8 @@ import { t, getLanguage } from '../i18n/index.js';
 import { loadSeasonTelemetry } from '../seasons/seasonTelemetry.js';
 import { loadCleanLapTelemetry } from '../seasons/cleanLapTelemetry.js';
 import {syncCleanLapMissionObjectives,getCleanLapMissionProgress} from '../seasons/cleanLapMissionTelemetry.js';
-import { unlockCar } from '../cars/carUnlocks.js';
+import { unlockCar, isCarUnlocked } from '../cars/carUnlocks.js';
+import {attachSeasonClaimReceipt,reconcileSeasonClaimState,seasonClaimReceipt,isStorageQuotaError,reclaimReplaceableSeasonCaches} from './seasonClaimPersistence.js';
 import { grantSeasonSkin } from '../skins/carSkins.js';
 import { carMileageKm,loadPlayerStatsPersisted } from '../stats/playerStats.js';
 import { CUPER_EVENT_DEFS,CUPER_MILEAGE_GATE_METERS,CUPER_STATE_KEY } from '../seasons/cuperCampaign.js';
@@ -67,9 +68,26 @@ function normalizedBaseline(s){return {laps:Number(s?.laps||0),clean:Number(s?.c
  ghostStarts:Number(s?.ghostStarts||0),recyclerOperations:Number(s?.recyclerOperations||0),
  onlinePublishedCuper:Number(s?.onlinePublishedCuper||0),cuperMeters:Number(s?.cuperMeters||0),
  cuperRallyMeters:Number(s?.cuperRallyMeters||0),cuperTrackMeters:{...(s?.cuperTrackMeters||{})},cuperEquipped:Number(s?.cuperEquipped||0)};}
-function loadState(key){try{const v=JSON.parse(localStorage.getItem(key)||'null');if(Number.isInteger(v?.index)&&v?.baseline)return v;}catch{}
- const init={index:0,baseline:normalizedBaseline(snapshotRaceEventStats()),claimed:[]};try{localStorage.setItem(key,JSON.stringify(init));}catch{}return init;}
-function saveState(key,v){try{localStorage.setItem(key,JSON.stringify(v));}catch{}return v;}
+function loadState(key){
+ let state=null;
+ try{const v=JSON.parse(localStorage.getItem(key)||'null');
+   if(Number.isInteger(v?.index)&&v?.baseline)state=v;
+ }catch{}
+ if(!state){
+   state={index:0,baseline:normalizedBaseline(snapshotRaceEventStats()),claimed:[]};
+   try{localStorage.setItem(key,JSON.stringify(state));}catch{}
+ }
+ // The authoritative claim receipt shares the exact same atomic garage write
+ // as the reward. This repairs users stuck on 9/14 after a failed season write.
+ const family=key===CUPER_STATE_KEY?'cuper':'induction';
+ const definitions=family==='cuper'?CUPER_EVENT_DEFS:EVENT_DEFS;
+ return reconcileSeasonClaimState(state,loadGarage(),family,definitions);
+}
+function saveState(key,v){
+ try{const raw=JSON.stringify(v);localStorage.setItem(key,raw);
+   return localStorage.getItem(key)===raw;
+ }catch{return false;}
+}
 function deltaMap(n,b){const o={},ids=new Set([...Object.keys(n||{}),...Object.keys(b||{})]);for(const id of ids)o[id]=Math.max(0,Number(n?.[id]||0)-Number(b?.[id]||0));return o;}
 function deltaStats(now,base){return{
  laps:Math.max(0,now.laps-base.laps),clean:Math.max(0,now.clean-base.clean),trackLaps:deltaMap(now.trackLaps,base.trackLaps),
@@ -124,15 +142,49 @@ export function claimCurrentRaceEvent(){
  progress=evaluateObjective(event.objective,deltaStats(now,state.baseline),current.family+':'+event.id);
  if(!progress.complete)return {ok:false,reason:'incomplete'};
  if((state.claimed||[]).includes(event.id))return {ok:false,reason:'claimed'};
- const garage=loadGarage();garage.coins=Math.max(0,Number(garage.coins)||0)+Math.max(0,Number(event.reward?.coins)||0);
+ // A receipt and its reward are written together in the GARAGE key. Never
+ // award materials first and then silently lose the season index on iOS.
+ const garage=loadGarage();
+ const nextState={...state,index:state.index+1,
+   claimed:[...(state.claimed||[]),event.id],baseline:normalizedBaseline(now)};
+ garage.coins=Math.max(0,Number(garage.coins)||0)+Math.max(0,Number(event.reward?.coins)||0);
  for(const [id,n] of Object.entries(event.reward?.items||{})){const count=Math.max(0,Math.floor(Number(n)||0));if(count)addItem(garage,id,count);}
- if(event.reward?.car?.id)unlockCar(event.reward.car.id);
- if(event.reward?.skin&&!grantSeasonSkin(event.reward.skin.carId,event.reward.skin.skinId))return {ok:false,reason:'skin-storage-unavailable'};
- saveGarage(garage);state.claimed=[...(state.claimed||[]),event.id];state.index++;state.baseline=normalizedBaseline(now);saveState(key,state);
+ attachSeasonClaimReceipt(garage,current.family,event.id,nextState);
+ // Non-repeatable unlocks must be persisted and checked BEFORE the receipt.
+ if(event.reward?.car?.id){
+   unlockCar(event.reward.car.id);
+   if(!isCarUnlocked(event.reward.car.id))return {ok:false,reason:'storage-unavailable'};
+ }
+ if(event.reward?.skin&&!grantSeasonSkin(event.reward.skin.carId,event.reward.skin.skinId))
+   return {ok:false,reason:'storage-unavailable'};
+ let saved=false,storageFailure=null;
+ for(let attempt=0;attempt<2&&!saved;attempt++){
+   try{
+     saveGarage(garage);
+     const receipt=seasonClaimReceipt(loadGarage(),current.family);
+     saved=receipt?.index===nextState.index&&receipt?.eventId===event.id;
+   }catch(error){
+     storageFailure=error;
+     // Make room only by releasing cheap downloadable/rebuildable caches.
+     // NEVER discard ghosts or player progress to make a claim work.
+     if(attempt!==0||!isStorageQuotaError(error)||
+        !reclaimReplaceableSeasonCaches())break;
+   }
+ }
+ if(!saved){
+   console.warn('[season] reward NOT confirmed in storage; no claim',storageFailure);
+   return {ok:false,reason:'storage-unavailable'};
+ }
+ // This key is a convenience view. If its write fails, the durable receipt
+ // still advances the season, survives reload and forbids a duplicate grant.
+ const stateSaved=saveState(key,nextState);
+ const recovered=loadState(key);
+ if(recovered.index!==nextState.index)return {ok:false,reason:'storage-unavailable'};
  // Immediately activate the next stage before the player races again.
- const next=defs[state.index];
+ const next=defs[nextState.index];
  syncCleanLapMissionObjectives(next?current.family+':'+next.id:null,next?.objective);
- const result={ok:true,event,nextIndex:state.index,family:current.family};
+ const result={ok:true,event,nextIndex:nextState.index,family:current.family,
+   recoveredFromReceipt:!stateSaved};
  try{window.dispatchEvent(new CustomEvent('tdr:seasonRewardClaimed',{detail:result}));}catch{}
  return result;
 }

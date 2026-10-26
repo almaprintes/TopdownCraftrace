@@ -108,7 +108,15 @@ export class SeasonScene extends Phaser.Scene {
     root.dataset.tdrWalletPending='1';
     try{
       const result=claimCurrentRaceEvent();
-      if(!result?.ok)return;
+      if(!result?.ok){
+        if(result?.reason==='storage-unavailable'){
+          const english=getLanguage()==='en';
+          window.alert(english
+            ?'The reward was not confirmed on your device. No new claim was granted. Check available storage and retry; do not clear game data.'
+            :'No se ha podido guardar la recompensa en este dispositivo. No se ha confirmado un nuevo cobro. Comprueba el espacio disponible y vuelve a intentarlo; no borres los datos del juego.');
+        }
+        return;
+      }
       const amount=Math.max(0,Math.floor(Number(result.event?.reward?.coins)||0));
       if(amount>0){
         const english=getLanguage()==='en';
