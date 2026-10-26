@@ -217,6 +217,32 @@ export async function getMyRaceControlProfile(){
   return Array.isArray(rows)?rows[0]||null:rows||null;
 }
 
+// Time-matched rivals for large leaderboards. Returns bounded metadata ONLY;
+// expensive compact ghost payloads remain on the existing rewarded, on-demand
+// getRaceControlGhost(record_ref) endpoint. No account creation per row.
+export async function getRaceControlNearbyGhostRivals({trackId,referenceMs,minGapMs=1,maxGapMs=3000,limit=8}){
+  const id=String(trackId||'').trim();
+  const time=Math.round(Number(referenceMs)||0);
+  const min=Math.round(Number(minGapMs)||0),max=Math.round(Number(maxGapMs)||0);
+  const amount=Math.round(Number(limit)||0);
+  if(!id||id.length>80||time<1001||time>3600000||
+     min<1||max<min||max>120000||amount<1||amount>12)
+    throw new Error('Rango de rivales no válido');
+  const s=await activeSession();
+  const rows=await request('/rest/v1/rpc/get_race_control_nearby_ghosts',{
+    method:'POST',token:s.access_token,
+    body:{p_track_id:id,p_reference_ms:time,
+      p_min_gap_ms:min,p_max_gap_ms:max,p_limit:amount}
+  });
+  return (Array.isArray(rows)?rows:[]).filter(row=>
+    row?.ghost_available===true&&
+    typeof row?.record_ref==='string'&&
+    Number(row?.best_time_ms)>1000&&
+    Number(row?.delta_ms)>0&&
+    Number(row?.delta_ms)<=max
+  ).slice(0,amount);
+}
+
 // One server-backed badge lookup per circuit, never per ranked row.
 // A verified record_ref is authoritative for authenticated leaderboard rows;
 // public snapshots have no record_ref, so require the exact server-supplied

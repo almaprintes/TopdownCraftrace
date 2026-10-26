@@ -8,6 +8,7 @@ import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
 import { REWARDED_PLACEMENTS, raceControlGhostClaimId, verifiedReward } from '../monetization/rewardedActions.js';
 import { setOnlineGhostChallenge } from '../online/onlineGhostSession.js';
 import { findExactLocalPbReplay, matchesExactLocalReplay } from '../tracks/exactLocalReplay.js';
+import { installNearbyRivalsPanel } from '../ui/raceControlNearbyRivalsPanel.js';
 
 const SESSION_KEY='tdr2:statsNativeReplay';
 const RETURN_TRACK_KEY='tdr2:statsReturnTrack';
@@ -58,6 +59,54 @@ export class StatsScene extends ReplayStatsScene{
       .br-watch{border:1px solid #55eaff;background:rgba(20,75,91,.38);color:#fff;font-weight:1000;cursor:pointer}.br-watch:hover,.br-watch:active{background:#17475a}.br-pb .br-watch{margin-top:5px;height:28px;padding:0 10px;font-size:8px}.br-online-actions{display:grid;grid-template-columns:30px minmax(0,1fr);gap:4px;align-items:center}.br-online-actions .br-watch{height:42px;padding:0;font-size:12px}.br-online-actions .br-vs{min-width:0;width:100%}
       @media(max-height:430px){.br-native-monitor{min-height:0!important;height:auto!important}.br-native-screen{height:252px}.br-native-monitor .br-monitor-head{height:44px}.br-replay-modal{padding:5px}.br-replay-modal__screen{height:300px;min-height:0;padding-bottom:0}.br-replay-modal__head{height:40px}.br-tel-bottom{bottom:0;height:50px}.br-tel-card{padding:6px 8px}.br-tel-row{padding-top:2px;margin-top:2px}}
     `;
+    s.textContent+=`
+      /* Time-based opponents — modern Race Control competition cards. */
+      .br-grid-online .br-nearby{padding:12px 14px 13px;min-height:0;
+        background:linear-gradient(120deg,rgba(6,32,51,.99),rgba(5,14,28,.98));
+        border:1px solid rgba(67,196,235,.38);border-radius:13px;
+        box-shadow:inset 0 1px rgba(94,239,255,.13),0 9px 22px rgba(0,0,0,.28);}
+      .br-nearby-head{display:flex;align-items:center;flex-wrap:wrap;gap:11px;margin-bottom:11px}
+      .br-nearby-icon{display:grid;place-items:center;width:40px;height:40px;
+        border:1px solid #58dfff;border-radius:11px;background:#0a3448;color:#68f1ff;
+        font-size:27px;font-weight:900}
+      .br-nearby-title{display:flex;flex-direction:column;gap:2px;flex:1;min-width:175px}
+      .br-nearby-title small{color:#56dcff;font-size:7px;font-weight:1000;letter-spacing:.14em}
+      .br-nearby-title strong{font-size:clamp(16px,2vw,22px);color:#fff;letter-spacing:.025em;line-height:1.05}
+      .br-nearby-title span{color:#9cb6c8;font-size:9px;font-weight:700}
+      .br-nearby-filters{display:flex;gap:4px}
+      .br-nearby-filters button{padding:8px 11px;border:1px solid #315773;
+        border-radius:7px;background:#0d2032;color:#89b5d0;font:900 10px system-ui;
+        cursor:pointer;touch-action:manipulation}
+      .br-nearby-filters button.active{color:#061823;background:#58e7ff;border-color:#58e7ff;
+        box-shadow:0 0 15px rgba(88,231,255,.2)}
+      .br-nearby-results{display:grid;gap:5px;max-height:260px;overflow:auto}
+      .br-nearby-message{margin:0;padding:15px 12px;border:1px dashed #426278;
+        background:#0b2131;border-radius:7px;color:#b2cadd;font:800 11px/1.4 system-ui}
+      .br-nearby-rival{display:grid;grid-template-columns:42px minmax(100px,1fr) minmax(92px,auto) auto;
+        gap:9px;align-items:center;padding:7px 10px;
+        background:linear-gradient(90deg,#0a2639,#081725);
+        border:1px solid #244459;border-radius:10px}
+      .br-nearby-car{display:grid;place-items:center;width:36px;height:33px;
+        background:#102d3c;border-radius:7px;font-size:20px}
+      .br-nearby-pilot{min-width:0}.br-nearby-pilot strong{display:block;max-width:100%;
+        overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff;font-size:12px}
+      .br-nearby-pilot small{display:block;color:#729db7;font:800 8px system-ui;
+        overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .br-nearby-time{text-align:right}.br-nearby-time strong{display:block;color:#fbf4e3;font-size:15px;
+        font-variant-numeric:tabular-nums;white-space:nowrap}
+      .br-nearby-time small{display:block;color:#67f0a5;font:900 9px system-ui;white-space:nowrap}
+      .br-nearby-actions{display:flex;gap:5px}
+      .br-nearby-actions button{min-width:48px;min-height:34px;padding:7px 9px;border-radius:7px;
+        font:900 9px system-ui;white-space:nowrap;cursor:pointer;touch-action:manipulation}
+      .br-nearby-replay{border:1px solid #426d8a;color:#e6f7ff;background:#132e45}
+      .br-nearby-vs{border:1px solid #66eaff;color:#d5f9ff;background:#07506b}
+      .br-nearby-actions button:disabled{opacity:.55}
+      @media(max-width:1100px){.br-nearby-head{gap:6px}.br-nearby-filters{width:100%}
+        .br-nearby-filters button{flex:1}.br-nearby-rival{grid-template-columns:30px minmax(65px,1fr) auto auto;gap:5px;padding:5px}
+        .br-nearby-car{width:27px;font-size:17px}.br-nearby-actions button{padding:6px;min-width:38px;font-size:8px}}
+      @media(max-height:430px){.br-nearby-results{max-height:156px}.br-nearby-rival{min-height:34px}
+        .br-nearby-head{margin-bottom:6px}.br-nearby-icon{width:30px;height:30px;font-size:19px}}
+    `;
     this._root.appendChild(s);
   }
 
@@ -65,6 +114,10 @@ export class StatsScene extends ReplayStatsScene{
     this._closeReplayModal();
     super._renderBroadcastRecords(trackId);
     this._installReplayModalActions(trackId);
+    const actualTrackId=this._raceControlRenderedTrack||trackId;
+    const selected=this._getSelectedRecord?.(actualTrackId)||
+      {trackId:actualTrackId,bestLapMs:0};
+    if(actualTrackId)this._installTimeMatchedRivals(selected);
   }
 
   _installReplayModalActions(trackId){
@@ -115,6 +168,46 @@ export class StatsScene extends ReplayStatsScene{
       vs.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();if(vs.dataset.brVsLaunching==='1')return;vs.dataset.brVsLaunching='1';const original=vs.innerHTML;try{if(!await this._ensureOnlineGhostReward(ref))return;vs.textContent='…';let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Ghost unavailable');cacheOnlineGhost(ref,data,ghost);}this._launchOnlineGhostChallenge(ref,data,ghost);}catch(err){console.error('[race-control] VS ghost launch failed',err);vs.innerHTML=original;}finally{vs.dataset.brVsLaunching='0';}});
       originalVs.replaceWith(actions);actions.append(watch,vs);
     });
+  }
+
+  _installTimeMatchedRivals(selected){
+    installNearbyRivalsPanel(this,{
+      trackId:selected.trackId,bestLapMs:selected.bestLapMs,
+      onReplay:async rival=>{
+        const loaded=await this._loadNearRivalGhost(rival,selected.trackId);
+        if(!loaded)return;
+        this._showRaceControlReplayModal({
+          trackId:selected.trackId,
+          selectedLap:{carId:rival.car_id,lapMs:rival.best_time_ms}
+        },loaded.ghost,t('replay.onlineReplay'));
+      },
+      onChallenge:async rival=>{
+        const loaded=await this._loadNearRivalGhost(rival,selected.trackId);
+        if(loaded)this._launchOnlineGhostChallenge(rival.record_ref,loaded.data,loaded.ghost);
+      }
+    });
+  }
+
+  async _loadNearRivalGhost(rival,trackId){
+    const ref=String(rival?.record_ref||'');
+    if(!ref||!await this._ensureOnlineGhostReward(ref))return null;
+    const hit=cachedOnlineGhost(ref);
+    let data=hit?.data,ghost=hit?.ghost;
+    if(!ghost){
+      const response=await getRaceControlGhost(ref);
+      data=Array.isArray(response)?response[0]:response;
+      ghost=onlineGhostFromRow(data);
+    }
+    const valid=data?.track_id===trackId &&
+      Number(data?.best_time_ms)===Number(rival?.best_time_ms) &&
+      String(data?.car_id||'')===String(rival?.car_id||'') &&
+      String(data?.record_ref||'')===ref &&
+      String(ghost?.trackKey||'')===trackId &&
+      Math.abs(Number(ghost?.lapMs)-Number(rival.best_time_ms))<=2 &&
+      Array.isArray(ghost?.samples)&&ghost.samples.length>=5;
+    if(!valid)throw new Error('La repetición ya no coincide con el rival. Actualiza el ranking.');
+    if(!hit)cacheOnlineGhost(ref,data,ghost);
+    return {data,ghost};
   }
 
   async _ensureOnlineGhostReward(ref){
