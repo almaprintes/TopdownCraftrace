@@ -1,5 +1,5 @@
-// Self-declared racing region. Never guess from GPS, IP, device language,
-// current position, or profile nickname. ISO country codes ensure stable joins.
+// Racing region is self-declared. Device hints reorder choices only, without
+// saving or claiming the player's real location. ISO codes ensure stable joins.
 const CONTINENTS=Object.freeze([
   ['AF','África','Africa'],['AS','Asia','Asia'],['EU','Europa','Europe'],
   ['NA','América del Norte y Central','North & Central America'],
@@ -20,6 +20,56 @@ const SPAIN_REGIONS=Object.freeze([
   ['ES-RI','La Rioja'],['ES-VC','Comunitat Valenciana']
 ]);
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+
+const CONTINENT_FOR_HINT_COUNTRY=Object.freeze({
+  ES:'EU',PT:'EU',GB:'EU',FR:'EU',DE:'EU',IT:'EU',NL:'EU',IE:'EU',PL:'EU',UA:'EU',
+  US:'NA',CA:'NA',MX:'NA',CO:'SA',PE:'SA',BR:'SA',AR:'SA',CL:'SA',
+  JP:'AS',CN:'AS',HK:'AS',IN:'AS',AE:'AS',KR:'AS',SG:'AS',
+  EG:'AF',ZA:'AF',AU:'OC',NZ:'OC'
+});
+const COUNTRY_BY_TIME_ZONE=Object.freeze({
+  'Atlantic/Canary':'ES','Europe/Madrid':'ES','Africa/Ceuta':'ES',
+  'Europe/Lisbon':'PT','Europe/London':'GB','Europe/Paris':'FR',
+  'Europe/Berlin':'DE','Europe/Rome':'IT','Europe/Amsterdam':'NL',
+  'Europe/Dublin':'IE','Europe/Warsaw':'PL',
+  'America/New_York':'US','America/Chicago':'US','America/Denver':'US',
+  'America/Los_Angeles':'US','America/Toronto':'CA',
+  'America/Mexico_City':'MX','America/Bogota':'CO',
+  'America/Lima':'PE','America/Sao_Paulo':'BR',
+  'America/Argentina/Buenos_Aires':'AR','America/Santiago':'CL',
+  'Asia/Tokyo':'JP','Asia/Shanghai':'CN','Asia/Hong_Kong':'HK',
+  'Asia/Kolkata':'IN','Asia/Dubai':'AE','Asia/Seoul':'KR',
+  'Asia/Singapore':'SG','Africa/Cairo':'EG',
+  'Africa/Johannesburg':'ZA','Australia/Sydney':'AU',
+  'Pacific/Auckland':'NZ'
+});
+// Suggestions reorder only: no GPS, IP, fetch, storage or automatic selection.
+export function suggestedRaceRankingGeography({timeZone=null,languages=null}={}){
+  let zone='';
+  try{zone=String(timeZone??Intl.DateTimeFormat().resolvedOptions().timeZone??'');}catch{}
+  let locales=languages;
+  if(!Array.isArray(locales)){
+    try{locales=[navigator.language,...(navigator.languages||[])];}catch{locales=[];}
+  }
+  let localeCountry='';
+  for(const locale of locales){
+    const parts=String(locale??'').replace(/_/g,'-').toUpperCase().split('-').slice(1);
+    localeCountry=parts.find(part=>/^[A-Z]{2}$/.test(part)&&COUNTRY_CODES.includes(part))||'';
+    if(localeCountry)break;
+  }
+  const candidate=COUNTRY_BY_TIME_ZONE[zone]||localeCountry;
+  const countryCode=COUNTRY_CODES.includes(candidate)?candidate:'';
+  const continentCode=CONTINENT_FOR_HINT_COUNTRY[countryCode]||
+    (zone.startsWith('Europe/')?'EU':zone.startsWith('Africa/')?'AF':
+     zone.startsWith('Asia/')?'AS':zone.startsWith('Australia/')?'OC':'');
+  return {continentCode,countryCode,regionCode:zone==='Atlantic/Canary'&&countryCode==='ES'?'ES-CN':''};
+}
+function suggestedFirst(rows,code){
+  if(!code)return rows;
+  const row=rows.find(option=>option[0]===code);
+  return row?[row,...rows.filter(option=>option[0]!==code)]:rows;
+}
+
 export const PILOT_UNKNOWN_REGION='XX';
 export function hasDeclaredRaceGeography(profile){
   return !!profile&&CONTINENTS.some(a=>a[0]===profile.continent_code)&&COUNTRY_CODES.includes(profile.country_code);
@@ -50,8 +100,9 @@ export function raceRankingFieldsHtml(en=false){
   const langs=en?'en':'es';
   let displayNames=null;
   try{displayNames=new Intl.DisplayNames([langs],{type:'region'});}catch{}
-  const countryOptions=COUNTRY_CODES.map(code=>[code,displayNames?.of(code)||code])
-    .sort((a,b)=>a[1].localeCompare(b[1],langs))
+  const suggestion=suggestedRaceRankingGeography();
+  const countryOptions=suggestedFirst(COUNTRY_CODES.map(code=>[code,displayNames?.of(code)||code])
+    .sort((a,b)=>a[1].localeCompare(b[1],langs)),suggestion.countryCode)
     .map(([code,name])=>'<option value="'+code+'">'+escapeHtml(name)+' ('+code+')</option>').join('');
   return '<div data-ranking-geography style="display:grid;gap:6px;margin:12px 0 10px">' +
     '<div style="font:950 10px system-ui;letter-spacing:.08em;color:#62eaff">'+
@@ -60,12 +111,12 @@ export function raceRankingFieldsHtml(en=false){
     (en?'Choose your racing location to enter continental, country and regional rankings. You decide what to share; no GPS is used.':'Indica dónde quieres competir para aparecer en las tablas por continente, país y región. Tú eliges qué compartir; no usamos GPS.')+'</div>'+
     '<label style="color:#c6e5f1;font:800 10px system-ui">'+(en?'Continent':'Continente')+'</label>'+
     '<select data-geo-continent aria-label="'+(en?'Continent':'Continente')+'" style="'+fieldStyle+'"><option value="">'+(en?'Choose continent':'Elige continente')+'</option>'+
-    CONTINENTS.map(c=>'<option value="'+c[0]+'">'+escapeHtml(c[en?2:1])+'</option>').join('')+'</select>'+
+    suggestedFirst(CONTINENTS,suggestion.continentCode).map(c=>'<option value="'+c[0]+'">'+escapeHtml(c[en?2:1])+'</option>').join('')+'</select>'+
     '<label style="color:#c6e5f1;font:800 10px system-ui">'+(en?'Country':'País')+'</label>'+
     '<select data-geo-country aria-label="'+(en?'Country':'País')+'" style="'+fieldStyle+'"><option value="">'+(en?'Choose country':'Elige país')+'</option>'+countryOptions+'</select>'+
     '<label style="color:#c6e5f1;font:800 10px system-ui">'+(en?'Region (optional)':'Región / comunidad autónoma (opcional)')+'</label>'+
     '<select data-geo-es-region aria-label="'+(en?'Autonomous community':'Comunidad autónoma')+'" hidden style="'+fieldStyle+'"><option value="">'+(en?'Choose region or skip':'Elige región u omite')+'</option>'+
-    SPAIN_REGIONS.map(([code,name])=>'<option value="'+code+'">'+escapeHtml(name)+'</option>').join('')+'</select>'+
+    suggestedFirst(SPAIN_REGIONS,suggestion.regionCode).map(([code,name])=>'<option value="'+code+'">'+escapeHtml(name)+'</option>').join('')+'</select>'+
     '<input data-geo-other-region aria-label="'+(en?'State or province':'Provincia o región')+'" maxlength="36" autocomplete="off" placeholder="'+(en?'State/province name or code':'Provincia, estado o región')+'" style="'+fieldStyle+'" />'+
     '<div style="color:#8da6b6;font:10px/1.35 system-ui">'+(en?'Region is optional. Without it you still appear in Global, Continent and Country; not Region.':'La región es opcional. Sin ella aparecerás en Global, Continente y País, pero no en Región.')+'</div></div>';
 }

@@ -4,6 +4,7 @@ import {raceControlServerTrackId,decodeRaceControlServerTrackId} from './raceCon
 // Auth uses the GoTrue protocol (open source, compatible with self-hosting).
 import { playerBackendConfig } from './backendConfig.js';
 let api=null;
+let activationPromise=null;
 // Single connection configuration allows switching to self-hosted GoTrue + Postgres.
 const cfg=()=>playerBackendConfig();
 const headers=(key,token)=>({'apikey':key,'Authorization':`Bearer ${token||key}`,'Content-Type':'application/json'});
@@ -27,7 +28,7 @@ async function request(path,{method='GET',body,token}={}){
   return data;
 }
 
-export async function activateRaceControlOnline(){
+async function performRaceControlActivation(){
   if(sessionUsable(api?.session))return api;
   const old=readSession();
   if(sessionUsable(old)){api={session:old};return api;}
@@ -51,6 +52,14 @@ export async function activateRaceControlOnline(){
   const session=normalizeSession(await request('/auth/v1/signup',{method:'POST',body:{}}));
   if(!sessionUsable(session))throw new Error('Anonymous session unavailable');
   saveSession(session);api={session};return api;
+}
+
+// A refresh token must never be used by concurrent callers.
+export async function activateRaceControlOnline(){
+  if(sessionUsable(api?.session))return api;
+  if(!activationPromise)activationPromise=performRaceControlActivation();
+  try{return await activationPromise;}
+  finally{activationPromise=null;}
 }
 
 // All account operations reuse the existing Race Control Supabase user ID.

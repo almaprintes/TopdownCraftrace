@@ -48,6 +48,14 @@ const expired={access_token:'old',refresh_token:'refresh-player-a',user:{id:'pla
   assert.equal(s.calls.filter(x=>x.includes('/auth/v1/signup')).length,0);
 }
 {
+  const s=await scenario({stored:expired,refresh:'success',signup:false});
+  const [a,b,c]=await Promise.all([s.activate(),s.activate(),s.activate()]);
+  assert.equal(a.session.user.id,'player-a');
+  assert.equal(b.session.user.id,a.session.user.id);
+  assert.equal(c.session.user.id,a.session.user.id);
+  assert.equal(s.calls.filter(x=>x.includes('/auth/v1/token?')).length,1,'single-flight refresh');
+}
+{
   const s=await scenario({stored:{...expired,expires_at:Math.floor(Date.now()/1000)+3600},signup:false});
   assert.equal((await s.activate()).session.user.id,'player-a');
   assert.equal(s.calls.length,0);
@@ -62,4 +70,4 @@ const expired={access_token:'old',refresh_token:'refresh-player-a',user:{id:'pla
   await assert.rejects(s.activate(),/No se pudo recuperar tu sesión/);
   assert.equal(s.calls.filter(x=>x.includes('/auth/v1/signup')).length,0);
 }
-console.log('Anonymous auth identity regression smoke: OK (5 scenarios, zero real requests)');
+console.log('Anonymous auth identity regression smoke: OK (6 scenarios, zero real requests)');

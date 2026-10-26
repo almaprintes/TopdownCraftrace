@@ -91,7 +91,7 @@ export function openCloudAccountUi({host=null}={}){
     if(stage==='home')root.querySelector('[data-advanced]').open=false;
     setNotice('');
   };
-  const showConnectionError=()=>{
+  const showConnectionError=(error)=>{
     creatorBadge.hidden=true;idLine.textContent='Identidad sin comprobar';
     // Keep local progress visible even when Auth or cloud storage is offline.
     let local=null;
@@ -100,11 +100,12 @@ export function openCloudAccountUi({host=null}={}){
     for(const key of ['protect','backup','restore','login-open'])
       root.querySelector('[data-action="'+key+'"]').hidden=true;
     root.querySelector('[data-action="retry"]').hidden=false;
+    const sessionLost=/No se pudo recuperar tu sesión|No se pudo renovar tu cuenta|La sesión de tu cuenta caducó/.test(String(error?.message||''));
     state.dataset.state='local';
     root.querySelector('[data-cloud-icon]').textContent='☁';
-    root.querySelector('[data-cloud-title]').textContent='Tu partida sigue en este móvil';
+    root.querySelector('[data-cloud-title]').textContent=sessionLost?'Tu sesión online requiere recuperación':'Tu partida sigue en este móvil';
     root.querySelector('[data-cloud-description]').textContent=
-      'Ahora no podemos conectar con la nube. Puedes seguir jugando y volver a intentarlo.';
+      sessionLost?'Supabase ha rechazado la renovación. Tu partida local sigue intacta y no se creará otra identidad automáticamente.':'Ahora no podemos conectar con la nube. Puedes seguir jugando y volver a intentarlo.';
     root.querySelector('[data-cloud-tip]').textContent=
       'No se ha cambiado ni borrado tu progreso.';
     for(const key of ['backup-manual','restore-manual','export-cloud'])
@@ -184,8 +185,10 @@ export function openCloudAccountUi({host=null}={}){
         for(const b of root.querySelectorAll('button'))b.disabled=false;
         try{await refresh();}catch(error){
           // Never leave the account stuck on "Comprobando tu partida".
-          showConnectionError();
-          setNotice('No se pudo conectar con la nube. Tu partida local sigue intacta.',false);
+          showConnectionError(error);
+          setNotice(/No se pudo recuperar tu sesión|No se pudo renovar tu cuenta|La sesión de tu cuenta caducó/.test(String(error?.message||''))
+            ?'Sesión online no válida. No borres datos ni desinstales TDR; conserva tu partida para recuperarla.'
+            :'No se pudo conectar con la nube. Tu partida local sigue intacta.',false);
         }
       }
     }

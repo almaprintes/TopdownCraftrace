@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {resolveRaceRankingLocation,hasDeclaredRaceGeography,invalidateLocalRaceRankingCaches,raceRankingFieldsHtml} from '../src/game/social/pilotRankingGeography.js';
+import {resolveRaceRankingLocation,hasDeclaredRaceGeography,invalidateLocalRaceRankingCaches,raceRankingFieldsHtml,suggestedRaceRankingGeography} from '../src/game/social/pilotRankingGeography.js';
 const valid={continentCode:'EU',countryCode:'ES',regionCode:'ES-CN'};
 assert.deepEqual(resolveRaceRankingLocation(valid),valid,'Canarias must use the existing ES-CN ranking group');
 assert.deepEqual(resolveRaceRankingLocation({continentCode:'EU',countryCode:'ES',regionCode:''}),{...valid,regionCode:'XX'},'Optional region only affects region table');
@@ -18,6 +18,15 @@ assert.match(html,/data-geo-es-region/);
 assert.match(html,/ES-CN/);
 assert.match(html,/Canarias/);
 assert.match(html,/no usamos GPS/);
+assert.deepEqual(suggestedRaceRankingGeography({timeZone:'Atlantic/Canary',languages:['en-US']}),
+  {continentCode:'EU',countryCode:'ES',regionCode:'ES-CN'});
+assert.deepEqual(suggestedRaceRankingGeography({timeZone:'Europe/Paris',languages:['es-ES']}),
+  {continentCode:'EU',countryCode:'FR',regionCode:''});
+assert.deepEqual(suggestedRaceRankingGeography({timeZone:'Unknown/Unknown',languages:['pt-BR']}),
+  {continentCode:'SA',countryCode:'BR',regionCode:''});
+assert.deepEqual(suggestedRaceRankingGeography({timeZone:'Unknown/Unknown',languages:['es']}),
+  {continentCode:'',countryCode:'',regionCode:''});
+assert.match(html,/<select data-geo-country[^>]*><option value="">/);
 const m=new Map([['tdr2:leaderboardSnapshot:circuito-atlantico','cache'],['tdr2:leaderboardSnapshot:karting-tenerife','cache'],['tdr2:ttBest:circuito-atlantico','best'],['tdr2:onlineSession:v1','session']]);
 const storage={get length(){return m.size;},key:i=>[...m.keys()][i],removeItem:key=>m.delete(key)};
 invalidateLocalRaceRankingCaches(storage);
