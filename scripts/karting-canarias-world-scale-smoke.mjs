@@ -73,7 +73,12 @@ for(const [i,p] of runtimeEnv.collisionZones[0].points.entries()){
   assert.equal(p.x,q.x*f);assert.equal(p.y,q.y*f);
 }
 const loader=readFileSync('src/game/tracks/imageNativeRaceLoader.js','utf8');
-assert.match(loader,/scene\.add\.image\(x\*worldScale,y\*worldScale,key\)/);
+assert.match(loader,/const bounds=photoTileSeamlessBounds\(\{/,
+  'Native-photo sprites must calculate seam-safe, world-scaled bounds');
+assert.match(loader,/scene\.add\.image\(bounds\.x,bounds\.y,key\)/,
+  'Native-photo sprites must use the world-scaled seam-safe origin');
+assert.match(loader,/sprite\.setDisplaySize\(bounds\.width,bounds\.height\)/,
+  'Native-photo sprites must cover adjacent joins without changing track geometry');
 assert.match(loader,/sprite\.setScale\(displayScaleX,displayScaleY\)/);
 assert.match(loader,/scaledCanarias[\s\S]*?KARTING_CANARIAS_WORLD_SCALE/);
 assert.match(loader,/desc\.tiles\)\&\&desc\.tiles\.length/); // tiled source remains pixel-authored
