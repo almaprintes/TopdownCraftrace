@@ -312,6 +312,20 @@ export async function getRaceControlSnapshot(trackId){
   return applyRaceControlCreatorBadges(id,ranking);
 }
 
+// This snapshot marks the caller by authenticated UUID (is_me), never nickname.
+// Used as a no-ad preflight before attempting to submit a local best.
+export async function getMyRaceControlRecord(trackId){
+  const id=String(trackId||'').trim();
+  if(!id||id.length>80)throw new Error('Circuito no válido');
+  const s=await activeSession();
+  const rows=await request('/rest/v1/rpc/get_race_control_snapshot',{
+    method:'POST',token:s.access_token,body:{p_track_id:id}
+  });
+  if(!Array.isArray(rows))throw new Error('No se pudo verificar tu récord online. No se ha solicitado ningún anuncio.');
+  const own=rows.find(row=>row?.scope==='global'&&row?.is_me===true);
+  return own&&Number(own.best_time_ms)>0?own:null;
+}
+
 export async function getRaceControlGhost(recordRef){
   const online=await activateRaceControlOnline();
   const token=online?.session?.access_token;
