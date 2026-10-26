@@ -42,7 +42,7 @@ for(const x of [
  '¡ENHORABUENA! NUEVO RÉCORD PERSONAL',
  '¿Quieres publicarlo en la clasificación online?',
  'PUBLICAR · VER ANUNCIO','AHORA NO',
- 'getPilotProfile()','localRecordGhost(trackId,carId,best.lapMs)',
+ 'getPilotProfile()','localRecordGhost(trackId,carId,best.lapMs,scene?._tdrSessionExactPbReplay)',
  'if(!isRewardedAdAvailable()&&!adVerified)',
  'await ensureRaceControlPilotProfile()',
  'await showRewardedAd(scene,',
