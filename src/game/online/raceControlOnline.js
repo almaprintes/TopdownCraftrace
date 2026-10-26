@@ -12,6 +12,21 @@ const readSession=()=>{try{return JSON.parse(localStorage.getItem('tdr2:onlineSe
 const saveSession=s=>{try{localStorage.setItem('tdr2:onlineSession:v1',JSON.stringify(s));}catch{}};
 // Presence check does not refresh a token or contact Supabase.
 export function hasSavedRaceControlSession(){return Boolean(readSession()?.user?.id);}
+// Only an expired legacy anonymous session may be detached explicitly.
+// Never touch game progress, replays, coins, or server records.
+export function continueRejectedAnonymousSessionLocally(expectedUserId){
+  const old=readSession();
+  const id=String(expectedUserId||'');
+  if(!id||old?.user?.id!==id||old?.user?.is_anonymous!==true)
+    throw new Error('La identidad ha cambiado. No se ha desvinculado ninguna cuenta.');
+  if(sessionUsable(old)||sessionUsable(api?.session))
+    throw new Error('La sesión sigue activa. No se ha desvinculado ninguna cuenta.');
+  localStorage.setItem('tdr2:previousOnlineUserId:v1',id);
+  localStorage.removeItem('tdr2:onlineSession:v1');
+  if(readSession())throw new Error('No se pudo quitar la sesión anterior. No se ha tocado tu partida.');
+  api=null;
+  return {id,mode:'local'};
+}
 // GoTrue REST may omit expires_at; supabase-js normally adds it.
 const normalizeSession=s=>{
   if(!s||!s.access_token||!s.user?.id)return s;
@@ -26,7 +41,12 @@ async function request(path,{method='GET',body,token}={}){
   const {url,key}=cfg();if(!url||!key)throw new Error('Online backend not configured');
   const res=await fetch(`${url}${path}`,{method,headers:headers(key,token),body:body?JSON.stringify(body):undefined});
   const data=await res.json().catch(()=>null);
-  if(!res.ok)throw new Error(data?.msg||data?.message||data?.error_description||`Online HTTP ${res.status}`);
+  if(!res.ok){
+    const err=new Error(data?.msg||data?.message||data?.error_description||`Online HTTP ${res.status}`);
+    err.status=res.status;
+    err.code=data?.code||data?.error_code||data?.error||'';
+    throw err;
+  }
   return data;
 }
 
@@ -41,6 +61,16 @@ async function performRaceControlActivation(){
         saveSession(refreshed);api={session:refreshed};return api;
       }
     }catch(error){
+      // A rejected token is distinct from a network error. Legacy guests only.
+      const rejected=(error?.status===400||error?.status===401)&&
+        /refresh_token_not_found|refresh.token.not.found|invalid.refresh.token/i.test(
+          String(error?.code||'')+' '+String(error?.message||''));
+      if(rejected&&old?.user?.is_anonymous===true&&!old?.user?.email){
+        const revoked=new Error('No se pudo recuperar tu sesión de piloto. La renovación anterior fue rechazada.');
+        revoked.code='TDR_AUTH_REFRESH_REJECTED';
+        revoked.userId=old.user.id;
+        throw revoked;
+      }
       // Never silently create an anonymous player when a permanent login expires.
       if(old?.user?.email||old?.user?.is_anonymous===false)
         throw new Error('La sesión de tu cuenta caducó. Entra de nuevo con tu correo; la copia de la nube sigue a salvo.');

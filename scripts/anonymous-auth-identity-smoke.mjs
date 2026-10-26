@@ -23,6 +23,7 @@ async function scenario({stored=null,refresh='fail',signup=true}={}){
     const path=String(url);calls.push(path);
     if(path.includes('/auth/v1/token?')){
       if(refresh==='fail')return {ok:false,status:401,json:async()=>({message:'invalid refresh token'})};
+      if(refresh==='revoked')return {ok:false,status:400,json:async()=>({code:'refresh_token_not_found',message:'Invalid Refresh Token: Refresh Token Not Found'})};
       if(refresh==='success')return {ok:true,status:200,json:async()=>valid(stored.user.id)};
       return {ok:true,status:200,json:async()=>valid('other-id')};
     }
@@ -33,7 +34,7 @@ async function scenario({stored=null,refresh='fail',signup=true}={}){
     throw Error('Unexpected endpoint: '+path);
   };
   const module=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64')+'#'+Math.random());
-  return {activate:module.activateRaceControlOnline,calls,data};
+  return {activate:module.activateRaceControlOnline,leave:module.continueRejectedAnonymousSessionLocally,calls,data};
 }
 const expired={access_token:'old',refresh_token:'refresh-player-a',user:{id:'player-a',is_anonymous:true},expires_at:1};
 {
@@ -70,4 +71,28 @@ const expired={access_token:'old',refresh_token:'refresh-player-a',user:{id:'pla
   await assert.rejects(s.activate(),/No se pudo recuperar tu sesión/);
   assert.equal(s.calls.filter(x=>x.includes('/auth/v1/signup')).length,0);
 }
-console.log('Anonymous auth identity regression smoke: OK (6 scenarios, zero real requests)');
+{
+  const s=await scenario({stored:expired,refresh:'revoked',signup:false});
+  s.data.set('tdr2:garageFusion:v1',JSON.stringify({coins:750}));
+  const err=await s.activate().then(()=>null,e=>e);
+  assert.equal(err.code,'TDR_AUTH_REFRESH_REJECTED');
+  assert.equal(err.userId,'player-a');
+  assert.deepEqual(JSON.parse(s.data.get('tdr2:onlineSession:v1')),expired,'no silent detachment');
+  assert.throws(()=>s.leave('wrong-user'),/identidad ha cambiado/i);
+  assert.deepEqual(JSON.parse(s.data.get('tdr2:onlineSession:v1')),expired);
+  assert.deepEqual(s.leave('player-a'),{id:'player-a',mode:'local'});
+  assert.equal(s.data.has('tdr2:onlineSession:v1'),false);
+  assert.equal(s.data.get('tdr2:previousOnlineUserId:v1'),'player-a');
+  assert.deepEqual(JSON.parse(s.data.get('tdr2:garageFusion:v1')),{coins:750});
+  await assert.rejects(s.activate(),/PARTIDA_LOCAL_SIN_CUENTA/);
+  assert.equal(s.calls.filter(x=>x.includes('/auth/v1/signup')).length,0);
+}
+{
+  const permanent={...expired,user:{id:'player-b',email:'user@example.test',is_anonymous:false}};
+  const s=await scenario({stored:permanent,refresh:'revoked',signup:false});
+  const err=await s.activate().then(()=>null,e=>e);
+  assert.notEqual(err?.code,'TDR_AUTH_REFRESH_REJECTED','never offer guest detachment to a permanent account');
+  assert.throws(()=>s.leave('player-b'),/identidad ha cambiado/);
+  assert.ok(s.data.has('tdr2:onlineSession:v1'));
+}
+console.log('Auth local-first regression smoke: OK (8 scenarios, no real requests)');
