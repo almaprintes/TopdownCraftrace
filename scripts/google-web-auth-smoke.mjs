@@ -21,6 +21,9 @@ globalThis.fetch=async(url,options)=>{
 };
 const pendingKey='tdr2:googlePkce:v1';
 const start=async()=>{await auth.startGoogleWebSignIn();const p=JSON.parse(sessionStorage.getItem(pendingKey));return {code:'single-use-code',state:p.nonce};};
+localStorage.setItem('tdr2:previousOnlineUserId:v1','old-detached-id');
+await assert.rejects(start,/identidad antigua/);
+localStorage.removeItem('tdr2:previousOnlineUserId:v1');
 let callback=await start();
 assert.equal(target.searchParams.get('provider'),'google');
 assert.equal(target.searchParams.get('code_challenge_method'),'s256');

@@ -13,6 +13,8 @@ export function googleWebAvailable(){
 export async function startGoogleWebSignIn(){
   if(!googleWebAvailable())throw new Error('Google está disponible en la DEV web. El acceso nativo se preparará por separado.');
   const expectedId=savedRaceControlIdentity();
+  if(!expectedId&&localStorage.getItem('tdr2:previousOnlineUserId:v1'))
+    throw new Error('Este dispositivo conserva la referencia de una identidad antigua. Para mantener su ID necesitas una sesión válida de ese piloto. No se ha creado otra cuenta ni modificado tu partida.');
   let linking=false,token=null;
   if(expectedId&&!savedGoogleWebIdentity()){
     // A nickname is never proof of ownership: require the old live session.
