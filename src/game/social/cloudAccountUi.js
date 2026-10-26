@@ -216,9 +216,11 @@ export function openCloudAccountUi({host=null}={}){
         try{await refresh();}catch(error){
           // Never leave the account stuck on "Comprobando tu partida".
           showConnectionError(error);
-          setNotice(/No se pudo recuperar tu sesión|No se pudo renovar tu cuenta|La sesión de tu cuenta caducó/.test(String(error?.message||''))
-            ?'Sesión online no válida. No borres datos ni desinstales TDR; conserva tu partida para recuperarla.'
-            :'No se pudo conectar con la nube. Tu partida local sigue intacta.',false);
+          setNotice(error?.code==='TDR_AUTH_REFRESH_REJECTED'
+            ?'Tu sesión antigua ya no funciona. Puedes continuar con tu partida local.'
+            :/No se pudo recuperar tu sesión|No se pudo renovar tu cuenta|La sesión de tu cuenta caducó/.test(String(error?.message||''))
+              ?'Sesión online no válida. No borres datos ni desinstales TDR; conserva tu partida para recuperarla.'
+              :'No se pudo conectar con la nube. Tu partida local sigue intacta.',error?.code==='TDR_AUTH_REFRESH_REJECTED');
         }
       }
     }
