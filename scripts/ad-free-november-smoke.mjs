@@ -11,6 +11,8 @@ const storeScene=src('src/game/scenes/MenuRewardedAdsScene.js');
 const legacyStore=src('src/game/scenes/MenuStoreScene.js');
 const record=src('src/game/ui/sessionRecordPublishOffer.js');
 const loot=src('src/game/scenes/RaceSessionRewardsScene.js');
+const broadcast=src('src/game/scenes/StatsBroadcastScene.js');
+const ghost=src('src/game/scenes/StatsBroadcastRealReplayScene.js');
 const recycler=src('src/game/ui/MaterialExchangeDom.js');
 const banner=src('src/game/ui/BlackFridayPromoUi.js');
 const lobby=src('src/game/ui/LobbyDomUi.js');
@@ -30,10 +32,12 @@ assert.match(policy,/export function verifiedReward/);
 assert.match(policy,/export function rewardActionAllowed/);
 assert.match(policy,/result\?\.verified===false/);
 for(const [name,source] of [['DOM store',store],['Phaser store',storeScene],
-  ['legacy store',legacyStore],['record',record],['postrace x2',loot],['recycler',recycler]]){
+  ['legacy store',legacyStore],['record',record],['ranking publication',broadcast],['ghost downloads',ghost],['postrace x2',loot],['recycler',recycler]]){
   assert.match(source,/rewardActionAllowed/,`${name} must accept explicit promo grants`);
 }
 assert.match(record,/promotionGranted/);
+assert.match(broadcast,/promotionGranted/);
+assert.match(ghost,/if\(verifiedReward\(ad\)\)localStorage\.setItem/);
 assert.match(record,/REINTENTAR PUBLICACIÓN · GRATIS/);
 assert.match(record,/submitRaceControlRecordWithGhost/);
 assert.match(record,/submitRaceControlRecordWithoutGhost/);
