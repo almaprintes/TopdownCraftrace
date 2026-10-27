@@ -66,7 +66,7 @@ export function mountRaceControlHub(root,{onAction,onExit,language='es'}={}) {
   const car4=asset('cars/lobby/avenir_gripline.webp');
   root.innerHTML=`<div class="tdr-rc2" role="region" aria-label="RACE CONTROL 2.0">
     <header class="rc2-head">
-      <div class="rc2-brand"><img src="${asset('logo.webp')}" alt="TOP DOWN RACE"><span>CRA FTRACE</span></div>
+      <div class="rc2-brand"><img src="${asset('logo.webp')}" alt="TOP DOWN RACE"><span>CRAFTRACE</span></div>
       <div class="rc2-headline"><h1>RACE CONTROL</h1><div class="rc2-stripes" aria-hidden="true"></div><p>${l.subtitle}</p></div>
       <div class="rc2-headside"><span class="rc2-test-label">${l.build}</span><button type="button" class="rc2-back" data-rc2-action="exit" aria-label="${l.exit}">‹ ${l.back}</button></div>
     </header>
