@@ -204,7 +204,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
       const autoReady=account.socialProviders?.includes('google')&&!!cloudConfirmedMarker(account.id);
       desc.textContent=backup.existing?
         'Última copia: '+dateText(backup.updatedAt)+' · Revisión '+backup.revision+
-        (autoReady?'. Guardado automático activado.':'. Confirma una actualización para activar el guardado automático.'):
+        (autoReady?'. Guardado automático activado.':account.socialProviders?.includes('google')?'. Confirma una actualización para activar el guardado automático.':'. Actualízala después de jugar.'):
         'Todavía no existe una copia online de este piloto.';
       if(local.meaningful)show('backup',backup.existing?'ACTUALIZAR COPIA':'GUARDAR COPIA');
       if(!local.pilotName||!local.meaningful)show('login-open','YA TENÍA UNA PARTIDA');
