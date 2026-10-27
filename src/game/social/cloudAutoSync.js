@@ -11,7 +11,6 @@ import {
 
 export const AUTO_CLOUD_MIN_WRITE_MS=5*60*1000;
 let installed=false,scheduled=null,inFlight=false,blocked='',lastWrite=0;
-let lastReceiptId='';
 const publish=(state,message='')=>{
   try{
     window.__tdrCloudAutoStatus={state,message,at:Date.now()};
@@ -94,7 +93,6 @@ export function installCloudAutoSync(){
     if(!id||!cloudConfirmedMarker(id))return;
     blocked='';
     lastWrite=Date.now();
-    lastReceiptId=id;
     schedule(3500);
   });
   window.addEventListener('tdr:cloud-checkpoint',()=>schedule(3500));
