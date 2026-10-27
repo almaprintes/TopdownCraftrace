@@ -7,7 +7,8 @@ import {ensureRaceControlPilotProfile} from '../online/onlinePilotIdentity.js';
 import {verifiedRecordPublishClaims as verifiedPublishClaims} from '../online/verifiedRecordPublishClaims.js';
 import {getPilotProfile} from '../social/pilotProfile.js';
 import {isRewardedAdAvailable,showRewardedAd} from '../monetization/RewardedAdsProvider.js';
-import {REWARDED_PLACEMENTS,raceControlPublishClaimId,verifiedReward} from '../monetization/rewardedActions.js';
+import {isAdFreePromoActive} from '../monetization/adFreeNovember.js';
+import {REWARDED_PLACEMENTS,raceControlPublishClaimId,verifiedReward,rewardActionAllowed} from '../monetization/rewardedActions.js';
 
 // Preserve verified ad credits and successful publications while the player
 // remains in this app session. Reopening the session report must not charge
@@ -35,7 +36,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
     <div data-pb-question style="margin-top:10px;font-size:13px;color:#fff;font-weight:850">¿Quieres publicarlo en la clasificación online?</div>
     <p data-pb-disclosure style="margin:6px 0 10px;color:#b5cbd7;font-size:11px;line-height:1.35">${RECORD_PUBLISH_DISCLOSURE}</p>
     <div data-pb-actions style="display:flex;gap:8px;flex-wrap:wrap">
-      <button data-pb-publish type="button" style="flex:1 1 200px;min-height:45px;background:#def6ef;color:#0c241c;border:1px solid #80e2c4;border-radius:10px;padding:8px 12px;font:900 11px system-ui;touch-action:manipulation">PUBLICAR · VER ANUNCIO</button>
+      <button data-pb-publish type="button" style="flex:1 1 200px;min-height:45px;background:#def6ef;color:#0c241c;border:1px solid #80e2c4;border-radius:10px;padding:8px 12px;font:900 11px system-ui;touch-action:manipulation">${isAdFreePromoActive()?'PUBLICAR GRATIS · BLACK FRIDAY':'PUBLICAR · VER ANUNCIO'}</button>
       <button data-pb-skip type="button" style="flex:1 1 90px;min-height:45px;background:#172639;color:#edf4fa;border:1px solid #4b687a;border-radius:10px;padding:8px;font:850 11px system-ui;touch-action:manipulation">AHORA NO</button>
     </div>
     <div data-pb-status role="status" aria-live="polite" style="min-height:15px;margin-top:8px;color:#b7e8df;font-size:11px;font-weight:750"></div>
@@ -52,8 +53,10 @@ export function mountNewPersonalBestOffer(scene,root,report){
   const claimId=raceControlPublishClaimId(trackId,best.lapMs);
   const existing=verifiedPublishClaims.get(claimId)||null;
   let adVerified=existing?.adVerified===true;
+  let promotionGranted=existing?.promotionGranted===true;
+  let hasAccess=()=>adVerified||promotionGranted;
   let published=existing?.published===true;
-  if(adVerified&&!published)publish.textContent='REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO';
+  if(hasAccess()&&!published)publish.textContent='REINTENTAR PUBLICACIÓN · GRATIS';
   if(published){
     actions.hidden=true;actions.style.display='none';
     card.querySelector('[data-pb-question]').textContent='✅ Tu récord está en la clasificación online';
@@ -108,22 +111,23 @@ export function mountNewPersonalBestOffer(scene,root,report){
           '. No se ha publicado una nueva marca ni se ha mostrado ningún anuncio.');
         return;
       }
-      if(!isRewardedAdAvailable()&&!adVerified)
+      if(!isRewardedAdAvailable()&&!hasAccess())
         throw new Error('No hay un anuncio recompensado disponible ahora. Tu récord se conserva.');
-      if(!adVerified){
-        setStatus('Preparando el anuncio opcional para publicar el récord…');
+      if(!hasAccess()){
+        setStatus(isAdFreePromoActive()?'Black Friday: publicación gratuita…':'Preparando el anuncio opcional para publicar el récord…');
         const result=await showRewardedAd(scene,{
           title:'PUBLICAR RÉCORD · ANUNCIO RECOMPENSADO',
           placement:REWARDED_PLACEMENTS.RACE_CONTROL_PUBLISH,
           claimId
         });
-        if(!verifiedReward(result))throw new Error('Anuncio cancelado o sin verificar. El récord no se ha publicado.');
-        adVerified=true;
-        verifiedPublishClaims.set(claimId,{adVerified:true,published:false});
+        if(!rewardActionAllowed(result))throw new Error('No se pudo autorizar la publicación. El récord está guardado.');
+        adVerified=verifiedReward(result);
+        promotionGranted=result?.promotion===true;
+        verifiedPublishClaims.set(claimId,{adVerified,promotionGranted,published:false});
       }
       // Retrying a transient network failure in this report must NEVER
       // require the player to watch a second ad for the same record.
-      setStatus('Anuncio completado. Publicando tu tiempo…');
+      setStatus(promotionGranted?'Promoción Black Friday: publicando gratis…':'Anuncio completado. Publicando tu tiempo…');
       const response=replay
         ?await submitRaceControlRecordWithGhost({
           trackId,bestTimeMs:best.lapMs,carId,
@@ -143,7 +147,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
         return;
       }
       published=true;
-      verifiedPublishClaims.set(claimId,{adVerified:true,published:true});
+      verifiedPublishClaims.set(claimId,{adVerified,promotionGranted,published:true});
       // A successful publication must also make its online leaderboard
       // available on the next Race Control visit. Failure to refresh the
       // read-only cache never undoes a verified server write or its ad credit.
@@ -157,11 +161,11 @@ export function mountNewPersonalBestOffer(scene,root,report){
         :'Nuevo tiempo ONLINE publicado sin repetición. Aparecerá sin botón VS.');
     }catch(error){
       setStatus(String(error?.message||'No se pudo publicar el tiempo.'),true);
-      if(adVerified)publish.textContent='REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO';
+      if(hasAccess())publish.textContent='REINTENTAR PUBLICACIÓN · GRATIS';
     }finally{
       inFlight=false;
       publish.disabled=published||settled;skip.disabled=published||settled;
     }
   });
-  return {best,card,getState:()=>({inFlight,adVerified,published})};
+  return {best,card,getState:()=>({inFlight,adVerified,promotionGranted,published})};
 }
