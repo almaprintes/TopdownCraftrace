@@ -1,4 +1,5 @@
 name: Android DEV installable QA APK (direct download)
+# Black Friday emergency candidate: use only Google demo inventory; never paid ads.
 on:
   push:
     branches: [main]
@@ -62,6 +63,8 @@ jobs:
           node scripts/android-release-candidate-smoke.mjs
           node scripts/ad-free-november-smoke.mjs
           node scripts/rewarded-access-smoke.mjs
+          node scripts/race-control-exact-replay-smoke.mjs
+          node scripts/session-pb-publish-offer-smoke.mjs
           node scripts/verify-android-launcher.mjs
           node scripts/rc-twin-axis-controls-smoke.mjs
           node scripts/race-visible-control-hitbox-smoke.mjs
