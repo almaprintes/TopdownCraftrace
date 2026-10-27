@@ -124,11 +124,15 @@ jobs:
             "Usa anuncios de prueba, no inventario real. No se ha generado ni publicado ningún AAB." \
             "Si otra APK bridgetest tenía una firma distinta, desinstala SOLO esa aplicación de pruebas." \
             "SHA-256: $(cat apk-sha256.txt)" > release-notes.txt
-          gh release create "$TAG" "device-apk/$APK_NAME" \
+          if gh release create "$TAG" "device-apk/$APK_NAME" \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
             --title "Top Down RACE Android DEV · prueba de conducción" \
-            --notes-file release-notes.txt
-          url="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$APK_NAME"
-          echo "Direct APK: $url" >> "$GITHUB_STEP_SUMMARY"
-          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fxq "$APK_NAME"
-          echo "Verified published release asset: $APK_NAME"
+            --notes-file release-notes.txt; then
+            url="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$APK_NAME"
+            echo "Direct APK: $url" >> "$GITHUB_STEP_SUMMARY"
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fxq "$APK_NAME"
+            echo "Verified published release asset: $APK_NAME"
+          else
+            echo '::warning::GitHub Releases unavailable; signed QA APK remains in Actions artifact.'
+            echo 'Download the artifact attached to this workflow run.' >> "$GITHUB_STEP_SUMMARY"
+          fi
