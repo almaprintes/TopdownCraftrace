@@ -1,4 +1,5 @@
 import './style.css';
+import {installAdFreePromoControl} from './game/monetization/adFreeNovember.js';
 import {completeGoogleWebSignIn} from './game/online/googleWebAuth.js';
 import {openCloudAccountUi} from './game/social/cloudAccountUi.js';
 import {installCloudAutoSync} from './game/social/cloudAutoSync.js';
@@ -6,6 +7,7 @@ import { createGame } from './game/game.js';
 import {archiveRetiredTrackRecords} from './game/stats/archiveRetiredTrackRecords.js';
 import {isBenignResizeObserverWarning,mayReplaceStartupScreen} from './game/dev/runtimeErrorPolicy.js';
 window.__tdrStartupMark?.('main-js');
+installAdFreePromoControl();
 // The retired contest preference cannot grant access; other player saves remain intact.
 try{localStorage.removeItem('tdr2:shipatonJudgeMode:v2');}catch{}
 
