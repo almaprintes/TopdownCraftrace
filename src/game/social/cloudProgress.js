@@ -31,8 +31,8 @@ export async function cloudDataDigest(data){
 }
 export async function markCloudConfirmed(id,revision,data){
   if(!id||!Number.isSafeInteger(revision)||revision<1)return false;
-  const digest=await cloudDataDigest(data);
   try{
+    const digest=await cloudDataDigest(data);
     localStorage.setItem(CLOUD_RECEIPT,JSON.stringify({id,revision,digest}));
     if(!cloudConfirmedMarker(id))return false;
     try{window.dispatchEvent(new Event('tdr:cloudsave-confirmed'));}catch{}
