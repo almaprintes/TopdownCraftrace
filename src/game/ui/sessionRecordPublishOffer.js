@@ -54,7 +54,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
   const existing=verifiedPublishClaims.get(claimId)||null;
   let adVerified=existing?.adVerified===true;
   let promotionGranted=existing?.promotionGranted===true;
-  let hasAccess=()=>adVerified||promotionGranted;
+  let hasAccess=()=>adVerified||(promotionGranted&&isAdFreePromoActive());
   let published=existing?.published===true;
   if(hasAccess()&&!published)publish.textContent='REINTENTAR PUBLICACIÓN · GRATIS';
   if(published){
