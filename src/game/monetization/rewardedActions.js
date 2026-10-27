@@ -13,6 +13,16 @@ export function verifiedReward(result){
   return result?.completed===true&&result?.verified===true;
 }
 
+// An explicit FREE in-game promotion is not an AdMob/RevenueCat verification.
+// Only the official placement list can receive a promotional entitlement.
+export function rewardActionAllowed(result){
+  const promoPlacements=Object.values(REWARDED_PLACEMENTS);
+  return verifiedReward(result)||
+    (result?.promotion===true&&result?.verified===false&&
+     result?.source==='november-2026'&&
+     promoPlacements.includes(result?.placement));
+}
+
 export function legacyPostRaceClaimId(lastReward={}){
   const track=token(lastReward?.trackKey||'race');
   const earnedAt=Math.max(0,Math.round(Number(lastReward?.t)||0));
