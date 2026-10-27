@@ -45,7 +45,8 @@ export function installBlackFridayPromoUi(root){
     dialog.querySelector('.tdr-bf-close')?.addEventListener('click',close);
     dialog.querySelector('.tdr-bf-play')?.addEventListener('click',close);
     dialog.addEventListener('click',event=>{if(event.target===dialog)close();});
-    root.appendChild(dialog);
+    // Mount outside the Phaser/lobby stacking context to avoid clipping.
+    document.body.appendChild(dialog);
   }
   badge.addEventListener('click',open);
   // Show on first lobby appearance per app session, then allow reopening by badge.
