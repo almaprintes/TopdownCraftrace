@@ -235,7 +235,7 @@ export class StatsScene extends MasteryStatsScene{
         button.disabled=true;
         return;
       }
-      if(credit?.adVerified!==true&&credit?.promotionGranted!==true){
+      if(credit?.adVerified!==true&&!(credit?.promotionGranted===true&&isAdFreePromoActive())){
         const ad=await showRewardedAd(this,{
           title:t('raceControl.publishRewardedTitle'),
           placement:REWARDED_PLACEMENTS.RACE_CONTROL_PUBLISH,
