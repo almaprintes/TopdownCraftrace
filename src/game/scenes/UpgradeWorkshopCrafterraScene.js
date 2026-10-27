@@ -4,7 +4,7 @@ import { loadGarage, qty, craft, equip, duplicateLastReward, getEquippedForCar, 
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveCarParams } from '../cars/resolveCarParams.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
-import { legacyPostRaceClaimId, REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
+import { legacyPostRaceClaimId, REWARDED_PLACEMENTS, rewardActionAllowed } from '../monetization/rewardedActions.js';
 import { t } from '../i18n/index.js';
 
 const FAMILIES=['engine','brakes','tires','suspension','transmission'];
@@ -270,7 +270,7 @@ export class UpgradeShopScene extends Phaser.Scene{
 
   async _doubleReward(){
     const reward=loadGarage().lastReward||{};
-    const ad=await showRewardedAd(this,{title:'DUPLICAR BOTÍN',placement:REWARDED_PLACEMENTS.POST_RACE_DOUBLE_LOOT,claimId:legacyPostRaceClaimId(reward)});if(!verifiedReward(ad))return;
+    const ad=await showRewardedAd(this,{title:'DUPLICAR BOTÍN',placement:REWARDED_PLACEMENTS.POST_RACE_DOUBLE_LOOT,claimId:legacyPostRaceClaimId(reward)});if(!rewardActionAllowed(ad))return;
     const r=duplicateLastReward();this.state=loadGarage();this._toast(r?t('workshop.lootDoubled'):t('workshop.alreadyClaimed'));this.render();
   }
 
