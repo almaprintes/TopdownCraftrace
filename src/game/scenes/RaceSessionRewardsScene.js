@@ -3,7 +3,7 @@ import { getRaceLootSessionSummary } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { t } from '../i18n/index.js';
 import { isRewardedAdAvailable, showRewardedAd } from '../monetization/RewardedAdsProvider.js';
-import { REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
+import { REWARDED_PLACEMENTS, rewardActionAllowed } from '../monetization/rewardedActions.js';
 import { claimPostRaceDoubleLoot, createPostRaceClaimId, hasClaimedPostRaceDouble } from '../monetization/postRaceDoubleLoot.js';
 import { mountRaceSessionRewards } from '../ui/raceSessionUi.js';
 
@@ -53,7 +53,7 @@ export class RaceScene extends CurrentRaceScene {
       onDouble:async()=>{
         if(this._tdrRaceLootDoubled||hasClaimedPostRaceDouble(claimId))return{ok:false,reason:'already_claimed'};
         const ad=await showRewardedAd(this,{title:'×2 BOTÍN · ANUNCIO RECOMPENSADO',placement:REWARDED_PLACEMENTS.POST_RACE_DOUBLE_LOOT,claimId});
-        if(!verifiedReward(ad))return{ok:false,reason:ad?.reason||'ad_not_verified'};
+        if(!rewardActionAllowed(ad))return{ok:false,reason:ad?.reason||'ad_not_verified'};
         const claim=claimPostRaceDoubleLoot({claimId,entries});
         if(claim?.ok)this._tdrRaceLootDoubled=true;
         return claim;
