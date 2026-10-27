@@ -1,5 +1,6 @@
 import {googleWebAvailable,startGoogleWebSignIn} from '../online/googleWebAuth.js';
 import {protectLocalSaveAfterSocialSignIn} from './socialAccountLink.js';
+import {cloudAutoSyncStatus} from './cloudAutoSync.js';
 import {canonicalRuntimeText,localizeDomTree} from '../i18n/canonicalRuntimeText.js';
 import {getLanguage} from '../i18n/index.js';
 import {
@@ -9,7 +10,7 @@ import {
   hasSavedRaceControlSession,savedGoogleWebIdentity,continueRejectedAnonymousSessionLocally
 } from '../online/raceControlOnline.js';
 import {
-  cloudBackupStatus,createFirstCloudBackup,updateCloudBackup,readCloudBackup,
+  cloudBackupStatus,createFirstCloudBackup,updateCloudBackup,readCloudBackup,cloudConfirmedMarker,
   restoreCloudBackup,inspectLocalProgress,exportLocalProgressJson,
   exportCloudProgressJson,downloadPortableSave,shortPlayerId
 } from './cloudProgress.js';
@@ -200,8 +201,10 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
       state.dataset.state=backup.existing?'saved':'local';
       icon.textContent=backup.existing?'✅':'☁';
       title.textContent=backup.existing?'Partida guardada en la nube':'Partida guardada en este dispositivo';
+      const autoReady=account.socialProviders?.includes('google')&&!!cloudConfirmedMarker(account.id);
       desc.textContent=backup.existing?
-        'Última copia: '+dateText(backup.updatedAt)+' · Revisión '+backup.revision+'. Actualízala después de jugar.':
+        'Última copia: '+dateText(backup.updatedAt)+' · Revisión '+backup.revision+
+        (autoReady?'. Guardado automático activado.':'. Confirma una actualización para activar el guardado automático.'):
         'Todavía no existe una copia online de este piloto.';
       if(local.meaningful)show('backup',backup.existing?'ACTUALIZAR COPIA':'GUARDAR COPIA');
       if(!local.pilotName||!local.meaningful)show('login-open','YA TENÍA UNA PARTIDA');
@@ -209,7 +212,14 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
         'La recuperación antigua se comprobó en este dispositivo. Conserva sus credenciales.':
         'Una copia en la nube NO basta para entrar tras cambiar de dispositivo. Descarga también tu partida y no desinstales hasta contar con un acceso probado. El sistema sin correo TDR ID todavía no está listo.';
     }
-    if(account.socialProviders?.includes('google')&&!pending)tip.textContent='Acceso con Google. La copia se actualiza solo cuando lo confirmas. Las grabaciones locales no se incluyen.';
+    if(account.socialProviders?.includes('google')&&!pending){
+      const auto=cloudAutoSyncStatus();
+      tip.textContent=auto.blocked?
+        auto.message+' La partida local se conserva; no se sobrescribe la nube.':
+        cloudConfirmedMarker(account.id)?
+          'Acceso con Google. Sincronización automática al salir de carreras y periódicamente, como máximo una subida cada 5 minutos. Puedes actualizar manualmente. Las grabaciones locales no se incluyen.':
+          'Acceso con Google. Confirma ACTUALIZAR COPIA una vez para activar los guardados automáticos con protección de conflictos.';
+    }
     root.querySelector('[data-action="backup"]').disabled=!!pending||!local.meaningful;
     root.querySelector('[data-action="restore"]').disabled=!backup.existing;
     root.querySelector('[data-action="backup-manual"]').disabled=!!pending||!local.meaningful;
