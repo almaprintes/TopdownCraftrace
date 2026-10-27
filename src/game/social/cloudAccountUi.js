@@ -323,6 +323,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     const result=status.existing
       ?await updateCloudBackup(status.revision)
       :await createFirstCloudBackup();
+    if(result.unchanged)return '✅ COPIA AL DÍA · REV '+result.revision+' · Sin subir datos duplicados.';
     return '✅ COPIA GUARDADA · REV '+result.revision+' · '+result.keys+
       ' bloques. Descarga también tu partida: guardar la copia no garantiza recuperar el acceso.';
   }));
