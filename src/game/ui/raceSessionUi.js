@@ -1,4 +1,5 @@
 import './raceSessionUi.css';
+import {isAdFreePromoActive} from '../monetization/adFreeNovember.js';
 import { installFreshGestureGuard } from './freshGestureGuard.js';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -49,10 +50,10 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
     : `<div class="tdr-x2-preview tdr-x2-preview-symbol"><span>◆</span><span class="tdr-x2-arrow">↻</span><span>◆</span></div>`;
 
   const doubleButton=doubleEnabled?`
-    <button class="tdr-x2-button" data-a="double" type="button" aria-label="Duplicar botín viendo un anuncio recompensado">
+    <button class="tdr-x2-button" data-a="double" type="button" aria-label="Duplicar botín">
       <span class="tdr-x2-play">▶</span>
       <span class="tdr-x2-big" data-a="double-x">×2</span>
-      <span class="tdr-x2-copy"><strong data-a="double-main">DUPLICAR BOTÍN</strong><small data-a="double-sub">MIRA UN ANUNCIO RECOMPENSADO</small></span>
+      <span class="tdr-x2-copy"><strong data-a="double-main">DUPLICAR BOTÍN</strong><small data-a="double-sub">${isAdFreePromoActive()?'BLACK FRIDAY · GRATIS':'MIRA UN ANUNCIO RECOMPENSADO'}</small></span>
       ${previewVisual}
     </button>`:'';
 
@@ -97,7 +98,7 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
     doubleBtn.classList.add('is-ready');
     if(doubleX)doubleX.textContent='×2';
     if(doubleMain)doubleMain.textContent='DUPLICAR BOTÍN';
-    if(doubleSub)doubleSub.textContent='MIRA UN ANUNCIO RECOMPENSADO';
+    if(doubleSub)doubleSub.textContent=isAdFreePromoActive()?'BLACK FRIDAY · GRATIS':'MIRA UN ANUNCIO RECOMPENSADO';
   };
   const applyDoubledVisuals=()=>{
     doubled=true;
