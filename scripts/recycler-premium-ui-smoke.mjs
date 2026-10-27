@@ -31,11 +31,11 @@ assert.match(style,/#tdr-material-exchange-dom \.rx-submit/);
 assert.match(style,/#tdr-part-dismantle-dom \.pd-go/);
 assert.match(style,/@media\(max-height:540px\)/);
 assert.match(style,/@media\(prefers-reduced-motion:reduce\)/);
-// Don't alter the actual exchange economics or ad verification.
+// Keep exchange economics unchanged; allow either verified ad or explicit promotion.
 assert.match(exchange,/materialExchangeStatus\(\)/);
 assert.match(exchange,/quoteMaterialExchange\(fromId,toId,amount\)/);
 assert.match(exchange,/executeMaterialExchange\(fromId,toId,amount\)/);
-assert.match(exchange,/if\(!verifiedReward\(ad\)\)/);
+assert.match(exchange,/if\(!rewardActionAllowed\(ad\)\)/,'Keep verified ad or explicit no-ads November promo gate');
 assert.match(exchange,/recyclerRewardedPlacement\(ordinal\)/);
 assert.match(exchange,/requiresVideo=status\.used>=1/);
 assert.match(exchange,/status\.remaining\}\/3/);
