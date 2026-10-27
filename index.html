@@ -4,7 +4,7 @@
 // Remove credentials before diagnostics, resources, or the game can see the URL.
 (()=>{const u=new URL(location.href),h=new URLSearchParams(u.hash.slice(1));
 if(['code','tdr_state','error','access_token','refresh_token','provider_token','provider_refresh_token'].some(k=>u.searchParams.has(k)||h.has(k))){
-window.__tdrGoogleCallback={code:u.searchParams.get('code'),state:u.searchParams.get('tdr_state'),error:u.searchParams.get('error')||h.get('error')||h.has('access_token')||u.searchParams.has('access_token')};
+window.__tdrGoogleCallback={code:u.searchParams.get('code'),state:h.get('tdr_state'),error:u.searchParams.get('error')||h.get('error')||h.has('access_token')||u.searchParams.has('access_token')};
 for(const k of ['code','tdr_state','state','error','error_code','error_description','access_token','refresh_token','provider_token','provider_refresh_token'])u.searchParams.delete(k);
 u.hash='';history.replaceState(null,'',u.pathname+u.search);
 }})();

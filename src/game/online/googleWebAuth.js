@@ -31,7 +31,7 @@ export async function startGoogleWebSignIn(){
   const pending=JSON.stringify({verifier,nonce,createdAt:Date.now(),backend:url,expectedId,linking});
   sessionStorage.setItem(PENDING,pending);
   if(sessionStorage.getItem(PENDING)!==pending)throw new Error(FAILURE);
-  const redirect=new URL(GOOGLE_REDIRECT);redirect.searchParams.set('tdr_state',nonce);
+  const redirect=new URL(GOOGLE_REDIRECT);redirect.hash=new URLSearchParams({tdr_state:nonce}).toString();
   const target=new URL(url+(linking?'/auth/v1/user/identities/authorize':'/auth/v1/authorize'));
   target.search=new URLSearchParams({provider:'google',redirect_to:redirect.href,
     code_challenge:challenge,code_challenge_method:'s256',apikey:key}).toString();

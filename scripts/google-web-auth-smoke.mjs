@@ -26,6 +26,10 @@ await assert.rejects(start,/identidad antigua/);
 localStorage.removeItem('tdr2:previousOnlineUserId:v1');
 let callback=await start();
 assert.equal(target.searchParams.get('provider'),'google');
+const callbackTarget=new URL(target.searchParams.get('redirect_to'));
+assert.equal(callbackTarget.origin+callbackTarget.pathname,auth.GOOGLE_REDIRECT);
+assert.equal(callbackTarget.search,'','exact allowlisted path; nonce only in fragment');
+assert.equal(new URLSearchParams(callbackTarget.hash.slice(1)).get('tdr_state'),callback.state);
 assert.equal(target.searchParams.get('code_challenge_method'),'s256');
 const pending=JSON.parse(sessionStorage.getItem(pendingKey));
 assert.equal(target.searchParams.get('code_challenge'),Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(pending.verifier))).toString('base64url'));
@@ -59,8 +63,8 @@ existing=null;googleKnown=true;
 // Verify URL scrubbing occurs in the HTML before any other scripts/resources.
 const html=read('index.html');const script=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 let replaced;const window={};
-runInNewContext(script,{URL,URLSearchParams,window,location:{href:location.origin+location.pathname+'?code=private-code&tdr_state=nonce#access_token=secret'},history:{replaceState:(_a,_b,u)=>replaced=u}});
-assert.equal(replaced,location.pathname);assert.equal(window.__tdrGoogleCallback.error,true);
+runInNewContext(script,{URL,URLSearchParams,window,location:{href:location.origin+location.pathname+'?code=private-code#tdr_state=nonce&access_token=secret'},history:{replaceState:(_a,_b,u)=>replaced=u}});
+assert.equal(replaced,location.pathname);assert.equal(window.__tdrGoogleCallback.error,true);assert.equal(window.__tdrGoogleCallback.state,'nonce');
 assert.ok(html.indexOf('name="referrer"')<html.indexOf('tdr-startup-diagnostics'));
 // Exercise the real session installer against mocked transport, not a mocked installer.
 source=read('src/game/online/raceControlOnline.js')
