@@ -5,7 +5,8 @@ import { decodeOnlineGhostNativeBinary, decodeOnlineGhostNative } from '../onlin
 import { pxpsToKmh } from '../cars/speedUnits.js';
 import { t } from '../i18n/index.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
-import { REWARDED_PLACEMENTS, raceControlGhostClaimId, verifiedReward } from '../monetization/rewardedActions.js';
+import {isAdFreePromoActive} from '../monetization/adFreeNovember.js';
+import { REWARDED_PLACEMENTS, raceControlGhostClaimId, verifiedReward, rewardActionAllowed } from '../monetization/rewardedActions.js';
 import { setOnlineGhostChallenge } from '../online/onlineGhostSession.js';
 import { findExactLocalPbReplay, matchesExactLocalReplay } from '../tracks/exactLocalReplay.js';
 import { installNearbyRivalsPanel } from '../ui/raceControlNearbyRivalsPanel.js';
@@ -225,14 +226,16 @@ export class StatsScene extends ReplayStatsScene{
   async _ensureOnlineGhostReward(ref){
     const unlockKey='tdr2:onlineGhostUnlocked:'+ref;
     if(localStorage.getItem(unlockKey)==='1')return true;
-    if(!window.confirm(t('raceControl.unlockGhostRewarded')))return false;
+    if(!window.confirm(isAdFreePromoActive()?'BLACK FRIDAY: descargar este fantasma GRATIS?':t('raceControl.unlockGhostRewarded')))return false;
     const ad=await showRewardedAd(this,{
       title:t('raceControl.ghostRewardedTitle'),
       placement:REWARDED_PLACEMENTS.RACE_CONTROL_GHOST,
       claimId:raceControlGhostClaimId(ref)
     });
-    if(!verifiedReward(ad))throw new Error(ad?.reason||'rewarded_ad_not_completed');
-    localStorage.setItem(unlockKey,'1');
+    if(!rewardActionAllowed(ad))throw new Error(ad?.reason||'reward_not_available');
+    // Promotional access lasts for the event only; do not create a permanent
+    // paid-ad unlock on an unverified, free ghost download.
+    if(verifiedReward(ad))localStorage.setItem(unlockKey,'1');
     return true;
   }
 
