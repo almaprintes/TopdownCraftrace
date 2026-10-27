@@ -2,8 +2,9 @@ import { MATERIAL_PACKS, buyMaterialPack, rewardedStatus, claimRewardedCoins, da
 import { loadGarage } from '../garage/garageStore.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { t, getLanguage } from '../i18n/index.js';
+import {isAdFreePromoActive} from '../monetization/adFreeNovember.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
-import { REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
+import { REWARDED_PLACEMENTS, rewardActionAllowed } from '../monetization/rewardedActions.js';
 import { openMaterialExchangeDom } from './MaterialExchangeFlexibleDom.js';
 import {playDomCoinRewardFlight,animateDomCoinBalance,primeCoinRewardSound} from './coinRewardFlight.js';
 import {createAppHeader,disposeAppWallets,refreshAppWallets} from './TdrAppHeader.js';
@@ -71,7 +72,7 @@ function refreshBalance(root){
 function rewardCard(scene,root,kind){
   const isVideo=kind==='video';
   const card=el('article',`tdr-store-card tdr-store-reward tdr-store-reward--${kind}`);
-  const title=el('h2','',isVideo?t('store.rewardedVideo'):t('store.dailyGift'));card.append(title);
+  const title=el('h2','',isVideo?(isAdFreePromoActive()?(getLanguage()==='en'?'BLACK FRIDAY · FREE 100 COINS':'BLACK FRIDAY · 100 MONEDAS GRATIS'):t('store.rewardedVideo')):t('store.dailyGift'));card.append(title);
   const img=el('img','tdr-store-reward-art');img.src=`${BASE()}assets/store/${isVideo?'rewarded_video':'daily_gift'}.webp`;img.alt='';card.append(img);
   card.append(el('div','tdr-store-reward-value',`+${isVideo?'100':'250'} ${t('store.coins')}`));
   // Share the lobby's illuminated outline language without touching the
@@ -90,7 +91,7 @@ function rewardCard(scene,root,kind){
     button.disabled=busy||!status.available;
     card.classList.toggle('is-ready',status.available&&!busy);
     card.classList.toggle('is-cooling',!status.available);
-    button.textContent=status.available?(isVideo?t('store.rewardedVideo'):t('store.dailyGift')):`${t('store.availableIn')} ${timeLabel(status.remaining)}`;
+    button.textContent=status.available?(isVideo?(isAdFreePromoActive()?(getLanguage()==='en'?'BLACK FRIDAY · FREE 100 COINS':'BLACK FRIDAY · 100 MONEDAS GRATIS'):t('store.rewardedVideo')):t('store.dailyGift')):`${t('store.availableIn')} ${timeLabel(status.remaining)}`;
   };
   button.addEventListener('click',async()=>{
     if(busy||!root.isConnected)return;
@@ -109,7 +110,7 @@ function rewardCard(scene,root,kind){
           placement:REWARDED_PLACEMENTS.STORE_COINS_100,
           claimId:status.claimId
         });
-        if(!verifiedReward(ad)){
+        if(!rewardActionAllowed(ad)){
           if(root.isConnected)toast(root,getLanguage()==='en'?'VIDEO NOT COMPLETED':'VÍDEO NO COMPLETADO',false);
           return; // No ad verification => no currency.
         }
