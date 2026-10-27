@@ -15,7 +15,8 @@ import { ensureRaceControlPilotProfile, explainPilotIdentityFailure } from '../o
 import { verifiedRecordPublishClaims } from '../online/verifiedRecordPublishClaims.js';
 import { encodeOnlineGhostNative, encodeOnlineGhostNativeBinary } from '../online/onlineGhostCodec.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
-import { REWARDED_PLACEMENTS, raceControlPublishClaimId, verifiedReward } from '../monetization/rewardedActions.js';
+import {isAdFreePromoActive} from '../monetization/adFreeNovember.js';
+import { REWARDED_PLACEMENTS, raceControlPublishClaimId, verifiedReward, rewardActionAllowed } from '../monetization/rewardedActions.js';
 
 const BASE=import.meta.env.BASE_URL||'/';
 const esc=v=>String(v??'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
@@ -201,7 +202,7 @@ export class StatsScene extends MasteryStatsScene{
     const claimId=raceControlPublishClaimId(selected.trackId,selected.bestLapMs);
     let credit=verifiedRecordPublishClaims.get(claimId)||null;
     if(credit?.published){button.textContent=t('raceControl.published');button.disabled=true;return;}
-    if(!window.confirm(t('raceControl.publishRewardedConfirm')))return;
+    if(!window.confirm(isAdFreePromoActive()?'BLACK FRIDAY: publicar tu mejor vuelta GRATIS en Race Control?':t('raceControl.publishRewardedConfirm')))return;
     button.dataset.brPublishing='1';
     button.disabled=true;
     button.textContent=t('raceControl.publishing');
@@ -234,14 +235,14 @@ export class StatsScene extends MasteryStatsScene{
         button.disabled=true;
         return;
       }
-      if(credit?.adVerified!==true){
+      if(credit?.adVerified!==true&&credit?.promotionGranted!==true){
         const ad=await showRewardedAd(this,{
           title:t('raceControl.publishRewardedTitle'),
           placement:REWARDED_PLACEMENTS.RACE_CONTROL_PUBLISH,
           claimId
         });
-        if(!verifiedReward(ad))throw new Error('El anuncio no se completó. No se ha publicado el récord.');
-        credit={adVerified:true,published:false};
+        if(!rewardActionAllowed(ad))throw new Error('La publicación no está disponible ahora; tu récord sigue guardado.');
+        credit={adVerified:verifiedReward(ad),promotionGranted:ad?.promotion===true,published:false};
         verifiedRecordPublishClaims.set(claimId,credit);
       }
       const out=replay
@@ -265,7 +266,7 @@ export class StatsScene extends MasteryStatsScene{
         return;
       }
       submitted=true;
-      verifiedRecordPublishClaims.set(claimId,{adVerified:true,published:true});
+      verifiedRecordPublishClaims.set(claimId,{adVerified:credit?.adVerified===true,promotionGranted:credit?.promotionGranted===true,published:true});
       button.textContent=t('raceControl.published');
       if(!replay)this._showRaceControlNotice('Tiempo publicado sin replay: aparece en el ranking, sin desafío VS.');
       // A subsequent refresh failure cannot undo a server-confirmed upload
@@ -283,8 +284,8 @@ export class StatsScene extends MasteryStatsScene{
       console.error('[race-control] rewarded publish failed',err);
       const message=explainPilotIdentityFailure(err);
       this._showRaceControlNotice(message);
-      button.textContent=credit?.adVerified===true?
-        'REINTENTAR · SIN OTRO ANUNCIO':t('raceControl.publishErrorRetry');
+      button.textContent=(credit?.adVerified===true||credit?.promotionGranted===true)?
+        'REINTENTAR · GRATIS':t('raceControl.publishErrorRetry');
       button.disabled=false;
     }finally{
       if(submitted)button.disabled=true;
