@@ -3,7 +3,7 @@ import { applyRecyclerPremiumTheme } from './recyclerPremiumTheme.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage, qty } from '../garage/garageStore.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
-import { recyclerRewardedClaimId, recyclerRewardedPlacement, verifiedReward } from '../monetization/rewardedActions.js';
+import { recyclerRewardedClaimId, recyclerRewardedPlacement, rewardActionAllowed } from '../monetization/rewardedActions.js';
 import { EXCHANGE_MATERIALS, MATERIAL_EXCHANGE_VALUE, MATERIAL_EXCHANGE_EFFICIENCY, materialExchangeStatus, quoteMaterialExchange, executeMaterialExchange } from '../store/materialExchange.js';
 import { t } from '../i18n/index.js';
 
@@ -35,7 +35,7 @@ if(slider){
     const val=Math.max(1,Math.min(have,Math.floor(Number(slider.value)||1)));
     reopen(fromId,toId,val);
   });
-}const applyExact=()=>{const val=Math.max(1,Math.min(have,Math.floor(Number(exact.value)||1)));reopen(fromId,toId,val)};exact?.addEventListener('change',applyExact);exact?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();exact.blur()}});root.querySelector('.rx-submit')?.addEventListener('click',async()=>{if(!enabled)return;const confirmed=await confirmExchange(root,C,{fromId,toId,amount,receive,requiresVideo});if(!confirmed)return;if(requiresVideo){const ordinal=status.nextOrdinal;const ad=await showRewardedAd(scene,{title:t('recycler.rewardedTitle'),placement:recyclerRewardedPlacement(ordinal),claimId:recyclerRewardedClaimId(status.day,ordinal)});if(!verifiedReward(ad)){scene._toastStore?.(t('recycler.videoNotCompleted'),false);return}}const result=executeMaterialExchange(fromId,toId,amount);scene._toastStore?.(result.ok?`${result.spend} ${materialName(fromId)} → ${result.receive} ${materialName(toId)}`:result.reason,result.ok);if(result.ok)scene._exchangeAmount=Math.min(amount,Math.max(1,qty(loadGarage(),fromId)));reopen(fromId,toId,scene._exchangeAmount)});scene.events?.once?.('shutdown',()=>closeMaterialExchangeDom(scene));return root}
+}const applyExact=()=>{const val=Math.max(1,Math.min(have,Math.floor(Number(exact.value)||1)));reopen(fromId,toId,val)};exact?.addEventListener('change',applyExact);exact?.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();exact.blur()}});root.querySelector('.rx-submit')?.addEventListener('click',async()=>{if(!enabled)return;const confirmed=await confirmExchange(root,C,{fromId,toId,amount,receive,requiresVideo});if(!confirmed)return;if(requiresVideo){const ordinal=status.nextOrdinal;const ad=await showRewardedAd(scene,{title:t('recycler.rewardedTitle'),placement:recyclerRewardedPlacement(ordinal),claimId:recyclerRewardedClaimId(status.day,ordinal)});if(!rewardActionAllowed(ad)){scene._toastStore?.(t('recycler.videoNotCompleted'),false);return}}const result=executeMaterialExchange(fromId,toId,amount);scene._toastStore?.(result.ok?`${result.spend} ${materialName(fromId)} → ${result.receive} ${materialName(toId)}`:result.reason,result.ok);if(result.ok)scene._exchangeAmount=Math.min(amount,Math.max(1,qty(loadGarage(),fromId)));reopen(fromId,toId,scene._exchangeAmount)});scene.events?.once?.('shutdown',()=>closeMaterialExchangeDom(scene));return root}
 
 // DEV 1.1.108: material recycler player copy is resolved through i18n keys; short-landscape footer behavior is unchanged.
 
