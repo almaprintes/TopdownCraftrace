@@ -11,6 +11,7 @@ on:
       - 'scripts/play-production-candidate-smoke.mjs'
       - 'scripts/ad-free-november-smoke.mjs'
       - 'scripts/rewarded-access-smoke.mjs'
+      - 'scripts/race-control-exact-replay-smoke.mjs'
   workflow_dispatch:
 permissions:
   contents: write
