@@ -2,6 +2,7 @@
 // Android will inject window.__tdrRewardedAds.show() from the native AdMob /
 // RevenueCat Ads integration. Until then, /dev can exercise the full flow with
 // a local video without pretending that an ad network has already been wired.
+import {isAdFreePromoActive} from './adFreeNovember.js';
 const VIDEO_SRC='assets/intro/intro.mp4';
 // Covers consent, inventory/load, playback and RevenueCat SSV polling. Android's
 // native watchdog resolves first at 170 s with a concrete failure reason.
@@ -27,7 +28,7 @@ function nativeBridge(){
 }
 
 export function isRewardedAdAvailable(){
-  return !!nativeBridge()||isDevPreview();
+  return isAdFreePromoActive()||!!nativeBridge()||isDevPreview();
 }
 
 function nativeRewardedAd({placement,claimId}){
@@ -119,6 +120,12 @@ function resolvedPlacement(placement,title){
 
 export async function showRewardedAd(scene,{title='RECOMPENSA PATROCINADA',placement='generic_reward',claimId=null}={}){
   const routedPlacement=resolvedPlacement(placement,title);
+  // Promotion bypasses the ad SDK entirely. This is NOT an ad/SSV verification.
+  // Calling code must independently accept the explicit promotional grant.
+  if(isAdFreePromoActive())return {
+    completed:false,verified:false,promotion:true,source:'november-2026',
+    placement:routedPlacement,reason:'black_friday_ad_free'
+  };
   if(nativeBridge())return nativeRewardedAd({placement:routedPlacement,claimId});
   if(typeof __TDR_PROD_BUILD__==='undefined'||!__TDR_PROD_BUILD__){
     if(isDevPreview())return devVideoRewardedAd(scene,{title});
