@@ -1,6 +1,7 @@
 import './style.css';
 import {completeGoogleWebSignIn} from './game/online/googleWebAuth.js';
 import {openCloudAccountUi} from './game/social/cloudAccountUi.js';
+import {installCloudAutoSync} from './game/social/cloudAutoSync.js';
 import { createGame } from './game/game.js';
 import {archiveRetiredTrackRecords} from './game/stats/archiveRetiredTrackRecords.js';
 import {isBenignResizeObserverWarning,mayReplaceStartupScreen} from './game/dev/runtimeErrorPolicy.js';
@@ -42,6 +43,8 @@ window.addEventListener('unhandledrejection', (e) => {
 
 let __game = null;
 let googleAuthReady=false;
+// DEV web only; no automatic anonymous login or production/native change.
+installCloudAutoSync();
 const googleCallback=window.__tdrGoogleCallback;
 delete window.__tdrGoogleCallback;
 void completeGoogleWebSignIn(googleCallback).then(result=>{
