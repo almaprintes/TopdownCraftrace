@@ -1,6 +1,6 @@
 import { MenuScene as CurrentMenuScene } from './MenuStoreCloseFixScene.js';
 import { showRewardedAd } from '../monetization/RewardedAdsProvider.js';
-import { REWARDED_PLACEMENTS, verifiedReward } from '../monetization/rewardedActions.js';
+import { REWARDED_PLACEMENTS, rewardActionAllowed } from '../monetization/rewardedActions.js';
 import { rewardedStatus, claimRewardedCoins, dailyStatus, claimDailyCoins } from '../store/storeEconomy.js';
 import { playCoinRewardFlight, primeCoinRewardSound } from '../ui/coinRewardFlight.js';
 import { getLanguage } from '../i18n/index.js';
@@ -148,7 +148,7 @@ export class MenuScene extends CurrentMenuScene {
             placement:REWARDED_PLACEMENTS.STORE_COINS_100,
             claimId:status.claimId
           });
-          if(!verifiedReward(ad)){
+          if(!rewardActionAllowed(ad)){
             this._toastStore?.(getLanguage()==='en'?'VIDEO NOT COMPLETED':'VÍDEO NO COMPLETADO',false);
             return;
           }
