@@ -9,6 +9,8 @@ on:
     paths:
       - '.github/workflows/android-google-play-candidate.yml'
       - 'scripts/play-production-candidate-smoke.mjs'
+      - 'scripts/ad-free-november-smoke.mjs'
+      - 'scripts/rewarded-access-smoke.mjs'
   workflow_dispatch:
 permissions:
   contents: write
