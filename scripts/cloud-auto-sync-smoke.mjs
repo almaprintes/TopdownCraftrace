@@ -16,6 +16,8 @@ assert.match(progress,/updateCloudBackupAutomatically/);
 assert.match(progress,/store\.save\(identity,snapshot,expectedRevision\)/);
 assert.match(progress,/if\(!row\?\.saved\)/);
 assert.match(progress,/saveBackup\(revision\)/,'manual backup preserves full readback');
+assert.match(progress,/bytes:0,verified:true,unchanged:true/,'identical manual copies avoid uploading data');
+assert.match(progress,/cloudWritePending/,'automatic and manual writes cannot overlap');
 assert.match(account,/Sincronización automática/);
 assert.match(policy,/AUTO_CLOUD_MIN_WRITE_MS=5\*60\*1000/);
 assert.match(policy,/cloudLoginPendingRestore/);
