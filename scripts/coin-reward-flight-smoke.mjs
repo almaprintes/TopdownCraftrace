@@ -24,12 +24,12 @@ assert.match(read('src/game/ui/coinRewardFlight.js'),
   'Quick flight schedules its first coin without a delay');
 const store=read('src/game/scenes/MenuRewardedAdsScene.js');
 assert.match(store,/const result=isVideo\?claimRewardedCoins\(100\):claimDailyCoins\(250\)/);
-const verify=store.indexOf('if(!verifiedReward(ad))');
+const verify=store.indexOf('if(!rewardActionAllowed(ad))');
 const persist=store.indexOf('const result=isVideo?claimRewardedCoins(100):claimDailyCoins(250)');
 const animate=store.indexOf('await playCoinRewardFlight(this');
 const refresh=store.indexOf("this._openStoreModal?.('rewards');",animate);
 assert.ok(verify>=0&&persist>verify&&animate>persist&&refresh>animate,
-  'ad verification -> durable grant -> flight -> header update');
+  'verified ad or explicit promo -> durable grant -> flight -> header update');
 assert.match(store,/hit\.removeAllListeners\('pointerup'\)/,'remove original claim');
 assert.match(store,/hit\.removeAllListeners\('pointerdown'\)/,'remove duplicate ad trigger');
 assert.match(store,/if\(busy\)return/,'ignore repeated taps');
@@ -46,12 +46,12 @@ assert.match(store,/root\.once\('destroy'/,'stop tweens on store close');
 const currentMenu=read('src/game/scenes/MenuDuelModeScene.js');
 assert.match(currentMenu,/return openStoreDom\(this,section\)/,'real store reuses DOM and forwards rewards section');
 const domStore=read('src/game/ui/StoreDomUi.js');
-const verified=domStore.indexOf('if(!verifiedReward(ad))');
+const verified=domStore.indexOf('if(!rewardActionAllowed(ad))');
 const awarded=domStore.indexOf('const result=isVideo?claimRewardedCoins(100):claimDailyCoins(250)');
 const flown=domStore.indexOf('await playDomCoinRewardFlight(scene');
 const counted=domStore.indexOf('await animateDomCoinBalance(root');
 assert.ok(verified>=0&&awarded>verified&&flown>awarded&&counted>flown,
-  'SHIPPING DOM: verified ad -> durable award -> flight -> animated wallet');
+  'SHIPPING DOM: authorised ad or promo -> durable award -> flight -> animated wallet');
 assert.doesNotMatch(domStore,/toast\(root,\x60\+\$\{result\.amount\}/,
   'After the reward flight, DOM store must not add a green +100/+250 success banner');
 assert.match(domStore,/toast\(root,getLanguage\(\)==='en'\?'VIDEO NOT COMPLETED'/,
@@ -115,8 +115,8 @@ assert.match(shopCss,/\.tdr-store-reward \.tdr-store-reward-action-slot > \.tdr-
 assert.match(shopCss,/@media\(prefers-reduced-motion:reduce\)/);
 assert.doesNotMatch(shopCss,/@keyframes tdr-store-reward-(?:halo|edge)-pulse[^}]*scale\(/,
   'Pulse opacity only; buttons must never grow or change touch bounds');
-assert.match(domStore,/if\(!verifiedReward\(ad\)\)/,
-  'Do not bypass ad verification');
+assert.match(domStore,/if\(!rewardActionAllowed\(ad\)\)/,
+  'Do not bypass verified-ad or explicit promotional authorisation');
 assert.match(domStore,/if\(!result\.ok\)\{/,
   'Do not bypass claim eligibility');
 assert.match(domStore,/await playDomCoinRewardFlight\(scene/,'Keep coin flight unchanged');
