@@ -45,7 +45,7 @@ assert.ok(!board.includes('if(!selected?.ghostKey||!button'),'Player can publish
 assert.ok(board.includes('findExactLocalPbReplay(selected)'));
 assert.ok(board.includes('submitRaceControlRecordWithoutGhost({'),'Board supports score-only');
 assert.ok(board.includes('submitRaceControlRecordWithGhost({'),'Board still supports score+replay');
-assert.ok(board.includes('if(credit?.adVerified!==true&&credit?.promotionGranted!==true)'),'No second ad for same completed claim');
+assert.ok(board.includes('if(credit?.adVerified!==true&&!(credit?.promotionGranted===true&&isAdFreePromoActive()))'),'No second ad for same completed claim');
 assert.ok(board.indexOf('if(!rewardActionAllowed(ad))')>=0 && board.indexOf('if(!rewardActionAllowed(ad))')<board.indexOf('submitRaceControlRecordWithoutGhost({'),
  'Server publication requires verified ad or explicitly granted November promotion');
 assert.ok(offer.includes('submitRaceControlRecordWithoutGhost({'),'Session report must offer score-only');
