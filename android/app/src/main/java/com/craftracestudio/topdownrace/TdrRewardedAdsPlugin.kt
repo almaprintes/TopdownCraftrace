@@ -53,8 +53,8 @@ class TdrRewardedAdsPlugin : Plugin() {
         result.put("releaseBuild", BuildConfig.BUILD_TYPE == "release")
         result.put("placementCount", RewardedRequestPolicy.placements().size)
         result.put("versionName", BuildConfig.VERSION_NAME)
-        result.put("diagnosticBuild", BuildConfig.FLAVOR == "deviceTest" || (BuildConfig.FLAVOR == "bridgeTest" && BuildConfig.DEBUG))
-        result.put("googleSampleAdMode", BuildConfig.FLAVOR == "bridgeTest" && BuildConfig.DEBUG)
+        result.put("diagnosticBuild", BuildConfig.FLAVOR != "production")
+        result.put("googleSampleAdMode", BuildConfig.FLAVOR != "production")
         lastDiagnostic?.let { result.put("lastRewardedDiagnostic", it) }
         activeAttempt?.let { attempt ->
             val live = JSObject()
@@ -105,10 +105,15 @@ class TdrRewardedAdsPlugin : Plugin() {
             resolveFailure(call, validation.reason ?: "invalid_request")
             return
         }
-        // Google sample ads are only available in the separately installed debug
-        // .bridgetest package. Production and bridgeTestRelease keep their original
-        // RevenueCat verification / fail-closed behavior.
-        if (BuildConfig.FLAVOR == "bridgeTest" && BuildConfig.DEBUG) {
+        // ALL non-production flavors (including minified QA release) must use
+        // Google's official sample unit. Never request paid inventory in QA.
+        if (BuildConfig.FLAVOR != "production") {
+            if (BuildConfig.TDR_REWARDED_AD_UNIT_ID != GOOGLE_DEMO_REWARDED_UNIT_ID ||
+                BuildConfig.TDR_REWARDED_CONFIGURED
+            ) {
+                resolveFailure(call, "qa_ad_config_unsafe")
+                return
+            }
             showGoogleSampleAd(call, placement!!, claimId!!)
             return
         }
@@ -379,6 +384,7 @@ class TdrRewardedAdsPlugin : Plugin() {
     }
 
     private companion object {
+        private const val GOOGLE_DEMO_REWARDED_UNIT_ID = "ca-app-pub-3940256099942544/5224354917"
         const val TAG = "TDR_REWARDED"
         const val WATCHDOG_MS = 170_000L
     }
