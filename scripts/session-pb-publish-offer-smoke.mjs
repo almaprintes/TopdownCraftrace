@@ -76,13 +76,15 @@ assert.ok(offer.indexOf('const ghost=localRecordGhost')<offer.indexOf('await sho
   'Check for an exact ghost before offering either publication format');
 assert.ok(offer.indexOf('const bytes=encodeOnlineGhostNativeBinary')<offer.indexOf('await showRewardedAd(scene'),
   'Encode and size-check ghost before showing ad');
-assert.ok(offer.includes('if(!verifiedReward(result))throw'), 'Publication requires a verified finished ad');
-assert.ok(offer.indexOf('if(!verifiedReward(result))throw')<offer.indexOf('await submitRaceControlRecordWithGhost'),
-  'Do not publish without completing the rewarded ad');
-assert.ok(offer.includes('verifiedPublishClaims.set(claimId,{adVerified:true,published:false})'),
-  'Credit a completed rewarded ad to allow retry');
-assert.ok(offer.includes('if(!adVerified){'),'Retry must not start another ad');
-assert.ok(offer.includes('REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO'));
+assert.ok(offer.includes('if(!rewardActionAllowed(result))throw'), 'Publication requires a verified ad OR explicitly granted free November promotion');
+assert.ok(offer.includes('adVerified=verifiedReward(result);'), 'Only a real SSV confirmation counts as verified ad');
+assert.ok(offer.includes('promotionGranted=result?.promotion===true;'), 'Promotion is tracked separately from SSV');
+assert.ok(offer.indexOf('if(!rewardActionAllowed(result))throw')<offer.indexOf('await submitRaceControlRecordWithGhost'),
+  'Do not publish without authorised ad or eligible promotion');
+assert.ok(offer.includes('verifiedPublishClaims.set(claimId,{adVerified,promotionGranted,published:false})'),
+  'Store separate verified ad and promotional permissions for safe retry');
+assert.ok(offer.includes('if(!hasAccess()){'),'Retry must not require a new ad or promotional claim');
+assert.ok(offer.includes('REINTENTAR PUBLICACIÓN · GRATIS'));
 assert.ok(offer.includes("setStatus('No has elegido publicar. No se mostrará ningún anuncio.')"));
 assert.ok(offer.includes('if(!row||(replay?!row.record_ref:row.track_id!==trackId))'),
   'Both ghost and time-only publications must have server acknowledgement');
@@ -97,4 +99,4 @@ assert.ok(report.indexOf('installSessionReportNavigation(root);')<report.indexOf
 assert.ok(ads.includes("RACE_CONTROL_PUBLISH:'race_control_publish_record'"));
 assert.ok(rpc.includes("'/rest/v1/rpc/submit_track_record_with_ghost'"));
 assert.ok(rewardProvider.includes('isRewardedAdAvailable()'));
-console.log('PB report offer: truly new session PB only; clear ad disclosure; opt-in click; verified ad; ghost/network preflight; no duplicate-ad retry; successful publication requires server ack OK');
+console.log('PASS: PB report offer, explicit action, separate SSV/promo credits, ghost/network preflight, no duplicate charge, server-ack publication');
