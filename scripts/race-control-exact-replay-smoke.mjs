@@ -45,13 +45,13 @@ assert.ok(!board.includes('if(!selected?.ghostKey||!button'),'Player can publish
 assert.ok(board.includes('findExactLocalPbReplay(selected)'));
 assert.ok(board.includes('submitRaceControlRecordWithoutGhost({'),'Board supports score-only');
 assert.ok(board.includes('submitRaceControlRecordWithGhost({'),'Board still supports score+replay');
-assert.ok(board.includes('if(credit?.adVerified!==true)'),'No second ad for same completed claim');
-assert.ok(board.indexOf('if(!verifiedReward(ad))')<board.indexOf('submitRaceControlRecordWithoutGhost({'),
- 'Server publication must still require a verified rewarded ad');
+assert.ok(board.includes('if(credit?.adVerified!==true&&credit?.promotionGranted!==true)'),'No second ad for same completed claim');
+assert.ok(board.indexOf('if(!rewardActionAllowed(ad))')>=0 && board.indexOf('if(!rewardActionAllowed(ad))')<board.indexOf('submitRaceControlRecordWithoutGhost({'),
+ 'Server publication requires verified ad or explicitly granted November promotion');
 assert.ok(offer.includes('submitRaceControlRecordWithoutGhost({'),'Session report must offer score-only');
 assert.ok(offer.includes('submitRaceControlRecordWithGhost({'),'Exact ghost still publishes');
 assert.ok(offer.includes('No existe una repetición exacta'),'User must be informed before paying for score-only');
-assert.ok(offer.indexOf('if(!verifiedReward(result))throw')<offer.indexOf('submitRaceControlRecordWithoutGhost({'));
+assert.ok(offer.indexOf('if(!rewardActionAllowed(result))')>=0 && offer.indexOf('if(!rewardActionAllowed(result))')<offer.indexOf('submitRaceControlRecordWithoutGhost({'));
 assert.ok(rpc.includes("'/rest/v1/rpc/submit_track_record'"),'Reuse authenticated score-only RPC');
 assert.ok(sql.includes('ghost_payload=null'),'New PB without replay clears an older ghost');
 assert.ok(sql.includes('record_ref=gen_random_uuid()'),'Old ghost references are invalidated');
