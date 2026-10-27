@@ -153,8 +153,11 @@ jobs:
             exit 1
           fi
           printf '%s\n' 'AAB for the actual Google Play application com.craftracestudio.topdownrace, versionCode 10, versionName 1.2.336.'             'NOT published in Google Play; owner must test QA first.'             'If the file is named NO_PUBLICAR_SIN_FIRMA, it is UNSIGNED: sign it with the original upload certificate before uploading.'             "Source commit: $GITHUB_SHA" > play-candidate-notes.txt
-          gh release create "$tag" "$candidate" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title 'Top Down RACE 1.2.336 · Google Play AAB v10 candidate' --notes-file play-candidate-notes.txt
+          if ! gh release create "$tag" "$candidate" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title 'Top Down RACE 1.2.336 · Google Play AAB v10 candidate' --notes-file play-candidate-notes.txt; then
+            echo '::warning::GitHub release unavailable (often 403). Validated AAB remains in the uploaded Actions artifact.'
+            echo 'Download the Actions artifact for this run; do not claim the unsigned AAB is Play-ready.' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Remove temporary upload signer
         if: always()
         run: |
