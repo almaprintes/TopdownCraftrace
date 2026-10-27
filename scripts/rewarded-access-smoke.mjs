@@ -30,6 +30,9 @@ assert.equal(coolingDown.available,false,'four-hour reward must remain locked af
 assert.equal(coolingDown.claimId,'store-coins-100:1000000');
 assert.equal(actions.storeRewardedWindow(1_000_000,1_000_000+4*60*60*1000).available,true);
 
+// Test REAL rewarded behavior outside the November free event window.
+const actualDateNow=Date.now;
+Date.now=()=>Date.parse('2026-12-05T12:00:00Z');
 globalThis.window={location:{pathname:'/'},__tdrRewardedAds:{show:async()=>({completed:true,verified:false,reason:'ssv_failed'})}};
 const provider=await import('../src/game/monetization/RewardedAdsProvider.js');
 const rejected=await provider.showRewardedAd(null,{placement:'test',claimId:'claim-1'});
@@ -53,12 +56,22 @@ assert.equal(provider.isRewardedAdAvailable(),true);
 localStorage.removeItem('tdr2:forceRewardedAdMock');
 window.location.pathname='/';
 delete globalThis.__TDR_PROD_BUILD__;
+// During promotion the native AdMob bridge is NEVER called, and no ad verification is forged.
+Date.now=()=>Date.parse('2026-11-15T12:00:00Z');
+const promo=await provider.showRewardedAd(null,{placement:actions.REWARDED_PLACEMENTS.STORE_COINS_100,claimId:'store-coins-100:first'});
+assert.equal(promo.promotion,true);
+assert.equal(promo.completed,false);
+assert.equal(promo.verified,false);
+assert.equal(actions.verifiedReward(promo),false);
+assert.equal(actions.rewardActionAllowed(promo),true);
+assert.equal(actions.rewardActionAllowed({...promo,placement:'fake_placement'}),false);
+Date.now=actualDateNow;
 
 const sessionRewardsSource=await readFile(new URL('../src/game/scenes/RaceSessionRewardsScene.js',import.meta.url),'utf8');
 assert.match(sessionRewardsSource,/mountRaceSessionRewards/,'shipping session rewards must use the canonical x2-capable UI');
 assert.match(sessionRewardsSource,/REWARDED_PLACEMENTS\.POST_RACE_DOUBLE_LOOT/,'shipping post-race screen must expose the x2 placement');
 assert.match(sessionRewardsSource,/claimPostRaceDoubleLoot/,'shipping post-race screen must grant the protected x2 claim');
-assert.match(sessionRewardsSource,/verifiedReward\(ad\)/,'shipping post-race x2 must require verified rewarded completion');
+assert.match(sessionRewardsSource,/rewardActionAllowed\(ad\)/,'shipping post-race x2 must require verified rewarded completion');
 const sessionUiSource=await readFile(new URL('../src/game/ui/raceSessionUi.js',import.meta.url),'utf8');
 assert.match(sessionUiSource,/data-a="double"/,'canonical session UI must render the x2 button');
 assert.match(sessionUiSource,/tdr-x2-button/,'canonical cinematic x2 button styling hook must remain present');
@@ -68,18 +81,18 @@ assert.match(publishSource,/RACE_CONTROL_PUBLISH/);
 assert.match(publishSource,/getRaceControlSnapshot\(selected\.trackId\)/,'publishing must refresh the selected leaderboard');
 const ghostSource=await readFile(new URL('../src/game/scenes/StatsBroadcastRealReplayScene.js',import.meta.url),'utf8');
 assert.match(ghostSource,/RACE_CONTROL_GHOST/);
-assert.match(ghostSource,/verifiedReward\(ad\)/);
+assert.match(ghostSource,/rewardActionAllowed\(ad\)/);
 const recyclerSource=await readFile(new URL('../src/game/ui/MaterialExchangeDom.js',import.meta.url),'utf8');
 assert.match(recyclerSource,/recyclerRewardedPlacement\(ordinal\)/);
-assert.match(recyclerSource,/verifiedReward\(ad\)/);
+assert.match(recyclerSource,/rewardActionAllowed\(ad\)/);
 const storeSource=await readFile(new URL('../src/game/scenes/MenuRewardedAdsScene.js',import.meta.url),'utf8');
 assert.match(storeSource,/STORE_COINS_100/);
 assert.match(storeSource,/claimId:status\.claimId/);
-assert.match(storeSource,/verifiedReward\(ad\)/);
+assert.match(storeSource,/rewardActionAllowed\(ad\)/);
 for(const file of ['UpgradeShopScene.js','UpgradeWorkshopPerformanceScene.js','UpgradeWorkshopCrafterraScene.js']){
   const source=await readFile(new URL(`../src/game/scenes/${file}`,import.meta.url),'utf8');
   assert.match(source,/REWARDED_PLACEMENTS\.POST_RACE_DOUBLE_LOOT/);
-  assert.match(source,/verifiedReward\(ad\)/,'legacy x2 entry points must never treat a failed result object as success');
+  assert.match(source,/rewardActionAllowed\(ad\)/,'legacy x2 entry points must never treat a failed result object as success');
 }
 // Contest-only judge mode is tested as removed by shipaton-retirement-smoke.mjs.
 
