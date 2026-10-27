@@ -1,3 +1,5 @@
+import {isAdFreePromoActive} from './adFreeNovember.js';
+
 export const REWARDED_PLACEMENTS=Object.freeze({
   POST_RACE_DOUBLE_LOOT:'post_race_double_loot',
   RACE_CONTROL_PUBLISH:'race_control_publish_record',
@@ -19,7 +21,7 @@ export function rewardActionAllowed(result){
   const promoPlacements=Object.values(REWARDED_PLACEMENTS);
   return verifiedReward(result)||
     (result?.promotion===true&&result?.verified===false&&
-     result?.source==='november-2026'&&
+     result?.source==='november-2026'&&isAdFreePromoActive()&&
      promoPlacements.includes(result?.placement));
 }
 
