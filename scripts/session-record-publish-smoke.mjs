@@ -43,16 +43,16 @@ for(const x of [
  '¿Quieres publicarlo en la clasificación online?',
  'PUBLICAR · VER ANUNCIO','AHORA NO',
  'getPilotProfile()','localRecordGhost(trackId,carId,best.lapMs,scene?._tdrSessionExactPbReplay)',
- 'if(!isRewardedAdAvailable()&&!adVerified)',
+ 'if(!isRewardedAdAvailable()&&!hasAccess())',
  'await ensureRaceControlPilotProfile()',
  'await showRewardedAd(scene,',
  'REWARDED_PLACEMENTS.RACE_CONTROL_PUBLISH',
- 'if(!verifiedReward(result))',
- 'adVerified=true',
+ 'if(!rewardActionAllowed(result))',
+ 'adVerified=verifiedReward(result)',
  'await submitRaceControlRecordWithGhost({',
  'if(!row||(replay?!row.record_ref:row.track_id!==trackId))',
- 'if(adVerified)publish.textContent=',
- 'REINTENTAR PUBLICACIÓN · SIN OTRO ANUNCIO',
+ 'if(hasAccess())publish.textContent=',
+ 'REINTENTAR PUBLICACIÓN · GRATIS',
  'actions.hidden=true'
 ])assert.ok(view.includes(x),'Missing explicitly optional consent flow or server verification: '+x);
 const earlyChecks=view.indexOf('const ghost=localRecordGhost');
@@ -70,4 +70,4 @@ assert.ok(source.includes('valid:e?.valid!==false&&e?.invalid!==true'));
 assert.ok(source.indexOf('installSessionReportNavigation(root)')<source.indexOf('mountNewPersonalBestOffer(this,root,r)'));
 const navig=readFileSync('src/game/ui/sessionReportNavigation.js','utf8');
 assert.ok(navig.includes("const TABS=[")&&navig.includes('VUELTAS'),'New three-page report retained');
-console.log('Record publication offer: PB vs historic best, invalid lap rejection, ghost match, explicit voluntary 30s ad disclosure, verified rewarded submission and ad-free retry OK');
+console.log('Record publication: valid PB, exact ghost, explicit ad OR November promo grant, independent SSV and no duplicate retries OK');
