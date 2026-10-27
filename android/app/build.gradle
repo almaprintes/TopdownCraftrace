@@ -15,10 +15,13 @@ def admobTestDeviceIds = configuredValue('TDR_ADMOB_TEST_DEVICE_IDS')
 def productionConfigured = admobAppId.startsWith('ca-app-pub-') &&
         rewardedAdUnitId.startsWith('ca-app-pub-') &&
         revenueCatPublicKey.length() > 8
+// Only Play builds need the real AdMob / RevenueCat identifiers.
+// Every QA flavor is hardwired to Google's demo inventory below.
 def productionRequested = gradle.startParameter.taskNames.any { task ->
     def name = task.toLowerCase()
-    name.contains('production') || name.contains('devicetest') ||
-        (name.contains('release') && !name.contains('bridgetest'))
+    name.contains('production') ||
+        (name.contains('release') &&
+            !['bridgetest', 'devicetest', 'cloudtest'].any { name.contains(it) })
 }
 
 if (productionRequested && !productionConfigured) {
@@ -95,16 +98,16 @@ android {
         deviceTest {
             dimension 'environment'
             applicationIdSuffix '.rewardedtest'
-            // Dedicated QA-only install number; production remains 8.
-            // Increase this monotonically for each QA install/update.
-            versionCode 1000335
-            versionName '1.2.335-qa'
+            // Dedicated, upgrade-compatible QA install: NEVER use real AdMob IDs.
+            // Google demo app + rewarded unit are not associated with the publisher.
+            versionCode 1000336
+            versionName '1.2.336-qa'
             versionNameSuffix '-rewarded-test'
-            manifestPlaceholders = [ADMOB_APP_ID: admobAppId ?: 'missing-production-admob-app-id']
-            buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted(rewardedAdUnitId)
-            buildConfigField 'String', 'TDR_REVENUECAT_PUBLIC_SDK_KEY', quoted(revenueCatPublicKey)
-            buildConfigField 'boolean', 'TDR_REWARDED_CONFIGURED', String.valueOf(productionConfigured)
-            buildConfigField 'String', 'TDR_ADMOB_TEST_DEVICE_IDS', quoted(admobTestDeviceIds)
+            manifestPlaceholders = [ADMOB_APP_ID: 'ca-app-pub-3940256099942544~3347511713']
+            buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted('ca-app-pub-3940256099942544/5224354917')
+            buildConfigField 'String', 'TDR_REVENUECAT_PUBLIC_SDK_KEY', quoted('')
+            buildConfigField 'boolean', 'TDR_REWARDED_CONFIGURED', 'false'
+            buildConfigField 'String', 'TDR_ADMOB_TEST_DEVICE_IDS', quoted('')
         }
         // Isolated account-recovery rehearsal. This test flavor is disposable;
         // it can be uninstalled without touching the real game or ad QA app.
