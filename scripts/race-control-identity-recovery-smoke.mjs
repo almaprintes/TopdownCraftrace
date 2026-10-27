@@ -33,11 +33,12 @@ assert.match(race,/getPublicRaceControlSnapshot\(selected.trackId\)/);
 assert.match(race,/saveCloudSnapshot\(selected.trackId,global\)/);
 assert.match(race,/this\._raceControlScope='global'/);
 assert.match(race,/this\._showRaceControlNotice\(message\)/);
-assert.match(race,/verifiedRecordPublishClaims\.set\(claimId,\{adVerified:true,published:true\}\)/);
+assert.match(race,/verifiedRecordPublishClaims\.set\(claimId,\{adVerified:credit\?\.adVerified===true,promotionGranted:credit\?\.promotionGranted===true,published:true\}\)/,
+  'Persist separate SSV or free-event publication credits only after server confirmation');
 assert.match(report,/verifiedRecordPublishClaims as verifiedPublishClaims/);
 assert.match(shared,/export const verifiedRecordPublishClaims=new Map\(\)/);
 assert.match(report,/actions\.hidden=true;actions\.style\.display='none'/);
-assert.ok(race.indexOf('verifiedRecordPublishClaims.set(claimId,{adVerified:true,published:true})')<
+assert.ok(race.indexOf('verifiedRecordPublishClaims.set(claimId,{adVerified:credit?.adVerified===true,promotionGranted:credit?.promotionGranted===true,published:true})')<
   race.indexOf('const snapshot=await getRaceControlSnapshot(selected.trackId);',race.indexOf('async _publishRaceControlRecord')),
   'A refresh failure must never invalidate a successfully published record or consume another ad');
 console.log('Race Control nickname conflict: secure profile gate, no orphan submissions, public GLOBAL fallback, verified ad-free retry, safe report actions OK');
