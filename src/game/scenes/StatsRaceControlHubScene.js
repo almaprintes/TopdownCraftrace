@@ -7,16 +7,16 @@ import { mountRaceControlHub } from '../ui/raceControlHub.js';
 
 export class StatsScene extends PreviousStatsScene {
   create(data) {
-    // A replay returning to an exact track must bypass the decorative hub.
-    let pendingReplayReturn = false;
-    try { pendingReplayReturn = !!sessionStorage.getItem('tdr2:statsReturnTrack'); } catch {}
-    super.create(data);
+    // The main lobby always supplies raceControlTrackId to jump directly into
+    // the old leaderboard. Strip that *only* for DEV hub entry so the inherited
+    // StatsBroadcastRealReplayScene does not schedule a delayed direct render.
+    // Preserve the selected track for when the player chooses Clasificaciones.
+    const onlineEntry=data?.onlineFromLobby===true && data?.statsView!=='overview';
+    this._rc2PreferredTrack=onlineEntry?String(data?.raceControlTrackId||''):null;
+    super.create(onlineEntry?{...data,raceControlTrackId:'',statsView:'overview'}:data);
     this.events.once('shutdown', () => this._disposeRaceControlHub());
     this.events.once('destroy', () => this._disposeRaceControlHub());
-    if(data?.onlineFromLobby === true &&
-       data?.statsView !== 'overview' &&
-       !data?.raceControlTrackId &&
-       !pendingReplayReturn) this._showRaceControlHub();
+    if(onlineEntry) this._showRaceControlHub();
   }
 
   _disposeRaceControlHub() {
@@ -51,7 +51,7 @@ export class StatsScene extends PreviousStatsScene {
         switch(action){
           case 'rankings':
           case 'ghosts':
-            this._renderBroadcastRecords();
+            this._renderBroadcastRecords(this._rc2PreferredTrack||null);
             break;
           case 'pilots':
           case 'cars':
