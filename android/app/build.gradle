@@ -78,7 +78,7 @@ android {
             dimension 'environment'
             // Google Play update of original application, not QA.
             versionCode 10
-            versionName '1.2.335'
+            versionName '1.2.336'
             manifestPlaceholders = [ADMOB_APP_ID: admobAppId ?: 'missing-production-admob-app-id']
             buildConfigField 'String', 'TDR_REWARDED_AD_UNIT_ID', quoted(rewardedAdUnitId)
             buildConfigField 'String', 'TDR_REVENUECAT_PUBLIC_SDK_KEY', quoted(revenueCatPublicKey)
