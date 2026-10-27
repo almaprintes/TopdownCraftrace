@@ -41,7 +41,10 @@ function harness(hasCanvas){
   };
   vm.runInNewContext(beginning,{
     window,document:{getElementById:id=>id==='app'?app:null},
-    isBenignResizeObserverWarning,mayReplaceStartupScreen
+    isBenignResizeObserverWarning,mayReplaceStartupScreen,
+    // The runtime bootstrap now initialises a read-only November promo flag.
+    // Stub it when isolating crash handlers; no network or game state is needed.
+    installAdFreePromoControl:()=>{}
   });
   return {
     app,
