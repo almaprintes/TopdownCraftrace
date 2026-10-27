@@ -142,6 +142,17 @@ async function saveBackup(expectedRevision,{socialAccountId=null}={}){
   try{pending=localStorage.getItem('tdr2:cloudLoginPendingRestore:v1');}catch{}
   if(pending&&!(expectedRevision===0&&socialAccountId===identity.id&&pending===identity.id&&localStorage.getItem('tdr2:socialSavePending:v1')===identity.id))throw new Error('Primero recupera la partida de esta cuenta; no se ha sobrescrito la nube.');
   const snapshot=localProgressSnapshot();
+  // A manual tap on a fully verified, unchanged backup must not transmit the
+  // whole 125-KB snapshot again. Recheck the remote revision with a tiny GET.
+  const marker=expectedRevision>0?cloudConfirmedMarker(identity.id):null;
+  if(marker?.revision===expectedRevision&&
+    marker.digest===await cloudDataDigest(snapshot.data)){
+    const status=await store.read(identity,{statusOnly:true});
+    if(status?.revision!==expectedRevision)
+      throw new Error('La copia ha cambiado en otro dispositivo. Compara antes de actualizar.');
+    return {id:identity.id,revision:expectedRevision,keys:Object.keys(snapshot.data).length,
+      bytes:0,verified:true,unchanged:true};
+  }
   const row=await store.save(identity,snapshot,expectedRevision);
   if(!row?.saved)throw new Error('La copia cambió en otro dispositivo. No se ha sobrescrito. Recarga su estado.');
   // Read back server state before declaring a backup safe for reinstall.
