@@ -1,5 +1,5 @@
-name: TDR real AdMob RevenueCat minified QA APK
-# QA 1.2.335: rebuild on fixed original-signing checks; preserve existing install.
+name: TDR safe Google demo ads minified QA APK
+# QA 1.2.336: demo-only AdMob inventory; no paid impressions from test devices.
 # Rerun: first-entry version parser no longer escapes too many characters.
 # DEV 1.2.335: corrected first-entry test to accept subsequent versions.
 # QA DEV 1.2.335: Android native JSON export + Atlantico Inverso fix, full approved game; never Play.
@@ -15,6 +15,9 @@ on:
       - 'scripts/verify-android-launcher.mjs'
       - 'scripts/android-release-candidate-smoke.mjs'
       - 'scripts/android-qa-signing-smoke.mjs'
+      - 'scripts/android-test-ads-safety-smoke.mjs'
+      - 'android/app/build.gradle'
+      - 'android/app/src/main/java/com/craftracestudio/topdownrace/TdrRewardedAdsPlugin.kt'
       - 'src/game/scenes/RaceProceduralAudioScene.js'
       - 'src/game/audio/CarEngineSampleRuntime.js'
       - 'src/main.js'
@@ -40,9 +43,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  real_ads_qa:
-    # Runs on a deliberate workflow change or manual dispatch. A web-only
-    # commit marked [pwa-only] must not trigger a real-ad test package.
+  safe_demo_ads_qa:
+    # Runs on deliberate changes or manual dispatch. Always demo-only;
+    # a web-only commit marked [pwa-only] should not regenerate the APK.
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[apk-qa]') || !contains(github.event.head_commit.message, '[pwa-only]') }}
     name: Build separate physical Redmi QA app
     runs-on: ubuntu-latest
@@ -57,14 +60,9 @@ jobs:
       TDR_ANDROID_TEST_BUILD_TYPE: release
       VITE_TDR_ONLINE_URL: ${{ vars.VITE_TDR_ONLINE_URL }}
       VITE_TDR_ONLINE_PUBLIC: ${{ vars.VITE_TDR_ONLINE_PUBLIC }}
-      # These three identifiers are PUBLIC Android app/SDK identifiers by design.
-      # They are bundled into the distributable app, not secret/private API keys.
-      TDR_ADMOB_APP_ID: ca-app-pub-1520547848869532~9780989345
-      TDR_ADMOB_REWARDED_UNIT_ID: ca-app-pub-1520547848869532/2605472830
-      TDR_REVENUECAT_PUBLIC_SDK_KEY: goog_dkfPGMwMaCAVUhyeibbGQOZMAiC
-      # This build exercises LIVE ad inventory. Do not use it for repeated
-      # artificial impression generation. Use bridgeTest for frequent testing.
-      TDR_ADMOB_TEST_DEVICE_IDS: ''
+      # No live ad identifiers or RevenueCat verification key in this job.
+      # deviceTest receives Google's demo app + rewarded unit at Gradle level.
+      # Sample rewards intentionally do not produce RevenueCat verified claims.
     steps:
       - name: Checkout merged DEV from exact main
         uses: actions/checkout@v4
@@ -204,9 +202,10 @@ jobs:
           node scripts/race-pause-timing-smoke.mjs
           node scripts/karting-canarias-4096-smoke.mjs
           node scripts/android-release-candidate-smoke.mjs
+          node scripts/android-test-ads-safety-smoke.mjs
           node scripts/android-qa-signing-smoke.mjs
           node scripts/verify-android-launcher.mjs
-      - name: Compile APK with real AdMob and RevenueCat integrations
+      - name: Compile APK with Google demo ads only (no paid inventory)
         working-directory: android
         run: ./gradlew :app:testDeviceTestReleaseUnitTest :app:assembleDeviceTestRelease --stacktrace
       - name: Validate separate package and APK
@@ -216,7 +215,7 @@ jobs:
           src='android/app/build/outputs/apk/deviceTest/release/app-deviceTest-release.apk'
           test -s "$src"
           unzip -t "$src" | tail -1
-          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000335'"
+          "${ANDROID_HOME}/build-tools/36.0.0/aapt" dump badging "$src" | grep "package: name='com.craftracestudio.topdownrace.rewardedtest'.*versionCode='1000336'"
           apk_sign_report="$("${ANDROID_HOME}/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$src")"
           printf '%s\n' "$apk_sign_report" | grep -E 'Verified using|Signer #1 certificate SHA-256'
           apk_cert="$(printf '%s\n' "$apk_sign_report" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1 | tr '[:upper:]' '[:lower:]')"
@@ -225,14 +224,14 @@ jobs:
             exit 1
           fi
           mkdir -p sdk-download
-          cp "$src" sdk-download/TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR.apk
-          sha256sum sdk-download/TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR.apk
+          cp "$src" sdk-download/TDR-QA-DEV-1.2.336-ANUNCIOS-DE-PRUEBA.apk
+          sha256sum sdk-download/TDR-QA-DEV-1.2.336-ANUNCIOS-DE-PRUEBA.apk
           ls -lh sdk-download/*.apk
       - name: Make installable Redmi APK available
         uses: actions/upload-artifact@v4
         with:
-          name: TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR
-          path: sdk-download/TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR.apk
+          name: TDR-QA-DEV-1.2.336-ANUNCIOS-DE-PRUEBA
+          path: sdk-download/TDR-QA-DEV-1.2.336-ANUNCIOS-DE-PRUEBA.apk
           compression-level: 0
           retention-days: 30
           if-no-files-found: error
@@ -243,10 +242,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          apk='sdk-download/TDR-QA-DEV-1.2.335-REAL-ADS-SIN-MEDIR.apk'
-          tag='tdr-qa-1.2.335'
+          apk='sdk-download/TDR-QA-DEV-1.2.336-ANUNCIOS-DE-PRUEBA.apk'
+          tag='tdr-qa-1.2.336'
           cat > qa-release-notes.md <<EOF
-          APK Android QA DEV 1.2.335 compilada desde main. Incluye: compatibilidad de fantasmas Atlántico 70 % y normalización de tamaño (DEV 1.2.335), corregida contaminación de colisiones de otro circuito en primera carga (DEV 1.2.333), controles del fantasma fijos con zoom (DEV 1.2.332), 2.364 frases de lectura de tanda ES/EN (DEV 1.2.331), exportación JSON Android, circuitos inversos, Race Control, RALLY, temporadas, Supabase y anuncios AdMob/RevenueCat reales. applicationId com.craftracestudio.topdownrace.rewardedtest, versionCode 1000335. No se publica en Play.
+          APK Android QA 1.2.336 compilada desde main. Contiene la DEV del commit exacto con circuitos, controles, Race Control, RALLY, temporadas, Supabase y Google AdMob DEMO. No envía impresiones monetizadas a la cuenta TDR. Los anuncios de demostración NO verifican recompensas vía RevenueCat: es intencional; probar SSV real solo con dispositivos registrados y redes correctamente configuradas. applicationId com.craftracestudio.topdownrace.rewardedtest, versionCode 1000336. No se publica en Play.
 
           CERTIFICADOS REALES AUDITADOS:
           - .300: ${{ steps.legacy_signers.outputs.cert_300 }}
@@ -261,6 +260,6 @@ jobs:
             exit 1
           else
             gh release create "$tag" "$apk" --target "$GITHUB_SHA" --prerelease \
-              --title 'Top Down Race · APK de prueba DEV 1.2.335' \
+              --title 'Top Down Race · APK de prueba segura 1.2.336' \
               --notes-file qa-release-notes.md
           fi
