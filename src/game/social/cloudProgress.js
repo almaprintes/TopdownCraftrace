@@ -1,6 +1,6 @@
 // Recoverable player progression. A backup never includes auth credentials,
 // transient ad claims, developer/admin overrides or device-specific settings.
-import { activateRaceControlOnline } from '../online/raceControlOnline.js';
+import { activateRaceControlOnline, savedGoogleWebIdentity } from '../online/raceControlOnline.js';
 import { createPlayerProgressRepository } from '../online/playerProgressRepository.js';
 import {Capacitor,registerPlugin} from '@capacitor/core';
 
@@ -8,6 +8,37 @@ const store=createPlayerProgressRepository();
 export const CLOUD_SAVE_FORMAT=2;
 // Leave margin below the 512-KiB server-side JSONB quota. No partial backups.
 export const MAX_CLOUD_BYTES=470000;
+// Small, device-local receipt. Never upload it and never treat it as server authentication.
+const CLOUD_RECEIPT='tdr2:cloudConfirmed:v1';
+let cloudWritePending=false;
+function exclusiveCloudWrite(task){
+  if(cloudWritePending)throw new Error('Ya se está guardando otra copia. Vuelve a intentarlo.');
+  cloudWritePending=true;
+  return Promise.resolve().then(task).finally(()=>{cloudWritePending=false;});
+}
+export function cloudConfirmedMarker(id){
+  if(!id)return null;
+  try{
+    const value=JSON.parse(localStorage.getItem(CLOUD_RECEIPT)||'null');
+    return value?.id===id&&Number.isSafeInteger(value.revision)&&value.revision>0&&
+      /^[a-f0-9]{64}$/.test(value.digest||'')?value:null;
+  }catch{return null;}
+}
+export async function cloudDataDigest(data){
+  const bytes=new TextEncoder().encode(canonicalJson(data));
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+  return Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
+}
+export async function markCloudConfirmed(id,revision,data){
+  if(!id||!Number.isSafeInteger(revision)||revision<1)return false;
+  const digest=await cloudDataDigest(data);
+  try{
+    localStorage.setItem(CLOUD_RECEIPT,JSON.stringify({id,revision,digest}));
+    if(!cloudConfirmedMarker(id))return false;
+    try{window.dispatchEvent(new Event('tdr:cloudsave-confirmed'));}catch{}
+    return true;
+  }catch{return false;}
+}
 const JSON_KEYS=new Set([
   'tdr2:playerStats:v1','tdr2:carUnlocks:v1','tdr2:garageFusion:v1',
   'tdr2:pilotProfile:v1','tdr2:pilotRankingLocalLocation:v1','tdr2:raceRecords:v1',
@@ -120,15 +151,50 @@ async function saveBackup(expectedRevision,{socialAccountId=null}={}){
   const actualData=validatedSnapshot(persisted.snapshot);
   if(canonicalJson(actualData)!==canonicalJson(snapshot.data))
     throw new Error('La copia leída del servidor difiere de la partida. No desinstales.');
+  await markCloudConfirmed(identity.id,row.revision,snapshot.data);
   return {id:identity.id,revision:row.revision,keys:Object.keys(snapshot.data).length,
     bytes:new TextEncoder().encode(JSON.stringify(snapshot)).length,verified:true};
 }
 // Revision 0 permits only the first backup, even under concurrent device writes.
-export async function createFirstCloudBackup(options){return saveBackup(0,options);}
+export async function createFirstCloudBackup(options){
+  return exclusiveCloudWrite(()=>saveBackup(0,options));
+}
 export async function updateCloudBackup(expectedRevision){
   const revision=Number(expectedRevision);
   if(!Number.isSafeInteger(revision)||revision<1)throw new Error('Revisión de copia inválida.');
-  return saveBackup(revision);
+  return exclusiveCloudWrite(()=>saveBackup(revision));
+}
+// Auto writes are limited to a previously confirmed *same-device* baseline.
+// The RPC performs an atomic revision CAS. Unlike manual saves, no full 125-KB
+// download is needed to read back an already committed PostgreSQL transaction.
+// Any mismatch fails closed; manual recovery keeps its full content verification.
+export async function updateCloudBackupAutomatically(expectedRevision){
+  return exclusiveCloudWrite(async()=>{
+    const id=savedGoogleWebIdentity();
+    const receipt=cloudConfirmedMarker(id);
+    if(!receipt||receipt.revision!==expectedRevision)
+      throw new Error('Confirma primero tu última copia en Cuenta.');
+    if(localStorage.getItem('tdr2:cloudLoginPendingRestore:v1'))
+      throw new Error('Debes decidir qué partida recuperar antes de sincronizar.');
+    const identity=await cloudIdentity();
+    if(identity.id!==id||savedGoogleWebIdentity()!==id)
+      throw new Error('Se ha cambiado de cuenta. La nube permanece intacta.');
+    const snapshot=localProgressSnapshot();
+    const digest=await cloudDataDigest(snapshot.data);
+    if(cloudConfirmedMarker(id)?.revision!==expectedRevision)
+      throw new Error('Se ha actualizado la copia desde otra operación.');
+    if(digest===receipt.digest)return {saved:false,unchanged:true,revision:expectedRevision};
+    if(savedGoogleWebIdentity()!==id)
+      throw new Error('La cuenta cambió durante el guardado.');
+    const row=await store.save(identity,snapshot,expectedRevision);
+    if(!row?.saved){
+      const error=new Error('La nube tiene otra revisión. Compara las partidas antes de guardar.');
+      error.code='TDR_CLOUD_CONFLICT';
+      throw error;
+    }
+    await markCloudConfirmed(id,row.revision,snapshot.data);
+    return {saved:true,revision:row.revision,bytes:new TextEncoder().encode(JSON.stringify(snapshot)).length};
+  });
 }
 export async function readCloudBackup(){
   const identity=await cloudIdentity();
@@ -178,6 +244,7 @@ export async function restoreCloudBackup(){
   // Clear the inter-account guard only after a successful fully verified
   // restoration. Never clear auth tokens or overwrite other players' saves.
   try{localStorage.removeItem('tdr2:cloudLoginPendingRestore:v1');localStorage.removeItem('tdr2:socialSavePending:v1');}catch{}
+  await markCloudConfirmed(cloud.id,cloud.revision,cloud.snapshot.data);
   return {...cloud,...local};
 }
 // Portable exports contain ONLY the schema-versioned save, never tokens,
