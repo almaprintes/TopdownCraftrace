@@ -23,6 +23,17 @@ const esc=v=>String(v??'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'
 const fmtLap=ms=>{ms=Number(ms);if(!Number.isFinite(ms)||ms<=0)return'—';const m=Math.floor(ms/60000),s=(ms-m*60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;};
 const trackName=(id,lang)=>getTrackPublicName(TRACK_REGISTRY?.[id]||id,lang);
 const carName=id=>CAR_SPECS?.[id]?.name||id||'—';
+// Race Control groups each CURRENT road with its Inverso variant.
+const RACE_CONTROL_CIRCUIT_ORDER=Object.freeze([
+  'KARTING TENERIFE','KARTING CANARIAS','KARTING AMÉRICAS',
+  'CIRCUITO ATLÁNTICO','SANTA CRUZ','7 PICOS','ARAFO → LOS LOROS'
+]);
+const raceControlCircuitOrder=id=>{
+  const name=trackName(id,'es'),inverse=/ INVERSO$/.test(name);
+  const basic=name.replace(/ INVERSO$/,'');
+  const idx=RACE_CONTROL_CIRCUIT_ORDER.indexOf(basic);
+  return (idx<0?100:idx)*2+(inverse?1:0);
+};
 // Cuper has original / Gold sprites in assets/skins, not a lobby WebP.
  // Resolve visuals using the shared garage/lobby selection with a safe fallback.
 const carSrc=id=>carVisualCandidates(id,CAR_SPECS?.[id],{base:BASE,dev:!IS_PROD_BUILD})[0]||'';
@@ -54,7 +65,7 @@ export class StatsScene extends MasteryStatsScene{
     this._root.appendChild(s);}
   _renderBroadcastRecords(trackId=null){
     const lang=getLanguage()==='en'?'en':'es';this._root.innerHTML=this._shell(t('raceControl.title'),t('common.back'));this._installBroadcastStyles();
-    const recorded=getPersonalCircuitRecords();const playable=this._playableTracks();
+    const recorded=getPersonalCircuitRecords();const playable=this._playableTracks().sort((a,b)=>raceControlCircuitOrder(a)-raceControlCircuitOrder(b));
     const records=playable.map(id=>recorded.find(r=>r.trackId===id)||{trackId:id,topLaps:[],progression:[],validLaps:0,bestLapMs:0});
     if(!records.length){const body=this._root.querySelector('.sh-body');body.innerHTML=`<div class="br-empty-chart">${t('raceControl.completeTimedLap')}</div>`;this._root.querySelector('.sh-back')?.addEventListener('click',()=>this._onlineFromLobby?this.scene.start('menu'):this._renderCars());return;}
     const selected=records.find(r=>r.trackId===trackId)||records.find(r=>r.validLaps>0)||records[0];const policy=cloudSnapshotPolicy(selected.trackId);const snapshotRows=Array.isArray(policy.cached?.payload)?policy.cached.payload:[];const scope=this._raceControlScope||'global';const cloudRows=snapshotRows.filter(r=>r.scope===scope);
