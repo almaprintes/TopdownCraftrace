@@ -76,7 +76,7 @@ export class AdminHubScene extends BaseScene {
     masteryPreview.style.margin='0';
     const webpTool=document.createElement('button');
     webpTool.type='button';
-    webpTool.textContent='IMÁGENES → WEBP';
+    webpTool.textContent='CONVERTIR IMÁGENES';
     webpTool.style.cssText='margin:0;padding:clamp(7px,1.2vh,11px) clamp(14px,2.2vw,24px);border:1px solid #2bff88;background:rgba(43,255,136,.08);color:#b8ffe1;font:900 clamp(9px,1.5vh,12px) system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.05em;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
     webpTool.addEventListener('click',async event=>{
       event.preventDefault();event.stopPropagation();
@@ -87,8 +87,8 @@ export class AdminHubScene extends BaseScene {
         try{this._webpToolDispose?.();}catch{}
         this._webpToolDispose=mountAdminWebpTool(root);
       }catch(err){
-        console.warn('[admin-webp] Cannot open image converter',err);
-        this._showToast('CONVERSOR WEBP NO DISPONIBLE');
+        console.warn('[admin-images] Cannot open image converter',err);
+        this._showToast('CONVERSOR DE IMÁGENES NO DISPONIBLE');
       }
     },{passive:false});
     const lastErrorButton=document.createElement('button');
