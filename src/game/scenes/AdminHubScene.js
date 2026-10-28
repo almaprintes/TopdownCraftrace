@@ -1,3 +1,4 @@
+import { mountAdminPaddock } from '../ui/adminPaddockView.js';
 import { BaseScene } from './BaseScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
 import { loadGarage, saveGarage } from '../garage/garageStore.js';
@@ -56,89 +57,33 @@ export class AdminHubScene extends BaseScene {
     this._removeAdminDom();
     const host=this.game?.canvas?.parentElement||document.getElementById('app')||document.body;
     try{if(getComputedStyle(host).position==='static')host.style.position='relative';}catch{}
-
-    const root=document.createElement('div');
-    root.className='tdr-admin-hub-dom';
-    root.style.cssText='position:absolute;inset:0;z-index:120;display:flex;flex-direction:column;box-sizing:border-box;padding:clamp(12px,2.5vh,22px) clamp(18px,4vw,54px);background:linear-gradient(180deg,#0b1020,#08111d);color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation;';
-
-    const header=document.createElement('div');
-    header.style.cssText='flex:0 0 auto;text-align:center;margin-bottom:clamp(8px,1.5vh,14px);';
-    header.innerHTML='<div style="font-size:clamp(21px,4.2vh,34px);font-weight:900;color:#2bff88;letter-spacing:.02em">ADMIN HUB</div><div style="margin-top:3px;font-size:clamp(8px,1.5vh,11px);font-weight:800;color:#71879b;letter-spacing:.16em">HERRAMIENTAS INTERNAS</div>';
-
-    const masteryPreview=document.createElement('button');
-    masteryPreview.type='button';
-    masteryPreview.textContent='VER 9 INSIGNIAS DE MAESTRÍA';
-    masteryPreview.style.cssText='margin:clamp(7px,1.1vh,11px) auto 0;padding:clamp(7px,1.2vh,11px) clamp(14px,2.2vw,24px);border:1px solid #d8a52f;background:rgba(216,165,47,.08);color:#ffe082;font:900 clamp(9px,1.5vh,12px) system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.08em;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
-    masteryPreview.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();this._showMasteryPreview();},{passive:false});
-    // Compact top toolbar: no ninth grid tile squashing the eight Admin tools.
-    const topTools=document.createElement('div');
-    topTools.style.cssText='display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:clamp(6px,1.2vw,12px);margin-top:clamp(6px,1vh,10px);';
-    masteryPreview.style.margin='0';
-    const webpTool=document.createElement('button');
-    webpTool.type='button';
-    webpTool.textContent='CONVERTIR IMÁGENES';
-    webpTool.style.cssText='margin:0;padding:clamp(7px,1.2vh,11px) clamp(14px,2.2vw,24px);border:1px solid #2bff88;background:rgba(43,255,136,.08);color:#b8ffe1;font:900 clamp(9px,1.5vh,12px) system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.05em;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;';
-    webpTool.addEventListener('click',async event=>{
-      event.preventDefault();event.stopPropagation();
-      try{
-        // Lazy-load only on demand; not part of the race render loop.
-        const {mountAdminWebpTool}=await import('../ui/adminImageWebpTool.js');
-        if(!root.isConnected)return;
-        try{this._webpToolDispose?.();}catch{}
-        this._webpToolDispose=mountAdminWebpTool(root);
-      }catch(err){
-        console.warn('[admin-images] Cannot open image converter',err);
-        this._showToast('CONVERSOR DE IMÁGENES NO DISPONIBLE');
-      }
-    },{passive:false});
-    const lastErrorButton=document.createElement('button');
-    lastErrorButton.type='button';
-    lastErrorButton.textContent='ÚLTIMO ERROR';
-    lastErrorButton.style.cssText='margin:0;padding:clamp(7px,1.2vh,11px) clamp(11px,1.8vw,18px);border:1px solid #ff9f43;background:rgba(255,159,67,.08);color:#ffcf91;font:900 clamp(9px,1.5vh,12px) system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:.05em;cursor:pointer;touch-action:manipulation;';
-    lastErrorButton.addEventListener('click',event=>{
-      event.preventDefault();event.stopPropagation();
-      this._showLastRuntimeError();
-    },{passive:false});
-    topTools.append(masteryPreview,webpTool,lastErrorButton);
-    header.appendChild(topTools);
-    root.appendChild(header);
-
-    const grid=document.createElement('div');
-    grid.style.cssText='flex:1 1 auto;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:clamp(6px,1.3vh,11px) clamp(10px,1.4vw,18px);width:min(980px,100%);margin:0 auto;';
-    root.appendChild(grid);
-
-    const actions=[
-      {label:'EDITAR COCHES',sub:'Físicas, fichas y maestrías',accent:'#2bff88',run:()=>this._navigate('GarageScene',{mode:'admin'})},
-      {label:'EDITAR PISTAS',sub:'Editor Bézier',accent:'#2bff88',run:()=>this._navigate('TrackEditorScene')},
-      {label:'TRACK STUDIO',sub:'Diseño avanzado de trazado',accent:'#2bff88',run:()=>this._navigate('TrackStudioScene')},
-      {label:'ENVIRONMENT BUILDER',sub:'Decoración y entorno',accent:'#e1b33b',run:()=>this._navigate('EnvironmentBuilderScene')},
-      {label:'KIT HOMOLOGACIÓN',sub:'Garantiza 1 de cada pieza',accent:'#ffa63c',run:()=>this._grantHomologationKit()},
-      {label:()=>`COCHES DEV · ${devFullCarAccessEnabled()?'ON':'OFF'}`,sub:()=>devFullCarAccessEnabled()?'Jugador ve toda la flota':'Jugador respeta desbloqueos',accent:'#35cfff',run:()=>this._toggleFullCarAccess()},
-      {label:'GARAGE JUGADOR',sub:'Probar progresión / homologar',accent:'#35cfff',run:()=>this._navigate('GarageScene')},
-      {label:'SALIR ADMIN',sub:'Volver al juego',accent:'#5c718e',run:()=>this._navigate('menu',{forcePlayer:true})}
-    ];
-
-    for(const action of actions){
-      const b=document.createElement('button');
-      b.type='button';
-      const render=()=>{
-        const label=typeof action.label==='function'?action.label():action.label;
-        const sub=typeof action.sub==='function'?action.sub():action.sub;
-        b.style.cssText=`min-width:0;min-height:0;border:2px solid ${action.accent};background:linear-gradient(180deg,rgba(20,27,51,.98),rgba(9,16,31,.98));color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(2px,.6vh,6px);padding:clamp(6px,1.2vh,12px);font:inherit;font-weight:900;letter-spacing:.02em;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;`;
-        b.innerHTML=`<span style="font-size:clamp(12px,2.1vh,17px)">${label}</span><small style="font-size:clamp(7px,1.25vh,10px);font-weight:750;color:#93a6b7">${sub}</small>`;
-      };
-      render();
-      b.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();action.run();render();},{passive:false});
-      grid.appendChild(b);
-    }
-
-    const toast=document.createElement('div');
-    toast.style.cssText='position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:2;display:none;padding:7px 12px;background:#071018;border:1px solid #ffa63c;color:#ffcf63;font-size:10px;font-weight:900;white-space:nowrap;';
-    root.appendChild(toast);
-    this._adminDomToast=toast;
-
-    host.appendChild(root);
-    this._adminDomRoot=root;
+    // Only the lazy DEV Admin Hub imports this screen. No race-loop overhead.
+    const view=mountAdminPaddock(host,{
+      track:()=>this._navigate('TrackStudioScene'),
+      environment:()=>this._navigate('EnvironmentBuilderScene'),
+      cars:()=>this._navigate('GarageScene',{mode:'admin'}),
+      images:async()=>{
+        try{
+          const {mountAdminWebpTool}=await import('../ui/adminImageWebpTool.js');
+          if(!this._adminDomRoot?.isConnected)return;
+          try{this._webpToolDispose?.();}catch{}
+          this._webpToolDispose=mountAdminWebpTool(this._adminDomRoot);
+        }catch(err){
+          console.warn('[admin-images] Cannot open image converter',err);
+          this._showToast('CONVERSOR DE IMÁGENES NO DISPONIBLE');
+        }
+      },
+      diagnostics:()=>this._showLastRuntimeError(),
+      garage:()=>this._navigate('GarageScene'),
+      isFullCars:()=>devFullCarAccessEnabled(),
+      toggleCars:()=>this._toggleFullCarAccess(),
+      kit:()=>this._grantHomologationKit(),
+      mastery:()=>this._showMasteryPreview(),
+      legacy:()=>this._navigate('TrackEditorScene'),
+      exit:()=>this._navigate('menu',{forcePlayer:true})
+    });
+    this._adminDomRoot=view.root;
+    this._adminDomToast=view.toast;
   }
 
   async _showLastRuntimeError(){
