@@ -19,6 +19,20 @@ const cache=readFileSync('src/game/stats/localRaceRecords.js','utf8');
 const replay=readFileSync('src/game/scenes/StatsBroadcastRealReplayScene.js','utf8');
 const board=readFileSync('src/game/scenes/StatsBroadcastScene.js','utf8');
 const report=readFileSync('src/game/ui/sessionRecordPublishOffer.js','utf8');
+const migration=readFileSync('supabase/migrations/20261028_022_race_control_current_circuits_only.sql','utf8');
+assert.match(migration,/tdr_web_private\.track_records_backup_20261028/,
+  'Retired physical layouts require an isolated backup including ghost bytes');
+assert.match(migration,/delete from public\.track_records/,
+  'Replace obsolete editions without deleting accounts or current record rows');
+for(const currentId of ['circuito-atlantico@g2-20261023','santa-cruz@g2-20261023',
+  'karting-canarias-4096','karting-canarias-4096-inverso',
+  'karting-tenerife-horario','karting-tenerife']){
+  assert.ok(migration.includes("('"+currentId+"')")||
+    migration.includes("    ('"+currentId+"'),"),
+    'Official live backend snapshot must include '+currentId);
+}
+assert.doesNotMatch(migration,/union select distinct track_id from public\.track_records/,
+  'Retired source records must not reappear when public rankings refresh');
 assert.match(api,/p_track_id:raceControlServerTrackId\(trackId\)/);
 assert.match(api,/p_track_id:raceControlServerTrackId\(id\)/);
 assert.match(api,/const id=raceControlServerTrackId\(trackId\)/);
