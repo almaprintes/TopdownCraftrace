@@ -63,7 +63,12 @@ assert.match(tool,/navigator\.canShare/);
 assert.match(tool,/const selected=Array\.from\(pick\.files/);
 assert.doesNotMatch(tool,/fetch\(|XMLHttpRequest|WebSocket/);
 const admin=fs.readFileSync('src/game/scenes/AdminHubScene.js','utf8');
-assert.match(admin,/webpTool\.textContent='CONVERTIR IMÁGENES'/);
+// PADDOCK uses an IMAGE LAB card instead of the previous toolbar button.
+const paddock=fs.readFileSync('src/game/ui/adminPaddockView.js','utf8');
+assert.ok(paddock.includes("title:'IMAGE LAB'"));
+assert.ok(paddock.includes("run:handlers.images"));
+assert.ok(admin.includes("images:async()=>{"));
+assert.ok(admin.includes("this._webpToolDispose=mountAdminWebpTool(this._adminDomRoot)"));
 assert.match(admin,/import\('\.\.\/ui\/adminImageWebpTool\.js'\)/);
 assert.match(admin,/this\._webpToolDispose\?\.\(\)/);
 const vite=fs.readFileSync('vite.config.js','utf8');
