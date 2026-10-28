@@ -24,12 +24,16 @@ assert.match(api,/p_track_id:raceControlServerTrackId\(id\)/);
 assert.match(api,/const id=raceControlServerTrackId\(trackId\)/);
 assert.match(api,/record\?\.track_id!==raceControlServerTrackId\(id\)/);
 assert.match(api,/online_geometry_current:edition.currentLayout/);
-assert.match(api,/if\(!board&&decodeRaceControlServerTrackId\(id\)\?\.currentLayout\)return \[\]/);
+assert.match(api,/if\(!board\)throw new Error\('La clasificación pública de este circuito aún se está actualizando\.'/,
+  'A stale guest snapshot must not overwrite an actual record with an empty board');
 assert.match(cache,/tdr2:leaderboardSnapshot:\$\{raceControlServerTrackId\(trackId\)\}/);
 assert.match(replay,/if\(row\?\.online_geometry_current===true\)/);
 assert.match(replay,/ghost.geometryRevision=revision/);
 assert.match(replay,/ghostReplayCompatibility\(ghost,row.track_id,TRACK_REGISTRY\[row.track_id\]\)/);
-assert.match(board,/CLASIFICACIÓN · TRAZADO ACTUAL/);
+assert.doesNotMatch(board,/Las marcas del trazado anterior se conservan aparte/,
+  'Retired layouts and technical edition messages are no longer shown');
+assert.match(board,/getTrackPublicName|trackName\(/,
+  'RACE Control displays friendly public track names, not internal keys');
 assert.match(board,/getMyRaceControlRecord\(selected.trackId\)/);
 assert.match(report,/getMyRaceControlRecord\(trackId\)/);
 console.log('PASS: versioned current Atlántico/Santa Cruz records isolated from historical times, ghosts and caches.');
