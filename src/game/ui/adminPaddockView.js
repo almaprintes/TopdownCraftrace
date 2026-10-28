@@ -40,7 +40,8 @@ export function mountAdminPaddock(host,handlers){
   mark.append(make('div','tdr-paddock__subtitle','CENTRO DE DESARROLLO · HERRAMIENTAS INTERNAS'));
   brand.append(logo,mark);
   const headActions=make('div','tdr-paddock__head-actions');
-  headActions.append(make('div','tdr-paddock__dev','DEV'));
+  const liveVersion=document.querySelector('meta[name="tdr-dev-version"]')?.content||'DEV';
+  headActions.append(make('div','tdr-paddock__dev',liveVersion));
   const exit=make('button','tdr-paddock__exit');
   exit.type='button';exit.innerHTML=ICONS.exit+'<span>SALIR</span>';
   exit.addEventListener('click',handlers.exit);
