@@ -370,10 +370,9 @@ export async function getPublicRaceControlSnapshot(trackId){
   const payload=rows?.[0]?.payload;
   if(!payload||!Array.isArray(payload.tracks))throw new Error('Clasificación pública no disponible.');
   const board=payload.tracks.find(t=>t?.id===id);
-  // A brand-new online edition has no guest snapshot until a first record
-  // and the scheduled refresh. Never borrow the historic leaderboard instead.
-  if(!board&&decodeRaceControlServerTrackId(id)?.currentLayout)return [];
-  if(!board)throw new Error('Circuito aún no disponible en la clasificación pública.');
+  // A missing current circuit in a delayed public snapshot is NOT evidence
+  // of an empty ranking. Do not overwrite a valid authenticated cache with [].
+  if(!board)throw new Error('La clasificación pública de este circuito aún se está actualizando.');
   const ranking=(Array.isArray(board.entries)?board.entries:[]).map(r=>({
     scope:'global',rank:Number(r.rank)||0,nick:String(r.nick||''),
     best_time_ms:Number(r.best_time_ms)||0,car_id:String(r.car_id||''),
