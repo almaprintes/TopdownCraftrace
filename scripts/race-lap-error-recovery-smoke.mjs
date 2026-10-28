@@ -73,7 +73,11 @@ const crash=fs.readFileSync('src/game/dev/runtimeCrashDiagnostics.js','utf8');
 assert.ok(crash.includes("store(LAST_JS_ERROR_KEY,info)"));
 assert.ok(crash.includes("node.textContent=`DIAGNÓSTICO"));
 const admin=fs.readFileSync('src/game/scenes/AdminHubScene.js','utf8');
-assert.ok(admin.includes("lastErrorButton.textContent='ÚLTIMO ERROR'"));
+// The PADDOCK redesign keeps diagnostics via the new card and handler.
+const paddock=fs.readFileSync('src/game/ui/adminPaddockView.js','utf8');
+assert.ok(paddock.includes("name:'DIAGNÓSTICO'"));
+assert.ok(paddock.includes("run:handlers.diagnostics"));
+assert.ok(admin.includes("diagnostics:()=>this._showLastRuntimeError()"));
 assert.ok(admin.includes('this._showLastRuntimeError()'));
 assert.ok(admin.includes("import('../dev/runtimeSupportReport.js')"));
 assert.ok(admin.includes('textarea')||admin.includes("createElement('textarea')"));
