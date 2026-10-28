@@ -1,7 +1,7 @@
 // Admin WebP must remain lazy, independent of races, safe for mobile and offline.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {targetWebpDimensions,makeWebpFilename,humanBytes,isWebpHeader,MAX_BATCH_COUNT,QUALITY_DEFAULT}
+import {targetWebpDimensions,makeWebpFilename,makeImageFilename,detectSourceFormat,resolveOutputFormat,humanBytes,isWebpHeader,MAX_BATCH_COUNT,QUALITY_DEFAULT}
   from '../src/game/ui/adminImageWebpTool.js';
 
 assert.equal(MAX_BATCH_COUNT,8);
@@ -13,9 +13,35 @@ assert.throws(()=>targetWebpDimensions(4096,6144,1,{mobile:true}),/16 MP/);
 assert.deepEqual(targetWebpDimensions(4096,6144,1),{width:4096,height:6144,pixels:25165824});
 assert.equal(makeWebpFilename('7 PICOS.png',2.5),'7 PICOS-x2_5.webp');
 assert.equal(makeWebpFilename('foto.jpg',1),'foto.webp');
+assert.equal(makeImageFilename('foto.webp',2,'png'),'foto-x2.png');
+assert.equal(makeImageFilename('imagen.PNG',1.5,'jpeg'),'imagen-x1_5.jpg');
+assert.equal(makeImageFilename('hola.png',1,'webp'),'hola.webp');
+assert.equal(detectSourceFormat({type:'image/jpeg',name:'foo.png'}),'jpeg');
+assert.equal(detectSourceFormat({type:'',name:'foto.HEIC'}),'heic');
+assert.equal(resolveOutputFormat('original','png'),'png');
+assert.equal(resolveOutputFormat('original','heic'),'heic');
+assert.throws(()=>resolveOutputFormat('gif','png'),/Formato de salida/);
+assert.throws(()=>resolveOutputFormat('original',null),/No se reconoce/);
 assert.equal(humanBytes(1048576),'1.00 MB');
 const tool=fs.readFileSync('src/game/ui/adminImageWebpTool.js','utf8');
 assert.match(tool,/canvas\.toBlob\(/);
+assert.match(tool,/canvas\.toBlob\(resolve,mime/);
+assert.ok(tool.includes("ctx.imageSmoothingQuality='high'"));
+assert.ok(tool.includes("if(outputFormat==='jpeg'){ctx.fillStyle='#ffffff';ctx.fillRect("));
+assert.ok(tool.includes("encoder:'ORIGINAL · SIN RECOMPRESIÓN'"));
+assert.ok(tool.includes("formatInput.value==='original'"));
+assert.ok(tool.includes("const result=await convertFileToImage(file,{format,quality,scale,mobile})"));
+assert.ok(tool.includes("smallButton('VER ANTES / DESPUÉS'"));
+assert.ok(tool.includes("slider.type='range'"));
+assert.ok(tool.includes("slider.addEventListener('input',draw)"));
+assert.ok(tool.includes("viewport.addEventListener('scroll',draw"));
+assert.ok(tool.includes("const boundary=viewport.scrollLeft+viewport.clientWidth*fraction"));
+assert.ok(tool.includes("after.style.clipPath='inset(0 '"));
+assert.ok(tool.includes("layer.style.width=r.width+'px'"));
+assert.ok(tool.includes("closePreview();"));
+assert.ok(tool.includes("URL.revokeObjectURL(previewSourceUrl)"));
+assert.ok(tool.includes("const addResult=(r,sourceFile)=>"));
+assert.ok(tool.includes("addResult(result,file)"));
 assert.match(tool,/'image\/webp',quality\/100/);
 assert.ok(tool.includes("native?.type==='image/webp'"));
 assert.ok(isWebpHeader(new Uint8Array([82,73,70,70,0,0,0,0,87,69,66,80])));
@@ -37,11 +63,11 @@ assert.match(tool,/navigator\.canShare/);
 assert.match(tool,/const selected=Array\.from\(pick\.files/);
 assert.doesNotMatch(tool,/fetch\(|XMLHttpRequest|WebSocket/);
 const admin=fs.readFileSync('src/game/scenes/AdminHubScene.js','utf8');
-assert.match(admin,/webpTool\.textContent='IMÁGENES → WEBP'/);
+assert.match(admin,/webpTool\.textContent='CONVERTIR IMÁGENES'/);
 assert.match(admin,/import\('\.\.\/ui\/adminImageWebpTool\.js'\)/);
 assert.match(admin,/this\._webpToolDispose\?\.\(\)/);
 const vite=fs.readFileSync('vite.config.js','utf8');
 assert.ok(vite.includes("worker:{format:'es'}"),'Vite must output code-split Web Workers as ES modules');
 const game=fs.readFileSync('src/game/game.js','utf8');
 assert.ok(!game.includes('adminImageWebpTool'),'Converter cannot be eager-loaded in race bundle');
-console.log('Admin WebP: local Canvas + libwebp/WASM fallback for Safari, RIFF validated, worker off-thread, no external upload, overlay fits iPhone.');
+console.log('Admin imágenes: WebP/PNG/JPG/formato original; remuestreo alto, PNG sin pérdidas, blanco en JPG y respaldo WebP Safari.');
