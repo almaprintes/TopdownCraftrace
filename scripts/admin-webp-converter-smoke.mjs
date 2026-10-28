@@ -31,6 +31,17 @@ assert.ok(tool.includes("if(outputFormat==='jpeg'){ctx.fillStyle='#ffffff';ctx.f
 assert.ok(tool.includes("encoder:'ORIGINAL · SIN RECOMPRESIÓN'"));
 assert.ok(tool.includes("formatInput.value==='original'"));
 assert.ok(tool.includes("const result=await convertFileToImage(file,{format,quality,scale,mobile})"));
+assert.ok(tool.includes("smallButton('VER ANTES / DESPUÉS'"));
+assert.ok(tool.includes("slider.type='range'"));
+assert.ok(tool.includes("slider.addEventListener('input',draw)"));
+assert.ok(tool.includes("viewport.addEventListener('scroll',draw"));
+assert.ok(tool.includes("const boundary=viewport.scrollLeft+viewport.clientWidth*fraction"));
+assert.ok(tool.includes("after.style.clipPath='inset(0 '"));
+assert.ok(tool.includes("layer.style.width=r.width+'px'"));
+assert.ok(tool.includes("closePreview();"));
+assert.ok(tool.includes("URL.revokeObjectURL(previewSourceUrl)"));
+assert.ok(tool.includes("const addResult=(r,sourceFile)=>"));
+assert.ok(tool.includes("addResult(result,file)"));
 assert.match(tool,/'image\/webp',quality\/100/);
 assert.ok(tool.includes("native?.type==='image/webp'"));
 assert.ok(isWebpHeader(new Uint8Array([82,73,70,70,0,0,0,0,87,69,66,80])));
