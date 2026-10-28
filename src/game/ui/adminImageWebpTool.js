@@ -168,7 +168,11 @@ function isMobileDevice(){return /iPhone|iPad|iPod|Android/i.test(navigator.user
 export function mountAdminWebpTool(adminRoot){
   if(!adminRoot?.isConnected)throw Error('Admin Hub cerrado');
   const issuedUrls=new Set();
-  let disposed=false,busy=false;
+  let disposed=false,busy=false,previewDialog=null,previewSourceUrl=null;
+  const closePreview=()=>{
+    previewDialog?.remove();previewDialog=null;
+    if(previewSourceUrl){URL.revokeObjectURL(previewSourceUrl);previewSourceUrl=null;}
+  };
   // Outside the game's scaled parent: iPhone landscape must not crop the header.
   const overlay=css(document.createElement('section'),
     'position:fixed;top:0;left:0;width:100vw;height:100vh;height:100dvh;z-index:100050;background:#08111d;color:#f2f7fc;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-right,0px) + 16px) calc(env(safe-area-inset-bottom,0px) + 18px) calc(env(safe-area-inset-left,0px) + 16px);font:13px system-ui;touch-action:pan-y;');
@@ -230,6 +234,7 @@ export function mountAdminWebpTool(adminRoot){
   overlay.appendChild(panel);document.body.appendChild(overlay);
 
   const clearOutput=()=>{
+    closePreview();
     for(const url of issuedUrls)URL.revokeObjectURL(url);
     issuedUrls.clear();results.replaceChildren();
   };
@@ -247,7 +252,81 @@ export function mountAdminWebpTool(adminRoot){
     const b=elt('button',label,B+'font-size:11px;padding:8px 10px;');
     b.type='button';b.addEventListener('click',action);return b;
   };
-  const addResult=r=>{
+  // Comparison is created only after an explicit click, not for every converted
+  // image: keeps decoded preview bitmaps out of memory during batch processing.
+  const openPreview=(sourceFile,r,outputUrl)=>{
+    if(disposed)return;
+    closePreview();
+    previewSourceUrl=URL.createObjectURL(sourceFile);
+    const compare=css(document.createElement('section'),
+      'position:fixed;inset:0;z-index:100052;background:#07111d;color:#f2f7fc;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;overflow:hidden;padding:calc(env(safe-area-inset-top,0px) + 10px) calc(env(safe-area-inset-right,0px) + 12px) calc(env(safe-area-inset-bottom,0px) + 12px) calc(env(safe-area-inset-left,0px) + 12px);font:12px system-ui;');
+    compare.setAttribute('role','dialog');
+    compare.setAttribute('aria-modal','true');
+    compare.setAttribute('aria-label','Comparar imagen original y convertida');
+    previewDialog=compare;
+    const bar=elt('div',null,'display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;');
+    const info=elt('div',null,'flex:1 1 180px;min-width:0;');
+    info.append(elt('strong','ANTES / DESPUÉS','display:block;color:#2bff88;font-size:clamp(15px,2.8vw,21px);'),
+      elt('small',r.originalWidth+'×'+r.originalHeight+' → '+r.width+'×'+r.height+
+      ' · '+humanBytes(r.originalBytes)+' → '+humanBytes(r.blob.size),
+      'display:block;color:#a7bed2;font-size:11px;margin-top:3px;'));
+    const closeButton=smallButton('CERRAR VISTA',closePreview);
+    bar.append(info,closeButton);compare.appendChild(bar);
+    const stage=elt('div',null,'flex:1 1 auto;min-height:110px;min-width:0;position:relative;overflow:hidden;border:1px solid #355273;border-radius:10px;background-color:#263243;background-image:conic-gradient(#34455a 25%,#263243 0 50%,#34455a 0 75%,#263243 0);background-size:20px 20px;');
+    // Scroll at 100% zoom: no giant comparison canvas or extra pixel buffer.
+    const viewport=elt('div',null,'position:absolute;inset:0;overflow:auto;overscroll-behavior:contain;touch-action:pan-x pan-y;');
+    viewport.setAttribute('aria-label','Imagen comparada: arrastra para desplazarte cuando esté al 100 %');
+    const layer=elt('div',null,'position:relative;width:100%;height:100%;');
+    const before=elt('img',null,'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;');
+    before.src=previewSourceUrl;before.alt='Imagen original';
+    const after=elt('img',null,'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;user-select:none;');
+    after.src=outputUrl;after.alt='Imagen procesada';
+    layer.append(before,after);viewport.append(layer);
+    const splitLine=elt('div',null,'position:absolute;top:0;bottom:0;left:50%;width:2px;transform:translateX(-1px);background:#2bff88;box-shadow:0 0 0 1px #07111d,0 0 7px #07111d;pointer-events:none;');
+    const beforeLabel=elt('span','ANTES','position:absolute;top:10px;right:10px;padding:5px 8px;border-radius:6px;background:#07111de6;color:#fff;font-weight:900;pointer-events:none;');
+    const afterLabel=elt('span','DESPUÉS','position:absolute;top:10px;left:10px;padding:5px 8px;border-radius:6px;background:#07111de6;color:#2bff88;font-weight:900;pointer-events:none;');
+    stage.append(viewport,splitLine,beforeLabel,afterLabel);compare.append(stage);
+    const controls=elt('div',null,'display:flex;flex-direction:column;gap:8px;');
+    const slideLabel=elt('label','DESLIZA PARA REVELAR ANTES / DESPUÉS · 50 %','font-size:11px;color:#dce8f6;font-weight:800;');
+    const slider=elt('input',null,'display:block;width:100%;accent-color:#2bff88;min-height:26px;touch-action:manipulation;');
+    slider.type='range';slider.min='0';slider.max='100';slider.step='1';slider.value='50';
+    slider.setAttribute('aria-label','Porcentaje de imagen procesada visible');
+    const zoomRow=elt('div',null,'display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;');
+    const zoomText=elt('small','COMPARAR · AJUSTAR A PANTALLA','color:#9fb5c8;font-size:11px;');
+    const zoomButtons=elt('div',null,'display:flex;gap:7px;');
+    const fit=smallButton('AJUSTAR',()=>setZoom(false));
+    const pixels=smallButton('100 %',()=>setZoom(true));
+    const draw=()=>{
+      const fraction=Number(slider.value)/100;
+      const boundary=viewport.scrollLeft+viewport.clientWidth*fraction;
+      const inset=Math.max(0,layer.clientWidth-boundary);
+      after.style.clipPath='inset(0 '+inset+'px 0 0)';
+      splitLine.style.left=(fraction*100)+'%';
+      slideLabel.textContent='DESLIZA PARA REVELAR ANTES / DESPUÉS · '+slider.value+' %';
+    };
+    const setZoom=actual=>{
+      if(actual){
+        layer.style.width=r.width+'px';layer.style.height=r.height+'px';
+        zoomText.textContent='100 % · 1 PX DE SALIDA POR PX CSS · DESPLÁZATE SOBRE LA IMAGEN';
+      }else{
+        layer.style.width='100%';layer.style.height='100%';
+        viewport.scrollTop=0;viewport.scrollLeft=0;
+        zoomText.textContent='COMPARAR · AJUSTAR A PANTALLA';
+      }
+      fit.style.borderColor=actual?'#355273':'#2bff88';
+      pixels.style.borderColor=actual?'#2bff88':'#355273';
+      draw();
+    };
+    slider.addEventListener('input',draw);
+    viewport.addEventListener('scroll',draw,{passive:true});
+    zoomButtons.append(fit,pixels);zoomRow.append(zoomText,zoomButtons);
+    controls.append(slideLabel,slider,zoomRow,
+      elt('small','La comparación es visual: un archivo más pequeño no implica necesariamente menos calidad. Al ampliar, el navegador remuestrea también el original para igualar el encuadre; no se recupera detalle inexistente.',
+        'color:#9fb5c8;font-size:10px;line-height:1.4;'));
+    compare.appendChild(controls);document.body.appendChild(compare);
+    setZoom(false);
+  };
+  const addResult=(r,sourceFile)=>{
     const href=URL.createObjectURL(r.blob);issuedUrls.add(href);
     const row=elt('div',null,'display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px;border:1px solid #315167;border-radius:8px;background:#102135;');
     const left=elt('div',null,'min-width:130px;flex:1 1 250px;overflow-wrap:anywhere;');
@@ -257,6 +336,7 @@ export function mountAdminWebpTool(adminRoot){
     const actions=elt('div',null,'display:flex;gap:7px;flex-wrap:wrap;');
     const dl=elt('a','DESCARGAR '+(r.format==='jpeg'?'JPG':String(r.format||'IMAGEN').toUpperCase()),B+'text-decoration:none;font-size:11px;display:inline-block;padding:8px 10px;');
     dl.href=href;dl.download=r.name;actions.appendChild(dl);
+    actions.appendChild(smallButton('VER ANTES / DESPUÉS',()=>openPreview(sourceFile,r,href)));
     if(typeof navigator.canShare==='function'&&typeof navigator.share==='function'){
       const f=new File([r.blob],r.name,{type:r.blob.type||mimeForFormat(r.format)});
       if(navigator.canShare({files:[f]})){
@@ -281,7 +361,7 @@ export function mountAdminWebpTool(adminRoot){
       try{
         const result=await convertFileToImage(file,{format,quality,scale,mobile});
         if(disposed)break;
-        addResult(result);succeeded++;
+        addResult(result,file);succeeded++;
       }catch(err){
         if(disposed)break;
         failed++;const item=elt('div',file.name+' · '+(err?.message||'No se pudo convertir'),
