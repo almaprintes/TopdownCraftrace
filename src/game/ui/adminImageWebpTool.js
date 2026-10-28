@@ -113,13 +113,13 @@ export async function convertFileToImage(file,{format='webp',quality=QUALITY_DEF
     else await new Promise((resolve,reject)=>{if(img.complete&&img.naturalWidth)return resolve();img.onload=resolve;img.onerror=()=>reject(Error('No se pudo abrir la imagen'));});
     const srcWidth=img.naturalWidth,srcHeight=img.naturalHeight;
     if(!srcWidth||!srcHeight)throw Error('Formato de imagen no compatible');
-    const dims=targetWebpDimensions(srcWidth,srcHeight,scale,{mobile});
     if(format==='original'&&scale===1){
       // Byte-for-byte copy: no generational loss when neither format nor size changes.
       return {blob:file,encoder:'ORIGINAL · SIN RECOMPRESIÓN',format:outputFormat,
-        originalWidth:srcWidth,originalHeight:srcHeight,width:dims.width,height:dims.height,
+        originalWidth:srcWidth,originalHeight:srcHeight,width:srcWidth,height:srcHeight,
         name:String(file.name||'imagen'),originalBytes:file.size};
     }
+    const dims=targetWebpDimensions(srcWidth,srcHeight,scale,{mobile});
     canvas=document.createElement('canvas');canvas.width=dims.width;canvas.height=dims.height;
     const ctx=canvas.getContext('2d',{alpha:true});
     if(!ctx)throw Error('No hay memoria disponible para el lienzo');
@@ -201,7 +201,7 @@ export function mountAdminWebpTool(adminRoot){
   const qualityWrap=elt('label',null,'display:flex;flex:1 1 190px;min-width:170px;gap:7px;flex-direction:column;color:#ccd9e9;');
   const qualityValue=elt('strong','3. CALIDAD · 86 / 100','color:#f2f7fc;font-size:11px;');
   const qualityInput=elt('input',null,'width:100%;accent-color:#2bff88;');qualityInput.type='range';qualityInput.min='50';qualityInput.max='95';qualityInput.value=String(QUALITY_DEFAULT);qualityInput.step='1';
-  qualityInput.addEventListener('input',()=>{qualityValue.textContent='2. CALIDAD · '+qualityInput.value+' / 100';});
+  qualityInput.addEventListener('input',()=>{qualityValue.textContent='3. CALIDAD · '+qualityInput.value+' / 100';});
   qualityWrap.append(qualityValue,qualityInput);
   const scaleWrap=elt('label',null,'display:flex;flex:1 1 200px;min-width:170px;gap:7px;flex-direction:column;color:#ccd9e9;');
   scaleWrap.append(elt('strong','4. RESOLUCIÓN DE SALIDA','color:#f2f7fc;font-size:11px;'));
@@ -270,7 +270,7 @@ export function mountAdminWebpTool(adminRoot){
     const selected=Array.from(pick.files||[]);
     if(!selected.length){status.textContent='Selecciona al menos una foto.';return;}
     if(selected.length>MAX_BATCH_COUNT){status.textContent='Máximo 8 imágenes por lote para proteger la memoria.';return;}
-    if(selected.some(f=>!(f.type||'').startsWith('image/'))){status.textContent='Solo se admiten imágenes.';return;}
+    if(selected.some(f=>!(f.type||'').startsWith('image/')&&!detectSourceFormat(f))){status.textContent='Solo se admiten imágenes.';return;}
     busy=true;launch.disabled=true;pick.disabled=true;scaleInput.disabled=true;formatInput.disabled=true;qualityInput.disabled=true;
     clearOutput();
     const scale=Number(scaleInput.value),quality=Number(qualityInput.value),format=formatInput.value,mobile=isMobileDevice();
