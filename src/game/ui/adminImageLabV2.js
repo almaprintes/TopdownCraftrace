@@ -146,7 +146,7 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
   resultsWrap.append(results);
   const footer=node('p','tdr-image-lab__footer');
   footer.textContent='Todo se procesa en tu dispositivo. Ampliar añade píxeles interpolados, no recupera detalle inexistente. Al cerrar IMAGE LAB se liberan los recursos temporales.';
-  hint.remove();options.remove();fileWrap.remove();note.remove();
+  hint.remove();options.remove();fileWrap.remove();
   // Keep the real input and its event handlers. This label is visually hidden, not removed.
   fileWrap.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);';
   pick.style.cssText='';
