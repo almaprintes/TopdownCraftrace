@@ -169,3 +169,39 @@
  .tdr-garage-admin-paddock .agp-display-body{min-height:245px}
  .tdr-garage-admin-paddock .agp-info{min-height:360px}
 }
+
+/* DEV 1.3.63 · The card thumbnail is fitted to the *frame*, not to the
+   intrinsic image or a growing grid track. Stops the bottom spill on iPhone. */
+.tdr-garage-admin-paddock .agp-item{
+ min-width:0;
+ align-items:center;
+ overflow:hidden;
+}
+.tdr-garage-admin-paddock .agp-thumb{
+ position:relative;
+ display:block;
+ overflow:hidden;
+ width:100%;height:clamp(67px,12vh,100px);
+ min-width:0;min-height:0;max-height:100%;
+ isolation:isolate;
+}
+.tdr-garage-admin-paddock .agp-thumb img{
+ position:absolute!important;
+ display:block;
+ inset:0;
+ width:100%!important;
+ height:100%!important;
+ max-width:100%!important;
+ max-height:100%!important;
+ object-fit:contain!important;
+ object-position:50% 44%;
+ transform:none!important;
+}
+.tdr-garage-admin-paddock .agp-thumb img[hidden]{display:none!important}
+.tdr-garage-admin-paddock .agp-thumb-backup{
+ position:absolute;inset:0;
+ display:grid;place-items:center;
+}
+@media(max-height:500px) and (min-width:700px){
+ .tdr-garage-admin-paddock .agp-thumb{height:clamp(61px,12vh,75px)}
+}

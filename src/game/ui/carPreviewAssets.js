@@ -37,7 +37,17 @@ export function attachCarPreviewFallback(img,urls,{onLoad,onExhausted}={}){
   };
   img.addEventListener('error',next);
   img.addEventListener('load',loaded);
-  next();
+  // Ficha may have an initial SSR/HTML src: bind before using it again.
+  // If the browser served a cached image synchronously, onload may have
+  // occurred before this listener was installed.
+  const existing=img.getAttribute?.('src')||'';
+  if(existing===urls[0]){
+    index=1;
+    if(img.complete){
+      if(img.naturalWidth>0)loaded();
+      else next();
+    }
+  }else next();
   return ()=>{
     disposed=true;
     img.removeEventListener('error',next);

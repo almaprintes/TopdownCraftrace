@@ -2,6 +2,8 @@ import './vehicleLabPaddockShared.css';
 import './garageDetailPaddock.css';
 import {createAppWallet,disposeAppWallets} from './TdrAppHeader.js';
 import {carPreviewCandidates,attachCarPreviewFallback} from './carPreviewAssets.js';
+import {carCardUrl} from '../cars/carCardArt.js';
+import {CAR_SPECS} from '../cars/carSpecs.js';
 
 const safe=value=>String(value??'').replace(/[&<>"']/g,c=>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -16,7 +18,14 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
     const name=safe(spec.name||carId),brand=safe(spec.brand||'TDR'),
       category=safe(spec.category||'CIRCUITO'),
       rarity=safe(spec.rarity||'—'),
-      imageCandidates=carPreviewCandidates(carId,spec,import.meta.env.BASE_URL||'/');
+      officialArtSpec=CAR_SPECS?.[carId]||spec,
+      base=import.meta.env.BASE_URL||'/',
+      // The published collection card is the same proven asset as the admin Garage.
+      // Use the source-of-truth factory metadata (not potentially edited fields).
+      imageCandidates=[...new Set([
+        carCardUrl(carId,officialArtSpec,base),
+        ...carPreviewCandidates(carId,officialArtSpec,base)
+      ])];
     const html=`<section class="vl-ficha" aria-label="Ficha técnica del vehículo">
       <header class="vl-ficha-header">
         <div class="vl-ficha-brand"><span class="vl-ficha-logo">TD<em>R</em></span>
@@ -26,7 +35,7 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
       <div class="vl-ficha-body">
         <div class="vl-ficha-preview">
           <div class="vl-ficha-kicker">COLECCIÓN TDR <span>#${safe(spec.collectionNo||'—')}</span></div>
-          <div class="vl-ficha-car"><img data-ficha-image alt="${name}" draggable="false">
+          <div class="vl-ficha-car"><img data-ficha-image src="${safe(imageCandidates[0]||'')}" alt="${name}" draggable="false">
             <span class="vl-ficha-fallback">TDR</span></div>
           <div class="vl-ficha-name">${name}</div>
           <div class="vl-ficha-details"><span>${brand} · ${category}</span><span>${rarity}</span></div>
@@ -77,8 +86,15 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
     root.querySelector('[data-ficha-wallet]')?.appendChild(wallet);
     const imageEl=root.querySelector('[data-ficha-image]');
     removePreviewHandlers=attachCarPreviewFallback(imageEl,imageCandidates,{
-      onLoad:()=>root.querySelector('.vl-ficha-car')?.classList.add('has-image'),
-      onExhausted:()=>root.querySelector('.vl-ficha-car')?.classList.remove('has-image')
+      onLoad:()=>{
+        root.querySelector('.vl-ficha-car')?.classList.add('has-image');
+        root.querySelector('[data-ficha-status]')?.removeAttribute('data-image-error');
+      },
+      onExhausted:()=>{
+        root.querySelector('.vl-ficha-car')?.classList.remove('has-image');
+        const status=root.querySelector('[data-ficha-status]');
+        if(status){status.dataset.imageError='1';status.textContent='NO SE PUDO CARGAR LA FOTO · REVISAR RECURSOS';}
+      }
     });
     scene.events.once('shutdown',removePreviewHandlers);
     scene.events.once('destroy',removePreviewHandlers);
