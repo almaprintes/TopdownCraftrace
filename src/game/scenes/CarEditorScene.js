@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import '../ui/adminVehicleLab.css';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { HANDLING_PROFILES } from '../cars/handlingProfiles.js';
 import {showAdminMasteryRoofCalibration} from '../ui/AdminMasteryRoofCalibration.js';
@@ -68,7 +69,7 @@ export class CarEditorScene extends Phaser.Scene {
     this._override = this._readDraft(this._carId);        // borrador actual
 
     // -------- Header --------
-    this.add.text(width / 2, 18, `EDITOR · ${this._base.name || this._carId}`, {
+    this._legacyVehicleTitle = this.add.text(width / 2, 18, `EDITOR · ${this._base.name || this._carId}`, {
       fontFamily: 'system-ui',
       fontSize: '21px',
       fontStyle: '900',
@@ -77,7 +78,7 @@ export class CarEditorScene extends Phaser.Scene {
       strokeThickness: 1
     }).setOrigin(0.5, 0);
 
-    this.add.text(width - 16, 22, 'ADMIN', {
+    this._legacyVehicleAdmin = this.add.text(width - 16, 22, 'ADMIN', {
       fontFamily: 'system-ui',
       fontSize: '14px',
       color: '#71dcf3',
@@ -184,6 +185,11 @@ this._downloadJson(fname, payload);
     this.add.existing(saveBtn);
     this.add.existing(exportBtn);
     this.add.existing(testBtn);
+
+    // The DOM PADDOCK shell owns all visible controls: no duplicate Phaser bars.
+    this._legacyVehicleTitle?.setVisible(false);
+    this._legacyVehicleAdmin?.setVisible(false);
+    back.setVisible(false).disableInteractive();
 
     // Limpieza al salir (si no, el DOM se queda pegado encima del juego)
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {this._vehicleLightsEditor?.close();this._vehicleLightsEditor=null;this._skinGeometryEditor?.close();this._skinGeometryEditor=null;this._masteryRoofEditor?.close();this._masteryRoofEditor=null;this._destroyDomPanel();});
@@ -356,10 +362,9 @@ this._downloadJson(fname, payload);
   _createDomPanel() {
     const { width, height } = this.scale;
 
-    const topY = 64;
-    const bottomSafe = 66;
-    const panelW = Math.min(850, Math.floor(width*.63), width-24);
-    const panelH = Math.max(145, height - topY - bottomSafe);
+    const topY = 0;
+    const panelW = width;
+    const panelH = height;
 
     const keys = this._collectEditableNumberKeys();
 
@@ -437,10 +442,10 @@ this._downloadJson(fname, payload);
       </div>
     `;
 
-    this._dom = this.add.dom(12, topY).createFromHTML(html);
+    this._dom = this.add.dom(0, topY).createFromHTML(html);
     this._dom.setDepth(999999);
     this._dom.setOrigin(0, 0);
-    this._dom.x = 12;
+    this._dom.x = 0;
     this._dom.y = topY;
 
     const node = this._dom.node;
@@ -815,6 +820,108 @@ this._downloadJson(fname, payload);
         r.style.display = (!q || k.includes(q)) ? '' : 'none';
       });
     });
+    this._mountVehicleLabShell();
+  }
+
+  _mountVehicleLabShell() {
+    // Move the EXISTING inputs and buttons: their current event delegation,
+    // save/draft storage and calibration callbacks remain the sole source.
+    const node = this._dom?.node;
+    if (!node) return;
+    const panel = node.matches?.('.tdr-car-editor') ? node : node.querySelector('.tdr-car-editor');
+    const bar = panel?.querySelector('.bar');
+    const list = panel?.querySelector('.list');
+    const tip = panel?.querySelector('.tip');
+    if (!panel || !bar || !list || !tip) return;
+    node.querySelector('style')?.remove(); // Remove old cyan toolbar CSS.
+    const esc = value => String(value ?? '').replace(/[&<>"']/g,
+      c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const name = esc(this._base?.name || this._carId);
+    const brand = esc(this._base?.brand || 'TDR');
+    const category = esc(this._base?.category || 'Circuito');
+    const rarity = esc(this._base?.rarity || '—');
+    const carSrc = `${import.meta.env.BASE_URL || '/'}assets/cars/lobby/${encodeURIComponent(this._carId)}.webp`;
+    const ui = document.createElement('div');
+    ui.className = 've-shell';
+    ui.innerHTML = `
+      <header class="ve-header">
+        <div class="ve-brand"><span class="ve-logo">TD<em>R</em></span>
+          <span class="ve-title"><small>ADMIN HUB / PADDOCK</small>
+            <strong>VEHICLE LAB <em>2.0</em></strong></span></div>
+        <div class="ve-header-actions">
+          <span class="ve-version" data-vehicle-version>DEV</span>
+          <button type="button" data-vehicle-act="garage">GARAJE</button>
+          <button type="button" data-vehicle-act="paddock">← PADDOCK</button>
+        </div>
+      </header>
+      <div class="ve-workspace">
+        <aside class="ve-preview">
+          <div class="ve-panel-title">COCHE SELECCIONADO</div>
+          <div class="ve-car-art"><img src="${carSrc}" alt="${name}" draggable="false" />
+            <span class="ve-photo-fallback">TDR</span></div>
+          <div class="ve-car-detail"><strong>${name}</strong>
+            <span>${brand} · ${category}</span><small>${rarity} · ${esc(this._carId)}</small></div>
+        </aside>
+        <section class="ve-parameters" aria-label="Parámetros editables">
+          <div class="ve-panel-title">FÍSICAS Y COMPORTAMIENTO <span>PARÁMETROS REALES</span></div>
+          <div class="ve-edit-slot"></div>
+        </section>
+        <aside class="ve-tools" aria-label="Calibración y telemetría">
+          <div class="ve-panel-title">HERRAMIENTAS <span>CALIBRACIÓN</span></div>
+          <div class="ve-calibration"></div>
+          <details class="ve-restore"><summary>RESTAURAR / SALIR</summary>
+            <div class="ve-restore-actions"></div></details>
+          <div class="ve-telemetry">
+            <div class="ve-panel-title">DATOS TÉCNICOS <span>EN DIRECTO</span></div>
+            <pre data-vehicle-telemetry>CARGANDO…</pre>
+          </div>
+        </aside>
+      </div>
+      <footer class="ve-footer">
+        <span data-vehicle-status role="status" aria-live="polite">BORRADOR LOCAL · AJUSTA, GUARDA Y PRUEBA</span>
+        <div class="ve-footer-actions">
+          <button data-vehicle-act="export" type="button">FÍSICAS JSON</button>
+          <button class="ve-save" data-vehicle-act="save" type="button">GUARDAR</button>
+          <button class="ve-test" data-vehicle-act="test" type="button">▶ PROBAR COCHE</button>
+        </div>
+      </footer>`;
+    // Move DOM subtrees rather than copying controls, so existing handlers
+    // continue to use the same rows, search, profile and calibration logic.
+    const edit = ui.querySelector('.ve-edit-slot');
+    edit.append(bar, list);
+    const calibration = ui.querySelector('.ve-calibration');
+    for (const act of ['mastery','skin-geometry','vehicle-lights']) {
+      const button = bar.querySelector(`[data-act="${act}"]`);
+      if (button) calibration.appendChild(button);
+    }
+    const restores = ui.querySelector('.ve-restore-actions');
+    for (const act of ['resetAll','factory','clear']) {
+      const button = bar.querySelector(`[data-act="${act}"]`);
+      if (button) restores.appendChild(button);
+    }
+    panel.classList.add('tdr-vehicle-lab');
+    panel.replaceChildren(ui, tip);
+    const version = document.querySelector('meta[name="tdr-dev-version"]')?.content || 'DEV';
+    ui.querySelector('[data-vehicle-version]').textContent = version;
+    const photo = ui.querySelector('.ve-car-art img');
+    photo?.addEventListener('error', () => { photo.style.display = 'none'; });
+    panel.addEventListener('click', event => {
+      const action = event.target?.closest?.('[data-vehicle-act]')?.dataset?.vehicleAct;
+      if (!action) return;
+      event.preventDefault();
+      if (action === 'garage' || action === 'paddock') {
+        if (Object.keys(this._override || {}).length &&
+          window.confirm?.('Hay ajustes sin guardar. ¿Descartarlos y salir?') === false) return;
+        this._override = {};
+        this._writeDraft(this._carId, this._override);
+        this._destroyDomPanel();
+        this.scene.start(action === 'paddock' ? 'admin-hub' : 'GarageScene',
+          action === 'garage' ? {mode:'admin'} : undefined);
+        return;
+      }
+      const label = {save:'GUARDAR',export:'FÍSICAS JSON',test:'TEST'}[action];
+      if (label) this._vehicleActions?.[label]?.();
+    });
   }
 
   _refreshRow(row, key) {
@@ -854,6 +961,8 @@ this._downloadJson(fname, payload);
   // UI helpers
   // -----------------------------
   _button(x, y, w, h, label, onClick) {
+    this._vehicleActions ??= {};
+    this._vehicleActions[label] = onClick;
     const c = this.add.container(x, y);
 
     const bg = this.add.rectangle(0, 0, w, h, 0x102537, 0.82).setOrigin(0);
@@ -875,30 +984,25 @@ this._downloadJson(fname, payload);
     hit.on('pointerout', () => { c.setScale(1.0); });
 
     c.add([bg, txt, hit]);
+    c.setVisible(false);
+    hit.disableInteractive();
     return c;
   }
 
   _toast(msg) {
-    const { width, height } = this.scale;
-    const t = this.add.text(width / 2, height - 40, msg, {
-      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-      fontSize: '14px',
-      color: '#2bff88',
-      fontStyle: 'bold',
-      backgroundColor: 'rgba(11,16,32,0.85)',
-      padding: { left: 12, right: 12, top: 6, bottom: 6 }
-    }).setOrigin(0.5).setAlpha(0).setDepth(999999);
-
-    this.tweens.add({
-      targets: t,
-      alpha: 1,
-      duration: 120,
-      yoyo: true,
-      hold: 900,
-      onComplete: () => t.destroy()
+    const status = this._dom?.node?.querySelector('[data-vehicle-status]');
+    if (!status) return;
+    this._vehicleToastTimer?.remove?.(false);
+    status.textContent = String(msg);
+    status.classList.add('ve-flash');
+    this._vehicleToastTimer = this.time.delayedCall(2700, () => {
+      if (status.isConnected) {
+        status.textContent = 'BORRADOR LOCAL · AJUSTA, GUARDA Y PRUEBA';
+        status.classList.remove('ve-flash');
+      }
+      this._vehicleToastTimer = null;
     });
   }
-
   // -----------------------------
   // Overlay técnico (admin)
   // -----------------------------
@@ -924,7 +1028,7 @@ this._downloadJson(fname, payload);
       lineSpacing: 1
     })
       .setOrigin(1, 0)
-      .setDepth(99999);
+      .setDepth(99999).setVisible(false);
   }
 
   _refreshTechOverlay() {
@@ -1027,6 +1131,10 @@ this._downloadJson(fname, payload);
     setTimeout(() => URL.revokeObjectURL(url), 2500);
   }
   _destroyDomPanel() {
+    clearTimeout(this._tipTimer);
+    this._tipTimer = null;
+    this._vehicleToastTimer?.remove?.(false);
+    this._vehicleToastTimer = null;
     try {
       if (this._dom?.node) this._dom.node.remove();
     } catch {}

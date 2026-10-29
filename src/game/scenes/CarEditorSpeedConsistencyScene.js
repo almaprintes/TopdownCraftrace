@@ -19,5 +19,7 @@ export class CarEditorScene extends CurrentCarEditorScene {
         `maxFwd: ${Number(liveSpec.maxFwd || 0).toFixed(1)} px/s · punta real ${attainable} km/h`
       )
     );
+    const telemetry = this._dom?.node?.querySelector('[data-vehicle-telemetry]');
+    if (telemetry) telemetry.textContent = txt.text;
   }
 }
