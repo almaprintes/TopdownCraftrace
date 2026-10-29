@@ -79,7 +79,7 @@ const formatWrap=makeWrap(formatInput),qualityWrap=makeWrap(qualityInput),scaleW
 const qualityValue=qualityWrap.querySelector('strong');
 const launch=el('button'),status=el('div'),results=el('div');
 panel.append(head,hint,fileWrap,options,note,launch,status,results);
-const skin=mount({overlay,panel,head,heading,close,hint,fileWrap,pick,options,formatWrap,formatInput,scaleWrap,
+const skin=mount({overlay,panel,head,heading,close,hint,fileWrap,pick,options,formatWrap,formatInput,scaleWrap,scaleInput,
  qualityWrap,qualityInput,qualityValue,note,launch,status,results});
 const walk=(root,needle,out=[])=>{
  if(root.className.split(' ').includes(needle))out.push(root);
