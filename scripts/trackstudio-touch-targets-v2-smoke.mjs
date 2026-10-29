@@ -20,7 +20,11 @@ const scene=readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
 const shape=readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
 assert.ok(scene.includes('pickCenterlineControl(this._nodes,this._selectedNode,{x,y},this._editCam?.zoom)'),'Centerline hit testing uses camera zoom');
 assert.ok(scene.includes('this._centerlineDragOffset = {')||scene.includes('this._centerlineDragOffset={'),'Keep relative finger offset to avoid geometry jumps');
-assert.ok(scene.includes('this._redrawEditor();\n  this._updatePanel();'),'Manual zoom refreshes control sizes');
+const zoomMethod=scene.slice(
+  scene.indexOf('_applyZoomAtViewportCenter(multiplier) {'),
+  scene.indexOf('  _trackWidthStep() {',scene.indexOf('_applyZoomAtViewportCenter(multiplier) {'))
+);
+assert.match(zoomMethod,/if\s*\(changed\)\s*\{\s*this\._redrawEditor\(\);\s*this\._updatePanel\(\);\s*\}/,'Manual zoom refreshes control sizes when zoom changes');
 assert.ok(scene.includes('if(now-(this._lastControlZoomRedraw||0)>90)'),'Pinch zoom refreshes markers without excessive redraws');
 assert.ok(scene.includes('if(selected){\n        this._guideGfx.lineStyle('),'Only selected node shows Bezier handles');
 assert.ok(shape.includes('if(side!==s._shapeSelected.side)continue'),'Selected edge alone shows control points');
