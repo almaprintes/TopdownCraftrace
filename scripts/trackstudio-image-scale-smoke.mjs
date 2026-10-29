@@ -46,6 +46,7 @@ assert.ok(mode.includes("s._suspendImageRestore=true"));
 assert.ok(mode.includes("await saveCanvasImage(meta.imageId,file,meta)"));
 assert.ok(mode.includes("s._openCanvasImagePicker=()=>"));
 assert.ok(mode.includes("add('SUSTITUIR FOTO'"));
+assert.ok(mode.includes("add('EXPORTAR FOTO'"));
 assert.ok(mode.includes("for(const factor of [2,2.5,3])"));
 assert.ok(mode.includes("await replaceCanvasImage(s,file)"));
 assert.ok(mode.includes("customButton.textContent='APLICAR ESCALA'"));
