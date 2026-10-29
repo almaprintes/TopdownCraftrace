@@ -1,4 +1,3 @@
-import './adminImageLabV2.css';
 
 // IMAGE LAB 2.0: presentation adapter for the existing offline converter.
 // Never re-encodes an image and never sends it to a server.
