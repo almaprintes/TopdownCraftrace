@@ -12,7 +12,7 @@ import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
 import { installTrackStudioGateControls } from '../studio/trackStudioGateControls.js';
 import { createPenAnchor, penGestureIsCurve, updatePenAnchorFromDrag } from '../studio/trackStudioPenTool.js';
 import {trackStudioToolbarLayout} from '../studio/trackStudioNavigationLayout.js';
-import {zoomTrackCameraAt,beginTrackPinch,updateTrackPinch} from '../studio/trackStudioZoom.js';
+import {zoomTrackCameraAt,beginTrackPinch,updateTrackPinch,fitTrackCamera} from '../studio/trackStudioZoom.js';
 import '../studio/trackStudioLabChrome.css';
 import {mountTrackStudioLabChrome} from '../studio/trackStudioLabChrome.js';
 
@@ -1910,6 +1910,43 @@ _applyZoomAtViewportCenter(multiplier) {
   }
   return changed;
 }
+  _frameTrackView(){
+    const cam=this._editCam;
+    if(!cam)return false;
+    // Prefer the authored photograph: it is the true playing field in image
+    // circuits. Otherwise frame the actual edited nodes, not the whole 8000x5000
+    // blank editing world.
+    let bounds;
+    if(this._imageCanvas?.width&&this._imageCanvas?.height){
+      bounds={x:0,y:0,width:this._imageCanvas.width,height:this._imageCanvas.height};
+    }else if(this._nodes?.length){
+      const x=this._nodes.map(n=>n.x),y=this._nodes.map(n=>n.y);
+      const left=Math.min(...x),top=Math.min(...y);
+      const width=Math.max(250,Math.max(...x)-left);
+      const height=Math.max(250,Math.max(...y)-top);
+      const gap=Math.max(100,Math.max(width,height)*.12);
+      bounds={x:left-gap,y:top-gap,width:width+2*gap,height:height+2*gap};
+    }else{
+      bounds={x:0,y:0,width:this._editorWorldW,height:this._editorWorldH};
+    }
+    if(!fitTrackCamera(cam,bounds,this._editZoomMin,this._editZoomMax))return false;
+    this._redrawEditor();
+    this._updatePanel();
+    return true;
+  }
+  _moveSelectedNodeOnScreen(dx,dy){
+    if(this._selectedNode<0||this._selectedNode>=this._nodes.length)return false;
+    const cam=this._editCam;
+    if(!cam?.getWorldPoint)return false;
+    // Convert screen-space arrow directions through Phaser's actual inverse
+    // camera transform. → always maps to screen-right even after pinch/pan.
+    const cx=cam.x+cam.width/2,cy=cam.y+cam.height/2;
+    const from=cam.getWorldPoint(cx,cy);
+    const to=cam.getWorldPoint(cx+dx,cy+dy);
+    if(!Number.isFinite(to.x-from.x)||!Number.isFinite(to.y-from.y))return false;
+    this._nudgeSelectedNode(to.x-from.x,to.y-from.y);
+    return true;
+  }
   _trackWidthStep() {
     return trackStudioWidthStep(this._imageCanvas, this._trackWidthMax, this._widthStep);
   }
@@ -1924,18 +1961,17 @@ _applyZoomAtViewportCenter(multiplier) {
   }
 
   _nudgeSelectedNode(dx, dy) {
-    if (this._selectedNode < 0 || this._selectedNode >= this._nodes.length) return;
-
-    const node = this._nodes[this._selectedNode];
-    node.x += dx;
-    node.y += dy;
-    node.handleIn.x += dx;
-    node.handleIn.y += dy;
-    node.handleOut.x += dx;
-    node.handleOut.y += dy;
-
-    this._updatePanel();
+    if (this._selectedNode < 0 || this._selectedNode >= this._nodes.length) return false;
+    if(!Number.isFinite(dx)||!Number.isFinite(dy)||(dx===0&&dy===0))return false;
+    this._pushHistory();
+    const node=this._nodes[this._selectedNode];
+    node.x+=dx;node.y+=dy;
+    node.handleIn.x+=dx;node.handleIn.y+=dy;
+    node.handleOut.x+=dx;node.handleOut.y+=dy;
+    this._autosaveRecovery();
     this._redrawEditor();
+    this._updatePanel();
+    return true;
   }
 
 _deleteSelectedNode() {
