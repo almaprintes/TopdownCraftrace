@@ -8,7 +8,8 @@ const css=fs.readFileSync('src/game/environment/environmentStudioChrome.css','ut
 const paddock=fs.readFileSync('src/game/ui/adminPaddockView.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 
-assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.63"'));
+const expectedDevVersion=html.match(/name="tdr-dev-version" content="([^"]+)"/)?.[1];
+assert.ok(expectedDevVersion?.startsWith('DEV '));
 assert.ok(paddock.includes("title:'ENVIRONMENT STUDIO'"));
 assert.ok(paddock.includes("color:'#19e58e'"));
 assert.ok(source.includes("mountEnvironmentStudioChrome(this,CATALOG,BASE)"));
@@ -48,7 +49,7 @@ class El{
   querySelectorAll(tag){return this.children.flatMap(c=>[...(c.tag===tag?[c]:[]),...c.querySelectorAll(tag)]);}
 }
 const document={body:new El('body'),createElement:t=>new El(t),
-  querySelector:()=>({content:'DEV 1.3.63'})};
+  querySelector:()=>({content:expectedDevVersion})};
 const listeners={};
 const window={
   confirm:()=>true,

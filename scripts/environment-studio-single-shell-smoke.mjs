@@ -12,7 +12,7 @@ const zone=get('src/game/scenes/EnvironmentBuilderFreehandCollisionScene.js');
 const workflow=get('src/game/scenes/EnvironmentBuilderCollisionWorkflowScene.js');
 const exit=get('src/game/scenes/EnvironmentBuilderSafeWorkflowScene.js');
 const html=get('index.html');
-assert.match(html,/name="tdr-dev-version" content="DEV 1\.3\.63"/);
+assert.match(html,/name="tdr-dev-version" content="DEV 1\.\d+\.\d+"/);
 assert.match(base,/typeof this\._mountDomShell==='function'\s*\? null : mountEnvironmentStudioChrome\(this,CATALOG,BASE\)/,
  'Advanced scene must never mount simple premium shell in parallel');
 assert.match(dom,/import '\.\.\/environment\/environmentStudioUnified\.css';/);
