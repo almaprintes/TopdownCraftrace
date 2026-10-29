@@ -19,7 +19,7 @@ const methods=[
   snippet('_frameTrackView(){','  _trackWidthStep() {'),
   snippet('  _nudgeSelectedNode(dx, dy) {','_deleteSelectedNode()')
 ].join('\n');
-const real=new Function('fitTrackCamera','return ({'+methods+'});')(fitTrackCamera);
+const RealSceneMethods=new Function('fitTrackCamera','return class { '+methods+' };')(fitTrackCamera);
 
 const cam={
   x:118,y:90,width:640,height:420,scrollX:250,scrollY:1600,zoom:1,
@@ -29,12 +29,12 @@ const cam={
 };
 const node={x:654,y:2281,handleIn:{x:600,y:2250},handleOut:{x:700,y:2320}};
 const calls=[];
-const scene={...real,_editCam:cam,_nodes:[node],_selectedNode:0,
+const scene=Object.assign(new RealSceneMethods(),{_editCam:cam,_nodes:[node],_selectedNode:0,
   _editZoomMin:.02,_editZoomMax:2.5,
   _editorWorldW:8000,_editorWorldH:5000,
   _pushHistory(){calls.push('undo')},_autosaveRecovery(){calls.push('recovery')},
   _redrawEditor(){calls.push('redraw')},_updatePanel(){calls.push('panel')}
-};
+});
 const screenX=()=>cam.x+cam.width/2+(node.x-cam.scrollX-cam.width/2)*cam.zoom;
 const screenY=()=>cam.y+cam.height/2+(node.y-cam.scrollY-cam.height/2)*cam.zoom;
 const near=(a,b,msg)=>assert.ok(Math.abs(a-b)<1e-6,msg+': '+a+' '+b);
