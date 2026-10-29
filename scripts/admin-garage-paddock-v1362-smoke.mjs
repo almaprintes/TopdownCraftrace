@@ -1,4 +1,4 @@
-// DEV 1.3.62 · Admin Garage Paddock and Ficha image regression.
+// DEV 1.3.63 · Admin Garage Paddock and Ficha image regression.
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
@@ -15,7 +15,7 @@ const helper=read('src/game/ui/carPreviewAssets.js');
 const game=read('src/game/game.js');
 const player=read('src/game/scenes/GarageLazyCardsScene.js');
 const page=read('index.html');
-assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.62"/);
+assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.63"/);
 assert.match(game,/GarageScene:\{load:\(\)=>import\('\.\/scenes\/GarageSelectionCenterScene\.js'\)/);
 assert.match(scene,/if\(this\._mode==='admin'\)/);
 assert.match(scene,/mountAdminGaragePaddock\(this\)/);
@@ -90,4 +90,4 @@ for(const p of ['src/game/scenes/GarageSelectionCenterScene.js',
  const out=spawnSync(process.execPath,['--check',p],{encoding:'utf8'});
  assert.equal(out.status,0,p+' failed syntax: '+out.stderr);
 }
-console.log('PASS DEV 1.3.62: admin paddock garage actions + source art, Ficha fallback chain and cleanup, player mode isolation, iPhone layout');
+console.log('PASS DEV 1.3.63: admin paddock garage actions + source art, Ficha fallback chain and cleanup, player mode isolation, iPhone layout');

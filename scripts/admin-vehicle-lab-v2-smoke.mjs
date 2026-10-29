@@ -1,4 +1,4 @@
-// DEV 1.3.62: Vehicle Lab must preserve native editor semantics while using
+// DEV 1.3.63: Vehicle Lab must preserve native editor semantics while using
 // ONE full-screen PADDOCK shell rather than duplicate Phaser header/controls.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -9,7 +9,7 @@ const speed=read('src/game/scenes/CarEditorSpeedConsistencyScene.js');
 const css=read('src/game/ui/adminVehicleLab.css');
 const game=read('src/game/game.js');
 const page=read('index.html');
-assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.62"/);
+assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.63"/);
 assert.match(source,/import '\.\.\/ui\/adminVehicleLab\.css';/);
 assert.match(game,/'car-editor':\{load:\(\)=>import\('\.\/scenes\/CarEditorSpeedConsistencyScene\.js'\)/);
 assert.match(source,/this\._mountVehicleLabShell\(\)/);
