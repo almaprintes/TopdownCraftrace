@@ -41,7 +41,13 @@ export class EnvironmentBuilderScene extends Current {
         <button data-pen="select">EDITAR / SELECCIÓN</button>
         <button data-pen="delete" class="danger">BORRAR LÍNEA</button>
       </div><p data-pen-count style="font-size:9px;color:#7fffd4;margin-top:9px"></p>`;
-    aside.prepend(section);this._penUi=section;
+    const group=document.createElement('details');
+    group.className='es-advanced-group';
+    const summary=document.createElement('summary');
+    summary.textContent='PLUMA · COLISIONES';
+    group.append(summary,section);
+    aside.prepend(group);
+    this._penUi=section;
     const on=(name,callback)=>section.querySelector(`[data-pen="${name}"]`)?.addEventListener('click',e=>{
       e.preventDefault();e.stopPropagation();callback();this._syncDomStatus();
     });

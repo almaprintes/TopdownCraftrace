@@ -23,7 +23,7 @@ export class EnvironmentBuilderScene extends Current{
     this.events.once('shutdown',()=>{
       this._canopyGesture=null;
       this._canopyInk?.destroy();
-      this._canopyUi=null;
+      this._canopyUi=null;this._canopyToggleCount=null;
     });
   }
   _mountCanopyControls(){
@@ -48,7 +48,19 @@ export class EnvironmentBuilderScene extends Current{
         🌿 CARGAR COPAS DEL CIRCUITO
       </button>
       <p data-canopy-status style="font-size:10px;color:#a6e5d2;margin:8px 0 0">Sin copas</p>`;
-    aside.prepend(section);this._canopyUi=section;
+    // Canopy painting stays fully functional but does not permanently cover
+    // the asset catalogue or the circuit on a short landscape iPhone.
+    const group=document.createElement('details');
+    group.className='es-canopy-details';
+    const toggle=document.createElement('summary');
+    toggle.textContent='🌳 COPAS 2.5D · OCULTACIÓN';
+    const count=document.createElement('span');
+    count.className='es-canopy-count';
+    toggle.appendChild(count);
+    group.append(toggle,section);
+    aside.prepend(group);
+    this._canopyUi=section;
+    this._canopyToggleCount=count;
     const actions={
       draw:()=>{
         if((this._canopyZones?.length||0)>=CANOPY_LIMIT){
@@ -188,6 +200,7 @@ export class EnvironmentBuilderScene extends Current{
     super._syncDomStatus?.();
     const t=this._canopyUi?.querySelector('[data-canopy-status]');
     if(t)t.textContent=`${this._canopyZones?.length||0} copas terminadas · ${this._canopyDraft?.length||0} puntos · ${this._mode==='canopy-draw'?'TOCA EL BORDE DE LAS RAMAS':this._mode==='canopy-edit'?'ARRASTRA COPA O VÉRTICES':this._canopyPausedMode?'TRAZADO EN PAUSA':'Pulsa NUEVA COPA'}`;
+    if(this._canopyToggleCount)this._canopyToggleCount.textContent=` ${this._canopyZones?.length||0}/16`;
   }
   _project(){
     const project=super._project?.()||{};
