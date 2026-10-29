@@ -7,6 +7,7 @@ El botón **MAP** conserva la importación inicial de fotografía. Cuando ya hay
 - **Sustituir foto:** elige una imagen de igual encuadre. Si conserva la resolución, solo cambia la fotografía. Si cambia la resolución, se transforman los píxeles del lienzo, nodos de la centerline, tiradores Bézier, anchuras globales y por nodo, ambos bordes ajustados, salida, meta, checkpoints y coordenadas de guía, sin recalcular ni aplanar los trazados.
 - **Ampliar todo ×2, ×2.5, ×3:** genera una nueva imagen ampliada por interpolación de alta calidad y ajusta las geometrías a la nueva resolución. No se escala el coche ni la cámara ni sus físicas.
 - **Factor personalizado:** admite factores entre 1.01 y 4.00; redondea las dimensiones de salida a píxeles enteros y calcula las proporciones exactas de coordenadas.
+- **Exportar foto:** descarga la imagen maestra en PNG, JPEG o WebP, conservando su resolución actual.
 - **Nuevo mapa:** crea un proyecto vacío como la acción MAP original.
 
 **Límites:** 8192 px máximos por lado, 32 megapíxeles por imagen. Para reemplazos de fotografía, los encuadres y proporciones deben coincidir (tolerancia de aspecto 0,5 %). El editor rechaza proyectos que superen el límite antes de alterar el trabajo actual.
