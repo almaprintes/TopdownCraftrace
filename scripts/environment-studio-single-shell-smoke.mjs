@@ -1,4 +1,4 @@
-// DEV 1.3.57: real editor must show ONE UI shell, without disabling
+// DEV 1.3.58: real editor must show ONE UI shell, without disabling
 // collisions, canopy painting, materials, camera or saved project schema.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -12,7 +12,7 @@ const zone=get('src/game/scenes/EnvironmentBuilderFreehandCollisionScene.js');
 const workflow=get('src/game/scenes/EnvironmentBuilderCollisionWorkflowScene.js');
 const exit=get('src/game/scenes/EnvironmentBuilderSafeWorkflowScene.js');
 const html=get('index.html');
-assert.match(html,/name="tdr-dev-version" content="DEV 1\.3\.57"/);
+assert.match(html,/name="tdr-dev-version" content="DEV 1\.3\.58"/);
 assert.match(base,/typeof this\._mountDomShell==='function'\s*\? null : mountEnvironmentStudioChrome\(this,CATALOG,BASE\)/,
  'Advanced scene must never mount simple premium shell in parallel');
 assert.match(dom,/import '\.\.\/environment\/environmentStudioUnified\.css';/);
@@ -24,6 +24,13 @@ for(const key of ['save','load','export','photo','fit','zoomIn','zoomOut','pan',
 }
 assert.match(dom,/this\._fitRealTrack\?\.\(\)/,'TODO frames real track with existing camera');
 assert.match(dom,/this\._pickGuide\?\.\(\)/,'Photo loading remains supported');
+for(const act of ['surface','data-surface-visual','data-surface-physics','data-surface-width'])assert.ok(dom.includes(act),'Lost terrain UI '+act);
+for(const material of ['asphalt','grass','dirt','gravel'])assert.ok(dom.includes('data-surface-visual="'+material+'"'),'Lost terrain '+material);
+assert.ok(dom.includes("this._surfaceVisual=b.dataset.surfaceVisual"),'Terrain visual selection must act on Phaser model');
+assert.ok(dom.includes("this._surfacePhysics=b.dataset.surfacePhysics"),'Terrain physics selection must act on Phaser model');
+assert.ok(dom.includes("this._surfaceWidth=Math.max(40,Math.min(400"),'Terrain width changes must reach existing renderer');
+assert.ok(dom.includes("_flash(message)"),'Status messages must remain legible without Phaser popups');
+assert.ok(css.includes('safe-area-inset-left'),'iPhone island must not block header');
 assert.match(dom,/--es-header/);assert.match(dom,/--es-left/);assert.match(dom,/--es-right/);
 assert.match(dom,/getBoundingClientRect/,'DOM must match actual Phaser canvas');
 assert.match(css,/#tdr-environment-studio-dom \.es-head\{/);
