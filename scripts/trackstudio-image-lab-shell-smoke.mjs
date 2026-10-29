@@ -29,8 +29,7 @@ class FakeEl{
     this.tag=tag;this.className='';this.textContent='';this.children=[];
     this.listeners={};this.attrs={};this.parent=null;this.dataset={};
     this.hidden=false;
-    const store={};
-    this.style={...store,setProperty(k,v){store[k]=v},cssText:''};
+    this.style={cssText:'',setProperty(k,v){this[k]=v}};
   }
   append(...items){for(const el of items){el.parent=this;this.children.push(el)}}
   appendChild(child){this.append(child);return child;}
