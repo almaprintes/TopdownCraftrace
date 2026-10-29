@@ -5,7 +5,7 @@ const ui=fs.readFileSync('src/game/ui/adminImageLabV2.js','utf8');
 const css=fs.readFileSync('src/game/ui/adminImageLabV2.css','utf8');
 const core=fs.readFileSync('src/game/ui/adminImageWebpTool.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
-assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.49"'));
+assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.50"'));
 assert.ok(core.includes("import {mountImageLabV2} from './adminImageLabV2.js'"));
 assert.ok(core.includes('skin.presentResult(r,sourceFile,href,'));
 assert.ok(core.includes('skin.showSelection(selected[0],selected.length)'));
@@ -64,13 +64,14 @@ class Element{
   getBoundingClientRect(){return{left:0,width:900};}
   focus(){}
 }
-const document={createElement:t=>new Element(t),querySelector:()=>({content:'DEV 1.3.49'})};
+const document={createElement:t=>new Element(t),querySelector:()=>({content:'DEV 1.3.50'})};
 let serial=0;const revoked=[];
 const URL={
   createObjectURL:()=> 'blob:fake-'+(++serial),
   revokeObjectURL:(url)=>revoked.push(url)
 };
-class Image{set src(url){this._src=url;this.naturalWidth=1024;this.naturalHeight=768;this.onload?.();}}
+let fixtureWidth=1024,fixtureHeight=768;
+class Image{set src(url){this._src=url;this.naturalWidth=fixtureWidth;this.naturalHeight=fixtureHeight;this.onload?.();}}
 class Event{constructor(type){this.type=type;}}
 const requestAnimationFrame=fn=>fn();
 const executable=ui.replace(/^import .*$/gm,'').replace('export function mountImageLabV2','function mountImageLabV2');
@@ -92,7 +93,8 @@ const qualityValue=qualityWrap.querySelector('strong');
 const launch=el('button'),status=el('div'),results=el('div');
 panel.append(head,hint,fileWrap,options,note,launch,status,results);
 const skin=mount({overlay,panel,head,heading,close,hint,fileWrap,pick,options,formatWrap,formatInput,scaleWrap,scaleInput,
- qualityWrap,qualityInput,qualityValue,note,launch,status,results});
+ qualityWrap,qualityInput,qualityValue,note,launch,status,results,
+ exportLimits:{mobile:true,maxEdge:8192,maxPixels:16_000_000}});
 const walk=(root,needle,out=[])=>{
  if(root.className.split(' ').includes(needle))out.push(root);
  for(const child of root.children)walk(child,needle,out);
@@ -101,7 +103,7 @@ const walk=(root,needle,out=[])=>{
 assert.equal(walk(panel,'tdr-image-lab__stage-area').length,1);
 assert.equal(walk(panel,'tdr-image-lab__side').length,1);
 assert.equal(walk(panel,'tdr-image-lab__results-wrap').length,1);
-assert.ok(walk(panel,'tdr-image-lab__version')[0].textContent==='DEV 1.3.49');
+assert.ok(walk(panel,'tdr-image-lab__version')[0].textContent==='DEV 1.3.50');
 assert.ok(walk(panel,'tdr-image-lab__settings-note').includes(note));
 assert.equal(walk(panel,'tdr-image-lab__format-choice').length,4);
 assert.equal(walk(panel,'tdr-image-lab__scale-choice').length,5);
@@ -126,5 +128,18 @@ button[1].click();
 assert.equal(walk(panel,'tdr-image-lab__canvas')[0].style.width,'2560px');
 skin.clearOutput();
 assert.ok(revoked.length>=2,'Object URLs must be revoked on reset');
+// Screenshot regression: a 1320×2868 PNG ×3 requests 3960×8604 pixels.
+// This cannot fit the iPhone Canvas edge/memory budget and must be flagged
+// before pressing PROCESS. ×2 (2640×5736) remains possible on the iPhone.
+fixtureWidth=1320;fixtureHeight=2868;
+skin.showSelection({name:'IMG_7255.png',size:1_800_000},1);
+const scales=walk(panel,'tdr-image-lab__scale-choice');
+assert.equal(scales[3].disabled,true,'×2.5 exceeds 16 MP on mobile');
+assert.equal(scales[4].disabled,true,'×3 exceeds 8192 px and 16 MP on mobile');
+assert.equal(scales[2].disabled,false,'×2 is permitted on mobile');
+assert.equal(launch.disabled,true,'Invalid selected scale must not start conversion');
+scales[2].click();
+assert.equal(launch.disabled,false,'Valid selected scale must enable conversion');
+assert.ok(walk(panel,'tdr-image-lab__export-hint')[0].textContent.includes('2640 × 5736'));
 assert.equal(actions[0].disabled,true);
 console.log('PASS Image Lab 2.0: version, layout, 4 formats, 5 scales, view, compare, download, zoom, object URL cleanup.');

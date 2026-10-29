@@ -12,7 +12,7 @@ self.onmessage=async ({data})=>{
   try{
     const {width,height,quality,rgba}=data||{};
     if(!Number.isSafeInteger(width)||!Number.isSafeInteger(height)||width<1||height<1||
-       width>8192||height>8192||width*height>32_000_000||!
+       width>16_383||height>16_383||width*height>64_000_000||!
        (rgba instanceof ArrayBuffer)||rgba.byteLength!==width*height*4)
       throw Error('Datos de imagen inválidos para el codificador');
     const imageData={data:new Uint8ClampedArray(rgba),width,height};

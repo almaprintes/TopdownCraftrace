@@ -1,14 +1,23 @@
 // Admin WebP must remain lazy, independent of races, safe for mobile and offline.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {targetWebpDimensions,makeWebpFilename,makeImageFilename,detectSourceFormat,resolveOutputFormat,humanBytes,isWebpHeader,MAX_BATCH_COUNT,QUALITY_DEFAULT}
+import {targetWebpDimensions,makeWebpFilename,makeImageFilename,detectSourceFormat,resolveOutputFormat,humanBytes,isWebpHeader,MAX_BATCH_COUNT,QUALITY_DEFAULT,MAX_EXPORT_EDGE,MAX_MOBILE_EXPORT_EDGE,MAX_EXPORT_PIXELS,MAX_MOBILE_EXPORT_PIXELS}
   from '../src/game/ui/adminImageWebpTool.js';
 
 assert.equal(MAX_BATCH_COUNT,8);
 assert.equal(QUALITY_DEFAULT,86);
 assert.deepEqual(targetWebpDimensions(1448,1086,2.5),{width:3620,height:2715,pixels:9828300});
 assert.deepEqual(targetWebpDimensions(1448,1086,1,{mobile:true}),{width:1448,height:1086,pixels:1572528});
-assert.throws(()=>targetWebpDimensions(4096,6144,2.5),/8192/);
+assert.equal(MAX_EXPORT_EDGE,16383);
+assert.equal(MAX_MOBILE_EXPORT_EDGE,8192);
+assert.equal(MAX_EXPORT_PIXELS,64_000_000);
+assert.equal(MAX_MOBILE_EXPORT_PIXELS,16_000_000);
+assert.deepEqual(targetWebpDimensions(1320,2868,3),{width:3960,height:8604,pixels:34071840});
+assert.throws(()=>targetWebpDimensions(1320,2868,3,{mobile:true}),/8192/);
+assert.throws(()=>targetWebpDimensions(1320,2868,2.5,{mobile:true}),/16 MP/);
+assert.deepEqual(targetWebpDimensions(1320,2868,2,{mobile:true}),{width:2640,height:5736,pixels:15143040});
+assert.throws(()=>targetWebpDimensions(6000,3000,3),/16.383/);
+assert.throws(()=>targetWebpDimensions(4096,6144,2),/64 megapíxeles/);
 assert.throws(()=>targetWebpDimensions(4096,6144,1,{mobile:true}),/16 MP/);
 assert.deepEqual(targetWebpDimensions(4096,6144,1),{width:4096,height:6144,pixels:25165824});
 assert.equal(makeWebpFilename('7 PICOS.png',2.5),'7 PICOS-x2_5.webp');
@@ -51,6 +60,7 @@ assert.ok(tool.includes("new URL('./adminWebpEncoder.worker.js',import.meta.url)
 assert.ok(tool.includes('document.body.appendChild(overlay)'));
 const worker=fs.readFileSync('src/game/ui/adminWebpEncoder.worker.js','utf8');
 assert.ok(worker.includes("import encode from '@jsquash/webp/encode.js'"));
+assert.ok(worker.includes('width>16_383||height>16_383||width*height>64_000_000'));
 assert.ok(worker.includes('await encode(imageData'));
 assert.ok(worker.includes('self.postMessage({buffer:bytes},[bytes])'));
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
