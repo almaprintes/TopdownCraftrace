@@ -395,6 +395,18 @@ this._btnNew = this._makeTopActionButton(...toolPos(), '+', 'NUEVO', () => {
       this._editorWorldH / 2 + 30
     );
 
+    // Informative empty state. No fake project preview or persistent graphics:
+    // it disappears as soon as any authored data or guide is present.
+    this._emptyHelp = this.add.text(
+      this._viewX+this._viewW/2,
+      this._viewY+this._viewH/2,
+      'LIENZO LISTO PARA DISEÑAR\\n\\nCarga una fotografía desde ABRIR o IMG\\npara empezar a trazar el circuito',
+      {fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+       fontSize:'14px',fontStyle:'bold',color:'#9ac2d0',
+       align:'center',backgroundColor:'#102130',
+       padding:{x:22,y:16}}
+    ).setOrigin(0.5).setDepth(28).setScrollFactor(0);
+
     // =================================================
     // Cámara de edición
     // =================================================
