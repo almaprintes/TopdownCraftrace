@@ -1,39 +1,43 @@
-// Pure layout helper: keep every Track Studio toolbar action on-screen.
-// Buttons and captions share these exact coordinates across desktop/mobile.
+// Pure, independently testable coordinates for Track Studio's compact UI.
+// All measurements are Phaser logical units, not physical screenshot pixels.
 export const TRACK_STUDIO_TOP_TOOLS=Object.freeze([
   'save','load','new','closure','widthDown','widthUp','undo','redo'
 ]);
 export function trackStudioToolbarLayout(width,rightPanelW=280){
   if(!Number.isFinite(width)||width<=0)throw Error('Ancho de pantalla inválido');
-  const compact=width<1040;
-  if(!compact){
-    return {compact:false,twoRows:false,y:29,
-      x:[285,329,373,429,477,517,569,609]};
+  const right=Math.max(280,width-rightPanelW);
+  const twoRows=right<790;
+  if(!twoRows){
+    const start=214,usable=right-start-7;
+    const gap=Math.min(76,usable/8);
+    const buttonWidth=Math.max(58,Math.min(70,gap-5));
+    return {compact:false,twoRows:false,width:buttonWidth,height:55,
+      x:Array.from({length:8},(_,i)=>start+gap*i+gap/2),
+      y:Array.from({length:8},()=>38)};
   }
-  const usableRight=width-rightPanelW-16;
-  const twoRows=usableRight<460;
-  if(twoRows){
-    // On narrow landscape phones use two groups of four. The top bar
-    // remains within its 72px height; avoid drawing captions off-screen.
-    const start=Math.min(Math.max(138,width*.23),Math.max(138,usableRight-154));
-    const gap=Math.max(36,Math.min(42,(usableRight-start-9)/3));
-    return {compact:true,twoRows:true,y:19,
-      x:[start,start+gap,start+gap*2,start+gap*3,
-         start,start+gap,start+gap*2,start+gap*3]};
-  }
-  const start=width<840?203:232;
-  const gap=Math.max(33,Math.min(42,(usableRight-start-22)/7));
-  return {compact:true,twoRows:false,y:24,
-    x:Array.from({length:8},(_,i)=>start+i*gap)};
+  // The previous layout placed icons 42px apart and drew captions separately:
+  // at 1.7x screenshot scale those captions visibly overlapped.
+  // Each new button owns its own caption INSIDE a fixed hit rectangle.
+  const start=width<740?Math.max(125,Math.min(155,right-260)):Math.max(155,Math.min(203,right-285));
+  const gap=Math.min(68,(right-start-8)/4);
+  const buttonWidth=Math.max(48,gap-5);
+  return {compact:true,twoRows:true,width:buttonWidth,height:32,
+    x:Array.from({length:8},(_,i)=>start+gap*(i%4)+gap/2),
+    y:Array.from({length:8},(_,i)=>i<4?20:55)};
 }
-
-// Editor controls (shape, edge, grid, preview) must never spill into the
-// inspector on short phones. Two rows remain inside the map viewport.
 export function trackStudioShapeToolbarLayout(viewX,viewY,viewWidth){
-  const compact=viewWidth<720;
-  const x=viewX+10,y=viewY+9;
-  const offsets=viewWidth<350?[[0,0],[112,0],[0,46],[112,46],[0,92]]:
-    compact?[[0,0],[112,0],[220,0],[0,46],[112,46]]:
-    [[0,0],[114,0],[225,0],[310,0],[447,0]];
-  return {compact,points:offsets.map(([dx,dy])=>({x:x+dx,y:y+dy}))};
+  const x=viewX+10,y=viewY+10;
+  const sizes=[119,108,87,111,118];
+  const gap=7;
+  const sum=sizes.reduce((a,b)=>a+b,0)+gap*4;
+  if(viewWidth>=sum+20){
+    let offset=0;
+    return {compact:false,rows:1,
+      points:sizes.map(width=>{const p={x:x+offset,y,width,height:38};offset+=width+gap;return p;})};
+  }
+  const twoRows=viewWidth>=380;
+  const offsets=twoRows?[[0,0],[128,0],[244,0],[0,46],[120,46]]:
+    [[0,0],[128,0],[0,46],[128,46],[0,92]];
+  return {compact:true,rows:twoRows?2:3,
+    points:offsets.map(([dx,dy],i)=>({x:x+dx,y:y+dy,width:sizes[i],height:38}))};
 }
