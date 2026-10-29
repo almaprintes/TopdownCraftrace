@@ -130,3 +130,7 @@
 .vl-ficha .vl-ficha-wallet-copy strong{color:#fff;font-size:15px;font-weight:1000}
 @media(max-height:510px){.vl-ficha .vl-ficha-wallet{padding:3px 7px}}
 @media(max-width:740px){.vl-ficha [data-ficha-wallet]{display:none}}
+
+/* Preview only shows the placeholder when every real image source fails. */
+.vl-ficha-car.has-image .vl-ficha-fallback{display:none}
+.vl-ficha-car img[hidden]{display:none!important}
