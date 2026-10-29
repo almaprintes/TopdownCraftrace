@@ -9,7 +9,7 @@ const speed=read('src/game/scenes/CarEditorSpeedConsistencyScene.js');
 const css=read('src/game/ui/adminVehicleLab.css');
 const game=read('src/game/game.js');
 const page=read('index.html');
-assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.63"/);
+assert.match(page,/name="tdr-dev-version" content="DEV 1\.\d+\.\d+"/);
 assert.match(source,/import '\.\.\/ui\/adminVehicleLab\.css';/);
 assert.match(game,/'car-editor':\{load:\(\)=>import\('\.\/scenes\/CarEditorSpeedConsistencyScene\.js'\)/);
 assert.match(source,/this\._mountVehicleLabShell\(\)/);

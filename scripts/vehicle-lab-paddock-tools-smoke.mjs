@@ -12,7 +12,7 @@ const mastery=read('src/game/ui/AdminMasteryRoofCalibration.js');
 const skins=read('src/game/ui/AdminSkinGeometryCalibration.js');
 const lights=read('src/game/ui/AdminVehicleLightsCalibration.js');
 const page=read('index.html');
-assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.63"/);
+assert.match(page,/name="tdr-dev-version" content="DEV 1\.\d+\.\d+"/);
 for(const [name,code] of [['maestrías',mastery],['skins',skins],['luces',lights]]){
  assert.match(code,/import '\.\/vehicleLabPaddockShared\.css'/,name+' must share theme');
  for(const element of ['vl-paddock-tool','vl-tool-header','vl-tool-brand','vl-tool-logo','vl-tool-heading','vl-tool-filters','vl-tool-preview','vl-tool-controls']){

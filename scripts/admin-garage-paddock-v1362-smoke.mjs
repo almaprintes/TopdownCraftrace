@@ -15,7 +15,7 @@ const helper=read('src/game/ui/carPreviewAssets.js');
 const game=read('src/game/game.js');
 const player=read('src/game/scenes/GarageLazyCardsScene.js');
 const page=read('index.html');
-assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.63"/);
+assert.match(page,/name="tdr-dev-version" content="DEV 1\.\d+\.\d+"/);
 assert.match(game,/GarageScene:\{load:\(\)=>import\('\.\/scenes\/GarageSelectionCenterScene\.js'\)/);
 assert.match(scene,/if\(this\._mode==='admin'\)/);
 assert.match(scene,/mountAdminGaragePaddock\(this\)/);

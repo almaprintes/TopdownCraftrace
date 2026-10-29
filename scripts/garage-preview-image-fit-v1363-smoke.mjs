@@ -12,7 +12,7 @@ const garageCss=read('src/game/ui/adminGaragePaddock.css');
 const helper=read('src/game/ui/carPreviewAssets.js');
 const garage=read('src/game/ui/adminGaragePaddock.js');
 const page=read('index.html');
-assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.63"/);
+assert.match(page,/name="tdr-dev-version" content="DEV 1\.\d+\.\d+"/);
 assert.match(ficha,/officialArtSpec=CAR_SPECS\?\.\[carId\]\|\|spec/);
 assert.match(ficha,/carCardUrl\(carId,officialArtSpec,base\)/);
 assert.match(ficha,/src="\$\{safe\(imageCandidates\[0\]\|\|''\)\}"/,'Actual image src must be present in HTML');

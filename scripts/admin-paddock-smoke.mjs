@@ -37,7 +37,9 @@ class MockElement {
   focus(){}
   remove(){if(this.parent)this.parent.children=this.parent.children.filter(c=>c!==this);}
 }
-const document={createElement:tag=>new MockElement(tag),querySelector:selector=>selector==='meta[name="tdr-dev-version"]'?{content:'DEV 1.3.63'}:null};
+const expectedDevVersion=fs.readFileSync('index.html','utf8').match(/name="tdr-dev-version" content="([^"]+)"/)?.[1];
+assert.ok(expectedDevVersion?.startsWith('DEV '),'Must find a DEV version in index.html');
+const document={createElement:tag=>new MockElement(tag),querySelector:selector=>selector==='meta[name="tdr-dev-version"]'?{content:expectedDevVersion}:null};
 const executable=viewSource.replace(/^import .*$/gm,'').replace('import.meta.env.BASE_URL',"'/'")
   .replace('export function mountAdminPaddock','function mountAdminPaddock');
 const mount=new Function('document',executable+'\nreturn mountAdminPaddock;')(document);
@@ -64,7 +66,7 @@ const tiles=walk(root,e=>e.className==='tdr-paddock__tile');
 const auxiliary=walk(root,e=>e.className==='tdr-paddock__aux');
 assert.equal(tiles.length,4);
 assert.equal(auxiliary.length,3);
-assert.equal(walk(root,e=>e.className==='tdr-paddock__dev')[0].textContent,'DEV 1.3.63');
+assert.equal(walk(root,e=>e.className==='tdr-paddock__dev')[0].textContent,expectedDevVersion);
 assert.deepEqual(tiles.map(t=>t.dataset.kind),['track','environment','car','image']);
 assert.ok(tiles.every(t=>walk(t,e=>e.tag==='img').length===1));
 tiles.forEach(t=>t.click());
