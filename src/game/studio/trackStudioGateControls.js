@@ -173,7 +173,17 @@ export function installTrackStudioGateControls(scene){
     );
     remove.style.display=selected?'block':'none';
   }
+  let mountedHost=null;
   function position(){
+    if(mountedHost){
+      root.style.position='relative';
+      root.style.left='0';
+      root.style.top='0';
+      root.style.width='100%';
+      root.style.height='100%';
+      root.style.maxHeight='none';
+      return;
+    }
     const rect=scene.game?.canvas?.getBoundingClientRect?.();
     if(!rect||rect.width<=0||rect.height<=0)return;
     const viewW=Math.max(1,scene.scale?.width||1);
@@ -215,5 +225,13 @@ export function installTrackStudioGateControls(scene){
     root.remove();
   });
   refresh();position();
-  return {root,start,finish,status,buttons,remove,widthValue,stepButton,localWidth,localLabel,localMinus,localPlus,localReset,refresh,position};
+  return {root,start,finish,status,buttons,remove,widthValue,stepButton,localWidth,localLabel,localMinus,localPlus,localReset,refresh,position,
+    mountInto(host){
+      if(!host||!host.isConnected)return false;
+      mountedHost=host;
+      host.appendChild(root);
+      position();
+      return true;
+    }};
+
 }
