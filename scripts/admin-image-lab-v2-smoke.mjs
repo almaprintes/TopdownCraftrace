@@ -15,6 +15,18 @@ assert.ok(core.includes("smallButton('VER ANTES / DESPUÉS'"));
 assert.ok(core.includes("new URL('./adminWebpEncoder.worker.js',import.meta.url)"));
 assert.match(css,/@media\(max-height:500px\)/);
 assert.match(css,/@media\(max-width:550px\)/);
+// Landscape layout guard: nothing essential may move below the fold.
+// A 100dvh screen owns exactly three rows (header, workspace, result strip).
+assert.ok(css.includes('@media (orientation:landscape) and (min-width:600px) and (max-height:820px)'));
+assert.ok(css.includes('@media (orientation:landscape) and (min-width:600px) and (max-height:415px)'));
+assert.ok(css.includes('height:100dvh!important;max-height:100dvh!important;'));
+assert.ok(css.includes('overflow:hidden!important;overscroll-behavior:none!important;'));
+assert.match(css,/grid-template-rows:42px minmax\(0,1fr\) auto/);
+assert.match(css,/grid-template-rows:34px minmax\(0,1fr\) auto/);
+assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+assert.ok(css.includes('max-height:45px;overflow-x:auto;overflow-y:hidden'));
+assert.ok(css.includes('.tdr-image-lab__footer{display:none}'));
+
 assert.match(core,/env\(safe-area-inset-left/); // inherited from existing overlay
 assert.doesNotMatch(ui,/fetch\(|XMLHttpRequest|WebSocket|localStorage/);
 assert.ok(ui.includes("current?.compare?.()"));
