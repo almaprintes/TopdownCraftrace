@@ -26,3 +26,13 @@ export function trackStudioToolbarLayout(width,rightPanelW=280){
   return {compact:true,twoRows:false,y:24,
     x:Array.from({length:8},(_,i)=>start+i*gap)};
 }
+
+// Editor controls (shape, edge, grid, preview) must never spill into the
+// inspector on short phones. Two rows remain inside the map viewport.
+export function trackStudioShapeToolbarLayout(viewX,viewY,viewWidth){
+  const compact=viewWidth<720;
+  const x=viewX+10,y=viewY+9;
+  const offsets=compact?[[0,0],[112,0],[220,0],[0,46],[112,46]]:
+    [[0,0],[114,0],[225,0],[310,0],[447,0]];
+  return {compact,points:offsets.map(([dx,dy])=>({x:x+dx,y:y+dy}))};
+}
