@@ -249,7 +249,7 @@ export class EnvironmentBuilderScene extends Current {
         h.lineStyle(1.5*step,ENVIRONMENT_ZONE_COLORS.pen.tangent,.85);h.lineBetween(n.x,n.y,n[key].x,n[key].y);
         h.fillStyle(ENVIRONMENT_ZONE_COLORS.pen.tangent,1);h.fillCircle(n[key].x,n[key].y,6*step);
       }
-      h.fillStyle(0xffdd75,1);h.fillCircle(n.x,n.y,8*step);
+      h.fillStyle(ENVIRONMENT_ZONE_COLORS.pen.handle,1);h.fillCircle(n.x,n.y,8*step);
       h.lineStyle(1.5*step,0x1a2734,1);h.strokeCircle(n.x,n.y,8*step);
     }
   }
