@@ -1016,6 +1016,18 @@ if (
 
     this._createGuideInput();
     this._createProjectInput();
+    // Leaving via race preview or scene replacement must also clean native
+    // pickers/popovers; previously only the Back button performed cleanup.
+    this.events.once('shutdown',()=>{
+      this._destroyGuideInput?.();
+      this._destroyProjectInput?.();
+      this._closeSourceMenu?.();
+      this._closeReferencePanel?.();
+      this._closeViewMenu?.();
+      this._closeModeMenu?.();
+      this._closeTrackMenu?.();
+      this._closeGuideMenu?.();
+    });
     installTrackStudioImageMode(this);
     installTrackStudioShapeEditor(this);
     installTrackStudioExitGuard(this);
