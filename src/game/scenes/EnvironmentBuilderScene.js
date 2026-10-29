@@ -140,5 +140,5 @@ export class EnvironmentBuilderScene extends BaseScene{
   _loadGuideFile(file){if(!file)return;const r=new FileReader();r.onload=e=>{const im=new Image();im.onload=()=>{const key=`env-guide-${Date.now()}`;this.textures.addImage(key,im);this._guide?.destroy?.();const g=this.add.image(WORLD_W/2,WORLD_H/2,key).setDepth(2).setAlpha(.72);const s=Math.min((WORLD_W*.82)/im.width,(WORLD_H*.82)/im.height);g.setScale(s);this.cameras.main.ignore(g);this._guide=g;this._environmentChrome?.refresh();};im.src=e.target.result;};r.readAsDataURL(file);this._guideInput.value='';}
   _updateSurfaceInfo(){this._surfaceInfo?.setText(`ASFALTO · física ${this._surfacePhysics==='grass'?'CÉSPED':'ASFALTO'} · ancho ${this._surfaceWidth}`);}
   _status(){const label=this._mode==='surface'?'SUPERFICIE ASFALTO':this._mode==='pan'?'PAN':'SELECCIÓN';this._statusText?.setText(`MODO: ${label}`);}
-  _flash(msg){this._flashText?.destroy?.();this._flashText=this._uiText(this._vx+this._vw/2,this._vy+28,msg,14,'#2bff88').setOrigin(.5);this.time.delayedCall(1200,()=>this._flashText?.destroy?.());}
+  _flash(msg){if(this._environmentChrome){this._environmentChrome.notify(msg);return;}this._flashText?.destroy?.();this._flashText=this._uiText(this._vx+this._vw/2,this._vy+28,msg,14,'#2bff88').setOrigin(.5);this.time.delayedCall(1200,()=>this._flashText?.destroy?.());}
 }
