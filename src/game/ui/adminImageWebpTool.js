@@ -2,9 +2,13 @@ import {mountImageLabV2} from './adminImageLabV2.js';
 // Admin-only local image converter. Lazy-loaded by Admin Hub; never in races.
 // Browser Canvas processes PNG/JPG and resizing; libwebp/WASM backs up Safari WebP export.
 // Browser resampling adds pixels, NOT missing photographic details.
-export const MAX_EXPORT_PIXELS=32_000_000;
+// High-resolution exports are supported on desktop where the Canvas memory
+// budget is larger. iOS WebKit has an 8192 px Canvas edge limit; keeping a
+// separate mobile cap avoids promising outputs that Safari cannot render.
+export const MAX_EXPORT_PIXELS=64_000_000;
 export const MAX_MOBILE_EXPORT_PIXELS=16_000_000;
-export const MAX_EXPORT_EDGE=8192;
+export const MAX_EXPORT_EDGE=16_383; // WebP VP8 upper bound
+export const MAX_MOBILE_EXPORT_EDGE=8192;
 export const MAX_BATCH_COUNT=8;
 export const MAX_INPUT_BYTES=60*1024*1024;
 export const QUALITY_DEFAULT=86;
@@ -36,12 +40,14 @@ export function targetWebpDimensions(width,height,scale=1,{mobile=false}={}){
   if(![width,height,scale].every(Number.isFinite)||width<=0||height<=0||scale<1||scale>3)
     throw Error('Dimensiones o escala incorrectas');
   const w=Math.round(width*scale),h=Math.round(height*scale);
-  if(w>MAX_EXPORT_EDGE||h>MAX_EXPORT_EDGE)
-    throw Error('Se superan los 8192 px por lado. Reduce la escala.');
+  const maxEdge=mobile?MAX_MOBILE_EXPORT_EDGE:MAX_EXPORT_EDGE;
+  if(w>maxEdge||h>maxEdge)
+    throw Error(mobile?'La salida supera 8192 px por lado en iPhone/Android. Utiliza el Mac para exportar más grande o reduce la escala.'
+      :'La salida supera 16.383 px por lado (máximo WebP). Reduce la escala.');
   const max=mobile?MAX_MOBILE_EXPORT_PIXELS:MAX_EXPORT_PIXELS;
   if(w*h>max)
     throw Error(mobile?'Imagen demasiado grande para convertir de forma segura en móvil (16 MP). Utiliza el Mac o reduce la escala.'
-      :'La salida supera 32 megapíxeles. Reduce la escala.');
+      :'La salida supera 64 megapíxeles. Reduce la escala.');
   return {width:w,height:h,pixels:w*h};
 }
 export function makeImageFilename(original,scale=1,format='webp'){
@@ -224,7 +230,7 @@ export function mountAdminWebpTool(adminRoot){
     launch.textContent=original?'PROCESAR · MANTENER FORMATO':'CONVERTIR A '+(formatInput.value==='jpeg'?'JPG':formatInput.value.toUpperCase());
   };
   formatInput.addEventListener('change',updateExportControls);
-  const note=elt('div','Remuestreo: suavizado de alta calidad del navegador, conservando proporciones. PNG no introduce compresión con pérdida; JPG no admite transparencia. HEIC/AVIF se pueden conservar sin cambios, pero para ampliarlos hay que exportar a PNG/JPG/WebP. Límite: 8192 px por lado, 16 MP en móvil o 32 MP en Mac/PC.',
+  const note=elt('div','Remuestreo: suavizado de alta calidad del navegador, conservando proporciones. PNG no introduce compresión con pérdida; JPG no admite transparencia. HEIC/AVIF se pueden conservar sin cambios, pero para ampliarlos hay que exportar a PNG/JPG/WebP. Salida máxima: 8192 px por lado y 16 MP en móvil; 16.383 px por lado y 64 MP en Mac/PC.',
     'font-size:11px;color:#a7b8ca;line-height:1.4');
   panel.appendChild(note);
   const launch=elt('button','CONVERTIR A WEBP',B+'border-color:#2bff88;background:#143b2b;color:#baffe1;align-self:flex-start;');
@@ -237,7 +243,10 @@ export function mountAdminWebpTool(adminRoot){
   // picker, processing, export and full-screen comparison handlers.
   const skin=mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,pick,
     options,formatWrap,formatInput,scaleWrap,scaleInput,qualityWrap,qualityInput,
-    qualityValue,note,launch,status,results});
+    qualityValue,note,launch,status,results,
+    exportLimits:{maxEdge:isMobileDevice()?MAX_MOBILE_EXPORT_EDGE:MAX_EXPORT_EDGE,
+      maxPixels:isMobileDevice()?MAX_MOBILE_EXPORT_PIXELS:MAX_EXPORT_PIXELS,
+      mobile:isMobileDevice()}});
 
   const clearOutput=()=>{
     skin.clearOutput();
