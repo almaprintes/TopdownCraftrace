@@ -160,6 +160,10 @@ export async function convertFileToImage(file,{format='webp',quality=QUALITY_DEF
         }catch{}
       }
       if(!blob){
+        // If native WebP lied about support, do not allocate a second huge
+        // RGBA buffer and WASM heap beyond the safe mobile fallback budget.
+        if(mobile&&dims.pixels>MAX_MOBILE_WASM_EXPORT_PIXELS)
+          throw Error('WebP no se pudo codificar de forma nativa a esta resolución. Prueba PNG o JPG, o reduce la escala.');
         const rgba=ctx.getImageData(0,0,dims.width,dims.height);
         blob=await encodeWithLocalWebpWorker(rgba,quality);
       }
