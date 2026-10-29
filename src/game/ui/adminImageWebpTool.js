@@ -375,6 +375,7 @@ export function mountAdminWebpTool(adminRoot){
     busy=true;launch.disabled=true;pick.disabled=true;scaleInput.disabled=true;formatInput.disabled=true;qualityInput.disabled=true;
     clearOutput();
     skin.showSelection(selected[0],selected.length);
+    skin.setBusy(true);
     const scale=Number(scaleInput.value),quality=Number(qualityInput.value),format=formatInput.value,mobile=isMobileDevice();
     let succeeded=0,failed=0;
     for(let i=0;i<selected.length;i++){
@@ -394,6 +395,7 @@ export function mountAdminWebpTool(adminRoot){
     if(!disposed){
       busy=false;launch.disabled=false;pick.disabled=false;scaleInput.disabled=false;formatInput.disabled=false;
       updateExportControls();
+      skin.setBusy(false);
       status.textContent=succeeded+' imagen(es) lista(s) para descargar'+(failed?' · '+failed+' error(es)':'')+'.';
     }
   });
