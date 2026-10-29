@@ -37,7 +37,7 @@ export function trackStudioShapeToolbarLayout(viewX,viewY,viewWidth){
   }
   const twoRows=viewWidth>=380;
   const offsets=twoRows?[[0,0],[128,0],[244,0],[0,46],[120,46]]:
-    [[0,0],[128,0],[0,46],[128,46],[0,92]];
+    [[0,0],[116,0],[0,46],[116,46],[0,92]];
   return {compact:true,rows:twoRows?2:3,
     points:offsets.map(([dx,dy],i)=>({x:x+dx,y:y+dy,width:sizes[i],height:38}))};
 }
