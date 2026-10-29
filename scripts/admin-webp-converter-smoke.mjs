@@ -67,6 +67,11 @@ assert.ok(tool.includes("native?.type==='image/webp'"));
 assert.ok(isWebpHeader(new Uint8Array([82,73,70,70,0,0,0,0,87,69,66,80])));
 assert.equal(isWebpHeader(new Uint8Array([137,80,78,71,0,0,0,0,0,0,0,0])),false);
 assert.ok(tool.includes('encodeWithLocalWebpWorker(rgba,quality)'));
+assert.ok(tool.includes('if(mobile&&dims.pixels>MAX_MOBILE_WASM_EXPORT_PIXELS)'));
+assert.ok(tool.includes('format:outputFormat,nativeWebp'));
+assert.ok(tool.includes('exportImageLimits({'));
+assert.ok(tool.includes('skin.showSelection(selected[0],selected.length,detectSourceFormat(selected[0]))'));
+
 assert.ok(tool.includes("new URL('./adminWebpEncoder.worker.js',import.meta.url)"));
 assert.ok(tool.includes('document.body.appendChild(overlay)'));
 const worker=fs.readFileSync('src/game/ui/adminWebpEncoder.worker.js','utf8');
