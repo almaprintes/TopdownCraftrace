@@ -64,10 +64,10 @@ assert.ok(canopy.includes('normalizedCanopyZones(this._canopyZones'),'Canopy JSO
 // The three editor tools must keep their independent colour identities on
 // completed, selected and in-progress traces, without changing saved data.
 const palette=get('src/game/environment/environmentStudioZoneColors.js');
-assert.match(palette,/canopy:Object\\.freeze\\(\\{line:0x38e99a,selected:0x95ffcf/);
-assert.match(palette,/pen:Object\\.freeze\\(\\{line:0xf1f6ff,selected:0xffffff/);
-assert.match(palette,/zone:Object\\.freeze\\(\\{line:0xffcf45,selected:0xffee97/);
-assert.ok(pen.includes('ENVIRONMENT_ZONE_COLORS.pen.line'),'Pluma base path must be white');
+assert.match(palette,/canopy:Object\.freeze\(\{line:0x38e99a,selected:0x95ffcf/);
+assert.match(palette,/pen:Object\.freeze\(\{line:0xf1f6ff,selected:0xffffff/);
+assert.match(palette,/zone:Object\.freeze\(\{line:0xffcf45,selected:0xffee97/);
+assert.ok(pen.includes('const palette=ENVIRONMENT_ZONE_COLORS.pen;'),'Pluma base path must be white');
 assert.ok(pen.includes('selected?palette.selected:palette.line'),'Pluma selection must remain white');
 assert.ok(pen.includes('palette.shadow'),'White stroke must have contrast on bright photos');
 assert.ok(zone.includes('unfinished?colors.draft:colors.line'),'Solid zones and drafts must remain yellow');
