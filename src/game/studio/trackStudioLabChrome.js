@@ -37,7 +37,7 @@ export function mountTrackStudioLabChrome(scene,gate){
   const save=button('GUARDAR',()=>{scene._saveProject?.();},'ts-lab__head-button ts-lab__head-button--primary');
   const open=button('ABRIR',()=>scene._openProjectSourceMenu?.(),'ts-lab__head-button');
   const create=button('NUEVO',()=>{
-    if(!window.confirm('¿Crear proyecto nuevo?\\n\\nSustituirá lo que estás editando. Guarda antes una copia si quieres conservarlo.'))return;
+    if(!window.confirm('¿Crear proyecto nuevo?\n\nSustituirá lo que estás editando. Guarda antes una copia si quieres conservarlo.'))return;
     scene._pushHistory?.();scene._newProject?.();
     scene._autosaveRecovery?.();scene._flashMessage?.('Proyecto nuevo');
   },'ts-lab__head-button');
@@ -184,7 +184,7 @@ export function mountTrackStudioLabChrome(scene,gate){
     placeholder.hidden=hasWork;
     const edge=scene._shapeEditing&&shapeIsValid(scene._trackShape);
     const description=edge?shapeInspectorCopy(scene._trackShape,scene._shapeSelected):studioInspectorCopy(scene);
-    const next=description.replaceAll('\\n',' · ').replace(/\\s+/g,' ').trim();
+    const next=description.replaceAll('\n',' · ').replace(/\s+/g,' ').trim();
     if(next!==displayed){state(info,next);displayed=next;}
     state(meta,edge?'AJUSTE DE BORDES':scene._imageCanvas?'LIENZO FOTOGRÁFICO':'TRAZADO');
     const selected=(scene._selectedNode>=0)||(scene._selectedPiano>=0);
