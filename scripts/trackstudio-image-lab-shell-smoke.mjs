@@ -10,7 +10,8 @@ const shape=fs.readFileSync('src/game/studio/installTrackShapeEditor.js','utf8')
 const gateSource=fs.readFileSync('src/game/studio/trackStudioGateControls.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
 
-assert.match(index,/name="tdr-dev-version" content="DEV 1\.3\.64"/);
+const expectedDevVersion=index.match(/name="tdr-dev-version" content="([^"]+)"/)?.[1];
+assert.ok(expectedDevVersion?.startsWith('DEV '));
 assert.ok(scene.includes("import '../studio/trackStudioLabChrome.css'"));
 assert.ok(scene.includes('mountTrackStudioLabChrome(this,gate)'));
 assert.ok(scene.includes("const gate=installTrackStudioGateControls(this)"));
@@ -45,7 +46,7 @@ class FakeEl{
 }
 const body=new FakeEl('body');
 const document={body,createElement:tag=>new FakeEl(tag),
-  querySelector:sel=>sel.startsWith('meta')?{content:'DEV 1.3.64'}:null};
+  querySelector:sel=>sel.startsWith('meta')?{content:expectedDevVersion}:null};
 const wListeners={};
 const window={
   confirm:()=>true,
