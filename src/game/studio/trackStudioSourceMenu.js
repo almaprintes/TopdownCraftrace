@@ -21,10 +21,17 @@ export function openTrackStudioSourceMenu(scene) {
   title.style.cssText='text-align:center;font-size:clamp(15px,3vw,21px);color:#64dfff;margin:0 0 14px;letter-spacing:.07em';
   const grid=document.createElement('div');
   grid.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(7px,2vh,13px)';
-  const close=()=>{root.remove();scene?.events?.off?.('shutdown',close);scene?.events?.off?.('destroy',close);if(scene._closeSourceMenu===close)scene._closeSourceMenu=null;};
+  const onKeyDown=e=>{if(e.key==='Escape'){e.preventDefault();close();}};
+  const close=()=>{
+    document.removeEventListener('keydown',onKeyDown);
+    root.remove();
+    scene?.events?.off?.('shutdown',close);
+    scene?.events?.off?.('destroy',close);
+    if(scene._closeSourceMenu===close)scene._closeSourceMenu=null;
+  };
   const handlers=[
     ()=>scene._openGameTrackSourceMenu(),
-    ()=>{scene._loadProject();scene._flashMessage('📂 Proyecto local cargado');},
+    ()=>{if(scene._loadProject?.())scene._flashMessage('📂 Proyecto local cargado');},
     ()=>scene._openProjectPicker(),
     ()=>scene._restoreLastTrackStudioRecovery()
   ];
@@ -47,6 +54,8 @@ export function openTrackStudioSourceMenu(scene) {
   cancel.addEventListener('click',close);
   root.addEventListener('pointerdown',e=>{if(e.target===root)close();});
   dialog.append(title,grid,cancel);root.append(dialog);document.body.append(root);
+  document.addEventListener('keydown',onKeyDown);
+  grid.querySelector('button')?.focus?.();
   scene?.events?.once?.('shutdown',close);scene?.events?.once?.('destroy',close);
   scene._closeSourceMenu=close;
 }
