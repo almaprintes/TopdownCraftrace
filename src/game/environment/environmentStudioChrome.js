@@ -232,6 +232,7 @@ export function mountEnvironmentStudioChrome(scene,catalog,baseUrl='/'){
     root.style.setProperty('--env-right',(scene._right*sx)+'px');
   };
   const onViewport=()=>{position();refresh()};
+  const notify=(message)=>write(stageMessage,message||'Todo listo para editar');
   const dispose=()=>{
     if(disposed)return;
     disposed=true;
@@ -242,7 +243,7 @@ export function mountEnvironmentStudioChrome(scene,catalog,baseUrl='/'){
     scene._environmentChrome=null;
   };
   document.body.append(root);
-  scene._environmentChrome={root,refresh,renderCatalog,position,dispose};
+  scene._environmentChrome={root,refresh,renderCatalog,position,notify,dispose};
   scene.events.once('shutdown',dispose);
   scene.events.once('destroy',dispose);
   window.addEventListener('resize',onViewport);
