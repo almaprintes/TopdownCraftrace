@@ -113,7 +113,7 @@ export class EnvironmentBuilderScene extends BaseScene{
       const project=JSON.parse(raw);
       if(!project||!Array.isArray(project.environment)||!Array.isArray(project.surfaces))
         throw Error('Proyecto de entorno incorrecto');
-      if(!window.confirm('¿Cargar el entorno guardado?\\n\\nSustituirá los objetos y superficies que tienes abiertos.'))return false;
+      if(!window.confirm('¿Cargar el entorno guardado?\n\nSustituirá los objetos y superficies que tienes abiertos.'))return false;
       this._applyProject(project);
       this._flash('CARGADO');
       this._environmentChrome?.refresh();
@@ -129,7 +129,7 @@ export class EnvironmentBuilderScene extends BaseScene{
   _changeTrackId(){
     const v=window.prompt('ID del circuito',this._trackId);
     if(!v)return;
-    const id=String(v).trim().toLowerCase().replace(/\\s+/g,'-');
+    const id=String(v).trim().toLowerCase().replace(/\s+/g,'-');
     if(!id||id===this._trackId)return;
     if((this._objects.length||this._surfaces.length)&&!window.confirm('Cambiar de circuito conservará la edición en pantalla. ¿Continuar? Guarda primero si no quieres mezclar entornos.'))return;
     this._trackId=id;
