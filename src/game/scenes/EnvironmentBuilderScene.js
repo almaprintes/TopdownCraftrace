@@ -45,7 +45,12 @@ export class EnvironmentBuilderScene extends BaseScene{
     super.create();
     this._setupLayout();this._setupWorld();this._setupUi();this._setupInput();this._refreshCatalog();
     try{
-      this._environmentChrome=mountEnvironmentStudioChrome(this,CATALOG,BASE);
+      // The real game loads a derived editor with _mountDomShell(), which
+      // supplies ALL advanced editing panels (copas, collisions, materials).
+      // Never mount this simple shell on top of that canonical interface.
+      // Keep it only for a standalone base editor / backward compatibility.
+      this._environmentChrome=typeof this._mountDomShell==='function'
+        ? null : mountEnvironmentStudioChrome(this,CATALOG,BASE);
       if(this._environmentChrome)this._catalogRoot?.setVisible?.(false);
     }catch(e){
       console.warn('[Environment Studio] Interfaz premium no disponible; se mantiene el editor anterior',e);
