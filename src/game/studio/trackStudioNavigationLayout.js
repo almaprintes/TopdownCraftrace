@@ -32,7 +32,8 @@ export function trackStudioToolbarLayout(width,rightPanelW=280){
 export function trackStudioShapeToolbarLayout(viewX,viewY,viewWidth){
   const compact=viewWidth<720;
   const x=viewX+10,y=viewY+9;
-  const offsets=compact?[[0,0],[112,0],[220,0],[0,46],[112,46]]:
+  const offsets=viewWidth<350?[[0,0],[112,0],[0,46],[112,46],[0,92]]:
+    compact?[[0,0],[112,0],[220,0],[0,46],[112,46]]:
     [[0,0],[114,0],[225,0],[310,0],[447,0]];
   return {compact,points:offsets.map(([dx,dy])=>({x:x+dx,y:y+dy}))};
 }
