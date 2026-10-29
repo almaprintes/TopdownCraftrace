@@ -26,7 +26,12 @@ export class EnvironmentBuilderScene extends Current {
       </div>
       <button data-workflow="restore-pen" style="margin-top:7px;width:100%;min-height:40px">↶ RECUPERAR PLUMA GUARDADA</button>
       <p data-workflow-state style="font-size:10px;font-weight:500;line-height:1.45;color:#a9d7d0;margin:8px 0 0"></p>`;
-    aside.prepend(section);
+    const group=document.createElement('details');
+    group.className='es-advanced-group';
+    const summary=document.createElement('summary');
+    summary.textContent='TRAZAR Y NAVEGAR';
+    group.append(summary,section);
+    aside.prepend(group);
     this._workflowUi=section;
     for(const [name,fn] of Object.entries({
       move:()=>this._pauseCollisionForPan(),
