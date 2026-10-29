@@ -282,6 +282,12 @@ export function installTrackStudioShapeEditor(s){
   let installing=false;
   const previewBtn=button(s,previewPos.x,previewPos.y,'▶ PROBAR JUEGO',async()=>{
     if(installing)return;
+    // A race preview needs an image-backed track, not just a centerline or
+    // a reference guide. Show this BEFORE the confirmation dialog.
+    if(!s._imageCanvas?.imageId){
+      s._flashMessage('No se puede probar: el proyecto no tiene imagen maestra. Pulsa MAP para cargarla.');
+      return;
+    }
     if(!window.confirm('¿Probar este Karting Tenerife en el juego DEV?\\n\\nSe guardará una copia local con un identificador de pruebas. La versión pública y sus récords no cambian.'))return;
     installing=true;
     try{

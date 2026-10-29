@@ -73,8 +73,9 @@ export function mountTrackStudioLabChrome(scene,gate){
     guidePanel.hidden=!guidePanel.hidden;
   },'ts-lab__rail-button ts-lab__rail-button--image');
   photo.setAttribute('aria-label','Importar fotografía de referencia');
-  const map=button('MAP',()=>scene._openProjectSourceMenu?.(),'ts-lab__rail-button');
-  map.setAttribute('aria-label','Abrir circuito o proyecto');
+  const map=button('MAP',()=>scene._openCanvasImagePicker?.(),'ts-lab__rail-button');
+  map.setAttribute('aria-label','Cargar imagen maestra para crear y probar un circuito');
+  map.title='Importar imagen maestra (para ▶ PROBAR)';
   add(rail,railHome,railIn,railOut,photo,map);
   guidePanel=make('div','ts-lab__guide-panel');
   guidePanel.hidden=true;
@@ -114,13 +115,35 @@ export function mountTrackStudioLabChrome(scene,gate){
   const placeholder=make('div','ts-lab__empty');
   add(placeholder,make('span','ts-lab__empty-icon','⌖'),make('strong','','LIENZO LISTO PARA DISEÑAR'),
     make('small','','Carga una imagen o abre un proyecto para comenzar a trabajar'));
+  // Topmost editor notice: never draw errors behind the header or toolbars.
+  const notice=make('div','ts-lab__notice');
+  notice.setAttribute('role','status');
+  notice.setAttribute('aria-live','polite');
+  notice.hidden=true;
+  let noticeTimeout=null;
+  const showNotice=(raw)=>{
+    const message=String(raw||'');
+    const missingMaster=/no tiene imagen maestra|no se encuentra la imagen maestra/i.test(message);
+    const displayed=missingMaster
+      ?'Para probar en carrera, pulsa MAP y carga una imagen maestra. IMG es solo una referencia.'
+      :message;
+    const error=missingMaster||/no se puede|error|no hay|falta|primero|inválid|falló/i.test(message);
+    state(notice,displayed);
+    notice.setAttribute('data-error',String(error));
+    notice.hidden=!displayed;
+    if(noticeTimeout!=null)window.clearTimeout?.(noticeTimeout);
+    noticeTimeout=window.setTimeout?.(()=>{
+      notice.hidden=true;noticeTimeout=null;
+    },error?8000:3500)??null;
+    return displayed;
+  };
   const stageBottom=make('div','ts-lab__stage-bottom');
   const mode=make('strong','ts-lab__mode','EDITAR');
   const stats=make('span','ts-lab__stats','0 NODOS · ZOOM —');
   const center=button('CENTRAR',()=>railHome.click(),'ts-lab__bottom-button');
   const status=make('span','ts-lab__status','Todo listo para empezar');
   stageBottom.append(mode,stats,center,status);
-  workspace.append(stageTop,placeholder,stageBottom);
+  workspace.append(stageTop,notice,placeholder,stageBottom);
 
   const side=make('aside','ts-lab__side');
   const sideHead=make('div','ts-lab__side-head');
@@ -201,9 +224,14 @@ export function mountTrackStudioLabChrome(scene,gate){
     const out=oldUpdate.apply(this,args);refresh();return out;
   };
   scene._flashMessage=function(...args){
-    const out=oldFlash.apply(this,args);
-    if(args[0])state(status,String(args[0]));
-    return out;
+    const message=String(args[0]||'');
+    if(!message)return;
+    // Phaser text at y=80 used to be covered by the premium DOM header.
+    // When the DOM shell exists, avoid drawing a second hidden message.
+    this._msgText?.destroy?.();
+    this._msgText=null;
+    const displayed=showNotice(message);
+    state(status,displayed);
   };
 
   const position=()=>{
@@ -229,6 +257,7 @@ export function mountTrackStudioLabChrome(scene,gate){
     // Restoring the editor's original methods allows safe scene transitions.
     scene._updatePanel=oldUpdate;
     scene._flashMessage=oldFlash;
+    if(noticeTimeout!=null)window.clearTimeout?.(noticeTimeout);
     root.remove();
     scene._studioChromeMounted=false;
   };

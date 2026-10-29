@@ -12,6 +12,7 @@ import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
 import { installTrackStudioGateControls } from '../studio/trackStudioGateControls.js';
 import { createPenAnchor, penGestureIsCurve, updatePenAnchorFromDrag } from '../studio/trackStudioPenTool.js';
 import {trackStudioToolbarLayout} from '../studio/trackStudioNavigationLayout.js';
+import {zoomTrackCameraAt,beginTrackPinch,updateTrackPinch} from '../studio/trackStudioZoom.js';
 import '../studio/trackStudioLabChrome.css';
 import {mountTrackStudioLabChrome} from '../studio/trackStudioLabChrome.js';
 
@@ -767,35 +768,16 @@ if (
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (!this._mapGesture) {
-          const startZoom = this._editCam.zoom;
-          this._mapGesture = {
-            startDist: Math.max(1, dist),
-            startZoom,
-            anchorWorldX: this._editCam.scrollX + (midX - this._editCam.x) / startZoom,
-            anchorWorldY: this._editCam.scrollY + (midY - this._editCam.y) / startZoom
-          };
+          this._mapGesture = beginTrackPinch(this._editCam,p1,p2);
           this._pinchLastDist = dist;
           this._panLast = null;
           this._draggingPart = false;
           return;
         }
-
-        const g = this._mapGesture;
-        const newZoom = Phaser.Math.Clamp(
-          g.startZoom * (dist / g.startDist),
-          this._editZoomMin,
-          this._editZoomMax
-        );
-
-        // Map-style pinch: the world point grabbed at gesture start remains
-        // exactly beneath the CURRENT midpoint of both fingers. Moving both
-        // fingers therefore pans while their separation controls zoom.
-        this._editCam.setZoom(newZoom);
-        this._editCam.scrollX =
-          g.anchorWorldX - (midX - this._editCam.x) / newZoom;
-        this._editCam.scrollY =
-          g.anchorWorldY - (midY - this._editCam.y) / newZoom;
-
+        // Phaser centers its camera zoom inside the viewport, whose x/y
+        // starts AFTER the left rail. Preserve the true two-finger midpoint.
+        updateTrackPinch(this._editCam,this._mapGesture,p1,p2,
+          this._editZoomMin,this._editZoomMax);
         this._pinchLastDist = dist;
         // The image tiles remain untouched; redraw only control graphics at
         // a throttled rate while pinching, then exactly once at gesture end.
@@ -1916,42 +1898,17 @@ _updatePianoDrag(part, world) {
   }
 }
 _applyZoomAtViewportCenter(multiplier) {
-  const cam = this._editCam;
-  if (!cam) return;
-
-  const midX = cam.x + cam.width / 2;
-  const midY = cam.y + cam.height / 2;
-
-  const newZoom = Phaser.Math.Clamp(
-    cam.zoom * multiplier,
-    this._editZoomMin,
-    this._editZoomMax
-  );
-
-  const worldX =
-    cam.scrollX +
-    (midX - cam.x) / cam.zoom;
-
-  const worldY =
-    cam.scrollY +
-    (midY - cam.y) / cam.zoom;
-
-  cam.setZoom(newZoom);
-
-  cam.scrollX =
-    worldX - (midX - cam.x) / newZoom;
-
-  cam.scrollY =
-    worldY - (midY - cam.y) / newZoom;
-
-  const maxScrollX = this._editorWorldW - (cam.width / cam.zoom);
-  const maxScrollY = this._editorWorldH - (cam.height / cam.zoom);
-
-  cam.scrollX = Phaser.Math.Clamp(cam.scrollX, 0, Math.max(0, maxScrollX));
-  cam.scrollY = Phaser.Math.Clamp(cam.scrollY, 0, Math.max(0, maxScrollY));
-
-  this._redrawEditor();
-  this._updatePanel();
+  const cam=this._editCam;
+  if(!cam)return false;
+  const midpointX=cam.x+cam.width/2;
+  const midpointY=cam.y+cam.height/2;
+  const changed=zoomTrackCameraAt(cam,midpointX,midpointY,multiplier,
+    this._editZoomMin,this._editZoomMax);
+  if(changed){
+    this._redrawEditor();
+    this._updatePanel();
+  }
+  return changed;
 }
   _trackWidthStep() {
     return trackStudioWidthStep(this._imageCanvas, this._trackWidthMax, this._widthStep);

@@ -53,7 +53,7 @@ export function mountAdminPaddock(host,handlers){
   const primary=make('div','tdr-paddock__primary');
   const entries=[
     {id:'track',number:'01',title:'TRACK STUDIO',desc:'Diseña y refina circuitos',points:['Trazados y nodos','Anchuras y curvas','Salida, meta y exportación'],color:'#2bff88',run:handlers.track},
-    {id:'environment',number:'02',title:'ENVIRONMENT BUILDER',desc:'Escenarios, decoración y colisiones',points:['Decoración y objetos','Colisiones y copas','Oclusiones fotográficas'],color:'#30cafe',run:handlers.environment},
+    {id:'environment',number:'02',title:'ENVIRONMENT STUDIO',desc:'Crea escenarios, coloca elementos y pinta superficies',points:['Vegetación, estructuras y objetos','Superficies y físicas','Guardar y exportar entornos'],color:'#19e58e',run:handlers.environment},
     {id:'car',number:'03',title:'VEHICLE LAB',desc:'Coches, físicas y configuraciones',points:['Modelos y fichas','Parámetros de físicas','Calibraciones de vehículos'],color:'#f3cf75',run:handlers.cars},
     {id:'image',number:'04',title:'IMAGE LAB',desc:'Conversión, ampliación y análisis',points:['JPG, PNG y WebP','Ampliación con remuestreo','Comparador antes / después'],color:'#c38aff',run:handlers.images}
   ];

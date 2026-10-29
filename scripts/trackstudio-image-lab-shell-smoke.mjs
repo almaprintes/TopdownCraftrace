@@ -10,7 +10,7 @@ const shape=fs.readFileSync('src/game/studio/installTrackShapeEditor.js','utf8')
 const gateSource=fs.readFileSync('src/game/studio/trackStudioGateControls.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
 
-assert.match(index,/name="tdr-dev-version" content="DEV 1\.3\.54"/);
+assert.match(index,/name="tdr-dev-version" content="DEV 1\.3\.55"/);
 assert.ok(scene.includes("import '../studio/trackStudioLabChrome.css'"));
 assert.ok(scene.includes('mountTrackStudioLabChrome(this,gate)'));
 assert.ok(scene.includes("const gate=installTrackStudioGateControls(this)"));
@@ -45,10 +45,11 @@ class FakeEl{
 }
 const body=new FakeEl('body');
 const document={body,createElement:tag=>new FakeEl(tag),
-  querySelector:sel=>sel.startsWith('meta')?{content:'DEV 1.3.54'}:null};
+  querySelector:sel=>sel.startsWith('meta')?{content:'DEV 1.3.55'}:null};
 const wListeners={};
 const window={
   confirm:()=>true,
+  setTimeout:()=>1,clearTimeout:()=>{},
   addEventListener(k,fn){(wListeners[k]??=[]).push(fn)},
   removeEventListener(k,fn){wListeners[k]=(wListeners[k]||[]).filter(x=>x!==fn)}
 };
@@ -77,7 +78,8 @@ const s={
   _trackWidthStep:()=>5,
   _changeTrackWidth(n){this._trackWidth+=n;this._updatePanel();calls.push('width')},
   _undo(){calls.push('undo')},_redo(){calls.push('redo')},
-  _applyZoomAtViewportCenter(n){calls.push('zoom')},
+  _applyZoomAtViewportCenter(n){this._editCam.zoom*=n;calls.push(n>1?'zoom-in':'zoom-out');this._updatePanel()},
+  _openCanvasImagePicker(){calls.push('master-file')},
   _openGuidePicker(){calls.push('guide-file')},
   _toggleGuideVisibility(){this._guideVisible=!this._guideVisible;calls.push('guide-toggle')},
   _changeGuideScale(){calls.push('guide-size')},
@@ -109,9 +111,19 @@ const click=(label)=>{const b=buttons.find(n=>n.textContent===label);assert.ok(b
 click('GUARDAR');click('ABRIR');click('NUEVO');click('ANCHO −');click('ANCHO +');
 click('↶');click('↷');click('VOLVER A PADDOCK');click('CREAR PISTA');
 click('AJUSTAR');click('+ NODO');click('▶ PROBAR');
-click('IMG');click('CARGAR');click('TAMAÑO +');click('OPACIDAD −');
+click('IMG');click('MAP');click('CARGAR');click('TAMAÑO +');click('OPACIDAD −');
+const zoomBefore=s._editCam.zoom;
+click('+');assert.ok(s._editCam.zoom>zoomBefore,'Plus must increase zoom');
+const zoomIn=s._editCam.zoom;
+click('−');assert.ok(s._editCam.zoom<zoomIn,'Minus must reduce zoom');
+s._flashMessage('No se puede probar: El proyecto no tiene imagen maestra');
+const alert=all(controller.root).find(n=>n.className==='ts-lab__notice');
+assert.ok(alert&&!alert.hidden,'Error visible above Phaser canvas');
+assert.equal(alert.getAttribute('data-error'),'true');
+assert.ok(alert.textContent.includes('pulsa MAP'),'Actionable master image guidance');
 for(const label of ['save','open','new','undo','redo','exit','shape-create','shape-edit',
-  'shape-add','shape-preview','guide-file','guide-size','guide-opacity'])
+  'shape-add','shape-preview','guide-file','guide-size','guide-opacity',
+  'master-file','zoom-in','zoom-out'])
   assert.ok(calls.includes(label),'Missing routing: '+label);
 const empty=all(controller.root).find(n=>n.className==='ts-lab__empty');
 assert.ok(empty&&!empty.hidden);
