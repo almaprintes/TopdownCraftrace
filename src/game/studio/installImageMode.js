@@ -121,9 +121,13 @@ async function replaceCanvasImage(s,file,{confirmed=false}={}){
   }
 }
 async function upscaleCanvasImage(s,factor){
+  factor=Number(factor);
+  if(!Number.isFinite(factor)||factor<=1||factor>4)
+    throw Error('El factor de ampliación debe estar entre 1.01 y 4.00');
   const current=s._getProjectData();
   const {width,height}=imageTrackResizePlan(current,
-    current.imageCanvas.width*factor,current.imageCanvas.height*factor);
+    Math.round(current.imageCanvas.width*factor),
+    Math.round(current.imageCanvas.height*factor));
   if(!window.confirm('AMPLIAR PROYECTO x'+factor+'\n\n'+
     current.imageCanvas.width+' × '+current.imageCanvas.height+
     ' → '+width+' × '+height+' píxeles.\n\n'+
@@ -188,7 +192,7 @@ function showCanvasScaleMenu(s,{onNew,onReplace,onUpscale}){
     b.append(strong,small);b.addEventListener('click',()=>{close();action()});grid.append(b);
   };
   add('SUSTITUIR FOTO','Mismo encuadre · reescala toda la geometría automáticamente',onReplace);
-  for(const factor of [2,3]){
+  for(const factor of [2,2.5,3]){
     const allowed=limit(meta.width*factor,meta.height*factor);
     add('AMPLIAR TODO ×'+factor,allowed
       ?(meta.width*factor)+' × '+(meta.height*factor)+' px · foto y geometría'
@@ -196,13 +200,30 @@ function showCanvasScaleMenu(s,{onNew,onReplace,onUpscale}){
       ()=>onUpscale(factor),allowed);
   }
   add('NUEVO MAPA','Crea un proyecto vacío. Conserva antes tu .tdrtrack',onNew);
+  const custom=document.createElement('div');
+  custom.style.cssText='display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap';
+  const customLabel=document.createElement('label');
+  customLabel.textContent='FACTOR PERSONALIZADO ×';
+  customLabel.style.cssText='font:700 11px system-ui;color:#ccedea';
+  const customInput=document.createElement('input');
+  customInput.type='number';customInput.min='1.01';customInput.max='4';customInput.step='.05';customInput.value='1.5';
+  customInput.setAttribute('aria-label','Factor de ampliación');
+  customInput.style.cssText='min-width:74px;width:78px;min-height:39px;box-sizing:border-box;padding:7px;border-radius:7px;border:1px solid #4a9b9c;background:#07131e;color:white;font:700 15px system-ui';
+  const customButton=document.createElement('button');customButton.type='button';
+  customButton.textContent='APLICAR ESCALA';
+  customButton.style.cssText='min-height:39px;padding:8px 12px;border:1px solid #27c9a3;background:#0c695e;color:#fff;border-radius:8px;font:800 11px system-ui;touch-action:manipulation';
+  customButton.addEventListener('click',()=>{
+    const factor=Number(String(customInput.value).replace(',','.'));
+    close();onUpscale(factor);
+  });
+  custom.append(customLabel,customInput,customButton);
   const note=document.createElement('p');
   note.textContent='La escala del coche y la cámara de carrera no se modifican. Al sustituir la foto, utiliza el mismo encuadre.';
   note.style.cssText='font:500 11px system-ui;line-height:1.5;color:#d1dce4;margin:14px 0 0';
   const cancel=document.createElement('button');cancel.type='button';cancel.textContent='CANCELAR';
   cancel.style.cssText='display:block;margin:13px auto 0;min-height:40px;padding:7px 26px;background:#1b3646;border:1px solid #6f9eaa;border-radius:9px;color:white;touch-action:manipulation';
   cancel.addEventListener('click',close);
-  panel.append(title,info,grid,note,cancel);root.append(panel);document.body.append(root);
+  panel.append(title,info,grid,custom,note,cancel);root.append(panel);document.body.append(root);
   document.addEventListener('keydown',onKey);s.events?.once?.('shutdown',close);
   s._closeCanvasScaleMenu=close;cancel.focus?.();
 }
