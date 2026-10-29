@@ -67,12 +67,38 @@ export function mountTrackStudioLabChrome(scene,gate){
   railIn.setAttribute('aria-label','Acercar');
   const railOut=button('−',()=>scene._applyZoomAtViewportCenter?.(1/1.15),'ts-lab__rail-button');
   railOut.setAttribute('aria-label','Alejar');
-  const photo=button('IMG',()=>scene._openGuidePicker?.(),'ts-lab__rail-button ts-lab__rail-button--image');
+  let guidePanel;
+  const photo=button('IMG',()=>{
+    if(!guidePanel)return;
+    guidePanel.hidden=!guidePanel.hidden;
+  },'ts-lab__rail-button ts-lab__rail-button--image');
   photo.setAttribute('aria-label','Importar fotografía de referencia');
   const map=button('MAP',()=>scene._openProjectSourceMenu?.(),'ts-lab__rail-button');
   map.setAttribute('aria-label','Abrir circuito o proyecto');
   add(rail,railHome,railIn,railOut,photo,map);
-
+  guidePanel=make('div','ts-lab__guide-panel');
+  guidePanel.hidden=true;
+  const guideTitle=make('strong','','IMAGEN DE REFERENCIA');
+  const guideCommands=make('div','ts-lab__guide-actions');
+  const guideLoad=button('CARGAR',()=>scene._openGuidePicker?.());
+  const guideLock=button('BLOQUEAR',()=>{
+    if(!scene._guideImage)return scene._flashMessage?.('Carga una imagen de referencia');
+    scene._guideLocked=!scene._guideLocked;
+    scene._autosaveRecovery?.();
+    scene._updatePanel?.();
+  });
+  const guideShow=button('MOSTRAR',()=>{
+    if(!scene._guideImage)return scene._flashMessage?.('Carga una imagen de referencia');
+    scene._toggleGuideVisibility?.();scene._autosaveRecovery?.();
+  });
+  const guideLess=button('TAMAÑO −',()=>scene._changeGuideScale?.(1/1.08));
+  const guideMore=button('TAMAÑO +',()=>scene._changeGuideScale?.(1.08));
+  const guideFade=button('OPACIDAD −',()=>scene._changeGuideAlpha?.(-0.08));
+  const guideBright=button('OPACIDAD +',()=>scene._changeGuideAlpha?.(0.08));
+  const guideClose=button('CERRAR',()=>{guidePanel.hidden=true;});
+  guideCommands.append(guideLoad,guideLock,guideShow,guideLess,guideMore,guideFade,guideBright,guideClose);
+  guidePanel.append(guideTitle,guideCommands);
+  
   const workspace=make('section','ts-lab__workspace');
   workspace.setAttribute('aria-label','Lienzo de edición Phaser');
   const stageTop=make('div','ts-lab__stage-top');
@@ -112,12 +138,29 @@ export function mountTrackStudioLabChrome(scene,gate){
   const pianoMetric=metric('PIANOS');
   const meta=make('div','ts-lab__meta','SIN SELECCIÓN');
   const info=make('div','ts-lab__properties','Selecciona un nodo o toca un borde para editar');
+  const nudge=make('div','ts-lab__nudge');
+  const nudgeTitle=make('span','','MOVER SELECCIÓN');
+  const nudgeControls=make('div','ts-lab__nudge-controls');
+  const step=button('PASO',()=>{
+    scene._cycleNudgeStep?.();
+    scene._updatePanel?.();
+  });
+  for(const [label,dx,dy] of [['←',-1,0],['↑',0,-1],['↓',0,1],['→',1,0]]){
+    const move=button(label,()=>scene._nudgeSelectedNode?.(
+      dx*scene._getNudgeStep(),dy*scene._getNudgeStep()
+    ));
+    move.setAttribute('aria-label','Mover selección '+label);
+    nudgeControls.append(move);
+  }
+  nudgeControls.append(step);
+  nudge.append(nudgeTitle,nudgeControls);
+  nudge.hidden=true;
   const toolsHead=make('div','ts-lab__tools-head');
   add(toolsHead,make('strong','','HERRAMIENTAS'),make('span','','TRAZADO Y MARCAS'));
   const toolHost=make('div','ts-lab__tool-host');
-  side.append(sideHead,metrics,meta,info,toolsHead,toolHost);
+  side.append(sideHead,metrics,meta,info,nudge,toolsHead,toolHost);
 
-  root.append(header,rail,workspace,side);
+  root.append(header,rail,workspace,side,guidePanel);
   document.body.append(root);
   if(!gate?.mountInto?.(toolHost)){
     root.remove();
@@ -144,6 +187,11 @@ export function mountTrackStudioLabChrome(scene,gate){
     const next=description.replaceAll('\\n',' · ').replace(/\\s+/g,' ').trim();
     if(next!==displayed){state(info,next);displayed=next;}
     state(meta,edge?'AJUSTE DE BORDES':scene._imageCanvas?'LIENZO FOTOGRÁFICO':'TRAZADO');
+    const selected=(scene._selectedNode>=0)||(scene._selectedPiano>=0);
+    nudge.hidden=!selected;
+    state(step,'PASO '+scene._getNudgeStep?.()+' px');
+    state(guideLock,scene._guideLocked?'DESBLOQUEAR':'BLOQUEAR');
+    state(guideShow,scene._guideVisible?'OCULTAR':'MOSTRAR');
     for(const [name,b] of [['create',shapeCreate],['edit',shapeEdit],['add',shapeNode]]){
       b.setAttribute('aria-pressed',String(name==='edit'&&!!scene._shapeEditing));
     }
