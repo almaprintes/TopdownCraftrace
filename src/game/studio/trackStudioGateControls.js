@@ -11,7 +11,7 @@ export function installTrackStudioGateControls(scene){
   root.setAttribute('aria-label','Herramientas de edición: editar, pluma, salida, meta, checkpoints y pianos');
   root.style.cssText=[
     'position:fixed','z-index:24010','box-sizing:border-box',
-    'padding:0 1px 5px','background:#0f1422','pointer-events:auto',
+    'padding:4px 3px 6px','background:linear-gradient(155deg,#102a3c,#091827)','pointer-events:auto',
     'overflow-y:auto','overflow-x:hidden','overscroll-behavior:contain',
     'touch-action:pan-y','scrollbar-width:thin'
   ].join(';');
@@ -94,7 +94,7 @@ export function installTrackStudioGateControls(scene){
     btn.setAttribute('aria-label',hints[type]);
     btn.style.cssText=[
       'min-width:0','min-height:44px','box-sizing:border-box','padding:7px 4px',
-      'border:2px solid #48627c','border-radius:8px','background:#1c2b43',
+      'border:1px solid #355c72','border-radius:9px','background:#132b3f',
       'color:#fff','font:800 12px/1.15 system-ui,-apple-system,Segoe UI,sans-serif',
       'cursor:pointer','touch-action:manipulation','white-space:normal',
       '-webkit-tap-highlight-color:transparent'
@@ -157,9 +157,9 @@ export function installTrackStudioGateControls(scene){
     for(const [type,btn] of Object.entries(buttons)){
       const chosen=active===type;
       btn.setAttribute('aria-pressed',String(chosen));
-      const accent=type==='start'?'#55f5ae':'#8cb8ff';
-      btn.style.borderColor=chosen?accent:'#48627c';
-      btn.style.background=chosen?(type==='start'?'#15503e':'#304d76'):'#1c2b43';
+      const accent=type==='start'?'#38f1b4':'#54cbe6';
+      btn.style.borderColor=chosen?accent:'#355c72';
+      btn.style.background=chosen?(type==='start'?'#15503e':'#304d76'):'#132b3f';
     }
     if(active==='start')status.textContent='Toca la pista para situar SALIDA';
     else if(active==='finish')status.textContent='Toca la pista para situar META';
