@@ -133,7 +133,7 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
 
     this.add.text(22, 18, 'TRACK STUDIO', {
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-      fontSize: this._toolbarLayout.twoRows?'18px':this._toolbarLayout.compact?'24px':'30px',
+      fontSize: this._toolbarLayout.twoRows?(width<740?'14px':'16px'):this._toolbarLayout.compact?'21px':'30px',
       color: '#ffffff',
       fontStyle: 'bold'
     });
@@ -1164,7 +1164,7 @@ _flashMessage(txt) {
   // UI helpers
   // =================================================
   _makeIconButton(cx, cy, label, onClick, fontSize = '22px') {
-    const bg = this.add.circle(cx, cy, 18, 0x1c2540, 1)
+    const bg = this.add.circle(cx, cy, 20, 0x1c2540, 1)
       .setStrokeStyle(2, 0x3c4e7a, 0.95)
       .setInteractive({ useHandCursor: true });
 
