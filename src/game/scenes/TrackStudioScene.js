@@ -12,6 +12,8 @@ import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
 import { installTrackStudioGateControls } from '../studio/trackStudioGateControls.js';
 import { createPenAnchor, penGestureIsCurve, updatePenAnchorFromDrag } from '../studio/trackStudioPenTool.js';
 import {trackStudioToolbarLayout} from '../studio/trackStudioNavigationLayout.js';
+import '../studio/trackStudioLabChrome.css';
+import {mountTrackStudioLabChrome} from '../studio/trackStudioLabChrome.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -1040,11 +1042,19 @@ if (
     installTrackStudioImageMode(this);
     installTrackStudioShapeEditor(this);
     installTrackStudioExitGuard(this);
-    installTrackStudioGateControls(this);
+    const gate=installTrackStudioGateControls(this);
     this._updateLoopButton();
     this._updateToolButtons();
     this._updatePanel();
     this._redrawEditor();
+    // Presentation is optional. On failure the original tool controls remain
+    // fully functional, and the circuit editor/model is never replaced.
+    try{
+      this._studioChrome=mountTrackStudioLabChrome(this,gate);
+    }catch(err){
+      console.warn('[TrackStudio] Premium chrome unavailable, keeping native UI',err);
+      this._studioChrome=null;
+    }
   }
 
   // =================================================
