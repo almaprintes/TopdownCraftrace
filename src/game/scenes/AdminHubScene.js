@@ -1,3 +1,4 @@
+import '../ui/adminImageLabV2.css';
 import { mountAdminPaddock } from '../ui/adminPaddockView.js';
 import { BaseScene } from './BaseScene.js';
 import { GARAGE_ITEMS } from '../garage/partsCatalog.js';
