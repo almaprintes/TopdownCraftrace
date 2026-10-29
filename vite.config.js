@@ -42,7 +42,11 @@ export default defineConfig(async ({ command, mode }) => {
         const devNotices=/<div class="rot-beta"><div class="rot-beta-title">[\s\S]*?<\/div><div class="rot-beta-text">[\s\S]*?<\/div><\/div>/g;
         const count=[...html.matchAll(devNotices)].length;
         if(count!==2)throw new Error(`Expected 2 DEV orientation warnings to remove, found ${count}`);
-        return html.replace(devNotices,'');
+        const releaseVersion=fs.readFileSync('android/app/build.gradle','utf8')
+          .match(/production\s*\{[\s\S]*?versionName '([^']+)'/)?.[1];
+        if(!releaseVersion)throw new Error('Missing production version');
+        return html.replace(devNotices,'')
+          .replace(/(<meta name="tdr-dev-version" content=")[^"]+/,`$1${releaseVersion}`);
       },
       closeBundle() {
         fs.rmSync(path.resolve(process.cwd(), 'dist/tool'), { recursive: true, force: true });

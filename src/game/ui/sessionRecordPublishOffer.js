@@ -34,9 +34,9 @@ export function mountNewPersonalBestOffer(scene,root,report){
     <div style="font:1000 clamp(23px,3.7vw,34px) system-ui;color:#fff;font-variant-numeric:tabular-nums;margin:5px 0">${fmtPersonalBest(best.lapMs)}</div>
     <div data-pb-improvement style="color:#b8d3ca;font-size:11px;font-weight:750">${best.improvementMs!=null?`¡Has mejorado ${(best.improvementMs/1000).toFixed(3)} s tu marca anterior!`:'¡Ya tienes tu primera marca personal en este circuito!'}</div>
     <div data-pb-question style="margin-top:10px;font-size:13px;color:#fff;font-weight:850">¿Quieres publicarlo en la clasificación online?</div>
-    <p data-pb-disclosure style="margin:6px 0 10px;color:#b5cbd7;font-size:11px;line-height:1.35">${isAdFreePromoActive()?'BLACK FRIDAY: durante noviembre puedes publicar tu récord sin ver anuncios.':RECORD_PUBLISH_DISCLOSURE}</p>
+    <p data-pb-disclosure style="margin:6px 0 10px;color:#b5cbd7;font-size:11px;line-height:1.35">${isAdFreePromoActive()?'puedes publicar tu récord sin ver anuncios.':RECORD_PUBLISH_DISCLOSURE}</p>
     <div data-pb-actions style="display:flex;gap:8px;flex-wrap:wrap">
-      <button data-pb-publish type="button" style="flex:1 1 200px;min-height:45px;background:#def6ef;color:#0c241c;border:1px solid #80e2c4;border-radius:10px;padding:8px 12px;font:900 11px system-ui;touch-action:manipulation">${isAdFreePromoActive()?'PUBLICAR GRATIS · BLACK FRIDAY':'PUBLICAR · VER ANUNCIO'}</button>
+      <button data-pb-publish type="button" style="flex:1 1 200px;min-height:45px;background:#def6ef;color:#0c241c;border:1px solid #80e2c4;border-radius:10px;padding:8px 12px;font:900 11px system-ui;touch-action:manipulation">${isAdFreePromoActive()?'PUBLICAR GRATIS':'PUBLICAR · VER ANUNCIO'}</button>
       <button data-pb-skip type="button" style="flex:1 1 90px;min-height:45px;background:#172639;color:#edf4fa;border:1px solid #4b687a;border-radius:10px;padding:8px;font:850 11px system-ui;touch-action:manipulation">AHORA NO</button>
     </div>
     <div data-pb-status role="status" aria-live="polite" style="min-height:15px;margin-top:8px;color:#b7e8df;font-size:11px;font-weight:750"></div>
@@ -114,7 +114,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
       if(!isRewardedAdAvailable()&&!hasAccess())
         throw new Error('No hay un anuncio recompensado disponible ahora. Tu récord se conserva.');
       if(!hasAccess()){
-        setStatus(isAdFreePromoActive()?'Black Friday: publicación gratuita…':'Preparando el anuncio opcional para publicar el récord…');
+        setStatus(isAdFreePromoActive()?'Sin anuncios: publicación gratuita…':'Preparando el anuncio opcional para publicar el récord…');
         const result=await showRewardedAd(scene,{
           title:'PUBLICAR RÉCORD · ANUNCIO RECOMPENSADO',
           placement:REWARDED_PLACEMENTS.RACE_CONTROL_PUBLISH,
@@ -127,7 +127,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
       }
       // Retrying a transient network failure in this report must NEVER
       // require the player to watch a second ad for the same record.
-      setStatus(promotionGranted?'Promoción Black Friday: publicando gratis…':'Anuncio completado. Publicando tu tiempo…');
+      setStatus(promotionGranted?'Sin anuncios: publicando gratis…':'Anuncio completado. Publicando tu tiempo…');
       const response=replay
         ?await submitRaceControlRecordWithGhost({
           trackId,bestTimeMs:best.lapMs,carId,

@@ -33,9 +33,14 @@ class TdrAdsConsentManager private constructor(application: Application) {
     private var lastReason: String? = null
 
     @Synchronized
-    fun snapshot(): Snapshot = currentSnapshot()
+    fun snapshot(): Snapshot = if (BuildConfig.TDR_ADS_SUSPENDED)
+        Snapshot(true, false, false, false, "ads_suspended") else currentSnapshot()
 
     fun prepare(activity: Activity, callback: (Snapshot) -> Unit) {
+        if (BuildConfig.TDR_ADS_SUSPENDED) {
+            callback(Snapshot(true, false, false, false, "ads_suspended"))
+            return
+        }
         activity.runOnUiThread {
             var immediate: Snapshot? = null
             val startUpdate = synchronized(this) {
@@ -71,6 +76,10 @@ class TdrAdsConsentManager private constructor(application: Application) {
     }
 
     fun showPrivacyOptions(activity: Activity, callback: (Snapshot) -> Unit) {
+        if (BuildConfig.TDR_ADS_SUSPENDED) {
+            callback(Snapshot(true, false, false, false, "ads_suspended"))
+            return
+        }
         activity.runOnUiThread {
             UserMessagingPlatform.showPrivacyOptionsForm(activity) { formError ->
                 synchronized(this) {
@@ -115,6 +124,7 @@ class TdrAdsConsentManager private constructor(application: Application) {
     }
 
     private fun initializeAdsOnce(onReady: () -> Unit) {
+        if (BuildConfig.TDR_ADS_SUSPENDED) { onReady(); return }
         var alreadyInitialized = false
         val shouldInitialize = synchronized(this) {
             if (adsInitialized) {

@@ -48,6 +48,7 @@ class TdrRewardedAdsPlugin : Plugin() {
     fun getStatus(call: PluginCall) {
         val consent = consentManager().snapshot()
         val result = JSObject()
+        result.put("adsSuspended", BuildConfig.TDR_ADS_SUSPENDED)
         result.put("bridgeReady", true)
         result.put("configured", BuildConfig.TDR_REWARDED_CONFIGURED)
         result.put("releaseBuild", BuildConfig.BUILD_TYPE == "release")
@@ -98,6 +99,10 @@ class TdrRewardedAdsPlugin : Plugin() {
 
     @PluginMethod
     fun show(call: PluginCall) {
+        if (BuildConfig.TDR_ADS_SUSPENDED) {
+            resolveFailure(call, "ads_suspended")
+            return
+        }
         val placement = call.getString("placement")?.trim()
         val claimId = call.getString("claimId")?.trim()
         val validation = RewardedRequestPolicy.validate(placement, claimId)

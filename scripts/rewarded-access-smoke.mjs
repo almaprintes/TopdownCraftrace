@@ -30,29 +30,22 @@ assert.equal(coolingDown.available,false,'four-hour reward must remain locked af
 assert.equal(coolingDown.claimId,'store-coins-100:1000000');
 assert.equal(actions.storeRewardedWindow(1_000_000,1_000_000+4*60*60*1000).available,true);
 
-// Test REAL rewarded behavior outside the November free event window.
+// Suspension blocks inventory independently of the November marketing window.
 const actualDateNow=Date.now;
 Date.now=()=>Date.parse('2026-12-05T12:00:00Z');
-globalThis.window={location:{pathname:'/'},__tdrRewardedAds:{show:async()=>({completed:true,verified:false,reason:'ssv_failed'})}};
+let nativeCalls=0;
+globalThis.window={location:{pathname:'/'},__tdrRewardedAds:{show:async()=>{nativeCalls++;throw new Error('Ads must remain blocked');}}};
 const provider=await import('../src/game/monetization/RewardedAdsProvider.js');
 const rejected=await provider.showRewardedAd(null,{placement:'test',claimId:'claim-1'});
-assert.equal(rejected.completed,false,'an unverified completion must never grant a reward');
+assert.equal(rejected.completed,false);
 assert.equal(rejected.verified,false);
-window.__tdrRewardedAds.show=async()=>({completed:true,verified:true,transactionId:'verified-test'});
-const accepted=await provider.showRewardedAd(null,{placement:'test',claimId:'claim-2'});
-assert.equal(accepted.completed,true);
-assert.equal(accepted.verified,true);
-
-// A persisted DEV toggle and /dev URL must never enable mock rewards in release.
+assert.equal(actions.rewardActionAllowed(rejected),false);
+assert.equal(nativeCalls,0);
 globalThis.__TDR_PROD_BUILD__=true;
-const savedBridge=window.__tdrRewardedAds;
 delete window.__tdrRewardedAds;
 localStorage.setItem('tdr2:forceRewardedAdMock','1');
 window.location.pathname='/dev/';
-assert.equal(provider.isRewardedAdAvailable(),false);
 assert.equal((await provider.showRewardedAd(null)).verified,false);
-window.__tdrRewardedAds=savedBridge;
-assert.equal(provider.isRewardedAdAvailable(),true);
 localStorage.removeItem('tdr2:forceRewardedAdMock');
 window.location.pathname='/';
 delete globalThis.__TDR_PROD_BUILD__;

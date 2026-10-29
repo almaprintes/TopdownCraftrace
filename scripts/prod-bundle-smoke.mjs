@@ -24,6 +24,7 @@ const forbidden=[
 ];
 for(const token of forbidden)if(text.includes(token))throw new Error(`Production bundle contains forbidden DEV token: ${token}`);
 const productionHtml=fs.readFileSync(path.join(root,'index.html'),'utf8');
+if(/<meta name="tdr-dev-version" content="DEV/.test(productionHtml))throw new Error('Production version is mislabeled DEV');
 if(/<div class="rot-beta">/.test(productionHtml))throw new Error('Production HTML still contains the DEV orientation notice');
 
 const required=[

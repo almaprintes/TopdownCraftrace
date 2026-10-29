@@ -12,3 +12,7 @@
 .tdr-bf-foot{margin-top:8px;color:#bfb49e;font-size:10px;font-weight:750}
 @media(max-height:410px){.tdr-bf-panel{padding:10px 18px}.tdr-bf-kicker{font-size:9px}.tdr-bf-title{font-size:clamp(26px,5vh,42px)}.tdr-bf-subtitle{font-size:clamp(15px,4vh,24px)}.tdr-bf-dates{margin:3px}.tdr-bf-perks{padding:6px;gap:5px 15px;margin:4px auto}.tdr-bf-perks span{font-size:10px}.tdr-bf-play{min-height:36px}.tdr-bf-foot{display:none}}
 @media(max-width:550px){.tdr-bf-perks{grid-template-columns:1fr 1fr;gap:6px}.tdr-bf-mini{max-width:42vw}}
+/* Keep campaign controls inside the usable viewport, including display cutouts. */
+.tdr-bf-shade{box-sizing:border-box;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+.tdr-bf-panel{box-sizing:border-box;max-height:calc(100dvh - max(8px,env(safe-area-inset-top)) - max(8px,env(safe-area-inset-bottom)))}
+.tdr-bf-close,.tdr-bf-play{min-height:44px;min-width:44px}

@@ -148,7 +148,7 @@ export class StatsScene extends MasteryStatsScene{
         }
       }
     });
-    this._root.querySelector('[data-br-publish]')?.addEventListener('click',e=>this._publishRaceControlRecord(selected,e.currentTarget));this._root.querySelectorAll('[data-br-vs]').forEach(el=>el.addEventListener('click',()=>{const row=cloudRows.find(r=>String(r.record_ref)===String(el.dataset.brVs));if(!row)return;const unlocked=localStorage.getItem('tdr2:onlineGhostUnlocked:'+row.record_ref)==='1';const message=unlocked?t('raceControl.challengeGhost'):(isAdFreePromoActive()?'BLACK FRIDAY: desafiar gratis a este fantasma?':t('raceControl.unlockGhostRewarded'));if(!window.confirm(message))return;el.dataset.brVsConfirmed='1';el.textContent=unlocked?'VS ✓':(isAdFreePromoActive()?'VS GRATIS':t('raceControl.rewardRequired'));}));this._root.querySelectorAll('[data-br-scope]').forEach(el=>el.addEventListener('click',()=>{if(this._raceControlPublicMode&&el.dataset.brScope!=='global'){this._showRaceControlNotice('Recupera o vincula tu perfil de piloto para consultar clasificaciones regionales.');return;}this._raceControlScope=el.dataset.brScope;this._renderBroadcastRecords(selected.trackId);}));this._root.querySelector('.sh-back')?.addEventListener('click',()=>{
+    this._root.querySelector('[data-br-publish]')?.addEventListener('click',e=>this._publishRaceControlRecord(selected,e.currentTarget));this._root.querySelectorAll('[data-br-vs]').forEach(el=>el.addEventListener('click',()=>{const row=cloudRows.find(r=>String(r.record_ref)===String(el.dataset.brVs));if(!row)return;const unlocked=localStorage.getItem('tdr2:onlineGhostUnlocked:'+row.record_ref)==='1';const message=unlocked?t('raceControl.challengeGhost'):(isAdFreePromoActive()?'desafiar gratis a este fantasma?':t('raceControl.unlockGhostRewarded'));if(!window.confirm(message))return;el.dataset.brVsConfirmed='1';el.textContent=unlocked?'VS ✓':(isAdFreePromoActive()?'VS GRATIS':t('raceControl.rewardRequired'));}));this._root.querySelectorAll('[data-br-scope]').forEach(el=>el.addEventListener('click',()=>{if(this._raceControlPublicMode&&el.dataset.brScope!=='global'){this._showRaceControlNotice('Recupera o vincula tu perfil de piloto para consultar clasificaciones regionales.');return;}this._raceControlScope=el.dataset.brScope;this._renderBroadcastRecords(selected.trackId);}));this._root.querySelector('.sh-back')?.addEventListener('click',()=>{
       if(this._onlineFromLobby)this.scene.start('menu');
       else this._renderCars();
     });this._root.querySelectorAll('[data-br-track]').forEach(el=>el.addEventListener('click',()=>this._renderBroadcastRecords(el.dataset.brTrack)));
@@ -202,7 +202,7 @@ export class StatsScene extends MasteryStatsScene{
     const claimId=raceControlPublishClaimId(selected.trackId,selected.bestLapMs);
     let credit=verifiedRecordPublishClaims.get(claimId)||null;
     if(credit?.published){button.textContent=t('raceControl.published');button.disabled=true;return;}
-    if(!window.confirm(isAdFreePromoActive()?'BLACK FRIDAY: publicar tu mejor vuelta GRATIS en Race Control?':t('raceControl.publishRewardedConfirm')))return;
+    if(!window.confirm(isAdFreePromoActive()?'publicar tu mejor vuelta GRATIS en Race Control?':t('raceControl.publishRewardedConfirm')))return;
     button.dataset.brPublishing='1';
     button.disabled=true;
     button.textContent=t('raceControl.publishing');

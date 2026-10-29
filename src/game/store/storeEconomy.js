@@ -30,6 +30,7 @@ export function rewardedStatus(now=Date.now()){
 }
 
 export function claimRewardedCoins(amount=100,now=Date.now()){
+  if(amount!==100||!Number.isSafeInteger(now)||now<=0)return {ok:false,reason:"invalid_reward"};
   const st=rewardedStatus(now); if(!st.available)return {ok:false,reason:'AÚN NO DISPONIBLE',remaining:st.remaining};
   const s=loadGarage(); s.coins=Number(s.coins||0)+amount; s.storeRewardedAt=now; saveGarage(s); return {ok:true,amount,state:s};
 }

@@ -226,7 +226,7 @@ export class StatsScene extends ReplayStatsScene{
   async _ensureOnlineGhostReward(ref){
     const unlockKey='tdr2:onlineGhostUnlocked:'+ref;
     if(localStorage.getItem(unlockKey)==='1')return true;
-    if(!window.confirm(isAdFreePromoActive()?'BLACK FRIDAY: descargar este fantasma GRATIS?':t('raceControl.unlockGhostRewarded')))return false;
+    if(!window.confirm(isAdFreePromoActive()?'descargar este fantasma GRATIS?':t('raceControl.unlockGhostRewarded')))return false;
     const ad=await showRewardedAd(this,{
       title:t('raceControl.ghostRewardedTitle'),
       placement:REWARDED_PLACEMENTS.RACE_CONTROL_GHOST,

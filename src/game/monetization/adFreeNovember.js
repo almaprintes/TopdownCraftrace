@@ -3,7 +3,9 @@
 import {playerBackendConfig} from '../online/backendConfig.js';
 
 export const BLACK_FRIDAY_PROMOTION_ID='november_2026';
-export const PROMO_START_MS=Date.parse('2026-10-27T21:00:00Z');
+// Marketing window is Canary time (UTC in November). The safety hold is separate.
+export const ADS_SUSPENDED=true; // Release only after confirmed AdMob reinstatement.
+export const PROMO_START_MS=Date.parse('2026-11-01T00:00:00Z');
 export const PROMO_END_MS=Date.parse('2026-12-01T00:00:00Z');
 const REFRESH_MS=15*60*1000;
 let remote=null;
@@ -14,17 +16,13 @@ const validWindow=(start,end,now)=>Number.isFinite(start)&&Number.isFinite(end)&
   start<=now&&now<end;
 
 export function isAdFreePromoActive(now=Date.now()){
-  // Bundled default ensures the published November promise is honoured even
-  // offline and before the first network request. Server may extend the promo
-  // or explicitly disable it; never treat network failure as ad consent.
-  if(remote!==null){
-    return remote.enabled===true&&validWindow(remote.startsAt,remote.endsAt,now);
-  }
-  return validWindow(PROMO_START_MS,PROMO_END_MS,now);
+  // Neither a clock change, expired campaign nor remote disabled flag may
+  // reactivate inventory while the publisher suspension remains unconfirmed.
+  return ADS_SUSPENDED||isBlackFridayPromoWindow(now);
 }
 
 export function isBlackFridayPromoWindow(now=Date.now()){
-  return isAdFreePromoActive(now);
+  return validWindow(PROMO_START_MS,PROMO_END_MS,now);
 }
 
 export async function refreshAdFreePromoControl({force=false}={}){
