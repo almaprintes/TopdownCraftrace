@@ -11,6 +11,7 @@ import { interpolateRoadWidth } from '../studio/trackShapeGeometry.js';
 import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
 import { installTrackStudioGateControls } from '../studio/trackStudioGateControls.js';
 import { createPenAnchor, penGestureIsCurve, updatePenAnchorFromDrag } from '../studio/trackStudioPenTool.js';
+import {trackStudioToolbarLayout} from '../studio/trackStudioNavigationLayout.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -29,6 +30,8 @@ export class TrackStudioScene extends BaseScene {
     this._topBarH = compactH ? 72 : 82;
     this._leftBarW = compactH ? 70 : 76;
     this._rightPanelW = width < 1200 ? 250 : 280;
+    this._toolbarLayout=trackStudioToolbarLayout(width,this._rightPanelW);
+    if(this._toolbarLayout.twoRows)this._topBarH=Math.max(this._topBarH,76);
     this._bottomPad = 8;
 
 this._viewX = this._leftBarW + 8;
@@ -130,7 +133,7 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
 
     this.add.text(22, 18, 'TRACK STUDIO', {
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-      fontSize: '30px',
+      fontSize: this._toolbarLayout.twoRows?'18px':this._toolbarLayout.compact?'24px':'30px',
       color: '#ffffff',
       fontStyle: 'bold'
     });
@@ -289,30 +292,34 @@ this._padCenter.on('pointerup', () => {
     // =================================================
     // Barra superior
     // =================================================
-    const topToolsY = 29;
-    let topX = 285;
+    const topLayout=this._toolbarLayout;
+    let topToolIndex=0;
+    const toolPos=()=>{
+      const index=topToolIndex++;
+      return [topLayout.x[index],topLayout.twoRows&&index>=4?52:topLayout.y];
+    };
 
 // =================================================
 // Guardar / Cargar / Nuevo (directos)
 // =================================================
 
 // Guardar
-this._btnSave = this._makeIconButton(topX, topToolsY, '💾', () => {
+this._btnSave = this._makeIconButton(...toolPos(), '💾', () => {
   console.log('CLICK SAVE');
   this._flashMessage('💾 Guardando...');
   this._saveProject?.();
 }, '18px');
-topX += 44;
+
 
 // Cargar
-this._btnLoad = this._makeIconButton(topX, topToolsY, '📂', () => {
+this._btnLoad = this._makeIconButton(...toolPos(), '📂', () => {
   console.log('CLICK LOAD');
   this._openProjectSourceMenu?.();
 }, '18px');
-topX += 44;
+
 
 // Nuevo
-this._btnNew = this._makeIconButton(topX, topToolsY, 'NEW', () => {
+this._btnNew = this._makeIconButton(...toolPos(), 'NEW', () => {
   console.log('CLICK NEW');
   const ok = window.confirm('¿Crear un proyecto nuevo?\n\nEl proyecto actual se sustituirá. Guarda una copia antes si quieres conservarlo.');
   if (!ok) return;
@@ -321,35 +328,35 @@ this._btnNew = this._makeIconButton(topX, topToolsY, 'NEW', () => {
   this._autosaveRecovery();
   this._flashMessage('🆕 Proyecto nuevo');
 }, '14px');
-topX += 56;
+
     // Drawing modes moved to the labelled right-hand tool palette.
     // There is deliberately no second row of cryptic ED/PL/SAL/CP/PI icons.
     // The existing _setTool() state machine and export format are preserved.
-    this._loopBtn = this._makeIconButton(topX, topToolsY, this._isClosed ? '🔒' : '🔓', () => {
+    this._loopBtn = this._makeIconButton(...toolPos(), this._isClosed ? '🔒' : '🔓', () => {
   this._toggleClosed();
   if (this._loopBtn?.txt) {
     this._loopBtn.txt.setText(this._isClosed ? '🔒' : '🔓');
   }
 }, '16px');
-topX += 48;
+
     // track directo
-    this._trackMinusBtn = this._makeIconButton(topX, topToolsY, 'W-', () => {
+    this._trackMinusBtn = this._makeIconButton(...toolPos(), 'W-', () => {
       this._trackTool = 'widthDown';
       this._changeTrackWidth(-this._trackWidthStep());
       this._updateToolButtons();
     }, '12px');
-    topX += 40;
+    
 
-    this._trackPlusBtn = this._makeIconButton(topX, topToolsY, 'W+', () => {
+    this._trackPlusBtn = this._makeIconButton(...toolPos(), 'W+', () => {
       this._trackTool = 'widthUp';
       this._changeTrackWidth(this._trackWidthStep());
       this._updateToolButtons();
     }, '12px');
-    topX += 52;
-    this._undoBtn = this._makeIconButton(topX, topToolsY, '↶', () => this._undo(), '20px');
-    topX += 40;
-    this._redoBtn = this._makeIconButton(topX, topToolsY, '↷', () => this._redo(), '20px');
-    topX += 40;
+    
+    this._undoBtn = this._makeIconButton(...toolPos(), '↶', () => this._undo(), '20px');
+    
+    this._redoBtn = this._makeIconButton(...toolPos(), '↷', () => this._redo(), '20px');
+    
 
     // Short permanent captions are usable with touch (unlike hover tooltips).
     // Compact top bar: project operations / track settings / history only.
@@ -357,11 +364,10 @@ topX += 48;
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
       fontSize: '9px', color: '#b9cae5', fontStyle: 'bold'
     }).setOrigin(0.5, 0);
-    [
-      [285, 'Guardar'], [329, 'Abrir'], [373, 'Nuevo'],
-      [429, 'Cierre'], [477, 'Ancho −'], [517, 'Ancho +'],
-      [569, 'Deshacer'], [609, 'Rehacer']
-    ].forEach(([x, label]) => caption(x, label));
+    if(!topLayout.twoRows){
+      ['Guardar','Abrir','Nuevo','Cierre','Ancho −','Ancho +','Deshacer','Rehacer']
+        .forEach((label,i)=>caption(topLayout.x[i],label));
+    }
 
     // =================================================
     // Mundo de edición
