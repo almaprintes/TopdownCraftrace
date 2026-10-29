@@ -88,9 +88,12 @@ const mount=new Function('document','window',
  shell.replace(/^import .*$/gm,'').replace('export function mountEnvironmentStudioChrome','function mountEnvironmentStudioChrome')+
  '\nreturn mountEnvironmentStudioChrome;')(document,window);
 const s=mount(scene,CATALOG,'/');
-assert.ok(s?.root&&s?.refresh);
-assert.ok(s.root.style['--env-left'].endsWith('px'));
 const descend=e=>[e,...e.children.flatMap(descend)];
+assert.ok(s?.root&&s?.refresh&&s.notify);
+s.notify('EXPORTACIÓN LISTA');
+assert.ok(descend(s.root).some(e=>e.className==='env2__stage-message'&&e.textContent==='EXPORTACIÓN LISTA'));
+assert.ok(s.root.style['--env-left'].endsWith('px'));
+
 const findButton=(label)=>descend(s.root).find(e=>e.tag==='button'&&e.textContent===label);
 for(const name of ['GUARDAR','ABRIR','EXPORTAR JSON','CARGAR FOTO','VOLVER A PADDOCK','SELECCIÓN','DESPLAZAR','PINTAR ASFALTO'])
   assert.ok(findButton(name),'No button '+name);
