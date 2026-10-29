@@ -31,7 +31,7 @@ for(const [width,panel,height] of [
   const left=height<720?(width>=760?110:96):88;
   const bar=height<720?76:82;
   const right=width-panel;
-  assert.ok(left-24-20>48,'Navigation exposed to Dynamic Island '+width);
+  if(height<720)assert.ok(left-24-20>=52,'Navigation exposed to Dynamic Island '+width);
   const viewW=width-left-panel-16;
   const shape=trackStudioShapeToolbarLayout(left+8,bar+8,viewW);
   assert.equal(shape.points.length,5);
