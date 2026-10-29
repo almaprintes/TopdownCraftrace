@@ -123,15 +123,16 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     // =================================================
     // UI base
     // =================================================
-    this.cameras.main.setBackgroundColor('#09101d');
+    this.cameras.main.setBackgroundColor('#07121e');
 
-    this.add.rectangle(0, 0, width, this._topBarH, 0x101626).setOrigin(0);
-    this.add.rectangle(0, this._topBarH, this._leftBarW, height - this._topBarH, 0x0d1422).setOrigin(0);
-    this.add.rectangle(width - this._rightPanelW, this._topBarH, this._rightPanelW, height - this._topBarH, 0x0f1422).setOrigin(0);
+    this.add.rectangle(0, 0, width, this._topBarH, 0x091726).setOrigin(0);
+    this.add.rectangle(0,this._topBarH-2,width,2,0x208e83,0.72).setOrigin(0);
+    this.add.rectangle(0, this._topBarH, this._leftBarW, height - this._topBarH, 0x0b1c2b).setOrigin(0);
+    this.add.rectangle(width - this._rightPanelW, this._topBarH, this._rightPanelW, height - this._topBarH, 0x0a1a29).setOrigin(0);
 
     this.add.rectangle(this._viewX, this._viewY, this._viewW, this._viewH, 0x0a0d16)
   .setOrigin(0)
-  .setStrokeStyle(2, 0x2f3b5c, 0.6);
+  .setStrokeStyle(2, 0x335f70, 0.8);
 
     this.add.text(22, 9, 'CRAFT RACE  /  CIRCUIT DESIGN', {
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
