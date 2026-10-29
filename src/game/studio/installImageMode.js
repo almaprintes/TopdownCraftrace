@@ -1,6 +1,7 @@
 import { saveCanvasImage, readCanvasImage, packImageProject, unpackImageProject, normalizeCanvasImageBlob } from './imageCanvasProject.js';
 import { attachImageNativeTrackContract } from '../tracks/imageNativeTrackContract.js';
 import { trackStudioWidthMaximum, CLASSIC_TRACK_WIDTH_MAX } from './trackStudioWidthRange.js';
+import { imageTrackResizePlan, rescaleImageTrackEditor } from './trackStudioImageScale.js';
 
 const TILE = 2048;
 const limit = (w,h) => w > 0 && h > 0 && w <= 8192 && h <= 8192 && w*h <= 32000000;
@@ -68,6 +69,144 @@ async function createFromFile(s,file){
   s._autosaveRecovery();
   s._flashMessage('Imagen como lienzo · píxeles y coordenadas 1:1');
 }
+
+const IMAGE_TYPES=/^image\/(png|jpeg|webp)$/;
+async function decodePhoto(file){
+  if(!file?.size||!IMAGE_TYPES.test(file.type))throw Error('Usa una fotografía PNG, JPEG o WebP');
+  const url=URL.createObjectURL(file),img=new Image();
+  try{
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('No se puede abrir la imagen'));img.src=url});
+    const width=img.naturalWidth,height=img.naturalHeight;
+    if(!limit(width,height))throw Error('Límite de imagen: 8192 px por lado y 32 MP');
+    return {width,height};
+  }finally{URL.revokeObjectURL(url);img.onload=null;img.onerror=null;img.src=''}
+}
+async function replaceCanvasImage(s,file,{confirmed=false}={}){
+  const current=s._getProjectData();
+  if(!current.imageCanvas?.imageId)throw Error('Carga primero la imagen maestra con MAP');
+  const size=await decodePhoto(file);
+  const plan=imageTrackResizePlan(current,size.width,size.height);
+  const factor=plan.sameSize?'sin cambiar la geometría':
+    'escalando pista, curvas, bordes, meta y checkpoints x'+plan.scale.toFixed(3);
+  if(!confirmed&&!window.confirm(
+    'SUSTITUIR IMAGEN DE TRACK STUDIO\n\n'+
+    plan.oldWidth+' × '+plan.oldHeight+' → '+plan.width+' × '+plan.height+' píxeles\n'+
+    factor+'\n\nEl coche conserva su tamaño. La fotografía debe tener el mismo encuadre.\n'+
+    'Este cambio conservará el proyecto anterior en el historial; guarda antes una copia .tdrtrack cuando sea importante.'
+  ))return false;
+  const meta={imageId:makeId(),name:file.name||'mapa-reescalado.png',
+    type:file.type,size:file.size,width:plan.width,height:plan.height};
+  // Persist source bytes BEFORE touching current geometry. Undo keeps its old imageId.
+  await saveCanvasImage(meta.imageId,file,meta);
+  const next={...rescaleImageTrackEditor(current,plan.width,plan.height),imageCanvas:meta};
+  s._pushHistory?.();
+  // Apply and mount as one controlled operation. An asynchronous restore from
+  // _applyProjectData must not race with our new master-image decode.
+  s._suspendImageRestore=true;
+  try{
+    s._applyProjectData(next);
+    await mount(s,file,meta);
+    s._autosaveRecovery();
+    s._flashMessage('Mapa '+plan.width+' × '+plan.height+
+      ' · geometría '+(plan.sameSize?'conservada':'ajustada x'+plan.scale.toFixed(2))+
+      ' · coches sin cambios');
+    return true;
+  }catch(error){
+    // A failed WebGL/canvas mount must not leave a half-rescaled track.
+    s._applyProjectData(current);
+    throw error;
+  }finally{
+    s._suspendImageRestore=false;
+    if(s._imageCanvas?.imageId===current.imageCanvas.imageId)restore(s,current.imageCanvas);
+  }
+}
+async function upscaleCanvasImage(s,factor){
+  const current=s._getProjectData();
+  const {width,height}=imageTrackResizePlan(current,
+    current.imageCanvas.width*factor,current.imageCanvas.height*factor);
+  if(!window.confirm('AMPLIAR PROYECTO x'+factor+'\n\n'+
+    current.imageCanvas.width+' × '+current.imageCanvas.height+
+    ' → '+width+' × '+height+' píxeles.\n\n'+
+    'Ampliará la imagen, centerline, bordes, colisiones de pista, meta y checkpoints.\n'+
+    'Los coches NO cambian. La interpolación mejora la resolución de salida, pero no inventa detalle fotográfico.\n\n¿Continuar?'))return false;
+  const row=await readCanvasImage(current.imageCanvas.imageId);
+  if(!row?.blob)throw Error('Falta la imagen maestra: vuelve a importar el .tdrtrack');
+  const normalized=await normalizeCanvasImageBlob(row.blob,current.imageCanvas);
+  const url=URL.createObjectURL(normalized.blob),img=new Image();
+  let canvas;
+  try{
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('No se puede decodificar el mapa'));img.src=url});
+    if(img.naturalWidth!==current.imageCanvas.width||img.naturalHeight!==current.imageCanvas.height)
+      throw Error('La imagen maestra no coincide con las dimensiones del proyecto');
+    canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d',{alpha:true});if(!ctx)throw Error('Canvas 2D no disponible');
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img,0,0,width,height);
+    const desiredType=/^image\/(png|jpeg|webp)$/.test(normalized.blob.type)
+      ?normalized.blob.type:'image/png';
+    const blob=await new Promise((resolve,reject)=>
+      canvas.toBlob(value=>value?resolve(value):reject(Error('No se pudo crear la imagen ampliada')),
+        desiredType,.96));
+    const ext=blob.type==='image/webp'?'webp':blob.type==='image/jpeg'?'jpg':'png';
+    const file=new File([blob],'mapa-'+width+'x'+height+'.'+ext,{type:blob.type});
+    return await replaceCanvasImage(s,file,{confirmed:true});
+  }finally{
+    if(canvas){canvas.width=0;canvas.height=0}
+    URL.revokeObjectURL(url);img.onload=null;img.onerror=null;img.src='';
+  }
+}
+function showCanvasScaleMenu(s,{onNew,onReplace,onUpscale}){
+  s._closeCanvasScaleMenu?.();
+  const meta=s._imageCanvas;
+  const root=document.createElement('div');
+  root.id='tdr-trackstudio-map-tools';
+  root.style.cssText='position:fixed;inset:0;z-index:2147483601;display:grid;place-items:center;padding:12px;box-sizing:border-box;background:rgba(0,6,15,.94);font:600 13px system-ui,-apple-system,sans-serif;color:#e9faff';
+  const panel=document.createElement('div');
+  panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+  panel.setAttribute('aria-label','MAP: escala y fotografía');
+  panel.style.cssText='width:min(540px,96vw);max-height:92dvh;overflow:auto;padding:clamp(12px,3vw,20px);box-sizing:border-box;background:#091e2c;border:1px solid #329d9c;border-radius:15px;box-shadow:0 20px 60px #0009';
+  const title=document.createElement('h2');
+  title.textContent='MAP · TALLER DE ESCALA';
+  title.style.cssText='font:800 clamp(16px,3vw,21px) system-ui;margin:0 0 10px;color:#73f0d4;letter-spacing:.05em';
+  const info=document.createElement('p');
+  info.textContent='Imagen / mundo: '+meta.width+' × '+meta.height+' px · pista: '+(Number(s._trackWidth)||0).toFixed(0)+' px';
+  info.style.cssText='margin:0 0 12px;color:#b9d9e1;font-size:12px';
+  const grid=document.createElement('div');grid.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px';
+  const onKey=e=>{if(e.key==='Escape'){e.preventDefault();close()}};
+  const close=()=>{
+    root.remove();document.removeEventListener('keydown',onKey);
+    s.events?.off?.('shutdown',close);
+    if(s._closeCanvasScaleMenu===close)s._closeCanvasScaleMenu=null;
+  };
+  const add=(label,desc,action,enabled=true)=>{
+    const b=document.createElement('button');b.type='button';b.disabled=!enabled;
+    b.style.cssText='min-width:0;min-height:73px;display:flex;flex-direction:column;gap:5px;padding:12px;text-align:left;border-radius:10px;background:#153347;border:1px solid #397d85;color:#f0fdff;font:700 13px system-ui;touch-action:manipulation;cursor:pointer';
+    if(!enabled)b.style.opacity='.42';
+    const strong=document.createElement('strong');strong.textContent=label;
+    const small=document.createElement('small');small.textContent=desc;
+    small.style.cssText='font:500 10px system-ui;color:#bbd6dd;line-height:1.35';
+    b.append(strong,small);b.addEventListener('click',()=>{close();action()});grid.append(b);
+  };
+  add('SUSTITUIR FOTO','Mismo encuadre · reescala toda la geometría automáticamente',onReplace);
+  for(const factor of [2,3]){
+    const allowed=limit(meta.width*factor,meta.height*factor);
+    add('AMPLIAR TODO ×'+factor,allowed
+      ?(meta.width*factor)+' × '+(meta.height*factor)+' px · foto y geometría'
+      :'Supera el límite de 8192 px / 32 MP',
+      ()=>onUpscale(factor),allowed);
+  }
+  add('NUEVO MAPA','Crea un proyecto vacío. Conserva antes tu .tdrtrack',onNew);
+  const note=document.createElement('p');
+  note.textContent='La escala del coche y la cámara de carrera no se modifican. Al sustituir la foto, utiliza el mismo encuadre.';
+  note.style.cssText='font:500 11px system-ui;line-height:1.5;color:#d1dce4;margin:14px 0 0';
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='CANCELAR';
+  cancel.style.cssText='display:block;margin:13px auto 0;min-height:40px;padding:7px 26px;background:#1b3646;border:1px solid #6f9eaa;border-radius:9px;color:white;touch-action:manipulation';
+  cancel.addEventListener('click',close);
+  panel.append(title,info,grid,note,cancel);root.append(panel);document.body.append(root);
+  document.addEventListener('keydown',onKey);s.events?.once?.('shutdown',close);
+  s._closeCanvasScaleMenu=close;cancel.focus?.();
+}
+
 export async function importImageProjectFile(s,file){
   const {project,image,repairedNested}=await unpackImageProject(file);
   const meta=project.editor.imageCanvas;
@@ -98,7 +237,7 @@ export function installTrackStudioImageMode(s){
     }
     originalApply(data);
     s._trackWidthMax=trackStudioWidthMaximum(data?.imageCanvas,s._trackWidth);
-    restore(s,data?.imageCanvas||null);
+    if(!s._suspendImageRestore)restore(s,data?.imageCanvas||null);
   };
   const originalNew=s._newProject.bind(s);
   s._newProject=()=>{
@@ -129,21 +268,42 @@ export function installTrackStudioImageMode(s){
       s._flashMessage('Guardado: proyecto + imagen en .tdrtrack');
     }catch(e){console.error('[TrackStudio] save failed',e);s._flashMessage('Error al guardar: '+(e.message||'desconocido'))}
   };
-  const input=document.createElement('input');
-  input.type='file';input.accept='image/png,image/jpeg,image/webp';
-  input.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0';
-  input.addEventListener('change',async()=>{const f=input.files?.[0];input.value='';if(!f)return;try{await createFromFile(s,f)}catch(e){console.error(e);s._flashMessage('Error de imagen: '+(e.message||'desconocido'))}});
-  document.body.appendChild(input);
-  // Share the same protected master-image import with native and premium UI.
-  // IMG is only a reference overlay; MAP creates the real race-ready canvas.
-  s._openCanvasImagePicker=()=>{
-    if(!window.confirm('¿Crear un proyecto desde una imagen maestra? Guarda antes el actual si lo necesitas.'))return;
+  const input=document.createElement('input'),replaceInput=document.createElement('input');
+  for(const el of [input,replaceInput]){
+    el.type='file';el.accept='image/png,image/jpeg,image/webp';
+    el.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0';
+    document.body.appendChild(el);
+  }
+  const reportError=error=>{console.error('[TrackStudio] MAP',error);
+    s._flashMessage('Error de MAP: '+(error?.message||'desconocido'));};
+  input.addEventListener('change',async()=>{
+    const file=input.files?.[0];input.value='';if(!file)return;
+    try{await createFromFile(s,file)}catch(error){reportError(error)}
+  });
+  replaceInput.addEventListener('change',async()=>{
+    const file=replaceInput.files?.[0];replaceInput.value='';if(!file)return;
+    try{await replaceCanvasImage(s,file)}catch(error){reportError(error)}
+  });
+  const newMap=()=>{
+    if(!window.confirm('¿Crear un NUEVO mapa? Guarda antes el circuito actual en .tdrtrack.'))return;
     input.click();
   };
+  // MAP becomes the self-service image/geometry workbench on existing projects.
+  s._openCanvasImagePicker=()=>{
+    if(!s._imageCanvas?.imageId)return newMap();
+    showCanvasScaleMenu(s,{
+      onNew:newMap,
+      onReplace:()=>replaceInput.click(),
+      onUpscale:async factor=>{try{await upscaleCanvasImage(s,factor)}catch(error){reportError(error)}}
+    });
+  };
+  s._replaceCanvasImagePicker=()=>replaceInput.click();
+  s._upscaleCanvasImage=async factor=>upscaleCanvasImage(s,factor);
   const x=Math.floor(s._leftBarW/2),y=s._topBarH+278;
   s._canvasModeBtn=s._makeIconButton(x,y,'MAP',()=>s._openCanvasImagePicker(),'11px');
   s.events.once('shutdown',()=>{
-    s._openCanvasImagePicker=null;
-    input.remove();resetTiles(s);
+    s._closeCanvasScaleMenu?.();
+    s._openCanvasImagePicker=null;s._replaceCanvasImagePicker=null;s._upscaleCanvasImage=null;
+    input.remove();replaceInput.remove();resetTiles(s);
   });
 }
