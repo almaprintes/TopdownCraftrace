@@ -34,7 +34,9 @@ assert.ok(CAR_SPECS.crown_equinox,'Canonical factory car exists');
 const spec=CAR_SPECS.crown_equinox;
 const prefix='/TopdownCraftrace/dev/';
 const publishedCard=carCardUrl('crown_equinox',spec,prefix);
-assert.ok(existsSync('public/'+publishedCard.slice(prefix.length)),'Published photo is in public');
+// cardCardUrl appends a browser cache-busting ?v=N; on-disk path excludes it.
+const publishedFile=publishedCard.split('?')[0];
+assert.ok(existsSync('public/'+publishedFile.slice(prefix.length)),'Published photo is in public');
 assert.ok(existsSync('public/assets/cars/lobby/crown_equinox.webp'),'Lobby backup exists');
 assert.ok(existsSync('public/assets/skins/skin_crown_equinox.webp'),'Skin backup exists');
 const sources=[...new Set([publishedCard,...carPreviewCandidates('crown_equinox',spec,prefix)])];
