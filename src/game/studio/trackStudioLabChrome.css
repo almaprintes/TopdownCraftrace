@@ -231,3 +231,13 @@
 @media(max-height:560px){
   .ts-lab__notice{top:43px;max-width:92%;padding:8px 11px;font-size:11px}
 }
+
+/* DEV 1.3.56: action-labelled fit-to-circuit, single photo entry MAP. */
+.ts-lab__rail-button--fit{
+  font-size:clamp(10px,.92vw,13px)!important;
+  letter-spacing:.02em;
+  color:#bffce8;
+  border-color:#2ca98b;
+  background:linear-gradient(160deg,#115642,#103124);
+}
+.ts-lab__rail-button--fit:active{background:#13745b}

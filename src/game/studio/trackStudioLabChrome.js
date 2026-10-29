@@ -58,27 +58,31 @@ export function mountTrackStudioLabChrome(scene,gate){
   const rail=make('nav','ts-lab__rail');
   rail.setAttribute('aria-label','Navegación del lienzo');
   rail.append(make('div','ts-lab__rail-title','VISTA'));
-  const railHome=button('⌂',()=>{
-    scene._editCam?.centerOn(scene._editorWorldW/2,scene._editorWorldH/2);
-    scene._redrawEditor?.();scene._updatePanel?.();
-  },'ts-lab__rail-button');
-  railHome.title='Centrar mapa';railHome.setAttribute('aria-label','Centrar mapa');
-  const railIn=button('+',()=>scene._applyZoomAtViewportCenter?.(1.15),'ts-lab__rail-button');
-  railIn.setAttribute('aria-label','Acercar');
-  const railOut=button('−',()=>scene._applyZoomAtViewportCenter?.(1/1.15),'ts-lab__rail-button');
-  railOut.setAttribute('aria-label','Alejar');
+  const railHome=button('TODO',()=>{
+    if(scene._frameTrackView?.())scene._studioChrome?.notify?.('Vista ajustada al circuito');
+  },'ts-lab__rail-button ts-lab__rail-button--fit');
+  railHome.title='Encuadrar imagen o trazado completo';
+  railHome.setAttribute('aria-label','Encuadrar circuito completo');
+  const changeZoom=(factor)=>{
+    const changed=scene._applyZoomAtViewportCenter?.(factor);
+    scene._studioChrome?.refresh?.();
+    if(changed)scene._studioChrome?.notify?.('Zoom '+Math.round((scene._editCam?.zoom||1)*100)+' %');
+    else scene._studioChrome?.notify?.('Límite de zoom alcanzado');
+  };
+  const railIn=button('+',()=>changeZoom(1.25),'ts-lab__rail-button');
+  railIn.title='Acercar +25 %';railIn.setAttribute('aria-label','Acercar');
+  const railOut=button('−',()=>changeZoom(1/1.25),'ts-lab__rail-button');
+  railOut.title='Alejar 20 %';railOut.setAttribute('aria-label','Alejar');
   let guidePanel;
-  const photo=button('IMG',()=>{
-    if(!guidePanel)return;
-    guidePanel.hidden=!guidePanel.hidden;
-  },'ts-lab__rail-button ts-lab__rail-button--image');
-  photo.setAttribute('aria-label','Importar fotografía de referencia');
   const map=button('MAP',()=>scene._openCanvasImagePicker?.(),'ts-lab__rail-button');
   map.setAttribute('aria-label','Cargar imagen maestra para crear y probar un circuito');
   map.title='Importar imagen maestra (para ▶ PROBAR)';
-  add(rail,railHome,railIn,railOut,photo,map);
+  add(rail,railHome,railIn,railOut,map);
   guidePanel=make('div','ts-lab__guide-panel');
   guidePanel.hidden=true;
+  // The optional REFERENCE image tools remain available from ABRIR, while
+  // MAP is the single photo button in the rail (real master photo).
+  scene._openReferenceTools=()=>{guidePanel.hidden=false;};
   const guideTitle=make('strong','','IMAGEN DE REFERENCIA');
   const guideCommands=make('div','ts-lab__guide-actions');
   const guideLoad=button('CARGAR',()=>scene._openGuidePicker?.());
@@ -140,7 +144,7 @@ export function mountTrackStudioLabChrome(scene,gate){
   const stageBottom=make('div','ts-lab__stage-bottom');
   const mode=make('strong','ts-lab__mode','EDITAR');
   const stats=make('span','ts-lab__stats','0 NODOS · ZOOM —');
-  const center=button('CENTRAR',()=>railHome.click(),'ts-lab__bottom-button');
+  const center=button('VER TODO',()=>railHome.click(),'ts-lab__bottom-button');
   const status=make('span','ts-lab__status','Todo listo para empezar');
   stageBottom.append(mode,stats,center,status);
   workspace.append(stageTop,notice,placeholder,stageBottom);
@@ -169,9 +173,16 @@ export function mountTrackStudioLabChrome(scene,gate){
     scene._updatePanel?.();
   });
   for(const [label,dx,dy] of [['←',-1,0],['↑',0,-1],['↓',0,1],['→',1,0]]){
-    const move=button(label,()=>scene._nudgeSelectedNode?.(
-      dx*scene._getNudgeStep(),dy*scene._getNudgeStep()
-    ));
+    const move=button(label,()=>{
+      const step=scene._getNudgeStep();
+      const moved=scene._moveSelectedNodeOnScreen?.(dx*step,dy*step);
+      if(moved){
+        const node=scene._nodes?.[scene._selectedNode];
+        scene._studioChrome?.notify?.(
+          'Nodo '+(scene._selectedNode+1)+' · X '+Math.round(node?.x||0)+' · Y '+Math.round(node?.y||0)
+        );
+      }
+    });
     move.setAttribute('aria-label','Mover selección '+label);
     nudgeControls.append(move);
   }
@@ -257,6 +268,7 @@ export function mountTrackStudioLabChrome(scene,gate){
     // Restoring the editor's original methods allows safe scene transitions.
     scene._updatePanel=oldUpdate;
     scene._flashMessage=oldFlash;
+    scene._openReferenceTools=null;
     if(noticeTimeout!=null)window.clearTimeout?.(noticeTimeout);
     root.remove();
     scene._studioChromeMounted=false;
@@ -270,5 +282,6 @@ export function mountTrackStudioLabChrome(scene,gate){
   scene.events.once('shutdown',dispose);
   scene.events.once('destroy',dispose);
   refresh();position();
-  return {root,refresh,position,dispose};
+  return {root,refresh,position,dispose,
+    notify(message){state(status,String(message));}};
 }

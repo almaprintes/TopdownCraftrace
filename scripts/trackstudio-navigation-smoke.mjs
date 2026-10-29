@@ -7,7 +7,7 @@ import {trackStudioToolbarLayout,trackStudioShapeToolbarLayout}
 import {openTrackStudioSourceMenu,SOURCE_ACTIONS}
   from '../src/game/studio/trackStudioSourceMenu.js';
 
-assert.equal(SOURCE_ACTIONS.length,4);
+assert.equal(SOURCE_ACTIONS.length,5);
 // Seven physical form factors, including the screenshot's approximate
 // 1024 logical-pixel iPhone landscape and short 600px layouts.
 for(const [width,panel,height] of [
@@ -48,7 +48,7 @@ const scene=fs.readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
 const shape=fs.readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
 const src=fs.readFileSync('src/game/studio/trackStudioSourceMenu.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
-assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.55"'));
+assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.56"'));
 assert.ok(scene.includes('trackStudioToolbarLayout(width,this._rightPanelW)'));
 assert.equal(scene.split('_makeTopActionButton(...toolPos(),').length-1,8);
 assert.ok(scene.includes("return {bg,txt,cap,x:cx,y:cy}"));
@@ -99,7 +99,8 @@ const sceneMock={
   _flashMessage:s=>log.push(s),
   _openGameTrackSourceMenu:()=>log.push('game'),
   _openProjectPicker:()=>log.push('file'),
-  _restoreLastTrackStudioRecovery:()=>log.push('recovery')
+  _restoreLastTrackStudioRecovery:()=>log.push('recovery'),
+  _openReferenceTools:()=>log.push('reference')
 };
 const getButton=action=>{
   const modal=document.body.children.find(x=>x.id==='tdr-trackstudio-source-menu');
@@ -121,9 +122,10 @@ assert.ok(log.some(m=>String(m).includes('Proyecto local cargado')));
 openTrackStudioSourceMenu(sceneMock);getButton('1').click();
 openTrackStudioSourceMenu(sceneMock);getButton('3').click();
 openTrackStudioSourceMenu(sceneMock);getButton('4').click();
-for(const s of ['game','file','recovery'])assert.ok(log.includes(s));
+openTrackStudioSourceMenu(sceneMock);getButton('5').click();
+for(const s of ['game','file','recovery','reference'])assert.ok(log.includes(s));
 openTrackStudioSourceMenu(sceneMock);
 for(const fn of [...listeners.keydown])fn({key:'Escape',preventDefault(){}});
 assert.ok(!document.body.children.some(x=>x.id==='tdr-trackstudio-source-menu'));
 assert.equal(listeners.keydown.length,0);
-console.log('PASS Track Studio 2.0 NAV: 7 screen widths, 8 non-overlapping labeled toolbar cards, 5 shaped tool cards, safe island rail, 4 modal routes, Escape/cleanup and autosave.');
+console.log('PASS Track Studio 2.0 NAV: 7 screen widths, 8 non-overlapping labeled toolbar cards, 5 shaped tool cards, safe island rail, 5 modal routes, Escape/cleanup and autosave.');

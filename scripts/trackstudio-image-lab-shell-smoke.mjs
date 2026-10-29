@@ -10,7 +10,7 @@ const shape=fs.readFileSync('src/game/studio/installTrackShapeEditor.js','utf8')
 const gateSource=fs.readFileSync('src/game/studio/trackStudioGateControls.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
 
-assert.match(index,/name="tdr-dev-version" content="DEV 1\.3\.55"/);
+assert.match(index,/name="tdr-dev-version" content="DEV 1\.3\.56"/);
 assert.ok(scene.includes("import '../studio/trackStudioLabChrome.css'"));
 assert.ok(scene.includes('mountTrackStudioLabChrome(this,gate)'));
 assert.ok(scene.includes("const gate=installTrackStudioGateControls(this)"));
@@ -45,7 +45,7 @@ class FakeEl{
 }
 const body=new FakeEl('body');
 const document={body,createElement:tag=>new FakeEl(tag),
-  querySelector:sel=>sel.startsWith('meta')?{content:'DEV 1.3.55'}:null};
+  querySelector:sel=>sel.startsWith('meta')?{content:'DEV 1.3.56'}:null};
 const wListeners={};
 const window={
   confirm:()=>true,
@@ -64,6 +64,7 @@ const s={
   _guideVisible:true,_guideLocked:true,_selectedNode:-1,_selectedPiano:-1,
   _editorWorldW:8000,_editorWorldH:5000,_undoStack:[],_redoStack:[],
   _editCam:{zoom:.28,centerOn(...a){calls.push(['center',...a])}},
+  _frameTrackView(){calls.push('frame');return true;},
   _getNudgeStep:()=>5,
   _redrawEditor(){calls.push('redraw')},
   _updatePanel(){calls.push('update')},
@@ -86,6 +87,7 @@ const s={
   _changeGuideAlpha(){calls.push('guide-opacity')},
   _cycleNudgeStep(){calls.push('step')},
   _nudgeSelectedNode(x,y){calls.push(['nudge',x,y])},
+  _moveSelectedNodeOnScreen(x,y){this._nudgeSelectedNode(x,y);this._nodes[this._selectedNode].x+=x;this._nodes[this._selectedNode].y+=y;return true;},
   _emptyHelp:{setVisible(v){calls.push(['empty-help',v])}},
   events:{once:(name,fn)=>{(eventBus[name]??=[]).push(fn)}},
   _studioShapeButtons:Object.fromEntries(['create','edit','add','gridOn','gridOff','preview'].map(key=>[key,{
@@ -111,7 +113,11 @@ const click=(label)=>{const b=buttons.find(n=>n.textContent===label);assert.ok(b
 click('GUARDAR');click('ABRIR');click('NUEVO');click('ANCHO −');click('ANCHO +');
 click('↶');click('↷');click('VOLVER A PADDOCK');click('CREAR PISTA');
 click('AJUSTAR');click('+ NODO');click('▶ PROBAR');
-click('IMG');click('MAP');click('CARGAR');click('TAMAÑO +');click('OPACIDAD −');
+assert.ok(!buttons.some(x=>x.textContent==='IMG'),'Redundant IMG must be removed');
+click('TODO');assert.ok(calls.includes('frame'),'TODO frames the track');
+click('MAP');
+s._openReferenceTools?.(); // Reference controls remain reachable from ABRIR.
+click('CARGAR');click('TAMAÑO +');click('OPACIDAD −');
 const zoomBefore=s._editCam.zoom;
 click('+');assert.ok(s._editCam.zoom>zoomBefore,'Plus must increase zoom');
 const zoomIn=s._editCam.zoom;
@@ -135,6 +141,11 @@ const nudger=buttons.find(n=>n.getAttribute('aria-label')==='Mover selección �
 assert.ok(nudger);
 nudger.click();
 assert.ok(calls.some(x=>Array.isArray(x)&&x[0]==='nudge'&&x[1]===-5));
+const right=buttons.find(x=>x.getAttribute('aria-label')==='Mover selección →');
+assert.ok(right);
+const beforeX=s._nodes[s._selectedNode].x;
+right.click();
+assert.ok(s._nodes[s._selectedNode].x>beforeX,'Right arrow must increase X');
 for(const done of eventBus.shutdown||[])done();
 assert.ok(controller.root.removed);
 assert.ok(!s._studioChromeMounted);
