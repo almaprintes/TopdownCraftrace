@@ -1,5 +1,6 @@
 // Geometry-only QA for TrackStudio image replacement and native scaling.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {imageTrackResizePlan,rescaleImageTrackEditor} from '../src/game/studio/trackStudioImageScale.js';
 
 const original={
@@ -39,4 +40,13 @@ assert.throws(()=>imageTrackResizePlan(original,3600,2500),/proporciones distint
 assert.throws(()=>imageTrackResizePlan(original,9000,6719),/8192/);
 assert.throws(()=>imageTrackResizePlan(original,7000,5600),/32 MP/);
 assert.throws(()=>imageTrackResizePlan({imageCanvas:null},3600,2688),/primero/);
+const mode=fs.readFileSync('src/game/studio/installImageMode.js','utf8');
+assert.ok(mode.includes("const next={...rescaleImageTrackEditor(current,plan.width,plan.height),imageCanvas:meta}"));
+assert.ok(mode.includes("s._suspendImageRestore=true"));
+assert.ok(mode.includes("await saveCanvasImage(meta.imageId,file,meta)"));
+assert.ok(mode.includes("s._openCanvasImagePicker=()=>"));
+assert.ok(mode.includes("add('SUSTITUIR FOTO'"));
+assert.ok(mode.includes("for(const factor of [2,3])"));
+assert.ok(mode.includes("await replaceCanvasImage(s,file)"));
+assert.ok(mode.includes("if(!s._imageCanvas?.imageId)return newMap()"));
 console.log('PASS Track Studio image scale: 1:1, x3 geometry, bezier controls, edges, gates, normals, undo immutability, same-size replacement, bad aspect and size guards');
