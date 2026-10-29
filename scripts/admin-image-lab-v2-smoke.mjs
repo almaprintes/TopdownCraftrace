@@ -15,7 +15,7 @@ assert.ok(core.includes("smallButton('VER ANTES / DESPUÉS'"));
 assert.ok(core.includes("new URL('./adminWebpEncoder.worker.js',import.meta.url)"));
 assert.match(css,/@media\(max-height:500px\)/);
 assert.match(css,/@media\(max-width:550px\)/);
-assert.match(css,/env\(safe-area-inset-left/); // inherited from existing overlay
+assert.match(core,/env\(safe-area-inset-left/); // inherited from existing overlay
 assert.doesNotMatch(ui,/fetch\(|XMLHttpRequest|WebSocket|localStorage/);
 assert.ok(ui.includes("current?.compare?.()"));
 assert.ok(ui.includes("current?.download?.()"));
