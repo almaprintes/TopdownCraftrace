@@ -41,7 +41,13 @@ export class EnvironmentBuilderScene extends Current {
         <button data-zone="delete" class="danger">BORRAR ZONA</button>
       </div>
       <p data-zone-count style="font-size:9px;color:#8cddfa;margin-top:9px"></p>`;
-    aside.prepend(section);this._zoneUi=section;
+    const group=document.createElement('details');
+    group.className='es-advanced-group';
+    const summary=document.createElement('summary');
+    summary.textContent='ZONAS · COLISIÓN';
+    group.append(summary,section);
+    aside.prepend(group);
+    this._zoneUi=section;
     const wire=(id,fn)=>section.querySelector(`[data-zone="${id}"]`)?.addEventListener('click',e=>{
       e.preventDefault();e.stopPropagation();fn();this._syncDomStatus();
     });
