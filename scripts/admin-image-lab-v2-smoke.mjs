@@ -5,7 +5,7 @@ const ui=fs.readFileSync('src/game/ui/adminImageLabV2.js','utf8');
 const css=fs.readFileSync('src/game/ui/adminImageLabV2.css','utf8');
 const core=fs.readFileSync('src/game/ui/adminImageWebpTool.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
-assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.48"'));
+assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.49"'));
 assert.ok(core.includes("import {mountImageLabV2} from './adminImageLabV2.js'"));
 assert.ok(core.includes('skin.presentResult(r,sourceFile,href,'));
 assert.ok(core.includes('skin.showSelection(selected[0],selected.length)'));
@@ -15,6 +15,18 @@ assert.ok(core.includes("smallButton('VER ANTES / DESPUÉS'"));
 assert.ok(core.includes("new URL('./adminWebpEncoder.worker.js',import.meta.url)"));
 assert.match(css,/@media\(max-height:500px\)/);
 assert.match(css,/@media\(max-width:550px\)/);
+// Landscape layout guard: nothing essential may move below the fold.
+// A 100dvh screen owns exactly three rows (header, workspace, result strip).
+assert.ok(css.includes('@media (orientation:landscape) and (min-width:600px) and (max-height:820px)'));
+assert.ok(css.includes('@media (orientation:landscape) and (min-width:600px) and (max-height:415px)'));
+assert.ok(css.includes('height:100dvh!important;max-height:100dvh!important;'));
+assert.ok(css.includes('overflow:hidden!important;overscroll-behavior:none!important;'));
+assert.match(css,/grid-template-rows:42px minmax\(0,1fr\) auto/);
+assert.match(css,/grid-template-rows:34px minmax\(0,1fr\) auto/);
+assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+assert.ok(css.includes('max-height:45px;overflow-x:auto;overflow-y:hidden'));
+assert.ok(css.includes('.tdr-image-lab__footer{display:none}'));
+
 assert.match(core,/env\(safe-area-inset-left/); // inherited from existing overlay
 assert.doesNotMatch(ui,/fetch\(|XMLHttpRequest|WebSocket|localStorage/);
 assert.ok(ui.includes("current?.compare?.()"));
@@ -52,7 +64,7 @@ class Element{
   getBoundingClientRect(){return{left:0,width:900};}
   focus(){}
 }
-const document={createElement:t=>new Element(t),querySelector:()=>({content:'DEV 1.3.48'})};
+const document={createElement:t=>new Element(t),querySelector:()=>({content:'DEV 1.3.49'})};
 let serial=0;const revoked=[];
 const URL={
   createObjectURL:()=> 'blob:fake-'+(++serial),
@@ -89,7 +101,7 @@ const walk=(root,needle,out=[])=>{
 assert.equal(walk(panel,'tdr-image-lab__stage-area').length,1);
 assert.equal(walk(panel,'tdr-image-lab__side').length,1);
 assert.equal(walk(panel,'tdr-image-lab__results-wrap').length,1);
-assert.ok(walk(panel,'tdr-image-lab__version')[0].textContent==='DEV 1.3.48');
+assert.ok(walk(panel,'tdr-image-lab__version')[0].textContent==='DEV 1.3.49');
 assert.ok(walk(panel,'tdr-image-lab__settings-note').includes(note));
 assert.equal(walk(panel,'tdr-image-lab__format-choice').length,4);
 assert.equal(walk(panel,'tdr-image-lab__scale-choice').length,5);
