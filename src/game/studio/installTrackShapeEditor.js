@@ -55,22 +55,36 @@ function render(s){
     }
   }
 }
-function button(s,x,y,text,callback){
-  const obj=s.add.text(x,y,text,{fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
-    fontSize:'12px',fontStyle:'bold',color:'#ffffff',backgroundColor:'#12344b',
-    padding:{x:9,y:6}})
-    .setDepth(1000).setScrollFactor(0).setInteractive({useHandCursor:true});
-  obj.on('pointerdown',(_p,_x,_y,event)=>{
-    s._tapCandidate=false;
-    event?.stopPropagation?.();
+function button(s,x,y,text,callback,width=112,height=38){
+  // Premium fixed-screen tools with full-size input targets.
+  // A Container is essential: hiding the PARRILLA variant hides its whole
+  // background and interactive zone, not just a label.
+  const w=Math.max(82,width),h=Math.max(38,height);
+  const background=s.add.graphics();
+  background.fillStyle(0x142a3b,0.98);
+  background.lineStyle(1,0x42667a,1);
+  background.fillRoundedRect(-w/2,-h/2,w,h,8);
+  background.strokeRoundedRect(-w/2,-h/2,w,h,8);
+  const label=s.add.text(0,0,text,{
+    fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+    fontSize:'11px',fontStyle:'bold',color:'#e5f7ff'
+  }).setOrigin(0.5);
+  const hit=s.add.zone(0,0,w,h).setOrigin(0.5)
+    .setInteractive({useHandCursor:true});
+  hit.on('pointerdown',(_p,_x,_y,event)=>{
+    s._tapCandidate=false;event?.stopPropagation?.();
   });
-  obj.on('pointerup',(_p,_x,_y,event)=>{
-    s._tapCandidate=false;
-    event?.stopPropagation?.();
-    callback();
+  hit.on('pointerup',(_p,_x,_y,event)=>{
+    s._tapCandidate=false;event?.stopPropagation?.();callback();
   });
-  s._editCam.ignore(obj);
-  return obj;
+  const container=s.add.container(x+w/2,y+h/2,[background,label,hit])
+    .setDepth(1000).setScrollFactor(0);
+  container.setTint=(color)=>{
+    label.setColor(color===0x83f6d7?'#83f6d7':'#e5f7ff');
+    return container;
+  };
+  s._editCam.ignore(container);
+  return container;
 }
 function findShapeControl(s,x,y){
   if(!s._shapeEditing||!shapeIsValid(s._trackShape))return null;
@@ -213,6 +227,9 @@ export function installTrackStudioShapeEditor(s){
   // It invokes Phaser Text.setText on every pointerup, causing iPhone crashes
   // even when shape editing is disabled (confirmed by DEV 1.2.102 stack).
   s._updatePanel=()=>{
+    s._emptyHelp?.setVisible(
+      !(s._nodes?.length||s._guideImage||s._imageCanvas||s._trackShape)
+    );
     const edgeMode=!!(s._shapeEditing && shapeIsValid(s._trackShape));
     s._panelInfoText?.setVisible(false);
     s._panelEmptyText?.setVisible(false);
@@ -241,7 +258,7 @@ export function installTrackStudioShapeEditor(s){
   };
   const shapeNav=trackStudioShapeToolbarLayout(s._viewX,s._viewY,s._viewW);
   const [createPos,editPos,addPos,gridPos,previewPos]=shapeNav.points;
-  const createBtn=button(s,createPos.x,createPos.y,'CREAR PISTA',()=>createOrRebuild(s));
+  const createBtn=button(s,createPos.x,createPos.y,'CREAR PISTA',()=>createOrRebuild(s),createPos.width,createPos.height);
   const editBtn=button(s,editPos.x,editPos.y,'AJUSTAR',()=>{
     if(!shapeIsValid(s._trackShape))return s._flashMessage('Primero pulsa CREAR PISTA');
     s._shapeEditing=!s._shapeEditing;s._shapeSelected=null;s._selectedNode=-1;
@@ -250,11 +267,11 @@ export function installTrackStudioShapeEditor(s){
     // Keep the button's Phaser Text immutable to avoid a second iOS canvas-UV crash.
     editBtn.setTint?.(s._shapeEditing?0x83f6d7:0xffffff);
     s._flashMessage(s._shapeEditing?'Toca pista para seleccionar; segundo gesto para mover':'Modo centerline · bordes conservados');
-  });
-  const addBtn=button(s,addPos.x,addPos.y,'+ NODO',()=>insertNode(s));
+  },editPos.width,editPos.height);
+  const addBtn=button(s,addPos.x,addPos.y,'+ NODO',()=>insertNode(s),addPos.width,addPos.height);
   // Two immutable Phaser labels avoid the iPhone Text.setText / UV crash.
-  gridOn=button(s,gridPos.x,gridPos.y,'PARRILLA: SÍ',toggleGrid);
-  gridOff=button(s,gridPos.x,gridPos.y,'PARRILLA: NO',toggleGrid);
+  gridOn=button(s,gridPos.x,gridPos.y,'PARRILLA: SÍ',toggleGrid,gridPos.width,gridPos.height);
+  gridOff=button(s,gridPos.x,gridPos.y,'PARRILLA: NO',toggleGrid,gridPos.width,gridPos.height);
   refreshGridToggle();
   // DEV preview is stored in this browser only. Race times use a separate
   // key, so existing Karting Tenerife rankings are not contaminated.
@@ -272,7 +289,7 @@ export function installTrackStudioShapeEditor(s){
       console.error('[TrackStudio] No se pudo preparar la carrera',err);
       s._flashMessage('No se puede probar: '+(err?.message||'error'));
     }finally{installing=false}
-  });
+  },previewPos.width,previewPos.height);
   // Controls are screen-fixed and never get written into project coordinates.
   s.events.once('shutdown',()=>{inspector.destroy();[createBtn,editBtn,addBtn,gridOn,gridOff,previewBtn].forEach(b=>b?.destroy());gfx.destroy();});
 }

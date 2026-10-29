@@ -8,39 +8,63 @@ import {openTrackStudioSourceMenu,SOURCE_ACTIONS}
   from '../src/game/studio/trackStudioSourceMenu.js';
 
 assert.equal(SOURCE_ACTIONS.length,4);
-for(const [width,panel] of [[1536,280],[1024,250],[920,250],[812,250],[740,250],[700,250],[600,250]]){
-  const layout=trackStudioToolbarLayout(width,panel);
-  assert.equal(layout.x.length,8);
-  assert.ok(layout.x.every(x=>x>=130&&x+20<width-panel+2),'Toolbar action outside reachable top area at '+width);
-  const compact=width<1040;
-  assert.equal(layout.compact,compact);
-  if(layout.twoRows)assert.ok(layout.y===19);
-  const bar=layout.twoRows?76:width<1040?72:82;
-  assert.ok(layout.y+20<=bar);
-  if(layout.twoRows)assert.ok(52+20<=bar);
-  const left=width<1200?70:76;
+// Seven physical form factors, including the screenshot's approximate
+// 1024 logical-pixel iPhone landscape and short 600px layouts.
+for(const [width,panel,height] of [
+  [1536,280,820],[1024,250,490],[920,250,550],
+  [812,250,460],[740,250,390],[700,250,390],[600,250,370]
+]){
+  const top=trackStudioToolbarLayout(width,panel);
+  assert.equal(top.x.length,8);
+  assert.equal(top.y.length,8);
+  assert.ok(top.width>=46 && top.height>=30);
+  assert.ok(top.x.every(x=>x-top.width/2>=120 && x+top.width/2<=width-panel),
+    'Toolbar overlaps title or inspector at '+width);
+  assert.ok(top.y.every(y=>y-top.height/2>=0 && y+top.height/2<=82),
+    'Toolbar vertically clipped at '+width);
+  // Cards must not overlap, even after captions are added INSIDE them.
+  for(let a=0;a<8;a++)for(let b=0;b<a;b++){
+    const separated=Math.abs(top.x[a]-top.x[b])>=top.width+3 ||
+      Math.abs(top.y[a]-top.y[b])>=top.height+2;
+    assert.ok(separated,'Overlapping toolbar cards '+a+' and '+b+' at '+width);
+  }
+  const left=height<720?(width>=760?110:96):88;
+  const bar=height<720?76:82;
+  const right=width-panel;
+  if(height<720)assert.ok(left-24-20>=52,'Navigation exposed to Dynamic Island '+width);
   const viewW=width-left-panel-16;
   const shape=trackStudioShapeToolbarLayout(left+8,bar+8,viewW);
   assert.equal(shape.points.length,5);
-  assert.ok(shape.points.every(p=>p.x+85<=left+8+viewW),'Shape action spills into the inspector '+width);
-  assert.ok(shape.points.every(p=>p.y>=bar+8&&p.y+32<600),'Shape action outside short phone screen '+width);
+  assert.ok(shape.points.every(p=>p.x+p.width<=right-5),
+    'Shape card overlaps inspector at '+width);
+  assert.ok(shape.points.every(p=>p.y+p.height<height-14),
+    'Shape card clipped at '+width);
 }
-assert.equal(trackStudioShapeToolbarLayout(80,80,476).points[3].y,
-  trackStudioShapeToolbarLayout(80,80,476).points[4].y);
-assert.ok(trackStudioShapeToolbarLayout(80,80,260).points[4].y >
-  trackStudioShapeToolbarLayout(80,80,260).points[3].y);
+assert.equal(trackStudioShapeToolbarLayout(80,80,700).rows,1);
+assert.equal(trackStudioShapeToolbarLayout(80,80,480).rows,2);
+assert.equal(trackStudioShapeToolbarLayout(80,80,300).rows,3);
 
 const scene=fs.readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
 const shape=fs.readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
 const src=fs.readFileSync('src/game/studio/trackStudioSourceMenu.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
-assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.52"'));
+assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.53"'));
 assert.ok(scene.includes('trackStudioToolbarLayout(width,this._rightPanelW)'));
-assert.equal(scene.match(/_makeIconButton\(\.\.\.toolPos\(\),/g)?.length,8);
+assert.equal(scene.split('_makeTopActionButton(...toolPos(),').length-1,8);
+assert.ok(scene.includes("return {bg,txt,cap,x:cx,y:cy}"));
+assert.ok(!scene.includes("const caption = (x, label)"));
+assert.ok(scene.includes("this._leftBarW = compactH ? (width>=760?110:96) : 88"));
+assert.ok(scene.includes("this._emptyHelp = this.add.text("));
+assert.ok(shape.includes("const container=s.add.container("));
+assert.ok(shape.includes("s._editCam.ignore(container)"));
+assert.ok(shape.includes("s._emptyHelp?.setVisible("));
 assert.ok(scene.includes("this.events.once('shutdown',()=>{"));
 assert.ok(scene.includes('this._destroyGuideInput?.()'));
 assert.ok(scene.includes('this._destroyProjectInput?.()'));
 assert.ok(shape.includes('trackStudioShapeToolbarLayout(s._viewX,s._viewY,s._viewW)'));
+assert.ok(shape.includes('const container=s.add.container('));
+assert.ok(shape.includes('s._editCam.ignore(container)'));
+assert.ok(shape.includes('s._emptyHelp?.setVisible('));
 assert.ok(shape.includes("s._autosaveRecovery?.();\n      s._flashMessage('Circuito listo."));
 assert.ok(scene.includes("if (!window.confirm('¿Abrir el proyecto guardado?"));
 assert.ok(scene.includes("return false;"));
@@ -102,4 +126,4 @@ openTrackStudioSourceMenu(sceneMock);
 for(const fn of [...listeners.keydown])fn({key:'Escape',preventDefault(){}});
 assert.ok(!document.body.children.some(x=>x.id==='tdr-trackstudio-source-menu'));
 assert.equal(listeners.keydown.length,0);
-console.log('PASS Track Studio NAV: 7 screen widths, 8 toolbar links, 5 shape tools, 4 modal routes, Escape/cleanup, honest load status, preview autosave.');
+console.log('PASS Track Studio 2.0 NAV: 7 screen widths, 8 non-overlapping labeled toolbar cards, 5 shaped tool cards, safe island rail, 4 modal routes, Escape/cleanup and autosave.');

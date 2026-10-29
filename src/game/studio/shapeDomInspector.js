@@ -96,12 +96,11 @@ export function studioInspectorCopy(scene) {
   const canvas=scene?._imageCanvas?'\nLienzo: '+scene._imageCanvas.width+'×'+scene._imageCanvas.height:'';
   // On very short landscape screens reserve the lower inspector for tools.
   // Keep essential track status visible without letting properties overlap buttons.
-  if(Number.isFinite(scene?.scale?.height) && scene.scale.height<420){
+  if(Number.isFinite(scene?.scale?.height) && scene.scale.height<650){
     return [
-      'Sin selección',
-      'Nodos: '+nodes.length+' · Pianos: '+pianos.length,
-      'Salida: '+(scene?._startLine?'sí':'no')+' · Meta: '+(scene?._finishLine?'sí':'no'),
-      'Controles: '+cps.length+(canvas?' · '+canvas.trim():'')
+      'Sin selección · '+(scene?._imageCanvas?'IMAGEN':'TRAZADO'),
+      'Nodos: '+nodes.length+' · Pianos: '+pianos.length+' · CP: '+cps.length,
+      'Salida: '+(scene?._startLine?'sí':'no')+' · Meta: '+(scene?._finishLine?'sí':'no')+(canvas?'\n'+canvas.trim():'')
     ].join('\n');
   }
   return ['Sin selección','Nodos: '+nodes.length,'Pianos: '+pianos.length,

@@ -27,8 +27,10 @@ export class TrackStudioScene extends BaseScene {
     // Layout base
     // =================================================
     const compactH = height < 720;
-    this._topBarH = compactH ? 72 : 82;
-    this._leftBarW = compactH ? 70 : 76;
+    this._topBarH = compactH ? 76 : 82;
+    // The iPhone landscape Dynamic Island covers the former 70px left rail.
+    // Shift navigation right without placing controls above the track itself.
+    this._leftBarW = compactH ? (width>=760?110:96) : 88;
     this._rightPanelW = width < 1200 ? 250 : 280;
     this._toolbarLayout=trackStudioToolbarLayout(width,this._rightPanelW);
     if(this._toolbarLayout.twoRows)this._topBarH=Math.max(this._topBarH,76);
@@ -121,21 +123,25 @@ this._viewH = height - this._topBarH - this._bottomPad - 16;
     // =================================================
     // UI base
     // =================================================
-    this.cameras.main.setBackgroundColor('#09101d');
+    this.cameras.main.setBackgroundColor('#07121e');
 
-    this.add.rectangle(0, 0, width, this._topBarH, 0x101626).setOrigin(0);
-    this.add.rectangle(0, this._topBarH, this._leftBarW, height - this._topBarH, 0x0d1422).setOrigin(0);
-    this.add.rectangle(width - this._rightPanelW, this._topBarH, this._rightPanelW, height - this._topBarH, 0x0f1422).setOrigin(0);
+    this.add.rectangle(0, 0, width, this._topBarH, 0x091726).setOrigin(0);
+    this.add.rectangle(0,this._topBarH-2,width,2,0x208e83,0.72).setOrigin(0);
+    this.add.rectangle(0, this._topBarH, this._leftBarW, height - this._topBarH, 0x0b1c2b).setOrigin(0);
+    this.add.rectangle(width - this._rightPanelW, this._topBarH, this._rightPanelW, height - this._topBarH, 0x0a1a29).setOrigin(0);
 
     this.add.rectangle(this._viewX, this._viewY, this._viewW, this._viewH, 0x0a0d16)
   .setOrigin(0)
-  .setStrokeStyle(2, 0x2f3b5c, 0.6);
+  .setStrokeStyle(2, 0x335f70, 0.8);
 
-    this.add.text(22, 18, 'TRACK STUDIO', {
+    this.add.text(22, 9, 'CRAFT RACE  /  CIRCUIT DESIGN', {
       fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-      fontSize: this._toolbarLayout.twoRows?(width<740?'14px':'16px'):this._toolbarLayout.compact?'21px':'30px',
-      color: '#ffffff',
-      fontStyle: 'bold'
+      fontSize: '9px', color: '#5ce6bd', fontStyle: 'bold'
+    });
+    this.add.text(21, 27, 'TRACK STUDIO', {
+      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
+      fontSize: this._toolbarLayout.twoRows?(width<740?'16px':'20px'):'26px',
+      color: '#f4fbff', fontStyle: 'bold'
     });
 
     this._rightTitle = this.add.text(width - this._rightPanelW + 20, this._topBarH + 18, 'PROPIEDADES', {
@@ -159,9 +165,9 @@ this._panelContentY = this._topBarH + 62;
 // Responsive: actions remain reachable even when browser chrome reduces viewport.
 // Leave room for the inspector, but reserve the bottom of the sidebar
 // for the complete, scrollable tool palette (never cover the canvas).
-this._panelActionsY = height >= 420
-  ? this._topBarH + 216
-  : Math.max(this._topBarH + 140, height - 170);
+this._panelActionsY = height < 650
+  ? this._topBarH + 162
+  : this._topBarH + 216;
 
 this.add.text(
   width - this._rightPanelW + 20,
@@ -262,7 +268,7 @@ this._padCenter.on('pointerup', () => {
     // =================================================
     // Barra izquierda
     // =================================================
-    const leftCX = Math.floor(this._leftBarW / 2);
+    const leftCX = this._leftBarW - 24;
     const leftY = this._topBarH + 20;
 
     this.add.text(leftCX, leftY, 'NAV', {
@@ -296,7 +302,7 @@ this._padCenter.on('pointerup', () => {
     let topToolIndex=0;
     const toolPos=()=>{
       const index=topToolIndex++;
-      return [topLayout.x[index],topLayout.twoRows&&index>=4?52:topLayout.y];
+      return [topLayout.x[index],topLayout.y[index],topLayout.width,topLayout.height];
     };
 
 // =================================================
@@ -304,7 +310,7 @@ this._padCenter.on('pointerup', () => {
 // =================================================
 
 // Guardar
-this._btnSave = this._makeIconButton(...toolPos(), '💾', () => {
+this._btnSave = this._makeTopActionButton(...toolPos(), '▣', 'GUARDAR', () => {
   console.log('CLICK SAVE');
   this._flashMessage('💾 Guardando...');
   this._saveProject?.();
@@ -312,14 +318,14 @@ this._btnSave = this._makeIconButton(...toolPos(), '💾', () => {
 
 
 // Cargar
-this._btnLoad = this._makeIconButton(...toolPos(), '📂', () => {
+this._btnLoad = this._makeTopActionButton(...toolPos(), '▤', 'ABRIR', () => {
   console.log('CLICK LOAD');
   this._openProjectSourceMenu?.();
 }, '18px');
 
 
 // Nuevo
-this._btnNew = this._makeIconButton(...toolPos(), 'NEW', () => {
+this._btnNew = this._makeTopActionButton(...toolPos(), '+', 'NUEVO', () => {
   console.log('CLICK NEW');
   const ok = window.confirm('¿Crear un proyecto nuevo?\n\nEl proyecto actual se sustituirá. Guarda una copia antes si quieres conservarlo.');
   if (!ok) return;
@@ -332,7 +338,7 @@ this._btnNew = this._makeIconButton(...toolPos(), 'NEW', () => {
     // Drawing modes moved to the labelled right-hand tool palette.
     // There is deliberately no second row of cryptic ED/PL/SAL/CP/PI icons.
     // The existing _setTool() state machine and export format are preserved.
-    this._loopBtn = this._makeIconButton(...toolPos(), this._isClosed ? '🔒' : '🔓', () => {
+    this._loopBtn = this._makeTopActionButton(...toolPos(), this._isClosed ? '🔒' : '🔓', 'CERRAR', () => {
   this._toggleClosed();
   if (this._loopBtn?.txt) {
     this._loopBtn.txt.setText(this._isClosed ? '🔒' : '🔓');
@@ -340,34 +346,25 @@ this._btnNew = this._makeIconButton(...toolPos(), 'NEW', () => {
 }, '16px');
 
     // track directo
-    this._trackMinusBtn = this._makeIconButton(...toolPos(), 'W-', () => {
+    this._trackMinusBtn = this._makeTopActionButton(...toolPos(), '−', 'ANCHO', () => {
       this._trackTool = 'widthDown';
       this._changeTrackWidth(-this._trackWidthStep());
       this._updateToolButtons();
     }, '12px');
     
 
-    this._trackPlusBtn = this._makeIconButton(...toolPos(), 'W+', () => {
+    this._trackPlusBtn = this._makeTopActionButton(...toolPos(), '+', 'ANCHO', () => {
       this._trackTool = 'widthUp';
       this._changeTrackWidth(this._trackWidthStep());
       this._updateToolButtons();
     }, '12px');
     
-    this._undoBtn = this._makeIconButton(...toolPos(), '↶', () => this._undo(), '20px');
+    this._undoBtn = this._makeTopActionButton(...toolPos(), '↶', 'DESHACER', () => this._undo(), '20px');
     
-    this._redoBtn = this._makeIconButton(...toolPos(), '↷', () => this._redo(), '20px');
+    this._redoBtn = this._makeTopActionButton(...toolPos(), '↷', 'REHACER', () => this._redo(), '20px');
     
 
-    // Short permanent captions are usable with touch (unlike hover tooltips).
-    // Compact top bar: project operations / track settings / history only.
-    const caption = (x, label) => this.add.text(x, 52, label, {
-      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
-      fontSize: '9px', color: '#b9cae5', fontStyle: 'bold'
-    }).setOrigin(0.5, 0);
-    if(!topLayout.twoRows){
-      ['Guardar','Abrir','Nuevo','Cierre','Ancho −','Ancho +','Deshacer','Rehacer']
-        .forEach((label,i)=>caption(topLayout.x[i],label));
-    }
+
 
     // =================================================
     // Mundo de edición
@@ -398,6 +395,18 @@ this._btnNew = this._makeIconButton(...toolPos(), 'NEW', () => {
       this._editorWorldW / 2,
       this._editorWorldH / 2 + 30
     );
+
+    // Informative empty state. No fake project preview or persistent graphics:
+    // it disappears as soon as any authored data or guide is present.
+    this._emptyHelp = this.add.text(
+      this._viewX+this._viewW/2,
+      this._viewY+this._viewH/2,
+      'LIENZO LISTO PARA DISEÑAR\n\nCarga una fotografía desde ABRIR o IMG\npara empezar a trazar el circuito',
+      {fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+       fontSize:'14px',fontStyle:'bold',color:'#9ac2d0',
+       align:'center',backgroundColor:'#102130',
+       padding:{x:22,y:16}}
+    ).setOrigin(0.5).setDepth(28).setScrollFactor(0);
 
     // =================================================
     // Cámara de edición
@@ -1175,6 +1184,32 @@ _flashMessage(txt) {
   // =================================================
   // UI helpers
   // =================================================
+  _makeTopActionButton(cx,cy,width,height,icon,caption,onClick,fontSize='18px'){
+    // Real single-card actions: the caption is inside the interactive hit area,
+    // never another Text object spaced only 40px apart.
+    const w=Math.max(46,width),h=Math.max(30,height);
+    const bg=this.add.rectangle(cx,cy,w,h,0x132437,1)
+      .setStrokeStyle(1,0x36546d,1)
+      .setInteractive({useHandCursor:true});
+    const compact=h<40;
+    const txt=this.add.text(cx,compact?cy:cy-11,icon,{
+      fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+      fontSize:compact?'15px':fontSize,color:'#f7fbff',fontStyle:'bold'
+    }).setOrigin(0.5);
+    const cap=this.add.text(compact?cx+13:cx,compact?cy:cy+13,caption,{
+      fontFamily:'system-ui,-apple-system,Segoe UI,Arial',
+      fontSize:compact?'8px':'9px',color:'#9fc9d9',fontStyle:'bold'
+    }).setOrigin(0.5);
+    if(compact)txt.setX(cx-13);
+    bg.on('pointerup',(_pointer,_lx,_ly,event)=>{
+      event?.stopPropagation?.();
+      onClick();
+    });
+    bg.on('pointerover',()=>bg.setStrokeStyle(1,0x31dfba,1));
+    bg.on('pointerout',()=>bg.setStrokeStyle(1,0x36546d,1));
+    return {bg,txt,cap,x:cx,y:cy};
+  }
+
   _makeIconButton(cx, cy, label, onClick, fontSize = '22px') {
     const bg = this.add.circle(cx, cy, 20, 0x1c2540, 1)
       .setStrokeStyle(2, 0x3c4e7a, 0.95)
@@ -1673,8 +1708,9 @@ _updateToolButtons() {
 
   const paintCircle = (btn, active = false, fill = 0x1c2540, stroke = 0x3c4e7a) => {
     if (!btn?.bg) return;
-    btn.bg.setFillStyle(active ? fill : 0x1c2540, 1);
-    btn.bg.setStrokeStyle(2, active ? stroke : 0x3c4e7a, 0.95);
+    const card=!!btn.cap;
+    btn.bg.setFillStyle(active ? fill : card?0x132437:0x1c2540, 1);
+    btn.bg.setStrokeStyle(card?1:2,active ? stroke : card?0x36546d:0x3c4e7a, 0.95);
   };
 
   // modo directo
@@ -1706,8 +1742,9 @@ _updateToolButtons() {
     this._saveMainBtn._bg.strokeRoundedRect(-20, -20, 40, 40, 8);
   }
   if (this._loopBtn?.txt) {
-  this._loopBtn.txt.setText(this._isClosed ? '🔒' : '🔓');
-}
+    const label=this._isClosed?'🔒':'🔓';
+    if(this._loopBtn.txt.text!==label)this._loopBtn.txt.setText(label);
+  }
 }
   _toggleClosed() {
     this._isClosed = !this._isClosed;
