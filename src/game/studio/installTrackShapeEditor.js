@@ -227,6 +227,9 @@ export function installTrackStudioShapeEditor(s){
   // It invokes Phaser Text.setText on every pointerup, causing iPhone crashes
   // even when shape editing is disabled (confirmed by DEV 1.2.102 stack).
   s._updatePanel=()=>{
+    s._emptyHelp?.setVisible(
+      !(s._nodes?.length||s._guideImage||s._imageCanvas||s._trackShape)
+    );
     const edgeMode=!!(s._shapeEditing && shapeIsValid(s._trackShape));
     s._panelInfoText?.setVisible(false);
     s._panelEmptyText?.setVisible(false);
