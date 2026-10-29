@@ -44,7 +44,10 @@ assert.match(css,/env\(safe-area-inset-left/);
 assert.match(css,/\.agp-list\{/);
 assert.match(css,/overflow-y:auto/);
 assert.match(css,/@media\(max-height:500px\)/);
-assert.match(ficha,/carPreviewCandidates\(carId,spec/);
+// Ficha now uses the published Garage card first, with fallback sources from
+// the official factory vehicle metadata rather than edited display fields.
+assert.match(ficha,/carCardUrl\(carId,officialArtSpec,base/);
+assert.match(ficha,/carPreviewCandidates\(carId,officialArtSpec,base/);
 assert.match(ficha,/attachCarPreviewFallback\(imageEl,imageCandidates/);
 assert.match(ficha,/removePreviewHandlers\(\)/);
 assert.match(ficha,/onExhausted/);
