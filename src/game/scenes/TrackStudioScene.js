@@ -3024,15 +3024,23 @@ const data = {
     try {
       const raw = localStorage.getItem('trackstudio_project');
       if (!raw) {
-        console.warn('⚠️ No hay proyecto guardado');
-        return;
+        this._flashMessage?.('No hay ningún proyecto guardado en este dispositivo');
+        return false;
       }
-
       const data = JSON.parse(raw);
-this._applyProjectData(data.editor || data);
+      if (!Array.isArray((data.editor || data)?.nodes))
+        throw Error('El proyecto local no contiene nodos');
+      // Never replace the active work without confirmation.
+      if (!window.confirm('¿Abrir el proyecto guardado?\\n\\nSustituirá lo que tienes abierto.'))return false;
+      this._pushHistory();
+      this._applyProjectData(data.editor || data);
+      this._autosaveRecovery();
       console.log('📂 Proyecto cargado');
+      return true;
     } catch (e) {
       console.error('❌ Error cargando proyecto', e);
+      this._flashMessage?.('No se pudo abrir el proyecto guardado');
+      return false;
     }
   }
 
