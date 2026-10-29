@@ -8,7 +8,7 @@ const source=fs.readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
 const chrome=fs.readFileSync('src/game/studio/trackStudioLabChrome.js','utf8');
 const menu=fs.readFileSync('src/game/studio/trackStudioSourceMenu.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
-assert.match(html,/name="tdr-dev-version" content="DEV 1\.3\.59"/);
+assert.match(html,/name="tdr-dev-version" content="DEV 1\.3\.60"/);
 
 function snippet(begin,end){
   const start=source.indexOf(begin),stop=source.indexOf(end,start);

@@ -1,0 +1,227 @@
+/* DEV 1.3.60 · Vehicle Lab / Paddock. ONE HTML shell; no Phaser HUD overlaps. */
+.tdr-car-editor.tdr-vehicle-lab{
+  --ve-bg:#071320;--ve-panel:#0d1e2d;--ve-line:#36556b;
+  --ve-accent:#2aefad;--ve-ice:#a9dbec;
+  position:relative;isolation:isolate;box-sizing:border-box;
+  width:100%;height:100%;padding:0;overflow:hidden;
+  color:#ecf8ff;font:700 12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:radial-gradient(ellipse at 30% -20%,#21425b 0%,transparent 49%),
+    radial-gradient(ellipse at 95% 95%,#0d3542 0%,transparent 56%),
+    repeating-linear-gradient(90deg,transparent 0 86px,#d6efff06 86px 87px),
+    linear-gradient(145deg,#091624,#050e19);
+  border:0;border-radius:0;box-shadow:none;
+  user-select:none;-webkit-user-select:none;
+}
+.tdr-car-editor.tdr-vehicle-lab *{box-sizing:border-box}
+.tdr-car-editor.tdr-vehicle-lab button,
+.tdr-car-editor.tdr-vehicle-lab input,
+.tdr-car-editor.tdr-vehicle-lab select{font:inherit;-webkit-tap-highlight-color:transparent}
+.tdr-car-editor.tdr-vehicle-lab button{
+  touch-action:manipulation;cursor:pointer;border:1px solid #476b7e;
+  border-radius:9px;color:#e7f6ff;background:linear-gradient(140deg,#18334a,#0a2032);
+  font-size:clamp(10px,1vw,12px);font-weight:850;
+}
+.tdr-car-editor.tdr-vehicle-lab button:focus-visible,
+.tdr-car-editor.tdr-vehicle-lab input:focus-visible,
+.tdr-car-editor.tdr-vehicle-lab select:focus-visible{outline:2px solid #5af6c8;outline-offset:2px}
+.tdr-car-editor.tdr-vehicle-lab button:active{filter:brightness(1.24)}
+.tdr-car-editor.tdr-vehicle-lab .ve-shell{
+  height:100%;min-height:0;width:100%;display:grid;
+  grid-template-rows:clamp(54px,10vh,74px) minmax(0,1fr) clamp(52px,10vh,66px);
+  gap:0;overflow:hidden;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-header{
+  display:flex;align-items:center;justify-content:space-between;min-width:0;
+  padding:5px max(12px,env(safe-area-inset-right,0px)) 5px max(12px,env(safe-area-inset-left,0px));
+  gap:10px;border-bottom:1px solid #3c657a;
+  background:linear-gradient(110deg,#0c2635ec,#0b1728f5 75%);
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-brand{display:flex;align-items:center;min-width:0;gap:10px}
+.tdr-car-editor.tdr-vehicle-lab .ve-logo{
+  font-size:clamp(25px,3.1vw,43px);font-style:italic;font-weight:1000;
+  letter-spacing:-.12em;white-space:nowrap;line-height:.9;transform:skew(-7deg);
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-logo em{color:#ed3755;font-style:inherit}
+.tdr-car-editor.tdr-vehicle-lab .ve-title{display:flex;flex-direction:column;min-width:0;padding-left:10px;border-left:2px solid #678ca7}
+.tdr-car-editor.tdr-vehicle-lab .ve-title small{font-size:clamp(8px,.75vw,10px);font-weight:850;letter-spacing:.14em;color:#a8bdd2}
+.tdr-car-editor.tdr-vehicle-lab .ve-title strong{
+  font-style:italic;font-size:clamp(17px,2vw,31px);font-weight:1000;
+  line-height:1.1;letter-spacing:.025em;white-space:nowrap;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-title em{font-style:inherit;color:#45eab9}
+.tdr-car-editor.tdr-vehicle-lab .ve-header-actions{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.tdr-car-editor.tdr-vehicle-lab .ve-header-actions button{min-height:37px;padding:7px 12px;white-space:nowrap}
+.tdr-car-editor.tdr-vehicle-lab .ve-version{
+  border:1px solid #296f5b;border-radius:9px;background:#0c332a;
+  color:#acf8d9;padding:9px 10px;font-size:10px;white-space:nowrap;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-version::before{
+  content:'';display:inline-block;margin-right:6px;width:7px;height:7px;
+  border-radius:50%;background:#3afaad;box-shadow:0 0 8px #3afaad;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-workspace{
+  display:grid;grid-template-columns:minmax(145px,21%) minmax(0,1fr) minmax(185px,24%);
+  gap:clamp(6px,.85vw,13px);padding:clamp(6px,1vh,11px) max(8px,env(safe-area-inset-right,0px)) clamp(5px,.8vh,9px) max(8px,env(safe-area-inset-left,0px));
+  min-height:0;overflow:hidden;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-preview,
+.tdr-car-editor.tdr-vehicle-lab .ve-parameters,
+.tdr-car-editor.tdr-vehicle-lab .ve-tools{
+  min-width:0;min-height:0;border:1px solid #35546a;border-radius:13px;
+  background:linear-gradient(158deg,#10263af5,#081723f5);
+  box-shadow:inset 0 1px #ffffff12,0 8px 22px #0004;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-panel-title{
+  display:flex;justify-content:space-between;align-items:center;gap:5px;
+  flex:0 0 auto;min-width:0;color:#c6e8f4;font-size:clamp(9px,.81vw,12px);
+  font-weight:950;font-style:italic;letter-spacing:.05em;
+  border-bottom:1px solid #2d5369;padding:8px 9px;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-panel-title span{
+  font-size:9px;font-style:normal;color:#6f9dad;white-space:nowrap;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-preview{display:flex;flex-direction:column;overflow:hidden}
+.tdr-car-editor.tdr-vehicle-lab .ve-car-art{
+  flex:1;min-height:65px;position:relative;display:grid;place-items:center;overflow:hidden;
+  margin:6px;border-radius:10px;border:1px solid #3a6677;
+  background:radial-gradient(ellipse,#26455a 0%,#091827 65%,#07101a);
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-car-art img{
+  display:block;position:relative;z-index:1;width:100%;height:100%;
+  max-height:100%;object-fit:contain;filter:drop-shadow(0 8px 14px #000a);
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-photo-fallback{
+  position:absolute;z-index:0;color:#28636c;font-size:50px;font-weight:1000;font-style:italic;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-car-detail{
+  display:flex;flex-direction:column;flex:0 0 auto;gap:3px;
+  padding:2px 9px 10px;min-width:0;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-car-detail strong{font-size:clamp(12px,1.18vw,17px);color:#fff;line-height:1.05;font-style:italic;white-space:normal}
+.tdr-car-editor.tdr-vehicle-lab .ve-car-detail span{font-size:10px;color:#8dcbce}
+.tdr-car-editor.tdr-vehicle-lab .ve-car-detail small{
+  font-size:9px;color:#39eeb0;text-transform:uppercase;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-parameters{display:flex;flex-direction:column;overflow:hidden}
+.tdr-car-editor.tdr-vehicle-lab .ve-edit-slot{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;flex:1}
+.tdr-car-editor.tdr-vehicle-lab .bar{
+  flex:0 0 auto;display:flex;flex-wrap:nowrap;align-items:center;
+  gap:7px;padding:8px 9px;border-bottom:1px solid #31516a;background:#0d2435;
+}
+.tdr-car-editor.tdr-vehicle-lab .search,
+.tdr-car-editor.tdr-vehicle-lab .selProfile{
+  min-width:0;height:35px;border:1px solid #496a80;border-radius:9px;
+  background:#081828;color:#fff;padding:0 9px;font-size:16px;
+}
+.tdr-car-editor.tdr-vehicle-lab .search{flex:1 1 auto;max-width:100%;font-size:16px}
+.tdr-car-editor.tdr-vehicle-lab .selProfile{flex:0 0 124px;max-width:128px;font-weight:900;font-size:12px}
+.tdr-car-editor.tdr-vehicle-lab .list{
+  flex:1;min-height:0;height:100%;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  touch-action:pan-y;padding:5px 9px 13px;
+}
+.tdr-car-editor.tdr-vehicle-lab .row{
+  display:flex;justify-content:space-between;align-items:center;min-width:0;
+  gap:6px;padding:7px 8px;margin:0 0 4px;border-radius:9px;
+  border:1px solid #29445a;background:linear-gradient(90deg,#0b2435,#0a1a2a);
+}
+.tdr-car-editor.tdr-vehicle-lab .row:focus-within{border-color:#36e6b3}
+.tdr-car-editor.tdr-vehicle-lab .left{min-width:0}
+.tdr-car-editor.tdr-vehicle-lab .k{display:flex;align-items:center;gap:6px}
+.tdr-car-editor.tdr-vehicle-lab .kname{font-size:12px;color:#f0f9ff;font-weight:900;overflow-wrap:anywhere}
+.tdr-car-editor.tdr-vehicle-lab .meta{display:flex;gap:9px;color:#87adba;font-size:10px;margin-top:2px}
+.tdr-car-editor.tdr-vehicle-lab .meta .d{color:#41dfa8}
+.tdr-car-editor.tdr-vehicle-lab .right{display:flex;flex:0 0 auto;align-items:center;gap:4px}
+.tdr-car-editor.tdr-vehicle-lab .btn{
+  width:35px;height:37px;font-size:18px;border-color:#3d7891;
+}
+.tdr-car-editor.tdr-vehicle-lab .inp{
+  width:clamp(62px,7vw,92px);height:37px;padding:0 6px;text-align:right;
+  border:1px solid #476c86;border-radius:9px;color:#fff;background:#081926;
+  font-size:16px;font-weight:850;-webkit-user-select:text;user-select:text;
+}
+.tdr-car-editor.tdr-vehicle-lab .infoBtn{width:27px;height:28px;font-size:13px}
+.tdr-car-editor.tdr-vehicle-lab .ve-tools{
+  display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;gap:6px;padding-bottom:6px;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-tools>.ve-panel-title{position:sticky;top:0;z-index:1;background:#10263a}
+.tdr-car-editor.tdr-vehicle-lab .ve-calibration{display:flex;flex-direction:column;gap:5px;padding:3px 8px 0}
+.tdr-car-editor.tdr-vehicle-lab .ve-calibration button{
+  width:100%;min-height:36px;text-align:left;padding:6px 9px;
+  border-color:#8a7953;background:linear-gradient(135deg,#403421,#182634);
+  color:#ffe6a8;font-size:10px;white-space:normal;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-restore{
+  flex:0 0 auto;margin:0 8px;border-radius:8px;border:1px solid #4a5264;
+  padding:6px 8px;background:#0a1d2a;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-restore summary{cursor:pointer;color:#bdd5e3;font-size:10px;font-weight:900;line-height:1.5}
+.tdr-car-editor.tdr-vehicle-lab .ve-restore-actions{display:flex;flex-direction:column;gap:5px;padding:8px 0 2px}
+.tdr-car-editor.tdr-vehicle-lab .ve-restore-actions button{min-height:35px;text-align:left;padding:6px 9px}
+.tdr-car-editor.tdr-vehicle-lab .ve-telemetry{min-height:80px;display:flex;flex-direction:column;padding:0 8px}
+.tdr-car-editor.tdr-vehicle-lab .ve-telemetry .ve-panel-title{padding:6px 0;font-size:10px;border:0}
+.tdr-car-editor.tdr-vehicle-lab .ve-telemetry pre{
+  margin:0;padding:8px;min-height:76px;max-height:190px;overflow-y:auto;
+  white-space:pre-wrap;overflow-wrap:anywhere;font-size:10px;line-height:1.36;
+  color:#aacdda;background:#061a26;border-radius:8px;border:1px solid #27465b;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:650;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-footer{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;
+  border-top:1px solid #37667b;background:#081c2be9;
+  padding:5px max(12px,env(safe-area-inset-right,0px)) 5px max(12px,env(safe-area-inset-left,0px));
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-footer [data-vehicle-status]{
+  min-width:0;max-width:44%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:clamp(9px,.8vw,12px);color:#8cb6c6;letter-spacing:.02em;
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-footer [data-vehicle-status].ve-flash{color:#8dffcd;font-weight:950}
+.tdr-car-editor.tdr-vehicle-lab .ve-footer-actions{display:flex;align-items:center;gap:7px;flex:0 0 auto}
+.tdr-car-editor.tdr-vehicle-lab .ve-footer-actions button{height:41px;min-width:101px;padding:6px 12px}
+.tdr-car-editor.tdr-vehicle-lab .ve-footer-actions .ve-save{
+  border-color:#28e6a6;color:#07271f;background:linear-gradient(140deg,#41ffc1,#18bd7e);
+}
+.tdr-car-editor.tdr-vehicle-lab .ve-footer-actions .ve-test{
+  border-color:#4bcceb;color:#031f2b;background:linear-gradient(140deg,#69dff3,#30b1d3);
+}
+.tdr-car-editor.tdr-vehicle-lab .tip{
+  position:absolute;z-index:100;left:23%;right:26%;bottom:calc(10vh + 7px);
+  padding:10px 12px;border-radius:10px;border:1px solid #51dfa9;
+  color:#f3fff8;background:#0b3028ed;font-size:12px;font-weight:800;
+  box-shadow:0 10px 20px #000b;
+}
+@media(max-height:500px) and (min-width:700px){
+ .tdr-car-editor.tdr-vehicle-lab .ve-shell{grid-template-rows:51px minmax(0,1fr) 51px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-workspace{gap:7px;padding-top:5px;padding-bottom:4px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-panel-title{padding:6px 7px;font-size:10px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-car-detail{padding-bottom:6px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-car-detail span{font-size:9px}
+ .tdr-car-editor.tdr-vehicle-lab .bar{padding:5px 7px}
+ .tdr-car-editor.tdr-vehicle-lab .row{padding:4px 7px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-calibration button{min-height:33px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-title strong{font-size:17px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-header-actions button{min-height:34px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-footer-actions button{height:38px}
+}
+@media(max-width:830px) and (min-width:650px){
+ .tdr-car-editor.tdr-vehicle-lab .ve-workspace{grid-template-columns:minmax(124px,18%) minmax(0,1fr) minmax(165px,26%)}
+ .tdr-car-editor.tdr-vehicle-lab .ve-title small{display:none}
+ .tdr-car-editor.tdr-vehicle-lab .ve-panel-title span{display:none}
+ .tdr-car-editor.tdr-vehicle-lab .ve-version{display:none}
+ .tdr-car-editor.tdr-vehicle-lab .ve-footer [data-vehicle-status]{max-width:20%}
+}
+@media(max-width:650px){
+ .tdr-car-editor.tdr-vehicle-lab{overflow:auto;touch-action:pan-y}
+ .tdr-car-editor.tdr-vehicle-lab .ve-shell{height:auto;min-height:100%;display:flex;flex-direction:column}
+ .tdr-car-editor.tdr-vehicle-lab .ve-workspace{display:flex;flex-direction:column;overflow:visible}
+ .tdr-car-editor.tdr-vehicle-lab .ve-preview{min-height:190px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-car-art{height:120px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-parameters{min-height:330px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-edit-slot{min-height:300px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-tools{min-height:240px}
+ .tdr-car-editor.tdr-vehicle-lab .ve-footer{position:sticky;bottom:0;flex-wrap:wrap}
+ .tdr-car-editor.tdr-vehicle-lab .ve-version{display:none}
+ .tdr-car-editor.tdr-vehicle-lab .ve-footer [data-vehicle-status]{max-width:100%}
+}
