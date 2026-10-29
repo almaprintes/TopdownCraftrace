@@ -17,7 +17,8 @@ const mbx=(label,fn,cls='tdr-image-lab__action')=>{
 
 export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,pick,
   options,formatWrap,formatInput,scaleWrap,scaleInput,qualityWrap,qualityInput,
-  qualityValue,note,launch,status,results}){
+  qualityValue,note,launch,status,results,
+  exportLimits={mobile:false,maxEdge:16383,maxPixels:64_000_000}}){
   overlay.classList.add('tdr-image-lab');
   panel.classList.add('tdr-image-lab__shell');
   panel.style.cssText='';
@@ -97,6 +98,7 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
   qualityValue.style.cssText='';
   qualityInput.style.cssText='';
   const choiceButtons=[];
+  const scaleButtons=[];
   const choices=(wrap,select,data,cls)=>{
     select.style.cssText='';
     const holder=node('div',cls);
@@ -107,6 +109,7 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
         select.dispatchEvent(new Event('change',{bubbles:true}));
       },cls==='tdr-image-lab__format-options'?'tdr-image-lab__format-choice':'tdr-image-lab__scale-choice');
       holder.append(b);choices.push([val,b]);choiceButtons.push(b);
+      if(cls==='tdr-image-lab__scale-options')scaleButtons.push([Number(val),b]);
     }
     wrap.append(holder);
     const update=()=>{
@@ -117,6 +120,9 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
   };
   choices(formatWrap,formatInput,[['webp','WebP'],['png','PNG'],['jpeg','JPG'],['original','Mantener formato']],'tdr-image-lab__format-options');
   choices(scaleWrap,scaleInput,[['1','×1'],['1.5','×1,5'],['2','×2'],['2.5','×2,5'],['3','×3']],'tdr-image-lab__scale-options');
+  const limitsHint=node('small','tdr-image-lab__export-hint');
+  limitsHint.setAttribute('role','status');limitsHint.setAttribute('aria-live','polite');
+  scaleWrap.append(limitsHint);
   note.classList.add('tdr-image-lab__settings-note');note.style.cssText='';
   const metrics=node('div','tdr-image-lab__metrics');
   const buildMetric=(title,different=false)=>{
@@ -152,10 +158,45 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
   pick.style.cssText='';
   panel.replaceChildren(head,workspace,resultsWrap,footer,fileWrap);
 
-  let sourceUrl=null,current=null,actualZoom=false;
+  let sourceUrl=null,current=null,actualZoom=false,sourceMeta=null,isBusy=false;
+  const describeLimit=()=>exportLimits.mobile
+    ?'Móvil: 8192 px/lado y 16 MP'
+    :'Mac/PC: 16.383 px/lado y 64 MP';
+  const refreshPrediction=()=>{
+    const {maxEdge,maxPixels}=exportLimits;
+    if(!sourceMeta){
+      limitsHint.textContent='Límite de salida · '+describeLimit();
+      limitsHint.setAttribute('data-warning','false');
+      for(const [,button] of scaleButtons)button.disabled=isBusy;
+      if(!isBusy)launch.disabled=false;
+      return;
+    }
+    const canKeepOriginal=formatInput.value==='original'&&Number(scaleInput.value)===1;
+    const width=Math.round(sourceMeta.width*Number(scaleInput.value));
+    const height=Math.round(sourceMeta.height*Number(scaleInput.value));
+    const pixels=width*height;
+    const invalid=!canKeepOriginal&&(width>maxEdge||height>maxEdge||pixels>maxPixels);
+    for(const [scale,button] of scaleButtons){
+      const w=Math.round(sourceMeta.width*scale),h=Math.round(sourceMeta.height*scale);
+      const directCopy=formatInput.value==='original'&&scale===1;
+      const prohibited=!directCopy&&(w>maxEdge||h>maxEdge||w*h>maxPixels);
+      button.disabled=isBusy||prohibited;
+      button.title=prohibited?'Supera '+describeLimit():'';
+    }
+    outputSize.textContent=width+' × '+height+(invalid?' ⚠':'');
+    outputSize.parentElement?.setAttribute('data-warning',String(invalid));
+    limitsHint.setAttribute('data-warning',String(invalid));
+    limitsHint.textContent=invalid
+      ?'NO ADMISIBLE · '+(width>maxEdge||height>maxEdge?'excede lado':'excede MP')+' · '+describeLimit()
+      :'Salida prevista: '+width+' × '+height+' · '+(pixels/1e6).toFixed(1)+' MP';
+    if(!isBusy)launch.disabled=invalid;
+    if(!current)metricStatus.textContent=invalid?'REDUCE ESCALA':'PENDIENTE';
+  };
+  formatInput.addEventListener('change',refreshPrediction);
+  scaleInput.addEventListener('change',refreshPrediction);
   const revoke=()=>{if(sourceUrl){URL.revokeObjectURL(sourceUrl);sourceUrl=null;}};
   const resetFrame=()=>{
-    revoke();current=null;actualZoom=false;
+    revoke();current=null;actualZoom=false;sourceMeta=null;
     before.removeAttribute('src');after.removeAttribute('src');
     before.hidden=after.hidden=true;
     placeholder.hidden=false;divider.hidden=handle.hidden=beforeLabel.hidden=afterLabel.hidden=true;
@@ -166,6 +207,7 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
     filename.textContent='SIN ARCHIVO SELECCIONADO';mode.textContent='IMAGEN ORIGINAL';
     for(const metric of [originalSize,outputSize,originalBytes,outputBytes,savings,metricStatus])metric.textContent='—';
     updateZoomButtons();
+    refreshPrediction();
   };
   function draw(){
     if(!current)return;
@@ -225,6 +267,8 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
     preview.onload=()=>{
       if(before.src!==sourceUrl||!sourceUrl)return;
       originalSize.textContent=preview.naturalWidth+' × '+preview.naturalHeight;
+      sourceMeta={width:preview.naturalWidth,height:preview.naturalHeight};
+      refreshPrediction();
     };
     preview.src=sourceUrl;
   };
@@ -246,12 +290,15 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
     const delta=result.originalBytes?((result.blob.size-result.originalBytes)/result.originalBytes*100):0;
     savings.textContent=(delta>0?'+':'')+delta.toFixed(1)+' %';
     metricStatus.textContent=formatLabel(result.format)+' · LISTO';
+    sourceMeta={width:result.originalWidth,height:result.originalHeight};
     compare.disabled=download.disabled=false;zoom(false);
     requestAnimationFrame(draw);
   };
   const setBusy=(busy)=>{
+    isBusy=busy;
     pickButton.disabled=busy;
     for(const button of choiceButtons)button.disabled=busy;
+    refreshPrediction();
   };
   resetFrame();
   return {showSelection,presentResult,clearOutput:resetFrame,dispose:resetFrame,setBusy};
