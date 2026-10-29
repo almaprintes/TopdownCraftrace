@@ -24,6 +24,8 @@ assert.ok(css.includes('pointer-events:none'));
 assert.ok(css.includes('pointer-events:auto'));
 assert.ok(css.includes('.ts-lab__tool-host'));
 assert.ok(css.includes('.ts-lab__guide-panel'));
+assert.ok(css.includes('.ts-lab__photo-panel[hidden]'));
+assert.ok(chrome.includes("photoScale.setAttribute('aria-label','Abrir taller de escala del mapa')"));
 
 class FakeEl{
   constructor(tag){
@@ -82,6 +84,7 @@ const s={
   _undo(){calls.push('undo')},_redo(){calls.push('redo')},
   _applyZoomAtViewportCenter(n){this._editCam.zoom*=n;calls.push(n>1?'zoom-in':'zoom-out');this._updatePanel()},
   _openCanvasImagePicker(){calls.push('master-file')},
+  _exportCanvasImage(){calls.push('export-master-photo')},
   _openGuidePicker(){calls.push('guide-file')},
   _toggleGuideVisibility(){this._guideVisible=!this._guideVisible;calls.push('guide-toggle')},
   _changeGuideScale(){calls.push('guide-size')},
@@ -117,6 +120,22 @@ click('AJUSTAR');click('+ NODO');click('▶ PROBAR');
 assert.ok(!buttons.some(x=>x.textContent==='IMG'),'Redundant IMG must be removed');
 click('TODO');assert.ok(calls.includes('frame'),'TODO frames the track');
 click('MAP');
+const photoPanel=all(controller.root).find(n=>n.className==='ts-lab__photo-panel');
+const photoDimensions=all(controller.root).find(n=>n.className==='ts-lab__photo-dimensions');
+const scaleButton=buttons.find(n=>n.getAttribute('aria-label')==='Abrir taller de escala del mapa');
+assert.ok(photoPanel&&photoPanel.hidden,'Photo controls hidden when no master image');
+assert.ok(scaleButton,'One-tap scale action exists in the visible properties panel');
+s._imageCanvas={width:1200,height:896,imageId:'photo123',name:'IMG_7322.png'};
+s._updatePanel();
+assert.ok(!photoPanel.hidden,'MAP scale controls must be visible immediately after photo import');
+assert.equal(photoDimensions.textContent,'1200 × 896 px','Display actual image pixels, not camera zoom');
+scaleButton.click();
+assert.equal(calls.filter(x=>x==='master-file').length,2,'MAP scale action must reach real workbench');
+click('EXPORTAR FOTO');
+assert.ok(calls.includes('export-master-photo'),'Export photo must be one tap');
+s._imageCanvas=null;
+s._updatePanel();
+assert.ok(photoPanel.hidden,'Do not show scale controls on empty projects');
 s._openReferenceTools?.(); // Reference controls remain reachable from ABRIR.
 click('CARGAR');click('TAMAÑO +');click('OPACIDAD −');
 const zoomBefore=s._editCam.zoom;

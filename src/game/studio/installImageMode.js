@@ -67,7 +67,10 @@ async function createFromFile(s,file){
   s._newProject();
   await mount(s,file,meta);
   s._autosaveRecovery();
-  s._flashMessage('Imagen como lienzo · píxeles y coordenadas 1:1');
+  s._flashMessage('Fotografía real: '+s._imageCanvas.width+' × '+s._imageCanvas.height+' px · zoom solo visual');
+  // A first-time MAP import must expose the workbench instead of hiding it
+  // behind another unexplained press on the MAP rail button.
+  s._openCanvasImagePicker?.();
 }
 
 const IMAGE_TYPES=/^image\/(png|jpeg|webp)$/;
@@ -332,11 +335,13 @@ export function installTrackStudioImageMode(s){
   };
   s._replaceCanvasImagePicker=()=>replaceInput.click();
   s._upscaleCanvasImage=async factor=>upscaleCanvasImage(s,factor);
+  s._exportCanvasImage=async()=>{try{await exportCanvasImage(s)}catch(error){reportError(error)}};
   const x=Math.floor(s._leftBarW/2),y=s._topBarH+278;
   s._canvasModeBtn=s._makeIconButton(x,y,'MAP',()=>s._openCanvasImagePicker(),'11px');
   s.events.once('shutdown',()=>{
     s._closeCanvasScaleMenu?.();
-    s._openCanvasImagePicker=null;s._replaceCanvasImagePicker=null;s._upscaleCanvasImage=null;
+    s._openCanvasImagePicker=null;s._replaceCanvasImagePicker=null;
+    s._upscaleCanvasImage=null;s._exportCanvasImage=null;
     input.remove();replaceInput.remove();resetTiles(s);
   });
 }

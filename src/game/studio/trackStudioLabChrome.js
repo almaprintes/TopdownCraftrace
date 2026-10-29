@@ -75,8 +75,8 @@ export function mountTrackStudioLabChrome(scene,gate){
   railOut.title='Alejar 20 %';railOut.setAttribute('aria-label','Alejar');
   let guidePanel;
   const map=button('MAP',()=>scene._openCanvasImagePicker?.(),'ts-lab__rail-button');
-  map.setAttribute('aria-label','Cargar imagen maestra para crear y probar un circuito');
-  map.title='Importar imagen maestra (para ▶ PROBAR)';
+  map.setAttribute('aria-label','MAP: importar fotografía o abrir taller de escala');
+  map.title='MAP: imagen maestra / herramientas de escala';
   add(rail,railHome,railIn,railOut,map);
   guidePanel=make('div','ts-lab__guide-panel');
   guidePanel.hidden=true;
@@ -189,10 +189,28 @@ export function mountTrackStudioLabChrome(scene,gate){
   nudgeControls.append(step);
   nudge.append(nudgeTitle,nudgeControls);
   nudge.hidden=true;
+  // Explicit, permanent real-pixel readout + one-tap workbench.
+  // Do not confuse Photoshop/PNG resolution with the editor camera zoom.
+  const photoPanel=make('section','ts-lab__photo-panel');
+  photoPanel.setAttribute('aria-label','Fotografía maestra y escala');
+  const photoTitle=make('strong','ts-lab__photo-title','IMAGEN MAESTRA · RESOLUCIÓN REAL');
+  const photoDimensions=make('div','ts-lab__photo-dimensions','— × — px');
+  const photoSource=make('div','ts-lab__photo-source','');
+  const photoHint=make('small','ts-lab__photo-hint','Píxeles reales · no es el zoom de pantalla');
+  const photoActions=make('div','ts-lab__photo-actions');
+  const photoScale=button('ESCALA · SUSTITUIR',()=>scene._openCanvasImagePicker?.(),'ts-lab__photo-action');
+  photoScale.setAttribute('aria-label','Abrir taller de escala del mapa');
+  const photoNew=button('EXPORTAR FOTO',()=>{
+    if(typeof scene._exportCanvasImage==='function')scene._exportCanvasImage();
+    else scene._openCanvasImagePicker?.();
+  },'ts-lab__photo-action ts-lab__photo-action--secondary');
+  photoActions.append(photoScale,photoNew);
+  photoPanel.append(photoTitle,photoDimensions,photoSource,photoHint,photoActions);
+  photoPanel.hidden=true;
   const toolsHead=make('div','ts-lab__tools-head');
   add(toolsHead,make('strong','','HERRAMIENTAS'),make('span','','TRAZADO Y MARCAS'));
   const toolHost=make('div','ts-lab__tool-host');
-  side.append(sideHead,metrics,meta,info,nudge,toolsHead,toolHost);
+  side.append(sideHead,metrics,meta,info,nudge,photoPanel,toolsHead,toolHost);
 
   root.append(header,rail,workspace,side,guidePanel);
   document.body.append(root);
@@ -221,6 +239,17 @@ export function mountTrackStudioLabChrome(scene,gate){
     const next=description.replaceAll('\n',' · ').replace(/\s+/g,' ').trim();
     if(next!==displayed){state(info,next);displayed=next;}
     state(meta,edge?'AJUSTE DE BORDES':scene._imageCanvas?'LIENZO FOTOGRÁFICO':'TRAZADO');
+    const nativePhoto=scene._imageCanvas;
+    const hasPhoto=!!(nativePhoto?.imageId&&nativePhoto.width>0&&nativePhoto.height>0);
+    photoPanel.hidden=!hasPhoto;
+    if(hasPhoto){
+      state(photoDimensions,nativePhoto.width+' × '+nativePhoto.height+' px');
+      state(photoSource,'ARCHIVO · '+(nativePhoto.name||'Imagen del proyecto'));
+      photoSource.title=nativePhoto.name||'';
+    }
+    map.setAttribute('aria-label',hasPhoto?'MAP: abrir taller de escala':'MAP: importar fotografía');
+    map.title=hasPhoto?'TALLER DE ESCALA · sustituir, ampliar o exportar foto':'Cargar imagen maestra';
+    map.setAttribute('data-photo-loaded',String(hasPhoto));
     const selected=(scene._selectedNode>=0)||(scene._selectedPiano>=0);
     nudge.hidden=!selected;
     state(step,'PASO '+scene._getNudgeStep?.()+' px');

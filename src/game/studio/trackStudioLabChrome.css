@@ -241,3 +241,30 @@
   background:linear-gradient(160deg,#115642,#103124);
 }
 .ts-lab__rail-button--fit:active{background:#13745b}
+
+/* Native image size is prominently visible, independent of editor zoom. */
+.ts-lab__photo-panel{
+  display:flex;flex-direction:column;gap:3px;flex:none;
+  padding:clamp(6px,.65vw,9px);border-radius:9px;
+  background:linear-gradient(135deg,#103b3b,#0a242d);
+  border:1px solid #299f87;
+}
+.ts-lab__photo-panel[hidden]{display:none}
+.ts-lab__photo-title{font-size:clamp(8px,.73vw,11px);letter-spacing:.05em;font-weight:900;color:#72f6d6}
+.ts-lab__photo-dimensions{font-size:clamp(16px,1.3vw,22px);line-height:1.2;font-weight:950;letter-spacing:.015em;color:#effffb;font-variant-numeric:tabular-nums}
+.ts-lab__photo-source{font-size:10px;color:#c3dadf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts-lab__photo-hint{font-size:9px;color:#b0d6cf;line-height:1.2}
+.ts-lab__photo-actions{display:flex;gap:5px;min-width:0;margin-top:3px}
+.ts-lab__photo-action{
+  flex:1;min-width:0;min-height:34px;padding:5px 6px;
+  font-size:clamp(9px,.75vw,11px);line-height:1.15;font-weight:900;
+  white-space:normal;background:#068b70;border:1px solid #3af2bf;
+  border-radius:7px;color:#fff;
+}
+.ts-lab__photo-action--secondary{background:#143c48;border-color:#56858e;font-size:clamp(8px,.67vw,10px)}
+@media(max-height:560px){
+  .ts-lab__photo-panel{gap:2px;padding:5px}
+  .ts-lab__photo-dimensions{font-size:14px}
+  .ts-lab__photo-actions{margin-top:1px}
+  .ts-lab__photo-action{min-height:29px;padding:3px}
+}
