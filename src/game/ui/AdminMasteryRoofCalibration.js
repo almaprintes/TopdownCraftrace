@@ -1,4 +1,5 @@
 import {CAR_SPECS} from '../cars/carSpecs.js';
+import './vehicleLabPaddockShared.css';
 import {bindMasteryHoldRepeat} from './masteryHoldRepeat.js';
 import {masteryWheelDataUri} from '../stats/carMastery.js';
 import official from '../stats/masteryRoofCalibration.json' with {type:'json'};
@@ -48,7 +49,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
     '-webkit-overflow-scrolling:touch;background:radial-gradient(circle at 50% 0%,#162c3a,#06101b 75%);'+
     'color:#fff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;'+
     'padding:clamp(6px,1.1vh,12px);pointer-events:auto;touch-action:pan-y;display:flex;flex-direction:column;min-height:0;';
-  root.classList.add('tdr-admin-mastery-editor');
+  root.classList.add('tdr-admin-mastery-editor','vl-paddock-tool','vl-paddock-mastery');
   root.innerHTML=`
     <style>
       .tdr-admin-mastery-editor { --mc-stroke:rgba(111,226,248,.28); }
@@ -129,12 +130,14 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
         .tdr-admin-mastery-editor .mcal-controls{overflow:visible;}
       }
     </style>
-    <div class="mcal-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
-      <div><strong style="font-size:clamp(14px,2.6vh,21px)">CALIBRAR MAESTRÍAS</strong>
-      <div style="font-size:10px;color:#97b3c8">POSICIÓN ÚNICA · LOBBY Y CARRERA · 1 PX</div></div>
-      <button type="button" data-action="close">CERRAR ✕</button>
+    <div class="mcal-toolbar vl-tool-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+      <div class="vl-tool-brand"><span class="vl-tool-logo">TD<em>R</em></span>
+      <div class="vl-tool-heading"><small>ADMIN HUB / VEHICLE LAB</small>
+      <strong style="font-size:clamp(14px,2.6vh,21px)">CALIBRAR MAESTRÍAS</strong>
+      <div class="vl-tool-subtitle" style="font-size:10px;color:#97b3c8">POSICIÓN ÚNICA · LOBBY Y CARRERA · 1 PX</div></div></div>
+      <button type="button" data-action="close">← VEHICLE LAB</button>
     </div>
-    <div class="mcal-filters" style="display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:3px 0 7px">
+    <div class="mcal-filters vl-tool-filters" style="display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:3px 0 7px">
       <label style="font-size:11px;color:#b1c9d6;font-weight:800">COCHE
         <select data-car aria-label="Elegir coche" style="display:block;min-width:155px;max-width:32vw;background:#102333;border:1px solid #55ddff;border-radius:8px;padding:9px;color:#fff;font:800 12px system-ui"></select>
       </label>
@@ -145,7 +148,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
       <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#b1cad7;font-weight:800"><input type="checkbox" data-preview-visible checked aria-label="Mostrar insignia en la previsualización"> MOSTRAR INSIGNIA</label>
     </div>
     <div class="mcal-columns" style="display:grid;gap:clamp(7px,1vw,14px)">
-      <div class="mcal-preview">
+      <div class="mcal-preview vl-tool-preview">
         <div data-stage style="position:relative;width:100%;height:clamp(180px,50vh,420px);border:1px solid #346074;border-radius:13px;background:radial-gradient(ellipse at center,rgba(46,93,111,.32),rgba(8,18,29,.98) 75%);overflow:hidden">
           <img data-car-image alt="Vista cenital del coche" draggable="false" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:94%;max-width:58%;width:auto;object-fit:contain;filter:drop-shadow(0 7px 10px #000c)">
           <img data-badge alt="Insignia de maestría" draggable="false" style="position:absolute;width:42px;height:42px;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 2px 2px #000);object-fit:contain">
@@ -153,7 +156,7 @@ export function showAdminMasteryRoofCalibration(adminRoot,{initialCarId=null,onC
         </div>
         <p style="color:#90adbd;font-size:10px;line-height:1.5;margin:7px 0">El ajuste único utiliza las dimensiones del vehículo y se aplica automáticamente en lobby y carrera.</p>
       </div>
-      <div class="mcal-controls">
+      <div class="mcal-controls vl-tool-controls">
         <div class="mcal-motion">
           <strong data-view-title style="font-size:clamp(12px,1.8vh,16px);color:#76ebff">POSICIÓN GLOBAL</strong>
           <div data-readout style="color:#d1e8f2;font:800 11px system-ui;line-height:1.45">X 0 px · Y 0 px</div>

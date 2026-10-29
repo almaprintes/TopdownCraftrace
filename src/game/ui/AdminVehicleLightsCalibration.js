@@ -1,4 +1,5 @@
 import {CAR_SPECS} from '../cars/carSpecs.js';
+import './vehicleLabPaddockShared.css';
 import {availableCarSkins} from '../skins/carSkins.js';
 import {bindMasteryHoldRepeat} from './masteryHoldRepeat.js';
 import {
@@ -56,10 +57,10 @@ export function showAdminVehicleLightsCalibration(host,{initialCarId='crown_cupe
  @media(max-width:700px) and (orientation:portrait){.tdr-lightcal .lc-cols{grid-template-columns:1fr;flex:none}.tdr-lightcal .lc-stage{height:35vh}}
  @media(max-height:440px){.tdr-lightcal .lc-pad button{min-height:29px}.tdr-lightcal .lc-panel{padding:6px;gap:5px}.tdr-lightcal .lc-stage{min-height:145px}}
  </style>
- <div class="lc-head"><div><strong style="font-size:clamp(15px,3vh,23px)">💡 LUCES / ÓPTICAS</strong><div class="lc-hint">AJUSTES POR COCHE Y SKIN · 1 PX POR TOQUE</div></div><button type="button" data-close>CERRAR ×</button></div>
- <div class="lc-menu"><label>COCHE <select data-car></select></label><label>SKIN <select data-skin></select></label><label><input data-braking type="checkbox"> SIMULAR FRENADA</label></div>
- <div class="lc-cols"><div class="lc-stage"><img data-image draggable="false" alt="Vista cenital del coche"><svg data-overlay aria-label="Ópticas ajustables"></svg><div class="lc-stage-note">ARRASTRA EL PUNTO O UTILIZA LAS FLECHAS · ROJO: TRASERAS · BLANCO: DELANTERAS</div></div>
- <div class="lc-panel">
+ <div class="lc-head vl-tool-header"><div class="vl-tool-brand"><span class="vl-tool-logo">TD<em>R</em></span><div class="vl-tool-heading"><small>ADMIN HUB / VEHICLE LAB</small><strong>LUZ Y ÓPTICAS</strong><div class="lc-hint vl-tool-subtitle">AJUSTES POR COCHE Y SKIN · 1 PX POR TOQUE</div></div></div><button type="button" data-close>← VEHICLE LAB</button></div>
+ <div class="lc-menu vl-tool-filters"><label>COCHE <select data-car></select></label><label>SKIN <select data-skin></select></label><label><input data-braking type="checkbox"> SIMULAR FRENADA</label></div>
+ <div class="lc-cols"><div class="lc-stage vl-tool-preview"><img data-image draggable="false" alt="Vista cenital del coche"><svg data-overlay aria-label="Ópticas ajustables"></svg><div class="lc-stage-note">ARRASTRA EL PUNTO O UTILIZA LAS FLECHAS · ROJO: TRASERAS · BLANCO: DELANTERAS</div></div>
+ <div class="lc-panel vl-tool-controls">
  <div class="lc-split"><button type="button" data-group="front">◉ FAROS DELANTEROS</button><button type="button" data-group="rear">◉ FRENO / TRASERAS</button></div>
  <div class="lc-row"><button type="button" data-side="left">IZQUIERDA</button><button type="button" data-side="right">DERECHA</button><label><input type="checkbox" data-enabled> ACTIVADAS</label></div>
  <strong class="lc-count" data-position>X 0 · Y 0 · TAMAÑO 0</strong>
@@ -72,7 +73,7 @@ export function showAdminVehicleLightsCalibration(host,{initialCarId='crown_cupe
  <div class="lc-hint">Los ajustes se guardan localmente hasta exportar. Sube el JSON a <strong>src/game/skins/vehicleLights.json</strong> para aplicarlos a todos los jugadores. Las físicas y las cartas no cambian.</div>
  <small data-status role="status" aria-live="polite" style="color:#83ecc3;min-height:13px"></small>
  </div></div>`;
- root.classList.add('tdr-lightcal');host.appendChild(root);
+ root.classList.add('tdr-lightcal','vl-paddock-tool','vl-paddock-lights');host.appendChild(root);
  const $=selector=>root.querySelector(selector);
  const car=$('[data-car]'),skin=$('[data-skin]'),image=$('[data-image]'),svg=$('[data-overlay]');
  const holds=[];

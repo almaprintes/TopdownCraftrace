@@ -1,4 +1,5 @@
 import {CAR_SPECS} from '../cars/carSpecs.js';
+import './vehicleLabPaddockShared.css';
 import {availableCarSkins} from '../skins/carSkins.js';
 import {factorySkinGeometryId} from '../skins/workshopCarArt.js';
 import {bindMasteryHoldRepeat} from './masteryHoldRepeat.js';
@@ -12,7 +13,7 @@ export function showAdminSkinGeometryCalibration(host,{initialCarId='crown_cuper
  const ids=Object.keys(CAR_SPECS).filter(id=>!['stock','touring','power'].includes(id));
  let draft={};try{draft=JSON.parse(localStorage.getItem(DRAFT_KEY)||'{}')||{};}catch{}
  let carId=ids.includes(initialCarId)?initialCarId:ids[0],skinId='original',view='race',shortAxis=0,ready=false;
- let root=document.createElement('div');root.className='tdr-admin-skin-geometry';
+ let root=document.createElement('div');root.className='tdr-admin-skin-geometry vl-paddock-tool vl-paddock-skins';
  root.style.cssText='position:absolute;inset:0;z-index:90000;background:linear-gradient(145deg,#071521,#0c2937);color:#f4fbff;font:700 12px system-ui;display:flex;flex-direction:column;gap:8px;padding:clamp(7px,2vh,14px);box-sizing:border-box;overflow:auto;touch-action:pan-y;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;';
  root.innerHTML=`<style>
  .tdr-admin-skin-geometry *{box-sizing:border-box;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
@@ -31,10 +32,10 @@ export function showAdminSkinGeometryCalibration(host,{initialCarId='crown_cuper
  @media(max-height:480px){.tdr-admin-skin-geometry .sg-grid{min-height:0}.tdr-admin-skin-geometry .sg-pad button{min-height:29px}}
  @media(max-width:700px) and (orientation:portrait){.tdr-admin-skin-geometry .sg-grid{grid-template-columns:1fr;flex:none}.tdr-admin-skin-geometry .sg-preview{height:35vh}}
  </style>
- <div class="sg-top"><div><strong style="font-size:clamp(14px,3vh,24px)">CALIBRAR SKINS</strong><div class="sg-help">APARIENCIA · 1 PX POR PULSACIÓN · MANTENER PULSADO</div></div><button data-close type="button">CERRAR ×</button></div>
- <div class="sg-selectors"><label>COCHE <select data-car></select></label><label>APARIENCIA <select data-skin></select></label><label>VISTA <select data-view><option value="race">CARRERA · CENITAL</option><option value="factory">FÁBRICA · 3/4</option></select></label><label><input data-reference type="checkbox" checked> MOSTRAR REFERENCIA</label></div>
- <div class="sg-grid"><div class="sg-preview"><img data-base alt=""><img data-skin-image alt=""><span data-wait style="position:absolute;left:10px;bottom:10px;color:#aed3e1;font-size:10px">REFERENCIA BASE + SKIN</span></div>
- <div class="sg-controls"><strong data-position>POSICIÓN · X 0 · Y 0</strong>
+ <div class="sg-top vl-tool-header"><div class="vl-tool-brand"><span class="vl-tool-logo">TD<em>R</em></span><div class="vl-tool-heading"><small>ADMIN HUB / VEHICLE LAB</small><strong>CALIBRAR SKINS</strong><div class="sg-help vl-tool-subtitle">APARIENCIA · 1 PX POR PULSACIÓN · MANTENER PULSADO</div></div></div><button data-close type="button">← VEHICLE LAB</button></div>
+ <div class="sg-selectors vl-tool-filters"><label>COCHE <select data-car></select></label><label>APARIENCIA <select data-skin></select></label><label>VISTA <select data-view><option value="race">CARRERA · CENITAL</option><option value="factory">FÁBRICA · 3/4</option></select></label><label><input data-reference type="checkbox" checked> MOSTRAR REFERENCIA</label></div>
+ <div class="sg-grid"><div class="sg-preview vl-tool-preview"><img data-base alt=""><img data-skin-image alt=""><span data-wait style="position:absolute;left:10px;bottom:10px;color:#aed3e1;font-size:10px">REFERENCIA BASE + SKIN</span></div>
+ <div class="sg-controls vl-tool-controls"><strong data-position>POSICIÓN · X 0 · Y 0</strong>
  <div class="sg-pad"><i></i><button type="button" data-nudge="up">▲ 1</button><i></i>
  <button type="button" data-nudge="left">◀ 1</button><button type="button" data-center>⌖</button><button type="button" data-nudge="right">1 ▶</button>
  <i></i><button type="button" data-nudge="down">▼ 1</button><i></i></div>
