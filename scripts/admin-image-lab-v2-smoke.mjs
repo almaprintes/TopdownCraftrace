@@ -8,7 +8,7 @@ const html=fs.readFileSync('index.html','utf8');
 assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.51"'));
 assert.ok(core.includes("import {mountImageLabV2} from './adminImageLabV2.js'"));
 assert.ok(core.includes('skin.presentResult(r,sourceFile,href,'));
-assert.ok(core.includes('skin.showSelection(selected[0],selected.length)'));
+assert.ok(core.includes('skin.showSelection(selected[0],selected.length,detectSourceFormat(selected[0]))'));
 assert.ok(core.includes('skin.clearOutput()'));
 assert.ok(core.includes("const result=await convertFileToImage(file,{format,quality,scale,mobile})"));
 assert.ok(core.includes("smallButton('VER ANTES / DESPUÉS'"));
