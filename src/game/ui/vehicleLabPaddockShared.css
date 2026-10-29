@@ -1,0 +1,198 @@
+/* DEV 1.3.61 · PADDOCK visual language for Vehicle Lab calibration subviews.
+   Every selector stays scoped to admin modal roots; editor logic untouched. */
+.vl-paddock-tool{
+ --vl-highlight:#4fd9f2;--vl-glow:#214e67;
+ position:absolute;inset:0;min-height:0;max-height:100%;
+ display:flex!important;flex-direction:column!important;
+ gap:0!important;padding:0!important;overflow:hidden!important;
+ background:radial-gradient(ellipse at 34% -20%,#244b61 0%,transparent 53%),
+   radial-gradient(ellipse at 92% 95%,#123641 0%,transparent 47%),
+   linear-gradient(115deg,#091b2b,#06121f)!important;
+ color:#edf8ff!important;
+ font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+}
+.vl-paddock-tool.vl-paddock-mastery{--vl-highlight:#f0c977;--vl-glow:#544029}
+.vl-paddock-tool.vl-paddock-skins{--vl-highlight:#77bde9;--vl-glow:#23485e}
+.vl-paddock-tool.vl-paddock-lights{--vl-highlight:#f0c16b;--vl-glow:#53452d}
+.vl-paddock-tool *, .vl-paddock-tool *::before, .vl-paddock-tool *::after{box-sizing:border-box}
+.vl-paddock-tool .vl-tool-header{
+ flex:0 0 auto!important;display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:nowrap!important;min-width:0;gap:8px!important;
+ min-height:clamp(51px,9vh,72px);margin:0!important;
+ padding:5px max(12px,env(safe-area-inset-right,0px)) 5px max(12px,env(safe-area-inset-left,0px))!important;
+ border-bottom:1px solid #3e657d;
+ background:linear-gradient(110deg,#102c3c,#081726 74%);
+ box-shadow:0 5px 16px #0005;
+}
+.vl-paddock-tool .vl-tool-brand{display:flex;align-items:center;gap:10px;min-width:0}
+.vl-paddock-tool .vl-tool-logo{
+ display:inline-block;white-space:nowrap;font-size:clamp(23px,3vw,43px);
+ line-height:1;font-weight:1000;font-style:italic;letter-spacing:-.12em;
+ transform:skew(-7deg);color:#f4fbff;
+}
+.vl-paddock-tool .vl-tool-logo em{font-style:inherit;color:#ed3553}
+.vl-paddock-tool .vl-tool-heading{
+ display:flex;flex-direction:column;min-width:0;
+ padding-left:10px;border-left:2px solid #718ca4;
+}
+.vl-paddock-tool .vl-tool-heading small{
+ font-size:clamp(8px,.74vw,11px);font-weight:900;
+ letter-spacing:.13em;color:#a4bed1;
+}
+.vl-paddock-tool .vl-tool-heading>strong{
+ font-size:clamp(16px,1.9vw,29px)!important;
+ font-style:italic;font-weight:1000;line-height:1.05;
+ white-space:nowrap;letter-spacing:.015em;color:#fff;
+}
+.vl-paddock-tool .vl-tool-subtitle{
+ font-size:clamp(8px,.66vw,10px)!important;
+ color:#99b9c9!important;line-height:1.22;letter-spacing:.04em;
+}
+.vl-paddock-tool button,
+.vl-paddock-tool select{
+ color:#e8f6ff!important;
+ border:1px solid #486d83!important;
+ border-radius:9px!important;
+ background:linear-gradient(130deg,#15364b,#0c2433)!important;
+ font-family:inherit!important;font-size:clamp(10px,.83vw,12px)!important;
+ font-weight:850!important;
+ touch-action:manipulation;
+ -webkit-tap-highlight-color:transparent;
+}
+.vl-paddock-tool button:focus-visible,.vl-paddock-tool select:focus-visible{
+ outline:2px solid var(--vl-highlight)!important;outline-offset:2px;
+}
+.vl-paddock-tool button:active{filter:brightness(1.22)}
+.vl-paddock-tool .vl-tool-header>button{
+ min-height:38px!important;flex:0 0 auto;
+ border-color:var(--vl-highlight)!important;padding:6px 12px!important;
+ color:#f4faff!important;white-space:nowrap;
+}
+.vl-paddock-tool .vl-tool-filters{
+ flex:0 0 auto!important;min-height:0;
+ display:flex;align-items:center;justify-content:flex-start;
+ flex-wrap:nowrap!important;gap:clamp(6px,1.1vw,15px)!important;
+ padding:7px max(9px,env(safe-area-inset-right,0px)) 7px max(9px,env(safe-area-inset-left,0px))!important;
+ border-bottom:1px solid #315368;background:#0a2232d9;
+ overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+ scrollbar-width:thin;
+}
+.vl-paddock-tool .vl-tool-filters>label{flex:0 0 auto;min-width:0}
+.vl-paddock-tool .vl-tool-filters select{
+ height:34px;min-height:34px!important;max-width:clamp(110px,23vw,235px)!important;
+ padding:5px 7px!important;border-color:#587f96!important;
+ background:#0b2234!important;
+}
+.vl-paddock-tool input[type=checkbox],.vl-paddock-tool input[type=range]{
+ accent-color:#39e8bb;
+}
+.vl-paddock-tool .mcal-columns,.vl-paddock-tool .sg-grid,.vl-paddock-tool .lc-cols{
+ flex:1 1 auto!important;min-height:0!important;min-width:0!important;
+ display:grid!important;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr)!important;
+ gap:clamp(7px,1vw,12px)!important;overflow:hidden!important;
+ padding:clamp(6px,1.1vh,10px) max(8px,env(safe-area-inset-right,0px)) clamp(5px,1vh,10px) max(8px,env(safe-area-inset-left,0px));
+}
+.vl-paddock-tool .vl-tool-preview,
+.vl-paddock-tool .vl-tool-controls{
+ min-width:0!important;min-height:0!important;
+ border:1px solid #41667b!important;border-radius:14px!important;
+ background:linear-gradient(145deg,#0d2738,#071923)!important;
+ box-shadow:inset 0 1px #ffffff18,0 7px 22px #0006;
+ overflow:hidden;
+}
+.vl-paddock-tool .vl-tool-preview{
+ position:relative;isolation:isolate;overflow:hidden!important;
+ background:radial-gradient(ellipse at center,#153d51,#06141f 70%)!important;
+}
+.vl-paddock-tool .vl-tool-preview:before{
+ content:'VEHICLE LAB · VISTA PREVIA';position:absolute;z-index:4;
+ top:8px;left:10px;pointer-events:none;
+ font-size:9px;font-weight:900;letter-spacing:.09em;
+ color:var(--vl-highlight);opacity:.9;
+}
+.vl-paddock-tool .vl-tool-preview img{pointer-events:none;-webkit-user-drag:none}
+.vl-paddock-tool .vl-tool-controls{
+ overflow-y:auto!important;overflow-x:hidden!important;
+ overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+ scrollbar-width:thin;scrollbar-color:#4e7587 transparent;
+ padding:clamp(7px,.85vw,12px)!important;
+}
+.vl-paddock-tool .vl-tool-controls button{min-height:35px}
+.vl-paddock-tool [data-status]{
+ display:block;min-height:19px;color:#91f5c7!important;
+ font-size:10px;line-height:1.35;padding:2px 0;
+}
+.vl-paddock-tool [data-export],.vl-paddock-tool [data-copy]{
+ border-color:#2ddcb0!important;background:#133f3a!important;
+ color:#b6ffe2!important;
+}
+.vl-paddock-tool [data-reset],.vl-paddock-tool [data-reset-view],
+.vl-paddock-tool [data-reset-center]{
+ border-color:#8c7657!important;
+}
+.vl-paddock-tool [data-nudge],.vl-paddock-tool [data-rotate]{
+ min-height:36px!important;
+}
+.vl-paddock-tool [data-nudge]{touch-action:none!important}
+.vl-paddock-tool .mcal-preview{padding:7px!important}
+.vl-paddock-tool .mcal-preview [data-stage]{
+ min-height:0!important;border-color:#426d81!important;
+ background:radial-gradient(ellipse at center,#193f52,#071523 73%)!important;
+}
+.vl-paddock-tool .mcal-controls{
+ grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ align-content:start;
+}
+.vl-paddock-tool .mcal-controls>div{min-width:0}
+.vl-paddock-tool .mcal-motion [data-view-title]{
+ color:var(--vl-highlight)!important;
+}
+.vl-paddock-tool .mcal-export{color:#f3d4a0!important}
+.vl-paddock-tool .sg-preview{min-height:0!important}
+.vl-paddock-tool .sg-controls{display:grid;align-content:start;gap:9px}
+.vl-paddock-tool .sg-pad button{min-width:0;min-height:36px}
+.vl-paddock-tool .sg-bar{
+ padding:7px;border:1px solid #27465c;border-radius:9px;
+ background:#10283b;
+}
+.vl-paddock-tool .sg-bar strong{color:#c5e7f8}
+.vl-paddock-tool .sg-controls>[data-position]{color:var(--vl-highlight)}
+.vl-paddock-tool .lc-stage{min-height:0!important;touch-action:none}
+.vl-paddock-tool .lc-panel{
+ display:flex;flex-direction:column;gap:8px!important;
+}
+.vl-paddock-tool .lc-split button{
+ min-width:0;min-height:41px!important;white-space:normal;
+ border-color:var(--vl-highlight)!important;
+}
+.vl-paddock-tool .lc-row{min-width:0}
+.vl-paddock-tool .lc-count{color:var(--vl-highlight)}
+.vl-paddock-tool .lc-meter{
+ padding:5px 0;border-top:1px solid #244a5e;gap:7px;
+}
+.vl-paddock-tool .lc-meter input[type=range]{max-width:none;min-width:70px;accent-color:#f0c16b}
+.vl-paddock-tool .lc-stage-note{color:#c1dfec}
+@media(max-height:540px) and (min-width:701px){
+ .vl-paddock-tool .vl-tool-header{min-height:52px}
+ .vl-paddock-tool .vl-tool-heading>strong{font-size:clamp(14px,1.7vw,21px)!important}
+ .vl-paddock-tool .vl-tool-filters{padding-top:4px!important;padding-bottom:4px!important}
+ .vl-paddock-tool .vl-tool-preview:before{font-size:8px;top:5px}
+ .vl-paddock-tool .mcal-controls{grid-template-columns:1fr!important}
+ .vl-paddock-tool .mcal-pad{max-width:290px}
+ .vl-paddock-tool .mcal-preview p{display:none}
+ .vl-paddock-tool .mcal-controls button,.vl-paddock-tool .sg-controls button{min-height:34px!important}
+}
+@media(max-width:700px) and (orientation:portrait){
+ .vl-paddock-tool{overflow-y:auto!important;overflow-x:hidden!important}
+ .vl-paddock-tool .vl-tool-header{position:sticky;top:0;z-index:20}
+ .vl-paddock-tool .vl-tool-heading>strong{font-size:17px!important}
+ .vl-paddock-tool .vl-tool-heading small{display:none}
+ .vl-paddock-tool .mcal-columns,.vl-paddock-tool .sg-grid,.vl-paddock-tool .lc-cols{
+  display:flex!important;flex-direction:column;flex:0 0 auto!important;
+  overflow:visible!important;
+ }
+ .vl-paddock-tool .vl-tool-preview{height:38vh!important;min-height:205px!important;flex:0 0 auto}
+ .vl-paddock-tool .mcal-preview [data-stage]{min-height:190px!important}
+ .vl-paddock-tool .vl-tool-controls{overflow:visible!important;min-height:250px!important}
+ .vl-paddock-tool .mcal-controls{grid-template-columns:1fr!important}
+}

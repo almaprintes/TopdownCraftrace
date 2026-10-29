@@ -1,0 +1,132 @@
+/* DEV 1.3.61 · Garage Ficha follows the premium PADDOCK / Vehicle Lab family. */
+.vl-ficha{
+ box-sizing:border-box;position:relative;width:100%;height:100%;min-height:0;
+ display:grid;grid-template-rows:clamp(54px,10vh,76px) minmax(0,1fr) clamp(54px,10vh,70px);
+ overflow:hidden;isolation:isolate;color:#eff8ff;
+ font:750 12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ background:radial-gradient(ellipse at 25% -15%,#21455c 0%,transparent 55%),
+   repeating-linear-gradient(90deg,#071a2900 0 90px,#a7e1f506 90px 91px),
+   linear-gradient(125deg,#0a1c2b,#061220 82%);
+}
+.vl-ficha *{box-sizing:border-box}
+.vl-ficha button{
+ font:850 12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+ border-radius:10px;min-height:38px;padding:6px 13px;
+ color:#f1faff;background:linear-gradient(140deg,#193a4e,#092536);
+ border:1px solid #527c93;
+}
+.vl-ficha button:focus-visible{outline:2px solid #50efc1;outline-offset:2px}
+.vl-ficha button:active{filter:brightness(1.2)}
+.vl-ficha-header{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+ min-width:0;padding:5px max(12px,env(safe-area-inset-right,0px)) 5px max(12px,env(safe-area-inset-left,0px));
+ border-bottom:1px solid #40687c;
+ background:linear-gradient(110deg,#10283a,#091726 74%);
+}
+.vl-ficha-brand{display:flex;align-items:center;min-width:0;gap:12px}
+.vl-ficha-logo{
+ font-size:clamp(25px,3vw,43px);font-weight:1000;font-style:italic;letter-spacing:-.12em;
+ line-height:1;transform:skew(-7deg);white-space:nowrap;
+}
+.vl-ficha-logo em{font-style:inherit;color:#f03c57}
+.vl-ficha-brand>div{display:flex;flex-direction:column;border-left:2px solid #7898ad;padding-left:11px}
+.vl-ficha-brand small{font-size:clamp(8px,.74vw,10px);font-weight:900;letter-spacing:.12em;color:#adccdb}
+.vl-ficha-brand strong{font-size:clamp(15px,1.8vw,28px);font-weight:1000;font-style:italic;letter-spacing:.025em;white-space:nowrap}
+.vl-ficha-header>button{flex:0 0 auto}
+.vl-ficha-body{
+ display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);
+ gap:clamp(7px,1.2vw,18px);padding:clamp(8px,1.4vh,15px) max(8px,env(safe-area-inset-right,0px)) clamp(7px,1.2vh,12px) max(8px,env(safe-area-inset-left,0px));
+ min-height:0;overflow:hidden;
+}
+.vl-ficha-preview,.vl-ficha-dossier{
+ min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;
+ border:1px solid #41677d;border-radius:15px;
+ background:linear-gradient(145deg,#102d41,#071a2a);
+ box-shadow:inset 0 1px #ffffff15,0 9px 22px #0005;
+}
+.vl-ficha-kicker,.vl-ficha-dossier-title{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;
+ padding:10px 13px;border-bottom:1px solid #2d5068;
+ font-size:clamp(10px,.98vw,14px);color:#ccebf9;font-weight:1000;font-style:italic;letter-spacing:.04em;
+}
+.vl-ficha-kicker span{color:#55e8bd;font-style:normal}
+.vl-ficha-dossier-title small{color:#7cabbf;font-size:9px;font-style:normal;white-space:nowrap}
+.vl-ficha-car{
+ position:relative;flex:1;min-height:50px;isolation:isolate;
+ display:grid;place-items:center;overflow:hidden;
+ background:radial-gradient(ellipse at 50% 43%,#1e4960,#091b2c 70%);
+ margin:6px 9px;border:1px solid #2c556b;border-radius:12px;
+}
+.vl-ficha-car img{
+ position:relative;z-index:1;width:100%;height:100%;max-height:100%;
+ object-fit:contain;-webkit-user-drag:none;
+ filter:drop-shadow(0 8px 12px #000a);
+}
+.vl-ficha-fallback{position:absolute;z-index:0;font-size:50px;font-style:italic;font-weight:1000;color:#376074}
+.vl-ficha-name{
+ flex:0 0 auto;padding:1px 13px 0;color:#f5fbff;
+ font-size:clamp(14px,1.6vw,23px);font-weight:1000;font-style:italic;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.vl-ficha-details{
+ flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;gap:9px;
+ padding:1px 13px 10px;font-size:10px;font-weight:850;color:#b5d5e5;min-width:0;
+}
+.vl-ficha-details span:last-child{color:#51e5b6}
+.vl-ficha-dossier{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.vl-ficha-stats{display:flex;flex-direction:column;gap:7px;padding:12px 13px 7px}
+.vl-ficha-stat{
+ display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:37px;
+ padding:6px 12px;border-radius:9px;border:1px solid #2c5066;
+ background:linear-gradient(110deg,#102a3d,#0b2031);
+}
+.vl-ficha-stat span{font-size:clamp(10px,.92vw,13px);font-weight:850;color:#b7dbe9;letter-spacing:.04em}
+.vl-ficha-stat strong{font-size:clamp(13px,1.4vw,20px);color:#6ef2c4;font-weight:1000;white-space:nowrap;font-variant-numeric:tabular-nums}
+.vl-ficha-technical{margin:5px 13px;border:1px solid #416278;border-radius:10px;padding:8px 10px;flex:0 0 auto}
+.vl-ficha-technical summary{cursor:pointer;color:#e4c98d;font-size:10px;font-weight:900}
+.vl-ficha-technical p{margin:6px 0;font:700 10px ui-monospace,SFMono-Regular,Consolas,monospace;color:#abd1e3}
+.vl-ficha-info{margin:auto 13px 11px;flex:0 0 auto;color:#7caac0;font-size:10px;letter-spacing:.08em;font-weight:850}
+.vl-ficha-footer{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;
+ padding:5px max(12px,env(safe-area-inset-right,0px)) 5px max(12px,env(safe-area-inset-left,0px));
+ border-top:1px solid #406d82;background:#071a2ac9;
+}
+.vl-ficha-footer>span{min-width:0;font-size:10px;color:#9dc9d9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vl-ficha-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.vl-ficha-actions button{min-width:140px;min-height:42px;color:#eff9ff;font-size:13px}
+.vl-ficha-actions [data-ficha-action="test"]{
+ border-color:#2ceab3;color:#082b1d;
+ background:linear-gradient(130deg,#4efac4,#1bbb8c);
+}
+@media(max-height:530px) and (min-width:701px){
+ .vl-ficha{grid-template-rows:53px minmax(0,1fr) 52px}
+ .vl-ficha-kicker,.vl-ficha-dossier-title{padding:7px 10px}
+ .vl-ficha-stats{gap:4px;padding:6px 10px}
+ .vl-ficha-stat{min-height:29px;padding:3px 9px}
+ .vl-ficha-actions button{min-height:38px}
+}
+@media(max-width:700px) and (orientation:portrait){
+ .vl-ficha{height:100%;overflow-y:auto;grid-template-rows:56px auto 62px}
+ .vl-ficha-body{grid-template-columns:minmax(0,1fr);overflow:visible}
+ .vl-ficha-preview{min-height:260px}
+ .vl-ficha-car{min-height:175px}
+ .vl-ficha-dossier{min-height:270px;overflow:visible}
+ .vl-ficha-actions button{min-width:90px}
+ .vl-ficha-footer>span{display:none}
+}
+
+/* Preserve the live Garage coin wallet, without a second legacy header. */
+.vl-ficha-header-right{display:flex;align-items:center;gap:12px;min-width:0}
+.vl-ficha [data-ficha-wallet]{display:flex;align-items:center;min-width:0}
+.vl-ficha .vl-ficha-wallet{
+ display:flex;align-items:center;gap:7px;min-width:0;
+ padding:5px 9px;border:1px solid #3b596c;border-radius:9px;
+ background:#0a1a2b;color:#e6f3ff;
+}
+.vl-ficha .vl-ficha-wallet-icon{width:31px;height:31px;object-fit:contain}
+.vl-ficha .vl-ficha-wallet-copy{display:flex;flex-direction:column;gap:1px}
+.vl-ficha .vl-ficha-wallet-copy small{color:#a7bfd0;font-size:9px;font-weight:900;letter-spacing:.07em}
+.vl-ficha .vl-ficha-wallet-copy strong{color:#fff;font-size:15px;font-weight:1000}
+@media(max-height:510px){.vl-ficha .vl-ficha-wallet{padding:3px 7px}}
+@media(max-width:740px){.vl-ficha [data-ficha-wallet]{display:none}}

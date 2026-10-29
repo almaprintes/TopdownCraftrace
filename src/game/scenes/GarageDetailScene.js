@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import {mountSceneAppHeader} from '../ui/TdrAppHeader.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
+import {mountGarageDetailPaddock} from '../ui/garageDetailPaddock.js';
 
 const SKIN_BASE = 'assets/skins/';
 // ===============================
@@ -149,10 +150,8 @@ export class GarageDetailScene extends Phaser.Scene {
     // ✅ spec EFECTIVO (incluye edits guardados)
     const spec = this._carId ? getEffectiveCarSpec(this._carId) : null;
 
-    // Ficha uses the same non-zooming wallet/header as the Garage itself.
-    mountSceneAppHeader(this,{title:'FICHA',onBack:()=>this.scene.start('GarageScene',{mode:this._mode})});
-
     if (!spec) {
+      mountSceneAppHeader(this,{title:'FICHA',onBack:()=>this.scene.start('GarageScene',{mode:this._mode})});
       this.add.text(width / 2, height / 2, 'Coche no encontrado', {
         fontFamily: 'system-ui',
         fontSize: '18px',
@@ -162,6 +161,41 @@ export class GarageDetailScene extends Phaser.Scene {
       }).setOrigin(0.5);
       return;
     }
+
+    // Keep the existing effective-spec and derived-stat calculations.
+    // The premium DOM dossier is the only visible Ficha UI when supported.
+    const dsPremium = computeDesignStatsFromPhysics(spec);
+    const telemetryPxps = readTopSpeedPxps(this._carId);
+    const effectiveTopKmh = (telemetryPxps == null ? spec.maxFwd : telemetryPxps) * KMH_PER_PXPS;
+    const premiumRows = [
+      {label:'VEL. MÁX.',value:Math.round(effectiveTopKmh),unit:'km/h',metric:'speed'},
+      {label:'ACELERACIÓN',value:dsPremium.ACC},
+      {label:'FRENADA',value:dsPremium.FRN},
+      {label:'GIRO',value:dsPremium.GIR},
+      {label:'ESTABILIDAD',value:dsPremium.EST}
+    ];
+    const fmtTech=(v,d=2)=>Number.isFinite(v)?Number(v).toFixed(d):'—';
+    const techInfo=isAdmin?[
+      `maxFwd ${fmtTech(spec.maxFwd,1)} px/s`,
+      `accel ${fmtTech(spec.accel)} · brakeForce ${fmtTech(spec.brakeForce)}`,
+      `turnRate ${fmtTech(spec.turnRate)} · turnMin ${fmtTech(spec.turnMin)}`,
+      `grip D/C/B ${fmtTech(spec.gripDrive)} / ${fmtTech(spec.gripCoast)} / ${fmtTech(spec.gripBrake)}`
+    ]:[];
+    const premium=mountGarageDetailPaddock(this,{
+      spec,carId:this._carId,mode:this._mode,rows:premiumRows,techInfo,
+      onBack:()=>this.scene.start('GarageScene',{mode:this._mode}),
+      onTune:()=>this._toast('Tienda de mejoras: próximamente'),
+      onTest:()=>{
+        localStorage.setItem('tdr2:carId',this._carId);
+        this.scene.start('race',{carId:this._carId});
+      }
+    });
+    if(premium){
+      this._garageDetailPaddock=premium;
+      return;
+    }
+    // Legacy Phaser card is kept only as a fallback when DOM isn't available.
+    mountSceneAppHeader(this,{title:'FICHA',onBack:()=>this.scene.start('GarageScene',{mode:this._mode})});
 
     // Nombre grande
     const nameText = this.add.text(width / 2, Math.max(76,Math.min(90,height*.21)), (spec.name || this._carId).toUpperCase(), {
