@@ -7,7 +7,7 @@ const chrome=fs.readFileSync('src/game/studio/trackStudioLabChrome.js','utf8');
 const css=fs.readFileSync('src/game/studio/trackStudioLabChrome.css','utf8');
 const scene=fs.readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
 const shape=fs.readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
-const gate=fs.readFileSync('src/game/studio/trackStudioGateControls.js','utf8');
+const gateSource=fs.readFileSync('src/game/studio/trackStudioGateControls.js','utf8');
 const index=fs.readFileSync('index.html','utf8');
 
 assert.match(index,/name="tdr-dev-version" content="DEV 1\.3\.54"/);
@@ -17,7 +17,7 @@ assert.ok(scene.includes("const gate=installTrackStudioGateControls(this)"));
 assert.ok(shape.includes('s._studioShapeButtons={create:createBtn'));
 assert.ok(shape.includes('container.run=callback'));
 assert.ok(shape.includes('const nativeVisible=!s._studioChromeMounted'));
-assert.ok(gate.includes('mountInto(host){'));
+assert.ok(gateSource.includes('mountInto(host){'));
 assert.ok(css.includes('--ts-teal:#19e5a0'));
 assert.ok(css.includes('pointer-events:none'));
 assert.ok(css.includes('pointer-events:auto'));
