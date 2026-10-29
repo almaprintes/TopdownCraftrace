@@ -46,3 +46,15 @@ export function updateTrackPinch(cam,gesture,p1,p2,minZoom=0.12,maxZoom=2.5){
   cam.scrollY+=gesture.anchor.y-actual.y;
   return true;
 }
+
+// Fit an authored image or set of nodes without changing any world geometry.
+// SetZoom and centerOn use Phaser's real camera transform and map bounds.
+export function fitTrackCamera(cam,bounds,minZoom=0.02,maxZoom=2.5,padding=1.08){
+  if(!cam||!bounds||!(bounds.width>0)||!(bounds.height>0))return false;
+  if(!(cam.width>0)||!(cam.height>0))return false;
+  const zoom=Math.max(minZoom,Math.min(maxZoom,
+    Math.min(cam.width/(bounds.width*padding),cam.height/(bounds.height*padding))));
+  cam.setZoom(zoom);
+  cam.centerOn(bounds.x+bounds.width/2,bounds.y+bounds.height/2);
+  return true;
+}
