@@ -16,7 +16,7 @@ assert.deepEqual(targetWebpDimensions(1320,2868,3),{width:3960,height:8604,pixel
 assert.throws(()=>targetWebpDimensions(1320,2868,3,{mobile:true}),/8192/);
 assert.throws(()=>targetWebpDimensions(1320,2868,2.5,{mobile:true}),/16 MP/);
 assert.deepEqual(targetWebpDimensions(1320,2868,2,{mobile:true}),{width:2640,height:5736,pixels:15143040});
-assert.throws(()=>targetWebpDimensions(4096,6144,2.5),/16.383/);
+assert.throws(()=>targetWebpDimensions(6000,3000,3),/16.383/);
 assert.throws(()=>targetWebpDimensions(4096,6144,2),/64 megapíxeles/);
 assert.throws(()=>targetWebpDimensions(4096,6144,1,{mobile:true}),/16 MP/);
 assert.deepEqual(targetWebpDimensions(4096,6144,1),{width:4096,height:6144,pixels:25165824});
