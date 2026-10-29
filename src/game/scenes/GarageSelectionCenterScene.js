@@ -2,12 +2,32 @@ import { GarageScene as CurrentGarageScene } from './GarageLazyCardsScene.js';
 import { showFirstVisitTutorial } from '../ui/FirstVisitTutorial.js';
 import { ensureSelectionPaddockSkin } from '../ui/selectionPaddockSkin.js';
 import { attachCenteredSelectionRail } from '../ui/centeredSelectionRail.js';
+import {mountAdminGaragePaddock} from '../ui/adminGaragePaddock.js';
 
 export class GarageScene extends CurrentGarageScene {
   create(...args){
     super.create(...args);
-    showFirstVisitTutorial('garage',{delay:260});
-    this.events.once('shutdown',()=>{this._centeredGarageRail?.destroy();this._centeredGarageRail=null;});
+    if(this._mode==='admin'){
+      this._adminPaddockGarage?.cleanup?.();
+      this._adminPaddockGarage=mountAdminGaragePaddock(this);
+    }else{
+      showFirstVisitTutorial('garage',{delay:260});
+    }
+    this.events.once('shutdown',()=>{
+      this._adminPaddockGarage?.cleanup?.();this._adminPaddockGarage=null;
+      this._centeredGarageRail?.destroy();this._centeredGarageRail=null;
+    });
+  }
+
+  // The legacy admin Phaser scene supplies authoritative actions and state.
+  // Never stack its older DOM hero or re-build it over the new HTML PADDOCK.
+  _showDomHeroCard(...args){
+    if(this._mode==='admin'&&this._adminPaddockGarage?.root?.isConnected)return;
+    return super._showDomHeroCard?.(...args);
+  }
+  _rebuild(...args){
+    if(this._mode==='admin'&&this._adminPaddockGarage?.root?.isConnected)return;
+    return super._rebuild(...args);
   }
 
   _installPlayerDomGarage(){

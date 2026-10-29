@@ -1,0 +1,171 @@
+/* DEV 1.3.62 · Actual ADMIN garage, separate from player DOM garage.
+   All cards and actions are real; Phaser legacy garage remains underneath. */
+.tdr-garage-admin-paddock{
+ position:absolute;inset:0;z-index:24500;overflow:hidden;box-sizing:border-box;
+ display:grid;grid-template-rows:clamp(55px,10vh,76px) minmax(0,1fr) 0;
+ gap:0;color:#ebf8ff;isolation:isolate;
+ background:radial-gradient(ellipse at 20% -12%,#26536a,transparent 55%),
+ radial-gradient(ellipse at 75% 70%,#123747,transparent 70%),
+ repeating-linear-gradient(90deg,transparent 0 84px,#ffffff05 84px 85px),
+ linear-gradient(135deg,#081725,#06111e);
+ font:750 12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ user-select:none;-webkit-user-select:none;
+}
+.tdr-garage-admin-paddock *{box-sizing:border-box}
+.tdr-garage-admin-paddock button{
+ font:850 12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+ cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.tdr-garage-admin-paddock button:focus-visible{outline:2px solid #67f1cb;outline-offset:2px}
+.tdr-garage-admin-paddock .agp-head{
+ display:flex;align-items:center;justify-content:space-between;gap:10px;
+ padding:4px max(10px,env(safe-area-inset-right,0px)) 4px max(10px,env(safe-area-inset-left,0px));
+ background:linear-gradient(110deg,#0f2a3b,#071723);
+ border-bottom:1px solid #4c7184;min-width:0;
+}
+.tdr-garage-admin-paddock .agp-brand{display:flex;align-items:center;gap:12px;min-width:0}
+.tdr-garage-admin-paddock .agp-logo{
+ font-size:clamp(26px,3.2vw,45px);line-height:1;font-style:italic;font-weight:1000;
+ letter-spacing:-.12em;transform:skewX(-7deg);color:#f5faff;
+}
+.tdr-garage-admin-paddock .agp-logo em{font-style:inherit;color:#ee3854}
+.tdr-garage-admin-paddock .agp-heading{
+ display:flex;flex-direction:column;border-left:2px solid #7298ad;padding-left:12px;
+}
+.tdr-garage-admin-paddock .agp-heading small{font-size:clamp(8px,.7vw,11px);letter-spacing:.14em;color:#a8c1cf;font-weight:900}
+.tdr-garage-admin-paddock .agp-heading strong{font-size:clamp(18px,2.1vw,32px);font-style:italic;font-weight:1000;line-height:1.05}
+.tdr-garage-admin-paddock .agp-head-actions{display:flex;align-items:center;gap:9px;flex:0 0 auto}
+.tdr-garage-admin-paddock .agp-head-actions button{
+ min-height:38px;border:1px solid #51778a;border-radius:10px;
+ padding:6px 14px;background:linear-gradient(130deg,#16364a,#0c2333);color:#ebf9ff;
+}
+.tdr-garage-admin-paddock .agp-wallet{
+ display:flex;align-items:center;gap:8px;padding:4px 10px;
+ border:1px solid #365870;border-radius:9px;background:#091b2d;
+}
+.tdr-garage-admin-paddock .agp-wallet .tdr-app-wallet-icon{width:30px;height:30px}
+.tdr-garage-admin-paddock .agp-body{
+ display:grid;grid-template-columns:minmax(210px,27%) minmax(200px,32%) minmax(0,1fr);
+ gap:clamp(7px,1vw,14px);padding:clamp(7px,1.3vh,13px) max(8px,env(safe-area-inset-right,0px)) clamp(7px,1.2vh,12px) max(8px,env(safe-area-inset-left,0px));
+ min-height:0;min-width:0;overflow:hidden;
+}
+.tdr-garage-admin-paddock .agp-collection,
+.tdr-garage-admin-paddock .agp-display,
+.tdr-garage-admin-paddock .agp-info{
+ border:1px solid #42667d;border-radius:15px;min-width:0;min-height:0;overflow:hidden;
+ background:linear-gradient(148deg,#102a3e,#081928);
+ box-shadow:inset 0 1px #ffffff15,0 8px 25px #0005;
+}
+.tdr-garage-admin-paddock .agp-collection{display:grid;grid-template-rows:auto minmax(0,1fr)}
+.tdr-garage-admin-paddock .agp-section-head{
+ display:flex;justify-content:space-between;align-items:center;gap:7px;
+ padding:9px 12px;color:#cdeaf6;border-bottom:1px solid #2c5269;
+ font-size:clamp(10px,.95vw,13px);letter-spacing:.055em;font-style:italic;font-weight:1000;
+ white-space:nowrap;
+}
+.tdr-garage-admin-paddock .agp-section-head small{font-style:normal;font-size:9px;color:#70b3c6;white-space:nowrap}
+.tdr-garage-admin-paddock .agp-list{
+ min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+ touch-action:pan-y;padding:8px;scrollbar-color:#487c91 transparent;scrollbar-width:thin;
+}
+.tdr-garage-admin-paddock .agp-item{
+ display:grid;grid-template-columns:clamp(55px,6.8vw,85px) minmax(0,1fr);
+ gap:8px;align-items:center;width:100%;min-height:clamp(90px,15vh,132px);
+ margin:0 0 8px;padding:7px;border-radius:11px;text-align:left;
+ border:1px solid #31536b;border-left:4px solid #4c91d0;
+ background:linear-gradient(105deg,#0d283b,#0b2031);color:#f3fbff;
+}
+.tdr-garage-admin-paddock .agp-item.is-selected{
+ border-color:#36e9b7;border-left:5px solid #38f6aa;
+ background:linear-gradient(115deg,#124239,#0c2531);
+ box-shadow:inset 0 0 0 1px #42e9b344;
+}
+.tdr-garage-admin-paddock .agp-thumb{
+ display:grid;place-items:center;position:relative;min-width:0;min-height:0;
+ height:clamp(72px,14vh,114px);border-radius:7px;
+ background:radial-gradient(ellipse,#214c5c,#081826);
+}
+.tdr-garage-admin-paddock .agp-thumb img{
+ position:relative;z-index:2;width:100%;height:100%;object-fit:contain;
+ -webkit-user-drag:none;
+}
+.tdr-garage-admin-paddock .agp-thumb-backup{
+ position:absolute;color:#2b6984;font-weight:1000;font-size:18px;font-style:italic;
+}
+.tdr-garage-admin-paddock .agp-item.has-art .agp-thumb-backup{display:none}
+.tdr-garage-admin-paddock .agp-item-desc{display:flex;flex-direction:column;gap:5px;min-width:0}
+.tdr-garage-admin-paddock .agp-item-desc strong{
+ font-size:clamp(11px,1.15vw,16px);line-height:1.1;overflow-wrap:anywhere;
+}
+.tdr-garage-admin-paddock .agp-item-desc small{color:#abc6d6;font-size:clamp(9px,.8vw,11px);line-height:1.26}
+.tdr-garage-admin-paddock .agp-display{display:flex;flex-direction:column;position:relative}
+.tdr-garage-admin-paddock .agp-display-body{
+ position:relative;flex:1;min-height:0;margin:8px;border:1px solid #345972;
+ border-radius:12px;display:grid;place-items:center;overflow:hidden;
+ background:radial-gradient(ellipse at center,#1b475b,#071724 75%);
+}
+.tdr-garage-admin-paddock .agp-display-body img{
+ position:relative;z-index:2;display:block;width:100%;height:100%;max-height:100%;
+ object-fit:contain;filter:drop-shadow(0 8px 17px #000b);-webkit-user-drag:none;
+}
+.tdr-garage-admin-paddock .agp-display-body img[hidden]{display:none}
+.tdr-garage-admin-paddock .agp-placeholder{
+ position:absolute;font-size:clamp(45px,7vw,100px);font-style:italic;font-weight:1000;color:#32647b;
+}
+.tdr-garage-admin-paddock .agp-display-body.has-image .agp-placeholder{display:none}
+.tdr-garage-admin-paddock .agp-display-foot{
+ padding:5px 12px 10px;text-align:center;color:#6eacbd;font-size:9px;font-weight:900;letter-spacing:.1em;
+}
+.tdr-garage-admin-paddock .agp-info{display:flex;flex-direction:column}
+.tdr-garage-admin-paddock .agp-info-scroll{
+ flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+ padding:9px 12px;
+}
+.tdr-garage-admin-paddock .agp-info h2{
+ margin:2px 0 7px;font-size:clamp(15px,1.8vw,28px);font-weight:1000;line-height:1.08;
+ overflow-wrap:anywhere;
+}
+.tdr-garage-admin-paddock .agp-manufacturer{color:#3ef0b3;font-size:clamp(12px,1vw,17px)}
+.tdr-garage-admin-paddock .agp-meta{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:9px 0}
+.tdr-garage-admin-paddock .agp-meta div{padding:7px;border:1px solid #31516b;border-radius:8px;background:#0c2032;min-width:0}
+.tdr-garage-admin-paddock .agp-meta small{display:block;color:#90b2c5;font-size:9px;font-weight:850}
+.tdr-garage-admin-paddock .agp-meta strong{font-size:11px;line-height:1.22;overflow-wrap:anywhere}
+.tdr-garage-admin-paddock .agp-description{font-size:10px;line-height:1.4;color:#b9d0df;font-style:italic;margin:7px 0}
+.tdr-garage-admin-paddock .agp-stats{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.tdr-garage-admin-paddock .agp-stats div{display:flex;justify-content:space-between;gap:7px;padding:5px 9px;border:1px solid #294b64;border-radius:8px;font-size:10px}
+.tdr-garage-admin-paddock .agp-stats span{color:#aacbdc}
+.tdr-garage-admin-paddock .agp-stats strong{color:#6ff3c8;font-variant-numeric:tabular-nums}
+.tdr-garage-admin-paddock .agp-actions{
+ flex:0 0 auto;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);
+ gap:7px;padding:9px;border-top:1px solid #2d506a;
+}
+.tdr-garage-admin-paddock .agp-actions button{
+ min-height:clamp(37px,7vh,47px);border:1px solid #55768a;border-radius:9px;
+ background:#18364a;color:#e9f8ff;padding:5px;white-space:normal;
+}
+.tdr-garage-admin-paddock .agp-actions .agp-primary{
+ background:linear-gradient(135deg,#41f9b3,#19c58c);color:#04251a;border-color:#35ffc1;
+}
+@media(max-height:500px) and (min-width:700px){
+ .tdr-garage-admin-paddock .agp-body{grid-template-columns:minmax(190px,26%) minmax(190px,32%) minmax(0,1fr);gap:7px;padding-top:6px}
+ .tdr-garage-admin-paddock .agp-section-head{padding:6px 9px}
+ .tdr-garage-admin-paddock .agp-item{min-height:83px}
+ .tdr-garage-admin-paddock .agp-thumb{height:72px}
+ .tdr-garage-admin-paddock .agp-meta{margin:6px 0;gap:4px}
+ .tdr-garage-admin-paddock .agp-meta div{padding:5px}
+ .tdr-garage-admin-paddock .agp-stats{margin-top:5px}
+}
+@media(max-width:830px){
+ .tdr-garage-admin-paddock .agp-body{grid-template-columns:minmax(155px,25%) minmax(170px,30%) minmax(0,1fr)}
+ .tdr-garage-admin-paddock .agp-heading small{display:none}
+ .tdr-garage-admin-paddock .agp-head-actions .agp-wallet{display:none}
+}
+@media(max-width:670px) and (orientation:portrait){
+ .tdr-garage-admin-paddock{overflow:auto;display:flex;flex-direction:column}
+ .tdr-garage-admin-paddock .agp-body{display:flex;flex-direction:column;overflow:visible;flex:0 0 auto}
+ .tdr-garage-admin-paddock .agp-collection{min-height:230px}
+ .tdr-garage-admin-paddock .agp-list{max-height:200px}
+ .tdr-garage-admin-paddock .agp-display{min-height:330px}
+ .tdr-garage-admin-paddock .agp-display-body{min-height:245px}
+ .tdr-garage-admin-paddock .agp-info{min-height:360px}
+}

@@ -1,6 +1,7 @@
 import './vehicleLabPaddockShared.css';
 import './garageDetailPaddock.css';
 import {createAppWallet,disposeAppWallets} from './TdrAppHeader.js';
+import {carPreviewCandidates,attachCarPreviewFallback} from './carPreviewAssets.js';
 
 const safe=value=>String(value??'').replace(/[&<>"']/g,c=>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,8 +16,7 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
     const name=safe(spec.name||carId),brand=safe(spec.brand||'TDR'),
       category=safe(spec.category||'CIRCUITO'),
       rarity=safe(spec.rarity||'—'),
-      image=`${import.meta.env.BASE_URL||'/'}assets/cars/lobby/${encodeURIComponent(carId)}.webp`,
-      skin=spec.skin?`${import.meta.env.BASE_URL||'/'}assets/skins/${encodeURIComponent(spec.skin)}`:'';
+      imageCandidates=carPreviewCandidates(carId,spec,import.meta.env.BASE_URL||'/');
     const html=`<section class="vl-ficha" aria-label="Ficha técnica del vehículo">
       <header class="vl-ficha-header">
         <div class="vl-ficha-brand"><span class="vl-ficha-logo">TD<em>R</em></span>
@@ -26,7 +26,7 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
       <div class="vl-ficha-body">
         <div class="vl-ficha-preview">
           <div class="vl-ficha-kicker">COLECCIÓN TDR <span>#${safe(spec.collectionNo||'—')}</span></div>
-          <div class="vl-ficha-car"><img data-ficha-image src="${image}" data-fallback="${skin}" alt="${name}" draggable="false">
+          <div class="vl-ficha-car"><img data-ficha-image alt="${name}" draggable="false">
             <span class="vl-ficha-fallback">TDR</span></div>
           <div class="vl-ficha-name">${name}</div>
           <div class="vl-ficha-details"><span>${brand} · ${category}</span><span>${rarity}</span></div>
@@ -63,9 +63,10 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
     fit();
     scene.scale.on('resize',fit);
     let closed=false;
+    let removePreviewHandlers=()=>{};
     const cleanup=()=>{
       if(closed)return;
-      closed=true;scene.scale.off('resize',fit);
+      closed=true;removePreviewHandlers();scene.scale.off('resize',fit);
       disposeAppWallets(root);
       dom?.destroy?.();dom=null;
       if(scene._garageDetailPaddock?.root===root)scene._garageDetailPaddock=null;
@@ -75,12 +76,12 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
     const wallet=createAppWallet({className:'vl-ficha-wallet'});
     root.querySelector('[data-ficha-wallet]')?.appendChild(wallet);
     const imageEl=root.querySelector('[data-ficha-image]');
-    imageEl?.addEventListener('error',()=>{
-      const fallback=imageEl.dataset.fallback;
-      if(fallback&&imageEl.src!==new URL(fallback,document.baseURI).href){
-        imageEl.dataset.fallback='';imageEl.src=fallback;
-      }else imageEl.style.display='none';
+    removePreviewHandlers=attachCarPreviewFallback(imageEl,imageCandidates,{
+      onLoad:()=>root.querySelector('.vl-ficha-car')?.classList.add('has-image'),
+      onExhausted:()=>root.querySelector('.vl-ficha-car')?.classList.remove('has-image')
     });
+    scene.events.once('shutdown',removePreviewHandlers);
+    scene.events.once('destroy',removePreviewHandlers);
     const status=root.querySelector('[data-ficha-status]');
     let toastTimer=null;
     root.addEventListener('click',event=>{
