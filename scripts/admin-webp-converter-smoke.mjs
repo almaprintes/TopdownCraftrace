@@ -1,7 +1,7 @@
 // Admin WebP must remain lazy, independent of races, safe for mobile and offline.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {targetWebpDimensions,makeWebpFilename,makeImageFilename,detectSourceFormat,resolveOutputFormat,humanBytes,isWebpHeader,MAX_BATCH_COUNT,QUALITY_DEFAULT,MAX_EXPORT_EDGE,MAX_MOBILE_EXPORT_EDGE,MAX_EXPORT_PIXELS,MAX_MOBILE_EXPORT_PIXELS}
+import {targetWebpDimensions,makeWebpFilename,makeImageFilename,detectSourceFormat,resolveOutputFormat,humanBytes,isWebpHeader,MAX_BATCH_COUNT,QUALITY_DEFAULT,MAX_EXPORT_EDGE,MAX_MOBILE_EXPORT_EDGE,MAX_EXPORT_PIXELS,MAX_MOBILE_EXPORT_PIXELS,MAX_MOBILE_WASM_EXPORT_PIXELS,exportImageLimits}
   from '../src/game/ui/adminImageWebpTool.js';
 
 assert.equal(MAX_BATCH_COUNT,8);
@@ -11,7 +11,16 @@ assert.deepEqual(targetWebpDimensions(1448,1086,1,{mobile:true}),{width:1448,hei
 assert.equal(MAX_EXPORT_EDGE,16383);
 assert.equal(MAX_MOBILE_EXPORT_EDGE,8192);
 assert.equal(MAX_EXPORT_PIXELS,64_000_000);
-assert.equal(MAX_MOBILE_EXPORT_PIXELS,16_000_000);
+assert.equal(MAX_MOBILE_EXPORT_PIXELS,32_000_000);
+assert.equal(MAX_MOBILE_WASM_EXPORT_PIXELS,16_000_000);
+assert.deepEqual(exportImageLimits({mobile:true,format:'png'}),{maxEdge:8192,maxPixels:32_000_000,mobile:true,usesWasm:false});
+assert.deepEqual(exportImageLimits({mobile:true,format:'webp'}),{maxEdge:8192,maxPixels:16_000_000,mobile:true,usesWasm:true});
+assert.deepEqual(exportImageLimits({mobile:true,format:'webp',nativeWebp:true}),{maxEdge:8192,maxPixels:32_000_000,mobile:true,usesWasm:false});
+// Screenshot IMG_7127.png: ×1.5 is possible using native PNG export on mobile.
+assert.deepEqual(targetWebpDimensions(2862,3435,1.5,{mobile:true,format:'png'}),
+  {width:4293,height:5153,pixels:22121829});
+assert.throws(()=>targetWebpDimensions(2862,3435,1.5,{mobile:true,format:'webp'}),/16 MP/);
+assert.throws(()=>targetWebpDimensions(2862,3435,2,{mobile:true,format:'png'}),/32 MP/);
 assert.deepEqual(targetWebpDimensions(1320,2868,3),{width:3960,height:8604,pixels:34071840});
 assert.throws(()=>targetWebpDimensions(1320,2868,3,{mobile:true}),/8192/);
 assert.throws(()=>targetWebpDimensions(1320,2868,2.5,{mobile:true}),/16 MP/);
@@ -19,6 +28,8 @@ assert.deepEqual(targetWebpDimensions(1320,2868,2,{mobile:true}),{width:2640,hei
 assert.throws(()=>targetWebpDimensions(6000,3000,3),/16.383/);
 assert.throws(()=>targetWebpDimensions(4096,6144,2),/64 megapíxeles/);
 assert.throws(()=>targetWebpDimensions(4096,6144,1,{mobile:true}),/16 MP/);
+assert.deepEqual(targetWebpDimensions(4096,6144,1,{mobile:true,format:'png'}),
+  {width:4096,height:6144,pixels:25165824});
 assert.deepEqual(targetWebpDimensions(4096,6144,1),{width:4096,height:6144,pixels:25165824});
 assert.equal(makeWebpFilename('7 PICOS.png',2.5),'7 PICOS-x2_5.webp');
 assert.equal(makeWebpFilename('foto.jpg',1),'foto.webp');
