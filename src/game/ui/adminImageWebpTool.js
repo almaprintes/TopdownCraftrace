@@ -170,7 +170,11 @@ export function convertFileToWebp(file,options={}){return convertFileToImage(fil
 const css=(node,value)=>{node.style.cssText=value;return node;};
 const elt=(tag,text,style)=>{const n=document.createElement(tag);if(text!=null)n.textContent=text;if(style)css(n,style);return n;};
 const B='border:1px solid #355273;background:#111d2e;color:#edf4fa;font:800 12px system-ui;padding:10px 14px;cursor:pointer;border-radius:8px;touch-action:manipulation;';
-function isMobileDevice(){return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'');}
+function isMobileDevice(){
+  // iPadOS desktop-mode Safari may identify itself as Macintosh.
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent||'')||
+    (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+}
 
 export function mountAdminWebpTool(adminRoot){
   if(!adminRoot?.isConnected)throw Error('Admin Hub cerrado');
