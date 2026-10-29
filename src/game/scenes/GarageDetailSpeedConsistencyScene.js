@@ -24,6 +24,9 @@ export class GarageDetailScene extends CurrentGarageDetailScene {
     const currentSpec = { ...factory, ...savedSpec(id) };
     const resolved = resolveCarParams(currentSpec);
     const kmh = Math.round(attainableTopSpeedKmh(resolved));
+    // The actual launched scene now renders a premium HTML dossier first.
+    // Keep its speed synchronized with the same speed-consistency model.
+    this._garageDetailPaddock?.updateTopSpeed?.(kmh);
 
     for (const child of this.children?.list || []) {
       if (!child?.setText || typeof child.text !== 'string') continue;
