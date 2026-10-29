@@ -1,9 +1,10 @@
-// Four keyboard-free actions for the TrackStudio import origin menu.
+// Five keyboard-free actions for the TrackStudio import origin menu.
 export const SOURCE_ACTIONS = Object.freeze([
   ['1','CIRCUITO DEL JUEGO','Pista registrada'],
   ['2','PROYECTO GUARDADO','Este dispositivo'],
   ['3','IMPORTAR ARCHIVO','JSON o .tdrtrack'],
-  ['4','RECUPERAR TRABAJO','Última copia automática']
+  ['4','RECUPERAR TRABAJO','Última copia automática'],
+  ['5','IMAGEN DE REFERENCIA','Guía opcional · sin sustituir MAP']
 ]);
 
 export function openTrackStudioSourceMenu(scene) {
@@ -33,7 +34,8 @@ export function openTrackStudioSourceMenu(scene) {
     ()=>scene._openGameTrackSourceMenu(),
     ()=>{if(scene._loadProject?.())scene._flashMessage('📂 Proyecto local cargado');},
     ()=>scene._openProjectPicker(),
-    ()=>scene._restoreLastTrackStudioRecovery()
+    ()=>scene._restoreLastTrackStudioRecovery(),
+    ()=>scene._openReferenceTools?.()
   ];
   SOURCE_ACTIONS.forEach(([number,label,description],i)=>{
     const button=document.createElement('button');
