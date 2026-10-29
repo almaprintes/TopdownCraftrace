@@ -134,10 +134,16 @@ export function installTrackStudioImageMode(s){
   input.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0';
   input.addEventListener('change',async()=>{const f=input.files?.[0];input.value='';if(!f)return;try{await createFromFile(s,f)}catch(e){console.error(e);s._flashMessage('Error de imagen: '+(e.message||'desconocido'))}});
   document.body.appendChild(input);
-  const x=Math.floor(s._leftBarW/2),y=s._topBarH+278;
-  s._canvasModeBtn=s._makeIconButton(x,y,'MAP',()=>{
-    if(!window.confirm('¿Crear un proyecto desde una imagen? Guarda antes el actual si lo necesitas.'))return;
+  // Share the same protected master-image import with native and premium UI.
+  // IMG is only a reference overlay; MAP creates the real race-ready canvas.
+  s._openCanvasImagePicker=()=>{
+    if(!window.confirm('¿Crear un proyecto desde una imagen maestra? Guarda antes el actual si lo necesitas.'))return;
     input.click();
-  },'11px');
-  s.events.once('shutdown',()=>{input.remove();resetTiles(s)});
+  };
+  const x=Math.floor(s._leftBarW/2),y=s._topBarH+278;
+  s._canvasModeBtn=s._makeIconButton(x,y,'MAP',()=>s._openCanvasImagePicker(),'11px');
+  s.events.once('shutdown',()=>{
+    s._openCanvasImagePicker=null;
+    input.remove();resetTiles(s);
+  });
 }
