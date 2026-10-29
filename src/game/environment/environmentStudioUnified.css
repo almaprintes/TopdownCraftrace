@@ -1,0 +1,229 @@
+/* ENVIRONMENT STUDIO 2.0 · Unified real editor shell.
+   Only .es DOM toolbar is visible; the true Phaser world stays uncovered.
+   All right-panel tools remain available through scroll/expandable groups. */
+#tdr-environment-studio-dom{
+  --es-green:#23e3a2;--es-mint:#b8f5d8;--es-ink:#effff7;
+  --es-muted:#94bba9;--es-line:#376d58;--es-header:76px;
+  --es-left:118px;--es-right:310px;
+  position:fixed;inset:auto;box-sizing:border-box;
+  z-index:34000;overflow:hidden;pointer-events:none;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  color:var(--es-ink);font-weight:750;letter-spacing:.01em;
+  -webkit-font-smoothing:antialiased;
+}
+#tdr-environment-studio-dom *,
+#tdr-environment-studio-dom *::before,
+#tdr-environment-studio-dom *::after{box-sizing:border-box}
+#tdr-environment-studio-dom button,
+#tdr-environment-studio-dom select{
+  font:inherit;font-weight:850;font-size:clamp(9px,.8vw,12px);
+  color:var(--es-ink);background:linear-gradient(150deg,#133d2e,#102a20);
+  border:1px solid #376e58;border-radius:8px;
+  cursor:pointer;min-height:32px;padding:4px 7px;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+#tdr-environment-studio-dom button:focus-visible,
+#tdr-environment-studio-dom select:focus-visible{
+  outline:2px solid #b8ffdb;outline-offset:2px
+}
+#tdr-environment-studio-dom button:active{filter:brightness(1.15)}
+#tdr-environment-studio-dom button.on{
+  border-color:#33f0b0;background:#0d7651;color:#e7fff2
+}
+#tdr-environment-studio-dom button.danger{
+  border-color:#ad695c;color:#ffded7;background:#42251f
+}
+#tdr-environment-studio-dom button.asphalt{border-color:#a99656}
+#tdr-environment-studio-dom .es-head{
+  pointer-events:auto;position:absolute;top:0;left:0;right:0;
+  height:var(--es-header);display:flex;align-items:center;
+  gap:clamp(6px,.8vw,14px);min-width:0;
+  padding:5px clamp(8px,1.2vw,18px);
+  border-bottom:1px solid #397d60;
+  background:radial-gradient(ellipse at 40% -125%,#2f6548,transparent 74%),
+    linear-gradient(113deg,#0c271d,#081912 80%);
+  box-shadow:0 5px 20px #0009;
+}
+#tdr-environment-studio-dom .es-brand{
+  display:flex;align-items:center;gap:8px;min-width:0;flex:0 1 auto;
+}
+#tdr-environment-studio-dom .es-logo{
+  font-size:clamp(21px,3vw,39px);font-weight:1000;font-style:italic;
+  letter-spacing:-.1em;white-space:nowrap;line-height:1;
+}
+#tdr-environment-studio-dom .es-logo em{font-style:normal;color:#e63d58}
+#tdr-environment-studio-dom .es-titles{
+  display:flex;flex-direction:column;min-width:0;
+  border-left:2px solid #62ad88;padding-left:clamp(7px,.9vw,12px);
+}
+#tdr-environment-studio-dom .es-titles small{
+  color:#a4d3b8;font-size:clamp(7px,.7vw,10px);
+  font-weight:900;letter-spacing:.12em;font-style:italic;
+}
+#tdr-environment-studio-dom .es-titles strong{
+  font-size:clamp(13px,1.4vw,23px);font-style:italic;
+  font-weight:1000;white-space:nowrap;line-height:1.13;
+}
+#tdr-environment-studio-dom .es-titles strong em{
+  color:#91efbb;font-style:inherit
+}
+#tdr-environment-studio-dom .es-head-actions{
+  display:flex;align-items:center;justify-content:center;
+  gap:clamp(3px,.5vw,8px);min-width:0;flex:1;
+}
+#tdr-environment-studio-dom .es-head-actions>button{
+  padding:4px clamp(4px,.65vw,11px);
+  min-height:35px;white-space:nowrap;
+}
+#tdr-environment-studio-dom .es-head-actions>[data-act=save]{
+  color:#052b20;background:linear-gradient(150deg,#37eeb2,#0bb776);
+  border-color:#3ffcc1;
+}
+#tdr-environment-studio-dom .es-head-actions>[data-act=exit]{
+  background:#162f24;border-color:#61846f
+}
+#tdr-environment-studio-dom .es-track{
+  display:flex;align-items:center;min-width:80px;max-width:23%;
+  margin-left:auto;background:#092f20;
+  border:1px solid #269c6a;border-radius:9px;height:36px;
+}
+#tdr-environment-studio-dom .es-track span{
+  padding:0 6px;color:#a2efbe;font-size:9px;white-space:nowrap
+}
+#tdr-environment-studio-dom .es-track select{
+  min-width:0;width:100%;max-width:180px;min-height:32px;
+  background:#0e3626;border:0;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;padding:0 4px;
+}
+#tdr-environment-studio-dom .es-version{
+  flex-shrink:0;padding:7px 9px;border:1px solid #258c5d;
+  border-radius:9px;background:#0b3023;color:#afffd6;
+  font-size:clamp(8px,.7vw,11px);font-weight:950;white-space:nowrap
+}
+#tdr-environment-studio-dom .es-version::before{
+  content:'';display:inline-block;width:7px;height:7px;
+  border-radius:50%;background:#26ecab;box-shadow:0 0 8px #20ea94;
+  margin-right:7px;
+}
+#tdr-environment-studio-dom .es-left{
+  pointer-events:auto;position:absolute;
+  left:0;top:var(--es-header);bottom:0;width:var(--es-left);
+  padding:clamp(7px,1.5vh,14px) clamp(6px,.8vw,11px);
+  border-right:1px solid #367d60;
+  background:linear-gradient(160deg,#163c2b,#071b13);
+  display:flex;align-items:flex-end;flex-direction:column;
+  gap:clamp(5px,1.05vh,10px);overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:none;overscroll-behavior:contain;
+}
+#tdr-environment-studio-dom .es-left::before{
+  content:'VISTA';font-weight:950;letter-spacing:.12em;
+  color:#8acfae;font-size:clamp(8px,.75vw,11px)
+}
+#tdr-environment-studio-dom .es-left button{
+  flex:0 0 auto;width:clamp(38px,3.8vw,52px);
+  height:clamp(36px,6vh,51px);min-height:36px;
+  border-radius:11px;font-size:clamp(11px,1vw,16px);
+}
+#tdr-environment-studio-dom .es-left [data-act=fit]{
+  font-size:clamp(9px,.88vw,12px);color:#bdffe0;
+  border-color:#23ba80;
+}
+#tdr-environment-studio-dom .es-right{
+  pointer-events:auto;position:absolute;right:0;
+  top:var(--es-header);bottom:0;width:var(--es-right);
+  overflow-y:auto;overflow-x:hidden;
+  padding:clamp(7px,.85vw,12px);
+  overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;scrollbar-color:#386f59 transparent;
+  border-left:1px solid #386d52;
+  background:radial-gradient(ellipse at 100% -10%,#174a31,transparent 69%),#081e15;
+  display:flex;flex-direction:column;gap:7px;
+}
+#tdr-environment-studio-dom .es-right>section,
+#tdr-environment-studio-dom .es-right>details,
+#tdr-environment-studio-dom .es-right>.es-canopy-tool{
+  flex:0 0 auto;min-width:0;
+  background:#0e2b20;border:1px solid #326e50;
+  border-radius:10px;padding:8px 9px;margin:0;
+  box-shadow:inset 0 1px #ffffff09;
+}
+#tdr-environment-studio-dom .es-right h3,
+#tdr-environment-studio-dom .es-right summary{
+  margin:0 0 7px;font-size:clamp(11px,1vw,15px);
+  color:#c5ffe0;font-style:italic;letter-spacing:.025em;
+  font-weight:950;cursor:pointer;
+}
+#tdr-environment-studio-dom .es-right details>summary{
+  display:list-item;padding:4px 1px;margin:0;
+  list-style:disclosure-closed;
+}
+#tdr-environment-studio-dom .es-right details[open]>summary{
+  margin-bottom:7px;list-style:disclosure-open;
+}
+#tdr-environment-studio-dom .es-right p{
+  font-size:clamp(9px,.75vw,12px)!important;
+  line-height:1.4;color:#a9cfb8;
+}
+#tdr-environment-studio-dom .es-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-bottom:6px}
+#tdr-environment-studio-dom .es-tabs button{font-size:clamp(8px,.65vw,10px);padding:2px}
+#tdr-environment-studio-dom .es-assets{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:5px;max-height:clamp(110px,31vh,250px);
+  overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+}
+#tdr-environment-studio-dom .es-asset{
+  min-height:75px!important;font-size:clamp(8px,.63vw,10px)!important;
+  padding:5px 3px!important;overflow-wrap:anywhere;
+  border-radius:8px!important;line-height:1.12;
+}
+#tdr-environment-studio-dom .es-asset img{
+  display:block;margin:0 auto 4px;width:90%;
+  height:clamp(40px,7vh,57px);object-fit:contain;
+}
+#tdr-environment-studio-dom .es-grid{display:grid;gap:5px}
+#tdr-environment-studio-dom .es-grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+#tdr-environment-studio-dom .es-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+#tdr-environment-studio-dom .es-grid.editables{grid-template-columns:repeat(2,minmax(0,1fr))}
+#tdr-environment-studio-dom .es-grid button{font-size:clamp(8px,.7vw,11px);padding:4px 3px;min-width:0}
+#tdr-environment-studio-dom .es-canopy-tool{
+  padding:6px!important;margin:0!important;background:transparent!important;border:0!important;
+}
+#tdr-environment-studio-dom [data-canopy]{
+  border-radius:8px!important;font-weight:850;
+  min-height:clamp(32px,5vh,42px)!important;
+}
+#tdr-environment-studio-dom [data-canopy=import-copas]{
+  color:#bdffdb;border-color:#388f6c!important;
+  background:#124b30;
+}
+#tdr-environment-studio-dom .es-canopy-count{
+  float:right;color:#50edaa;font-size:10px;font-style:normal;
+}
+#tdr-environment-studio-dom .es-status{
+  pointer-events:none;position:absolute;
+  top:auto;left:calc(var(--es-left) + 8px);
+  right:calc(var(--es-right) + 8px);bottom:7px;
+  padding:6px 11px;border-radius:8px;
+  background:#0a241ae8;border:1px solid #3a775c;
+  color:#9ee7c4;font-size:clamp(9px,.73vw,12px);
+  white-space:nowrap;text-overflow:ellipsis;overflow:hidden;
+}
+@media(max-height:560px){
+  #tdr-environment-studio-dom .es-titles>small{display:none}
+  #tdr-environment-studio-dom .es-head{gap:5px}
+  #tdr-environment-studio-dom .es-head-actions{gap:3px}
+  #tdr-environment-studio-dom .es-head-actions>button{padding:3px 5px;min-height:29px}
+  #tdr-environment-studio-dom .es-left{gap:5px;padding:6px}
+  #tdr-environment-studio-dom .es-right{gap:5px;padding:6px}
+  #tdr-environment-studio-dom .es-right>section,
+  #tdr-environment-studio-dom .es-right>details{padding:6px}
+  #tdr-environment-studio-dom .es-assets{max-height:120px}
+  #tdr-environment-studio-dom .es-version{display:none}
+}
+@media(max-width:950px){
+  #tdr-environment-studio-dom .es-titles strong{font-size:12px}
+  #tdr-environment-studio-dom .es-track span{display:none}
+  #tdr-environment-studio-dom .es-head-actions{gap:3px}
+  #tdr-environment-studio-dom .es-head-actions>button{padding:3px}
+  #tdr-environment-studio-dom .es-version{display:none}
+}
