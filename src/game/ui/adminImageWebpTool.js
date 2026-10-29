@@ -1,3 +1,4 @@
+import {mountImageLabV2} from './adminImageLabV2.js';
 // Admin-only local image converter. Lazy-loaded by Admin Hub; never in races.
 // Browser Canvas processes PNG/JPG and resizing; libwebp/WASM backs up Safari WebP export.
 // Browser resampling adds pixels, NOT missing photographic details.
@@ -232,8 +233,14 @@ export function mountAdminWebpTool(adminRoot){
   status.setAttribute('aria-live','polite');panel.appendChild(status);
   const results=elt('div',null,'display:flex;flex-direction:column;gap:8px;padding-bottom:18px;');panel.appendChild(results);
   overlay.appendChild(panel);document.body.appendChild(overlay);
+  // Presentation-only adapter: moves existing controls, preserving native
+  // picker, processing, export and full-screen comparison handlers.
+  const skin=mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,pick,
+    options,formatWrap,formatInput,scaleWrap,scaleInput,qualityWrap,qualityInput,
+    qualityValue,note,launch,status,results});
 
   const clearOutput=()=>{
+    skin.clearOutput();
     closePreview();
     for(const url of issuedUrls)URL.revokeObjectURL(url);
     issuedUrls.clear();results.replaceChildren();
@@ -245,6 +252,7 @@ export function mountAdminWebpTool(adminRoot){
     if(busy)return;
     clearOutput();
     const count=pick.files?.length||0;
+    skin.showSelection(pick.files?.[0]||null,count);
     status.textContent=count?count+' foto(s) preparada(s) · Pulsa PROCESAR.':'Selecciona fotografías.';
     updateExportControls();
   });
@@ -343,7 +351,20 @@ export function mountAdminWebpTool(adminRoot){
         actions.appendChild(smallButton('GUARDAR / COMPARTIR',async()=>{try{await navigator.share({files:[f],title:r.name});}catch(err){if(err?.name!=='AbortError')status.textContent='No se pudo compartir: utiliza DESCARGAR.';}}));
       }
     }
-    row.append(left,actions);results.appendChild(row);
+    // Compact filmstrip cards; download/share/compare retain their original callbacks.
+    row.classList.add('tdr-image-lab__result');row.style.cssText='';
+    left.classList.add('tdr-image-lab__result-meta');left.style.cssText='';
+    const name=left.querySelector('strong'),meta=left.querySelector('small');
+    if(name){name.classList.add('tdr-image-lab__result-name');name.style.cssText='';}
+    if(meta){meta.classList.add('tdr-image-lab__result-sub');meta.style.cssText='';}
+    const thumb=elt('img',null,'');thumb.src=href;thumb.alt='';
+    thumb.loading='lazy';thumb.decoding='async';thumb.classList.add('tdr-image-lab__thumb');
+    const top=elt('div',null,'');top.className='tdr-image-lab__result-main';top.append(thumb,left);
+    actions.classList.add('tdr-image-lab__result-actions');actions.style.cssText='';
+    for(const button of actions.children)button.style.cssText='';
+    row.append(top,actions);results.appendChild(row);
+    skin.presentResult(r,sourceFile,href,
+      ()=>openPreview(sourceFile,r,href),()=>dl.click());
   };
   launch.addEventListener('click',async()=>{
     if(busy||disposed)return;
@@ -353,6 +374,7 @@ export function mountAdminWebpTool(adminRoot){
     if(selected.some(f=>!(f.type||'').startsWith('image/')&&!detectSourceFormat(f))){status.textContent='Solo se admiten imágenes.';return;}
     busy=true;launch.disabled=true;pick.disabled=true;scaleInput.disabled=true;formatInput.disabled=true;qualityInput.disabled=true;
     clearOutput();
+    skin.showSelection(selected[0],selected.length);
     const scale=Number(scaleInput.value),quality=Number(qualityInput.value),format=formatInput.value,mobile=isMobileDevice();
     let succeeded=0,failed=0;
     for(let i=0;i<selected.length;i++){
