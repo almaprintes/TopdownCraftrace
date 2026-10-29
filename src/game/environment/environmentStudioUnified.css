@@ -227,3 +227,28 @@
   #tdr-environment-studio-dom .es-head-actions>button{padding:3px}
   #tdr-environment-studio-dom .es-version{display:none}
 }
+/* DEV 1.3.58 · terrain controls restored in the canonical sidebar. */
+#tdr-environment-studio-dom .es-head{
+  padding-left:max(8px, env(safe-area-inset-left));
+  padding-right:max(8px, env(safe-area-inset-right));
+}
+#tdr-environment-studio-dom .es-surface-tools h4{
+  color:#a7f0c5;font-size:10px;letter-spacing:.07em;margin:9px 0 5px;
+}
+#tdr-environment-studio-dom .es-surface-tools p{margin:2px 0 7px}
+#tdr-environment-studio-dom .es-surface-width{
+  display:grid;grid-template-columns:1fr 1.25fr 1fr;align-items:center;
+  gap:5px;margin-top:9px;
+}
+#tdr-environment-studio-dom .es-surface-width span{
+  font-size:10px;text-align:center;color:#b9ffd6;
+}
+#tdr-environment-studio-dom .es-status.es-notice{
+  color:#f2ffec;font-weight:950;border-color:#48efac;
+  background:#085333f4;box-shadow:0 0 15px #11b97270;
+}
+@media (max-height:560px){
+  #tdr-environment-studio-dom .es-titles strong{font-size:clamp(11px,1.1vw,16px)}
+  #tdr-environment-studio-dom [data-act=exit]{max-width:114px;white-space:normal;line-height:1.08}
+  #tdr-environment-studio-dom .es-surface-tools button{min-height:34px}
+}
