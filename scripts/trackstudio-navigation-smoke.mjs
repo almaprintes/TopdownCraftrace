@@ -48,7 +48,7 @@ const scene=fs.readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
 const shape=fs.readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
 const src=fs.readFileSync('src/game/studio/trackStudioSourceMenu.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
-assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.53"'));
+assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.54"'));
 assert.ok(scene.includes('trackStudioToolbarLayout(width,this._rightPanelW)'));
 assert.equal(scene.split('_makeTopActionButton(...toolPos(),').length-1,8);
 assert.ok(scene.includes("return {bg,txt,cap,x:cx,y:cy}"));
