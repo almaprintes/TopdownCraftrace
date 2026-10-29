@@ -280,7 +280,7 @@ export function mountAdminWebpTool(adminRoot){
     if(busy)return;
     clearOutput();
     const count=pick.files?.length||0;
-    skin.showSelection(pick.files?.[0]||null,count);
+    skin.showSelection(pick.files?.[0]||null,count,pick.files?.[0]?detectSourceFormat(pick.files[0]):null);
     status.textContent=count?count+' foto(s) preparada(s) · Pulsa PROCESAR.':'Selecciona fotografías.';
     updateExportControls();
   });
@@ -402,7 +402,7 @@ export function mountAdminWebpTool(adminRoot){
     if(selected.some(f=>!(f.type||'').startsWith('image/')&&!detectSourceFormat(f))){status.textContent='Solo se admiten imágenes.';return;}
     busy=true;launch.disabled=true;pick.disabled=true;scaleInput.disabled=true;formatInput.disabled=true;qualityInput.disabled=true;
     clearOutput();
-    skin.showSelection(selected[0],selected.length);
+    skin.showSelection(selected[0],selected.length,detectSourceFormat(selected[0]));
     skin.setBusy(true);
     const scale=Number(scaleInput.value),quality=Number(qualityInput.value),format=formatInput.value,mobile=isMobileDevice();
     let succeeded=0,failed=0;
