@@ -84,6 +84,8 @@ function button(s,x,y,text,callback,width=112,height=38){
     return container;
   };
   s._editCam.ignore(container);
+  // Keep the original validated callback available to the DOM skin.
+  container.run=callback;
   return container;
 }
 function findShapeControl(s,x,y){
@@ -167,8 +169,10 @@ export function installTrackStudioShapeEditor(s){
   };
   let gridOn=null,gridOff=null;
   const refreshGridToggle=()=>{
-    gridOn?.setVisible(s._showStartingGrid !== false);
-    gridOff?.setVisible(s._showStartingGrid === false);
+    // The DOM dock replaces this visual toolbar while retaining callbacks.
+    const nativeVisible=!s._studioChromeMounted;
+    gridOn?.setVisible(nativeVisible&&s._showStartingGrid !== false);
+    gridOff?.setVisible(nativeVisible&&s._showStartingGrid === false);
   };
   const toggleGrid=()=>{
     s._pushHistory();
@@ -228,7 +232,7 @@ export function installTrackStudioShapeEditor(s){
   // even when shape editing is disabled (confirmed by DEV 1.2.102 stack).
   s._updatePanel=()=>{
     s._emptyHelp?.setVisible(
-      !(s._nodes?.length||s._guideImage||s._imageCanvas||s._trackShape)
+      !s._studioChromeMounted&&!(s._nodes?.length||s._guideImage||s._imageCanvas||s._trackShape)
     );
     const edgeMode=!!(s._shapeEditing && shapeIsValid(s._trackShape));
     s._panelInfoText?.setVisible(false);
@@ -290,6 +294,10 @@ export function installTrackStudioShapeEditor(s){
       s._flashMessage('No se puede probar: '+(err?.message||'error'));
     }finally{installing=false}
   },previewPos.width,previewPos.height);
-  // Controls are screen-fixed and never get written into project coordinates.
+  // Image Lab presentation layer delegates to these exact original handlers,
+  // so engine, history, confirmations and track data remain unchanged.
+  s._studioShapeButtons={create:createBtn,edit:editBtn,add:addBtn,
+    gridOn,gridOff,preview:previewBtn};
+    // Controls are screen-fixed and never get written into project coordinates.
   s.events.once('shutdown',()=>{inspector.destroy();[createBtn,editBtn,addBtn,gridOn,gridOff,previewBtn].forEach(b=>b?.destroy());gfx.destroy();});
 }
