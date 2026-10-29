@@ -45,7 +45,7 @@ class FakeEl{
 }
 const body=new FakeEl('body');
 const document={body,createElement:tag=>new FakeEl(tag),
-  querySelector:sel=>sel.startsWith('meta')?{content:'DEV 1.3.63'}:null};
+  querySelector:sel=>sel.startsWith('meta')?{content:'DEV 1.3.64'}:null};
 const wListeners={};
 const window={
   confirm:()=>true,
