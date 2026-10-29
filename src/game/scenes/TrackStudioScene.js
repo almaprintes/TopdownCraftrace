@@ -1708,8 +1708,9 @@ _updateToolButtons() {
 
   const paintCircle = (btn, active = false, fill = 0x1c2540, stroke = 0x3c4e7a) => {
     if (!btn?.bg) return;
-    btn.bg.setFillStyle(active ? fill : 0x1c2540, 1);
-    btn.bg.setStrokeStyle(2, active ? stroke : 0x3c4e7a, 0.95);
+    const card=!!btn.cap;
+    btn.bg.setFillStyle(active ? fill : card?0x132437:0x1c2540, 1);
+    btn.bg.setStrokeStyle(card?1:2,active ? stroke : card?0x36546d:0x3c4e7a, 0.95);
   };
 
   // modo directo
@@ -1741,8 +1742,9 @@ _updateToolButtons() {
     this._saveMainBtn._bg.strokeRoundedRect(-20, -20, 40, 40, 8);
   }
   if (this._loopBtn?.txt) {
-  this._loopBtn.txt.setText(this._isClosed ? '🔒' : '🔓');
-}
+    const label=this._isClosed?'🔒':'🔓';
+    if(this._loopBtn.txt.text!==label)this._loopBtn.txt.setText(label);
+  }
 }
   _toggleClosed() {
     this._isClosed = !this._isClosed;
