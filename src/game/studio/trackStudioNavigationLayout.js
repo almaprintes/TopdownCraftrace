@@ -6,7 +6,7 @@ export const TRACK_STUDIO_TOP_TOOLS=Object.freeze([
 export function trackStudioToolbarLayout(width,rightPanelW=280){
   if(!Number.isFinite(width)||width<=0)throw Error('Ancho de pantalla inválido');
   const right=Math.max(280,width-rightPanelW);
-  const twoRows=right<790;
+  const twoRows=right<770;
   if(!twoRows){
     const start=214,usable=right-start-7;
     const gap=Math.min(76,usable/8);
