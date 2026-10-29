@@ -70,6 +70,7 @@ assert.match(palette,/zone:Object\.freeze\(\{line:0xffcf45,selected:0xffee97/);
 assert.ok(pen.includes('const palette=ENVIRONMENT_ZONE_COLORS.pen;'),'Pluma base path must be white');
 assert.ok(pen.includes('selected?palette.selected:palette.line'),'Pluma selection must remain white');
 assert.ok(pen.includes('palette.shadow'),'White stroke must have contrast on bright photos');
+assert.ok(!pen.includes('0xffdd75'),'Pen vertices must never turn yellow on selection');
 assert.ok(zone.includes('unfinished?colors.draft:colors.line'),'Solid zones and drafts must remain yellow');
 assert.ok(canopy.includes('unfinished?colors.draft:colors.line'),'Canopy contours and drafts must remain green');
 assert.ok(zone.includes("es-advanced-group es-zone-details"),'Zone menu must have own accent');
