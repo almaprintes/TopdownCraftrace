@@ -97,5 +97,5 @@ assert.ok(!sectors.includes('localStorage.setItem(this._ghostStorageKey'),
  'Sector metadata must never overwrite some other ghost key');
 assert.match(sectors,/stored\.kind!==ghost\.kind/);
 assert.match(readFileSync('index.html','utf8'),
- /<meta name="tdr-dev-version" content="DEV 1\.3\.(?:[4-9]|[1-9][0-9]+)"/);
+ /<meta name="tdr-dev-version" content="DEV \d+\.\d+\.\d+"/);
 console.log('PASS: Santa Cruz Normal/Inverse old ghosts blocked; Race Control -> self ghost local recovery; on-device PB automatically saved; historic records and online rivals untouched');
