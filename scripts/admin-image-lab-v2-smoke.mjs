@@ -5,7 +5,7 @@ const ui=fs.readFileSync('src/game/ui/adminImageLabV2.js','utf8');
 const css=fs.readFileSync('src/game/ui/adminImageLabV2.css','utf8');
 const core=fs.readFileSync('src/game/ui/adminImageWebpTool.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
-assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.61"'));
+assert.ok(html.includes('name="tdr-dev-version" content="DEV 1.3.62"'));
 assert.ok(core.includes("import {mountImageLabV2} from './adminImageLabV2.js'"));
 assert.ok(core.includes('skin.presentResult(r,sourceFile,href,'));
 assert.ok(core.includes('skin.showSelection(selected[0],selected.length,detectSourceFormat(selected[0]))'));
@@ -64,7 +64,7 @@ class Element{
   getBoundingClientRect(){return{left:0,width:900};}
   focus(){}
 }
-const document={createElement:t=>new Element(t),querySelector:()=>({content:'DEV 1.3.61'})};
+const document={createElement:t=>new Element(t),querySelector:()=>({content:'DEV 1.3.62'})};
 let serial=0;const revoked=[];
 const URL={
   createObjectURL:()=> 'blob:fake-'+(++serial),
@@ -107,7 +107,7 @@ const walk=(root,needle,out=[])=>{
 assert.equal(walk(panel,'tdr-image-lab__stage-area').length,1);
 assert.equal(walk(panel,'tdr-image-lab__side').length,1);
 assert.equal(walk(panel,'tdr-image-lab__results-wrap').length,1);
-assert.ok(walk(panel,'tdr-image-lab__version')[0].textContent==='DEV 1.3.61');
+assert.ok(walk(panel,'tdr-image-lab__version')[0].textContent==='DEV 1.3.62');
 assert.ok(walk(panel,'tdr-image-lab__settings-note').includes(note));
 assert.equal(walk(panel,'tdr-image-lab__format-choice').length,4);
 assert.equal(walk(panel,'tdr-image-lab__scale-choice').length,5);

@@ -1,4 +1,4 @@
-// DEV 1.3.61 · all Vehicle Lab subtools share one PADDOCK language.
+// DEV 1.3.62 · all Vehicle Lab subtools share one PADDOCK language.
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
@@ -12,7 +12,7 @@ const mastery=read('src/game/ui/AdminMasteryRoofCalibration.js');
 const skins=read('src/game/ui/AdminSkinGeometryCalibration.js');
 const lights=read('src/game/ui/AdminVehicleLightsCalibration.js');
 const page=read('index.html');
-assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.61"/);
+assert.match(page,/name="tdr-dev-version" content="DEV 1\.3\.62"/);
 for(const [name,code] of [['maestrías',mastery],['skins',skins],['luces',lights]]){
  assert.match(code,/import '\.\/vehicleLabPaddockShared\.css'/,name+' must share theme');
  for(const element of ['vl-paddock-tool','vl-tool-header','vl-tool-brand','vl-tool-logo','vl-tool-heading','vl-tool-filters','vl-tool-preview','vl-tool-controls']){
@@ -79,4 +79,4 @@ for(const path of [
  const result=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});
  assert.equal(result.status,0,path+' syntax: '+result.stderr);
 }
-console.log('PASS Vehicle Lab 1.3.61: Maestrías, skins, luces + Ficha premium; callbacks, JSON drafts, 1px gestures, responsive layout, fallback and exit cleanup');
+console.log('PASS Vehicle Lab 1.3.62: Maestrías, skins, luces + Ficha premium; callbacks, JSON drafts, 1px gestures, responsive layout, fallback and exit cleanup');
