@@ -1,6 +1,7 @@
 // Environment Studio 2.5D: trace photographed branches that visually pass
 // OVER a car. Strictly an authored image occlusion layer, never a solid wall.
 import {EnvironmentBuilderScene as Current} from './EnvironmentBuilderAmericasImportScene.js';
+import {ENVIRONMENT_ZONE_COLORS} from '../environment/environmentStudioZoneColors.js';
 import {validCanopyZone,normalizedCanopyZones} from '../environment/canopyOcclusionGeometry.js';
 import {pointInsidePolygon} from '../environment/FreehandCollisionZones.js';
 import {createTrackEnvironment} from '../tracks/environmentRegistry.js';
@@ -177,7 +178,8 @@ export class EnvironmentBuilderScene extends Current{
     const u=1/Math.max(.1,this._editCam?.zoom||1);
     const draw=(pts,selected=false,unfinished=false)=>{
       if(!Array.isArray(pts)||pts.length<2)return;
-      const color=selected?0xffcf6e:0x6affbc;
+      const colors=ENVIRONMENT_ZONE_COLORS.canopy;
+      const color=selected?colors.selected:unfinished?colors.draft:colors.line;
       if(pts.length>=3){
         g.fillStyle(color,unfinished?.06:.16);
         g.beginPath();g.moveTo(pts[0].x,pts[0].y);

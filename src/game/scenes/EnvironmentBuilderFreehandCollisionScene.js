@@ -6,6 +6,8 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 
 // Draw over trees, buildings or other decorative shapes without painting
 // anything on the source image. All coordinates are world pixels (1:1).
+import {ENVIRONMENT_ZONE_COLORS} from '../environment/environmentStudioZoneColors.js';
+
 export class EnvironmentBuilderScene extends Current {
   create(){
     this._collisionZones=[];
@@ -42,7 +44,7 @@ export class EnvironmentBuilderScene extends Current {
       </div>
       <p data-zone-count style="font-size:9px;color:#8cddfa;margin-top:9px"></p>`;
     const group=document.createElement('details');
-    group.className='es-advanced-group';
+    group.className='es-advanced-group es-zone-details';
     const summary=document.createElement('summary');
     summary.textContent='ZONAS · COLISIÓN';
     group.append(summary,section);
@@ -237,7 +239,8 @@ export class EnvironmentBuilderScene extends Current {
     const zoom=Math.max(.1,this._editCam?.zoom||1),unit=1/zoom;
     const shape=(pts,selected=false,unfinished=false)=>{
       if(!pts||pts.length<2)return;
-      const color=selected?0xffd166:unfinished?0x42b9ff:0x67e6ab;
+      const colors=ENVIRONMENT_ZONE_COLORS.zone;
+      const color=selected?colors.selected:unfinished?colors.draft:colors.line;
       if(pts.length>=3){
         g.fillStyle(color,unfinished?.10:.16);
         g.beginPath();g.moveTo(pts[0].x,pts[0].y);
@@ -252,7 +255,7 @@ export class EnvironmentBuilderScene extends Current {
     for(const zone of this._collisionZones||[])shape(zone.points,zone===this._zoneSelected);
     if(this._zoneDraft?.length)shape(this._zoneDraft,false,true);
     if(this._zoneSelected&&this._mode==='collision-zone-edit'){
-      g.fillStyle(0xffd166,1);
+      g.fillStyle(ENVIRONMENT_ZONE_COLORS.zone.handle,1);
       for(const p of this._zoneSelected.points)g.fillCircle(p.x,p.y,5.5*unit);
     }
   }

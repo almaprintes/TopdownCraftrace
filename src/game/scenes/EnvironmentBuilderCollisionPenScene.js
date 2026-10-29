@@ -5,6 +5,8 @@ const clone=v=>JSON.parse(JSON.stringify(v));
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const near=(a,b,r)=>distance(a,b)<=r;
 
+import {ENVIRONMENT_ZONE_COLORS} from '../environment/environmentStudioZoneColors.js';
+
 export class EnvironmentBuilderScene extends Current {
   create(){
     this._collisionLines=[];
@@ -42,7 +44,7 @@ export class EnvironmentBuilderScene extends Current {
         <button data-pen="delete" class="danger">BORRAR LÍNEA</button>
       </div><p data-pen-count style="font-size:9px;color:#7fffd4;margin-top:9px"></p>`;
     const group=document.createElement('details');
-    group.className='es-advanced-group';
+    group.className='es-advanced-group es-pen-details';
     const summary=document.createElement('summary');
     summary.textContent='PLUMA · COLISIONES';
     group.append(summary,section);
@@ -216,32 +218,38 @@ export class EnvironmentBuilderScene extends Current {
     const zoom=Math.max(.1,this._editCam?.zoom||1),step=1/zoom;
     const draw=(line,selected=false)=>{
       if(!validCollisionLine(line))return;
-      g.lineStyle((selected?4:3)*step,selected?0xffdd75:0x36f4d1,selected?1:.78);
-      for(let i=0;i<line.nodes.length-1;i++){
-        let p=cubicCollisionPoint(line.nodes,i,0);
-        const a=line.nodes[i],b=line.nodes[i+1],approx=distance(a,b)+distance(a.out,a)+distance(b.in,b);
-        const count=Math.min(150,Math.max(8,Math.ceil(approx/(10*step))));
-        for(let j=1;j<=count;j++){
-          const q=cubicCollisionPoint(line.nodes,i,j/count);
-          g.lineBetween(p.x,p.y,q.x,q.y);p=q;
+      const palette=ENVIRONMENT_ZONE_COLORS.pen;
+      const trace=(width,color,alpha)=>{
+        g.lineStyle(width*step,color,alpha);
+        for(let i=0;i<line.nodes.length-1;i++){
+          let p=cubicCollisionPoint(line.nodes,i,0);
+          const a=line.nodes[i],b=line.nodes[i+1],approx=distance(a,b)+distance(a.out,a)+distance(b.in,b);
+          const count=Math.min(150,Math.max(8,Math.ceil(approx/(10*step))));
+          for(let j=1;j<=count;j++){
+            const q=cubicCollisionPoint(line.nodes,i,j/count);
+            g.lineBetween(p.x,p.y,q.x,q.y);p=q;
+          }
         }
-      }
+      };
+      // Dark contour preserves white-pen legibility on pale aerial photos.
+      trace(selected?6.4:5.2,palette.shadow,.82);
+      trace(selected?4:3,selected?palette.selected:palette.line,selected?1:.92);
     };
     for(const line of this._collisionLines)draw(line,line===this._collisionSelected);
     const active=this._penDraft||this._collisionSelected;
     if(this._penDraft){
       draw(this._penDraft,true);
       if(this._penDraft.nodes.length===1){
-        const n=this._penDraft.nodes[0];h.fillStyle(0xffdd75,1);h.fillCircle(n.x,n.y,8*step);
+        const n=this._penDraft.nodes[0];h.fillStyle(ENVIRONMENT_ZONE_COLORS.pen.handle,1);h.fillCircle(n.x,n.y,8*step);
       }
     }
     if(!active)return;
     for(const n of active.nodes){
       for(const key of ['in','out'])if(!near(n,n[key],1)){
-        h.lineStyle(1.5*step,0x7bdaf7,.85);h.lineBetween(n.x,n.y,n[key].x,n[key].y);
-        h.fillStyle(0x7bdaf7,1);h.fillCircle(n[key].x,n[key].y,6*step);
+        h.lineStyle(1.5*step,ENVIRONMENT_ZONE_COLORS.pen.tangent,.85);h.lineBetween(n.x,n.y,n[key].x,n[key].y);
+        h.fillStyle(ENVIRONMENT_ZONE_COLORS.pen.tangent,1);h.fillCircle(n[key].x,n[key].y,6*step);
       }
-      h.fillStyle(0xffdd75,1);h.fillCircle(n.x,n.y,8*step);
+      h.fillStyle(ENVIRONMENT_ZONE_COLORS.pen.handle,1);h.fillCircle(n.x,n.y,8*step);
       h.lineStyle(1.5*step,0x1a2734,1);h.strokeCircle(n.x,n.y,8*step);
     }
   }

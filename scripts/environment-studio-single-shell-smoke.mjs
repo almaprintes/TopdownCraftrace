@@ -1,4 +1,4 @@
-// DEV 1.3.58: real editor must show ONE UI shell, without disabling
+// DEV 1.3.59: real editor must show ONE UI shell, without disabling
 // collisions, canopy painting, materials, camera or saved project schema.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -12,7 +12,7 @@ const zone=get('src/game/scenes/EnvironmentBuilderFreehandCollisionScene.js');
 const workflow=get('src/game/scenes/EnvironmentBuilderCollisionWorkflowScene.js');
 const exit=get('src/game/scenes/EnvironmentBuilderSafeWorkflowScene.js');
 const html=get('index.html');
-assert.match(html,/name="tdr-dev-version" content="DEV 1\.3\.58"/);
+assert.match(html,/name="tdr-dev-version" content="DEV 1\.3\.59"/);
 assert.match(base,/typeof this\._mountDomShell==='function'\s*\? null : mountEnvironmentStudioChrome\(this,CATALOG,BASE\)/,
  'Advanced scene must never mount simple premium shell in parallel');
 assert.match(dom,/import '\.\.\/environment\/environmentStudioUnified\.css';/);
@@ -61,4 +61,24 @@ assert.ok(exit.includes("querySelector('[data-act=\"exit\"]')"),'Safe exit butto
 assert.ok(base.includes('_storageKey(){return`tdr2:environmentBuilder:v1:${this._trackId}`;}'),
   'No changed persistent project namespace');
 assert.ok(canopy.includes('normalizedCanopyZones(this._canopyZones'),'Canopy JSON export preserved');
+// The three editor tools must keep their independent colour identities on
+// completed, selected and in-progress traces, without changing saved data.
+const palette=get('src/game/environment/environmentStudioZoneColors.js');
+assert.match(palette,/canopy:Object\.freeze\(\{line:0x38e99a,selected:0x95ffcf/);
+assert.match(palette,/pen:Object\.freeze\(\{line:0xf1f6ff,selected:0xffffff/);
+assert.match(palette,/zone:Object\.freeze\(\{line:0xffcf45,selected:0xffee97/);
+assert.ok(pen.includes('const palette=ENVIRONMENT_ZONE_COLORS.pen;'),'Pluma base path must be white');
+assert.ok(pen.includes('selected?palette.selected:palette.line'),'Pluma selection must remain white');
+assert.ok(pen.includes('palette.shadow'),'White stroke must have contrast on bright photos');
+assert.ok(!pen.includes('0xffdd75'),'Pen vertices must never turn yellow on selection');
+assert.ok(zone.includes('unfinished?colors.draft:colors.line'),'Solid zones and drafts must remain yellow');
+assert.ok(canopy.includes('unfinished?colors.draft:colors.line'),'Canopy contours and drafts must remain green');
+assert.ok(zone.includes("es-advanced-group es-zone-details"),'Zone menu must have own accent');
+assert.ok(pen.includes("es-advanced-group es-pen-details"),'Pen menu must have own accent');
+assert.ok(canopy.includes("es-canopy-details"),'Canopy menu must have own accent');
+for(const cls of ['es-canopy-details','es-pen-details','es-zone-details'])assert.ok(css.includes('details.'+cls),'Missing CSS colour section '+cls);
+assert.ok(css.includes('background:var(--es-zone)'),'Menus must include colour swatches');
+assert.ok(base.includes('_storageKey(){return`tdr2:environmentBuilder:v1:${this._trackId}`;}'),'Persisted editor key unchanged');
+console.log('PASS Environment Studio 1.3.59: canopy green, pen white, solid zones yellow (draft/selected), matching menus, saved JSON untouched');
+
 console.log('PASS Environment Studio single premium shell: layout, iPhone dimensions, scroll, all callbacks, canopy/collisions, cleanup and saved data.');
