@@ -51,7 +51,7 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
       </footer>
     </section>`;
     dom=scene.add.dom(0,0).createFromHTML(html).setOrigin(0,0).setDepth(1000000);
-    const node=dom.node,root=node?.querySelector?.('.vl-ficha');
+    const node=dom.node,root=node?.matches?.('.vl-ficha')?node:node?.querySelector?.('.vl-ficha');
     if(!root)throw new Error('Ficha DOM not mounted');
     const fit=()=>{
       if(!dom?.node)return;
