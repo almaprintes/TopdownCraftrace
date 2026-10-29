@@ -1944,8 +1944,7 @@ _applyZoomAtViewportCenter(multiplier) {
     const from=cam.getWorldPoint(cx,cy);
     const to=cam.getWorldPoint(cx+dx,cy+dy);
     if(!Number.isFinite(to.x-from.x)||!Number.isFinite(to.y-from.y))return false;
-    this._nudgeSelectedNode(to.x-from.x,to.y-from.y);
-    return true;
+    return this._nudgeSelectedNode(to.x-from.x,to.y-from.y);
   }
   _trackWidthStep() {
     return trackStudioWidthStep(this._imageCanvas, this._trackWidthMax, this._widthStep);
