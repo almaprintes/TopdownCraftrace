@@ -97,6 +97,7 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
   setting(qualityWrap,'CALIDAD DE EXPORTACIÓN');
   qualityValue.style.cssText='';
   qualityInput.style.cssText='';
+  const choiceButtons=[];
   const choices=(wrap,select,data,cls)=>{
     select.style.cssText='';
     const holder=node('div',cls);
@@ -106,7 +107,7 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
         select.value=val;
         select.dispatchEvent(new Event('change',{bubbles:true}));
       },cls==='tdr-image-lab__format-options'?'tdr-image-lab__format-choice':'tdr-image-lab__scale-choice');
-      holder.append(b);choices.push([val,b]);
+      holder.append(b);choices.push([val,b]);choiceButtons.push(b);
     }
     wrap.append(holder);
     const update=()=>{
@@ -249,6 +250,10 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
     compare.disabled=download.disabled=false;zoom(false);
     requestAnimationFrame(draw);
   };
+  const setBusy=(busy)=>{
+    pickButton.disabled=busy;
+    for(const button of choiceButtons)button.disabled=busy;
+  };
   resetFrame();
-  return {showSelection,presentResult,clearOutput:resetFrame,dispose:resetFrame};
+  return {showSelection,presentResult,clearOutput:resetFrame,dispose:resetFrame,setBusy};
 }
