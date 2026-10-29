@@ -21,6 +21,7 @@ assert.ok(calibrator.includes('previewVisible=!!event.target.checked'),'Single p
 assert.ok(!calibrator.includes('data-view="race"'),'No separate race calibration tab');
 assert.ok(calibrator.includes('LEGACY_CAR_IDS'));
 assert.ok(editor.includes('panel tdr-car-editor'));
+assert.ok(editor.includes('this._mountVehicleLabShell()'),'PADDOCK skin must be mounted');
 assert.ok(editor.includes('FÍSICAS JSON'));
 assert.ok(calibrator.includes('mcal-controlpanel')||calibrator.includes('mcal-controls'));
 assert.ok(assets.size>=15,'Expected actual fleet visuals');
