@@ -169,8 +169,10 @@ export function installTrackStudioShapeEditor(s){
   };
   let gridOn=null,gridOff=null;
   const refreshGridToggle=()=>{
-    gridOn?.setVisible(s._showStartingGrid !== false);
-    gridOff?.setVisible(s._showStartingGrid === false);
+    // The DOM dock replaces this visual toolbar while retaining callbacks.
+    const nativeVisible=!s._studioChromeMounted;
+    gridOn?.setVisible(nativeVisible&&s._showStartingGrid !== false);
+    gridOff?.setVisible(nativeVisible&&s._showStartingGrid === false);
   };
   const toggleGrid=()=>{
     s._pushHistory();
