@@ -159,13 +159,18 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
   panel.replaceChildren(head,workspace,resultsWrap,footer,fileWrap);
 
   let sourceUrl=null,current=null,actualZoom=false,sourceMeta=null,isBusy=false;
-  const describeLimit=()=>exportLimits.mobile
-    ?'Móvil: 8192 px/lado y 16 MP'
-    :'Mac/PC: 16.383 px/lado y 64 MP';
+  const currentLimits=()=>typeof exportLimits.getLimits==='function'
+    ?exportLimits.getLimits(formatInput.value,sourceMeta?.format)
+    :exportLimits;
+  const describeLimit=({maxEdge,maxPixels,mobile,usesWasm})=>{
+    const name=mobile?(usesWasm?'WebP':'PNG/JPG'):'Mac/PC';
+    return name+': '+maxEdge.toLocaleString('es-ES')+' px/lado, '+(maxPixels/1e6)+' MP';
+  };
   const refreshPrediction=()=>{
-    const {maxEdge,maxPixels}=exportLimits;
+    const limits=currentLimits();
+    const {maxEdge,maxPixels}=limits;
     if(!sourceMeta){
-      limitsHint.textContent='Límite de salida · '+describeLimit();
+      limitsHint.textContent='Límite de salida · '+describeLimit(limits);
       limitsHint.setAttribute('data-warning','false');
       for(const [,button] of scaleButtons)button.disabled=isBusy;
       if(!isBusy)launch.disabled=false;
@@ -181,14 +186,16 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
       const directCopy=formatInput.value==='original'&&scale===1;
       const prohibited=!directCopy&&(w>maxEdge||h>maxEdge||w*h>maxPixels);
       button.disabled=isBusy||prohibited;
-      button.title=prohibited?'Supera '+describeLimit():'';
+      button.title=prohibited?'Supera '+describeLimit(limits):'';
     }
     outputSize.textContent=width+' × '+height+(invalid?' ⚠':'');
     outputSize.parentElement?.setAttribute('data-warning',String(invalid));
     limitsHint.setAttribute('data-warning',String(invalid));
+    const highMemory=limits.mobile&&pixels>16_000_000&&!invalid;
     limitsHint.textContent=invalid
-      ?'NO ADMISIBLE · '+(width>maxEdge||height>maxEdge?'excede lado':'excede MP')+' · '+describeLimit()
-      :'Salida prevista: '+width+' × '+height+' · '+(pixels/1e6).toFixed(1)+' MP';
+      ?'NO ADMISIBLE · '+(width>maxEdge||height>maxEdge?'excede lado':'excede MP')+' · '+describeLimit(limits)
+      :'Salida prevista: '+width+' × '+height+' · '+(pixels/1e6).toFixed(1)+' MP'+(highMemory?' · ALTA MEMORIA':'');
+    limitsHint.setAttribute('data-caution',String(highMemory));
     if(!isBusy)launch.disabled=invalid;
     if(!current)metricStatus.textContent=invalid?'REDUCE ESCALA':'PENDIENTE';
   };
@@ -254,7 +261,7 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
       draw();
     }
   });
-  const showSelection=(file,count)=>{
+  const showSelection=(file,count,sourceFormat)=>{
     resetFrame();
     if(!file)return;
     sourceUrl=URL.createObjectURL(file);
@@ -267,7 +274,8 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
     preview.onload=()=>{
       if(before.src!==sourceUrl||!sourceUrl)return;
       originalSize.textContent=preview.naturalWidth+' × '+preview.naturalHeight;
-      sourceMeta={width:preview.naturalWidth,height:preview.naturalHeight};
+      sourceMeta={width:preview.naturalWidth,height:preview.naturalHeight,
+        format:sourceFormat||(/\.(png)$/i.test(file.name||'')?'png':/\.(jpe?g)$/i.test(file.name||'')?'jpeg':'webp')};
       refreshPrediction();
     };
     preview.src=sourceUrl;
@@ -290,7 +298,7 @@ export function mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,
     const delta=result.originalBytes?((result.blob.size-result.originalBytes)/result.originalBytes*100):0;
     savings.textContent=(delta>0?'+':'')+delta.toFixed(1)+' %';
     metricStatus.textContent=formatLabel(result.format)+' · LISTO';
-    sourceMeta={width:result.originalWidth,height:result.originalHeight};
+    sourceMeta={width:result.originalWidth,height:result.originalHeight,format:sourceFile?.type==='image/png'?'png':sourceFile?.type==='image/jpeg'?'jpeg':result.format};
     compare.disabled=download.disabled=false;zoom(false);
     requestAnimationFrame(draw);
   };

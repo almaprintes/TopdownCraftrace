@@ -6,7 +6,8 @@ import {mountImageLabV2} from './adminImageLabV2.js';
 // budget is larger. iOS WebKit has an 8192 px Canvas edge limit; keeping a
 // separate mobile cap avoids promising outputs that Safari cannot render.
 export const MAX_EXPORT_PIXELS=64_000_000;
-export const MAX_MOBILE_EXPORT_PIXELS=16_000_000;
+export const MAX_MOBILE_EXPORT_PIXELS=32_000_000; // native PNG/JPG, ~128 MiB output RGBA
+export const MAX_MOBILE_WASM_EXPORT_PIXELS=16_000_000; // conservative WebP WASM fallback
 export const MAX_EXPORT_EDGE=16_383; // WebP VP8 upper bound
 export const MAX_MOBILE_EXPORT_EDGE=8192;
 export const MAX_BATCH_COUNT=8;
@@ -36,18 +37,28 @@ const mimeForFormat=format=>({
   webp:'image/webp',png:'image/png',jpeg:'image/jpeg',avif:'image/avif',heic:'image/heic'
 })[format]||'application/octet-stream';
 
-export function targetWebpDimensions(width,height,scale=1,{mobile=false}={}){
+// Mobile memory budget depends on the encoder. Native PNG/JPG can safely
+// attempt more pixels than WebP's multi-buffer WASM fallback. This is a
+// conservative application policy, not a guaranteed device memory limit.
+export function exportImageLimits({mobile=false,format='webp',nativeWebp=false}={}){
+  const maxEdge=mobile?MAX_MOBILE_EXPORT_EDGE:MAX_EXPORT_EDGE;
+  const usesWasm=mobile&&format==='webp'&&!nativeWebp;
+  const maxPixels=mobile?(usesWasm?MAX_MOBILE_WASM_EXPORT_PIXELS:MAX_MOBILE_EXPORT_PIXELS):MAX_EXPORT_PIXELS;
+  return {maxEdge,maxPixels,mobile,usesWasm};
+}
+export function targetWebpDimensions(width,height,scale=1,{mobile=false,format='webp',nativeWebp=false}={}){
   if(![width,height,scale].every(Number.isFinite)||width<=0||height<=0||scale<1||scale>3)
     throw Error('Dimensiones o escala incorrectas');
   const w=Math.round(width*scale),h=Math.round(height*scale);
-  const maxEdge=mobile?MAX_MOBILE_EXPORT_EDGE:MAX_EXPORT_EDGE;
+  const {maxEdge,maxPixels}=exportImageLimits({mobile,format,nativeWebp});
   if(w>maxEdge||h>maxEdge)
     throw Error(mobile?'La salida supera 8192 px por lado en iPhone/Android. Utiliza el Mac para exportar más grande o reduce la escala.'
       :'La salida supera 16.383 px por lado (máximo WebP). Reduce la escala.');
-  const max=mobile?MAX_MOBILE_EXPORT_PIXELS:MAX_EXPORT_PIXELS;
-  if(w*h>max)
-    throw Error(mobile?'Imagen demasiado grande para convertir de forma segura en móvil (16 MP). Utiliza el Mac o reduce la escala.'
-      :'La salida supera 64 megapíxeles. Reduce la escala.');
+  if(w*h>maxPixels){
+    if(!mobile)throw Error('La salida supera 64 megapíxeles. Reduce la escala.');
+    const limit=maxPixels/1e6;
+    throw Error('La salida supera '+limit+' MP para '+(format==='webp'?'WebP con codificador de compatibilidad':'PNG/JPG nativo')+'. Reduce la escala o cambia de formato.');
+  }
   return {width:w,height:h,pixels:w*h};
 }
 export function makeImageFilename(original,scale=1,format='webp'){
@@ -126,7 +137,8 @@ export async function convertFileToImage(file,{format='webp',quality=QUALITY_DEF
         originalWidth:srcWidth,originalHeight:srcHeight,width:srcWidth,height:srcHeight,
         name:String(file.name||'imagen'),originalBytes:file.size};
     }
-    const dims=targetWebpDimensions(srcWidth,srcHeight,scale,{mobile});
+    const nativeWebp=outputFormat==='webp'&&webpEncoderSupported();
+    const dims=targetWebpDimensions(srcWidth,srcHeight,scale,{mobile,format:outputFormat,nativeWebp});
     canvas=document.createElement('canvas');canvas.width=dims.width;canvas.height=dims.height;
     const ctx=canvas.getContext('2d',{alpha:true});
     if(!ctx)throw Error('No hay memoria disponible para el lienzo');
@@ -138,7 +150,7 @@ export async function convertFileToImage(file,{format='webp',quality=QUALITY_DEF
     let blob=null,encoder='';
     if(outputFormat==='webp'){
       encoder='LIBWEBP · COMPATIBILIDAD';
-      if(webpEncoderSupported()){
+      if(nativeWebp){
         // Safari may silently export PNG; verify both MIME and file signature.
         try{
           const native=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality/100));
@@ -148,6 +160,10 @@ export async function convertFileToImage(file,{format='webp',quality=QUALITY_DEF
         }catch{}
       }
       if(!blob){
+        // If native WebP lied about support, do not allocate a second huge
+        // RGBA buffer and WASM heap beyond the safe mobile fallback budget.
+        if(mobile&&dims.pixels>MAX_MOBILE_WASM_EXPORT_PIXELS)
+          throw Error('WebP no se pudo codificar de forma nativa a esta resolución. Prueba PNG o JPG, o reduce la escala.');
         const rgba=ctx.getImageData(0,0,dims.width,dims.height);
         blob=await encodeWithLocalWebpWorker(rgba,quality);
       }
@@ -234,7 +250,7 @@ export function mountAdminWebpTool(adminRoot){
     launch.textContent=original?'PROCESAR · MANTENER FORMATO':'CONVERTIR A '+(formatInput.value==='jpeg'?'JPG':formatInput.value.toUpperCase());
   };
   formatInput.addEventListener('change',updateExportControls);
-  const note=elt('div','Remuestreo: suavizado de alta calidad del navegador, conservando proporciones. PNG no introduce compresión con pérdida; JPG no admite transparencia. HEIC/AVIF se pueden conservar sin cambios, pero para ampliarlos hay que exportar a PNG/JPG/WebP. Salida máxima: 8192 px por lado y 16 MP en móvil; 16.383 px por lado y 64 MP en Mac/PC.',
+  const note=elt('div','Remuestreo: suavizado de alta calidad del navegador, conservando proporciones. PNG no introduce compresión con pérdida; JPG no admite transparencia. HEIC/AVIF se pueden conservar sin cambios, pero para ampliarlos hay que exportar a PNG/JPG/WebP. Móvil: máximo 8192 px por lado, 32 MP para PNG/JPG, 16 MP si WebP necesita el codificador de compatibilidad. Mac/PC: 16.383 px y 64 MP.',
     'font-size:11px;color:#a7b8ca;line-height:1.4');
   panel.appendChild(note);
   const launch=elt('button','CONVERTIR A WEBP',B+'border-color:#2bff88;background:#143b2b;color:#baffe1;align-self:flex-start;');
@@ -248,9 +264,12 @@ export function mountAdminWebpTool(adminRoot){
   const skin=mountImageLabV2({overlay,panel,head,heading,close,hint,fileWrap,pick,
     options,formatWrap,formatInput,scaleWrap,scaleInput,qualityWrap,qualityInput,
     qualityValue,note,launch,status,results,
-    exportLimits:{maxEdge:isMobileDevice()?MAX_MOBILE_EXPORT_EDGE:MAX_EXPORT_EDGE,
-      maxPixels:isMobileDevice()?MAX_MOBILE_EXPORT_PIXELS:MAX_EXPORT_PIXELS,
-      mobile:isMobileDevice()}});
+    exportLimits:{mobile:isMobileDevice(),
+      getLimits:(requestedFormat,sourceFormat)=>exportImageLimits({
+        mobile:isMobileDevice(),
+        format:requestedFormat==='original'?sourceFormat:requestedFormat,
+        nativeWebp:webpEncoderSupported()
+      })}});
 
   const clearOutput=()=>{
     skin.clearOutput();
@@ -265,7 +284,7 @@ export function mountAdminWebpTool(adminRoot){
     if(busy)return;
     clearOutput();
     const count=pick.files?.length||0;
-    skin.showSelection(pick.files?.[0]||null,count);
+    skin.showSelection(pick.files?.[0]||null,count,pick.files?.[0]?detectSourceFormat(pick.files[0]):null);
     status.textContent=count?count+' foto(s) preparada(s) · Pulsa PROCESAR.':'Selecciona fotografías.';
     updateExportControls();
   });
@@ -387,7 +406,7 @@ export function mountAdminWebpTool(adminRoot){
     if(selected.some(f=>!(f.type||'').startsWith('image/')&&!detectSourceFormat(f))){status.textContent='Solo se admiten imágenes.';return;}
     busy=true;launch.disabled=true;pick.disabled=true;scaleInput.disabled=true;formatInput.disabled=true;qualityInput.disabled=true;
     clearOutput();
-    skin.showSelection(selected[0],selected.length);
+    skin.showSelection(selected[0],selected.length,detectSourceFormat(selected[0]));
     skin.setBusy(true);
     const scale=Number(scaleInput.value),quality=Number(qualityInput.value),format=formatInput.value,mobile=isMobileDevice();
     let succeeded=0,failed=0;
