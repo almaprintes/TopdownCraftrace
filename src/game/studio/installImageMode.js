@@ -120,6 +120,16 @@ async function replaceCanvasImage(s,file,{confirmed=false}={}){
     if(s._imageCanvas?.imageId===current.imageCanvas.imageId)restore(s,current.imageCanvas);
   }
 }
+async function exportCanvasImage(s){
+  const meta=s._imageCanvas;
+  if(!meta?.imageId)throw Error('Carga primero una imagen maestra');
+  const row=await readCanvasImage(meta.imageId);
+  if(!row?.blob)throw Error('Falta la fotografía del proyecto');
+  const {blob}=await normalizeCanvasImageBlob(row.blob,meta);
+  const ext=blob.type==='image/webp'?'webp':blob.type==='image/jpeg'?'jpg':'png';
+  download(blob,'trackstudio-mapa-'+meta.width+'x'+meta.height+'.'+ext);
+  s._flashMessage('Foto maestra exportada · '+meta.width+' × '+meta.height+' px');
+}
 async function upscaleCanvasImage(s,factor){
   factor=Number(factor);
   if(!Number.isFinite(factor)||factor<=1||factor>4)
@@ -159,7 +169,7 @@ async function upscaleCanvasImage(s,factor){
     URL.revokeObjectURL(url);img.onload=null;img.onerror=null;img.src='';
   }
 }
-function showCanvasScaleMenu(s,{onNew,onReplace,onUpscale}){
+function showCanvasScaleMenu(s,{onNew,onReplace,onUpscale,onExport}){
   s._closeCanvasScaleMenu?.();
   const meta=s._imageCanvas;
   const root=document.createElement('div');
@@ -200,6 +210,7 @@ function showCanvasScaleMenu(s,{onNew,onReplace,onUpscale}){
       ()=>onUpscale(factor),allowed);
   }
   add('NUEVO MAPA','Crea un proyecto vacío. Conserva antes tu .tdrtrack',onNew);
+  add('EXPORTAR FOTO','Descarga la imagen maestra actual sin cambiarla',onExport);
   const custom=document.createElement('div');
   custom.style.cssText='display:flex;align-items:center;gap:8px;margin-top:12px;flex-wrap:wrap';
   const customLabel=document.createElement('label');
@@ -315,7 +326,8 @@ export function installTrackStudioImageMode(s){
     showCanvasScaleMenu(s,{
       onNew:newMap,
       onReplace:()=>replaceInput.click(),
-      onUpscale:async factor=>{try{await upscaleCanvasImage(s,factor)}catch(error){reportError(error)}}
+      onUpscale:async factor=>{try{await upscaleCanvasImage(s,factor)}catch(error){reportError(error)}},
+      onExport:async()=>{try{await exportCanvasImage(s)}catch(error){reportError(error)}}
     });
   };
   s._replaceCanvasImagePicker=()=>replaceInput.click();
