@@ -1,5 +1,6 @@
 import './vehicleLabPaddockShared.css';
 import './garageDetailPaddock.css';
+import {createAppWallet,disposeAppWallets} from './TdrAppHeader.js';
 
 const safe=value=>String(value??'').replace(/[&<>"']/g,c=>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -20,7 +21,7 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
       <header class="vl-ficha-header">
         <div class="vl-ficha-brand"><span class="vl-ficha-logo">TD<em>R</em></span>
           <div><small>GARAJE / VEHICLE LAB</small><strong>FICHA DEL VEHÍCULO</strong></div></div>
-        <button type="button" data-ficha-action="back">← VOLVER AL GARAJE</button>
+        <div class="vl-ficha-header-right"><span data-ficha-wallet></span><button type="button" data-ficha-action="back">← VOLVER AL GARAJE</button></div>
       </header>
       <div class="vl-ficha-body">
         <div class="vl-ficha-preview">
@@ -65,11 +66,14 @@ export function mountGarageDetailPaddock(scene,{spec,carId,mode,rows,techInfo,on
     const cleanup=()=>{
       if(closed)return;
       closed=true;scene.scale.off('resize',fit);
+      disposeAppWallets(root);
       dom?.destroy?.();dom=null;
       if(scene._garageDetailPaddock?.root===root)scene._garageDetailPaddock=null;
     };
     scene.events.once('shutdown',cleanup);
     scene.events.once('destroy',cleanup);
+    const wallet=createAppWallet({className:'vl-ficha-wallet'});
+    root.querySelector('[data-ficha-wallet]')?.appendChild(wallet);
     const imageEl=root.querySelector('[data-ficha-image]');
     imageEl?.addEventListener('error',()=>{
       const fallback=imageEl.dataset.fallback;

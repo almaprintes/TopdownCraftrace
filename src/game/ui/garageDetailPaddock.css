@@ -115,3 +115,18 @@
  .vl-ficha-actions button{min-width:90px}
  .vl-ficha-footer>span{display:none}
 }
+
+/* Preserve the live Garage coin wallet, without a second legacy header. */
+.vl-ficha-header-right{display:flex;align-items:center;gap:12px;min-width:0}
+.vl-ficha [data-ficha-wallet]{display:flex;align-items:center;min-width:0}
+.vl-ficha .vl-ficha-wallet{
+ display:flex;align-items:center;gap:7px;min-width:0;
+ padding:5px 9px;border:1px solid #3b596c;border-radius:9px;
+ background:#0a1a2b;color:#e6f3ff;
+}
+.vl-ficha .vl-ficha-wallet-icon{width:31px;height:31px;object-fit:contain}
+.vl-ficha .vl-ficha-wallet-copy{display:flex;flex-direction:column;gap:1px}
+.vl-ficha .vl-ficha-wallet-copy small{color:#a7bfd0;font-size:9px;font-weight:900;letter-spacing:.07em}
+.vl-ficha .vl-ficha-wallet-copy strong{color:#fff;font-size:15px;font-weight:1000}
+@media(max-height:510px){.vl-ficha .vl-ficha-wallet{padding:3px 7px}}
+@media(max-width:740px){.vl-ficha [data-ficha-wallet]{display:none}}
