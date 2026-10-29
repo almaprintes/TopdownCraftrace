@@ -3,6 +3,7 @@ import {pickShapeTarget} from './shapeTouchInteraction.js';
 import {EDITOR_CONTROL_PIXELS,worldControlRadius} from './trackStudioControlGeometry.js';
 import {createShapeDomInspector,shapeInspectorCopy,studioInspectorCopy} from './shapeDomInspector.js';
 import { installKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
+import { trackStudioShapeToolbarLayout } from './trackStudioNavigationLayout.js';
 
 function drawPolyline(g,points,closed){
   if(points.length<2)return;
@@ -238,9 +239,10 @@ export function installTrackStudioShapeEditor(s){
       s._redrawEditor();s._updatePanel();
     }
   };
-  const y=s._viewY+9,x=s._viewX+10;
-  const createBtn=button(s,x,y,'CREAR PISTA',()=>createOrRebuild(s));
-  const editBtn=button(s,x+114,y,'AJUSTAR',()=>{
+  const shapeNav=trackStudioShapeToolbarLayout(s._viewX,s._viewY,s._viewW);
+  const [createPos,editPos,addPos,gridPos,previewPos]=shapeNav.points;
+  const createBtn=button(s,createPos.x,createPos.y,'CREAR PISTA',()=>createOrRebuild(s));
+  const editBtn=button(s,editPos.x,editPos.y,'AJUSTAR',()=>{
     if(!shapeIsValid(s._trackShape))return s._flashMessage('Primero pulsa CREAR PISTA');
     s._shapeEditing=!s._shapeEditing;s._shapeSelected=null;s._selectedNode=-1;
     s._selectedPart=null;s._tool='edit';
@@ -249,15 +251,15 @@ export function installTrackStudioShapeEditor(s){
     editBtn.setTint?.(s._shapeEditing?0x83f6d7:0xffffff);
     s._flashMessage(s._shapeEditing?'Toca pista para seleccionar; segundo gesto para mover':'Modo centerline · bordes conservados');
   });
-  const addBtn=button(s,x+225,y,'+ NODO',()=>insertNode(s));
+  const addBtn=button(s,addPos.x,addPos.y,'+ NODO',()=>insertNode(s));
   // Two immutable Phaser labels avoid the iPhone Text.setText / UV crash.
-  gridOn=button(s,x+310,y,'PARRILLA: SÍ',toggleGrid);
-  gridOff=button(s,x+310,y,'PARRILLA: NO',toggleGrid);
+  gridOn=button(s,gridPos.x,gridPos.y,'PARRILLA: SÍ',toggleGrid);
+  gridOff=button(s,gridPos.x,gridPos.y,'PARRILLA: NO',toggleGrid);
   refreshGridToggle();
   // DEV preview is stored in this browser only. Race times use a separate
   // key, so existing Karting Tenerife rankings are not contaminated.
   let installing=false;
-  const previewBtn=button(s,x+447,y,'▶ PROBAR JUEGO',async()=>{
+  const previewBtn=button(s,previewPos.x,previewPos.y,'▶ PROBAR JUEGO',async()=>{
     if(installing)return;
     if(!window.confirm('¿Probar este Karting Tenerife en el juego DEV?\\n\\nSe guardará una copia local con un identificador de pruebas. La versión pública y sus récords no cambian.'))return;
     installing=true;
