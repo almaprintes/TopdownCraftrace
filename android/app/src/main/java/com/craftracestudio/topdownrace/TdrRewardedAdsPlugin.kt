@@ -4,6 +4,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Log
+import android.content.Intent
+import android.net.Uri
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -120,6 +122,25 @@ class TdrRewardedAdsPlugin : Plugin() {
             result.put("checked", false)
             result.put("available", false)
             call.resolve(result)
+        }
+    }
+
+    // User-initiated, fixed-package Play link. Do not navigate the game WebView.
+    @PluginMethod
+    fun openPlayStore(call: PluginCall) {
+        val appId = "com.craftracestudio.topdownrace"
+        try {
+            activity.startActivity(Intent(Intent.ACTION_VIEW,
+                Uri.parse("market://details?id=" + appId)))
+            call.resolve()
+        } catch (_: Exception) {
+            try {
+                activity.startActivity(Intent(Intent.ACTION_VIEW,
+                    Uri.parse("https://play.google.com/store/apps/details?id=" + appId)))
+                call.resolve()
+            } catch (_: Exception) {
+                call.reject("No se pudo abrir Google Play")
+            }
         }
     }
 
