@@ -9,6 +9,18 @@ Reglas del proyecto:
 
 ---
 
+## 🔐 PRIORIDAD ESTRATÉGICA · ONLINE / 100.000 JUGADORES (30/10/2026)
+
+**Decisión explícita del propietario.** Hoja de ruta verificable: [Integridad online, identidad recuperable y almacenamiento](100K_ONLINE_TRUST_STORAGE_ROADMAP.md).
+
+- [ ] **P0 — Sistema antitrampas de Race Control**: comprobar tiempos y fantasmas de forma independiente del cliente antes de clasificarlos como verificados; pruebas sin falsear récords reales.
+- [ ] **P0 — Pilotos vinculados Google/Apple para servicios online**: invitados pueden jugar local, pero publicar récords o almacenar progresos online deberá exigir identidad recuperable **tras** un plan de transición; preservar UUID, inventario y copias. NO bloquear ahora usuarios anónimos de Auth.
+- [ ] **P1 — Reducir bytes de progreso y fantasmas**: medir tamaños y frecuencias, evitar subidas redundantes, estudiar compactación reversible sin borrar datos.
+
+La API de Supabase considera `authenticated` también a las **cuentas anónimas con sesión**; nunca equiparar `GRANT authenticated` a identidad social vinculada.
+
+---
+
 ## 🔧 EN PROCESO
 
 - [ ] **Perfiles de conducción**

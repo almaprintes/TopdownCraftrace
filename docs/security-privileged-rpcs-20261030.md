@@ -1,3 +1,5 @@
+> **Prioridad P0 aprobada el 30/10/2026:** implantar antitrampas verificable de RACE Control e identidades online vinculadas a Google/Apple, **sin bloquear cuentas provisionales actuales ni perder progreso**. [Plan y auditoría de almacenamiento a 100.000 jugadores](100K_ONLINE_TRUST_STORAGE_ROADMAP.md).
+
 # TDR · Auditoría de funciones privilegiadas (2026-10-30)
 
 ## Criterio
