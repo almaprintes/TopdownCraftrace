@@ -1,4 +1,4 @@
-import {fetchLiveCommunications,installedAndroidVersion,playUpdateNotice,noticeForPlayer,acknowledgeCommunication,safeNoticeLink,COMMUNICATION_REFRESH_MS} from '../online/liveCommunications.js';
+import {fetchLiveCommunications,installedAndroidVersion,playUpdateNotice,noticeForPlayer,acknowledgeCommunication,safeNoticeLink,openCommunicationLink,COMMUNICATION_REFRESH_MS} from '../online/liveCommunications.js';
 import './liveCommunicationsUi.css';
 
 const make=(tag,cls,value)=>{
@@ -47,8 +47,7 @@ export function installLiveCommunicationsUi(lobbyRoot){
       go.type='button';
       go.addEventListener('click',()=>{
         acknowledgeCommunication(notice,localStorage);
-        try{window.open(url,'_blank','noopener,noreferrer');}
-        catch{window.location.assign(url);}
+        void openCommunicationLink(notice);
         close();
       });
       controls.append(go);
