@@ -4,8 +4,9 @@ import { ghostPanelViewportRect } from '../ui/ghostPanelViewport.js';
 import {ghostGeometryRevision,ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
 import {findRaceControlGhost} from '../tracks/ghostReplayRecovery.js';
 
-const PANEL_W = 282;
-const ROW_H = 30;
+// Compact ghost buttons protect the usable racing view on mobile.
+const PANEL_W = 184;
+const ROW_H = 25;
 const PANEL_H = ROW_H * 3;
 const GHOST_BASE_ALPHA = 0.48;
 const GHOST_VISIBILITY_LEVELS = [1, 0.75, 0.5, 0.25];
@@ -319,11 +320,11 @@ export class RaceScene extends CurrentRaceScene {
       root.appendChild(row);
     }
 
-    const ghostText = this._makeGhostPanelText('0', '👻 FANTASMA · ON', '#c9f5ff');
+    const ghostText = this._makeGhostPanelText('0', '👻 ON', '#c9f5ff');
     ghostText.dataset.ghost = '1';
-    const recordText = this._makeGhostPanelText(`${ROW_H / PANEL_H * 100}%`, '🏆 RÉCORD PERSONAL');
+    const recordText = this._makeGhostPanelText(`${ROW_H / PANEL_H * 100}%`, '🏆 SIN REPLAY');
     recordText.dataset.record = '1';
-    const visibilityText = this._makeGhostPanelText(`${ROW_H * 2 / PANEL_H * 100}%`, '◐ VISIBILIDAD · 100%', '#d8f8ff');
+    const visibilityText = this._makeGhostPanelText(`${ROW_H * 2 / PANEL_H * 100}%`, '◐ VIS. 100%', '#d8f8ff');
     visibilityText.dataset.visibility = '1';
 
     root.append(ghostText, recordText, visibilityText);
@@ -392,16 +393,26 @@ export class RaceScene extends CurrentRaceScene {
     const hasReplay=onlineReplay||hasPbReplay||hasCurrentReplay;
     const bestMs=Number(this.ttBest?.lapMs);
     const setText=(node,value)=>{if(node&&node.textContent!==value)node.textContent=value;};
-    setText(labels.ghostText,`👻 FANTASMA · ${this._tdrGhostVisibleEnabled?'ON':'OFF'}`);
-    const recordText=onlineReplay?`🌐 ONLINE ${fmtPb(this._ghostData?.lapMs)} · ▶`:
-      this._onlineGhostChallenge?.invalid?'🌐 FANTASMA ANTIGUO · INCOMPATIBLE':
-      hasPbReplay?`🏆 PB ${fmtPb(bestMs)} · ▶`:
-      hasCurrentReplay?`🎥 VUELTA ACTUAL ${fmtPb(this._ghostData.lapMs)} · ▶`:
-      this._tdrGhostGeometryIncompatible?'🏆 PB ANTIGUO · CREA OTRO FANTASMA':
-      Number.isFinite(bestMs)?`🏆 PB ${fmtPb(bestMs)} · SIN REPLAY`:'RÉCORD NO DISPONIBLE';
+    setText(labels.ghostText,`👻 ${this._tdrGhostVisibleEnabled?'ON':'OFF'}`);
+    const recordText=onlineReplay?`🌐 ONLINE ${fmtPb(this._ghostData?.lapMs)} ▶`:
+      this._onlineGhostChallenge?.invalid?'🌐 REPLAY INCOMPATIBLE':
+      hasPbReplay?`🏆 PB ${fmtPb(bestMs)} ▶`:
+      hasCurrentReplay?`🎥 VUELTA ${fmtPb(this._ghostData.lapMs)} ▶`:
+      this._tdrGhostGeometryIncompatible?'🏆 PB ANTIGUO':
+      Number.isFinite(bestMs)?`🏆 PB ${fmtPb(bestMs)}`:'SIN RÉCORD';
     setText(labels.recordText,recordText);
-    setText(labels.visibilityText,`◐ VISIBILIDAD · ${Math.round(level * 100)}%`);
-    const recordRow=this._tdrGhostPanelRows?.[1];
+    setText(labels.visibilityText,`◐ VIS. ${Math.round(level * 100)}%`);
+    const rows=this._tdrGhostPanelRows||[];
+    // Compact visual labels keep accessible long descriptions intact.
+    const descriptions=[
+      'Fantasma '+(this._tdrGhostVisibleEnabled?'activado':'desactivado')+'. Tocar para cambiar.',
+      onlineReplay?'Fantasma online '+fmtPb(this._ghostData?.lapMs)+'. Tocar para ver repetición.':
+        hasReplay?'Repetición '+recordText+'. Tocar para reproducir.':
+        'No hay una repetición disponible para este circuito.',
+      'Visibilidad del fantasma '+Math.round(level*100)+' por ciento. Tocar para cambiar.'
+    ];
+    rows.forEach((row,i)=>{row.setAttribute?.('role','button');row.setAttribute?.('aria-label',descriptions[i]);});
+    const recordRow=rows[1];
     if(recordRow){
       const opacity=hasReplay?'1':'.58',cursor=hasReplay?'pointer':'default';
       if(recordRow.style.opacity!==opacity)recordRow.style.opacity=opacity;
