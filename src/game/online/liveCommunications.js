@@ -51,9 +51,35 @@ export async function installedAndroidVersion(){
   try{
     const status=await NATIVE.getStatus();
     const code=Number(status?.versionCode);
-    return Number.isSafeInteger(code)&&code>0
-      ?{code,version:String(status.versionName||'')} : null;
+    if(!Number.isSafeInteger(code)||code<1)return null;
+    // Play Core is the source of truth for each player's eligible rollout.
+    // A missing Play store/network response is "unknown", not "no update".
+    const play=await Promise.race([
+      Promise.resolve().then(()=>NATIVE.checkForPlayUpdate()).catch(()=>null),
+      new Promise(resolve=>setTimeout(()=>resolve(null),5000))
+    ]);
+    return {
+      code,version:String(status.versionName||''),
+      playChecked:play?.checked===true,
+      playAvailable:play?.available===true,
+      playVersionCode:Math.max(0,Math.floor(Number(play?.availableVersionCode)||0))
+    };
   }catch{return null;}
+}
+
+export function playUpdateNotice(installed,now=Date.now()){
+  if(!installed?.playAvailable||!Number.isSafeInteger(installed.code)||
+    !Number.isSafeInteger(installed.playVersionCode)||
+    installed.playVersionCode<=installed.code)return null;
+  return {
+    id:'00000000-0000-0000-0000-000000000000',
+    kind:'update',target:'android',active:true,priority:0,
+    title:'¡Nueva versión disponible!',
+    body:'Google Play tiene una actualización de Top Down RACE lista para tu dispositivo. Puedes instalarla ahora o seguir jugando.',
+    action_label:'ACTUALIZAR EN GOOGLE PLAY',action_url:PLAY_STORE_URL,
+    version_code:installed.playVersionCode,updated_at:'play:'+installed.playVersionCode,
+    starts_at:'2000-01-01T00:00:00Z',ends_at:null
+  };
 }
 
 export function noticeForPlayer(rows,{platform='web',versionCode=0,storage=null,now=Date.now()}={}){
