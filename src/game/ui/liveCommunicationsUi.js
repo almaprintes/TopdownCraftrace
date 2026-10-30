@@ -1,4 +1,4 @@
-import {fetchLiveCommunications,installedAndroidVersion,playUpdateNotice,noticeForPlayer,acknowledgeCommunication,safeNoticeLink,openCommunicationLink,COMMUNICATION_REFRESH_MS} from '../online/liveCommunications.js';
+import {fetchLiveCommunications,installedAndroidVersion,playUpdateNotice,noticeForPlayer,acknowledgeCommunication,communicationSeenStore,safeNoticeLink,openCommunicationLink,COMMUNICATION_REFRESH_MS} from '../online/liveCommunications.js';
 import './liveCommunicationsUi.css';
 
 const make=(tag,cls,value)=>{
@@ -14,6 +14,7 @@ const make=(tag,cls,value)=>{
 export function installLiveCommunicationsUi(lobbyRoot){
   if(!lobbyRoot||typeof document==='undefined')return()=>{};
   let disposed=false,working=false,pendingNotice=null;
+  const seen=communicationSeenStore();
   let panel=null,queuedTimer=null;
   const tray=make('div','tdr-comms-tray');
   const trigger=make('button','tdr-comms-trigger','📣 AVISOS');
@@ -24,7 +25,7 @@ export function installLiveCommunicationsUi(lobbyRoot){
   let platform='web',versionCode=0;
   function close({acknowledge=false}={}){
     if(!panel)return;
-    if(acknowledge&&pendingNotice)acknowledgeCommunication(pendingNotice,localStorage);
+    if(acknowledge&&pendingNotice)acknowledgeCommunication(pendingNotice,seen);
     panel.remove();panel=null;
     pendingNotice=null;
   }
@@ -46,7 +47,7 @@ export function installLiveCommunicationsUi(lobbyRoot){
         notice.kind==='update'?'ACTUALIZAR EN GOOGLE PLAY':notice.action_label||'MÁS INFORMACIÓN');
       go.type='button';
       go.addEventListener('click',()=>{
-        acknowledgeCommunication(notice,localStorage);
+        acknowledgeCommunication(notice,seen);
         void openCommunicationLink(notice);
         close();
       });
@@ -96,7 +97,7 @@ export function installLiveCommunicationsUi(lobbyRoot){
       const available=known.some(n=>n.kind==='notice'&&(n.target==='all'||n.target===platform))||
         (platform==='android'&&known.some(n=>n.kind==='update'&&n.version_code>versionCode));
       trigger.hidden=!available;
-      const notice=noticeForPlayer(known,{platform,versionCode,storage:localStorage});
+      const notice=noticeForPlayer(known,{platform,versionCode,storage:seen});
       if(notice)show(notice);
     }finally{working=false;}
   }
