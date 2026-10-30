@@ -45,6 +45,17 @@ assert.match(migration,/where tr\.user_id=v_uid and tr\.track_id=v_track/,
   'Personal-best RPC is limited to authenticated UUID and exact edition');
 assert.match(migration,/revoke all on function public\.get_my_track_personal_best\(text\) from public,anon/,
   'The indexed personal-best endpoint must not be anonymously callable');
+const optimized=readFileSync('supabase/migrations/20261030_025_race_control_single_window_rank.sql','utf8');
+assert.match(optimized,/select count\(\*\) into v_prefix_count/,
+  'Compute one index-backed count before the bounded rank window');
+assert.match(optimized,/v_prefix_count\+rank\(\) over\(order by n\.best_time_ms/,
+  'Recover exact global and geographic positions via a bounded window');
+assert.match(optimized,/from near_ranked n cross join my_rank m/,
+  'The near window still centers on the authenticated own rank');
+assert.match(optimized,/m.position-10/,'Preserve the -10 rank window');
+assert.match(optimized,/m.position\+10/,'Preserve the +10 rank window');
+assert.doesNotMatch(optimized,/exact_ranks|create temporary table|truncate table/i,
+  'No O(distinct times) recounts and no per-request temporary tables');
 const ownBestCall=online.slice(online.indexOf('export async function getMyRaceControlRecord'),
   online.indexOf('export async function getRaceControlGhost'));
 assert.match(ownBestCall,/\/rpc\/get_my_track_personal_best/,
