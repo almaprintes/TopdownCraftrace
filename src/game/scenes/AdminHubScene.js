@@ -74,6 +74,17 @@ export class AdminHubScene extends BaseScene {
           this._showToast('CONVERSOR DE IMÁGENES NO DISPONIBLE');
         }
       },
+      communications:async()=>{
+        try{
+          const {mountAdminCommunications}=await import('../ui/adminCommunications.js');
+          if(!this._adminDomRoot?.isConnected)return;
+          this._communicationDispose?.();
+          this._communicationDispose=mountAdminCommunications();
+        }catch(error){
+          console.warn('[paddock communications] unavailable',error);
+          this._showToast('COMUNICACIONES NO DISPONIBLES');
+        }
+      },
       diagnostics:()=>this._showLastRuntimeError(),
       garage:()=>this._navigate('GarageScene'),
       isFullCars:()=>devFullCarAccessEnabled(),
@@ -168,6 +179,8 @@ export class AdminHubScene extends BaseScene {
     // Revoke any generated object URLs on navigation/shutdown.
     try{this._webpToolDispose?.();}catch{}
     this._webpToolDispose=null;
+    try{this._communicationDispose?.();}catch{}
+    this._communicationDispose=null;
     try{
       this._errorPreview?.remove?.();
       this._errorPreview=null;
