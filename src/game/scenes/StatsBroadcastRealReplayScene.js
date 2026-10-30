@@ -1,6 +1,7 @@
 import { StatsScene as ReplayStatsScene } from './StatsBroadcastReplayScene.js';
 import { resolveStatsInitialTrack } from './statsEntryRoute.js';
 import { getRaceControlGhost } from '../online/raceControlOnline.js';
+import { createBoundedOnlineGhostCache } from '../online/onlineGhostDownloadCache.js';
 import { decodeOnlineGhostNativeBinary, decodeOnlineGhostNative } from '../online/onlineGhostCodec.js';
 import { pxpsToKmh } from '../cars/speedUnits.js';
 import { t } from '../i18n/index.js';
@@ -15,10 +16,9 @@ import {ghostReplayCompatibility,ghostGeometryRevision} from '../tracks/ghostTra
 
 const SESSION_KEY='tdr2:statsNativeReplay';
 const RETURN_TRACK_KEY='tdr2:statsReturnTrack';
-// Session-memory cache: one Supabase ghost download can feed replay and VS Ghost.
-const ONLINE_GHOST_CACHE=new Map();
-const cacheOnlineGhost=(ref,data,ghost)=>{const key=String(ref||'');if(key&&ghost?.samples?.length)ONLINE_GHOST_CACHE.set(key,{data,ghost});return ghost;};
-const cachedOnlineGhost=ref=>ONLINE_GHOST_CACHE.get(String(ref||''))||null;
+// Cap decoded ghosts (not just raw bytes) and dedupe concurrent Replay / VS
+// downloads of one record_ref. An evicted ghost can always be downloaded again.
+const ONLINE_GHOST_CACHE=createBoundedOnlineGhostCache({maxEntries:4,maxSamples:20000});
 const esc=v=>String(v??'').replace(/[&<>\"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[ch]));
 const fmt=ms=>{ms=Math.max(0,Number(ms)||0);const m=Math.floor(ms/60000),s=(ms%60000)/1000;return`${m}:${s.toFixed(3).padStart(6,'0')}`;};
 const readLocalGhost=key=>{try{const g=JSON.parse(localStorage.getItem(key)||'null');return g&&Array.isArray(g.samples)&&g.samples.length>4?g:null;}catch{return null;}};
@@ -34,6 +34,19 @@ function onlineGhostFromRow(row){const bytes=byteaBytes(row?.ghost_payload);if(!
     ghost.geometryRevision=revision;
   }
   return ghostReplayCompatibility(ghost,row.track_id,TRACK_REGISTRY[row.track_id]).compatible?ghost:null;}
+
+async function loadOnlineGhost(ref){
+  return ONLINE_GHOST_CACHE.load(ref,async()=>{
+    const out=await getRaceControlGhost(ref);
+    const data=Array.isArray(out)?out[0]:out;
+    // A missing or changed record must never poison the shared cache.
+    if(String(data?.record_ref||'')!==String(ref))
+      throw new Error('El récord online ya no existe o ha cambiado.');
+    const ghost=onlineGhostFromRow(data);
+    if(!ghost)throw new Error('Este fantasma no se puede reproducir.');
+    return {data,ghost};
+  });
+}
 
 export class StatsScene extends ReplayStatsScene{
   create(data){
@@ -177,8 +190,8 @@ export class StatsScene extends ReplayStatsScene{
       const vs=originalVs.cloneNode(true);
       const actions=document.createElement('span');actions.className='br-online-actions';
       const watch=document.createElement('button');watch.type='button';watch.className='br-watch';watch.title=t('replay.watch');watch.textContent='▶';
-      watch.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();watch.disabled=true;watch.textContent='…';try{if(!await this._ensureOnlineGhostReward(ref))return;let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Replay unavailable');cacheOnlineGhost(ref,data,ghost);}this._showRaceControlReplayModal({trackId:data.track_id,selectedLap:{carId:data.car_id}},ghost,t('replay.onlineReplay'));}catch(err){console.error('[race-control] rewarded replay download failed',err);watch.textContent='!';setTimeout(()=>{if(watch.isConnected){watch.disabled=false;watch.textContent='▶';}},1200);}finally{if(watch.isConnected&&watch.textContent==='…'){watch.disabled=false;watch.textContent='▶';}}});
-      vs.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();if(vs.dataset.brVsLaunching==='1')return;vs.dataset.brVsLaunching='1';const original=vs.innerHTML;try{if(!await this._ensureOnlineGhostReward(ref))return;vs.textContent='…';let hit=cachedOnlineGhost(ref),data=hit?.data,ghost=hit?.ghost;if(!ghost){const out=await getRaceControlGhost(ref);data=Array.isArray(out)?out[0]:out;ghost=onlineGhostFromRow(data);if(!ghost)throw new Error('Ghost unavailable');cacheOnlineGhost(ref,data,ghost);}this._launchOnlineGhostChallenge(ref,data,ghost);}catch(err){console.error('[race-control] VS ghost launch failed',err);vs.innerHTML=original;}finally{vs.dataset.brVsLaunching='0';}});
+      watch.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();watch.disabled=true;watch.textContent='…';try{if(!await this._ensureOnlineGhostReward(ref))return;const {data,ghost}=await loadOnlineGhost(ref);this._showRaceControlReplayModal({trackId:data.track_id,selectedLap:{carId:data.car_id}},ghost,t('replay.onlineReplay'));}catch(err){console.error('[race-control] rewarded replay download failed',err);watch.textContent='!';setTimeout(()=>{if(watch.isConnected){watch.disabled=false;watch.textContent='▶';}},1200);}finally{if(watch.isConnected&&watch.textContent==='…'){watch.disabled=false;watch.textContent='▶';}}});
+      vs.addEventListener('click',async e=>{e.preventDefault();e.stopPropagation();if(vs.dataset.brVsLaunching==='1')return;vs.dataset.brVsLaunching='1';const original=vs.innerHTML;try{if(!await this._ensureOnlineGhostReward(ref))return;vs.textContent='…';const {data,ghost}=await loadOnlineGhost(ref);this._launchOnlineGhostChallenge(ref,data,ghost);}catch(err){console.error('[race-control] VS ghost launch failed',err);vs.innerHTML=original;}finally{vs.dataset.brVsLaunching='0';}});
       originalVs.replaceWith(actions);actions.append(watch,vs);
     });
   }
@@ -204,13 +217,7 @@ export class StatsScene extends ReplayStatsScene{
   async _loadNearRivalGhost(rival,trackId){
     const ref=String(rival?.record_ref||'');
     if(!ref||!await this._ensureOnlineGhostReward(ref))return null;
-    const hit=cachedOnlineGhost(ref);
-    let data=hit?.data,ghost=hit?.ghost;
-    if(!ghost){
-      const response=await getRaceControlGhost(ref);
-      data=Array.isArray(response)?response[0]:response;
-      ghost=onlineGhostFromRow(data);
-    }
+    const {data,ghost}=await loadOnlineGhost(ref);
     const valid=data?.track_id===trackId &&
       Number(data?.best_time_ms)===Number(rival?.best_time_ms) &&
       String(data?.car_id||'')===String(rival?.car_id||'') &&
@@ -219,7 +226,6 @@ export class StatsScene extends ReplayStatsScene{
       Math.abs(Number(ghost?.lapMs)-Number(rival.best_time_ms))<=2 &&
       Array.isArray(ghost?.samples)&&ghost.samples.length>=5;
     if(!valid)throw new Error('La repetición ya no coincide con el rival. Actualiza el ranking.');
-    if(!hit)cacheOnlineGhost(ref,data,ghost);
     return {data,ghost};
   }
 
