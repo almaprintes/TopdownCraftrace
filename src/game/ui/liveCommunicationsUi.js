@@ -1,4 +1,4 @@
-import {fetchLiveCommunications,installedAndroidVersion,noticeForPlayer,acknowledgeCommunication,safeNoticeLink,COMMUNICATION_REFRESH_MS} from '../online/liveCommunications.js';
+import {fetchLiveCommunications,installedAndroidVersion,playUpdateNotice,noticeForPlayer,acknowledgeCommunication,safeNoticeLink,COMMUNICATION_REFRESH_MS} from '../online/liveCommunications.js';
 import './liveCommunicationsUi.css';
 
 const make=(tag,cls,value)=>{
@@ -84,8 +84,14 @@ export function installLiveCommunicationsUi(lobbyRoot){
         fetchLiveCommunications({force}),installedAndroidVersion()
       ]);
       if(disposed||!lobbyRoot.isConnected)return;
-      known=rows;platform=installed?'android':'web';
+      platform=installed?'android':'web';
       versionCode=installed?.code||0;
+      // When Play confirms no update for this user, do not prematurely
+      // display a remote announcement for an unfinished/staged rollout.
+      const eligible=(installed?.playChecked&&installed.playAvailable!==true)
+        ?rows.filter(n=>n.kind!=='update'):rows;
+      const automatic=playUpdateNotice(installed);
+      known=automatic?[...eligible,automatic]:eligible;
       // If native version detection is temporarily unavailable, never claim
       // that a Play update exists based on the DEV label or a stored guess.
       const available=known.some(n=>n.kind==='notice'&&(n.target==='all'||n.target===platform))||
