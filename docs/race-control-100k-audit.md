@@ -85,3 +85,26 @@ Verificación posterior: comparativa de **40 combinaciones circuito/ámbito, 57 
 **Avisos informativos que permanecen (no confundir con errores):** las dos tablas históricas de respaldo no tienen clave primaria y un índice de país figura como no utilizado. No tocar respaldos ni eliminar índices potencialmente necesarios con tan pocos usuarios: medir antes y justificar cualquier operación.
 
 **Límite de evidencia:** la desaparición de los avisos y las pruebas de permisos acreditan la corrección estructural; el ahorro real de CPU con 100.000 jugadores sigue pendiente de una prueba de carga sintética aislada.
+
+
+## Séptima optimización: cerrar circuitos inventados en las RPC de publicación (30/10/2026)
+
+### Hallazgo de seguridad y coste
+Las dos funciones `SECURITY DEFINER` `submit_track_record` y `submit_track_record_with_ghost` autenticaban por `auth.uid()`, pero aceptaban cualquier nombre de circuito de 1 a 80 caracteres. Una cuenta falsificada podía enviar innumerables IDs de circuito diferentes, generando filas sin límite y hasta 128 KiB de fantasma por fila: crecimiento de almacenamiento y coste de escritura no justificados.
+
+### Corrección
+Migración `20261030_031_official_track_publication_guard.sql`.
+- Catálogo **inmutable** `tdr_web_private.is_current_race_control_track(text)` con los 13 IDs actuales ya utilizados por la instantánea pública.
+- Comprueba ambos métodos de publicación antes de insertar/actualizar; si el ID no es oficial: `Invalid track_id`. No crea tablas, índices, ciclos cron, conexiones ni consultas SQL adicionales. Tampoco cambia los límites de tamaño ni la lógica de recompensa.
+- Las funciones siguen usando únicamente el UUID del JWT, permanecen bajo `authenticated` y no dan acceso a `anon`. El ayudante queda en esquema privado, sin permiso de ejecución para roles públicos.
+- La migración comprueba las huellas de los cuerpos originales para no modificar inadvertidamente funciones editadas en paralelo. Ningún récord, fantasma o perfil existente se altera.
+
+### Norma indispensable para nuevas pistas
+**Todo circuito nuevo debe registrarse en el catálogo oficial del juego, el resumen público y la función privada de ID permitido antes de que puedan publicarse sus récords.** Para un nuevo `@gN-AAAAMMDD` se debe añadir la nueva edición; la antigua puede conservarse en respaldos. Acompañar el cambio de pruebas de regresión y actualización de documentación.
+
+### Riesgos que siguen pendientes
+- El cliente todavía proporciona `best_time_ms` y el contenido del fantasma; esta protección evita crear circuitos ficticios, pero **no es un sistema antitrampas**. Hace falta homologación o validación independiente antes de declarar inviolables los récords.
+- La identidad anónima de Supabase es técnicamente un rol `authenticated` si inicia sesión anónima; revisar el flujo de invitado antes de rechazarla, para no romper partidas de producción.
+- Las 13 advertencias de `authenticated_security_definer_function_executable` no implican automáticamente 13 vulnerabilidades. Los endpoints inspeccionados están sujetos al JWT y son funcionalmente necesarios para lectura o escritura controlada. No revocar permisos genéricamente.
+- La carga de 100.000 usuarios aún requiere pruebas sintéticas externas.
+
