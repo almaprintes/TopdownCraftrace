@@ -66,3 +66,22 @@ Verificación posterior: comparativa de **40 combinaciones circuito/ámbito, 57 
 - La clasificación pública puede tardar hasta una hora en reflejar un nuevo récord; **esta latencia es deliberada**, para ahorrar consultas. El panel autenticado de Race Control mantiene sus consultas bajo demanda y no está sujeto a ese horario.
 - Se mantienen la limpieza diaria del historial cron, la prevención de escrituras idénticas, las regiones y los circuitos actuales.
 - Migración versionada: `supabase/migrations/20261030_028_race_control_hourly_public_rankings.sql`. La tarea y su intervalo se verificaron directamente en `cron.job`; no hay nuevos servicios ni coste por jugador.
+
+
+## Sexta optimización: 10 políticas RLS con InitPlan estable (30/10/2026)
+
+**Motivo:** Supabase Performance Advisor informó de 10 advertencias `auth_rls_initplan` (3 en `profiles`, 3 en `track_records` y 4 en `tdr_public_notices`). En estas políticas, `auth.uid()` y `auth.jwt()` se ejecutaban potencialmente por cada fila.
+
+**Intervención:** Migración `supabase/migrations/20261030_029_rls_initplan_efficiency.sql`. Cada comprobación pasa a `(select auth.uid())` o `(select auth.jwt())`: PostgreSQL puede evaluarla una vez por consulta. Se mantienen los predicados de propiedad `user_id`, los límites temporales de publicación, los `TO authenticated`/`TO anon`, las restricciones `USING` y `WITH CHECK`, y la autorización de staff basada exclusivamente en `app_metadata.tdr_staff`. No se crean funciones `SECURITY DEFINER` ni se amplían GRANTs.
+
+**Control de cambios:** La transacción de migración compara las diez definiciones originales, roles, comandos y tipos de política con `pg_policies`. Si alguna ha cambiado, aborta sin aplicar ninguna modificación. Todo se aplica mediante `ALTER POLICY`, conservando nombres, roles y operaciones.
+
+**Verificación:**
+- Auditor de rendimiento repetido tras el cambio: **0 advertencias `auth_rls_initplan`**, frente a 10 antes.
+- Pruebas SQL de solo lectura con transacciones revertidas (`SET LOCAL ROLE` y JWT simulado): anónimo **no puede ver borrador**, cuenta autenticada sin staff **no puede verlo**, administrador **sí puede verlo**.
+- Datos intactos: **15 récords, 15 fantasmas, 26 perfiles, 2 copias de progreso y 1 borrador no publicado**.
+- Prueba automatizada sin red: `scripts/rls-initplan-efficiency-smoke.mjs` / `npm run check:rls-initplan`, integrada en el prebuild, exige exactamente las 10 políticas revisadas y prohíbe cambios en los permisos y datos.
+
+**Avisos informativos que permanecen (no confundir con errores):** las dos tablas históricas de respaldo no tienen clave primaria y un índice de país figura como no utilizado. No tocar respaldos ni eliminar índices potencialmente necesarios con tan pocos usuarios: medir antes y justificar cualquier operación.
+
+**Límite de evidencia:** la desaparición de los avisos y las pruebas de permisos acreditan la corrección estructural; el ahorro real de CPU con 100.000 jugadores sigue pendiente de una prueba de carga sintética aislada.
