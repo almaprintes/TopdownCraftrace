@@ -83,3 +83,11 @@ El JSON de las dos copias suma 254.534 bytes. `tdr2:ttHist:*` aporta 108.858 byt
 5. Documentar tanto la mejora como los límites de la evidencia; no llamar «antitrampas» a una simple comparación local o a un hash del cliente.
 
 Fuentes técnicas: Supabase [Anonymous Sign-Ins](https://supabase.com/docs/guides/auth/auth-anonymous) y [Identity Linking](https://supabase.com/docs/guides/auth/auth-identity-linking), funciones `save_my_player_progress`, `cloudAutoSync.js`, `cloudProgress.js`, `onlineGhostCodec.js` y consultas de tamaño de la base real.
+
+## Optimización aplicada — 30/10/2026: no reescribir partidas idénticas
+
+- Migración 032: `save_my_player_progress` solo hace `UPDATE` cuando cambian realmente `schema_version` o `progress.data`, manteniendo la comparación de revisiones (CAS). La fecha `createdAt` regenerada ya no provoca una reescritura por sí sola. Si la partida es igual y la revisión coincide, devuelve éxito con la revisión existente; si está obsoleta, responde conflicto como antes. No cambia los formatos 1/2, las tablas ni las partidas guardadas.
+- Prueba con una copia real usando rol autenticado en transacción revertida: un `createdAt` diferente preservó `xmin` y revisión, y una revisión antigua fue rechazada. El dato original no se modificó.
+- Ahorro: elimina WAL y actualizaciones físicas *cuando llega una subida redundante*. El cliente ya evita la mayoría de las subidas idénticas comparando SHA-256, por lo que no se anuncia un porcentaje artificial de ahorro.
+- Prueba automática `scripts/cloud-noop-history-smoke.mjs`: valida la lógica SQL y un prototipo **reversible**, construido con datos inventados, de diccionario de campos por historial; comprueba campos opcionales, Unicode, propiedades futuras, gzip y restauración completa.
+- **IMPORTANTE: el prototipo de compactación no se activa.** Un formato 3 enviado a la base de datos impediría a clientes antiguos recuperar su partida; hay que validar lectura v3 en todas las plataformas, compatibilidad de Google Play, restauración y tamaño físico en PostgreSQL antes de habilitarlo. PostgreSQL ya comprime internamente el JSONB, por lo que el ahorro de tamaño de red no garantiza ahorro físico en la base de datos.
