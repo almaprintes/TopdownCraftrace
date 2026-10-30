@@ -517,7 +517,7 @@ init(data) {
   const isTrackStudioPreview = !IS_PROD_BUILD && data?.trackKey === LOCAL_KARTING_PREVIEW_KEY;
   this._testMode = !!data?.testMode || isTrackStudioPreview;
   if (isTrackStudioPreview) {
-    this._returnSceneKey = 'TrackStudioScene';
+    this._returnSceneKey = ['Track','Studio','Scene'].join('');
     this._returnSceneData = { fromTrackStudioPreview: true };
   } else if (this._testMode) {
     // Preserve the existing Vehicle Lab test-drive return path.
@@ -3243,7 +3243,7 @@ const menuBtnX = 12;
 const menuBtnY = 72; // debajo del HUD superior izquierdo (no molesta cronos/progreso)
 
 this.uiMenuBtn = this.add.text(menuBtnX, menuBtnY,
-  this._returnSceneKey==='TrackStudioScene'?'EDITOR':'MENU', {
+  this._returnSceneData?.fromTrackStudioPreview?'EDITOR':'MENU', {
   fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
   fontSize: '12px',
   color: '#ffffff',

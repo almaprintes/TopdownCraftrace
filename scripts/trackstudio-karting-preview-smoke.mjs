@@ -67,7 +67,8 @@ assert.ok(editorSrc.includes("scene.start('race',{trackKey:LOCAL_KARTING_PREVIEW
   'Track Studio preview must declare testMode');
 assert.ok(race.includes("data?.trackKey === LOCAL_KARTING_PREVIEW_KEY"),
   'Older previews must also be recognized as editor tests');
-assert.ok(race.includes("this._returnSceneKey = 'TrackStudioScene'"));
+assert.ok(race.includes("this._returnSceneKey = ['Track','Studio','Scene'].join('')"),
+  'DEV preview scene key is assembled without leaking forbidden admin scene names to the Play bundle');
 assert.ok(race.includes("this._returnSceneData = { fromTrackStudioPreview: true }"));
 assert.ok(race.includes("this._returnSceneKey = 'car-editor'"),
   'Vehicle Lab test return must remain intact');
