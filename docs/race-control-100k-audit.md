@@ -56,3 +56,13 @@ Verificación posterior: comparativa de **40 combinaciones circuito/ámbito, 57 
 - Prueba estática de regresión integrada en `scripts/online-snapshot-recovery-smoke.mjs`: 13 circuitos y orden iguales al original, comparación semántica de contenidos, versión y condición de no reescritura.
 
 **Siguiente hipótesis a medir:** entrega de los resúmenes públicos con caché HTTP/CDN y política de revalidación para reducir lecturas de Supabase por visitante. Elegir la solución según egress, no añadir un proxy que pueda resultar más caro que la lectura actual.
+
+
+## Quinta optimización: cron de rankings públicos cada hora en punto (30/10/2026)
+
+- El trabajo `tdr-web-rankings-refresh` pasa de `*/5 * * * *` a **`0 * * * *`**: 24 comprobaciones/día frente a 288 (reducción de **91,7 %**), sin tocar la función de rankings autenticados que usan los jugadores dentro de Race Control.
+- La marca `refresh_seconds` de la instantánea pública ahora declara **3.600 segundos**. La comparación de contenido incluye expresamente esa propiedad: se publicó un único cambio de metadatos y, en la ejecución inmediata posterior sin nuevos récords, el número de versión interno de la fila no cambió.
+- Prueba en producción controlada: el digest de `tracks` siguió idéntico antes/después de cambiar el intervalo. Sin inserción ni eliminación de récords o fantasmas.
+- La clasificación pública puede tardar hasta una hora en reflejar un nuevo récord; **esta latencia es deliberada**, para ahorrar consultas. El panel autenticado de Race Control mantiene sus consultas bajo demanda y no está sujeto a ese horario.
+- Se mantienen la limpieza diaria del historial cron, la prevención de escrituras idénticas, las regiones y los circuitos actuales.
+- Migración versionada: `supabase/migrations/20261030_028_race_control_hourly_public_rankings.sql`. La tarea y su intervalo se verificaron directamente en `cron.job`; no hay nuevos servicios ni coste por jugador.

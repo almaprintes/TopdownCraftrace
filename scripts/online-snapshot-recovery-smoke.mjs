@@ -80,6 +80,19 @@ assert.match(conditionalPublic,/'refresh_seconds',300/,
 assert.doesNotMatch(conditionalPublic,/create trigger|alter table|create index/i,
   'Never add database writes to each player publication for a cache check');
 
+
+const hourlyMigration=readFileSync('supabase/migrations/20261030_028_race_control_hourly_public_rankings.sql','utf8');
+assert.match(hourlyMigration,/cron\.alter_job\(job_to_change,schedule => '0 \* \* \* \*'\)/,
+  'Public ranking refresh must run once per hour, on the hour');
+assert.match(hourlyMigration,/'refresh_seconds',3600/,
+  'Public payload must advertise the new 3600-second cadence');
+assert.match(hourlyMigration,/payload->'refresh_seconds'\s+is distinct from excluded\.payload->'refresh_seconds'/,
+  'Change cadence metadata exactly once even when standings are unchanged');
+assert.match(hourlyMigration,/where j\.jobname='tdr-web-rankings-refresh'/,
+  'Only the named public leaderboard cron must change');
+assert.doesNotMatch(hourlyMigration,/cron\.unschedule|drop table|delete from public\.track_records/i,
+  'Do not remove jobs or player records to save polling work');
+
 const ownBestCall=online.slice(online.indexOf('export async function getMyRaceControlRecord'),
   online.indexOf('export async function getRaceControlGhost'));
 assert.match(ownBestCall,/\/rpc\/get_my_track_personal_best/,
