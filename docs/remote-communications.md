@@ -1,4 +1,4 @@
-# Comunicaciones y actualización de Google Play — TDR DEV 1.4.4
+# Comunicaciones y actualización de Google Play — TDR DEV 1.4.6
 
 ## Qué hace
 - **Lobby:** al abrir, lee hasta 30 avisos activos desde Supabase REST con API key pública; muestra un aviso solo una vez por publicación/revisión. El jugador siempre puede cerrarlo y continuar jugando. Se consulta nuevamente como máximo cada 30 minutos con el lobby abierto.
@@ -12,7 +12,7 @@ Migración aplicada al proyecto Supabase `juukbnkjboiazqggqcyv`: `tdr_remote_com
 
 La tabla tiene RLS activo, lectura pública únicamente de avisos publicados dentro de su ventana, y escritura exclusivamente para JWT de Supabase Auth con `app_metadata.tdr_staff=true` (atributo **gestionado por el servidor**; nunca en `user_metadata`). La UI autentica usando GoTrue sin tocar la sesión del jugador ni guardar contraseña o token de administrador en `localStorage`. No contiene claves de `service_role`.
 
-**Activación de administrador:** todavía no hay cuentas `tdr_staff`. Selecciona primero una cuenta de Supabase Auth con email/contraseña verificada que deba gestionar comunicados. Desde el panel Supabase Auth administrativo, asigna `raw_app_meta_data.tdr_staff=true` únicamente a esa cuenta. No autorices jugadores por nombre visible, email no verificado o conjeturas. Después inicia sesión en COMUNICACIONES. Una cuenta corriente no puede publicar aun cuando consiga abrir la interfaz DEV.
+**Administrador verificado (30/10/2026):** solo la cuenta de TDR `dj1free@gmail.com`, vinculada a Google, tiene `app_metadata.tdr_staff=true`. El editor DEV usa la sesión existente de TDR/Google, renovando el JWT GoTrue; no pide otra contraseña ni altera la partida. Los permisos dependen de RLS, no de un botón oculto.
 
 Los mensajes iniciales **no están publicados** (tabla vacía). Publica el primer mensaje real únicamente después de probar el circuito completo en la DEV y de identificar la cuenta administradora.
 
@@ -28,3 +28,12 @@ Los mensajes iniciales **no están publicados** (tabla vacía). Publica el prime
 Google Play Core puede declarar estado desconocido en instalaciones por APK, en pruebas sin Play o sin acceso a la cuenta de Google; no se inventa disponibilidad. Esta implementación notifica y abre Play, **no instala** la actualización ni usa un diálogo de actualización inmediata. Para iOS, el detector de App Store requerirá su propia integración cuando exista una versión iOS publicada.
 
 Esta primera entrega incluye la lectura nativa y el editor DEV. El primer aviso solo empezará a mostrarse a quienes tengan una versión de TDR que incluya este sistema de comunicaciones.
+
+## Idiomas (DEV 1.4.6)
+- Los idiomas **activos** del juego son español (`es`) e inglés (`en`).
+- Español se mantiene en `title`, `body`, `action_label` (compatibilidad con instalaciones antiguas). La columna `translations` (JSONB) contiene `en: {title, body, action_label}`.
+- El editor permite guardar borradores sin completar traducciones; el cliente **y una restricción CHECK de Postgres** impiden publicar avisos sin título y texto inglés, además del botón traducido cuando exista.
+- El lobby lee `tdr2:settings.language` mediante `getLanguage()` y presenta la traducción elegida. Las alertas automáticas de Google Play también se localizan.
+- Los clientes anteriores a DEV 1.4.6 siguen usando los campos españoles; para ver inglés desde el feed, necesitan una actualización futura autorizada.
+- Migración `tdr_notice_bilingual_es_en_20261030`; fichero de control de versiones `supabase/migrations/20261030_023_tdr_notice_bilingual_es_en.sql`.
+- El inicio de sesión real y el POST de borrador desde la interfaz necesitan la prueba manual en el dispositivo del administrador: no se pueden simular sus tokens Google privados.

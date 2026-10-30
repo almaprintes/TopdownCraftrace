@@ -1,4 +1,6 @@
 import {fetchLiveCommunications,installedAndroidVersion,playUpdateNotice,noticeForPlayer,acknowledgeCommunication,communicationSeenStore,safeNoticeLink,openCommunicationLink,COMMUNICATION_REFRESH_MS} from '../online/liveCommunications.js';
+import {getLanguage} from '../i18n/index.js';
+import {localizePublicNotice} from '../online/liveCommunications.js';
 import './liveCommunicationsUi.css';
 
 const make=(tag,cls,value)=>{
@@ -17,9 +19,15 @@ export function installLiveCommunicationsUi(lobbyRoot){
   const seen=communicationSeenStore();
   let panel=null,queuedTimer=null;
   const tray=make('div','tdr-comms-tray');
-  const trigger=make('button','tdr-comms-trigger','📣 AVISOS');
+  const trigger=make('button','tdr-comms-trigger',getLanguage()==='en'?'📣 NOTICES':'📣 AVISOS');
   trigger.type='button';trigger.hidden=true;
-  trigger.setAttribute('aria-label','Abrir comunicaciones de Top Down Race');
+  const updateTriggerLanguage=()=>{
+    const english=getLanguage()==='en';
+    trigger.textContent=english?'📣 NOTICES':'📣 AVISOS';
+    trigger.setAttribute('aria-label',english?'Open Top Down RACE announcements':'Abrir comunicaciones de Top Down Race');
+  };
+  updateTriggerLanguage();
+  window.addEventListener('tdr2:language-change',updateTriggerLanguage);
   tray.append(trigger);lobbyRoot.append(tray);
   let known=[];
   let platform='web',versionCode=0;
@@ -30,21 +38,23 @@ export function installLiveCommunicationsUi(lobbyRoot){
     pendingNotice=null;
   }
   const build=(notice)=>{
+    const english=getLanguage()==='en';
+    const display=localizePublicNotice(notice,english?'en':'es');
     const shade=make('div','tdr-comms-shade');
     shade.setAttribute('role','dialog');shade.setAttribute('aria-modal','true');
-    shade.setAttribute('aria-label',notice.kind==='update'?'Actualización disponible':'Aviso de Top Down Race');
+    shade.setAttribute('aria-label',notice.kind==='update'?(english?'Update available':'Actualización disponible'):(english?'Top Down RACE notice':'Aviso de Top Down Race'));
     const card=make('section','tdr-comms-card');
-    const bar=make('div','tdr-comms-overline',notice.kind==='update'?'ACTUALIZACIÓN DISPONIBLE':'TOP DOWN RACE · AVISO OFICIAL');
-    const heading=make('h2','',notice.title);
-    const body=make('p','',notice.body);
+    const bar=make('div','tdr-comms-overline',notice.kind==='update'?(english?'UPDATE AVAILABLE':'ACTUALIZACIÓN DISPONIBLE'):(english?'TOP DOWN RACE · OFFICIAL NOTICE':'TOP DOWN RACE · AVISO OFICIAL'));
+    const heading=make('h2','',display.title);
+    const body=make('p','',display.body);
     const controls=make('div','tdr-comms-actions');
-    const later=make('button','tdr-comms-later',notice.kind==='update'?'MÁS TARDE':'ENTENDIDO');
+    const later=make('button','tdr-comms-later',notice.kind==='update'?(english?'LATER':'MÁS TARDE'):(english?'GOT IT':'ENTENDIDO'));
     later.type='button';later.addEventListener('click',()=>close({acknowledge:true}));
     controls.append(later);
     const url=safeNoticeLink(notice);
     if(url){
       const go=make('button','tdr-comms-go',
-        notice.kind==='update'?'ACTUALIZAR EN GOOGLE PLAY':notice.action_label||'MÁS INFORMACIÓN');
+        notice.kind==='update'?(english?'UPDATE ON GOOGLE PLAY':'ACTUALIZAR EN GOOGLE PLAY'):display.action_label||(english?'MORE INFORMATION':'MÁS INFORMACIÓN'));
       go.type='button';
       go.addEventListener('click',()=>{
         acknowledgeCommunication(notice,seen);
@@ -54,7 +64,7 @@ export function installLiveCommunicationsUi(lobbyRoot){
       controls.append(go);
     }
     const dismiss=make('button','tdr-comms-close','×');
-    dismiss.type='button';dismiss.setAttribute('aria-label','Cerrar aviso');
+    dismiss.type='button';dismiss.setAttribute('aria-label',english?'Close notice':'Cerrar aviso');
     dismiss.addEventListener('click',()=>close({acknowledge:true}));
     card.append(dismiss,bar,heading,body,controls);
     shade.append(card);document.body.append(shade);
@@ -105,6 +115,7 @@ export function installLiveCommunicationsUi(lobbyRoot){
   const timer=setInterval(()=>{void refresh({force:true});},COMMUNICATION_REFRESH_MS);
   return ()=>{
     disposed=true;clearInterval(timer);clearTimeout(queuedTimer);
+    window.removeEventListener('tdr2:language-change',updateTriggerLanguage);
     close();tray.remove();
   };
 }

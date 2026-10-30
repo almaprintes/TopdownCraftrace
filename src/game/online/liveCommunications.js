@@ -5,6 +5,23 @@ import {Capacitor,registerPlugin} from '@capacitor/core';
 
 export const PLAY_STORE_URL='https://play.google.com/store/apps/details?id=com.craftracestudio.topdownrace';
 export const COMMUNICATION_REFRESH_MS=30*60*1000;
+
+// Spanish is the legacy/default message. An English translation must be authored
+// and checked before publication; never machine-translate game announcements.
+export function hasEnglishNoticeTranslation(record){
+  const en=record?.translations?.en;
+  const title=String(en?.title||'').trim(),body=String(en?.body||'').trim();
+  const label=String(en?.action_label||'').trim();
+  return title.length>=1&&title.length<=90&&body.length>=1&&body.length<=600&&
+    (record?.kind==='update'||!record?.action_label||(label.length>=1&&label.length<=28));
+}
+export function localizePublicNotice(record,language='es'){
+  if(language!=='en'||!hasEnglishNoticeTranslation(record))return record;
+  const en=record.translations.en;
+  return {...record,title:en.title.trim(),body:en.body.trim(),
+    action_label:record.kind==='update'?'UPDATE ON GOOGLE PLAY':
+      String(en.action_label||'').trim()||null};
+}
 const NATIVE=registerPlugin('TdrRewardedAds');
 let snapshot=null, lastFetch=0, pending=null;
 
@@ -28,7 +45,7 @@ export async function fetchLiveCommunications({force=false}={}){
     try{
       const {url,key}=playerBackendConfig();
       if(!url||!key)return [];
-      const endpoint=url+'/rest/v1/tdr_public_notices?select=id,kind,target,title,body,action_label,action_url,version_code,priority,active,starts_at,ends_at,updated_at&active=eq.true&order=priority.desc,created_at.desc&limit=30';
+      const endpoint=url+'/rest/v1/tdr_public_notices?select=id,kind,target,title,body,action_label,action_url,version_code,priority,active,starts_at,ends_at,updated_at,translations&active=eq.true&order=priority.desc,created_at.desc&limit=30';
       const response=await fetch(endpoint,{headers:{apikey:key},cache:'no-store',signal:AbortSignal.timeout(6500)});
       if(!response.ok)throw Error('communications_http_'+response.status);
       const rows=await response.json();
@@ -78,6 +95,9 @@ export function playUpdateNotice(installed,now=Date.now()){
     body:'Google Play tiene una actualización de Top Down RACE lista para tu dispositivo. Puedes instalarla ahora o seguir jugando.',
     action_label:'ACTUALIZAR EN GOOGLE PLAY',action_url:PLAY_STORE_URL,
     version_code:installed.playVersionCode,updated_at:'play:'+installed.playVersionCode,
+    translations:{en:{title:'New version available!',
+      body:'Google Play has a Top Down RACE update ready for your device. Install it now or keep playing.',
+      action_label:'UPDATE ON GOOGLE PLAY'}},
     starts_at:'2000-01-01T00:00:00Z',ends_at:null
   };
 }

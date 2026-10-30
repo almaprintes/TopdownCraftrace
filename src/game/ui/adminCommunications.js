@@ -1,7 +1,7 @@
 // DEV-only Paddock tool. Writes require a signed-in Supabase Auth user
 // with server-managed app_metadata.tdr_staff=true. No admin secrets in the app.
 import {playerBackendConfig} from '../online/backendConfig.js';
-import {PLAY_STORE_URL} from '../online/liveCommunications.js';
+import {PLAY_STORE_URL,hasEnglishNoticeTranslation} from '../online/liveCommunications.js';
 import {hasSavedRaceControlSession,refreshRaceControlOnlineSession} from '../online/raceControlOnline.js';
 import './adminCommunications.css';
 
@@ -27,7 +27,7 @@ const select=(entries,chosen)=>{
   for(const [value,name] of entries){const opt=make('option','',name);opt.value=value;node.append(opt);}
   node.value=chosen;return node;
 };
-const PUBLIC_FIELDS='id,kind,target,title,body,action_label,action_url,version_code,priority,active,starts_at,ends_at,updated_at,created_at';
+const PUBLIC_FIELDS='id,kind,target,title,body,action_label,action_url,version_code,priority,active,starts_at,ends_at,updated_at,created_at,translations';
 const isoLocal=value=>{
   if(!value)return '';
   const date=new Date(value);
@@ -46,7 +46,7 @@ const toISO=value=>{
 export function mountAdminCommunications(){
   if(typeof document==='undefined')return()=>{};
   const {url,key}=playerBackendConfig();
-  let token=null,closed=false,rows=[],editing=null;
+  let token=null,staffUserId=null,closed=false,rows=[],editing=null;
   const root=make('div','tdr-comms-admin');
   const panel=make('section','tdr-comms-admin-panel');
   root.append(panel);document.body.append(root);
@@ -59,7 +59,7 @@ export function mountAdminCommunications(){
   panel.append(header,renderError);
   const work=make('div','tdr-comms-admin-work');panel.append(work);
   function close(){
-    if(closed)return;closed=true;token=null;root.remove();
+    if(closed)return;closed=true;token=null;staffUserId=null;root.remove();
   }
   const notice=text=>{renderError.textContent=text||'';};
   async function request(path,{method='GET',body,adminToken=token,retry=true}={}){
@@ -78,7 +78,7 @@ export function mountAdminCommunications(){
       const refreshed=(await refreshRaceControlOnlineSession()).session;
       const verified=await request('/auth/v1/user',{adminToken:refreshed.access_token,retry:false});
       if(verified?.id!==refreshed.user.id||verified?.app_metadata?.tdr_staff!==true||
-        (previousId&&previousId!==verified.id))throw Error('Sesión de administración caducada.');
+        verified?.id!==staffUserId||(previousId&&previousId!==verified.id))throw Error('Sesión de administración caducada.');
       token=refreshed.access_token;
       return request(path,{method,body,adminToken:token,retry:false});
     }
@@ -94,8 +94,10 @@ export function mountAdminCommunications(){
     if(!account?.access_token||!account?.user?.id)
       throw Error('La sesión de Google no está disponible. Entra desde Ajustes → Cuenta.');
     const user=await request('/auth/v1/user',{adminToken:account.access_token});
-    if(user?.id!==account.user.id||user?.app_metadata?.tdr_staff!==true)
-      throw Error('La cuenta actual no está autorizada para publicar avisos. Revisa el permiso tdr_staff en Supabase.');
+    if(user?.id!==account.user.id||user?.app_metadata?.tdr_staff!==true||
+      !user?.app_metadata?.providers?.includes('google'))
+      throw Error('La cuenta actual no está autorizada o no está vinculada a Google. Revisa Ajustes → Cuenta y el permiso tdr_staff.');
+    staffUserId=user.id;
     token=account.access_token;
     await refresh();
   }
@@ -106,7 +108,7 @@ export function mountAdminCommunications(){
     const access=btn('ENTRAR CON MI CUENTA DE TDR · GOOGLE',async()=>{
       access.disabled=true;notice('Verificando tu cuenta y renovando permisos…');
       try{await loginWithCurrentPilot();notice('Permiso de comunicaciones verificado');}
-      catch(error){token=null;notice(error.message||'No se pudo autorizar tu cuenta');}
+      catch(error){token=null;staffUserId=null;notice(error.message||'No se pudo autorizar tu cuenta');}
       finally{access.disabled=false;}
     },'tdr-comms-admin-google');
     work.append(access);
@@ -128,16 +130,23 @@ export function mountAdminCommunications(){
     const actionUrl=kind==='update'?PLAY_STORE_URL:String(parts.url.value||'').trim()||null;
     const actionLabel=kind==='update'?'ACTUALIZAR EN GOOGLE PLAY':String(parts.label.value||'').trim()||null;
     const title=parts.title.value.trim(),body=parts.body.value.trim();
-    if(title.length<1||title.length>90||body.length<1||body.length>600)throw Error('Título 1–90 caracteres; texto 1–600');
+    const en={title:parts.titleEn.value.trim(),body:parts.bodyEn.value.trim(),
+      action_label:kind==='update'?'UPDATE ON GOOGLE PLAY':parts.labelEn.value.trim()||null};
+    if(title.length<1||title.length>90||body.length<1||body.length>600)throw Error('Título ES 1–90 caracteres; texto ES 1–600');
+    if(en.title.length>90||en.body.length>600||String(en.action_label||'').length>28)
+      throw Error('Inglés: título máximo 90; mensaje 600; botón 28 caracteres');
     if(actionUrl&&!/^https:\/\/[^\s]+$/.test(actionUrl))throw Error('El enlace debe comenzar por https://');
     const code=kind==='update'?Number(parts.versionCode.value):null;
     if(kind==='update'&&(!Number.isSafeInteger(code)||code<1))throw Error('La actualización necesita versionCode real de Google Play');
     const starts=toISO(parts.start.value)||new Date().toISOString(),ends=toISO(parts.end.value);
     if(ends&&ends<=starts)throw Error('La fecha de fin debe ser posterior a la de inicio');
-    return {kind,target:kind==='update'?'android':parts.target.value,title,body,action_url:actionUrl,
+    const payload={kind,target:kind==='update'?'android':parts.target.value,title,body,action_url:actionUrl,
       action_label:actionLabel,version_code:code,priority:Number(parts.priority.value)||0,
-      active:parts.active.checked,starts_at:starts,ends_at:ends,
+      active:parts.active.checked,starts_at:starts,ends_at:ends,translations:{en},
       updated_at:new Date().toISOString()};
+    if(payload.active&&!hasEnglishNoticeTranslation(payload))
+      throw Error('Antes de publicar, completa título y mensaje en inglés y traduce el botón si lo utilizas.');
+    return payload;
   };
   function editorView(record=null){
     editing=record?.id||null;
@@ -149,6 +158,9 @@ export function mountAdminCommunications(){
       title:input('text','Título',record?.title||''),
       body:make('textarea'),
       label:input('text','Ej.: VER NOVEDADES',record?.action_label||''),
+      titleEn:input('text','English title',record?.translations?.en?.title||''),
+      bodyEn:make('textarea'),
+      labelEn:input('text','E.g. READ MORE',record?.translations?.en?.action_label||''),
       url:input('url','https://...',record?.action_url||''),
       versionCode:input('number','Versión publicada: 12, 13, 14…',record?.version_code||''),
       priority:input('number','0–100',record?.priority??50),
@@ -156,8 +168,9 @@ export function mountAdminCommunications(){
       end:input('datetime-local','',isoLocal(record?.ends_at)),
       active:input('checkbox')
     };
-    parts.body.value=record?.body||'';parts.active.checked=record?.active===true;
+    parts.body.value=record?.body||'';parts.bodyEn.value=record?.translations?.en?.body||'';parts.active.checked=record?.active===true;
     parts.title.maxLength=90;parts.body.maxLength=600;parts.label.maxLength=28;
+    parts.titleEn.maxLength=90;parts.bodyEn.maxLength=600;parts.labelEn.maxLength=28;
     parts.priority.min='0';parts.priority.max='100';parts.versionCode.min='1';
     const updateKind=()=>{
       const isUpdate=parts.kind.value==='update';
@@ -165,10 +178,15 @@ export function mountAdminCommunications(){
       parts.versionCode.parentElement.hidden=!isUpdate;
       parts.url.parentElement.hidden=isUpdate;
       parts.label.parentElement.hidden=isUpdate;
+      parts.labelEn.parentElement.hidden=isUpdate;
     };
     parts.kind.addEventListener('change',updateKind);
-    box.append(title,field('TIPO',parts.kind),field('DESTINATARIOS',parts.target),
-      field('TÍTULO',parts.title),field('MENSAJE',parts.body),field('TEXTO DEL BOTÓN (OPCIONAL)',parts.label),
+    box.append(title,make('p','tdr-comms-admin-language-note','ESPAÑOL + ENGLISH · Los borradores pueden estar incompletos, pero para publicar hay que completar ambos idiomas.'),
+      field('TIPO',parts.kind),field('DESTINATARIOS',parts.target),
+      field('TÍTULO · ESPAÑOL',parts.title),field('MENSAJE · ESPAÑOL',parts.body),
+      field('TÍTULO · ENGLISH',parts.titleEn),field('MENSAJE · ENGLISH',parts.bodyEn),
+      field('TEXTO DEL BOTÓN · ESPAÑOL (OPCIONAL)',parts.label),
+      field('BUTTON LABEL · ENGLISH (OPTIONAL)',parts.labelEn),
       field('ENLACE HTTPS (OPCIONAL)',parts.url),field('VERSIONCODE PUBLICADO EN PLAY',parts.versionCode),
       field('PRIORIDAD 0–100',parts.priority),field('DESDE',parts.start),
       field('HASTA (OPCIONAL)',parts.end));
@@ -191,7 +209,7 @@ export function mountAdminCommunications(){
     work.replaceChildren();
     const controls=make('div','tdr-comms-admin-actions');
     controls.append(btn('CREAR AVISO',()=>editorView()),btn('ACTUALIZAR LISTADO',()=>void refresh().catch(err=>notice(err.message))),
-      btn('CERRAR SESIÓN',()=>{token=null;loginView();notice('Sesión cerrada');}));
+      btn('CERRAR SESIÓN',()=>{token=null;staffUserId=null;loginView();notice('Sesión cerrada');}));
     work.append(controls);
     const summary=make('p','',rows.length+' comunicaciones registradas. Una actualización se publica solo cuando Google Play ya ofrece ese versionCode.');
     work.append(summary);
@@ -203,9 +221,14 @@ export function mountAdminCommunications(){
       item.append(make('p','',row.body));
       const actions=make('div','tdr-comms-admin-actions');
       actions.append(btn('EDITAR',()=>editorView(row)));
-      actions.append(btn(row.active?'DESPUBLICAR':'PUBLICAR',()=>void transact(
-        '/rest/v1/tdr_public_notices?id=eq.'+encodeURIComponent(row.id),
-        {method:'PATCH',body:{active:!row.active,updated_at:new Date().toISOString()}})));
+      actions.append(btn(row.active?'DESPUBLICAR':'PUBLICAR',()=>{
+        if(!row.active&&!hasEnglishNoticeTranslation(row)){
+          notice('Completa el título y mensaje en inglés antes de publicar.');
+          return;
+        }
+        void transact('/rest/v1/tdr_public_notices?id=eq.'+encodeURIComponent(row.id),
+        {method:'PATCH',body:{active:!row.active,updated_at:new Date().toISOString()}});
+      }));
       actions.append(btn('BORRAR',()=>{if(window.confirm('¿Borrar definitivamente este aviso?'))void transact(
         '/rest/v1/tdr_public_notices?id=eq.'+encodeURIComponent(row.id),{method:'DELETE'});}));
       item.append(actions);work.append(item);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {validPublicNotice,noticeForPlayer,acknowledgeCommunication,noticeSeenKey,communicationSeenStore,playUpdateNotice,safeNoticeLink,PLAY_STORE_URL} from '../src/game/online/liveCommunications.js';
+import {validPublicNotice,noticeForPlayer,acknowledgeCommunication,noticeSeenKey,communicationSeenStore,playUpdateNotice,safeNoticeLink,PLAY_STORE_URL,hasEnglishNoticeTranslation,localizePublicNotice} from '../src/game/online/liveCommunications.js';
 
 const now=Date.parse('2026-11-02T12:00:00Z');
 const id='11111111-1111-4111-8111-111111111111';
@@ -11,6 +11,21 @@ const update={...a,id:'22222222-2222-4222-8222-222222222222',kind:'update',targe
   version_code:12,title:'Actualiza TDR',action_url:PLAY_STORE_URL,priority:50};
 const storage=new Map(),local={getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)};
 assert.equal(validPublicNotice(a,now),true);
+const bilingual={...a,translations:{en:{title:'Welcome!',body:'New season'}}};
+assert.equal(hasEnglishNoticeTranslation(bilingual),true);
+assert.equal(hasEnglishNoticeTranslation({...a,translations:{en:{title:'Welcome!'}}}),false,
+  'Publishing requires both English title and message');
+assert.equal(localizePublicNotice(bilingual,'es').title,a.title);
+assert.equal(localizePublicNotice(bilingual,'en').title,'Welcome!');
+assert.equal(localizePublicNotice(bilingual,'en').body,'New season');
+assert.equal(localizePublicNotice(bilingual,'fr').body,a.body,
+  'Unsupported languages retain the Spanish canonical message');
+assert.equal(hasEnglishNoticeTranslation({...bilingual,action_label:'MÁS INFO'}),false,
+  'A custom Spanish button requires its English translation');
+assert.equal(localizePublicNotice({...bilingual,action_label:'MÁS INFO',
+  translations:{en:{title:'Welcome!',body:'New season',action_label:'MORE INFO'}}},'en').action_label,'MORE INFO');
+assert.equal(localizePublicNotice(playUpdateNotice({code:11,playAvailable:true,playVersionCode:12},now),'en').title,
+  'New version available!','Play-sourced updates are bilingual too');
 assert.equal(validPublicNotice({...a,active:false},now),false,'Drafts stay hidden');
 assert.equal(validPublicNotice({...a,ends_at:'2026-11-01T12:00:00Z'},now),false,'Expired messages stay hidden');
 assert.equal(validPublicNotice({...a,starts_at:'2026-11-03T00:00:00Z'},now),false,'Scheduled messages must wait');
@@ -63,6 +78,13 @@ assert.match(lobby,/disposeCommunications\?\.\(\)/,'No polling after leaving the
 assert.match(ui,/document\.querySelector\('\.tdr-bf-shade'\)/,'Do not overlay the existing Black Friday popup');
 assert.match(ui,/MÁS TARDE/,'Player must be able to dismiss the update');
 assert.match(ui,/textContent/,'Remote text rendered without raw HTML injection');
+assert.match(ui,/localizePublicNotice\(notice/,'Player notice uses selected language');
+assert.match(ui,/getLanguage\(\)/,'Read the TDR language setting');
+assert.match(admin,/TÍTULO · ENGLISH/,'Admin must author an English title');
+assert.match(admin,/MENSAJE · ENGLISH/,'Admin must author an English body');
+assert.match(admin,/hasEnglishNoticeTranslation\(row\)/,'Cannot publish incomplete translations');
+const liveSource=readFileSync('src/game/online/liveCommunications.js','utf8');
+assert.match(liveSource,/updated_at,translations/,'Public REST feed includes translations');
 assert.match(ui,/playUpdateNotice\(installed\)/,'Google Play available update must display without server authoring');
 assert.match(ui,/known=automatic\?\[\.\.\.eligible,automatic\]:eligible/);
 assert.match(admin,/tdr_staff/,'Publishing requires server-managed app metadata');
@@ -75,6 +97,7 @@ const onlineAuth=readFileSync('src/game/online/raceControlOnline.js','utf8');
 assert.match(onlineAuth,/export async function refreshRaceControlOnlineSession/);
 assert.match(onlineAuth,/next\.user\.id!==old\.user\.id/,'Never exchange pilot identity');
 assert.match(onlineAuth,/current\?\.refresh_token!==old\.refresh_token/,'Never overwrite rotated session');
+assert.match(admin,/verified\?\.id!==staffUserId/,'Refreshed staff JWT must belong to original administrator');
 assert.match(admin,/\/auth\/v1\/user/);
 assert.match(admin,/GUARDAR EN SERVIDOR/);
 assert.match(paddock,/COMUNICACIONES/);
