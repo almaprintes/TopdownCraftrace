@@ -9,6 +9,8 @@ import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
 import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.install.model.UpdateAvailability
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -84,6 +86,41 @@ class TdrRewardedAdsPlugin : Plugin() {
                 "ads_initialized=${consent.adsInitialized}",
         )
         call.resolve(result)
+    }
+
+    // Ask Play whether this installed production app can actually be upgraded.
+    // QA/debug sideloads must never claim a Play update is available.
+    @PluginMethod
+    fun checkForPlayUpdate(call: PluginCall) {
+        if (BuildConfig.FLAVOR != "production") {
+            val result = JSObject()
+            result.put("checked", false)
+            result.put("available", false)
+            call.resolve(result)
+            return
+        }
+        try {
+            AppUpdateManagerFactory.create(activity).appUpdateInfo
+                .addOnSuccessListener { info ->
+                    val available = info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+                    val result = JSObject()
+                    result.put("checked", true)
+                    result.put("available", available)
+                    result.put("availableVersionCode", if (available) info.availableVersionCode() else 0)
+                    call.resolve(result)
+                }
+                .addOnFailureListener {
+                    val result = JSObject()
+                    result.put("checked", false)
+                    result.put("available", false)
+                    call.resolve(result)
+                }
+        } catch (_: Exception) {
+            val result = JSObject()
+            result.put("checked", false)
+            result.put("available", false)
+            call.resolve(result)
+        }
     }
 
     @PluginMethod
