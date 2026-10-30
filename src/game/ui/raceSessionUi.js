@@ -50,10 +50,10 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
     : `<div class="tdr-x2-preview tdr-x2-preview-symbol"><span>◆</span><span class="tdr-x2-arrow">↻</span><span>◆</span></div>`;
 
   const doubleButton=doubleEnabled?`
-    <button class="tdr-x2-button" data-a="double" type="button" aria-label="Duplicar botín">
-      <span class="tdr-x2-play">▶</span>
+    <button class="tdr-x2-button" data-a="double" type="button" aria-label="${isAdFreePromoActive()?'Duplicar botín gratis':'Duplicar botín viendo un anuncio'}">
+      <span class="tdr-x2-play">${isAdFreePromoActive()?'✦':'▶'}</span>
       <span class="tdr-x2-big" data-a="double-x">×2</span>
-      <span class="tdr-x2-copy"><strong data-a="double-main">DUPLICAR BOTÍN</strong><small data-a="double-sub">${isAdFreePromoActive()?'GRATIS':'MIRA UN ANUNCIO RECOMPENSADO'}</small></span>
+      <span class="tdr-x2-copy"><strong data-a="double-main">${isAdFreePromoActive()?'DUPLICAR GRATIS':'DUPLICAR BOTÍN'}</strong><small data-a="double-sub">${isAdFreePromoActive()?'PROMOCIÓN SIN ANUNCIOS':'MIRA UN ANUNCIO RECOMPENSADO'}</small></span>
       ${previewVisual}
     </button>`:'';
 
@@ -97,8 +97,8 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
     doubleBtn.classList.remove('is-loading','is-failed','is-doubled');
     doubleBtn.classList.add('is-ready');
     if(doubleX)doubleX.textContent='×2';
-    if(doubleMain)doubleMain.textContent='DUPLICAR BOTÍN';
-    if(doubleSub)doubleSub.textContent=isAdFreePromoActive()?'GRATIS':'MIRA UN ANUNCIO RECOMPENSADO';
+    if(doubleMain)doubleMain.textContent=isAdFreePromoActive()?'DUPLICAR GRATIS':'DUPLICAR BOTÍN';
+    if(doubleSub)doubleSub.textContent=isAdFreePromoActive()?'PROMOCIÓN SIN ANUNCIOS':'MIRA UN ANUNCIO RECOMPENSADO';
   };
   const applyDoubledVisuals=()=>{
     doubled=true;
@@ -126,15 +126,15 @@ export function mountRaceSessionRewards({baseUrl='/',laps=0,bonusLaps=0,entries=
     doubling=true;
     if(doubleBtn){doubleBtn.disabled=true;doubleBtn.classList.remove('is-ready','is-failed');doubleBtn.classList.add('is-loading');}
     if(doubleX)doubleX.textContent='…';
-    if(doubleMain)doubleMain.textContent='CARGANDO ANUNCIO…';
-    if(doubleSub)doubleSub.textContent='NO CIERRES ESTA PANTALLA';
+    if(doubleMain)doubleMain.textContent=isAdFreePromoActive()?'DUPLICANDO BOTÍN…':'CARGANDO ANUNCIO…';
+    if(doubleSub)doubleSub.textContent=isAdFreePromoActive()?'ENTREGA GRATUITA':'NO CIERRES ESTA PANTALLA';
     let result=null;
     try{result=await onDouble();}catch(error){console.error('[post-race-x2] UI callback failed',error);}
     doubling=false;
     if(result?.ok){applyDoubledVisuals();return;}
     if(doubleBtn){doubleBtn.disabled=false;doubleBtn.classList.remove('is-loading');doubleBtn.classList.add('is-failed');}
     if(doubleX)doubleX.textContent='!';
-    if(doubleMain)doubleMain.textContent='ANUNCIO NO COMPLETADO';
+    if(doubleMain)doubleMain.textContent=isAdFreePromoActive()?'NO SE PUDO DUPLICAR':'ANUNCIO NO COMPLETADO';
     if(doubleSub)doubleSub.textContent='CONSERVAS TU BOTÍN · PUEDES REINTENTAR';
     setTimeout(resetDoubleButton,1500);
   };
