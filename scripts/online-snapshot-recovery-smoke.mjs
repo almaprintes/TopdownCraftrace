@@ -56,6 +56,30 @@ assert.match(optimized,/m.position-10/,'Preserve the -10 rank window');
 assert.match(optimized,/m.position\+10/,'Preserve the +10 rank window');
 assert.doesNotMatch(optimized,/exact_ranks|create temporary table|truncate table/i,
   'No O(distinct times) recounts and no per-request temporary tables');
+
+const oldPublic=readFileSync('supabase/migrations/20261028_022_race_control_current_circuits_only.sql','utf8');
+const conditionalPublic=readFileSync('supabase/migrations/20261030_027_race_control_skip_unchanged_public_snapshot.sql','utf8');
+const tracksFrom=source=>Array.from(source.matchAll(/^\s*\('([^']+)'\),?\s*$/gm),match=>match[1]);
+assert.equal(tracksFrom(conditionalPublic).length,13,
+  'The public rankings must still include all 13 current track editions');
+assert.deepEqual(tracksFrom(conditionalPublic),tracksFrom(oldPublic),
+  'Skipping unchanged snapshots must not change the supported circuits');
+assert.match(conditionalPublic,/on conflict\(id\) do update set payload=excluded\.payload\s+where/,
+  'Only a new public leaderboard warrants an UPDATE');
+assert.match(conditionalPublic,/payload->'tracks'\s+is distinct from excluded\.payload->'tracks'/,
+  'Compare the actual standings, never generated_at timestamps');
+assert.match(conditionalPublic,/payload->'version'\s+is distinct from excluded\.payload->'version'/,
+  'A schema-version change must still force a refreshed snapshot');
+assert.match(conditionalPublic,/get diagnostics changed_rows = row_count;\s+if changed_rows = 0 then\s+return;/,
+  'Stop before daily-stat writes if standings have not changed');
+assert.ok(conditionalPublic.indexOf('if changed_rows = 0 then')<
+  conditionalPublic.indexOf('insert into tdr_web_private.refresh_daily'),
+  'Do not update daily counters on empty refreshes');
+assert.match(conditionalPublic,/'refresh_seconds',300/,
+  'Continue checking at five-minute intervals');
+assert.doesNotMatch(conditionalPublic,/create trigger|alter table|create index/i,
+  'Never add database writes to each player publication for a cache check');
+
 const ownBestCall=online.slice(online.indexOf('export async function getMyRaceControlRecord'),
   online.indexOf('export async function getRaceControlGhost'));
 assert.match(ownBestCall,/\/rpc\/get_my_track_personal_best/,
