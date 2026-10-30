@@ -118,3 +118,16 @@ export function safeNoticeLink(record){
     return url.protocol==='https:'?url.href:null;
   }catch{return null;}
 }
+
+export async function openCommunicationLink(record){
+  const url=safeNoticeLink(record);
+  if(!url)return false;
+  if(record?.kind==='update'&&Capacitor.isNativePlatform?.()&&
+    Capacitor.getPlatform?.()==='android'){
+    try{await NATIVE.openPlayStore();return true;}catch(error){
+      console.warn('[TDR update] Play application unavailable',error?.message||'unknown');
+    }
+  }
+  try{window.open(url,'_blank','noopener,noreferrer');return true;}
+  catch{return false;}
+}
