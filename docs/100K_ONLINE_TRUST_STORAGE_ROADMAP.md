@@ -1,5 +1,5 @@
 # TDR · Plan obligatorio de integridad online y eficiencia a 100.000 pilotos
-**Decisión del propietario: 30/10/2026. Estado: APROBADO COMO OBJETIVO, NO IMPLEMENTADO.**
+**Decisión del propietario: 30/10/2026. Estado: EN DESARROLLO. Antitrampas estructural aplicado; verificación de físicas e identidad vinculada pendientes.**
 
 > Prioridad: preparar un sistema antitrampas y una migración progresiva de cuentas provisionales a identidades vinculadas, para que la base de datos competitiva sea utilizada por pilotos recuperables. No bloquear cuentas activas, borrar usuarios, invalidar sus tiempos ni alterar partidas hasta verificar la transición completa.
 
@@ -8,7 +8,7 @@
 **Problema demostrado:** los `submit_track_record*` de Supabase reciben el tiempo y el fantasma del cliente, y aún no pueden demostrar que procedan de una carrera legítima. La migración 031 impide **circuitos inventados** en ambos publicadores (13 ediciones oficiales), pero no evita tiempos o trayectorias fraudulentos.
 
 - [ ] Definir contrato autoritativo para circuito/edición física, coche, versión de físicas, checkpoints y formato de ghost. El servidor no debe confiar en un hash generado exclusivamente por el cliente.
-- [ ] Validaciones baratas en recepción: tipo, límites, intervalo, duración coherente con muestras, orden temporal, puntos finitos, tamaño y coincidencia del circuito. Rechazar payloads imposibles antes de almacenar.
+- [x] Primera barrera del servidor: validar la estructura binaria, cantidad de muestras, tiempo final, orden temporal y formato v1. Rechazar paquetes imposibles antes de guardar una **mejora**. Pendientes físicas/geometría y validación autoritativa.
 - [ ] Probar validez de trayectoria: salida/meta/checkpoints en orden, geometría oficial, velocidades y aceleraciones físicamente plausibles, teletransportes, vueltas imposibles. Diseñar límites conservadores para no penalizar técnicas legítimas.
 - [ ] Separar récords **pendientes / verificados / rechazados**, con política de visibilidad y revisión; estudiar el coste de una validación diferida por evento (no por fotograma ni por apertura).
 - [ ] Para partidas competitivas de mayor rigor, considerar simulación autoritativa o reproducción determinista en un servidor. **Ninguna comprobación ejecutada únicamente en el dispositivo ofrece garantía antitrampas.**
@@ -102,3 +102,19 @@ Fuentes técnicas: Supabase [Anonymous Sign-Ins](https://supabase.com/docs/guide
 - Prueba automatizada sin red: `scripts/online-ghost-download-budget-smoke.mjs` cubre dos clics concurrentes y una sola descarga, LRU, presupuesto de muestras, reintentos, fallo sin caché y controles de autorización/compatibilidad.
 - Ahorro real: **una llamada a Supabase por cada solicitud simultánea repetida** que antes se habría duplicado; las repeticiones dentro de la caché no descargan otra vez. No cuantificar porcentaje general sin datos de usuarios.
 - Pendiente: facturar egress incluyendo serialización `bytea`/JSON de PostgREST y cabeceras, el tamaño en viajes reales y la retención de previews. No diseñar un CDN para datos privados sin revisar controles de acceso y recompensa.
+
+## Primera fase activa de antitrampas — migraciones 033 y 034 (30/10/2026)
+
+**Alcance real:** integridad de paquete, NO demostración de que la carrera fue limpia. Esto es una defensa frente a grabaciones malformadas y tiempos evidentemente imposibles, nunca un sistema antitrampas terminado.
+
+- Migración 033: función privada e inmutable `tdr_web_private.valid_online_ghost_v1(bytea,int,int)`. Recorre los cuatro valores ZigZag-varint de cada muestra del formato nativo, comprueba decodificación no truncada/no canónica, recuento de muestras, tiempo creciente, igualdad exacta entre última muestra y vuelta declarada, y ausencia de bytes sobrantes. Rechaza datos malformados **solo para nuevas mejoras con fantasma**; no modifica grabaciones existentes.
+- La migración valida **antes de aplicar el bloqueo** que los 15 fantasmas previamente publicados pasan el mismo algoritmo: **15/15 válidos**, 0 inválidos. No hay nuevas tablas, índices, tareas cron, procesos periódicos ni consultas por sesión. Se ejecuta únicamente una vez al intentar guardar una vuelta mejorada con fantasma.
+- Migración 034: ambas RPC de publicación exigen tiempos `>1000 ms`, en consonancia con el cliente. La RPC de fantasma exige `ghost_format=1` también si un atacante envía SQL `NULL`. Controles compatibles con los 15 tiempos existentes (mínimo observado: 11.084 ms).
+- Permisos: helper no ejecutable directamente por `anon` o `authenticated`; las RPC originales continúan únicamente para `authenticated`. Usuarios Auth anónimos **todavía** siguen contando como `authenticated`; la migración de identidades vinculadas está pendiente.
+- Pruebas: 15/15 fantasmas existentes aceptados; truncados, varints sobrelargos, timestamps repetidos y paquetes con basura rechazados; llamadas de publicación con duración de 1.000 ms y formato NULL rechazadas en transacciones revertidas. `scripts/ghost-structural-integrity-smoke.mjs` reproduce casos válidos e inválidos y se ejecuta en prebuild.
+
+**Coste medido, sin ocultarlo:** una ejecución `EXPLAIN ANALYZE` para verificar los 15 fantasmas tardó 202,6 ms; otra 208,4 ms. Aproximadamente 13–14 ms por fantasma en esta medición colectiva, **no** garantía de p95 ni de coste para 100.000 jugadores. Antes de expansión masiva hay que sustituir o complementar el decodificador PL/pgSQL por un servicio optimizado y probado si CPU resulta un cuello de botella. Por ahora solo consume CPU al publicar una nueva mejora con fantasma, no al consultar rankings, abrir partida o competir normalmente. Un score-only no aporta muestras para cotejar y sigue sin validación de trayectoria.
+
+**Pendiente P0:** validación física de trayectorias, checkpoints, límites específicos de circuito, geometría de cada edición, cuentas Google/Apple vinculadas, puntuaciones pendientes/verificadas y auditoría independiente de carreras. Una persona que manipule coherentemente el tiempo y el fantasma puede superar esta barrera. No presentar rankings como inviolables.
+
+**Principio:** no rechazar récords históricos, no borrar datos, no declarar trampa por anomalía física hasta disponer de pruebas y calibración con carreras reales.
