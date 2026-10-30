@@ -2,6 +2,7 @@
 // with server-managed app_metadata.tdr_staff=true. No admin secrets in the app.
 import {playerBackendConfig} from '../online/backendConfig.js';
 import {PLAY_STORE_URL} from '../online/liveCommunications.js';
+import {hasSavedRaceControlSession,refreshRaceControlOnlineSession} from '../online/raceControlOnline.js';
 import './adminCommunications.css';
 
 const make=(tag,cls,value)=>{
@@ -61,7 +62,7 @@ export function mountAdminCommunications(){
     if(closed)return;closed=true;token=null;root.remove();
   }
   const notice=text=>{renderError.textContent=text||'';};
-  async function request(path,{method='GET',body,adminToken=token}={}){
+  async function request(path,{method='GET',body,adminToken=token,retry=true}={}){
     if(!url||!key)throw Error('Falta configuración de Supabase');
     const headers={apikey:key,Accept:'application/json'};
     if(adminToken)headers.Authorization='Bearer '+adminToken;
@@ -70,33 +71,47 @@ export function mountAdminCommunications(){
     const response=await fetch(url+path,{method,headers,body:body?JSON.stringify(body):undefined,
       signal:AbortSignal.timeout(12000),cache:'no-store'});
     const data=await response.json().catch(()=>null);
+    if(response.status===401&&retry&&token&&adminToken===token){
+      // Staff JWT may expire while editing. The renewed JWT must still belong
+      // to the SAME player and retain staff privileges before any retry.
+      const previousId=(await request('/auth/v1/user',{adminToken:token,retry:false}).catch(()=>null))?.id;
+      const refreshed=(await refreshRaceControlOnlineSession()).session;
+      const verified=await request('/auth/v1/user',{adminToken:refreshed.access_token,retry:false});
+      if(verified?.id!==refreshed.user.id||verified?.app_metadata?.tdr_staff!==true||
+        (previousId&&previousId!==verified.id))throw Error('Sesión de administración caducada.');
+      token=refreshed.access_token;
+      return request(path,{method,body,adminToken:token,retry:false});
+    }
     if(!response.ok)throw Error(data?.msg||data?.message||data?.error_description||'Error de Supabase '+response.status);
     return data;
   }
-  async function login(email,password){
-    const session=await request('/auth/v1/token?grant_type=password',{
-      method:'POST',body:{email,password},adminToken:null});
-    if(!session?.access_token)throw Error('No se recibió sesión');
-    const user=await request('/auth/v1/user',{adminToken:session.access_token});
-    if(user?.id!==session.user?.id||user?.app_metadata?.tdr_staff!==true)
-      throw Error('Esta cuenta no tiene permiso de publicar avisos. Configura tdr_staff en Auth.');
-    token=session.access_token;
+  async function loginWithCurrentPilot(){
+    // Reuse the existing player's saved Google/GoTrue identity. Never attempt
+    // password grant (disabled by project policy) and never sign in as a guest.
+    if(!hasSavedRaceControlSession())
+      throw Error('No hay una cuenta online en este dispositivo. Abre Ajustes → Cuenta y entra con Google primero.');
+    const account=(await refreshRaceControlOnlineSession()).session;
+    if(!account?.access_token||!account?.user?.id)
+      throw Error('La sesión de Google no está disponible. Entra desde Ajustes → Cuenta.');
+    const user=await request('/auth/v1/user',{adminToken:account.access_token});
+    if(user?.id!==account.user.id||user?.app_metadata?.tdr_staff!==true)
+      throw Error('La cuenta actual no está autorizada para publicar avisos. Revisa el permiso tdr_staff en Supabase.');
+    token=account.access_token;
     await refresh();
   }
   function loginView(){
     work.replaceChildren();
-    work.append(make('p','','Acceso exclusivo de administración. Usa una cuenta de Supabase autorizada; no se modifica la cuenta ni la partida de ningún piloto.'));
-    const form=make('form','tdr-comms-admin-login');
-    const email=input('email','Correo administrador');email.required=true;email.autocomplete='username';
-    const password=input('password','Contraseña');password.required=true;password.autocomplete='current-password';
-    const submit=make('button','','ACCEDER AL PANEL');submit.type='submit';
-    form.append(field('CORREO',email),field('CONTRASEÑA',password),submit);work.append(form);
-    form.addEventListener('submit',async event=>{
-      event.preventDefault();submit.disabled=true;notice('Comprobando permisos…');
-      try{await login(email.value,password.value);notice('Sesión autorizada');}
-      catch(error){token=null;notice(error.message||'No se pudo iniciar sesión');}
-      finally{password.value='';submit.disabled=false;}
-    });
+    work.append(make('p','','Acceso exclusivo con tu cuenta de TDR vinculada a Google. No necesitas contraseña adicional y tu partida no se modifica.'));
+    const existing=hasSavedRaceControlSession();
+    const access=btn('ENTRAR CON MI CUENTA DE TDR · GOOGLE',async()=>{
+      access.disabled=true;notice('Verificando tu cuenta y renovando permisos…');
+      try{await loginWithCurrentPilot();notice('Permiso de comunicaciones verificado');}
+      catch(error){token=null;notice(error.message||'No se pudo autorizar tu cuenta');}
+      finally{access.disabled=false;}
+    },'tdr-comms-admin-google');
+    work.append(access);
+    if(!existing)work.append(make('p','',
+      'No hay sesión vinculada en este navegador. Cierra el panel, abre Configuración → Cuenta, entra con Google y regresa a Comunicaciones.'));
   }
   async function refresh(){
     if(closed||!token)return;

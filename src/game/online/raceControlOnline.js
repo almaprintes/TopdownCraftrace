@@ -94,6 +94,34 @@ export async function activateRaceControlOnline(){
   finally{activationPromise=null;}
 }
 
+// Staff metadata is minted into JWTs at sign-in / refresh. Reuse the player's
+// EXISTING authenticated user; do not create a second Supabase identity or touch
+// local/cloud game progression. Supabase rotates refresh tokens, so serialize
+// the operation with the ordinary session activation path.
+export async function refreshRaceControlOnlineSession(){
+  const online=await activateRaceControlOnline();
+  if(!online?.session?.user?.id)throw Error('Primero vincula tu cuenta desde Ajustes → Cuenta.');
+  if(!activationPromise)activationPromise=(async()=>{
+    const old=readSession();
+    if(!old?.user?.id||!old?.refresh_token||old.user.id!==online.session.user.id)
+      throw Error('No hay sesión de Google guardada. Entra desde Ajustes → Cuenta.');
+    const next=normalizeSession(await request('/auth/v1/token?grant_type=refresh_token',{
+      method:'POST',body:{refresh_token:old.refresh_token}
+    }));
+    if(!sessionUsable(next)||!next.refresh_token||next.user.id!==old.user.id)
+      throw Error('No se pudo renovar el permiso de esta cuenta.');
+    // Never overwrite a different player's session or a token rotated elsewhere.
+    const current=readSession();
+    if(current?.user?.id!==old.user.id||current?.refresh_token!==old.refresh_token)
+      throw Error('La sesión cambió durante la comprobación. Vuelve a abrir Comunicaciones.');
+    saveSession(next);
+    api={session:next};
+    return api;
+  })();
+  try{return await activationPromise;}
+  finally{activationPromise=null;}
+}
+
 // All account operations reuse the existing Race Control Supabase user ID.
 const cleanEmail=email=>{
   const value=String(email||'').trim().toLowerCase();

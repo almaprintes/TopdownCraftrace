@@ -66,6 +66,15 @@ assert.match(ui,/textContent/,'Remote text rendered without raw HTML injection')
 assert.match(ui,/playUpdateNotice\(installed\)/,'Google Play available update must display without server authoring');
 assert.match(ui,/known=automatic\?\[\.\.\.eligible,automatic\]:eligible/);
 assert.match(admin,/tdr_staff/,'Publishing requires server-managed app metadata');
+assert.match(admin,/ENTRAR CON MI CUENTA DE TDR · GOOGLE/,'Admin uses existing Google-linked player identity');
+assert.match(admin,/refreshRaceControlOnlineSession\(\)/,'Admin refreshes JWT to receive server-assigned staff claim');
+assert.match(admin,/hasSavedRaceControlSession\(\)/,'Admin must never create an anonymous player to login');
+assert.doesNotMatch(admin,/grant_type=password/,'Disabled email/password sign-in must not be offered');
+assert.doesNotMatch(admin,/password\.value/,'Admin must not collect player password');
+const onlineAuth=readFileSync('src/game/online/raceControlOnline.js','utf8');
+assert.match(onlineAuth,/export async function refreshRaceControlOnlineSession/);
+assert.match(onlineAuth,/next\.user\.id!==old\.user\.id/,'Never exchange pilot identity');
+assert.match(onlineAuth,/current\?\.refresh_token!==old\.refresh_token/,'Never overwrite rotated session');
 assert.match(admin,/\/auth\/v1\/user/);
 assert.match(admin,/GUARDAR EN SERVIDOR/);
 assert.match(paddock,/COMUNICACIONES/);
