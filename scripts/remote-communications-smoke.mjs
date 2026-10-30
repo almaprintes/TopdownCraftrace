@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {validPublicNotice,noticeForPlayer,acknowledgeCommunication,noticeSeenKey,communicationSeenStore,playUpdateNotice,safeNoticeLink,PLAY_STORE_URL,hasEnglishNoticeTranslation,localizePublicNotice} from '../src/game/online/liveCommunications.js';
+import {splitTranslationSegments,translateCommunicationDraft} from '../src/game/online/communicationTranslation.js';
 
 const now=Date.parse('2026-11-02T12:00:00Z');
 const id='11111111-1111-4111-8111-111111111111';
@@ -66,6 +67,28 @@ assert.equal(playUpdateNotice({code:12,playAvailable:true,playVersionCode:12},no
 assert.equal(playUpdateNotice({code:11,playAvailable:false,playVersionCode:12},now),null);
 assert.equal(playUpdateNotice({code:11,playAvailable:true,playVersionCode:0},now),null);
 
+const huge='¡Árboles y curvas! '.repeat(40);
+const parts=splitTranslationSegments(huge);
+assert.ok(parts.length>1,'Long Spanish drafts must be split into safe segments');
+assert.ok(parts.every(p=>!p.translate||new TextEncoder().encode(p.text.trim()).length<=500),
+  'MyMemory must never receive more than 500 UTF-8 bytes in one segment');
+const requests=[];
+const mockTranslation=async url=>{
+  const address=new URL(url);
+  assert.equal(address.hostname,'api.mymemory.translated.net');
+  assert.equal(address.searchParams.get('langpair'),'es|en');
+  requests.push(address.searchParams.get('q'));
+  return {ok:true,json:async()=>({responseStatus:200,
+    responseData:{translatedText:'EN '+address.searchParams.get('q')}})};
+};
+const translated=await translateCommunicationDraft({title:'Hola',body:'Primera línea.\nSegunda línea.',actionLabel:'Ver más'},mockTranslation);
+assert.equal(translated.title,'EN Hola');
+assert.ok(translated.body.includes('\n'),'Preserve paragraph boundaries');
+assert.equal(translated.action_label,'EN Ver más');
+assert.equal(requests.length,4,'Translate title, two body paragraphs, and button separately');
+await assert.rejects(()=>translateCommunicationDraft({title:'Hola',body:'Mensaje'},
+  async()=>({ok:true,json:async()=>({responseStatus:429,responseDetails:'limit'})})),
+  /cuota|rechazado/,'Reject provider quota failures without inventing an English text');
 const ui=readFileSync('src/game/ui/liveCommunicationsUi.js','utf8');
 const lobby=readFileSync('src/game/ui/LobbyDomUi.js','utf8');
 const admin=readFileSync('src/game/ui/adminCommunications.js','utf8');
@@ -93,7 +116,20 @@ assert.match(adminStyles,/min-height:0;overflow-y:auto;overscroll-behavior:conta
   'Only the message editor scrolls, avoiding sticky-header overlap');
 const liveSource=readFileSync('src/game/online/liveCommunications.js','utf8');
 assert.match(liveSource,/updated_at,translations/,'Public REST feed includes translations');
+assert.doesNotMatch(liveSource,/lastFetch|COMMUNICATION_REFRESH_MS/,
+  'Freeze fetched notices for the entire app runtime');
+assert.match(liveSource,/if\(snapshot\)return snapshot/,
+  'Reload only after a fresh game startup');
 assert.match(ui,/playUpdateNotice\(installed\)/,'Google Play available update must display without server authoring');
+assert.match(ui,/getOpeningCommunications\(\)/,
+  'Opening communications must be captured once per application runtime');
+assert.match(ui,/if\(!launchRead\)launchRead=Promise\.all/,
+  'Shared promise must freeze the feed and Play update status at app start');
+assert.doesNotMatch(ui,/setInterval\(/,'No polling while players are racing or using the lobby');
+assert.match(ui,/automaticNoticeShownThisLaunch=true/,
+  'Do not repeat automatic notices when returning to the lobby');
+assert.match(admin,/TRADUCIR AL INGLÉS/,'Admin can translate Spanish draft on demand');
+assert.match(admin,/translateCommunicationDraft\(source\)/,'Admin uses external translator only on user click');
 assert.match(ui,/known=automatic\?\[\.\.\.eligible,automatic\]:eligible/);
 assert.match(admin,/tdr_staff/,'Publishing requires server-managed app metadata');
 assert.match(admin,/ENTRAR CON MI CUENTA DE TDR · GOOGLE/,'Admin uses existing Google-linked player identity');

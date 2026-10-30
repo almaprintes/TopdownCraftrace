@@ -4,7 +4,7 @@ import {playerBackendConfig} from './backendConfig.js';
 import {Capacitor,registerPlugin} from '@capacitor/core';
 
 export const PLAY_STORE_URL='https://play.google.com/store/apps/details?id=com.craftracestudio.topdownrace';
-export const COMMUNICATION_REFRESH_MS=30*60*1000;
+// Communications are frozen for one app runtime. No mid-session polling.
 
 // Spanish is the legacy/default message. An English translation must be authored
 // and checked before publication; never machine-translate game announcements.
@@ -23,7 +23,7 @@ export function localizePublicNotice(record,language='es'){
       String(en.action_label||'').trim()||null};
 }
 const NATIVE=registerPlugin('TdrRewardedAds');
-let snapshot=null, lastFetch=0, pending=null;
+let snapshot=null, pending=null;
 
 export function validPublicNotice(record,now=Date.now()){
   if(!record||record.active!==true||!['notice','update'].includes(record.kind)||
@@ -38,25 +38,23 @@ export function validPublicNotice(record,now=Date.now()){
   return true;
 }
 
-export async function fetchLiveCommunications({force=false}={}){
-  if(!force&&snapshot&&Date.now()-lastFetch<COMMUNICATION_REFRESH_MS)return snapshot;
+export async function fetchLiveCommunications(){
+  if(snapshot)return snapshot;
   if(pending)return pending;
   pending=(async()=>{
     try{
       const {url,key}=playerBackendConfig();
-      if(!url||!key)return [];
+      if(!url||!key){snapshot=[];return snapshot;}
       const endpoint=url+'/rest/v1/tdr_public_notices?select=id,kind,target,title,body,action_label,action_url,version_code,priority,active,starts_at,ends_at,updated_at,translations&active=eq.true&order=priority.desc,created_at.desc&limit=30';
       const response=await fetch(endpoint,{headers:{apikey:key},cache:'no-store',signal:AbortSignal.timeout(6500)});
       if(!response.ok)throw Error('communications_http_'+response.status);
       const rows=await response.json();
       if(!Array.isArray(rows))throw Error('communications_invalid_response');
       snapshot=rows.filter(record=>validPublicNotice(record)).slice(0,20);
-      lastFetch=Date.now();
     }catch(error){
       // Opening the game must never depend on a successful network request.
       console.warn('[TDR communications] offline or unavailable',error?.message||'unknown');
       snapshot=snapshot||[];
-      lastFetch=Date.now();
     }
     return snapshot;
   })().finally(()=>{pending=null;});

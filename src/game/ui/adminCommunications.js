@@ -3,6 +3,7 @@
 import {playerBackendConfig} from '../online/backendConfig.js';
 import {PLAY_STORE_URL,hasEnglishNoticeTranslation} from '../online/liveCommunications.js';
 import {hasSavedRaceControlSession,refreshRaceControlOnlineSession} from '../online/raceControlOnline.js';
+import {translateCommunicationDraft,TRANSLATOR_NAME} from '../online/communicationTranslation.js';
 import './adminCommunications.css';
 
 const make=(tag,cls,value)=>{
@@ -192,7 +193,41 @@ export function mountAdminCommunications(){
       parts.labelEn.parentElement.hidden=isUpdate;
     };
     parts.kind.addEventListener('change',updateKind);
-    box.append(title,make('p','tdr-comms-admin-language-note','ESPAÑOL + ENGLISH · Los borradores pueden estar incompletos, pero para publicar hay que completar ambos idiomas.'),
+    const translateBar=make('div','tdr-comms-admin-translate');
+    const translateButton=btn('🌐 TRADUCIR AL INGLÉS',async()=>{
+      if(!parts.title.value.trim()||!parts.body.value.trim()){
+        notice('Escribe primero el título y el mensaje en español.');
+        return;
+      }
+      const existing=[parts.titleEn.value,parts.bodyEn.value,parts.labelEn.value].some(s=>s.trim());
+      if(existing&&!window.confirm('¿Reemplazar la traducción inglesa actual? Revisa el resultado antes de publicar.'))
+        return;
+      const source={title:parts.title.value,body:parts.body.value,
+        actionLabel:parts.kind.value==='update'?'':parts.label.value};
+      translateButton.disabled=true;
+      notice('Traduciendo al inglés…');
+      try{
+        const en=await translateCommunicationDraft(source);
+        if(closed||!box.isConnected)return;
+        if(source.title!==parts.title.value||source.body!==parts.body.value||
+          source.actionLabel!==(parts.kind.value==='update'?'':parts.label.value)){
+          notice('Has cambiado el español durante la traducción. Pulsa TRADUCIR otra vez.');
+          return;
+        }
+        parts.titleEn.value=en.title;
+        parts.bodyEn.value=en.body;
+        parts.labelEn.value=parts.kind.value==='update'?'':en.action_label||'';
+        const tooLong=en.title.length>90||en.body.length>600||String(en.action_label||'').length>28;
+        notice(tooLong?'Traducción generada. Acorta los campos ingleses que superan el límite antes de guardar.':
+          'Traducción generada. Revisa el inglés antes de guardar o publicar.');
+      }catch(error){if(!closed&&box.isConnected)notice(error.message||'No se pudo traducir.');}
+      finally{translateButton.disabled=false;}
+    },'tdr-comms-admin-translate-button');
+    translateBar.append(translateButton,make('small','',
+      'Servicio externo '+TRANSLATOR_NAME+' · El texto español se envía solo al pulsar. Revisa la traducción antes de publicar.'));
+    box.append(title,make('p','tdr-comms-admin-language-note',
+      'ESPAÑOL + ENGLISH · Los borradores pueden estar incompletos, pero para publicar hay que completar ambos idiomas.'),
+      translateBar,
       field('TIPO',parts.kind),field('DESTINATARIOS',parts.target),
       field('TÍTULO · ESPAÑOL',parts.title),field('MENSAJE · ESPAÑOL',parts.body),
       field('TÍTULO · ENGLISH',parts.titleEn),field('MENSAJE · ENGLISH',parts.bodyEn),

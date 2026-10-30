@@ -1,4 +1,4 @@
-import {fetchLiveCommunications,installedAndroidVersion,playUpdateNotice,noticeForPlayer,acknowledgeCommunication,communicationSeenStore,safeNoticeLink,openCommunicationLink,COMMUNICATION_REFRESH_MS} from '../online/liveCommunications.js';
+import {fetchLiveCommunications,installedAndroidVersion,playUpdateNotice,noticeForPlayer,acknowledgeCommunication,communicationSeenStore,safeNoticeLink,openCommunicationLink} from '../online/liveCommunications.js';
 import {getLanguage} from '../i18n/index.js';
 import {localizePublicNotice} from '../online/liveCommunications.js';
 import './liveCommunicationsUi.css';
@@ -10,12 +10,22 @@ const make=(tag,cls,value)=>{
   return node;
 };
 
-// This small controller lives only while the lobby is visible, not during races.
-// New releases take priority. Neither a network failure nor an offscreen button
-// can block the player from pressing JUGAR.
+// A published communication is eligible only after a FRESH app startup.
+ // The first lobby instance shares a frozen snapshot with all later lobby visits.
+ // Opening settings or completing races must never fetch newly published notices.
+let launchRead=null;
+let automaticNoticeShownThisLaunch=false;
+function getOpeningCommunications(){
+  if(!launchRead)launchRead=Promise.all([
+    fetchLiveCommunications(),installedAndroidVersion()
+  ]);
+  return launchRead;
+}
+// This controller is mounted while the lobby is visible only.
+// A failed fetch remains empty until the app is restarted; no mid-game retries.
 export function installLiveCommunicationsUi(lobbyRoot){
   if(!lobbyRoot||typeof document==='undefined')return()=>{};
-  let disposed=false,working=false,pendingNotice=null;
+  let disposed=false,pendingNotice=null;
   const seen=communicationSeenStore();
   let panel=null,queuedTimer=null;
   const tray=make('div','tdr-comms-tray');
@@ -71,7 +81,7 @@ export function installLiveCommunicationsUi(lobbyRoot){
     return shade;
   };
   function show(notice,{manual=false}={}){
-    if(disposed||!lobbyRoot.isConnected||!notice||panel)return;
+    if(disposed||!lobbyRoot.isConnected||!notice||panel||(!manual&&automaticNoticeShownThisLaunch))return;
     if(!manual&&(document.querySelector('.tdr-bf-shade')||
       document.querySelector('[aria-modal="true"]:not(.tdr-comms-shade)'))){
       clearTimeout(queuedTimer);
@@ -80,19 +90,16 @@ export function installLiveCommunicationsUi(lobbyRoot){
     }
     pendingNotice=notice;
     panel=build(notice);
+    if(!manual)automaticNoticeShownThisLaunch=true;
   }
   trigger.addEventListener('click',()=>{
     const candidate=noticeForPlayer(known,{platform,versionCode,storage:null})||
       known.find(n=>n.kind==='notice'&&(n.target==='all'||n.target===platform));
     if(candidate)show(candidate,{manual:true});
   });
-  async function refresh({force=false}={}){
-    if(disposed||working)return;
-    working=true;
+  async function showOpeningCommunications(){
     try{
-      const [rows,installed]=await Promise.all([
-        fetchLiveCommunications({force}),installedAndroidVersion()
-      ]);
+      const [rows,installed]=await getOpeningCommunications();
       if(disposed||!lobbyRoot.isConnected)return;
       platform=installed?'android':'web';
       versionCode=installed?.code||0;
@@ -109,12 +116,13 @@ export function installLiveCommunicationsUi(lobbyRoot){
       trigger.hidden=!available;
       const notice=noticeForPlayer(known,{platform,versionCode,storage:seen});
       if(notice)show(notice);
-    }finally{working=false;}
+    }catch(error){
+      console.warn('[TDR communications] launch check failed',error?.message||'unknown');
+    }
   }
-  void refresh();
-  const timer=setInterval(()=>{void refresh({force:true});},COMMUNICATION_REFRESH_MS);
+  void showOpeningCommunications();
   return ()=>{
-    disposed=true;clearInterval(timer);clearTimeout(queuedTimer);
+    disposed=true;clearTimeout(queuedTimer);
     window.removeEventListener('tdr2:language-change',updateTriggerLanguage);
     close();tray.remove();
   };

@@ -1,9 +1,9 @@
-# Comunicaciones y actualización de Google Play — TDR DEV 1.4.6
+# Comunicaciones y actualización de Google Play — TDR DEV 1.4.8
 
 ## Qué hace
-- **Lobby:** al abrir, lee hasta 30 avisos activos desde Supabase REST con API key pública; muestra un aviso solo una vez por publicación/revisión. El jugador siempre puede cerrarlo y continuar jugando. Se consulta nuevamente como máximo cada 30 minutos con el lobby abierto.
+- **Lobby:** al abrir, lee hasta 30 avisos activos desde Supabase REST con API key pública; muestra un aviso solo una vez por publicación/revisión. El jugador siempre puede cerrarlo y continuar jugando. No vuelve a consultar comunicaciones durante esa sesión: ni al regresar al lobby, ni al pasar 30 minutos, ni al reanudar desde segundo plano. Solo una nueva carga real del juego comprueba mensajes nuevos.
 - **Google Play (Android):** la app nativa usa `AppUpdateManager` de Google Play Core para saber si esa instalación concreta puede actualizarse. No se compara con la versión DEV ni se presupone que todo el mundo tiene el mismo rollout. El botón abre Play Store mediante un Intent nativo y no instala nada sin acción del jugador.
-- **Admin Hub > COMUNICACIONES (DEV):** crear/editar/publicar/despublicar/borrar; fechas de inicio y fin, prioridad, canal, enlace HTTPS y versión Android. Cada cambio publicado se ve sin distribuir APK/AAB nuevo.
+- **Admin Hub > COMUNICACIONES (DEV):** crear/editar/publicar/despublicar/borrar; fechas de inicio y fin, prioridad, canal, enlace HTTPS y versión Android. Cada cambio publicado estará disponible para los jugadores en su **siguiente apertura real** del juego, sin requerir un APK nuevo si ya tienen el lector de comunicaciones.
 - **Sin Internet:** lobby sigue funcionando, no se enseña alerta falsa; los avisos son datos, nunca HTML ejecutable.
 - **Publicación:** publicar un aviso no equivale a publicar una actualización de la app. Los avisos tipo actualización solo deben activarse cuando Google Play ya ofrece la versión.
 
@@ -14,7 +14,7 @@ La tabla tiene RLS activo, lectura pública únicamente de avisos publicados den
 
 **Administrador verificado (30/10/2026):** solo la cuenta de TDR `dj1free@gmail.com`, vinculada a Google, tiene `app_metadata.tdr_staff=true`. El editor DEV usa la sesión existente de TDR/Google, renovando el JWT GoTrue; no pide otra contraseña ni altera la partida. Los permisos dependen de RLS, no de un botón oculto.
 
-Los mensajes iniciales **no están publicados** (tabla vacía). Publica el primer mensaje real únicamente después de probar el circuito completo en la DEV y de identificar la cuenta administradora.
+El primer comunicado bilingüe de bienvenida está guardado como **borrador** (`active=false`). La sesión Google del administrador y su edición se verificaron el 30/10/2026. No publicar sin autorización.
 
 ## Campos
 - `kind=notice`: mensaje de servicio, `target=all|android|web|ios`, título y texto, enlace HTTPS opcional, prioridad, programación y publicación.
@@ -37,3 +37,11 @@ Esta primera entrega incluye la lectura nativa y el editor DEV. El primer aviso 
 - Los clientes anteriores a DEV 1.4.6 siguen usando los campos españoles; para ver inglés desde el feed, necesitan una actualización futura autorizada.
 - Migración `tdr_notice_bilingual_es_en_20261030`; fichero de control de versiones `supabase/migrations/20261030_023_tdr_notice_bilingual_es_en.sql`.
 - El inicio de sesión real y el POST de borrador desde la interfaz necesitan la prueba manual en el dispositivo del administrador: no se pueden simular sus tokens Google privados.
+
+## DEV 1.4.8 — traducción asistida y lectura solo al arrancar
+- **TRADUCIR AL INGLÉS:** botón dentro del editor; envía título, párrafos y etiqueta de botón en español a MyMemory (https://mymemory.translated.net/doc/spec.php) solo bajo acción del administrador. Sin clave privada ni servicio de pago. El proveedor puede limitar solicitudes o fallar: nunca se inventa un texto ni se auto-publica.
+- El texto del borrador se transmite a un **servicio de traducción externo** en el momento de pulsar. No incluir secretos en los borradores que se quieran traducir.
+- Se usa el endpoint GET oficial de MyMemory, con segmentos de máximo 450 bytes UTF-8. El editor no sobrescribe inglés existente sin confirmación, no aplica traducciones parciales si falla la solicitud y obliga a revisar/ajustar los límites antes de publicar.
+- La fuente pública de avisos se lee **una vez por ciclo de vida JavaScript** en el primer lobby; un mismo snapshot compartido cubre retornos al lobby y avisos de Google Play. La publicación de nuevos avisos durante la partida no provoca ninguna nueva consulta ni popup. La comprobación siguiente requiere cerrar realmente y volver a abrir/recargar la app.
+- La vista manual 📣 AVISOS muestra solo los avisos conocidos al abrir la sesión; no consulta avisos publicados mientras la sesión estaba abierta.
+- Las comunicaciones anteriores vistas siguen controladas por almacenamiento local. El aviso de actualización de Play puede recordarse en un arranque nuevo.
