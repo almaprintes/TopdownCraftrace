@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {validPublicNotice,noticeForPlayer,acknowledgeCommunication,noticeSeenKey,playUpdateNotice,safeNoticeLink,PLAY_STORE_URL} from '../src/game/online/liveCommunications.js';
+import {validPublicNotice,noticeForPlayer,acknowledgeCommunication,noticeSeenKey,communicationSeenStore,playUpdateNotice,safeNoticeLink,PLAY_STORE_URL} from '../src/game/online/liveCommunications.js';
 
 const now=Date.parse('2026-11-02T12:00:00Z');
 const id='11111111-1111-4111-8111-111111111111';
@@ -28,6 +28,20 @@ assert.equal(noticeForPlayer([a,update],{platform:'android',versionCode:11,stora
   'Dismissed update falls through to normal notice');
 acknowledgeCommunication(a,local);
 assert.equal(local.getItem(noticeSeenKey(a)),'1');
+const persistent=new Map(),temporary=new Map();
+const persistentStore={getItem:k=>persistent.get(k)||null,setItem:(k,v)=>persistent.set(k,v)};
+const sessionStore={getItem:k=>temporary.get(k)||null,setItem:(k,v)=>temporary.set(k,v)};
+const perSession=communicationSeenStore(persistentStore,sessionStore);
+acknowledgeCommunication(update,perSession);
+acknowledgeCommunication(a,perSession);
+assert.equal(noticeForPlayer([a,update],{platform:'android',versionCode:11,storage:perSession,now}),null,
+  'No repeat within one game session');
+temporary.clear();
+assert.equal(noticeForPlayer([a,update],{platform:'android',versionCode:11,storage:perSession,now}).kind,'update',
+  'After app restart, pending Play update must be offered again');
+assert.equal(noticeForPlayer([a],{platform:'web',storage:perSession,now}),null,
+  'Previously read ordinary announcement stays read after restart');
+
 assert.equal(noticeForPlayer([a,update],{platform:'android',versionCode:11,storage:local,now}),null);
 assert.equal(noticeForPlayer([{...a,updated_at:'2026-11-02T12:01:00Z'}],{platform:'web',storage:local,now}).kind,'notice',
   'A revised notice may appear once again');
