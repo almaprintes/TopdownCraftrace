@@ -8,6 +8,9 @@ const original=readFileSync('src/game/scenes/RaceGhostModeScene.js','utf8');
 const minimap=readFileSync('src/game/scenes/RaceStaticMinimapScene.js','utf8');
 const directions=readFileSync('scripts/all-circuit-directions-smoke.mjs','utf8');
 assert.match(status,/this\._tdrGameMode==='ghost'/,'Panel must be gated to ghost mode, not time attack');
+assert.match(status,/const PANEL_W = 184;/,'Compact buttons must not block the racing view');
+assert.match(status,/const ROW_H = 25;/,'Compact controls must preserve three distinct rows');
+assert.match(status,/setAttribute\?\.\('aria-label',descriptions\[i\]\)/,'Accessibility labels remain descriptive');
 assert.match(status,/document\.body\.appendChild\(root\)/,
   'Ghost controls must live outside transformed canvas parents');
 assert.match(status,/this\._ghostControlsLayout\?\.\(\)/,'Use viewport UI geometry, never Phaser text coordinates');
@@ -42,7 +45,7 @@ for(const p of layouts){
   const canvasRect={left:17,top:32,width:p.vw*1.2,height:p.vh*1.2};
   const layout={x:p.x,controlWidth:p.controlWidth,topY:p.topY};
   const expected=ghostPanelViewportRect({canvasRect,viewportWidth:p.vw,viewportHeight:p.vh,
-    ghostLayout:layout,panelWidth:282,panelHeight:90});
+    ghostLayout:layout,panelWidth:184,panelHeight:75});
   assert.ok(expected&&expected.width>0&&expected.height>0);
   assert.ok(expected.left>=canvasRect.left&&expected.left+expected.width<=canvasRect.left+canvasRect.width,
     'Ghost buttons must remain on-screen');
@@ -50,13 +53,13 @@ for(const p of layouts){
     for(const zoom of [.48,.62,.86,1.06,1.45]){
       // Changing the world zoom must never change the screen rectangle.
       const measured=ghostPanelViewportRect({canvasRect,viewportWidth:p.vw,viewportHeight:p.vh,
-        ghostLayout:layout,panelWidth:282,panelHeight:90,worldZoom:zoom,trackKey:track.alternate});
+        ghostLayout:layout,panelWidth:184,panelHeight:75,worldZoom:zoom,trackKey:track.alternate});
       assert.deepEqual(measured,expected,'Inverse circuit ghost controls drift at zoom '+zoom+': '+track.alternate);
     }
   }
 }
 assert.equal(ghostPanelViewportRect({canvasRect:{width:0,height:5},viewportWidth:1,viewportHeight:1,
-  ghostLayout:{x:1,controlWidth:1,topY:1},panelWidth:282,panelHeight:90}),null);
+  ghostLayout:{x:1,controlWidth:1,topY:1},panelWidth:184,panelHeight:75}),null);
 const version=readFileSync('index.html','utf8').match(/content="DEV (\d+)\.(\d+)\.(\d+)"/);
 assert.ok(version,'Canonical DEV version missing');
 const [major,minor,patch]=version.slice(1).map(Number);
