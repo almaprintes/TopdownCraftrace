@@ -121,7 +121,8 @@ export function mountAdminCommunications(){
     if(ends&&ends<=starts)throw Error('La fecha de fin debe ser posterior a la de inicio');
     return {kind,target:kind==='update'?'android':parts.target.value,title,body,action_url:actionUrl,
       action_label:actionLabel,version_code:code,priority:Number(parts.priority.value)||0,
-      active:parts.active.checked,starts_at:starts,ends_at:ends};
+      active:parts.active.checked,starts_at:starts,ends_at:ends,
+      updated_at:new Date().toISOString()};
   };
   function editorView(record=null){
     editing=record?.id||null;
@@ -189,7 +190,7 @@ export function mountAdminCommunications(){
       actions.append(btn('EDITAR',()=>editorView(row)));
       actions.append(btn(row.active?'DESPUBLICAR':'PUBLICAR',()=>void transact(
         '/rest/v1/tdr_public_notices?id=eq.'+encodeURIComponent(row.id),
-        {method:'PATCH',body:{active:!row.active}})));
+        {method:'PATCH',body:{active:!row.active,updated_at:new Date().toISOString()}})));
       actions.append(btn('BORRAR',()=>{if(window.confirm('¿Borrar definitivamente este aviso?'))void transact(
         '/rest/v1/tdr_public_notices?id=eq.'+encodeURIComponent(row.id),{method:'DELETE'});}));
       item.append(actions);work.append(item);
