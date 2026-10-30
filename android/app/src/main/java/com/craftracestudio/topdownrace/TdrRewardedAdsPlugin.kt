@@ -54,6 +54,7 @@ class TdrRewardedAdsPlugin : Plugin() {
         result.put("releaseBuild", BuildConfig.BUILD_TYPE == "release")
         result.put("placementCount", RewardedRequestPolicy.placements().size)
         result.put("versionName", BuildConfig.VERSION_NAME)
+        result.put("versionCode", BuildConfig.VERSION_CODE)
         result.put("diagnosticBuild", BuildConfig.FLAVOR != "production")
         result.put("googleSampleAdMode", BuildConfig.FLAVOR != "production")
         lastDiagnostic?.let { result.put("lastRewardedDiagnostic", it) }
