@@ -36,8 +36,12 @@ const video=read('src/game/scenes/StatsBroadcastRealReplayScene.js');
 assert.match(replay,/_getSelectedRecord\(trackId\)\{return trackId\?getCircuitRecord\(trackId\):null;/,
   'Rivals, replay and hero must resolve the same local PB');
 assert.match(online,/export async function getMyRaceControlRecord\(trackId\)/);
-assert.match(online,/row\?\.scope==='global'&&row\?\.is_me===true/,
-  'Never infer the online owner by nickname');
+const ownBestRead=online.slice(online.indexOf('export async function getMyRaceControlRecord'),
+  online.indexOf('export async function getRaceControlGhost'));
+assert.match(ownBestRead,/\/rpc\/get_my_track_personal_best/,
+  'Only request the authenticated record by server JWT; never infer an online owner by nickname');
+assert.doesNotMatch(ownBestRead,/get_race_control_snapshot|\.find\(/,
+  'Do not calculate four leaderboards merely to check an existing personal best');
 assert.match(online,/record\?\.improved===true&&record\?\.record_ref/,
   'Cuper season cannot progress from a no-op ghost publication');
 assert.match(online,/record.improved===true&&car==='crown_cuper'/,
