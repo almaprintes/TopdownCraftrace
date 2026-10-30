@@ -55,11 +55,11 @@ assert.match(src,/if\(!ref\|\|!await this\._ensureOnlineGhostReward\(ref\)\)retu
   'Nearby rivals must verify rewarded gate before downloading');
 assert.equal((src.match(/await this\._ensureOnlineGhostReward\(ref\)/g)||[]).length,3,
   'All entry points retain their existing rewarded gate');
-assert.match(src,/String\(data\?\.record_ref\|\|'\'\)===ref/,
+assert.ok(src.includes("String(data?.record_ref||'')===ref"),
   'Nearby match must still verify exact record reference');
 assert.match(src,/ghostReplayCompatibility\(ghost,row\.track_id/,
   'Historic geometry remains rejected');
-assert.match(src,/String\(data\?\.record_ref\|\|'\)\!==String\(ref\)/,
+assert.ok(src.includes("String(data?.record_ref||'')!==String(ref)"),
   'Unknown record refs cannot poison cache');
 assert.doesNotMatch(src,/localStorage\.setItem\([^)]*(?:ghost_payload|ONLINE_GHOST_CACHE)/,
   'No sensitive payload persisted by the caching layer');
