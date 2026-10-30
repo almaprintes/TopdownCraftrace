@@ -19,6 +19,8 @@ assert.equal(calls,0);
 assert.equal(rewardActionAllowed(await showRewardedAd(null,{placement:'arbitrary'})),false);
 
 assert.equal(isAdFreePromoActive(),true);
+// x2 stays a per-race claim, independently of cooldown-based coin grants.
+assert.equal(rewardActionAllowed({completed:false,verified:false,promotion:true,source:'november-2026',placement:REWARDED_PLACEMENTS.POST_RACE_DOUBLE_LOOT}),true);
 // Execute the actual economy functions with an isolated transactional garage.
 let state={coins:0,items:{}};
 globalThis.__testGarage={load:()=>structuredClone(state),save:s=>{state=structuredClone(s);},add:(s,id,n)=>{s.items[id]=(s.items[id]||0)+n;}};
