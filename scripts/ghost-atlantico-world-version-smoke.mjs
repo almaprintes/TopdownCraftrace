@@ -37,7 +37,7 @@ assert.match(status,/GEOMETRY_GHOST_PREFIX = 'tdr2:ghostGeometry:'/);
 assert.match(status,/kind:isOfficialNewPb\?'circuit-personal-best':'circuit-geometry-best'/);
 assert.match(status,/if\(isOfficialNewPb\)\{[\s\S]*?localStorage\.setItem\(this\.ttKey/);
 assert.match(status,/_isGhostCurrentGeometryReplay\(\)/);
-assert.match(status,/VUELTA ACTUAL/);
+assert.match(status,/VUELTA/, 'Compact ghost replay button must still identify current lap');
 assert.match(status,/PB ANTIGUO/);
 assert.match(status,/_onlineGhostChallenge=\{\.\.\.this\._onlineGhostChallenge,invalid:true\}/);
 assert.match(publish,/ghostReplayCompatibility\(ghost,trackId,scene\?\.track\)\.compatible/);
