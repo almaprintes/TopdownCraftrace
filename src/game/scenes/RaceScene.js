@@ -512,11 +512,15 @@ init(data) {
         this._physicsABMode='B';
     }catch{}
     this._physicsABPractice=this._physicsABMode==='B';
-    // Si venimos del editor, testMode = true
-  this._testMode = !!data?.testMode;
-
-  // Por defecto, si es test, volver al editor del coche actual
-  if (this._testMode) {
+    // Track Studio preview is a DEV-only test even when launched by an older
+    // editor that did not pass testMode. Never return a local track to the lobby.
+  const isTrackStudioPreview = !IS_PROD_BUILD && data?.trackKey === LOCAL_KARTING_PREVIEW_KEY;
+  this._testMode = !!data?.testMode || isTrackStudioPreview;
+  if (isTrackStudioPreview) {
+    this._returnSceneKey = 'TrackStudioScene';
+    this._returnSceneData = { fromTrackStudioPreview: true };
+  } else if (this._testMode) {
+    // Preserve the existing Vehicle Lab test-drive return path.
     const carId = data?.carId || this.carId || 'stock';
     this._returnSceneKey = 'car-editor';
     this._returnSceneData = { carId };
@@ -3238,7 +3242,8 @@ if (this.keys?.back) {
 const menuBtnX = 12;
 const menuBtnY = 72; // debajo del HUD superior izquierdo (no molesta cronos/progreso)
 
-this.uiMenuBtn = this.add.text(menuBtnX, menuBtnY, 'MENU', {
+this.uiMenuBtn = this.add.text(menuBtnX, menuBtnY,
+  this._returnSceneKey==='TrackStudioScene'?'EDITOR':'MENU', {
   fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Arial',
   fontSize: '12px',
   color: '#ffffff',

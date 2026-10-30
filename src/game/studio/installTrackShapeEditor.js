@@ -294,7 +294,7 @@ export function installTrackStudioShapeEditor(s){
       await installKartingPreview(s);
       s._autosaveRecovery?.();
       s._flashMessage('Circuito listo. Abriendo carrera DEV…');
-      s.scene.start('race',{trackKey:LOCAL_KARTING_PREVIEW_KEY});
+      s.scene.start('race',{trackKey:LOCAL_KARTING_PREVIEW_KEY,testMode:true});
     }catch(err){
       console.error('[TrackStudio] No se pudo preparar la carrera',err);
       s._flashMessage('No se puede probar: '+(err?.message||'error'));

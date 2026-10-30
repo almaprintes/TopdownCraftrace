@@ -175,6 +175,10 @@ export class RaceScene extends CurrentRaceScene {
     root.querySelector('[data-a="world"]')?.addEventListener('click', () => this._captureFromPause('world'));
     root.querySelector('[data-a="technical"]')?.addEventListener('click', () => this._captureFromPause('technical'));
     root.querySelector('[data-a="report"]')?.addEventListener('click', () => { this._closePauseMenu(false); this._openSessionReport?.(); });
+    if(this._testMode&&this._returnSceneKey==='TrackStudioScene'){
+      const backToEditor=root.querySelector('[data-a="menu"]');
+      if(backToEditor)backToEditor.textContent='VOLVER A TRACK STUDIO';
+    }
     root.querySelector('[data-a="menu"]')?.addEventListener('click', () => {
       this._closePauseMenu(false);
       if (this._testMode && this._returnSceneKey) this.scene.start(this._returnSceneKey, this._returnSceneData || {});

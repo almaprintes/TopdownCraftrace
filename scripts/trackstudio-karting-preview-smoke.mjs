@@ -63,5 +63,28 @@ assert.ok(loader.includes('readCanvasImage(desc.imageId)'), 'Photo is loaded fro
 assert.ok(loader.includes('validateImageNativeRaceDescriptor(desc)'), 'Photo validated before race');
 assert.ok(loader.includes('mountPhoto(this,desc,img)'), 'One renderer mounts the photo');
 assert.ok(editorSrc.includes("▶ PROBAR JUEGO"),'TrackStudio needs a direct test drive action');
-assert.ok(editorSrc.includes("scene.start('race',{trackKey:LOCAL_KARTING_PREVIEW_KEY})"));
+assert.ok(editorSrc.includes("scene.start('race',{trackKey:LOCAL_KARTING_PREVIEW_KEY,testMode:true})"),
+  'Track Studio preview must declare testMode');
+assert.ok(race.includes("data?.trackKey === LOCAL_KARTING_PREVIEW_KEY"),
+  'Older previews must also be recognized as editor tests');
+assert.ok(race.includes("this._returnSceneKey = 'TrackStudioScene'"));
+assert.ok(race.includes("this._returnSceneData = { fromTrackStudioPreview: true }"));
+assert.ok(race.includes("this._returnSceneKey = 'car-editor'"),
+  'Vehicle Lab test return must remain intact');
+const studioScene=readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
+const pauseScene=readFileSync('src/game/scenes/RacePauseMenuScene.js','utf8');
+const reportScene=readFileSync('src/game/scenes/RaceSessionReportScene.js','utf8');
+assert.ok(studioScene.includes("this._returningFromPreview = data?.fromTrackStudioPreview === true"),
+  'Only the preview return should restore without confirmation');
+assert.ok(studioScene.includes("localStorage.getItem('trackstudio_recovery')"),
+  'Return must restore the autosaved edit session');
+assert.ok(studioScene.includes("this._applyProjectData(project)"),
+  'Return restores master photo and Bezier geometry together');
+assert.ok(studioScene.includes("!project?.imageCanvas?.imageId"),
+  'Reject invalid or incomplete preview recovery');
+assert.ok(pauseScene.includes("VOLVER A TRACK STUDIO"));
+assert.ok(pauseScene.includes("this.scene.start(this._returnSceneKey, this._returnSceneData || {})"));
+assert.ok(reportScene.includes("this.scene.start(this._returnSceneKey,this._returnSceneData||{})"));
+assert.ok(race.includes("this.scene.start(this._returnSceneKey, this._returnSceneData || {})"),
+  'MENU/escape return must use the editor destination');
 console.log('Karting Tenerife local DEV test: separate key, exact independent borders, grass, spawn, isolation, valid gates: OK');

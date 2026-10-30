@@ -21,6 +21,10 @@ export class TrackStudioScene extends BaseScene {
     super('TrackStudioScene');
   }
 
+  init(data) {
+    this._returningFromPreview = data?.fromTrackStudioPreview === true;
+  }
+
   create() {
     super.create();
 
@@ -1025,6 +1029,21 @@ if (
     installTrackStudioShapeEditor(this);
     installTrackStudioExitGuard(this);
     const gate=installTrackStudioGateControls(this);
+    // A race scene destroys the editor view, not the editable project.
+    // Restore its last auto-saved geometry AND image metadata on direct return.
+    // This is deliberately opt-in: entering from Paddock still starts empty.
+    if (this._returningFromPreview) {
+      try {
+        const saved=JSON.parse(localStorage.getItem('trackstudio_recovery')||'null');
+        const project=saved?.editor||saved;
+        if(!Array.isArray(project?.nodes)||!project?.imageCanvas?.imageId)
+          throw Error('No hay una copia completa del circuito');
+        this._applyProjectData(project);
+      } catch(err) {
+        console.error('[TrackStudio] No se pudo restaurar después de PROBAR',err);
+        this._previewRecoveryError=true;
+      }
+    }
     this._updateLoopButton();
     this._updateToolButtons();
     this._updatePanel();
@@ -1036,6 +1055,13 @@ if (
     }catch(err){
       console.warn('[TrackStudio] Premium chrome unavailable, keeping native UI',err);
       this._studioChrome=null;
+    }
+    if(this._returningFromPreview){
+      this._flashMessage(this._previewRecoveryError
+        ?'No se recuperó automáticamente. Pulsa ABRIR → RECUPERAR o abre tu .tdrtrack.'
+        :'Regreso de PROBAR · circuito, trazado y fotografía recuperados');
+      this._returningFromPreview=false;
+      this._previewRecoveryError=false;
     }
   }
 
