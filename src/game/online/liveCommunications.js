@@ -65,8 +65,8 @@ export function noticeForPlayer(rows,{platform='web',versionCode=0,storage=null,
     // A later version always wins, even if another announcement has higher priority.
     updates.sort((a,b)=>b.version_code-a.version_code||Number(b.priority||0)-Number(a.priority||0));
     const next=updates[0];
-    if(storage?.getItem?.('tdr2:remoteUpdateDismissed:'+next.version_code)==='1')return
-      relevant.filter(record=>record.kind==='notice'&&!wasSeen(record,storage))[0]||null;
+    if(storage?.getItem?.('tdr2:remoteUpdateDismissed:'+next.version_code)==='1')
+      return relevant.filter(record=>record.kind==='notice'&&!wasSeen(record,storage))[0]||null;
     return next;
   }
   return relevant.filter(record=>record.kind==='notice'&&!wasSeen(record,storage))[0]||null;
