@@ -43,3 +43,16 @@ Verificación posterior: comparativa de **40 combinaciones circuito/ámbito, 57 
 8. No mezclar pruebas experimentales con datos de jugadores reales ni ejecutar pruebas de carga contra producción.
 
 **Resultado**: progreso real sin compra de servicios, sin aumento de consultas por usuario y sin modificar datos existentes. La validación de escala 100k permanece pendiente de un entorno de carga sintética.
+
+
+## Cuarta optimización: instantáneas públicas sin escrituras inútiles (30/10/2026)
+- Migración versionada: `20261030_027_race_control_skip_unchanged_public_snapshot.sql`.
+- La tarea `tdr-web-rankings-refresh` **continúa cada 5 minutos** (288 comprobaciones/día). Se consultan solo los mejores tiempos de los **13 circuitos vigentes**; no hay más consultas por jugador ni triggers adicionales.
+- Como `generated_at` cambia en cada comprobación, la comparación excluye expresamente esa fecha. Se compara únicamente el JSON `tracks` y `version` contra la instantánea ya publicada, utilizando `ON CONFLICT DO UPDATE ... WHERE ... IS DISTINCT FROM ...`.
+- **Si no cambia el contenido, la tabla pública no se reescribe**, y no se actualiza `tdr_web_private.refresh_daily` (este contador pasa a registrar solo publicaciones con cambios reales). `generated_at` pasa a ser la **última modificación real**, no la última comprobación. El historial técnico de comprobaciones sigue en pg_cron.
+- Verificación directa no destructiva: ejecutar la función sin cambios mantuvo el mismo `xmin`, la misma huella SHA-256 de JSON y el mismo `generated_at`. Es una constatación real de que no hubo actualización de la fila.
+- Beneficio máximo en periodos sin cambios: se evitan hasta **288 reescrituras diarias del resumen público** (menos las actualizaciones legítimas). La tarea cron sigue leyendo las clasificaciones y registrando sus propias ejecuciones: ahorro de escrituras, **no ahorro de todas las consultas**.
+- Se mantienen intactos jugadores, récords, fantasmas, circuito, orden, tipo de respuesta y cadencia de actualización. No exige otra versión instalada del juego.
+- Prueba estática de regresión integrada en `scripts/online-snapshot-recovery-smoke.mjs`: 13 circuitos y orden iguales al original, comparación semántica de contenidos, versión y condición de no reescritura.
+
+**Siguiente hipótesis a medir:** entrega de los resúmenes públicos con caché HTTP/CDN y política de revalidación para reducir lecturas de Supabase por visitante. Elegir la solución según egress, no añadir un proxy que pueda resultar más caro que la lectura actual.
