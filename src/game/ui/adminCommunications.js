@@ -122,7 +122,17 @@ export function mountAdminCommunications(){
     renderList();
   }
   async function transact(path,options){
-    try{notice('Guardando en Supabase…');await request(path,options);editing=null;await refresh();notice('Cambios guardados en Supabase');}
+    try{
+      notice('Guardando en Supabase…');
+      // PostgREST is asked for return=representation. Zero returned rows can
+      // mean RLS silently prevented an UPDATE: never report a false success.
+      const affected=await request(path,options);
+      if(!Array.isArray(affected)||affected.length!==1)
+        throw Error('Supabase no confirmó ningún cambio. El aviso no se ha dado por guardado.');
+      editing=null;
+      await refresh();
+      notice('Cambios guardados en Supabase');
+    }
     catch(error){notice(error.message||'No se pudo guardar');}
   }
   const formToNotice=(parts,source={})=>{
@@ -149,6 +159,7 @@ export function mountAdminCommunications(){
     return payload;
   };
   function editorView(record=null){
+    notice('');
     editing=record?.id||null;
     const box=make('form','tdr-comms-admin-editor');
     const title=make('h3','',record?'EDITAR AVISO':'CREAR AVISO');

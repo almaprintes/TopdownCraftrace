@@ -83,6 +83,14 @@ assert.match(ui,/getLanguage\(\)/,'Read the TDR language setting');
 assert.match(admin,/TÍTULO · ENGLISH/,'Admin must author an English title');
 assert.match(admin,/MENSAJE · ENGLISH/,'Admin must author an English body');
 assert.match(admin,/hasEnglishNoticeTranslation\(row\)/,'Cannot publish incomplete translations');
+assert.match(admin,/affected\.length!==1/,'Write success requires exactly one changed server row');
+assert.match(admin,/function editorView\(record=null\)\{\s*notice\(''\)/,
+  'Old success banners must be cleared before editing a new message');
+const adminStyles=readFileSync('src/game/ui/adminCommunications.css','utf8');
+assert.match(adminStyles,/flex-direction:column;overflow:hidden/,
+  'Keep the admin header outside the scrollable content');
+assert.match(adminStyles,/min-height:0;overflow-y:auto;overscroll-behavior:contain/,
+  'Only the message editor scrolls, avoiding sticky-header overlap');
 const liveSource=readFileSync('src/game/online/liveCommunications.js','utf8');
 assert.match(liveSource,/updated_at,translations/,'Public REST feed includes translations');
 assert.match(ui,/playUpdateNotice\(installed\)/,'Google Play available update must display without server authoring');
