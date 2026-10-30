@@ -420,18 +420,19 @@ export async function getRaceControlSnapshot(trackId){
   return applyRaceControlCreatorBadges(id,ranking);
 }
 
-// This snapshot marks the caller by authenticated UUID (is_me), never nickname.
-// Used as a no-ad preflight before attempting to submit a local best.
+// One indexed, authenticated own-best lookup, never four full leaderboards.
+// Identity is resolved from the server JWT, not a client-supplied user ID.
 export async function getMyRaceControlRecord(trackId){
   const id=raceControlServerTrackId(trackId);
   if(!id||id.length>80)throw new Error('Circuito no válido');
   const s=await activeSession();
-  const rows=await request('/rest/v1/rpc/get_race_control_snapshot',{
+  const best=await request('/rest/v1/rpc/get_my_track_personal_best',{
     method:'POST',token:s.access_token,body:{p_track_id:id}
   });
-  if(!Array.isArray(rows))throw new Error('No se pudo verificar tu récord online. No se ha solicitado ningún anuncio.');
-  const own=rows.find(row=>row?.scope==='global'&&row?.is_me===true);
-  return own&&Number(own.best_time_ms)>0?own:null;
+  if(best===null)return null;
+  if(!Number.isSafeInteger(best)||best<=0)
+    throw new Error('Supabase no devolvió un tiempo válido. No se ha solicitado ningún anuncio.');
+  return {scope:'global',track_id:id,best_time_ms:best,is_me:true};
 }
 
 export async function getRaceControlGhost(recordRef){
