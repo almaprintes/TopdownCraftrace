@@ -101,6 +101,16 @@ export function noticeForPlayer(rows,{platform='web',versionCode=0,storage=null,
 export function noticeSeenKey(record){
   return 'tdr2:remoteNoticeSeen:'+String(record?.id||'')+':'+String(record?.updated_at||'');
 }
+ 
+// Players see ordinary notices once per publication, but are reminded of a
+// still-pending Play update on the next app launch (not endlessly per lobby).
+export function communicationSeenStore(local=globalThis.localStorage,session=globalThis.sessionStorage){
+  const source=key=>String(key).startsWith('tdr2:remoteUpdateDismissed:')?session:local;
+  return {
+    getItem(key){try{return source(key)?.getItem?.(key)||null;}catch{return null;}},
+    setItem(key,value){try{source(key)?.setItem?.(key,value);}catch{}}
+  };
+}
 function wasSeen(record,storage){
   try{return storage?.getItem?.(noticeSeenKey(record))==='1';}catch{return false;}
 }
