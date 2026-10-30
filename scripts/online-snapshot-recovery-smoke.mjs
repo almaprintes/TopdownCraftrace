@@ -28,4 +28,28 @@ assert.match(report,/if\(Array\.isArray\(snapshot\)\)saveCloudSnapshot\(trackId,
 assert.match(report,/\.catch\(err=>console\.warn\('\[race-control\] post-publish ranking refresh unavailable'/,'read errors cannot unpublish');
 assert.match(cache,/tdr2:leaderboardSnapshot:\$\{raceControlServerTrackId\(trackId\)\}/,'per-circuit, per-geometry cache');
 assert.match(online,/p_track_id:id/,'authenticated leaderboard keyed by exact track');
+
+const migration=readFileSync('supabase/migrations/20261030_024_race_control_100k_query_optimizations.sql','utf8');
+assert.match(migration,/fetch first 25 rows with ties/i,
+  'Top 25 must preserve ties crossing the 25th row');
+assert.match(migration,/rank\(\) over\(order by t\.best_time_ms/i,
+  'Rank ties must retain the same rank');
+assert.match(migration,/v_my_rank-10/,'The -10 window remains intact');
+assert.match(migration,/v_my_rank\+10/,'The +10 window remains intact');
+assert.match(migration,/select distinct n\.best_time_ms from near_rows/,
+  'Rank counts are evaluated once per distinct near time');
+assert.doesNotMatch(migration,/create temporary table|truncate table/i,
+  'Rankings must not create or truncate temporary database tables');
+assert.match(migration,/get_my_track_personal_best/,'Keep the personal-best RPC versioned');
+assert.match(migration,/where tr\.user_id=v_uid and tr\.track_id=v_track/,
+  'Personal-best RPC is limited to authenticated UUID and exact edition');
+assert.match(migration,/revoke all on function public\.get_my_track_personal_best\(text\) from public,anon/,
+  'The indexed personal-best endpoint must not be anonymously callable');
+const ownBestCall=online.slice(online.indexOf('export async function getMyRaceControlRecord'),
+  online.indexOf('export async function getRaceControlGhost'));
+assert.match(ownBestCall,/\/rpc\/get_my_track_personal_best/,
+  'Pre-advertisement check is a one-record indexed lookup');
+assert.doesNotMatch(ownBestCall,/get_race_control_snapshot|\.find\(/,
+  'Pre-advertisement check must not assemble a full leaderboard');
+
 console.log('PASS: unpersisted/empty ranking recovers once from Supabase and post-race publication caches the verified ranking without additional ads');
