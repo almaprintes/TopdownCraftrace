@@ -1,0 +1,55 @@
+name: TDR PostgreSQL lab (no Mac storage)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/tdr-postgres-lab.yml
+      - scripts/tdr-postgres-ghost-lab.mjs
+      - supabase/migrations/20261030_033_online_ghost_structural_validation.sql
+      - src/game/online/onlineGhostCodec.js
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: lab
+          POSTGRES_PASSWORD: ci-temporary-only
+          POSTGRES_DB: tdr_lab
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lab -d tdr_lab"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '5432'
+      PGUSER: lab
+      PGPASSWORD: ci-temporary-only
+      PGDATABASE: tdr_lab
+    steps:
+      - name: Fetch the game source
+        uses: actions/checkout@v4
+      - name: Node 22 (no npm dependencies)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: PostgreSQL command-line client
+        run: |
+          if ! command -v psql >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq postgresql-client
+          fi
+      - name: Verify ghost codec contract
+        run: node scripts/ghost-structural-integrity-smoke.mjs
+      - name: Verify real SQL validator in temporary PostgreSQL
+        run: node scripts/tdr-postgres-ghost-lab.mjs
