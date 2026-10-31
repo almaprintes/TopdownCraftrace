@@ -12,6 +12,9 @@ on:
       - supabase/migrations/20261031_035_cloud_save_rpc_only_permissions.sql
       - supabase/migrations/20261030_032_skip_identical_cloud_progress_writes.sql
       - src/game/online/serverGeometryJudge.js
+      - src/server/raceEditionRegistry.js
+      - config/online-trusted-editions.json
+      - scripts/tdr-edition-registry-lab.mjs
       - scripts/tdr-tenerife-geometry-lab.mjs
       - src/game/tracks/library/karting-tenerife/track.json
       - src/game/tracks/closedCircuitGateOrder.js
@@ -64,5 +67,7 @@ jobs:
         run: node scripts/ghost-structural-integrity-smoke.mjs
       - name: Shadow-judge real Tenerife authored road, checkpoints and cuts
         run: node scripts/tdr-tenerife-geometry-lab.mjs
+      - name: Reject unapproved changes of official server geometry editions
+        run: node scripts/tdr-edition-registry-lab.mjs
       - name: Verify real SQL validator in temporary PostgreSQL
         run: node scripts/tdr-postgres-ghost-lab.mjs

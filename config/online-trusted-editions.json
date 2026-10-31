@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "authority": "server-controlled-repository-manifest",
+  "scope": "SHADOW_ONLY_NO_PRODUCTION_HOMOLOGATION",
+  "frozenAt": "2026-10-31",
+  "pilotSource": "src/game/tracks/library/karting-tenerife/track.json",
+  "editions": {
+    "karting-tenerife": {
+      "edition": "tenerife-legacy-geometry-20261031",
+      "geometrySha256": "a3f2ebe40306d7fee2f38c2e5de13354f057509faaea35ad638de1015447bc73",
+      "checkpointOrder": [
+        "CP1",
+        "CP2",
+        "FINISH"
+      ],
+      "physicsRevision": null,
+      "status": "shadow"
+    },
+    "karting-tenerife-horario": {
+      "edition": "tenerife-clockwise-geometry-20261031",
+      "geometrySha256": "f68a70dd9faec5a9540a05170ff1a32d2510be303486265fe7b9b889983ef182",
+      "checkpointOrder": [
+        "CP2",
+        "CP1",
+        "FINISH"
+      ],
+      "physicsRevision": null,
+      "status": "shadow"
+    }
+  }
+}
