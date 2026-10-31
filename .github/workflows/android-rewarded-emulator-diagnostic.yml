@@ -1,0 +1,76 @@
+name: TDR rewarded bridge emulator diagnostic (manual, sample ads only)
+
+# This workflow intentionally fails on any real emulator regression.
+# During the AdMob account suspension it is NOT a prerequisite for PWA
+# deployment, Android compilation, cloud recovery, or Play publication.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rewarded_emulator_diagnostic:
+    name: Android release WebView sample-ad diagnostic (NON-BLOCKING DEV)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BASE: ./
+      TDR_ANDROID_TEST_BUILD_TYPE: release
+      TDR_CI_BRIDGE_TEST: '1'
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          test -n "${ANDROID_HOME}"
+          yes | "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"             'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+      - name: Build sample-ad-only release WebView
+        shell: bash
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/install-karting-tenerife-source.mjs
+          node scripts/karting-official-source-smoke.mjs
+          npm run build:android
+      - name: Run Android release unit tests
+        working-directory: android
+        run: ./gradlew :app:testBridgeTestReleaseUnitTest :app:assembleBridgeTestRelease --stacktrace
+      - name: Enable accelerated Android emulator
+        shell: bash
+        run: |
+          test -e /dev/kvm
+          sudo chmod 666 /dev/kvm
+          "${ANDROID_HOME}/platform-tools/adb" kill-server || true
+          "${ANDROID_HOME}/platform-tools/adb" start-server
+      - name: Reproduce native plugin and Google demo rewarded ad bridge
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: Nexus 6
+          disable-animations: true
+          script: cd android && ./gradlew :app:connectedBridgeTestReleaseAndroidTest --stacktrace
+      - name: Keep JUnit and instrumentation reports when test fails
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-sample-ad-bridge-diagnostic
+          path: |
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 14

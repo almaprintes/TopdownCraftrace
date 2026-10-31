@@ -18,6 +18,9 @@ on:
       - config/online-trusted-physics.json
       - src/server/trustedVehiclePhysics.js
       - scripts/tdr-vehicle-physics-lab.mjs
+      - .github/workflows/pages.yml
+      - .github/workflows/android-rewarded-emulator-diagnostic.yml
+      - scripts/ci-ads-isolation-smoke.mjs
       - scripts/google-web-auth-smoke.mjs
       - scripts/anonymous-auth-identity-smoke.mjs
       - scripts/race-control-identity-recovery-smoke.mjs
@@ -84,6 +87,8 @@ jobs:
         run: node scripts/anonymous-auth-identity-smoke.mjs
       - name: Preserve records when old nickname/UUID conflicts
         run: node scripts/race-control-identity-recovery-smoke.mjs
+      - name: Check that sample-ad failures cannot block unrelated DEV
+        run: node scripts/ci-ads-isolation-smoke.mjs
       - name: Verify ghost codec contract
         run: node scripts/ghost-structural-integrity-smoke.mjs
       - name: Shadow-judge real Tenerife authored road, checkpoints and cuts
