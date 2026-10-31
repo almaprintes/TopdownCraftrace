@@ -8,6 +8,9 @@ on:
       - scripts/tdr-postgres-ghost-lab.mjs
       - supabase/migrations/20261030_033_online_ghost_structural_validation.sql
       - src/game/online/onlineGhostCodec.js
+      - scripts/cloud-save-rpc-privilege-smoke.mjs
+      - supabase/migrations/20261031_035_cloud_save_rpc_only_permissions.sql
+      - supabase/migrations/20261030_032_skip_identical_cloud_progress_writes.sql
       - src/game/online/serverGeometryJudge.js
       - scripts/tdr-tenerife-geometry-lab.mjs
       - src/game/tracks/library/karting-tenerife/track.json
@@ -55,6 +58,8 @@ jobs:
             sudo apt-get update -qq
             sudo apt-get install -y -qq postgresql-client
           fi
+      - name: Test direct DML closure and cloud-save RPC in isolated PostgreSQL
+        run: node scripts/cloud-save-rpc-privilege-smoke.mjs
       - name: Verify ghost codec contract
         run: node scripts/ghost-structural-integrity-smoke.mjs
       - name: Shadow-judge real Tenerife authored road, checkpoints and cuts
