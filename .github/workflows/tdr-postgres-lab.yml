@@ -18,6 +18,13 @@ on:
       - config/online-trusted-physics.json
       - src/server/trustedVehiclePhysics.js
       - scripts/tdr-vehicle-physics-lab.mjs
+      - scripts/google-web-auth-smoke.mjs
+      - scripts/anonymous-auth-identity-smoke.mjs
+      - scripts/race-control-identity-recovery-smoke.mjs
+      - src/game/online/googleWebAuth.js
+      - src/game/online/raceControlOnline.js
+      - src/game/social/cloudProgress.js
+      - src/game/social/cloudAutoSync.js
       - src/game/cars/carSpecs.js
       - public/assets/data/car_overrides.json
       - src/game/cars/resolveCarParams.js
@@ -71,6 +78,12 @@ jobs:
           fi
       - name: Test direct DML closure and cloud-save RPC in isolated PostgreSQL
         run: node scripts/cloud-save-rpc-privilege-smoke.mjs
+      - name: OAuth Google PKCE and safe manual identity-linking contract
+        run: node scripts/google-web-auth-smoke.mjs
+      - name: Preserve permanent and anonymous IDs on auth refresh
+        run: node scripts/anonymous-auth-identity-smoke.mjs
+      - name: Preserve records when old nickname/UUID conflicts
+        run: node scripts/race-control-identity-recovery-smoke.mjs
       - name: Verify ghost codec contract
         run: node scripts/ghost-structural-integrity-smoke.mjs
       - name: Shadow-judge real Tenerife authored road, checkpoints and cuts
