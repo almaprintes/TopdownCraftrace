@@ -148,27 +148,50 @@ export function savedGoogleWebIdentity(){
   const user=readSession()?.user;
   return user&&(user.app_metadata?.provider==='google'||user.app_metadata?.providers?.includes('google')||user.identities?.some(i=>i.provider==='google'))?user.id:null;
 }
-export async function acceptGoogleWebSession(incoming,expectedId=null,{linking=false}={}){
-  if((readSession()?.user?.id||null)!==expectedId)throw new Error('La identidad local ha cambiado.');
+// Shared, fail-closed verification gate for OAuth identity sessions.
+// Today only Google Web calls it. Apple/native adapters must provide a
+// Supabase Auth session after their own verified OAuth/OIDC flow; never trust
+// a provider name or claimed user ID supplied by a WebView callback alone.
+export async function acceptVerifiedSocialSession(incoming,expectedId=null,
+  {linking=false,provider}={}){
+  if(provider!=='google'&&provider!=='apple')throw new Error('Proveedor no autorizado.');
+  if((readSession()?.user?.id||null)!==expectedId)
+    throw new Error('La identidad local ha cambiado.');
   const session=normalizeSession(incoming);
   if(!sessionUsable(session)||!session.refresh_token)throw new Error('Sesión inválida.');
   const user=await request('/auth/v1/user',{token:session.access_token});
-  if(user?.id!==session.user.id||(expectedId&&user.id!==expectedId)||user.is_anonymous!==false||
-    !user.identities?.some(identity=>identity.provider==='google'))throw new Error('Google no verificado.');
-  if((readSession()?.user?.id||null)!==expectedId)throw new Error('La identidad local ha cambiado.');
-  // Fail closed before auth becomes visible to any game/cloud code.
+  const identities=Array.isArray(user?.identities)?user.identities:[];
+  if(user?.id!==session.user.id||(expectedId&&user.id!==expectedId)||
+    user.is_anonymous!==false||
+    !identities.some(identity=>identity?.provider===provider&&
+      (!identity.user_id||identity.user_id===user.id)))
+    throw new Error('El proveedor social no coincide con la identidad del piloto.');
+  if((readSession()?.user?.id||null)!==expectedId)
+    throw new Error('La identidad local ha cambiado.');
+  const providers=[...new Set(identities
+    .filter(i=>(i.provider==='google'||i.provider==='apple')&&
+      (!i.user_id||i.user_id===user.id))
+    .map(i=>i.provider))];
+  // Never store OAuth provider tokens, ID tokens, provider refresh tokens
+  // or unrelated user metadata. Preserve all social identities verified
+  // by Supabase Auth, so linking Apple does not erase cached Google support.
+  const safe={access_token:session.access_token,refresh_token:session.refresh_token,
+    expires_at:session.expires_at,token_type:'bearer',user:{id:user.id,
+    email:user.email,is_anonymous:false,app_metadata:{provider,providers}}};
+  // Mark a social login as requiring explicit cloud-save confirmation.
+  // Never restore a cloud snapshot on merely accepting a provider session.
   if(!expectedId||linking){
     localStorage.setItem('tdr2:cloudLoginPendingRestore:v1',user.id);
     localStorage.setItem('tdr2:socialSavePending:v1',user.id);
   }
-  // Google provider tokens are never retained, exported or logged.
-  const safe={access_token:session.access_token,refresh_token:session.refresh_token,
-    expires_at:session.expires_at,token_type:'bearer',user:{id:user.id,
-    email:user.email,is_anonymous:false,app_metadata:{provider:'google'}}};
   localStorage.setItem('tdr2:onlineSession:v1',JSON.stringify(safe));
-  if(readSession()?.access_token!==safe.access_token)throw new Error('No se pudo guardar la sesión.');
+  if(readSession()?.access_token!==safe.access_token)
+    throw new Error('No se pudo guardar la sesión.');
   api={session:safe};
   return {id:user.id};
+}
+export async function acceptGoogleWebSession(incoming,expectedId=null,{linking=false}={}){
+  return acceptVerifiedSocialSession(incoming,expectedId,{provider:'google',linking});
 }
 export async function currentRaceControlAccount(){
   const s=await activeSession();

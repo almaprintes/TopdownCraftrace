@@ -26,6 +26,7 @@ on:
       - scripts/race-control-identity-recovery-smoke.mjs
       - src/game/online/googleWebAuth.js
       - src/game/online/raceControlOnline.js
+      - scripts/oauth-provider-session-guard-smoke.mjs
       - src/game/social/cloudProgress.js
       - src/game/social/cloudAutoSync.js
       - src/game/cars/carSpecs.js
@@ -83,6 +84,8 @@ jobs:
         run: node scripts/cloud-save-rpc-privilege-smoke.mjs
       - name: OAuth Google PKCE and safe manual identity-linking contract
         run: node scripts/google-web-auth-smoke.mjs
+      - name: Verify shared Apple and Google identity acceptance fails closed
+        run: node scripts/oauth-provider-session-guard-smoke.mjs
       - name: Preserve permanent and anonymous IDs on auth refresh
         run: node scripts/anonymous-auth-identity-smoke.mjs
       - name: Preserve records when old nickname/UUID conflicts

@@ -45,8 +45,10 @@ concurrency:
 jobs:
   safe_demo_ads_qa:
     # Runs on deliberate changes or manual dispatch. Always demo-only;
-    # a web-only commit marked [pwa-only] should not regenerate the APK.
-    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[apk-qa]') || !contains(github.event.head_commit.message, '[pwa-only]') }}
+    # During the current AdMob suspension, demo ad QA builds require
+    # explicit [apk-qa] or manual dispatch; ordinary source commits must
+    # still be tested by the normal Android release build job.
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[apk-qa]') }}
     name: Build separate physical Redmi QA app
     runs-on: ubuntu-latest
     timeout-minutes: 40
