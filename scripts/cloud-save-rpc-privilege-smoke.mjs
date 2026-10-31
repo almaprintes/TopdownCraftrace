@@ -53,12 +53,12 @@ const sql=[
  "DO $isolation$ BEGIN IF (SELECT count(*) FROM public.player_progress)<>0 THEN RAISE EXCEPTION 'cross-player access'; END IF; RAISE NOTICE 'PASS: second player cannot read private cloud save'; END; $isolation$;",
  'RESET ROLE;'
 ].join('\n').replace(/\\x27/g,"'");
-const process=spawnSync('psql',['-X','-v','ON_ERROR_STOP=1','-q'],{
+const runner=spawnSync('psql',['-X','-v','ON_ERROR_STOP=1','-q'],{
  input:sql,encoding:'utf8',env:process.env,maxBuffer:1024*1024,timeout:100000
 });
-if(process.error)throw process.error;
-if(process.status!==0){console.error(process.stderr);throw Error('PostgreSQL cloud-save regression failed');}
-const lines=(process.stderr||'').split('\n').filter(x=>x.includes('PASS:'));
+if(runner.error)throw runner.error;
+if(runner.status!==0){console.error(runner.stderr);throw Error('PostgreSQL cloud-save regression failed');}
+const lines=(runner.stderr||'').split('\n').filter(x=>x.includes('PASS:'));
 assert.equal(lines.length,2,'Both simulated users must be tested');
 console.log(lines.join('\n'));
 console.log('No real users, no Supabase connection, no personal data.');
