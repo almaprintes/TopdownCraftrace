@@ -17,3 +17,10 @@ inventados. Se destruye al finalizar.
   independiente con datos de prueba antes de integrar producción.
 
 **No comprar Raspberry Pi, SSD ni mini-PC antes de conocer los resultados.**
+
+## Fase 2: juez geométrico en sombra (31/10/2026)
+
+- `src/game/online/serverGeometryJudge.js` lee únicamente geometría **oficial y confiable del servidor**: `src/game/tracks/library/karting-tenerife/track.json`, convierte su ruta con `TrackBuilder`, genera los mismos gates proporcionales y amplía sus extremos usando `raceGateWidth`. Guarda hash SHA-256 de los parámetros oficiales relevantes, calculado en el servidor.
+- Comprueba el cruce dirigido CP1 → CP2 → meta con `crossesDirectedFinishGate`, cobertura de la ruta (12 sectores), proximidad al eje y segmentos que recortan curvas; detecta casos a revisar, no declara automáticamente tramposos. Registros corruptos o con circuito distinto se etiquetan `invalid` **solo en este laboratorio**, sin efecto sobre jugadores.
+- Pruebas inventadas del trazado real: vuelta por la línea central completa, media vuelta, dirección contraria, salto de tramo, tiempo alterado, circuito incorrecto y fuente de geometría distinta. Los fantasmas se cuantizan como en el juego (`encodeOnlineGhostNative`).
+- **NO es una función desplegada de Supabase ni un filtro de rankings reales.** Antes de activarla hay que reproducir muchos fantasmas legítimos con trazado/máscaras de carretera exactas, contemplar las rutas inversas y partes abiertas, medir falsos positivos y definir `pending/verified/rejected` sin eliminar marcas antiguas. El codec de fantasma del cliente puede ser falsificado de forma coherente; para garantía fuerte se necesitan entradas o simulación autoritativa.

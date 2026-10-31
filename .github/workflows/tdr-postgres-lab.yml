@@ -8,6 +8,12 @@ on:
       - scripts/tdr-postgres-ghost-lab.mjs
       - supabase/migrations/20261030_033_online_ghost_structural_validation.sql
       - src/game/online/onlineGhostCodec.js
+      - src/game/online/serverGeometryJudge.js
+      - scripts/tdr-tenerife-geometry-lab.mjs
+      - src/game/tracks/library/karting-tenerife/track.json
+      - src/game/tracks/closedCircuitGateOrder.js
+      - src/game/tracks/TrackBuilder.js
+      - src/game/tracks/raceGateWidth.js
 
 permissions:
   contents: read
@@ -51,5 +57,7 @@ jobs:
           fi
       - name: Verify ghost codec contract
         run: node scripts/ghost-structural-integrity-smoke.mjs
+      - name: Shadow-judge real Tenerife authored road, checkpoints and cuts
+        run: node scripts/tdr-tenerife-geometry-lab.mjs
       - name: Verify real SQL validator in temporary PostgreSQL
         run: node scripts/tdr-postgres-ghost-lab.mjs
