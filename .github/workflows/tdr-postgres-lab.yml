@@ -15,6 +15,14 @@ on:
       - src/server/raceEditionRegistry.js
       - config/online-trusted-editions.json
       - scripts/tdr-edition-registry-lab.mjs
+      - config/online-trusted-physics.json
+      - src/server/trustedVehiclePhysics.js
+      - scripts/tdr-vehicle-physics-lab.mjs
+      - src/game/cars/carSpecs.js
+      - public/assets/data/car_overrides.json
+      - src/game/cars/resolveCarParams.js
+      - src/game/cars/cuperDrivingPhysics.js
+      - src/game/garage/garageStore.js
       - scripts/tdr-tenerife-geometry-lab.mjs
       - src/game/tracks/library/karting-tenerife/track.json
       - src/game/tracks/closedCircuitGateOrder.js
@@ -69,5 +77,7 @@ jobs:
         run: node scripts/tdr-tenerife-geometry-lab.mjs
       - name: Reject unapproved changes of official server geometry editions
         run: node scripts/tdr-edition-registry-lab.mjs
+      - name: Cross-check official vehicle physics and reject unapproved changes
+        run: node scripts/tdr-vehicle-physics-lab.mjs
       - name: Verify real SQL validator in temporary PostgreSQL
         run: node scripts/tdr-postgres-ghost-lab.mjs

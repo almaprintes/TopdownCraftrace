@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "authority": "trusted-repository-physics-sources",
+  "scope": "SHADOW_ONLY_NO_PRODUCTION_PHYSICS_VERIFICATION",
+  "date": "2026-10-31",
+  "sourceGitBlobSha1": {
+    "src/game/cars/carSpecs.js": "a67341b2edc05dc9b45eeebda5a7404be8287be2",
+    "public/assets/data/car_overrides.json": "480b2e2a158432a01db5f1be65ead2c811d6795c",
+    "src/game/cars/resolveCarParams.js": "7f2a1b7883cbb86cab3281c74e12c2fb5f24669a",
+    "src/game/cars/cuperDrivingPhysics.js": "aa40b54ecc75fa157142381c805af5e147e9398b",
+    "src/game/garage/garageStore.js": "3540bdd8ca1a7b8dc87d8b0ca6d5bc4d09b02cb6"
+  },
+  "physicsRevision": null,
+  "serverEquipmentEvidence": false,
+  "expectedCarCount": 21,
+  "factorMaxFwdFromResolver": 1.4,
+  "cuperDevMaxFwdFactor": 1.2
+}
