@@ -47,8 +47,21 @@ function finishFromAnchor(anchor,width){
     b:{x:anchor.x-ny*half,y:anchor.y+nx*half},
     normal:{x:nx,y:ny}};
 }
-// Explicitly scoped pilot. No other track is deemed certified.
-export function buildTenerifeJudgeGeometry(json){
+// Strictly scoped to the two *different* Tenerife leaderboard identities.
+const TENERIFE_LEGACY='karting-tenerife';
+const TENERIFE_CLOCKWISE='karting-tenerife-horario';
+const TENERIFE_IDS=new Set([TENERIFE_LEGACY,TENERIFE_CLOCKWISE]);
+function reverseGate(gate){
+  if(!gate?.normal)throw Error('Cannot reverse a gate without travel normal');
+  return {...gate,normal:{x:-Number(gate.normal.x),y:-Number(gate.normal.y)}};
+}
+
+// Only a trusted server checkout supplies json and the official race edition.
+// This uses the production rule: clockwise reverses CP order AND both normals.
+// No other track is supported or claimed to be homologated.
+export function buildTenerifeJudgeGeometry(json,{trackId=TENERIFE_LEGACY}={}){
+  if(!TENERIFE_IDS.has(trackId))throw Error('Unsupported race-control track identity');
+  const clockwise=trackId===TENERIFE_CLOCKWISE;
   if(json?.closed!==true||!Array.isArray(json.centerline)||json.centerline.length<30||
     !Number.isFinite(json.trackWidth)||!Number.isFinite(json.sampleStepPx)||
     json.raceDirection!=='forward'||json.checkpointMode==='authored'||
@@ -79,13 +92,16 @@ export function buildTenerifeJudgeGeometry(json){
   });
   const widened=widenAllRaceGates({closed:true,trackWidth:json.trackWidth,trackShape:null,
     finishLine:finishFromAnchor(anchor,json.trackWidth),checkpoints:gates},ribbon);
+  const checkpoints=clockwise?widened.checkpoints.slice().reverse().map(reverseGate)
+    :widened.checkpoints;
+  const finishLine=clockwise?reverseGate(widened.finishLine):widened.finishLine;
   const hash=createHash('sha256').update(JSON.stringify({
-    trackId:'karting-tenerife',centerline:json.centerline,finishAnchor:json.finishAnchor,
+    trackId,centerline:json.centerline,finishAnchor:json.finishAnchor,
     checkpointFractions:fractions,trackWidth:json.trackWidth,
     sampleStepPx:json.sampleStepPx,closed:json.closed,raceDirection:json.raceDirection
   })).digest('hex');
-  return Object.freeze({trackId:'karting-tenerife',geometrySha256:hash,
-    metrics,finishLine:widened.finishLine,checkpoints:widened.checkpoints,
+  return Object.freeze({trackId,geometrySha256:hash,
+    metrics,finishLine,checkpoints,clockwise,
     anchorDistance,roadWidth:json.trackWidth});
 }
 
@@ -93,10 +109,10 @@ export function buildTenerifeJudgeGeometry(json){
 // Samples are assumed to be decoded with the existing native ghost codec.
 export function reviewTenerifeGhost(ghost,trusted){
   const reasons=[],diagnostics={};
-  if(!trusted||trusted.trackId!=='karting-tenerife'||!trusted.metrics||
+  if(!trusted||!TENERIFE_IDS.has(trusted.trackId)||!trusted.metrics||
     !trusted.finishLine||trusted.checkpoints?.length!==2)
     return {status:'unsupported',reasons:['untrusted_geometry']};
-  if(ghost?.trackKey!=='karting-tenerife')return {status:'invalid',reasons:['track_mismatch']};
+  if(ghost?.trackKey!==trusted.trackId)return {status:'invalid',reasons:['track_mismatch']};
   const samples=ghost?.samples;
   if(!Array.isArray(samples)||samples.length<5||samples.length>20000||
     !Number.isInteger(ghost.lapMs)||ghost.lapMs<=1000)
@@ -107,6 +123,8 @@ export function reviewTenerifeGhost(ghost,trusted){
   if(samples.at(-1).t!==ghost.lapMs)return {status:'invalid',reasons:['finish_time_mismatch']};
   const geo=trusted.metrics,binCount=12,visited=new Set();
   let farSamples=0,shortcutSegments=0,furthest=0,maxSegmentPx=0;
+  let maxRawSpeed=0,max100msSpeed=0,veryShortGaps=0;
+  let windowStart=0;
   let state=0,finishSeen=false,outOfOrder=false;
   const gates=[...trusted.checkpoints,trusted.finishLine];
   let previousProjection=null;
@@ -115,7 +133,8 @@ export function reviewTenerifeGhost(ghost,trusted){
     if(!near)return {status:'unsupported',reasons:['empty_official_road']};
     const allowed=Math.max(12,near.width*.5+8);
     if(near.distance>allowed)farSamples++;
-    const along=((near.routeDistance-trusted.anchorDistance+geo.total)%geo.total);
+    const forwardAlong=((near.routeDistance-trusted.anchorDistance+geo.total)%geo.total);
+    const along=trusted.clockwise?(geo.total-forwardAlong)%geo.total:forwardAlong;
     const fraction=along/geo.total;
     visited.add(Math.min(binCount-1,Math.floor(fraction*binCount)));
     if(previousProjection!==null){
@@ -126,8 +145,20 @@ export function reviewTenerifeGhost(ghost,trusted){
     previousProjection=along;
     if(i===0)continue;
     const prev=samples[i-1];
-    const seg=distance(prev,curr);
+    const seg=distance(prev,curr),dt=curr.t-prev.t;
     maxSegmentPx=Math.max(maxSegmentPx,seg);
+    maxRawSpeed=Math.max(maxRawSpeed,1000*seg/dt);
+    if(dt<8)veryShortGaps++;
+    // A 1-ms clock irregularity in an existing rally ghost proves why
+    // single-frame speed is unsuitable as an automatic ban. Use a 100-ms
+    // window as *diagnostic*, pending car-physics calibration.
+    while(windowStart+1<i&&curr.t-samples[windowStart+1].t>=100)
+      windowStart++;
+    const windowDt=curr.t-samples[windowStart].t;
+    if(windowDt>=100){
+      max100msSpeed=Math.max(max100msSpeed,
+        1000*distance(curr,samples[windowStart])/windowDt);
+    }
     const mid={x:(prev.x+curr.x)*.5,y:(prev.y+curr.y)*.5};
     const midNear=nearestOnRoad(mid,geo);
     if(midNear.distance>Math.max(12,midNear.width*.5+8))shortcutSegments++;
@@ -155,6 +186,14 @@ export function reviewTenerifeGhost(ghost,trusted){
   diagnostics.offRoadShortcuts=shortcutSegments;
   diagnostics.routeJumps=furthest;
   diagnostics.maxStepPx=Math.round(maxSegmentPx*100)/100;
+  diagnostics.maxRawSpeedPxPerSecond=Math.round(maxRawSpeed);
+  diagnostics.max100msSpeedPxPerSecond=Math.round(max100msSpeed);
+  diagnostics.shortTimestampGaps=veryShortGaps;
+  diagnostics.variant=trusted.clockwise?'clockwise':'legacy';
+  if(farSamples>samples.length*.15)reasons.push('geometry_revision_unknown');
+  // Provisional screening margin only, never an official physics limit.
+  // Must be calibrated with genuine races and per-car physics first.
+  if(max100msSpeed>2500)reasons.push('motion_anomaly_needs_physics_review');
   if(outOfOrder)reasons.push('wrong_gate_order');
   if(state<2)reasons.push('missing_checkpoint');
   if(!finishSeen)reasons.push('finish_not_observed');
