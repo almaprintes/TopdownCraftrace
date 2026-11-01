@@ -67,7 +67,7 @@ export class SettingsScene extends Phaser.Scene{
     root.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>this._renderTab(b.dataset.tab));
     this._renderTab('controls');
   }
-  _unmount(){this._appHeaderDispose?.();this._appHeaderDispose=null;this._closeCalibration();try{this.root?.remove();}catch{}this.root=null;try{document.getElementById('tdr-settings2-style')?.remove();}catch{}}
+  _unmount(){try{this._feedbackDispose?.();}catch{}this._feedbackDispose=null;this._appHeaderDispose?.();this._appHeaderDispose=null;this._closeCalibration();try{this.root?.remove();}catch{}this.root=null;try{document.getElementById('tdr-settings2-style')?.remove();}catch{}}
   _set(path,val,rerender=false){const [a,b]=path;this.settings[a][b]=val;save(this.settings);if(rerender)this._renderTab(a==='audio'?'audio':a==='video'?'video':'controls');}
   _toggleEl(el,val){el.classList.toggle('on',!!val);}
   _switch(card,path){const sw=card.querySelector('.s2switch');sw.onclick=()=>{const [a,b]=path;this._set(path,!this.settings[a][b]);this._toggleEl(sw,this.settings[a][b]);};}
@@ -152,9 +152,16 @@ export class SettingsScene extends Phaser.Scene{
       body.innerHTML=`<div class="s2grid">
         <section class="s2card wide" data-legal-kind="ads"><div class="s2label">${t('settings.adPrivacy')}</div><div class="s2desc">${t('settings.adPrivacyDesc')}</div><div class="s2row"><button class="s2cta" disabled>${t('settings.managePrivacy')}</button><span class="s2note">${t('settings.androidPending')}</span></div></section>
         <section class="s2card" data-legal-kind="privacy"><div class="s2label">${t('settings.privacyPolicy')}</div><div class="s2desc">${t('settings.privacyPolicyDesc')}</div></section>
-        <section class="s2card" data-legal-kind="support"><div class="s2label">${t('settings.support')}</div><div class="s2desc">${t('settings.supportDesc')}</div></section>
+        <section class="s2card" data-legal-kind="support"><div class="s2label">${t('settings.support')}</div><div class="s2desc">${t('settings.supportDesc')}</div><div class="s2row"><button class="s2cta" type="button" data-feedback-open>${getLanguage()==='en'?'REPORT A PROBLEM':'INFORMAR DE UN PROBLEMA'}</button></div></section>
         <section class="s2card wide" data-legal-kind="legal"><div class="s2label">${t('settings.legalInfo')}</div><div class="s2desc">${t('settings.legalInfoDesc')}</div></section>
       </div>`;
+      body.querySelector('[data-feedback-open]')?.addEventListener('click',async()=>{
+        try{
+          this._feedbackDispose?.();
+          const {mountPlayerFeedback}=await import('../ui/playerFeedback.js');
+          if(this.root?.isConnected)this._feedbackDispose=mountPlayerFeedback();
+        }catch(error){console.warn('[tdr-feedback] Cannot open support form',error);}
+      });
     }
   }
 }
