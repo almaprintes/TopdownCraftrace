@@ -25,4 +25,9 @@ assert.match(block,/this\.uiCam\?\.ignore\(this\.carRig\)/);
 assert.match(block,/this\.uiCam\?\.ignore\(this\.finishGfx\)/);
 for(const name of ['_shoulderLeft','_shoulderRight','_curbOuter','_curbInner','cpGfx'])
   assert.ok(!block.includes('this.uiCam?.ignore(this.'+name+')'),'No late exclusion for '+name+'; capture via diagnostic, do not change UI blindly');
-console.log('iOS camera creation-order audit confirmed: six early ignore calls predate uiCam; only some late recovery exists.');
+const fixed=readFileSync(new URL('../src/game/scenes/RaceFixedScene.js', import.meta.url),'utf8');
+assert.match(fixed,/if \(this\.uiCam\) this\.uiCam\.setVisible\(false\);/,'Single-camera fix disables the UI camera');
+assert.match(fixed,/main\.setVisible\(true\);/,'Main camera remains visible');
+const styled=readFileSync(new URL('../src/game/scenes/RaceStyledHudScene.js',import.meta.url),'utf8');
+assert.match(styled,/uiCam sigue desactivada por el fix iOS/,'Styled HUD explicitly relies on a disabled UI camera');
+console.log('Camera audit: six early ignore calls exist but RaceFixedScene disables uiCam; no second camera render in this path.');
