@@ -6,6 +6,30 @@ const natural=(n)=>Number.isFinite(Number(n))&&Number(n)>=0?Number(n):0;
 const unique=list=>new Set(Array.isArray(list)?list:[]);
 const formatMb=bytes=>(bytes/1048576).toFixed(1);
 
+
+const isWorldSpaceObject=(o)=>{
+  const x=Number(o?.scrollFactorX),y=Number(o?.scrollFactorY);
+  return Number.isFinite(x)&&Number.isFinite(y)&&(Math.abs(x)>0.00001||Math.abs(y)>0.00001);
+};
+const objectLabel=(obj,alias='')=>{
+  const type=String(obj?.type||obj?.constructor?.name||'GameObject').slice(0,24);
+  const texture=String(obj?.texture?.key||'').slice(0,42);
+  const depth=Number(obj?.depth);
+  return [alias||type,texture?'tex='+texture:null,Number.isFinite(depth)?'z='+depth:null].filter(Boolean).join(' ');
+};
+const namedWorldObjects=(scene)=>{
+  const names=['_shoulderLeft','_shoulderRight','_curbOuter','_curbInner','_borderLeft','_borderRight','finishLineDebug','gridDebug','finishGfx','cpGfx','carRig'];
+  const out=[];
+  for(const key of names){
+    const obj=scene?.[key];
+    if(obj)out.push({alias:key,obj});
+  }
+  for(const [i,entry] of (scene?.gridCars||[]).entries()){
+    if(entry?.rig)out.push({alias:'gridCars['+i+'].rig',obj:entry.rig});
+  }
+  return out;
+};
+
 export function captureIosRenderAuditSnapshot(scene){
   const game=scene?.game;
   const canvas=game?.canvas;
@@ -17,6 +41,21 @@ export function captureIosRenderAuditSnapshot(scene){
   const uiList=unique(ui?.renderList);
   let overlap=0;
   for(const object of mainList)if(uiList.has(object))overlap++;
+  const sharedWorld=[...mainList].filter(obj=>uiList.has(obj)&&isWorldSpaceObject(obj));
+  const uiWorld=[...uiList].filter(isWorldSpaceObject);
+  // For named scene objects, cameraFilter is a camera bitmask. A named
+  // object can be eligible for UI camera even when outside its viewport.
+  // These checks do not change cameraFilter or any other game property.
+  const uiCameraId=Number(ui?.id)||0;
+  const namedWorld=namedWorldObjects(scene).map(({alias,obj})=>({
+    alias,
+    label:objectLabel(obj,alias),
+    uiIgnored:uiCameraId>0&&(Number(obj.cameraFilter||0)&uiCameraId)!==0,
+    inMain:mainList.has(obj),
+    inUi:uiList.has(obj),
+    visible:obj?.visible!==false,
+  }));
+  const unfilteredNamed=namedWorld.filter(v=>!v.uiIgnored&&v.visible);
   const photos=Array.isArray(scene?._trackBeautyTiles)?scene._trackBeautyTiles:[];
   let estimatedRgbaBytes=0;
   let photoInMain=0;
@@ -49,6 +88,14 @@ export function captureIosRenderAuditSnapshot(scene){
     mainObjects:mainList.size,
     uiObjects:uiList.size,
     sharedObjects:overlap,
+    uiWorldObjects:uiWorld.length,
+    sharedWorldObjects:sharedWorld.length,
+    sharedWorldExamples:sharedWorld.slice(0,12).map(obj=>objectLabel(obj)),
+    uiWorldExamples:uiWorld.slice(0,12).map(obj=>objectLabel(obj)),
+    namedWorldCount:namedWorld.length,
+    namedWorldUnfiltered:unfilteredNamed.length,
+    namedWorldUnfilteredExamples:unfilteredNamed.slice(0,14).map(v=>v.label+(v.inUi?' [EN UI]': ' [FUERA UI/NO VISIBLE]')),
+    namedWorldActuallyInUi:namedWorld.filter(v=>v.inUi).length,
     photoTiles:photos.length,
     photoInMain,
     photoInUi,
@@ -69,7 +116,14 @@ export function formatIosRenderAuditSnapshot(value){
     `CANVAS ${canvas} (${Number(s.canvasMegapixels||0).toFixed(2)} Mpx) · GL ${gl}`,
     `CÁMARAS ${s.cameraCount??'?'} · renderList MAIN ${s.mainObjects??'?'} · UI ${s.uiObjects??'?'} · COMPARTIDOS ${s.sharedObjects??'?'}`,
     `FOTO ${s.photoTiles??0} mosaicos · MAIN ${s.photoInMain??0} · UI ${s.photoInUi??0} · RGBA8 teórico ${s.photoRgbaEstimateMiB??0} MiB (${s.photoSourceCount??0} fuentes)`,
+    `UI MUNDO ${s.uiWorldObjects??0} · COMPARTIDOS MUNDO ${s.sharedWorldObjects??0}`,
+    `NOMBRADOS MUNDO ${s.namedWorldCount??0} · NO EXCLUIDOS DE UI ${s.namedWorldUnfiltered??0} · PRESENTES UI ${s.namedWorldActuallyInUi??0}`,
+    ...((s.namedWorldUnfilteredExamples||[]).length?['EJEMPLOS SIN EXCLUIR: '+s.namedWorldUnfilteredExamples.join(' | ')]:[]),
+    ...((s.sharedWorldExamples||[]).length?['COMPARTIDOS EN AMBAS: '+s.sharedWorldExamples.join(' | ')]:[]),
+    ...((s.uiWorldExamples||[]).length?['EJEMPLOS MUNDO EN UI: '+s.uiWorldExamples.join(' | ')]:[]),
+
     'RENDERLIST = objetos reportados por Phaser; NO draw calls ni tiempo GPU',
+    'NO EXCLUIDO = elegible para cámara UI, NO prueba de dibujo si no aparece en renderList',
     'RGBA8 = estimación de píxeles fotográficos, NO memoria total GPU'
   ].join('\n');
 }
