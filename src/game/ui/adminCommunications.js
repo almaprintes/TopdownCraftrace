@@ -306,6 +306,33 @@ export function mountAdminCommunications(){
     const guard=make('section','tdr-feedback-guard');
     work.append(guard,controls);
     void renderFeedbackGuard(guard);
+    const reportControls=make('div','tdr-comms-admin-actions');
+    const reportList=make('div','tdr-feedback-report-list');
+    const openReports=btn('VER INFORMES RECIBIDOS',async()=>{
+      openReports.disabled=true;reportList.replaceChildren(make('p','','Consultando informes…'));
+      try{
+        const reports=await request('/rest/v1/tdr_feedback_reports?select=id,category,message,diagnostics,created_at&order=created_at.desc&limit=20');
+        if(!Array.isArray(reports))throw Error('Respuesta inválida de Supabase');
+        reportList.replaceChildren();
+        for(const report of reports){
+          const article=make('article','tdr-comms-admin-row');
+          article.append(make('strong','',String(report.category||'other').toUpperCase()+' · #'+report.id),
+            make('small','',new Date(report.created_at).toLocaleString()),
+            make('p','',report.message));
+          const copy=btn('COPIAR PARA GITHUB',async()=>{
+            const content='TDR · Informe #'+report.id+'\\nTipo: '+report.category+
+              '\\nFecha: '+report.created_at+'\\n\\n'+report.message+
+              '\\n\\nDatos técnicos autorizados:\\n'+JSON.stringify(report.diagnostics||{},null,2);
+            try{await navigator.clipboard.writeText(content);notice('Informe copiado para crear una incidencia en GitHub.');}
+            catch{notice('No se pudo copiar: el navegador exige permiso de portapapeles.');}
+          });
+          article.append(copy);reportList.append(article);
+        }
+        if(!reports.length)reportList.append(make('p','','Todavía no se ha recibido ningún informe.'));
+      }catch(error){reportList.replaceChildren(make('p','','No se pudieron consultar los informes: '+(error?.message||'error')));}
+      finally{openReports.disabled=false;}
+    });
+    reportControls.append(openReports);work.append(reportControls,reportList);
     const summary=make('p','',rows.length+' comunicaciones registradas. Una actualización se publica solo cuando Google Play ya ofrece ese versionCode.');
     work.append(summary);
     for(const row of rows){
