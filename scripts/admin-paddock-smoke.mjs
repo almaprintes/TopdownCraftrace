@@ -48,7 +48,8 @@ let allCars=false;
 const callbacks={
   track:()=>events.push('track'),environment:()=>events.push('environment'),
   cars:()=>events.push('cars'),images:()=>events.push('images'),
-  diagnostics:()=>events.push('diagnostics'),communications:()=>events.push('communications'),garage:()=>events.push('garage'),
+  diagnostics:()=>events.push('diagnostics'),communications:()=>events.push('communications'),
+  emergency:()=>events.push('emergency'),garage:()=>events.push('garage'),
   isFullCars:()=>allCars,toggleCars:()=>{allCars=!allCars;events.push('cars-dev');},
   kit:()=>events.push('kit'),mastery:()=>events.push('mastery'),
   legacy:()=>events.push('legacy'),exit:()=>events.push('exit')
@@ -72,6 +73,8 @@ assert.deepEqual(tiles.map(t=>t.dataset.kind),['track','environment','car','imag
 assert.ok(tiles.every(t=>walk(t,e=>e.tag==='img').length===1));
 tiles.forEach(t=>t.click());
 auxiliary[0].click();auxiliary[1].click();auxiliary[2].click();
+assert.deepEqual(events.slice(4,7),['emergency','communications','diagnostics'],
+  'Emergency and Communications MUST open different screens');
 const qaTools=walk(root,e=>e.className==='tdr-paddock__tool');
 qaTools.find(t=>t.children[0].textContent==='GARAJE JUGADOR').click();
 qaTools.find(t=>t.children[0].textContent.startsWith('COCHES DEV')).click();
@@ -88,7 +91,7 @@ walk(root,e=>e.className==='tdr-paddock__back')[0].click();
 auxiliary[4].click();
 qaTools.find(t=>t.children[0].textContent.startsWith('EDITAR PISTAS')).click();
 walk(root,e=>e.className==='tdr-paddock__exit')[0].click();
-for(const action of ['track','environment','cars','images','communications','diagnostics','garage','cars-dev','kit','mastery','legacy','exit'])
+for(const action of ['track','environment','cars','images','emergency','communications','diagnostics','garage','cars-dev','kit','mastery','legacy','exit'])
   assert.ok(events.includes(action),'Missing action '+action);
 assert.ok(!viewSource.includes('fetch('),'Dashboard must not issue network requests');
-console.log('PADDOCK: 4 primary cards, 5 secondary cards, 12 wired actions, QA confirmation, accessible navigation and compact CSS OK.');
+console.log('PADDOCK: 4 primary cards, 5 secondary cards, 13 wired actions, QA confirmation, accessible navigation and compact CSS OK.');

@@ -74,10 +74,25 @@ export class AdminHubScene extends BaseScene {
           this._showToast('CONVERSOR DE IMÁGENES NO DISPONIBLE');
         }
       },
+      emergency:async()=>{
+        try{
+          const {mountAdminEmergencyControls}=await import('../ui/adminEmergencyControls.js');
+          if(!this._adminDomRoot?.isConnected)return;
+          try{this._communicationDispose?.();}catch{}
+          this._communicationDispose=null;
+          try{this._emergencyDispose?.();}catch{}
+          this._emergencyDispose=mountAdminEmergencyControls();
+        }catch(error){
+          console.warn('[paddock emergency] unavailable',error);
+          this._showToast('CONTROLES DE EMERGENCIA NO DISPONIBLES');
+        }
+      },
       communications:async()=>{
         try{
           const {mountAdminCommunications}=await import('../ui/adminCommunications.js');
           if(!this._adminDomRoot?.isConnected)return;
+          try{this._emergencyDispose?.();}catch{}
+          this._emergencyDispose=null;
           this._communicationDispose?.();
           this._communicationDispose=mountAdminCommunications();
         }catch(error){
@@ -181,6 +196,8 @@ export class AdminHubScene extends BaseScene {
     this._webpToolDispose=null;
     try{this._communicationDispose?.();}catch{}
     this._communicationDispose=null;
+    try{this._emergencyDispose?.();}catch{}
+    this._emergencyDispose=null;
     try{
       this._errorPreview?.remove?.();
       this._errorPreview=null;

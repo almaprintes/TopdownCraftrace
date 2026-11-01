@@ -89,7 +89,7 @@ export function mountAdminPaddock(host,handlers){
   };
   const closePane=()=>{qaPane.hidden=true;legacyPane.hidden=true;main.hidden=false;root.scrollTop=0;};
   const auxiliary=[
-    {name:'BOTÓN ROJO · SUPABASE',desc:'Corte de emergencia de informes · acceso con cuenta autorizada',id:'emergency',color:'#ff4261',run:handlers.communications},
+    {name:'BOTÓN ROJO · SUPABASE',desc:'Corte de emergencia de informes · acceso con cuenta autorizada',id:'emergency',color:'#ff4261',run:handlers.emergency},
     {name:'COMUNICACIONES',desc:'Mensajes y actualizaciones desde Supabase',id:'communications',color:'#40e4c7',run:handlers.communications},
     {name:'DIAGNÓSTICO',desc:'Último error y diagnóstico local',id:'diagnostic',color:'#ff5c71',run:handlers.diagnostics},
     {name:'LABORATORIO QA',desc:'Garaje, coches DEV y comprobaciones',id:'qa',color:'#42d2f7',run:()=>openPane(qaPane)},

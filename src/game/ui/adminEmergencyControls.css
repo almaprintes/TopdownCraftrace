@@ -1,0 +1,36 @@
+.tdr-emergency-overlay{position:fixed;inset:0;z-index:250012;display:grid;place-items:center;box-sizing:border-box;background:#050a12f5;color:#f2f7ff;font:12px system-ui,-apple-system,Arial,sans-serif;padding:calc(env(safe-area-inset-top,0px) + 8px) calc(env(safe-area-inset-right,0px) + 8px) calc(env(safe-area-inset-bottom,0px) + 8px) calc(env(safe-area-inset-left,0px) + 8px)}
+.tdr-emergency-overlay *{box-sizing:border-box}
+.tdr-emergency-panel{width:min(970px,100%);max-height:96dvh;min-height:0;overflow:auto;overscroll-behavior:contain;padding:clamp(12px,2.3vw,22px);border:1px solid #9d5869;border-radius:17px;background:linear-gradient(145deg,#1a202f,#070f1b);box-shadow:0 16px 70px #000d}
+.tdr-emergency-heading{display:flex;gap:8px;align-items:center;justify-content:space-between;border-bottom:1px solid #ffffff24;padding-bottom:9px}
+.tdr-emergency-brand{font-weight:900;font-size:10px;letter-spacing:.1em;color:#ffb4bf}
+.tdr-emergency-heading h2{font-size:clamp(16px,2.6vw,23px);font-weight:950;margin:3px 0}
+.tdr-emergency-overlay button{min-height:40px;padding:10px 13px;border:1px solid #72889b;border-radius:11px;color:white;background:#1e344b;font-weight:900;font-size:11px;cursor:pointer;touch-action:manipulation}
+.tdr-emergency-overlay button:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+.tdr-emergency-overlay button:focus-visible,.tdr-emergency-direct-link:focus-visible{outline:2px solid white;outline-offset:2px}
+.tdr-emergency-overlay p{margin:5px 0;line-height:1.4}
+.tdr-emergency-summary{font-size:12px;color:#c5d3e3;margin:10px 0!important}
+.tdr-emergency-notice{color:#ffd7a5;min-height:18px;font-weight:800}
+.tdr-emergency-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tdr-emergency-card{display:flex;flex-direction:column;gap:10px;min-width:0;border:1px solid #c9506588;border-radius:15px;background:linear-gradient(155deg,#321c2c,#121f30);padding:clamp(12px,2vw,18px)}
+.tdr-emergency-card--project{background:linear-gradient(155deg,#3d1527,#161e2f)}
+.tdr-emergency-kicker{color:#ffa9b5;font-weight:950;letter-spacing:.08em;font-size:10px}
+.tdr-emergency-card h3{margin:0;font-size:clamp(14px,2.2vw,18px)}
+.tdr-emergency-card p{color:#cdd3df}
+.tdr-emergency-state{font-weight:950!important;letter-spacing:.04em;font-size:13px}
+.tdr-emergency-state[data-active="false"]{color:#a7f1c8}
+.tdr-emergency-state[data-active="true"]{color:#ffadb9}
+.tdr-emergency-counter{color:#9cb9cb!important}
+.tdr-emergency-actions{display:flex;flex-wrap:wrap;gap:8px}
+.tdr-emergency-overlay button.tdr-emergency-danger{min-height:48px;background:linear-gradient(135deg,#d91637,#a00a2b);border:2px solid #ff7891;color:#fff;box-shadow:0 0 12px #e61a3650}
+.tdr-emergency-overlay button.tdr-emergency-resume{background:#135239;color:#dcffed;border-color:#56da9b}
+.tdr-emergency-overlay button.tdr-emergency-login{background:#104b62;border-color:#47c3db;width:100%}
+.tdr-emergency-auth,.tdr-emergency-inbox{border-top:1px solid #ffffff20;padding-top:9px}
+.tdr-emergency-inbox[hidden],.tdr-emergency-auth[hidden]{display:none}
+.tdr-emergency-warning{padding:10px;background:#5b282f55;border-left:3px solid #ff8996;border-radius:8px;color:#ffe5df!important}
+.tdr-emergency-note,.tdr-emergency-footnote{color:#aebbc9!important;font-size:11px}
+.tdr-emergency-direct-link{color:#c2ecff;text-decoration:underline;font-weight:800}
+.tdr-emergency-report-list{max-height:150px;overflow-y:auto;display:grid;gap:8px;padding-top:8px}
+.tdr-emergency-report{padding:8px;background:#142b3e;border:1px solid #426278;border-radius:10px;display:grid;gap:5px;overflow-wrap:anywhere}
+.tdr-emergency-report small{color:#9dc9d7}
+@media(max-width:690px){.tdr-emergency-cards{grid-template-columns:1fr}.tdr-emergency-panel{max-height:94dvh}}
+@media(max-height:500px){.tdr-emergency-panel{padding:10px}.tdr-emergency-card{gap:6px}.tdr-emergency-heading h2{font-size:15px}}

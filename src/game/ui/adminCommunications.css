@@ -5,14 +5,3 @@
 .tdr-comms-admin-translate small{color:#a4c2d0;font-size:10px;max-width:430px;line-height:1.4}
 .tdr-comms-admin-translate-button{background:linear-gradient(105deg,#087568,#116f89)!important;border-color:#4fe9c3!important}
 .tdr-comms-admin-translate-button:disabled{opacity:.55}
-
-/* Fail-closed staff switch: only backend RPC decides actual state. */
-.tdr-feedback-guard{margin:10px 0 16px;padding:14px;border:1px solid #b4505e9c;border-radius:16px;background:linear-gradient(135deg,#351421,#101a29);color:white;display:flex;flex-direction:column;gap:9px}
-.tdr-feedback-guard h3{font-size:clamp(13px,2.3vw,18px);font-weight:950;margin:0}
-.tdr-feedback-guard-status{font-weight:850;font-size:13px;color:#ffb8ba}
-.tdr-feedback-guard[data-active="false"] .tdr-feedback-guard-status{color:#a5f6c6}
-.tdr-feedback-guard-stop{font:950 12px system-ui;color:white;background:#ce1736;border:2px solid #ff647c;border-radius:13px;padding:12px 15px;min-height:48px;box-shadow:0 0 15px #d514384d}
-.tdr-feedback-guard-stop:disabled{opacity:.38;box-shadow:none}
-.tdr-feedback-guard-start{font:850 11px system-ui;color:#c0ffde;background:#13452f;border:1px solid #45c989;border-radius:11px;padding:9px 12px}
-.tdr-feedback-guard-start:disabled{opacity:.4}
-.tdr-feedback-guard small{color:#cbbcc4;font-size:11px;line-height:1.4}
