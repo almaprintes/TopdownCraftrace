@@ -39,6 +39,13 @@ export function captureIosRenderAuditSnapshot(scene){
   const cameras=scene?.cameras?.cameras||[];
   const main=scene?.cameras?.main;
   const ui=scene?.uiCam;
+  const activeScenes=game?.scene?.getScenes?.(true)||[];
+  const sceneSummaries=Array.isArray(activeScenes)?activeScenes.slice(0,12).map(sc=>({
+    key:String(sc?.sys?.settings?.key||sc?.scene?.key||'?').slice(0,35),
+    visibleCameras:(sc?.cameras?.cameras||[]).filter(c=>c?.visible!==false&&Number(c?.alpha??1)>0).length
+  })):[];
+  const visibleCameras=cameras.filter(c=>c?.visible!==false&&Number(c?.alpha??1)>0);
+  const uiCameraVisible=!!ui&&ui.visible!==false&&Number(ui.alpha??1)>0;
   const mainList=unique(main?.renderList);
   const uiList=unique(ui?.renderList);
   let overlap=0;
@@ -108,6 +115,10 @@ export function captureIosRenderAuditSnapshot(scene){
     glWidth:natural(gl?.drawingBufferWidth),
     glHeight:natural(gl?.drawingBufferHeight),
     cameraCount:cameras.length,
+    visibleCameraCount:visibleCameras.length,
+    uiCameraVisible,
+    activeSceneCount:sceneSummaries.length,
+    activeScenes:sceneSummaries,
     mainObjects:mainList.size,
     uiObjects:uiList.size,
     sharedObjects:overlap,
@@ -142,6 +153,8 @@ export function formatIosRenderAuditSnapshot(value){
     'AUDITORÍA RENDER (captura puntual; sin sensor GPU)',
     `CANVAS ${canvas} (${Number(s.canvasMegapixels||0).toFixed(2)} Mpx) · GL ${gl}`,
     `CÁMARAS ${s.cameraCount??'?'} · renderList MAIN ${s.mainObjects??'?'} · UI ${s.uiObjects??'?'} · COMPARTIDOS ${s.sharedObjects??'?'}`,
+    `CÁMARAS VISIBLES ${s.visibleCameraCount??'?'} · UI ${s.uiCameraVisible?'ACTIVA':'INACTIVA'} · ESCENAS ACTIVAS ${s.activeSceneCount??'?'}`,
+    ...((s.activeScenes||[]).length?['ESCENAS '+s.activeScenes.map(v=>v.key+' ('+v.visibleCameras+' cam)').join(' | ')]:[]),
     `FOTO ${s.photoTiles??0} mosaicos · MAIN ${s.photoInMain??0} · UI ${s.photoInUi??0} · RGBA8 teórico ${s.photoRgbaEstimateMiB??0} MiB (${s.photoSourceCount??0} fuentes)`,
     `FOTO IOS CATEGORIAS COMPACTA ${s.photoCompactCount??0} · ORIGINAL ${s.photoFullSizeCount??0} · INESPERADA/SIN META ${s.photoUnmatchedCount??0}`,
     ...((s.photoSizeExamples||[]).length?['MOSAICOS '+s.photoSizeExamples.join(' | ')]:[]),
@@ -151,7 +164,7 @@ export function formatIosRenderAuditSnapshot(value){
     ...((s.sharedWorldExamples||[]).length?['COMPARTIDOS EN AMBAS: '+s.sharedWorldExamples.join(' | ')]:[]),
     ...((s.uiWorldExamples||[]).length?['EJEMPLOS MUNDO EN UI: '+s.uiWorldExamples.join(' | ')]:[]),
 
-    'RENDERLIST = objetos reportados por Phaser; NO draw calls ni tiempo GPU',
+    'RENDERLIST de cámara INACTIVA no demuestra doble render; NO draw calls ni tiempo GPU',
     'NO EXCLUIDO = elegible para cámara UI, NO prueba de dibujo si no aparece en renderList',
     'RGBA8 = estimación de píxeles fotográficos, NO memoria total GPU'
   ].join('\n');
