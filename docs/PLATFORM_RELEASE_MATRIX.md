@@ -21,7 +21,7 @@
 
 ### Qué se ha verificado, sin confundir fuente, candidato y publicación
 - DEV Pages: flujo de numeración automática `scripts/stamp-dev-version.mjs`, ancla workflow run **5675 = DEV 1.4.9**; run **5677 = DEV 1.4.11** publicado y validado. El siguiente número dependerá del run real, y puede saltarse números cuando una ejecución falla. En `index.html` del repositorio permanece una versión de respaldo; **no** representa la última publicada si CI la ha estampado.
-- Android Gradle flavor `production`: candidato **1.3.64 / versionCode 11** (no equivale a publicado). Historial de publicación confirmada **1.2.335 / versionCode 10**, que debe reconfirmarse en Play Console antes de una nueva subida.
+- **Android Play pública: `versionCode 11`, confirmado expresamente por el propietario el 01/11/2026.** El flavor `production` del repositorio configura `versionCode 11` y `versionName '1.3.64'`, pero el `versionName` exacto de la versión **instalada/publicada** todavía debe contrastarse con Play Console; no se ha consultado Play Console en esta revisión. `1.2.335 / vc10` es historial anterior, **no** la versión pública vigente.
 - Android `defaultConfig` de Gradle mantiene un `versionName` distinto, **1.1.188/vc8**; NO usarlo para identificar producción sin leer el flavor `production`. `package.json` `version:1.0.4` tampoco identifica Android ni iOS.
 - iOS nativo: versión y build reales **pendientes de comprobación en el Mac**. La base original no es prueba del estado actual.
 
