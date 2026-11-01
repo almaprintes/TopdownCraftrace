@@ -1,6 +1,8 @@
 import { RaceScene as BakedRaceScene } from './RaceBakedAsphaltScene.js';
 import {TRACK_REGISTRY} from '../tracks/trackRegistry.js';
 import {isImageNativeTrackMeta} from '../tracks/imageNativeTrackContract.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
+import {skipIosDevPhotoMaterialSync} from '../performance/iosDevRedundantPassGuard.js';
 
 const ATLANTICO_TRACK_KEY = 'circuito-atlantico';
 const POLYHAVEN_BASE = 'https://dl.polyhaven.org/file/ph-assets/Textures';
@@ -38,8 +40,8 @@ export class RaceScene extends BakedRaceScene {
     }
     if(window.__tdrIosSafeMode===true||lowSurfaceMode){try{window.__tdrLowSurfaceMode=true;}catch{}return;}try{window.__tdrLowSurfaceMode=false;}catch{}if(trackKey===ATLANTICO_TRACK_KEY){const plan=surfacePlan(prefs),grassDiff=polyhaven('sparse_grass','diff','jpg',plan.diff),dirtDiff=polyhaven('rocky_trail_02','diff','jpg',plan.diff),grassNormal=polyhaven('sparse_grass','nor_gl','png',plan.normal),dirtNormal=polyhaven('rocky_trail_02','nor_gl','png',plan.normal);this.load.image('grass',prefs.lighting?[grassDiff,grassNormal]:grassDiff);this.load.image('off',prefs.lighting?[dirtDiff,dirtNormal]:dirtDiff);this.load.image('asphalt',polyhaven('asphalt_02','diff','jpg',plan.asphalt));return;}this.load.image('grass','assets/materials/grass/rocky_terrain_02_diff_2k.jpg?v=20260824-grass-rocky2k-v1');const offPath=trackKey==='offroad-raven-hollow'?'assets/materials/dirt-road/road_damaged_2_diff_2k.jpg?v=20260824-raven-dirt-v1':'assets/materials/offroad/rocky_terrain_diff_2k.jpg?v=20260824-rocky-offroad-2k-v1';this.load.image('off',offPath);this.load.image('asphalt','assets/materials/asphalt-pbr/clean_asphalt_diff_2k.jpg?v=20260824-polyhaven-clean-v1');}
   _applyAtlanticoSurfacePresentation(){if(currentTrackKey(this)!==ATLANTICO_TRACK_KEY||this._beautyLayerActive===true)return;applyAtlanticoMaterialPresentation(this.bgGrass);applyAtlanticoMaterialPresentation(this.bgOff);applyAtlanticoMaterialPresentation(this._atlanticoPbrSurface);const cells=this.track?.gfxByCell;if(cells?.values){for(const cell of cells.values())applyAtlanticoMaterialPresentation(cell?.tile);}}
-  create(data){const result=super.create?.(data);this._applyAtlanticoSurfacePresentation();if(canUseAtlanticoLitSurfaces(this)){try{this.bgGrass?.setPipeline?.('Light2D');}catch{}try{this.bgOff?.setPipeline?.('Light2D');}catch{}}this._destroyRaceLoadingUi();return result;}
-  update(time,delta){super.update?.(time,delta);this._applyAtlanticoSurfacePresentation();}
+  create(data){const result=super.create?.(data);this._tdrIphoneDevMaterialGuard=!IS_PROD_BUILD&&/iPhone|iPod/i.test(String(navigator?.userAgent||''));this._applyAtlanticoSurfacePresentation();if(canUseAtlanticoLitSurfaces(this)){try{this.bgGrass?.setPipeline?.('Light2D');}catch{}try{this.bgOff?.setPipeline?.('Light2D');}catch{}}this._destroyRaceLoadingUi();return result;}
+  update(time,delta){super.update?.(time,delta);if(skipIosDevPhotoMaterialSync({isProd:IS_PROD_BUILD,isIphone:this._tdrIphoneDevMaterialGuard===true,beautyLayerActive:this._beautyLayerActive===true}))return;this._applyAtlanticoSurfacePresentation();}
   ensureBgTexture(){if(this.textures.exists('grass'))return;super.ensureBgTexture?.();}
   ensureOffTexture(){if(this.textures.exists('off'))return;super.ensureOffTexture?.();}
   ensureAsphaltTexture(){if(this.textures.exists('asphalt'))return;super.ensureAsphaltTexture?.();}
