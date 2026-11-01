@@ -20,3 +20,6 @@ jobs:
           node --check src/game/dev/iosRaceFrameDiagnostics.js
       - name: Verify camera snapshot is read-only
         run: node scripts/ios-render-audit-snapshot-smoke.mjs
+
+      - name: Verify camera creation order (documentation guard)
+        run: node scripts/ios-camera-creation-order-smoke.mjs
