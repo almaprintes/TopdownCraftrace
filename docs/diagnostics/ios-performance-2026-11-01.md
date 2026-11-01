@@ -96,11 +96,20 @@ Ya sabemos que el iPhone terminó caliente pero se enfrió pronto. Evitar de mom
 - >33 ms: 90 (**4,70 %**); >50 ms: 15 (**0,78 %**); P95/P99 33/48 ms (aprox.); 15 ráfagas >50 ms, máximo 1 seguido; >33 ms máximo 3 seguidos.
 - Misma configuración general que prueba 4: RES 1.5 BASE 1.5, high, FPS limit 0, LOOP RAF, WEBGL DESYNC solicitado (real NO DISPONIBLE), SAFE NO, TIMER NO, HUD/FOTO ON, TEXTOS PHASER/RAF OFF/50 nodos, TILES 6, sin segundo plano; el informe vuelve a identificar erróneamente CIRCUITO ATLÁNTICO frente al Karting Américas indicado por el usuario para la investigación.
 - **Lectura prudente:** comparada con la prueba 4, AUDIO ON (55,0 FPS, 3,85 % >33 ms, 0,37 % >50 ms, P95 32, P99 44), no se observa mejora con audio suspendido. **No es un A/B controlado:** sesiones independientes, 35 vs 87 s, aplicación lleva 8m33s, situación térmica inicial/final no indicada, y falta el informe MOTOR ON inmediatamente anterior **de la misma carrera**. No atribuir las diferencias exclusivamente al sonido ni declarar causalidad.
-- **Pendiente inmediato:** pedir al piloto informe MOTOR ON de la misma carrera si lo copió, y estado térmico al terminar; evitar pruebas largas si está caliente. No tocar código ni Android.
+- **Pendiente inmediato (actualizado):** el piloto confirma que NO copió la fase MOTOR ON y que el teléfono volvió a calentarse bastante. No se le vuelve a pedir ese informe; evitar carreras repetidas hasta revisar en software. No tocar código de Android.
+
+## Aclaración de la prueba 5 — 07:55 WET
+- El usuario confirma que **solo copió el informe al final del minuto de prueba**; **no hay informe MOTOR ON** de la primera fase y no se debe pedir que lo recupere ni suponer resultados no guardados.
+- La ventana del informe `MOTOR OFF` dura **35 s**, coherente con que el interruptor de motor **reinicia las estadísticas** al cambiar de estado. El tiempo acumulado de la carrera era **1m 27s**, pero no son 87 s medidos con MOTOR OFF.
+- El usuario confirma que el **iPhone volvió a calentarse bastante** incluso durante la prueba con audio suspendido; antes había comunicado calentamiento tras la cuarta prueba y que se enfriaba rápido al dejar de jugar.
+- Conclusión acotada: **apagar el motor no evitó los tirones ni el calentamiento perceptible en esta sesión**, pero **no basta para descartar una contribución del audio** al consumo porque el calor previo, la duración y el orden no están controlados.
+- **Decisión:** detener pruebas físicas mientras el equipo esté caliente; auditar código de render/frame pacing, consumo sostenido y pausa/reanudación sin exigir más carreras. Mantener Android, física, UI y producción intactos.
+- Inspección de código confirmada: `src/game/game.js` aplica FPS limit 0 a iOS en modo high, usa RAF y `powerPreference:'high-performance'`; el módulo `iosRaceRenderBudget.js` solo aplica presupuesto compacto a tamaños mínimos de pantalla <=430. Esto ofrece hipótesis para pruebas futuras **no prueba una causa térmica**.
+- Próxima intervención propuesta, sujeta a verificación/implementación: test A/B exclusivo iPhone DEV (pacing limitado/alternativo) con restauración segura, sin tocar Android ni producción. No se ha implementado dicho test todavía.
 
 ## Último estado del usuario
 - El dispositivo se enfrió una vez, pero en la prueba C volvió a calentarse.
-- El usuario reanudó las pruebas a la mañana siguiente (2026-11-01), con la prueba 4 documentada arriba; pendiente conocer el calor final e investigar un tramo sostenido controlado.
+- El usuario reanudó las pruebas a la mañana siguiente (2026-11-01), con la prueba 4 documentada arriba; calor final confirmado en 4 y 5; ahora priorizar auditoría de código antes de más carga térmica.
 - No se ha probado todavía un límite iOS real de 60 FPS ni el modo LOOP TIMEOUT con condiciones controladas.
 - Ningún informe presentado prueba que la pausa o WebGL sea la causa definitiva.
 
