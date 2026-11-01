@@ -200,7 +200,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       if(frame>50)w.over50++;
     }
     if(now-state.lastReportAt>=1500){
-      state.lastReport=metrics(w,scene,mode(),state);
+      state.lastReport=metrics(w,scene,mode(),state)+(state.renderAudit?'\n'+state.renderAudit:'');
       // Hidden reports should not trigger DOM paint/layout while the player drives.
       if(state.expanded)pre.textContent=state.lastReport;
       state.lastReportAt=now;
