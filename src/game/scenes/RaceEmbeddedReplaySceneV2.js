@@ -50,6 +50,11 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     const replayTrackKey=String(pending?.trackId||data?.trackKey||'').trim();
     const createData=replayTrackKey?{...(data||{}),trackKey:replayTrackKey}:data;
     this._tdrEmbeddedReplay=embeddedRequested===true;
+    this._tdrIphoneDevSteeringGuard=skipIosDevPreUpdateSteeringScan({
+      isProd:IS_PROD_BUILD,
+      isIphone:/iPhone|iPod/i.test(String(navigator?.userAgent||'')),
+      embedded:this._tdrEmbeddedReplay
+    });
 
     let blockedAutoStart=false;
     const clock=this.time,originalDelayed=clock?.delayedCall?.bind(clock);
@@ -187,11 +192,7 @@ export class RaceScene extends EmbeddedReplayRaceScene{
       // The same scan runs again after super.update(), before Phaser draws.
       // The first scan is redundant on iPhone DEV normal races and can traverse
       // the entire display list when gamepad steering is selected.
-      if(!skipIosDevPreUpdateSteeringScan({
-        isProd:IS_PROD_BUILD,
-        isIphone:/iPhone|iPod/i.test(String(navigator?.userAgent||'')),
-        embedded:this._tdrEmbeddedReplay===true
-      }))this._tdrHideResidualPhaserSteering();
+      if(!this._tdrIphoneDevSteeringGuard)this._tdrHideResidualPhaserSteering();
     }
     let originalThrottle=null;
     if(this._raceStarted&&this._tdrClutchReleaseAt&&this.touch){originalThrottle=Number(this.touch.throttle)||0;const clutch=clamp01((performance.now()-this._tdrClutchReleaseAt)/350);this.touch.throttle=originalThrottle*clutch;}
