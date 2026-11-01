@@ -112,6 +112,27 @@ export function captureIosRenderAuditSnapshot(scene){
       );
     }
   }
+  // A read-only inventory of decoded dimensions across all textures loaded
+  // in Phaser. Texture Cache lifetime spans scenes: this helps spot oversized
+  // assets or retained photos. This is NOT a GPU allocation tracker.
+  const textureEntries=Object.entries(game?.textures?.list||{});
+  const textureBudgets=[];
+  for(const [name,tex] of textureEntries){
+    const sources=Array.isArray(tex?.source)?tex.source:[];
+    let bytes=0,maxWidth=0,maxHeight=0;
+    for(const source of sources){
+      const w=natural(source?.width),h=natural(source?.height);
+      if(w>0&&h>0){
+        bytes+=w*h*4;
+        if(w*h>maxWidth*maxHeight){maxWidth=w;maxHeight=h;}
+      }
+    }
+    if(bytes>0)textureBudgets.push({name:String(name),bytes,width:maxWidth,height:maxHeight});
+  }
+  textureBudgets.sort((a,b)=>b.bytes-a.bytes);
+  const cachedRgbaBytes=textureBudgets.reduce((sum,t)=>sum+t.bytes,0);
+  const topTextures=textureBudgets.slice(0,8).map(t=>
+    String(t.name).slice(0,44)+' '+t.width+'x'+t.height+' '+formatMb(t.bytes)+' MiB');
   const backingWidth=natural(canvas?.width);
   const backingHeight=natural(canvas?.height);
   const result={
@@ -120,6 +141,10 @@ export function captureIosRenderAuditSnapshot(scene){
     canvasMegapixels:backingWidth*backingHeight/1e6,
     glWidth:natural(gl?.drawingBufferWidth),
     glHeight:natural(gl?.drawingBufferHeight),
+    textureCacheEntries:textureEntries.length,
+    textureCacheWithDimensions:textureBudgets.length,
+    cachedRgbaEstimateMiB:Number(formatMb(cachedRgbaBytes)),
+    largestTextures:topTextures,
     cameraCount:cameras.length,
     visibleCameraCount:visibleCameras.length,
     uiCameraVisible,
@@ -168,6 +193,8 @@ export function formatIosRenderAuditSnapshot(value){
     ...((s.activeScenes||[]).length?['ESCENAS '+s.activeScenes.map(v=>v.key+' ('+v.visibleCameras+' cam)').join(' | ')]:[]),
     `FOTO ${s.photoTiles??0} mosaicos · MAIN ${s.photoInMain??0} · UI ${s.photoInUi??0} · RGBA8 teórico ${s.photoRgbaEstimateMiB??0} MiB (${s.photoSourceCount??0} fuentes)`,
     `FOTO IOS CATEGORIAS COMPACTA ${s.photoCompactCount??0} · ORIGINAL ${s.photoFullSizeCount??0} · INESPERADA/SIN META ${s.photoUnmatchedCount??0}`,
+    `CACHE TEXTURAS ${s.textureCacheEntries??0} keys · ${s.textureCacheWithDimensions??0} con tamaño · RGBA8 teórico ${s.cachedRgbaEstimateMiB??0} MiB`,
+    ...((s.largestTextures||[]).length?['TEXTURAS MAYORES '+s.largestTextures.join(' | ')]:[]),
     ...((s.photoSizeExamples||[]).length?['MOSAICOS '+s.photoSizeExamples.join(' | ')]:[]),
     `UI MUNDO ${s.uiWorldObjects??0} · COMPARTIDOS MUNDO ${s.sharedWorldObjects??0}`,
     `NOMBRADOS MUNDO ${s.namedWorldCount??0} · NO EXCLUIDOS DE UI ${s.namedWorldUnfiltered??0} · PRESENTES UI ${s.namedWorldActuallyInUi??0}`,
