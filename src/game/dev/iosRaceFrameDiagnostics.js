@@ -7,6 +7,7 @@ import { IOS_DEV_RESOLUTION_KEY } from '../performance/iosDevResolutionTrial.js'
 import { IOS_DEV_TIMEOUT_KEY } from '../performance/iosDevLoopDriver.js';
 import { IOS_DEV_FPS_CAP_KEY } from '../performance/iosDevFpsCapTrial.js';
 import { createFramePacingStats, recordFramePacing, percentileFramePacing } from '../performance/iosFramePacingStats.js';
+import { createIosFramePhaseStats, recordIosFramePhase, formatIosFramePhaseStats } from '../performance/iosFramePhaseStats.js';
 import { captureIosRenderAuditSnapshot, formatIosRenderAuditSnapshot } from '../performance/iosRenderAuditSnapshot.js';
 import { beginIosWebglDrawCallSample, formatIosWebglDrawCallSample } from '../performance/iosWebglDrawCallSample.js';
 import { getDevRaceTextRenderMode, setDevRaceTextRenderMode } from '../ui/htmlTextRuntime.js';
@@ -15,7 +16,7 @@ import { getDevRaceTextRenderMode, setDevRaceTextRenderMode } from '../ui/htmlTe
 // than a second requestAnimationFrame loop or a fake "FPS" approximation.
 const isIos=()=>{try{return /iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;}catch{return false;}};
 const style=(node,css)=>{node.style.cssText=css;return node;};
-const freshWindow=()=>({started:performance.now(),count:0,frameSum:0,frameMax:0,sceneSum:0,sceneMax:0,sceneSamples:0,stepSum:0,stepMax:0,stepSamples:0,renderSum:0,renderMax:0,otherSum:0,otherMax:0,otherSamples:0,over33:0,over50:0,lastSpike:0,pacing:createFramePacingStats()});
+const freshWindow=()=>({started:performance.now(),count:0,frameSum:0,frameMax:0,sceneSum:0,sceneMax:0,sceneSamples:0,stepSum:0,stepMax:0,stepSamples:0,renderSum:0,renderMax:0,otherSum:0,otherMax:0,otherSamples:0,over33:0,over50:0,lastSpike:0,pacing:createFramePacingStats(),phases:createIosFramePhaseStats()});
 const avg=(sum,count)=>count?sum/count:0;
 const ms=n=>n.toFixed(1);
 const sampled=(sum,max,count)=>count?ms(avg(sum,count))+' / '+ms(max)+' ms':'SIN MUESTRAS';
@@ -85,6 +86,7 @@ const metrics=(w,scene,mode,state,nowWall=Date.now())=>[
   'P95/P99   '+(w.pacing.samples?percentileFramePacing(w.pacing,.95)+' / '+percentileFramePacing(w.pacing,.99)+' ms (aprox.)':'SIN MUESTRAS'),
   'RÁFAGAS >50ms '+w.pacing.over50Runs+' · máx '+w.pacing.longestOver50+' seguidos · >33 máx '+w.pacing.longestOver33,
   'TILES '+(scene._trackBeautyTiles?.length||0)+' · NO mide GPU directamente',
+  ...(state.phaseEnabled?[formatIosFramePhaseStats(w.phases)]:[]),
   frameInfo(scene),
   engineStatus(scene),
   (()=>{const t=getDevRaceTextRenderMode();return 'TEXTOS '+t.mode+' · RAF '+(t.rafActive?'ON':'OFF')+' · nodos '+(t.registered??'?');})(),
@@ -125,7 +127,7 @@ export function mountRaceDevFrameDiagnostics(scene){
     const b=style(document.createElement('button'),'padding:5px 7px;min-height:30px;background:#1b3241;color:#fff;border:1px solid #648194;border-radius:6px;font:800 10px system-ui;touch-action:manipulation');
     b.type='button';b.textContent=label;b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();callback(b);});target.appendChild(b);return b;
   };
-  const state={active:false,expanded:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,stepStart:0,sceneStart:0,lastStepMs:0,lastSceneMs:0,stepMeasured:false,sceneMeasured:false,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now(),
+  const state={active:false,expanded:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,phaseEnabled:!IS_PROD_BUILD&&/iPhone/i.test(String(navigator?.userAgent||'')),frameBegin:0,stepStart:0,sceneStart:0,lastStepMs:0,lastSceneMs:0,stepMeasured:false,sceneMeasured:false,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now(),
     raceMountedAt:performance.now(),measurementStartedAt:0,previous:null,thermalIndex:0,thermalAtStart:THERMAL_TOUCH_LEVELS[0],
     hiddenCount:0,hiddenSince:0,hiddenTotalMs:0,batteryReading:null,batteryRequested:false,glSampler:null,glAudit:null};
   const mode=()=>[state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON',scene._tdrEngineSample?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON','TEXTO '+getDevRaceTextRenderMode().mode].join(' · ');
@@ -142,7 +144,7 @@ export function mountRaceDevFrameDiagnostics(scene){
     state.lastReportAt=performance.now();
     state.lastReport='';
     state.lastPost=0;
-    state.stepStart=0;state.sceneStart=0;
+    state.frameBegin=0;state.stepStart=0;state.sceneStart=0;
     state.lastStepMs=0;state.lastSceneMs=0;
     state.stepMeasured=false;state.sceneMeasured=false;
     pre.textContent='Midiendo '+mode()+'\nConduce aproximadamente 20 s y haz una captura.';
@@ -164,7 +166,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       state.batteryReading=Math.round(Number(battery.level)*100)+' % · '+(battery.charging?'CARGANDO':'SIN CARGAR');
     }).catch(()=>{state.batteryReading='NO DISPONIBLE';});
   };
-  state.preStep=()=>{if(state.active)state.stepStart=performance.now();};
+  state.preStep=()=>{if(state.active){state.stepStart=performance.now();if(state.phaseEnabled)state.frameBegin=state.stepStart;}};
   state.postStep=()=>{
     if(!state.active||!state.stepStart)return;
     state.lastStepMs=Math.max(0,performance.now()-state.stepStart);
@@ -183,7 +185,8 @@ export function mountRaceDevFrameDiagnostics(scene){
     const render=Math.max(0,now-(state.renderStart||now));
     const frame=state.lastPost>0?now-state.lastPost:0;
     const stepMeasured=state.stepMeasured,sceneMeasured=state.sceneMeasured;
-    state.lastPost=now;
+    const previousPost=state.lastPost,frameBegin=state.frameBegin;
+    state.lastPost=now;state.frameBegin=0;
     // Never reuse stale CPU samples if Phaser omitted a step this frame.
     state.stepMeasured=false;state.sceneMeasured=false;
     if(frame>0&&frame<1500){
@@ -201,6 +204,7 @@ export function mountRaceDevFrameDiagnostics(scene){
         w.otherMax=Math.max(w.otherMax,other);
       }
       recordFramePacing(w.pacing,frame);
+      if(state.phaseEnabled)recordIosFramePhase(w.phases,previousPost,frameBegin,now);
       if(frame>33.4){w.over33++;w.lastSpike=frame;}
       if(frame>50)w.over50++;
     }
