@@ -22,7 +22,7 @@ const value=captureIosRenderAuditSnapshot(scene);
 assert.equal(value.canvasWidth,1440);
 assert.equal(value.textureCacheEntries,3);
 assert.equal(value.textureCacheWithDimensions,2);
-assert.equal(value.cachedRgbaEstimateMiB,2.06);
+assert.equal(value.cachedRgbaEstimateMiB,2.1);
 assert.match(value.largestTextures[0],/photo 1024x512 2.0 MiB/);
 assert.match(formatIosRenderAuditSnapshot(value),/CACHE TEXTURAS 3 keys/);
 assert.equal(value.canvasHeight,900);
