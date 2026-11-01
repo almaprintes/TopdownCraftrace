@@ -51,3 +51,14 @@ La lectura manual `INSPECCIONAR RENDER` de este PR ahora informa:
 - `scripts/ios-camera-creation-order-smoke.mjs`: 6 llamadas prematuras y ausencia de 5 exclusiones de la rutina correctiva; test estático.
 - `scripts/ios-render-audit-snapshot-smoke.mjs`: verifica clasificación de filtros/objetos compartidos, ejemplos y no mutación de listas.
 - GitHub Actions (no deploy) `41298411260` completado correctamente.
+
+## Segunda sospecha medible: mosaicos compactos realmente utilizados en Karting Américas
+- En `scripts/install-karting-americas-source.mjs` se generan **6 mosaicos de 1431 × 1145 píxeles** desde el original PNG 2862 × 3435 del editor. Los originales se generan en `public/assets/tracks/karting-americas/` al compilar, por lo que **no aparecer en el árbol de archivos versionados no significa que falten en la build**.
+- `scripts/build-ios-race-photo-tiles.mjs` genera variantes `*-ios.webp` al 65 % de cada borde: tamaño esperado de cada mosaico **930 × 744 píxeles**. Si se cargaran las seis variantes, su presupuesto RGBA8 teórico sería **15,84 MiB**; si las seis regresaran al tamaño original sería **37,50 MiB** (diferencia **21,66 MiB**). Son cantidades de píxeles decodificados hipotéticos, **NO medición directa de VRAM**, e ignoran otros recursos del juego.
+- `src/game/tracks/imageNativeRaceLoader.js` incluye **fallback automático** a WebP original si falla la carga del `*-ios.webp`. Por ello una instalación local antigua, incompleta o que sirva otras rutas puede presentar presupuesto de texturas más alto de lo esperado. **No hay evidencia todavía de que esto esté ocurriendo**; el build actual sí genera las versiones reducidas y ejecuta pruebas de existencia.
+- `INSPECCIONAR RENDER` ahora lee las dimensiones efectivas de cada `texture.source[0]` y las compara con las dimensiones de `scene._imageNativePrepared.tiles`; informa `COMPACTA`, `ORIGINAL` o `INESPERADA/SIN META` para cada textura junto a la memoria RGBA8 estimada. No inicia solicitudes ni vuelve a decodificar imágenes.
+- En la prueba futura de la app **nativa real**, registrar esta sección: si aparecen **6 COMPACTA, 0 ORIGINAL**, la sospecha del fallback se reduce; si aparecen **6 ORIGINAL**, investigar el empaquetado/rutas del WebP compactado antes de cambiar resolución o estética. En PWA Safari distinta versión, la medición no es equivalente a la app Capacitor ya instalada.
+
+## Estado verificado
+- GitHub Actions `41298581151`: sintaxis, snapshots read-only, exclusión por cámara, orden de creación y clasificación de mosaicos compactos/originales **correctas**.
+- Estos test son **de código y casos simulados**, no equivalen a ver el comportamiento de GPU en iPhone real.
