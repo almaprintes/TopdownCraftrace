@@ -18,7 +18,7 @@ assert.match(audio,/if \(context\.state === 'suspended' && !this\._audioBlocked\
 assert.match(audio,/this\._tdrDiagnosticEngineSuspended=false;\s*document\.removeEventListener/);
 assert.match(scene,/new CarEngineSampleRuntime\(this\)/);
 assert.match(scene,/this\._tdrEngineSample\?\.destroy\?\.\(\)/);
-assert.match(ui,/control\('MOTOR ON',async b=>/);
+assert.match(ui,/control\('SILENCIAR MOTOR',async b=>/);
 assert.match(ui,/await engine\.setDevEngineAudioSuspended\(requested\)/);
 assert.match(ui,/result\?\.ok/);
 assert.match(ui,/AUDIO MOTOR/);
