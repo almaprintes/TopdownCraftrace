@@ -77,3 +77,11 @@ La sección anterior sobre `uiCam?.ignore?.()` ejecutadas antes de crear `uiCam`
 ### Siguiente prioridad técnica
 
 A) A/B de límite de FPS (PR #32), sin cambiar definición ni física; B) comprobar los mosaicos reales compactados de la instalación y número de **escenas/cámaras visibles** (este PR); C) solo si persiste, instrumentación de presentación WebGL/Metal con dispositivo conectado. No nuevas rebajas visuales a ciegas ni intervenir en Android. Todos los PR siguen en borrador sin despliegue.
+
+## Ocultación fotográfica: máscaras de copas, auditoría estática
+
+- `src/game/tracks/photoCanopyOcclusion.js` construye una máscara de geometría compartida para las zonas de copas y crea una copia visual de los tiles fotográficos que intersectan con ellas. **Reutiliza las texturas de foto ya cargadas** (`photo.texture.key`), por lo que no crea otra copia GPU independiente del WebP por cada zona, aunque sí añade primitivas/pases gráficos en las áreas tapadas.
+- Archivos reales de Environment Studio: **Karting Américas: 1 canopyZone**, **Karting Tenerife: 3 canopyZones**, **Santa Cruz: 13 canopyZones**, **Karting Canarias base: sin canopyZones**. Son definiciones autorales, no medidas de draw calls. Los polígonos pueden tener numerosos puntos; el coste depende también del campo de visión y máscaras en render.
+- Dado que el usuario informa de tirones/calor en varios circuitos, **la existencia de canopyZones no explica por sí sola un problema universal**; algunos circuitos no utilizan esta función. Es un factor adicional por cuantificar, no un culpable encontrado.
+- El botón `INSPECCIONAR RENDER` de esta PR ahora recoge número de zonas/vertices, duplicados fotográficos como objetos en la vista principal/UI y si hay sprites con máscara. No muta el render ni es un sensor GPU.
+- Verificado por test sin dispositivo en GitHub Actions run `41299478920` (éxito). Ningún cambio en assets, configuración de render, físicas, controles o Android.
