@@ -35,7 +35,7 @@ assert.match(panel,/if\(!IS_PROD_BUILD&&isIos\(\)\)/);
 assert.match(panel,/if\(!state\.active\)/,'No frame metrics before user presses MEDIR');
 assert.match(panel,/P95\/P99/);
 assert.match(panel,/RÁFAGAS >50ms/);
-assert.match(panel,/const copyButton=control\('COPIAR'/);
+assert.match(panel,/const copyButton=control\('COPIAR INFORME'/);
 assert.match(panel,/PERF /);
 assert.match(panel,/scene\.events\.off\(Phaser\.Scenes\.Events\.POST_UPDATE,state\.scenePost\)/);
 console.log('PASS: hidden, expiring support unlock; opt-in cross-platform read-only public diagnostics; DEV-only tuning tools');
