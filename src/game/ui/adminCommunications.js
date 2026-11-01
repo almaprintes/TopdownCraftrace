@@ -251,12 +251,61 @@ export function mountAdminCommunications(){
       finally{save.disabled=false;}
     });
   }
+  // Staff-only emergency circuit breaker. Reads the real server state;
+  // successful clicks must be acknowledged by the RPC, never assumed locally.
+  async function renderFeedbackGuard(host){
+    const status=make('p','tdr-feedback-guard-status','Consultando el estado real de Supabase…');
+    const stop=btn('🛑 PARADA DE EMERGENCIA · CORTAR INFORMES',async()=>{
+      if(!window.confirm('¿Desactivar YA la recepción de nuevos informes y telemetría? Las partidas y récords no se verán afectados.'))return;
+      stop.disabled=true;
+      try{
+        const result=await request('/rest/v1/rpc/tdr_set_feedback_enabled',
+          {method:'POST',body:{p_enabled:false}});
+        if(result?.enabled!==false)throw Error('El servidor no confirmó el apagado.');
+        notice('RECEPCIÓN DE INFORMES DESACTIVADA EN SUPABASE.');
+        await renderFeedbackGuard(host);
+      }catch(error){notice('NO SE HA CONFIRMADO EL CORTE: '+(error?.message||'error de red'));}
+      finally{stop.disabled=false;}
+    },'tdr-feedback-guard-stop');
+    const start=btn('ACTIVAR INFORMES',async()=>{
+      if(!window.confirm('¿Activar los informes voluntarios? Límite global de 40 al día y 2 por usuario.'))return;
+      start.disabled=true;
+      try{
+        const result=await request('/rest/v1/rpc/tdr_set_feedback_enabled',
+          {method:'POST',body:{p_enabled:true}});
+        if(result?.enabled!==true)throw Error('El servidor no confirmó la activación.');
+        notice('Informes activados con límites de seguridad.');
+        await renderFeedbackGuard(host);
+      }catch(error){notice(error?.message||'No se pudieron activar los informes.');}
+      finally{start.disabled=false;}
+    },'tdr-feedback-guard-start');
+    const title=make('h3','','🛑 BOTÓN ROJO · CONSUMO SUPABASE');
+    const detail=make('small','','Solo controla informes de errores y datos técnicos. No interrumpe perfiles, partidas, récords ni anuncios.');
+    host.replaceChildren(title,status,stop,start,detail);
+    stop.disabled=true;start.disabled=true;
+    try{
+      const state=await request('/rest/v1/rpc/tdr_feedback_admin_status',
+        {method:'POST',body:{}});
+      if(closed||!host.isConnected)return;
+      const active=state?.enabled===true;
+      status.textContent=(active?'RECEPCIÓN ACTIVADA':'RECEPCIÓN DETENIDA')+
+        ' · Informes hoy: '+Number(state?.received_today||0)+'/'+Number(state?.daily_limit||40);
+      stop.disabled=!active;
+      start.disabled=active;
+      host.dataset.active=active?'true':'false';
+    }catch(error){
+      status.textContent='No se pudo verificar el estado del servidor. Revisa Supabase Dashboard antes de actuar.';
+      notice(error?.message||'Error de control remoto');
+    }
+  }
   function renderList(){
     work.replaceChildren();
     const controls=make('div','tdr-comms-admin-actions');
     controls.append(btn('CREAR AVISO',()=>editorView()),btn('ACTUALIZAR LISTADO',()=>void refresh().catch(err=>notice(err.message))),
       btn('CERRAR SESIÓN',()=>{token=null;staffUserId=null;loginView();notice('Sesión cerrada');}));
-    work.append(controls);
+    const guard=make('section','tdr-feedback-guard');
+    work.append(guard,controls);
+    void renderFeedbackGuard(guard);
     const summary=make('p','',rows.length+' comunicaciones registradas. Una actualización se publica solo cuando Google Play ya ofrece ese versionCode.');
     work.append(summary);
     for(const row of rows){
