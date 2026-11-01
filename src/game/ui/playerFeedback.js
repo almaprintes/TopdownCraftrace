@@ -8,7 +8,7 @@ const make=(tag,cls,label)=>{
   if(label!==undefined)el.textContent=label;
   return el;
 };
-export function mountPlayerFeedback({category='performance'}={}){
+export function mountPlayerFeedback({category:preferredCategory='performance'}={}){
   if(typeof document==='undefined')return ()=>{};
   document.querySelector('[data-tdr-feedback-modal]')?.remove();
   const root=make('div','tdr-feedback-modal');
@@ -27,7 +27,7 @@ export function mountPlayerFeedback({category='performance'}={}){
   for(const [value,label] of options){
     const option=make('option','',label);option.value=value;category.append(option);
   }
-  category.value=['performance','controls','track','online','other'].includes(category)?category:'performance';
+  category.value=['performance','controls','track','online','other'].includes(preferredCategory)?preferredCategory:'performance';
   const message=make('textarea');message.placeholder='¿Qué ocurrió? (mínimo 8 caracteres)';
   message.maxLength=1000;message.rows=4;
   const consent=make('label','tdr-feedback-consent');
