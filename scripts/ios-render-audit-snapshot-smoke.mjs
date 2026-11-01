@@ -6,8 +6,13 @@ const carRig={cameraFilter:2,visible:true};
 const tile={texture:{key:'native:karting-americas:0:0',source:[{width:1024,height:512}]}};
 const canopySprite={type:'Image',mask:{},texture:tile.texture};
 const uiCam={id:2,renderList:[shared,hud]},main={renderList:[road,tile,shared,canopySprite]};
+const textures={
+  photo:{source:[{width:1024,height:512}]},
+  ui:{source:[{width:128,height:128}]},
+  empty:{source:[]}
+};
 const scene={
-  game:{canvas:{width:1440,height:900},renderer:{gl:{drawingBufferWidth:1440,drawingBufferHeight:900}},scene:{getScenes:()=>[{sys:{settings:{key:'race'}},cameras:{cameras:[{visible:true},{visible:false}]}}]}},
+  game:{canvas:{width:1440,height:900},textures:{list:textures},renderer:{gl:{drawingBufferWidth:1440,drawingBufferHeight:900}},scene:{getScenes:()=>[{sys:{settings:{key:'race'}},cameras:{cameras:[{visible:true},{visible:false}]}}]}},
   cameras:{main,cameras:[main,uiCam]},uiCam,
   _tdrCanopyOcclusion:{zones:[{points:[{x:1,y:2},{x:3,y:4},{x:5,y:6}]}],overlay:[canopySprite]},
   _trackBeautyTiles:[tile],_imageNativePrepared:{trackKey:'karting-americas',tiles:[{x:0,y:0,width:1024,height:512}]},cpGfx:shared,_curbOuter:road,carRig
@@ -15,6 +20,11 @@ const scene={
 const before={main:[...main.renderList],ui:[...uiCam.renderList]};
 const value=captureIosRenderAuditSnapshot(scene);
 assert.equal(value.canvasWidth,1440);
+assert.equal(value.textureCacheEntries,3);
+assert.equal(value.textureCacheWithDimensions,2);
+assert.equal(value.cachedRgbaEstimateMiB,2.06);
+assert.match(value.largestTextures[0],/photo 1024x512 2.0 MiB/);
+assert.match(formatIosRenderAuditSnapshot(value),/CACHE TEXTURAS 3 keys/);
 assert.equal(value.canvasHeight,900);
 assert.equal(value.cameraCount,2);
 assert.equal(value.visibleCameraCount,2);
