@@ -66,6 +66,12 @@ export function captureIosRenderAuditSnapshot(scene){
   }));
   const unfilteredNamed=namedWorld.filter(v=>!v.uiIgnored&&v.visible);
   const photos=Array.isArray(scene?._trackBeautyTiles)?scene._trackBeautyTiles:[];
+  const canopy=scene?._tdrCanopyOcclusion;
+  const canopyZones=Array.isArray(canopy?.zones)?canopy.zones:[];
+  const canopyOverlay=Array.isArray(canopy?.overlay)?canopy.overlay:[];
+  const canopyPoints=canopyZones.reduce((sum,z)=>sum+(Array.isArray(z?.points)?z.points.length:0),0);
+  const maskedCanopyInMain=canopyOverlay.filter(obj=>mainList.has(obj)).length;
+  const maskedCanopyInUi=canopyOverlay.filter(obj=>uiList.has(obj)).length;
   let estimatedRgbaBytes=0;
   let photoInMain=0;
   let photoInUi=0;
@@ -130,6 +136,11 @@ export function captureIosRenderAuditSnapshot(scene){
     namedWorldUnfiltered:unfilteredNamed.length,
     namedWorldUnfilteredExamples:unfilteredNamed.slice(0,14).map(v=>v.label+(v.inUi?' [EN UI]': ' [NO RENDER UI]')),
     namedWorldActuallyInUi:namedWorld.filter(v=>v.inUi).length,
+    canopyZoneCount:canopyZones.length,
+    canopyOverlayCount:canopyOverlay.length,
+    canopyPoints,
+    maskedCanopyInMain,
+    maskedCanopyInUi,
     photoTiles:photos.length,
     photoInMain,
     photoInUi,
@@ -167,6 +178,8 @@ export function formatIosRenderAuditSnapshot(value){
     'RENDERLIST de cámara INACTIVA no demuestra doble render; NO draw calls ni tiempo GPU',
     'NO EXCLUIDO = elegible para cámara UI, NO prueba de dibujo si no aparece en renderList',
     ...(!s.uiCameraVisible?['DESCARTADO DOBLE RENDER UI: cámara invisible (no renderiza)']:[]),
+    `COPAS MÁSCARA ${s.canopyZoneCount??0} zonas · ${s.canopyPoints??0} puntos · ${s.canopyOverlayCount??0} imágenes · MAIN ${s.maskedCanopyInMain??0} · UI ${s.maskedCanopyInUi??0}`,
+    'COPAS reutilizan textura fotográfica; máscara = posibles pases de render, sin tiempos GPU medidos',
     'RGBA8 = estimación de píxeles fotográficos, NO memoria total GPU'
   ].join('\n');
 }
