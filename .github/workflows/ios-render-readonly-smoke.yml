@@ -27,3 +27,25 @@ jobs:
 
       - name: Run short WebGL sampler restoration test
         run: node scripts/ios-webgl-draw-sampler-smoke.mjs
+
+  dev_build:
+    name: Preflight DEV PWA bundle (no deploy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies and generate official source assets
+        run: |
+          npm ci --no-audit --no-fund
+          npm run predev
+      - name: Compile complete iPhone DEV PWA
+        run: |
+          npx vite build --base=/TopdownCraftrace/dev/
+          test -f dist/index.html
+          grep -RFl 'GL: 90 FOTOGRAMAS' dist/assets >/dev/null
+          grep -RFl 'INSPECCIONAR RENDER' dist/assets >/dev/null
+          echo 'Preflight PWA compiled. No deploy was performed.'
