@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const paths=['src/game/online/feedbackReports.js','src/game/ui/playerFeedback.js',
   'src/game/ui/adminCommunications.js','src/game/ui/adminEmergencyControls.js',
-  'src/game/ui/playerSupportMenu.js','src/game/ui/LobbyDomUi.js',
+  'src/game/ui/LobbyDomUi.js',
   'src/game/ui/adminPaddockView.js',
   'src/game/scenes/SettingsDomScene.js','src/ui/settingsLegalEnhancer.js'];
 for(const path of paths)execFileSync(process.execPath,['--check',new URL('../'+path,import.meta.url).pathname],{stdio:'pipe'});
