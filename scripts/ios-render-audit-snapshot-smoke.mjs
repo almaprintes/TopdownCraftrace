@@ -4,10 +4,12 @@ import { captureIosRenderAuditSnapshot, formatIosRenderAuditSnapshot } from '../
 const shared={id:'checkpoint',type:'Graphics',scrollFactorX:1,scrollFactorY:1,cameraFilter:0,depth:18},road={id:'curb',type:'Graphics',scrollFactorX:1,scrollFactorY:1,cameraFilter:0,depth:12},hud={id:'speed',scrollFactorX:0,scrollFactorY:0};
 const carRig={cameraFilter:2,visible:true};
 const tile={texture:{key:'native:karting-americas:0:0',source:[{width:1024,height:512}]}};
-const uiCam={id:2,renderList:[shared,hud]},main={renderList:[road,tile,shared]};
+const canopySprite={type:'Image',mask:{},texture:tile.texture};
+const uiCam={id:2,renderList:[shared,hud]},main={renderList:[road,tile,shared,canopySprite]};
 const scene={
   game:{canvas:{width:1440,height:900},renderer:{gl:{drawingBufferWidth:1440,drawingBufferHeight:900}},scene:{getScenes:()=>[{sys:{settings:{key:'race'}},cameras:{cameras:[{visible:true},{visible:false}]}}]}},
   cameras:{main,cameras:[main,uiCam]},uiCam,
+  _tdrCanopyOcclusion:{zones:[{points:[{x:1,y:2},{x:3,y:4},{x:5,y:6}]}],overlay:[canopySprite]},
   _trackBeautyTiles:[tile],_imageNativePrepared:{trackKey:'karting-americas',tiles:[{x:0,y:0,width:1024,height:512}]},cpGfx:shared,_curbOuter:road,carRig
 };
 const before={main:[...main.renderList],ui:[...uiCam.renderList]};
@@ -19,7 +21,12 @@ assert.equal(value.visibleCameraCount,2);
 assert.equal(value.uiCameraVisible,true);
 assert.equal(value.activeSceneCount,1);
 assert.equal(value.activeScenes[0].visibleCameras,1);
-assert.equal(value.mainObjects,3);
+assert.equal(value.mainObjects,4);
+assert.equal(value.canopyZoneCount,1);
+assert.equal(value.canopyPoints,3);
+assert.equal(value.canopyOverlayCount,1);
+assert.equal(value.maskedCanopyInMain,1);
+assert.equal(value.maskedCanopyInUi,0);
 assert.equal(value.uiObjects,2);
 assert.equal(value.sharedObjects,1);
 assert.equal(value.uiWorldObjects,1);
@@ -31,6 +38,7 @@ assert.match(value.namedWorldUnfilteredExamples[0],/curbOuter/);
 assert.match(value.namedWorldUnfilteredExamples[1],/cpGfx/);
 assert.equal(value.namedWorldUnfilteredExamples.some(x=>x.includes('carRig')),false);
 assert.match(formatIosRenderAuditSnapshot(value),/NO EXCLUIDOS DE UI 2/);
+assert.match(formatIosRenderAuditSnapshot(value),/COPAS MÁSCARA 1 zonas/);
 assert.equal(value.photoTiles,1);
 assert.equal(value.photoInMain,1);
 assert.equal(value.photoInUi,0);
