@@ -7,6 +7,7 @@ import { IOS_DEV_RESOLUTION_KEY } from '../performance/iosDevResolutionTrial.js'
 import { IOS_DEV_TIMEOUT_KEY } from '../performance/iosDevLoopDriver.js';
 import { createFramePacingStats, recordFramePacing, percentileFramePacing } from '../performance/iosFramePacingStats.js';
 import { captureIosRenderAuditSnapshot, formatIosRenderAuditSnapshot } from '../performance/iosRenderAuditSnapshot.js';
+import { beginIosWebglDrawCallSample, formatIosWebglDrawCallSample } from '../performance/iosWebglDrawCallSample.js';
 import { getDevRaceTextRenderMode, setDevRaceTextRenderMode } from '../ui/htmlTextRuntime.js';
 
 // On-device DEV diagnostic, OFF until opened. Real Phaser game events rather
@@ -125,9 +126,12 @@ export function mountRaceDevFrameDiagnostics(scene){
   };
   const state={active:false,expanded:false,disposed:false,hudOff:false,photoOff:false,audioBusy:false,stepStart:0,sceneStart:0,lastStepMs:0,lastSceneMs:0,stepMeasured:false,sceneMeasured:false,renderStart:0,lastPost:0,window:freshWindow(),lastReport:'',lastReportAt:performance.now(),
     raceMountedAt:performance.now(),measurementStartedAt:0,previous:null,thermalIndex:0,thermalAtStart:THERMAL_TOUCH_LEVELS[0],
-    hiddenCount:0,hiddenSince:0,hiddenTotalMs:0,batteryReading:null,batteryRequested:false};
+    hiddenCount:0,hiddenSince:0,hiddenTotalMs:0,batteryReading:null,batteryRequested:false,glSampler:null,glAudit:null};
   const mode=()=>[state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON',scene._tdrEngineSample?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON','TEXTO '+getDevRaceTextRenderMode().mode].join(' · ');
   const reset=()=>{
+    // Stop any active GL method interception before clearing measurements.
+    if(state.glSampler){state.glSampler.cancel();state.glSampler=null;}
+    state.glAudit=null;
     state.window=freshWindow();
     state.renderAudit=null;
     state.measurementStartedAt=Date.now();
@@ -200,7 +204,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       if(frame>50)w.over50++;
     }
     if(now-state.lastReportAt>=1500){
-      state.lastReport=metrics(w,scene,mode(),state)+(state.renderAudit?'\n'+state.renderAudit:'');
+      state.lastReport=metrics(w,scene,mode(),state)+(state.renderAudit?'\n'+state.renderAudit:'')+(state.glAudit?'\n'+state.glAudit:'');
       // Hidden reports should not trigger DOM paint/layout while the player drives.
       if(state.expanded)pre.textContent=state.lastReport;
       state.lastReportAt=now;
@@ -318,6 +322,42 @@ export function mountRaceDevFrameDiagnostics(scene){
       }
     });
   }
+  const glButton=control('GL: 90 FOTOGRAMAS',b=>{
+    if(state.glSampler){
+      state.glSampler.cancel();
+      state.glSampler=null;
+      return;
+    }
+    // This is not an energy / FPS comparison: wrapping draw* has overhead.
+    state.glAudit=null;
+    b.textContent='CONTANDO GL…';
+    b.disabled=false;
+    const sampler=beginIosWebglDrawCallSample({
+      game:scene.game,
+      maxFrames:90,
+      timeoutMs:8000,
+      onComplete:result=>{
+        if(state.disposed)return;
+        state.glSampler=null;
+        state.glAudit=formatIosWebglDrawCallSample(result);
+        b.textContent='GL: 90 FOTOGRAMAS';
+        state.lastReport=metrics(state.window,scene,mode(),state)+
+          (state.renderAudit?'\n'+state.renderAudit:'')+'\n'+state.glAudit;
+        state.expanded=true;
+        panel.style.display='block';
+        trigger.textContent='MINIMIZAR';
+        pre.textContent=state.lastReport;
+      }
+    });
+    if(sampler.ok){
+      state.glSampler=sampler;
+      b.textContent='DETENER GL';
+      pre.textContent='Contador GL activo: sólo diagnóstico.\nNo compares FPS ni consumo durante esta muestra.';
+    }else{
+      b.textContent='GL NO DISPONIBLE';
+      pre.textContent=sampler.reason||'No se puede capturar WebGL en este dispositivo.';
+    }
+  });
   const thermalButton=control('CALOR: '+THERMAL_TOUCH_LEVELS[state.thermalIndex],b=>{
     state.thermalIndex=(state.thermalIndex+1)%THERMAL_TOUCH_LEVELS.length;
     b.textContent='CALOR: '+THERMAL_TOUCH_LEVELS[state.thermalIndex];
@@ -329,7 +369,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   control('REINICIAR',()=>reset());
   const copyButton=control('COPIAR',async b=>{
     const finishedAt=Date.now(),w=state.window;
-    const output=state.active?metrics(w,scene,mode(),state,finishedAt)+(state.renderAudit?'\n'+state.renderAudit:''):pre.textContent;
+    const output=state.active?metrics(w,scene,mode(),state,finishedAt)+(state.renderAudit?'\n'+state.renderAudit:'')+(state.glAudit?'\n'+state.glAudit:''):pre.textContent;
     if(state.active&&w.count>0&&w.frameSum>0){
       savePreviousRaceMeasurement(localStorage,{
         finishedAt,fps:1000/avg(w.frameSum,w.count),
@@ -376,6 +416,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   events.on(Phaser.Core.Events.POST_RENDER,state.post);
   const cleanup=()=>{
     if(state.disposed)return;state.disposed=true;state.active=false;state.expanded=false;
+    if(state.glSampler){state.glSampler.cancel();state.glSampler=null;}
     document.removeEventListener('visibilitychange',onVisibilityChange);
     events.off(Phaser.Core.Events.PRE_STEP,state.preStep);
     events.off(Phaser.Core.Events.POST_STEP,state.postStep);
