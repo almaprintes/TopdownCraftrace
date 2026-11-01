@@ -1,0 +1,24 @@
+name: iOS FPS A/B diagnostic smoke (no deploy)
+on:
+  push:
+    branches:
+      - diagnostics/ios-fps-cap-ab-2026-11-01
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax-check only the iOS trial modules
+        run: |
+          node --version
+          node --check src/game/performance/iosDevFpsCapTrial.js
+          node --check src/game/dev/iosRaceFrameDiagnostics.js
+          node --check src/game/game.js
+      - name: Isolated iOS/Android/production regression checks
+        run: node scripts/ios-dev-fps-cap-smoke.mjs
