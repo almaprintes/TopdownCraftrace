@@ -123,3 +123,15 @@ Ya sabemos que el iPhone terminó caliente pero se enfrió pronto. Evitar de mom
 
 ---
 *Este documento conserva el estado de investigación sin adelantar conclusiones ni modificar el juego. No contiene datos privados del jugador.*
+
+## 2026-11-01 — Rectificación verificada y prioridades (auditoría de la cadena de escenas)
+
+**Rectificación importante:** antes se planteó que `uiCam` podía estar haciendo un segundo pase de renderizado del circuito porque varias llamadas `uiCam?.ignore?.()` aparecen antes de su creación. Ese orden de código es real, **pero la cámara no está activa en la carrera que estamos analizando**: `src/game/scenes/RaceFixedScene.js` ejecuta `this.uiCam.setVisible(false)` después de `RaceScene.create()`. La versión oficial de Phaser 3.90 confirma que una cámara invisible no renderiza. Así, **no atribuir consumo al duplicado de la cámara HUD**, ni aplicar cambios a ciegas en sus `cameraFilter`. El archivo `RaceFixedScene.js` es exactamente el mismo en el punto inicial iOS local `9181e72c` y `main` actual (blob Git `4ce483cc14814b44084873e7753c5ebc06924d8f`). Referencia: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera.
+
+**Compatibilidad con copia local inicial iOS:** `iosPhotoTileBudget.js`, `RaceEmbeddedReplaySceneV2.js` y `scripts/build-ios-race-photo-tiles.mjs` también son idénticos entre `9181e72c` y `main`. La copia inicial **ya incluía** los mosaicos iPhone al 65 %, la lectura de WebP compactos y el apagado de la cámara HUD. Esto no garantiza que la app instalada sea exactamente el mismo binario ni que los assets compactos estén efectivamente presentes en los paquetes entregados a Xcode.
+
+**Máscaras fotográficas:** `photoCanopyOcclusion.js` reutiliza las texturas ya cargadas y añade overlay con `GeometryMask`. Karting Américas tiene 1 canopyZone, Karting Tenerife 3 y Santa Cruz 13, mientras que Karting Canarias base no define ninguna. Como la queja abarca varios circuitos, las máscaras de copa tampoco explican por sí solas el fenómeno universal; sin datos GPU no excluir posible coste adicional en circuitos concretos.
+
+**Estado de la instrumentación:** PR #33 (rama `diagnostics/ios-render-readonly-2026-11-01`) actualizado para registrar **cámaras visibles, escenas activas, dimensiones framebuffer, mosaicos COMPACTA/ORIGINAL, capas de máscaras** y objetos listados por cámaras. Incluye aviso explícito de `uiCam` invisible; pruebas de solo lectura y de orden de cámara en GitHub Actions correctas (run `41299478920`). **No está fusionado, desplegado ni instalado en el iPhone.**
+
+**Hipótesis que siguen abiertas:** (1) carga sostenida del único render WebGL/WKWebView, (2) límite real de FPS ausente en preset alto (test reversible PR #32, sin asumir que mejore si ya va a ~55 fps), (3) fallback accidental a texturas originales en la instalación, (4) otras escenas activas, presentación/composición/sincronización del renderizador. Power Profiler confirmó gasto global alto y `Nominal -> Fair` en TDR, pero no hay desglose por GPU/CPU. No tocar calidad, físicas, Android ni publicación sin evidencia.
