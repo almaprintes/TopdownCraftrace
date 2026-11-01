@@ -1,5 +1,7 @@
 import { RaceScene as EmbeddedReplayRaceScene } from './RaceEmbeddedReplayScene.js';
 import { CarEngineSampleRuntime, IGNITION_TO_LIGHTS_MS } from '../audio/CarEngineSampleRuntime.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
+import { skipIosDevPreUpdateSteeringScan } from '../performance/iosDevRedundantPassGuard.js';
 
 const clamp01=n=>Math.max(0,Math.min(1,Number(n)||0));
 const STATS_REPLAY_KEY='tdr2:statsNativeReplay';
@@ -182,7 +184,14 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     // Ignition/audio setup remains untouched; this isolates the frame-loop additions.
     if(!androidNormal){
       this._tdrSyncGamepadUi();
-      this._tdrHideResidualPhaserSteering();
+      // The same scan runs again after super.update(), before Phaser draws.
+      // The first scan is redundant on iPhone DEV normal races and can traverse
+      // the entire display list when gamepad steering is selected.
+      if(!skipIosDevPreUpdateSteeringScan({
+        isProd:IS_PROD_BUILD,
+        isIphone:/iPhone|iPod/i.test(String(navigator?.userAgent||'')),
+        embedded:this._tdrEmbeddedReplay===true
+      }))this._tdrHideResidualPhaserSteering();
     }
     let originalThrottle=null;
     if(this._raceStarted&&this._tdrClutchReleaseAt&&this.touch){originalThrottle=Number(this.touch.throttle)||0;const clutch=clamp01((performance.now()-this._tdrClutchReleaseAt)/350);this.touch.throttle=originalThrottle*clutch;}
