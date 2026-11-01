@@ -13,7 +13,7 @@ assert.throws(()=>versionFromRunNumber(7.25));
 
 const stamped=stampDevHtml(source,versionFromRunNumber(5676));
 assert.match(stamped,/<meta name="tdr-dev-version" content="DEV 1\.4\.10"\s*\/>/);
-assert.equal((stamped.match(/name="tdr-dev-version"/g)||[]).length,1);
+assert.equal((stamped.match(/<meta name="tdr-dev-version"/g)||[]).length,1);
 assert.equal(stampDevHtml(stamped,'DEV 1.4.11').includes('DEV 1.4.11'),true,
   'Can re-stamp same checked-out HTML without duplicates');
 assert.throws(()=>stampDevHtml(source+'<meta name="tdr-dev-version" content="DEV 1.4.10" />','DEV 1.4.12'));
