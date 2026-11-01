@@ -1,0 +1,98 @@
+# TDR iOS — Auditoría estática del pipeline gráfico y captura de cámaras
+**Fecha:** 2026-11-01. Estado: rama aislada `diagnostics/ios-render-readonly-2026-11-01`, **sin publicar ni fusionar**. No se cambian física, control, juego visual, Android ni producción.
+
+## Evidencia establecida
+- Apple Power Profiler + Instruments: TDR **44,08%/h** tasa de consumo energética global media durante ~97s frente a **7,97%/h** durante una grabación de Ultimate Racing ~376s (comparación no estrictamente controlada). TDR cambió de estado térmico `Nominal` a `Fair` a ~55s; Ultimate permaneció `Nominal`. Causa CPU vs GPU **no identificada**.
+- `src/game/game.js`: iPhone 16 Pro Max en preset alto tiene resolución framebuffer **1.5** y un `fps.limit = 0`. El límite 0 no demuestra que esté dibujando a 120 FPS; `requestAnimationFrame` y presentación dependen del navegador. Un A/B de cap 60 se ha preparado **por separado en PR #32** (no fusionada).
+- `src/game/performance/iosPhotoTileBudget.js` y `src/game/tracks/imageNativeRaceLoader.js`: el plan de circuitos fotográficos usa WebP cortados; en iPhone usa las variantes compactas al **65%** y escala de coordenadas en mundo. Tras la carga, `scene.uiCam.ignore(sprite)` evita que la cámara del HUD dibuje las fotografías, y `_destroyLegacyGroundRender` elimina fondos antiguos. Es una **defensa presente en código**, no evidencia de rendimiento medido.
+- `src/game/scenes/RaceScene.js` establece cámara UI adicional; en general, otros GameObjects podrían aparecer en ambas cámaras y necesitar `ignore`. El listado nativo de Phaser `Camera.renderList` informa de los objetos renderizados por cada cámara, sin indicar draw calls de GPU.
+- `src/game/scenes/RaceEmbeddedReplaySceneV2.js` invoca `_tdrSyncGamepadUi()` en cada frame iOS, y `_tdrHideResidualPhaserSteering()` hasta **dos veces por frame**, pero esta última devuelve inmediatamente si no está seleccionado mando. La primera lee la configuración de controles localStorage; el segundo ciclo de recorrido de objetos solo ocurre con modo mando activo. En Android carrera normal existe bypass. **No atribuirle el gasto energético sin medir**.
+- `src/game/scenes/RaceRealSurfaceAssetsScene.js` aplica una comprobación de materiales de Atlántico por frame; para circuitos distintos vuelve sin reconfigurar visuales, y en Atlántico fotográfico la bandera `_beautyLayerActive` hace retorno temprano.
+
+## Instrumentación preparada, bajo demanda
+- `src/game/performance/iosRenderAuditSnapshot.js` obtiene:
+  1. Dimensiones del canvas de Phaser y drawing buffer WebGL (si disponible).
+  2. Cantidad de entradas **únicas** en `Camera.renderList` de principal y UI, junto a la intersección de objetos.
+  3. Número de mosaicos de fotografía registrados, y en cuál cámara figuran.
+  4. Estimación de memoria de mosaicos RGBA8 (número de píxeles * 4), no memoria GPU real.
+- `src/game/dev/iosRaceFrameDiagnostics.js` añade botón **INSPECCIONAR RENDER** al panel DEV ya existente, solo en iOS, sin alterar el flujo de fotogramas. No utiliza `gl.finish`, `readPixels`, `getParameter`, ni re-render. Se obtiene una muestra solo al pulsar y se incluye en **COPIAR**; no añade un segundo RAF ni un contador siempre activo.
+- `scripts/ios-render-audit-snapshot-smoke.mjs` comprueba cámara principal, UI, objetos compartidos, conteo de mosaicos, estimación RGBA y que los listados son inmutables.
+
+## Interpretación y pasos de prueba
+1. Cuando haya forma de instalar una build DEV actual de la misma rama (iPhone iOS Capacitor), abrir diagnóstico carrera (Ajustes > Vídeo, 7 pulsaciones sobre Calidad Gráfica en 5s); MEDIR y, durante la carrera, INSPECCIONAR RENDER > COPIAR. Registrar circuito verdadero, coche, ajustes, resolución, FPS, contador MAIN, contador UI, compartidos y FOTO en UI.
+2. **Si FOTO UI > 0**, hay objetos fotográficos que aparecen en la cámara del HUD y se debe revisar `ignore()` en el momento de montar foto. Si compartidos > 0, inspeccionar qué objetos son: algunos pueden ser UI deliberada; no significa automáticamente duplicación innecesaria.
+3. Si cifras de ambas cámaras no muestran exceso, priorizar A/B FPS 60 en PR #32, y usar una traza Metal/Instruments **específica del proceso** desde un iPhone conectado para distinguir coste GPU vs WebKit/presentación. `Power Profiler` de la sesión actual no exportó desglose por subsistema del proceso.
+4. No seguir haciendo tandas largas si el iPhone vuelve a calentarse mucho; abortar con signos de sobretemperatura.
+
+**Límite:** test estático / instrumentación preparada, **sin ejecución en iPhone**. La instalación nativa del usuario puede basarse en un snapshot local anterior a GitHub, y un commit en GitHub no actualiza por sí solo la aplicación firmada del iPhone.
+
+Referencia documentación Phaser 3.90: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera (propiedad renderList; no modificarla).
+
+## Hallazgo de mayor prioridad: orden de creación de la cámara HUD
+
+Comprobación estática contra `src/game/scenes/RaceScene.js` de `main`, confirmada por `node scripts/ios-camera-creation-order-smoke.mjs`:
+
+- `uiCam` se crea en la zona de la línea **2886** (después de crear varios objetos gráficos del mundo); se resetea a `null` en el cierre de la escena.
+- Las seis invocaciones `this.uiCam?.ignore?.(...)` para `_shoulderLeft`, `_shoulderRight`, `_curbOuter`, `_curbInner`, `finishGfx` y `cpGfx` figuran **ANTES de la creación** de `uiCam`. Con `uiCam` ausente, el operador `?.` las convierte en operaciones nulas.
+- Después hay dos mecanismos correctivos: se ignoran `bgOff`, `bgGrass`, `_grassMaskGfx` y, en `_applyCameraIgnores`, `bgWorld`, `carRig` y `finishGfx`. Esto **sí recupera finishGfx**, pero **no recupera explícitamente** las exclusiones de `_shoulderLeft`, `_shoulderRight`, `_curbOuter`, `_curbInner` ni `cpGfx`.
+- `finishLineDebug` y `gridDebug` también intentan `uiCam?.ignore?.()` antes de la creación, sin inclusión en `_applyCameraIgnores`. En las carreras foto, los mosaicos **sí** se crean después de `uiCam` y se ignoran correctamente allí.
+- **Consecuencia verificable del código:** varias entidades gráficas del mundo pueden quedar elegibles para renderizado por `uiCam` debido al filtro de cámara sin configurar. Que la cámara UI finalmente renderice alguna en un frame, el número real de draw calls y su coste GPU/energético **todavía no están medidos**. La cámara UI trabaja con scroll 0, zoom 1; objetos fuera de ese viewport podrían no contribuir aunque no estén excluidos.
+- Fuente Phaser 3.90: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera (`Camera.ignore` modifica el `cameraFilter`; `Camera.renderList` refleja lo que se ha renderizado por esa cámara). **No realizar corrección visual directa antes de observar el renderList.**
+
+### Instrumentación mejorada para aislar la hipótesis
+La lectura manual `INSPECCIONAR RENDER` de este PR ahora informa:
+- `UI MUNDO`: objetos con desplazamiento de cámara que figuran en la lista de render de la cámara UI;
+- `COMPARTIDOS MUNDO`: objetos de mundo presentes en las dos listas, con hasta 12 ejemplos `tipo/textura/profundidad`;
+- `NOMBRADOS MUNDO` y `NO EXCLUIDOS DE UI`: recuento de objetos concretos (`cpGfx`, `_curbOuter`, `_shoulderLeft`, `gridDebug`, `gridCars[].rig`, etc.) cuyo `cameraFilter` no excluye la segunda cámara, incluso si están fuera de pantalla. Incluye hasta 14 ejemplos de objetos.
+- `PRESENTES UI`: los objetos concretos anteriores reportados por `renderList` de UI.
+- No cambia `cameraFilter`, listas, shaders, cámaras, física, textura ni controles, y sigue siendo una foto puntual al tocar el botón. Los nombres de objetos no deben confundirse con *tiempo GPU*.
+
+### Validación
+- `scripts/ios-camera-creation-order-smoke.mjs`: 6 llamadas prematuras y ausencia de 5 exclusiones de la rutina correctiva; test estático.
+- `scripts/ios-render-audit-snapshot-smoke.mjs`: verifica clasificación de filtros/objetos compartidos, ejemplos y no mutación de listas.
+- GitHub Actions (no deploy) `41298411260` completado correctamente.
+
+## Segunda sospecha medible: mosaicos compactos realmente utilizados en Karting Américas
+- En `scripts/install-karting-americas-source.mjs` se generan **6 mosaicos de 1431 × 1145 píxeles** desde el original PNG 2862 × 3435 del editor. Los originales se generan en `public/assets/tracks/karting-americas/` al compilar, por lo que **no aparecer en el árbol de archivos versionados no significa que falten en la build**.
+- `scripts/build-ios-race-photo-tiles.mjs` genera variantes `*-ios.webp` al 65 % de cada borde: tamaño esperado de cada mosaico **930 × 744 píxeles**. Si se cargaran las seis variantes, su presupuesto RGBA8 teórico sería **15,84 MiB**; si las seis regresaran al tamaño original sería **37,50 MiB** (diferencia **21,66 MiB**). Son cantidades de píxeles decodificados hipotéticos, **NO medición directa de VRAM**, e ignoran otros recursos del juego.
+- `src/game/tracks/imageNativeRaceLoader.js` incluye **fallback automático** a WebP original si falla la carga del `*-ios.webp`. Por ello una instalación local antigua, incompleta o que sirva otras rutas puede presentar presupuesto de texturas más alto de lo esperado. **No hay evidencia todavía de que esto esté ocurriendo**; el build actual sí genera las versiones reducidas y ejecuta pruebas de existencia.
+- `INSPECCIONAR RENDER` ahora lee las dimensiones efectivas de cada `texture.source[0]` y las compara con las dimensiones de `scene._imageNativePrepared.tiles`; informa `COMPACTA`, `ORIGINAL` o `INESPERADA/SIN META` para cada textura junto a la memoria RGBA8 estimada. No inicia solicitudes ni vuelve a decodificar imágenes.
+- En la prueba futura de la app **nativa real**, registrar esta sección: si aparecen **6 COMPACTA, 0 ORIGINAL**, la sospecha del fallback se reduce; si aparecen **6 ORIGINAL**, investigar el empaquetado/rutas del WebP compactado antes de cambiar resolución o estética. En PWA Safari distinta versión, la medición no es equivalente a la app Capacitor ya instalada.
+
+## Estado verificado
+- GitHub Actions `41298581151`: sintaxis, snapshots read-only, exclusión por cámara, orden de creación y clasificación de mosaicos compactos/originales **correctas**.
+- Estos test son **de código y casos simulados**, no equivalen a ver el comportamiento de GPU en iPhone real.
+
+## CORRECCIÓN IMPORTANTE (2026-11-01, continuación): UI camera NO renderiza
+
+La sección anterior sobre `uiCam?.ignore?.()` ejecutadas antes de crear `uiCam` es correcta respecto al **orden del código**, pero interpretar que se está **duplicando renderizado** fue una hipótesis prematura. La auditoría completa de la herencia revela:
+
+1. `src/game/scenes/RaceFixedScene.js`, que heredan `RaceStyledHudScene`, `RaceCompetitionHudScene` y la carrera actual, ejecuta después de `RaceScene.create()` **`this.uiCam.setVisible(false)`**, manteniendo `main.setVisible(true)`. Esto se realiza en la versión base del iOS local (`9181e72c`) **y en `main`**: el archivo es idéntico (blob Git `4ce483cc14814b44084873e7753c5ebc06924d8f`).
+2. Documentación de Phaser 3.90: una cámara invisible **no renderiza y no realiza tests de input**. En consecuencia, la cámara del HUD no puede explicar *en este camino de código* un segundo pase de renderizado por fotograma, aunque sus filtros `ignore` no estén completos. Referencia: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera
+3. `RaceFixedScene.js` reproyecta los elementos del HUD a la cámara principal (`_pinHudToScreen`, `_pinRaceInfoHud`, etc.) para preservar posiciones visuales. Existen tareas de colocación HUD por fotograma, pero sus costes no pueden atribuirse a GPU sin medición.
+4. **Acción:** NO aplicar ningún supuesto arreglo de exclusiones de la cámara UI para mejorar energía; eso sería trabajar sobre una hipótesis ya descartada. `INSPECCIONAR RENDER` ahora informa **cámaras visibles, estado real de UI y escenas activas** y alerta cuando UI está inactiva. Los filtros prematuros se conservan documentados como deuda de código, no prioridad de rendimiento.
+5. La comparación de la base iOS local inicial `9181e72c` contra `main` también confirma que `iosPhotoTileBudget.js`, `RaceFixedScene.js`, `RaceEmbeddedReplaySceneV2.js` y `build-ios-race-photo-tiles.mjs` son **idénticos**. La primera copia local usa ya la escala de mosaicos iOS al 65%, la cámara UI desactivada y la ruta de carga compacta. **No asegura** que la build finalmente instalada sea exactamente esa copia sin consultar el móvil/Mac, ni que los archivos compactos estén presentes en la instalación.
+6. La versión GitHub `main` está **253 commits por delante** del punto inicial `9181e72c`; la prueba energética medida en iPhone puede corresponder a una instantánea diferente. Debemos aislar hipótesis que se mantengan en ambas sin atribuir fallos de HEAD a la instalación nativa.
+
+### Siguiente prioridad técnica
+
+A) A/B de límite de FPS (PR #32), sin cambiar definición ni física; B) comprobar los mosaicos reales compactados de la instalación y número de **escenas/cámaras visibles** (este PR); C) solo si persiste, instrumentación de presentación WebGL/Metal con dispositivo conectado. No nuevas rebajas visuales a ciegas ni intervenir en Android. Todos los PR siguen en borrador sin despliegue.
+
+## Ocultación fotográfica: máscaras de copas, auditoría estática
+
+- `src/game/tracks/photoCanopyOcclusion.js` construye una máscara de geometría compartida para las zonas de copas y crea una copia visual de los tiles fotográficos que intersectan con ellas. **Reutiliza las texturas de foto ya cargadas** (`photo.texture.key`), por lo que no crea otra copia GPU independiente del WebP por cada zona, aunque sí añade primitivas/pases gráficos en las áreas tapadas.
+- Archivos reales de Environment Studio: **Karting Américas: 1 canopyZone**, **Karting Tenerife: 3 canopyZones**, **Santa Cruz: 13 canopyZones**, **Karting Canarias base: sin canopyZones**. Son definiciones autorales, no medidas de draw calls. Los polígonos pueden tener numerosos puntos; el coste depende también del campo de visión y máscaras en render.
+- Dado que el usuario informa de tirones/calor en varios circuitos, **la existencia de canopyZones no explica por sí sola un problema universal**; algunos circuitos no utilizan esta función. Es un factor adicional por cuantificar, no un culpable encontrado.
+- El botón `INSPECCIONAR RENDER` de esta PR ahora recoge número de zonas/vertices, duplicados fotográficos como objetos en la vista principal/UI y si hay sprites con máscara. No muta el render ni es un sensor GPU.
+- Verificado por test sin dispositivo en GitHub Actions run `41299478920` (éxito). Ningún cambio en assets, configuración de render, físicas, controles o Android.
+
+## Diagnóstico WebGL por llamadas reales (opt-in) — 2026-11-01
+
+Phaser v3.90 documenta los eventos del Game `PRE_RENDER` y `POST_RENDER`, pero no se ha encontrado contador público estable para el número de llamadas OpenGL/WebGL por frame en `WebGLRenderer`. Referencia: https://docs.phaser.io/api-documentation/3.90.0/class/renderer-webgl-webglrenderer y https://docs.phaser.io/api-documentation/event/core-events.
+
+- Nuevo botón **GL: 90 FOTOGRAMAS** (solo en el diagnóstico de carrera DEV, no en producción). Intercepta **temporalmente** los métodos de dibujo de **ese contexto concreto** (`gl.drawElements`, `gl.drawArrays` y variantes instanced si existen). Usa los eventos `game.events` `prerender/postrender` para contar las llamadas entre esos límites y agrupar 90 frames, como máximo 8 segundos. El botón puede detenerlo antes.
+- **Todas las funciones originales se restauran** (con los descriptores de propiedad originales; si el método estaba heredado de prototipo, se elimina el shadow propio) en éxito, cancelación, expiración y error de instalación. La instrumentación no está habilitada automáticamente al entrar a la carrera. No se intercepta el prototype global, no añade otro requestAnimationFrame ni invoca métodos GPU sincronizantes (`finish`, `readPixels`, `getParameter`).
+- Resultado: llamadas JS a draw* observadas (total, media/pico por frame, tipos de llamada). **No** mide tiempo GPU, potencia, ocupación de GPU, memoria GPU, compositor WKWebView, fotogramas presentados al usuario o llamadas que eviten el método interceptado. La instrumentación añade sobrecarga de JavaScript mientras está activa; **NO usar su FPS ni consumo para evaluar el rendimiento**. Únicamente sirve para saber si Phaser está enviando decenas o cientos de draw calls por fotograma.
+- Ampliación de **INSPECCIONAR RENDER**: se añaden número de texturas actualmente registradas en caché de Phaser, dimensiones decodificadas y ocho fuentes mayores, con presupuesto **RGBA8 teórico** de los píxeles. No equivale a la VRAM ni implica que todas las texturas estén simultáneamente en GPU; tampoco cuenta todos los posibles búferes internos, mipmaps ni texturas comprimidas de GPU.
+- Verificación automatizada en `scripts/ios-webgl-draw-sampler-smoke.mjs`: restauración tras 90 frames, cancelación, timeout, imposibilidad de sobrescritura del contexto y ausencia de listeners colgantes, junto con tests de snapshot y sintaxis del panel. GitHub Actions `41300615635` **éxito**, incluyendo los pasos anteriores.
+- Todo en rama `diagnostics/ios-render-readonly-2026-11-01`, PR #33 **DRAFT**: sin fusión, sin despliegue PWA ni cambios nativos Android/iOS. El Mac de GitHub puede comprobar el código, pero no medir el iPhone físico. Cuando vuelva el acceso al Mac, sincronizar y firmar una build DEV para probar los datos de esa misma build; el terminal iPhone actual no se actualiza por commits de GitHub.
