@@ -55,7 +55,7 @@ assert.match(lobby,/mountPlayerSupportMenu\(\)/);
 assert.match(help,/mountPlayerFeedback\(\{category\}\)/);
 assert.match(help,/category:'performance'/);
 assert.match(help,/category:'other'/);
-assert.match(read('src/game/ui/playerFeedback.js'),/export function mountPlayerFeedback\(\{category='performance'\}=\{\}\)/);
+assert.match(read('src/game/ui/playerFeedback.js'),/export function mountPlayerFeedback\(\{category:preferredCategory='performance'\}=\{\}\)/);
 const lobbyStyles=read('src/game/ui/lobby-dom.css');
 const helpStyles=read('src/game/ui/playerSupportMenu.css');
 assert.match(lobbyStyles,/button\.tdr-lobby-help/);
