@@ -6,7 +6,7 @@ const carRig={cameraFilter:2,visible:true};
 const tile={texture:{key:'native:karting-americas:0:0',source:[{width:1024,height:512}]}};
 const uiCam={id:2,renderList:[shared,hud]},main={renderList:[road,tile,shared]};
 const scene={
-  game:{canvas:{width:1440,height:900},renderer:{gl:{drawingBufferWidth:1440,drawingBufferHeight:900}}},
+  game:{canvas:{width:1440,height:900},renderer:{gl:{drawingBufferWidth:1440,drawingBufferHeight:900}},scene:{getScenes:()=>[{sys:{settings:{key:'race'}},cameras:{cameras:[{visible:true},{visible:false}]}}]}},
   cameras:{main,cameras:[main,uiCam]},uiCam,
   _trackBeautyTiles:[tile],_imageNativePrepared:{trackKey:'karting-americas',tiles:[{x:0,y:0,width:1024,height:512}]},cpGfx:shared,_curbOuter:road,carRig
 };
@@ -15,6 +15,10 @@ const value=captureIosRenderAuditSnapshot(scene);
 assert.equal(value.canvasWidth,1440);
 assert.equal(value.canvasHeight,900);
 assert.equal(value.cameraCount,2);
+assert.equal(value.visibleCameraCount,2);
+assert.equal(value.uiCameraVisible,true);
+assert.equal(value.activeSceneCount,1);
+assert.equal(value.activeScenes[0].visibleCameras,1);
 assert.equal(value.mainObjects,3);
 assert.equal(value.uiObjects,2);
 assert.equal(value.sharedObjects,1);
@@ -41,6 +45,11 @@ assert.deepEqual(uiCam.renderList,before.ui);
 assert.match(formatIosRenderAuditSnapshot(value),/NO draw calls ni tiempo GPU/);
 assert.match(formatIosRenderAuditSnapshot(value),/NO memoria total GPU/);
 assert.equal(captureIosRenderAuditSnapshot(null).cameraCount,0);
+uiCam.visible=false;
+assert.equal(captureIosRenderAuditSnapshot(scene).visibleCameraCount,1);
+assert.equal(captureIosRenderAuditSnapshot(scene).uiCameraVisible,false);
+assert.match(formatIosRenderAuditSnapshot(captureIosRenderAuditSnapshot(scene)),/UI INACTIVA/);
+uiCam.visible=true;
 tile.texture.source[0]={width:666,height:333};
 const small=captureIosRenderAuditSnapshot(scene);
 assert.equal(small.photoCompactCount,1);
