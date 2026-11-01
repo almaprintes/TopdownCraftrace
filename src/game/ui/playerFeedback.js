@@ -38,6 +38,7 @@ export function mountPlayerFeedback(){
   actions.append(send);panel.append(category,message,consent,actions,status);
   const hint=make('p','tdr-feedback-hint',hasFeedbackAccount()?'Máximo 2 informes por cuenta y día.':
     'Para limitar el consumo de Supabase necesitas tener una cuenta online vinculada desde Ajustes → Cuenta.');
+  panel.append(make('p','tdr-feedback-hint','El informe se asocia a tu ID de jugador para impedir abusos. No adjuntamos ubicación ni correo electrónico.'));
   panel.append(hint);
   root.append(panel);document.body.append(root);
   const previousFocus=document.activeElement;
