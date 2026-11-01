@@ -17,9 +17,13 @@ jobs:
       - name: Verify diagnostic JS syntax
         run: |
           node --check src/game/performance/iosRenderAuditSnapshot.js
+          node --check src/game/performance/iosWebglDrawCallSample.js
           node --check src/game/dev/iosRaceFrameDiagnostics.js
       - name: Verify camera snapshot is read-only
         run: node scripts/ios-render-audit-snapshot-smoke.mjs
 
       - name: Verify camera creation order (documentation guard)
         run: node scripts/ios-camera-creation-order-smoke.mjs
+
+      - name: Run short WebGL sampler restoration test
+        run: node scripts/ios-webgl-draw-sampler-smoke.mjs
