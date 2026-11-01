@@ -45,7 +45,13 @@ const frameInfo=scene=>{
   const limit=devIos?conf.frameLimit:scene.game?.config?.fps?.limit;
   const line=`MODO ${preset||'?'}  RES ${resolution||'?'}  FPS limit ${limit??'?'}`;
   if(!devIos)return line+'\nWEBGL '+actual+' real · FPS HUD '+(videoProbeEnabled()?'ON':'OFF');
-  return line+` · FPS ${conf.fpsTrialMode==='CAP_60'?'PRUEBA 60':'BASE '+(conf.baseFrameLimit??'?')} · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\nLOOP ${conf.loopTrialMode||'DESCONOCIDO'}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;
+  const limitText=conf.fpsTrialMode==='CAP_60'?'ACTIVADO (máximo 60)':'DESACTIVADO (sin tope adicional)';
+  const baseRes=Number(conf.baseRenderResolution??resolution);
+  const resText=conf.resolutionTrialMode==='LOW'?'REDUCIDA (escala 1,0)':'NORMAL (escala '+(Number.isFinite(baseRes)?baseRes.toLocaleString('es-ES'):'?')+')';
+  return line+(limit===0?' (0 = sin tope adicional)':'')+
+    `\nLÍMITE EXTRA 60 FPS: ${limitText} · NITIDEZ: ${resText}`+
+    `\nLOOP ${conf.loopTrialMode||'DESCONOCIDO'} · WEBGL ${conf.webglDesyncRequested?'DESYNC normal solicitado':'SYNC alternativo solicitado'} · ${actual} real`+
+    `\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;
 };
 // Extra information is sampled on demand, never on every animation frame.
 const contextLines=(w,scene,state,nowWall)=> {
@@ -120,6 +126,16 @@ export function mountRaceDevFrameDiagnostics(scene){
   const panel=style(document.createElement('div'),'display:none;margin-top:4px;padding:7px;border:1px solid #94aabb;border-radius:8px;background:rgba(3,12,22,.93);pointer-events:auto;box-shadow:0 6px 16px #0009;max-height:min(39vh,250px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch');
   const row=style(document.createElement('div'),'display:flex;gap:4px;flex-wrap:wrap;margin-bottom:5px');
   panel.appendChild(row);
+  // Compact, optional help keeps the existing touch steering and panel sizing.
+  const help=document.createElement('details');
+  help.style.cssText='margin:0 0 5px;border:1px solid #526e80;border-radius:6px;padding:5px 7px;color:#cdeeff;font:650 10px/1.4 system-ui';
+  const helpTitle=document.createElement('summary');
+  helpTitle.textContent='AYUDA: ¿QUÉ HACE CADA BOTÓN?';
+  helpTitle.style.cssText='cursor:pointer;touch-action:manipulation;font-weight:850';
+  const helpBody=document.createElement('div');
+  helpBody.style.cssText='padding-top:5px;color:#deedf7';
+  helpBody.textContent='Los botones indican QUÉ HARÁN al tocarlos. REINICIA = recarga TDR. FPS 0 = sin límite extra, NO cero fotogramas. Escala 1,5 (normal) y 1,0 (reducida) = nitidez, NO número de versión. WEBGL y BUCLE son pruebas separadas; cambia solo una a la vez. REINICIAR MEDICIÓN borra solo contadores, nunca el progreso.';
+  help.appendChild(helpTitle);help.appendChild(helpBody);panel.appendChild(help);
   const pre=style(document.createElement('pre'),'margin:0;font:700 9px/1.22 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;color:#e7f7ff;user-select:text;-webkit-user-select:text');
   pre.textContent='Pulsa MEDIR, oculta el panel y conduce; la medición continuará.';
   panel.appendChild(pre);root.appendChild(panel);
@@ -217,7 +233,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   };
   let motorButton=null;
   if(!IS_PROD_BUILD&&isIos()){
-  motorButton=control('MOTOR ON',async b=>{
+  motorButton=control('SILENCIAR MOTOR',async b=>{
     if(state.audioBusy)return;
     const engine=scene._tdrEngineSample;
     const current=engine?.getDevEngineAudioStatus?.();
@@ -233,7 +249,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       const result=await engine.setDevEngineAudioSuspended(requested);
       if(state.disposed)return;
       const next=engine.getDevEngineAudioStatus?.();
-      b.textContent=next?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON';
+      b.textContent=next?.diagnosticSuspended?'ACTIVAR SONIDO MOTOR':'SILENCIAR MOTOR';
       if(!result?.ok){
         pre.textContent='PRUEBA NO VÁLIDA: '+(result?.reason||'No se pudo confirmar el AudioContext')+
           '\\nESTADO '+(result?.state||next?.state||'desconocido')+'. No interpretes FPS todavía.';
@@ -243,7 +259,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       pre.textContent='AUDIO MOTOR '+(requested?'REALMENTE SUSPENDIDO':'REANUDADO')+
         ' · AudioContext '+result.state+'\\nMide 20 segundos en esta fase y pulsa COPIAR.';
     }catch(error){
-      b.textContent=engine?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON';
+      b.textContent=engine?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'ACTIVAR SONIDO MOTOR':'SILENCIAR MOTOR';
       pre.textContent='Error al cambiar motor: '+String(error?.message||error);
     }finally{
       state.audioBusy=false;
@@ -252,7 +268,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   },toolbar);
   // MOTOR is reachable with details collapsed; before MEDIR it stays hidden.
   motorButton.style.display='none';
-  const textButton=control('TEXTO '+getDevRaceTextRenderMode().mode,b=>{
+  const textButton=control(getDevRaceTextRenderMode().mode==='PHASER'?'ACTIVAR TEXTOS HTML':'ACTIVAR TEXTOS PHASER',b=>{
     const previous=getDevRaceTextRenderMode();
     const toPhaser=previous.mode!=='PHASER';
     const result=setDevRaceTextRenderMode(scene,toPhaser);
@@ -260,20 +276,20 @@ export function mountRaceDevFrameDiagnostics(scene){
       pre.textContent='No se pudo cambiar el motor de textos: '+(result.reason||'desconocido');
       return;
     }
-    b.textContent='TEXTO '+result.mode;
+    b.textContent=result.mode==='PHASER'?'ACTIVAR TEXTOS HTML':'ACTIVAR TEXTOS PHASER';
     reset();
   });
   // Keep the A/B action accessible without scrolling through the other tools.
   row.insertBefore(textButton,row.firstChild);
-  const hudButton=control('HUD ON',b=>{
+  const hudButton=control('OCULTAR INDICADORES (HUD)',b=>{
     state.hudOff=!state.hudOff;
     scene._tdrDiagnosticHudOff=state.hudOff;
     if(scene._raceHudDom)scene._raceHudDom.style.display=state.hudOff?'none':'';
     if(!state.hudOff)scene._raceHudAccum=100;
-    b.textContent=state.hudOff?'HUD OFF':'HUD ON';
+    b.textContent=state.hudOff?'MOSTRAR INDICADORES (HUD)':'OCULTAR INDICADORES (HUD)';
     reset();
   });
-  control(window.__tdrIosFrameConfig?.webglDesyncRequested?'PROBAR WEBGL SYNC (REINICIA)':'VOLVER WEBGL DESYNC (REINICIA)',()=>{
+  control(window.__tdrIosFrameConfig?.webglDesyncRequested?'ACTIVAR PRUEBA WEBGL SYNC (REINICIA)':'DESACTIVAR PRUEBA WEBGL SYNC (REINICIA)',()=>{
     const requested=!!window.__tdrIosFrameConfig?.webglDesyncRequested;
     try{localStorage.setItem(IOS_WEBGL_SYNC_KEY,requested?'1':'0');window.location.reload();}
     catch{pre.textContent='No se pudo guardar el modo WebGL. No se ha cambiado el juego.';}
@@ -286,7 +302,7 @@ export function mountRaceDevFrameDiagnostics(scene){
     const fpsConfig=window.__tdrIosFrameConfig||{};
     if(Number(fpsConfig.baseFrameLimit||0)===0){
       const capped=fpsConfig.fpsTrialMode==='CAP_60';
-      control(capped?'VOLVER FPS BASE (REINICIA)':'PROBAR FPS 60 (REINICIA)',()=>{
+      control(capped?'DESACTIVAR LÍMITE 60 FPS (REINICIA)':'ACTIVAR LÍMITE 60 FPS (REINICIA)',()=>{
         try{
           if(capped)localStorage.removeItem(IOS_DEV_FPS_CAP_KEY);
           else localStorage.setItem(IOS_DEV_FPS_CAP_KEY,'1');
@@ -295,7 +311,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       });
     }
     const usingTimeout=window.__tdrIosFrameConfig?.forceSetTimeOut===true;
-    control(usingTimeout?'VOLVER LOOP RAF (REINICIA)':'PROBAR LOOP TIMEOUT (REINICIA)',()=>{
+    control(usingTimeout?'DESACTIVAR BUCLE ALTERNATIVO (REINICIA)':'ACTIVAR BUCLE ALTERNATIVO (REINICIA)',()=>{
       try{
         if(usingTimeout)localStorage.removeItem(IOS_DEV_TIMEOUT_KEY);
         else localStorage.setItem(IOS_DEV_TIMEOUT_KEY,'1');
@@ -308,7 +324,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   const resolutionConfig=window.__tdrIosFrameConfig||{};
   const resolutionBase=Number(resolutionConfig.baseRenderResolution)||1;
   const lowResolutionActive=resolutionConfig.resolutionTrialMode==='LOW';
-  const resolutionButton=control(lowResolutionActive?'RES BASE (REINICIA)':'RES 1.0 (REINICIA)',()=>{
+  const resolutionButton=control(lowResolutionActive?'DESACTIVAR NITIDEZ REDUCIDA (REINICIA)':'ACTIVAR NITIDEZ REDUCIDA (REINICIA)',()=>{
     if(resolutionBase<=1){pre.textContent='La resolución base ya es 1.0; no hay comparación que realizar.';return;}
     try{
       if(lowResolutionActive)localStorage.removeItem(IOS_DEV_RESOLUTION_KEY);
@@ -316,16 +332,16 @@ export function mountRaceDevFrameDiagnostics(scene){
       window.location.reload();
     }catch{pre.textContent='No se pudo cambiar la resolución de prueba.';}
   });
-  if(resolutionBase<=1){resolutionButton.disabled=true;resolutionButton.textContent='RES BASE 1.0';}
-  const photoButton=control('FOTO ON',b=>{
+  if(resolutionBase<=1){resolutionButton.disabled=true;resolutionButton.textContent='RESOLUCIÓN NORMAL YA ES 1,0';}
+  const photoButton=control('OCULTAR FOTO DEL CIRCUITO',b=>{
     const tiles=scene._trackBeautyTiles;
     if(!Array.isArray(tiles)||tiles.length===0){pre.textContent='No hay fotografía montada; el test FOTO no está disponible en este circuito.';return;}
     state.photoOff=!state.photoOff;
     for(const tile of tiles)if(tile?.scene)tile.setVisible(!state.photoOff);
-    b.textContent=state.photoOff?'FOTO OFF':'FOTO ON';
+    b.textContent=state.photoOff?'MOSTRAR FOTO DEL CIRCUITO':'OCULTAR FOTO DEL CIRCUITO';
     reset();
   });
-    control('INSPECCIONAR RENDER',()=>{
+    control('REVISAR CÁMARAS Y TEXTURAS',()=>{
       try {
         // One snapshot on a direct user tap: no continuous GPU polling,
         // display-list patching or extra RAF loop.
@@ -340,7 +356,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       }
     });
   }
-  const glButton=control('GL: 90 FOTOGRAMAS',b=>{
+  const glButton=control('CONTAR DIBUJOS (90 FOTOGRAMAS)',b=>{
     if(state.glSampler){
       state.glSampler.cancel();
       state.glSampler=null;
@@ -358,7 +374,7 @@ export function mountRaceDevFrameDiagnostics(scene){
         if(state.disposed)return;
         state.glSampler=null;
         state.glAudit=formatIosWebglDrawCallSample(result);
-        b.textContent='GL: 90 FOTOGRAMAS';
+        b.textContent='CONTAR DIBUJOS (90 FOTOGRAMAS)';
         state.lastReport=metrics(state.window,scene,mode(),state)+
           (state.renderAudit?'\n'+state.renderAudit:'')+'\n'+state.glAudit;
         state.expanded=true;
@@ -369,23 +385,23 @@ export function mountRaceDevFrameDiagnostics(scene){
     });
     if(sampler.ok){
       state.glSampler=sampler;
-      b.textContent='DETENER GL';
+      b.textContent='DETENER CONTEO DE DIBUJOS';
       pre.textContent='Contador GL activo: sólo diagnóstico.\nNo compares FPS ni consumo durante esta muestra.';
     }else{
       b.textContent='GL NO DISPONIBLE';
       pre.textContent=sampler.reason||'No se puede capturar WebGL en este dispositivo.';
     }
   });
-  const thermalButton=control('CALOR: '+THERMAL_TOUCH_LEVELS[state.thermalIndex],b=>{
+  const thermalButton=control('CAMBIAR CALOR: '+THERMAL_TOUCH_LEVELS[state.thermalIndex],b=>{
     state.thermalIndex=(state.thermalIndex+1)%THERMAL_TOUCH_LEVELS.length;
-    b.textContent='CALOR: '+THERMAL_TOUCH_LEVELS[state.thermalIndex];
+    b.textContent='CAMBIAR CALOR: '+THERMAL_TOUCH_LEVELS[state.thermalIndex];
     if(state.active){
       state.lastReport=metrics(state.window,scene,mode(),state);
       if(state.expanded)pre.textContent=state.lastReport;
     }
   });
-  control('REINICIAR',()=>reset());
-  const copyButton=control('COPIAR',async b=>{
+  control('REINICIAR MEDICIÓN',()=>reset());
+  const copyButton=control('COPIAR INFORME',async b=>{
     const finishedAt=Date.now(),w=state.window;
     const output=state.active?metrics(w,scene,mode(),state,finishedAt)+(state.renderAudit?'\n'+state.renderAudit:'')+(state.glAudit?'\n'+state.glAudit:''):pre.textContent;
     if(state.active&&w.count>0&&w.frameSum>0){
@@ -396,7 +412,7 @@ export function mountRaceDevFrameDiagnostics(scene){
       });
     }
     state.lastReport=output;
-    try{await navigator.clipboard.writeText(output);b.textContent='COPIADO';}
+    try{await navigator.clipboard.writeText(output);b.textContent='INFORME COPIADO';}
     catch{
       state.expanded=true;
       panel.style.display='block';
