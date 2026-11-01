@@ -202,6 +202,24 @@ export function installLobbyDom(scene) {
     const disposeBlackFriday=installBlackFridayPromoUi(root);
     const disposeCommunications=installLiveCommunicationsUi(root);
     const top = root.querySelector('.tdr-lobby-top-actions'); top.append(makeButton({ cls:'tdr-lobby-button--gold', icon:'icon_inventory.webp', label:tr('lobby.inventory'), action:()=>scene._openLobbyInventoryModal?.('materials') }), makeButton({ cls:'tdr-lobby-button--purple', icon:'icon_store.webp', label:tr('lobby.store'), action:()=>scene._openStoreModal?.('materials') }), makeButton({ icon:'icon_settings.webp', label:tr('lobby.settings'), action:()=>scene.scene.start('SettingsScene') }));
+    // A single global help entry lives in the lobby header, not Legal/Privacy.
+    // The support menu is loaded only after a real tap; no Supabase calls on opening.
+    const helpButton=document.createElement('button');
+    helpButton.type='button';helpButton.className='tdr-lobby-help';
+    helpButton.dataset.lobbyHelp='1';
+    helpButton.textContent='?';
+    helpButton.title=getLanguage()==='en'?'Help & support':'Ayuda y soporte';
+    helpButton.setAttribute('aria-label',helpButton.title);
+    let supportMenuDispose=null;
+    helpButton.addEventListener('click',async()=>{
+      try{
+        const {mountPlayerSupportMenu}=await import('./playerSupportMenu.js');
+        if(!root.isConnected)return;
+        supportMenuDispose?.();
+        supportMenuDispose=mountPlayerSupportMenu();
+      }catch(error){console.warn('[tdr-help] unavailable',error);}
+    });
+    top.append(helpButton);
     const play = document.createElement('button'); play.type='button'; play.className='tdr-lobby-play'; play.innerHTML=`<span class="tdr-lobby-play-triangle">▶</span><span>${getLanguage()==='en'?'PLAY':'JUGAR'}</span>`; play.addEventListener('click',()=>startRaceFlow(scene));
     const lane=root.querySelector('.tdr-lobby-play-slot');
     lane?.classList.add('tdr-lobby-action-capsule');
@@ -271,7 +289,7 @@ export function installLobbyDom(scene) {
     };
     window.addEventListener('tdr:seasonProgressChanged',syncSeasonCard);
 
-    scene.events.once('shutdown',()=>{disposeCommunications?.();disposeBlackFriday?.();window.removeEventListener('tdr:seasonProgressChanged',syncSeasonCard);disposeAppWallets(root);try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
+    scene.events.once('shutdown',()=>{try{supportMenuDispose?.();}catch{}disposeCommunications?.();disposeBlackFriday?.();window.removeEventListener('tdr:seasonProgressChanged',syncSeasonCard);disposeAppWallets(root);try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
   }
   const syncLobbyHeader=()=>{const pilotNode=root.querySelector('[data-pilot-header-name]');if(pilotNode)pilotNode.textContent=String(getPilotProfile()?.name||'').trim()||'—';const countdown=root.querySelector('[data-season-countdown]');if(countdown)countdown.textContent=seasonCountdownLabel();updateLobbyRewardShortcuts(root);};
   syncLobbyHeader();

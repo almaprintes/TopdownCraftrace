@@ -3,7 +3,7 @@
 **Ámbito:** solo DEV PWA de GitHub Pages /dev. No modificar la app Android publicada ni la integración iOS local en esta entrega.
 
 ## Flujo
-- Jugador: **Configuración → Legal/Soporte → Informar de un problema**. Descripción de 8 a 1000 caracteres; telemetría mínima únicamente tras marcar consentimiento. Requiere sesión online de TDR y conserva su identidad; el ID de la cuenta se almacena para aplicar límites. No se envían el correo, ubicación ni IDs de dispositivo en los diagnósticos adjuntos.
+- Jugador: **Lobby → encabezado superior → ? Ayuda y soporte → Informar de un error / Enviar una sugerencia**. Descripción de 8 a 1000 caracteres; telemetría mínima únicamente tras marcar consentimiento. Requiere sesión online de TDR y conserva su identidad; el ID de la cuenta se almacena para aplicar límites. No se envían el correo, ubicación ni IDs de dispositivo en los diagnósticos adjuntos.
 - Receptor: PostgREST RPC `tdr_submit_feedback`, que valida acceso y comprueba el **interruptor server-side** dentro de una transacción protegida por advisory lock antes de escribir. NO hay envío en el bucle de carrera ni sondeos automáticos.
 - Límites: 2 por cuenta/día UTC, 40 globales/día UTC, 5 minutos entre envíos del mismo jugador, máximo 1500 caracteres de JSON técnico. Los límites de escritura se aplican en la base de datos. Las peticiones rechazadas aún consumen cierto tráfico de API: no son un cortafuegos global de Supabase.
 - Control de informes: **Paddock ADMIN → 🛑 INFORMES · PARADA → CORTAR INFORMES**. Solo cuenta TDR Google con `app_metadata.tdr_staff=true`; RPC `tdr_set_feedback_enabled(false)` confirmada por el servidor. Reactivación verde dentro de esa misma pantalla, estado inicial OFF.
@@ -35,3 +35,10 @@ where id = 'global';
 - **🛑 INFORMES · PARADA** abre solo `adminEmergencyControls.js` en modo `reports` (RPC directa). **🛑 SUPABASE · PARADA TOTAL** abre solo el modo `project` (enlace al Dashboard oficial). Cada acceso muestra una pantalla diferente, sin mezcla.
 - Ambas pantallas se cierran mutuamente cuando se cambia entre ellas; la restauración total debe estar disponible aunque el proyecto esté pausado y el juego no pueda autenticarse.
 - La pausa total NO puede activarse en un solo toque desde el juego sin una credencial de Management API privada y un backend de confianza. **No insertar esa credencial en GitHub Pages, PWA o app móvil**.
+
+## Acceso del jugador (01/11/2026, revisión UX)
+- Un solo botón `?` con `aria-label="Ayuda y soporte"` en el header superior del lobby; no aparece en el HUD de carrera.
+- Abre un menú pequeño con dos elecciones: informar de un error (`performance`) o enviar una sugerencia (`other`). Ambos reutilizan el formulario existente, con datos opcionales solo tras consentimiento.
+- El acceso se ha retirado de Configuración/Legal. No se prometen respuestas ni seguimiento de tickets: actualmente son informes voluntarios, no conversaciones de soporte.
+- El formulario y el menú funcionan sin consultas Supabase al abrirse; la RPC solo se llama al enviar con cuenta válida.
+- El diseño tiene anchuras limitadas, área segura iPhone y desplazamiento vertical cuando la pantalla es baja. La comprobación visual real en iPhone sigue siendo necesaria.

@@ -5,6 +5,7 @@ import {execFileSync} from 'node:child_process';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const paths=['src/game/online/feedbackReports.js','src/game/ui/playerFeedback.js',
   'src/game/ui/adminCommunications.js','src/game/ui/adminEmergencyControls.js',
+  'src/game/ui/playerSupportMenu.js','src/game/ui/LobbyDomUi.js',
   'src/game/ui/adminPaddockView.js',
   'src/game/scenes/SettingsDomScene.js','src/ui/settingsLegalEnhancer.js'];
 for(const path of paths)execFileSync(process.execPath,['--check',new URL('../'+path,import.meta.url).pathname],{stdio:'pipe'});
@@ -44,8 +45,23 @@ assert.match(ui,/if\(!projectMode\)cards\.append\(reports\)/);
 assert.match(ui,/if\(projectMode\)cards\.append\(project\)/);
 assert.match(scene,/mountAdminCommunications\(\)/);
 assert.match(scene,/this\._emergencyDispose\?\.\(\)/);
-assert.match(read('src/game/scenes/SettingsDomScene.js'),/data-feedback-open/);
-assert.match(read('src/ui/settingsLegalEnhancer.js'),/closest\?\.\('\[data-feedback-open\]'\)/);
+const settings=read('src/game/scenes/SettingsDomScene.js');
+const lobby=read('src/game/ui/LobbyDomUi.js');
+const help=read('src/game/ui/playerSupportMenu.js');
+assert.doesNotMatch(settings,/data-feedback-open|mountPlayerFeedback/,'Do not bury bug reporting in Legal settings');
+assert.match(lobby,/dataset\.lobbyHelp='1'/,'Player help is in the TOP lobby header');
+assert.match(lobby,/top\.append\(helpButton\)/);
+assert.match(lobby,/mountPlayerSupportMenu\(\)/);
+assert.match(help,/mountPlayerFeedback\(\{category\}\)/);
+assert.match(help,/category:'performance'/);
+assert.match(help,/category:'other'/);
+assert.match(read('src/game/ui/playerFeedback.js'),/export function mountPlayerFeedback\(\{category='performance'\}=\{\}\)/);
+const lobbyStyles=read('src/game/ui/lobby-dom.css');
+const helpStyles=read('src/game/ui/playerSupportMenu.css');
+assert.match(lobbyStyles,/button\.tdr-lobby-help/);
+assert.match(lobbyStyles,/flex:0 0 clamp\(36px,4\.8vh,44px\)/);
+assert.match(helpStyles,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+assert.match(helpStyles,/overflow-x:hidden;overflow-y:auto/);
 const player=read('src/game/online/feedbackReports.js');
 assert.match(player,/includeDiagnostics\?limitedFeedbackDiagnostics\(\):\{\}/);
 assert.match(player,/tdr_submit_feedback/);
