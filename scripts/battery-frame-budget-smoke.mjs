@@ -15,7 +15,12 @@ assert.match(game,/androidFrameBudget\(preset,android\)\.targetFps/);
 assert.match(game,/limit:frameLimit/);
 // Android keeps its exact 30/45/60 limits. Compact iPhone users may now
 // voluntarily choose Performance/Medium (30) to reduce heat; High stays at 60.
-assert.match(game,/frameLimit=androidDevice\?targetFps:\(iosDevice\?Number\(vp\.iosFpsLimit\|\|0\):0\)/);
+assert.match(game,/baseFrameLimit=androidDevice\?targetFps:\(iosDevice\?Number\(vp\.iosFpsLimit\|\|0\):0\)/,
+  'Android FPS budget must still be determined by the original targetFps');
+assert.match(game,/const frameLimit=fpsTrial\.limit/,
+  'Only the guarded optional iPhone FPS trial resolves the effective limit');
+assert.match(game,/resolveIosDevFpsCap\(\{baseLimit:baseFrameLimit,isIphone:.*?isProd:IS_PROD_BUILD,safeMode,storage:localStorage\}\)/,
+  'FPS trial must be limited to iPhone DEV and respect existing safe mode');
 assert.match(game,/iosFpsLimit:compactBudget\?\.fpsLimit\|\|0/);
 assert.match(game,/powerPreference:'high-performance'/,
   'GPU renderer policy stays unchanged for A/B profiling');
