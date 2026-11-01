@@ -4,7 +4,12 @@ import {activateRaceControlOnline,hasSavedRaceControlSession} from './raceContro
 import {summarizeStoredRuntimeErrors} from '../dev/runtimeSupportReport.js';
 
 const CATEGORIES=new Set(['performance','controls','track','online','other']);
-export const hasFeedbackAccount=()=>hasSavedRaceControlSession();
+export const hasFeedbackAccount=()=>{
+  try{
+    const saved=JSON.parse(localStorage.getItem('tdr2:onlineSession:v1')||'null');
+    return !!saved?.access_token&&!!saved?.user?.id&&saved?.user?.is_anonymous!==true;
+  }catch{return false;}
+};
 
 export function limitedFeedbackDiagnostics(){
   const platform=String(globalThis.Capacitor?.getPlatform?.()||'web').slice(0,24);
