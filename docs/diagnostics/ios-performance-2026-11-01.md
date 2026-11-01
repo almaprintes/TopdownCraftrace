@@ -61,8 +61,8 @@
 - `src/game/dev/iosRaceFrameDiagnostics.js` y `src/game/support/supportRaceDiagnostics.js`: diagnóstico en carrera que se desbloquea con 7 pulsaciones en «CALIDAD GRÁFICA» en Ajustes → Vídeo en menos de 5 s; vale 30 min; en carrera MEDIR → MINIMIZAR → VER DATOS → COPIAR.
 - Comprobaciones disponibles en scripts `check:ios-frame-diagnostic`, `check:ios-resolution-pacing`, `check:ios-webgl-pacing`, `check:ios-loop-driver`, `check:support-diagnostics`.
 
-## Plan para retomar las pruebas el 2026-11-02 (día siguiente)
-1. **Dejar enfriar el dispositivo y no continuar pruebas cuando esté excesivamente caliente.** No hacer carreras hoy 2026-11-01 por la noche tras lo observado.
+## Plan para continuar las pruebas el 2026-11-01 (misma mañana)
+1. **Dejar enfriar el dispositivo y no continuar pruebas cuando esté excesivamente caliente.** Durante las pruebas de la mañana, detenerse si se recalienta.
 2. **Reconciliar configuración activa al entrar**: la última medida mostraba `RES 1.0 PRUEBA` y `WEBGL SYNC solicitado`, aunque el estado real SYNC es desconocido. Con controles DEV regresar a `RES BASE (REINICIA)` y `VOLVER WEBGL DESYNC (REINICIA)` para recuperar situación inicial antes de cualquier nueva comparación. Cada acción reinicia el juego.
 3. Para comparar correctamente, mantener mismo circuito Karting Américas, coche HÉLIX Spark, calidad high, HUD/FOTO/MOTOR ON, duración comparable; arrancar con iPhone frío y apuntar **calor al tacto** al inicio y al final. Medir con captura/informe completo. Evitar pausas y cambios simultáneos durante el A/B de base.
 4. **Prueba aislada de pausa** solo si la temperatura lo permite: medir tramo antes/pausa/después por separado en condiciones comparables; distinguir pausa interna de aplicación en segundo plano; comprobar si hay tareas/temporizadores/audio/loop acumulados tras reanudar.
@@ -70,9 +70,26 @@
 6. Ejecutar smoke tests relevantes; comprobar que cualquier cambio sea exclusivo iOS, reversible, probado; **no tocar Android**, interfaz, físicas, ni producción sin pruebas.
 7. Revisar incidencia aislada de etiqueta de circuito `CIRCUITO ATLÁNTICO` reportada para una sesión confirmada Karting Américas.
 
+## Cuarta medición: mañana del 2026-11-01, RES BASE y WEBGL DESYNC solicitados
+
+**Informe recibido a las 07:47 WET.** Inicio 07:45:33, fin 07:47:01, duración 1m 27s; 4.830 fotogramas, 55,0 FPS, FRAME 18,2 / 78,0 ms (media/máximo), ESCENA CPU 0,6 / 58,0 ms, PASO CPU 0,7 / 58,0 ms, RENDER CPU 0,2 / 9,0 ms, OTROS 17,3 / 68,0 ms. Fotogramas >33 ms: 186 (3,85 %). Fotogramas >50 ms: 18 (0,37 %). P95/P99 32/44 ms. Ráfagas >50 ms: 18, máximo 1 seguido; máximo >33 ms: 2 consecutivos. TILES 6, DPR 3.
+
+**Configuración confirmada:** MODO high, RES 1.5 BASE 1.5, FPS limit 0, LOOP RAF, WEBGL DESYNC solicitado (estado real NO DISPONIBLE), SAFE NO, TIMER NO, FPS HUD OFF, HUD/FOTO/MOTOR ON, TEXTO PHASER (RAF OFF, 50 nodos), audio running 6 fuentes rpm-bank, segundo plano 0, RAM y batería no disponibles. **Aún indica CIRCUITO ATLÁNTICO** en el informe aunque el piloto había identificado el trazado como Karting Américas en pruebas previas.
+
+### Contraste principal: primera prueba nocturna vs cuarta matutina (ambas resolución 1.5, modo high, WebGL DESYNC solicitado)
+- FPS: 50,5 → 55,0 (+4,5 FPS).
+- P95: 39 → 32 ms; P99: 61 → 44 ms.
+- >33 ms: 448/5393 = 8,31 % → 186/4830 = 3,85 %.
+- >50 ms: 119/5393 = 2,21 % → 18/4830 = 0,37 % (~83 % menos *proporcionalmente*).
+- Máximo intervalo: 205 → 78 ms.
+- **Límite de inferencia:** prueba A duró 106 segundos y prueba D 87; tiempo desde sesión, temperatura ambiental, calor real al tacto y otros factores no están controlados. La mejora concuerda con la hipótesis de efecto térmico/uso continuado, **pero no demuestra causalidad**, ni que el iPhone estuviera frío al inicio; el usuario no ha indicado todavía sensación térmica al final de la prueba 4.
+
+### Próximo experimento recomendado
+Primero confirmar cómo terminó de temperatura el iPhone en la prueba 4. Si está fresco o templado, una única prueba **sin pausa y sin alterar ajustes** que dure ~2 min, en Karting Américas/HÉLIX Spark, con MEDIR activo, anotando sensación térmica antes/después; detener si aparece calor excesivo. Comparar **tasas**, P95/P99 y ráfagas con la prueba 4 para ver si empeoran con mayor duración. Opcionalmente hacer mediciones por ventanas temporales reiniciando SOLO el contador del diagnóstico, si se puede hacer sin pausar/ocultar la app, pero eso añade intervención y dificulta comparabilidad. **No introducir cambios de código o más A/B hasta aislar temperatura/tiempo y pausa.**
+
 ## Último estado del usuario
 - El dispositivo se enfrió una vez, pero en la prueba C volvió a calentarse.
-- El usuario decidió detener las pruebas y **seguir mañana**.
+- El usuario reanudó las pruebas a la mañana siguiente (2026-11-01), con la prueba 4 documentada arriba; pendiente conocer el calor final e investigar un tramo sostenido controlado.
 - No se ha probado todavía un límite iOS real de 60 FPS ni el modo LOOP TIMEOUT con condiciones controladas.
 - Ningún informe presentado prueba que la pausa o WebGL sea la causa definitiva.
 
