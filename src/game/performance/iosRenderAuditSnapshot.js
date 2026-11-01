@@ -94,7 +94,7 @@ export function captureIosRenderAuditSnapshot(scene){
     uiWorldExamples:uiWorld.slice(0,12).map(obj=>objectLabel(obj)),
     namedWorldCount:namedWorld.length,
     namedWorldUnfiltered:unfilteredNamed.length,
-    namedWorldUnfilteredExamples:unfilteredNamed.slice(0,14).map(v=>v.label+(v.inUi?' [EN UI]': ' [FUERA UI/NO VISIBLE]')),
+    namedWorldUnfilteredExamples:unfilteredNamed.slice(0,14).map(v=>v.label+(v.inUi?' [EN UI]': ' [NO RENDER UI]')),
     namedWorldActuallyInUi:namedWorld.filter(v=>v.inUi).length,
     photoTiles:photos.length,
     photoInMain,
