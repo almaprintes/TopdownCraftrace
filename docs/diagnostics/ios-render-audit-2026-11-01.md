@@ -27,3 +27,27 @@
 **Límite:** test estático / instrumentación preparada, **sin ejecución en iPhone**. La instalación nativa del usuario puede basarse en un snapshot local anterior a GitHub, y un commit en GitHub no actualiza por sí solo la aplicación firmada del iPhone.
 
 Referencia documentación Phaser 3.90: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera (propiedad renderList; no modificarla).
+
+## Hallazgo de mayor prioridad: orden de creación de la cámara HUD
+
+Comprobación estática contra `src/game/scenes/RaceScene.js` de `main`, confirmada por `node scripts/ios-camera-creation-order-smoke.mjs`:
+
+- `uiCam` se crea en la zona de la línea **2886** (después de crear varios objetos gráficos del mundo); se resetea a `null` en el cierre de la escena.
+- Las seis invocaciones `this.uiCam?.ignore?.(...)` para `_shoulderLeft`, `_shoulderRight`, `_curbOuter`, `_curbInner`, `finishGfx` y `cpGfx` figuran **ANTES de la creación** de `uiCam`. Con `uiCam` ausente, el operador `?.` las convierte en operaciones nulas.
+- Después hay dos mecanismos correctivos: se ignoran `bgOff`, `bgGrass`, `_grassMaskGfx` y, en `_applyCameraIgnores`, `bgWorld`, `carRig` y `finishGfx`. Esto **sí recupera finishGfx**, pero **no recupera explícitamente** las exclusiones de `_shoulderLeft`, `_shoulderRight`, `_curbOuter`, `_curbInner` ni `cpGfx`.
+- `finishLineDebug` y `gridDebug` también intentan `uiCam?.ignore?.()` antes de la creación, sin inclusión en `_applyCameraIgnores`. En las carreras foto, los mosaicos **sí** se crean después de `uiCam` y se ignoran correctamente allí.
+- **Consecuencia verificable del código:** varias entidades gráficas del mundo pueden quedar elegibles para renderizado por `uiCam` debido al filtro de cámara sin configurar. Que la cámara UI finalmente renderice alguna en un frame, el número real de draw calls y su coste GPU/energético **todavía no están medidos**. La cámara UI trabaja con scroll 0, zoom 1; objetos fuera de ese viewport podrían no contribuir aunque no estén excluidos.
+- Fuente Phaser 3.90: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera (`Camera.ignore` modifica el `cameraFilter`; `Camera.renderList` refleja lo que se ha renderizado por esa cámara). **No realizar corrección visual directa antes de observar el renderList.**
+
+### Instrumentación mejorada para aislar la hipótesis
+La lectura manual `INSPECCIONAR RENDER` de este PR ahora informa:
+- `UI MUNDO`: objetos con desplazamiento de cámara que figuran en la lista de render de la cámara UI;
+- `COMPARTIDOS MUNDO`: objetos de mundo presentes en las dos listas, con hasta 12 ejemplos `tipo/textura/profundidad`;
+- `NOMBRADOS MUNDO` y `NO EXCLUIDOS DE UI`: recuento de objetos concretos (`cpGfx`, `_curbOuter`, `_shoulderLeft`, `gridDebug`, `gridCars[].rig`, etc.) cuyo `cameraFilter` no excluye la segunda cámara, incluso si están fuera de pantalla. Incluye hasta 14 ejemplos de objetos.
+- `PRESENTES UI`: los objetos concretos anteriores reportados por `renderList` de UI.
+- No cambia `cameraFilter`, listas, shaders, cámaras, física, textura ni controles, y sigue siendo una foto puntual al tocar el botón. Los nombres de objetos no deben confundirse con *tiempo GPU*.
+
+### Validación
+- `scripts/ios-camera-creation-order-smoke.mjs`: 6 llamadas prematuras y ausencia de 5 exclusiones de la rutina correctiva; test estático.
+- `scripts/ios-render-audit-snapshot-smoke.mjs`: verifica clasificación de filtros/objetos compartidos, ejemplos y no mutación de listas.
+- GitHub Actions (no deploy) `41298411260` completado correctamente.
