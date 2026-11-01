@@ -51,3 +51,14 @@ assert.match(player,/includeDiagnostics\?limitedFeedbackDiagnostics\(\):\{\}/);
 assert.match(player,/tdr_submit_feedback/);
 assert.doesNotMatch(player,/service_role|serviceRole|sb_secret_/);
 console.log('TDR feedback emergency switch smoke OK: gated SQL, opt-in client, secured staff controls.');
+
+const emergencyStyles=read('src/game/ui/adminEmergencyControls.css');
+const paddockStyles=read('src/game/ui/adminPaddock.css');
+assert.match(emergencyStyles,/width:min\(790px,100%\);max-width:100%/);
+assert.match(emergencyStyles,/overflow-x:hidden;overflow-y:auto/);
+assert.match(emergencyStyles,/grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,170px\),1fr\)\)/);
+assert.match(emergencyStyles,/white-space:normal/);
+assert.match(emergencyStyles,/env\(safe-area-inset-left/);
+assert.match(emergencyStyles,/@media\(max-height:500px\) and \(orientation:landscape\)/);
+assert.match(paddockStyles,/tdr-paddock__aux-name,\.tdr-paddock__aux-desc/);
+assert.match(paddockStyles,/overflow-wrap:anywhere/);

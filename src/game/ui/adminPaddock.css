@@ -31,3 +31,22 @@
 @media(max-width:420px){.tdr-paddock__primary,.tdr-paddock__tools{grid-template-columns:1fr}.tdr-paddock__tile{min-height:250px}.tdr-paddock__logo{display:none}.tdr-paddock__mark{padding-left:0;border:0}}
 @media(max-height:520px) and (min-width:701px){.tdr-paddock__shell{gap:9px;padding-top:calc(env(safe-area-inset-top,0px) + 8px)}.tdr-paddock__heading{font-size:29px}.tdr-paddock__logo{font-size:32px}.tdr-paddock__subtitle{margin-top:2px}.tdr-paddock__tile{min-height:210px}.tdr-paddock__tile-content{bottom:7px;gap:5px}.tdr-paddock__tile-icon{top:8px;left:8px;width:42px;height:42px}.tdr-paddock__tile-points{gap:2px}.tdr-paddock__tile-points li{font-size:9px}.tdr-paddock__aux{min-height:78px;padding:9px}.tdr-paddock__aux-icon{width:41px;height:41px}}
 @media(prefers-reduced-motion:reduce){.tdr-paddock__tile,.tdr-paddock__aux{transition:none}}
+
+/* Mobile landscape: both emergency shortcuts and all other Paddock tools
+   remain within safe-area boundaries without clipping their titles. */
+.tdr-paddock__secondary{min-width:0;max-width:100%}
+.tdr-paddock__aux{max-width:100%;overflow:hidden;min-width:0;gap:clamp(6px,1vw,14px)}
+.tdr-paddock__aux-text{min-width:0;max-width:100%}
+.tdr-paddock__aux-name,.tdr-paddock__aux-desc{min-width:0;max-width:100%;overflow-wrap:anywhere;white-space:normal;line-height:1.2}
+.tdr-paddock__aux-icon{flex-shrink:0}
+.tdr-paddock__aux-arrow{flex:0 0 auto}
+.tdr-paddock__confirmbox{max-width:100%;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 20px);overflow-y:auto}
+.tdr-paddock__confirm-actions{display:flex;flex-wrap:wrap;min-width:0}
+.tdr-paddock__confirm-actions button{min-width:0;flex:1 1 120px;white-space:normal;overflow-wrap:anywhere}
+@media(max-height:520px) and (min-width:701px){
+  .tdr-paddock__secondary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tdr-paddock__aux{min-height:60px;padding:8px 10px}
+  .tdr-paddock__aux-icon{width:35px;height:35px}
+  .tdr-paddock__aux-name{font-size:12px}
+  .tdr-paddock__aux-desc{font-size:10px}
+}

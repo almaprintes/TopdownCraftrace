@@ -36,3 +36,41 @@
 @media(max-height:500px){.tdr-emergency-panel{padding:10px}.tdr-emergency-card{gap:6px}.tdr-emergency-heading h2{font-size:15px}}
 
 .tdr-emergency-cards.is-single{grid-template-columns:minmax(0,1fr);max-width:790px;margin:0 auto}
+
+/* iPhone landscape and narrow safe-area viewports: never allow action labels
+   to force an off-screen button. Only the panel scrolls, not the entire page. */
+.tdr-emergency-overlay{
+  width:100%;max-width:100%;height:100dvh;max-height:100dvh;min-width:0;
+  overflow:hidden;
+  padding-left:calc(env(safe-area-inset-left,0px) + 10px);
+  padding-right:calc(env(safe-area-inset-right,0px) + 10px);
+}
+.tdr-emergency-panel{
+  width:min(790px,100%);max-width:100%;max-height:100%;min-width:0;
+  overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.tdr-emergency-heading{min-width:0;align-items:flex-start}
+.tdr-emergency-heading>div{min-width:0;flex:1 1 0;overflow-wrap:anywhere}
+.tdr-emergency-heading h2{overflow-wrap:anywhere;line-height:1.1}
+.tdr-emergency-heading .tdr-emergency-close{flex:0 0 auto;max-width:35%}
+.tdr-emergency-card,.tdr-emergency-card>*{max-width:100%}
+.tdr-emergency-actions{width:100%;min-width:0;max-width:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));align-items:stretch;gap:8px}
+.tdr-emergency-overlay button{
+  min-width:0;max-width:100%;width:100%;white-space:normal;
+  overflow-wrap:anywhere;word-break:normal;line-height:1.25;
+  text-align:center;display:flex;align-items:center;justify-content:center;
+}
+.tdr-emergency-overlay button.tdr-emergency-close{width:auto}
+.tdr-emergency-auth,.tdr-emergency-inbox,.tdr-emergency-report-list{min-width:0;max-width:100%}
+.tdr-emergency-inbox>button{width:100%}
+.tdr-emergency-direct-link{display:block;overflow-wrap:anywhere;max-width:100%}
+.tdr-emergency-note,.tdr-emergency-warning,.tdr-emergency-footnote{overflow-wrap:anywhere}
+@media(max-height:500px) and (orientation:landscape){
+  .tdr-emergency-overlay{padding-top:calc(env(safe-area-inset-top,0px) + 5px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 5px)}
+  .tdr-emergency-panel{padding:10px;max-height:100%}
+  .tdr-emergency-heading h2{font-size:clamp(13px,2.2vw,17px)}
+  .tdr-emergency-card{padding:10px;gap:6px}
+  .tdr-emergency-summary{margin:6px 0!important}
+  .tdr-emergency-overlay button{font-size:10px;min-height:42px;padding:8px 10px}
+  .tdr-emergency-overlay button.tdr-emergency-danger{min-height:45px}
+}
