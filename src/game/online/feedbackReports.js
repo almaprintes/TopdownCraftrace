@@ -24,6 +24,7 @@ export async function submitPlayerFeedback({category,message,includeDiagnostics=
   if(!hasSavedRaceControlSession())throw Error('Para evitar abusos, primero entra en Ajustes → Cuenta con tu cuenta online.');
   const {session}=await activateRaceControlOnline();
   if(!session?.access_token||!session?.user?.id)throw Error('No se encontró una sesión online válida.');
+  if(session.user.is_anonymous===true)throw Error('Vincula primero tu partida a una cuenta online desde Ajustes → Cuenta.');
   const {url,key}=playerBackendConfig();
   const response=await fetch(url+'/rest/v1/rpc/tdr_submit_feedback',{
     method:'POST',headers:{apikey:key,Authorization:'Bearer '+session.access_token,
