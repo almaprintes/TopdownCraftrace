@@ -154,3 +154,28 @@ Ya sabemos que el iPhone terminó caliente pero se enfrió pronto. Evitar de mom
 
 ## Ensayo iPhone DEV FPS 60 (integración de la PR #32)
 La hipótesis 0 vs 60 FPS se implementa con un selector opcional de diagnóstico exclusivo de iPhone en la PWA DEV. Estado inicial BASE 0; `PROBAR FPS 60 (REINICIA)` cambia solo el límite del renderizador/loop Phaser, y `VOLVER FPS BASE (REINICIA)` restaura la configuración. Nunca aplica a Android ni a la compilación de producción (y SafeMode o límites ya <=60 tienen prioridad). El resultado debe medirse sobre condiciones comparables con la misma ruta y en sesiones cortas si el equipo se calienta. No atribuir una mejora al cap sin A/B real. Consultar `docs/diagnostics/ios-fps-cap-ab-plan-2026-11-01.md`.
+
+
+## Prueba real 2026-11-01 23:25–23:31 WET — FPS BASE 0 frente a tope 60
+
+**PWA DEV 1.4.14**, panel iPhone y configuración high, resolución 1.5, RAF, WEBGL DESYNC solicitado (estado real no disponible), sin SafeMode, motor running 6 fuentes, foto y HUD activos, textos Phaser; el informe continúa mostrando `CIRCUITO CIRCUITO ATLÁNTICO` (la pista real no queda confirmada por este informe). Cambia únicamente `fps.limit` 0 → 60 de manera voluntaria entre dos sesiones.
+
+| Métrica | BASE 0 | CAP 60 |
+|---|---:|---:|
+| Hora inicio WET | 23:25:49 | 23:30:41 |
+| Duración medición | 2m20s | 1m01s |
+| Total fotogramas | 5841 | 2646 |
+| FPS promedio | 49.3 | 43.0 |
+| FRAME medio / máximo ms | 20.3 / 254 | 23.2 / 107 |
+| ESCENA CPU medio / máx ms | 0.8 / 87 | 0.9 / 39 |
+| PASO CPU medio / máx ms | 0.8 / 87 | 1.0 / 39 |
+| RENDER CPU medio / máx ms | 0.2 / 12 | 0.2 / 17 |
+| OTROS medio / máx ms | 19.2 / 253 | 22.1 / 105 |
+| >33 ms | 573/5841 = **9.81%** | 480/2646 = **18.14%** |
+| >50 ms | 146/5841 = **2.50%** | 92/2646 = **3.48%** |
+| P95/P99 ms (aprox.) | 41 / 62 | 45 / 63 |
+| Ráfagas >50ms | 129, máx 4 consecutivos | 82, máx 2 consecutivos |
+| Salidas segundo plano | 1, 21 s | 0 |
+| Calor al tacto | no informado | no informado |
+
+**Interpretación:** el cap no ha mostrado mejora de FPS ni regularidad; promedio baja 49,3 → 43,0 y porcentaje de intervalos >33 ms sube ~9,8 → ~18,1 %. El peor intervalo aislado baja 254 → 107 ms, pero este extremo no invalida el empeoramiento de P95/tasas. No se demuestra que el límite cause empeoramiento porque la segunda prueba se hizo poco después de la primera, las duraciones son distintas, hubo 21 s en segundo plano solo durante la primera, no se controló temperatura ni se compararon ventanas equivalentes. El estado de calor no debe inventarse. **Decisión provisional:** recomendar revertir con `VOLVER FPS BASE (REINICIA)`; no promover el cap de 60 como solución permanente, no tocar Android ni producción, no pedir más carreras si se calienta. El usuario debe confirmar manualmente la reversión; no se ha modificado su localStorage remoto.
