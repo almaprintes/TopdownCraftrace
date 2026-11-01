@@ -6,6 +6,7 @@ import { IOS_WEBGL_SYNC_KEY } from '../performance/iosWebglPresentationMode.js';
 import { IOS_DEV_RESOLUTION_KEY } from '../performance/iosDevResolutionTrial.js';
 import { IOS_DEV_TIMEOUT_KEY } from '../performance/iosDevLoopDriver.js';
 import { createFramePacingStats, recordFramePacing, percentileFramePacing } from '../performance/iosFramePacingStats.js';
+import { captureIosRenderAuditSnapshot, formatIosRenderAuditSnapshot } from '../performance/iosRenderAuditSnapshot.js';
 import { getDevRaceTextRenderMode, setDevRaceTextRenderMode } from '../ui/htmlTextRuntime.js';
 
 // On-device DEV diagnostic, OFF until opened. Real Phaser game events rather
@@ -128,6 +129,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   const mode=()=>[state.hudOff?'HUD OFF':'HUD ON',state.photoOff?'FOTO OFF':'FOTO ON',scene._tdrEngineSample?.getDevEngineAudioStatus?.()?.diagnosticSuspended?'MOTOR OFF':'MOTOR ON','TEXTO '+getDevRaceTextRenderMode().mode].join(' · ');
   const reset=()=>{
     state.window=freshWindow();
+    state.renderAudit=null;
     state.measurementStartedAt=Date.now();
     state.previous=loadPreviousRaceMeasurement(localStorage,state.measurementStartedAt);
     state.thermalAtStart=THERMAL_TOUCH_LEVELS[state.thermalIndex];
@@ -301,6 +303,20 @@ export function mountRaceDevFrameDiagnostics(scene){
     b.textContent=state.photoOff?'FOTO OFF':'FOTO ON';
     reset();
   });
+    control('INSPECCIONAR RENDER',()=>{
+      try {
+        // One snapshot on a direct user tap: no continuous GPU polling,
+        // display-list patching or extra RAF loop.
+        state.renderAudit=formatIosRenderAuditSnapshot(captureIosRenderAuditSnapshot(scene));
+        state.lastReport=metrics(state.window,scene,mode(),state)+'\n'+state.renderAudit;
+        state.expanded=true;
+        panel.style.display='block';
+        trigger.textContent='MINIMIZAR';
+        pre.textContent=state.lastReport;
+      } catch (err) {
+        pre.textContent='No se pudo inspeccionar el render: '+String(err?.message||err);
+      }
+    });
   }
   const thermalButton=control('CALOR: '+THERMAL_TOUCH_LEVELS[state.thermalIndex],b=>{
     state.thermalIndex=(state.thermalIndex+1)%THERMAL_TOUCH_LEVELS.length;
@@ -313,7 +329,7 @@ export function mountRaceDevFrameDiagnostics(scene){
   control('REINICIAR',()=>reset());
   const copyButton=control('COPIAR',async b=>{
     const finishedAt=Date.now(),w=state.window;
-    const output=state.active?metrics(w,scene,mode(),state,finishedAt):pre.textContent;
+    const output=state.active?metrics(w,scene,mode(),state,finishedAt)+(state.renderAudit?'\n'+state.renderAudit:''):pre.textContent;
     if(state.active&&w.count>0&&w.frameSum>0){
       savePreviousRaceMeasurement(localStorage,{
         finishedAt,fps:1000/avg(w.frameSum,w.count),
