@@ -13,7 +13,8 @@ const game=readFileSync('src/game/game.js','utf8');
 const diag=readFileSync('src/game/dev/iosRaceFrameDiagnostics.js','utf8');
 assert.match(game,/desynchronized:iosWebglDesync,roundPixels:safeMode/);
 assert.match(game,/if\(!IS_PROD_BUILD&&!isIOSDevice\(\)&&!\/Android\/i\.test/,'avoid duplicate always-on FPS RAF on DEV iOS');
-assert.match(game,/window\.__tdrIosFrameConfig=\{preset:vp\.preset,renderResolution:vp\.renderResolution,targetFps,frameLimit,forceSetTimeOut,safeMode,webglDesyncRequested:iosWebglDesync\}/);
+assert.match(game,/window\.__tdrIosFrameConfig=\{preset:vp\.preset,renderResolution:vp\.renderResolution,targetFps,frameLimit,baseFrameLimit:fpsTrial\.baseLimit,fpsTrialMode:fpsTrial\.mode,forceSetTimeOut,safeMode,webglDesyncRequested:iosWebglDesync\}/,
+  'DEV diagnostic must preserve original WebGL flags plus effective and baseline FPS limits');
 assert.match(diag,/PROBAR WEBGL SYNC \(REINICIA\)/);
 assert.match(diag,/VOLVER WEBGL DESYNC \(REINICIA\)/);
 assert.match(diag,/localStorage\.setItem\(IOS_WEBGL_SYNC_KEY,requested\?'1':'0'\);window\.location\.reload\(\)/);
