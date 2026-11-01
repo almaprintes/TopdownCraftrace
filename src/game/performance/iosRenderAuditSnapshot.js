@@ -166,6 +166,7 @@ export function formatIosRenderAuditSnapshot(value){
 
     'RENDERLIST de cámara INACTIVA no demuestra doble render; NO draw calls ni tiempo GPU',
     'NO EXCLUIDO = elegible para cámara UI, NO prueba de dibujo si no aparece en renderList',
+    ...(!s.uiCameraVisible?['DESCARTADO DOBLE RENDER UI: cámara invisible (no renderiza)']:[]),
     'RGBA8 = estimación de píxeles fotográficos, NO memoria total GPU'
   ].join('\n');
 }
