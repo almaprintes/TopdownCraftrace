@@ -104,7 +104,8 @@ export function mountAdminEmergencyControls(){
   function openOfficialDashboard(){
     // Always opens directly from the user's gesture; no privileged token is exposed.
     try{const tab=window.open(SUPABASE_PROJECT_DASHBOARD,'_blank','noopener,noreferrer');
-      if(tab===null)notify('Si el navegador bloquea la ventana, pulsa el enlace de Supabase del panel.');
+      // Some browsers return null for noopener even when navigation succeeded.
+      void tab;
     }catch{notify('No se pudo abrir el navegador. Usa el enlace de Supabase del panel.');}
   }
   async function request(path,{method='POST',body={},accessToken=token}={}){
@@ -132,6 +133,7 @@ export function mountAdminEmergencyControls(){
     status.dataset.active=on?'true':'false';
     count.textContent='Recibidos hoy: '+Number(s.received_today||0)+' / '+Number(s.daily_limit||40);
     stopReports.disabled=!on;resumeReports.disabled=on;refreshReports.disabled=false;
+    inbox.hidden=false;
   }
   async function staffLogin(){
     if(!hasSavedRaceControlSession()){
@@ -164,7 +166,7 @@ export function mountAdminEmergencyControls(){
       paintState(s);notify('Estado confirmado por Supabase.');
     }catch(error){
       if(closed)return;
-      paintUnknown();notify('No se ha podido confirmar el estado: '+messageForError(error));
+      paintUnknown();auth.hidden=false;notify('No se ha podido confirmar el estado: '+messageForError(error));
     }
   }
   async function updateReports(enabled){
