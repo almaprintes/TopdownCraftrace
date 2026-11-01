@@ -19,7 +19,9 @@ const button=(label,cls,action)=>{
 };
 const messageForError=e=>String(e?.message||'Error de conexión');
 
-export function mountAdminEmergencyControls(){
+export function mountAdminEmergencyControls({mode='reports'}={}){
+  const projectMode=mode==='project';
+
   if(typeof document==='undefined')return ()=>{};
   document.querySelector('[data-tdr-emergency-root]')?.remove();
   const {url,key}=playerBackendConfig();
@@ -32,16 +34,17 @@ export function mountAdminEmergencyControls(){
   const panel=el('section','tdr-emergency-panel');
   const head=el('header','tdr-emergency-heading');
   head.append(el('div','tdr-emergency-brand','TDR · ADMIN HUB'),
-    el('h2','','CONTROLES DE EMERGENCIA'));
+    el('h2','',projectMode?'PAUSA TOTAL · SUPABASE':'PARADA DE INFORMES'));
   const closeButton=button('CERRAR','tdr-emergency-close',close);
   head.append(closeButton);panel.append(head);
   const info=el('p','tdr-emergency-summary',
-    'Dos cortes distintos. El primero solo detiene informes. El segundo permite pausar TODO Supabase desde su panel oficial y restaurarlo más adelante.');
+    projectMode?'Pausa completa y reversible del servicio online mediante Supabase Dashboard.':
+      'Solo gestiona informes voluntarios: apagado y reactivación sin afectar a partidas ni récords.');
   panel.append(info);
   const banner=el('p','tdr-emergency-notice','');
   banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');
   panel.append(banner);
-  const cards=el('div','tdr-emergency-cards');panel.append(cards);
+  const cards=el('div','tdr-emergency-cards is-single');panel.append(cards);
   const reports=el('section','tdr-emergency-card');
   reports.dataset.emergencySection='reports';
   reports.append(el('div','tdr-emergency-kicker','01 · INFORMES DE JUGADORES'),
@@ -70,7 +73,7 @@ export function mountAdminEmergencyControls(){
   const showReports=button('VER INFORMES RECIBIDOS','tdr-emergency-neutral',()=>void loadReports());
   const reportList=el('div','tdr-emergency-report-list');
   inbox.append(showReports,reportList);
-  reports.append(inbox);cards.append(reports);
+  reports.append(inbox);if(!projectMode)cards.append(reports);
 
   const project=el('section','tdr-emergency-card tdr-emergency-card--project');
   project.dataset.emergencySection='project';
@@ -91,9 +94,10 @@ export function mountAdminEmergencyControls(){
     'Plan Free: Supabase documenta que la restauración normal se puede hacer durante los 90 días posteriores a la pausa. Una pausa no borra los datos; no borres el proyecto. En planes de pago la pausa no está disponible.'));
   const link=el('a','tdr-emergency-direct-link','Abrir configuración oficial de Supabase');
   link.href=SUPABASE_PROJECT_DASHBOARD;link.target='_blank';link.rel='noopener noreferrer';
-  project.append(link);cards.append(project);
+  project.append(link);if(projectMode)cards.append(project);
   const footer=el('p','tdr-emergency-footnote',
-    'La parada total necesita el panel de Supabase: la web de TDR no puede garantizar el corte de costes o conexiones por sí sola. Si Supabase está pausado, podrás reanudarlo desde Supabase Dashboard, aunque no funcione el juego online.');
+    projectMode?'La pausa es reversible desde Supabase Dashboard incluso cuando el juego online no tiene conexión. El botón abre el panel, NO pausa automáticamente.':
+      'El corte de informes no detiene Supabase ni garantiza evitar costes de otras funciones. Para eso usa el botón rojo de PAUSA TOTAL del Paddock.');
   panel.append(cards,footer);root.append(panel);document.body.append(root);
 
   function notify(value){if(!closed)banner.textContent=value||'';}
@@ -213,7 +217,6 @@ export function mountAdminEmergencyControls(){
     }finally{if(!closed)showReports.disabled=false;}
   }
 
-  paintUnknown();
-  auth.hidden=false;
+  if(!projectMode){paintUnknown();auth.hidden=false;}
   return close;
 }

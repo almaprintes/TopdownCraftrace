@@ -35,8 +35,13 @@ assert.doesNotMatch(ui,/service_role|serviceRole|sb_secret_|api\.supabase\.com\/
 assert.doesNotMatch(announcements,/tdr_set_feedback_enabled|tdr_feedback_reports|ABRIR PAUSA TOTAL|CORTAR INFORMES/,
   'Communications must contain ZERO emergency/feedback controls');
 assert.match(paddock,/id:'emergency',color:'#ff4261',run:handlers\.emergency/);
+assert.match(paddock,/id:'emergencyProject',color:'#ff2349',run:handlers\.projectEmergency/);
 assert.match(paddock,/id:'communications',color:'#40e4c7',run:handlers\.communications/);
-assert.match(scene,/mountAdminEmergencyControls\(\)/);
+assert.match(scene,/mountAdminEmergencyControls\(\{mode\}\)/);
+assert.match(scene,/_openEmergencyConsole\('reports'\)/);
+assert.match(scene,/_openEmergencyConsole\('project'\)/);
+assert.match(ui,/if\(!projectMode\)cards\.append\(reports\)/);
+assert.match(ui,/if\(projectMode\)cards\.append\(project\)/);
 assert.match(scene,/mountAdminCommunications\(\)/);
 assert.match(scene,/this\._emergencyDispose\?\.\(\)/);
 assert.match(read('src/game/scenes/SettingsDomScene.js'),/data-feedback-open/);

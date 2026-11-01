@@ -74,19 +74,8 @@ export class AdminHubScene extends BaseScene {
           this._showToast('CONVERSOR DE IMÁGENES NO DISPONIBLE');
         }
       },
-      emergency:async()=>{
-        try{
-          const {mountAdminEmergencyControls}=await import('../ui/adminEmergencyControls.js');
-          if(!this._adminDomRoot?.isConnected)return;
-          try{this._communicationDispose?.();}catch{}
-          this._communicationDispose=null;
-          try{this._emergencyDispose?.();}catch{}
-          this._emergencyDispose=mountAdminEmergencyControls();
-        }catch(error){
-          console.warn('[paddock emergency] unavailable',error);
-          this._showToast('CONTROLES DE EMERGENCIA NO DISPONIBLES');
-        }
-      },
+      emergency:()=>this._openEmergencyConsole('reports'),
+      projectEmergency:()=>this._openEmergencyConsole('project'),
       communications:async()=>{
         try{
           const {mountAdminCommunications}=await import('../ui/adminCommunications.js');
@@ -111,6 +100,20 @@ export class AdminHubScene extends BaseScene {
     });
     this._adminDomRoot=view.root;
     this._adminDomToast=view.toast;
+  }
+
+  async _openEmergencyConsole(mode){
+    try{
+      const {mountAdminEmergencyControls}=await import('../ui/adminEmergencyControls.js');
+      if(!this._adminDomRoot?.isConnected)return;
+      try{this._communicationDispose?.();}catch{}
+      this._communicationDispose=null;
+      try{this._emergencyDispose?.();}catch{}
+      this._emergencyDispose=mountAdminEmergencyControls({mode});
+    }catch(error){
+      console.warn('[paddock emergency] unavailable',error);
+      this._showToast('CONTROLES DE EMERGENCIA NO DISPONIBLES');
+    }
   }
 
   async _showLastRuntimeError(){

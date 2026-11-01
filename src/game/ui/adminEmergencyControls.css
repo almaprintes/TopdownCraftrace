@@ -34,3 +34,5 @@
 .tdr-emergency-report small{color:#9dc9d7}
 @media(max-width:690px){.tdr-emergency-cards{grid-template-columns:1fr}.tdr-emergency-panel{max-height:94dvh}}
 @media(max-height:500px){.tdr-emergency-panel{padding:10px}.tdr-emergency-card{gap:6px}.tdr-emergency-heading h2{font-size:15px}}
+
+.tdr-emergency-cards.is-single{grid-template-columns:minmax(0,1fr);max-width:790px;margin:0 auto}
