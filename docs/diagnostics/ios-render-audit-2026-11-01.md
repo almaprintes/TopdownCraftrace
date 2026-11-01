@@ -62,3 +62,18 @@ La lectura manual `INSPECCIONAR RENDER` de este PR ahora informa:
 ## Estado verificado
 - GitHub Actions `41298581151`: sintaxis, snapshots read-only, exclusión por cámara, orden de creación y clasificación de mosaicos compactos/originales **correctas**.
 - Estos test son **de código y casos simulados**, no equivalen a ver el comportamiento de GPU en iPhone real.
+
+## CORRECCIÓN IMPORTANTE (2026-11-01, continuación): UI camera NO renderiza
+
+La sección anterior sobre `uiCam?.ignore?.()` ejecutadas antes de crear `uiCam` es correcta respecto al **orden del código**, pero interpretar que se está **duplicando renderizado** fue una hipótesis prematura. La auditoría completa de la herencia revela:
+
+1. `src/game/scenes/RaceFixedScene.js`, que heredan `RaceStyledHudScene`, `RaceCompetitionHudScene` y la carrera actual, ejecuta después de `RaceScene.create()` **`this.uiCam.setVisible(false)`**, manteniendo `main.setVisible(true)`. Esto se realiza en la versión base del iOS local (`9181e72c`) **y en `main`**: el archivo es idéntico (blob Git `4ce483cc14814b44084873e7753c5ebc06924d8f`).
+2. Documentación de Phaser 3.90: una cámara invisible **no renderiza y no realiza tests de input**. En consecuencia, la cámara del HUD no puede explicar *en este camino de código* un segundo pase de renderizado por fotograma, aunque sus filtros `ignore` no estén completos. Referencia: https://docs.phaser.io/api-documentation/3.90.0/class/cameras-scene2d-basecamera
+3. `RaceFixedScene.js` reproyecta los elementos del HUD a la cámara principal (`_pinHudToScreen`, `_pinRaceInfoHud`, etc.) para preservar posiciones visuales. Existen tareas de colocación HUD por fotograma, pero sus costes no pueden atribuirse a GPU sin medición.
+4. **Acción:** NO aplicar ningún supuesto arreglo de exclusiones de la cámara UI para mejorar energía; eso sería trabajar sobre una hipótesis ya descartada. `INSPECCIONAR RENDER` ahora informa **cámaras visibles, estado real de UI y escenas activas** y alerta cuando UI está inactiva. Los filtros prematuros se conservan documentados como deuda de código, no prioridad de rendimiento.
+5. La comparación de la base iOS local inicial `9181e72c` contra `main` también confirma que `iosPhotoTileBudget.js`, `RaceFixedScene.js`, `RaceEmbeddedReplaySceneV2.js` y `build-ios-race-photo-tiles.mjs` son **idénticos**. La primera copia local usa ya la escala de mosaicos iOS al 65%, la cámara UI desactivada y la ruta de carga compacta. **No asegura** que la build finalmente instalada sea exactamente esa copia sin consultar el móvil/Mac, ni que los archivos compactos estén presentes en la instalación.
+6. La versión GitHub `main` está **253 commits por delante** del punto inicial `9181e72c`; la prueba energética medida en iPhone puede corresponder a una instantánea diferente. Debemos aislar hipótesis que se mantengan en ambas sin atribuir fallos de HEAD a la instalación nativa.
+
+### Siguiente prioridad técnica
+
+A) A/B de límite de FPS (PR #32), sin cambiar definición ni física; B) comprobar los mosaicos reales compactados de la instalación y número de **escenas/cámaras visibles** (este PR); C) solo si persiste, instrumentación de presentación WebGL/Metal con dispositivo conectado. No nuevas rebajas visuales a ciegas ni intervenir en Android. Todos los PR siguen en borrador sin despliegue.
