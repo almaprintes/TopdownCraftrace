@@ -320,9 +320,9 @@ export function mountAdminCommunications(){
             make('small','',new Date(report.created_at).toLocaleString()),
             make('p','',report.message));
           const copy=btn('COPIAR PARA GITHUB',async()=>{
-            const content='TDR · Informe #'+report.id+'\\nTipo: '+report.category+
-              '\\nFecha: '+report.created_at+'\\n\\n'+report.message+
-              '\\n\\nDatos técnicos autorizados:\\n'+JSON.stringify(report.diagnostics||{},null,2);
+            const content='TDR · Informe #'+report.id+'\nTipo: '+report.category+
+              '\nFecha: '+report.created_at+'\n\n'+report.message+
+              '\n\nDatos técnicos autorizados:\n'+JSON.stringify(report.diagnostics||{},null,2);
             try{await navigator.clipboard.writeText(content);notice('Informe copiado para crear una incidencia en GitHub.');}
             catch{notice('No se pudo copiar: el navegador exige permiso de portapapeles.');}
           });
