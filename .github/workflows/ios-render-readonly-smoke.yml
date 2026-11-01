@@ -1,0 +1,22 @@
+name: iOS read-only render audit smoke (no deploy)
+on:
+  push:
+    branches:
+      - diagnostics/ios-render-readonly-2026-11-01
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify diagnostic JS syntax
+        run: |
+          node --check src/game/performance/iosRenderAuditSnapshot.js
+          node --check src/game/dev/iosRaceFrameDiagnostics.js
+      - name: Verify camera snapshot is read-only
+        run: node scripts/ios-render-audit-snapshot-smoke.mjs
