@@ -5,6 +5,7 @@ import { THERMAL_TOUCH_LEVELS, loadPreviousRaceMeasurement, savePreviousRaceMeas
 import { IOS_WEBGL_SYNC_KEY } from '../performance/iosWebglPresentationMode.js';
 import { IOS_DEV_RESOLUTION_KEY } from '../performance/iosDevResolutionTrial.js';
 import { IOS_DEV_TIMEOUT_KEY } from '../performance/iosDevLoopDriver.js';
+import { IOS_DEV_FPS_CAP_KEY } from '../performance/iosDevFpsCapTrial.js';
 import { createFramePacingStats, recordFramePacing, percentileFramePacing } from '../performance/iosFramePacingStats.js';
 import { captureIosRenderAuditSnapshot, formatIosRenderAuditSnapshot } from '../performance/iosRenderAuditSnapshot.js';
 import { beginIosWebglDrawCallSample, formatIosWebglDrawCallSample } from '../performance/iosWebglDrawCallSample.js';
@@ -43,7 +44,7 @@ const frameInfo=scene=>{
   const limit=devIos?conf.frameLimit:scene.game?.config?.fps?.limit;
   const line=`MODO ${preset||'?'}  RES ${resolution||'?'}  FPS limit ${limit??'?'}`;
   if(!devIos)return line+'\nWEBGL '+actual+' real · FPS HUD '+(videoProbeEnabled()?'ON':'OFF');
-  return line+` · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\nLOOP ${conf.loopTrialMode||'DESCONOCIDO'}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;
+  return line+` · FPS ${conf.fpsTrialMode==='CAP_60'?'PRUEBA 60':'BASE '+(conf.baseFrameLimit??'?')} · RES ${conf.resolutionTrialMode==='LOW'?'PRUEBA 1.0':'BASE '+(conf.baseRenderResolution??'?')}\nLOOP ${conf.loopTrialMode||'DESCONOCIDO'}\nWEBGL ${conf.webglDesyncRequested?'DESYNC':'SYNC'} solicitado · ${actual} real\nSAFE ${conf.safeMode?'SI':'NO'} (${safeModeDetails()}) · TIMER ${conf.forceSetTimeOut?'SI':'NO'} · FPS HUD ${videoProbeEnabled()?'ON':'OFF'}`;
 };
 // Extra information is sampled on demand, never on every animation frame.
 const contextLines=(w,scene,state,nowWall)=> {
@@ -276,6 +277,19 @@ export function mountRaceDevFrameDiagnostics(scene){
   // Compare the historic iPhone-only Phaser setTimeout loop without
   // changing the Android, production or safe-mode loop policies.
   if(/iPhone/i.test(String(navigator?.userAgent||''))&&!window.__tdrIosFrameConfig?.safeMode){
+    // Voluntary FPS cap A/B is restricted to iPhone DEV with no existing cap.
+    // Reload applies Phaser configuration at startup; Android/production unchanged.
+    const fpsConfig=window.__tdrIosFrameConfig||{};
+    if(Number(fpsConfig.baseFrameLimit||0)===0){
+      const capped=fpsConfig.fpsTrialMode==='CAP_60';
+      control(capped?'VOLVER FPS BASE (REINICIA)':'PROBAR FPS 60 (REINICIA)',()=>{
+        try{
+          if(capped)localStorage.removeItem(IOS_DEV_FPS_CAP_KEY);
+          else localStorage.setItem(IOS_DEV_FPS_CAP_KEY,'1');
+          window.location.reload();
+        }catch{pre.textContent='No se pudo cambiar el límite de FPS; la configuración actual se conserva.';}
+      });
+    }
     const usingTimeout=window.__tdrIosFrameConfig?.forceSetTimeOut===true;
     control(usingTimeout?'VOLVER LOOP RAF (REINICIA)':'PROBAR LOOP TIMEOUT (REINICIA)',()=>{
       try{
