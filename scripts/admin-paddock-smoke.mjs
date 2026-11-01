@@ -65,7 +65,8 @@ const walk=(node,test,out=[])=>{
 const tiles=walk(root,e=>e.className==='tdr-paddock__tile');
 const auxiliary=walk(root,e=>e.className==='tdr-paddock__aux');
 assert.equal(tiles.length,4);
-assert.equal(auxiliary.length,4);
+assert.equal(auxiliary.length,5);
+assert.match(auxiliary[0].textContent + JSON.stringify(auxiliary[0].children.map(x=>x.children.map?.(z=>z.textContent)||[])),/BOTÓN ROJO/);
 assert.equal(walk(root,e=>e.className==='tdr-paddock__dev')[0].textContent,expectedDevVersion);
 assert.deepEqual(tiles.map(t=>t.dataset.kind),['track','environment','car','image']);
 assert.ok(tiles.every(t=>walk(t,e=>e.tag==='img').length===1));
@@ -84,10 +85,10 @@ walk(dialog,e=>e.tag==='button').find(b=>b.textContent==='CONFIRMAR').click();
 assert.ok(events.includes('kit'));
 qaTools.find(t=>t.children[0].textContent==='9 INSIGNIAS DE MAESTRÍA').click();
 walk(root,e=>e.className==='tdr-paddock__back')[0].click();
-auxiliary[3].click();
+auxiliary[4].click();
 qaTools.find(t=>t.children[0].textContent.startsWith('EDITAR PISTAS')).click();
 walk(root,e=>e.className==='tdr-paddock__exit')[0].click();
 for(const action of ['track','environment','cars','images','communications','diagnostics','garage','cars-dev','kit','mastery','legacy','exit'])
   assert.ok(events.includes(action),'Missing action '+action);
 assert.ok(!viewSource.includes('fetch('),'Dashboard must not issue network requests');
-console.log('PADDOCK: 4 primary cards, 4 secondary cards, 12 wired actions, QA confirmation, accessible navigation and compact CSS OK.');
+console.log('PADDOCK: 4 primary cards, 5 secondary cards, 12 wired actions, QA confirmation, accessible navigation and compact CSS OK.');
