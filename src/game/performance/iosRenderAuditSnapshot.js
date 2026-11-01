@@ -1,3 +1,5 @@
+import { expectedCompactTileSize } from './iosPhotoTileBudget.js';
+
 // Read-only, DEV diagnostics for a single, user-triggered snapshot.
 // Phaser Camera.renderList describes the Game Objects rendered in the last
 // camera frame. It is NOT a GPU draw-call count, a memory measurement or a
@@ -61,6 +63,15 @@ export function captureIosRenderAuditSnapshot(scene){
   let photoInMain=0;
   let photoInUi=0;
   let photoSourceCount=0;
+  let photoCompactCount=0;
+  let photoFullSizeCount=0;
+  let photoUnmatchedCount=0;
+  const photoSizeExamples=[];
+  const descriptor=scene?._imageNativePrepared||{};
+  const authoredTiles=Array.isArray(descriptor?.tiles)?descriptor.tiles:[];
+  const authoredByKey=new Map(authoredTiles.map(t=>[
+    'native:'+descriptor.trackKey+':'+Number(t.x)+':'+Number(t.y),t
+  ]));
   const keys=new Set();
   for(const sprite of photos){
     if(mainList.has(sprite))photoInMain++;
@@ -74,6 +85,18 @@ export function captureIosRenderAuditSnapshot(scene){
     if(w>0&&h>0){
       photoSourceCount++;
       estimatedRgbaBytes+=w*h*4;
+      const expected=authoredByKey.get(key);
+      const fullW=natural(expected?.width),fullH=natural(expected?.height);
+      const [smallW,smallH]=expectedCompactTileSize(fullW,fullH);
+      let mode='SIN METADATOS';
+      if(fullW>0&&fullH>0){
+        if(w===smallW&&h===smallH){mode='COMPACTA';photoCompactCount++;}
+        else if(w===fullW&&h===fullH){mode='ORIGINAL';photoFullSizeCount++;}
+        else{mode='INESPERADA';photoUnmatchedCount++;}
+      }else photoUnmatchedCount++;
+      if(photoSizeExamples.length<9)photoSizeExamples.push(
+        String(key).slice(0,42)+' '+w+'x'+h+' ['+mode+']'
+      );
     }
   }
   const backingWidth=natural(canvas?.width);
@@ -100,6 +123,10 @@ export function captureIosRenderAuditSnapshot(scene){
     photoInMain,
     photoInUi,
     photoSourceCount,
+    photoCompactCount,
+    photoFullSizeCount,
+    photoUnmatchedCount,
+    photoSizeExamples,
     photoRgbaEstimateMiB:Number(formatMb(estimatedRgbaBytes)),
     // Never identify this number as all GPU allocations: it is just the
     // estimated uncompressed RGBA8 pixel budget of native photo textures.
@@ -116,6 +143,8 @@ export function formatIosRenderAuditSnapshot(value){
     `CANVAS ${canvas} (${Number(s.canvasMegapixels||0).toFixed(2)} Mpx) · GL ${gl}`,
     `CÁMARAS ${s.cameraCount??'?'} · renderList MAIN ${s.mainObjects??'?'} · UI ${s.uiObjects??'?'} · COMPARTIDOS ${s.sharedObjects??'?'}`,
     `FOTO ${s.photoTiles??0} mosaicos · MAIN ${s.photoInMain??0} · UI ${s.photoInUi??0} · RGBA8 teórico ${s.photoRgbaEstimateMiB??0} MiB (${s.photoSourceCount??0} fuentes)`,
+    `FOTO IOS CATEGORIAS COMPACTA ${s.photoCompactCount??0} · ORIGINAL ${s.photoFullSizeCount??0} · INESPERADA/SIN META ${s.photoUnmatchedCount??0}`,
+    ...((s.photoSizeExamples||[]).length?['MOSAICOS '+s.photoSizeExamples.join(' | ')]:[]),
     `UI MUNDO ${s.uiWorldObjects??0} · COMPARTIDOS MUNDO ${s.sharedWorldObjects??0}`,
     `NOMBRADOS MUNDO ${s.namedWorldCount??0} · NO EXCLUIDOS DE UI ${s.namedWorldUnfiltered??0} · PRESENTES UI ${s.namedWorldActuallyInUi??0}`,
     ...((s.namedWorldUnfilteredExamples||[]).length?['EJEMPLOS SIN EXCLUIR: '+s.namedWorldUnfilteredExamples.join(' | ')]:[]),
