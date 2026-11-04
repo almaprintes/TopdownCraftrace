@@ -1,0 +1,25 @@
+name: iOS DEV redundant-pass isolation (no deploy)
+on:
+  push:
+    branches:
+      - diagnostics/ios-photo-framework-reduction-2026-11-01
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Syntax checks
+        run: |
+          node --version
+          node --check src/game/performance/iosDevRedundantPassGuard.js
+          node --check src/game/scenes/RaceEmbeddedReplaySceneV2.js
+          node --check src/game/scenes/RaceRealSurfaceAssetsScene.js
+          node --check scripts/ios-dev-redundant-render-guard-smoke.mjs
+      - name: iPhone DEV/platform isolation and guard tests
+        run: node scripts/ios-dev-redundant-render-guard-smoke.mjs
