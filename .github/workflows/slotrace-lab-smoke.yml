@@ -1,0 +1,21 @@
+name: SlotRace LAB smoke
+on:
+  push:
+    branches:
+      - prototype/slotrace-v0
+    paths:
+      - experiments/slotrace/**
+      - .github/workflows/slotrace-lab-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  slotrace-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the standalone prototype
+        run: node experiments/slotrace/smoke.cjs
