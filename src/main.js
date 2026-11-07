@@ -1,6 +1,7 @@
 import './style.css';
 import {installAdFreePromoControl} from './game/monetization/adFreeNovember.js';
 import {completeGoogleWebSignIn} from './game/online/googleWebAuth.js';
+import {completeAppleWebSignIn,APPLE_PENDING} from './game/online/appleWebAuth.js';
 import {openCloudAccountUi} from './game/social/cloudAccountUi.js';
 import {installCloudAutoSync} from './game/social/cloudAutoSync.js';
 import { createGame } from './game/game.js';
@@ -49,7 +50,12 @@ let googleAuthReady=false;
 installCloudAutoSync();
 const googleCallback=window.__tdrGoogleCallback;
 delete window.__tdrGoogleCallback;
-void completeGoogleWebSignIn(googleCallback).then(result=>{
+// Both games use the same Supabase Auth UUID. The originating provider is
+// selected from this tab's one-time PKCE transaction, never from a URL claim.
+const completeStudioSocialSignIn=()=>googleCallback&&sessionStorage.getItem(APPLE_PENDING)
+  ?completeAppleWebSignIn(googleCallback)
+  :completeGoogleWebSignIn(googleCallback);
+void completeStudioSocialSignIn().then(result=>{
   googleAuthReady=true;
   __tickOrientation();
   if(result)openCloudAccountUi({initialNotice:result.message});

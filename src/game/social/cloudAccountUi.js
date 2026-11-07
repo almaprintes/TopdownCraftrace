@@ -1,10 +1,11 @@
 import {googleWebAvailable,startGoogleWebSignIn} from '../online/googleWebAuth.js';
+import {appleWebAvailable,startAppleWebSignIn} from '../online/appleWebAuth.js';
 import {protectLocalSaveAfterSocialSignIn} from './socialAccountLink.js';
 import {cloudAutoSyncStatus} from './cloudAutoSync.js';
 import {canonicalRuntimeText,localizeDomTree} from '../i18n/canonicalRuntimeText.js';
 import {getLanguage} from '../i18n/index.js';
 import {
-  currentRaceControlAccount,requestRaceControlEmailLink,
+  currentRaceControlAccount,getMyCraftStudioAccount,requestRaceControlEmailLink,
   verifyRaceControlEmailCode,setRaceControlPassword,
   switchRaceControlAccount,getMyRaceControlBadge,
   hasSavedRaceControlSession,savedGoogleWebIdentity,continueRejectedAnonymousSessionLocally
@@ -61,6 +62,14 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   googleButton.type='button';googleButton.textContent='CONTINUAR CON GOOGLE';
   googleButton.dataset.action='google';googleButton.hidden=!googleWebAvailable();
   root.querySelector('.tdr-cloud-main-actions')?.prepend(googleButton);
+  const appleButton=document.createElement('button');
+  appleButton.type='button';appleButton.textContent='CONTINUAR CON APPLE';
+  appleButton.dataset.action='apple';appleButton.hidden=!appleWebAvailable();
+  root.querySelector('.tdr-cloud-main-actions')?.prepend(appleButton);
+  const studioBadge=document.createElement('small');
+  studioBadge.dataset.craftStudioIdentity='1';
+  studioBadge.textContent='CRAFTRACE STUDIO · IDENTIDAD COMPARTIDA';
+  root.querySelector('.tdr-cloud-driver')?.appendChild(studioBadge);
   const socialSave=document.createElement('button');
   socialSave.type='button';socialSave.textContent='PROTEGER MI PARTIDA';
   socialSave.className='tdr-cloud-primary';socialSave.hidden=true;
@@ -112,10 +121,11 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   };
   const showLocalAccount=()=>{
     account=null;backup=null;
-    googleButton.hidden=!googleWebAvailable();socialSave.hidden=true;
+    googleButton.hidden=!googleWebAvailable();
+    appleButton.hidden=!appleWebAvailable();socialSave.hidden=true;
     const local=inspectLocalProgress();
     root.querySelector('[data-cloud-pilot]').textContent=local.pilotName||'MI PILOTO';
-    idLine.textContent='PARTIDA LOCAL';creatorBadge.hidden=true;
+    idLine.textContent='PARTIDA LOCAL';creatorBadge.hidden=true;studioBadge.hidden=true;
     localContinue.hidden=true;localContinue.dataset.userId='';
     for(const key of ['protect','backup','restore','login-open','retry'])
       root.querySelector('[data-action="'+key+'"]').hidden=true;
@@ -124,14 +134,15 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     root.querySelector('[data-cloud-icon]').textContent='🏁';
     root.querySelector('[data-cloud-title]').textContent='Partida en este dispositivo';
     root.querySelector('[data-cloud-description]').textContent='Puedes jugar, mejorar tus coches y ganar recompensas sin registrarte.';
-    root.querySelector('[data-cloud-tip]').textContent='Conecta Google para poder recuperar tu cuenta. Después te pediremos confirmar la copia del progreso. Puedes seguir jugando sin cuenta. Apple y las apps nativas quedan para más adelante.';
+    root.querySelector('[data-cloud-tip]').textContent='Conecta Google o Apple para identificarte en CraftRace Studio. Después te pediremos confirmar una copia del progreso. Puedes jugar sin cuenta. En Android/iOS nativos el acceso social requiere integración por plataforma.';
     for(const key of ['backup-manual','restore-manual','export-cloud'])
       root.querySelector('[data-action="'+key+'"]').disabled=true;
     localizeDomTree(root);
   };
   const showConnectionError=(error)=>{
-    creatorBadge.hidden=true;idLine.textContent='Identidad sin comprobar';
-    googleButton.hidden=!googleWebAvailable()||!savedGoogleWebIdentity();socialSave.hidden=true;
+    creatorBadge.hidden=true;studioBadge.hidden=true;idLine.textContent='Identidad sin comprobar';
+    googleButton.hidden=!googleWebAvailable()||!savedGoogleWebIdentity();
+    appleButton.hidden=!appleWebAvailable();socialSave.hidden=true;
     // Keep local progress visible even when Auth or cloud storage is offline.
     let local=null;
     try{local=inspectLocalProgress();}catch{}
@@ -161,7 +172,10 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     account=await currentRaceControlAccount();
     legacyAccess.hidden=!account.email||account.socialProviders?.includes('google');
     googleButton.hidden=!googleWebAvailable()||account.socialProviders?.includes('google');
-    googleButton.textContent='VINCULAR GOOGLE · CONSERVAR MI ID';socialSave.hidden=true;
+    appleButton.hidden=!appleWebAvailable()||account.socialProviders?.includes('apple');
+    googleButton.textContent='VINCULAR GOOGLE · CONSERVAR MI ID';
+    appleButton.textContent='VINCULAR APPLE · CONSERVAR MI ID';
+    socialSave.hidden=true;
     backup=await cloudBackupStatus();
     if(account.id!==backup.id)throw new Error('La cuenta y la copia tienen identidades distintas.');
     const local=inspectLocalProgress();
@@ -178,6 +192,19 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     idLine.textContent='ID · '+shortPlayerId(account.id);
     creatorBadge.hidden=true;
     try{creatorBadge.hidden=(await getMyRaceControlBadge())!=='CREADOR';}catch{}
+    studioBadge.hidden=account.anonymous;
+    studioBadge.textContent='CRAFTRACE STUDIO · CUENTA CONECTADA';
+    if(!account.anonymous){
+      // The display is a server-side verified membership, never a local nick.
+      try{
+        const studio=await getMyCraftStudioAccount();
+        studioBadge.textContent=studio?.nickname?
+          'CRAFTRACE STUDIO · '+studio.nickname:
+          'CRAFTRACE STUDIO · REGISTRO AUTOMÁTICO';
+      }catch{
+        studioBadge.textContent='CRAFTRACE STUDIO · IDENTIDAD VERIFICADA';
+      }
+    }
     for(const key of ['protect','backup','restore','login-open'])
       root.querySelector('[data-action="'+key+'"]').hidden=true;
     const show=(key,label)=>{
@@ -271,7 +298,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   localContinue.addEventListener('click',()=>{
     const oldId=localContinue.dataset.userId;
     if(!oldId)return;
-    if(!accountConfirm('CONTINUAR SIN CUENTA\n\nSe quitará la sesión online anterior de este dispositivo. El nick, monedas, coches, tiempos y progreso local NO se borrarán.\n\nSi la cuenta anterior todavía existiera, ya no podrías acceder a ella desde esta sesión. Google está disponible para la partida local en la DEV web. El acceso Apple y nativo se preparará después.\n\n¿Quieres continuar con tu partida local?'))return;
+    if(!accountConfirm('CONTINUAR SIN CUENTA\n\nSe quitará la sesión online anterior de este dispositivo. El nick, monedas, coches, tiempos y progreso local NO se borrarán.\n\nSi la cuenta anterior todavía existiera, ya no podrías acceder a ella desde esta sesión. Google y Apple están disponibles para probar en la DEV web si sus proveedores están configurados. El acceso nativo requiere su propia integración.\n\n¿Quieres continuar con tu partida local?'))return;
     run(async()=>{
       continueRejectedAnonymousSessionLocally(oldId);
       return '✅ Partida local conservada. Tu acceso online anterior ya no está vinculado a este móvil.';
@@ -282,9 +309,14 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     await startGoogleWebSignIn();
     return 'Abriendo Google…';
   }));
+  appleButton.addEventListener('click',()=>run(async()=>{
+    if(!accountConfirm('CONTINUAR CON APPLE\n\nApple comprobará tu identidad con CraftRace Studio. Si ya tienes cuenta en este dispositivo, intentaremos vincular Apple al MISMO ID. Si elegiste Ocultar mi correo, no se fusionarán dos identidades por el apodo. Tu partida local no se modificará. ¿Continuar?'))return 'Acceso cancelado.';
+    await startAppleWebSignIn();
+    return 'Abriendo Apple…';
+  }));
   socialSave.addEventListener('click',()=>run(async()=>{
     const local=inspectLocalProgress();
-    if(!accountConfirm('PROTEGER MI PARTIDA\n\nPiloto: '+local.pilotName+' · '+local.keys+' bloques.\nSe creará la primera copia en esta cuenta Google. Si ya existe una copia, no se sustituirá. Las grabaciones locales no se incluyen. ¿Confirmas la subida?'))return 'Subida cancelada. Tu partida sigue local.';
+    if(!accountConfirm('PROTEGER MI PARTIDA\n\nPiloto: '+local.pilotName+' · '+local.keys+' bloques.\nSe creará la primera copia en esta cuenta CraftRace Studio. Si ya existe una copia, no se sustituirá. Las grabaciones locales no se incluyen. ¿Confirmas la subida?'))return 'Subida cancelada. Tu partida sigue local.';
     const result=await protectLocalSaveAfterSocialSignIn({playerConfirmed:true});
     return result.status==='protected'?'✅ Primera copia verificada. Tu partida local se conserva.':result.message;
   }));

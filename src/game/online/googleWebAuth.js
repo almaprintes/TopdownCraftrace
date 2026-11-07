@@ -29,6 +29,8 @@ export async function startGoogleWebSignIn(){
   const challenge=b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
   const {url,key}=playerBackendConfig();
   const pending=JSON.stringify({verifier,nonce,createdAt:Date.now(),backend:url,expectedId,linking});
+  // Only one provider callback may be outstanding in this tab.
+  sessionStorage.removeItem('tdr2:applePkce:v1');
   sessionStorage.setItem(PENDING,pending);
   if(sessionStorage.getItem(PENDING)!==pending)throw new Error(FAILURE);
   const redirect=new URL(GOOGLE_REDIRECT);redirect.hash=new URLSearchParams({tdr_state:nonce}).toString();

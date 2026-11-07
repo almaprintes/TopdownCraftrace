@@ -204,6 +204,18 @@ export async function currentRaceControlAccount(){
     anonymous:typeof user.is_anonymous==='boolean'?user.is_anonymous:!user.email,
     pendingEmail:user.new_email||null,socialProviders};
 }
+// Global Studio membership is created by the auth.users DB trigger.
+ // This read-only check never writes or merges TDR or SlotRace progress.
+export async function getMyCraftStudioAccount(){
+  const session=await activeSession();
+  const account=await currentRaceControlAccount();
+  if(account.anonymous)return null;
+  const response=await request('/rest/v1/craft_accounts?select=user_id,nickname&user_id=eq.'+
+    encodeURIComponent(account.id),{token:session.access_token});
+  const value=Array.isArray(response)?response[0]:null;
+  if(!value||value.user_id!==account.id)return null;
+  return {id:account.id,nickname:typeof value.nickname==='string'?value.nickname:null};
+}
 export async function requestRaceControlEmailLink(email){
   const s=await activeSession();
   const addr=cleanEmail(email);
