@@ -275,16 +275,20 @@ jobs:
           printf 'DEV_SOURCE_SHA=%s\n' "$(git -C dev-src rev-parse HEAD)" > dev-src/dist/dev-build.txt
           cp -R dev-src/dist/. site/dev/
           cp -R dev-src/dist/. site/dev-live/
-          cat > site/index.html <<'HTML'
-          <!doctype html>
-          <html lang="es">
-          <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Top Down RACE</title>
-          <style>body{min-height:100vh;display:grid;place-items:center;margin:0;background:#09101d;color:#fff;font:16px system-ui}main{max-width:600px;padding:32px;text-align:center}a{display:inline-block;margin:8px;padding:14px 20px;background:#19477a;color:white;border-radius:10px;text-decoration:none}small{color:#b2c5d9}</style></head>
-          <body><main><h1>TOP DOWN RACE</h1><p>La versión pública 1.1.188 está disponible en Google Play.</p>
-          <a href="https://play.google.com/store/apps/details?id=com.craftracestudio.topdownrace">Abrir Google Play</a>
-          <a href="./dev/">Versión DEV (pruebas)</a><p><small>Google Play se actualiza por separado. Desarrollo desde main.</small></p>
-          </main></body></html>
-          HTML
+          # Studio public homepage and the two game landing pages.
+          # This replaces only the old generated public landing.
+          # Game builds in site/dev and site/dev-live remain untouched.
+          test -s dev-src/studio/index.html
+          mkdir -p site/studio-assets site/top-down-race site/slotrace site/cuenta site/privacidad
+          cp dev-src/studio/index.html site/index.html
+          cp -R dev-src/studio/assets/. site/studio-assets/
+          cp dev-src/studio/top-down-race/index.html site/top-down-race/index.html
+          cp dev-src/studio/slotrace/index.html site/slotrace/index.html
+          cp dev-src/studio/cuenta/index.html site/cuenta/index.html
+          cp dev-src/studio/privacidad/index.html site/privacidad/index.html
+      - name: Verify CraftRace Studio landing, account portal and game links
+        working-directory: dev-src
+        run: node scripts/studio-landing-smoke.mjs ../site
       - name: Verify DEV artifact
         shell: bash
         run: |
