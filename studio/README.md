@@ -1,14 +1,24 @@
 # CraftRace Studio · Sitio web público
 
+## Marcas y nombres oficiales
+
+- Nombre del estudio: **CraftRace Studio**.
+- Juego 001: **Top Down RACE: CrafRace**.
+- Juego 002: **Top Down RACE: SlotRace**.
+
+No usar «Top Down RACE» ni «SlotRace» como título completo del
+producto en la landing, menú, títulos SEO, fichas o accesos públicos.
+Las URL técnicas existentes no se renombran para no romper enlaces.
+
 ## URLs tras el despliegue de GitHub Pages
 
 - Inicio / estudio: https://almaprintes.github.io/TopdownCraftrace/
-- Top Down RACE — landing: https://almaprintes.github.io/TopdownCraftrace/top-down-race/
-- SlotRace — landing: https://almaprintes.github.io/TopdownCraftrace/slotrace/
+- Top Down RACE: CrafRace — landing: https://almaprintes.github.io/TopdownCraftrace/top-down-race/
+- Top Down RACE: SlotRace — landing: https://almaprintes.github.io/TopdownCraftrace/slotrace/
 - CraftRace Studio ID: https://almaprintes.github.io/TopdownCraftrace/cuenta/
 - Privacidad y datos: https://almaprintes.github.io/TopdownCraftrace/privacidad/
-- Juego TDR DEV existente: https://almaprintes.github.io/TopdownCraftrace/dev/
-- Juego SlotRace existente (otro repositorio): https://almaprintes.github.io/SlotRace/
+- Juego Top Down RACE: CrafRace DEV existente: https://almaprintes.github.io/TopdownCraftrace/dev/
+- Juego Top Down RACE: SlotRace existente (otro repositorio): https://almaprintes.github.io/SlotRace/
 
 ## Límites de responsabilidad / compilación
 

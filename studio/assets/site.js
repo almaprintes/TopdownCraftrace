@@ -15,7 +15,7 @@ if(toggle&&panel){
   close();toggle.textContent="☰";
  }));
  window.addEventListener("keydown",ev=>{if(ev.key==="Escape"){close();toggle.textContent="☰";}});
- window.addEventListener("resize",()=>{if(innerWidth>800){close();toggle.textContent="☰";}});
+ window.addEventListener("resize",()=>{if(innerWidth>1120){close();toggle.textContent="☰";}});
 }
 document.querySelectorAll("[data-year]").forEach(node=>node.textContent=String(new Date().getFullYear()));
 const reveal=[...document.querySelectorAll(".reveal")];

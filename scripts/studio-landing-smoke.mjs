@@ -8,8 +8,8 @@ const output=process.argv[2]?resolve(process.argv[2]):null;
 const read=path=>readFileSync(path,"utf8");
 const pages=[
  ["index.html","CraftRace Studio"],
- ["top-down-race/index.html","Top Down RACE"],
- ["slotrace/index.html","SlotRace"],
+ ["top-down-race/index.html","Top Down RACE: CrafRace"],
+ ["slotrace/index.html","Top Down RACE: SlotRace"],
  ["cuenta/index.html","Mi cuenta"],
  ["privacidad/index.html","Privacidad"]
 ];
@@ -29,6 +29,22 @@ for(const [file,title] of pages){
   assert.equal(read(resolve(output,file)),text,file+" deployed bytes");
  }
 }
+// Official game identities: CraftRace Studio is the STUDIO name, not a
+// substitute for either of the two game titles.
+const GAME_CRAFRACE="Top Down RACE: CrafRace";
+const GAME_SLOTRACE="Top Down RACE: SlotRace";
+for(const [file] of pages){
+ const html=read(resolve(source,file));
+ for(const name of [GAME_CRAFRACE,GAME_SLOTRACE]){
+  assert.ok(html.includes(name),file+" must name "+name);
+ }
+ assert.match(html,/<a href="\/TopdownCraftrace\/top-down-race\/"[^>]*>Top Down RACE: CrafRace<\/a>/,
+  file+" desktop menu must use the full game name");
+ assert.match(html,/<a href="\/TopdownCraftrace\/slotrace\/"[^>]*>Top Down RACE: SlotRace<\/a>/,
+  file+" desktop menu must use the full game name");
+ assert.match(html,/aria-label="CraftRace Studio, inicio"/,
+  "The publisher brand must remain CraftRace Studio");
+}
 const landing=read(resolve(source,"index.html"));
 assert.match(landing,/CRAFT<b>RACE<\/b>/);
 assert.match(landing,/href="\/TopdownCraftrace\/top-down-race\/"/);
@@ -38,8 +54,14 @@ assert.match(landing,/https:\/\/almaprintes\.github\.io\/SlotRace\//);
 const slot=read(resolve(source,"slotrace/index.html"));
 assert.match(slot,/CONSTRUCCIÓ[N]/i);
 assert.match(slot,/prototipo web en desarrollo/i);
+assert.match(slot,/<title>Top Down RACE: SlotRace \| CraftRace Studio<\/title>/);
+assert.match(slot,/SLOTRACE\.<\/span>/);
+assert.doesNotMatch(slot,/<title>SlotRace LAB/);
 const tdr=read(resolve(source,"top-down-race/index.html"));
 assert.match(tdr,/Google Play/);
+assert.match(tdr,/<title>Top Down RACE: CrafRace \| CraftRace Studio<\/title>/);
+assert.match(tdr,/CRAFRACE\.<\/span>/);
+assert.doesNotMatch(tdr,/<title>Top Down RACE \|/);
 assert.match(tdr,/\/TopdownCraftrace\/dev\//);
 const portal=read(resolve(source,"cuenta/index.html"));
 for(const id of ["studioAuthApp","formLogin","formRegister","profileClaim","linkGoogle","linkApple","profileReady","authNotice","signOut"]){
@@ -61,6 +83,9 @@ const styles=read(resolve(source,"assets/studio.css"));
 assert.match(styles,/@media\(max-width:530px\)/);
 assert.match(styles,/prefers-reduced-motion:reduce/);
 assert.match(styles,/:focus-visible/);
+assert.match(styles,/h3\.game-full-title/);
+assert.match(styles,/h1\.official-game-title/);
+assert.match(styles,/@media\(max-width:1120px\)/);
 for(const file of ["assets/site.js","assets/account.mjs"]){
  const full=resolve(source,file);
  const check=spawnSync(process.execPath,["--check",full],{encoding:"utf8"});
@@ -72,5 +97,5 @@ if(output){
  assert.ok(existsSync(resolve(output,"studio-assets/studio.css")));
  assert.ok(existsSync(resolve(output,"dev/index.html")),"Never delete the TDR DEV PWA");
 }
-console.log("PASS CraftRace Studio: 5 pages, shared identity, OAuth, responsive CSS, no local save mutations.");
+console.log("PASS CraftRace Studio: official game titles, 5 pages, shared identity, OAuth, responsive CSS, no local save mutations.");
 if(output)console.log("PASS GitHub Pages stage: studio routes and resources served without altering /dev.");
