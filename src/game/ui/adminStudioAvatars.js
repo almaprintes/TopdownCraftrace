@@ -244,11 +244,18 @@ export function mountAdminStudioAvatars(){
    }
  };
  const webp=async(item,width,height)=>{
-   const canvas=document.createElement('canvas');renderInto(canvas,item,width,height);
-   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.85));
-   if(!blob||blob.type!=='image/webp')throw Error('El navegador no pudo exportar WebP.');
-   if(blob.size>1024*1024)throw Error('Una imagen supera 1 MB después del recorte.');
-   return blob;
+   const canvas=document.createElement('canvas');
+   try{
+     renderInto(canvas,item,width,height);
+     // Safari/iOS may silently return PNG when WebP is requested. Reuse the
+     // existing first-party Image Lab libwebp/WASM worker for a safe fallback.
+     const {isWebpHeader,encodeWebpCanvas}=await import('./adminImageWebpTool.js');
+     const blob=await encodeWebpCanvas(canvas,85);
+     if(!blob||blob.type!=='image/webp'||!isWebpHeader(await blob.slice(0,12).arrayBuffer()))
+       throw Error('No se generó un WebP válido. No se ha publicado este avatar.');
+     if(blob.size>1024*1024)throw Error('Una imagen supera 1 MB después del recorte.');
+     return blob;
+   }finally{canvas.width=0;canvas.height=0;}
  };
  const githubExisting=async()=>{
    const data=await github('/git/trees/main?recursive=1');
