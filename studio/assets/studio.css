@@ -343,3 +343,11 @@ h3{font-size:clamp(32px,3.7vw,56px);font-weight:800}
  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
  .reveal{opacity:1;transform:none}
 }
+/* Shared Studio avatar catalog, used by the public account portal. */
+.studio-avatar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px;margin:12px 0;max-height:390px;overflow:auto}
+.studio-avatar-choice{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0;min-height:116px;padding:7px;border:2px solid #326473;border-radius:12px;background:#0d2638;color:#e9faff;cursor:pointer;font:700 11px system-ui;text-align:center}
+.studio-avatar-choice[aria-pressed="true"]{border-color:#4cebbf;box-shadow:0 0 0 2px #4cebbf55}
+.studio-avatar-choice img{display:block;width:100%;max-width:84px;aspect-ratio:1/1;object-fit:cover;border-radius:10px}
+.studio-avatar-choice small{max-width:100%;overflow-wrap:anywhere;font-size:10px}
+.studio-avatar-current{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.studio-avatar-current img{width:92px;height:92px;object-fit:cover;border-radius:14px}
