@@ -265,6 +265,7 @@ jobs:
           # A new Actions run gets its own DEV patch version; never commit the stamp.
           node scripts/stamp-dev-version.mjs
           node scripts/studio-avatar-player-smoke.mjs
+          node scripts/lobby-studio-avatar-layout-smoke.mjs
           npx vite build --base=/TopdownCraftrace/dev/
           # Do not publish a DEV bundle that silently lost the Studio avatar manager.
           grep -Rqs 'AVATARES · STUDIO' dist/assets/ || { echo 'Avatar Studio missing from DEV bundle'; exit 1; }
