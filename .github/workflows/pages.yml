@@ -307,6 +307,7 @@ jobs:
           node scripts/studio-landing-smoke.mjs ../site
           node scripts/admin-studio-avatars-smoke.mjs
           node scripts/studio-avatar-nested-zip-smoke.mjs
+          node scripts/studio-avatar-git-concurrency-smoke.mjs
       - name: Verify DEV artifact
         shell: bash
         run: |
