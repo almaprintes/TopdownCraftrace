@@ -5,6 +5,8 @@ import { isRewardedAdAvailable, showRewardedAd } from '../monetization/RewardedA
 import { claimPostRaceDoubleLoot, createPostRaceClaimId, hasClaimedPostRaceDouble } from '../monetization/postRaceDoubleLoot.js';
 import { mountRaceSessionRewards } from '../ui/raceSessionUi.js';
 import { mountRacePauseUi } from '../ui/racePauseUi.js';
+import { IS_PROD_BUILD } from '../buildTarget.js';
+import { formatDevRaceTimingAudit } from '../timing/devRaceTimingAuditReport.js';
 import { beginRacePauseClock, resumeRacePauseClock } from '../ui/racePauseTiming.js';
 import { hideRaceUi, restoreRaceUi } from '../ui/raceUiVisibility.js';
 
@@ -170,7 +172,9 @@ export class RaceScene extends CurrentRaceScene {
       onCaptureWorld:()=>this._runPauseCapture('world'),
       onCaptureTechnical:()=>this._runPauseCapture('technical'),
       onFinish:()=>this._finishSessionFromPause(),
-      onAbandon:()=>this._abandonSessionFromPause()
+      onAbandon:()=>this._abandonSessionFromPause(),
+      onTimingAudit:IS_PROD_BUILD?null:()=>formatDevRaceTimingAudit(
+        this._tdrGateTimingAudit,{track:this.trackKey||this.track?.key||'desconocido'})
     });
     this._experiencePauseUi=ui;
     this._pauseModal=ui?.root||null;
