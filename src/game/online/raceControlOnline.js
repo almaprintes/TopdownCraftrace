@@ -210,11 +210,11 @@ export async function getMyCraftStudioAccount(){
   const session=await activeSession();
   const account=await currentRaceControlAccount();
   if(account.anonymous)return null;
-  const response=await request('/rest/v1/craft_accounts?select=user_id,nickname&user_id=eq.'+
+  const response=await request('/rest/v1/craft_accounts?select=user_id,nickname,avatar_path,avatar_url,updated_at&user_id=eq.'+
     encodeURIComponent(account.id),{token:session.access_token});
   const value=Array.isArray(response)?response[0]:null;
   if(!value||value.user_id!==account.id)return null;
-  return {id:account.id,nickname:typeof value.nickname==='string'?value.nickname:null};
+  return {id:account.id,nickname:typeof value.nickname==='string'?value.nickname:null,avatarPath:typeof value.avatar_path==='string'?value.avatar_path:null,avatarUrl:typeof value.avatar_url==='string'?value.avatar_url:null,updatedAt:value.updated_at||null};
 }
 export async function requestRaceControlEmailLink(email){
   const s=await activeSession();
