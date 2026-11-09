@@ -210,11 +210,18 @@ export async function getMyCraftStudioAccount(){
   const session=await activeSession();
   const account=await currentRaceControlAccount();
   if(account.anonymous)return null;
-  const response=await request('/rest/v1/craft_accounts?select=user_id,nickname,avatar_path,avatar_url,updated_at&user_id=eq.'+
+  const response=await request('/rest/v1/craft_accounts?select=user_id,nickname,avatar_path,avatar_url,updated_at,avatar_id&user_id=eq.'+
     encodeURIComponent(account.id),{token:session.access_token});
   const value=Array.isArray(response)?response[0]:null;
   if(!value||value.user_id!==account.id)return null;
-  return {id:account.id,nickname:typeof value.nickname==='string'?value.nickname:null,avatarPath:typeof value.avatar_path==='string'?value.avatar_path:null,avatarUrl:typeof value.avatar_url==='string'?value.avatar_url:null,updatedAt:value.updated_at||null};
+  let catalogUrl=null;
+  if(typeof value.avatar_id==='string'){
+    try{
+      const choices=await request('/rest/v1/studio_avatar_catalog?select=id,image_url&id=eq.'+encodeURIComponent(value.avatar_id),{token:session.access_token});
+      if(Array.isArray(choices)&&choices[0]?.id===value.avatar_id&&typeof choices[0].image_url==='string')catalogUrl=choices[0].image_url;
+    }catch{}
+  }
+  return {id:account.id,nickname:typeof value.nickname==='string'?value.nickname:null,avatarPath:typeof value.avatar_path==='string'?value.avatar_path:null,avatarUrl:typeof value.avatar_url==='string'?value.avatar_url:null,avatarId:typeof value.avatar_id==='string'?value.avatar_id:null,catalogUrl,updatedAt:value.updated_at||null};
 }
 export async function requestRaceControlEmailLink(email){
   const s=await activeSession();
