@@ -265,6 +265,8 @@ jobs:
           # A new Actions run gets its own DEV patch version; never commit the stamp.
           node scripts/stamp-dev-version.mjs
           npx vite build --base=/TopdownCraftrace/dev/
+          # Do not publish a DEV bundle that silently lost the Studio avatar manager.
+          grep -Rqs 'AVATARES · STUDIO' dist/assets/ || { echo 'Avatar Studio missing from DEV bundle'; exit 1; }
           node --input-type=module -e "import {readFileSync} from 'node:fs';import {versionFromRunNumber} from './scripts/stamp-dev-version.mjs';const version=versionFromRunNumber(process.env.GITHUB_RUN_NUMBER);if(!readFileSync('dist/index.html','utf8').includes('content='+String.fromCharCode(34)+version+String.fromCharCode(34)))process.exit(1);console.log('Verified DEV bundle '+version)"
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
