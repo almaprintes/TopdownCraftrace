@@ -167,7 +167,7 @@ export function mountAdminStudioAvatars(){
      if(at+46+nameLen+extraLen+commentLen>bytes.length)throw Error('ZIP dañado: ruta incompleta.');
      const name=new TextDecoder().decode(bytes.subarray(at+46,at+46+nameLen));
      at+=46+nameLen+extraLen+commentLen;
-     if(!/\\.(png|jpe?g|webp)$/i.test(name)||name.endsWith('/'))continue;
+     if(!/\.(png|jpe?g|webp)$/i.test(name)||name.endsWith('/'))continue;
      if(flags&1)throw Error('El ZIP tiene imágenes cifradas.');
      if(comp>12_000_000||plain>12_000_000||(totalPlain+=plain)>100_000_000)
        throw Error('El ZIP supera el límite de tamaño seguro.');
