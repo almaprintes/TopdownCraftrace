@@ -1,0 +1,23 @@
+name: CraftRace cronometry audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  timing-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out CraftRace
+        uses: actions/checkout@v4
+      - name: "Audit: pause, ghost, and race-clock invariants"
+        run: |
+          node scripts/race-timing-audit-smoke.mjs
+          node scripts/race-pause-timing-smoke.mjs
