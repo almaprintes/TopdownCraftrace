@@ -5,13 +5,16 @@ import {execFileSync} from 'node:child_process';
 const file=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const admin=file('src/game/ui/adminStudioAvatars.js');
 const zipReader=file('src/game/ui/studioAvatarZip.mjs');
+const gitWriter=file('src/game/ui/studioAvatarGitPublish.mjs');
 const hub=file('src/game/scenes/AdminHubScene.js');
 const paddock=file('src/game/ui/adminPaddockView.js');
 const portal=file('studio/assets/account.mjs');
 const tdr=file('src/game/online/raceControlOnline.js');
-for(const word of ['nextNumber(gitNumbers)','studio_avatar_catalog','/git/blobs','/git/trees','/git/commits','/git/refs/heads/main','readStudioAvatarZip','data-total','data-active','data-next','data-zoom','data-width','data-height','tdr_staff']){
+for(const word of ['commitStudioAvatarBatch','studio_avatar_catalog','/git/blobs','getPendingRows','registerPending','readStudioAvatarZip','data-total','data-active','data-next','data-zoom','data-width','data-height','tdr_staff']){
  assert(admin.includes(word),'Missing avatar contract: '+word);
 }
+assert(gitWriter.includes('isNonFastForward')&&gitWriter.includes('branchContains'),'GitHub writer retries non-fast-forward conflicts without force');
+assert(gitWriter.includes("force:false")&&gitWriter.includes('base_tree:base.tree.sha'),'GitHub preserves new main commits');
 assert(zipReader.includes("DecompressionStream")&&zipReader.includes("tinyInflate"),'ZIP reader handles Safari without native deflate-raw');
 assert(zipReader.includes('if(inner)await visit(data,depth+1)'), 'ZIP reader recognizes nested ZIPs');
 assert(!admin.includes('accept="image/png'), 'iOS file input must show all images and ZIPs');
