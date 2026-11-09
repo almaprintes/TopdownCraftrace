@@ -50,7 +50,8 @@ const lobby=read('src/game/ui/LobbyDomUi.js');
 const form=read('src/game/ui/playerFeedback.js');
 assert.doesNotMatch(settings,/data-feedback-open|mountPlayerFeedback/,'Do not bury bug reporting in Legal settings');
 assert.match(lobby,/dataset\.lobbyHelp='1'/,'Player help is in the TOP lobby header');
-assert.match(lobby,/top\.append\(helpButton\)/);
+assert.match(lobby,/root\.querySelector\('\.tdr-lobby-right'\)\?\.prepend\(helpButton\)/,
+  'Help must live beside the wallet, outside the elastic navigation');
 assert.match(lobby,/mountPlayerFeedback\(\)/,'Header must open the form directly');
 assert.match(lobby,/import\('\.\/playerFeedback\.js'\)/);
 assert.doesNotMatch(lobby,/mountPlayerSupportMenu|playerSupportMenu/,'No intermediate choice menu');
