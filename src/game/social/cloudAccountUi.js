@@ -5,7 +5,7 @@ import {cloudAutoSyncStatus} from './cloudAutoSync.js';
 import {canonicalRuntimeText,localizeDomTree} from '../i18n/canonicalRuntimeText.js';
 import {getLanguage} from '../i18n/index.js';
 import {
-  currentRaceControlAccount,getMyCraftStudioAccount,requestRaceControlEmailLink,
+  currentRaceControlAccount,getMyCraftStudioAccount,listAvailableStudioAvatars,chooseMyStudioAvatar,requestRaceControlEmailLink,
   verifyRaceControlEmailCode,setRaceControlPassword,
   switchRaceControlAccount,getMyRaceControlBadge,
   hasSavedRaceControlSession,savedGoogleWebIdentity,continueRejectedAnonymousSessionLocally
@@ -102,6 +102,37 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   studioBadge.dataset.craftStudioIdentity='1';
   studioBadge.textContent='CRAFTRACE STUDIO · IDENTIDAD COMPARTIDA';
   root.querySelector('.tdr-cloud-driver')?.appendChild(studioBadge);
+  // The player chooses from the live central catalog; no game rebuild when
+  // an admin publishes a new batch of official avatars.
+  const avatarChoiceButton=document.createElement('button');
+  avatarChoiceButton.type='button';avatarChoiceButton.className='tdr-studio-choose';
+  avatarChoiceButton.textContent='🎭 ELEGIR AVATAR · CRAFTRACE STUDIO';
+  avatarChoiceButton.hidden=true;
+  const avatarChoicePanel=document.createElement('section');
+  avatarChoicePanel.className='tdr-studio-avatar-picker';avatarChoicePanel.hidden=true;
+  avatarChoicePanel.setAttribute('aria-label','Avatares disponibles de CraftRace Studio');
+  const avatarChoiceTitle=document.createElement('strong');
+  avatarChoiceTitle.textContent='ELIGE TU PILOTO';
+  const avatarChoiceHint=document.createElement('p');
+  avatarChoiceHint.textContent='Los avatares activos aparecen aquí automáticamente. Se aplican a tu cuenta de ambos juegos.';
+  const avatarChoiceRefresh=document.createElement('button');
+  avatarChoiceRefresh.type='button';avatarChoiceRefresh.textContent='ACTUALIZAR CATÁLOGO';
+  const avatarChoiceNotice=document.createElement('div');
+  avatarChoiceNotice.className='tdr-studio-avatar-status';
+  avatarChoiceNotice.setAttribute('role','status');avatarChoiceNotice.setAttribute('aria-live','polite');
+  const avatarChoiceGrid=document.createElement('div');
+  avatarChoiceGrid.className='tdr-studio-avatar-grid';
+  avatarChoicePanel.append(avatarChoiceTitle,avatarChoiceHint,avatarChoiceRefresh,avatarChoiceNotice,avatarChoiceGrid);
+  root.querySelector('.tdr-cloud-driver')?.after(avatarChoiceButton,avatarChoicePanel);
+  let studioAvatarSelectedId=null,avatarPickerRequest=0;
+  const setAvatarSelectionState=()=>{
+    for(const button of avatarChoiceGrid.querySelectorAll('button[data-avatar-id]'))
+      button.setAttribute('aria-pressed',String(button.dataset.avatarId===String(studioAvatarSelectedId||'')));
+  };
+  const hideAvatarPicker=()=>{
+    avatarPickerRequest++;avatarChoicePanel.hidden=true;
+  };
+
   const socialSave=document.createElement('button');
   socialSave.type='button';socialSave.textContent='PROTEGER MI PARTIDA';
   socialSave.className='tdr-cloud-primary';socialSave.hidden=true;
@@ -135,6 +166,20 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
       #${ID}[data-inline="1"] .tdr-cloud-actions{display:grid;}
       #${ID}[data-inline="1"] button{width:100%;}}
   `;
+  style.textContent+=`
+  #tdr-cloud-account-modal .tdr-studio-choose{width:100%;margin:0 0 12px;border:1px solid #65ccad;background:linear-gradient(105deg,#184c46,#173952);color:#eafff7;font-weight:900;letter-spacing:.04em}
+  #tdr-cloud-account-modal .tdr-studio-avatar-picker{background:#0a1d30;border:1px solid #3c6676;border-radius:12px;padding:12px;margin:0 0 14px}
+  #tdr-cloud-account-modal .tdr-studio-avatar-picker>strong{display:block;color:#dffdf5;font-size:14px;font-weight:950}
+  #tdr-cloud-account-modal .tdr-studio-avatar-picker>p{margin:4px 0 10px;color:#bdd3df;font-size:12px;line-height:1.45}
+  #tdr-cloud-account-modal .tdr-studio-avatar-status{color:#b4efde;padding:7px 0;font-size:12px}
+  #tdr-cloud-account-modal .tdr-studio-avatar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:9px;margin-top:8px}
+  #tdr-cloud-account-modal .tdr-studio-avatar-grid button{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-width:0;padding:5px;gap:5px;border:2px solid #3c576b;background:#152a3d;color:#fff;min-height:111px;text-align:center}
+  #tdr-cloud-account-modal .tdr-studio-avatar-grid button[aria-pressed="true"]{border-color:#61edbe;box-shadow:0 0 0 2px #61edbe44;background:#1d4a49}
+  #tdr-cloud-account-modal .tdr-studio-avatar-grid button img{width:72px;height:72px;object-fit:cover;border-radius:8px;background:#24405a}
+  #tdr-cloud-account-modal .tdr-studio-avatar-grid button span{display:block;font-size:10px;overflow-wrap:anywhere;line-height:1.3}
+  #tdr-cloud-account-modal .tdr-studio-avatar-grid .tdr-studio-no-avatar{justify-content:center}
+  @media(max-width:400px){#tdr-cloud-account-modal .tdr-studio-avatar-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  `;
   style.textContent+="\n  #tdr-cloud-account-modal .tdr-cloud-panel{max-width:760px;margin-inline:auto;}\n  #tdr-cloud-account-modal[data-inline=\"1\"] .tdr-cloud-panel{max-width:760px;margin-inline:auto;}\n  #tdr-cloud-account-modal .tdr-cloud-driver>div{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;}\n  #tdr-cloud-account-modal .tdr-cloud-driver strong{width:100%;}\n  #tdr-cloud-account-modal [data-cloud-creator-badge]{display:inline-flex;padding:3px 10px;\n    border:1px solid #ac843c;border-radius:14px;color:#ffd17b;background:rgba(100,56,5,.3);\n    font:900 11px system-ui;letter-spacing:.075em;}\n  #tdr-cloud-account-modal [data-cloud-creator-badge][hidden]{display:none;}\n  #tdr-cloud-account-modal [data-cloud-player-id]{color:#b0c9d8;font:700 10px system-ui;}\n  #tdr-cloud-account-modal .tdr-cloud-main-actions{display:flex;flex-wrap:wrap;gap:10px;}\n  #tdr-cloud-account-modal .tdr-cloud-main-actions button{min-width:200px;max-width:350px;flex:1 1 220px;}\n  #tdr-cloud-account-modal button.tdr-cloud-secondary{border:1px solid #50748d;color:#d6e9f4;background:#11283e;box-shadow:none;font-size:12px;}\n  #tdr-cloud-account-modal .tdr-cloud-state[data-state=\"saved\"]{border-color:#2f9577;background:#0e2a2b;}\n  #tdr-cloud-account-modal .tdr-cloud-tip{text-align:left;color:#dcc091;font-size:12px;line-height:1.5;}\n  @media(max-width:520px){#tdr-cloud-account-modal .tdr-cloud-main-actions button{max-width:none;min-width:100%;}}\n";
   document.head.appendChild(style);
   (host||document.body).appendChild(root);
@@ -152,7 +197,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     setNotice('');
   };
   const showLocalAccount=()=>{
-    account=null;backup=null;setStudioAvatar(null,'');
+    account=null;backup=null;setStudioAvatar(null,'');studioAvatarSelectedId=null;avatarChoiceButton.hidden=true;hideAvatarPicker();
     googleButton.hidden=!googleWebAvailable();
     appleButton.hidden=!appleWebAvailable();socialSave.hidden=true;
     const local=inspectLocalProgress();
@@ -172,7 +217,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     localizeDomTree(root);
   };
   const showConnectionError=(error)=>{
-    creatorBadge.hidden=true;studioBadge.hidden=true;idLine.textContent='Identidad sin comprobar';
+    creatorBadge.hidden=true;studioBadge.hidden=true;idLine.textContent='Identidad sin comprobar';avatarChoiceButton.hidden=true;hideAvatarPicker();
     googleButton.hidden=!googleWebAvailable()||!savedGoogleWebIdentity();
     appleButton.hidden=!appleWebAvailable();socialSave.hidden=true;
     // Keep local progress visible even when Auth or cloud storage is offline.
@@ -225,6 +270,8 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     creatorBadge.hidden=true;
     try{creatorBadge.hidden=(await getMyRaceControlBadge())!=='CREADOR';}catch{}
     studioBadge.hidden=account.anonymous;
+    avatarChoiceButton.hidden=account.anonymous;
+    if(account.anonymous){studioAvatarSelectedId=null;hideAvatarPicker();setStudioAvatar(null,'');}
     studioBadge.textContent='CRAFTRACE STUDIO · CUENTA CONECTADA';
     if(!account.anonymous){
       // The display is a server-side verified membership, never a local nick.
@@ -234,7 +281,9 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
           'CRAFTRACE STUDIO · CUENTA COMPARTIDA':
           'CRAFTRACE STUDIO · REGISTRO AUTOMÁTICO';
         if(studio?.nickname)root.querySelector('[data-cloud-pilot]').textContent=studio.nickname;
+        studioAvatarSelectedId=studio?.avatarId||null;
         setStudioAvatar(studio,account.id);
+        setAvatarSelectionState();
       }catch{
         studioBadge.textContent='CRAFTRACE STUDIO · IDENTIDAD VERIFICADA';
       }
@@ -317,6 +366,65 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
       }
     }
   };
+
+  const openFreshAvatarCatalog=async()=>{
+    const requestId=++avatarPickerRequest;
+    avatarChoiceGrid.replaceChildren();
+    avatarChoiceNotice.textContent='Consultando avatares publicados…';
+    avatarChoiceRefresh.disabled=true;
+    try{
+      // Fresh Supabase query every time the player opens or refreshes this view.
+      const avatars=await listAvailableStudioAvatars();
+      if(!root.isConnected||avatarChoicePanel.hidden||requestId!==avatarPickerRequest)return;
+      const clear=document.createElement('button');
+      clear.type='button';clear.className='tdr-studio-no-avatar';
+      clear.dataset.avatarId='';
+      clear.setAttribute('aria-pressed',String(!studioAvatarSelectedId));
+      const clearText=document.createElement('span');
+      clearText.textContent='🏁 SIN AVATAR OFICIAL';
+      clear.appendChild(clearText);
+      clear.addEventListener('click',()=>run(async()=>{
+        await chooseMyStudioAvatar(null);
+        studioAvatarSelectedId=null;hideAvatarPicker();
+        return 'Avatar oficial retirado. Tu cuenta compartida sigue intacta.';
+      }));
+      avatarChoiceGrid.appendChild(clear);
+      for(const avatar of avatars){
+        const button=document.createElement('button');button.type='button';
+        button.dataset.avatarId=avatar.id;button.setAttribute('aria-label','Elegir '+avatar.label);
+        button.setAttribute('aria-pressed',String(avatar.id===studioAvatarSelectedId));
+        const image=document.createElement('img');
+        image.alt='';image.loading='lazy';image.decoding='async';image.src=avatar.image_url;
+        image.onerror=()=>{
+          // GitHub's raw file is available as soon as the commit lands; Pages
+          // may still be deploying. Never replace an avatar ID during fallback.
+          if(image.dataset.fallback==='1'){image.hidden=true;return;}
+          image.dataset.fallback='1';
+          const filename=avatar.image_url.split('/').pop();
+          image.src='https://raw.githubusercontent.com/almaprintes/TopdownCraftrace/main/studio/assets/avatars/'+filename;
+        };
+        const label=document.createElement('span');label.textContent=avatar.label;
+        button.append(image,label);
+        button.addEventListener('click',()=>run(async()=>{
+          await chooseMyStudioAvatar(avatar.id);
+          studioAvatarSelectedId=avatar.id;hideAvatarPicker();
+          return '✅ Avatar guardado en CraftRace Studio y disponible para SlotRace.';
+        }));
+        avatarChoiceGrid.appendChild(button);
+      }
+      avatarChoiceNotice.textContent=avatars.length?avatars.length+' avatares disponibles.':
+        'Todavía no hay avatares oficiales activos. Se mostrarán cuando el estudio publique el primer lote.';
+    }catch(error){
+      if(requestId===avatarPickerRequest)avatarChoiceNotice.textContent='No se pudo consultar el catálogo: '+String(error?.message||error);
+    }finally{if(requestId===avatarPickerRequest)avatarChoiceRefresh.disabled=false;}
+  };
+  avatarChoiceButton.addEventListener('click',()=>{
+    if(avatarChoiceButton.hidden)return;
+    if(!avatarChoicePanel.hidden){hideAvatarPicker();return;}
+    avatarChoicePanel.hidden=false;
+    void openFreshAvatarCatalog();
+  });
+  avatarChoiceRefresh.addEventListener('click',()=>void openFreshAvatarCatalog());
   root.querySelector('[data-action="close"]').addEventListener('click',()=>{if(busy)return;root.remove();style.remove();});
   const editPilot=root.querySelector('[data-action="edit-pilot"]');
   if(!host)editPilot.hidden=true;
