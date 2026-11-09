@@ -1,7 +1,7 @@
 import {skinGeometryForSprite} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,getEquippedCarSkin,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
-import {auditDirectedFinishTime} from '../timing/readOnlyFinishAudit.js';
+import {estimateDirectedGateCrossing} from '../timing/subframeGateClock.js';
 import {raceCarLookTexture} from '../visual/raceCarLook.js';
 import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
@@ -4321,17 +4321,24 @@ if (this.timing) {
   // fantasmas, clasificaciones ni ninguna llamada a Supabase.
   if (!IS_PROD_BUILD) {
     try {
-      const sample=auditDirectedFinishTime({
+      const rawMs=Math.max(0,Number(deltaMs)||0);
+      const sample=estimateDirectedGateCrossing({
         gate:paddockFinishCrossed?paddockFinish:this.finishLine,
-        from:{x:this.prevCarX??this.car.x,y:this.prevCarY??this.car.y},
-        to:{x:this.car.x,y:this.car.y},
-        nowMs:now,lapStartMs:this.timing.lapStart,
-        frameDeltaMs:Math.max(0,Number(deltaMs)||0),
-        simulatedDeltaMs:Math.min(50,Math.max(0,Number(deltaMs)||0))
+        previous:{x:this.prevCarX??this.car.x,y:this.prevCarY??this.car.y},
+        current:{x:this.car.x,y:this.car.y},
+        velocity:body.velocity,
+        frameEndNowMs:now,clockOriginMs:this.timing.lapStart,
+        rawFrameMs:rawMs,simulatedFrameMs:Math.min(50,rawMs)
       });
-      const previous=Array.isArray(this._tdrGateTimingAudit)?this._tdrGateTimingAudit:[];
-      this._tdrGateTimingAudit=[...previous,{...sample,trackKey:this.trackKey,
-        lapIndex:(this.lapCount||0)+1}].slice(-30);
+      if(sample){
+        const previous=Array.isArray(this._tdrGateTimingAudit)?this._tdrGateTimingAudit:[];
+        this._tdrGateTimingAudit=[...previous,{
+          ...sample,observedLapMs:lapTime,
+          // Null means no reliable comparison when physics lost simulated time.
+          differenceMs:sample.reviewRequired?null:lapTime-sample.elapsedMs,
+          trackKey:this.trackKey,lapIndex:(this.lapCount||0)+1
+        }].slice(-30);
+      }
     }catch(_){}
   }
 const lapTicks = (this.lapStartTick != null) ? (this.simTick - this.lapStartTick) : null;
