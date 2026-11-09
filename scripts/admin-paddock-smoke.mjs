@@ -47,7 +47,7 @@ const events=[];
 let allCars=false;
 const callbacks={
   track:()=>events.push('track'),environment:()=>events.push('environment'),
-  cars:()=>events.push('cars'),images:()=>events.push('images'),
+  cars:()=>events.push('cars'),images:()=>events.push('images'),avatars:()=>events.push('avatars'),
   diagnostics:()=>events.push('diagnostics'),communications:()=>events.push('communications'),
   emergency:()=>events.push('emergency'),projectEmergency:()=>events.push('projectEmergency'),garage:()=>events.push('garage'),
   isFullCars:()=>allCars,toggleCars:()=>{allCars=!allCars;events.push('cars-dev');},
@@ -65,6 +65,10 @@ const walk=(node,test,out=[])=>{
 };
 const tiles=walk(root,e=>e.className==='tdr-paddock__tile');
 const auxiliary=walk(root,e=>e.className==='tdr-paddock__aux');
+const studioShortcut=walk(root,e=>e.className==='tdr-paddock__studio-quick')[0];
+assert.ok(studioShortcut,'Studio avatar access must be above the editor cards');
+assert.match(studioShortcut.innerHTML,/AVATARES · STUDIO/);
+studioShortcut.click();
 assert.equal(tiles.length,4);
 assert.equal(auxiliary.length,6);
 assert.match(auxiliary[0].textContent + JSON.stringify(auxiliary[0].children.map(x=>x.children.map?.(z=>z.textContent)||[])),/INFORMES · PARADA/);
@@ -92,7 +96,9 @@ walk(root,e=>e.className==='tdr-paddock__back')[0].click();
 auxiliary[5].click();
 qaTools.find(t=>t.children[0].textContent.startsWith('EDITAR PISTAS')).click();
 walk(root,e=>e.className==='tdr-paddock__exit')[0].click();
-for(const action of ['track','environment','cars','images','emergency','projectEmergency','communications','diagnostics','garage','cars-dev','kit','mastery','legacy','exit'])
+for(const action of ['avatars','track','environment','cars','images','emergency','projectEmergency','communications','diagnostics','garage','cars-dev','kit','mastery','legacy','exit'])
   assert.ok(events.includes(action),'Missing action '+action);
 assert.ok(!viewSource.includes('fetch('),'Dashboard must not issue network requests');
+assert.match(sceneSource,/mountAdminStudioAvatars\(\)/);
+assert.match(sceneSource,/adminStudioAvatars\.js/);
 console.log('PADDOCK: 4 primary cards, 6 secondary cards, 14 wired actions, QA confirmation, accessible navigation and compact CSS OK.');
