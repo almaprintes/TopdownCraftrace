@@ -19,6 +19,8 @@ const callbackError=new URLSearchParams(location.search).get("error_description"
  new URLSearchParams(location.search).get("error");
 let api=null,user=null,studio=null,busy=false,view="login",lastRefresh=0;
 let verifying=false;
+let pendingAvatarId=null;
+const AVATAR_PREFIX="https://almaprintes.github.io/TopdownCraftrace/studio-assets/avatars/";
 function notice(value,kind="info"){
  noticeEl.textContent=value;
  noticeEl.className="auth-alert"+(kind==="error"?" error":kind==="info"?" info":"");
@@ -121,19 +123,66 @@ function scrubCallback(){
 }
 async function profileAccount(client,u){
  let lookup=await client.from("craft_accounts")
-  .select("user_id,nickname").eq("user_id",u.id).maybeSingle();
+  .select("user_id,nickname,avatar_id").eq("user_id",u.id).maybeSingle();
  if(lookup.error)throw lookup.error;
  if(!lookup.data){
   // Recovery for an account issued before the DB registration trigger.
   const inserted=await client.from("craft_accounts")
    .upsert({user_id:u.id,nickname:null},{onConflict:"user_id",ignoreDuplicates:true});
   if(inserted.error)throw inserted.error;
-  lookup=await client.from("craft_accounts").select("user_id,nickname")
+  lookup=await client.from("craft_accounts").select("user_id,nickname,avatar_id")
    .eq("user_id",u.id).maybeSingle();
   if(lookup.error||!lookup.data)throw lookup.error||Error("Falta el perfil global.");
  }
  if(lookup.data.user_id!==u.id)throw Error("La cuenta no coincide con la identidad.");
  return lookup.data;
+}
+async function listStudioAvatars(client){
+ const {data,error}=await client.from("studio_avatar_catalog")
+  .select("id,label,image_url").eq("active",true).eq("exclusive",false).order("sort_order");
+ if(error)throw error;
+ return (data||[]).filter(x=>typeof x.image_url==="string"&&
+  x.image_url.startsWith(AVATAR_PREFIX)&&
+  /^https:\/\/almaprintes\.github\.io\/TopdownCraftrace\/studio-assets\/avatars\/[a-z0-9_]+\.webp$/.test(x.image_url));
+}
+async function renderStudioAvatarSelection(client,mode,activeId=null){
+ const grid=get(mode==="claim"?"studioAvatarClaim":"studioAvatarGallery");
+ if(!grid)return;
+ grid.replaceChildren();
+ const avatars=await listStudioAvatars(client);
+ if(mode==="claim"&&!pendingAvatarId&&avatars.length)pendingAvatarId=avatars[0].id;
+ if(!avatars.length){grid.textContent="Próximamente: catálogo de avatares oficiales.";return;}
+ for(const avatar of avatars){
+  const button=document.createElement("button");button.type="button";button.className="studio-avatar-choice";
+  button.setAttribute("aria-label","Seleccionar "+avatar.label);
+  button.setAttribute("aria-pressed",String(avatar.id===(mode==="claim"?pendingAvatarId:activeId)));
+  const img=document.createElement("img");img.src=avatar.image_url;img.alt="";img.loading="lazy";
+  const label=document.createElement("small");label.textContent=avatar.label;
+  button.append(img,label);
+  button.addEventListener("click",()=>void run(async()=>{
+   if(mode==="claim"){
+    pendingAvatarId=avatar.id;
+    for(const b of grid.querySelectorAll("button"))b.setAttribute("aria-pressed",String(b===button));
+    return;
+   }
+   const current=await client.auth.getUser();
+   if(current.error||current.data?.user?.id!==user?.id)throw Error("La sesión ha cambiado.");
+   const {data:done,error}=await client.from("craft_accounts")
+    .update({avatar_id:avatar.id,updated_at:new Date().toISOString()})
+    .eq("user_id",user.id).select("avatar_id").maybeSingle();
+   if(error||done?.avatar_id!==avatar.id)throw error||Error("No se confirmó el avatar.");
+   grid.hidden=true;await refresh();notice("Avatar actualizado en los dos juegos.","success");
+  }));
+  grid.append(button);
+ }
+}
+async function renderStudioCurrent(client,account){
+ const img=get("studioAvatarCurrent");img.hidden=true;img.removeAttribute("src");
+ if(!account.avatar_id)return;
+ const {data,error}=await client.from("studio_avatar_catalog").select("image_url").eq("id",account.avatar_id).maybeSingle();
+ if(!error&&typeof data?.image_url==="string"&&data.image_url.startsWith(AVATAR_PREFIX)){
+   img.src=data.image_url;img.hidden=false;
+ }
 }
 async function refresh(){
  const n=++lastRefresh;
@@ -167,6 +216,7 @@ async function refresh(){
   get("profileEmail").textContent=u.email||"Inicio de sesión mediante un proveedor";
   if(!account.nickname){
    claim.hidden=false;ready.hidden=true;
+   void renderStudioAvatarSelection(client,"claim").catch(()=>{get("studioAvatarClaim").textContent="Catálogo temporalmente no disponible.";});
    notice("Tu identidad permanente ya está registrada en CraftRace Studio. Elige el apodo único que aparecerá en tus juegos.");
    const oldNick=get("claimNickname");
    if(!oldNick.value){
@@ -176,6 +226,8 @@ async function refresh(){
    }
   }else{
    claim.hidden=true;ready.hidden=false;
+   void renderStudioCurrent(client,account);
+   void renderStudioAvatarSelection(client,"account",account.avatar_id).catch(()=>{get("studioAvatarGallery").textContent="Catálogo temporalmente no disponible.";});
    const known=providersFor(u);
    get("profileProviders").textContent=[...known].map(p=>
     p==="google"?"Google":p==="apple"?"Apple":p==="email"?"Correo":p).join(" · ")||"Autenticado";
@@ -240,6 +292,14 @@ async function claimName(){
  if(res.error)throw res.error;
  if(!res.data)throw Error("No se pudo reclamar este nombre. Revisa tu perfil.");
  get("claimNickname").value="";
+ if(pendingAvatarId){
+  const {data:updated,error:avatarError}=await client.from("craft_accounts")
+   .update({avatar_id:pendingAvatarId,updated_at:new Date().toISOString()})
+   .eq("user_id",user.id).select("avatar_id").maybeSingle();
+  if(avatarError||updated?.avatar_id!==pendingAvatarId){
+   await refresh();notice("Nick guardado. Puedes escoger el avatar desde tu perfil.","info");return;
+  }
+ }
  await refresh();
 }
 async function linkIdentity(provider){
@@ -273,6 +333,7 @@ get("tabLogin").addEventListener("click",()=>tab("login"));
 get("tabRegister").addEventListener("click",()=>tab("register"));
 get("formLogin").addEventListener("submit",e=>{e.preventDefault();void run(signIn);});
 get("formRegister").addEventListener("submit",e=>{e.preventDefault();void run(signUp);});
+get("studioAvatarEdit").addEventListener("click",()=>{const grid=get("studioAvatarGallery");grid.hidden=!grid.hidden;});
 get("formClaim").addEventListener("submit",e=>{e.preventDefault();void run(claimName);});
 get("signOut").addEventListener("click",()=>{void run(signOut);});
 get("refreshAuth").addEventListener("click",()=>{void run(refresh);});
