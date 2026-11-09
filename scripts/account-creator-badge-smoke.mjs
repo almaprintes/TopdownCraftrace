@@ -27,8 +27,11 @@ assert.match(lobbyCss,/\.tdr-lobby-identity-row\{\s*display:flex;align-items:cen
  'ID and creator badge share one flex row');
 assert.match(lobbyCss,/\.tdr-lobby-identity-row \[data-cloud-account\]\{[\s\S]*?text-overflow:ellipsis/,
  'long ID stays bounded without pushing the badge outside the header');
-assert.match(lobby,/display:grid;gap:2px;padding:3px 8px/,
- 'three rows still fit the short landscape header');
+assert.match(lobby,/class="tdr-lobby-pilot" data-pilot-header>/,
+ 'pilot metadata stays in a dedicated block beside the Studio avatar');
+assert.match(lobbyCss,/\.tdr-lobby-dom \.tdr-lobby-pilot\{[\s\S]*?display:grid;align-content:center;gap:3px;/,
+ 'pilot metadata preserves exactly three height-bounded rows');
+assert.match(lobby,/data-lobby-avatar-image/,'large Studio avatar is present in the identity block');
 assert.match(account,/Partida guardada en la nube/);
 assert.match(account,/GUARDAR COPIA/);
 assert.match(account,/ACTUALIZAR COPIA/);
