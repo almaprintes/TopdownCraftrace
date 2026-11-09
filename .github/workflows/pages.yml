@@ -288,7 +288,9 @@ jobs:
           cp dev-src/studio/privacidad/index.html site/privacidad/index.html
       - name: Verify CraftRace Studio landing, account portal and game links
         working-directory: dev-src
-        run: node scripts/studio-landing-smoke.mjs ../site
+        run: |
+          node scripts/studio-landing-smoke.mjs ../site
+          node scripts/admin-studio-avatars-smoke.mjs
       - name: Verify DEV artifact
         shell: bash
         run: |
