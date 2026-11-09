@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {directedGateCrossingFraction,estimateSubframeGateTime,
  estimateDirectedGateCrossing} from '../src/game/timing/subframeGateClock.js';
 
@@ -50,5 +51,15 @@ assert.equal(afterPause.elapsedMs,9000,
  'El origen desplazado durante 20 s de pausa preserva el tiempo de carrera');
 assert.throws(()=>estimateSubframeGateTime({frameEndNowMs:1000,
  rawFrameMs:20,simulatedFrameMs:20,fraction:1.1}));
+
+// Wiring check: the live game records the comparison only in DEV.
+// The production lap clock remains unchanged until device validation.
+const raceSource=readFileSync(new URL('../src/game/scenes/RaceScene.js',import.meta.url),'utf8');
+assert.match(raceSource,/import \{estimateDirectedGateCrossing\} from '\.\.\/timing\/subframeGateClock\.js';/);
+assert.match(raceSource,/if \(!IS_PROD_BUILD\) \{/);
+assert.match(raceSource,/this\._tdrGateTimingAudit=/);
+assert.match(raceSource,/const lapTime = now - this\.timing\.lapStart;/,
+ 'El tiempo histórico en producción no debe alterarse durante la auditoría');
+
 console.log('CraftRace subframe: 3.000 cruces 60/30/15 FPS, 1/3 s FPS stall, dirección, geometría y pausas OK');
 console.log('SOLO DIAGNÓSTICO: no reemplaza aún el timestamp de RaceScene ni homologa marcas online.');
