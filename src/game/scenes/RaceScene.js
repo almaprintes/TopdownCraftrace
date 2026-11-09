@@ -1,6 +1,7 @@
 import {skinGeometryForSprite} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,getEquippedCarSkin,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
+import {auditDirectedFinishTime} from '../timing/readOnlyFinishAudit.js';
 import {raceCarLookTexture} from '../visual/raceCarLook.js';
 import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
@@ -4316,6 +4317,23 @@ if (!this._stageWaitingForStart && validFinishCrossing && this._lapCooldownMs ==
 if (this.timing) {
   const now = performance.now();
   const lapTime = now - this.timing.lapStart;
+  // DEV: comparar el cruce geométrico con la marca real, sin cambiar récords,
+  // fantasmas, clasificaciones ni ninguna llamada a Supabase.
+  if (!IS_PROD_BUILD) {
+    try {
+      const sample=auditDirectedFinishTime({
+        gate:paddockFinishCrossed?paddockFinish:this.finishLine,
+        from:{x:this.prevCarX??this.car.x,y:this.prevCarY??this.car.y},
+        to:{x:this.car.x,y:this.car.y},
+        nowMs:now,lapStartMs:this.timing.lapStart,
+        frameDeltaMs:Math.max(0,Number(deltaMs)||0),
+        simulatedDeltaMs:Math.min(50,Math.max(0,Number(deltaMs)||0))
+      });
+      const previous=Array.isArray(this._tdrGateTimingAudit)?this._tdrGateTimingAudit:[];
+      this._tdrGateTimingAudit=[...previous,{...sample,trackKey:this.trackKey,
+        lapIndex:(this.lapCount||0)+1}].slice(-30);
+    }catch(_){}
+  }
 const lapTicks = (this.lapStartTick != null) ? (this.simTick - this.lapStartTick) : null;
 // === TT Panel: captura del best ANTES de actualizar (para delta real)
 const prevBestMs = (this.ttBest && Number.isFinite(this.ttBest.lapMs)) ? this.ttBest.lapMs : null;
