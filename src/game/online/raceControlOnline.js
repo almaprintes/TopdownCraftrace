@@ -37,9 +37,11 @@ const normalizeSession=s=>{
 };
 const sessionUsable=s=>Boolean(s?.access_token&&s?.user?.id&&Number(s?.expires_at||0)*1000>Date.now()+30000);
 
-async function request(path,{method='GET',body,token}={}){
+async function request(path,{method='GET',body,token,representation=false}={}){
   const {url,key}=cfg();if(!url||!key)throw new Error('Online backend not configured');
-  const res=await fetch(`${url}${path}`,{method,headers:headers(key,token),body:body?JSON.stringify(body):undefined});
+  const reqHeaders=headers(key,token);
+  if(representation)reqHeaders.Prefer='return=representation';
+  const res=await fetch(`${url}${path}`,{method,headers:reqHeaders,body:body?JSON.stringify(body):undefined});
   const data=await res.json().catch(()=>null);
   if(!res.ok){
     const err=new Error(data?.msg||data?.message||data?.error_description||`Online HTTP ${res.status}`);
@@ -222,6 +224,45 @@ export async function getMyCraftStudioAccount(){
     }catch{}
   }
   return {id:account.id,nickname:typeof value.nickname==='string'?value.nickname:null,avatarPath:typeof value.avatar_path==='string'?value.avatar_path:null,avatarUrl:typeof value.avatar_url==='string'?value.avatar_url:null,avatarId:typeof value.avatar_id==='string'?value.avatar_id:null,catalogUrl,updatedAt:value.updated_at||null};
+}
+// Shared CraftRace Studio avatar catalog. Loaded on demand when the player opens
+// Settings → Account; newly activated art needs no PWA update.
+const STUDIO_AVATAR_BASE='https://almaprintes.github.io/TopdownCraftrace/studio-assets/avatars/';
+const validStudioAvatarImage=url=>typeof url==='string'&&url.startsWith(STUDIO_AVATAR_BASE)&&
+  /^https:\/\/almaprintes\.github\.io\/TopdownCraftrace\/studio-assets\/avatars\/[a-z0-9_]+\.webp$/.test(url);
+
+export async function listAvailableStudioAvatars(){
+  const session=await activeSession();
+  const user=await currentRaceControlAccount();
+  if(user.anonymous)throw Error('Entra con tu cuenta CraftRace Studio para elegir un avatar.');
+  const items=[];
+  // Explicit limit / offset avoids silently capping a growing catalog at 1000.
+  for(let page=0;page<40;page++){
+    const rows=await request('/rest/v1/studio_avatar_catalog?select=id,label,image_url,sort_order,exclusive,owner_user_id&active=eq.true&order=sort_order.asc,id.asc&limit=200&offset='+(page*200),{token:session.access_token});
+    if(!Array.isArray(rows))throw Error('No se pudo leer el catálogo de avatares.');
+    items.push(...rows.filter(row=>
+      (row.exclusive!==true||row.owner_user_id===user.id)&&validStudioAvatarImage(row.image_url)));
+    if(rows.length<200)break;
+    if(page===39)throw Error('El catálogo de avatares supera el límite de lectura.');
+  }
+  return items;
+}
+
+export async function chooseMyStudioAvatar(avatarId){
+  const session=await activeSession();
+  const user=await currentRaceControlAccount();
+  if(user.anonymous)throw Error('Inicia sesión con tu cuenta CraftRace Studio.');
+  if(avatarId!==null&&!(typeof avatarId==='string'&&/^(avatar_[0-9]{2,4}|founder_[a-z0-9_]+)$/.test(avatarId)))
+    throw Error('Identificador de avatar incorrecto.');
+  const path='/rest/v1/craft_accounts?select=user_id,avatar_id&user_id=eq.'+encodeURIComponent(user.id);
+  const response=await request(path,{
+    method:'PATCH',token:session.access_token,representation:true,
+    body:{avatar_id:avatarId,updated_at:new Date().toISOString()}
+  });
+  if(!Array.isArray(response)||response.length!==1||response[0]?.user_id!==user.id||
+     response[0]?.avatar_id!==avatarId)
+    throw Error('Supabase no confirmó el avatar. No se ha modificado tu perfil.');
+  return avatarId;
 }
 export async function requestRaceControlEmailLink(email){
   const s=await activeSession();
