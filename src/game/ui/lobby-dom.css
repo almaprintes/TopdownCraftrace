@@ -953,3 +953,188 @@
   .tdr-lobby-header{gap:6px;padding-inline:calc(max(8px,env(safe-area-inset-left,0px))) calc(max(8px,env(safe-area-inset-right,0px)))}
   .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button{width:38px;min-width:38px;padding-inline:5px}
 }
+
+
+/* CRAFT STUDIO LOBBY IDENTITY 2026-11-09
+   A real three-zone layout: [TDR logo + Studio avatar + pilot] [main actions]
+   [help + wallet]. Help and wallet are siblings; neither can overlap the other.
+   The logo's long-press admin hit area and all existing button actions survive. */
+.tdr-lobby-dom .tdr-lobby-header.tdr-app-header{
+  height:clamp(66px,11vh,82px);
+  padding:5px clamp(8px,1.15vw,18px);
+  gap:clamp(6px,.75vw,12px);
+  display:flex;align-items:center;
+  box-sizing:border-box;
+}
+.tdr-lobby-dom .tdr-lobby-profile{
+  flex:0 1 clamp(300px,28.5vw,430px);
+  display:flex;align-items:center;gap:clamp(6px,.65vw,11px);
+  height:100%;min-width:0;max-width:43%;
+}
+.tdr-lobby-dom .tdr-lobby-profile .tdr-lobby-brand{
+  flex:0 0 clamp(62px,7.1vw,108px);
+  width:clamp(62px,7.1vw,108px);
+  height:100%;max-height:100%;min-width:0;
+}
+.tdr-lobby-dom .tdr-lobby-profile .tdr-lobby-brand img{
+  /* The previous 150% logo spilled into the pilot block. The logo stays
+     visible, but the newly selected Studio avatar is the visual protagonist. */
+  transform:scale(1.12);
+}
+.tdr-lobby-dom .tdr-lobby-avatar{
+  --studio-avatar-edge:clamp(52px,10vh,76px);
+  display:grid;place-items:center;
+  flex:0 0 var(--studio-avatar-edge);
+  width:var(--studio-avatar-edge);
+  height:min(var(--studio-avatar-edge),100%);
+  padding:2px;margin:0;box-sizing:border-box;
+  border:2px solid #63d7f6;border-radius:16px;
+  background:linear-gradient(155deg,#143951,#0a1b2a);
+  box-shadow:0 0 0 2px #0a111d,0 0 12px #27c9fb40;
+  color:white;cursor:pointer;touch-action:manipulation;
+  overflow:hidden;position:relative;z-index:3;
+}
+.tdr-lobby-dom .tdr-lobby-avatar img{
+  display:block;width:100%;height:100%;
+  object-fit:cover;border-radius:12px;
+}
+.tdr-lobby-dom .tdr-lobby-avatar img[hidden],
+.tdr-lobby-dom .tdr-lobby-avatar span[hidden]{display:none}
+.tdr-lobby-dom .tdr-lobby-avatar span{
+  font-size:clamp(25px,3.2vw,39px);line-height:1;pointer-events:none;
+}
+.tdr-lobby-dom .tdr-lobby-avatar:focus-visible{
+  outline:2px solid #fff;outline-offset:3px;
+}
+.tdr-lobby-dom .tdr-lobby-pilot{
+  display:grid;align-content:center;gap:3px;
+  flex:1 1 0;min-width:0;overflow:hidden;
+  height:100%;padding:3px 0 3px 9px;box-sizing:border-box;
+  border-left:1px solid #46ddff44;line-height:1.05;
+}
+.tdr-lobby-dom .tdr-lobby-pilot-label{
+  display:block;color:#9aaec5;
+  font:900 clamp(8px,.76vw,11px)/1.1 system-ui,sans-serif;
+  letter-spacing:.16em;
+}
+.tdr-lobby-dom .tdr-lobby-pilot [data-pilot-header-name]{
+  display:block;max-width:100%;min-width:0;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+  color:#6de9ff;font:950 clamp(11px,1.19vw,19px)/1.13 system-ui,sans-serif;
+  letter-spacing:.05em;text-transform:uppercase;
+}
+.tdr-lobby-dom .tdr-lobby-pilot .tdr-lobby-identity-row{
+  width:100%;max-width:100%;overflow:hidden;
+  gap:clamp(3px,.35vw,6px);align-items:center;min-height:15px;
+}
+.tdr-lobby-dom .tdr-lobby-pilot [data-cloud-account]{
+  padding:0;border:0;background:none;color:#aac2d3;
+  text-align:left;cursor:pointer;touch-action:manipulation;
+  font:750 clamp(8px,.8vw,11px)/1.2 system-ui,sans-serif;
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0;
+}
+.tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions{
+  display:flex;flex:1 1 0;min-width:0;max-width:none;
+  justify-content:space-evenly;align-items:center;
+  gap:clamp(4px,.55vw,9px);margin:0;
+}
+.tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button{
+  flex:1 1 0;width:auto;max-width:205px;min-width:0;
+  height:clamp(38px,6.7vh,53px);
+  padding:0 clamp(5px,.7vw,12px);
+  gap:clamp(4px,.6vw,9px);
+  white-space:nowrap;
+}
+.tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button img{
+  flex:0 0 auto;width:clamp(22px,2.2vw,31px);height:clamp(22px,2.2vw,31px);
+}
+.tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button span{
+  font-size:clamp(9px,.86vw,13px);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.tdr-lobby-dom .tdr-lobby-right{
+  display:flex;align-items:center;justify-content:flex-end;
+  flex:0 0 auto;min-width:0;gap:clamp(7px,.8vw,12px);
+  height:100%;
+}
+.tdr-lobby-dom .tdr-lobby-right .tdr-lobby-help{
+  position:relative;z-index:1;flex:0 0 44px;
+  width:44px;min-width:44px;max-width:44px;
+  height:44px;min-height:44px;max-height:44px;
+}
+.tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet{
+  margin:0;flex:0 0 auto;
+  min-width:clamp(104px,9.3vw,145px);
+  gap:6px;white-space:nowrap;
+}
+.tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet-icon{
+  width:clamp(27px,3vw,37px);height:clamp(27px,3vw,37px);
+}
+@media(max-width:1280px){
+  .tdr-lobby-dom .tdr-lobby-profile{
+    flex-basis:clamp(280px,31vw,380px);max-width:45%;
+  }
+  .tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button{
+    padding-inline:5px;
+  }
+}
+@media(max-width:1080px){
+  .tdr-lobby-dom .tdr-lobby-profile{
+    flex:1 1 0;max-width:none;
+  }
+  .tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions{
+    flex:0 0 auto;justify-content:center;margin-left:auto;gap:5px;
+  }
+  .tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button{
+    flex:0 0 46px;width:46px;max-width:46px;min-width:46px;
+    padding:0 6px;
+  }
+  .tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button span{display:none}
+  .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet{min-width:102px}
+}
+@media(max-height:500px){
+  .tdr-lobby-dom .tdr-lobby-header.tdr-app-header{
+    height:clamp(48px,11vh,56px);gap:6px;padding-block:3px;
+  }
+  .tdr-lobby-dom .tdr-lobby-profile{gap:5px}
+  .tdr-lobby-dom .tdr-lobby-profile .tdr-lobby-brand{
+    flex-basis:clamp(49px,7vw,69px);width:clamp(49px,7vw,69px);
+  }
+  .tdr-lobby-dom .tdr-lobby-avatar{
+    --studio-avatar-edge:clamp(40px,10vh,50px);
+    border-radius:11px;
+  }
+  .tdr-lobby-dom .tdr-lobby-avatar img{border-radius:8px}
+  .tdr-lobby-dom .tdr-lobby-pilot{gap:1px;padding-left:5px}
+  .tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button{
+    height:36px;
+  }
+  .tdr-lobby-dom .tdr-lobby-right .tdr-lobby-help{
+    flex-basis:34px;width:34px;min-width:34px;max-width:34px;
+    height:34px;min-height:34px;max-height:34px;
+  }
+  .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet{min-width:91px;gap:4px}
+  .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet-icon{width:24px;height:24px}
+  .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet-copy strong{font-size:15px}
+  .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet-copy small{font-size:7px}
+}
+@media(max-width:680px){
+  .tdr-lobby-dom .tdr-lobby-header.tdr-app-header{padding-inline:5px;gap:4px}
+  .tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions{gap:2px}
+  .tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button{
+    flex-basis:34px;width:34px;max-width:34px;min-width:34px;padding:0 4px;
+  }
+  .tdr-lobby-dom .tdr-lobby-header .tdr-lobby-top-actions .tdr-lobby-button img{width:23px;height:23px}
+  .tdr-lobby-dom .tdr-lobby-right{gap:4px}
+  .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet{min-width:82px}
+}
+@media(max-width:450px) and (orientation:portrait){
+  /* Preserve access to avatar, navigation, help and coins on tiny viewports. */
+  .tdr-lobby-dom .tdr-lobby-profile .tdr-lobby-brand{flex-basis:35px;width:35px}
+  .tdr-lobby-dom .tdr-lobby-avatar{--studio-avatar-edge:36px}
+  .tdr-lobby-dom .tdr-lobby-pilot [data-cloud-account],
+  .tdr-lobby-dom .tdr-lobby-pilot [data-lobby-creator-badge]{display:none!important}
+  .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet-copy small{display:none}
+  .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet{min-width:56px;gap:2px}
+  .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet-icon{width:20px;height:20px}
+}
