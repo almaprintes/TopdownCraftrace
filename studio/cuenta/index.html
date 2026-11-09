@@ -95,11 +95,11 @@
      <label for="claimNickname">Nombre de piloto y constructor</label>
      <input id="claimNickname" name="nickname" class="auth-input" type="text" minlength="3" maxlength="24" pattern="[A-Za-z0-9_-]{3,24}" autocapitalize="off" autocomplete="off" spellcheck="false" required placeholder="Tu apodo único">
      <p class="auth-note" style="margin:2px 0">3–24 caracteres: letras sin tildes, números, guion o guion bajo.</p>
-     <button type="submit" class="btn btn-primary">Reservar mi nombre <span class="btn-arrow">→</span></button>
+     <h3>ELIGE TU AVATAR</h3><p class="auth-note">Selecciona un avatar oficial. Se comparte con ambos juegos y puedes cambiarlo después.</p><div id="studioAvatarClaim" class="studio-avatar-grid" aria-label="Avatares disponibles"></div><button type="submit" class="btn btn-primary">Guardar nick y avatar <span class="btn-arrow">→</span></button>
     </form>
    </div>
    <div id="profileReady" hidden>
-    <h2 style="margin-top:30px">TUS ACCESOS</h2>
+    <h2 style="margin-top:30px">MI AVATAR CRAFTRACE STUDIO</h2><div class="studio-avatar-current"><img id="studioAvatarCurrent" alt="Mi avatar" width="92" height="92" hidden><button id="studioAvatarEdit" type="button" class="btn btn-ghost">ELEGIR OTRO AVATAR</button></div><div id="studioAvatarGallery" class="studio-avatar-grid" hidden aria-label="Seleccionar avatar"></div><h2 style="margin-top:30px">TUS ACCESOS</h2>
     <p class="auth-sub">Proveedores vinculados a esta misma identidad:</p>
     <div class="chip" id="profileProviders">Verificando…</div>
     <div class="link-providers">
