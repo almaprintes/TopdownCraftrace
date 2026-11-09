@@ -53,10 +53,10 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   const avatarPhoto=document.createElement('img');
   avatarPhoto.alt='Avatar de CraftRace Studio';avatarPhoto.hidden=true;
   avatarPhoto.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block';
-  avatarPhoto.addEventListener('error',()=>{avatarPhoto.hidden=true;avatarBox.textContent='🏁';});
+  avatarPhoto.addEventListener('error',()=>{avatarPhoto.hidden=true;avatarPhoto.removeAttribute('src');avatarBox.replaceChildren(document.createTextNode('🏁'),avatarPhoto);});
   avatarBox.style.overflow='hidden';avatarBox.appendChild(avatarPhoto);
   const setStudioAvatar=(studio,userId)=>{
-    avatarPhoto.hidden=true;avatarPhoto.removeAttribute('src');avatarBox.textContent='🏁';
+    avatarPhoto.hidden=true;avatarPhoto.removeAttribute('src');avatarBox.replaceChildren(document.createTextNode('🏁'),avatarPhoto);
     let url=null;
     const validPath=typeof studio?.avatarPath==='string'&&
       studio.avatarPath===userId+'/pilot.webp'||studio?.avatarPath===userId+'/pilot.png'||studio?.avatarPath===userId+'/pilot.jpg';
@@ -66,7 +66,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     }else if(typeof studio?.avatarUrl==='string'&&
       studio.avatarUrl.startsWith('https://almaprintes.github.io/SlotRace/assets/avatars/')&&
       studio.avatarUrl.endsWith('.webp')&&!studio.avatarUrl.includes('..'))url=studio.avatarUrl;
-    if(url){avatarBox.textContent='';avatarPhoto.hidden=false;avatarPhoto.src=url;}
+    if(url){avatarBox.replaceChildren(avatarPhoto);avatarPhoto.hidden=false;avatarPhoto.src=url;}
   };
   const idLine=document.createElement('small');
   idLine.dataset.cloudPlayerId='1';
