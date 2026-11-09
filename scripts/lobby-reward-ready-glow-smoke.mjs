@@ -28,7 +28,11 @@ assert.match(css,/@keyframes tdr-lobby-ready-aura\{\s*0%,100%\{opacity:\.02\}\s*
 assert.match(css,/@keyframes tdr-lobby-ready-edge\{\s*0%,100%\{opacity:\.06\}\s*32%,48%\{opacity:1\}/);
 assert.doesNotMatch(css,/\.tdr-lobby-reward-halo-shape\{[^}]*filter:blur/);
 assert.doesNotMatch(css,/filter:drop-shadow\(0 0 9px var\(--tdr-reward-glow\)\)/);
-assert.doesNotMatch(css,/@keyframes tdr-lobby-ready-(?:aura|edge)[\s\S]*?scale\(/);
+// Inspect only the two keyframe bodies, not unrelated style rules added later.
+const haloKeyframes=[...css.matchAll(/@keyframes tdr-lobby-ready-(?:aura|edge)\{((?:[^{}]|\{[^{}]*\})*)\}/g)];
+assert.equal(haloKeyframes.length,2,'both reward halo keyframes are present');
+for(const [,body] of haloKeyframes)assert.doesNotMatch(body,/scale\(/,
+  'reward halo animation must not scale its geometry');
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 assert.match(css,/\.tdr-lobby-reward-slot\.is-ready \.tdr-lobby-reward-halo\{animation:none;opacity:\.48/);
 assert.match(css,/\.tdr-lobby-reward-slot\.is-ready::before\{animation:none;opacity:\.85/);
