@@ -197,7 +197,7 @@ export function installLobbyDom(scene) {
   hideLegacyLobbyControls(scene); let root = scene._lobbyDomRoot;
   if (!root?.isConnected) {
     const host = scene.game?.canvas?.parentElement || document.getElementById('app') || document.body; host.classList.add('tdr-lobby-host'); root = document.createElement('div'); root.className = 'tdr-lobby-dom';
-    root.style.backgroundImage = `url("${BASE}assets/ui/lobby/lobby_background_topdown_garage.webp")`; root.style.backgroundSize='cover'; root.style.backgroundPosition='center'; root.style.backgroundRepeat='no-repeat'; root.innerHTML = `<header class="tdr-lobby-header"><div class="tdr-lobby-profile"><button type="button" class="tdr-lobby-brand" aria-label="Top Down Race"><img src="${BASE}assets/logo.webp" alt="Top Down Race" draggable="false"></button><button type="button" class="tdr-lobby-avatar" data-lobby-avatar aria-label="Abrir mi perfil y avatar" title="Cuenta CraftRace Studio"><img data-lobby-avatar-image alt="" hidden draggable="false"><span data-lobby-avatar-fallback aria-hidden="true">🏁</span></button><div class="tdr-lobby-pilot" data-pilot-header><img src="${BASE}assets/ui/moneda-tdr.webp" alt="" draggable="false"><span><small>${tr('lobby.coins')}</small><strong data-coins>0</strong></span></div><small style="color:#7f94a6;font-size:8px;font-weight:900;letter-spacing:.16em">${tr('lobby.driver')}</small><strong data-pilot-header-name style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#65eaff;font-size:clamp(11px,1.05vw,16px);font-weight:950;letter-spacing:.05em">—</strong><button type="button" data-cloud-account style="padding:0;border:0;background:none;text-align:left;color:#8eabb9;font:700 9px system-ui;cursor:pointer;touch-action:manipulation" title="Cuenta y copia de seguridad">ID · … ☁</button></div></div><nav class="tdr-lobby-top-actions"></nav><div class="tdr-lobby-right"></div></header><img class="tdr-lobby-car-platform" src="${BASE}assets/ui/lobby/car_platform.webp" alt="" aria-hidden="true" draggable="false"><img class="tdr-lobby-car-preview" data-lobby-car alt="" draggable="false"><main class="tdr-lobby-cards"><section class="tdr-lobby-card tdr-event-card" data-event-card></section><section class="tdr-lobby-card tdr-car-card" data-car-card></section><section class="tdr-lobby-card tdr-track-card" data-track-card></section></main><div class="tdr-lobby-play-slot"></div><nav class="tdr-lobby-bottom-actions"></nav>`;
+    root.style.backgroundImage = `url("${BASE}assets/ui/lobby/lobby_background_topdown_garage.webp")`; root.style.backgroundSize='cover'; root.style.backgroundPosition='center'; root.style.backgroundRepeat='no-repeat'; root.innerHTML = `<header class="tdr-lobby-header"><div class="tdr-lobby-profile"><button type="button" class="tdr-lobby-brand" aria-label="Top Down Race"><img src="${BASE}assets/logo.webp" alt="Top Down Race" draggable="false"></button><button type="button" class="tdr-lobby-avatar" data-lobby-avatar aria-label="Abrir mi perfil y avatar" title="Cuenta CraftRace Studio"><img data-lobby-avatar-image alt="" hidden draggable="false"><span data-lobby-avatar-fallback aria-hidden="true">🏁</span></button><div class="tdr-lobby-pilot" data-pilot-header><small class="tdr-lobby-pilot-label">${tr("lobby.driver")}</small><strong data-pilot-header-name>—</strong><button type="button" data-cloud-account title="Cuenta y copia de seguridad">ID · … ☁</button></div></div><nav class="tdr-lobby-top-actions"></nav><div class="tdr-lobby-right"></div></header><img class="tdr-lobby-car-platform" src="${BASE}assets/ui/lobby/car_platform.webp" alt="" aria-hidden="true" draggable="false"><img class="tdr-lobby-car-preview" data-lobby-car alt="" draggable="false"><main class="tdr-lobby-cards"><section class="tdr-lobby-card tdr-event-card" data-event-card></section><section class="tdr-lobby-card tdr-car-card" data-car-card></section><section class="tdr-lobby-card tdr-track-card" data-track-card></section></main><div class="tdr-lobby-play-slot"></div><nav class="tdr-lobby-bottom-actions"></nav>`;
     const header=root.querySelector('.tdr-lobby-header');header?.classList.add('tdr-app-header');if(header)header.dataset.tdrAppHeader='1';root.querySelector('.tdr-lobby-right')?.append(createAppWallet({className:'tdr-lobby-wallet',amountAttribute:'coins',label:tr('lobby.coins')}));host.appendChild(root); scene._lobbyDomRoot = root;
     const disposeBlackFriday=installBlackFridayPromoUi(root);
     const disposeCommunications=installLiveCommunicationsUi(root);
@@ -232,16 +232,14 @@ export function installLobbyDom(scene) {
       makeOnlineRecordsShortcut(scene)
     );
     if(!IS_PROD_BUILD){const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));}
-    // Avatar is part of the live CraftRace Studio identity, not a fixed image.
-    // Read once per lobby entry (never from the once-per-second coin refresh).
+    // One shared Studio avatar for both games, loaded once when opening the lobby.
     const avatarButton=root.querySelector('[data-lobby-avatar]');
     const avatarImage=root.querySelector('[data-lobby-avatar-image]');
     const avatarFallback=root.querySelector('[data-lobby-avatar-fallback]');
-    const resetAvatar=()=>{
-      if(!avatarImage)return;
-      avatarImage.hidden=true;
-      avatarImage.removeAttribute('src');
-      if(avatarFallback)avatarFallback.hidden=false;
+    let avatarRequest=0;
+    const showAvatarFallback=()=>{
+      avatarImage.hidden=true;avatarImage.removeAttribute('src');
+      avatarFallback.hidden=false;
     };
     const openStudioAccount=()=>{
       window.__tdrSettingsAccountRequested=true;
@@ -251,23 +249,38 @@ export function installLobbyDom(scene) {
     const studioAvatarBase='https://almaprintes.github.io/TopdownCraftrace/studio-assets/avatars/';
     const studioAvatarRaw='https://raw.githubusercontent.com/almaprintes/TopdownCraftrace/main/studio/assets/avatars/';
     const loadStudioAvatar=async()=>{
-      resetAvatar();
-      if(!hasSavedRaceControlSession()||!avatarImage)return;
+      const requestId=++avatarRequest;
+      showAvatarFallback();
+      if(!hasSavedRaceControlSession())return;
       try{
-        const profile=await getMyCraftStudioAccount();
-        if(!root.isConnected||!profile)return;
-        let src='';
-        let backup='';
-        if(typeof profile.catalogUrl==='string'&&profile.catalogUrl.startsWith(studioAvatarBase)){
-          const basename=profile.catalogUrl.slice(studioAvatarBase.length);
-          if(/^(?:avatar_[0-9]{2,4}|founder_[a-z0-9_]+)\.webp$/.test(basename)){
-            // The blob is public on GitHub as soon as the editor commits it.
-            src=studioAvatarRaw+basename;
-            backup=profile.catalogUrl;
+        const account=await getMyCraftStudioAccount();
+        if(!root.isConnected||requestId!==avatarRequest||!account)return;
+        let primary='',secondary='';
+        if(typeof account.catalogUrl==='string'&&account.catalogUrl.startsWith(studioAvatarBase)){
+          const file=account.catalogUrl.slice(studioAvatarBase.length);
+          if(/^(?:avatar_[0-9]{2,4}|founder_[a-z0-9_]+)\.webp$/.test(file)){
+            primary=studioAvatarRaw+file;secondary=account.catalogUrl;
           }
         }
-        if(!src&&typeof profile.avatarPath==='string'&&
-          new RegExp('^'+profile.id.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\    const syncPilot=()=>{const name=String(getPilotProfile()?.name||'').trim();const node=root.querySelector('[data-pilot-header-name]');if(node)node.textContent=name||'—';};')+'\\/pilot\\.(?:webp|png|jpg)
+        if(!primary&&typeof account.avatarPath==='string'&&
+          ['webp','png','jpg'].some(ext=>account.avatarPath===account.id+'/pilot.'+ext)){
+          // Legacy portrait support until the player selects a Studio avatar.
+          primary='https://juukbnkjboiazqggqcyv.supabase.co/storage/v1/object/public/craft-avatars/'+account.avatarPath;
+        }
+        if(!primary)return;
+        const prefetch=new Image();prefetch.decoding='async';
+        prefetch.onload=()=>{
+          if(!root.isConnected||requestId!==avatarRequest)return;
+          avatarImage.src=prefetch.src;avatarImage.hidden=false;avatarFallback.hidden=true;
+        };
+        prefetch.onerror=()=>{
+          if(secondary){const next=secondary;secondary='';prefetch.src=next;}
+          else if(requestId===avatarRequest&&root.isConnected)showAvatarFallback();
+        };
+        prefetch.src=primary;
+      }catch{if(requestId===avatarRequest&&root.isConnected)showAvatarFallback();}
+    };
+    const syncPilot=()=>{const name=String(getPilotProfile()?.name||'').trim();const node=root.querySelector('[data-pilot-header-name]');if(node)node.textContent=name||'—';};
     window.addEventListener('tdr:pilotprofile',syncPilot);
     const accountButton=root.querySelector('[data-cloud-account]');
     const creatorBadge=document.createElement('span');
@@ -310,6 +323,7 @@ export function installLobbyDom(scene) {
     accountButton?.addEventListener('click',openStudioAccount);
     updateCloudId();
     void loadStudioAvatar();
+    window.addEventListener('tdr:studio-avatar-selected',loadStudioAvatar);
     // A material-pack purchase completes induction mission 7 while the store
     // remains over this same lobby scene. Update ONLY the season card (and its
     // existing polished navigation) when that persisted progress changes.
@@ -320,91 +334,7 @@ export function installLobbyDom(scene) {
     };
     window.addEventListener('tdr:seasonProgressChanged',syncSeasonCard);
 
-    scene.events.once('shutdown',()=>{try{feedbackDispose?.();}catch{}disposeCommunications?.();disposeBlackFriday?.();window.removeEventListener('tdr:seasonProgressChanged',syncSeasonCard);disposeAppWallets(root);try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
-  }
-  const syncLobbyHeader=()=>{const pilotNode=root.querySelector('[data-pilot-header-name]');if(pilotNode)pilotNode.textContent=String(getPilotProfile()?.name||'').trim()||'—';const countdown=root.querySelector('[data-season-countdown]');if(countdown)countdown.textContent=seasonCountdownLabel();updateLobbyRewardShortcuts(root);};
-  syncLobbyHeader();
-  if(!scene._lobbyCoinSyncTimer){scene._lobbyCoinSyncTimer=window.setInterval(syncLobbyHeader,1000);scene.events.once('shutdown',()=>{try{window.clearInterval(scene._lobbyCoinSyncTimer);}catch{}scene._lobbyCoinSyncTimer=null;});}
-  renderDomCards(scene,root); return root;
-}
-).test(profile.avatarPath)){
-          // Existing legacy account portrait remains usable if no Studio avatar is chosen.
-          src='https://juukbnkjboiazqggqcyv.supabase.co/storage/v1/object/public/craft-avatars/'+profile.avatarPath;
-        }
-        if(!src)return;
-        const image=new Image();
-        image.decoding='async';
-        image.onload=()=>{
-          if(!root.isConnected||!avatarImage)return;
-          avatarImage.src=image.src;
-          avatarImage.hidden=false;
-          if(avatarFallback)avatarFallback.hidden=true;
-        };
-        image.onerror=()=>{
-          if(backup){const next=backup;backup='';image.src=next;}
-          else resetAvatar();
-        };
-        image.src=src;
-      }catch{
-        if(root.isConnected)resetAvatar();
-      }
-    };
-    const syncPilot=()=>{const name=String(getPilotProfile()?.name||'').trim();const node=root.querySelector('[data-pilot-header-name]');if(node)node.textContent=name||'—';};
-    window.addEventListener('tdr:pilotprofile',syncPilot);
-    const accountButton=root.querySelector('[data-cloud-account]');
-    const creatorBadge=document.createElement('span');
-    creatorBadge.dataset.lobbyCreatorBadge='1';
-    creatorBadge.textContent='✓ CREADOR';
-    creatorBadge.title='Distintivo de creador confirmado por el servidor';
-    creatorBadge.hidden=true;
-    creatorBadge.style.cssText='display:none;white-space:nowrap;flex:0 0 auto;'+
-      'padding:2px 5px;border:1px solid #a88338;border-radius:12px;'+
-      'background:rgba(70,39,7,.85);color:#ffd478;font:900 8px system-ui;letter-spacing:.045em';
-    // The lobby header has three height-constrained rows. A fourth badge row
-    // was cropped by the header on iPhone landscape. Keep badge WITH the ID
-    // inside row three; never grow the header or displace game shortcuts.
-    const identityRow=document.createElement('div');
-    identityRow.className='tdr-lobby-identity-row';
-    accountButton?.parentNode?.insertBefore(identityRow,accountButton);
-    if(accountButton)identityRow.append(accountButton,creatorBadge);
-    const updateCloudId=async()=>{
-      if(!hasSavedRaceControlSession()){
-        creatorBadge.hidden=true;creatorBadge.style.display='none';
-        accountButton.textContent='🏁 PARTIDA LOCAL';
-        accountButton.title='Partida solo en este dispositivo · Ajustes → Cuenta';
-        return;
-      }
-      try{
-        const {id}=await cloudIdentity();
-        if(!root.isConnected)return;
-        accountButton.textContent='ID · '+shortPlayerId(id)+' ☁';
-        accountButton.title='ID: '+id+' · Cuenta y copia de seguridad';
-        try{creatorBadge.hidden=(await getMyRaceControlBadge())!=='CREADOR';}
-        catch{creatorBadge.hidden=true;}
-        creatorBadge.style.display=creatorBadge.hidden?'none':'inline-flex';
-      }catch{
-        creatorBadge.hidden=true;creatorBadge.style.display='none';
-        if(root.isConnected)accountButton.textContent='☁ SIN CONEXIÓN';
-      }
-    };
-    // Keep the compact pilot ID in the lobby, but send account management to
-    // the existing Settings > Cuenta tab. No duplicate full-screen manager.
-    accountButton?.addEventListener('click',()=>{
-      window.__tdrSettingsAccountRequested=true;
-      scene.scene.start('SettingsScene');
-    });
-    updateCloudId();
-    // A material-pack purchase completes induction mission 7 while the store
-    // remains over this same lobby scene. Update ONLY the season card (and its
-    // existing polished navigation) when that persisted progress changes.
-    const syncSeasonCard=()=>{
-      if(!root.isConnected)return;
-      renderDomCards(scene,root,true);
-      polishSeasonCard(scene,root.querySelector('[data-event-card]'));
-    };
-    window.addEventListener('tdr:seasonProgressChanged',syncSeasonCard);
-
-    scene.events.once('shutdown',()=>{try{feedbackDispose?.();}catch{}disposeCommunications?.();disposeBlackFriday?.();window.removeEventListener('tdr:seasonProgressChanged',syncSeasonCard);disposeAppWallets(root);try{window.removeEventListener('tdr:pilotprofile',syncPilot);}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
+    scene.events.once('shutdown',()=>{try{feedbackDispose?.();}catch{}disposeCommunications?.();disposeBlackFriday?.();window.removeEventListener('tdr:seasonProgressChanged',syncSeasonCard);disposeAppWallets(root);try{window.removeEventListener('tdr:pilotprofile',syncPilot);window.removeEventListener('tdr:studio-avatar-selected',loadStudioAvatar);avatarRequest++;}catch{}try{root.querySelectorAll('img').forEach(img=>{img.removeAttribute('src');img.src='';});}catch{}try{root.replaceChildren();}catch{}try{root.remove();}catch{}if(scene._lobbyDomRoot===root)scene._lobbyDomRoot=null;});
   }
   const syncLobbyHeader=()=>{const pilotNode=root.querySelector('[data-pilot-header-name]');if(pilotNode)pilotNode.textContent=String(getPilotProfile()?.name||'').trim()||'—';const countdown=root.querySelector('[data-season-countdown]');if(countdown)countdown.textContent=seasonCountdownLabel();updateLobbyRewardShortcuts(root);};
   syncLobbyHeader();
