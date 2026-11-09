@@ -105,6 +105,28 @@ async function encodeWithLocalWebpWorker(imageData,quality){
   }finally{worker.terminate();}
 }
 
+// Reusable local WebP export for small assets such as CraftRace Studio avatars.
+// Canvas may silently produce PNG on iOS Safari; validate the RIFF/WEBP bytes.
+export async function encodeWebpCanvas(canvas,quality=85){
+  if(!canvas||!Number.isSafeInteger(canvas.width)||!Number.isSafeInteger(canvas.height)||
+     canvas.width<1||canvas.height<1||canvas.width*canvas.height>MAX_MOBILE_WASM_EXPORT_PIXELS)
+    throw Error('Dimensiones no válidas para exportar avatares WebP.');
+  if(!Number.isFinite(quality)||quality<50||quality>95)
+    throw Error('Calidad WebP fuera del intervalo permitido.');
+  try{
+    const native=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality/100));
+    if(native?.type==='image/webp'&&isWebpHeader(await native.slice(0,12).arrayBuffer()))
+      return native;
+  }catch{}
+  const context=canvas.getContext('2d',{willReadFrequently:true});
+  if(!context)throw Error('No se pudo leer la imagen del editor.');
+  const rgba=context.getImageData(0,0,canvas.width,canvas.height);
+  const blob=await encodeWithLocalWebpWorker(rgba,quality);
+  if(!isWebpHeader(await blob.slice(0,12).arrayBuffer()))
+    throw Error('El codificador de compatibilidad no generó un archivo WebP válido.');
+  return blob;
+}
+
 function hasImageSignature(bytes,format){
   const b=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes||[]);
   if(format==='webp')return isWebpHeader(b);
