@@ -19,17 +19,17 @@ assert.equal(directedGateCrossingFraction({x:NaN,y:0},{x:2,y:0},gate),null,
  'Coordenadas inválidas no se admiten');
 
 for(const fps of [60,30,15]){
- const frameMs=1000/fps;
+ const frameMs=1000/fps,simulatedFrameMs=Math.min(frameMs,50);
  for(let i=0;i<1000;i++){
   const fraction=((i*7919)%997+.5)/997;
   const before={x:-fraction,y:0},after={x:1-fraction,y:0};
-  const now=8432+(1-fraction)*frameMs;
+  const now=8432+(1-fraction)*simulatedFrameMs;
   const crossed=estimateDirectedGateCrossing({previous:before,current:after,
     gate,velocity:{x:1,y:0},frameEndNowMs:now,rawFrameMs:frameMs,
-    simulatedFrameMs:frameMs,clockOriginMs:0});
+    simulatedFrameMs,clockOriginMs:0});
   approximate(crossed.fraction,fraction,`geometría ${fps} FPS ${i}`);
   approximate(crossed.crossedAtMs,8432,`subfotograma ${fps} FPS ${i}`);
-  assert.equal(crossed.reviewRequired,false);
+  assert.equal(crossed.reviewRequired,fps===15,"15 FPS exceeds the current 50 ms physics cap");
  }
 }
 // Un salto de 1 o 3 segundos solo mueve la física hasta 50 ms por update.
