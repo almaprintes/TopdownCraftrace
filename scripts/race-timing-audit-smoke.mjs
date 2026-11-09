@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {beginRacePauseClock,resumeRacePauseClock} from '../src/game/ui/racePauseTiming.js';
+const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
+const race=read('../src/game/scenes/RaceScene.js');
+const pauseUi=read('../src/game/scenes/RaceExperienceScene.js');
+const ghost=read('../src/game/scenes/RaceGhostModeScene.js');
+// Evidencia estática: se ejecuta contra el código real, no contra un cronómetro ficticio.
+assert.match(race,/const lapTime = now - this\.timing\.lapStart/);
+assert.match(race,/const now = performance\.now\(\)/);
+assert.match(race,/Math\.min\(0\.05, \(deltaMs \|\| 0\) \/ 1000\)/);
+assert.match(race,/this\._simAccMs > 250/);
+assert.match(race,/crossesDirectedFinishGate\(/);
+assert.match(pauseUi,/beginRacePauseClock\(this\)/);
+assert.match(pauseUi,/resumeRacePauseClock\(this\)/);
+assert.match(ghost,/_ghostLapStartPerf/);
+const scene={timing:{started:true,lapStart:1000},_tdrPauseTimingStartedAt:NaN,
+ _tdrSessionLapClockStart:1000,_ghostLapStartPerf:1000};
+assert.equal(beginRacePauseClock(scene,6000),true);
+assert.equal(beginRacePauseClock(scene,9000),false,'no reiniciar pausa');
+assert.equal(resumeRacePauseClock(scene,26000),20000);
+assert.equal(31000-scene.timing.lapStart,10000,'5 s carrera + 20 s pausa + 5 s carrera');
+assert.equal(scene._tdrSessionLapClockStart,21000);
+assert.equal(scene._ghostLapStartPerf,21000);
+assert.equal(resumeRacePauseClock(scene,31000),0,'continuar dos veces no altera la marca');
+const pre={timing:{started:false,lapStart:null},_tdrPauseTimingStartedAt:NaN};
+assert.equal(beginRacePauseClock(pre,0),true);
+assert.equal(resumeRacePauseClock(pre,10000),10000);
+assert.equal(pre.timing.lapStart,null);
+console.log('CraftRace auditoría: reloj monotónico identificado, pausas y reloj fantasma coherentes OK.');
+console.log('PENDIENTE (no homologado): interpolación temporal de salida/CP/meta y FPS en dispositivo real.');
