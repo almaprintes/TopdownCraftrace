@@ -84,8 +84,13 @@ export function mountAdminStudioAvatars(){
  };
  const loadCatalog=async()=>{
    await authenticate();
-   const rows=await request('/rest/v1/studio_avatar_catalog?select=id,label,image_url,active,sort_order,width_px,height_px,created_at,exclusive,owner_user_id&order=sort_order.asc,id.asc');
-   if(!Array.isArray(rows))throw Error('Supabase no devolvió un catálogo válido.');
+   const rows=[];
+   for(let page=0;page<30;page++){
+     const batch=await request('/rest/v1/studio_avatar_catalog?select=id,label,image_url,active,sort_order,width_px,height_px,created_at,exclusive,owner_user_id&order=sort_order.asc,id.asc&limit=500&offset='+(page*500));
+     if(!Array.isArray(batch))throw Error('Supabase no devolvió un catálogo válido.');
+     rows.push(...batch);if(batch.length<500)break;
+     if(page===29)throw Error('Catálogo demasiado grande para esta versión del editor.');
+   }
    catalog=rows;
    $('[data-total]').textContent=rows.length;
    $('[data-active]').textContent=rows.filter(x=>x.active&&!x.exclusive).length;
@@ -217,9 +222,10 @@ export function mountAdminStudioAvatars(){
    return blob;
  };
  const githubExisting=async()=>{
-   const data=await github('/contents/'+IMAGE_DIR.replace(/\/$/,'')+'?ref=main',{notFoundOk:true});
-   if(data!==null&&!Array.isArray(data))throw Error('No se pudo comprobar la carpeta de imágenes en GitHub.');
-   return (data||[]).map(x=>filenameNumber(x.name)).filter(n=>n>0);
+   const data=await github('/git/trees/main?recursive=1');
+   if(data?.truncated||!Array.isArray(data?.tree))throw Error('No se puede asegurar la lista completa de avatares en GitHub.');
+   return data.tree.filter(x=>x.type==='blob'&&x.path?.startsWith(IMAGE_DIR))
+     .map(x=>filenameNumber(x.path.slice(IMAGE_DIR.length))).filter(n=>n>0);
  };
  const registerPending=async()=>{
    if(!pendingRows?.length)throw Error('No hay registros pendientes.');
@@ -229,7 +235,14 @@ export function mountAdminStudioAvatars(){
      throw Error('Supabase no confirmó todos los registros. Comprueba el catálogo.');
    pendingRows=null;sessionStorage.removeItem('tdr-studio-avatar-pending-v1');ui.retry.hidden=true;
    await loadCatalog();
-   inform('¡Lote publicado! '+saved.length+' avatares registrados y numerados en CraftRace Studio.',true);
+   if(saved.length===1&&saved[0].exclusive&&saved[0].owner_user_id===staffId&&saved[0].active){
+     try{
+       const applied=await request('/rest/v1/craft_accounts?user_id=eq.'+encodeURIComponent(staffId),
+         {method:'PATCH',body:{avatar_id:saved[0].id,updated_at:new Date().toISOString()}});
+       if(!Array.isArray(applied)||applied.length!==1)throw Error('No se confirmó la asignación.');
+       inform('Avatar exclusivo publicado y aplicado a tu cuenta.',true);
+     }catch(error){inform('Publicado, pero no se pudo asignar a tu cuenta: '+errorText(error)+'. Usa el botón USAR EN MI CUENTA del catálogo.');}
+   }else inform('¡Lote publicado! '+saved.length+' avatares registrados y numerados en CraftRace Studio.',true);
  };
  const publish=async()=>{
    if(!items.length)throw Error('Añade al menos una imagen.');
