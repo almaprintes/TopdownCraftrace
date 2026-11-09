@@ -250,6 +250,19 @@ jobs:
           path: ${{ runner.temp }}/tdr-car-alpha-kartings/
           if-no-files-found: error
           retention-days: 30
+      - name: Read last successfully published DEV version
+        working-directory: dev-src
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Failed, cancelled and superseded Actions runs must NOT increase DEV.
+          # The LIVE Pages HTML is the only source of the next patch number.
+          url="https://almaprintes.github.io/TopdownCraftrace/dev/index.html?version_check=${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          curl -fLsS --retry 3 --retry-all-errors --retry-delay 2 --connect-timeout 10 --max-time 30 \
+            -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' \
+            "$url" -o .live-dev-index.html
+          node --input-type=module -e "import {readFileSync} from 'node:fs';import {nextVersionFromPublishedHtml} from './scripts/stamp-dev-version.mjs';console.log('Next DEV version: '+nextVersionFromPublishedHtml(readFileSync('.live-dev-index.html','utf8')))"
+
       - name: Build development
         working-directory: dev-src
         shell: bash
@@ -261,22 +274,24 @@ jobs:
           test -n "${VITE_TDR_ONLINE_PUBLIC}"
           test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
           npm ci --no-audit --no-fund
-          # Stamp only the DEV checkout, AFTER the separate production candidate check.
-          # A new Actions run gets its own DEV patch version; never commit the stamp.
-          node scripts/stamp-dev-version.mjs
+          # Stamp only DEV, AFTER the separate production candidate check.
+          # Increment the last LIVE version exactly once; do not count GitHub runs.
+          # A failed/cancelled deploy cannot consume a patch number.
+          node scripts/stamp-dev-version.mjs --from-live .live-dev-index.html
           node scripts/studio-avatar-player-smoke.mjs
           node scripts/lobby-studio-avatar-layout-smoke.mjs
           npx vite build --base=/TopdownCraftrace/dev/
           # Do not publish a DEV bundle that silently lost the Studio avatar manager.
           grep -Rqs 'AVATARES · STUDIO' dist/assets/ || { echo 'Avatar Studio missing from DEV bundle'; exit 1; }
-          node --input-type=module -e "import {readFileSync} from 'node:fs';import {versionFromRunNumber} from './scripts/stamp-dev-version.mjs';const version=versionFromRunNumber(process.env.GITHUB_RUN_NUMBER);if(!readFileSync('dist/index.html','utf8').includes('content='+String.fromCharCode(34)+version+String.fromCharCode(34)))process.exit(1);console.log('Verified DEV bundle '+version)"
+          node --input-type=module -e "import {readFileSync} from 'node:fs';import {nextVersionFromPublishedHtml} from './scripts/stamp-dev-version.mjs';const version=nextVersionFromPublishedHtml(readFileSync('.live-dev-index.html','utf8'));if(!readFileSync('dist/index.html','utf8').includes('content='+String.fromCharCode(34)+version+String.fromCharCode(34)))process.exit(1);console.log('Verified DEV bundle '+version)"
           mkdir -p dist/assets/tutorials/dropping
           cp -R assets/tutorials/dropping/. dist/assets/tutorials/dropping/
       - name: Assemble main-only Pages (public entry + DEV)
         shell: bash
         run: |
           mkdir -p site/dev site/dev-live
-          printf 'DEV_SOURCE_SHA=%s\n' "$(git -C dev-src rev-parse HEAD)" > dev-src/dist/dev-build.txt
+          version="$(node --input-type=module -e "import {readFileSync} from 'node:fs';import {nextVersionFromPublishedHtml} from './dev-src/scripts/stamp-dev-version.mjs';console.log(nextVersionFromPublishedHtml(readFileSync('dev-src/.live-dev-index.html','utf8')))")"
+          printf 'DEV_SOURCE_SHA=%s\nDEV_VERSION=%s\n' "$(git -C dev-src rev-parse HEAD)" "$version" > dev-src/dist/dev-build.txt
           cp -R dev-src/dist/. site/dev/
           # Keep the second DEV entry point without copying hundreds of MB
           # of identical images, JS bundles and textures into Pages.
@@ -326,8 +341,11 @@ jobs:
           test -f site/dev-live/sw.js
           grep -Fq "DEV_SOURCE_SHA=$(git -C dev-src rev-parse HEAD)" site/dev/dev-build.txt
           grep -Fq "DEV_SOURCE_SHA=$(git -C dev-src rev-parse HEAD)" site/dev-live/dev-build.txt
-          # No green build with a stale 1.4.9 badge, and both mirrors must agree.
-          version="DEV 1.4.$((9 + GITHUB_RUN_NUMBER - 5675))"
+          # Verify one increment over the PREVIOUS LIVE deployed version.
+          # Both /dev/ and /dev-live/ must carry the same patch and source SHA.
+          version="$(node --input-type=module -e "import {readFileSync} from 'node:fs';import {nextVersionFromPublishedHtml} from './dev-src/scripts/stamp-dev-version.mjs';console.log(nextVersionFromPublishedHtml(readFileSync('dev-src/.live-dev-index.html','utf8')))")"
+          grep -Fxq "DEV_VERSION=$version" site/dev/dev-build.txt
+          grep -Fxq "DEV_VERSION=$version" site/dev-live/dev-build.txt
           grep -Fq "content=\"$version\"" site/dev/index.html
           grep -Fq "content=\"$version\"" site/dev-live/index.html
       - name: Configure GitHub Pages
