@@ -50,23 +50,32 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   creatorBadge.title='Creador reconocido por Top Down Race';
   root.querySelector('[data-cloud-pilot]')?.after(creatorBadge);
   const avatarBox=root.querySelector('.tdr-cloud-avatar');
-  const avatarPhoto=document.createElement('img');
-  avatarPhoto.alt='Avatar de CraftRace Studio';avatarPhoto.hidden=true;
-  avatarPhoto.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block';
-  avatarPhoto.addEventListener('error',()=>{avatarPhoto.hidden=true;avatarPhoto.removeAttribute('src');avatarBox.replaceChildren(document.createTextNode('🏁'),avatarPhoto);});
-  avatarBox.style.overflow='hidden';avatarBox.appendChild(avatarPhoto);
+  avatarBox.style.cssText+=';overflow:hidden;background-position:center;background-size:cover;background-repeat:no-repeat;';
+  let avatarRequest=0;
   const setStudioAvatar=(studio,userId)=>{
-    avatarPhoto.hidden=true;avatarPhoto.removeAttribute('src');avatarBox.replaceChildren(document.createTextNode('🏁'),avatarPhoto);
+    const requestId=++avatarRequest;
+    avatarBox.style.backgroundImage='none';
+    avatarBox.textContent='🏁';
     let url=null;
-    const validPath=typeof studio?.avatarPath==='string'&&
-      studio.avatarPath===userId+'/pilot.webp'||studio?.avatarPath===userId+'/pilot.png'||studio?.avatarPath===userId+'/pilot.jpg';
-    if(validPath){
+    const path=studio?.avatarPath;
+    if(typeof path==='string'&&['webp','png','jpg'].some(ext=>path===userId+'/pilot.'+ext)){
       url='https://juukbnkjboiazqggqcyv.supabase.co/storage/v1/object/public/craft-avatars/'+
-        studio.avatarPath+'?v='+encodeURIComponent(studio.updatedAt||'1');
+        path+'?v='+encodeURIComponent(studio.updatedAt||'1');
     }else if(typeof studio?.avatarUrl==='string'&&
       studio.avatarUrl.startsWith('https://almaprintes.github.io/SlotRace/assets/avatars/')&&
       studio.avatarUrl.endsWith('.webp')&&!studio.avatarUrl.includes('..'))url=studio.avatarUrl;
-    if(url){avatarBox.replaceChildren(avatarPhoto);avatarPhoto.hidden=false;avatarPhoto.src=url;}
+    if(!url)return;
+    const preview=new Image();
+    preview.onload=()=>{
+      if(requestId!==avatarRequest)return;
+      avatarBox.style.backgroundImage='url("'+url.replace(/"/g,'%22')+'")';
+      avatarBox.textContent='';
+    };
+    preview.onerror=()=>{
+      if(requestId!==avatarRequest)return;
+      avatarBox.style.backgroundImage='none';avatarBox.textContent='🏁';
+    };
+    preview.src=url;
   };
   const idLine=document.createElement('small');
   idLine.dataset.cloudPlayerId='1';
