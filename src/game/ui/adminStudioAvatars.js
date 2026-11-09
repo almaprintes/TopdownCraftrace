@@ -4,6 +4,7 @@
 import {playerBackendConfig} from '../online/backendConfig.js';
 import {hasSavedRaceControlSession,refreshRaceControlOnlineSession} from '../online/raceControlOnline.js';
 import './adminStudioAvatars.css';
+import {readStudioAvatarZip,studioAvatarImageType} from './studioAvatarZip.mjs';
 
 const REPO='almaprintes/TopdownCraftrace';
 const GITHUB='https://api.github.com/repos/'+REPO;
@@ -36,7 +37,7 @@ export function mountAdminStudioAvatars(){
  '<section class="saa-stats"><div><b data-total>—</b><span>REGISTRADOS</span></div><div><b data-active>—</b><span>PÚBLICOS ACTIVOS</span></div><div><b data-next>—</b><span>SIGUIENTE ID</span></div><button data-reload type="button">ACTUALIZAR</button></section>',
  '<p class="saa-hint">Los avatares exclusivos cuentan en registrados, pero no en públicos activos.</p>',
  '<section class="saa-section"><h3>01 · Seleccionar lote</h3><p>Arrastra imágenes o un ZIP de WebP, PNG o JPG. Nada se publica hasta que confirmes.</p>',
- '<div class="saa-drop" data-drop><label for="saa-file">AÑADIR IMÁGENES O ZIP</label><input id="saa-file" data-file type="file" accept="image/png,image/webp,image/jpeg,.zip,application/zip" multiple><span data-queued>0 imágenes pendientes</span></div>',
+ '<div class="saa-drop" data-drop><label for="saa-file">AÑADIR IMÁGENES O ZIP</label><input id="saa-file" data-file type="file" multiple><span data-queued>0 imágenes pendientes</span></div><p class="saa-hint">Si iOS oculta los WebP, usa «Explorar» en Archivos. El selector acepta todos los archivos; el editor valida su formato.</p>',
  '<div class="saa-editor"><div class="saa-queue" data-queue aria-label="Imágenes del lote"></div><div class="saa-preview-wrap"><canvas data-preview width="256" height="256" aria-label="Vista previa del avatar"></canvas>',
  '<label>Ancho final (px)<input data-width type="number" min="128" max="1024" step="64" value="256"></label><label>Alto final (px)<input data-height type="number" min="128" max="1024" step="64" value="256"></label>',
  '<label>Encuadre · zoom <input data-zoom type="range" min="100" max="250" value="100"><output data-zoom-text>100 %</output></label>',
@@ -165,66 +166,45 @@ export function mountAdminStudioAvatars(){
    }
  };
  const disposeItems=()=>{for(const x of items){try{x.bitmap?.close?.();}catch{}}items=[];selected=-1;draw();renderQueue();};
- const readZip=async(file)=>{
-   // Local ZIP decoder: no third-party code runs in this admin panel.
-   const bytes=new Uint8Array(await file.arrayBuffer());
-   const view=new DataView(bytes.buffer);
-   let eocd=-1;
-   for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--){
-     if(view.getUint32(i,true)===0x06054b50){eocd=i;break;}
-   }
-   if(eocd<0)throw Error('El archivo no parece ser un ZIP válido.');
-   const total=view.getUint16(eocd+10,true);
-   if(total>100)throw Error('Máximo 100 archivos por lote ZIP.');
-   let at=view.getUint32(eocd+16,true);
-   const out=[];let totalPlain=0;
-   for(let i=0;i<total;i++){
-     if(at+46>bytes.length||view.getUint32(at,true)!==0x02014b50)throw Error('ZIP dañado: índice incompleto.');
-     const flags=view.getUint16(at+8,true),method=view.getUint16(at+10,true);
-     const comp=view.getUint32(at+20,true),plain=view.getUint32(at+24,true);
-     const nameLen=view.getUint16(at+28,true),extraLen=view.getUint16(at+30,true),commentLen=view.getUint16(at+32,true);
-     const loc=view.getUint32(at+42,true);
-     if(at+46+nameLen+extraLen+commentLen>bytes.length)throw Error('ZIP dañado: ruta incompleta.');
-     const name=new TextDecoder().decode(bytes.subarray(at+46,at+46+nameLen));
-     at+=46+nameLen+extraLen+commentLen;
-     if(!/\.(png|jpe?g|webp)$/i.test(name)||name.endsWith('/'))continue;
-     if(flags&1)throw Error('El ZIP tiene imágenes cifradas.');
-     if(comp>12_000_000||plain>12_000_000||(totalPlain+=plain)>100_000_000)
-       throw Error('El ZIP supera el límite de tamaño seguro.');
-     if(loc+30>bytes.length||view.getUint32(loc,true)!==0x04034b50)throw Error('ZIP dañado: imagen incompleta.');
-     const begin=loc+30+view.getUint16(loc+26,true)+view.getUint16(loc+28,true);
-     if(begin+comp>bytes.length)throw Error('ZIP dañado: datos incompletos.');
-     const compressed=bytes.slice(begin,begin+comp);
-     let content;
-     if(method===0)content=compressed;
-     else if(method===8){
-       if(typeof DecompressionStream!=='function')throw Error('Este navegador no puede descomprimir ZIP. Extrae las imágenes y selecciónalas juntas.');
-       const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-       content=new Uint8Array(await new Response(stream).arrayBuffer());
-     }else throw Error('Este ZIP usa una compresión no compatible.');
-     if(content.length!==plain)throw Error('ZIP dañado: tamaño de imagen incorrecto.');
-     const basename=name.split('/').pop();const ext=basename.split('.').pop().toLowerCase();
-     const mime=ext==='webp'?'image/webp':ext==='png'?'image/png':'image/jpeg';
-     out.push(new File([content],basename,{type:mime}));
-   }
-   return out;
- };
  const pushFiles=async(files)=>{
+   if(!files.length){inform('No se ha seleccionado ningún archivo.');return;}
    const queue=[];
-   for(const f of files){
-     if(/\.zip$/i.test(f.name))queue.push(...await readZip(f));
-     else queue.push(f);
+   let zipCount=0;
+   for(const file of files){
+     if(/\.zip$/i.test(file.name)){
+       zipCount++;
+       inform('Abriendo el ZIP y comprobando sus imágenes…');
+       const extracted=await readStudioAvatarZip(file);
+       for(const item of extracted)
+         queue.push(new File([item.bytes],item.name,{type:item.mime}));
+     }else{
+       const mime=studioAvatarImageType(file.name);
+       if(mime){
+         // iOS Files may report WebP as octet-stream/empty MIME.
+         queue.push(file.type===mime?file:new File([file],file.name,{type:mime}));
+       }
+     }
    }
+   if(!queue.length)throw Error('No hay imágenes compatibles. Selecciona un ZIP o archivos .webp, .png, .jpg.');
    if(items.length+queue.length>100)throw Error('Máximo 100 avatares por lote.');
-   let added=0;
+   let added=0,skipped=0;
    for(const file of queue){
-     if(!/^image\/(webp|jpeg|png)$/.test(file.type)||file.size>12_000_000)continue;
-     const bitmap=await createImageBitmap(file);
-     if(bitmap.width<64||bitmap.height<64){bitmap.close?.();continue;}
+     if(file.size>12_000_000){skipped++;continue;}
+     let bitmap;
+     try{bitmap=await createImageBitmap(file);}
+     catch{
+       // The archive was correctly extracted, but the local image is invalid
+       // or this Safari version cannot decode it. Keep an actionable error.
+       skipped++;continue;
+     }
+     if(bitmap.width<64||bitmap.height<64){bitmap.close?.();skipped++;continue;}
      items.push({file,bitmap,zoom:100,x:50,y:50,label:filenameLabel(file)});added++;
    }
-   selected=items.length?items.length-1:-1;renderQueue();draw();
-   inform(added+' imágenes preparadas. Selecciona una para ajustar su encuadre.',true);
+   selected=items.length?items.length-1:-1;
+   renderQueue();draw();
+   if(!added)throw Error('Los archivos se encontraron, pero el navegador no pudo abrir ninguna imagen. Revisa que sean WebP, PNG o JPG válidos.');
+   inform(added+' imágenes preparadas'+(zipCount?' desde '+zipCount+' ZIP'+(zipCount>1?'s':''):'')+
+     (skipped?' · '+skipped+' no compatibles':'')+'. Selecciona una para revisar el encuadre.',true);
  };
  const outputSize=()=>{
    const width=nval(ui.width,256),height=nval(ui.height,256);
