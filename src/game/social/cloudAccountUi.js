@@ -49,6 +49,23 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   creatorBadge.textContent='✓ CREADOR';creatorBadge.hidden=true;
   creatorBadge.title='Creador reconocido por Top Down Race';
   root.querySelector('[data-cloud-pilot]')?.after(creatorBadge);
+  const avatarBox=root.querySelector('.tdr-cloud-avatar');
+  const avatarPhoto=document.createElement('img');
+  avatarPhoto.alt='Avatar de CraftRace Studio';avatarPhoto.hidden=true;
+  avatarPhoto.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block';
+  avatarPhoto.addEventListener('error',()=>{avatarPhoto.hidden=true;avatarBox.textContent='🏁';});
+  avatarBox.style.overflow='hidden';avatarBox.appendChild(avatarPhoto);
+  const setStudioAvatar=(studio,userId)=>{
+    avatarPhoto.hidden=true;avatarPhoto.removeAttribute('src');avatarBox.textContent='🏁';
+    let url=null;
+    if(studio?.avatarPath?.startsWith(userId+'/')&&
+       /^[0-9a-f-]{36}\\/pilot\\.(webp|png|jpg)$/.test(studio.avatarPath)){
+      url='https://juukbnkjboiazqggqcyv.supabase.co/storage/v1/object/public/craft-avatars/'+
+        studio.avatarPath+'?v='+encodeURIComponent(studio.updatedAt||'1');
+    }else if(typeof studio?.avatarUrl==='string'&&
+      /^https:\\/\\/almaprintes\\.github\\.io\\/SlotRace\\/assets\\/avatars\\/[A-Za-z0-9_-]+\\.webp$/.test(studio.avatarUrl))url=studio.avatarUrl;
+    if(url){avatarBox.textContent='';avatarPhoto.hidden=false;avatarPhoto.src=url;}
+  };
   const idLine=document.createElement('small');
   idLine.dataset.cloudPlayerId='1';
   idLine.textContent='Comprobando ID…';
@@ -120,7 +137,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     setNotice('');
   };
   const showLocalAccount=()=>{
-    account=null;backup=null;
+    account=null;backup=null;setStudioAvatar(null,'');
     googleButton.hidden=!googleWebAvailable();
     appleButton.hidden=!appleWebAvailable();socialSave.hidden=true;
     const local=inspectLocalProgress();
@@ -199,8 +216,10 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
       try{
         const studio=await getMyCraftStudioAccount();
         studioBadge.textContent=studio?.nickname?
-          'CRAFTRACE STUDIO · '+studio.nickname:
+          'CRAFTRACE STUDIO · CUENTA COMPARTIDA':
           'CRAFTRACE STUDIO · REGISTRO AUTOMÁTICO';
+        if(studio?.nickname)root.querySelector('[data-cloud-pilot]').textContent=studio.nickname;
+        setStudioAvatar(studio,account.id);
       }catch{
         studioBadge.textContent='CRAFTRACE STUDIO · IDENTIDAD VERIFICADA';
       }
