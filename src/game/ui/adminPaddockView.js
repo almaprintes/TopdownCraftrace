@@ -93,6 +93,7 @@ export function mountAdminPaddock(host,handlers){
     {name:'🛑 INFORMES · PARADA',desc:'Suspender y reactivar solamente los informes de jugadores',id:'emergency',color:'#ff4261',run:handlers.emergency},
     {name:'🛑 SUPABASE · PARADA TOTAL',desc:'Pausar y restaurar el proyecto completo desde Supabase',id:'emergencyProject',color:'#ff2349',run:handlers.projectEmergency},
     {name:'COMUNICACIONES',desc:'Mensajes y actualizaciones desde Supabase',id:'communications',color:'#40e4c7',run:handlers.communications},
+    {name:'AVATARES · STUDIO',desc:'Lotes, recortes, tamaños y catálogo común de pilotos',id:'image',color:'#eab66b',run:handlers.avatars},
     {name:'DIAGNÓSTICO',desc:'Último error y diagnóstico local',id:'diagnostic',color:'#ff5c71',run:handlers.diagnostics},
     {name:'LABORATORIO QA',desc:'Garaje, coches DEV y comprobaciones',id:'qa',color:'#42d2f7',run:()=>openPane(qaPane)},
     {name:'HERRAMIENTAS HEREDADAS',desc:'Editar pistas · editor Bézier',id:'legacy',color:'#a8bfd7',run:()=>openPane(legacyPane)}
