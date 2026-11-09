@@ -146,17 +146,46 @@ export function mountAdminStudioAvatars(){
  };
  const disposeItems=()=>{for(const x of items){try{x.bitmap?.close?.();}catch{}}items=[];selected=-1;draw();renderQueue();};
  const readZip=async(file)=>{
-   const sdk=await import('https://esm.sh/jszip@3.10.1?target=es2022');
-   const zip=await sdk.default.loadAsync(file);
-   const entries=Object.values(zip.files).filter(x=>!x.dir&&/\.(png|jpe?g|webp)$/i.test(x.name));
-   if(entries.length>100)throw Error('Máximo 100 imágenes por lote.');
-   const out=[];
-   for(const entry of entries){
-     const bytes=await entry.async('uint8array');
-     const basename=entry.name.split('/').pop();
-     const ext=basename.split('.').pop().toLowerCase();
-     const type=ext==='webp'?'image/webp':ext==='png'?'image/png':'image/jpeg';
-     out.push(new File([bytes],basename,{type}));
+   // Local ZIP decoder: no third-party code runs in this admin panel.
+   const bytes=new Uint8Array(await file.arrayBuffer());
+   const view=new DataView(bytes.buffer);
+   let eocd=-1;
+   for(let i=bytes.length-22;i>=Math.max(0,bytes.length-65557);i--){
+     if(view.getUint32(i,true)===0x06054b50){eocd=i;break;}
+   }
+   if(eocd<0)throw Error('El archivo no parece ser un ZIP válido.');
+   const total=view.getUint16(eocd+10,true);
+   if(total>100)throw Error('Máximo 100 archivos por lote ZIP.');
+   let at=view.getUint32(eocd+16,true);
+   const out=[];let totalPlain=0;
+   for(let i=0;i<total;i++){
+     if(at+46>bytes.length||view.getUint32(at,true)!==0x02014b50)throw Error('ZIP dañado: índice incompleto.');
+     const flags=view.getUint16(at+8,true),method=view.getUint16(at+10,true);
+     const comp=view.getUint32(at+20,true),plain=view.getUint32(at+24,true);
+     const nameLen=view.getUint16(at+28,true),extraLen=view.getUint16(at+30,true),commentLen=view.getUint16(at+32,true);
+     const loc=view.getUint32(at+42,true);
+     if(at+46+nameLen+extraLen+commentLen>bytes.length)throw Error('ZIP dañado: ruta incompleta.');
+     const name=new TextDecoder().decode(bytes.subarray(at+46,at+46+nameLen));
+     at+=46+nameLen+extraLen+commentLen;
+     if(!/\\.(png|jpe?g|webp)$/i.test(name)||name.endsWith('/'))continue;
+     if(flags&1)throw Error('El ZIP tiene imágenes cifradas.');
+     if(comp>12_000_000||plain>12_000_000||(totalPlain+=plain)>100_000_000)
+       throw Error('El ZIP supera el límite de tamaño seguro.');
+     if(loc+30>bytes.length||view.getUint32(loc,true)!==0x04034b50)throw Error('ZIP dañado: imagen incompleta.');
+     const begin=loc+30+view.getUint16(loc+26,true)+view.getUint16(loc+28,true);
+     if(begin+comp>bytes.length)throw Error('ZIP dañado: datos incompletos.');
+     const compressed=bytes.slice(begin,begin+comp);
+     let content;
+     if(method===0)content=compressed;
+     else if(method===8){
+       if(typeof DecompressionStream!=='function')throw Error('Este navegador no puede descomprimir ZIP. Extrae las imágenes y selecciónalas juntas.');
+       const stream=new Blob([compressed]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+       content=new Uint8Array(await new Response(stream).arrayBuffer());
+     }else throw Error('Este ZIP usa una compresión no compatible.');
+     if(content.length!==plain)throw Error('ZIP dañado: tamaño de imagen incorrecto.');
+     const basename=name.split('/').pop();const ext=basename.split('.').pop().toLowerCase();
+     const mime=ext==='webp'?'image/webp':ext==='png'?'image/png':'image/jpeg';
+     out.push(new File([content],basename,{type:mime}));
    }
    return out;
  };
