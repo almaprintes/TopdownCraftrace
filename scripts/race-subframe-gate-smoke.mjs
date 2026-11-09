@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {formatDevRaceTimingAudit} from '../src/game/timing/devRaceTimingAuditReport.js';
 import {directedGateCrossingFraction,estimateSubframeGateTime,
  estimateDirectedGateCrossing} from '../src/game/timing/subframeGateClock.js';
 
@@ -60,6 +61,29 @@ assert.match(raceSource,/if \(!IS_PROD_BUILD\) \{/);
 assert.match(raceSource,/this\._tdrGateTimingAudit=/);
 assert.match(raceSource,/const lapTime = now - this\.timing\.lapStart;/,
  'El tiempo histórico en producción no debe alterarse durante la auditoría');
+
+
+// DEV-only iPhone reporting: compare measured and estimated without modifying lap data.
+const examples=[
+ {lapIndex:1,observedLapMs:10000,elapsedMs:9992.5,differenceMs:7.5,reviewRequired:false,lostPhysicsMs:0},
+ {lapIndex:2,observedLapMs:12000,elapsedMs:11975,differenceMs:null,reviewRequired:true,lostPhysicsMs:250}
+];
+const before=JSON.stringify(examples);
+const report=formatDevRaceTimingAudit(examples,{track:'karting-tenerife'});
+assert.match(report,/NO OFICIAL/);
+assert.match(report,/Cruces conservados: 2 \| Comparables: 1 \| Revisar: 1/);
+assert.match(report,/V1 · COMPARABLE/);
+assert.match(report,/V2 · REVISAR FPS/);
+assert.match(report,/Diferencia máxima.*7\.500 ms/);
+assert.match(formatDevRaceTimingAudit([]),/Todavía no hay cruces/);
+assert.equal(JSON.stringify(examples),before,'No modificar las marcas ni las muestras originales');
+assert.equal(formatDevRaceTimingAudit(new Array(100).fill(examples[0])).split('\n').filter(x=>/^V\d/.test(x)).length,30,'Informe limitado a 30 cruces');
+const experience=readFileSync(new URL('../src/game/scenes/RaceExperienceScene.js',import.meta.url),'utf8');
+const pauseUi=readFileSync(new URL('../src/game/ui/racePauseUi.js',import.meta.url),'utf8');
+assert.match(experience,/onTimingAudit:IS_PROD_BUILD\?null:/,'En producción la auditoría no se ofrece');
+assert.match(experience,/formatDevRaceTimingAudit\(/,'Se muestra la telemetría guardada');
+assert.match(pauseUi,/typeof onTimingAudit==='function'/,'El botón solo existe cuando hay callback DEV');
+assert.match(pauseUi,/data-a="timingOutput"/,'Informe seleccionable desde iPhone');
 
 console.log('CraftRace subframe: 3.000 cruces 60/30/15 FPS, 1/3 s FPS stall, dirección, geometría y pausas OK');
 console.log('SOLO DIAGNÓSTICO: no reemplaza aún el timestamp de RaceScene ni homologa marcas online.');
