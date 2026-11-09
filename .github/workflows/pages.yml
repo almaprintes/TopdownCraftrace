@@ -277,7 +277,18 @@ jobs:
           mkdir -p site/dev site/dev-live
           printf 'DEV_SOURCE_SHA=%s\n' "$(git -C dev-src rev-parse HEAD)" > dev-src/dist/dev-build.txt
           cp -R dev-src/dist/. site/dev/
-          cp -R dev-src/dist/. site/dev-live/
+          # Keep the second DEV entry point without copying hundreds of MB
+          # of identical images, JS bundles and textures into Pages.
+          # The shared Vite build is already compiled with --base=/TopdownCraftrace/dev/.
+          cp dev-src/dist/index.html site/dev-live/index.html
+          cp dev-src/dist/sw.js site/dev-live/sw.js
+          cp dev-src/dist/dev-build.txt site/dev-live/dev-build.txt
+          node --input-type=module -e "import fs from 'node:fs';const f='site/dev-live/index.html';const h=fs.readFileSync(f,'utf8');if(!h.includes('<head>')||h.includes('<base '))throw Error('Unexpected DEV entry HTML');fs.writeFileSync(f,h.replace('<head>','<head><base href='+String.fromCharCode(34)+'/TopdownCraftrace/dev/'+String.fromCharCode(34)+'>'));"
+          # The page remains at /dev-live/ while loading the same immutable
+          # assets as /dev/. Local account data remains origin-scoped.
+          echo "Pages payload dimensions:"
+          du -sh site/dev site/dev-live
+          test "$(find site/dev-live -type f | wc -l)" -eq 3
           # Studio public homepage and the two game landing pages.
           # This replaces only the old generated public landing.
           # Game builds in site/dev and site/dev-live remain untouched.
@@ -298,7 +309,10 @@ jobs:
         shell: bash
         run: |
           cmp dev-src/dist/index.html site/dev/index.html
-          cmp dev-src/dist/index.html site/dev-live/index.html
+          # The /dev-live/ mirror is intentionally lightweight but serves the
+          # exact same hashed assets and version stamp as /dev/.
+          grep -Fq '<base href="/TopdownCraftrace/dev/">' site/dev-live/index.html
+          cmp dev-src/dist/sw.js site/dev-live/sw.js
           test -f site/dev/sw.js
           test -f site/dev/assets/tracks/karting-tenerife/karting-tenerife-official.webp
           test -f site/dev/assets/tracks/karting-americas/karting-americas-official.webp
