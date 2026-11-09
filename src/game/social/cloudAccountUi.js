@@ -58,7 +58,11 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     avatarBox.textContent='🏁';
     let url=null;
     const path=studio?.avatarPath;
-    if(typeof path==='string'&&['webp','png','jpg'].some(ext=>path===userId+'/pilot.'+ext)){
+    if(typeof studio?.catalogUrl==='string'&&
+      studio.catalogUrl.startsWith('https://almaprintes.github.io/TopdownCraftrace/studio-assets/avatars/')&&
+      /^https:\/\/almaprintes\.github\.io\/TopdownCraftrace\/studio-assets\/avatars\/[a-z0-9_]+\.webp$/.test(studio.catalogUrl)){
+      url=studio.catalogUrl;
+    }else if(typeof path==='string'&&['webp','png','jpg'].some(ext=>path===userId+'/pilot.'+ext)){
       url='https://juukbnkjboiazqggqcyv.supabase.co/storage/v1/object/public/craft-avatars/'+
         path+'?v='+encodeURIComponent(studio.updatedAt||'1');
     }else if(typeof studio?.avatarUrl==='string'&&
