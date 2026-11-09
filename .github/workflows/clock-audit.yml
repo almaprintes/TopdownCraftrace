@@ -1,0 +1,29 @@
+name: CraftRace · cronometraje (auditoría sin despliegue)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/race-timing-audit-smoke.mjs'
+      - 'src/game/ui/racePauseTiming.js'
+      - 'src/game/scenes/RaceScene.js'
+      - 'src/game/scenes/RaceExperienceScene.js'
+      - 'src/game/scenes/RaceGhostModeScene.js'
+      - '.github/workflows/clock-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Comprobar sintaxis del auditor
+        run: node --check scripts/race-timing-audit-smoke.mjs
+      - name: Verificar pausas, fantasma y fuentes de reloj
+        run: node scripts/race-timing-audit-smoke.mjs
