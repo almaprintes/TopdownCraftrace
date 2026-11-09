@@ -32,11 +32,11 @@ export function mountAdminStudioAvatars(){
  '<label>Ancho final (px)<input data-width type="number" min="128" max="1024" step="64" value="256"></label><label>Alto final (px)<input data-height type="number" min="128" max="1024" step="64" value="256"></label>',
  '<label>Encuadre · zoom <input data-zoom type="range" min="100" max="250" value="100"><output data-zoom-text>100 %</output></label>',
  '<label>Centro horizontal <input data-x type="range" min="0" max="100" value="50"></label><label>Centro vertical <input data-y type="range" min="0" max="100" value="50"></label>',
- '<p class="saa-hint">Recorte sin deformación. Cada imagen mantiene su proporción y se exporta en WebP. El tamaño habitual es 256 × 256.</p></div></div>',
+ '<label class="saa-full">Nombre del avatar seleccionado<input data-label type="text" maxlength="64" placeholder="Piloto deportivo"></label><p class="saa-hint">Recorte sin deformación. Cada imagen mantiene su proporción y se exporta en WebP. El tamaño habitual es 256 × 256.</p></div></div>',
  '<button data-clear type="button" class="saa-muted">VACIAR LOTE</button></section>',
  '<section class="saa-section"><h3>02 · Publicar lote</h3><p>Se crea un único commit en GitHub. Después se registran los metadatos en Supabase. El contador y los IDs salen de los datos reales.</p>',
  '<label class="saa-token">Token temporal de GitHub · acceso de escritura solo a este repositorio<input data-github type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…"><small>No se almacena ni se envía a Supabase. Para generar el token: permisos Contents: Read and write sobre TopdownCraftrace.</small></label>',
- '<label class="saa-toggle"><input data-activate type="checkbox" checked> Activar los avatares para los jugadores tras publicar</label>',
+ '<label class="saa-toggle"><input data-activate type="checkbox" checked> Activar los avatares para los jugadores tras publicar</label><label class="saa-toggle"><input data-exclusive type="checkbox"> Avatar exclusivo para mi cuenta (solo una imagen por lote)</label>',
  '<div class="saa-buttons"><button data-publish type="button" class="saa-primary">PUBLICAR TODO EL LOTE</button><button data-retry type="button" hidden>REINTENTAR REGISTRO EN SUPABASE</button></div>',
  '<p class="saa-hint">Si GitHub se completa y Supabase falla, el registro se podrá reintentar sin volver a subir imágenes.</p></section>',
  '<section class="saa-section"><h3>03 · Catálogo existente</h3><div class="saa-gallery" data-gallery></div></section></div>'
@@ -45,7 +45,7 @@ export function mountAdminStudioAvatars(){
  const $=sel=>root.querySelector(sel);
  const ui={notice:$('[data-notice]'),queue:$('[data-queue]'),gallery:$('[data-gallery]'),preview:$('[data-preview]'),
    width:$('[data-width]'),height:$('[data-height]'),zoom:$('[data-zoom]'),x:$('[data-x]'),y:$('[data-y]'),
-   queued:$('[data-queued]'),publish:$('[data-publish]'),retry:$('[data-retry]'),github:$('[data-github]')};
+   queued:$('[data-queued]'),publish:$('[data-publish]'),retry:$('[data-retry]'),github:$('[data-github]'),label:$('[data-label]')};
  const ctx=ui.preview.getContext('2d');
  let closed=false,loading=false,token='',staffId='',catalog=[],items=[],selected=-1,pendingRows=null;
  const inform=(message,good=false)=>{if(!closed){ui.notice.textContent=message||'';ui.notice.dataset.state=good?'success':'info';}};
@@ -84,11 +84,11 @@ export function mountAdminStudioAvatars(){
  };
  const loadCatalog=async()=>{
    await authenticate();
-   const rows=await request('/rest/v1/studio_avatar_catalog?select=id,label,image_url,active,sort_order,width_px,height_px,created_at&order=sort_order.asc,id.asc');
+   const rows=await request('/rest/v1/studio_avatar_catalog?select=id,label,image_url,active,sort_order,width_px,height_px,created_at,exclusive,owner_user_id&order=sort_order.asc,id.asc');
    if(!Array.isArray(rows))throw Error('Supabase no devolvió un catálogo válido.');
    catalog=rows;
    $('[data-total]').textContent=rows.length;
-   $('[data-active]').textContent=rows.filter(x=>x.active).length;
+   $('[data-active]').textContent=rows.filter(x=>x.active&&!x.exclusive).length;
    $('[data-next]').textContent=fmt(nextNumber());
    renderGallery();
  };
@@ -102,7 +102,19 @@ export function mountAdminStudioAvatars(){
      const img=make('img');img.alt=avatar.label;img.loading='lazy';
      if(avatar.image_url?.startsWith(PAGE_DIR))img.src=avatar.image_url;
      const name=make('strong','',avatar.id);
-     const desc=make('small','',avatar.label+' · '+avatar.width_px+' × '+avatar.height_px);
+     const desc=make('small','',avatar.width_px+' × '+avatar.height_px+(avatar.exclusive?' · EXCLUSIVO':''));
+     const editLabel=make('input');editLabel.type='text';editLabel.maxLength=64;editLabel.value=avatar.label;editLabel.setAttribute('aria-label','Nombre del avatar '+avatar.id);
+     const editSort=make('input');editSort.type='number';editSort.min='0';editSort.max='99999';editSort.value=String(avatar.sort_order);editSort.setAttribute('aria-label','Orden del avatar '+avatar.id);
+     const save=make('button','saa-muted','GUARDAR NOMBRE Y ORDEN');save.type='button';
+     save.addEventListener('click',()=>void guard(async()=>{
+       await authenticate();
+       const label=editLabel.value.trim();const order=Number(editSort.value);
+       if(!label||label.length>64||!Number.isInteger(order)||order<0||order>99999)throw Error('Revisa el nombre y el orden.');
+       const changed=await request('/rest/v1/studio_avatar_catalog?id=eq.'+encodeURIComponent(avatar.id),
+         {method:'PATCH',body:{label,sort_order:order,updated_at:new Date().toISOString()}});
+       if(!Array.isArray(changed)||changed.length!==1)throw Error('Supabase no confirmó los cambios.');
+       inform('Datos del avatar '+avatar.id+' guardados.',true);await loadCatalog();
+     }));
      const toggle=make('button','saa-muted',avatar.active?'RETIRAR DE SELECCIÓN':'ACTIVAR');
      toggle.type='button';
      toggle.addEventListener('click',()=>void guard(async()=>{
@@ -112,7 +124,19 @@ export function mountAdminStudioAvatars(){
        if(!Array.isArray(changed)||changed.length!==1)throw Error('No se confirmó el cambio en Supabase.');
        inform('Estado de '+avatar.id+' actualizado.',true);await loadCatalog();
      }));
-     card.append(img,name,desc,toggle);ui.gallery.append(card);
+     card.append(img,name,desc,editLabel,editSort,save,toggle);
+     if(avatar.exclusive&&avatar.owner_user_id===staffId){
+       const use=make('button','','USAR EN MI CUENTA');
+       use.type='button';use.addEventListener('click',()=>void guard(async()=>{
+         if(!avatar.active)throw Error('Activa primero este avatar.');
+         await authenticate();
+         const rows=await request('/rest/v1/craft_accounts?user_id=eq.'+encodeURIComponent(staffId),
+           {method:'PATCH',body:{avatar_id:avatar.id,updated_at:new Date().toISOString()}});
+         if(!Array.isArray(rows)||rows.length!==1)throw Error('No se pudo aplicar el avatar a tu cuenta.');
+         inform('Avatar '+avatar.id+' aplicado a tu cuenta CraftRace Studio.',true);
+       }));card.append(use);
+     }
+     ui.gallery.append(card);
    }
  };
  const disposeItems=()=>{for(const x of items){try{x.bitmap?.close?.();}catch{}}items=[];selected=-1;draw();renderQueue();};
@@ -143,7 +167,7 @@ export function mountAdminStudioAvatars(){
      if(!/^image\/(webp|jpeg|png)$/.test(file.type)||file.size>12_000_000)continue;
      const bitmap=await createImageBitmap(file);
      if(bitmap.width<64||bitmap.height<64){bitmap.close?.();continue;}
-     items.push({file,bitmap,zoom:100,x:50,y:50});added++;
+     items.push({file,bitmap,zoom:100,x:50,y:50,label:file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').slice(0,64)});added++;
    }
    selected=items.length?items.length-1:-1;renderQueue();draw();
    inform(added+' imágenes preparadas. Selecciona una para ajustar su encuadre.',true);
@@ -170,11 +194,11 @@ export function mountAdminStudioAvatars(){
  const draw=()=>{
    const item=items[selected];
    if(!ctx)return;
-   if(!item){ui.preview.width=256;ui.preview.height=256;ctx.clearRect(0,0,256,256);return;}
+   if(!item){ui.preview.width=256;ui.preview.height=256;ctx.clearRect(0,0,256,256);ui.label.value='';return;}
    let size;try{size=outputSize();}catch{size={width:256,height:256};}
    renderInto(ui.preview,item,size.width,size.height);
    ui.zoom.value=String(item.zoom);ui.x.value=String(item.x);ui.y.value=String(item.y);
-   $('[data-zoom-text]').textContent=item.zoom+' %';
+   $('[data-zoom-text]').textContent=item.zoom+' %';ui.label.value=item.label||'';
  };
  const renderQueue=()=>{
    ui.queue.replaceChildren();
@@ -209,6 +233,8 @@ export function mountAdminStudioAvatars(){
  };
  const publish=async()=>{
    if(!items.length)throw Error('Añade al menos una imagen.');
+   const exclusive=$('[data-exclusive]').checked;
+   if(exclusive&&items.length!==1)throw Error('El avatar exclusivo se publica individualmente, no en un lote público.');
    if(pendingRows)throw Error('Hay un lote con registro pendiente. Reinténtalo antes de publicar otro.');
    const size=outputSize();
    if(!window.confirm('Se van a publicar '+items.length+' avatares en GitHub y Supabase. ¿Continuar?'))return;
@@ -228,20 +254,21 @@ export function mountAdminStudioAvatars(){
    const rows=[];
    for(let i=0;i<items.length;i++){
      ensureAlive();
-     const id=fmt(start+i);
+     const id=exclusive?'founder_'+staffId.replace(/-/g,'').slice(0,12)+'_'+Date.now().toString(36):fmt(start+i);
      inform('Preparando '+(i+1)+'/'+items.length+': '+id);
      const blob=await webp(items[i],size.width,size.height);
      const bytes=new Uint8Array(await blob.arrayBuffer());
      const saved=await github('/git/blobs',{method:'POST',body:{content:b64(bytes),encoding:'base64'}});
      if(!saved?.sha)throw Error('GitHub no confirmó el archivo '+id);
      treeElements.push({path:IMAGE_DIR+id+'.webp',mode:'100644',type:'blob',sha:saved.sha});
-     rows.push({id,label:'Piloto '+String(start+i).padStart(4,'0'),
+     rows.push({id,label:items[i].label||('Piloto '+String(start+i).padStart(4,'0')),
        image_url:PAGE_DIR+id+'.webp',active:$('[data-activate]').checked,
-       sort_order:start+i,width_px:size.width,height_px:size.height});
+       sort_order:start+i,width_px:size.width,height_px:size.height,
+       exclusive,owner_user_id:exclusive?staffId:null});
    }
    inform('Guardando un único commit con '+items.length+' avatares…');
    const tree=await github('/git/trees',{method:'POST',body:{base_tree:baseTree,tree:treeElements}});
-   const commit=await github('/git/commits',{method:'POST',body:{message:'feat(studio): publish '+items.length+' avatars '+fmt(start)+' to '+fmt(finalNum),tree:tree.sha,parents:[before]}});
+   const commit=await github('/git/commits',{method:'POST',body:{message:'feat(studio): publish '+items.length+' avatars '+(exclusive?'exclusive':fmt(start)+' to '+fmt(finalNum)),tree:tree.sha,parents:[before]}});
    const moved=await github('/git/refs/heads/main',{method:'PATCH',body:{sha:commit.sha,force:false}});
    if(moved?.object?.sha!==commit.sha)throw Error('No se confirmó la actualización de la rama main.');
    const verified=await github('/git/ref/heads/main');
@@ -271,6 +298,7 @@ export function mountAdminStudioAvatars(){
    });
  }
  ui.width.addEventListener('change',draw);ui.height.addEventListener('change',draw);
+ ui.label.addEventListener('input',()=>{if(items[selected])items[selected].label=ui.label.value.trim().slice(0,64);});
  const drop=$('[data-drop]');
  drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('saa-dragging');});
  drop.addEventListener('dragleave',()=>drop.classList.remove('saa-dragging'));
