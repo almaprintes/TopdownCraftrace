@@ -5,6 +5,7 @@ import {playerBackendConfig} from '../online/backendConfig.js';
 import {hasSavedRaceControlSession,refreshRaceControlOnlineSession} from '../online/raceControlOnline.js';
 import './adminStudioAvatars.css';
 import {readStudioAvatarZip,studioAvatarImageType} from './studioAvatarZip.mjs';
+import {commitStudioAvatarBatch} from './studioAvatarGitPublish.mjs';
 
 const REPO='almaprintes/TopdownCraftrace';
 const GITHUB='https://api.github.com/repos/'+REPO;
@@ -257,28 +258,53 @@ export function mountAdminStudioAvatars(){
      return blob;
    }finally{canvas.width=0;canvas.height=0;}
  };
- const githubExisting=async()=>{
-   const data=await github('/git/trees/main?recursive=1');
-   if(data?.truncated||!Array.isArray(data?.tree))throw Error('No se puede asegurar la lista completa de avatares en GitHub.');
-   return data.tree.filter(x=>x.type==='blob'&&x.path?.startsWith(IMAGE_DIR))
-     .map(x=>filenameNumber(x.path.slice(IMAGE_DIR.length))).filter(n=>n>0);
+ // Idempotent registration: if the network fails after INSERT, verify what
+ // Supabase already accepted before retrying. Never duplicate/change an ID.
+ const getPendingRows=async()=>{
+   const ids=pendingRows.map(row=>row.id);
+   if(ids.some(id=>!validAvatarId(id)))throw Error('El lote pendiente contiene IDs no válidos.');
+   const encoded=ids.map(encodeURIComponent).join(',');
+   const list=await request('/rest/v1/studio_avatar_catalog?select=id,image_url,exclusive,owner_user_id,width_px,height_px&id=in.('+encoded+')');
+   if(!Array.isArray(list))throw Error('Supabase no confirmó los registros.');
+   for(const row of list){
+     const desired=pendingRows.find(x=>x.id===row.id);
+     if(!desired||row.image_url!==desired.image_url||
+       row.exclusive!==desired.exclusive||
+       row.owner_user_id!==desired.owner_user_id||
+       row.width_px!==desired.width_px||row.height_px!==desired.height_px)
+       throw Error('Un ID del lote ya existe con otros datos: '+row.id+'. No se sobrescribirá.');
+   }
+   return list;
  };
  const registerPending=async()=>{
    if(!pendingRows?.length)throw Error('No hay registros pendientes.');
    await authenticate();
-   const saved=await request('/rest/v1/studio_avatar_catalog',{method:'POST',body:pendingRows});
-   if(!Array.isArray(saved)||saved.length!==pendingRows.length)
-     throw Error('Supabase no confirmó todos los registros. Comprueba el catálogo.');
+   const existing=await getPendingRows();
+   const savedIds=new Set(existing.map(row=>row.id));
+   const missing=pendingRows.filter(row=>!savedIds.has(row.id));
+   if(missing.length){
+     try{await request('/rest/v1/studio_avatar_catalog',{method:'POST',body:missing});}
+     catch(error){
+       // The request may have succeeded server-side but the response was lost.
+       const retryCheck=await getPendingRows();
+       if(retryCheck.length!==pendingRows.length)throw error;
+     }
+   }
+   const verified=await getPendingRows();
+   if(verified.length!==pendingRows.length)
+     throw Error('Supabase no confirmó todos los avatares. Puedes reintentar el registro sin subirlos de nuevo.');
+   const completed=pendingRows;
    pendingRows=null;sessionStorage.removeItem('tdr-studio-avatar-pending-v1');ui.retry.hidden=true;
-   await loadCatalog();
-   if(saved.length===1&&saved[0].exclusive&&saved[0].owner_user_id===staffId&&saved[0].active){
+   try{await loadCatalog();}
+   catch(error){inform('Avatares registrados. No se pudo actualizar el contador: '+errorText(error)+'. Pulsa ACTUALIZAR.');}
+   if(completed.length===1&&completed[0].exclusive&&completed[0].owner_user_id===staffId&&completed[0].active){
      try{
        const applied=await request('/rest/v1/craft_accounts?user_id=eq.'+encodeURIComponent(staffId),
-         {method:'PATCH',body:{avatar_id:saved[0].id,updated_at:new Date().toISOString()}});
+         {method:'PATCH',body:{avatar_id:completed[0].id,updated_at:new Date().toISOString()}});
        if(!Array.isArray(applied)||applied.length!==1)throw Error('No se confirmó la asignación.');
        inform('Avatar exclusivo publicado y aplicado a tu cuenta.',true);
-     }catch(error){inform('Publicado, pero no se pudo asignar a tu cuenta: '+errorText(error)+'. Usa el botón USAR EN MI CUENTA del catálogo.');}
-   }else inform('¡Lote publicado! '+saved.length+' avatares registrados y numerados en CraftRace Studio.',true);
+     }catch(error){inform('Publicado, pero no se pudo asignar a tu cuenta: '+errorText(error)+'. Usa USAR EN MI CUENTA.');}
+   }else inform('¡Lote publicado! '+completed.length+' avatares registrados y numerados en CraftRace Studio.',true);
  };
  const publish=async()=>{
    if(!items.length)throw Error('Añade al menos una imagen.');
@@ -288,45 +314,34 @@ export function mountAdminStudioAvatars(){
    const size=outputSize();
    if(!window.confirm('Se van a publicar '+items.length+' avatares en GitHub y Supabase. ¿Continuar?'))return;
    await authenticate();
-   inform('Verificando catálogo, archivos anteriores y permisos de GitHub…');
-   const gitNumbers=await githubExisting();
-   const start=nextNumber(gitNumbers);
-   const finalNum=start+items.length-1;
-   if(finalNum>9999)throw Error('Se ha alcanzado el límite de IDs del catálogo.');
-   const ref=await github('/git/ref/heads/main');
-   const before=ref?.object?.sha;
-   if(!before)throw Error('No se pudo leer la rama principal de GitHub.');
-   const oldCommit=await github('/git/commits/'+encodeURIComponent(before));
-   const baseTree=oldCommit?.tree?.sha;
-   if(!baseTree)throw Error('GitHub no devolvió el árbol base.');
-   const treeElements=[];
-   const rows=[];
+   inform('Preparando imágenes WebP. Si GitHub recibe nuevos cambios, se actualizará automáticamente la base del commit…');
+   const blobs=[];
    for(let i=0;i<items.length;i++){
      ensureAlive();
-     const id=exclusive?'founder_'+staffId.replace(/-/g,'').slice(0,12)+'_'+Date.now().toString(36):fmt(start+i);
-     inform('Preparando '+(i+1)+'/'+items.length+': '+id);
-     const blob=await webp(items[i],size.width,size.height);
-     const bytes=new Uint8Array(await blob.arrayBuffer());
+     inform('Preparando imagen '+(i+1)+' de '+items.length+'…');
+     const webpBlob=await webp(items[i],size.width,size.height);
+     const bytes=new Uint8Array(await webpBlob.arrayBuffer());
      const saved=await github('/git/blobs',{method:'POST',body:{content:b64(bytes),encoding:'base64'}});
-     if(!saved?.sha)throw Error('GitHub no confirmó el archivo '+id);
-     treeElements.push({path:IMAGE_DIR+id+'.webp',mode:'100644',type:'blob',sha:saved.sha});
-     rows.push({id,label:items[i].label||(exclusive?'Piloto fundador':'Piloto '+String(start+i).padStart(4,'0')),
-       image_url:PAGE_DIR+id+'.webp',active:$('[data-activate]').checked,
-       sort_order:start+i,width_px:size.width,height_px:size.height,
-       exclusive,owner_user_id:exclusive?staffId:null});
+     if(!/^[0-9a-f]{40}$/.test(String(saved?.sha)))throw Error('GitHub no confirmó la imagen '+(i+1));
+     blobs.push({sha:saved.sha,label:items[i].label});
    }
-   inform('Guardando un único commit con '+items.length+' avatares…');
-   const tree=await github('/git/trees',{method:'POST',body:{base_tree:baseTree,tree:treeElements}});
-   const commit=await github('/git/commits',{method:'POST',body:{message:'feat(studio): publish '+items.length+' avatars '+(exclusive?'exclusive':fmt(start)+' to '+fmt(finalNum)),tree:tree.sha,parents:[before]}});
-   const moved=await github('/git/refs/heads/main',{method:'PATCH',body:{sha:commit.sha,force:false}});
-   if(moved?.object?.sha!==commit.sha)throw Error('No se confirmó la actualización de la rama main.');
-   const verified=await github('/git/ref/heads/main');
-   if(verified?.object?.sha!==commit.sha)throw Error('GitHub no confirmó el commit final. Revisa antes de repetir.');
-   pendingRows=rows;
-   sessionStorage.setItem('tdr-studio-avatar-pending-v1',JSON.stringify(rows));
+   const exclusiveId=exclusive?'founder_'+staffId.replace(/-/g,'').slice(0,12)+'_'+Date.now().toString(36):null;
+   const committed=await commitStudioAvatarBatch({
+     github,blobs,exclusiveId,
+     catalogIds:async()=>{await loadCatalog();return catalog.map(x=>x.id);},
+     metadata:{width:size.width,height:size.height,active:$('[data-activate]').checked,
+       exclusive,owner:staffId},
+     report:message=>inform(message)
+   });
+   pendingRows=committed.rows;
+   sessionStorage.setItem('tdr-studio-avatar-pending-v1',JSON.stringify(committed.rows));
    ui.retry.hidden=false;
    try{await registerPending();disposeItems();}
-   catch(error){inform('GitHub publicado, pero Supabase no pudo registrar el lote: '+errorText(error)+'. Pulsa REINTENTAR REGISTRO.',false);throw error;}
+   catch(error){
+     inform('El lote está en GitHub, pero Supabase aún no confirmó los registros: '+errorText(error)+
+       '. Pulsa REINTENTAR REGISTRO, no PUBLICAR TODO EL LOTE.');
+     throw error;
+   }
  };
  const guard=async(task)=>{
    if(loading)return;loading=true;
