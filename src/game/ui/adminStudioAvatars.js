@@ -9,6 +9,14 @@ const REPO='almaprintes/TopdownCraftrace';
 const GITHUB='https://api.github.com/repos/'+REPO;
 const IMAGE_DIR='studio/assets/avatars/';
 const PAGE_DIR='https://almaprintes.github.io/TopdownCraftrace/studio-assets/avatars/';
+const RAW_DIR='https://raw.githubusercontent.com/almaprintes/TopdownCraftrace/main/studio/assets/avatars/';
+const validAvatarId=id=>typeof id==='string'&&/^(?:avatar_[0-9]{2,4}|founder_[a-z0-9_]+)$/.test(id);
+const filenameLabel=file=>{
+  const stem=String(file?.name||'').replace(/\.[^.]+$/,'');
+  if(/^[0-9a-f]{8}[-_][0-9a-f]{4}[-_][0-9a-f]{4}[-_][0-9a-f]{4}[-_][0-9a-f]{12}$/i.test(stem)||
+    /^[0-9a-f]{24,}$/i.test(stem))return '';
+  return stem.replace(/[_-]+/g,' ').trim().slice(0,64);
+};
 const MAX_PIXELS=1024;
 const make=(tag,cls='',value)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(value!=null)e.textContent=String(value);return e;};
 const fmt=id=>'avatar_'+String(id).padStart(4,'0');
@@ -25,7 +33,8 @@ export function mountAdminStudioAvatars(){
  root.innerHTML=[
  '<div class="saa-panel"><header class="saa-head"><div><small>ADMIN HUB · CRAFTRACE STUDIO</small><h2>AVATARES</h2><p>Catálogo global de CraftRace y SlotRace · imágenes en GitHub Pages</p></div><button data-close type="button">✕ CERRAR</button></header>',
  '<div class="saa-notice" role="status" aria-live="polite" data-notice></div>',
- '<section class="saa-stats"><div><b data-total>—</b><span>REGISTRADOS</span></div><div><b data-active>—</b><span>PUBLICADOS</span></div><div><b data-next>—</b><span>SIGUIENTE ID</span></div><button data-reload type="button">ACTUALIZAR</button></section>',
+ '<section class="saa-stats"><div><b data-total>—</b><span>REGISTRADOS</span></div><div><b data-active>—</b><span>PÚBLICOS ACTIVOS</span></div><div><b data-next>—</b><span>SIGUIENTE ID</span></div><button data-reload type="button">ACTUALIZAR</button></section>',
+ '<p class="saa-hint">Los avatares exclusivos cuentan en registrados, pero no en públicos activos.</p>',
  '<section class="saa-section"><h3>01 · Seleccionar lote</h3><p>Arrastra imágenes o un ZIP de WebP, PNG o JPG. Nada se publica hasta que confirmes.</p>',
  '<div class="saa-drop" data-drop><label for="saa-file">AÑADIR IMÁGENES O ZIP</label><input id="saa-file" data-file type="file" accept="image/png,image/webp,image/jpeg,.zip,application/zip" multiple><span data-queued>0 imágenes pendientes</span></div>',
  '<div class="saa-editor"><div class="saa-queue" data-queue aria-label="Imágenes del lote"></div><div class="saa-preview-wrap"><canvas data-preview width="256" height="256" aria-label="Vista previa del avatar"></canvas>',
@@ -105,9 +114,20 @@ export function mountAdminStudioAvatars(){
    for(const avatar of catalog){
      const card=make('div','saa-avatar-card');
      const img=make('img');img.alt=avatar.label;img.loading='lazy';
-     if(avatar.image_url?.startsWith(PAGE_DIR))img.src=avatar.image_url;
-     const name=make('strong','',avatar.id);
-     const desc=make('small','',avatar.width_px+' × '+avatar.height_px+(avatar.exclusive?' · EXCLUSIVO':''));
+     if(validAvatarId(avatar.id)&&avatar.image_url===PAGE_DIR+avatar.id+'.webp'){
+       // GitHub has the image immediately; Pages may still be rebuilding.
+       img.src=RAW_DIR+avatar.id+'.webp';
+       img.addEventListener('error',()=>{
+         if(img.dataset.fallback!=='pages'){
+           img.dataset.fallback='pages';img.src=avatar.image_url;return;
+         }
+         img.hidden=true;
+         card.prepend(make('div','saa-image-unavailable','🏁 Imagen pendiente'));
+       });
+     }else img.hidden=true;
+     const name=make('strong','',avatar.label||avatar.id);name.title=avatar.id;
+     const desc=make('small','',avatar.width_px+' × '+avatar.height_px+(avatar.exclusive?' · EXCLUSIVO':' · PÚBLICO'));
+     const idLine=make('small','',avatar.id);idLine.title='Identificador técnico';
      const editLabel=make('input');editLabel.type='text';editLabel.maxLength=64;editLabel.value=avatar.label;editLabel.setAttribute('aria-label','Nombre del avatar '+avatar.id);
      const editSort=make('input');editSort.type='number';editSort.min='0';editSort.max='99999';editSort.value=String(avatar.sort_order);editSort.setAttribute('aria-label','Orden del avatar '+avatar.id);
      const save=make('button','saa-muted','GUARDAR NOMBRE Y ORDEN');save.type='button';
@@ -129,7 +149,7 @@ export function mountAdminStudioAvatars(){
        if(!Array.isArray(changed)||changed.length!==1)throw Error('No se confirmó el cambio en Supabase.');
        inform('Estado de '+avatar.id+' actualizado.',true);await loadCatalog();
      }));
-     card.append(img,name,desc,editLabel,editSort,save,toggle);
+     card.append(img,name,desc,idLine,editLabel,editSort,save,toggle);
      if(avatar.exclusive&&avatar.owner_user_id===staffId){
        const use=make('button','','USAR EN MI CUENTA');
        use.type='button';use.addEventListener('click',()=>void guard(async()=>{
@@ -201,7 +221,7 @@ export function mountAdminStudioAvatars(){
      if(!/^image\/(webp|jpeg|png)$/.test(file.type)||file.size>12_000_000)continue;
      const bitmap=await createImageBitmap(file);
      if(bitmap.width<64||bitmap.height<64){bitmap.close?.();continue;}
-     items.push({file,bitmap,zoom:100,x:50,y:50,label:file.name.replace(/\.[^.]+$/,'').replace(/[_-]+/g,' ').slice(0,64)});added++;
+     items.push({file,bitmap,zoom:100,x:50,y:50,label:filenameLabel(file)});added++;
    }
    selected=items.length?items.length-1:-1;renderQueue();draw();
    inform(added+' imágenes preparadas. Selecciona una para ajustar su encuadre.',true);
@@ -310,7 +330,7 @@ export function mountAdminStudioAvatars(){
      const saved=await github('/git/blobs',{method:'POST',body:{content:b64(bytes),encoding:'base64'}});
      if(!saved?.sha)throw Error('GitHub no confirmó el archivo '+id);
      treeElements.push({path:IMAGE_DIR+id+'.webp',mode:'100644',type:'blob',sha:saved.sha});
-     rows.push({id,label:items[i].label||('Piloto '+String(start+i).padStart(4,'0')),
+     rows.push({id,label:items[i].label||(exclusive?'Piloto fundador':'Piloto '+String(start+i).padStart(4,'0')),
        image_url:PAGE_DIR+id+'.webp',active:$('[data-activate]').checked,
        sort_order:start+i,width_px:size.width,height_px:size.height,
        exclusive,owner_user_id:exclusive?staffId:null});
