@@ -21,4 +21,5 @@ jobs:
         run: |
           node scripts/race-timing-audit-smoke.mjs
           node scripts/race-pause-timing-smoke.mjs
+          node scripts/race-finish-audit-smoke.mjs
           node scripts/race-subframe-gate-smoke.mjs
