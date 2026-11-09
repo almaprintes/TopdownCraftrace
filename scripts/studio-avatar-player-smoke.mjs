@@ -6,6 +6,7 @@ import {spawnSync} from 'node:child_process';
 const ui=fs.readFileSync('src/game/social/cloudAccountUi.js','utf8');
 const backend=fs.readFileSync('src/game/online/raceControlOnline.js','utf8');
 const admin=fs.readFileSync('src/game/ui/adminStudioAvatars.js','utf8');
+const gitWriter=fs.readFileSync('src/game/ui/studioAvatarGitPublish.mjs','utf8');
 const encoder=fs.readFileSync('src/game/ui/adminImageWebpTool.js','utf8');
 const worker=fs.readFileSync('src/game/ui/adminWebpEncoder.worker.js','utf8');
 
@@ -23,9 +24,9 @@ assert.match(backend,/export async function chooseMyStudioAvatar\(avatarId\)/);
 assert.match(backend,/representation:true/);
 assert.match(backend,/studio_avatar_catalog\?select/);
 assert.match(admin,/studio_avatar_catalog/);
-assert.match(admin,/git\/commits/);
-assert.match(admin,/git\/refs\/heads\/main/);
-assert.match(admin,/pendingRows=rows;/);
+assert.match(gitWriter,/git\/commits/);
+assert.match(gitWriter,/git\/refs\/heads\/main/);
+assert.match(admin,/pendingRows=committed\.rows;/);
 assert.match(admin,/await import\('\.\/adminImageWebpTool\.js'\)/,
   'Studio avatars must reuse the first-party WebP encoder');
 assert.match(admin,/await encodeWebpCanvas\(canvas,85\)/);
