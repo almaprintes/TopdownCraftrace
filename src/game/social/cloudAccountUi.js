@@ -58,12 +58,14 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   const setStudioAvatar=(studio,userId)=>{
     avatarPhoto.hidden=true;avatarPhoto.removeAttribute('src');avatarBox.textContent='🏁';
     let url=null;
-    if(studio?.avatarPath?.startsWith(userId+'/')&&
-       /^[0-9a-f-]{36}\\/pilot\\.(webp|png|jpg)$/.test(studio.avatarPath)){
+    const validPath=typeof studio?.avatarPath==='string'&&
+      studio.avatarPath===userId+'/pilot.webp'||studio?.avatarPath===userId+'/pilot.png'||studio?.avatarPath===userId+'/pilot.jpg';
+    if(validPath){
       url='https://juukbnkjboiazqggqcyv.supabase.co/storage/v1/object/public/craft-avatars/'+
         studio.avatarPath+'?v='+encodeURIComponent(studio.updatedAt||'1');
     }else if(typeof studio?.avatarUrl==='string'&&
-      /^https:\\/\\/almaprintes\\.github\\.io\\/SlotRace\\/assets\\/avatars\\/[A-Za-z0-9_-]+\\.webp$/.test(studio.avatarUrl))url=studio.avatarUrl;
+      studio.avatarUrl.startsWith('https://almaprintes.github.io/SlotRace/assets/avatars/')&&
+      studio.avatarUrl.endsWith('.webp')&&!studio.avatarUrl.includes('..'))url=studio.avatarUrl;
     if(url){avatarBox.textContent='';avatarPhoto.hidden=false;avatarPhoto.src=url;}
   };
   const idLine=document.createElement('small');
