@@ -89,6 +89,17 @@ export class AdminHubScene extends BaseScene {
           this._showToast('COMUNICACIONES NO DISPONIBLES');
         }
       },
+      avatars:async()=>{
+        try{
+          const {mountAdminStudioAvatars}=await import('../ui/adminStudioAvatars.js');
+          if(!this._adminDomRoot?.isConnected)return;
+          try{this._avatarDispose?.();}catch{}
+          this._avatarDispose=mountAdminStudioAvatars();
+        }catch(error){
+          console.warn('[admin-avatars] unavailable',error);
+          this._showToast('CATÁLOGO DE AVATARES NO DISPONIBLE');
+        }
+      },
       diagnostics:()=>this._showLastRuntimeError(),
       garage:()=>this._navigate('GarageScene'),
       isFullCars:()=>devFullCarAccessEnabled(),
@@ -195,6 +206,8 @@ export class AdminHubScene extends BaseScene {
   _removeAdminDom(){
     clearTimeout(this._adminToastTimer);
     // Revoke any generated object URLs on navigation/shutdown.
+    try{this._avatarDispose?.();}catch{}
+    this._avatarDispose=null;
     try{this._webpToolDispose?.();}catch{}
     this._webpToolDispose=null;
     try{this._communicationDispose?.();}catch{}
