@@ -78,7 +78,7 @@ assert.deepEqual(tiles.map(t=>t.dataset.kind),['track','environment','car','imag
 assert.ok(tiles.every(t=>walk(t,e=>e.tag==='img').length===1));
 tiles.forEach(t=>t.click());
 auxiliary[0].click();auxiliary[1].click();auxiliary[2].click();auxiliary[3].click();
-assert.deepEqual(events.slice(4,8),['emergency','projectEmergency','communications','diagnostics'],
+assert.deepEqual(events.slice(5,9),['emergency','projectEmergency','communications','diagnostics'],
   'Each emergency and Communications must use a DISTINCT route');
 const qaTools=walk(root,e=>e.className==='tdr-paddock__tool');
 qaTools.find(t=>t.children[0].textContent==='GARAJE JUGADOR').click();
