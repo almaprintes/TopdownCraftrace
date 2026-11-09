@@ -77,6 +77,13 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     };
     preview.onerror=()=>{
       if(requestId!==avatarRequest)return;
+      // GitHub's raw file can already exist before the Pages deployment finishes.
+      // Keep displaying the same account.avatar_id: do not silently substitute another avatar.
+      if(url===studio?.catalogUrl&&!preview.dataset.fallback){
+        preview.dataset.fallback='1';
+        url='https://raw.githubusercontent.com/almaprintes/TopdownCraftrace/main/studio/assets/avatars/'+url.split('/').pop();
+        preview.src=url;return;
+      }
       avatarBox.style.backgroundImage='none';avatarBox.textContent='🏁';
     };
     preview.src=url;
