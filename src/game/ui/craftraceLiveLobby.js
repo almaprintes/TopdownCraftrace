@@ -11,7 +11,8 @@ export function openCrafRaceLiveLobby(scene){
  let transport=null,room=null,busy=false,closed=false,lastChat=0,readySent=false,rivalReady=false,localId=null;
  const say=s=>{if(!closed)$('[data-status]').textContent=String(s);};
  const log=s=>{const p=document.createElement('p');p.textContent=s;$('[data-messages]').append(p);while($('[data-messages]').children.length>10)$('[data-messages]').firstChild.remove();};
- const refreshReady=()=>{if(closed||!room)return;$('[data-test-race]').hidden=!(readySent&&rivalReady);const joined=!!room.guest_id;$('[data-pilots]').textContent=joined?(rivalReady?'RIVAL PREPARADO · '+(readySent?'AMBOS LISTOS':'FALTA TU CONFIRMACIÓN'):'DOS PILOTOS CONECTADOS'):'ESPERANDO AL SEGUNDO PILOTO';$('[data-ready]').disabled=!joined||readySent;};
+ const refreshReady=()=>{if(closed||!room)return;$('[data-test-race]').hidden=!(readySent&&rivalReady&&localId===room.host_id);const joined=!!room.guest_id;$('[data-pilots]').textContent=joined?(rivalReady?'RIVAL PREPARADO · '+(readySent?'AMBOS LISTOS':'FALTA TU CONFIRMACIÓN'):'DOS PILOTOS CONECTADOS'):'ESPERANDO AL SEGUNDO PILOTO';$('[data-ready]').disabled=!joined||readySent;};
+ const launch=()=>{if(closed||launching||!room||!readySent||!rivalReady)return;launching=true;const liveRoomId=room.id,carId=scene?.selectedCarId||room.car_id,trackKey=room.track_id;dispose();scene.scene.start('race',{carId,trackKey,liveRoomId,gameMode:'online',testMode:true});};
  const dispose=()=>{if(closed)return;closed=true;transport?.stop();root.remove();scene?.events?.off?.('shutdown',dispose);document.removeEventListener('keydown',esc);};
  const esc=e=>{if(e.key==='Escape')dispose();};
  $('[data-close]').addEventListener('click',dispose);document.addEventListener('keydown',esc);scene?.events?.once?.('shutdown',dispose);
@@ -23,7 +24,7 @@ export function openCrafRaceLiveLobby(scene){
    const identity=await import('../online/craftraceLiveTransport.js').then(m=>m.liveIdentity());if(closed)return;localId=identity.id;
    transport=new CrafRaceLiveTransport(room.id,{
     onState:d=>{if(closed)return;if(d.host_id!==room.host_id||d.room_id!==room.id)return;room.guest_id=d.guest_id;refreshReady();},
-    onPacket:p=>{if(p.from!==(localId===room.host_id?room.guest_id:room.host_id))return;if(p.type==='chat')log('RIVAL · '+String(p.payload.text||''));if(p.type==='ready'&&p.payload.trackId===room.track_id&&p.payload.physicsVersion===room.physics_version&&p.payload.direction===room.direction&&p.payload.laps===room.laps){rivalReady=true;log('El rival está preparado.');refreshReady();if(readySent)say('Ambos preparados. Esperando integración de la carrera.');}},
+    onPacket:p=>{if(p.from!==(localId===room.host_id?room.guest_id:room.host_id))return;if(p.type==='start'&&p.from===room.host_id&&p.payload.restart===false){launch();return;}if(p.type==='chat')log('RIVAL · '+String(p.payload.text||''));if(p.type==='ready'&&p.payload.trackId===room.track_id&&p.payload.physicsVersion===room.physics_version&&p.payload.direction===room.direction&&p.payload.laps===room.laps){rivalReady=true;log('El rival está preparado.');refreshReady();if(readySent)say('Ambos preparados. Esperando integración de la carrera.');}},
     onError:e=>say('Reconectando… '+String(e.message||''))
    });transport.start();say('Pista conectada. Esperando al segundo piloto.');
   }catch(e){say(e.message||'Error de conexión');}
@@ -35,10 +36,11 @@ export function openCrafRaceLiveLobby(scene){
   try{await transport.send('ready',{trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps});readySent=true;refreshReady();say(rivalReady?'Ambos preparados. Carrera aún no integrada.':'Preparado. Esperando al rival.');}
   catch(e){say(e.message);$('[data-ready]').disabled=false;}
  });
- $('[data-test-race]').addEventListener('click',()=>{
-  if(!room||!readySent||!rivalReady||closed)return;
-  const liveRoomId=room.id,carId=scene?.selectedCarId||room.car_id,trackKey=room.track_id;
-  dispose();scene.scene.start('race',{carId,trackKey,liveRoomId,gameMode:'online',testMode:true});
+ $('[data-test-race]').addEventListener('click',async()=>{
+  if(!room||!readySent||!rivalReady||closed||launching||localId!==room.host_id)return;
+  $('[data-test-race]').disabled=true;
+  try{await transport.send('start',{countdownMs:8000,restart:false});launch();}
+  catch(e){say(e.message);if(!closed)$('[data-test-race]').disabled=false;}
  });
  $('[data-send]').addEventListener('click',async()=>{
   const input=$('[data-chat]'),value=input.value.trim();if(!transport||!value||value.length>160)return;
