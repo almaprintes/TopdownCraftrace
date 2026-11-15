@@ -134,7 +134,7 @@ begin
   order by id asc limit 100
  ) x;
  return jsonb_build_object('room_id',v_room.id,'host_id',v_room.host_id,
- 'guest_id',v_room.guest_id,'state',v_room.state,'packets',v_packets);
+ 'guest_id',v_room.guest_id,'state',v_room.state,'server_now_ms',floor(extract(epoch from clock_timestamp())*1000)::bigint,'packets',v_packets);
 end $fn$;
 
 revoke all on function public.craftrace_live_create(text,text,text,integer,integer,text) from public,anon;
