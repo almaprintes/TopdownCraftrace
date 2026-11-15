@@ -8,9 +8,10 @@ export function openCrafRaceLiveLobby(scene){
  const root=document.createElement('div');root.id='cr-live-lab';root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');
  root.innerHTML='<section class="cr-live-panel"><header><small>CRAFT RACE STUDIO · DEV</small><button data-close aria-label="Cerrar">✕</button><h2>CRAFRACE LIVE</h2></header><p>Laboratorio de conexión de dos pilotos. Todavía no inicia carreras.</p><p data-status role="status" aria-live="polite">Crea una pista o introduce un código.</p><div data-actions class="cr-live-row"><button data-create>CREAR PISTA</button><input data-code maxlength="7" aria-label="Código" placeholder="CÓDIGO"><button data-join>UNIRME</button></div><div data-room hidden><h3 data-roomcode></h3><p data-pilots>Esperando al rival…</p><button data-ready disabled>ESTOY LISTO</button><div data-messages aria-live="polite"></div><div class="cr-live-row"><input data-chat maxlength="160" aria-label="Mensaje" placeholder="Mensaje al rival"><button data-send>ENVIAR</button></div></div><footer>Sin premios ni clasificaciones · DEV LAB</footer></section>';
  document.body.append(root);const $=s=>root.querySelector(s);
- let transport=null,room=null,busy=false,closed=false,lastChat=0,readySent=false;
+ let transport=null,room=null,busy=false,closed=false,lastChat=0,readySent=false,rivalReady=false;
  const say=s=>{if(!closed)$('[data-status]').textContent=String(s);};
  const log=s=>{const p=document.createElement('p');p.textContent=s;$('[data-messages]').append(p);while($('[data-messages]').children.length>10)$('[data-messages]').firstChild.remove();};
+ const refreshReady=()=>{if(closed||!room)return;const joined=!!room.guest_id;$('[data-pilots]').textContent=joined?(rivalReady?'RIVAL PREPARADO · '+(readySent?'AMBOS LISTOS':'FALTA TU CONFIRMACIÓN'):'DOS PILOTOS CONECTADOS'):'ESPERANDO AL SEGUNDO PILOTO';$('[data-ready]').disabled=!joined||readySent;};
  const dispose=()=>{if(closed)return;closed=true;transport?.stop();root.remove();scene?.events?.off?.('shutdown',dispose);document.removeEventListener('keydown',esc);};
  const esc=e=>{if(e.key==='Escape')dispose();};
  $('[data-close]').addEventListener('click',dispose);document.addEventListener('keydown',esc);scene?.events?.once?.('shutdown',dispose);
@@ -20,8 +21,8 @@ export function openCrafRaceLiveLobby(scene){
    say('Conectando…');room=await fn();if(closed)return;if(!room?.id||!room?.code)throw Error('Respuesta incompleta.');
    $('[data-actions]').hidden=true;$('[data-room]').hidden=false;$('[data-roomcode]').textContent='CÓDIGO · '+room.code;
    transport=new CrafRaceLiveTransport(room.id,{
-    onState:d=>{const joined=!!d.guest_id;$('[data-pilots]').textContent=joined?'DOS PILOTOS CONECTADOS':'ESPERANDO AL SEGUNDO PILOTO';$('[data-ready]').disabled=!joined||readySent;},
-    onPacket:p=>{if(p.type==='chat')log('RIVAL · '+String(p.payload.text||''));if(p.type==='ready')log('El rival está preparado.');},
+    onState:d=>{if(closed)return;room.guest_id=d.guest_id;refreshReady();},
+    onPacket:p=>{if(p.type==='chat')log('RIVAL · '+String(p.payload.text||''));if(p.type==='ready'&&p.payload.trackId===room.track_id&&p.payload.physicsVersion===room.physics_version&&p.payload.direction===room.direction&&p.payload.laps===room.laps){rivalReady=true;log('El rival está preparado.');refreshReady();if(readySent)say('Ambos preparados. Esperando integración de la carrera.');}},
     onError:e=>say('Reconectando… '+String(e.message||''))
    });transport.start();say('Pista conectada. Esperando al segundo piloto.');
   }catch(e){say(e.message||'Error de conexión');}
@@ -30,7 +31,7 @@ export function openCrafRaceLiveLobby(scene){
  $('[data-create]').addEventListener('click',()=>void connect(()=>createLiveRoom({trackId:selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage),carId:scene?.selectedCarId||'avenir_gripline',laps:3,physicsVersion:1,direction:'forward'})));
  $('[data-join]').addEventListener('click',()=>void connect(()=>joinLiveRoom($('[data-code]').value)));
  $('[data-ready]').addEventListener('click',async()=>{if(!transport||readySent)return;$('[data-ready]').disabled=true;
-  try{await transport.send('ready',{trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps});readySent=true;say('Preparado. Carrera aún no integrada.');}
+  try{await transport.send('ready',{trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps});readySent=true;refreshReady();say(rivalReady?'Ambos preparados. Carrera aún no integrada.':'Preparado. Esperando al rival.');}
   catch(e){say(e.message);$('[data-ready]').disabled=false;}
  });
  $('[data-send]').addEventListener('click',async()=>{
