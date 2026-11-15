@@ -20,7 +20,7 @@ export function openCrafRaceLiveLobby(scene){
  async function connect(fn){
   if(busy||closed)return;busy=true;$('[data-create]').disabled=$('[data-join]').disabled=true;
   try{
-   say('Conectando…');room=await fn();if(closed)return;if(!room?.id||!room?.code)throw Error('Respuesta incompleta.');
+   say('Solicitando acceso a la pista…');const watchdog=new Promise((_,reject)=>setTimeout(()=>reject(Error('La conexión tarda demasiado. Comprueba que Android tiene sesión iniciada en CraftRace Studio y vuelve a intentarlo.')),12000));room=await Promise.race([fn(),watchdog]);if(closed)return;if(!room?.id||!room?.code)throw Error('Respuesta incompleta.');
    $('[data-actions]').hidden=true;$('[data-room]').hidden=false;$('[data-roomcode]').textContent='CÓDIGO · '+room.code;
    const identity=await import('../online/craftraceLiveTransport.js').then(m=>m.liveIdentity());if(closed)return;localId=identity.id;
    transport=new CrafRaceLiveTransport(room.id,{
@@ -28,11 +28,11 @@ export function openCrafRaceLiveLobby(scene){
     onPacket:p=>{if(p.from!==(localId===room.host_id?room.guest_id:room.host_id))return;if(p.type==='start'&&p.from===room.host_id&&p.payload.restart===false&&readySent&&Number.isFinite(p.payload.startAt)){launch(p.payload.startAt);return;}if(p.type==='chat')log('RIVAL · '+String(p.payload.text||''));if(p.type==='ready'&&p.payload.trackId===room.track_id&&p.payload.physicsVersion===room.physics_version&&p.payload.direction===room.direction&&p.payload.laps===room.laps){rivalReady=true;log('El rival está preparado.');refreshReady();if(readySent)say('Ambos preparados. Esperando salida del anfitrión.');}},
     onError:e=>say('Reconectando… '+String(e.message||''))
    });transport.start();say('Pista conectada. Esperando al segundo piloto.');
-  }catch(e){say(e.message||'Error de conexión');}
+  }catch(e){const message=e?.message||'Error de conexión';say('NO SE PUDO UNIR / CREAR: '+message);console.warn('[CrafRace LIVE] join/create failed',message);}
   finally{busy=false;if(!closed)$('[data-create]').disabled=$('[data-join]').disabled=false;}
  }
  $('[data-create]').addEventListener('click',()=>void connect(()=>createLiveRoom({trackId:selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage),carId:scene?.selectedCarId||'avenir_gripline',laps:3,physicsVersion:1,direction:'forward'})));
- const join=()=>{const code=$('[data-code]').value.trim().toUpperCase();if(!code){say('Introduce el código de la pista.');$('[data-code]').focus();return;}void connect(()=>joinLiveRoom(code));};
+ const join=()=>{say('Comprobando código…');const code=$('[data-code]').value.trim().toUpperCase();if(!code){say('Introduce el código de la pista.');$('[data-code]').focus();return;}void connect(()=>joinLiveRoom(code));};
  $('[data-join]').addEventListener('click',join);
  $('[data-code]').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();join();}});
  $('[data-code]').addEventListener('input',()=>{$('[data-code]').value=$('[data-code]').value.toUpperCase().replace(/[^A-Z0-9]/g,'');});
