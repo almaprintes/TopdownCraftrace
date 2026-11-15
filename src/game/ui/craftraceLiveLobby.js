@@ -7,7 +7,7 @@ import './craftraceLiveLobby.css';
 export function openCrafRaceLiveLobby(scene){
  if(document.getElementById('cr-live-lab'))return;
  const root=document.createElement('div');root.id='cr-live-lab';root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');
- root.innerHTML='<section class="cr-live-panel"><header><small>CRAFT RACE STUDIO · DEV</small><button data-close aria-label="Cerrar">✕</button><h2>CRAFRACE LIVE</h2></header><p>Laboratorio de conexión de dos pilotos. Beta técnica: salida programada con reloj del servidor. Resultados y reconexión pendientes de validar.</p><p data-status role="status" aria-live="polite">Crea una pista o introduce un código.</p><div data-actions class="cr-live-row"><button data-create>CREAR PISTA</button><input data-code maxlength="7" aria-label="Código" placeholder="CÓDIGO"><button data-join>UNIRME</button></div><div data-room hidden><h3 data-roomcode></h3><p data-pilots>Esperando al rival…</p><button data-ready disabled>ESTOY LISTO</button><button data-test-race hidden>INICIAR PRUEBA ONLINE</button><div data-messages aria-live="polite"></div><div class="cr-live-row"><input data-chat maxlength="160" aria-label="Mensaje" placeholder="Mensaje al rival"><button data-send>ENVIAR</button></div></div><footer>Sin premios ni clasificaciones · DEV LAB</footer></section>';
+ root.innerHTML='<section class="cr-live-panel"><header><small>CRAFT RACE STUDIO · DEV</small><button data-close aria-label="Cerrar">✕</button><h2>CRAFRACE LIVE</h2></header><p>Laboratorio de conexión de dos pilotos. Beta técnica: salida programada con reloj del servidor. Resultados y reconexión pendientes de validar.</p><p data-status role="status" aria-live="polite">Crea una pista o introduce un código y pulsa UNIRME (también puedes usar Intro).</p><div data-actions class="cr-live-row"><button data-create>CREAR PISTA</button><input data-code maxlength="7" aria-label="Código" placeholder="CÓDIGO"><button data-join>UNIRME</button></div><div data-room hidden><h3 data-roomcode></h3><p data-pilots>Esperando al rival…</p><button data-ready disabled>ESTOY LISTO</button><button data-test-race hidden>INICIAR PRUEBA ONLINE</button><div data-messages aria-live="polite"></div><div class="cr-live-row"><input data-chat maxlength="160" aria-label="Mensaje" placeholder="Mensaje al rival"><button data-send>ENVIAR</button></div></div><footer>Sin premios ni clasificaciones · DEV LAB</footer></section>';
  document.body.append(root);const $=s=>root.querySelector(s);
  let transport=null,room=null,busy=false,closed=false,lastChat=0,readySent=false,rivalReady=false,localId=null,launching=false;
  const say=s=>{if(!closed)$('[data-status]').textContent=String(s);};
@@ -32,7 +32,10 @@ export function openCrafRaceLiveLobby(scene){
   finally{busy=false;if(!closed)$('[data-create]').disabled=$('[data-join]').disabled=false;}
  }
  $('[data-create]').addEventListener('click',()=>void connect(()=>createLiveRoom({trackId:selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage),carId:scene?.selectedCarId||'avenir_gripline',laps:3,physicsVersion:1,direction:'forward'})));
- $('[data-join]').addEventListener('click',()=>void connect(()=>joinLiveRoom($('[data-code]').value)));
+ const join=()=>{const code=$('[data-code]').value.trim().toUpperCase();if(!code){say('Introduce el código de la pista.');$('[data-code]').focus();return;}void connect(()=>joinLiveRoom(code));};
+ $('[data-join]').addEventListener('click',join);
+ $('[data-code]').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();join();}});
+ $('[data-code]').addEventListener('input',()=>{$('[data-code]').value=$('[data-code]').value.toUpperCase().replace(/[^A-Z0-9]/g,'');});
  $('[data-ready]').addEventListener('click',async()=>{if(!transport||readySent)return;$('[data-ready]').disabled=true;
   try{await transport.send('ready',{trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps});readySent=true;refreshReady();say(rivalReady?'Ambos preparados. Esperando salida del anfitrión.':'Preparado. Esperando al rival.');}
   catch(e){say(e.message);$('[data-ready]').disabled=false;}
