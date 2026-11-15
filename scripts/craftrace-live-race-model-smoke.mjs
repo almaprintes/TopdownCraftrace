@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {RemotePilotInterpolator,MonotonicLiveClock} from '../src/game/online/craftraceLiveRaceModel.js';
+const r=new RemotePilotInterpolator({delayMs:100,maxExtrapolateMs:100});
+assert.equal(r.at(0),null);
+assert.equal(r.push({x:0,y:0,angle:0,speed:10,tick:1,heat:1,generation:1},1000),true);
+assert.equal(r.push({x:10,y:0,angle:0,speed:10,tick:2,heat:1,generation:1},1100),true);
+assert.equal(r.at(1150).x,5);
+assert.equal(r.push({x:20,y:0,angle:0,speed:10,tick:2,heat:1,generation:1},1200),false,'Duplicate tick');
+assert.equal(r.at(1400).stale,true,'No unlimited extrapolation');
+assert.equal(r.push({x:0,y:0,angle:0,speed:0,tick:1,heat:2,generation:1},1500),true,'New heat resets history');
+assert.equal(r.samples.length,1);
+let t=1000;const c=new MonotonicLiveClock(()=>t);
+c.start();t=4000;c.pause();t=14000;assert.equal(c.elapsed(),3000);
+c.resume();t=16000;assert.equal(c.elapsed(),5000);
+assert.equal(c.lap(),5000);t=19000;assert.equal(c.lap(),3000);
+assert.deepEqual(c.result(),{elapsedMs:8000,laps:2,lapTimes:[5000,3000]});
+assert.throws(()=>c.start());
+console.log('PASS CrafRace LIVE interpolation, stale data, heat reset and monotonic pause/laps');
