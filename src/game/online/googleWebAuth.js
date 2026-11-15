@@ -63,11 +63,20 @@ export async function completeGoogleWebSignIn(callback){
     // Consume once, including failed, denied, expired, and replayed callbacks.
     sessionStorage.removeItem(PENDING);
     const {url,key}=playerBackendConfig();
-    if(!googleWebAvailable()||callback.error||!callback.code||callback.code.length>4096||
-      !pending||pending.nonce!==callback.state||pending.backend!==url||
-      Date.now()-pending.createdAt>600000||Date.now()<pending.createdAt||
-      !/^[A-Za-z0-9_-]{64}$/.test(pending.verifier)||(hasSavedRaceControlSession()&&!pending.expectedId)||
-      (savedRaceControlIdentity()||null)!==(pending.expectedId||null))throw new Error();
+    // Give actionable, non-sensitive failure codes: never show nonce, auth code or verifier.
+    const checks=[
+      ['C01','La dirección de retorno no corresponde a la web DEV.',!googleWebAvailable()],
+      ['C02','Google devolvió una cancelación o un error.',!!callback.error],
+      ['C03','No llegó el código de autorización de Google.',!callback.code||callback.code.length>4096],
+      ['C04','Se perdió la sesión temporal del navegador durante el regreso de Google.',!pending],
+      ['C05','No coincide el estado de seguridad de la redirección.',!!pending&&pending.nonce!==callback.state],
+      ['C06','Ha cambiado el servidor de autenticación.',!!pending&&pending.backend!==url],
+      ['C07','El intento ha caducado o la fecha del dispositivo es incorrecta.',!!pending&&(Date.now()-pending.createdAt>600000||Date.now()<pending.createdAt)],
+      ['C08','La clave temporal de autorización es inválida.',!!pending&&!/^[A-Za-z0-9_-]{64}$/.test(pending.verifier)],
+      ['C09','La sesión local no coincide con la que inició Google.',(hasSavedRaceControlSession()&&!pending?.expectedId)||(savedRaceControlIdentity()||null)!==(pending?.expectedId||null)]
+    ];
+    const failed=checks.find(([, ,condition])=>condition);
+    if(failed)throw new Error(failed[0]+': '+failed[1]);
     stage='exchange';
     const response=await fetch(url+'/auth/v1/token?grant_type=pkce',{
       method:'POST',cache:'no-store',referrerPolicy:'no-referrer',
@@ -85,7 +94,8 @@ export async function completeGoogleWebSignIn(callback){
     const hint=stage==='callback'?'No se ha podido verificar el retorno de Google en este navegador.':
       stage==='exchange'?'Google ha vuelto, pero no se ha podido completar el intercambio seguro de sesión.':
       'Google ha vuelto, pero la cuenta no supera la verificación de identidad de CraftRace Studio.';
+    const safeDetail=stage==='callback'&&/^C0[1-9]: /.test(error?.message||'')?error.message:'';
     console.warn('[TDR Google OAuth] Failed at stage',stage,error?.message||'');
-    return {ok:false,message:FAILURE+' '+hint};
+    return {ok:false,message:FAILURE+' '+hint+(safeDetail?' Diagnóstico '+safeDetail:'')};
   }
 }
