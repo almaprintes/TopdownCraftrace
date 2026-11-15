@@ -55,6 +55,7 @@ export async function startGoogleWebSignIn(){
 }
 export async function completeGoogleWebSignIn(callback){
   if(!callback)return null;
+  let stage='callback';
   try{
     const pending=JSON.parse(sessionStorage.getItem(PENDING)||'null');
     // Consume once, including failed, denied, expired, and replayed callbacks.
@@ -65,17 +66,24 @@ export async function completeGoogleWebSignIn(callback){
       Date.now()-pending.createdAt>600000||Date.now()<pending.createdAt||
       !/^[A-Za-z0-9_-]{64}$/.test(pending.verifier)||(hasSavedRaceControlSession()&&!pending.expectedId)||
       (savedRaceControlIdentity()||null)!==(pending.expectedId||null))throw new Error();
+    stage='exchange';
     const response=await fetch(url+'/auth/v1/token?grant_type=pkce',{
       method:'POST',cache:'no-store',referrerPolicy:'no-referrer',
       headers:{apikey:key,'Content-Type':'application/json'},
       body:JSON.stringify({auth_code:callback.code,code_verifier:pending.verifier}),
       signal:AbortSignal.timeout(20000)
     });
-    if(!response.ok)throw new Error();
+    if(!response.ok)throw new Error('Intercambio OAuth rechazado ('+response.status+').');
     const session=await response.json();
+    stage='identity';
     await acceptGoogleWebSession(session,pending.expectedId||null,{linking:pending.linking===true});
     return {ok:true,message:'Google conectado. Tu partida local no ha cambiado. Confirma PROTEGER MI PARTIDA para crear una copia; si ya existe otra, podrás revisarla antes de recuperar.'};
-  }catch{
-    return {ok:false,message:FAILURE};
+  }catch(error){
+    // No credentials, OAuth codes or provider tokens are included in UI diagnostics.
+    const hint=stage==='callback'?'No se ha podido verificar el retorno de Google en este navegador.':
+      stage==='exchange'?'Google ha vuelto, pero no se ha podido completar el intercambio seguro de sesión.':
+      'Google ha vuelto, pero la cuenta no supera la verificación de identidad de CraftRace Studio.';
+    console.warn('[TDR Google OAuth] Failed at stage',stage,error?.message||'');
+    return {ok:false,message:FAILURE+' '+hint};
   }
 }
