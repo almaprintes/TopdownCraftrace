@@ -4,6 +4,12 @@ on:
     branches: [main]
     paths:
       - 'src/game/online/craftraceLiveProtocol.js'
+      - 'src/game/online/craftraceLiveTransport.js'
+      - 'src/game/ui/craftraceLiveLobby.js'
+      - 'src/game/ui/craftraceLiveLobby.css'
+      - 'src/game/ui/LobbyDomUi.js'
+      - 'supabase/migrations/20261115_038_craftrace_live_rpc_beta.sql'
+      - 'scripts/craftrace-live-rpc-smoke.mjs'
       - 'scripts/craftrace-live-protocol-smoke.mjs'
       - 'docs/CRAFTRACE_LIVE_BETA.md'
       - '.github/workflows/craftrace-live-protocol.yml'
@@ -27,3 +33,6 @@ jobs:
         run: |
           node --check src/game/online/craftraceLiveProtocol.js
           node scripts/craftrace-live-protocol-smoke.mjs
+          node scripts/craftrace-live-rpc-smoke.mjs
+          node --check src/game/online/craftraceLiveTransport.js
+          node --check src/game/ui/craftraceLiveLobby.js
