@@ -26,7 +26,8 @@ class MockElement {
     this.style={setProperty:(key,value)=>{this.style[key]=value;}};
   }
   append(...children){for(const child of children){this.children.push(child);child.parent=this;}}
-  appendChild(child){this.append(child);return child;}
+  appendChild(child){if(child.parent)child.parent.children=child.parent.children.filter(c=>c!==child);this.append(child);return child;}
+  get firstChild(){return this.children[0]||null;}
   setAttribute(key,value){this.attrs[key]=value;}
   addEventListener(type,cb){this.events[type]=cb;}
   querySelector(tag){
@@ -71,6 +72,12 @@ assert.match(studioShortcut.innerHTML,/AVATARES · STUDIO/);
 studioShortcut.click();
 assert.equal(tiles.length,4);
 assert.equal(auxiliary.length,6);
+const dashboard=walk(root,e=>e.className==='tdr-paddock__dashboard')[0];
+assert.ok(dashboard,'Admin Hub must mount its compact dashboard');
+assert.equal(dashboard.children.length,9,'Dashboard must contain exactly nine shortcuts');
+assert.equal(dashboard.children.filter(e=>e.className==='tdr-paddock__tile').length,4);
+assert.equal(dashboard.children.filter(e=>e.className==='tdr-paddock__aux').length,5);
+assert.match(css,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 assert.match(auxiliary[0].textContent + JSON.stringify(auxiliary[0].children.map(x=>x.children.map?.(z=>z.textContent)||[])),/INFORMES · PARADA/);
 assert.match(auxiliary[1].textContent + JSON.stringify(auxiliary[1].children.map(x=>x.children.map?.(z=>z.textContent)||[])),/SUPABASE · PARADA TOTAL/);
 assert.equal(walk(root,e=>e.className==='tdr-paddock__dev')[0].textContent,expectedDevVersion);
@@ -101,4 +108,4 @@ for(const action of ['avatars','track','environment','cars','images','emergency'
 assert.ok(!viewSource.includes('fetch('),'Dashboard must not issue network requests');
 assert.match(sceneSource,/mountAdminStudioAvatars\(\)/);
 assert.match(sceneSource,/adminStudioAvatars\.js/);
-console.log('PADDOCK: 4 primary cards, 6 secondary cards, 14 wired actions, QA confirmation, accessible navigation and compact CSS OK.');
+console.log('PADDOCK: 3x3 dashboard, 4 primary cards, 6 auxiliary actions, QA confirmation and accessible navigation OK.');
