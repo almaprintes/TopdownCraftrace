@@ -11,7 +11,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
  remoteSprite.setOrigin(localSprite.originX,localSprite.originY).setScale(localSprite.scaleX,localSprite.scaleY);
  const remote=scene.add.container(scene.carBody.x,scene.carBody.y,[remoteSprite]).setDepth(29).setVisible(false);
  const label=scene.add.text(0,-45,'RIVAL · LIVE',{fontFamily:'system-ui',fontSize:'14px',color:'#ffffff',backgroundColor:'#16283c',padding:{x:5,y:3}}).setOrigin(0.5).setDepth(31).setVisible(false);
- let lastSent=0,stopped=false;
+ let lastSent=0,stopped=false,positionPending=false;
  const session=takeLiveSession(roomId);
  if(!session){remote.destroy();label.destroy();return null;}
  const {transport,room,identity}=session;
@@ -27,12 +27,13 @@ export function attachCrafRaceLivePilot(scene,roomId){
   const position=interpolation.at(now);
   if(position){remote.setPosition(position.x,position.y).setRotation(position.angle+(scene._carVisualRotOffset||0)).setAlpha(position.stale?0.25:0.68).setVisible(true);
    label.setPosition(position.x,position.y-45).setVisible(true);}
-  if(scene._raceStarted&&now-lastSent>=150&&scene.carBody?.active){
+  if(scene._raceStarted&&!positionPending&&now-lastSent>=150&&scene.carBody?.active){
    lastSent=now;
    const body=scene.carBody;
    const speed=Math.max(0,Math.hypot(body.body?.velocity?.x||0,body.body?.velocity?.y||0));
    if(Number.isFinite(body.x)&&Number.isFinite(body.y)&&Number.isFinite(body.rotation)&&Math.abs(body.x)<=100000&&Math.abs(body.y)<=100000){
-    void transport.send('position',{x:body.x,y:body.y,angle:body.rotation,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0)}).catch(()=>{});
+    positionPending=true;
+    void transport.send('position',{x:body.x,y:body.y,angle:body.rotation,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0)}).catch(()=>{}).finally(()=>{positionPending=false;});
    }
   }
  };
