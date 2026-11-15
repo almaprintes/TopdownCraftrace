@@ -505,6 +505,7 @@ else this._ttProg.idx = startIdx;
   }
 init(data) {
     this._crafRaceLiveRoomId=(!IS_PROD_BUILD&&data?.liveRoomId)||null;
+    this._crafRaceLiveStartAt=Number.isFinite(data?.liveStartAt)?data.liveStartAt:null;
     // DEV driving A/B: choose once at race start. B is a local practice mode;
     // online/competitive variants never receive altered grip physics.
     this._physicsABMode='A';
@@ -3559,7 +3560,17 @@ this._prevThrottleDown = throttleDown;
 //-------------------//
 //-------------------//
     // START LIGHTS: arrancar automáticamente 1 vez
-if (!this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
+if(this._crafRaceLiveRoomId&&this._crafRaceLiveStartAt&&this._startState==='COUNTDOWN'){
+  const left=Math.max(0,this._crafRaceLiveStartAt-(Date.now()+(this._crafRaceLiveBridge?.serverOffsetMs||0)));
+  if(this._startStatus)this._startStatus.setText(left>0?'LIVE · '+Math.ceil(left/1000):'GO!');
+  if(left<=0&&(!this._iosStaticTrackRender||this._iosStaticTrackInitialReady)){
+   this._startState='RACING';this._raceStarted=true;
+   if(this._startModal)this._startModal.setVisible(false);
+   if(this.timing){this.timing.started=true;this.timing.lapStart=performance.now();}
+   this.lapStartTick=this.simTick;
+  }
+}
+if (!this._crafRaceLiveRoomId && !this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
   this._startAutoFired = true;
 
   if (this._startHint) this._startHint.setText('Mantente listo...');
