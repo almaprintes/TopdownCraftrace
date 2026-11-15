@@ -22,6 +22,7 @@ assert.equal(liveTransition(s,{type:'ready',role:'guest',trackId:config.trackId,
 assert.equal(liveTransition(s,{type:'start',hostId:guest}).phase,'countdown');
 s=liveTransition(s,{type:'start',hostId:host});assert.equal(s.phase,'racing');
 s=liveTransition(s,{type:'disconnect'});assert.equal(s.phase,'paused');
+assert.equal(liveTransition(s,{type:'ready',role:'host',trackId:config.trackId,physicsVersion:1,direction:config.direction,laps:config.laps}),s,'Disconnected players cannot bypass pause');
 s=liveTransition(s,{type:'retry',hostId:host});assert.equal(s.generation,2);
 s=liveTransition(s,{type:'ready',role:'host',trackId:config.trackId,physicsVersion:1,direction:config.direction,laps:config.laps});
 s=liveTransition(s,{type:'ready',role:'guest',trackId:config.trackId,physicsVersion:1,direction:config.direction,laps:config.laps});
