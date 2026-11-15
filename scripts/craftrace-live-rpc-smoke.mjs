@@ -5,6 +5,7 @@ const adapter=readFileSync('src/game/online/craftraceLiveTransport.js','utf8');
 const lobby=readFileSync('src/game/ui/craftraceLiveLobby.js','utf8');
 const race=readFileSync('src/game/scenes/RaceScene.js','utf8');
 const bridge=readFileSync('src/game/online/craftraceLiveRaceBridge.js','utf8');
+const session=readFileSync('src/game/online/craftraceLiveSession.js','utf8');
 for(const name of ['craftrace_live_create','craftrace_live_join','craftrace_live_send','craftrace_live_poll']){
  assert.ok(sql.includes('create or replace function public.'+name+'('));
  assert.ok(sql.includes('revoke all on function public.'+name+'('));
@@ -26,5 +27,8 @@ assert.ok(lobby.includes("transport.send('start'"));
 assert.ok(lobby.includes('localId!==room.host_id'));
 assert.ok(race.includes('attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId)'));
 assert.ok(bridge.includes('RemotePilotInterpolator'));
+assert.ok(bridge.includes('takeLiveSession(roomId)'));
+assert.ok(lobby.includes('handoffLiveSession(room,transport'));
+assert.ok(session.includes('pending={room,transport,identity}'));
 assert.doesNotMatch(sql,/slotrace_live_rooms|drop table|truncate table/i);
 console.log('PASS CrafRace LIVE static RPC and race wiring checks');
