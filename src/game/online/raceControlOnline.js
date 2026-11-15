@@ -155,9 +155,10 @@ export function savedGoogleWebIdentity(){
 // Supabase Auth session after their own verified OAuth/OIDC flow; never trust
 // a provider name or claimed user ID supplied by a WebView callback alone.
 export async function acceptVerifiedSocialSession(incoming,expectedId=null,
-  {linking=false,provider}={}){
+  {linking=false,provider,login=false,previousId=null}={}){
   if(provider!=='google'&&provider!=='apple')throw new Error('Proveedor no autorizado.');
-  if((readSession()?.user?.id||null)!==expectedId)
+  const originalId=login?previousId:expectedId;
+  if((readSession()?.user?.id||null)!==originalId)
     throw new Error('La identidad local ha cambiado.');
   const session=normalizeSession(incoming);
   if(!sessionUsable(session)||!session.refresh_token)throw new Error('Sesión inválida.');
@@ -168,7 +169,7 @@ export async function acceptVerifiedSocialSession(incoming,expectedId=null,
     !identities.some(identity=>identity?.provider===provider&&
       (!identity.user_id||identity.user_id===user.id)))
     throw new Error('El proveedor social no coincide con la identidad del piloto.');
-  if((readSession()?.user?.id||null)!==expectedId)
+  if((readSession()?.user?.id||null)!==originalId)
     throw new Error('La identidad local ha cambiado.');
   const providers=[...new Set(identities
     .filter(i=>(i.provider==='google'||i.provider==='apple')&&
@@ -182,7 +183,7 @@ export async function acceptVerifiedSocialSession(incoming,expectedId=null,
     email:user.email,is_anonymous:false,app_metadata:{provider,providers}}};
   // Mark a social login as requiring explicit cloud-save confirmation.
   // Never restore a cloud snapshot on merely accepting a provider session.
-  if(!expectedId||linking){
+  if(!expectedId||linking||login){
     localStorage.setItem('tdr2:cloudLoginPendingRestore:v1',user.id);
     localStorage.setItem('tdr2:socialSavePending:v1',user.id);
   }
@@ -192,8 +193,8 @@ export async function acceptVerifiedSocialSession(incoming,expectedId=null,
   api={session:safe};
   return {id:user.id};
 }
-export async function acceptGoogleWebSession(incoming,expectedId=null,{linking=false}={}){
-  return acceptVerifiedSocialSession(incoming,expectedId,{provider:'google',linking});
+export async function acceptGoogleWebSession(incoming,expectedId=null,{linking=false,login=false,previousId=null}={}){
+  return acceptVerifiedSocialSession(incoming,expectedId,{provider:'google',linking,login,previousId});
 }
 export async function currentRaceControlAccount(){
   const s=await activeSession();
