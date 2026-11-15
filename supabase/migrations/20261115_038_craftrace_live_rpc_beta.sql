@@ -64,7 +64,7 @@ declare v_uid uuid := auth.uid(); v_room public.craftrace_live_rooms;
 begin
  if v_uid is null or coalesce((auth.jwt()->>'is_anonymous')::boolean,false)
  then raise exception 'Permanent account required';end if;
- if p_code is null or p_code !~ '^[A-HJ-NP-Z2-9]{7}
+ if p_code is null or p_code !~ '^[A-HJ-NP-Z2-9]{7}$' then raise exception 'Invalid code';end if;
  select * into v_room from public.craftrace_live_rooms
  where code=p_code and expires_at>now() and state<>'closed' for update;
  if not found then raise exception 'Room unavailable';end if;
