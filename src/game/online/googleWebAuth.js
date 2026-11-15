@@ -57,6 +57,14 @@ export async function startGoogleWebSignIn(){
 }
 export async function completeGoogleWebSignIn(callback){
   if(!callback)return null;
+  // Supabase returns this specific error when the provider identity belongs to
+  // another Studio user. Never overwrite the current account or local save.
+  const providerError=[callback.errorCode,callback.errorDescription,typeof callback.error==='string'?callback.error:'']
+    .filter(value=>typeof value==='string').join(' ').toLowerCase();
+  if(/identity[_ ]is[_ ]already[_ ]linked[_ ]to[_ ]another[_ ]user|identity[_ ]already[_ ]exists|already[_ ]linked[_ ]to[_ ]another[_ ]user/.test(providerError)){
+    sessionStorage.removeItem(PENDING);
+    return {ok:false,message:'Cuenta ya existente. Por favor, inicia sesión.'};
+  }
   let stage='callback';
   try{
     const pending=JSON.parse(sessionStorage.getItem(PENDING)||'null');
