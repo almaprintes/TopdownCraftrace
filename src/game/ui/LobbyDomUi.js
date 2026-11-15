@@ -235,7 +235,11 @@ export function installLobbyDom(scene) {
       const liveLab=document.createElement('button');liveLab.type='button';liveLab.className='tdr-lobby-button tdr-lobby-button--records';
       liveLab.textContent='🏁 LIVE LAB';liveLab.title='Pruebas de conexión entre pilotos';
       liveLab.addEventListener('click',async()=>{try{const {openCrafRaceLiveLobby}=await import('./craftraceLiveLobby.js');openCrafRaceLiveLobby(scene);}catch(err){console.error('[CrafRace LIVE]',err);}});
-      bottom.append(liveLab);
+      // Keep the five-slot player footer unchanged: LIVE is a separate, visible header action.
+      liveLab.className='tdr-lobby-live-entry';
+      liveLab.textContent='🏁 MULTIJUGADOR';
+      liveLab.setAttribute('aria-label','Multijugador en directo (pruebas DEV)');
+      root.querySelector('.tdr-lobby-right')?.append(liveLab);
     }
     if(!IS_PROD_BUILD){const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));}
     // One shared Studio avatar for both games, loaded once when opening the lobby.
