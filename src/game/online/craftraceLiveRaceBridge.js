@@ -5,9 +5,8 @@ const validRoom=x=>typeof x==='string'&&/^[0-9a-f-]{36}$/i.test(x);
 export function attachCrafRaceLivePilot(scene,roomId){
  if(!validRoom(roomId)||!scene?.carBody||!scene?.add)return null;
  const interpolation=new RemotePilotInterpolator({delayMs:220,maxExtrapolateMs:120});
- const remote=scene.add.container(scene.carBody.x,scene.carBody.y,[
-  scene.add.sprite(0,0,'car').setAlpha(0.68)
- ]).setDepth(29).setVisible(false);
+ const remoteSprite=scene.add.sprite(0,0,'car').setAlpha(0.68);
+ const remote=scene.add.container(scene.carBody.x,scene.carBody.y,[remoteSprite]).setDepth(29).setVisible(false);
  const label=scene.add.text(0,-45,'RIVAL · LIVE',{fontFamily:'system-ui',fontSize:'14px',color:'#ffffff',backgroundColor:'#16283c',padding:{x:5,y:3}}).setOrigin(0.5).setDepth(31).setVisible(false);
  let lastSent=0,stopped=false;
  const transport=new CrafRaceLiveTransport(roomId,{
@@ -24,7 +23,9 @@ export function attachCrafRaceLivePilot(scene,roomId){
    lastSent=now;
    const body=scene.carBody;
    const speed=Math.max(0,Math.hypot(body.body?.velocity?.x||0,body.body?.velocity?.y||0));
-   void transport.send('position',{x:body.x,y:body.y,angle:body.rotation,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0)}).catch(()=>{});
+   if(Number.isFinite(body.x)&&Number.isFinite(body.y)&&Number.isFinite(body.rotation)&&Math.abs(body.x)<=100000&&Math.abs(body.y)<=100000){
+    void transport.send('position',{x:body.x,y:body.y,angle:body.rotation,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0)}).catch(()=>{});
+   }
   }
  };
  const stop=()=>{if(stopped)return;stopped=true;transport.stop();remote.destroy();label.destroy();};
