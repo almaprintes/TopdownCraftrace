@@ -35,5 +35,5 @@ export function attachCrafRaceLivePilot(scene,roomId){
  };
  const stop=()=>{if(stopped)return;stopped=true;transport.stop();remote.destroy();label.destroy();};
  scene.events.once('shutdown',stop);
- return {update,stop};
+ return {update,stop,get serverOffsetMs(){return transport.serverOffsetMs;}};
 }
