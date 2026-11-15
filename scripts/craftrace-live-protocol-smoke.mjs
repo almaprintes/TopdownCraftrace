@@ -13,6 +13,10 @@ assert.equal(acceptLivePacket({...pos,payload:{...pos.payload,x:Infinity}},{room
 assert.equal(acceptLivePacket({...pos,type:'chat',payload:{text:'x'.repeat(161)}},{roomId:room,from:host}),false);
 assert.equal(acceptLivePacket({...pos,type:'ready',payload:{trackId:config.trackId,physicsVersion:1}},{roomId:room,from:host}),false);
 assert.equal(acceptLivePacket({...pos,type:'ready',payload:{trackId:config.trackId,physicsVersion:1,laps:3,direction:'forward'}},{roomId:room,from:host}),true);
+const start={...pos,type:'start',payload:{countdownMs:12000,restart:false,startAt:1794744000000}};
+assert.equal(acceptLivePacket(start,{roomId:room,from:host}),true);
+assert.equal(acceptLivePacket({...start,payload:{countdownMs:12000,restart:false}},{roomId:room,from:host}),false);
+assert.equal(acceptLivePacket({...start,payload:{...start.payload,startAt:'tomorrow'}},{roomId:room,from:host}),false);
 assert.equal(chatReady(1000,5999),false);assert.equal(chatReady(1000,6000),true);
 let s=initialLiveRace({roomId:room,hostId:host,config});
 assert.equal(s.phase,'waiting');s=liveTransition(s,{type:'join',guestId:guest});
