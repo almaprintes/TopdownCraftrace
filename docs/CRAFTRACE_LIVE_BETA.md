@@ -22,3 +22,16 @@ Se trasladan las lecciones funcionales de SlotRace DEV 0.15.82, pero **no** su m
 - Verificar después GitHub Actions y publicación real antes de invitar a probar.
 
 Prueba de regresión de este primer núcleo: node scripts/craftrace-live-protocol-smoke.mjs
+
+## Avance técnico del 15/11/2026 — rama PR #42
+
+**Implementado en código, pero NO desplegado:**
+- `supabase/migrations/20261115_038_craftrace_live_rpc_beta.sql`: tablas independientes para salas y paquetes; creación, unión, envío y lectura mediante RPC autenticadas, acceso exclusivo de dos UUID, expiración de dos horas, límites de 6 salas/hora, 12 paquetes/segundo y 5 segundos para chat/reacción/revancha. La migración está en revisión y **NO se ha aplicado al Supabase productivo**.
+- `src/game/online/craftraceLiveTransport.js`: transporte HTTP de prueba con sesión de Race Control reutilizada, código criptográfico, sondeo de paquetes, limpieza y rechazo de secuencias repetidas.
+- `src/game/ui/craftraceLiveLobby.js` y CSS: laboratorio PADDOCK **solo DEV** con crear/unirse, estado, preparado y mensajes. Se abre desde LIVE LAB en el lobby si se construye esta rama. Sin backend migrado no puede crear salas.
+- `src/game/online/craftraceLiveRaceModel.js`: interpolador del coche remoto **solo para representación**, reloj monotónico con pausa, reinicio por manga y rechazo de telemetría obsoleta. No está conectado a la escena de carreras.
+- Smoke CI de protocolo, revisión estructural de RPC y reloj/interpolación. **CI no sustituye una prueba de SQL contra PostgreSQL real ni QA con dos teléfonos**.
+
+**No implementado todavía:** backend en producción, permisos probados con JWT reales, presencia robusta, handshake y arranque sincronizado, coches remotos visibles en carrera, conexión del crono con meta/checkpoints reales, recuperación de manga en red, revancha completa, validación antifraude y prueba manual iPhone/Android. El transporte por sondeo a 350 ms **no sirve por sí solo para sincronizar la física de coches**; la interpolación y el protocolo necesitarán integración y medidas de latencia reales.
+
+**Prohibido fusionar/publicar** esta PR como multijugador funcional mientras esas verificaciones sigan pendientes. El acceso LIVE LAB es una herramienta de diagnóstico, no una función terminada. Ninguna tabla existente, datos de pilotos, versión pública de Android o proyecto Xcode se han modificado.
