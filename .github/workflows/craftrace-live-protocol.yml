@@ -1,0 +1,29 @@
+name: CrafRace LIVE DEV · protocolo seguro
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/game/online/craftraceLiveProtocol.js'
+      - 'scripts/craftrace-live-protocol-smoke.mjs'
+      - 'docs/CRAFTRACE_LIVE_BETA.md'
+      - '.github/workflows/craftrace-live-protocol.yml'
+  push:
+    branches: [feature/craftrace-live-two-player-beta]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Extraer código de CrafRace
+        uses: actions/checkout@v4
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar protocolo de dos pilotos
+        run: |
+          node --check src/game/online/craftraceLiveProtocol.js
+          node scripts/craftrace-live-protocol-smoke.mjs
