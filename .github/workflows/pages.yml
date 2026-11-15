@@ -87,6 +87,8 @@ jobs:
           node scripts/invisible-steering-controls-smoke.mjs
           node scripts/physics-ab-neutral-grip-smoke.mjs
           node scripts/race-visible-control-hitbox-smoke.mjs
+          # Ensure the nine-button Admin Hub grid is included in the DEV source.
+          node --input-type=module -e "import{readFileSync}from'node:fs';const js=readFileSync('src/game/ui/adminPaddockView.js','utf8');const css=readFileSync('src/game/ui/adminPaddock.css','utf8');if(!js.includes('tdr-paddock__dashboard')||!css.includes('grid-template-columns:repeat(3,minmax(0,1fr))'))process.exit(1);console.log('Admin Hub 3x3 grid present')"
           node scripts/lobby-online-records-shortcut-smoke.mjs
           node scripts/stats-unlocked-circuits-smoke.mjs
           node scripts/lobby-bottom-directions-smoke.mjs
