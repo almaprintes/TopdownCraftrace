@@ -37,7 +37,7 @@ export function liveTransition(s,e){
  if(!s||!e)return s;
  const next=(patch)=>Object.freeze({...s,...patch}), reset=()=>({host:false,guest:false});
  if(e.type==='join'&&s.phase==='waiting'&&uid(e.guestId)&&e.guestId!==s.hostId)return next({guestId:e.guestId,phase:'ready'});
- if(e.type==='ready'&&['ready','paused'].includes(s.phase)&&s.guestId&&['host','guest'].includes(e.role)&&e.trackId===s.config.trackId&&e.physicsVersion===s.config.physicsVersion&&e.direction===s.config.direction&&e.laps===s.config.laps){
+ if(e.type==='ready'&&s.phase==='ready'&&s.guestId&&['host','guest'].includes(e.role)&&e.trackId===s.config.trackId&&e.physicsVersion===s.config.physicsVersion&&e.direction===s.config.direction&&e.laps===s.config.laps){
   const ready={...s.ready,[e.role]:true};return next({ready,phase:ready.host&&ready.guest?'countdown':s.phase});
  }
  if(e.type==='start'&&s.phase==='countdown'&&e.hostId===s.hostId)return next({phase:'racing'});
