@@ -15,6 +15,25 @@ assert.equal((sql.match(/create or replace function public\.craftrace_live_/g)||
 assert.equal((sql.match(/end \$fn\$;/g)||[]).length,4,'All four SQL functions must close');
 assert.match(sql,/p_code is null or p_track is null or p_car is null/);
 assert.match(sql,/p_seq is null or p_generation is null or p_heat is null/);
+assert.match(sql,/p_code !~ '\^\[A-HJ-NP-Z2-9\]\{7\}\
+assert.match(sql,/enable row level security/g);
+assert.match(sql,/revoke all on public\.craftrace_live_rooms,public\.craftrace_live_packets from public,anon,authenticated/);
+assert.match(sql,/v_uid<>v_room\.host_id and v_uid is distinct from v_room\.guest_id/);
+assert.match(sql,/on conflict\(room_id,sender_id,client_seq\) do nothing/);
+assert.match(sql,/created_at>now\(\)-interval '5 seconds'/);
+assert.match(sql,/created_at>now\(\)-interval '1 second'/);
+assert.match(adapter,/activateRaceControlOnline\(\)/);
+assert.match(adapter,/crypto\.getRandomValues/);
+assert.match(adapter,/this\.onPacket\(packet\)/);
+assert.doesNotMatch(sql,/slotrace_live_rooms|drop table|truncate table/i);
+assert.match(lobby,/localId!==room\.host_id/);
+assert.match(lobby,/transport\.send\('start'/);
+assert.match(lobby,/p\.type==='start'&&p\.from===room\.host_id/);
+assert.match(race,/attachCrafRaceLivePilot\(this,this\._crafRaceLiveRoomId\)/);
+assert.match(bridge,/RemotePilotInterpolator/);
+console.log('PASS CrafRace LIVE RPC review: restricted RPCs, isolated tables, identity, flood limits');
+ then raise exception 'Invalid code'/);
+assert.match(sql,/p_kind='start' and \(v_uid<>v_room\.host_id/);
 assert.match(sql,/enable row level security/g);
 assert.match(sql,/revoke all on public\.craftrace_live_rooms,public\.craftrace_live_packets from public,anon,authenticated/);
 assert.match(sql,/v_uid<>v_room\.host_id and v_uid is distinct from v_room\.guest_id/);
