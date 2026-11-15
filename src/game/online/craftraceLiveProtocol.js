@@ -37,13 +37,13 @@ export function liveTransition(s,e){
  if(!s||!e)return s;
  const next=(patch)=>Object.freeze({...s,...patch}), reset=()=>({host:false,guest:false});
  if(e.type==='join'&&s.phase==='waiting'&&uid(e.guestId)&&e.guestId!==s.hostId)return next({guestId:e.guestId,phase:'ready'});
- if(e.type==='ready'&&['ready','paused'].includes(s.phase)&&s.guestId&&['host','guest'].includes(e.role)&&e.trackId===s.config.trackId&&e.physicsVersion===s.config.physicsVersion){
+ if(e.type==='ready'&&['ready','paused'].includes(s.phase)&&s.guestId&&['host','guest'].includes(e.role)&&e.trackId===s.config.trackId&&e.physicsVersion===s.config.physicsVersion&&e.direction===s.config.direction&&e.laps===s.config.laps){
   const ready={...s.ready,[e.role]:true};return next({ready,phase:ready.host&&ready.guest?'countdown':s.phase});
  }
  if(e.type==='start'&&s.phase==='countdown'&&e.hostId===s.hostId)return next({phase:'racing'});
  if(e.type==='disconnect'&&['ready','countdown','racing'].includes(s.phase))return next({phase:'paused',ready:reset()});
- if(e.type==='retry'&&s.phase==='paused'&&e.hostId===s.hostId)return next({phase:'ready',ready:reset(),generation:s.generation+1});
- if(e.type==='finish'&&s.phase==='racing'&&['host','guest'].includes(e.role)&&int(e.elapsedMs,1000,7200000)){
+ if(e.type==='retry'&&s.phase==='paused'&&e.hostId===s.hostId)return next({phase:'ready',ready:reset(),results:{host:null,guest:null},generation:s.generation+1});
+ if(e.type==='finish'&&s.phase==='racing'&&['host','guest'].includes(e.role)&&s.results[e.role]===null&&int(e.elapsedMs,1000,7200000)){
   const results={...s.results,[e.role]:e.elapsedMs};return next({results,phase:results.host&&results.guest?'finished':'racing'});
  }
  if(e.type==='close'&&e.hostId===s.hostId)return next({phase:'closed',ready:reset()});
