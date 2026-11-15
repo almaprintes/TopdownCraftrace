@@ -85,9 +85,11 @@ export function mountAdminPaddock(host,handlers){
     b.addEventListener('click',entry.run);
     primary.appendChild(b);
   }
-  main.appendChild(primary);
+  // Nine primary Admin Hub shortcuts share one compact 3x3 matrix.
+  const dashboard=make('div','tdr-paddock__dashboard');
+  while(primary.firstChild)dashboard.appendChild(primary.firstChild);
+  main.appendChild(dashboard);
 
-  main.append(make('div','tdr-paddock__section-caption','SOPORTE Y UTILIDADES'));
   const secondary=make('div','tdr-paddock__secondary');
   const qaPane=make('section','tdr-paddock__pane');qaPane.hidden=true;
   const legacyPane=make('section','tdr-paddock__pane');legacyPane.hidden=true;
@@ -111,7 +113,8 @@ export function mountAdminPaddock(host,handlers){
     txt.append(make('strong','tdr-paddock__aux-name',a.name),make('span','tdr-paddock__aux-desc',a.desc));
     b.append(icon,txt,make('span','tdr-paddock__aux-arrow','›'));
     b.addEventListener('click',a.run);
-    secondary.appendChild(b);
+    if(a.id==='legacy')secondary.appendChild(b);
+    else dashboard.appendChild(b);
   }
   main.appendChild(secondary);shell.appendChild(main);
 
