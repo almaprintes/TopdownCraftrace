@@ -43,6 +43,7 @@ export class CrafRaceLiveTransport{
   this.pollMs=Math.max(250,Math.min(3000,pollMs));this.seq=0;this.lastId=0;
   this.lastSeqBySender=new Map();this.heat=1;this.generation=1;
   this.closed=false;this.timer=null;this.busy=false;this.sending=Promise.resolve();
+  this.serverOffsetMs=0;this.clockSamples=0;
  }
  async send(type,payload){
   if(this.closed)throw Error('Pista cerrada.');
@@ -60,8 +61,17 @@ export class CrafRaceLiveTransport{
   if(this.closed||this.busy)return;
   this.busy=true;
   try{
+   const requestStarted=Date.now();
    const {id,data}=await rpc('craftrace_live_poll',{p_room:this.roomId,p_after:this.lastId});
    if(this.closed)return;
+   const rtt=Date.now()-requestStarted;
+   if(Number.isFinite(data?.server_now_ms)&&rtt>=0&&rtt<3000){
+    const offset=data.server_now_ms-(requestStarted+rtt/2);
+    if(!this.clockSamples||Math.abs(offset-this.serverOffsetMs)<1500){
+     this.serverOffsetMs=this.clockSamples?this.serverOffsetMs*0.8+offset*0.2:offset;
+     this.clockSamples++;
+    }
+   }
    try{this.onState(data);}catch(err){this.onError(err);}
    for(const packet of data?.packets||[]){
     if(this.closed)break;
@@ -85,6 +95,7 @@ export class CrafRaceLiveTransport{
   void this.poll();
  }
  stop(){this.closed=true;if(this.timer)clearInterval(this.timer);this.timer=null;}
+ serverNow(){return Date.now()+this.serverOffsetMs;}
  setRound(heat,generation){
   if(!Number.isSafeInteger(heat)||heat<1||heat>2||!Number.isSafeInteger(generation)||generation<1)return;
   this.heat=heat;this.generation=generation;this.lastSeqBySender.clear();
