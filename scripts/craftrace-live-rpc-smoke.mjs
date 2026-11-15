@@ -12,8 +12,8 @@ for(const name of ['craftrace_live_create','craftrace_live_join','craftrace_live
  assert.ok(sql.includes('grant execute on function public.'+name+'('));
  assert.ok(adapter.includes("'"+name+"'"));
 }
-assert.equal((sql.match(/create or replace function public\\.craftrace_live_/g)||[]).length,4);
-assert.equal((sql.match(/end \\$fn\\$;/g)||[]).length,4);
+assert.equal(sql.split('create or replace function public.craftrace_live_').length-1,4);
+assert.equal(sql.split('end $fn$;').length-1,4);
 assert.ok(sql.includes("p_code !~ '^[A-HJ-NP-Z2-9]{7}$' then raise exception 'Invalid code'"));
 assert.ok(sql.includes("p_kind='start' and (v_uid<>v_room.host_id"));
 assert.ok(sql.includes('p_seq is null or p_generation is null or p_heat is null'));
