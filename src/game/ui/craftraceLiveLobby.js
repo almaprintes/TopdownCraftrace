@@ -11,7 +11,7 @@ export function openCrafRaceLiveLobby(scene){
  let transport=null,room=null,busy=false,closed=false,lastChat=0,readySent=false,rivalReady=false,localId=null;
  const say=s=>{if(!closed)$('[data-status]').textContent=String(s);};
  const log=s=>{const p=document.createElement('p');p.textContent=s;$('[data-messages]').append(p);while($('[data-messages]').children.length>10)$('[data-messages]').firstChild.remove();};
- const refreshReady=()=>{if(closed||!room)return;const joined=!!room.guest_id;$('[data-pilots]').textContent=joined?(rivalReady?'RIVAL PREPARADO · '+(readySent?'AMBOS LISTOS':'FALTA TU CONFIRMACIÓN'):'DOS PILOTOS CONECTADOS'):'ESPERANDO AL SEGUNDO PILOTO';$('[data-ready]').disabled=!joined||readySent;};
+ const refreshReady=()=>{if(closed||!room)return;$('[data-test-race]').hidden=!(readySent&&rivalReady);const joined=!!room.guest_id;$('[data-pilots]').textContent=joined?(rivalReady?'RIVAL PREPARADO · '+(readySent?'AMBOS LISTOS':'FALTA TU CONFIRMACIÓN'):'DOS PILOTOS CONECTADOS'):'ESPERANDO AL SEGUNDO PILOTO';$('[data-ready]').disabled=!joined||readySent;};
  const dispose=()=>{if(closed)return;closed=true;transport?.stop();root.remove();scene?.events?.off?.('shutdown',dispose);document.removeEventListener('keydown',esc);};
  const esc=e=>{if(e.key==='Escape')dispose();};
  $('[data-close]').addEventListener('click',dispose);document.addEventListener('keydown',esc);scene?.events?.once?.('shutdown',dispose);
@@ -34,6 +34,11 @@ export function openCrafRaceLiveLobby(scene){
  $('[data-ready]').addEventListener('click',async()=>{if(!transport||readySent)return;$('[data-ready]').disabled=true;
   try{await transport.send('ready',{trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps});readySent=true;refreshReady();say(rivalReady?'Ambos preparados. Carrera aún no integrada.':'Preparado. Esperando al rival.');}
   catch(e){say(e.message);$('[data-ready]').disabled=false;}
+ });
+ $('[data-test-race]').addEventListener('click',()=>{
+  if(!room||!readySent||!rivalReady||closed)return;
+  const liveRoomId=room.id,carId=scene?.selectedCarId||room.car_id,trackKey=room.track_id;
+  dispose();scene.scene.start('race',{carId,trackKey,liveRoomId,gameMode:'online',testMode:true});
  });
  $('[data-send]').addEventListener('click',async()=>{
   const input=$('[data-chat]'),value=input.value.trim();if(!transport||!value||value.length>160)return;
