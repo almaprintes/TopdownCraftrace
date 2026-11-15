@@ -1138,3 +1138,9 @@
   .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet{min-width:56px;gap:2px}
   .tdr-lobby-dom .tdr-lobby-right .tdr-app-wallet-icon{width:20px;height:20px}
 }
+
+/* DEV multiplayer entry lives in the header, never in the five-button player footer. */
+.tdr-lobby-header .tdr-lobby-right{display:flex;align-items:center;gap:clamp(4px,.6vw,10px)}
+.tdr-lobby-header button.tdr-lobby-live-entry{appearance:none;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-height:36px;padding:7px clamp(8px,1vw,15px);border:1px solid rgba(100,225,255,.75);border-radius:12px;background:linear-gradient(135deg,rgba(8,65,95,.95),rgba(7,27,57,.96));box-shadow:0 0 14px rgba(0,200,255,.22);color:#f2fdff;font-weight:900;font-size:clamp(10px,1.15vw,15px);letter-spacing:.02em;white-space:nowrap;cursor:pointer;touch-action:manipulation}
+.tdr-lobby-header button.tdr-lobby-live-entry:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(max-width:700px){.tdr-lobby-header button.tdr-lobby-live-entry{font-size:10px;padding:6px 8px;min-height:34px}}
