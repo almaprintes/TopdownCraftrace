@@ -8,6 +8,10 @@ for(const name of ['craftrace_live_create','craftrace_live_join','craftrace_live
  assert.match(sql,new RegExp('grant execute on function public\\.'+name+'\\('));
  assert.match(adapter,new RegExp("'"+name+"'"));
 }
+assert.equal((sql.match(/create or replace function public\.craftrace_live_/g)||[]).length,4,'Exactly four RPC definitions');
+assert.equal((sql.match(/end \$fn\$;/g)||[]).length,4,'All four SQL functions must close');
+assert.match(sql,/p_code is null or p_track is null or p_car is null/);
+assert.match(sql,/p_seq is null or p_generation is null or p_heat is null/);
 assert.match(sql,/enable row level security/g);
 assert.match(sql,/revoke all on public\.craftrace_live_rooms,public\.craftrace_live_packets from public,anon,authenticated/);
 assert.match(sql,/v_uid<>v_room\.host_id and v_uid is distinct from v_room\.guest_id/);
