@@ -28,8 +28,8 @@ let callback=await start();
 assert.equal(target.searchParams.get('provider'),'google');
 const callbackTarget=new URL(target.searchParams.get('redirect_to'));
 assert.equal(callbackTarget.origin+callbackTarget.pathname,auth.GOOGLE_REDIRECT);
-assert.equal(callbackTarget.search,'','exact allowlisted path; nonce only in fragment');
-assert.equal(new URLSearchParams(callbackTarget.hash.slice(1)).get('tdr_state'),callback.state);
+assert.equal(callbackTarget.searchParams.get('tdr_state'),callback.state,'nonce must survive the server-side OAuth redirect');
+assert.equal(callbackTarget.hash,'','OAuth nonce must not be placed in a fragment lost at the server');
 assert.equal(target.searchParams.get('code_challenge_method'),'s256');
 const pending=JSON.parse(sessionStorage.getItem(pendingKey));
 assert.equal(target.searchParams.get('code_challenge'),Buffer.from(await webcrypto.subtle.digest('SHA-256',new TextEncoder().encode(pending.verifier))).toString('base64url'));
@@ -65,6 +65,13 @@ const html=read('index.html');const script=html.match(/<script>([\s\S]*?)<\/scri
 let replaced;const window={};
 runInNewContext(script,{URL,URLSearchParams,window,location:{href:location.origin+location.pathname+'?code=private-code#tdr_state=nonce&access_token=secret'},history:{replaceState:(_a,_b,u)=>replaced=u}});
 assert.equal(replaced,location.pathname);assert.equal(window.__tdrGoogleCallback.error,true);assert.equal(window.__tdrGoogleCallback.state,'nonce');
+// OAuth callback now returns the nonce in the query; scrub it before any resource loads.
+let queryReplaced;
+const queryWindow={};
+runInNewContext(script,{URL,URLSearchParams,window:queryWindow,location:{href:location.origin+location.pathname+'?code=private-code&tdr_state=query-nonce'},history:{replaceState:(_a,_b,u)=>queryReplaced=u}});
+assert.equal(queryReplaced,location.pathname);
+assert.equal(queryWindow.__tdrGoogleCallback.code,'private-code');
+assert.equal(queryWindow.__tdrGoogleCallback.state,'query-nonce');
 assert.ok(html.indexOf('name="referrer"')<html.indexOf('tdr-startup-diagnostics'));
 // Exercise the real session installer against mocked transport, not a mocked installer.
 source=read('src/game/online/raceControlOnline.js')
