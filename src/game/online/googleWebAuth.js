@@ -10,13 +10,14 @@ export function googleWebAvailable(){
   return globalThis.location?.origin+globalThis.location?.pathname===GOOGLE_REDIRECT&&
     !globalThis.Capacitor?.isNativePlatform?.()&&!!globalThis.crypto?.subtle;
 }
-export async function startGoogleWebSignIn(){
+export async function startGoogleWebSignIn({mode='link'}={}){
+  if(mode!=='link'&&mode!=='login')throw new Error('Operación de Google no válida.');
   if(!googleWebAvailable())throw new Error('Google está disponible en la DEV web. El acceso nativo se preparará por separado.');
   const expectedId=savedRaceControlIdentity();
-  if(!expectedId&&localStorage.getItem('tdr2:previousOnlineUserId:v1'))
+  if(mode==='link'&&!expectedId&&localStorage.getItem('tdr2:previousOnlineUserId:v1'))
     throw new Error('Este dispositivo conserva la referencia de una identidad antigua. Para mantener su ID necesitas una sesión válida de ese piloto. No se ha creado otra cuenta ni modificado tu partida.');
   let linking=false,token=null;
-  if(expectedId&&!savedGoogleWebIdentity()){
+  if(mode==='link'&&expectedId&&!savedGoogleWebIdentity()){
     // A nickname is never proof of ownership: require the old live session.
     const account=await currentRaceControlAccount();
     if(account.id!==expectedId)throw new Error(FAILURE);
@@ -28,7 +29,7 @@ export async function startGoogleWebSignIn(){
   const nonce=b64(crypto.getRandomValues(new Uint8Array(32)));
   const challenge=b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
   const {url,key}=playerBackendConfig();
-  const pending=JSON.stringify({verifier,nonce,createdAt:Date.now(),backend:url,expectedId,linking});
+  const pending=JSON.stringify({verifier,nonce,createdAt:Date.now(),backend:url,expectedId,linking,mode});
   // Only one provider callback may be outstanding in this tab.
   sessionStorage.removeItem('tdr2:applePkce:v1');
   sessionStorage.setItem(PENDING,pending);
@@ -81,7 +82,7 @@ export async function completeGoogleWebSignIn(callback){
       ['C06','Ha cambiado el servidor de autenticación.',!!pending&&pending.backend!==url],
       ['C07','El intento ha caducado o la fecha del dispositivo es incorrecta.',!!pending&&(Date.now()-pending.createdAt>600000||Date.now()<pending.createdAt)],
       ['C08','La clave temporal de autorización es inválida.',!!pending&&!/^[A-Za-z0-9_-]{64}$/.test(pending.verifier)],
-      ['C09','La sesión local no coincide con la que inició Google.',(hasSavedRaceControlSession()&&!pending?.expectedId)||(savedRaceControlIdentity()||null)!==(pending?.expectedId||null)]
+      ['C09','La sesión local no coincide con la que inició Google.',(hasSavedRaceControlSession()&&!pending?.expectedId&&pending?.mode!=='login')||(savedRaceControlIdentity()||null)!==(pending?.expectedId||null)]
     ];
     const failed=checks.find(([, ,condition])=>condition);
     if(failed)throw new Error(failed[0]+': '+failed[1]);
@@ -95,7 +96,7 @@ export async function completeGoogleWebSignIn(callback){
     if(!response.ok)throw new Error('Intercambio OAuth rechazado ('+response.status+').');
     const session=await response.json();
     stage='identity';
-    await acceptGoogleWebSession(session,pending.expectedId||null,{linking:pending.linking===true});
+    await acceptGoogleWebSession(session,pending.mode==='login'?null:(pending.expectedId||null),{linking:pending.linking===true,login:pending.mode==='login',previousId:pending.expectedId||null});
     return {ok:true,message:'Google conectado. Tu partida local no ha cambiado. Confirma PROTEGER MI PARTIDA para crear una copia; si ya existe otra, podrás revisarla antes de recuperar.'};
   }catch(error){
     // No credentials, OAuth codes or provider tokens are included in UI diagnostics.
