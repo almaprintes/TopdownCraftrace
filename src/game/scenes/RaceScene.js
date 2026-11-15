@@ -1,3 +1,4 @@
+import {attachCrafRaceLivePilot} from '../online/craftraceLiveRaceBridge.js';
 import {skinGeometryForSprite} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,getEquippedCarSkin,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
@@ -503,6 +504,7 @@ else this._ttProg.idx = startIdx;
     };
   }
 init(data) {
+    this._crafRaceLiveRoomId=(!IS_PROD_BUILD&&data?.liveRoomId)||null;
     // DEV driving A/B: choose once at race start. B is a local practice mode;
     // online/competitive variants never receive altered grip physics.
     this._physicsABMode='A';
@@ -1249,6 +1251,7 @@ rig.setDepth(30);
 this.carBody = body;
 this.carRig = rig;
 this.car = body; // compat con tu update()
+if(this._crafRaceLiveRoomId)this._crafRaceLiveBridge=attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId);
 
 // Skin runtime: si existe, sustituye la textura del sprite sin romper nada
 this.ensureCarSkinTexture(specFinal).then((texKey) => {
@@ -3438,6 +3441,7 @@ try { this.cameras.main.ignore(this._touchDbg); } catch (e) {}
   }
 
   update(time, deltaMs) {
+    this._crafRaceLiveBridge?.update(performance.now());
     const dt = Math.min(0.05, (deltaMs || 0) / 1000);
 
 // ✅ SIM TICK (aprox) — base para cronómetro determinista
