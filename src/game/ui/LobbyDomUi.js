@@ -232,12 +232,8 @@ export function installLobbyDom(scene) {
       makeOnlineRecordsShortcut(scene)
     );
     if(!IS_PROD_BUILD){
-      // DEV-only 3x3 compact menu: preserve every existing destination.
-      bottom.classList.add('tdr-lobby-bottom-actions--dev-grid');
-      const liveLab=document.createElement('button');
-      liveLab.type='button';liveLab.className='tdr-lobby-button tdr-lobby-button--records tdr-lobby-button--live';
-      liveLab.innerHTML='<span>🏁 LIVE LAB</span>';
-      liveLab.title='Pruebas de conexión entre pilotos';
+      const liveLab=document.createElement('button');liveLab.type='button';liveLab.className='tdr-lobby-button tdr-lobby-button--records';
+      liveLab.textContent='🏁 LIVE LAB';liveLab.title='Pruebas de conexión entre pilotos';
       liveLab.addEventListener('click',async()=>{try{const {openCrafRaceLiveLobby}=await import('./craftraceLiveLobby.js');openCrafRaceLiveLobby(scene);}catch(err){console.error('[CrafRace LIVE]',err);}});
       bottom.append(liveLab);
     }
