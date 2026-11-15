@@ -8,7 +8,7 @@ export function openCrafRaceLiveLobby(scene){
  const root=document.createElement('div');root.id='cr-live-lab';root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');
  root.innerHTML='<section class="cr-live-panel"><header><small>CRAFT RACE STUDIO · DEV</small><button data-close aria-label="Cerrar">✕</button><h2>CRAFRACE LIVE</h2></header><p>Laboratorio de conexión de dos pilotos. Todavía no inicia carreras.</p><p data-status role="status" aria-live="polite">Crea una pista o introduce un código.</p><div data-actions class="cr-live-row"><button data-create>CREAR PISTA</button><input data-code maxlength="7" aria-label="Código" placeholder="CÓDIGO"><button data-join>UNIRME</button></div><div data-room hidden><h3 data-roomcode></h3><p data-pilots>Esperando al rival…</p><button data-ready disabled>ESTOY LISTO</button><div data-messages aria-live="polite"></div><div class="cr-live-row"><input data-chat maxlength="160" aria-label="Mensaje" placeholder="Mensaje al rival"><button data-send>ENVIAR</button></div></div><footer>Sin premios ni clasificaciones · DEV LAB</footer></section>';
  document.body.append(root);const $=s=>root.querySelector(s);
- let transport=null,room=null,busy=false,closed=false,lastChat=0,readySent=false,rivalReady=false;
+ let transport=null,room=null,busy=false,closed=false,lastChat=0,readySent=false,rivalReady=false,localId=null;
  const say=s=>{if(!closed)$('[data-status]').textContent=String(s);};
  const log=s=>{const p=document.createElement('p');p.textContent=s;$('[data-messages]').append(p);while($('[data-messages]').children.length>10)$('[data-messages]').firstChild.remove();};
  const refreshReady=()=>{if(closed||!room)return;const joined=!!room.guest_id;$('[data-pilots]').textContent=joined?(rivalReady?'RIVAL PREPARADO · '+(readySent?'AMBOS LISTOS':'FALTA TU CONFIRMACIÓN'):'DOS PILOTOS CONECTADOS'):'ESPERANDO AL SEGUNDO PILOTO';$('[data-ready]').disabled=!joined||readySent;};
@@ -20,9 +20,10 @@ export function openCrafRaceLiveLobby(scene){
   try{
    say('Conectando…');room=await fn();if(closed)return;if(!room?.id||!room?.code)throw Error('Respuesta incompleta.');
    $('[data-actions]').hidden=true;$('[data-room]').hidden=false;$('[data-roomcode]').textContent='CÓDIGO · '+room.code;
+   const identity=await import('../online/craftraceLiveTransport.js').then(m=>m.liveIdentity());if(closed)return;localId=identity.id;
    transport=new CrafRaceLiveTransport(room.id,{
-    onState:d=>{if(closed)return;room.guest_id=d.guest_id;refreshReady();},
-    onPacket:p=>{if(p.type==='chat')log('RIVAL · '+String(p.payload.text||''));if(p.type==='ready'&&p.payload.trackId===room.track_id&&p.payload.physicsVersion===room.physics_version&&p.payload.direction===room.direction&&p.payload.laps===room.laps){rivalReady=true;log('El rival está preparado.');refreshReady();if(readySent)say('Ambos preparados. Esperando integración de la carrera.');}},
+    onState:d=>{if(closed)return;if(d.host_id!==room.host_id||d.room_id!==room.id)return;room.guest_id=d.guest_id;refreshReady();},
+    onPacket:p=>{if(p.from!==(localId===room.host_id?room.guest_id:room.host_id))return;if(p.type==='chat')log('RIVAL · '+String(p.payload.text||''));if(p.type==='ready'&&p.payload.trackId===room.track_id&&p.payload.physicsVersion===room.physics_version&&p.payload.direction===room.direction&&p.payload.laps===room.laps){rivalReady=true;log('El rival está preparado.');refreshReady();if(readySent)say('Ambos preparados. Esperando integración de la carrera.');}},
     onError:e=>say('Reconectando… '+String(e.message||''))
    });transport.start();say('Pista conectada. Esperando al segundo piloto.');
   }catch(e){say(e.message||'Error de conexión');}
