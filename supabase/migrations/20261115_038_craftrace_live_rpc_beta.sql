@@ -105,7 +105,10 @@ begin
   where room_id=p_room and sender_id=v_uid and kind=p_kind
     and created_at>now()-interval '5 seconds')
  then raise exception 'Message cooldown';end if;
- if p_kind='start' and (v_uid<>v_room.host_id or v_room.guest_id is null or coalesce((p_payload->>'countdownMs')::integer,0) not between 1000 and 15000 or jsonb_typeof(p_payload->'restart')<>'boolean')
+ if p_kind='start' and (v_uid<>v_room.host_id or v_room.guest_id is null or coalesce((p_payload->>'countdownMs')::integer,0) not between 1000 and 15000 or jsonb_typeof(p_payload->'restart')<>'boolean'
+ or jsonb_typeof(p_payload->'startAt')<>'number'
+ or (p_payload->>'startAt')::numeric not between
+   extract(epoch from clock_timestamp())*1000+1000 and extract(epoch from clock_timestamp())*1000+30000)
  then raise exception 'Invalid start';end if;
  if p_kind='chat' and (length(coalesce(p_payload->>'text','')) not between 1 and 160)
  then raise exception 'Invalid chat';end if;
