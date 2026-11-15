@@ -42,13 +42,19 @@ export class CrafRaceLiveTransport{
   this.roomId=roomId;this.onPacket=onPacket;this.onState=onState;this.onError=onError;
   this.pollMs=Math.max(250,Math.min(3000,pollMs));this.seq=0;this.lastId=0;
   this.lastSeqBySender=new Map();this.heat=1;this.generation=1;
-  this.closed=false;this.timer=null;this.busy=false;
+  this.closed=false;this.timer=null;this.busy=false;this.sending=Promise.resolve();
  }
  async send(type,payload){
   if(this.closed)throw Error('Pista cerrada.');
-  const seq=++this.seq;
-  return (await rpc('craftrace_live_send',{p_room:this.roomId,p_seq:seq,
-   p_generation:this.generation,p_heat:this.heat,p_kind:type,p_payload:payload})).data;
+  // Serialize writes: concurrent button presses must never arrive out of order.
+  const operation=this.sending.catch(()=>{}).then(async()=>{
+   if(this.closed)throw Error('Pista cerrada.');
+   const seq=++this.seq;
+   return (await rpc('craftrace_live_send',{p_room:this.roomId,p_seq:seq,
+    p_generation:this.generation,p_heat:this.heat,p_kind:type,p_payload:payload})).data;
+  });
+  this.sending=operation.catch(()=>{});
+  return operation;
  }
  async poll(){
   if(this.closed||this.busy)return;
@@ -56,7 +62,7 @@ export class CrafRaceLiveTransport{
   try{
    const {id,data}=await rpc('craftrace_live_poll',{p_room:this.roomId,p_after:this.lastId});
    if(this.closed)return;
-   this.onState(data);
+   try{this.onState(data);}catch(err){this.onError(err);}
    for(const packet of data?.packets||[]){
     if(this.closed)break;
     if(!Number.isSafeInteger(packet.id)||packet.id<=this.lastId)continue;
@@ -66,7 +72,7 @@ export class CrafRaceLiveTransport{
     if(!acceptLivePacket({...packet,roomId:this.roomId},{
       roomId:this.roomId,from:packet.from,lastSeq:prev,heat:this.heat,generation:this.generation}))continue;
     this.lastSeqBySender.set(packet.from,packet.seq);
-    this.onPacket(packet);
+    try{this.onPacket(packet);}catch(err){this.onError(err);}
    }
   }catch(err){if(!this.closed)this.onError(err);}
   finally{this.busy=false;}
