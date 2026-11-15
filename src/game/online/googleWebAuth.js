@@ -33,7 +33,9 @@ export async function startGoogleWebSignIn(){
   sessionStorage.removeItem('tdr2:applePkce:v1');
   sessionStorage.setItem(PENDING,pending);
   if(sessionStorage.getItem(PENDING)!==pending)throw new Error(FAILURE);
-  const redirect=new URL(GOOGLE_REDIRECT);redirect.hash=new URLSearchParams({tdr_state:nonce}).toString();
+  // URL fragments never reach the OAuth server, so they cannot survive its redirect.
+  // Put our one-time nonce in the redirect query and consume it before boot.
+  const redirect=new URL(GOOGLE_REDIRECT);redirect.searchParams.set('tdr_state',nonce);
   const target=new URL(url+(linking?'/auth/v1/user/identities/authorize':'/auth/v1/authorize'));
   target.search=new URLSearchParams({provider:'google',redirect_to:redirect.href,
     code_challenge:challenge,code_challenge_method:'s256',apikey:key}).toString();
