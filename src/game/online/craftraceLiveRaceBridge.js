@@ -6,14 +6,15 @@ import {getEquippedCarSkin,availableCarSkins} from '../skins/carSkins.js';
 const validRoom=x=>typeof x==='string'&&/^[0-9a-f-]{36}$/i.test(x);
 export function attachCrafRaceLivePilot(scene,roomId){
  if(!validRoom(roomId)||!scene?.carBody||!scene?.add)return null;
- const interpolation=new RemotePilotInterpolator({delayMs:220,maxExtrapolateMs:120});
+ const interpolation=new RemotePilotInterpolator({delayMs:400,maxExtrapolateMs:250});
  const localSprite=scene.carRig?.list?.find?.(item=>item?.texture?.key);
  if(!localSprite)return null;
- const remoteSprite=scene.add.sprite(0,0,'car').setAlpha(0.68);
+ const remoteSprite=scene.add.sprite(0,0,'car').setAlpha(1);
  remoteSprite.setOrigin(localSprite.originX,localSprite.originY).setScale(localSprite.scaleX,localSprite.scaleY);
  const remote=scene.add.container(scene.carBody.x,scene.carBody.y,[remoteSprite]).setDepth(29).setVisible(false);
  const label=scene.add.text(0,-45,'RIVAL · LIVE',{fontFamily:'system-ui',fontSize:'14px',color:'#ffffff',backgroundColor:'#16283c',padding:{x:5,y:3}}).setOrigin(0.5).setDepth(31).setVisible(false);
  let lastSent=0,stopped=false,positionPending=false,remoteAppearance=null;
+ let lastRemotePacketAt=0,remotePacketGapMs=350,lastRenderedAt=0;
  const ownCarId=CAR_SPECS[scene.carId]?.id||CAR_SPECS[scene.baseSpec?.id]?.id||'stock';
  const ownSkinId=getEquippedCarSkin(ownCarId,{spec:CAR_SPECS[ownCarId],dev:true}).id;
  const loadAppearance=(carId,skinId)=>{
@@ -47,7 +48,16 @@ export function attachCrafRaceLivePilot(scene,roomId){
   if(p.from!==rivalId)return;
   if(p.type==='position'){
    if(typeof p.payload?.carId==='string'&&typeof p.payload?.skinId==='string')loadAppearance(p.payload.carId,p.payload.skinId);
-   interpolation.push({...p.payload,heat:p.heat,generation:p.generation},performance.now());
+   const receivedAt=performance.now();
+   const accepted=interpolation.push({...p.payload,heat:p.heat,generation:p.generation},receivedAt);
+   if(accepted){
+    if(lastRemotePacketAt>0){
+     const gap=receivedAt-lastRemotePacketAt;
+     if(gap>=100&&gap<=1500)remotePacketGapMs=remotePacketGapMs*0.8+gap*0.2;
+    }
+    lastRemotePacketAt=receivedAt;
+    interpolation.delayMs=Math.max(300,Math.min(500,remotePacketGapMs+70));
+   }
   }
  };
  transport.onState=d=>{if(d.room_id!==roomId||d.host_id!==room.host_id)transport.stop();};
@@ -55,8 +65,18 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const update=now=>{
   if(stopped)return;
   const position=interpolation.at(now);
-  if(position){remote.setPosition(position.x,position.y).setRotation(position.angle+(scene._carVisualRotOffset||0)).setAlpha(position.stale?0.25:0.68).setVisible(true);
-   label.setPosition(position.x,position.y-45).setVisible(true);}
+  if(position){
+   const dt=lastRenderedAt?Math.max(0,Math.min(100,now-lastRenderedAt)):16;
+   lastRenderedAt=now;
+   // Smooth irregular HTTP polling without making the rival translucent.
+   const blend=remote.visible?1-Math.exp(-dt/75):1;
+   const x=remote.visible?remote.x+(position.x-remote.x)*blend:position.x;
+   const y=remote.visible?remote.y+(position.y-remote.y)*blend:position.y;
+   const targetAngle=position.angle+(scene._carVisualRotOffset||0);
+   const angleDelta=Math.atan2(Math.sin(targetAngle-remote.rotation),Math.cos(targetAngle-remote.rotation));
+   remote.setPosition(x,y).setRotation(remote.visible?remote.rotation+angleDelta*blend:targetAngle).setAlpha(1).setVisible(true);
+   label.setPosition(x,y-45).setVisible(true);
+  }
   if(scene._raceStarted&&!positionPending&&now-lastSent>=150&&scene.carBody?.active){
    lastSent=now;
    const body=scene.carBody;
