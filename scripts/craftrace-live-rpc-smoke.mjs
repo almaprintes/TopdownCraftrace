@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const sql=readFileSync('supabase/migrations/20261115_038_craftrace_live_rpc_beta.sql','utf8');
+const adapter=readFileSync('src/game/online/craftraceLiveTransport.js','utf8');
+const lobby=readFileSync('src/game/ui/craftraceLiveLobby.js','utf8');
+const race=readFileSync('src/game/scenes/RaceScene.js','utf8');
+const bridge=readFileSync('src/game/online/craftraceLiveRaceBridge.js','utf8');
+const session=readFileSync('src/game/online/craftraceLiveSession.js','utf8');
+for(const name of ['craftrace_live_create','craftrace_live_join','craftrace_live_send','craftrace_live_poll']){
+ assert.ok(sql.includes('create or replace function public.'+name+'('));
+ assert.ok(sql.includes('revoke all on function public.'+name+'('));
+ assert.ok(sql.includes('grant execute on function public.'+name+'('));
+ assert.ok(adapter.includes("'"+name+"'"));
+}
+assert.equal(sql.split('create or replace function public.craftrace_live_').length-1,4);
+assert.equal(sql.split('end $fn$;').length-1,4);
+assert.ok(sql.includes("p_code !~ '^[A-HJ-NP-Z2-9]{7}$' then raise exception 'Invalid code'"));
+assert.ok(sql.includes("p_kind='start' and (v_uid<>v_room.host_id"));
+assert.ok(sql.includes('p_seq is null or p_generation is null or p_heat is null'));
+assert.ok(sql.includes('enable row level security'));
+assert.ok(sql.includes('revoke all on public.craftrace_live_rooms,public.craftrace_live_packets from public,anon,authenticated'));
+assert.ok(sql.includes('on conflict(room_id,sender_id,client_seq) do nothing'));
+assert.ok(adapter.includes('activateRaceControlOnline()'));
+assert.ok(adapter.includes('crypto.getRandomValues'));
+assert.ok(lobby.includes('data-test-race'));
+assert.ok(lobby.includes("transport.send('start'"));
+assert.ok(lobby.includes('localId!==room.host_id'));
+assert.ok(race.includes('attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId)'));
+assert.ok(bridge.includes('RemotePilotInterpolator'));
+assert.ok(sql.includes("'server_now_ms',floor(extract(epoch from clock_timestamp())*1000)::bigint"));
+assert.ok(lobby.includes('startAt=Math.ceil((transport.serverNow()+12000)'));
+assert.ok(race.includes('this._crafRaceLiveStartAt'));
+assert.ok(adapter.includes('serverOffsetMs'));
+assert.ok(bridge.includes('takeLiveSession(roomId)'));
+assert.ok(lobby.includes('handoffLiveSession(room,transport'));
+assert.ok(session.includes('pending={room,transport,identity}'));
+assert.doesNotMatch(sql,/slotrace_live_rooms|drop table|truncate table/i);
+console.log('PASS CrafRace LIVE static RPC and race wiring checks');

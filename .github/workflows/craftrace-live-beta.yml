@@ -1,0 +1,30 @@
+name: CrafRace LIVE beta checks
+on:
+  push:
+    branches:
+      - feature/craftrace-live-two-player-beta
+  workflow_dispatch:
+jobs:
+  protocol-and-wiring:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm ci
+      - name: Development build
+        run: npm run build
+      - name: Protocol smoke test
+        run: node scripts/craftrace-live-protocol-smoke.mjs
+      - name: RPC and race wiring smoke test
+        run: node scripts/craftrace-live-rpc-smoke.mjs
+      - name: JavaScript syntax checks
+        run: |
+          node --check src/game/online/craftraceLiveProtocol.js
+          node --check src/game/online/craftraceLiveTransport.js
+          node --check src/game/online/craftraceLiveRaceBridge.js
+          node --check src/game/ui/craftraceLiveLobby.js
+          node --check src/game/scenes/RaceScene.js

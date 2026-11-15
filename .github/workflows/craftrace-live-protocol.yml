@@ -1,0 +1,42 @@
+name: CrafRace LIVE DEV · protocolo seguro
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/game/online/craftraceLiveProtocol.js'
+      - 'src/game/online/craftraceLiveRaceModel.js'
+      - 'scripts/craftrace-live-race-model-smoke.mjs'
+      - 'src/game/online/craftraceLiveTransport.js'
+      - 'src/game/ui/craftraceLiveLobby.js'
+      - 'src/game/ui/craftraceLiveLobby.css'
+      - 'src/game/ui/LobbyDomUi.js'
+      - 'supabase/migrations/20261115_038_craftrace_live_rpc_beta.sql'
+      - 'scripts/craftrace-live-rpc-smoke.mjs'
+      - 'scripts/craftrace-live-protocol-smoke.mjs'
+      - 'docs/CRAFTRACE_LIVE_BETA.md'
+      - '.github/workflows/craftrace-live-protocol.yml'
+  push:
+    branches: [feature/craftrace-live-two-player-beta]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-protocol:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Extraer código de CrafRace
+        uses: actions/checkout@v4
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar protocolo de dos pilotos
+        run: |
+          node --check src/game/online/craftraceLiveProtocol.js
+          node scripts/craftrace-live-protocol-smoke.mjs
+          node scripts/craftrace-live-rpc-smoke.mjs
+          node scripts/craftrace-live-race-model-smoke.mjs
+          node --check src/game/online/craftraceLiveRaceModel.js
+          node --check src/game/online/craftraceLiveTransport.js
+          node --check src/game/ui/craftraceLiveLobby.js
