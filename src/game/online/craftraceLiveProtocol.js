@@ -18,7 +18,7 @@ export function acceptLivePacket(p,{roomId,from,lastSeq=0,heat=1,generation=1}={
   !p.payload||typeof p.payload!=='object'||Array.isArray(p.payload))return false;
  const q=p.payload;
  switch(p.type){
- case 'hello':case 'ready':return slug(q.trackId)&&int(q.physicsVersion,1,10000);
+ case 'hello':case 'ready':return slug(q.trackId)&&int(q.physicsVersion,1,10000)&&int(q.laps,1,30)&&['forward','reverse'].includes(q.direction);
  case 'start':return int(q.countdownMs,1000,15000)&&typeof q.restart==='boolean';
  case 'position':return num(q.x,-100000,100000)&&num(q.y,-100000,100000)&&num(q.angle,-7,7)&&num(q.speed,0,200000)&&int(q.lap,0,31)&&int(q.tick,0,2147483647);
  case 'finish':return int(q.elapsedMs,1000,7200000)&&int(q.laps,1,30)&&Array.isArray(q.lapTimes)&&q.lapTimes.length===q.laps&&q.lapTimes.every(n=>int(n,500,7200000))&&Math.abs(q.lapTimes.reduce((a,b)=>a+b,0)-q.elapsedMs)<=3000;
