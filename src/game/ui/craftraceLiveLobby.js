@@ -1,6 +1,7 @@
 // DEV-only CrafRace LIVE transport laboratory; no race simulation is connected.
 import {createLiveRoom,joinLiveRoom,CrafRaceLiveTransport} from '../online/craftraceLiveTransport.js';
 import {chatReady} from '../online/craftraceLiveProtocol.js';
+import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import './craftraceLiveLobby.css';
 export function openCrafRaceLiveLobby(scene){
  if(document.getElementById('cr-live-lab'))return;
@@ -26,10 +27,10 @@ export function openCrafRaceLiveLobby(scene){
   }catch(e){say(e.message||'Error de conexión');}
   finally{busy=false;if(!closed)$('[data-create]').disabled=$('[data-join]').disabled=false;}
  }
- $('[data-create]').addEventListener('click',()=>void connect(()=>createLiveRoom({trackId:scene?.selectedTrackKey||'track01',carId:scene?.selectedCarId||'avenue_gripline',laps:3,physicsVersion:1,direction:'forward'})));
+ $('[data-create]').addEventListener('click',()=>void connect(()=>createLiveRoom({trackId:selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage),carId:scene?.selectedCarId||'avenir_gripline',laps:3,physicsVersion:1,direction:'forward'})));
  $('[data-join]').addEventListener('click',()=>void connect(()=>joinLiveRoom($('[data-code]').value)));
  $('[data-ready]').addEventListener('click',async()=>{if(!transport||readySent)return;$('[data-ready]').disabled=true;
-  try{await transport.send('ready',{trackId:room.track_id,physicsVersion:room.physics_version});readySent=true;say('Preparado. Carrera aún no integrada.');}
+  try{await transport.send('ready',{trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps});readySent=true;say('Preparado. Carrera aún no integrada.');}
   catch(e){say(e.message);$('[data-ready]').disabled=false;}
  });
  $('[data-send]').addEventListener('click',async()=>{
