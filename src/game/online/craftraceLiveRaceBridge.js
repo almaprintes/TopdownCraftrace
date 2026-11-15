@@ -24,7 +24,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
   const position=interpolation.at(now);
   if(position){remote.setPosition(position.x,position.y).setRotation(position.angle+Math.PI/2).setAlpha(position.stale?0.25:0.68).setVisible(true);
    label.setPosition(position.x,position.y-45).setVisible(true);}
-  if(scene.timing?.started&&now-lastSent>=150&&scene.carBody?.active){
+  if(scene._raceStarted&&now-lastSent>=150&&scene.carBody?.active){
    lastSent=now;
    const body=scene.carBody;
    const speed=Math.max(0,Math.hypot(body.body?.velocity?.x||0,body.body?.velocity?.y||0));
