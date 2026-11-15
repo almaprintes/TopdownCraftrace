@@ -101,6 +101,11 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   googleButton.type='button';googleButton.textContent='CONTINUAR CON GOOGLE';
   googleButton.dataset.action='google';googleButton.hidden=!googleWebAvailable();
   root.querySelector('.tdr-cloud-main-actions')?.prepend(googleButton);
+  const googleLoginButton=document.createElement('button');
+  googleLoginButton.type='button';googleLoginButton.dataset.action='google-login';
+  googleLoginButton.textContent='INICIAR SESIÓN CON GOOGLE';
+  googleLoginButton.hidden=!googleWebAvailable();
+  root.querySelector('.tdr-cloud-main-actions')?.prepend(googleLoginButton);
   const appleButton=document.createElement('button');
   appleButton.type='button';appleButton.textContent='CONTINUAR CON APPLE';
   appleButton.dataset.action='apple';appleButton.hidden=!appleWebAvailable();
@@ -205,7 +210,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   };
   const showLocalAccount=()=>{
     account=null;backup=null;setStudioAvatar(null,'');studioAvatarSelectedId=null;avatarChoiceButton.hidden=true;hideAvatarPicker();
-    googleButton.hidden=!googleWebAvailable();
+    googleButton.hidden=!googleWebAvailable();googleLoginButton.hidden=!googleWebAvailable();
     appleButton.hidden=!appleWebAvailable();socialSave.hidden=true;
     const local=inspectLocalProgress();
     root.querySelector('[data-cloud-pilot]').textContent=local.pilotName||'MI PILOTO';
@@ -225,7 +230,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   };
   const showConnectionError=(error)=>{
     creatorBadge.hidden=true;studioBadge.hidden=true;idLine.textContent='Identidad sin comprobar';avatarChoiceButton.hidden=true;hideAvatarPicker();
-    googleButton.hidden=!googleWebAvailable()||!savedGoogleWebIdentity();
+    googleButton.hidden=!googleWebAvailable()||!savedGoogleWebIdentity();googleLoginButton.hidden=!googleWebAvailable();
     appleButton.hidden=!appleWebAvailable();socialSave.hidden=true;
     // Keep local progress visible even when Auth or cloud storage is offline.
     let local=null;
@@ -256,6 +261,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
     account=await currentRaceControlAccount();
     legacyAccess.hidden=!account.email||account.socialProviders?.includes('google');
     googleButton.hidden=!googleWebAvailable()||account.socialProviders?.includes('google');
+    googleLoginButton.hidden=!googleWebAvailable();
     appleButton.hidden=!appleWebAvailable()||account.socialProviders?.includes('apple');
     googleButton.textContent='VINCULAR GOOGLE · CONSERVAR MI ID';
     appleButton.textContent='VINCULAR APPLE · CONSERVAR MI ID';
@@ -443,7 +449,7 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
   });
   root.querySelectorAll('[data-action="back"]').forEach(b=>b.addEventListener('click',()=>setView('home')));
   root.querySelector('[data-action="protect"]').addEventListener('click',()=>setView(account.emailConfirmed?'password':account.pendingEmail?'verify':'link'));
-  root.querySelector('[data-action="login-open"]').addEventListener('click',()=>googleButton.click());
+  root.querySelector('[data-action="login-open"]').addEventListener('click',()=>googleLoginButton.click());
   localContinue.addEventListener('click',()=>{
     const oldId=localContinue.dataset.userId;
     if(!oldId)return;
@@ -453,6 +459,11 @@ export function openCloudAccountUi({host=null,initialNotice=''}={}){
       return '✅ Partida local conservada. Tu acceso online anterior ya no está vinculado a este móvil.';
     });
   });
+  googleLoginButton.addEventListener('click',()=>run(async()=>{
+    if(!accountConfirm('INICIAR SESIÓN CON GOOGLE\\n\\nAccederás a tu cuenta CraftRace Studio existente, también utilizada en SlotRace. La identidad online actual podrá cambiar. Tu partida LOCAL, monedas y coches no se borrarán ni se fusionarán. Para recuperar una copia online tendrás que confirmarlo después. ¿Continuar?'))return 'Inicio de sesión cancelado.';
+    await startGoogleWebSignIn({mode:'login'});
+    return 'Abriendo Google para iniciar sesión…';
+  }));
   googleButton.addEventListener('click',()=>run(async()=>{
     if(!accountConfirm('CONTINUAR CON GOOGLE\n\nGoogle verificará tu cuenta. Si ya tienes identidad online, se vinculará manteniendo el mismo ID. Tu nick, monedas y coches permanecen en este dispositivo. No subiremos ni recuperaremos progreso sin otra confirmación. ¿Continuar?'))return 'Acceso cancelado.';
     await startGoogleWebSignIn();
