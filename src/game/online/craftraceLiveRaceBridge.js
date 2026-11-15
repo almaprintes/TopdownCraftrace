@@ -1,6 +1,6 @@
 // DEV-only live visual bridge. Remote pilot never participates in local collisions.
 import {RemotePilotInterpolator} from './craftraceLiveRaceModel.js';
-import {CrafRaceLiveTransport} from './craftraceLiveTransport.js';
+import {takeLiveSession} from './craftraceLiveSession.js';
 const validRoom=x=>typeof x==='string'&&/^[0-9a-f-]{36}$/i.test(x);
 export function attachCrafRaceLivePilot(scene,roomId){
  if(!validRoom(roomId)||!scene?.carBody||!scene?.add)return null;
@@ -9,11 +9,16 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const remote=scene.add.container(scene.carBody.x,scene.carBody.y,[remoteSprite]).setDepth(29).setVisible(false);
  const label=scene.add.text(0,-45,'RIVAL · LIVE',{fontFamily:'system-ui',fontSize:'14px',color:'#ffffff',backgroundColor:'#16283c',padding:{x:5,y:3}}).setOrigin(0.5).setDepth(31).setVisible(false);
  let lastSent=0,stopped=false;
- const transport=new CrafRaceLiveTransport(roomId,{
-  onPacket:p=>{if(p.type==='position')interpolation.push({...p.payload,heat:p.heat,generation:p.generation},performance.now());},
-  onError:e=>{if(!stopped)console.warn('[CrafRace LIVE DEV]',e.message);}
- });
- transport.start();
+ const session=takeLiveSession(roomId);
+ if(!session){remote.destroy();label.destroy();return null;}
+ const {transport,room,identity}=session;
+ const rivalId=identity.id===room.host_id?room.guest_id:room.host_id;
+ transport.onPacket=p=>{
+  if(p.from!==rivalId)return;
+  if(p.type==='position')interpolation.push({...p.payload,heat:p.heat,generation:p.generation},performance.now());
+ };
+ transport.onState=d=>{if(d.room_id!==roomId||d.host_id!==room.host_id)transport.stop();};
+ transport.onError=e=>{if(!stopped)console.warn('[CrafRace LIVE DEV]',e.message);};
  const update=now=>{
   if(stopped)return;
   const position=interpolation.at(now);
