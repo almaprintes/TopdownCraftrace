@@ -59,3 +59,34 @@
 .tdr-paddock__studio-quick small{font-size:clamp(11px,1.1vw,13px);color:#e3cad0;line-height:1.35}
 .tdr-paddock__studio-quick span:last-child{font-size:30px;color:#ffd29a}
 @media(max-width:450px){.tdr-paddock__studio-quick{min-height:70px;padding:11px}.tdr-paddock__studio-quick svg{width:30px;height:30px}}
+
+/* Admin Hub: nine compact working shortcuts, exactly three columns and rows.
+   The tenth, legacy-tools entry remains below rather than disappearing. */
+.tdr-paddock__dashboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(86px,auto));gap:clamp(6px,.85vw,12px)}
+.tdr-paddock__dashboard .tdr-paddock__tile,
+.tdr-paddock__dashboard .tdr-paddock__aux{min-height:86px;height:clamp(86px,14vh,118px);border-radius:12px;overflow:hidden}
+.tdr-paddock__dashboard .tdr-paddock__tile{padding:12px;display:flex;align-items:center}
+.tdr-paddock__dashboard .tdr-paddock__photo{height:100%;opacity:.25;object-fit:cover}
+.tdr-paddock__dashboard .tdr-paddock__tile:before{background:linear-gradient(90deg,rgba(2,10,20,.95),rgba(4,16,28,.65))}
+.tdr-paddock__dashboard .tdr-paddock__tile-icon,
+.tdr-paddock__dashboard .tdr-paddock__tile-points,
+.tdr-paddock__dashboard .tdr-paddock__tile-number{display:none}
+.tdr-paddock__dashboard .tdr-paddock__tile-content{position:relative;left:auto;right:auto;bottom:auto;gap:6px;padding-right:20px}
+.tdr-paddock__dashboard .tdr-paddock__tile-name{font-size:clamp(14px,1.5vw,20px);line-height:1.1}
+.tdr-paddock__dashboard .tdr-paddock__tile-desc{font-size:clamp(10px,.95vw,13px);line-height:1.25}
+.tdr-paddock__dashboard .tdr-paddock__tile-chevron{top:50%;right:8px;transform:translateY(-50%);width:26px;height:26px}
+.tdr-paddock__dashboard .tdr-paddock__aux{padding:10px;gap:9px}
+.tdr-paddock__dashboard .tdr-paddock__aux-icon{width:34px;height:34px;border-radius:9px}
+.tdr-paddock__dashboard .tdr-paddock__aux-name{font-size:clamp(11px,1.1vw,15px);line-height:1.1}
+.tdr-paddock__dashboard .tdr-paddock__aux-desc{font-size:clamp(9px,.8vw,11px);line-height:1.25}
+.tdr-paddock__dashboard .tdr-paddock__aux-arrow{font-size:22px}
+.tdr-paddock__secondary{display:block;margin-top:8px}
+.tdr-paddock__secondary .tdr-paddock__aux{min-height:54px;padding:8px 12px}
+@media(max-width:680px){
+ .tdr-paddock__dashboard{gap:5px}
+ .tdr-paddock__dashboard .tdr-paddock__tile,.tdr-paddock__dashboard .tdr-paddock__aux{min-height:80px;height:96px;padding:7px}
+ .tdr-paddock__dashboard .tdr-paddock__tile-name{font-size:11px}
+ .tdr-paddock__dashboard .tdr-paddock__tile-desc,.tdr-paddock__dashboard .tdr-paddock__aux-desc{font-size:9px}
+ .tdr-paddock__dashboard .tdr-paddock__aux-icon,.tdr-paddock__dashboard .tdr-paddock__aux-arrow{display:none}
+ .tdr-paddock__dashboard .tdr-paddock__aux-name{font-size:10px}
+}
