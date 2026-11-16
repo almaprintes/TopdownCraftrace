@@ -506,6 +506,7 @@ else this._ttProg.idx = startIdx;
 init(data) {
     this._crafRaceLiveRoomId=(!IS_PROD_BUILD&&data?.liveRoomId)||null;
     this._crafRaceLiveStartAt=Number.isFinite(data?.liveStartAt)?data.liveStartAt:null;
+    this._crafRaceLiveGridSlot=this._crafRaceLiveRoomId?(data?.liveGridSlot===1?1:0):null;
     // DEV driving A/B: choose once at race start. B is a local practice mode;
     // online/competitive variants never receive altered grip physics.
     this._physicsABMode='A';
@@ -1171,7 +1172,23 @@ const gridSpawns = Array.isArray(t01?.grid?.slots)
       .map((_, i) => this._getGridSpawnSlot(t01, i))
       .filter(Boolean)
   : [];
-const spawnSlot = this._getGridSpawnSlot(t01, 0);
+// Online grid is calculated without interrupting scene initialization.
+const onlineGrid=this._crafRaceLiveRoomId;
+const slot0=this._getGridSpawnSlot(t01,0);
+const slot1=this._getGridSpawnSlot(t01,1);
+const validGridSlot=s=>s&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r);
+const baseGrid=validGridSlot(slot0)?slot0:{x:Number(t01.start.x),y:Number(t01.start.y),r:Number(t01.start.r)};
+const gridWidth=Number(t01.trackWidth);
+const carSize=Number(t01.carScale)||1;
+const minSideClearance=2*14*carSize+16;
+const minLongClearance=2*48*carSize+28;
+const authoredSecond=validGridSlot(slot1)&&Math.hypot(slot1.x-baseGrid.x,slot1.y-baseGrid.y)>=minSideClearance;
+const canParallel=Number.isFinite(gridWidth)&&gridWidth>=minSideClearance*2+16;
+const normalX=-Math.sin(baseGrid.r),normalY=Math.cos(baseGrid.r);
+const candidateSecond=authoredSecond?slot1:canParallel
+ ? {x:baseGrid.x+normalX*minSideClearance,y:baseGrid.y+normalY*minSideClearance,r:baseGrid.r}
+ : {x:baseGrid.x-Math.cos(baseGrid.r)*minLongClearance,y:baseGrid.y-Math.sin(baseGrid.r)*minLongClearance,r:baseGrid.r};
+const spawnSlot=onlineGrid?(this._crafRaceLiveGridSlot===1?candidateSecond:baseGrid):slot0;
 const GRID_SPAWN_BACK = 44; // antes 18
 
 const spawn = spawnSlot
@@ -1293,7 +1310,7 @@ const aiSkinPool = Object.values(CAR_SPECS).filter((s) =>
   s.id !== specFinal.id && hasPublishedCarArt(s.id)
 );
   this.gridCars = [];
-const MAX_GRID_CARS = gridSpawns.length;
+const MAX_GRID_CARS = onlineGrid?0:gridSpawns.length;
 
 for (let i = 1; i < MAX_GRID_CARS; i++) {
   const aiSpawn0 = gridSpawns[i];
