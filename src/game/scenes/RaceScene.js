@@ -3257,6 +3257,20 @@ this.time.delayedCall(0, () => this._reflowStartModal());
 this.time.delayedCall(120, () => this._reflowStartModal());    
     // El semáforo se dispara desde update() cuando la ventana iOS de salida ya está lista.
 this._startAutoFired = false;
+if(this._crafRaceLiveRoomId){
+ this._crafRaceLiveReadyRequested=false;
+ this._liveReadyButton=this.add.text(0,0,'ARRANCAR MOTOR',{fontFamily:'system-ui',fontSize:'20px',color:'#ffffff',backgroundColor:'#2452a0',padding:{x:16,y:10}}).setOrigin(0.5).setInteractive({useHandCursor:true});
+ this._liveReadyButton.on('pointerdown',()=>{
+  if(this._crafRaceLiveReadyRequested)return;
+  this._crafRaceLiveReadyRequested=true;
+  this._liveReadyButton.setVisible(false);
+  if(this._startHint)this._startHint.setText('Esperando al otro jugador…');
+ });
+ this._startModal.add(this._liveReadyButton);
+ this._liveReadyButton.setPosition(this.scale.width/2,this.scale.height*0.78);
+ this._startHint?.setText('Pulsa ARRANCAR MOTOR cuando estés listo');
+}
+
 // 12) Volver (si testMode => editor, si no => menú)
 if (this.keys?.back) {
   this.keys.back.on('down', () => {
@@ -3584,8 +3598,12 @@ this._prevThrottleDown = throttleDown;
 //-------------------//
 //-------------------//
     // START LIGHTS: arrancar automáticamente 1 vez
+if(this._crafRaceLiveRoomId&&this._startState==='COUNTDOWN'&&!this._crafRaceLiveStartAt){
+ if(this._startStatus)this._startStatus.setText(this._crafRaceLiveReadyRequested?'ESPERANDO AL OTRO JUGADOR':'ESPERANDO TU CONFIRMACIÓN');
+}
 if(this._crafRaceLiveRoomId&&this._crafRaceLiveStartAt&&this._startState==='COUNTDOWN'){
   const left=Math.max(0,this._crafRaceLiveStartAt-(Date.now()+(this._crafRaceLiveBridge?.serverOffsetMs||0)));
+  if(this._liveReadyButton)this._liveReadyButton.setVisible(false);
   // Online lights are a pure function of the shared server deadline, never local timers.
   // Six lamps illuminate at 600 ms intervals during the final 3.6 seconds.
   const lit=left>0?Math.max(0,Math.min(6,6-Math.ceil(left/600))):0;

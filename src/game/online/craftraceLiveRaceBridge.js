@@ -15,6 +15,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const label=scene.add.text(0,-45,'RIVAL · LIVE',{fontFamily:'system-ui',fontSize:'14px',color:'#ffffff',backgroundColor:'#16283c',padding:{x:5,y:3}}).setOrigin(0.5).setDepth(31).setVisible(false);
  let lastSent=0,stopped=false,positionPending=false,remoteAppearance=null;
  let lastRemotePacketAt=0,remotePacketGapMs=350,lastRenderedAt=0;
+ let ownReady=false,otherReady=false,startSending=false,readySending=false;
  const ownCarId=CAR_SPECS[scene.carId]?.id||CAR_SPECS[scene.baseSpec?.id]?.id||'stock';
  const ownSkinId=getEquippedCarSkin(ownCarId,{spec:CAR_SPECS[ownCarId],dev:true}).id;
  const loadAppearance=(carId,skinId)=>{
@@ -46,6 +47,8 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const rivalId=identity.id===room.host_id?room.guest_id:room.host_id;
  transport.onPacket=p=>{
   if(p.from!==rivalId)return;
+  if(p.type==='ready'&&p.payload?.trackId===room.track_id&&p.payload?.physicsVersion===room.physics_version&&p.payload?.direction===room.direction&&p.payload?.laps===room.laps)otherReady=true;
+  if(p.type==='start'&&p.payload?.restart===true&&identity.id!==room.host_id&&Number.isFinite(p.payload.startAt))scene._crafRaceLiveStartAt=p.payload.startAt;
   if(p.type==='position'){
    if(typeof p.payload?.carId==='string'&&typeof p.payload?.skinId==='string')loadAppearance(p.payload.carId,p.payload.skinId);
    const receivedAt=performance.now();
@@ -64,6 +67,19 @@ export function attachCrafRaceLivePilot(scene,roomId){
  transport.onError=e=>{if(!stopped)console.warn('[CrafRace LIVE DEV]',e.message);};
  const update=now=>{
   if(stopped)return;
+  if(scene._crafRaceLiveReadyRequested&&!ownReady&&!readySending&&(!scene._iosStaticTrackRender||scene._iosStaticTrackInitialReady)){
+   readySending=true;
+   void transport.send('ready',{trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps})
+    .then(()=>{ownReady=true;}).catch(e=>console.warn('[CrafRace LIVE] ready:',e.message))
+    .finally(()=>{readySending=false;});
+  }
+  if(ownReady&&otherReady&&!startSending&&identity.id===room.host_id&&transport.clockSamples>0){
+   startSending=true;
+   const startAt=Math.ceil((transport.serverNow()+6000)/1000)*1000;
+   void transport.send('start',{countdownMs:6000,restart:true,startAt})
+    .then(()=>{scene._crafRaceLiveStartAt=startAt;})
+    .catch(e=>{startSending=false;console.warn('[CrafRace LIVE] start:',e.message);});
+  }
   const position=interpolation.at(now);
   if(position){
    const dt=lastRenderedAt?Math.max(0,Math.min(100,now-lastRenderedAt)):16;
@@ -91,5 +107,5 @@ export function attachCrafRaceLivePilot(scene,roomId){
  };
  const stop=()=>{if(stopped)return;stopped=true;transport.stop();remote.destroy();label.destroy();};
  scene.events.once('shutdown',stop);
- return {update,stop,get serverOffsetMs(){return transport.serverOffsetMs;}};
+ return {update,stop,get ownReady(){return ownReady;},get otherReady(){return otherReady;},get serverOffsetMs(){return transport.serverOffsetMs;}};
 }
