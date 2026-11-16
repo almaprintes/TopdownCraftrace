@@ -504,6 +504,8 @@ else this._ttProg.idx = startIdx;
     };
   }
 init(data) {
+    this._raceEntryData={...(data||{})};
+    this._importJsonReady=Boolean(data?._importJsonReady);
     this._crafRaceLiveOnlineIntent=data?.gameMode==='online'&&Boolean(data?.liveRoomId);
     this._crafRaceLiveRoomId=(!IS_PROD_BUILD&&data?.liveRoomId)||null;
     this._crafRaceLiveStartAt=Number.isFinite(data?.liveStartAt)?data.liveStartAt:null;
@@ -1044,7 +1046,7 @@ if (typeof this.trackKey === 'string' && this.trackKey.startsWith('import:')) {
 
         this.cache.json.add(jsonKey, data);
         this._importJsonReady = true;
-        this.scene.restart({ trackKey: `import:${slug}` });
+        this.scene.restart({...this._raceEntryData,trackKey:`import:${slug}`,_importJsonReady:true});
       })
       .catch((err) => {
         console.error('[RaceScene] import fetch error:', err);
