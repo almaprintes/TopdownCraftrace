@@ -504,6 +504,7 @@ else this._ttProg.idx = startIdx;
     };
   }
 init(data) {
+    this._crafRaceLiveOnlineIntent=data?.gameMode==='online'&&Boolean(data?.liveRoomId);
     this._crafRaceLiveRoomId=(!IS_PROD_BUILD&&data?.liveRoomId)||null;
     this._crafRaceLiveStartAt=Number.isFinite(data?.liveStartAt)?data.liveStartAt:null;
     this._crafRaceLiveGridSlot=this._crafRaceLiveRoomId?(data?.liveGridSlot===1?1:0):null;
@@ -3598,10 +3599,10 @@ this._prevThrottleDown = throttleDown;
 //-------------------//
 //-------------------//
     // START LIGHTS: arrancar automáticamente 1 vez
-if(this._crafRaceLiveRoomId&&this._startState==='COUNTDOWN'&&!this._crafRaceLiveStartAt){
+if(this._crafRaceLiveOnlineIntent&&this._startState==='COUNTDOWN'&&!this._crafRaceLiveStartAt){
  if(this._startStatus)this._startStatus.setText(this._crafRaceLiveReadyRequested?'ESPERANDO AL OTRO JUGADOR':'ESPERANDO TU CONFIRMACIÓN');
 }
-if(this._crafRaceLiveRoomId&&this._crafRaceLiveStartAt&&this._startState==='COUNTDOWN'){
+if(this._crafRaceLiveOnlineIntent&&this._crafRaceLiveStartAt&&this._crafRaceLiveReadyRequested&&this._crafRaceLiveBridge?.ownReady&&this._crafRaceLiveBridge?.otherReady&&this._startState==='COUNTDOWN'){
   const left=Math.max(0,this._crafRaceLiveStartAt-(Date.now()+(this._crafRaceLiveBridge?.serverOffsetMs||0)));
   if(this._liveReadyButton)this._liveReadyButton.setVisible(false);
   // Online lights are a pure function of the shared server deadline, never local timers.
@@ -3622,7 +3623,7 @@ if(this._crafRaceLiveRoomId&&this._crafRaceLiveStartAt&&this._startState==='COUN
    this.lapStartTick=this.simTick;
   }
 }
-if (!this._crafRaceLiveRoomId && !this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
+if (!this._crafRaceLiveOnlineIntent && !this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
   this._startAutoFired = true;
 
   if (this._startHint) this._startHint.setText('Mantente listo...');
@@ -3644,6 +3645,7 @@ if (!this._crafRaceLiveRoomId && !this._startAutoFired && this._startState === '
   const randMs = 800 + Math.floor(Math.random() * 700);
 
   this.time.delayedCall(stepMs * 6 + randMs, () => {
+    if(this._crafRaceLiveOnlineIntent)return;
     this._startState = 'GO';
 
     if (this._startAsset) this._startAsset.setTexture('start_base');
@@ -3665,6 +3667,7 @@ if (!this._crafRaceLiveRoomId && !this._startAutoFired && this._startState === '
     }
 
     this.time.delayedCall(350, () => {
+      if(this._crafRaceLiveOnlineIntent)return;
       this._startState = 'RACING';
       this._raceStarted = true;
       if (this._startModal) this._startModal.setVisible(false);
