@@ -1172,23 +1172,30 @@ const gridSpawns = Array.isArray(t01?.grid?.slots)
       .map((_, i) => this._getGridSpawnSlot(t01, i))
       .filter(Boolean)
   : [];
-// Online grid is calculated without interrupting scene initialization.
-const onlineGrid=this._crafRaceLiveRoomId;
+// LIVE: both clients derive the same grid from the track's authored width and centerline.
+// In a parallel start, the three free gaps (edge/car, car/car, car/edge)
+// are equal after accounting for the physical widths of both cars.
+const onlineGrid=Boolean(this._crafRaceLiveRoomId);
 const slot0=this._getGridSpawnSlot(t01,0);
-const slot1=this._getGridSpawnSlot(t01,1);
 const validGridSlot=s=>s&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r);
 const baseGrid=validGridSlot(slot0)?slot0:{x:Number(t01.start.x),y:Number(t01.start.y),r:Number(t01.start.r)};
-const gridWidth=Number(t01.trackWidth);
-const carSize=Number(t01.carScale)||1;
-const minSideClearance=2*14*carSize+16;
-const minLongClearance=2*48*carSize+28;
-const authoredSecond=validGridSlot(slot1)&&Math.hypot(slot1.x-baseGrid.x,slot1.y-baseGrid.y)>=minSideClearance;
-const canParallel=Number.isFinite(gridWidth)&&gridWidth>=minSideClearance*2+16;
-const normalX=-Math.sin(baseGrid.r),normalY=Math.cos(baseGrid.r);
-const candidateSecond=authoredSecond?slot1:canParallel
- ? {x:baseGrid.x+normalX*minSideClearance,y:baseGrid.y+normalY*minSideClearance,r:baseGrid.r}
- : {x:baseGrid.x-Math.cos(baseGrid.r)*minLongClearance,y:baseGrid.y-Math.sin(baseGrid.r)*minLongClearance,r:baseGrid.r};
-const spawnSlot=onlineGrid?(this._crafRaceLiveGridSlot===1?candidateSecond:baseGrid):slot0;
+const trackWidth=Number(t01.trackWidth);
+const trackScale=Math.max(0.35,Math.min(1.5,Number(t01.carScale)||1));
+const carWidth=48*1.35*trackScale;
+const carLength=96*1.35*trackScale;
+const safetyGap=Math.max(12,carWidth*0.18);
+const freeGap=(trackWidth-2*carWidth)/3;
+const canParallel=Number.isFinite(trackWidth)&&freeGap>=safetyGap;
+const nx=-Math.sin(baseGrid.r),ny=Math.cos(baseGrid.r);
+const parallelOffset=(carWidth+freeGap)/2;
+const longitudinalGap=carLength+Math.max(24,carLength*0.25);
+const gridPositions=canParallel
+ ? [{x:baseGrid.x-nx*parallelOffset,y:baseGrid.y-ny*parallelOffset,r:baseGrid.r},
+    {x:baseGrid.x+nx*parallelOffset,y:baseGrid.y+ny*parallelOffset,r:baseGrid.r}]
+ : [{...baseGrid},
+    {x:baseGrid.x-Math.cos(baseGrid.r)*longitudinalGap,
+     y:baseGrid.y-Math.sin(baseGrid.r)*longitudinalGap,r:baseGrid.r}];
+const spawnSlot=onlineGrid?gridPositions[this._crafRaceLiveGridSlot===1?1:0]:slot0;
 const GRID_SPAWN_BACK = 44; // antes 18
 
 const spawn = spawnSlot
