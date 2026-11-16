@@ -77,7 +77,9 @@ export function attachCrafRaceLivePilot(scene,roomId){
    remote.setPosition(x,y).setRotation(remote.visible?remote.rotation+angleDelta*blend:targetAngle).setAlpha(1).setVisible(true);
    label.setPosition(x,y-45).setVisible(true);
   }
-  if(scene._raceStarted&&!positionPending&&now-lastSent>=150&&scene.carBody?.active){
+  // Publish the stationary grid position before the countdown ends, so both pilots are visible.
+  // Continue sending at the existing cadence during the race; never move a local car remotely.
+  if(!positionPending&&now-lastSent>=(scene._raceStarted?150:500)&&scene.carBody?.active){
    lastSent=now;
    const body=scene.carBody;
    const speed=Math.max(0,Math.hypot(body.body?.velocity?.x||0,body.body?.velocity?.y||0));
