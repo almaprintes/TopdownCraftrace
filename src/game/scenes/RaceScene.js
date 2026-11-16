@@ -506,7 +506,6 @@ else this._ttProg.idx = startIdx;
 init(data) {
     this._crafRaceLiveRoomId=(!IS_PROD_BUILD&&data?.liveRoomId)||null;
     this._crafRaceLiveStartAt=Number.isFinite(data?.liveStartAt)?data.liveStartAt:null;
-    this._crafRaceLiveGridSlot=this._crafRaceLiveRoomId?(data?.liveGridSlot===1?1:0):null;
     // DEV driving A/B: choose once at race start. B is a local practice mode;
     // online/competitive variants never receive altered grip physics.
     this._physicsABMode='A';
@@ -1172,17 +1171,7 @@ const gridSpawns = Array.isArray(t01?.grid?.slots)
       .map((_, i) => this._getGridSpawnSlot(t01, i))
       .filter(Boolean)
   : [];
-const liveGridSlot=this._crafRaceLiveRoomId?this._crafRaceLiveGridSlot:null;
-const spawnSlot = this._getGridSpawnSlot(t01,liveGridSlot??0);
-if(liveGridSlot!==null){
- const otherSlot=this._getGridSpawnSlot(t01,liveGridSlot===0?1:0);
- const valid=s=>s&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r);
- if(!valid(spawnSlot)||!valid(otherSlot)||Math.hypot(spawnSlot.x-otherSlot.x,spawnSlot.y-otherSlot.y)<30){
-  console.error('[CrafRace LIVE] Invalid two-car grid: cannot safely start online race');
-  this.scene.start('menu');
-  return;
- }
-}
+const spawnSlot = this._getGridSpawnSlot(t01, 0);
 const GRID_SPAWN_BACK = 44; // antes 18
 
 const spawn = spawnSlot
@@ -1304,7 +1293,7 @@ const aiSkinPool = Object.values(CAR_SPECS).filter((s) =>
   s.id !== specFinal.id && hasPublishedCarArt(s.id)
 );
   this.gridCars = [];
-const MAX_GRID_CARS = this._crafRaceLiveRoomId?0:gridSpawns.length;
+const MAX_GRID_CARS = gridSpawns.length;
 
 for (let i = 1; i < MAX_GRID_CARS; i++) {
   const aiSpawn0 = gridSpawns[i];
