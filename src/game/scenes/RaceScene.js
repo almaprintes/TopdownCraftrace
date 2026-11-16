@@ -3586,7 +3586,17 @@ this._prevThrottleDown = throttleDown;
     // START LIGHTS: arrancar automáticamente 1 vez
 if(this._crafRaceLiveRoomId&&this._crafRaceLiveStartAt&&this._startState==='COUNTDOWN'){
   const left=Math.max(0,this._crafRaceLiveStartAt-(Date.now()+(this._crafRaceLiveBridge?.serverOffsetMs||0)));
-  if(this._startStatus)this._startStatus.setText(left>0?'LIVE · '+Math.ceil(left/1000):'GO!');
+  // Online lights are a pure function of the shared server deadline, never local timers.
+  // Six lamps illuminate at 600 ms intervals during the final 3.6 seconds.
+  const lit=left>0?Math.max(0,Math.min(6,6-Math.ceil(left/600))):0;
+  if(this._crafRaceLiveLastLit!==lit){
+   this._crafRaceLiveLastLit=lit;
+   if(this._startAsset)this._startAsset.setTexture(lit?'start_l'+lit:'start_base');
+  }
+  if(this._startStatus){
+   this._startStatus.setText(left>3600?'ESPERANDO SALIDA · '+Math.ceil(left/1000):left>0?'SEMÁFORO · '+(left/1000).toFixed(1):'GO!');
+   this._startStatus.setColor(left>0?'#ffffff':'#2bff88');
+  }
   if(left<=0&&(!this._iosStaticTrackRender||this._iosStaticTrackInitialReady)){
    this._startState='RACING';this._raceStarted=true;
    if(this._startModal)this._startModal.setVisible(false);
