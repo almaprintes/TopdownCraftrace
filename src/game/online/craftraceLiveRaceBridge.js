@@ -45,10 +45,30 @@ export function attachCrafRaceLivePilot(scene,roomId){
  if(!session){remote.destroy();label.destroy();return null;}
  const {transport,room,identity}=session;
  const rivalId=identity.id===room.host_id?room.guest_id:room.host_id;
+ const targetLaps=Math.max(1,Math.min(30,Number(room.laps)||3));
+ let raceStartClock=null,lastCompletedLap=0,lapTimes=[],localFinish=null,rivalFinish=null,finishSending=false;
+ const fmt=ms=>{if(!Number.isFinite(ms))return '—';const n=Math.max(0,Math.round(ms));return Math.floor(n/60000)+':'+String(Math.floor(n%60000/1000)).padStart(2,'0')+'.'+String(n%1000).padStart(3,'0');};
+ const results=document.createElement('section');
+ results.setAttribute('aria-live','polite');results.style.cssText='position:fixed;z-index:999999;inset:0;display:none;align-items:center;justify-content:center;background:#050d19cc;color:white;font:600 16px system-ui;padding:16px;box-sizing:border-box';
+ const panel=document.createElement('div');panel.style.cssText='background:#101d30;border:1px solid #4b789b;border-radius:18px;padding:24px;max-width:440px;width:100%;text-align:center;box-sizing:border-box';results.append(panel);document.body.append(results);
+ const showResults=()=>{
+  if(!localFinish)return;
+  results.style.display='flex';panel.replaceChildren();
+  const heading=document.createElement('h2');heading.textContent=rivalFinish?'RESULTADOS · CRAF RACE LIVE':'META · ESPERANDO AL RIVAL';panel.append(heading);
+  const intro=document.createElement('p');intro.textContent='Circuito: '+room.track_id+' · '+targetLaps+' vueltas';panel.append(intro);
+  const rows=[{name:'TÚ',result:localFinish},{name:'RIVAL',result:rivalFinish}];
+  if(rivalFinish)rows.sort((a,b)=>a.result.elapsedMs-b.result.elapsedMs);
+  const best=rivalFinish?Math.min(localFinish.elapsedMs,rivalFinish.elapsedMs):null;
+  for(const entry of rows){const p=document.createElement('p');p.style.cssText='padding:12px;border-top:1px solid #38506b;text-align:left';
+   p.textContent=entry.name+' · '+(entry.result?fmt(entry.result.elapsedMs)+' · mejor vuelta '+fmt(Math.min(...entry.result.lapTimes))+(best!==null?' · Δ +'+fmt(entry.result.elapsedMs-best):''):'En carrera…');panel.append(p);}
+  if(!rivalFinish){const note=document.createElement('p');note.textContent='Tu tiempo está cerrado. Esperando a que el otro piloto complete la carrera.';panel.append(note);}
+  const close=document.createElement('button');close.textContent='VOLVER AL MENÚ';close.style.cssText='margin-top:14px;padding:12px 20px;border-radius:10px;background:#245c86;color:white;border:1px solid #8ac8ed';close.onclick=()=>{results.remove();scene.scene.start('menu');};panel.append(close);
+ };
  transport.onPacket=p=>{
   if(p.from!==rivalId)return;
   if(p.type==='ready'&&p.payload?.phase==='grid'&&p.payload?.trackId===room.track_id&&p.payload?.physicsVersion===room.physics_version&&p.payload?.direction===room.direction&&p.payload?.laps===room.laps)otherReady=true;
   if(p.type==='start'&&p.payload?.restart===true&&p.from===room.host_id&&identity.id!==room.host_id&&ownReady&&otherReady&&Number.isFinite(p.payload.startAt))scene._crafRaceLiveStartAt=p.payload.startAt;
+  if(p.type==='finish'&&p.payload?.laps===targetLaps){rivalFinish=p.payload;showResults();}
   if(p.type==='position'){
    if(typeof p.payload?.carId==='string'&&typeof p.payload?.skinId==='string')loadAppearance(p.payload.carId,p.payload.skinId);
    const receivedAt=performance.now();
@@ -88,6 +108,30 @@ export function attachCrafRaceLivePilot(scene,roomId){
     .then(()=>{scene._crafRaceLiveStartAt=startAt;})
     .catch(e=>{startSending=false;console.warn('[CrafRace LIVE] start:',e.message);});
   }
+  if(scene._raceStarted&&raceStartClock===null)raceStartClock=performance.now();
+  if(raceStartClock!==null&&!localFinish){
+   const completed=Math.max(0,Math.floor(Number(scene.lapCount)||0));
+   if(completed>lastCompletedLap){
+    // A single update may not legitimately account for multiple timed laps.
+    if(completed===lastCompletedLap+1){
+     const elapsed=Math.round(performance.now()-raceStartClock);
+     const prior=lapTimes.reduce((a,b)=>a+b,0);
+     const lapMs=elapsed-prior;
+     if(lapMs>=500&&elapsed<=7200000)lapTimes.push(lapMs);
+    }
+    lastCompletedLap=completed;
+   }
+   if(completed>=targetLaps&&lapTimes.length===targetLaps&&!finishSending){
+    finishSending=true;
+    const elapsedMs=lapTimes.reduce((a,b)=>a+b,0);
+    localFinish={elapsedMs,laps:targetLaps,lapTimes:[...lapTimes]};
+    scene._raceStarted=false;
+    scene.carBody?.body?.setVelocity?.(0,0);
+    scene.carBody?.body?.setAngularVelocity?.(0);
+    showResults();
+    void transport.send('finish',localFinish).catch(e=>console.warn('[CrafRace LIVE] finish:',e.message));
+   }
+  }
   const position=interpolation.at(now);
   if(position){
    const dt=lastRenderedAt?Math.max(0,Math.min(100,now-lastRenderedAt)):16;
@@ -118,7 +162,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
    }
   }
  };
- const stop=()=>{if(stopped)return;stopped=true;transport.stop();remote.destroy();label.destroy();};
+ const stop=()=>{if(stopped)return;stopped=true;transport.stop();remote.destroy();label.destroy();results.remove();};
  scene.events.once('shutdown',stop);
  return {update,stop,get ownReady(){return ownReady;},get otherReady(){return otherReady;},get serverOffsetMs(){return transport.serverOffsetMs;}};
 }
