@@ -152,7 +152,9 @@ export function attachCrafRaceLivePilot(scene,roomId){
   const velocity=scene.carBody?.body?.velocity;
   const moving=Boolean(velocity&&Math.hypot(velocity.x||0,velocity.y||0)>1);
   const positionIntervalMs=scene._raceStarted&&moving?150:500;
-  if(!positionPending&&now-lastSent>=positionIntervalMs&&scene.carBody?.active){
+  // Once this pilot finishes, its final position is no longer live gameplay.
+  // Avoid ongoing authenticated writes while waiting for the other result.
+  if(!localFinish&&!positionPending&&now-lastSent>=positionIntervalMs&&scene.carBody?.active){
    lastSent=now;
    const body=scene.carBody;
    const speed=Math.max(0,Math.hypot(body.body?.velocity?.x||0,body.body?.velocity?.y||0));
