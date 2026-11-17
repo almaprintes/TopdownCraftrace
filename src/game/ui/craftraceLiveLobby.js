@@ -38,7 +38,7 @@ export function openCrafRaceLiveLobby(scene){
  // swallowing text input events while a LIVE code or chat field has focus.
  for(const field of [$('[data-code]'),$('[data-chat]')]){
   for(const event of ['keydown','keyup','keypress'])field.addEventListener(event,e=>{
-   e.stopPropagation();e.stopImmediatePropagation();
+   e.stopPropagation();
   },{capture:true});
  }
  $('[data-code]').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();join();}});
