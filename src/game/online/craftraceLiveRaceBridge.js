@@ -15,7 +15,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const label=scene.add.text(0,-45,'RIVAL · LIVE',{fontFamily:'system-ui',fontSize:'14px',color:'#ffffff',backgroundColor:'#16283c',padding:{x:5,y:3}}).setOrigin(0.5).setDepth(31).setVisible(false);
  let lastSent=0,stopped=false,positionPending=false,remoteAppearance=null;
  let lastRemotePacketAt=0,remotePacketGapMs=350,lastRenderedAt=0;
- let ownReady=false,otherReady=false,startSending=false,readySending=false;
+ let ownReady=false,otherReady=false,startSending=false,readySending=false,lastReadySentAt=0;
  const ownCarId=CAR_SPECS[scene.carId]?.id||CAR_SPECS[scene.baseSpec?.id]?.id||'stock';
  const ownSkinId=getEquippedCarSkin(ownCarId,{spec:CAR_SPECS[ownCarId],dev:true}).id;
  const loadAppearance=(carId,skinId)=>{
@@ -67,7 +67,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
  transport.onError=e=>{if(!stopped)console.warn('[CrafRace LIVE DEV]',e.message);};
  const update=now=>{
   if(stopped)return;
-  if(scene._crafRaceLiveReadyRequested&&!ownReady&&!readySending&&(!scene._iosStaticTrackRender||scene._iosStaticTrackInitialReady)){
+  // A ready packet can be consumed by the lobby during scene handoff. Re-announce\n  // until both pilots are ready; never rely on a single non-replayed packet.\n  if(scene._crafRaceLiveReadyRequested&&!otherReady&&!readySending&&now-lastReadySentAt>=2500&&(!scene._iosStaticTrackRender||scene._iosStaticTrackInitialReady)){
    readySending=true;
    void transport.send('ready',{phase:'grid',trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps})
     .then(()=>{ownReady=true;}).catch(e=>console.warn('[CrafRace LIVE] ready:',e.message))
