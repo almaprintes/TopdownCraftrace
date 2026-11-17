@@ -67,8 +67,9 @@ export function attachCrafRaceLivePilot(scene,roomId){
  transport.onError=e=>{if(!stopped)console.warn('[CrafRace LIVE DEV]',e.message);};
  const update=now=>{
   if(stopped)return;
-  // A ready packet can be consumed by the lobby during scene handoff. Re-announce\n  // until both pilots are ready; never rely on a single non-replayed packet.\n  if(scene._crafRaceLiveReadyRequested&&!otherReady&&!readySending&&now-lastReadySentAt>=2500&&(!scene._iosStaticTrackRender||scene._iosStaticTrackInitialReady)){
-   readySending=true;
+  // A ready packet can be consumed during scene handoff. Retry until peer confirms.
+  if(scene._crafRaceLiveReadyRequested&&!otherReady&&!readySending&&now-lastReadySentAt>=2500&&(!scene._iosStaticTrackRender||scene._iosStaticTrackInitialReady)){
+   readySending=true;lastReadySentAt=now;
    void transport.send('ready',{phase:'grid',trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps})
     .then(()=>{ownReady=true;}).catch(e=>console.warn('[CrafRace LIVE] ready:',e.message))
     .finally(()=>{readySending=false;});
