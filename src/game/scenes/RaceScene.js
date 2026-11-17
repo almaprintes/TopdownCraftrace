@@ -3606,7 +3606,10 @@ if(this._crafRaceLiveOnlineIntent&&this._crafRaceLiveStartAt&&this._crafRaceLive
    this._startStatus.setText(left>3600?'ESPERANDO SALIDA · '+Math.ceil(left/1000):left>0?'SEMÁFORO · '+(left/1000).toFixed(1):'GO!');
    this._startStatus.setColor(left>0?'#ffffff':'#2bff88');
   }
-  if(left<=0&&(!this._iosStaticTrackRender||this._iosStaticTrackInitialReady)){
+  // In LIVE the shared server deadline is authoritative. iOS can leave the
+  // static-track-ready flag false even while the starting grid is visible;
+  // never trap only one pilot behind the lights after the common GO time.
+  if(left<=0){
    this._startState='RACING';this._raceStarted=true;
    if(this._startModal)this._startModal.setVisible(false);
    if(this.timing){this.timing.started=true;this.timing.lapStart=performance.now();}
