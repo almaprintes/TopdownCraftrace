@@ -34,8 +34,15 @@ export function openCrafRaceLiveLobby(scene){
  $('[data-create]').addEventListener('click',()=>void connect(()=>createLiveRoom({trackId:selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage),carId:scene?.selectedCarId||'avenir_gripline',laps:3,physicsVersion:1,direction:'forward'})));
  const join=()=>{say('Comprobando código…');const code=$('[data-code]').value.trim().toUpperCase();if(!code){say('Introduce el código de la pista.');$('[data-code]').focus();return;}void connect(()=>joinLiveRoom(code));};
  $('[data-join]').addEventListener('click',join);
+ // Phaser binds W/A/S/D and E/Q globally; prevent those shortcuts from
+ // swallowing text input events while a LIVE code or chat field has focus.
+ for(const field of [$('[data-code]'),$('[data-chat]')]){
+  for(const event of ['keydown','keyup','keypress'])field.addEventListener(event,e=>{
+   e.stopPropagation();e.stopImmediatePropagation();
+  },{capture:true});
+ }
  $('[data-code]').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();join();}});
- $('[data-code]').addEventListener('input',()=>{$('[data-code]').value=$('[data-code]').value.toUpperCase().replace(/[^A-Z0-9]/g,'');});
+ $('[data-code]').addEventListener('input',()=>{$('[data-code]').value=$('[data-code]').value.toUpperCase().replace(/[^ABCDEFGHJKLMNPQRSTUVWXYZ23456789]/g,'');});
  $('[data-ready]').addEventListener('click',async()=>{if(!transport||readySent)return;$('[data-ready]').disabled=true;
   try{await transport.send('ready',{trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps});readySent=true;refreshReady();say(rivalReady?'Ambos preparados. Esperando salida del anfitrión.':'Preparado. Esperando al rival.');}
   catch(e){say(e.message);$('[data-ready]').disabled=false;}
