@@ -95,7 +95,12 @@ export function attachCrafRaceLivePilot(scene,roomId){
   }
   // Publish the stationary grid position before the countdown ends, so both pilots are visible.
   // Continue sending at the existing cadence during the race; never move a local car remotely.
-  if(!positionPending&&now-lastSent>=(scene._raceStarted?150:500)&&scene.carBody?.active){
+  // Stationary cars do not need the moving-car cadence; reduce persistent RPC writes
+  // without delaying motion, countdown events, or reconnection packets.
+  const velocity=scene.carBody?.body?.velocity;
+  const moving=Boolean(velocity&&Math.hypot(velocity.x||0,velocity.y||0)>1);
+  const positionIntervalMs=scene._raceStarted&&moving?150:500;
+  if(!positionPending&&now-lastSent>=positionIntervalMs&&scene.carBody?.active){
    lastSent=now;
    const body=scene.carBody;
    const speed=Math.max(0,Math.hypot(body.body?.velocity?.x||0,body.body?.velocity?.y||0));
