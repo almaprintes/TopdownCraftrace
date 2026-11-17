@@ -67,8 +67,13 @@ export function attachCrafRaceLivePilot(scene,roomId){
  transport.onError=e=>{if(!stopped)console.warn('[CrafRace LIVE DEV]',e.message);};
  const update=now=>{
   if(stopped)return;
-  // A ready packet can be consumed during scene handoff. Retry until peer confirms.
-  if(scene._crafRaceLiveReadyRequested&&!otherReady&&!readySending&&now-lastReadySentAt>=2500&&(!scene._iosStaticTrackRender||scene._iosStaticTrackInitialReady)){
+  // RaceScene starts in COUNTDOWN; no UI currently sets ReadyRequested=true.
+  // Automatically arm the online grid once the scene and iOS track are ready.
+  if(scene._startState==='COUNTDOWN'&&(!scene._iosStaticTrackRender||scene._iosStaticTrackInitialReady))scene._crafRaceLiveReadyRequested=true;
+  // Both peers MUST announce readiness even after receiving the rival's packet.
+  // Otherwise the first receiver stops transmitting and the other waits forever.
+  // Repeat during handoff until the shared start timestamp is known.
+  if(scene._crafRaceLiveReadyRequested&&!scene._crafRaceLiveStartAt&&!readySending&&now-lastReadySentAt>=2500&&(!scene._iosStaticTrackRender||scene._iosStaticTrackInitialReady)){
    readySending=true;lastReadySentAt=now;
    void transport.send('ready',{phase:'grid',trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps})
     .then(()=>{ownReady=true;}).catch(e=>console.warn('[CrafRace LIVE] ready:',e.message))
