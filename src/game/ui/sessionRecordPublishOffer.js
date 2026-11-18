@@ -108,7 +108,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
         // Keep the reason visible on the device: iOS users may not have a
         // remote debugger. Never send an incompatible replay to Supabase.
         console.warn('[race-control] time-only publication reason', {trackId,carId,lapMs:best.lapMs,replayReason});
-        const approved=window.confirm('No se puede publicar la repetición de esta vuelta (diagnóstico: '+replayReason+'). Puedes publicar el tiempo igualmente, pero NO tendrá replay ni desafío fantasma. ¿Quieres publicar solo tu tiempo?');
+        const approved=window.confirm('No existe una repetición exacta de esta vuelta (diagnóstico: '+replayReason+'). Puedes publicar el tiempo igualmente, pero NO tendrá replay ni desafío fantasma. ¿Quieres publicar solo tu tiempo?');
         if(!approved)throw new Error('Publicación sin repetición cancelada. Tu marca personal sigue guardada.');
       }
       // Validate online readiness before attempting an optional rewarded ad.
