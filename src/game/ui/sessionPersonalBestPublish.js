@@ -37,6 +37,11 @@ export function localRecordGhost(trackId,carId,bestMs,liveReplay=null){
     try{return matching(JSON.parse(localStorage.getItem(key)||'null'));}
     catch{return null;}
   };
+  // Current race scene writes exact PB ghosts under tdr2:ghostPb:<track>.
+  // Read that canonical key before legacy and Records fallbacks, including
+  // when the Records snapshot has not yet been synchronised.
+  const currentPb=readMatching(`tdr2:ghostPb:${track}`);
+  if(currentPb)return currentPb;
   const legacy=readMatching(`tdr2:ghost:${track}:${car}`);
   if(legacy)return legacy;
   // Reuse the official local PB/replay identity shown by the Records screen.
