@@ -85,7 +85,7 @@ export function mountNewPersonalBestOffer(scene,root,report){
       let replay=null;
       let replayReason='recording-missing-or-not-exact';
       if(ghost){
-        const compatibility=ghostReplayCompatibility(ghost,trackId,scene?.track);
+        const compatibility=ghostReplayCompatibility(ghost,trackId,scene?._tdrGhostGeometryTrack||scene?.track);
         if(!compatibility.compatible){
           replayReason='geometry-'+compatibility.reason;
         }else{
