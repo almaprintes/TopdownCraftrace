@@ -237,7 +237,7 @@ export class RaceScene extends CurrentRaceScene {
       const ghost={version:6,trackKey:last.trackKey,carId:last.carId,
         lapMs:Math.round(last.lapMs),geometryRevision:last.geometryRevision,
         samples:last.samples};
-      const check=ghostReplayCompatibility(ghost,trackId,this.track);
+      const check=ghostReplayCompatibility(ghost,trackId,this._tdrGhostGeometryTrack||this.track);
       let encoding='NO PROBADO';
       if(last.valid&&check.compatible&&ghost.samples.length>=5){
         try{
@@ -255,7 +255,7 @@ export class RaceScene extends CurrentRaceScene {
         'Geometría: '+(check.compatible?'COMPATIBLE':'ERROR · '+check.reason),
         'Codificación: '+encoding,
         'Récords y Supabase: SIN CAMBIOS'
-      ].join('\\n');
+      ].join('\n');
     });
     const diagnosticPage=root.querySelector('[data-report-page="resumen"]');
     if(diagnosticPage){diagnosticPage.appendChild(testButton);diagnosticPage.appendChild(testResult);}
