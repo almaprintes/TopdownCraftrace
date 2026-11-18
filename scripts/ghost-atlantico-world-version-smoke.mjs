@@ -40,7 +40,8 @@ assert.match(status,/_isGhostCurrentGeometryReplay\(\)/);
 assert.match(status,/VUELTA/, 'Compact ghost replay button must still identify current lap');
 assert.match(status,/PB ANTIGUO/);
 assert.match(status,/_onlineGhostChallenge=\{\.\.\.this\._onlineGhostChallenge,invalid:true\}/);
-assert.match(publish,/ghostReplayCompatibility\(ghost,trackId,scene\?\.track\)\.compatible/);
+assert.match(publish,/const compatibility=ghostReplayCompatibility\(ghost,trackId,scene\?\.track\);/);
+assert.match(publish,/if\(!compatibility\.compatible\)/, 'Incompatible ghost must be rejected using the compatibility result');
 assert.ok(publish.indexOf('ghostReplayCompatibility(ghost,trackId')<publish.indexOf('await showRewardedAd(scene'),
   'Stale replay rejection MUST happen before rewarded advertisement');
 assert.match(visual,/g\.setDisplaySize\(footprintW,footprintH\)/);
