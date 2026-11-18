@@ -3521,7 +3521,15 @@ if (this.car) {
 
 // Minimap car — proyección geométrica precisa, suave y con rotación
 if (this.minimap?.car && this.minimap?.points?.length >= 2) {
-  const proj = this._computeCenterlineProjection(this.car.x, this.car.y);
+  // iOS: la proyección recorre TODA la centerline; no repetirla a 60 FPS.
+  // Solo afecta al marcador visual del minimapa; física y cronometraje intactos.
+  const iosMinimap = isIOSRaceDevice();
+  const minimapNow = time;
+  if (!iosMinimap || !this._iosMinimapProjection || minimapNow - (this._iosMinimapProjectionAt ?? -Infinity) >= 100) {
+    this._iosMinimapProjection = this._computeCenterlineProjection(this.car.x, this.car.y);
+    this._iosMinimapProjectionAt = minimapNow;
+  }
+  const proj = this._iosMinimapProjection;
   const pts = this.minimap.points;
   const segIndex = Phaser.Math.Clamp(proj.segIndex, 0, pts.length - 2);
   const segT = Phaser.Math.Clamp(proj.segT, 0, 1);
