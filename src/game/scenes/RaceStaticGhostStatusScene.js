@@ -192,6 +192,21 @@ export class RaceScene extends CurrentRaceScene {
       && Math.abs(lapMs - officialBestMs) <= 1
       && (!(previousBestMs > 1000) || officialBestMs < previousBestMs - 0.5);
 
+    // DEV-only dry run source: snapshot every completed lap without altering
+    // personal bests, local replay keys, rankings or network state.
+    const diagnosticSamples=(this._ghostSamples||[])
+      .filter(p=>Number.isFinite(Number(p?.t))&&Number.isFinite(Number(p?.x))&&Number.isFinite(Number(p?.y))&&Number(p.t)>=0&&Number(p.t)<lapMs)
+      .map(p=>({t:Number(p.t),x:Number(p.x),y:Number(p.y),r:Number(p.r||0)}));
+    if(valid&&this.carBody&&diagnosticSamples.length>=4){
+      diagnosticSamples.push({t:Math.round(lapMs),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});
+    }
+    this._tdrLastGhostDiagnostic={
+      valid,lapMs,trackKey:String(this._ghostTrackKey||this.trackKey||''),
+      carId:String(this._tdrCurrentGhostCarId||this.carId||''),
+      geometryRevision:this._tdrGhostGeometryRevision,
+      samples:diagnosticSamples,historyCount:hist.length,
+      reason:valid?'completed-lap':'invalid-lap'
+    };
     // If the retired road held the official PB, a new-format ghost must be
     // recordable without having to BEAT the historical time. Keep it under a
     // separate key; never change the old PB, its replay or online rankings.
