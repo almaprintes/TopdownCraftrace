@@ -1,5 +1,6 @@
 // DEV-only live visual bridge. Remote pilot never participates in local collisions.
 import {RemotePilotInterpolator} from './craftraceLiveRaceModel.js';
+import {connectLivePositionBroadcast} from './craftraceLiveTransport.js';
 import {takeLiveSession} from './craftraceLiveSession.js';
 import {CAR_SPECS} from '../cars/carSpecs.js';
 import {getEquippedCarSkin,availableCarSkins} from '../skins/carSkins.js';
@@ -15,6 +16,8 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const label=scene.add.text(0,-45,'RIVAL · LIVE',{fontFamily:'system-ui',fontSize:'14px',color:'#ffffff',backgroundColor:'#16283c',padding:{x:5,y:3}}).setOrigin(0.5).setDepth(31).setVisible(false);
  let lastSent=0,stopped=false,positionPending=false,remoteAppearance=null;
  let lastPublishedPose=null;
+ let positionBroadcast=null,connectingBroadcast=false,positionBroadcastStatus='HTTP fallback';
+ let broadcastLastAttempt=0;
  let lastRemotePacketAt=0,remotePacketGapMs=300,lastRenderedAt=0;
  let perfFrames=0,perfSlowFrames=0,perfTotalMs=0,perfLastAt=0,perfLastReport=0,perfRemotePackets=0;
  let ownReady=false,otherReady=false,startSending=false,readySending=false,lastReadySentAt=0;
@@ -48,6 +51,30 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const {transport,room,identity}=session;
  const rivalId=identity.id===room.host_id?room.guest_id:room.host_id;
  const targetLaps=Math.max(1,Math.min(30,Number(room.laps)||3));
+ const acceptPosition=p=>{
+  if(typeof p.payload?.carId==='string'&&typeof p.payload?.skinId==='string')loadAppearance(p.payload.carId,p.payload.skinId);
+  const receivedAt=performance.now();
+  const accepted=interpolation.push({...p.payload,heat:p.heat,generation:p.generation},receivedAt);
+  if(accepted){
+   perfRemotePackets++;
+   if(lastRemotePacketAt>0){const gap=receivedAt-lastRemotePacketAt;
+    if(gap>=40&&gap<=1500)remotePacketGapMs=remotePacketGapMs*0.8+gap*0.2;}
+   lastRemotePacketAt=receivedAt;
+   interpolation.delayMs=Math.max(220,Math.min(450,remotePacketGapMs+55));
+  }
+ };
+ const startBroadcast=async()=>{
+  if(stopped||connectingBroadcast||positionBroadcast)return;
+  connectingBroadcast=true;broadcastLastAttempt=performance.now();
+  try{
+   const connection=await connectLivePositionBroadcast(roomId,identity.id,rivalId,acceptPosition,(ready,status)=>{
+    positionBroadcastStatus=ready?'Realtime Broadcast':('HTTP fallback · '+status);
+   });
+   if(stopped)void connection.close();else positionBroadcast=connection;
+  }catch(e){console.warn('[CrafRace LIVE] Realtime unavailable, retaining HTTP fallback:',e.message);}
+  finally{connectingBroadcast=false;}
+ };
+ void startBroadcast();
  let raceStartClock=null,lastCompletedLap=0,lapTimes=[],localFinish=null,rivalFinish=null,finishSending=false;
  const fmt=ms=>{if(!Number.isFinite(ms))return '—';const n=Math.max(0,Math.round(ms));return Math.floor(n/60000)+':'+String(Math.floor(n%60000/1000)).padStart(2,'0')+'.'+String(n%1000).padStart(3,'0');};
  const results=document.createElement('section');
@@ -71,26 +98,13 @@ export function attachCrafRaceLivePilot(scene,roomId){
   if(p.type==='ready'&&p.payload?.phase==='grid'&&p.payload?.trackId===room.track_id&&p.payload?.physicsVersion===room.physics_version&&p.payload?.direction===room.direction&&p.payload?.laps===room.laps)otherReady=true;
   if(p.type==='start'&&p.payload?.restart===true&&p.from===room.host_id&&identity.id!==room.host_id&&ownReady&&otherReady&&Number.isFinite(p.payload.startAt))scene._crafRaceLiveStartAt=p.payload.startAt;
   if(p.type==='finish'&&p.payload?.laps===targetLaps){rivalFinish=p.payload;showResults();}
-  if(p.type==='position'){
-   if(typeof p.payload?.carId==='string'&&typeof p.payload?.skinId==='string')loadAppearance(p.payload.carId,p.payload.skinId);
-   const receivedAt=performance.now();
-   const accepted=interpolation.push({...p.payload,heat:p.heat,generation:p.generation},receivedAt);
-   if(accepted){
-    perfRemotePackets++;
-    if(lastRemotePacketAt>0){
-     const gap=receivedAt-lastRemotePacketAt;
-     if(gap>=100&&gap<=1500)remotePacketGapMs=remotePacketGapMs*0.8+gap*0.2;
-    }
-    lastRemotePacketAt=receivedAt;
-    // Buffer roughly one observed packet interval, but avoid a permanent half-second lag.
-    interpolation.delayMs=Math.max(220,Math.min(450,remotePacketGapMs+55));
-   }
-  }
+  if(p.type==='position'&&!positionBroadcast?.ready)acceptPosition(p);
  };
  transport.onState=d=>{if(d.room_id!==roomId||d.host_id!==room.host_id)transport.stop();};
  transport.onError=e=>{if(!stopped)console.warn('[CrafRace LIVE DEV]',e.message);};
  const update=now=>{
   if(stopped)return;
+  if(!positionBroadcast&&!connectingBroadcast&&now-broadcastLastAttempt>15000)void startBroadcast();
   // Five-second diagnostics only in LIVE races; no per-frame DOM updates.
   // Compare early and late laps on both devices before tuning renderer/physics.
   if(perfLastAt){const frameMs=Math.max(0,Math.min(1000,now-perfLastAt));perfFrames++;perfTotalMs+=frameMs;if(frameMs>33.4)perfSlowFrames++;}
@@ -98,7 +112,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
   if(!perfLastReport)perfLastReport=now;
   if(now-perfLastReport>=5000){
    if(scene._raceStarted&&perfFrames){
-    console.info('[CrafRace LIVE perf]',{lap:Math.max(0,scene.lapCount||0),fps:Math.round(1000*perfFrames/Math.max(1,perfTotalMs)),slowFrames:perfSlowFrames,remotePackets:perfRemotePackets,remoteGapMs:Math.round(remotePacketGapMs),iosStaticTrack:!!scene._iosStaticTrackRender});
+    console.info('[CrafRace LIVE perf]',{lap:Math.max(0,scene.lapCount||0),fps:Math.round(1000*perfFrames/Math.max(1,perfTotalMs)),slowFrames:perfSlowFrames,remotePackets:perfRemotePackets,remoteGapMs:Math.round(remotePacketGapMs),positionTransport:positionBroadcastStatus,iosStaticTrack:!!scene._iosStaticTrackRender});
    }
    perfFrames=0;perfSlowFrames=0;perfTotalMs=0;perfRemotePackets=0;perfLastReport=now;
   }
@@ -182,11 +196,13 @@ export function attachCrafRaceLivePilot(scene,roomId){
    if(Number.isFinite(body.x)&&Number.isFinite(body.y)&&Number.isFinite(body.rotation)&&Math.abs(body.x)<=100000&&Math.abs(body.y)<=100000){
     positionPending=true;
     const snapshot={x:body.x,y:body.y,angle:body.rotation};
-    void transport.send('position',{...snapshot,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0),carId:ownCarId,skinId:ownSkinId}).then(()=>{lastPublishedPose=snapshot;}).catch(()=>{}).finally(()=>{positionPending=false;});
+    const payload={...snapshot,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0),carId:ownCarId,skinId:ownSkinId};
+    const send=positionBroadcast?.ready?positionBroadcast.send(payload):transport.send('position',payload);
+    void send.then(ok=>{if(ok!==false)lastPublishedPose=snapshot;}).catch(()=>{}).finally(()=>{positionPending=false;});
    }
   }
  };
- const stop=()=>{if(stopped)return;stopped=true;transport.stop();remote.destroy();label.destroy();results.remove();};
+ const stop=()=>{if(stopped)return;stopped=true;transport.stop();void positionBroadcast?.close();remote.destroy();label.destroy();results.remove();};
  scene.events.once('shutdown',stop);
  return {update,stop,get ownReady(){return ownReady;},get otherReady(){return otherReady;},get serverOffsetMs(){return transport.serverOffsetMs;}};
 }
