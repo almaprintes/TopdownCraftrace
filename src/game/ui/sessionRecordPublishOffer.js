@@ -83,16 +83,32 @@ export function mountNewPersonalBestOffer(scene,root,report){
       // geometry. When it is missing, Supabase supports a time-only record.
       const ghost=localRecordGhost(trackId,carId,best.lapMs,scene?._tdrSessionExactPbReplay);
       let replay=null;
-      if(ghost&&ghostReplayCompatibility(ghost,trackId,scene?.track).compatible){
-        try{
-          const packet=encodeOnlineGhostNative(ghost);
-          const bytes=encodeOnlineGhostNativeBinary(packet);
-          if(packet.p.length>=2&&packet.p.length<=20000&&bytes.byteLength<=131072)
-            replay={bytes,count:packet.p.length};
-        }catch(error){console.warn('[race-control] exact replay unavailable; time-only publication',error);}
+      let replayReason='recording-missing-or-not-exact';
+      if(ghost){
+        const compatibility=ghostReplayCompatibility(ghost,trackId,scene?.track);
+        if(!compatibility.compatible){
+          replayReason='geometry-'+compatibility.reason;
+        }else{
+          try{
+            const packet=encodeOnlineGhostNative(ghost);
+            const bytes=encodeOnlineGhostNativeBinary(packet);
+            if(packet.p.length>=2&&packet.p.length<=20000&&bytes.byteLength<=131072){
+              replay={bytes,count:packet.p.length};
+              replayReason='ready';
+            }else{
+              replayReason='payload-limits';
+            }
+          }catch(error){
+            replayReason='encoding-failed';
+            console.warn('[race-control] exact replay unavailable; time-only publication',error);
+          }
+        }
       }
       if(!replay){
-        const approved=window.confirm('No existe una repetición exacta de esta vuelta. Puedes publicar el tiempo igualmente, pero NO tendrá replay ni desafío fantasma. ¿Quieres publicar solo tu tiempo?');
+        // Keep the reason visible on the device: iOS users may not have a
+        // remote debugger. Never send an incompatible replay to Supabase.
+        console.warn('[race-control] time-only publication reason', {trackId,carId,lapMs:best.lapMs,replayReason});
+        const approved=window.confirm('No se puede publicar la repetición de esta vuelta (diagnóstico: '+replayReason+'). Puedes publicar el tiempo igualmente, pero NO tendrá replay ni desafío fantasma. ¿Quieres publicar solo tu tiempo?');
         if(!approved)throw new Error('Publicación sin repetición cancelada. Tu marca personal sigue guardada.');
       }
       // Validate online readiness before attempting an optional rewarded ad.
