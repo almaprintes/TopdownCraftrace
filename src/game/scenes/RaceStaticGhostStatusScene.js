@@ -3,6 +3,7 @@ import { CAR_SPECS } from '../cars/carSpecs.js';
 import { ghostPanelViewportRect } from '../ui/ghostPanelViewport.js';
 import {ghostGeometryRevision,ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
 import {findRaceControlGhost} from '../tracks/ghostReplayRecovery.js';
+import {TRACK_REGISTRY} from '../tracks/trackRegistry.js';
 
 // Compact ghost buttons protect the usable racing view on mobile.
 const PANEL_W = 184;
@@ -56,7 +57,13 @@ export class RaceScene extends CurrentRaceScene {
     // correspond to the physical version of the currently loaded road.
     this._tdrCurrentGhostCarId=this._ghostCarId||this.carId||data?.carId||'car';
     const key=String(this._ghostTrackKey||this.trackKey||'');
-    this._tdrGhostGeometryRevision=ghostGeometryRevision(key,this.track);
+    // Santa Cruz can expose a race scene without the full geometry object.
+    // Resolve the registered physical track rather than bypassing validation.
+    const runtimeRevision=ghostGeometryRevision(key,this.track);
+    const registeredTrack=TRACK_REGISTRY[key]||null;
+    const registeredRevision=ghostGeometryRevision(key,registeredTrack);
+    this._tdrGhostGeometryTrack=runtimeRevision?this.track:(registeredRevision?registeredTrack:this.track);
+    this._tdrGhostGeometryRevision=ghostGeometryRevision(key,this._tdrGhostGeometryTrack);
     this._tdrPbGhostStorageKey=pbGhostKey(key);
     this._tdrGeometryGhostStorageKey=geometryGhostKey(key,this._tdrGhostGeometryRevision);
     this._ghostStorageKey=this._tdrPbGhostStorageKey;
@@ -66,14 +73,14 @@ export class RaceScene extends CurrentRaceScene {
     const onlineGhost=onlineChallenge&&this._ghostData?.samples?.length?this._ghostData:null;
     const oldPb=onlineChallenge?null:readPbGhost(this._tdrPbGhostStorageKey);
     const currentReplay=onlineChallenge?null:readPbGhost(this._tdrGeometryGhostStorageKey);
-    const pbCompatibility=oldPb?ghostReplayCompatibility(oldPb,key,this.track):null;
-    const replayCompatibility=currentReplay?ghostReplayCompatibility(currentReplay,key,this.track):null;
-    const onlineCompatibility=onlineGhost?ghostReplayCompatibility(onlineGhost,key,this.track):null;
+    const pbCompatibility=oldPb?ghostReplayCompatibility(oldPb,key,this._tdrGhostGeometryTrack):null;
+    const replayCompatibility=currentReplay?ghostReplayCompatibility(currentReplay,key,this._tdrGhostGeometryTrack):null;
+    const onlineCompatibility=onlineGhost?ghostReplayCompatibility(onlineGhost,key,this._tdrGhostGeometryTrack):null;
     // Race Control stores top-ten laps separately from the Ghost PB key.
     // An already recorded local replay must not disappear from Ghost mode.
     // Only recover samples that fit the currently loaded physical circuit.
     const recovered=onlineChallenge?null:
-      findRaceControlGhost(key,this.track,this._tdrGhostKnownBestMs);
+      findRaceControlGhost(key,this._tdrGhostGeometryTrack,this._tdrGhostKnownBestMs);
     const pbTimeMatches=oldPb&&pbCompatibility?.compatible&&
       Number.isFinite(this._tdrGhostKnownBestMs)&&
       Math.abs(Number(oldPb.lapMs)-this._tdrGhostKnownBestMs)<=2;
@@ -150,7 +157,7 @@ export class RaceScene extends CurrentRaceScene {
       Number.isFinite(ghostMs)&&Number.isFinite(bestMs)&&
       Math.abs(ghostMs-bestMs)<=1&&
       String(ghost?.trackKey||key)===key&&
-      ghostReplayCompatibility(ghost,key,this.track).compatible;
+      ghostReplayCompatibility(ghost,key,this._tdrGhostGeometryTrack).compatible;
   }
 
   _isGhostCurrentGeometryReplay() {
@@ -160,7 +167,7 @@ export class RaceScene extends CurrentRaceScene {
       !!this._tdrGhostGeometryRevision&&
       ghost.geometryRevision===this._tdrGhostGeometryRevision&&
       String(ghost.trackKey||'')===key&&
-      ghostReplayCompatibility(ghost,key,this.track).compatible;
+      ghostReplayCompatibility(ghost,key,this._tdrGhostGeometryTrack).compatible;
   }
 
   _hasPlayableGhostReplay() {
