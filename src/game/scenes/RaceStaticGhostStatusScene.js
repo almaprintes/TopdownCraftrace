@@ -199,6 +199,15 @@ export class RaceScene extends CurrentRaceScene {
     const geometryLap=valid&&!isOfficialNewPb&&
       (this._tdrGhostGeometryIncompatible||haveGeometryReplay)&&
       (!haveGeometryReplay||lapMs<Number(this._ghostData?.lapMs));
+    // Preserve the exact completed PB in memory for the session report, even
+    // when localStorage is unavailable or the Records snapshot is still stale.
+    if(isOfficialNewPb&&this._ghostSamples.length>4){
+      const samples=this._ghostSamples
+        .filter(p=>Number.isFinite(Number(p?.t))&&Number.isFinite(Number(p?.x))&&Number.isFinite(Number(p?.y))&&Number(p.t)>=0&&Number(p.t)<officialBestMs)
+        .map(p=>({t:Number(p.t),x:Number(p.x),y:Number(p.y),r:Number(p.r||0)}));
+      if(this.carBody)samples.push({t:Math.round(officialBestMs),x:Number(this.carBody.x||0),y:Number(this.carBody.y||0),r:Number(this.carBody.rotation||0)});
+      if(samples.length>=5)this._tdrSessionExactPbReplay={version:6,trackKey:this._ghostTrackKey,carId:this._tdrCurrentGhostCarId,lapMs:Math.round(officialBestMs),geometryRevision:this._tdrGhostGeometryRevision||undefined,samples};
+    }
     if((isOfficialNewPb||geometryLap)&&this._ghostSamples.length>4){
       const recordedMs=isOfficialNewPb?officialBestMs:lapMs;
       const samples=this._ghostSamples
