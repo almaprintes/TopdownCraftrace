@@ -165,7 +165,8 @@ export function attachCrafRaceLivePilot(scene,roomId){
    const speed=Math.max(0,Math.hypot(body.body?.velocity?.x||0,body.body?.velocity?.y||0));
    if(Number.isFinite(body.x)&&Number.isFinite(body.y)&&Number.isFinite(body.rotation)&&Math.abs(body.x)<=100000&&Math.abs(body.y)<=100000){
     positionPending=true;
-    void transport.send('position',{x:body.x,y:body.y,angle:body.rotation,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0),carId:ownCarId,skinId:ownSkinId}).then(()=>{lastPublishedPose={x:body.x,y:body.y,angle:body.rotation};}).catch(()=>{}).finally(()=>{positionPending=false;});
+    const snapshot={x:body.x,y:body.y,angle:body.rotation};
+    void transport.send('position',{...snapshot,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0),carId:ownCarId,skinId:ownSkinId}).then(()=>{lastPublishedPose=snapshot;}).catch(()=>{}).finally(()=>{positionPending=false;});
    }
   }
  };
