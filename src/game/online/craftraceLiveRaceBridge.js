@@ -16,6 +16,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
  let lastSent=0,stopped=false,positionPending=false,remoteAppearance=null;
  let lastPublishedPose=null;
  let lastRemotePacketAt=0,remotePacketGapMs=350,lastRenderedAt=0;
+ let perfFrames=0,perfSlowFrames=0,perfTotalMs=0,perfLastAt=0,perfLastReport=0,perfRemotePackets=0;
  let ownReady=false,otherReady=false,startSending=false,readySending=false,lastReadySentAt=0;
  const ownCarId=CAR_SPECS[scene.carId]?.id||CAR_SPECS[scene.baseSpec?.id]?.id||'stock';
  const ownSkinId=getEquippedCarSkin(ownCarId,{spec:CAR_SPECS[ownCarId],dev:true}).id;
@@ -75,6 +76,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
    const receivedAt=performance.now();
    const accepted=interpolation.push({...p.payload,heat:p.heat,generation:p.generation},receivedAt);
    if(accepted){
+    perfRemotePackets++;
     if(lastRemotePacketAt>0){
      const gap=receivedAt-lastRemotePacketAt;
      if(gap>=100&&gap<=1500)remotePacketGapMs=remotePacketGapMs*0.8+gap*0.2;
@@ -88,6 +90,17 @@ export function attachCrafRaceLivePilot(scene,roomId){
  transport.onError=e=>{if(!stopped)console.warn('[CrafRace LIVE DEV]',e.message);};
  const update=now=>{
   if(stopped)return;
+  // Five-second diagnostics only in LIVE races; no per-frame DOM updates.
+  // Compare early and late laps on both devices before tuning renderer/physics.
+  if(perfLastAt){const frameMs=Math.max(0,Math.min(1000,now-perfLastAt));perfFrames++;perfTotalMs+=frameMs;if(frameMs>33.4)perfSlowFrames++;}
+  perfLastAt=now;
+  if(!perfLastReport)perfLastReport=now;
+  if(now-perfLastReport>=5000){
+   if(scene._raceStarted&&perfFrames){
+    console.info('[CrafRace LIVE perf]',{lap:Math.max(0,scene.lapCount||0),fps:Math.round(1000*perfFrames/Math.max(1,perfTotalMs)),slowFrames:perfSlowFrames,remotePackets:perfRemotePackets,remoteGapMs:Math.round(remotePacketGapMs),iosStaticTrack:!!scene._iosStaticTrackRender});
+   }
+   perfFrames=0;perfSlowFrames=0;perfTotalMs=0;perfRemotePackets=0;perfLastReport=now;
+  }
   // RaceScene starts in COUNTDOWN; no UI currently sets ReadyRequested=true.
   // Arm network readiness as soon as the countdown scene exists. iOS track
   // rendering can finish later; only the actual GO transition waits for it.
