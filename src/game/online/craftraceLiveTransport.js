@@ -101,3 +101,31 @@ export class CrafRaceLiveTransport{
   this.heat=heat;this.generation=generation;this.lastSeqBySender.clear();
  }
 }
+
+// SlotRace-style private Broadcast, exclusively for transient car positions.
+// The database already authorizes craftrace-live:<room UUID> only to its two pilots.
+// RPC remains authoritative for race control, results and fallback.
+export async function connectLivePositionBroadcast(roomId,localId,remoteId,onPosition,onStatus=()=>{}){
+ if(!uuid.test(roomId)||!uuid.test(localId)||!uuid.test(remoteId)||localId===remoteId)throw Error('Invalid LIVE peers');
+ const identity=await liveIdentity();
+ if(identity.id!==localId)throw Error('LIVE account changed');
+ const {url,key}=playerBackendConfig();
+ const {createClient}=await import(/* @vite-ignore */ 'https://esm.sh/@supabase/supabase-js@2.119.0?target=es2022');
+ const client=createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+ client.realtime.setAuth(identity.token);
+ const {CrafRaceLivePositionChannel}=await import('./craftraceLivePositionChannel.js');
+ const channel=client.channel('craftrace-live:'+roomId,{config:{private:true,broadcast:{self:false,ack:false}}});
+ const positions=new CrafRaceLivePositionChannel({channel,roomId,localId,remoteId,onPosition});
+ let closed=false,ready=false;
+ channel.subscribe(status=>{
+  if(closed)return;
+  ready=status==='SUBSCRIBED';
+  if(ready)positions.enable();else positions.disable();
+  onStatus(ready,status);
+ });
+ return {get ready(){return ready&&!closed;},send:payload=>positions.send(payload),close:async()=>{
+  if(closed)return;closed=true;ready=false;positions.close();
+  try{await client.removeChannel(channel);}catch{};
+  try{await client.removeAllChannels();}catch{};
+ }};
+}
