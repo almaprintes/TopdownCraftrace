@@ -6,7 +6,7 @@ import {getEquippedCarSkin,availableCarSkins} from '../skins/carSkins.js';
 const validRoom=x=>typeof x==='string'&&/^[0-9a-f-]{36}$/i.test(x);
 export function attachCrafRaceLivePilot(scene,roomId){
  if(!validRoom(roomId)||!scene?.carBody||!scene?.add)return null;
- const interpolation=new RemotePilotInterpolator({delayMs:400,maxExtrapolateMs:250});
+ const interpolation=new RemotePilotInterpolator({delayMs:350,maxExtrapolateMs:100});
  const localSprite=scene.carRig?.list?.find?.(item=>item?.texture?.key);
  if(!localSprite)return null;
  const remoteSprite=scene.add.sprite(0,0,'car').setAlpha(1);
@@ -15,7 +15,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const label=scene.add.text(0,-45,'RIVAL · LIVE',{fontFamily:'system-ui',fontSize:'14px',color:'#ffffff',backgroundColor:'#16283c',padding:{x:5,y:3}}).setOrigin(0.5).setDepth(31).setVisible(false);
  let lastSent=0,stopped=false,positionPending=false,remoteAppearance=null;
  let lastPublishedPose=null;
- let lastRemotePacketAt=0,remotePacketGapMs=350,lastRenderedAt=0;
+ let lastRemotePacketAt=0,remotePacketGapMs=300,lastRenderedAt=0;
  let perfFrames=0,perfSlowFrames=0,perfTotalMs=0,perfLastAt=0,perfLastReport=0,perfRemotePackets=0;
  let ownReady=false,otherReady=false,startSending=false,readySending=false,lastReadySentAt=0;
  const ownCarId=CAR_SPECS[scene.carId]?.id||CAR_SPECS[scene.baseSpec?.id]?.id||'stock';
@@ -82,7 +82,8 @@ export function attachCrafRaceLivePilot(scene,roomId){
      if(gap>=100&&gap<=1500)remotePacketGapMs=remotePacketGapMs*0.8+gap*0.2;
     }
     lastRemotePacketAt=receivedAt;
-    interpolation.delayMs=Math.max(300,Math.min(500,remotePacketGapMs+70));
+    // Buffer roughly one observed packet interval, but avoid a permanent half-second lag.
+    interpolation.delayMs=Math.max(220,Math.min(450,remotePacketGapMs+55));
    }
   }
  };
@@ -151,7 +152,9 @@ export function attachCrafRaceLivePilot(scene,roomId){
    const dt=lastRenderedAt?Math.max(0,Math.min(100,now-lastRenderedAt)):16;
    lastRenderedAt=now;
    // Smooth irregular HTTP polling without making the rival translucent.
-   const blend=remote.visible?1-Math.exp(-dt/75):1;
+   // Smooth network jitter across frames without changing the authoritative car.
+   // A longer visual time constant avoids visible steps on sparse HTTP updates.
+   const blend=remote.visible?1-Math.exp(-dt/145):1;
    const x=remote.visible?remote.x+(position.x-remote.x)*blend:position.x;
    const y=remote.visible?remote.y+(position.y-remote.y)*blend:position.y;
    const targetAngle=position.angle+(scene._carVisualRotOffset||0);
