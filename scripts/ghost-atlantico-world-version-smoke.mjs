@@ -31,8 +31,8 @@ assert.equal(ghostReplayCompatibility({...good,trackKey:'karting-tenerife'},'kar
 const status=readFileSync('src/game/scenes/RaceStaticGhostStatusScene.js','utf8');
 const visual=readFileSync('src/game/scenes/RaceGhostModeScene.js','utf8');
 const publish=readFileSync('src/game/ui/sessionRecordPublishOffer.js','utf8');
-assert.match(status,/ghostReplayCompatibility\(onlineGhost,key,this\.track\)/);
-assert.match(status,/ghostReplayCompatibility\(oldPb,key,this\.track\)/);
+assert.match(status,/ghostReplayCompatibility\(onlineGhost,key,this\._tdrGhostGeometryTrack\)/);
+assert.match(status,/ghostReplayCompatibility\(oldPb,key,this\._tdrGhostGeometryTrack\)/);
 assert.match(status,/GEOMETRY_GHOST_PREFIX = 'tdr2:ghostGeometry:'/);
 assert.match(status,/kind:isOfficialNewPb\?'circuit-personal-best':'circuit-geometry-best'/);
 assert.match(status,/if\(isOfficialNewPb\)\{[\s\S]*?localStorage\.setItem\(this\.ttKey/);
@@ -40,7 +40,7 @@ assert.match(status,/_isGhostCurrentGeometryReplay\(\)/);
 assert.match(status,/VUELTA/, 'Compact ghost replay button must still identify current lap');
 assert.match(status,/PB ANTIGUO/);
 assert.match(status,/_onlineGhostChallenge=\{\.\.\.this\._onlineGhostChallenge,invalid:true\}/);
-assert.match(publish,/const compatibility=ghostReplayCompatibility\(ghost,trackId,scene\?\.track\);/);
+assert.match(publish,/const compatibility=ghostReplayCompatibility\(ghost,trackId,scene\?\._tdrGhostGeometryTrack\|\|scene\?\.track\);/);
 assert.match(publish,/if\(!compatibility\.compatible\)/, 'Incompatible ghost must be rejected using the compatibility result');
 assert.ok(publish.indexOf('ghostReplayCompatibility(ghost,trackId')<publish.indexOf('await showRewardedAd(scene'),
   'Stale replay rejection MUST happen before rewarded advertisement');
