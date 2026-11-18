@@ -63,7 +63,7 @@ assert.ok(earlyChecks>=0&&adCall>earlyChecks&&submit>adCall,
 assert.ok(view.includes("raceControlPublishClaimId(trackId,best.lapMs)"));
 assert.ok(view.includes('ghostSampleCount:replay.count'));
 assert.ok(view.includes('submitRaceControlRecordWithoutGhost({'));
-assert.ok(view.includes('No existe una repetición exacta'));
+assert.ok(view.includes('No se ha publicado online para evitar perder el botón VS.')&&view.includes('if(!replay){'));
 assert.ok(source.includes('mountNewPersonalBestOffer(this,root,r);'));
 assert.ok(source.includes('this._sessionPreviousPersonalBestMs='));
 assert.ok(source.includes('valid:e?.valid!==false&&e?.invalid!==true'));
