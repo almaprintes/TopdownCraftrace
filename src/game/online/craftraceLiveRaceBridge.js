@@ -14,6 +14,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const remote=scene.add.container(scene.carBody.x,scene.carBody.y,[remoteSprite]).setDepth(29).setVisible(false);
  const label=scene.add.text(0,-45,'RIVAL · LIVE',{fontFamily:'system-ui',fontSize:'14px',color:'#ffffff',backgroundColor:'#16283c',padding:{x:5,y:3}}).setOrigin(0.5).setDepth(31).setVisible(false);
  let lastSent=0,stopped=false,positionPending=false,remoteAppearance=null;
+ let lastPublishedPose=null;
  let lastRemotePacketAt=0,remotePacketGapMs=350,lastRenderedAt=0;
  let ownReady=false,otherReady=false,startSending=false,readySending=false,lastReadySentAt=0;
  const ownCarId=CAR_SPECS[scene.carId]?.id||CAR_SPECS[scene.baseSpec?.id]?.id||'stock';
@@ -151,16 +152,20 @@ export function attachCrafRaceLivePilot(scene,roomId){
   // without delaying motion, countdown events, or reconnection packets.
   const velocity=scene.carBody?.body?.velocity;
   const moving=Boolean(velocity&&Math.hypot(velocity.x||0,velocity.y||0)>1);
-  const positionIntervalMs=scene._raceStarted&&moving?150:500;
+  // An unchanged grid/parked car needs a heartbeat, not two database writes
+  // per second. Preserve the 150 ms moving cadence on both platforms.
+  const body=scene.carBody;
+  const poseChanged=!lastPublishedPose||Math.hypot(body.x-lastPublishedPose.x,body.y-lastPublishedPose.y)>0.5||
+   Math.abs(Math.atan2(Math.sin(body.rotation-lastPublishedPose.angle),Math.cos(body.rotation-lastPublishedPose.angle)))>0.02;
+  const positionIntervalMs=scene._raceStarted&&moving?150:(poseChanged?500:2000);
   // Once this pilot finishes, its final position is no longer live gameplay.
   // Avoid ongoing authenticated writes while waiting for the other result.
   if(!localFinish&&!positionPending&&now-lastSent>=positionIntervalMs&&scene.carBody?.active){
    lastSent=now;
-   const body=scene.carBody;
    const speed=Math.max(0,Math.hypot(body.body?.velocity?.x||0,body.body?.velocity?.y||0));
    if(Number.isFinite(body.x)&&Number.isFinite(body.y)&&Number.isFinite(body.rotation)&&Math.abs(body.x)<=100000&&Math.abs(body.y)<=100000){
     positionPending=true;
-    void transport.send('position',{x:body.x,y:body.y,angle:body.rotation,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0),carId:ownCarId,skinId:ownSkinId}).catch(()=>{}).finally(()=>{positionPending=false;});
+    void transport.send('position',{x:body.x,y:body.y,angle:body.rotation,speed,lap:Math.max(0,scene.lapCount||0),tick:Math.max(0,scene.simTick||0),carId:ownCarId,skinId:ownSkinId}).then(()=>{lastPublishedPose={x:body.x,y:body.y,angle:body.rotation};}).catch(()=>{}).finally(()=>{positionPending=false;});
    }
   }
  };
