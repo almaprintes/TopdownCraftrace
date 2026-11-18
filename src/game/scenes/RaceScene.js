@@ -867,6 +867,17 @@ _dbg(msg) {
   }
 create() {
     super.create()
+    // iPhone/iPad: mute only while the race scene is active. Preserve the
+    // player's previous sound setting and restore it when leaving the race.
+    // Android and other platforms retain their existing audio behaviour.
+    if (isIOSRaceDevice() && this.sound) {
+      const raceSoundManager = this.sound;
+      const previousRaceMute = raceSoundManager.mute;
+      raceSoundManager.mute = true;
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        raceSoundManager.mute = previousRaceMute;
+      });
+    }
 this.standings = createStandingsSystem();
 // -------------------------------------------------
 // RESET DURO DE CÁMARA PRINCIPAL
