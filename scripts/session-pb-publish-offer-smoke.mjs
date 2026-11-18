@@ -88,10 +88,10 @@ assert.ok(offer.includes('REINTENTAR PUBLICACIÓN · GRATIS'));
 assert.ok(offer.includes("setStatus('No has elegido publicar. No se mostrará ningún anuncio.')"));
 assert.ok(offer.includes('if(!row||(replay?!row.record_ref:row.track_id!==trackId))'),
   'Both ghost and time-only publications must have server acknowledgement');
-assert.ok(offer.includes('submitRaceControlRecordWithoutGhost({'),
-  'No recorded replay still permits publishing the personal best after an ad');
-assert.ok(offer.includes('No existe una repetición exacta'),
-  'The player must agree explicitly to time-only publication');
+assert.ok(offer.includes("if(!replay){")&&offer.includes('No se ha publicado online para evitar perder el botón VS.'),
+  'Missing replay must block online publication and show the diagnostic in the report');
+assert.ok(offer.indexOf('if(!replay){')<offer.indexOf('await showRewardedAd(scene'),
+  'Missing replay must block before any rewarded advertisement');
 assert.ok(report.includes('this._sessionPreviousPersonalBestMs='),'Persist pre-session comparison baseline');
 assert.ok(report.includes('mountNewPersonalBestOffer(this,root,r)'),'Mount celebration within report');
 assert.ok(report.indexOf('installSessionReportNavigation(root);')<report.indexOf('mountNewPersonalBestOffer(this,root,r);'),
