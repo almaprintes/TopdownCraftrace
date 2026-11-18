@@ -4036,6 +4036,11 @@ if (steeringInput) {
 }
 
 // === Track culling render (solo celdas cercanas) ===
+// iOS startup diagnostic: measure only the one-time static track build.
+// Never profile subsequent frames or change rendering/physics on Android.
+const iosTrackWarmupPending = this._iosStaticTrackRender && !this._iosStaticTrackPrepared;
+const iosTrackWarmupStart = iosTrackWarmupPending ? performance.now() : 0;
+const iosTrackWarmupObjectsBefore = iosTrackWarmupPending ? (this.track?.gfxByCell?.size || 0) : 0;
 // IMPORTANTE: si aquí explota, no debe tumbar el update entero.
 try {
   const geom = this.track?.geom;
@@ -4221,6 +4226,16 @@ if (cell.overlay && !cell.overlay.visible) cell.overlay.setVisible(true);
     this._cullErrLogged = true;
     this._hudLog(`[cull ERROR] ${e?.message || e}`);
   }
+}
+if (iosTrackWarmupPending) {
+  const warmupMs = performance.now() - iosTrackWarmupStart;
+  const createdCells = (this.track?.gfxByCell?.size || 0) - iosTrackWarmupObjectsBefore;
+  console.info('[TDR iOS track warmup]', {
+    durationMs: Math.round(warmupMs * 10) / 10,
+    createdCells,
+    totalCells: this.track?.gfxByCell?.size || 0,
+    prepared: this._iosStaticTrackPrepared === true
+  });
 }
     // === VUELTAS: detectar cruce de línea de meta (robusto) ===
     try {
