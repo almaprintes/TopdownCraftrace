@@ -2141,7 +2141,10 @@ this.cameras.main.setScroll(0, 0);
 
 this.cameras.main.startFollow(this.carBody, true, 0.12, 0.12);
 this.cameras.main.setZoom(this.zoom);
-this.cameras.main.roundPixels = true;
+// Subpixel world-camera motion on iOS: avoid quantizing the moving track
+// into whole-pixel steps while the followed car remains screen-centered.
+// UI camera retains pixel rounding for sharp, stationary HUD text.
+this.cameras.main.roundPixels = !isIOSRaceDevice();
 
 // Snap inmediato al coche (si no, puedes quedarte viendo el off en (0,0))
 this.cameras.main.centerOn(this.carBody.x, this.carBody.y);
