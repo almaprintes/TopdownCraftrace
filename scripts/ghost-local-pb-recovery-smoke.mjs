@@ -90,7 +90,7 @@ const scene=readFileSync('src/game/scenes/RaceStaticGhostStatusScene.js','utf8')
 const sectors=readFileSync('src/game/scenes/RaceReplayRealSectorsScene.js','utf8');
 assert.match(source,/persistOfficialPersonalBestReplay\(\{/,
  'Top-ten recording must immediately persist exact PB on device');
-assert.match(scene,/findRaceControlGhost\(key,this\.track,this\._tdrGhostKnownBestMs\)/);
+assert.match(scene,/findRaceControlGhost\(key,this\._tdrGhostGeometryTrack,this\._tdrGhostKnownBestMs\)/);
 assert.match(scene,/writePbGhost\(this\._tdrGeometryGhostStorageKey,current\)/);
 assert.match(sectors,/if\(this\._onlineGhostChallenge\|\|!this\._ghostData\)return;/);
 assert.ok(!sectors.includes('localStorage.setItem(this._ghostStorageKey'),
