@@ -105,11 +105,13 @@ export function mountNewPersonalBestOffer(scene,root,report){
         }
       }
       if(!replay){
-        // Keep the reason visible on the device: iOS users may not have a
-        // remote debugger. Never send an incompatible replay to Supabase.
-        console.warn('[race-control] time-only publication reason', {trackId,carId,lapMs:best.lapMs,replayReason});
-        const approved=window.confirm('No existe una repetición exacta de esta vuelta (diagnóstico: '+replayReason+'). Puedes publicar el tiempo igualmente, pero NO tendrá replay ni desafío fantasma. ¿Quieres publicar solo tu tiempo?');
-        if(!approved)throw new Error('Publicación sin repetición cancelada. Tu marca personal sigue guardada.');
+        // Native confirm dialogs may be suppressed by iOS webviews. Never
+        // silently publish a time-only PB: that permanently replaces the
+        // online best without a VS replay. Keep the local PB and show a
+        // persistent, actionable diagnostic in the session report itself.
+        console.warn('[race-control] replay required before publication', {trackId,carId,lapMs:best.lapMs,replayReason});
+        card.querySelector('[data-pb-question]').textContent='⚠️ Repetición no disponible · récord local conservado';
+        throw new Error('No se ha publicado online para evitar perder el botón VS. Diagnóstico: '+replayReason+'. Muestras: '+(ghost?.samples?.length||0)+'. Circuito: '+trackId+'. Coche: '+carId+'.');
       }
       // Validate online readiness before attempting an optional rewarded ad.
       setStatus(replay?'Comprobando conexión y repetición…':'Comprobando conexión para publicar solo el tiempo…');
