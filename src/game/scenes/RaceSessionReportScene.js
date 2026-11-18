@@ -1,3 +1,5 @@
+import {ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
+import {encodeOnlineGhostNative,encodeOnlineGhostNativeBinary} from '../online/onlineGhostCodec.js';
 import { RaceScene as CurrentRaceScene } from './RaceProgressiveBrakeScene.js';
 import { getLanguage } from '../i18n/index.js';
 import { buildSessionInsight } from '../ui/sessionInsightReader.js';
@@ -215,6 +217,49 @@ export class RaceScene extends CurrentRaceScene {
     this._sessionReportModal=root;
     installSessionReportNavigation(root);
     mountNewPersonalBestOffer(this,root,r);
+    // Developer diagnostic is a local dry run. It never writes a record,
+    // requests an ad or sends anything to Supabase.
+    const testButton=document.createElement('button');
+    testButton.type='button';
+    testButton.textContent='🧪 PROBAR FANTASMA';
+    testButton.style.cssText='width:100%;margin:10px 0;padding:11px;border:1px solid #64e8ff;border-radius:10px;background:#112b39;color:#d6faff;font:800 12px system-ui';
+    const testResult=document.createElement('div');
+    testResult.setAttribute('data-ghost-diagnostic','');
+    testResult.setAttribute('role','status');
+    testResult.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 system-ui;color:#d6faff;padding:0 5px 12px';
+    testButton.addEventListener('click',()=>{
+      const last=this._tdrLastGhostDiagnostic;
+      const trackId=String(this._ghostTrackKey||this.trackKey||'');
+      if(!last){
+        testResult.textContent='SIN VUELTA GRABADA: completa una vuelta y vuelve a FIN SESIÓN. No se ha modificado ningún récord.';
+        return;
+      }
+      const ghost={version:6,trackKey:last.trackKey,carId:last.carId,
+        lapMs:Math.round(last.lapMs),geometryRevision:last.geometryRevision,
+        samples:last.samples};
+      const check=ghostReplayCompatibility(ghost,trackId,this.track);
+      let encoding='NO PROBADO';
+      if(last.valid&&check.compatible&&ghost.samples.length>=5){
+        try{
+          const packet=encodeOnlineGhostNative(ghost);
+          const bytes=encodeOnlineGhostNativeBinary(packet);
+          encoding=packet.p.length>=2&&packet.p.length<=20000&&bytes.byteLength<=131072
+            ?'OK · '+bytes.byteLength+' bytes':'FUERA DE LÍMITES';
+        }catch(error){encoding='ERROR · '+String(error?.message||error);}
+      }
+      testResult.textContent=[
+        'PRUEBA LOCAL · NO PUBLICADA',
+        'Circuito: '+trackId+' · Coche: '+last.carId,
+        'Vuelta: '+Math.round(last.lapMs)+' ms · '+(last.valid?'válida':'no válida'),
+        'Muestras: '+last.samples.length,
+        'Geometría: '+(check.compatible?'COMPATIBLE':'ERROR · '+check.reason),
+        'Codificación: '+encoding,
+        'Récords y Supabase: SIN CAMBIOS'
+      ].join('\\n');
+    });
+    const diagnosticPage=root.querySelector('[data-report-page="resumen"]');
+    if(diagnosticPage){diagnosticPage.appendChild(testButton);diagnosticPage.appendChild(testResult);}
+
     root.querySelector('[data-a="continue"]')?.addEventListener('click',()=>this._closeSessionReport(true));
     root.querySelector('[data-a="export"]')?.addEventListener('click',()=>this._exportSessionReport(r));
     root.querySelector('[data-a="exit"]')?.addEventListener('click',()=>{
