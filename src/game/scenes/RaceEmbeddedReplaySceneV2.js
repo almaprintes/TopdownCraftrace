@@ -68,7 +68,14 @@ export class RaceScene extends EmbeddedReplayRaceScene{
 
     if(!embeddedRequested&&!this._tdrEmbeddedReplay){
       try{
-        this._tdrEngineSample?.destroy?.();this._tdrEngineSample=new CarEngineSampleRuntime(this);this._tdrInstallIgnitionStart(blockedAutoStart);
+        this._tdrEngineSample?.destroy?.();
+        // iOS: do not instantiate WebAudio at all (no fetch/decode, AudioContext,
+        // source nodes, DSP or per-frame engine parameter updates).
+        // Keep the ignition UI/countdown and all Android behaviour unchanged.
+        const iosRaceAudioDisabled = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        this._tdrEngineSample = iosRaceAudioDisabled ? null : new CarEngineSampleRuntime(this);
+        this._tdrInstallIgnitionStart(blockedAutoStart);
         this.events.once('shutdown',()=>{this._tdrCleanupIgnitionStart();this._tdrEngineSample?.destroy?.();this._tdrEngineSample=null;});
       }catch(e){console.warn('[TDR2 ignition] init failed',e);}
     }else this._tdrRemoveIgnitionButton();
