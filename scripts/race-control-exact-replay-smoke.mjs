@@ -50,7 +50,7 @@ assert.ok(board.indexOf('if(!rewardActionAllowed(ad))')>=0 && board.indexOf('if(
  'Server publication requires verified ad or explicitly granted November promotion');
 assert.ok(offer.includes('submitRaceControlRecordWithoutGhost({'),'Session report must offer score-only');
 assert.ok(offer.includes('submitRaceControlRecordWithGhost({'),'Exact ghost still publishes');
-assert.ok(offer.includes('No existe una repetición exacta'),'User must be informed before paying for score-only');
+assert.ok(offer.includes('No se ha publicado online para evitar perder el botón VS.')&&offer.includes('if(!replay){'),'Missing exact replay must block online publication before any ad');
 assert.ok(offer.indexOf('if(!rewardActionAllowed(result))')>=0 && offer.indexOf('if(!rewardActionAllowed(result))')<offer.indexOf('submitRaceControlRecordWithoutGhost({'));
 assert.ok(rpc.includes("'/rest/v1/rpc/submit_track_record'"),'Reuse authenticated score-only RPC');
 assert.ok(sql.includes('ghost_payload=null'),'New PB without replay clears an older ghost');
