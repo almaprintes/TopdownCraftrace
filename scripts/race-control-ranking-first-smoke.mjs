@@ -17,8 +17,8 @@ const nearbyAuto='if(actualTrackId)this._installTimeMatchedRivals(selected);';
 assert.ok(!video.includes(nearbyAuto),'Nearby filters must not auto-mount or auto-fetch on the ranking page');
 const render=video.slice(video.indexOf('_renderBroadcastRecords(trackId=null){'),video.indexOf('_installReplayModalActions(trackId){'));
 assert.doesNotMatch(render,/_installTimeMatchedRivals\(/,'No second rival panel between PB and leaderboard');
-assert.match(video,/import raceControlRankingFirstCss from '.\.\.\/ui\/raceControlRankingFirst\.css\?inline'/);
-assert.match(video,/s\.textContent \+= '\\n' \+ raceControlRankingFirstCss/);
+assert.ok(video.includes("import raceControlRankingFirstCss from '../ui/raceControlRankingFirst.css?inline'"));
+assert.ok(video.includes("s.textContent += '\\n' + raceControlRankingFirstCss"));
 for(const marker of ['br-board-tabs','br-online-head','br-online-board','br-online-row','data-br-vs','data-br-scope','data-br-online'])
   assert.ok(board.includes(marker),'Existing ranking/filter/VS must remain: '+marker);
 assert.match(css,/grid-template-areas:"track car pb publish"/);
