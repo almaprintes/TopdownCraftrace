@@ -3094,6 +3094,12 @@ this.minimap?.car,
   if (this.bgWorld) this.uiCam?.ignore(this.bgWorld);
   if (this.carRig) this.uiCam?.ignore(this.carRig);
   if (this.finishGfx) this.uiCam?.ignore(this.finishGfx);
+  // These world graphics were created before uiCam existed, so their earlier
+  // optional ignore() calls did nothing. Exclude them after camera creation.
+  // This affects rendering only; checkpoints and driving physics stay intact.
+  const worldGraphics=[this._shoulderLeft,this._shoulderRight,
+    this._curbOuter,this._curbInner,this.cpGfx,this.finishLineDebug,this.gridDebug].filter(Boolean);
+  if(worldGraphics.length)this.uiCam?.ignore(worldGraphics);
 };
 
 // aplicar una vez aquí
