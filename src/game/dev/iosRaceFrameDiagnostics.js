@@ -67,7 +67,10 @@ const contextLines=(w,scene,state,nowWall)=> {
   const duration=Math.max(0,nowWall-state.measurementStartedAt);
   const hiddenTotal=state.hiddenTotalMs+(state.hiddenSince>0?Math.max(0,performance.now()-state.hiddenSince):0);
   const track=scene.track||{};
-  const trackName=[track?.meta?.name,track?.name,track?.id,scene?.trackId].find(v=>typeof v==='string'&&v.trim());
+  // Show the active race key separately: track metadata may be inherited from
+  // a base circuit and must not be mistaken for the selected variant.
+  const trackName=[track?.meta?.name,track?.name,track?.id].find(v=>typeof v==='string'&&v.trim());
+  const activeTrackKey=typeof scene?.trackKey==='string'&&scene.trackKey.trim()?scene.trackKey.trim():'NO DISPONIBLE';
   const deviceMemory=Number(navigator?.deviceMemory);
   return [
     'FECHA INICIO '+localMeasurementTime(state.measurementStartedAt),
@@ -75,7 +78,7 @@ const contextLines=(w,scene,state,nowWall)=> {
     'DURACIÓN '+formatMeasurementDuration(duration)+' · sesión app '+formatMeasurementDuration(pageAge)+' · carrera '+formatMeasurementDuration(raceAge),
     previousMeasurementContext(prev,state.measurementStartedAt)+prevDelta,
     'CALOR AL TACTO (MANUAL): inicio '+state.thermalAtStart+' · ahora '+thermalNow+' · SIN SENSOR TÉRMICO',
-    'CIRCUITO '+(trackName||'NO DISPONIBLE')+' · DPR '+label(window.devicePixelRatio)+' · RAM estimada '+(Number.isFinite(deviceMemory)&&deviceMemory>0?deviceMemory+' GB':'NO DISPONIBLE'),
+    'CIRCUITO CLAVE '+activeTrackKey+' · META '+(trackName||'NO DISPONIBLE')+' · DPR '+label(window.devicePixelRatio)+' · RAM estimada '+(Number.isFinite(deviceMemory)&&deviceMemory>0?deviceMemory+' GB':'NO DISPONIBLE'),
     'SEGUNDO PLANO '+state.hiddenCount+' salidas · '+formatMeasurementDuration(hiddenTotal)+' acumulados',
     'BATERÍA '+(state.batteryReading||'NO DISPONIBLE EN ESTE NAVEGADOR')
   ];
