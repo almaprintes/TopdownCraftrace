@@ -206,6 +206,7 @@ export function formatIosRenderAuditSnapshot(value){
     `FOTO ELEGIBLE PARA UI ${s.photoEligibleForUi??0} (sin filtro, no implica render real) · ZOOM CÁMARA ${s.mainZoom==null?'?':s.mainZoom.toFixed(3)} · REDONDEO PÍXELES ${s.mainRoundPixels?'SI':'NO'}`,
     `TRAZA CAMARA redondeo tras FOLLOW ${s.cameraRoundTrace?.afterFollow==null?'?':s.cameraRoundTrace.afterFollow?'SI':'NO'} · tras crear HUD ${s.cameraRoundTrace?.afterHudCamera==null?'?':s.cameraRoundTrace.afterHudCamera?'SI':'NO'} · actual ${s.mainRoundPixels?'SI':'NO'}`,
     `IDENTIDAD CAMARAS main ID ${s.mainCameraId??'?'} · HUD ID ${s.uiCameraId??'?'} · main primera ${s.mainIsFirstCamera?'SI':'NO'} · main=HUD ${s.mainIsHudCamera?'SI':'NO'}`,
+    `PRIMER CAMBIO NO→SI ${s.cameraRoundTrace?.firstFalseToTrue?.stack || 'NO CAPTURADO'}`,
     `FOTO IOS CATEGORIAS COMPACTA ${s.photoCompactCount??0} · ORIGINAL ${s.photoFullSizeCount??0} · INESPERADA/SIN META ${s.photoUnmatchedCount??0}`,
     `CACHE TEXTURAS ${s.textureCacheEntries??0} keys · ${s.textureCacheWithDimensions??0} con tamaño · RGBA8 teórico ${s.cachedRgbaEstimateMiB??0} MiB`,
     ...((s.largestTextures||[]).length?['TEXTURAS MAYORES '+s.largestTextures.join(' | ')]:[]),
