@@ -11,6 +11,7 @@ import { REWARDED_PLACEMENTS, raceControlGhostClaimId, verifiedReward, rewardAct
 import { setOnlineGhostChallenge } from '../online/onlineGhostSession.js';
 import { findExactLocalPbReplay, matchesExactLocalReplay } from '../tracks/exactLocalReplay.js';
 import { installNearbyRivalsPanel } from '../ui/raceControlNearbyRivalsPanel.js';
+import raceControlRankingFirstCss from '../ui/raceControlRankingFirst.css?inline';
 import {TRACK_REGISTRY} from '../tracks/trackRegistry.js';
 import {ghostReplayCompatibility,ghostGeometryRevision} from '../tracks/ghostTrackCompatibility.js';
 
@@ -133,6 +134,8 @@ export class StatsScene extends ReplayStatsScene{
       @media(max-height:430px){.br-nearby-results{max-height:156px}.br-nearby-rival{min-height:34px}
         .br-nearby-head{margin-bottom:6px}.br-nearby-icon{width:30px;height:30px;font-size:19px}}
     `;
+    // Last CSS layer prevents older 180px PB layout from hiding the ranking.
+    s.textContent += '\n' + raceControlRankingFirstCss;
     this._root.appendChild(s);
   }
 
@@ -143,7 +146,7 @@ export class StatsScene extends ReplayStatsScene{
     const actualTrackId=this._raceControlRenderedTrack||trackId;
     const selected=this._getSelectedRecord?.(actualTrackId)||
       {trackId:actualTrackId,bestLapMs:0};
-    if(actualTrackId)this._installTimeMatchedRivals(selected);
+    // Ranking first: don't mount optional near-rival filters or auto-fetch another shortlist.
   }
 
   _installReplayModalActions(trackId){

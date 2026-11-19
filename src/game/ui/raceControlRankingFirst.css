@@ -1,0 +1,129 @@
+/* RACE CONTROL — ranking first; shared Safari iOS / Android UI.
+   Applied after legacy styles. Presentation only, no data/physics/network writes. */
+.br-grid.br-grid-online>.br-main{
+  display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;
+  align-content:start;gap:8px;min-width:0
+}
+.br-grid.br-grid-online .br-hero.br-hero--compact{
+  min-height:0!important;height:auto!important;padding:8px 11px!important;
+  overflow:hidden;isolation:isolate
+}
+.br-grid.br-grid-online .br-hero--compact .br-track-beauty{
+  height:100%;opacity:.075;pointer-events:none
+}
+.br-grid.br-grid-online .br-hero--compact .br-hero-head{
+  position:relative;z-index:2;display:grid!important;
+  grid-template-columns:minmax(0,1.4fr) minmax(105px,.64fr) minmax(112px,.64fr) minmax(97px,.46fr);
+  grid-template-areas:"track car pb publish";align-items:center;gap:8px;min-height:74px
+}
+.br-grid.br-grid-online .br-hero--compact .br-hero-head>div:first-child{
+  grid-area:track;min-width:0;max-width:none!important
+}
+.br-grid.br-grid-online .br-hero--compact .br-hero-head h3{
+  margin:3px 0 0;font-size:clamp(17px,1.85vw,26px)!important;
+  line-height:1.07;white-space:normal!important;overflow-wrap:normal
+}
+.br-grid.br-grid-online .br-hero--compact .br-car-strip{
+  grid-area:car;position:relative;z-index:2;min-width:0;
+  height:59px!important;margin:0!important;padding:0!important;overflow:hidden;
+  display:grid!important;grid-template-columns:45px minmax(0,1fr);gap:4px;
+  align-items:center;border:0!important;border-left:1px solid rgba(86,200,222,.23)!important;
+  background:linear-gradient(95deg,rgba(16,69,82,.13),rgba(5,23,34,.18))
+}
+.br-grid.br-grid-online .br-hero--compact .br-brand-watermark{display:none!important}
+.br-grid.br-grid-online .br-hero--compact .br-record-car-stage{
+  grid-column:1;min-width:0;height:57px;padding:0!important;overflow:hidden;place-items:center
+}
+.br-grid.br-grid-online .br-hero--compact .br-record-car-stage .br-record-car{
+  width:100%!important;height:51px!important;max-height:51px;
+  object-fit:contain;transform:rotate(12deg) scale(1.03)!important
+}
+.br-grid.br-grid-online .br-hero--compact .br-car-meta{
+  grid-column:2;min-width:0;height:auto;max-height:59px;
+  overflow:hidden;padding:0 3px!important;border:0!important;
+  background:transparent;justify-content:center;gap:2px
+}
+.br-grid.br-grid-online .br-hero--compact .br-car-meta small{
+  font-size:7px;line-height:1.1;color:#91adbb
+}
+.br-grid.br-grid-online .br-hero--compact .br-car-meta strong{
+  font-size:clamp(10px,1.05vw,14px);line-height:1.07;
+  overflow:hidden;text-overflow:ellipsis;max-height:32px
+}
+.br-grid.br-grid-online .br-hero--compact .br-pb{
+  grid-area:pb;min-width:0;max-width:100%!important;width:100%;
+  padding:0!important;text-align:right;overflow:visible
+}
+.br-grid.br-grid-online .br-hero--compact .br-pb strong{
+  font-size:clamp(23px,2.55vw,34px)!important;letter-spacing:-.02em;
+  line-height:1.04;white-space:nowrap
+}
+.br-grid.br-grid-online .br-hero--compact .br-pb small,
+.br-grid.br-grid-online .br-hero--compact .br-pb em{
+  font-size:7px;line-height:1.2;letter-spacing:.04em
+}
+.br-grid.br-grid-online .br-hero--compact .br-pb [data-br-replay-missing]{
+  max-width:100%;font-size:7px!important;margin-top:2px!important
+}
+.br-grid.br-grid-online .br-hero--compact .br-pb .br-watch{
+  margin-top:3px;height:25px
+}
+.br-grid.br-grid-online .br-hero--compact .br-publish-hero{
+  grid-area:publish;position:static!important;inset:auto!important;
+  justify-self:stretch;align-self:center;box-sizing:border-box;
+  min-width:0!important;width:100%!important;max-width:none!important;
+  min-height:35px;padding:6px!important;margin:0;
+  font-size:8px!important;line-height:1.2;text-align:center;white-space:normal
+}
+.br-grid.br-grid-online>.br-main>.br-online-arena{
+  min-height:0!important;padding:9px 11px 12px!important;overflow:hidden
+}
+.br-grid.br-grid-online .br-board-toolbar{margin:0;padding-bottom:7px;gap:9px}
+.br-grid.br-grid-online .br-board-toolbar strong{font-size:clamp(12px,1.2vw,18px)}
+.br-grid.br-grid-online .br-board-tabs button{
+  height:34px;min-height:34px;padding:4px 3px
+}
+.br-grid.br-grid-online .br-online-head{padding-top:7px;padding-bottom:5px}
+.br-grid.br-grid-online .br-online-board{
+  max-height:clamp(205px,46dvh,480px);overflow-y:auto;scrollbar-width:thin
+}
+.br-grid.br-grid-online .br-online-row{min-height:49px}
+@media(max-width:820px){
+  .br-grid.br-grid-online .br-hero--compact .br-hero-head{
+    grid-template-columns:minmax(0,1fr) minmax(115px,.6fr);
+    grid-template-areas:"track pb" "car publish";gap:4px 10px;min-height:0
+  }
+  .br-grid.br-grid-online .br-hero--compact .br-car-strip{
+    height:38px!important;grid-template-columns:39px minmax(0,1fr)
+  }
+  .br-grid.br-grid-online .br-hero--compact .br-record-car-stage{height:38px}
+  .br-grid.br-grid-online .br-hero--compact .br-record-car-stage .br-record-car{
+    height:38px!important
+  }
+  .br-grid.br-grid-online .br-hero--compact .br-publish-hero{min-height:31px}
+}
+@media(max-width:620px){
+  .br-grid.br-grid-online .br-hero--compact .br-car-strip{display:none!important}
+  .br-grid.br-grid-online .br-hero--compact .br-hero-head{
+    grid-template-areas:"track pb" "publish publish"
+  }
+  .br-grid.br-grid-online .br-hero--compact .br-publish-hero{
+    justify-self:start;width:auto!important;padding:6px 11px!important
+  }
+}
+@media(max-height:430px){
+  .br-grid.br-grid-online .br-hero.br-hero--compact{padding:6px 9px!important}
+  .br-grid.br-grid-online .br-hero--compact .br-hero-head{
+    min-height:60px;gap:5px
+  }
+  .br-grid.br-grid-online .br-hero--compact .br-hero-head h3{
+    font-size:clamp(15px,1.6vw,23px)!important
+  }
+  .br-grid.br-grid-online .br-hero--compact .br-pb strong{
+    font-size:clamp(22px,2.35vw,31px)!important
+  }
+  .br-grid.br-grid-online>.br-main>.br-online-arena{padding:7px 9px 9px!important}
+  .br-grid.br-grid-online .br-online-row{min-height:44px}
+  .br-grid.br-grid-online .br-board-toolbar{padding-bottom:5px}
+  .br-grid.br-grid-online .br-board-tabs button{height:31px;min-height:31px}
+}
