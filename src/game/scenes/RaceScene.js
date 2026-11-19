@@ -2146,7 +2146,48 @@ this.cameras.main.setZoom(this.zoom);
 // UI camera retains pixel rounding for sharp, stationary HUD text.
 this.cameras.main.roundPixels = !isIOSRaceDevice();
 // DEV-only checkpoint: record the value immediately after assignment.
-if (!IS_PROD_BUILD && isIOSRaceDevice()) this._iosCameraRoundTrace = {afterFollow: this.cameras.main.roundPixels === true};
+if (!IS_PROD_BUILD && isIOSRaceDevice()) {
+  this._iosCameraRoundTrace = {afterFollow: this.cameras.main.roundPixels === true};
+  // DEV only: intercept the first actual change, not each render frame.
+  // Restore the original property descriptor when this scene shuts down.
+  const camera = this.cameras.main;
+  const ownDescriptor = Object.getOwnPropertyDescriptor(camera, 'roundPixels');
+  const inheritedDescriptor = (() => {
+    let proto = Object.getPrototypeOf(camera);
+    while (proto) {
+      const d = Object.getOwnPropertyDescriptor(proto, 'roundPixels');
+      if (d) return d;
+      proto = Object.getPrototypeOf(proto);
+    }
+    return null;
+  })();
+  if (ownDescriptor?.configurable !== false) {
+    let current = camera.roundPixels;
+    let firstChange = null;
+    const trace = this._iosCameraRoundTrace;
+    Object.defineProperty(camera, 'roundPixels', {
+      configurable: true, enumerable: ownDescriptor?.enumerable ?? true,
+      get() { return current; },
+      set(value) {
+        if (!firstChange && current === false && value === true) {
+          firstChange = {from: false, to: true, stack: String(new Error('roundPixels write').stack || '').slice(0, 1200)};
+          trace.firstFalseToTrue = firstChange;
+        }
+        current = value;
+      }
+    });
+    this.events.once('shutdown', () => {
+      const latest = camera.roundPixels;
+      if (ownDescriptor) {
+        Object.defineProperty(camera, 'roundPixels', ownDescriptor);
+        if ('value' in ownDescriptor && ownDescriptor.writable) camera.roundPixels = latest;
+      } else {
+        delete camera.roundPixels;
+        if (inheritedDescriptor?.set) camera.roundPixels = latest;
+      }
+    });
+  }
+}
 
 // Snap inmediato al coche (si no, puedes quedarte viendo el off en (0,0))
 this.cameras.main.centerOn(this.carBody.x, this.carBody.y);
