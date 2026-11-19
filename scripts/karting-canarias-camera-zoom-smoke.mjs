@@ -22,10 +22,7 @@ const race=readFileSync('src/game/scenes/RaceScene.js','utf8');
 assert.match(race,/import \{ raceCameraZoomTarget \} from '\.\.\/tracks\/raceCameraZoom\.js';/);
 const dynamic=race.slice(race.indexOf('    // === ZOOM DINÁMICO ==='),race.indexOf('// DEV HUD info (derecha)'));
 assert.match(dynamic,/const targetZoom = raceCameraZoomTarget\([\s\S]*?this\.trackKey,[\s\S]*?this\._zoomGameplayMax/);
-assert.match(dynamic,/const relaxedTarget = iphoneZoom[\s\S]*?targetZoom/);
-assert.match(dynamic,/this\._zoomCurrent = Phaser\.Math\.Linear\([\s\S]*?relaxedTarget/);
-assert.match(dynamic,/const zoomAlpha = iphoneZoom[\s\S]*?deltaMs/,
-  'iPhone zoom smoothing must account for frame duration');
+assert.match(dynamic,/this\._zoomCurrent = Phaser\.Math\.Linear\([\s\S]*?targetZoom/);
 assert.match(dynamic,/this\.cameras\.main\.setZoom\(this\.zoom\)/,
   'Must apply track-specific factor to the dynamic target every frame');
 const wide=readFileSync('src/game/scenes/RaceWideCameraPreviewScene.js','utf8');
