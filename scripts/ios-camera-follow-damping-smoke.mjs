@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {iosCameraFollowAlpha} from '../src/game/performance/iosCameraFollowDamping.js';
+const base=0.12;
+assert.ok(Math.abs(iosCameraFollowAlpha(1000/60)-base)<1e-12);
+assert.ok(Math.abs(iosCameraFollowAlpha(1000/30)-(1-(1-base)**2))<1e-12);
+assert.ok(iosCameraFollowAlpha(1000/120)<base);
+assert.ok(iosCameraFollowAlpha(1000/30)>base);
+const race=readFileSync(new URL('../src/game/scenes/RaceScene.js',import.meta.url),'utf8');
+assert.match(race,/\/iPhone\/i\.test[\s\S]*?iosCameraFollowAlpha\(deltaMs\)/);
+assert.match(race,/this\.cameras\.main\.setLerp\(alpha,alpha\)/);
+assert.match(race,/startFollow\(this\.carBody, true, 0\.12, 0\.12\)/);
+console.log('PASS iPhone camera follow damping: time-normalized, 60Hz baseline and native follow retained');
