@@ -2139,7 +2139,7 @@ if(!IS_PROD_BUILD&&isImageNativeTrackScene(this)){
 this.cameras.main.stopFollow();
 this.cameras.main.setScroll(0, 0);
 
-this.cameras.main.startFollow(this.carBody, true, 0.12, 0.12);
+this.cameras.main.startFollow(this.carBody, !isIOSRaceDevice(), 0.12, 0.12);
 this.cameras.main.setZoom(this.zoom);
 // Subpixel world-camera motion on iOS: avoid quantizing the moving track
 // into whole-pixel steps while the followed car remains screen-centered.
@@ -2195,7 +2195,7 @@ this.cameras.main.centerOn(this.carBody.x, this.carBody.y);
 // iOS: a veces el follow no “engancha” hasta el siguiente tick al reentrar
 this.time.delayedCall(0, () => {
   if (!this.carRig || !this.carBody) return;
-  this.cameras.main.startFollow(this.carBody, true, 0.12, 0.12);
+  this.cameras.main.startFollow(this.carBody, !isIOSRaceDevice(), 0.12, 0.12);
   this.cameras.main.centerOn(this.carBody.x, this.carBody.y);
 });
 
@@ -2588,7 +2588,7 @@ this.devBtnMap = mkBtn(bx, by, 'MAP', () => {
 
     // Reanudar follow al coche al salir del modo mapa
     if (this.carBody) {
-      cam.startFollow(this.carBody, true, 0.12, 0.12);
+      cam.startFollow(this.carBody, !isIOSRaceDevice(), 0.12, 0.12);
       cam.centerOn(this.carBody.x, this.carBody.y);
     }
 
