@@ -3098,7 +3098,7 @@ this.minimap?.car,
   // optional ignore() calls did nothing. Exclude them after camera creation.
   // This affects rendering only; checkpoints and driving physics stay intact.
   const worldGraphics=[this._shoulderLeft,this._shoulderRight,
-    this._curbOuter,this._curbInner,this.cpGfx,this.finishLineDebug,this.gridDebug,
+    this._curbOuter,this._curbInner,this.cpGfx,this.finishGfx,this.finishLineDebug,this.gridDebug,
     // iPhone stage asphalt is created before uiCam; its earlier optional
     // ignore() is a no-op, otherwise the full track is drawn twice.
     this._iosStageAsphalt].filter(Boolean);
