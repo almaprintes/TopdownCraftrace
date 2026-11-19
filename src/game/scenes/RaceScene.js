@@ -11,6 +11,7 @@ import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/loc
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import {physicalCircuitId} from '../tracks/trackReverseVariant.js';
 import { raceCameraZoomTarget } from '../tracks/raceCameraZoom.js';
+import {iosCameraFollowAlpha} from '../performance/iosCameraFollowDamping.js';
 import {getRallyDrivingProfile,nextRallyThrottleHeld,applyRallyDriveProfile} from '../tracks/rallyDrivingProfile.js';
 import { crossesDirectedFinishGate } from '../tracks/closedCircuitGateOrder.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
@@ -3480,6 +3481,13 @@ try { this.cameras.main.ignore(this._touchDbg); } catch (e) {}
   }
 
   update(time, deltaMs) {
+    // SlotRace's time-based damping, adapted to Phaser's native camera follow.
+    // Only iPhone; no camera position override, zoom changes or physics changes.
+    // Phaser applies this lerp during the camera update before rendering.
+    if (/iPhone/i.test(String(navigator?.userAgent||'')) && this.cameras?.main?.setLerp && this.cameras.main._follow) {
+      const alpha=iosCameraFollowAlpha(deltaMs);
+      this.cameras.main.setLerp(alpha,alpha);
+    }
     this._crafRaceLiveBridge?.update(performance.now());
     const dt = Math.min(0.05, (deltaMs || 0) / 1000);
 
