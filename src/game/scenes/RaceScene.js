@@ -2922,6 +2922,9 @@ this.uiCam = this.cameras.add(0, 0, this.scale.width, this.scale.height);
 this.uiCam.setScroll(0, 0);
 this.uiCam.setZoom(1);
 this.uiCam.roundPixels = true;
+// The iPhone world camera must retain subpixel movement after the HUD camera
+// has been created. Keep the HUD camera's independent pixel rounding.
+if (isIOSRaceDevice()) this.cameras.main.roundPixels = false;
 
 // UI cam: ignorar fondos del mundo y máscaras
 if (this.bgOff) this.uiCam.ignore(this.bgOff);
