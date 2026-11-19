@@ -2145,6 +2145,8 @@ this.cameras.main.setZoom(this.zoom);
 // into whole-pixel steps while the followed car remains screen-centered.
 // UI camera retains pixel rounding for sharp, stationary HUD text.
 this.cameras.main.roundPixels = !isIOSRaceDevice();
+// DEV-only checkpoint: record the value immediately after assignment.
+if (!IS_PROD_BUILD && isIOSRaceDevice()) this._iosCameraRoundTrace = {afterFollow: this.cameras.main.roundPixels === true};
 
 // Snap inmediato al coche (si no, puedes quedarte viendo el off en (0,0))
 this.cameras.main.centerOn(this.carBody.x, this.carBody.y);
@@ -2925,6 +2927,12 @@ this.uiCam.roundPixels = true;
 // The iPhone world camera must retain subpixel movement after the HUD camera
 // has been created. Keep the HUD camera's independent pixel rounding.
 if (isIOSRaceDevice()) this.cameras.main.roundPixels = false;
+if (!IS_PROD_BUILD && isIOSRaceDevice()) {
+  this._iosCameraRoundTrace = {...this._iosCameraRoundTrace,
+    afterHudCamera: this.cameras.main.roundPixels === true,
+    mainIdAfterHud: this.cameras.main.id,
+    hudIdAfterHud: this.uiCam.id};
+}
 
 // UI cam: ignorar fondos del mundo y máscaras
 if (this.bgOff) this.uiCam.ignore(this.bgOff);
