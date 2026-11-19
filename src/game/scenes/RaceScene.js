@@ -4632,28 +4632,14 @@ const kmh = speed * KMH_PER_PXSEC;
     !IS_PROD_BUILD&&isImageNativeTrackScene(this)
   );
 
-  // iPhone: keep speed-based framing but halve its travel around the
-  // original midpoint. This reduces continuous rescaling of the road without
-  // changing physics, car speed, zoom controls, or Android presentation.
-  const iphoneZoom = isIOSRaceDevice();
-  const midpoint = (this._zoomGameplayMin + this._zoomGameplayMax) * 0.5;
-  const relaxedTarget = iphoneZoom
-    ? midpoint + (targetZoom - midpoint) * 0.5
-    : targetZoom;
-  // Match the existing 0.06-per-frame smoothing at 60 Hz, but use elapsed
-  // frame time so irregular iOS frame intervals don't change its time constant.
-  const zoomAlpha = iphoneZoom
-    ? 1 - Math.pow(1 - this._zoomLerp, Phaser.Math.Clamp((deltaMs || 16.667) / (1000 / 60), 0, 3))
-    : this._zoomLerp;
   this._zoomCurrent = Phaser.Math.Linear(
     this._zoomCurrent ?? this.zoom,
-    relaxedTarget,
-    zoomAlpha
+    targetZoom,
+    this._zoomLerp
   );
 
   this.zoom = this._zoomCurrent;
-  if (Math.abs(this.cameras.main.zoom - this.zoom) > 0.0001)
-    this.cameras.main.setZoom(this.zoom);
+  this.cameras.main.setZoom(this.zoom);
 }
 
 // DEV HUD info (derecha) — COMPACTO para móvil
