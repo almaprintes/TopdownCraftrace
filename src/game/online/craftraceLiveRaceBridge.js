@@ -4,6 +4,10 @@ import {connectLivePositionBroadcast} from './craftraceLiveTransport.js';
 import {takeLiveSession} from './craftraceLiveSession.js';
 import {CAR_SPECS} from '../cars/carSpecs.js';
 import {getEquippedCarSkin,availableCarSkins} from '../skins/carSkins.js';
+import {localLivePilot,parseLivePilot,pilotName,pilotMastery,livePilotHandshake} from './craftraceLivePilot.js';
+import {getTrackPublicName} from '../tracks/trackPublicNames.js';
+import {masteryWheelDataUri} from '../stats/carMastery.js';
+import '../ui/craftraceLiveResults.css';
 const validRoom=x=>typeof x==='string'&&/^[0-9a-f-]{36}$/i.test(x);
 export function attachCrafRaceLivePilot(scene,roomId){
  if(!validRoom(roomId)||!scene?.carBody||!scene?.add)return null;
@@ -51,6 +55,9 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const {transport,room,identity}=session;
  const rivalId=identity.id===room.host_id?room.guest_id:room.host_id;
  const targetLaps=Math.max(1,Math.min(30,Number(room.laps)||3));
+ const ownPilot=localLivePilot(ownCarId);
+ let rivalPilot=parseLivePilot(room.rivalPilot);
+ label.setText(pilotName(rivalPilot,'RIVAL')+' · LIVE');
  const acceptPosition=p=>{
   if(typeof p.payload?.carId==='string'&&typeof p.payload?.skinId==='string')loadAppearance(p.payload.carId,p.payload.skinId);
   const receivedAt=performance.now();
@@ -77,27 +84,111 @@ export function attachCrafRaceLivePilot(scene,roomId){
  void startBroadcast();
  let raceStartClock=null,lastCompletedLap=0,lapTimes=[],localFinish=null,rivalFinish=null,finishSending=false;
  const fmt=ms=>{if(!Number.isFinite(ms))return '—';const n=Math.max(0,Math.round(ms));return Math.floor(n/60000)+':'+String(Math.floor(n%60000/1000)).padStart(2,'0')+'.'+String(n%1000).padStart(3,'0');};
- const results=document.createElement('section');
- results.setAttribute('aria-live','polite');results.style.cssText='position:fixed;z-index:999999;inset:0;display:none;align-items:center;justify-content:center;background:#050d19cc;color:white;font:600 16px system-ui;padding:16px;box-sizing:border-box';
- const panel=document.createElement('div');panel.style.cssText='background:#101d30;border:1px solid #4b789b;border-radius:18px;padding:24px;max-width:440px;width:100%;text-align:center;box-sizing:border-box';results.append(panel);document.body.append(results);
+ let localRematch=false,rivalRematch=false,rematchBusy=false,rematchLaunching=false,restarting=false,rematchStatus='';
+ const results=document.createElement('section');results.className='cr-live-results';
+ results.setAttribute('role','dialog');results.setAttribute('aria-modal','true');
+ results.setAttribute('aria-label','Resultados de CraftRace Live');results.setAttribute('aria-live','polite');
+ const panel=document.createElement('div');panel.className='crl-score';results.append(panel);document.body.append(results);
+ const restartRace=()=>{
+  if(restarting||!localFinish||!rivalFinish)return;
+  restarting=true;
+  handoffLiveSession(room,transport,identity);
+  scene.scene.start('race',{
+   carId:ownCarId,trackKey:room.track_id,liveRoomId:room.id,liveStartAt:null,
+   liveGridSlot:identity.id===room.host_id?0:1,gameMode:'online',testMode:false
+  });
+ };
+ const maybeStartRematch=async()=>{
+  if(stopped||rematchLaunching||!localRematch||!rivalRematch||!localFinish||!rivalFinish||identity.id!==room.host_id)return;
+  rematchLaunching=true;rematchStatus='PREPARANDO NUEVA SALIDA…';showResults();
+  try{
+   const startAt=Math.ceil((transport.serverNow()+6000)/1000)*1000;
+   await transport.send('start',{countdownMs:6000,restart:false,startAt});
+   restartRace();
+  }catch(e){rematchLaunching=false;rematchStatus='No se pudo iniciar la revancha: '+e.message;showResults();}
+ };
+ const askRematch=async(accept=false)=>{
+  if(rematchBusy||localRematch||!localFinish||!rivalFinish)return;
+  rematchBusy=true;rematchStatus='ENVIANDO PROPUESTA…';showResults();
+  try{
+   await transport.send('rematch',accept?{accept:true}:{request:true});
+   localRematch=true;rematchStatus='ESPERANDO CONFIRMACIÓN DEL RIVAL…';
+   showResults();void maybeStartRematch();
+  }catch(e){rematchStatus='No se pudo solicitar: '+e.message;showResults();}
+  finally{rematchBusy=false;}
+ };
+ const declineRematch=async()=>{
+  if(rematchBusy)return;
+  rematchBusy=true;
+  try{await transport.send('rematch',{accept:false});localRematch=false;rivalRematch=false;rematchStatus='REVANCHA RECHAZADA';}
+  catch(e){rematchStatus='No se pudo responder: '+e.message;}
+  finally{rematchBusy=false;showResults();}
+ };
  const showResults=()=>{
-  if(!localFinish)return;
+  if(!localFinish||stopped)return;
   results.style.display='flex';panel.replaceChildren();
-  const heading=document.createElement('h2');heading.textContent=rivalFinish?'RESULTADOS · CRAF RACE LIVE':'META · ESPERANDO AL RIVAL';panel.append(heading);
-  const intro=document.createElement('p');intro.textContent='Circuito: '+room.track_id+' · '+targetLaps+' vueltas';panel.append(intro);
-  const rows=[{name:'TÚ',result:localFinish},{name:'RIVAL',result:rivalFinish}];
-  if(rivalFinish)rows.sort((a,b)=>a.result.elapsedMs-b.result.elapsedMs);
+  const eyebrow=document.createElement('div');eyebrow.className='crl-score__eyebrow';eyebrow.textContent='CRAFT RACE STUDIO · LIVE';panel.append(eyebrow);
+  const heading=document.createElement('h2');heading.textContent=rivalFinish?'RESULTADOS DE CARRERA':'META · ESPERANDO AL RIVAL';panel.append(heading);
+  const intro=document.createElement('p');intro.className='crl-score__track';
+  intro.textContent=getTrackPublicName(room.track_id)+' · '+targetLaps+(targetLaps===1?' VUELTA':' VUELTAS');panel.append(intro);
+  const grid=document.createElement('div');grid.className='crl-score__grid';panel.append(grid);
+  const rows=[{name:pilotName(ownPilot,'TÚ'),tag:'TU CARRERA',pilot:ownPilot,result:localFinish},
+   {name:pilotName(rivalPilot,'RIVAL'),tag:'RIVAL',pilot:rivalPilot,result:rivalFinish}];
+  if(rivalFinish)rows.sort((a,b)=>(a.result?.elapsedMs??Infinity)-(b.result?.elapsedMs??Infinity));
   const best=rivalFinish?Math.min(localFinish.elapsedMs,rivalFinish.elapsedMs):null;
-  for(const entry of rows){const p=document.createElement('p');p.style.cssText='padding:12px;border-top:1px solid #38506b;text-align:left';
-   p.textContent=entry.name+' · '+(entry.result?fmt(entry.result.elapsedMs)+' · mejor vuelta '+fmt(Math.min(...entry.result.lapTimes))+(best!==null?' · Δ +'+fmt(entry.result.elapsedMs-best):''):'En carrera…');panel.append(p);}
-  if(!rivalFinish){const note=document.createElement('p');note.textContent='Tu tiempo está cerrado. Esperando a que el otro piloto complete la carrera.';panel.append(note);}
-  const close=document.createElement('button');close.textContent='VOLVER AL MENÚ';close.style.cssText='margin-top:14px;padding:12px 20px;border-radius:10px;background:#245c86;color:white;border:1px solid #8ac8ed';close.onclick=()=>{results.remove();scene.scene.start('menu');};panel.append(close);
+  rows.forEach((entry,index)=>{
+   const card=document.createElement('article');card.className='crl-score__driver'+(rivalFinish&&index===0?' winner':'');
+   const tag=document.createElement('div');tag.className='crl-score__tag';tag.textContent=rivalFinish?(index===0?'🏆 1º · '+entry.tag:'2º · '+entry.tag):entry.tag;card.append(tag);
+   const head=document.createElement('div');head.className='crl-score__head';
+   if(Number.isInteger(entry.pilot?.masteryLevel)&&entry.pilot.masteryLevel>0){
+    const img=document.createElement('img');img.src=masteryWheelDataUri(entry.pilot.masteryLevel,{size:96});img.alt='Emblema de maestría';head.append(img);
+   }
+   const info=document.createElement('div');
+   const name=document.createElement('div');name.className='crl-score__pilot';name.textContent=entry.name;info.append(name);
+   const mastery=document.createElement('p');mastery.className='crl-score__mastery';mastery.textContent=pilotMastery(entry.pilot);info.append(mastery);
+   head.append(info);card.append(head);
+   const time=document.createElement('div');time.className='crl-score__time';
+   time.textContent=entry.result?fmt(entry.result.elapsedMs):'EN CARRERA';card.append(time);
+   const metrics=document.createElement('div');metrics.className='crl-score__metrics';
+   const lap=document.createElement('span');lap.textContent='MEJOR VUELTA ';
+   const lapVal=document.createElement('strong');lapVal.textContent=entry.result?fmt(Math.min(...entry.result.lapTimes)):'—';lap.append(lapVal);metrics.append(lap);
+   const delta=document.createElement('span');delta.textContent='DIFERENCIA ';
+   const deltaVal=document.createElement('strong');deltaVal.textContent=best===null||!entry.result?'—':'+ '+fmt(entry.result.elapsedMs-best);delta.append(deltaVal);metrics.append(delta);
+   card.append(metrics);grid.append(card);
+  });
+  const status=document.createElement('p');status.className='crl-score__status';
+  status.textContent=rematchStatus||(!rivalFinish?'Tu tiempo está cerrado; esperamos a que termine el otro piloto.':'CARRERA FINALIZADA · RESULTADO AMISTOSO');
+  panel.append(status);
+  const actions=document.createElement('div');actions.className='crl-score__actions';panel.append(actions);
+  const makeButton=(label,fn,disabled=false)=>{
+   const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=disabled;button.addEventListener('click',fn);actions.append(button);return button;
+  };
+  if(rivalFinish&&!rematchLaunching){
+   if(rivalRematch&&!localRematch){
+    makeButton('ACEPTAR REVANCHA',()=>void askRematch(true),rematchBusy);
+    makeButton('RECHAZAR',()=>void declineRematch(),rematchBusy);
+   }else makeButton(localRematch?'REVANCHA SOLICITADA':'PEDIR REVANCHA',()=>void askRematch(),localRematch||rematchBusy);
+  }
+  makeButton('VOLVER AL MENÚ',()=>scene.scene.start('menu'));
  };
  transport.onPacket=p=>{
   if(p.from!==rivalId)return;
+  if(p.type==='hello'||p.type==='ready'){
+   const incoming=parseLivePilot(p.payload);
+   if(incoming){rivalPilot=incoming;room.rivalPilot=incoming;label.setText(pilotName(rivalPilot,'RIVAL')+' · LIVE');if(localFinish)showResults();}
+  }
   if(p.type==='ready'&&p.payload?.phase==='grid'&&p.payload?.trackId===room.track_id&&p.payload?.physicsVersion===room.physics_version&&p.payload?.direction===room.direction&&p.payload?.laps===room.laps)otherReady=true;
   if(p.type==='start'&&p.payload?.restart===true&&p.from===room.host_id&&identity.id!==room.host_id&&ownReady&&otherReady&&Number.isFinite(p.payload.startAt))scene._crafRaceLiveStartAt=p.payload.startAt;
+  if(p.type==='start'&&p.payload?.restart===false&&p.from===room.host_id&&localRematch&&rivalRematch&&localFinish&&rivalFinish)restartRace();
   if(p.type==='finish'&&p.payload?.laps===targetLaps){rivalFinish=p.payload;showResults();}
+  if(p.type==='rematch'&&localFinish&&rivalFinish){
+   if(p.payload?.request===true||p.payload?.accept===true){
+    rivalRematch=true;rematchStatus=localRematch?'PREPARANDO REVANCHA…':pilotName(rivalPilot,'EL RIVAL')+' TE PROPONE UNA REVANCHA';
+    showResults();void maybeStartRematch();
+   }else if(p.payload?.accept===false){
+    rivalRematch=false;localRematch=false;rematchStatus='EL RIVAL HA RECHAZADO LA REVANCHA';showResults();
+   }
+  }
   if(p.type==='position'&&!positionBroadcast?.ready)acceptPosition(p);
  };
  transport.onState=d=>{if(d.room_id!==roomId||d.host_id!==room.host_id)transport.stop();};
@@ -126,7 +217,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
   // Repeat during handoff until the shared start timestamp is known.
   if(scene._crafRaceLiveReadyRequested&&!scene._crafRaceLiveStartAt&&!readySending&&now-lastReadySentAt>=2500){
    readySending=true;lastReadySentAt=now;
-   void transport.send('ready',{phase:'grid',trackId:room.track_id,physicsVersion:room.physics_version,direction:room.direction,laps:room.laps})
+   void transport.send('ready',{...livePilotHandshake(room,ownPilot),phase:'grid'})
     .then(()=>{ownReady=true;}).catch(e=>console.warn('[CrafRace LIVE] ready:',e.message))
     .finally(()=>{readySending=false;});
   }
@@ -202,7 +293,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
    }
   }
  };
- const stop=()=>{if(stopped)return;stopped=true;transport.stop();void positionBroadcast?.close();remote.destroy();label.destroy();results.remove();};
+ const stop=()=>{if(stopped)return;stopped=true;if(!restarting)transport.stop();void positionBroadcast?.close();remote.destroy();label.destroy();results.remove();};
  scene.events.once('shutdown',stop);
  return {update,stop,get ownReady(){return ownReady;},get otherReady(){return otherReady;},get serverOffsetMs(){return transport.serverOffsetMs;}};
 }

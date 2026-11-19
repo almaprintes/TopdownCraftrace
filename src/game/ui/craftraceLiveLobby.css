@@ -1,1 +1,29 @@
 #cr-live-lab{position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:#020810f5;color:#f0f6ff;font:14px system-ui,sans-serif;box-sizing:border-box}#cr-live-lab *{box-sizing:border-box}#cr-live-lab [hidden]{display:none!important}#cr-live-lab .cr-live-panel{width:min(670px,100%);max-height:100%;overflow:auto;background:linear-gradient(130deg,#183149,#07131f);border:1px solid #42647d;border-top:3px solid #ffa64f;border-radius:15px;padding:clamp(12px,2vw,24px);box-shadow:0 20px 65px #000a}#cr-live-lab header{position:relative}#cr-live-lab small{color:#ffba79;font-weight:900;letter-spacing:.14em}#cr-live-lab h2{font-size:clamp(21px,4vw,34px);letter-spacing:.08em;margin:6px 0}#cr-live-lab [data-close]{position:absolute;right:0;top:0}#cr-live-lab [data-status]{padding:12px;border-radius:8px;border:1px solid #39556d;background:#0b2133}#cr-live-lab .cr-live-row{display:flex;gap:9px;flex-wrap:wrap}#cr-live-lab button,#cr-live-lab input{min-height:42px;border-radius:8px;border:1px solid #506d84;background:#112b40;color:white;padding:8px 12px;font:inherit}#cr-live-lab button{font-weight:800;cursor:pointer}#cr-live-lab button:disabled{opacity:.4}#cr-live-lab input{min-width:110px;flex:1}#cr-live-lab button:focus-visible,#cr-live-lab input:focus-visible{outline:3px solid #ffb86e}#cr-live-lab [data-create],#cr-live-lab [data-ready]{background:linear-gradient(#f3a852,#bd6d29);color:#131820}#cr-live-lab [data-room]{border-top:1px solid #37546b;margin-top:15px;padding-top:10px}#cr-live-lab [data-roomcode]{font-size:26px;letter-spacing:.12em;color:#ffc48a}#cr-live-lab [data-messages]{max-height:100px;overflow:auto}#cr-live-lab footer{color:#a8c0d2;font-size:11px;margin-top:15px}#cr-live-lab .cr-live-code-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}#cr-live-lab .cr-live-code-row h3{margin:0;user-select:text;-webkit-user-select:text}#cr-live-lab [data-copy],#cr-live-lab [data-paste]{border-color:#ffb86e;color:#ffd1a3}
+/* LIVE pilot paddock - shared mobile landscape polish */
+#cr-live-lab{background:radial-gradient(ellipse at 50% 20%,rgba(20,57,75,.46),transparent 68%),rgba(1,8,15,.96);font-family:system-ui,-apple-system,sans-serif;}
+#cr-live-lab .cr-live-panel{width:min(780px,100%);border:1px solid #4b7485;border-top:3px solid #f6b85e;background:linear-gradient(145deg,#132638,#081722 62%,#050e18);box-shadow:0 24px 80px rgba(0,0,0,.7)}
+#cr-live-lab .cr-live-subtitle{font-size:10px;font-weight:800;letter-spacing:.14em;color:#94adbf;margin:2px 0 12px}
+#cr-live-lab .cr-live-settings{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0;padding:12px;border:1px solid #355163;background:#091b29;border-radius:10px}
+#cr-live-lab .cr-live-settings label{font-size:11px;font-weight:900;letter-spacing:.07em;color:#fbd3a1}
+#cr-live-lab .cr-live-settings small{flex:1 1 100%;letter-spacing:normal;font-weight:500;color:#aac0d1}
+#cr-live-lab select{min-height:44px;border:1px solid #698394;border-radius:8px;background:#122e42;color:white;padding:6px 12px;font:800 13px system-ui}
+#cr-live-lab .cr-live-rules{font-weight:900;font-size:11px;letter-spacing:.08em;color:#d3edf6;text-align:center;text-transform:uppercase}
+#cr-live-lab .cr-live-versus{display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);align-items:center;gap:10px;margin:12px 0}
+#cr-live-lab .cr-live-versus>b{font-style:italic;color:#ffc377;text-align:center;font-size:18px}
+#cr-live-lab .cr-live-driver{display:grid;gap:5px;min-width:0;padding:11px;border:1px solid #3e6075;background:linear-gradient(110deg,#0b2333,#0b1624);border-radius:12px}
+#cr-live-lab .cr-live-driver span{color:#8fb2c7;font-size:9px;font-weight:900;letter-spacing:.12em}
+#cr-live-lab .cr-live-driver strong{font-size:clamp(15px,2.8vw,23px);line-height:1.1;overflow-wrap:anywhere}
+#cr-live-lab .cr-live-driver small{color:#ffcb84;letter-spacing:.06em;font-size:10px}
+#cr-live-lab [data-pilots]{font-size:11px;color:#9de9dc;text-align:center;font-weight:800;letter-spacing:.05em}
+#cr-live-lab [data-messages] p{margin:4px 0;padding:5px 8px;background:#0c2533;border-left:2px solid #376b88;border-radius:4px;font-size:11px}
+#cr-live-lab button{touch-action:manipulation}
+@media(max-height:440px){
+ #cr-live-lab .cr-live-panel{padding:10px 14px}
+ #cr-live-lab h2{font-size:22px}
+ #cr-live-lab .cr-live-subtitle{margin-bottom:5px}
+ #cr-live-lab [data-status]{padding:7px;margin:6px 0}
+ #cr-live-lab .cr-live-versus{margin:7px 0}
+ #cr-live-lab .cr-live-driver{padding:7px}
+ #cr-live-lab .cr-live-code-row{margin:5px 0}
+ #cr-live-lab footer{margin-top:8px}
+}
