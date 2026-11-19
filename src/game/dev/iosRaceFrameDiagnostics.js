@@ -26,7 +26,8 @@ const safeModeDetails=()=>{
     const manual=localStorage.getItem('tdr2:forceIosSafeMode')==='1';
     const until=Number(localStorage.getItem('tdr2:autoIosSafeModeUntil')||0);
     const auto=Number.isFinite(until)&&until>Date.now();
-    return manual?'MANUAL (forzado)':auto?'AUTO hasta '+new Date(until).toLocaleTimeString():'INACTIVO';
+    const reason=localStorage.getItem('tdr2:autoIosSafeModeReason')||'sin motivo registrado (activación anterior)';
+    return manual?'MANUAL (forzado)':auto?'AUTO hasta '+new Date(until).toLocaleTimeString()+' · origen '+reason:'INACTIVO';
   }catch{return 'DESCONOCIDO';}
 };
 const engineStatus=scene=>{
@@ -234,6 +235,20 @@ export function mountRaceDevFrameDiagnostics(scene){
       state.lastReportAt=now;
     }
   };
+  if(!IS_PROD_BUILD&&isIos()&&window.__tdrIosFrameConfig?.safeMode){
+    control('SALIR DEL MODO SEGURO AUTO (REINICIA)',()=>{
+      try{
+        if(localStorage.getItem('tdr2:forceIosSafeMode')==='1'){
+          pre.textContent='Modo seguro MANUAL activo: no se modifica la protección manual.';
+          return;
+        }
+        localStorage.removeItem('tdr2:autoIosSafeModeUntil');
+        localStorage.removeItem('tdr2:autoIosSafeModeReason');
+        // Do not disable WebGL context-loss monitoring or error reporting.
+        window.location.reload();
+      }catch{pre.textContent='No se pudo restablecer el modo normal.';}
+    });
+  }
   let motorButton=null;
   if(!IS_PROD_BUILD&&isIos()){
   motorButton=control('SILENCIAR MOTOR',async b=>{
