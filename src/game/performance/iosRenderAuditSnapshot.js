@@ -75,6 +75,8 @@ export function captureIosRenderAuditSnapshot(scene){
   let estimatedRgbaBytes=0;
   let photoInMain=0;
   let photoInUi=0;
+  let photoEligibleForUi=0;
+  const uiCameraBit=Number(ui?.id)||0;
   let photoSourceCount=0;
   let photoCompactCount=0;
   let photoFullSizeCount=0;
@@ -87,6 +89,7 @@ export function captureIosRenderAuditSnapshot(scene){
   ]));
   const keys=new Set();
   for(const sprite of photos){
+    if(uiCameraBit>0&&(Number(sprite?.cameraFilter||0)&uiCameraBit)===0)photoEligibleForUi++;
     if(mainList.has(sprite))photoInMain++;
     if(uiList.has(sprite))photoInUi++;
     const texture=sprite?.texture;
@@ -169,6 +172,9 @@ export function captureIosRenderAuditSnapshot(scene){
     photoTiles:photos.length,
     photoInMain,
     photoInUi,
+    photoEligibleForUi,
+    mainZoom:Number.isFinite(Number(main?.zoom))?Number(main.zoom):null,
+    mainRoundPixels:main?.roundPixels===true,
     photoSourceCount,
     photoCompactCount,
     photoFullSizeCount,
@@ -192,6 +198,7 @@ export function formatIosRenderAuditSnapshot(value){
     `CÁMARAS VISIBLES ${s.visibleCameraCount??'?'} · UI ${s.uiCameraVisible?'ACTIVA':'INACTIVA'} · ESCENAS ACTIVAS ${s.activeSceneCount??'?'}`,
     ...((s.activeScenes||[]).length?['ESCENAS '+s.activeScenes.map(v=>v.key+' ('+v.visibleCameras+' cam)').join(' | ')]:[]),
     `FOTO ${s.photoTiles??0} mosaicos · MAIN ${s.photoInMain??0} · UI ${s.photoInUi??0} · RGBA8 teórico ${s.photoRgbaEstimateMiB??0} MiB (${s.photoSourceCount??0} fuentes)`,
+    `FOTO ELEGIBLE PARA UI ${s.photoEligibleForUi??0} (sin filtro, no implica render real) · ZOOM CÁMARA ${s.mainZoom==null?'?':s.mainZoom.toFixed(3)} · REDONDEO PÍXELES ${s.mainRoundPixels?'SI':'NO'}`,
     `FOTO IOS CATEGORIAS COMPACTA ${s.photoCompactCount??0} · ORIGINAL ${s.photoFullSizeCount??0} · INESPERADA/SIN META ${s.photoUnmatchedCount??0}`,
     `CACHE TEXTURAS ${s.textureCacheEntries??0} keys · ${s.textureCacheWithDimensions??0} con tamaño · RGBA8 teórico ${s.cachedRgbaEstimateMiB??0} MiB`,
     ...((s.largestTextures||[]).length?['TEXTURAS MAYORES '+s.largestTextures.join(' | ')]:[]),
