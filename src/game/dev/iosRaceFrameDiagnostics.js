@@ -5,7 +5,7 @@ import { THERMAL_TOUCH_LEVELS, loadPreviousRaceMeasurement, savePreviousRaceMeas
 import { IOS_WEBGL_SYNC_KEY } from '../performance/iosWebglPresentationMode.js';
 import { IOS_DEV_RESOLUTION_KEY } from '../performance/iosDevResolutionTrial.js';
 import { IOS_DEV_TIMEOUT_KEY } from '../performance/iosDevLoopDriver.js';
-import { IOS_DEV_FPS_CAP_KEY } from '../performance/iosDevFpsCapTrial.js';
+import { IOS_DEV_FPS_CAP_KEY, IOS_DEV_FPS_CAP_TTL_MS } from '../performance/iosDevFpsCapTrial.js';
 import { createFramePacingStats, recordFramePacing, percentileFramePacing } from '../performance/iosFramePacingStats.js';
 import { createIosFramePhaseStats, recordIosFramePhase, formatIosFramePhaseStats } from '../performance/iosFramePhaseStats.js';
 import { captureIosRenderAuditSnapshot, formatIosRenderAuditSnapshot } from '../performance/iosRenderAuditSnapshot.js';
@@ -46,7 +46,7 @@ const frameInfo=scene=>{
   const limit=devIos?conf.frameLimit:scene.game?.config?.fps?.limit;
   const line=`MODO ${preset||'?'}  RES ${resolution||'?'}  FPS limit ${limit??'?'}`;
   if(!devIos)return line+'\nWEBGL '+actual+' real · FPS HUD '+(videoProbeEnabled()?'ON':'OFF');
-  const limitText=conf.fpsTrialMode==='CAP_60'?'ACTIVADO (máximo 60)':'DESACTIVADO (sin tope adicional)';
+  const limitText=conf.fpsTrialMode==='CAP_60'?'PRUEBA ACTIVA (máximo 60; caduca en 20 min)':'DESACTIVADO (sin tope adicional)';
   const baseRes=Number(conf.baseRenderResolution??resolution);
   const resText=conf.resolutionTrialMode==='LOW'?'REDUCIDA (escala 1,0)':'NORMAL (escala '+(Number.isFinite(baseRes)?baseRes.toLocaleString('es-ES'):'?')+')';
   return line+(limit===0?' (0 = sin tope adicional)':'')+
@@ -320,10 +320,12 @@ export function mountRaceDevFrameDiagnostics(scene){
     const fpsConfig=window.__tdrIosFrameConfig||{};
     if(Number(fpsConfig.baseFrameLimit||0)===0){
       const capped=fpsConfig.fpsTrialMode==='CAP_60';
+      if(capped){const warning=document.createElement('div');warning.textContent='⚠ PRUEBA EXPERIMENTAL ACTIVA: límite 60 FPS. Puede provocar tirones; se desactivará automáticamente en 20 minutos o al pulsar restaurar.';warning.style.cssText='background:#63351c;color:#fff3d0;padding:10px;border-radius:8px;font-weight:700;margin:8px 0';panel.appendChild(warning);}
+      control('RESTAURAR FPS NORMALES (REINICIA)',()=>{try{localStorage.removeItem(IOS_DEV_FPS_CAP_KEY);window.location.reload();}catch{pre.textContent='No se pudo restaurar el límite de FPS.';}});
       control(capped?'DESACTIVAR LÍMITE 60 FPS (REINICIA)':'ACTIVAR LÍMITE 60 FPS (REINICIA)',()=>{
         try{
           if(capped)localStorage.removeItem(IOS_DEV_FPS_CAP_KEY);
-          else localStorage.setItem(IOS_DEV_FPS_CAP_KEY,'1');
+          else localStorage.setItem(IOS_DEV_FPS_CAP_KEY,String(Date.now()+IOS_DEV_FPS_CAP_TTL_MS));
           window.location.reload();
         }catch{pre.textContent='No se pudo cambiar el límite de FPS; la configuración actual se conserva.';}
       });
