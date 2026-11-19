@@ -2969,10 +2969,10 @@ this.uiCam.roundPixels = true;
 // has been created. Keep the HUD camera's independent pixel rounding.
 if (isIOSRaceDevice()) this.cameras.main.roundPixels = false;
 if (!IS_PROD_BUILD && isIOSRaceDevice()) {
-  this._iosCameraRoundTrace = {...this._iosCameraRoundTrace,
+  Object.assign(this._iosCameraRoundTrace, {
     afterHudCamera: this.cameras.main.roundPixels === true,
     mainIdAfterHud: this.cameras.main.id,
-    hudIdAfterHud: this.uiCam.id};
+    hudIdAfterHud: this.uiCam.id});
 }
 
 // UI cam: ignorar fondos del mundo y máscaras
