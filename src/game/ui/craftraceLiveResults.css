@@ -25,3 +25,17 @@
 .crl-score__actions button:focus-visible{outline:3px solid #d7f2ff}
 @media(max-height:420px){.cr-live-results .crl-score{padding:9px 14px}.crl-score__track{margin-bottom:7px}.crl-score__driver{padding:8px}.crl-score__head{margin:3px 0}.crl-score__head img{height:32px;width:32px}.crl-score__metrics{margin-top:5px;padding-top:6px}.crl-score__actions{margin-top:6px}.crl-score__status{margin:7px 0}}
 @media(max-width:500px){.crl-score__grid{grid-template-columns:1fr}.crl-score__driver{padding:10px}}
+
+/* Match LIVE race results to the game's PADDOCK, not a generic dialog. */
+.cr-live-results{background:rgba(1,8,15,.9);font-family:Inter,ui-sans-serif,system-ui,-apple-system,sans-serif;backdrop-filter:none}
+.cr-live-results .crl-score{width:min(850px,100%);border:1px solid #4f9bb3;border-top:2px solid #e6b84e;border-radius:0;clip-path:polygon(11px 0,calc(100% - 11px) 0,100% 11px,100% calc(100% - 11px),calc(100% - 11px) 100%,11px 100%,0 calc(100% - 11px),0 11px);background:radial-gradient(ellipse at 40% 0,#15536b44,transparent 65%),linear-gradient(135deg,#0b2132,#05121d 80%)}
+.crl-score__eyebrow{color:#46ddff;letter-spacing:.18em}
+.crl-score h2{font-weight:1000;font-style:italic;letter-spacing:.01em;text-transform:uppercase}
+.crl-score__track{font-weight:900;color:#9bbac8;font-size:10px}
+.crl-score__driver{border:0;border-left:3px solid #46ddff88;border-radius:0;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%);background:linear-gradient(110deg,#143f50d9,#071725ee)}
+.crl-score__driver.winner{border-left-color:#e6b84e;background:linear-gradient(110deg,#765b2866,#0b2b3aef 60%)}
+.crl-score__driver.winner .crl-score__tag{color:#ffe1a0}
+.crl-score__time{font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.crl-score__actions button{border-radius:0;clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px);font-weight:950;letter-spacing:.05em}
+.crl-score__actions button:first-child:not(:last-child){background:linear-gradient(110deg,#efd17d,#c69b44);color:#10212b;border-color:#ffe2a0}
+@media(max-height:440px){.cr-live-results .crl-score{padding:9px 14px}.crl-score h2{font-size:24px}.crl-score__driver{padding:8px}.crl-score__status{margin:7px 0}.crl-score__actions{margin-top:6px}}
