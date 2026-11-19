@@ -20,6 +20,7 @@ export function openCrafRaceLiveLobby(scene){
  '<p data-pilots>Esperando al rival…</p><div class="cr-live-row"><button data-ready type="button" disabled>ESTOY LISTO</button><button data-test-race type="button" hidden>INICIAR CARRERA</button></div><div data-messages aria-live="polite"></div><div class="cr-live-row"><input data-chat maxlength="160" aria-label="Mensaje" placeholder="Mensaje al rival"><button data-send type="button">ENVIAR</button></div></div>'+
  '<footer class="cr-live-footer"><span>CRAFT RACE STUDIO · ONLINE</span><span>DEV · SIN PREMIOS NI RÁNKING OFICIAL</span></footer></section>';
  document.body.append(root);const $=s=>root.querySelector(s);
+ const brandImage=document.createElement('img');brandImage.src=(import.meta.env.BASE_URL||'/')+'assets/logo.webp';brandImage.alt='';brandImage.draggable=false;root.querySelector('.cr-live-mark')?.replaceChildren(brandImage);
  $('[data-selected-track]').textContent=getTrackPublicName(selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage));
  let transport=null,room=null,busy=false,closed=false,lastChat=0,readySent=false,rivalReady=false,localId=null,launching=false;
  const say=s=>{if(!closed)$('[data-status]').textContent=String(s);};
