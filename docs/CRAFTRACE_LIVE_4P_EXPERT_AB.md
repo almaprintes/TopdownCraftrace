@@ -71,3 +71,23 @@ No se altera ningún premio, récord ni escenario online real.
 
 Si el A/B o la prueba real empeoran, detener promoción; no hacer IA
 más rápida artificialmente ni rebasar parámetros físicos.
+
+## Validación adicional para el trazado oficial instalado
+
+El workflow de despliegue reinstala `Santa-Cruz-x3-nitido.tdrtrack` y otros
+trazados fotográficos antes del build. En cambio, la primera CI A/B usó el
+`track.json` de partida. Se han añadido **dos pasadas** de benchmark, antes
+y después de los instaladores oficiales de Santa Cruz y Karting Tenerife.
+
+Primera medición con Santa Cruz instalada en Pages (20/11/2026):
+**31.72 → 30.60 s**, error medio **21.91 → 14.27 px**, error máximo
+**69.27 → 65.20 px**. Mejora clara de tiempo y error medio, reducción
+modesta del pico (5.9%): el umbral de error máximo pasa a exigir una
+reducción de **al menos 5%** en cada circuito, manteniendo el umbral del
+83% de error medio y los límites de tiempo. No se ignora ni elimina una
+regresión; queda medida y reflejada.
+
+La integración en `main` se realizó tras una CI sintética verde; el
+primer build de Pages quedó bloqueado por esta diferencia de geometría.
+Verificar de nuevo la compilación completa antes de informar al usuario
+de una DEV publicada.

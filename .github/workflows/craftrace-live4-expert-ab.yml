@@ -36,8 +36,13 @@ jobs:
           node --check src/game/ai/survivalPhysicalBotController.js
           node --check src/game/online/craftraceLiveV2BotDirector.js
           node --check scripts/craftrace-live4-expert-ab.mjs
-      - name: Compare same-car physical Expert baseline vs new on four tracks
+      - name: A/B on checked-in baseline track JSON
         run: node scripts/craftrace-live4-expert-ab.mjs
+      - name: A/B again after installing official Santa Cruz and Tenerife photo geometries
+        run: |
+          node scripts/install-santa-cruz-source.mjs
+          node scripts/install-karting-tenerife-source.mjs
+          node scripts/craftrace-live4-expert-ab.mjs
       - name: Four-seat DEV smoke
         run: node scripts/craftrace-live-v2-race-smoke.mjs
       - name: Development build (does not publish)
