@@ -506,6 +506,12 @@ else this._ttProg.idx = startIdx;
   }
 init(data) {
     this._raceEntryData={...(data||{})};
+    // Local DEV camera producer. No player seat, server state or real-time channel.
+    this._crafRaceDirectorPreview=!IS_PROD_BUILD&&data?.directorPreview===true&&
+      data?.gameMode==='director'&&window.location.pathname.includes('/dev/')&&
+      !globalThis.Capacitor?.isNativePlatform?.();
+    this._directorLaps=[1,3,5,10,20].includes(data?.directorLaps)?data.directorLaps:3;
+    this._directorAiDifficulty=[1,2,3].includes(data?.directorAiDifficulty)?data.directorAiDifficulty:3;
     this._importJsonReady=Boolean(data?._importJsonReady);
     this._crafRaceLiveV2RoomId=(!IS_PROD_BUILD&&data?.gameMode==='online'&&data?.liveV2RoomId)||null;
     this._crafRaceLiveOnlineIntent=data?.gameMode==='online'&&Boolean(data?.liveRoomId||this._crafRaceLiveV2RoomId);
@@ -528,11 +534,11 @@ init(data) {
     // Track Studio preview is a DEV-only test even when launched by an older
     // editor that did not pass testMode. Never return a local track to the lobby.
   const isTrackStudioPreview = !IS_PROD_BUILD && data?.trackKey === LOCAL_KARTING_PREVIEW_KEY;
-  this._testMode = !!data?.testMode || isTrackStudioPreview || Boolean(this._crafRaceLiveV2RoomId);
+  this._testMode = !!data?.testMode || isTrackStudioPreview || Boolean(this._crafRaceLiveV2RoomId) || this._crafRaceDirectorPreview;
   if (isTrackStudioPreview) {
     this._returnSceneKey = ['Track','Studio','Scene'].join('');
     this._returnSceneData = { fromTrackStudioPreview: true };
-  } else if (this._testMode && !this._crafRaceLiveV2RoomId) {
+  } else if (this._testMode && !this._crafRaceLiveV2RoomId && !this._crafRaceDirectorPreview) {
     // Preserve the existing Vehicle Lab test-drive return path.
     const carId = data?.carId || this.carId || 'stock';
     this._returnSceneKey = 'car-editor';
@@ -588,7 +594,7 @@ localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // Never nest B keys below the official ttHist/ttBest prefixes: some
   // downstream rankings enumerate those namespaces rather than exact keys.
   const abPracticePrefix=`tdr2:physicsAB:B:${this.trackKey}:${this.carId}`;
-  this.ttHistKey = this._crafRaceLiveV2RoomId ? null : this._physicsABPractice
+  this.ttHistKey = this._crafRaceLiveV2RoomId ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
     ? `${abPracticePrefix}:laps`
     : `tdr2:ttHist:${this.trackKey}`;
   this.ttHistory = [];
@@ -609,7 +615,7 @@ localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // ========================================
   // Time Trial: best lap + splits por pista
   // ========================================
-  this.ttKey = this._crafRaceLiveV2RoomId ? null : this._physicsABPractice
+  this.ttKey = this._crafRaceLiveV2RoomId ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
     ? `${abPracticePrefix}:best`
     : `tdr2:ttBest:${this.trackKey}`;
   this.ttBest = null;
@@ -1290,7 +1296,14 @@ rig.setDepth(30);
 this.carBody = body;
 this.carRig = rig;
 this.car = body; // compat con tu update()
-if(this._crafRaceLiveV2RoomId){
+if(this._crafRaceDirectorPreview){
+ void import('../online/craftraceDirectorPreview.js').then(({attachCrafRaceDirectorPreview})=>{
+  if(this.sys?.isActive?.()&&this._crafRaceDirectorPreview)
+   this._crafRaceDirectorBridge=attachCrafRaceDirectorPreview(this,{
+     laps:this._directorLaps,difficulty:this._directorAiDifficulty
+   });
+ }).catch(err=>console.error('[LIVE 4 Director] Initialization failed',err));
+}else if(this._crafRaceLiveV2RoomId){
  // LIVE 4 is opt-in DEV; load its renderer/physical AI only for an approved v2 race.
  const roomId=this._crafRaceLiveV2RoomId;
  void import('../online/craftraceLiveV2RaceBridge.js').then(({attachCrafRaceLive4Pilot})=>{
@@ -1340,7 +1353,7 @@ const aiSkinPool = Object.values(CAR_SPECS).filter((s) =>
   s.id !== specFinal.id && hasPublishedCarArt(s.id)
 );
   this.gridCars = [];
-const MAX_GRID_CARS = onlineGrid?0:gridSpawns.length;
+const MAX_GRID_CARS = (onlineGrid||this._crafRaceDirectorPreview)?0:gridSpawns.length;
 
 for (let i = 1; i < MAX_GRID_CARS; i++) {
   const aiSpawn0 = gridSpawns[i];
@@ -3555,6 +3568,7 @@ try { this.cameras.main.ignore(this._touchDbg); } catch (e) {}
   }
 
   update(time, deltaMs) {
+    this._crafRaceDirectorBridge?.update(performance.now(),deltaMs);
     this._crafRaceLiveBridge?.update(performance.now(),deltaMs);
     const dt = Math.min(0.05, (deltaMs || 0) / 1000);
 
@@ -3771,24 +3785,24 @@ if (freezeStart) {
     body0.setAngularVelocity(0);
   }
 }
-const up = !freezeStart && (
+const up = !freezeStart && !this._crafRaceDirectorPreview && (
   (keys.up?.isDown) ||
   (keys.up2?.isDown) ||
   (t.throttle > 0.5)
 );
 
-const down = !freezeStart && (
+const down = !freezeStart && !this._crafRaceDirectorPreview && (
   (keys.down?.isDown) ||
   (keys.down2?.isDown) ||
   (t.brake > 0.5)
 );
 
-const left = !freezeStart && (
+const left = !freezeStart && !this._crafRaceDirectorPreview && (
   (keys.left?.isDown) ||
   (keys.left2?.isDown)
 );
 
-const right = !freezeStart && (
+const right = !freezeStart && !this._crafRaceDirectorPreview && (
   (keys.right?.isDown) ||
   (keys.right2?.isDown)
 );
@@ -3813,7 +3827,7 @@ this._topSpeedPxps = Math.max(this._topSpeedPxps || 0, speed);
 
 // guarda cada ~0.5s para no spamear localStorage
 this._topSpeedSaveT = (this._topSpeedSaveT || 0) + (this.game.loop.delta || 0);
-if (this._topSpeedSaveT >= 500) {
+if (this._topSpeedSaveT >= 500 && !this._crafRaceDirectorPreview) {
   this._topSpeedSaveT = 0;
   try {
     localStorage.setItem(`tdr2:telemetry:topSpeedPxps:${carId}`, String(this._topSpeedPxps));

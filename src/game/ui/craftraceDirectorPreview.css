@@ -1,0 +1,57 @@
+/* DEV-only local broadcaster, safe-area aware iPhone/Android landscape. */
+#cr-director{position:fixed;inset:0;z-index:2147483400;pointer-events:none;
+ color:#eff9ff;font:800 12px Inter,system-ui,sans-serif}
+#cr-director *{box-sizing:border-box}
+#cr-director button{border:1px solid #78c2da;background:#0b2940eb;color:#eefaff;
+ font:900 12px Inter,system-ui,sans-serif;touch-action:none;user-select:none;
+ -webkit-user-select:none;pointer-events:auto;cursor:pointer}
+#cr-director .crdir-top{position:absolute;top:max(7px,env(safe-area-inset-top));
+ left:max(11px,env(safe-area-inset-left));right:max(11px,env(safe-area-inset-right));
+ display:flex;gap:8px;align-items:center;padding:5px 8px;
+ background:#071d2ade;border:1px solid #2f728c;pointer-events:auto}
+#cr-director .crdir-top strong{color:#ffd18a;white-space:nowrap}
+#cr-director .crdir-top output{flex:1;min-width:0;font-size:10px;color:#a3eddf}
+#cr-director .crdir-top button{padding:6px 9px;min-height:32px}
+#cr-director .crdir-stickbox{position:absolute;left:max(25px,env(safe-area-inset-left));
+ bottom:max(12px,env(safe-area-inset-bottom));text-align:center}
+#cr-director .crdir-stick{width:115px;height:115px;border:2px solid #91e0f6b8;
+ border-radius:50%;background:#041b2ca8;display:grid;place-items:center;
+ pointer-events:auto;touch-action:none;user-select:none}
+#cr-director .crdir-stick>span{width:46px;height:46px;border-radius:50%;
+ border:2px solid #bcecf7;background:radial-gradient(circle,#dfefff,#69b7eb);pointer-events:none}
+#cr-director .crdir-stickbox small{display:block;font-size:10px;color:#b2e3f2;margin-top:3px}
+#cr-director .crdir-alt{position:absolute;left:50%;transform:translateX(-50%);
+ bottom:max(13px,env(safe-area-inset-bottom));display:flex;gap:7px}
+#cr-director .crdir-alt button{min-height:49px;width:88px}
+#cr-director .crdir-alt small{display:block;font-size:9px;color:#b2e2ef}
+#cr-director .crdir-drive{position:absolute;right:max(25px,env(safe-area-inset-right));
+ bottom:max(13px,env(safe-area-inset-bottom));display:grid;gap:7px;min-width:116px}
+#cr-director .crdir-drive button{min-height:48px}
+#cr-director [data-gas]{background:#076344f0;border-color:#6dddab}
+#cr-director [data-brake]{background:#6c2632f0;border-color:#ef9da5}
+#cr-director [hidden]{display:none!important}
+#cr-director .crdir-results{position:absolute;inset:0;background:#031321ee;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;
+ gap:8px;padding:18px;pointer-events:auto;overflow:auto}
+#cr-director .crdir-results h2{font-size:20px;color:#f8d18c;margin:0}
+#cr-director .crdir-results p{font-size:12px;color:#b4d6e0;text-align:center}
+#cr-director .crdir-results ol{line-height:1.9;font:800 16px ui-monospace,monospace}
+#cr-director .crdir-results button{min-height:44px;padding:10px 25px;background:#e2bd77;color:#10202d}
+@media(max-height:460px){
+ #cr-director .crdir-top{padding:3px 6px}
+ #cr-director .crdir-top strong{font-size:10px}
+ #cr-director .crdir-top output{font-size:9px}
+ #cr-director .crdir-top button{padding:3px 6px;min-height:28px;font-size:10px}
+ #cr-director .crdir-stick{width:96px;height:96px}
+ #cr-director .crdir-stickbox{left:max(18px,env(safe-area-inset-left));bottom:6px}
+ #cr-director .crdir-drive{right:max(18px,env(safe-area-inset-right));bottom:6px}
+ #cr-director .crdir-drive button{min-height:41px}
+ #cr-director .crdir-alt{bottom:6px}
+ #cr-director .crdir-alt button{min-height:42px}
+}
+@media(max-width:750px){#cr-director .crdir-top output{display:none}
+ #cr-director .crdir-alt button{width:65px;font-size:10px}
+ #cr-director .crdir-stick{width:83px;height:83px}
+ #cr-director .crdir-drive{min-width:90px}
+}
+@media(prefers-reduced-motion:reduce){#cr-director *{transition:none!important}}

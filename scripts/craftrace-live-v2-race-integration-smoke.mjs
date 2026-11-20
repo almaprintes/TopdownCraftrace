@@ -10,6 +10,8 @@ for(const path of [
  'src/game/online/craftraceLiveV2GridGeometry.js',
  'src/game/online/craftraceLiveV2RaceSession.js',
  'src/game/online/craftraceLiveV2RaceBridge.js',
+ 'src/game/online/craftraceDirectorCamera.js',
+ 'src/game/online/craftraceDirectorPreview.js',
  'src/game/ui/craftraceLiveV2Lobby.js',
  'src/game/scenes/RaceScene.js',
  'src/game/online/craftraceLiveV2LobbyClient.js'
@@ -39,6 +41,24 @@ for(const phrase of [
 assert.ok(!/\b(?:insert into|update|delete from|alter table|drop table|create table)\s+public\.craftrace_live_(?:rooms|packets)\b/i.test(sql),
  'LIVE 4 migration must not alter the existing two-player data');
 const scene=file('src/game/scenes/RaceScene.js');
+assert.ok(scene.includes('this._crafRaceDirectorPreview=!IS_PROD_BUILD'),
+ 'Director must be isolated from production');
+assert.ok(scene.includes("data?.gameMode==='director'"),
+ 'Director must require its explicit game mode');
+assert.ok(scene.includes("import('../online/craftraceDirectorPreview.js')"),
+ 'Director module must be lazily loaded');
+assert.ok(scene.includes('this._crafRaceDirectorBridge?.update(performance.now(),deltaMs)'));
+assert.ok(scene.includes('(onlineGrid||this._crafRaceDirectorPreview)?0'),
+ 'Do not spawn legacy preview bots on top of the four AI');
+assert.ok(scene.includes('this._crafRaceDirectorPreview ? null'),
+ 'Director results must not write personal bests or history');
+const localProducer=file('src/game/online/craftraceDirectorPreview.js');
+for(const needle of ['CrafRaceLive4BotDirector','preview:true','data-gas',
+ 'data-brake','data-stick','data-alt-up','data-alt-down','data-auto',
+ 'scene.events.on(\'postupdate\'','scene.cameras.main'])
+ assert.ok(localProducer.includes(needle),'Missing director control '+needle);
+assert.ok(!localProducer.includes('finishLiveV2Lobby('),
+ 'Local preview must never write unofficial results to Supabase');
 assert.ok(scene.includes("this._crafRaceLiveV2RoomId=(!IS_PROD_BUILD"));
 assert.ok(scene.includes("attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId)"));
 assert.ok(scene.includes("import('../online/craftraceLiveV2RaceBridge.js')"));

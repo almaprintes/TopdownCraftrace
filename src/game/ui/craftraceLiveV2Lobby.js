@@ -52,6 +52,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
             </select></label>
           </div>
           <button type="button" data-create class="cr4-primary">CREAR PISTA</button>
+          <button type="button" data-director class="cr4-secondary">REALIZADOR · 4 IA (PRUEBA)</button>
+          <p>Prueba local de dron, sin sala, cuenta, premios ni récords.</p>
         </section>
         <section class="cr4-card">
           <h3>UNIRSE A UNA PISTA</h3>
@@ -97,6 +99,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   const $=selector=>root.querySelector(selector);
   const classicButton=$('[data-classic]');
   classicButton.hidden=typeof onOpenClassic!=='function';
+  $('[data-director]').hidden=!race4Enabled;
   $('[data-track]').textContent=getTrackPublicName(track);
   let closed=false,loading=false,room=null,identity=null,monitor=null,hydrated=false,launching=false;
   $('[data-race-warning]').textContent=race4Enabled
@@ -207,6 +210,18 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     try{await task();}catch(e){say(e?.message||'Error al comunicar con la pista');}
     finally{if(!closed)setBusy(false);}
   };
+  $('[data-director]').addEventListener('click',()=>{
+    if(closed||loading||!race4Enabled)return;
+    const laps=Number($('[data-laps]').value);
+    const difficulty=Number($('[data-ai]').value);
+    if(![1,3,5,10,20].includes(laps)||![1,2,3].includes(difficulty))return;
+    // No Supabase room or four-player admission: producer is off-grid.
+    dispose();
+    scene.scene.start('race',{
+      carId:car,trackKey:track,gameMode:'director',testMode:true,
+      directorPreview:true,directorLaps:laps,directorAiDifficulty:difficulty
+    });
+  });
   $('[data-create]').addEventListener('click',()=>void action(async()=>{
     const s=await createLiveV2Lobby({
       trackId:track,carId:car,laps:Number($('[data-laps]').value),

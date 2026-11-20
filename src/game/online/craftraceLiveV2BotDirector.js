@@ -12,16 +12,20 @@ const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
 export const LIVE4_AI_LEVELS=Object.freeze({
   1:Object.freeze({title:'Principiante',pace:0.70,cornerRisk:0,plannerLateralAccel:1050,plannerDrive:.58,plannerBrake:.67}),
   2:Object.freeze({title:'Competitivo',pace:0.86,cornerRisk:0.17,plannerLateralAccel:1450,plannerDrive:.80,plannerBrake:.85}),
-  3:Object.freeze({title:'Experto',pace:1,cornerRisk:0.35,plannerLateralAccel:1800,plannerDrive:.95,plannerBrake:.95})
+  3:Object.freeze({title:'Experto',pace:1,cornerRisk:0.35,plannerLateralAccel:2050,plannerDrive:1,plannerBrake:1})
 });
 const speedOf=body=>Math.hypot(body?.body?.velocity?.x||0,body?.body?.velocity?.y||0);
 
 export class CrafRaceLive4BotDirector{
- constructor(scene,{roster,hostId,localId,startingGrid,laps=3}={}){
+ constructor(scene,{roster,hostId,localId,startingGrid,laps=3,preview=false}={}){
   if(!scene?.physics?.add?.sprite||!Array.isArray(roster)||hostId!==localId)
     throw Error('Only a physics-ready host can drive LIVE AI');
   const ai=roster.filter(x=>x.kind==='ai');
-  if(ai.length>3||ai.some(x=>!LIVE4_AI_LEVELS[x.difficulty]||x.owner_id!==hostId))
+  // Four AI may run only in this device's off-grid director preview.
+  // The authenticated LIVE 4 room keeps its original 1-3 bot restriction.
+  if((preview&&scene?._crafRaceDirectorPreview!==true)||
+     ai.length>(preview?4:3)||
+     ai.some(x=>!LIVE4_AI_LEVELS[x.difficulty]||x.owner_id!==hostId))
     throw Error('Invalid AI assignment');
   this.scene=scene;this.bots=[];this.laps=clamp(Math.floor(laps),1,30);
   this.lastUpdated=0;this.lastCpuMs=0;this.cpuTotalMs=0;this.cpuSamples=0;

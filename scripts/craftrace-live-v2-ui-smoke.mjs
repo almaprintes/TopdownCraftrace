@@ -39,4 +39,9 @@ assert.ok(css.includes('@media(max-height:460px)'));
 assert.ok(css.includes('prefers-reduced-motion'));
 assert.ok(client.includes('liveIdentity()'));
 assert.ok(client.includes('this.heartbeatMs'));
+assert.ok(next.includes('data-director'),'Local director entry must be visible in DEV');
+assert.ok(next.includes("gameMode:'director'")&&next.includes('directorPreview:true'),
+ 'Producer mode must launch a separate local race');
+assert.ok(next.includes("if(closed||loading||!race4Enabled)return"),
+ 'Never expose the producer in public/native builds');
 console.log('PASS LIVE 4 normal DEV entry: classic 2P fallback, protected 4P start, native/public isolation and responsive layout');

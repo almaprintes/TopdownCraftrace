@@ -4,6 +4,8 @@ import {CrafRaceLive4RemoteModel,validateLive4Roster} from '../src/game/online/c
 import {makeLive4StartingGrid} from '../src/game/online/craftraceLiveV2GridGeometry.js';
 import {CrafRaceLive4BotDirector,LIVE4_AI_LEVELS} from '../src/game/online/craftraceLiveV2BotDirector.js';
 import {syncLive4CarVisual} from '../src/game/online/craftraceLiveV2CarVisual.js';
+import {makeDirectorCameraState,chooseDirectorAction,stepDirectorCamera,directorZoom}
+ from '../src/game/online/craftraceDirectorCamera.js';
 const a='550e8400-e29b-41d4-a716-446655440000';
 const b='550e8400-e29b-41d4-a716-446655440001';
 const c='550e8400-e29b-41d4-a716-446655440002';
@@ -67,6 +69,8 @@ assert.ok(wide.positions[0].y!==wide.positions[1].y);
 assert.ok(wide.positions[0].x!==wide.positions[2].x);
 assert.deepEqual(Object.keys(LIVE4_AI_LEVELS).map(Number),[1,2,3]);
 assert.equal(LIVE4_AI_LEVELS[3].pace,1,'Expert never receives more than player maximum speed');
+assert.equal(LIVE4_AI_LEVELS[3].plannerDrive,1,'Expert anticipates using the actual acceleration limit');
+assert.equal(LIVE4_AI_LEVELS[3].plannerBrake,1,'Expert anticipates using the actual brake limit');
 assert.ok(LIVE4_AI_LEVELS[1].pace<LIVE4_AI_LEVELS[2].pace);
 assert.ok(LIVE4_AI_LEVELS[2].pace<LIVE4_AI_LEVELS[3].pace);
 const landscape={centerline:[{x:100,y:100},{x:700,y:100},{x:700,y:700},{x:100,y:700}],trackWidth:170,carScale:1};
@@ -135,7 +139,40 @@ for(const bot of director.bots)assert.ok(Number.isFinite(bot.plannerBody.x)&&Num
 director.destroy();
 assert.equal(director.bots.length,0);
 assert.throws(()=>new CrafRaceLive4BotDirector(mockScene,{roster:aiRoster,hostId:a,localId:b,startingGrid:wide}));
+const four=Array.from({length:4},(_,seat)=>({kind:'ai',seat,bot_id:'local-ai-'+(seat+1),
+ owner_id:'local-director',difficulty:3}));
+const localScene={...mockScene,_crafRaceDirectorPreview:true};
+const localGrid=makeLive4StartingGrid({start:{x:500,y:400,r:0},trackWidth:170,capacity:4});
+assert.throws(()=>new CrafRaceLive4BotDirector(mockScene,{
+ roster:four,hostId:'local-director',localId:'local-director',
+ startingGrid:localGrid,laps:3}),
+ 'Four AI must remain forbidden inside LIVE v2 network rooms');
+const fourBots=new CrafRaceLive4BotDirector(localScene,{
+ roster:four,hostId:'local-director',localId:'local-director',
+ startingGrid:localGrid,laps:3,preview:true});
+assert.equal(fourBots.bots.length,4,'Director preview creates exactly four AI');
+assert.equal(fourBots.update(16,1000,false).length,0,'No early start during countdown');
+assert.equal(fourBots.stats().count,4);
+fourBots.destroy();
 const link=fs.readFileSync(new URL('../src/game/online/craftraceLiveV2PositionLink.js',import.meta.url),'utf8');
 assert.ok(link.includes("private:true")&&link.includes("craftrace-live4:"));
 assert.ok(link.includes("identity.id!==this.localId"));
+
+let drone=makeDirectorCameraState({x:10,y:20,heading:0});
+assert.equal(drone.speed,0,'Drone starts still');
+drone=stepDirectorCamera(drone,{gas:1},.05);
+assert.ok(drone.x>10&&drone.speed>0,'Acceleration advances the drone');
+const manualSpeed=drone.speed;
+drone=stepDirectorCamera(drone,{brake:1,steer:1,rise:1},.05);
+assert.ok(drone.speed<manualSpeed&&drone.heading>0,'Brake and steering are independent');
+assert.ok(directorZoom(drone.altitude)<directorZoom(.52),'Higher drone means wider view');
+const cars=[{plannerBody:{x:0,y:0}},{plannerBody:{x:12,y:0}},
+ {plannerBody:{x:700,y:900}},{plannerBody:{x:800,y:900}}];
+assert.equal(chooseDirectorAction(cars).x,6,'AUTO chooses the closest fight');
+drone.auto=true;
+drone=stepDirectorCamera(drone,{gas:0},.05,cars);
+assert.ok(drone.auto&&drone.speed===0,'Automatic camera never controls racers');
+drone=stepDirectorCamera(drone,{gas:1},.05,cars);
+assert.equal(drone.auto,false,'Manual throttle cancels automatic mode');
+assert.ok(directorZoom(.1)>directorZoom(1),'Altitude increases reduce zoom');
 console.log('PASS LIVE 4: validated 4-seat protocol, three independent interpolators, two grid layouts, three physical AI levels and 80-step synthetic physics');
