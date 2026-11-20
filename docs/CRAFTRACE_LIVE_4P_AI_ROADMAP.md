@@ -1,6 +1,12 @@
 # CraftRace LIVE — parrilla de 2 a 4 pilotos con IA opcional
 **Decisión de producto:** 20 de noviembre de 2026. **Estado:** diseño y primera lógica de parrilla **aislada y probada**; **NO es aún un multijugador de cuatro jugadores operativo**.
 
+## Acceso predeterminado en DEV (20/11/2026)
+- El botón normal **Multijugador** de la PWA `/dev/` abre **LIVE 4** sin `?live4=1` ni `?race4=1`; incluye la carrera experimental con salida protegida por servidor. Esto evita perder el modo de prueba tras el retorno de Google OAuth a `/dev/`.
+- **LIVE 2 · CLÁSICO** sigue accesible desde la cabecera de LIVE 4 antes de crear o unirse a una pista; su protocolo original se mantiene sin cambios.
+- En `/` (beta pública), Android/iOS nativos y cualquier ruta no DEV, el multijugador de dos pilotos sigue siendo el predeterminado. Sin cambios en Supabase, premios, récords ni despliegues nativos.
+- Si el navegador tiene un token de sesión rechazado, se debe recuperar la cuenta desde Ajustes → Cuenta. No se renueva ni reemplaza la identidad automáticamente. Integrar el acceso no equivale a validar los cuatro coches en móviles físicos.
+
 ## Objetivo acordado
 - El organizador configura **2, 3 o 4 plazas**; por defecto se mantiene el formato actual de **2 humanos**.
 - Invita hasta tres humanos adicionales con **el mismo código de siete caracteres**. Las personas reales tienen prioridad sobre los bots antes de iniciar la carrera.

@@ -7,14 +7,16 @@ import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import './craftraceLiveLobby.css';
 
-export function openCrafRaceLiveLobby(scene,{carId=null,trackId=null}={}){
- // Explicit DEV-only entry into the isolated 2–4 lobby test.
- // Default and native/public online continue to use the proven two-player code.
+export function openCrafRaceLiveLobby(scene,{carId=null,trackId=null,classic=false}={}){
+ // Browser DEV opens LIVE 4 by default; the original two-pilot lobby remains selectable.
+ // The published game and native clients keep their proven two-pilot flow.
  const path=window.location.pathname;
- const devAllowed=path.includes('/dev/')||['localhost','127.0.0.1'].includes(window.location.hostname);
- if(devAllowed&&new URLSearchParams(window.location.search).get('live4')==='1'){
+ const devAllowed=(path.includes('/dev/')||['localhost','127.0.0.1'].includes(window.location.hostname))&&
+  !globalThis.Capacitor?.isNativePlatform?.();
+ if(devAllowed&&!classic){
   void import('./craftraceLiveV2Lobby.js').then(({openCrafRaceLiveV2Lobby})=>{
-   openCrafRaceLiveV2Lobby(scene,{carId,trackId});
+   openCrafRaceLiveV2Lobby(scene,{carId,trackId,
+    onOpenClassic:()=>openCrafRaceLiveLobby(scene,{carId,trackId,classic:true})});
   }).catch(e=>console.error('[CrafRace LIVE 4] Failed to load DEV lobby',e));
   return;
  }

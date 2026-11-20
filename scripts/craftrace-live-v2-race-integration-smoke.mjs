@@ -59,7 +59,8 @@ assert.ok(file('src/game/scenes/RaceCleanLapScene.js')
   .includes('if(this._crafRaceLiveV2RoomId)return 0'),
   'No clean combo coins in LIVE 4');
 const ui=file('src/game/ui/craftraceLiveV2Lobby.js');
-assert.ok(ui.includes("get('race4')==='1'"));
+assert.ok(ui.includes("window.location.pathname.includes('/dev/')"));
+assert.ok(ui.includes("!globalThis.Capacitor?.isNativePlatform?.()"));
 assert.ok(ui.includes("state==='countdown'"));
 assert.ok(ui.includes("stageLive4RaceSession(s,identity)"));
 assert.ok(ui.includes("startLiveV2Lobby(room.id)"));

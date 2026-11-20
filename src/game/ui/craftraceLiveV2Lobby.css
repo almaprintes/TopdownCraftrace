@@ -13,6 +13,8 @@
  padding:clamp(10px,2vw,20px);box-shadow:0 24px 70px #000a;
  clip-path:polygon(11px 0,calc(100% - 11px) 0,100% 11px,100% calc(100% - 11px),calc(100% - 11px) 100%,11px 100%,0 calc(100% - 11px),0 11px)}
 #cr-live4 .cr4-header{display:flex;justify-content:space-between;align-items:center;gap:18px;border-bottom:1px solid #42748b77;padding-bottom:8px}
+#cr-live4 .cr4-header-buttons{display:flex;align-items:center;gap:7px;flex-shrink:0}
+#cr-live4 [data-classic]{min-height:36px;padding:6px 9px;font-size:10px;white-space:nowrap;border-color:#6a9eae}
 #cr-live4 .cr4-header small,#cr-live4 .cr4-code small{font-size:9px;letter-spacing:.17em;color:var(--cr4-cyan);font-weight:900}
 #cr-live4 h2{font-size:clamp(21px,4vw,31px);line-height:1;margin:4px 0 3px;font-style:italic;letter-spacing:.04em}
 #cr-live4 h2 em{color:var(--cr4-gold)}
@@ -64,7 +66,9 @@
 #cr-live4 .cr4-note{font-size:10px;line-height:1.35;font-weight:850;color:#b8e7d8;margin:7px 0}
 #cr-live4 .cr4-note--warning{color:#fad79b;font-weight:600}
 #cr-live4 footer{margin-top:10px;text-align:center;color:#87a9b8;font-size:9px;letter-spacing:.14em;font-weight:850}
-@media(max-width:680px){#cr-live4 .cr4-entry{grid-template-columns:1fr}
+@media(max-width:680px){#cr-live4 .cr4-header-buttons{gap:4px}
+ #cr-live4 [data-classic]{padding:5px;font-size:9px}
+ #cr-live4 .cr4-entry{grid-template-columns:1fr}
  #cr-live4 .cr4-seats{grid-template-columns:repeat(2,minmax(0,1fr))}
  #cr-live4 .cr4-seat{min-height:70px}}
 @media(max-height:460px){#cr-live4 .cr4-panel{padding:8px 12px}

@@ -1,5 +1,5 @@
-// CraftRace LIVE 4 — preview of the authenticated v2 lobby only.
-// Explicit DEV opt-in via ?live4=1. No racing or physics is started here.
+// CraftRace LIVE 4 — default multiplayer lobby on the browser DEV route only.
+// Race start remains server-authorized, unofficial, and isolated from public/native builds.
 import {createLiveV2Lobby,joinLiveV2Lobby,configureLiveV2Lobby,
   setReadyLiveV2Lobby,leaveLiveV2Lobby,startLiveV2Lobby,
   CrafRaceLiveV2LobbyMonitor} from '../online/craftraceLiveV2LobbyClient.js';
@@ -9,9 +9,11 @@ import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import './craftraceLiveV2Lobby.css';
 
-export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
+export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenClassic=null}={}){
   if(document.getElementById('cr-live4'))return;
-  const race4Enabled=new URLSearchParams(window.location.search).get('race4')==='1';
+  const race4Enabled=(window.location.pathname.includes('/dev/')||
+    ['localhost','127.0.0.1'].includes(window.location.hostname))&&
+    !globalThis.Capacitor?.isNativePlatform?.();
   const car=String(carId||scene?.selectedCarId||localStorage.getItem('tdr2:carId')||'avenir_gripline');
   const track=String(trackId||selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage));
   const root=document.createElement('section');root.id='cr-live4';
@@ -23,10 +25,13 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
         <div><small>TOP DOWN RACE · MULTIJUGADOR EXPERIMENTAL</small>
           <h2>CRAFT RACE <em>LIVE 4</em></h2>
           <p>2–4 PILOTOS · HUMANOS E IA · PRUEBA DE PARRILLA</p>
-        </div><button type="button" data-close aria-label="Cerrar">✕</button>
+        </div><div class="cr4-header-buttons">
+          <button type="button" data-classic>LIVE 2 · CLÁSICO</button>
+          <button type="button" data-close aria-label="Cerrar">✕</button>
+        </div>
       </header>
       <p class="cr4-status" data-status role="status" aria-live="polite">
-        Beta de invitaciones. Las carreras de cuatro aún no están habilitadas.</p>
+        LIVE 4 · Prueba experimental de 2–4 pilotos, sin premios ni récords.</p>
       <div class="cr4-entry" data-entry>
         <section class="cr4-card">
           <h3>CREAR UNA PISTA</h3>
@@ -90,6 +95,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
     </div>`;
   document.body.append(root);
   const $=selector=>root.querySelector(selector);
+  const classicButton=$('[data-classic]');
+  classicButton.hidden=typeof onOpenClassic!=='function';
   $('[data-track]').textContent=getTrackPublicName(track);
   let closed=false,loading=false,room=null,identity=null,monitor=null,hydrated=false,launching=false;
   $('[data-race-warning]').textContent=race4Enabled
@@ -112,6 +119,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
   const update=(s,grid)=>{
     if(closed||!room||s.id!==room.id)return;
     room=s;
+    classicButton.hidden=true;
     const host=s.host_id===identity.id;
     $('[data-roomcode]').textContent=s.code;
     $('[data-rules]').textContent=getTrackPublicName(s.track_id)+' · '+s.laps+(s.laps===1?' VUELTA':' VUELTAS');
@@ -144,7 +152,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
   };
   const disconnect=()=>{
     monitor?.stop();monitor=null;room=null;hydrated=false;
-    if(!closed){$('[data-room]').hidden=true;$('[data-entry]').hidden=false;}
+    if(!closed){$('[data-room]').hidden=true;$('[data-entry]').hidden=false;
+      classicButton.hidden=typeof onOpenClassic!=='function';}
   };
   const dispose=()=>{
     if(closed)return;closed=true;monitor?.stop();root.remove();
@@ -153,6 +162,10 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
   };
   const escape=e=>{if(e.key==='Escape')dispose();};
   $('[data-close]').addEventListener('click',dispose);
+  classicButton.addEventListener('click',()=>{
+    if(closed||room||typeof onOpenClassic!=='function')return;
+    dispose();onOpenClassic();
+  });
   document.addEventListener('keydown',escape);
   scene?.events?.once?.('shutdown',dispose);
   const launch=(s)=>{
