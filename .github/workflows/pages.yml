@@ -402,7 +402,42 @@ jobs:
           npm run build:android
       - name: Compile minified release and run native unit tests
         working-directory: android
-        run: ./gradlew :app:testBridgeTestReleaseUnitTest :app:assembleBridgeTestRelease --stacktrace
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Maven Central / Google Maven can transiently fail to resolve
+          # Kotlin artifacts in a fresh CI runner. Retry only that class of
+          # failure, refreshing Gradle's cached dependency metadata. Never
+          # conceal a compile, test or ProGuard failure behind a green job.
+          tasks=(:app:testBridgeTestReleaseUnitTest :app:assembleBridgeTestRelease)
+          for attempt in 1 2 3; do
+            log="${RUNNER_TEMP}/tdr-gradle-attempt-${attempt}.log"
+            extra_args=()
+            if (( attempt > 1 )); then extra_args+=(--refresh-dependencies); fi
+            echo "::group::Android bridge release: attempt ${attempt}/3"
+            set +e
+            ./gradlew --no-daemon "${extra_args[@]}" "${tasks[@]}" --stacktrace 2>&1 | tee "$log"
+            gradle_exit=${PIPESTATUS[0]}
+            set -e
+            echo "::endgroup::"
+            if (( gradle_exit == 0 )); then
+              echo "Bridge release APK and native unit tests passed (attempt ${attempt})."
+              exit 0
+            fi
+            if ! grep -Eiq \
+              'Could not resolve all files for configuration|Could not (find|resolve).*org[.]jetbrains[.](kotlin|kotlinx)|Could not (GET|HEAD)|Read timed out|Connection reset|Temporary failure in name resolution' \
+              "$log"; then
+              echo "::error::Gradle failed for a non-dependency reason. No automatic retry."
+              exit "$gradle_exit"
+            fi
+            if (( attempt == 3 )); then
+              echo "::error::Gradle dependency resolution failed after 3 attempts."
+              exit "$gradle_exit"
+            fi
+            echo "::warning::Dependency repository resolution failed; retrying with --refresh-dependencies."
+            sleep $((attempt * 12))
+          done
+          exit 1
       - name: Attach installable Android DEV test APK
         uses: actions/upload-artifact@v4
         with:
