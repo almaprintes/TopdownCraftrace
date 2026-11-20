@@ -21,7 +21,8 @@ function simulate(track,adaptive){
   }));
   assert.ok(profile.valid,'Valid Expert speed profile required');
   profile.live4CurveComplexity=adaptive?line.metrics.meanAbsCurvature:0;
-  const boost=Math.min(1,Math.max(0,(profile.live4CurveComplexity-.050)/.005));
+  const boost=Math.min(1,Math.max(0,(profile.live4CurveComplexity-.043)/.005))*
+    Math.min(1,Math.max(0,(profile.samples.length-365)/100));
   const samples=profile.samples, n=samples.length;
   const body={x:samples[0].x,y:samples[0].y,
     rotation:Math.atan2(samples[4].y-samples[0].y,samples[4].x-samples[0].x),
@@ -66,6 +67,14 @@ for(const key of TRACKS){
   baseTotal+=base.seconds;candidateTotal+=candidate.seconds;
   const active=candidate.aimBoost>.01;
   if(candidate.seconds<base.seconds-.05)improved++;
+  // Official photo track has much denser geometry than the placeholder
+  // JSON. Require an actual activated optimization, never a false green.
+  if(key==='santa-cruz'&&track.meta?.sourceFile){
+    assert.ok(candidate.aimBoost>.5,
+      'Adaptation must activate on the installed Santa Cruz photo circuit');
+    assert.ok(candidate.seconds<base.seconds*.995,
+      'Official Santa Cruz AI must gain time, not merely match baseline');
+  }
   assert.ok(candidate.seconds<=base.seconds*1.025,
     'Adaptive Expert cannot sacrifice >2.5% time on '+key);
   assert.ok(candidate.maxError<=base.maxError*1.15+.1,
