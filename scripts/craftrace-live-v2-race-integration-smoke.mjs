@@ -65,6 +65,15 @@ assert.ok(localProducer.includes('directorStickVector(e.clientX,e.clientY'),
  'Left stick must track the finger on both axes');
 assert.ok(localProducer.includes('directorAltitudeStick(e.clientY'),
  'Right vertical stick must independently control height');
+assert.ok(localProducer.includes('↑ ACERCAR · ↓ ALEJAR'),
+ 'Producer must display the new right stick direction');
+const producerMath=file('src/game/online/craftraceDirectorCamera.js');
+assert.ok(producerMath.includes('next.altitude+next.heightInput*1.35*elapsed'),
+ 'Up on the right stick must reduce altitude and zoom IN');
+assert.ok(producerMath.includes('920/Math.max(.39,directorZoom(next.altitude))'),
+ 'Manual panning should retain responsive screen speed at different zoom levels');
+assert.ok(producerMath.includes('(active?26:34)*elapsed'),
+ 'Manual camera should accelerate and stop promptly without drifting');
 assert.ok(localProducer.includes('stickX:x,stickY:y,altitudeAxis:height'),
  'Camera must take two analog directions and independent zoom');
 

@@ -57,8 +57,8 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    aria-label="Palanca izquierda: mover dron en todas las direcciones y controlar velocidad">
    <span data-knob></span></div><small>MOVER · VELOCIDAD</small></div>
  <div class="crdir-heightbox"><div data-height-stick class="crdir-height-stick" role="group"
-   aria-label="Palanca derecha: subir, bajar y cambiar altura o zoom">
-   <span data-height-knob></span></div><small>ALTURA · ZOOM</small></div>
+   aria-label="Palanca derecha: arriba acerca la cámara; abajo aleja la cámara">
+   <span data-height-knob></span></div><small>↑ ACERCAR · ↓ ALEJAR</small></div>
  <div class="crdir-results" data-results hidden>
   <h2>4 IA · RESULTADOS PROVISIONALES</h2>
   <p>Prueba local. Vueltas estimadas por trayectoria, todavía no homologadas.</p>

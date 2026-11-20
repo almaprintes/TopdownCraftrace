@@ -2,7 +2,7 @@
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function makeDirectorCameraState({x=0,y=0,heading=0}={}){
  if(![x,y,heading].every(Number.isFinite))throw Error('Invalid drone position');
- return {x,y,heading,speed:0,vx:0,vy:0,altitude:.52,auto:false};
+ return {x,y,heading,speed:0,vx:0,vy:0,altitude:.52,heightInput:0,auto:false};
 }
 export function chooseDirectorAction(bots){
  const cars=(Array.isArray(bots)?bots:[]).filter(b=>b?.plannerBody&&
@@ -32,7 +32,7 @@ export function directorStickVector(x,y,rect){
  return {x:active?vx:0,y:active?vy:0,
   offsetX:dx*factor,offsetY:dy*factor,magnitude:active?magnitude:0};
 }
-// Vertical camera-height lever, spring-centered; up = higher/wider view.
+// Right lever: pulling UP approaches the asphalt (zoom IN); DOWN ascends (zoom OUT).
 export function directorAltitudeStick(y,rect){
  const height=Math.max(1,Number(rect?.height)||1);
  const travel=Math.max(1,height*.34);
@@ -46,34 +46,43 @@ export function directorStartPhase(now,startAt){
  if(!Number.isFinite(remaining))return {started:false,seconds:3};
  return {started:remaining<=0,seconds:Math.ceil(remaining/1000)};
 }
-export function directorZoom(altitude){return 1.4-clamp(Number(altitude)||.52,.10,1)*1.12;}
+export function directorZoom(altitude){
+ // Exponential zoom: equal thumb travel gives proportionate changes at any
+ // height. Initial .52 remains close to the previous 0.82× default.
+ const a=clamp(Number.isFinite(altitude)?altitude:.52,.10,1);
+ return 2.1*Math.pow(.27/2.1,(a-.10)/.90);
+}
 // Twin-stick drone: LEFT = translation in screen XY with analog magnitude;
 // RIGHT = vertical climb/descent (and therefore zoom). No gas, brake or yaw pedal.
 export function stepDirectorCamera(state,input,dt,bots=[]){
  const elapsed=clamp(Number(dt)||0,0,.05);
- const next={vx:0,vy:0,...state};
+ const next={vx:0,vy:0,heightInput:0,...state};
  const sx=clamp(Number(input?.stickX)||0,-1,1);
  const sy=clamp(Number(input?.stickY)||0,-1,1);
  const axis=clamp(Number(input?.altitudeAxis)||0,-1,1);
  const mag=Math.min(1,Math.hypot(sx,sy));
- const active=mag>.08;
+ const active=mag>.065;
  if(active&&next.auto)next.auto=false;
+ // Responsive, frame-rate-independent height lever with short release damping.
+ next.heightInput+=(axis-next.heightInput)*(1-Math.exp(-23*elapsed));
  if(next.auto){
   const interest=chooseDirectorAction(bots);
   if(interest){
-   const smoothing=1-Math.exp(-3.2*elapsed);
+   const smoothing=1-Math.exp(-5.2*elapsed);
    next.x+=(interest.x-next.x)*smoothing;
    next.y+=(interest.y-next.y)*smoothing;
    // Right stick can override auto zoom without cancelling auto framing.
-   if(Math.abs(axis)<.08)
+   if(Math.abs(axis)<.08&&Math.abs(next.heightInput)<.06)
     next.altitude+=(clamp(.42+interest.distance/1100,.40,.85)-next.altitude)*smoothing;
   }
   next.vx=0;next.vy=0;next.speed=0;
  }else{
-  const maxSpeed=530;
-  const targetVx=active?sx*maxSpeed:0;
-  const targetVy=active?sy*maxSpeed:0;
-  const smoothing=1-Math.exp(-(active?13:20)*elapsed);
+  // World-pixel speed responds to current zoom: panning must feel agile even
+  // when the camera is high above the circuit. Still cap the world velocity.
+  const worldMax=Math.min(2350,920/Math.max(.39,directorZoom(next.altitude)));
+  const targetVx=active?sx*worldMax:0;
+  const targetVy=active?sy*worldMax:0;
+  const smoothing=1-Math.exp(-(active?26:34)*elapsed);
   next.vx+=(targetVx-next.vx)*smoothing;
   next.vy+=(targetVy-next.vy)*smoothing;
   if(Math.hypot(next.vx,next.vy)<.05){next.vx=0;next.vy=0;}
@@ -82,7 +91,8 @@ export function stepDirectorCamera(state,input,dt,bots=[]){
   next.speed=Math.hypot(next.vx,next.vy);
   if(next.speed>.1)next.heading=Math.atan2(next.vy,next.vx);
  }
- // Push lever upward (negative Y) to climb and widen the framing.
- next.altitude=clamp(next.altitude-axis*.64*elapsed,.10,1);
+ // UP (negative axis) moves the drone DOWN: closer, more zoom.
+ // DOWN (positive axis) ascends: wider view. Full range in under a second.
+ next.altitude=clamp(next.altitude+next.heightInput*1.35*elapsed,.10,1);
  return next;
 }

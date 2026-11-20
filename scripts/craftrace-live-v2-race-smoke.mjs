@@ -177,8 +177,8 @@ const heightRect={left:400,top:200,width:76,height:150};
 const high=directorAltitudeStick(200,heightRect);
 const low=directorAltitudeStick(350,heightRect);
 const neutral=directorAltitudeStick(275,heightRect);
-assert.equal(high.axis,-1,'Right lever up raises camera');
-assert.equal(low.axis,1,'Right lever down lowers camera');
+assert.equal(high.axis,-1,'Right lever up points toward the asphalt');
+assert.equal(low.axis,1,'Right lever down ascends to a wider view');
 assert.equal(neutral.axis,0,'Right lever returns to neutral');
 assert.ok(Math.abs(directorAltitudeStick(160,heightRect).offsetY+51)<1e-9,
  'Right lever is constrained to its vertical track');
@@ -192,6 +192,19 @@ const fast=run({stickX:0,stickY:topStick.y});
 const slow=run({stickX:0,stickY:halfStick.y});
 assert.ok(fast.y<slow.y&&slow.y<0,'Speed follows distance from center');
 assert.ok(fast.speed>slow.speed*1.6,'Analog speed is not constant');
+let snappy=startState();
+for(let frame=0;frame<7;frame++)
+ snappy=stepDirectorCamera(snappy,{stickX:1,stickY:0},1/60);
+assert.ok(snappy.vx>650,'Direction reaches useful speed within ~120 ms');
+let responsiveZoom=startState();
+for(let frame=0;frame<30;frame++)
+ responsiveZoom=stepDirectorCamera(responsiveZoom,{altitudeAxis:-1},1/60);
+assert.ok(directorZoom(responsiveZoom.altitude)>1.8,
+ 'Zoom-in must respond clearly within half a second');
+const combined=run({stickX:.7,stickY:-.5,altitudeAxis:-1});
+assert.ok(combined.x>0&&combined.y<0&&directorZoom(combined.altitude)>1.9,
+ 'Moving, changing direction and zooming work simultaneously');
+assert.ok(fast.speed>650,'Full stick gives lively panning at normal zoom');
 assert.ok(Math.abs(fast.x)<1,'Pushing upward does not drift sideways');
 const east=run({stickX:eastStick.x,stickY:eastStick.y});
 assert.ok(east.x>0&&Math.abs(east.y)<1,'Rightward stick flies right');
@@ -199,10 +212,14 @@ const diagonal=run({stickX:diagonalStick.x,stickY:diagonalStick.y});
 assert.ok(diagonal.x>0&&diagonal.y<0,'Diagonal motion has both components');
 const climb=run({altitudeAxis:high.axis});
 const descend=run({altitudeAxis:low.axis});
-assert.ok(directorZoom(climb.altitude)<directorZoom(.52),
- 'High drone = wider view');
-assert.ok(directorZoom(descend.altitude)>directorZoom(.52),
- 'Low drone = closer view');
+assert.ok(directorZoom(climb.altitude)>directorZoom(.52),
+ 'UP = camera descends / zoom IN');
+assert.ok(directorZoom(descend.altitude)<directorZoom(.52),
+ 'DOWN = camera climbs / zoom OUT');
+assert.ok(directorZoom(climb.altitude)>1.9,
+ 'Upward zoom has sufficient range to show a close-up');
+assert.ok(directorZoom(descend.altitude)<.35,
+ 'Downward zoom allows a genuinely wide shot');
 const centerAfter=stepDirectorCamera(fast,{stickX:0,stickY:0},.05);
 assert.ok(centerAfter.speed<fast.speed,'Centering the stick slows flight');
 let settling=centerAfter;
