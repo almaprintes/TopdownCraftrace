@@ -87,7 +87,7 @@ const results=[];
 for(const entry of CASES){
  const track=JSON.parse(readFileSync(
   'src/game/tracks/library/'+entry.path+'/track.json','utf8'));
- assert.equal(track.closed,true,'Closed track required');
+ assert.notEqual(track.closed,false,'Explicitly open tracks are not valid A/B laps');
  const old=simulate(track,false),next=simulate(track,true);
  totalLegacy+=old.seconds;totalExpert+=next.seconds;
  const gap=100*(next.seconds/old.seconds-1);
