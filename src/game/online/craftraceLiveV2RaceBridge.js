@@ -6,6 +6,7 @@ import {consumeLive4RaceSession} from './craftraceLiveV2RaceSession.js';
 import {CrafRaceLive4RemoteModel} from './craftraceLiveV2RaceModel.js';
 import {CrafRaceLive4PositionLink} from './craftraceLiveV2PositionLink.js';
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
+import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
 import {CrafRaceLiveV2LobbyMonitor,finishLiveV2Lobby,acknowledgeLiveV2GridLoaded} from './craftraceLiveV2LobbyClient.js';
 
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
@@ -68,9 +69,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  const raceEntries=model.roster;
  const createVisual=item=>{
    if(item.seat===localSeat||isHost&&item.kind==='ai')return;
-   const visual=scene.add.sprite(0,0,sprite.texture.key)
-     .setOrigin(sprite.originX,sprite.originY).setScale(sprite.scaleX,sprite.scaleY)
-     .setTint(TINTS[item.seat]);
+   const visual=scene.add.sprite(0,0,'__DEFAULT').setVisible(false);
+   syncLive4CarVisual(scene,visual,TINTS[item.seat]);
    const rig=scene.add.container(scene.carBody.x,scene.carBody.y,[visual])
      .setDepth(29).setVisible(false);
    const label=scene.add.text(0,-40,
@@ -78,7 +78,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        fontFamily:'system-ui',fontSize:'12px',fontStyle:'bold',
        color:'#ffffff',backgroundColor:'#112638',padding:{x:4,y:2}
      }).setOrigin(.5).setDepth(31).setVisible(false);
-   paint.set(item.seat,{rig,label,lastDrawn:0});
+   paint.set(item.seat,{rig,label,visual,tint:TINTS[item.seat],lastDrawn:0});
  };
  raceEntries.forEach(createVisual);
  let director=null,aiError=null;
@@ -225,6 +225,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        continue;
      }
      const pose=item.pose;
+     const textured=syncLive4CarVisual(scene,visual.visual,visual.tint);
      const dt=visual.lastDrawn?Math.max(0,Math.min(80,now-visual.lastDrawn)):16.667;
      visual.lastDrawn=now;
      const blend=visual.rig.visible?1-Math.exp(-dt/115):1;
@@ -234,8 +235,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      const offset=Math.atan2(Math.sin(target-visual.rig.rotation),Math.cos(target-visual.rig.rotation));
      visual.rig.setPosition(x,y)
        .setRotation(visual.rig.visible?visual.rig.rotation+offset*blend:target)
-       .setVisible(true);
-     visual.label.setPosition(x,y-40).setVisible(true);
+       .setVisible(textured);
+     visual.label.setPosition(x,y-40).setVisible(textured);
    }
    if(scene.carBody?.active&&linkReady&&(!localFinish)){
      const body=scene.carBody,v=body.body?.velocity;

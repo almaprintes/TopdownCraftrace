@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import {CrafRaceLive4RemoteModel,validateLive4Roster} from '../src/game/online/craftraceLiveV2RaceModel.js';
 import {makeLive4StartingGrid} from '../src/game/online/craftraceLiveV2GridGeometry.js';
 import {CrafRaceLive4BotDirector,LIVE4_AI_LEVELS} from '../src/game/online/craftraceLiveV2BotDirector.js';
+import {syncLive4CarVisual} from '../src/game/online/craftraceLiveV2CarVisual.js';
 const a='550e8400-e29b-41d4-a716-446655440000';
 const b='550e8400-e29b-41d4-a716-446655440001';
 const c='550e8400-e29b-41d4-a716-446655440002';
@@ -77,11 +78,23 @@ function mockBody(x,y){
     destroy(){this.scene=null;}
   };
 }
+const makeVisual=(x,y,key)=>({
+ texture:{key},x,y,originX:.5,originY:.5,scaleX:1,scaleY:1,rotation:0,alpha:1,visible:true,
+ setTexture(value){this.texture.key=value;return this;},
+ setVisible(value){this.visible=value;return this;},
+ setOrigin(x,y){this.originX=x;this.originY=y;return this;},
+ setPosition(x,y){this.x=x;this.y=y;return this;},
+ setScale(x,y=x){this.scaleX=x;this.scaleY=y;return this;},
+ setRotation(value){this.rotation=value;return this;},
+ setAlpha(value){this.alpha=value;return this;},
+ setTint(value){this.tint=value;return this;}
+});
 const mockScene={
  track:{closed:true,meta:landscape},maxFwd:420,carParams:{maxFwd:420,accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,steering:{}},
- carRig:{list:[{originX:.5,originY:.5,scaleX:1,scaleY:1,texture:{key:'car'}}]},
+ textures:{exists:key=>key==='car'||key==='published_skin'},
+ carRig:{list:[makeVisual(0,0,'car')]},
  physics:{add:{sprite:(x,y)=>mockBody(x,y)}},
- add:{sprite:()=>({setOrigin(){return this;},setScale(){return this;},setTint(){return this;}}),
+ add:{sprite:makeVisual,
    container:(x,y)=>({scene:{},x,y,setDepth(){return this;},setPosition(nx,ny){this.x=nx;this.y=ny;return this;},
       setRotation(rotation){this.rotation=rotation;return this;},destroy(){this.scene=null;}})},
  simTick:1
@@ -90,7 +103,22 @@ const aiRoster=[roster[0],{kind:'ai',seat:1,bot_id:'ai-seat-2',owner_id:a,diffic
  {kind:'ai',seat:2,bot_id:'ai-seat-3',owner_id:a,difficulty:2},roster[3]];
 const director=new CrafRaceLive4BotDirector(mockScene,{roster:aiRoster,hostId:a,localId:a,startingGrid:wide,laps:3});
 assert.equal(director.bots.length,3);
+assert.equal(director.profiles.get(3).parameters.maxSpeed,420,
+ 'Expert targets the true car limit, not the old hardcoded 520px/s');
+assert.equal(director.profiles.get(3).parameters.driveAccel,520*.95);
+assert.ok(director.profiles.get(3).metrics.meanTargetSpeed>=director.profiles.get(2).metrics.meanTargetSpeed);
+assert.equal(new Set(director.bots.map(b=>b.style)).size,3,'Every bot has a deterministic driving style');
 assert.equal(director.update(16,1000,false).length,0,'No bot driving during countdown');
+assert.ok(director.bots.every(b=>b.visual.texture.key==='car'&&b.visual.visible));
+const visual=director.bots[0].visual;
+mockScene.carRig.list[0].setTexture('__MISSING');
+assert.equal(syncLive4CarVisual(mockScene,visual,0xffffff),false,'Missing textures never render');
+assert.equal(visual.visible,false);
+mockScene.carRig.list[0].setTexture('published_skin').setScale(.8,.85).setRotation(.12);
+director.update(16,1001,false);
+assert.ok(director.bots.every(b=>b.visual.visible&&b.visual.texture.key==='published_skin'));
+assert.equal(visual.scaleX,.8,'AI skin must inherit the player skin fit');
+assert.equal(visual.rotation,.12,'AI skin must inherit artwork rotation');
 let count=0;
 for(let frame=0;frame<80;frame++){
  const reports=director.update(16.667,1000+frame*16.667,true);
