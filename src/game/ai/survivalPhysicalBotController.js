@@ -161,7 +161,17 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // following the asphalt. LIVE 4 Expert always pursues a nearby point on the
   // physical racing line, with a shorter horizon as curvature increases.
   const curveSeverity=clamp((peakTurn-.018)/.10,0,1);
-  const precisionAimPx=clamp(25+speed*.11-curveSeverity*26,22,74);
+  // Complex technical circuits require a longer *visual aiming horizon* to
+  // avoid steering too late through continuous bends. This is lookahead only:
+  // it does not change engine power, grip, braking or the target speed plan.
+  // Lower-complexity circuits retain the identical proven controller.
+  const curveComplexity=precisionCornering
+    ?Math.max(0,Number(profile.live4CurveComplexity)||0):0;
+  const adaptiveHorizon=clamp((curveComplexity-.050)/.005,0,1);
+  const precisionAimPx=clamp(
+    25+20*adaptiveHorizon+
+    speed*(.11+.04*adaptiveHorizon)-curveSeverity*26,
+    22,110);
   const precisionSteps=clamp(Math.round(precisionAimPx/spacing),2,8);
   const recoverySteps=nearest.distance>45?Math.min(3,precisionSteps):precisionSteps;
   const targetIndex=precisionCornering

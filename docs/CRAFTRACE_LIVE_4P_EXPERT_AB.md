@@ -175,3 +175,44 @@ no cruzan la meta, y la fila de salida no queda sobre el asfalto real.
 
 **Alcance:** sólo LIVE 4 y Realizador DEV, sin tocar coches, dificultad, premios,
 récords, Supabase ni versiones de Google Play.
+
+## Ensayo: anticipación adaptativa para Experto (20/11/2026)
+
+Objetivo: aproximarse al tiempo humano **58,583–59,952 s/3 vueltas** frente a la
+IA **68,603 s/3 vueltas** (Santa Cruz/Gripline). Las últimas capturas confirman
+que 3/3 IA registraron resultados, pero no garantizan por sí solas su calidad
+de trazada durante toda la carrera.
+
+Hipótesis física: en trazados muy sinuosos, la IA exige demasiado giro con
+un punto de mira corto y pierde tiempo corrigiendo el volante. Aumentar el
+horizonte de seguimiento **sin cambiar velocidad objetivo, potencia, agarre,
+freno ni velocidad máxima** puede anticipar las curvas. No aplicar el ajuste a
+circuitos abiertos y rápidos, donde aumenta el error transversal.
+
+Adaptación en la instancia LIVE4 de nivel 3: usar el promedio de curvatura
+absoluta por muestra de la trazada calculada; interpolar el horizonte de
+mira entre la configuración anterior y una más anticipativa en el intervalo
+[0.050, 0.055] rad/muestra. Por debajo se conserva exactamente el ajuste
+anterior. Sólo varía el punto perseguido por el controlador Experto; nivel 1,
+nivel 2, Survival, duelos, físicas y premios no cambian.
+
+Previsión de la *simulación aislada* con la geometría JSON anterior a la
+instalación fotográfica oficial:
+- Santa Cruz: **21,35 → 20,30 s** por vuelta virtual (≈ 4,9 % menos),
+  desviación media **13,7 → 13,5 px**, fracción con error >35 px **9,7 → 5,0 %**.
+  Error máximo **49,2 → 50,2 px**: empeora ligeramente, de modo que se
+  permiten un máximo de 15 % de margen y no se considera homologación.
+- Track 01, Karting Tenerife y Technical Ridge: misma respuesta anterior,
+  pues su curvatura media queda por debajo del umbral.
+
+**No extrapolar** estos segundos sintéticos al cronómetro del iPhone.
+El benchmark A/B `scripts/craftrace-live4-expert-horizon-ab.mjs` compara
+ambas configuraciones en el mismo controlador, con física idéntica a 60 Hz,
+vigila tiempos, máximos errores y muestras fuera de línea. También se
+mantiene el test de cuatro bots, tres vueltas y cruces físicos de meta,
+incluyendo la fotografía oficial cuando está instalada en CI.
+
+Sólo se publicará DEV tras los controles; la verificación real exige Santa
+Cruz/Gripline/3 vueltas/3 IA Experto, anotando tiempo por IA, FPS, y un vídeo
+en curvas. Objetivo final: que se acerquen al tiempo del jugador **sin
+aumentar prestaciones**. El resultado sigue siendo provisional.

@@ -66,6 +66,7 @@ export class CrafRaceLive4BotDirector{
       driveAccel:driveAccel*settings.plannerDrive,
       brakeDecel:brakeDecel*settings.plannerBrake
     }));
+    if(expert)profile.live4CurveComplexity=expertLine.metrics.meanAbsCurvature;
     if(!profile.valid||!Array.isArray(profile.samples)||profile.samples.length<12)
       throw Error('No se puede preparar IA física para este circuito');
     this.profiles.set(Number(level),profile);
