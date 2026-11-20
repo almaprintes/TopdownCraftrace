@@ -125,3 +125,8 @@
 - Carrera local simulada con cuatro coches físicos de la clase LIVE 4; al finalizar se muestran resultados **provisionales** y no homologados porque las vueltas IA todavía se derivan del avance por trazada, no de cruzar físicamente todos los checkpoints. Sin premios, récords ni red.
 - IA Experto adelanta el perfil predictivo de curva ligeramente (2050 de referencia lateral, planificación al 100 % de aceleración y freno **del mismo coche**). No incrementa físicamente agarre, velocidad máxima ni motor; objetivo de acercarse al tiempo del usuario, pendiente de medición en el mismo circuito/coche.
 - Fase posterior: añadir permisos y presencia de realizador distintos de las cuatro plazas de corredor, emisión/espectadores conectados y selección de cámaras; ninguna de esas funciones de red está incluida en este prototipo.
+
+## Auditoría de capturas del Realizador · 20/11/2026
+- Las capturas de iPhone muestran el modo cámara operando (manual y AUTO) pero con capas del piloto: botón ARRANCAR MOTOR, panel de Gripline/crono/PB, pedales y el gran freno de mano, además de la aparición del teclado iOS. El origen del teclado no está demostrado; se previene enfoque de campos de texto heredados.
+- Corrección DEV: la sesión local ya no crea la interfaz de arranque de motor; utiliza semáforo automático del núcleo de carrera. Oculta temporalmente HUD y controles de conductor mediante `raceUiVisibility` y CSS scoped por `tdr-director-active`, sin cambiar sus ajustes ni la interfaz en las carreras normales. Restablece y limpia al salir.
+- La cabecera aclara que «FINALIZADAS N/4» cuenta las IA que han terminado (no los rivales presentes). Prueba física en iPhone pendiente para confirmar visibilidad/click-through y que las cuatro IA completen la carrera.

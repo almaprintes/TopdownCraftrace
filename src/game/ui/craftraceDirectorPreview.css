@@ -55,3 +55,20 @@
  #cr-director .crdir-drive{min-width:90px}
 }
 @media(prefers-reduced-motion:reduce){#cr-director *{transition:none!important}}
+
+/* In producer mode, the inherited driver cockpit is NEVER interactive or
+   rendered. The selector is scoped to this local preview and undone on exit. */
+body.tdr-director-active #tdr-race-controls,
+body.tdr-director-active #tdr-handbrake,
+body.tdr-director-active #tdr-ignition-start,
+body.tdr-director-active #tdr-rc-controls,
+body.tdr-director-active #tdr-steering-wheel,
+body.tdr-director-active #tdr-invisible-steering-zone,
+body.tdr-director-active #tdr-gamepad-pedals,
+body.tdr-director-active #tdr-physics-ab-practice-label,
+body.tdr-director-active [data-tdr-steering-button],
+body.tdr-director-active [data-tdr-touch-controls],
+body.tdr-director-active [data-tdr-race-ui="1"],
+body.tdr-director-active .tdr-race-hud{
+ display:none!important;visibility:hidden!important;pointer-events:none!important;
+}

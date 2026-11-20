@@ -59,6 +59,21 @@ for(const needle of ['CrafRaceLive4BotDirector','preview:true','data-gas',
  assert.ok(localProducer.includes(needle),'Missing director control '+needle);
 assert.ok(!localProducer.includes('finishLiveV2Lobby('),
  'Local preview must never write unofficial results to Supabase');
+assert.ok(localProducer.includes('hideRaceUi(scene)')&&
+ localProducer.includes('restoreRaceUi(scene,hiddenUi)'),
+ 'Director must hide the entire driver cockpit and restore on exit');
+assert.ok(localProducer.includes("classList.add('tdr-director-active')")&&
+ localProducer.includes("classList.remove('tdr-director-active')"),
+ 'Producer CSS must not bleed into normal races');
+assert.ok(localProducer.includes("document.addEventListener('focusin',suppressTextFocus,true)"),
+ 'Legacy text inputs must not summon iOS keyboard in the camera view');
+const directorCss=file('src/game/ui/craftraceDirectorPreview.css');
+for(const selector of ['#tdr-handbrake','#tdr-race-controls','#tdr-ignition-start',
+ '[data-tdr-race-ui="1"]','.tdr-race-hud'])
+ assert.ok(directorCss.includes(selector),'Unhidden driver overlay '+selector);
+const engineScene=file('src/game/scenes/RaceEmbeddedReplaySceneV2.js');
+assert.ok(engineScene.includes('&&!this._crafRaceDirectorPreview'),
+ 'Producer is exempt from driver ignition and starts on normal race lights');
 assert.ok(scene.includes("this._crafRaceLiveV2RoomId=(!IS_PROD_BUILD"));
 assert.ok(scene.includes("attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId)"));
 assert.ok(scene.includes("import('../online/craftraceLiveV2RaceBridge.js')"));

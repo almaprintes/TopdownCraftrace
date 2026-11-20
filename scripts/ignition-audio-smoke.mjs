@@ -12,7 +12,8 @@ const scene = await readFile(new URL('../src/game/scenes/RaceEmbeddedReplayScene
 const runtime = await readFile(new URL('../src/game/audio/CarEngineSampleRuntime.js', import.meta.url), 'utf8');
 
 assert.match(scene, /IGNITION_TO_LIGHTS_MS/, 'common race scene must own the ignition-to-lights transition');
-assert.match(scene, /if\(!embeddedRequested&&!this\._tdrEmbeddedReplay\)/, 'embedded replays must not install ignition audio');
+assert.match(scene, /if\(!embeddedRequested&&!this\._tdrEmbeddedReplay&&!this\._crafRaceDirectorPreview\)/,
+ 'embedded replays and local director must never install ignition audio');
 assert.equal((scene.match(/_tdrEngineSample\?\.startEngine\?\.\(\)/g) || []).length, 1, 'race ignition button must be the only startEngine trigger');
 
 const handlerStart = scene.indexOf('const start=(ev)=>');

@@ -2,6 +2,7 @@
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
 import {makeLive4StartingGrid} from './craftraceLiveV2GridGeometry.js';
 import {makeDirectorCameraState,stepDirectorCamera,directorZoom} from './craftraceDirectorCamera.js';
+import {hideRaceUi,restoreRaceUi} from '../ui/raceUiVisibility.js';
 import '../ui/craftraceDirectorPreview.css';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const fmt=ms=>Math.floor(ms/60000)+':'+String(Math.floor(ms%60000/1000)).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0');
@@ -22,6 +23,21 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    roster,hostId,localId:hostId,startingGrid:grid,laps,preview:true
  });
  scene.carRig.setVisible(false);body.setVisible(false);
+ // Keep the whole scene for real circuit and AI physics, but hide every
+ // driver-only HUD and all its interactive pedal/handbrake layers.
+ document.body.classList.add('tdr-director-active');
+ const hiddenUi=hideRaceUi(scene);
+ scene._tdrRemoveIgnitionButton?.();
+ const wasTextInput=()=>{
+   const el=document.activeElement;
+   return el?.matches?.('input,textarea,select,[contenteditable="true"]')?el:null;
+ };
+ wasTextInput()?.blur?.();
+ const suppressTextFocus=e=>{
+   if(e.target?.matches?.('input,textarea,select,[contenteditable="true"]'))
+     e.target.blur?.();
+ };
+ document.addEventListener('focusin',suppressTextFocus,true);
  const root=document.createElement('section');root.id='cr-director';
  root.setAttribute('aria-label','Realizador de CraftRace');
  root.innerHTML=`
@@ -42,6 +58,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
   <p>Prueba local. Vueltas estimadas por trayectoria, todavía no homologadas.</p>
   <ol data-order></ol><button type="button" data-finish>VOLVER AL MENÚ</button></div>`;
  document.body.append(root);
+ // Stop director touch events reaching legacy driver controls behind the view.
+ for(const ev of ['pointerdown','pointermove','pointerup','pointercancel','click'])
+   root.addEventListener(ev,e=>e.stopPropagation());
  const $=s=>root.querySelector(s);
  const held={gas:new Set,brake:new Set,rise:new Set,sink:new Set};
  const keyboard=new Set;let stopped=false,shown=false,stickPointer=null,steerValue=0,lastInfo=0;
@@ -99,6 +118,11 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  // Override the gameplay camera after the normal RaceScene zoom/follow update.
  const draw=()=>{
    if(stopped||!scene.cameras?.main)return;
+   // Several inherited scene layers can repaint UI after the initial hide.
+   // Keep only the producer's independent DOM controls visible.
+   if(scene.uiCam?.visible!==false)scene.uiCam?.setVisible(false);
+   if(scene._startModal?.visible!==false)scene._startModal?.setVisible(false);
+   if(scene.touchUI?.visible!==false)scene.touchUI?.setVisible(false);
    const cam=scene.cameras.main;
    cam.stopFollow();cam.setZoom(directorZoom(camera.altitude));
    cam.centerOn(camera.x,camera.y);
@@ -117,8 +141,8 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    bots.update(deltaMs,now,scene._raceStarted===true);
    if(now-lastInfo>=500){
      lastInfo=now;const stats=bots.stats();
-     $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'ESPERANDO SALIDA')+
-      ' · IA '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
+     $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN PREPARACIÓN')+
+      ' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
       ' · ZOOM '+directorZoom(camera.altitude).toFixed(2)+'×';
      $('[data-auto]').textContent=camera.auto?'AUTO ACTIVADO':'AUTO · ACCIÓN';
    }
@@ -138,6 +162,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    document.removeEventListener('keyup',keyUp,true);
    keyboard.clear();for(const group of Object.values(held))group.clear();
    bots.destroy();root.remove();
+   document.removeEventListener('focusin',suppressTextFocus,true);
+   restoreRaceUi(scene,hiddenUi);
+   document.body.classList.remove('tdr-director-active');
  };
  scene.events.once('shutdown',stop);
  return {update,stop,get camera(){return camera;}};

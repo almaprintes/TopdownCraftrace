@@ -66,7 +66,9 @@ export class RaceScene extends EmbeddedReplayRaceScene{
     }catch{}
     this._tdrSyncGamepadUi(true);
 
-    if(!embeddedRequested&&!this._tdrEmbeddedReplay){
+    // A camera-only director has no engine to start: use the inherited
+    // automatic race lights. Keep the normal ignition flow unchanged.
+    if(!embeddedRequested&&!this._tdrEmbeddedReplay&&!this._crafRaceDirectorPreview){
       try{
         this._tdrEngineSample?.destroy?.();
         // iOS: do not instantiate WebAudio at all (no fetch/decode, AudioContext,
