@@ -54,6 +54,7 @@ export class CrafRaceLive4BotDirector{
   const sprite=scene.carRig?.list?.find?.(item=>item?.texture?.key);
   if(!sprite)throw Error('Player car visuals unavailable');
   for(const item of ai){
+   const profile=this.profiles.get(item.difficulty);
    const grid=startingGrid?.positions?.[item.seat];
    if(!grid)throw Error('Missing AI start position');
    const x=grid.x-Math.cos(grid.r)*44,y=grid.y-Math.sin(grid.r)*44;
