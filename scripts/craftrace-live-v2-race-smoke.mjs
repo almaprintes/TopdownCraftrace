@@ -180,7 +180,7 @@ const neutral=directorAltitudeStick(275,heightRect);
 assert.equal(high.axis,-1,'Right lever up raises camera');
 assert.equal(low.axis,1,'Right lever down lowers camera');
 assert.equal(neutral.axis,0,'Right lever returns to neutral');
-assert.equal(directorAltitudeStick(160,heightRect).offsetY,-51,
+assert.ok(Math.abs(directorAltitudeStick(160,heightRect).offsetY+51)<1e-9,
  'Right lever is constrained to its vertical track');
 assert.deepEqual(directorStartPhase(1000,4000),{started:false,seconds:3});
 assert.deepEqual(directorStartPhase(3000,4000),{started:false,seconds:1});
