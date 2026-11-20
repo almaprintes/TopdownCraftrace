@@ -16,7 +16,7 @@ function simulate(track,adaptive){
   },{apexCommitment:.22});
   assert.ok(line.valid,'Valid racing line required');
   const profile=buildTrackManeuverPlan(buildTrackSpeedProfile(line,{
-    maxSpeed,lateralAccel:2050,minCornerSpeed:80,maxYawRate:turnRate,
+    maxSpeed:maxFwd,lateralAccel:2050,minCornerSpeed:80,maxYawRate:turnRate,
     curvatureSmoothWindow:21,driveAccel:accel,brakeDecel:brakeForce
   }));
   assert.ok(profile.valid,'Valid Expert speed profile required');
