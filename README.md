@@ -1,5 +1,7 @@
 # Top Down RACE / TopdownCraftrace
 
+> **NORMA DE DESPLIEGUE (20/11/2026):** La web DEV se publica **únicamente con GitHub Actions → GitHub Pages**. El enlace Git de Vercel fue desconectado tras su utilización puntual durante una incidencia de Actions; **no se debe reconectar ni desplegar a Vercel sin autorización expresa**. Ver [docs/DEPLOYMENT_POLICY.md](docs/DEPLOYMENT_POLICY.md) y [AGENTS.md](AGENTS.md). Las referencias antiguas a Vercel en este README son históricas.
+
 > **DOCUMENTO DE CONTINUIDAD VIGENTE (20/10/2026):** [docs/continuity/2026-10-20-handoff-general.md](docs/continuity/2026-10-20-handoff-general.md). Para reanudar en otro chat, leer esa síntesis **junto con AGENTS.md y PROJECT_HANDOFF.md**, consultar HEAD de main y comprobar GitHub Actions. Las secciones históricas de este archivo reflejan su propia fecha y no sustituyen el estado más reciente.
 
 Estado real del proyecto a **17 de agosto de 2026**.

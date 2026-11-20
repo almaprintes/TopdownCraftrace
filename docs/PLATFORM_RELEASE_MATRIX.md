@@ -1,6 +1,11 @@
 # TDR · Matriz de plataformas, versiones y rutas de publicación
 **Norma operativa vigente: 1 de noviembre de 2026.** Se aplica a los cambios posteriores y prevalece sobre las instrucciones *históricas* que citan ramas `develop`, `beta-0.0.3` o dicen que todos los cambios de interfaz son «solo iPhone».
 
+## Canal web autorizado y Vercel (norma de 20/11/2026)
+**Solo GitHub Actions + GitHub Pages publican DEV automáticamente.** El proyecto `almaprint/topdown-craftrace` de Vercel se utilizó excepcionalmente cuando GitHub Actions no desplegaba durante una incidencia, pero su vínculo Git permaneció activo y causó despliegues redundantes y miles de avisos. El propietario lo desconectó el **20/11/2026**, verificándose `linkedProjects: []` en Vercel, sin borrar el proyecto ni sus dominios.
+
+**No** reconectar GitHub con Vercel, no crear despliegues Vercel, activar hooks o configurar CI para Vercel por defecto. En caso de caída de GitHub Actions, diagnosticar primero y obtener autorización específica del propietario para cualquier alternativa temporal; desconectarla al terminar. Documento operativo: [DEPLOYMENT_POLICY.md](DEPLOYMENT_POLICY.md). Las referencias anteriores a Vercel son históricas y **no** modifican esta regla.
+
 ## Regla del propietario
 1. **Rendimiento del iPhone: SOLO iOS.** Cualquier cambio de WebKit, frame pacing, WebGL, resolución, GPU, memory pressure, profiler, optimización de mosaicos o control térmico para resolver los tirones de iPhone debe ejecutarse únicamente en iOS/iPhone. No modificar el comportamiento Android que ya funciona bien. Un módulo del repositorio compartido puede contener código exclusivo iOS, pero debe quedar protegido por detección de plataforma + pruebas en ambos sistemas.
 2. **Menús, cabeceras, botones, modales, tipografía, disposición, responsive, áreas seguras y ayuda: COMPARTIDOS Android + iOS.** Crear un solo comportamiento funcional y estilo base donde la misma pantalla exista en ambas. Corregirlo y validar en las dos plataformas. Solo utilizar diferencias CSS de plataforma para corregir restricciones reales (isla dinámica/safe area/teclado), nunca duplicar flujos sin necesidad.
