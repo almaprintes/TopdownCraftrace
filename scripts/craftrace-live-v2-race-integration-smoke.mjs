@@ -45,6 +45,19 @@ assert.ok(scene.includes("import('../online/craftraceLiveV2RaceBridge.js')"));
 assert.ok(scene.includes('makeLive4StartingGrid({start:baseGrid'));
 assert.ok(scene.includes('this._crafRaceLiveBridge?.update(performance.now(),deltaMs)'));
 assert.ok(scene.includes('this._crafRaceLiveGridSlot===1?1:0'),'2-player grid must stay unchanged');
+assert.ok(scene.includes('|| Boolean(this._crafRaceLiveV2RoomId)'),'LIVE 4 must be unofficial/test mode');
+assert.ok(scene.includes('this.ttHistKey = this._crafRaceLiveV2RoomId ? null'),
+  'LIVE 4 must not write official lap history');
+assert.ok(scene.includes('this.ttKey = this._crafRaceLiveV2RoomId ? null'),
+  'LIVE 4 must not update official PBs');
+assert.ok(scene.includes('if(this.ttKey)localStorage.setItem(this.ttKey'),
+  'LIVE 4 null PB key must not write localStorage');
+assert.ok(file('src/game/scenes/RaceSessionRewardsScene.js')
+  .includes('this._physicsABPractice||this._crafRaceLiveV2RoomId'),
+  'No ad/loot reward flow in LIVE 4');
+assert.ok(file('src/game/scenes/RaceCleanLapScene.js')
+  .includes('if(this._crafRaceLiveV2RoomId)return 0'),
+  'No clean combo coins in LIVE 4');
 const ui=file('src/game/ui/craftraceLiveV2Lobby.js');
 assert.ok(ui.includes("get('race4')==='1'"));
 assert.ok(ui.includes("state==='countdown'"));
@@ -63,4 +76,4 @@ const client=file('src/game/online/craftraceLiveV2LobbyClient.js');
 assert.ok(client.includes("return rpc('finish'"));
 assert.ok(client.includes('clientClockOffsetMs'));
 assert.ok(!file('src/game/online/craftraceLiveRaceBridge.js').includes('craftraceLiveV2RaceBridge'));
-console.log('PASS LIVE 4: real room start, race bridge, 3 physical host bots, private Realtime, provisional results, 2P isolation, FPS metrics');
+console.log('PASS LIVE 4: signed room start, 3 physical bots, private Realtime, friendly results, reward/PB isolation, 2P safety and FPS metrics');

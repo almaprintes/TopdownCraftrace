@@ -528,11 +528,11 @@ init(data) {
     // Track Studio preview is a DEV-only test even when launched by an older
     // editor that did not pass testMode. Never return a local track to the lobby.
   const isTrackStudioPreview = !IS_PROD_BUILD && data?.trackKey === LOCAL_KARTING_PREVIEW_KEY;
-  this._testMode = !!data?.testMode || isTrackStudioPreview;
+  this._testMode = !!data?.testMode || isTrackStudioPreview || Boolean(this._crafRaceLiveV2RoomId);
   if (isTrackStudioPreview) {
     this._returnSceneKey = ['Track','Studio','Scene'].join('');
     this._returnSceneData = { fromTrackStudioPreview: true };
-  } else if (this._testMode) {
+  } else if (this._testMode && !this._crafRaceLiveV2RoomId) {
     // Preserve the existing Vehicle Lab test-drive return path.
     const carId = data?.carId || this.carId || 'stock';
     this._returnSceneKey = 'car-editor';
@@ -588,7 +588,7 @@ localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // Never nest B keys below the official ttHist/ttBest prefixes: some
   // downstream rankings enumerate those namespaces rather than exact keys.
   const abPracticePrefix=`tdr2:physicsAB:B:${this.trackKey}:${this.carId}`;
-  this.ttHistKey = this._physicsABPractice
+  this.ttHistKey = this._crafRaceLiveV2RoomId ? null : this._physicsABPractice
     ? `${abPracticePrefix}:laps`
     : `tdr2:ttHist:${this.trackKey}`;
   this.ttHistory = [];
@@ -609,13 +609,13 @@ localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // ========================================
   // Time Trial: best lap + splits por pista
   // ========================================
-  this.ttKey = this._physicsABPractice
+  this.ttKey = this._crafRaceLiveV2RoomId ? null : this._physicsABPractice
     ? `${abPracticePrefix}:best`
     : `tdr2:ttBest:${this.trackKey}`;
   this.ttBest = null;
 
   try {
-    const raw = localStorage.getItem(this.ttKey);
+    const raw = this.ttKey ? localStorage.getItem(this.ttKey) : null;
     const parsed = raw ? JSON.parse(raw) : null;
     if (parsed && Number.isFinite(parsed.lapMs) && parsed.lapMs > 1000) {
       this.ttBest = {
@@ -4568,7 +4568,7 @@ if (this.ttHistory && this.ttHistKey) {
       s2Tick: this.timing.s2Tick ?? null
     };
     try {
-      localStorage.setItem(this.ttKey, JSON.stringify(this.ttBest));
+      if(this.ttKey)localStorage.setItem(this.ttKey, JSON.stringify(this.ttBest));
       // Actualiza HUD "MEJOR" al instante si existe
     if (this.ttHud?.bestLapText) {
       this.ttHud.bestLapText.setText(`MEJOR ${this._fmtTT2(this.ttBest.lapMs)}`);

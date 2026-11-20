@@ -71,7 +71,7 @@
 - Próximo bloqueo: permisos privados Realtime v2, resultados amistosos persistidos/autorizados, integración completa de cliente + escena y QA físico con hasta cuatro dispositivos. Mantener el botón de salida deshabilitado hasta conectar esos componentes.
 
 ## Fase 4B: primera carrera LIVE 4 jugable en DEV, bajo doble bandera (20/11/2026)
-**Integración de código realizada; pendiente de completar el despliegue seguro de la migración y la verificación en dispositivos reales. No declarar 4P estable ni ofrecerlo como modo oficial.**
+**Código integrado y migración 040 aplicada a Supabase (20/11/2026), con grants/RLS revisados y prueba SQL transaccional completa; pendiente de QA con dispositivos y cuentas reales. No declarar 4P estable ni ofrecerlo como modo oficial.**
 
 - Para no alterar el LIVE de dos: `?live4=1` sigue mostrando la parrilla de pruebas sin posibilidad de salida. **Solo** `?live4=1&race4=1` muestra el botón **INICIAR CARRERA · BETA**, y únicamente al organizador, cuando los participantes están listos.
 - El organizador solicita `craftrace_live_v2_start` en servidor. Este bloquea identidades y bots en plazas 0–3 y fija un instante de salida compartido; los demás participantes que consultan la parrilla entran en su propia `RaceScene` con esa información. El cliente puede bloquear la salida si falla la suscripción Realtime.
@@ -82,3 +82,10 @@
 - Logs de rendimiento `[LIVE 4 PERF]`: FPS, fotogramas lentos, estados remotos, paquetes aceptados/rechazados y CPU media de las IA del anfitrión. Faltan mediciones sostenidas con móviles físicos y pruebas de redes/reconexión.
 - QA obligatorio antes de considerar modo listo: pruebas 1 humano + 3 IA, 2 humanos + 2 IA, 3/4 humanos, modos IA 1/2/3, seis circuitos, dos coches de rendimiento distinto, WiFi/datos, 5/10/20 vueltas, tasas FPS en iPhone 12 y Pro Max y Android, reentrada y seguridad (quinto/intruso). Rechazar como beta si cae rendimiento sostenido o se atasca el cronómetro.
 - **Modo público y publicación de apps nativas inalterados**. Solo GitHub Pages DEV. No Vercel.
+
+## Seguridad adicional al habilitar una salida real (20/11/2026)
+- La auditoría de `RaceScene.js` reveló que el cronómetro normal escribe récords locales y concede materiales por vueltas. **LIVE 4 activa automáticamente modo prueba**, conserva regreso al menú y fuerza `ttHistKey`/`ttKey` a `null` para que no se guarden resultados oficiales ni claves sueltas. Se conserva el cronómetro de la sesión en memoria para el resultado amistoso.
+- `RaceSessionRewardsScene.js` omite botín/ads de recompensa para LIVE 4. `RaceCleanLapScene.js` no entrega monedas por combos de la prueba. La lógica de premios de carrera normal permanece sin cambios.
+- **Verificación Supabase:** nueva tabla `craftrace_live_v2_results` con RLS y sin acceso SELECT directo para `anon` ni `authenticated`, RPC `finish` solo para miembros y plazas propias (IA solo organizador); dos políticas de Broadcast específicas para `craftrace-live4` y políticas de modo dos intactas. Hay 0 resultados reales al verificar.
+- Una prueba SQL dentro de una transacción revocada usó cuatro cuentas permanentes existentes (sin revelar IDs), comprobó cuatro plazas, rechazo de inicio prematuro, preparación, bloqueo de parrilla, rechazo de suplantación de resultado, entrega de resultados correctos, rechazo de lectura externa y de pertenencia Realtime de un intruso; **la transacción terminó con ROLLBACK** y no dejó carreras de prueba en el proyecto.
+- Esta prueba no sustituye JWT reales de cuatro móviles, la medición de WebSockets bajo carga ni los informes de rendimiento. La detección anti-trampas y la homologación siguen bloqueadas.
