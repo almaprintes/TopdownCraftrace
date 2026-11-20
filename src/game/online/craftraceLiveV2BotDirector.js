@@ -6,6 +6,7 @@ import {buildTrackSpeedProfile} from '../ai/trackSpeedProfilePlanner.js';
 import {buildTrackManeuverPlan} from '../ai/trackManeuverPlanner.js';
 import {updateRacePhysicalBot} from '../ai/raceAiController.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
+import {makeLive4LapGates,advanceLive4PhysicalLap} from './craftraceLive4LapGates.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
@@ -35,6 +36,11 @@ export class CrafRaceLive4BotDirector{
     throw Error('Live AI currently requires a closed circuit');
   const centerline=scene.track?.meta?.raceCenterline||scene.track?.meta?.centerline;
   const width=Number(scene.track?.meta?.trackWidth||140);
+  this.lapGates=makeLive4LapGates({
+    centerline,trackWidth:width,
+    finishLine:scene.track?.meta?.finishLine||scene.track?.meta?.finish,
+    checkpoints:scene.track?.meta?.checkpoints
+  });
   const trackGeometry={raceCenterline:centerline,trackWidth:width};
   const line=buildTrackRacingLineModel(trackGeometry);
   const expertLine=buildTrackRacingLineModel(trackGeometry,{apexCommitment:.22});
@@ -71,7 +77,9 @@ export class CrafRaceLive4BotDirector{
    const profile=this.profiles.get(item.difficulty);
    const grid=startingGrid?.positions?.[item.seat];
    if(!grid)throw Error('Missing AI start position');
-   const x=grid.x-Math.cos(grid.r)*44,y=grid.y-Math.sin(grid.r)*44;
+   const spawnBack=startingGrid.trackAligned?0:44;
+   const x=grid.x-Math.cos(grid.r)*spawnBack,
+     y=grid.y-Math.sin(grid.r)*spawnBack;
    const body=scene.physics.add.sprite(x,y,'__BODY__');
    body.setVisible(false);
    body.setCircle(Math.max(7,Math.round(14*Number(scene.track?.meta?.carScale||1))));
@@ -92,6 +100,7 @@ export class CrafRaceLive4BotDirector{
      plannerBody:body,rig,visual,style:(item.seat*2+1)%3,
      _plannerSampleIndex:best,
      lastIndex:best,sampleProgress:0,completedLaps:0,
+     gatePhase:0,lastPhysicalPosition:{x,y},
      finished:false,finishAt:null,lapTimes:[],lastLapAt:null,
      lastPoseAt:0,lastPose:null,
      cornerDiagnostics:{samples:0,sumError:0,maxError:0,overWide:0,lastAimSteps:null}};
@@ -144,16 +153,9 @@ export class CrafRaceLive4BotDirector{
    if(step>n/2)step-=n;
    if(step>0&&step<Math.min(50,n*.12))bot.sampleProgress+=step;
    bot.lastIndex=next;
-   const lap=Math.min(this.laps,Math.floor(bot.sampleProgress/n));
-   while(bot.completedLaps<lap){
-     bot.completedLaps++;
-     const lapMs=Math.round(now-bot.lastLapAt);
-     if(lapMs>=500)bot.lapTimes.push(lapMs);
-     bot.lastLapAt=now;
-   }
-   if(bot.completedLaps>=this.laps&&bot.lapTimes.length===this.laps){
-     bot.finished=true;bot.finishAt=now;body.setVelocity(0,0);
-   }
+   // Sample progress remains telemetry only. Require swept physical crossings
+   // of both checkpoints and the REAL finish gate, in race direction.
+   advanceLive4PhysicalLap(bot,this.lapGates,now,this.laps);
    const pose={x:body.x,y:body.y,angle:body.rotation,
      speed:speedOf(body),lap:bot.completedLaps,
      tick:Math.max(0,Math.floor(scene.simTick||0))};

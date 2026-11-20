@@ -8,6 +8,7 @@ for(const path of [
  'src/game/online/craftraceLiveV2BotDirector.js',
  'src/game/online/craftraceLiveV2PositionLink.js',
  'src/game/online/craftraceLiveV2GridGeometry.js',
+ 'src/game/online/craftraceLive4LapGates.js',
  'src/game/online/craftraceLiveV2RaceSession.js',
  'src/game/online/craftraceLiveV2RaceBridge.js',
  'src/game/online/craftraceLive4HostContinuity.js',
@@ -127,6 +128,18 @@ assert.ok(scene.includes("this._crafRaceLiveV2RoomId=(!IS_PROD_BUILD"));
 assert.ok(scene.includes("attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId)"));
 assert.ok(scene.includes("import('../online/craftraceLiveV2RaceBridge.js')"));
 assert.ok(scene.includes('makeLive4StartingGrid({start:baseGrid'));
+assert.ok(scene.includes('centerline:t01.centerline,finishLine:t01.finishLine||t01.finish'),
+ 'LIVE 4 grid follows real installed circuit geometry');
+assert.ok(scene.includes('live4Grid?.trackAligned ? 0 : 44'),
+ 'LIVE 4 aligned cars must never be shifted 44 px off the asphalt');
+assert.ok(localProducer.includes('centerline:scene.track?.meta?.raceCenterline'),
+ 'Director must use real race centerline for its grid');
+const hostBot=file('src/game/online/craftraceLiveV2BotDirector.js');
+assert.ok(hostBot.includes('advanceLive4PhysicalLap(bot,this.lapGates,now,this.laps)'),
+ 'Bot laps must require real CP1/CP2/finish crossings, not sample counts');
+assert.ok(hostBot.includes('startingGrid.trackAligned?0:44'),
+ 'AI starting body must stay at its aligned physical grid center');
+
 assert.ok(scene.includes('this._crafRaceLiveBridge?.update(performance.now(),deltaMs)'));
 assert.ok(scene.includes('this._crafRaceLiveGridSlot===1?1:0'),'2-player grid must stay unchanged');
 assert.ok(scene.includes('|| Boolean(this._crafRaceLiveV2RoomId)'),'LIVE 4 must be unofficial/test mode');

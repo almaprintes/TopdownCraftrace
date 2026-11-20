@@ -149,3 +149,29 @@ Realtime con iPhone conectado: AI deben continuar en pista, acabar las tres
 vueltas, mostrar resultados aun sin servidor y sincronizar al reconectar.
 Hay que vigilar que el canal se recupere, y comparar trazada y tiempo una vez
 se haya descartado la interrupción.
+
+## 20/11/2026 · Parrilla mal alineada y IA sin cruzar meta: verificación de geometría física
+
+**Incidencia:** en DEV las IA pueden aparecer detenidas respecto a la parrilla,
+no cruzan la meta, y la fila de salida no queda sobre el asfalto real.
+
+**Corrección propuesta en rama de ensayo (no desplegar sin CI):**
+- Los cuatro puestos se colocan mediante distancia curvilínea sobre la
+  `centerline` real, tomando como ancla la intersección de la META con la
+  carretera; cada fila utiliza su propia tangente, incluso si hay curva.
+  Eliminado el desplazamiento físico adicional de 44 px cuando se usa
+  una parrilla ajustada. Sin cambios en parrillas antiguas de 2 pilotos.
+- Los bots no completan una vuelta por haber acumulado N índices de una
+  trayectoria. Deben cruzar físicamente (por segmentos barridos y dirección
+  positiva) CP1, CP2 y la línea de meta, en ese orden. Los checkpoints
+  geométricos pueden ser derivados del eje en pistas sin 2 gates homologadas;
+  los resultados siguen identificados como **provisionales**.
+- Prueba reproducible de cuatro IA Experto con tres vueltas reales, en un
+  motor cinemático Arcade simulado a 60 Hz, partida desde el eje del
+  circuito y cruce verificable de meta.
+- La prueba real en iPhone sigue siendo obligatoria (colliders, render de
+  las carrocerías, FPS, colocación respecto al arte de la foto y red).
+  Prohibido atribuir homologación o premios a tiempos del simulador.
+
+**Alcance:** sólo LIVE 4 y Realizador DEV, sin tocar coches, dificultad, premios,
+récords, Supabase ni versiones de Google Play.

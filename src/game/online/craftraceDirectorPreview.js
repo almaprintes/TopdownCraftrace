@@ -25,7 +25,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const start={x:body.x+Math.cos(heading)*44,y:body.y+Math.sin(heading)*44,r:heading};
  const grid=makeLive4StartingGrid({start,capacity:4,
    trackWidth:Number(scene.track?.meta?.trackWidth||140),
-   carScale:Number(scene.track?.meta?.carScale||1)});
+   carScale:Number(scene.track?.meta?.carScale||1),
+   centerline:scene.track?.meta?.raceCenterline||scene.track?.meta?.centerline,
+   finishLine:scene.track?.meta?.finishLine||scene.track?.meta?.finish});
  const bots=new CrafRaceLive4BotDirector(scene,{
    roster,hostId,localId:hostId,startingGrid:grid,laps,preview:true
  });
@@ -82,7 +84,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const keyboard=new Set;let stopped=false,shown=false,stickPointer=null;
  let heightPointer=null,lastInfo=0;
  let stickVector={x:0,y:0},altitudeAxis=0;
- let camera=makeDirectorCameraState({x:body.x,y:body.y,heading});
+ const firstGridCar=grid.positions[0];
+ let camera=makeDirectorCameraState({x:firstGridCar.x,y:firstGridCar.y,
+   heading:firstGridCar.r});
  const stick=$('[data-stick]'),knob=$('[data-knob]');
  const move=e=>{
    if(e.pointerId!==stickPointer)return;

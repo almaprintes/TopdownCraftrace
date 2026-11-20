@@ -1211,12 +1211,14 @@ const gridPositions=canParallel
      y:baseGrid.y-Math.sin(baseGrid.r)*longitudinalGap,r:baseGrid.r}];
 // LIVE 4 uses a dedicated 2×2 or staggered single-file grid; never alter 2P.
 const live4Grid=this._crafRaceLiveV2RoomId
- ?makeLive4StartingGrid({start:baseGrid,trackWidth,carScale:trackScale,capacity:4}):null;
+ ?makeLive4StartingGrid({start:baseGrid,trackWidth,carScale:trackScale,capacity:4,
+   centerline:t01.centerline,finishLine:t01.finishLine||t01.finish}):null;
 this._crafRaceLiveV2Grid=live4Grid;
 const spawnSlot=live4Grid
  ?live4Grid.positions[this._crafRaceLiveGridSlot||0]
  :onlineGrid?gridPositions[this._crafRaceLiveGridSlot===1?1:0]:slot0;
-const GRID_SPAWN_BACK = 44; // antes 18
+const GRID_SPAWN_BACK = live4Grid?.trackAligned ? 0 : 44;
+// Aligned LIVE 4 grid positions are final physical centers: no extra shift.
 
 const spawn = spawnSlot
   ? {
