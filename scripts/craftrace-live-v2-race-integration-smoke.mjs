@@ -49,7 +49,7 @@ assert.ok(scene.includes("import('../online/craftraceDirectorPreview.js')"),
  'Director module must be lazily loaded');
 assert.ok(scene.includes('this._crafRaceDirectorBridge?.update(performance.now(),deltaMs)'));
 assert.ok(scene.includes("!this._crafRaceDirectorPreview && !this._startAutoFired"),
- 'The driver's ignition/countdown must not race with director's timer');
+ "Director ignition countdown must not race with its own timer");
 assert.ok(scene.includes('(onlineGrid||this._crafRaceDirectorPreview)?0'),
  'Do not spawn legacy preview bots on top of the four AI');
 assert.ok(scene.includes('this._crafRaceDirectorPreview ? null'),
