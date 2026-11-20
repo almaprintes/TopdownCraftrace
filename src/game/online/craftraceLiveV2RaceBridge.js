@@ -44,9 +44,23 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  let localStartPerf=null,lastLocalSend=0,localPending=false;
  let completed=0,lapTimes=[],localFinish=null,localFinishPosted=false;
  let lastPostAttempt=0,localPosCount=0,slowFrames=0,frameCount=0;
- let elapsedWindow=0,lastUpdate=0,lastReport=0;
+ let elapsedWindow=0,lastUpdate=0,lastReport=0,frameTimes=[];
  const botPostAttempts=new Map(),postedBots=new Set();
  const states=new Map(),paint=new Map();
+ // Low-cost, DEV-only performance HUD. Refresh only every 5 seconds.
+ const perfHud=document.createElement('output');
+ perfHud.setAttribute('aria-label','Diagnóstico LIVE 4');
+ perfHud.style.cssText=[
+   'position:fixed','right:max(5px,env(safe-area-inset-right))',
+   'bottom:max(5px,env(safe-area-inset-bottom))','z-index:2147483500',
+   'padding:4px 7px','max-width:min(92vw,380px)',
+   'background:rgba(3,17,28,.82)','color:#aaf7df',
+   'border:1px solid rgba(113,210,218,.45)',
+   'font:600 10px ui-monospace,monospace','white-space:normal',
+   'pointer-events:none'
+ ].join(';');
+ perfHud.textContent='LIVE 4 · conectando…';
+ document.body.append(perfHud);
  const results=document.createElement('section');
  results.className='cr4-result-shell';results.style.display='none';
  results.setAttribute('role','dialog');results.setAttribute('aria-label','Resultados provisionales LIVE 4');
@@ -245,22 +259,34 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    if(localFinish&&!localFinishPosted)saveResult(localSeat,localFinish,now);
    // Aggregate perf only every five seconds. Never render diagnostics each frame.
    if(lastUpdate){
-     const ms=Math.min(1000,Math.max(0,now-lastUpdate));
-     frameCount++;elapsedWindow+=ms;if(ms>33.4)slowFrames++;
+     const ms=Math.max(0,now-lastUpdate);
+     // Exclude the pause after tab/app backgrounding from active-play FPS.
+     if(ms>0&&ms<=250&&document.visibilityState!=='hidden'){
+       frameCount++;elapsedWindow+=ms;
+       if(ms>33.4)slowFrames++;
+       frameTimes.push(ms);
+     }
    }
    lastUpdate=now;
    if(now-lastReport>=5000){
-     if(scene._raceStarted||localFinish){
-       const stats=model.stats(),ai=director?.stats()||{count:0,botCpuMeanMs:0};
-       console.info('[LIVE 4 PERF]',{
-         fps:Math.round(frameCount*1000/Math.max(1,elapsedWindow)),
-         slowFrames,remoteCars:stats.remoteCount,
-         received:stats.accepted,rejected:stats.rejected,
-         localSent:localPosCount,aiCars:ai.count,
-         botCpuMeanMs:+ai.botCpuMeanMs.toFixed(3),realtime:linkReady
-       });
+     const stats=model.stats(),ai=director?.stats()||{count:0,botCpuMeanMs:0};
+     const sorted=frameTimes.sort((a,b)=>a-b);
+     const p95=sorted.length?sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*.95)-1)]:0;
+     const fps=Math.round(frameCount*1000/Math.max(1,elapsedWindow));
+     const record={fps,p95FrameMs:+p95.toFixed(1),slowFrames,
+       remoteCars:stats.remoteCount,received:stats.accepted,rejected:stats.rejected,
+       localSent:localPosCount,aiCars:ai.count,
+       botCpuMeanMs:+ai.botCpuMeanMs.toFixed(3),realtime:linkReady};
+     if(scene._raceStarted||localFinish)console.info('[LIVE 4 PERF]',record);
+     if(!stopped){
+       perfHud.textContent='LIVE 4 · '+(frameCount?fps+' FPS':'SIN MUESTRAS')+
+         ' · P95 '+(frameCount?p95.toFixed(1):'—')+' ms'+
+         ' · IA '+ai.count+' ('+record.botCpuMeanMs.toFixed(2)+' ms)'+
+         ' · RIVALES '+stats.remoteCount+
+         ' · RED '+(linkReady?'OK':'SIN ENLACE');
+       perfHud.style.color=frameCount&&fps<45?'#ffd2ad':'#aaf7df';
      }
-     frameCount=0;elapsedWindow=0;slowFrames=0;lastReport=now;
+     frameCount=0;elapsedWindow=0;slowFrames=0;frameTimes=[];lastReport=now;
    }
  };
  const stop=()=>{
@@ -268,7 +294,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    stopped=true;monitor.stop();void link?.close();
    director?.destroy();
    for(const v of paint.values()){v.rig.destroy();v.label.destroy();}
-   paint.clear();results.remove();
+   paint.clear();results.remove();perfHud.remove();
  };
  scene.events.once('shutdown',stop);
  return{update,stop,get ownReady(){return linkReady&&!aiError;},

@@ -102,3 +102,7 @@
 - `src/game/ui/craftraceLiveV2Lobby.js` acepta entrar a la escena con `start_at_ms=null` y reconectar a una sala ya en countdown/racing; `src/game/online/craftraceLiveV2RaceBridge.js` confirma carga con límite de reintentos y espera la fecha que publica el servidor. La salida de 2 jugadores tradicional no se toca.
 - `RaceCleanLapScene.update` también abandona la lógica de misión y premios para carreras beta LIVE 4. Permanecen aislados récords personales, créditos, recompensas del taller y anuncios postcarrera.
 - Nuevo smoke `scripts/craftrace-live-v2-loaded-start-smoke.mjs`: protección de RPC y permisos, semáforo conjunto, membresía y no modificación del esquema antiguo. Es una prueba estructural: **solo una prueba real de varios dispositivos confirma la sincronización visual**.
+
+## Diagnóstico visible LIVE 4 (20/11/2026)
+- En la carrera experimental, un HUD ligero muestra **FPS**, **P95 de duración de fotogramas** (ms), número de IA, coste medio de CPU de las IA por frame, rivales remotos y estado del canal. Se actualiza cada **cinco segundos**, fuera de la lógica de render de cada frame, y desaparece al salir.
+- Los intervalos de pausa del navegador de más de 250 ms se excluyen de las métricas de juego activo. La consola sigue publicando el desglose de paquetes/frames cada 5 s. Son métricas locales reales en QA, no certifican previamente 60 FPS.

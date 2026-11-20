@@ -48,7 +48,7 @@ export class CrafRaceLive4RemoteModel{
     this.state=new Map();this.accepted=0;this.rejected=0;
     for(const item of this.roster)if(item.seat!==this.localSeat){
       this.state.set(item.seat,{
-        item,seq:0,generation:null,lastAt:0,count:0,reconnects:0,interpolator:new RemotePilotInterpolator({
+        item,seq:0,generation:null,seenGenerations:new Set(),lastAt:0,count:0,reconnects:0,interpolator:new RemotePilotInterpolator({
           delayMs,maxSamples:18,maxExtrapolateMs:90
         })
       });
@@ -72,6 +72,7 @@ export class CrafRaceLive4RemoteModel{
     // A restarted device creates a fresh sender generation and resets seq/tick.
     // Only accept a takeover after the prior feed has genuinely gone stale.
     // This prevents delayed old packets from stealing an active feed.
+    if(newGeneration&&st.seenGenerations.has(packet.generation))return fail();
     if(newGeneration&&st.generation!==null&&now-st.lastAt<2500)return fail();
     if(!newGeneration&&packet.seq<=st.seq)return fail();
     const pose=packet.payload;
@@ -81,7 +82,13 @@ export class CrafRaceLive4RemoteModel{
       !integer(pose.lap,0,31))
       return fail();
     if(!st.interpolator.push({...pose,generation:packet.generation,heat:1},now))return fail();
-    if(newGeneration&&st.generation!==null)st.reconnects++;
+    if(newGeneration){
+      if(st.generation!==null)st.reconnects++;
+      st.seenGenerations.add(packet.generation);
+      // Bound memory under repeated reconnects.
+      if(st.seenGenerations.size>16)
+        st.seenGenerations.delete(st.seenGenerations.values().next().value);
+    }
     st.generation=packet.generation;
     st.seq=packet.seq;st.lastAt=now;st.count++;this.accepted++;
     return true;

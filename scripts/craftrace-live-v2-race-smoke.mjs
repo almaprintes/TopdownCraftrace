@@ -47,6 +47,8 @@ assert.equal(model.accept({...packet,seq:1,generation:1,payload:{...pose,tick:25
 assert.equal(model.accept({...packet,seq:2,generation:2,payload:{...pose,tick:1,x:90}},
  4250),true,'New epoch continues with increasing seq and tick');
 assert.equal(model.stats().samples.find(s=>s.seat===1).reconnects,1);
+assert.equal(model.accept({...packet,seq:4,generation:1,payload:{...pose,tick:4}},
+ 8000),false,'A previously seen generation cannot be replayed even after silence');
 assert.equal(model.stats().accepted,5);
 assert.equal(model.positions(7100).find(x=>x.seat===1).disconnected,true);
 assert.equal(model.positions(4300).filter(x=>x.pose).length,1, 'Stale bot hidden while reconnected human remains visible');
