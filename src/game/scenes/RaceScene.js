@@ -1,4 +1,5 @@
 import {attachCrafRaceLivePilot} from '../online/craftraceLiveRaceBridge.js';
+import {makeLive4StartingGrid} from '../online/craftraceLiveV2GridGeometry.js';
 import {skinGeometryForSprite} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,getEquippedCarSkin,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
@@ -506,10 +507,14 @@ else this._ttProg.idx = startIdx;
 init(data) {
     this._raceEntryData={...(data||{})};
     this._importJsonReady=Boolean(data?._importJsonReady);
-    this._crafRaceLiveOnlineIntent=data?.gameMode==='online'&&Boolean(data?.liveRoomId);
+    this._crafRaceLiveV2RoomId=(!IS_PROD_BUILD&&data?.gameMode==='online'&&data?.liveV2RoomId)||null;
+    this._crafRaceLiveOnlineIntent=data?.gameMode==='online'&&Boolean(data?.liveRoomId||this._crafRaceLiveV2RoomId);
     this._crafRaceLiveRoomId=(!IS_PROD_BUILD&&data?.liveRoomId)||null;
     this._crafRaceLiveStartAt=Number.isFinite(data?.liveStartAt)?data.liveStartAt:null;
-    this._crafRaceLiveGridSlot=this._crafRaceLiveRoomId?(data?.liveGridSlot===1?1:0):null;
+    this._crafRaceLiveGridSlot=this._crafRaceLiveV2RoomId?
+      (Number.isInteger(data?.liveGridSlot)&&data.liveGridSlot>=0&&data.liveGridSlot<=3?data.liveGridSlot:0):
+      this._crafRaceLiveRoomId?(data?.liveGridSlot===1?1:0):null;
+    this._crafRaceLiveV2Grid=null;
     // DEV driving A/B: choose once at race start. B is a local practice mode;
     // online/competitive variants never receive altered grip physics.
     this._physicsABMode='A';
@@ -1178,7 +1183,7 @@ const gridSpawns = Array.isArray(t01?.grid?.slots)
 // LIVE: both clients derive the same grid from the track's authored width and centerline.
 // In a parallel start, the three free gaps (edge/car, car/car, car/edge)
 // are equal after accounting for the physical widths of both cars.
-const onlineGrid=Boolean(this._crafRaceLiveRoomId);
+const onlineGrid=Boolean(this._crafRaceLiveRoomId||this._crafRaceLiveV2RoomId);
 const slot0=this._getGridSpawnSlot(t01,0);
 const validGridSlot=s=>s&&Number.isFinite(s.x)&&Number.isFinite(s.y)&&Number.isFinite(s.r);
 const baseGrid=validGridSlot(slot0)?slot0:{x:Number(t01.start.x),y:Number(t01.start.y),r:Number(t01.start.r)};
@@ -1198,7 +1203,13 @@ const gridPositions=canParallel
  : [{...baseGrid},
     {x:baseGrid.x-Math.cos(baseGrid.r)*longitudinalGap,
      y:baseGrid.y-Math.sin(baseGrid.r)*longitudinalGap,r:baseGrid.r}];
-const spawnSlot=onlineGrid?gridPositions[this._crafRaceLiveGridSlot===1?1:0]:slot0;
+// LIVE 4 uses a dedicated 2×2 or staggered single-file grid; never alter 2P.
+const live4Grid=this._crafRaceLiveV2RoomId
+ ?makeLive4StartingGrid({start:baseGrid,trackWidth,carScale:trackScale,capacity:4}):null;
+this._crafRaceLiveV2Grid=live4Grid;
+const spawnSlot=live4Grid
+ ?live4Grid.positions[this._crafRaceLiveGridSlot||0]
+ :onlineGrid?gridPositions[this._crafRaceLiveGridSlot===1?1:0]:slot0;
 const GRID_SPAWN_BACK = 44; // antes 18
 
 const spawn = spawnSlot
@@ -1279,7 +1290,16 @@ rig.setDepth(30);
 this.carBody = body;
 this.carRig = rig;
 this.car = body; // compat con tu update()
-if(this._crafRaceLiveRoomId)this._crafRaceLiveBridge=attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId);
+if(this._crafRaceLiveV2RoomId){
+ // LIVE 4 is opt-in DEV; load its renderer/physical AI only for an approved v2 race.
+ const roomId=this._crafRaceLiveV2RoomId;
+ void import('../online/craftraceLiveV2RaceBridge.js').then(({attachCrafRaceLive4Pilot})=>{
+  if(this.sys?.isActive?.()&&this._crafRaceLiveV2RoomId===roomId)
+   this._crafRaceLiveBridge=attachCrafRaceLive4Pilot(this,roomId);
+ }).catch(err=>console.error('[LIVE 4] Failed to load race bridge',err));
+}else if(this._crafRaceLiveRoomId){
+ this._crafRaceLiveBridge=attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId);
+}
 
 // Skin runtime: si existe, sustituye la textura del sprite sin romper nada
 this.ensureCarSkinTexture(specFinal).then((texKey) => {
@@ -3535,7 +3555,7 @@ try { this.cameras.main.ignore(this._touchDbg); } catch (e) {}
   }
 
   update(time, deltaMs) {
-    this._crafRaceLiveBridge?.update(performance.now());
+    this._crafRaceLiveBridge?.update(performance.now(),deltaMs);
     const dt = Math.min(0.05, (deltaMs || 0) / 1000);
 
 // ✅ SIM TICK (aprox) — base para cronómetro determinista

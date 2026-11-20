@@ -75,3 +75,24 @@
  #cr-live4 .cr4-code{padding:6px 10px;margin:6px 0}
  #cr-live4 footer{margin-top:5px}}
 @media(prefers-reduced-motion:reduce){#cr-live4 *{scroll-behavior:auto!important;transition:none!important}}
+
+/* Provisional LIVE 4 results are only visible after the local pilot finishes. */
+.cr4-result-shell{position:fixed;inset:0;z-index:2147483601;align-items:center;
+ justify-content:center;padding:12px;background:#020c16eb;color:#f3faff;
+ font-family:Inter,system-ui,sans-serif}
+.cr4-result-panel{width:min(650px,96vw);max-height:94dvh;overflow:auto;padding:20px;
+ background:linear-gradient(140deg,#14384a,#061421);border:2px solid #d8b56e;
+ box-shadow:0 24px 65px #000b}
+.cr4-result-panel h2{font-size:clamp(16px,3vw,23px);color:#ffdb96;margin:0 0 6px}
+.cr4-result-panel>p{font-size:11px;font-weight:750;color:#b4d3e1}
+.cr4-result-list{list-style:none;margin:12px 0;padding:0;display:grid;gap:6px}
+.cr4-result-list li{display:flex;justify-content:space-between;gap:15px;
+ align-items:center;padding:10px;background:#0e2c3c;border-left:3px solid #60c8df}
+.cr4-result-list li strong{font-size:13px}
+.cr4-result-list li span{font:800 15px ui-monospace,monospace;color:#ffe1a7}
+.cr4-result-panel button{background:#dbb66c;color:#10202b;min-height:40px;
+ padding:10px 18px;border:0;font-weight:900;cursor:pointer}
+.cr4-result-panel .cr4-result-note{color:#aed9ca}
+@media(max-height:460px){.cr4-result-panel{padding:10px}
+ .cr4-result-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .cr4-result-list li{padding:7px}.cr4-result-panel h2{font-size:17px}}

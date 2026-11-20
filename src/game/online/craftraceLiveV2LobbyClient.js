@@ -16,6 +16,7 @@ export function liveV2Options({capacity=2,fillWithAi=false,aiDifficulty=2}={}){
 async function rpc(suffix,args){
   const identity=await liveIdentity();
   const {url,key}=playerBackendConfig();
+  const startedAt=Date.now();
   const response=await fetch(url+'/rest/v1/rpc/craftrace_live_v2_'+suffix,{
     method:'POST',headers:{apikey:key,Authorization:'Bearer '+identity.token,
       'Content-Type':'application/json'},
@@ -23,6 +24,11 @@ async function rpc(suffix,args){
   });
   const body=await response.json().catch(()=>null);
   if(!response.ok)throw Error(body?.message||'Error LIVE v2 '+response.status);
+  // Date.now is used only for clock alignment; never for lap timing.
+  if(body&&typeof body==='object'&&Number.isFinite(body.server_now_ms)){
+    const rtt=Date.now()-startedAt;
+    if(rtt>=0&&rtt<3000)body.clientClockOffsetMs=body.server_now_ms-(startedAt+rtt/2);
+  }
   return body;
 }
 export async function createLiveV2Lobby(config,options={}){
@@ -63,6 +69,16 @@ export async function startLiveV2Lobby(roomId){
 }
 export async function leaveLiveV2Lobby(roomId){
   return rpc('leave',{p_room:verifyId(roomId)});
+}
+export async function finishLiveV2Lobby(roomId,seat,lapTimes,elapsedMs){
+  if(!Number.isInteger(seat)||seat<0||seat>3||
+      !Number.isInteger(elapsedMs)||elapsedMs<1000||elapsedMs>7200000||
+      !Array.isArray(lapTimes)||lapTimes.length<1||lapTimes.length>30||
+      lapTimes.some(x=>!Number.isInteger(x)||x<500||x>7200000)||
+      lapTimes.reduce((a,b)=>a+b,0)!==elapsedMs)
+    throw Error('Resultado LIVE provisional inválido');
+  return rpc('finish',{p_room:verifyId(roomId),p_seat:seat,
+    p_lap_times:lapTimes,p_elapsed_ms:elapsedMs});
 }
 export async function heartbeatLiveV2Lobby(roomId){
   return rpc('heartbeat',{p_room:verifyId(roomId)});

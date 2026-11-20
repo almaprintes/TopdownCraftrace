@@ -20,12 +20,14 @@ for(const field of ['data-capacity','data-ai','data-fill','data-code','data-copy
  assert.ok(next.includes(field),'Missing 4P control: '+field);
 assert.ok(next.includes('CrafRaceLiveV2LobbyMonitor'));
 assert.ok(next.includes('getTrackPublicName'));
-assert.ok(!next.includes('scene.scene.start('),'No 4P race launch before physics/authoritative results');
-assert.ok(!next.includes('startLiveV2Lobby('),'Server start must remain disabled until 4P race implementation');
-assert.ok(next.includes('La salida de carrera 4P todavía está desactivada'));
+assert.ok(next.includes("get('race4')==='1'"),'Race requires separate DEV-only flag');
+assert.ok(next.includes("scene.scene.start('race',"),'Experimental 4P race must launch');
+assert.ok(next.includes('startLiveV2Lobby(room.id)'),'Host must use protected server start');
+assert.ok(next.includes('stageLive4RaceSession(s,identity)'),'Handoff must retain authenticated server roster');
+assert.ok(next.includes('sin monedas ni récords'),'Experimental results must remain unofficial');
 assert.ok(css.includes('safe-area-inset-top'));
 assert.ok(css.includes('@media(max-height:460px)'));
 assert.ok(css.includes('prefers-reduced-motion'));
 assert.ok(client.includes('liveIdentity()'));
 assert.ok(client.includes('this.heartbeatMs'));
-console.log('PASS LIVE 4 DEV-only UI: 2P isolation, opt-in, safe controls, layout and no premature 4P start');
+console.log('PASS LIVE 4 DEV-only UI: two opt-in flags, legacy isolation, protected race start, account handoff and responsive layout');

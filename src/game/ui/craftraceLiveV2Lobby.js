@@ -1,7 +1,9 @@
 // CraftRace LIVE 4 — preview of the authenticated v2 lobby only.
 // Explicit DEV opt-in via ?live4=1. No racing or physics is started here.
 import {createLiveV2Lobby,joinLiveV2Lobby,configureLiveV2Lobby,
-  setReadyLiveV2Lobby,leaveLiveV2Lobby,CrafRaceLiveV2LobbyMonitor} from '../online/craftraceLiveV2LobbyClient.js';
+  setReadyLiveV2Lobby,leaveLiveV2Lobby,startLiveV2Lobby,
+  CrafRaceLiveV2LobbyMonitor} from '../online/craftraceLiveV2LobbyClient.js';
+import {stageLive4RaceSession} from '../online/craftraceLiveV2RaceSession.js';
 import {liveIdentity} from '../online/craftraceLiveTransport.js';
 import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
@@ -9,6 +11,7 @@ import './craftraceLiveV2Lobby.css';
 
 export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
   if(document.getElementById('cr-live4'))return;
+  const race4Enabled=new URLSearchParams(window.location.search).get('race4')==='1';
   const car=String(carId||scene?.selectedCarId||localStorage.getItem('tdr2:carId')||'avenir_gripline');
   const track=String(trackId||selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage));
   const root=document.createElement('section');root.id='cr-live4';
@@ -75,24 +78,27 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
           </div>
           <div class="cr4-actions">
             <button type="button" data-ready class="cr4-primary">ESTOY LISTO</button>
+            <button type="button" data-start class="cr4-secondary" hidden>INICIAR CARRERA · BETA</button>
             <button type="button" data-leave>ABANDONAR PISTA</button>
           </div>
         </div>
         <p class="cr4-note" data-rosterstatus></p>
-        <p class="cr4-note cr4-note--warning">La parrilla ya se puede probar con otros
-          jugadores. <strong>La salida de carrera 4P todavía está desactivada</strong> hasta
-          integrar y validar los tres rivales, la IA física y los resultados.</p>
+        <p class="cr4-note cr4-note--warning" data-race-warning>La salida de carrera 4P
+          requiere el modo experimental y no otorga premios ni récords.</p>
       </div>
       <footer>CRAFT RACE STUDIO · SOLO DEV · SIN PREMIOS NI RÉCORDS</footer>
     </div>`;
   document.body.append(root);
   const $=selector=>root.querySelector(selector);
   $('[data-track]').textContent=getTrackPublicName(track);
-  let closed=false,loading=false,room=null,identity=null,monitor=null,hydrated=false;
+  let closed=false,loading=false,room=null,identity=null,monitor=null,hydrated=false,launching=false;
+  $('[data-race-warning]').textContent=race4Enabled
+    ?'CARRERA 4P EXPERIMENTAL · NO HOMOLOGADA · sin monedas ni récords. Comprueba primero la conexión.'
+    :'Parrilla de pruebas. La carrera solo puede iniciarse desde el enlace DEV con race4=1.';
   const say=msg=>{if(!closed)$('[data-status]').textContent=msg;};
   const setBusy=on=>{
     loading=on;
-    for(const b of root.querySelectorAll('[data-create],[data-join],[data-apply],[data-ready],[data-leave]'))
+    for(const b of root.querySelectorAll('[data-create],[data-join],[data-apply],[data-ready],[data-leave],[data-start]'))
       b.disabled=on;
     if(!on&&room?.state!=='waiting')$('[data-ready]').disabled=true;
   };
@@ -129,6 +135,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
     const me=s.members.find(m=>m.player_id===identity.id);
     $('[data-ready]').disabled=loading||s.state!=='waiting';
     $('[data-ready]').textContent=me?.ready?'CANCELAR LISTO':'ESTOY LISTO';
+    $('[data-start]').hidden=!(race4Enabled&&host&&s.state==='waiting');
+    $('[data-start]').disabled=loading||!grid.canStart;
     $('[data-rosterstatus]').textContent=grid.canStart
       ?'PARRILLA PREPARADA · '+grid.humanCount+' HUMANO(S) + '+grid.aiCount+' IA'
       :'PARA SALIR: MÍNIMO 2 PILOTOS Y TODOS LOS HUMANOS LISTOS Y CONECTADOS';
@@ -147,6 +155,20 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
   $('[data-close]').addEventListener('click',dispose);
   document.addEventListener('keydown',escape);
   scene?.events?.once?.('shutdown',dispose);
+  const launch=(s)=>{
+    if(closed||launching||!race4Enabled||s?.state!=='countdown'||
+       !Array.isArray(s.locked_roster)||!Number.isFinite(s.start_at_ms))return;
+    const seat=s.members?.find(m=>m.player_id===identity?.id)?.seat;
+    if(!Number.isInteger(seat)||seat<0||seat>3)return;
+    if(s.start_at_ms<Date.now()-30000){say('La salida expiró. Crea una pista nueva.');return;}
+    launching=true;
+    stageLive4RaceSession(s,identity);
+    dispose();
+    scene.scene.start('race',{
+      carId:car,trackKey:s.track_id,gameMode:'online',liveV2RoomId:s.id,
+      liveStartAt:s.start_at_ms,liveGridSlot:seat,testMode:false
+    });
+  };
   const enter=async result=>{
     room=result;identity=await liveIdentity();
     if(closed)return;
@@ -155,7 +177,10 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
     const {liveV2Grid}=await import('../online/craftraceLiveV2Roster.js');
     update(result,liveV2Grid(result));
     monitor=new CrafRaceLiveV2LobbyMonitor(result.id,{
-      onSnapshot:(snapshot,grid)=>update(snapshot,grid),
+      onSnapshot:(snapshot,grid)=>{
+        update(snapshot,grid);
+        if(snapshot.state==='countdown')launch(snapshot);
+      },
       onError:e=>say('Comprobando conexión… '+e.message)
     });
     monitor.start();say('Pista conectada. Invita a más pilotos con el código.');
@@ -199,6 +224,12 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
     const {liveV2Grid}=await import('../online/craftraceLiveV2Roster.js');
     await update(state,liveV2Grid(state));
     say('Cambios aplicados. Los pilotos deben confirmar de nuevo.');
+  }));
+  $('[data-start]').addEventListener('click',()=>void action(async()=>{
+    if(!room||!race4Enabled||room.host_id!==identity?.id)return;
+    say('Preparando la salida de los cuatro pilotos…');
+    const state=await startLiveV2Lobby(room.id);
+    launch(state);
   }));
   $('[data-ready]').addEventListener('click',()=>void action(async()=>{
     if(!room||!identity)return;
