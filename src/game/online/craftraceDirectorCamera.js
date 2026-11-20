@@ -20,7 +20,7 @@ export function chooseDirectorAction(bots){
 // a circular travel area instead of being pinned to the horizontal diameter.
 export function directorStickVector(x,y,rect){
  const width=Math.max(1,Number(rect?.width)||1),height=Math.max(1,Number(rect?.height)||1);
- const travel=Math.max(1,Math.min(width,height)*.26);
+ const travel=Math.max(1,Math.min(width,height)*.34);
  const dx=(Number(x)||0)-(Number(rect?.left)||0)-width/2;
  const dy=(Number(y)||0)-(Number(rect?.top)||0)-height/2;
  const radius=Math.hypot(dx,dy);
@@ -61,7 +61,13 @@ export function stepDirectorCamera(state,input,dt,bots=[]){
  const sy=clamp(Number(input?.stickY)||0,-1,1);
  const axis=clamp(Number(input?.altitudeAxis)||0,-1,1);
  const mag=Math.min(1,Math.hypot(sx,sy));
- const active=mag>.065;
+ // Precision envelope: a stable neutral zone and an ease-in response.
+ // First quarter of the large stick gives fine camera corrections; only
+ // a deliberate push toward its rim requests rapid travel.
+ const active=mag>.14;
+ const speedFraction=active?Math.pow((mag-.14)/.86,1.7):0;
+ const unitX=mag>0?sx/mag:0;
+ const unitY=mag>0?sy/mag:0;
  if(active&&next.auto)next.auto=false;
  // Responsive, frame-rate-independent height lever with short release damping.
  next.heightInput+=(axis-next.heightInput)*(1-Math.exp(-23*elapsed));
@@ -79,10 +85,10 @@ export function stepDirectorCamera(state,input,dt,bots=[]){
  }else{
   // World-pixel speed responds to current zoom: panning must feel agile even
   // when the camera is high above the circuit. Still cap the world velocity.
-  const worldMax=Math.min(2350,920/Math.max(.39,directorZoom(next.altitude)));
-  const targetVx=active?sx*worldMax:0;
-  const targetVy=active?sy*worldMax:0;
-  const smoothing=1-Math.exp(-(active?26:34)*elapsed);
+  const worldMax=Math.min(1750,700/Math.max(.42,directorZoom(next.altitude)));
+  const targetVx=unitX*speedFraction*worldMax;
+  const targetVy=unitY*speedFraction*worldMax;
+  const smoothing=1-Math.exp(-(active?19:34)*elapsed);
   next.vx+=(targetVx-next.vx)*smoothing;
   next.vy+=(targetVy-next.vy)*smoothing;
   if(Math.hypot(next.vx,next.vy)<.05){next.vx=0;next.vy=0;}

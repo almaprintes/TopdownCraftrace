@@ -70,10 +70,20 @@ assert.ok(localProducer.includes('↑ ACERCAR · ↓ ALEJAR'),
 const producerMath=file('src/game/online/craftraceDirectorCamera.js');
 assert.ok(producerMath.includes('next.altitude+next.heightInput*1.35*elapsed'),
  'Up on the right stick must reduce altitude and zoom IN');
-assert.ok(producerMath.includes('920/Math.max(.39,directorZoom(next.altitude))'),
+assert.ok(producerMath.includes('700/Math.max(.42,directorZoom(next.altitude))'),
  'Manual panning should retain responsive screen speed at different zoom levels');
-assert.ok(producerMath.includes('(active?26:34)*elapsed'),
+assert.ok(producerMath.includes('(active?19:34)*elapsed'),
  'Manual camera should accelerate and stop promptly without drifting');
+assert.ok(producerMath.includes('Math.min(width,height)*.34'),
+ 'Use substantially more of the joystick touch surface');
+assert.ok(producerMath.includes('Math.pow((mag-.14)/.86,1.7)'),
+ 'The neutral zone and ease-in curve should protect fine movement');
+const producerCss=file('src/game/ui/craftraceDirectorPreview.css');
+assert.ok(producerCss.includes('width:clamp(148px,40vh,166px)'),
+ 'Landscape iPhone needs a larger left joystick surface');
+assert.ok(producerCss.includes('width:clamp(140px,40vh,156px)'),
+ 'Narrow displays must retain a substantial precision surface');
+
 assert.ok(localProducer.includes('stickX:x,stickY:y,altitudeAxis:height'),
  'Camera must take two analog directions and independent zoom');
 

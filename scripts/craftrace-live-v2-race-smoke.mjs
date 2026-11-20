@@ -170,7 +170,7 @@ assert.ok(halfStick.magnitude>.35&&halfStick.magnitude<.7,
  'Stick near center gives proportional speed');
 const eastStick=directorStickVector(290,250,rect);
 assert.ok(eastStick.x>.95&&eastStick.y===0,'Horizontal movement');
-assert.ok(Math.hypot(eastStick.offsetX,eastStick.offsetY)<=26.01,'Thumb stays inside the track');
+assert.ok(Math.hypot(eastStick.offsetX,eastStick.offsetY)<=34.01,'Thumb stays inside the track');
 const diagonalStick=directorStickVector(260,150,rect);
 assert.ok(diagonalStick.x>0&&diagonalStick.y<0,'Both XY directions work');
 const heightRect={left:400,top:200,width:76,height:150};
@@ -204,7 +204,25 @@ assert.ok(directorZoom(responsiveZoom.altitude)>1.8,
 const combined=run({stickX:.7,stickY:-.5,altitudeAxis:-1});
 assert.ok(combined.x>0&&combined.y<0&&directorZoom(combined.altitude)>1.9,
  'Moving, changing direction and zooming work simultaneously');
-assert.ok(fast.speed>650,'Full stick gives lively panning at normal zoom');
+assert.ok(fast.speed>650,'Full stick preserves rapid panning at the rim');
+// Actual landscape-size stick: tiny movements must never throw the camera.
+const largerRect={left:0,top:0,width:160,height:160};
+const drift=px=>directorStickVector(80+px,80,largerRect);
+const velocityAt=px=>{
+ let state=startState();
+ const v=drift(px);
+ for(let i=0;i<50;i++)state=stepDirectorCamera(state,{
+  stickX:v.x,stickY:v.y
+ },.02);
+ return state.speed;
+};
+assert.equal(velocityAt(2),0,'One or two pixels must remain in the neutral zone');
+assert.ok(velocityAt(8)<15,'Eight pixels must allow very fine correction');
+assert.ok(velocityAt(14)>velocityAt(8),'Speed grows progressively');
+assert.ok(velocityAt(27)>velocityAt(14),'Mid-stick must remain controllable');
+assert.ok(velocityAt(60)>velocityAt(27)*3,
+ 'Only near the edge should the director reach high speed');
+assert.ok(velocityAt(60)>700,'Full travel must still support fast repositioning');
 assert.ok(Math.abs(fast.x)<1,'Pushing upward does not drift sideways');
 const east=run({stickX:eastStick.x,stickY:eastStick.y});
 assert.ok(east.x>0&&Math.abs(east.y)<1,'Rightward stick flies right');

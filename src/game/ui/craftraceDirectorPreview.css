@@ -14,8 +14,8 @@
 #cr-director .crdir-top button{padding:6px 9px;min-height:32px}
 #cr-director .crdir-stickbox{position:absolute;left:max(25px,env(safe-area-inset-left));
  bottom:max(12px,env(safe-area-inset-bottom));text-align:center}
-#cr-director .crdir-stick{width:115px;height:115px;border:2px solid #91e0f6b8;
- border-radius:50%;background:#041b2ca8;display:grid;place-items:center;
+#cr-director .crdir-stick{width:176px;height:176px;border:2px solid #91e0f6b8;
+ border-radius:50%;background:radial-gradient(circle at center,transparent 0 34%,#84d7eb3d 35% 36%,transparent 37% 69%,#84d7eb3d 70% 71%,transparent 72%),#041b2ca8;display:grid;place-items:center;
  pointer-events:auto;touch-action:none;user-select:none}
 #cr-director .crdir-stick>span{width:46px;height:46px;border-radius:50%;
  border:2px solid #bcecf7;background:radial-gradient(circle,#dfefff,#69b7eb);pointer-events:none}
@@ -57,14 +57,15 @@
  #cr-director .crdir-top strong{font-size:10px}
  #cr-director .crdir-top output{font-size:9px}
  #cr-director .crdir-top button{padding:3px 6px;min-height:28px;font-size:10px}
- #cr-director .crdir-stick{width:96px;height:96px}
+ #cr-director .crdir-stick{width:clamp(148px,40vh,166px);height:clamp(148px,40vh,166px)}
  #cr-director .crdir-stickbox{left:max(18px,env(safe-area-inset-left));bottom:6px}
  #cr-director .crdir-heightbox{right:max(18px,env(safe-area-inset-right));bottom:6px}
  #cr-director .crdir-height-stick{width:69px;height:126px}
  #cr-director .crdir-height-stick>span{width:44px;height:33px}
 }
 @media(max-width:750px){#cr-director .crdir-top output{display:none}
- #cr-director .crdir-stick{width:83px;height:83px}
+ #cr-director .crdir-stick{width:clamp(140px,40vh,156px);height:clamp(140px,40vh,156px)}
+ #cr-director .crdir-stick>span{width:40px;height:40px}
  #cr-director .crdir-height-stick{width:62px;height:114px}
  #cr-director .crdir-height-stick>span{width:40px;height:30px}
 }
