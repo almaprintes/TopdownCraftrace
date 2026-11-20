@@ -167,7 +167,12 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // Lower-complexity circuits retain the identical proven controller.
   const curveComplexity=precisionCornering
     ?Math.max(0,Number(profile.live4CurveComplexity)||0):0;
-  const adaptiveHorizon=clamp((curveComplexity-.050)/.005,0,1);
+  // A long sequence of direction changes benefits from early aiming;
+  // a short compact circuit must not receive that same longer horizon.
+  // Calibrated on actual photographic race geometry, not circuit names.
+  const technicality=clamp((curveComplexity-.043)/.005,0,1);
+  const sustainedSequence=clamp((samples.length-365)/100,0,1);
+  const adaptiveHorizon=technicality*sustainedSequence;
   const precisionAimPx=clamp(
     25+20*adaptiveHorizon+
     speed*(.11+.04*adaptiveHorizon)-curveSeverity*26,
