@@ -43,7 +43,7 @@ assert.match(settings,/data-physics-ab/);
 assert.match(settings,/c\.physicsAB=b\.dataset\.physics==='B'\?'B':'A'/);
 assert.match(hud,/tdr-physics-ab-practice-label/);
 assert.match(hud,/FÍSICA B · PRUEBA · SIN RÉCORDS/);
-assert.match(clean,/if\(this\._physicsABPractice\)/);
+assert.match(clean,/if\(this\._physicsABPractice\|\|this\._crafRaceLiveV2RoomId\)/,'A/B and LIVE4 never advance clean-lap missions');
 assert.match(ghost,/if\(this\._physicsABPractice\)/);
 assert.match(rewards,/if\(this\._physicsABPractice\|\|this\._crafRaceLiveV2RoomId\)/);
 console.log('PASS: Physics A/B neutral stability only; A same as production, B dissipates lateral slip 45% faster; official PB/ghost/clean missions isolated');
