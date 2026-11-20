@@ -48,11 +48,24 @@ assert.ok(scene.includes("data?.gameMode==='director'"),
 assert.ok(scene.includes("import('../online/craftraceDirectorPreview.js')"),
  'Director module must be lazily loaded');
 assert.ok(scene.includes('this._crafRaceDirectorBridge?.update(performance.now(),deltaMs)'));
+assert.ok(scene.includes("!this._crafRaceDirectorPreview && !this._startAutoFired"),
+ 'The driver's ignition/countdown must not race with director's timer');
 assert.ok(scene.includes('(onlineGrid||this._crafRaceDirectorPreview)?0'),
  'Do not spawn legacy preview bots on top of the four AI');
 assert.ok(scene.includes('this._crafRaceDirectorPreview ? null'),
  'Director results must not write personal bests or history');
 const localProducer=file('src/game/online/craftraceDirectorPreview.js');
+assert.ok(localProducer.includes('const directorGreenAt=performance.now()+3000'),
+ 'A director race needs an independent 3-second countdown');
+assert.ok(localProducer.includes('directorStartPhase(now,directorGreenAt)')&&
+ localProducer.includes("scene._startState='RACING'")&&
+ localProducer.includes('scene._raceStarted=true'),
+ 'Director must start its four AI without ignition or iOS track-ready gate');
+assert.ok(localProducer.includes('directorStickVector(e.clientX,e.clientY'),
+ 'Stick must track the finger on both axes');
+assert.ok(localProducer.includes('stickX:stickVector.x,stickY:stickVector.y'),
+ 'Camera must steer toward both X and Y input, not just rotate sideways');
+
 for(const needle of ['CrafRaceLive4BotDirector','preview:true','data-gas',
  'data-brake','data-stick','data-alt-up','data-alt-down','data-auto',
  'scene.events.on(\'postupdate\'','scene.cameras.main'])

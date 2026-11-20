@@ -3722,7 +3722,7 @@ if(this._crafRaceLiveOnlineIntent&&this._crafRaceLiveStartAt&&this._crafRaceLive
    this.lapStartTick=this.simTick;
   }
 }
-if (!this._crafRaceLiveOnlineIntent && !this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
+if (!this._crafRaceLiveOnlineIntent && !this._crafRaceDirectorPreview && !this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
   this._startAutoFired = true;
 
   if (this._startHint) this._startHint.setText('Mantente listo...');

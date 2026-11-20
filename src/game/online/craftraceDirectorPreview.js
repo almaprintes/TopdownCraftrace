@@ -1,7 +1,7 @@
 // DEV-only local producer seat: four physical AI without creating an online room.
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
 import {makeLive4StartingGrid} from './craftraceLiveV2GridGeometry.js';
-import {makeDirectorCameraState,stepDirectorCamera,directorZoom} from './craftraceDirectorCamera.js';
+import {makeDirectorCameraState,stepDirectorCamera,directorZoom,directorStickVector,directorStartPhase} from './craftraceDirectorCamera.js';
 import {hideRaceUi,restoreRaceUi} from '../ui/raceUiVisibility.js';
 import '../ui/craftraceDirectorPreview.css';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -22,6 +22,13 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const bots=new CrafRaceLive4BotDirector(scene,{
    roster,hostId,localId:hostId,startingGrid:grid,laps,preview:true
  });
+ // Director races have no ignition button, no human grid slot and no online
+ // ready handshake. Own the 3-second green-light deadline locally, independently
+ // of the driver scene's iOS static-track readiness flag.
+ const directorGreenAt=performance.now()+3000;
+ scene._startAutoFired=true;
+ scene._startState='DIRECTOR_COUNTDOWN';
+ scene._raceStarted=false;
  scene.carRig.setVisible(false);body.setVisible(false);
  // Keep the whole scene for real circuit and AI physics, but hide every
  // driver-only HUD and all its interactive pedal/handbrake layers.
@@ -46,9 +53,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
   <button type="button" data-auto>AUTO · ACCIÓN</button>
   <button type="button" data-exit>SALIR</button>
  </div>
- <div class="crdir-stickbox"><div data-stick class="crdir-stick" role="slider"
-   aria-label="Girar dron" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0">
-   <span data-knob></span></div><small>GIRAR</small></div>
+ <div class="crdir-stickbox"><div data-stick class="crdir-stick" role="group"
+   aria-label="Palanca de dirección del dron en dos ejes">
+   <span data-knob></span></div><small>DIRECCIÓN</small></div>
  <div class="crdir-alt"><button type="button" data-alt-up>SUBIR <small>− ZOOM</small></button>
   <button type="button" data-alt-down>BAJAR <small>+ ZOOM</small></button></div>
  <div class="crdir-drive"><button type="button" data-gas>ACELERAR</button>
@@ -63,7 +70,8 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    root.addEventListener(ev,e=>e.stopPropagation());
  const $=s=>root.querySelector(s);
  const held={gas:new Set,brake:new Set,rise:new Set,sink:new Set};
- const keyboard=new Set;let stopped=false,shown=false,stickPointer=null,steerValue=0,lastInfo=0;
+ const keyboard=new Set;let stopped=false,shown=false,stickPointer=null,lastInfo=0;
+ let stickVector={x:0,y:0};
  let camera=makeDirectorCameraState({x:body.x,y:body.y,heading});
  const addHold=(selector,key)=>{
    const element=$(selector);
@@ -80,10 +88,12 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const stick=$('[data-stick]'),knob=$('[data-knob]');
  const move=e=>{
    if(e.pointerId!==stickPointer)return;
-   const rect=stick.getBoundingClientRect();
-   steerValue=clamp((e.clientX-rect.left-rect.width/2)/(rect.width*.38),-1,1);
-   knob.style.transform='translateX('+Math.round(steerValue*29)+'px)';
-   stick.setAttribute('aria-valuenow',steerValue.toFixed(2));
+   e.preventDefault();e.stopPropagation();
+   const v=directorStickVector(e.clientX,e.clientY,stick.getBoundingClientRect());
+   stickVector={x:v.x,y:v.y};
+   // The thumb is freely dragged inside a circular travel radius.
+   knob.style.transform='translate('+Math.round(v.offsetX)+'px,'+
+     Math.round(v.offsetY)+'px)';
    camera.auto=false;
  };
  stick.addEventListener('pointerdown',e=>{
@@ -93,8 +103,8 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  });
  stick.addEventListener('pointermove',move);
  const release=e=>{if(e.pointerId!==stickPointer)return;
-   stickPointer=null;steerValue=0;knob.style.transform='translateX(0)';
-   stick.setAttribute('aria-valuenow','0');
+   stickPointer=null;stickVector={x:0,y:0};
+   knob.style.transform='translate(0px,0px)';
  };
  for(const event of ['pointerup','pointercancel','lostpointercapture'])
    stick.addEventListener(event,release);
@@ -134,14 +144,28 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    const brake=pressed('brake',['KeyS','ArrowDown','Space'])?1:0;
    const rise=pressed('rise',['KeyQ'])?1:0;
    const sink=pressed('sink',['KeyE'])?1:0;
-   const steer=clamp(steerValue+(keyboard.has('KeyD')||keyboard.has('ArrowRight')?1:0)-
+   const steer=clamp((keyboard.has('KeyD')||keyboard.has('ArrowRight')?1:0)-
       (keyboard.has('KeyA')||keyboard.has('ArrowLeft')?1:0),-1,1);
-   camera=stepDirectorCamera(camera,{gas,brake,rise,sink,steer},
-     Math.min(50,Math.max(0,deltaMs))/1000,bots.bots);
+   camera=stepDirectorCamera(camera,{
+     gas,brake,rise,sink,steer,stickX:stickVector.x,stickY:stickVector.y
+   },Math.min(50,Math.max(0,deltaMs))/1000,bots.bots);
+   const countdown=directorStartPhase(now,directorGreenAt);
+   if(!scene._raceStarted&&countdown.started){
+     scene._startAutoFired=true;
+     scene._startState='RACING';
+     scene._raceStarted=true;
+     scene._startModal?.setVisible(false);
+     if(scene.timing){
+       scene.timing.started=true;
+       scene.timing.lapStart=now;
+       scene.timing.s1=null;scene.timing.s2=null;scene.timing.s3=null;
+     }
+     scene.lapStartTick=scene.simTick;
+   }
    bots.update(deltaMs,now,scene._raceStarted===true);
    if(now-lastInfo>=500){
      lastInfo=now;const stats=bots.stats();
-     $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN PREPARACIÓN')+
+     $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN '+countdown.seconds)+
       ' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
       ' · ZOOM '+directorZoom(camera.altitude).toFixed(2)+'×';
      $('[data-auto]').textContent=camera.auto?'AUTO ACTIVADO':'AUTO · ACCIÓN';

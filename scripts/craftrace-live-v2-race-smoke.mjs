@@ -4,7 +4,8 @@ import {CrafRaceLive4RemoteModel,validateLive4Roster} from '../src/game/online/c
 import {makeLive4StartingGrid} from '../src/game/online/craftraceLiveV2GridGeometry.js';
 import {CrafRaceLive4BotDirector,LIVE4_AI_LEVELS} from '../src/game/online/craftraceLiveV2BotDirector.js';
 import {syncLive4CarVisual} from '../src/game/online/craftraceLiveV2CarVisual.js';
-import {makeDirectorCameraState,chooseDirectorAction,stepDirectorCamera,directorZoom}
+import {makeDirectorCameraState,chooseDirectorAction,stepDirectorCamera,directorZoom,
+ directorStickVector,directorStartPhase}
  from '../src/game/online/craftraceDirectorCamera.js';
 const a='550e8400-e29b-41d4-a716-446655440000';
 const b='550e8400-e29b-41d4-a716-446655440001';
@@ -175,4 +176,25 @@ assert.ok(drone.auto&&drone.speed===0,'Automatic camera never controls racers');
 drone=stepDirectorCamera(drone,{gas:1},.05,cars);
 assert.equal(drone.auto,false,'Manual throttle cancels automatic mode');
 assert.ok(directorZoom(.1)>directorZoom(1),'Altitude increases reduce zoom');
+const rect={left:100,top:200,width:100,height:100};
+const topStick=directorStickVector(150,201,rect);
+assert.equal(topStick.x,0,'Vertical gesture does not turn sideways');
+assert.ok(topStick.y<-.95,'Pushing upward aims north');
+assert.ok(topStick.offsetY<0,'Thumb visually moves toward the finger in Y');
+const rightStick=directorStickVector(290,250,rect);
+assert.ok(rightStick.x>.95&&rightStick.y===0,'Stick radius clamps horizontal drag');
+assert.ok(Math.hypot(rightStick.offsetX,rightStick.offsetY)<=26.01,'Thumb stays inside circular travel');
+const diagonalStick=directorStickVector(260,150,rect);
+assert.ok(diagonalStick.x>0&&diagonalStick.y<0,'Diagonal stick has independent X/Y axes');
+assert.deepEqual(directorStartPhase(1000,4500),{started:false,seconds:4});
+assert.deepEqual(directorStartPhase(2500,4500),{started:false,seconds:2});
+assert.deepEqual(directorStartPhase(4500,4500),{started:true,seconds:0});
+assert.deepEqual(directorStartPhase(6500,4500),{started:true,seconds:0});
+let north=makeDirectorCameraState({x:0,y:0,heading:0});
+for(let frame=0;frame<50;frame++)north=stepDirectorCamera(north,{
+ gas:1,stickX:topStick.x,stickY:topStick.y},.02);
+assert.ok(north.y<0,'Upward stick plus throttle flies toward screen top');
+assert.ok(Math.abs(north.x)<Math.abs(north.y)*.85,
+ 'Drone turns toward stick world direction, not sideways-only');
+
 console.log('PASS LIVE 4: validated 4-seat protocol, three independent interpolators, two grid layouts, three physical AI levels and 80-step synthetic physics');
