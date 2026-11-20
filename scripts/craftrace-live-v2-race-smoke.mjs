@@ -109,7 +109,7 @@ const director=new CrafRaceLive4BotDirector(mockScene,{roster:aiRoster,hostId:a,
 assert.equal(director.bots.length,3);
 assert.equal(director.profiles.get(3).parameters.maxSpeed,420,
  'Expert targets the true car limit, not the old hardcoded 520px/s');
-assert.equal(director.profiles.get(3).parameters.driveAccel,520*.95);
+assert.equal(director.profiles.get(3).parameters.driveAccel,520,'Expert uses real acceleration (no boost)');
 assert.ok(director.profiles.get(3).metrics.meanTargetSpeed>=director.profiles.get(2).metrics.meanTargetSpeed);
 assert.equal(new Set(director.bots.map(b=>b.style)).size,3,'Every bot has a deterministic driving style');
 assert.equal(director.update(16,1000,false).length,0,'No bot driving during countdown');
