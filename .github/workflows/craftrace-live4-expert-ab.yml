@@ -1,0 +1,44 @@
+name: LIVE 4 · Expert A/B cornering (no deployment)
+
+on:
+  push:
+    branches:
+      - experiment/live4-expert-cornering-ab-20261120
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'src/game/ai/survivalPhysicalBotController.js'
+      - 'src/game/ai/trackSpeedProfilePlanner.js'
+      - 'src/game/online/craftraceLiveV2BotDirector.js'
+      - 'scripts/craftrace-live4-expert-ab.mjs'
+      - 'scripts/craftrace-live-v2-race-smoke.mjs'
+      - 'package.json'
+      - '.github/workflows/craftrace-live4-expert-ab.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Syntax (no bundler)
+        run: |
+          node --check src/game/ai/trackSpeedProfilePlanner.js
+          node --check src/game/ai/survivalPhysicalBotController.js
+          node --check src/game/online/craftraceLiveV2BotDirector.js
+          node --check scripts/craftrace-live4-expert-ab.mjs
+      - name: Compare same-car physical Expert baseline vs new on four tracks
+        run: node scripts/craftrace-live4-expert-ab.mjs
+      - name: Four-seat DEV smoke
+        run: node scripts/craftrace-live-v2-race-smoke.mjs
+      - name: Development build (does not publish)
+        run: npm run build

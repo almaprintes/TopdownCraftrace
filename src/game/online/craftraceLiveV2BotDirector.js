@@ -35,19 +35,29 @@ export class CrafRaceLive4BotDirector{
     throw Error('Live AI currently requires a closed circuit');
   const centerline=scene.track?.meta?.raceCenterline||scene.track?.meta?.centerline;
   const width=Number(scene.track?.meta?.trackWidth||140);
-  const line=buildTrackRacingLineModel({
-    raceCenterline:centerline,trackWidth:width,offsetScale:1,apexCommitment:.20
-  });
+  const trackGeometry={raceCenterline:centerline,trackWidth:width};
+  const line=buildTrackRacingLineModel(trackGeometry);
+  const expertLine=buildTrackRacingLineModel(trackGeometry,{apexCommitment:.22});
+  if(!expertLine.valid||expertLine.racingLine.length!==line.racingLine.length)
+    throw Error('Expert racing line invalid');
   // Previously the planner assumed 520px/s while the actual car was limited
   // to ~420px/s. The controller normalized twice and drove every bot too slowly.
   // Plan against the host's actual car envelope; never grant extra physics.
   const maxFwd=Math.max(80,Number(scene.maxFwd||scene.carParams?.maxFwd||420));
   const driveAccel=Math.max(20,Number(scene.accel||scene.carParams?.accel||520));
   const brakeDecel=Math.max(20,Number(scene.brakeForce||scene.carParams?.brakeForce||720));
+  // Steering physics limits speed in tight corners; lateral grip alone
+  // overestimates hairpin entry speed. LIVE4-only expert envelope.
+  // Planner uses the nominal steering bound. Physical steering continues
+  // respecting speed-dependent grip and turn factors inside the controller.
+  const yawAtSpeed=Math.max(.1,Number(scene.turnRate||scene.carParams?.turnRate||2.4));
   for(const [level,settings] of Object.entries(LIVE4_AI_LEVELS)){
-    const profile=buildTrackManeuverPlan(buildTrackSpeedProfile(line,{
+    const expert=Number(level)===3;
+    const profile=buildTrackManeuverPlan(buildTrackSpeedProfile(expert?expertLine:line,{
       maxSpeed:maxFwd,lateralAccel:settings.plannerLateralAccel,
-      minCornerSpeed:125,driveAccel:driveAccel*settings.plannerDrive,
+      minCornerSpeed:expert?80:125,
+      ...(expert?{maxYawRate:yawAtSpeed,curvatureSmoothWindow:21}:{}),
+      driveAccel:driveAccel*settings.plannerDrive,
       brakeDecel:brakeDecel*settings.plannerBrake
     }));
     if(!profile.valid||!Array.isArray(profile.samples)||profile.samples.length<12)
@@ -83,7 +93,8 @@ export class CrafRaceLive4BotDirector{
      _plannerSampleIndex:best,
      lastIndex:best,sampleProgress:0,completedLaps:0,
      finished:false,finishAt:null,lapTimes:[],lastLapAt:null,
-     lastPoseAt:0,lastPose:null};
+     lastPoseAt:0,lastPose:null,
+     cornerDiagnostics:{samples:0,sumError:0,maxError:0,overWide:0,lastAimSteps:null}};
    this.bots.push(bot);
   }
  }
@@ -105,6 +116,7 @@ export class CrafRaceLive4BotDirector{
    const paceBias=[1,.985,.97][bot.style];
    const control=updateRacePhysicalBot(bot,profile,{
      dt,spacing:this.spacing,maxFwd:maxSpeed*settings.pace*paceBias,
+     live4PrecisionCornering:bot.difficulty===3,
      cornerRisk:settings.cornerRisk,
      accel:Number(scene.accel||scene.carParams?.accel||520),
      brakeForce:Number(scene.brakeForce||scene.carParams?.brakeForce||720),
@@ -115,6 +127,16 @@ export class CrafRaceLive4BotDirector{
    const body=bot.plannerBody;
    bot.rig.setPosition(body.x,body.y).setRotation(body.rotation+(scene._carVisualRotOffset||0));
    if(!control.valid)continue;
+   // Record real cross-track errors, not just nominal plan speed. Useful for
+   // identifying overrun sectors on devices without an intrusive debug HUD.
+   if(bot.difficulty===3&&(!bot._cornerDiagnosticAt||now-bot._cornerDiagnosticAt>=125)){
+     bot._cornerDiagnosticAt=now;
+     const d=bot.cornerDiagnostics;
+     d.samples++;d.sumError+=control.distanceToLine;
+     d.maxError=Math.max(d.maxError,control.distanceToLine);
+     if(control.distanceToLine>this.spacing*6)d.overWide++;
+     d.lastAimSteps=control.precisionAimSteps;
+   }
    if(bot.lastLapAt===null)bot.lastLapAt=now;
    const n=profile.samples.length,next=control.nearestIndex;
    let step=next-bot.lastIndex;
@@ -150,7 +172,14 @@ export class CrafRaceLive4BotDirector{
  }
  stats(){return {
   count:this.bots.length,botCpuMeanMs:this.cpuSamples?this.cpuTotalMs/this.cpuSamples:0,
-  botCpuLastMs:this.lastCpuMs,finished:this.bots.filter(x=>x.finished).length
+  botCpuLastMs:this.lastCpuMs,finished:this.bots.filter(x=>x.finished).length,
+  cornerDiagnostics:this.bots.filter(b=>b.difficulty===3).map(b=>({
+   seat:b.seat,samples:b.cornerDiagnostics.samples,
+   meanError:b.cornerDiagnostics.samples
+     ?b.cornerDiagnostics.sumError/b.cornerDiagnostics.samples:0,
+   maxError:b.cornerDiagnostics.maxError,wideSamples:b.cornerDiagnostics.overWide,
+   aimSteps:b.cornerDiagnostics.lastAimSteps
+  }))
  };}
  destroy(){
   for(const bot of this.bots){bot.rig?.destroy?.();bot.plannerBody?.destroy?.();}

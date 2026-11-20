@@ -42,6 +42,9 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   }
 
   const dt=clamp(Number(params.dt||0),.001,.05);
+  // LIVE 4 expert only: precision mode must not change Survival physics or
+  // the existing two-player racing controller.
+  const precisionCornering=params.live4PrecisionCornering===true;
   const velocity=body.body.velocity;
   const speed=Math.hypot(Number(velocity.x)||0,Number(velocity.y)||0);
   const nearest=nearestSample(samples,Number(body.x),Number(body.y),bot._plannerSampleIndex);
@@ -153,16 +156,27 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
       ?clamp(74+speed*.16,84,124)
       :clamp(30+speed*.17-cornerFactor*8,28,76));
   const lookaheadSteps=Math.max(2,Math.round(lookaheadPx/spacing));
-  const targetIndex=maneuverActive
-    ?maneuver.targetIndex
-    :(committedShortChicane?shortcut.targetIndex
-      :(nearest.index+lookaheadSteps)%samples.length);
+  // The old maneuver logic jumps straight to the EXIT of a linked sequence;
+  // on Santa Cruz this can aim across an entire hairpin/chicane instead of
+  // following the asphalt. LIVE 4 Expert always pursues a nearby point on the
+  // physical racing line, with a shorter horizon as curvature increases.
+  const curveSeverity=clamp((peakTurn-.018)/.10,0,1);
+  const precisionAimPx=clamp(25+speed*.11-curveSeverity*26,22,74);
+  const precisionSteps=clamp(Math.round(precisionAimPx/spacing),2,8);
+  const recoverySteps=nearest.distance>45?Math.min(3,precisionSteps):precisionSteps;
+  const targetIndex=precisionCornering
+    ?(nearest.index+recoverySteps)%samples.length
+    :(maneuverActive
+      ?maneuver.targetIndex
+      :(committedShortChicane?shortcut.targetIndex
+        :(nearest.index+lookaheadSteps)%samples.length));
   const target=samples[targetIndex];
   const desiredHeading=Math.atan2(Number(target.y)-Number(body.y),Number(target.x)-Number(body.x));
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
-  let rawSteer=clamp(headingError/(straightLock?.62:.48),-1,1);
+  let rawSteer=clamp(headingError/(precisionCornering
+    ?(straightLock?.50:.33):(straightLock?.62:.48)),-1,1);
   const previousSteer=Number(bot._plannerSteerCommand||0);
-  const oppositeDuringRelease=maneuverRelease&&
+  const oppositeDuringRelease=!precisionCornering&&maneuverRelease&&
     Math.sign(rawSteer)!==Math.sign(previousSteer)&&
     Math.abs(previousSteer)>.04;
   // En una recta estable hay zona muerta y no se acepta un cambio de signo por
@@ -177,7 +191,9 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const releaseOppositeSuppressed=oppositeDuringRelease&&
     Math.abs(headingError)<.34;
   if(releaseOppositeSuppressed||straightDeadband||straightOppositeSuppressed)rawSteer=0;
-  const steerRate=straightLock?2.4:(oppositeDuringRelease?2.2:9);
+  const steerRate=precisionCornering
+    ?(straightLock?3.5:11)
+    :(straightLock?2.4:(oppositeDuringRelease?2.2:9));
   let steer=clamp(previousSteer+
     clamp(rawSteer-previousSteer,-steerRate*dt,steerRate*dt),-1,1);
   if(straightLock&&rawSteer===0){
@@ -192,7 +208,10 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     ?Number(plannedSample?.maneuverTargetSpeed||0)
     :0;
   const profileRatio=clamp(
-    Math.max(baseProfileSpeed,maneuverProfileSpeed)/profileMax,0,1
+    // In precision mode the planned curve-entry speed takes precedence.
+    // The 65%-of-range maneuver fallback must not override a necessary
+    // hairpin braking request on the current racing-line sample.
+    (precisionCornering?baseProfileSpeed:Math.max(baseProfileSpeed,maneuverProfileSpeed))/profileMax,0,1
   );
   // Riesgo condicionado: si el coche llega bien colocado conserva más velocidad
   // cuanto más cerrada es la curva. Si acumula error angular o transversal,
@@ -270,6 +289,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     valid:true,
     nearestIndex:nearest.index,
     targetIndex,
+    precisionAimSteps:precisionCornering?recoverySteps:null,
     distanceToLine:nearest.distance,
     speed,
     targetSpeed:controlledTargetSpeed,

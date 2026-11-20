@@ -19,12 +19,35 @@ export function buildTrackSpeedProfile(lineModel,options={}){
   const driveAccel=Math.max(20,Number(options.driveAccel||260));
   const brakeDecel=Math.max(20,Number(options.brakeDecel||430));
   const curvatureFloor=Math.max(1e-5,Number(options.curvatureFloor||.0015));
+  // Optional physics-aware turning envelope. Unset leaves existing Survival
+  // and other planners byte-for-byte equivalent in their outputs.
+  const yawRate=Number(options.maxYawRate);
+  const yawBounded=Number.isFinite(yawRate)&&yawRate>0;
 
   // Límite local por radio: v²/r <= aceleración lateral. El giro guardado es
   // por muestra, por lo que kappa ~= deltaHeading / spacing.
-  const localLimit=turns.map(turn=>{
-    const kappa=Math.max(curvatureFloor,Math.abs(Number(turn)||0)/spacing);
-    return clamp(Math.sqrt(lateralAccel/kappa),minCornerSpeed,maxSpeed);
+  // A single polygon vertex can create a curvature impulse far sharper
+  // than a real drivable racing line. Average absolute curvature over a
+  // finite steering horizon; taking absolute values first avoids chicane
+  // cancellation. Only used when the optional LIVE 4 Expert flag is set.
+  const smoothWindow=Math.min(21,Math.max(1,Math.floor(Number(options.curvatureSmoothWindow||1))));
+  const radius=Math.floor(smoothWindow/2);
+  const turnsUsed=turns.map((turn,i)=>{
+    if(radius===0)return Math.abs(Number(turn)||0);
+    let sum=0;
+    for(let d=-radius;d<=radius;d++)
+      sum+=Math.abs(Number(turns[(i+d+n)%n])||0);
+    return sum/(2*radius+1);
+  });
+  const localLimit=turnsUsed.map(turn=>{
+    const kappa=Math.max(curvatureFloor,turn/spacing);
+    const lateralLimit=Math.sqrt(lateralAccel/kappa);
+    const steeringLimit=yawBounded?yawRate/kappa:Infinity;
+    // A car cannot follow curvature requiring more angular velocity than
+    // its real steering allows. A fixed minimum corner speed must not override
+    // this physics bound on hairpins.
+    const floor=Math.min(minCornerSpeed,steeringLimit);
+    return clamp(Math.min(lateralLimit,steeringLimit),floor,maxSpeed);
   });
   const speed=localLimit.slice();
 
@@ -73,7 +96,7 @@ export function buildTrackSpeedProfile(lineModel,options={}){
     valid:finite,
     reason:finite?null:'non_finite_speed_profile',
     samples,
-    parameters:{maxSpeed,minCornerSpeed,lateralAccel,driveAccel,brakeDecel},
+    parameters:{maxSpeed,minCornerSpeed,lateralAccel,driveAccel,brakeDecel,...(yawBounded?{maxYawRate:yawRate}:{}) ,...(smoothWindow>1?{curvatureSmoothWindow:smoothWindow}:{})},
     metrics:{
       pointCount:n,
       minTargetSpeed:minSpeed,

@@ -1,0 +1,73 @@
+# CraftRace LIVE 4 · Experto predictivo y comparación A/B
+
+## Objetivo y estado
+
+Probar el controlador de curvas de **Experto** antes de publicarlo en DEV. Solo rama
+`experiment/live4-expert-cornering-ab-20261120` y PR: este workflow no despliega.
+No hay cambios en Google Play, otras modalidades, datos de usuarios ni Supabase.
+
+El jugador observó que en Santa Cruz las IA de nivel 3 trazaban mal las curvas.
+Su referencia humana de tres vueltas fue **0:59.935**, frente a la mejor IA
+**1:17.987**. Es una referencia de dispositivo real, NO un dato comparable
+directamente con las simulaciones que siguen.
+
+## Diseño del cambio
+
+- En el modelo de la línea, `apexCommitment: .22` se pasa explícitamente
+  como opción de geometría **solo para Experto**. Antes se dejaba por error
+  dentro del objeto de pista y el optimizador no lo interpretaba.
+- Se elimina para Experto el atajo de apuntar directamente al final de una
+  maniobra enlazada. Se usa punto objetivo adelantado adaptado a curvatura y
+  a distancia de recuperación. El resto de las dificultades y Survival
+  conservan su controlador original.
+- En Experto prevalece la velocidad del plan físico de curva y no el
+  suelo artificial de la maniobra enlazada. El plan usa la tasa nominal de
+  giro del coche y una media ABSOLUTA circular de 21 muestras de curvatura:
+  evita reaccionar a picos de un solo vértice y evita cancelar chicanes opuestas.
+- Se conservan exactamente las prestaciones del coche local:
+  **sin grip, aceleración, velocidad máxima o frenado extra**. El controlador
+  sigue computando el factor de giro dependiente de velocidad.
+- Telemetría acotada de error de trazada por IA Experto (125 ms), para que
+  futuras pruebas comparen maniobras reales. No tiene interacción con premios
+  o rankings.
+
+Inspiraciones matemáticas: [F1TENTH Pure Pursuit](https://github.com/zzjun725/f1tenth-racing-stack-ICRA22),
+[TUM global trajectory optimization](https://github.com/TUMFTM/global_racetrajectory_optimization);
+no se ha copiado código ni añadido dependencias.
+
+## Benchmark reproducible
+
+`node scripts/craftrace-live4-expert-ab.mjs`
+
+La prueba instancia ambas opciones en el **mismo código**, con geometría JSON
+original, coche sintético fijo (420/520/720 px/s y 2.4 rad/s), reloj fijo a
+60 Hz y una vuelta geométrica en cuatro circuitos. Reproduce los comandos de
+dirección/aceleración/freno y actualiza los cuerpos, sin colisiones físicas
+Phaser, salidas, tráfico, red, checkpoints ni cronometraje oficial. Por tanto
+**no predice de forma exacta los tiempos del iPhone**. No sirve para homologar
+la competitividad frente al usuario.
+
+| Circuito | Anterior (s) | Candidato (s) | Error medio antes → después |
+|---|---:|---:|---:|
+| Santa Cruz | 21.13 | 21.35 | 30.41 → 13.71 px |
+| Track 01 | 15.00 | 14.07 | 21.28 → 14.42 px |
+| Karting Tenerife | 52.45 | 49.62 | 20.19 → 12.62 px |
+| Technical Ridge | 40.85 | 38.13 | 19.06 → 11.53 px |
+
+Estas cifras son una **precomprobación en simulación de aislada**, a confirmar
+por CI. Se exige en los cuatro circuitos completar la vuelta, reducir error
+medio y máximo, y no perder más del 3.5% de ritmo; en agregado, mejorar 2%.
+No se altera ningún premio, récord ni escenario online real.
+
+## Validaciones restantes antes de considerar homologado Experto
+
+- Comprobar GitHub Actions de esta rama y repetir el benchmark sin errores.
+- Comparar 3 y 5 vueltas de **Santa Cruz / Gripline** en iPhone, con
+  tres IA, tiempos por vuelta, FPS y observación de horquillas y chicanes.
+- Validar cruces de meta/checkpoints de las IA por posiciones físicas; los
+  resultados actuales siguen siendo amistosos/provisionales.
+- Comprobar otras físicas (Spark), la reincorporación y partidas de 2–4
+  humanos sin regresiones.
+
+Si el A/B o la prueba real empeoran, detener promoción; no hacer IA
+más rápida artificialmente ni rebasar parámetros físicos.

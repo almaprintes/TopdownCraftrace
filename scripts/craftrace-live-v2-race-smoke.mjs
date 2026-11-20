@@ -111,7 +111,14 @@ assert.equal(director.bots.length,3);
 assert.equal(director.profiles.get(3).parameters.maxSpeed,420,
  'Expert targets the true car limit, not the old hardcoded 520px/s');
 assert.equal(director.profiles.get(3).parameters.driveAccel,520,'Expert uses real acceleration (no boost)');
-assert.ok(director.profiles.get(3).metrics.meanTargetSpeed>=director.profiles.get(2).metrics.meanTargetSpeed);
+assert.equal(director.profiles.get(3).parameters.curvatureSmoothWindow,21,
+ 'Expert smooths isolated polyline curvature impulses');
+assert.equal(director.profiles.get(3).parameters.maxYawRate,2.4,
+ 'Expert respects the nominal turn-rate envelope');
+assert.equal(director.profiles.get(2).parameters.curvatureSmoothWindow,undefined,
+ 'Other difficulties retain the previous planner');
+assert.ok(director.profiles.get(3).metrics.maxTargetSpeed<=420,
+ 'Expert planner does not invent top speed');
 assert.equal(new Set(director.bots.map(b=>b.style)).size,3,'Every bot has a deterministic driving style');
 assert.equal(director.update(16,1000,false).length,0,'No bot driving during countdown');
 assert.ok(director.bots.every(b=>b.visual.texture.key==='car'&&b.visual.visible));
@@ -135,6 +142,10 @@ for(let frame=0;frame<80;frame++){
 }
 assert.ok(count>=6,'Bot positions published at bounded cadence');
 assert.ok(Number.isFinite(director.stats().botCpuMeanMs));
+const cornerReadings=director.stats().cornerDiagnostics;
+assert.equal(cornerReadings.length,1,'Expert has separate tracking diagnostics');
+assert.ok(cornerReadings[0].samples>0&&Number.isFinite(cornerReadings[0].meanError),
+ 'Tracking error measured during the race, without changing physics');
 assert.ok(director.stats().count===3);
 for(const bot of director.bots)assert.ok(Number.isFinite(bot.plannerBody.x)&&Number.isFinite(bot.plannerBody.y));
 director.destroy();
