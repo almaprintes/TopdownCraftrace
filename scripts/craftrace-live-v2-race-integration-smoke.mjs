@@ -10,6 +10,7 @@ for(const path of [
  'src/game/online/craftraceLiveV2GridGeometry.js',
  'src/game/online/craftraceLiveV2RaceSession.js',
  'src/game/online/craftraceLiveV2RaceBridge.js',
+ 'src/game/online/craftraceLive4HostContinuity.js',
  'src/game/online/craftraceDirectorCamera.js',
  'src/game/online/craftraceDirectorPreview.js',
  'src/game/ui/craftraceLiveV2Lobby.js',
@@ -150,6 +151,17 @@ assert.ok(ui.includes("startLiveV2Lobby(room.id)"));
 const bridge=file('src/game/online/craftraceLiveV2RaceBridge.js');
 assert.ok(bridge.includes('CrafRaceLive4RemoteModel'));
 assert.ok(bridge.includes('CrafRaceLive4BotDirector'));
+assert.ok(bridge.includes('advanceHostedLive4Bots({'),
+ 'Host must tick AI even when the Realtime broadcast channel disconnects');
+assert.ok(!bridge.includes('if(director&&linkReady)'),
+ 'Never pause host physics on a temporary network outage');
+assert.ok(bridge.includes('const reconnectLink=now=>')&&bridge.includes('reconnectLink(now)'),
+ 'A dropped broadcast channel must be recreated without resetting bots');
+assert.ok(bridge.includes('states.set(bot.seat,{seat:bot.seat'),
+ 'Completed host AI results must remain locally visible until server recovery');
+assert.ok(bridge.includes('Red interrumpida · Las IA locales siguen compitiendo'),
+ 'Local results should explain why remote results are still pending');
+
 assert.ok(bridge.includes('finishLiveV2Lobby('));
 assert.ok(bridge.includes('localFinishPosted'));
 assert.ok(bridge.includes('console.info(\'[LIVE 4 PERF]\''));

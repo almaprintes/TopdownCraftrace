@@ -125,3 +125,27 @@ Prueba pendiente en iPhone: Realizador, Santa Cruz, Gripline, nivel 3 Experto,
 tres vueltas. Comparar los resultados provisionales con la parrilla 1H+3IA
 y grabar **durante la carrera**, no solo una vez terminada, para revisar las
 curvas. Se mantiene no homologado hasta verificar meta y checkpoints.
+
+## Incidencia 20/11/2026, 21:09: IA congeladas al perder enlace Realtime
+
+En una carrera LIVE 4 (Santa Cruz, Gripline, tres IA nivel 3) el piloto terminó en
+58.193 s, pero las tres IA se detuvieron en plena segunda vuelta y quedaron
+sin tiempo final. En el HUD se lee `RED SIN ENLACE`, con aproximadamente 60 FPS.
+Revisión del código: el host sólo llamaba `director.update(...)` dentro de
+`if(director&&linkReady)`; una desconexión de Broadcast cortaba la propia
+simulación física. Es un fallo verificado en el flujo, no un síntoma de falta de FPS.
+
+**Solución aislada en LIVE 4:** `advanceHostedLive4Bots` actualiza la física de
+las IA host de forma incondicional durante carrera activa, enviando posiciones
+sólo si la red está conectada. Al perder un canal por más de 6,5 s, se recrea
+con la misma identidad y plaza, sin reiniciar coches/vueltas. Los tiempos de
+las IA quedan visibles localmente como provisionales y se reintenta la
+persistencia habitual sin generar premios/récords. El HUD advierte cuando
+siguen pendientes de sincronizar. Añadido smoke de interrupción 5 s, llegada
+de IA con enlace cortado y recuperación del envío posterior sin reset.
+
+**Pendiente de validación física:** probar corte y restablecimiento de datos o
+Realtime con iPhone conectado: AI deben continuar en pista, acabar las tres
+vueltas, mostrar resultados aun sin servidor y sincronizar al reconectar.
+Hay que vigilar que el canal se recupere, y comparar trazada y tiempo una vez
+se haya descartado la interrupción.

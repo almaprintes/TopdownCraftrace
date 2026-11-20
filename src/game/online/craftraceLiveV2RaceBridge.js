@@ -6,6 +6,7 @@ import {consumeLive4RaceSession} from './craftraceLiveV2RaceSession.js';
 import {CrafRaceLive4RemoteModel} from './craftraceLiveV2RaceModel.js';
 import {CrafRaceLive4PositionLink} from './craftraceLiveV2PositionLink.js';
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
+import {advanceHostedLive4Bots} from './craftraceLive4HostContinuity.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
 import {CrafRaceLiveV2LobbyMonitor,finishLiveV2Lobby,acknowledgeLiveV2GridLoaded} from './craftraceLiveV2LobbyClient.js';
 
@@ -92,21 +93,43 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      aiError=err;console.error('[LIVE 4] Could not initialize physical AI:',err);
    }
  }
- let link=null;
+ // Keep local simulation authoritative even if Supabase Realtime disconnects.
+ let link=null,reconnecting=false,offlineSince=performance.now(),
+   lastReconnectAttempt=-10000;
  const startLink=async()=>{
    if(stopped||link)return;
    const instance=new CrafRaceLive4PositionLink({
      roomId,hostId,localId,roster,
      onPosition:packet=>{model.accept(packet,performance.now());},
      onStatus:(ready,status)=>{
-       if(stopped)return;
+       if(stopped||link!==instance)return;
        linkReady=ready;
-       if(!ready)console.warn('[LIVE 4] Realtime status',status);
+       if(ready)offlineSince=null;
+       else{
+         if(offlineSince===null)offlineSince=performance.now();
+         console.warn('[LIVE 4] Realtime status',status);
+       }
      }
    });
    link=instance;
    try{await instance.connect();}
-   catch(err){linkReady=false;console.error('[LIVE 4] Realtime connection error',err);}
+   catch(err){
+     if(link!==instance||stopped)return;
+     linkReady=false;
+     if(offlineSince===null)offlineSince=performance.now();
+     console.error('[LIVE 4] Realtime connection error',err);
+   }
+ };
+ const reconnectLink=now=>{
+   if(stopped||linkReady||reconnecting||offlineSince===null||
+     now-offlineSince<6500||now-lastReconnectAttempt<9000)return;
+   lastReconnectAttempt=now;reconnecting=true;
+   const old=link;link=null;
+   // New transport epoch, same authenticated room/seat, same local bot state.
+   void Promise.resolve(old?.close()).catch(()=>{}).finally(()=>{
+     reconnecting=false;
+     if(!stopped)void startLink();
+   });
  };
  void startLink();
  const monitor=new CrafRaceLiveV2LobbyMonitor(roomId,{
@@ -173,9 +196,16 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    }
    panel.append(list);
    const status=document.createElement('p');status.className='cr4-result-note';
-   status.textContent=ordered.every(x=>x.time!==null)
-     ?'Todos han terminado. Clasificación provisional.'
-     :'Esperando los resultados del resto de pilotos…';
+   const allFinished=ordered.every(x=>x.time!==null);
+   const unposted=Boolean(localFinish&&!localFinishPosted)||
+     Boolean(director?.results().some(bot=>!postedBots.has(bot.seat)));
+   status.textContent=allFinished
+     ?(!linkReady||unposted
+       ?'Todos han terminado localmente. Resultados pendientes de sincronizar.'
+       :'Todos han terminado. Clasificación provisional.')
+     :(!linkReady
+       ?'Red interrumpida · Las IA locales siguen compitiendo. Esperando resultados.'
+       :'Esperando los resultados del resto de pilotos…');
    panel.append(status);
    const back=document.createElement('button');back.type='button';
    back.textContent='VOLVER AL MENÚ';back.onclick=()=>scene.scene.start('menu');
@@ -214,6 +244,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
          'CONECTANDO PILOTOS · LIVE 4':'ESPERANDO CARGA DE LOS PILOTOS · LIVE 4');
      }
    }
+   reconnectLink(now);
    if(scene._raceStarted&&localStartPerf===null)localStartPerf=now;
    finishCheck(now);
    // Update only remotely controlled rigs; never mutate local car dynamics.
@@ -250,13 +281,22 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
          lap:Math.max(0,Math.floor(scene.lapCount||0))});
      }
    }
-   if(director&&linkReady){
-     // The host continues driving bots after their own race finishes.
-     const snapshots=director.update(deltaMs,now,scene._raceStarted||Boolean(localFinish));
-     for(const {seat,pose} of snapshots)sendPose(seat,pose);
-     for(const bot of director.results())if(!postedBots.has(bot.seat))
-       saveResult(bot.seat,bot,now);
-   }
+   // LIVE 4 host physics must advance even if the private Realtime link
+   // goes offline. Network readiness only controls packet transmission.
+   advanceHostedLive4Bots({
+     director,deltaMs,now,
+     started:scene._raceStarted||Boolean(localFinish),
+     linkReady,sendPose,
+     onBotFinish:bot=>{
+       const local=states.get(bot.seat);
+       if(local?.elapsedMs!==bot.elapsedMs){
+         states.set(bot.seat,{seat:bot.seat,elapsedMs:bot.elapsedMs,
+           lapTimes:bot.lapTimes,kind:'ai'});
+         if(localFinish)showResults();
+       }
+       if(!postedBots.has(bot.seat))saveResult(bot.seat,bot,now);
+     }
+   });
    if(localFinish&&!localFinishPosted)saveResult(localSeat,localFinish,now);
    // Aggregate perf only every five seconds. Never render diagnostics each frame.
    if(lastUpdate){
