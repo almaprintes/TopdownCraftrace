@@ -50,6 +50,14 @@ assert.ok(next.includes("fillWithAi:$('[data-fill]').checked,aiDifficulty:Number
  'Original online difficulty choice must remain unchanged');
 assert.ok(css.includes('.cr4-director-entry'),
  'Director-specific difficulty should remain usable in landscape');
+assert.ok(css.includes('.cr4-result-shell.cr4-results-waiting'),
+ 'Results while AI race must have a separate translucent state');
+assert.ok(css.includes('background:rgba(1,8,16,.055)'),
+ 'The circuit must remain visible behind ongoing results');
+assert.ok(css.includes('pointer-events:none'),
+ 'Waiting scoreboard must not block touches on the rest of the track');
+assert.ok(css.includes('backdrop-filter:blur(3px)'),
+ 'Keep text legible using only a small translucent scoreboard');
 assert.ok(next.includes("gameMode:'director'")&&next.includes('directorPreview:true'),
  'Producer mode must launch a separate local race');
 assert.ok(next.includes("if(closed||loading||!race4Enabled)return"),

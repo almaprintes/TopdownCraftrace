@@ -141,6 +141,11 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      if(Number.isFinite(s.start_at_ms)&&s.start_at_ms>0)startAt=s.start_at_ms;
      states.clear();
      for(const result of s.results||[])states.set(result.seat,result);
+     // Server snapshots can lag local completed AI results after an outage.
+     // Preserve valid local finishes until the remote snapshot catches up.
+     for(const bot of director?.results()||[])if(!states.has(bot.seat))
+       states.set(bot.seat,{seat:bot.seat,elapsedMs:bot.elapsedMs,
+         lapTimes:bot.lapTimes,kind:'ai'});
      if(localFinish)showResults();
    },
    onError:err=>{if(!stopped)console.warn('[LIVE 4] Snapshot:',err.message);}
@@ -197,6 +202,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    panel.append(list);
    const status=document.createElement('p');status.className='cr4-result-note';
    const allFinished=ordered.every(x=>x.time!==null);
+   // Keep the live race visible while AI finish after the player.
+   results.classList.toggle('cr4-results-waiting',!allFinished);
    const unposted=Boolean(localFinish&&!localFinishPosted)||
      Boolean(director?.results().some(bot=>!postedBots.has(bot.seat)));
    status.textContent=allFinished

@@ -151,6 +151,10 @@ assert.ok(ui.includes("startLiveV2Lobby(room.id)"));
 const bridge=file('src/game/online/craftraceLiveV2RaceBridge.js');
 assert.ok(bridge.includes('CrafRaceLive4RemoteModel'));
 assert.ok(bridge.includes('CrafRaceLive4BotDirector'));
+assert.ok(bridge.includes("results.classList.toggle('cr4-results-waiting',!allFinished)"),
+ 'Show translucent compact results only while other pilots are racing');
+assert.ok(bridge.includes('for(const bot of director?.results()||[])if(!states.has(bot.seat))'),
+ 'Server snapshot must not erase locally completed AI after an outage');
 assert.ok(bridge.includes('advanceHostedLive4Bots({'),
  'Host must tick AI even when the Realtime broadcast channel disconnects');
 assert.ok(!bridge.includes('if(director&&linkReady)'),
