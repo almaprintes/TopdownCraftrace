@@ -39,3 +39,16 @@
 - Los resultados LIVE beta no confieren premios/monedas/récords oficiales hasta prueba del cronometraje/antifraude.
 
 **Referencia:** `docs/DEPLOYMENT_POLICY.md`, `docs/PLATFORM_RELEASE_MATRIX.md`, `docs/CRAFTRACE_LIVE_BROADCAST_MIGRATION.md`.
+
+## Fase 2: backend aislado, monitor de presencia y contrato para 4 plazas (20/11/2026)
+**Preparado en código, aún no activado en la interfaz ni aplicado al Supabase de producción al crear esta revisión.**
+
+- Migración aditiva: `supabase/migrations/20261120_039_craftrace_live_v2_lobby_2_to_4.sql`; tablas **independientes** `craftrace_live_v2_rooms` y `craftrace_live_v2_members`, sin alterar las tablas ni RPC del modo de dos.
+- RPC versionadas de acceso restringido: `create`, `join`, `snapshot`, `configure`, `set_ready`, `heartbeat`, `start`, `leave`. El cliente nuevo solo las llama tras autorización del usuario y **no está importado por la interfaz LIVE actual**.
+- El anfitrión ocupa la plaza 0; los invitados entran atómicamente en la **primera plaza libre**, hasta 4. UUID únicos, límites de formato y 6 pistas por anfitrión/hora. Una entrada posterior a la salida se rechaza, excepto el **reingreso de una identidad que ya tenía plaza**.
+- Cada piloto humano pulsa Listo. Todos deben figurar listos y haber enviado un latido en los **15 segundos** anteriores a iniciar; el monitor privado se actualiza cada 5 s. La parrilla permanece provisional antes de salir y los bots no ocupan identidades reales.
+- Al iniciar, el servidor bloquea la parrilla con hasta 4 entradas y cuenta atrás de 8 segundos. Las posiciones de IA de plazas vacías **solo se materializan en ese momento**. Este bloqueo **no significa que exista ya un motor de carrera 4P integrado**.
+- Desconexión previa a salida: un invitado libera su plaza al salir expresamente; durante carrera conserva la plaza para reconectar. El anfitrión puede cerrar su pista. Una conexión perdida sin salida expresa queda identificada por presencia obsoleta, no permite salida y puede reentrar.
+- `src/game/online/craftraceLiveV2Roster.js` interpreta **plazas reales de servidor**, no indices inferidos por el orden de la lista: admite huecos de invitados, hasta tres IA, todos los niveles y parrilla cerrada. `src/game/online/craftraceLiveV2LobbyClient.js` prepara las peticiones autenticadas y el monitor sin conexión al cargar el módulo.
+- `scripts/craftrace-live-v2-lobby-smoke.mjs` cubre composición, huecos, control de Listo, validación de entrada, contrato SQL, RLS, concesión de RPC y aislamiento de las funciones de dos pilotos; se ejecuta en `prebuild`. **Una prueba estructural JavaScript no sustituye prueba SQL ni de autorización real con usuarios distintos.**
+- Siguiente bloqueo: aplicar migración **solo después de validar SQL**; ejecutar pruebas reales con dos, tres y cuatro cuentas, rechazos de intruso/quinto y latidos; después integrar UI y transporte de 3 rivales. No migrar resultados oficiales, Play, iOS ni Vercel.
