@@ -8,7 +8,8 @@ import { IS_PROD_BUILD } from '../buildTarget.js';
 import { getPersonalCircuitRecords, cloudSnapshotPolicy, saveCloudSnapshot } from '../stats/localRaceRecords.js';
 import { needsRaceControlCacheRecovery } from '../online/raceControlSnapshotRecovery.js';
 
-import { submitRaceControlRecordWithGhost, submitRaceControlRecordWithoutGhost, getRaceControlSnapshot, getPublicRaceControlSnapshot, getRaceControlTrackCreatorBadges, withRaceControlCreatorBadges, getMyRaceControlRecord } from '../online/raceControlOnline.js';
+import { submitRaceControlRecordWithGhost, submitRaceControlRecordWithoutGhost, getRaceControlSnapshot, getPublicRaceControlSnapshot, getRaceControlTrackCreatorBadges, withRaceControlCreatorBadges, getMyRaceControlRecord, raceControlOnlineIsActive, savedRaceControlIdentity } from '../online/raceControlOnline.js';
+import { classifyRaceControlPublication, createRaceControlPublicationChecks } from '../ui/raceControlPublicationStatus.js';
 import { findExactLocalPbReplay } from '../tracks/exactLocalReplay.js';
 import { ghostReplayCompatibility } from '../tracks/ghostTrackCompatibility.js';
 import { ensureRaceControlPilotProfile, explainPilotIdentityFailure } from '../online/onlinePilotIdentity.js';
@@ -95,14 +96,8 @@ export class StatsScene extends MasteryStatsScene{
     // Only current playable circuits are listed; no obsolete-edition notice.
      const localPbLabel=body.querySelector('.br-pb small');
     if(localPbLabel)localPbLabel.textContent='PERSONAL BEST · LOCAL';
-    const onlineMine=cloudRows.find(row=>row?.is_me===true&&Number(row?.best_time_ms)>0);
-    if(onlineMine){
-      const onlineLabel=document.createElement('small');
-      onlineLabel.dataset.brOnlinePersonalBest='1';
-      onlineLabel.textContent='ONLINE '+fmtLap(onlineMine.best_time_ms);
-      onlineLabel.style.cssText='display:block;color:#81cde2;letter-spacing:.05em;margin:3px 0;font-size:9px;';
-      body.querySelector('.br-pb')?.appendChild(onlineLabel);
-    }
+    // The local PB and the online PB belong to different stores.
+    // Only the authenticated own-best RPC may certify the ONLINE label.
     // Applies the real equipped Cuper skin and installs fallback onerror.
     // Runs after every render (different track / scope / refreshed ranking).
     body.querySelectorAll('[data-br-car-image]').forEach(img=>{
@@ -112,12 +107,9 @@ export class StatsScene extends MasteryStatsScene{
     const note=this._raceControlNotice;
     if(note&&(!note.trackId||note.trackId===selected.trackId))
       this._showRaceControlNotice(note.message);
-    const claimId=selected?.bestLapMs?raceControlPublishClaimId(selected.trackId,selected.bestLapMs):null;
-    const claim=claimId?verifiedRecordPublishClaims.get(claimId):null;
-    if(claim?.published){
-      const btn=this._root.querySelector('[data-br-publish]');
-      if(btn){btn.disabled=true;btn.textContent=t('raceControl.published');}
-    }
+    // Local rewarded-ad receipts are not evidence of a server-published record.
+    // Verify the selected normal/inverse circuit under the current account.
+    this._syncRaceControlPublicationStatus(selected);
     this._root.querySelector('[data-br-online]')?.addEventListener('click',async e=>{
       const b=e.currentTarget;
       b.disabled=true;b.textContent=t('raceControl.connecting');
@@ -125,6 +117,7 @@ export class StatsScene extends MasteryStatsScene{
         await ensureRaceControlPilotProfile();
         const snap=await getRaceControlSnapshot(selected.trackId);
         saveCloudSnapshot(selected.trackId,snap);
+        this._raceControlPublicationChecks?.invalidate(savedRaceControlIdentity(),selected.trackId);
         this._raceControlNotice=null;
         this._raceControlPublicMode=false;
         this._renderBroadcastRecords(selected.trackId);
@@ -195,6 +188,60 @@ export class StatsScene extends MasteryStatsScene{
       arena.insertBefore(el,arena.firstChild);
     }
     el.textContent=String(message||'');
+  }
+
+  _raceControlPublicationCache(){
+    return this._raceControlPublicationChecks||(
+      this._raceControlPublicationChecks=createRaceControlPublicationChecks(getMyRaceControlRecord)
+    );
+  }
+
+  _syncRaceControlPublicationStatus(selected){
+    const button=this._root?.querySelector('[data-br-publish]');
+    if(!button||!(Number(selected?.bestLapMs)>1000))return;
+    const account=savedRaceControlIdentity();
+    if(!raceControlOnlineIsActive()||!account){
+      button.disabled=false;
+      button.textContent='COMPROBAR ONLINE';
+      button.title='Identifica tu cuenta antes de comprobar si este récord está publicado.';
+      return;
+    }
+    const track=selected.trackId,localMs=Number(selected.bestLapMs);
+    button.disabled=true;button.textContent='COMPROBANDO ONLINE…';
+    const cache=this._raceControlPublicationCache();
+    void cache.read(account,track).then(onlineMs=>{
+      if(!button.isConnected||this._raceControlRenderedTrack!==track||
+         savedRaceControlIdentity()!==account||button.dataset.brPublishing==='1')return;
+      const state=classifyRaceControlPublication(localMs,onlineMs);
+      const panel=this._root?.querySelector('.br-pb');
+      panel?.querySelector('[data-br-online-personal-best]')?.remove();
+      if(onlineMs!=null&&panel){
+        const label=document.createElement('small');
+        label.dataset.brOnlinePersonalBest='1';
+        label.textContent='ONLINE '+fmtLap(onlineMs);
+        label.style.cssText='display:block;color:#81cde2;letter-spacing:.05em;margin:3px 0;font-size:9px;';
+        panel.append(label);
+      }
+      if(state==='published'){
+        button.textContent=t('raceControl.published');
+        button.disabled=true;
+      }else if(state==='online-better'){
+        button.textContent='ONLINE MÁS RÁPIDO';
+        button.disabled=true;
+        button.title='El servidor conserva una marca mejor que la de este dispositivo.';
+      }else{
+        button.textContent=t('raceControl.publishPb',{time:fmtLap(localMs)});
+        button.disabled=false;
+        button.title='Esta marca local mejora la marca de esta cuenta o todavía no se ha publicado.';
+      }
+    }).catch(error=>{
+      if(!button.isConnected||this._raceControlRenderedTrack!==track||
+         savedRaceControlIdentity()!==account||button.dataset.brPublishing==='1')return;
+      console.warn('[race-control] own PB status unavailable',error);
+      button.textContent='COMPROBAR ESTADO';
+      button.disabled=false;
+      button.title='No se pudo verificar el récord personal online. Reintenta antes de publicar.';
+    });
   }
 
   async _publishRaceControlRecord(selected,button){
