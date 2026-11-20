@@ -52,7 +52,11 @@ assert.match(scene,/carId:this\._rc2LiveCar\|\|null/);
 assert.ok(scene.indexOf("if(action==='multiplayer')")<
   scene.indexOf("this._disposeRaceControlHub();\n        switch(action)"),
   'Leave hub interactive below dialog so closing LIVE returns to Race Control');
-assert.match(live,/export function openCrafRaceLiveLobby\(scene,\{carId=null,trackId=null\}=\{\}\)/);
+assert.match(live,/export function openCrafRaceLiveLobby\(scene,\{carId=null,trackId=null,classic=false\}=\{\}\)/,
+  'LIVE 4 must be the default in DEV while keeping the explicit LIVE 2 fallback');
+assert.match(live,/if\(devAllowed&&!classic\)/,'The LIVE 4 route must remain opt-in to browser DEV');
+assert.match(live,/onOpenClassic:\(\)=>openCrafRaceLiveLobby\(scene,\{carId,trackId,classic:true\}\)/,
+  'Classic LIVE 2 must remain reachable from LIVE 4');
 assert.match(live,/trackId:localTrackId/);
 assert.match(live,/carId:localCarId/);
 assert.match(live,/carId=localCarId\|\|room.car_id/);
