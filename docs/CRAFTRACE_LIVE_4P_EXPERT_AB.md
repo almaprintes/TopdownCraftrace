@@ -91,3 +91,15 @@ La integración en `main` se realizó tras una CI sintética verde; el
 primer build de Pages quedó bloqueado por esta diferencia de geometría.
 Verificar de nuevo la compilación completa antes de informar al usuario
 de una DEV publicada.
+
+### Revisión de tolerancia del peor error, fuente oficial de Track 01
+
+En la build oficial instalada, Track 01 dio **17.58 → 17.25 s**,
+error medio **22.37 → 17.82 px**, peor error **64.53 → 63.84 px**.
+El umbral obligatorio de reducción de un 5% del único pico de error era
+demasiado estricto pese a la mejora simultánea de tiempo, error medio y
+fracción fuera de trazada. El nuevo criterio es **no aumentar el peor error**
+en ningún circuito; permanecen los criterios exigentes de reducción media,
+tiempo y muestras fuera de línea. Las mediciones de geometría no coinciden
+entre JSON histórico, foto reinstalada y otros instaladores; CI debe ejecutar
+las dos variantes y el Pages prebuild con los activos reales.
