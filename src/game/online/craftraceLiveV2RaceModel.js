@@ -48,7 +48,7 @@ export class CrafRaceLive4RemoteModel{
     this.state=new Map();this.accepted=0;this.rejected=0;
     for(const item of this.roster)if(item.seat!==this.localSeat){
       this.state.set(item.seat,{
-        item,seq:0,lastAt:0,count:0,interpolator:new RemotePilotInterpolator({
+        item,seq:0,generation:null,lastAt:0,count:0,reconnects:0,interpolator:new RemotePilotInterpolator({
           delayMs,maxSamples:18,maxExtrapolateMs:90
         })
       });
@@ -63,16 +63,26 @@ export class CrafRaceLive4RemoteModel{
       !packet.payload||typeof packet.payload!=='object')
       return fail();
     const st=this.state.get(packet.seat);
-    if(!st||packet.seq<=st.seq||packet.generation!==1)return fail();
+    if(!st)return fail();
+    // First validate the claimed pilot/host. Membership alone is not
+    // sender attestation: these remain friendly, non-rewarded results.
     if(st.item.kind==='human'&&packet.from!==st.item.player_id)return fail();
     if(st.item.kind==='ai'&&packet.from!==this.hostId)return fail();
+    const newGeneration=st.generation!==packet.generation;
+    // A restarted device creates a fresh sender generation and resets seq/tick.
+    // Only accept a takeover after the prior feed has genuinely gone stale.
+    // This prevents delayed old packets from stealing an active feed.
+    if(newGeneration&&st.generation!==null&&now-st.lastAt<2500)return fail();
+    if(!newGeneration&&packet.seq<=st.seq)return fail();
     const pose=packet.payload;
     if(!numeric(pose.x,-100000,100000)||!numeric(pose.y,-100000,100000)||
       !numeric(pose.angle,-Math.PI*2,Math.PI*2)||
       !numeric(pose.speed,0,200000)||!integer(pose.tick,0,2147483647)||
       !integer(pose.lap,0,31))
       return fail();
-    if(!st.interpolator.push({...pose,generation:1,heat:1},now))return fail();
+    if(!st.interpolator.push({...pose,generation:packet.generation,heat:1},now))return fail();
+    if(newGeneration&&st.generation!==null)st.reconnects++;
+    st.generation=packet.generation;
     st.seq=packet.seq;st.lastAt=now;st.count++;this.accepted++;
     return true;
   }
@@ -92,6 +102,7 @@ export class CrafRaceLive4RemoteModel{
   }
   stats(){return {
     remoteCount:this.state.size,accepted:this.accepted,rejected:this.rejected,
-    samples:[...this.state.entries()].map(([seat,s])=>({seat,packets:s.count,samples:s.interpolator.samples.length}))
+    samples:[...this.state.entries()].map(([seat,s])=>({seat,packets:s.count,
+      reconnects:s.reconnects,samples:s.interpolator.samples.length}))
   };}
 }

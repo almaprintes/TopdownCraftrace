@@ -156,11 +156,14 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
   document.addEventListener('keydown',escape);
   scene?.events?.once?.('shutdown',dispose);
   const launch=(s)=>{
-    if(closed||launching||!race4Enabled||s?.state!=='countdown'||
+    if(closed||launching||!race4Enabled||
+       !['countdown','racing'].includes(s?.state)||
        !Array.isArray(s.locked_roster)||!Number.isFinite(s.start_at_ms))return;
     const seat=s.members?.find(m=>m.player_id===identity?.id)?.seat;
     if(!Number.isInteger(seat)||seat<0||seat>3)return;
-    if(s.start_at_ms<Date.now()-30000){say('La salida expiró. Crea una pista nueva.');return;}
+    // The server retains the same member seat for reconnection. The room TTL
+    // (enforced by snapshot/join RPC) is the real validity limit; a 30-second
+    // client guard would incorrectly strand pilots after a network drop.
     launching=true;
     stageLive4RaceSession(s,identity);
     dispose();
@@ -179,7 +182,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
     monitor=new CrafRaceLiveV2LobbyMonitor(result.id,{
       onSnapshot:(snapshot,grid)=>{
         update(snapshot,grid);
-        if(snapshot.state==='countdown')launch(snapshot);
+        if(snapshot.state==='countdown'||snapshot.state==='racing')launch(snapshot);
       },
       onError:e=>say('Comprobando conexión… '+e.message)
     });

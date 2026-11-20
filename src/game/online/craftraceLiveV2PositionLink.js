@@ -16,6 +16,11 @@ export class CrafRaceLive4PositionLink{
   this.status='OFFLINE';this.ready=false;this.closed=false;
   this.channel=null;this.client=null;this.sent=0;this.errors=0;
   this.seqBySeat=new Map();
+  // Fresh epoch per connection allows remote interpolators to recover after
+  // a page reload or reconnect, without accepting stale packet replays.
+  const entropy=new Uint32Array(1);
+  crypto.getRandomValues(entropy);
+  this.generation=1+(entropy[0]%1000000);
  }
  async connect(){
   if(this.closed)throw Error('Closed Live 4 position link');
@@ -55,7 +60,7 @@ export class CrafRaceLive4PositionLink{
   const seq=(this.seqBySeat.get(seat)||0)+1;
   this.seqBySeat.set(seat,seq);
   const packet={v:1,type:'position',roomId:this.roomId,from:this.localId,
-    seat,seq,generation:1,payload};
+    seat,seq,generation:this.generation,payload};
   try{
    const result=await this.channel.send({type:'broadcast',event:'position',payload:packet});
    if(result==='ok'){this.sent++;return true;}

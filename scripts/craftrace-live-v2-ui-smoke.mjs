@@ -24,6 +24,8 @@ assert.ok(next.includes("get('race4')==='1'"),'Race requires separate DEV-only f
 assert.ok(next.includes("scene.scene.start('race',"),'Experimental 4P race must launch');
 assert.ok(next.includes('startLiveV2Lobby(room.id)'),'Host must use protected server start');
 assert.ok(next.includes('stageLive4RaceSession(s,identity)'),'Handoff must retain authenticated server roster');
+assert.ok(next.includes("['countdown','racing'].includes(s?.state)"),'Race reconnection requires server-owned seat');
+assert.ok(!next.includes('Date.now()-30000'),'30-second rejoin trap removed');
 assert.ok(next.includes('sin monedas ni récords'),'Experimental results must remain unofficial');
 assert.ok(css.includes('safe-area-inset-top'));
 assert.ok(css.includes('@media(max-height:460px)'));

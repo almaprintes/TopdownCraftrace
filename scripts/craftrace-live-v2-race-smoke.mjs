@@ -35,8 +35,21 @@ assert.equal(model.accept({...packet,seq:3,payload:{...pose,tick:1}},1250),false
 assert.equal(model.accept({...packet,seat:3,from:b,seq:3},1300),false,'Guest cannot send bot');
 assert.equal(model.accept({...packet,seat:3,from:a,seq:1},1300),true,'Host owns bot');
 assert.equal(model.stats().accepted,3);
-assert.equal(model.positions(4000).find(x=>x.seat===1).disconnected,true);
-assert.equal(model.positions(1300).filter(x=>x.pose).length,2);
+// A live sender cannot arbitrarily switch session generation.
+assert.equal(model.accept({...packet,seq:3,generation:2,payload:{...pose,tick:3}},1400),
+ false,'Unexpected epoch switch rejected while old stream is active');
+// After silence (for example an app crash), the same authorized pilot may
+// reconnect with a new epoch and reset both packet sequence and sim tick.
+assert.equal(model.accept({...packet,seq:1,generation:2,payload:{...pose,tick:0,x:80}},
+ 4100),true,'Reconnection accepted after stale interval');
+assert.equal(model.accept({...packet,seq:1,generation:1,payload:{...pose,tick:25}},
+ 4200),false,'Delayed old epoch must not replace the new stream');
+assert.equal(model.accept({...packet,seq:2,generation:2,payload:{...pose,tick:1,x:90}},
+ 4250),true,'New epoch continues with increasing seq and tick');
+assert.equal(model.stats().samples.find(s=>s.seat===1).reconnects,1);
+assert.equal(model.stats().accepted,5);
+assert.equal(model.positions(7100).find(x=>x.seat===1).disconnected,true);
+assert.equal(model.positions(4300).filter(x=>x.pose).length,1, 'Stale bot hidden while reconnected human remains visible');
 const remoteView=new CrafRaceLive4RemoteModel({roomId:room,hostId:a,localId:b,roster});
 assert.equal(remoteView.state.size,3);
 assert.equal(remoteView.accept({...packet,seat:3,from:a},500),true);
