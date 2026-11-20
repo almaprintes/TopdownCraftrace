@@ -192,7 +192,9 @@ circuitos abiertos y rápidos, donde aumenta el error transversal.
 Adaptación en la instancia LIVE4 de nivel 3: usar el promedio de curvatura
 absoluta por muestra de la trazada calculada; interpolar el horizonte de
 mira entre la configuración anterior y una más anticipativa en el intervalo
-[0.050, 0.055] rad/muestra. Por debajo se conserva exactamente el ajuste
+[0.043, 0.048] rad/muestra, multiplicado por una transición de longitud
+de trazada derivada de las muestras [365,465]. Así se activa en el circuito
+urbano fotográfico de curvas sostenidas y se desactiva en trazados muy cortos. Por debajo se conserva exactamente el ajuste
 anterior. Sólo varía el punto perseguido por el controlador Experto; nivel 1,
 nivel 2, Survival, duelos, físicas y premios no cambian.
 
@@ -216,3 +218,8 @@ Sólo se publicará DEV tras los controles; la verificación real exige Santa
 Cruz/Gripline/3 vueltas/3 IA Experto, anotando tiempo por IA, FPS, y un vídeo
 en curvas. Objetivo final: que se acerquen al tiempo del jugador **sin
 aumentar prestaciones**. El resultado sigue siendo provisional.
+
+- El primer CI de esta optimización pasó sin mejoras reales sobre la pista
+fotográfica: curvatura media 0.0475, por debajo de su umbral inicial 0.050.
+La versión revisada exige explícitamente activar el ajuste y ganar tiempo en
+Santa Cruz fotográfica. Es un ensayo hasta superar esa verificación.
