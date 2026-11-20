@@ -248,13 +248,37 @@ export class StatsScene extends MasteryStatsScene{
     if(!selected?.trackId||!(Number(selected.bestLapMs)>1000)||!button||button.dataset.brPublishing==='1')return;
     const claimId=raceControlPublishClaimId(selected.trackId,selected.bestLapMs);
     let credit=verifiedRecordPublishClaims.get(claimId)||null;
-    if(credit?.published){button.textContent=t('raceControl.published');button.disabled=true;return;}
-    if(!window.confirm(isAdFreePromoActive()?'publicar tu mejor vuelta GRATIS en Race Control?':t('raceControl.publishRewardedConfirm')))return;
     button.dataset.brPublishing='1';
     button.disabled=true;
-    button.textContent=t('raceControl.publishing');
-    let submitted=false;
+    button.textContent='COMPROBANDO ONLINE…';
+    let submitted=false,preflightDone=false;
     try{
+      // A receipt from a previous session (or another account) must never
+      // mark a PB as published without an authenticated server comparison.
+      // Check BEFORE confirmation or any rewarded advertisement.
+      await ensureRaceControlPilotProfile();
+      const account=savedRaceControlIdentity();
+      const ownOnline=await getMyRaceControlRecord(selected.trackId);
+      if(account&&ownOnline)this._raceControlPublicationCache()
+        .remember(account,selected.trackId,Number(ownOnline.best_time_ms));
+      const publishState=classifyRaceControlPublication(selected.bestLapMs,ownOnline?.best_time_ms);
+      if(publishState==='published'||publishState==='online-better'){
+        this._showRaceControlNotice(publishState==='published'
+          ?'Tu mejor tiempo LOCAL '+fmtLap(selected.bestLapMs)+' ya está publicado en tu cuenta ONLINE. No se ha solicitado ningún anuncio.'
+          :'Tu mejor tiempo LOCAL '+fmtLap(selected.bestLapMs)+
+            ' no supera tu marca ONLINE '+fmtLap(ownOnline.best_time_ms)+
+            '. Se conserva el récord online. No se ha solicitado ningún anuncio.');
+        button.textContent=publishState==='published'?t('raceControl.published'):'ONLINE MÁS RÁPIDO';
+        button.disabled=true;
+        return;
+      }
+      preflightDone=true;
+      if(!window.confirm(isAdFreePromoActive()?'publicar tu mejor vuelta GRATIS en Race Control?':t('raceControl.publishRewardedConfirm'))){
+        button.textContent=t('raceControl.publishPb',{time:fmtLap(selected.bestLapMs)});
+        button.disabled=false;
+        return;
+      }
+      button.textContent=t('raceControl.publishing');
       // Never send an obsolete replay for the PB shown in Race Control.
       const exact=findExactLocalPbReplay(selected);
       const raw=exact?.ghost;
@@ -269,19 +293,8 @@ export class StatsScene extends MasteryStatsScene{
       }
       if(!replay&&!window.confirm('No hay repetición exacta de esta marca. ¿Quieres publicar SOLO EL TIEMPO? Figurará en el ranking sin REPLAY ni VS fantasma.'))
         throw new Error('Publicación cancelada. Tu marca sigue guardada y puedes volver a intentarlo.');
-      // An unresolved nickname must fail BEFORE requesting a rewarded ad.
-      await ensureRaceControlPilotProfile();
-      // Do not charge an ad when the server already owns a better or equal
-      // personal record, possibly from another device or an older geometry.
-      const ownOnline=await getMyRaceControlRecord(selected.trackId);
-      if(ownOnline&&Number(ownOnline.best_time_ms)<=Number(selected.bestLapMs)){
-        this._showRaceControlNotice('Tu mejor tiempo LOCAL '+fmtLap(selected.bestLapMs)+
-          ' no supera tu marca ONLINE '+fmtLap(ownOnline.best_time_ms)+
-          '. Se conserva el récord online. No se ha solicitado ningún anuncio.');
-        button.textContent='ONLINE MÁS RÁPIDO';
-        button.disabled=true;
-        return;
-      }
+      if(savedRaceControlIdentity()!==account)
+        throw new Error('La cuenta cambió durante la preparación de la publicación. No se ha solicitado ningún anuncio.');
       if(credit?.adVerified!==true&&!(credit?.promotionGranted===true&&isAdFreePromoActive())){
         const ad=await showRewardedAd(this,{
           title:t('raceControl.publishRewardedTitle'),
@@ -292,6 +305,8 @@ export class StatsScene extends MasteryStatsScene{
         credit={adVerified:verifiedReward(ad),promotionGranted:ad?.promotion===true,published:false};
         verifiedRecordPublishClaims.set(claimId,credit);
       }
+      if(savedRaceControlIdentity()!==account)
+        throw new Error('La cuenta cambió. No se ha enviado ningún récord a Supabase.');
       const out=replay
         ?await submitRaceControlRecordWithGhost({
           trackId:selected.trackId,bestTimeMs:selected.bestLapMs,
@@ -306,6 +321,7 @@ export class StatsScene extends MasteryStatsScene{
       if(!row||(replay?!row.record_ref:row.track_id!==selected.trackId))
         throw new Error('Supabase no confirmó la publicación. Puedes reintentar sin otro anuncio.');
       if(row.improved!==true){
+        if(account)this._raceControlPublicationCache().remember(account,selected.trackId,Number(row.best_time_ms));
         this._showRaceControlNotice('El servidor conservó tu récord online '+fmtLap(row.best_time_ms)+
           ': la nueva vuelta no lo ha mejorado. No se ha cambiado la clasificación.');
         button.textContent='ONLINE CONSERVADO';
@@ -313,6 +329,7 @@ export class StatsScene extends MasteryStatsScene{
         return;
       }
       submitted=true;
+      if(account)this._raceControlPublicationCache().remember(account,selected.trackId,Number(row.best_time_ms));
       verifiedRecordPublishClaims.set(claimId,{adVerified:credit?.adVerified===true,promotionGranted:credit?.promotionGranted===true,published:true});
       button.textContent=t('raceControl.published');
       if(!replay)this._showRaceControlNotice('Tiempo publicado sin replay: aparece en el ranking, sin desafío VS.');
@@ -331,8 +348,9 @@ export class StatsScene extends MasteryStatsScene{
       console.error('[race-control] rewarded publish failed',err);
       const message=explainPilotIdentityFailure(err);
       this._showRaceControlNotice(message);
-      button.textContent=(credit?.adVerified===true||credit?.promotionGranted===true)?
-        'REINTENTAR · GRATIS':t('raceControl.publishErrorRetry');
+      button.textContent=!preflightDone?'COMPROBAR ESTADO':
+        (credit?.adVerified===true||credit?.promotionGranted===true)?
+          'REINTENTAR · GRATIS':t('raceControl.publishErrorRetry');
       button.disabled=false;
     }finally{
       if(submitted)button.disabled=true;
