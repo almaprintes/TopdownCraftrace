@@ -87,3 +87,11 @@ body.tdr-director-active [data-tdr-race-ui="1"],
 body.tdr-director-active .tdr-race-hud{
  display:none!important;visibility:hidden!important;pointer-events:none!important;
 }
+
+/* Show the exact AI test configuration so results cannot be confused with level 2. */
+#cr-director .crdir-top [data-config]{font-size:9px;letter-spacing:.025em;
+ color:#f1d495;white-space:nowrap;max-width:32%;overflow:hidden;
+ text-overflow:ellipsis;display:block}
+#cr-director .crdir-results [data-session]{color:#ffe1ac;font-weight:850;
+ font-size:12px;text-align:center;max-width:95vw}
+@media(max-width:780px){#cr-director .crdir-top [data-config]{display:none}}

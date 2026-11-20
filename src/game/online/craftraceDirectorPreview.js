@@ -1,5 +1,6 @@
 // DEV-only local producer seat: four physical AI without creating an online room.
-import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
+import {CrafRaceLive4BotDirector,LIVE4_AI_LEVELS} from './craftraceLiveV2BotDirector.js';
+import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import {makeLive4StartingGrid} from './craftraceLiveV2GridGeometry.js';
 import {makeDirectorCameraState,stepDirectorCamera,directorZoom,directorStickVector,directorAltitudeStick,directorStartPhase} from './craftraceDirectorCamera.js';
 import {hideRaceUi,restoreRaceUi} from '../ui/raceUiVisibility.js';
@@ -11,6 +12,12 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    scene._crafRaceLiveV2RoomId||![1,3,5,10,20].includes(laps)||
    ![1,2,3].includes(difficulty))throw Error('Invalid local director preview');
  const hostId='local-director-preview';
+ const difficultyName=LIVE4_AI_LEVELS[difficulty].title.toUpperCase();
+ const circuitLabel=String(getTrackPublicName(scene.trackKey)||scene.trackKey||'CIRCUITO').toUpperCase();
+ const carLabel=String(scene.baseSpec?.name||scene.carId||'COCHE').replaceAll('_',' ').toUpperCase();
+ const setupLabel=circuitLabel+' · '+carLabel+' · '+laps+' VUELTAS · IA '+difficulty+' '+difficultyName;
+ // Keep the chosen configuration visible. The prior results did not say
+ // whether they were level 2 (default online) or the new level 3 Expert.
  const roster=Array.from({length:4},(_,seat)=>({
    kind:'ai',seat,owner_id:hostId,bot_id:'local-ai-'+(seat+1),difficulty
  }));
@@ -49,7 +56,8 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  root.setAttribute('aria-label','Realizador de CraftRace');
  root.innerHTML=`
  <div class="crdir-top">
-  <strong>REALIZADOR · 4 IA</strong><output data-state>SALIDA EN PREPARACIÓN</output>
+  <strong>REALIZADOR · 4 IA · NIVEL ${difficulty}</strong>
+  <small data-config></small><output data-state>SALIDA EN PREPARACIÓN</output>
   <button type="button" data-auto>AUTO · ACCIÓN</button>
   <button type="button" data-exit>SALIR</button>
  </div>
@@ -61,6 +69,7 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    <span data-height-knob></span></div><small>↑ ACERCAR · ↓ ALEJAR</small></div>
  <div class="crdir-results" data-results hidden>
   <h2>4 IA · RESULTADOS PROVISIONALES</h2>
+  <p data-session></p>
   <p>Prueba local. Vueltas estimadas por trayectoria, todavía no homologadas.</p>
   <ol data-order></ol><button type="button" data-finish>VOLVER AL MENÚ</button></div>`;
  document.body.append(root);
@@ -68,6 +77,8 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  for(const ev of ['pointerdown','pointermove','pointerup','pointercancel','click'])
    root.addEventListener(ev,e=>e.stopPropagation());
  const $=s=>root.querySelector(s);
+ $('[data-config]').textContent=circuitLabel+' · '+carLabel+' · '+difficultyName;
+ $('[data-session]').textContent=setupLabel+' · FÍSICA A';
  const keyboard=new Set;let stopped=false,shown=false,stickPointer=null;
  let heightPointer=null,lastInfo=0;
  let stickVector={x:0,y:0},altitudeAxis=0;

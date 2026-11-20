@@ -103,3 +103,25 @@ en ningún circuito; permanecen los criterios exigentes de reducción media,
 tiempo y muestras fuera de línea. Las mediciones de geometría no coinciden
 entre JSON histórico, foto reinstalada y otros instaladores; CI debe ejecutar
 las dos variantes y el Pages prebuild con los activos reales.
+
+## Realizador y comparación homogénea (20/11/2026)
+
+La captura del Realizador mostraba 1:29.511, 1:31.579, 1:32.562 y 1:32.562
+para tres vueltas, mientras LIVE 4 Experto había registrado 1:07.933–1:09.100.
+Esos tiempos NO justifican atribuir la diferencia a la trazada: el selector
+original del Realizador reutilizaba `data-ai`, cuya opción **predeterminada
+era 2 · Competitivo**, y los resultados no imprimían el nivel. No sabemos por
+la captura qué opción escogió el usuario. El vídeo de 17,6 segundos comienza
+cuando ya han finalizado 4/4, por lo que tampoco enseña curvas en carrera.
+
+La corrección conserva el nivel 2 predeterminado para crear partidas online,
+pero incorpora un selector **separado para el Realizador**, predeterminado en
+3 · Experto. En cabecera y resultados se muestra explícitamente el nivel,
+circuito y coche realmente cargados; física experimental B queda excluida del
+modo Realizador, igual que de online, para comparaciones justas. No se han
+cambiado los algoritmos ni la potencia de los coches.
+
+Prueba pendiente en iPhone: Realizador, Santa Cruz, Gripline, nivel 3 Experto,
+tres vueltas. Comparar los resultados provisionales con la parrilla 1H+3IA
+y grabar **durante la carrera**, no solo una vez terminada, para revisar las
+curvas. Se mantiene no homologado hasta verificar meta y checkpoints.

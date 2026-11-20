@@ -52,8 +52,16 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
             </select></label>
           </div>
           <button type="button" data-create class="cr4-primary">CREAR PISTA</button>
-          <button type="button" data-director class="cr4-secondary">REALIZADOR · 4 IA (PRUEBA)</button>
-          <p>Prueba local de dron, sin sala, cuenta, premios ni récords.</p>
+          <div class="cr4-director-entry">
+            <label>Dificultad IA del Realizador<select data-director-ai aria-label="Dificultad de las cuatro IA del Realizador">
+              <option value="1">1 · Principiante</option>
+              <option value="2">2 · Competitivo</option>
+              <option value="3" selected>3 · Experto</option>
+            </select></label>
+            <button type="button" data-director class="cr4-secondary">REALIZADOR · 4 IA</button>
+          </div>
+          <p>Realizador: EXPERTO por defecto. Nivel independiente de la pista online.
+          Prueba local sin premios ni récords.</p>
         </section>
         <section class="cr4-card">
           <h3>UNIRSE A UNA PISTA</h3>
@@ -108,7 +116,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   const say=msg=>{if(!closed)$('[data-status]').textContent=msg;};
   const setBusy=on=>{
     loading=on;
-    for(const b of root.querySelectorAll('[data-create],[data-join],[data-apply],[data-ready],[data-leave],[data-start]'))
+    for(const b of root.querySelectorAll('[data-create],[data-director],[data-join],[data-apply],[data-ready],[data-leave],[data-start]'))
       b.disabled=on;
     if(!on&&room?.state!=='waiting')$('[data-ready]').disabled=true;
   };
@@ -213,9 +221,10 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   $('[data-director]').addEventListener('click',()=>{
     if(closed||loading||!race4Enabled)return;
     const laps=Number($('[data-laps]').value);
-    const difficulty=Number($('[data-ai]').value);
+    const difficulty=Number($('[data-director-ai]').value);
     if(![1,3,5,10,20].includes(laps)||![1,2,3].includes(difficulty))return;
-    // No Supabase room or four-player admission: producer is off-grid.
+    // This separate selector defaults to Expert; online hosts keep level 2
+    // as their own existing default. No Supabase room/seat is created.
     dispose();
     scene.scene.start('race',{
       carId:car,trackKey:track,gameMode:'director',testMode:true,

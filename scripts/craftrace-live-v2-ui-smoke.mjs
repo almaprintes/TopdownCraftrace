@@ -40,6 +40,16 @@ assert.ok(css.includes('prefers-reduced-motion'));
 assert.ok(client.includes('liveIdentity()'));
 assert.ok(client.includes('this.heartbeatMs'));
 assert.ok(next.includes('data-director'),'Local director entry must be visible in DEV');
+assert.ok(next.includes('<option value="3" selected>3 · Experto</option>'),
+ 'Director must default to Expert');
+assert.ok(next.includes("const difficulty=Number($('[data-director-ai]').value)"),
+ 'Director must read an independent AI level, not the online level');
+assert.ok(next.includes('<option value="2" selected>2 · Competitivo</option>'),
+ 'Ordinary online lobbies keep their existing level 2 default');
+assert.ok(next.includes("fillWithAi:$('[data-fill]').checked,aiDifficulty:Number($('[data-ai]').value)"),
+ 'Original online difficulty choice must remain unchanged');
+assert.ok(css.includes('.cr4-director-entry'),
+ 'Director-specific difficulty should remain usable in landscape');
 assert.ok(next.includes("gameMode:'director'")&&next.includes('directorPreview:true'),
  'Producer mode must launch a separate local race');
 assert.ok(next.includes("if(closed||loading||!race4Enabled)return"),

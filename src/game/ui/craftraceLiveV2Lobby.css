@@ -100,3 +100,11 @@
 @media(max-height:460px){.cr4-result-panel{padding:10px}
  .cr4-result-list{grid-template-columns:repeat(2,minmax(0,1fr))}
  .cr4-result-list li{padding:7px}.cr4-result-panel h2{font-size:17px}}
+
+/* Separate local director difficulty. Never inherit online matchmaking level. */
+#cr-live4 .cr4-director-entry{display:flex;gap:8px;align-items:end;flex-wrap:wrap;
+ border-top:1px solid #5d8ca566;padding-top:8px}
+#cr-live4 .cr4-director-entry label{flex:1;min-width:120px}
+#cr-live4 .cr4-director-entry select{width:100%}
+#cr-live4 .cr4-director-entry button{flex:1;min-width:145px}
+@media(max-height:460px){#cr-live4 .cr4-director-entry{padding-top:5px;gap:6px}}

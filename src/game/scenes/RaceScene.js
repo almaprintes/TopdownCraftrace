@@ -527,7 +527,7 @@ init(data) {
     try{
       const selected=JSON.parse(localStorage.getItem('tdr2:settings')||'{}')?.controls?.physicsAB;
       const gameMode=data?.gameMode||localStorage.getItem('tdr2:gameMode')||'timeattack';
-      if(selected==='B'&& !['ghost','survival','duel','online'].includes(gameMode))
+      if(selected==='B'&& !['ghost','survival','duel','online','director'].includes(gameMode))
         this._physicsABMode='B';
     }catch{}
     this._physicsABPractice=this._physicsABMode==='B';

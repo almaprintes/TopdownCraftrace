@@ -55,6 +55,17 @@ assert.ok(scene.includes('(onlineGrid||this._crafRaceDirectorPreview)?0'),
 assert.ok(scene.includes('this._crafRaceDirectorPreview ? null'),
  'Director results must not write personal bests or history');
 const localProducer=file('src/game/online/craftraceDirectorPreview.js');
+assert.ok(scene.includes("'ghost','survival','duel','online','director'"),
+ 'Director must not inherit optional physics B, unlike online physics A');
+assert.ok(localProducer.includes("LIVE4_AI_LEVELS[difficulty].title.toUpperCase()"),
+ 'Producer must expose selected difficulty, not an anonymous AI label');
+assert.ok(localProducer.includes("getTrackPublicName(scene.trackKey)"),
+ 'Show actual circuit used in producer race');
+assert.ok(localProducer.includes('data-session')&&localProducer.includes('setupLabel'),
+ 'Producer result must identify car, track and difficulty');
+const lobbyForDirector=file('src/game/ui/craftraceLiveV2Lobby.js');
+assert.ok(lobbyForDirector.includes("const difficulty=Number($('[data-director-ai]').value)"),
+ 'Producer must not inherit online level 2 by default');
 assert.ok(localProducer.includes('const directorGreenAt=performance.now()+3000'),
  'A director race needs an independent 3-second countdown');
 assert.ok(localProducer.includes('directorStartPhase(now,directorGreenAt)')&&
