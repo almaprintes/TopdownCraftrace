@@ -8,6 +8,16 @@ import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import './craftraceLiveLobby.css';
 
 export function openCrafRaceLiveLobby(scene,{carId=null,trackId=null}={}){
+ // Explicit DEV-only entry into the isolated 2–4 lobby test.
+ // Default and native/public online continue to use the proven two-player code.
+ const path=window.location.pathname;
+ const devAllowed=path.includes('/dev/')||['localhost','127.0.0.1'].includes(window.location.hostname);
+ if(devAllowed&&new URLSearchParams(window.location.search).get('live4')==='1'){
+  void import('./craftraceLiveV2Lobby.js').then(({openCrafRaceLiveV2Lobby})=>{
+   openCrafRaceLiveV2Lobby(scene,{carId,trackId});
+  }).catch(e=>console.error('[CrafRace LIVE 4] Failed to load DEV lobby',e));
+  return;
+ }
  if(document.getElementById('cr-live-lab'))return;
  // Keep the car and exact NORMAL/INVERSO circuit selected before entering Race Control.
  const localCarId=String(carId||scene?.selectedCarId||localStorage.getItem('tdr2:carId')||'avenir_gripline');
