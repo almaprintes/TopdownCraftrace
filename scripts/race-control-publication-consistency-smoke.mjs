@@ -55,7 +55,7 @@ for(const source of [stats,report]){
   assert.match(source,/No se ha/);
 }
 assert.match(stats,/PERSONAL BEST · LOCAL/);
-assert.match(stats,/ONLINE '\+fmtLap\(onlineMine.best_time_ms\)/);
+assert.match(stats,/label\.textContent='ONLINE '\+fmtLap\(onlineMs\)/,\n  'Only the authenticated own-best response may label a published online PB');
 assert.match(video,/ghostReplayCompatibility\(ghost,row.track_id,TRACK_REGISTRY\[row.track_id\]\)/,
   'Before replay an existing online ghost, reject obsolete track coordinates');
 console.log('PASS: 21.084 -> 12.749 local, 9.054 online, stale index, no-op submissions, no preflight ads, ghost geometry gate');
