@@ -7,8 +7,11 @@ import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import './craftraceLiveLobby.css';
 
-export function openCrafRaceLiveLobby(scene){
+export function openCrafRaceLiveLobby(scene,{carId=null,trackId=null}={}){
  if(document.getElementById('cr-live-lab'))return;
+ // Keep the car and exact NORMAL/INVERSO circuit selected before entering Race Control.
+ const localCarId=String(carId||scene?.selectedCarId||localStorage.getItem('tdr2:carId')||'avenir_gripline');
+ const localTrackId=String(trackId||selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage));
  const root=document.createElement('div');root.id='cr-live-lab';root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');
  root.innerHTML='<section class="cr-live-panel">'+
  '<header class="cr-live-head"><div class="cr-live-mark" aria-hidden="true">TDR</div><div class="cr-live-heading"><small>TOP DOWN RACE · MULTIJUGADOR</small><h2>CRAFT RACE <em>LIVE</em></h2><p class="cr-live-subtitle">DOS PILOTOS · UNA PISTA · EN DIRECTO</p></div><span class="cr-live-session-tag">ONLINE · DEV</span><button data-close type="button" aria-label="Cerrar multijugador">✕</button></header>'+
@@ -21,7 +24,7 @@ export function openCrafRaceLiveLobby(scene){
  '<footer class="cr-live-footer"><span>CRAFT RACE STUDIO · ONLINE</span><span>DEV · SIN PREMIOS NI RÁNKING OFICIAL</span></footer></section>';
  document.body.append(root);const $=s=>root.querySelector(s);
  const brandImage=document.createElement('img');brandImage.src=(import.meta.env.BASE_URL||'/')+'assets/logo.webp';brandImage.alt='';brandImage.draggable=false;root.querySelector('.cr-live-mark')?.replaceChildren(brandImage);
- $('[data-selected-track]').textContent=getTrackPublicName(selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage));
+ $('[data-selected-track]').textContent=getTrackPublicName(localTrackId);
  let transport=null,room=null,busy=false,closed=false,lastChat=0,readySent=false,rivalReady=false,localId=null,launching=false;
  const say=s=>{if(!closed)$('[data-status]').textContent=String(s);};
  const log=s=>{const p=document.createElement('p');p.textContent=s;$('[data-messages]').append(p);while($('[data-messages]').children.length>10)$('[data-messages]').firstChild.remove();};
@@ -40,7 +43,7 @@ export function openCrafRaceLiveLobby(scene){
  const launch=()=>{
   if(closed||launching||!room||!readySent)return;
   launching=true;
-  const liveRoomId=room.id,carId=scene?.selectedCarId||room.car_id,trackKey=room.track_id;
+  const liveRoomId=room.id,carId=localCarId||room.car_id,trackKey=room.track_id;
   handoffLiveSession(room,transport,{id:localId});transport=null;dispose();
   scene.scene.start('race',{carId,trackKey,liveRoomId,liveStartAt:null,liveGridSlot:localId===room.host_id?0:1,gameMode:'online',testMode:false});
  };
@@ -57,7 +60,7 @@ export function openCrafRaceLiveLobby(scene){
    $('[data-actions]').hidden=true;$('[data-settings]').hidden=true;$('[data-room]').hidden=false;
    $('[data-roomcode]').textContent='CÓDIGO · '+room.code;
    const identity=await liveIdentity();if(closed)return;
-   localId=identity.id;room.ownPilot=localLivePilot(scene?.selectedCarId||room.car_id);room.rivalPilot=null;
+   localId=identity.id;room.ownPilot=localLivePilot(localCarId||room.car_id);room.rivalPilot=null;
    transport=new CrafRaceLiveTransport(room.id,{
     onState:d=>{
      if(closed)return;
@@ -90,8 +93,8 @@ export function openCrafRaceLiveLobby(scene){
   }finally{busy=false;if(!closed)$('[data-create]').disabled=$('[data-join]').disabled=false;}
  }
  $('[data-create]').addEventListener('click',()=>void connect(()=>createLiveRoom({
-  trackId:selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage),
-  carId:scene?.selectedCarId||'avenir_gripline',
+  trackId:localTrackId,
+  carId:localCarId,
   laps:Number($('[data-laps]').value)||3,physicsVersion:1,direction:'forward'
  })));
  $('[data-copy]').addEventListener('click',async()=>{

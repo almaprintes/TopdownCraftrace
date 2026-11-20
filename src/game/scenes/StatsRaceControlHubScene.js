@@ -13,6 +13,9 @@ export class StatsScene extends PreviousStatsScene {
     // Preserve the selected track for when the player chooses Clasificaciones.
     const onlineEntry=data?.onlineFromLobby===true && data?.statsView!=='overview';
     this._rc2PreferredTrack=onlineEntry?String(data?.raceControlTrackId||''):null;
+    // Preserve the exact NORMAL/INVERSO circuit and selected car across scenes.
+    this._rc2LiveTrack=onlineEntry?String(data?.liveTrackId||this._rc2PreferredTrack||''):null;
+    this._rc2LiveCar=onlineEntry?String(data?.liveCarId||''):null;
     super.create(onlineEntry?{...data,raceControlTrackId:'',statsView:'overview'}:data);
     this.events.once('shutdown', () => this._disposeRaceControlHub());
     this.events.once('destroy', () => this._disposeRaceControlHub());
@@ -47,6 +50,25 @@ export class StatsScene extends PreviousStatsScene {
       language:getLanguage(),
       onExit:()=>this._onlineFromLobby?this.scene.start('menu'):this._renderCars(),
       onAction:action=>{
+        if(action==='multiplayer'){
+          // Keep the hub mounted beneath the dialog. Closing LIVE must return
+          // to a fully working Race Control panel, not an inert preview.
+          if(this._rc2LiveOpening)return;
+          this._rc2LiveOpening=true;
+          void import('../ui/craftraceLiveLobby.js').then(({openCrafRaceLiveLobby})=>{
+            if(!this.scene?.isActive?.()||!this._root?.isConnected||
+               !this._root.querySelector('.tdr-rc2'))return;
+            openCrafRaceLiveLobby(this,{
+              trackId:this._rc2LiveTrack||this._rc2PreferredTrack||null,
+              carId:this._rc2LiveCar||null
+            });
+          }).catch(error=>{
+            console.error('[Race Control] Could not open CraftRace Live',error);
+            const note=this._root?.querySelector('.rc2-footer-note');
+            if(note)note.textContent='NO SE PUDO ABRIR MULTIJUGADOR. VUELVE A INTENTARLO.';
+          }).finally(()=>{this._rc2LiveOpening=false;});
+          return;
+        }
         this._disposeRaceControlHub();
         switch(action){
           case 'rankings':

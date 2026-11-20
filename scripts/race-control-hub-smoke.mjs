@@ -34,4 +34,27 @@ for(const file of [
 assert.match(css,/\.rc2-board\s*\{[^}]*grid-template-columns:/s,'Hub must retain asymmetric columns');
 assert.match(css,/env\(safe-area-inset-/,'Hub must respect screen cutouts');
 assert.match(css,/prefers-reduced-motion/,'Hub must respect reduced motion');
+// LIVE multiplayer has one clear entry: the playable Race Control panel.
+const lobby=read('src/game/ui/LobbyDomUi.js');
+const lobbyCss=read('src/game/ui/lobby-dom.css');
+const live=read('src/game/ui/craftraceLiveLobby.js');
+assert.doesNotMatch(lobby,/tdr-lobby-live-entry|LIVE LAB|openCrafRaceLiveLobby/,'Duplicate lobby header button removed');
+assert.doesNotMatch(lobbyCss,/tdr-lobby-live-entry/,'Remove unused lobby header CSS');
+assert.match(lobby,/liveCarId:scene.selectedCarId/,'Selected car carried into hub');
+assert.match(lobby,/liveTrackId:selectedCircuitRaceId/,'Exact normal or inverse variant carried into hub');
+assert.doesNotMatch(hub,/disabled:true,action:'multiplayer'/,'Enable the existing multiplayer panel');
+assert.match(hub,/rc2-status--live/,'Show working DEV status');
+assert.match(scene,/if\(action==='multiplayer'\)/,'Route live from Race Control');
+assert.match(scene,/import\('\.\.\/ui\/craftraceLiveLobby\.js'\)/,'Reuse LIVE dialog');
+assert.match(scene,/openCrafRaceLiveLobby\(this,\{/,'Open LIVE with hub scene');
+assert.match(scene,/trackId:this\._rc2LiveTrack\|\|this\._rc2PreferredTrack\|\|null/);
+assert.match(scene,/carId:this\._rc2LiveCar\|\|null/);
+assert.ok(scene.indexOf("if(action==='multiplayer')")<
+  scene.indexOf("this._disposeRaceControlHub();\n        switch(action)"),
+  'Leave hub interactive below dialog so closing LIVE returns to Race Control');
+assert.match(live,/export function openCrafRaceLiveLobby\(scene,\{carId=null,trackId=null\}=\{\}\)/);
+assert.match(live,/trackId:localTrackId/);
+assert.match(live,/carId:localCarId/);
+assert.match(live,/carId=localCarId\|\|room.car_id/);
+
 console.log('OK RACE CONTROL 2.0 static routing/assets smoke (not device E2E).');

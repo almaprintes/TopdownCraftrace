@@ -187,7 +187,9 @@ function makeOnlineRecordsShortcut(scene){
   button.innerHTML=`<svg class="tdr-lobby-records-emblem" viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h14v9c0 6-3.2 9-7 9s-7-3-7-9V4z"/><path d="M9 7H5v4c0 5 3 7 7 7M23 7h4v4c0 5-3 7-7 7M16 22v5m-6 2h12m-10-2h8"/><path d="m16 8 1.4 2.8 3.1.5-2.3 2.2.6 3.1-2.8-1.5-2.8 1.5.6-3.1-2.3-2.2 3.1-.5L16 8z" stroke-width="1.4"/></svg><span>${tr('lobby.onlineRecords')}</span>`;
   button.addEventListener('click',()=>scene.scene.start('StatsScene',{
     raceControlTrackId:selectedCircuitRaceId(scene.selectedTrackKey||'track01',localStorage),
-    onlineFromLobby:true
+    onlineFromLobby:true,
+    liveCarId:scene.selectedCarId||'avenir_gripline',
+    liveTrackId:selectedCircuitRaceId(scene.selectedTrackKey||'track01',localStorage)
   }));
   return button;
 }
@@ -231,16 +233,6 @@ export function installLobbyDom(scene) {
       makeButton({cls:'tdr-lobby-button--gold',icon:'icon_tracks.webp',label:tr('lobby.tracks'),action:()=>scene.scene.start('TrackGarageScene',{mode:'player'})}),
       makeOnlineRecordsShortcut(scene)
     );
-    if(!IS_PROD_BUILD){
-      const liveLab=document.createElement('button');liveLab.type='button';liveLab.className='tdr-lobby-button tdr-lobby-button--records';
-      liveLab.textContent='🏁 LIVE LAB';liveLab.title='Pruebas de conexión entre pilotos';
-      liveLab.addEventListener('click',async()=>{try{const {openCrafRaceLiveLobby}=await import('./craftraceLiveLobby.js');openCrafRaceLiveLobby(scene);}catch(err){console.error('[CrafRace LIVE]',err);}});
-      // Keep the five-slot player footer unchanged: LIVE is a separate, visible header action.
-      liveLab.className='tdr-lobby-live-entry';
-      liveLab.textContent='🏁 MULTIJUGADOR';
-      liveLab.setAttribute('aria-label','Multijugador en directo (pruebas DEV)');
-      root.querySelector('.tdr-lobby-right')?.append(liveLab);
-    }
     if(!IS_PROD_BUILD){const brand=root.querySelector('.tdr-lobby-brand'); let adminTimer=0; const cancelAdmin=()=>{if(adminTimer)window.clearTimeout(adminTimer);adminTimer=0;}; brand.addEventListener('contextmenu',event=>event.preventDefault()); brand.addEventListener('dragstart',event=>event.preventDefault()); brand.addEventListener('pointerdown',event=>{event.preventDefault();cancelAdmin();adminTimer=window.setTimeout(()=>{const enabled=localStorage.getItem('tdr2:admin')==='1'?'0':'1';localStorage.setItem('tdr2:admin',enabled);if(enabled==='1')scene.scene.start('admin-hub');},700);}); ['pointerup','pointercancel','pointerleave'].forEach(name=>brand.addEventListener(name,cancelAdmin));}
     // One shared Studio avatar for both games, loaded once when opening the lobby.
     const avatarButton=root.querySelector('[data-lobby-avatar]');

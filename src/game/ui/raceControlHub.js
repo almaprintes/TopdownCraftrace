@@ -15,7 +15,7 @@ const labels = {
     seasons:'TEMPORADAS',seasonsSub:'PROGRESO Y RECOMPENSAS',
     soon:'PRÓXIMAMENTE', inDev:'EN DESARROLLO',
     build:'VISTA PREVIA · DEV', exit:'VOLVER AL LOBBY',
-    about:'EL MULTIJUGADOR ESTÁ EN PREPARACIÓN. LAS CLASIFICACIONES Y LOS FANTASMAS YA FUNCIONAN.',
+    about:'MULTIJUGADOR EN DIRECTO DISPONIBLE EN DEV · PISTAS PRIVADAS CON CÓDIGO.',
     back:'ATRÁS'
   },
   en:{
@@ -30,7 +30,7 @@ const labels = {
     seasons:'SEASONS',seasonsSub:'PROGRESS AND REWARDS',
     soon:'COMING SOON', inDev:'IN DEVELOPMENT',
     build:'PREVIEW · DEV', exit:'BACK TO LOBBY',
-    about:'MULTIPLAYER IS IN DEVELOPMENT. LEADERBOARDS AND GHOSTS ARE AVAILABLE NOW.',
+    about:'LIVE MULTIPLAYER AVAILABLE IN DEV · PRIVATE CODE-BASED RACES.',
     back:'BACK'
   }
 };
@@ -72,8 +72,8 @@ export function mountRaceControlHub(root,{onAction,onExit,language='es'}={}) {
     </header>
     <main class="rc2-board">
       <div class="rc2-col rc2-col-left">
-        ${panel({type:'multiplayer',photo:world,title:l.multiplayer,sub:l.multiplayerSub,disabled:true,action:'multiplayer',
-          body:`<div class="rc2-multi-cars" aria-hidden="true"><img src="${car1}" alt=""><img src="${car2}" alt=""><img src="${car3}" alt=""><img src="${car4}" alt=""></div><span class="rc2-status">${l.inDev}</span>`})}
+        ${panel({type:'multiplayer',photo:world,title:l.multiplayer,sub:l.multiplayerSub,action:'multiplayer',
+          body:`<div class="rc2-multi-cars" aria-hidden="true"><img src="${car1}" alt=""><img src="${car2}" alt=""><img src="${car3}" alt=""><img src="${car4}" alt=""></div><span class="rc2-status rc2-status--live">${language==='en'?'PLAY LIVE · DEV':'ENTRAR EN DIRECTO · DEV'}</span>`})}
         ${panel({type:'rankings',photo:canarias,title:l.rankings,sub:l.rankingsSub,action:'rankings'})}
       </div>
       <div class="rc2-col rc2-col-mid">

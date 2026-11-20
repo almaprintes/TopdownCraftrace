@@ -75,3 +75,7 @@
 @media(max-height:480px){.rc2-head{flex-basis:clamp(56px,17.5vh,85px)}.rc2-heading{padding:6px 8px;gap:6px}.rc2-heading p{margin-top:2px}.rc2-symbol{width:30px;height:30px;flex-basis:30px}.rc2-symbol:after{font-size:18px}.rc2-rival-actions{gap:3px}.rc2-rival-actions button{min-height:25px;padding:3px 9px}.rc2-status{bottom:3px}.rc2-board{padding-top:5px;padding-bottom:5px}.rc2-footer{flex-basis:27px}.rc2-side-car{height:108%}}
 @media(max-width:700px){.rc2-head{grid-template-columns:22% 1fr 16%;gap:3px}.rc2-headline h1{font-size:clamp(20px,6vw,45px)}.rc2-headline p{font-size:7px;letter-spacing:.16em}.rc2-test-label{font-size:7px}.rc2-back{min-height:28px;padding:4px 6px;font-size:9px}.rc2-board{gap:4px;padding-left:6px;padding-right:6px}.rc2-col{gap:4px}.rc2-heading h2{font-size:clamp(11px,2.25vw,20px)}.rc2-heading p{font-size:6px;letter-spacing:0}.rc2-col-mid .rc2-heading h2,.rc2-col-right .rc2-heading h2{font-size:clamp(10px,1.9vw,17px)}.rc2-symbol{height:24px;width:24px;flex-basis:24px}.rc2-symbol:after{font-size:15px}.rc2-footer-note{display:none}.rc2-rival-actions button{font-size:clamp(12px,2.0vw,20px)}}
 @media(prefers-reduced-motion:reduce){.tdr-rc2 *{transition:none!important;animation:none!important}}
+
+/* LIVE is a real playable DEV destination; its label never blocks the panel hit area. */
+.rc2-multiplayer .rc2-status--live{background:linear-gradient(110deg,#20bee5,#69eaff);color:#002333;border:1px solid #90f8ff;pointer-events:none;box-shadow:0 0 14px #1fd1ee55}
+.rc2-multiplayer:focus-within{outline:2px solid #ffce58;outline-offset:-4px}
