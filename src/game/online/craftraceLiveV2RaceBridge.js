@@ -6,7 +6,7 @@ import {consumeLive4RaceSession} from './craftraceLiveV2RaceSession.js';
 import {CrafRaceLive4RemoteModel} from './craftraceLiveV2RaceModel.js';
 import {CrafRaceLive4PositionLink} from './craftraceLiveV2PositionLink.js';
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
-import {CrafRaceLiveV2LobbyMonitor,finishLiveV2Lobby} from './craftraceLiveV2LobbyClient.js';
+import {CrafRaceLiveV2LobbyMonitor,finishLiveV2Lobby,acknowledgeLiveV2GridLoaded} from './craftraceLiveV2LobbyClient.js';
 
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
 const fmt=ms=>{
@@ -28,6 +28,18 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  const sprite=scene.carRig.list.find(item=>item?.texture?.key);
  if(!sprite)throw Error('LIVE 4 car sprite unavailable');
  let stopped=false,linkReady=false,startAt=Number(room.start_at_ms)||0;
+ let gridAckPending=false,gridAckDone=false,lastGridAckAt=-5000;
+ const ackGrid=now=>{
+   if(stopped||!linkReady||aiError||gridAckPending||gridAckDone||now-lastGridAckAt<4000)return;
+   gridAckPending=true;lastGridAckAt=now;
+   void acknowledgeLiveV2GridLoaded(roomId).then(snapshot=>{
+     if(stopped)return;
+     gridAckDone=true;
+     if(Number.isFinite(snapshot?.start_at_ms))startAt=snapshot.start_at_ms;
+     if(Number.isFinite(snapshot?.clientClockOffsetMs))clockOffset=snapshot.clientClockOffsetMs;
+   }).catch(err=>{if(!stopped)console.warn('[LIVE 4] Grid acknowledgement:',err.message);})
+   .finally(()=>{gridAckPending=false;});
+ };
  let clockOffset=Number(room.clientClockOffsetMs)||0;
  let localStartPerf=null,lastLocalSend=0,localPending=false;
  let completed=0,lapTimes=[],localFinish=null,localFinishPosted=false;
@@ -180,10 +192,12 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    // Server had already verified readiness before locking the roster.
    // The client still blocks GO until an authenticated private channel joins.
    if(scene._startState==='COUNTDOWN'){
+     ackGrid(now);
      scene._crafRaceLiveStartAt=startAt||null;
-     if(!linkReady||aiError){
+     if(!linkReady||aiError||!startAt){
        if(scene._startStatus)scene._startStatus.setText(aiError?
-         'ERROR IA FÍSICA · SALIDA BLOQUEADA':'CONECTANDO PILOTOS · LIVE 4');
+         'ERROR IA FÍSICA · SALIDA BLOQUEADA':!linkReady?
+         'CONECTANDO PILOTOS · LIVE 4':'ESPERANDO CARGA DE LOS PILOTOS · LIVE 4');
      }
    }
    if(scene._raceStarted&&localStartPerf===null)localStartPerf=now;

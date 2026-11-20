@@ -3682,7 +3682,7 @@ this._prevThrottleDown = throttleDown;
 //-------------------//
     // START LIGHTS: arrancar automáticamente 1 vez
 if(this._crafRaceLiveOnlineIntent&&this._startState==='COUNTDOWN'&&!this._crafRaceLiveStartAt){
- if(this._startStatus)this._startStatus.setText(this._crafRaceLiveReadyRequested?'ESPERANDO AL OTRO JUGADOR':'ESPERANDO TU CONFIRMACIÓN');
+ if(this._startStatus)this._startStatus.setText(this._crafRaceLiveV2RoomId?'ESPERANDO CARGA DE PILOTOS · LIVE 4':(this._crafRaceLiveReadyRequested?'ESPERANDO AL OTRO JUGADOR':'ESPERANDO TU CONFIRMACIÓN'));
 }
 if(this._crafRaceLiveOnlineIntent&&this._crafRaceLiveStartAt&&this._crafRaceLiveReadyRequested&&this._crafRaceLiveBridge?.ownReady&&this._crafRaceLiveBridge?.otherReady&&this._startState==='COUNTDOWN'){
   const left=Math.max(0,this._crafRaceLiveStartAt-(Date.now()+(this._crafRaceLiveBridge?.serverOffsetMs||0)));

@@ -206,8 +206,8 @@ export class RaceScene extends CurrentRaceScene {
 
   update(time,delta){
     super.update?.(time,delta);
-    // A/B physics practice must not advance clean-lap seasons or awards.
-    if(this._physicsABPractice){
+    // A/B and LIVE 4 DEV must not advance clean-lap missions or awards.
+    if(this._physicsABPractice||this._crafRaceLiveV2RoomId){
       this._retireLegacyDeltaHud();
       this._closeLiveHudForSessionEnd();
       return;

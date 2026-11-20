@@ -67,6 +67,9 @@ export async function setReadyLiveV2Lobby(roomId,ready){
 export async function startLiveV2Lobby(roomId){
   return rpc('start',{p_room:verifyId(roomId)});
 }
+export async function acknowledgeLiveV2GridLoaded(roomId){
+  return rpc('grid_loaded',{p_room:verifyId(roomId)});
+}
 export async function leaveLiveV2Lobby(roomId){
   return rpc('leave',{p_room:verifyId(roomId)});
 }

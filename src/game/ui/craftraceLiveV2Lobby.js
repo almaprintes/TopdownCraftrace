@@ -158,7 +158,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
   const launch=(s)=>{
     if(closed||launching||!race4Enabled||
        !['countdown','racing'].includes(s?.state)||
-       !Array.isArray(s.locked_roster)||!Number.isFinite(s.start_at_ms))return;
+       !Array.isArray(s.locked_roster))return;
     const seat=s.members?.find(m=>m.player_id===identity?.id)?.seat;
     if(!Number.isInteger(seat)||seat<0||seat>3)return;
     // The server retains the same member seat for reconnection. The room TTL
@@ -169,7 +169,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null}={}){
     dispose();
     scene.scene.start('race',{
       carId:car,trackKey:s.track_id,gameMode:'online',liveV2RoomId:s.id,
-      liveStartAt:s.start_at_ms,liveGridSlot:seat,testMode:false
+      liveStartAt:Number.isFinite(s.start_at_ms)?s.start_at_ms:null,liveGridSlot:seat,testMode:false
     });
   };
   const enter=async result=>{
