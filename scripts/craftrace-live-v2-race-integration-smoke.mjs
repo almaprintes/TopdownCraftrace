@@ -62,14 +62,19 @@ assert.ok(localProducer.includes('directorStartPhase(now,directorGreenAt)')&&
  localProducer.includes('scene._raceStarted=true'),
  'Director must start its four AI without ignition or iOS track-ready gate');
 assert.ok(localProducer.includes('directorStickVector(e.clientX,e.clientY'),
- 'Stick must track the finger on both axes');
-assert.ok(localProducer.includes('stickX:stickVector.x,stickY:stickVector.y'),
- 'Camera must steer toward both X and Y input, not just rotate sideways');
+ 'Left stick must track the finger on both axes');
+assert.ok(localProducer.includes('directorAltitudeStick(e.clientY'),
+ 'Right vertical stick must independently control height');
+assert.ok(localProducer.includes('stickX:x,stickY:y,altitudeAxis:height'),
+ 'Camera must take two analog directions and independent zoom');
 
-for(const needle of ['CrafRaceLive4BotDirector','preview:true','data-gas',
- 'data-brake','data-stick','data-alt-up','data-alt-down','data-auto',
+for(const needle of ['CrafRaceLive4BotDirector','preview:true','data-stick',
+ 'data-height-stick','data-height-knob','data-auto',
  'scene.events.on(\'postupdate\'','scene.cameras.main'])
  assert.ok(localProducer.includes(needle),'Missing director control '+needle);
+for(const forbidden of ['data-gas','data-brake','data-alt-up','data-alt-down'])
+ assert.ok(!localProducer.includes(forbidden),'No legacy driving button allowed: '+forbidden);
+assert.ok(!localProducer.includes('const held='),'Only two independent analog levers');
 assert.ok(!localProducer.includes('finishLiveV2Lobby('),
  'Local preview must never write unofficial results to Supabase');
 assert.ok(localProducer.includes('hideRaceUi(scene)')&&

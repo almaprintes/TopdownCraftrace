@@ -5,7 +5,7 @@ import {makeLive4StartingGrid} from '../src/game/online/craftraceLiveV2GridGeome
 import {CrafRaceLive4BotDirector,LIVE4_AI_LEVELS} from '../src/game/online/craftraceLiveV2BotDirector.js';
 import {syncLive4CarVisual} from '../src/game/online/craftraceLiveV2CarVisual.js';
 import {makeDirectorCameraState,chooseDirectorAction,stepDirectorCamera,directorZoom,
- directorStickVector,directorStartPhase}
+ directorStickVector,directorAltitudeStick,directorStartPhase}
  from '../src/game/online/craftraceDirectorCamera.js';
 const a='550e8400-e29b-41d4-a716-446655440000';
 const b='550e8400-e29b-41d4-a716-446655440001';
@@ -159,42 +159,63 @@ const link=fs.readFileSync(new URL('../src/game/online/craftraceLiveV2PositionLi
 assert.ok(link.includes("private:true")&&link.includes("craftrace-live4:"));
 assert.ok(link.includes("identity.id!==this.localId"));
 
-let drone=makeDirectorCameraState({x:10,y:20,heading:0});
-assert.equal(drone.speed,0,'Drone starts still');
-drone=stepDirectorCamera(drone,{gas:1},.05);
-assert.ok(drone.x>10&&drone.speed>0,'Acceleration advances the drone');
-const manualSpeed=drone.speed;
-drone=stepDirectorCamera(drone,{brake:1,steer:1,rise:1},.05);
-assert.ok(drone.speed<manualSpeed&&drone.heading>0,'Brake and steering are independent');
-assert.ok(directorZoom(drone.altitude)<directorZoom(.52),'Higher drone means wider view');
+// Producer flight: two (and only two) analog levers. Speed is LEFT radius,
+// not a gas/brake button. The RIGHT lever only changes altitude/zoom.
+const rect={left:100,top:200,width:100,height:100};
+const topStick=directorStickVector(150,201,rect);
+assert.equal(topStick.x,0,'Up is pure Y, no inadvertent horizontal movement');
+assert.ok(topStick.y<-.95&&topStick.offsetY<0,'Thumb and movement track finger');
+const halfStick=directorStickVector(150,237,rect);
+assert.ok(halfStick.magnitude>.35&&halfStick.magnitude<.7,
+ 'Stick near center gives proportional speed');
+const eastStick=directorStickVector(290,250,rect);
+assert.ok(eastStick.x>.95&&eastStick.y===0,'Horizontal movement');
+assert.ok(Math.hypot(eastStick.offsetX,eastStick.offsetY)<=26.01,'Thumb stays inside the track');
+const diagonalStick=directorStickVector(260,150,rect);
+assert.ok(diagonalStick.x>0&&diagonalStick.y<0,'Both XY directions work');
+const heightRect={left:400,top:200,width:76,height:150};
+const high=directorAltitudeStick(200,heightRect);
+const low=directorAltitudeStick(350,heightRect);
+const neutral=directorAltitudeStick(275,heightRect);
+assert.equal(high.axis,-1,'Right lever up raises camera');
+assert.equal(low.axis,1,'Right lever down lowers camera');
+assert.equal(neutral.axis,0,'Right lever returns to neutral');
+assert.equal(directorAltitudeStick(160,heightRect).offsetY,-51,
+ 'Right lever is constrained to its vertical track');
+assert.deepEqual(directorStartPhase(1000,4000),{started:false,seconds:3});
+assert.deepEqual(directorStartPhase(3000,4000),{started:false,seconds:1});
+assert.deepEqual(directorStartPhase(4000,4000),{started:true,seconds:0});
+const startState=()=>makeDirectorCameraState({x:0,y:0,heading:0});
+const run=(input)=>{let state=startState();
+ for(let frame=0;frame<50;frame++)state=stepDirectorCamera(state,input,.02);return state;};
+const fast=run({stickX:0,stickY:topStick.y});
+const slow=run({stickX:0,stickY:halfStick.y});
+assert.ok(fast.y<slow.y&&slow.y<0,'Speed follows distance from center');
+assert.ok(fast.speed>slow.speed*1.6,'Analog speed is not constant');
+assert.ok(Math.abs(fast.x)<1,'Pushing upward does not drift sideways');
+const east=run({stickX:eastStick.x,stickY:eastStick.y});
+assert.ok(east.x>0&&Math.abs(east.y)<1,'Rightward stick flies right');
+const diagonal=run({stickX:diagonalStick.x,stickY:diagonalStick.y});
+assert.ok(diagonal.x>0&&diagonal.y<0,'Diagonal motion has both components');
+const climb=run({altitudeAxis:high.axis});
+const descend=run({altitudeAxis:low.axis});
+assert.ok(directorZoom(climb.altitude)<directorZoom(.52),
+ 'High drone = wider view');
+assert.ok(directorZoom(descend.altitude)>directorZoom(.52),
+ 'Low drone = closer view');
+const centerAfter=stepDirectorCamera(fast,{stickX:0,stickY:0},.05);
+assert.ok(centerAfter.speed<fast.speed,'Centering the stick slows flight');
+let settling=centerAfter;
+for(let i=0;i<30;i++)settling=stepDirectorCamera(settling,{},.05);
+assert.ok(settling.speed<1,'Drone brakes naturally at neutral without a pedal');
 const cars=[{plannerBody:{x:0,y:0}},{plannerBody:{x:12,y:0}},
  {plannerBody:{x:700,y:900}},{plannerBody:{x:800,y:900}}];
 assert.equal(chooseDirectorAction(cars).x,6,'AUTO chooses the closest fight');
-drone.auto=true;
-drone=stepDirectorCamera(drone,{gas:0},.05,cars);
-assert.ok(drone.auto&&drone.speed===0,'Automatic camera never controls racers');
-drone=stepDirectorCamera(drone,{gas:1},.05,cars);
-assert.equal(drone.auto,false,'Manual throttle cancels automatic mode');
-assert.ok(directorZoom(.1)>directorZoom(1),'Altitude increases reduce zoom');
-const rect={left:100,top:200,width:100,height:100};
-const topStick=directorStickVector(150,201,rect);
-assert.equal(topStick.x,0,'Vertical gesture does not turn sideways');
-assert.ok(topStick.y<-.95,'Pushing upward aims north');
-assert.ok(topStick.offsetY<0,'Thumb visually moves toward the finger in Y');
-const rightStick=directorStickVector(290,250,rect);
-assert.ok(rightStick.x>.95&&rightStick.y===0,'Stick radius clamps horizontal drag');
-assert.ok(Math.hypot(rightStick.offsetX,rightStick.offsetY)<=26.01,'Thumb stays inside circular travel');
-const diagonalStick=directorStickVector(260,150,rect);
-assert.ok(diagonalStick.x>0&&diagonalStick.y<0,'Diagonal stick has independent X/Y axes');
-assert.deepEqual(directorStartPhase(1000,4500),{started:false,seconds:4});
-assert.deepEqual(directorStartPhase(2500,4500),{started:false,seconds:2});
-assert.deepEqual(directorStartPhase(4500,4500),{started:true,seconds:0});
-assert.deepEqual(directorStartPhase(6500,4500),{started:true,seconds:0});
-let north=makeDirectorCameraState({x:0,y:0,heading:0});
-for(let frame=0;frame<50;frame++)north=stepDirectorCamera(north,{
- gas:1,stickX:topStick.x,stickY:topStick.y},.02);
-assert.ok(north.y<0,'Upward stick plus throttle flies toward screen top');
-assert.ok(Math.abs(north.x)<Math.abs(north.y)*.85,
- 'Drone turns toward stick world direction, not sideways-only');
-
+let tracking=startState();tracking.auto=true;
+tracking=stepDirectorCamera(tracking,{altitudeAxis:-1},.05,cars);
+assert.ok(tracking.auto&&tracking.x>0,
+ 'Second lever adjusts altitude without cancelling AUTO framing');
+tracking=stepDirectorCamera(tracking,{stickX:1,stickY:0},.05,cars);
+assert.equal(tracking.auto,false,'Manual translation cancels AUTO framing');
+assert.ok(directorZoom(.1)>directorZoom(1));
 console.log('PASS LIVE 4: validated 4-seat protocol, three independent interpolators, two grid layouts, three physical AI levels and 80-step synthetic physics');

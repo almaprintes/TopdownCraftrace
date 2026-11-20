@@ -2,7 +2,7 @@
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function makeDirectorCameraState({x=0,y=0,heading=0}={}){
  if(![x,y,heading].every(Number.isFinite))throw Error('Invalid drone position');
- return {x,y,heading,speed:0,altitude:.52,auto:false};
+ return {x,y,heading,speed:0,vx:0,vy:0,altitude:.52,auto:false};
 }
 export function chooseDirectorAction(bots){
  const cars=(Array.isArray(bots)?bots:[]).filter(b=>b?.plannerBody&&
@@ -32,7 +32,14 @@ export function directorStickVector(x,y,rect){
  return {x:active?vx:0,y:active?vy:0,
   offsetX:dx*factor,offsetY:dy*factor,magnitude:active?magnitude:0};
 }
-const wrapPi=a=>Math.atan2(Math.sin(a),Math.cos(a));
+// Vertical camera-height lever, spring-centered; up = higher/wider view.
+export function directorAltitudeStick(y,rect){
+ const height=Math.max(1,Number(rect?.height)||1);
+ const travel=Math.max(1,height*.34);
+ const dy=(Number(y)||0)-(Number(rect?.top)||0)-height/2;
+ const axis=clamp(dy/travel,-1,1);
+ return {axis:Math.abs(axis)<.08?0:axis,offsetY:clamp(dy,-travel,travel)};
+}
 // Race director starts itself; never waits for the pilot's ignition/track gate.
 export function directorStartPhase(now,startAt){
  const remaining=Math.max(0,Number(startAt)-Number(now));
@@ -40,40 +47,42 @@ export function directorStartPhase(now,startAt){
  return {started:remaining<=0,seconds:Math.ceil(remaining/1000)};
 }
 export function directorZoom(altitude){return 1.4-clamp(Number(altitude)||.52,.10,1)*1.12;}
+// Twin-stick drone: LEFT = translation in screen XY with analog magnitude;
+// RIGHT = vertical climb/descent (and therefore zoom). No gas, brake or yaw pedal.
 export function stepDirectorCamera(state,input,dt,bots=[]){
- const elapsed=clamp(Number(dt)||0,0,.05),next={...state};
- const gas=clamp(Number(input?.gas)||0,0,1);
- const brake=clamp(Number(input?.brake)||0,0,1);
- const steer=clamp(Number(input?.steer)||0,-1,1);
- const stickX=clamp(Number(input?.stickX)||0,-1,1);
- const stickY=clamp(Number(input?.stickY)||0,-1,1);
- const stickActive=Math.hypot(stickX,stickY)>.14;
- const rise=clamp(Number(input?.rise)||0,0,1);
- const sink=clamp(Number(input?.sink)||0,0,1);
- if((gas||brake||Math.abs(steer)>.04||stickActive)&&next.auto)next.auto=false;
+ const elapsed=clamp(Number(dt)||0,0,.05);
+ const next={vx:0,vy:0,...state};
+ const sx=clamp(Number(input?.stickX)||0,-1,1);
+ const sy=clamp(Number(input?.stickY)||0,-1,1);
+ const axis=clamp(Number(input?.altitudeAxis)||0,-1,1);
+ const mag=Math.min(1,Math.hypot(sx,sy));
+ const active=mag>.08;
+ if(active&&next.auto)next.auto=false;
  if(next.auto){
   const interest=chooseDirectorAction(bots);
   if(interest){
    const smoothing=1-Math.exp(-3.2*elapsed);
    next.x+=(interest.x-next.x)*smoothing;
    next.y+=(interest.y-next.y)*smoothing;
-   next.altitude+=(clamp(.42+interest.distance/1100,.40,.85)-next.altitude)*smoothing;
+   // Right stick can override auto zoom without cancelling auto framing.
+   if(Math.abs(axis)<.08)
+    next.altitude+=(clamp(.42+interest.distance/1100,.40,.85)-next.altitude)*smoothing;
   }
-  next.speed=0;
+  next.vx=0;next.vy=0;next.speed=0;
  }else{
-  if(stickActive){
-   // North-up map: pushing up moves toward the top of the screen.
-   const desired=Math.atan2(stickY,stickX);
-   const deltaAngle=wrapPi(desired-next.heading);
-   next.heading+=clamp(deltaAngle,-5.8*elapsed,5.8*elapsed);
-  }else{
-   // A/D remains yaw for keyboard users; releasing the stick holds heading.
-   next.heading+=steer*2.4*elapsed;
-  }
-  next.speed=clamp(next.speed+(gas*520-brake*850-next.speed*1.5)*elapsed,0,530);
-  next.x+=Math.cos(next.heading)*next.speed*elapsed;
-  next.y+=Math.sin(next.heading)*next.speed*elapsed;
+  const maxSpeed=530;
+  const targetVx=active?sx*maxSpeed:0;
+  const targetVy=active?sy*maxSpeed:0;
+  const smoothing=1-Math.exp(-(active?13:20)*elapsed);
+  next.vx+=(targetVx-next.vx)*smoothing;
+  next.vy+=(targetVy-next.vy)*smoothing;
+  if(Math.hypot(next.vx,next.vy)<.05){next.vx=0;next.vy=0;}
+  next.x+=next.vx*elapsed;
+  next.y+=next.vy*elapsed;
+  next.speed=Math.hypot(next.vx,next.vy);
+  if(next.speed>.1)next.heading=Math.atan2(next.vy,next.vx);
  }
- next.altitude=clamp(next.altitude+(rise-sink)*.50*elapsed,.10,1);
+ // Push lever upward (negative Y) to climb and widen the framing.
+ next.altitude=clamp(next.altitude-axis*.64*elapsed,.10,1);
  return next;
 }

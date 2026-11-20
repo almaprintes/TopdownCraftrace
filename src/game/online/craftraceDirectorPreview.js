@@ -1,7 +1,7 @@
 // DEV-only local producer seat: four physical AI without creating an online room.
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
 import {makeLive4StartingGrid} from './craftraceLiveV2GridGeometry.js';
-import {makeDirectorCameraState,stepDirectorCamera,directorZoom,directorStickVector,directorStartPhase} from './craftraceDirectorCamera.js';
+import {makeDirectorCameraState,stepDirectorCamera,directorZoom,directorStickVector,directorAltitudeStick,directorStartPhase} from './craftraceDirectorCamera.js';
 import {hideRaceUi,restoreRaceUi} from '../ui/raceUiVisibility.js';
 import '../ui/craftraceDirectorPreview.css';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -54,12 +54,11 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
   <button type="button" data-exit>SALIR</button>
  </div>
  <div class="crdir-stickbox"><div data-stick class="crdir-stick" role="group"
-   aria-label="Palanca de dirección del dron en dos ejes">
-   <span data-knob></span></div><small>DIRECCIÓN</small></div>
- <div class="crdir-alt"><button type="button" data-alt-up>SUBIR <small>− ZOOM</small></button>
-  <button type="button" data-alt-down>BAJAR <small>+ ZOOM</small></button></div>
- <div class="crdir-drive"><button type="button" data-gas>ACELERAR</button>
-  <button type="button" data-brake>FRENAR</button></div>
+   aria-label="Palanca izquierda: mover dron en todas las direcciones y controlar velocidad">
+   <span data-knob></span></div><small>MOVER · VELOCIDAD</small></div>
+ <div class="crdir-heightbox"><div data-height-stick class="crdir-height-stick" role="group"
+   aria-label="Palanca derecha: subir, bajar y cambiar altura o zoom">
+   <span data-height-knob></span></div><small>ALTURA · ZOOM</small></div>
  <div class="crdir-results" data-results hidden>
   <h2>4 IA · RESULTADOS PROVISIONALES</h2>
   <p>Prueba local. Vueltas estimadas por trayectoria, todavía no homologadas.</p>
@@ -69,22 +68,10 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  for(const ev of ['pointerdown','pointermove','pointerup','pointercancel','click'])
    root.addEventListener(ev,e=>e.stopPropagation());
  const $=s=>root.querySelector(s);
- const held={gas:new Set,brake:new Set,rise:new Set,sink:new Set};
- const keyboard=new Set;let stopped=false,shown=false,stickPointer=null,lastInfo=0;
- let stickVector={x:0,y:0};
+ const keyboard=new Set;let stopped=false,shown=false,stickPointer=null;
+ let heightPointer=null,lastInfo=0;
+ let stickVector={x:0,y:0},altitudeAxis=0;
  let camera=makeDirectorCameraState({x:body.x,y:body.y,heading});
- const addHold=(selector,key)=>{
-   const element=$(selector);
-   element.addEventListener('pointerdown',e=>{
-     if(stopped)return;e.preventDefault();e.stopPropagation();
-     element.setPointerCapture?.(e.pointerId);held[key].add(e.pointerId);
-     if(key==='gas'||key==='brake')camera.auto=false;
-   });
-   for(const event of ['pointerup','pointercancel','lostpointercapture'])
-     element.addEventListener(event,e=>held[key].delete(e.pointerId));
- };
- addHold('[data-gas]','gas');addHold('[data-brake]','brake');
- addHold('[data-alt-up]','rise');addHold('[data-alt-down]','sink');
  const stick=$('[data-stick]'),knob=$('[data-knob]');
  const move=e=>{
    if(e.pointerId!==stickPointer)return;
@@ -108,7 +95,31 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  };
  for(const event of ['pointerup','pointercancel','lostpointercapture'])
    stick.addEventListener(event,release);
- const keys=new Set(['KeyW','KeyS','KeyA','KeyD','KeyQ','KeyE','Space',
+ // The second analog lever is wholly independent: true two-finger operation.
+ const heightStick=$('[data-height-stick]'),heightKnob=$('[data-height-knob]');
+ const moveHeight=e=>{
+   if(e.pointerId!==heightPointer)return;
+   e.preventDefault();e.stopPropagation();
+   const result=directorAltitudeStick(e.clientY,heightStick.getBoundingClientRect());
+   altitudeAxis=result.axis;
+   heightKnob.style.transform='translateY('+Math.round(result.offsetY)+'px)';
+ };
+ heightStick.addEventListener('pointerdown',e=>{
+   if(stopped||heightPointer!==null)return;
+   e.preventDefault();e.stopPropagation();
+   heightPointer=e.pointerId;
+   heightStick.setPointerCapture?.(e.pointerId);
+   moveHeight(e);
+ });
+ heightStick.addEventListener('pointermove',moveHeight);
+ const releaseHeight=e=>{
+   if(e.pointerId!==heightPointer)return;
+   heightPointer=null;altitudeAxis=0;
+   heightKnob.style.transform='translateY(0px)';
+ };
+ for(const event of ['pointerup','pointercancel','lostpointercapture'])
+   heightStick.addEventListener(event,releaseHeight);
+ const keys=new Set(['KeyW','KeyS','KeyA','KeyD','KeyQ','KeyE',
    'ArrowUp','ArrowDown','ArrowLeft','ArrowRight']);
  const keyDown=e=>{if(stopped||!keys.has(e.code))return;
    if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
@@ -117,7 +128,6 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const keyUp=e=>keyboard.delete(e.code);
  document.addEventListener('keydown',keyDown,true);
  document.addEventListener('keyup',keyUp,true);
- const pressed=(key,variants)=>held[key].size>0||variants.some(k=>keyboard.has(k));
  const exit=()=>{if(!stopped)scene.scene.start('menu');};
  $('[data-exit]').addEventListener('click',exit);
  $('[data-finish]').addEventListener('click',exit);
@@ -140,14 +150,18 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  scene.events.on('postupdate',draw);
  const update=(now,deltaMs=16.667)=>{
    if(stopped)return;
-   const gas=pressed('gas',['KeyW','ArrowUp'])?1:0;
-   const brake=pressed('brake',['KeyS','ArrowDown','Space'])?1:0;
-   const rise=pressed('rise',['KeyQ'])?1:0;
-   const sink=pressed('sink',['KeyE'])?1:0;
-   const steer=clamp((keyboard.has('KeyD')||keyboard.has('ArrowRight')?1:0)-
-      (keyboard.has('KeyA')||keyboard.has('ArrowLeft')?1:0),-1,1);
+   const keyX=(keyboard.has('KeyD')||keyboard.has('ArrowRight')?1:0)-
+     (keyboard.has('KeyA')||keyboard.has('ArrowLeft')?1:0);
+   const keyY=(keyboard.has('KeyS')||keyboard.has('ArrowDown')?1:0)-
+     (keyboard.has('KeyW')||keyboard.has('ArrowUp')?1:0);
+   const keyboardLength=Math.max(1,Math.hypot(keyX,keyY));
+   // Touch wins over desktop keys, and diagonal keys are normalized.
+   const leftActive=Math.hypot(stickVector.x,stickVector.y)>.08;
+   const x=leftActive?stickVector.x:keyX/keyboardLength;
+   const y=leftActive?stickVector.y:keyY/keyboardLength;
+   const height=altitudeAxis||((keyboard.has('KeyE')?1:0)-(keyboard.has('KeyQ')?1:0));
    camera=stepDirectorCamera(camera,{
-     gas,brake,rise,sink,steer,stickX:stickVector.x,stickY:stickVector.y
+     stickX:x,stickY:y,altitudeAxis:height
    },Math.min(50,Math.max(0,deltaMs))/1000,bots.bots);
    const countdown=directorStartPhase(now,directorGreenAt);
    if(!scene._raceStarted&&countdown.started){
@@ -184,7 +198,7 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    scene.events.off('postupdate',draw);
    document.removeEventListener('keydown',keyDown,true);
    document.removeEventListener('keyup',keyUp,true);
-   keyboard.clear();for(const group of Object.values(held))group.clear();
+   keyboard.clear();stickVector={x:0,y:0};altitudeAxis=0;
    bots.destroy();root.remove();
    document.removeEventListener('focusin',suppressTextFocus,true);
    restoreRaceUi(scene,hiddenUi);

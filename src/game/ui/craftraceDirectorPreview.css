@@ -20,15 +20,30 @@
 #cr-director .crdir-stick>span{width:46px;height:46px;border-radius:50%;
  border:2px solid #bcecf7;background:radial-gradient(circle,#dfefff,#69b7eb);pointer-events:none}
 #cr-director .crdir-stickbox small{display:block;font-size:10px;color:#b2e3f2;margin-top:3px}
-#cr-director .crdir-alt{position:absolute;left:50%;transform:translateX(-50%);
- bottom:max(13px,env(safe-area-inset-bottom));display:flex;gap:7px}
-#cr-director .crdir-alt button{min-height:49px;width:88px}
-#cr-director .crdir-alt small{display:block;font-size:9px;color:#b2e2ef}
-#cr-director .crdir-drive{position:absolute;right:max(25px,env(safe-area-inset-right));
- bottom:max(13px,env(safe-area-inset-bottom));display:grid;gap:7px;min-width:116px}
-#cr-director .crdir-drive button{min-height:48px}
-#cr-director [data-gas]{background:#076344f0;border-color:#6dddab}
-#cr-director [data-brake]{background:#6c2632f0;border-color:#ef9da5}
+/* Right lever: analog vertical control, not a collection of +/- buttons. */
+#cr-director .crdir-heightbox{
+ position:absolute;right:max(26px,env(safe-area-inset-right));
+ bottom:max(13px,env(safe-area-inset-bottom));text-align:center;
+}
+#cr-director .crdir-height-stick{
+ width:76px;height:154px;border:2px solid #8ce7d5c2;border-radius:25px;
+ background:linear-gradient(90deg,#051b2fdc,#103a49cf);
+ display:grid;place-items:center;pointer-events:auto;touch-action:none;
+ user-select:none;-webkit-user-select:none;position:relative;
+}
+#cr-director .crdir-height-stick::before{
+ content:"";width:5px;height:75%;position:absolute;left:calc(50% - 2.5px);
+ top:12.5%;background:linear-gradient(#72b5dd,#8ccea9);border-radius:10px;
+ pointer-events:none;opacity:.55;
+}
+#cr-director .crdir-height-stick>span{
+ display:block;width:47px;height:38px;border-radius:19px;
+ border:2px solid #d6f8ee;background:linear-gradient(150deg,#b8f6e9,#56abcf);
+ box-shadow:0 3px 8px #001625ac;pointer-events:none;
+}
+#cr-director .crdir-heightbox small{
+ display:block;font-size:10px;color:#b2e9dc;margin-top:4px;
+}
 #cr-director [hidden]{display:none!important}
 #cr-director .crdir-results{position:absolute;inset:0;background:#031321ee;
  display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -44,15 +59,14 @@
  #cr-director .crdir-top button{padding:3px 6px;min-height:28px;font-size:10px}
  #cr-director .crdir-stick{width:96px;height:96px}
  #cr-director .crdir-stickbox{left:max(18px,env(safe-area-inset-left));bottom:6px}
- #cr-director .crdir-drive{right:max(18px,env(safe-area-inset-right));bottom:6px}
- #cr-director .crdir-drive button{min-height:41px}
- #cr-director .crdir-alt{bottom:6px}
- #cr-director .crdir-alt button{min-height:42px}
+ #cr-director .crdir-heightbox{right:max(18px,env(safe-area-inset-right));bottom:6px}
+ #cr-director .crdir-height-stick{width:69px;height:126px}
+ #cr-director .crdir-height-stick>span{width:44px;height:33px}
 }
 @media(max-width:750px){#cr-director .crdir-top output{display:none}
- #cr-director .crdir-alt button{width:65px;font-size:10px}
  #cr-director .crdir-stick{width:83px;height:83px}
- #cr-director .crdir-drive{min-width:90px}
+ #cr-director .crdir-height-stick{width:62px;height:114px}
+ #cr-director .crdir-height-stick>span{width:40px;height:30px}
 }
 @media(prefers-reduced-motion:reduce){#cr-director *{transition:none!important}}
 
