@@ -210,7 +210,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    scene.scene.start('stats',{
      onlineFromLobby:true,
      raceControlTrackId:next.track_id,liveTrackId:next.track_id,
-     liveCarId:next.car_id,live4RematchRoom:next
+     liveCarId:scene.carId||next.car_id,live4RematchRoom:next
    });
  };
  const showResults=()=>{
