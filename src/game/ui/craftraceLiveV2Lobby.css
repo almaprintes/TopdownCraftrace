@@ -84,7 +84,10 @@
 .cr4-result-shell{position:fixed;inset:0;z-index:2147483601;align-items:center;
  justify-content:center;padding:12px;background:#020c16eb;color:#f3faff;
  font-family:Inter,system-ui,sans-serif}
-.cr4-result-panel{width:min(650px,96vw);max-height:94dvh;overflow:auto;padding:20px;
+.cr4-result-panel{width:min(650px,96vw);max-height:94dvh;overflow-y:auto;overflow-x:auto;padding:20px;
+ /* Keep touch gestures inside the results sheet on iPhone; do not hand
+    overscroll to the driving canvas or the page underneath. */
+ overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;
  background:linear-gradient(140deg,#14384a,#061421);border:2px solid #d8b56e;
  box-shadow:0 24px 65px #000b}
 .cr4-result-panel h2{font-size:clamp(16px,3vw,23px);color:#ffdb96;margin:0 0 6px}
