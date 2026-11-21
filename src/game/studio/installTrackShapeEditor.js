@@ -4,6 +4,8 @@ import {EDITOR_CONTROL_PIXELS,worldControlRadius} from './trackStudioControlGeom
 import {createShapeDomInspector,shapeInspectorCopy,studioInspectorCopy} from './shapeDomInspector.js';
 import { installKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 import { trackStudioShapeToolbarLayout } from './trackStudioNavigationLayout.js';
+import {buildTrackRacingLineModel} from '../ai/trackRacingLinePlanner.js';
+import {buildBezierAiRacingLineModel} from '../ai/trackBezierAiRacingLinePlanner.js';
 
 function drawPolyline(g,points,closed){
   if(points.length<2)return;
@@ -319,6 +321,30 @@ export function installTrackStudioShapeEditor(s){
     if(!window.confirm('¿Probar la trayectoria Bézier/guías IA con 4 rivales físicos en el Realizador DEV?\\n\\nSin récords ni créditos. Podrás comparar A / B / GUIADA antes de la salida.'))return;
     installing=true;
     try{
+      // Validate BEFORE overwriting the last working browser-local preview.
+      // A hand-authored Bézier cannot silently fall back to a different G.
+      if(s._aiBezierLine){
+        const track=s._exportToGameTrack();
+        const baseline=buildTrackRacingLineModel({
+          raceCenterline:track.centerline,trackWidth:track.trackWidth
+        },{apexCommitment:.22});
+        const test=buildBezierAiRacingLineModel(baseline,s._aiBezierLine,
+          s._trackShape,track,{carRadius:14});
+        if(!test.report.active){
+          const explanation={
+            'outside-safe-asphalt':'La trayectoria invade el borde o el exterior',
+            'outside-route-corridor':'Hay un tramo demasiado alejado del eje de pista',
+            'route-order-break':'Los nodos están cruzando un tramo anterior',
+            'wrong-direction':'Revisa el orden de los nodos',
+            'steering-discontinuity':'Suaviza los tiradores en la curva problemática',
+            'length-mismatch':'La trayectoria tiene una longitud imposible',
+            'start-mismatch':'Alinea el inicio con el sentido de marcha'
+          };
+          const why=explanation[test.report.reason]||test.report.reason;
+          throw Error('Bézier no validada: '+why+
+            (Number.isInteger(test.report.badIndex)?' (muestra '+test.report.badIndex+')':''));
+        }
+      }
       const record=await installKartingPreview(s);
       if(!record?.track?.aiLineGuides?.points?.length&&
          !record?.track?.aiBezierLine?.nodes?.length)
