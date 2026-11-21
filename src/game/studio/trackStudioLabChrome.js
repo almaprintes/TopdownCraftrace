@@ -116,9 +116,11 @@ export function mountTrackStudioLabChrome(scene,gate){
   const shapeNode=button('+ NODO',()=>action(scene,'add'),'ts-lab__stage-button');
   const aiMode=button('GUÍAS IA',()=>scene._aiGuideToggle?.(),'ts-lab__stage-button ts-lab__stage-button--ai');
   aiMode.setAttribute('aria-pressed','false');
+  const splineMode=button('TRAZADA IA',()=>scene._aiBezierToggle?.(),'ts-lab__stage-button ts-lab__stage-button--spline');
+  splineMode.setAttribute('aria-pressed','false');
   const shapeGrid=button('PARRILLA',()=>action(scene,scene._showStartingGrid===false?'gridOff':'gridOn'),'ts-lab__stage-button');
   const shapePreview=button('▶ PROBAR',()=>action(scene,'preview'),'ts-lab__stage-button ts-lab__stage-button--preview');
-  add(stageActions,shapeCreate,shapeEdit,shapeNode,aiMode,shapeGrid,shapePreview);
+  add(stageActions,shapeCreate,shapeEdit,shapeNode,aiMode,splineMode,shapeGrid,shapePreview);
   stageTop.append(stageTag,stageActions);
   const placeholder=make('div','ts-lab__empty');
   add(placeholder,make('span','ts-lab__empty-icon','⌖'),make('strong','','LIENZO LISTO PARA DISEÑAR'),
@@ -193,6 +195,20 @@ export function mountTrackStudioLabChrome(scene,gate){
     'ts-lab__ai-test');
   const aiHint=make('small','ts-lab__ai-hint','Toca para colocar · selecciona y vuelve a arrastrar para mover');
   aiPanel.append(aiTitle,aiSummary,aiRows,aiDelete,aiTry,aiHint);
+  const splinePanel=make('section','ts-lab__ai-guide-panel ts-lab__spline-panel');
+  splinePanel.setAttribute('aria-label','Edición de trayectoria Bézier IA');
+  splinePanel.hidden=true;
+  const splineTitle=make('strong','ts-lab__ai-title','TRAZADA MAESTRA · BÉZIER');
+  const splineSummary=make('div','ts-lab__ai-summary','Crea la base siguiendo el eje central');
+  const splineGenerate=button('GENERAR BASE',()=>scene._aiBezierGenerate?.(),'ts-lab__ai-test');
+  const splineInsert=button('+ NODO',()=>scene._aiBezierInsert?.(),'ts-lab__ai-step');
+  const splineDelete=button('BORRAR NODO',()=>scene._aiBezierDelete?.(),'ts-lab__ai-delete');
+  const splineClear=button('BORRAR TRAZADA',()=>scene._aiBezierClear?.(),'ts-lab__ai-delete');
+  const splineTry=button('▶ PROBAR BÉZIER IA',()=>scene._startGuidedAiPreview?.(),'ts-lab__ai-test');
+  const splineHint=make('small','ts-lab__ai-hint',
+   'Selecciona un nodo; vuelve a arrastrarlo o mueve sus tiradores. + NODO conserva la curva.');
+  splinePanel.append(splineTitle,splineSummary,splineGenerate,
+    splineInsert,splineDelete,splineClear,splineTry,splineHint);
   const nudge=make('div','ts-lab__nudge');
   const nudgeTitle=make('span','','MOVER SELECCIÓN');
   const nudgeControls=make('div','ts-lab__nudge-controls');
@@ -238,7 +254,7 @@ export function mountTrackStudioLabChrome(scene,gate){
   const toolsHead=make('div','ts-lab__tools-head');
   add(toolsHead,make('strong','','HERRAMIENTAS'),make('span','','TRAZADO Y MARCAS'));
   const toolHost=make('div','ts-lab__tool-host');
-  side.append(sideHead,metrics,meta,info,nudge,aiPanel,photoPanel,toolsHead,toolHost);
+  side.append(sideHead,metrics,meta,info,nudge,aiPanel,splinePanel,photoPanel,toolsHead,toolHost);
 
   root.append(header,rail,workspace,side,guidePanel);
   document.body.append(root);
@@ -258,9 +274,20 @@ export function mountTrackStudioLabChrome(scene,gate){
     state(loop,scene._isClosed?'PISTA CERRADA':'PISTA ABIERTA');
     state(shapeGrid,scene._showStartingGrid===false?'PARRILLA NO':'PARRILLA SÍ');
     const tool=scene._tool||'edit';
-    const editingAi=tool==='aiGuide';
-    state(mode,editingAi?'GUÍAS IA':tool.toUpperCase());
+    const editingAi=tool==='aiGuide',editingSpline=tool==='aiBezier';
+    state(mode,editingSpline?'TRAZADA IA':editingAi?'GUÍAS IA':tool.toUpperCase());
     aiMode.setAttribute('aria-pressed',String(editingAi));
+    splineMode.setAttribute('aria-pressed',String(editingSpline));
+    splinePanel.hidden=!editingSpline;
+    splineTry.disabled=!(scene._aiBezierLine?.nodes?.length>=3);
+    splineInsert.disabled=splineDelete.disabled=scene._aiBezierSelected<0;
+    splineClear.disabled=!(scene._aiBezierLine?.nodes?.length);
+    if(editingSpline){
+      const count=scene._aiBezierLine?.nodes?.length||0;
+      state(splineSummary,count?('NODOS '+count+' · '+
+        (scene._aiBezierSelected<0?'TOCA PARA SELECCIONAR':'EDITANDO NODO '+(scene._aiBezierSelected+1))):
+        'GENERAR BASE · no modifica la pista');
+    }
     aiPanel.hidden=!editingAi;
     aiTry.disabled=!(scene._aiLineGuides?.length);
     if(editingAi){
@@ -277,15 +304,18 @@ export function mountTrackStudioLabChrome(scene,gate){
     const hasWork=!!(nodes||scene._imageCanvas||scene._guideImage||scene._trackShape);
     placeholder.hidden=hasWork;
     const edge=scene._shapeEditing&&shapeIsValid(scene._trackShape);
-    const description=editingAi?'Guías suaves: no cambian el asfalto ni son checkpoints. Se guardan con el proyecto.':edge?shapeInspectorCopy(scene._trackShape,scene._shapeSelected):studioInspectorCopy(scene);
+    const description=editingSpline?
+      'Traza maestra Bézier independiente. Edita nodos y tiradores; guarda y prueba G sin cambiar pista ni vértices antiguos.':
+      editingAi?'Guías suaves: no cambian el asfalto ni son checkpoints. Se guardan con el proyecto.':
+      edge?shapeInspectorCopy(scene._trackShape,scene._shapeSelected):studioInspectorCopy(scene);
     const next=description.replaceAll('\n',' · ').replace(/\s+/g,' ').trim();
     if(next!==displayed){state(info,next);displayed=next;}
-    state(meta,editingAi?'ANOTACIONES IA':edge?'AJUSTE DE BORDES':scene._imageCanvas?'LIENZO FOTOGRÁFICO':'TRAZADO');
+    state(meta,editingSpline?'TRAZADA IA · BÉZIER':editingAi?'ANOTACIONES IA':edge?'AJUSTE DE BORDES':scene._imageCanvas?'LIENZO FOTOGRÁFICO':'TRAZADO');
     const nativePhoto=scene._imageCanvas;
     const hasPhoto=!!(nativePhoto?.imageId&&nativePhoto.width>0&&nativePhoto.height>0);
-    photoPanel.hidden=!hasPhoto||editingAi;
-    toolsHead.hidden=editingAi;
-    toolHost.hidden=editingAi;
+    photoPanel.hidden=!hasPhoto||editingAi||editingSpline;
+    toolsHead.hidden=editingAi||editingSpline;
+    toolHost.hidden=editingAi||editingSpline;
     if(hasPhoto){
       state(photoDimensions,nativePhoto.width+' × '+nativePhoto.height+' px');
       state(photoSource,'ARCHIVO · '+(nativePhoto.name||'Imagen del proyecto'));
@@ -295,7 +325,7 @@ export function mountTrackStudioLabChrome(scene,gate){
     map.title=hasPhoto?'TALLER DE ESCALA · sustituir, ampliar o exportar foto':'Cargar imagen maestra';
     map.setAttribute('data-photo-loaded',String(hasPhoto));
     const selected=(scene._selectedNode>=0)||(scene._selectedPiano>=0);
-    nudge.hidden=!selected||editingAi;
+    nudge.hidden=!selected||editingAi||editingSpline;
     state(step,'PASO '+scene._getNudgeStep?.()+' px');
     state(guideLock,scene._guideLocked?'DESBLOQUEAR':'BLOQUEAR');
     state(guideShow,scene._guideVisible?'OCULTAR':'MOSTRAR');
