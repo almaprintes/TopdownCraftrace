@@ -15,7 +15,7 @@ import {CAR_SPECS} from '../cars/carSpecs.js';
 import {unlockedCarIds,STARTER_CAR_ID} from '../cars/carUnlocks.js';
 import './craftraceLiveV2Lobby.css';
 
-export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenClassic=null,initialRoom=null,onExit=null}={}){
+export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenClassic=null,initialRoom=null,onExit=null,rematchExpectedHumans=1}={}){
   if(document.getElementById('cr-live4'))return;
   const race4Enabled=(window.location.pathname.includes('/dev/')||
     ['localhost','127.0.0.1'].includes(window.location.hostname))&&
@@ -235,11 +235,16 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     $('[data-ready]').disabled=loading||s.state!=='waiting';
     $('[data-ready]').textContent=me?.ready?'CANCELAR LISTO':'ESTOY LISTO';
     $('[data-start]').hidden=!(race4Enabled&&host&&s.state==='waiting');
-    $('[data-start]').disabled=loading||!grid.canStart;
+    const needsReturningRivals=Boolean(initialRoom?.id)&&
+      s.members.length<Math.max(1,Number(rematchExpectedHumans)||1);
+    $('[data-start]').disabled=loading||!grid.canStart||needsReturningRivals;
     if(host&&isLive4GuidedGSupported({trackId:s.track_id,dev:race4Enabled,aiDifficulty:3})&&
        hasLive4GuidedGForRoom(s.id)&&s.ai_difficulty===3&&s.fill_ai)
       $('[data-rules]').textContent+=' · IA G BÉZIER + DADOS';
-    $('[data-rosterstatus]').textContent=grid.canStart
+    $('[data-rosterstatus]').textContent=needsReturningRivals
+      ?'REVANCHA · ESPERANDO A LOS '+Math.max(1,Number(rematchExpectedHumans)||1)+
+        ' PILOTOS HUMANOS ANTERIORES ('+s.members.length+' CONFIRMADOS)'
+      :grid.canStart
       ?'PARRILLA PREPARADA · '+grid.humanCount+' HUMANO(S) + '+grid.aiCount+' IA'
       :'PARA SALIR: MÍNIMO 2 PILOTOS Y TODOS LOS HUMANOS LISTOS Y CONECTADOS';
     if(s.state!=='waiting')say('La parrilla de esta pista ya fue bloqueada.');
@@ -368,7 +373,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     say('Cambios aplicados. Los pilotos deben confirmar de nuevo.');
   }));
   $('[data-start]').addEventListener('click',()=>void action(async()=>{
-    if(!room||!race4Enabled||room.host_id!==identity?.id)return;
+    if(!room||!race4Enabled||room.host_id!==identity?.id||
+      (initialRoom?.id&&room.members.length<Math.max(1,Number(rematchExpectedHumans)||1)))return;
     say('Preparando la salida de los cuatro pilotos…');
     const state=await startLiveV2Lobby(room.id);
     launch(state);
