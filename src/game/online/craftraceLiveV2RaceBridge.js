@@ -6,11 +6,12 @@ import {consumeLive4RaceSession} from './craftraceLiveV2RaceSession.js';
 import {CrafRaceLive4RemoteModel} from './craftraceLiveV2RaceModel.js';
 import {CrafRaceLive4PositionLink} from './craftraceLiveV2PositionLink.js';
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
-import {hasLive4GuidedGForRoom} from './craftraceLive4GuidedGExperiment.js';
+import {hasLive4GuidedGForRoom,setLive4GuidedGForRoom} from './craftraceLive4GuidedGExperiment.js';
 import {advanceHostedLive4Bots} from './craftraceLive4HostContinuity.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
 import {live4SeatName} from './craftraceLiveV2PilotNames.js';
-import {CrafRaceLiveV2LobbyMonitor,finishLiveV2Lobby,acknowledgeLiveV2GridLoaded} from './craftraceLiveV2LobbyClient.js';
+import {CrafRaceLiveV2LobbyMonitor,finishLiveV2Lobby,acknowledgeLiveV2GridLoaded,
+ requestLiveV2Rematch,acceptLiveV2Rematch} from './craftraceLiveV2LobbyClient.js';
 
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
 const fmt=ms=>{
@@ -35,6 +36,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  const sprite=scene.carRig.list.find(item=>item?.texture?.key);
  if(!sprite)throw Error('LIVE 4 car sprite unavailable');
  let stopped=false,linkReady=false,startAt=Number(room.start_at_ms)||0;
+ let rematchRoomId=room.rematch_room_id||null;
  let gridAckPending=false,gridAckDone=false,lastGridAckAt=-5000;
  const ackGrid=now=>{
    if(stopped||!linkReady||aiError||gridAckPending||gridAckDone||now-lastGridAckAt<4000)return;
@@ -85,7 +87,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  };
  updateNames(room);
  const displayName=entry=>live4SeatName(entry,
-   [...membersById].map(([player_id,nick])=>({player_id,nick})));
+   [...membersById].map(([player_id,nick])=>({player_id,nick})),
+   room.ai_identity_seed||room.id);
  const createVisual=item=>{
    if(item.seat===localSeat||isHost&&item.kind==='ai')return;
    const visual=scene.add.sprite(0,0,'__DEFAULT').setVisible(false);
@@ -105,7 +108,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      director=new CrafRaceLive4BotDirector(scene,{
        roster:raceEntries,hostId,localId,
        startingGrid:scene._crafRaceLiveV2Grid,laps:room.laps,
-       live4GuidedGTrial:guidedGTrial
+       live4GuidedGTrial:guidedGTrial,
+       aiIdentitySeed:room.ai_identity_seed||room.id
      });
    }catch(err){
      aiError=err;console.error('[LIVE 4] Could not initialize physical AI:',err);
@@ -158,6 +162,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        clockOffset=clockOffset*.75+s.clientClockOffsetMs*.25;
      if(Number.isFinite(s.start_at_ms)&&s.start_at_ms>0)startAt=s.start_at_ms;
      updateNames(s);
+     if(typeof s.rematch_room_id==='string')rematchRoomId=s.rematch_room_id;
      for(const item of raceEntries){
        const visual=paint.get(item.seat);
        const nick=displayName(item);
@@ -199,12 +204,21 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      .finally(()=>botPostAttempts.delete('write'+seat));
  };
  let lastResultsSnapshot=null;
+ const openRematchLobby=next=>{
+   if(!next?.id||!Array.isArray(next?.members))throw Error('Revancha sin sala autorizada');
+   // Never reuse an existing room or its saved result rows.
+   scene.scene.start('stats',{
+     onlineFromLobby:true,
+     raceControlTrackId:next.track_id,liveTrackId:next.track_id,
+     liveCarId:next.car_id,live4RematchRoom:next
+   });
+ };
  const showResults=()=>{
    if(!localFinish||stopped)return;
    // Network acknowledgements may call this repeatedly while the player
    // reads the results. Replacing DOM resets <details> and scroll on iOS.
    const snapshot=JSON.stringify({
-     localFinish,localFinishPosted,linkReady,
+     localFinish,localFinishPosted,linkReady,rematchRoomId,
      entries:raceEntries.map(entry=>({
        seat:entry.seat,name:displayName(entry),
        elapsedMs:states.get(entry.seat)?.elapsedMs??null,
@@ -273,7 +287,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      dice.append(summary);
      for(const b of director.results()){
        const p=document.createElement('p');p.className='cr4-result-note';
-       p.textContent='IA '+(b.seat+1)+' · '+
+       p.textContent=(b.aiPilotName||'IA '+(b.seat+1))+' · '+
          (b.bezierDieHistory||[]).map(x=>'V'+x.lap+': '+x.face+'/6 · '+
            Number(x.plannedVariationPx||0).toFixed(1)+' px previstos').join(' | ');
        dice.append(p);
@@ -315,6 +329,42 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        ' · HITCH '+diag.timing.hitches+
        ' · TIEMPO NO INTEGRADO '+diag.timing.droppedSeconds.toFixed(2)+' s';
      panel.append(detail);
+   }
+   // Authenticated rematch: only the previous host can propose. Former
+   // human participants can accept without a second invitation code.
+   if(allFinished&&!unposted&&linkReady){
+     if(isHost&&!rematchRoomId){
+       const repeat=document.createElement('button');
+       repeat.type='button';repeat.textContent='REVANCHA · MISMA PARRILLA';
+       repeat.onclick=async()=>{
+         repeat.disabled=true;repeat.textContent='CREANDO REVANCHA…';
+         try{
+           const next=await requestLiveV2Rematch(roomId);
+           setLive4GuidedGForRoom(next.id,guidedGTrial);
+           openRematchLobby(next);
+         }catch(e){
+           status.textContent='Revancha: '+(e?.message||'No disponible');
+           repeat.disabled=false;repeat.textContent='REINTENTAR REVANCHA';
+         }
+       };
+       panel.append(repeat);
+     }else if(!isHost&&rematchRoomId){
+       const accept=document.createElement('button');
+       accept.type='button';accept.textContent='ACEPTAR REVANCHA';
+       accept.onclick=async()=>{
+         accept.disabled=true;accept.textContent='UNIÉNDOTE A LA REVANCHA…';
+         try{openRematchLobby(await acceptLiveV2Rematch(roomId));}
+         catch(e){
+           status.textContent='Revancha: '+(e?.message||'No disponible');
+           accept.disabled=false;accept.textContent='REINTENTAR REVANCHA';
+         }
+       };
+       panel.append(accept);
+     }else if(!isHost){
+       const hint=document.createElement('p');hint.className='cr4-result-note';
+       hint.textContent='Esperando a que el organizador proponga una revancha…';
+       panel.append(hint);
+     }
    }
    const back=document.createElement('button');back.type='button';
    back.textContent='VOLVER AL MENÚ';back.onclick=()=>scene.scene.start('menu');
