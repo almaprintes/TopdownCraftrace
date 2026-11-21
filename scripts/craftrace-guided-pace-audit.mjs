@@ -14,7 +14,7 @@ assert.equal(track.meta?.sourceFile,'Santa-Cruz-x3-nitido.tdrtrack');
 const source=resolveDirectorGuideSource({meta:track});
 const geometry={raceCenterline:track.raceCenterline||track.centerline,
  trackWidth:track.trackWidth};
-const b=buildTrackRacingLineModel(geometry,{apexCommitment:.22,racecraftPreview:true});
+const b=buildTrackRacingLineModel(geometry,{apexCommitment:.22});
 const guided=buildGuidedTrackRacingLineModel(b,source.guides,source.shape,
  source.dimensions,{carRadius:14,recoveryMargin:8});
 assert.ok(b.valid&&guided.report.active);
@@ -64,4 +64,4 @@ assert.ok(result.g.maxTurnAngle<.45,
  'Guided line must not introduce violent heading kinks');
 assert.ok(result.g.minTargetSpeed>225,
  'Guided plan must avoid severe emergency braking from new heading kinks');
-console.log('PASS plan-only B vs G pace audit (not a substitute for driving)');
+console.log('PASS plan-only A baseline vs G pace audit (not a substitute for driving)');
