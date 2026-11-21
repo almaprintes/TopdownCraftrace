@@ -37,7 +37,7 @@ for(const requirement of [
   "this._pushHistory();\n      this._nodes.push(node);",
   "this._autosaveRecovery();",
   "if(this._penGesture){",
-  "this._cancelPenGesture();\n      if (this._guideDragging)",
+  "this._cancelPenGesture();\n      this._aiGuidePointerCancel?.();\n      if (this._guideDragging)",
   "const candidate=updatePenAnchorFromDrag(",
   "this._sampleCubicBezier(prev,prev.handleOut,candidate.handleIn,candidate,24)",
   "this._cancelPenGesture();\n    if(tool==='pen' && this._shapeEditing)"
