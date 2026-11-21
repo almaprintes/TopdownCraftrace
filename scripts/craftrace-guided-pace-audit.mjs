@@ -48,6 +48,10 @@ function summarize(line,profile){
 }
 const result={track:'Santa Cruz official',guides:guided.report.accepted,
  safeSamplesModified:guided.report.changedSamples,
+ headingKinksBefore:guided.report.headingKinksBefore,
+ maxTurnBeforeRad:guided.report.maxTurnBeforeRad,
+ maxTurnAfterRad:guided.report.maxTurnAfterRad,
+ headingLimitPasses:guided.report.headingLimitPasses,
  b:summarize(b,pb),g:summarize(g,pg)};
 result.difference={
  lengthPercent:+(100*(result.g.lengthPx/result.b.lengthPx-1)).toFixed(2),
@@ -56,4 +60,8 @@ result.difference={
  meanTurnAnglePercent:+(100*(result.g.meanTurnAngle/result.b.meanTurnAngle-1)).toFixed(2)
 };
 console.log('CRAFT RACE G PACE AUDIT',JSON.stringify(result));
+assert.ok(result.g.maxTurnAngle<.45,
+ 'Guided line must not introduce violent heading kinks');
+assert.ok(result.g.minTargetSpeed>225,
+ 'Guided plan must avoid severe emergency braking from new heading kinks');
 console.log('PASS plan-only B vs G pace audit (not a substitute for driving)');

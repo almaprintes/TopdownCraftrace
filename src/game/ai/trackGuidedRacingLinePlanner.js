@@ -150,9 +150,45 @@ export function buildGuidedTrackRacingLineModel(baseLine,rawGuides,shape,dimensi
   }
   if(Math.abs(offsets[i]-original)>.25)changedSamples++;
  }
- if(changedSamples<5)return fallback(baseLine,'insufficient-safe-correction',entries);
+ // A nominally shorter path can still be worse if guide pulls produce
+ // near-hairpin polygon kinks. The real steering/yaw envelope must NEVER be
+ // bypassed by a 2-radian jump between adjacent ~10 px path samples.
+ // Ease guided offsets toward the already-tested B geometry LOCALLY around
+ // excessive heading changes, while checking the same asphalt footprint.
+ const initialTurns=lineCurvature(baseLine.centerline.map((_,i)=>makePoint(i,offsets[i])));
+ const maxBefore=Math.max(...initialTurns.map(v=>Math.abs(v)));
+ const headingLimit=i=>Math.max(.38,Math.abs(baseLine.curvature[i]||0)*1.2+.10);
+ let steeringLimitedSamples=0,steeringPasses=0;
+ for(;steeringPasses<36;steeringPasses++){
+  const angles=lineCurvature(baseLine.centerline.map((_,i)=>makePoint(i,offsets[i])));
+  const problem=[];
+  for(let i=0;i<n;i++)if(Math.abs(angles[i])>headingLimit(i))problem.push(i);
+  if(!problem.length)break;
+  const blend=new Array(n).fill(1);
+  for(const i of problem){
+   for(let d=-9;d<=9;d++){
+    const j=(i+d+n)%n;
+    blend[j]=Math.min(blend[j],1-.42*(1-Math.abs(d)/10));
+   }
+  }
+  for(let i=0;i<n;i++){
+   if(blend[i]>=1)continue;
+   const newOffset=baseLine.offsets[i]+
+     (offsets[i]-baseLine.offsets[i])*blend[i];
+   const candidate=makePoint(i,newOffset);
+   offsets[i]=safe(candidate.x,candidate.y)?newOffset:baseLine.offsets[i];
+  }
+ }
  const racingLine=baseLine.centerline.map((_,i)=>makePoint(i,offsets[i]));
  const curvature=lineCurvature(racingLine);
+ const maxAfter=Math.max(...curvature.map(v=>Math.abs(v)));
+ if(curvature.some((v,i)=>Math.abs(v)>headingLimit(i)+.005))
+  return fallback(baseLine,'steering-continuity-not-recovered',entries);
+ steeringLimitedSamples=initialTurns.filter((v,i)=>
+   Math.abs(v)>headingLimit(i)).length;
+ changedSamples=offsets.filter((v,i)=>
+   Math.abs(v-baseLine.offsets[i])>.25).length;
+ if(changedSamples<5)return fallback(baseLine,'insufficient-safe-correction',entries);
  const metrics={...baseLine.metrics,
   meanAbsCurvature:curvature.reduce((a,v)=>a+Math.abs(v),0)/n,
   maxAbsCurvature:Math.max(...curvature.map(v=>Math.abs(v))),
@@ -160,6 +196,10 @@ export function buildGuidedTrackRacingLineModel(baseLine,rawGuides,shape,dimensi
  const report={active:true,reason:'experimental-safe-guide-pull',accepted:active.length,
   total:guides.length,entries,changedSamples,clippedSamples:clipped,
   baselineUnsafeSamples:baselineUnsafe,safetyRadiusPx:safeDistance,
+  headingKinksBefore:steeringLimitedSamples,
+  maxTurnBeforeRad:Number(maxBefore.toFixed(4)),
+  maxTurnAfterRad:Number(maxAfter.toFixed(4)),
+  headingLimitPasses:steeringPasses,
   // B itself is not proven to be fully homologated. Never imply otherwise.
   homologated:false};
  return{model:{...baseLine,offsets,racingLine,curvature,metrics},report};
