@@ -93,8 +93,11 @@ export function buildGuidedTrackRacingLineModel(baseLine,rawGuides,shape,dimensi
    entries.push({id:guide.id,status:'already-near-guide'});
    continue;
   }
+  // Influence must be LOCAL to this corner. The old ~360px radius
+  // pulled the car laterally along neighbouring straights with no guide.
   active.push({id:guide.id,index:idx,requested,weight:guide.strength,
-   radius:Math.max(130,(Number(center.width)||140)*2.3),x:guide.x,y:guide.y});
+   radius:clamp((Number(center.width)||140)*1.02,95,170),
+   x:guide.x,y:guide.y});
   entries.push({id:guide.id,status:'accepted'});
  }
  if(!active.length)return fallback(baseLine,'no-safe-influential-guides',entries);
