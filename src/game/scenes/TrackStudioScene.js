@@ -1049,7 +1049,10 @@ if (
       try {
         const saved=JSON.parse(localStorage.getItem('trackstudio_recovery')||'null');
         const project=saved?.editor||saved;
-        if(!Array.isArray(project?.nodes)||!project?.imageCanvas?.imageId)
+        if(!Array.isArray(project?.nodes)||project.nodes.length<3||
+          (!project?.imageCanvas?.imageId&&
+           !project?.aiBezierLine?.nodes?.length&&
+           !project?.aiLineGuides?.points?.length))
           throw Error('No hay una copia completa del circuito');
         this._applyProjectData(project);
       } catch(err) {
