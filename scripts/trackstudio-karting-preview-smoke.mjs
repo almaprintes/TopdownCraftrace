@@ -27,6 +27,8 @@ const track={name:'TrackStudio Export',worldW:1000,worldH:900,trackWidth:70,cent
   finishLine:{a:{x:500,y:100},b:{x:530,y:100},normal:{x:0,y:1}},checkpoints:[],start:{x:p[0].x,y:p[0].y,r:0},trackShape:shape,grid:null};
 const record=makeKartingPreviewRecord(editor,track);
 assert.equal(record.track.key,LOCAL_KARTING_PREVIEW_KEY);
+assert.equal(record.track.name,'TrackStudio Export · TRACKSTUDIO DEV',
+ 'Realizador should show the actual authored circuit name, not a hard-coded Karting Tenerife');
 assert.equal(record.track.meta.localPreview,true);
 assert.equal(record.track.carScale,1,'Preview must keep factory-size car');
 assert.equal(record.track.meta.carScale,1,'Nested metadata must not shrink the car');

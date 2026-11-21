@@ -1,6 +1,7 @@
 // DEV-only local producer seat: four physical AI without creating an online room.
 import {CrafRaceLive4BotDirector,LIVE4_AI_LEVELS} from './craftraceLiveV2BotDirector.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
+import {LOCAL_KARTING_PREVIEW_KEY} from '../tracks/localKartingPreview.js';
 import {makeLive4StartingGrid} from './craftraceLiveV2GridGeometry.js';
 import {makeDirectorCameraState,stepDirectorCamera,directorZoom,directorStickVector,directorAltitudeStick,directorStartPhase} from './craftraceDirectorCamera.js';
 import {hideRaceUi,restoreRaceUi} from '../ui/raceUiVisibility.js';
@@ -15,7 +16,8 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    ![1,2,3].includes(difficulty))throw Error('Invalid local director preview');
  const hostId='local-director-preview';
  const difficultyName=LIVE4_AI_LEVELS[difficulty].title.toUpperCase();
- const circuitLabel=String(getTrackPublicName(scene.trackKey)||scene.trackKey||'CIRCUITO').toUpperCase();
+ const fromStudio=scene.trackKey===LOCAL_KARTING_PREVIEW_KEY;
+ const circuitLabel=String(fromStudio?scene.track?.meta?.name||'TRACKSTUDIO DEV':getTrackPublicName(scene.trackKey)||scene.trackKey||'CIRCUITO').toUpperCase();
  const carLabel=String(scene.baseSpec?.name||scene.carId||'COCHE').replaceAll('_',' ').toUpperCase();
  const setupLabel=circuitLabel+' · '+carLabel+' · '+laps+' VUELTAS · IA '+difficulty+' '+difficultyName;
  // Keep the chosen configuration visible. The prior results did not say
@@ -95,6 +97,10 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  for(const ev of ['pointerdown','pointermove','pointerup','pointercancel','click'])
    root.addEventListener(ev,e=>e.stopPropagation());
  const $=s=>root.querySelector(s);
+ if(fromStudio){
+   $('[data-exit]').textContent='EDITOR';
+   $('[data-finish]').textContent='VOLVER AL EDITOR';
+ }
  $('[data-config]').textContent=circuitLabel+' · '+carLabel+' · '+difficultyName;
  const updateModeLabel=()=>{
    const mode=bots.previewMode;

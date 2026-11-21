@@ -112,7 +112,7 @@ export function makeKartingPreviewRecord(editor,gameTrack){
     ...jsonCopy(gameTrack),
     id:LOCAL_KARTING_PREVIEW_KEY,
     key:LOCAL_KARTING_PREVIEW_KEY,
-    name:'KARTING TENERIFE · TRACKSTUDIO DEV',
+    name:String(gameTrack.name||'KARTING TENERIFE').trim().slice(0,64)+' · TRACKSTUDIO DEV',
     category:'Karting / DEV local',
     carScale:STOCK_PREVIEW_CAR_SCALE,
     start:{x:start.x,y:start.y,r:start.r},
