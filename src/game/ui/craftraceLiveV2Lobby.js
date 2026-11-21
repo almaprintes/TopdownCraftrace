@@ -6,6 +6,8 @@ import {createLiveV2Lobby,joinLiveV2Lobby,configureLiveV2Lobby,
 import {stageLive4RaceSession} from '../online/craftraceLiveV2RaceSession.js';
 import {liveIdentity} from '../online/craftraceLiveTransport.js';
 import {live4SeatName} from '../online/craftraceLiveV2PilotNames.js';
+import {isLive4GuidedGSupported,setLive4GuidedGForRoom,hasLive4GuidedGForRoom}
+  from '../online/craftraceLive4GuidedGExperiment.js';
 import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import './craftraceLiveV2Lobby.css';
@@ -51,6 +53,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
               <option value="2" selected>2 · Competitivo</option>
               <option value="3">3 · Experto</option>
             </select></label>
+            <label class="cr4-check" data-g-option><input type="checkbox" data-guided-g>
+              IA EXPERTO · G BÉZIER + DADOS (SANTA CRUZ · DEV)</label>
           </div>
           <button type="button" data-create class="cr4-primary">CREAR PISTA</button>
           <div class="cr4-director-entry">
@@ -90,6 +94,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
               <option value="2">2 · Competitivo</option>
               <option value="3">3 · Experto</option>
             </select></label>
+            <label class="cr4-check" data-g-option-edit><input type="checkbox" data-edit-guided-g>
+              IA EXPERTO · G BÉZIER + DADOS (SANTA CRUZ · DEV)</label>
             <button type="button" data-apply>APLICAR CAMBIOS</button>
           </div>
           <div class="cr4-actions">
@@ -107,6 +113,23 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   document.body.append(root);
   const $=selector=>root.querySelector(selector);
   const classicButton=$('[data-classic]');
+  const gSupported=isLive4GuidedGSupported({trackId:track,dev:race4Enabled,aiDifficulty:3});
+  $('[data-g-option]').hidden=!gSupported;
+  $('[data-g-option-edit]').hidden=!gSupported;
+  $('[data-guided-g]').checked=gSupported;
+  if(gSupported)$('[data-ai]').value='3';
+  $('[data-guided-g]').addEventListener('change',()=>{
+    if($('[data-guided-g]').checked){$('[data-ai]').value='3';$('[data-fill]').checked=true;}
+  });
+  $('[data-ai]').addEventListener('change',()=>{
+    if($('[data-ai]').value!=='3')$('[data-guided-g]').checked=false;
+  });
+  $('[data-edit-guided-g]').addEventListener('change',()=>{
+    if($('[data-edit-guided-g]').checked){$('[data-edit-ai]').value='3';$('[data-edit-fill]').checked=true;}
+  });
+  $('[data-edit-ai]').addEventListener('change',()=>{
+    if($('[data-edit-ai]').value!=='3')$('[data-edit-guided-g]').checked=false;
+  });
   classicButton.hidden=typeof onOpenClassic!=='function';
   $('[data-director]').hidden=!race4Enabled;
   $('[data-track]').textContent=getTrackPublicName(track);
@@ -126,6 +149,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     $('[data-edit-capacity]').value=String(s.capacity);
     $('[data-edit-fill]').checked=Boolean(s.fill_ai);
     $('[data-edit-ai]').value=String(s.ai_difficulty);
+    $('[data-edit-guided-g]').checked=gSupported&&hasLive4GuidedGForRoom(s.id);
     hydrated=true;
   };
   const update=(s,grid)=>{
@@ -159,6 +183,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     $('[data-ready]').textContent=me?.ready?'CANCELAR LISTO':'ESTOY LISTO';
     $('[data-start]').hidden=!(race4Enabled&&host&&s.state==='waiting');
     $('[data-start]').disabled=loading||!grid.canStart;
+    if(host&&gSupported&&hasLive4GuidedGForRoom(s.id)&&s.ai_difficulty===3&&s.fill_ai)
+      $('[data-rules]').textContent+=' · IA G BÉZIER + DADOS';
     $('[data-rosterstatus]').textContent=grid.canStart
       ?'PARRILLA PREPARADA · '+grid.humanCount+' HUMANO(S) + '+grid.aiCount+' IA'
       :'PARA SALIR: MÍNIMO 2 PILOTOS Y TODOS LOS HUMANOS LISTOS Y CONECTADOS';
@@ -242,6 +268,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
       capacity:Number($('[data-capacity]').value),
       fillWithAi:$('[data-fill]').checked,aiDifficulty:Number($('[data-ai]').value)
     });
+    setLive4GuidedGForRoom(s.id,gSupported&&$('[data-guided-g]').checked&&
+      $('[data-ai]').value==='3'&&$('[data-fill]').checked);
     await enter(s);
   }));
   $('[data-code]').addEventListener('input',()=>{
@@ -264,6 +292,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
       aiDifficulty:Number($('[data-edit-ai]').value)
     });
     hydrated=false;
+    setLive4GuidedGForRoom(room.id,gSupported&&$('[data-edit-guided-g]').checked&&
+      state.ai_difficulty===3&&state.fill_ai===true);
     const {liveV2Grid}=await import('../online/craftraceLiveV2Roster.js');
     await update(state,liveV2Grid(state));
     say('Cambios aplicados. Los pilotos deben confirmar de nuevo.');
