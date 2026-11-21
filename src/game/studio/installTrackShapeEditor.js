@@ -304,8 +304,8 @@ export function installTrackStudioShapeEditor(s){
   // A/B/G comparison and NO online room, rewards or official time records.
   s._startGuidedAiPreview=async()=>{
     if(installing)return;
-    if(!(s._aiLineGuides?.length)){
-      s._flashMessage('Añade al menos una GUÍA IA para probar la trazada guiada');
+    if(!(s._aiLineGuides?.length)&&!(s._aiBezierLine?.nodes?.length>=3)){
+      s._flashMessage('Dibuja una TRAZADA IA Bézier o añade guías de vértice');
       return;
     }
     if(!s._imageCanvas?.imageId){
@@ -316,12 +316,13 @@ export function installTrackStudioShapeEditor(s){
       s._flashMessage('El Realizador guiado solo existe en CraftRace DEV');
       return;
     }
-    if(!window.confirm('¿Probar las guías IA con 4 rivales físicos en el Realizador DEV?\\n\\nSin récords ni créditos. Podrás comparar A / B / GUIADA antes de la salida.'))return;
+    if(!window.confirm('¿Probar la trayectoria Bézier/guías IA con 4 rivales físicos en el Realizador DEV?\\n\\nSin récords ni créditos. Podrás comparar A / B / GUIADA antes de la salida.'))return;
     installing=true;
     try{
       const record=await installKartingPreview(s);
-      if(!record?.track?.aiLineGuides?.points?.length)
-        throw Error('La vista previa no contiene tus guías IA');
+      if(!record?.track?.aiLineGuides?.points?.length&&
+         !record?.track?.aiBezierLine?.nodes?.length)
+        throw Error('La vista previa no contiene tu trayectoria Bézier ni guías IA');
       s._autosaveRecovery?.();
       s.scene.start('race',{
         trackKey:LOCAL_KARTING_PREVIEW_KEY,testMode:true,
