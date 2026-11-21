@@ -22,7 +22,8 @@ const bridge=readFileSync('src/game/online/craftraceLiveV2RaceBridge.js','utf8')
 for(const key of ['observeLive4Timing(this.timingAudit','measureLateralUse(candidate',
   'lateralMeanPct','timing:summarizeLive4Timing(this.timingAudit)'])
  assert.ok(director.includes(key),'Missing host diagnostic '+key);
-assert.ok(bridge.includes('DIAGNÓSTICO IA')&&bridge.includes('IA HITCH'));
+assert.ok(bridge.includes('OBJETIVO LATERAL')&&
+ bridge.includes('ERROR SEGUIMIENTO')&&bridge.includes('IA HITCH'));
 assert.ok(bridge.includes('elapsedMs:bot.elapsedMs'),
  'Results should remain physical-gate elapsed time');
 console.log('PASS LIVE 4: frame-time debt + physical lateral occupancy are read-only');

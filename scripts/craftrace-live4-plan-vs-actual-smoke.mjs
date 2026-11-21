@@ -28,6 +28,8 @@ for(const key of ['santa-cruz','track01','karting-tenerife','technical-ridge']){
  assert.ok(baseline?.meanPct>=0&&baseline.meanPct<=100);
  assert.ok(alternative?.meanPct>=0&&alternative.meanPct<=100);
  console.log('[LIVE 4 LINE PLAN]',key,JSON.stringify({
+  geometry:track.meta?.sourceFile||'repository-track-json',
+  samplePoints:track.centerline.length,
   baselineTargetPct:baseline.meanPct,experimentalTargetPct:alternative.meanPct,
   baselineMaxPct:baseline.maxPct,experimentalMaxPct:alternative.maxPct
  }));
