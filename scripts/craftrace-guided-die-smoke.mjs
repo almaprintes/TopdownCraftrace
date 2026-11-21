@@ -5,6 +5,8 @@ import {
  GUIDED_DIE_TOLERANCE_PX,rollGuidedDie,nextGuidedApex,
  physicalPointSegmentDistance,measureGuidedPass,closeGuidedLap
 } from '../src/game/online/craftraceGuidedDie.js';
+import {buildDirectorLapReport,fmtDirectorTime}
+ from '../src/game/online/craftraceDirectorLapReport.js';
 
 assert.deepEqual(GUIDED_DIE_TOLERANCE_PX.slice(1),[35,35,20,20,5,5]);
 for(let f=1;f<=6;f++){
@@ -40,6 +42,30 @@ assert.ok(controller.includes("targetSpeed*controlScale*(1-.28*missRisk)"));
 assert.ok(director.includes("this.preview&&this.previewMode==='G'&&"));
 assert.ok(director.includes("if(guidedActive&&lapPassed)"));
 assert.ok(director.includes("measureGuidedPass(bot,this.previewGuideTargets"));
-assert.ok(real.includes('Los aciertos son distancias físicas medidas'));
+// Realizador reports every real lap, totals, best laps and actual rank.
+const lapReport=buildDirectorLapReport([
+ {seat:0,lapTimes:[22000,20700,21000],elapsedMs:63700},
+ {seat:1,lapTimes:[21500,20300,20400],elapsedMs:62200},
+ {seat:2,lapTimes:[24000,22000,23000],elapsedMs:69000},
+ {seat:3,lapTimes:[22200,21000,20800],elapsedMs:64000}
+],3);
+assert.deepEqual(lapReport.rows.map(row=>row.seat),[1,0,3,2]);
+assert.deepEqual(lapReport.rows[0].lapTimes,[21500,20300,20400]);
+assert.equal(lapReport.rows[0].totalMs,62200);
+assert.equal(lapReport.rows[0].bestLapMs,20300);
+assert.equal(lapReport.fastestLapMs,20300);
+assert.equal(fmtDirectorTime(20300),'0:20.300');
+assert.equal(fmtDirectorTime(62200),'1:02.200');
+assert.equal(fmtDirectorTime(null),'—');
+const longReport=buildDirectorLapReport([{seat:0,
+ lapTimes:Array.from({length:20},(_,i)=>20000+i)}],20);
+assert.equal(longReport.rows[0].lapTimes.length,20);
+assert.equal(longReport.rows[0].totalMs,20*20000+190);
+assert.ok(real.includes("buildDirectorLapReport(bots.results(),laps)"));
+assert.ok(real.includes('data-lap-table'));
+assert.ok(real.includes('TIEMPOS REALES POR VUELTA'));
+assert.ok(!real.includes('🎲')&&!real.includes('dieStatus')&&
+ !real.includes('Dado por IA y vuelta'),
+ 'Die rolls must remain totally hidden during the race and in the results');
 assert.ok(!controller.includes('setPosition('),'No position teleportation from guided controller');
-console.log('PASS G die 1-6, per-lap commitments, true 5px segment hit/miss and DEV isolation');
+console.log('PASS G invisible auto-die, real apex pass accuracy and 1-20 lap timing report');
