@@ -4,6 +4,8 @@ import {normalizeAiBezierLine,createAiBezierFromTrackNodes,
  sampleAiBezierLine,moveAiBezierPart,AI_BEZIER_MAX_NODES}
  from './trackAiBezierLine.js';
 import {splitShapeEdge} from './trackShapeGeometry.js';
+import {buildTrackRacingLineModel} from '../ai/trackRacingLinePlanner.js';
+import {buildBezierAiRacingLineModel} from '../ai/trackBezierAiRacingLinePlanner.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 function draw(scene){
@@ -101,6 +103,48 @@ export function installTrackStudioAiBezier(scene){
    scene._autosaveRecovery();scene._redrawEditor();scene._updatePanel();
    scene._flashMessage('Trayectoria IA creada · ajusta sus nodos sin alterar la pista');
   }catch(error){scene._flashMessage(error.message||'Error al generar trayectoria IA');}
+ };
+ scene._aiBezierValidate=()=>{
+  if(!scene._aiBezierLine){
+   scene._flashMessage('Primero pulsa GENERAR BASE y dibuja tu trayectoria');
+   return null;
+  }
+  if(!scene._trackShape){
+   scene._flashMessage('Primero pulsa CREAR PISTA para disponer de los bordes reales');
+   return null;
+  }
+  try{
+   const track=scene._exportToGameTrack();
+   if(!track?.centerline?.length)throw Error('Circuito sin eje de pista');
+   const base=buildTrackRacingLineModel({
+     raceCenterline:track.centerline,trackWidth:track.trackWidth
+   },{apexCommitment:.22});
+   const result=buildBezierAiRacingLineModel(base,scene._aiBezierLine,
+     scene._trackShape,track,{carRadius:14});
+   const report=result.report;
+   if(report.active){
+    scene._flashMessage('TRAZADA VALIDADA · '+report.total+
+      ' nodos · continuidad y bordes correctos · lista para PROBAR');
+   }else{
+    const reasons={
+     'outside-safe-asphalt':'la trayectoria invade un borde o el exterior',
+     'outside-route-corridor':'un tramo se aleja demasiado del eje del circuito',
+     'route-order-break':'se cruza el orden natural de los tramos',
+     'wrong-direction':'hay nodos en sentido contrario',
+     'steering-discontinuity':'hay una curva demasiado brusca',
+     'length-mismatch':'la longitud de la curva no concuerda con la pista',
+     'start-mismatch':'el inicio no está alineado',
+     'missing-borders':'faltan los bordes reales de pista',
+     'invalid-bezier':'faltan nodos o los tiradores son inválidos'
+    };
+    scene._flashMessage('BÉZIER POR CORREGIR · '+(reasons[report.reason]||report.reason)+
+     (Number.isInteger(report.badIndex)?' · muestra '+report.badIndex:''));
+   }
+   return report;
+  }catch(err){
+   scene._flashMessage('No se pudo validar la trayectoria: '+String(err?.message||err));
+   return null;
+  }
  };
  scene._aiBezierInsert=()=>{
   const line=scene._aiBezierLine,index=scene._aiBezierSelected;
