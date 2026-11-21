@@ -18,7 +18,18 @@ assert.match(scene,/this\._renderBroadcastRecords\(this\._rc2PreferredTrack\|\|n
 assert.match(scene,/event\.stopImmediatePropagation\(\)/,'Back click handler must stop legacy navigation');
 assert.match(scene,/this\.scene\.start\('season'\)/,'Seasons must navigate to the existing scene');
 assert.doesNotMatch(hub,/supabase|createClient|fetch\(|WebSocket|setInterval|requestAnimationFrame/i,'Hub must not initiate background network or animation loops');
-for(const action of ['rankings','ghosts','multiplayer','events','pilots','cars','seasons','exit'])
+const directory=read('src/game/ui/raceControlDirectory.js');
+assert.match(scene,/mountRaceControlDirectory\(this\._root/, 'Open the real directories');
+assert.match(scene,/case 'circuits':/, 'Circuit archive must route correctly');
+assert.match(hub,/type:'circuits'/, 'Cars must be replaced with Circuits');
+assert.doesNotMatch(hub,/action:'cars'|type:'cars'/, 'No AI garage or fixed car tile');
+assert.match(directory,/TRACK_REGISTRY/, 'Read actual registered tracks');
+assert.match(directory,/AI_ELO_PILOTS/, 'Show exactly the current AI roster');
+assert.match(directory,/seedAiWeekendChampionship/, 'Show the approved seven-race bracket');
+assert.match(directory,/onTrack\?\.\(t\.id\)/, 'Registered tracks must open actual records');
+assert.doesNotMatch(directory,/supabase|createClient|fetch\(|setInterval|WebSocket/i, 'Preview directories must not claim server results');
+
+for(const action of ['rankings','ghosts','multiplayer','events','pilots','circuits','seasons','exit'])
   assert.match(hub,new RegExp('(?:action:|data-rc2-action=)[\\x27\\x22]?'+action),'Missing '+action+' action');
 for(const file of [
   'public/assets/logo.webp',
