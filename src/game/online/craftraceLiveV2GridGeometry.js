@@ -5,7 +5,8 @@ import {loopPathMetrics,gateOnLoop,sampleLoopAt} from '../tracks/closedCircuitGa
 
 const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export function makeLive4StartingGrid({
- start,trackWidth,carScale=1,capacity=4,centerline=null,finishLine=null
+ start,trackWidth,carScale=1,capacity=4,centerline=null,finishLine=null,
+ frontOffsetPx=90
 }={}){
  if(!start||![start.x,start.y,start.r].every(finite)||
     !Number.isInteger(capacity)||capacity<2||capacity>4)throw Error('Invalid start grid');
@@ -34,7 +35,7 @@ export function makeLive4StartingGrid({
    // 90 px prevents the front axle of the first physical car from hanging
    // over the finish stripe before the green light. The original grid used
    // another 44 px at spawn; no hidden extra shift is applied on this path.
-   const along=90+longitudinal*row;
+   const along=Math.max(90,Math.min(900,Number(frontOffsetPx)||90))+longitudinal*row;
    const sample=trackAligned?sampleLoopAt(metrics,gate.routeDistance-along):null;
    const r=sample?Math.atan2(sample.tangent.y,sample.tangent.x):start.r;
    const nx=-Math.sin(r),ny=Math.cos(r);
