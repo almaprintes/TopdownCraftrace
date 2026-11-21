@@ -5,6 +5,7 @@ import {createAiBezierFromTrackNodes,sampleAiBezierLine}
  from '../src/game/studio/trackAiBezierLine.js';
 import {makeAiLineGuide,normalizeAiLineGuides}
  from '../src/game/studio/trackAiLineGuides.js';
+import {splitShapeEdge} from '../src/game/studio/trackShapeGeometry.js';
 
 const R=320,N=32,C={x:650,y:650},step=2*Math.PI/N;
 const arm=R*(4/3)*Math.tan(step/4);
@@ -23,11 +24,12 @@ const guides=guideIndices.map((j,i)=>{
  return makeAiLineGuide([],p.x,p.y,170);
 }).map((g,i)=>({...g,id:'apex-'+(i+1)}));
 const original=JSON.stringify(nodes),oldGuides=JSON.stringify(guides);
-const generated=createAiBezierFromGuides(nodes,guides,{trackWidth:170,maxNodes:76});
+const generated=createAiBezierFromGuides(nodes,guides,{trackWidth:170});
 const line=generated.line;
 assert.equal(generated.source,'guide-anchors');
 assert.equal(generated.usedGuides.length,guides.length);
-assert.ok(line.nodes.length<=76 && line.nodes.length>guides.length+10);
+assert.equal(line.nodes.length,guides.length,
+ 'Exactly one node for each authored guide, ZERO automatic intermediate nodes');
 const sampled=sampleAiBezierLine(line,8);
 for(const guide of guides){
  const exact=line.nodes.filter(p=>p.x===guide.x&&p.y===guide.y);
@@ -40,6 +42,17 @@ assert.equal(JSON.stringify(guides),oldGuides,'Never mutate saved guide points')
 assert.equal(normalizeAiLineGuides(guides).points.length,6);
 assert.ok(line.nodes.some(p=>Math.abs(Math.hypot(p.x-C.x,p.y-C.y)-R)>10),
  'The line must not be a copy of the central axis');
+// The curve can be refined with + NODO, but only after the author asks.
+const manuallyExtended=JSON.parse(JSON.stringify(line));
+const originalSample=sampleAiBezierLine(manuallyExtended,12);
+const selected=splitShapeEdge(manuallyExtended.nodes,0,true);
+assert.equal(selected,1);
+assert.equal(manuallyExtended.nodes.length,guides.length+1);
+const refinedSample=sampleAiBezierLine(manuallyExtended,24);
+for(const p of originalSample)assert.ok(refinedSample.some(q=>
+ Math.hypot(p.x-q.x,p.y-q.y)<1e-6),
+ 'Manual subdivision must not change the original spline shape');
+assert.ok(manuallyExtended.nodes.some(p=>p.x===guides[0].x&&p.y===guides[0].y));
 const axis=createAiBezierFromTrackNodes(nodes,32);
 assert.equal(axis.nodes.length,32,'Legacy fallback must remain independent');
 const impossible=guides.map(p=>({...p}));
@@ -47,7 +60,9 @@ impossible[0]={...impossible[0],x:1250,y:1200};
 assert.throws(()=>createAiBezierFromGuides(nodes,impossible,{trackWidth:170}),
  /podría pertenecer a otro tramo/,'Never connect a far guide through an unrelated road');
 assert.throws(()=>createAiBezierFromGuides(nodes,[],{trackWidth:170}),
- /No hay puntos guía/);
+ /al menos 3 puntos guía/);
+assert.throws(()=>createAiBezierFromGuides(nodes,guides.slice(0,2),{trackWidth:170}),
+ /al menos 3 puntos guía/);
 const repeated=guides.map(p=>({...p}));
 repeated[1]={...repeated[1],x:repeated[0].x,y:repeated[0].y};
 assert.throws(()=>createAiBezierFromGuides(nodes,repeated,{trackWidth:170}),
@@ -61,4 +76,4 @@ assert.ok(ui.includes('DESDE EJE (SIN GUÍAS)'));
 assert.ok(plugin.includes('scene._autosaveRecovery()'));
 assert.ok(plugin.includes('scene._exportToGameTrack='));
 assert.ok(ui.includes('✓ VALIDAR TRAZADA'));
-console.log('PASS AI Bezier: exact authored apex anchors, continuous ordered route, 76-node limit, independent centerline fallback');
+console.log('PASS AI Bezier: 1 node per guide, no extra nodes, manual subdivision, independent centerline fallback');
