@@ -1,6 +1,7 @@
 // src/game/ai/survivalPhysicalBotController.js
 // Fase 3: controlador físico de un único bot experimental.
 // Produce dirección, gas y freno; nunca teletransporta el cuerpo durante la marcha.
+import {nextGuidedApex} from '../online/craftraceGuidedDie.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
@@ -179,14 +180,28 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     22,110);
   const precisionSteps=clamp(Math.round(precisionAimPx/spacing),2,8);
   const recoverySteps=nearest.distance>45?Math.min(3,precisionSteps):precisionSteps;
+  // Only the experimental G Realizador provides a die and authored apexes.
+  // Look ahead to the next *forward* guide, never jump to another hairpin.
+  const guidance=params.live4GuidedApex;
+  const upcoming=precisionCornering&&guidance?.guides?.length
+    ?nextGuidedApex(guidance.guides,nearest.index,samples.length,22):null;
+  const guideAhead=upcoming&&upcoming.stepsAhead>=1&&upcoming.stepsAhead<=18;
+  const guideTolerance=Math.max(5,Number(guidance?.tolerancePx)||35);
+  const guideUrgency=guideAhead?clamp((19-upcoming.stepsAhead)/15,0,1):0;
+  const guidePrecision=clamp((35-guideTolerance)/30,0,1);
+  const guideAim=guideUrgency*(.28+.67*guidePrecision);
+  const guidedSteps=guideAhead&&upcoming.stepsAhead<recoverySteps
+    ?Math.max(2,upcoming.stepsAhead):recoverySteps;
   const targetIndex=precisionCornering
-    ?(nearest.index+recoverySteps)%samples.length
+    ?(nearest.index+guidedSteps)%samples.length
     :(maneuverActive
       ?maneuver.targetIndex
       :(committedShortChicane?shortcut.targetIndex
         :(nearest.index+lookaheadSteps)%samples.length));
   const target=samples[targetIndex];
-  const desiredHeading=Math.atan2(Number(target.y)-Number(body.y),Number(target.x)-Number(body.x));
+  const aimX=Number(target.x)*(1-guideAim)+Number(upcoming?.x??target.x)*guideAim;
+  const aimY=Number(target.y)*(1-guideAim)+Number(upcoming?.y??target.y)*guideAim;
+  const desiredHeading=Math.atan2(aimY-Number(body.y),aimX-Number(body.x));
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
   let rawSteer=clamp(headingError/(precisionCornering
     ?(straightLock?.50:.33):(straightLock?.62:.48)),-1,1);
@@ -249,7 +264,12 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
       Math.max(0,nearest.distance-((maneuverActive||maneuverRelease)?28:12))*.003,
     .58,1
   );
-  const controlledTargetSpeed=targetSpeed*controlScale;
+  // No preset braking for a guide. Only shed speed if steering error
+  // predicts a miss near an exact apex. Physics/grip remain untouched.
+  const predictedMiss=Math.abs(headingError)*Math.max(28,speed*.16);
+  const missRisk=guideAhead
+    ?clamp((predictedMiss-guideTolerance)/55,0,1)*guideUrgency:0;
+  const controlledTargetSpeed=targetSpeed*controlScale*(1-.28*missRisk);
   const speedError=controlledTargetSpeed-speed;
   const throttle=clamp((speedError-2)/34,0,1);
   const brake=clamp((-speedError-3)/30,0,1);
@@ -304,7 +324,10 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     valid:true,
     nearestIndex:nearest.index,
     targetIndex,
-    precisionAimSteps:precisionCornering?recoverySteps:null,
+    precisionAimSteps:precisionCornering?guidedSteps:null,
+    guidedGuideId:guideAhead?upcoming.id:null,
+    guidedTolerancePx:guideAhead?guideTolerance:null,
+    guidedPredictedMissPx:guideAhead?predictedMiss:null,
     distanceToLine:nearest.distance,
     speed,
     targetSpeed:controlledTargetSpeed,
