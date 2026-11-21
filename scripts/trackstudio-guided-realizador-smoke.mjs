@@ -54,7 +54,7 @@ const director=readFileSync('src/game/online/craftraceLiveV2BotDirector.js','utf
 const preview=readFileSync('src/game/online/craftraceDirectorPreview.js','utf8');
 const editor=readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
 const ui=readFileSync('src/game/studio/trackStudioLabChrome.js','utf8');
-assert.ok(director.includes('if(preview&&scene.track?.meta?.aiLineGuides?.points?.length)'));
+assert.ok(director.includes('resolveDirectorGuideSource(scene.track)'));
 assert.ok(director.includes("if(!this.preview||this.raceStarted"));
 assert.ok(director.includes('this.previewGuidedProfile=guidedProfile'));
 assert.ok(preview.includes("bots.previewGuidedProfile?'G':'B'"));

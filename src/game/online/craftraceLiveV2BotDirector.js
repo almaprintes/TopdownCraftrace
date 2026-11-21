@@ -3,6 +3,7 @@
 // easy/medium simply choose less ambitious pace, expert has no extra grip/power.
 import {buildTrackRacingLineModel} from '../ai/trackRacingLinePlanner.js';
 import {buildGuidedTrackRacingLineModel} from '../ai/trackGuidedRacingLinePlanner.js';
+import {resolveDirectorGuideSource} from './craftraceDirectorGuideSource.js';
 import {buildTrackSpeedProfile} from '../ai/trackSpeedProfilePlanner.js';
 import {buildTrackManeuverPlan} from '../ai/trackManeuverPlanner.js';
 import {updateRacePhysicalBot} from '../ai/raceAiController.js';
@@ -56,14 +57,20 @@ export class CrafRaceLive4BotDirector{
   }):null;
   this.previewGuidedLine=null;this.previewGuidedProfile=null;this.previewGuideReport=null;
   this.previewMode='A';
-  if(preview&&scene.track?.meta?.aiLineGuides?.points?.length){
-    const result=buildGuidedTrackRacingLineModel(
-      this.previewExpertLine,scene.track.meta.aiLineGuides,
-      scene.track.meta.trackShape,{
-        worldW:scene.track.meta.worldW,worldH:scene.track.meta.worldH
-      },{carRadius:Math.max(8,Math.round(14*Number(scene.track.meta.carScale||1)))});
-    this.previewGuideReport=result.report;
-    if(result.report.active)this.previewGuidedLine=result.model;
+  if(preview){
+    const authored=resolveDirectorGuideSource(scene.track);
+    if(authored.guides?.points?.length){
+      const result=buildGuidedTrackRacingLineModel(
+        this.previewExpertLine,authored.guides,authored.shape,
+        authored.dimensions,
+        {carRadius:Math.max(8,Math.round(14*Number(authored.carScale||1)))});
+      this.previewGuideReport={...result.report,source:authored.source};
+      if(result.report.active)this.previewGuidedLine=result.model;
+    }else{
+      // Distinguish a genuinely guide-free circuit from a missing/invalid plan.
+      this.previewGuideReport={active:false,reason:'no-guides',accepted:0,
+        total:0,source:authored.source,entries:[]};
+    }
   }
   if(!expertLine.valid||expertLine.racingLine.length!==line.racingLine.length||
      (preview&&(!this.previewExpertLine?.valid||

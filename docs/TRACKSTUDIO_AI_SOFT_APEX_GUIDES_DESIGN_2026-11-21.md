@@ -135,3 +135,13 @@ Se incorpora **PADDOCK → LABORATORIO QA → REALIZADOR GUIADO · SANTA CRUZ** 
 La prueba CI comprueba que el circuito instalado incluye 10 guías idénticas a las del archivo de origen, los recursos fotográficos y el acceso de QA, y que el planificador conserva la regla de 9 guías admisibles y 1 descartada por seguridad.
 
 **No homologada:** que la línea G se construya y sus desplazamientos tengan margen dentro de asfalto no equivale a demostrar una carrera más rápida. La prueba con cuatro coches en dispositivo sigue siendo necesaria.
+
+## 21/11/2026 13:57 — Corrección: Realizador mostraba B / «SIN GUÍAS»
+
+**Incidencia observada y reproducible:** el usuario lanzó `PADDOCK → LABORATORIO QA → REALIZADOR GUIADO · SANTA CRUZ` en iPhone. La sesión funcionaba y completó cuatro coches, pero el HUD indicaba `B · VÉRTICES` y `SIN GUÍAS`. Las diez guías sí estaban instaladas en `track.json.meta.aiLineGuides` y el CI previo validaba solo el archivo fuente. El problema era una ruta equivocada a los metadatos del circuito en el runtime.
+
+**Causa demostrada:** `RaceScene` crea `scene.track={meta:t01,...}`. Para un circuito registrado, el campo real queda en `scene.track.meta.meta.aiLineGuides`, mientras que para una vista previa importada de TrackStudio está en `scene.track.meta.aiLineGuides`. El constructor del bot solo consultaba la segunda ruta, así que ignoraba silenciosamente las diez guías del Santa Cruz registrado y activaba B por falta de G.
+
+**Corrección:** `src/game/online/craftraceDirectorGuideSource.js` resuelve ambas variantes (solo dentro de `preview`), y entrega los bordes Bézier y dimensiones desde `scene.track.meta`. El planificador guiado y las físicas existentes no cambian. El diagnóstico informa de guías no disponibles solo cuando realmente faltan. La prueba `scripts/craftrace-realizador-registered-guides-smoke.mjs`, ejecutada después de instalar la pista oficial, reproduce `scene.track.meta=t01` y exige diez guías leídas, nueve aceptadas, una descartada, una trayectoria distinta y un perfil físico G válido. También comprueba la ruta de TrackStudio y la ausencia de guías.
+
+La vía de prueba sigue siendo DEV/Paddock y nunca se habilita en LIVE 4 competitivo. No significa que G sea más rápida: hay que repetir carreras reales A/B/G y observar sus trazadas y tiempos.

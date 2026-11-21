@@ -34,7 +34,7 @@ assert.ok(hub.includes("window.location.pathname.includes('/dev/')"));
 assert.ok(race.includes('fromPaddockDirector:true'));
 assert.ok(preview.includes('scene._returnSceneData?.fromPaddockDirector'));
 assert.ok(preview.includes("bots.previewGuidedProfile?'G':'B'"));
-assert.ok(director.includes('if(preview&&scene.track?.meta?.aiLineGuides?.points?.length)'));
+assert.ok(director.includes('resolveDirectorGuideSource(scene.track)'));
 assert.ok(director.includes('if(!this.preview||this.raceStarted'));
 const room=readFileSync('src/game/online/craftraceLiveV2RaceBridge.js','utf8');
 assert.ok(!room.includes('previewGuidedProfile'));
