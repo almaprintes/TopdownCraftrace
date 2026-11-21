@@ -4,6 +4,7 @@ import {normalizeAiBezierLine,createAiBezierFromTrackNodes,
  sampleAiBezierLine,moveAiBezierPart,AI_BEZIER_MAX_NODES}
  from './trackAiBezierLine.js';
 import {splitShapeEdge} from './trackShapeGeometry.js';
+import {createAiBezierFromGuides} from './trackAiBezierGuideGenerator.js';
 import {buildTrackRacingLineModel} from '../ai/trackRacingLinePlanner.js';
 import {buildBezierAiRacingLineModel} from '../ai/trackBezierAiRacingLinePlanner.js';
 
@@ -91,17 +92,30 @@ export function installTrackStudioAiBezier(scene){
   scene._flashMessage(active?'Edición Bézier cerrada':
    'TRAZADA IA · genera una base y ajusta sus nodos y tiradores');
  };
- scene._aiBezierGenerate=()=>{
+ scene._aiBezierGenerate=(forceAxis=false)=>{
   if(!scene._isClosed||scene._nodes.length<3)
    return scene._flashMessage('Primero abre un circuito cerrado');
+  const guideCount=scene._aiLineGuides?.length||0;
   if(scene._aiBezierLine&&!window.confirm(
     '¿Regenerar la trayectoria IA? Perderás los ajustes Bézier actuales. La carretera no cambiará.'))return;
+  // Never overwrite an already edited Bezier if a guide is malformed.
+  // Validate everything before pushing an undo checkpoint.
   try{
+   const fromGuides=!forceAxis&&guideCount>0;
+   const generated=fromGuides?createAiBezierFromGuides(
+     scene._nodes,scene._aiLineGuides,
+     {maxNodes:76,trackWidth:scene._trackWidth,influencePx:140}
+   ):null;
+   const next=generated?.line||createAiBezierFromTrackNodes(scene._nodes,32);
+   if(!next)throw Error('No se pudo generar la curva');
    scene._pushHistory();
-   scene._aiBezierLine=createAiBezierFromTrackNodes(scene._nodes,32);
+   scene._aiBezierLine=next;
    scene._aiBezierSelected=0;
    scene._autosaveRecovery();scene._redrawEditor();scene._updatePanel();
-   scene._flashMessage('Trayectoria IA creada · ajusta sus nodos sin alterar la pista');
+   scene._flashMessage(fromGuides?
+     'TRAZADA GENERADA DESDE '+generated.usedGuides.length+
+       ' GUÍAS · curva continua con vértices exactos · pulsa VALIDAR':
+     'TRAZADA DESDE EJE · ajusta nodos · pulsa VALIDAR');
   }catch(error){scene._flashMessage(error.message||'Error al generar trayectoria IA');}
  };
  scene._aiBezierValidate=()=>{
