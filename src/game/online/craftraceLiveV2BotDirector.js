@@ -187,7 +187,7 @@ export class CrafRaceLive4BotDirector{
      gatePhase:0,lastPhysicalPosition:{x,y},
      finished:false,finishAt:null,lapTimes:[],lastLapAt:null,
      lastPoseAt:0,lastPose:null,
-     guidedRoll:null,guidedTolerancePx:null,guidedLapHistory:[],
+     guidedRoll:null,guidedTolerancePx:null,guidedLapHistory:[],bezierDieHistory:[],
      _guidedNearestPx:{},_guidedPrevPosition:{x,y},
      cornerDiagnostics:{samples:0,sumError:0,maxError:0,overWide:0,lastAimSteps:null,
        lateralCount:0,lateralSum:0,lateralMax:0,lateralNearEdge:0,
@@ -211,7 +211,19 @@ export class CrafRaceLive4BotDirector{
     line,this._bezierSpeedOptions));
   if(!profile.valid)return this.previewGuidedProfile;
   profile.live4CurveComplexity=line.metrics.meanAbsCurvature;
+  // Actual selected, asphalt-safe modification (may be zero for a narrow
+  // curve): a roll is NOT proof that the physical car reached the target.
+  profile.live4DieVariationPx=Number(line.metrics?.dieVariationPx)||0;
   return profile;
+ }
+ _setBezierDieForLap(bot,lap){
+  const profile=this._bezierProfileForDie(bot.seat,bot.guidedRoll);
+  bot._bezierProfile=profile;
+  if(!Number.isInteger(lap)||lap<1||lap>this.laps)return;
+  bot.bezierDieHistory.push({
+    lap,face:bot.guidedRoll,
+    plannedVariationPx:Number(profile?.live4DieVariationPx)||0
+  });
  }
  setPreviewLineMode(mode){
   if(!this.preview||this.raceStarted||!['A','B','G'].includes(mode))return false;
@@ -223,13 +235,13 @@ export class CrafRaceLive4BotDirector{
   this.profiles.set(3,chosen);this.profile=chosen;
   for(const bot of this.bots){
     bot._bezierProfile=null;
+    bot.bezierDieHistory=[];
     if(mode!=='G'||bot.difficulty!==3)continue;
-    if(bot.guidedRoll===null){
-      const die=rollGuidedDie();
-      bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
-    }
-    if(this.previewBezierActive)
-      bot._bezierProfile=this._bezierProfileForDie(bot.seat,bot.guidedRoll);
+    // Every new pre-start selection of G creates its own independent dice
+    // sequence. No visible pause, button or roll animation.
+    const die=rollGuidedDie();
+    bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
+    if(this.previewBezierActive)this._setBezierDieForLap(bot,1);
   }
   return true;
  }
@@ -325,7 +337,7 @@ export class CrafRaceLive4BotDirector{
        const die=rollGuidedDie();
        bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
        if(bezierActive)
-         bot._bezierProfile=this._bezierProfileForDie(bot.seat,die.face);
+         this._setBezierDieForLap(bot,bot.completedLaps+1);
      }
    }
    const pose={x:body.x,y:body.y,angle:body.rotation,
@@ -342,6 +354,7 @@ export class CrafRaceLive4BotDirector{
   return this.bots.filter(bot=>bot.finished).map(bot=>({
    seat:bot.seat,lapTimes:bot.lapTimes.slice(),
    guidedLapHistory:bot.guidedLapHistory.slice(),
+   ...(this.preview?{bezierDieHistory:bot.bezierDieHistory.map(x=>({...x}))}:{}),
    elapsedMs:bot.lapTimes.reduce((sum,ms)=>sum+ms,0),difficulty:bot.difficulty
   }));
  }
