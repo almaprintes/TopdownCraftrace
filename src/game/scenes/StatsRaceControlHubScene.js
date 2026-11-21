@@ -21,6 +21,17 @@ export class StatsScene extends PreviousStatsScene {
     this.events.once('shutdown', () => this._disposeRaceControlHub());
     this.events.once('destroy', () => this._disposeRaceControlHub());
     if(onlineEntry) this._showRaceControlHub();
+    // Revancha returns to RACE CONTROL with a NEW authorized waiting room.
+    // This runs only on explicit host proposal or human acceptance; no auto
+    // consent and no reuse of the previous locked grid/result rows.
+    if(onlineEntry&&data?.live4RematchRoom?.id){
+      const next=data.live4RematchRoom;
+      void import('../ui/craftraceLiveV2Lobby.js').then(({openCrafRaceLiveV2Lobby})=>{
+        if(!this.scene?.isActive?.()||!this._root?.isConnected)return;
+        openCrafRaceLiveV2Lobby(this,{trackId:next.track_id,carId:next.car_id,
+          initialRoom:next});
+      }).catch(error=>console.error('[LIVE 4] Could not open rematch lobby',error));
+    }
   }
 
   _disposeRaceControlHub() {
