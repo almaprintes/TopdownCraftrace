@@ -268,3 +268,22 @@
   .ts-lab__photo-actions{margin-top:1px}
   .ts-lab__photo-action{min-height:29px;padding:3px}
 }
+
+/* TrackStudio: compact mobile editor for non-mandatory AI apex hints. */
+.ts-lab__stage-button--ai{background:#3e3020;border-color:#d3a14e;color:#ffe3aa}
+.ts-lab__stage-button--ai[aria-pressed=true]{background:#efba60;border-color:#ffdc99;color:#172535}
+.ts-lab__ai-guide-panel{display:flex;flex-direction:column;gap:clamp(3px,.7vh,8px);min-height:0;overflow-y:auto;
+ border:1px solid #bf965e;border-radius:9px;background:linear-gradient(145deg,#382918,#132638);
+ padding:clamp(5px,.8vw,10px);overscroll-behavior:contain}
+.ts-lab__ai-guide-panel[hidden]{display:none}
+.ts-lab__ai-title{font-weight:950;color:#ffe0a3;font-size:clamp(10px,1vw,15px)}
+.ts-lab__ai-summary{font-weight:800;color:#fff0d8;font-size:clamp(9px,.78vw,12px)}
+.ts-lab__ai-rows{display:flex;flex-direction:column;gap:4px}
+.ts-lab__ai-row{display:grid;grid-template-columns:minmax(45px,1fr) 32px minmax(46px,1fr) 32px;gap:4px;align-items:center}
+.ts-lab__ai-label{font-size:clamp(9px,.8vw,12px);font-weight:850;color:#eccf9d}
+.ts-lab__ai-value{font-variant-numeric:tabular-nums;color:#fff2dd;font-size:clamp(11px,1vw,15px);text-align:center;font-weight:900}
+.ts-lab__ai-step{min-height:30px;border:1px solid #cb9d62;border-radius:6px;background:#2e4153;color:#fff;font-size:18px;font-weight:900}
+.ts-lab__ai-delete{min-height:30px;border:1px solid #e18b73;border-radius:6px;background:#702e2a;color:#fff;font-size:11px;font-weight:900}
+.ts-lab__ai-step:disabled,.ts-lab__ai-delete:disabled{opacity:.38}
+.ts-lab__ai-hint{color:#e5cba8;font-size:clamp(8px,.7vw,10px);line-height:1.25}
+@media(max-height:560px){.ts-lab__ai-guide-panel{gap:3px;padding:5px}.ts-lab__ai-step,.ts-lab__ai-delete{min-height:27px}}

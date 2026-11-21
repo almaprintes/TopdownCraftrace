@@ -112,9 +112,11 @@ export function mountTrackStudioLabChrome(scene,gate){
   const shapeCreate=button('CREAR PISTA',()=>action(scene,'create'),'ts-lab__stage-button ts-lab__stage-button--create');
   const shapeEdit=button('AJUSTAR',()=>action(scene,'edit'),'ts-lab__stage-button');
   const shapeNode=button('+ NODO',()=>action(scene,'add'),'ts-lab__stage-button');
+  const aiMode=button('GUÍAS IA',()=>scene._aiGuideToggle?.(),'ts-lab__stage-button ts-lab__stage-button--ai');
+  aiMode.setAttribute('aria-pressed','false');
   const shapeGrid=button('PARRILLA',()=>action(scene,scene._showStartingGrid===false?'gridOff':'gridOn'),'ts-lab__stage-button');
   const shapePreview=button('▶ PROBAR',()=>action(scene,'preview'),'ts-lab__stage-button ts-lab__stage-button--preview');
-  add(stageActions,shapeCreate,shapeEdit,shapeNode,shapeGrid,shapePreview);
+  add(stageActions,shapeCreate,shapeEdit,shapeNode,aiMode,shapeGrid,shapePreview);
   stageTop.append(stageTag,stageActions);
   const placeholder=make('div','ts-lab__empty');
   add(placeholder,make('span','ts-lab__empty-icon','⌖'),make('strong','','LIENZO LISTO PARA DISEÑAR'),
@@ -165,6 +167,28 @@ export function mountTrackStudioLabChrome(scene,gate){
   const pianoMetric=metric('PIANOS');
   const meta=make('div','ts-lab__meta','SIN SELECCIÓN');
   const info=make('div','ts-lab__properties','Selecciona un nodo o toca un borde para editar');
+  const aiPanel=make('section','ts-lab__ai-guide-panel');
+  aiPanel.setAttribute('aria-label','Edición de guías IA');
+  aiPanel.hidden=true;
+  const aiTitle=make('strong','ts-lab__ai-title','GUÍAS DE VÉRTICE');
+  const aiSummary=make('div','ts-lab__ai-summary','Toca el circuito para añadir una guía');
+  const aiRows=make('div','ts-lab__ai-rows');
+  const aiControl=(name,field,step)=>{
+    const row=make('div','ts-lab__ai-row');
+    const minus=button('−',()=>scene._aiGuideAdjustSelected?.(field,-step),'ts-lab__ai-step');
+    minus.setAttribute('aria-label','Reducir '+name);
+    const value=make('span','ts-lab__ai-value','—');
+    const plus=button('+',()=>scene._aiGuideAdjustSelected?.(field,step),'ts-lab__ai-step');
+    plus.setAttribute('aria-label','Aumentar '+name);
+    row.append(make('span','ts-lab__ai-label',name),minus,value,plus);
+    aiRows.append(row);
+    return{minus,plus,value};
+  };
+  const aiStrength=aiControl('FUERZA','strength',.10);
+  const aiRadius=aiControl('RADIO','radiusPx',5);
+  const aiDelete=button('BORRAR GUÍA',()=>scene._aiGuideDeleteSelected?.(),'ts-lab__ai-delete');
+  const aiHint=make('small','ts-lab__ai-hint','Toca para colocar · selecciona y vuelve a arrastrar para mover');
+  aiPanel.append(aiTitle,aiSummary,aiRows,aiDelete,aiHint);
   const nudge=make('div','ts-lab__nudge');
   const nudgeTitle=make('span','','MOVER SELECCIÓN');
   const nudgeControls=make('div','ts-lab__nudge-controls');
@@ -210,7 +234,7 @@ export function mountTrackStudioLabChrome(scene,gate){
   const toolsHead=make('div','ts-lab__tools-head');
   add(toolsHead,make('strong','','HERRAMIENTAS'),make('span','','TRAZADO Y MARCAS'));
   const toolHost=make('div','ts-lab__tool-host');
-  side.append(sideHead,metrics,meta,info,nudge,photoPanel,toolsHead,toolHost);
+  side.append(sideHead,metrics,meta,info,nudge,aiPanel,photoPanel,toolsHead,toolHost);
 
   root.append(header,rail,workspace,side,guidePanel);
   document.body.append(root);
@@ -230,18 +254,33 @@ export function mountTrackStudioLabChrome(scene,gate){
     state(loop,scene._isClosed?'PISTA CERRADA':'PISTA ABIERTA');
     state(shapeGrid,scene._showStartingGrid===false?'PARRILLA NO':'PARRILLA SÍ');
     const tool=scene._tool||'edit';
-    state(mode,tool.toUpperCase());
+    const editingAi=tool==='aiGuide';
+    state(mode,editingAi?'GUÍAS IA':tool.toUpperCase());
+    aiMode.setAttribute('aria-pressed',String(editingAi));
+    aiPanel.hidden=!editingAi;
+    if(editingAi){
+      const guide=scene._aiGuideSelected?.();
+      const count=scene._aiLineGuides?.length||0;
+      state(aiSummary,guide?('SELECCIÓN '+guide.id+' · '+count+'/32'):
+        ('TOCA PARA AÑADIR · '+count+'/32'));
+      state(aiStrength.value,guide?Math.round(guide.strength*100)+' %':'—');
+      state(aiRadius.value,guide?Math.round(guide.radiusPx)+' px':'—');
+      for(const b of [aiStrength.minus,aiStrength.plus,aiRadius.minus,aiRadius.plus,aiDelete])
+        b.disabled=!guide;
+    }
     state(stats,nodes+' NODOS · ZOOM '+(scene._editCam?.zoom||1).toFixed(2)+'×');
     const hasWork=!!(nodes||scene._imageCanvas||scene._guideImage||scene._trackShape);
     placeholder.hidden=hasWork;
     const edge=scene._shapeEditing&&shapeIsValid(scene._trackShape);
-    const description=edge?shapeInspectorCopy(scene._trackShape,scene._shapeSelected):studioInspectorCopy(scene);
+    const description=editingAi?'Guías suaves: no cambian el asfalto ni son checkpoints. Se guardan con el proyecto.':edge?shapeInspectorCopy(scene._trackShape,scene._shapeSelected):studioInspectorCopy(scene);
     const next=description.replaceAll('\n',' · ').replace(/\s+/g,' ').trim();
     if(next!==displayed){state(info,next);displayed=next;}
-    state(meta,edge?'AJUSTE DE BORDES':scene._imageCanvas?'LIENZO FOTOGRÁFICO':'TRAZADO');
+    state(meta,editingAi?'ANOTACIONES IA':edge?'AJUSTE DE BORDES':scene._imageCanvas?'LIENZO FOTOGRÁFICO':'TRAZADO');
     const nativePhoto=scene._imageCanvas;
     const hasPhoto=!!(nativePhoto?.imageId&&nativePhoto.width>0&&nativePhoto.height>0);
-    photoPanel.hidden=!hasPhoto;
+    photoPanel.hidden=!hasPhoto||editingAi;
+    toolsHead.hidden=editingAi;
+    toolHost.hidden=editingAi;
     if(hasPhoto){
       state(photoDimensions,nativePhoto.width+' × '+nativePhoto.height+' px');
       state(photoSource,'ARCHIVO · '+(nativePhoto.name||'Imagen del proyecto'));
@@ -251,7 +290,7 @@ export function mountTrackStudioLabChrome(scene,gate){
     map.title=hasPhoto?'TALLER DE ESCALA · sustituir, ampliar o exportar foto':'Cargar imagen maestra';
     map.setAttribute('data-photo-loaded',String(hasPhoto));
     const selected=(scene._selectedNode>=0)||(scene._selectedPiano>=0);
-    nudge.hidden=!selected;
+    nudge.hidden=!selected||editingAi;
     state(step,'PASO '+scene._getNudgeStep?.()+' px');
     state(guideLock,scene._guideLocked?'DESBLOQUEAR':'BLOQUEAR');
     state(guideShow,scene._guideVisible?'OCULTAR':'MOSTRAR');

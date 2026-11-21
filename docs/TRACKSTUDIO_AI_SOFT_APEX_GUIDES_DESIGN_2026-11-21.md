@@ -91,3 +91,11 @@ La primera versión del experimento con límites de bordes Bézier automáticos 
 **Etapa D — eventual homologación competitiva:** solo después de CI y pruebas iPhone/Android con 1–3 IA y varios humanos; sin premios oficiales, estadísticas o cambio de versiones comerciales por una prueba.
 
 **Decisión pendiente:** iniciar etapas de implementación del editor y del modo guiado cuando el creador lo solicite explícitamente. Ninguna decisión registrada habilita publicar a Google Play.
+
+## 21/11/2026 — Etapa A implementada en DEV
+
+La herramienta **GUÍAS IA** se integra en la barra de acciones de TrackStudio. Permite crear una guía tocando el lienzo, seleccionar y mover la guía con un gesto posterior, ajustar fuerza y radio con botones grandes, borrar, deshacer/rehacer y guardar. Los gráficos se dibujan por separado de los nodos Bézier. Hasta 32 guías por circuito, con datos normalizados.
+
+El campo opcional `aiLineGuides:{version:1,points:[...]}` se incluye tanto en el editor como en `gameTrack` y viaja en el archivo fotográfico `.tdrtrack`. No se escribe este campo para circuitos sin guías. El reescalado de la imagen conserva las posiciones y aumenta el radio proporcionalmente.
+
+**No activa conducción guiada:** ni el Realizador ni LIVE 4 interpretan este campo todavía. El siguiente paso es comparar líneas guiadas en el Realizador, verificando la seguridad de los bordes antes de promoverlas. Ninguna física, premio o récord se altera.

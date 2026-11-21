@@ -5,6 +5,7 @@ import { installTrackStudioImageMode, importImageProjectFile } from '../studio/i
 import { looksLikeImageProject } from '../studio/imageCanvasProject.js';
 import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
 import { installTrackStudioShapeEditor } from '../studio/installTrackShapeEditor.js';
+import { installTrackStudioAiGuides } from '../studio/installTrackAiLineGuides.js';
 import { trackStudioWidthStep } from '../studio/trackStudioWidthRange.js';
 import { EDITOR_CONTROL_PIXELS, worldControlRadius, pickCenterlineControl } from '../studio/trackStudioControlGeometry.js';
 import { interpolateRoadWidth } from '../studio/trackShapeGeometry.js';
@@ -471,6 +472,7 @@ this._btnNew = this._makeTopActionButton(...toolPos(), '+', 'NUEVO', () => {
       if (!this._isPointerInReferencePanel(pointer)) this._closeReferencePanel();
 
       if (!this._isPointerInViewport(pointer)) return;
+      if(this._tool==='aiGuide'&&this._aiGuidePointerDown?.(pointer))return;
 
       // Pluma owns only NEW anchors, never the editing of existing ones.
       // Keeping this separate from ED protects current edit/shape gestures.
@@ -626,6 +628,8 @@ this._btnNew = this._makeTopActionButton(...toolPos(), '+', 'NUEVO', () => {
       const down = this.input.manager.pointers.filter(
         (p) => p.isDown && this._isPointerInViewport(p)
       );
+
+      if(this._tool==='aiGuide'&&this._aiGuidePointerMove?.(down))return;
 
       // Pluma previews a new anchor/curve without mutating the real project.
       // Two fingers cancel that candidate, then pass through to pinch-to-zoom.
@@ -806,6 +810,7 @@ if (
     this._autosaveRecovery();
   }
   const stillDown = this.input.manager.pointers.filter((p) => p.isDown).length;
+  if(this._tool==='aiGuide'&&this._aiGuidePointerUp?.(pointer,stillDown))return;
 
   if(this._penGesture && pointer.id===this._penGesture.id){
     const g=this._penGesture;
@@ -994,6 +999,7 @@ if (
 });
     this.input.on('pointerupoutside', () => {
       this._cancelPenGesture();
+      this._aiGuidePointerCancel?.();
       if (this._guideDragging) this._autosaveRecovery();
       this._guideDragging = false;
       this._guideDragLast = null;
@@ -1027,6 +1033,7 @@ if (
     });
     installTrackStudioImageMode(this);
     installTrackStudioShapeEditor(this);
+    installTrackStudioAiGuides(this);
     installTrackStudioExitGuard(this);
     const gate=installTrackStudioGateControls(this);
     // A race scene destroys the editor view, not the editable project.

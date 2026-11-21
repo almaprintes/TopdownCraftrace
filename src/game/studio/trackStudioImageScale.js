@@ -47,6 +47,13 @@ export function rescaleImageTrackEditor(editor,newWidth,newHeight){
     finishLine:scaleGate(editor.finishLine,sx,sy),
     checkpoints:Array.isArray(editor.checkpoints)
       ?editor.checkpoints.map(g=>scaleGate(g,sx,sy)):[],
+    ...(editor.aiLineGuides?.points?.length?{aiLineGuides:{
+      version:1,
+      points:editor.aiLineGuides.points.map(p=>({
+        ...p,x:coordinate(p.x,sx),y:coordinate(p.y,sy),
+        radiusPx:coordinate(p.radiusPx,scale)
+      }))
+    }}:{}),
     trackShape:shape?{
       ...shape,
       leftEdge:Array.isArray(shape.leftEdge)?shape.leftEdge.map(p=>scaleNode(p,sx,sy,scale)):shape.leftEdge,
