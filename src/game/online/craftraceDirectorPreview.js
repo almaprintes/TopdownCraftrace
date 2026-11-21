@@ -314,8 +314,7 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
          ' · G '+(guide.active?'ACTIVA':'NO DISPONIBLE'):'SIN GUÍAS')+
        ' · '+(hasAuthoredBounds?'BORDES AUTÉNTICOS':'SIN BORDES');
      const dieStatus=bots.previewMode==='G'&&stats.dice
-       ?' · DADOS '+stats.dice.map(d=>'IA'+(d.seat+1)+':'+d.face+
-         '/'+d.tolerancePx+'px').join(' '):'';
+       ?' · 🎲 '+stats.dice.map(d=>d.face??'—').join('/') :'';
      $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN '+countdown.seconds)+
       dieStatus+' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
       ' · ZOOM '+directorZoom(camera.altitude).toFixed(2)+'×';
@@ -328,8 +327,8 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
      for(const item of ordered){const li=document.createElement('li');
        const stat=summarizeLateralUse(lateralSamples[item.seat]);
        const accuracy=bots.previewMode==='G'&&item.guidedLapHistory?.length
-         ?' · DADOS '+item.guidedLapHistory.map(l=>l.die+
-           ' ('+l.hits+'/'+l.checked+' guías)').join(' / '):'';
+         ?' · 🎲 '+item.guidedLapHistory.map(l=>
+           l.die+':'+l.hits+'/'+l.checked).join(' / '):'';
        li.textContent='IA '+(item.seat+1)+' · '+fmt(item.elapsedMs)+
          ' · LATERAL '+(stat.samples?stat.meanPct+'%':'—')+accuracy;list.append(li);}
      const used=summarizeLateralUse(lateralSamples.flat());
