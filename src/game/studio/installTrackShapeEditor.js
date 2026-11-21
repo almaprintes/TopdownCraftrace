@@ -2,7 +2,7 @@ import {createTrackShape,shapeIsValid,sampleShapeEdge,splitShapeEdge,moveShapePa
 import {pickShapeTarget} from './shapeTouchInteraction.js';
 import {EDITOR_CONTROL_PIXELS,worldControlRadius} from './trackStudioControlGeometry.js';
 import {createShapeDomInspector,shapeInspectorCopy,studioInspectorCopy} from './shapeDomInspector.js';
-import { installKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
+import { installKartingPreview, LOCAL_KARTING_PREVIEW_KEY, LOCAL_STUDIO_VECTOR_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 import { trackStudioShapeToolbarLayout } from './trackStudioNavigationLayout.js';
 import {buildTrackRacingLineModel} from '../ai/trackRacingLinePlanner.js';
 import {buildBezierAiRacingLineModel} from '../ai/trackBezierAiRacingLinePlanner.js';
@@ -310,15 +310,16 @@ export function installTrackStudioShapeEditor(s){
       s._flashMessage('Dibuja una TRAZADA IA Bézier o añade guías de vértice');
       return;
     }
-    if(!s._imageCanvas?.imageId){
-      s._flashMessage('Necesitas la fotografía maestra en este iPhone: carga el .tdrtrack completo');
-      return;
-    }
+    // For a guided AI Realizador we can test the authored road without its
+    // photographic art: geometry, Bézier safety and physics are unchanged.
+    const vectorOnly=!s._imageCanvas?.imageId;
     if(!window.location.pathname.includes('/dev/')){
       s._flashMessage('El Realizador guiado solo existe en CraftRace DEV');
       return;
     }
-    if(!window.confirm('¿Probar la trayectoria Bézier/guías IA con 4 rivales físicos en el Realizador DEV?\\n\\nSin récords ni créditos. Podrás comparar A / B / GUIADA antes de la salida.'))return;
+    if(!window.confirm('¿Probar la trayectoria Bézier/guías IA con 4 rivales físicos en el Realizador DEV?\\n\\nSin récords ni créditos.'+
+      (vectorOnly?'\\nSin fotografía en este iPhone: se mostrará una pista técnica.':'')+
+      '\\nPodrás comparar A / B / GUIADA antes de la salida.'))return;
     installing=true;
     try{
       // Validate BEFORE overwriting the last working browser-local preview.
@@ -345,14 +346,14 @@ export function installTrackStudioShapeEditor(s){
             (Number.isInteger(test.report.badIndex)?' (muestra '+test.report.badIndex+')':''));
         }
       }
-      const record=await installKartingPreview(s);
+      const record=await installKartingPreview(s,{allowVectorOnly:true});
       if(!record?.track?.aiLineGuides?.points?.length&&
          !record?.track?.aiBezierLine?.nodes?.length)
         throw Error('La vista previa no contiene tu trayectoria Bézier ni guías IA');
       s._autosaveRecovery?.();
       s.scene.start('race',{
-        trackKey:LOCAL_KARTING_PREVIEW_KEY,testMode:true,
-        gameMode:'director',directorPreview:true,
+        trackKey:vectorOnly?LOCAL_STUDIO_VECTOR_PREVIEW_KEY:LOCAL_KARTING_PREVIEW_KEY,
+        testMode:true,gameMode:'director',directorPreview:true,
         directorLaps:3,directorAiDifficulty:3
       });
     }catch(error){
