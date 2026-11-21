@@ -13,7 +13,7 @@ assert.equal(track.meta?.sourceFile,'Santa-Cruz-x3-nitido.tdrtrack',
 const centerline=track.raceCenterline||track.centerline;
 const baseline=buildTrackRacingLineModel({
  raceCenterline:centerline,trackWidth:track.trackWidth
-},{apexCommitment:.22,racecraftPreview:true});
+},{apexCommitment:.22});
 assert.ok(baseline.valid);
 const authored=JSON.parse(readFileSync('src/game/tracks/library/santa-cruz/source/santa-cruz-ai-line-guides.json','utf8'));
 const guides=track.meta?.aiLineGuides;
