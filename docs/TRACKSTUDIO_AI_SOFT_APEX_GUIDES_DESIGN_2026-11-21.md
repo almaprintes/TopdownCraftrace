@@ -99,3 +99,13 @@ La herramienta **GUÍAS IA** se integra en la barra de acciones de TrackStudio. 
 El campo opcional `aiLineGuides:{version:1,points:[...]}` se incluye tanto en el editor como en `gameTrack` y viaja en el archivo fotográfico `.tdrtrack`. No se escribe este campo para circuitos sin guías. El reescalado de la imagen conserva las posiciones y aumenta el radio proporcionalmente.
 
 **No activa conducción guiada:** ni el Realizador ni LIVE 4 interpretan este campo todavía. El siguiente paso es comparar líneas guiadas en el Realizador, verificando la seguridad de los bordes antes de promoverlas. Ninguna física, premio o récord se altera.
+
+## 21/11/2026 — Exportación fiable desde iPhone
+
+Se observó que el creador pudo colocar y guardar 12 guías en TrackStudio, pero la descarga automática de .tdrtrack desde GUARDAR no estaba disponible. La antigua exportación leía de manera asincrónica la foto en IndexedDB antes de intentar una descarga automática; Safari/PWA puede perder la activación del usuario y el mensaje de guardado no demuestra que el fichero esté en Archivos.
+
+Solución DEV: un botón EXPORTAR junto a GUARDAR abre un diálogo que prepara el proyecto completo (editor, gameTrack, guías y fotografía). Una segunda pulsación explícita permite COMPARTIR / GUARDAR EN ARCHIVOS de iOS mediante Web Share cuando se admiten archivos, o DESCARGAR ARCHIVO con un enlace real. Se indica nombre, tamaño y cantidad de guías, sin afirmar que la descarga se haya completado antes de confirmación de iOS.
+
+Para circuitos con fotografía, GUARDAR conserva una copia local, y EXPORTAR permite crear el fichero portable .tdrtrack. Si falta la imagen maestra, se ofrece un JSON de recuperación que conserva la geometría y los puntos, con un aviso explícito de que no contiene foto. Los archivos sin fotografía siguen usando JSON. No hay cambios de IA, física ni online.
+
+Pruebas incluidas: scripts/trackstudio-iphone-export-smoke.mjs, validación de ida y vuelta del paquete con 12 puntos de vértice, JSON de rescate y separación guardado/exportación.

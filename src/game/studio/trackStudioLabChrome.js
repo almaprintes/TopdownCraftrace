@@ -35,6 +35,8 @@ export function mountTrackStudioLabChrome(scene,gate){
   add(brand,logo,titles);
   const headActions=make('div','ts-lab__head-actions');
   const save=button('GUARDAR',()=>{scene._saveProject?.();},'ts-lab__head-button ts-lab__head-button--primary');
+  const exportFile=button('EXPORTAR',()=>scene._openPortableExport?.(),'ts-lab__head-button ts-lab__head-button--export');
+  exportFile.setAttribute('aria-label','Exportar circuito completo al iPhone');
   const open=button('ABRIR',()=>scene._openProjectSourceMenu?.(),'ts-lab__head-button');
   const create=button('NUEVO',()=>{
     if(!window.confirm('¿Crear proyecto nuevo?\n\nSustituirá lo que estás editando. Guarda antes una copia si quieres conservarlo.'))return;
@@ -48,7 +50,7 @@ export function mountTrackStudioLabChrome(scene,gate){
   undo.setAttribute('aria-label','Deshacer');
   const redo=button('↷',()=>scene._redo?.(),'ts-lab__head-button ts-lab__head-button--icon');
   redo.setAttribute('aria-label','Rehacer');
-  headActions.append(save,open,create,loop,minus,plus,undo,redo);
+  headActions.append(save,exportFile,open,create,loop,minus,plus,undo,redo);
   const headRight=make('div','ts-lab__head-right');
   const version=make('span','ts-lab__version',document.querySelector('meta[name="tdr-dev-version"]')?.content||'DEV');
   const exit=button('VOLVER A PADDOCK',()=>scene._requestExitTrackStudio?.(),'ts-lab__exit');

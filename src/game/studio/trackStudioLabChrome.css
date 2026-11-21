@@ -287,3 +287,8 @@
 .ts-lab__ai-step:disabled,.ts-lab__ai-delete:disabled{opacity:.38}
 .ts-lab__ai-hint{color:#e5cba8;font-size:clamp(8px,.7vw,10px);line-height:1.25}
 @media(max-height:560px){.ts-lab__ai-guide-panel{gap:3px;padding:5px}.ts-lab__ai-step,.ts-lab__ai-delete{min-height:27px}}
+
+/* Explicit Files/Share export on iPhone PWA. */
+.ts-lab__head-button--export{background:#224558;border-color:#51dfd0;color:#d5fff8;font-weight:950}
+.ts-lab__head-button--export:active{background:#157d78}
+@media(max-width:1050px){.ts-lab__head-button--export{padding-inline:3px;letter-spacing:-.02em}}

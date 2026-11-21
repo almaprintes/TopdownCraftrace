@@ -2,6 +2,8 @@ import { saveCanvasImage, readCanvasImage, packImageProject, unpackImageProject,
 import { attachImageNativeTrackContract } from '../tracks/imageNativeTrackContract.js';
 import { trackStudioWidthMaximum, CLASSIC_TRACK_WIDTH_MAX } from './trackStudioWidthRange.js';
 import { imageTrackResizePlan, rescaleImageTrackEditor } from './trackStudioImageScale.js';
+import {buildTrackStudioPortableExport,buildTrackStudioRescueJson} from './trackStudioPortableExport.js';
+import {openTrackStudioExportDialog} from './trackStudioExportDialog.js';
 
 const TILE = 2048;
 const limit = (w,h) => w > 0 && h > 0 && w <= 8192 && h <= 8192 && w*h <= 32000000;
@@ -286,22 +288,46 @@ export function installTrackStudioImageMode(s){
     return originalImport(data);
   };
   const originalSave=s._saveProject.bind(s);
-  s._saveProject=async()=>{
+  // iOS Safari: downloading after await readCanvasImage() can silently fail.
+  // GUARDAR writes the local copy; EXPORTAR offers explicit share and download.
+  s._saveProject=()=>{
     if(!s._imageCanvas)return originalSave();
     try{
-      const data={editor:s._getProjectData(),gameTrack:s._exportToGameTrack()},row=await readCanvasImage(s._imageCanvas.imageId);
-      if(!row?.blob)throw Error('No se encuentra la imagen maestra');
-      // Older saves may have placed a whole .tdrtrack where an image belonged.
-      // Normalize before packaging and repair the IndexedDB copy if necessary.
-      const image=await normalizeCanvasImageBlob(row.blob,s._imageCanvas);
-      if(image.nested) await saveCanvasImage(s._imageCanvas.imageId,image.blob,s._imageCanvas);
+      const data={editor:s._getProjectData(),gameTrack:s._exportToGameTrack()};
       const json=JSON.stringify(data);
       localStorage.setItem('trackstudio_project',json);
       localStorage.setItem('trackstudio_recovery',json);
-      const blob=packImageProject(data,image.blob,s._imageCanvas);
-      download(blob,'trackstudio-image-'+Date.now()+'.tdrtrack');
-      s._flashMessage('Guardado: proyecto + imagen en .tdrtrack');
-    }catch(e){console.error('[TrackStudio] save failed',e);s._flashMessage('Error al guardar: '+(e.message||'desconocido'))}
+      s._flashMessage('Proyecto guardado aquí · pulsa EXPORTAR para crear el .tdrtrack');
+    }catch(e){
+      console.error('[TrackStudio] local save failed',e);
+      s._flashMessage('Error al guardar: '+(e.message||'desconocido'));
+    }
+  };
+  s._openPortableExport=()=>{
+    s._closePortableExport?.();
+    let data;
+    try{data={editor:s._getProjectData(),gameTrack:s._exportToGameTrack()};}
+    catch(error){
+      s._flashMessage('No se puede exportar: '+(error?.message||'error de circuito'));
+      return;
+    }
+    const dialog=openTrackStudioExportDialog({
+      prepare:async()=>{
+        if(!data.editor?.imageCanvas?.imageId)
+          return buildTrackStudioPortableExport(data);
+        const meta=data.editor.imageCanvas;
+        const row=await readCanvasImage(meta.imageId);
+        if(!row?.blob)throw Error('No se encuentra la imagen maestra en este dispositivo');
+        // Recover old nested packages, without losing editor geometry.
+        const image=await normalizeCanvasImageBlob(row.blob,meta);
+        if(image.nested)await saveCanvasImage(meta.imageId,image.blob,meta);
+        return buildTrackStudioPortableExport(data,{imageBlob:image.blob,imageMeta:meta});
+      },
+      fallback:()=>buildTrackStudioRescueJson(data),
+      onClose:()=>{if(s._portableExportDialog===dialog)s._portableExportDialog=null;}
+    });
+    s._portableExportDialog=dialog;
+    s._closePortableExport=()=>dialog?.close();
   };
   const input=document.createElement('input'),replaceInput=document.createElement('input');
   for(const el of [input,replaceInput]){
@@ -339,6 +365,8 @@ export function installTrackStudioImageMode(s){
   const x=Math.floor(s._leftBarW/2),y=s._topBarH+278;
   s._canvasModeBtn=s._makeIconButton(x,y,'MAP',()=>s._openCanvasImagePicker(),'11px');
   s.events.once('shutdown',()=>{
+    s._closePortableExport?.();
+    s._closePortableExport=null;s._openPortableExport=null;
     s._closeCanvasScaleMenu?.();
     s._openCanvasImagePicker=null;s._replaceCanvasImagePicker=null;
     s._upscaleCanvasImage=null;s._exportCanvasImage=null;
