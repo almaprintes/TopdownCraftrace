@@ -1,7 +1,7 @@
 // src/game/ai/survivalPhysicalBotController.js
 // Fase 3: controlador físico de un único bot experimental.
 // Produce dirección, gas y freno; nunca teletransporta el cuerpo durante la marcha.
-import {nextGuidedApex} from '../online/craftraceGuidedDie.js';
+import {nextGuidedApex,nearestContinuousGuidedSample} from '../online/craftraceGuidedDie.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
@@ -48,7 +48,16 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const precisionCornering=params.live4PrecisionCornering===true;
   const velocity=body.body.velocity;
   const speed=Math.hypot(Number(velocity.x)||0,Number(velocity.y)||0);
-  const nearest=nearestSample(samples,Number(body.x),Number(body.y),bot._plannerSampleIndex);
+  const guidance=params.live4GuidedApex;
+  const guidedMode=precisionCornering&&Array.isArray(guidance?.guides)&&
+    guidance.guides.length>0;
+  // G only: never jump to an adjacent branch merely because the hairpin's
+  // return straight is physically closer than the current road segment.
+  const continuous=guidedMode?nearestContinuousGuidedSample(
+    samples,Number(body.x),Number(body.y),bot._plannerSampleIndex,{
+      speed,dt,spacing:Number(params.spacing||10)}):null;
+  const nearest=continuous||nearestSample(samples,Number(body.x),
+    Number(body.y),bot._plannerSampleIndex);
   bot._plannerSampleIndex=nearest.index;
 
   const spacing=Math.max(1,Number(params.spacing||10));
@@ -181,15 +190,13 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const precisionSteps=clamp(Math.round(precisionAimPx/spacing),2,8);
   const recoverySteps=nearest.distance>45?Math.min(3,precisionSteps):precisionSteps;
   // Only the experimental G Realizador provides a die and authored apexes.
-  // Look ahead to the next *forward* guide, never jump to another hairpin.
-  const guidance=params.live4GuidedApex;
-  const upcoming=precisionCornering&&guidance?.guides?.length
+  // Use the ordered guide only for local horizon and speed planning, NEVER
+  // as a direct steering destination across another bend or a straight.
+  const upcoming=guidedMode
     ?nextGuidedApex(guidance.guides,nearest.index,samples.length,22):null;
   const guideAhead=upcoming&&upcoming.stepsAhead>=1&&upcoming.stepsAhead<=18;
   const guideTolerance=Math.max(5,Number(guidance?.tolerancePx)||35);
   const guideUrgency=guideAhead?clamp((19-upcoming.stepsAhead)/15,0,1):0;
-  const guidePrecision=clamp((35-guideTolerance)/30,0,1);
-  const guideAim=guideUrgency*(.28+.67*guidePrecision);
   const guidedSteps=guideAhead&&upcoming.stepsAhead<recoverySteps
     ?Math.max(2,upcoming.stepsAhead):recoverySteps;
   const targetIndex=precisionCornering
@@ -198,10 +205,12 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
       ?maneuver.targetIndex
       :(committedShortChicane?shortcut.targetIndex
         :(nearest.index+lookaheadSteps)%samples.length));
+  // The steering vector always points to the next sampled location ON the
+  // smoothed guided racing line. Direct apex seeking was producing U-turns,
+  // hairpin shortcuts and inexplicable bends on neighbouring straights.
   const target=samples[targetIndex];
-  const aimX=Number(target.x)*(1-guideAim)+Number(upcoming?.x??target.x)*guideAim;
-  const aimY=Number(target.y)*(1-guideAim)+Number(upcoming?.y??target.y)*guideAim;
-  const desiredHeading=Math.atan2(aimY-Number(body.y),aimX-Number(body.x));
+  const desiredHeading=Math.atan2(Number(target.y)-Number(body.y),
+    Number(target.x)-Number(body.x));
   const headingError=wrapAngle(desiredHeading-Number(body.rotation||0));
   let rawSteer=clamp(headingError/(precisionCornering
     ?(straightLock?.50:.33):(straightLock?.62:.48)),-1,1);
