@@ -45,7 +45,7 @@
  display:block;font-size:10px;color:#b2e9dc;margin-top:4px;
 }
 #cr-director [hidden]{display:none!important}
-#cr-director .crdir-results{position:absolute;inset:0;background:#031321ee;
+#cr-director .crdir-results{position:absolute;inset:0;background:#031321ac;
  display:flex;flex-direction:column;align-items:center;justify-content:center;
  gap:8px;padding:18px;pointer-events:auto;overflow:auto}
 #cr-director .crdir-results h2{font-size:20px;color:#f8d18c;margin:0}
@@ -115,3 +115,9 @@ body.tdr-director-active .tdr-race-hud{
  #cr-director .crdir-line-legend{font-size:8px;gap:5px;bottom:2px}
  #cr-director .crdir-top button{font-size:9px;padding:4px 5px}
 }
+
+#cr-director .crdir-border{color:#baff7f}
+#cr-director .crdir-line-legend [data-roadstats]{color:#f5e4b5}
+#cr-director .crdir-results [data-roadreport]{max-width:90vw;font-size:11px;color:#dcf2ea;text-align:center;text-shadow:0 1px 5px #00131b}
+#cr-director .crdir-results h2,#cr-director .crdir-results ol{text-shadow:0 2px 5px #00131bed}
+@media(max-width:900px){#cr-director .crdir-line-legend{max-width:65vw;flex-wrap:wrap;justify-content:center;row-gap:2px;bottom:2px}#cr-director .crdir-line-legend span{font-size:8px}}

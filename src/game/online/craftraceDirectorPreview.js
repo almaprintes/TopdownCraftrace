@@ -4,6 +4,8 @@ import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import {makeLive4StartingGrid} from './craftraceLiveV2GridGeometry.js';
 import {makeDirectorCameraState,stepDirectorCamera,directorZoom,directorStickVector,directorAltitudeStick,directorStartPhase} from './craftraceDirectorCamera.js';
 import {hideRaceUi,restoreRaceUi} from '../ui/raceUiVisibility.js';
+import {sampleShapeEdge,shapeIsValid} from '../studio/trackShapeGeometry.js';
+import {measureLateralUse,summarizeLateralUse} from './craftraceRacingLineTelemetry.js';
 import '../ui/craftraceDirectorPreview.css';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const fmt=ms=>Math.floor(ms/60000)+':'+String(Math.floor(ms%60000/1000)).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0');
@@ -71,8 +73,10 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  <div class="crdir-line-legend" data-legend>
   <span class="crdir-center">EJE</span>
   <span class="crdir-target">OBJETIVO</span>
+  <span class="crdir-border">BORDES</span>
   <span class="crdir-ai1">IA 1</span><span class="crdir-ai2">IA 2</span>
   <span class="crdir-ai3">IA 3</span><span class="crdir-ai4">IA 4</span>
+  <span data-roadstats>USO LATERAL: SIN MUESTRAS</span>
  </div>
  <div class="crdir-stickbox"><div data-stick class="crdir-stick" role="group"
    aria-label="Palanca izquierda: mover dron en todas las direcciones y controlar velocidad">
@@ -84,6 +88,7 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
   <h2>4 IA · RESULTADOS PROVISIONALES</h2>
   <p data-session></p>
   <p>Prueba local. Vueltas estimadas por trayectoria, todavía no homologadas.</p>
+  <p data-roadreport></p>
   <ol data-order></ol><button type="button" data-finish>VOLVER AL MENÚ</button></div>`;
  document.body.append(root);
  // Stop director touch events reaching legacy driver controls behind the view.
@@ -104,6 +109,17 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  // Actual pilot tracks are sampled at a bounded rate to protect mobile FPS.
  const traceColors=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
  const trail=bots.bots.map(()=>[]);
+ const lateralSamples=bots.bots.map(()=>[]);
+ const shape=scene.track?.meta?.trackShape;
+ const authoredBorders=shapeIsValid(shape)&&shape.closed?[
+   sampleShapeEdge(shape.leftEdge,true,12),
+   sampleShapeEdge(shape.rightEdge,true,12)
+ ]:[];
+ const hasAuthoredBounds=authoredBorders.length===2;
+ const thin=points=>{
+   const jump=Math.max(1,Math.ceil(points.length/1400));
+   return jump===1?points:points.filter((_,i)=>i%jump===0);
+ };
  let showLines=true,lastTrace=0,lastLinePaint=-1;
  const lineGraphics=scene.add.graphics().setDepth(38);
  const drawLine=(points,color,width,alpha,close)=>{
@@ -122,14 +138,19 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    const data=bots.diagnosticLines();
    drawLine(data.centerline,0x67d7ff,3,.70,true);
    drawLine(data.target,0xffcb65,4,.96,true);
+   for(const edge of authoredBorders)drawLine(thin(edge),0xbaff7f,2,.92,true);
    trail.forEach((points,i)=>drawLine(points,traceColors[i],3,.85,false));
  };
  const captureTrails=(now)=>{
-   if(!showLines||now-lastTrace<180)return;
+   if(now-lastTrace<180)return;
    lastTrace=now;
+   const line=bots.previewRacecraft?bots.previewExpertLine:bots.standardExpertLine;
    bots.bots.forEach((bot,i)=>{
      const p=bot.plannerBody,history=trail[i];
      if(!p||!scene._raceStarted||!Number.isFinite(p.x)||!Number.isFinite(p.y))return;
+     const measure=measureLateralUse(line,p.x,p.y,bot._plannerSampleIndex);
+     if(measure&&lateralSamples[i].length<1500)lateralSamples[i].push(measure);
+     if(!showLines)return;
      const last=history[history.length-1];
      if(!last||Math.hypot(last.x-p.x,last.y-p.y)>=5){
        history.push({x:p.x,y:p.y});
@@ -203,6 +224,7 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    if(scene._raceStarted)return;
    if(bots.setPreviewRacecraft(!bots.previewRacecraft)){
      trail.forEach(points=>points.length=0);
+     lateralSamples.forEach(points=>points.length=0);
      lastLinePaint=-1;updateModeLabel();paintLines(performance.now());
    }
  });
@@ -262,6 +284,13 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    captureTrails(now);paintLines(now);
    if(now-lastInfo>=500){
      lastInfo=now;const stats=bots.stats();
+     const line=bots.previewRacecraft?bots.previewExpertLine:bots.standardExpertLine;
+     const averageTarget=line.offsets.reduce((sum,o,i)=>sum+
+       Math.abs(o)/Math.max(1,line.limits[i]),0)/Math.max(1,line.offsets.length);
+     const actual=summarizeLateralUse(lateralSamples.flat());
+     $('[data-roadstats]').textContent='OBJ '+Math.round(averageTarget*100)+
+       '% · IA '+(actual.samples?actual.meanPct+'%':'—')+
+       ' · '+(hasAuthoredBounds?'BORDES AUTÉNTICOS':'SIN BORDES');
      $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN '+countdown.seconds)+
       ' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
       ' · ZOOM '+directorZoom(camera.altitude).toFixed(2)+'×';
@@ -272,7 +301,16 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
      const ordered=bots.results().sort((a,b)=>a.elapsedMs-b.elapsedMs);
      const list=$('[data-order]');list.replaceChildren();
      for(const item of ordered){const li=document.createElement('li');
-       li.textContent='IA '+(item.seat+1)+' · '+fmt(item.elapsedMs);list.append(li);}
+       const stat=summarizeLateralUse(lateralSamples[item.seat]);
+       li.textContent='IA '+(item.seat+1)+' · '+fmt(item.elapsedMs)+
+         ' · LATERAL '+(stat.samples?stat.meanPct+'%':'—');list.append(li);}
+     const used=summarizeLateralUse(lateralSamples.flat());
+     $('[data-roadreport]').textContent='Uso lateral medio: '+
+       (used.samples?used.meanPct+'%':'sin medición')+
+       ' del semiancho útil estimado; muestras ≥70%: '+
+       used.nearEdgePct+'%. '+(hasAuthoredBounds
+         ?'Bordes Bézier originales en verde.'
+         :'Sin bordes originales para contrastar pianos.');
      $('[data-results]').hidden=false;
    }
  };
