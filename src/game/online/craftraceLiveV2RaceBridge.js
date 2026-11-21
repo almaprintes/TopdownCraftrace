@@ -8,6 +8,7 @@ import {CrafRaceLive4PositionLink} from './craftraceLiveV2PositionLink.js';
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
 import {advanceHostedLive4Bots} from './craftraceLive4HostContinuity.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
+import {live4SeatName} from './craftraceLiveV2PilotNames.js';
 import {CrafRaceLiveV2LobbyMonitor,finishLiveV2Lobby,acknowledgeLiveV2GridLoaded} from './craftraceLiveV2LobbyClient.js';
 
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
@@ -68,14 +69,26 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  results.setAttribute('role','dialog');results.setAttribute('aria-label','Resultados provisionales LIVE 4');
  document.body.append(results);
  const raceEntries=model.roster;
+ // The room snapshot is authenticated and authorized by server membership.
+ // Preserve known names during temporary Realtime/snapshot outages.
+ const membersById=new Map();
+ const updateNames=s=>{
+   for(const member of s?.members||[]){
+     if(typeof member?.player_id==='string'&&typeof member?.nick==='string'){
+       membersById.set(member.player_id,member.nick);
+     }
+   }
+ };
+ updateNames(room);
+ const displayName=entry=>live4SeatName(entry,
+   [...membersById].map(([player_id,nick])=>({player_id,nick})));
  const createVisual=item=>{
    if(item.seat===localSeat||isHost&&item.kind==='ai')return;
    const visual=scene.add.sprite(0,0,'__DEFAULT').setVisible(false);
    syncLive4CarVisual(scene,visual,TINTS[item.seat]);
    const rig=scene.add.container(scene.carBody.x,scene.carBody.y,[visual])
      .setDepth(29).setVisible(false);
-   const label=scene.add.text(0,-40,
-     item.kind==='ai'?'IA '+item.difficulty:'PILOTO '+(item.seat+1),{
+   const label=scene.add.text(0,-40,displayName(item),{
        fontFamily:'system-ui',fontSize:'12px',fontStyle:'bold',
        color:'#ffffff',backgroundColor:'#112638',padding:{x:4,y:2}
      }).setOrigin(.5).setDepth(31).setVisible(false);
@@ -139,6 +152,12 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      if(Number.isFinite(s.clientClockOffsetMs))
        clockOffset=clockOffset*.75+s.clientClockOffsetMs*.25;
      if(Number.isFinite(s.start_at_ms)&&s.start_at_ms>0)startAt=s.start_at_ms;
+     updateNames(s);
+     for(const item of raceEntries){
+       const visual=paint.get(item.seat);
+       const nick=displayName(item);
+       if(visual?.label?.text!==nick)visual?.label?.setText(nick);
+     }
      states.clear();
      for(const result of s.results||[])states.set(result.seat,result);
      // Server snapshots can lag local completed AI results after an outage.
@@ -187,8 +206,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    const list=document.createElement('ol');list.className='cr4-result-list';
    const ordered=raceEntries.map(entry=>({
      seat:entry.seat,
-     name:entry.kind==='ai'?'IA · NIVEL '+entry.difficulty:
-       entry.player_id===localId?'TÚ':'PILOTO '+(entry.seat+1),
+     name:displayName(entry),
      time:states.get(entry.seat)?.elapsedMs??
        (entry.seat===localSeat?localFinish.elapsedMs:null)
    }));

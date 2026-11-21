@@ -5,6 +5,7 @@ import {createLiveV2Lobby,joinLiveV2Lobby,configureLiveV2Lobby,
   CrafRaceLiveV2LobbyMonitor} from '../online/craftraceLiveV2LobbyClient.js';
 import {stageLive4RaceSession} from '../online/craftraceLiveV2RaceSession.js';
 import {liveIdentity} from '../online/craftraceLiveTransport.js';
+import {live4SeatName} from '../online/craftraceLiveV2PilotNames.js';
 import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import './craftraceLiveV2Lobby.css';
@@ -142,8 +143,10 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
       const label=document.createElement('small');label.textContent='PLAZA '+(seat.index+1);card.append(label);
       const name=document.createElement('strong');
       name.textContent=seat.kind==='human'
-        ?seat.playerId===identity.id?'TÚ':seat.index===0?'ORGANIZADOR':'PILOTO HUMANO'
-        :seat.kind==='ai'?'IA · NIVEL '+seat.difficulty:'LIBRE';
+        ?live4SeatName({seat:seat.index,kind:'human',player_id:seat.playerId},s.members)
+        :seat.kind==='ai'
+          ?live4SeatName({seat:seat.index,kind:'ai',difficulty:seat.difficulty},s.members)
+          :'LIBRE';
       card.append(name);
       const status=document.createElement('span');
       status.textContent=seat.kind==='human'
