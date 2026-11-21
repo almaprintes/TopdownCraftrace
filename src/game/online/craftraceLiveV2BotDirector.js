@@ -25,7 +25,7 @@ export const LIVE4_AI_LEVELS=Object.freeze({
 const speedOf=body=>Math.hypot(body?.body?.velocity?.x||0,body?.body?.velocity?.y||0);
 
 export class CrafRaceLive4BotDirector{
- constructor(scene,{roster,hostId,localId,startingGrid,laps=3,preview=false}={}){
+ constructor(scene,{roster,hostId,localId,startingGrid,laps=3,preview=false,live4GuidedGTrial=false}={}){
   if(!scene?.physics?.add?.sprite||!Array.isArray(roster)||hostId!==localId)
     throw Error('Only a physics-ready host can drive LIVE AI');
   const ai=roster.filter(x=>x.kind==='ai');
@@ -39,6 +39,7 @@ export class CrafRaceLive4BotDirector{
   this.lastUpdated=0;this.lastCpuMs=0;this.cpuTotalMs=0;this.cpuSamples=0;
   this.profiles=new Map();
   this.preview=preview===true;this.raceStarted=false;
+  this.live4GuidedGTrial=!this.preview&&live4GuidedGTrial===true&&scene.trackKey==='santa-cruz';
   this.timingAudit=makeLive4TimingAudit();
   if(ai.length===0){this.profile=null;return;}
   if(scene.track?.closed===false||scene.track?.meta?.closed===false)
@@ -62,7 +63,7 @@ export class CrafRaceLive4BotDirector{
   this.previewBezierActive=false;
   this.previewBezierOptions=null;
   this.previewMode='A';
-  if(preview){
+  if(preview||this.live4GuidedGTrial){
     const authored=resolveDirectorGuideSource(scene.track);
     if(authored.bezier){
       const opts={carRadius:Math.max(8,Math.round(14*Number(authored.carScale||1)))};
@@ -91,6 +92,8 @@ export class CrafRaceLive4BotDirector{
         total:0,source:authored.source,entries:[]};
     }
   }
+  if(this.live4GuidedGTrial&&!this.previewBezierActive)
+    throw Error('LIVE 4 G: no se ha validado la Bézier de Santa Cruz');
   if(!expertLine.valid||expertLine.racingLine.length!==line.racingLine.length||
      (preview&&(!this.previewExpertLine?.valid||
        this.previewExpertLine.racingLine.length!==line.racingLine.length)))
@@ -132,22 +135,28 @@ export class CrafRaceLive4BotDirector{
     if(!this.previewExpertProfile.valid)throw Error('Preview racecraft plan invalid');
     this.previewExpertProfile.live4CurveComplexity=
       this.previewExpertLine.metrics.meanAbsCurvature;
-    if(this.previewGuidedLine){
-      const guidedProfile=buildTrackManeuverPlan(buildTrackSpeedProfile(
-        this.previewGuidedLine,{
-          maxSpeed:maxFwd,lateralAccel:LIVE4_AI_LEVELS[3].plannerLateralAccel,
-          minCornerSpeed:80,maxYawRate:yawAtSpeed,curvatureSmoothWindow:21,
-          driveAccel,brakeDecel
-        }));
-      if(guidedProfile.valid&&guidedProfile.samples?.length>=12){
-        guidedProfile.live4CurveComplexity=this.previewGuidedLine.metrics.meanAbsCurvature;
-        this.previewGuidedProfile=guidedProfile;
-      }else{
-        this.previewGuideReport={...this.previewGuideReport,active:false,
-          reason:'invalid-guided-speed-profile'};
-        this.previewGuidedLine=null;
-      }
+  }
+  if((preview||this.live4GuidedGTrial)&&this.previewGuidedLine){
+    const guidedProfile=buildTrackManeuverPlan(buildTrackSpeedProfile(
+      this.previewGuidedLine,{
+        maxSpeed:maxFwd,lateralAccel:LIVE4_AI_LEVELS[3].plannerLateralAccel,
+        minCornerSpeed:80,maxYawRate:yawAtSpeed,curvatureSmoothWindow:21,
+        driveAccel,brakeDecel
+      }));
+    if(guidedProfile.valid&&guidedProfile.samples?.length>=12){
+      guidedProfile.live4CurveComplexity=this.previewGuidedLine.metrics.meanAbsCurvature;
+      this.previewGuidedProfile=guidedProfile;
+    }else{
+      this.previewGuideReport={...this.previewGuideReport,active:false,
+        reason:'invalid-guided-speed-profile'};
+      this.previewGuidedLine=null;
     }
+  }
+  if(this.live4GuidedGTrial){
+    if(!this.previewBezierActive||!this.previewGuidedProfile)
+      throw Error('LIVE 4 G: perfil Bézier no válido; salida bloqueada');
+    this.profiles.set(3,this.previewGuidedProfile);
+    this.previewMode='G';
   }
   this._bezierSpeedOptions={
     maxSpeed:maxFwd,lateralAccel:LIVE4_AI_LEVELS[3].plannerLateralAccel,
@@ -194,10 +203,16 @@ export class CrafRaceLive4BotDirector{
        targetSum:0,followErrorSum:0,followErrorMax:0}};
    this.bots.push(bot);
   }
+  if(this.live4GuidedGTrial)for(const bot of this.bots){
+    if(bot.difficulty!==3)continue;
+    const die=rollGuidedDie();
+    bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
+    this._setBezierDieForLap(bot,1);
+  }
  }
- // A/B/G selection is locked on green; hosted LIVE 4 never enters this path.
+ // LIVE 4 host G is opt-in per server-authorized room. A/B remain unchanged.
  previewActiveLine(){
-  return this.preview&&this.previewMode==='G'&&this.previewGuidedLine
+  return (this.preview||this.live4GuidedGTrial)&&this.previewMode==='G'&&this.previewGuidedLine
     ?this.previewGuidedLine
     :this.preview&&this.previewMode==='B'
       ?this.previewExpertLine:this.standardExpertLine;
@@ -267,9 +282,9 @@ export class CrafRaceLive4BotDirector{
    if(bot.finished)continue;
    const settings=LIVE4_AI_LEVELS[bot.difficulty];
    const profile=bot._bezierProfile||this.profiles.get(bot.difficulty);
-   const bezierActive=this.preview&&this.previewMode==='G'&&
+   const bezierActive=(this.preview||this.live4GuidedGTrial)&&this.previewMode==='G'&&
      bot.difficulty===3&&this.previewBezierActive;
-   const guidedActive=this.preview&&this.previewMode==='G'&&
+   const guidedActive=(this.preview||this.live4GuidedGTrial)&&this.previewMode==='G'&&
      bot.difficulty===3&&this.previewGuideTargets.length>0;
    // Deterministic driving styles break up the three-car clone procession.
    // Bias only lowers the chosen pace; none exceeds the player's own car.
@@ -354,7 +369,7 @@ export class CrafRaceLive4BotDirector{
   return this.bots.filter(bot=>bot.finished).map(bot=>({
    seat:bot.seat,lapTimes:bot.lapTimes.slice(),
    guidedLapHistory:bot.guidedLapHistory.slice(),
-   ...(this.preview?{bezierDieHistory:bot.bezierDieHistory.map(x=>({...x}))}:{}),
+   ...((this.preview||this.live4GuidedGTrial)?{bezierDieHistory:bot.bezierDieHistory.map(x=>({...x}))}:{}),
    elapsedMs:bot.lapTimes.reduce((sum,ms)=>sum+ms,0),difficulty:bot.difficulty
   }));
  }
@@ -363,6 +378,7 @@ export class CrafRaceLive4BotDirector{
   botCpuLastMs:this.lastCpuMs,finished:this.bots.filter(x=>x.finished).length,
   timing:summarizeLive4Timing(this.timingAudit),
   plan:summarizePlannedLateral(this.previewActiveLine()),
+   live4GuidedGTrial:this.live4GuidedGTrial,
   ...(this.preview?{guided:this.previewGuideReport,previewMode:this.previewMode,
     dice:this.bots.map(b=>({seat:b.seat,face:b.guidedRoll,
       tolerancePx:b.guidedTolerancePx,laps:b.guidedLapHistory.length}))}:{}),
