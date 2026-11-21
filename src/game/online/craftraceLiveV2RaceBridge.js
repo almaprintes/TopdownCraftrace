@@ -6,6 +6,7 @@ import {consumeLive4RaceSession} from './craftraceLiveV2RaceSession.js';
 import {CrafRaceLive4RemoteModel} from './craftraceLiveV2RaceModel.js';
 import {CrafRaceLive4PositionLink} from './craftraceLiveV2PositionLink.js';
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
+import {hasLive4GuidedGForRoom} from './craftraceLive4GuidedGExperiment.js';
 import {advanceHostedLive4Bots} from './craftraceLive4HostContinuity.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
 import {live4SeatName} from './craftraceLiveV2PilotNames.js';
@@ -26,6 +27,9 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  }
  const {room,identity}=session,roster=room.locked_roster;
  const localId=identity.id,hostId=room.host_id,isHost=localId===hostId;
+ const guidedGTrial=isHost&&scene.trackKey==='santa-cruz'&&
+   roster.some(x=>x.kind==='ai'&&x.difficulty===3)&&
+   hasLive4GuidedGForRoom(roomId);
  const model=new CrafRaceLive4RemoteModel({roomId,hostId,localId,roster});
  const localSeat=model.localSeat;
  const sprite=scene.carRig.list.find(item=>item?.texture?.key);
@@ -62,7 +66,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    'font:600 10px ui-monospace,monospace','white-space:normal',
    'pointer-events:none'
  ].join(';');
- perfHud.textContent='LIVE 4 · conectando…';
+ perfHud.textContent='LIVE 4'+(guidedGTrial?' · G BÉZIER + DADOS':'')+' · conectando…';
  document.body.append(perfHud);
  const results=document.createElement('section');
  results.className='cr4-result-shell';results.style.display='none';
@@ -100,7 +104,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    try{
      director=new CrafRaceLive4BotDirector(scene,{
        roster:raceEntries,hostId,localId,
-       startingGrid:scene._crafRaceLiveV2Grid,laps:room.laps
+       startingGrid:scene._crafRaceLiveV2Grid,laps:room.laps,
+       live4GuidedGTrial:guidedGTrial
      });
    }catch(err){
      aiError=err;console.error('[LIVE 4] Could not initialize physical AI:',err);
@@ -201,7 +206,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    const headline=document.createElement('h2');headline.textContent='LIVE 4 · RESULTADOS AMISTOSOS';
    panel.append(headline);
    const intro=document.createElement('p');
-   intro.textContent=String(room.laps)+' VUELTAS · SIN RÉCORDS NI CRÉDITOS';
+   intro.textContent=String(room.laps)+' VUELTAS · SIN RÉCORDS NI CRÉDITOS'+
+     (guidedGTrial?' · IA G BÉZIER + DADOS':'');
    panel.append(intro);
    const list=document.createElement('ol');list.className='cr4-result-list';
    const ordered=raceEntries.map(entry=>({
@@ -218,6 +224,40 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      li.append(name,time);list.append(li);
    }
    panel.append(list);
+   const lapTable=document.createElement('table');lapTable.className='cr4-laps';
+   const header=document.createElement('tr');
+   for(const title of ['PILOTO',...Array.from({length:room.laps},(_,i)=>'V'+(i+1))]){
+     const th=document.createElement('th');th.textContent=title;header.append(th);
+   }
+   lapTable.append(header);
+   for(const entry of raceEntries){
+     const data=states.get(entry.seat);
+     const times=(entry.seat===localSeat?localFinish?.lapTimes:null)||
+       data?.lapTimes||data?.lap_times||[];
+     const tr=document.createElement('tr'),name=document.createElement('th');
+     name.textContent=displayName(entry);tr.append(name);
+     for(let n=0;n<room.laps;n++){
+       const td=document.createElement('td');td.textContent=fmt(times[n]);tr.append(td);
+     }
+     lapTable.append(tr);
+   }
+   panel.append(lapTable);
+   if(guidedGTrial&&director?.results().length){
+     const dice=document.createElement('details');
+     const summary=document.createElement('summary');
+     summary.textContent='TIRADAS AUTOMÁTICAS DE DADO (POR VUELTA)';
+     dice.append(summary);
+     for(const b of director.results()){
+       const p=document.createElement('p');p.className='cr4-result-note';
+       p.textContent='IA '+(b.seat+1)+' · '+
+         (b.bezierDieHistory||[]).map(x=>'V'+x.lap+': '+x.face+'/6 · '+
+           Number(x.plannedVariationPx||0).toFixed(1)+' px previstos').join(' | ');
+       dice.append(p);
+     }
+     const explanation=document.createElement('small');
+     explanation.textContent='Variación planificada, no distancia física garantizada. Tiradas invisibles durante la carrera.';
+     dice.append(explanation);panel.append(dice);
+   }
    const status=document.createElement('p');status.className='cr4-result-note';
    const allFinished=ordered.every(x=>x.time!==null);
    // Keep the live race visible while AI finish after the player.
@@ -365,7 +405,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        botCpuMeanMs:+ai.botCpuMeanMs.toFixed(3),realtime:linkReady};
      if(scene._raceStarted||localFinish)console.info('[LIVE 4 PERF]',record);
      if(!stopped){
-       perfHud.textContent='LIVE 4 · '+(frameCount?fps+' FPS':'SIN MUESTRAS')+
+       perfHud.textContent='LIVE 4'+(guidedGTrial?' · G':'')+' · '+(frameCount?fps+' FPS':'SIN MUESTRAS')+
          ' · P95 '+(frameCount?p95.toFixed(1):'—')+' ms'+
          ' · IA '+ai.count+' ('+record.botCpuMeanMs.toFixed(2)+' ms)'+
          ' · RIVALES '+stats.remoteCount+
