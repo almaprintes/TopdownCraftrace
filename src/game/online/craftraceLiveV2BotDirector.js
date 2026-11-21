@@ -3,6 +3,7 @@
 // easy/medium simply choose less ambitious pace, expert has no extra grip/power.
 import {buildTrackRacingLineModel} from '../ai/trackRacingLinePlanner.js';
 import {buildGuidedTrackRacingLineModel} from '../ai/trackGuidedRacingLinePlanner.js';
+import {buildBezierAiRacingLineModel,buildBezierDieVariant} from '../ai/trackBezierAiRacingLinePlanner.js';
 import {resolveDirectorGuideSource} from './craftraceDirectorGuideSource.js';
 import {buildTrackSpeedProfile} from '../ai/trackSpeedProfilePlanner.js';
 import {buildTrackManeuverPlan} from '../ai/trackManeuverPlanner.js';
@@ -58,10 +59,23 @@ export class CrafRaceLive4BotDirector{
   }):null;
   this.previewGuidedLine=null;this.previewGuidedProfile=null;this.previewGuideReport=null;
   this.previewGuideTargets=[];
+  this.previewBezierActive=false;
+  this.previewBezierOptions=null;
   this.previewMode='A';
   if(preview){
     const authored=resolveDirectorGuideSource(scene.track);
-    if(authored.guides?.points?.length){
+    if(authored.bezier){
+      const opts={carRadius:Math.max(8,Math.round(14*Number(authored.carScale||1)))};
+      const result=buildBezierAiRacingLineModel(this.standardExpertLine,
+        authored.bezier,authored.shape,authored.dimensions,opts);
+      this.previewGuideReport={...result.report,source:'trackstudio-bezier'};
+      if(result.report.active){
+        this.previewGuidedLine=result.model;
+        this.previewBezierActive=true;
+        this.previewBezierOptions={...opts,shape:authored.shape,
+          dimensions:authored.dimensions};
+      }
+    }else if(authored.guides?.points?.length){
       const result=buildGuidedTrackRacingLineModel(
         this.standardExpertLine,authored.guides,authored.shape,
         authored.dimensions,
@@ -135,6 +149,11 @@ export class CrafRaceLive4BotDirector{
       }
     }
   }
+  this._bezierSpeedOptions={
+    maxSpeed:maxFwd,lateralAccel:LIVE4_AI_LEVELS[3].plannerLateralAccel,
+    minCornerSpeed:80,maxYawRate:yawAtSpeed,curvatureSmoothWindow:21,
+    driveAccel,brakeDecel
+  };
   this.profile=this.profiles.get(3);this.spacing=Number(line.spacing||10);
   const sprite=scene.carRig?.list?.find?.(item=>item?.texture?.key);
   if(!sprite)throw Error('Player car visuals unavailable');
@@ -183,6 +202,17 @@ export class CrafRaceLive4BotDirector{
     :this.preview&&this.previewMode==='B'
       ?this.previewExpertLine:this.standardExpertLine;
  }
+ _bezierProfileForDie(seat,face){
+  if(!this.previewBezierActive||!this.previewBezierOptions)return null;
+  const options=this.previewBezierOptions;
+  const line=buildBezierDieVariant(this.previewGuidedLine,face,seat,
+    options.shape,options.dimensions,{carRadius:options.carRadius});
+  const profile=buildTrackManeuverPlan(buildTrackSpeedProfile(
+    line,this._bezierSpeedOptions));
+  if(!profile.valid)return this.previewGuidedProfile;
+  profile.live4CurveComplexity=line.metrics.meanAbsCurvature;
+  return profile;
+ }
  setPreviewLineMode(mode){
   if(!this.preview||this.raceStarted||!['A','B','G'].includes(mode))return false;
   const chosen=mode==='A'?this.standardExpertProfile
@@ -191,10 +221,15 @@ export class CrafRaceLive4BotDirector{
   this.previewMode=mode;
   this.previewRacecraft=mode!=='A'; // backwards-compatible A/B diagnostics
   this.profiles.set(3,chosen);this.profile=chosen;
-  if(mode==='G')for(const bot of this.bots){
-    if(bot.difficulty!==3||bot.guidedRoll!==null)continue;
-    const die=rollGuidedDie();
-    bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
+  for(const bot of this.bots){
+    bot._bezierProfile=null;
+    if(mode!=='G'||bot.difficulty!==3)continue;
+    if(bot.guidedRoll===null){
+      const die=rollGuidedDie();
+      bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
+    }
+    if(this.previewBezierActive)
+      bot._bezierProfile=this._bezierProfileForDie(bot.seat,bot.guidedRoll);
   }
   return true;
  }
@@ -219,7 +254,9 @@ export class CrafRaceLive4BotDirector{
   for(const bot of this.bots){
    if(bot.finished)continue;
    const settings=LIVE4_AI_LEVELS[bot.difficulty];
-   const profile=this.profiles.get(bot.difficulty);
+   const profile=bot._bezierProfile||this.profiles.get(bot.difficulty);
+   const bezierActive=this.preview&&this.previewMode==='G'&&
+     bot.difficulty===3&&this.previewBezierActive;
    const guidedActive=this.preview&&this.previewMode==='G'&&
      bot.difficulty===3&&this.previewGuideTargets.length>0;
    // Deterministic driving styles break up the three-car clone procession.
@@ -281,11 +318,13 @@ export class CrafRaceLive4BotDirector{
    // Sample progress remains telemetry only. Require swept physical crossings
    // of both checkpoints and the REAL finish gate, in race direction.
    const lapPassed=advanceLive4PhysicalLap(bot,this.lapGates,now,this.laps);
-   if(guidedActive&&lapPassed){
-     closeGuidedLap(bot,this.previewGuideTargets);
+   if((guidedActive||bezierActive)&&lapPassed){
+     if(guidedActive)closeGuidedLap(bot,this.previewGuideTargets);
      if(!bot.finished){
        const die=rollGuidedDie();
        bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
+       if(bezierActive)
+         bot._bezierProfile=this._bezierProfileForDie(bot.seat,die.face);
      }
    }
    const pose={x:body.x,y:body.y,angle:body.rotation,
