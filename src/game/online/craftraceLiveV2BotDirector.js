@@ -13,7 +13,9 @@ import {makeLive4LapGates,advanceLive4PhysicalLap} from './craftraceLive4LapGate
 import {measureLateralUse} from './craftraceRacingLineTelemetry.js';
 import {summarizePlannedLateral,samplePlannedVsReal} from './craftraceLive4LineTrackingAudit.js';
 import {makeLive4TimingAudit,observeLive4Timing,summarizeLive4Timing} from './craftraceLive4TimingAudit.js';
-import {rollGuidedDie,measureGuidedPass,closeGuidedLap} from './craftraceGuidedDie.js';
+import {rollGuidedDie,GUIDED_DIE_TOLERANCE_PX,measureGuidedPass,closeGuidedLap} from './craftraceGuidedDie.js';
+import {live4AiPilotForSeat} from './craftraceLive4AiIdentity.js';
+import {rollEloAiDie} from '../ai/craftraceAiEloLeague.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
@@ -25,7 +27,7 @@ export const LIVE4_AI_LEVELS=Object.freeze({
 const speedOf=body=>Math.hypot(body?.body?.velocity?.x||0,body?.body?.velocity?.y||0);
 
 export class CrafRaceLive4BotDirector{
- constructor(scene,{roster,hostId,localId,startingGrid,laps=3,preview=false,live4GuidedGTrial=false}={}){
+ constructor(scene,{roster,hostId,localId,startingGrid,laps=3,preview=false,live4GuidedGTrial=false,aiIdentitySeed=null}={}){
   if(!scene?.physics?.add?.sprite||!Array.isArray(roster)||hostId!==localId)
     throw Error('Only a physics-ready host can drive LIVE AI');
   const ai=roster.filter(x=>x.kind==='ai');
@@ -39,6 +41,7 @@ export class CrafRaceLive4BotDirector{
   this.lastUpdated=0;this.lastCpuMs=0;this.cpuTotalMs=0;this.cpuSamples=0;
   this.profiles=new Map();
   this.preview=preview===true;this.raceStarted=false;
+  this.aiIdentitySeed=typeof aiIdentitySeed==='string'?aiIdentitySeed:null;
   this.live4GuidedGTrial=!this.preview&&live4GuidedGTrial===true&&scene.trackKey==='santa-cruz';
   this.timingAudit=makeLive4TimingAudit();
   if(ai.length===0){this.profile=null;return;}
@@ -190,6 +193,7 @@ export class CrafRaceLive4BotDirector{
     if(dist<bd){best=i;bd=dist;}
    }
    const bot={seat:item.seat,difficulty:item.difficulty,
+     aiPilot:this.aiIdentitySeed?live4AiPilotForSeat(this.aiIdentitySeed,item.seat):null,
      plannerBody:body,rig,visual,style:(item.seat*2+1)%3,
      _plannerSampleIndex:best,
      lastIndex:best,sampleProgress:0,completedLaps:0,
@@ -205,10 +209,17 @@ export class CrafRaceLive4BotDirector{
   }
   if(this.live4GuidedGTrial)for(const bot of this.bots){
     if(bot.difficulty!==3)continue;
-    const die=rollGuidedDie();
+    const die=this._rollBotDie(bot);
     bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
     this._setBezierDieForLap(bot,1);
   }
+ }
+ // The owner-specified 16-driver league influences only the experimental
+ // G dice. No DEV friendly race may alter Elo or grant enhanced physics.
+ _rollBotDie(bot){
+  if(!this.live4GuidedGTrial||!bot.aiPilot)return rollGuidedDie();
+  const face=rollEloAiDie(bot.aiPilot.elo);
+  return{face,tolerancePx:GUIDED_DIE_TOLERANCE_PX[face]};
  }
  // LIVE 4 host G is opt-in per server-authorized room. A/B remain unchanged.
  previewActiveLine(){
@@ -349,7 +360,7 @@ export class CrafRaceLive4BotDirector{
    if((guidedActive||bezierActive)&&lapPassed){
      if(guidedActive)closeGuidedLap(bot,this.previewGuideTargets);
      if(!bot.finished){
-       const die=rollGuidedDie();
+       const die=this._rollBotDie(bot);
        bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
        if(bezierActive)
          this._setBezierDieForLap(bot,bot.completedLaps+1);
@@ -368,6 +379,7 @@ export class CrafRaceLive4BotDirector{
  results(){
   return this.bots.filter(bot=>bot.finished).map(bot=>({
    seat:bot.seat,lapTimes:bot.lapTimes.slice(),
+   ...(bot.aiPilot?{aiPilotId:bot.aiPilot.id,aiPilotName:bot.aiPilot.name,aiPilotElo:bot.aiPilot.elo}:{}),
    guidedLapHistory:bot.guidedLapHistory.slice(),
    ...((this.preview||this.live4GuidedGTrial)?{bezierDieHistory:bot.bezierDieHistory.map(x=>({...x}))}:{}),
    elapsedMs:bot.lapTimes.reduce((sum,ms)=>sum+ms,0),difficulty:bot.difficulty
