@@ -60,6 +60,29 @@ export async function configureLiveV2Lobby(roomId,options){
   return rpc('configure',{p_room:verifyId(roomId),p_capacity:settings.capacity,
     p_fill_ai:settings.fillWithAi,p_ai_difficulty:settings.aiDifficulty});
 }
+// Room host edits the venue while the lobby is still waiting. This keeps
+// the same invitation code and human seats, but clears all ready flags.
+export async function setLiveV2Venue(roomId,trackId,carId){
+ const race=liveConfig({trackId,carId,laps:1,physicsVersion:1,direction:'forward'});
+ if(!race)throw Error('Circuito o coche no válido');
+ return rpc('set_venue',{p_room:verifyId(roomId),p_track:trackId,p_car:carId});
+}
+// A rematch is a NEW room: previous results and locked grid are immutable.
+// Only the previous host proposes it; only previous members may accept.
+export async function requestLiveV2Rematch(roomId){
+ for(let attempt=0;attempt<3;attempt++){
+  const code=makeLiveCode(crypto.getRandomValues(new Uint8Array(7)));
+  try{return await rpc('request_rematch',{p_room:verifyId(roomId),p_code:code});}
+  catch(e){
+   if(!/duplicate key|unique constraint/i.test(e.message)||attempt===2)throw e;
+  }
+ }
+ throw Error('No se pudo crear la revancha');
+}
+export async function acceptLiveV2Rematch(roomId){
+ return rpc('accept_rematch',{p_room:verifyId(roomId)});
+}
+
 export async function setReadyLiveV2Lobby(roomId,ready){
   if(typeof ready!=='boolean')throw Error('Estado de preparación inválido');
   return rpc('set_ready',{p_room:verifyId(roomId),p_ready:ready});
