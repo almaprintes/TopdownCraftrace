@@ -1,7 +1,7 @@
 # Top Down RACE: F1Race — visión acordada y evaluación técnica
 
 **Fecha:** 21 de noviembre de 2026.  
-**Tipo:** ficha del **tercer juego futuro** de CraftRace Studio.  
+**Tipo:** ficha del proyecto futuro de monoplazas dentro de una familia de **cuatro títulos/conceptos**, incluidos RcRace y los dos juegos actuales.  
 **Nombre:** «F1Race» es **clave interna provisional**, no título comercial autorizado.  
 **Implementación:** **no iniciada**; este documento registra decisiones y propuestas, no entrega un juego.
 
@@ -16,7 +16,7 @@ El jugador quiere exactamente la vista top-down tradicional. La aproximación is
 - 3D al servicio de la vista cenital, **nunca al revés**. El nombre «Top Down RACE» debe seguir describiendo exactamente la experiencia.
 - **Objetivo de 60 FPS en iPhone**, a verificar con medidas y sin confundir objetivo con capacidad demostrada.
 - **Forma de trabajo preferida:** GitHub → GitHub Actions → GitHub Pages → Safari/iPhone en modo PWA. Debe ser posible probar DEV desde una URL sin recompilar una IPA cada vez.
-- Proyecto futuro **independiente de CraftRace y SlotRace**. No requiere migrar sus motores gráficos ni su juego en producción.
+- Proyecto futuro **independiente de CraftRace, SlotRace y RcRace**. No requiere migrar sus motores gráficos ni sus juegos en producción.
 - **PlayCanvas**: primera alternativa técnica para explorar. No se ha ordenado arrancar la programación y **no está elegido definitivamente**.
 
 ## 2. Qué permite el 3D sin inclinar la cámara
@@ -103,12 +103,14 @@ No construir aún un campeonato. Cuando se autorice empezar:
 
 ## 7. Nomenclatura y derechos
 
-**«Top Down RACE: F1Race» permanece como nombre del proyecto interno.**
+**«Top Down RACE: F1Race» permanece como nombre del proyecto interno.**  
+En la conversación del 21/11/2026 se solicitaron nombres que indiquen monoplazas sin utilizar «F1». Los dos candidatos principales en estudio son **«Top Down RACE: FormulaRace»** (más evidente; cercano a nombres existentes) y **«Top Down RACE: OpenWheelRace»** (más descriptivo de monoplazas de ruedas descubiertas). Ninguno está registrado, aprobado ni elegido. Comparación ampliada en el catálogo maestro.
 Formula 1 identifica F1 como marca y limita su incorporación en nombres de productos; además hay proyectos y dominios llamados F1Race. No usar logos oficiales, monoplazas reales con decoraciones registradas ni signos de campeonato sin autorización.
 
 - [Formula 1 — directrices oficiales de marcas y derechos](https://www.formula1.com/en/information/guidelines.4EOKE9RRqevL4niTK9kWyt).
 - [EUIPO — búsqueda de marcas (TMview/eSearch)](https://www.euipo.europa.eu/en/search-ip).
-- [Catálogo de familia y revisión de nombres](./TOP_DOWN_RACE_FAMILY_CATALOG_2026-11-21.md).
+- [Catálogo de cuatro juegos y revisión de nombres](./TOP_DOWN_RACE_FAMILY_CATALOG_2026-11-21.md).
+- [RcRace: proyecto distinto y VR en estudio](./RCRACE_CONCEPT_BRIEF_2026-11-21.md).
 
 ## 8. Registro de decisiones
 
