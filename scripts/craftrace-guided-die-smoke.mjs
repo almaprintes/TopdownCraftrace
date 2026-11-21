@@ -73,7 +73,7 @@ assert.equal(bot.guidedLapHistory.length,2);
 const controller=readFileSync('src/game/ai/survivalPhysicalBotController.js','utf8');
 const director=readFileSync('src/game/online/craftraceLiveV2BotDirector.js','utf8');
 const real=readFileSync('src/game/online/craftraceDirectorPreview.js','utf8');
-assert.ok(controller.includes("precisionCornering&&Array.isArray(guidance?.guides)"));
+assert.ok(controller.includes("guidance?.continuousOnly===true"));
 assert.ok(controller.includes('nearestContinuousGuidedSample('));
 assert.ok(controller.includes('const desiredHeading=Math.atan2(Number(target.y)-Number(body.y)'));
 assert.ok(!controller.includes('Number(upcoming?.x')&&!controller.includes('guideAim'),
