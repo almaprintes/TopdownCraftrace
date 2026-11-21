@@ -36,6 +36,28 @@ assert.ok(target.report.active,
  'A gentle authored ring must be drivable: '+JSON.stringify(target.report));
 assert.equal(target.report.mode,'bezier');
 assert.equal(target.model.racingLine.length,baseline.racingLine.length);
+const turned=JSON.parse(JSON.stringify(bezier));
+turned.nodes.push(...turned.nodes.splice(0,5));
+const sameLoop=buildBezierAiRacingLineModel(baseline,turned,shape,
+ {worldW:1600,worldH:1600},{carRadius:10});
+assert.ok(sameLoop.report.active,
+ 'Closed Bézier must validate regardless of which knot the author selected first: '+
+ JSON.stringify(sameLoop.report));
+const movedOutside=JSON.parse(JSON.stringify(bezier));
+for(const p of movedOutside.nodes){
+ const dx=p.x-C.x,dy=p.y-C.y;
+ p.x=C.x+dx*1.7;p.y=C.y+dy*1.7;
+ p.handleIn.x=C.x+(p.handleIn.x-C.x)*1.7;
+ p.handleIn.y=C.y+(p.handleIn.y-C.y)*1.7;
+ p.handleOut.x=C.x+(p.handleOut.x-C.x)*1.7;
+ p.handleOut.y=C.y+(p.handleOut.y-C.y)*1.7;
+}
+const unsafeLoop=buildBezierAiRacingLineModel(baseline,movedOutside,shape,
+ {worldW:1600,worldH:1600},{carRadius:10});
+assert.equal(unsafeLoop.report.active,false);
+assert.notEqual(unsafeLoop.report.reason,'start-mismatch',
+ 'Unsafe trajectories must not be misdiagnosed as start alignment');
+
 const exact=buildBezierDieVariant(target.model,6,0,shape,{worldW:1600,worldH:1600});
 assert.strictEqual(exact,target.model);
 const varied=buildBezierDieVariant(target.model,2,1,shape,
