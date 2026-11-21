@@ -266,7 +266,8 @@ export class CrafRaceLive4BotDirector{
      dt,spacing:this.spacing,maxFwd:maxSpeed*settings.pace*paceBias,
      live4PrecisionCornering:bot.difficulty===3,
      live4GuidedApex:guidedActive?{
-       guides:this.previewGuideTargets,tolerancePx:bot.guidedTolerancePx}:null,
+       guides:this.previewGuideTargets,tolerancePx:bot.guidedTolerancePx}:
+       bezierActive?{continuousOnly:true,guides:[]}:null,
      cornerRisk:settings.cornerRisk,
      accel:Number(scene.accel||scene.carParams?.accel||520),
      brakeForce:Number(scene.brakeForce||scene.carParams?.brakeForce||720),
