@@ -4,6 +4,7 @@
 import { StatsScene as PreviousStatsScene } from './StatsTesterExchangeScene.js';
 import { getLanguage } from '../i18n/index.js';
 import { mountRaceControlHub } from '../ui/raceControlHub.js';
+import { mountRaceControlDirectory } from '../ui/raceControlDirectory.js';
 
 export class StatsScene extends PreviousStatsScene {
   create(data) {
@@ -76,9 +77,9 @@ export class StatsScene extends PreviousStatsScene {
             this._renderBroadcastRecords(this._rc2PreferredTrack||null);
             break;
           case 'pilots':
-          case 'cars':
-            this._rc2FromProfile=true;
-            this._renderCars();
+          case 'circuits':
+          case 'events':
+            this._showRaceControlDirectory(action);
             break;
           case 'seasons':
             this.scene.start('season');
@@ -86,6 +87,16 @@ export class StatsScene extends PreviousStatsScene {
           default:break; // Upcoming features never launch fake rooms/events.
         }
       }
+    });
+  }
+
+  _showRaceControlDirectory(type) {
+    if(!this._root)return;
+    this._disposeRaceControlHub();
+    this._rc2Dispose=mountRaceControlDirectory(this._root,{
+      type,language:getLanguage(),
+      onBack:()=>this._showRaceControlHub(),
+      onTrack:trackId=>this._renderBroadcastRecords(trackId)
     });
   }
 
