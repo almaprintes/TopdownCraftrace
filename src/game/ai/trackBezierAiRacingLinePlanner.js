@@ -73,7 +73,11 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
  // farther ahead in lap progress, so matching may only move forward locally.
  // The previous check assumed path[i] should match centerline[i] +/-20;
  // that fails on different arc-length distributions and arbitrary starts.
- const maxCorridor=Math.max(18,Number(options.maxCorridorPx)||75);
+ // The physical road mask above decides whether the entire car fits.
+ // NEVER reject a safe racing line merely for being >75px from centerline:
+ // Santa Cruz has broad, correctly authored road sections where an apex is
+ // >100px from the axis. Distance here is DIAGNOSTIC ONLY.
+ // Match to the forward road order to reject direction reversals and jumps.
  const matches=[],maxForward=Math.min(18,Math.max(7,
    Math.ceil(2.5*sampled.total/Math.max(1,baseline.lengthPx))));
  let previous=-1,travel=0,maxMismatch=0;
@@ -85,8 +89,6 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
    const d=distance(path[i],first[j]);
    if(d<closest){closest=d;index=j;advance=step;}
   }
-  if(closest>maxCorridor)return fail(baseline,'outside-route-corridor',
-    {badIndex:i,distancePx:Math.round(closest)});
   if(i>0)travel+=advance;
   maxMismatch=Math.max(maxMismatch,closest);
   previous=index;matches.push(index);
