@@ -199,6 +199,30 @@ export function makeKartingShapeMask(shape,worldW,worldH){
   };
 }
 
+// DEV technical camera: show the actual authored Bézier edges, never pretend
+// the centerline ribbon matches the user's painted asphalt. One draw per race,
+// not one canvas per frame. Cars/guide lines render over these boundaries.
+export function mountKartingVectorTrackOutline(scene){
+  if(scene?.trackKey!==LOCAL_STUDIO_VECTOR_PREVIEW_KEY)return null;
+  const track=getLocalKartingPreview(scene.trackKey)?.track;
+  if(!track||!shapeIsValid(track.trackShape))return null;
+  const layer=scene.add.graphics().setDepth(14);
+  const stroke=(edge,color)=>{
+    const pts=sampleShapeEdge(edge,true,12);
+    if(pts.length<3)return;
+    layer.lineStyle(3,color,.95);
+    layer.beginPath();
+    layer.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++)layer.lineTo(pts[i].x,pts[i].y);
+    layer.closePath();layer.strokePath();
+  };
+  stroke(track.trackShape.leftEdge,0x36e5ef);
+  stroke(track.trackShape.rightEdge,0xffc34d);
+  scene.uiCam?.ignore?.(layer);
+  scene.events.once('shutdown',()=>layer.destroy());
+  return layer;
+}
+
 export function applyKartingPreviewPhysics(scene){
   const saved=getLocalKartingPreview(scene.trackKey);
   if(!saved)return false;
