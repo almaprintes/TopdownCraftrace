@@ -120,7 +120,7 @@ export function mountTrackStudioLabChrome(scene,gate){
   splineMode.setAttribute('aria-pressed','false');
   const shapeGrid=button('PARRILLA',()=>action(scene,scene._showStartingGrid===false?'gridOff':'gridOn'),'ts-lab__stage-button');
   const shapePreview=button('▶ PROBAR',()=>action(scene,'preview'),'ts-lab__stage-button ts-lab__stage-button--preview');
-  add(stageActions,shapeCreate,shapeEdit,shapeNode,aiMode,splineMode,shapeGrid,shapePreview);
+  add(stageActions,shapeCreate,shapeEdit,splineMode,shapeNode,aiMode,shapeGrid,shapePreview);
   stageTop.append(stageTag,stageActions);
   const placeholder=make('div','ts-lab__empty');
   add(placeholder,make('span','ts-lab__empty-icon','⌖'),make('strong','','LIENZO LISTO PARA DISEÑAR'),
@@ -204,11 +204,12 @@ export function mountTrackStudioLabChrome(scene,gate){
   const splineInsert=button('+ NODO',()=>scene._aiBezierInsert?.(),'ts-lab__ai-step');
   const splineDelete=button('BORRAR NODO',()=>scene._aiBezierDelete?.(),'ts-lab__ai-delete');
   const splineClear=button('BORRAR TRAZADA',()=>scene._aiBezierClear?.(),'ts-lab__ai-delete');
+  const splineValidate=button('✓ VALIDAR TRAZADA',()=>scene._aiBezierValidate?.(),'ts-lab__ai-test');
   const splineTry=button('▶ PROBAR BÉZIER IA',()=>scene._startGuidedAiPreview?.(),'ts-lab__ai-test');
   const splineHint=make('small','ts-lab__ai-hint',
    'Selecciona un nodo; vuelve a arrastrarlo o mueve sus tiradores. + NODO conserva la curva.');
   splinePanel.append(splineTitle,splineSummary,splineGenerate,
-    splineInsert,splineDelete,splineClear,splineTry,splineHint);
+    splineInsert,splineDelete,splineClear,splineValidate,splineTry,splineHint);
   const nudge=make('div','ts-lab__nudge');
   const nudgeTitle=make('span','','MOVER SELECCIÓN');
   const nudgeControls=make('div','ts-lab__nudge-controls');
@@ -280,6 +281,7 @@ export function mountTrackStudioLabChrome(scene,gate){
     splineMode.setAttribute('aria-pressed',String(editingSpline));
     splinePanel.hidden=!editingSpline;
     splineTry.disabled=!(scene._aiBezierLine?.nodes?.length>=3);
+    splineValidate.disabled=!(scene._aiBezierLine?.nodes?.length>=3);
     splineInsert.disabled=splineDelete.disabled=scene._aiBezierSelected<0;
     splineClear.disabled=!(scene._aiBezierLine?.nodes?.length);
     if(editingSpline){
