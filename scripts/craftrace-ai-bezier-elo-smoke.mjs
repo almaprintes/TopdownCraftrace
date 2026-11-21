@@ -36,9 +36,10 @@ assert.ok(target.report.active,
  'A gentle authored ring must be drivable: '+JSON.stringify(target.report));
 assert.equal(target.report.mode,'bezier');
 assert.equal(target.model.racingLine.length,baseline.racingLine.length);
-const wideShape=createTrackShape(nodes,300,true);
-const wideBaseline=buildTrackRacingLineModel({raceCenterline:nodes,trackWidth:300});
-const wideBezier=createAiBezierFromTrackNodes(nodes,N);
+const wideNodes=nodes.map(p=>({...p,width:300}));
+const wideShape=createTrackShape(wideNodes,300,true);
+const wideBaseline=buildTrackRacingLineModel({raceCenterline:wideNodes,trackWidth:300});
+const wideBezier=createAiBezierFromTrackNodes(wideNodes,N);
 const widening=(p)=>({
   x:C.x+(p.x-C.x)*(R+95)/R,
   y:C.y+(p.y-C.y)*(R+95)/R
