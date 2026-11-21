@@ -7,9 +7,9 @@ import {makeDirectorCameraState,stepDirectorCamera,directorZoom,directorStickVec
 import {hideRaceUi,restoreRaceUi} from '../ui/raceUiVisibility.js';
 import {sampleShapeEdge,shapeIsValid} from '../studio/trackShapeGeometry.js';
 import {measureLateralUse,summarizeLateralUse} from './craftraceRacingLineTelemetry.js';
+import {buildDirectorLapReport,fmtDirectorTime} from './craftraceDirectorLapReport.js';
 import '../ui/craftraceDirectorPreview.css';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-const fmt=ms=>Math.floor(ms/60000)+':'+String(Math.floor(ms%60000/1000)).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0');
 export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  if(!scene?._crafRaceDirectorPreview||!scene?.carRig||!scene?.carBody||
    scene._crafRaceLiveV2RoomId||![1,3,5,10,20].includes(laps)||
@@ -89,9 +89,10 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  <div class="crdir-results" data-results hidden>
   <h2>4 IA · RESULTADOS PROVISIONALES</h2>
   <p data-session></p>
-  <p>Prueba local. Vueltas estimadas por trayectoria, todavía no homologadas.</p>
+  <p>Cronometría local experimental: vueltas registradas al cruzar meta tras los dos controles. No homologada.</p>
   <p data-roadreport></p>
-  <ol data-order></ol><button type="button" data-finish>VOLVER AL MENÚ</button></div>`;
+  <div class="crdir-lap-scroll" data-lap-table></div>
+  <button type="button" data-finish>VOLVER AL MENÚ</button></div>`;
  document.body.append(root);
  // Stop director touch events reaching legacy driver controls behind the view.
  for(const ev of ['pointerdown','pointermove','pointerup','pointercancel','click'])
@@ -313,31 +314,57 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
        ' · '+(guide?'GUÍAS '+guide.accepted+'/'+guide.total+
          ' · G '+(guide.active?'ACTIVA':'NO DISPONIBLE'):'SIN GUÍAS')+
        ' · '+(hasAuthoredBounds?'BORDES AUTÉNTICOS':'SIN BORDES');
-     const dieStatus=bots.previewMode==='G'&&stats.dice
-       ?' · 🎲 '+stats.dice.map(d=>d.face??'—').join('/') :'';
+     // Die rolls remain internal: no visible prompt, overlay, animation or stop.
      $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN '+countdown.seconds)+
-      dieStatus+' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
+      ' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
       ' · ZOOM '+directorZoom(camera.altitude).toFixed(2)+'×';
      $('[data-auto]').textContent=camera.auto?'AUTO ACTIVADO':'AUTO · ACCIÓN';
    }
    if(!shown&&bots.results().length===4){
      shown=true;
-     const ordered=bots.results().sort((a,b)=>a.elapsedMs-b.elapsedMs);
-     const list=$('[data-order]');list.replaceChildren();
-     for(const item of ordered){const li=document.createElement('li');
-       const stat=summarizeLateralUse(lateralSamples[item.seat]);
-       const accuracy=bots.previewMode==='G'&&item.guidedLapHistory?.length
-         ?' · 🎲 '+item.guidedLapHistory.map(l=>
-           l.die+':'+l.hits+'/'+l.checked).join(' / '):'';
-       li.textContent='IA '+(item.seat+1)+' · '+fmt(item.elapsedMs)+
-         ' · LATERAL '+(stat.samples?stat.meanPct+'%':'—')+accuracy;list.append(li);}
+     const report=buildDirectorLapReport(bots.results(),laps);
+     const host=$('[data-lap-table]');host.replaceChildren();
+     const table=document.createElement('table');
+     table.className='crdir-lap-table';
+     const caption=document.createElement('caption');
+     caption.textContent='TIEMPOS REALES POR VUELTA · META FÍSICA';
+     table.append(caption);
+     const thead=document.createElement('thead'),heading=document.createElement('tr');
+     for(const name of ['POS.','PILOTO',
+       ...Array.from({length:report.laps},(_,i)=>'V'+(i+1)),'MEJOR','TOTAL']){
+       const th=document.createElement('th');th.scope='col';th.textContent=name;
+       heading.append(th);
+     }
+     thead.append(heading);table.append(thead);
+     const tbody=document.createElement('tbody');
+     report.rows.forEach((pilot,position)=>{
+       const tr=document.createElement('tr');
+       const place=document.createElement('td');
+       place.textContent=String(position+1)+'.º';tr.append(place);
+       const name=document.createElement('th');name.scope='row';
+       name.textContent='IA '+(pilot.seat+1);tr.append(name);
+       pilot.lapTimes.forEach((ms,i)=>{
+         const cell=document.createElement('td');
+         cell.textContent=fmtDirectorTime(ms);
+         if(ms!==null&&ms===pilot.bestLapMs)cell.classList.add('crdir-best-personal');
+         if(ms!==null&&ms===report.fastestLapMs)cell.classList.add('crdir-best-global');
+         cell.title='IA '+(pilot.seat+1)+' · vuelta '+(i+1);
+         tr.append(cell);
+       });
+       const best=document.createElement('td');
+       best.textContent=fmtDirectorTime(pilot.bestLapMs);
+       best.className='crdir-best-column';tr.append(best);
+       const total=document.createElement('td');
+       total.textContent=fmtDirectorTime(pilot.totalMs);
+       total.className='crdir-total-column';tr.append(total);
+       tbody.append(tr);
+     });
+     table.append(tbody);host.append(table);
      const used=summarizeLateralUse(lateralSamples.flat());
      const guide=bots.previewGuideReport;
      $('[data-roadreport]').textContent='TRAZADA '+bots.previewMode+
        ' · Uso lateral medio: '+(used.samples?used.meanPct+'%':'sin medición')+
        ' del semiancho útil estimado; muestras ≥70%: '+used.nearEdgePct+'%. '+
-       (bots.previewMode==='G'?'Dado por IA y vuelta: 1-2 = 35px, 3-4 = 20px, 5-6 = 5px. '+
-        'Los aciertos son distancias físicas medidas; no se fuerza la posición. ':'')+
        (guide?'Guías admitidas '+guide.accepted+'/'+guide.total+
         (guide.active?' · trazada G NO HOMOLOGADA':' · trazada G no disponible')+
         ' · '+(guide.entries||[]).filter(e=>e.status!=='accepted')
