@@ -135,10 +135,10 @@ export function makeKartingPreviewRecord(editor,gameTrack,{vectorOnly=false}={})
     meta:{...meta,localPreview:true,carScale:STOCK_PREVIEW_CAR_SCALE,
       source:vectorOnly?'trackstudio-director-vector':'trackstudio-image-native'}
   };
-  return vectorOnly
-    ?{version:1,previewKind:'director-vector',imageId:null,imageMeta:null,track}
-    :{version:1,imageId:editor.imageCanvas.imageId,
-      imageMeta:jsonCopy(editor.imageCanvas),track};
+  if(vectorOnly)
+    return {version:1,previewKind:'director-vector',imageId:null,imageMeta:null,track};
+  const imageId=editor.imageCanvas.imageId;
+  return {version:1,imageId,imageMeta:jsonCopy(editor.imageCanvas),track};
 }
 
 export async function installKartingPreview(scene,{allowVectorOnly=false}={}){
