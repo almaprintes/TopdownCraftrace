@@ -7,11 +7,13 @@ import {fileURLToPath} from 'node:url';
 import {expandCheckpointToEdges} from '../src/game/tracks/imageNativeCheckpointWidth.js';
 import {shapeIsValid} from '../src/game/studio/trackShapeGeometry.js';
 import {orderClosedCircuitGates} from '../src/game/tracks/closedCircuitGateOrder.js';
+import {normalizeAiLineGuides} from '../src/game/studio/trackAiLineGuides.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source=path.join(root,'src/game/tracks/library/santa-cruz/source/Santa-Cruz-x3-nitido.tdrtrack');
 const target=path.join(root,'src/game/tracks/library/santa-cruz/track.json');
 const environmentSource=path.join(root,'src/game/tracks/library/santa-cruz/source/santa-cruz-photo.environment.json');
+const guideSource=path.join(root,'src/game/tracks/library/santa-cruz/source/santa-cruz-ai-line-guides.json');
 const environmentTarget=path.join(root,'src/game/tracks/library/santa-cruz/santa-cruz.environment.json');
 const assets=path.join(root,'public/assets/tracks/santa-cruz');
 const WIDTH=3072,HEIGHT=4608,TILE=1536;
@@ -36,6 +38,20 @@ function parseSource(){
 export async function installSantaCruzSource(){
   if(!fs.existsSync(source))return {installed:false,reason:'Esperando paquete Santa-Cruz-x3-nitido.tdrtrack'};
   const {t,image}=parseSource();
+  // This overlay is a validated copy of the ten guides exported by the
+  // author from TrackStudio. They are advisory metadata, not road geometry.
+  // The source photo .tdrtrack remains untouched and authoritative.
+  const authorGuides=JSON.parse(fs.readFileSync(guideSource,'utf8'));
+  const aiLineGuides=normalizeAiLineGuides(authorGuides);
+  if(aiLineGuides.points.length!==10||authorGuides.points?.length!==10||
+     aiLineGuides.points.some((p,i)=>p.id!=='apex-'+(i+1)||
+      p.x<=0||p.y<=0||p.x>=WIDTH||p.y>=HEIGHT))
+    throw Error('Santa Cruz: anotaciones IA inválidas o desalineadas');
+  if(t?.aiLineGuides?.points?.length&&
+      JSON.stringify(normalizeAiLineGuides(t.aiLineGuides).points)!==
+        JSON.stringify(aiLineGuides.points))
+    throw Error('Santa Cruz: el archivo fuente y sus guías difieren');
+
   const first=t.centerline[0],ahead=t.centerline[Math.min(6,t.centerline.length-1)];
   const dx=Number(ahead.x)-Number(first.x),dy=Number(ahead.y)-Number(first.y);
   if(Math.hypot(dx,dy)<5)throw Error('Santa Cruz: rumbo de salida inválido');
@@ -73,6 +89,8 @@ export async function installSantaCruzSource(){
     checkpointMode:'authored',checkpoints,centerline:t.centerline,
     trackShape:t.trackShape,grid:t.grid||null,
     meta:{...(t.meta||{}),renderMode:'image-native',imageNative:photo,
+      // DEV Realizador only reads this field when preview=true.
+      aiLineGuides,aiGuideSource:'TrackStudio user-export 2026-11-21',
       gateOrder:ordered.diagnostics,
       source:'Track Studio .tdrtrack',sourceFile:'Santa-Cruz-x3-nitido.tdrtrack',
       sourceImageSha256:crypto.createHash('sha256').update(image).digest('hex')}
@@ -94,7 +112,7 @@ export async function installSantaCruzSource(){
      !Array.isArray(environment.collisionZones))
     throw Error('Santa Cruz: proyecto de colisiones inválido');
   fs.writeFileSync(environmentTarget,JSON.stringify(environment,null,2)+'\n');
-  return {installed:true,world:[WIDTH,HEIGHT],checkpoints:checkpoints.length,tiles:tiles.length,
+  return {installed:true,world:[WIDTH,HEIGHT],checkpoints:checkpoints.length,aiGuides:aiLineGuides.points.length,tiles:tiles.length,
     collisionLines:environment.collisionLines.length,collisionZones:environment.collisionZones.length};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))

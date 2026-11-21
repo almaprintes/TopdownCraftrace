@@ -61,6 +61,15 @@ export class AdminHubScene extends BaseScene {
     // Only the lazy DEV Admin Hub imports this screen. No race-loop overhead.
     const view=mountAdminPaddock(host,{
       track:()=>this._navigate('TrackStudioScene'),
+      santaCruzGuidedDirector:()=>{
+        if(!window.location.pathname.includes('/dev/')||
+           globalThis.Capacitor?.isNativePlatform?.())return;
+        this._navigate('race',{
+          trackKey:'santa-cruz',gameMode:'director',directorPreview:true,
+          directorFromPaddock:true,testMode:true,
+          directorLaps:3,directorAiDifficulty:3
+        });
+      },
       environment:()=>this._navigate('EnvironmentBuilderScene'),
       cars:()=>this._navigate('GarageScene',{mode:'admin'}),
       images:async()=>{

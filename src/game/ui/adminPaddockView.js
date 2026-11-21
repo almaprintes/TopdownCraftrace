@@ -139,6 +139,7 @@ export function mountAdminPaddock(host,handlers){
   };
 
   const qaGrid=paneHeader(qaPane,'LABORATORIO QA','Pruebas del juego y comprobación de recursos. No son herramientas de edición.');
+  addTool(qaGrid,{name:'REALIZADOR GUIADO · SANTA CRUZ',desc:'Cuatro IA Experto · comparar A/B/G sobre el circuito oficial con diez vértices guardados · solo DEV, sin premios.',run:handlers.santaCruzGuidedDirector,tone:'cyan'});
   addTool(qaGrid,{name:'GARAJE JUGADOR',desc:'Abrir el garaje para comprobar progresión, desbloqueos y homologaciones.',run:handlers.garage});
   const carsDev=addTool(qaGrid,{name:'',desc:'Activar o desactivar el acceso a toda la flota para pruebas.',run:()=>{handlers.toggleCars();refreshCarsDev();},tone:'cyan'});
   const carsLabel=carsDev.querySelector('strong');

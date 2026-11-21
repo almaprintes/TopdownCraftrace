@@ -15,11 +15,12 @@ const baseline=buildTrackRacingLineModel({
  raceCenterline:centerline,trackWidth:track.trackWidth
 },{apexCommitment:.22,racecraftPreview:true});
 assert.ok(baseline.valid);
-const points=[[958.7044591835196,3028.6913447192965],[473.3582229277389,2300.1970447789217],[921.4511882978474,1748.0219784075573],[1465.2263073591866,1806.7027466515867],[1505.086315151928,444.9958035685489],[2173.9852891055625,780.9991482269222],[2022.7328528569028,1254.0422907669106],[1676.6774644201096,2832.241858807157],[1726.029260056513,3809.7890398863774],[1035.552220385101,3590.714171775334]];
-const guides={version:1,points:points.map(([x,y],i)=>({
- id:'apex-'+(i+1),x,y,kind:'apex',direction:'forward',
- radiusPx:39.6,strength:.65
-}))};
+const authored=JSON.parse(readFileSync('src/game/tracks/library/santa-cruz/source/santa-cruz-ai-line-guides.json','utf8'));
+const guides=track.meta?.aiLineGuides;
+assert.equal(guides?.points?.length,10,'The installed built-in Santa Cruz must expose all ten author tips');
+assert.deepEqual(guides.points,authored.points,'No rounding or reauthoring of original user vertices');
+assert.equal(track.meta?.aiGuideSource,'TrackStudio user-export 2026-11-21');
+
 const invalid=buildGuidedTrackRacingLineModel(baseline,guides,null,track);
 assert.equal(invalid.report.active,false);
 assert.equal(invalid.model,baseline);
@@ -29,7 +30,7 @@ console.log('REAL GUIDES Santa Cruz',JSON.stringify({
  source:track.meta?.sourceFile,modelPoints:baseline.offsets.length,...report
 }));
 assert.ok(report.active,'The user-authored guides must activate on photo Santa Cruz');
-assert.ok(report.accepted>=5,'At least five visible real guide points should be useful');
+assert.equal(report.accepted,9,'Nine safe tips are expected; the tenth is too near the edge');
 assert.ok(report.changedSamples>=5);
 assert.equal(report.homologated,false);
 assert.equal(model.racingLine.length,baseline.racingLine.length);
@@ -64,4 +65,4 @@ assert.ok(ui.includes('▶ PROBAR IA GUIADA'));
 const room=readFileSync('src/game/online/craftraceLiveV2RaceBridge.js','utf8');
 assert.ok(!room.includes('previewGuidedProfile'),
  'The competitive race bridge must not activate the guided test');
-console.log('PASS TrackStudio authored soft apex -> local Realizador G with physical boundary checks');
+console.log('PASS installed Santa Cruz author tips -> local Realizador G with physical boundary checks');

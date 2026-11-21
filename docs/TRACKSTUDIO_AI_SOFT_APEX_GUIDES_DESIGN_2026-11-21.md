@@ -123,3 +123,15 @@ La etapa G combina el desplazamiento B con atracción suave hacia las anotacione
 **NO HOMOLOGADA:** la línea B de referencia no tiene una certificación global de seguridad; esta primera etapa verifica únicamente los desplazamientos nuevos de G y no sustituye controles físicos por velocidad artificial. Los datos de tiempos son provisionales y deben compararse en dispositivo; no declarar mejora de tiempo, seguimiento, validez de vueltas o ausencia de choques hasta observar carreras reales.
 
 Pruebas automáticas añadidas en `scripts/trackstudio-guided-realizador-smoke.mjs`, tras la instalación de Santa Cruz fotográfica. Comprueban diez vértices del JSON del usuario (sin copiar la imagen ni el archivo completo al repositorio), seguridad de las modificaciones, perfil de velocidad y aislamiento del online. Las carreras LIVE 4, los premios y Google Play permanecen intactos.
+
+## 21/11/2026 — Santa Cruz registrado con guías integradas en el juego (sin fotografía local)
+
+**Motivo:** en iPhone el editor conserva 226 nodos y 10 guías pero IndexedDB no encuentra la fotografía maestra; el botón de «PROBAR IA GUIADA» de TrackStudio depende del recurso faltante y no puede abrir la sesión. **El juego ya cuenta con la fotografía oficial de Santa Cruz y sus bordes Bézier publicados**; no necesitamos duplicar la imagen local ni exigir otra exportación al usuario.
+
+**Solución:** guardamos las 10 coordenadas **tal como fueron exportadas** en `src/game/tracks/library/santa-cruz/source/santa-cruz-ai-line-guides.json`, campo versionado `{version:1,points:[...]}` con radio 39,6 px y fuerza 0,65. No contiene fotografía, credenciales ni archivos privados del usuario. El instalador oficial de Santa Cruz añade `meta.aiLineGuides` al `track.json` producido durante el build, junto con el circuito oficial de 3072 × 4608 y sus seis teselas WebP ya publicadas.
+
+Se incorpora **PADDOCK → LABORATORIO QA → REALIZADOR GUIADO · SANTA CRUZ** para lanzar la prueba local DEV con 4 IA Experto, 3 vueltas, A/B/G seleccionable, **sin entrar en TrackStudio ni acceder a IndexedDB**. Volver sale al PADDOCK. Esta herramienta no modifica el trazado ni el modo de juego normal. LIVE 4 online, créditos, récords y Google Play siguen sin usar G.
+
+La prueba CI comprueba que el circuito instalado incluye 10 guías idénticas a las del archivo de origen, los recursos fotográficos y el acceso de QA, y que el planificador conserva la regla de 9 guías admisibles y 1 descartada por seguridad.
+
+**No homologada:** que la línea G se construya y sus desplazamientos tengan margen dentro de asfalto no equivale a demostrar una carrera más rápida. La prueba con cuatro coches en dispositivo sigue siendo necesaria.

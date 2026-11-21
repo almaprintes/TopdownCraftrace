@@ -538,6 +538,10 @@ init(data) {
   if (isTrackStudioPreview) {
     this._returnSceneKey = ['Track','Studio','Scene'].join('');
     this._returnSceneData = { fromTrackStudioPreview: true };
+  } else if(this._crafRaceDirectorPreview&&
+      data?.directorFromPaddock===true&&data?.trackKey==='santa-cruz'){
+    this._returnSceneKey='admin-hub';
+    this._returnSceneData={fromPaddockDirector:true};
   } else if (this._testMode && !this._crafRaceLiveV2RoomId && !this._crafRaceDirectorPreview) {
     // Preserve the existing Vehicle Lab test-drive return path.
     const carId = data?.carId || this.carId || 'stock';
@@ -585,7 +589,8 @@ this.trackKey =
 
 // Preserve the existing player-facing circuit card after a variant race;
 // the variant's own trackKey still keys all lap, ghost and leaderboard data.
-localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
+if(data?.directorFromPaddock!==true)
+  localStorage.setItem('tdr2:trackKey', physicalCircuitId(this.trackKey));
   // ========================================
   // Time Trial: histórico de vueltas (por pista) — máx 500
   // ========================================

@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "origin": "TrackStudio Santa Cruz · user-exported guide points 2026-11-21",
+  "points": [
+    {
+      "id": "apex-1",
+      "x": 958.7044591835196,
+      "y": 3028.6913447192965,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    },
+    {
+      "id": "apex-2",
+      "x": 473.3582229277389,
+      "y": 2300.1970447789217,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    },
+    {
+      "id": "apex-3",
+      "x": 921.4511882978474,
+      "y": 1748.0219784075573,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    },
+    {
+      "id": "apex-4",
+      "x": 1465.2263073591866,
+      "y": 1806.7027466515867,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    },
+    {
+      "id": "apex-5",
+      "x": 1505.086315151928,
+      "y": 444.9958035685489,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    },
+    {
+      "id": "apex-6",
+      "x": 2173.9852891055625,
+      "y": 780.9991482269222,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    },
+    {
+      "id": "apex-7",
+      "x": 2022.7328528569028,
+      "y": 1254.0422907669106,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    },
+    {
+      "id": "apex-8",
+      "x": 1676.6774644201096,
+      "y": 2832.241858807157,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    },
+    {
+      "id": "apex-9",
+      "x": 1726.029260056513,
+      "y": 3809.7890398863774,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    },
+    {
+      "id": "apex-10",
+      "x": 1035.552220385101,
+      "y": 3590.714171775334,
+      "kind": "apex",
+      "direction": "forward",
+      "radiusPx": 39.6,
+      "strength": 0.65
+    }
+  ]
+}

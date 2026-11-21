@@ -100,6 +100,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  if(fromStudio){
    $('[data-exit]').textContent='EDITOR';
    $('[data-finish]').textContent='VOLVER AL EDITOR';
+ }else if(scene._returnSceneData?.fromPaddockDirector){
+   $('[data-exit]').textContent='PADDOCK';
+   $('[data-finish]').textContent='VOLVER AL PADDOCK';
  }
  $('[data-config]').textContent=circuitLabel+' · '+carLabel+' · '+difficultyName;
  const updateModeLabel=()=>{
@@ -226,7 +229,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  document.addEventListener('keyup',keyUp,true);
  const exit=()=>{
    if(stopped)return;
-   if(scene._returnSceneData?.fromTrackStudioPreview&&scene._returnSceneKey)
+   if(scene._returnSceneKey&&
+     (scene._returnSceneData?.fromTrackStudioPreview||
+      scene._returnSceneData?.fromPaddockDirector))
      scene.scene.start(scene._returnSceneKey,scene._returnSceneData);
    else scene.scene.start('menu');
  };
