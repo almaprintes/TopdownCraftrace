@@ -36,6 +36,26 @@ assert.ok(target.report.active,
  'A gentle authored ring must be drivable: '+JSON.stringify(target.report));
 assert.equal(target.report.mode,'bezier');
 assert.equal(target.model.racingLine.length,baseline.racingLine.length);
+const wideShape=createTrackShape(nodes,300,true);
+const wideBaseline=buildTrackRacingLineModel({raceCenterline:nodes,trackWidth:300});
+const wideBezier=createAiBezierFromTrackNodes(nodes,N);
+const widening=(p)=>({
+  x:C.x+(p.x-C.x)*(R+95)/R,
+  y:C.y+(p.y-C.y)*(R+95)/R
+});
+for(const knot of wideBezier.nodes){
+  const moved=widening(knot),handleIn=widening(knot.handleIn),
+    handleOut=widening(knot.handleOut);
+  Object.assign(knot,moved,{handleIn,handleOut});
+}
+const wideResult=buildBezierAiRacingLineModel(wideBaseline,wideBezier,wideShape,
+ {worldW:1600,worldH:1600},{carRadius:10});
+assert.ok(wideResult.report.active,
+ 'A safe 95px lateral deviation must NOT be rejected by a 75px centerline rule: '+
+ JSON.stringify(wideResult.report));
+assert.ok(wideResult.report.maxMismatchPx>75,
+ 'The test must exercise a real >75px deviation');
+
 const turned=JSON.parse(JSON.stringify(bezier));
 turned.nodes.push(...turned.nodes.splice(0,5));
 const sameLoop=buildBezierAiRacingLineModel(baseline,turned,shape,
