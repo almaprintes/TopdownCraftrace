@@ -51,32 +51,11 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
  if(!sampled)return fail(baseline,'short-bezier');
  if(sampled.total<baseline.lengthPx*.72||sampled.total>baseline.lengthPx*1.28)
   return fail(baseline,'length-mismatch',{ratio:sampled.total/baseline.lengthPx});
- if(best>Math.max(45,Number(baseline.centerline[0].width||140)*.65))
-  return fail(baseline,'start-mismatch',{startDistancePx:Math.round(best)});
- const path=sampled.points;
- const first=baseline.centerline,from=first[0],to=first[3];
- const baseAngle=Math.atan2(to.y-from.y,to.x-from.x);
- const pathAngle=Math.atan2(path[3].y-path[0].y,path[3].x-path[0].x);
- if(Math.abs(wrap(pathAngle-baseAngle))>1.35)
-  return fail(baseline,'wrong-direction');
- const maxCorridor=Math.max(18,Number(options.maxCorridorPx)||75);
- // Author edits may shift local arc length: find a corresponding centerline
- // sample in an ordered nearby window, not the geometrically nearest hairpin.
- let previous=0,maxMismatch=0;
- for(let i=0;i<n;i++){
-  let closest=Infinity,index=-1;
-  const expected=Math.round(i*n/n);
-  for(let step=-20;step<=20;step++){
-   const j=(expected+step+n)%n,d=distance(path[i],first[j]);
-   if(d<closest){closest=d;index=j;}
-  }
-  maxMismatch=Math.max(maxMismatch,closest);
-  if(closest>maxCorridor)return fail(baseline,'outside-route-corridor',
-    {badIndex:i,distancePx:Math.round(closest)});
-  const delta=((index-previous+n)%n);
-  if(i>0&&delta>35)return fail(baseline,'route-order-break',{badIndex:i});
-  previous=index;
- }
+ // A closed spline has no mandatory first anchor at the starting grid.
+ // A driver may choose ten apexes without marking the start/finish line.
+ // The former "start-mismatch" check wrongly rejected these valid splines.
+ // Check safety and correspondence to the road instead of node-zero phase.
+ const path=sampled.points,first=baseline.centerline;
  const mask=makeKartingShapeMask(shape,w,h);
  const safeRadius=clamp(Number(options.carRadius)||14,8,40)+4;
  const safe=p=>{
@@ -89,6 +68,37 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
  };
  const unsafe=path.findIndex(p=>!safe(p));
  if(unsafe>=0)return fail(baseline,'outside-safe-asphalt',{badIndex:unsafe});
+ // Follow a topologically CONTINUOUS route through the centerline. For a
+ // hairpin, the physically nearest sample on the opposite leg may be much
+ // farther ahead in lap progress, so matching may only move forward locally.
+ // The previous check assumed path[i] should match centerline[i] +/-20;
+ // that fails on different arc-length distributions and arbitrary starts.
+ const maxCorridor=Math.max(18,Number(options.maxCorridorPx)||75);
+ const matches=[],maxForward=Math.min(18,Math.max(7,
+   Math.ceil(2.5*sampled.total/Math.max(1,baseline.lengthPx))));
+ let previous=-1,travel=0,maxMismatch=0;
+ for(let i=0;i<n;i++){
+  let closest=Infinity,index=-1,advance=0;
+  const firstStep=i===0?0:Math.min(maxForward,n-1);
+  for(let step=0;step<=(i===0?n-1:firstStep);step++){
+   const j=i===0?step:(previous+step)%n;
+   const d=distance(path[i],first[j]);
+   if(d<closest){closest=d;index=j;advance=step;}
+  }
+  if(closest>maxCorridor)return fail(baseline,'outside-route-corridor',
+    {badIndex:i,distancePx:Math.round(closest)});
+  if(i>0)travel+=advance;
+  maxMismatch=Math.max(maxMismatch,closest);
+  previous=index;matches.push(index);
+ }
+ const from=first[matches[0]],to=first[(matches[0]+3)%n];
+ const baseAngle=Math.atan2(to.y-from.y,to.x-from.x);
+ const pathAngle=Math.atan2(path[3].y-path[0].y,path[3].x-path[0].x);
+ if(Math.abs(wrap(pathAngle-baseAngle))>1.35)
+  return fail(baseline,'wrong-direction');
+ if(travel<n*.75||travel>n*1.25)
+  return fail(baseline,'route-order-break',
+    {travelSamples:travel,expectedSamples:n});
  const curvature=turns(path);
  const maxTurn=Math.max(...curvature.map(v=>Math.abs(v)));
  if(maxTurn>.62)return fail(baseline,'steering-discontinuity',{maxTurnRad:maxTurn});
@@ -96,8 +106,11 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
   const a=first[(i-1+n)%n],b=first[(i+1)%n],x=b.x-a.x,y=b.y-a.y;
   const len=Math.max(.01,Math.hypot(x,y));return{nx:-y/len,ny:x/len};
  });
- const offsets=path.map((p,i)=>((p.x-first[i].x)*normals[i].nx+
-  (p.y-first[i].y)*normals[i].ny));
+ const offsets=path.map((p,i)=>{
+  const j=matches[i];
+  return(p.x-first[j].x)*normals[j].nx+
+    (p.y-first[j].y)*normals[j].ny;
+ });
  const metrics={...baseline.metrics,meanAbsCurvature:
   curvature.reduce((a,v)=>a+Math.abs(v),0)/n,maxAbsCurvature:maxTurn,
   maxAbsOffset:Math.max(...offsets.map(v=>Math.abs(v))),guided:true,
@@ -106,7 +119,8 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
   lengthPx:sampled.total},
   report:{active:true,mode:'bezier',reason:'authored-bezier',accepted:bezier.nodes.length,
    total:bezier.nodes.length,homologated:false,changedSamples:n,
-   maxMismatchPx:Math.round(maxMismatch),maxTurnRad:Number(maxTurn.toFixed(3)),
+   maxMismatchPx:Math.round(maxMismatch),startDistancePx:Math.round(best),
+   maxTurnRad:Number(maxTurn.toFixed(3)),
    targets:[],entries:[],safeRadius}};
 }
 
