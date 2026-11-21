@@ -232,6 +232,21 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        ?'Red interrumpida · Las IA locales siguen compitiendo. Esperando resultados.'
        :'Esperando los resultados del resto de pilotos…');
    panel.append(status);
+   if(allFinished&&director){
+     // Host-only, observational telemetry; guests still see identical
+     // classification data. No finish times are recalculated.
+     const diag=director.stats();
+     const occupied=diag.cornerDiagnostics||[];
+     const average=occupied.length
+       ?Math.round(occupied.reduce((n,b)=>n+b.lateralMeanPct,0)/occupied.length):null;
+     const detail=document.createElement('p');
+     detail.className='cr4-result-note';
+     detail.textContent='DIAGNÓSTICO IA · margen lateral utilizado: '+
+       (average===null?'—':average+'%')+
+       ' · fotogramas largos: '+diag.timing.hitches+
+       ' · tiempo no integrado: '+diag.timing.droppedSeconds.toFixed(2)+' s';
+     panel.append(detail);
+   }
    const back=document.createElement('button');back.type='button';
    back.textContent='VOLVER AL MENÚ';back.onclick=()=>scene.scene.start('menu');
    panel.append(back);results.append(panel);
@@ -349,7 +364,10 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
          ' · P95 '+(frameCount?p95.toFixed(1):'—')+' ms'+
          ' · IA '+ai.count+' ('+record.botCpuMeanMs.toFixed(2)+' ms)'+
          ' · RIVALES '+stats.remoteCount+
-         ' · RED '+(linkReady?'OK':'SIN ENLACE');
+         ' · RED '+(linkReady?'OK':'SIN ENLACE')+
+         (director?' · IA HITCH '+(ai.timing?.hitches||0)+
+           ' · Δ '+(ai.timing?.droppedSeconds||0).toFixed(1)+'s':
+           '');
        perfHud.style.color=frameCount&&fps<45?'#ffd2ad':'#aaf7df';
      }
      frameCount=0;elapsedWindow=0;slowFrames=0;frameTimes=[];lastReport=now;

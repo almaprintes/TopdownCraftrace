@@ -7,6 +7,8 @@ import {buildTrackManeuverPlan} from '../ai/trackManeuverPlanner.js';
 import {updateRacePhysicalBot} from '../ai/raceAiController.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
 import {makeLive4LapGates,advanceLive4PhysicalLap} from './craftraceLive4LapGates.js';
+import {measureLateralUse} from './craftraceRacingLineTelemetry.js';
+import {makeLive4TimingAudit,observeLive4Timing,summarizeLive4Timing} from './craftraceLive4TimingAudit.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
@@ -32,6 +34,7 @@ export class CrafRaceLive4BotDirector{
   this.lastUpdated=0;this.lastCpuMs=0;this.cpuTotalMs=0;this.cpuSamples=0;
   this.profiles=new Map();
   this.preview=preview===true;this.raceStarted=false;
+  this.timingAudit=makeLive4TimingAudit();
   if(ai.length===0){this.profile=null;return;}
   if(scene.track?.closed===false||scene.track?.meta?.closed===false)
     throw Error('Live AI currently requires a closed circuit');
@@ -124,7 +127,8 @@ export class CrafRaceLive4BotDirector{
      gatePhase:0,lastPhysicalPosition:{x,y},
      finished:false,finishAt:null,lapTimes:[],lastLapAt:null,
      lastPoseAt:0,lastPose:null,
-     cornerDiagnostics:{samples:0,sumError:0,maxError:0,overWide:0,lastAimSteps:null}};
+     cornerDiagnostics:{samples:0,sumError:0,maxError:0,overWide:0,lastAimSteps:null,
+       lateralCount:0,lateralSum:0,lateralMax:0,lateralNearEdge:0}};
    this.bots.push(bot);
   }
  }
@@ -149,6 +153,7 @@ export class CrafRaceLive4BotDirector{
   for(const bot of this.bots)syncLive4CarVisual(scene,bot.visual,TINTS[bot.seat]);
   if(!started)return [];
   this.raceStarted=true;
+  observeLive4Timing(this.timingAudit,Number(deltaMs));
   const startedCpu=performance.now();
   const dt=clamp((Number(deltaMs)||16.667)/1000,.001,.05),packets=[];
   const maxSpeed=Math.max(80,Number(scene.maxFwd||scene.carParams?.maxFwd||420));
@@ -181,6 +186,16 @@ export class CrafRaceLive4BotDirector{
      d.maxError=Math.max(d.maxError,control.distanceToLine);
      if(control.distanceToLine>this.spacing*6)d.overWide++;
      d.lastAimSteps=control.precisionAimSteps;
+     // Compare physical cars to the CURRENT CENTERLINE, independent of their
+     // chosen race line. This is how we detect centerline hugging in practice.
+     const candidate=this.previewRacecraft?this.previewExpertLine:this.standardExpertLine;
+     const occupied=measureLateralUse(candidate,body.x,body.y,control.nearestIndex);
+     if(occupied){
+       d.lateralCount++;
+       d.lateralSum+=occupied.absoluteFraction;
+       d.lateralMax=Math.max(d.lateralMax,occupied.absoluteFraction);
+       if(occupied.absoluteFraction>=.70)d.lateralNearEdge++;
+     }
    }
    if(bot.lastLapAt===null)bot.lastLapAt=now;
    const n=profile.samples.length,next=control.nearestIndex;
@@ -211,12 +226,19 @@ export class CrafRaceLive4BotDirector{
  stats(){return {
   count:this.bots.length,botCpuMeanMs:this.cpuSamples?this.cpuTotalMs/this.cpuSamples:0,
   botCpuLastMs:this.lastCpuMs,finished:this.bots.filter(x=>x.finished).length,
+  timing:summarizeLive4Timing(this.timingAudit),
   cornerDiagnostics:this.bots.filter(b=>b.difficulty===3).map(b=>({
    seat:b.seat,samples:b.cornerDiagnostics.samples,
    meanError:b.cornerDiagnostics.samples
      ?b.cornerDiagnostics.sumError/b.cornerDiagnostics.samples:0,
    maxError:b.cornerDiagnostics.maxError,wideSamples:b.cornerDiagnostics.overWide,
-   aimSteps:b.cornerDiagnostics.lastAimSteps
+   aimSteps:b.cornerDiagnostics.lastAimSteps,
+   lateralSamples:b.cornerDiagnostics.lateralCount,
+   lateralMeanPct:b.cornerDiagnostics.lateralCount
+     ?Math.round(b.cornerDiagnostics.lateralSum/b.cornerDiagnostics.lateralCount*100):0,
+   lateralMaxPct:Math.round(b.cornerDiagnostics.lateralMax*100),
+   lateralNearEdgePct:b.cornerDiagnostics.lateralCount
+     ?Math.round(b.cornerDiagnostics.lateralNearEdge/b.cornerDiagnostics.lateralCount*100):0
   }))
  };}
  destroy(){
