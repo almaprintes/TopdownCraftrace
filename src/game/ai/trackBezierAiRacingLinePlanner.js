@@ -109,3 +109,59 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
    maxMismatchPx:Math.round(maxMismatch),maxTurnRad:Number(maxTurn.toFixed(3)),
    targets:[],entries:[],safeRadius}};
 }
+
+export function buildBezierDieVariant(base,face,seat,shape,dimensions={},options={}){
+ if(!base?.valid||!base?.metrics?.authoredBezier||!shapeIsValid(shape))
+  return base;
+ const amplitudes={1:26,2:20,3:13,4:9,5:2.5,6:0};
+ const amplitude=amplitudes[face]??0;
+ if(!amplitude)return base;
+ const n=base.racingLine.length,mask=makeKartingShapeMask(shape,
+  Number(dimensions.worldW),Number(dimensions.worldH));
+ const radius=clamp(Number(options.carRadius)||14,8,40)+4;
+ const baseCurvature=base.curvature;
+ const envelope=baseCurvature.map((_,i)=>{
+  let energy=0;
+  for(let d=-8;d<=8;d++){
+   const weight=(9-Math.abs(d))/81;
+   energy+=weight*Math.abs(baseCurvature[(i+d+n)%n]);
+  }
+  return clamp((energy-.003)/.035,0,1);
+ });
+ const normal=base.racingLine.map((_,i)=>{
+  const a=base.racingLine[(i-2+n)%n],b=base.racingLine[(i+2)%n];
+  const dx=b.x-a.x,dy=b.y-a.y,len=Math.max(.01,Math.hypot(dx,dy));
+  return {x:-dy/len,y:dx/len};
+ });
+ const phase=(seat*1.731+face*.317);
+ for(const factor of [1,.5,.25,.125,0]){
+  const path=base.racingLine.map((p,i)=>{
+   const oscillation=Math.sin(i/n*Math.PI*6+phase);
+   const offset=amplitude*factor*envelope[i]*oscillation;
+   return {x:p.x+normal[i].x*offset,y:p.y+normal[i].y*offset};
+  });
+  if(path.some(p=>{
+   if(!mask.isOnTrack(p.x,p.y))return true;
+   for(let k=0;k<12;k++){
+    const a=Math.PI*2*k/12;
+    if(!mask.isOnTrack(p.x+Math.cos(a)*radius,
+        p.y+Math.sin(a)*radius))return true;
+   }
+   return false;
+  }))continue;
+  const curvature=turns(path);
+  if(curvature.some((v,i)=>Math.abs(v)>Math.max(.62,Math.abs(baseCurvature[i])+.10)))
+   continue;
+  const offsets=base.offsets.map((v,i)=>{
+   const p=path[i],b=base.racingLine[i];
+   return v+(p.x-b.x)*normal[i].x+(p.y-b.y)*normal[i].y;
+  });
+  const metrics={...base.metrics,meanAbsCurvature:
+   curvature.reduce((a,v)=>a+Math.abs(v),0)/n,
+   maxAbsCurvature:Math.max(...curvature.map(v=>Math.abs(v))),
+   maxAbsOffset:Math.max(...offsets.map(v=>Math.abs(v))),
+   dieVariationPx:amplitude*factor,dieFace:face};
+  return{...base,racingLine:path,curvature,offsets,metrics};
+ }
+ return base;
+}
