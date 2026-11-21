@@ -154,3 +154,17 @@
 #cr-live4 .cr4-director-entry select{width:100%}
 #cr-live4 .cr4-director-entry button{flex:1;min-width:145px}
 @media(max-height:460px){#cr-live4 .cr4-director-entry{padding-top:5px;gap:6px}}
+
+
+/* LIVE 4 DEV: per-lap results for humans and AI; scroll for 10/20-lap races. */
+.cr4-result-panel .cr4-laps{width:100%;border-collapse:collapse;margin:12px 0;
+ font:700 clamp(10px,1.15vw,13px) ui-monospace,monospace;color:#d8eff9}
+.cr4-result-panel .cr4-laps th,.cr4-result-panel .cr4-laps td{
+ padding:7px 9px;text-align:left;white-space:nowrap;border-bottom:1px solid #355668}
+.cr4-result-panel .cr4-laps td{font-variant-numeric:tabular-nums}
+.cr4-result-panel .cr4-laps th{color:#a3ebff;background:#0b3047}
+.cr4-result-panel details{margin:10px 0;border:1px solid #337797;
+ padding:8px 10px;border-radius:5px;color:#bdebf9}
+.cr4-result-panel details summary{cursor:pointer;font-size:12px;font-weight:850}
+.cr4-result-panel details small{display:block;line-height:1.4;margin:8px 0;
+ color:#aac2cc}
