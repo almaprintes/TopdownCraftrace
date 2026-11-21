@@ -9,9 +9,9 @@ const labels = {
     rankings:'CLASIFICACIONES', rankingsSub:'MUNDIAL · CONTINENTE · NACIONAL · REGIONAL',
     ghosts:'RIVALES Y FANTASMAS', ghostsSub:'DESAFÍA A PILOTOS DE TU NIVEL',
     versus:'VS GHOST', challenge:'DESAFÍOS',
-    events:'EVENTOS', eventsSub:'COMPETICIONES ESPECIALES',
-    pilots:'PILOTOS',pilotsSub:'PERFIL Y ESTADÍSTICAS',
-    cars:'COCHES',carsSub:'HISTORIAL DE VEHÍCULOS',
+    events:'EVENTOS', eventsSub:'CAMPEONATOS DE IA · CRÓNICAS',
+    pilots:'PILOTOS',pilotsSub:'16 PILOTOS IA · ELO Y PERFIL',
+    circuits:'CIRCUITOS',circuitsSub:'PISTAS · HISTORIA · RÉCORDS',
     seasons:'TEMPORADAS',seasonsSub:'PROGRESO Y RECOMPENSAS',
     soon:'PRÓXIMAMENTE', inDev:'EN DESARROLLO',
     build:'VISTA PREVIA · DEV', exit:'VOLVER AL LOBBY',
@@ -24,9 +24,9 @@ const labels = {
     rankings:'LEADERBOARDS', rankingsSub:'WORLD · CONTINENT · COUNTRY · REGION',
     ghosts:'RIVALS AND GHOSTS', ghostsSub:'CHALLENGE DRIVERS AT YOUR LEVEL',
     versus:'VS GHOST', challenge:'CHALLENGES',
-    events:'EVENTS', eventsSub:'SPECIAL COMPETITIONS',
-    pilots:'DRIVERS',pilotsSub:'PROFILE AND STATISTICS',
-    cars:'CARS',carsSub:'VEHICLE HISTORY',
+    events:'EVENTS', eventsSub:'AI CHAMPIONSHIPS · REPORTS',
+    pilots:'DRIVERS',pilotsSub:'16 AI DRIVERS · ELO AND PROFILES',
+    circuits:'TRACKS',circuitsSub:'TRACKS · HISTORY · RECORDS',
     seasons:'SEASONS',seasonsSub:'PROGRESS AND REWARDS',
     soon:'COMING SOON', inDev:'IN DEVELOPMENT',
     build:'PREVIEW · DEV', exit:'BACK TO LOBBY',
@@ -81,14 +81,14 @@ export function mountRaceControlHub(root,{onAction,onExit,language='es'}={}) {
           body:`<div class="rc2-ghost-cars" aria-hidden="true"><img src="${car2}" alt=""><img src="${car3}" alt=""></div>
             <div class="rc2-rival-actions"><button type="button" data-rc2-action="ghosts" class="rc2-rival-cyan">${l.versus}<strong>»</strong></button>
             <button type="button" data-rc2-action="ghosts" class="rc2-rival-gold">${l.challenge}<strong>»</strong></button></div>`})}
-        ${panel({type:'events',photo:atlantico,title:l.events,sub:l.eventsSub,action:'events',disabled:true,
-          body:`<span class="rc2-status">${l.soon}</span>`})}
+        ${panel({type:'events',photo:atlantico,title:l.events,sub:l.eventsSub,action:'events',
+          body:`<span class="rc2-status rc2-status--archive">${language==='en'?'16 AI · WEEKEND':'16 IA · FIN DE SEMANA'}</span>`})}
       </div>
       <div class="rc2-col rc2-col-right">
         ${panel({type:'pilots',photo:santa,title:l.pilots,sub:l.pilotsSub,action:'pilots',
           body:`<img class="rc2-side-car" src="${car1}" alt="" aria-hidden="true">`})}
-        ${panel({type:'cars',photo:world,title:l.cars,sub:l.carsSub,action:'cars',
-          body:`<img class="rc2-side-car" src="${car4}" alt="" aria-hidden="true">`})}
+        ${panel({type:'circuits',photo:world,title:l.circuits,sub:l.circuitsSub,action:'circuits',
+          body:`<span class="rc2-track-summary">${language==='en'?'TRACK ARCHIVE':'ARCHIVO DE CIRCUITOS'}</span>`})}
         ${panel({type:'seasons',photo:atlantico,title:l.seasons,sub:l.seasonsSub,action:'seasons',
           body:`<img class="rc2-side-car" src="${car3}" alt="" aria-hidden="true">`})}
       </div>
