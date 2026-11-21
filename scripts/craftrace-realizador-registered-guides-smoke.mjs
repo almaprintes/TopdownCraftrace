@@ -31,7 +31,7 @@ assert.equal(picked.carScale,official.carScale??1);
 const baseline=buildTrackRacingLineModel({
  raceCenterline:official.raceCenterline||official.centerline,
  trackWidth:official.trackWidth
-},{apexCommitment:.22,racecraftPreview:true});
+},{apexCommitment:.22});
 assert.ok(baseline.valid);
 const result=buildGuidedTrackRacingLineModel(
  baseline,picked.guides,picked.shape,picked.dimensions,
