@@ -12,6 +12,7 @@ import {makeLive4LapGates,advanceLive4PhysicalLap} from './craftraceLive4LapGate
 import {measureLateralUse} from './craftraceRacingLineTelemetry.js';
 import {summarizePlannedLateral,samplePlannedVsReal} from './craftraceLive4LineTrackingAudit.js';
 import {makeLive4TimingAudit,observeLive4Timing,summarizeLive4Timing} from './craftraceLive4TimingAudit.js';
+import {rollGuidedDie,measureGuidedPass,closeGuidedLap} from './craftraceGuidedDie.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
@@ -56,6 +57,7 @@ export class CrafRaceLive4BotDirector{
     apexCommitment:.22,racecraftPreview:true
   }):null;
   this.previewGuidedLine=null;this.previewGuidedProfile=null;this.previewGuideReport=null;
+  this.previewGuideTargets=[];
   this.previewMode='A';
   if(preview){
     const authored=resolveDirectorGuideSource(scene.track);
@@ -65,7 +67,10 @@ export class CrafRaceLive4BotDirector{
         authored.dimensions,
         {carRadius:Math.max(8,Math.round(14*Number(authored.carScale||1)))});
       this.previewGuideReport={...result.report,source:authored.source};
-      if(result.report.active)this.previewGuidedLine=result.model;
+      if(result.report.active){
+        this.previewGuidedLine=result.model;
+        this.previewGuideTargets=result.report.targets||[];
+      }
     }else{
       // Distinguish a genuinely guide-free circuit from a missing/invalid plan.
       this.previewGuideReport={active:false,reason:'no-guides',accepted:0,
@@ -163,6 +168,8 @@ export class CrafRaceLive4BotDirector{
      gatePhase:0,lastPhysicalPosition:{x,y},
      finished:false,finishAt:null,lapTimes:[],lastLapAt:null,
      lastPoseAt:0,lastPose:null,
+     guidedRoll:null,guidedTolerancePx:null,guidedLapHistory:[],
+     _guidedNearestPx:{},_guidedPrevPosition:{x,y},
      cornerDiagnostics:{samples:0,sumError:0,maxError:0,overWide:0,lastAimSteps:null,
        lateralCount:0,lateralSum:0,lateralMax:0,lateralNearEdge:0,
        targetSum:0,followErrorSum:0,followErrorMax:0}};
@@ -184,6 +191,11 @@ export class CrafRaceLive4BotDirector{
   this.previewMode=mode;
   this.previewRacecraft=mode!=='A'; // backwards-compatible A/B diagnostics
   this.profiles.set(3,chosen);this.profile=chosen;
+  if(mode==='G')for(const bot of this.bots){
+    if(bot.difficulty!==3||bot.guidedRoll!==null)continue;
+    const die=rollGuidedDie();
+    bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
+  }
   return true;
  }
  setPreviewRacecraft(enabled){
@@ -208,12 +220,16 @@ export class CrafRaceLive4BotDirector{
    if(bot.finished)continue;
    const settings=LIVE4_AI_LEVELS[bot.difficulty];
    const profile=this.profiles.get(bot.difficulty);
+   const guidedActive=this.preview&&this.previewMode==='G'&&
+     bot.difficulty===3&&this.previewGuideTargets.length>0;
    // Deterministic driving styles break up the three-car clone procession.
    // Bias only lowers the chosen pace; none exceeds the player's own car.
    const paceBias=[1,.985,.97][bot.style];
    const control=updateRacePhysicalBot(bot,profile,{
      dt,spacing:this.spacing,maxFwd:maxSpeed*settings.pace*paceBias,
      live4PrecisionCornering:bot.difficulty===3,
+     live4GuidedApex:guidedActive?{
+       guides:this.previewGuideTargets,tolerancePx:bot.guidedTolerancePx}:null,
      cornerRisk:settings.cornerRisk,
      accel:Number(scene.accel||scene.carParams?.accel||520),
      brakeForce:Number(scene.brakeForce||scene.carParams?.brakeForce||720),
@@ -224,6 +240,11 @@ export class CrafRaceLive4BotDirector{
    const body=bot.plannerBody;
    bot.rig.setPosition(body.x,body.y).setRotation(body.rotation+(scene._carVisualRotOffset||0));
    if(!control.valid)continue;
+   if(guidedActive){
+     measureGuidedPass(bot,this.previewGuideTargets,bot._guidedPrevPosition,
+       {x:body.x,y:body.y},control.nearestIndex,profile.samples.length);
+     bot._guidedPrevPosition={x:body.x,y:body.y};
+   }
    // Record real cross-track errors, not just nominal plan speed. Useful for
    // identifying overrun sectors on devices without an intrusive debug HUD.
    if(bot.difficulty===3&&(!bot._cornerDiagnosticAt||now-bot._cornerDiagnosticAt>=125)){
@@ -235,7 +256,7 @@ export class CrafRaceLive4BotDirector{
      d.lastAimSteps=control.precisionAimSteps;
      // Compare physical cars to the CURRENT CENTERLINE, independent of their
      // chosen race line. This is how we detect centerline hugging in practice.
-     const candidate=this.previewActiveLine();
+     const candidate=guidedActive?this.previewGuidedLine:this.previewActiveLine();
      const occupied=measureLateralUse(candidate,body.x,body.y,control.nearestIndex);
      if(occupied){
        d.lateralCount++;
@@ -259,7 +280,14 @@ export class CrafRaceLive4BotDirector{
    bot.lastIndex=next;
    // Sample progress remains telemetry only. Require swept physical crossings
    // of both checkpoints and the REAL finish gate, in race direction.
-   advanceLive4PhysicalLap(bot,this.lapGates,now,this.laps);
+   const lapPassed=advanceLive4PhysicalLap(bot,this.lapGates,now,this.laps);
+   if(guidedActive&&lapPassed){
+     closeGuidedLap(bot,this.previewGuideTargets);
+     if(!bot.finished){
+       const die=rollGuidedDie();
+       bot.guidedRoll=die.face;bot.guidedTolerancePx=die.tolerancePx;
+     }
+   }
    const pose={x:body.x,y:body.y,angle:body.rotation,
      speed:speedOf(body),lap:bot.completedLaps,
      tick:Math.max(0,Math.floor(scene.simTick||0))};
@@ -273,6 +301,7 @@ export class CrafRaceLive4BotDirector{
  results(){
   return this.bots.filter(bot=>bot.finished).map(bot=>({
    seat:bot.seat,lapTimes:bot.lapTimes.slice(),
+   guidedLapHistory:bot.guidedLapHistory.slice(),
    elapsedMs:bot.lapTimes.reduce((sum,ms)=>sum+ms,0),difficulty:bot.difficulty
   }));
  }
@@ -281,7 +310,9 @@ export class CrafRaceLive4BotDirector{
   botCpuLastMs:this.lastCpuMs,finished:this.bots.filter(x=>x.finished).length,
   timing:summarizeLive4Timing(this.timingAudit),
   plan:summarizePlannedLateral(this.previewActiveLine()),
-  ...(this.preview?{guided:this.previewGuideReport,previewMode:this.previewMode}:{}),
+  ...(this.preview?{guided:this.previewGuideReport,previewMode:this.previewMode,
+    dice:this.bots.map(b=>({seat:b.seat,face:b.guidedRoll,
+      tolerancePx:b.guidedTolerancePx,laps:b.guidedLapHistory.length}))}:{}),
   cornerDiagnostics:this.bots.filter(b=>b.difficulty===3).map(b=>({
    seat:b.seat,samples:b.cornerDiagnostics.samples,
    meanError:b.cornerDiagnostics.samples
