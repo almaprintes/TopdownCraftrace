@@ -61,7 +61,7 @@ export class CrafRaceLive4BotDirector{
     const authored=resolveDirectorGuideSource(scene.track);
     if(authored.guides?.points?.length){
       const result=buildGuidedTrackRacingLineModel(
-        this.previewExpertLine,authored.guides,authored.shape,
+        this.standardExpertLine,authored.guides,authored.shape,
         authored.dimensions,
         {carRadius:Math.max(8,Math.round(14*Number(authored.carScale||1)))});
       this.previewGuideReport={...result.report,source:authored.source};
