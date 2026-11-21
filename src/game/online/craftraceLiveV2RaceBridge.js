@@ -198,8 +198,30 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      .catch(err=>console.warn('[LIVE 4] Finish persistence:',err.message))
      .finally(()=>botPostAttempts.delete('write'+seat));
  };
+ let lastResultsSnapshot=null;
  const showResults=()=>{
    if(!localFinish||stopped)return;
+   // Network acknowledgements may call this repeatedly while the player
+   // reads the results. Replacing DOM resets <details> and scroll on iOS.
+   const snapshot=JSON.stringify({
+     localFinish,localFinishPosted,linkReady,
+     entries:raceEntries.map(entry=>({
+       seat:entry.seat,name:displayName(entry),
+       elapsedMs:states.get(entry.seat)?.elapsedMs??null,
+       lapTimes:states.get(entry.seat)?.lapTimes||
+         states.get(entry.seat)?.lap_times||null
+     })),
+     postedBots:[...postedBots].sort((a,b)=>a-b),
+     dice:guidedGTrial?director?.results().map(bot=>({
+       seat:bot.seat,lapTimes:bot.lapTimes,
+       bezierDieHistory:bot.bezierDieHistory
+     })):null
+   });
+   if(snapshot===lastResultsSnapshot&&results.querySelector('.cr4-result-panel'))return;
+   lastResultsSnapshot=snapshot;
+   const previousPanel=results.querySelector('.cr4-result-panel');
+   const savedScrollTop=previousPanel?.scrollTop||0;
+   const diceWasOpen=previousPanel?.querySelector('details')?.open===true;
    results.style.display='flex';
    results.replaceChildren();
    const panel=document.createElement('div');panel.className='cr4-result-panel';
@@ -244,6 +266,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    panel.append(lapTable);
    if(guidedGTrial&&director?.results().length){
      const dice=document.createElement('details');
+     // Keep the user's toggle open through real server-state updates.
+     dice.open=diceWasOpen;
      const summary=document.createElement('summary');
      summary.textContent='TIRADAS AUTOMÁTICAS DE DADO (POR VUELTA)';
      dice.append(summary);
@@ -295,6 +319,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    const back=document.createElement('button');back.type='button';
    back.textContent='VOLVER AL MENÚ';back.onclick=()=>scene.scene.start('menu');
    panel.append(back);results.append(panel);
+   panel.scrollTop=Math.min(savedScrollTop,
+     Math.max(0,panel.scrollHeight-panel.clientHeight));
  };
  const finishCheck=now=>{
    if(!scene._raceStarted||localFinish)return;
