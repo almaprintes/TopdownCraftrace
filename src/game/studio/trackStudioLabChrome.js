@@ -189,8 +189,10 @@ export function mountTrackStudioLabChrome(scene,gate){
   const aiStrength=aiControl('FUERZA','strength',.10);
   const aiRadius=aiControl('RADIO','radiusPx',5);
   const aiDelete=button('BORRAR GUÍA',()=>scene._aiGuideDeleteSelected?.(),'ts-lab__ai-delete');
+  const aiTry=button('▶ PROBAR IA GUIADA',()=>scene._startGuidedAiPreview?.(),
+    'ts-lab__ai-test');
   const aiHint=make('small','ts-lab__ai-hint','Toca para colocar · selecciona y vuelve a arrastrar para mover');
-  aiPanel.append(aiTitle,aiSummary,aiRows,aiDelete,aiHint);
+  aiPanel.append(aiTitle,aiSummary,aiRows,aiDelete,aiTry,aiHint);
   const nudge=make('div','ts-lab__nudge');
   const nudgeTitle=make('span','','MOVER SELECCIÓN');
   const nudgeControls=make('div','ts-lab__nudge-controls');
@@ -260,6 +262,7 @@ export function mountTrackStudioLabChrome(scene,gate){
     state(mode,editingAi?'GUÍAS IA':tool.toUpperCase());
     aiMode.setAttribute('aria-pressed',String(editingAi));
     aiPanel.hidden=!editingAi;
+    aiTry.disabled=!(scene._aiLineGuides?.length);
     if(editingAi){
       const guide=scene._aiGuideSelected?.();
       const count=scene._aiLineGuides?.length||0;

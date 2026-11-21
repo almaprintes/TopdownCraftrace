@@ -2,6 +2,7 @@
 // All levels use the player's car parameters and the same Arcade integration;
 // easy/medium simply choose less ambitious pace, expert has no extra grip/power.
 import {buildTrackRacingLineModel} from '../ai/trackRacingLinePlanner.js';
+import {buildGuidedTrackRacingLineModel} from '../ai/trackGuidedRacingLinePlanner.js';
 import {buildTrackSpeedProfile} from '../ai/trackSpeedProfilePlanner.js';
 import {buildTrackManeuverPlan} from '../ai/trackManeuverPlanner.js';
 import {updateRacePhysicalBot} from '../ai/raceAiController.js';
@@ -53,6 +54,17 @@ export class CrafRaceLive4BotDirector{
   this.previewExpertLine=preview?buildTrackRacingLineModel(trackGeometry,{
     apexCommitment:.22,racecraftPreview:true
   }):null;
+  this.previewGuidedLine=null;this.previewGuidedProfile=null;this.previewGuideReport=null;
+  this.previewMode='A';
+  if(preview&&scene.track?.meta?.aiLineGuides?.points?.length){
+    const result=buildGuidedTrackRacingLineModel(
+      this.previewExpertLine,scene.track.meta.aiLineGuides,
+      scene.track.meta.trackShape,{
+        worldW:scene.track.meta.worldW,worldH:scene.track.meta.worldH
+      },{carRadius:Math.max(8,Math.round(14*Number(scene.track.meta.carScale||1)))});
+    this.previewGuideReport=result.report;
+    if(result.report.active)this.previewGuidedLine=result.model;
+  }
   if(!expertLine.valid||expertLine.racingLine.length!==line.racingLine.length||
      (preview&&(!this.previewExpertLine?.valid||
        this.previewExpertLine.racingLine.length!==line.racingLine.length)))
@@ -94,6 +106,22 @@ export class CrafRaceLive4BotDirector{
     if(!this.previewExpertProfile.valid)throw Error('Preview racecraft plan invalid');
     this.previewExpertProfile.live4CurveComplexity=
       this.previewExpertLine.metrics.meanAbsCurvature;
+    if(this.previewGuidedLine){
+      const guidedProfile=buildTrackManeuverPlan(buildTrackSpeedProfile(
+        this.previewGuidedLine,{
+          maxSpeed:maxFwd,lateralAccel:LIVE4_AI_LEVELS[3].plannerLateralAccel,
+          minCornerSpeed:80,maxYawRate:yawAtSpeed,curvatureSmoothWindow:21,
+          driveAccel,brakeDecel
+        }));
+      if(guidedProfile.valid&&guidedProfile.samples?.length>=12){
+        guidedProfile.live4CurveComplexity=this.previewGuidedLine.metrics.meanAbsCurvature;
+        this.previewGuidedProfile=guidedProfile;
+      }else{
+        this.previewGuideReport={...this.previewGuideReport,active:false,
+          reason:'invalid-guided-speed-profile'};
+        this.previewGuidedLine=null;
+      }
+    }
   }
   this.profile=this.profiles.get(3);this.spacing=Number(line.spacing||10);
   const sprite=scene.carRig?.list?.find?.(item=>item?.texture?.key);
@@ -134,18 +162,28 @@ export class CrafRaceLive4BotDirector{
    this.bots.push(bot);
   }
  }
- // A/B selection is locked as soon as the local green light is given.
- // Never available to hosted rooms or ordinary LIVE 4 matches.
- setPreviewRacecraft(enabled){
-  if(!this.preview||this.raceStarted||!this.previewExpertProfile)return false;
-  this.previewRacecraft=enabled===true;
-  this.profiles.set(3,this.previewRacecraft
-    ?this.previewExpertProfile:this.standardExpertProfile);
-  this.profile=this.profiles.get(3);
+ // A/B/G selection is locked on green; hosted LIVE 4 never enters this path.
+ previewActiveLine(){
+  return this.preview&&this.previewMode==='G'&&this.previewGuidedLine
+    ?this.previewGuidedLine
+    :this.preview&&this.previewMode==='B'
+      ?this.previewExpertLine:this.standardExpertLine;
+ }
+ setPreviewLineMode(mode){
+  if(!this.preview||this.raceStarted||!['A','B','G'].includes(mode))return false;
+  const chosen=mode==='A'?this.standardExpertProfile
+    :mode==='B'?this.previewExpertProfile:this.previewGuidedProfile;
+  if(!chosen)return false;
+  this.previewMode=mode;
+  this.previewRacecraft=mode!=='A'; // backwards-compatible A/B diagnostics
+  this.profiles.set(3,chosen);this.profile=chosen;
   return true;
  }
+ setPreviewRacecraft(enabled){
+  return this.setPreviewLineMode(enabled?'B':'A');
+ }
  diagnosticLines(){
-  const line=this.previewRacecraft?this.previewExpertLine:this.standardExpertLine;
+  const line=this.previewActiveLine();
   return{centerline:line?.centerline||[],target:line?.racingLine||[]};
  }
  update(deltaMs,now,started){
@@ -190,7 +228,7 @@ export class CrafRaceLive4BotDirector{
      d.lastAimSteps=control.precisionAimSteps;
      // Compare physical cars to the CURRENT CENTERLINE, independent of their
      // chosen race line. This is how we detect centerline hugging in practice.
-     const candidate=this.previewRacecraft?this.previewExpertLine:this.standardExpertLine;
+     const candidate=this.previewActiveLine();
      const occupied=measureLateralUse(candidate,body.x,body.y,control.nearestIndex);
      if(occupied){
        d.lateralCount++;
@@ -235,8 +273,8 @@ export class CrafRaceLive4BotDirector{
   count:this.bots.length,botCpuMeanMs:this.cpuSamples?this.cpuTotalMs/this.cpuSamples:0,
   botCpuLastMs:this.lastCpuMs,finished:this.bots.filter(x=>x.finished).length,
   timing:summarizeLive4Timing(this.timingAudit),
-  plan:summarizePlannedLateral(this.previewRacecraft
-    ?this.previewExpertLine:this.standardExpertLine),
+  plan:summarizePlannedLateral(this.previewActiveLine()),
+  ...(this.preview?{guided:this.previewGuideReport,previewMode:this.previewMode}:{}),
   cornerDiagnostics:this.bots.filter(b=>b.difficulty===3).map(b=>({
    seat:b.seat,samples:b.cornerDiagnostics.samples,
    meanError:b.cornerDiagnostics.samples

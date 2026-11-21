@@ -292,3 +292,8 @@
 .ts-lab__head-button--export{background:#224558;border-color:#51dfd0;color:#d5fff8;font-weight:950}
 .ts-lab__head-button--export:active{background:#157d78}
 @media(max-width:1050px){.ts-lab__head-button--export{padding-inline:3px;letter-spacing:-.02em}}
+
+/* Extra local-only AI director test, available when the editor has guide points. */
+.ts-lab__ai-test{min-height:34px;padding:7px 10px;border:1px solid #70e6a7;border-radius:7px;
+ background:#0f7557;color:#f1fffa;font:900 11px system-ui;touch-action:manipulation}
+.ts-lab__ai-test:disabled{opacity:.40}

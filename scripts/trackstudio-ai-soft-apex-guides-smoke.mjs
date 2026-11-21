@@ -45,5 +45,6 @@ for(const x of ['GUÍAS IA','FUERZA','RADIO','BORRAR GUÍA',
  'aiPanel.hidden=!editingAi'])
  assert.ok(chrome.includes(x),'Missing UI: '+x);
 const online=readFileSync('src/game/online/craftraceLiveV2BotDirector.js','utf8');
-assert.ok(!online.includes('aiLineGuides'),'Do not activate annotations in online LIVE 4');
+assert.ok(online.includes('if(preview&&scene.track?.meta?.aiLineGuides?.points?.length)'),
+ 'Guide points must be read only for local Realizador preview');
 console.log('PASS TrackStudio AI guides: touch, edit, undo, resize, export/import .tdrtrack; LIVE 4 unchanged');

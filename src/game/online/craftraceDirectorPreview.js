@@ -35,11 +35,11 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  });
  // Prototype B is opt-in to this local spectator/diagnostic session only.
  // Online LIVE 4 and all its original physical AI profiles remain unchanged.
- bots.setPreviewRacecraft(true);
+ bots.setPreviewLineMode(bots.previewGuidedProfile?'G':'B');
  // Director races have no ignition button, no human grid slot and no online
  // ready handshake. Own the 3-second green-light deadline locally, independently
  // of the driver scene's iOS static-track readiness flag.
- const directorGreenAt=performance.now()+3000;
+ const directorGreenAt=performance.now()+(bots.previewGuidedProfile?8500:3000);
  scene._startAutoFired=true;
  scene._startState='DIRECTOR_COUNTDOWN';
  scene._raceStarted=false;
@@ -97,9 +97,10 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const $=s=>root.querySelector(s);
  $('[data-config]').textContent=circuitLabel+' · '+carLabel+' · '+difficultyName;
  const updateModeLabel=()=>{
-   $('[data-mode]').textContent=bots.previewRacecraft?'B · VÉRTICES':'A · ORIGINAL';
+   const mode=bots.previewMode;
+   $('[data-mode]').textContent=mode==='G'?'G · GUIADA':mode==='B'?'B · VÉRTICES':'A · ORIGINAL';
    $('[data-session]').textContent=setupLabel+' · FÍSICA A · TRAZADA '+
-     (bots.previewRacecraft?'B EXPERIMENTAL':'A ORIGINAL');
+     (mode==='G'?'G GUIADA (PRUEBA)':mode==='B'?'B EXPERIMENTAL':'A ORIGINAL');
  };
  updateModeLabel();
  const keyboard=new Set;let stopped=false,shown=false,stickPointer=null;
@@ -144,7 +145,7 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const captureTrails=(now)=>{
    if(now-lastTrace<180)return;
    lastTrace=now;
-   const line=bots.previewRacecraft?bots.previewExpertLine:bots.standardExpertLine;
+   const line=bots.previewActiveLine();
    bots.bots.forEach((bot,i)=>{
      const p=bot.plannerBody,history=trail[i];
      if(!p||!scene._raceStarted||!Number.isFinite(p.x)||!Number.isFinite(p.y))return;
@@ -217,12 +218,19 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const keyUp=e=>keyboard.delete(e.code);
  document.addEventListener('keydown',keyDown,true);
  document.addEventListener('keyup',keyUp,true);
- const exit=()=>{if(!stopped)scene.scene.start('menu');};
+ const exit=()=>{
+   if(stopped)return;
+   if(scene._returnSceneData?.fromTrackStudioPreview&&scene._returnSceneKey)
+     scene.scene.start(scene._returnSceneKey,scene._returnSceneData);
+   else scene.scene.start('menu');
+ };
  $('[data-exit]').addEventListener('click',exit);
  $('[data-finish]').addEventListener('click',exit);
  $('[data-mode]').addEventListener('click',()=>{
    if(scene._raceStarted)return;
-   if(bots.setPreviewRacecraft(!bots.previewRacecraft)){
+   const modes=bots.previewGuidedProfile?['A','B','G']:['A','B'];
+   const next=modes[(modes.indexOf(bots.previewMode)+1)%modes.length];
+   if(bots.setPreviewLineMode(next)){
      trail.forEach(points=>points.length=0);
      lateralSamples.forEach(points=>points.length=0);
      lastLinePaint=-1;updateModeLabel();paintLines(performance.now());
@@ -284,12 +292,15 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    captureTrails(now);paintLines(now);
    if(now-lastInfo>=500){
      lastInfo=now;const stats=bots.stats();
-     const line=bots.previewRacecraft?bots.previewExpertLine:bots.standardExpertLine;
+     const line=bots.previewActiveLine();
      const averageTarget=line.offsets.reduce((sum,o,i)=>sum+
        Math.abs(o)/Math.max(1,line.limits[i]),0)/Math.max(1,line.offsets.length);
      const actual=summarizeLateralUse(lateralSamples.flat());
+     const guide=bots.previewGuideReport;
      $('[data-roadstats]').textContent='OBJ '+Math.round(averageTarget*100)+
        '% · IA '+(actual.samples?actual.meanPct+'%':'—')+
+       ' · '+(guide?'GUÍAS '+guide.accepted+'/'+guide.total+
+         ' · G '+(guide.active?'ACTIVA':'NO DISPONIBLE'):'SIN GUÍAS')+
        ' · '+(hasAuthoredBounds?'BORDES AUTÉNTICOS':'SIN BORDES');
      $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN '+countdown.seconds)+
       ' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
@@ -305,11 +316,15 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
        li.textContent='IA '+(item.seat+1)+' · '+fmt(item.elapsedMs)+
          ' · LATERAL '+(stat.samples?stat.meanPct+'%':'—');list.append(li);}
      const used=summarizeLateralUse(lateralSamples.flat());
-     $('[data-roadreport]').textContent='Uso lateral medio: '+
-       (used.samples?used.meanPct+'%':'sin medición')+
-       ' del semiancho útil estimado; muestras ≥70%: '+
-       used.nearEdgePct+'%. '+(hasAuthoredBounds
-         ?'Bordes Bézier originales en verde.'
+     const guide=bots.previewGuideReport;
+     $('[data-roadreport]').textContent='TRAZADA '+bots.previewMode+
+       ' · Uso lateral medio: '+(used.samples?used.meanPct+'%':'sin medición')+
+       ' del semiancho útil estimado; muestras ≥70%: '+used.nearEdgePct+'%. '+
+       (guide?'Guías admitidas '+guide.accepted+'/'+guide.total+
+        (guide.active?' · trazada G NO HOMOLOGADA':' · trazada G no disponible')+
+        ' · '+(guide.entries||[]).filter(e=>e.status!=='accepted')
+          .map(e=>e.id+': '+e.status).join(', ')+'. ':'')+
+       (hasAuthoredBounds?'Bordes Bézier originales en verde.'
          :'Sin bordes originales para contrastar pianos.');
      $('[data-results]').hidden=false;
    }

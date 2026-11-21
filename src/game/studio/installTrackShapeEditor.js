@@ -300,6 +300,39 @@ export function installTrackStudioShapeEditor(s){
       s._flashMessage('No se puede probar: '+(err?.message||'error'));
     }finally{installing=false}
   },previewPos.width,previewPos.height);
+  // A separate, local-only test of author-apex hints: four real-physics AI,
+  // A/B/G comparison and NO online room, rewards or official time records.
+  s._startGuidedAiPreview=async()=>{
+    if(installing)return;
+    if(!(s._aiLineGuides?.length)){
+      s._flashMessage('Añade al menos una GUÍA IA para probar la trazada guiada');
+      return;
+    }
+    if(!s._imageCanvas?.imageId){
+      s._flashMessage('Necesitas la fotografía maestra en este iPhone: carga el .tdrtrack completo');
+      return;
+    }
+    if(!window.location.pathname.includes('/dev/')){
+      s._flashMessage('El Realizador guiado solo existe en CraftRace DEV');
+      return;
+    }
+    if(!window.confirm('¿Probar las guías IA con 4 rivales físicos en el Realizador DEV?\\n\\nSin récords ni créditos. Podrás comparar A / B / GUIADA antes de la salida.'))return;
+    installing=true;
+    try{
+      const record=await installKartingPreview(s);
+      if(!record?.track?.aiLineGuides?.points?.length)
+        throw Error('La vista previa no contiene tus guías IA');
+      s._autosaveRecovery?.();
+      s.scene.start('race',{
+        trackKey:LOCAL_KARTING_PREVIEW_KEY,testMode:true,
+        gameMode:'director',directorPreview:true,
+        directorLaps:3,directorAiDifficulty:3
+      });
+    }catch(error){
+      console.error('[TrackStudio] No se pudo lanzar IA guiada',error);
+      s._flashMessage('No se puede probar la IA guiada: '+(error?.message||'error'));
+    }finally{installing=false;}
+  };
   // Image Lab presentation layer delegates to these exact original handlers,
   // so engine, history, confirmations and track data remain unchanged.
   s._studioShapeButtons={create:createBtn,edit:editBtn,add:addBtn,

@@ -109,3 +109,17 @@ Solución DEV: un botón EXPORTAR junto a GUARDAR abre un diálogo que prepara e
 Para circuitos con fotografía, GUARDAR conserva una copia local, y EXPORTAR permite crear el fichero portable .tdrtrack. Si falta la imagen maestra, se ofrece un JSON de recuperación que conserva la geometría y los puntos, con un aviso explícito de que no contiene foto. Los archivos sin fotografía siguen usando JSON. No hay cambios de IA, física ni online.
 
 Pruebas incluidas: scripts/trackstudio-iphone-export-smoke.mjs, validación de ida y vuelta del paquete con 12 puntos de vértice, JSON de rescate y separación guardado/exportación.
+
+## 21/11/2026 — Etapa B: IA guiada para Realizador DEV (experimental)
+
+El usuario exportó un JSON auténtico de Santa Cruz desde TrackStudio con **10 guías IA**, coordenadas en mundo nativo, fuerza 0.65 y radio 39.6 px (se conserva en `editor.aiLineGuides` y `gameTrack.aiLineGuides`). El JSON no incluye la fotografía maestra; la prueba en el propio iPhone requiere conservarla en IndexedDB o importar un `.tdrtrack` que sí la contenga.
+
+**Corrección respecto al informe inicial:** la revisión de las curvas Bézier muestra que `apex-10` está dentro del asfalto; el problema de proximidad está en `apex-1` (aprox. 12 px del límite), mientras las otras nueve guías están a mayor distancia. Se valida la huella física del coche y una holgura adicional; las guías excesivamente cercanas al borde se descartan, no se convierten en waypoints obligatorios.
+
+Nueva acción **▶ PROBAR IA GUIADA** en la sección GUÍAS IA. Instala una vista previa fotográfica local y abre directamente **Realizador** con cuatro IA Experto, tres vueltas, manteniendo la misma velocidad, dirección, freno y agarre de antes. Solo en ruta DEV/PWA; jamás en producción o carreras online. El Realizador permite cambiar **A (original), B (experimental) o G (guiada)** antes de la salida. Cuando hay guías aceptables, G aparece preseleccionada. El botón del Realizador regresa al editor de TrackStudio conservando su recuperación.
+
+La etapa G combina el desplazamiento B con atracción suave hacia las anotaciones; utiliza una banda de tolerancia y una influencia distribuida en la longitud de pista, con pequeñas zonas de entrada/salida contrarias al vértice. No fuerza el centro del coche a atravesar coordenadas fijas. Antes de aplicar un desplazamiento, se verifica la posición del cuerpo y un margen de recuperación con **el mismo `makeKartingShapeMask` basado en los bordes Bézier** que la pista fotográfica; se reducen las propuestas peligrosas o se vuelve a B. El diagnóstico declara cuántas guías son aceptadas o descartadas, muestras modificadas y cuántas muestras de B carecen de margen.
+
+**NO HOMOLOGADA:** la línea B de referencia no tiene una certificación global de seguridad; esta primera etapa verifica únicamente los desplazamientos nuevos de G y no sustituye controles físicos por velocidad artificial. Los datos de tiempos son provisionales y deben compararse en dispositivo; no declarar mejora de tiempo, seguimiento, validez de vueltas o ausencia de choques hasta observar carreras reales.
+
+Pruebas automáticas añadidas en `scripts/trackstudio-guided-realizador-smoke.mjs`, tras la instalación de Santa Cruz fotográfica. Comprueban diez vértices del JSON del usuario (sin copiar la imagen ni el archivo completo al repositorio), seguridad de las modificaciones, perfil de velocidad y aislamiento del online. Las carreras LIVE 4, los premios y Google Play permanecen intactos.
