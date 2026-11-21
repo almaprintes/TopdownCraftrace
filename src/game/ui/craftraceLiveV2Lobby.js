@@ -15,7 +15,7 @@ import {CAR_SPECS} from '../cars/carSpecs.js';
 import {unlockedCarIds,STARTER_CAR_ID} from '../cars/carUnlocks.js';
 import './craftraceLiveV2Lobby.css';
 
-export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenClassic=null,initialRoom=null}={}){
+export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenClassic=null,initialRoom=null,onExit=null}={}){
   if(document.getElementById('cr-live4'))return;
   const race4Enabled=(window.location.pathname.includes('/dev/')||
     ['localhost','127.0.0.1'].includes(window.location.hostname))&&
@@ -254,8 +254,9 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     scene?.events?.off?.('shutdown',dispose);
     document.removeEventListener('keydown',escape);
   };
-  const escape=e=>{if(e.key==='Escape')dispose();};
-  $('[data-close]').addEventListener('click',dispose);
+  const close=()=>{dispose();onExit?.();};
+  const escape=e=>{if(e.key==='Escape')close();};
+  $('[data-close]').addEventListener('click',close);
   classicButton.addEventListener('click',()=>{
     if(closed||room||typeof onOpenClassic!=='function')return;
     dispose();onOpenClassic();
