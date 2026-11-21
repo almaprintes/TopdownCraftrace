@@ -10,6 +10,9 @@ import {isLive4GuidedGSupported,setLive4GuidedGForRoom,hasLive4GuidedGForRoom}
   from '../online/craftraceLive4GuidedGExperiment.js';
 import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
+import {TRACK_REGISTRY} from '../tracks/trackIdentity.js';
+import {CAR_SPECS} from '../cars/carSpecs.js';
+import {unlockedCarIds,STARTER_CAR_ID} from '../cars/carUnlocks.js';
 import './craftraceLiveV2Lobby.css';
 
 export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenClassic=null}={}){
@@ -17,8 +20,22 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   const race4Enabled=(window.location.pathname.includes('/dev/')||
     ['localhost','127.0.0.1'].includes(window.location.hostname))&&
     !globalThis.Capacitor?.isNativePlatform?.();
-  const car=String(carId||scene?.selectedCarId||localStorage.getItem('tdr2:carId')||'avenir_gripline');
-  const track=String(trackId||selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage));
+  const initialCar=String(carId||scene?.selectedCarId||localStorage.getItem('tdr2:carId')||STARTER_CAR_ID);
+  const initialTrack=String(trackId||selectedCircuitRaceId(scene?.selectedTrackKey||'track01',localStorage));
+  const trackChoices=[...new Map(Object.values(TRACK_REGISTRY)
+    .filter(t=>t?.id&&t.closed!==false&&t.raceType!=='stage'&&
+      !t.meta?.hiddenFromTrackSelect)
+    .map(t=>[t.id,{id:t.id,name:getTrackPublicName(t)}])).values()]
+    .sort((a,b)=>a.name.localeCompare(b.name,'es'));
+  if(TRACK_REGISTRY[initialTrack]&&!trackChoices.some(t=>t.id===initialTrack))
+    trackChoices.unshift({id:initialTrack,name:getTrackPublicName(initialTrack)});
+  const carChoices=[...new Set([...unlockedCarIds(),initialCar])]
+    .filter(id=>Object.hasOwn(CAR_SPECS,id))
+    .map(id=>({id,name:CAR_SPECS[id].name||id}))
+    .sort((a,b)=>a.name.localeCompare(b.name,'es'));
+  if(!carChoices.length)carChoices.push({id:STARTER_CAR_ID,name:CAR_SPECS[STARTER_CAR_ID]?.name||'HÉLIX Spark'});
+  const car=carChoices.some(c=>c.id===initialCar)?initialCar:carChoices[0].id;
+  const track=trackChoices.some(t=>t.id===initialTrack)?initialTrack:trackChoices[0]?.id||initialTrack;
   const root=document.createElement('section');root.id='cr-live4';
   root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');
   root.setAttribute('aria-label','CraftRace LIVE cuatro pilotos en pruebas');
@@ -38,6 +55,10 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
       <div class="cr4-entry" data-entry>
         <section class="cr4-card">
           <h3>CREAR UNA PISTA</h3>
+          <div class="cr4-venue-select">
+            <label>Circuito<select data-select-track aria-label="Circuito de LIVE 4"></select></label>
+            <label>Tu coche<select data-select-car aria-label="Coche para LIVE 4"></select></label>
+          </div>
           <p class="cr4-track" data-track></p>
           <div class="cr4-fields">
             <label>Plazas<select data-capacity>
@@ -71,6 +92,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
         <section class="cr4-card">
           <h3>UNIRSE A UNA PISTA</h3>
           <p>Introduce el mismo código que te envíe el organizador.</p>
+          <label>Tu coche<select data-join-car aria-label="Tu coche al unirte"></select></label>
           <label>Código de invitación<input data-code autocomplete="off" autocapitalize="characters"
             maxlength="7" spellcheck="false" placeholder="7 CARACTERES" aria-label="Código de pista"></label>
           <button type="button" data-join class="cr4-secondary">UNIRME</button>
@@ -85,6 +107,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
         <div class="cr4-seats" data-seats aria-live="polite"></div>
         <div class="cr4-controls">
           <div data-host-settings hidden>
+            <label>Circuito<select data-edit-track aria-label="Cambiar circuito de la pista"></select></label>
+            <label>Coche oficial<select data-edit-car aria-label="Cambiar coche de la pista"></select></label>
             <label>Plazas<select data-edit-capacity>
               <option value="2">2</option><option value="3">3</option><option value="4">4</option>
             </select></label>
@@ -113,9 +137,35 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   document.body.append(root);
   const $=selector=>root.querySelector(selector);
   const classicButton=$('[data-classic]');
-  const gSupported=isLive4GuidedGSupported({trackId:track,dev:race4Enabled,aiDifficulty:3});
-  $('[data-g-option]').hidden=!gSupported;
-  $('[data-g-option-edit]').hidden=!gSupported;
+  const addOptions=(selector,choices,selected)=>{
+    const select=$(selector);
+    for(const item of choices){
+      const opt=document.createElement('option');
+      opt.value=item.id;opt.textContent=item.name;select.append(opt);
+    }
+    select.value=selected;
+  };
+  for(const selector of ['[data-select-track]','[data-edit-track]'])
+    addOptions(selector,trackChoices,track);
+  for(const selector of ['[data-select-car]','[data-join-car]','[data-edit-car]'])
+    addOptions(selector,carChoices,car);
+  let gSupported=false;
+  const syncGuidedAvailability=()=>{
+    const selectedTrack=$('[data-select-track]').value;
+    gSupported=isLive4GuidedGSupported({trackId:selectedTrack,dev:race4Enabled,aiDifficulty:3});
+    $('[data-g-option]').hidden=!gSupported;
+    $('[data-guided-g]').disabled=!gSupported;
+    if(!gSupported)$('[data-guided-g]').checked=false;
+    $('[data-track]').textContent=getTrackPublicName(selectedTrack);
+    const editSupported=isLive4GuidedGSupported({
+      trackId:$('[data-edit-track]').value,dev:race4Enabled,aiDifficulty:3});
+    $('[data-g-option-edit]').hidden=!editSupported;
+    $('[data-edit-guided-g]').disabled=!editSupported;
+    if(!editSupported)$('[data-edit-guided-g]').checked=false;
+  };
+  $('[data-select-track]').addEventListener('change',syncGuidedAvailability);
+  $('[data-edit-track]').addEventListener('change',syncGuidedAvailability);
+  syncGuidedAvailability();
   $('[data-guided-g]').checked=gSupported;
   if(gSupported)$('[data-ai]').value='3';
   $('[data-guided-g]').addEventListener('change',()=>{
@@ -132,7 +182,6 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   });
   classicButton.hidden=typeof onOpenClassic!=='function';
   $('[data-director]').hidden=!race4Enabled;
-  $('[data-track]').textContent=getTrackPublicName(track);
   let closed=false,loading=false,room=null,identity=null,monitor=null,hydrated=false,launching=false;
   $('[data-race-warning]').textContent=race4Enabled
     ?'CARRERA 4P EXPERIMENTAL · NO HOMOLOGADA · sin monedas ni récords. Comprueba primero la conexión.'
@@ -146,10 +195,14 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   };
   const syncOptions=s=>{
     if(hydrated)return;
+    $('[data-edit-track]').value=s.track_id;
+    $('[data-edit-car]').value=s.car_id;
     $('[data-edit-capacity]').value=String(s.capacity);
     $('[data-edit-fill]').checked=Boolean(s.fill_ai);
     $('[data-edit-ai]').value=String(s.ai_difficulty);
-    $('[data-edit-guided-g]').checked=gSupported&&hasLive4GuidedGForRoom(s.id);
+    syncGuidedAvailability();
+    $('[data-edit-guided-g]').checked=!$('[data-g-option-edit]').hidden&&
+      hasLive4GuidedGForRoom(s.id);
     hydrated=true;
   };
   const update=(s,grid)=>{
@@ -183,7 +236,8 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     $('[data-ready]').textContent=me?.ready?'CANCELAR LISTO':'ESTOY LISTO';
     $('[data-start]').hidden=!(race4Enabled&&host&&s.state==='waiting');
     $('[data-start]').disabled=loading||!grid.canStart;
-    if(host&&gSupported&&hasLive4GuidedGForRoom(s.id)&&s.ai_difficulty===3&&s.fill_ai)
+    if(host&&isLive4GuidedGSupported({trackId:s.track_id,dev:race4Enabled,aiDifficulty:3})&&
+       hasLive4GuidedGForRoom(s.id)&&s.ai_difficulty===3&&s.fill_ai)
       $('[data-rules]').textContent+=' · IA G BÉZIER + DADOS';
     $('[data-rosterstatus]').textContent=grid.canStart
       ?'PARRILLA PREPARADA · '+grid.humanCount+' HUMANO(S) + '+grid.aiCount+' IA'
@@ -208,6 +262,14 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   });
   document.addEventListener('keydown',escape);
   scene?.events?.once?.('shutdown',dispose);
+  const hostCarId=s=>{
+    const selected=$('[data-join-car]').value;
+    // The room host chooses the shared race car; guests may keep their own
+    // unlocked car. None can select a car they do not own.
+    return s.host_id===identity?.id
+      ?(carChoices.some(c=>c.id===s.car_id)?s.car_id:car)
+      :(carChoices.some(c=>c.id===selected)?selected:car);
+  };
   const launch=(s)=>{
     if(closed||launching||!race4Enabled||
        !['countdown','racing'].includes(s?.state)||
@@ -220,8 +282,9 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     launching=true;
     stageLive4RaceSession(s,identity);
     dispose();
+    const localCar=hostCarId(s);
     scene.scene.start('race',{
-      carId:car,trackKey:s.track_id,gameMode:'online',liveV2RoomId:s.id,
+      carId:localCar,trackKey:s.track_id,gameMode:'online',liveV2RoomId:s.id,
       liveStartAt:Number.isFinite(s.start_at_ms)?s.start_at_ms:null,liveGridSlot:seat,testMode:false
     });
   };
@@ -256,13 +319,14 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     // as their own existing default. No Supabase room/seat is created.
     dispose();
     scene.scene.start('race',{
-      carId:car,trackKey:track,gameMode:'director',testMode:true,
+      carId:$('[data-select-car]').value,trackKey:$('[data-select-track]').value,gameMode:'director',testMode:true,
       directorPreview:true,directorLaps:laps,directorAiDifficulty:difficulty
     });
   });
   $('[data-create]').addEventListener('click',()=>void action(async()=>{
     const s=await createLiveV2Lobby({
-      trackId:track,carId:car,laps:Number($('[data-laps]').value),
+      trackId:$('[data-select-track]').value,carId:$('[data-select-car]').value,
+      laps:Number($('[data-laps]').value),
       physicsVersion:1,direction:'forward'
     },{
       capacity:Number($('[data-capacity]').value),
