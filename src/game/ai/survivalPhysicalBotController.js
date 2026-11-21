@@ -49,8 +49,9 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const velocity=body.body.velocity;
   const speed=Math.hypot(Number(velocity.x)||0,Number(velocity.y)||0);
   const guidance=params.live4GuidedApex;
-  const guidedMode=precisionCornering&&Array.isArray(guidance?.guides)&&
-    guidance.guides.length>0;
+  const guidedMode=precisionCornering&&(
+    guidance?.continuousOnly===true||
+    (Array.isArray(guidance?.guides)&&guidance.guides.length>0));
   // G only: never jump to an adjacent branch merely because the hairpin's
   // return straight is physically closer than the current road segment.
   const continuous=guidedMode?nearestContinuousGuidedSample(
@@ -192,7 +193,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // Only the experimental G Realizador provides a die and authored apexes.
   // Use the ordered guide only for local horizon and speed planning, NEVER
   // as a direct steering destination across another bend or a straight.
-  const upcoming=guidedMode
+  const upcoming=guidedMode&&Array.isArray(guidance?.guides)&&guidance.guides.length
     ?nextGuidedApex(guidance.guides,nearest.index,samples.length,22):null;
   const guideAhead=upcoming&&upcoming.stepsAhead>=1&&upcoming.stepsAhead<=18;
   const guideTolerance=Math.max(5,Number(guidance?.tolerancePx)||35);
