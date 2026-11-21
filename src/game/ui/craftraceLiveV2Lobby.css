@@ -38,6 +38,10 @@
 #cr-live4 .cr4-card>.cr4-primary,#cr-live4 .cr4-card>.cr4-secondary{margin-top:auto}
 #cr-live4 .cr4-track{color:#c3eefa;font-size:12px;font-weight:850;margin:0 0 4px}
 #cr-live4 .cr4-fields{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
+#cr-live4 .cr4-venue-select{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:9px}
+#cr-live4 .cr4-venue-select label,#cr-live4 .cr4-venue-select select{min-width:0;width:100%}
+#cr-live4 [data-host-settings] select[data-edit-track]{max-width:245px}
+#cr-live4 [data-host-settings] select[data-edit-car]{max-width:225px}
 #cr-live4 label{display:flex;flex-direction:column;gap:5px;font-size:10px;color:#c4e0ea;font-weight:850;letter-spacing:.04em}
 #cr-live4 label.cr4-check{flex-direction:row;align-items:center;gap:7px}
 #cr-live4 select,#cr-live4 input:not([type=checkbox]){height:38px;min-width:80px;max-width:100%;
