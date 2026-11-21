@@ -103,11 +103,10 @@ export function buildGuidedTrackRacingLineModel(baseLine,rawGuides,shape,dimensi
   for(const g of active){
    const d=wrapDistance(i,g.index,n,spacing);
    if(d>g.radius*1.7)continue;
-   // A gentle apex pull with weak outer-entry and outer-exit lobes.
-   // The existing B line still supplies the original optimised corners.
-   const core=Math.exp(-.5*(d/(g.radius*.41))**2);
-   const outer=Math.exp(-.5*((d-g.radius*.82)/(g.radius*.25))**2);
-   const profile=core-.20*outer;
+   // G is a soft pull toward the authored apex only. Never reverse the
+   // offset before/after the hint: that forced an exterior counter-swerve
+   // in closely linked corners, even when the authored apex was inside.
+   const profile=Math.exp(-.5*(d/(g.radius*.41))**2);
    correction+=g.requested*g.weight*profile;
    weight+=Math.abs(profile)*g.weight;
   }
