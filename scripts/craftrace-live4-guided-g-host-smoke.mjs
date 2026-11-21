@@ -45,7 +45,7 @@ function sprite(x,y,key='car'){return{x,y,texture:{key},scaleX:1,scaleY:1,
  setVisible(){return this},setOrigin(){return this},setPosition(){return this},
  setScale(){return this},setRotation(){return this},setAlpha(){return this},
  setTint(){return this},setTexture(next){this.texture.key=next;return this}}}
-const scene={trackKey:'santa-cruz',track:{closed:true,meta:track},
+const scene={trackKey:'santa-cruz',track:{closed:true,meta:{...track,id:'santa-cruz'}},
  maxFwd:420,accel:520,brakeForce:720,turnRate:2.4,carParams:{maxFwd:420,
  accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,steering:{}},
  carRig:{list:[sprite(0,0)]},textures:{exists:key=>key==='car'},
@@ -56,7 +56,9 @@ const scene={trackKey:'santa-cruz',track:{closed:true,meta:track},
 const roster=[{kind:'human',seat:0,player_id:host},
  ...Array.from({length:3},(_,i)=>({kind:'ai',seat:i+1,
  bot_id:'guided-'+(i+1),owner_id:host,difficulty:3}))];
-const grid=makeLive4StartingGrid({start:track.start,capacity:4,
+const a=track.centerline[0],b=track.centerline[1];
+const origin={x:a.x,y:a.y,r:Math.atan2(b.y-a.y,b.x-a.x)};
+const grid=makeLive4StartingGrid({start:origin,capacity:4,
  centerline:track.centerline,finishLine:track.finishLine,
  trackWidth:track.trackWidth,carScale:track.carScale});
 const director=new CrafRaceLive4BotDirector(scene,{roster,hostId:host,
