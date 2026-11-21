@@ -9,6 +9,8 @@ import {buildTrackRacingLineModel}
  from '../src/game/ai/trackRacingLinePlanner.js';
 import {buildGuidedTrackRacingLineModel}
  from '../src/game/ai/trackGuidedRacingLinePlanner.js';
+import {buildBezierAiRacingLineModel} from '../src/game/ai/trackBezierAiRacingLinePlanner.js';
+import {SANTA_CRUZ_AUTHOR_BEZIER} from '../src/game/online/craftraceSantaCruzAuthorBezier.js';
 import {buildTrackSpeedProfile}
  from '../src/game/ai/trackSpeedProfilePlanner.js';
 import {buildTrackManeuverPlan}
@@ -19,7 +21,7 @@ const official=JSON.parse(readFileSync(
 assert.equal(official.meta?.aiLineGuides?.points?.length,10);
 
 // The ACTUAL RaceScene topology, rather than raw track.json.
-const sceneTrack={meta:{...official,meta:{...official.meta}}};
+const sceneTrack={meta:{...official,id:'santa-cruz',meta:{...official.meta}}};
 const picked=resolveDirectorGuideSource(sceneTrack);
 assert.equal(picked.source,'registered-circuit');
 assert.equal(picked.guides.points.length,10);
@@ -28,11 +30,27 @@ assert.equal(picked.shape,official.trackShape);
 assert.deepEqual(picked.dimensions,
  {worldW:official.worldW,worldH:official.worldH});
 assert.equal(picked.carScale,official.carScale??1);
+assert.deepEqual(picked.bezier,SANTA_CRUZ_AUTHOR_BEZIER,
+ 'Paddock Realizador should load the 10 exact author-edited Bézier anchors');
+assert.equal(picked.bezier.nodes.length,10);
+assert.ok(picked.bezier.nodes.every(p=>
+ p.x>0&&p.x<official.worldW&&p.y>0&&p.y<official.worldH));
+const noOfficial={meta:{...sceneTrack.meta,worldW:1900,worldH:2900}};
+assert.equal(resolveDirectorGuideSource(noOfficial).bezier,null,
+ 'Never project author Bézier into wrong photographic world dimensions');
 const baseline=buildTrackRacingLineModel({
  raceCenterline:official.raceCenterline||official.centerline,
  trackWidth:official.trackWidth
 },{apexCommitment:.22});
 assert.ok(baseline.valid);
+const authoredBezier=buildBezierAiRacingLineModel(
+ baseline,picked.bezier,picked.shape,picked.dimensions,{carRadius:14});
+console.log('[SANTA CRUZ BÉZIER ON OFFICIAL PHOTO]',JSON.stringify(authoredBezier.report));
+assert.equal(authoredBezier.report.active,true,
+ 'The user-validated author Bézier must be safe on the official photo: '+
+ JSON.stringify(authoredBezier.report));
+assert.equal(authoredBezier.report.accepted,10);
+assert.equal(authoredBezier.model.metrics.authoredBezier,true);
 const result=buildGuidedTrackRacingLineModel(
  baseline,picked.guides,picked.shape,picked.dimensions,
  {carRadius:Math.max(8,Math.round(14*Number(picked.carScale||1)))});
