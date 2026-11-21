@@ -223,3 +223,40 @@ aumentar prestaciones**. El resultado sigue siendo provisional.
 fotográfica: curvatura media 0.0475, por debajo de su umbral inicial 0.050.
 La versión revisada exige explícitamente activar el ajuste y ganar tiempo en
 Santa Cruz fotográfica. Es un ensayo hasta superar esa verificación.
+
+## 21/11/2026 · Dos carreras reales LIVE 4: diagnóstico de lateralidad y reloj
+
+**Evidencia:** capturas aportadas por el creador de dos carreras de **3 vueltas**, anfitrión **JUANFRIKAZO_DEV**, **Gripline**, **3 IA Experto**, interfaz LIVE 4 DEV. Capturas recibidas a las 10:40 UTC del 21/11/2026. Se muestran como dos observaciones independientes; no asumir que las redes, entradas de volante o condiciones de conducción son idénticas.
+
+| Métrica | Carrera 1 | Carrera 2 |
+|---|---:|---:|
+| JUANFRIKAZO_DEV | **0:58.602** | **1:06.525** |
+| IA EXPERTO · 2 | **1:08.420** | **1:08.475** |
+| IA EXPERTO · 4 | **1:09.120** | **1:08.992** |
+| IA EXPERTO · 3 | **1:09.492** | **1:09.325** |
+| Uso lateral promedio (IA expertas, telemetría) | **9 %** | **9 %** |
+| Fotogramas con delta > 50 ms (diagnóstico del host) | **0** | **0** |
+| Tiempo real de actualización descartado por clamp dt ≤ 50 ms | **0.00 s** | **0.00 s** |
+| Estado Realtime en pantalla | **RED SIN ENLACE** | **RED OK** |
+| Clasificación | Todos finalizados localmente; **pendientes de sincronizar** | Todos finalizados; **provisional** |
+
+**Variación IA entre ambas carreras (carrera 2 − carrera 1):** asiento 2 **+0.055 s**, asiento 4 **−0.128 s**, asiento 3 **−0.167 s**. Mayor diferencia absoluta **0.167 s** entre tres IA de nivel 3. El humano varió **+7.923 s**, sin que los tres bots siguieran ese cambio. El reporte previo de IA entre **~1:08 y ~1:18** **no se reproduce en estas dos capturas** y queda pendiente de diagnóstico separado.
+
+### Interpretación que sí respalda el código
+
+1. **La trayectoria A sigue en LIVE 4 online.** En `CrafRaceLive4BotDirector` se usa `standardExpertLine` y `standardExpertProfile`. La variante B `racecraftPreview` se instancia **solo** cuando `preview=true` (modo Realizador) y su activación `setPreviewRacecraft` se bloquea fuera de ese modo. **Las imágenes no prueban la calidad de B**.
+2. `measureLateralUse()` mide distancia lateral respecto al segmento más próximo de la `centerline` del modelo y la divide por el `limit` **estimado** (semiancho seguro derivado de la anchura anotada). Por tanto, el **9 % es una fracción del corredor estimado**, no una comprobación de distancia real a los pianos ni un porcentaje de anchura física fotografiada.
+3. **9 % sostenido es consistente con conducir cerca del eje**; exige separar dos hipótesis: (a) el optimizador A calcula desplazamientos pequeños, y (b) el controlador no sigue los desplazamientos ya calculados. **No subir la agresividad sin distinguirlas**.
+4. Los contadores de fotogramas largos y tiempo descartado están a cero en **estas dos pruebas**: no apoyan explicar sus resultados por el clamp `dt` de 50 ms. Tampoco explican ni descartan el caso previo de ~1:18, que necesita una captura con esa anomalía.
+5. La **desconexión Realtime** en la primera imagen es una incidencia **distinta**: el anfitrión vio resultados locales sin sincronización. La IA completó sus vueltas sin conexión, coherente con continuidad física del host; no declarar recuperada la sincronización sin verificar la recepción posterior.
+
+### Próximo trabajo recomendado
+
+- En DEV, comparar **objetivo lateral del plan (abs(offset)/limit) y lateral real de cada IA**, usando la misma referencia local. El Realizador A/B ya puede visualizar OBJ e IA; contrastar con las líneas verdes de los bordes Bézier originales cuando la geometría está disponible.
+- Si el **objetivo A es igualmente pequeño**, mejorar el **planificador de trazada** con bordes homologados, entrada exterior, vértice interior y salida exterior, comprobando que no invada el asfalto real ni supere el límite físico de giro.
+- Si el objetivo es amplio pero la IA se mantiene en el centro, intervenir en **seguimiento/anticipación de dirección**, sin trucar potencia o grip.
+- **No desplegar B automáticamente en LIVE 4** hasta superar un test con geometría instalada y prueba visual en dispositivo real. Mantener marca A/B y resultados amistosos.
+- Mantener ticket separado para **RED SIN ENLACE / pendientes de sincronizar**, especialmente cuando corren 1 humano + 3 IA.
+- No tocar récords, premios, Google Play, SlotRace, carrera online clásica o identidad de pilotos para resolver esta incidencia.
+
+**Estado:** evidencia real registrada; trazada de IA Experto **aún no homologada**. Esta anotación es documentación, no corrección de trazada.
