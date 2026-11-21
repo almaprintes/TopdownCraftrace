@@ -10,7 +10,6 @@ import {makeLive4LapGates,advanceLive4PhysicalLap} from './craftraceLive4LapGate
 import {measureLateralUse} from './craftraceRacingLineTelemetry.js';
 import {summarizePlannedLateral,samplePlannedVsReal} from './craftraceLive4LineTrackingAudit.js';
 import {makeLive4TimingAudit,observeLive4Timing,summarizeLive4Timing} from './craftraceLive4TimingAudit.js';
-import {constrainRacecraftToAuthoredEdges} from '../ai/trackAuthoredCorridor.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
@@ -54,16 +53,6 @@ export class CrafRaceLive4BotDirector{
   this.previewExpertLine=preview?buildTrackRacingLineModel(trackGeometry,{
     apexCommitment:.22,racecraftPreview:true
   }):null;
-  this.previewAuthoredReport=null;
-  if(preview&&this.previewExpertLine?.valid){
-    const bounded=constrainRacecraftToAuthoredEdges(
-      this.previewExpertLine,scene.track?.meta?.trackShape,{
-        carRadius:Math.max(7,Math.round(14*Number(scene.track?.meta?.carScale||1))),
-        reservePx:14
-      });
-    this.previewExpertLine=bounded.model;
-    this.previewAuthoredReport=bounded.report;
-  }
   if(!expertLine.valid||expertLine.racingLine.length!==line.racingLine.length||
      (preview&&(!this.previewExpertLine?.valid||
        this.previewExpertLine.racingLine.length!==line.racingLine.length)))
@@ -246,7 +235,6 @@ export class CrafRaceLive4BotDirector{
   count:this.bots.length,botCpuMeanMs:this.cpuSamples?this.cpuTotalMs/this.cpuSamples:0,
   botCpuLastMs:this.lastCpuMs,finished:this.bots.filter(x=>x.finished).length,
   timing:summarizeLive4Timing(this.timingAudit),
-  ...(this.preview?{authoredCorridor:this.previewAuthoredReport}:{}),
   plan:summarizePlannedLateral(this.previewRacecraft
     ?this.previewExpertLine:this.standardExpertLine),
   cornerDiagnostics:this.bots.filter(b=>b.difficulty===3).map(b=>({

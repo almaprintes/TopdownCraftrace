@@ -209,11 +209,8 @@ export function buildTrackRacingLineModel(track,options={}){
       }
       return clamp(sum/(total*.03),-1,1);
     };
-    // Use a signed three-phase corner lobe. Negative BEFORE the corner
-    // (outer entry), positive at the apex, negative AFTER (outer exit).
-    // For the opposite bend the signs invert. This only runs in Realizador B.
     const desired=offsets.map((_,i)=>limits[i]*clamp(
-      1.60*signal(i)-1.00*signal(i+20)-.60*signal(i-20),-.88,.88
+      1.30*signal(i)-.45*signal(i+20)-.45*signal(i-20),-.70,.70
     ));
     // Keep the entry/exit transition gradual rather than creating a
     // hard lateral zigzag that would require impossible yaw.
@@ -224,7 +221,7 @@ export function buildTrackRacingLineModel(track,options={}){
         2*copy[(i+1)%n]+copy[(i+2)%n])/10;
     }
     offsets=offsets.map((v,i)=>clamp(
-      v*.20+desired[i]*.80,-limits[i],limits[i]
+      v*.55+desired[i]*.45,-limits[i],limits[i]
     ));
   }
 

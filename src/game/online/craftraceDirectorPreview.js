@@ -288,12 +288,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
      const averageTarget=line.offsets.reduce((sum,o,i)=>sum+
        Math.abs(o)/Math.max(1,line.limits[i]),0)/Math.max(1,line.offsets.length);
      const actual=summarizeLateralUse(lateralSamples.flat());
-     const bound=bots.previewAuthoredReport;
-    $('[data-roadstats]').textContent='OBJ '+Math.round(averageTarget*100)+
+     $('[data-roadstats]').textContent='OBJ '+Math.round(averageTarget*100)+
        '% · IA '+(actual.samples?actual.meanPct+'%':'—')+
-       ' · '+(bots.previewRacecraft&&bound?.applied
-         ?'BORDES VERIFICADOS '+bound.coveragePct+'%'
-         :(hasAuthoredBounds?'BORDES SIN HOMOLOGAR':'SIN BORDES'));
+       ' · '+(hasAuthoredBounds?'BORDES AUTÉNTICOS':'SIN BORDES');
      $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN '+countdown.seconds)+
       ' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
       ' · ZOOM '+directorZoom(camera.altitude).toFixed(2)+'×';
@@ -312,10 +309,7 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
        (used.samples?used.meanPct+'%':'sin medición')+
        ' del semiancho útil estimado; muestras ≥70%: '+
        used.nearEdgePct+'%. '+(hasAuthoredBounds
-         ?'Bordes Bézier originales en verde. '+
-           (bots.previewRacecraft&&bots.previewAuthoredReport?.applied
-             ?'B acotada con sección transversal de bordes reales. '
-             :'No se ha validado el corredor de B contra los bordes.')
+         ?'Bordes Bézier originales en verde.'
          :'Sin bordes originales para contrastar pianos.');
      $('[data-results]').hidden=false;
    }
