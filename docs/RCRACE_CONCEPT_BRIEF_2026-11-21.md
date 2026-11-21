@@ -19,7 +19,7 @@
 | CraftRace | Carreras arcade cenitales convencionales con coches a escala de circuito |
 | SlotRace | Construcción física de una pista de slot por piezas, carriles fijos y coches de slot |
 | **RcRace** | Radiocontrol: conducción de miniaturas desde fuera de la pista, con exploración VR/MR |
-| F1Race (nombre provisional) | Monoplazas en mundo 3D, **cámara cenital pura obligatoria** y PWA móvil como método preferido |
+| **FormulaRace** (antes «F1Race») | Monoplazas en mundo 3D, **cámara cenital pura obligatoria** y PWA móvil como método preferido. Nombre de proyecto elegido, marca pendiente de comprobar |
 
 No confundir «RC» como modo de mando de CraftRace con **RcRace**, que es el **concepto de videojuego independiente**.
 
@@ -32,7 +32,7 @@ No confundir «RC» como modo de mando de CraftRace con **RcRace**, que es el **
 - ¿Qué motor soportará la experiencia elegida, Quest 3 y su posible versión móvil?
 - ¿Cómo se compartirá la cuenta CraftRace Studio sin mezclar progresión?
 
-**No aplicar automáticamente a RcRace la restricción de cámara ortográfica cenital pura del proyecto F1Race**: afecta a un juego diferente y aún hay que acordar la experiencia de VR.
+**No aplicar automáticamente a RcRace la restricción de cámara ortográfica cenital pura del proyecto FormulaRace**: afecta a un juego diferente y aún hay que acordar la experiencia de VR.
 
 ## 4. Siguiente paso cuando el creador decida retomarlo
 
