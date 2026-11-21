@@ -30,7 +30,7 @@ export class StatsScene extends PreviousStatsScene {
         if(!this.scene?.isActive?.()||!this._root?.isConnected)return;
         openCrafRaceLiveV2Lobby(this,{trackId:next.track_id,
           carId:this._rc2LiveCar||next.car_id,
-          initialRoom:next});
+          initialRoom:next,rematchExpectedHumans:data.live4RematchExpectedHumans||1});
       }).catch(error=>console.error('[LIVE 4] Could not open rematch lobby',error));
     }
   }
