@@ -28,7 +28,8 @@ export class StatsScene extends PreviousStatsScene {
       const next=data.live4RematchRoom;
       void import('../ui/craftraceLiveV2Lobby.js').then(({openCrafRaceLiveV2Lobby})=>{
         if(!this.scene?.isActive?.()||!this._root?.isConnected)return;
-        openCrafRaceLiveV2Lobby(this,{trackId:next.track_id,carId:next.car_id,
+        openCrafRaceLiveV2Lobby(this,{trackId:next.track_id,
+          carId:this._rc2LiveCar||next.car_id,
           initialRoom:next});
       }).catch(error=>console.error('[LIVE 4] Could not open rematch lobby',error));
     }
