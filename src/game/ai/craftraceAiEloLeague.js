@@ -49,7 +49,7 @@ export function updateAiEloRace(league,finishers,{homologated=false,k=24}={}){
  const unit=Math.max(1,Math.min(40,Number(k)||24))/(scored.length-1);
  for(let i=0;i<scored.length;i++)for(let j=i+1;j<scored.length;j++){
   const a=scored[i],b=scored[j];
-  const score=a.elapsedMs===b.elapsedMs?.5:(a.elapsedMs<b.elapsedMs?1:0);
+  const score=a.elapsedMs===b.elapsedMs?0.5:(a.elapsedMs<b.elapsedMs?1:0);
   const change=unit*(score-expected(a.elo,b.elo));
   delta.set(a.id,delta.get(a.id)+change);
   delta.set(b.id,delta.get(b.id)-change);
