@@ -510,8 +510,6 @@ init(data) {
     this._crafRaceDirectorPreview=!IS_PROD_BUILD&&data?.directorPreview===true&&
       data?.gameMode==='director'&&window.location.pathname.includes('/dev/')&&
       !globalThis.Capacitor?.isNativePlatform?.();
-    this._crafRaceDirectorPlayable=this._crafRaceDirectorPreview&&data?.directorPlayable===true;
-    this._crafRaceDirectorHumanDone=false;
     this._directorLaps=[1,3,5,10,20].includes(data?.directorLaps)?data.directorLaps:3;
     this._directorAiDifficulty=[1,2,3].includes(data?.directorAiDifficulty)?data.directorAiDifficulty:3;
     this._importJsonReady=Boolean(data?._importJsonReady);
@@ -1307,21 +1305,12 @@ this.carBody = body;
 this.carRig = rig;
 this.car = body; // compat con tu update()
 if(this._crafRaceDirectorPreview){
- if(this._crafRaceDirectorPlayable){
-  void import('../online/craftraceDirectorPlayable.js').then(({attachCrafRaceDirectorPlayable})=>{
-   if(this.sys?.isActive?.()&&this._crafRaceDirectorPlayable)
-    this._crafRaceDirectorBridge=attachCrafRaceDirectorPlayable(this,{
+ void import('../online/craftraceDirectorPreview.js').then(({attachCrafRaceDirectorPreview})=>{
+  if(this.sys?.isActive?.()&&this._crafRaceDirectorPreview)
+   this._crafRaceDirectorBridge=attachCrafRaceDirectorPreview(this,{
      laps:this._directorLaps,difficulty:this._directorAiDifficulty
-    });
-  }).catch(err=>console.error('[DEV Vs 4 IA] Initialization failed',err));
- }else{
-  void import('../online/craftraceDirectorPreview.js').then(({attachCrafRaceDirectorPreview})=>{
-   if(this.sys?.isActive?.()&&this._crafRaceDirectorPreview)
-    this._crafRaceDirectorBridge=attachCrafRaceDirectorPreview(this,{
-      laps:this._directorLaps,difficulty:this._directorAiDifficulty
-    });
-  }).catch(err=>console.error('[LIVE 4 Director] Initialization failed',err));
- }
+   });
+ }).catch(err=>console.error('[LIVE 4 Director] Initialization failed',err));
 }else if(this._crafRaceLiveV2RoomId){
  // LIVE 4 is opt-in DEV; load its renderer/physical AI only for an approved v2 race.
  const roomId=this._crafRaceLiveV2RoomId;
@@ -3804,28 +3793,24 @@ if (freezeStart) {
     body0.setAngularVelocity(0);
   }
 }
-const up = !freezeStart && !this._crafRaceDirectorHumanDone &&
- (!this._crafRaceDirectorPreview||this._crafRaceDirectorPlayable) && (
+const up = !freezeStart && !this._crafRaceDirectorPreview && (
   (keys.up?.isDown) ||
   (keys.up2?.isDown) ||
   (t.throttle > 0.5)
 );
 
-const down = !freezeStart && !this._crafRaceDirectorHumanDone &&
- (!this._crafRaceDirectorPreview||this._crafRaceDirectorPlayable) && (
+const down = !freezeStart && !this._crafRaceDirectorPreview && (
   (keys.down?.isDown) ||
   (keys.down2?.isDown) ||
   (t.brake > 0.5)
 );
 
-const left = !freezeStart && !this._crafRaceDirectorHumanDone &&
- (!this._crafRaceDirectorPreview||this._crafRaceDirectorPlayable) && (
+const left = !freezeStart && !this._crafRaceDirectorPreview && (
   (keys.left?.isDown) ||
   (keys.left2?.isDown)
 );
 
-const right = !freezeStart && !this._crafRaceDirectorHumanDone &&
- (!this._crafRaceDirectorPreview||this._crafRaceDirectorPlayable) && (
+const right = !freezeStart && !this._crafRaceDirectorPreview && (
   (keys.right?.isDown) ||
   (keys.right2?.isDown)
 );
