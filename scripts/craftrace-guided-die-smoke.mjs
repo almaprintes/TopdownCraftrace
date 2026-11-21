@@ -81,7 +81,8 @@ assert.ok(!controller.includes('Number(upcoming?.x')&&!controller.includes('guid
 assert.ok(controller.includes("predictedMiss-guideTolerance"));
 assert.ok(controller.includes("targetSpeed*controlScale*(1-.28*missRisk)"));
 assert.ok(director.includes("this.preview&&this.previewMode==='G'&&"));
-assert.ok(director.includes("if(guidedActive&&lapPassed)"));
+assert.ok(director.includes("if((guidedActive||bezierActive)&&lapPassed)"),
+ 'A guided-apex or Bezier lap must still roll a new die at the finish');
 assert.ok(director.includes("measureGuidedPass(bot,this.previewGuideTargets"));
 // Realizador reports every real lap, totals, best laps and actual rank.
 const lapReport=buildDirectorLapReport([
