@@ -8,7 +8,7 @@ import {raceCarLookTexture} from '../visual/raceCarLook.js';
 import Phaser from 'phaser';
 import { createTrack } from '../tracks/trackRegistry.js';
 import { buildTrackRibbon } from '../tracks/TrackBuilder.js';
-import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
+import { getLocalKartingPreview, LOCAL_KARTING_PREVIEW_KEY, LOCAL_STUDIO_VECTOR_PREVIEW_KEY } from '../tracks/localKartingPreview.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import {physicalCircuitId} from '../tracks/trackReverseVariant.js';
 import { raceCameraZoomTarget } from '../tracks/raceCameraZoom.js';
@@ -533,7 +533,8 @@ init(data) {
     this._physicsABPractice=this._physicsABMode==='B';
     // Track Studio preview is a DEV-only test even when launched by an older
     // editor that did not pass testMode. Never return a local track to the lobby.
-  const isTrackStudioPreview = !IS_PROD_BUILD && data?.trackKey === LOCAL_KARTING_PREVIEW_KEY;
+  const isTrackStudioPreview = !IS_PROD_BUILD && (data?.trackKey === LOCAL_KARTING_PREVIEW_KEY ||
+    data?.trackKey === LOCAL_STUDIO_VECTOR_PREVIEW_KEY);
   this._testMode = !!data?.testMode || isTrackStudioPreview || Boolean(this._crafRaceLiveV2RoomId) || this._crafRaceDirectorPreview;
   if (isTrackStudioPreview) {
     this._returnSceneKey = ['Track','Studio','Scene'].join('');
@@ -5402,7 +5403,7 @@ if (state.stickX === 0 && state.stickY === 0) {
     return state;
   }  _resolveTrackMeta(trackKey) {
     // DEV local preview has its own track key: never overwrite public records.
-    if (trackKey === LOCAL_KARTING_PREVIEW_KEY) {
+    if (trackKey === LOCAL_KARTING_PREVIEW_KEY || trackKey === LOCAL_STUDIO_VECTOR_PREVIEW_KEY) {
       const authored = getLocalKartingPreview(trackKey)?.track;
       if (authored) return authored;
       console.warn('[TrackStudio] Local Karting preview is missing; keep default track fallback');
