@@ -21,7 +21,7 @@ export function measureLateralUse(line,x,y,guessIndex=null){
    const length=Math.sqrt(lengthSq);
    const limit=Math.max(1,Number(limits[i])*(1-t)+Number(limits[(i+1)%n])*t);
    const signed=(dx*(-vy)+dy*vx)/length;
-   bestSq=d;best={index:i,lateralPx:signed,
+   bestSq=d;best={index:i,segmentT:t,lateralPx:signed,
      fraction:signed/limit,absoluteFraction:Math.abs(signed/limit),
      distanceToReference:Math.sqrt(d)};
  }

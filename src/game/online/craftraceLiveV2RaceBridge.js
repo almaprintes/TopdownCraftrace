@@ -241,10 +241,15 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        ?Math.round(occupied.reduce((n,b)=>n+b.lateralMeanPct,0)/occupied.length):null;
      const detail=document.createElement('p');
      detail.className='cr4-result-note';
-     detail.textContent='DIAGNÓSTICO IA · margen lateral utilizado: '+
-       (average===null?'—':average+'%')+
-       ' · fotogramas largos: '+diag.timing.hitches+
-       ' · tiempo no integrado: '+diag.timing.droppedSeconds.toFixed(2)+' s';
+     const target=occupied.length
+       ?Math.round(occupied.reduce((n,b)=>n+b.targetMeanPct,0)/occupied.length):null;
+     const follow=occupied.length
+       ?Math.round(occupied.reduce((n,b)=>n+b.followMeanErrorPct,0)/occupied.length):null;
+     detail.textContent='IA · OBJETIVO LATERAL '+(target===null?'—':target+'%')+
+       ' · REAL '+(average===null?'—':average+'%')+
+       ' · ERROR SEGUIMIENTO '+(follow===null?'—':follow+'%')+
+       ' · HITCH '+diag.timing.hitches+
+       ' · TIEMPO NO INTEGRADO '+diag.timing.droppedSeconds.toFixed(2)+' s';
      panel.append(detail);
    }
    const back=document.createElement('button');back.type='button';

@@ -260,3 +260,17 @@ Santa Cruz fotográfica. Es un ensayo hasta superar esa verificación.
 - No tocar récords, premios, Google Play, SlotRace, carrera online clásica o identidad de pilotos para resolver esta incidencia.
 
 **Estado:** evidencia real registrada; trazada de IA Experto **aún no homologada**. Esta anotación es documentación, no corrección de trazada.
+
+## 21/11/2026 · Experimento de diagnóstico: OBJ/REAL/ERROR en LIVE 4
+
+Las capturas de las 10:40 muestran ~9 % lateral de tres IA, 0 hitches, ritmo ~1:08–1:09. Pero esa media no distingue entre una **trayectoria A calculada cerca del centro** y **seguimiento insuficiente de una trayectoria desplazada**.
+
+Se instrumenta únicamente el anfitrión DEV y sus resultados amistosos para mostrar, usando el mismo segmento de referencia para cada muestreo:
+- **OBJETIVO LATERAL:** valor absoluto del offset previsto de la línea A, interpolado sobre el mismo segmento central, dividido por el semiancho útil **estimado**.
+- **REAL:** desplazamiento físico lateral del bot en esa posición, en la misma escala estimada.
+- **ERROR SEGUIMIENTO:** diferencia absoluta entre offset firmado previsto y real, en el mismo punto.
+- **HITCH y TIEMPO NO INTEGRADO:** los indicadores existentes, sin cambios.
+
+En CI, `scripts/craftrace-live4-plan-vs-actual-smoke.mjs` registra la ocupación media **planeada** A y B en los cuatro circuitos de referencia; cuando el instalador oficial se ejecuta antes, permite inspeccionar el cálculo sobre la geometría instalada. **Las mediciones sintéticas no acreditan que se respeten los bordes reales.**
+
+El modo online sigue usando **A**, no promueve B; no cambian los parámetros de las IA ni su física, cronómetro, recompensas o funcionamiento con red desconectada. **No interpretar el porcentaje medio como margen libre a un piano**: procede de un corredor derivado de la centerline.

@@ -8,6 +8,7 @@ import {updateRacePhysicalBot} from '../ai/raceAiController.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
 import {makeLive4LapGates,advanceLive4PhysicalLap} from './craftraceLive4LapGates.js';
 import {measureLateralUse} from './craftraceRacingLineTelemetry.js';
+import {summarizePlannedLateral,samplePlannedVsReal} from './craftraceLive4LineTrackingAudit.js';
 import {makeLive4TimingAudit,observeLive4Timing,summarizeLive4Timing} from './craftraceLive4TimingAudit.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -128,7 +129,8 @@ export class CrafRaceLive4BotDirector{
      finished:false,finishAt:null,lapTimes:[],lastLapAt:null,
      lastPoseAt:0,lastPose:null,
      cornerDiagnostics:{samples:0,sumError:0,maxError:0,overWide:0,lastAimSteps:null,
-       lateralCount:0,lateralSum:0,lateralMax:0,lateralNearEdge:0}};
+       lateralCount:0,lateralSum:0,lateralMax:0,lateralNearEdge:0,
+       targetSum:0,followErrorSum:0,followErrorMax:0}};
    this.bots.push(bot);
   }
  }
@@ -195,6 +197,12 @@ export class CrafRaceLive4BotDirector{
        d.lateralSum+=occupied.absoluteFraction;
        d.lateralMax=Math.max(d.lateralMax,occupied.absoluteFraction);
        if(occupied.absoluteFraction>=.70)d.lateralNearEdge++;
+       const follow=samplePlannedVsReal(candidate,occupied);
+       if(follow){
+         d.targetSum+=Math.abs(follow.targetFraction);
+         d.followErrorSum+=follow.errorFraction;
+         d.followErrorMax=Math.max(d.followErrorMax,follow.errorFraction);
+       }
      }
    }
    if(bot.lastLapAt===null)bot.lastLapAt=now;
@@ -227,6 +235,8 @@ export class CrafRaceLive4BotDirector{
   count:this.bots.length,botCpuMeanMs:this.cpuSamples?this.cpuTotalMs/this.cpuSamples:0,
   botCpuLastMs:this.lastCpuMs,finished:this.bots.filter(x=>x.finished).length,
   timing:summarizeLive4Timing(this.timingAudit),
+  plan:summarizePlannedLateral(this.previewRacecraft
+    ?this.previewExpertLine:this.standardExpertLine),
   cornerDiagnostics:this.bots.filter(b=>b.difficulty===3).map(b=>({
    seat:b.seat,samples:b.cornerDiagnostics.samples,
    meanError:b.cornerDiagnostics.samples
@@ -237,6 +247,11 @@ export class CrafRaceLive4BotDirector{
    lateralMeanPct:b.cornerDiagnostics.lateralCount
      ?Math.round(b.cornerDiagnostics.lateralSum/b.cornerDiagnostics.lateralCount*100):0,
    lateralMaxPct:Math.round(b.cornerDiagnostics.lateralMax*100),
+   targetMeanPct:b.cornerDiagnostics.lateralCount
+     ?Math.round(b.cornerDiagnostics.targetSum/b.cornerDiagnostics.lateralCount*100):0,
+   followMeanErrorPct:b.cornerDiagnostics.lateralCount
+     ?Math.round(b.cornerDiagnostics.followErrorSum/b.cornerDiagnostics.lateralCount*100):0,
+   followMaxErrorPct:Math.round(b.cornerDiagnostics.followErrorMax*100),
    lateralNearEdgePct:b.cornerDiagnostics.lateralCount
      ?Math.round(b.cornerDiagnostics.lateralNearEdge/b.cornerDiagnostics.lateralCount*100):0
   }))
