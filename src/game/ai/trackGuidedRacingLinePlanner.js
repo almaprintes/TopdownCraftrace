@@ -123,7 +123,7 @@ export function buildGuidedTrackRacingLineModel(baseLine,rawGuides,shape,dimensi
    -baseLine.limits[i],baseLine.limits[i]);
  }
  // Every newly moved sample must keep the physical body AND recovery buffer
- // on the asphalt. Revert isolated invalid proposals to the B reference.
+ // on the asphalt. Revert isolated invalid proposals to the base reference.
  const makePoint=(i,offset)=>({
   x:baseLine.centerline[i].x+frame[i].nx*offset,
   y:baseLine.centerline[i].y+frame[i].ny*offset
@@ -152,7 +152,7 @@ export function buildGuidedTrackRacingLineModel(baseLine,rawGuides,shape,dimensi
  // A nominally shorter path can still be worse if guide pulls produce
  // near-hairpin polygon kinks. The real steering/yaw envelope must NEVER be
  // bypassed by a 2-radian jump between adjacent ~10 px path samples.
- // Ease guided offsets toward the already-tested B geometry LOCALLY around
+ // Ease guided offsets toward the original safe geometry LOCALLY around
  // excessive heading changes, while checking the same asphalt footprint.
  const initialTurns=lineCurvature(baseLine.centerline.map((_,i)=>makePoint(i,offsets[i])));
  const maxBefore=Math.max(...initialTurns.map(v=>Math.abs(v)));
@@ -199,7 +199,9 @@ export function buildGuidedTrackRacingLineModel(baseLine,rawGuides,shape,dimensi
   maxTurnBeforeRad:Number(maxBefore.toFixed(4)),
   maxTurnAfterRad:Number(maxAfter.toFixed(4)),
   headingLimitPasses:steeringPasses,
-  // B itself is not proven to be fully homologated. Never imply otherwise.
+  // Each guide remains an observable physical objective during a die lap.
+  targets:active.map(g=>({id:g.id,index:g.index,x:g.x,y:g.y})),
+  // G is not proven to be fully homologated. Never imply otherwise.
   homologated:false};
  return{model:{...baseLine,offsets,racingLine,curvature,metrics},report};
 }
