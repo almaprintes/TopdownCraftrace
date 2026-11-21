@@ -116,8 +116,11 @@ export function installTrackStudioAiGuides(scene){
  scene._aiGuidePointerDown=pointer=>{
   const active=scene.input.manager.pointers.filter(p=>p.isDown&&scene._isPointerInViewport(p));
   if(active.length!==1){
+   // Consume the second pointer DOWN so it cannot select or move an
+   // underlying centerline node; pointermove still runs native pinch-to-zoom.
    scene._aiGuideDown=null;scene._gestureWasMultiTouch=true;
-   return false; // preserve native two-finger zoom
+   scene._tapCandidate=false;scene._draggingPart=false;scene._panLast=null;
+   return true;
   }
   const world=scene._screenToWorld(pointer.x,pointer.y);
   const hit=pick(world);
