@@ -2,6 +2,7 @@ import { RaceScene as RealSurfaceRaceScene } from './RaceRealSurfaceAssetsScene.
 import { getTrackBeautyLayerConfig } from '../tracks/trackBeautyLayers.js';
 import { isImageNativeTrackScene } from '../tracks/imageNativeTrackIdentity.js';
 import { applyImageNativeTrackPhysics } from '../tracks/imageNativeRaceLoader.js';
+import { LOCAL_STUDIO_VECTOR_PREVIEW_KEY, applyKartingPreviewPhysics } from '../tracks/localKartingPreview.js';
 
 const ATLANTICO_PBR_TRACK = 'circuito-atlantico';
 const ATLANTICO_PBR_KEY = 'tdr_atlantico_asphalt_lit';
@@ -73,6 +74,10 @@ export class RaceScene extends RealSurfaceRaceScene {
 
   create(data) {
     const result = super.create(data);
+    // Photo-free DEV Realizador: procedural road art, but authored shape is
+    // still the only physical asphalt/grass boundary (never a widened ribbon).
+    if(this.trackKey===LOCAL_STUDIO_VECTOR_PREVIEW_KEY)
+      applyKartingPreviewPhysics(this);
     const trackId = trackIdFrom(data, this);
     const cfg = isImageNativeTrackScene(this) ? null : getTrackBeautyLayerConfig(trackId);
     this._beautyConfig = cfg;
