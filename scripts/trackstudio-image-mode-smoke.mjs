@@ -60,6 +60,6 @@ for(const fragment of [
 for(const fragment of [
   '_editorWorldW=w','_editorWorldH=h','ctx.drawImage(img,x,y,tw,th,0,0,tw,th)',
   'setOrigin(0,0)','saveCanvasImage','_getProjectData','_saveProject',
-  'normalizeCanvasImageBlob(row.blob,s._imageCanvas)'
+  'normalizeCanvasImageBlob(row.blob,meta)','readCanvasImage(meta.imageId)'
 ])assert.ok(mode.includes(fragment),'Missing image / repair invariant: '+fragment);
 console.log('TrackStudio Image Mode: valid image, nested legacy recovery, header sniff, preserve outer geometry, reject bad files, editor integration: OK');
