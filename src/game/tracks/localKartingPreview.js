@@ -5,7 +5,9 @@ import { shapeIsValid, sampleShapeEdge } from '../studio/trackShapeGeometry.js';
 import { spawnUpstreamOfFinish } from './imageNativeDriving.js';
 
 export const LOCAL_KARTING_PREVIEW_KEY='karting-tenerife-studio';
+export const LOCAL_STUDIO_VECTOR_PREVIEW_KEY='trackstudio-vector-director';
 const STORAGE_KEY='tdr:trackstudio:karting-tenerife-preview-v1';
+const VECTOR_STORAGE_KEY='tdr:trackstudio:vector-director-preview-v1';
 const bounded=(n,max)=>Number.isFinite(Number(n))&&Number(n)>0&&Number(n)<=max;
 const jsonCopy=value=>JSON.parse(JSON.stringify(value));
 // Local TrackStudio test races use the car's factory visual and collision size.
@@ -73,69 +75,87 @@ function restoreNativePixels(record){
 
 
 export function getLocalKartingPreview(trackKey=LOCAL_KARTING_PREVIEW_KEY){
-  if(trackKey!==LOCAL_KARTING_PREVIEW_KEY)return null;
+  const vector=trackKey===LOCAL_STUDIO_VECTOR_PREVIEW_KEY;
+  if(!vector&&trackKey!==LOCAL_KARTING_PREVIEW_KEY)return null;
   try{
-    const raw=localStorage.getItem(STORAGE_KEY);
+    const raw=localStorage.getItem(vector?VECTOR_STORAGE_KEY:STORAGE_KEY);
     if(!raw)return null;
     const stored=JSON.parse(raw);
-    const p=restoreStockPreviewCarScale(restoreNativePixels(stored)),track=p?.track;
+    const p=restoreStockPreviewCarScale(vector?stored:restoreNativePixels(stored)),track=p?.track;
     if(!track||!Array.isArray(track.centerline)||track.centerline.length<20||
        !shapeIsValid(track.trackShape)||!bounded(track.worldW,8192)||
-       !bounded(track.worldH,8192)||!p?.imageId||
-       track.worldW!==p.imageMeta?.width||track.worldH!==p.imageMeta?.height)return null;
+       !bounded(track.worldH,8192))return null;
+    if(vector){
+      if(p.previewKind!=='director-vector'||p.imageId||p.imageMeta||
+         track.id!==trackKey||track.key!==trackKey||
+         track.meta?.source!=='trackstudio-director-vector'||track.meta?.renderMode)return null;
+    }else if(!p.imageId||track.worldW!==p.imageMeta?.width||
+       track.worldH!==p.imageMeta?.height)return null;
     return p;
   }catch{return null;}
 }
 
-export function makeKartingPreviewRecord(editor,gameTrack){
-  if(!editor?.imageCanvas?.imageId)throw Error('El proyecto no tiene imagen maestra');
-  if(!shapeIsValid(editor.trackShape) || !shapeIsValid(gameTrack?.trackShape))
+export function makeKartingPreviewRecord(editor,gameTrack,{vectorOnly=false}={}){
+  if(!vectorOnly&&!editor?.imageCanvas?.imageId)throw Error('El proyecto no tiene imagen maestra');
+  if(!shapeIsValid(editor?.trackShape) || !shapeIsValid(gameTrack?.trackShape))
     throw Error('Primero convierte la centerline en pista editable');
-  if(!editor.isClosed || !gameTrack.closed)throw Error('Este modo es para Karting Tenerife cerrado');
-  if(!bounded(gameTrack.worldW,8192)||!bounded(gameTrack.worldH,8192)||
-     gameTrack.worldW!==editor.imageCanvas.width || gameTrack.worldH!==editor.imageCanvas.height)
+  if(!editor.isClosed || !gameTrack.closed)throw Error('Este modo es para un circuito cerrado');
+  if(!bounded(gameTrack.worldW,8192)||!bounded(gameTrack.worldH,8192))
+    throw Error('Las dimensiones de la pista no son válidas');
+  if(!vectorOnly&&(gameTrack.worldW!==editor.imageCanvas.width ||
+      gameTrack.worldH!==editor.imageCanvas.height))
     throw Error('Las dimensiones de pista e imagen no coinciden');
   if(!Array.isArray(gameTrack.centerline)||gameTrack.centerline.length<20)
     throw Error('La centerline no está completa');
   if(!gameTrack.finishLine?.a||!gameTrack.finishLine?.b)
     throw Error('Configura la meta antes de probar el circuito');
-  // The editor's first centerline node is not necessarily near the finish
-  // (this Karting project starts ~209px before the gate). Keep the original
-  // centerline untouched and calculate a temporary race spawn ~65px upstream.
   const first=gameTrack.centerline[0],next=gameTrack.centerline[1],
-        theta=Math.atan2(next.y-first.y,next.x-first.x);
+    theta=Math.atan2(next.y-first.y,next.x-first.x);
   if(!Number.isFinite(theta))throw Error('El punto inicial de la pista es inválido');
   const beforeFinish=spawnUpstreamOfFinish(gameTrack.centerline,gameTrack.finishLine,65);
   const start=beforeFinish||{x:first.x,y:first.y,r:theta};
-  const imageId=editor.imageCanvas.imageId;
+  const previewKey=vectorOnly?LOCAL_STUDIO_VECTOR_PREVIEW_KEY:LOCAL_KARTING_PREVIEW_KEY;
+  const meta={...(gameTrack.meta||{})};
+  if(vectorOnly){
+    // Imported JSON may carry metadata from a photo-native environment.
+    // The vector preview must not impersonate an absent decoded photo.
+    delete meta.renderMode;
+    delete meta.imageNative;
+  }
   const track={
     ...jsonCopy(gameTrack),
-    id:LOCAL_KARTING_PREVIEW_KEY,
-    key:LOCAL_KARTING_PREVIEW_KEY,
-    name:String(gameTrack.name||'KARTING TENERIFE').trim().slice(0,64)+' · TRACKSTUDIO DEV',
-    category:'Karting / DEV local',
+    id:previewKey,key:previewKey,
+    name:String(gameTrack.name||'CIRCUITO').trim().slice(0,64)+
+      (vectorOnly?' · REALIZADOR TÉCNICO DEV':' · TRACKSTUDIO DEV'),
+    category:vectorOnly?'Circuito / Prueba técnica DEV':'Karting / DEV local',
     carScale:STOCK_PREVIEW_CAR_SCALE,
     start:{x:start.x,y:start.y,r:start.r},
     closed:true,raceType:'circuit',raceDirection:'forward',
-    grid:null,
-    checkpointMode:'authored',
-    meta:{...(gameTrack.meta||{}),localPreview:true,carScale:STOCK_PREVIEW_CAR_SCALE,source:'trackstudio-image-native'}
+    grid:null,checkpointMode:'authored',
+    meta:{...meta,localPreview:true,carScale:STOCK_PREVIEW_CAR_SCALE,
+      source:vectorOnly?'trackstudio-director-vector':'trackstudio-image-native'}
   };
-  return {version:1,imageId,imageMeta:jsonCopy(editor.imageCanvas),track};
+  return vectorOnly
+    ?{version:1,previewKind:'director-vector',imageId:null,imageMeta:null,track}
+    :{version:1,imageId:editor.imageCanvas.imageId,
+      imageMeta:jsonCopy(editor.imageCanvas),track};
 }
 
-export async function installKartingPreview(scene){
+export async function installKartingPreview(scene,{allowVectorOnly=false}={}){
   const editor=scene._getProjectData(),meta=scene._exportToGameTrack();
-  const record=makeKartingPreviewRecord(editor,meta);
-  const stored=await readCanvasImage(record.imageId);
-  if(!stored?.blob)throw Error('Imagen no encontrada: vuelve a importar el .tdrtrack');
-  const img=await normalizeCanvasImageBlob(stored.blob,record.imageMeta);
-  if(img.nested) {
-    const {saveCanvasImage}=await import('../studio/imageCanvasProject.js');
-    await saveCanvasImage(record.imageId,img.blob,record.imageMeta);
+  const vectorOnly=allowVectorOnly&&!editor?.imageCanvas?.imageId;
+  const record=makeKartingPreviewRecord(editor,meta,{vectorOnly});
+  if(!vectorOnly){
+    const stored=await readCanvasImage(record.imageId);
+    if(!stored?.blob)throw Error('Imagen no encontrada: vuelve a importar el .tdrtrack');
+    const img=await normalizeCanvasImageBlob(stored.blob,record.imageMeta);
+    if(img.nested) {
+      const {saveCanvasImage}=await import('../studio/imageCanvasProject.js');
+      await saveCanvasImage(record.imageId,img.blob,record.imageMeta);
+    }
   }
-  // Last mutating step. Never overwrite a working local preview on failure.
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(record));
+  // Last mutating step: never overwrite a working photo preview on failure.
+  localStorage.setItem(vectorOnly?VECTOR_STORAGE_KEY:STORAGE_KEY,JSON.stringify(record));
   return record;
 }
 
