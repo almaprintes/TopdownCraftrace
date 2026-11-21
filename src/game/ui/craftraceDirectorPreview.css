@@ -121,3 +121,69 @@ body.tdr-director-active .tdr-race-hud{
 #cr-director .crdir-results [data-roadreport]{max-width:90vw;font-size:11px;color:#dcf2ea;text-align:center;text-shadow:0 1px 5px #00131b}
 #cr-director .crdir-results h2,#cr-director .crdir-results ol{text-shadow:0 2px 5px #00131bed}
 @media(max-width:900px){#cr-director .crdir-line-legend{max-width:65vw;flex-wrap:wrap;justify-content:center;row-gap:2px;bottom:2px}#cr-director .crdir-line-legend span{font-size:8px}}
+
+/* Realizador: physically measured per-lap timing, readable on iPhone landscape.
+   Only the matrix scrolls sideways for 10/20-lap sessions; no extra HUD. */
+#cr-director .crdir-results{padding:
+ max(11px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right))
+ max(11px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+ gap:5px}
+#cr-director .crdir-results p{margin:2px 0;line-height:1.25}
+#cr-director .crdir-lap-scroll{
+ width:min(96vw,1180px);max-height:42vh;overflow:auto;
+ border:1px solid #467a91;border-radius:8px;
+ background:#041b2bdc;pointer-events:auto;
+ touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;
+}
+#cr-director .crdir-lap-table{
+ border-collapse:separate;border-spacing:0;width:100%;min-width:max-content;
+ font:800 clamp(10px,1.1vw,15px) ui-monospace,SFMono-Regular,monospace;
+ font-variant-numeric:tabular-nums;color:#e8f7ff;text-align:center;
+}
+#cr-director .crdir-lap-table caption{
+ caption-side:top;font:800 10px Inter,system-ui,sans-serif;
+ letter-spacing:.07em;text-align:left;padding:7px 12px;color:#b6e7f2;
+}
+#cr-director .crdir-lap-table th,
+#cr-director .crdir-lap-table td{
+ padding:7px 10px;border-bottom:1px solid #47748b53;
+ white-space:nowrap;text-align:center;
+}
+#cr-director .crdir-lap-table thead th{
+ position:sticky;top:0;z-index:2;background:#11384c;
+ color:#a7e6ef;font-size:11px;
+}
+#cr-director .crdir-lap-table tbody tr:nth-child(even){background:#082638b5}
+#cr-director .crdir-lap-table tbody tr:first-child{
+ color:#ffe6a5;background:#233b49bd;
+}
+#cr-director .crdir-lap-table th:first-child,
+#cr-director .crdir-lap-table td:first-child{
+ position:sticky;left:0;min-width:42px;z-index:1;background:#102c3c;
+}
+#cr-director .crdir-lap-table th:nth-child(2){
+ position:sticky;left:42px;min-width:68px;z-index:1;background:#102c3c;
+}
+#cr-director .crdir-lap-table thead th:first-child,
+#cr-director .crdir-lap-table thead th:nth-child(2){
+ z-index:3;background:#11384c;
+}
+#cr-director .crdir-lap-table .crdir-best-personal{color:#9feadd}
+#cr-director .crdir-lap-table .crdir-best-global{
+ color:#ffe19a;text-decoration:underline;text-underline-offset:3px;
+}
+#cr-director .crdir-lap-table .crdir-best-column{color:#9feadd}
+#cr-director .crdir-lap-table .crdir-total-column{
+ background:#173a4d;color:#ffe19a;font-weight:950;
+}
+@media(max-height:460px){
+ #cr-director .crdir-results h2{font-size:16px}
+ #cr-director .crdir-results p{font-size:10px}
+ #cr-director .crdir-results [data-session]{font-size:10px}
+ #cr-director .crdir-results [data-roadreport]{font-size:9px}
+ #cr-director .crdir-lap-scroll{max-height:38vh}
+ #cr-director .crdir-lap-table th,
+ #cr-director .crdir-lap-table td{padding:5px 8px}
+ #cr-director .crdir-lap-table caption{padding:4px 8px}
+ #cr-director .crdir-results button{min-height:36px;padding:7px 15px}
+}
