@@ -104,7 +104,7 @@ export function installTrackStudioAiBezier(scene){
    const fromGuides=!forceAxis&&guideCount>0;
    const generated=fromGuides?createAiBezierFromGuides(
      scene._nodes,scene._aiLineGuides,
-     {maxNodes:76,trackWidth:scene._trackWidth,influencePx:140}
+     {trackWidth:scene._trackWidth}
    ):null;
    const next=generated?.line||createAiBezierFromTrackNodes(scene._nodes,32);
    if(!next)throw Error('No se pudo generar la curva');
@@ -113,8 +113,8 @@ export function installTrackStudioAiBezier(scene){
    scene._aiBezierSelected=0;
    scene._autosaveRecovery();scene._redrawEditor();scene._updatePanel();
    scene._flashMessage(fromGuides?
-     'TRAZADA GENERADA DESDE '+generated.usedGuides.length+
-       ' GUÍAS · curva continua con vértices exactos · pulsa VALIDAR':
+     'TRAZADA CREADA · '+generated.usedGuides.length+
+       ' GUÍAS = '+next.nodes.length+' NODOS · AJUSTA TIRADORES · VALIDA':
      'TRAZADA DESDE EJE · ajusta nodos · pulsa VALIDAR');
   }catch(error){scene._flashMessage(error.message||'Error al generar trayectoria IA');}
  };
