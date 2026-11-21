@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {makeKartingPreviewRecord,getLocalKartingPreview,makeKartingShapeMask,LOCAL_KARTING_PREVIEW_KEY} from '../src/game/tracks/localKartingPreview.js';
+import {makeKartingPreviewRecord,getLocalKartingPreview,makeKartingShapeMask,LOCAL_KARTING_PREVIEW_KEY,LOCAL_STUDIO_VECTOR_PREVIEW_KEY} from '../src/game/tracks/localKartingPreview.js';
 const points=[[100,100],[900,100],[900,800],[100,800]];
 function ring(x1,y1,x2,y2){
  const q=[[x1,y1],[x2,y1],[x2,y2],[x1,y2]];
@@ -52,6 +52,33 @@ assert.equal(store.get('tdr:trackstudio:karting-tenerife-preview-v1'),cachedBefo
  'Never overwrite a saved preview while fixing the size');
 store.set('tdr:trackstudio:karting-tenerife-preview-v1',JSON.stringify(record));
 assert.equal(getLocalKartingPreview('karting-tenerife'),null,'Official Karting Tenerife must never be overridden');
+const vectorEditor={...editor,imageCanvas:null};
+const importedVectorTrack={...track,meta:{
+ renderMode:'image-native',imageNative:{schema:1,imageId:'old-device'},
+ aiBezierLine:{version:1,nodes:[]}
+}};
+const vector=makeKartingPreviewRecord(vectorEditor,importedVectorTrack,{vectorOnly:true});
+assert.equal(vector.previewKind,'director-vector');
+assert.equal(vector.imageId,null);
+assert.equal(vector.imageMeta,null);
+assert.equal(vector.track.key,LOCAL_STUDIO_VECTOR_PREVIEW_KEY);
+assert.equal(vector.track.id,LOCAL_STUDIO_VECTOR_PREVIEW_KEY);
+assert.equal(vector.track.meta.source,'trackstudio-director-vector');
+assert.equal(vector.track.meta.renderMode,undefined,
+ 'A missing photo must never be treated as image-native');
+assert.equal(vector.track.meta.imageNative,undefined);
+assert.deepEqual(vector.track.trackShape,shape);
+store.set('tdr:trackstudio:vector-director-preview-v1',JSON.stringify(vector));
+assert.deepEqual(getLocalKartingPreview(LOCAL_STUDIO_VECTOR_PREVIEW_KEY),vector);
+assert.deepEqual(getLocalKartingPreview(LOCAL_KARTING_PREVIEW_KEY),record,
+ 'The vector test must not replace the working photographic preview');
+const badVector=structuredClone(vector);
+badVector.track.meta.renderMode='image-native';
+store.set('tdr:trackstudio:vector-director-preview-v1',JSON.stringify(badVector));
+assert.equal(getLocalKartingPreview(LOCAL_STUDIO_VECTOR_PREVIEW_KEY),null,
+ 'Never run technical mode as a fake photo');
+store.set('tdr:trackstudio:vector-director-preview-v1',JSON.stringify(vector));
+
 assert.throws(()=>makeKartingPreviewRecord({...editor,imageCanvas:null},track),/imagen/);
 assert.throws(()=>makeKartingPreviewRecord(editor,{...track,finishLine:null}),/meta/);
 assert.throws(()=>makeKartingPreviewRecord(editor,{...track,worldW:1001}),/dimensiones/);
@@ -83,11 +110,21 @@ assert.ok(studioScene.includes("localStorage.getItem('trackstudio_recovery')"),
   'Return must restore the autosaved edit session');
 assert.ok(studioScene.includes("this._applyProjectData(project)"),
   'Return restores master photo and Bezier geometry together');
-assert.ok(studioScene.includes("!project?.imageCanvas?.imageId"),
-  'Reject invalid or incomplete preview recovery');
+assert.ok(studioScene.includes("!project?.imageCanvas?.imageId") &&
+  studioScene.includes("!project?.aiBezierLine?.nodes?.length"),
+  'Allow photo-free edited Bézier recovery without accepting an empty project');
 assert.ok(pauseScene.includes("VOLVER A TRACK STUDIO"));
 assert.ok(pauseScene.includes("this.scene.start(this._returnSceneKey, this._returnSceneData || {})"));
 assert.ok(reportScene.includes("this.scene.start(this._returnSceneKey,this._returnSceneData||{})"));
 assert.ok(race.includes("this.scene.start(this._returnSceneKey, this._returnSceneData || {})"),
   'MENU/escape return must use the editor destination');
-console.log('Karting Tenerife local DEV test: separate key, exact independent borders, grass, spawn, isolation, valid gates: OK');
+const materials=readFileSync('src/game/scenes/RaceWorldAlignedMaterialsScene.js','utf8');
+assert.ok(materials.includes('applyKartingPreviewPhysics(this)'),
+ 'Photo-free director must use authored Bézier borders for road physics');
+assert.ok(race.includes('LOCAL_STUDIO_VECTOR_PREVIEW_KEY'),
+ 'Test mode and local geometry resolver must support isolated vector previews');
+assert.ok(editorSrc.includes('allowVectorOnly:true'),
+ 'Only guided AI Realizador may opt into vector fallback');
+assert.ok(editorSrc.includes('trackKey:vectorOnly?LOCAL_STUDIO_VECTOR_PREVIEW_KEY:LOCAL_KARTING_PREVIEW_KEY'),
+ 'Photo-free Realizador must launch the independent vector key');
+console.log('PASS photographic and vector-only local previews, independent keys, safe masks, editor return');
