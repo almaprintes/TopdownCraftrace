@@ -8,6 +8,7 @@ import {hideRaceUi,restoreRaceUi} from '../ui/raceUiVisibility.js';
 import {sampleShapeEdge,shapeIsValid} from '../studio/trackShapeGeometry.js';
 import {measureLateralUse,summarizeLateralUse} from './craftraceRacingLineTelemetry.js';
 import {buildDirectorLapReport,fmtDirectorTime} from './craftraceDirectorLapReport.js';
+import {buildDirectorDieAudit} from './craftraceDirectorDieAudit.js';
 import '../ui/craftraceDirectorPreview.css';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
@@ -92,6 +93,11 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
   <p>Cronometría local experimental: vueltas registradas al cruzar meta tras los dos controles. No homologada.</p>
   <p data-roadreport></p>
   <div class="crdir-lap-scroll" data-lap-table></div>
+  <details class="crdir-die-audit" data-die-audit hidden>
+   <summary>DIAGNÓSTICO G · TIRADAS AUTOMÁTICAS POR VUELTA</summary>
+   <div class="crdir-lap-scroll" data-die-table></div>
+   <small>La variación indicada es la amplitud máxima PLANIFICADA respecto a tu Bézier. No certifica por sí sola el seguimiento físico.</small>
+  </details>
   <button type="button" data-finish>VOLVER AL MENÚ</button></div>`;
  document.body.append(root);
  // Stop director touch events reaching legacy driver controls behind the view.
@@ -360,6 +366,40 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
        tbody.append(tr);
      });
      table.append(tbody);host.append(table);
+     const diceBox=$('[data-die-audit]');
+     // Rolls are fully invisible and automatic DURING the race. Only after
+     // all four cross the finish, offer a voluntary technical explanation.
+     if(bots.previewMode==='G'&&bots.previewBezierActive){
+       const audit=buildDirectorDieAudit(bots.results(),laps);
+       if(audit.complete){
+         const dieHost=$('[data-die-table]');
+         dieHost.replaceChildren();
+         const dieTable=document.createElement('table');
+         dieTable.className='crdir-lap-table crdir-die-table';
+         const header=document.createElement('thead'),headRow=document.createElement('tr');
+         for(const text of ['PILOTO',...Array.from({length:laps},(_,i)=>'V'+(i+1))]){
+           const th=document.createElement('th');th.scope='col';th.textContent=text;
+           headRow.append(th);
+         }
+         header.append(headRow);dieTable.append(header);
+         const body=document.createElement('tbody');
+         for(const row of audit.rows){
+           const tr=document.createElement('tr'),pilot=document.createElement('th');
+           pilot.scope='row';pilot.textContent='IA '+(row.seat+1);
+           tr.append(pilot);
+           for(const roll of row.rolls){
+             const cell=document.createElement('td');
+             cell.textContent=roll.face+'/6 · '+roll.plannedVariationPx.toFixed(1)+' px';
+             cell.title='Cara '+roll.face+' · separación máxima planificada '+
+               roll.plannedVariationPx.toFixed(1)+' píxeles';
+             tr.append(cell);
+           }
+           body.append(tr);
+         }
+         dieTable.append(body);dieHost.append(dieTable);
+         diceBox.hidden=false;
+       }
+     }
      const used=summarizeLateralUse(lateralSamples.flat());
      const guide=bots.previewGuideReport;
      $('[data-roadreport]').textContent='TRAZADA '+bots.previewMode+
