@@ -200,15 +200,16 @@ export function mountTrackStudioLabChrome(scene,gate){
   splinePanel.hidden=true;
   const splineTitle=make('strong','ts-lab__ai-title','TRAZADA MAESTRA · BÉZIER');
   const splineSummary=make('div','ts-lab__ai-summary','Crea la base siguiendo el eje central');
-  const splineGenerate=button('GENERAR BASE',()=>scene._aiBezierGenerate?.(),'ts-lab__ai-test');
+  const splineGenerate=button('GENERAR DESDE GUÍAS',()=>scene._aiBezierGenerate?.(),'ts-lab__ai-test');
+  const splineAxis=button('DESDE EJE (SIN GUÍAS)',()=>scene._aiBezierGenerate?.(true),'ts-lab__ai-step');
   const splineInsert=button('+ NODO',()=>scene._aiBezierInsert?.(),'ts-lab__ai-step');
   const splineDelete=button('BORRAR NODO',()=>scene._aiBezierDelete?.(),'ts-lab__ai-delete');
   const splineClear=button('BORRAR TRAZADA',()=>scene._aiBezierClear?.(),'ts-lab__ai-delete');
   const splineValidate=button('✓ VALIDAR TRAZADA',()=>scene._aiBezierValidate?.(),'ts-lab__ai-test');
   const splineTry=button('▶ PROBAR BÉZIER IA',()=>scene._startGuidedAiPreview?.(),'ts-lab__ai-test');
   const splineHint=make('small','ts-lab__ai-hint',
-   'Selecciona un nodo; vuelve a arrastrarlo o mueve sus tiradores. + NODO conserva la curva.');
-  splinePanel.append(splineTitle,splineSummary,splineGenerate,
+   'Los puntos guía son vértices exactos. Las conexiones siguen el circuito y puedes ajustar los tiradores.');
+  splinePanel.append(splineTitle,splineSummary,splineGenerate,splineAxis,
     splineInsert,splineDelete,splineClear,splineValidate,splineTry,splineHint);
   const nudge=make('div','ts-lab__nudge');
   const nudgeTitle=make('span','','MOVER SELECCIÓN');
@@ -282,13 +283,18 @@ export function mountTrackStudioLabChrome(scene,gate){
     splinePanel.hidden=!editingSpline;
     splineTry.disabled=!(scene._aiBezierLine?.nodes?.length>=3);
     splineValidate.disabled=!(scene._aiBezierLine?.nodes?.length>=3);
+    const existingGuides=scene._aiLineGuides?.length||0;
+    splineGenerate.disabled=!existingGuides;
+    state(splineGenerate,existingGuides?
+      'GENERAR DESDE '+existingGuides+' GUÍAS':'SIN GUÍAS · USA DESDE EJE');
     splineInsert.disabled=splineDelete.disabled=scene._aiBezierSelected<0;
     splineClear.disabled=!(scene._aiBezierLine?.nodes?.length);
     if(editingSpline){
       const count=scene._aiBezierLine?.nodes?.length||0;
-      state(splineSummary,count?('NODOS '+count+' · '+
+      state(splineSummary,count?('NODOS BÉZIER '+count+' · GUÍAS '+existingGuides+' · '+
         (scene._aiBezierSelected<0?'TOCA PARA SELECCIONAR':'EDITANDO NODO '+(scene._aiBezierSelected+1))):
-        'GENERAR BASE · no modifica la pista');
+        (existingGuides?'USA TUS GUÍAS EXISTENTES PARA CREAR LA TRAYECTORIA':
+         'SIN GUÍAS: GENERA DESDE EL EJE · NO MODIFICA LA PISTA'));
     }
     aiPanel.hidden=!editingAi;
     aiTry.disabled=!(scene._aiLineGuides?.length);
