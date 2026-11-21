@@ -1,7 +1,7 @@
 // CraftRace LIVE 4 — default multiplayer lobby on the browser DEV route only.
 // Race start remains server-authorized, unofficial, and isolated from public/native builds.
 import {createLiveV2Lobby,joinLiveV2Lobby,configureLiveV2Lobby,
-  setReadyLiveV2Lobby,leaveLiveV2Lobby,startLiveV2Lobby,
+  setReadyLiveV2Lobby,leaveLiveV2Lobby,startLiveV2Lobby,setLiveV2Venue,
   CrafRaceLiveV2LobbyMonitor} from '../online/craftraceLiveV2LobbyClient.js';
 import {stageLive4RaceSession} from '../online/craftraceLiveV2RaceSession.js';
 import {liveIdentity} from '../online/craftraceLiveTransport.js';
@@ -15,7 +15,7 @@ import {CAR_SPECS} from '../cars/carSpecs.js';
 import {unlockedCarIds,STARTER_CAR_ID} from '../cars/carUnlocks.js';
 import './craftraceLiveV2Lobby.css';
 
-export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenClassic=null}={}){
+export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenClassic=null,initialRoom=null}={}){
   if(document.getElementById('cr-live4'))return;
   const race4Enabled=(window.location.pathname.includes('/dev/')||
     ['localhost','127.0.0.1'].includes(window.location.hostname))&&
@@ -220,15 +220,15 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
       const label=document.createElement('small');label.textContent='PLAZA '+(seat.index+1);card.append(label);
       const name=document.createElement('strong');
       name.textContent=seat.kind==='human'
-        ?live4SeatName({seat:seat.index,kind:'human',player_id:seat.playerId},s.members)
+        ?live4SeatName({seat:seat.index,kind:'human',player_id:seat.playerId},s.members,s.ai_identity_seed||s.id)
         :seat.kind==='ai'
-          ?live4SeatName({seat:seat.index,kind:'ai',difficulty:seat.difficulty},s.members)
+          ?live4SeatName({seat:seat.index,kind:'ai',difficulty:seat.difficulty},s.members,s.ai_identity_seed||s.id)
           :'LIBRE';
       card.append(name);
       const status=document.createElement('span');
       status.textContent=seat.kind==='human'
         ?seat.online?(seat.ready?'LISTO':'CONECTADO'):'SIN CONEXIÓN'
-        :seat.kind==='ai'?'RESERVA PROVISIONAL':'ESPERANDO INVITACIÓN';
+        :seat.kind==='ai'?'PILOTO IA · ELO PROVISIONAL':'ESPERANDO INVITACIÓN';
       card.append(status);row.append(card);
     }
     const me=s.members.find(m=>m.player_id===identity.id);
@@ -350,14 +350,18 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   });
   $('[data-apply]').addEventListener('click',()=>void action(async()=>{
     if(!room)return;
-    const state=await configureLiveV2Lobby(room.id,{
+    let state=await configureLiveV2Lobby(room.id,{
       capacity:Number($('[data-edit-capacity]').value),
       fillWithAi:$('[data-edit-fill]').checked,
       aiDifficulty:Number($('[data-edit-ai]').value)
     });
+    const venueTrack=$('[data-edit-track]').value,venueCar=$('[data-edit-car]').value;
+    if(venueTrack!==state.track_id||venueCar!==state.car_id)
+      state=await setLiveV2Venue(room.id,venueTrack,venueCar);
     hydrated=false;
-    setLive4GuidedGForRoom(room.id,gSupported&&$('[data-edit-guided-g]').checked&&
-      state.ai_difficulty===3&&state.fill_ai===true);
+    setLive4GuidedGForRoom(room.id,isLive4GuidedGSupported({
+      trackId:state.track_id,dev:race4Enabled,aiDifficulty:3})&&
+      $('[data-edit-guided-g]').checked&&state.ai_difficulty===3&&state.fill_ai===true);
     const {liveV2Grid}=await import('../online/craftraceLiveV2Roster.js');
     await update(state,liveV2Grid(state));
     say('Cambios aplicados. Los pilotos deben confirmar de nuevo.');
@@ -384,5 +388,9 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     if(state.rejoinable){say('Puedes volver con el mismo código. Tu plaza está reservada.');return;}
     disconnect();say(host?'Pista cerrada.':'Has abandonado la pista.');
   }));
+  // Authenticated rematches arrive as new waiting rooms. Only prior
+  // participants may enter through the server-authorized accept RPC.
+  if(initialRoom?.id&&Array.isArray(initialRoom.members))
+    void enter(initialRoom).catch(e=>say('No se pudo abrir la revancha: '+e.message));
   return dispose;
 }
