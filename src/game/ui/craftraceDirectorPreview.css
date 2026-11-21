@@ -95,3 +95,23 @@ body.tdr-director-active .tdr-race-hud{
 #cr-director .crdir-results [data-session]{color:#ffe1ac;font-weight:850;
  font-size:12px;text-align:center;max-width:95vw}
 @media(max-width:780px){#cr-director .crdir-top [data-config]{display:none}}
+
+/* LOCAL Realizador A/B: only visual telemetry, never a driving overlay. */
+#cr-director .crdir-line-legend{
+ position:absolute;left:50%;bottom:max(8px,env(safe-area-inset-bottom));
+ transform:translateX(-50%);display:flex;gap:9px;align-items:center;
+ padding:5px 8px;border:1px solid #42788a;border-radius:6px;
+ background:#071b2bd9;pointer-events:none;white-space:nowrap;
+ font-size:9px;letter-spacing:.02em}
+#cr-director .crdir-line-legend span{font-weight:900}
+#cr-director .crdir-center{color:#67d7ff}
+#cr-director .crdir-target{color:#ffcb65}
+#cr-director .crdir-ai1{color:#ffc35b}
+#cr-director .crdir-ai2{color:#73d7ff}
+#cr-director .crdir-ai3{color:#ee81ce}
+#cr-director .crdir-ai4{color:#9affbb}
+#cr-director .crdir-top button:disabled{opacity:.55;cursor:default}
+@media(max-width:750px){
+ #cr-director .crdir-line-legend{font-size:8px;gap:5px;bottom:2px}
+ #cr-director .crdir-top button{font-size:9px;padding:4px 5px}
+}

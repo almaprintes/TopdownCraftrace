@@ -195,6 +195,36 @@ export function buildTrackRacingLineModel(track,options={}){
   const offsetScale=clamp(Number(options.offsetScale??1),.35,1);
   if(offsetScale!==1)offsets=offsets.map(v=>v*offsetScale);
 
+
+  // DEV Realizador A/B only: a bounded outside-apex-outside candidate.
+  // The normal Expert line is left unchanged. The real surface/kerb
+  // collision envelope is still authoritative; this never grants grip.
+  if(options.racecraftPreview===true){
+    const n=base.length,turns=curvature(base),radius=9;
+    const signal=(index)=>{
+      let sum=0,total=0;
+      for(let d=-radius;d<=radius;d++){
+        const weight=radius+1-Math.abs(d);
+        sum+=turns[((index+d)%n+n)%n]*weight;total+=weight;
+      }
+      return clamp(sum/(total*.03),-1,1);
+    };
+    const desired=offsets.map((_,i)=>limits[i]*clamp(
+      1.30*signal(i)-.45*signal(i+20)-.45*signal(i-20),-.70,.70
+    ));
+    // Keep the entry/exit transition gradual rather than creating a
+    // hard lateral zigzag that would require impossible yaw.
+    for(let pass=0;pass<12;pass++){
+      const copy=desired.slice();
+      for(let i=0;i<n;i++)desired[i]=(
+        copy[(i-2+n)%n]+2*copy[(i-1+n)%n]+4*copy[i]+
+        2*copy[(i+1)%n]+copy[(i+2)%n])/10;
+    }
+    offsets=offsets.map((v,i)=>clamp(
+      v*.55+desired[i]*.45,-limits[i],limits[i]
+    ));
+  }
+
   const racingLine=materialize(base,frame,offsets);
   const curve=curvature(racingLine);
   const clearances=limits.map((limit,i)=>limit-Math.abs(offsets[i])+safetyMargin);
@@ -222,7 +252,8 @@ export function buildTrackRacingLineModel(track,options={}){
       sourceMaxTurn:conditioning.sourceMaxTurn,
       referenceConditioningMaxShift:conditioning.maxShift,
       offsetScale,
-      apexCommitment
+      apexCommitment,
+      ...(options.racecraftPreview===true?{racecraftPreview:true}:{})
     }
   };
 }

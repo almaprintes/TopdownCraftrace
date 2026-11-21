@@ -31,6 +31,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const bots=new CrafRaceLive4BotDirector(scene,{
    roster,hostId,localId:hostId,startingGrid:grid,laps,preview:true
  });
+ // Prototype B is opt-in to this local spectator/diagnostic session only.
+ // Online LIVE 4 and all its original physical AI profiles remain unchanged.
+ bots.setPreviewRacecraft(true);
  // Director races have no ignition button, no human grid slot and no online
  // ready handshake. Own the 3-second green-light deadline locally, independently
  // of the driver scene's iOS static-track readiness flag.
@@ -60,8 +63,16 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  <div class="crdir-top">
   <strong>REALIZADOR · 4 IA · NIVEL ${difficulty}</strong>
   <small data-config></small><output data-state>SALIDA EN PREPARACIÓN</output>
+  <button type="button" data-mode>B · VÉRTICES</button>
+  <button type="button" data-lines>TRAZAS · ON</button>
   <button type="button" data-auto>AUTO · ACCIÓN</button>
   <button type="button" data-exit>SALIR</button>
+ </div>
+ <div class="crdir-line-legend" data-legend>
+  <span class="crdir-center">EJE</span>
+  <span class="crdir-target">OBJETIVO</span>
+  <span class="crdir-ai1">IA 1</span><span class="crdir-ai2">IA 2</span>
+  <span class="crdir-ai3">IA 3</span><span class="crdir-ai4">IA 4</span>
  </div>
  <div class="crdir-stickbox"><div data-stick class="crdir-stick" role="group"
    aria-label="Palanca izquierda: mover dron en todas las direcciones y controlar velocidad">
@@ -80,10 +91,52 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    root.addEventListener(ev,e=>e.stopPropagation());
  const $=s=>root.querySelector(s);
  $('[data-config]').textContent=circuitLabel+' · '+carLabel+' · '+difficultyName;
- $('[data-session]').textContent=setupLabel+' · FÍSICA A';
+ const updateModeLabel=()=>{
+   $('[data-mode]').textContent=bots.previewRacecraft?'B · VÉRTICES':'A · ORIGINAL';
+   $('[data-session]').textContent=setupLabel+' · FÍSICA A · TRAZADA '+
+     (bots.previewRacecraft?'B EXPERIMENTAL':'A ORIGINAL');
+ };
+ updateModeLabel();
  const keyboard=new Set;let stopped=false,shown=false,stickPointer=null;
  let heightPointer=null,lastInfo=0;
  let stickVector={x:0,y:0},altitudeAxis=0;
+ // World-space telemetry, drawn only for the Realizador and destroyed on exit.
+ // Actual pilot tracks are sampled at a bounded rate to protect mobile FPS.
+ const traceColors=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
+ const trail=bots.bots.map(()=>[]);
+ let showLines=true,lastTrace=0,lastLinePaint=-1;
+ const lineGraphics=scene.add.graphics().setDepth(38);
+ const drawLine=(points,color,width,alpha,close)=>{
+   if(points.length<2)return;
+   lineGraphics.lineStyle(width,color,alpha);
+   lineGraphics.beginPath();
+   lineGraphics.moveTo(points[0].x,points[0].y);
+   for(let i=1;i<points.length;i++)lineGraphics.lineTo(points[i].x,points[i].y);
+   if(close)lineGraphics.closePath();
+   lineGraphics.strokePath();
+ };
+ const paintLines=(now)=>{
+   if(!showLines){lineGraphics.clear();return;}
+   if(now-lastLinePaint<180)return;
+   lastLinePaint=now;lineGraphics.clear();
+   const data=bots.diagnosticLines();
+   drawLine(data.centerline,0x67d7ff,3,.70,true);
+   drawLine(data.target,0xffcb65,4,.96,true);
+   trail.forEach((points,i)=>drawLine(points,traceColors[i],3,.85,false));
+ };
+ const captureTrails=(now)=>{
+   if(!showLines||now-lastTrace<180)return;
+   lastTrace=now;
+   bots.bots.forEach((bot,i)=>{
+     const p=bot.plannerBody,history=trail[i];
+     if(!p||!scene._raceStarted||!Number.isFinite(p.x)||!Number.isFinite(p.y))return;
+     const last=history[history.length-1];
+     if(!last||Math.hypot(last.x-p.x,last.y-p.y)>=5){
+       history.push({x:p.x,y:p.y});
+       if(history.length>900)history.shift();
+     }
+   });
+ };
  const firstGridCar=grid.positions[0];
  let camera=makeDirectorCameraState({x:firstGridCar.x,y:firstGridCar.y,
    heading:firstGridCar.r});
@@ -146,6 +199,19 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  const exit=()=>{if(!stopped)scene.scene.start('menu');};
  $('[data-exit]').addEventListener('click',exit);
  $('[data-finish]').addEventListener('click',exit);
+ $('[data-mode]').addEventListener('click',()=>{
+   if(scene._raceStarted)return;
+   if(bots.setPreviewRacecraft(!bots.previewRacecraft)){
+     trail.forEach(points=>points.length=0);
+     lastLinePaint=-1;updateModeLabel();paintLines(performance.now());
+   }
+ });
+ $('[data-lines]').addEventListener('click',()=>{
+   showLines=!showLines;
+   $('[data-lines]').textContent=showLines?'TRAZAS · ON':'TRAZAS · OFF';
+   $('[data-legend]').hidden=!showLines;
+   lastLinePaint=-1;paintLines(performance.now());
+ });
  $('[data-auto]').addEventListener('click',()=>{
    camera.auto=!camera.auto;camera.speed=0;
    $('[data-auto]').textContent=camera.auto?'AUTO ACTIVADO':'AUTO · ACCIÓN';
@@ -192,6 +258,8 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
      scene.lapStartTick=scene.simTick;
    }
    bots.update(deltaMs,now,scene._raceStarted===true);
+   if(scene._raceStarted)$('[data-mode]').disabled=true;
+   captureTrails(now);paintLines(now);
    if(now-lastInfo>=500){
      lastInfo=now;const stats=bots.stats();
      $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN '+countdown.seconds)+
@@ -214,6 +282,7 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    document.removeEventListener('keydown',keyDown,true);
    document.removeEventListener('keyup',keyUp,true);
    keyboard.clear();stickVector={x:0,y:0};altitudeAxis=0;
+   lineGraphics.destroy();
    bots.destroy();root.remove();
    document.removeEventListener('focusin',suppressTextFocus,true);
    restoreRaceUi(scene,hiddenUi);

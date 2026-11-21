@@ -31,6 +31,7 @@ export class CrafRaceLive4BotDirector{
   this.scene=scene;this.bots=[];this.laps=clamp(Math.floor(laps),1,30);
   this.lastUpdated=0;this.lastCpuMs=0;this.cpuTotalMs=0;this.cpuSamples=0;
   this.profiles=new Map();
+  this.preview=preview===true;this.raceStarted=false;
   if(ai.length===0){this.profile=null;return;}
   if(scene.track?.closed===false||scene.track?.meta?.closed===false)
     throw Error('Live AI currently requires a closed circuit');
@@ -44,7 +45,13 @@ export class CrafRaceLive4BotDirector{
   const trackGeometry={raceCenterline:centerline,trackWidth:width};
   const line=buildTrackRacingLineModel(trackGeometry);
   const expertLine=buildTrackRacingLineModel(trackGeometry,{apexCommitment:.22});
-  if(!expertLine.valid||expertLine.racingLine.length!==line.racingLine.length)
+  this.standardExpertLine=expertLine;
+  this.previewExpertLine=preview?buildTrackRacingLineModel(trackGeometry,{
+    apexCommitment:.22,racecraftPreview:true
+  }):null;
+  if(!expertLine.valid||expertLine.racingLine.length!==line.racingLine.length||
+     (preview&&(!this.previewExpertLine?.valid||
+       this.previewExpertLine.racingLine.length!==line.racingLine.length)))
     throw Error('Expert racing line invalid');
   // Previously the planner assumed 520px/s while the actual car was limited
   // to ~420px/s. The controller normalized twice and drove every bot too slowly.
@@ -70,6 +77,19 @@ export class CrafRaceLive4BotDirector{
     if(!profile.valid||!Array.isArray(profile.samples)||profile.samples.length<12)
       throw Error('No se puede preparar IA física para este circuito');
     this.profiles.set(Number(level),profile);
+  }
+  this.standardExpertProfile=this.profiles.get(3);
+  this.previewExpertProfile=null;this.previewRacecraft=false;
+  if(preview){
+    this.previewExpertProfile=buildTrackManeuverPlan(buildTrackSpeedProfile(
+      this.previewExpertLine,{
+        maxSpeed:maxFwd,lateralAccel:LIVE4_AI_LEVELS[3].plannerLateralAccel,
+        minCornerSpeed:80,maxYawRate:yawAtSpeed,curvatureSmoothWindow:21,
+        driveAccel,brakeDecel
+      }));
+    if(!this.previewExpertProfile.valid)throw Error('Preview racecraft plan invalid');
+    this.previewExpertProfile.live4CurveComplexity=
+      this.previewExpertLine.metrics.meanAbsCurvature;
   }
   this.profile=this.profiles.get(3);this.spacing=Number(line.spacing||10);
   const sprite=scene.carRig?.list?.find?.(item=>item?.texture?.key);
@@ -108,12 +128,27 @@ export class CrafRaceLive4BotDirector{
    this.bots.push(bot);
   }
  }
+ // A/B selection is locked as soon as the local green light is given.
+ // Never available to hosted rooms or ordinary LIVE 4 matches.
+ setPreviewRacecraft(enabled){
+  if(!this.preview||this.raceStarted||!this.previewExpertProfile)return false;
+  this.previewRacecraft=enabled===true;
+  this.profiles.set(3,this.previewRacecraft
+    ?this.previewExpertProfile:this.standardExpertProfile);
+  this.profile=this.profiles.get(3);
+  return true;
+ }
+ diagnosticLines(){
+  const line=this.previewRacecraft?this.previewExpertLine:this.standardExpertLine;
+  return{centerline:line?.centerline||[],target:line?.racingLine||[]};
+ }
  update(deltaMs,now,started){
   if(!this.bots.length)return [];
   const scene=this.scene;
   // Refresh even during countdown, after the host's skin promise resolves.
   for(const bot of this.bots)syncLive4CarVisual(scene,bot.visual,TINTS[bot.seat]);
   if(!started)return [];
+  this.raceStarted=true;
   const startedCpu=performance.now();
   const dt=clamp((Number(deltaMs)||16.667)/1000,.001,.05),packets=[];
   const maxSpeed=Math.max(80,Number(scene.maxFwd||scene.carParams?.maxFwd||420));
