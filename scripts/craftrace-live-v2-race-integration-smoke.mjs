@@ -68,8 +68,8 @@ assert.ok(localProducer.includes('data-session')&&localProducer.includes('setupL
 const lobbyForDirector=file('src/game/ui/craftraceLiveV2Lobby.js');
 assert.ok(lobbyForDirector.includes("const difficulty=Number($('[data-director-ai]').value)"),
  'Producer must not inherit online level 2 by default');
-assert.ok(localProducer.includes('const directorGreenAt=performance.now()+3000'),
- 'A director race needs an independent 3-second countdown');
+assert.ok(localProducer.includes('const directorGreenAt=performance.now()+(bots.previewGuidedProfile?8500:3000)'),
+ 'Director must keep classic 3-second countdown and allow longer selection for guided preview');
 assert.ok(localProducer.includes('directorStartPhase(now,directorGreenAt)')&&
  localProducer.includes("scene._startState='RACING'")&&
  localProducer.includes('scene._raceStarted=true'),
