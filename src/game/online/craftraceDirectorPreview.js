@@ -313,8 +313,11 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
        ' · '+(guide?'GUÍAS '+guide.accepted+'/'+guide.total+
          ' · G '+(guide.active?'ACTIVA':'NO DISPONIBLE'):'SIN GUÍAS')+
        ' · '+(hasAuthoredBounds?'BORDES AUTÉNTICOS':'SIN BORDES');
+     const dieStatus=bots.previewMode==='G'&&stats.dice
+       ?' · DADOS '+stats.dice.map(d=>'IA'+(d.seat+1)+':'+d.face+
+         '/'+d.tolerancePx+'px').join(' '):'';
      $('[data-state]').textContent=(scene._raceStarted?'EN DIRECTO':'SALIDA EN '+countdown.seconds)+
-      ' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
+      dieStatus+' · FINALIZADAS '+stats.finished+'/4 · DRON '+Math.round(camera.speed)+
       ' · ZOOM '+directorZoom(camera.altitude).toFixed(2)+'×';
      $('[data-auto]').textContent=camera.auto?'AUTO ACTIVADO':'AUTO · ACCIÓN';
    }
@@ -324,13 +327,18 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
      const list=$('[data-order]');list.replaceChildren();
      for(const item of ordered){const li=document.createElement('li');
        const stat=summarizeLateralUse(lateralSamples[item.seat]);
+       const accuracy=bots.previewMode==='G'&&item.guidedLapHistory?.length
+         ?' · DADOS '+item.guidedLapHistory.map(l=>l.die+
+           ' ('+l.hits+'/'+l.checked+' guías)').join(' / '):'';
        li.textContent='IA '+(item.seat+1)+' · '+fmt(item.elapsedMs)+
-         ' · LATERAL '+(stat.samples?stat.meanPct+'%':'—');list.append(li);}
+         ' · LATERAL '+(stat.samples?stat.meanPct+'%':'—')+accuracy;list.append(li);}
      const used=summarizeLateralUse(lateralSamples.flat());
      const guide=bots.previewGuideReport;
      $('[data-roadreport]').textContent='TRAZADA '+bots.previewMode+
        ' · Uso lateral medio: '+(used.samples?used.meanPct+'%':'sin medición')+
        ' del semiancho útil estimado; muestras ≥70%: '+used.nearEdgePct+'%. '+
+       (bots.previewMode==='G'?'Dado por IA y vuelta: 1-2 = 35px, 3-4 = 20px, 5-6 = 5px. '+
+        'Los aciertos son distancias físicas medidas; no se fuerza la posición. ':'')+
        (guide?'Guías admitidas '+guide.accepted+'/'+guide.total+
         (guide.active?' · trazada G NO HOMOLOGADA':' · trazada G no disponible')+
         ' · '+(guide.entries||[]).filter(e=>e.status!=='accepted')
