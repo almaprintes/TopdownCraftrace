@@ -37,7 +37,7 @@
 .rc2-symbol-ghosts:after{content:'◉'}
 .rc2-symbol-events:after{content:'▦'}
 .rc2-symbol-pilots:after{content:'♙'}
-.rc2-symbol-cars:after{content:'⚙'}
+.rc2-symbol-circuits:after{content:'⚑'}
 .rc2-symbol-seasons:after{content:'✦'}
 .rc2-heading-text{min-width:0}
 .rc2-heading h2{margin:0;font-family:Impact,'Arial Narrow',system-ui,sans-serif;font-size:clamp(14px,2.5vw,46px);font-style:normal;font-weight:1000;line-height:.98;letter-spacing:.008em;white-space:nowrap;text-overflow:clip}
@@ -65,7 +65,7 @@
 .rc2-rival-gold{background:linear-gradient(90deg,#ffaf00,#ffdb26)}
 .rc2-rival-actions button:active{filter:brightness(1.22)}
 .rc2-side-car{position:absolute;bottom:-19%;right:-15%;height:98%;width:102%;object-fit:contain;object-position:right center;filter:drop-shadow(0 10px 7px #000);transform:rotate(-13deg)}
-.rc2-cars .rc2-side-car{height:112%;bottom:-33%;right:-24%;transform:rotate(9deg)}
+.rc2-circuits:before{background-position:center center}
 .rc2-seasons .rc2-side-car{bottom:-33%;right:-26%;height:121%;transform:rotate(-11deg)}
 .rc2-footer{flex:0 0 clamp(28px,5.8vh,46px);display:flex;align-items:center;justify-content:space-between;gap:14px;padding:2px max(17px,env(safe-area-inset-right)) 2px max(17px,env(safe-area-inset-left));border-top:1px solid #0aa7dd;background:linear-gradient(90deg,#03192c,#03243b,#02101e);font:800 clamp(8px,.95vw,13px)/1.2 system-ui,sans-serif}
 .rc2-footer-id{color:#6fe7ff;white-space:nowrap;letter-spacing:.04em}
@@ -79,3 +79,10 @@
 /* LIVE is a real playable DEV destination; its label never blocks the panel hit area. */
 .rc2-multiplayer .rc2-status--live{background:linear-gradient(110deg,#20bee5,#69eaff);color:#002333;border:1px solid #90f8ff;pointer-events:none;box-shadow:0 0 14px #1fd1ee55}
 .rc2-multiplayer:focus-within{outline:2px solid #ffce58;outline-offset:-4px}
+
+/* RACE CONTROL DEV: real circuit archive, not a fake fixed car per AI. */
+.rc2-track-summary{position:absolute;bottom:12px;left:12px;padding:5px 10px;
+ background:linear-gradient(90deg,#09334f,#0d6a89cc);
+ color:#a9f1ff;border-left:3px solid #4ce3ff;
+ font:900 clamp(9px,1.03vw,14px) system-ui,sans-serif;letter-spacing:.06em}
+.rc2-status--archive{background:#08547a;border:1px solid #66cdea;color:#dcf8ff}
