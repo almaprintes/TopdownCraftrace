@@ -2650,6 +2650,7 @@ const targetS = finishS - correctedOffset;
       version: 1,
       catalogTrackId: this._catalogTrackId || null,
       catalogSourceSignature: this._catalogSourceSignature || null,
+      catalogRaceDirection: this._catalogRaceDirection || null,
       nodes: this._nodes,
       trackWidth: this._trackWidth,
       isClosed: this._isClosed,
@@ -2884,6 +2885,7 @@ _loadTrack() {
     this._importedTrackMeta = data.importedTrackMeta || null;
     this._catalogTrackId = data.catalogTrackId || null;
     this._catalogSourceSignature = data.catalogSourceSignature || null;
+    this._catalogRaceDirection = data.catalogRaceDirection || null;
 
     if (this._guideImage) {
       this._guideImage.setAlpha(this._guideAlpha);
@@ -3083,6 +3085,7 @@ const data = {
     // File imports do not inherit the previous catalog circuit identity.
     this._catalogTrackId = null;
     this._catalogSourceSignature = null;
+    this._catalogRaceDirection = null;
     if (data?.editor || Array.isArray(data?.nodes)) {
       this._applyProjectData(data.editor || data);
       return;
@@ -3160,6 +3163,7 @@ const data = {
     this._importedTrackMeta = null;
     this._catalogTrackId = null;
     this._catalogSourceSignature = null;
+    this._catalogRaceDirection = null;
 
     this._updateToolButtons();
     this._updatePanel();
