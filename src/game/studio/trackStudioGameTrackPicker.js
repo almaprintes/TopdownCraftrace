@@ -17,8 +17,9 @@ const paint=(canvas,track)=>{
  if(points.length<2)return;
  const width=canvas.width,height=canvas.height;
  ctx.fillStyle='#091623';ctx.fillRect(0,0,width,height);
- const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
- const minX=Math.min(...xs),minY=Math.min(...ys),maxX=Math.max(...xs),maxY=Math.max(...ys);
+ let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+ for(const p of points){minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);
+  maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y);}
  const scale=Math.min((width-22)/Math.max(1,maxX-minX),(height-14)/Math.max(1,maxY-minY));
  const ox=(width-(maxX-minX)*scale)/2,oy=(height-(maxY-minY)*scale)/2;
  const step=Math.max(1,Math.ceil(points.length/700));
@@ -43,10 +44,10 @@ const STATES={
  incompatible:['GEOMETRÍA CAMBIADA','#ff9e97'],
  source:['GUÍAS DE ORIGEN','#9dc8f6']
 };
-export function openTrackStudioGameTrackCatalog(scene,keys,createTrack){
+export function openTrackStudioGameTrackCatalog(scene,keys,readTrack,cloneTrack=readTrack){
  if(typeof document==='undefined')return;
  scene?._closeGameTrackCatalog?.();
- const entries=buildAiTrackCatalog(keys,createTrack);
+ const entries=buildAiTrackCatalog(keys,readTrack);
  const previous=document.activeElement;
  let filter='Todos',search='',showHidden=false;
  const root=css(element('div'),
@@ -106,11 +107,10 @@ export function openTrackStudioGameTrackCatalog(scene,keys,createTrack){
    scene._flashMessage?.('La guía guardada no coincide con la geometría actual. Exporta la copia anterior antes de continuar.');
    return;
   }
-  const track={...entry.track,
-   aiLineGuides:draft?draft.guides:
-    entry.track.aiLineGuides||entry.track.meta?.aiLineGuides,
-   aiBezierLine:draft?draft.bezier:
-    entry.track.aiBezierLine||entry.track.meta?.aiBezierLine};
+  const selected=cloneTrack(entry.id);
+  const track={...selected,
+   aiLineGuides:draft?draft.guides:selected.aiLineGuides||selected.meta?.aiLineGuides,
+   aiBezierLine:draft?draft.bezier:selected.aiBezierLine||selected.meta?.aiBezierLine};
   try{
    scene._pushHistory?.();
    scene._catalogHydrating=true;
