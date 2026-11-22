@@ -9,6 +9,12 @@ import {buildTrackRacingLineModel} from '../ai/trackRacingLinePlanner.js';
 import {buildBezierAiRacingLineModel} from '../ai/trackBezierAiRacingLinePlanner.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+// The road remains unchanged, but reverse races require a reversed teaching
+// order (and reversed Bézier handles) for apexes, tangents and validation.
+const nodesInRaceDirection=scene=>scene._catalogRaceDirection==='reverse'
+ ?scene._nodes.slice().reverse().map(p=>({...p,
+   handleIn:{...p.handleOut},handleOut:{...p.handleIn}}))
+ :scene._nodes;
 function draw(scene){
  const gfx=scene._aiBezierGfx;
  if(!gfx)return;
@@ -103,10 +109,10 @@ export function installTrackStudioAiBezier(scene){
   try{
    const fromGuides=!forceAxis&&guideCount>0;
    const generated=fromGuides?createAiBezierFromGuides(
-     scene._nodes,scene._aiLineGuides,
+     nodesInRaceDirection(scene),scene._aiLineGuides,
      {trackWidth:scene._trackWidth}
    ):null;
-   const next=generated?.line||createAiBezierFromTrackNodes(scene._nodes,32);
+   const next=generated?.line||createAiBezierFromTrackNodes(nodesInRaceDirection(scene),32);
    if(!next)throw Error('No se pudo generar la curva');
    scene._pushHistory();
    scene._aiBezierLine=next;
@@ -131,7 +137,9 @@ export function installTrackStudioAiBezier(scene){
    const track=scene._exportToGameTrack();
    if(!track?.centerline?.length)throw Error('Circuito sin eje de pista');
    const base=buildTrackRacingLineModel({
-     raceCenterline:track.centerline,trackWidth:track.trackWidth
+     raceCenterline:scene._catalogRaceDirection==='reverse'?
+      track.centerline.slice().reverse():track.centerline,
+     trackWidth:track.trackWidth
    },{apexCommitment:.22});
    const result=buildBezierAiRacingLineModel(base,scene._aiBezierLine,
      scene._trackShape,track,{carRadius:14});
