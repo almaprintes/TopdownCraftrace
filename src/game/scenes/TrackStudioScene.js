@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
-import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
+import { createTrack, getTrackKeys, TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { installTrackStudioImageMode, importImageProjectFile } from '../studio/installImageMode.js';
 import { looksLikeImageProject } from '../studio/imageCanvasProject.js';
 import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
@@ -3002,7 +3002,7 @@ const data = {
   }
 
   _openGameTrackSourceMenu() {
-    openTrackStudioGameTrackCatalog(this,getTrackKeys(),createTrack);
+    openTrackStudioGameTrackCatalog(this,getTrackKeys(),id=>TRACK_REGISTRY[id],createTrack);
   }
 
   _createProjectInput() {
