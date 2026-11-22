@@ -1,0 +1,26 @@
+name: Karting Canarias 4096 · IA del Realizador (no deploy)
+on:
+  pull_request:
+    paths:
+      - 'src/game/online/craftraceKartingCanariasAuthorBezier.js'
+      - 'src/game/online/craftraceDirectorGuideSource.js'
+      - 'scripts/trackstudio-karting-canarias-author-bezier-smoke.mjs'
+      - '.github/workflows/karting-canarias-ai-authoring.yml'
+jobs:
+  author-geometry:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies and exact owner photo circuit
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/install-karting-canarias-4096-source.mjs
+      - name: Verify hand-tuned AI path against original road
+        run: |
+          test -f src/game/tracks/library/karting-canarias-4096/track.json
+          node scripts/trackstudio-karting-canarias-author-bezier-smoke.mjs
