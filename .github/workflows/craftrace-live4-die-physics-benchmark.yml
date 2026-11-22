@@ -1,0 +1,35 @@
+name: CraftRace · auditoría física dados Bézier (no deploy)
+on:
+  pull_request:
+    paths:
+      - 'scripts/craftrace-live4-die-physics-benchmark.mjs'
+      - '.github/workflows/craftrace-live4-die-physics-benchmark.yml'
+  workflow_dispatch:
+jobs:
+  controlled-dice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies and original Karting Canarias road
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/install-karting-canarias-4096-source.mjs
+      - name: Verify benchmark syntax
+        run: node --check scripts/craftrace-live4-die-physics-benchmark.mjs
+      - name: Simulate all six die faces and three seats at 30/60 Hz
+        env:
+          RACE_DIE_REPS: '1'
+        run: node scripts/craftrace-live4-die-physics-benchmark.mjs
+      - name: Publish raw race-level telemetry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: craftrace-bezier-dice-physics
+          path: artifacts/live4-bezier-dice-physics.json
+          if-no-files-found: warn
