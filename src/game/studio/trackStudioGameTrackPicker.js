@@ -101,7 +101,13 @@ export function openTrackStudioGameTrackCatalog(scene,keys,readTrack,cloneTrack=
   if(entry.id!==scene._catalogTrackId&&scene._nodes?.length>2&&
    !window.confirm('¿Abrir '+entry.displayName+'?\n\nLa edición actual se guardará en este dispositivo. Exporta el proyecto si necesitas una copia externa.'))return;
   const prior=scene._catalogTrackId;
-  if(prior&&prior!==entry.id)scene._autosaveRecovery?.();
+  if(prior){
+   scene._autosaveRecovery?.();
+   if(scene._catalogLastSaveOk===false){
+    scene._flashMessage?.('No se pudo guardar la trayectoria actual. Exporta una copia antes de cambiar.');
+    return;
+   }
+  }
   const draft=readAiTrackDraft(localStorage,entry.id);
   if(draft&&draft.signature!==entry.signature){
    scene._flashMessage?.('La guía guardada no coincide con la geometría actual. Exporta la copia anterior antes de continuar.');
