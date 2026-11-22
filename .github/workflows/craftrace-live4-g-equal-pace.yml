@@ -1,0 +1,30 @@
+name: LIVE 4 G · ritmo igual y telemetría física (no deploy)
+on:
+  pull_request:
+    paths:
+      - 'src/game/online/craftraceLiveV2BotDirector.js'
+      - 'src/game/online/craftraceLiveV2RaceBridge.js'
+      - 'scripts/craftrace-live4-g-seat-telemetry-smoke.mjs'
+      - '.github/workflows/craftrace-live4-g-equal-pace.yml'
+jobs:
+  guided-telemetry:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install and validate verified authored tracks
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/install-santa-cruz-source.mjs
+          node scripts/install-karting-canarias-4096-source.mjs
+      - name: No new physics cheats, telemetry valid, no regressions
+        run: |
+          node --check src/game/online/craftraceLiveV2BotDirector.js
+          node --check src/game/online/craftraceLiveV2RaceBridge.js
+          node scripts/craftrace-live4-g-seat-telemetry-smoke.mjs
+          node scripts/craftrace-live4-canarias-vs-bezier-smoke.mjs
+          node scripts/craftrace-live4-guided-g-host-smoke.mjs
