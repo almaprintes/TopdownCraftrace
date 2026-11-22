@@ -1,8 +1,9 @@
 // Karting Canarias 4096 · author's Track Studio teaching line, 22 Nov 2026.
 // Source: trackstudio-karting-canarias-1795308139835.json, editor.catalogTrackId
 // 'karting-canarias-4096'. The owner edited 14 independent Bézier nodes.
-// One tiny DEV-only tangent smooth (apex-6 next handle X: 1898.2789 -> 1840)
-// removes a >0.62-rad direction discontinuity. Original source file is retained
+// Two tiny DEV-only tangent smoothing tweaks (apex-6 next handle X:
+// 1898.2789 -> 1840; node 12 outgoing Y: 3506.1419 -> 3490)
+// remove curvature discontinuities (>0.62 rad) on the exact owner road. Original source file is retained
 // untouched in the owner's export; this candidate is ONLY for local Realizador.
 // Never modify official track JSON, timing, record IDs or LIVE 4 trajectories.
 const guides=[
@@ -34,7 +35,7 @@ const anchors=[
  [2260.9302,2739.8740,2320.8075,2589.9015,2169.7228,2931.9181],
  [1672.7831,3412.4441,1717.6887,3301.7802,1577.0502,3608.4978],
  [1792.7405,3827.4270,1695.2556,3788.3160,2135.6337,3892.2268],
- [2252.7814,3463.4703,1983.3285,3522.1474,2354.8733,3506.1419],
+ [2252.7814,3463.4703,1983.3285,3522.1474,2354.8733,3490.0000],
  [2473.9256,3788.7519,2502.9929,3570.1295,2371.3481,4004.8847],
  [2562.3406,4080.8879,2470.6341,4062.9552,2723.8682,4049.5877]
 ];
