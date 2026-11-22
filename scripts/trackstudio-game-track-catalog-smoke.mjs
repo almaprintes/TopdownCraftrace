@@ -62,7 +62,7 @@ assert.notEqual(circuitSignature(different),circuit.signature);
 
 const scene=readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
 const picker=readFileSync('src/game/studio/trackStudioGameTrackPicker.js','utf8');
-assert.ok(scene.includes('openTrackStudioGameTrackCatalog(this,getTrackKeys(),createTrack)'));
+assert.ok(scene.includes('openTrackStudioGameTrackCatalog(this,getTrackKeys(),id=>TRACK_REGISTRY[id],createTrack)'));
 assert.ok(scene.includes('installAiTrackCatalogPersistence(this)'));
 assert.ok(scene.includes('catalogTrackId: this._catalogTrackId || null'));
 assert.ok(scene.includes('this._closeGameTrackCatalog?.()'));
