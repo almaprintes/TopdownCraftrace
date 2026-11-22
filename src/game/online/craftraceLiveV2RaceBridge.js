@@ -6,7 +6,7 @@ import {consumeLive4RaceSession} from './craftraceLiveV2RaceSession.js';
 import {CrafRaceLive4RemoteModel} from './craftraceLiveV2RaceModel.js';
 import {CrafRaceLive4PositionLink} from './craftraceLiveV2PositionLink.js';
 import {CrafRaceLive4BotDirector} from './craftraceLiveV2BotDirector.js';
-import {hasLive4GuidedGForRoom,setLive4GuidedGForRoom} from './craftraceLive4GuidedGExperiment.js';
+import {hasLive4GuidedGForRoom,setLive4GuidedGForRoom,isLive4GuidedGSupported} from './craftraceLive4GuidedGExperiment.js';
 import {advanceHostedLive4Bots} from './craftraceLive4HostContinuity.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
 import {live4SeatName} from './craftraceLiveV2PilotNames.js';
@@ -28,8 +28,9 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  }
  const {room,identity}=session,roster=room.locked_roster;
  const localId=identity.id,hostId=room.host_id,isHost=localId===hostId;
- const guidedGTrial=isHost&&scene.trackKey==='santa-cruz'&&
-   roster.some(x=>x.kind==='ai'&&x.difficulty===3)&&
+ const guidedGTrial=isHost&&room.track_id===scene.trackKey&&
+   isLive4GuidedGSupported({trackId:room.track_id,dev:true,aiDifficulty:room.ai_difficulty})&&
+   room.fill_ai===true&&roster.some(x=>x.kind==='ai'&&x.difficulty===3)&&
    hasLive4GuidedGForRoom(roomId);
  const model=new CrafRaceLive4RemoteModel({roomId,hostId,localId,roster});
  const localSeat=model.localSeat;
