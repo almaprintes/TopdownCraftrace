@@ -47,7 +47,7 @@ const baseStats=readFileSync('src/game/scenes/StatsScene.js','utf8');
 assert.ok(registry.includes('StatsScene:{load:()'));
 assert.ok(baseStats.includes("super('StatsScene')"));
 const start=' const openRematchLobby=next=>{';
-const end='\\n const showResults=()=>{';
+const end='\n const showResults=()=>{';
 const startAt=bridge.indexOf(start),endAt=bridge.indexOf(end,startAt);
 assert.ok(startAt>=0&&endAt>startAt,'Rematch navigation must be present');
 const source=bridge.slice(startAt,endAt);
