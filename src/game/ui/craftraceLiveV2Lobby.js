@@ -6,7 +6,7 @@ import {createLiveV2Lobby,joinLiveV2Lobby,configureLiveV2Lobby,
 import {stageLive4RaceSession} from '../online/craftraceLiveV2RaceSession.js';
 import {liveIdentity} from '../online/craftraceLiveTransport.js';
 import {live4SeatName} from '../online/craftraceLiveV2PilotNames.js';
-import {isLive4GuidedGSupported,setLive4GuidedGForRoom,hasLive4GuidedGForRoom}
+import {isLive4GuidedGSupported,setLive4GuidedGForRoom,hasLive4GuidedGForRoom,guidedGTrackLabel}
   from '../online/craftraceLive4GuidedGExperiment.js';
 import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
@@ -76,9 +76,10 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
               <option value="3">3 · Experto</option>
             </select></label>
             <label class="cr4-check" data-g-option><input type="checkbox" data-guided-g>
-              IA EXPERTO · G BÉZIER + DADOS (SANTA CRUZ · DEV)</label>
+              <span data-g-label>COMPETIR CONTRA EXPERTOS BÉZIER + DADOS · DEV</span></label>
           </div>
           <button type="button" data-create class="cr4-primary">CREAR PISTA</button>
+          <p class="cr4-note" data-g-howto hidden>PARA CORRER CONTRA 3 EXPERTOS: 4 PLAZAS · COMPLETAR CON IA · NIVEL 3 · CREAR PISTA · ESTOY LISTO · INICIAR CARRERA. Sin premios ni récords.</p>
           <div class="cr4-director-entry">
             <label>Dificultad IA del Realizador<select data-director-ai aria-label="Dificultad de las cuatro IA del Realizador">
               <option value="1">1 · Principiante</option>
@@ -120,7 +121,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
               <option value="3">3 · Experto</option>
             </select></label>
             <label class="cr4-check" data-g-option-edit><input type="checkbox" data-edit-guided-g>
-              IA EXPERTO · G BÉZIER + DADOS (SANTA CRUZ · DEV)</label>
+              <span data-edit-g-label>COMPETIR CONTRA EXPERTOS BÉZIER + DADOS · DEV</span></label>
             <button type="button" data-apply>APLICAR CAMBIOS</button>
           </div>
           <div class="cr4-actions">
@@ -155,16 +156,28 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     const selectedTrack=$('[data-select-track]').value;
     gSupported=isLive4GuidedGSupported({trackId:selectedTrack,dev:race4Enabled,aiDifficulty:3});
     $('[data-g-option]').hidden=!gSupported;
+    $('[data-g-label]').textContent='COMPETIR CONTRA IA EXPERTO · BÉZIER + DADOS · '+guidedGTrackLabel(selectedTrack)+' · DEV';
     $('[data-guided-g]').disabled=!gSupported;
+    $('[data-g-howto]').hidden=!gSupported;
     if(!gSupported)$('[data-guided-g]').checked=false;
     $('[data-track]').textContent=getTrackPublicName(selectedTrack);
     const editSupported=isLive4GuidedGSupported({
       trackId:$('[data-edit-track]').value,dev:race4Enabled,aiDifficulty:3});
     $('[data-g-option-edit]').hidden=!editSupported;
+    $('[data-edit-g-label]').textContent='COMPETIR CONTRA IA EXPERTO · BÉZIER + DADOS · '+guidedGTrackLabel($('[data-edit-track]').value)+' · DEV';
     $('[data-edit-guided-g]').disabled=!editSupported;
     if(!editSupported)$('[data-edit-guided-g]').checked=false;
   };
-  $('[data-select-track]').addEventListener('change',syncGuidedAvailability);
+  $('[data-select-track]').addEventListener('change',()=>{
+    syncGuidedAvailability();
+    // The authoring circuit's explicit option remains reversible: uncheck G
+    // to race with the original level-3 expert planner.
+    if(gSupported){
+      $('[data-guided-g]').checked=true;
+      $('[data-ai]').value='3';
+      $('[data-fill]').checked=true;
+    }
+  });
   $('[data-edit-track]').addEventListener('change',syncGuidedAvailability);
   syncGuidedAvailability();
   $('[data-guided-g]').checked=gSupported;

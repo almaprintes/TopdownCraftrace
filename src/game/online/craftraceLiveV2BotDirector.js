@@ -5,6 +5,7 @@ import {buildTrackRacingLineModel} from '../ai/trackRacingLinePlanner.js';
 import {buildGuidedTrackRacingLineModel} from '../ai/trackGuidedRacingLinePlanner.js';
 import {buildBezierAiRacingLineModel,buildBezierDieVariant} from '../ai/trackBezierAiRacingLinePlanner.js';
 import {resolveDirectorGuideSource} from './craftraceDirectorGuideSource.js';
+import {isLive4GuidedGSupported} from './craftraceLive4GuidedGExperiment.js';
 import {buildTrackSpeedProfile} from '../ai/trackSpeedProfilePlanner.js';
 import {buildTrackManeuverPlan} from '../ai/trackManeuverPlanner.js';
 import {updateRacePhysicalBot} from '../ai/raceAiController.js';
@@ -42,7 +43,8 @@ export class CrafRaceLive4BotDirector{
   this.profiles=new Map();
   this.preview=preview===true;this.raceStarted=false;
   this.aiIdentitySeed=typeof aiIdentitySeed==='string'?aiIdentitySeed:null;
-  this.live4GuidedGTrial=!this.preview&&live4GuidedGTrial===true&&scene.trackKey==='santa-cruz';
+  this.live4GuidedGTrial=!this.preview&&live4GuidedGTrial===true&&
+    isLive4GuidedGSupported({trackId:scene.trackKey,dev:true,aiDifficulty:3});
   this.timingAudit=makeLive4TimingAudit();
   if(ai.length===0){this.profile=null;return;}
   if(scene.track?.closed===false||scene.track?.meta?.closed===false)
@@ -96,7 +98,7 @@ export class CrafRaceLive4BotDirector{
     }
   }
   if(this.live4GuidedGTrial&&!this.previewBezierActive)
-    throw Error('LIVE 4 G: no se ha validado la Bézier de Santa Cruz');
+    throw Error('LIVE 4 G: no se ha validado la Bézier de este circuito');
   if(!expertLine.valid||expertLine.racingLine.length!==line.racingLine.length||
      (preview&&(!this.previewExpertLine?.valid||
        this.previewExpertLine.racingLine.length!==line.racingLine.length)))
