@@ -24,7 +24,7 @@ jobs:
         run: node --check scripts/craftrace-live4-die-physics-benchmark.mjs
       - name: Simulate all six die faces and three seats at 30/60 Hz
         env:
-          RACE_DIE_REPS: '1'
+          RACE_DIE_REPS: '35'
         run: node scripts/craftrace-live4-die-physics-benchmark.mjs
       - name: Publish raw race-level telemetry
         if: always()
