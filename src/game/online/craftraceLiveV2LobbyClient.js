@@ -23,7 +23,15 @@ async function rpc(suffix,args){
     body:JSON.stringify(args),signal:AbortSignal.timeout(8000),cache:'no-store'
   });
   const body=await response.json().catch(()=>null);
-  if(!response.ok)throw Error(body?.message||'Error LIVE v2 '+response.status);
+  if(!response.ok){
+    const error=new Error(body?.message||'Error LIVE v2 '+response.status);
+    // PostgREST exposes the server-computed unlock time separately in details.
+    // Keep it structured instead of parsing server text or guessing a duration.
+    error.details=body?.details||null;
+    error.hint=body?.hint||null;
+    error.code=body?.code||null;
+    throw error;
+  }
   // Date.now is used only for clock alignment; never for lap timing.
   if(body&&typeof body==='object'&&Number.isFinite(body.server_now_ms)){
     const rtt=Date.now()-startedAt;
