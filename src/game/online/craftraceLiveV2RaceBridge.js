@@ -293,9 +293,20 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
          (b.bezierDieHistory||[]).map(x=>'V'+x.lap+': '+x.face+'/6 · '+
            Number(x.plannedVariationPx||0).toFixed(1)+' px previstos').join(' | ');
        dice.append(p);
+       const observed=b.bezierLapTelemetry||[];
+       if(observed.length){
+         const detail=document.createElement('p');
+         detail.className='cr4-result-note';
+         detail.textContent='TELEMETRÍA FÍSICA · '+
+           observed.map(t=>'V'+t.lap+': error medio a trazada objetivo '+
+             Number(t.meanLineErrorPx).toFixed(1)+' px · '+
+             'velocidad '+Number(t.meanSpeedPxS).toFixed(0)+' px/s · '+
+             'freno '+Math.round(Number(t.meanBrake)*100)+'%').join(' | ');
+         dice.append(detail);
+       }
      }
      const explanation=document.createElement('small');
-     explanation.textContent='Variación planificada, no distancia física garantizada. Tiradas invisibles durante la carrera.';
+     explanation.textContent='La variación prevista afecta al plan Bézier. El error real es la distancia media del coche físico a su línea objetivo: no equivale al desplazamiento causado exclusivamente por el dado.';
      dice.append(explanation);panel.append(dice);
    }
    const status=document.createElement('p');status.className='cr4-result-note';

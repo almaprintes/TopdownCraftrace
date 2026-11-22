@@ -20,6 +20,36 @@ import {rollEloAiDie} from '../ai/craftraceAiEloLeague.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
+// The G experiment compares die skills on equal car physics. Ordinary A/B
+// retains its existing seat-dependent variety until evaluated separately.
+export function live4AiSeatPaceBias({guidedG=false,difficulty=3,style=0}={}){
+ if(guidedG===true&&Number(difficulty)===3)return 1;
+ return [1,.985,.97][Number(style)]??1;
+}
+export const newLive4GPhysicalLap=()=>({
+ samples:0,sumLineErrorPx:0,maxLineErrorPx:0,sumSpeed:0,sumBrake:0,
+ sumAbsSteer:0
+});
+export function measureLive4GPhysicalLap(lap,control){
+ if(!lap||!control?.valid)return;
+ lap.samples++;
+ const error=Math.max(0,Number(control.distanceToLine)||0);
+ lap.sumLineErrorPx+=error;
+ lap.maxLineErrorPx=Math.max(lap.maxLineErrorPx,error);
+ lap.sumSpeed+=Math.max(0,Number(control.speed)||0);
+ lap.sumBrake+=Math.max(0,Number(control.brake)||0);
+ lap.sumAbsSteer+=Math.abs(Number(control.steer)||0);
+}
+export function summarizeLive4GPhysicalLap(lap,number){
+ const n=Math.max(1,Number(lap?.samples)||0);
+ const round=value=>Math.round(value*100)/100;
+ return {lap:number,samples:lap?.samples||0,
+  meanLineErrorPx:round((lap?.sumLineErrorPx||0)/n),
+  maxLineErrorPx:round(lap?.maxLineErrorPx||0),
+  meanSpeedPxS:round((lap?.sumSpeed||0)/n),
+  meanBrake:round((lap?.sumBrake||0)/n),
+  meanAbsSteer:round((lap?.sumAbsSteer||0)/n)};
+}
 export const LIVE4_AI_LEVELS=Object.freeze({
   1:Object.freeze({title:'Principiante',pace:0.70,cornerRisk:0,plannerLateralAccel:1050,plannerDrive:.58,plannerBrake:.67}),
   2:Object.freeze({title:'Competitivo',pace:0.86,cornerRisk:0.17,plannerLateralAccel:1450,plannerDrive:.80,plannerBrake:.85}),
@@ -203,6 +233,7 @@ export class CrafRaceLive4BotDirector{
      finished:false,finishAt:null,lapTimes:[],lastLapAt:null,
      lastPoseAt:0,lastPose:null,
      guidedRoll:null,guidedTolerancePx:null,guidedLapHistory:[],bezierDieHistory:[],
+     bezierLapTelemetry:[],_bezierLapTelemetry:newLive4GPhysicalLap(),
      _guidedNearestPx:{},_guidedPrevPosition:{x,y},
      cornerDiagnostics:{samples:0,sumError:0,maxError:0,overWide:0,lastAimSteps:null,
        lateralCount:0,lateralSum:0,lateralMax:0,lateralNearEdge:0,
@@ -299,9 +330,10 @@ export class CrafRaceLive4BotDirector{
      bot.difficulty===3&&this.previewBezierActive;
    const guidedActive=(this.preview||this.live4GuidedGTrial)&&this.previewMode==='G'&&
      bot.difficulty===3&&this.previewGuideTargets.length>0;
-   // Deterministic driving styles break up the three-car clone procession.
-   // Bias only lowers the chosen pace; none exceeds the player's own car.
-   const paceBias=[1,.985,.97][bot.style];
+   // In G, all seats share equal max speed: the die must not be masked by
+   // a fixed 1.5–3% seat penalty. A/B keeps the proven legacy behavior.
+   const paceBias=live4AiSeatPaceBias({
+     guidedG:this.live4GuidedGTrial,difficulty:bot.difficulty,style:bot.style});
    const control=updateRacePhysicalBot(bot,profile,{
      dt,spacing:this.spacing,maxFwd:maxSpeed*settings.pace*paceBias,
      live4PrecisionCornering:bot.difficulty===3,
@@ -318,6 +350,7 @@ export class CrafRaceLive4BotDirector{
    const body=bot.plannerBody;
    bot.rig.setPosition(body.x,body.y).setRotation(body.rotation+(scene._carVisualRotOffset||0));
    if(!control.valid)continue;
+   if(bezierActive)measureLive4GPhysicalLap(bot._bezierLapTelemetry,control);
    if(guidedActive){
      measureGuidedPass(bot,this.previewGuideTargets,bot._guidedPrevPosition,
        {x:body.x,y:body.y},control.nearestIndex,profile.samples.length);
@@ -360,6 +393,11 @@ export class CrafRaceLive4BotDirector{
    // of both checkpoints and the REAL finish gate, in race direction.
    const lapPassed=advanceLive4PhysicalLap(bot,this.lapGates,now,this.laps);
    if((guidedActive||bezierActive)&&lapPassed){
+     if(bezierActive){
+       bot.bezierLapTelemetry.push(summarizeLive4GPhysicalLap(
+         bot._bezierLapTelemetry,bot.completedLaps));
+       bot._bezierLapTelemetry=newLive4GPhysicalLap();
+     }
      if(guidedActive)closeGuidedLap(bot,this.previewGuideTargets);
      if(!bot.finished){
        const die=this._rollBotDie(bot);
@@ -383,7 +421,10 @@ export class CrafRaceLive4BotDirector{
    seat:bot.seat,lapTimes:bot.lapTimes.slice(),
    ...(bot.aiPilot?{aiPilotId:bot.aiPilot.id,aiPilotName:bot.aiPilot.name,aiPilotElo:bot.aiPilot.elo}:{}),
    guidedLapHistory:bot.guidedLapHistory.slice(),
-   ...((this.preview||this.live4GuidedGTrial)?{bezierDieHistory:bot.bezierDieHistory.map(x=>({...x}))}:{}),
+   ...((this.preview||this.live4GuidedGTrial)?{
+     bezierDieHistory:bot.bezierDieHistory.map(x=>({...x})),
+     bezierLapTelemetry:bot.bezierLapTelemetry.map(x=>({...x}))
+   }:{}),
    elapsedMs:bot.lapTimes.reduce((sum,ms)=>sum+ms,0),difficulty:bot.difficulty
   }));
  }
