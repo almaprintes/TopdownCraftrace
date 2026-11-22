@@ -45,14 +45,14 @@ assert.ok(stats.includes('live4RematchRoom')&&stats.includes('initialRoom:next')
 const registry=readFileSync('src/game/game.js','utf8');
 const baseStats=readFileSync('src/game/scenes/StatsScene.js','utf8');
 assert.ok(registry.includes('StatsScene:{load:()'));
-assert.ok(baseStats.includes(\"super('StatsScene')\"));
+assert.ok(baseStats.includes("super('StatsScene')"));
 const start=' const openRematchLobby=next=>{';
 const end='\\n const showResults=()=>{';
 const startAt=bridge.indexOf(start),endAt=bridge.indexOf(end,startAt);
 assert.ok(startAt>=0&&endAt>startAt,'Rematch navigation must be present');
 const source=bridge.slice(startAt,endAt);
-assert.ok(source.includes(\"scene.scene.start('StatsScene'\"));
-assert.ok(!source.includes(\"scene.scene.start('stats'\"));
+assert.ok(source.includes("scene.scene.start('StatsScene'"));
+assert.ok(!source.includes("scene.scene.start('stats'"));
 let navigation=null;
 const sceneForTest={carId:'avenir',scene:{start:(key,data)=>{navigation={key,data};}}};
 const priorRoom={members:[{player_id:'test-host',seat:0}]};
