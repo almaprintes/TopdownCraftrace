@@ -54,6 +54,31 @@ if(existsSync(actualSource)){
  assert.ok(base.valid);
  const result=buildBezierAiRacingLineModel(base,KARTING_CANARIAS_AI_BEZIER,
   track.trackShape,track,{carRadius:14});
+ if(!result.report.active&&result.report.reason==='steering-discontinuity'){
+  const samples=sampleAiBezierLine(KARTING_CANARIAS_AI_BEZIER,30);
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  let first=0,best=Infinity;
+  for(let i=0;i<samples.length;i++){const d=dist(samples[i],base.centerline[0]);
+   if(d<best){best=d;first=i;}}
+  const loop=samples.slice(first).concat(samples.slice(0,first));
+  const cumulative=[0];for(let i=0;i<loop.length;i++)
+   cumulative.push(cumulative.at(-1)+dist(loop[i],loop[(i+1)%loop.length]));
+  const lapLen=cumulative.at(-1),count=base.centerline.length,route=[];
+  let seg=0;
+  for(let i=0;i<count;i++){
+   const d=i*lapLen/count;
+   while(seg<loop.length-1&&cumulative[seg+1]<d)seg++;
+   const a=loop[seg],b=loop[(seg+1)%loop.length],span=Math.max(.00001,cumulative[seg+1]-cumulative[seg]);
+   const t=Math.max(0,Math.min(1,(d-cumulative[seg])/span));
+   route.push({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+  }
+  const worst=route.map((p,i)=>{
+   const a=route[(i-1+count)%count],b=route[(i+1)%count];
+   const incoming=Math.atan2(p.y-a.y,p.x-a.x),outgoing=Math.atan2(b.y-p.y,b.x-p.x);
+   return {i,x:Math.round(p.x),y:Math.round(p.y),turn:Math.abs(Math.atan2(Math.sin(outgoing-incoming),Math.cos(outgoing-incoming)))};
+  }).sort((a,b)=>b.turn-a.turn).slice(0,5);
+  console.log('DEBUG CANARIAS CURVATURE',JSON.stringify({count,worst}));
+ }
  assert.equal(result.report.active,true,
   'Karting Canarias author teaching line must stay safe in official road: '+
   JSON.stringify(result.report));
