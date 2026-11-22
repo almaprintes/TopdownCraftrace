@@ -12,6 +12,7 @@ import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import {TRACK_REGISTRY} from '../tracks/trackIdentity.js';
 import {CAR_SPECS} from '../cars/carSpecs.js';
+import {liveV2ErrorMessage} from './craftraceLiveV2ErrorMessage.js';
 import {unlockedCarIds,STARTER_CAR_ID} from '../cars/carUnlocks.js';
 import './craftraceLiveV2Lobby.css';
 
@@ -313,7 +314,7 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   const action=async(task)=>{
     if(loading||closed)return;
     setBusy(true);
-    try{await task();}catch(e){say(e?.message||'Error al comunicar con la pista');}
+    try{await task();}catch(e){say(liveV2ErrorMessage(e));}
     finally{if(!closed)setBusy(false);}
   };
   $('[data-director]').addEventListener('click',()=>{
