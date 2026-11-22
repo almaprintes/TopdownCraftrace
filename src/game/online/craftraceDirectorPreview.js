@@ -9,6 +9,7 @@ import {sampleShapeEdge,shapeIsValid} from '../studio/trackShapeGeometry.js';
 import {measureLateralUse,summarizeLateralUse} from './craftraceRacingLineTelemetry.js';
 import {buildDirectorLapReport,fmtDirectorTime} from './craftraceDirectorLapReport.js';
 import {buildDirectorDieAudit} from './craftraceDirectorDieAudit.js';
+import {resolveDirectorGuideSource} from './craftraceDirectorGuideSource.js';
 import '../ui/craftraceDirectorPreview.css';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
@@ -73,6 +74,12 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
   <button type="button" data-auto>AUTO · ACCIÓN</button>
   <button type="button" data-exit>SALIR</button>
  </div>
+ <div class="crdir-guide-picker" data-guide-picker hidden>
+  <button type="button" data-load-guide
+    aria-label="Cargar trazada Bézier y referencias de vértice para la IA del Realizador">
+    CARGAR BÉZIER + GUÍAS</button>
+  <small data-guide-status role="status" aria-live="polite"></small>
+ </div>
  <div class="crdir-line-legend" data-legend>
   <span class="crdir-center">EJE</span>
   <span class="crdir-target">OBJETIVO</span>
@@ -112,9 +119,28 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    $('[data-finish]').textContent='VOLVER AL PADDOCK';
  }
  $('[data-config]').textContent=circuitLabel+' · '+carLabel+' · '+difficultyName;
+ const authored=resolveDirectorGuideSource(scene.track);
+ const authoredGuidePoints=authored.guides?.points||[];
+ const loadGuideButton=$('[data-load-guide]');
+ const guideStatus=$('[data-guide-status]');
+ const guideReady=Boolean(bots.previewBezierActive&&bots.previewGuidedProfile);
+ // The G switch was previously only implicit in A/B/G, so owners could not
+ // see whether their Track Studio export had actually been loaded.
+ $('[data-guide-picker]').hidden=difficulty!==3;
  const updateModeLabel=()=>{
    const mode=bots.previewMode;
    $('[data-mode]').textContent=mode==='G'?'G · GUIADA':mode==='B'?'B · VÉRTICES':'A · ORIGINAL';
+   if(difficulty===3){
+     loadGuideButton.disabled=!guideReady||scene._raceStarted===true;
+     loadGuideButton.textContent=!guideReady?'BÉZIER NO DISPONIBLE':
+       mode==='G'?'G · BÉZIER + GUÍAS CARGADAS':'CARGAR BÉZIER + GUÍAS';
+     guideStatus.textContent=guideReady
+       ?'TRAZADA VALIDADA · '+(bots.previewGuideReport?.total||0)+
+         ' NODOS · '+authoredGuidePoints.length+
+         ' VÉRTICES DE REFERENCIA · '+circuitLabel
+       :'TRAZADA NO DISPONIBLE · '+
+         String(bots.previewGuideReport?.reason||'no hay una guía homologada para este circuito');
+   }
    $('[data-session]').textContent=setupLabel+' · FÍSICA A · TRAZADA '+
      (mode==='G'?'G GUIADA (PRUEBA)':mode==='B'?'B EXPERIMENTAL':'A ORIGINAL');
  };
@@ -156,6 +182,14 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    drawLine(data.centerline,0x67d7ff,3,.70,true);
    drawLine(data.target,0xffcb65,4,.96,true);
    for(const edge of authoredBorders)drawLine(thin(edge),0xbaff7f,2,.92,true);
+   // Show the author's soft apex references only when G actually drives the
+   // hand-tuned Bézier. They are visual teaching markers, not extra physics.
+   if(bots.previewMode==='G'&&bots.previewBezierActive){
+     for(const guide of authoredGuidePoints){
+       lineGraphics.lineStyle(3,0xf18bd6,.9);
+       lineGraphics.strokeCircle(guide.x,guide.y,7);
+     }
+   }
    trail.forEach((points,i)=>drawLine(points,traceColors[i],3,.85,false));
  };
  const captureTrails=(now)=>{
@@ -244,15 +278,21 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
  };
  $('[data-exit]').addEventListener('click',exit);
  $('[data-finish]').addEventListener('click',exit);
+ const selectMode=next=>{
+   if(scene._raceStarted)return false;
+   if(!bots.setPreviewLineMode(next))return false;
+   trail.forEach(points=>points.length=0);
+   lateralSamples.forEach(points=>points.length=0);
+   lastLinePaint=-1;updateModeLabel();paintLines(performance.now());
+   return true;
+ };
+ $('[data-load-guide]').addEventListener('click',()=>{
+   if(guideReady)selectMode('G');
+ });
  $('[data-mode]').addEventListener('click',()=>{
-   if(scene._raceStarted)return;
    const modes=bots.previewGuidedProfile?['A','B','G']:['A','B'];
    const next=modes[(modes.indexOf(bots.previewMode)+1)%modes.length];
-   if(bots.setPreviewLineMode(next)){
-     trail.forEach(points=>points.length=0);
-     lateralSamples.forEach(points=>points.length=0);
-     lastLinePaint=-1;updateModeLabel();paintLines(performance.now());
-   }
+   selectMode(next);
  });
  $('[data-lines]').addEventListener('click',()=>{
    showLines=!showLines;
@@ -306,7 +346,7 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
      scene.lapStartTick=scene.simTick;
    }
    bots.update(deltaMs,now,scene._raceStarted===true);
-   if(scene._raceStarted)$('[data-mode]').disabled=true;
+   if(scene._raceStarted){$('[data-mode]').disabled=true;loadGuideButton.disabled=true;}
    captureTrails(now);paintLines(now);
    if(now-lastInfo>=500){
      lastInfo=now;const stats=bots.stats();

@@ -1,0 +1,27 @@
+name: Realizador · cargar Bézier y guías (sin publicar)
+on:
+  pull_request:
+    paths:
+      - 'src/game/online/craftraceDirectorPreview.js'
+      - 'src/game/ui/craftraceDirectorPreview.css'
+      - 'scripts/craftrace-director-guide-load-smoke.mjs'
+      - '.github/workflows/craftrace-director-guide-load.yml'
+jobs:
+  director-guides:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies and exact Karting Canarias owner road
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/install-karting-canarias-4096-source.mjs
+      - name: Verify G button and actual AI steering/speed plan
+        run: |
+          test -f src/game/tracks/library/karting-canarias-4096/track.json
+          node scripts/craftrace-director-guide-load-smoke.mjs
+          node --check src/game/online/craftraceDirectorPreview.js
