@@ -40,6 +40,34 @@ for(const key of ['data-select-track','data-select-car','data-join-car',
 }
 const stats=readFileSync('src/game/scenes/StatsRaceControlHubScene.js','utf8');
 assert.ok(stats.includes('live4RematchRoom')&&stats.includes('initialRoom:next'));
+// Protect the exact destination from a black screen: no 'stats' scene exists.
+// The real scene key is StatsScene, registered by the lazy loader.
+const registry=readFileSync('src/game/game.js','utf8');
+const baseStats=readFileSync('src/game/scenes/StatsScene.js','utf8');
+assert.ok(registry.includes('StatsScene:{load:()'));
+assert.ok(baseStats.includes("super('StatsScene')"));
+const start=' const openRematchLobby=next=>{';
+const end='\n const showResults=()=>{';
+const startAt=bridge.indexOf(start),endAt=bridge.indexOf(end,startAt);
+assert.ok(startAt>=0&&endAt>startAt,'Rematch navigation must be present');
+const source=bridge.slice(startAt,endAt);
+assert.ok(source.includes("scene.scene.start('StatsScene'"));
+assert.ok(!source.includes("scene.scene.start('stats'"));
+let navigation=null;
+const sceneForTest={carId:'avenir',scene:{start:(key,data)=>{navigation={key,data};}}};
+const priorRoom={members:[{player_id:'test-host',seat:0}]};
+const onRematch=Function('scene','room',source+';return openRematchLobby;')(
+  sceneForTest,priorRoom);
+const newRoom={id:'new-room',track_id:'karting-canarias-4096',car_id:'avenir',
+ members:[{player_id:'test-host',seat:0}],state:'waiting'};
+onRematch(newRoom);
+assert.equal(navigation?.key,'StatsScene');
+assert.equal(navigation.data.live4RematchRoom,newRoom,
+ 'Keep full server-authorized new room snapshot, not previous race results');
+assert.equal(navigation.data.live4RematchExpectedHumans,1);
+assert.equal(navigation.data.liveCarId,'avenir');
+assert.equal(navigation.data.raceControlTrackId,'karting-canarias-4096');
+assert.throws(()=>onRematch({id:'invalid-room'}),/Revancha sin sala autorizada/);
 const director=readFileSync('src/game/online/craftraceLiveV2BotDirector.js','utf8');
 assert.ok(director.includes('rollEloAiDie(bot.aiPilot.elo)'));
 assert.ok(!bridge.includes('createLiveRoom('),'LIVE 2 transport untouched');

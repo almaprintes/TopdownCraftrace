@@ -1,0 +1,22 @@
+name: LIVE 4 · Revancha misma parrilla · clave de escena
+on:
+  pull_request:
+    paths:
+      - 'src/game/online/craftraceLiveV2RaceBridge.js'
+      - 'scripts/craftrace-live4-rematch-roster-venue-smoke.mjs'
+      - '.github/workflows/craftrace-live4-rematch-scene-check.yml'
+jobs:
+  rematch-navigation:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and execute rematch to exact registered scene
+        run: |
+          node --check src/game/online/craftraceLiveV2RaceBridge.js
+          node --check scripts/craftrace-live4-rematch-roster-venue-smoke.mjs
+          node scripts/craftrace-live4-rematch-roster-venue-smoke.mjs

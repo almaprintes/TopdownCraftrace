@@ -208,7 +208,9 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  const openRematchLobby=next=>{
    if(!next?.id||!Array.isArray(next?.members))throw Error('Revancha sin sala autorizada');
    // Never reuse an existing room or its saved result rows.
-   scene.scene.start('stats',{
+   // StatsScene is a lazily registered Phaser key; lowercase 'stats' is
+   // NOT an alias. Starting an unknown key closed the race into a black screen.
+   scene.scene.start('StatsScene',{
      onlineFromLobby:true,
      raceControlTrackId:next.track_id,liveTrackId:next.track_id,
      liveCarId:scene.carId||next.car_id,live4RematchRoom:next,
