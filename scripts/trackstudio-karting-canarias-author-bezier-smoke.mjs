@@ -22,6 +22,7 @@ assert.equal(KARTING_CANARIAS_AI_BEZIER.nodes.length,14);
 assert.ok(normalizeAiBezierLine(KARTING_CANARIAS_AI_BEZIER));
 assert.equal(normalizeAiLineGuides(KARTING_CANARIAS_AI_GUIDES).points.length,14);
 assert.equal(KARTING_CANARIAS_AI_BEZIER.nodes[6].handleOut.x,1840);
+assert.equal(KARTING_CANARIAS_AI_BEZIER.nodes[11].handleOut.y,3490);
 const originalSource=readFileSync('src/game/online/craftraceKartingCanariasAuthorBezier.js','utf8');
 assert.ok(originalSource.includes('1898.2789 -> 1840'));
 assert.ok(originalSource.includes('Never modify official track JSON'));
