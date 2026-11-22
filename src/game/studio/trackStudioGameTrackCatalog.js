@@ -90,17 +90,22 @@ export function saveAiTrackDraft(storage,id,signature,guides,bezier,{validated=f
 }
 export function installAiTrackCatalogPersistence(scene){
  const save=()=>{
-  if(!scene._catalogTrackId||scene._catalogHydrating||!scene._catalogSourceSignature)return;
+  if(!scene._catalogTrackId||scene._catalogHydrating||!scene._catalogSourceSignature)return true;
   // Store only AI annotation data. Neither road nodes nor reference images
   // are overwritten by changing the selected catalog circuit.
   try{
    saveAiTrackDraft(localStorage,scene._catalogTrackId,scene._catalogSourceSignature,
     scene._aiLineGuides,scene._aiBezierLine);
+   scene._catalogLastSaveOk=true;
+   return true;
   }catch(error){
    console.warn('[TrackStudio] No se guardó la guía IA del catálogo',error);
    scene._flashMessage?.('No se guardó la guía IA local: '+String(error.message||error));
+   scene._catalogLastSaveOk=false;
+   return false;
   }
  };
+ scene._catalogSaveAiDraft=save;
  const oldAutosave=scene._autosaveRecovery.bind(scene);
  scene._autosaveRecovery=(...args)=>{const result=oldAutosave(...args);save();return result;};
  const oldValidate=scene._aiBezierValidate?.bind(scene);
