@@ -117,6 +117,7 @@ export function openTrackStudioGameTrackCatalog(scene,keys,readTrack,cloneTrack=
    scene._importProjectOrTrack(track);
    scene._catalogTrackId=entry.id;
    scene._catalogSourceSignature=entry.signature;
+   scene._catalogRaceDirection=selected.raceDirection||'forward';
    scene._autosaveRecovery?.();
    scene._frameTrackView?.();
    scene._flashMessage?.('Circuito '+entry.displayName+' · guías IA separadas · '+entry.id);
