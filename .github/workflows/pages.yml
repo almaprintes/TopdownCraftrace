@@ -49,6 +49,7 @@ jobs:
           node scripts/install-karting-canarias-source.mjs
           node scripts/install-karting-canarias-narrow70.mjs
           node scripts/install-karting-canarias-4096-source.mjs
+          node scripts/trackstudio-karting-canarias-author-bezier-smoke.mjs
           node scripts/install-circuito-atlantico-source.mjs
           node scripts/circuito-atlantico-official-smoke.mjs
           node scripts/santa-cruz-official-source-smoke.mjs
