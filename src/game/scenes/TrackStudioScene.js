@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BaseScene } from './BaseScene.js';
-import { createTrack, getTrackKeys } from '../tracks/trackRegistry.js';
+import { createTrack, getTrackKeys, TRACK_REGISTRY } from '../tracks/trackRegistry.js';
 import { installTrackStudioImageMode, importImageProjectFile } from '../studio/installImageMode.js';
 import { looksLikeImageProject } from '../studio/imageCanvasProject.js';
 import { installTrackStudioExitGuard } from '../studio/trackStudioExitGuard.js';
@@ -11,6 +11,8 @@ import { trackStudioWidthStep } from '../studio/trackStudioWidthRange.js';
 import { EDITOR_CONTROL_PIXELS, worldControlRadius, pickCenterlineControl } from '../studio/trackStudioControlGeometry.js';
 import { interpolateRoadWidth } from '../studio/trackShapeGeometry.js';
 import { openTrackStudioSourceMenu } from '../studio/trackStudioSourceMenu.js';
+import {openTrackStudioGameTrackCatalog} from '../studio/trackStudioGameTrackPicker.js';
+import {installAiTrackCatalogPersistence} from '../studio/trackStudioGameTrackCatalog.js';
 import { installTrackStudioGateControls } from '../studio/trackStudioGateControls.js';
 import { createPenAnchor, penGestureIsCurve, updatePenAnchorFromDrag } from '../studio/trackStudioPenTool.js';
 import {trackStudioToolbarLayout} from '../studio/trackStudioNavigationLayout.js';
@@ -1030,6 +1032,7 @@ if (
       this._destroyGuideInput?.();
       this._destroyProjectInput?.();
       this._closeSourceMenu?.();
+      this._closeGameTrackCatalog?.();
       this._closeReferencePanel?.();
       this._closeViewMenu?.();
       this._closeModeMenu?.();
@@ -1040,6 +1043,7 @@ if (
     installTrackStudioShapeEditor(this);
     installTrackStudioAiGuides(this);
     installTrackStudioAiBezier(this);
+    installAiTrackCatalogPersistence(this);
     installTrackStudioExitGuard(this);
     const gate=installTrackStudioGateControls(this);
     // A race scene destroys the editor view, not the editable project.
@@ -2644,6 +2648,9 @@ const targetS = finishS - correctedOffset;
   _getProjectData() {
     return {
       version: 1,
+      catalogTrackId: this._catalogTrackId || null,
+      catalogSourceSignature: this._catalogSourceSignature || null,
+      catalogRaceDirection: this._catalogRaceDirection || null,
       nodes: this._nodes,
       trackWidth: this._trackWidth,
       isClosed: this._isClosed,
@@ -2876,6 +2883,9 @@ _loadTrack() {
     this._guideTool = data.guideTool || 'load';
     this._raceType = this._isClosed ? (data.raceType || 'circuit') : 'stage';
     this._importedTrackMeta = data.importedTrackMeta || null;
+    this._catalogTrackId = data.catalogTrackId || null;
+    this._catalogSourceSignature = data.catalogSourceSignature || null;
+    this._catalogRaceDirection = data.catalogRaceDirection || null;
 
     if (this._guideImage) {
       this._guideImage.setAlpha(this._guideAlpha);
@@ -2994,19 +3004,7 @@ const data = {
   }
 
   _openGameTrackSourceMenu() {
-    const keys=getTrackKeys();
-    if(!keys.length){this._flashMessage('❌ No hay circuitos registrados');return;}
-    const rows=keys.map((key,i)=>{let name=key;try{name=createTrack(key)?.name||key;}catch{}return `${i+1} · ${name}`;});
-    const raw=window.prompt(`CIRCUITOS DEL JUEGO\n\n${rows.join('\n')}\n\nEscribe el número:`,'1');
-    if(raw===null)return;
-    const n=Number.parseInt(String(raw).trim(),10),key=keys[n-1];
-    if(!key){this._flashMessage('❌ Circuito no válido');return;}
-    try{
-      this._pushHistory();
-      this._importProjectOrTrack(createTrack(key));
-      this._autosaveRecovery();
-      this._flashMessage(`📍 ${createTrack(key)?.name||key} cargado`);
-    }catch(e){console.error('❌ No se pudo cargar circuito del juego',key,e);this._flashMessage('❌ Error cargando circuito');}
+    openTrackStudioGameTrackCatalog(this,getTrackKeys(),id=>TRACK_REGISTRY[id],createTrack);
   }
 
   _createProjectInput() {
@@ -3084,6 +3082,10 @@ const data = {
   }
 
   _importProjectOrTrack(data) {
+    // File imports do not inherit the previous catalog circuit identity.
+    this._catalogTrackId = null;
+    this._catalogSourceSignature = null;
+    this._catalogRaceDirection = null;
     if (data?.editor || Array.isArray(data?.nodes)) {
       this._applyProjectData(data.editor || data);
       return;
@@ -3159,6 +3161,9 @@ const data = {
     this._guideLocked = true;
     this._raceType = 'stage';
     this._importedTrackMeta = null;
+    this._catalogTrackId = null;
+    this._catalogSourceSignature = null;
+    this._catalogRaceDirection = null;
 
     this._updateToolButtons();
     this._updatePanel();

@@ -1,0 +1,29 @@
+name: Track Studio - Catalogo IA
+on:
+  pull_request:
+    paths:
+      - 'src/game/scenes/TrackStudioScene.js'
+      - 'src/game/studio/trackStudioGameTrackCatalog.js'
+      - 'src/game/studio/trackStudioGameTrackPicker.js'
+      - 'src/game/studio/installTrackAiBezier.js'
+      - 'scripts/trackstudio-game-track-catalog-smoke.mjs'
+      - '.github/workflows/trackstudio-ai-catalog-check.yml'
+jobs:
+  catalog-smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: |
+          node --check src/game/studio/trackStudioGameTrackCatalog.js
+          node --check src/game/studio/trackStudioGameTrackPicker.js
+          node --check src/game/studio/installTrackAiBezier.js
+          node --check src/game/scenes/TrackStudioScene.js
+          node --check scripts/trackstudio-game-track-catalog-smoke.mjs
+      - name: Circuit identities and AI draft safety
+        run: node scripts/trackstudio-game-track-catalog-smoke.mjs
