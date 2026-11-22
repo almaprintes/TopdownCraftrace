@@ -41,7 +41,7 @@ for(const altered of [
  {...runtime,meta:{originalOwnerBundleSha256:'other'}}
 ]){
  assert.equal(resolveDirectorGuideSource({meta:altered}).bezier,null,
- 'Never attach author's points to a different official track geometry');
+ "Never attach author points to a different official track geometry");
 }
 const actualSource='src/game/tracks/library/karting-canarias-4096/track.json';
 if(existsSync(actualSource)){
