@@ -38,4 +38,4 @@ jobs:
           node scripts/craftrace-live4-canarias-vs-bezier-smoke.mjs
           node scripts/craftrace-live4-rematch-roster-venue-smoke.mjs
       - name: Full DEV build with all prebuild regressions
-        run: npm run build:dev
+        run: npm run build
