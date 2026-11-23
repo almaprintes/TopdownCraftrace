@@ -10,6 +10,9 @@ import {live4GDriverSkill,live4GCornerDecisions}
 import {CrafRaceLive4BotDirector} from '../src/game/online/craftraceLiveV2BotDirector.js';
 import {makeLive4StartingGrid} from '../src/game/online/craftraceLiveV2GridGeometry.js';
 import {updateRacePhysicalBot} from '../src/game/ai/raceAiController.js';
+import {CAR_SPECS} from '../src/game/cars/carSpecs.js';
+import {resolveCarParamsWithTuning} from '../src/game/cars/resolveCarParams.js';
+const CAR=resolveCarParamsWithTuning(CAR_SPECS.avenir_gripline,{});
 
 const round=(v,d=3)=>Number(v.toFixed(d));
 const flat=eloDieProbabilities(1350),top=eloDieProbabilities(1800),low=eloDieProbabilities(900);
@@ -57,8 +60,9 @@ function sprite(x,y,key='car'){return{x,y,texture:{key},scaleX:1,scaleY:1,
  setScale(){return this},setRotation(){return this},setAlpha(){return this},
  setTint(){return this},setTexture(k){this.texture.key=k;return this}}}
 const scene={trackKey:'santa-cruz',track:{closed:true,meta:{...track,id:'santa-cruz'}},simTick:1,
- maxFwd:480,accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,
- carParams:{maxFwd:480,accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,steering:{}},
+ maxFwd:CAR.maxFwd,accel:CAR.accel,brakeForce:CAR.brakeForce,
+ linearDrag:CAR.linearDrag,turnRate:CAR.turnRate,
+ carParams:CAR,
  carRig:{list:[sprite(0,0)]},textures:{exists:key=>key==='car'},
  physics:{add:{sprite:(x,y)=>body(x,y)}},
  add:{sprite,container:(x,y)=>({x,y,setDepth(){return this},
@@ -94,8 +98,9 @@ function simulate(elo,die,lapCount=1){
  const lapEnds=[];
  for(let frame=0;frame<60*130;frame++){
   const control=updateRacePhysicalBot(bot,profile,{
-   dt:DT,spacing:director.spacing,maxFwd:480,cornerRisk:.35,
-   accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,steering:{},
+   dt:DT,spacing:director.spacing,maxFwd:CAR.maxFwd,cornerRisk:.35,
+   accel:CAR.accel,brakeForce:CAR.brakeForce,
+   linearDrag:CAR.linearDrag,turnRate:CAR.turnRate,steering:CAR.steering,
    live4PrecisionCornering:true,
    live4GuidedApex:{continuousOnly:true,guides:[]},
    live4GDriverSkill:skill
@@ -174,7 +179,9 @@ const rolling=Array.from({length:6},(_,i)=>i+1).flatMap(die=>[900,1800].map(elo=
   movingLapMean:round((x.lapTimes[1]+x.lapTimes[2])/2),
   meanError:x.meanError,brakePct:x.brakePct,cornerDecisionPct:x.cornerDecisionPct};
 }));
-console.info('LIVE4-G-ROLLING-AB',JSON.stringify(rolling));
+console.info('LIVE4-G-ROLLING-AB',JSON.stringify({car:{
+ maxFwd:CAR.maxFwd,accel:CAR.accel,linearDrag:CAR.linearDrag,
+ turnRate:CAR.turnRate},laps:rolling}));
 director.destroy();
 console.log('PASS LIVE4 G Elo/dice physical driving A/B',JSON.stringify({dice:{
  topHigh:round(top[4]+top[5]),rookieHigh:round(low[4]+low[5]),
