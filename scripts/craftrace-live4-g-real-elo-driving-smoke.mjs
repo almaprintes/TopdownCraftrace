@@ -171,6 +171,37 @@ console.info('LIVE4-G-ROLLING-AB',JSON.stringify({car:{
  maxFwd:CAR.maxFwd,accel:CAR.accel,linearDrag:CAR.linearDrag,
  turnRate:CAR.turnRate},laps:rolling}));
 
+// Protect the actual racing phase. A standing-start gain is not enough:
+// EVERY equal-roll matchup must carry an advantage on launched laps, without
+// imposing an unrealistic skill gap or changing the car's physical limits.
+for(const face of [1,2,3,4,5,6]){
+ const novice=rolling.find(x=>x.elo===900&&x.die===face);
+ const expert=rolling.find(x=>x.elo===1800&&x.die===face);
+ const gap=novice.movingLapMean-expert.movingLapMean;
+ assert.ok(gap>.25&&gap<1.5,
+  'Real Avenir rolling-lap Elo gap must be noticeable but bounded: face '+face+', '+gap);
+ assert.ok(novice.throttlePct<expert.throttlePct,
+  'Low Elo must actually lift more gas at the same die: '+face);
+ assert.equal(novice.brakePct,0,
+  'The Avenir needs no forced braking just to distinguish driver skill');
+}
+for(const elo of [900,1800]){
+ const bad=rolling.find(x=>x.elo===elo&&x.die===1);
+ const good=rolling.find(x=>x.elo===elo&&x.die===6);
+ assert.ok(bad.movingLapMean>good.movingLapMean+.3,
+  'The die must affect the same pilot on LAUNCHED laps: '+elo);
+}
+const expectedRolling={};
+for(const elo of [900,1800]){
+ const probs=eloDieProbabilities(elo);
+ expectedRolling[elo]=round(probs.reduce((sum,p,i)=>
+  sum+p*rolling.find(x=>x.elo===elo&&x.die===i+1).movingLapMean,0));
+}
+assert.ok(expectedRolling[900]>expectedRolling[1800]+.35 &&
+ expectedRolling[900]<expectedRolling[1800]+1.5,
+ 'Softened dice plus Elo decisions must create a reasonable rolling-lap gap');
+console.info('LIVE4-G-ROLLING-EXPECTED',JSON.stringify(expectedRolling));
+
 assert.ok(byName['rookie die 1'].seconds>byName['rookie die 6'].seconds+.15,
  'Dice must affect actual physical lap time for same pilot');
 assert.ok(byName['ace die 1'].seconds>byName['ace die 6'].seconds+.08,
