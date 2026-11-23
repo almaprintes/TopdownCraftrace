@@ -11,8 +11,15 @@ import {CrafRaceLive4BotDirector} from '../src/game/online/craftraceLiveV2BotDir
 import {makeLive4StartingGrid} from '../src/game/online/craftraceLiveV2GridGeometry.js';
 import {updateRacePhysicalBot} from '../src/game/ai/raceAiController.js';
 import {CAR_SPECS} from '../src/game/cars/carSpecs.js';
-import {resolveCarParamsWithTuning} from '../src/game/cars/resolveCarParams.js';
-const CAR=resolveCarParamsWithTuning(CAR_SPECS.avenir_gripline,{});
+import {HANDLING_PROFILES} from '../src/game/cars/handlingProfiles.js';
+// The app's resolver imports browser-only Vite/garage sources. In this
+// Node A/B, reproduce its pure factory baseline from tracked source values.
+const factoryResolver=readFileSync('src/game/cars/resolveCarParams.js','utf8');
+assert.match(factoryResolver,/FACTORY_MAX_FWD_MULT = 1\.40/);
+const spec=CAR_SPECS.avenir_gripline;
+const profileId=spec.handlingProfile||spec.steeringProfile||'ARCADE';
+const steering=HANDLING_PROFILES[profileId].steering;
+const CAR={...spec,maxFwd:spec.maxFwd*1.40,steering};
 
 const round=(v,d=3)=>Number(v.toFixed(d));
 const flat=eloDieProbabilities(1350),top=eloDieProbabilities(1800),low=eloDieProbabilities(900);
