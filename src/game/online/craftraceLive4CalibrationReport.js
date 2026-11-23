@@ -87,6 +87,7 @@ export function saveLive4CalibrationReport(store,key,report){
  const old=readLive4CalibrationHistory(store);
  const existing=old.filter(row=>row.key!==key);
  const recent=[...existing,{key:String(key),report}].slice(-LIVE4_G_REPORT_LIMIT);
+ if(!store||typeof store.setItem!=='function')return{history:recent,persisted:false};
  try{
   store?.setItem(LIVE4_G_REPORT_KEY,JSON.stringify(recent));
   return{history:recent,persisted:true};
