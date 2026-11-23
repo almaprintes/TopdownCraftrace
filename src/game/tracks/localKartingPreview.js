@@ -3,6 +3,8 @@
 import { readCanvasImage, normalizeCanvasImageBlob } from '../studio/imageCanvasProject.js';
 import { shapeIsValid, sampleShapeEdge } from '../studio/trackShapeGeometry.js';
 import { spawnUpstreamOfFinish } from './imageNativeDriving.js';
+import {writeTrackStudioWorkingCopy,readTrackStudioWorkingCopies}
+ from '../studio/trackStudioPreviewStorage.js';
 
 export const LOCAL_KARTING_PREVIEW_KEY='karting-tenerife-studio';
 export const LOCAL_STUDIO_VECTOR_PREVIEW_KEY='trackstudio-vector-director';
@@ -77,22 +79,24 @@ function restoreNativePixels(record){
 export function getLocalKartingPreview(trackKey=LOCAL_KARTING_PREVIEW_KEY){
   const vector=trackKey===LOCAL_STUDIO_VECTOR_PREVIEW_KEY;
   if(!vector&&trackKey!==LOCAL_KARTING_PREVIEW_KEY)return null;
-  try{
-    const raw=localStorage.getItem(vector?VECTOR_STORAGE_KEY:STORAGE_KEY);
-    if(!raw)return null;
-    const stored=JSON.parse(raw);
-    const p=restoreStockPreviewCarScale(vector?stored:restoreNativePixels(stored)),track=p?.track;
-    if(!track||!Array.isArray(track.centerline)||track.centerline.length<20||
-       !shapeIsValid(track.trackShape)||!bounded(track.worldW,8192)||
-       !bounded(track.worldH,8192))return null;
-    if(vector){
-      if(p.previewKind!=='director-vector'||p.imageId||p.imageMeta||
-         track.id!==trackKey||track.key!==trackKey||
-         track.meta?.source!=='trackstudio-director-vector'||track.meta?.renderMode)return null;
-    }else if(!p.imageId||track.worldW!==p.imageMeta?.width||
-       track.worldH!==p.imageMeta?.height)return null;
-    return p;
-  }catch{return null;}
+  const saved=readTrackStudioWorkingCopies(vector?VECTOR_STORAGE_KEY:STORAGE_KEY);
+  for(const raw of saved){
+    try{
+      const stored=JSON.parse(raw);
+      const p=restoreStockPreviewCarScale(vector?stored:restoreNativePixels(stored)),track=p?.track;
+      if(!track||!Array.isArray(track.centerline)||track.centerline.length<20||
+         !shapeIsValid(track.trackShape)||!bounded(track.worldW,8192)||
+         !bounded(track.worldH,8192))continue;
+      if(vector){
+        if(p.previewKind!=='director-vector'||p.imageId||p.imageMeta||
+           track.id!==trackKey||track.key!==trackKey||
+           track.meta?.source!=='trackstudio-director-vector'||track.meta?.renderMode)continue;
+      }else if(!p.imageId||track.worldW!==p.imageMeta?.width||
+         track.worldH!==p.imageMeta?.height)continue;
+      return p;
+    }catch{/* A corrupt session record must not hide a good local preview. */}
+  }
+  return null;
 }
 
 export function makeKartingPreviewRecord(editor,gameTrack,{vectorOnly=false}={}){
@@ -155,7 +159,7 @@ export async function installKartingPreview(scene,{allowVectorOnly=false}={}){
     }
   }
   // Last mutating step: never overwrite a working photo preview on failure.
-  localStorage.setItem(vectorOnly?VECTOR_STORAGE_KEY:STORAGE_KEY,JSON.stringify(record));
+  writeTrackStudioWorkingCopy(vectorOnly?VECTOR_STORAGE_KEY:STORAGE_KEY,JSON.stringify(record));
   return record;
 }
 
