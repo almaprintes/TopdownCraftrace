@@ -7,6 +7,8 @@ import {SANTA_CRUZ_AUTHOR_BEZIER} from './craftraceSantaCruzAuthorBezier.js';
 import {KARTING_CANARIAS_AI_AUTHORING_ID,KARTING_CANARIAS_AI_SOURCE_SHA,
   KARTING_CANARIAS_AI_GUIDES,KARTING_CANARIAS_AI_BEZIER}
  from './craftraceKartingCanariasAuthorBezier.js';
+import {TENERIFE_G_ID,TENERIFE_G_IMAGE_SHA,TENERIFE_G_GUIDES,TENERIFE_G_BEZIER}
+ from './craftraceKartingTenerifeAuthorBezier.js';
 export function resolveDirectorGuideSource(runtimeTrack){
  const track=runtimeTrack?.meta;
  const direct=track?.aiLineGuides;
@@ -18,9 +20,15 @@ export function resolveDirectorGuideSource(runtimeTrack){
    track?.raceDirection==='forward'&&
    track?.worldW===4096&&track?.worldH===6144&&
    track?.meta?.originalOwnerBundleSha256===KARTING_CANARIAS_AI_SOURCE_SHA;
+ // Match the exact photo source and direction; never attach to the inverse.
+ const officialTenerife=track?.id===TENERIFE_G_ID&&
+   track?.raceDirection==='reverse'&&
+   track?.worldW===3344&&track?.worldH===1882&&
+   track?.meta?.sourceFile==='Karting Tenerife.tdrtrack'&&
+   track?.meta?.sourceImageSha256===TENERIFE_G_IMAGE_SHA;
  const guides=direct?.points?.length?direct:
    authored?.points?.length?authored:
-   officialCanarias?KARTING_CANARIAS_AI_GUIDES:null;
+   officialCanarias?KARTING_CANARIAS_AI_GUIDES:officialTenerife?TENERIFE_G_GUIDES:null;
  // The installed Santa Cruz photo uses the same authoring coordinates as
  // the original 10 tips. Expose the manually drawn line exclusively to
  // local Realizador G; the competitive race bridge never calls this helper.
@@ -30,7 +38,8 @@ export function resolveDirectorGuideSource(runtimeTrack){
    track?.worldW===3072&&track?.worldH===4608;
  const bezier=track?.aiBezierLine||track?.meta?.aiBezierLine||
    (officialSantaCruz?SANTA_CRUZ_AUTHOR_BEZIER:
-     officialCanarias?KARTING_CANARIAS_AI_BEZIER:null);
+     officialCanarias?KARTING_CANARIAS_AI_BEZIER:null)||
+   (officialTenerife?TENERIFE_G_BEZIER:null);
  return{
    guides,bezier,
    shape:track?.trackShape||null,
@@ -38,6 +47,6 @@ export function resolveDirectorGuideSource(runtimeTrack){
    carScale:track?.carScale??track?.meta?.carScale??1,
    source:direct?.points?.length?'trackstudio':
      authored?.points?.length?'registered-circuit':
-     officialCanarias?'owner-director-candidate':'none'
+     (officialCanarias||officialTenerife)?'owner-director-candidate':'none'
  };
 }
