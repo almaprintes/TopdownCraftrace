@@ -183,9 +183,9 @@ export function buildBezierDieVariant(base,face,seat,shape,dimensions={},options
    return lo;
   })();
   const scale=amplitude/26;
-  // Leave a 7% envelope margin between the target and validated edge
-  // limit. This limits physical off-road excursions after steering error.
-  const intended=safeMax*scale*.93;
+  // Keep a 20% extra margin on the nominally safe Bézier perturbation.
+  // Physical steering error can otherwise send the car beyond that line.
+  const intended=safeMax*scale*.80;
   let built=generate(intended),effective=intended;
   if(!built){
    for(const factor of [.98,.95,.9,.8,.5,.25,0]){
