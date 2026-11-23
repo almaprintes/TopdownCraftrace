@@ -359,7 +359,9 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        if(!calibrationSaved){
          const report=buildLive4CalibrationReport({
            trackId:room.track_id,carId:scene.carId||room.car_id,
-           laps:room.laps,generatedAt:new Date().toISOString(),
+           laps:room.laps,direction:room.direction,
+           physicsVersion:room.physics_version,aiDifficulty:room.ai_difficulty,
+           generatedAt:new Date().toISOString(),
            entries:raceEntries.map(entry=>{
              const current=states.get(entry.seat),local=entry.seat===localSeat?localFinish:null;
              return{seat:entry.seat,kind:entry.kind,name:displayName(entry),
@@ -379,7 +381,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        let store=null;
        try{store=globalThis.localStorage;}catch{}
        const persisted=readLive4CalibrationHistory(store);
-       const notebook=persisted.length?persisted:calibrationMemory;
+       const notebook=calibrationMemory.length>=persisted.length?calibrationMemory:persisted;
        const count=notebook.length;
        const copy=document.createElement('button');
        copy.type='button';
