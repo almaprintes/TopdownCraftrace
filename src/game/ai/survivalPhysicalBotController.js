@@ -290,7 +290,11 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const controlledTargetSpeed=targetSpeed*controlScale*(1-.28*missRisk)*
     gDecisions.cornerSpeedFactor;
   const speedError=controlledTargetSpeed-speed;
-  const throttle=clamp((speedError-2)/34,0,1);
+  // DEV G pilot judgment: a less confident driver deliberately eases off
+  // the gas in a bend even when a high-power car cannot reach the planner's
+  // nominal speed. The actual motor/grip/drag remain exactly the same.
+  const throttle=clamp((speedError-2)/34,0,1)*
+    gDecisions.throttleFactor;
   const brake=clamp((-speedError-3)/30,0,1);
 
   const accel=Math.max(0,Number(params.accel||520));
@@ -352,6 +356,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     targetSpeed:controlledTargetSpeed,
     profileTargetSpeed:targetSpeed,
     live4GCornerSpeedFactor:gDecisions.cornerSpeedFactor,
+    live4GCornerThrottleFactor:gDecisions.throttleFactor,
     live4GDriverQuality:params.live4GDriverSkill?.quality??null,
     cornerRisk,
     riskConfidence,
