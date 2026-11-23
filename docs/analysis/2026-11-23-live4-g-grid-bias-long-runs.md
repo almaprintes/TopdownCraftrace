@@ -138,6 +138,58 @@ Cambios relacionados: [PR #55](https://github.com/almaprintes/TopdownCraftrace/p
 
 ---
 
+## 3 ter. Carrera larga B — intercambio completado (23/11/2026 21:23 UTC)
+
+**Resultado REAL en iPhone, mismo Santa Cruz / Avenir Gripline / física 1 / 10 vueltas / G / Experto.** Intercambiados solo Sira y Vera: Álex p1 Elo 1800, Sira p2 Elo 900, Vera p3 Elo 1730. El humano no esperó tras GO (0 ms).
+
+| Puesto | Plaza | Piloto | Total (ms) | Media V2–V10 (ms) |
+|---:|---:|---|---:|---:|
+| 1 | 0 | Humano | 190927 | 18982.78 |
+| 2 | 3 | Vera Cometa | 196343 | 19492.00 |
+| 3 | 2 | Sira Nova | 196426 | 19477.11 |
+| 4 | 1 | Álex Falcón | 196610 | 19551.33 |
+
+**40 tiempos por vuelta del JSON del propietario**, comprobados contra los totales:
+
+| Vuelta | Humano | Álex p1 | Sira p2 | Vera p3 | ventaja p3 acumulada (ms) |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 20082 | 20648 | 21132 | 20915 | +217 |
+| 2 | 18687 | 19569 | 19518 | 19552 | +183 |
+| 3 | 19108 | 19585 | 19518 | 19535 | +166 |
+| 4 | 19526 | 19468 | 19386 | 19418 | +134 |
+| 5 | 19235 | 19552 | 19418 | 19435 | +117 |
+| 6 | 18788 | 19402 | 19435 | 19402 | +150 |
+| 7 | 18828 | 19597 | 19614 | 19614 | +150 |
+| 8 | 18836 | 19669 | 19569 | 19569 | +150 |
+| 9 | 19101 | 19518 | 19451 | 19518 | +83 |
+| 10 | 18736 | 19602 | 19385 | 19385 | +83 |
+
+**Resultado A/B combinado:**
+
+| Indicador | Carrera A: Vera p2, Sira p3 | Carrera B: Sira p2, Vera p3 |
+|---|---:|---:|
+| Ventaja de plaza 3 en V1 | 183 ms | 217 ms |
+| Ventaja de plaza 3 tras V10 | 133 ms | 83 ms |
+| Recuperación acumulada de plaza 2 en V2–V10 | 50 ms | 134 ms |
+| Diferencia total entre las tres IA | 150 ms | 267 ms |
+| Tiempo humano | 190836 ms | 190927 ms |
+
+**Lectura:** A y B reproducen que la plaza 3 obtiene alrededor de dos décimas en la primera vuelta (+183 y +217 ms), con independencia del piloto. Después de nueve vueltas lanzadas, parte se recupera pero no se neutraliza. **Es evidencia de un sesgo asociado a la plaza, no prueba todavía su causa geométrica.** Las medias del humano entre A y B difieren solo 91 ms de tiempo total; la reproducibilidad del ensayo es razonable para esta comparación.
+
+**Problema deportivo más grave:** 900 puntos Elo entre Álex y Sira pero los tres IA terminaron separados por 150–267 ms después de diez vueltas; las dos tandas las ganó el humano por 5.45–5.68 segundos. No se distinguen como pilotos de nivel diferente. En B, Sira con 900 Elo logró media lanzada **19477.11 ms**, mejor que Vera con 1730 Elo (**19492.00 ms**) y Álex con 1800 (**19551.33 ms**). Dados de B: Sira 5 tiradas de 1/2 y 2 tiradas de 5/6; Vera 2 tiradas de 1/2 y 6 de 5/6; Álex 1 tirada de 1/2 y 7 de 5/6. Además, en V7, V8 y V10 Sira y Vera registraron tiempos exactamente iguales, aun con dados y desviaciones diferentes. Todos los registros de frenada fueron 0, **lo cual no es un defecto por sí mismo** con el coche actual; sin hitches y sin segundos sin integrar.
+
+**Código comprobado 23/11/2026 (rama main):**
+- `src/game/ai/craftraceAiEloLeague.js` muestra que `rollEloAiDie(elo)` cambia las probabilidades de las 6 caras.
+- En `src/game/online/craftraceLiveV2BotDirector.js`, los tres IA de nivel 3 reciben el mismo `LIVE4_AI_LEVELS[3]`, el mismo `maxFwd`, `accel`, agarre y límites físicos, y `live4AiSeatPaceBias` devuelve 1 en G. El Elo se utiliza para tirar el dado: **no existe una pericia de conductor distinta por Elo aparte de su efecto indirecto en la desviación planificada**.
+- `_bezierProfileForDie` obtiene un `buildBezierDieVariant` y recalcula perfil; `trackBezierAiRacingLinePlanner.js` limita la perturbación según la forma de pista, radio del coche, curvatura y margen de seguridad, con 20% extra de margen. Por eso la perturbación puede acercarse a cero en plazas o trazados restrictivos: con dados distintos, las trayectorias físicas pueden seguir siendo casi iguales.
+- No atribuir el problema a que se haya ignorado el piloto elegido: la identidad y su Elo se usan en el controlador y aparecen correctamente en el informe. **El problema está en que ese Elo prácticamente no se traduce en diferencia real de pericia y ritmo en esta pista.**
+
+**Decisión tras recibir B:** parar las tandas repetitivas; no pedir al propietario 20 vueltas ni más ensayos idénticos. Antes de volver a correr, realizar auditoría de **distancia real de parrilla a primera puerta/meta** y diseñar un efecto **medible de pericia del conductor** (optimización de trayectoria, anticipación de curvas, recuperación de correcciones y decisiones), sin dar a IA motores o agarres ilegales, sin frenadas forzadas y sin penalizadores artificiales de velocidad por Elo. Introducir un test controlado de pilotos con dados prefijados y mismo punto de partida para separar efecto de dado/Elo de la posición. Solo tras la auditoría y validación de pruebas automáticas considerar cambios en DEV G y nueva tanda de verificación.
+
+**Estado:** diagnóstico confirmado en código; la implementación o modificación de conducción por Elo **todavía no está hecha ni validada**.
+
+---
+
 ## 4. Experimento acordado: análisis A/B en carreras de 10 vueltas
 
 **No modificar código en este paso.** Ya se ha recibido una carrera A de 10 vueltas, pero aún falta la carrera B intercambiando las IA. Para la siguiente prueba:
@@ -190,4 +242,4 @@ Para cada carrera, para las **plazas 2 y 3**:
 - Mantener mismo coche y físicas para jugador e IA; habilidad debe venir de trazada, selección de acciones y aprovechamiento del agarre. No forzar frenos que el coche no necesita.
 - Cualquier corrección futura se probará en DEV con regresión de cronometraje y revancha **antes** de integrar; ninguna intervención en Play, nativo, Supabase o despliegues a Vercel por esta documentación.
 
-**Siguiente paso pendiente:** recibir la carrera B (Álex 1, Sira 2, Vera 3) de 10 vueltas, comparar con A y decidir si repetir B–A. **Este documento recoge una carrera larga real aportada por el propietario; no se han ejecutado simulaciones ni carreras adicionales por esta modificación de documentación.**
+**Siguiente paso pendiente:** la carrera B ya está recibida; auditar técnicamente la parrilla y el mecanismo real de pericia Elo antes de pedir más tandas. **Este documento recoge una carrera larga real aportada por el propietario; no se han ejecutado simulaciones ni carreras adicionales por esta modificación de documentación.**
