@@ -1,7 +1,7 @@
 # CraftRace · LIVE 4 DEV G — parrilla, Elo, dados y plan de carreras largas
 
 **Fecha de registro:** 23/11/2026  
-**Estado:** tres carreras de 3 vueltas y **dos carreras A/B de 10 vueltas COMPLETADAS**. El problema Elo/ritmo requiere revisión del controlador antes de nuevas pruebas.  
+**Estado:** tres carreras de 3 vueltas, dos carreras A/B de 10 vueltas y **una carrera adicional de 20 vueltas completadas**; confirmado que Elo y dados apenas separan los tiempos de las IA en Santa Cruz.  
 **Circuito prioritario:** \`santa-cruz\` (sentido normal).  
 **Vehículo:** Avenir Gripline (\`avenir_gripline\`). **Físicas declaradas:** v1.  
 **Modalidad:** 1 humano + 3 IA, nivel 3 Experto, trazada G Bézier + dados.  
@@ -187,6 +187,41 @@ Cambios relacionados: [PR #55](https://github.com/almaprintes/TopdownCraftrace/p
 **Decisión tras recibir B:** parar las tandas repetitivas; no pedir al propietario 20 vueltas ni más ensayos idénticos. Antes de volver a correr, realizar auditoría de **distancia real de parrilla a primera puerta/meta** y diseñar un efecto **medible de pericia del conductor** (optimización de trayectoria, anticipación de curvas, recuperación de correcciones y decisiones), sin dar a IA motores o agarres ilegales, sin frenadas forzadas y sin penalizadores artificiales de velocidad por Elo. Introducir un test controlado de pilotos con dados prefijados y mismo punto de partida para separar efecto de dado/Elo de la posición. Solo tras la auditoría y validación de pruebas automáticas considerar cambios en DEV G y nueva tanda de verificación.
 
 **Estado:** diagnóstico confirmado en código; la implementación o modificación de conducción por Elo **todavía no está hecha ni validada**.
+
+---
+
+## 3 quater. Carrera adicional de 20 vueltas — colapso competitivo de Elo (23/11/2026 21:41 UTC)
+
+**Informe real del usuario** `CRAFT_RACE_LIVE4_G_V1`, fecha UTC `2026-11-23T21:41:05.260Z`, Santa Cruz forward, Avenir Gripline, física v1, LIVE 4 G, IA Experto 3, sin espera humana después de GO (0 ms); plazas: humano 0, Álex Falcón (1800) 1, Sira Nova (900) 2, Vera Cometa (1730) 3. Se completaron **20 vueltas por piloto**, sin hitches ni segundos sin integrar.
+
+| Puesto | Piloto | Elo | Tiempo final | Diferencia al humano | Tiradas 5–6 /20 | Tiradas 1–2 /20 |
+|---:|---|---:|---:|---:|---:|---:|
+| 1 | Humano | — | 376674 ms (6:16.674) | — | — | — |
+| 2 | Vera Cometa | 1730 | 391176 ms (6:31.176) | +14502 ms | 16 | 2 |
+| 3 | Sira Nova | 900 | 391208 ms (6:31.208) | +14534 ms | 0 | 17 |
+| 4 | Álex Falcón | 1800 | 391275 ms (6:31.275) | +14601 ms | 19 | 0 |
+
+Los 80 tiempos por vuelta han sido sumados y cotejados con los totales del informe; no se reproducen aquí todos los campos individuales para mantener el documento legible. **Los tres IA terminan en una ventana de solo 99 ms a lo largo de 20 vueltas**, pese a una diferencia de 900 Elo y distribuciones de dados radicalmente distintas. El hecho de que 19/20 tiradas de Álex fueran 5/6 mientras Sira tuvo 17/20 de 1/2 demuestra que el Elo **sí afecta al dado**; no está causando una separación suficiente en **ritmo de conducción real**. Álex terminó por detrás de Sira por 67 ms, dentro de esa ventana.
+
+**Ventaja acumulada del humano sobre la IA más cercana**, segundos al terminar cada vuelta:
+
+| Vueltas | V1 | V2 | V3 | V4 | V5 | V6 | V7 | V8 | V9 | V10 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Ventaja (s) | .869 | 1.784 | 2.364 | 2.750 | 3.433 | 4.217 | 5.082 | 5.783 | 6.867 | 7.624 |
+
+| Vueltas | V11 | V12 | V13 | V14 | V15 | V16 | V17 | V18 | V19 | V20 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Ventaja (s) | 8.267 | 9.134 | 9.701 | 10.184 | 10.550 | 11.334 | 12.250 | 13.258 | 14.161 | 14.502 |
+
+La ventaja superó los 6 s **al finalizar V9**, y aumentó otros **6.878 s entre V10 y V20**. Esto **descarta un tope rígido observado de 6 s** y matiza la impresión anterior de estancamiento, aunque no prueba que cualquier posible mecanismo condicional esté ausente de todo el juego. El humano completó las últimas 10 vueltas en 187567 ms frente a 189107 ms en las 10 primeras, una mejora de 1540 ms.
+
+**Plaza 3 vs 2 en esta carrera:** Vera (p3) ganó V1 a Sira (p2) por **283 ms** (20941 vs 21224). Tras 20 vueltas terminó **32 ms por delante** (391176 vs 391208). La plaza 2 recuperó **251 ms** durante V2–V20; no se neutralizó totalmente la diferencia inicial. Resultado consistente con las diferencias iniciales de ~0.2 s en las dos carreras A/B de 10 vueltas; persiste la incertidumbre sobre la causa de ese diferencial.
+
+**Dato físico adicional:** las últimas vueltas IA fueron Álex 19285 ms, Sira 19268 ms y Vera 19270 ms (17 ms de diferencia máxima); la semejanza no es solo de tiempos agregados. Las 60 vueltas IA registraron frenada 0 %, sin necesidad de forzar freno para este coche.
+
+**Conclusión operativa:** no solicitar más carreras de 10/20 vueltas con el sistema actual. Auditar/controlar (a) distancia inicial y cronometraje por plaza, y (b) que los distintos dados alteren realmente decisiones de conducción/tiempos respetando el mismo motor, agarre y físicas. Preparar ensayos automáticos con misma plaza y dados controlados, medición de lap delta y separación de distancias, antes de que el propietario vuelva a gastar seis minutos en otra carrera.
+
+**Estado:** registro y diagnóstico **documental**, ninguna modificación de controlador/IA ni de despliegues por esta entrada.
 
 ---
 
