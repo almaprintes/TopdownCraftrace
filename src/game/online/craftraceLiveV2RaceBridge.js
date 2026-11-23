@@ -118,7 +118,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  updateNames(room);
  const displayName=entry=>live4SeatName(entry,
    [...membersById].map(([player_id,nick])=>({player_id,nick})),
-   room.ai_identity_seed||room.id);
+   room.ai_identity_seed||room.id,guidedGTrial?session.aiPilotIds:null);
  const createVisual=item=>{
    if(item.seat===localSeat||isHost&&item.kind==='ai')return;
    const visual=scene.add.sprite(0,0,'__DEFAULT').setVisible(false);
@@ -139,7 +139,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        roster:raceEntries,hostId,localId,
        startingGrid:scene._crafRaceLiveV2Grid,laps:room.laps,
        live4GuidedGTrial:guidedGTrial,
-       aiIdentitySeed:room.ai_identity_seed||room.id
+       aiIdentitySeed:room.ai_identity_seed||room.id,
+       aiPilotIds:guidedGTrial?session.aiPilotIds:null
      });
    }catch(err){
      aiError=err;console.error('[LIVE 4] Could not initialize physical AI:',err);

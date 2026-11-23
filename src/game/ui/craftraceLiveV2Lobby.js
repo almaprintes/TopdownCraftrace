@@ -6,6 +6,10 @@ import {createLiveV2Lobby,joinLiveV2Lobby,configureLiveV2Lobby,
 import {stageLive4RaceSession} from '../online/craftraceLiveV2RaceSession.js';
 import {liveIdentity} from '../online/craftraceLiveTransport.js';
 import {live4SeatName} from '../online/craftraceLiveV2PilotNames.js';
+import {LIVE4_AI_CHOICES,live4PilotHighRollChance,
+ readLive4AiSelections,chooseLive4AiSeat,saveLive4AiSelections,
+ resolveLive4AiPilots,resolvedLive4AiPilotIds}
+ from '../online/craftraceLive4AiSelection.js';
 import {isLive4GuidedGSupported,setLive4GuidedGForRoom,hasLive4GuidedGForRoom,guidedGTrackLabel}
   from '../online/craftraceLive4GuidedGExperiment.js';
 import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
@@ -197,6 +201,12 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
   classicButton.hidden=typeof onOpenClassic!=='function';
   $('[data-director]').hidden=!race4Enabled;
   let closed=false,loading=false,room=null,identity=null,monitor=null,hydrated=false,launching=false;
+  const aiSelectionsByTrack=new Map();
+  const getAiSelection=trackId=>{
+    if(!aiSelectionsByTrack.has(trackId))
+      aiSelectionsByTrack.set(trackId,readLive4AiSelections(trackId));
+    return aiSelectionsByTrack.get(trackId);
+  };
   $('[data-race-warning]').textContent=race4Enabled
     ?'CARRERA 4P EXPERIMENTAL · NO HOMOLOGADA · sin monedas ni récords. Comprueba primero la conexión.'
     :'Parrilla de pruebas. La carrera solo puede iniciarse desde el enlace DEV con race4=1.';
@@ -228,22 +238,84 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     $('[data-rules]').textContent=getTrackPublicName(s.track_id)+' · '+s.laps+(s.laps===1?' VUELTA':' VUELTAS');
     $('[data-host-settings]').hidden=!host||s.state!=='waiting';
     syncOptions(s);
-    const row=$('[data-seats]');row.replaceChildren();
-    for(const seat of grid.seats){
-      const card=document.createElement('article');card.className='cr4-seat cr4-seat--'+seat.kind;
-      const label=document.createElement('small');label.textContent='PLAZA '+(seat.index+1);card.append(label);
-      const name=document.createElement('strong');
-      name.textContent=seat.kind==='human'
-        ?live4SeatName({seat:seat.index,kind:'human',player_id:seat.playerId},s.members,s.ai_identity_seed||s.id)
-        :seat.kind==='ai'
-          ?live4SeatName({seat:seat.index,kind:'ai',difficulty:seat.difficulty},s.members,s.ai_identity_seed||s.id)
-          :'LIBRE';
-      card.append(name);
-      const status=document.createElement('span');
-      status.textContent=seat.kind==='human'
-        ?seat.online?(seat.ready?'LISTO':'CONECTADO'):'SIN CONEXIÓN'
-        :seat.kind==='ai'?'PILOTO IA · ELO PROVISIONAL':'ESPERANDO INVITACIÓN';
-      card.append(status);row.append(card);
+    const row=$('[data-seats]');
+    // Host-only G analysis: independent identities, preserved by circuit for
+    // rematches. Multi-human rooms keep server-seed names on every device
+    // until a server-synchronized selection protocol is available.
+    const canSelectAi=Boolean(race4Enabled&&host&&s.state==='waiting'&&
+      s.members.length===1&&s.fill_ai&&s.ai_difficulty===3&&
+      isLive4GuidedGSupported({trackId:s.track_id,dev:race4Enabled,aiDifficulty:3})&&
+      hasLive4GuidedGForRoom(s.id));
+    const aiSeats=grid.seats.filter(seat=>seat.kind==='ai').map(seat=>seat.index);
+    const prefs=canSelectAi?getAiSelection(s.track_id):{};
+    const actualPilots=canSelectAi?resolveLive4AiPilots(
+      s.ai_identity_seed||s.id,aiSeats,prefs):{};
+    // Polling the lobby every 1.2 seconds must NOT close an open native
+    // dropdown on iPhone. Only rebuild when seat or selection data changes.
+    const seatSignature=JSON.stringify({
+      seats:grid.seats.map(seat=>[seat.index,seat.kind,seat.playerId,
+        seat.online,seat.ready,seat.difficulty]),
+      members:s.members.map(member=>[member.player_id,member.nick]),
+      canSelectAi,prefs,aiPilots:Object.values(actualPilots).map(p=>p.id)
+    });
+    if(row.dataset.signature!==seatSignature){
+      row.dataset.signature=seatSignature;
+      row.replaceChildren();
+      for(const seat of grid.seats){
+        const card=document.createElement('article');
+        card.className='cr4-seat cr4-seat--'+seat.kind;
+        const label=document.createElement('small');
+        label.textContent='PLAZA '+(seat.index+1);card.append(label);
+        const pilot=actualPilots[seat.index];
+        const status=document.createElement('span');
+        if(seat.kind==='ai'&&canSelectAi&&pilot){
+          const select=document.createElement('select');
+          select.className='cr4-ai-pilot-select';
+          select.setAttribute('aria-label','Seleccionar IA en plaza '+(seat.index+1));
+          const automatic=document.createElement('option');
+          automatic.value='';
+          automatic.textContent='AUTO · '+pilot.name+' · ELO '+pilot.elo;
+          select.append(automatic);
+          for(const choice of LIVE4_AI_CHOICES){
+            const option=document.createElement('option');
+            option.value=choice.id;
+            option.textContent=choice.name+' · ELO '+choice.elo+
+              ' · '+choice.style+' · dado 5–6 '+live4PilotHighRollChance(choice)+'%';
+            option.disabled=Object.entries(prefs).some(([other,id])=>
+              Number(other)!==seat.index&&id===choice.id);
+            select.append(option);
+          }
+          select.value=prefs[seat.index]||'';
+          select.addEventListener('change',()=>{
+            try{
+              const next=chooseLive4AiSeat(getAiSelection(s.track_id),seat.index,select.value);
+              aiSelectionsByTrack.set(s.track_id,next);
+              const saved=saveLive4AiSelections(s.track_id,next);
+              update(s,grid);
+              say(saved?'Piloto seleccionado para esta pista y próximas revanchas.'
+                :'Piloto elegido para esta sesión. El navegador no permite guardar la preferencia.');
+            }catch(error){say(error.message);select.value=prefs[seat.index]||'';}
+          });
+          card.append(select);
+          status.textContent='ELO '+pilot.elo+' · '+pilot.style.toUpperCase()+
+            ' · DADO 5–6: '+live4PilotHighRollChance(pilot)+'%';
+          card.classList.add('cr4-seat--selectable');
+        }else{
+          const name=document.createElement('strong');
+          name.textContent=seat.kind==='human'
+            ?live4SeatName({seat:seat.index,kind:'human',player_id:seat.playerId},
+              s.members,s.ai_identity_seed||s.id)
+            :seat.kind==='ai'
+              ?live4SeatName({seat:seat.index,kind:'ai',difficulty:seat.difficulty},
+                s.members,s.ai_identity_seed||s.id)
+              :'LIBRE';
+          card.append(name);
+          status.textContent=seat.kind==='human'
+            ?seat.online?(seat.ready?'LISTO':'CONECTADO'):'SIN CONEXIÓN'
+            :seat.kind==='ai'?'PILOTO IA · ELO PROVISIONAL':'ESPERANDO INVITACIÓN';
+        }
+        card.append(status);row.append(card);
+      }
     }
     const me=s.members.find(m=>m.player_id===identity.id);
     $('[data-ready]').disabled=loading||s.state!=='waiting';
@@ -300,7 +372,15 @@ export function openCrafRaceLiveV2Lobby(scene,{carId=null,trackId=null,onOpenCla
     // (enforced by snapshot/join RPC) is the real validity limit; a 30-second
     // client guard would incorrectly strand pilots after a network drop.
     launching=true;
-    stageLive4RaceSession(s,identity);
+    const eligibleSelectedG=s.host_id===identity.id&&s.fill_ai===true&&
+      s.ai_difficulty===3&&s.locked_roster.filter(x=>x.kind==='human').length===1&&
+      isLive4GuidedGSupported({trackId:s.track_id,dev:race4Enabled,aiDifficulty:3})&&
+      hasLive4GuidedGForRoom(s.id);
+    const pilots=eligibleSelectedG?resolveLive4AiPilots(
+      s.ai_identity_seed||s.id,
+      s.locked_roster.filter(x=>x.kind==='ai').map(x=>x.seat),
+      getAiSelection(s.track_id)):null;
+    stageLive4RaceSession(s,identity,resolvedLive4AiPilotIds(pilots));
     dispose();
     const localCar=hostCarId(s);
     scene.scene.start('race',{

@@ -159,7 +159,8 @@ const ui=file('src/game/ui/craftraceLiveV2Lobby.js');
 assert.ok(ui.includes("window.location.pathname.includes('/dev/')"));
 assert.ok(ui.includes("!globalThis.Capacitor?.isNativePlatform?.()"));
 assert.ok(ui.includes("state==='countdown'"));
-assert.ok(ui.includes("stageLive4RaceSession(s,identity)"));
+assert.ok(ui.includes("stageLive4RaceSession(s,identity,resolvedLive4AiPilotIds(pilots))"),
+ 'Handoff must preserve server-authorized room while passing optional validated host AI identities');
 assert.ok(ui.includes("startLiveV2Lobby(room.id)"));
 const bridge=file('src/game/online/craftraceLiveV2RaceBridge.js');
 assert.ok(bridge.includes('CrafRaceLive4RemoteModel'));

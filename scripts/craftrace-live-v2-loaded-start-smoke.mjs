@@ -31,7 +31,8 @@ assert.ok(!/\b(?:insert into|update|delete from|alter table|drop table)\s+public
 const lobby=read('src/game/ui/craftraceLiveV2Lobby.js');
 assert.ok(lobby.includes("!Array.isArray(s.locked_roster))return;"));
 assert.ok(lobby.includes("liveStartAt:Number.isFinite(s.start_at_ms)?s.start_at_ms:null"));
-assert.ok(lobby.includes("stageLive4RaceSession(s,identity)"));
+assert.ok(lobby.includes("stageLive4RaceSession(s,identity,resolvedLive4AiPilotIds(pilots))"),
+ 'Only server-locked race roster is authorized; selected AI IDs are metadata');
 const client=read('src/game/online/craftraceLiveV2LobbyClient.js');
 assert.ok(client.includes("rpc('grid_loaded',{p_room:verifyId(roomId)})"));
 const bridge=read('src/game/online/craftraceLiveV2RaceBridge.js');

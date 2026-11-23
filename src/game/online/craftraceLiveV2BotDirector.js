@@ -16,6 +16,7 @@ import {summarizePlannedLateral,samplePlannedVsReal} from './craftraceLive4LineT
 import {makeLive4TimingAudit,observeLive4Timing,summarizeLive4Timing} from './craftraceLive4TimingAudit.js';
 import {rollGuidedDie,GUIDED_DIE_TOLERANCE_PX,measureGuidedPass,closeGuidedLap} from './craftraceGuidedDie.js';
 import {live4AiPilotForSeat} from './craftraceLive4AiIdentity.js';
+import {live4AiPilotById} from './craftraceLive4AiSelection.js';
 import {rollEloAiDie} from '../ai/craftraceAiEloLeague.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -63,7 +64,7 @@ export const LIVE4_AI_LEVELS=Object.freeze({
 const speedOf=body=>Math.hypot(body?.body?.velocity?.x||0,body?.body?.velocity?.y||0);
 
 export class CrafRaceLive4BotDirector{
- constructor(scene,{roster,hostId,localId,startingGrid,laps=3,preview=false,live4GuidedGTrial=false,aiIdentitySeed=null}={}){
+ constructor(scene,{roster,hostId,localId,startingGrid,laps=3,preview=false,live4GuidedGTrial=false,aiIdentitySeed=null,aiPilotIds=null}={}){
   if(!scene?.physics?.add?.sprite||!Array.isArray(roster)||hostId!==localId)
     throw Error('Only a physics-ready host can drive LIVE AI');
   const ai=roster.filter(x=>x.kind==='ai');
@@ -78,6 +79,7 @@ export class CrafRaceLive4BotDirector{
   this.profiles=new Map();
   this.preview=preview===true;this.raceStarted=false;
   this.aiIdentitySeed=typeof aiIdentitySeed==='string'?aiIdentitySeed:null;
+  this.aiPilotIds=aiPilotIds;
   this.live4GuidedGTrial=!this.preview&&live4GuidedGTrial===true&&
     isLive4GuidedGSupported({trackId:scene.trackKey,dev:true,aiDifficulty:3});
   this.timingAudit=makeLive4TimingAudit();
@@ -230,7 +232,8 @@ export class CrafRaceLive4BotDirector{
     if(dist<bd){best=i;bd=dist;}
    }
    const bot={seat:item.seat,difficulty:item.difficulty,
-     aiPilot:this.aiIdentitySeed?live4AiPilotForSeat(this.aiIdentitySeed,item.seat):null,
+     aiPilot:(this.live4GuidedGTrial?live4AiPilotById(this.aiPilotIds?.[item.seat]):null)||
+       (this.aiIdentitySeed?live4AiPilotForSeat(this.aiIdentitySeed,item.seat):null),
      plannerBody:body,rig,visual,style:(item.seat*2+1)%3,
      _plannerSampleIndex:best,
      lastIndex:best,sampleProgress:0,completedLaps:0,

@@ -175,3 +175,16 @@
 .cr4-result-panel details summary{cursor:pointer;font-size:12px;font-weight:850}
 .cr4-result-panel details small{display:block;line-height:1.4;margin:8px 0;
  color:#aac2cc}
+
+
+/* DEV G: native iOS picker lives inside the actual AI card and exposes ELO. */
+#cr-live4 .cr4-seat--selectable{border-color:#e4bd74;position:relative;
+  background:linear-gradient(120deg,#4b3527bb,#101f2f)}
+#cr-live4 .cr4-ai-pilot-select{min-width:0;width:100%;height:auto;min-height:39px;
+  padding:7px 18px 7px 5px;border:1px solid #e2b96f;
+  background:#1b2933;color:#ffdfaa;font-size:clamp(11px,1.7vw,15px);
+  font-weight:900;line-height:1.2;text-overflow:ellipsis;
+  border-radius:4px;cursor:pointer;touch-action:manipulation}
+#cr-live4 .cr4-seat--selectable span{font-size:10px;line-height:1.25;
+  overflow-wrap:anywhere;color:#d8c7a4}
+#cr-live4 .cr4-seat--selectable:focus-within{outline:2px solid #f4ca74;outline-offset:1px}
