@@ -17,7 +17,7 @@ export function live4GDriverSkill(elo,face){
   hesitation:1-quality});
 }
 export function live4GCornerDecisions(skill,curveDemand){
- if(!skill)return {aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1};
+ if(!skill)return {aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1,throttleFactor:1};
  const demand=clamp(Number(curveDemand)||0,0,1);
  const hesitation=clamp(Number(skill.hesitation)||0,0,1);
  const x=demand*hesitation;
@@ -27,6 +27,11 @@ export function live4GCornerDecisions(skill,curveDemand){
  return {
   aimFactor:1-.15*x,
   steerRateFactor:1-.12*x,
-  cornerSpeedFactor:1-.20*x
+  cornerSpeedFactor:1-.20*x,
+  // On powerful cars the old speed target could remain above the real
+  // drag-limited pace: every AI then held full throttle despite distinct
+  // target percentages. Less confident drivers now genuinely lift the
+  // accelerator as they turn. No added braking, torque or grip modifiers.
+  throttleFactor:1-.65*x
  };
 }
