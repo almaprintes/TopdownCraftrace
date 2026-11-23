@@ -250,6 +250,15 @@ Para corregir el banco se reconstruyeron los **parámetros base reales del Aveni
 
 La prueba de calibración previa de 0,65 se **descartó por excesiva**: ampliaba de modo irreal las diferencias a más de 8 s/vuelta en el modelo. La calibración 0,15 se validó en el mismo Avenir con **tres vueltas físicas continuadas** y los seis dados; el ensayo verificará que la separación por Elo sea perceptible pero no abrumadora y que permanezca en las vueltas 2 y 3. El JSON añade `factorGasCurvaMedioPct` y `gasAplicadoMedioPct`; el usuario deberá contrastar estos valores y los tiempos con un informe real de iPhone cuando la versión DEV esté desplegada.
 
+**Actualización de conducción solicitada por el propietario (23/11):** la diferencia entre pilotos debe ser también de **momento de ejecución**, no simplemente un factor fijo de gas. Se incorporó a DEV G un detector de entrada/salida de curva sobre la curvatura real de la Bézier:
+
+- Una tirada favorable y Elo alto dan menor vacilación: retrasar el levantamiento de gas/decisión de frenar cuando la curva se aproxima y volver a abrir antes a la salida.
+- Una mala tirada o Elo bajo incrementan la vacilación: el piloto puede levantar antes y mantener ese levantamiento unas decenas de milisegundos tras el final de la curva; si el controlador **realmente requiere frenada**, el umbral puede adelantarse ligeramente, sin inventar un freno donde no lo necesita.
+- El margen de reacción depende de la calidad conjunta (72% experiencia / 28% dado): adelanto visual de entrada `16 + 84 × vacilación` ms y retardo de recuperación `12 + 72 × vacilación` ms, traducidos a muestras de trayectoria según velocidad actual y separación real. A 60 FPS, las decisiones se cuantizan a ~16,7 ms por actualización.
+- La perturbación adicional del gas se activa sobre las **transiciones de curvatura** (entrada y salida). En rectas y curvas de curvatura estable la compuerta temporal no introduce castigo adicional. Se mantiene la calibración moderada de reducción de gas basada en demanda real de curva, con límites de seguridad.
+- El nuevo JSON por vuelta permite ver `anticipacionEntradaCurvaMs`, `retardoSalidaCurvaMs`, `faseEntradaCurvaPct`, `faseSalidaCurvaPct`, además del gas aplicado, curvas y dados. Los milisegundos son **ventanas nominales de decisión**, no exactitud subfotograma demostrada en iPhone.
+- Añadidos tests con una curva sintética de entrada/salida y con la curvatura real de Santa Cruz. El banco sigue comparando las **vueltas 2–3** lanzadas con el Avenir físico, todos los dados, Elo 900 y 1800; exige diferencias perceptibles pero limitadas.
+
 **No afirmar aún que el error de parrilla o todos los duelos están corregidos.** Estos cambios apuntan solo a la conversión efectiva de Elo+dado en controles físicos de conducción del anfitrión G.
 
 ---
