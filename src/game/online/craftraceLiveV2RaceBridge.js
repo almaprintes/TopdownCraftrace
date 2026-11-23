@@ -55,6 +55,11 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  };
  let clockOffset=Number(room.clientClockOffsetMs)||0;
  let localStartPerf=null,lastLocalSend=0,localPending=false;
+ // Read-only GO-to-first-motion timer: proves whether a deliberately delayed
+ // start is actually included in the player's first timed lap. Never alters
+ // the car, the start lights, standings, or the finish gate.
+ let playerFirstMotionMs=null;
+ const FIRST_MOTION_PX_S=8;
  let completed=0,lapTimes=[],localFinish=null,localFinishPosted=false;
  let lastPostAttempt=0,localPosCount=0,slowFrames=0,frameCount=0;
  let elapsedWindow=0,lastUpdate=0,lastReport=0,frameTimes=[];
@@ -359,7 +364,10 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        if(!calibrationSaved){
          const report=buildLive4CalibrationReport({
            trackId:room.track_id,carId:scene.carId||room.car_id,
-           laps:room.laps,direction:room.direction,
+           laps:room.laps,
+           playerStartDelayMs:playerFirstMotionMs,
+           firstMotionThresholdPxS:FIRST_MOTION_PX_S,
+           direction:room.direction,
            physicsVersion:room.physics_version,aiDifficulty:room.ai_difficulty,
            generatedAt:new Date().toISOString(),
            entries:raceEntries.map(entry=>{
@@ -410,6 +418,13 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
          }
        };
        panel.append(copy,feedback);
+       if(playerFirstMotionMs!==null){
+         const startNote=document.createElement('p');
+         startNote.className='cr4-result-note';
+         startNote.textContent='SALIDA · PRIMER MOVIMIENTO '+(playerFirstMotionMs/1000).toFixed(3)+
+           ' s después del GO · umbral '+FIRST_MOTION_PX_S+' px/s · tiempo incluido en V1';
+         panel.append(startNote);
+       }
      }
    }
    // Authenticated rematch: only the previous host can propose. Former
@@ -489,6 +504,11 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    }
    reconnectLink(now);
    if(scene._raceStarted&&localStartPerf===null)localStartPerf=now;
+   if(scene._raceStarted&&!localFinish&&localStartPerf!==null&&playerFirstMotionMs===null){
+     const v=scene.carBody?.body?.velocity;
+     if(Math.hypot(Number(v?.x)||0,Number(v?.y)||0)>=FIRST_MOTION_PX_S)
+       playerFirstMotionMs=Math.max(0,Math.round(now-localStartPerf));
+   }
    finishCheck(now);
    // Update only remotely controlled rigs; never mutate local car dynamics.
    for(const item of model.positions(now)){

@@ -32,6 +32,7 @@ const entries=[
 ];
 const report=buildLive4CalibrationReport({
  trackId:'karting-canarias-4096',carId:'avenir',laps:3,
+ playerStartDelayMs:5000,firstMotionThresholdPxS:8,
  direction:'forward',physicsVersion:205,aiDifficulty:3,
  generatedAt:'2026-11-23T08:04:00.000Z',
  entries,bots,diagnostics:{
@@ -40,6 +41,10 @@ const report=buildLive4CalibrationReport({
  }
 });
 assert.equal(report.formato,'CRAFT_RACE_LIVE4_G_V1');
+assert.equal(report.salidaHumano.esperaPrimerMovimientoMs,5000);
+assert.equal(report.salidaHumano.incluidoEnPrimeraVuelta,true);
+assert.equal(report.salidaHumano.umbralMovimientoPxS,8);
+assert.equal(buildLive4CalibrationReport({}).salidaHumano.esperaPrimerMovimientoMs,null);
 assert.equal(report.pilotoDatos.length,2);
 assert.equal(report.pilotoDatos[0].totalMs,77837);
 assert.deepEqual(report.pilotoDatos[0].vueltas.map(x=>x.ms),[26166,26369,25302]);
@@ -104,4 +109,8 @@ assert.ok(bridge.includes('saveLive4CalibrationReport(store,roomId,report)'));
 assert.ok(bridge.includes('formatLive4CalibrationHistory(notebook)'));
 assert.ok(bridge.includes('Abre ChatGPT y pega el texto'));
 assert.ok(bridge.includes('room.physics_version'));
+assert.ok(bridge.includes('FIRST_MOTION_PX_S=8'));
+assert.ok(bridge.includes('playerFirstMotionMs=Math.max(0,Math.round(now-localStartPerf))'));
+assert.ok(bridge.includes('playerStartDelayMs:playerFirstMotionMs'));
+assert.ok(bridge.includes('SALIDA · PRIMER MOVIMIENTO'));
 console.log('PASS LIVE 4 G race notebook: ten runs, dedup, accurate lap/dice/telemetry, privacy, clipboard, iPhone fallback.');
