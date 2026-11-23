@@ -42,15 +42,16 @@ for(const elo of [900,1200,1500,1800]){
   const p=live4GDriverSkill(elo,die);
   assert.ok(p&&p.quality>=0&&p.quality<=1);
   const curve=live4GCornerDecisions(p,1),straight=live4GCornerDecisions(p,0);
-  assert.deepEqual(straight,{aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1});
+  assert.deepEqual(straight,{aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1,throttleFactor:1});
   assert.ok(curve.aimFactor>=.85&&curve.aimFactor<=1);
   assert.ok(curve.steerRateFactor>=.88&&curve.steerRateFactor<=1);
   assert.ok(curve.cornerSpeedFactor>=.8&&curve.cornerSpeedFactor<=1);
+  assert.ok(curve.throttleFactor>=.35&&curve.throttleFactor<=1);
   if(die<6)assert.ok(p.quality<live4GDriverSkill(elo,die+1).quality);
  }
 }
 assert.deepEqual(live4GCornerDecisions(null,1),{
- aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1
+ aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1,throttleFactor:1
 });
 assert.equal(live4GDriverSkill(null,6),null);
 assert.ok(live4GDriverSkill(1800,1).quality>live4GDriverSkill(900,6).quality,
@@ -102,6 +103,7 @@ function simulate(elo,die,lapCount=1){
  const bot={plannerBody:physicsBody,_plannerSampleIndex:0};
  const skill=live4GDriverSkill(elo,die);
  let progress=0,last=0,errors=0,maxError=0,avgDecision=0,brakes=0;
+ let avgThrottle=0,avgCornerThrottleFactor=0;
  const lapEnds=[];
  for(let frame=0;frame<60*130;frame++){
   const control=updateRacePhysicalBot(bot,profile,{
@@ -124,6 +126,8 @@ function simulate(elo,die,lapCount=1){
   errors+=control.distanceToLine;
   maxError=Math.max(maxError,control.distanceToLine);
   avgDecision+=control.live4GCornerSpeedFactor;
+  avgThrottle+=control.throttle;
+  avgCornerThrottleFactor+=control.live4GCornerThrottleFactor;
   if(control.brake>.001)brakes++;
   if(progress>=n){
    progress-=n;lapEnds.push(round((frame+1)*DT));
@@ -133,6 +137,8 @@ function simulate(elo,die,lapCount=1){
     meanError:round(errors/(frame+1)),
     maxError:round(maxError),
     cornerDecisionPct:round(avgDecision/(frame+1)*100,2),
+    throttlePct:round(avgThrottle/(frame+1)*100,2),
+    cornerThrottlePct:round(avgCornerThrottleFactor/(frame+1)*100,2),
     brakePct:round(brakes/(frame+1)*100,2)
    };
   }
@@ -152,6 +158,19 @@ const cases=[
 const results=cases.map(x=>({...x,...simulate(x.elo,x.die)}));
 const byName=Object.fromEntries(results.map(x=>[x.name,x]));
 console.info('LIVE4-G-REAL-ELO-AB',JSON.stringify(results));
+// Standing-start-only comparisons may exaggerate skill. Diagnose launched
+// laps before adjusting gameplay: same continuous physical state, no reset.
+const rolling=Array.from({length:6},(_,i)=>i+1).flatMap(die=>[900,1800].map(elo=>{
+ const x=simulate(elo,die,3);
+ return{elo,die,lapTimes:x.lapTimes,
+  movingLapMean:round((x.lapTimes[1]+x.lapTimes[2])/2),
+  meanError:x.meanError,brakePct:x.brakePct,throttlePct:x.throttlePct,
+  cornerDecisionPct:x.cornerDecisionPct,cornerThrottlePct:x.cornerThrottlePct};
+}));
+console.info('LIVE4-G-ROLLING-AB',JSON.stringify({car:{
+ maxFwd:CAR.maxFwd,accel:CAR.accel,linearDrag:CAR.linearDrag,
+ turnRate:CAR.turnRate},laps:rolling}));
+
 assert.ok(byName['rookie die 1'].seconds>byName['rookie die 6'].seconds+.15,
  'Dice must affect actual physical lap time for same pilot');
 assert.ok(byName['ace die 1'].seconds>byName['ace die 6'].seconds+.08,
@@ -178,17 +197,6 @@ assert.ok(expectedByElo[900]>expectedByElo[1350] &&
 assert.ok(expectedByElo[900]-expectedByElo[1800]>.4,
  'Physical skill and softened dice must separate 900 from 1800 ELO');
 console.info('LIVE4-G-WEIGHTED-ELO-PACE',JSON.stringify(expectedByElo));
-// Standing-start-only comparisons may exaggerate skill. Diagnose launched
-// laps before adjusting gameplay: same continuous physical state, no reset.
-const rolling=Array.from({length:6},(_,i)=>i+1).flatMap(die=>[900,1800].map(elo=>{
- const x=simulate(elo,die,3);
- return{elo,die,lapTimes:x.lapTimes,
-  movingLapMean:round((x.lapTimes[1]+x.lapTimes[2])/2),
-  meanError:x.meanError,brakePct:x.brakePct,cornerDecisionPct:x.cornerDecisionPct};
-}));
-console.info('LIVE4-G-ROLLING-AB',JSON.stringify({car:{
- maxFwd:CAR.maxFwd,accel:CAR.accel,linearDrag:CAR.linearDrag,
- turnRate:CAR.turnRate},laps:rolling}));
 director.destroy();
 console.log('PASS LIVE4 G Elo/dice physical driving A/B',JSON.stringify({dice:{
  topHigh:round(top[4]+top[5]),rookieHigh:round(low[4]+low[5]),
