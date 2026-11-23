@@ -143,6 +143,22 @@ assert.ok(byName['rookie die 6'].seconds>byName['ace die 6'].seconds+.15,
  'High Elo must have meaningful proficiency even on equal perfect roll');
 assert.ok(results.every(x=>x.maxError<110),
  'Skill variation must still follow racing line safely; no teleport or shortcut');
+// More than a lucky roll: compare expected physical lap time across ALL SIX
+// faces with the newly softened probabilities, fixed grid and same engine.
+const expectedByElo={};
+for(const elo of [900,1350,1800]){
+ const probs=eloDieProbabilities(elo);
+ const perFace=Array.from({length:6},(_,i)=>simulate(elo,i+1));
+ expectedByElo[elo]=round(perFace.reduce((sum,run,i)=>sum+probs[i]*run.seconds,0));
+ assert.ok(perFace.every(x=>x.maxError<110),
+  'All six skill choices must remain on track: '+elo);
+}
+assert.ok(expectedByElo[900]>expectedByElo[1350] &&
+ expectedByElo[1350]>expectedByElo[1800],
+ 'Expected ELO pace must be ordered over all rolls');
+assert.ok(expectedByElo[900]-expectedByElo[1800]>.4,
+ 'Physical skill and softened dice must separate 900 from 1800 ELO');
+console.info('LIVE4-G-WEIGHTED-ELO-PACE',JSON.stringify(expectedByElo));
 director.destroy();
 console.log('PASS LIVE4 G Elo/dice physical driving A/B',JSON.stringify({dice:{
  topHigh:round(top[4]+top[5]),rookieHigh:round(low[4]+low[5]),
