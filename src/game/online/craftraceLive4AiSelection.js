@@ -37,10 +37,10 @@ export function cleanLive4AiSelections(selection){
  }
  return clean;
 }
-export function readLive4AiSelections(trackId,store=globalThis.localStorage){
+export function readLive4AiSelections(trackId,store=null){
  if(!ALLOWED_TRACKS.has(trackId))return {};
  try{
-  const raw=store?.getItem(STORAGE_PREFIX+trackId);
+  const raw=(store||globalThis.localStorage)?.getItem(STORAGE_PREFIX+trackId);
   return cleanLive4AiSelections(raw?JSON.parse(raw):null);
  }catch{return {};}
 }
@@ -58,12 +58,13 @@ export function chooseLive4AiSeat(selection,seat,pilotId){
  else updated[seat]=pilotId;
  return updated;
 }
-export function saveLive4AiSelections(trackId,selection,store=globalThis.localStorage){
+export function saveLive4AiSelections(trackId,selection,store=null){
  const normalized=cleanLive4AiSelections(selection);
  if(!ALLOWED_TRACKS.has(trackId))return false;
  try{
-  store?.setItem(STORAGE_PREFIX+trackId,JSON.stringify(normalized));
-  return typeof store?.setItem==='function';
+  const storage=store||globalThis.localStorage;
+  storage?.setItem(STORAGE_PREFIX+trackId,JSON.stringify(normalized));
+  return typeof storage?.setItem==='function';
  }catch{return false;}
 }
 
