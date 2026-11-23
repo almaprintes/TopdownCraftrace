@@ -1,11 +1,11 @@
 # CraftRace · LIVE 4 DEV G — parrilla, Elo, dados y plan de carreras largas
 
 **Fecha de registro:** 23/11/2026  
-**Estado:** tres carreras de 3 vueltas y **primera carrera A de 10 vueltas observadas**; intercambio B de 10 vueltas **PENDIENTE**.  
+**Estado:** tres carreras de 3 vueltas y **dos carreras A/B de 10 vueltas COMPLETADAS**. El problema Elo/ritmo requiere revisión del controlador antes de nuevas pruebas.  
 **Circuito prioritario:** \`santa-cruz\` (sentido normal).  
 **Vehículo:** Avenir Gripline (\`avenir_gripline\`). **Físicas declaradas:** v1.  
 **Modalidad:** 1 humano + 3 IA, nivel 3 Experto, trazada G Bézier + dados.  
-**Alcance de este cambio:** documentación exclusivamente. **Esta actualización documental solo incorpora una carrera real comunicada por el propietario; no modifica físicas, cronometraje, dados, Elo, parrilla, Supabase o Android/Play.**
+**Alcance de este cambio:** documentación exclusivamente. **Esta actualización documental incorpora el resultado B comunicado por el propietario; no modifica físicas, cronometraje, dados, Elo, parrilla, Supabase o Android/Play.**
 
 ## 1. Pregunta que resolveremos
 
@@ -132,9 +132,9 @@ Cambios relacionados: [PR #55](https://github.com/almaprintes/TopdownCraftrace/p
 - Dados: **Sira** 1×6, 2×3, 4×1 (nueve tiradas 1/2); **Vera** 5×5, 6×3, 4×2 (ocho tiradas 5/6); **Álex** 6×5, 5×2, 4×1, 3×2. Sira pudo sostener una media de V2–V10 muy similar a Vera aun con tiradas mucho peores, por lo que **la separación efectiva en tiempo de la perturbación G merece revisión**, sin concluir a partir de una sola carrera que las tiradas no funcionan.
 - En Santa Cruz la desviación planificada a menudo queda geométricamente reducida según plaza: Vera con dados 5/6 osciló entre 0 y 0,11 px en su objetivo, Sira con dado 1 tuvo 7,19 px y Álex con 3 hasta 10,4 px. La desviación planificada no equivale al desvío físico ni a la pérdida de tiempo.
 - Todas las cuatro series de 10 vueltas suman exactamente sus totales; 3 IA terminan; `iaHitches=0`, `segundosSinIntegrar=0`; frenada registrada 0 % en las 30 vueltas IA, lo que no exige introducir frenadas con este coche.
-- **No confirma por sí sola que exista una ventaja geométrica por puesto**: solo muestra persistencia de un diferencial de primera vuelta en la configuración A y una compensación cuando existe mejor ritmo lanzado. La configuración invertida B todavía no ha llegado.
+- **No confirma por sí sola que exista una ventaja geométrica por puesto**: solo muestra persistencia de un diferencial de primera vuelta en la configuración A y una compensación cuando existe mejor ritmo lanzado. La configuración invertida B llegó a continuación y queda comparada en la sección 3 ter.
 
-**Siguiente carrera solicitada para comparación:** configuración **B** de 10 vueltas, sin espera humana: **Álex plaza 1, Sira plaza 2, Vera plaza 3**, idénticos coche/circuito/físicas/dificultad/G. Compartir informe completo. No cambiar físicamente IA ni cronómetro hasta compararlo; después decidir si hacen falta las repeticiones B–A.
+**Actualización:** la carrera B de 10 vueltas ya se ha realizado; véase la sección 3 ter. **No se requieren más repeticiones por el momento.**
 
 ---
 
@@ -190,9 +190,9 @@ Cambios relacionados: [PR #55](https://github.com/almaprintes/TopdownCraftrace/p
 
 ---
 
-## 4. Experimento acordado: análisis A/B en carreras de 10 vueltas
+## 4. Protocolo A/B de 10 vueltas — EJECUTADO (referencia para regresiones futuras)
 
-**No modificar código en este paso.** Ya se ha recibido una carrera A de 10 vueltas, pero aún falta la carrera B intercambiando las IA. Para la siguiente prueba:
+**A y B ya están completadas y analizadas; no volver a pedirlas sin justificación técnica nueva.** Se conserva este protocolo exclusivamente para poder repetirlo después de corregir el sistema de pericia IA:
 
 1. Abrir la versión DEV web verificada de GitHub Pages (no Vercel/Google Play) y configurar \`LIVE 4\` en **Santa Cruz**, sentido normal, **Avenir Gripline**, 4 plazas, **1 humano + 3 IA**, nivel **3 Experto**, **G Bézier + dados**, **10 vueltas**. Física v1, si no ha cambiado; anotar cualquier cambio.
 2. Mantener la **plaza 0 humana** y la **plaza 1 de Álex Falcón (Elo 1800)**. No cambiar coche, circuito, opciones o control entre tandas.
@@ -203,9 +203,9 @@ Cambios relacionados: [PR #55](https://github.com/almaprintes/TopdownCraftrace/p
 7. No modificar físicamente la IA, el agarre, el máximo de velocidad, la fórmula de dados ni las posiciones iniciales entre A y B. No forzar frenadas: el coche actual puede no necesitarlas.
 8. Al terminar cada carrera, confirmar **10 tiempos y 10 dados por IA**, cero fallos de registro; copiar **solo la carrera actual** o **la nueva tanda** y pegarla para análisis. No hace falta capturar pantallas. Al guardar una tanda de cuatro, mantenerla por debajo del máximo de 10 informes.
 
-**Si 10 vueltas no bastan para resolver el comportamiento:** considerar 20, pero solo después de revisar los resultados y la estabilidad de 10. No confundir estabilidad de esta carrera con prueba de multijugador de 2–4 humanos.
+**Decisión tras A/B:** 20 vueltas no aportarían un diagnóstico proporcional al esfuerzo mientras todos los pilotos expertos compartan prácticamente la misma capacidad de conducción. **No pedir 20 vueltas por ahora.** No confundir estas carreras DEV con pruebas de multijugador de 2–4 humanos.
 
-## 5. Análisis a calcular cuando lleguen datos
+## 5. Método de análisis aplicado a A/B (conservar para futuras regresiones)
 
 Para cada carrera, para las **plazas 2 y 3**:
 
@@ -242,4 +242,4 @@ Para cada carrera, para las **plazas 2 y 3**:
 - Mantener mismo coche y físicas para jugador e IA; habilidad debe venir de trazada, selección de acciones y aprovechamiento del agarre. No forzar frenos que el coche no necesita.
 - Cualquier corrección futura se probará en DEV con regresión de cronometraje y revancha **antes** de integrar; ninguna intervención en Play, nativo, Supabase o despliegues a Vercel por esta documentación.
 
-**Siguiente paso pendiente:** la carrera B ya está recibida; auditar técnicamente la parrilla y el mecanismo real de pericia Elo antes de pedir más tandas. **Este documento recoge una carrera larga real aportada por el propietario; no se han ejecutado simulaciones ni carreras adicionales por esta modificación de documentación.**
+**Siguiente paso pendiente:** la carrera B ya está recibida; auditar técnicamente la parrilla y el mecanismo real de pericia Elo antes de pedir más tandas. **Este documento recoge ambas carreras largas reales aportadas por el propietario; no se han ejecutado simulaciones ni carreras adicionales por esta modificación de documentación.**
