@@ -3,6 +3,8 @@
 import {normalizeAiBezierLine,sampleAiBezierLine} from '../studio/trackAiBezierLine.js';
 import {shapeIsValid} from '../studio/trackShapeGeometry.js';
 import {makeKartingShapeMask} from '../tracks/localKartingPreview.js';
+import {findBezierSelfIntersection,alignForwardRoadOrder}
+ from './trackBezierGeometryAudit.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
@@ -39,6 +41,15 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
  if(!Number.isFinite(w)||!Number.isFinite(h)||w<100||h<100||w>8192||h>8192)
   return fail(baseline,'invalid-world');
  const dense=sampleAiBezierLine(bezier,30);
+ // An out-of-order greedy snap to an adjacent hairpin leg was previously
+ // reported as "nodes crossing a previous section" even without any actual
+ // intersection. Test the continuous authored spline geometry separately.
+ const crossing=findBezierSelfIntersection(dense,30);
+ if(crossing)return fail(baseline,'route-self-intersection',{
+  badPoint:crossing.point,badNodeIndex:crossing.nodeA,
+  otherNodeIndex:crossing.nodeB,
+  badIndex:crossing.sampleA,otherIndex:crossing.sampleB
+ });
  // Rotate the path to its nearest point at the centerline's start while
  // preserving its authored forward direction.
  let start=0,best=Infinity;
@@ -78,7 +89,7 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
  // Santa Cruz has broad, correctly authored road sections where an apex is
  // >100px from the axis. Distance here is DIAGNOSTIC ONLY.
  // Match to the forward road order to reject direction reversals and jumps.
- const matches=[],maxForward=Math.min(18,Math.max(7,
+ let matches=[],maxForward=Math.min(18,Math.max(7,
    Math.ceil(2.5*sampled.total/Math.max(1,baseline.lengthPx))));
  let previous=-1,travel=0,maxMismatch=0;
  for(let i=0;i<n;i++){
@@ -98,9 +109,29 @@ export function buildBezierAiRacingLineModel(baseline,rawBezier,shape,dimensions
  const pathAngle=Math.atan2(path[3].y-path[0].y,path[3].x-path[0].x);
  if(Math.abs(wrap(pathAngle-baseAngle))>1.35)
   return fail(baseline,'wrong-direction');
- if(travel<n*.75||travel>n*1.25)
-  return fail(baseline,'route-order-break',
-    {travelSamples:travel,expectedSamples:n});
+ if(travel<n*.75||travel>n*1.25){
+  // Greedy nearest matching may jump to an adjacent leg on a tight
+  // hairpin. Try a forward-only GLOBAL match before rejecting a safe,
+  // non-self-intersecting curve; never pretend a matching failure is a
+  // proven crossing. Both methods retain road-mask and direction checks.
+  const aligned=alignForwardRoadOrder(path,first);
+  if(aligned){
+   matches=aligned.matches;
+   travel=aligned.travel;
+   maxMismatch=aligned.maxMismatch;
+  }else{
+   let worst=0,worstError=-1;
+   for(let i=0;i<n;i++){
+    const error=distance(path[i],first[matches[i]]);
+    if(error>worstError){worstError=error;worst=i;}
+   }
+   return fail(baseline,'route-order-break',{
+    travelSamples:travel,expectedSamples:n,badIndex:worst,
+    badPoint:{x:path[worst].x,y:path[worst].y},
+    diagnostic:'forward-matching-failed-not-proof-of-crossing'
+   });
+  }
+ }
  const curvature=turns(path);
  const maxTurn=Math.max(...curvature.map(v=>Math.abs(v)));
  if(maxTurn>.62)return fail(baseline,'steering-discontinuity',{maxTurnRad:maxTurn});
