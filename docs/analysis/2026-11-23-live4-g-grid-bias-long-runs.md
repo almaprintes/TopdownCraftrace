@@ -1,7 +1,7 @@
 # CraftRace · LIVE 4 DEV G — parrilla, Elo, dados y plan de carreras largas
 
 **Fecha de registro:** 23/11/2026  
-**Estado:** tres carreras de 3 vueltas, dos carreras A/B de 10 vueltas y **una carrera adicional de 20 vueltas completadas**; confirmado que Elo y dados apenas separan los tiempos de las IA en Santa Cruz.  
+**Estado actualizado 23/11 22:35 UTC:** pruebas anteriores detectaron Elo/dados casi irrelevantes; tras PR #66, **primera carrera de iPhone confirma separación de ritmo en vueltas lanzadas** entre Álex (1800) y Sira (900), pero requiere repeticiones controladas antes de atribuir causalidad plena. Mantener pendiente estudio de sesgo de parrilla.  
 **Circuito prioritario:** \`santa-cruz\` (sentido normal).  
 **Vehículo:** Avenir Gripline (\`avenir_gripline\`). **Físicas declaradas:** v1.  
 **Modalidad:** 1 humano + 3 IA, nivel 3 Experto, trazada G Bézier + dados.  
@@ -260,6 +260,56 @@ La prueba de calibración previa de 0,65 se **descartó por excesiva**: ampliaba
 - Añadidos tests con una curva sintética de entrada/salida y con la curvatura real de Santa Cruz. El banco sigue comparando las **vueltas 2–3** lanzadas con el Avenir físico, todos los dados, Elo 900 y 1800; exige diferencias perceptibles pero limitadas.
 
 **No afirmar aún que el error de parrilla o todos los duelos están corregidos.** Estos cambios apuntan solo a la conversión efectiva de Elo+dado en controles físicos de conducción del anfitrión G.
+
+---
+
+## 3 sexies. Primera carrera real iPhone tras PR #66: gas y momentos de curva (23/11/2026 22:35 UTC)
+
+**Origen:** JSON proporcionado directamente por el propietario, `CRAFT_RACE_CALIBRACION` / `CRAFT_RACE_LIVE4_G_V1`, fecha `2026-11-23T22:35:04.577Z`. No es simulación. Santa Cruz, sentido forward, Avenir Gripline, física 1, IA nivel 3 G Bézier + dados, 3 vueltas, espera humana 0 ms. Plazas: humano 0, Álex Falcón (1800) 1, Sira Nova (900) 2, Vera Cometa (1730) 3.
+
+### Clasificación observada
+
+| Piloto | Elo | Plaza | V1 ms (dado) | V2 ms (dado) | V3 ms (dado) | Total ms |
+|---|---:|---:|---:|---:|---:|---:|
+| Humano | — | 0 | 19883 | 19302 | 18618 | 57803 |
+| Álex Falcón | 1800 | 1 | 20766 (4) | 19735 (4) | 19602 (3) | 60103 |
+| Vera Cometa | 1730 | 3 | 21166 (1) | 19669 (4) | 19501 (3) | 60336 |
+| Sira Nova | 900 | 2 | 21783 (1) | 20004 (2) | 20049 (2) | 61836 |
+
+Comprobación de sumas: todas las series de tres vueltas suman sus respectivos totales, 3 IA finalizan, `iaHitches=0`, `segundosSinIntegrar=0`.
+
+### Contraste con primera carrera iPhone tras PR #65 (22:08 UTC)
+
+Configuración idéntica de puestos, coche, física y circuito, pero **tiradas distintas y conducción revisada**; no es un A/B de dados controlados.
+
+| Contraste Álex (1800) vs Sira (900) | PR #65 (antes) | PR #66 (ahora) |
+|---|---:|---:|
+| Ventaja de Álex V1 | +367 ms | +1017 ms |
+| Ventaja de Álex V2+V3 | −83 ms (Sira más rápida) | **+716 ms** |
+| Ventaja de Álex en total | +284 ms | **+1733 ms** |
+| Diferencia media por vuelta lanzada a favor de Álex | −41,5 ms | **+358 ms** |
+
+En la carrera actual Álex fue **269 ms más rápido que Sira en V2 y 447 ms en V3**, luego **la separación no procede solamente de la parrilla**. Álex y Vera (Elo muy cercanos) acabaron separados por 233 ms; Sira cedió 1500 ms a Vera. La diferencia deportiva entre Elo se observa en una carrera real, pero necesita repetición para separar el efecto sistemático de las tiradas y la variabilidad de carrera.
+
+### Telemetría física de decisiones
+
+| Piloto y vuelta | Dado | Gas medio realmente aplicado | Entrada nominal (ms) | Retardo salida (ms) | Velocidad media (px/s) | Freno |
+|---|---:|---:|---:|---:|---:|---:|
+| Álex V1 | 4 | 99,38% | 25 | 20 | 452,51 | 0% |
+| Álex V2 | 4 | 99,36% | 25 | 20 | 471,11 | 0% |
+| Álex V3 | 3 | 99,00% | 30 | 24 | 473,84 | 0% |
+| Vera V1 | 1 | 98,12% | 44 | 36 | 448,57 | 0% |
+| Vera V2 | 4 | 99,11% | 30 | 24 | 471,42 | 0% |
+| Vera V3 | 3 | 98,81% | 35 | 28 | 473,75 | 0% |
+| Sira V1 | 1 | 93,91% | 100 | 84 | 438,71 | 0% |
+| Sira V2 | 2 | 94,14% | 95 | 80 | 461,89 | 0% |
+| Sira V3 | 2 | 94,17% | 95 | 80 | 460,52 | 0% |
+
+La nueva versión **sí diferencia el gas realmente aplicado, los tiempos nominales de reacción y las velocidades medias**: a igualdad de recorrido aproximado, Álex V2 y Sira V2 difieren en 9,22 px/s de velocidad media; V3, 13,32 px/s. `factorGasCurvaMedioPct` y `gasAplicadoMedioPct` coinciden en los nueve registros, lo que indica que el gas base estuvo esencialmente saturado y el factor de decisión dictó la pequeña reducción. Esto debe tratarse como observación del informe, no como medición independiente de un segundo mecanismo.
+
+**Importante:** `anticipacionEntradaCurvaMs` y `retardoSalidaCurvaMs` son ventanas nominales del algoritmo, **no medidas exactas de frenada real**. La frenada fue 0% en todas las vueltas: se ha observado **levantamiento de acelerador**, no que Álex frene más tarde. Para validar frenadas efectivas haría falta un circuito/vehículo que realmente exija frenar, sin introducirlas por la fuerza.
+
+**Decisión:** mantener la calibración PR #66 sin endurecer más los factores. El resultado actual es prometedor, pero no garantiza automáticamente clasificación Elo en toda carrera. Próxima validación, si el usuario quiere, un par de carreras cortas manteniendo mismo coche y parrilla, idealmente con dados visibles en cada informe; dejar el sesgo de salida entre plazas 2/3 como tema independiente. No pedir otra tanda larga.
 
 ---
 
