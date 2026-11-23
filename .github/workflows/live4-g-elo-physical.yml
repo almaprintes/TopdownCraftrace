@@ -1,0 +1,37 @@
+name: LIVE 4 G · Elo real y dados equilibrados (sin deploy)
+on:
+  pull_request:
+    paths:
+      - 'src/game/ai/craftraceAiEloLeague.js'
+      - 'src/game/ai/craftraceLive4GDriverSkill.js'
+      - 'src/game/ai/survivalPhysicalBotController.js'
+      - 'src/game/online/craftraceLiveV2BotDirector.js'
+      - 'src/game/online/craftraceLive4CalibrationReport.js'
+      - 'scripts/craftrace-live4-g-real-elo-driving-smoke.mjs'
+      - '.github/workflows/live4-g-elo-physical.yml'
+      - 'package.json'
+jobs:
+  physical-skill-ab:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependencies and authored Santa Cruz source
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/install-santa-cruz-source.mjs
+          node scripts/install-karting-canarias-4096-source.mjs
+      - name: Physical Elo and dice A/B on real circuit geometry
+        run: |
+          node --check src/game/ai/craftraceLive4GDriverSkill.js
+          node --check src/game/ai/survivalPhysicalBotController.js
+          node --check src/game/online/craftraceLiveV2BotDirector.js
+          node scripts/craftrace-live4-g-real-elo-driving-smoke.mjs
+          node scripts/craftrace-ai-bezier-elo-smoke.mjs
+          node scripts/craftrace-live4-canarias-vs-bezier-smoke.mjs
+      - name: Full CraftRace DEV build and regression suite
+        run: npm run build
