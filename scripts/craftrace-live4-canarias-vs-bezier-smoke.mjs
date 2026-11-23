@@ -92,6 +92,14 @@ for(const bot of race.bots){
 }
 assert.equal(race.update(16,1000,false).length,0);
 race.destroy();
+const chosen=new CrafRaceLive4BotDirector(scene,{roster,hostId:host,
+ localId:host,startingGrid:grid,laps:3,live4GuidedGTrial:true,
+ aiIdentitySeed:roomId,aiPilotIds:{1:'falcon',2:'nova',3:'comet'}});
+assert.deepEqual(chosen.bots.map(b=>b.aiPilot?.id),['falcon','nova','comet']);
+assert.deepEqual(chosen.bots.map(b=>b.aiPilot?.elo),[1800,900,1730]);
+assert.equal(chosen.results().length,0);
+assert.ok(chosen.bots.every(b=>b.bezierDieHistory.length===1));
+chosen.destroy();
 const ordinary=new CrafRaceLive4BotDirector(scene,{roster,hostId:host,
  localId:host,startingGrid:grid,laps:3,live4GuidedGTrial:false});
 assert.equal(ordinary.live4GuidedGTrial,false);
