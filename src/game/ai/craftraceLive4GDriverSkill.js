@@ -32,6 +32,6 @@ export function live4GCornerDecisions(skill,curveDemand){
   // drag-limited pace: every AI then held full throttle despite distinct
   // target percentages. Less confident drivers now genuinely lift the
   // accelerator as they turn. No added braking, torque or grip modifiers.
-  throttleFactor:1-.65*x
+  throttleFactor:1-.15*x
  };
 }
