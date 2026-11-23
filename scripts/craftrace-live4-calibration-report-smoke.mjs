@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {LIVE4_G_REPORT_KEY,LIVE4_G_REPORT_LIMIT,
  buildLive4CalibrationReport,readLive4CalibrationHistory,
- saveLive4CalibrationReport,formatLive4CalibrationHistory,
+ saveLive4CalibrationReport,startNewLive4CalibrationBatch,formatLive4CalibrationHistory,
  copyLive4CalibrationText} from '../src/game/online/craftraceLive4CalibrationReport.js';
 
 const storageMap=new Map();
@@ -79,6 +79,22 @@ assert.equal(decoded.carreras.at(-1).fechaUTC,'2026-11-23T08:04:00.000Z');
 assert.ok(!text.includes('room-private-'));
 assert.ok(!text.includes(LIVE4_G_REPORT_KEY));
 assert.ok(!text.includes('undefined'));
+storage.setItem('tdr:unrelated:progress','preserve-me');
+const single=formatLive4CalibrationHistory([{key:'room-private-11',report}]);
+assert.equal(JSON.parse(single).totalCarreras,1);
+const fresh=startNewLive4CalibrationBatch(storage,'room-private-11',report);
+assert.equal(fresh.persisted,true);
+assert.equal(fresh.history.length,1);
+assert.deepEqual(readLive4CalibrationHistory(storage).map(x=>x.key),['room-private-11']);
+assert.equal(storage.getItem('tdr:unrelated:progress'),'preserve-me');
+const next=saveLive4CalibrationReport(storage,'room-new',report);
+assert.equal(next.history.length,2,'New batch must accumulate only new races');
+assert.deepEqual(next.history.map(x=>x.key),['room-private-11','room-new']);
+const noWrite=startNewLive4CalibrationBatch(null,'room-private-11',report);
+assert.equal(noWrite.persisted,false);
+assert.equal(noWrite.history.length,1);
+assert.throws(()=>startNewLive4CalibrationBatch(storage,'room-private-11',{}),
+ /Informe de carrera inválido/);
 assert.ok(text.length<85000,'Clipboard report stays under mobile-friendly limit');
 let copied='';
 const ok=await copyLive4CalibrationText(text,{
@@ -113,4 +129,9 @@ assert.ok(bridge.includes('FIRST_MOTION_PX_S=8'));
 assert.ok(bridge.includes('playerFirstMotionMs=Math.max(0,Math.round(now-localStartPerf))'));
 assert.ok(bridge.includes('playerStartDelayMs:playerFirstMotionMs'));
 assert.ok(bridge.includes('SALIDA · PRIMER MOVIMIENTO'));
+assert.ok(bridge.includes('COPIAR SOLO ESTA CARRERA'));
+assert.ok(bridge.includes('NUEVA TANDA · BORRAR INFORMES ANTERIORES'));
+assert.ok(bridge.includes('startNewLive4CalibrationBatch(store,roomId,currentReport)'));
+assert.ok(bridge.includes('let notebook=calibrationMemory'));
+assert.ok(bridge.includes('copy.textContent=\'COPIAR INFORME IA · 1 CARRERA\''));
 console.log('PASS LIVE 4 G race notebook: ten runs, dedup, accurate lap/dice/telemetry, privacy, clipboard, iPhone fallback.');
