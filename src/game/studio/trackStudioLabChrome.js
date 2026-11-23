@@ -206,11 +206,15 @@ export function mountTrackStudioLabChrome(scene,gate){
   const splineDelete=button('BORRAR NODO',()=>scene._aiBezierDelete?.(),'ts-lab__ai-delete');
   const splineClear=button('BORRAR TRAZADA',()=>scene._aiBezierClear?.(),'ts-lab__ai-delete');
   const splineValidate=button('✓ VALIDAR TRAZADA',()=>scene._aiBezierValidate?.(),'ts-lab__ai-test');
+  const splineLocate=button('⌖ LOCALIZAR ERROR',
+    ()=>scene._aiBezierFocusFault?.(),'ts-lab__ai-test ts-lab__spline-locate');
+  splineLocate.hidden=true;
+  splineLocate.setAttribute('aria-label','Centrar el mapa en el error de la trayectoria Bézier');
   const splineTry=button('▶ PROBAR BÉZIER IA',()=>scene._startGuidedAiPreview?.(),'ts-lab__ai-test');
   const splineHint=make('small','ts-lab__ai-hint',
    'Los puntos guía son vértices exactos. Las conexiones siguen el circuito y puedes ajustar los tiradores.');
   splinePanel.append(splineTitle,splineSummary,splineGenerate,splineAxis,
-    splineInsert,splineDelete,splineClear,splineValidate,splineTry,splineHint);
+    splineInsert,splineDelete,splineClear,splineValidate,splineLocate,splineTry,splineHint);
   const nudge=make('div','ts-lab__nudge');
   const nudgeTitle=make('span','','MOVER SELECCIÓN');
   const nudgeControls=make('div','ts-lab__nudge-controls');
@@ -281,6 +285,11 @@ export function mountTrackStudioLabChrome(scene,gate){
     aiMode.setAttribute('aria-pressed',String(editingAi));
     splineMode.setAttribute('aria-pressed',String(editingSpline));
     splinePanel.hidden=!editingSpline;
+    const fault=scene._aiBezierFault;
+    splineLocate.hidden=!(Number.isFinite(fault?.badPoint?.x)&&Number.isFinite(fault?.badPoint?.y));
+    splineLocate.title=fault?.reason==='route-self-intersection'
+      ?scene._aiBezierFaultLabel?.(fault)||'Cruce real de la curva'
+      :'Zona donde el seguimiento del orden presenta la mayor discrepancia';
     splineTry.disabled=!(scene._aiBezierLine?.nodes?.length>=3);
     splineValidate.disabled=!(scene._aiBezierLine?.nodes?.length>=3);
     const existingGuides=scene._aiLineGuides?.length||0;
@@ -292,7 +301,8 @@ export function mountTrackStudioLabChrome(scene,gate){
     if(editingSpline){
       const count=scene._aiBezierLine?.nodes?.length||0;
       state(splineSummary,count?('NODOS BÉZIER '+count+' · GUÍAS '+existingGuides+' · '+
-        (scene._aiBezierSelected<0?'TOCA PARA SELECCIONAR':'EDITANDO NODO '+(scene._aiBezierSelected+1))):
+        (fault?('AVISO: '+(scene._aiBezierFaultLabel?.(fault)||fault.reason)):
+         (scene._aiBezierSelected<0?'TOCA PARA SELECCIONAR':'EDITANDO NODO '+(scene._aiBezierSelected+1)))):
         (existingGuides?'USA TUS GUÍAS EXISTENTES PARA CREAR LA TRAYECTORIA':
          'SIN GUÍAS: GENERA DESDE EL EJE · NO MODIFICA LA PISTA'));
     }
