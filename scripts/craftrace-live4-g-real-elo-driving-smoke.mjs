@@ -79,7 +79,7 @@ assert.ok(director.previewBezierActive,'Use the actual authored G Bézier');
 for(const bot of director.bots)assert.equal(bot._live4GDriverSkill?.elo,bot.aiPilot.elo);
 assert.ok(director._bezierProfileForDie(1,6).valid);
 const DT=1/60;
-function simulate(elo,die){
+function simulate(elo,die,lapCount=1){
  // Fixed seat and identical starting point; only die/profile and driver
  // judgment vary. Reuse the actual G director's generated speed profiles.
  const profile=director._bezierProfileForDie(1,die);
@@ -91,6 +91,7 @@ function simulate(elo,die){
  const bot={plannerBody:physicsBody,_plannerSampleIndex:0};
  const skill=live4GDriverSkill(elo,die);
  let progress=0,last=0,errors=0,maxError=0,avgDecision=0,brakes=0;
+ const lapEnds=[];
  for(let frame=0;frame<60*130;frame++){
   const control=updateRacePhysicalBot(bot,profile,{
    dt:DT,spacing:director.spacing,maxFwd:480,cornerRisk:.35,
@@ -112,11 +113,17 @@ function simulate(elo,die){
   maxError=Math.max(maxError,control.distanceToLine);
   avgDecision+=control.live4GCornerSpeedFactor;
   if(control.brake>.001)brakes++;
-  if(progress>=n)return{
-   seconds:round((frame+1)*DT),meanError:round(errors/(frame+1)),
-   maxError:round(maxError),cornerDecisionPct:round(avgDecision/(frame+1)*100,2),
-   brakePct:round(brakes/(frame+1)*100,2)
-  };
+  if(progress>=n){
+   progress-=n;lapEnds.push(round((frame+1)*DT));
+   if(lapEnds.length>=lapCount)return{
+    seconds:round((frame+1)*DT),
+    lapTimes:lapEnds.map((v,i)=>round(v-(lapEnds[i-1]||0))),
+    meanError:round(errors/(frame+1)),
+    maxError:round(maxError),
+    cornerDecisionPct:round(avgDecision/(frame+1)*100,2),
+    brakePct:round(brakes/(frame+1)*100,2)
+   };
+  }
  }
  throw Error('Physical lap did not complete Elo='+elo+' die='+die);
 }
@@ -159,6 +166,15 @@ assert.ok(expectedByElo[900]>expectedByElo[1350] &&
 assert.ok(expectedByElo[900]-expectedByElo[1800]>.4,
  'Physical skill and softened dice must separate 900 from 1800 ELO');
 console.info('LIVE4-G-WEIGHTED-ELO-PACE',JSON.stringify(expectedByElo));
+// Standing-start-only comparisons may exaggerate skill. Diagnose launched
+// laps before adjusting gameplay: same continuous physical state, no reset.
+const rolling=Array.from({length:6},(_,i)=>i+1).flatMap(die=>[900,1800].map(elo=>{
+ const x=simulate(elo,die,3);
+ return{elo,die,lapTimes:x.lapTimes,
+  movingLapMean:round((x.lapTimes[1]+x.lapTimes[2])/2),
+  meanError:x.meanError,brakePct:x.brakePct,cornerDecisionPct:x.cornerDecisionPct};
+}));
+console.info('LIVE4-G-ROLLING-AB',JSON.stringify(rolling));
 director.destroy();
 console.log('PASS LIVE4 G Elo/dice physical driving A/B',JSON.stringify({dice:{
  topHigh:round(top[4]+top[5]),rookieHigh:round(low[4]+low[5]),
