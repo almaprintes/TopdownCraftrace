@@ -359,7 +359,11 @@ export function installTrackStudioShapeEditor(s){
       if(!record?.track?.aiLineGuides?.points?.length&&
          !record?.track?.aiBezierLine?.nodes?.length)
         throw Error('La vista previa no contiene tu trayectoria Bézier ni guías IA');
-      s._autosaveRecovery?.();
+      // Never leave the editor unless we can restore this exact author project
+      // when the driver returns. The file export remains untouched.
+      if(s._autosaveRecovery?.()===false)
+        throw Error('No se puede guardar una copia de recuperación del circuito. '+
+          'EXPORTAR conserva el proyecto antes de probar.');
       s.scene.start('race',{
         trackKey:vectorOnly?LOCAL_STUDIO_VECTOR_PREVIEW_KEY:LOCAL_KARTING_PREVIEW_KEY,
         testMode:true,gameMode:'director',directorPreview:true,

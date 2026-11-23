@@ -19,6 +19,8 @@ import {trackStudioToolbarLayout} from '../studio/trackStudioNavigationLayout.js
 import {zoomTrackCameraAt,beginTrackPinch,updateTrackPinch,fitTrackCamera} from '../studio/trackStudioZoom.js';
 import '../studio/trackStudioLabChrome.css';
 import {mountTrackStudioLabChrome} from '../studio/trackStudioLabChrome.js';
+import {writeTrackStudioWorkingCopy,readTrackStudioWorkingCopy}
+ from '../studio/trackStudioPreviewStorage.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -1051,7 +1053,7 @@ if (
     // This is deliberately opt-in: entering from Paddock still starts empty.
     if (this._returningFromPreview) {
       try {
-        const saved=JSON.parse(localStorage.getItem('trackstudio_recovery')||'null');
+        const saved=JSON.parse(readTrackStudioWorkingCopy('trackstudio_recovery')||'null');
         const project=saved?.editor||saved;
         if(!Array.isArray(project?.nodes)||project.nodes.length<3||
           (!project?.imageCanvas?.imageId&&
@@ -2944,10 +2946,15 @@ _loadTrack() {
 
   _autosaveRecovery() {
     try {
-      const data = { editor: this._getProjectData(), gameTrack: this._exportToGameTrack() };
-      localStorage.setItem('trackstudio_recovery', JSON.stringify(data));
+      // Only the editable project is needed to return from PROBAR. Storing
+      // gameTrack too duplicated thousands of sampled road points in Safari,
+      // making quota errors much more likely with big imported kartings.
+      const data = {editor:this._getProjectData()};
+      writeTrackStudioWorkingCopy('trackstudio_recovery',JSON.stringify(data));
+      return true;
     } catch (e) {
-      console.warn('No se pudo crear recuperación automática', e);
+      console.warn('[TrackStudio] No se pudo crear recuperación automática', e);
+      return false;
     }
   }
 
@@ -2965,8 +2972,15 @@ const data = {
       if (!this._isClosed && roundTrip.gameTrack?.raceType !== 'stage') {
         throw new Error('Un tramo abierto debe exportarse como stage');
       }
-      localStorage.setItem('trackstudio_project', serialized);
-      localStorage.setItem('trackstudio_recovery', serialized);
+      // Keep the browser copy COMPACT (no indentation) and avoid duplicating
+      // the huge sampled gameTrack in the recovery record. Keep the exported
+      // JSON complete and pretty for portability and the user's archive.
+      let browserSaveError=null,saveLocation=null;
+      try {
+        saveLocation=writeTrackStudioWorkingCopy('trackstudio_project',JSON.stringify(data));
+        if(!this._autosaveRecovery())
+          browserSaveError=Error('No hay espacio para recuperación automática');
+      } catch(e) {browserSaveError=e;}
       const blob = new Blob([serialized], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -2974,8 +2988,14 @@ const data = {
       a.download = `trackstudio-${(data.gameTrack?.name || 'project').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      this._flashMessage('💾 Guardado + copia JSON');
-      console.log('✅ Proyecto guardado + backup JSON');
+      if(browserSaveError)console.warn('[TrackStudio] Descarga independiente del almacenamiento local',browserSaveError);
+      this._flashMessage(browserSaveError
+        ?'JSON generado. Sin espacio para copia en navegador: conserva el archivo.'
+        :saveLocation==='session'
+          ?'Guardado en esta pestaña + copia JSON. Conserva el archivo.'
+          :'💾 Guardado + copia JSON');
+      console.log('[TrackStudio] JSON solicitado y almacenamiento:',
+        browserSaveError?'no disponible':saveLocation);
     } catch (e) {
       console.error('❌ Error guardando proyecto', e);
     }
@@ -2987,7 +3007,7 @@ const data = {
 
   _restoreLastTrackStudioRecovery() {
     try {
-      const raw = localStorage.getItem('trackstudio_recovery');
+      const raw = readTrackStudioWorkingCopy('trackstudio_recovery');
       if (!raw) return this._flashMessage('No hay trabajo automático que recuperar');
       const data = JSON.parse(raw);
       const editor = data.editor || data;
@@ -3117,7 +3137,7 @@ const data = {
 
   _loadProject() {
     try {
-      const raw = localStorage.getItem('trackstudio_project');
+      const raw = readTrackStudioWorkingCopy('trackstudio_project');
       if (!raw) {
         this._flashMessage?.('No hay ningún proyecto guardado en este dispositivo');
         return false;
