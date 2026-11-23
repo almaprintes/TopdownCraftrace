@@ -10,6 +10,9 @@ import {hasLive4GuidedGForRoom,setLive4GuidedGForRoom,isLive4GuidedGSupported} f
 import {advanceHostedLive4Bots} from './craftraceLive4HostContinuity.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
 import {live4SeatName} from './craftraceLiveV2PilotNames.js';
+import {buildLive4CalibrationReport,readLive4CalibrationHistory,
+ saveLive4CalibrationReport,formatLive4CalibrationHistory,copyLive4CalibrationText}
+ from './craftraceLive4CalibrationReport.js';
 import {CrafRaceLiveV2LobbyMonitor,finishLiveV2Lobby,acknowledgeLiveV2GridLoaded,
  requestLiveV2Rematch,acceptLiveV2Rematch} from './craftraceLiveV2LobbyClient.js';
 
@@ -205,6 +208,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      .finally(()=>botPostAttempts.delete('write'+seat));
  };
  let lastResultsSnapshot=null;
+ let calibrationSaved=false,calibrationMemory=[];
  const openRematchLobby=next=>{
    if(!next?.id||!Array.isArray(next?.members))throw Error('Revancha sin sala autorizada');
    // Never reuse an existing room or its saved result rows.
@@ -344,6 +348,64 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        ' · HITCH '+diag.timing.hitches+
        ' · TIEMPO NO INTEGRADO '+diag.timing.droppedSeconds.toFixed(2)+' s';
      panel.append(detail);
+   }
+   // The exporter reads the same finish rows, dice and physics as the
+   // visible results. No manual transcription, private room IDs or uploads.
+   // Only save an entire authenticated, locally computed G test race.
+   if(allFinished&&guidedGTrial&&isHost&&director){
+     const botRows=director.results();
+     const expectedBots=raceEntries.filter(entry=>entry.kind==='ai').length;
+     if(botRows.length===expectedBots){
+       if(!calibrationSaved){
+         const report=buildLive4CalibrationReport({
+           trackId:room.track_id,carId:scene.carId||room.car_id,
+           laps:room.laps,generatedAt:new Date().toISOString(),
+           entries:raceEntries.map(entry=>{
+             const current=states.get(entry.seat),local=entry.seat===localSeat?localFinish:null;
+             return{seat:entry.seat,kind:entry.kind,name:displayName(entry),
+               elapsedMs:current?.elapsedMs??local?.elapsedMs??null,
+               lapTimes:current?.lapTimes||current?.lap_times||local?.lapTimes||[]};
+           }),
+           bots:botRows,diagnostics:director.stats()
+         });
+         let store=null;
+         try{store=globalThis.localStorage;}catch{}
+         const saved=saveLive4CalibrationReport(store,roomId,report);
+         calibrationMemory=saved.history;
+         calibrationSaved=true;
+       }
+       // Prefer the persisted notebook; private-browsing browsers still get
+       // the in-memory copy of this race as a safe fallback.
+       let store=null;
+       try{store=globalThis.localStorage;}catch{}
+       const persisted=readLive4CalibrationHistory(store);
+       const notebook=persisted.length?persisted:calibrationMemory;
+       const count=notebook.length;
+       const copy=document.createElement('button');
+       copy.type='button';
+       copy.textContent='COPIAR INFORME IA · '+count+' CARRERA'+(count===1?'':'S');
+       copy.setAttribute('aria-label','Copiar resultados y dados de las últimas '+count+' carreras');
+       const feedback=document.createElement('p');
+       feedback.className='cr4-result-note';
+       feedback.setAttribute('role','status');
+       feedback.textContent='Guardo hasta 10 carreras solo en este dispositivo. Copia el informe y pégalo en ChatGPT; sin capturas.';
+       copy.onclick=async()=>{
+         const data=formatLive4CalibrationHistory(notebook);
+         const success=await copyLive4CalibrationText(data);
+         if(success){
+           copy.textContent='COPIADO · PEGA EN CHATGPT';
+           feedback.textContent='Datos copiados ('+count+' carrera'+(count===1?'':'s')+'). Abre ChatGPT y pega el texto.';
+         }else{
+           feedback.textContent='Tu navegador impide copiar automáticamente. Selecciona el informe de este campo y cópialo manualmente.';
+           const fallback=document.createElement('textarea');
+           fallback.value=data;fallback.readOnly=true;
+           fallback.setAttribute('aria-label','Informe de calibración para copiar manualmente');
+           fallback.style.cssText='display:block;box-sizing:border-box;width:100%;height:90px;color:#e9faff;background:#091f2d';
+           panel.append(fallback);fallback.focus();fallback.select();
+         }
+       };
+       panel.append(copy,feedback);
+     }
    }
    // Authenticated rematch: only the previous host can propose. Former
    // human participants can accept without a second invitation code.
