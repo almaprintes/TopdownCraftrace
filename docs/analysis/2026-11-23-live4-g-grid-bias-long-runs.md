@@ -277,4 +277,4 @@ Para cada carrera, para las **plazas 2 y 3**:
 - Mantener mismo coche y físicas para jugador e IA; habilidad debe venir de trazada, selección de acciones y aprovechamiento del agarre. No forzar frenos que el coche no necesita.
 - Cualquier corrección futura se probará en DEV con regresión de cronometraje y revancha **antes** de integrar; ninguna intervención en Play, nativo, Supabase o despliegues a Vercel por esta documentación.
 
-**Siguiente paso pendiente:** la carrera B ya está recibida; auditar técnicamente la parrilla y el mecanismo real de pericia Elo antes de pedir más tandas. **Este documento recoge ambas carreras largas reales aportadas por el propietario; no se han ejecutado simulaciones ni carreras adicionales por esta modificación de documentación.**
+**Siguiente paso pendiente:** la carrera B ya está recibida; auditar técnicamente la parrilla y el mecanismo real de pericia Elo antes de pedir más tandas. **Este documento recoge las dos carreras reales A/B de 10 vueltas y la adicional de 20 vueltas aportadas por el propietario; no se han ejecutado simulaciones ni carreras nuevas mediante esta actualización documental.**
