@@ -43,9 +43,37 @@ export function findBezierSelfIntersection(points,samplesPerNode=30){
 // Unlike a greedy nearest point, alignment cannot jump across the opposite
 // leg of a tight hairpin because the sequence must remain globally ordered.
 // Called ONLY if legacy fast path reports a dubious progress count.
+// Check the winding order independently of the DP correspondences. Without
+// this check an inverse lap could spuriously match the opposite, nearby leg
+// of a hairpin and look like a legal forward lap (especially on thin ovals).
+// Take ~128 samples; a few nearest-leg ambiguities do not reverse a full lap.
+export function nearestRoadWinding(path,centerline){
+ const n=path?.length||0;
+ if(n<24||centerline?.length!==n)return 0;
+ const step=Math.max(1,Math.floor(n/128));
+ let previous=null,travel=0;
+ for(let i=0;i<n;i+=step){
+  const p=path[i];let best=Infinity,index=-1;
+  for(let j=0;j<n;j++){
+   const d=sq(p,centerline[j]);
+   if(d<best){best=d;index=j;}
+  }
+  if(previous!==null){
+   let delta=index-previous;
+   if(delta>n/2)delta-=n;
+   if(delta< -n/2)delta+=n;
+   travel+=delta;
+  }
+  previous=index;
+ }
+ return travel/n;
+}
+
 export function alignForwardRoadOrder(path,centerline){
  const n=path?.length||0;
  if(n<24||centerline?.length!==n)return null;
+ // This is a geometry / topology check, NOT a speed handicap or lap timer.
+ if(nearestRoadWinding(path,centerline)<-.35)return null;
  const band=Math.min(220,Math.max(28,Math.ceil(n*.16)));
  const width=band*2+1;
  const maxStep=Math.min(15,Math.max(5,Math.ceil(n*.018)));
