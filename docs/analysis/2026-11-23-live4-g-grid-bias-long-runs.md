@@ -1,11 +1,11 @@
 # CraftRace · LIVE 4 DEV G — parrilla, Elo, dados y plan de carreras largas
 
 **Fecha de registro:** 23/11/2026  
-**Estado:** tres carreras de 3 vueltas y **primera carrera A de 10 vueltas observadas**; intercambio B de 10 vueltas **PENDIENTE**.  
+**Estado:** tres carreras de 3 vueltas y **dos carreras A/B de 10 vueltas COMPLETADAS**. El problema Elo/ritmo requiere revisión del controlador antes de nuevas pruebas.  
 **Circuito prioritario:** \`santa-cruz\` (sentido normal).  
 **Vehículo:** Avenir Gripline (\`avenir_gripline\`). **Físicas declaradas:** v1.  
 **Modalidad:** 1 humano + 3 IA, nivel 3 Experto, trazada G Bézier + dados.  
-**Alcance de este cambio:** documentación exclusivamente. **Esta actualización documental solo incorpora una carrera real comunicada por el propietario; no modifica físicas, cronometraje, dados, Elo, parrilla, Supabase o Android/Play.**
+**Alcance de este cambio:** documentación exclusivamente. **Esta actualización documental incorpora el resultado B comunicado por el propietario; no modifica físicas, cronometraje, dados, Elo, parrilla, Supabase o Android/Play.**
 
 ## 1. Pregunta que resolveremos
 
@@ -132,15 +132,67 @@ Cambios relacionados: [PR #55](https://github.com/almaprintes/TopdownCraftrace/p
 - Dados: **Sira** 1×6, 2×3, 4×1 (nueve tiradas 1/2); **Vera** 5×5, 6×3, 4×2 (ocho tiradas 5/6); **Álex** 6×5, 5×2, 4×1, 3×2. Sira pudo sostener una media de V2–V10 muy similar a Vera aun con tiradas mucho peores, por lo que **la separación efectiva en tiempo de la perturbación G merece revisión**, sin concluir a partir de una sola carrera que las tiradas no funcionan.
 - En Santa Cruz la desviación planificada a menudo queda geométricamente reducida según plaza: Vera con dados 5/6 osciló entre 0 y 0,11 px en su objetivo, Sira con dado 1 tuvo 7,19 px y Álex con 3 hasta 10,4 px. La desviación planificada no equivale al desvío físico ni a la pérdida de tiempo.
 - Todas las cuatro series de 10 vueltas suman exactamente sus totales; 3 IA terminan; `iaHitches=0`, `segundosSinIntegrar=0`; frenada registrada 0 % en las 30 vueltas IA, lo que no exige introducir frenadas con este coche.
-- **No confirma por sí sola que exista una ventaja geométrica por puesto**: solo muestra persistencia de un diferencial de primera vuelta en la configuración A y una compensación cuando existe mejor ritmo lanzado. La configuración invertida B todavía no ha llegado.
+- **No confirma por sí sola que exista una ventaja geométrica por puesto**: solo muestra persistencia de un diferencial de primera vuelta en la configuración A y una compensación cuando existe mejor ritmo lanzado. La configuración invertida B llegó a continuación y queda comparada en la sección 3 ter.
 
-**Siguiente carrera solicitada para comparación:** configuración **B** de 10 vueltas, sin espera humana: **Álex plaza 1, Sira plaza 2, Vera plaza 3**, idénticos coche/circuito/físicas/dificultad/G. Compartir informe completo. No cambiar físicamente IA ni cronómetro hasta compararlo; después decidir si hacen falta las repeticiones B–A.
+**Actualización:** la carrera B de 10 vueltas ya se ha realizado; véase la sección 3 ter. **No se requieren más repeticiones por el momento.**
 
 ---
 
-## 4. Experimento acordado: análisis A/B en carreras de 10 vueltas
+## 3 ter. Carrera larga B — intercambio completado (23/11/2026 21:23 UTC)
 
-**No modificar código en este paso.** Ya se ha recibido una carrera A de 10 vueltas, pero aún falta la carrera B intercambiando las IA. Para la siguiente prueba:
+**Resultado REAL en iPhone, mismo Santa Cruz / Avenir Gripline / física 1 / 10 vueltas / G / Experto.** Intercambiados solo Sira y Vera: Álex p1 Elo 1800, Sira p2 Elo 900, Vera p3 Elo 1730. El humano no esperó tras GO (0 ms).
+
+| Puesto | Plaza | Piloto | Total (ms) | Media V2–V10 (ms) |
+|---:|---:|---|---:|---:|
+| 1 | 0 | Humano | 190927 | 18982.78 |
+| 2 | 3 | Vera Cometa | 196343 | 19492.00 |
+| 3 | 2 | Sira Nova | 196426 | 19477.11 |
+| 4 | 1 | Álex Falcón | 196610 | 19551.33 |
+
+**40 tiempos por vuelta del JSON del propietario**, comprobados contra los totales:
+
+| Vuelta | Humano | Álex p1 | Sira p2 | Vera p3 | ventaja p3 acumulada (ms) |
+|---:|---:|---:|---:|---:|---:|
+| 1 | 20082 | 20648 | 21132 | 20915 | +217 |
+| 2 | 18687 | 19569 | 19518 | 19552 | +183 |
+| 3 | 19108 | 19585 | 19518 | 19535 | +166 |
+| 4 | 19526 | 19468 | 19386 | 19418 | +134 |
+| 5 | 19235 | 19552 | 19418 | 19435 | +117 |
+| 6 | 18788 | 19402 | 19435 | 19402 | +150 |
+| 7 | 18828 | 19597 | 19614 | 19614 | +150 |
+| 8 | 18836 | 19669 | 19569 | 19569 | +150 |
+| 9 | 19101 | 19518 | 19451 | 19518 | +83 |
+| 10 | 18736 | 19602 | 19385 | 19385 | +83 |
+
+**Resultado A/B combinado:**
+
+| Indicador | Carrera A: Vera p2, Sira p3 | Carrera B: Sira p2, Vera p3 |
+|---|---:|---:|
+| Ventaja de plaza 3 en V1 | 183 ms | 217 ms |
+| Ventaja de plaza 3 tras V10 | 133 ms | 83 ms |
+| Recuperación acumulada de plaza 2 en V2–V10 | 50 ms | 134 ms |
+| Diferencia total entre las tres IA | 150 ms | 267 ms |
+| Tiempo humano | 190836 ms | 190927 ms |
+
+**Lectura:** A y B reproducen que la plaza 3 obtiene alrededor de dos décimas en la primera vuelta (+183 y +217 ms), con independencia del piloto. Después de nueve vueltas lanzadas, parte se recupera pero no se neutraliza. **Es evidencia de un sesgo asociado a la plaza, no prueba todavía su causa geométrica.** Las medias del humano entre A y B difieren solo 91 ms de tiempo total; la reproducibilidad del ensayo es razonable para esta comparación.
+
+**Problema deportivo más grave:** 900 puntos Elo entre Álex y Sira pero los tres IA terminaron separados por 150–267 ms después de diez vueltas; las dos tandas las ganó el humano por 5.45–5.68 segundos. No se distinguen como pilotos de nivel diferente. En B, Sira con 900 Elo logró media lanzada **19477.11 ms**, mejor que Vera con 1730 Elo (**19492.00 ms**) y Álex con 1800 (**19551.33 ms**). Dados de B: Sira 5 tiradas de 1/2 y 2 tiradas de 5/6; Vera 2 tiradas de 1/2 y 6 de 5/6; Álex 1 tirada de 1/2 y 7 de 5/6. Además, en V7, V8 y V10 Sira y Vera registraron tiempos exactamente iguales, aun con dados y desviaciones diferentes. Todos los registros de frenada fueron 0, **lo cual no es un defecto por sí mismo** con el coche actual; sin hitches y sin segundos sin integrar.
+
+**Código comprobado 23/11/2026 (rama main):**
+- `src/game/ai/craftraceAiEloLeague.js` muestra que `rollEloAiDie(elo)` cambia las probabilidades de las 6 caras.
+- En `src/game/online/craftraceLiveV2BotDirector.js`, los tres IA de nivel 3 reciben el mismo `LIVE4_AI_LEVELS[3]`, el mismo `maxFwd`, `accel`, agarre y límites físicos, y `live4AiSeatPaceBias` devuelve 1 en G. El Elo se utiliza para tirar el dado: **no existe una pericia de conductor distinta por Elo aparte de su efecto indirecto en la desviación planificada**.
+- `_bezierProfileForDie` obtiene un `buildBezierDieVariant` y recalcula perfil; `trackBezierAiRacingLinePlanner.js` limita la perturbación según la forma de pista, radio del coche, curvatura y margen de seguridad, con 20% extra de margen. Por eso la perturbación puede acercarse a cero en plazas o trazados restrictivos: con dados distintos, las trayectorias físicas pueden seguir siendo casi iguales.
+- No atribuir el problema a que se haya ignorado el piloto elegido: la identidad y su Elo se usan en el controlador y aparecen correctamente en el informe. **El problema está en que ese Elo prácticamente no se traduce en diferencia real de pericia y ritmo en esta pista.**
+
+**Decisión tras recibir B:** parar las tandas repetitivas; no pedir al propietario 20 vueltas ni más ensayos idénticos. Antes de volver a correr, realizar auditoría de **distancia real de parrilla a primera puerta/meta** y diseñar un efecto **medible de pericia del conductor** (optimización de trayectoria, anticipación de curvas, recuperación de correcciones y decisiones), sin dar a IA motores o agarres ilegales, sin frenadas forzadas y sin penalizadores artificiales de velocidad por Elo. Introducir un test controlado de pilotos con dados prefijados y mismo punto de partida para separar efecto de dado/Elo de la posición. Solo tras la auditoría y validación de pruebas automáticas considerar cambios en DEV G y nueva tanda de verificación.
+
+**Estado:** diagnóstico confirmado en código; la implementación o modificación de conducción por Elo **todavía no está hecha ni validada**.
+
+---
+
+## 4. Protocolo A/B de 10 vueltas — EJECUTADO (referencia para regresiones futuras)
+
+**A y B ya están completadas y analizadas; no volver a pedirlas sin justificación técnica nueva.** Se conserva este protocolo exclusivamente para poder repetirlo después de corregir el sistema de pericia IA:
 
 1. Abrir la versión DEV web verificada de GitHub Pages (no Vercel/Google Play) y configurar \`LIVE 4\` en **Santa Cruz**, sentido normal, **Avenir Gripline**, 4 plazas, **1 humano + 3 IA**, nivel **3 Experto**, **G Bézier + dados**, **10 vueltas**. Física v1, si no ha cambiado; anotar cualquier cambio.
 2. Mantener la **plaza 0 humana** y la **plaza 1 de Álex Falcón (Elo 1800)**. No cambiar coche, circuito, opciones o control entre tandas.
@@ -151,9 +203,9 @@ Cambios relacionados: [PR #55](https://github.com/almaprintes/TopdownCraftrace/p
 7. No modificar físicamente la IA, el agarre, el máximo de velocidad, la fórmula de dados ni las posiciones iniciales entre A y B. No forzar frenadas: el coche actual puede no necesitarlas.
 8. Al terminar cada carrera, confirmar **10 tiempos y 10 dados por IA**, cero fallos de registro; copiar **solo la carrera actual** o **la nueva tanda** y pegarla para análisis. No hace falta capturar pantallas. Al guardar una tanda de cuatro, mantenerla por debajo del máximo de 10 informes.
 
-**Si 10 vueltas no bastan para resolver el comportamiento:** considerar 20, pero solo después de revisar los resultados y la estabilidad de 10. No confundir estabilidad de esta carrera con prueba de multijugador de 2–4 humanos.
+**Decisión tras A/B:** 20 vueltas no aportarían un diagnóstico proporcional al esfuerzo mientras todos los pilotos expertos compartan prácticamente la misma capacidad de conducción. **No pedir 20 vueltas por ahora.** No confundir estas carreras DEV con pruebas de multijugador de 2–4 humanos.
 
-## 5. Análisis a calcular cuando lleguen datos
+## 5. Método de análisis aplicado a A/B (conservar para futuras regresiones)
 
 Para cada carrera, para las **plazas 2 y 3**:
 
@@ -190,4 +242,4 @@ Para cada carrera, para las **plazas 2 y 3**:
 - Mantener mismo coche y físicas para jugador e IA; habilidad debe venir de trazada, selección de acciones y aprovechamiento del agarre. No forzar frenos que el coche no necesita.
 - Cualquier corrección futura se probará en DEV con regresión de cronometraje y revancha **antes** de integrar; ninguna intervención en Play, nativo, Supabase o despliegues a Vercel por esta documentación.
 
-**Siguiente paso pendiente:** recibir la carrera B (Álex 1, Sira 2, Vera 3) de 10 vueltas, comparar con A y decidir si repetir B–A. **Este documento recoge una carrera larga real aportada por el propietario; no se han ejecutado simulaciones ni carreras adicionales por esta modificación de documentación.**
+**Siguiente paso pendiente:** la carrera B ya está recibida; auditar técnicamente la parrilla y el mecanismo real de pericia Elo antes de pedir más tandas. **Este documento recoge ambas carreras largas reales aportadas por el propietario; no se han ejecutado simulaciones ni carreras adicionales por esta modificación de documentación.**
