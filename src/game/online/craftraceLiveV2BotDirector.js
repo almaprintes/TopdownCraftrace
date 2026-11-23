@@ -28,7 +28,7 @@ export function live4AiSeatPaceBias({guidedG=false,difficulty=3,style=0}={}){
 }
 export const newLive4GPhysicalLap=()=>({
  samples:0,sumLineErrorPx:0,maxLineErrorPx:0,sumSpeed:0,sumBrake:0,
- sumAbsSteer:0
+ brakeActiveSamples:0,peakBrake:0,sumAbsSteer:0
 });
 export function measureLive4GPhysicalLap(lap,control){
  if(!lap||!control?.valid)return;
@@ -37,7 +37,10 @@ export function measureLive4GPhysicalLap(lap,control){
  lap.sumLineErrorPx+=error;
  lap.maxLineErrorPx=Math.max(lap.maxLineErrorPx,error);
  lap.sumSpeed+=Math.max(0,Number(control.speed)||0);
- lap.sumBrake+=Math.max(0,Number(control.brake)||0);
+ const brake=Math.max(0,Number(control.brake)||0);
+ lap.sumBrake+=brake;
+ if(brake>0.001)lap.brakeActiveSamples++;
+ lap.peakBrake=Math.max(lap.peakBrake,brake);
  lap.sumAbsSteer+=Math.abs(Number(control.steer)||0);
 }
 export function summarizeLive4GPhysicalLap(lap,number){
@@ -48,6 +51,8 @@ export function summarizeLive4GPhysicalLap(lap,number){
   maxLineErrorPx:round(lap?.maxLineErrorPx||0),
   meanSpeedPxS:round((lap?.sumSpeed||0)/n),
   meanBrake:round((lap?.sumBrake||0)/n),
+  brakeActivePct:round((lap?.brakeActiveSamples||0)/n*100),
+  peakBrake:round(lap?.peakBrake||0),
   meanAbsSteer:round((lap?.sumAbsSteer||0)/n)};
 }
 export const LIVE4_AI_LEVELS=Object.freeze({
