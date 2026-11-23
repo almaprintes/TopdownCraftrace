@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {AI_ELO_PILOTS,eloDieProbabilities,rollEloAiDie}
  from '../src/game/ai/craftraceAiEloLeague.js';
-import {live4GDriverSkill,live4GCornerDecisions}
+import {live4GDriverSkill,live4GCornerDecisions,live4GCornerTiming}
  from '../src/game/ai/craftraceLive4GDriverSkill.js';
 import {CrafRaceLive4BotDirector} from '../src/game/online/craftraceLiveV2BotDirector.js';
 import {makeLive4StartingGrid} from '../src/game/online/craftraceLiveV2GridGeometry.js';
@@ -54,6 +54,28 @@ assert.deepEqual(live4GCornerDecisions(null,1),{
  aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1,throttleFactor:1
 });
 assert.equal(live4GDriverSkill(null,6),null);
+
+// A novice must react to the rising and falling curvature at distinct
+// millisecond windows, with no artificial lift on a straight or flat apex.
+const pulse=Array.from({length:120},(_,i)=>({
+ curvature:i>=45&&i<=65?.11:0
+}));
+const noviceTiming=live4GDriverSkill(900,1),expertTiming=live4GDriverSkill(1800,6);
+const entry=live4GCornerTiming(noviceTiming,pulse,41,10,480);
+const exit=live4GCornerTiming(noviceTiming,pulse,68,10,480);
+const straightTiming=live4GCornerTiming(noviceTiming,pulse,5,10,480);
+const apexTiming=live4GCornerTiming(noviceTiming,pulse,55,10,480);
+const perfectTiming=live4GCornerTiming(expertTiming,pulse,41,10,480);
+assert.ok(entry.entryPhase>0&&entry.throttleFactor<1&&
+ entry.brakeThresholdRelaxPxS>0,'Novice lifts/anticipates brakes before a curve');
+assert.ok(exit.exitPhase>0&&exit.throttleFactor<1,
+ 'Novice delays reapplying gas after a bend');
+assert.equal(straightTiming.throttleFactor,1);
+assert.equal(apexTiming.throttleFactor,1);
+assert.equal(perfectTiming.throttleFactor,1);
+assert.ok(entry.entryLeadMs>=16&&entry.entryLeadMs<=100);
+assert.ok(exit.exitLagMs>=12&&exit.exitLagMs<=84);
+
 assert.ok(live4GDriverSkill(1800,1).quality>live4GDriverSkill(900,6).quality,
  'Elo experience matters even if the novice gets a lucky die');
 
@@ -104,6 +126,7 @@ function simulate(elo,die,lapCount=1){
  const skill=live4GDriverSkill(elo,die);
  let progress=0,last=0,errors=0,maxError=0,avgDecision=0,brakes=0;
  let avgThrottle=0,avgCornerThrottleFactor=0;
+ let maxEntryPhase=0,maxExitPhase=0;
  const lapEnds=[];
  for(let frame=0;frame<60*130;frame++){
   const control=updateRacePhysicalBot(bot,profile,{
@@ -128,6 +151,8 @@ function simulate(elo,die,lapCount=1){
   avgDecision+=control.live4GCornerSpeedFactor;
   avgThrottle+=control.throttle;
   avgCornerThrottleFactor+=control.live4GCornerThrottleFactor;
+  maxEntryPhase=Math.max(maxEntryPhase,control.live4GEntryPhase||0);
+  maxExitPhase=Math.max(maxExitPhase,control.live4GExitPhase||0);
   if(control.brake>.001)brakes++;
   if(progress>=n){
    progress-=n;lapEnds.push(round((frame+1)*DT));
@@ -139,6 +164,7 @@ function simulate(elo,die,lapCount=1){
     cornerDecisionPct:round(avgDecision/(frame+1)*100,2),
     throttlePct:round(avgThrottle/(frame+1)*100,2),
     cornerThrottlePct:round(avgCornerThrottleFactor/(frame+1)*100,2),
+    maxEntryPhase:round(maxEntryPhase),maxExitPhase:round(maxExitPhase),
     brakePct:round(brakes/(frame+1)*100,2)
    };
   }
@@ -165,6 +191,7 @@ const rolling=Array.from({length:6},(_,i)=>i+1).flatMap(die=>[900,1800].map(elo=
  return{elo,die,lapTimes:x.lapTimes,
   movingLapMean:round((x.lapTimes[1]+x.lapTimes[2])/2),
   meanError:x.meanError,brakePct:x.brakePct,throttlePct:x.throttlePct,
+  maxEntryPhase:x.maxEntryPhase,maxExitPhase:x.maxExitPhase,
   cornerDecisionPct:x.cornerDecisionPct,cornerThrottlePct:x.cornerThrottlePct};
 }));
 console.info('LIVE4-G-ROLLING-AB',JSON.stringify({car:{
@@ -191,6 +218,10 @@ for(const elo of [900,1800]){
  assert.ok(bad.movingLapMean>good.movingLapMean+.3,
   'The die must affect the same pilot on LAUNCHED laps: '+elo);
 }
+// The timing model must run on Santa Cruz's actual sampled curvature.
+const slowRoll=rolling.find(x=>x.elo===900&&x.die===1);
+assert.ok(slowRoll.maxEntryPhase>.05&&slowRoll.maxExitPhase>.05,
+ 'Both skill-dependent entry and exit timing windows must occur on Santa Cruz');
 const expectedRolling={};
 for(const elo of [900,1800]){
  const probs=eloDieProbabilities(elo);
