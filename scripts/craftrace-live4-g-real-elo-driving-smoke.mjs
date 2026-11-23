@@ -56,7 +56,7 @@ function sprite(x,y,key='car'){return{x,y,texture:{key},scaleX:1,scaleY:1,
  setVisible(){return this},setPosition(){return this},setOrigin(){return this},
  setScale(){return this},setRotation(){return this},setAlpha(){return this},
  setTint(){return this},setTexture(k){this.texture.key=k;return this}}}
-const scene={trackKey:'santa-cruz',track:{closed:true,meta:track},simTick:1,
+const scene={trackKey:'santa-cruz',track:{closed:true,meta:{...track,id:'santa-cruz'}},simTick:1,
  maxFwd:480,accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,
  carParams:{maxFwd:480,accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,steering:{}},
  carRig:{list:[sprite(0,0)]},textures:{exists:key=>key==='car'},
