@@ -132,6 +132,7 @@ const cases=[
 ];
 const results=cases.map(x=>({...x,...simulate(x.elo,x.die)}));
 const byName=Object.fromEntries(results.map(x=>[x.name,x]));
+console.info('LIVE4-G-REAL-ELO-AB',JSON.stringify(results));
 assert.ok(byName['rookie die 1'].seconds>byName['rookie die 6'].seconds+.15,
  'Dice must affect actual physical lap time for same pilot');
 assert.ok(byName['ace die 1'].seconds>byName['ace die 6'].seconds+.08,
