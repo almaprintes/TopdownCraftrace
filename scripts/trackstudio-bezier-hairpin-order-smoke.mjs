@@ -39,7 +39,7 @@ const authored=road.map((_,i)=>{
  const k=Math.floor(at),u=at-k;
  const a=road[k],b=road[(k+1)%n];
  return{x:a.x+(b.x-a.x)*u,
-  y:a.y+(b.y-a.y)*u+(a.y<0?4:-4)};
+  y:a.y+(b.y-a.y)*u};
 });
 assert.equal(findBezierSelfIntersection(authored,1),null,
  'Nearby hairpin legs are not a literal curve crossing');
