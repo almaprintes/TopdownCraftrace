@@ -31,7 +31,7 @@ export function live4AiSeatPaceBias({guidedG=false,difficulty=3,style=0}={}){
 export const newLive4GPhysicalLap=()=>({
  samples:0,sumLineErrorPx:0,maxLineErrorPx:0,sumSpeed:0,sumBrake:0,
  brakeActiveSamples:0,peakBrake:0,sumAbsSteer:0,
- sumCornerDecision:0
+ sumCornerDecision:0,sumCornerThrottleDecision:0,sumThrottle:0
 });
 export function measureLive4GPhysicalLap(lap,control){
  if(!lap||!control?.valid)return;
@@ -46,6 +46,8 @@ export function measureLive4GPhysicalLap(lap,control){
  lap.peakBrake=Math.max(lap.peakBrake,brake);
  lap.sumAbsSteer+=Math.abs(Number(control.steer)||0);
  lap.sumCornerDecision+=Number(control.live4GCornerSpeedFactor)||1;
+ lap.sumCornerThrottleDecision+=Number(control.live4GCornerThrottleFactor)||1;
+ lap.sumThrottle+=Number(control.throttle)||0;
 }
 export function summarizeLive4GPhysicalLap(lap,number){
  const n=Math.max(1,Number(lap?.samples)||0);
@@ -58,7 +60,9 @@ export function summarizeLive4GPhysicalLap(lap,number){
   brakeActivePct:round((lap?.brakeActiveSamples||0)/n*100),
   peakBrake:round(lap?.peakBrake||0),
   meanAbsSteer:round((lap?.sumAbsSteer||0)/n),
-  meanCornerDecisionPct:round((lap?.sumCornerDecision||n)/n*100)};
+  meanCornerDecisionPct:round((lap?.sumCornerDecision||n)/n*100),
+  meanCornerThrottleDecisionPct:round((lap?.sumCornerThrottleDecision||n)/n*100),
+  meanThrottlePct:round((lap?.sumThrottle||0)/n*100)};
 }
 export const LIVE4_AI_LEVELS=Object.freeze({
   1:Object.freeze({title:'Principiante',pace:0.70,cornerRisk:0,plannerLateralAccel:1050,plannerDrive:.58,plannerBrake:.67}),
