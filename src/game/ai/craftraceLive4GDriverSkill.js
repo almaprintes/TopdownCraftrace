@@ -5,7 +5,8 @@
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 export function live4GDriverSkill(elo,face){
  const rating=Number(elo),die=Number(face);
- if(!Number.isFinite(rating)||!Number.isInteger(die)||die<1||die>6)
+ if(elo===null||elo===undefined||!Number.isFinite(rating)||
+    !Number.isInteger(die)||die<1||die>6)
   return null;
  const experience=clamp((rating-900)/900,0,1);
  const execution=clamp((die-1)/5,0,1);
