@@ -101,6 +101,18 @@ export function saveLive4CalibrationReport(store,key,report){
  }catch{return{history:recent,persisted:false};}
 }
 
+// Start a new comparison batch without losing the race just completed.
+// Only rewrites this DEV G notebook key, never game progress or other data.
+export function startNewLive4CalibrationBatch(store,key,report){
+ if(!report||report.formato!=='CRAFT_RACE_LIVE4_G_V1')throw Error('Informe de carrera inválido');
+ const history=[{key:String(key),report}];
+ if(!store||typeof store.setItem!=='function')return {history,persisted:false};
+ try{
+  store.setItem(LIVE4_G_REPORT_KEY,JSON.stringify(history));
+  return {history,persisted:true};
+ }catch{return {history,persisted:false};}
+}
+
 export function formatLive4CalibrationHistory(history){
  const reports=arr(history).slice(-LIVE4_G_REPORT_LIMIT)
   .map(row=>row.report).filter(x=>x?.formato==='CRAFT_RACE_LIVE4_G_V1');
