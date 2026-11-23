@@ -30,7 +30,7 @@ const local=new MockStorage(18000),session=new MockStorage(8_000_000);
 Object.defineProperty(globalThis,'localStorage',{configurable:true,value:local});
 Object.defineProperty(globalThis,'sessionStorage',{configurable:true,value:session});
 local.setItem('tdr:account:do-not-touch','preserve-user-account');
-local.setItem('tdr:other-app','X'.repeat(5500));
+local.setItem('tdr:other-app','X'.repeat(8700));
 const key='tdr:trackstudio:vector-director-preview-v1';
 const edge=pts=>pts.map(([x,y])=>({
  x,y,handleIn:{x,y},handleOut:{x,y}
@@ -64,7 +64,7 @@ assert.equal(recovered.track.centerline.length,2800);
 assert.deepEqual(recovered.track.aiBezierLine,bezier,
  'The authored line remains bit-for-bit identical');
 assert.equal(local.getItem('tdr:account:do-not-touch'),'preserve-user-account');
-assert.equal(local.getItem('tdr:other-app'),'X'.repeat(5500));
+assert.equal(local.getItem('tdr:other-app'),'X'.repeat(8700));
 
 const recovery={editor:{
  nodes:edge([[10,11],[50,51],[90,91]]),aiBezierLine:bezier
@@ -92,7 +92,7 @@ session.quota=1000;
 assert.rejects(()=>installKartingPreview(scene,{allowVectorOnly:true}),
  /Sin espacio para la vista previa o recuperación/);
 assert.equal(local.getItem('tdr:account:do-not-touch'),'preserve-user-account');
-assert.equal(local.getItem('tdr:other-app'),'X'.repeat(5500));
+assert.equal(local.getItem('tdr:other-app'),'X'.repeat(8700));
 
 const source=readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
 const preview=readFileSync('src/game/studio/installTrackShapeEditor.js','utf8');
