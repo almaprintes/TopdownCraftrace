@@ -28,6 +28,17 @@ function draw(scene){
  gfx.beginPath();gfx.moveTo(samples[0].x,samples[0].y);
  for(let i=1;i<samples.length;i++)gfx.lineTo(samples[i].x,samples[i].y);
  gfx.closePath();gfx.strokePath();
+ // Ephemeral diagnostic overlay: the author must be able to see WHERE
+ // validation failed without hunting 261 road nodes or deleting geometry.
+ const point=scene._aiBezierFault?.badPoint;
+ if(Number.isFinite(point?.x)&&Number.isFinite(point?.y)){
+  const r=16/zoom;
+  gfx.fillStyle(0xff625b,.28);gfx.fillCircle(point.x,point.y,r*1.5);
+  gfx.lineStyle(3/zoom,0xff625b,1);
+  gfx.strokeCircle(point.x,point.y,r);
+  gfx.lineBetween(point.x-r*.65,point.y-r*.65,point.x+r*.65,point.y+r*.65);
+  gfx.lineBetween(point.x-r*.65,point.y+r*.65,point.x+r*.65,point.y-r*.65);
+ }
  if(!editing)return;
  line.nodes.forEach((node,index)=>{
   const active=scene._aiBezierSelected===index;
@@ -45,6 +56,35 @@ function draw(scene){
 }
 export function installTrackStudioAiBezier(scene){
  scene._aiBezierLine=null;scene._aiBezierSelected=-1;scene._aiBezierGesture=null;
+ scene._aiBezierFault=null;
+ // Validation errors are ephemeral. Only real track data belongs to saves
+ // and exports; fault coordinates do not alter the authored project.
+ scene._aiBezierSetFault=report=>{
+  scene._aiBezierFault=report&&!report.active?report:null;
+  scene._redrawEditor?.();scene._updatePanel?.();
+ };
+ scene._aiBezierFaultLabel=report=>{
+  if(!report)return '';
+  if(report.reason==='route-self-intersection')
+   return 'Cruce real entre segmentos Bézier '+((report.badNodeIndex??0)+1)+
+    ' y '+((report.otherNodeIndex??0)+1);
+  if(report.reason==='route-order-break')
+   return 'No se pudo seguir el orden de la pista; no implica un cruce real';
+  return '';
+ };
+ scene._aiBezierFocusFault=()=>{
+  const point=scene._aiBezierFault?.badPoint,cam=scene._editCam;
+  if(!cam||!Number.isFinite(point?.x)||!Number.isFinite(point?.y))return false;
+  const maximum=Math.max(.1,Number(scene._editZoomMax)||1.5);
+  const desired=Math.min(maximum,Math.max(cam.zoom,.85));
+  cam.setZoom?.(desired);
+  cam.centerOn(point.x,point.y);
+  if(Number.isInteger(scene._aiBezierFault.badNodeIndex)){
+   scene._aiBezierSelected=scene._aiBezierFault.badNodeIndex;
+  }
+  scene._redrawEditor();scene._updatePanel();
+  return true;
+ };
  scene._aiBezierGfx=scene.add.graphics().setDepth(15);
  scene.cameras.main.ignore(scene._aiBezierGfx);
  const oldProject=scene._getProjectData.bind(scene);
@@ -65,6 +105,7 @@ export function installTrackStudioAiBezier(scene){
  const oldApply=scene._applyProjectData.bind(scene);
  scene._applyProjectData=data=>{
   oldApply(data);
+  scene._aiBezierFault=null;
   scene._aiBezierLine=normalizeAiBezierLine(data?.aiBezierLine);
   scene._aiBezierSelected=-1;scene._aiBezierGesture=null;
   scene._redrawEditor();scene._updatePanel();
@@ -74,6 +115,7 @@ export function installTrackStudioAiBezier(scene){
   const editor=Boolean(data?.editor||Array.isArray(data?.nodes));
   const value=oldImport(data);
   if(!editor){
+   scene._aiBezierFault=null;
    scene._aiBezierLine=normalizeAiBezierLine(data?.aiBezierLine||data?.meta?.aiBezierLine);
    scene._aiBezierSelected=-1;scene._redrawEditor();scene._updatePanel();
   }
@@ -82,7 +124,7 @@ export function installTrackStudioAiBezier(scene){
  const oldNew=scene._newProject.bind(scene);
  scene._newProject=(...args)=>{
   const value=oldNew(...args);
-  scene._aiBezierLine=null;scene._aiBezierSelected=-1;
+  scene._aiBezierLine=null;scene._aiBezierSelected=-1;scene._aiBezierFault=null;
   scene._redrawEditor();scene._updatePanel();return value;
  };
  const oldRedraw=scene._redrawEditor.bind(scene);
@@ -116,7 +158,7 @@ export function installTrackStudioAiBezier(scene){
    if(!next)throw Error('No se pudo generar la curva');
    scene._pushHistory();
    scene._aiBezierLine=next;
-   scene._aiBezierSelected=0;
+   scene._aiBezierFault=null;scene._aiBezierSelected=0;
    scene._autosaveRecovery();scene._redrawEditor();scene._updatePanel();
    scene._flashMessage(fromGuides?
      'TRAZADA CREADA · '+generated.usedGuides.length+
@@ -144,6 +186,7 @@ export function installTrackStudioAiBezier(scene){
    const result=buildBezierAiRacingLineModel(base,scene._aiBezierLine,
      scene._trackShape,track,{carRadius:14});
    const report=result.report;
+   scene._aiBezierSetFault(report);
    if(report.active){
     scene._flashMessage('TRAZADA VALIDADA · '+report.total+
       ' nodos · continuidad y bordes correctos · lista para PROBAR');
@@ -151,7 +194,8 @@ export function installTrackStudioAiBezier(scene){
     const reasons={
      'outside-safe-asphalt':'la trayectoria invade un borde o el exterior',
      'outside-route-corridor':'un tramo se aleja demasiado del eje del circuito',
-     'route-order-break':'se cruza el orden natural de los tramos',
+     'route-self-intersection':'la trayectoria se cruza consigo misma',
+     'route-order-break':'el seguimiento del orden de pista no es continuo',
      'wrong-direction':'hay nodos en sentido contrario',
      'steering-discontinuity':'hay una curva demasiado brusca',
      'length-mismatch':'la longitud de la curva no concuerda con la pista',
@@ -159,8 +203,11 @@ export function installTrackStudioAiBezier(scene){
      'missing-borders':'faltan los bordes reales de pista',
      'invalid-bezier':'faltan nodos o los tiradores son inválidos'
     };
-    scene._flashMessage('BÉZIER POR CORREGIR · '+(reasons[report.reason]||report.reason)+
-     (Number.isInteger(report.badIndex)?' · muestra '+report.badIndex:''));
+    const special=scene._aiBezierFaultLabel(report);
+    const canLocate=Number.isFinite(report.badPoint?.x)&&Number.isFinite(report.badPoint?.y);
+    scene._flashMessage('BÉZIER POR CORREGIR · '+(special||reasons[report.reason]||report.reason)+
+     (canLocate?' · pulsa LOCALIZAR ERROR':
+      Number.isInteger(report.badIndex)?' · muestra '+report.badIndex:''));
    }
    return report;
   }catch(err){
@@ -176,6 +223,7 @@ export function installTrackStudioAiBezier(scene){
   const next=normalizeAiBezierLine(line);
   scene._aiBezierSelected=splitShapeEdge(next.nodes,index,true);
   scene._aiBezierLine=normalizeAiBezierLine(next);
+  scene._aiBezierFault=null;
   scene._autosaveRecovery();scene._redrawEditor();scene._updatePanel();
  };
  scene._aiBezierDelete=()=>{
@@ -187,12 +235,13 @@ export function installTrackStudioAiBezier(scene){
   next.nodes.splice(index,1);
   scene._aiBezierLine=normalizeAiBezierLine(next);
   scene._aiBezierSelected=Math.min(index,next.nodes.length-1);
+  scene._aiBezierFault=null;
   scene._autosaveRecovery();scene._redrawEditor();scene._updatePanel();
  };
  scene._aiBezierClear=()=>{
   if(!scene._aiBezierLine)return;
   if(!window.confirm('¿Borrar solo la trayectoria IA Bézier? La pista y las guías antiguas seguirán guardadas.'))return;
-  scene._pushHistory();scene._aiBezierLine=null;scene._aiBezierSelected=-1;
+  scene._pushHistory();scene._aiBezierLine=null;scene._aiBezierSelected=-1;scene._aiBezierFault=null;
   scene._autosaveRecovery();scene._redrawEditor();scene._updatePanel();
  };
  function pick(world){
@@ -241,7 +290,7 @@ export function installTrackStudioAiBezier(scene){
     const next=moveAiBezierPart(scene._aiBezierLine,g.hit.index,part,target);
     if(next){
      if(!g.changed){scene._pushHistory();g.changed=true;}
-     scene._aiBezierLine=next;g.world=world;
+     scene._aiBezierLine=next;scene._aiBezierFault=null;g.world=world;
      scene._redrawEditor();scene._updatePanel();
     }
    }

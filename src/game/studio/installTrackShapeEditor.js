@@ -326,16 +326,24 @@ export function installTrackStudioShapeEditor(s){
       // A hand-authored Bézier cannot silently fall back to a different G.
       if(s._aiBezierLine){
         const track=s._exportToGameTrack();
+        // Validate in the SAME direction as the editor button. A reverse
+        // author line was wrongly compared to the forward centerline, so
+        // PROBAR raised a "crossing previous segment" error on clean tracks.
+        const raceCenterline=s._catalogRaceDirection==='reverse'
+          ?track.centerline.slice().reverse():track.centerline;
         const baseline=buildTrackRacingLineModel({
-          raceCenterline:track.centerline,trackWidth:track.trackWidth
+          raceCenterline,trackWidth:track.trackWidth
         },{apexCommitment:.22});
         const test=buildBezierAiRacingLineModel(baseline,s._aiBezierLine,
           s._trackShape,track,{carRadius:14});
+        s._aiBezierSetFault?.(test.report);
         if(!test.report.active){
           const explanation={
             'outside-safe-asphalt':'La trayectoria invade el borde o el exterior',
             'outside-route-corridor':'Hay un tramo demasiado alejado del eje de pista',
-            'route-order-break':'Los nodos están cruzando un tramo anterior',
+            'route-self-intersection':s._aiBezierFaultLabel?.(test.report)||
+              'La trayectoria Bézier se cruza consigo misma',
+            'route-order-break':'No se pudo asociar la ruta al orden de la pista (no es un cruce geométrico)',
             'wrong-direction':'Revisa el orden de los nodos',
             'steering-discontinuity':'Suaviza los tiradores en la curva problemática',
             'length-mismatch':'La trayectoria tiene una longitud imposible',
@@ -343,7 +351,8 @@ export function installTrackStudioShapeEditor(s){
           };
           const why=explanation[test.report.reason]||test.report.reason;
           throw Error('Bézier no validada: '+why+
-            (Number.isInteger(test.report.badIndex)?' (muestra '+test.report.badIndex+')':''));
+            (Number.isFinite(test.report.badPoint?.x)?' · LOCALIZAR ERROR':
+              Number.isInteger(test.report.badIndex)?' (muestra '+test.report.badIndex+')':''));
         }
       }
       const record=await installKartingPreview(s,{allowVectorOnly:true});
