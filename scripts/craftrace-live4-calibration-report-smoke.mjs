@@ -95,6 +95,7 @@ assert.equal(fallbackCopied,true);
 const readonly={getItem(){throw Error('storage blocked')},setItem(){throw Error('storage blocked')}};
 assert.equal(saveLive4CalibrationReport(readonly,'demo',report).persisted,false);
 assert.equal(saveLive4CalibrationReport(readonly,'demo',report).history.length,1);
+assert.equal(saveLive4CalibrationReport(null,'demo',report).persisted,false);
 const bridge=readFileSync('src/game/online/craftraceLiveV2RaceBridge.js','utf8');
 assert.ok(bridge.includes("if(allFinished&&guidedGTrial&&isHost&&director)"),
  'Never export incomplete/offline/guest result as a complete G calibration');
