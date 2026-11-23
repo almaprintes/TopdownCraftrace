@@ -2972,8 +2972,15 @@ const data = {
       if (!this._isClosed && roundTrip.gameTrack?.raceType !== 'stage') {
         throw new Error('Un tramo abierto debe exportarse como stage');
       }
-      localStorage.setItem('trackstudio_project', serialized);
-      localStorage.setItem('trackstudio_recovery', serialized);
+      // Keep the browser copy COMPACT (no indentation) and avoid duplicating
+      // the huge sampled gameTrack in the recovery record. Keep the exported
+      // JSON complete and pretty for portability and the user's archive.
+      let browserSaveError=null,saveLocation=null;
+      try {
+        saveLocation=writeTrackStudioWorkingCopy('trackstudio_project',JSON.stringify(data));
+        if(!this._autosaveRecovery())
+          browserSaveError=Error('No hay espacio para recuperación automática');
+      } catch(e) {browserSaveError=e;}
       const blob = new Blob([serialized], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -2981,8 +2988,14 @@ const data = {
       a.download = `trackstudio-${(data.gameTrack?.name || 'project').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      this._flashMessage('💾 Guardado + copia JSON');
-      console.log('✅ Proyecto guardado + backup JSON');
+      if(browserSaveError)console.warn('[TrackStudio] Descarga independiente del almacenamiento local',browserSaveError);
+      this._flashMessage(browserSaveError
+        ?'JSON generado. Sin espacio para copia en navegador: conserva el archivo.'
+        :saveLocation==='session'
+          ?'Guardado en esta pestaña + copia JSON. Conserva el archivo.'
+          :'💾 Guardado + copia JSON');
+      console.log('[TrackStudio] JSON solicitado y almacenamiento:',
+        browserSaveError?'no disponible':saveLocation);
     } catch (e) {
       console.error('❌ Error guardando proyecto', e);
     }
@@ -3124,7 +3137,7 @@ const data = {
 
   _loadProject() {
     try {
-      const raw = localStorage.getItem('trackstudio_project');
+      const raw = readTrackStudioWorkingCopy('trackstudio_project');
       if (!raw) {
         this._flashMessage?.('No hay ningún proyecto guardado en este dispositivo');
         return false;
