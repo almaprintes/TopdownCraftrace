@@ -16,7 +16,7 @@ const safeTime=value=>{
 };
 
 export function buildLive4CalibrationReport({
- trackId,carId,laps,generatedAt,entries,bots,diagnostics
+ trackId,carId,laps,direction,physicsVersion,aiDifficulty,generatedAt,entries,bots,diagnostics
 }={}){
  const aiBySeat=new Map(arr(bots).map(bot=>[bot.seat,bot]));
  const records=arr(entries).map(entry=>{
@@ -57,10 +57,19 @@ export function buildLive4CalibrationReport({
   circuito:String(trackId||'desconocido').slice(0,65),
   coche:String(carId||'desconocido').slice(0,65),
   vueltasPrevistas:integer(laps),
+  sentido:String(direction||'forward').slice(0,20),
+  versionFisicas:integer(physicsVersion),
+  nivelIA:integer(aiDifficulty),
   pilotoDatos:records,
   diagnostico:{
    iaHitches:integer(timing.hitches),
-   segundosSinIntegrar:round(timing.droppedSeconds,3)
+   segundosSinIntegrar:round(timing.droppedSeconds,3),
+   pilotos:arr(diagnostics?.cornerDiagnostics).map(x=>({
+     plaza:integer(x.seat),
+     objetivoLateralPct:round(x.targetMeanPct,1),
+     lateralRealPct:round(x.lateralMeanPct,1),
+     errorSeguimientoPct:round(x.followMeanErrorPct,1)
+   }))
   },
   notas:'El error de seguimiento es respecto a la trayectoria objetivo, no a la Bézier ideal. Los tiempos son observados en el dispositivo.'
  };
