@@ -49,7 +49,7 @@ const variationSamples=(variant,original)=>{
 const combos=[];
 for(const seat of SEATS)for(const face of FACES){
  const line=buildBezierDieVariant(base,face,seat,source.shape,source.dimensions,
- {carRadius:14});
+ {carRadius:14,monotoneCalibration:process.env.RACE_DIE_CALIBRATED==='1'});
  const plan=buildTrackManeuverPlan(buildTrackSpeedProfile(line,profileOptions));
  assert.ok(plan.valid&&plan.samples.length>=12,'Invalid controlled G profile');
  const distance=variationSamples(line,base);
@@ -165,7 +165,7 @@ const summary={kind:'physics-controller-headless-not-full-gameplay',
   face1SlowerFraction:round(paired.filter(x=>x.deltaFace1Minus6>0).length/Math.max(1,paired.length),4)},
  beforeFixExpectedRole:'No seat-specific pace multipliers in controlled simulation',
  timingMs:Date.now()-started};
-const output=process.env.RACE_DIE_OUTPUT||'artifacts/live4-bezier-dice-physics.json';
+const output=process.env.RACE_DIE_OUTPUT||(process.env.RACE_DIE_CALIBRATED==='1'?'artifacts/live4-bezier-dice-calibrated.json':'artifacts/live4-bezier-dice-physics.json');
 mkdirSync('artifacts',{recursive:true});
 writeFileSync(output,JSON.stringify({summary,cases,paired},null,2));
 console.log('BENCHMARK_RESULT='+JSON.stringify(summary));
