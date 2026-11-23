@@ -10,9 +10,9 @@ export function live4GDriverSkill(elo,face){
   return null;
  const experience=clamp((rating-900)/900,0,1);
  const execution=clamp((die-1)/5,0,1);
- // Experience matters over a season; each die still changes the decisions
+ // A driver's stable competence dominates; each die still changes the decisions
  // of the very same pilot on this particular lap.
- const quality=.60*experience+.40*execution;
+ const quality=.72*experience+.28*execution;
  return Object.freeze({elo:rating,die,quality,
   hesitation:1-quality});
 }
