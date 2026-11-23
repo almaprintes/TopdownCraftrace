@@ -2,6 +2,7 @@
 // Fase 3: controlador físico de un único bot experimental.
 // Produce dirección, gas y freno; nunca teletransporta el cuerpo durante la marcha.
 import {nextGuidedApex,nearestContinuousGuidedSample} from '../online/craftraceGuidedDie.js';
+import {live4GCornerDecisions} from './craftraceLive4GDriverSkill.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
@@ -172,6 +173,9 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // following the asphalt. LIVE 4 Expert always pursues a nearby point on the
   // physical racing line, with a shorter horizon as curvature increases.
   const curveSeverity=clamp((peakTurn-.018)/.10,0,1);
+  // Only LIVE 4 DEV G supplies a driver profile. All existing controller
+  // users and the historic A/B race mode get the exact neutral factors.
+  const gDecisions=live4GCornerDecisions(params.live4GDriverSkill,curveSeverity);
   // Complex technical circuits require a longer *visual aiming horizon* to
   // avoid steering too late through continuous bends. This is lookahead only:
   // it does not change engine power, grip, braking or the target speed plan.
@@ -187,7 +191,7 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const precisionAimPx=clamp(
     25+20*adaptiveHorizon+
     speed*(.11+.04*adaptiveHorizon)-curveSeverity*26,
-    22,110);
+    22,110)*gDecisions.aimFactor;
   const precisionSteps=clamp(Math.round(precisionAimPx/spacing),2,8);
   const recoverySteps=nearest.distance>45?Math.min(3,precisionSteps):precisionSteps;
   // Only the experimental G Realizador provides a die and authored apexes.
@@ -231,9 +235,10 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const releaseOppositeSuppressed=oppositeDuringRelease&&
     Math.abs(headingError)<.34;
   if(releaseOppositeSuppressed||straightDeadband||straightOppositeSuppressed)rawSteer=0;
-  const steerRate=precisionCornering
+  const steerRate=(precisionCornering
     ?(straightLock?3.5:11)
-    :(straightLock?2.4:(oppositeDuringRelease?2.2:9));
+    :(straightLock?2.4:(oppositeDuringRelease?2.2:9)))*
+    gDecisions.steerRateFactor;
   let steer=clamp(previousSteer+
     clamp(rawSteer-previousSteer,-steerRate*dt,steerRate*dt),-1,1);
   if(straightLock&&rawSteer===0){
@@ -279,7 +284,11 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   const predictedMiss=Math.abs(headingError)*Math.max(28,speed*.16);
   const missRisk=guideAhead
     ?clamp((predictedMiss-guideTolerance)/55,0,1)*guideUrgency:0;
-  const controlledTargetSpeed=targetSpeed*controlScale*(1-.28*missRisk);
+  // Judgment, not physics: a less experienced driver lifts or slows its
+  // corner entry sooner. The exact same acceleration, braking, grip and
+  // maximum speed integrate the resulting controls; no timed penalty.
+  const controlledTargetSpeed=targetSpeed*controlScale*(1-.28*missRisk)*
+    gDecisions.cornerSpeedFactor;
   const speedError=controlledTargetSpeed-speed;
   const throttle=clamp((speedError-2)/34,0,1);
   const brake=clamp((-speedError-3)/30,0,1);
@@ -342,6 +351,8 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     speed,
     targetSpeed:controlledTargetSpeed,
     profileTargetSpeed:targetSpeed,
+    live4GCornerSpeedFactor:gDecisions.cornerSpeedFactor,
+    live4GDriverQuality:params.live4GDriverSkill?.quality??null,
     cornerRisk,
     riskConfidence,
     riskScale,
