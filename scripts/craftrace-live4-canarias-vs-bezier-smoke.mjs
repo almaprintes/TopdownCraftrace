@@ -74,6 +74,14 @@ assert.equal(race.previewBezierActive,true);
 assert.equal(race.previewGuideReport.total,14);
 assert.equal(race.previewGuideReport.active,true);
 assert.equal(race.previewGuidedProfile.valid,true);
+// Active DEV LIVE 4 G rooms must use the calibrated monotone mode for physics.
+const g1=race._bezierProfileForDie(1,1);
+const g2=race._bezierProfileForDie(1,2);
+const g6=race._bezierProfileForDie(1,6);
+assert.ok(g1.live4DieVariationPx>g2.live4DieVariationPx,
+  '1 must be more perturbed than 2 in this same G seat');
+assert.ok(g2.live4DieVariationPx>g6.live4DieVariationPx);
+assert.equal(g6.live4DieVariationPx,0);
 for(const bot of race.bots){
  assert.equal(bot.difficulty,3);
  assert.ok(bot.guidedRoll>=1&&bot.guidedRoll<=6);
