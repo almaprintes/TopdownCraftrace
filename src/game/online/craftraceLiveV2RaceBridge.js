@@ -208,7 +208,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
      .finally(()=>botPostAttempts.delete('write'+seat));
  };
  let lastResultsSnapshot=null;
- let calibrationSaved=false,calibrationMemory=[];
+ let calibrationSaved=false,calibrationPersisted=false,calibrationMemory=[];
  const openRematchLobby=next=>{
    if(!next?.id||!Array.isArray(next?.members))throw Error('Revancha sin sala autorizada');
    // Never reuse an existing room or its saved result rows.
@@ -374,6 +374,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
          try{store=globalThis.localStorage;}catch{}
          const saved=saveLive4CalibrationReport(store,roomId,report);
          calibrationMemory=saved.history;
+         calibrationPersisted=saved.persisted;
          calibrationSaved=true;
        }
        // Prefer the persisted notebook; private-browsing browsers still get
@@ -390,7 +391,9 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        const feedback=document.createElement('p');
        feedback.className='cr4-result-note';
        feedback.setAttribute('role','status');
-       feedback.textContent='Guardo hasta 10 carreras solo en este dispositivo. Copia el informe y pégalo en ChatGPT; sin capturas.';
+       feedback.textContent=calibrationPersisted
+         ?'Hasta 10 carreras guardadas en este dispositivo. Copia el informe y pégalo en ChatGPT; sin capturas.'
+         :'Almacenamiento bloqueado: copia este informe ANTES de salir de la carrera.';
        copy.onclick=async()=>{
          const data=formatLive4CalibrationHistory(notebook);
          const success=await copyLive4CalibrationText(data);
