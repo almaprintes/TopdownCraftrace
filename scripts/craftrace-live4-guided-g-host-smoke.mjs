@@ -102,6 +102,10 @@ for(const candidate of [
  {trackId:TENERIFE_G_ID,dev:true,aiDifficulty:2},
  {trackId:'karting-tenerife',dev:true,aiDifficulty:3}
 ])assert.equal(isLive4GuidedGSupported(candidate),false);
+import {installKartingTenerife} from './install-karting-tenerife-source.mjs';
+// The standalone LIVE 4 CI previously unpacked only Santa Cruz and Canarias.
+// Install Tenerife metadata from the original bundle before checking its hash.
+await installKartingTenerife({withAssets:false});
 const tenerife=JSON.parse(readFileSync('src/game/tracks/library/karting-tenerife/track.json','utf8'));
 assert.equal(tenerife.meta.sourceImageSha256,TENERIFE_G_IMAGE_SHA);
 const center=tenerife.centerline.map(p=>({...p,width:Number(p.width)||tenerife.trackWidth}));
