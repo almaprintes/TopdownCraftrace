@@ -66,19 +66,39 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
  let elapsedWindow=0,lastUpdate=0,lastReport=0,frameTimes=[];
  const botPostAttempts=new Map(),postedBots=new Set();
  const states=new Map(),paint=new Map();
- // Low-cost, DEV-only performance HUD. Refresh only every 5 seconds.
- const perfHud=document.createElement('output');
- perfHud.setAttribute('aria-label','Diagnóstico LIVE 4');
+ // Compact, inspectable DEV performance HUD. The lap timer is top-center;
+ // action controls are bottom-mounted. Keep FPS midway down the left edge,
+ // never over the timer, and expand detailed diagnostics only on demand.
+ const perfHud=document.createElement('button');
+ perfHud.type='button';
+ perfHud.dataset.cr4PerfHud='true';
+ perfHud.setAttribute('aria-label','Rendimiento LIVE 4: mostrar detalles de FPS');
+ perfHud.setAttribute('aria-expanded','false');
  perfHud.style.cssText=[
-   'position:fixed','right:max(5px,env(safe-area-inset-right))',
-   'bottom:max(5px,env(safe-area-inset-bottom))','z-index:2147483500',
-   'padding:4px 7px','max-width:min(92vw,380px)',
-   'background:rgba(3,17,28,.82)','color:#aaf7df',
+   'position:fixed','left:max(4px,env(safe-area-inset-left))',
+   'top:48%','transform:translateY(-50%)','z-index:2147483500',
+   'box-sizing:border-box','padding:4px 6px',
+   'max-width:min(78vw,340px)','min-height:28px',
+   'background:rgba(3,17,28,.80)','color:#aaf7df',
    'border:1px solid rgba(113,210,218,.45)',
+   'border-radius:6px','text-align:left','cursor:pointer',
    'font:600 10px ui-monospace,monospace','white-space:normal',
-   'pointer-events:none'
+   'pointer-events:auto','touch-action:manipulation'
  ].join(';');
- perfHud.textContent='LIVE 4'+(guidedGTrial?' · G BÉZIER + DADOS':'')+' · conectando…';
+ let perfExpanded=false;
+ let perfCompact='FPS · —',perfDetails='LIVE 4 · conectando…';
+ const renderPerfHud=()=>{
+   perfHud.textContent=perfExpanded?perfDetails:perfCompact;
+   perfHud.setAttribute('aria-expanded',String(perfExpanded));
+   perfHud.setAttribute('aria-label',perfExpanded
+     ?'Rendimiento LIVE 4: ocultar detalles de FPS'
+     :'Rendimiento LIVE 4: mostrar detalles de FPS');
+   perfHud.title=perfDetails;
+ };
+ perfHud.addEventListener('click',()=>{
+   perfExpanded=!perfExpanded;renderPerfHud();
+ });
+ renderPerfHud();
  document.body.append(perfHud);
  const results=document.createElement('section');
  results.className='cr4-result-shell';results.style.display='none';
@@ -627,7 +647,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        botCpuMeanMs:+ai.botCpuMeanMs.toFixed(3),realtime:linkReady};
      if(scene._raceStarted||localFinish)console.info('[LIVE 4 PERF]',record);
      if(!stopped){
-       perfHud.textContent='LIVE 4'+(guidedGTrial?' · G':'')+' · '+(frameCount?fps+' FPS':'SIN MUESTRAS')+
+       perfCompact=frameCount?fps+' FPS':'FPS · —';
+       perfDetails='LIVE 4'+(guidedGTrial?' · G':'')+' · '+(frameCount?fps+' FPS':'SIN MUESTRAS')+
          ' · P95 '+(frameCount?p95.toFixed(1):'—')+' ms'+
          ' · IA '+ai.count+' ('+record.botCpuMeanMs.toFixed(2)+' ms)'+
          ' · RIVALES '+stats.remoteCount+
@@ -635,6 +656,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
          (director?' · IA HITCH '+(ai.timing?.hitches||0)+
            ' · Δ '+(ai.timing?.droppedSeconds||0).toFixed(1)+'s':
            '');
+       renderPerfHud();
        perfHud.style.color=frameCount&&fps<45?'#ffd2ad':'#aaf7df';
      }
      frameCount=0;elapsedWindow=0;slowFrames=0;frameTimes=[];lastReport=now;
