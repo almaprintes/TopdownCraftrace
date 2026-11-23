@@ -265,7 +265,12 @@ export class CrafRaceLive4BotDirector{
   if(!this.previewBezierActive||!this.previewBezierOptions)return null;
   const options=this.previewBezierOptions;
   const line=buildBezierDieVariant(this.previewGuidedLine,face,seat,
-    options.shape,options.dimensions,{carRadius:options.carRadius});
+    options.shape,options.dimensions,{
+      carRadius:options.carRadius,
+      // Only authorized DEV LIVE 4 G rooms use calibrated dice.
+      // Ordinary A/B, non-G online and local Realizador retain their planners.
+      monotoneCalibration:this.live4GuidedGTrial===true
+    });
   const profile=buildTrackManeuverPlan(buildTrackSpeedProfile(
     line,this._bezierSpeedOptions));
   if(!profile.valid)return this.previewGuidedProfile;

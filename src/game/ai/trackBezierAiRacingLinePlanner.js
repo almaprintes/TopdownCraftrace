@@ -149,6 +149,65 @@ export function buildBezierDieVariant(base,face,seat,shape,dimensions={},options
   const dx=b.x-a.x,dy=b.y-a.y,len=Math.max(.01,Math.hypot(dx,dy));
   return {x:-dy/len,y:dx/len};
  });
+ // Optional DEV experiment: all faces use the same lateral oscillation phase
+ // for a given seat. Compute the maximum asphalt-safe amplitude once, then
+ // scale every die face by the same monotone fraction. A 1/6 can no longer
+ // be clipped below a 2/6 merely because its phase is different.
+ if(options.monotoneCalibration===true){
+  const phase=seat*1.731+.317;
+  const generate=amp=>{
+   const path=base.racingLine.map((p,i)=>{
+    const offset=amp*envelope[i]*Math.sin(i/n*Math.PI*6+phase);
+    return{x:p.x+normal[i].x*offset,y:p.y+normal[i].y*offset};
+   });
+   for(const p of path){
+    if(!mask.isOnTrack(p.x,p.y))return null;
+    for(let k=0;k<12;k++){
+     const a=Math.PI*2*k/12;
+     if(!mask.isOnTrack(p.x+Math.cos(a)*radius,p.y+Math.sin(a)*radius))
+      return null;
+    }
+   }
+   const curvature=turns(path);
+   if(curvature.some((v,i)=>Math.abs(v)>
+     Math.max(.62,Math.abs(baseCurvature[i])+.10)))return null;
+   return{path,curvature};
+  };
+  const safeMax=(()=>{
+   if(generate(26))return 26;
+   let lo=0,hi=26;
+   for(let i=0;i<11;i++){
+    const mid=(lo+hi)/2;
+    if(generate(mid))lo=mid;else hi=mid;
+   }
+   return lo;
+  })();
+  const scale=amplitude/26;
+  // Keep a 20% extra margin on the nominally safe Bézier perturbation.
+  // Physical steering error can otherwise send the car beyond that line.
+  const intended=safeMax*scale*.80;
+  let built=generate(intended),effective=intended;
+  if(!built){
+   for(const factor of [.98,.95,.9,.8,.5,.25,0]){
+    effective=intended*factor;
+    built=generate(effective);
+    if(built)break;
+   }
+  }
+  if(!built)return base;
+  const {path,curvature}=built;
+  const offsets=base.offsets.map((v,i)=>{
+   const p=path[i],b=base.racingLine[i];
+   return v+(p.x-b.x)*normal[i].x+(p.y-b.y)*normal[i].y;
+  });
+  const metrics={...base.metrics,meanAbsCurvature:
+    curvature.reduce((a,v)=>a+Math.abs(v),0)/n,
+   maxAbsCurvature:Math.max(...curvature.map(v=>Math.abs(v))),
+   maxAbsOffset:Math.max(...offsets.map(v=>Math.abs(v))),
+   dieVariationPx:effective,dieFace:face,
+   dieSafeMaxPx:safeMax,dieCalibration:'monotone-v1'};
+  return{...base,racingLine:path,curvature,offsets,metrics};
+ }
  const phase=(seat*1.731+face*.317);
  for(const factor of [1,.5,.25,.125,0]){
   const path=base.racingLine.map((p,i)=>{
