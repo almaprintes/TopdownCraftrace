@@ -46,6 +46,18 @@ export function buildLive4CalibrationReport({
        ...(num(measure.peakBrake)!==null?{frenadaMaximaPct:round(measure.peakBrake*100,2)}:{}),
        ...(num(measure.meanCornerDecisionPct)!==null
          ?{factorDecisionCurvaMedioPct:round(measure.meanCornerDecisionPct,2)}:{}),
+       ...(num(measure.meanCornerThrottleDecisionPct)!==null
+         ?{factorGasCurvaMedioPct:round(measure.meanCornerThrottleDecisionPct,2)}:{}),
+       ...(num(measure.meanThrottlePct)!==null
+         ?{gasAplicadoMedioPct:round(measure.meanThrottlePct,2)}:{}),
+       ...(num(measure.entryLeadMs)!==null
+         ?{anticipacionEntradaCurvaMs:round(measure.entryLeadMs,0)}:{}),
+       ...(num(measure.exitLagMs)!==null
+         ?{retardoSalidaCurvaMs:round(measure.exitLagMs,0)}:{}),
+       ...(num(measure.meanEntryPhasePct)!==null
+         ?{faseEntradaCurvaPct:round(measure.meanEntryPhasePct,2)}:{}),
+       ...(num(measure.meanExitPhasePct)!==null
+         ?{faseSalidaCurvaPct:round(measure.meanExitPhasePct,2)}:{}),
        giroMedio:round(measure.meanAbsSteer,3),
        muestras:integer(measure.samples)
      }:{})

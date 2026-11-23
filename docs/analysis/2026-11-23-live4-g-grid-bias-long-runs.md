@@ -225,6 +225,44 @@ La ventaja superó los 6 s **al finalizar V9**, y aumentó otros **6.878 s entre
 
 ---
 
+## 3 quinquies. Primer ensayo real tras PR #65, y por qué se revisó el cálculo de habilidad
+
+**Informe REAL del usuario**, `2026-11-23T22:08:27.069Z`: Santa Cruz, Avenir Gripline, física 1, LIVE 4 G Experto, 3 vueltas; GO→primer movimiento humano 0 ms. Las nuevas probabilidades de dado y el factor de decisión de curva estaban activos, pero **la diferencia de ritmo lanzado seguía siendo casi nula**.
+
+| Plaza | Piloto | Elo | V1 | V2 | V3 | Total |
+|---:|---|---:|---:|---:|---:|---:|
+| 0 | Humano | — | 20438 | 18832 | 19855 | 59125 |
+| 1 | Álex Falcón | 1800 | 20835 (5) | 19535 (6) | 19635 (4) | 60005 |
+| 2 | Sira Nova | 900 | 21202 (2) | 19552 (3) | 19535 (2) | 60289 |
+| 3 | Vera Cometa | 1730 | 20968 (5) | 19585 (3) | 19535 (4) | 60088 |
+
+*Los paréntesis indican dados; tiempos en ms.*
+
+**V2+V3:** Álex 39170 ms, Sira 39087 ms; la novata fue **83 ms más rápida que el piloto de 1800 Elo** en las vueltas lanzadas. La diferencia total de 284 ms se explica por la ventaja inicial de Álex de 367 ms en V1. El `factorDecisionCurvaMedioPct` sí se diferencia: Álex 99,67 / 100 / 99,27 %, Sira 94,60 / 94,70 / 94,36 %, Vera 99,35 / 98,65 / 98,99 %, pero **todas las vueltas IA mantienen 0 % de frenada** y velocidades físicas próximas a 474 px/s en las vueltas 2–3.
+
+**Hallazgo de auditoría del banco de pruebas anterior:** el smoke inicial comparaba una sola vuelta física con **parámetros genéricos** (`maxFwd=480`, `accel=520`, `linearDrag=.004`, `turnRate=2.4`), no el Avenir. Ese resultado (24,771 / 24,414 / 24,207 s esperados para 900/1350/1800 Elo) era **válido para aquella prueba sintética, pero NO extrapolable a este coche ni a sus vueltas lanzadas**.
+
+Para corregir el banco se reconstruyeron los **parámetros base reales del Avenir** desde `CAR_SPECS.avenir_gripline`, factor de fábrica 1,40 y `HANDLING_PROFILES.ARCADE`: `maxFwd=760.06`, `accel=743.3`, `linearDrag=.032`, `turnRate=4.26`. Esto no incorpora eventuales reglajes o mejoras locales del usuario, y la simulación por progreso de muestras no sustituye la homologación de puertas de meta/checkpoints del juego real. Antes de la corrección, el banco con Avenir midió **31,117 s** para Elo 900 y 1800, ambos con dado 1; con dado 6 fueron **30,833 vs 30,850 s** respectivamente. Por tanto, el factor de habilidad anterior estaba alterando un objetivo de velocidad que con este vehículo no llegaba a producir decisiones físicas distintas.
+
+### Corrección en revisión — PR #66
+
+**Sin cambios de motor, aceleración, agarre, límites físicos o cronometraje:** el controlador DEV LIVE 4 G pasa a modular también el **gas realmente aplicado al entrar en curvas**, con una limitación pequeña (`1 - 0.15 * demandaDeCurva * vacilaciónDelPiloto`). Se conserva la experiencia Elo y el dado para el cálculo de vacilación y la misma potencia máxima para todas las IA; el factor de gas es neutro en rectas. Esto representa cómo un piloto más inseguro levanta ligeramente antes el acelerador, no un multiplicador de velocidad por Elo ni una frenada artificial.
+
+La prueba de calibración previa de 0,65 se **descartó por excesiva**: ampliaba de modo irreal las diferencias a más de 8 s/vuelta en el modelo. La calibración 0,15 se validó en el mismo Avenir con **tres vueltas físicas continuadas** y los seis dados; el ensayo verificará que la separación por Elo sea perceptible pero no abrumadora y que permanezca en las vueltas 2 y 3. El JSON añade `factorGasCurvaMedioPct` y `gasAplicadoMedioPct`; el usuario deberá contrastar estos valores y los tiempos con un informe real de iPhone cuando la versión DEV esté desplegada.
+
+**Actualización de conducción solicitada por el propietario (23/11):** la diferencia entre pilotos debe ser también de **momento de ejecución**, no simplemente un factor fijo de gas. Se incorporó a DEV G un detector de entrada/salida de curva sobre la curvatura real de la Bézier:
+
+- Una tirada favorable y Elo alto dan menor vacilación: retrasar el levantamiento de gas/decisión de frenar cuando la curva se aproxima y volver a abrir antes a la salida.
+- Una mala tirada o Elo bajo incrementan la vacilación: el piloto puede levantar antes y mantener ese levantamiento unas decenas de milisegundos tras el final de la curva; si el controlador **realmente requiere frenada**, el umbral puede adelantarse ligeramente, sin inventar un freno donde no lo necesita.
+- El margen de reacción depende de la calidad conjunta (72% experiencia / 28% dado): adelanto visual de entrada `16 + 84 × vacilación` ms y retardo de recuperación `12 + 72 × vacilación` ms, traducidos a muestras de trayectoria según velocidad actual y separación real. A 60 FPS, las decisiones se cuantizan a ~16,7 ms por actualización.
+- La perturbación adicional del gas se activa sobre las **transiciones de curvatura** (entrada y salida). En rectas y curvas de curvatura estable la compuerta temporal no introduce castigo adicional. Se mantiene la calibración moderada de reducción de gas basada en demanda real de curva, con límites de seguridad.
+- El nuevo JSON por vuelta permite ver `anticipacionEntradaCurvaMs`, `retardoSalidaCurvaMs`, `faseEntradaCurvaPct`, `faseSalidaCurvaPct`, además del gas aplicado, curvas y dados. Los milisegundos son **ventanas nominales de decisión**, no exactitud subfotograma demostrada en iPhone.
+- Añadidos tests con una curva sintética de entrada/salida y con la curvatura real de Santa Cruz. El banco sigue comparando las **vueltas 2–3** lanzadas con el Avenir físico, todos los dados, Elo 900 y 1800; exige diferencias perceptibles pero limitadas.
+
+**No afirmar aún que el error de parrilla o todos los duelos están corregidos.** Estos cambios apuntan solo a la conversión efectiva de Elo+dado en controles físicos de conducción del anfitrión G.
+
+---
+
 ## 4. Protocolo A/B de 10 vueltas — EJECUTADO (referencia para regresiones futuras)
 
 **A y B ya están completadas y analizadas; no volver a pedirlas sin justificación técnica nueva.** Se conserva este protocolo exclusivamente para poder repetirlo después de corregir el sistema de pericia IA:

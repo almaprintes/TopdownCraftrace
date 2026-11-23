@@ -5,11 +5,21 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {AI_ELO_PILOTS,eloDieProbabilities,rollEloAiDie}
  from '../src/game/ai/craftraceAiEloLeague.js';
-import {live4GDriverSkill,live4GCornerDecisions}
+import {live4GDriverSkill,live4GCornerDecisions,live4GCornerTiming}
  from '../src/game/ai/craftraceLive4GDriverSkill.js';
 import {CrafRaceLive4BotDirector} from '../src/game/online/craftraceLiveV2BotDirector.js';
 import {makeLive4StartingGrid} from '../src/game/online/craftraceLiveV2GridGeometry.js';
 import {updateRacePhysicalBot} from '../src/game/ai/raceAiController.js';
+import {CAR_SPECS} from '../src/game/cars/carSpecs.js';
+import {HANDLING_PROFILES} from '../src/game/cars/handlingProfiles.js';
+// The app's resolver imports browser-only Vite/garage sources. In this
+// Node A/B, reproduce its pure factory baseline from tracked source values.
+const factoryResolver=readFileSync('src/game/cars/resolveCarParams.js','utf8');
+assert.match(factoryResolver,/FACTORY_MAX_FWD_MULT = 1\.40/);
+const spec=CAR_SPECS.avenir_gripline;
+const profileId=spec.handlingProfile||spec.steeringProfile||'ARCADE';
+const steering=HANDLING_PROFILES[profileId].steering;
+const CAR={...spec,maxFwd:spec.maxFwd*1.40,steering};
 
 const round=(v,d=3)=>Number(v.toFixed(d));
 const flat=eloDieProbabilities(1350),top=eloDieProbabilities(1800),low=eloDieProbabilities(900);
@@ -32,17 +42,40 @@ for(const elo of [900,1200,1500,1800]){
   const p=live4GDriverSkill(elo,die);
   assert.ok(p&&p.quality>=0&&p.quality<=1);
   const curve=live4GCornerDecisions(p,1),straight=live4GCornerDecisions(p,0);
-  assert.deepEqual(straight,{aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1});
+  assert.deepEqual(straight,{aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1,throttleFactor:1});
   assert.ok(curve.aimFactor>=.85&&curve.aimFactor<=1);
   assert.ok(curve.steerRateFactor>=.88&&curve.steerRateFactor<=1);
   assert.ok(curve.cornerSpeedFactor>=.8&&curve.cornerSpeedFactor<=1);
+  assert.ok(curve.throttleFactor>=.35&&curve.throttleFactor<=1);
   if(die<6)assert.ok(p.quality<live4GDriverSkill(elo,die+1).quality);
  }
 }
 assert.deepEqual(live4GCornerDecisions(null,1),{
- aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1
+ aimFactor:1,steerRateFactor:1,cornerSpeedFactor:1,throttleFactor:1
 });
 assert.equal(live4GDriverSkill(null,6),null);
+
+// A novice must react to the rising and falling curvature at distinct
+// millisecond windows, with no artificial lift on a straight or flat apex.
+const pulse=Array.from({length:120},(_,i)=>({
+ curvature:i>=45&&i<=65?.11:0
+}));
+const noviceTiming=live4GDriverSkill(900,1),expertTiming=live4GDriverSkill(1800,6);
+const entry=live4GCornerTiming(noviceTiming,pulse,41,10,480);
+const exit=live4GCornerTiming(noviceTiming,pulse,68,10,480);
+const straightTiming=live4GCornerTiming(noviceTiming,pulse,5,10,480);
+const apexTiming=live4GCornerTiming(noviceTiming,pulse,55,10,480);
+const perfectTiming=live4GCornerTiming(expertTiming,pulse,41,10,480);
+assert.ok(entry.entryPhase>0&&entry.throttleFactor<1&&
+ entry.brakeThresholdRelaxPxS>0,'Novice lifts/anticipates brakes before a curve');
+assert.ok(exit.exitPhase>0&&exit.throttleFactor<1,
+ 'Novice delays reapplying gas after a bend');
+assert.equal(straightTiming.throttleFactor,1);
+assert.equal(apexTiming.throttleFactor,1);
+assert.equal(perfectTiming.throttleFactor,1);
+assert.ok(entry.entryLeadMs>=16&&entry.entryLeadMs<=100);
+assert.ok(exit.exitLagMs>=12&&exit.exitLagMs<=84);
+
 assert.ok(live4GDriverSkill(1800,1).quality>live4GDriverSkill(900,6).quality,
  'Elo experience matters even if the novice gets a lucky die');
 
@@ -57,8 +90,9 @@ function sprite(x,y,key='car'){return{x,y,texture:{key},scaleX:1,scaleY:1,
  setScale(){return this},setRotation(){return this},setAlpha(){return this},
  setTint(){return this},setTexture(k){this.texture.key=k;return this}}}
 const scene={trackKey:'santa-cruz',track:{closed:true,meta:{...track,id:'santa-cruz'}},simTick:1,
- maxFwd:480,accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,
- carParams:{maxFwd:480,accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,steering:{}},
+ maxFwd:CAR.maxFwd,accel:CAR.accel,brakeForce:CAR.brakeForce,
+ linearDrag:CAR.linearDrag,turnRate:CAR.turnRate,
+ carParams:CAR,
  carRig:{list:[sprite(0,0)]},textures:{exists:key=>key==='car'},
  physics:{add:{sprite:(x,y)=>body(x,y)}},
  add:{sprite,container:(x,y)=>({x,y,setDepth(){return this},
@@ -79,7 +113,7 @@ assert.ok(director.previewBezierActive,'Use the actual authored G Bézier');
 for(const bot of director.bots)assert.equal(bot._live4GDriverSkill?.elo,bot.aiPilot.elo);
 assert.ok(director._bezierProfileForDie(1,6).valid);
 const DT=1/60;
-function simulate(elo,die){
+function simulate(elo,die,lapCount=1){
  // Fixed seat and identical starting point; only die/profile and driver
  // judgment vary. Reuse the actual G director's generated speed profiles.
  const profile=director._bezierProfileForDie(1,die);
@@ -91,10 +125,14 @@ function simulate(elo,die){
  const bot={plannerBody:physicsBody,_plannerSampleIndex:0};
  const skill=live4GDriverSkill(elo,die);
  let progress=0,last=0,errors=0,maxError=0,avgDecision=0,brakes=0;
+ let avgThrottle=0,avgCornerThrottleFactor=0;
+ let maxEntryPhase=0,maxExitPhase=0;
+ const lapEnds=[];
  for(let frame=0;frame<60*130;frame++){
   const control=updateRacePhysicalBot(bot,profile,{
-   dt:DT,spacing:director.spacing,maxFwd:480,cornerRisk:.35,
-   accel:520,brakeForce:720,linearDrag:.004,turnRate:2.4,steering:{},
+   dt:DT,spacing:director.spacing,maxFwd:CAR.maxFwd,cornerRisk:.35,
+   accel:CAR.accel,brakeForce:CAR.brakeForce,
+   linearDrag:CAR.linearDrag,turnRate:CAR.turnRate,steering:CAR.steering,
    live4PrecisionCornering:true,
    live4GuidedApex:{continuousOnly:true,guides:[]},
    live4GDriverSkill:skill
@@ -111,12 +149,25 @@ function simulate(elo,die){
   errors+=control.distanceToLine;
   maxError=Math.max(maxError,control.distanceToLine);
   avgDecision+=control.live4GCornerSpeedFactor;
+  avgThrottle+=control.throttle;
+  avgCornerThrottleFactor+=control.live4GCornerThrottleFactor;
+  maxEntryPhase=Math.max(maxEntryPhase,control.live4GEntryPhase||0);
+  maxExitPhase=Math.max(maxExitPhase,control.live4GExitPhase||0);
   if(control.brake>.001)brakes++;
-  if(progress>=n)return{
-   seconds:round((frame+1)*DT),meanError:round(errors/(frame+1)),
-   maxError:round(maxError),cornerDecisionPct:round(avgDecision/(frame+1)*100,2),
-   brakePct:round(brakes/(frame+1)*100,2)
-  };
+  if(progress>=n){
+   progress-=n;lapEnds.push(round((frame+1)*DT));
+   if(lapEnds.length>=lapCount)return{
+    seconds:round((frame+1)*DT),
+    lapTimes:lapEnds.map((v,i)=>round(v-(lapEnds[i-1]||0))),
+    meanError:round(errors/(frame+1)),
+    maxError:round(maxError),
+    cornerDecisionPct:round(avgDecision/(frame+1)*100,2),
+    throttlePct:round(avgThrottle/(frame+1)*100,2),
+    cornerThrottlePct:round(avgCornerThrottleFactor/(frame+1)*100,2),
+    maxEntryPhase:round(maxEntryPhase),maxExitPhase:round(maxExitPhase),
+    brakePct:round(brakes/(frame+1)*100,2)
+   };
+  }
  }
  throw Error('Physical lap did not complete Elo='+elo+' die='+die);
 }
@@ -133,6 +184,55 @@ const cases=[
 const results=cases.map(x=>({...x,...simulate(x.elo,x.die)}));
 const byName=Object.fromEntries(results.map(x=>[x.name,x]));
 console.info('LIVE4-G-REAL-ELO-AB',JSON.stringify(results));
+// Standing-start-only comparisons may exaggerate skill. Diagnose launched
+// laps before adjusting gameplay: same continuous physical state, no reset.
+const rolling=Array.from({length:6},(_,i)=>i+1).flatMap(die=>[900,1800].map(elo=>{
+ const x=simulate(elo,die,3);
+ return{elo,die,lapTimes:x.lapTimes,
+  movingLapMean:round((x.lapTimes[1]+x.lapTimes[2])/2),
+  meanError:x.meanError,brakePct:x.brakePct,throttlePct:x.throttlePct,
+  maxEntryPhase:x.maxEntryPhase,maxExitPhase:x.maxExitPhase,
+  cornerDecisionPct:x.cornerDecisionPct,cornerThrottlePct:x.cornerThrottlePct};
+}));
+console.info('LIVE4-G-ROLLING-AB',JSON.stringify({car:{
+ maxFwd:CAR.maxFwd,accel:CAR.accel,linearDrag:CAR.linearDrag,
+ turnRate:CAR.turnRate},laps:rolling}));
+
+// Protect the actual racing phase. A standing-start gain is not enough:
+// EVERY equal-roll matchup must carry an advantage on launched laps, without
+// imposing an unrealistic skill gap or changing the car's physical limits.
+for(const face of [1,2,3,4,5,6]){
+ const novice=rolling.find(x=>x.elo===900&&x.die===face);
+ const expert=rolling.find(x=>x.elo===1800&&x.die===face);
+ const gap=novice.movingLapMean-expert.movingLapMean;
+ assert.ok(gap>.25&&gap<1.5,
+  'Real Avenir rolling-lap Elo gap must be noticeable but bounded: face '+face+', '+gap);
+ assert.ok(novice.throttlePct<expert.throttlePct,
+  'Low Elo must actually lift more gas at the same die: '+face);
+ assert.equal(novice.brakePct,0,
+  'The Avenir needs no forced braking just to distinguish driver skill');
+}
+for(const elo of [900,1800]){
+ const bad=rolling.find(x=>x.elo===elo&&x.die===1);
+ const good=rolling.find(x=>x.elo===elo&&x.die===6);
+ assert.ok(bad.movingLapMean>good.movingLapMean+.3,
+  'The die must affect the same pilot on LAUNCHED laps: '+elo);
+}
+// The timing model must run on Santa Cruz's actual sampled curvature.
+const slowRoll=rolling.find(x=>x.elo===900&&x.die===1);
+assert.ok(slowRoll.maxEntryPhase>.05&&slowRoll.maxExitPhase>.05,
+ 'Both skill-dependent entry and exit timing windows must occur on Santa Cruz');
+const expectedRolling={};
+for(const elo of [900,1800]){
+ const probs=eloDieProbabilities(elo);
+ expectedRolling[elo]=round(probs.reduce((sum,p,i)=>
+  sum+p*rolling.find(x=>x.elo===elo&&x.die===i+1).movingLapMean,0));
+}
+assert.ok(expectedRolling[900]>expectedRolling[1800]+.35 &&
+ expectedRolling[900]<expectedRolling[1800]+1.5,
+ 'Softened dice plus Elo decisions must create a reasonable rolling-lap gap');
+console.info('LIVE4-G-ROLLING-EXPECTED',JSON.stringify(expectedRolling));
+
 assert.ok(byName['rookie die 1'].seconds>byName['rookie die 6'].seconds+.15,
  'Dice must affect actual physical lap time for same pilot');
 assert.ok(byName['ace die 1'].seconds>byName['ace die 6'].seconds+.08,
