@@ -182,7 +182,10 @@ assert.ok(bridge.includes('Red interrumpida · Las IA locales siguen compitiendo
 assert.ok(bridge.includes('finishLiveV2Lobby('));
 assert.ok(bridge.includes('localFinishPosted'));
 assert.ok(bridge.includes('console.info(\'[LIVE 4 PERF]\''));
-assert.ok(bridge.includes("perfHud.textContent='LIVE 4"), 'HUD should be rendered in the experimental race');
+assert.ok(bridge.includes("perfHud.dataset.cr4PerfHud='true'")&&
+ bridge.includes("perfCompact=frameCount?fps+' FPS':'FPS · —';")&&
+ bridge.includes("perfExpanded?perfDetails:perfCompact"),
+ 'Compact FPS HUD must render and expand on demand during the race');
 assert.ok(bridge.includes('p95FrameMs'), 'FPS P95 should be sampled on device');
 assert.ok(bridge.includes('perfHud.remove()'), 'HUD should be destroyed on scene exit');
 assert.ok(bridge.includes('if(!linkReady||aiError||!startAt)'),'No GO before every pilot has loaded and server schedules the start');
