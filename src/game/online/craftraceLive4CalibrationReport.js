@@ -3,8 +3,9 @@
 // One tap copies up to the last 10 completed races as structured JSON.
 export const LIVE4_G_REPORT_KEY='tdr:dev:live4:g:reports:v1';
 export const LIVE4_G_REPORT_LIMIT=10;
-const num=value=>Number.isFinite(Number(value))?Number(value):null;
-const integer=value=>Number.isFinite(Number(value))?Math.max(0,Math.round(Number(value))):null;
+const num=value=>value===null||value===undefined||value===''?null:
+ Number.isFinite(Number(value))?Number(value):null;
+const integer=value=>num(value)===null?null:Math.max(0,Math.round(Number(value)));
 const cleanName=value=>String(value||'Piloto').slice(0,70);
 const arr=value=>Array.isArray(value)?value:[];
 const round=(value,places=3)=>{
