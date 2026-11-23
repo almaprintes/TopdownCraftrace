@@ -16,7 +16,8 @@ const safeTime=value=>{
 };
 
 export function buildLive4CalibrationReport({
- trackId,carId,laps,direction,physicsVersion,aiDifficulty,generatedAt,entries,bots,diagnostics
+ trackId,carId,laps,direction,physicsVersion,aiDifficulty,
+ playerStartDelayMs,firstMotionThresholdPxS,generatedAt,entries,bots,diagnostics
 }={}){
  const aiBySeat=new Map(arr(bots).map(bot=>[bot.seat,bot]));
  const records=arr(entries).map(entry=>{
@@ -60,6 +61,12 @@ export function buildLive4CalibrationReport({
   sentido:String(direction||'forward').slice(0,20),
   versionFisicas:integer(physicsVersion),
   nivelIA:integer(aiDifficulty),
+  salidaHumano:{
+   esperaPrimerMovimientoMs:safeTime(playerStartDelayMs),
+   umbralMovimientoPxS:num(firstMotionThresholdPxS),
+   reloj:'GO → primer desplazamiento físico',
+   incluidoEnPrimeraVuelta:true
+  },
   pilotoDatos:records,
   diagnostico:{
    iaHitches:integer(timing.hitches),
