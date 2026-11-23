@@ -2,7 +2,7 @@
 // Fase 3: controlador físico de un único bot experimental.
 // Produce dirección, gas y freno; nunca teletransporta el cuerpo durante la marcha.
 import {nextGuidedApex,nearestContinuousGuidedSample} from '../online/craftraceGuidedDie.js';
-import {live4GCornerDecisions} from './craftraceLive4GDriverSkill.js';
+import {live4GCornerDecisions,live4GCornerTiming} from './craftraceLive4GDriverSkill.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const wrapAngle=(a)=>{while(a>Math.PI)a-=Math.PI*2;while(a<-Math.PI)a+=Math.PI*2;return a;};
@@ -176,6 +176,10 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // Only LIVE 4 DEV G supplies a driver profile. All existing controller
   // users and the historic A/B race mode get the exact neutral factors.
   const gDecisions=live4GCornerDecisions(params.live4GDriverSkill,curveSeverity);
+  // Anticipation is not just a throttle percentage: per-pilot timing
+  // changes when a curve starts to tighten and when it opens again.
+  const gTiming=live4GCornerTiming(params.live4GDriverSkill,
+    samples,nearest.index,spacing,speed);
   // Complex technical circuits require a longer *visual aiming horizon* to
   // avoid steering too late through continuous bends. This is lookahead only:
   // it does not change engine power, grip, braking or the target speed plan.
@@ -294,8 +298,11 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
   // the gas in a bend even when a high-power car cannot reach the planner's
   // nominal speed. The actual motor/grip/drag remain exactly the same.
   const throttle=clamp((speedError-2)/34,0,1)*
-    gDecisions.throttleFactor;
-  const brake=clamp((-speedError-3)/30,0,1);
+    gDecisions.throttleFactor*gTiming.throttleFactor;
+  // More cautious pilots can brake a fraction earlier IF the speed plan
+  // genuinely calls for deceleration; never force unnecessary braking.
+  const brake=speedError<0?clamp(
+    (-speedError-3+gTiming.brakeThresholdRelaxPxS)/30,0,1):0;
 
   const accel=Math.max(0,Number(params.accel||520));
   const brakeForce=Math.max(0,Number(params.brakeForce||720));
@@ -356,7 +363,12 @@ export function updateSurvivalPhysicalBot(bot,profile,params={}){
     targetSpeed:controlledTargetSpeed,
     profileTargetSpeed:targetSpeed,
     live4GCornerSpeedFactor:gDecisions.cornerSpeedFactor,
-    live4GCornerThrottleFactor:gDecisions.throttleFactor,
+    live4GCornerThrottleFactor:
+      gDecisions.throttleFactor*gTiming.throttleFactor,
+    live4GEntryLeadMs:gTiming.entryLeadMs,
+    live4GExitLagMs:gTiming.exitLagMs,
+    live4GEntryPhase:gTiming.entryPhase,
+    live4GExitPhase:gTiming.exitPhase,
     live4GDriverQuality:params.live4GDriverSkill?.quality??null,
     cornerRisk,
     riskConfidence,
