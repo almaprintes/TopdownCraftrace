@@ -18,7 +18,8 @@ measureLive4GPhysicalLap(lap,{valid:false,distanceToLine:900});
 assert.deepEqual(summarizeLive4GPhysicalLap(lap,2),{
  lap:2,samples:2,meanLineErrorPx:20,maxLineErrorPx:30,
  meanSpeedPxS:330,meanBrake:.1,brakeActivePct:50,peakBrake:.2,
- meanAbsSteer:.4,meanCornerDecisionPct:100});
+ meanAbsSteer:.4,meanCornerDecisionPct:100,
+ meanCornerThrottleDecisionPct:100,meanThrottlePct:0});
 const scene=readFileSync('src/game/online/craftraceLiveV2BotDirector.js','utf8');
 const panel=readFileSync('src/game/online/craftraceLiveV2RaceBridge.js','utf8');
 assert.ok(scene.includes('if(bezierActive)measureLive4GPhysicalLap'));
