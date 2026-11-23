@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'src/game/ai/trackBezierAiRacingLinePlanner.js'
+      - 'src/game/online/craftraceLiveV2BotDirector.js'
+      - 'scripts/craftrace-live4-canarias-vs-bezier-smoke.mjs'
       - 'scripts/craftrace-live4-die-physics-benchmark.mjs'
       - 'scripts/craftrace-live4-dice-monotone-calibration-smoke.mjs'
       - 'scripts/craftrace-live4-dice-calibration-compare.mjs'
@@ -27,6 +29,7 @@ jobs:
           node --check src/game/ai/trackBezierAiRacingLinePlanner.js
           node --check scripts/craftrace-live4-die-physics-benchmark.mjs
           node scripts/craftrace-live4-dice-monotone-calibration-smoke.mjs
+          node scripts/craftrace-live4-canarias-vs-bezier-smoke.mjs
       - name: Original 1260 physical simulations
         env:
           RACE_DIE_REPS: '35'
