@@ -11,7 +11,8 @@ import {advanceHostedLive4Bots} from './craftraceLive4HostContinuity.js';
 import {syncLive4CarVisual} from './craftraceLiveV2CarVisual.js';
 import {live4SeatName} from './craftraceLiveV2PilotNames.js';
 import {buildLive4CalibrationReport,readLive4CalibrationHistory,
- saveLive4CalibrationReport,formatLive4CalibrationHistory,copyLive4CalibrationText}
+ saveLive4CalibrationReport,startNewLive4CalibrationBatch,
+ formatLive4CalibrationHistory,copyLive4CalibrationText}
  from './craftraceLive4CalibrationReport.js';
 import {CrafRaceLiveV2LobbyMonitor,finishLiveV2Lobby,acknowledgeLiveV2GridLoaded,
  requestLiveV2Rematch,acceptLiveV2Rematch} from './craftraceLiveV2LobbyClient.js';
@@ -390,8 +391,8 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
        let store=null;
        try{store=globalThis.localStorage;}catch{}
        const persisted=readLive4CalibrationHistory(store);
-       const notebook=calibrationMemory.length>=persisted.length?calibrationMemory:persisted;
-       const count=notebook.length;
+       let notebook=calibrationMemory.length>=persisted.length?calibrationMemory:persisted;
+       let count=notebook.length;
        const copy=document.createElement('button');
        copy.type='button';
        copy.textContent='COPIAR INFORME IA · '+count+' CARRERA'+(count===1?'':'S');
@@ -417,7 +418,50 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
            panel.append(fallback);fallback.focus();fallback.select();
          }
        };
-       panel.append(copy,feedback);
+       const currentReport=notebook.find(row=>row.key===roomId)?.report;
+       if(currentReport&&count>1){
+         const onlyThis=document.createElement('button');
+         onlyThis.type='button';
+         onlyThis.textContent='COPIAR SOLO ESTA CARRERA';
+         onlyThis.setAttribute('aria-label','Copiar únicamente la última carrera, sin repetir las anteriores');
+         onlyThis.onclick=async()=>{
+           const data=formatLive4CalibrationHistory([{key:roomId,report:currentReport}]);
+           const success=await copyLive4CalibrationText(data);
+           if(success){
+             onlyThis.textContent='CARRERA ACTUAL COPIADA';
+             feedback.textContent='Solo se ha copiado esta carrera. Los informes anteriores siguen guardados por si los necesitas.';
+           }else{
+             const fallback=document.createElement('textarea');
+             fallback.value=data;fallback.readOnly=true;
+             fallback.setAttribute('aria-label','Informe de esta carrera para copiar manualmente');
+             fallback.style.cssText='display:block;box-sizing:border-box;width:100%;height:90px;color:#e9faff;background:#091f2d';
+             panel.append(fallback);fallback.focus();fallback.select();
+             feedback.textContent='Selecciona y copia el informe de esta carrera.';
+           }
+         };
+         const reset=document.createElement('button');
+         reset.type='button';
+         reset.textContent='NUEVA TANDA · BORRAR INFORMES ANTERIORES';
+         reset.setAttribute('aria-label','Iniciar una tanda nueva conservando únicamente esta carrera');
+         reset.onclick=()=>{
+           if(globalThis.confirm?.('¿Iniciar nueva tanda? Se borrarán solo los informes de carreras anteriores. Esta carrera se conserva. Los récords y el progreso no cambian.')===false)return;
+           const updated=startNewLive4CalibrationBatch(store,roomId,currentReport);
+           notebook=updated.history;
+           calibrationMemory=notebook;
+           calibrationPersisted=updated.persisted;
+           count=1;
+           copy.textContent='COPIAR INFORME IA · 1 CARRERA';
+           copy.setAttribute('aria-label','Copiar resultados y dados de esta carrera');
+           onlyThis.remove();
+           reset.remove();
+           feedback.textContent=updated.persisted
+             ?'Nueva tanda iniciada: se conserva esta carrera y se han borrado solo los informes anteriores.'
+             :'Nueva tanda iniciada en memoria. Copia esta carrera antes de salir: no se pudo guardar el cambio en el dispositivo.';
+         };
+         panel.append(copy,onlyThis,reset,feedback);
+       }else{
+         panel.append(copy,feedback);
+       }
        if(playerFirstMotionMs!==null){
          const startNote=document.createElement('p');
          startNote.className='cr4-result-note';
