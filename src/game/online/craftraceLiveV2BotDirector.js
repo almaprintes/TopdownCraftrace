@@ -18,6 +18,7 @@ import {rollGuidedDie,GUIDED_DIE_TOLERANCE_PX,measureGuidedPass,closeGuidedLap} 
 import {live4AiPilotForSeat} from './craftraceLive4AiIdentity.js';
 import {live4AiPilotById} from './craftraceLive4AiSelection.js';
 import {rollEloAiDie} from '../ai/craftraceAiEloLeague.js';
+import {live4GDriverSkill} from '../ai/craftraceLive4GDriverSkill.js';
 
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const TINTS=[0xffc35b,0x73d7ff,0xee81ce,0x9affbb];
@@ -29,7 +30,8 @@ export function live4AiSeatPaceBias({guidedG=false,difficulty=3,style=0}={}){
 }
 export const newLive4GPhysicalLap=()=>({
  samples:0,sumLineErrorPx:0,maxLineErrorPx:0,sumSpeed:0,sumBrake:0,
- brakeActiveSamples:0,peakBrake:0,sumAbsSteer:0
+ brakeActiveSamples:0,peakBrake:0,sumAbsSteer:0,
+ sumCornerDecision:0
 });
 export function measureLive4GPhysicalLap(lap,control){
  if(!lap||!control?.valid)return;
@@ -43,6 +45,7 @@ export function measureLive4GPhysicalLap(lap,control){
  if(brake>0.001)lap.brakeActiveSamples++;
  lap.peakBrake=Math.max(lap.peakBrake,brake);
  lap.sumAbsSteer+=Math.abs(Number(control.steer)||0);
+ lap.sumCornerDecision+=Number(control.live4GCornerSpeedFactor)||1;
 }
 export function summarizeLive4GPhysicalLap(lap,number){
  const n=Math.max(1,Number(lap?.samples)||0);
@@ -54,7 +57,8 @@ export function summarizeLive4GPhysicalLap(lap,number){
   meanBrake:round((lap?.sumBrake||0)/n),
   brakeActivePct:round((lap?.brakeActiveSamples||0)/n*100),
   peakBrake:round(lap?.peakBrake||0),
-  meanAbsSteer:round((lap?.sumAbsSteer||0)/n)};
+  meanAbsSteer:round((lap?.sumAbsSteer||0)/n),
+  meanCornerDecisionPct:round((lap?.sumCornerDecision||n)/n*100)};
 }
 export const LIVE4_AI_LEVELS=Object.freeze({
   1:Object.freeze({title:'Principiante',pace:0.70,cornerRisk:0,plannerLateralAccel:1050,plannerDrive:.58,plannerBrake:.67}),
@@ -236,6 +240,7 @@ export class CrafRaceLive4BotDirector{
        (this.aiIdentitySeed?live4AiPilotForSeat(this.aiIdentitySeed,item.seat):null),
      plannerBody:body,rig,visual,style:(item.seat*2+1)%3,
      _plannerSampleIndex:best,
+     _live4GDriverSkill:null,
      lastIndex:best,sampleProgress:0,completedLaps:0,
      gatePhase:0,lastPhysicalPosition:{x,y},
      finished:false,finishAt:null,lapTimes:[],lastLapAt:null,
@@ -289,6 +294,8 @@ export class CrafRaceLive4BotDirector{
   return profile;
  }
  _setBezierDieForLap(bot,lap){
+  bot._live4GDriverSkill=this.live4GuidedGTrial
+    ?live4GDriverSkill(bot.aiPilot?.elo,bot.guidedRoll):null;
   const profile=this._bezierProfileForDie(bot.seat,bot.guidedRoll);
   bot._bezierProfile=profile;
   if(!Number.isInteger(lap)||lap<1||lap>this.laps)return;
@@ -350,6 +357,7 @@ export class CrafRaceLive4BotDirector{
    const control=updateRacePhysicalBot(bot,profile,{
      dt,spacing:this.spacing,maxFwd:maxSpeed*settings.pace*paceBias,
      live4PrecisionCornering:bot.difficulty===3,
+     live4GDriverSkill:bezierActive?bot._live4GDriverSkill:null,
      live4GuidedApex:guidedActive?{
        guides:this.previewGuideTargets,tolerancePx:bot.guidedTolerancePx}:
        bezierActive?{continuousOnly:true,guides:[]}:null,

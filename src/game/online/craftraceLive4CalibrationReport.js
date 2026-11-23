@@ -44,6 +44,8 @@ export function buildLive4CalibrationReport({
        frenadaMediaPct:round(num(measure.meanBrake)===null?null:measure.meanBrake*100,2),
        ...(num(measure.brakeActivePct)!==null?{fotogramasFrenandoPct:round(measure.brakeActivePct,2)}:{}),
        ...(num(measure.peakBrake)!==null?{frenadaMaximaPct:round(measure.peakBrake*100,2)}:{}),
+       ...(num(measure.meanCornerDecisionPct)!==null
+         ?{factorDecisionCurvaMedioPct:round(measure.meanCornerDecisionPct,2)}:{}),
        giroMedio:round(measure.meanAbsSteer,3),
        muestras:integer(measure.samples)
      }:{})

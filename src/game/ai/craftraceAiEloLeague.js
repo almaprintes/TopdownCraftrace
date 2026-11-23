@@ -18,11 +18,16 @@ export const AI_ELO_PILOTS=Object.freeze([
  {id:'rookie',name:'Teo Rookie',elo:970,style:'constante'},
  {id:'nova',name:'Sira Nova',elo:900,style:'promesa'}
 ].map(p=>Object.freeze({...p})));
+// Modest ELO bias: every face is always possible and no single face
+// exceeds 25%. Skills are implemented by physical driving decisions, not
+// by stacking an overwhelming dice lottery on top of real racecraft.
 export function eloDieProbabilities(elo){
- const slope=Math.max(-1.85,Math.min(1.85,(Number(elo)-1300)/400));
- const weights=Array.from({length:6},(_,i)=>Math.exp((i-2.5)*slope*.57));
- const total=weights.reduce((a,b)=>a+b,0);
- return weights.map(w=>w/total);
+ const rating=Number(elo);
+ const tilt=Math.max(-.45,Math.min(.45,
+   ((Number.isFinite(rating)?rating:1300)-1350)/1000));
+ // Face 1..6: probability moves linearly with die value. The terms sum
+ // exactly to one: the centered coefficients have zero sum.
+ return Array.from({length:6},(_,i)=>(1+tilt*(i-2.5)/2.5)/6);
 }
 export function rollEloAiDie(elo,rng=Math.random){
  const probabilities=eloDieProbabilities(elo);
