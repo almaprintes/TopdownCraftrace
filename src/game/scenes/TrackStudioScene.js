@@ -19,6 +19,8 @@ import {trackStudioToolbarLayout} from '../studio/trackStudioNavigationLayout.js
 import {zoomTrackCameraAt,beginTrackPinch,updateTrackPinch,fitTrackCamera} from '../studio/trackStudioZoom.js';
 import '../studio/trackStudioLabChrome.css';
 import {mountTrackStudioLabChrome} from '../studio/trackStudioLabChrome.js';
+import {writeTrackStudioWorkingCopy,readTrackStudioWorkingCopy}
+ from '../studio/trackStudioPreviewStorage.js';
 
 export class TrackStudioScene extends BaseScene {
   constructor() {
@@ -1051,7 +1053,7 @@ if (
     // This is deliberately opt-in: entering from Paddock still starts empty.
     if (this._returningFromPreview) {
       try {
-        const saved=JSON.parse(localStorage.getItem('trackstudio_recovery')||'null');
+        const saved=JSON.parse(readTrackStudioWorkingCopy('trackstudio_recovery')||'null');
         const project=saved?.editor||saved;
         if(!Array.isArray(project?.nodes)||project.nodes.length<3||
           (!project?.imageCanvas?.imageId&&
@@ -2944,10 +2946,15 @@ _loadTrack() {
 
   _autosaveRecovery() {
     try {
-      const data = { editor: this._getProjectData(), gameTrack: this._exportToGameTrack() };
-      localStorage.setItem('trackstudio_recovery', JSON.stringify(data));
+      // Only the editable project is needed to return from PROBAR. Storing
+      // gameTrack too duplicated thousands of sampled road points in Safari,
+      // making quota errors much more likely with big imported kartings.
+      const data = {editor:this._getProjectData()};
+      writeTrackStudioWorkingCopy('trackstudio_recovery',JSON.stringify(data));
+      return true;
     } catch (e) {
-      console.warn('No se pudo crear recuperación automática', e);
+      console.warn('[TrackStudio] No se pudo crear recuperación automática', e);
+      return false;
     }
   }
 
@@ -2987,7 +2994,7 @@ const data = {
 
   _restoreLastTrackStudioRecovery() {
     try {
-      const raw = localStorage.getItem('trackstudio_recovery');
+      const raw = readTrackStudioWorkingCopy('trackstudio_recovery');
       if (!raw) return this._flashMessage('No hay trabajo automático que recuperar');
       const data = JSON.parse(raw);
       const editor = data.editor || data;
