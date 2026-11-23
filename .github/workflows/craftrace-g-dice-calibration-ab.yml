@@ -1,0 +1,50 @@
+name: LIVE 4 G · calibración dados 1260 A/B (sin deploy)
+on:
+  pull_request:
+    paths:
+      - 'src/game/ai/trackBezierAiRacingLinePlanner.js'
+      - 'scripts/craftrace-live4-die-physics-benchmark.mjs'
+      - 'scripts/craftrace-live4-dice-monotone-calibration-smoke.mjs'
+      - 'scripts/craftrace-live4-dice-calibration-compare.mjs'
+      - '.github/workflows/craftrace-g-dice-calibration-ab.yml'
+jobs:
+  simulation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Dependencies and verified Karting Canarias 4096
+        run: |
+          npm ci --no-audit --no-fund
+          node scripts/install-karting-canarias-4096-source.mjs
+      - name: Check ordered safe deviations
+        run: |
+          node --check src/game/ai/trackBezierAiRacingLinePlanner.js
+          node --check scripts/craftrace-live4-die-physics-benchmark.mjs
+          node scripts/craftrace-live4-dice-monotone-calibration-smoke.mjs
+      - name: Original 1260 physical simulations
+        env:
+          RACE_DIE_REPS: '35'
+          RACE_DIE_CALIBRATED: '0'
+        run: node scripts/craftrace-live4-die-physics-benchmark.mjs
+      - name: Calibrated 1260 physical simulations
+        env:
+          RACE_DIE_REPS: '35'
+          RACE_DIE_CALIBRATED: '1'
+        run: node scripts/craftrace-live4-die-physics-benchmark.mjs
+      - name: Compare times, guide offsets, and finish rates
+        run: node scripts/craftrace-live4-dice-calibration-compare.mjs
+      - name: Artifact full input/output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: craftrace-g-dice-before-after-2520
+          path: |
+            artifacts/live4-bezier-dice-physics.json
+            artifacts/live4-bezier-dice-calibrated.json
+          if-no-files-found: warn
