@@ -50,6 +50,14 @@ export function buildLive4CalibrationReport({
          ?{factorGasCurvaMedioPct:round(measure.meanCornerThrottleDecisionPct,2)}:{}),
        ...(num(measure.meanThrottlePct)!==null
          ?{gasAplicadoMedioPct:round(measure.meanThrottlePct,2)}:{}),
+       ...(num(measure.entryLeadMs)!==null
+         ?{anticipacionEntradaCurvaMs:round(measure.entryLeadMs,0)}:{}),
+       ...(num(measure.exitLagMs)!==null
+         ?{retardoSalidaCurvaMs:round(measure.exitLagMs,0)}:{}),
+       ...(num(measure.meanEntryPhasePct)!==null
+         ?{faseEntradaCurvaPct:round(measure.meanEntryPhasePct,2)}:{}),
+       ...(num(measure.meanExitPhasePct)!==null
+         ?{faseSalidaCurvaPct:round(measure.meanExitPhasePct,2)}:{}),
        giroMedio:round(measure.meanAbsSteer,3),
        muestras:integer(measure.samples)
      }:{})
