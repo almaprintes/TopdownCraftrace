@@ -1,0 +1,27 @@
+name: LIVE 4 G · informes sin capturas (sin publicar)
+on:
+  pull_request:
+    paths:
+      - 'src/game/online/craftraceLive4CalibrationReport.js'
+      - 'src/game/online/craftraceLiveV2RaceBridge.js'
+      - 'src/game/online/craftraceLiveV2BotDirector.js'
+      - 'scripts/craftrace-live4-calibration-report-smoke.mjs'
+      - 'scripts/craftrace-live4-g-seat-telemetry-smoke.mjs'
+      - '.github/workflows/craftrace-live4-calibration-report.yml'
+jobs:
+  calibration-report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and clipboard/telemetry report tests
+        run: |
+          node --check src/game/online/craftraceLive4CalibrationReport.js
+          node --check src/game/online/craftraceLiveV2RaceBridge.js
+          node --check src/game/online/craftraceLiveV2BotDirector.js
+          node scripts/craftrace-live4-calibration-report-smoke.mjs
+          node scripts/craftrace-live4-g-seat-telemetry-smoke.mjs
