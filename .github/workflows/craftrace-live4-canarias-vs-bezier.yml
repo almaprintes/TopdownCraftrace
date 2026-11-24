@@ -1,4 +1,4 @@
-name: LIVE 4 · Humano vs expertos Bézier Canarias (no deploy)
+name: LIVE 4 · Humano vs expertos Bézier y parrilla (no deploy)
 on:
   pull_request:
     paths:
@@ -7,6 +7,9 @@ on:
       - 'src/game/online/craftraceLiveV2RaceBridge.js'
       - 'src/game/ui/craftraceLiveV2Lobby.js'
       - 'scripts/craftrace-live4-canarias-vs-bezier-smoke.mjs'
+      - 'scripts/craftrace-live4-guided-g-host-smoke.mjs'
+      - 'src/game/online/craftraceLiveV2GridGeometry.js'
+      - 'src/game/scenes/RaceScene.js'
       - '.github/workflows/craftrace-live4-canarias-vs-bezier.yml'
 jobs:
   human-vs-g:
