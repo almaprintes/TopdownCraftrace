@@ -124,7 +124,24 @@ assert.equal(resolveDirectorGuideSource({meta:{...clockwise,meta:{...clockwise.m
 assert.equal(resolveDirectorGuideSource({meta:{...clockwise,raceDirection:'forward'}}).bezier,null);
 const tenerifeGrid=makeLive4StartingGrid({start:clockwise.start,capacity:4,
  centerline:clockwise.raceCenterline,finishLine:clockwise.finishLine,
- trackWidth:clockwise.trackWidth,carScale:clockwise.carScale});
+ trackWidth:clockwise.trackWidth,carScale:clockwise.carScale,
+ compact:true,trackShape:clockwise.trackShape,vehicleVisualScale:1.02});
+assert.equal(tenerifeGrid.parallel,true,'Tenerife NORMAL must fit two cars per row');
+const normal=clockwise.finishLine.normal;
+for(const p of tenerifeGrid.positions){
+ assert.ok(Math.cos(p.r)*normal.x+Math.sin(p.r)*normal.y>.5,'All grid cars must face the race direction');
+}
+for(let i=0;i<4;i+=2){
+ const a=tenerifeGrid.positions[i],b=tenerifeGrid.positions[i+1];
+ assert.ok(Math.abs((b.x-a.x)*Math.cos(a.r)+(b.y-a.y)*Math.sin(a.r))<1e-5);
+ assert.ok(Math.hypot(b.x-a.x,b.y-a.y)>=48*1.35*1.02);
+}
+const wrongOrderGrid=makeLive4StartingGrid({start:clockwise.start,capacity:4,
+ centerline:baseT.raceCenterline,finishLine:clockwise.finishLine,
+ trackWidth:clockwise.trackWidth,carScale:clockwise.carScale,
+ compact:true,trackShape:clockwise.trackShape,vehicleVisualScale:1.02});
+assert.deepEqual(wrongOrderGrid,tenerifeGrid,'Finish normal must correct accidental base-path ordering');
+console.log('PASS Tenerife NORMAL directed 2x2 grid',JSON.stringify(tenerifeGrid.positions));
 const tenerifeScene={...scene,trackKey:TENERIFE_G_ID,track:{closed:true,meta:clockwise}};
 const tenerifeDirector=new CrafRaceLive4BotDirector(tenerifeScene,{roster,hostId:host,
  localId:host,startingGrid:tenerifeGrid,laps:3,live4GuidedGTrial:true,
