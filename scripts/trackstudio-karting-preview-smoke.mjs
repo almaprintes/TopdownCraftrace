@@ -106,8 +106,11 @@ const pauseScene=readFileSync('src/game/scenes/RacePauseMenuScene.js','utf8');
 const reportScene=readFileSync('src/game/scenes/RaceSessionReportScene.js','utf8');
 assert.ok(studioScene.includes("this._returningFromPreview = data?.fromTrackStudioPreview === true"),
   'Only the preview return should restore without confirmation');
-assert.ok(studioScene.includes("localStorage.getItem('trackstudio_recovery')"),
-  'Return must restore the autosaved edit session');
+assert.ok(studioScene.includes("readTrackStudioWorkingCopy('trackstudio_recovery')"),
+  'Return must restore the autosaved edit session from local or session storage');
+const recoveryStore=readFileSync('src/game/studio/trackStudioPreviewStorage.js','utf8');
+assert.ok(recoveryStore.includes("['sessionStorage','localStorage']"),
+  'Prefer the fresh temporary copy after a Safari quota error');
 assert.ok(studioScene.includes("this._applyProjectData(project)"),
   'Return restores master photo and Bezier geometry together');
 assert.ok(studioScene.includes("!project?.imageCanvas?.imageId") &&
