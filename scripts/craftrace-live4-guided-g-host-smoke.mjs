@@ -86,3 +86,59 @@ assert.equal(standard.live4GuidedGTrial,false);
 assert.equal(standard.bots[0].bezierDieHistory.length,0);
 standard.destroy();
 console.log('PASS LIVE 4: 1 human + 3 AI, host-only G Bezier, initial dice, room scoping, unchanged default');
+
+ // Real LIVE 4 Tenerife normal (clockwise), using the installed source and
+ // the same ribbon sampling and reverse variant as the registry.
+import {buildTrackRibbon} from '../src/game/tracks/TrackBuilder.js';
+import {makeTenerifeClockwiseTrack} from '../src/game/tracks/trackReverseVariant.js';
+import {resolveDirectorGuideSource} from '../src/game/online/craftraceDirectorGuideSource.js';
+import {TENERIFE_G_ID,TENERIFE_G_IMAGE_SHA,TENERIFE_G_GUIDES,TENERIFE_G_BEZIER}
+ from '../src/game/online/craftraceKartingTenerifeAuthorBezier.js';
+assert.equal(TENERIFE_G_GUIDES.points.length,19);
+assert.equal(TENERIFE_G_BEZIER.nodes.length,19);
+assert.equal(isLive4GuidedGSupported({trackId:TENERIFE_G_ID,dev:true,aiDifficulty:3}),true);
+for(const candidate of [
+ {trackId:TENERIFE_G_ID,dev:false,aiDifficulty:3},
+ {trackId:TENERIFE_G_ID,dev:true,aiDifficulty:2},
+ {trackId:'karting-tenerife',dev:true,aiDifficulty:3}
+])assert.equal(isLive4GuidedGSupported(candidate),false);
+import {installKartingTenerife} from './install-karting-tenerife-source.mjs';
+// The standalone LIVE 4 CI previously unpacked only Santa Cruz and Canarias.
+// Install Tenerife metadata from the original bundle before checking its hash.
+await installKartingTenerife({withAssets:false});
+const tenerife=JSON.parse(readFileSync('src/game/tracks/library/karting-tenerife/track.json','utf8'));
+assert.equal(tenerife.meta.sourceImageSha256,TENERIFE_G_IMAGE_SHA);
+const center=tenerife.centerline.map(p=>({...p,width:Number(p.width)||tenerife.trackWidth}));
+if(Math.hypot(center[0].x-center.at(-1).x,center[0].y-center.at(-1).y)>1)
+ center.push({...center[0]});
+const ribbon=buildTrackRibbon({centerline:center,trackWidth:tenerife.trackWidth,
+ grassMargin:tenerife.grassMargin,sampleStepPx:tenerife.sampleStepPx,
+ cellSize:tenerife.cellSize,closed:true});
+const baseT={...tenerife,id:'karting-tenerife',key:'karting-tenerife',
+ raceCenterline:ribbon.center.map(p=>({x:Number(p.x),y:Number(p.y),width:Number(p.width)||tenerife.trackWidth}))};
+const clockwise=makeTenerifeClockwiseTrack(baseT);
+const authored=resolveDirectorGuideSource({meta:clockwise});
+assert.deepEqual(authored.bezier,TENERIFE_G_BEZIER);
+assert.equal(resolveDirectorGuideSource({meta:baseT}).bezier,null);
+assert.equal(resolveDirectorGuideSource({meta:{...clockwise,meta:{...clockwise.meta,sourceImageSha256:'wrong'}}}).bezier,null);
+assert.equal(resolveDirectorGuideSource({meta:{...clockwise,raceDirection:'forward'}}).bezier,null);
+const tenerifeGrid=makeLive4StartingGrid({start:clockwise.start,capacity:4,
+ centerline:clockwise.raceCenterline,finishLine:clockwise.finishLine,
+ trackWidth:clockwise.trackWidth,carScale:clockwise.carScale});
+const tenerifeScene={...scene,trackKey:TENERIFE_G_ID,track:{closed:true,meta:clockwise}};
+const tenerifeDirector=new CrafRaceLive4BotDirector(tenerifeScene,{roster,hostId:host,
+ localId:host,startingGrid:tenerifeGrid,laps:3,live4GuidedGTrial:true,
+ aiPilotIds:{1:'falcon',2:'nova',3:'comet'}});
+assert.equal(tenerifeDirector.preview,false);
+assert.equal(tenerifeDirector.previewMode,'G');
+assert.equal(tenerifeDirector.previewBezierActive,true);
+assert.equal(tenerifeDirector.previewGuideReport.total,19);
+assert.equal(tenerifeDirector.bots.length,3);
+for(const bot of tenerifeDirector.bots){
+ assert.ok(bot._bezierProfile.valid);
+ assert.equal(bot._bezierProfile.parameters.maxSpeed,420);
+ assert.ok(bot.guidedRoll>=1&&bot.guidedRoll<=6);
+ for(let die=1;die<=6;die++)assert.ok(tenerifeDirector._bezierProfileForDie(bot.seat,die).valid);
+}
+tenerifeDirector.destroy();
+console.log('PASS LIVE 4 Tenerife normal: exact 19-node source, real clockwise road, 3 experts and all dice, no inverse expansion.');
