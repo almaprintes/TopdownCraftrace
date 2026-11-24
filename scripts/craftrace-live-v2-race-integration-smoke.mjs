@@ -128,7 +128,7 @@ assert.ok(scene.includes("this._crafRaceLiveV2RoomId=(!IS_PROD_BUILD"));
 assert.ok(scene.includes("attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId)"));
 assert.ok(scene.includes("import('../online/craftraceLiveV2RaceBridge.js')"));
 assert.ok(scene.includes('makeLive4StartingGrid({start:baseGrid'));
-assert.ok(scene.includes('centerline:t01.centerline,finishLine:t01.finishLine||t01.finish'),
+assert.ok(scene.includes('centerline:t01.raceCenterline||t01.centerline,finishLine:t01.finishLine||t01.finish'),
  'LIVE 4 grid follows real installed circuit geometry');
 assert.ok(scene.includes('live4Grid?.trackAligned ? 0 : 44'),
  'LIVE 4 aligned cars must never be shifted 44 px off the asphalt');
