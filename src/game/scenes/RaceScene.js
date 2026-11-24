@@ -1,5 +1,5 @@
 import {attachCrafRaceLivePilot} from '../online/craftraceLiveRaceBridge.js';
-import {makeLive4StartingGrid} from '../online/craftraceLiveV2GridGeometry.js';
+import {makeLive4StartingGrid,live4CompactGridTrack} from '../online/craftraceLiveV2GridGeometry.js';
 import {skinGeometryForSprite} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,getEquippedCarSkin,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
@@ -1218,7 +1218,9 @@ const gridPositions=canParallel
 // LIVE 4 uses a dedicated 2×2 or staggered single-file grid; never alter 2P.
 const live4Grid=this._crafRaceLiveV2RoomId
  ?makeLive4StartingGrid({start:baseGrid,trackWidth,carScale:trackScale,capacity:4,
-   centerline:t01.centerline,finishLine:t01.finishLine||t01.finish}):null;
+   centerline:t01.raceCenterline||t01.centerline,finishLine:t01.finishLine||t01.finish,
+   compact:live4CompactGridTrack(this.trackKey),trackShape:t01.trackShape,
+   vehicleVisualScale:CAR_SPECS[this.carId]?.visualScale??1}):null;
 this._crafRaceLiveV2Grid=live4Grid;
 const spawnSlot=live4Grid
  ?live4Grid.positions[this._crafRaceLiveGridSlot||0]
