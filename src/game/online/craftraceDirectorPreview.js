@@ -2,7 +2,7 @@
 import {CrafRaceLive4BotDirector,LIVE4_AI_LEVELS} from './craftraceLiveV2BotDirector.js';
 import {getTrackPublicName} from '../tracks/trackPublicNames.js';
 import {LOCAL_KARTING_PREVIEW_KEY} from '../tracks/localKartingPreview.js';
-import {makeLive4StartingGrid} from './craftraceLiveV2GridGeometry.js';
+import {makeLive4StartingGrid,live4CompactGridTrack} from './craftraceLiveV2GridGeometry.js';
 import {makeDirectorCameraState,stepDirectorCamera,directorZoom,directorStickVector,directorAltitudeStick,directorStartPhase} from './craftraceDirectorCamera.js';
 import {hideRaceUi,restoreRaceUi} from '../ui/raceUiVisibility.js';
 import {sampleShapeEdge,shapeIsValid} from '../studio/trackShapeGeometry.js';
@@ -33,7 +33,9 @@ export function attachCrafRaceDirectorPreview(scene,{laps=3,difficulty=3}={}){
    trackWidth:Number(scene.track?.meta?.trackWidth||140),
    carScale:Number(scene.track?.meta?.carScale||1),
    centerline:scene.track?.meta?.raceCenterline||scene.track?.meta?.centerline,
-   finishLine:scene.track?.meta?.finishLine||scene.track?.meta?.finish});
+   finishLine:scene.track?.meta?.finishLine||scene.track?.meta?.finish,
+   compact:live4CompactGridTrack(scene.trackKey),trackShape:scene.track?.meta?.trackShape,
+   vehicleVisualScale:scene.baseSpec?.visualScale??1});
  const bots=new CrafRaceLive4BotDirector(scene,{
    roster,hostId,localId:hostId,startingGrid:grid,laps,preview:true
  });
