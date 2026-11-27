@@ -5,6 +5,12 @@ name: TDR rewarded bridge emulator diagnostic (manual, sample ads only)
 # deployment, Android compilation, cloud recovery, or Play publication.
 on:
   workflow_dispatch:
+  # Temporary trigger for this isolated QA branch only; remove before merging.
+  push:
+    branches: [qa/admob-reinstatement-20261127]
+    paths:
+      - '.github/workflows/android-rewarded-emulator-diagnostic.yml'
+      - 'android/app/src/androidTest/**'
 
 permissions:
   contents: read
@@ -42,6 +48,7 @@ jobs:
         shell: bash
         run: |
           npm ci --no-audit --no-fund
+          node scripts/android-test-ads-safety-smoke.mjs
           node scripts/install-karting-tenerife-source.mjs
           node scripts/karting-official-source-smoke.mjs
           npm run build:android
