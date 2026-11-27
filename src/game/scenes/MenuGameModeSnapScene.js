@@ -1,5 +1,8 @@
 import { MenuScene as CurrentMenuScene } from './MenuSeasonScene.js';
-import { t } from '../i18n/index.js';
+import { t, getLanguage } from '../i18n/index.js';
+import {IS_PROD_BUILD} from '../buildTarget.js';
+import {makeOfflineFourRace,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../ai/offlineFourRace.js';
+import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 
 const MODE_KEY='tdr2:gameMode';
 const BASE=import.meta.env.BASE_URL||'/';
@@ -7,7 +10,8 @@ const BASE=import.meta.env.BASE_URL||'/';
 const MODES=[
   {key:'timeattack',asset:'contrarreloj.webp'},
   {key:'ghost',asset:'fantasma.webp'},
-  {key:'duel',asset:'duelo.webp'}
+  {key:'duel',asset:'duelo.webp'},
+  ...(!IS_PROD_BUILD?[{key:'offline-ai',asset:null}]:[])
 ];
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
@@ -51,10 +55,11 @@ export class MenuScene extends CurrentMenuScene {
 .tdr-mode-close{position:absolute;right:11px;top:8px;width:42px;height:42px;border:0;background:transparent;color:#a9bac9;font:800 30px/1 system-ui;z-index:5}
 .tdr-mode-carousel{flex:1;display:flex;gap:22px;align-items:center;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;padding:8px calc(50% - 112px) 4px;scrollbar-width:none;touch-action:pan-x}.tdr-mode-carousel::-webkit-scrollbar{display:none}
 .tdr-mode-card{flex:0 0 224px;height:min(67vh,300px);max-height:300px;min-height:220px;scroll-snap-align:center;scroll-snap-stop:always;border:0;background:transparent;padding:0;opacity:.44;transform:scale(.78);transition:transform .18s ease,opacity .18s ease;outline:none;touch-action:manipulation}.tdr-mode-card img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 12px 18px rgba(0,0,0,.48))}.tdr-mode-card.active{opacity:1;transform:scale(1)}
+.tdr-mode-ai-art{height:96%;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:linear-gradient(145deg,#112e42,#07131b);border:2px solid #ff9f43;border-radius:16px;color:#fff;text-align:center;padding:12px;font:900 19px system-ui}.tdr-mode-ai-art b{font-size:38px}.tdr-mode-ai-art small{font:600 12px system-ui;color:#b9d4e4}
 .tdr-mode-arrow{position:absolute;top:50%;transform:translateY(-35%);width:48px;height:48px;border-radius:50%;border:1px solid #ffb04c;background:#102435;color:#fff;font:800 34px/1 system-ui;z-index:4}.tdr-mode-arrow.prev{left:10px}.tdr-mode-arrow.next{right:10px}.tdr-mode-arrow:disabled{opacity:.3;border-color:#425261}
 .tdr-mode-dots{height:18px;display:flex;justify-content:center;align-items:center;gap:12px}.tdr-mode-dot{width:8px;height:8px;border-radius:50%;background:#51606d;opacity:.7}.tdr-mode-dot.active{width:10px;height:10px;background:#ff9f43;opacity:1}
 @media(max-height:430px){.tdr-mode-panel{height:94vh;min-height:280px;padding-top:9px;padding-bottom:7px}.tdr-mode-title{font-size:19px}.tdr-mode-help{margin-top:2px}.tdr-mode-card{height:230px;min-height:190px;flex-basis:174px}.tdr-mode-carousel{padding-left:calc(50% - 87px);padding-right:calc(50% - 87px)}}
-</style><div class="tdr-mode-panel" role="dialog" aria-modal="true" aria-label="${t('modes.title')}"><button class="tdr-mode-close" type="button" aria-label="Cerrar">×</button><div class="tdr-mode-title">${t('modes.title')}</div><div class="tdr-mode-help">${t('modes.swipe')}</div><button class="tdr-mode-arrow prev" type="button" aria-label="Anterior">‹</button><div class="tdr-mode-carousel">${MODES.map((m,i)=>`<button class="tdr-mode-card${i===index?' active':''}" type="button" data-index="${i}" data-key="${m.key}"><img src="${BASE}assets/ui/game-modes/${m.asset}" alt="${m.key}" draggable="false" loading="eager" decoding="async"></button>`).join('')}</div><button class="tdr-mode-arrow next" type="button" aria-label="Siguiente">›</button><div class="tdr-mode-dots">${MODES.map((_,i)=>`<span class="tdr-mode-dot${i===index?' active':''}" data-dot="${i}"></span>`).join('')}</div></div>`;
+</style><div class="tdr-mode-panel" role="dialog" aria-modal="true" aria-label="${t('modes.title')}"><button class="tdr-mode-close" type="button" aria-label="Cerrar">×</button><div class="tdr-mode-title">${t('modes.title')}</div><div class="tdr-mode-help">${t('modes.swipe')}</div><button class="tdr-mode-arrow prev" type="button" aria-label="Anterior">‹</button><div class="tdr-mode-carousel">${MODES.map((m,i)=>`<button class="tdr-mode-card${i===index?' active':''}" type="button" data-index="${i}" data-key="${m.key}">${m.asset?`<img src="${BASE}assets/ui/game-modes/${m.asset}" alt="${m.key}" draggable="false" loading="eager" decoding="async">`:`<span class="tdr-mode-ai-art"><b>🏁</b>${getLanguage()==='en'?'AI RACE':'CARRERA IA'}<small>${getLanguage()==='en'?'1 player · 3 AI · Offline':'1 jugador · 3 IA · Sin conexión'}</small></span>`}</button>`).join('')}</div><button class="tdr-mode-arrow next" type="button" aria-label="Siguiente">›</button><div class="tdr-mode-dots">${MODES.map((_,i)=>`<span class="tdr-mode-dot${i===index?' active':''}" data-dot="${i}"></span>`).join('')}</div></div>`;
 
     const carousel=root.querySelector('.tdr-mode-carousel');
     const cards=[...root.querySelectorAll('.tdr-mode-card')];
@@ -77,6 +82,7 @@ export class MenuScene extends CurrentMenuScene {
       if(launching)return;
       launching=true;
       const key=MODES[index]?.key||'timeattack';
+      if(key==='offline-ai'){this._closeGameModeModal();this._openOfflineFourSetup();return;}
       try{localStorage.setItem(MODE_KEY,key);}catch{}
       this._closeGameModeModal();
       try{this._startSelectedMode?.(key);}catch(err){launching=false;console.error('[game-mode-dom] start failed',err);}
@@ -109,6 +115,28 @@ export class MenuScene extends CurrentMenuScene {
     this._gameModeDom=root;
     this._gameModeModal=root;
     requestAnimationFrame(()=>requestAnimationFrame(()=>update(index,{scroll:true,instant:true})));
+  }
+
+  _openOfflineFourSetup(){
+    if(IS_PROD_BUILD||this._gameModeDom?.isConnected)return;
+    const english=getLanguage()==='en';
+    const tr=(es,en)=>english?en:es;
+    const root=document.createElement('div');root.className='tdr-mode-dom-root';root.dataset.tdrMenuUi='1';
+    root.style.cssText='position:fixed;inset:0;z-index:2147482000;background:rgba(2,7,13,.9);display:grid;place-items:center;font-family:system-ui;color:#fff;padding:12px';
+    const panel=document.createElement('section');panel.setAttribute('role','dialog');panel.setAttribute('aria-label',tr('Carrera IA','AI Race'));
+    panel.style.cssText='box-sizing:border-box;width:min(92vw,720px);max-height:94vh;overflow:auto;background:#0b1c29;border:1px solid #ff9f43;border-radius:14px;padding:12px;display:grid;gap:8px';
+    const title=document.createElement('h2');title.style.cssText='margin:0;text-align:center;font-size:19px';title.textContent=tr('CARRERA IA · 4 COCHES','AI RACE · 4 CARS');panel.append(title);
+    const makeSelect=(label,options)=>{const wrap=document.createElement('label');wrap.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700';wrap.textContent=label;const select=document.createElement('select');select.style.cssText='width:60%;min-height:36px;background:#152e40;color:white;border:1px solid #678;border-radius:6px;font:inherit';for(const [value,text] of options){const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option);}wrap.append(select);panel.append(wrap);return select;};
+    const tracks=makeSelect(tr('Circuito','Circuit'),OFFLINE_FOUR_TRACKS.map(id=>[id,({'santa-cruz':'Santa Cruz','karting-canarias-4096':'Karting Canarias','karting-tenerife-horario':'Karting Tenerife · Normal'})[id]]));
+    try{const chosen=selectedCircuitRaceId(this.selectedTrackKey,localStorage);if(OFFLINE_FOUR_TRACKS.includes(chosen))tracks.value=chosen;}catch{}
+    const laps=makeSelect(tr('Vueltas','Laps'),OFFLINE_FOUR_LAPS.map(n=>[n,String(n)]));laps.value='3';
+    const difficulty=makeSelect(tr('Dificultad','Difficulty'),[[1,tr('Principiante','Rookie')],[2,tr('Competitivo','Competitive')],[3,tr('Experto','Expert')]]);difficulty.value='2';
+    const note=document.createElement('small');note.textContent=tr('Prueba DEV · Sin clasificación online ni recompensas.','DEV test · No online ranking or rewards.');panel.append(note);
+    const actions=document.createElement('div');actions.style.cssText='display:flex;gap:10px';
+    const button=(text,primary)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.style.cssText='flex:1;min-height:40px;border:1px solid #ff9f43;border-radius:8px;background:'+(primary?'#ff9f43;color:#111':'#14283a;color:#fff')+';font:800 13px system-ui';actions.append(b);return b;};
+    const back=button(tr('VOLVER','BACK'),false);back.onclick=()=>{this._closeGameModeModal();this._openGameModeModal();};
+    const start=button(tr('COMENZAR CARRERA','START RACE'),true);start.onclick=()=>{try{const config=makeOfflineFourRace({trackKey:tracks.value,carId:this.selectedCarId,laps:Number(laps.value),difficulty:Number(difficulty.value)});start.disabled=true;try{localStorage.setItem(MODE_KEY,'offline-ai');}catch{}this._closeGameModeModal();this.scene.start('race',{...config,gameMode:'offline-ai',offlineFourRace:config});}catch(error){note.textContent=String(error.message);start.disabled=false;}};
+    panel.append(actions);root.append(panel);document.body.append(root);this._gameModeDom=root;this._gameModeModal=root;
   }
 
   _closeGameModeModal(){
