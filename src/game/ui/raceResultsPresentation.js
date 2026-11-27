@@ -1,10 +1,14 @@
 // Shared results presentation. No persistence, ranking, physics, rewards or network.
 import './raceResultsPresentation.css';
-const AI_IDS=['falcon','comet','viper','storm','blaze','apex','orbit','sprint','grip','vector','drift','pulse','racer','spark','rookie','nova'];
 const images=import.meta.glob('../../../studio/assets/avatars/avatar_*.webp',{eager:true,query:'?url',import:'default'});
 const catalog=Object.fromEntries(Object.entries(images).map(([path,url])=>[path.split('/').pop(),url]));
 // Fixed, local assignment: identity, never seat or finishing position.
-const aiAvatars=Object.freeze(Object.fromEntries(AI_IDS.map((id,i)=>[id,'avatar_'+String(i+1).padStart(4,'0')+'.webp'])));
+// Curated by inspecting the original artwork, not by catalog order.
+const AI_PORTRAITS=Object.freeze({
+  falcon:7,comet:1,viper:2,storm:4,blaze:5,apex:8,orbit:6,sprint:13,
+  grip:12,vector:17,drift:18,pulse:11,racer:16,spark:3,rookie:19,nova:9
+});
+const aiAvatars=Object.freeze(Object.fromEntries(Object.entries(AI_PORTRAITS).map(([id,n])=>[id,'avatar_'+String(n).padStart(4,'0')+'.webp'])));
 let ownPortrait='';
 export function rememberResultPlayerAvatar(url){
   ownPortrait=typeof url==='string'&&(/^https:\/\/almaprintes\.github\.io\/TopdownCraftrace\/studio-assets\/avatars\/[a-z0-9_]+\.webp$/.test(url)||
@@ -14,7 +18,7 @@ export function rememberResultPlayerAvatar(url){
 export function resultAvatarUrl({human=false,aiId=null,name=''}={}){
   if(human){const file=ownPortrait.split('/').pop();return catalog[file]||ownPortrait;}
   const id=aiId;
-  return catalog[id==='generic-cpu'?'avatar_0017.webp':aiAvatars[id]]||'';
+  return catalog[id==='generic-cpu'?'avatar_0020.webp':aiAvatars[id]]||'';
 }
 export function resultPortrait(driver){
   const wrap=document.createElement('span');wrap.className='tdr-result-portrait';

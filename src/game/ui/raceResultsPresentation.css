@@ -32,3 +32,31 @@
 .tdr-offline-results .tdr-result-body>p{font:750 11px system-ui;color:#b4d3e1;margin:4px 0}
 .tdr-offline-results .tdr-result-body h2{margin:0 0 3px}
 .tdr-result-premium .tdrsurv-title>.tdr-result-portrait{vertical-align:middle;margin-right:8px}
+
+/* Portrait-first compact racing plaques. Preserve square artwork, use width
+   for the name and clock instead of empty columns beside tiny headshots. */
+.tdr-result-hero-card{display:grid;grid-template-columns:clamp(58px,11vw,124px) minmax(0,1fr);align-items:stretch;min-height:0}
+.tdr-result-hero-card>.tdr-result-portrait{width:100%;height:auto;aspect-ratio:1;align-self:center;overflow:hidden;border-radius:0}
+.tdr-result-hero-card>.tdr-result-portrait img{object-fit:cover;object-position:center}
+.tdr-result-hero-card[data-rank="1"]{grid-template-columns:clamp(66px,12vw,138px) minmax(0,1fr)}
+.tdr-result-hero-card[data-rank="1"]>.tdr-result-portrait{height:auto}
+.tdr-result-plaque{align-self:stretch;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;border-top:0;border-left:1px solid var(--medal);padding:5px 8px;background:linear-gradient(115deg,transparent,#071724 88%)}
+.tdr-result-plaque>b{font-size:clamp(22px,6dvh,42px);line-height:1}
+.tdr-result-plaque>div{max-width:100%;width:100%}
+.tdr-result-plaque strong{font-size:clamp(10px,2.9dvh,17px)}
+.tdr-result-plaque small{font-size:clamp(10px,2.7dvh,15px)}
+@media(max-height:460px){
+ .tdr-result-hero-card{grid-template-columns:clamp(49px,19dvh,85px) minmax(0,1fr)}
+ .tdr-result-hero-card[data-rank="1"]{grid-template-columns:clamp(56px,22dvh,99px) minmax(0,1fr)}
+ .tdr-offline-results .tdr-result-body{padding:5px 10px}
+ .tdr-offline-results .cr4-result-list{gap:2px;margin:5px 0}
+ .tdr-offline-results .cr4-result-list li{padding:3px 6px}
+ .tdr-offline-results .tdr-offline-fastest{margin:4px 0}
+ .tdr-offline-results .cr4-laps th,.tdr-offline-results .cr4-laps td{padding:3px 7px}
+ .tdr-offline-results .tdr-offline-actions button{min-height:34px}
+}
+@media(max-width:500px) and (orientation:portrait){
+ .tdr-result-hero-card,.tdr-result-hero-card[data-rank="1"]{display:flex;flex-direction:column}
+ .tdr-result-hero-card>.tdr-result-portrait{width:100%;height:auto;aspect-ratio:1}
+ .tdr-result-plaque{border-left:0;border-top:1px solid var(--medal)}
+}

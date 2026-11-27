@@ -62,3 +62,12 @@ assert.match(presentation,/catalog\[file\]\|\|ownPortrait/,'Selected catalog por
 assert.match(read('src/game/ui/LobbyDomUi.js'),/rememberResultPlayerAvatar\(prefetch\.src\)/);
 for(const path of ['src/game/ai/offlineFourRaceBridge.js','src/game/online/craftraceLiveV2RaceBridge.js','src/game/online/craftraceLiveRaceBridge.js','src/game/scenes/RaceDuelStandaloneScene.js','src/game/scenes/RaceSessionReportScene.js','src/game/scenes/RaceSurvivalModeScene.js'])assert.match(read(path),/dressResultPanel\(/);
 console.log('PASS: shared podium presentation, bundled catalog portraits, selected player avatar, six result flows');
+
+assert.match(presentation,/apex:8,orbit:6,sprint:13/);
+assert.match(presentation,/grip:12,vector:17/);
+assert.match(presentation,/nova:9/);
+assert.match(presentation,/generic-cpu'\?'avatar_0020\.webp'/);
+const mapText=presentation.match(/const AI_PORTRAITS=Object\.freeze\(\{([\s\S]*?)\}\)/)[1];
+const avatarIds=[...mapText.matchAll(/:\s*(\d+)/g)].map(m=>Number(m[1]));
+assert.equal(avatarIds.length,16);assert.equal(new Set(avatarIds).size,16);
+console.log('PASS: curated unique AI portraits and generic robot CPU');
