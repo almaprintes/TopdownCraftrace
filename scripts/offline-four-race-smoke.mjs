@@ -106,3 +106,48 @@ for(const contact of ['ghost','soft','full']){
 assert.equal(launchConfig.contact,'ghost');assert.throws(()=>makeOfflineFourRace({...launchConfig,contact:'other'}));
 assert.match(bridge,/config.contact==='ghost'\?null:createOfflineContactPhysics/);
 assert.match(menu,/contact:contact.value/);
+
+import {CONTACT_TUNING,makeContactBox,orientedContact,resolveContact,trafficAssist,createOfflineContactPhysics} from '../src/game/ai/offlineContactPhysics.js';
+{
+
+const check=(v,msg)=>{if(!v)throw Error(msg)};
+const box=(x,y,angle=0,vx=0,vy=0)=>makeContactBox({x,y,angle,vx,vy,halfLength:40,halfWidth:20});
+check(orientedContact(box(0,0),box(0,41))===null,'side clearance');
+check(orientedContact(box(0,0),box(0,45,Math.PI/2))!==null,'rotation affects footprint');
+check(orientedContact(box(0,0),box(200,0))===null,'broad phase');
+for(const tuning of Object.values(CONTACT_TUNING)){
+ let a=box(0,0,0,160),b=box(76,0,0,80);
+ let hit=resolveContact(a,b,tuning,420,1/60);
+ check(hit.normal>0&&a.vx<160&&b.vx>80,'rear collision transfers speed');
+ check(Math.abs(a.vx+b.vx-240)<1e-8,'momentum');
+ a=box(0,0,0,100);b=box(77,0,0,140);
+ hit=resolveContact(a,b,tuning,420,1/60);
+ check(hit.normal===0&&a.vx===100&&b.vx===140,'no extra impulse when separating');
+ a=box(0,0,0,150);b=box(0,39,0,150);
+ hit=resolveContact(a,b,tuning,420,1/60);
+ check(a.vx===150&&b.vx===150&&Math.abs(a.vy)<20,'parallel rub preserves forward momentum');
+ a=box(0,0,0,180);b=box(77,0,Math.PI,-180);
+ hit=resolveContact(a,b,tuning,420,1/60);
+ check(a.vx<180&&b.vx> -180&&Math.abs(a.vx)<=180&&Math.abs(b.vx)<=180,'head-on bounded');
+ a=box(0,0,0,160);b=box(99,0,0,80);
+ trafficAssist(a,b,tuning,1/60);
+ check(a.vx<160&&a.vx>=80,'near traffic braking');
+ a=box(0,0,0,160);b=box(500,0,0,80);
+ trafficAssist(a,b,tuning,1/60);
+ check(a.vx===160,'clear track untouched');
+}
+const sprite=(x,y,vx)=>({x,y,rotation:0,body:{enable:true,velocity:{x:vx,y:0}}});
+const human=sprite(0,0,160),bot=sprite(100,0,80);
+const world={carBody:human,maxFwd:420,track:{meta:{carScale:1}},baseSpec:{collisionScale:1}};
+const directorMock={bots:[{seat:1,plannerBody:bot,finished:false},...Array.from({length:15},(_,i)=>({seat:i+2,plannerBody:sprite(1000+i*300,500,200),finished:false}))]};
+const solver=createOfflineContactPhysics(world,directorMock,{contact:'soft',humanSeat:0});
+solver.update(16.67,1,false);solver.update(16.67,18,false);
+check(solver.playerImpacts===1,'persistent overlap counted once');
+check(human.x===0&&bot.x===100,'no center teleport');
+check(directorMock.bots.slice(1).every(b=>b.plannerBody.body.velocity.x===200),'distant cars unchanged');
+bot.x=500;solver.update(16.67,35,false);bot.x=100;solver.update(16.67,52,false);
+check(solver.playerImpacts===2,'new contact counted');
+solver.update(16.67,69,true);check(solver.playerImpacts===2,'finished human excluded');
+
+}
+console.log('PASS: oriented hitboxes, bounded impulses, traffic assist, 17-body isolation and contact counting');
