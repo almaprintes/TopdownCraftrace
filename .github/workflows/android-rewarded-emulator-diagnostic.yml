@@ -11,6 +11,7 @@ on:
     paths:
       - '.github/workflows/android-rewarded-emulator-diagnostic.yml'
       - 'android/app/src/androidTest/**'
+      - 'scripts/android-rewarded-bridge-smoke.mjs'
 
 permissions:
   contents: read
