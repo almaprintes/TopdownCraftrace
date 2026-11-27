@@ -1373,7 +1373,7 @@ const aiSkinPool = Object.values(CAR_SPECS).filter((s) =>
   s.id !== specFinal.id && hasPublishedCarArt(s.id)
 );
   this.gridCars = [];
-const MAX_GRID_CARS = (onlineGrid||this._crafRaceDirectorPreview)?0:gridSpawns.length;
+const MAX_GRID_CARS = this._offlineFourRace?0:(onlineGrid||this._crafRaceDirectorPreview)?0:gridSpawns.length;
 
 for (let i = 1; i < MAX_GRID_CARS; i++) {
   const aiSpawn0 = gridSpawns[i];
@@ -3746,7 +3746,7 @@ if(this._crafRaceLiveOnlineIntent&&this._crafRaceLiveStartAt&&this._crafRaceLive
 if(this._offlineFourRace&&this._startState==='COUNTDOWN'&&!this._offlineFourBridge?.ready){
  if(this._startStatus)this._startStatus.setText(this._offlineFourError?'ERROR IA · VUELVE AL MENÚ':'PREPARANDO RIVALES IA…');
 }
-if (!this._crafRaceLiveOnlineIntent && !this._crafRaceDirectorPreview && (!this._offlineFourRace||this._offlineFourBridge?.ready) && !this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
+if (!this._crafRaceLiveOnlineIntent && !this._crafRaceDirectorPreview && !this._startAutoFired && (!this._offlineFourRace||this._offlineFourBridge?.ready) && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
   this._startAutoFired = true;
 
   if (this._startHint) this._startHint.setText('Mantente listo...');
