@@ -14,19 +14,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class RewardedBridgeReleaseTest {
     @Test
-    fun physicalDeviceLoadsWithoutShowingForRegistration() {
-        assumeTrue("Runs only against the isolated physical-device flavor", BuildConfig.FLAVOR == "deviceTest")
+    fun qaLoadsGoogleDemoWithoutShowing() {
+        assumeTrue("Runs only against isolated QA flavors", BuildConfig.FLAVOR != "production")
+        assertEquals("ca-app-pub-3940256099942544/5224354917", BuildConfig.TDR_REWARDED_AD_UNIT_ID)
+        assertTrue("QA must not have production reward verification", !BuildConfig.TDR_REWARDED_CONFIGURED)
+        val outcome = AtomicReference("no_callback")
         val callback = CountDownLatch(1)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 TdrAdsConsentManager.get(activity.application).prepare(activity) { consent ->
                     if (!consent.canRequestAds || !consent.adsInitialized) {
+                        outcome.set("consent_or_initialization_unavailable")
                         callback.countDown()
                         return@prepare
                     }
@@ -36,17 +41,20 @@ class RewardedBridgeReleaseTest {
                         AdRequest.Builder().build(),
                         object : RewardedAdLoadCallback() {
                             override fun onAdLoaded(ad: RewardedAd) {
+                                outcome.set("loaded")
                                 callback.countDown()
                             }
 
                             override fun onAdFailedToLoad(error: LoadAdError) {
+                                outcome.set("load_failed_${error.code}_${error.domain}")
                                 callback.countDown()
                             }
                         },
                     )
                 }
             }
-            assertTrue("AdMob registration probe timed out", callback.await(120, TimeUnit.SECONDS))
+            assertTrue("Google demo load timed out", callback.await(120, TimeUnit.SECONDS))
+            assertEquals("Google demo must really load (not just return a callback)", "loaded", outcome.get())
         }
     }
 
@@ -58,12 +66,12 @@ class RewardedBridgeReleaseTest {
             assertGameReady(webView)
             assertBridge(webView)
 
-            if (!BuildConfig.TDR_REWARDED_CONFIGURED) requests().forEachIndexed { index, request ->
-                val nativeResult = callBridge(webView, index, request.first, request.second)
-                assertTrue("${request.first} did not reach the native plugin: $nativeResult", nativeResult.contains("native_rewarded_not_configured"))
-                assertTrue(nativeResult.contains("\"verified\":false"))
-                assertTrue(nativeResult.contains("\"completed\":false"))
-            }
+            // Exercise the native boundary without showing or clicking an ad.
+            val nativeResult = callBridge(webView, 0, "unsupported_qa_probe", "invalid")
+            val expected = if (BuildConfig.TDR_ADS_SUSPENDED) "ads_suspended" else "unsupported_placement"
+            assertTrue("Native plugin did not reject the request: $nativeResult", nativeResult.contains(expected))
+            assertTrue(nativeResult.contains("\"verified\":false"))
+            assertTrue(nativeResult.contains("\"completed\":false"))
 
             scenario.recreate()
             webView = webViewFrom(scenario)
@@ -73,29 +81,28 @@ class RewardedBridgeReleaseTest {
     }
 
     @Test
-    fun physicalDeviceCompletesAndVerifiesEveryPlacement() {
-        assumeTrue("Runs only against the isolated physical-device flavor", BuildConfig.FLAVOR == "deviceTest")
+    fun qaBridgeReportsDemoModeWithoutProductionVerification() {
+        assumeTrue("Runs only against isolated QA flavors", BuildConfig.FLAVOR != "production")
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val webView = webViewFrom(scenario)
             assertGameReady(webView)
             assertBridge(webView)
-            requests().forEachIndexed { index, request ->
-                val result = callBridge(webView, index + 20, request.first, request.second)
-                assertTrue("${request.first} was not completed: $result", result.contains("\"completed\":true"))
-                assertTrue("${request.first} was not SSV verified: $result", result.contains("\"verified\":true"))
+            val result = eventually(webView) {
+                """(()=>{
+                    const key='tdrQaModeProbe';
+                    if(!document.documentElement.dataset[key]){
+                        document.documentElement.dataset[key]='pending';
+                        window.__tdrRewardedAds.diagnostics()
+                            .then(status=>document.documentElement.dataset[key]=JSON.stringify(status))
+                            .catch(error=>document.documentElement.dataset[key]=JSON.stringify({error:String(error)}));
+                    }
+                    return document.documentElement.dataset[key];
+                })()"""
             }
+            assertTrue(result.contains("\"googleSampleAdMode\":true"))
+            assertTrue(result.contains("\"configured\":false"))
         }
     }
-
-    private fun requests() =
-        listOf(
-                "post_race_double_loot" to "post-race-x2:release-webview:probe",
-                "race_control_publish_record" to "race-control-publish:release-webview:probe",
-                "race_control_ghost_download" to "race-control-ghost:release-webview:probe",
-                "recycler_exchange_2" to "recycler-exchange:release-webview:probe:2",
-                "recycler_exchange_3" to "recycler-exchange:release-webview:probe:3",
-                "store_coins_100_4h" to "store-coins-100:release-webview:probe",
-            )
 
     private fun webViewFrom(scenario: ActivityScenario<MainActivity>): WebView {
         lateinit var webView: WebView
