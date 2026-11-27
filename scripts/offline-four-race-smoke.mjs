@@ -166,3 +166,18 @@ solver.update(16.67,69,true);check(solver.playerImpacts===2,'finished human excl
 
 }
 console.log('PASS: oriented hitboxes, bounded impulses, traffic assist, 17-body isolation and contact counting');
+
+import {formatRaceResultTime,formatRaceResultGap} from '../src/game/ui/raceResultTime.js';
+{
+const checks=[
+ [formatRaceResultTime(99225),'1:39.225'],[formatRaceResultTime(100142),'1:40.142'],
+ [formatRaceResultTime(18885),'0:18.885'],[formatRaceResultTime(59999.7),'1:00.000'],
+ [formatRaceResultTime(3600000),'60:00.000'],[formatRaceResultTime(null),'—'],
+ [formatRaceResultTime(NaN),'—'],[formatRaceResultGap(917),'+0.917 s'],
+ [formatRaceResultGap(-8702),'−8.702 s'],[formatRaceResultGap(60000),'+1:00.000'],
+ [formatRaceResultGap(null),'—']
+];
+for(const [actual,expected] of checks)if(actual!==expected)throw Error(actual+' != '+expected);
+}
+assert.match(bridge,/formatRaceResultTime as fmt,formatRaceResultGap as gapFmt/);
+console.log('PASS: minute-second-millisecond presentation and signed gaps');

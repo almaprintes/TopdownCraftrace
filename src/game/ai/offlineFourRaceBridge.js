@@ -9,8 +9,7 @@ import {CrafRaceLive4BotDirector} from '../online/craftraceLiveV2BotDirector.js'
 import {live4SeatName} from '../online/craftraceLiveV2PilotNames.js';
 import {isLive4GuidedGSupported} from '../online/craftraceLive4GuidedGExperiment.js';
 import {offlineFourRoster,rankOfflineFour,offlineFullPilotIds,offlineHudEntries} from './offlineFourRace.js';
-const fmt=ms=>ms==null?'—':(ms/1000).toFixed(3)+' s';
-const gapFmt=ms=>ms==null?'—':(ms>=0?'+':'−')+(Math.abs(ms)/1000).toFixed(3)+' s';
+import {formatRaceResultTime as fmt,formatRaceResultGap as gapFmt} from '../ui/raceResultTime.js';
 export function attachOfflineFourRace(scene,config){
   const roster=offlineFourRoster(config.difficulty,config.humanSeat,config.capacity),hostId='local-player';
   const seed=config.seed;
