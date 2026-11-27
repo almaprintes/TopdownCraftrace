@@ -39,3 +39,18 @@ assert.match(menu,/await prepareOfflineFourLaunch/);
 assert.match(menu,/await globalThis\.__tdrWarmRaceScene\(\)/);
 assert.match(menu,/this\.scene\.start\('race',data\)/);
 console.log('PASS: offline launch waits for scene and AI module; failed preflight retains retry UI.');
+
+import {makeOfflineStandingsRoute,offlineRouteProgress,rankOfflineLive,offlineCommonLapGap,offlineFastestLap} from '../src/game/ai/offlineFourStandings.js';
+import {makeLive4LapGates} from '../src/game/online/craftraceLive4LapGates.js';
+const line=[{x:0,y:0},{x:1000,y:0},{x:1000,y:1000},{x:0,y:1000}];
+const gates=makeLive4LapGates({centerline:line,trackWidth:100});
+const route=makeOfflineStandingsRoute(line,gates);
+const before=offlineRouteProgress(route,{x:0,y:25,laps:0,phase:0}),after=offlineRouteProgress(route,{x:50,y:0,laps:0,phase:0});
+assert.ok(before<0&&after>before,'Grid behind finish is not one lap ahead');
+assert.ok(offlineRouteProgress(route,{x:50,y:0,laps:1,phase:0})>4000);
+const standings=rankOfflineLive([{seat:0,progress:10,elapsedMs:null},{seat:1,progress:20,elapsedMs:null},{seat:2,progress:1,elapsedMs:5000}]);
+assert.deepEqual(standings.map(r=>r.seat),[2,1,0]);
+assert.deepEqual(offlineCommonLapGap({lapTimes:[1100,900]},{lapTimes:[1000]}),{lap:1,ms:100});
+assert.equal(offlineCommonLapGap({lapTimes:[]},{lapTimes:[1000]}),null);
+assert.deepEqual(offlineFastestLap([{seat:0,lapTimes:[1200,900]},{seat:1,lapTimes:[1000]}]),{seat:0,lap:2,ms:900});
+console.log('PASS: grid wrap, valid lap progress, live order, measured common-lap gap and fastest lap');
