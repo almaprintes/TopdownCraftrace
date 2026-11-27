@@ -1227,7 +1227,7 @@ const live4Grid=(this._crafRaceLiveV2RoomId||this._offlineFourRace)
    vehicleVisualScale:CAR_SPECS[this.carId]?.visualScale??1}):null;
 this._crafRaceLiveV2Grid=live4Grid;
 const spawnSlot=live4Grid
- ?live4Grid.positions[this._crafRaceLiveGridSlot||0]
+ ?live4Grid.positions[this._offlineFourRace?.humanSeat??this._crafRaceLiveGridSlot??0]
  :onlineGrid?gridPositions[this._crafRaceLiveGridSlot===1?1:0]:slot0;
 const GRID_SPAWN_BACK = live4Grid?.trackAligned ? 0 : 44;
 // Aligned LIVE 4 grid positions are final physical centers: no extra shift.
