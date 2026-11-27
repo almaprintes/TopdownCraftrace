@@ -1,0 +1,27 @@
+name: Offline four-car race DEV validation (no deploy)
+on:
+  push:
+    branches: [feat/offline-four-car-race]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tdr-offline-four-race-qa
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Validate offline configuration, isolation and shared race regression
+        run: |
+          node scripts/offline-four-race-smoke.mjs
+          node scripts/craftrace-live-v2-race-integration-smoke.mjs
+      - name: Build DEV game without deployment
+        run: npm run build
