@@ -163,6 +163,7 @@ function placeHandbrake(el,point){
 }
 
 
+function hardenIosRaceControls(root){
   if(!root)return;
   const nodes=[
     root,
