@@ -64,33 +64,92 @@ export function trafficAssist(a,b,tuning,dt){
  const brake=Math.min(closing,closing*tuning.traffic*clamp(dt*12,0,1)*(1-clamp(clearance/range,0,1)));
  a.vx-=a.fx*brake;a.vy-=a.fy*brake;
 }
+// Measure opaque artwork once per Phaser frame. Transparent margins must
+// never create invisible bumpers. Cache normalized bounds, not world scale.
+const alphaBoundsCache=new WeakMap();
+export function opaqueContactBounds(data,w,h,threshold=112){
+ let x0=w,y0=h,x1=-1,y1=-1;
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(data[(y*w+x)*4+3]>=threshold){
+   x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);
+ }
+ return x1>=x0&&y1>=y0?{left:x0/w,top:y0/h,right:(x1+1)/w,bottom:(y1+1)/h}:null;
+}
+function artworkBounds(visual){
+ const f=visual.frame;
+ if(!f||typeof f!=='object')return null;
+ if(alphaBoundsCache.has(f))return alphaBoundsCache.get(f);
+ let bounds=null;
+ try{
+   const image=f.source?.image||visual.texture?.getSourceImage?.();
+   const w=Number(f.cutWidth),h=Number(f.cutHeight);
+   if(image&&w>0&&h>0&&typeof document!=='undefined'){
+     const canvas=document.createElement('canvas');
+     // Full source alpha avoids coarse sampling expanding a thin silhouette.
+     canvas.width=w;canvas.height=h;
+     const ctx=canvas.getContext('2d',{willReadFrequently:true});
+     if(ctx){
+       ctx.drawImage(image,Number(f.cutX)||0,Number(f.cutY)||0,w,h,0,0,w,h);
+       const crop=opaqueContactBounds(ctx.getImageData(0,0,w,h).data,w,h);
+       if(crop){
+         const rw=Number(f.realWidth)||w,rh=Number(f.realHeight)||h;
+         const ox=Number(f.x)||0,oy=Number(f.y)||0;
+         bounds={left:(ox+crop.left*w)/rw,top:(oy+crop.top*h)/rh,right:(ox+crop.right*w)/rw,bottom:(oy+crop.bottom*h)/rh};
+       }
+     }
+   }
+ }catch{}
+ // If alpha is unavailable (e.g. canvas security), use an inset of the
+ // actual displayed sprite, never the theoretical car spec dimensions.
+ bounds=bounds||{left:.12,top:.12,right:.88,bottom:.88};
+ alphaBoundsCache.set(f,bounds);
+ return bounds;
+}
+// Body heading plus actual rig offset, local skin angle, scale and pivot.
+// The longitudinal axis follows the longer axis of the painted rectangle.
+export function contactBoxFromVisual(sprite,visual,rigOffset=0,bounds=null){
+ if(!visual||visual.visible===false)return null;
+ const width=Number(visual.displayWidth),height=Number(visual.displayHeight);
+ if(!(width>0&&height>0))return null;
+ const crop=bounds||artworkBounds(visual);if(!crop)return null;
+ const originX=Number.isFinite(visual.originX)?visual.originX:.5;
+ const originY=Number.isFinite(visual.originY)?visual.originY:.5;
+ const localAngle=Number(visual.rotation)||0;
+ const angle=sprite.rotation+rigOffset+localAngle;
+ const cx=((crop.left+crop.right)/2-originX)*width;
+ const cy=((crop.top+crop.bottom)/2-originY)*height;
+ const rigAngle=sprite.rotation+rigOffset;
+ const lx=Number(visual.x)||0,ly=Number(visual.y)||0;
+ const x=sprite.x+Math.cos(rigAngle)*lx-Math.sin(rigAngle)*ly+Math.cos(angle)*cx-Math.sin(angle)*cy;
+ const y=sprite.y+Math.sin(rigAngle)*lx+Math.cos(rigAngle)*ly+Math.sin(angle)*cx+Math.cos(angle)*cy;
+ // Slight inset keeps transparent/antialiased edges and rounded corners
+ // from causing premature contact. Same footprint in both contact modes.
+ const hw=width*(crop.right-crop.left)*.46,hh=height*(crop.bottom-crop.top)*.46;
+ const longX=hw>=hh;
+ const v=sprite.body?.velocity;
+ return makeContactBox({x,y,angle:longX?angle:angle+Math.PI/2,halfLength:Math.max(hw,hh),halfWidth:Math.min(hw,hh),vx:v?.x,vy:v?.y});
+}
+
 export function createOfflineContactPhysics(scene,director,config){
  const tuning=CONTACT_TUNING[config.contact];if(!tuning)throw Error('Invalid contact mode');
  const state={playerImpacts:0,update};
  const activePairs=new Set();
- const scale=clamp(Number(scene.track?.meta?.carScale)||1,.35,1.5);
- // Use stable collision scale, not async skin sprite dimensions.
- const vehicleScale=clamp(Number(scene.baseSpec?.collisionScale??scene.baseSpec?.visualScale)||1,.5,1.5);
- const halfLength=96*1.35*scale*vehicleScale*.42;
- const halfWidth=48*1.35*scale*vehicleScale*.42;
  function update(deltaMs,clock,playerFinished){
   const dt=clamp(Number(deltaMs)/1000||0,0,.05);if(!dt)return;
   const maxSpeed=Math.max(80,Number(scene.maxFwd||scene.carParams?.maxFwd)||420);
   const entries=[];
-  function add(sprite,seat,human){
+  function add(sprite,visual,seat,human){
    const v=sprite?.body?.velocity;if(!v||sprite.body.enable===false)return;
-   const box=makeContactBox({x:sprite.x,y:sprite.y,angle:sprite.rotation,halfLength,halfWidth,vx:v.x,vy:v.y});
+   const box=contactBoxFromVisual(sprite,visual,Number(scene._carVisualRotOffset)||0);
    if(box)entries.push({...box,sprite,seat,human,yawDelta:0});
   }
-  if(!playerFinished)add(scene.carBody,config.humanSeat,true);
-  for(const bot of director.bots)if(!bot.finished)add(bot.plannerBody,bot.seat,false);
+  if(!playerFinished)add(scene.carBody,scene.carRig?.list?.find(item=>item?.texture?.key),config.humanSeat,true);
+  for(const bot of director.bots)if(!bot.finished)add(bot.plannerBody,bot.visual,bot.seat,false);
   const seen=new Set();
   // Only 136 pairs at 17 cars. Cheap radius rejection before SAT/traffic.
   for(let i=0;i<entries.length;i++)for(let j=i+1;j<entries.length;j++){
    const a=entries[i],b=entries[j];
-   if((a.x-b.x)**2+(a.y-b.y)**2>(a.radius+b.radius+halfLength)**2)continue;
-   if(!a.human)trafficAssist(a,b,tuning,dt);
-   if(!b.human)trafficAssist(b,a,tuning,dt);
+   if((a.x-b.x)**2+(a.y-b.y)**2>(a.radius+b.radius)**2)continue;
+   // No pre-contact braking/velocity changes. First require painted bodies to touch.
    const result=resolveContact(a,b,tuning,maxSpeed,dt);if(!result)continue;
    a.yawDelta+=result.yawA;b.yawDelta+=result.yawB;
    const key=Math.min(a.seat,b.seat)+':'+Math.max(a.seat,b.seat);

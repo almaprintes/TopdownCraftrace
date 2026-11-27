@@ -107,7 +107,7 @@ assert.equal(launchConfig.contact,'ghost');assert.throws(()=>makeOfflineFourRace
 assert.match(bridge,/config.contact==='ghost'\?null:createOfflineContactPhysics/);
 assert.match(menu,/contact:contact.value/);
 
-import {CONTACT_TUNING,makeContactBox,orientedContact,resolveContact,trafficAssist,createOfflineContactPhysics} from '../src/game/ai/offlineContactPhysics.js';
+import {CONTACT_TUNING,makeContactBox,orientedContact,resolveContact,trafficAssist,createOfflineContactPhysics,contactBoxFromVisual,opaqueContactBounds} from '../src/game/ai/offlineContactPhysics.js';
 {
 
 const check=(v,msg)=>{if(!v)throw Error(msg)};
@@ -137,15 +137,30 @@ for(const tuning of Object.values(CONTACT_TUNING)){
  check(a.vx===160,'clear track untouched');
 }
 const sprite=(x,y,vx)=>({x,y,rotation:0,body:{enable:true,velocity:{x:vx,y:0}}});
-const human=sprite(0,0,160),bot=sprite(100,0,80);
-const world={carBody:human,maxFwd:420,track:{meta:{carScale:1}},baseSpec:{collisionScale:1}};
-const directorMock={bots:[{seat:1,plannerBody:bot,finished:false},...Array.from({length:15},(_,i)=>({seat:i+2,plannerBody:sprite(1000+i*300,500,200),finished:false}))]};
+const visual={displayWidth:80,displayHeight:40,originX:.5,originY:.5,rotation:0,visible:true,texture:{key:'car'},frame:{}};
+const human=sprite(0,0,160),bot=sprite(54,0,80);
+const world={carBody:human,carRig:{list:[visual]},maxFwd:420,track:{meta:{carScale:1}},baseSpec:{collisionScale:1}};
+const directorMock={bots:[{seat:1,plannerBody:bot,visual,finished:false},...Array.from({length:15},(_,i)=>({seat:i+2,plannerBody:sprite(1000+i*300,500,200),visual,finished:false}))]};
+const pixels=new Uint8ClampedArray(10*10*4);
+for(let y=2;y<8;y++)for(let x=3;x<7;x++)pixels[(y*10+x)*4+3]=255;
+check(JSON.stringify(opaqueContactBounds(pixels,10,10))===JSON.stringify({left:.3,top:.2,right:.7,bottom:.8}),'transparent padding excluded');
+const crop={left:.3,top:.2,right:.7,bottom:.8};
+const tall={...visual,displayWidth:40,displayHeight:80};
+const fit=contactBoxFromVisual(human,tall,Math.PI/2,crop);
+check(Math.abs(fit.halfLength-22.08)<1e-8&&Math.abs(fit.halfWidth-7.36)<1e-8,'actual painted size and rotated long axis');
+check(Math.abs(Math.sin(fit.angle))<1e-8,'rig offset aligns tall sprite with heading');
+const near=contactBoxFromVisual(sprite(46,0,80),tall,Math.PI/2,crop);
+check(orientedContact(fit,near)===null,'visible gap does not collide');
+const touching=contactBoxFromVisual(sprite(43,0,80),tall,Math.PI/2,crop);
+check(orientedContact(fit,touching)!==null,'visible contact detected');
 const solver=createOfflineContactPhysics(world,directorMock,{contact:'soft',humanSeat:0});
-solver.update(16.67,1,false);solver.update(16.67,18,false);
+bot.x=63;solver.update(16.67,0,false);
+check(human.body.velocity.x===160&&bot.body.velocity.x===80&&solver.playerImpacts===0,'no impulse or AI braking across visible gap');
+bot.x=54;solver.update(16.67,1,false);solver.update(16.67,18,false);
 check(solver.playerImpacts===1,'persistent overlap counted once');
-check(human.x===0&&bot.x===100,'no center teleport');
+check(human.x===0&&bot.x===54,'no center teleport');
 check(directorMock.bots.slice(1).every(b=>b.plannerBody.body.velocity.x===200),'distant cars unchanged');
-bot.x=500;solver.update(16.67,35,false);bot.x=100;solver.update(16.67,52,false);
+bot.x=500;solver.update(16.67,35,false);bot.x=54;solver.update(16.67,52,false);
 check(solver.playerImpacts===2,'new contact counted');
 solver.update(16.67,69,true);check(solver.playerImpacts===2,'finished human excluded');
 
