@@ -2,19 +2,17 @@
 import '../ui/craftraceLiveV2Lobby.css';
 import {CrafRaceLive4BotDirector} from '../online/craftraceLiveV2BotDirector.js';
 import {live4SeatName} from '../online/craftraceLiveV2PilotNames.js';
-import {resolveLive4AiPilots,resolvedLive4AiPilotIds} from '../online/craftraceLive4AiSelection.js';
 import {isLive4GuidedGSupported} from '../online/craftraceLive4GuidedGExperiment.js';
 import {offlineFourRoster,rankOfflineFour} from './offlineFourRace.js';
 const fmt=ms=>ms==null?'—':(ms/1000).toFixed(3)+' s';
 export function attachOfflineFourRace(scene,config){
-  const roster=offlineFourRoster(config.difficulty),hostId='local-player';
-  const seed='offline-'+Date.now()+'-'+Math.random();
+  const roster=offlineFourRoster(config.difficulty,config.humanSeat),hostId='local-player';
+  const seed=config.seed;
   const guided=isLive4GuidedGSupported({trackId:config.trackKey,dev:true,aiDifficulty:config.difficulty});
-  const aiPilotIds=guided?resolvedLive4AiPilotIds(resolveLive4AiPilots(seed,[1,2,3],{})):null;
-  const name=entry=>entry.seat===0?'TÚ':live4SeatName(entry,[],seed,aiPilotIds);
+  const name=entry=>entry.kind==='human'?'TÚ':live4SeatName(entry,[],seed);
   const director=new CrafRaceLive4BotDirector(scene,{roster,hostId,localId:hostId,
     startingGrid:scene._crafRaceLiveV2Grid,laps:config.laps,
-    live4GuidedGTrial:guided,aiIdentitySeed:seed,aiPilotIds});
+    live4GuidedGTrial:guided,aiIdentitySeed:seed});
   const results=document.createElement('section');
   results.className='cr4-result-shell';
   results.style.display='none';
@@ -25,7 +23,7 @@ export function attachOfflineFourRace(scene,config){
   const show=()=>{
     const bots=director.results();
     const rows=rankOfflineFour(roster.map(entry=>{
-      const result=entry.seat===0?playerFinish:bots.find(b=>b.seat===entry.seat);
+      const result=entry.kind==='human'?playerFinish:bots.find(b=>b.seat===entry.seat);
       return {seat:entry.seat,name:result?.aiPilotName||name(entry),elapsedMs:result?.elapsedMs??null,lapTimes:result?.lapTimes||[]};
     }));
     const snapshot=JSON.stringify(rows);
@@ -47,7 +45,7 @@ export function attachOfflineFourRace(scene,config){
     for(const row of rows){const tr=table.insertRow();tr.insertCell().textContent=row.name;
       for(let i=0;i<config.laps;i++)tr.insertCell().textContent=fmt(row.lapTimes[i]);}
     panel.append(table);
-    if(allFinished){const repeat=document.createElement('button');repeat.type='button';repeat.textContent='REVANCHA';
+    if(allFinished){const repeat=document.createElement('button');repeat.type='button';repeat.textContent='REVANCHA · MISMA PARRILLA';
       repeat.onclick=()=>scene.scene.restart({gameMode:'offline-ai',offlineFourRace:config,trackKey:config.trackKey,carId:config.carId});panel.append(repeat);}
     const back=document.createElement('button');back.type='button';back.textContent='VOLVER AL MENÚ';back.onclick=()=>scene.scene.start('menu');panel.append(back);
     results.append(panel);
