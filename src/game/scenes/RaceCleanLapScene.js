@@ -80,7 +80,8 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _grantCleanComboCoins(){
-    if(this._crafRaceLiveV2RoomId)return 0; // LIVE 4 is an unofficial DEV race.
+    if(this._crafRaceLiveV2RoomId)return 0;
+    if(this._offlineFourRace)return 0; // LIVE 4 is an unofficial DEV race.
     if(this._cleanComboCoinsGranted)return Number(this._cleanComboCoinReward)||0;
     this._cleanComboCoinsGranted=true;
     const amount=cleanComboCoins(this._cleanLapBestCombo);
