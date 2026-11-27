@@ -1,3 +1,4 @@
+import {dressResultPanel,resultHero} from '../ui/raceResultsPresentation.js';
 import { RaceScene as CurrentRaceScene } from './RaceKartingTenerifePitReportScene.js';
 import { buildTrackRacingLineModel } from '../ai/trackRacingLinePlanner.js';
 import { buildTrackSpeedProfile } from '../ai/trackSpeedProfilePlanner.js';
@@ -194,6 +195,10 @@ export class RaceScene extends CurrentRaceScene {
     const p=this._duelPlayer.lapTimes,c=this._duelCpu.lapTimes,pb=p.length?Math.min(...p):null,cb=c.length?Math.min(...c):null;
     const root=document.createElement('div');root.dataset.tdrRaceUi='1';
     root.innerHTML=`<style>.duel-v{position:fixed;inset:0;z-index:15000;background:#02060cd9;display:flex;align-items:center;justify-content:center;font-family:system-ui,-apple-system,Segoe UI,sans-serif}.duel-c{width:min(88vw,500px);background:#091722;border:2px solid #ff9f43;padding:22px;color:white}.duel-k{font-size:9px;font-weight:900;letter-spacing:.16em;color:#ffb45f}.duel-t{font-size:27px;font-weight:950;margin:5px 0 16px}.duel-g{display:grid;grid-template-columns:1fr 1fr;gap:9px}.duel-s{background:#111f2b;border:1px solid #314353;padding:12px;text-align:center}.duel-s small{display:block;color:#8fa2b4;font-size:8px;font-weight:900;margin-bottom:5px}.duel-s b{font-size:18px}.duel-a{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}.duel-a button{height:44px;border:1px solid #526b7d;background:#122536;color:white;font:900 10px system-ui}.duel-a .p{border-color:#ff9f43;background:#4a2b10}</style><div class="duel-v"><div class="duel-c"><div class="duel-k">DUELO · ${this._duelLapTarget} VUELTAS</div><div class="duel-t">${this._duelWinner==='player'?'🏆 VICTORIA':'CPU1 GANA'}</div><div class="duel-g"><div class="duel-s"><small>TU MEJOR VUELTA</small><b>${fmtLap(pb)}</b></div><div class="duel-s"><small>MEJOR CPU1</small><b>${fmtLap(cb)}</b></div></div><div class="duel-a"><button class="p" data-a="again">OTRO DUELO</button><button data-a="menu">MENÚ</button></div></div></div>`;
+    const card=root.querySelector('.duel-c');dressResultPanel(card);
+    const drivers=[{name:'TÚ',human:true,time:fmtLap(p.length?Math.min(...p):null)},{name:'CPU1',aiId:'rookie',time:fmtLap(c.length?Math.min(...c):null)}];
+    if(this._duelWinner!=='player')drivers.reverse();
+    card.insertBefore(resultHero(drivers),card.querySelector('.duel-g'));
     document.body.appendChild(root);this._duelResultDom=root;
     root.querySelector('[data-a="again"]')?.addEventListener('click',()=>{try{root.remove();}catch{}this._duelResultDom=null;try{this.physics?.world?.resume?.();}catch{}this.scene.restart({carId:this.carId||this.selectedCarId,trackKey:this.trackKey,gameMode:'duel'});});
     root.querySelector('[data-a="menu"]')?.addEventListener('click',()=>{try{root.remove();}catch{}this._duelResultDom=null;try{this.physics?.world?.resume?.();}catch{}this.scene.start('menu');});

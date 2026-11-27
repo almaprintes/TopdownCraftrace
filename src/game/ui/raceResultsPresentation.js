@@ -1,10 +1,10 @@
 // Shared results presentation. No persistence, ranking, physics, rewards or network.
 import './raceResultsPresentation.css';
-import {AI_ELO_PILOTS} from '../ai/craftraceAiEloLeague.js';
+const AI_IDS=['falcon','comet','viper','storm','blaze','apex','orbit','sprint','grip','vector','drift','pulse','racer','spark','rookie','nova'];
 const images=import.meta.glob('../../../studio/assets/avatars/avatar_*.webp',{eager:true,query:'?url',import:'default'});
 const catalog=Object.fromEntries(Object.entries(images).map(([path,url])=>[path.split('/').pop(),url]));
 // Fixed, local assignment: identity, never seat or finishing position.
-const aiAvatars=Object.freeze(Object.fromEntries(AI_ELO_PILOTS.map((p,i)=>[p.id,'avatar_'+String(i+1).padStart(4,'0')+'.webp'])));
+const aiAvatars=Object.freeze(Object.fromEntries(AI_IDS.map((id,i)=>[id,'avatar_'+String(i+1).padStart(4,'0')+'.webp'])));
 let ownPortrait='';
 export function rememberResultPlayerAvatar(url){
   ownPortrait=typeof url==='string'&&(/^https:\/\/almaprintes\.github\.io\/TopdownCraftrace\/studio-assets\/avatars\/[a-z0-9_]+\.webp$/.test(url)||
@@ -13,7 +13,7 @@ export function rememberResultPlayerAvatar(url){
 }
 export function resultAvatarUrl({human=false,aiId=null,name=''}={}){
   if(human)return ownPortrait;
-  const id=aiId||AI_ELO_PILOTS.find(p=>p.name===name)?.id;
+  const id=aiId;
   return catalog[aiAvatars[id]]||'';
 }
 export function resultPortrait(driver){

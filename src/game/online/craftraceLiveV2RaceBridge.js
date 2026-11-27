@@ -1,3 +1,5 @@
+import {dressResultPanel,resultHero,resultPortrait} from '../ui/raceResultsPresentation.js';
+import {AI_ELO_PILOTS} from '../ai/craftraceAiEloLeague.js';
 // CraftRace LIVE 4 EXPERIMENTAL: 1 local car, 0–3 remotely rendered
 // human cars, and up to 3 locally simulated AI cars on HOST ONLY.
 // Nothing in here touches online LIVE 2, official records or rewards.
@@ -273,7 +275,7 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    const diceWasOpen=previousPanel?.querySelector('details')?.open===true;
    results.style.display='flex';
    results.replaceChildren();
-   const panel=document.createElement('div');panel.className='cr4-result-panel';
+   const panel=document.createElement('div');panel.className='cr4-result-panel';dressResultPanel(panel);
    const headline=document.createElement('h2');headline.textContent='LIVE 4 · RESULTADOS AMISTOSOS';
    panel.append(headline);
    const intro=document.createElement('p');
@@ -283,16 +285,19 @@ export function attachCrafRaceLive4Pilot(scene,roomId){
    const list=document.createElement('ol');list.className='cr4-result-list';
    const ordered=raceEntries.map(entry=>({
      seat:entry.seat,
-     name:displayName(entry),
+     name:displayName(entry),human:entry.kind==='human'&&entry.seat===localSeat,
+     aiId:entry.kind==='ai'?AI_ELO_PILOTS.find(p=>p.name===displayName(entry))?.id:null,
      time:states.get(entry.seat)?.elapsedMs??
        (entry.seat===localSeat?localFinish.elapsedMs:null)
    }));
    ordered.sort((a,b)=>(a.time??Infinity)-(b.time??Infinity));
+   if(ordered.every(x=>x.time!==null))panel.append(resultHero(ordered.map(x=>({...x,time:fmt(x.time)}))));
    for(const entry of ordered){
      const li=document.createElement('li');
      const name=document.createElement('strong');name.textContent=entry.name;
      const time=document.createElement('span');time.textContent=fmt(entry.time);
-     li.append(name,time);list.append(li);
+     const driver=document.createElement('div');driver.className='tdr-result-name-with-avatar';driver.append(resultPortrait(entry),name);
+     li.append(driver,time);list.append(li);
    }
    panel.append(list);
    const lapTable=document.createElement('table');lapTable.className='cr4-laps';

@@ -1,3 +1,4 @@
+import {dressResultPanel,resultPortrait} from '../ui/raceResultsPresentation.js';
 import {ghostReplayCompatibility} from '../tracks/ghostTrackCompatibility.js';
 import {encodeOnlineGhostNative,encodeOnlineGhostNativeBinary} from '../online/onlineGhostCodec.js';
 import { RaceScene as CurrentRaceScene } from './RaceProgressiveBrakeScene.js';
@@ -216,6 +217,9 @@ export class RaceScene extends CurrentRaceScene {
     document.body.appendChild(root);
     this._sessionReportModal=root;
     installSessionReportNavigation(root);
+    dressResultPanel(root.querySelector('.modal'));
+    const hero=root.querySelector('[data-report-page="resumen"] .hero');
+    if(hero)hero.append(resultPortrait({name:'TÚ',human:true}));
     mountNewPersonalBestOffer(this,root,r);
     // Developer diagnostic is a local dry run. It never writes a record,
     // requests an ad or sends anything to Supabase.

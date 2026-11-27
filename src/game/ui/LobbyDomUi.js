@@ -14,6 +14,7 @@ import { polishSeasonCard } from './LobbyPublishPolish.js';
 import { getLanguage, t } from '../i18n/index.js';
 import { getPilotProfile } from '../social/pilotProfile.js';
 import { cloudIdentity, shortPlayerId } from '../social/cloudProgress.js';
+import {rememberResultPlayerAvatar} from './raceResultsPresentation.js';
 import {getMyRaceControlBadge,getMyCraftStudioAccount,hasSavedRaceControlSession} from '../online/raceControlOnline.js';
 
 import { IS_PROD_BUILD } from '../buildTarget.js';
@@ -253,10 +254,11 @@ export function installLobbyDom(scene) {
     const loadStudioAvatar=async()=>{
       const requestId=++avatarRequest;
       showAvatarFallback();
-      if(!hasSavedRaceControlSession())return;
+      if(!hasSavedRaceControlSession()){rememberResultPlayerAvatar('');return;}
       try{
         const account=await getMyCraftStudioAccount();
         if(!root.isConnected||requestId!==avatarRequest||!account)return;
+        rememberResultPlayerAvatar('');
         let primary='',secondary='';
         if(typeof account.catalogUrl==='string'&&account.catalogUrl.startsWith(studioAvatarBase)){
           const file=account.catalogUrl.slice(studioAvatarBase.length);
@@ -273,7 +275,7 @@ export function installLobbyDom(scene) {
         const prefetch=new Image();prefetch.decoding='async';
         prefetch.onload=()=>{
           if(!root.isConnected||requestId!==avatarRequest)return;
-          avatarImage.src=prefetch.src;avatarImage.hidden=false;avatarFallback.hidden=true;
+          avatarImage.src=prefetch.src;avatarImage.hidden=false;avatarFallback.hidden=true;rememberResultPlayerAvatar(prefetch.src);
         };
         prefetch.onerror=()=>{
           if(secondary){const next=secondary;secondary='';prefetch.src=next;}

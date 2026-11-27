@@ -1,3 +1,4 @@
+import {dressResultPanel,resultPortrait} from '../ui/raceResultsPresentation.js';
 import { RaceScene as CurrentRaceScene } from './RaceAntiCutPenaltyScene.js';
 import { CAR_SPECS } from '../cars/carSpecs.js';
 import { resolveVehicleSurface } from '../cars/surfaceInteraction.js';
@@ -346,6 +347,8 @@ export class RaceScene extends CurrentRaceScene{
       try{this.physics?.world?.resume?.();}catch{}
       this.scene.start('menu');
     });
+    const resultCard=root.querySelector('.tdrsurv-card');dressResultPanel(resultCard);
+    resultCard.querySelector('.tdrsurv-title')?.prepend(resultPortrait({name:'TÚ',human:true}));
     document.body.appendChild(root);this._survivalResultDom=root;
   }
 

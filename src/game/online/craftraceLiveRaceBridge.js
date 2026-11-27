@@ -1,3 +1,4 @@
+import {dressResultPanel,resultHero} from '../ui/raceResultsPresentation.js';
 // DEV-only live visual bridge. Remote pilot never participates in local collisions.
 import {RemotePilotInterpolator} from './craftraceLiveRaceModel.js';
 import {connectLivePositionBroadcast} from './craftraceLiveTransport.js';
@@ -88,7 +89,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
  const results=document.createElement('section');results.className='cr-live-results';
  results.setAttribute('role','dialog');results.setAttribute('aria-modal','true');
  results.setAttribute('aria-label','Resultados de CraftRace Live');results.setAttribute('aria-live','polite');
- const panel=document.createElement('div');panel.className='crl-score';results.append(panel);document.body.append(results);
+ const panel=document.createElement('div');panel.className='crl-score';dressResultPanel(panel);results.append(panel);document.body.append(results);
  const restartRace=()=>{
   if(restarting||!localFinish||!rivalFinish)return;
   restarting=true;
@@ -135,6 +136,7 @@ export function attachCrafRaceLivePilot(scene,roomId){
   const rows=[{name:pilotName(ownPilot,'TÚ'),tag:'TU CARRERA',pilot:ownPilot,result:localFinish},
    {name:pilotName(rivalPilot,'RIVAL'),tag:'RIVAL',pilot:rivalPilot,result:rivalFinish}];
   if(rivalFinish)rows.sort((a,b)=>(a.result?.elapsedMs??Infinity)-(b.result?.elapsedMs??Infinity));
+  if(rivalFinish)panel.insertBefore(resultHero(rows.map(x=>({name:x.name,human:x.pilot===ownPilot,time:fmt(x.result.elapsedMs)}))),grid);
   const best=rivalFinish?Math.min(localFinish.elapsedMs,rivalFinish.elapsedMs):null;
   rows.forEach((entry,index)=>{
    const card=document.createElement('article');card.className='crl-score__driver'+(rivalFinish&&index===0?' winner':'');

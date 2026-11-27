@@ -1,6 +1,7 @@
 // Reuse the physical LIVE4 bot director, never the network race bridge.
 import '../ui/craftraceLiveV2Lobby.css';
 import './offlineFourRace.css';
+import {dressResultPanel,resultHero,resultPortrait} from '../ui/raceResultsPresentation.js';
 import {makeOfflineStandingsRoute,offlineRouteProgress,rankOfflineLive,offlineCommonLapGap,offlineFastestLap} from './offlineFourStandings.js';
 import {getLanguage} from '../i18n/index.js';
 import {CrafRaceLive4BotDirector} from '../online/craftraceLiveV2BotDirector.js';
@@ -72,7 +73,7 @@ export function attachOfflineFourRace(scene,config){
     const bots=director.results();
     const rows=rankOfflineFour(roster.map(entry=>{
       const result=entry.kind==='human'?playerFinish:bots.find(b=>b.seat===entry.seat);
-      return {seat:entry.seat,name:result?.aiPilotName||name(entry),elapsedMs:result?.elapsedMs??null,lapTimes:result?.lapTimes||[]};
+      return {seat:entry.seat,name:result?.aiPilotName||name(entry),human:entry.kind==='human',aiId:director.bots.find(b=>b.seat===entry.seat)?.aiPilot?.id,elapsedMs:result?.elapsedMs??null,lapTimes:result?.lapTimes||[]};
     }));
     const snapshot=JSON.stringify(rows);
     if(snapshot===lastSnapshot)return;
@@ -81,30 +82,31 @@ export function attachOfflineFourRace(scene,config){
     results.style.display='flex';
     results.classList.toggle('cr4-results-waiting',!allFinished);
     results.replaceChildren();
-    const panel=document.createElement('div');panel.className='cr4-result-panel';
-    const title=element('h2','',tr('CARRERA IA · RESULTADOS','AI RACE · RESULTS'));panel.append(title);
-    const status=element('p','',allFinished?tr('CLASIFICACIÓN FINAL · LOCAL','FINAL CLASSIFICATION · LOCAL'):tr('ESPERANDO A LOS RIVALES…','WAITING FOR RIVALS…'));panel.append(status);
+    const panel=document.createElement('div');panel.className='cr4-result-panel';dressResultPanel(panel);
+    const body=element('div','tdr-result-body');panel.append(body);
+    const title=element('h2','',tr('CARRERA IA · RESULTADOS','AI RACE · RESULTS'));body.append(title);
+    const status=element('p','',allFinished?tr('CLASIFICACIÓN FINAL · LOCAL','FINAL CLASSIFICATION · LOCAL'):tr('ESPERANDO A LOS RIVALES…','WAITING FOR RIVALS…'));body.append(status);
     if(allFinished){
-      const podium=element('div','tdr-offline-podium');
-      rows.slice(0,3).forEach((r,i)=>{const item=element('div');item.append(element('b','',String(i+1)+'º'),element('strong','',r.name),element('small','',fmt(r.elapsedMs)));podium.append(item);});panel.append(podium);
+      body.append(resultHero(rows.map(r=>({...r,time:fmt(r.elapsedMs)}))));
     }
     const list=element('ol','cr4-result-list');
     for(const [i,row] of rows.entries()){
       const li=element('li');li.dataset.human=row.seat===config.humanSeat?'1':'0';
-      li.append(element('b','',row.elapsedMs==null?'—':String(i+1)+'º'),element('strong','',row.name),element('span','',fmt(row.elapsedMs)));
+      const driver=element('div','tdr-result-name-with-avatar');driver.append(resultPortrait(row),element('strong','',row.name));
+      li.append(element('b','',row.elapsedMs==null?'—':String(i+1)+'º'),driver,element('span','',fmt(row.elapsedMs)));
       if(allFinished)li.append(element('span','tdr-offline-gap',i===0?tr('GANADOR','WINNER'):gapFmt(row.elapsedMs-rows[0].elapsedMs)));
       list.append(li);
     }
-    panel.append(list);
+    body.append(list);
     if(allFinished){
       const fastest=offlineFastestLap(rows);
-      if(fastest){const driver=rows.find(r=>r.seat===fastest.seat);panel.append(element('div','tdr-offline-fastest',tr('VUELTA RÁPIDA · ','FASTEST LAP · ')+driver.name+' · V'+fastest.lap+' · '+fmt(fastest.ms)));}
+      if(fastest){const driver=rows.find(r=>r.seat===fastest.seat);body.append(element('div','tdr-offline-fastest',tr('VUELTA RÁPIDA · ','FASTEST LAP · ')+driver.name+' · V'+fastest.lap+' · '+fmt(fastest.ms)));}
       const scroll=element('div','tdr-offline-laps-scroll'),table=element('table','cr4-laps');
       const header=table.insertRow();for(const label of [tr('PILOTO','DRIVER'),...Array.from({length:config.laps},(_,i)=>'V'+(i+1))])header.append(element('th','',label));
       for(const row of rows){const line=table.insertRow();line.insertCell().textContent=row.name;
         for(let i=0;i<config.laps;i++){const cell=line.insertCell();cell.textContent=fmt(row.lapTimes[i]);if(fastest?.seat===row.seat&&fastest.lap===i+1)cell.dataset.fastest='1';}
       }
-      scroll.append(table);panel.append(scroll);
+      scroll.append(table);body.append(scroll);
     }
     const actions=element('div','tdr-offline-actions');
     if(allFinished){const repeat=element('button','',tr('REVANCHA · MISMA PARRILLA','REMATCH · SAME GRID'));repeat.type='button';
