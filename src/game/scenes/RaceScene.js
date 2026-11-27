@@ -1224,7 +1224,7 @@ const live4Grid=(this._crafRaceLiveV2RoomId||this._offlineFourRace)
  ?makeLive4StartingGrid({start:baseGrid,trackWidth,carScale:trackScale,capacity:this._offlineFourRace?.capacity??4,
    offlineFullGrid:this._offlineFourRace?.capacity===17,
    centerline:t01.raceCenterline||t01.centerline,finishLine:t01.finishLine||t01.finish,
-   compact:live4CompactGridTrack(this.trackKey),trackShape:t01.trackShape,
+   compact:live4CompactGridTrack(this.trackKey)||this._offlineFourRace?.capacity===17,trackShape:t01.trackShape,
    vehicleVisualScale:CAR_SPECS[this.carId]?.visualScale??1}):null;
 this._crafRaceLiveV2Grid=live4Grid;
 const spawnSlot=live4Grid

@@ -21,7 +21,7 @@ export function attachOfflineFourRace(scene,config){
     startingGrid:scene._crafRaceLiveV2Grid,laps:config.laps,
     live4GuidedGTrial:guided,aiIdentitySeed:seed,aiPilotIds});
   const centerline=scene.track?.meta?.raceCenterline||scene.track?.meta?.centerline;
-  const route=makeOfflineStandingsRoute(centerline,director.lapGates);
+  const route=makeOfflineStandingsRoute(centerline,director.lapGates,scene._crafRaceLiveV2Grid?.gridBackDistance);
   const element=(tag,cls,copy)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(copy!=null)node.textContent=copy;return node;};
   const hud=element('aside','tdr-offline-hud');hud.style.display='none';hud.dataset.tdrRaceUi='1';
   const hudHead=element('div','tdr-offline-hud-head'),position=element('b','','—/'+config.capacity),lap=element('small');
@@ -69,7 +69,8 @@ export function attachOfflineFourRace(scene,config){
     const zoom=Math.max(.1,Number(scene.cameras?.main?.zoom)||1);
     for(const {bot,label} of labels){
       const body=bot.plannerBody;
-      label.setVisible(!playerFinish&&!bot.finished&&bot.visual?.visible!==false);
+      const nearby=!full||Math.hypot(body.x-scene.carBody.x,body.y-scene.carBody.y)*zoom<Math.max(280,scene.scale.width*.55);
+      label.setVisible(nearby&&!playerFinish&&!bot.finished&&bot.visual?.visible!==false);
       label.setPosition(body.x,body.y-24/zoom).setScale(1/zoom);
     }
   };

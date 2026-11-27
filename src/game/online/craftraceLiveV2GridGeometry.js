@@ -61,16 +61,27 @@ export function makeLive4StartingGrid({
    if(!Number.isFinite(gap)||gap<2*scale)return null;
    return {first:left+gap+carWidth/2,second:right-gap-carWidth/2};
  }
+ if(offlineFullGrid&&capacity===17){
+   if(!trackAligned)throw Error('La parrilla completa requiere una META alineada');
+   const positions=[];
+   let row=0;
+   while(positions.length<capacity){
+     const along=90+rowGap*row;
+     if(along+carLength>metrics.total*.30)throw Error('La parrilla de 17 coches no cabe en este circuito');
+     const p=sampleRow(along),nx=-Math.sin(p.r),ny=Math.cos(p.r),lane=compactRow(row);
+     const offsets=lane&&positions.length+1<capacity?[lane.first,lane.second]:[0];
+     for(const lateral of offsets)positions.push(Object.freeze({x:p.x+nx*lateral,y:p.y+ny*lateral,r:p.r,seat:positions.length}));
+     row++;
+   }
+   for(let i=0;i<positions.length;i++)for(let j=0;j<i;j++)if(Math.hypot(positions[i].x-positions[j].x,positions[i].y-positions[j].y)<carWidth*.9)throw Error('Parrilla completa con plazas solapadas');
+   return Object.freeze({parallel:true,trackAligned,positions:Object.freeze(positions),gridBackDistance:90+rowGap*(row-1)});
+ }
  const compactRows=compact?Array.from({length:Math.ceil(capacity/2)},(_,row)=>compactRow(row)):null;
  const compactParallel=Boolean(compactRows?.every(Boolean));
  const parallel=compact?compactParallel:standardParallel;
  const longitudinal=parallel?rowGap:rowGap*1.05;
  const offset=parallel?(carWidth+parallelGap)/2:0;
  const positions=[];
- if(offlineFullGrid&&capacity===17){
-   if(!trackAligned||90+longitudinal*(parallel?8:16)+carLength>metrics.total*.30)
-     throw Error('La parrilla de 17 coches no cabe en este circuito');
- }
  for(let seat=0;seat<capacity;seat++){
    const row=parallel?Math.floor(seat/2):seat;
    const lateral=parallel?(compactParallel?(seat%2===0?compactRows[row].first:compactRows[row].second):
@@ -78,9 +89,6 @@ export function makeLive4StartingGrid({
    const p=sampleRow(90+longitudinal*row),r=p.r;
    const nx=-Math.sin(r),ny=Math.cos(r);
    positions.push(Object.freeze({x:p.x+nx*lateral,y:p.y+ny*lateral,r,seat}));
- }
- if(offlineFullGrid&&capacity===17){
-   for(let i=0;i<positions.length;i++)for(let j=0;j<i;j++)if(Math.hypot(positions[i].x-positions[j].x,positions[i].y-positions[j].y)<carWidth*.9)throw Error('Parrilla completa con plazas solapadas');
  }
  return Object.freeze({parallel,trackAligned,positions:Object.freeze(positions)});
 }

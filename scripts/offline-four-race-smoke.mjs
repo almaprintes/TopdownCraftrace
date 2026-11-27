@@ -91,3 +91,11 @@ assert.equal(makeLive4StartingGrid({...gridInput,offlineFullGrid:true}).position
 assert.deepEqual(offlineHudEntries(Array.from({length:17},(_,i)=>({human:i===10})),17).map(x=>x.rank),[1,10,11,12]);
 assert.match(bridge,/config.capacity/);assert.match(scene,/offlineFullGrid:this\._offlineFourRace\?\.capacity===17/);
 console.log('PASS: duel and full grid, 285 configurations, all 16 AI identities, online capacity unchanged and compact HUD');
+
+// Santa Cruz's actual nominal width supports compact 2-car rows; the full
+// grid may never use the old single-file length just because its default gap is large.
+const compact=makeLive4StartingGrid({...gridInput,trackWidth:156,offlineFullGrid:true,compact:true});
+assert.equal(compact.positions.length,17);
+assert.ok(compact.gridBackDistance>0);
+const extendedRoute=makeOfflineStandingsRoute(line,gates,700);
+assert.ok(offlineRouteProgress(extendedRoute,{x:0,y:500,laps:0,phase:0})<0);
