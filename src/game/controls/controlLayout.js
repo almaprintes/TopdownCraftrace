@@ -131,7 +131,38 @@ function placeDom(el,point,sizeScale=true){
   }
 }
 
-function hardenIosRaceControls(root){
+// The handbrake is an empty DOM element with a background image. Never
+// derive its factory size from a transient DOMRect (e.g. Safari orientation
+// settling or a previously applied layout). Keep the actual touch target
+// and painted lever within the same explicitly sized box.
+export function handbrakeControlGeometry(point,viewport=viewportSize()){
+  const p=sanitizeLayoutPoint(point);
+  const {w,h}=viewport;
+  const ratio=859/1024;
+  const base=clamp(w*.08,78,102);
+  const width=Math.min(base*p.scale, h*.46*ratio);
+  const height=width/ratio;
+  const x=clamp(p.x*w,width/2+4,w-width/2-4);
+  const y=clamp(p.y*h,height/2+4,h-height/2-4);
+  return {width,height,x,y,scale:p.scale};
+}
+
+function placeHandbrake(el,point){
+  if(!el||!point)return;
+  const g=handbrakeControlGeometry(point);
+  const properties={
+    position:'fixed',left:g.x+'px',top:g.y+'px',right:'auto',bottom:'auto',
+    transform:'translate(-50%,-50%)','box-sizing':'border-box',
+    width:g.width+'px',height:g.height+'px',
+    'min-width':'0','min-height':'0','max-width':g.width+'px','max-height':g.height+'px',
+    'background-size':'100% 100%'
+  };
+  for(const [key,value] of Object.entries(properties))el.style.setProperty(key,value,'important');
+  el.dataset.tdrLayoutScale=String(g.scale);
+  delete el.dataset.tdrLayoutBaseWidth;
+}
+
+
   if(!root)return;
   const nodes=[
     root,
@@ -173,11 +204,11 @@ function hardenIosRaceControls(root){
 export function applyDomControlLayout(){
   const {controls,layout}=readControlLayout();
   const root=document.getElementById('tdr-race-controls');
+  placeHandbrake(document.getElementById('tdr-handbrake'),layout.handbrake);
   if(!root)return;
   hardenIosRaceControls(root);
   placeDom(root.querySelector('[data-stick]'),layout.steer);
   placeDom(root.querySelector('[data-pedal="gas"]'),layout.gas);
   placeDom(root.querySelector('[data-pedal="brake"]'),layout.brake);
-  placeDom(document.getElementById('tdr-handbrake'),layout.handbrake);
   if(controls.steeringMode==='wheel')placeDom(document.getElementById('tdr-steering-wheel'),layout.steer);
 }
