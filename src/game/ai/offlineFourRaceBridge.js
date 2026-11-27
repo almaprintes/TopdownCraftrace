@@ -1,4 +1,5 @@
 // Reuse the physical LIVE4 bot director, never the network race bridge.
+import '../ui/craftraceLiveV2Lobby.css';
 import {CrafRaceLive4BotDirector} from '../online/craftraceLiveV2BotDirector.js';
 import {live4SeatName} from '../online/craftraceLiveV2PilotNames.js';
 import {resolveLive4AiPilots,resolvedLive4AiPilotIds} from '../online/craftraceLive4AiSelection.js';
