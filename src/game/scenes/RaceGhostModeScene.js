@@ -6,7 +6,7 @@ const GHOST_PREFIX='tdr2:ghost:';
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 
 function readMode(data){
-  if(data?.gameMode==='ghost'||data?.gameMode==='timeattack')return data.gameMode;
+  if(data?.gameMode==='offline-ai'||data?.gameMode==='ghost'||data?.gameMode==='timeattack')return data.gameMode;
   try{return localStorage.getItem(MODE_KEY)||'timeattack';}catch{return 'timeattack';}
 }
 

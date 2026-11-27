@@ -162,7 +162,13 @@ export class RaceScene extends EmbeddedReplayRaceScene{
   _tdrCleanupIgnitionStart(){try{this._tdrIgnitionLightsCall?.remove?.();}catch{}this._tdrIgnitionLightsCall=null;this._tdrRemoveIgnitionButton();}
   _tdrBeginLights(){
     if(this._crafRaceLiveOnlineIntent)return;
-    if(this._startState!=='READY')return;this._startState='COUNTDOWN';
+    if(this._startState!=='READY')return;
+    if(this._offlineFourRace&&!this._offlineFourBridge?.ready){
+      if(this._startStatus)this._startStatus.setText(this._offlineFourError?'ERROR IA · VUELVE AL MENÚ':'PREPARANDO RIVALES IA…');
+      if(!this._offlineFourError)this._tdrIgnitionLightsCall=this.time.delayedCall(100,()=>{this._tdrIgnitionLightsCall=null;this._tdrBeginLights();});
+      return;
+    }
+    this._startState='COUNTDOWN';
     if(this._startHint)this._startHint.setText('Mantente listo...');if(this._startStatus){this._startStatus.setText('RED LIGHTS');this._startStatus.setColor('#ffffff');}
     if(this._startAsset)this._startAsset.setTexture('start_base');const stepMs=600;
     for(let i=1;i<=6;i++)this.time.delayedCall(stepMs*i,()=>{if(this._startAsset)this._startAsset.setTexture(`start_l${i}`);});

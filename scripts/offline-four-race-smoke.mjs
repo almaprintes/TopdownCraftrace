@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {makeOfflineFourRace,offlineFourRoster,rankOfflineFour,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../src/game/ai/offlineFourRace.js';
+const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+for(const trackKey of OFFLINE_FOUR_TRACKS)for(const laps of OFFLINE_FOUR_LAPS)for(const difficulty of [1,2,3])for(const humanSeat of [0,1,2,3]){
+  const config=makeOfflineFourRace({trackKey,carId:'avenir_gripline',laps,difficulty,humanSeat,seed:'smoke'});
+  assert.deepEqual(makeOfflineFourRace(config),config,'rematch must retain exact configuration');
+  const roster=offlineFourRoster(difficulty,humanSeat);
+  assert.equal(roster.length,4);assert.equal(roster.filter(p=>p.kind==='human').length,1);
+  assert.equal(roster.find(p=>p.kind==='human').seat,humanSeat);
+  assert.equal(roster.filter(p=>p.kind==='ai'&&p.difficulty===difficulty).length,3);
+  assert.equal(new Set(roster.map(p=>p.seat)).size,4);
+}
+assert.throws(()=>makeOfflineFourRace({trackKey:'practice-area',carId:'stock'}));
+assert.throws(()=>offlineFourRoster(4));
+assert.throws(()=>offlineFourRoster(3,4));
+assert.deepEqual(rankOfflineFour([{seat:0,elapsedMs:null},{seat:1,elapsedMs:1200},{seat:2,elapsedMs:1000},{seat:3,elapsedMs:1200}]).map(x=>x.seat),[2,1,3,0]);
+const bridge=read('src/game/ai/offlineFourRaceBridge.js');
+assert.match(bridge,/CrafRaceLive4BotDirector/);
+assert.match(bridge,/director\.update\(deltaMs,clock,started\)/);
+assert.match(bridge,/scene\.events\.once\('shutdown',stop\)/);
+assert.doesNotMatch(bridge,/fetch\(|WebSocket|PositionLink|LobbyMonitor|finishLiveV2Lobby|showRewardedAd|requestLiveV2Rematch/);
+const scene=read('src/game/scenes/RaceScene.js');
+assert.match(scene,/_offlineFourRace\?\.humanSeat/);
+assert.match(scene,/_offlineFourBridge\?\.update/);
+assert.match(scene,/MAX_GRID_CARS = this\._offlineFourRace\?0:/,'Only the three new AI cars may spawn');
+assert.match(scene,/ttHistKey = this\._crafRaceLiveV2RoomId \? null : this\._offlineFourRace \? null/);
+assert.match(read('src/game/scenes/RaceSessionRewardsScene.js'),/this\._crafRaceLiveV2RoomId\|\|this\._offlineFourRace/);
+assert.match(read('src/game/scenes/RaceCleanLapScene.js'),/if\(this\._offlineFourRace\)return 0/);
+assert.match(read('src/game/scenes/MenuGameModeSnapScene.js'),/!IS_PROD_BUILD\?\[\{key:'offline-ai'/);
+console.log('PASS: 180 local configs, four unique seats, rematch, ranking, DEV isolation, no race network transport.');

@@ -80,7 +80,8 @@ export class RaceScene extends CurrentRaceScene {
   }
 
   _grantCleanComboCoins(){
-    if(this._crafRaceLiveV2RoomId)return 0; // LIVE 4 is an unofficial DEV race.
+    if(this._crafRaceLiveV2RoomId)return 0;
+    if(this._offlineFourRace)return 0; // LIVE 4 is an unofficial DEV race.
     if(this._cleanComboCoinsGranted)return Number(this._cleanComboCoinReward)||0;
     this._cleanComboCoinsGranted=true;
     const amount=cleanComboCoins(this._cleanLapBestCombo);
@@ -207,7 +208,7 @@ export class RaceScene extends CurrentRaceScene {
   update(time,delta){
     super.update?.(time,delta);
     // A/B and LIVE 4 DEV must not advance clean-lap missions or awards.
-    if(this._physicsABPractice||this._crafRaceLiveV2RoomId){
+    if(this._physicsABPractice||this._crafRaceLiveV2RoomId||this._offlineFourRace){
       this._retireLegacyDeltaHud();
       this._closeLiveHudForSessionEnd();
       return;

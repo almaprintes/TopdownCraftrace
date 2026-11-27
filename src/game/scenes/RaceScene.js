@@ -1,5 +1,6 @@
 import {attachCrafRaceLivePilot} from '../online/craftraceLiveRaceBridge.js';
 import {makeLive4StartingGrid,live4CompactGridTrack} from '../online/craftraceLiveV2GridGeometry.js';
+import {makeOfflineFourRace} from '../ai/offlineFourRace.js';
 import {skinGeometryForSprite} from '../skins/skinGeometry.js';
 import {selectedCarSkinFile,getEquippedCarSkin,hasPublishedCarArt} from '../skins/carSkins.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
@@ -506,6 +507,9 @@ else this._ttProg.idx = startIdx;
   }
 init(data) {
     this._raceEntryData={...(data||{})};
+    this._offlineFourRace=!IS_PROD_BUILD&&data?.gameMode==='offline-ai'?
+      makeOfflineFourRace(data.offlineFourRace):null;
+    this._offlineFourBridge=null;this._offlineFourError=null;
     // Local DEV camera producer. No player seat, server state or real-time channel.
     this._crafRaceDirectorPreview=!IS_PROD_BUILD&&data?.directorPreview===true&&
       data?.gameMode==='director'&&window.location.pathname.includes('/dev/')&&
@@ -527,7 +531,7 @@ init(data) {
     try{
       const selected=JSON.parse(localStorage.getItem('tdr2:settings')||'{}')?.controls?.physicsAB;
       const gameMode=data?.gameMode||localStorage.getItem('tdr2:gameMode')||'timeattack';
-      if(selected==='B'&& !['ghost','survival','duel','online','director'].includes(gameMode))
+      if(selected==='B'&& !['ghost','survival','duel','online','director','offline-ai'].includes(gameMode))
         this._physicsABMode='B';
     }catch{}
     this._physicsABPractice=this._physicsABMode==='B';
@@ -535,7 +539,7 @@ init(data) {
     // editor that did not pass testMode. Never return a local track to the lobby.
   const isTrackStudioPreview = !IS_PROD_BUILD && (data?.trackKey === LOCAL_KARTING_PREVIEW_KEY ||
     data?.trackKey === LOCAL_STUDIO_VECTOR_PREVIEW_KEY);
-  this._testMode = !!data?.testMode || isTrackStudioPreview || Boolean(this._crafRaceLiveV2RoomId) || this._crafRaceDirectorPreview;
+  this._testMode = !!data?.testMode || isTrackStudioPreview || Boolean(this._crafRaceLiveV2RoomId) || this._crafRaceDirectorPreview || Boolean(this._offlineFourRace);
   if (isTrackStudioPreview) {
     this._returnSceneKey = ['Track','Studio','Scene'].join('');
     this._returnSceneData = { fromTrackStudioPreview: true };
@@ -543,7 +547,7 @@ init(data) {
       data?.directorFromPaddock===true&&data?.trackKey==='santa-cruz'){
     this._returnSceneKey='admin-hub';
     this._returnSceneData={fromPaddockDirector:true};
-  } else if (this._testMode && !this._crafRaceLiveV2RoomId && !this._crafRaceDirectorPreview) {
+  } else if (this._testMode && !this._crafRaceLiveV2RoomId && !this._crafRaceDirectorPreview && !this._offlineFourRace) {
     // Preserve the existing Vehicle Lab test-drive return path.
     const carId = data?.carId || this.carId || 'stock';
     this._returnSceneKey = 'car-editor';
@@ -600,7 +604,7 @@ if(data?.directorFromPaddock!==true)
   // Never nest B keys below the official ttHist/ttBest prefixes: some
   // downstream rankings enumerate those namespaces rather than exact keys.
   const abPracticePrefix=`tdr2:physicsAB:B:${this.trackKey}:${this.carId}`;
-  this.ttHistKey = this._crafRaceLiveV2RoomId ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
+  this.ttHistKey = this._crafRaceLiveV2RoomId ? null : this._offlineFourRace ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
     ? `${abPracticePrefix}:laps`
     : `tdr2:ttHist:${this.trackKey}`;
   this.ttHistory = [];
@@ -621,7 +625,7 @@ if(data?.directorFromPaddock!==true)
   // ========================================
   // Time Trial: best lap + splits por pista
   // ========================================
-  this.ttKey = this._crafRaceLiveV2RoomId ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
+  this.ttKey = this._crafRaceLiveV2RoomId ? null : this._offlineFourRace ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
     ? `${abPracticePrefix}:best`
     : `tdr2:ttBest:${this.trackKey}`;
   this.ttBest = null;
@@ -1216,14 +1220,14 @@ const gridPositions=canParallel
     {x:baseGrid.x-Math.cos(baseGrid.r)*longitudinalGap,
      y:baseGrid.y-Math.sin(baseGrid.r)*longitudinalGap,r:baseGrid.r}];
 // LIVE 4 uses a dedicated 2×2 or staggered single-file grid; never alter 2P.
-const live4Grid=this._crafRaceLiveV2RoomId
+const live4Grid=(this._crafRaceLiveV2RoomId||this._offlineFourRace)
  ?makeLive4StartingGrid({start:baseGrid,trackWidth,carScale:trackScale,capacity:4,
    centerline:t01.raceCenterline||t01.centerline,finishLine:t01.finishLine||t01.finish,
    compact:live4CompactGridTrack(this.trackKey),trackShape:t01.trackShape,
    vehicleVisualScale:CAR_SPECS[this.carId]?.visualScale??1}):null;
 this._crafRaceLiveV2Grid=live4Grid;
 const spawnSlot=live4Grid
- ?live4Grid.positions[this._crafRaceLiveGridSlot||0]
+ ?live4Grid.positions[this._offlineFourRace?.humanSeat??this._crafRaceLiveGridSlot??0]
  :onlineGrid?gridPositions[this._crafRaceLiveGridSlot===1?1:0]:slot0;
 const GRID_SPAWN_BACK = live4Grid?.trackAligned ? 0 : 44;
 // Aligned LIVE 4 grid positions are final physical centers: no extra shift.
@@ -1306,7 +1310,13 @@ rig.setDepth(30);
 this.carBody = body;
 this.carRig = rig;
 this.car = body; // compat con tu update()
-if(this._crafRaceDirectorPreview){
+if(this._offlineFourRace){
+ const config=this._offlineFourRace;
+ void import('../ai/offlineFourRaceBridge.js').then(({attachOfflineFourRace})=>{
+  if(this.sys?.isActive?.()&&this._offlineFourRace===config)
+   this._offlineFourBridge=attachOfflineFourRace(this,config);
+ }).catch(err=>{if(this.sys?.isActive?.()&&this._offlineFourRace===config){this._offlineFourError=err;console.error('[Offline IA]',err);}});
+}else if(this._crafRaceDirectorPreview){
  void import('../online/craftraceDirectorPreview.js').then(({attachCrafRaceDirectorPreview})=>{
   if(this.sys?.isActive?.()&&this._crafRaceDirectorPreview)
    this._crafRaceDirectorBridge=attachCrafRaceDirectorPreview(this,{
@@ -1363,7 +1373,7 @@ const aiSkinPool = Object.values(CAR_SPECS).filter((s) =>
   s.id !== specFinal.id && hasPublishedCarArt(s.id)
 );
   this.gridCars = [];
-const MAX_GRID_CARS = (onlineGrid||this._crafRaceDirectorPreview)?0:gridSpawns.length;
+const MAX_GRID_CARS = this._offlineFourRace?0:(onlineGrid||this._crafRaceDirectorPreview)?0:gridSpawns.length;
 
 for (let i = 1; i < MAX_GRID_CARS; i++) {
   const aiSpawn0 = gridSpawns[i];
@@ -3580,6 +3590,7 @@ try { this.cameras.main.ignore(this._touchDbg); } catch (e) {}
   update(time, deltaMs) {
     this._crafRaceDirectorBridge?.update(performance.now(),deltaMs);
     this._crafRaceLiveBridge?.update(performance.now(),deltaMs);
+    this._offlineFourBridge?.update(performance.now(),deltaMs);
     const dt = Math.min(0.05, (deltaMs || 0) / 1000);
 
 // ✅ SIM TICK (aprox) — base para cronómetro determinista
@@ -3732,7 +3743,10 @@ if(this._crafRaceLiveOnlineIntent&&this._crafRaceLiveStartAt&&this._crafRaceLive
    this.lapStartTick=this.simTick;
   }
 }
-if (!this._crafRaceLiveOnlineIntent && !this._crafRaceDirectorPreview && !this._startAutoFired && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
+if(this._offlineFourRace&&this._startState==='COUNTDOWN'&&!this._offlineFourBridge?.ready){
+ if(this._startStatus)this._startStatus.setText(this._offlineFourError?'ERROR IA · VUELVE AL MENÚ':'PREPARANDO RIVALES IA…');
+}
+if (!this._crafRaceLiveOnlineIntent && !this._crafRaceDirectorPreview && !this._startAutoFired && (!this._offlineFourRace||this._offlineFourBridge?.ready) && this._startState === 'COUNTDOWN' && (!this._iosStaticTrackRender || this._iosStaticTrackInitialReady)) {
   this._startAutoFired = true;
 
   if (this._startHint) this._startHint.setText('Mantente listo...');

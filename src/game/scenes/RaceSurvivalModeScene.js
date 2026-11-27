@@ -7,7 +7,7 @@ const MODE_KEY='tdr2:gameMode';
 const rand=(a,b)=>a+Math.random()*(b-a);
 
 function readMode(data){
-  if(['timeattack','ghost','survival'].includes(data?.gameMode))return data.gameMode;
+  if(['offline-ai','timeattack','ghost','survival'].includes(data?.gameMode))return data.gameMode;
   try{return localStorage.getItem(MODE_KEY)||'timeattack';}catch{return'timeattack';}
 }
 function visualCarSprite(scene){
