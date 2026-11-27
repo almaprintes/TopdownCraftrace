@@ -1,7 +1,7 @@
 import { MenuScene as CurrentMenuScene } from './MenuSeasonScene.js';
 import { t, getLanguage } from '../i18n/index.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
-import {makeOfflineFourRace,prepareOfflineFourLaunch,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../ai/offlineFourRace.js';
+import {makeOfflineFourRace,prepareOfflineFourLaunch,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS,OFFLINE_DEFAULT_CONTACT} from '../ai/offlineFourRace.js';
 import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 
 const MODE_KEY='tdr2:gameMode';
@@ -129,11 +129,11 @@ export class MenuScene extends CurrentMenuScene {
     const makeSelect=(label,options)=>{const wrap=document.createElement('label');wrap.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700';wrap.textContent=label;const select=document.createElement('select');select.style.cssText='width:60%;min-height:36px;background:#152e40;color:white;border:1px solid #678;border-radius:6px;font:inherit';for(const [value,text] of options){const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option);}wrap.append(select);panel.append(wrap);return select;};
     const capacity=makeSelect(tr('Participantes','Drivers'),initialCapacity===2?[[2,tr('2 · Tú + 1 IA','2 · You + 1 AI')]]:[[4,tr('4 · Tú + 3 IA','4 · You + 3 AI')],[17,tr('17 · Plantilla completa · EXP','17 · Full roster · EXP')]]);
     capacity.value=String(initialCapacity);
-    const tracks=makeSelect(tr('Circuito','Circuit'),OFFLINE_FOUR_TRACKS.map(id=>[id,({'santa-cruz':'Santa Cruz','karting-canarias-4096':'Karting Canarias','karting-tenerife-horario':'Karting Tenerife · Normal'})[id]]));
+    const tracks=makeSelect(tr('Circuito','Circuit'),OFFLINE_FOUR_TRACKS.map(id=>[id,({'santa-cruz':'Santa Cruz','karting-canarias-4096':'Karting Canarias','karting-tenerife-horario':'Karting Tenerife · Normal','circuito-atlantico':tr('Circuito Atlántico · EXP','Atlantic Circuit · EXP')})[id]]));
     try{const chosen=selectedCircuitRaceId(this.selectedTrackKey,localStorage);if(OFFLINE_FOUR_TRACKS.includes(chosen))tracks.value=chosen;}catch{}
     const laps=makeSelect(tr('Vueltas','Laps'),OFFLINE_FOUR_LAPS.map(n=>[n,String(n)]));laps.value='3';
     const difficulty=makeSelect(tr('Dificultad','Difficulty'),[[1,tr('Principiante','Rookie')],[2,tr('Competitivo','Competitive')],[3,tr('Experto','Expert')]]);difficulty.value='2';
-    const contact=makeSelect(tr('Colisiones','Collisions'),[['ghost',tr('Fantasma · Sin contacto','Ghost · No contact')],['soft',tr('Contacto suave · EXP','Soft contact · EXP')],['full',tr('Contacto completo · EXP','Full contact · EXP')]]);contact.value='ghost';
+    const contact=makeSelect(tr('Colisiones','Collisions'),[['ghost',tr('Fantasma · Sin contacto','Ghost · No contact')],['soft',tr('Contacto suave','Soft contact')],['full',tr('Contacto completo · EXP','Full contact · EXP')]]);contact.value=OFFLINE_DEFAULT_CONTACT;
     const note=document.createElement('small');note.textContent=tr('Prueba DEV · Sin clasificación online ni recompensas.','DEV test · No online ranking or rewards.');panel.append(note);
     const syncCapacity=()=>{
       const full=capacity.value==='17';
@@ -141,7 +141,8 @@ export class MenuScene extends CurrentMenuScene {
       if(full){tracks.value='santa-cruz';difficulty.value='3';}
       note.textContent=full?tr('EXPERIMENTAL · 16 IA únicas · Santa Cruz · Sin premios','EXPERIMENTAL · 16 unique AI · Santa Cruz · No rewards'):tr('Prueba DEV · Sin clasificación online ni recompensas.','DEV test · No online ranking or rewards.');
     };
-    capacity.onchange=syncCapacity;syncCapacity();
+    const syncTrackNote=()=>{if(capacity.value!=='17')note.textContent=tracks.value==='circuito-atlantico'?tr('Atlántico experimental · IA pendiente de calibración · Sin premios','Experimental Atlantic · AI calibration pending · No rewards'):tr('Prueba DEV · Sin clasificación online ni recompensas.','DEV test · No online ranking or rewards.');};
+    tracks.onchange=syncTrackNote;capacity.onchange=()=>{syncCapacity();syncTrackNote();};syncCapacity();syncTrackNote();
     const actions=document.createElement('div');actions.style.cssText='display:flex;gap:10px';
     const button=(text,primary)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.style.cssText='flex:1;min-height:40px;border:1px solid #ff9f43;border-radius:8px;background:'+(primary?'#ff9f43;color:#111':'#14283a;color:#fff')+';font:800 13px system-ui';actions.append(b);return b;};
     const back=button(tr('VOLVER','BACK'),false);back.onclick=()=>{this._closeGameModeModal();this._openGameModeModal();};

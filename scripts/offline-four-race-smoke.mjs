@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {makeOfflineFourRace,prepareOfflineFourLaunch,offlineFourRoster,offlineFullPilotIds,offlineHudEntries,rankOfflineFour,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../src/game/ai/offlineFourRace.js';
+import {makeOfflineFourRace,prepareOfflineFourLaunch,offlineFourRoster,offlineFullPilotIds,offlineHudEntries,rankOfflineFour,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS,OFFLINE_DEFAULT_CONTACT} from '../src/game/ai/offlineFourRace.js';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 for(const trackKey of OFFLINE_FOUR_TRACKS)for(const laps of OFFLINE_FOUR_LAPS)for(const difficulty of [1,2,3])for(const humanSeat of [0,1,2,3]){
   const config=makeOfflineFourRace({trackKey,carId:'avenir_gripline',laps,difficulty,humanSeat,seed:'smoke'});
@@ -28,7 +28,7 @@ assert.match(scene,/ttHistKey = this\._crafRaceLiveV2RoomId \? null : this\._off
 assert.match(read('src/game/scenes/RaceSessionRewardsScene.js'),/this\._crafRaceLiveV2RoomId\|\|this\._offlineFourRace/);
 assert.match(read('src/game/scenes/RaceCleanLapScene.js'),/if\(this\._offlineFourRace\)return 0/);
 assert.match(read('src/game/scenes/MenuGameModeSnapScene.js'),/!IS_PROD_BUILD\?\[\{key:'offline-ai'/);
-console.log('PASS: 180 local configs, four unique seats, rematch, ranking, DEV isolation, no race network transport.');
+console.log('PASS: '+(OFFLINE_FOUR_TRACKS.length*OFFLINE_FOUR_LAPS.length*3*4)+' local configs, four unique seats, rematch, ranking, DEV isolation, no race network transport.');
 
 const launchConfig=makeOfflineFourRace({trackKey:'santa-cruz',carId:'avenir_gripline',laps:3,difficulty:3,humanSeat:2,seed:'preflight'});
 assert.deepEqual(await prepareOfflineFourLaunch(launchConfig,async()=>true),{trackKey:'santa-cruz',carId:'avenir_gripline',gameMode:'offline-ai',offlineFourRace:launchConfig});
@@ -103,7 +103,7 @@ assert.ok(offlineRouteProgress(extendedRoute,{x:0,y:500,laps:0,phase:0})<0);
 for(const contact of ['ghost','soft','full']){
  const c=makeOfflineFourRace({...launchConfig,contact});assert.equal(c.contact,contact);assert.deepEqual(makeOfflineFourRace(c),c);
 }
-assert.equal(launchConfig.contact,'ghost');assert.throws(()=>makeOfflineFourRace({...launchConfig,contact:'other'}));
+assert.equal(OFFLINE_DEFAULT_CONTACT,'soft');assert.equal(launchConfig.contact,'soft');assert.throws(()=>makeOfflineFourRace({...launchConfig,contact:'other'}));
 assert.match(bridge,/config.contact==='ghost'\?null:createOfflineContactPhysics/);
 assert.match(menu,/contact:contact.value/);
 
@@ -181,3 +181,25 @@ for(const [actual,expected] of checks)if(actual!==expected)throw Error(actual+' 
 }
 assert.match(bridge,/formatRaceResultTime as fmt,formatRaceResultGap as gapFmt/);
 console.log('PASS: minute-second-millisecond presentation and signed gaps');
+
+assert.match(menu,/contact.value=OFFLINE_DEFAULT_CONTACT/);
+for(const capacity of [2,4,17]){
+ const c=makeOfflineFourRace({...launchConfig,capacity,humanSeat:0,contact:undefined});
+ assert.equal(c.contact,'soft');assert.equal(makeOfflineFourRace({...c,contact:'ghost'}).contact,'ghost');
+}
+for(const capacity of [2,4])assert.equal(makeOfflineFourRace({...launchConfig,trackKey:'circuito-atlantico',capacity,humanSeat:0}).trackKey,'circuito-atlantico');
+assert.throws(()=>makeOfflineFourRace({...launchConfig,trackKey:'circuito-atlantico',capacity:17}));
+// The CI installer stages the official Atlantic source; check its actual gate/grid.
+// The repository fallback is older, so only enforce authored-geometry checks when installed.
+const atlantic=JSON.parse(read('src/game/tracks/library/track01/track.json'));
+if(atlantic.meta?.trackId==='circuito-atlantico'&&atlantic.closed===true&&atlantic.finishLine?.normal){
+ const cl=atlantic.raceDirection==='reverse'?atlantic.centerline.slice().reverse():atlantic.centerline;
+ for(const capacity of [2,4]){
+  const grid=makeLive4StartingGrid({start:atlantic.start,trackWidth:atlantic.trackWidth,carScale:atlantic.carScale||1,centerline:cl,finishLine:atlantic.finishLine,capacity});
+  assert.equal(grid.positions.length,capacity);assert.equal(grid.trackAligned,true);
+  assert.ok(grid.positions.every(p=>[p.x,p.y,p.r].every(Number.isFinite)));
+ }
+ const tracker=makeLive4LapGates({centerline:cl,trackWidth:atlantic.trackWidth,finishLine:atlantic.finishLine,checkpoints:atlantic.checkpoints});
+ assert.equal(tracker.gates.length,3);assert.equal(tracker.usedAuthoredFinish,true);
+}
+console.log('PASS: soft contact default, explicit ghost retained, Atlantic limited to 2/4 drivers');

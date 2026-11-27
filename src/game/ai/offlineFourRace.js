@@ -1,10 +1,11 @@
 import {AI_ELO_PILOTS} from './craftraceAiEloLeague.js';
 // Local-only four-car race setup. No account, server ID, room, or network transport.
-export const OFFLINE_FOUR_TRACKS=Object.freeze(['santa-cruz','karting-canarias-4096','karting-tenerife-horario']);
+export const OFFLINE_FOUR_TRACKS=Object.freeze(['santa-cruz','karting-canarias-4096','karting-tenerife-horario','circuito-atlantico']);
 export const OFFLINE_FOUR_LAPS=Object.freeze([1,3,5,10,20]);
 export const OFFLINE_RACE_CAPACITIES=Object.freeze([2,4,17]);
 export const OFFLINE_CONTACT_MODES=Object.freeze(['ghost','soft','full']);
-export function makeOfflineFourRace({trackKey,carId,laps=3,difficulty=2,capacity=4,contact='ghost',humanSeat=Math.floor(Math.random()*capacity),seed='local-'+Date.now()+'-'+Math.random()}={}){
+export const OFFLINE_DEFAULT_CONTACT='soft';
+export function makeOfflineFourRace({trackKey,carId,laps=3,difficulty=2,capacity=4,contact=OFFLINE_DEFAULT_CONTACT,humanSeat=Math.floor(Math.random()*capacity),seed='local-'+Date.now()+'-'+Math.random()}={}){
   if(!OFFLINE_FOUR_TRACKS.includes(trackKey)||typeof carId!=='string'||!carId.trim()||
      !OFFLINE_FOUR_LAPS.includes(laps)||![1,2,3].includes(difficulty)||
      !OFFLINE_RACE_CAPACITIES.includes(capacity)||!OFFLINE_CONTACT_MODES.includes(contact)||(capacity===17&&trackKey!=='santa-cruz')||
