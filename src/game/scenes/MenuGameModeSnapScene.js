@@ -1,7 +1,7 @@
 import { MenuScene as CurrentMenuScene } from './MenuSeasonScene.js';
 import { t, getLanguage } from '../i18n/index.js';
 import {IS_PROD_BUILD} from '../buildTarget.js';
-import {makeOfflineFourRace,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../ai/offlineFourRace.js';
+import {makeOfflineFourRace,prepareOfflineFourLaunch,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../ai/offlineFourRace.js';
 import {selectedCircuitRaceId} from '../tracks/trackReverseVariant.js';
 
 const MODE_KEY='tdr2:gameMode';
@@ -135,7 +135,30 @@ export class MenuScene extends CurrentMenuScene {
     const actions=document.createElement('div');actions.style.cssText='display:flex;gap:10px';
     const button=(text,primary)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.style.cssText='flex:1;min-height:40px;border:1px solid #ff9f43;border-radius:8px;background:'+(primary?'#ff9f43;color:#111':'#14283a;color:#fff')+';font:800 13px system-ui';actions.append(b);return b;};
     const back=button(tr('VOLVER','BACK'),false);back.onclick=()=>{this._closeGameModeModal();this._openGameModeModal();};
-    const start=button(tr('COMENZAR CARRERA','START RACE'),true);start.onclick=()=>{try{const config=makeOfflineFourRace({trackKey:tracks.value,carId:this.selectedCarId,laps:Number(laps.value),difficulty:Number(difficulty.value)});start.disabled=true;try{localStorage.setItem(MODE_KEY,'offline-ai');}catch{}this._closeGameModeModal();this.scene.start('race',{...config,gameMode:'offline-ai',offlineFourRace:config});}catch(error){note.textContent=String(error.message);start.disabled=false;}};
+    const start=button(tr('COMENZAR CARRERA','START RACE'),true);
+    start.onclick=async()=>{
+      if(start.disabled)return;
+      start.disabled=true;back.disabled=true;
+      note.textContent=tr('Preparando circuito y rivales…','Preparing circuit and rivals…');
+      try{
+        let carId=this.selectedCarId;
+        if(!carId)try{carId=localStorage.getItem('tdr2:carId');}catch{}
+        const config=makeOfflineFourRace({trackKey:tracks.value,carId,laps:Number(laps.value),difficulty:Number(difficulty.value)});
+        const data=await prepareOfflineFourLaunch(config,async()=>{
+          if(typeof globalThis.__tdrWarmRaceScene!=='function')return false;
+          if(await globalThis.__tdrWarmRaceScene()!==true)return false;
+          const module=await import('../ai/offlineFourRaceBridge.js');
+          return typeof module.attachOfflineFourRace==='function';
+        });
+        if(!root.isConnected||this._gameModeDom!==root||this.sys?.isActive?.()===false)return;
+        try{localStorage.setItem(MODE_KEY,'offline-ai');}catch{}
+        // Keep configuration visible until Phaser actually shuts down the lobby.
+        this.scene.start('race',data);
+      }catch(error){
+        console.error('[Offline IA] Launch failed',error);
+        if(root.isConnected){note.textContent=tr('No se pudo iniciar: ','Could not start: ')+String(error?.message||error);start.disabled=false;back.disabled=false;}
+      }
+    };
     panel.append(actions);root.append(panel);document.body.append(root);this._gameModeDom=root;this._gameModeModal=root;
   }
 

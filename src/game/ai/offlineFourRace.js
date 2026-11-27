@@ -16,3 +16,10 @@ export function offlineFourRoster(difficulty,humanSeat=0){
 export function rankOfflineFour(rows){
   return [...rows].sort((a,b)=>(a.elapsedMs??Infinity)-(b.elapsedMs??Infinity)||a.seat-b.seat);
 }
+
+// Preflight must finish before leaving the selection screen.
+export async function prepareOfflineFourLaunch(config,prepare){
+  const valid=makeOfflineFourRace(config);
+  if(typeof prepare!=='function'||await prepare()!==true)throw Error('Módulo de carrera no disponible. Vuelve a intentarlo.');
+  return {trackKey:valid.trackKey,carId:valid.carId,gameMode:'offline-ai',offlineFourRace:valid};
+}

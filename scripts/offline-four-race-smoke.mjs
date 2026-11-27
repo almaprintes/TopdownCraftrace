@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {makeOfflineFourRace,offlineFourRoster,rankOfflineFour,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../src/game/ai/offlineFourRace.js';
+import {makeOfflineFourRace,prepareOfflineFourLaunch,offlineFourRoster,rankOfflineFour,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../src/game/ai/offlineFourRace.js';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 for(const trackKey of OFFLINE_FOUR_TRACKS)for(const laps of OFFLINE_FOUR_LAPS)for(const difficulty of [1,2,3])for(const humanSeat of [0,1,2,3]){
   const config=makeOfflineFourRace({trackKey,carId:'avenir_gripline',laps,difficulty,humanSeat,seed:'smoke'});
@@ -29,3 +29,13 @@ assert.match(read('src/game/scenes/RaceSessionRewardsScene.js'),/this\._crafRace
 assert.match(read('src/game/scenes/RaceCleanLapScene.js'),/if\(this\._offlineFourRace\)return 0/);
 assert.match(read('src/game/scenes/MenuGameModeSnapScene.js'),/!IS_PROD_BUILD\?\[\{key:'offline-ai'/);
 console.log('PASS: 180 local configs, four unique seats, rematch, ranking, DEV isolation, no race network transport.');
+
+const launchConfig=makeOfflineFourRace({trackKey:'santa-cruz',carId:'avenir_gripline',laps:3,difficulty:3,humanSeat:2,seed:'preflight'});
+assert.deepEqual(await prepareOfflineFourLaunch(launchConfig,async()=>true),{trackKey:'santa-cruz',carId:'avenir_gripline',gameMode:'offline-ai',offlineFourRace:launchConfig});
+await assert.rejects(prepareOfflineFourLaunch(launchConfig,async()=>false),/Módulo de carrera no disponible/);
+await assert.rejects(prepareOfflineFourLaunch(launchConfig,async()=>{throw Error('chunk unavailable')}),/chunk unavailable/);
+const menu=read('src/game/scenes/MenuGameModeSnapScene.js');
+assert.match(menu,/await prepareOfflineFourLaunch/);
+assert.match(menu,/await globalThis\.__tdrWarmRaceScene\(\)/);
+assert.match(menu,/this\.scene\.start\('race',data\)/);
+console.log('PASS: offline launch waits for scene and AI module; failed preflight retains retry UI.');
