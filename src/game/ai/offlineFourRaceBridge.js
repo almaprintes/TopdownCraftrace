@@ -1,6 +1,7 @@
 // Reuse the physical LIVE4 bot director, never the network race bridge.
 import '../ui/craftraceLiveV2Lobby.css';
 import './offlineFourRace.css';
+import {createOfflineContactPhysics} from './offlineContactPhysics.js';
 import {dressResultPanel,resultHero,resultPortrait} from '../ui/raceResultsPresentation.js';
 import {makeOfflineStandingsRoute,offlineRouteProgress,rankOfflineLive,offlineCommonLapGap,offlineFastestLap} from './offlineFourStandings.js';
 import {getLanguage} from '../i18n/index.js';
@@ -20,6 +21,7 @@ export function attachOfflineFourRace(scene,config){
   const director=new CrafRaceLive4BotDirector(scene,{roster,hostId,localId:hostId,
     startingGrid:scene._crafRaceLiveV2Grid,laps:config.laps,
     live4GuidedGTrial:guided,aiIdentitySeed:seed,aiPilotIds});
+  const contacts=config.contact==='ghost'?null:createOfflineContactPhysics(scene,director,config);
   const centerline=scene.track?.meta?.raceCenterline||scene.track?.meta?.centerline;
   const route=makeOfflineStandingsRoute(centerline,director.lapGates,scene._crafRaceLiveV2Grid?.gridBackDistance);
   const element=(tag,cls,copy)=>{const node=document.createElement(tag);if(cls)node.className=cls;if(copy!=null)node.textContent=copy;return node;};
@@ -27,7 +29,8 @@ export function attachOfflineFourRace(scene,config){
   const hudHead=element('div','tdr-offline-hud-head'),position=element('b','','—/'+config.capacity),lap=element('small');
   hudHead.append(position,lap);hud.append(hudHead);
   const hudRows=roster.slice(0,4).map(()=>{const row=element('div','tdr-offline-hud-row');const cells=[element('span'),element('span'),element('span')];row.append(...cells);hud.append(row);return {row,cells};});
-  const foot=element('div','tdr-offline-hud-foot',tr('Δ en última vuelta común','Δ at last common lap'));hud.append(foot);const perf=full?element('div','tdr-offline-hud-foot','17 · EXP'):null;if(perf)hud.append(perf);document.body.append(hud);
+  const contactLabel=config.contact==='soft'?tr('CONTACTO SUAVE','SOFT CONTACT'):config.contact==='full'?tr('CONTACTO COMPLETO','FULL CONTACT'):tr('FANTASMA','GHOST');
+  const foot=element('div','tdr-offline-hud-foot',tr('Δ en última vuelta común','Δ at last common lap'));hud.append(foot);const perf=full?element('div','tdr-offline-hud-foot','17 · EXP'):null;if(perf)hud.append(perf);const contactHud=contacts?element('div','tdr-offline-hud-foot',contactLabel+' · EXP'):null;if(contactHud)hud.append(contactHud);document.body.append(hud);
   const labels=director.bots.map(bot=>({bot,label:scene.add.text(0,0,name(roster.find(r=>r.seat===bot.seat)),{
     fontFamily:'system-ui,sans-serif',fontSize:'11px',fontStyle:'bold',color:'#ffffff',stroke:'#07111d',strokeThickness:3
   }).setOrigin(.5,1).setDepth(75).setVisible(false)}));
@@ -50,6 +53,7 @@ export function attachOfflineFourRace(scene,config){
     if(playerFinish){hud.style.display='none';return;}
     if(!started||clock-lastHudAt<250)return;
     lastHudAt=clock;
+    if(contactHud)contactHud.textContent=contactLabel+' · '+contacts.playerImpacts+' '+tr('contactos','contacts');
     const rows=liveRows(),leader=rows[0],index=rows.findIndex(r=>r.human);
     position.textContent=(index+1)+'º / '+config.capacity;
     if(perf){perf.textContent='EXP · '+(frameSum>0?Math.round(1000*frameCount/frameSum):'—')+' FPS';frameSum=0;frameCount=0;}
@@ -91,6 +95,7 @@ export function attachOfflineFourRace(scene,config){
     const body=element('div','tdr-result-body');panel.append(body);
     const title=element('h2','',config.capacity===2?tr('DUELO IA · RESULTADOS','AI DUEL · RESULTS'):full?tr('PLANTILLA COMPLETA · RESULTADOS','FULL GRID · RESULTS'):tr('CARRERA IA · RESULTADOS','AI RACE · RESULTS'));body.append(title);
     const status=element('p','',allFinished?tr('CLASIFICACIÓN FINAL · LOCAL','FINAL CLASSIFICATION · LOCAL'):tr('ESPERANDO A LOS RIVALES…','WAITING FOR RIVALS…'));body.append(status);
+    if(contacts)body.append(element('p','tdr-offline-hud-foot',contactLabel+' · '+contacts.playerImpacts+' '+tr('contactos del jugador','player contacts')));
     if(allFinished){
       body.append(resultHero(rows.map(r=>({...r,time:fmt(r.elapsedMs)}))));
     }
@@ -138,6 +143,7 @@ export function attachOfflineFourRace(scene,config){
       }
     }
     director.update(deltaMs,clock,started);
+    if(contacts&&started&&!scene.physics?.world?.isPaused)contacts.update(deltaMs,clock,Boolean(playerFinish));
     paintLabels();renderHud();
     if(playerFinish)show();
   };

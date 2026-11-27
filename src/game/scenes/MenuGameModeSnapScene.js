@@ -133,6 +133,7 @@ export class MenuScene extends CurrentMenuScene {
     try{const chosen=selectedCircuitRaceId(this.selectedTrackKey,localStorage);if(OFFLINE_FOUR_TRACKS.includes(chosen))tracks.value=chosen;}catch{}
     const laps=makeSelect(tr('Vueltas','Laps'),OFFLINE_FOUR_LAPS.map(n=>[n,String(n)]));laps.value='3';
     const difficulty=makeSelect(tr('Dificultad','Difficulty'),[[1,tr('Principiante','Rookie')],[2,tr('Competitivo','Competitive')],[3,tr('Experto','Expert')]]);difficulty.value='2';
+    const contact=makeSelect(tr('Colisiones','Collisions'),[['ghost',tr('Fantasma · Sin contacto','Ghost · No contact')],['soft',tr('Contacto suave · EXP','Soft contact · EXP')],['full',tr('Contacto completo · EXP','Full contact · EXP')]]);contact.value='ghost';
     const note=document.createElement('small');note.textContent=tr('Prueba DEV · Sin clasificación online ni recompensas.','DEV test · No online ranking or rewards.');panel.append(note);
     const syncCapacity=()=>{
       const full=capacity.value==='17';
@@ -152,7 +153,7 @@ export class MenuScene extends CurrentMenuScene {
       try{
         let carId=this.selectedCarId;
         if(!carId)try{carId=localStorage.getItem('tdr2:carId');}catch{}
-        const config=makeOfflineFourRace({trackKey:tracks.value,carId,laps:Number(laps.value),difficulty:Number(difficulty.value),capacity:Number(capacity.value)});
+        const config=makeOfflineFourRace({trackKey:tracks.value,carId,laps:Number(laps.value),difficulty:Number(difficulty.value),capacity:Number(capacity.value),contact:contact.value});
         const data=await prepareOfflineFourLaunch(config,async()=>{
           if(typeof globalThis.__tdrWarmRaceScene!=='function')return false;
           if(await globalThis.__tdrWarmRaceScene()!==true)return false;

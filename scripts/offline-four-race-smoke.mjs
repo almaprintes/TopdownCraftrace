@@ -99,3 +99,10 @@ assert.equal(compact.positions.length,17);
 assert.ok(compact.gridBackDistance>0);
 const extendedRoute=makeOfflineStandingsRoute(line,gates,700);
 assert.ok(offlineRouteProgress(extendedRoute,{x:0,y:500,laps:0,phase:0})<0);
+
+for(const contact of ['ghost','soft','full']){
+ const c=makeOfflineFourRace({...launchConfig,contact});assert.equal(c.contact,contact);assert.deepEqual(makeOfflineFourRace(c),c);
+}
+assert.equal(launchConfig.contact,'ghost');assert.throws(()=>makeOfflineFourRace({...launchConfig,contact:'other'}));
+assert.match(bridge,/config.contact==='ghost'\?null:createOfflineContactPhysics/);
+assert.match(menu,/contact:contact.value/);
