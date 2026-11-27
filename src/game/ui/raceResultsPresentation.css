@@ -1,0 +1,28 @@
+/* One racing identity for all result overlays. No rules affect the active HUD. */
+.tdr-result-premium{border-color:#e2bb6b!important;border-radius:12px!important;background:radial-gradient(ellipse at 50% 0,#17516b88,transparent 55%),linear-gradient(145deg,#102e40,#06131f 75%)!important;box-shadow:0 0 0 1px #f0ca7755,0 18px 55px #000b!important}
+.tdr-result-premium h2,.tdr-result-premium .duel-t,.tdr-result-premium .tdrsurv-title{color:#ffda91!important;font-style:italic;font-weight:950;letter-spacing:.015em}
+.tdr-result-hero{display:grid;grid-template-columns:1fr 1.18fr 1fr;gap:9px;align-items:end;margin:9px 0 11px;isolation:isolate}
+.tdr-result-hero[data-count="2"]{grid-template-columns:1fr 1fr}.tdr-result-hero[data-count="1"]{grid-template-columns:minmax(0,260px);justify-content:center}
+.tdr-result-hero-card{min-width:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;--medal:#77cede;--shine:#143e50;overflow:hidden;border-radius:8px;background:radial-gradient(ellipse at 50% 20%,var(--shine),#071724 75%);border:1px solid var(--medal)}
+.tdr-result-hero-card[data-rank="1"]{--medal:#ffd47a;--shine:#a57825;border-color:var(--medal);box-shadow:0 0 14px #eab65755}
+.tdr-result-hero-card[data-rank="2"]{--medal:#bbdce9;--shine:#386375}.tdr-result-hero-card[data-rank="3"]{--medal:#d79b76;--shine:#754a38}
+.tdr-result-hero-card:before{content:"";position:absolute;inset:0;background:repeating-conic-gradient(#bcd9eb11 0 25%,transparent 0 50%) 0 0/32px 32px;mask-image:linear-gradient(135deg,transparent 30%,#000);pointer-events:none}
+.tdr-result-portrait{display:inline-grid;place-items:center;position:relative;isolation:isolate;overflow:hidden;width:34px;height:34px;flex:none;border:1px solid #7295ab;border-radius:7px;background:#193b4d;color:#cce4ed}
+.tdr-result-initials{font:900 12px system-ui}
+.tdr-result-portrait img{position:absolute!important;inset:0;width:100%!important;height:100%!important;object-fit:cover;border-radius:inherit!important;margin:0!important}
+.tdr-result-hero-card>.tdr-result-portrait{width:100%;height:clamp(55px,18dvh,145px);border:0;border-radius:0;background:transparent}
+.tdr-result-hero-card>.tdr-result-portrait img{object-fit:contain;object-position:center top;filter:drop-shadow(0 5px 6px #0008)}
+.tdr-result-hero-card>.tdr-result-portrait .tdr-result-initials{font-size:clamp(22px,6vh,45px);color:var(--medal)}
+.tdr-result-hero-card[data-rank="1"]>.tdr-result-portrait{height:clamp(65px,21dvh,165px)}
+.tdr-result-plaque{position:relative;display:flex;align-items:center;gap:7px;width:100%;box-sizing:border-box;padding:5px 8px;background:linear-gradient(115deg,var(--shine),#071724 65%);border-top:1px solid var(--medal);color:#f5fbff;text-align:left}
+.tdr-result-plaque>b{font:950 italic clamp(20px,4vh,34px) system-ui;color:var(--medal);flex:none}.tdr-result-plaque>div{min-width:0;display:grid;gap:1px}
+.tdr-result-plaque strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:900 clamp(10px,2.8vh,17px) system-ui}.tdr-result-plaque small{color:var(--medal);font:750 11px ui-monospace,monospace}
+.tdr-result-name-with-avatar{display:flex;align-items:center;gap:7px;min-width:0}.tdr-result-name-with-avatar strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tdr-result-name-with-avatar .tdr-result-portrait{width:24px;height:24px}
+.tdr-offline-results .tdr-result-premium{display:flex;flex-direction:column;overflow:hidden!important;padding:0!important;max-height:94dvh}
+.tdr-offline-results .tdr-result-body{overflow:auto;min-height:0;padding:9px 13px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.tdr-offline-results .tdr-offline-actions{flex:none;margin:0!important;padding:8px 13px;background:#061724;border-top:1px solid #be9c5a66}
+.tdr-offline-results .tdr-offline-actions button:first-child:not(:last-child),.tdr-result-premium .duel-a .p{background:linear-gradient(120deg,#ffe8a6,#dbac4e)!important;color:#101c25!important;border:1px solid #ffdc8d!important;font-style:italic}
+.tdr-report-paged .tdr-result-premium .hero{border-bottom:1px solid #d0a96266;padding-bottom:8px}
+.tdr-report-paged .tdr-result-premium .hero>.tdr-result-portrait{width:48px;height:48px;align-self:center}
+@media(max-height:460px){.tdr-result-hero{gap:5px;margin:5px 0}.tdr-result-hero-card>.tdr-result-portrait{height:clamp(46px,14dvh,75px)}.tdr-result-hero-card[data-rank="1"]>.tdr-result-portrait{height:clamp(53px,17dvh,90px)}.tdr-result-plaque{padding:3px 5px}.tdr-result-name-with-avatar .tdr-result-portrait{width:18px;height:18px}.tdr-offline-results .tdr-result-body{padding:7px 10px}.tdr-offline-results .tdr-offline-actions{padding:5px 10px}}
