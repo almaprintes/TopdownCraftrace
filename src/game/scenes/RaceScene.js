@@ -604,7 +604,7 @@ if(data?.directorFromPaddock!==true)
   // Never nest B keys below the official ttHist/ttBest prefixes: some
   // downstream rankings enumerate those namespaces rather than exact keys.
   const abPracticePrefix=`tdr2:physicsAB:B:${this.trackKey}:${this.carId}`;
-  this.ttHistKey = (this._crafRaceLiveV2RoomId||this._offlineFourRace) ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
+  this.ttHistKey = this._crafRaceLiveV2RoomId ? null : this._offlineFourRace ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
     ? `${abPracticePrefix}:laps`
     : `tdr2:ttHist:${this.trackKey}`;
   this.ttHistory = [];
@@ -625,7 +625,7 @@ if(data?.directorFromPaddock!==true)
   // ========================================
   // Time Trial: best lap + splits por pista
   // ========================================
-  this.ttKey = (this._crafRaceLiveV2RoomId||this._offlineFourRace) ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
+  this.ttKey = this._crafRaceLiveV2RoomId ? null : this._offlineFourRace ? null : this._crafRaceDirectorPreview ? null : this._physicsABPractice
     ? `${abPracticePrefix}:best`
     : `tdr2:ttBest:${this.trackKey}`;
   this.ttBest = null;
