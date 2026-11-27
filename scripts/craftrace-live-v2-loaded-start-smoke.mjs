@@ -45,5 +45,5 @@ const scene=read('src/game/scenes/RaceScene.js');
 assert.ok(scene.includes("this._crafRaceLiveV2RoomId?'ESPERANDO CARGA DE PILOTOS"));
 assert.ok(scene.includes("attachCrafRaceLivePilot(this,this._crafRaceLiveRoomId)"),'LIVE2 must be unchanged');
 const clean=read('src/game/scenes/RaceCleanLapScene.js');
-assert.ok(clean.includes("if(this._physicsABPractice||this._crafRaceLiveV2RoomId){"));
+assert.ok(clean.includes("if(this._physicsABPractice||this._crafRaceLiveV2RoomId||this._offlineFourRace){"),"LIVE 4, physics calibration and offline QA must all exclude clean-lap missions");
 console.log('PASS LIVE4 loaded-first grid: private ack, all-human barrier, server GO, DEV-only coin/mission isolation, 2P untouched');
