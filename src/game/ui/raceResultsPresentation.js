@@ -12,9 +12,9 @@ export function rememberResultPlayerAvatar(url){
     /^https:\/\/juukbnkjboiazqggqcyv\.supabase\.co\/storage\/v1\/object\/public\/craft-avatars\/[a-z0-9-]+\/pilot\.(webp|png|jpg)$/.test(url))?url:'';
 }
 export function resultAvatarUrl({human=false,aiId=null,name=''}={}){
-  if(human)return ownPortrait;
+  if(human){const file=ownPortrait.split('/').pop();return catalog[file]||ownPortrait;}
   const id=aiId;
-  return catalog[aiAvatars[id]]||'';
+  return catalog[id==='generic-cpu'?'avatar_0017.webp':aiAvatars[id]]||'';
 }
 export function resultPortrait(driver){
   const wrap=document.createElement('span');wrap.className='tdr-result-portrait';

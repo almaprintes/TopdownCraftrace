@@ -26,3 +26,9 @@
 .tdr-report-paged .tdr-result-premium .hero{border-bottom:1px solid #d0a96266;padding-bottom:8px}
 .tdr-report-paged .tdr-result-premium .hero>.tdr-result-portrait{width:48px;height:48px;align-self:center}
 @media(max-height:460px){.tdr-result-hero{gap:5px;margin:5px 0}.tdr-result-hero-card>.tdr-result-portrait{height:clamp(46px,14dvh,75px)}.tdr-result-hero-card[data-rank="1"]>.tdr-result-portrait{height:clamp(53px,17dvh,90px)}.tdr-result-plaque{padding:3px 5px}.tdr-result-name-with-avatar .tdr-result-portrait{width:18px;height:18px}.tdr-offline-results .tdr-result-body{padding:7px 10px}.tdr-offline-results .tdr-offline-actions{padding:5px 10px}}
+
+/* Waiting results stay compact and translucent until the last driver finishes. */
+.cr4-results-waiting .tdr-result-premium{background:rgba(3,21,34,.76)!important;box-shadow:0 8px 25px #0007!important}
+.tdr-offline-results .tdr-result-body>p{font:750 11px system-ui;color:#b4d3e1;margin:4px 0}
+.tdr-offline-results .tdr-result-body h2{margin:0 0 3px}
+.tdr-result-premium .tdrsurv-title>.tdr-result-portrait{vertical-align:middle;margin-right:8px}

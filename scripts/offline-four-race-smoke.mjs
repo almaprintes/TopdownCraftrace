@@ -54,3 +54,11 @@ assert.deepEqual(offlineCommonLapGap({lapTimes:[1100,900]},{lapTimes:[1000]}),{l
 assert.equal(offlineCommonLapGap({lapTimes:[]},{lapTimes:[1000]}),null);
 assert.deepEqual(offlineFastestLap([{seat:0,lapTimes:[1200,900]},{seat:1,lapTimes:[1000]}]),{seat:0,lap:2,ms:900});
 console.log('PASS: grid wrap, valid lap progress, live order, measured common-lap gap and fastest lap');
+
+const presentation=read('src/game/ui/raceResultsPresentation.js');
+assert.match(presentation,/avatar_\*\.webp/);
+assert.match(presentation,/ranked\[1\],ranked\[0\],ranked\[2\]/,'Winner is centered in three-place podium');
+assert.match(presentation,/catalog\[file\]\|\|ownPortrait/,'Selected catalog portrait uses bundled asset');
+assert.match(read('src/game/ui/LobbyDomUi.js'),/rememberResultPlayerAvatar\(prefetch\.src\)/);
+for(const path of ['src/game/ai/offlineFourRaceBridge.js','src/game/online/craftraceLiveV2RaceBridge.js','src/game/online/craftraceLiveRaceBridge.js','src/game/scenes/RaceDuelStandaloneScene.js','src/game/scenes/RaceSessionReportScene.js','src/game/scenes/RaceSurvivalModeScene.js'])assert.match(read(path),/dressResultPanel\(/);
+console.log('PASS: shared podium presentation, bundled catalog portraits, selected player avatar, six result flows');
