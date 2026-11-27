@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {makeOfflineFourRace,prepareOfflineFourLaunch,offlineFourRoster,rankOfflineFour,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../src/game/ai/offlineFourRace.js';
+import {makeOfflineFourRace,prepareOfflineFourLaunch,offlineFourRoster,offlineFullPilotIds,offlineHudEntries,rankOfflineFour,OFFLINE_FOUR_TRACKS,OFFLINE_FOUR_LAPS} from '../src/game/ai/offlineFourRace.js';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 for(const trackKey of OFFLINE_FOUR_TRACKS)for(const laps of OFFLINE_FOUR_LAPS)for(const difficulty of [1,2,3])for(const humanSeat of [0,1,2,3]){
   const config=makeOfflineFourRace({trackKey,carId:'avenir_gripline',laps,difficulty,humanSeat,seed:'smoke'});
@@ -71,3 +71,23 @@ const mapText=presentation.match(/const AI_PORTRAITS=Object\.freeze\(\{([\s\S]*?
 const avatarIds=[...mapText.matchAll(/:\s*(\d+)/g)].map(m=>Number(m[1]));
 assert.equal(avatarIds.length,16);assert.equal(new Set(avatarIds).size,16);
 console.log('PASS: curated unique AI portraits and generic robot CPU');
+
+import {makeLive4StartingGrid} from '../src/game/online/craftraceLiveV2GridGeometry.js';
+import {AI_ELO_PILOTS} from '../src/game/ai/craftraceAiEloLeague.js';
+for(const capacity of [2,17])for(let humanSeat=0;humanSeat<capacity;humanSeat++)for(const difficulty of [1,2,3])for(const laps of OFFLINE_FOUR_LAPS){
+  const cfg=makeOfflineFourRace({trackKey:'santa-cruz',carId:'stock',capacity,humanSeat,difficulty,laps,seed:'all-pilots'});
+  assert.deepEqual(makeOfflineFourRace(cfg),cfg);
+  const roster=offlineFourRoster(difficulty,humanSeat,capacity);
+  assert.equal(roster.length,capacity);assert.equal(roster.filter(x=>x.kind==='ai').length,capacity-1);
+  assert.equal(roster.find(x=>x.kind==='human').seat,humanSeat);
+  if(capacity===17){const ids=offlineFullPilotIds(roster,cfg.seed);assert.deepEqual(Object.values(ids).sort(),AI_ELO_PILOTS.map(p=>p.id).sort());assert.deepEqual(offlineFullPilotIds(roster,cfg.seed),ids);}
+}
+assert.throws(()=>makeOfflineFourRace({trackKey:'karting-tenerife-horario',carId:'stock',capacity:17}));
+assert.throws(()=>makeOfflineFourRace({trackKey:'santa-cruz',carId:'stock',capacity:8}));
+const longLine=[{x:0,y:0},{x:4000,y:0},{x:4000,y:4000},{x:0,y:4000}];
+const gridInput={start:{x:2500,y:0,r:0},trackWidth:250,centerline:longLine,finishLine:{a:{x:2500,y:-130},b:{x:2500,y:130},normal:{x:1,y:0}},capacity:17};
+assert.throws(()=>makeLive4StartingGrid(gridInput));
+assert.equal(makeLive4StartingGrid({...gridInput,offlineFullGrid:true}).positions.length,17);
+assert.deepEqual(offlineHudEntries(Array.from({length:17},(_,i)=>({human:i===10})),17).map(x=>x.rank),[1,10,11,12]);
+assert.match(bridge,/config.capacity/);assert.match(scene,/offlineFullGrid:this\._offlineFourRace\?\.capacity===17/);
+console.log('PASS: duel and full grid, 285 configurations, all 16 AI identities, online capacity unchanged and compact HUD');

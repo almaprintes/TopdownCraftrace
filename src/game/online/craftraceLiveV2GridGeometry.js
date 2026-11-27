@@ -7,10 +7,10 @@ const finite=v=>typeof v==='number'&&Number.isFinite(v);
 export const live4CompactGridTrack=id=>id==='karting-tenerife'||id==='karting-tenerife-horario';
 export function makeLive4StartingGrid({
  start,trackWidth,carScale=1,capacity=4,centerline=null,finishLine=null,
- compact=false,trackShape=null,vehicleVisualScale=1
+ compact=false,trackShape=null,vehicleVisualScale=1,offlineFullGrid=false
 }={}){
  if(!start||![start.x,start.y,start.r].every(finite)||
-    !Number.isInteger(capacity)||capacity<2||capacity>4)throw Error('Invalid start grid');
+    !Number.isInteger(capacity)||capacity<2||(capacity>4&&!(offlineFullGrid===true&&capacity===17)))throw Error('Invalid start grid');
  const width=Number(trackWidth),scale=Math.max(.35,Math.min(1.5,Number(carScale)||1));
  const visual=compact?Math.max(.35,Math.min(1.5,Number(vehicleVisualScale)||1)):1;
  const carWidth=48*1.35*scale*visual;
@@ -67,6 +67,10 @@ export function makeLive4StartingGrid({
  const longitudinal=parallel?rowGap:rowGap*1.05;
  const offset=parallel?(carWidth+parallelGap)/2:0;
  const positions=[];
+ if(offlineFullGrid&&capacity===17){
+   if(!trackAligned||90+longitudinal*(parallel?8:16)+carLength>metrics.total*.30)
+     throw Error('La parrilla de 17 coches no cabe en este circuito');
+ }
  for(let seat=0;seat<capacity;seat++){
    const row=parallel?Math.floor(seat/2):seat;
    const lateral=parallel?(compactParallel?(seat%2===0?compactRows[row].first:compactRows[row].second):
@@ -74,6 +78,9 @@ export function makeLive4StartingGrid({
    const p=sampleRow(90+longitudinal*row),r=p.r;
    const nx=-Math.sin(r),ny=Math.cos(r);
    positions.push(Object.freeze({x:p.x+nx*lateral,y:p.y+ny*lateral,r,seat}));
+ }
+ if(offlineFullGrid&&capacity===17){
+   for(let i=0;i<positions.length;i++)for(let j=0;j<i;j++)if(Math.hypot(positions[i].x-positions[j].x,positions[i].y-positions[j].y)<carWidth*.9)throw Error('Parrilla completa con plazas solapadas');
  }
  return Object.freeze({parallel,trackAligned,positions:Object.freeze(positions)});
 }

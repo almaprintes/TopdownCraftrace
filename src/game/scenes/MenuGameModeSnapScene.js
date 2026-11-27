@@ -82,7 +82,7 @@ export class MenuScene extends CurrentMenuScene {
       if(launching)return;
       launching=true;
       const key=MODES[index]?.key||'timeattack';
-      if(key==='offline-ai'){this._closeGameModeModal();this._openOfflineFourSetup();return;}
+      if(!IS_PROD_BUILD&&(key==='offline-ai'||key==='duel')){this._closeGameModeModal();this._openOfflineFourSetup(key==='duel'?2:4);return;}
       try{localStorage.setItem(MODE_KEY,key);}catch{}
       this._closeGameModeModal();
       try{this._startSelectedMode?.(key);}catch(err){launching=false;console.error('[game-mode-dom] start failed',err);}
@@ -117,7 +117,7 @@ export class MenuScene extends CurrentMenuScene {
     requestAnimationFrame(()=>requestAnimationFrame(()=>update(index,{scroll:true,instant:true})));
   }
 
-  _openOfflineFourSetup(){
+  _openOfflineFourSetup(initialCapacity=4){
     if(IS_PROD_BUILD||this._gameModeDom?.isConnected)return;
     const english=getLanguage()==='en';
     const tr=(es,en)=>english?en:es;
@@ -125,13 +125,22 @@ export class MenuScene extends CurrentMenuScene {
     root.style.cssText='position:fixed;inset:0;z-index:2147482000;background:rgba(2,7,13,.9);display:grid;place-items:center;font-family:system-ui;color:#fff;padding:12px';
     const panel=document.createElement('section');panel.setAttribute('role','dialog');panel.setAttribute('aria-label',tr('Carrera IA','AI Race'));
     panel.style.cssText='box-sizing:border-box;width:min(92vw,720px);max-height:94vh;overflow:auto;background:#0b1c29;border:1px solid #ff9f43;border-radius:14px;padding:12px;display:grid;gap:8px';
-    const title=document.createElement('h2');title.style.cssText='margin:0;text-align:center;font-size:19px';title.textContent=tr('CARRERA IA · 4 COCHES','AI RACE · 4 CARS');panel.append(title);
+    const title=document.createElement('h2');title.style.cssText='margin:0;text-align:center;font-size:19px';title.textContent=initialCapacity===2?tr('DUELO IA · 2 COCHES','AI DUEL · 2 CARS'):tr('CARRERA IA','AI RACE');panel.append(title);
     const makeSelect=(label,options)=>{const wrap=document.createElement('label');wrap.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:700';wrap.textContent=label;const select=document.createElement('select');select.style.cssText='width:60%;min-height:36px;background:#152e40;color:white;border:1px solid #678;border-radius:6px;font:inherit';for(const [value,text] of options){const option=document.createElement('option');option.value=value;option.textContent=text;select.append(option);}wrap.append(select);panel.append(wrap);return select;};
+    const capacity=makeSelect(tr('Participantes','Drivers'),initialCapacity===2?[[2,tr('2 · Tú + 1 IA','2 · You + 1 AI')]]:[[4,tr('4 · Tú + 3 IA','4 · You + 3 AI')],[17,tr('17 · Plantilla completa · EXP','17 · Full roster · EXP')]]);
+    capacity.value=String(initialCapacity);
     const tracks=makeSelect(tr('Circuito','Circuit'),OFFLINE_FOUR_TRACKS.map(id=>[id,({'santa-cruz':'Santa Cruz','karting-canarias-4096':'Karting Canarias','karting-tenerife-horario':'Karting Tenerife · Normal'})[id]]));
     try{const chosen=selectedCircuitRaceId(this.selectedTrackKey,localStorage);if(OFFLINE_FOUR_TRACKS.includes(chosen))tracks.value=chosen;}catch{}
     const laps=makeSelect(tr('Vueltas','Laps'),OFFLINE_FOUR_LAPS.map(n=>[n,String(n)]));laps.value='3';
     const difficulty=makeSelect(tr('Dificultad','Difficulty'),[[1,tr('Principiante','Rookie')],[2,tr('Competitivo','Competitive')],[3,tr('Experto','Expert')]]);difficulty.value='2';
     const note=document.createElement('small');note.textContent=tr('Prueba DEV · Sin clasificación online ni recompensas.','DEV test · No online ranking or rewards.');panel.append(note);
+    const syncCapacity=()=>{
+      const full=capacity.value==='17';
+      for(const option of tracks.options)option.disabled=full&&option.value!=='santa-cruz';
+      if(full){tracks.value='santa-cruz';difficulty.value='3';}
+      note.textContent=full?tr('EXPERIMENTAL · 16 IA únicas · Santa Cruz · Sin premios','EXPERIMENTAL · 16 unique AI · Santa Cruz · No rewards'):tr('Prueba DEV · Sin clasificación online ni recompensas.','DEV test · No online ranking or rewards.');
+    };
+    capacity.onchange=syncCapacity;syncCapacity();
     const actions=document.createElement('div');actions.style.cssText='display:flex;gap:10px';
     const button=(text,primary)=>{const b=document.createElement('button');b.type='button';b.textContent=text;b.style.cssText='flex:1;min-height:40px;border:1px solid #ff9f43;border-radius:8px;background:'+(primary?'#ff9f43;color:#111':'#14283a;color:#fff')+';font:800 13px system-ui';actions.append(b);return b;};
     const back=button(tr('VOLVER','BACK'),false);back.onclick=()=>{this._closeGameModeModal();this._openGameModeModal();};
@@ -143,7 +152,7 @@ export class MenuScene extends CurrentMenuScene {
       try{
         let carId=this.selectedCarId;
         if(!carId)try{carId=localStorage.getItem('tdr2:carId');}catch{}
-        const config=makeOfflineFourRace({trackKey:tracks.value,carId,laps:Number(laps.value),difficulty:Number(difficulty.value)});
+        const config=makeOfflineFourRace({trackKey:tracks.value,carId,laps:Number(laps.value),difficulty:Number(difficulty.value),capacity:Number(capacity.value)});
         const data=await prepareOfflineFourLaunch(config,async()=>{
           if(typeof globalThis.__tdrWarmRaceScene!=='function')return false;
           if(await globalThis.__tdrWarmRaceScene()!==true)return false;
@@ -151,7 +160,7 @@ export class MenuScene extends CurrentMenuScene {
           return typeof module.attachOfflineFourRace==='function';
         });
         if(!root.isConnected||this._gameModeDom!==root||this.sys?.isActive?.()===false)return;
-        try{localStorage.setItem(MODE_KEY,'offline-ai');}catch{}
+        try{localStorage.setItem(MODE_KEY,initialCapacity===2?'duel':'offline-ai');}catch{}
         // Keep configuration visible until Phaser actually shuts down the lobby.
         this.scene.start('race',data);
       }catch(error){

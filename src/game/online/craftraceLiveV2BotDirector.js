@@ -87,8 +87,12 @@ export class CrafRaceLive4BotDirector{
   const ai=roster.filter(x=>x.kind==='ai');
   // Four AI may run only in this device's off-grid director preview.
   // The authenticated LIVE 4 room keeps its original 1-3 bot restriction.
+  const offlineFull=!preview&&scene?._offlineFourRace?.capacity===17&&
+    !scene._crafRaceLiveV2RoomId&&hostId==='local-player'&&
+    roster.length===17&&roster.filter(x=>x.kind==='human').length===1&&
+    new Set(roster.map(x=>x.seat)).size===17&&roster.every(x=>Number.isInteger(x.seat)&&x.seat>=0&&x.seat<17);
   if((preview&&scene?._crafRaceDirectorPreview!==true)||
-     ai.length>(preview?4:3)||
+     ai.length>(offlineFull?16:preview?4:3)||
      ai.some(x=>!LIVE4_AI_LEVELS[x.difficulty]||x.owner_id!==hostId))
     throw Error('Invalid AI assignment');
   this.scene=scene;this.bots=[];this.laps=clamp(Math.floor(laps),1,30);
@@ -241,7 +245,7 @@ export class CrafRaceLive4BotDirector{
    // until a verified texture exists, then follow any async skin/fit changes.
    const visual=scene.add.sprite(0,0,'__DEFAULT').setVisible(false);
    const rig=scene.add.container(x,y,[visual]).setDepth(29);
-   syncLive4CarVisual(scene,visual,TINTS[item.seat]);
+   syncLive4CarVisual(scene,visual,TINTS[item.seat%TINTS.length]);
    rig.rotation=grid.r+(scene._carVisualRotOffset||0);
    let best=0,bd=Infinity;
    for(let i=0;i<profile.samples.length;i++){
@@ -249,7 +253,7 @@ export class CrafRaceLive4BotDirector{
     if(dist<bd){best=i;bd=dist;}
    }
    const bot={seat:item.seat,difficulty:item.difficulty,
-     aiPilot:(this.live4GuidedGTrial?live4AiPilotById(this.aiPilotIds?.[item.seat]):null)||
+     aiPilot:((this.live4GuidedGTrial||offlineFull)?live4AiPilotById(this.aiPilotIds?.[item.seat]):null)||
        (this.aiIdentitySeed?live4AiPilotForSeat(this.aiIdentitySeed,item.seat):null),
      plannerBody:body,rig,visual,style:(item.seat*2+1)%3,
      _plannerSampleIndex:best,
@@ -348,7 +352,7 @@ export class CrafRaceLive4BotDirector{
   if(!this.bots.length)return [];
   const scene=this.scene;
   // Refresh even during countdown, after the host's skin promise resolves.
-  for(const bot of this.bots)syncLive4CarVisual(scene,bot.visual,TINTS[bot.seat]);
+  for(const bot of this.bots)syncLive4CarVisual(scene,bot.visual,TINTS[bot.seat%TINTS.length]);
   if(!started)return [];
   this.raceStarted=true;
   observeLive4Timing(this.timingAudit,Number(deltaMs));
