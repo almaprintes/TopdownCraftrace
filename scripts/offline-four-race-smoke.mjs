@@ -23,6 +23,7 @@ assert.doesNotMatch(bridge,/fetch\(|WebSocket|PositionLink|LobbyMonitor|finishLi
 const scene=read('src/game/scenes/RaceScene.js');
 assert.match(scene,/_offlineFourRace\?\.humanSeat/);
 assert.match(scene,/_offlineFourBridge\?\.update/);
+assert.match(scene,/MAX_GRID_CARS = this\._offlineFourRace\?0:/,'Only the three new AI cars may spawn');
 assert.match(scene,/ttHistKey = this\._crafRaceLiveV2RoomId \? null : this\._offlineFourRace \? null/);
 assert.match(read('src/game/scenes/RaceSessionRewardsScene.js'),/this\._crafRaceLiveV2RoomId\|\|this\._offlineFourRace/);
 assert.match(read('src/game/scenes/RaceCleanLapScene.js'),/if\(this\._offlineFourRace\)return 0/);
