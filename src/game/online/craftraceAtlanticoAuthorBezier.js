@@ -58,7 +58,7 @@ export const ATLANTICO_G_GUIDES={
     }
   ]
 };
-export const ATLANTICO_G_BEZIER={
+export const ATLANTICO_G_ORIGINAL_BEZIER={
   "version": 1,
   "closed": true,
   "nodes": [
@@ -136,6 +136,15 @@ export const ATLANTICO_G_BEZIER={
     }
   ]
 };
+// Preserve the exact owner export above. The competition variant changes only
+// four handles at anchors 4 and 5 to reduce steering discontinuities.
+// All anchor coordinates, other handles and road geometry are unchanged.
+const correctedHandles={
+  3:{handleIn:{x:1378.3996234197607,y:980.2074301800285},handleOut:{x:1576.4880182129696,y:926.7635641904941}},
+  4:{handleIn:{x:1547.8775211019515,y:682.4600040975134},handleOut:{x:1969.6583385228105,y:472.8373791015289}}
+};
+export const ATLANTICO_G_BEZIER={...ATLANTICO_G_ORIGINAL_BEZIER,
+ nodes:ATLANTICO_G_ORIGINAL_BEZIER.nodes.map((node,index)=>({...node,...correctedHandles[index]}))};
 export function matchesAtlanticoAuthorWorld(track){
  return track?.id==='circuito-atlantico'&&track.raceDirection==='forward'&&
  Math.abs(track.worldW-3040.8)<.001&&Math.abs(track.worldH-2280.6)<.001&&
