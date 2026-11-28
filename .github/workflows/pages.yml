@@ -52,6 +52,8 @@ jobs:
           node scripts/trackstudio-karting-canarias-author-bezier-smoke.mjs
           node scripts/install-circuito-atlantico-source.mjs
           node scripts/circuito-atlantico-official-smoke.mjs
+          node scripts/craftrace-director-guide-load-smoke.mjs
+          node scripts/trackstudio-iphone-export-smoke.mjs
           node scripts/santa-cruz-official-source-smoke.mjs
           node scripts/santa-cruz-clean-lap-photo-smoke.mjs
           node scripts/karting-official-source-smoke.mjs
