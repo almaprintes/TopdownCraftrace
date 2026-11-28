@@ -1,3 +1,4 @@
+import {matchesAtlanticoAuthorWorld} from './craftraceAtlanticoAuthorBezier.js';
 // DEV-only physical AI pilot director. ONLY the room host owns bot physics.
 // All levels use the player's car parameters and the same Arcade integration;
 // easy/medium simply choose less ambitious pace, expert has no extra grip/power.
@@ -102,7 +103,7 @@ export class CrafRaceLive4BotDirector{
   this.aiIdentitySeed=typeof aiIdentitySeed==='string'?aiIdentitySeed:null;
   this.aiPilotIds=aiPilotIds;
   this.live4GuidedGTrial=!this.preview&&live4GuidedGTrial===true&&
-    isLive4GuidedGSupported({trackId:scene.trackKey,dev:true,aiDifficulty:3});
+    (isLive4GuidedGSupported({trackId:scene.trackKey,dev:true,aiDifficulty:3})||(hostId==='local-player'&&!scene._crafRaceLiveV2RoomId&&scene._offlineFourRace?.difficulty===3&&matchesAtlanticoAuthorWorld(scene.track?.meta)));
   this.timingAudit=makeLive4TimingAudit();
   if(ai.length===0){this.profile=null;return;}
   if(scene.track?.closed===false||scene.track?.meta?.closed===false)

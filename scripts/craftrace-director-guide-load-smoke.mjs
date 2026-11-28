@@ -43,3 +43,16 @@ if(existsSync(path)){
  console.log('PASS: Karting Canarias G Bézier has safe route and real speed/steering plan.');
 }else console.log('Source not installed: UI contract checked; Pages checks after photo install.');
 console.log('PASS: explicit local Realizador load button; LIVE 4 Santa Cruz-only untouched.');
+
+const atl=JSON.parse(readFileSync('src/game/tracks/library/track01/track.json','utf8'));
+if(atl.meta?.imageNative?.worldScale===.7){
+ const runtime={...atl,id:'circuito-atlantico',raceDirection:atl.raceDirection||'forward'};
+ const guide=resolveDirectorGuideSource({meta:runtime});
+ assert.equal(guide.guides?.points?.length,6);assert.equal(guide.bezier?.nodes?.length,6);
+ const baseline=buildTrackRacingLineModel({raceCenterline:runtime.raceCenterline||runtime.centerline,trackWidth:runtime.trackWidth},{apexCommitment:.22});
+ const validated=buildBezierAiRacingLineModel(baseline,guide.bezier,guide.shape,guide.dimensions,{carRadius:14});
+ assert.equal(validated.report.active,true,JSON.stringify(validated.report));
+ assert.ok(buildTrackManeuverPlan(buildTrackSpeedProfile(validated.model,{maxSpeed:420,lateralAccel:2050,minCornerSpeed:80,maxYawRate:2.4,curvatureSmoothWindow:21,driveAccel:520,brakeDecel:720})).valid);
+ assert.equal(resolveDirectorGuideSource({meta:{...runtime,raceDirection:'reverse'}}).bezier,null);
+ console.log('PASS: Atlantic owner Bezier and physical plan');
+}

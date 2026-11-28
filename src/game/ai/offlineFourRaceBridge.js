@@ -1,3 +1,4 @@
+import {matchesAtlanticoAuthorWorld} from '../online/craftraceAtlanticoAuthorBezier.js';
 // Reuse the physical LIVE4 bot director, never the network race bridge.
 import '../ui/craftraceLiveV2Lobby.css';
 import './offlineFourRace.css';
@@ -14,7 +15,7 @@ export function attachOfflineFourRace(scene,config){
   const roster=offlineFourRoster(config.difficulty,config.humanSeat,config.capacity),hostId='local-player';
   const seed=config.seed;
   const en=getLanguage()==='en',tr=(es,eng)=>en?eng:es;
-  const guided=isLive4GuidedGSupported({trackId:config.trackKey,dev:true,aiDifficulty:config.difficulty});
+  const guided=isLive4GuidedGSupported({trackId:config.trackKey,dev:true,aiDifficulty:config.difficulty})||(config.difficulty===3&&matchesAtlanticoAuthorWorld(scene.track?.meta));
   const full=config.capacity===17,aiPilotIds=full?offlineFullPilotIds(roster,seed):null;
   const name=entry=>entry.kind==='human'?tr('TÚ','YOU'):live4SeatName(entry,[],seed,aiPilotIds);
   const director=new CrafRaceLive4BotDirector(scene,{roster,hostId,localId:hostId,

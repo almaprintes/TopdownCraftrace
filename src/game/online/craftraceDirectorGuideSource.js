@@ -1,3 +1,4 @@
+import {ATLANTICO_G_GUIDES,ATLANTICO_G_BEZIER,matchesAtlanticoAuthorWorld} from './craftraceAtlanticoAuthorBezier.js';
 // TrackStudio preview exports annotations on gameTrack.aiLineGuides.
 // Registered circuits place author annotations inside gameTrack.meta.
 // RaceScene wraps either source in scene.track.meta = gameTrack, so
@@ -11,6 +12,7 @@ import {TENERIFE_G_ID,TENERIFE_G_IMAGE_SHA,TENERIFE_G_GUIDES,TENERIFE_G_BEZIER}
  from './craftraceKartingTenerifeAuthorBezier.js';
 export function resolveDirectorGuideSource(runtimeTrack){
  const track=runtimeTrack?.meta;
+ const officialAtlantico=matchesAtlanticoAuthorWorld(track);
  const direct=track?.aiLineGuides;
  const authored=track?.meta?.aiLineGuides;
  // The manual Karting Canarias line is local-Realizador-only and bound to the
@@ -28,7 +30,7 @@ export function resolveDirectorGuideSource(runtimeTrack){
    track?.meta?.sourceImageSha256===TENERIFE_G_IMAGE_SHA;
  const guides=direct?.points?.length?direct:
    authored?.points?.length?authored:
-   officialCanarias?KARTING_CANARIAS_AI_GUIDES:officialTenerife?TENERIFE_G_GUIDES:null;
+   officialCanarias?KARTING_CANARIAS_AI_GUIDES:officialTenerife?TENERIFE_G_GUIDES:officialAtlantico?ATLANTICO_G_GUIDES:null;
  // The installed Santa Cruz photo uses the same authoring coordinates as
  // the original 10 tips. Expose the manually drawn line exclusively to
  // local Realizador G; the competitive race bridge never calls this helper.
@@ -39,7 +41,7 @@ export function resolveDirectorGuideSource(runtimeTrack){
  const bezier=track?.aiBezierLine||track?.meta?.aiBezierLine||
    (officialSantaCruz?SANTA_CRUZ_AUTHOR_BEZIER:
      officialCanarias?KARTING_CANARIAS_AI_BEZIER:null)||
-   (officialTenerife?TENERIFE_G_BEZIER:null);
+   (officialTenerife?TENERIFE_G_BEZIER:null)||(officialAtlantico?ATLANTICO_G_BEZIER:null);
  return{
    guides,bezier,
    shape:track?.trackShape||null,
@@ -47,6 +49,6 @@ export function resolveDirectorGuideSource(runtimeTrack){
    carScale:track?.carScale??track?.meta?.carScale??1,
    source:direct?.points?.length?'trackstudio':
      authored?.points?.length?'registered-circuit':
-     (officialCanarias||officialTenerife)?'owner-director-candidate':'none'
+     (officialCanarias||officialTenerife||officialAtlantico)?'owner-director-candidate':'none'
  };
 }
