@@ -2981,23 +2981,16 @@ const data = {
         if(!this._autosaveRecovery())
           browserSaveError=Error('No hay espacio para recuperación automática');
       } catch(e) {browserSaveError=e;}
-      const blob = new Blob([serialized], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `trackstudio-${(data.gameTrack?.name || 'project').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()}.json`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      if(browserSaveError)console.warn('[TrackStudio] Descarga independiente del almacenamiento local',browserSaveError);
       this._flashMessage(browserSaveError
-        ?'JSON generado. Sin espacio para copia en navegador: conserva el archivo.'
+        ?(saveLocation?'Guardado local; recuperación no disponible. EXPORTA una copia.':'No se pudo guardar. EXPORTA una copia antes de salir.')
         :saveLocation==='session'
-          ?'Guardado en esta pestaña + copia JSON. Conserva el archivo.'
-          :'💾 Guardado + copia JSON');
-      console.log('[TrackStudio] JSON solicitado y almacenamiento:',
-        browserSaveError?'no disponible':saveLocation);
+          ?'Guardado en esta pestaña. EXPORTA una copia permanente.'
+          :'💾 Guardado en este dispositivo · EXPORTAR para crear un archivo');
+      return Boolean(saveLocation);
     } catch (e) {
       console.error('❌ Error guardando proyecto', e);
+      this._flashMessage('No se pudo guardar: '+(e?.message||'error desconocido'));
+      return false;
     }
   }
 

@@ -32,3 +32,26 @@ export function buildTrackStudioRescueJson(data,{stamp=Date.now()}={}){
   mime:'application/json',imageIncluded:false,
   guideCount:data.editor.aiLineGuides?.points?.length||0};
 }
+
+export function buildTrackStudioAiExport(data,{stamp=Date.now()}={}){
+ const {editor,gameTrack}=data||{};
+ if(!editor||!gameTrack)throw Error('No hay circuito válido');
+ const guides=gameTrack.aiLineGuides,bezier=gameTrack.aiBezierLine;
+ if(!(bezier?.nodes?.length>=3))throw Error('Genera primero la trazada Bézier');
+ if(JSON.stringify(editor.aiLineGuides||null)!==JSON.stringify(guides||null)||
+    JSON.stringify(editor.aiBezierLine)!==JSON.stringify(bezier))
+   throw Error('Las guías o la Bézier no coinciden con el editor');
+ const {worldW,worldH}=gameTrack;
+ if(![worldW,worldH].every(n=>Number.isFinite(n)&&n>0))throw Error('Dimensiones inválidas');
+ const payload={format:'TDR_TRACKSTUDIO_AI_LINE',version:1,
+  trackId:editor.catalogTrackId||gameTrack.id||gameTrack.key||null,
+  name:gameTrack.name,direction:gameTrack.raceDirection||editor.catalogRaceDirection||'forward',
+  worldW,worldH,worldScale:gameTrack.meta?.imageNative?.worldScale??1,
+  coordinateSpace:'published-world-px',sourceSignature:editor.catalogSourceSignature||null,
+  sourceSha256:gameTrack.meta?.sourceSha256||null,
+  sourceImageSha256:gameTrack.meta?.sourceImageSha256||null,
+  aiLineGuides:guides||null,aiBezierLine:bezier};
+ return {blob:new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),
+ filename:'trackstudio-ia-'+slug(gameTrack.name)+'-'+stamp+'.json',
+ mime:'application/json',imageIncluded:false,guideCount:guides?.points?.length||0};
+}

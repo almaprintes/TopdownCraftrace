@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {buildTrackStudioPortableExport,buildTrackStudioRescueJson}
+import {buildTrackStudioPortableExport,buildTrackStudioRescueJson,buildTrackStudioAiExport}
  from '../src/game/studio/trackStudioPortableExport.js';
 import {unpackImageProject} from '../src/game/studio/imageCanvasProject.js';
 
@@ -36,7 +36,7 @@ assert.throws(()=>buildTrackStudioPortableExport({...data,
 const mode=readFileSync('src/game/studio/installImageMode.js','utf8');
 const chrome=readFileSync('src/game/studio/trackStudioLabChrome.js','utf8');
 const dialog=readFileSync('src/game/studio/trackStudioExportDialog.js','utf8');
-assert.ok(mode.includes('s._openPortableExport=()=>'));
+assert.ok(mode.includes('s._openPortableExport=(aiOnly=false)=>'));
 assert.ok(mode.includes('normalizeCanvasImageBlob(row.blob,meta)'));
 assert.ok(mode.includes('buildTrackStudioRescueJson(data)'));
 assert.ok(!mode.includes("download(blob,'trackstudio-image-'"),
@@ -46,3 +46,16 @@ assert.ok(chrome.includes('scene._openPortableExport?.()'));
 assert.ok(dialog.includes("navigator.share({title:'Circuito TrackStudio',files:[exportFile]})"));
 assert.ok(dialog.includes("download.href=activeUrl;download.download=result.filename;"));
 console.log('PASS TrackStudio iPhone export: full photo and 12 AI guides, JSON rescue, explicit share/download');
+
+const bezier={version:1,closed:true,nodes:[{x:1,y:2},{x:3,y:4},{x:5,y:6}]};
+const aiData={editor:{catalogTrackId:'circuito-atlantico',aiLineGuides:guides,aiBezierLine:bezier},gameTrack:{name:'Circuito Atlántico',worldW:3040.8,worldH:2280.6,raceDirection:'forward',meta:{imageNative:{worldScale:.7}},aiLineGuides:guides,aiBezierLine:bezier}};
+const ai=buildTrackStudioAiExport(aiData,{stamp:777});
+const payload=JSON.parse(await ai.blob.text());
+assert.equal(payload.trackId,'circuito-atlantico');assert.equal(payload.worldScale,.7);assert.deepEqual(payload.aiBezierLine,bezier);
+assert.equal(payload.coordinateSpace,'published-world-px');assert.ok(!('centerline' in payload));assert.ok(!('editor' in payload));
+assert.throws(()=>buildTrackStudioAiExport({...aiData,editor:{...aiData.editor,aiBezierLine:null}}),/no coinciden/);
+assert.match(chrome,/EXPORTAR TRAZADA IA/);
+const scene=readFileSync('src/game/scenes/TrackStudioScene.js','utf8');
+const save=scene.slice(scene.indexOf('  _saveProject() {'),scene.indexOf('  _openProjectSourceMenu()'));
+assert.ok(!save.includes('a.click()'));assert.ok(save.includes("writeTrackStudioWorkingCopy('trackstudio_project'"));
+console.log('PASS: AI-only export and local save without download');

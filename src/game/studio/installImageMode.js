@@ -2,7 +2,7 @@ import { saveCanvasImage, readCanvasImage, packImageProject, unpackImageProject,
 import { attachImageNativeTrackContract } from '../tracks/imageNativeTrackContract.js';
 import { trackStudioWidthMaximum, CLASSIC_TRACK_WIDTH_MAX } from './trackStudioWidthRange.js';
 import { imageTrackResizePlan, rescaleImageTrackEditor } from './trackStudioImageScale.js';
-import {buildTrackStudioPortableExport,buildTrackStudioRescueJson} from './trackStudioPortableExport.js';
+import {buildTrackStudioPortableExport,buildTrackStudioRescueJson,buildTrackStudioAiExport} from './trackStudioPortableExport.js';
 import {openTrackStudioExportDialog} from './trackStudioExportDialog.js';
 
 const TILE = 2048;
@@ -287,23 +287,8 @@ export function installTrackStudioImageMode(s){
     if(!data?.editor?.imageCanvas&&!data?.imageCanvas)resetTiles(s);
     return originalImport(data);
   };
-  const originalSave=s._saveProject.bind(s);
-  // iOS Safari: downloading after await readCanvasImage() can silently fail.
-  // GUARDAR writes the local copy; EXPORTAR offers explicit share and download.
-  s._saveProject=()=>{
-    if(!s._imageCanvas)return originalSave();
-    try{
-      const data={editor:s._getProjectData(),gameTrack:s._exportToGameTrack()};
-      const json=JSON.stringify(data);
-      localStorage.setItem('trackstudio_project',json);
-      localStorage.setItem('trackstudio_recovery',json);
-      s._flashMessage('Proyecto guardado aquí · pulsa EXPORTAR para crear el .tdrtrack');
-    }catch(e){
-      console.error('[TrackStudio] local save failed',e);
-      s._flashMessage('Error al guardar: '+(e.message||'desconocido'));
-    }
-  };
-  s._openPortableExport=()=>{
+  // All project types share the same local save path.
+  s._openPortableExport=(aiOnly=false)=>{
     s._closePortableExport?.();
     let data;
     try{data={editor:s._getProjectData(),gameTrack:s._exportToGameTrack()};}
@@ -312,7 +297,9 @@ export function installTrackStudioImageMode(s){
       return;
     }
     const dialog=openTrackStudioExportDialog({
+      aiOnly,
       prepare:async()=>{
+        if(aiOnly)return buildTrackStudioAiExport(data);
         if(!data.editor?.imageCanvas?.imageId)
           return buildTrackStudioPortableExport(data);
         const meta=data.editor.imageCanvas;
@@ -323,7 +310,7 @@ export function installTrackStudioImageMode(s){
         if(image.nested)await saveCanvasImage(meta.imageId,image.blob,meta);
         return buildTrackStudioPortableExport(data,{imageBlob:image.blob,imageMeta:meta});
       },
-      fallback:()=>buildTrackStudioRescueJson(data),
+      fallback:aiOnly?null:()=>buildTrackStudioRescueJson(data),
       onClose:()=>{if(s._portableExportDialog===dialog)s._portableExportDialog=null;}
     });
     s._portableExportDialog=dialog;

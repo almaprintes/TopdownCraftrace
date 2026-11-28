@@ -211,10 +211,11 @@ export function mountTrackStudioLabChrome(scene,gate){
   splineLocate.hidden=true;
   splineLocate.setAttribute('aria-label','Centrar el mapa en el error de la trayectoria Bézier');
   const splineTry=button('▶ PROBAR BÉZIER IA',()=>scene._startGuidedAiPreview?.(),'ts-lab__ai-test');
+  const splineExport=button('EXPORTAR TRAZADA IA',()=>scene._openPortableExport?.(true),'ts-lab__ai-test');
   const splineHint=make('small','ts-lab__ai-hint',
    'Los puntos guía son vértices exactos. Las conexiones siguen el circuito y puedes ajustar los tiradores.');
   splinePanel.append(splineTitle,splineSummary,splineGenerate,splineAxis,
-    splineInsert,splineDelete,splineClear,splineValidate,splineLocate,splineTry,splineHint);
+    splineInsert,splineDelete,splineClear,splineValidate,splineLocate,splineTry,splineExport,splineHint);
   const nudge=make('div','ts-lab__nudge');
   const nudgeTitle=make('span','','MOVER SELECCIÓN');
   const nudgeControls=make('div','ts-lab__nudge-controls');
@@ -292,6 +293,7 @@ export function mountTrackStudioLabChrome(scene,gate){
       :'Zona donde el seguimiento del orden presenta la mayor discrepancia';
     splineTry.disabled=!(scene._aiBezierLine?.nodes?.length>=3);
     splineValidate.disabled=!(scene._aiBezierLine?.nodes?.length>=3);
+    splineExport.disabled=splineValidate.disabled;
     const existingGuides=scene._aiLineGuides?.length||0;
     splineGenerate.disabled=!existingGuides;
     state(splineGenerate,existingGuides?

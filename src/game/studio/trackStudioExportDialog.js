@@ -7,7 +7,7 @@ const el=(tag,text,style='')=>{
  if(style)node.style.cssText=style;
  return node;
 };
-export function openTrackStudioExportDialog({prepare,fallback,onClose}={}){
+export function openTrackStudioExportDialog({prepare,fallback,onClose,aiOnly=false}={}){
  if(typeof document==='undefined'||typeof prepare!=='function')return null;
  const root=el('div',null,
   'position:fixed;inset:0;z-index:2147483600;display:grid;place-items:center;'+
@@ -21,9 +21,9 @@ export function openTrackStudioExportDialog({prepare,fallback,onClose}={}){
  card.setAttribute('role','dialog');
  card.setAttribute('aria-modal','true');
  card.setAttribute('aria-label','Exportar circuito TrackStudio');
- const title=el('h2','EXPORTAR CIRCUITO',
+ const title=el('h2',aiOnly?'EXPORTAR TRAZADA IA':'EXPORTAR CIRCUITO',
   'margin:0 0 9px;color:#8ff5d8;font:950 clamp(17px,2.5vw,24px) system-ui');
- const hint=el('p','Preparando una copia con tu pista, sus guías IA y la fotografía…',
+ const hint=el('p',aiOnly?'Preparando guías, Bézier, escala y sentido…':'Preparando una copia con tu pista, sus guías IA y la fotografía…',
   'margin:0 0 12px;color:#d3e5eb;font-size:clamp(11px,1.25vw,14px);line-height:1.4');
  const status=el('p','Leyendo el proyecto guardado…',
   'margin:0 0 13px;overflow-wrap:anywhere;color:#ffda94;font-size:12px;line-height:1.4');
@@ -106,7 +106,7 @@ export function openTrackStudioExportDialog({prepare,fallback,onClose}={}){
  });
  Promise.resolve().then(prepare).then(result=>displayResult(result)).catch(error=>{
   if(closed)return;
-  status.textContent='No se pudo preparar el .tdrtrack: '+(error?.message||'error desconocido');
+  status.textContent='No se pudo preparar el archivo: '+(error?.message||'error desconocido');
   hint.textContent='No se ha cambiado ni borrado el circuito abierto.';
   if(typeof fallback==='function'){
    try{const rescue=fallback();displayResult(rescue,{rescue:true});}
